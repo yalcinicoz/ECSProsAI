@@ -1,0 +1,25 @@
+# Data & logs
+data/
+logs/
+backups/
+
+# .NET
+src/**/bin/
+src/**/obj/
+src/**/*.user
+src/**/.vs/
+*.DotSettings.user
+
+# Environment
+.env
+.env.local
+*.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
