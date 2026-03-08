@@ -88,4 +88,5 @@ public class Order : BaseEntity
     public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
     public ICollection<Shipment> Shipments { get; set; } = new List<Shipment>();
     public ICollection<OrderNotification> Notifications { get; set; } = new List<OrderNotification>();
+    public ICollection<OrderGift> Gifts { get; set; } = new List<OrderGift>();
 }
