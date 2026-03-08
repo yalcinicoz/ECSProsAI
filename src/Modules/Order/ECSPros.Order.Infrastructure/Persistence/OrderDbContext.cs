@@ -28,6 +28,7 @@ public class OrderDbContext : DbContext
     public DbSet<ReturnRefund> ReturnRefunds => Set<ReturnRefund>();
     public DbSet<Quote> Quotes => Set<Quote>();
     public DbSet<QuoteItem> QuoteItems => Set<QuoteItem>();
+    public DbSet<OrderGift> OrderGifts => Set<OrderGift>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

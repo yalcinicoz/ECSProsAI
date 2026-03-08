@@ -42,6 +42,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Domain.Entities.Order
         builder.HasMany(x => x.Invoices).WithOne(x => x.Order).HasForeignKey(x => x.OrderId);
         builder.HasMany(x => x.Shipments).WithOne(x => x.Order).HasForeignKey(x => x.OrderId);
         builder.HasMany(x => x.Notifications).WithOne(x => x.Order).HasForeignKey(x => x.OrderId);
+        builder.HasMany(x => x.Gifts).WithOne(x => x.Order).HasForeignKey(x => x.OrderId);
     }
 }
 
@@ -337,6 +338,20 @@ public class QuoteConfiguration : IEntityTypeConfiguration<Quote>
         builder.HasIndex(x => x.QuoteNumber).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
         builder.HasMany(x => x.Items).WithOne(x => x.Quote).HasForeignKey(x => x.QuoteId);
+    }
+}
+
+public class OrderGiftConfiguration : IEntityTypeConfiguration<OrderGift>
+{
+    public void Configure(EntityTypeBuilder<OrderGift> builder)
+    {
+        builder.ToTable("ord_order_gifts");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.GiftReason).HasMaxLength(30);
+        builder.Property(x => x.AddedAtStage).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.InvoiceDescription).HasMaxLength(200);
+        builder.Property(x => x.UnitValue).HasPrecision(18, 2);
+        builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }
 

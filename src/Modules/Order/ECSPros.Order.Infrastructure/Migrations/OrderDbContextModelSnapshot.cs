@@ -765,6 +765,75 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.ToTable("ord_order_expenses", "order");
                 });
 
+            modelBuilder.Entity("ECSPros.Order.Domain.Entities.OrderGift", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AddedAtStage")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid?>("AddedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("GiftReason")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("InvoiceDescription")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("ShowOnInvoice")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("UnitValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("ord_order_gifts", "order");
+                });
+
             modelBuilder.Entity("ECSPros.Order.Domain.Entities.OrderItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1741,6 +1810,17 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("ECSPros.Order.Domain.Entities.OrderGift", b =>
+                {
+                    b.HasOne("ECSPros.Order.Domain.Entities.Order", "Order")
+                        .WithMany("Gifts")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("ECSPros.Order.Domain.Entities.OrderItem", b =>
                 {
                     b.HasOne("ECSPros.Order.Domain.Entities.Order", "Order")
@@ -1871,6 +1951,8 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.Navigation("Discounts");
 
                     b.Navigation("Expenses");
+
+                    b.Navigation("Gifts");
 
                     b.Navigation("Invoices");
 
