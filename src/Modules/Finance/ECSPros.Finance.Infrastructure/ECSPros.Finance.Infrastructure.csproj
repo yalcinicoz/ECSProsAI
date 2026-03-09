@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ECSPros.Finance.Domain\ECSPros.Finance.Domain.csproj" />
+    <ProjectReference Include="..\ECSPros.Finance.Application\ECSPros.Finance.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

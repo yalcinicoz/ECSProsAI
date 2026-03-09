@@ -1,10 +1,11 @@
+using ECSPros.Finance.Application.Services;
 using ECSPros.Finance.Domain.Entities;
 using ECSPros.Shared.Kernel.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Finance.Infrastructure.Persistence;
 
-public class FinanceDbContext : DbContext
+public class FinanceDbContext : DbContext, IFinanceDbContext
 {
     public FinanceDbContext(DbContextOptions<FinanceDbContext> options) : base(options) { }
 

@@ -1,10 +1,11 @@
+using ECSPros.Promotion.Application.Services;
 using ECSPros.Promotion.Domain.Entities;
 using ECSPros.Shared.Kernel.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Promotion.Infrastructure.Persistence;
 
-public class PromotionDbContext : DbContext
+public class PromotionDbContext : DbContext, IPromotionDbContext
 {
     public PromotionDbContext(DbContextOptions<PromotionDbContext> options) : base(options) { }
 
