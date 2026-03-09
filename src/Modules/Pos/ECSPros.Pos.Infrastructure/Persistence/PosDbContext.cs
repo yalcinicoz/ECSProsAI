@@ -1,10 +1,11 @@
+using ECSPros.Pos.Application.Services;
 using ECSPros.Pos.Domain.Entities;
 using ECSPros.Shared.Kernel.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Pos.Infrastructure.Persistence;
 
-public class PosDbContext : DbContext
+public class PosDbContext : DbContext, IPosDbContext
 {
     public PosDbContext(DbContextOptions<PosDbContext> options) : base(options) { }
 

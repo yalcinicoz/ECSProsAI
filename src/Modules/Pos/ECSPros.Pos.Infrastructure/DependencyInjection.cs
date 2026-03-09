@@ -1,3 +1,4 @@
+using ECSPros.Pos.Application.Services;
 using ECSPros.Pos.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +13,8 @@ public static class DependencyInjection
         services.AddDbContext<PosDbContext>(options =>
             options.UseNpgsql(dataSource,
                 o => o.MigrationsHistoryTable("__ef_migrations_pos", "pos")));
+
+        services.AddScoped<IPosDbContext>(sp => sp.GetRequiredService<PosDbContext>());
 
         return services;
     }

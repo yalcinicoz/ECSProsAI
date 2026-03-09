@@ -36,7 +36,9 @@
     <ProjectReference Include="..\Modules\Promotion\ECSPros.Promotion.Infrastructure\ECSPros.Promotion.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Promotion\ECSPros.Promotion.Application\ECSPros.Promotion.Application.csproj" />
     <ProjectReference Include="..\Modules\Cms\ECSPros.Cms.Infrastructure\ECSPros.Cms.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Cms\ECSPros.Cms.Application\ECSPros.Cms.Application.csproj" />
     <ProjectReference Include="..\Modules\Pos\ECSPros.Pos.Infrastructure\ECSPros.Pos.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Pos\ECSPros.Pos.Application\ECSPros.Pos.Application.csproj" />
   </ItemGroup>
 
 </Project>

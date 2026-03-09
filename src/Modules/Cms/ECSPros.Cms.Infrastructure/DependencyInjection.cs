@@ -1,3 +1,4 @@
+using ECSPros.Cms.Application.Services;
 using ECSPros.Cms.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +13,8 @@ public static class DependencyInjection
         services.AddDbContext<CmsDbContext>(options =>
             options.UseNpgsql(dataSource,
                 o => o.MigrationsHistoryTable("__ef_migrations_cms", "cms")));
+
+        services.AddScoped<ICmsDbContext>(sp => sp.GetRequiredService<CmsDbContext>());
 
         return services;
     }
