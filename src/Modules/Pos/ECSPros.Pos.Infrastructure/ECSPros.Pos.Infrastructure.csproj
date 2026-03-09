@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ECSPros.Pos.Domain\ECSPros.Pos.Domain.csproj" />
+    <ProjectReference Include="..\ECSPros.Pos.Application\ECSPros.Pos.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,10 +1,11 @@
+using ECSPros.Cms.Application.Services;
 using ECSPros.Cms.Domain.Entities;
 using ECSPros.Shared.Kernel.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Cms.Infrastructure.Persistence;
 
-public class CmsDbContext : DbContext
+public class CmsDbContext : DbContext, ICmsDbContext
 {
     public CmsDbContext(DbContextOptions<CmsDbContext> options) : base(options) { }
 
