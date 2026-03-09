@@ -26,7 +26,9 @@
     <ProjectReference Include="..\Modules\Catalog\ECSPros.Catalog.Application\ECSPros.Catalog.Application.csproj" />
     <ProjectReference Include="..\Modules\Inventory\ECSPros.Inventory.Infrastructure\ECSPros.Inventory.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Crm\ECSPros.Crm.Infrastructure\ECSPros.Crm.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Crm\ECSPros.Crm.Application\ECSPros.Crm.Application.csproj" />
     <ProjectReference Include="..\Modules\Order\ECSPros.Order.Infrastructure\ECSPros.Order.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Order\ECSPros.Order.Application\ECSPros.Order.Application.csproj" />
     <ProjectReference Include="..\Modules\Fulfillment\ECSPros.Fulfillment.Infrastructure\ECSPros.Fulfillment.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Finance\ECSPros.Finance.Infrastructure\ECSPros.Finance.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Promotion\ECSPros.Promotion.Infrastructure\ECSPros.Promotion.Infrastructure.csproj" />

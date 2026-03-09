@@ -1,3 +1,4 @@
+using ECSPros.Crm.Application.Services;
 using ECSPros.Crm.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +13,8 @@ public static class DependencyInjection
         services.AddDbContext<CrmDbContext>(options =>
             options.UseNpgsql(dataSource,
                 o => o.MigrationsHistoryTable("__ef_migrations_crm", "crm")));
+
+        services.AddScoped<ICrmDbContext>(sp => sp.GetRequiredService<CrmDbContext>());
 
         return services;
     }

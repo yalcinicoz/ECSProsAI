@@ -5,6 +5,8 @@ using ECSPros.Api.Extensions;
 using ECSPros.Api.Middleware;
 using ECSPros.Catalog.Application.Queries.GetCategories;
 using ECSPros.Catalog.Infrastructure;
+using ECSPros.Crm.Application.Queries.GetMembers;
+using ECSPros.Order.Application.Queries.GetOrders;
 using ECSPros.Cms.Infrastructure;
 using ECSPros.Core.Application.Queries.GetLanguages;
 using ECSPros.Core.Infrastructure;
@@ -48,6 +50,8 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(LoginCommand).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetLanguagesQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetCategoriesQuery).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(GetMembersQuery).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(GetOrdersQuery).Assembly);
 });
 
 // ─── Infrastructure Modules ────────────────────────────────────────

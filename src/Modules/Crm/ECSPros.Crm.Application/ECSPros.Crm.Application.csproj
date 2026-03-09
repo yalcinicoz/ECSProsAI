@@ -1,4 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ECSPros.Crm.Domain\ECSPros.Crm.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Shared\ECSPros.Shared.Kernel\ECSPros.Shared.Kernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MediatR" Version="14.1.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.14" />
+  </ItemGroup>
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>

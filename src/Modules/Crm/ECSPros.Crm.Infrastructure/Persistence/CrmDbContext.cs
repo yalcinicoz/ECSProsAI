@@ -1,10 +1,11 @@
+using ECSPros.Crm.Application.Services;
 using ECSPros.Crm.Domain.Entities;
 using ECSPros.Shared.Kernel.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Crm.Infrastructure.Persistence;
 
-public class CrmDbContext : DbContext
+public class CrmDbContext : DbContext, ICrmDbContext
 {
     public CrmDbContext(DbContextOptions<CrmDbContext> options) : base(options) { }
 
