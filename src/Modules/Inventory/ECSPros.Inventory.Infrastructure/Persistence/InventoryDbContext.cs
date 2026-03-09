@@ -1,10 +1,11 @@
+using ECSPros.Inventory.Application.Services;
 using ECSPros.Inventory.Domain.Entities;
 using ECSPros.Shared.Kernel.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Inventory.Infrastructure.Persistence;
 
-public class InventoryDbContext : DbContext
+public class InventoryDbContext : DbContext, IInventoryDbContext
 {
     public InventoryDbContext(DbContextOptions<InventoryDbContext> options) : base(options) { }
 

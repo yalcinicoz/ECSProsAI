@@ -6,6 +6,7 @@ using ECSPros.Api.Middleware;
 using ECSPros.Catalog.Application.Queries.GetCategories;
 using ECSPros.Catalog.Infrastructure;
 using ECSPros.Crm.Application.Queries.GetMembers;
+using ECSPros.Inventory.Application.Queries.GetWarehouses;
 using ECSPros.Order.Application.Queries.GetOrders;
 using ECSPros.Cms.Infrastructure;
 using ECSPros.Core.Application.Queries.GetLanguages;
@@ -52,6 +53,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(GetCategoriesQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetMembersQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetOrdersQuery).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(GetWarehousesQuery).Assembly);
 });
 
 // ─── Infrastructure Modules ────────────────────────────────────────
