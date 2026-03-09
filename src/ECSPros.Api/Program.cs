@@ -12,7 +12,9 @@ using ECSPros.Cms.Infrastructure;
 using ECSPros.Core.Application.Queries.GetLanguages;
 using ECSPros.Core.Infrastructure;
 using ECSPros.Crm.Infrastructure;
+using ECSPros.Finance.Application.Queries.GetSuppliers;
 using ECSPros.Finance.Infrastructure;
+using ECSPros.Promotion.Application.Queries.GetCampaigns;
 using ECSPros.Fulfillment.Infrastructure;
 using ECSPros.Iam.Application.Commands.Login;
 using ECSPros.Iam.Infrastructure;
@@ -54,6 +56,8 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(GetMembersQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetOrdersQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetWarehousesQuery).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(GetSuppliersQuery).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(GetCampaignsQuery).Assembly);
 });
 
 // ─── Infrastructure Modules ────────────────────────────────────────
