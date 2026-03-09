@@ -1,3 +1,4 @@
+using ECSPros.Inventory.Application.Services;
 using ECSPros.Inventory.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +13,8 @@ public static class DependencyInjection
         services.AddDbContext<InventoryDbContext>(options =>
             options.UseNpgsql(dataSource,
                 o => o.MigrationsHistoryTable("__ef_migrations_inventory", "inventory")));
+
+        services.AddScoped<IInventoryDbContext>(sp => sp.GetRequiredService<InventoryDbContext>());
 
         return services;
     }
