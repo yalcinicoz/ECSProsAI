@@ -1,7 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\ECSPros.Core.Domain\ECSPros.Core.Domain.csproj" />
+    <ProjectReference Include="..\ECSPros.Core.Application\ECSPros.Core.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

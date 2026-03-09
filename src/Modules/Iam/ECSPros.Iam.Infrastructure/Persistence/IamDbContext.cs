@@ -1,10 +1,11 @@
+using ECSPros.Iam.Application.Services;
 using ECSPros.Iam.Domain.Entities;
 using ECSPros.Shared.Kernel.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Iam.Infrastructure.Persistence;
 
-public class IamDbContext : DbContext
+public class IamDbContext : DbContext, IIamDbContext
 {
     public IamDbContext(DbContextOptions<IamDbContext> options) : base(options) { }
 
