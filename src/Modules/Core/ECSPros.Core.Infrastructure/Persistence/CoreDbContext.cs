@@ -1,9 +1,10 @@
+using ECSPros.Core.Application.Services;
 using ECSPros.Core.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Core.Infrastructure.Persistence;
 
-public class CoreDbContext : DbContext
+public class CoreDbContext : DbContext, ICoreDbContext
 {
     public CoreDbContext(DbContextOptions<CoreDbContext> options) : base(options) { }
 

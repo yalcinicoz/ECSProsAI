@@ -1,10 +1,11 @@
+using ECSPros.Catalog.Application.Services;
 using ECSPros.Catalog.Domain.Entities;
 using ECSPros.Shared.Kernel.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Catalog.Infrastructure.Persistence;
 
-public class CatalogDbContext : DbContext
+public class CatalogDbContext : DbContext, ICatalogDbContext
 {
     public CatalogDbContext(DbContextOptions<CatalogDbContext> options) : base(options) { }
 
