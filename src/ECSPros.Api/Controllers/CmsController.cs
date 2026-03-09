@@ -1,3 +1,4 @@
+using ECSPros.Cms.Application.Commands.CreatePage;
 using ECSPros.Cms.Application.Queries.GetPages;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -27,4 +28,38 @@ public class CmsController : ControllerBase
         var result = await _mediator.Send(new GetPagesQuery(firmPlatformId, activeOnly), ct);
         return Ok(new { success = true, data = result.Value });
     }
+
+    /// <summary>Yeni CMS sayfası oluşturur.</summary>
+    [HttpPost("pages")]
+    public async Task<IActionResult> CreatePage([FromBody] CreatePageRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new CreatePageCommand(
+            request.FirmPlatformId,
+            request.TemplateId,
+            request.Code,
+            request.NameI18n,
+            request.SlugI18n,
+            request.PageType,
+            request.TargetGender,
+            request.TargetCategoryId,
+            request.PublishAt,
+            request.UnpublishAt), ct);
+
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+
+        return Created($"/api/cms/pages", new { success = true, data = new { id = result.Value } });
+    }
 }
+
+public record CreatePageRequest(
+    Guid FirmPlatformId,
+    Guid TemplateId,
+    string Code,
+    Dictionary<string, string> NameI18n,
+    Dictionary<string, string> SlugI18n,
+    string PageType,
+    string? TargetGender,
+    Guid? TargetCategoryId,
+    DateTime? PublishAt,
+    DateTime? UnpublishAt);
