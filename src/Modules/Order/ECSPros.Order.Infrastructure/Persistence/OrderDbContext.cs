@@ -1,10 +1,11 @@
+using ECSPros.Order.Application.Services;
 using ECSPros.Order.Domain.Entities;
 using ECSPros.Shared.Kernel.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Order.Infrastructure.Persistence;
 
-public class OrderDbContext : DbContext
+public class OrderDbContext : DbContext, IOrderDbContext
 {
     public OrderDbContext(DbContextOptions<OrderDbContext> options) : base(options) { }
 

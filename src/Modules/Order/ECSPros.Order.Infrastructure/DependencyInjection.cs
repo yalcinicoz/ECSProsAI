@@ -1,3 +1,4 @@
+using ECSPros.Order.Application.Services;
 using ECSPros.Order.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +13,8 @@ public static class DependencyInjection
         services.AddDbContext<OrderDbContext>(options =>
             options.UseNpgsql(dataSource,
                 o => o.MigrationsHistoryTable("__ef_migrations_order", "order")));
+
+        services.AddScoped<IOrderDbContext>(sp => sp.GetRequiredService<OrderDbContext>());
 
         return services;
     }
