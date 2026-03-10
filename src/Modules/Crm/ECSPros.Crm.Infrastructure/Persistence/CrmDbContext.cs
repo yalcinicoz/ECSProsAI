@@ -29,6 +29,7 @@ public class CrmDbContext : DbContext, ICrmDbContext
     public DbSet<MemberDiscount> MemberDiscounts => Set<MemberDiscount>();
     public DbSet<OrderTemplate> OrderTemplates => Set<OrderTemplate>();
     public DbSet<OrderTemplateItem> OrderTemplateItems => Set<OrderTemplateItem>();
+    public DbSet<MemberSession> MemberSessions => Set<MemberSession>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

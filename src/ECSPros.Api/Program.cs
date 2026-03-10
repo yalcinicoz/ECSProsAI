@@ -134,7 +134,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("MemberOnly", policy =>
+        policy.RequireClaim("type", "member"));
+});
 
 // ─── CORS ──────────────────────────────────────────────────────────
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];

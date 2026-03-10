@@ -293,3 +293,17 @@ public class OrderTemplateItemConfiguration : IEntityTypeConfiguration<OrderTemp
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }
+
+public class MemberSessionConfiguration : IEntityTypeConfiguration<MemberSession>
+{
+    public void Configure(EntityTypeBuilder<MemberSession> b)
+    {
+        b.ToTable("member_sessions");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.RefreshTokenHash).HasMaxLength(128).IsRequired();
+        b.Property(x => x.IpAddress).HasMaxLength(50);
+        b.Property(x => x.UserAgent).HasMaxLength(500);
+        b.HasQueryFilter(x => !x.IsDeleted);
+        b.HasOne(x => x.Member).WithMany().HasForeignKey(x => x.MemberId);
+    }
+}
