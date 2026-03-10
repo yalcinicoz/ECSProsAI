@@ -27,6 +27,7 @@ public class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand, Resul
         user.JobTitle = request.JobTitle;
         user.Phone = request.Phone;
         user.IsActive = request.IsActive;
+        user.UpdatedBy = request.UpdatedBy;
 
         await _context.SaveChangesAsync(cancellationToken);
         return Result.Success();

@@ -23,5 +23,4 @@ public record OrderListDto(
     string PaymentStatus,
     decimal GrandTotal,
     string CurrencyCode,
-    bool IsPosSale,
     DateTime CreatedAt);

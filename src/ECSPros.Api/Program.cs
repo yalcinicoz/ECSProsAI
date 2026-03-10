@@ -17,6 +17,7 @@ using ECSPros.Finance.Application.Queries.GetSuppliers;
 using ECSPros.Finance.Infrastructure;
 using ECSPros.Pos.Application.Queries.GetPosRegisters;
 using ECSPros.Promotion.Application.Queries.GetCampaigns;
+using ECSPros.Fulfillment.Application.Queries.GetPickingPlans;
 using ECSPros.Fulfillment.Infrastructure;
 using ECSPros.Iam.Application.Commands.Login;
 using ECSPros.Iam.Infrastructure;
@@ -62,6 +63,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(GetCampaignsQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetPagesQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetPosRegistersQuery).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(GetPickingPlansQuery).Assembly);
 });
 
 // ─── Infrastructure Modules ────────────────────────────────────────
@@ -138,11 +140,8 @@ var app = builder.Build();
 // ─── Middleware Pipeline ────────────────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "ECSPros API v1"));
-}
+app.UseSwagger();
+app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "ECSPros API v1"));
 
 app.UseCors();
 app.UseAuthentication();

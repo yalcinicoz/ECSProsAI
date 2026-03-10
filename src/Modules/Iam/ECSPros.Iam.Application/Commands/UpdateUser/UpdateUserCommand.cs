@@ -7,7 +7,8 @@ public record UpdateUserCommand(
     Guid Id,
     string FirstName,
     string LastName,
-    string Department,
+    string? Department,
     string? JobTitle,
     string? Phone,
-    bool IsActive) : IRequest<Result>;
+    bool IsActive,
+    Guid UpdatedBy) : IRequest<Result>;

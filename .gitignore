@@ -23,3 +23,12 @@ src/**/.vs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Build output
+publish/
+
+# Runtime logs
+nohup.out
+
+# Secrets
+src/**/appsettings.Production.json

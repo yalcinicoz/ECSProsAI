@@ -56,9 +56,11 @@ public class UsersController : ControllerBase
     [HttpPut("users/{id:guid}")]
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserRequest request, CancellationToken ct)
     {
+        var updatedBy = Guid.TryParse(User.FindFirst("sub")?.Value, out var uid) ? uid : Guid.Empty;
+
         var result = await _mediator.Send(new UpdateUserCommand(
             id, request.FirstName, request.LastName, request.Department,
-            request.JobTitle, request.Phone, request.IsActive), ct);
+            request.JobTitle, request.Phone, request.IsActive, updatedBy), ct);
 
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
@@ -115,7 +117,7 @@ public record CreateUserRequest(
 public record UpdateUserRequest(
     string FirstName,
     string LastName,
-    string Department,
+    string? Department,
     string? JobTitle,
     string? Phone,
     bool IsActive);

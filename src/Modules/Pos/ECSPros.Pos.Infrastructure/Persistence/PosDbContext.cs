@@ -13,7 +13,9 @@ public class PosDbContext : DbContext, IPosDbContext
     public DbSet<PosSession> PosSessions => Set<PosSession>();
     public DbSet<PosSessionTransaction> PosSessionTransactions => Set<PosSessionTransaction>();
     public DbSet<PosQuickProduct> PosQuickProducts => Set<PosQuickProduct>();
-    public DbSet<PosReceipt> PosReceipts => Set<PosReceipt>();
+    public DbSet<PosSale> PosSales => Set<PosSale>();
+    public DbSet<PosSaleItem> PosSaleItems => Set<PosSaleItem>();
+    public DbSet<PosSalePayment> PosSalePayments => Set<PosSalePayment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

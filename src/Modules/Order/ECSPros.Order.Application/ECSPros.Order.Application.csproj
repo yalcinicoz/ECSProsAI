@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ECSPros.Order.Domain\ECSPros.Order.Domain.csproj" />
+    <ProjectReference Include="..\..\Fulfillment\ECSPros.Fulfillment.Domain\ECSPros.Fulfillment.Domain.csproj" />
     <ProjectReference Include="..\..\..\Shared\ECSPros.Shared.Kernel\ECSPros.Shared.Kernel.csproj" />
   </ItemGroup>
 

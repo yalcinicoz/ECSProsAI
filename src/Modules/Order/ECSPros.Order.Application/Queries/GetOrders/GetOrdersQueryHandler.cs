@@ -41,7 +41,6 @@ public class GetOrdersQueryHandler : IRequestHandler<GetOrdersQuery, Result<Page
                 o.PaymentStatus,
                 o.GrandTotal,
                 o.CurrencyCode,
-                o.IsPosSale,
                 o.CreatedAt))
             .ToListAsync(cancellationToken);
 
