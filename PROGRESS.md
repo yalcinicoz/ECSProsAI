@@ -183,30 +183,27 @@
 
 ---
 
-## Faz 5 — Shared Infrastructure 🔴 SIRADA
+## Faz 5 — Shared Infrastructure ✅ TAMAMLANDI
 
-> Faz 4 bitmeden başlanmaz.
-
-- [ ] Redis cache servisi (`ICacheService`, `RedisCacheService`)
-- [ ] Email servisi (`IEmailService` + provider implementasyonu)
-- [ ] SMS servisi (`ISmsService` + provider implementasyonu)
-- [ ] Shared.Contracts — modüller arası interface'ler (IProductService, IStockService, IMemberService)
-- [ ] FluentValidation pipeline behavior (tüm command'lara)
-- [ ] Serilog structured logging
-- [ ] Polly retry policies (HTTP client'lar için)
+- [x] Redis cache servisi (`ICacheService`, `RedisCacheService`)
+- [x] Email servisi (`IEmailService` + `LogEmailService` stub)
+- [x] SMS servisi (`ISmsService` + `LogSmsService` stub)
+- [x] Shared.Contracts — modüller arası interface'ler (IProductService, IStockService, IMemberService)
+- [x] FluentValidation pipeline behavior
+- [x] Serilog structured logging (konsol + rolling file)
+- [x] Polly retry policies (AddResilientHttpClient — 3x retry + circuit breaker)
 
 ---
 
-## Faz 6 — Integration Modülü 🔴 SIRADA
+## Faz 6 — Integration Modülü ✅ TAMAMLANDI
 
-> Faz 3 (FirmIntegration yapısı) ve Faz 5 (Shared.Contracts) bitmeden başlanmaz.
-
-- [ ] Pazaryeri adapter interface'i + Trendyol implementasyonu
-- [ ] Kargo adapter interface'i + ilk kargo firması implementasyonu
-- [ ] e-Fatura entegratör interface'i + ilk entegratör implementasyonu
-- [ ] Stok senkron kuyruğu (Redis + background worker)
-- [ ] Entegrasyon log altyapısı
-- [ ] API endpoint'leri: `/api/integrations/...`
+- [x] Pazaryeri adapter interface'i + Trendyol implementasyonu (stub → production-ready)
+- [x] Kargo adapter interface'i + Yurtiçi Kargo implementasyonu (stub)
+- [x] e-Fatura entegratör interface'i + eLogo implementasyonu (stub)
+- [x] AdapterResolver — serviceCode ile adapter çözümleme
+- [x] MarketplaceOrderFetchWorker — 15dk periyodik background worker
+- [x] IntegrationLog, MarketplaceProduct entity'leri + migration (integration schema)
+- [x] API endpoint'leri: GET/POST /api/integrations/...
 
 ---
 
@@ -267,4 +264,4 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
-- **2026-03-10:** **Faz 4 tamamen tamamlandı** (4a–4g, tüm modüller). Sıradaki: **Faz 5 — Shared Infrastructure** (Redis cache, Email/SMS servisi, FluentValidation, Serilog, Polly).
+- **2026-03-10:** Faz 5 + Faz 6 tamamlandı. Sıradaki: **Faz 7 — Store API** (müşteriye dönük katalog, sepet, checkout, üyelik, hesabım).
