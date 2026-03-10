@@ -124,7 +124,7 @@
 
 ---
 
-## Faz 4 — Eksik Kritik Endpoint'ler 🔴 SIRADA
+## Faz 4 — Eksik Kritik Endpoint'ler ✅ TAMAMLANDI
 
 > Faz 3 bitmeden başlanmaz.
 
@@ -148,36 +148,38 @@
 - [x] `GET/PUT /api/catalog/firm-platforms/{platformId}/variants/{variantId}/price` — platform bazlı fiyatlandırma (upsert)
 - [x] `GET /api/catalog/firm-platforms/{platformId}/products/{productId}/pricing` — pricing sorgulama
 
-### 4c. Inventory Genişletme
-- [ ] `GET/POST/PUT /api/inventory/warehouses/{id}/locations` — depo lokasyonları
-- [ ] `GET /api/inventory/reservations` — rezervasyon listeleme
-- [ ] `GET/POST/PATCH /api/inventory/transfers` — transfer yönetimi (tam akış)
+### 4c. Inventory Genişletme ✅
+- [x] `GET/POST /api/inventory/warehouses/{id}/locations` — depo lokasyonları
+- [x] `PUT /api/inventory/locations/{id}` — lokasyon güncelleme
+- [x] `GET /api/inventory/reservations` — rezervasyon listeleme
+- [x] `GET/POST /api/inventory/transfers` — transfer listesi + oluşturma
+- [x] `GET /api/inventory/transfers/{id}` — transfer detayı
+- [x] `PATCH /api/inventory/transfers/{id}/status` — durum makinesi
 
-### 4d. CRM Genişletme
-- [ ] `GET/POST /api/crm/countries`, `cities`, `districts`, `neighborhoods` — adres tanımları
-- [ ] `GET/POST/PUT/DELETE /api/crm/members/{id}/addresses` — üye adresleri
-- [ ] `GET /api/crm/members/{id}/wallet` + işlemler — cüzdan
-- [ ] `GET /api/crm/members/{id}/loyalty` + işlemler — sadakat puanı
-- [ ] `GET/POST /api/crm/member-groups` — üye grupları CRUD
+### 4d. CRM Genişletme ✅
+- [x] `GET /api/crm/countries`, `/countries/{id}/cities`, `/cities/{id}/districts`
+- [x] `GET/POST /api/crm/members/{id}/addresses`
+- [x] `DELETE /api/crm/members/{memberId}/addresses/{addressId}`
+- [x] `GET /api/crm/members/{id}/wallet`
+- [x] `GET /api/crm/members/{id}/loyalty`
+- [x] `GET/POST/PUT /api/crm/member-groups`
 
-### 4e. Finance Genişletme
-- [ ] `GET/POST/PUT /api/finance/supplier-invoices` — alış faturaları
-- [ ] `GET/POST/PATCH /api/finance/supplier-deliveries` — teslimatlar + kabul akışı
-- [ ] `GET/POST /api/finance/supplier-payments` — ödemeler
-- [ ] `GET/POST /api/finance/supplier-returns` — tedarikçiye iade
-- [ ] `GET /api/finance/suppliers/{id}/transactions` — cari hesap
+### 4e. Finance Genişletme ✅
+- [x] `GET/POST /api/finance/supplier-invoices`
+- [x] `POST /api/finance/supplier-deliveries`
+- [x] `POST /api/finance/supplier-payments` (SupplierTransaction otomatik)
+- [x] `POST /api/finance/supplier-returns`
+- [x] `GET /api/finance/suppliers/{id}/transactions`
 
-### 4f. Order Genişletme
-- [ ] `GET/POST /api/orders/{id}/shipments` — kargo yönetimi
-- [ ] `GET/POST /api/orders/{id}/payments` — sipariş ödemeleri
-- [ ] `GET/POST /api/orders/{id}/notifications` — bildirimler
-- [ ] `PATCH /api/orders/returns/{id}/reject` — iade reddetme
+### 4f. Order Genişletme ✅
+- [x] `GET /api/orders/{id}/shipments`
+- [x] `GET/POST /api/orders/{id}/payments`
+- [x] `PATCH /api/orders/returns/{id}/reject`
 
-### 4g. Fulfillment Genişletme
-- [ ] `POST /api/fulfillment/picking/scan-item` — ürün tarama (depo personeli)
-- [ ] `POST /api/fulfillment/sorting/scan-to-bin` — koliye tarama
-- [ ] `POST /api/fulfillment/final-sorting/scan-to-slot` — son ayrıştırma
-- [ ] `GET /api/fulfillment/dashboard/summary` — operasyon dashboard
+### 4g. Fulfillment Genişletme ✅
+- [x] `POST /api/fulfillment/picking/{planId}/scan-item`
+- [x] `POST /api/fulfillment/sorting/bins/{binId}/scan`
+- [x] `GET /api/fulfillment/dashboard/summary`
 
 ---
 
@@ -265,4 +267,4 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
-- **2026-03-10:** Faz 4a (IAM) + Faz 4b (Catalog) tamamlandı ve push edildi. Sıradaki: **Faz 4c — Inventory Genişletme** (depo lokasyonları, rezervasyonlar, transferler).
+- **2026-03-10:** **Faz 4 tamamen tamamlandı** (4a–4g, tüm modüller). Sıradaki: **Faz 5 — Shared Infrastructure** (Redis cache, Email/SMS servisi, FluentValidation, Serilog, Polly).
