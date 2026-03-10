@@ -17,6 +17,7 @@ public interface ICrmDbContext
     DbSet<Country> Countries { get; }
     DbSet<City> Cities { get; }
     DbSet<District> Districts { get; }
+    DbSet<MemberSession> MemberSessions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
