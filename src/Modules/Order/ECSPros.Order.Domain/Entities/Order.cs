@@ -1,8 +1,9 @@
+using ECSPros.Order.Domain.Events;
 using ECSPros.Shared.Kernel.Domain;
 
 namespace ECSPros.Order.Domain.Entities;
 
-public class Order : BaseEntity
+public class Order : AggregateRoot
 {
     public string OrderNumber { get; set; } = string.Empty;
     public Guid FirmPlatformId { get; set; }
@@ -21,12 +22,6 @@ public class Order : BaseEntity
     // Payment Terms (B2B)
     public int? PaymentTermsDays { get; set; }
     public DateOnly? PaymentDueDate { get; set; }
-
-    // POS
-    public bool IsPosSale { get; set; } = false;
-    public Guid? PosSessionId { get; set; }
-    public Guid? PosRegisterId { get; set; }
-    public string? ReceiptNumber { get; set; }
 
     // Currency
     public string CurrencyCode { get; set; } = "TRY";
@@ -89,4 +84,70 @@ public class Order : BaseEntity
     public ICollection<Shipment> Shipments { get; set; } = new List<Shipment>();
     public ICollection<OrderNotification> Notifications { get; set; } = new List<OrderNotification>();
     public ICollection<OrderGift> Gifts { get; set; } = new List<OrderGift>();
+
+    private static readonly string[] ConfirmableStatuses = ["pending"];
+    private static readonly string[] CancellableStatuses = ["pending", "confirmed"];
+    private static readonly string[] ProcessableStatuses = ["confirmed"];
+    private static readonly string[] ShippableStatuses = ["processing"];
+    private static readonly string[] DeliverableStatuses = ["shipped"];
+
+    public void Confirm(Guid warehouseId, Guid confirmedBy)
+    {
+        if (!ConfirmableStatuses.Contains(Status))
+            throw new InvalidOperationException($"'{Status}' durumundaki sipariş onaylanamaz.");
+
+        Status = "confirmed";
+        ConfirmedAt = DateTime.UtcNow;
+        ConfirmedBy = confirmedBy;
+
+        var reservedItems = Items
+            .Select(i => new OrderedItem(i.VariantId, i.Quantity))
+            .ToList();
+
+        AddDomainEvent(new OrderConfirmedEvent(Id, warehouseId, confirmedBy, reservedItems));
+    }
+
+    public void Cancel(Guid cancelledBy, string? reason = null)
+    {
+        if (!CancellableStatuses.Contains(Status))
+            throw new InvalidOperationException($"'{Status}' durumundaki sipariş iptal edilemez.");
+
+        Status = "cancelled";
+        InternalNotes = reason is not null
+            ? $"[İptal] {reason}\n{InternalNotes}"
+            : InternalNotes;
+
+        AddDomainEvent(new OrderCancelledEvent(Id, cancelledBy));
+    }
+
+    public void StartProcessing(Guid updatedBy, Guid? pickingPlanId = null)
+    {
+        if (!ProcessableStatuses.Contains(Status))
+            throw new InvalidOperationException($"'{Status}' durumundaki sipariş işleme alınamaz.");
+
+        Status = "processing";
+        PickingPlanId = pickingPlanId ?? PickingPlanId;
+    }
+
+    public void MarkShipped(Guid updatedBy)
+    {
+        if (!ShippableStatuses.Contains(Status))
+            throw new InvalidOperationException($"'{Status}' durumundaki sipariş kargoya verilemez.");
+
+        Status = "shipped";
+
+        var shippedItems = Items
+            .Select(i => new OrderedItem(i.VariantId, i.Quantity))
+            .ToList();
+
+        AddDomainEvent(new OrderShippedEvent(Id, updatedBy, shippedItems));
+    }
+
+    public void MarkDelivered(Guid updatedBy)
+    {
+        if (!DeliverableStatuses.Contains(Status))
+            throw new InvalidOperationException($"'{Status}' durumundaki sipariş teslim edildi olarak işaretlenemez.");
+
+        Status = "delivered";
+    }
 }

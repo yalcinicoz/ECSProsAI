@@ -2,6 +2,16 @@ namespace ECSPros.Shared.Kernel.Common;
 
 public class PagedResult<T>
 {
+    public PagedResult() { }
+
+    public PagedResult(IEnumerable<T> items, int totalCount, int page, int pageSize)
+    {
+        Items = items;
+        TotalCount = totalCount;
+        Page = page;
+        PageSize = pageSize;
+    }
+
     public IEnumerable<T> Items { get; init; } = [];
     public int TotalCount { get; init; }
     public int Page { get; init; }

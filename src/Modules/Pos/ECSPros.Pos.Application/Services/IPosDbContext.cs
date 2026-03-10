@@ -9,7 +9,9 @@ public interface IPosDbContext
     DbSet<PosSession> PosSessions { get; }
     DbSet<PosSessionTransaction> PosSessionTransactions { get; }
     DbSet<PosQuickProduct> PosQuickProducts { get; }
-    DbSet<PosReceipt> PosReceipts { get; }
+    DbSet<PosSale> PosSales { get; }
+    DbSet<PosSaleItem> PosSaleItems { get; }
+    DbSet<PosSalePayment> PosSalePayments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

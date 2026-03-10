@@ -1,4 +1,6 @@
 using ECSPros.Finance.Application.Commands.CreateSupplier;
+using ECSPros.Finance.Application.Commands.UpdateSupplier;
+using ECSPros.Finance.Application.Queries.GetSupplierDetail;
 using ECSPros.Finance.Application.Queries.GetSuppliers;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -29,6 +31,16 @@ public class FinanceController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>Tedarikçi detayını döner.</summary>
+    [HttpGet("suppliers/{id:guid}")]
+    public async Task<IActionResult> GetSupplierDetail(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetSupplierDetailQuery(id), ct);
+        if (result.IsFailure)
+            return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
     /// <summary>Yeni tedarikçi oluşturur.</summary>
     [HttpPost("suppliers")]
     public async Task<IActionResult> CreateSupplier([FromBody] CreateSupplierRequest request, CancellationToken ct)
@@ -49,6 +61,33 @@ public class FinanceController : ControllerBase
 
         return Created($"/api/finance/suppliers", new { success = true, data = new { id = result.Value } });
     }
+
+    /// <summary>Tedarikçi günceller.</summary>
+    [HttpPut("suppliers/{id:guid}")]
+    public async Task<IActionResult> UpdateSupplier(Guid id, [FromBody] UpdateSupplierRequest request, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized();
+
+        var result = await _mediator.Send(new UpdateSupplierCommand(
+            id,
+            request.Name,
+            request.TaxOffice,
+            request.TaxNumber,
+            request.Phone,
+            request.Email,
+            request.Address,
+            request.ContactPerson,
+            request.Notes,
+            request.IsActive,
+            userId), ct);
+
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+
+        return Ok(new { success = true });
+    }
 }
 
 public record CreateSupplierRequest(
@@ -61,3 +100,14 @@ public record CreateSupplierRequest(
     string? Address,
     string? ContactPerson,
     string? Notes);
+
+public record UpdateSupplierRequest(
+    string Name,
+    string? TaxOffice,
+    string? TaxNumber,
+    string? Phone,
+    string? Email,
+    string? Address,
+    string? ContactPerson,
+    string? Notes,
+    bool IsActive);

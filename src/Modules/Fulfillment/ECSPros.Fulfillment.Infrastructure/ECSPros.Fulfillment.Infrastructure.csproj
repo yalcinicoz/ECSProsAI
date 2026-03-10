@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ECSPros.Fulfillment.Domain\ECSPros.Fulfillment.Domain.csproj" />
+    <ProjectReference Include="..\ECSPros.Fulfillment.Application\ECSPros.Fulfillment.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,5 +1,7 @@
 using ECSPros.Catalog.Application.Commands.CreateCategory;
 using ECSPros.Catalog.Application.Commands.CreateProduct;
+using ECSPros.Catalog.Application.Commands.UpdateCategory;
+using ECSPros.Catalog.Application.Commands.UpdateProduct;
 using ECSPros.Catalog.Application.Queries.GetCategories;
 using ECSPros.Catalog.Application.Queries.GetProductDetail;
 using ECSPros.Catalog.Application.Queries.GetProducts;
@@ -47,6 +49,23 @@ public class CatalogController : ControllerBase
         return Created($"/api/catalog/categories", new { success = true, data = new { id = result.Value } });
     }
 
+    /// <summary>Kategoriyi günceller.</summary>
+    [HttpPut("categories/{id:guid}")]
+    public async Task<IActionResult> UpdateCategory(Guid id, [FromBody] UpdateCategoryRequest request, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var updatedBy))
+            return Unauthorized();
+
+        var result = await _mediator.Send(new UpdateCategoryCommand(
+            id, request.NameI18n, request.ParentId, request.FillType, request.IsActive, request.SortOrder, updatedBy), ct);
+
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+
+        return Ok(new { success = true });
+    }
+
     // ─── Products ──────────────────────────────────────────────────────────────
 
     /// <summary>Ürünleri sayfalı listeler.</summary>
@@ -87,6 +106,23 @@ public class CatalogController : ControllerBase
 
         return Ok(new { success = true, data = result.Value });
     }
+
+    /// <summary>Ürünü günceller.</summary>
+    [HttpPut("products/{id:guid}")]
+    public async Task<IActionResult> UpdateProduct(Guid id, [FromBody] UpdateProductRequest request, CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userIdClaim, out var updatedBy))
+            return Unauthorized();
+
+        var result = await _mediator.Send(new UpdateProductCommand(
+            id, request.NameI18n, request.ShortDescriptionI18n, request.IsActive, updatedBy), ct);
+
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+
+        return Ok(new { success = true });
+    }
 }
 
 public record CreateCategoryRequest(
@@ -104,3 +140,15 @@ public record CreateProductRequest(
     List<VariantRequest> Variants);
 
 public record VariantRequest(string Sku, decimal BasePrice, decimal? BaseCost);
+
+public record UpdateCategoryRequest(
+    Dictionary<string, string> NameI18n,
+    Guid? ParentId,
+    string FillType,
+    bool IsActive,
+    int SortOrder);
+
+public record UpdateProductRequest(
+    Dictionary<string, string> NameI18n,
+    Dictionary<string, string>? ShortDescriptionI18n,
+    bool IsActive);

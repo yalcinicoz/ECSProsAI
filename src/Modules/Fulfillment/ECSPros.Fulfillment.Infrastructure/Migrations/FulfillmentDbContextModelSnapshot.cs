@@ -252,6 +252,9 @@ namespace ECSPros.Fulfillment.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("PickingPlanId")
                         .HasColumnType("uuid");
 

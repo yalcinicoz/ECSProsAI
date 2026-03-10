@@ -1,10 +1,12 @@
 using ECSPros.Core.Application.Commands.CreateLookupType;
 using ECSPros.Core.Application.Commands.CreateLookupValue;
+using ECSPros.Core.Application.Commands.UpdateLookupValue;
 using ECSPros.Core.Application.Queries.GetLookupTypes;
 using ECSPros.Core.Application.Queries.GetLookupValues;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace ECSPros.Api.Controllers;
 
@@ -50,6 +52,29 @@ public class LookupController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>Lookup değerini günceller.</summary>
+    [HttpPut("values/{id:guid}")]
+    public async Task<IActionResult> UpdateValue(Guid id, [FromBody] UpdateLookupValueRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        Guid.TryParse(userId, out var uid);
+
+        var result = await _mediator.Send(new UpdateLookupValueCommand(
+            id,
+            request.NameI18n,
+            request.Color,
+            request.Icon,
+            request.IsDefault,
+            request.IsActive,
+            request.SortOrder,
+            uid), ct);
+
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+
+        return Ok(new { success = true });
+    }
+
     /// <summary>Lookup tipine yeni değer ekler.</summary>
     [HttpPost("types/{code}/values")]
     public async Task<IActionResult> CreateValue(string code, [FromBody] CreateLookupValueRequest request, CancellationToken ct)
@@ -66,6 +91,13 @@ public class LookupController : ControllerBase
 }
 
 public record CreateLookupTypeRequest(string Code, Dictionary<string, string> NameI18n, string? Description);
+public record UpdateLookupValueRequest(
+    Dictionary<string, string> NameI18n,
+    string? Color,
+    string? Icon,
+    bool IsDefault,
+    bool IsActive,
+    int SortOrder);
 public record CreateLookupValueRequest(
     string Code,
     Dictionary<string, string> NameI18n,

@@ -17,7 +17,6 @@ public class OrderConfiguration : IEntityTypeConfiguration<Domain.Entities.Order
         builder.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(x => x.InvoiceCurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(x => x.ExchangeRate).HasPrecision(18, 6);
-        builder.Property(x => x.ReceiptNumber).HasMaxLength(50);
         builder.Property(x => x.ShippingRecipientName).HasMaxLength(200).IsRequired();
         builder.Property(x => x.ShippingRecipientPhone).HasMaxLength(20).IsRequired();
         builder.Property(x => x.ShippingPostalCode).HasMaxLength(10);
@@ -34,6 +33,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Domain.Entities.Order
         builder.Property(x => x.CustomerNotes).HasColumnType("jsonb");
         builder.HasIndex(x => x.OrderNumber).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
+        builder.Ignore(x => x.DomainEvents);
         builder.HasMany(x => x.Items).WithOne(x => x.Order).HasForeignKey(x => x.OrderId);
         builder.HasMany(x => x.Discounts).WithOne(x => x.Order).HasForeignKey(x => x.OrderId);
         builder.HasMany(x => x.Expenses).WithOne(x => x.Order).HasForeignKey(x => x.OrderId);

@@ -31,6 +31,7 @@
     <ProjectReference Include="..\Modules\Order\ECSPros.Order.Infrastructure\ECSPros.Order.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Order\ECSPros.Order.Application\ECSPros.Order.Application.csproj" />
     <ProjectReference Include="..\Modules\Fulfillment\ECSPros.Fulfillment.Infrastructure\ECSPros.Fulfillment.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Fulfillment\ECSPros.Fulfillment.Application\ECSPros.Fulfillment.Application.csproj" />
     <ProjectReference Include="..\Modules\Finance\ECSPros.Finance.Infrastructure\ECSPros.Finance.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Finance\ECSPros.Finance.Application\ECSPros.Finance.Application.csproj" />
     <ProjectReference Include="..\Modules\Promotion\ECSPros.Promotion.Infrastructure\ECSPros.Promotion.Infrastructure.csproj" />

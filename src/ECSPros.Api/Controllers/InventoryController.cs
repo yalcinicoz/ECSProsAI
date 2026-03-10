@@ -1,5 +1,6 @@
 using ECSPros.Inventory.Application.Commands.AdjustStock;
 using ECSPros.Inventory.Application.Commands.CreateWarehouse;
+using ECSPros.Inventory.Application.Commands.UpdateWarehouse;
 using ECSPros.Inventory.Application.Queries.GetStocks;
 using ECSPros.Inventory.Application.Queries.GetWarehouses;
 using MediatR;
@@ -48,6 +49,30 @@ public class InventoryController : ControllerBase
         return Created($"/api/inventory/warehouses", new { success = true, data = new { id = result.Value } });
     }
 
+    /// <summary>Depo günceller.</summary>
+    [HttpPut("warehouses/{id:guid}")]
+    public async Task<IActionResult> UpdateWarehouse(Guid id, [FromBody] UpdateWarehouseRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        Guid.TryParse(userId, out var uid);
+
+        var result = await _mediator.Send(new UpdateWarehouseCommand(
+            id,
+            request.NameI18n,
+            request.WarehouseType,
+            request.Address,
+            request.IsSellableOnline,
+            request.ReservePriority,
+            request.IsActive,
+            request.SortOrder,
+            uid), ct);
+
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+
+        return Ok(new { success = true });
+    }
+
     /// <summary>Stok bilgilerini listeler.</summary>
     [HttpGet("stocks")]
     public async Task<IActionResult> GetStocks(
@@ -90,6 +115,15 @@ public record CreateWarehouseRequest(
     bool IsSellableOnline = true,
     int ReservePriority = 0,
     int SortOrder = 0);
+
+public record UpdateWarehouseRequest(
+    Dictionary<string, string> NameI18n,
+    string WarehouseType,
+    string? Address,
+    bool IsSellableOnline,
+    int ReservePriority,
+    bool IsActive,
+    int SortOrder);
 
 public record AdjustStockRequest(
     Guid VariantId,

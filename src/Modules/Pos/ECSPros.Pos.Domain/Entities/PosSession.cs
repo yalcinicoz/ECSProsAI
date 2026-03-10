@@ -18,5 +18,5 @@ public class PosSession : BaseEntity
 
     public PosRegister Register { get; set; } = null!;
     public ICollection<PosSessionTransaction> Transactions { get; set; } = new List<PosSessionTransaction>();
-    public ICollection<PosReceipt> Receipts { get; set; } = new List<PosReceipt>();
+    public ICollection<PosSale> Sales { get; set; } = new List<PosSale>();
 }

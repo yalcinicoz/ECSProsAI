@@ -528,9 +528,6 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsPosSale")
-                        .HasColumnType("boolean");
-
                     b.Property<Guid>("MemberId")
                         .HasColumnType("uuid");
 
@@ -565,18 +562,8 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.Property<Guid?>("PickingPlanId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("PosRegisterId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("PosSessionId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid?>("QuoteId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("ReceiptNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
 
                     b.Property<bool>("RequiresApproval")
                         .HasColumnType("boolean");

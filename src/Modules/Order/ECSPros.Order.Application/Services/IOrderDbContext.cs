@@ -18,9 +18,11 @@ public interface IOrderDbContext
     DbSet<Return> Returns { get; }
     DbSet<ReturnItem> ReturnItems { get; }
     DbSet<ReturnRefund> ReturnRefunds { get; }
+    DbSet<InvoiceSeries> InvoiceSeries { get; }
     DbSet<Quote> Quotes { get; }
     DbSet<QuoteItem> QuoteItems { get; }
     DbSet<GiftCard> GiftCards { get; }
+    DbSet<GiftCardTransaction> GiftCardTransactions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

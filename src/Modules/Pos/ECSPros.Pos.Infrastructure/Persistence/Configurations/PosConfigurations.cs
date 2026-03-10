@@ -35,7 +35,7 @@ public class PosSessionConfiguration : IEntityTypeConfiguration<PosSession>
         builder.HasIndex(x => x.SessionNumber).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
         builder.HasMany(x => x.Transactions).WithOne(x => x.Session).HasForeignKey(x => x.SessionId);
-        builder.HasMany(x => x.Receipts).WithOne(x => x.Session).HasForeignKey(x => x.SessionId);
+        builder.HasMany(x => x.Sales).WithOne(x => x.Session).HasForeignKey(x => x.SessionId);
     }
 }
 
@@ -65,15 +65,56 @@ public class PosQuickProductConfiguration : IEntityTypeConfiguration<PosQuickPro
     }
 }
 
-public class PosReceiptConfiguration : IEntityTypeConfiguration<PosReceipt>
+public class PosSaleConfiguration : IEntityTypeConfiguration<PosSale>
 {
-    public void Configure(EntityTypeBuilder<PosReceipt> builder)
+    public void Configure(EntityTypeBuilder<PosSale> builder)
     {
-        builder.ToTable("pos_receipts");
+        builder.ToTable("pos_sales");
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.ReceiptNumber).HasMaxLength(50).IsRequired();
-        builder.Property(x => x.ReceiptType).HasMaxLength(20).IsRequired();
-        builder.HasIndex(x => x.ReceiptNumber).IsUnique();
+        builder.Property(x => x.SaleNumber).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Status).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.Subtotal).HasPrecision(18, 2);
+        builder.Property(x => x.TotalDiscount).HasPrecision(18, 2);
+        builder.Property(x => x.TotalTax).HasPrecision(18, 2);
+        builder.Property(x => x.GrandTotal).HasPrecision(18, 2);
+        builder.Property(x => x.Notes).HasMaxLength(1000);
+        builder.HasIndex(x => x.SaleNumber).IsUnique();
+        builder.HasQueryFilter(x => !x.IsDeleted);
+        builder.HasMany(x => x.Items).WithOne(x => x.Sale).HasForeignKey(x => x.SaleId);
+        builder.HasMany(x => x.Payments).WithOne(x => x.Sale).HasForeignKey(x => x.SaleId);
+        // DomainEvents alanı persist edilmez
+        builder.Ignore(x => x.DomainEvents);
+    }
+}
+
+public class PosSaleItemConfiguration : IEntityTypeConfiguration<PosSaleItem>
+{
+    public void Configure(EntityTypeBuilder<PosSaleItem> builder)
+    {
+        builder.ToTable("pos_sale_items");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Barcode).HasMaxLength(50);
+        builder.Property(x => x.ProductName).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.Quantity).HasPrecision(18, 4);
+        builder.Property(x => x.UnitPrice).HasPrecision(18, 2);
+        builder.Property(x => x.DiscountAmount).HasPrecision(18, 2);
+        builder.Property(x => x.TaxRate).HasPrecision(5, 2);
+        builder.Property(x => x.TaxAmount).HasPrecision(18, 2);
+        builder.Property(x => x.LineTotal).HasPrecision(18, 2);
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
+public class PosSalePaymentConfiguration : IEntityTypeConfiguration<PosSalePayment>
+{
+    public void Configure(EntityTypeBuilder<PosSalePayment> builder)
+    {
+        builder.ToTable("pos_sale_payments");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.PaymentMethod).HasMaxLength(30).IsRequired();
+        builder.Property(x => x.Amount).HasPrecision(18, 2);
+        builder.Property(x => x.TenderedAmount).HasPrecision(18, 2);
+        builder.Property(x => x.ChangeAmount).HasPrecision(18, 2);
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

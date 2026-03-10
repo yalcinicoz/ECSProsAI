@@ -14,6 +14,7 @@ public class PickingPlanConfiguration : IEntityTypeConfiguration<PickingPlan>
         builder.Property(x => x.PlanType).HasMaxLength(50).IsRequired();
         builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
         builder.HasQueryFilter(x => !x.IsDeleted);
+        builder.Ignore(x => x.DomainEvents);
         builder.HasMany(x => x.Bins).WithOne(x => x.PickingPlan).HasForeignKey(x => x.PickingPlanId);
     }
 }

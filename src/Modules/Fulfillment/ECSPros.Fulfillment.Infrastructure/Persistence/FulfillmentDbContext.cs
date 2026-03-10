@@ -1,10 +1,11 @@
+using ECSPros.Fulfillment.Application.Services;
 using ECSPros.Fulfillment.Domain.Entities;
 using ECSPros.Shared.Kernel.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Fulfillment.Infrastructure.Persistence;
 
-public class FulfillmentDbContext : DbContext
+public class FulfillmentDbContext : DbContext, IFulfillmentDbContext
 {
     public FulfillmentDbContext(DbContextOptions<FulfillmentDbContext> options) : base(options) { }
 
