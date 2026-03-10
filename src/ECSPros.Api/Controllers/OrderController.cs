@@ -1,3 +1,4 @@
+using ECSPros.Order.Application.Commands.AddOrderPayment;
 using ECSPros.Order.Application.Commands.ApproveReturn;
 using ECSPros.Order.Application.Commands.CancelInvoice;
 using ECSPros.Order.Application.Commands.CancelOrder;
@@ -12,6 +13,7 @@ using ECSPros.Order.Application.Commands.CreateReturn;
 using ECSPros.Order.Application.Commands.MarkDelivered;
 using ECSPros.Order.Application.Commands.MarkShipped;
 using ECSPros.Order.Application.Commands.ReceiveReturn;
+using ECSPros.Order.Application.Commands.RejectReturn;
 using ECSPros.Order.Application.Commands.RespondQuote;
 using ECSPros.Order.Application.Commands.SendQuote;
 using ECSPros.Order.Application.Commands.StartProcessing;
@@ -19,6 +21,8 @@ using ECSPros.Order.Application.Commands.UseGiftCard;
 using ECSPros.Order.Application.Queries.GetGiftCardBalance;
 using ECSPros.Order.Application.Queries.GetInvoices;
 using ECSPros.Order.Application.Queries.GetOrderDetail;
+using ECSPros.Order.Application.Queries.GetOrderPayments;
+using ECSPros.Order.Application.Queries.GetOrderShipments;
 using ECSPros.Order.Application.Queries.GetOrders;
 using ECSPros.Order.Application.Queries.GetQuotes;
 using ECSPros.Order.Application.Queries.GetReturnDetail;
@@ -183,6 +187,15 @@ public class OrderController : ControllerBase
         return Ok(new { success = true });
     }
 
+    /// <summary>İadeyi reddeder (requested → rejected).</summary>
+    [HttpPatch("returns/{returnId:guid}/reject")]
+    public async Task<IActionResult> RejectReturn(Guid returnId, [FromBody] RejectReturnRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new RejectReturnCommand(returnId, request.Reason), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
     /// <summary>İade kargosu depoda teslim alındı — stok otomatik geri yüklenir.</summary>
     [HttpPost("returns/{returnId:guid}/receive")]
     public async Task<IActionResult> ReceiveReturn(Guid returnId, [FromBody] ReceiveReturnRequest request, CancellationToken ct)
@@ -317,6 +330,35 @@ public class OrderController : ControllerBase
         return Created($"/api/orders/{result.Value}", new { success = true, data = new { orderId = result.Value } });
     }
 
+    // ─── Shipments ────────────────────────────────────────────────────────────
+
+    /// <summary>Sipariş kargo takip bilgileri.</summary>
+    [HttpGet("{id:guid}/shipments")]
+    public async Task<IActionResult> GetOrderShipments(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetOrderShipmentsQuery(id), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    // ─── Payments ─────────────────────────────────────────────────────────────
+
+    /// <summary>Sipariş ödemelerini listeler.</summary>
+    [HttpGet("{id:guid}/payments")]
+    public async Task<IActionResult> GetOrderPayments(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetOrderPaymentsQuery(id), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Siparişe ödeme ekler.</summary>
+    [HttpPost("{id:guid}/payments")]
+    public async Task<IActionResult> AddOrderPayment(Guid id, [FromBody] AddOrderPaymentRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new AddOrderPaymentCommand(id, request.PaymentMethodId, request.Amount, request.CurrencyCode), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Created($"/api/orders/{id}/payments", new { success = true, data = new { id = result.Value } });
+    }
+
     // ─── Gift Cards ───────────────────────────────────────────────────────────
 
     /// <summary>Hediye kartı bakiyesi sorgular.</summary>
@@ -411,3 +453,5 @@ public record CreateGiftCardRequest(
     Guid? CreatedForMemberId, Guid? CreatedFromOrderId);
 
 public record UseGiftCardRequest(string Code, decimal Amount, Guid OrderId);
+public record AddOrderPaymentRequest(Guid PaymentMethodId, decimal Amount, string CurrencyCode = "TRY");
+public record RejectReturnRequest(string Reason);
