@@ -1,4 +1,7 @@
 using ECSPros.Fulfillment.Application.Commands.CompletePickingPlan;
+using ECSPros.Fulfillment.Application.Commands.ScanItem;
+using ECSPros.Fulfillment.Application.Commands.ScanToBin;
+using ECSPros.Fulfillment.Application.Queries.GetFulfillmentDashboard;
 using ECSPros.Fulfillment.Application.Commands.PrintPackageLabel;
 using ECSPros.Fulfillment.Application.Commands.UpdateBinStatus;
 using ECSPros.Fulfillment.Application.Queries.GetPickingPlanDetail;
@@ -219,9 +222,50 @@ public class FulfillmentController : ControllerBase
 
         return Created($"/api/fulfillment/packages", new { success = true, data = new { id = result.Value } });
     }
+
+    // ─── Scan Operations ───────────────────────────────────────────────────────
+
+    /// <summary>Toplama planında ürün tarar — uygun kutya atar.</summary>
+    [HttpPost("picking/{planId:guid}/scan-item")]
+    public async Task<IActionResult> ScanItem(Guid planId, [FromBody] ScanItemRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid))
+            return Unauthorized(new { success = false, error = "Geçersiz token." });
+
+        var result = await _mediator.Send(new ScanItemCommand(planId, request.Barcode, uid), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Ürünü belirtilen kutya tarar.</summary>
+    [HttpPost("sorting/bins/{binId:guid}/scan")]
+    public async Task<IActionResult> ScanToBin(Guid binId, [FromBody] ScanItemRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid))
+            return Unauthorized(new { success = false, error = "Geçersiz token." });
+
+        var result = await _mediator.Send(new ScanToBinCommand(binId, request.Barcode, uid), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    // ─── Dashboard ─────────────────────────────────────────────────────────────
+
+    /// <summary>Fulfillment operasyon özet dashboard.</summary>
+    [HttpGet("dashboard/summary")]
+    public async Task<IActionResult> GetDashboardSummary(CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetFulfillmentDashboardQuery(), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
 }
 
 public record UpdateBinStatusRequest(string Status);
+public record ScanItemRequest(string Barcode);
 
 public record UpdatePackingStationRequest(
     string? StationName,
