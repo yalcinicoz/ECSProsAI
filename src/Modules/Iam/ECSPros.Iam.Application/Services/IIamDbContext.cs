@@ -13,5 +13,6 @@ public interface IIamDbContext
     DbSet<UserPermission> UserPermissions { get; }
     DbSet<UserSession> UserSessions { get; }
     DbSet<AuditLog> AuditLogs { get; }
+    DbSet<AdminMenu> AdminMenus { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
