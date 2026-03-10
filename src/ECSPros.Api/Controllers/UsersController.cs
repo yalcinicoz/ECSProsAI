@@ -1,8 +1,16 @@
 using ECSPros.Iam.Application.Commands.AssignRole;
 using ECSPros.Iam.Application.Commands.ChangePassword;
+using ECSPros.Iam.Application.Commands.CreateAdminMenu;
 using ECSPros.Iam.Application.Commands.CreateUser;
+using ECSPros.Iam.Application.Commands.RevokeAllUserSessions;
+using ECSPros.Iam.Application.Commands.RevokeSession;
+using ECSPros.Iam.Application.Commands.UpdateAdminMenu;
 using ECSPros.Iam.Application.Commands.UpdateUser;
+using ECSPros.Iam.Application.Queries.GetAdminMenus;
+using ECSPros.Iam.Application.Queries.GetAuditLogs;
 using ECSPros.Iam.Application.Queries.GetRoles;
+using ECSPros.Iam.Application.Queries.GetUserDetail;
+using ECSPros.Iam.Application.Queries.GetUserSessions;
 using ECSPros.Iam.Application.Queries.GetUsers;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -125,3 +133,22 @@ public record UpdateUserRequest(
 public record ResetPasswordRequest(string NewPassword);
 
 public record AssignRoleRequest(Guid RoleId);
+
+public record CreateAdminMenuRequest(
+    Guid? ParentId,
+    string Code,
+    Dictionary<string, string> NameI18n,
+    string? Icon,
+    string? Route,
+    string? PermissionCode,
+    int SortOrder = 0
+);
+
+public record UpdateAdminMenuRequest(
+    Dictionary<string, string> NameI18n,
+    string? Icon,
+    string? Route,
+    string? PermissionCode,
+    int SortOrder,
+    bool IsActive
+);
