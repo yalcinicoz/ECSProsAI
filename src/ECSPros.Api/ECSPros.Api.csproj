@@ -43,6 +43,8 @@
     <ProjectReference Include="..\Modules\Cms\ECSPros.Cms.Application\ECSPros.Cms.Application.csproj" />
     <ProjectReference Include="..\Modules\Pos\ECSPros.Pos.Infrastructure\ECSPros.Pos.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Pos\ECSPros.Pos.Application\ECSPros.Pos.Application.csproj" />
+    <ProjectReference Include="..\Modules\Integration\ECSPros.Integration.Infrastructure\ECSPros.Integration.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Integration\ECSPros.Integration.Application\ECSPros.Integration.Application.csproj" />
   </ItemGroup>
 
 </Project>
