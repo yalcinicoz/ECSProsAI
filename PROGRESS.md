@@ -128,12 +128,14 @@
 
 > Faz 3 bitmeden başlanmaz.
 
-### 4a. IAM Genişletme
-- [ ] `POST /api/auth/forgot-password` — şifremi unuttum (email gönderme)
-- [ ] `POST /api/auth/reset-password` — token ile şifre sıfırlama
-- [ ] `GET/DELETE /api/iam/sessions` — aktif oturum listeleme/sonlandırma
-- [ ] `GET /api/iam/audit-logs` — audit log listeleme
-- [ ] `GET/POST/PUT /api/iam/admin-menus` — admin menü yönetimi
+### 4a. IAM Genişletme ✅
+- [ ] `POST /api/auth/forgot-password` — şifremi unuttum (⚠️ Faz 5'e ertelendi: email servisi gerekiyor)
+- [ ] `POST /api/auth/reset-password` — token ile şifre sıfırlama (⚠️ Faz 5'e ertelendi)
+- [x] `GET /api/iam/users/{id}` — kullanıcı detayı (roller + izinler + son giriş)
+- [x] `GET/DELETE /api/iam/users/{id}/sessions` — oturum listeleme/tümünü sonlandırma
+- [x] `DELETE /api/iam/sessions/{id}` — tek oturum sonlandırma
+- [x] `GET /api/iam/audit-logs` — audit log listeleme (filtreli + sayfalı)
+- [x] `GET/POST/PUT /api/iam/admin-menus` — admin menü yönetimi (ağaç yapısı)
 
 ### 4b. Catalog Genişletme
 - [ ] `GET/POST/PUT/DELETE /api/catalog/attribute-types` — özellik tipleri
