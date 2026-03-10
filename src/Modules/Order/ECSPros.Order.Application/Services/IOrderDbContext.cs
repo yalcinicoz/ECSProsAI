@@ -15,6 +15,8 @@ public interface IOrderDbContext
     DbSet<InvoiceItem> InvoiceItems { get; }
     DbSet<Shipment> Shipments { get; }
     DbSet<ShipmentItem> ShipmentItems { get; }
+    DbSet<ShipmentEvent> ShipmentEvents { get; }
+    DbSet<OrderNotification> OrderNotifications { get; }
     DbSet<Return> Returns { get; }
     DbSet<ReturnItem> ReturnItems { get; }
     DbSet<ReturnRefund> ReturnRefunds { get; }
