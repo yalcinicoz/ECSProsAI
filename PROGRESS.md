@@ -137,13 +137,16 @@
 - [x] `GET /api/iam/audit-logs` — audit log listeleme (filtreli + sayfalı)
 - [x] `GET/POST/PUT /api/iam/admin-menus` — admin menü yönetimi (ağaç yapısı)
 
-### 4b. Catalog Genişletme
-- [ ] `GET/POST/PUT/DELETE /api/catalog/attribute-types` — özellik tipleri
-- [ ] `GET/POST/PUT /api/catalog/attribute-types/{id}/values` — özellik değerleri
-- [ ] `GET/POST/PUT /api/catalog/product-groups` — ürün grupları/şablonları
-- [ ] `POST/DELETE /api/catalog/variants/{id}/images` — varyant görselleri
-- [ ] `PATCH /api/catalog/products/{id}/activate|deactivate`
-- [ ] `GET/PUT /api/catalog/firm-platforms/{platformId}/products` — platform bazlı fiyatlandırma
+### 4b. Catalog Genişletme ✅
+- [x] `GET/POST /api/catalog/attribute-types` — özellik tipleri
+- [x] `POST /api/catalog/attribute-types/{id}/values` — özellik değeri ekle
+- [x] `GET/POST /api/catalog/product-groups` — ürün grupları
+- [x] `PUT /api/catalog/product-groups/{id}` — ürün grubu güncelleme
+- [x] `POST /api/catalog/product-groups/{id}/attributes` — gruba özellik ekle
+- [x] `POST /api/catalog/variants/{id}/images` — varyant görseli ekle
+- [x] `PATCH /api/catalog/products/{id}/activate|deactivate`
+- [x] `GET/PUT /api/catalog/firm-platforms/{platformId}/variants/{variantId}/price` — platform bazlı fiyatlandırma (upsert)
+- [x] `GET /api/catalog/firm-platforms/{platformId}/products/{productId}/pricing` — pricing sorgulama
 
 ### 4c. Inventory Genişletme
 - [ ] `GET/POST/PUT /api/inventory/warehouses/{id}/locations` — depo lokasyonları
@@ -262,4 +265,4 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
-- **2026-03-10:** PROGRESS.md oluşturuldu. Faz 0-3 tamamlandı. Sıradaki: **Faz 4 — Eksik Kritik Endpoint'ler**. IAM genişletmeden başlanacak.
+- **2026-03-10:** Faz 4a (IAM) + Faz 4b (Catalog) tamamlandı ve push edildi. Sıradaki: **Faz 4c — Inventory Genişletme** (depo lokasyonları, rezervasyonlar, transferler).
