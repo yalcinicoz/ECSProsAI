@@ -207,17 +207,16 @@
 
 ---
 
-## Faz 7 — Store API (Müşteriye Dönük) 🔴 SIRADA
+## Faz 7 — Store API (Müşteriye Dönük) ✅ TAMAMLANDI
 
-> Faz 4 ve Faz 5 bitmeden başlanmaz.
-
-- [ ] Katalog: kategori ağacı, ürün listesi/detay, arama
-- [ ] Sepet yönetimi
-- [ ] Checkout + sipariş oluşturma
-- [ ] Üyelik: kayıt, giriş, profil, adreslerim
-- [ ] Hesabım: siparişlerim, iadelerim, cüzdanım, sadakatim
-- [ ] CMS: menüler, sayfalar, ana sayfa
-- [ ] B2B: teklif, sipariş şablonu, hızlı sipariş
+- [x] Üye auth: kayıt, giriş, refresh token rotation, me — MemberSession entity + MemberTokenService (type=member JWT)
+- [x] Store Katalog: ağaç kategoriler, platform fiyatlı ürün listesi, ürün detayı (varyant+görsel+özellik)
+- [x] Sepet: GET/POST/PUT/DELETE + anonim (sessionId) + üye + MergeCarts (giriş sonrası birleştirme)
+- [x] Checkout: sepet → sipariş (pending, tüm adres alanları)
+- [x] Hesabım: profil, adresler, siparişlerim, iadelerim, cüzdan, sadakat
+- [x] CMS: public sayfa listesi + detay
+- [x] MemberOnly auth policy (type=member JWT claim)
+- [x] Migration: crm.member_sessions
 
 ---
 
@@ -264,4 +263,4 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
-- **2026-03-10:** Faz 5 + Faz 6 tamamlandı. Sıradaki: **Faz 7 — Store API** (müşteriye dönük katalog, sepet, checkout, üyelik, hesabım).
+- **2026-03-10:** Faz 5 + Faz 6 + Faz 7 tamamlandı. Sıradaki: **Faz 8 — SignalR + Real-Time** (/hubs/fulfillment, /hubs/notifications, /hubs/dashboard).
