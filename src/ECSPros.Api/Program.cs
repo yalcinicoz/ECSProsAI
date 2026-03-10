@@ -24,6 +24,8 @@ using ECSPros.Pos.Application.Queries.GetPosRegisters;
 using ECSPros.Promotion.Application.Queries.GetCampaigns;
 using ECSPros.Fulfillment.Application.Queries.GetPickingPlans;
 using ECSPros.Fulfillment.Infrastructure;
+using ECSPros.Integration.Application.Queries.GetIntegrationLogs;
+using ECSPros.Integration.Infrastructure;
 using ECSPros.Iam.Application.Commands.Login;
 using ECSPros.Iam.Infrastructure;
 using ECSPros.Inventory.Infrastructure;
@@ -85,6 +87,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(GetPagesQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetPosRegistersQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetPickingPlansQuery).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(GetIntegrationLogsQuery).Assembly);
 
     // FluentValidation pipeline behavior
     cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
@@ -109,6 +112,7 @@ builder.Services.AddFinanceInfrastructure(npgsqlDataSource);
 builder.Services.AddPromotionInfrastructure(npgsqlDataSource);
 builder.Services.AddCmsInfrastructure(npgsqlDataSource);
 builder.Services.AddPosInfrastructure(npgsqlDataSource);
+builder.Services.AddIntegrationInfrastructure(npgsqlDataSource);
 
 // ─── JWT Authentication ────────────────────────────────────────────
 var jwtSecret = builder.Configuration["Jwt:Secret"]
