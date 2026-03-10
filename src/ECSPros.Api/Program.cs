@@ -3,6 +3,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ECSPros.Api.Extensions;
 using ECSPros.Api.Middleware;
+using ECSPros.Shared.Infrastructure;
+using ECSPros.Shared.Infrastructure.Behaviors;
+using FluentValidation;
+using MediatR;
+using Serilog;
 using ECSPros.Catalog.Application.Queries.GetCategories;
 using ECSPros.Catalog.Infrastructure;
 using ECSPros.Crm.Application.Queries.GetMembers;
@@ -30,7 +35,23 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Npgsql;
 
+// ─── Serilog Bootstrap Logger ───────────────────────────────────────
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
+
 var builder = WebApplication.CreateBuilder(args);
+
+// ─── Serilog Full Configuration ─────────────────────────────────────
+builder.Host.UseSerilog((ctx, lc) => lc
+    .ReadFrom.Configuration(ctx.Configuration)
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("Application", "ECSPros")
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}")
+    .WriteTo.File("logs/ecspros-.log",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 14,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}"));
 
 // ─── NpgsqlDataSource (EnableDynamicJson — Dictionary<string,X> için gerekli) ──
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -64,7 +85,17 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(GetPagesQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetPosRegistersQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetPickingPlansQuery).Assembly);
+
+    // FluentValidation pipeline behavior
+    cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 });
+
+// ─── FluentValidation — register all validators from all assemblies ─
+builder.Services.AddValidatorsFromAssembly(typeof(LoginCommand).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(GetOrdersQuery).Assembly);
+
+// ─── Shared Infrastructure (Redis, Email, SMS stubs) ───────────────
+builder.Services.AddSharedInfrastructure(builder.Configuration);
 
 // ─── Infrastructure Modules ────────────────────────────────────────
 builder.Services.AddIamInfrastructure(npgsqlDataSource, builder.Configuration);
