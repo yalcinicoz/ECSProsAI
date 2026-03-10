@@ -97,9 +97,9 @@
 
 ---
 
-## Faz 3 — Çok Firmalı Yapı + Core Genişletme 🔴 SIRADA
+## Faz 3 — Çok Firmalı Yapı + Core Genişletme ✅ TAMAMLANDI
 
-> **Neden kritik:** Firma + Platform yapısı olmadan entegrasyon ve fiyatlandırma yapılamaz.
+> Domain entity'leri + konfigürasyonlar zaten mevcuttu. Application + Controller tamamlandı.
 
 ### 3a. Domain + Migration
 - [ ] `Firm` entity (core şeması)
@@ -111,15 +111,16 @@
 - [ ] `ExpenseType` entity
 - [ ] Migration: AddFirmAndPlatformStructure
 
-### 3b. API Endpoint'leri
-- [ ] `GET/POST /api/core/firms` — firma listesi + oluşturma
-- [ ] `GET/PUT /api/core/firms/{id}` — detay + güncelleme
-- [ ] `GET/POST /api/core/firms/{firmId}/platforms` — firma platformları
-- [ ] `GET/PUT /api/core/firm-platforms/{id}` — platform detay + güncelleme
-- [ ] `GET /api/core/integration-services` — mevcut entegrasyon servisleri
-- [ ] `GET/POST /api/core/firms/{firmId}/integrations` — firma entegrasyonları
-- [ ] `GET/POST/PUT /api/core/cargo-rules` — kargo kuralları
-- [ ] `GET/POST/PUT /api/core/expense-types` — masraf tipleri
+### 3b. API Endpoint'leri ✅
+- [x] `GET/POST /api/core/firms` — firma listesi + oluşturma
+- [x] `GET/PUT /api/core/firms/{id}` — detay + güncelleme
+- [x] `GET/POST /api/core/firms/{firmId}/platforms` — firma platformları
+- [x] `GET/PUT /api/core/firm-platforms/{id}` — platform detay + güncelleme
+- [x] `GET /api/core/integration-services` — mevcut entegrasyon servisleri
+- [x] `GET/POST /api/core/firms/{firmId}/integrations` — firma entegrasyonları
+- [x] `GET/POST /api/core/firms/{firmId}/cargo-rules` — kargo kuralları
+- [x] `GET/POST /api/core/expense-types` — masraf tipleri
+- [x] `GET /api/core/platform-types` — platform tipleri
 
 ---
 
@@ -259,4 +260,4 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
-- **2026-03-10:** PROGRESS.md oluşturuldu. Faz 0-2 tamamlandı olarak işaretlendi. Sıradaki: **Faz 3 (Çok Firmalı Yapı)**.
+- **2026-03-10:** PROGRESS.md oluşturuldu. Faz 0-3 tamamlandı. Sıradaki: **Faz 4 — Eksik Kritik Endpoint'ler**. IAM genişletmeden başlanacak.
