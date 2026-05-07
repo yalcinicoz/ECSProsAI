@@ -21,6 +21,7 @@ public interface ICoreDbContext
     DbSet<FirmIntegration> FirmIntegrations { get; }
     DbSet<NotificationType> NotificationTypes { get; }
     DbSet<NotificationTemplate> NotificationTemplates { get; }
+    DbSet<UiTranslation> UiTranslations { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
