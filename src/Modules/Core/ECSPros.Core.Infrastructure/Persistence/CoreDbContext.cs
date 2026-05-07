@@ -26,6 +26,7 @@ public class CoreDbContext : DbContext, ICoreDbContext
     public DbSet<NotificationType> NotificationTypes => Set<NotificationType>();
     public DbSet<NotificationTemplate> NotificationTemplates => Set<NotificationTemplate>();
     public DbSet<FirmNotificationSetting> FirmNotificationSettings => Set<FirmNotificationSetting>();
+    public DbSet<UiTranslation> UiTranslations => Set<UiTranslation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

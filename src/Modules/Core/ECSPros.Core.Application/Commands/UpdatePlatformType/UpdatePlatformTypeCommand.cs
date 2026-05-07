@@ -24,19 +24,19 @@ public class UpdatePlatformTypeCommandHandler : IRequestHandler<UpdatePlatformTy
 
     public async Task<Result<Unit>> Handle(UpdatePlatformTypeCommand request, CancellationToken ct)
     {
-        var exists = await _db.PlatformTypes.AnyAsync(p => p.Id == request.Id, ct);
-        if (!exists)
+        var entity = await _db.PlatformTypes
+            .FirstOrDefaultAsync(p => p.Id == request.Id, ct);
+        if (entity == null)
             return Result.Failure<Unit>("Platform tipi bulunamadı.");
 
-        var schemaJson = request.SettingsSchema is { Count: > 0 }
+        entity.NameI18n = new Dictionary<string, string>(request.NameI18n);
+        entity.IsMarketplace = request.IsMarketplace;
+        entity.IsActive = request.IsActive;
+        entity.SettingsSchemaJson = request.SettingsSchema is { Count: > 0 }
             ? JsonSerializer.Serialize(request.SettingsSchema, _json)
             : null;
 
-        var nameJson = JsonSerializer.Serialize(request.NameI18n, _json);
-
-        await _db.UpdatePlatformTypeRawAsync(
-            request.Id, nameJson, request.IsMarketplace, request.IsActive, schemaJson, ct);
-
+        await _db.SaveChangesAsync(ct);
         return Result.Success<Unit>(Unit.Value);
     }
 }
