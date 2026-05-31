@@ -1,5 +1,7 @@
 using ECSPros.Inventory.Application.Services;
 using ECSPros.Inventory.Infrastructure.Persistence;
+using ECSPros.Inventory.Infrastructure.Services;
+using ECSPros.Shared.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -15,6 +17,7 @@ public static class DependencyInjection
                 o => o.MigrationsHistoryTable("__ef_migrations_inventory", "inventory")));
 
         services.AddScoped<IInventoryDbContext>(sp => sp.GetRequiredService<InventoryDbContext>());
+        services.AddScoped<IStockService, InventoryStockService>();
 
         return services;
     }

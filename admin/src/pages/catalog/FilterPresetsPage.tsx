@@ -11,7 +11,7 @@ import { PageSpinner } from '@/components/ui/Spinner'
 import { useLanguages } from '@/hooks/useLanguages'
 import { FL } from '@/lib/field-labels'
 import { buildI18nValues } from '@/lib/i18n-helper'
-import { FilterBuilder, type FilterDef, buildDescription } from '@/components/catalog/FilterBuilder'
+import { FilterBuilder, type FilterDef } from '@/components/catalog/FilterBuilder'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -102,7 +102,7 @@ export function FilterPresetsPage() {
       ...f,
       filterDef: def,
       // Sadece description boşsa otomatik doldur; kullanıcı üzerine yazdıysa koru
-      description: f.description && f.description !== buildDescription(f.filterDef as FilterDef, [], [])
+      description: f.description && f.description !== 'Tüm ürünler'
         ? f.description
         : desc,
     }))
