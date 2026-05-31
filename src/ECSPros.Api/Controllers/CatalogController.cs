@@ -56,6 +56,11 @@ using ECSPros.Catalog.Application.Queries.GetFilterColors;
 using ECSPros.Catalog.Application.Queries.GetProductsByAttributeValue;
 using ECSPros.Catalog.Application.Queries.GetProductGroups;
 using ECSPros.Catalog.Application.Queries.GetProducts;
+using ECSPros.Catalog.Application.Commands.CreateFilterPreset;
+using ECSPros.Catalog.Application.Commands.UpdateFilterPreset;
+using ECSPros.Catalog.Application.Commands.DeleteFilterPreset;
+using ECSPros.Catalog.Application.Queries.GetFilterPresets;
+using ECSPros.Catalog.Application.Queries.GetFilterPresetDetail;
 using ECSPros.Api.Authorization;
 using ECSPros.Shared.Kernel.Authorization;
 using MediatR;
@@ -121,7 +126,7 @@ public class CatalogController : ControllerBase
 
         var result = await _mediator.Send(new UpdateCategoryCommand(
             id, request.NameI18n, request.ParentId, request.FillType,
-            request.FilterRules, request.IsActive, request.SortOrder, updatedBy), ct);
+            request.FilterPresetId, request.FilterRules, request.IsActive, request.SortOrder, updatedBy), ct);
 
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
@@ -741,6 +746,55 @@ public class CatalogController : ControllerBase
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = new { id = result.Value } });
     }
+
+    // ─── Filter Presets ───────────────────────────────────────────────────────
+
+    /// <summary>Kayıtlı filtre şablonlarını listeler.</summary>
+    [HttpGet("filter-presets")]
+    public async Task<IActionResult> GetFilterPresets(
+        [FromQuery] bool activeOnly = false, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetFilterPresetsQuery(activeOnly), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Filtre şablonu detayını döner.</summary>
+    [HttpGet("filter-presets/{id:guid}")]
+    public async Task<IActionResult> GetFilterPresetDetail(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetFilterPresetDetailQuery(id), ct);
+        if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Yeni filtre şablonu oluşturur.</summary>
+    [HttpPost("filter-presets")]
+    public async Task<IActionResult> CreateFilterPreset([FromBody] CreateFilterPresetRequest req, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new CreateFilterPresetCommand(
+            req.Code, req.NameI18n, req.Description, req.FilterDef, req.SortOrder), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Created($"/api/catalog/filter-presets/{result.Value}", new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>Filtre şablonunu günceller.</summary>
+    [HttpPut("filter-presets/{id:guid}")]
+    public async Task<IActionResult> UpdateFilterPreset(Guid id, [FromBody] UpdateFilterPresetRequest req, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new UpdateFilterPresetCommand(
+            id, req.NameI18n, req.Description, req.FilterDef, req.IsActive, req.SortOrder), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Filtre şablonunu siler (kullanan kategori varsa reddeder).</summary>
+    [HttpDelete("filter-presets/{id:guid}")]
+    public async Task<IActionResult> DeleteFilterPreset(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new DeleteFilterPresetCommand(id), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
 }
 
 public record CreateCategoryRequest(
@@ -767,6 +821,7 @@ public record UpdateCategoryRequest(
     Dictionary<string, string> NameI18n,
     Guid? ParentId,
     string FillType,
+    Guid? FilterPresetId,
     Dictionary<string, object>? FilterRules,
     bool IsActive,
     int SortOrder);
@@ -876,3 +931,17 @@ public record UpdateSeoRequest(
     Dictionary<string, string>? MetaTitleI18n,
     Dictionary<string, string>? MetaDescriptionI18n,
     Dictionary<string, string>? MetaKeywordsI18n);
+
+public record CreateFilterPresetRequest(
+    string Code,
+    Dictionary<string, string> NameI18n,
+    string? Description,
+    Dictionary<string, object> FilterDef,
+    int SortOrder = 0);
+
+public record UpdateFilterPresetRequest(
+    Dictionary<string, string> NameI18n,
+    string? Description,
+    Dictionary<string, object> FilterDef,
+    bool IsActive,
+    int SortOrder);
