@@ -3,7 +3,9 @@ using MediatR;
 
 namespace ECSPros.Catalog.Application.Queries.GetCategories;
 
-public record GetCategoriesQuery(Guid? ParentId = null, bool ActiveOnly = true) : IRequest<Result<List<CategoryDto>>>;
+public record GetCategoriesQuery(
+    Guid? ParentId = null,
+    bool ActiveOnly = true) : IRequest<Result<List<CategoryDto>>>;
 
 public record CategoryDto(
     Guid Id,

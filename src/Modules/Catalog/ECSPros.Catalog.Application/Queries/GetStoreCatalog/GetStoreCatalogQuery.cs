@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Catalog.Application.Queries.GetStoreCatalog;
 
-public record GetStoreCatalogQuery(Guid FirmPlatformId) : IRequest<Result<StoreCatalogDto>>;
+public record GetStoreCatalogQuery() : IRequest<Result<StoreCatalogDto>>;
 
 public record StoreCatalogDto(
     List<StoreCategoryDto> Categories);

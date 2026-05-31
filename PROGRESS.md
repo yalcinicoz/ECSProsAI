@@ -220,32 +220,63 @@
 
 ---
 
-## Faz 8 — SignalR + Real-Time 🔴 SIRADA
+## Faz 8 — SignalR + Real-Time ✅ TAMAMLANDI
 
-> Faz 4 (Fulfillment) bitmeden öneri: paralel başlanabilir.
-
-- [ ] `/hubs/fulfillment` — depo operasyonları (tarama, görev atama)
-- [ ] `/hubs/notifications` — yeni sipariş, stok uyarısı
-- [ ] `/hubs/dashboard` — canlı metrikler
+- [x] `/hubs/fulfillment` — PickingPlan grup tabanlı, JoinPlan/LeavePlan/JoinWarehouse
+- [x] `/hubs/notifications` — sipariş, stok, POS bildirimleri; topic Subscribe/Unsubscribe; kullanıcıya özel grup
+- [x] `/hubs/dashboard` — canlı metrikler (MetricsUpdated, MetricChanged)
+- [x] `IRealtimeNotificationService` + `SignalRNotificationService` implementasyonu
+- [x] `DashboardMetricsWorker` — 30sn periyodik background worker (sipariş/POS/fulfillment metrikleri)
+- [x] SignalR event handler'ları: OrderConfirmed/Shipped/Cancelled, PickingPlanCreated/Completed, PosSaleCompleted
+- [x] JWT WebSocket desteği (access_token query param)
+- [x] CORS `.AllowCredentials()` (SignalR için zorunlu)
 
 ---
 
-## Faz 9 — Frontend 🔴 SIRADA
+## Faz 9 — Frontend 🟡 DEVAM EDİYOR
 
-> Backend Faz 4 tamamlanmadan başlanmaz. Paralel ekip varsa Faz 3 sonrası başlanabilir.
+### Admin Panel (React 18 + TypeScript + Tailwind) — Temel İskelet ✅
+- [x] Proje iskelet: Vite 7, TanStack Query 5, Zustand, React Hook Form, Zod, Axios, React Router v7
+- [x] Tailwind CSS v4 (@tailwindcss/vite plugin)
+- [x] Path alias: `@/` → `src/`
+- [x] Auth: login sayfası, JWT token yönetimi (auto-refresh interceptor), Zustand persist, AuthGuard
+- [x] Layout: Sidebar (tüm modüller, grup açma/kapama), Header (kullanıcı + çıkış), MainLayout
+- [x] UI bileşenleri: Button, Input, Card, Badge, Table, Pagination, Modal, Spinner
+- [x] Sayfa listesi: Dashboard (stat cards), Users, Products, Orders, Members, Stocks, POS Sales
+- [x] PlaceholderPage — henüz tamamlanmamış modüller için
+- [x] Build: `admin/dist/` — production ready
+- [x] Nginx: `/admin` path'inden statik dosya sunumu (docker-compose volume mount)
+- [x] Base path: `/admin` (vite base + router basename)
 
-### Admin Panel (React 18 + TypeScript + Tailwind)
-- [ ] Proje iskelet: Vite, TanStack Query, Zustand, React Hook Form, Zod, Axios, i18next
-- [ ] Auth: login sayfası, token yönetimi, permission guard
-- [ ] Modül sayfalası: IAM, Core, Catalog, Inventory, CRM, Order, Fulfillment, Finance, Promotion, CMS
+### Modül Detay Sayfaları ✅
+- [x] UI bileşenleri: Select, Textarea, Alert
+- [x] IAM Users — CreateUserModal + EditUserModal
+- [x] Catalog Categories — liste + CreateCategoryModal + EditCategoryModal
+- [x] Catalog Products — aktif/pasif toggle + satır tıkla → ProductDetailPage (/catalog/products/:code)
+- [x] CRM Members — CreateMemberModal + EditMemberModal
+- [x] Inventory Warehouses — liste + CreateWarehouseModal + EditWarehouseModal
+- [x] Orders — satır tıkla → OrderDetailPage (/orders/:id) + aksiyon butonları (onayla/iptal/kargoya ver/teslim)
+- [x] Finance Suppliers — liste + CreateSupplierModal + EditSupplierModal
+- [x] Promotion Campaigns — liste + CreateCampaignModal
+- [x] CMS Pages — liste + CreatePageModal
+- [x] Code splitting (vendor chunk'ları): react, query, form, ui
 
-### POS Terminal
-- [ ] Kasa arayüzü (barkod tarama, ürün arama, ödeme)
-- [ ] Oturum açma/kapama
-- [ ] Gün sonu raporu
+### Tüm Modül Sayfaları ✅
+- [x] IAM: Roller (liste), Audit Logları (filtrelenebilir + sayfalı)
+- [x] CRM: Üye Grupları (CRUD)
+- [x] Inventory: Transferler (liste + oluştur + durum geçişleri)
+- [x] Entegrasyon: Log Kayıtları (filtrelenebilir + sayfalı)
+- [x] Orders: İadeler (aksiyon butonları), Teklifler (gönder/dönüştür), Faturalar (iptal)
+- [x] Fulfillment: Picking Planları (oluştur/başlat/tamamla), Paketleme İstasyonları (CRUD)
+- [x] Finance: Tedarikçi Faturaları (oluştur)
+- [x] Core: Firmalar (CRUD), Diller (liste), Lookup Tipleri (CRUD + değer ekleme)
+- [x] Dashboard: gerçek API verisi (toplam sipariş, bekleyen, POS satış sayısı)
+- [x] Sıfır PlaceholderPage kaldı (Store hariç — bilgi sayfası)
 
-### Storefront
-- [ ] Müşteri sitesi (Store API tamamlandıktan sonra)
+### Sıradaki (Faz 9 devamı)
+- [ ] Ürün Oluşturma / Düzenleme sayfası (prototip — Adım 3: dinamik sekmeler, varyant girişi)
+- [ ] POS Terminal arayüzü
+- [ ] Storefront (Store API üzerine)
 
 ---
 
@@ -263,4 +294,51 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
-- **2026-03-10:** Faz 5 + Faz 6 + Faz 7 tamamlandı. Sıradaki: **Faz 8 — SignalR + Real-Time** (/hubs/fulfillment, /hubs/notifications, /hubs/dashboard).
+- **2026-05-31 — Menü-Kategori mimarisi yeniden yapılandırması (`docs/menu-kategori.md` kararları uygulandı):**
+  - **Category → Global (site-bağımsız):** `FirmPlatformId` kaldırıldı; migration: `RemoveFirmPlatformIdFromCategory`
+  - **Yeni Storefront modülü** oluşturuldu: `NavigationMenu` + `NavNode` + `ChannelProduct` entity'leri; schema: `storefront`; migration: `InitialStorefront`
+  - **CMS'ten Menu temizlendi:** `SiteMenu`, `SiteMenuItem`, `MenuMegaPanel`, `MenuPanelGroup`, `MenuPanelItem` entity + command/query + configuration kaldırıldı; migration: `RemoveSiteMenuTables`
+  - **Yeni `/api/navigation/menus` controller:** CreateMenu, UpdateMenu, DeleteMenu, GetMenus, GetMenuDetail, SaveNavNodes
+  - **Store API güncellendi:** `GET /api/store/cms/menus/{code}` → artık `StorefrontDbContext` + `GetStoreNavigationMenuQuery` kullanıyor
+  - **NodeType:** `category | link | label`; categoryId (nullable FK), SEO alanları, badgeLabel
+  - **Admin Panel güncellendi:** `MenusPage` + `MenuDetailPage` → `/navigation/menus` path'i, `itemType`→`nodeType`, `nameI18n`→`nameOverrideI18n`, `targetType/targetId`→`categoryId`
+  - **Seeder'lar güncellendi:** `TestDataSeeder`, `DemoDataSeeder` → `NavigationMenu/NavNode` kullanıyor
+  - **Bir sonraki adım:** Inventory sayfaları (Depolar, Stok, Transferler) veya POS Terminal
+
+- **2026-05-31 — Kategori seed verileri:**
+  - `DatabaseSeeder.SeedCategoriesAsync` eklendi — **111 kategori**, 3 seviye derinlik, 12 kök
+  - `SeedPermissionsAndRolesAsync` scope bug düzeltildi (root provider → kendi scope'u oluşturur)
+  - `DemoDataSeeder.SeedCategoriesAsync` güncellendi — artık kendi kategorisini oluşturmuyor, DatabaseSeeder'ınkileri kullanıyor
+  - Seed idempotent: `erkek` kodu yoksa eski kategorileri hard-delete edip yenilerini ekler
+
+---
+
+## Yeniden Yapılanma Kararları (2026-03-11)
+
+### Genel Yaklaşım
+- Frontend-driven: Önce admin panel sayfası yapılır, API o sayfayı takip eder.
+- Sayfa sayfa ilerlenir, bitirmeden sonrakine geçilmez.
+- Mevcut `/admin` klasörü ve API temizlenip sıfırdan başlanacak.
+
+### Görsel Tasarım
+- Referans: partner.trendyol.com ve merchant.hepsiburada.com ama özgün olacak.
+- Tema altyapısı: Çok şablonlu, firma/kullanıcı tercihine göre değişebilen.
+- Stil: Kurumsal/Modern.
+- Sidebar: Sol, collapse edilebilir (başlangıçta kapalı).
+- Arama: Sidebar içi menü araması (sadece nav filtreler) + global hızlı arama (Ctrl+K).
+- Sık Kullanılanlar: Sağdan açılan slide-over panel; her sayfada ekle/çıkar butonu; mobilde alt nav'da yıldız ikonu.
+- **ŞABLON KARAR VERILDI: option-h.html** — Yeşil accent (#059669), koyu sidebar, mobile-responsive.
+- Örnek sayfalar: `/admin/examples/option-a.html` … `option-h.html` (production: `http://51.178.208.59/admin/examples/`)
+- option-h üzerine Özellik Tipleri sayfaları eklendi (liste + detay + yeni oluşturma modal).
+
+### Çok Dillilik Kararları
+- Panel arayüz dili: Sınırsız dil desteği, personel kendi dilini seçer.
+- Zorunlu veri dili: Site kurulum ayarlarından alınır.
+- Veri girişi: Ana formda sadece zorunlu dil ile çalışılır.
+- Çeviri girişi: "Çeviri" butonu / kısayol → popup açılır.
+  Popupta: Dil seçimi (pill butonlar, tab görüntüsü YOK) + grid:
+  Alan etiketi | Zorunlu dildeki değer (read-only) | Hedef dil değeri (editable)
+- Hangi alanlar çok dilli: Sadece müşteriye görünen alanlar
+  (ürün adı, açıklama, kategori adı, SEO başlık vb.)
+  Fiyat, stok, SKU, tarih alanları çok dilli DEĞİL.
+- Çeviri popup örneği: option-a ve option-c'de görülebilir.

@@ -45,6 +45,10 @@
     <ProjectReference Include="..\Modules\Pos\ECSPros.Pos.Application\ECSPros.Pos.Application.csproj" />
     <ProjectReference Include="..\Modules\Integration\ECSPros.Integration.Infrastructure\ECSPros.Integration.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Integration\ECSPros.Integration.Application\ECSPros.Integration.Application.csproj" />
+    <ProjectReference Include="..\Modules\Accounts\ECSPros.Accounts.Infrastructure\ECSPros.Accounts.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Accounts\ECSPros.Accounts.Application\ECSPros.Accounts.Application.csproj" />
+    <ProjectReference Include="..\Modules\Storefront\ECSPros.Storefront.Infrastructure\ECSPros.Storefront.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Storefront\ECSPros.Storefront.Application\ECSPros.Storefront.Application.csproj" />
   </ItemGroup>
 
 </Project>

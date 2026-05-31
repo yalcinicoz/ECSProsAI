@@ -9,11 +9,6 @@ public class CmsDbContext : DbContext, ICmsDbContext
 {
     public CmsDbContext(DbContextOptions<CmsDbContext> options) : base(options) { }
 
-    public DbSet<SiteMenu> SiteMenus => Set<SiteMenu>();
-    public DbSet<SiteMenuItem> SiteMenuItems => Set<SiteMenuItem>();
-    public DbSet<MenuMegaPanel> MenuMegaPanels => Set<MenuMegaPanel>();
-    public DbSet<MenuPanelGroup> MenuPanelGroups => Set<MenuPanelGroup>();
-    public DbSet<MenuPanelItem> MenuPanelItems => Set<MenuPanelItem>();
     public DbSet<PageTemplate> PageTemplates => Set<PageTemplate>();
     public DbSet<Page> Pages => Set<Page>();
     public DbSet<SectionType> SectionTypes => Set<SectionType>();
