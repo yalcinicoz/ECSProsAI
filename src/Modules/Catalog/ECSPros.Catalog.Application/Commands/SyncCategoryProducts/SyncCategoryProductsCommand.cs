@@ -37,15 +37,16 @@ public class SyncCategoryProductsCommandHandler(ICatalogDbContext db, IStockServ
         if (rules is null) return Result.Failure<int>("FilterRules tanımlı değil.");
 
         // Stok filtresi gerekiyorsa önceden yükle
-        HashSet<Guid>? inStockVariantIds = null;
-        if (rules.HasStock.HasValue)
-            inStockVariantIds = await stockService.GetInStockVariantIdsAsync(ct);
+        HashSet<Guid>? productIdsInStockRange = null;
+        if (rules.StockMin.HasValue || rules.StockMax.HasValue)
+            productIdsInStockRange = await GetStoreCategoryProductsQueryHandler
+                .ResolveStockRangeProductIds(db, stockService, rules.StockMin, rules.StockMax, ct);
 
         // IsActive filtresi tanımlı değilse varsayılan olarak aktif ürünleri al
         if (!rules.IsActive.HasValue) rules.IsActive = true;
 
         var matchedIds = await GetStoreCategoryProductsQueryHandler
-            .BuildFilterQuery(db, rules, firmPlatformId: null, inStockVariantIds)
+            .BuildFilterQuery(db, rules, firmPlatformId: null, productIdsInStockRange)
             .Select(p => p.Id)
             .ToListAsync(ct);
 

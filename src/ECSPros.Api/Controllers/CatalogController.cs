@@ -56,6 +56,7 @@ using ECSPros.Catalog.Application.Queries.GetFilterColors;
 using ECSPros.Catalog.Application.Queries.GetProductsByAttributeValue;
 using ECSPros.Catalog.Application.Queries.GetProductGroups;
 using ECSPros.Catalog.Application.Queries.GetProducts;
+using ECSPros.Catalog.Application.Queries.GetProductTags;
 using ECSPros.Catalog.Application.Commands.CreateFilterPreset;
 using ECSPros.Catalog.Application.Commands.UpdateFilterPreset;
 using ECSPros.Catalog.Application.Commands.DeleteFilterPreset;
@@ -745,6 +746,16 @@ public class CatalogController : ControllerBase
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = new { id = result.Value } });
+    }
+
+    // ─── Product Tags ─────────────────────────────────────────────────────────
+
+    /// <summary>Tüm ürünlerdeki benzersiz etiketleri döner (filtre oluşturmak için).</summary>
+    [HttpGet("tags")]
+    public async Task<IActionResult> GetProductTags(CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetProductTagsQuery(), ct);
+        return Ok(new { success = true, data = result.Value });
     }
 
     // ─── Filter Presets ───────────────────────────────────────────────────────

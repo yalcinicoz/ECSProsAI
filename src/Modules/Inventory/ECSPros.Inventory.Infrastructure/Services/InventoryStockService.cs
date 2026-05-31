@@ -19,13 +19,13 @@ public class InventoryStockService(InventoryDbContext db) : IStockService
         return available >= quantity;
     }
 
-    public async Task<HashSet<Guid>> GetInStockVariantIdsAsync(CancellationToken ct = default)
+    public async Task<Dictionary<Guid, int>> GetVariantAvailableStocksAsync(CancellationToken ct = default)
     {
-        var ids = await db.Stocks
-            .Where(s => s.Quantity > s.ReservedQuantity)
-            .Select(s => s.VariantId)
-            .Distinct()
+        var rows = await db.Stocks
+            .GroupBy(s => s.VariantId)
+            .Select(g => new { VariantId = g.Key, Available = g.Sum(s => s.Quantity - s.ReservedQuantity) })
             .ToListAsync(ct);
-        return ids.ToHashSet();
+
+        return rows.ToDictionary(r => r.VariantId, r => r.Available);
     }
 }
