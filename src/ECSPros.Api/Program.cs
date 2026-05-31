@@ -1,10 +1,14 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ECSPros.Api.EventHandlers;
 using ECSPros.Api.Extensions;
+using ECSPros.Api.Hubs;
 using ECSPros.Api.Middleware;
+using ECSPros.Api.Services;
 using ECSPros.Shared.Infrastructure;
 using ECSPros.Shared.Infrastructure.Behaviors;
+using ECSPros.Shared.Infrastructure.Messaging;
 using FluentValidation;
 using MediatR;
 using Serilog;
@@ -18,7 +22,7 @@ using ECSPros.Core.Application.Queries.GetLanguages;
 using ECSPros.Core.Infrastructure;
 using ECSPros.Crm.Infrastructure;
 using ECSPros.Cms.Application.Queries.GetPages;
-using ECSPros.Finance.Application.Queries.GetSuppliers;
+using ECSPros.Finance.Application.Queries.GetSupplierInvoices;
 using ECSPros.Finance.Infrastructure;
 using ECSPros.Pos.Application.Queries.GetPosRegisters;
 using ECSPros.Promotion.Application.Queries.GetCampaigns;
@@ -26,6 +30,10 @@ using ECSPros.Fulfillment.Application.Queries.GetPickingPlans;
 using ECSPros.Fulfillment.Infrastructure;
 using ECSPros.Integration.Application.Queries.GetIntegrationLogs;
 using ECSPros.Integration.Infrastructure;
+using ECSPros.Accounts.Application.Queries.GetCurrentAccounts;
+using ECSPros.Accounts.Infrastructure;
+using ECSPros.Storefront.Application.Queries.GetNavigationMenus;
+using ECSPros.Storefront.Infrastructure;
 using ECSPros.Iam.Application.Commands.Login;
 using ECSPros.Iam.Infrastructure;
 using ECSPros.Inventory.Infrastructure;
@@ -43,6 +51,8 @@ Log.Logger = new LoggerConfiguration()
     .CreateBootstrapLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.Configure<HostOptions>(o =>
+    o.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
 
 // ─── Serilog Full Configuration ─────────────────────────────────────
 builder.Host.UseSerilog((ctx, lc) => lc
@@ -82,12 +92,16 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(GetMembersQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetOrdersQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetWarehousesQuery).Assembly);
-    cfg.RegisterServicesFromAssembly(typeof(GetSuppliersQuery).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(GetSupplierInvoicesQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetCampaignsQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetPagesQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetPosRegistersQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetPickingPlansQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetIntegrationLogsQuery).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(GetCurrentAccountsQuery).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(GetNavigationMenusQuery).Assembly);
+    // API katmanındaki SignalR event handler'ları
+    cfg.RegisterServicesFromAssembly(typeof(OrderConfirmedSignalRHandler).Assembly);
 
     // FluentValidation pipeline behavior
     cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
@@ -113,6 +127,16 @@ builder.Services.AddPromotionInfrastructure(npgsqlDataSource);
 builder.Services.AddCmsInfrastructure(npgsqlDataSource);
 builder.Services.AddPosInfrastructure(npgsqlDataSource);
 builder.Services.AddIntegrationInfrastructure(npgsqlDataSource);
+builder.Services.AddAccountsInfrastructure(npgsqlDataSource);
+builder.Services.AddStorefrontInfrastructure(npgsqlDataSource);
+
+// ─── SignalR ────────────────────────────────────────────────────────
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+});
+builder.Services.AddScoped<IRealtimeNotificationService, SignalRNotificationService>();
+builder.Services.AddHostedService<DashboardMetricsWorker>();
 
 // ─── JWT Authentication ────────────────────────────────────────────
 var jwtSecret = builder.Configuration["Jwt:Secret"]
@@ -121,6 +145,7 @@ var jwtSecret = builder.Configuration["Jwt:Secret"]
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false; // "sub" → User.FindFirst("sub") olarak kalır
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -131,6 +156,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
             ClockSkew = TimeSpan.Zero
+        };
+        // SignalR WebSocket handshake'te Authorization header gönderilemez;
+        // token ?access_token=<jwt> query parametresiyle iletilir.
+        options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+        {
+            OnMessageReceived = ctx =>
+            {
+                var token = ctx.Request.Query["access_token"];
+                var path = ctx.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(token) &&
+                    (path.StartsWithSegments("/hubs/fulfillment") ||
+                     path.StartsWithSegments("/hubs/notifications") ||
+                     path.StartsWithSegments("/hubs/dashboard")))
+                {
+                    ctx.Token = token;
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -187,7 +230,19 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-if (app.Environment.IsDevelopment())
-    await DatabaseSeeder.SeedAsync(app.Services);
+// ─── SignalR Hubs ───────────────────────────────────────────────────
+app.MapHub<FulfillmentHub>("/hubs/fulfillment");
+app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<DashboardHub>("/hubs/dashboard");
+
+// Permission/rol ve dil seed'i her ortamda çalışır (idempotent — eksik kayıtları ekler)
+await DatabaseSeeder.SeedPermissionsAndRolesAsync(app.Services);
+await DatabaseSeeder.SeedLanguagesAsync(app.Services);
+
+// Temel sistem seed'i her ortamda çalışır
+await DatabaseSeeder.SeedAsync(app.Services);
+
+// Demo veri seed'i — idempotent, her ortamda çalışır
+await DemoDataSeeder.SeedAsync(app.Services);
 
 app.Run();
