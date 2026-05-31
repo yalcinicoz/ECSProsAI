@@ -311,6 +311,14 @@
   - `DemoDataSeeder.SeedCategoriesAsync` güncellendi — artık kendi kategorisini oluşturmuyor, DatabaseSeeder'ınkileri kullanıyor
   - Seed idempotent: `erkek` kodu yoksa eski kategorileri hard-delete edip yenilerini ekler
 
+- **2026-05-31 — Filtre Şablonu (FilterPreset):**
+  - `FilterPreset` entity: Code, NameI18n, Description (insan dili), FilterDef (JSONB); migration: `AddFilterPreset`
+  - `Category.FilterPresetId` nullable FK; query-time merge: preset + override birleşir
+  - CQRS: Create/Update/Delete/GetList(usageCount)/GetDetail + UpdateCategory güncellendi
+  - `SyncCategoryProducts` ve `GetStoreCategoryProductsQuery` preset-aware hale getirildi
+  - Admin Panel: `/catalog/filter-presets` — liste + create/edit/delete modal, JSON editör, kullanım sayacı
+  - CategoryDetailPage: Filtre Şablonu selector, preset özeti (collapsible JSON), override kurallar
+
 ---
 
 ## Yeniden Yapılanma Kararları (2026-03-11)

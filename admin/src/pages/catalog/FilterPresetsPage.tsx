@@ -1,0 +1,377 @@
+import { useState, useMemo, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Plus, Pencil, Trash2, Filter, Link } from 'lucide-react'
+import { toSnakeCase } from '@/lib/utils'
+import api from '@/api/client'
+import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
+import { Modal } from '@/components/ui/Modal'
+import { IntegerInput } from '@/components/ui/IntegerInput'
+import { I18nField } from '@/components/ui/I18nField'
+import { PageSpinner } from '@/components/ui/Spinner'
+import { useLanguages } from '@/hooks/useLanguages'
+import { FL } from '@/lib/field-labels'
+import { buildI18nValues } from '@/lib/i18n-helper'
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface FilterPreset {
+  id: string
+  code: string
+  nameI18n: Record<string, string>
+  description: string | null
+  filterDef: Record<string, unknown>
+  isActive: boolean
+  sortOrder: number
+  usedInCategories: number
+}
+
+interface PresetForm {
+  code: string
+  nameI18n: Record<string, string>
+  description: string
+  filterDefJson: string
+  sortOrder: number
+  isActive: boolean
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getName(p: FilterPreset): string {
+  return p.nameI18n['tr'] ?? p.nameI18n[Object.keys(p.nameI18n)[0]] ?? p.code
+}
+
+function tryParseJson(s: string): { ok: true; val: Record<string, unknown> } | { ok: false; err: string } {
+  try { return { ok: true, val: JSON.parse(s) } }
+  catch { return { ok: false, err: 'Geçersiz JSON' } }
+}
+
+const EMPTY_DEF = '{\n  "productGroupIds": [],\n  "priceMin": null,\n  "priceMax": null,\n  "attributeFilters": []\n}'
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export function FilterPresetsPage() {
+  const qc = useQueryClient()
+  const { data: languages = [], isLoading: langsLoading } = useLanguages()
+
+  const [modal, setModal] = useState<null | 'create' | FilterPreset>(null)
+  const [deleteTarget, setDeleteTarget] = useState<FilterPreset | null>(null)
+  const [jsonError, setJsonError] = useState<string | null>(null)
+
+  const blankForm = useCallback((): PresetForm => ({
+    code: '',
+    nameI18n: languages.reduce((a, l) => ({ ...a, [l.code]: '' }), {}),
+    description: '',
+    filterDefJson: EMPTY_DEF,
+    sortOrder: 0,
+    isActive: true,
+  }), [languages])
+
+  const [form, setForm] = useState<PresetForm>(blankForm)
+
+  const sourceLang = languages.find(l => l.isDefault)?.code ?? languages[0]?.code ?? 'tr'
+  const nameFields = useMemo(() => [{ key: 'name', labels: FL.categoryName, required: true }], [])
+
+  // ── Fetch ──────────────────────────────────────────────────────────────────
+
+  const { data: presets = [], isLoading } = useQuery<FilterPreset[]>({
+    queryKey: ['filter-presets'],
+    queryFn: async () => { const { data } = await api.get('/catalog/filter-presets'); return data.data },
+  })
+
+  // ── Open modal ─────────────────────────────────────────────────────────────
+
+  function openCreate() {
+    setForm(blankForm())
+    setJsonError(null)
+    setModal('create')
+  }
+
+  function openEdit(p: FilterPreset) {
+    setForm({
+      code: p.code,
+      nameI18n: { ...p.nameI18n },
+      description: p.description ?? '',
+      filterDefJson: JSON.stringify(p.filterDef, null, 2),
+      sortOrder: p.sortOrder,
+      isActive: p.isActive,
+    })
+    setJsonError(null)
+    setModal(p)
+  }
+
+  // ── Save mutation ──────────────────────────────────────────────────────────
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const parsed = tryParseJson(form.filterDefJson)
+      if (!parsed.ok) throw new Error('Geçersiz JSON')
+
+      const payload = {
+        code: form.code.trim().toLowerCase().replace(/\s+/g, '_'),
+        nameI18n: form.nameI18n,
+        description: form.description.trim() || null,
+        filterDef: parsed.val,
+        sortOrder: form.sortOrder,
+        isActive: form.isActive,
+      }
+
+      if (modal === 'create') {
+        await api.post('/catalog/filter-presets', payload)
+      } else {
+        await api.put(`/catalog/filter-presets/${(modal as FilterPreset).id}`, payload)
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['filter-presets'] })
+      setModal(null)
+    },
+    onError: (err: unknown) => {
+      const msg = (err as Error).message === 'Geçersiz JSON'
+        ? 'FilterDef geçerli bir JSON değil.'
+        : ((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Bir hata oluştu.')
+      setJsonError(msg)
+    },
+  })
+
+  // ── Delete mutation ────────────────────────────────────────────────────────
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => api.delete(`/catalog/filter-presets/${id}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['filter-presets'] }); setDeleteTarget(null) },
+  })
+
+  if (isLoading || langsLoading) return <PageSpinner />
+
+  const isEditing = modal !== null && modal !== 'create'
+
+  return (
+    <div className="p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Filtre Şablonları</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>
+            {presets.length} şablon — kategorilerde ve diğer yerlerde yeniden kullanılabilir filtreler
+          </p>
+        </div>
+        <Button onClick={openCreate}><Plus size={14} /> Yeni Şablon</Button>
+      </div>
+
+      {/* List */}
+      {presets.length === 0 ? (
+        <div className="card flex flex-col items-center justify-center py-16 gap-3" style={{ color: 'var(--text-s)' }}>
+          <Filter size={32} />
+          <p className="text-sm">Henüz filtre şablonu yok.</p>
+          <Button onClick={openCreate}><Plus size={14} /> İlk Şablonu Oluştur</Button>
+        </div>
+      ) : (
+        <div className="card overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--text-m)' }}>Şablon</th>
+                <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--text-m)' }}>Açıklama</th>
+                <th className="text-center px-4 py-3 font-semibold" style={{ color: 'var(--text-m)' }}>Kullanım</th>
+                <th className="text-center px-4 py-3 font-semibold" style={{ color: 'var(--text-m)' }}>Durum</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {presets.map((p, i) => (
+                <tr
+                  key={p.id}
+                  className="cursor-pointer transition-colors"
+                  style={{ borderTop: i > 0 ? '1px solid var(--border)' : undefined }}
+                  onClick={() => openEdit(p)}
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Filter size={14} style={{ color: 'var(--brand)', flexShrink: 0 }} />
+                      <div>
+                        <div className="font-medium" style={{ color: 'var(--text)' }}>{getName(p)}</div>
+                        <code className="text-xs" style={{ color: 'var(--text-s)' }}>{p.code}</code>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm max-w-xs" style={{ color: 'var(--text-m)' }}>
+                    {p.description
+                      ? <span className="line-clamp-2">{p.description}</span>
+                      : <span style={{ color: 'var(--text-s)', fontStyle: 'italic' }}>Açıklama yok</span>}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {p.usedInCategories > 0 ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+                        style={{ background: 'var(--brand-bg)', color: 'var(--brand)' }}>
+                        <Link size={10} /> {p.usedInCategories} kategori
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--text-s)', fontSize: '12px' }}>—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <Badge variant={p.isActive ? 'success' : 'neutral'}>{p.isActive ? 'Aktif' : 'Pasif'}</Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1 justify-end">
+                      <button
+                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface2)] transition-colors"
+                        style={{ color: 'var(--text-m)' }}
+                        onClick={e => { e.stopPropagation(); openEdit(p) }}
+                        title="Düzenle"
+                      ><Pencil size={13} /></button>
+                      <button
+                        className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+                        style={{ color: p.usedInCategories > 0 ? 'var(--text-s)' : '#ef4444' }}
+                        onClick={e => { e.stopPropagation(); if (p.usedInCategories === 0) setDeleteTarget(p) }}
+                        title={p.usedInCategories > 0 ? 'Kategorilerde kullanılıyor' : 'Sil'}
+                        disabled={p.usedInCategories > 0}
+                      ><Trash2 size={13} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Create / Edit Modal */}
+      {modal !== null && (
+        <Modal
+          open
+          title={isEditing ? `Düzenle: ${getName(modal as FilterPreset)}` : 'Yeni Filtre Şablonu'}
+          onClose={() => setModal(null)}
+          footer={
+            <div className="flex gap-2 justify-end">
+              <Button variant="secondary" onClick={() => setModal(null)}>İptal</Button>
+              <Button onClick={() => saveMutation.mutate()} loading={saveMutation.isPending}>
+                {isEditing ? 'Kaydet' : 'Oluştur'}
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            {/* Code */}
+            {!isEditing && (
+              <div>
+                <label className="flbl">Kod</label>
+                <input
+                  className="inp"
+                  value={form.code}
+                  onChange={e => setForm(f => ({ ...f, code: toSnakeCase(e.target.value) }))}
+                  placeholder="erkek_urunler"
+                />
+              </div>
+            )}
+
+            {/* Name i18n */}
+            {languages.length > 0 && (
+              <div>
+                <label className="flbl mb-2">Şablon Adı</label>
+                <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                  <I18nField
+                    sourceLang={sourceLang}
+                    languages={languages}
+                    fields={nameFields}
+                    values={buildI18nValues(form.nameI18n, languages)}
+                    onChange={(lang, _key, value) =>
+                      setForm(f => ({ ...f, nameI18n: { ...f.nameI18n, [lang]: value } }))}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Description */}
+            <div>
+              <label className="flbl">Açıklama (insan dili)</label>
+              <textarea
+                className="inp resize-none"
+                rows={2}
+                value={form.description}
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                placeholder="Bu filtre erkek ürünlerini, 100-500 TL fiyat aralığında listeler."
+              />
+            </div>
+
+            {/* FilterDef JSON */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="flbl">Filtre Tanımı (JSON)</label>
+                <span className="text-xs" style={{ color: 'var(--text-s)' }}>
+                  productGroupIds, priceMin, priceMax, attributeFilters
+                </span>
+              </div>
+              <textarea
+                className="inp font-mono text-xs resize-y"
+                rows={10}
+                value={form.filterDefJson}
+                onChange={e => { setForm(f => ({ ...f, filterDefJson: e.target.value })); setJsonError(null) }}
+                spellCheck={false}
+              />
+              {jsonError && (
+                <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{jsonError}</p>
+              )}
+              <div className="mt-2 p-3 rounded-xl text-xs" style={{ background: 'var(--surface2)', color: 'var(--text-m)' }}>
+                <p className="font-semibold mb-1" style={{ color: 'var(--text)' }}>Örnek:</p>
+                <pre className="overflow-x-auto">{`{
+  "productGroupIds": ["<uuid>"],
+  "priceMin": 100,
+  "priceMax": 500,
+  "attributeFilters": [
+    {
+      "attributeTypeId": "<uuid>",
+      "valueIds": ["<uuid>"]
+    }
+  ]
+}`}</pre>
+              </div>
+            </div>
+
+            {/* SortOrder + IsActive */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="flbl">Sıra</label>
+                <IntegerInput value={form.sortOrder} onChange={v => setForm(f => ({ ...f, sortOrder: v ?? 0 }))} />
+              </div>
+              <div className="flex items-end pb-1">
+                <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: 'var(--text-m)' }}>
+                  <input
+                    type="checkbox"
+                    checked={form.isActive}
+                    onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
+                    className="w-4 h-4 rounded"
+                  />
+                  Aktif
+                </label>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Delete Confirm */}
+      {deleteTarget && (
+        <Modal
+          open
+          title="Filtre Şablonunu Sil"
+          onClose={() => setDeleteTarget(null)}
+          footer={
+            <div className="flex gap-2 justify-end">
+              <Button variant="secondary" onClick={() => setDeleteTarget(null)}>İptal</Button>
+              <Button
+                variant="danger"
+                onClick={() => deleteMutation.mutate(deleteTarget.id)}
+                loading={deleteMutation.isPending}
+              >Sil</Button>
+            </div>
+          }
+        >
+          <p className="text-sm" style={{ color: 'var(--text-m)' }}>
+            <strong style={{ color: 'var(--text)' }}>{getName(deleteTarget)}</strong> şablonu silinecek. Bu işlem geri alınamaz.
+          </p>
+        </Modal>
+      )}
+    </div>
+  )
+}
