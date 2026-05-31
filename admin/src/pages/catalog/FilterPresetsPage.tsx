@@ -54,7 +54,7 @@ export function FilterPresetsPage() {
   const [saveError, setSaveError] = useState<string | null>(null)
 
   const sourceLang = languages.find(l => l.isDefault)?.code ?? languages[0]?.code ?? 'tr'
-  const nameFields = useMemo(() => [{ key: 'name', labels: FL.categoryName, required: true }], [])
+  const nameFields = useMemo(() => [{ key: 'name', labels: FL.filterName, required: true }], [])
 
   const blankForm = useCallback((): PresetForm => ({
     code: '',

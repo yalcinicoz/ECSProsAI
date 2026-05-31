@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, X, Tag, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -16,27 +16,27 @@ export interface FilterDef {
   taxRateMin?: number | null
   taxRateMax?: number | null
   supplierIds?: string[]
-  categoryIds?: string[]
   isActive?: boolean | null
-  hasStock?: boolean | null
+  stockMin?: number | null
+  stockMax?: number | null
+  createdAfterDays?: number | null
   createdAfter?: string | null
   createdBefore?: string | null
+  imageUpdatedAfterDays?: number | null
+  imageUpdatedAfter?: string | null
+  imageUpdatedBefore?: string | null
+  tags?: string[]
   attributeFilters?: AttributeFilterItem[]
 }
 
-interface AttributeFilterItem {
-  attributeTypeId: string
-  valueIds: string[]
-}
-
+interface AttributeFilterItem { attributeTypeId: string; valueIds: string[] }
 interface ProductGroup { id: string; code: string; nameI18n: Record<string, string> }
 interface AttributeValue {
   id: string; nameI18n: Record<string, string>
   filterColors: { code: string; nameI18n: Record<string, string>; hexCode?: string }[]
 }
 interface AttributeType { id: string; code: string; nameI18n: Record<string, string>; values: AttributeValue[] }
-interface Supplier { id: string; title: string; code: string }
-interface CategoryItem { id: string; code: string; nameI18n: Record<string, string>; parentId: string | null }
+interface Supplier { id: string; title: string; code: string; accountType?: string }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -45,53 +45,51 @@ function tr(i18n: Record<string, string> | undefined, fallback = ''): string {
   return i18n['tr'] ?? i18n['en'] ?? i18n[Object.keys(i18n)[0]] ?? fallback
 }
 
-/** Tüm filtre seçimlerini okunabilir metne çevirir. */
 export function buildDescription(
   def: FilterDef,
-  refs: {
-    groups: ProductGroup[]
-    attrTypes: AttributeType[]
-    suppliers: Supplier[]
-    categories: CategoryItem[]
-  },
+  refs: { groups: ProductGroup[]; attrTypes: AttributeType[]; suppliers: Supplier[] },
 ): string {
   const parts: string[] = []
 
-  if (def.productGroupIds?.length) {
-    const names = def.productGroupIds.map(id => tr(refs.groups.find(g => g.id === id)?.nameI18n)).filter(Boolean)
-    if (names.length) parts.push(names.join(', ') + (names.length > 1 ? ' gruplarından' : ' grubundan'))
-  }
+  if (def.productGroupIds?.length)
+    parts.push(def.productGroupIds.map(id => tr(refs.groups.find(g => g.id === id)?.nameI18n)).filter(Boolean).join(', ') + ' grubundan')
 
-  if (def.categoryIds?.length) {
-    const names = def.categoryIds.map(id => tr(refs.categories.find(c => c.id === id)?.nameI18n)).filter(Boolean)
-    if (names.length) parts.push('Kategori: ' + names.join(', '))
-  }
-
-  if (def.supplierIds?.length) {
-    const names = def.supplierIds.map(id => refs.suppliers.find(s => s.id === id)?.title ?? '?').filter(Boolean)
-    if (names.length) parts.push('Tedarikçi: ' + names.join(', '))
-  }
+  if (def.supplierIds?.length)
+    parts.push('Tedarikçi: ' + def.supplierIds.map(id => refs.suppliers.find(s => s.id === id)?.title ?? '?').join(', '))
 
   if (def.priceMin != null && def.priceMax != null) parts.push(`Fiyat: ${def.priceMin}₺–${def.priceMax}₺`)
   else if (def.priceMin != null) parts.push(`Min fiyat: ${def.priceMin}₺`)
   else if (def.priceMax != null) parts.push(`Maks fiyat: ${def.priceMax}₺`)
 
-  if (def.platformPriceMin != null && def.platformPriceMax != null) parts.push(`Platform fiyatı: ${def.platformPriceMin}₺–${def.platformPriceMax}₺`)
-  else if (def.platformPriceMin != null) parts.push(`Min platform fiyatı: ${def.platformPriceMin}₺`)
-  else if (def.platformPriceMax != null) parts.push(`Maks platform fiyatı: ${def.platformPriceMax}₺`)
+  if (def.platformPriceMin != null || def.platformPriceMax != null)
+    parts.push(`Platform fiyatı: ${def.platformPriceMin ?? '?'}₺–${def.platformPriceMax ?? '?'}₺`)
 
   if (def.discountMinPercent != null) parts.push(`Min %${def.discountMinPercent} indirim`)
+
   if (def.taxRateMin != null && def.taxRateMax != null) parts.push(`KDV: %${def.taxRateMin}–%${def.taxRateMax}`)
   else if (def.taxRateMin != null) parts.push(`Min KDV: %${def.taxRateMin}`)
   else if (def.taxRateMax != null) parts.push(`Maks KDV: %${def.taxRateMax}`)
 
-  if (def.isActive === true) parts.push('Sadece aktif ürünler')
-  if (def.isActive === false) parts.push('Sadece pasif ürünler')
-  if (def.hasStock === true) parts.push('Stokta var')
-  if (def.hasStock === false) parts.push('Stok yok')
+  if (def.isActive === true) parts.push('Sadece aktif')
+  if (def.isActive === false) parts.push('Sadece pasif')
 
-  if (def.createdAfter) parts.push(`${def.createdAfter.slice(0, 10)} tarihinden sonra`)
-  if (def.createdBefore) parts.push(`${def.createdBefore.slice(0, 10)} tarihinden önce`)
+  if (def.stockMin != null && def.stockMax != null) parts.push(`Stok: ${def.stockMin}–${def.stockMax} adet`)
+  else if (def.stockMin != null) parts.push(`Min stok: ${def.stockMin} adet`)
+  else if (def.stockMax != null) parts.push(`Maks stok: ${def.stockMax} adet`)
+
+  if (def.createdAfterDays != null) parts.push(`Son ${def.createdAfterDays} günde eklenen`)
+  else {
+    if (def.createdAfter) parts.push(`Eklendi: ${def.createdAfter.slice(0, 10)} sonrası`)
+    if (def.createdBefore) parts.push(`Eklendi: ${def.createdBefore.slice(0, 10)} öncesi`)
+  }
+
+  if (def.imageUpdatedAfterDays != null) parts.push(`Son ${def.imageUpdatedAfterDays} günde resmi güncellenen`)
+  else {
+    if (def.imageUpdatedAfter) parts.push(`Resim güncelleme: ${def.imageUpdatedAfter.slice(0, 10)} sonrası`)
+    if (def.imageUpdatedBefore) parts.push(`Resim güncelleme: ${def.imageUpdatedBefore.slice(0, 10)} öncesi`)
+  }
+
+  if (def.tags?.length) parts.push(`Etiket: ${def.tags.join(', ')}`)
 
   if (def.attributeFilters?.length) {
     for (const af of def.attributeFilters) {
@@ -107,7 +105,7 @@ export function buildDescription(
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
-interface FilterBuilderProps {
+export interface FilterBuilderProps {
   value: FilterDef
   onChange: (def: FilterDef, description: string) => void
 }
@@ -129,91 +127,68 @@ export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
     queryKey: ['accounts-suppliers'],
     queryFn: async () => {
       const { data } = await api.get('/accounts?pageSize=200')
-      return (data.data?.items ?? data.data ?? []).filter((a: Supplier & { accountType?: string }) =>
-        !a.accountType || a.accountType === 'supplier' || a.accountType === 'both')
+      const all: Supplier[] = data.data?.items ?? data.data ?? []
+      return all.filter(a => !a.accountType || a.accountType === 'supplier' || a.accountType === 'both')
     },
     staleTime: 60_000,
   })
-  const { data: allCategories = [] } = useQuery<CategoryItem[]>({
-    queryKey: ['categories-flat'],
-    queryFn: async () => { const { data } = await api.get('/catalog/categories?activeOnly=false'); return data.data },
+  const { data: allTags = [] } = useQuery<string[]>({
+    queryKey: ['product-tags'],
+    queryFn: async () => { const { data } = await api.get('/catalog/tags'); return data.data },
     staleTime: 60_000,
   })
 
   // ── State ─────────────────────────────────────────────────────────────────
 
-  const [selGroups,      setSelGroups]      = useState<string[]>(value.productGroupIds ?? [])
-  const [priceMin,       setPriceMin]       = useState(value.priceMin != null ? String(value.priceMin) : '')
-  const [priceMax,       setPriceMax]       = useState(value.priceMax != null ? String(value.priceMax) : '')
-  const [platPriceMin,   setPlatPriceMin]   = useState(value.platformPriceMin != null ? String(value.platformPriceMin) : '')
-  const [platPriceMax,   setPlatPriceMax]   = useState(value.platformPriceMax != null ? String(value.platformPriceMax) : '')
-  const [discount,       setDiscount]       = useState(value.discountMinPercent != null ? String(value.discountMinPercent) : '')
-  const [taxMin,         setTaxMin]         = useState(value.taxRateMin != null ? String(value.taxRateMin) : '')
-  const [taxMax,         setTaxMax]         = useState(value.taxRateMax != null ? String(value.taxRateMax) : '')
-  const [selSuppliers,   setSelSuppliers]   = useState<string[]>(value.supplierIds ?? [])
-  const [selCategories,  setSelCategories]  = useState<string[]>(value.categoryIds ?? [])
-  const [isActive,       setIsActive]       = useState<boolean | null | undefined>(value.isActive)
-  const [hasStock,       setHasStock]       = useState<boolean | null | undefined>(value.hasStock)
-  const [createdAfter,   setCreatedAfter]   = useState(value.createdAfter?.slice(0, 10) ?? '')
-  const [createdBefore,  setCreatedBefore]  = useState(value.createdBefore?.slice(0, 10) ?? '')
-  const [attrFilters,    setAttrFilters]    = useState<AttributeFilterItem[]>(value.attributeFilters ?? [])
-  const [groupOpen,      setGroupOpen]      = useState(false)
-  const [suppOpen,       setSuppOpen]       = useState(false)
-  const [catOpen,        setCatOpen]        = useState(false)
+  const [def, setDef] = useState<FilterDef>(() => value)
+  const [groupOpen, setGroupOpen] = useState(false)
+  const [suppOpen, setSuppOpen] = useState(false)
+  const [tagInput, setTagInput] = useState('')
+  const tagInputRef = useRef<HTMLInputElement>(null)
+  const [attrFilters, setAttrFilters] = useState<AttributeFilterItem[]>(value.attributeFilters ?? [])
 
-  const refs = useMemo(() => ({ groups: productGroups, attrTypes, suppliers, categories: allCategories }), [productGroups, attrTypes, suppliers, allCategories])
+  const refs = useMemo(() => ({ groups: productGroups, attrTypes, suppliers }), [productGroups, attrTypes, suppliers])
 
   // ── Emit ──────────────────────────────────────────────────────────────────
 
-  const emit = useCallback((patch: Partial<{
-    groups: string[]; min: string; max: string; pMin: string; pMax: string
-    disc: string; tMin: string; tMax: string; supps: string[]; cats: string[]
-    active: boolean | null | undefined; stock: boolean | null | undefined
-    after: string; before: string; attrs: AttributeFilterItem[]
-  }>) => {
-    const g = patch.groups ?? selGroups
-    const mn = patch.min ?? priceMin; const mx = patch.max ?? priceMax
-    const pm = patch.pMin ?? platPriceMin; const px = patch.pMax ?? platPriceMax
-    const dc = patch.disc ?? discount; const tm = patch.tMin ?? taxMin; const tx = patch.tMax ?? taxMax
-    const sp = patch.supps ?? selSuppliers; const ca = patch.cats ?? selCategories
-    const ac = 'active' in patch ? patch.active : isActive
-    const hs = 'stock' in patch ? patch.stock : hasStock
-    const af = patch.after ?? createdAfter; const bf = patch.before ?? createdBefore
-    const at = patch.attrs ?? attrFilters
+  const emitDef = useCallback((next: FilterDef) => {
+    onChange(next, buildDescription(next, refs))
+  }, [onChange, refs])
 
-    const def: FilterDef = {
-      productGroupIds:   g.length ? g : undefined,
-      priceMin:          mn !== '' ? +mn : null,
-      priceMax:          mx !== '' ? +mx : null,
-      platformPriceMin:  pm !== '' ? +pm : null,
-      platformPriceMax:  px !== '' ? +px : null,
-      discountMinPercent: dc !== '' ? +dc : null,
-      taxRateMin:        tm !== '' ? +tm : null,
-      taxRateMax:        tx !== '' ? +tx : null,
-      supplierIds:       sp.length ? sp : undefined,
-      categoryIds:       ca.length ? ca : undefined,
-      isActive:          ac ?? null,
-      hasStock:          hs ?? null,
-      createdAfter:      af || null,
-      createdBefore:     bf || null,
-      attributeFilters:  at.filter(f => f.valueIds.length > 0),
-    }
-    onChange(def, buildDescription(def, refs))
-  }, [selGroups, priceMin, priceMax, platPriceMin, platPriceMax, discount, taxMin, taxMax,
-      selSuppliers, selCategories, isActive, hasStock, createdAfter, createdBefore, attrFilters, refs, onChange])
+  const update = useCallback((patch: Partial<FilterDef>) => {
+    setDef(prev => {
+      const next = { ...prev, ...patch }
+      emitDef(next)
+      return next
+    })
+  }, [emitDef])
 
   useEffect(() => {
     if (productGroups.length || attrTypes.length || suppliers.length)
-      emit({})
+      emitDef(def)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productGroups.length, attrTypes.length, suppliers.length])
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  // ── Helpers ──────────────────────────────────────────────────────────────
 
-  function toggleItem(list: string[], setList: (v: string[]) => void, id: string, emitKey: string) {
+  function toggleMultiId(key: 'productGroupIds' | 'supplierIds', id: string) {
+    const list = (def[key] ?? []) as string[]
     const next = list.includes(id) ? list.filter(x => x !== id) : [...list, id]
-    setList(next)
-    emit({ [emitKey]: next })
+    update({ [key]: next.length ? next : undefined })
+  }
+
+  function addTag(tag: string) {
+    const trimmed = tag.trim()
+    if (!trimmed) return
+    const current = def.tags ?? []
+    if (current.includes(trimmed)) return
+    update({ tags: [...current, trimmed] })
+    setTagInput('')
+  }
+
+  function removeTag(tag: string) {
+    const next = (def.tags ?? []).filter(t => t !== tag)
+    update({ tags: next.length ? next : undefined })
   }
 
   function addAttrFilter() {
@@ -221,15 +196,15 @@ export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
     const first = attrTypes.find(a => !usedTypeIds.includes(a.id))
     if (!first) return
     const next = [...attrFilters, { attributeTypeId: first.id, valueIds: [] }]
-    setAttrFilters(next); emit({ attrs: next })
+    setAttrFilters(next); update({ attributeFilters: next.filter(f => f.valueIds.length) })
   }
   function removeAttrFilter(idx: number) {
     const next = attrFilters.filter((_, i) => i !== idx)
-    setAttrFilters(next); emit({ attrs: next })
+    setAttrFilters(next); update({ attributeFilters: next.filter(f => f.valueIds.length) })
   }
   function changeAttrType(idx: number, typeId: string) {
     const next = attrFilters.map((f, i) => i === idx ? { attributeTypeId: typeId, valueIds: [] } : f)
-    setAttrFilters(next); emit({ attrs: next })
+    setAttrFilters(next); update({ attributeFilters: next.filter(f => f.valueIds.length) })
   }
   function toggleAttrValue(idx: number, valueId: string) {
     const next = attrFilters.map((f, i) => {
@@ -237,21 +212,13 @@ export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
       const valueIds = f.valueIds.includes(valueId) ? f.valueIds.filter(v => v !== valueId) : [...f.valueIds, valueId]
       return { ...f, valueIds }
     })
-    setAttrFilters(next); emit({ attrs: next })
+    setAttrFilters(next); update({ attributeFilters: next.filter(f => f.valueIds.length) })
   }
 
+  const description = useMemo(() => buildDescription(def, refs), [def, refs])
   const usedTypeIds = attrFilters.map(f => f.attributeTypeId)
-  const description = useMemo(() => buildDescription({
-    productGroupIds: selGroups, priceMin: priceMin !== '' ? +priceMin : null, priceMax: priceMax !== '' ? +priceMax : null,
-    platformPriceMin: platPriceMin !== '' ? +platPriceMin : null, platformPriceMax: platPriceMax !== '' ? +platPriceMax : null,
-    discountMinPercent: discount !== '' ? +discount : null, taxRateMin: taxMin !== '' ? +taxMin : null,
-    taxRateMax: taxMax !== '' ? +taxMax : null, supplierIds: selSuppliers, categoryIds: selCategories,
-    isActive: isActive ?? null, hasStock: hasStock ?? null,
-    createdAfter: createdAfter || null, createdBefore: createdBefore || null, attributeFilters: attrFilters,
-  }, refs), [selGroups, priceMin, priceMax, platPriceMin, platPriceMax, discount, taxMin, taxMax,
-             selSuppliers, selCategories, isActive, hasStock, createdAfter, createdBefore, attrFilters, refs])
-
   const hasFilters = description !== 'Tüm ürünler'
+  const tagSuggestions = allTags.filter(t => !def.tags?.includes(t) && t.toLowerCase().includes(tagInput.toLowerCase()))
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -259,19 +226,15 @@ export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
     <div className="space-y-5">
 
       {/* Ürün Grupları */}
-      <Section title="Ürün Grupları" hint="Hangi ürün gruplarından?">
-        {selGroups.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {selGroups.map(id => {
-              const g = productGroups.find(pg => pg.id === id)
-              return <Chip key={id} onRemove={() => toggleItem(selGroups, setSelGroups, id, 'groups')}>{g ? tr(g.nameI18n, g.code) : '…'}</Chip>
-            })}
-          </div>
-        )}
-        <Dropdown label={selGroups.length ? 'Başka grup ekle' : 'Ürün grubu seç'} open={groupOpen} onToggle={() => setGroupOpen(o => !o)}>
+      <Section title="Ürün Grupları">
+        <ChipList items={def.productGroupIds ?? []}
+          label={id => tr(productGroups.find(g => g.id === id)?.nameI18n) || '…'}
+          onRemove={id => toggleMultiId('productGroupIds', id)} />
+        <Dropdown label={def.productGroupIds?.length ? 'Başka grup ekle' : 'Ürün grubu seç'}
+          open={groupOpen} onToggle={() => setGroupOpen(o => !o)}>
           {productGroups.map(g => (
-            <DropItem key={g.id} selected={selGroups.includes(g.id)}
-              onClick={() => { toggleItem(selGroups, setSelGroups, g.id, 'groups'); setGroupOpen(false) }}>
+            <DropItem key={g.id} selected={(def.productGroupIds ?? []).includes(g.id)}
+              onClick={() => { toggleMultiId('productGroupIds', g.id); setGroupOpen(false) }}>
               {tr(g.nameI18n, g.code)}
             </DropItem>
           ))}
@@ -279,20 +242,16 @@ export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
       </Section>
 
       {/* Tedarikçi */}
-      <Section title="Tedarikçi" hint="Ürünün tedarikçisi">
-        {selSuppliers.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {selSuppliers.map(id => {
-              const s = suppliers.find(x => x.id === id)
-              return <Chip key={id} onRemove={() => toggleItem(selSuppliers, setSelSuppliers, id, 'supps')}>{s?.title ?? '…'}</Chip>
-            })}
-          </div>
-        )}
+      <Section title="Tedarikçi">
+        <ChipList items={def.supplierIds ?? []}
+          label={id => suppliers.find(s => s.id === id)?.title ?? '…'}
+          onRemove={id => toggleMultiId('supplierIds', id)} />
         {suppliers.length > 0 ? (
-          <Dropdown label={selSuppliers.length ? 'Başka tedarikçi ekle' : 'Tedarikçi seç'} open={suppOpen} onToggle={() => setSuppOpen(o => !o)}>
+          <Dropdown label={def.supplierIds?.length ? 'Başka tedarikçi ekle' : 'Tedarikçi seç'}
+            open={suppOpen} onToggle={() => setSuppOpen(o => !o)}>
             {suppliers.map(s => (
-              <DropItem key={s.id} selected={selSuppliers.includes(s.id)}
-                onClick={() => { toggleItem(selSuppliers, setSelSuppliers, s.id, 'supps'); setSuppOpen(false) }}>
+              <DropItem key={s.id} selected={(def.supplierIds ?? []).includes(s.id)}
+                onClick={() => { toggleMultiId('supplierIds', s.id); setSuppOpen(false) }}>
                 {s.title}
               </DropItem>
             ))}
@@ -302,43 +261,25 @@ export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
         )}
       </Section>
 
-      {/* Kategori filtresi */}
-      <Section title="Kategoriler" hint="Ürün şu kategorilerde olmalı">
-        {selCategories.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {selCategories.map(id => {
-              const c = allCategories.find(x => x.id === id)
-              return <Chip key={id} onRemove={() => toggleItem(selCategories, setSelCategories, id, 'cats')}>{c ? tr(c.nameI18n, c.code) : '…'}</Chip>
-            })}
-          </div>
-        )}
-        <Dropdown label={selCategories.length ? 'Başka kategori ekle' : 'Kategori seç'} open={catOpen} onToggle={() => setCatOpen(o => !o)}>
-          {allCategories.map(c => (
-            <DropItem key={c.id} selected={selCategories.includes(c.id)}
-              onClick={() => { toggleItem(selCategories, setSelCategories, c.id, 'cats'); setCatOpen(false) }}>
-              {c.parentId ? `  ${tr(c.nameI18n, c.code)}` : tr(c.nameI18n, c.code)}
-            </DropItem>
-          ))}
-        </Dropdown>
-      </Section>
-
-      {/* Fiyat */}
-      <Section title="Temel Fiyat" hint="Ürünün baz fiyatına göre (BasePrice)">
-        <RangeRow
-          minVal={priceMin} maxVal={priceMax} unit="₺"
-          onMin={v => { setPriceMin(v); emit({ min: v }) }}
-          onMax={v => { setPriceMax(v); emit({ max: v }) }}
-          onClear={() => { setPriceMin(''); setPriceMax(''); emit({ min: '', max: '' }) }}
+      {/* Temel Fiyat */}
+      <Section title="Temel Fiyat" hint="BasePrice aralığı">
+        <RangeRow unit="₺"
+          minVal={def.priceMin != null ? String(def.priceMin) : ''}
+          maxVal={def.priceMax != null ? String(def.priceMax) : ''}
+          onMin={v => update({ priceMin: v !== '' ? +v : null })}
+          onMax={v => update({ priceMax: v !== '' ? +v : null })}
+          onClear={() => update({ priceMin: null, priceMax: null })}
         />
       </Section>
 
       {/* Platform Fiyatı */}
-      <Section title="Platform Fiyatı" hint="Platforma özel satış fiyatına göre">
-        <RangeRow
-          minVal={platPriceMin} maxVal={platPriceMax} unit="₺"
-          onMin={v => { setPlatPriceMin(v); emit({ pMin: v }) }}
-          onMax={v => { setPlatPriceMax(v); emit({ pMax: v }) }}
-          onClear={() => { setPlatPriceMin(''); setPlatPriceMax(''); emit({ pMin: '', pMax: '' }) }}
+      <Section title="Platform Fiyatı" hint="Platforma özel satış fiyatı">
+        <RangeRow unit="₺"
+          minVal={def.platformPriceMin != null ? String(def.platformPriceMin) : ''}
+          maxVal={def.platformPriceMax != null ? String(def.platformPriceMax) : ''}
+          onMin={v => update({ platformPriceMin: v !== '' ? +v : null })}
+          onMax={v => update({ platformPriceMax: v !== '' ? +v : null })}
+          onClear={() => update({ platformPriceMin: null, platformPriceMax: null })}
         />
       </Section>
 
@@ -346,59 +287,144 @@ export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
       <div className="grid grid-cols-2 gap-4">
         <Section title="Min. İndirim">
           <div className="flex items-center gap-2">
-            <NumInput value={discount} unit="%" placeholder="0" onChange={v => { setDiscount(v); emit({ disc: v }) }} />
-            {discount && <ClearBtn onClick={() => { setDiscount(''); emit({ disc: '' }) }} />}
+            <NumInput value={def.discountMinPercent != null ? String(def.discountMinPercent) : ''} unit="%"
+              onChange={v => update({ discountMinPercent: v !== '' ? +v : null })} />
+            {def.discountMinPercent != null && (
+              <ClearBtn onClick={() => update({ discountMinPercent: null })} />
+            )}
           </div>
         </Section>
         <Section title="KDV Oranı" hint="aralık">
-          <RangeRow
-            minVal={taxMin} maxVal={taxMax} unit="%" placeholder="0/100"
-            onMin={v => { setTaxMin(v); emit({ tMin: v }) }}
-            onMax={v => { setTaxMax(v); emit({ tMax: v }) }}
-            onClear={() => { setTaxMin(''); setTaxMax(''); emit({ tMin: '', tMax: '' }) }}
+          <RangeRow unit="%" placeholder="0/100"
+            minVal={def.taxRateMin != null ? String(def.taxRateMin) : ''}
+            maxVal={def.taxRateMax != null ? String(def.taxRateMax) : ''}
+            onMin={v => update({ taxRateMin: v !== '' ? +v : null })}
+            onMax={v => update({ taxRateMax: v !== '' ? +v : null })}
+            onClear={() => update({ taxRateMin: null, taxRateMax: null })}
           />
         </Section>
       </div>
 
-      {/* Durum + Stok */}
-      <div className="grid grid-cols-2 gap-4">
-        <Section title="Ürün Durumu">
-          <ThreeWayToggle
-            value={isActive}
-            labels={['Tümü', 'Sadece Aktif', 'Sadece Pasif']}
-            onChange={v => { setIsActive(v); emit({ active: v }) }}
-          />
-        </Section>
-        <Section title="Stok Durumu">
-          <ThreeWayToggle
-            value={hasStock}
-            labels={['Tümü', 'Stokta Var', 'Stok Yok']}
-            onChange={v => { setHasStock(v); emit({ stock: v }) }}
-          />
-        </Section>
-      </div>
+      {/* Durum */}
+      <Section title="Ürün Durumu">
+        <ThreeWayToggle value={def.isActive} labels={['Tümü', 'Sadece Aktif', 'Sadece Pasif']}
+          onChange={v => update({ isActive: v })} />
+      </Section>
 
-      {/* Tarih */}
-      <Section title="Oluşturma Tarihi" hint="Yeni ürün filtresi">
-        <div className="flex items-center gap-2">
-          <div className="flex-1">
-            <label className="text-xs mb-1 block" style={{ color: 'var(--text-s)' }}>Başlangıç</label>
-            <input type="date" className="inp text-sm" value={createdAfter}
-              onChange={e => { setCreatedAfter(e.target.value); emit({ after: e.target.value }) }} />
+      {/* Stok Miktarı */}
+      <Section title="Stok Miktarı" hint="Tüm depolar toplamı (adet)">
+        <RangeRow unit="adet" placeholder="0/∞"
+          minVal={def.stockMin != null ? String(def.stockMin) : ''}
+          maxVal={def.stockMax != null ? String(def.stockMax) : ''}
+          onMin={v => update({ stockMin: v !== '' ? +v : null })}
+          onMax={v => update({ stockMax: v !== '' ? +v : null })}
+          onClear={() => update({ stockMin: null, stockMax: null })}
+        />
+      </Section>
+
+      {/* Oluşturma Tarihi */}
+      <Section title="Oluşturma Tarihi" hint="Yeni eklenen ürünler">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="relative w-32">
+              <input type="number" className="inp pr-8" placeholder="Gün sayısı" min={1}
+                value={def.createdAfterDays != null ? String(def.createdAfterDays) : ''}
+                onChange={e => update({
+                  createdAfterDays: e.target.value !== '' ? +e.target.value : null,
+                  createdAfter: null, createdBefore: null,
+                })} />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs pointer-events-none" style={{ color: 'var(--text-s)' }}>gün</span>
+            </div>
+            <span className="text-sm" style={{ color: 'var(--text-s)' }}>
+              {def.createdAfterDays ? `Son ${def.createdAfterDays} günde eklenmiş` : 'veya tarih aralığı:'}
+            </span>
+            {def.createdAfterDays && <ClearBtn onClick={() => update({ createdAfterDays: null })} />}
           </div>
-          <span className="text-sm mt-4" style={{ color: 'var(--text-s)' }}>—</span>
-          <div className="flex-1">
-            <label className="text-xs mb-1 block" style={{ color: 'var(--text-s)' }}>Bitiş</label>
-            <input type="date" className="inp text-sm" value={createdBefore}
-              onChange={e => { setCreatedBefore(e.target.value); emit({ before: e.target.value }) }} />
+          {!def.createdAfterDays && (
+            <DateRange
+              after={def.createdAfter ?? ''} before={def.createdBefore ?? ''}
+              onAfter={v => update({ createdAfter: v || null })}
+              onBefore={v => update({ createdBefore: v || null })}
+              onClear={() => update({ createdAfter: null, createdBefore: null })}
+            />
+          )}
+        </div>
+      </Section>
+
+      {/* Resim Güncelleme Tarihi */}
+      <Section title="Resim Güncelleme Tarihi" hint="Fotoğrafı güncellenen ürünler">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="relative w-32">
+              <input type="number" className="inp pr-8" placeholder="Gün sayısı" min={1}
+                value={def.imageUpdatedAfterDays != null ? String(def.imageUpdatedAfterDays) : ''}
+                onChange={e => update({
+                  imageUpdatedAfterDays: e.target.value !== '' ? +e.target.value : null,
+                  imageUpdatedAfter: null, imageUpdatedBefore: null,
+                })} />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs pointer-events-none" style={{ color: 'var(--text-s)' }}>gün</span>
+            </div>
+            <span className="text-sm" style={{ color: 'var(--text-s)' }}>
+              {def.imageUpdatedAfterDays ? `Son ${def.imageUpdatedAfterDays} günde resim değişmiş` : 'veya tarih aralığı:'}
+            </span>
+            {def.imageUpdatedAfterDays && <ClearBtn onClick={() => update({ imageUpdatedAfterDays: null })} />}
           </div>
-          {(createdAfter || createdBefore) && (
-            <button type="button" className="mt-5" style={{ color: 'var(--text-s)' }}
-              onClick={() => { setCreatedAfter(''); setCreatedBefore(''); emit({ after: '', before: '' }) }}>
-              <X size={14} />
+          {!def.imageUpdatedAfterDays && (
+            <DateRange
+              after={def.imageUpdatedAfter ?? ''} before={def.imageUpdatedBefore ?? ''}
+              onAfter={v => update({ imageUpdatedAfter: v || null })}
+              onBefore={v => update({ imageUpdatedBefore: v || null })}
+              onClear={() => update({ imageUpdatedAfter: null, imageUpdatedBefore: null })}
+            />
+          )}
+        </div>
+      </Section>
+
+      {/* Etiketler */}
+      <Section title="Etiketler" hint="En az biri eşleşmeli">
+        {(def.tags ?? []).length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {(def.tags ?? []).map(t => (
+              <Chip key={t} onRemove={() => removeTag(t)}>#{t}</Chip>
+            ))}
+          </div>
+        )}
+        <div className="relative">
+          <input
+            ref={tagInputRef}
+            className="inp text-sm"
+            placeholder="Etiket yaz veya listeden seç…"
+            value={tagInput}
+            onChange={e => setTagInput(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(tagInput) }
+            }}
+          />
+          {tagInput && tagSuggestions.length > 0 && (
+            <div className="absolute z-20 mt-1 w-full rounded-xl shadow-lg py-1 overflow-y-auto max-h-40"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+              {tagSuggestions.slice(0, 8).map(t => (
+                <button key={t} type="button"
+                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-[var(--surface2)] transition-colors"
+                  style={{ color: 'var(--text)' }}
+                  onMouseDown={e => { e.preventDefault(); addTag(t) }}>
+                  #{t}
+                </button>
+              ))}
+            </div>
+          )}
+          {tagInput && !tagSuggestions.find(t => t === tagInput.trim()) && (
+            <button type="button"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-0.5 rounded-full"
+              style={{ background: 'var(--brand-bg)', color: 'var(--brand)' }}
+              onClick={() => addTag(tagInput)}>
+              + ekle
             </button>
           )}
         </div>
+        <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+          Enter veya virgülle ekle. Hiç etiket olmayan ürünler için boş bırak.
+        </p>
       </Section>
 
       {/* Özellik Filtreleri */}
@@ -429,8 +455,7 @@ export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
                           selected ? 'border-[var(--brand)]' : 'border-transparent hover:border-[var(--border)]')}
                         style={{ background: selected ? 'var(--brand-bg)' : 'var(--surface)', color: selected ? 'var(--brand)' : 'var(--text-m)' }}>
                         {hex && <span className="w-3 h-3 rounded-full border border-white/30 flex-shrink-0" style={{ background: hex }} />}
-                        {tr(val.nameI18n)}
-                        {selected && <span className="ml-0.5 opacity-60">×</span>}
+                        {tr(val.nameI18n)}{selected && <span className="ml-0.5 opacity-60">×</span>}
                       </button>
                     )
                   })}
@@ -486,9 +511,16 @@ function Chip({ children, onRemove }: { children: React.ReactNode; onRemove: () 
   )
 }
 
-function Dropdown({ label, open, onToggle, children }: {
-  label: string; open: boolean; onToggle: () => void; children: React.ReactNode
-}) {
+function ChipList({ items, label, onRemove }: { items: string[]; label: (id: string) => string; onRemove: (id: string) => void }) {
+  if (!items.length) return null
+  return (
+    <div className="flex flex-wrap gap-1.5 mb-2">
+      {items.map(id => <Chip key={id} onRemove={() => onRemove(id)}>{label(id)}</Chip>)}
+    </div>
+  )
+}
+
+function Dropdown({ label, open, onToggle, children }: { label: string; open: boolean; onToggle: () => void; children: React.ReactNode }) {
   return (
     <div className="relative">
       <button type="button"
@@ -525,13 +557,13 @@ function RangeRow({ minVal, maxVal, unit, placeholder, onMin, onMax, onClear }: 
   return (
     <div className="flex items-center gap-2">
       <div className="relative flex-1">
-        <input type="number" className="inp pr-6" placeholder={placeholder ? placeholder.split('/')[0] : 'Min'}
+        <input type="number" className="inp pr-8" placeholder={placeholder?.split('/')[0] ?? 'Min'}
           value={minVal} onChange={e => onMin(e.target.value)} min={0} />
         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs pointer-events-none" style={{ color: 'var(--text-s)' }}>{unit}</span>
       </div>
       <span className="text-sm" style={{ color: 'var(--text-s)' }}>—</span>
       <div className="relative flex-1">
-        <input type="number" className="inp pr-6" placeholder={placeholder ? placeholder.split('/')[1] : 'Maks'}
+        <input type="number" className="inp pr-8" placeholder={placeholder?.split('/')[1] ?? 'Maks'}
           value={maxVal} onChange={e => onMax(e.target.value)} min={0} />
         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs pointer-events-none" style={{ color: 'var(--text-s)' }}>{unit}</span>
       </div>
@@ -540,37 +572,50 @@ function RangeRow({ minVal, maxVal, unit, placeholder, onMin, onMax, onClear }: 
   )
 }
 
+function DateRange({ after, before, onAfter, onBefore, onClear }: {
+  after: string; before: string; onAfter: (v: string) => void; onBefore: (v: string) => void; onClear: () => void
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1">
+        <input type="date" className="inp text-sm" value={after} onChange={e => onAfter(e.target.value)} />
+      </div>
+      <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span>
+      <div className="flex-1">
+        <input type="date" className="inp text-sm" value={before} onChange={e => onBefore(e.target.value)} />
+      </div>
+      {(after || before) && <ClearBtn onClick={onClear} />}
+    </div>
+  )
+}
+
 function NumInput({ value, unit, placeholder, onChange }: { value: string; unit: string; placeholder?: string; onChange: (v: string) => void }) {
   return (
     <div className="relative w-28">
-      <input type="number" className="inp pr-6" placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)} min={0} max={100} />
+      <input type="number" className="inp pr-6" placeholder={placeholder ?? '0'} value={value} onChange={e => onChange(e.target.value)} min={0} />
       <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs pointer-events-none" style={{ color: 'var(--text-s)' }}>{unit}</span>
     </div>
   )
 }
 
 function ClearBtn({ onClick }: { onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} style={{ color: 'var(--text-s)' }}><X size={14} /></button>
-  )
+  return <button type="button" onClick={onClick} style={{ color: 'var(--text-s)' }}><X size={14} /></button>
 }
 
 function ThreeWayToggle({ value, labels, onChange }: {
-  value: boolean | null | undefined
-  labels: [string, string, string]
-  onChange: (v: boolean | null) => void
+  value: boolean | null | undefined; labels: [string, string, string]; onChange: (v: boolean | null) => void
 }) {
   const opts: [string, boolean | null][] = [[labels[0], null], [labels[1], true], [labels[2], false]]
   return (
     <div className="flex rounded-lg overflow-hidden text-xs" style={{ border: '1px solid var(--border)' }}>
-      {opts.map(([label, val]) => {
-        const active = value === val
+      {opts.map(([lbl, val]) => {
+        const active = (value ?? null) === val
         return (
           <button key={String(val)} type="button"
             className="flex-1 px-2 py-1.5 text-center transition-colors"
             style={{ background: active ? 'var(--brand)' : 'var(--surface2)', color: active ? '#fff' : 'var(--text-m)' }}
             onClick={() => onChange(val)}>
-            {label}
+            {lbl}
           </button>
         )
       })}
