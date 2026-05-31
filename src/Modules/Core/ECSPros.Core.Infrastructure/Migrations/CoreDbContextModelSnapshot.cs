@@ -652,11 +652,6 @@ namespace ECSPros.Core.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<string>("Color")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -707,8 +702,7 @@ namespace ECSPros.Core.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("LookupTypeId", "Code")
-                        .IsUnique();
+                    b.HasIndex("LookupTypeId");
 
                     b.ToTable("core_lookup_values", "core");
                 });
@@ -1026,8 +1020,9 @@ namespace ECSPros.Core.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
-                    b.Property<Dictionary<string, object>>("SettingsSchema")
-                        .HasColumnType("jsonb");
+                    b.Property<string>("SettingsSchemaJson")
+                        .HasColumnType("text")
+                        .HasColumnName("settings_schema");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1097,6 +1092,61 @@ namespace ECSPros.Core.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("core_return_reasons", "core");
+                });
+
+            modelBuilder.Entity("ECSPros.Core.Domain.Entities.UiTranslation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Lang")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Namespace")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Namespace", "Key", "Lang")
+                        .IsUnique();
+
+                    b.ToTable("core_ui_translations", "core");
                 });
 
             modelBuilder.Entity("ECSPros.Core.Domain.Entities.CargoRule", b =>

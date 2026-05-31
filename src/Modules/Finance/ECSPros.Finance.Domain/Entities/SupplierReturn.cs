@@ -4,7 +4,7 @@ namespace ECSPros.Finance.Domain.Entities;
 
 public class SupplierReturn : BaseEntity
 {
-    public Guid SupplierId { get; set; }
+    public Guid CurrentAccountId { get; set; }
     public string ReturnNumber { get; set; } = string.Empty;
     public DateOnly ReturnDate { get; set; }
     public string Reason { get; set; } = string.Empty;

@@ -8,7 +8,6 @@ namespace ECSPros.Catalog.Application.Commands.UpdateProductGroup;
 public record UpdateProductGroupCommand(
     Guid Id,
     Dictionary<string, string> NameI18n,
-    Guid? ParentId,
     int SortOrder,
     bool IsActive
 ) : IRequest<Result<bool>>;
@@ -26,7 +25,6 @@ public class UpdateProductGroupCommandHandler : IRequestHandler<UpdateProductGro
             return Result.Failure<bool>("Ürün grubu bulunamadı.");
 
         group.NameI18n = request.NameI18n;
-        group.ParentId = request.ParentId;
         group.SortOrder = request.SortOrder;
         group.IsActive = request.IsActive;
         group.UpdatedAt = DateTime.UtcNow;

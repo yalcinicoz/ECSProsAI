@@ -12,7 +12,9 @@ public class PlatformTypeConfiguration : IEntityTypeConfiguration<PlatformType>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Code).HasMaxLength(50).IsRequired();
         builder.Property(x => x.NameI18n).HasColumnType("jsonb").IsRequired();
-        builder.Property(x => x.SettingsSchema).HasColumnType("jsonb");
+        builder.Property(x => x.SettingsSchemaJson)
+            .HasColumnName("settings_schema")
+            .HasColumnType("text");
         builder.HasIndex(x => x.Code).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

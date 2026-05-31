@@ -8,7 +8,8 @@ public class PlatformType : BaseEntity
     public Dictionary<string, string> NameI18n { get; set; } = new();
     public bool IsMarketplace { get; set; } = false;
     public bool IsActive { get; set; } = true;
-    public Dictionary<string, object>? SettingsSchema { get; set; }
+    /// <summary>JSON string — uygulama katmanında serialize/deserialize edilir.</summary>
+    public string? SettingsSchemaJson { get; set; }
 
     public ICollection<FirmPlatform> FirmPlatforms { get; set; } = new List<FirmPlatform>();
 }

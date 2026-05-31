@@ -1,3 +1,4 @@
+using ECSPros.Catalog.Application.Helpers;
 using ECSPros.Catalog.Application.Services;
 using ECSPros.Catalog.Domain.Entities;
 using ECSPros.Shared.Kernel.Common;
@@ -7,9 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ECSPros.Catalog.Application.Commands.CreateProductGroup;
 
 public record CreateProductGroupCommand(
-    string Code,
     Dictionary<string, string> NameI18n,
-    Guid? ParentId,
     int SortOrder
 ) : IRequest<Result<Guid>>;
 
@@ -21,19 +20,21 @@ public class CreateProductGroupCommandHandler : IRequestHandler<CreateProductGro
 
     public async Task<Result<Guid>> Handle(CreateProductGroupCommand request, CancellationToken ct)
     {
-        if (request.ParentId.HasValue)
-        {
-            var parentExists = await _db.ProductGroups.AnyAsync(pg => pg.Id == request.ParentId, ct);
-            if (!parentExists)
-                return Result.Failure<Guid>("Üst ürün grubu bulunamadı.");
-        }
+        var code = SlugHelper.FromNameI18n(request.NameI18n);
+        if (string.IsNullOrEmpty(code))
+            return Result.Failure<Guid>("Ad alanından geçerli bir kod üretilemedi.");
+
+        // Benzersizlik kontrolü: varsa sonuna sayı ekle
+        var baseCode = code;
+        var suffix = 2;
+        while (await _db.ProductGroups.AnyAsync(pg => pg.Code == code, ct))
+            code = $"{baseCode}_{suffix++}";
 
         var group = new ProductGroup
         {
             Id = Guid.NewGuid(),
-            Code = request.Code.Trim().ToLowerInvariant(),
+            Code = code,
             NameI18n = request.NameI18n,
-            ParentId = request.ParentId,
             SortOrder = request.SortOrder,
             IsActive = true,
             CreatedAt = DateTime.UtcNow

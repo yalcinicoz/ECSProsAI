@@ -4,7 +4,7 @@ namespace ECSPros.Finance.Domain.Entities;
 
 public class SupplierInvoice : BaseEntity
 {
-    public Guid SupplierId { get; set; }
+    public Guid CurrentAccountId { get; set; }
     public string InvoiceNumber { get; set; } = string.Empty;
     public DateOnly InvoiceDate { get; set; }
     public DateOnly? DueDate { get; set; }

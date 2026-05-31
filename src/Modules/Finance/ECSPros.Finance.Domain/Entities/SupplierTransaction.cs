@@ -4,7 +4,7 @@ namespace ECSPros.Finance.Domain.Entities;
 
 public class SupplierTransaction : BaseEntity
 {
-    public Guid SupplierId { get; set; }
+    public Guid CurrentAccountId { get; set; }
     public string TransactionType { get; set; } = string.Empty;
     public decimal Debit { get; set; } = 0;
     public decimal Credit { get; set; } = 0;

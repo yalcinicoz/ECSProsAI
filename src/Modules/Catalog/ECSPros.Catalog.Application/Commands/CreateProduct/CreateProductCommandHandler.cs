@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Catalog.Application.Commands.CreateProduct;
 
-public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand, Result<Guid>>
+public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand, Result<CreateProductResult>>
 {
     private readonly ICatalogDbContext _context;
 
@@ -15,47 +15,56 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
         _context = context;
     }
 
-    public async Task<Result<Guid>> Handle(CreateProductCommand request, CancellationToken cancellationToken)
+    public async Task<Result<CreateProductResult>> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
-        var exists = await _context.Products.AnyAsync(p => p.Code == request.Code, cancellationToken);
+        var code = string.IsNullOrWhiteSpace(request.Code)
+            ? $"PRD-{Guid.NewGuid().ToString("N")[..8].ToUpper()}"
+            : request.Code.Trim();
+
+        var exists = await _context.Products.AnyAsync(p => p.Code == code, cancellationToken);
         if (exists)
-            return Result.Failure<Guid>($"'{request.Code}' ürün kodu zaten mevcut.");
+            return Result.Failure<CreateProductResult>($"'{code}' ürün kodu zaten mevcut.");
 
         var groupExists = await _context.ProductGroups.AnyAsync(g => g.Id == request.ProductGroupId, cancellationToken);
         if (!groupExists)
-            return Result.Failure<Guid>("Ürün grubu bulunamadı.");
+            return Result.Failure<CreateProductResult>("Ürün grubu bulunamadı.");
 
-        if (request.Variants.Count == 0)
-            return Result.Failure<Guid>("En az bir varyant gereklidir.");
+        var variants = request.Variants ?? [];
 
-        // SKU benzersizlik kontrolü
-        var skus = request.Variants.Select(v => v.Sku).ToList();
-        var duplicateSku = await _context.ProductVariants.AnyAsync(v => skus.Contains(v.Sku), cancellationToken);
-        if (duplicateSku)
-            return Result.Failure<Guid>("Bir veya daha fazla SKU zaten kullanımda.");
+        if (variants.Count > 0)
+        {
+            var skus = variants.Select(v => v.Sku).ToList();
+            var duplicateSku = await _context.ProductVariants.AnyAsync(v => skus.Contains(v.Sku), cancellationToken);
+            if (duplicateSku)
+                return Result.Failure<CreateProductResult>("Bir veya daha fazla SKU zaten kullanımda.");
+        }
 
         var product = new Product
         {
-            ProductGroupId = request.ProductGroupId,
-            Code = request.Code,
-            NameI18n = request.NameI18n,
+            ProductGroupId       = request.ProductGroupId,
+            Code                 = code,
+            NameI18n             = request.NameI18n,
             ShortDescriptionI18n = request.ShortDescriptionI18n,
-            IsActive = true
+            DescriptionI18n      = request.DescriptionI18n,
+            BasePrice            = request.BasePrice,
+            BaseCost             = request.BaseCost,
+            TaxRate              = request.TaxRate,
+            IsActive             = true
         };
 
-        foreach (var v in request.Variants)
+        foreach (var v in variants)
         {
             product.Variants.Add(new ProductVariant
             {
-                Sku = v.Sku,
+                Sku       = v.Sku,
                 BasePrice = v.BasePrice,
-                BaseCost = v.BaseCost,
-                IsActive = true
+                BaseCost  = v.BaseCost,
+                IsActive  = true
             });
         }
 
         _context.Products.Add(product);
         await _context.SaveChangesAsync(cancellationToken);
-        return Result.Success(product.Id);
+        return Result.Success(new CreateProductResult(product.Id, product.Code));
     }
 }

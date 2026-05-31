@@ -5,10 +5,16 @@ namespace ECSPros.Catalog.Application.Commands.CreateProduct;
 
 public record CreateProductCommand(
     Guid ProductGroupId,
-    string Code,
+    string? Code,
     Dictionary<string, string> NameI18n,
     Dictionary<string, string>? ShortDescriptionI18n,
-    List<CreateVariantDto> Variants) : IRequest<Result<Guid>>;
+    Dictionary<string, string>? DescriptionI18n,
+    decimal BasePrice,
+    decimal? BaseCost,
+    int TaxRate,
+    List<CreateVariantDto>? Variants) : IRequest<Result<CreateProductResult>>;
+
+public record CreateProductResult(Guid Id, string Code);
 
 public record CreateVariantDto(
     string Sku,

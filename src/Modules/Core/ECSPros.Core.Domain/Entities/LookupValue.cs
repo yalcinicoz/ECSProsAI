@@ -5,7 +5,6 @@ namespace ECSPros.Core.Domain.Entities;
 public class LookupValue : BaseEntity
 {
     public Guid LookupTypeId { get; set; }
-    public string Code { get; set; } = string.Empty;
     public Dictionary<string, string> NameI18n { get; set; } = new();
     public string? Color { get; set; }
     public string? Icon { get; set; }

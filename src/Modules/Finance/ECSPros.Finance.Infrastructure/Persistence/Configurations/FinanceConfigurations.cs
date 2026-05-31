@@ -4,26 +4,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace ECSPros.Finance.Infrastructure.Persistence.Configurations;
 
-public class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
-{
-    public void Configure(EntityTypeBuilder<Supplier> builder)
-    {
-        builder.ToTable("fin_suppliers");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Code).HasMaxLength(50).IsRequired();
-        builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
-        builder.Property(x => x.TaxOffice).HasMaxLength(200);
-        builder.Property(x => x.TaxNumber).HasMaxLength(30);
-        builder.Property(x => x.Phone).HasMaxLength(30);
-        builder.Property(x => x.Email).HasMaxLength(200);
-        builder.Property(x => x.Address).HasColumnType("text");
-        builder.Property(x => x.ContactPerson).HasMaxLength(200);
-        builder.Property(x => x.Notes).HasColumnType("text");
-        builder.HasIndex(x => x.Code).IsUnique();
-        builder.HasQueryFilter(x => !x.IsDeleted);
-    }
-}
-
 public class SupplierInvoiceConfiguration : IEntityTypeConfiguration<SupplierInvoice>
 {
     public void Configure(EntityTypeBuilder<SupplierInvoice> builder)

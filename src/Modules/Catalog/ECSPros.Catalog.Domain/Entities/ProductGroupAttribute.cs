@@ -8,6 +8,7 @@ public class ProductGroupAttribute : BaseEntity
     public Guid AttributeTypeId { get; set; }
     public bool IsVariant { get; set; } = false;
     public bool IsRequired { get; set; } = false;
+    public bool IsPrimaryAxis { get; set; } = false;
     public int SortOrder { get; set; } = 0;
 
     public ProductGroup ProductGroup { get; set; } = null!;

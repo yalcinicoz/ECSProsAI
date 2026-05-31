@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ECSPros — Seçenek F: Dashboard (Rol Bazlı, Favoriler, Widget'lar)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    #sidebar { width: 248px; transition: width .28s cubic-bezier(.4,0,.2,1); overflow: hidden; white-space: nowrap; }
+    #sidebar.collapsed { width: 60px; }
+    #sidebar.collapsed .hide-col { display: none !important; }
+    #sidebar.collapsed .nav-link { justify-content: center; padding: 9px 8px; }
+    #main { margin-left: 248px; transition: margin-left .28s cubic-bezier(.4,0,.2,1); }
+    #main.expanded { margin-left: 60px; }
+    .nav-link { display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13px;font-weight:500;color:#64748b;text-decoration:none;transition:all .15s; }
+    .nav-link:hover { background:#f1f5f9;color:#0f172a; }
+    .nav-link.active { background:#eff6ff;color:#1d4ed8;font-weight:600; }
+    .nav-link .icon { font-size:13px;width:16px;text-align:center;flex-shrink:0;color:#94a3b8; }
+    .nav-link.active .icon { color:#3b82f6; }
+    .sec-label { font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#94a3b8;padding:12px 10px 3px; }
+
+    /* Stat card */
+    .stat-card { background:white;border:1.5px solid #e2e8f0;border-radius:16px;padding:20px;transition:box-shadow .15s,transform .15s;cursor:default; }
+    .stat-card:hover { box-shadow:0 4px 20px rgba(0,0,0,.08);transform:translateY(-1px); }
+
+    /* Order status badge */
+    .badge { display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600; }
+    .badge-pending { background:#fef9c3;color:#713f12;border:1px solid #fde68a; }
+    .badge-processing { background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe; }
+    .badge-shipped { background:#f0fdf4;color:#166534;border:1px solid #bbf7d0; }
+    .badge-cancelled { background:#fff1f2;color:#be123c;border:1px solid #fecdd3; }
+    .dot { width:5px;height:5px;border-radius:50%;display:inline-block; }
+
+    /* Notification types */
+    .notif-icon-warn { background:#fef9c3;color:#b45309; }
+    .notif-icon-error { background:#fee2e2;color:#dc2626; }
+    .notif-icon-info { background:#eff6ff;color:#2563eb; }
+    .notif-icon-success { background:#f0fdf4;color:#16a34a; }
+
+    /* Shortcut cards */
+    .shortcut-card { display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 12px;background:white;border:1.5px solid #e2e8f0;border-radius:14px;cursor:pointer;transition:all .15s;text-align:center; }
+    .shortcut-card:hover { border-color:#93c5fd;background:#eff6ff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,.1); }
+    .shortcut-card .sc-icon { width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px; }
+
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-thumb { background:rgba(0,0,0,.1);border-radius:2px; }
+
+    /* Command Palette */
+    #cmd-overlay { display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.6);backdrop-filter:blur(6px);align-items:flex-start;justify-content:center;padding-top:80px; }
+    #cmd-overlay.open { display:flex; }
+    #cmd-box { background:#fff;border-radius:16px;width:100%;max-width:580px;box-shadow:0 25px 60px rgba(0,0,0,.3);border:1px solid rgba(0,0,0,.08);overflow:hidden; }
+    #cmd-input { width:100%;padding:16px 20px;font-size:16px;border:none;outline:none;color:#0f172a;background:transparent; }
+    .cmd-result { display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:background .1s; }
+    .cmd-result:hover, .cmd-result.selected { background:#f1f5f9; }
+    .cmd-result-icon { width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px; }
+  </style>
+</head>
+<body style="background:#f1f5f9">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<aside id="sidebar" class="fixed top-0 left-0 h-screen bg-white border-r border-slate-200 flex flex-col z-40">
+
+  <div class="flex items-center justify-between px-4 py-4 border-b border-slate-100 flex-shrink-0">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#2563eb">
+        <span class="text-white font-black text-sm">E</span>
+      </div>
+      <span class="hide-col text-slate-900 font-black text-base tracking-tight">ECSPros</span>
+    </div>
+    <button onclick="toggleSidebar()" class="hide-col w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-300 hover:text-slate-500 flex-shrink-0">
+      <i class="fa fa-bars text-sm"></i>
+    </button>
+  </div>
+
+  <!-- Sidebar search -->
+  <div class="hide-col px-3 pt-3 pb-1 flex-shrink-0">
+    <div class="relative">
+      <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-xs pointer-events-none"></i>
+      <input type="text" placeholder="Menüde ara…" class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-sm text-slate-600 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
+    </div>
+  </div>
+
+  <nav class="flex-1 overflow-y-auto px-2.5 py-2 space-y-0.5">
+    <a class="nav-link active" href="#"><i class="icon fa fa-gauge"></i><span class="hide-col">Dashboard</span></a>
+
+    <div class="sec-label hide-col">Katalog</div>
+    <a class="nav-link" href="#"><i class="icon fa fa-box"></i><span class="hide-col">Ürünler</span></a>
+    <a class="nav-link" href="#"><i class="icon fa fa-sitemap"></i><span class="hide-col">Kategoriler</span></a>
+    <a class="nav-link" href="#"><i class="icon fa fa-copyright"></i><span class="hide-col">Markalar</span></a>
+
+    <div class="sec-label hide-col">Satış</div>
+    <a class="nav-link" href="#">
+      <i class="icon fa fa-shopping-bag"></i>
+      <span class="hide-col">Siparişler</span>
+      <span class="hide-col ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style="background:#2563eb;color:#fff">14</span>
+    </a>
+    <a class="nav-link" href="#"><i class="icon fa fa-rotate-left"></i><span class="hide-col">İadeler</span></a>
+    <a class="nav-link" href="#"><i class="icon fa fa-file-invoice-dollar"></i><span class="hide-col">Faturalar</span></a>
+
+    <div class="sec-label hide-col">Müşteriler</div>
+    <a class="nav-link" href="#"><i class="icon fa fa-users"></i><span class="hide-col">Üyeler</span></a>
+    <a class="nav-link" href="#"><i class="icon fa fa-layer-group"></i><span class="hide-col">Gruplar</span></a>
+
+    <div class="sec-label hide-col">Stok</div>
+    <a class="nav-link" href="#"><i class="icon fa fa-warehouse"></i><span class="hide-col">Depolar</span></a>
+    <a class="nav-link" href="#"><i class="icon fa fa-cubes"></i><span class="hide-col">Stok Takibi</span></a>
+
+    <div class="sec-label hide-col">Pazarlama</div>
+    <a class="nav-link" href="#"><i class="icon fa fa-percent"></i><span class="hide-col">Kampanyalar</span></a>
+    <a class="nav-link" href="#"><i class="icon fa fa-ticket"></i><span class="hide-col">Kuponlar</span></a>
+
+    <div class="sec-label hide-col">Sistem</div>
+    <a class="nav-link" href="#"><i class="icon fa fa-cash-register"></i><span class="hide-col">POS</span></a>
+    <a class="nav-link" href="#"><i class="icon fa fa-plug"></i><span class="hide-col">Entegrasyonlar</span></a>
+    <a class="nav-link" href="#"><i class="icon fa fa-file"></i><span class="hide-col">CMS</span></a>
+    <a class="nav-link" href="#"><i class="icon fa fa-gear"></i><span class="hide-col">Ayarlar</span></a>
+  </nav>
+
+  <!-- Favorites section in sidebar -->
+  <div class="hide-col border-t border-slate-100 px-2.5 py-2 flex-shrink-0">
+    <div class="sec-label" style="padding-top:8px">Sık Kullanılanlar</div>
+    <a class="nav-link" href="#"><i class="icon fa fa-star" style="color:#f59e0b"></i><span class="hide-col">Bekleyen Siparişler</span></a>
+    <a class="nav-link" href="#"><i class="icon fa fa-star" style="color:#f59e0b"></i><span class="hide-col">Stok Uyarıları</span></a>
+    <a class="nav-link" href="#"><i class="icon fa fa-star" style="color:#f59e0b"></i><span class="hide-col">Yeni Ürün Ekle</span></a>
+    <button class="w-full text-left nav-link text-slate-400 text-xs hover:text-slate-600">
+      <i class="icon fa fa-plus" style="font-size:11px"></i><span class="hide-col">Kısayol Ekle</span>
+    </button>
+  </div>
+
+  <div class="border-t border-slate-100 px-3 py-3 flex items-center gap-2.5 flex-shrink-0">
+    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style="background:#2563eb">AY</div>
+    <div class="hide-col min-w-0 flex-1">
+      <div class="text-sm font-semibold text-slate-700 truncate">Ahmet Yılmaz</div>
+      <div class="text-[11px] text-slate-400">Süper Admin</div>
+    </div>
+    <button class="hide-col text-slate-300 hover:text-slate-500 flex-shrink-0"><i class="fa fa-chevron-up text-xs"></i></button>
+  </div>
+</aside>
+
+<!-- ══════════ MAIN ══════════ -->
+<div id="main" class="min-h-screen flex flex-col">
+
+  <!-- Topbar -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200/80 h-14 flex items-center px-6 gap-4">
+    <button id="ctoggle" onclick="toggleSidebar()" class="hidden w-8 h-8 items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 mr-1">
+      <i class="fa fa-bars text-sm"></i>
+    </button>
+
+    <!-- Global search -->
+    <div class="flex-1 max-w-md">
+      <div class="relative">
+        <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-sm"></i>
+        <input type="text" placeholder='Sipariş, ürün, müşteri ara…' class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-32 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-300 focus:bg-white transition-all">
+        <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          <kbd class="bg-white border border-slate-200 rounded text-[10px] font-mono px-1 py-0.5 text-slate-500">Ctrl</kbd>
+          <kbd class="bg-white border border-slate-200 rounded text-[10px] font-mono px-1 py-0.5 text-slate-500">K</kbd>
+        </div>
+      </div>
+    </div>
+
+    <!-- Favorites in header -->
+    <div class="flex items-center gap-1 border-l border-slate-200 pl-4">
+      <span class="text-xs text-slate-400 mr-1 flex-shrink-0">Hızlı:</span>
+      <button class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-amber-50 text-slate-600 hover:text-amber-700 text-xs font-medium transition-colors">
+        <i class="fa fa-star text-amber-400 text-[10px]"></i> Bekleyen Sipariş
+        <span class="bg-amber-100 text-amber-700 text-[9px] font-bold px-1 rounded-full">14</span>
+      </button>
+      <button class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-amber-50 text-slate-600 hover:text-amber-700 text-xs font-medium transition-colors">
+        <i class="fa fa-star text-amber-400 text-[10px]"></i> Stok Uyarısı
+        <span class="bg-red-100 text-red-600 text-[9px] font-bold px-1 rounded-full">47</span>
+      </button>
+    </div>
+
+    <div class="ml-auto flex items-center gap-1">
+      <!-- Notifications -->
+      <button onclick="toggleNotifPanel()" class="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-500 transition-colors">
+        <i class="fa fa-bell text-sm"></i>
+        <span class="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full ring-2 ring-white"></span>
+      </button>
+      <!-- Language -->
+      <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100 text-slate-600 text-sm font-medium">
+        <span class="text-base">🇹🇷</span> TR
+        <i class="fa fa-chevron-down text-[10px] text-slate-400"></i>
+      </button>
+      <!-- Theme -->
+      <button onclick="toggleDark()" id="theme-btn" class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-400">
+        <i class="fa fa-moon text-sm"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 p-6 space-y-5">
+
+    <!-- Welcome + role indicator -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Merhaba, Ahmet 👋</h1>
+        <p class="text-sm text-slate-400 mt-0.5">
+          <span class="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 text-xs font-semibold px-2 py-0.5 rounded-full border border-blue-200 mr-2">
+            <i class="fa fa-shield-halved text-[10px]"></i> Süper Admin
+          </span>
+          Bugün 12 Mart 2026, Perşembe &nbsp;·&nbsp; Son giriş: 2 saat önce
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-400">Tarih aralığı:</span>
+        <select class="text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <option>Son 7 gün</option>
+          <option selected>Son 30 gün</option>
+          <option>Bu ay</option>
+          <option>Bu yıl</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- KPI stat cards -->
+    <div class="grid grid-cols-4 gap-4">
+      <div class="stat-card">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Toplam Sipariş</span>
+          <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center"><i class="fa fa-shopping-bag text-blue-500 text-sm"></i></div>
+        </div>
+        <div class="text-3xl font-black text-slate-900">1.482</div>
+        <div class="flex items-center gap-1.5 mt-2">
+          <span class="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">
+            <i class="fa fa-arrow-up text-[9px]"></i> %8.2
+          </span>
+          <span class="text-xs text-slate-400">geçen aya göre</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ciro</span>
+          <div class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center"><i class="fa fa-turkish-lira-sign text-emerald-500 text-sm"></i></div>
+        </div>
+        <div class="text-3xl font-black text-slate-900">284.750</div>
+        <div class="flex items-center gap-1.5 mt-2">
+          <span class="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md">
+            <i class="fa fa-arrow-up text-[9px]"></i> %12.4
+          </span>
+          <span class="text-xs text-slate-400">geçen aya göre</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Yeni Üye</span>
+          <div class="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center"><i class="fa fa-user-plus text-purple-500 text-sm"></i></div>
+        </div>
+        <div class="text-3xl font-black text-slate-900">146</div>
+        <div class="flex items-center gap-1.5 mt-2">
+          <span class="flex items-center gap-1 text-xs font-semibold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md">
+            <i class="fa fa-arrow-down text-[9px]"></i> %3.1
+          </span>
+          <span class="text-xs text-slate-400">geçen aya göre</span>
+        </div>
+      </div>
+
+      <div class="stat-card" style="border-color:#fecaca;background:linear-gradient(135deg,#fff,#fff1f2)">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-bold text-red-400 uppercase tracking-wider">Stok Dışı</span>
+          <div class="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center"><i class="fa fa-triangle-exclamation text-red-400 text-sm"></i></div>
+        </div>
+        <div class="text-3xl font-black text-red-500">47</div>
+        <div class="flex items-center gap-1.5 mt-2">
+          <span class="text-xs font-semibold text-red-500">Acil müdahale gerekli</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick shortcuts (role-based) -->
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-bold text-slate-700">Hızlı İşlemler</h2>
+        <button class="text-xs text-slate-400 hover:text-blue-600 font-medium flex items-center gap-1">
+          <i class="fa fa-pen text-[10px]"></i> Özelleştir
+        </button>
+      </div>
+      <div class="grid grid-cols-6 gap-3">
+        <div class="shortcut-card">
+          <div class="sc-icon bg-blue-50"><i class="fa fa-plus text-blue-500"></i></div>
+          <span class="text-xs font-semibold text-slate-700">Yeni Sipariş</span>
+        </div>
+        <div class="shortcut-card">
+          <div class="sc-icon bg-emerald-50"><i class="fa fa-box text-emerald-500"></i></div>
+          <span class="text-xs font-semibold text-slate-700">Yeni Ürün</span>
+        </div>
+        <div class="shortcut-card">
+          <div class="sc-icon bg-purple-50"><i class="fa fa-user-plus text-purple-500"></i></div>
+          <span class="text-xs font-semibold text-slate-700">Üye Ekle</span>
+        </div>
+        <div class="shortcut-card">
+          <div class="sc-icon bg-amber-50"><i class="fa fa-arrows-rotate text-amber-500"></i></div>
+          <span class="text-xs font-semibold text-slate-700">Stok Hareketi</span>
+        </div>
+        <div class="shortcut-card">
+          <div class="sc-icon bg-rose-50"><i class="fa fa-percent text-rose-500"></i></div>
+          <span class="text-xs font-semibold text-slate-700">Kampanya Oluştur</span>
+        </div>
+        <div class="shortcut-card">
+          <div class="sc-icon bg-slate-100"><i class="fa fa-file-invoice text-slate-500"></i></div>
+          <span class="text-xs font-semibold text-slate-700">Fatura Kes</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lower grid: Recent orders + Notifications + Stock alerts -->
+    <div class="grid grid-cols-3 gap-5">
+
+      <!-- Recent Orders -->
+      <div class="col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h2 class="text-sm font-bold text-slate-700">Son Siparişler</h2>
+          <a href="#" class="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1">
+            Tümünü Gör <i class="fa fa-arrow-right text-[10px]"></i>
+          </a>
+        </div>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-slate-50/60 border-b border-slate-100">
+              <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Sipariş</th>
+              <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Müşteri</th>
+              <th class="text-right px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Tutar</th>
+              <th class="text-center px-4 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Durum</th>
+              <th class="text-right px-5 py-2.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Tarih</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="px-5 py-3 font-semibold text-blue-600 text-sm">#ORD-00892</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">AY</div>
+                  <span class="text-sm text-slate-700">Ahmet Yılmaz</span>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-right font-semibold text-slate-800">1.299,90 ₺</td>
+              <td class="px-4 py-3 text-center"><span class="badge badge-pending"><span class="dot bg-amber-500"></span>Beklemede</span></td>
+              <td class="px-5 py-3 text-right text-xs text-slate-400">5 dk önce</td>
+            </tr>
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="px-5 py-3 font-semibold text-blue-600 text-sm">#ORD-00891</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">FK</div>
+                  <span class="text-sm text-slate-700">Fatma Kaya</span>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-right font-semibold text-slate-800">2.899,00 ₺</td>
+              <td class="px-4 py-3 text-center"><span class="badge badge-processing"><span class="dot bg-blue-500"></span>İşlemde</span></td>
+              <td class="px-5 py-3 text-right text-xs text-slate-400">18 dk önce</td>
+            </tr>
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="px-5 py-3 font-semibold text-blue-600 text-sm">#ORD-00890</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">MC</div>
+                  <span class="text-sm text-slate-700">Mehmet Çelik</span>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-right font-semibold text-slate-800">679,90 ₺</td>
+              <td class="px-4 py-3 text-center"><span class="badge badge-shipped"><span class="dot bg-emerald-500"></span>Kargoda</span></td>
+              <td class="px-5 py-3 text-right text-xs text-slate-400">1 saat önce</td>
+            </tr>
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="px-5 py-3 font-semibold text-blue-600 text-sm">#ORD-00889</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">SY</div>
+                  <span class="text-sm text-slate-700">Selin Yıldız</span>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-right font-semibold text-slate-800">450,00 ₺</td>
+              <td class="px-4 py-3 text-center"><span class="badge badge-cancelled"><span class="dot bg-red-500"></span>İptal</span></td>
+              <td class="px-5 py-3 text-right text-xs text-slate-400">2 saat önce</td>
+            </tr>
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="px-5 py-3 font-semibold text-blue-600 text-sm">#ORD-00888</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">KA</div>
+                  <span class="text-sm text-slate-700">Kadir Arslan</span>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-right font-semibold text-slate-800">3.199,00 ₺</td>
+              <td class="px-4 py-3 text-center"><span class="badge badge-processing"><span class="dot bg-blue-500"></span>İşlemde</span></td>
+              <td class="px-5 py-3 text-right text-xs text-slate-400">3 saat önce</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Notifications + Stock alerts -->
+      <div class="space-y-4">
+
+        <!-- Notifications -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
+            <h2 class="text-sm font-bold text-slate-700">Bildirimler</h2>
+            <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">4</span>
+          </div>
+          <div class="divide-y divide-slate-50">
+            <div class="flex items-start gap-3 px-4 py-3">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 notif-icon-error"><i class="fa fa-triangle-exclamation text-sm"></i></div>
+              <div class="min-w-0 flex-1">
+                <div class="text-xs font-semibold text-slate-800">47 ürün stok dışı</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">Acil stok girişi gerekli</div>
+              </div>
+              <span class="text-[10px] text-slate-300 flex-shrink-0">5 dk</span>
+            </div>
+            <div class="flex items-start gap-3 px-4 py-3">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 notif-icon-warn"><i class="fa fa-rotate-left text-sm"></i></div>
+              <div class="min-w-0 flex-1">
+                <div class="text-xs font-semibold text-slate-800">Yeni iade talebi</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">#ORD-00851 — onay bekliyor</div>
+              </div>
+              <span class="text-[10px] text-slate-300 flex-shrink-0">22 dk</span>
+            </div>
+            <div class="flex items-start gap-3 px-4 py-3">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 notif-icon-info"><i class="fa fa-plug text-sm"></i></div>
+              <div class="min-w-0 flex-1">
+                <div class="text-xs font-semibold text-slate-800">Trendyol senkron tamamlandı</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">1.284 ürün güncellendi</div>
+              </div>
+              <span class="text-[10px] text-slate-300 flex-shrink-0">1 sa</span>
+            </div>
+            <div class="flex items-start gap-3 px-4 py-3">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 notif-icon-success"><i class="fa fa-check text-sm"></i></div>
+              <div class="min-w-0 flex-1">
+                <div class="text-xs font-semibold text-slate-800">Kampanya başladı</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">"Bahar Fırsatları" yayında</div>
+              </div>
+              <span class="text-[10px] text-slate-300 flex-shrink-0">2 sa</span>
+            </div>
+          </div>
+          <div class="px-4 py-2.5 border-t border-slate-100 bg-slate-50/50">
+            <a href="#" class="text-xs font-semibold text-blue-600 hover:text-blue-800">Tüm bildirimleri gör →</a>
+          </div>
+        </div>
+
+        <!-- Critical stock widget -->
+        <div class="bg-white rounded-2xl border border-red-100 shadow-sm overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-3.5 border-b border-red-100">
+            <h2 class="text-sm font-bold text-red-600 flex items-center gap-2">
+              <i class="fa fa-triangle-exclamation text-xs"></i> Kritik Stok
+            </h2>
+            <span class="bg-red-100 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">5</span>
+          </div>
+          <div class="divide-y divide-slate-50">
+            <div class="flex items-center justify-between px-4 py-2.5">
+              <div class="min-w-0">
+                <div class="text-xs font-semibold text-slate-700 truncate">Adidas Ultraboost 22</div>
+                <div class="text-[11px] text-slate-400">AD-UB22-43</div>
+              </div>
+              <span class="font-bold text-red-500 text-sm flex-shrink-0">0</span>
+            </div>
+            <div class="flex items-center justify-between px-4 py-2.5">
+              <div class="min-w-0">
+                <div class="text-xs font-semibold text-slate-700 truncate">Zara Trench Coat S</div>
+                <div class="text-[11px] text-slate-400">ZR-TRC-S</div>
+              </div>
+              <span class="font-bold text-amber-500 text-sm flex-shrink-0">2</span>
+            </div>
+            <div class="flex items-center justify-between px-4 py-2.5">
+              <div class="min-w-0">
+                <div class="text-xs font-semibold text-slate-700 truncate">Nike AF1 Low 40</div>
+                <div class="text-[11px] text-slate-400">NK-AF1-40</div>
+              </div>
+              <span class="font-bold text-amber-500 text-sm flex-shrink-0">3</span>
+            </div>
+          </div>
+          <div class="px-4 py-2.5 border-t border-red-50 bg-red-50/30">
+            <a href="#" class="text-xs font-semibold text-red-600 hover:text-red-800">Tüm stok uyarılarını gör →</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════ COMMAND PALETTE ══════════ -->
+<div id="cmd-overlay" onclick="if(event.target===this)closePalette()">
+  <div id="cmd-box">
+    <div class="flex items-center gap-3 px-5 border-b border-slate-100">
+      <i class="fa fa-search text-slate-400 text-sm flex-shrink-0"></i>
+      <input id="cmd-input" placeholder="Sipariş, ürün, müşteri ara… veya komut girin" autocomplete="off">
+      <kbd class="flex-shrink-0 bg-slate-100 text-slate-400 text-[10px] font-mono px-1.5 py-0.5 rounded border border-slate-200">ESC</kbd>
+    </div>
+    <div class="py-2 max-h-72 overflow-y-auto">
+      <div class="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hızlı Erişim</div>
+      <div class="cmd-result selected">
+        <div class="cmd-result-icon bg-blue-50"><i class="fa fa-shopping-bag text-blue-500"></i></div>
+        <div class="flex-1"><div class="text-sm font-semibold text-slate-800">Sipariş #ORD-00892</div><div class="text-xs text-slate-400">Ahmet Yılmaz &bull; 1.299,90 ₺ &bull; Beklemede</div></div>
+        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200">Sipariş</span>
+      </div>
+      <div class="cmd-result">
+        <div class="cmd-result-icon bg-emerald-50"><i class="fa fa-box text-emerald-500"></i></div>
+        <div class="flex-1"><div class="text-sm font-semibold text-slate-800">Nike Air Max 270</div><div class="text-xs text-slate-400">SKU: NK-AM270-42 &bull; Stok: 45</div></div>
+        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Ürün</span>
+      </div>
+      <div class="cmd-result">
+        <div class="cmd-result-icon bg-purple-50"><i class="fa fa-user text-purple-500"></i></div>
+        <div class="flex-1"><div class="text-sm font-semibold text-slate-800">Fatma Kaya</div><div class="text-xs text-slate-400">fatma.kaya@email.com &bull; 12 sipariş</div></div>
+        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">Müşteri</span>
+      </div>
+      <div class="h-px bg-slate-100 mx-4 my-1"></div>
+      <div class="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hızlı İşlemler</div>
+      <div class="cmd-result">
+        <div class="cmd-result-icon bg-slate-100"><i class="fa fa-plus text-slate-500"></i></div>
+        <div class="flex-1"><div class="text-sm font-medium text-slate-700">Yeni Sipariş Oluştur</div></div>
+        <kbd class="text-[10px] font-mono bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded border border-slate-200">Ctrl+N</kbd>
+      </div>
+      <div class="cmd-result">
+        <div class="cmd-result-icon bg-amber-50"><i class="fa fa-star text-amber-400"></i></div>
+        <div class="flex-1"><div class="text-sm font-medium text-slate-700">Bekleyen Siparişler</div></div>
+        <span class="text-[10px] text-amber-500 font-semibold">Favori</span>
+      </div>
+    </div>
+    <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/60">
+      <div class="flex items-center gap-4 text-[11px] text-slate-400">
+        <span><kbd class="bg-white border border-slate-200 rounded px-1 font-mono">↑↓</kbd> Gezin</span>
+        <span><kbd class="bg-white border border-slate-200 rounded px-1 font-mono">↵</kbd> Seç</span>
+        <span><kbd class="bg-white border border-slate-200 rounded px-1 font-mono">Esc</kbd> Kapat</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Demo hint -->
+<div id="hint" class="fixed bottom-6 right-6 bg-slate-900 text-white text-sm px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 z-40">
+  <i class="fa fa-circle-info text-blue-400"></i>
+  <span>Dashboard: Rol bazlı KPI &bull; Header favorileri &bull; Widget'lar</span>
+  <button onclick="document.getElementById('hint').remove()" class="text-white/40 hover:text-white ml-1"><i class="fa fa-xmark"></i></button>
+</div>
+
+<script>
+  let collapsed = false;
+  function toggleSidebar() {
+    collapsed = !collapsed;
+    document.getElementById('sidebar').classList.toggle('collapsed', collapsed);
+    document.getElementById('main').classList.toggle('expanded', collapsed);
+    const ct = document.getElementById('ctoggle');
+    if (collapsed) { ct.classList.remove('hidden'); ct.classList.add('flex'); }
+    else { ct.classList.add('hidden'); ct.classList.remove('flex'); }
+  }
+
+  function openPalette() {
+    document.getElementById('cmd-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('cmd-input').focus(), 50);
+  }
+  function closePalette() {
+    document.getElementById('cmd-overlay').classList.remove('open');
+  }
+
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); openPalette(); }
+    if (e.key === 'Escape') closePalette();
+  });
+
+  function toggleDark() {
+    const btn = document.getElementById('theme-btn');
+    const icon = btn.querySelector('i');
+    if (icon.classList.contains('fa-moon')) {
+      icon.classList.replace('fa-moon','fa-sun');
+      document.body.style.background = '#0f172a';
+    } else {
+      icon.classList.replace('fa-sun','fa-moon');
+      document.body.style.background = '#f1f5f9';
+    }
+  }
+</script>
+</body>
+</html>

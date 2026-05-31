@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ECSPros.Finance.Application.Commands.CreateSupplierInvoice;
 
 public record CreateSupplierInvoiceCommand(
-    Guid SupplierId,
+    Guid CurrentAccountId,
     string InvoiceNumber,
     DateOnly InvoiceDate,
     DateOnly? DueDate,
@@ -31,9 +31,6 @@ public class CreateSupplierInvoiceCommandHandler : IRequestHandler<CreateSupplie
 
     public async Task<Result<Guid>> Handle(CreateSupplierInvoiceCommand request, CancellationToken ct)
     {
-        var supplierExists = await _db.Suppliers.AnyAsync(s => s.Id == request.SupplierId, ct);
-        if (!supplierExists)
-            return Result.Failure<Guid>("Tedarikçi bulunamadı.");
 
         if (!request.Items.Any())
             return Result.Failure<Guid>("Fatura için en az bir kalem eklenmelidir.");
@@ -72,7 +69,7 @@ public class CreateSupplierInvoiceCommandHandler : IRequestHandler<CreateSupplie
         var invoice = new SupplierInvoice
         {
             Id = Guid.NewGuid(),
-            SupplierId = request.SupplierId,
+            CurrentAccountId = request.CurrentAccountId,
             InvoiceNumber = request.InvoiceNumber,
             InvoiceDate = request.InvoiceDate,
             DueDate = request.DueDate,
