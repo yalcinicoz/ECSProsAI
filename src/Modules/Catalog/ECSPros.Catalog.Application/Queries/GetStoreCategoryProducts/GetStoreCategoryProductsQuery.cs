@@ -1,5 +1,6 @@
 using ECSPros.Catalog.Application.Helpers;
 using ECSPros.Catalog.Application.Services;
+using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +29,7 @@ public record StoreProductListItemDto(
     decimal? CompareAtPrice,
     bool IsActive);
 
-public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db)
+public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db, IStockService stockService)
     : IRequestHandler<GetStoreCategoryProductsQuery, Result<StoreCategoryProductsDto>>
 {
     public async Task<Result<StoreCategoryProductsDto>> Handle(
@@ -42,8 +43,13 @@ public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db)
         if (category is null)
             return Result.Failure<StoreCategoryProductsDto>("Kategori bulunamadı.");
 
-        // Filtre kurallarını çöz: preset varsa onu kullan, yoksa doğrudan FilterRules
         var effectiveFilterDef = ResolveFilterDef(category);
+        var rules = CategoryFilterRules.From(effectiveFilterDef);
+
+        // Stok filtresi için önceden variant ID'lerini topla
+        HashSet<Guid>? inStockVariantIds = null;
+        if (rules?.HasStock.HasValue == true)
+            inStockVariantIds = await stockService.GetInStockVariantIdsAsync(ct);
 
         IQueryable<Domain.Entities.Product> productQuery;
 
@@ -57,11 +63,12 @@ public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db)
         }
         else if (category.FillType == "filter")
         {
-            productQuery = BuildFilterQuery(db, effectiveFilterDef).Where(p => p.IsActive);
+            productQuery = BuildFilterQuery(db, rules, request.FirmPlatformId, inStockVariantIds)
+                .Where(p => p.IsActive);
         }
         else // mixed
         {
-            var filteredIds = await BuildFilterQuery(db, effectiveFilterDef)
+            var filteredIds = await BuildFilterQuery(db, rules, request.FirmPlatformId, inStockVariantIds)
                 .Select(p => p.Id).ToListAsync(ct);
 
             var pinnedIds = await db.CategoryProducts
@@ -112,41 +119,85 @@ public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db)
             category.Id, category.NameI18n, category.FillType, paged));
     }
 
-    /// <summary>
-    /// Preset varsa preset'in FilterDef'ini döner.
-    /// Kategori kendi FilterRules'ına da sahipse bunlar merge edilir (kategori override eder).
-    /// </summary>
     private static Dictionary<string, object>? ResolveFilterDef(Domain.Entities.Category category)
     {
         if (category.FilterPreset is null)
             return category.FilterRules;
-
         if (category.FilterRules is null or { Count: 0 })
             return category.FilterPreset.FilterDef;
-
-        // Merge: preset taban, category.FilterRules override
         var merged = new Dictionary<string, object>(category.FilterPreset.FilterDef);
         foreach (var kv in category.FilterRules)
             merged[kv.Key] = kv.Value;
         return merged;
     }
 
-    private static IQueryable<Domain.Entities.Product> BuildFilterQuery(
-        ICatalogDbContext db, Dictionary<string, object>? rawRules)
+    /// <summary>Tüm filtre kurallarını uygular. isActive filtresi burada uygulanmaz (caller halleder).</summary>
+    internal static IQueryable<Domain.Entities.Product> BuildFilterQuery(
+        ICatalogDbContext db,
+        CategoryFilterRules? rules,
+        Guid? firmPlatformId = null,
+        HashSet<Guid>? inStockVariantIds = null)
     {
         var q = db.Products.AsNoTracking();
-        var rules = CategoryFilterRules.From(rawRules);
         if (rules is null) return q;
 
+        // Ürün grubu
         if (rules.ProductGroupIds is { Count: > 0 })
             q = q.Where(p => rules.ProductGroupIds.Contains(p.ProductGroupId));
 
+        // Temel fiyat aralığı
         if (rules.PriceMin.HasValue)
             q = q.Where(p => p.BasePrice >= rules.PriceMin.Value);
-
         if (rules.PriceMax.HasValue)
             q = q.Where(p => p.BasePrice <= rules.PriceMax.Value);
 
+        // Platform fiyatı (sadece firmPlatformId biliniyorsa)
+        if (firmPlatformId.HasValue && (rules.PlatformPriceMin.HasValue || rules.PlatformPriceMax.HasValue))
+        {
+            var pid = firmPlatformId.Value;
+            if (rules.PlatformPriceMin.HasValue)
+                q = q.Where(p => p.Variants.Any(v => v.FirmPlatformVariants
+                    .Any(fpv => fpv.FirmPlatformId == pid && fpv.Price >= rules.PlatformPriceMin.Value)));
+            if (rules.PlatformPriceMax.HasValue)
+                q = q.Where(p => p.Variants.Any(v => v.FirmPlatformVariants
+                    .Any(fpv => fpv.FirmPlatformId == pid && fpv.Price <= rules.PlatformPriceMax.Value)));
+        }
+
+        // KDV oranı
+        if (rules.TaxRateMin.HasValue)
+            q = q.Where(p => p.TaxRate >= rules.TaxRateMin.Value);
+        if (rules.TaxRateMax.HasValue)
+            q = q.Where(p => p.TaxRate <= rules.TaxRateMax.Value);
+
+        // Tedarikçi
+        if (rules.SupplierIds is { Count: > 0 })
+            q = q.Where(p => p.SupplierId.HasValue && rules.SupplierIds.Contains(p.SupplierId.Value));
+
+        // Kategori — ürün şu kategorilerde bulunmalı
+        if (rules.CategoryIds is { Count: > 0 })
+            q = q.Where(p => db.CategoryProducts
+                .Any(cp => cp.ProductId == p.Id && rules.CategoryIds.Contains(cp.CategoryId)));
+
+        // Durum
+        if (rules.IsActive.HasValue)
+            q = q.Where(p => p.IsActive == rules.IsActive.Value);
+
+        // Stok durumu
+        if (rules.HasStock.HasValue && inStockVariantIds is not null)
+        {
+            if (rules.HasStock.Value)
+                q = q.Where(p => p.Variants.Any(v => inStockVariantIds.Contains(v.Id)));
+            else
+                q = q.Where(p => !p.Variants.Any(v => inStockVariantIds.Contains(v.Id)));
+        }
+
+        // Oluşturma tarihi
+        if (rules.CreatedAfter.HasValue)
+            q = q.Where(p => p.CreatedAt >= rules.CreatedAfter.Value);
+        if (rules.CreatedBefore.HasValue)
+            q = q.Where(p => p.CreatedAt <= rules.CreatedBefore.Value);
+
+        // Özellik filtreleri
         if (rules.AttributeFilters is { Count: > 0 })
         {
             foreach (var af in rules.AttributeFilters)
