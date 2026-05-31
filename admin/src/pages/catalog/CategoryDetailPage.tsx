@@ -1,8 +1,9 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Plus, Trash2, RefreshCw, Save, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, RefreshCw, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { FilterBuilder, type FilterDef } from '@/components/catalog/FilterBuilder'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -96,7 +97,7 @@ export function CategoryDetailPage() {
     nameI18n: Record<string, string>
     fillType: string
     filterPresetId: string | null
-    filterRulesJson: string
+    filterDef: FilterDef
     isActive: boolean
     sortOrder: number
   } | null>(null)
@@ -105,35 +106,21 @@ export function CategoryDetailPage() {
   if (cat && !formInited) {
     setFormInited(true)
     setGenForm({
-      nameI18n:        { ...cat.nameI18n },
-      fillType:        cat.fillType,
-      filterPresetId:  cat.filterPresetId,
-      filterRulesJson: cat.filterRules ? JSON.stringify(cat.filterRules, null, 2) : '',
-      isActive:        cat.isActive,
-      sortOrder:       cat.sortOrder,
+      nameI18n:       { ...cat.nameI18n },
+      fillType:       cat.fillType,
+      filterPresetId: cat.filterPresetId,
+      filterDef:      (cat.filterRules ?? {}) as FilterDef,
+      isActive:       cat.isActive,
+      sortOrder:      cat.sortOrder,
     })
   }
-
-  const [jsonError, setJsonError] = useState<string | null>(null)
-
-  const validateJson = useCallback((val: string): Record<string, unknown> | null => {
-    if (!val.trim()) return null
-    try {
-      return JSON.parse(val)
-    } catch {
-      return undefined as unknown as null
-    }
-  }, [])
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!genForm) return
-      let filterRules: Record<string, unknown> | null = null
-      if (genForm.fillType !== 'manual' && genForm.filterRulesJson.trim()) {
-        const parsed = validateJson(genForm.filterRulesJson)
-        if (parsed === undefined as unknown) throw new Error('Geçersiz JSON')
-        filterRules = parsed
-      }
+      const filterRules = genForm.fillType !== 'manual' && Object.keys(genForm.filterDef).length > 0
+        ? genForm.filterDef
+        : null
       await api.put(`/catalog/categories/${id}`, {
         nameI18n:       genForm.nameI18n,
         parentId:       cat?.parentId ?? null,
@@ -147,9 +134,6 @@ export function CategoryDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['category', id] })
       setFormInited(false)
-    },
-    onError: (err: Error) => {
-      if (err.message === 'Geçersiz JSON') setJsonError('FilterRules geçerli bir JSON değil.')
     },
   })
 
@@ -315,19 +299,18 @@ export function CategoryDetailPage() {
             </p>
           </div>
 
-          {/* Filtre — Preset seçici + override */}
+          {/* Filtre — Preset seçici + görsel builder */}
           {hasFilterSupport && (
             <div className="space-y-4">
-              {/* Preset seçici */}
+              {/* Kayıtlı filtre seçici */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="flbl">Filtre Şablonu</label>
+                  <label className="flbl">Kayıtlı Filtreden Seç</label>
                   {genForm.filterPresetId && (
-                    <button
-                      className="text-xs"
-                      style={{ color: '#ef4444' }}
-                      onClick={() => setGenForm(f => f && ({ ...f, filterPresetId: null }))}
-                    >Şablonu kaldır</button>
+                    <button className="text-xs" style={{ color: '#ef4444' }}
+                      onClick={() => setGenForm(f => f && ({ ...f, filterPresetId: null }))}>
+                      Filtreyi kaldır
+                    </button>
                   )}
                 </div>
                 <SearchableSelect
@@ -336,58 +319,39 @@ export function CategoryDetailPage() {
                   options={filterPresets.map(fp => ({
                     value: fp.id,
                     label: fp.nameI18n['tr'] ?? fp.nameI18n[Object.keys(fp.nameI18n)[0]] ?? fp.code,
-                    description: fp.description ?? undefined,
                   }))}
-                  placeholder="Kayıtlı filtre şablonu seçin…"
+                  placeholder="Kayıtlı filtreyi seç…"
                   hasValue={!!genForm.filterPresetId}
                 />
-                {/* Preset özeti */}
                 {selectedPreset && (
-                  <div className="mt-2 p-3 rounded-xl text-xs space-y-1"
-                    style={{ background: 'var(--brand-bg)', border: '1px solid var(--brand)', color: 'var(--brand)' }}>
-                    <div className="font-semibold">
+                  <div className="mt-2 p-2.5 rounded-xl text-xs"
+                    style={{ background: 'var(--brand-bg)', border: '1px solid var(--brand)' }}>
+                    <span className="font-semibold" style={{ color: 'var(--brand)' }}>
                       {selectedPreset.nameI18n['tr'] ?? selectedPreset.code}
-                    </div>
+                    </span>
                     {selectedPreset.description && (
-                      <div style={{ color: 'var(--text-m)' }}>{selectedPreset.description}</div>
+                      <span style={{ color: 'var(--text-m)' }}> · {selectedPreset.description}</span>
                     )}
-                    <details>
-                      <summary className="cursor-pointer" style={{ color: 'var(--text-s)' }}>Filtre JSON'u gör</summary>
-                      <pre className="mt-1 text-xs overflow-x-auto" style={{ color: 'var(--text-m)' }}>
-                        {JSON.stringify(selectedPreset.filterDef, null, 2)}
-                      </pre>
-                    </details>
                   </div>
                 )}
-                <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
-                  Şablon seçilmezse aşağıdaki özel kurallar kullanılır. Seçilirse şablon + özel kurallar birleşir.
-                </p>
               </div>
 
-              {/* Override / özel kurallar */}
-              <div>
-                <label className="flbl">
-                  {genForm.filterPresetId ? 'Özel Override Kuralları (opsiyonel)' : 'Filtre Kuralları (JSON)'}
-                </label>
-                <textarea
-                  rows={8}
-                  className={cn('inp font-mono text-xs', jsonError && 'border-red-400')}
-                  style={{ resize: 'vertical' }}
-                  value={genForm.filterRulesJson}
-                  onChange={(e) => { setJsonError(null); setGenForm(f => f && ({ ...f, filterRulesJson: e.target.value })) }}
-                  placeholder={genForm.filterPresetId
-                    ? '// Boş bırakılırsa sadece şablon kuralları kullanılır'
-                    : JSON.stringify({ productGroupIds: [], priceMin: null, priceMax: null, attributeFilters: [] }, null, 2)}
-                />
-                {jsonError && (
-                  <p className="text-xs mt-1 flex items-center gap-1" style={{ color: '#ef4444' }}>
-                    <AlertCircle size={11} /> {jsonError}
-                  </p>
-                )}
-                <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
-                  Ürünler sekmesinden "Sync Çalıştır" ile CategoryProducts tablosu güncellenir.
-                </p>
+              {/* Ayraç */}
+              <div className="flex items-center gap-2" style={{ color: 'var(--text-s)' }}>
+                <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                <span className="text-xs">{genForm.filterPresetId ? 'ek özel kurallar (opsiyonel)' : 'filtre kurallarını seç'}</span>
+                <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
               </div>
+
+              {/* Görsel filtre oluşturucu */}
+              <FilterBuilder
+                value={genForm.filterDef}
+                onChange={(def) => setGenForm(f => f && ({ ...f, filterDef: def }))}
+              />
+
+              <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+                Ürünler sekmesinden "Sync Çalıştır" ile CategoryProducts tablosu güncellenir.
+              </p>
             </div>
           )}
 
