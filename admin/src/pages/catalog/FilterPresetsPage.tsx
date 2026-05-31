@@ -1,7 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Trash2, Filter, Link } from 'lucide-react'
-import { toSnakeCase } from '@/lib/utils'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -12,6 +11,7 @@ import { PageSpinner } from '@/components/ui/Spinner'
 import { useLanguages } from '@/hooks/useLanguages'
 import { FL } from '@/lib/field-labels'
 import { buildI18nValues } from '@/lib/i18n-helper'
+import { FilterBuilder, type FilterDef, buildDescription } from '@/components/catalog/FilterBuilder'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -20,7 +20,7 @@ interface FilterPreset {
   code: string
   nameI18n: Record<string, string>
   description: string | null
-  filterDef: Record<string, unknown>
+  filterDef: FilterDef
   isActive: boolean
   sortOrder: number
   usedInCategories: number
@@ -30,23 +30,18 @@ interface PresetForm {
   code: string
   nameI18n: Record<string, string>
   description: string
-  filterDefJson: string
+  filterDef: FilterDef
   sortOrder: number
   isActive: boolean
 }
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getName(p: FilterPreset): string {
   return p.nameI18n['tr'] ?? p.nameI18n[Object.keys(p.nameI18n)[0]] ?? p.code
 }
 
-function tryParseJson(s: string): { ok: true; val: Record<string, unknown> } | { ok: false; err: string } {
-  try { return { ok: true, val: JSON.parse(s) } }
-  catch { return { ok: false, err: 'Geçersiz JSON' } }
+function toSlug(s: string) {
+  return s.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
 }
-
-const EMPTY_DEF = '{\n  "productGroupIds": [],\n  "priceMin": null,\n  "priceMax": null,\n  "attributeFilters": []\n}'
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -56,21 +51,21 @@ export function FilterPresetsPage() {
 
   const [modal, setModal] = useState<null | 'create' | FilterPreset>(null)
   const [deleteTarget, setDeleteTarget] = useState<FilterPreset | null>(null)
-  const [jsonError, setJsonError] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  const sourceLang = languages.find(l => l.isDefault)?.code ?? languages[0]?.code ?? 'tr'
+  const nameFields = useMemo(() => [{ key: 'name', labels: FL.categoryName, required: true }], [])
 
   const blankForm = useCallback((): PresetForm => ({
     code: '',
     nameI18n: languages.reduce((a, l) => ({ ...a, [l.code]: '' }), {}),
     description: '',
-    filterDefJson: EMPTY_DEF,
+    filterDef: {},
     sortOrder: 0,
     isActive: true,
   }), [languages])
 
   const [form, setForm] = useState<PresetForm>(blankForm)
-
-  const sourceLang = languages.find(l => l.isDefault)?.code ?? languages[0]?.code ?? 'tr'
-  const nameFields = useMemo(() => [{ key: 'name', labels: FL.categoryName, required: true }], [])
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
@@ -83,7 +78,7 @@ export function FilterPresetsPage() {
 
   function openCreate() {
     setForm(blankForm())
-    setJsonError(null)
+    setSaveError(null)
     setModal('create')
   }
 
@@ -92,45 +87,47 @@ export function FilterPresetsPage() {
       code: p.code,
       nameI18n: { ...p.nameI18n },
       description: p.description ?? '',
-      filterDefJson: JSON.stringify(p.filterDef, null, 2),
+      filterDef: p.filterDef ?? {},
       sortOrder: p.sortOrder,
       isActive: p.isActive,
     })
-    setJsonError(null)
+    setSaveError(null)
     setModal(p)
   }
+
+  // ── FilterBuilder callback ─────────────────────────────────────────────────
+
+  const handleFilterChange = useCallback((def: FilterDef, desc: string) => {
+    setForm(f => ({
+      ...f,
+      filterDef: def,
+      // Sadece description boşsa otomatik doldur; kullanıcı üzerine yazdıysa koru
+      description: f.description && f.description !== buildDescription(f.filterDef as FilterDef, [], [])
+        ? f.description
+        : desc,
+    }))
+  }, [])
 
   // ── Save mutation ──────────────────────────────────────────────────────────
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const parsed = tryParseJson(form.filterDefJson)
-      if (!parsed.ok) throw new Error('Geçersiz JSON')
-
       const payload = {
-        code: form.code.trim().toLowerCase().replace(/\s+/g, '_'),
+        code: form.code.trim() || toSlug(form.nameI18n['tr'] ?? form.nameI18n[Object.keys(form.nameI18n)[0]] ?? 'filtre'),
         nameI18n: form.nameI18n,
         description: form.description.trim() || null,
-        filterDef: parsed.val,
+        filterDef: form.filterDef,
         sortOrder: form.sortOrder,
         isActive: form.isActive,
       }
-
-      if (modal === 'create') {
-        await api.post('/catalog/filter-presets', payload)
-      } else {
-        await api.put(`/catalog/filter-presets/${(modal as FilterPreset).id}`, payload)
-      }
+      if (modal === 'create') await api.post('/catalog/filter-presets', payload)
+      else await api.put(`/catalog/filter-presets/${(modal as FilterPreset).id}`, payload)
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['filter-presets'] })
-      setModal(null)
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['filter-presets'] }); setModal(null) },
     onError: (err: unknown) => {
-      const msg = (err as Error).message === 'Geçersiz JSON'
-        ? 'FilterDef geçerli bir JSON değil.'
-        : ((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Bir hata oluştu.')
-      setJsonError(msg)
+      setSaveError(
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Bir hata oluştu.',
+      )
     },
   })
 
@@ -139,39 +136,44 @@ export function FilterPresetsPage() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => api.delete(`/catalog/filter-presets/${id}`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['filter-presets'] }); setDeleteTarget(null) },
+    onError: (err: unknown) => {
+      alert((err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Silinemedi.')
+    },
   })
 
   if (isLoading || langsLoading) return <PageSpinner />
 
   const isEditing = modal !== null && modal !== 'create'
 
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   return (
     <div className="p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Filtre Şablonları</h1>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Filtreler</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>
-            {presets.length} şablon — kategorilerde ve diğer yerlerde yeniden kullanılabilir filtreler
+            {presets.length} filtre — kategorilerde ve diğer yerlerde kullanılabilir
           </p>
         </div>
-        <Button onClick={openCreate}><Plus size={14} /> Yeni Şablon</Button>
+        <Button onClick={openCreate}><Plus size={14} /> Yeni Filtre</Button>
       </div>
 
-      {/* List */}
+      {/* Empty state */}
       {presets.length === 0 ? (
         <div className="card flex flex-col items-center justify-center py-16 gap-3" style={{ color: 'var(--text-s)' }}>
           <Filter size={32} />
-          <p className="text-sm">Henüz filtre şablonu yok.</p>
-          <Button onClick={openCreate}><Plus size={14} /> İlk Şablonu Oluştur</Button>
+          <p className="text-sm">Henüz filtre tanımlanmamış.</p>
+          <Button onClick={openCreate}><Plus size={14} /> İlk Filtreyi Oluştur</Button>
         </div>
       ) : (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--text-m)' }}>Şablon</th>
-                <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--text-m)' }}>Açıklama</th>
+                <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--text-m)' }}>Filtre</th>
+                <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--text-m)' }}>Otomatik Açıklama</th>
                 <th className="text-center px-4 py-3 font-semibold" style={{ color: 'var(--text-m)' }}>Kullanım</th>
                 <th className="text-center px-4 py-3 font-semibold" style={{ color: 'var(--text-m)' }}>Durum</th>
                 <th className="px-4 py-3" />
@@ -181,7 +183,7 @@ export function FilterPresetsPage() {
               {presets.map((p, i) => (
                 <tr
                   key={p.id}
-                  className="cursor-pointer transition-colors"
+                  className="cursor-pointer transition-colors hover:bg-[var(--surface2)]"
                   style={{ borderTop: i > 0 ? '1px solid var(--border)' : undefined }}
                   onClick={() => openEdit(p)}
                 >
@@ -194,10 +196,10 @@ export function FilterPresetsPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm max-w-xs" style={{ color: 'var(--text-m)' }}>
-                    {p.description
-                      ? <span className="line-clamp-2">{p.description}</span>
-                      : <span style={{ color: 'var(--text-s)', fontStyle: 'italic' }}>Açıklama yok</span>}
+                  <td className="px-4 py-3 max-w-xs">
+                    <span className="text-sm line-clamp-2" style={{ color: 'var(--text-m)' }}>
+                      {p.description || <span style={{ color: 'var(--text-s)', fontStyle: 'italic' }}>—</span>}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-center">
                     {p.usedInCategories > 0 ? (
@@ -218,14 +220,13 @@ export function FilterPresetsPage() {
                         className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--surface2)] transition-colors"
                         style={{ color: 'var(--text-m)' }}
                         onClick={e => { e.stopPropagation(); openEdit(p) }}
-                        title="Düzenle"
                       ><Pencil size={13} /></button>
                       <button
                         className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
                         style={{ color: p.usedInCategories > 0 ? 'var(--text-s)' : '#ef4444' }}
                         onClick={e => { e.stopPropagation(); if (p.usedInCategories === 0) setDeleteTarget(p) }}
-                        title={p.usedInCategories > 0 ? 'Kategorilerde kullanılıyor' : 'Sil'}
                         disabled={p.usedInCategories > 0}
+                        title={p.usedInCategories > 0 ? 'Kategorilerde kullanılıyor' : 'Sil'}
                       ><Trash2 size={13} /></button>
                     </div>
                   </td>
@@ -236,39 +237,31 @@ export function FilterPresetsPage() {
         </div>
       )}
 
-      {/* Create / Edit Modal */}
+      {/* ── Create / Edit Modal ─────────────────────────────────────────────── */}
       {modal !== null && (
         <Modal
           open
-          title={isEditing ? `Düzenle: ${getName(modal as FilterPreset)}` : 'Yeni Filtre Şablonu'}
+          title={isEditing ? `Düzenle: ${getName(modal as FilterPreset)}` : 'Yeni Filtre'}
           onClose={() => setModal(null)}
           footer={
-            <div className="flex gap-2 justify-end">
-              <Button variant="secondary" onClick={() => setModal(null)}>İptal</Button>
-              <Button onClick={() => saveMutation.mutate()} loading={saveMutation.isPending}>
-                {isEditing ? 'Kaydet' : 'Oluştur'}
-              </Button>
+            <div className="flex items-center justify-between w-full">
+              <div>
+                {saveError && <p className="text-xs" style={{ color: '#ef4444' }}>{saveError}</p>}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={() => setModal(null)}>İptal</Button>
+                <Button onClick={() => saveMutation.mutate()} loading={saveMutation.isPending}>
+                  {isEditing ? 'Kaydet' : 'Oluştur'}
+                </Button>
+              </div>
             </div>
           }
         >
-          <div className="space-y-4">
-            {/* Code */}
-            {!isEditing && (
-              <div>
-                <label className="flbl">Kod</label>
-                <input
-                  className="inp"
-                  value={form.code}
-                  onChange={e => setForm(f => ({ ...f, code: toSnakeCase(e.target.value) }))}
-                  placeholder="erkek_urunler"
-                />
-              </div>
-            )}
-
-            {/* Name i18n */}
+          <div className="space-y-5">
+            {/* Filtre adı */}
             {languages.length > 0 && (
               <div>
-                <label className="flbl mb-2">Şablon Adı</label>
+                <label className="flbl mb-2">Filtre Adı</label>
                 <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
                   <I18nField
                     sourceLang={sourceLang}
@@ -282,53 +275,46 @@ export function FilterPresetsPage() {
               </div>
             )}
 
-            {/* Description */}
+            {/* Kod — sadece oluşturma */}
+            {!isEditing && (
+              <div>
+                <label className="flbl">Kod <span className="text-xs font-normal" style={{ color: 'var(--text-s)' }}>(opsiyonel — boş bırakılırsa otomatik)</span></label>
+                <input
+                  className="inp"
+                  value={form.code}
+                  onChange={e => setForm(f => ({ ...f, code: toSlug(e.target.value) }))}
+                  placeholder="erkek_gomlek_filtresi"
+                />
+              </div>
+            )}
+
+            {/* Ayraç */}
+            <div style={{ borderTop: '2px solid var(--border)', margin: '0 -4px' }} />
+
+            {/* Görsel filtre oluşturucu */}
+            <FilterBuilder
+              value={form.filterDef}
+              onChange={handleFilterChange}
+            />
+
+            {/* Açıklama — düzenlenebilir override */}
             <div>
-              <label className="flbl">Açıklama (insan dili)</label>
+              <label className="flbl">
+                Açıklama
+                <span className="text-xs font-normal ml-1" style={{ color: 'var(--text-s)' }}>
+                  (otomatik üretilir, istersen değiştirebilirsin)
+                </span>
+              </label>
               <textarea
                 className="inp resize-none"
                 rows={2}
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Bu filtre erkek ürünlerini, 100-500 TL fiyat aralığında listeler."
+                placeholder="Erkek gömlek gruplarından, 150-500₺ arası ürünler"
               />
             </div>
 
-            {/* FilterDef JSON */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="flbl">Filtre Tanımı (JSON)</label>
-                <span className="text-xs" style={{ color: 'var(--text-s)' }}>
-                  productGroupIds, priceMin, priceMax, attributeFilters
-                </span>
-              </div>
-              <textarea
-                className="inp font-mono text-xs resize-y"
-                rows={10}
-                value={form.filterDefJson}
-                onChange={e => { setForm(f => ({ ...f, filterDefJson: e.target.value })); setJsonError(null) }}
-                spellCheck={false}
-              />
-              {jsonError && (
-                <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{jsonError}</p>
-              )}
-              <div className="mt-2 p-3 rounded-xl text-xs" style={{ background: 'var(--surface2)', color: 'var(--text-m)' }}>
-                <p className="font-semibold mb-1" style={{ color: 'var(--text)' }}>Örnek:</p>
-                <pre className="overflow-x-auto">{`{
-  "productGroupIds": ["<uuid>"],
-  "priceMin": 100,
-  "priceMax": 500,
-  "attributeFilters": [
-    {
-      "attributeTypeId": "<uuid>",
-      "valueIds": ["<uuid>"]
-    }
-  ]
-}`}</pre>
-              </div>
-            </div>
-
-            {/* SortOrder + IsActive */}
+            {/* Sıra + Aktif */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="flbl">Sıra</label>
@@ -336,12 +322,9 @@ export function FilterPresetsPage() {
               </div>
               <div className="flex items-end pb-1">
                 <label className="flex items-center gap-2 cursor-pointer text-sm" style={{ color: 'var(--text-m)' }}>
-                  <input
-                    type="checkbox"
-                    checked={form.isActive}
+                  <input type="checkbox" checked={form.isActive}
                     onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
-                    className="w-4 h-4 rounded"
-                  />
+                    className="w-4 h-4 rounded" />
                   Aktif
                 </label>
               </div>
@@ -350,25 +333,23 @@ export function FilterPresetsPage() {
         </Modal>
       )}
 
-      {/* Delete Confirm */}
+      {/* ── Delete Confirm ─────────────────────────────────────────────────── */}
       {deleteTarget && (
         <Modal
           open
-          title="Filtre Şablonunu Sil"
+          title="Filtreyi Sil"
           onClose={() => setDeleteTarget(null)}
           footer={
             <div className="flex gap-2 justify-end">
               <Button variant="secondary" onClick={() => setDeleteTarget(null)}>İptal</Button>
-              <Button
-                variant="danger"
-                onClick={() => deleteMutation.mutate(deleteTarget.id)}
-                loading={deleteMutation.isPending}
-              >Sil</Button>
+              <Button variant="danger" onClick={() => deleteMutation.mutate(deleteTarget.id)} loading={deleteMutation.isPending}>
+                Sil
+              </Button>
             </div>
           }
         >
           <p className="text-sm" style={{ color: 'var(--text-m)' }}>
-            <strong style={{ color: 'var(--text)' }}>{getName(deleteTarget)}</strong> şablonu silinecek. Bu işlem geri alınamaz.
+            <strong style={{ color: 'var(--text)' }}>{getName(deleteTarget)}</strong> filtresini silmek istediğinize emin misiniz?
           </p>
         </Modal>
       )}
