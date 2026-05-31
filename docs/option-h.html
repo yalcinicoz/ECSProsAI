@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ECSPros Admin — Seçenek H</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+
+    :root {
+      --bg:#f1f5f9; --surface:#fff; --surface2:#f8fafc;
+      --border:#e2e8f0; --text:#0f172a; --text-m:#475569; --text-s:#94a3b8;
+      --brand:#059669; --brand-bg:#ecfdf5; --brand-b:#a7f3d0;
+      --header:rgba(255,255,255,.96); --sidebar:#0f2e24;
+      --sb-w: 248px; --sb-w-col: 60px;
+    }
+    html.dark {
+      --bg:#0f172a; --surface:#1e293b; --surface2:#162032;
+      --border:#334155; --text:#f1f5f9; --text-m:#cbd5e1; --text-s:#475569;
+      --brand:#34d399; --brand-bg:rgba(52,211,153,.12); --brand-b:rgba(52,211,153,.3);
+      --header:rgba(15,23,42,.97); --sidebar:#061812;
+    }
+
+    body { background:var(--bg); color:var(--text); transition:background .2s,color .2s; overflow-x:hidden; }
+
+    /* ── SIDEBAR ── */
+    #sidebar {
+      position: fixed; top:0; left:0; height:100vh;
+      width: var(--sb-w-col); /* başlangıçta kapalı (icon-only) */
+      overflow: hidden; white-space: nowrap;
+      background: var(--sidebar);
+      display: flex; flex-direction: column;
+      z-index: 50;
+      transition: width .28s cubic-bezier(.4,0,.2,1);
+    }
+    #sidebar.open { width: var(--sb-w); }
+    #sidebar:not(.open) .hc { display: none !important; }
+    #sidebar:not(.open) .nav-link { justify-content:center; padding:9px 8px; }
+    #sidebar:not(.open) .slbl { opacity:0; }
+    #sidebar:not(.open) #menu-search-wrap { display: none !important; }
+
+    #main {
+      margin-left: var(--sb-w-col);
+      transition: margin-left .28s cubic-bezier(.4,0,.2,1);
+      min-height: 100vh; display:flex; flex-direction:column;
+    }
+    #main.sidebar-open { margin-left: var(--sb-w); }
+
+    /* mobile overlay */
+    #mob-overlay {
+      display:none; position:fixed; inset:0; z-index:49;
+      background:rgba(15,23,42,.5); backdrop-filter:blur(2px);
+    }
+
+    @media (max-width: 767px) {
+      #sidebar {
+        width: var(--sb-w) !important;
+        transform: translateX(-100%);
+        transition: transform .28s cubic-bezier(.4,0,.2,1);
+      }
+      #sidebar.open {
+        transform: translateX(0);
+        width: var(--sb-w) !important;
+      }
+      #sidebar .hc { display: flex !important; }
+      #sidebar:not(.open) .nav-link { justify-content:flex-start; padding:8px 10px; }
+      #sidebar #menu-search-wrap { display: block !important; }
+      #main { margin-left: 0 !important; padding-bottom: 64px; }
+      #mob-overlay.show { display: block; }
+    }
+
+    /* ── NAV ── */
+    .nav-link { display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13px;font-weight:500;color:rgba(255,255,255,.52);text-decoration:none;transition:all .15s;cursor:pointer;user-select:none; }
+    .nav-link:hover { background:rgba(255,255,255,.08); color:rgba(255,255,255,.9); }
+    .nav-link.active { background:rgba(52,211,153,.15); color:#6ee7b7; box-shadow:inset 3px 0 0 #34d399; padding-left:7px; }
+    .nav-link.hidden-item { display:none !important; }
+    .ni { font-size:13px;width:16px;text-align:center;flex-shrink:0;color:rgba(255,255,255,.28); }
+    .nav-link.active .ni { color:#34d399; }
+    .slbl { font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.2);padding:12px 10px 3px;transition:opacity .15s; }
+    .slbl.hidden-section { display:none !important; }
+
+    /* ── HEADER ── */
+    #topbar { background:var(--header); border-bottom:1px solid var(--border); backdrop-filter:blur(8px); position:sticky; top:0; z-index:30; height:56px; display:flex; align-items:center; padding:0 16px; gap:10px; }
+
+    /* ── SURFACES ── */
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; }
+    .card2 { background:var(--surface); border:1px solid var(--border); border-radius:12px; }
+
+    /* ── INPUTS ── */
+    .inp { background:var(--surface); border:1.5px solid var(--border); color:var(--text); border-radius:10px; padding:9px 13px; font-size:14px; outline:none; width:100%; transition:border-color .15s,box-shadow .15s; }
+    .inp:focus { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-bg); }
+    .inp:disabled { opacity:.45; }
+    .inp.ok { border-color:var(--brand-b) !important; background:var(--brand-bg) !important; }
+    .sel { background:var(--surface); border:1.5px solid var(--border); color:var(--text); border-radius:10px; padding:9px 13px; font-size:14px; outline:none; width:100%; }
+    .sel:focus { border-color:var(--brand); }
+    .ta { background:var(--surface); border:1.5px solid var(--border); color:var(--text); border-radius:10px; padding:9px 13px; font-size:14px; outline:none; width:100%; resize:vertical; min-height:88px; }
+    .ta:focus { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-bg); }
+    .ta.ok { border-color:var(--brand-b) !important; background:var(--brand-bg) !important; }
+    .flbl { font-size:12.5px; font-weight:600; color:var(--text-m); margin-bottom:6px; display:block; }
+
+    /* ── COMMAND PALETTE ── */
+    #cmd-ov { display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.65);backdrop-filter:blur(6px);align-items:flex-start;justify-content:center;padding-top:60px; }
+    #cmd-ov.open { display:flex; }
+    #cmd-box { background:var(--surface);border-radius:16px;width:calc(100% - 32px);max-width:580px;box-shadow:0 25px 60px rgba(0,0,0,.35);border:1px solid var(--border);overflow:hidden; }
+    #cmd-in { width:100%;padding:16px 20px;font-size:16px;border:none;outline:none;color:var(--text);background:transparent; }
+    .cm-scope { border-bottom:1px solid var(--border);background:var(--surface2);padding:0 16px;display:flex;overflow-x:auto; }
+    .cm-btn { padding:8px 12px;font-size:12px;font-weight:500;color:var(--text-s);border-bottom:2px solid transparent;cursor:pointer;transition:all .12s;white-space:nowrap; }
+    .cm-btn.active { color:var(--brand);border-bottom-color:var(--brand);font-weight:600; }
+    .cm-res { display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:background .1s; }
+    .cm-res:hover,.cm-res.sel { background:var(--surface2); }
+    .cm-ico { width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px; }
+    .cm-foot { border-top:1px solid var(--border);background:var(--surface2);padding:10px 16px; }
+    .kbd { background:var(--surface);border:1px solid var(--border);color:var(--text-m);border-radius:4px;padding:1px 6px;font-size:10px;font-family:monospace; }
+
+    /* ── FAVORITES ── */
+    #fav-btn { position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:60;background:var(--brand);color:white;width:26px;height:60px;border-radius:8px 0 0 8px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:-2px 0 12px rgba(0,0,0,.2);transition:width .15s; }
+    #fav-btn:hover { width:34px; }
+    #fav-panel { position:fixed;right:0;top:0;height:100vh;width:272px;background:var(--surface);border-left:1px solid var(--border);z-index:59;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:-8px 0 28px rgba(0,0,0,.14);display:flex;flex-direction:column; }
+    #fav-panel.open { transform:translateX(0); }
+    @media (max-width:767px) {
+      #fav-btn { display:none; }
+      #fav-panel { width:100%;max-width:320px; }
+    }
+
+    /* ── TABS ── */
+    .lang-tab { padding:9px 14px;font-size:13px;font-weight:500;border-bottom:2px solid transparent;color:var(--text-s);cursor:pointer;transition:all .15s;white-space:nowrap; }
+    .lang-tab:hover { color:var(--text); }
+    .lang-tab.active { color:var(--brand);border-bottom-color:var(--brand);font-weight:600; }
+    .lang-tab.warn::after { content:'';display:inline-block;width:6px;height:6px;background:#f59e0b;border-radius:50%;margin-left:4px;vertical-align:middle; }
+    .stab { padding:9px 14px;font-size:13px;font-weight:500;border-bottom:2px solid transparent;color:var(--text-m);cursor:pointer;transition:all .15s;white-space:nowrap; }
+    .stab:hover { color:var(--text); }
+    .stab.active { color:var(--text);border-bottom-color:var(--brand);font-weight:600; }
+    .tab-scroll { display:flex;overflow-x:auto;scrollbar-width:none; }
+    .tab-scroll::-webkit-scrollbar { display:none; }
+
+    /* ── VALUE CHIPS ── */
+    .val-chip { display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;background:var(--surface);border:1px solid var(--border);color:var(--text); }
+    .val-chip button { line-height:1;padding:0;background:none;border:none;cursor:pointer; }
+    .val-chip-add { display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px dashed var(--brand-b);color:var(--brand);background:var(--brand-bg);cursor:pointer; }
+
+    /* ── BADGES ── */
+    .badge { display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600; }
+    .bg { background:#f0fdf4;color:#166534;border:1px solid #bbf7d0; }
+    .br { background:#fff1f2;color:#be123c;border:1px solid #fecdd3; }
+    .ba { background:#fef9c3;color:#713f12;border:1px solid #fde68a; }
+    .bb { background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe; }
+    .bx { background:#f8fafc;color:#64748b;border:1px solid #e2e8f0; }
+    html.dark .bg { background:rgba(22,101,52,.25);color:#86efac;border-color:rgba(134,239,172,.3); }
+    html.dark .br { background:rgba(190,18,60,.2);color:#fca5a5;border-color:rgba(252,165,165,.3); }
+    html.dark .ba { background:rgba(113,63,18,.25);color:#fde68a;border-color:rgba(253,230,138,.3); }
+    html.dark .bb { background:rgba(30,64,175,.25);color:#93c5fd;border-color:rgba(147,197,253,.3); }
+    html.dark .bx { background:rgba(100,116,139,.15);color:#94a3b8;border-color:rgba(148,163,184,.2); }
+    .dot { width:5px;height:5px;border-radius:50%;display:inline-block; }
+
+    /* ── STATS / WIDGETS ── */
+    .stat { background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:20px; }
+    .widget { background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden; }
+
+    /* ── TABLE ── */
+    .trow:hover td { background:var(--surface2); }
+    .tbl-wrap { overflow-x:auto;-webkit-overflow-scrolling:touch; }
+
+    /* ── SOURCE BLOCK ── */
+    .src-block { background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text-m);line-height:1.6; }
+
+    /* ── DEMO SWITCHER ── */
+    .vbtn { padding:5px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);color:var(--text-m);background:var(--surface);transition:all .12s;white-space:nowrap; }
+    .vbtn.active { background:var(--brand-bg);color:var(--brand);border-color:var(--brand-b); }
+
+    /* ── NOTIF ICONS ── */
+    .ni-err { background:#fee2e2;color:#dc2626; }
+    .ni-warn { background:#fef9c3;color:#b45309; }
+    .ni-ok { background:#f0fdf4;color:#16a34a; }
+    .ni-info { background:#eff6ff;color:#2563eb; }
+    html.dark .ni-err { background:rgba(220,38,38,.2);color:#fca5a5; }
+    html.dark .ni-warn { background:rgba(180,83,9,.2);color:#fde68a; }
+    html.dark .ni-ok { background:rgba(22,163,74,.2);color:#86efac; }
+    html.dark .ni-info { background:rgba(37,99,235,.2);color:#93c5fd; }
+
+    /* ── WIDGET PICKER MODAL ── */
+    #widget-modal { display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px; }
+    #widget-modal.open { display:flex; }
+    .w-pick-card { display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px;background:var(--surface);border:2px solid var(--border);border-radius:14px;cursor:pointer;transition:all .15s;text-align:center; }
+    .w-pick-card:hover { border-color:var(--brand);background:var(--brand-bg); }
+    .w-pick-card.added { border-color:var(--brand);background:var(--brand-bg); }
+
+    /* ── MOBILE BOTTOM NAV ── */
+    #bottom-nav { display:none;position:fixed;bottom:0;left:0;right:0;z-index:40;background:var(--surface);border-top:1px solid var(--border);padding:6px 0;safe-area-inset-bottom:env(safe-area-inset-bottom); }
+    @media (max-width:767px) { #bottom-nav { display:flex; } }
+    .bn-item { flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;cursor:pointer;transition:color .12s;font-size:11px;font-weight:500;color:var(--text-s); }
+    .bn-item.active { color:var(--brand); }
+    .bn-item i { font-size:18px; }
+
+    /* ── MOBILE FILTER SHEET ── */
+    #filter-sheet { display:none;position:fixed;inset:0;z-index:8000; }
+    #filter-sheet.open { display:block; }
+    #filter-sheet-bg { position:absolute;inset:0;background:rgba(15,23,42,.5); }
+    #filter-sheet-panel { position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-radius:20px 20px 0 0;padding:20px;max-height:85vh;overflow-y:auto; }
+
+    /* ── RESPONSIVE HELPERS ── */
+    @media (max-width:767px) {
+      .mob-hide { display:none !important; }
+      .mob-full { width:100% !important; }
+      .mob-col { flex-direction:column !important; }
+      .mob-p2 { padding:12px !important; }
+      .mob-text-sm { font-size:13px !important; }
+      .detail-cols { flex-direction:column !important; }
+      .detail-right { width:100% !important; }
+    }
+    @media (min-width:768px) {
+      .desk-hide { display:none !important; }
+    }
+
+    ::-webkit-scrollbar { width:4px; height:4px; }
+    ::-webkit-scrollbar-thumb { background:rgba(128,128,128,.2);border-radius:2px; }
+  </style>
+</head>
+<body>
+
+<!-- ══ MOBILE SIDEBAR OVERLAY ══ -->
+<div id="mob-overlay" onclick="closeSidebar()"></div>
+
+<!-- ══ COMMAND PALETTE ══ -->
+<div id="cmd-ov" onclick="if(event.target===this)cmdClose()">
+  <div id="cmd-box">
+    <div class="flex items-center gap-3 px-5 py-1 border-b" style="border-color:var(--border)">
+      <i class="fa fa-search flex-shrink-0" style="color:var(--text-s)"></i>
+      <input id="cmd-in" placeholder="Sipariş, ürün, müşteri ara… veya komut girin" autocomplete="off" class="w-full py-4 text-base border-none outline-none" style="background:transparent;color:var(--text)">
+      <kbd class="kbd flex-shrink-0">ESC</kbd>
+    </div>
+    <div class="cm-scope">
+      <button class="cm-btn active" onclick="setScp(this)">Tümü</button>
+      <button class="cm-btn" onclick="setScp(this)">Ürünler</button>
+      <button class="cm-btn" onclick="setScp(this)">Siparişler</button>
+      <button class="cm-btn" onclick="setScp(this)">Müşteriler</button>
+      <button class="cm-btn" onclick="setScp(this)">Barkod</button>
+    </div>
+    <div class="py-2 max-h-64 overflow-y-auto">
+      <div class="px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-s)">Hızlı Erişim</div>
+      <div class="cm-res sel">
+        <div class="cm-ico" style="background:var(--brand-bg)"><i class="fa fa-box" style="color:var(--brand)"></i></div>
+        <div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate" style="color:var(--text)">Nike Air Max 270</div><div class="text-xs" style="color:var(--text-s)">NK-AM270-42 · Stok: 45</div></div>
+        <span class="badge bb text-[11px] flex-shrink-0">Ürün</span>
+      </div>
+      <div class="cm-res">
+        <div class="cm-ico ni-ok"><i class="fa fa-shopping-bag text-[13px]"></i></div>
+        <div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate" style="color:var(--text)">#ORD-00892 — Ahmet Yılmaz</div><div class="text-xs" style="color:var(--text-s)">1.299 ₺ · Beklemede</div></div>
+        <span class="badge bg text-[11px] flex-shrink-0">Sipariş</span>
+      </div>
+      <div class="cm-res">
+        <div class="cm-ico" style="background:#f3e8ff"><i class="fa fa-user text-[13px]" style="color:#9333ea"></i></div>
+        <div class="flex-1 min-w-0"><div class="text-sm font-semibold truncate" style="color:var(--text)">Fatma Kaya</div><div class="text-xs" style="color:var(--text-s)">12 sipariş</div></div>
+        <span class="badge" style="background:#f3e8ff;color:#7e22ce;border:1px solid #e9d5ff" class="text-[11px] flex-shrink-0">Müşteri</span>
+      </div>
+      <div class="h-px mx-4 my-1" style="background:var(--border)"></div>
+      <div class="cm-res">
+        <div class="cm-ico" style="background:var(--surface2)"><i class="fa fa-plus" style="color:var(--text-m)"></i></div>
+        <div class="flex-1"><div class="text-sm font-medium" style="color:var(--text)">Yeni Ürün Oluştur</div></div>
+        <kbd class="kbd mob-hide">Ctrl+N</kbd>
+      </div>
+    </div>
+    <div class="cm-foot flex items-center justify-between">
+      <div class="flex gap-3 text-[11px] mob-hide" style="color:var(--text-s)">
+        <span><kbd class="kbd">↑↓</kbd> Gezin</span>
+        <span><kbd class="kbd">↵</kbd> Seç</span>
+        <span><kbd class="kbd">Esc</kbd> Kapat</span>
+      </div>
+      <span class="text-[11px]" style="color:var(--text-s)">3 sonuç</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FAVORITES PANEL ══ -->
+<button id="fav-btn" onclick="toggleFavs()" title="Sık Kullanılanlar">
+  <i class="fa fa-star text-xs"></i>
+</button>
+<div id="fav-panel">
+  <div class="flex items-center justify-between px-4 py-4 border-b flex-shrink-0" style="border-color:var(--border)">
+    <div>
+      <h3 class="font-bold text-sm" style="color:var(--text)">Sık Kullanılanlar</h3>
+      <p class="text-xs mt-0.5" style="color:var(--text-s)">Hızlı erişim kısayolları</p>
+    </div>
+    <button onclick="toggleFavs()" class="w-8 h-8 flex items-center justify-center rounded-lg" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-xmark"></i></button>
+  </div>
+  <div class="flex-1 overflow-y-auto px-3 py-2">
+    <div class="text-[10px] font-bold uppercase tracking-wider px-2 py-1.5" style="color:var(--text-s)">Sayfalar</div>
+    <div class="nav-link" style="color:var(--text-m)"><i class="ni fa fa-star text-amber-400"></i><span>Bekleyen Siparişler</span><span class="ml-auto bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 rounded-full">14</span></div>
+    <div class="nav-link" style="color:var(--text-m)"><i class="ni fa fa-star text-amber-400"></i><span>Stok Uyarıları</span><span class="ml-auto bg-red-100 text-red-600 text-[9px] font-bold px-1.5 rounded-full">47</span></div>
+    <div class="nav-link" style="color:var(--text-m)"><i class="ni fa fa-star text-amber-400"></i><span>Yeni Sipariş</span></div>
+    <div class="text-[10px] font-bold uppercase tracking-wider px-2 py-1.5 mt-2" style="color:var(--text-s)">Son Ziyaret</div>
+    <div class="nav-link" style="color:var(--text-m)"><i class="ni fa fa-clock-rotate-left"></i><span>Nike Air Max 270</span></div>
+    <div class="nav-link" style="color:var(--text-m)"><i class="ni fa fa-clock-rotate-left"></i><span>#ORD-00892</span></div>
+  </div>
+  <div class="px-4 py-3 border-t flex-shrink-0" style="border-color:var(--border)">
+    <button class="w-full py-2 rounded-xl text-sm font-semibold" style="background:var(--brand-bg);color:var(--brand);border:1px solid var(--brand-b)">
+      <i class="fa fa-plus mr-1.5 text-xs"></i> Kısayol Ekle
+    </button>
+  </div>
+</div>
+
+<!-- ══ WIDGET PICKER MODAL ══ -->
+<div id="widget-modal" onclick="if(event.target===this)closeWidgetModal()">
+  <div class="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl" style="background:var(--surface);border:1px solid var(--border)">
+    <div class="flex items-center justify-between px-5 py-4 border-b" style="border-color:var(--border)">
+      <div>
+        <h3 class="font-bold" style="color:var(--text)">Widget Ekle</h3>
+        <p class="text-xs mt-0.5" style="color:var(--text-s)">Dashboard'ınıza eklemek istediğiniz widget'ı seçin</p>
+      </div>
+      <button onclick="closeWidgetModal()" class="w-8 h-8 flex items-center justify-center rounded-lg" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-xmark"></i></button>
+    </div>
+    <div class="p-5 grid grid-cols-3 gap-3" style="max-height:60vh;overflow-y:auto">
+      <div class="w-pick-card" onclick="addWidget('sales',this)" id="wp-sales">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:var(--brand-bg)"><i class="fa fa-chart-line" style="color:var(--brand)"></i></div>
+        <span class="text-xs font-semibold" style="color:var(--text)">Satış Grafiği</span>
+      </div>
+      <div class="w-pick-card added" onclick="addWidget('orders',this)" id="wp-orders">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:var(--brand-bg)"><i class="fa fa-shopping-bag" style="color:var(--brand)"></i></div>
+        <span class="text-xs font-semibold" style="color:var(--text)">Son Siparişler</span>
+        <span class="text-[10px]" style="color:var(--brand)">✓ Eklendi</span>
+      </div>
+      <div class="w-pick-card added" onclick="addWidget('stock',this)" id="wp-stock">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-red-50"><i class="fa fa-triangle-exclamation text-red-400"></i></div>
+        <span class="text-xs font-semibold" style="color:var(--text)">Kritik Stok</span>
+        <span class="text-[10px]" style="color:var(--brand)">✓ Eklendi</span>
+      </div>
+      <div class="w-pick-card" onclick="addWidget('members',this)" id="wp-members">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#f3e8ff"><i class="fa fa-user-plus" style="color:#9333ea"></i></div>
+        <span class="text-xs font-semibold" style="color:var(--text)">Yeni Üyeler</span>
+      </div>
+      <div class="w-pick-card added" onclick="addWidget('notif',this)" id="wp-notif">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#fffbeb"><i class="fa fa-bell text-amber-500"></i></div>
+        <span class="text-xs font-semibold" style="color:var(--text)">Bildirimler</span>
+        <span class="text-[10px]" style="color:var(--brand)">✓ Eklendi</span>
+      </div>
+      <div class="w-pick-card" onclick="addWidget('campaigns',this)" id="wp-campaigns">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#fee2e2"><i class="fa fa-percent text-red-400"></i></div>
+        <span class="text-xs font-semibold" style="color:var(--text)">Kampanyalar</span>
+      </div>
+      <div class="w-pick-card" onclick="addWidget('returns',this)" id="wp-returns">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:#eff6ff"><i class="fa fa-rotate-left text-blue-500"></i></div>
+        <span class="text-xs font-semibold" style="color:var(--text)">İadeler</span>
+      </div>
+      <div class="w-pick-card" onclick="addWidget('pos',this)" id="wp-pos">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:var(--surface2)"><i class="fa fa-cash-register" style="color:var(--text-m)"></i></div>
+        <span class="text-xs font-semibold" style="color:var(--text)">POS Özeti</span>
+      </div>
+      <div class="w-pick-card" onclick="addWidget('topproducts',this)" id="wp-topproducts">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:var(--brand-bg)"><i class="fa fa-trophy" style="color:var(--brand)"></i></div>
+        <span class="text-xs font-semibold" style="color:var(--text)">Top Ürünler</span>
+      </div>
+    </div>
+    <div class="px-5 py-4 border-t flex justify-end" style="border-color:var(--border)">
+      <button onclick="closeWidgetModal()" class="px-5 py-2 rounded-xl text-sm font-semibold text-white" style="background:var(--brand)">Tamam</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MOBILE FILTER SHEET ══ -->
+<div id="filter-sheet">
+  <div id="filter-sheet-bg" onclick="closeFilterSheet()"></div>
+  <div id="filter-sheet-panel">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-bold text-base" style="color:var(--text)">Filtreler</h3>
+      <button onclick="closeFilterSheet()" class="w-8 h-8 flex items-center justify-center rounded-lg" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-xmark"></i></button>
+    </div>
+    <div class="space-y-4">
+      <div><label class="flbl">Kategori</label><select class="sel"><option>Tümü</option><option>Ayakkabı</option><option>Üst Giyim</option><option>Pantolon</option></select></div>
+      <div><label class="flbl">Marka</label><select class="sel"><option>Tümü</option><option>Nike</option><option>Adidas</option></select></div>
+      <div><label class="flbl">Durum</label><select class="sel"><option>Tümü</option><option>Aktif</option><option>Pasif</option><option>Stok Dışı</option></select></div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="flbl">Min Fiyat (₺)</label><input class="inp" type="number" placeholder="0"></div>
+        <div><label class="flbl">Max Fiyat (₺)</label><input class="inp" type="number" placeholder="9999"></div>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-6">
+      <button onclick="closeFilterSheet()" class="flex-1 py-3 rounded-xl text-sm font-semibold" style="border:1.5px solid var(--border);color:var(--text-m)">Temizle</button>
+      <button onclick="closeFilterSheet()" class="flex-1 py-3 rounded-xl text-white text-sm font-semibold" style="background:var(--brand)">Uygula</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SIDEBAR ══ -->
+<aside id="sidebar">
+  <!-- Logo + toggle -->
+  <div class="flex items-center justify-between px-4 py-4 border-b border-white/10 flex-shrink-0">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style="background:var(--brand)">
+        <span class="text-white font-black text-sm">E</span>
+      </div>
+      <span class="hc text-white font-bold text-base tracking-tight">ECSPros</span>
+    </div>
+    <button onclick="toggleSidebar()" class="hc w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 flex-shrink-0" style="color:rgba(255,255,255,.3)">
+      <i class="fa fa-bars-staggered text-sm"></i>
+    </button>
+  </div>
+
+  <!-- Menu search (only filters menu) -->
+  <div id="menu-search-wrap" class="hc px-3 pt-3 pb-1 flex-shrink-0">
+    <div class="relative">
+      <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-xs pointer-events-none" style="color:rgba(255,255,255,.25)"></i>
+      <input id="menu-search" type="text" placeholder="Menüde ara…"
+        oninput="filterMenu(this.value)"
+        class="w-full pl-8 pr-3 py-2 text-sm rounded-lg outline-none"
+        style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.75);placeholder-color:rgba(255,255,255,.3)">
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav id="sidebar-nav" class="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
+    <div class="slbl hc" data-section="genel">Genel</div>
+    <a class="nav-link active" data-view="dashboard" onclick="switchView('dashboard')"><i class="ni fa fa-gauge"></i><span class="hc nav-text">Dashboard</span></a>
+
+    <div class="slbl hc" data-section="katalog">Katalog</div>
+    <a class="nav-link" data-view="list" onclick="switchView('list')"><i class="ni fa fa-box"></i><span class="hc nav-text">Ürün Kartları</span></a>
+    <a class="nav-link" data-view="attr-list" onclick="switchView('attr-list')"><i class="ni fa fa-sliders"></i><span class="hc nav-text">Özellik Tipleri</span></a>
+    <a class="nav-link" data-view="group-list"><i class="ni fa fa-object-group"></i><span class="hc nav-text">Ürün Grupları</span></a>
+    <a class="nav-link"><i class="ni fa fa-sitemap"></i><span class="hc nav-text">Kategoriler</span></a>
+    <a class="nav-link"><i class="ni fa fa-copyright"></i><span class="hc nav-text">Markalar</span></a>
+
+    <div class="slbl hc" data-section="satis">Satış</div>
+    <a class="nav-link"><i class="ni fa fa-shopping-bag"></i><span class="hc nav-text">Siparişler</span><span class="hc ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style="background:rgba(52,211,153,.2);color:#34d399">14</span></a>
+    <a class="nav-link"><i class="ni fa fa-rotate-left"></i><span class="hc nav-text">İadeler</span></a>
+    <a class="nav-link"><i class="ni fa fa-file-invoice-dollar"></i><span class="hc nav-text">Faturalar</span></a>
+    <a class="nav-link"><i class="ni fa fa-handshake"></i><span class="hc nav-text">Teklifler</span></a>
+
+    <div class="slbl hc" data-section="musteriler">Müşteriler</div>
+    <a class="nav-link"><i class="ni fa fa-users"></i><span class="hc nav-text">Üyeler</span></a>
+    <a class="nav-link"><i class="ni fa fa-layer-group"></i><span class="hc nav-text">Gruplar</span></a>
+
+    <div class="slbl hc" data-section="stok">Stok</div>
+    <a class="nav-link"><i class="ni fa fa-warehouse"></i><span class="hc nav-text">Depolar</span></a>
+    <a class="nav-link"><i class="ni fa fa-cubes"></i><span class="hc nav-text">Stok Takibi</span></a>
+    <a class="nav-link"><i class="ni fa fa-arrows-rotate"></i><span class="hc nav-text">Stok Hareketleri</span></a>
+
+    <div class="slbl hc" data-section="pazarlama">Pazarlama</div>
+    <a class="nav-link"><i class="ni fa fa-percent"></i><span class="hc nav-text">Kampanyalar</span></a>
+    <a class="nav-link"><i class="ni fa fa-ticket"></i><span class="hc nav-text">Kuponlar</span></a>
+    <a class="nav-link"><i class="ni fa fa-gift"></i><span class="hc nav-text">Hediye Kartı</span></a>
+
+    <div class="slbl hc" data-section="sistem">Sistem</div>
+    <a class="nav-link"><i class="ni fa fa-cash-register"></i><span class="hc nav-text">POS</span></a>
+    <a class="nav-link"><i class="ni fa fa-plug"></i><span class="hc nav-text">Entegrasyonlar</span></a>
+    <a class="nav-link"><i class="ni fa fa-file"></i><span class="hc nav-text">CMS</span></a>
+    <a class="nav-link"><i class="ni fa fa-gear"></i><span class="hc nav-text">Ayarlar</span></a>
+  </nav>
+
+  <!-- User -->
+  <div class="border-t border-white/10 px-3 py-3 flex items-center gap-3 flex-shrink-0">
+    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style="background:var(--brand)">AY</div>
+    <div class="hc min-w-0 flex-1">
+      <div class="text-white text-sm font-medium truncate">Ahmet Yılmaz</div>
+      <div class="text-xs" style="color:rgba(255,255,255,.35)">Süper Admin</div>
+    </div>
+    <button class="hc flex-shrink-0" style="color:rgba(255,255,255,.3)"><i class="fa fa-ellipsis-vertical text-sm"></i></button>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<div id="main">
+
+  <!-- Topbar -->
+  <header id="topbar">
+    <!-- Hamburger (always on mobile, also on desktop when collapsed) -->
+    <button onclick="toggleSidebar()" class="w-9 h-9 flex items-center justify-center rounded-xl flex-shrink-0" style="color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <i class="fa fa-bars text-sm"></i>
+    </button>
+
+    <!-- Breadcrumb (hide on mobile) -->
+    <nav id="breadcrumb" class="mob-hide flex items-center gap-1.5 text-sm flex-shrink-0">
+      <span style="color:var(--brand)" class="font-semibold">Dashboard</span>
+    </nav>
+
+    <!-- Search trigger -->
+    <div class="flex-1 max-w-md mx-auto">
+      <button onclick="cmdOpen()" class="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-left transition-all" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-s)">
+        <i class="fa fa-search text-sm"></i>
+        <span class="flex-1 truncate">Ara… <span class="mob-hide" style="color:var(--text-s);opacity:.6">sipariş, ürün, müşteri</span></span>
+        <span class="flex items-center gap-0.5 mob-hide">
+          <kbd class="kbd">Ctrl</kbd><kbd class="kbd">K</kbd>
+        </span>
+      </button>
+    </div>
+
+    <div class="flex items-center gap-1 flex-shrink-0">
+      <!-- Add to favs -->
+      <button id="fav-toggle-btn" onclick="togglePageFav()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all mob-hide" style="color:var(--text-m);border:1px solid var(--border);background:var(--surface)">
+        <i id="fav-icon" class="fa fa-star text-[11px] text-amber-400"></i>
+        <span id="fav-label">Favorilere Ekle</span>
+      </button>
+      <!-- Notifications -->
+      <button class="relative w-9 h-9 flex items-center justify-center rounded-xl" style="color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <i class="fa fa-bell text-sm"></i>
+        <span class="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+      </button>
+      <!-- Theme -->
+      <button onclick="toggleTheme()" class="w-9 h-9 flex items-center justify-center rounded-xl" style="color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <i id="theme-icon" class="fa fa-moon text-sm"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Demo switcher -->
+  <div class="flex items-center gap-2 px-4 py-2 border-b overflow-x-auto" style="border-color:var(--border);background:var(--surface2)">
+    <span class="text-xs font-semibold flex-shrink-0 mob-hide" style="color:var(--text-s)">Demo:</span>
+    <button class="vbtn active flex-shrink-0" onclick="switchView('dashboard',this)">Dashboard</button>
+    <button class="vbtn flex-shrink-0" onclick="switchView('list',this)">Ürün Listesi</button>
+    <button class="vbtn flex-shrink-0" onclick="switchView('detail',this)">Ürün Detayı</button>
+  </div>
+
+  <!-- ═══════════ VIEW: DASHBOARD ═══════════ -->
+  <div id="view-dashboard" class="flex-1 p-4 md:p-6 space-y-5">
+
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <h1 class="text-xl md:text-2xl font-bold" style="color:var(--text)">Merhaba, Ahmet 👋</h1>
+        <p class="text-xs md:text-sm mt-0.5 flex flex-wrap items-center gap-2" style="color:var(--text-s)">
+          <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full" style="background:var(--brand-bg);color:var(--brand);border:1px solid var(--brand-b)">
+            <i class="fa fa-shield-halved text-[10px]"></i> Süper Admin
+          </span>
+          <span>12 Mart 2026</span>
+        </p>
+      </div>
+      <select class="sel flex-shrink-0" style="width:auto;padding:6px 10px;font-size:12px">
+        <option>Son 7 gün</option>
+        <option selected>Son 30 gün</option>
+        <option>Bu ay</option>
+      </select>
+    </div>
+
+    <!-- KPI — 2 col mobile, 4 col desktop -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      <div class="stat">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-[11px] font-bold uppercase tracking-wider" style="color:var(--text-s)">Sipariş</span>
+          <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:var(--brand-bg)"><i class="fa fa-shopping-bag text-sm" style="color:var(--brand)"></i></div>
+        </div>
+        <div class="text-2xl md:text-3xl font-black" style="color:var(--text)">1.482</div>
+        <div class="flex items-center gap-1 mt-2"><span class="text-xs font-semibold px-1.5 py-0.5 rounded-md" style="background:var(--brand-bg);color:var(--brand)">↑ %8.2</span><span class="text-xs" style="color:var(--text-s)">geçen ay</span></div>
+      </div>
+      <div class="stat">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-[11px] font-bold uppercase tracking-wider" style="color:var(--text-s)">Ciro</span>
+          <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:var(--brand-bg)"><i class="fa fa-turkish-lira-sign text-sm" style="color:var(--brand)"></i></div>
+        </div>
+        <div class="text-2xl md:text-3xl font-black" style="color:var(--text)">284.750</div>
+        <div class="flex items-center gap-1 mt-2"><span class="text-xs font-semibold px-1.5 py-0.5 rounded-md" style="background:var(--brand-bg);color:var(--brand)">↑ %12.4</span><span class="text-xs" style="color:var(--text-s)">geçen ay</span></div>
+      </div>
+      <div class="stat">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-[11px] font-bold uppercase tracking-wider" style="color:var(--text-s)">Yeni Üye</span>
+          <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:#f3e8ff"><i class="fa fa-user-plus text-sm" style="color:#9333ea"></i></div>
+        </div>
+        <div class="text-2xl md:text-3xl font-black" style="color:var(--text)">146</div>
+        <div class="flex items-center gap-1 mt-2"><span class="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-red-50 text-red-500">↓ %3.1</span><span class="text-xs" style="color:var(--text-s)">geçen ay</span></div>
+      </div>
+      <div class="stat" style="border-color:#fecaca">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-red-400">Stok Dışı</span>
+          <div class="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center"><i class="fa fa-triangle-exclamation text-sm text-red-400"></i></div>
+        </div>
+        <div class="text-2xl md:text-3xl font-black text-red-500">47</div>
+        <div class="text-xs text-red-400 font-medium mt-2">Acil müdahale</div>
+      </div>
+    </div>
+
+    <!-- Widget Grid -->
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-bold" style="color:var(--text)">Widget'lar</h2>
+        <button onclick="openWidgetModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors" style="background:var(--brand-bg);color:var(--brand);border:1px solid var(--brand-b)">
+          <i class="fa fa-plus text-[10px]"></i> Widget Ekle
+        </button>
+      </div>
+      <div id="widget-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        <!-- Widget: Son Siparişler -->
+        <div id="w-orders" class="widget md:col-span-2">
+          <div class="flex items-center justify-between px-4 py-3 border-b" style="border-color:var(--border)">
+            <h3 class="text-sm font-bold" style="color:var(--text)">Son Siparişler</h3>
+            <div class="flex items-center gap-2">
+              <a href="#" class="text-xs font-semibold" style="color:var(--brand)">Tümü →</a>
+              <button onclick="removeWidget('orders')" class="text-xs" style="color:var(--text-s)" title="Kaldır"><i class="fa fa-xmark"></i></button>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table class="w-full text-sm min-w-[480px]">
+              <thead><tr style="background:var(--surface2);border-bottom:1px solid var(--border)">
+                <th class="text-left px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Sipariş</th>
+                <th class="text-left px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Müşteri</th>
+                <th class="text-right px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Tutar</th>
+                <th class="text-center px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Durum</th>
+              </tr></thead>
+              <tbody>
+                <tr class="trow"><td class="px-4 py-2.5 font-semibold" style="border-bottom:1px solid var(--border);color:var(--brand)">#ORD-00892</td><td class="px-4 py-2.5" style="border-bottom:1px solid var(--border);color:var(--text)">Ahmet Yılmaz</td><td class="px-4 py-2.5 text-right font-semibold" style="border-bottom:1px solid var(--border);color:var(--text)">1.299 ₺</td><td class="px-4 py-2.5 text-center" style="border-bottom:1px solid var(--border)"><span class="badge ba"><span class="dot bg-amber-500"></span>Beklemede</span></td></tr>
+                <tr class="trow"><td class="px-4 py-2.5 font-semibold" style="border-bottom:1px solid var(--border);color:var(--brand)">#ORD-00891</td><td class="px-4 py-2.5" style="border-bottom:1px solid var(--border);color:var(--text)">Fatma Kaya</td><td class="px-4 py-2.5 text-right font-semibold" style="border-bottom:1px solid var(--border);color:var(--text)">2.899 ₺</td><td class="px-4 py-2.5 text-center" style="border-bottom:1px solid var(--border)"><span class="badge bb"><span class="dot bg-blue-500"></span>İşlemde</span></td></tr>
+                <tr class="trow"><td class="px-4 py-2.5 font-semibold" style="color:var(--brand)">#ORD-00890</td><td class="px-4 py-2.5" style="color:var(--text)">Mehmet Çelik</td><td class="px-4 py-2.5 text-right font-semibold" style="color:var(--text)">679 ₺</td><td class="px-4 py-2.5 text-center"><span class="badge bg"><span class="dot bg-emerald-500"></span>Kargoda</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Widget: Bildirimler -->
+        <div id="w-notif" class="widget">
+          <div class="flex items-center justify-between px-4 py-3 border-b" style="border-color:var(--border)">
+            <h3 class="text-sm font-bold" style="color:var(--text)">Bildirimler</h3>
+            <div class="flex items-center gap-2">
+              <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">4</span>
+              <button onclick="removeWidget('notif')" class="text-xs" style="color:var(--text-s)"><i class="fa fa-xmark"></i></button>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-start gap-3 px-4 py-3 border-b" style="border-color:var(--border)"><div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ni-err"><i class="fa fa-triangle-exclamation text-sm"></i></div><div class="min-w-0"><div class="text-xs font-semibold" style="color:var(--text)">47 ürün stok dışı</div><div class="text-[11px] mt-0.5" style="color:var(--text-s)">Acil stok girişi gerekli</div></div></div>
+            <div class="flex items-start gap-3 px-4 py-3 border-b" style="border-color:var(--border)"><div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ni-warn"><i class="fa fa-rotate-left text-sm"></i></div><div class="min-w-0"><div class="text-xs font-semibold" style="color:var(--text)">Yeni iade talebi</div><div class="text-[11px] mt-0.5" style="color:var(--text-s)">#ORD-00851 — onay bekliyor</div></div></div>
+            <div class="flex items-start gap-3 px-4 py-3"><div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ni-ok"><i class="fa fa-check text-sm"></i></div><div class="min-w-0"><div class="text-xs font-semibold" style="color:var(--text)">Kampanya başladı</div><div class="text-[11px] mt-0.5" style="color:var(--text-s)">Bahar Fırsatları yayında</div></div></div>
+          </div>
+        </div>
+
+        <!-- Widget: Kritik Stok -->
+        <div id="w-stock" class="widget" style="border-color:#fecaca">
+          <div class="flex items-center justify-between px-4 py-3 border-b" style="border-color:#fecaca">
+            <h3 class="text-sm font-bold text-red-500 flex items-center gap-2"><i class="fa fa-triangle-exclamation text-xs"></i> Kritik Stok</h3>
+            <div class="flex items-center gap-2">
+              <span class="bg-red-100 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">5</span>
+              <button onclick="removeWidget('stock')" class="text-xs text-red-300"><i class="fa fa-xmark"></i></button>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between px-4 py-2.5 border-b" style="border-color:var(--border)"><div><div class="text-xs font-semibold" style="color:var(--text)">Adidas Ultraboost 22</div><div class="text-[11px]" style="color:var(--text-s)">AD-UB22-43</div></div><span class="font-bold text-red-500">0</span></div>
+            <div class="flex items-center justify-between px-4 py-2.5 border-b" style="border-color:var(--border)"><div><div class="text-xs font-semibold" style="color:var(--text)">Zara Trench Coat S</div><div class="text-[11px]" style="color:var(--text-s)">ZR-TRC-S</div></div><span class="font-bold text-amber-500">2</span></div>
+            <div class="flex items-center justify-between px-4 py-2.5"><div><div class="text-xs font-semibold" style="color:var(--text)">Nike AF1 Low 40</div><div class="text-[11px]" style="color:var(--text-s)">NK-AF1-40</div></div><span class="font-bold text-amber-500">3</span></div>
+          </div>
+        </div>
+
+        <!-- Empty widget slot -->
+        <div id="w-empty" class="widget border-dashed flex items-center justify-center py-10 cursor-pointer" onclick="openWidgetModal()" style="border-style:dashed">
+          <div class="text-center">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2" style="background:var(--surface2)"><i class="fa fa-plus" style="color:var(--text-s)"></i></div>
+            <div class="text-sm font-medium" style="color:var(--text-s)">Widget Ekle</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ VIEW: PRODUCT LIST ═══════════ -->
+  <div id="view-list" class="hidden flex-1 p-4 md:p-6 space-y-4">
+    <div class="flex items-center justify-between gap-3 mob-col">
+      <div>
+        <h1 class="text-xl font-bold" style="color:var(--text)">Ürünler</h1>
+        <p class="text-sm mt-0.5" style="color:var(--text-s)">1.284 ürün</p>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <button class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium mob-hide" style="border:1px solid var(--border);background:var(--surface);color:var(--text-m)"><i class="fa fa-download text-xs"></i> Dışa Aktar</button>
+        <button class="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold shadow-md" style="background:var(--brand)"><i class="fa fa-plus text-xs"></i> Yeni Ürün</button>
+      </div>
+    </div>
+
+    <div class="card overflow-hidden">
+      <!-- Desktop filters -->
+      <div class="mob-hide flex items-center gap-2.5 px-5 py-3.5 border-b flex-wrap" style="border-color:var(--border)">
+        <div class="relative"><i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-s)"></i><input type="text" placeholder="Ürün adı, SKU…" class="inp pl-8" style="width:200px"></div>
+        <select class="sel" style="width:auto;font-size:13px"><option>Tüm Kategoriler</option><option>Ayakkabı</option><option>Üst Giyim</option></select>
+        <select class="sel" style="width:auto;font-size:13px"><option>Tüm Durumlar</option><option>Aktif</option><option>Pasif</option><option>Stok Dışı</option></select>
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold" style="background:var(--brand-bg);color:var(--brand);border:1px solid var(--brand-b)">Aktif <button class="ml-0.5 text-base leading-none">×</button></span>
+        <div class="ml-auto flex gap-2">
+          <button onclick="toggleAdvFilter()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium" style="border:1px solid var(--border);color:var(--text-m);background:var(--surface)"><i class="fa fa-sliders text-xs"></i> Gelişmiş <i id="adv-chv" class="fa fa-chevron-down text-[10px]" style="color:var(--text-s)"></i></button>
+        </div>
+      </div>
+
+      <!-- Mobile filters bar -->
+      <div class="desk-hide flex items-center gap-2 px-4 py-3 border-b" style="border-color:var(--border)">
+        <div class="relative flex-1"><i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-s)"></i><input type="text" placeholder="Ara…" class="inp pl-8" style="font-size:14px"></div>
+        <button onclick="openFilterSheet()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold flex-shrink-0" style="background:var(--brand-bg);color:var(--brand);border:1px solid var(--brand-b)"><i class="fa fa-sliders text-xs"></i> Filtrele</button>
+      </div>
+
+      <!-- Bulk bar -->
+      <div class="flex items-center gap-3 px-4 py-2.5 border-b overflow-x-auto" style="border-color:var(--brand-b);background:var(--brand-bg)">
+        <span class="text-sm font-semibold flex-shrink-0" style="color:var(--brand)">2 seçili</span>
+        <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold flex-shrink-0" style="background:var(--surface);border:1px solid var(--border);color:var(--text-m)"><i class="fa fa-check-circle text-emerald-500"></i> Aktif</button>
+        <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold flex-shrink-0" style="background:var(--surface);border:1px solid var(--border);color:var(--text-m)"><i class="fa fa-eye-slash" style="color:var(--text-s)"></i> Pasif</button>
+        <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-500 flex-shrink-0" style="background:var(--surface);border:1px solid #fecaca"><i class="fa fa-trash"></i> Sil</button>
+      </div>
+
+      <div class="tbl-wrap">
+        <table class="w-full text-sm" style="min-width:540px">
+          <thead><tr style="background:var(--surface2);border-bottom:1px solid var(--border)">
+            <th class="w-10 px-4 py-3"><input type="checkbox" class="accent-emerald-600"></th>
+            <th class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Ürün</th>
+            <th class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider mob-hide" style="color:var(--text-s)">Kategori</th>
+            <th class="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Fiyat</th>
+            <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Stok</th>
+            <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Durum</th>
+            <th class="px-4 py-3 w-16"></th>
+          </tr></thead>
+          <tbody>
+            <tr class="trow group" style="background:var(--brand-bg)">
+              <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><input type="checkbox" checked class="accent-emerald-600"></td>
+              <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center text-[10px]" style="background:var(--surface2);color:var(--text-s)">IMG</div><div><div class="font-semibold" style="color:var(--text)">Nike Air Max 270</div><div class="text-xs mt-0.5" style="color:var(--text-s)">NK-AM270-42</div></div></div></td>
+              <td class="px-4 py-3.5 text-sm mob-hide" style="border-bottom:1px solid var(--border);color:var(--text-m)">Ayakkabı</td>
+              <td class="px-4 py-3.5 text-right font-semibold" style="border-bottom:1px solid var(--border);color:var(--text)">1.299 ₺</td>
+              <td class="px-4 py-3.5 text-center font-medium" style="border-bottom:1px solid var(--border);color:var(--text)">45</td>
+              <td class="px-4 py-3.5 text-center" style="border-bottom:1px solid var(--border)"><span class="badge bg"><span class="dot bg-emerald-500"></span>Aktif</span></td>
+              <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><div class="flex gap-1 opacity-0 group-hover:opacity-100"><button onclick="switchView('detail',null)" class="w-7 h-7 flex items-center justify-center rounded-lg" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-pen text-xs"></i></button><button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><i class="fa fa-trash text-xs"></i></button></div></td>
+            </tr>
+            <tr class="trow group">
+              <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><input type="checkbox" checked class="accent-emerald-600"></td>
+              <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center text-[10px]" style="background:var(--surface2);color:var(--text-s)">IMG</div><div><div class="font-semibold" style="color:var(--text)">Levi's 501 Slim</div><div class="text-xs mt-0.5" style="color:var(--text-s)">LV-501-SLM-32</div></div></div></td>
+              <td class="px-4 py-3.5 text-sm mob-hide" style="border-bottom:1px solid var(--border);color:var(--text-m)">Pantolon</td>
+              <td class="px-4 py-3.5 text-right font-semibold" style="border-bottom:1px solid var(--border);color:var(--text)">899 ₺</td>
+              <td class="px-4 py-3.5 text-center font-medium" style="border-bottom:1px solid var(--border);color:var(--text)">128</td>
+              <td class="px-4 py-3.5 text-center" style="border-bottom:1px solid var(--border)"><span class="badge bg"><span class="dot bg-emerald-500"></span>Aktif</span></td>
+              <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><div class="flex gap-1 opacity-0 group-hover:opacity-100"><button class="w-7 h-7 flex items-center justify-center rounded-lg" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-pen text-xs"></i></button><button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><i class="fa fa-trash text-xs"></i></button></div></td>
+            </tr>
+            <tr class="trow group">
+              <td class="px-4 py-3.5"><input type="checkbox" class="accent-emerald-600"></td>
+              <td class="px-4 py-3.5"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center text-[10px]" style="background:var(--surface2);color:var(--text-s)">IMG</div><div><div class="font-semibold" style="color:var(--text)">Adidas Ultraboost</div><div class="text-xs mt-0.5" style="color:var(--text-s)">AD-UB22-43</div></div></div></td>
+              <td class="px-4 py-3.5 text-sm mob-hide" style="color:var(--text-m)">Ayakkabı</td>
+              <td class="px-4 py-3.5 text-right font-semibold" style="color:var(--text)">2.499 ₺</td>
+              <td class="px-4 py-3.5 text-center font-bold text-red-500">0</td>
+              <td class="px-4 py-3.5 text-center"><span class="badge br"><span class="dot bg-red-500"></span>Stok Dışı</span></td>
+              <td class="px-4 py-3.5"><div class="flex gap-1 opacity-0 group-hover:opacity-100"><button class="w-7 h-7 flex items-center justify-center rounded-lg" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-pen text-xs"></i></button><button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><i class="fa fa-trash text-xs"></i></button></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color:var(--border);background:var(--surface2)">
+        <span class="text-sm" style="color:var(--text-m)"><span class="font-medium" style="color:var(--text)">1–25</span> / 1.284</span>
+        <div class="flex items-center gap-1">
+          <button disabled class="w-8 h-8 flex items-center justify-center rounded-xl text-xs cursor-not-allowed" style="border:1px solid var(--border);color:var(--text-s)"><i class="fa fa-chevron-left"></i></button>
+          <button class="w-8 h-8 flex items-center justify-center rounded-xl text-white text-sm font-semibold" style="background:var(--brand)">1</button>
+          <button class="w-8 h-8 flex items-center justify-center rounded-xl text-sm" style="color:var(--text-m)">2</button>
+          <button class="w-8 h-8 flex items-center justify-center rounded-xl text-sm" style="color:var(--text-m)">3</button>
+          <button class="w-8 h-8 flex items-center justify-center rounded-xl border text-xs" style="border-color:var(--border);color:var(--text-m)"><i class="fa fa-chevron-right"></i></button>
+        </div>
+        <select class="sel mob-hide" style="width:auto;font-size:12px;padding:6px 10px"><option>25/sayfa</option><option>50</option></select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ VIEW: DETAIL ═══════════ -->
+  <div id="view-detail" class="hidden">
+    <div class="border-b px-4 md:px-6 py-4" style="border-color:var(--border);background:var(--surface)">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xs flex-shrink-0" style="background:var(--surface2);color:var(--text-s)">IMG</div>
+          <div>
+            <div class="flex items-center flex-wrap gap-2"><h1 class="text-lg font-bold" style="color:var(--text)">Nike Air Max 270</h1><span class="badge bg"><span class="dot bg-emerald-500"></span>Aktif</span></div>
+            <p class="text-xs mt-0.5" style="color:var(--text-s)">NK-AM270-42 · Nike · 3 varyant</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <button class="px-4 py-2 rounded-xl text-white text-sm font-semibold shadow-md" style="background:var(--brand)"><i class="fa fa-floppy-disk text-xs mr-1"></i> Kaydet</button>
+        </div>
+      </div>
+      <div class="tab-scroll mt-4 border-b -mb-px" style="border-color:var(--border)">
+        <button class="stab active" onclick="setSTab(this)">Genel</button>
+        <button class="stab" onclick="setSTab(this)">Varyantlar (3)</button>
+        <button class="stab" onclick="setSTab(this)">Stok</button>
+        <button class="stab" onclick="setSTab(this)">Görseller</button>
+        <button class="stab" onclick="setSTab(this)">SEO</button>
+      </div>
+    </div>
+
+    <!-- 2-col on desktop, 1-col on mobile -->
+    <div class="flex detail-cols gap-6 p-4 md:p-6">
+
+      <!-- LEFT -->
+      <div class="flex-1 space-y-4 min-w-0">
+        <div class="card p-4 space-y-4">
+          <h2 class="text-sm font-bold" style="color:var(--text)">Temel Bilgiler</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="flbl">Ürün Kodu (SKU)</label><input class="inp" value="NK-AM270-42" disabled></div>
+            <div><label class="flbl">Barkod</label><input class="inp" value="0195866085967"></div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="flbl">Kategori</label><select class="sel"><option>Ayakkabı</option></select></div>
+            <div><label class="flbl">Marka</label><select class="sel"><option>Nike</option></select></div>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div><label class="flbl">Liste Fiyatı (₺)</label><input class="inp" value="1.299,90"></div>
+            <div><label class="flbl">KDV (%)</label><select class="sel"><option>%18</option></select></div>
+            <div><label class="flbl">İndirimli</label><input class="inp" placeholder="—"></div>
+          </div>
+        </div>
+
+        <!-- Multi-lang card -->
+        <div class="card overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-3 border-b" style="border-color:var(--border)">
+            <h2 class="text-sm font-bold" style="color:var(--text)">Çok Dilli İçerik</h2>
+            <div class="flex flex-wrap items-center gap-1">
+              <span class="badge bg text-[10px]">✓ TR</span>
+              <span class="badge bg text-[10px]">✓ EN</span>
+              <span class="badge ba text-[10px]">⏱ DE</span>
+              <span class="badge bx text-[10px]">AR</span>
+            </div>
+          </div>
+          <div class="tab-scroll border-b" style="border-color:var(--border);background:var(--surface2)">
+            <button class="lang-tab active" onclick="setLang(this,'tr')">🇹🇷 Türkçe</button>
+            <button class="lang-tab" onclick="setLang(this,'en')">🇬🇧 İngilizce</button>
+            <button class="lang-tab warn" onclick="setLang(this,'de')">🇩🇪 Almanca</button>
+            <button class="lang-tab" onclick="setLang(this,'ar')">🇸🇦 Arapça</button>
+          </div>
+
+          <div id="lp-tr" class="lang-panel p-4 space-y-4">
+            <div><label class="flbl">Ürün Adı</label><input class="inp ok" value="Nike Air Max 270"></div>
+            <div><label class="flbl">Kısa Açıklama</label><textarea class="ta ok">Hafif ve konforlu günlük spor ayakkabı. Görünmez Air yastıklama teknolojisi.</textarea></div>
+            <div><label class="flbl">Açıklama</label><textarea class="ta ok" style="min-height:100px">Nike Air Max 270, şimdiye kadar yapılmış en büyük Air birimine sahip spor ayakkabı. Diz altından topuğa kadar uzanan hava yastığı maksimum konfor sağlar.</textarea></div>
+          </div>
+
+          <div id="lp-en" class="lang-panel hidden p-4 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div><label class="flbl" style="color:var(--text-s)">🇹🇷 Kaynak</label><div class="src-block">Nike Air Max 270</div></div>
+              <div><label class="flbl">🇬🇧 İngilizce</label><input class="inp ok" value="Nike Air Max 270"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div><label class="flbl" style="color:var(--text-s)">Kısa Açıklama (TR)</label><div class="src-block">Hafif ve konforlu günlük spor ayakkabı. Görünmez Air yastıklama teknolojisi.</div></div>
+              <div><label class="flbl">Short Description</label><textarea class="ta ok">Lightweight and comfortable everyday sneaker.</textarea></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div><label class="flbl" style="color:var(--text-s)">Açıklama (TR)</label><div class="src-block" style="min-height:70px">Nike Air Max 270, şimdiye kadar yapılmış en büyük Air birimine sahip spor ayakkabı.</div></div>
+              <div><label class="flbl">Description</label><textarea class="ta ok" style="min-height:70px">The Nike Air Max 270 features Nike's biggest Air unit for unprecedented comfort.</textarea></div>
+            </div>
+          </div>
+
+          <div id="lp-de" class="lang-panel hidden p-4 space-y-4">
+            <div class="flex items-center gap-2 p-3 rounded-xl text-xs" style="background:#fffbeb;border:1px solid #fde68a;color:#92400e"><i class="fa fa-triangle-exclamation text-amber-500"></i> Çeviriler eksik. Kaynak metin referans olarak gösterilmektedir.</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div><label class="flbl" style="color:var(--text-s)">🇹🇷 Kaynak</label><div class="src-block">Nike Air Max 270</div></div>
+              <div><label class="flbl">Produktname (DE)</label><input class="inp" placeholder="Çeviri girin…"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div><label class="flbl" style="color:var(--text-s)">Kısa Açıklama (TR)</label><div class="src-block">Hafif ve konforlu günlük spor ayakkabı.</div></div>
+              <div><label class="flbl">Kurzbeschreibung</label><textarea class="ta" placeholder="Çeviri girin…"></textarea></div>
+            </div>
+          </div>
+
+          <div id="lp-ar" class="lang-panel hidden p-4 space-y-3">
+            <div class="flex items-center gap-2 p-3 rounded-xl text-xs" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-m)"><i class="fa fa-info-circle" style="color:var(--text-s)"></i> Sistem → Dil Ayarları'ndan Arapça ekleyin.</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div><label class="flbl" style="color:var(--text-s)">🇹🇷 Kaynak</label><div class="src-block">Nike Air Max 270</div></div>
+              <div><label class="flbl">اسم المنتج</label><input class="inp" dir="rtl" placeholder="الترجمة..."></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT metadata -->
+      <div class="detail-right w-full md:w-64 flex-shrink-0 space-y-4">
+        <div class="card overflow-hidden">
+          <div class="px-4 py-3 border-b" style="border-color:var(--border)"><h3 class="text-sm font-bold" style="color:var(--text)">Durum</h3></div>
+          <div class="p-4 space-y-3">
+            <div><label class="flbl">Yayın Durumu</label><select class="sel text-sm"><option>🟢 Aktif</option><option>⚪ Pasif</option><option>📝 Taslak</option></select></div>
+            <div><label class="flbl">Kanallar</label>
+              <div class="space-y-2">
+                <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--text-m)"><input type="checkbox" checked class="accent-emerald-600"> Web</label>
+                <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--text-m)"><input type="checkbox" checked class="accent-emerald-600"> Mobil</label>
+                <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--text-m)"><input type="checkbox" class="accent-emerald-600"> POS</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="px-4 py-3 border-b" style="border-color:var(--border)"><h3 class="text-sm font-bold" style="color:var(--text)">Kayıt Bilgisi</h3></div>
+          <div class="p-4 space-y-2.5">
+            <div class="flex justify-between"><span class="text-xs" style="color:var(--text-s)">Oluşturulma</span><span class="text-xs font-medium" style="color:var(--text)">12 Mar 2025</span></div>
+            <div class="flex justify-between"><span class="text-xs" style="color:var(--text-s)">Son Güncelleme</span><span class="text-xs font-medium" style="color:var(--text)">2 sa önce</span></div>
+            <div class="h-px" style="background:var(--border)"></div>
+            <div class="flex justify-between"><span class="text-xs" style="color:var(--text-s)">Stok</span><span class="text-sm font-bold" style="color:var(--text)">45 adet</span></div>
+            <div class="flex justify-between"><span class="text-xs" style="color:var(--text-s)">30 gün satış</span><span class="text-sm font-bold" style="color:var(--brand)">12 adet</span></div>
+          </div>
+        </div>
+        <div class="card overflow-hidden" style="border-color:#fecaca">
+          <div class="px-4 py-3 border-b" style="border-color:#fecaca"><h3 class="text-sm font-bold text-red-500">Tehlikeli Alan</h3></div>
+          <div class="p-4 space-y-2">
+            <button class="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium" style="border:1px solid var(--border);color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-eye-slash text-xs" style="color:var(--text-s)"></i> Pasife Al</button>
+            <button class="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-red-500" style="border:1px solid #fecaca" onmouseover="this.style.background='#fff1f2'" onmouseout="this.style.background=''"><i class="fa fa-trash text-xs"></i> Ürünü Sil</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════ VIEW: ATTR-LIST ═══════════ -->
+  <div id="view-attr-list" class="hidden flex-1 flex flex-col">
+    <!-- Page header -->
+    <div class="border-b px-4 md:px-6 py-4 flex-shrink-0" style="border-color:var(--border);background:var(--surface)">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h1 class="text-lg font-bold" style="color:var(--text)">Özellik Tipleri</h1>
+          <p class="text-xs mt-0.5" style="color:var(--text-s)">Ürün ve varyant özelliklerinin merkezi havuzu</p>
+        </div>
+        <button onclick="openAttrModal()" class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold shadow-sm flex-shrink-0" style="background:var(--brand)">
+          <i class="fa fa-plus text-xs"></i>
+          <span class="mob-hide">Yeni Özellik Tipi</span>
+        </button>
+      </div>
+      <!-- Filters -->
+      <div class="flex flex-wrap gap-2 mt-4">
+        <div class="relative flex-1 min-w-[180px]">
+          <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-xs pointer-events-none" style="color:var(--text-s)"></i>
+          <input class="inp pl-8" placeholder="Kod veya ad ile ara…" style="padding-top:8px;padding-bottom:8px">
+        </div>
+        <select class="sel" style="width:auto;min-width:130px">
+          <option>Tüm Tipler</option>
+          <option>text</option><option>select</option><option>multiselect</option><option>number</option><option>boolean</option>
+        </select>
+        <select class="sel" style="width:auto;min-width:160px">
+          <option>Tüm Özellikler</option>
+          <option>Sadece Varyant Eksenleri</option>
+          <option>Sadece Ürün Özellikleri</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="flex-1 overflow-y-auto p-4 md:p-6">
+      <div class="card2 overflow-hidden">
+        <div class="tbl-wrap">
+          <table class="w-full" style="min-width:520px">
+            <thead>
+              <tr style="background:var(--surface2)">
+                <th class="px-4 py-3 text-left text-xs font-semibold" style="color:var(--text-s);border-bottom:1px solid var(--border);width:36px"></th>
+                <th class="px-4 py-3 text-left text-xs font-semibold" style="color:var(--text-s);border-bottom:1px solid var(--border)">KOD</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold" style="color:var(--text-s);border-bottom:1px solid var(--border)">AD</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold mob-hide" style="color:var(--text-s);border-bottom:1px solid var(--border)">VERİ TİPİ</th>
+                <th class="px-4 py-3 text-center text-xs font-semibold mob-hide" style="color:var(--text-s);border-bottom:1px solid var(--border)">VARYANT EKSENİ</th>
+                <th class="px-4 py-3 text-center text-xs font-semibold mob-hide" style="color:var(--text-s);border-bottom:1px solid var(--border)">DEĞER SAYISI</th>
+                <th class="px-4 py-3" style="border-bottom:1px solid var(--border);width:72px"></th>
+              </tr>
+            </thead>
+            <tbody>
+
+              <!-- ── renk (expanded by default) ── -->
+              <tr class="trow group cursor-pointer" onclick="toggleAttrRow('ar-renk',this)">
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)">
+                  <i id="chv-ar-renk" class="fa fa-chevron-down text-[10px] transition-transform" style="color:var(--text-s)"></i>
+                </td>
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)">
+                  <code class="text-xs font-mono px-1.5 py-0.5 rounded" style="background:var(--surface2);color:var(--brand)">renk</code>
+                </td>
+                <td class="px-4 py-3.5 font-medium" style="border-bottom:1px solid var(--border);color:var(--text)">Renk</td>
+                <td class="px-4 py-3.5 mob-hide" style="border-bottom:1px solid var(--border)"><span class="badge bb text-[11px]"><i class="fa fa-list-ul text-[9px] mr-0.5"></i>select</span></td>
+                <td class="px-4 py-3.5 text-center mob-hide" style="border-bottom:1px solid var(--border)"><span class="badge bg text-[11px]"><i class="fa fa-check text-[9px]"></i> Evet</span></td>
+                <td class="px-4 py-3.5 text-center font-semibold mob-hide" style="border-bottom:1px solid var(--border);color:var(--text)">24</td>
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)">
+                  <div class="flex gap-1 opacity-0 group-hover:opacity-100">
+                    <button onclick="event.stopPropagation();switchView('attr-detail')" class="w-7 h-7 flex items-center justify-center rounded-lg" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-pen text-xs"></i></button>
+                    <button onclick="event.stopPropagation()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><i class="fa fa-trash text-xs"></i></button>
+                  </div>
+                </td>
+              </tr>
+              <tr id="ar-renk">
+                <td colspan="7" class="px-4 pb-4 pt-1" style="border-bottom:1px solid var(--border);background:var(--surface2)">
+                  <div class="ml-6">
+                    <p class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:var(--text-s)">Değerler</p>
+                    <div class="flex flex-wrap gap-2">
+                      <span class="val-chip"><span class="w-3 h-3 rounded-full flex-shrink-0" style="background:#e74c3c"></span>Kırmızı<button class="hover:text-red-400 transition-colors" style="color:var(--text-s)" title="Sil"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip"><span class="w-3 h-3 rounded-full flex-shrink-0" style="background:#1a1a2e"></span>Siyah<button class="hover:text-red-400 transition-colors" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip"><span class="w-3 h-3 rounded-full flex-shrink-0" style="background:#f5f5f5;border:1px solid #ddd"></span>Beyaz<button class="hover:text-red-400 transition-colors" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip"><span class="w-3 h-3 rounded-full flex-shrink-0" style="background:#3498db"></span>Mavi<button class="hover:text-red-400 transition-colors" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip"><span class="w-3 h-3 rounded-full flex-shrink-0" style="background:#27ae60"></span>Yeşil<button class="hover:text-red-400 transition-colors" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip"><span class="w-3 h-3 rounded-full flex-shrink-0" style="background:#9b59b6"></span>Mor<button class="hover:text-red-400 transition-colors" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip"><span class="w-3 h-3 rounded-full flex-shrink-0" style="background:#e67e22"></span>Turuncu<button class="hover:text-red-400 transition-colors" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="text-xs self-center" style="color:var(--text-s)">+17 daha…</span>
+                      <button class="val-chip-add" onclick="event.stopPropagation()"><i class="fa fa-plus text-[9px]"></i> Değer Ekle</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- ── beden ── -->
+              <tr class="trow group cursor-pointer" onclick="toggleAttrRow('ar-beden',this)">
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><i id="chv-ar-beden" class="fa fa-chevron-right text-[10px] transition-transform" style="color:var(--text-s)"></i></td>
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><code class="text-xs font-mono px-1.5 py-0.5 rounded" style="background:var(--surface2);color:var(--brand)">beden</code></td>
+                <td class="px-4 py-3.5 font-medium" style="border-bottom:1px solid var(--border);color:var(--text)">Beden</td>
+                <td class="px-4 py-3.5 mob-hide" style="border-bottom:1px solid var(--border)"><span class="badge bb text-[11px]"><i class="fa fa-list-ul text-[9px] mr-0.5"></i>select</span></td>
+                <td class="px-4 py-3.5 text-center mob-hide" style="border-bottom:1px solid var(--border)"><span class="badge bg text-[11px]"><i class="fa fa-check text-[9px]"></i> Evet</span></td>
+                <td class="px-4 py-3.5 text-center font-semibold mob-hide" style="border-bottom:1px solid var(--border);color:var(--text)">18</td>
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><div class="flex gap-1 opacity-0 group-hover:opacity-100"><button onclick="event.stopPropagation();switchView('attr-detail')" class="w-7 h-7 flex items-center justify-center rounded-lg" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-pen text-xs"></i></button><button onclick="event.stopPropagation()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><i class="fa fa-trash text-xs"></i></button></div></td>
+              </tr>
+              <tr id="ar-beden" class="hidden">
+                <td colspan="7" class="px-4 pb-4 pt-1" style="border-bottom:1px solid var(--border);background:var(--surface2)">
+                  <div class="ml-6">
+                    <p class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:var(--text-s)">Değerler</p>
+                    <div class="flex flex-wrap gap-2">
+                      <span class="val-chip">XS<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip">S<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip">M<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip">L<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip">XL<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip">XXL<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip">34<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip">36<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip">38<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip">40<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="val-chip">42<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                      <span class="text-xs self-center" style="color:var(--text-s)">+7 daha…</span>
+                      <button class="val-chip-add" onclick="event.stopPropagation()"><i class="fa fa-plus text-[9px]"></i> Değer Ekle</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- ── malzeme ── -->
+              <tr class="trow group cursor-pointer" onclick="toggleAttrRow('ar-malzeme',this)">
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><i id="chv-ar-malzeme" class="fa fa-chevron-right text-[10px] transition-transform" style="color:var(--text-s)"></i></td>
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><code class="text-xs font-mono px-1.5 py-0.5 rounded" style="background:var(--surface2);color:var(--text-m)">malzeme</code></td>
+                <td class="px-4 py-3.5 font-medium" style="border-bottom:1px solid var(--border);color:var(--text)">Malzeme / Kumaş</td>
+                <td class="px-4 py-3.5 mob-hide" style="border-bottom:1px solid var(--border)"><span class="badge bb text-[11px]"><i class="fa fa-list-ul text-[9px] mr-0.5"></i>select</span></td>
+                <td class="px-4 py-3.5 text-center mob-hide" style="border-bottom:1px solid var(--border)"><span class="badge bx text-[11px]">—</span></td>
+                <td class="px-4 py-3.5 text-center font-semibold mob-hide" style="border-bottom:1px solid var(--border);color:var(--text)">18</td>
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><div class="flex gap-1 opacity-0 group-hover:opacity-100"><button onclick="event.stopPropagation();switchView('attr-detail')" class="w-7 h-7 flex items-center justify-center rounded-lg" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-pen text-xs"></i></button><button onclick="event.stopPropagation()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><i class="fa fa-trash text-xs"></i></button></div></td>
+              </tr>
+              <tr id="ar-malzeme" class="hidden">
+                <td colspan="7" class="px-4 pb-4 pt-1" style="border-bottom:1px solid var(--border);background:var(--surface2)">
+                  <div class="ml-6 flex flex-wrap gap-2">
+                    <span class="val-chip">Pamuk<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                    <span class="val-chip">Polyester<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                    <span class="val-chip">Deri<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                    <span class="val-chip">Keten<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                    <span class="val-chip">Viskon<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span>
+                    <button class="val-chip-add" onclick="event.stopPropagation()"><i class="fa fa-plus text-[9px]"></i> Değer Ekle</button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- ── marka ── -->
+              <tr class="trow group cursor-pointer" onclick="toggleAttrRow('ar-marka',this)">
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><i id="chv-ar-marka" class="fa fa-chevron-right text-[10px] transition-transform" style="color:var(--text-s)"></i></td>
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><code class="text-xs font-mono px-1.5 py-0.5 rounded" style="background:var(--surface2);color:var(--text-m)">marka</code></td>
+                <td class="px-4 py-3.5 font-medium" style="border-bottom:1px solid var(--border);color:var(--text)">Marka</td>
+                <td class="px-4 py-3.5 mob-hide" style="border-bottom:1px solid var(--border)"><span class="badge bb text-[11px]"><i class="fa fa-list-ul text-[9px] mr-0.5"></i>select</span></td>
+                <td class="px-4 py-3.5 text-center mob-hide" style="border-bottom:1px solid var(--border)"><span class="badge bx text-[11px]">—</span></td>
+                <td class="px-4 py-3.5 text-center font-semibold mob-hide" style="border-bottom:1px solid var(--border);color:var(--text)">247</td>
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><div class="flex gap-1 opacity-0 group-hover:opacity-100"><button onclick="event.stopPropagation();switchView('attr-detail')" class="w-7 h-7 flex items-center justify-center rounded-lg" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-pen text-xs"></i></button><button onclick="event.stopPropagation()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><i class="fa fa-trash text-xs"></i></button></div></td>
+              </tr>
+              <tr id="ar-marka" class="hidden"><td colspan="7" class="px-4 pb-3 pt-1" style="border-bottom:1px solid var(--border);background:var(--surface2)"><div class="ml-6 text-xs" style="color:var(--text-s)">Nike, Adidas, Puma, Levi's… <span class="font-medium" style="color:var(--text)">247 değer</span> — <button class="underline" onclick="event.stopPropagation();switchView('attr-detail')" style="color:var(--brand)">Tümünü görüntüle ve yönet</button></div></td></tr>
+
+              <!-- ── işlemci ── -->
+              <tr class="trow group cursor-pointer" onclick="toggleAttrRow('ar-islemci',this)">
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><i id="chv-ar-islemci" class="fa fa-chevron-right text-[10px] transition-transform" style="color:var(--text-s)"></i></td>
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><code class="text-xs font-mono px-1.5 py-0.5 rounded" style="background:var(--surface2);color:var(--brand)">islemci</code></td>
+                <td class="px-4 py-3.5 font-medium" style="border-bottom:1px solid var(--border);color:var(--text)">İşlemci</td>
+                <td class="px-4 py-3.5 mob-hide" style="border-bottom:1px solid var(--border)"><span class="badge bb text-[11px]"><i class="fa fa-list-ul text-[9px] mr-0.5"></i>select</span></td>
+                <td class="px-4 py-3.5 text-center mob-hide" style="border-bottom:1px solid var(--border)"><span class="badge bg text-[11px]"><i class="fa fa-check text-[9px]"></i> Evet</span></td>
+                <td class="px-4 py-3.5 text-center font-semibold mob-hide" style="border-bottom:1px solid var(--border);color:var(--text)">15</td>
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><div class="flex gap-1 opacity-0 group-hover:opacity-100"><button onclick="event.stopPropagation();switchView('attr-detail')" class="w-7 h-7 flex items-center justify-center rounded-lg" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-pen text-xs"></i></button><button onclick="event.stopPropagation()" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><i class="fa fa-trash text-xs"></i></button></div></td>
+              </tr>
+              <tr id="ar-islemci" class="hidden"><td colspan="7" class="px-4 pb-3 pt-1" style="border-bottom:1px solid var(--border);background:var(--surface2)"><div class="ml-6 flex flex-wrap gap-2"><span class="val-chip">Intel Core i5<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span><span class="val-chip">Intel Core i7<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span><span class="val-chip">Apple M3<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span><span class="val-chip">AMD Ryzen 5<button class="hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-xmark text-[9px]"></i></button></span><button class="val-chip-add" onclick="event.stopPropagation()"><i class="fa fa-plus text-[9px]"></i> Değer Ekle</button></div></td></tr>
+
+              <!-- ── agirlik (number) ── -->
+              <tr class="trow group">
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><i class="fa fa-minus text-[10px]" style="color:var(--border)"></i></td>
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><code class="text-xs font-mono px-1.5 py-0.5 rounded" style="background:var(--surface2);color:var(--text-m)">agirlik</code></td>
+                <td class="px-4 py-3.5 font-medium" style="border-bottom:1px solid var(--border);color:var(--text)">Ağırlık</td>
+                <td class="px-4 py-3.5 mob-hide" style="border-bottom:1px solid var(--border)"><span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:11px"><i class="fa fa-hashtag text-[9px] mr-0.5"></i>number</span></td>
+                <td class="px-4 py-3.5 text-center mob-hide" style="border-bottom:1px solid var(--border)"><span class="badge bx text-[11px]">—</span></td>
+                <td class="px-4 py-3.5 text-center mob-hide" style="border-bottom:1px solid var(--border)"><span class="text-xs" style="color:var(--text-s)">serbest giriş</span></td>
+                <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><div class="flex gap-1 opacity-0 group-hover:opacity-100"><button onclick="switchView('attr-detail')" class="w-7 h-7 flex items-center justify-center rounded-lg" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-pen text-xs"></i></button><button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><i class="fa fa-trash text-xs"></i></button></div></td>
+              </tr>
+
+              <!-- ── su_gecirmez (boolean) ── -->
+              <tr class="trow group">
+                <td class="px-4 py-3.5"><i class="fa fa-minus text-[10px]" style="color:var(--border)"></i></td>
+                <td class="px-4 py-3.5"><code class="text-xs font-mono px-1.5 py-0.5 rounded" style="background:var(--surface2);color:var(--text-m)">su_gecirmez</code></td>
+                <td class="px-4 py-3.5 font-medium" style="color:var(--text)">Su Geçirmez</td>
+                <td class="px-4 py-3.5 mob-hide"><span class="badge" style="background:#ede9fe;color:#5b21b6;border:1px solid #ddd6fe;font-size:11px"><i class="fa fa-toggle-on text-[9px] mr-0.5"></i>boolean</span></td>
+                <td class="px-4 py-3.5 text-center mob-hide"><span class="badge bx text-[11px]">—</span></td>
+                <td class="px-4 py-3.5 text-center mob-hide"><span class="text-xs" style="color:var(--text-s)">Evet / Hayır</span></td>
+                <td class="px-4 py-3.5"><div class="flex gap-1 opacity-0 group-hover:opacity-100"><button onclick="switchView('attr-detail')" class="w-7 h-7 flex items-center justify-center rounded-lg" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-pen text-xs"></i></button><button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><i class="fa fa-trash text-xs"></i></button></div></td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+        <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color:var(--border);background:var(--surface2)">
+          <span class="text-sm" style="color:var(--text-m)"><span class="font-medium" style="color:var(--text)">1–7</span> / 42</span>
+          <div class="flex items-center gap-1">
+            <button disabled class="w-8 h-8 flex items-center justify-center rounded-xl text-xs cursor-not-allowed" style="border:1px solid var(--border);color:var(--text-s)"><i class="fa fa-chevron-left"></i></button>
+            <button class="w-8 h-8 flex items-center justify-center rounded-xl text-white text-sm font-semibold" style="background:var(--brand)">1</button>
+            <button class="w-8 h-8 flex items-center justify-center rounded-xl text-sm" style="color:var(--text-m)">2</button>
+            <button class="w-8 h-8 flex items-center justify-center rounded-xl border text-xs" style="border-color:var(--border);color:var(--text-m)"><i class="fa fa-chevron-right"></i></button>
+          </div>
+          <select class="sel mob-hide" style="width:auto;font-size:12px;padding:6px 10px"><option>25/sayfa</option><option>50</option></select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ VIEW: ATTR-DETAIL ═══════════ -->
+  <div id="view-attr-detail" class="hidden flex-1 flex flex-col">
+    <!-- Page header -->
+    <div class="border-b px-4 md:px-6 py-4 flex-shrink-0" style="border-color:var(--border);background:var(--surface)">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <button onclick="switchView('attr-list')" class="w-9 h-9 flex items-center justify-center rounded-xl flex-shrink-0" style="border:1px solid var(--border);color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+            <i class="fa fa-arrow-left text-sm"></i>
+          </button>
+          <div>
+            <div class="flex items-center flex-wrap gap-2">
+              <h1 class="text-lg font-bold" style="color:var(--text)">Renk</h1>
+              <span class="badge bg"><i class="fa fa-check text-[9px]"></i> Varyant Ekseni</span>
+            </div>
+            <p class="text-xs mt-0.5" style="color:var(--text-s)"><code class="font-mono">renk</code> · select · 24 değer</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <button id="fav-toggle-btn2" onclick="togglePageFav()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all mob-hide" style="color:var(--text-m);border:1px solid var(--border);background:var(--surface)">
+            <i class="fa fa-star text-[11px] text-amber-400"></i>
+            <span>Favorilere Ekle</span>
+          </button>
+          <button class="px-4 py-2 rounded-xl text-white text-sm font-semibold shadow-sm" style="background:var(--brand)">
+            <i class="fa fa-floppy-disk text-xs mr-1"></i> Kaydet
+          </button>
+        </div>
+      </div>
+      <!-- Detail tabs -->
+      <div class="tab-scroll mt-4 border-b -mb-px" style="border-color:var(--border)">
+        <button class="stab active" onclick="setSTab(this)">Genel Bilgiler</button>
+        <button class="stab" onclick="setSTab(this)">Değerler (24)</button>
+        <button class="stab" onclick="setSTab(this)">Kullanılan Gruplar (3)</button>
+      </div>
+    </div>
+
+    <!-- 2-col layout -->
+    <div class="flex detail-cols gap-6 p-4 md:p-6 overflow-y-auto">
+
+      <!-- LEFT -->
+      <div class="flex-1 space-y-4 min-w-0">
+
+        <!-- Temel bilgiler -->
+        <div class="card p-4 space-y-4">
+          <h2 class="text-sm font-bold" style="color:var(--text)">Temel Bilgiler</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="flbl">Kod <span class="text-[10px] font-normal" style="color:var(--text-s)">(değiştirilemez)</span></label>
+              <input class="inp" value="renk" disabled>
+            </div>
+            <div>
+              <label class="flbl">Veri Tipi</label>
+              <select class="sel">
+                <option>select — Tekli seçim</option>
+                <option>multiselect — Çoklu seçim</option>
+                <option>text — Serbest metin</option>
+                <option>number — Sayısal değer</option>
+                <option>boolean — Evet / Hayır</option>
+              </select>
+            </div>
+          </div>
+          <!-- multilang name -->
+          <div class="card2 overflow-hidden">
+            <div class="tab-scroll border-b" style="border-color:var(--border);background:var(--surface2)">
+              <button class="lang-tab active" onclick="setLang(this,'tr-at')">🇹🇷 Türkçe</button>
+              <button class="lang-tab" onclick="setLang(this,'en-at')">🇬🇧 İngilizce</button>
+              <button class="lang-tab warn" onclick="setLang(this,'de-at')">🇩🇪 Almanca</button>
+              <button class="lang-tab" onclick="setLang(this,'ar-at')">🇸🇦 Arapça</button>
+            </div>
+            <div class="p-4 space-y-3">
+              <div id="lp-tr-at"><label class="flbl">Ad (TR) <span class="text-amber-500 font-bold">*</span></label><input class="inp ok" value="Renk"></div>
+              <div id="lp-en-at" class="hidden"><label class="flbl">Ad (EN)</label><input class="inp" value="Color"></div>
+              <div id="lp-de-at" class="hidden"><div class="flex items-start gap-3 p-3 rounded-xl mb-3" style="background:#fef9c3;border:1px solid #fde68a"><i class="fa fa-triangle-exclamation text-amber-500 mt-0.5 flex-shrink-0"></i><div><p class="text-xs font-semibold" style="color:#713f12">Referans: <span class="font-bold">Renk</span></p><p class="text-xs mt-0.5" style="color:#92400e">Bu dildeki çeviri eksik veya tamamlanmamış.</p></div></div><label class="flbl">Ad (DE)</label><input class="inp" placeholder="Farbe"></div>
+              <div id="lp-ar-at" class="hidden"><label class="flbl">Ad (AR)</label><input class="inp" placeholder="اللون" dir="rtl"></div>
+            </div>
+          </div>
+          <!-- Varyant ekseni toggle -->
+          <div class="flex items-center justify-between p-3 rounded-xl" style="background:var(--surface2);border:1px solid var(--border)">
+            <div>
+              <p class="text-sm font-semibold" style="color:var(--text)">Varyant Ekseni</p>
+              <p class="text-xs mt-0.5" style="color:var(--text-s)">Bu özellik ürün varyantlarını belirlemede kullanılır</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked class="sr-only peer">
+              <div class="w-10 h-5 rounded-full peer-checked:after:translate-x-5 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:rounded-full after:transition-all" style="background:var(--brand)" onclick="this.parentElement.querySelector('input').checked=!this.parentElement.querySelector('input').checked"></div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Değerler (select/multiselect için) -->
+        <div class="card overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-3 border-b" style="border-color:var(--border)">
+            <div>
+              <h2 class="text-sm font-bold" style="color:var(--text)">Değerler</h2>
+              <p class="text-xs mt-0.5" style="color:var(--text-s)">Bu özellik için seçilebilecek değerler</p>
+            </div>
+            <button onclick="addValueRow()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold" style="background:var(--brand-bg);color:var(--brand);border:1px solid var(--brand-b)">
+              <i class="fa fa-plus text-[10px]"></i> Değer Ekle
+            </button>
+          </div>
+          <div class="divide-y" style="border-color:var(--border)">
+            <!-- Değer satırları -->
+            <div class="flex items-center gap-3 px-4 py-2.5 group">
+              <i class="fa fa-grip-vertical text-xs cursor-grab" style="color:var(--text-s)"></i>
+              <input class="inp flex-1 py-1.5 text-sm" value="Kırmızı" style="min-width:0">
+              <div class="flex items-center gap-1.5">
+                <input type="color" value="#e74c3c" class="w-7 h-7 rounded cursor-pointer border-0 p-0.5" style="background:none" title="Renk kodu">
+                <input class="inp text-xs py-1 px-2 w-20" value="#e74c3c" placeholder="#000000">
+              </div>
+              <button class="w-7 h-7 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-400 transition-all" style="color:var(--text-s)"><i class="fa fa-trash text-xs"></i></button>
+            </div>
+            <div class="flex items-center gap-3 px-4 py-2.5 group">
+              <i class="fa fa-grip-vertical text-xs cursor-grab" style="color:var(--text-s)"></i>
+              <input class="inp flex-1 py-1.5 text-sm" value="Siyah" style="min-width:0">
+              <div class="flex items-center gap-1.5">
+                <input type="color" value="#1a1a2e" class="w-7 h-7 rounded cursor-pointer border-0 p-0.5" style="background:none">
+                <input class="inp text-xs py-1 px-2 w-20" value="#1a1a2e">
+              </div>
+              <button class="w-7 h-7 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-400 transition-all" style="color:var(--text-s)"><i class="fa fa-trash text-xs"></i></button>
+            </div>
+            <div class="flex items-center gap-3 px-4 py-2.5 group">
+              <i class="fa fa-grip-vertical text-xs cursor-grab" style="color:var(--text-s)"></i>
+              <input class="inp flex-1 py-1.5 text-sm" value="Beyaz" style="min-width:0">
+              <div class="flex items-center gap-1.5">
+                <input type="color" value="#f5f5f5" class="w-7 h-7 rounded cursor-pointer border-0 p-0.5" style="background:none">
+                <input class="inp text-xs py-1 px-2 w-20" value="#f5f5f5">
+              </div>
+              <button class="w-7 h-7 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-400 transition-all" style="color:var(--text-s)"><i class="fa fa-trash text-xs"></i></button>
+            </div>
+            <div class="flex items-center gap-3 px-4 py-2.5 group">
+              <i class="fa fa-grip-vertical text-xs cursor-grab" style="color:var(--text-s)"></i>
+              <input class="inp flex-1 py-1.5 text-sm" value="Mavi" style="min-width:0">
+              <div class="flex items-center gap-1.5">
+                <input type="color" value="#3498db" class="w-7 h-7 rounded cursor-pointer border-0 p-0.5" style="background:none">
+                <input class="inp text-xs py-1 px-2 w-20" value="#3498db">
+              </div>
+              <button class="w-7 h-7 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-400 transition-all" style="color:var(--text-s)"><i class="fa fa-trash text-xs"></i></button>
+            </div>
+            <div class="flex items-center gap-3 px-4 py-2.5 group">
+              <i class="fa fa-grip-vertical text-xs cursor-grab" style="color:var(--text-s)"></i>
+              <input class="inp flex-1 py-1.5 text-sm" value="Yeşil" style="min-width:0">
+              <div class="flex items-center gap-1.5">
+                <input type="color" value="#27ae60" class="w-7 h-7 rounded cursor-pointer border-0 p-0.5" style="background:none">
+                <input class="inp text-xs py-1 px-2 w-20" value="#27ae60">
+              </div>
+              <button class="w-7 h-7 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-400 transition-all" style="color:var(--text-s)"><i class="fa fa-trash text-xs"></i></button>
+            </div>
+            <!-- Yeni değer satırı (varsayılan kapalı) -->
+            <div id="new-val-row" class="hidden flex items-center gap-3 px-4 py-2.5" style="background:var(--brand-bg)">
+              <i class="fa fa-grip-vertical text-xs" style="color:var(--text-s)"></i>
+              <input id="new-val-inp" class="inp flex-1 py-1.5 text-sm" placeholder="Değer adı…" style="min-width:0">
+              <div class="flex items-center gap-1.5">
+                <input type="color" id="new-val-color" value="#059669" class="w-7 h-7 rounded cursor-pointer border-0 p-0.5" style="background:none">
+                <input class="inp text-xs py-1 px-2 w-20" placeholder="#000000">
+              </div>
+              <button onclick="confirmAddValue()" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-white" style="background:var(--brand)">Ekle</button>
+              <button onclick="cancelAddValue()" class="px-3 py-1.5 rounded-lg text-xs font-semibold" style="color:var(--text-m);border:1px solid var(--border)">İptal</button>
+            </div>
+            <div class="px-4 py-2.5 text-xs" style="color:var(--text-s)">+19 daha · Tümünü göster</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="w-72 flex-shrink-0 space-y-4" style="flex-shrink:0;min-width:0">
+        <!-- Özet -->
+        <div class="card p-4 space-y-3">
+          <h2 class="text-sm font-bold" style="color:var(--text)">Özet</h2>
+          <div class="space-y-2">
+            <div class="flex justify-between text-sm">
+              <span style="color:var(--text-m)">Toplam Değer</span>
+              <span class="font-semibold" style="color:var(--text)">24</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span style="color:var(--text-m)">Kullanılan Grup</span>
+              <span class="font-semibold" style="color:var(--text)">3</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span style="color:var(--text-m)">Veri Tipi</span>
+              <span class="badge bb text-[11px]">select</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span style="color:var(--text-m)">Varyant Ekseni</span>
+              <span class="badge bg text-[11px]"><i class="fa fa-check text-[9px]"></i> Evet</span>
+            </div>
+            <div class="h-px" style="background:var(--border)"></div>
+            <div class="flex justify-between text-xs">
+              <span style="color:var(--text-s)">Oluşturulma</span>
+              <span style="color:var(--text-m)">12 Oca 2025</span>
+            </div>
+            <div class="flex justify-between text-xs">
+              <span style="color:var(--text-s)">Son Güncelleme</span>
+              <span style="color:var(--text-m)">3 Mar 2026</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kullanılan gruplar -->
+        <div class="card p-4 space-y-3">
+          <h2 class="text-sm font-bold" style="color:var(--text)">Kullanılan Gruplar</h2>
+          <p class="text-xs" style="color:var(--text-s)">Bu özellik tipi aşağıdaki ürün gruplarında kullanılmaktadır.</p>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between p-2.5 rounded-xl" style="background:var(--surface2);border:1px solid var(--border)">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:var(--brand-bg)"><i class="fa fa-tshirt text-[11px]" style="color:var(--brand)"></i></div>
+                <div>
+                  <p class="text-xs font-semibold" style="color:var(--text)">Tekstil</p>
+                  <p class="text-[10px]" style="color:var(--text-s)">Varyant ekseni olarak</p>
+                </div>
+              </div>
+              <span class="badge bg text-[10px]">eksen</span>
+            </div>
+            <div class="flex items-center justify-between p-2.5 rounded-xl" style="background:var(--surface2);border:1px solid var(--border)">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:#f3e8ff"><i class="fa fa-shoe-prints text-[11px]" style="color:#9333ea"></i></div>
+                <div>
+                  <p class="text-xs font-semibold" style="color:var(--text)">Ayakkabı</p>
+                  <p class="text-[10px]" style="color:var(--text-s)">Varyant ekseni olarak</p>
+                </div>
+              </div>
+              <span class="badge bg text-[10px]">eksen</span>
+            </div>
+            <div class="flex items-center justify-between p-2.5 rounded-xl" style="background:var(--surface2);border:1px solid var(--border)">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:#eff6ff"><i class="fa fa-couch text-[11px]" style="color:#3b82f6"></i></div>
+                <div>
+                  <p class="text-xs font-semibold" style="color:var(--text)">Ev Tekstili</p>
+                  <p class="text-[10px]" style="color:var(--text-s)">Ürün özelliği olarak</p>
+                </div>
+              </div>
+              <span class="badge bb text-[10px]">özellik</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tehlikeli alan -->
+        <div class="card p-4 space-y-2" style="border-color:#fecaca">
+          <h3 class="text-sm font-bold text-red-500">Tehlikeli Alan</h3>
+          <p class="text-xs" style="color:var(--text-s)">Bu özellik tipi 3 grupta kullanılıyor. Silme işlemi bu gruplardaki ürünleri etkileyebilir.</p>
+          <button class="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-red-500 mt-2" style="border:1px solid #fecaca" onmouseover="this.style.background='#fff1f2'" onmouseout="this.style.background=''"><i class="fa fa-trash text-xs"></i> Özellik Tipini Sil</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#main -->
+
+<!-- ══ ATTR TYPE MODAL ══ -->
+<div id="attr-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden" style="background:rgba(15,23,42,.5);backdrop-filter:blur(4px)" onclick="if(event.target===this)closeAttrModal()">
+  <div class="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl" style="background:var(--surface);border:1px solid var(--border)">
+    <div class="flex items-center justify-between px-5 py-4 border-b" style="border-color:var(--border)">
+      <div>
+        <h3 class="font-bold" style="color:var(--text)">Yeni Özellik Tipi</h3>
+        <p class="text-xs mt-0.5" style="color:var(--text-s)">Merkezi özellik havuzuna yeni tip ekle</p>
+      </div>
+      <button onclick="closeAttrModal()" class="w-8 h-8 flex items-center justify-center rounded-lg" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-xmark"></i></button>
+    </div>
+    <div class="p-5 space-y-4" style="max-height:70vh;overflow-y:auto">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="flbl">Kod <span class="text-amber-500 font-bold">*</span></label>
+          <input class="inp" placeholder="örn: kalip_tipi" oninput="this.value=this.value.toLowerCase().replace(/\s+/g,'_')">
+          <p class="text-[11px] mt-1" style="color:var(--text-s)">Küçük harf, alt çizgi. Sonradan değiştirilemez.</p>
+        </div>
+        <div>
+          <label class="flbl">Ad (TR) <span class="text-amber-500 font-bold">*</span></label>
+          <input class="inp" placeholder="örn: Kalıp Tipi">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="flbl">Veri Tipi <span class="text-amber-500 font-bold">*</span></label>
+          <select class="sel" id="attr-modal-type" onchange="toggleModalValues()">
+            <option value="">Seçin…</option>
+            <option value="select">select — Tekli seçim</option>
+            <option value="multiselect">multiselect — Çoklu seçim</option>
+            <option value="text">text — Serbest metin</option>
+            <option value="number">number — Sayısal değer</option>
+            <option value="boolean">boolean — Evet / Hayır</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <div class="flex items-center justify-between w-full p-3 rounded-xl" style="background:var(--surface2);border:1px solid var(--border)">
+            <div>
+              <p class="text-xs font-semibold" style="color:var(--text)">Varyant Ekseni</p>
+              <p class="text-[10px]" style="color:var(--text-s)">Varyant oluşturur</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="attr-modal-axis" class="sr-only peer">
+              <div class="w-9 h-5 rounded-full peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:rounded-full after:transition-all after:bg-white" style="background:var(--border)" id="axis-track" onclick="this.style.background=document.getElementById('attr-modal-axis').checked?'var(--border)':'var(--brand)'"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+      <!-- Değerler bölümü (select/multiselect için) -->
+      <div id="modal-values-section" class="hidden space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="flbl mb-0">Başlangıç Değerleri <span class="text-[11px] font-normal" style="color:var(--text-s)">(isteğe bağlı)</span></label>
+          <button onclick="addModalValue()" class="text-xs font-semibold" style="color:var(--brand)"><i class="fa fa-plus text-[10px]"></i> Ekle</button>
+        </div>
+        <div id="modal-values-list" class="space-y-2">
+          <div class="flex items-center gap-2">
+            <input class="inp flex-1 py-1.5 text-sm" placeholder="Değer adı…">
+            <button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-trash text-xs"></i></button>
+          </div>
+          <div class="flex items-center gap-2">
+            <input class="inp flex-1 py-1.5 text-sm" placeholder="Değer adı…">
+            <button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 hover:text-red-400" style="color:var(--text-s)"><i class="fa fa-trash text-xs"></i></button>
+          </div>
+        </div>
+        <p class="text-[11px]" style="color:var(--text-s)">Daha fazla değer oluşturulduktan sonra detay sayfasından eklenebilir.</p>
+      </div>
+    </div>
+    <div class="px-5 py-4 border-t flex justify-end gap-3" style="border-color:var(--border)">
+      <button onclick="closeAttrModal()" class="px-4 py-2 rounded-xl text-sm font-semibold" style="border:1px solid var(--border);color:var(--text-m)">İptal</button>
+      <button class="px-5 py-2 rounded-xl text-sm font-semibold text-white" style="background:var(--brand)">
+        <i class="fa fa-floppy-disk text-xs mr-1"></i> Oluştur
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MOBILE BOTTOM NAV ══ -->
+<div id="bottom-nav">
+  <div class="bn-item active" onclick="switchView('dashboard',null);setBottomNav(this)"><i class="fa fa-gauge"></i><span>Ana</span></div>
+  <div class="bn-item" onclick="switchView('list',null);setBottomNav(this)"><i class="fa fa-box"></i><span>Ürünler</span></div>
+  <div class="bn-item" onclick="switchView('dashboard',null);setBottomNav(this)"><i class="fa fa-shopping-bag"></i><span>Siparişler</span></div>
+  <div class="bn-item" onclick="toggleFavs();setBottomNav(this)"><i class="fa fa-star"></i><span>Favoriler</span></div>
+  <div class="bn-item" onclick="toggleSidebar();setBottomNav(this)"><i class="fa fa-bars"></i><span>Menü</span></div>
+</div>
+
+<script>
+  // ── Sidebar ──
+  let sidebarOpen = false; // başlangıçta kapalı
+  const isMobile = () => window.innerWidth < 768;
+
+  function openSidebar() {
+    sidebarOpen = true;
+    document.getElementById('sidebar').classList.add('open');
+    if (!isMobile()) document.getElementById('main').classList.add('sidebar-open');
+    if (isMobile()) document.getElementById('mob-overlay').classList.add('show');
+  }
+  function closeSidebar() {
+    sidebarOpen = false;
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('main').classList.remove('sidebar-open');
+    document.getElementById('mob-overlay').classList.remove('show');
+  }
+  function toggleSidebar() { sidebarOpen ? closeSidebar() : openSidebar(); }
+
+  // ── Menu search (only filters nav items) ──
+  function filterMenu(query) {
+    const q = query.trim().toLowerCase();
+    const nav = document.getElementById('sidebar-nav');
+    const links = nav.querySelectorAll('.nav-link');
+    const sections = nav.querySelectorAll('.slbl');
+
+    links.forEach(link => {
+      const text = link.querySelector('.nav-text')?.textContent?.toLowerCase() || '';
+      link.classList.toggle('hidden-item', q.length > 0 && !text.includes(q));
+    });
+
+    // Hide section labels if all their items are hidden
+    sections.forEach(section => {
+      let next = section.nextElementSibling;
+      let hasVisible = false;
+      while (next && !next.classList.contains('slbl')) {
+        if (next.classList.contains('nav-link') && !next.classList.contains('hidden-item')) {
+          hasVisible = true;
+          break;
+        }
+        next = next.nextElementSibling;
+      }
+      section.classList.toggle('hidden-section', !hasVisible && q.length > 0);
+    });
+  }
+
+  // ── Command Palette ──
+  function cmdOpen() {
+    document.getElementById('cmd-ov').classList.add('open');
+    setTimeout(() => document.getElementById('cmd-in').focus(), 40);
+  }
+  function cmdClose() { document.getElementById('cmd-ov').classList.remove('open'); }
+  function setScp(btn) {
+    document.querySelectorAll('.cm-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  // ── Favorites ──
+  let favsOpen = false, pageInFavs = false;
+  function toggleFavs() {
+    favsOpen = !favsOpen;
+    document.getElementById('fav-panel').classList.toggle('open', favsOpen);
+  }
+  function togglePageFav() {
+    pageInFavs = !pageInFavs;
+    const btn = document.getElementById('fav-toggle-btn');
+    document.getElementById('fav-label').textContent = pageInFavs ? 'Favorilerden Çıkar' : 'Favorilere Ekle';
+    btn.style.background = pageInFavs ? 'var(--brand-bg)' : 'var(--surface)';
+    btn.style.borderColor = pageInFavs ? 'var(--brand-b)' : 'var(--border)';
+    btn.style.color = pageInFavs ? 'var(--brand)' : 'var(--text-m)';
+  }
+
+  // ── Theme ──
+  let dark = false;
+  function toggleTheme() {
+    dark = !dark;
+    document.documentElement.classList.toggle('dark', dark);
+    document.getElementById('theme-icon').className = dark ? 'fa fa-sun text-sm' : 'fa fa-moon text-sm';
+  }
+
+  // ── Widget system ──
+  const activeWidgets = new Set(['orders', 'notif', 'stock']);
+  function openWidgetModal() { document.getElementById('widget-modal').classList.add('open'); }
+  function closeWidgetModal() { document.getElementById('widget-modal').classList.remove('open'); }
+  function addWidget(id, card) {
+    if (activeWidgets.has(id)) {
+      activeWidgets.delete(id);
+      card.classList.remove('added');
+      card.querySelector('span:last-child')?.remove();
+      const el = document.getElementById('w-' + id);
+      if (el) el.style.display = 'none';
+    } else {
+      activeWidgets.add(id);
+      card.classList.add('added');
+      if (!card.querySelector('span:last-child')?.textContent?.includes('Eklendi')) {
+        const s = document.createElement('span');
+        s.className = 'text-[10px]';
+        s.style.color = 'var(--brand)';
+        s.textContent = '✓ Eklendi';
+        card.appendChild(s);
+      }
+      const el = document.getElementById('w-' + id);
+      if (el) el.style.display = '';
+    }
+  }
+  function removeWidget(id) {
+    const el = document.getElementById('w-' + id);
+    if (el) el.style.display = 'none';
+    activeWidgets.delete(id);
+    const card = document.getElementById('wp-' + id);
+    if (card) {
+      card.classList.remove('added');
+      card.querySelector('span:last-child')?.remove();
+    }
+  }
+
+  // ── View switching ──
+  const views = ['dashboard', 'list', 'detail'];
+  const breadcrumbs = { dashboard: 'Dashboard', list: 'Katalog / Ürünler', detail: 'Katalog / Ürünler / Nike Air Max 270' };
+  function switchView(name, btn) {
+    views.forEach(v => {
+      const el = document.getElementById('view-' + v);
+      if (el) { el.classList.toggle('hidden', v !== name); el.classList.toggle('flex-1', v === name); }
+    });
+    document.getElementById('breadcrumb').innerHTML = breadcrumbs[name]
+      .split(' / ').map((p, i, a) =>
+        i < a.length - 1
+          ? `<span style="color:var(--text-s)" class="cursor-pointer hover:underline">${p}</span><i class="fa fa-chevron-right text-[9px] mx-1.5" style="color:var(--text-s)"></i>`
+          : `<span style="color:var(--brand)" class="font-semibold">${p}</span>`
+      ).join('');
+    document.querySelectorAll('#sidebar-nav .nav-link').forEach(l => l.classList.remove('active'));
+    const idx = { dashboard: 0, list: 1, detail: 1 }[name];
+    document.querySelectorAll('#sidebar-nav .nav-link')[idx]?.classList.add('active');
+    document.querySelectorAll('.vbtn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.vbtn')[{dashboard:0,list:1,detail:2}[name]]?.classList.add('active');
+    if (isMobile()) closeSidebar();
+  }
+
+  // ── Lang tabs ──
+  function setLang(btn, lang) {
+    document.querySelectorAll('.lang-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.lang-panel').forEach(p => p.classList.add('hidden'));
+    document.getElementById('lp-' + lang)?.classList.remove('hidden');
+  }
+  function setSTab(btn) {
+    document.querySelectorAll('.stab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  // ── Advanced filter ──
+  let advOpen = false;
+  function toggleAdvFilter() {
+    advOpen = !advOpen;
+    document.getElementById('adv-panel')?.classList.toggle('hidden', !advOpen);
+    if (document.getElementById('adv-chv'))
+      document.getElementById('adv-chv').style.transform = advOpen ? 'rotate(180deg)' : '';
+  }
+
+  // ── Mobile filter sheet ──
+  function openFilterSheet() { document.getElementById('filter-sheet').classList.add('open'); }
+  function closeFilterSheet() { document.getElementById('filter-sheet').classList.remove('open'); }
+
+  // ── Mobile bottom nav ──
+  function setBottomNav(el) {
+    document.querySelectorAll('.bn-item').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // ── Keyboard ──
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); cmdOpen(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); }
+    if (e.key === 'Escape') {
+      cmdClose();
+      closeWidgetModal();
+      closeFilterSheet();
+      if (favsOpen) { favsOpen = false; document.getElementById('fav-panel').classList.remove('open'); }
+    }
+  });
+
+  // Close col-menu on outside click
+  document.addEventListener('click', e => {
+    const m = document.getElementById('col-menu');
+    if (m && !e.target.closest('#col-menu') && !e.target.closest('[onclick*="toggleColMenu"]'))
+      m?.classList.add('hidden');
+  });
+</script>
+</body>
+</html>

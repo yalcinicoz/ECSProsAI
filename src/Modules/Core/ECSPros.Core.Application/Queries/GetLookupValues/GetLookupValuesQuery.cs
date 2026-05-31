@@ -7,7 +7,6 @@ public record GetLookupValuesQuery(string TypeCode, bool ActiveOnly = true) : IR
 
 public record LookupValueDto(
     Guid Id,
-    string Code,
     Dictionary<string, string> NameI18n,
     string? Color,
     string? Icon,

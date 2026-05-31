@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ECSPros Admin — Seçenek G</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+
+    :root {
+      --bg:#f1f5f9; --surface:#ffffff; --surface2:#f8fafc;
+      --border:#e2e8f0; --text:#0f172a; --text-m:#475569; --text-s:#94a3b8;
+      --brand:#059669; --brand-bg:#ecfdf5; --brand-b:#a7f3d0;
+      --header:#ffffffee; --sidebar:#0f2e24;
+    }
+    html.dark {
+      --bg:#0f172a; --surface:#1e293b; --surface2:#162032;
+      --border:#334155; --text:#f1f5f9; --text-m:#cbd5e1; --text-s:#64748b;
+      --brand:#34d399; --brand-bg:rgba(52,211,153,.12); --brand-b:rgba(52,211,153,.3);
+      --header:rgba(15,23,42,.96); --sidebar:#061812;
+    }
+
+    body { background:var(--bg); color:var(--text); transition:background .2s,color .2s; }
+
+    /* Sidebar */
+    #sidebar { width:248px; transition:width .28s cubic-bezier(.4,0,.2,1); overflow:hidden; white-space:nowrap; background:var(--sidebar); }
+    #sidebar.collapsed { width:60px; }
+    #sidebar.collapsed .hc { display:none !important; }
+    #sidebar.collapsed .nav-link { justify-content:center; padding:9px 8px; }
+    #main { margin-left:248px; transition:margin-left .28s cubic-bezier(.4,0,.2,1); }
+    #main.expanded { margin-left:60px; }
+
+    .nav-link { display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13px;font-weight:500;color:rgba(255,255,255,.52);text-decoration:none;transition:all .15s;cursor:pointer; }
+    .nav-link:hover { background:rgba(255,255,255,.08); color:rgba(255,255,255,.9); }
+    .nav-link.active { background:rgba(52,211,153,.15); color:#6ee7b7; box-shadow:inset 3px 0 0 #34d399; padding-left:7px; }
+    .ni { font-size:13px;width:16px;text-align:center;flex-shrink:0;color:rgba(255,255,255,.28); }
+    .nav-link.active .ni { color:#34d399; }
+    .slbl { font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.2);padding:12px 10px 3px; }
+
+    /* Header */
+    #topbar { background:var(--header); border-bottom:1px solid var(--border); backdrop-filter:blur(8px); }
+
+    /* Cards */
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; }
+    .card2 { background:var(--surface); border:1px solid var(--border); border-radius:12px; }
+
+    /* Inputs */
+    .inp { background:var(--surface); border:1.5px solid var(--border); color:var(--text); border-radius:10px; padding:9px 13px; font-size:14px; outline:none; width:100%; transition:border-color .15s,box-shadow .15s; }
+    .inp:focus { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-bg); }
+    .inp:disabled { opacity:.45; }
+    .inp.ok { border-color:var(--brand-b) !important; background:var(--brand-bg) !important; }
+    .sel { background:var(--surface); border:1.5px solid var(--border); color:var(--text); border-radius:10px; padding:9px 13px; font-size:14px; outline:none; width:100%; }
+    .sel:focus { border-color:var(--brand); }
+    .ta { background:var(--surface); border:1.5px solid var(--border); color:var(--text); border-radius:10px; padding:9px 13px; font-size:14px; outline:none; width:100%; resize:vertical; min-height:88px; }
+    .ta:focus { border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-bg); }
+    .ta.ok { border-color:var(--brand-b) !important; background:var(--brand-bg) !important; }
+    .flbl { font-size:12.5px; font-weight:600; color:var(--text-m); margin-bottom:6px; display:block; }
+
+    /* Command Palette */
+    #cmd-ov { display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.65);backdrop-filter:blur(6px);align-items:flex-start;justify-content:center;padding-top:80px; }
+    #cmd-ov.open { display:flex; }
+    #cmd-box { background:var(--surface);border-radius:16px;width:100%;max-width:580px;box-shadow:0 25px 60px rgba(0,0,0,.35);border:1px solid var(--border);overflow:hidden; }
+    #cmd-in { width:100%;padding:16px 20px;font-size:16px;border:none;outline:none;color:var(--text);background:transparent; }
+    .cm-scope { border-bottom:1px solid var(--border);background:var(--surface2);padding:0 16px;display:flex; }
+    .cm-btn { padding:8px 12px;font-size:12px;font-weight:500;color:var(--text-s);border-bottom:2px solid transparent;cursor:pointer;transition:all .12s; }
+    .cm-btn.active { color:var(--brand);border-bottom-color:var(--brand);font-weight:600; }
+    .cm-res { display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:background .1s; }
+    .cm-res:hover,.cm-res.sel { background:var(--surface2); }
+    .cm-ico { width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px; }
+    .cm-foot { border-top:1px solid var(--border);background:var(--surface2);padding:10px 16px; }
+    .kbd { background:var(--surface);border:1px solid var(--border);color:var(--text-m);border-radius:4px;padding:1px 6px;font-size:10px;font-family:monospace; }
+
+    /* Favorites slide-over */
+    #fav-btn { position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:60;background:var(--brand);color:white;width:26px;height:60px;border-radius:8px 0 0 8px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:-2px 0 12px rgba(0,0,0,.2);transition:width .15s; }
+    #fav-btn:hover { width:34px; }
+    #fav-panel { position:fixed;right:0;top:0;height:100vh;width:272px;background:var(--surface);border-left:1px solid var(--border);z-index:59;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:-8px 0 28px rgba(0,0,0,.14);display:flex;flex-direction:column; }
+    #fav-panel.open { transform:translateX(0); }
+
+    /* Tabs */
+    .lang-tab { padding:9px 16px;font-size:13px;font-weight:500;border-bottom:2px solid transparent;color:var(--text-s);cursor:pointer;transition:all .15s;white-space:nowrap; }
+    .lang-tab:hover { color:var(--text); }
+    .lang-tab.active { color:var(--brand);border-bottom-color:var(--brand);font-weight:600; }
+    .lang-tab.warn::after { content:'';display:inline-block;width:6px;height:6px;background:#f59e0b;border-radius:50%;margin-left:4px;vertical-align:middle; }
+    .stab { padding:9px 14px;font-size:13px;font-weight:500;border-bottom:2px solid transparent;color:var(--text-m);cursor:pointer;transition:all .15s; }
+    .stab:hover { color:var(--text); }
+    .stab.active { color:var(--text);border-bottom-color:var(--brand);font-weight:600; }
+
+    /* Badges */
+    .badge { display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600; }
+    .bg { background:#f0fdf4;color:#166534;border:1px solid #bbf7d0; }
+    .br { background:#fff1f2;color:#be123c;border:1px solid #fecdd3; }
+    .ba { background:#fef9c3;color:#713f12;border:1px solid #fde68a; }
+    .bb { background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe; }
+    .bx { background:#f8fafc;color:#64748b;border:1px solid #e2e8f0; }
+    html.dark .bg { background:rgba(22,101,52,.25);color:#86efac;border-color:rgba(134,239,172,.3); }
+    html.dark .br { background:rgba(190,18,60,.2);color:#fca5a5;border-color:rgba(252,165,165,.3); }
+    html.dark .ba { background:rgba(113,63,18,.25);color:#fde68a;border-color:rgba(253,230,138,.3); }
+    html.dark .bb { background:rgba(30,64,175,.25);color:#93c5fd;border-color:rgba(147,197,253,.3); }
+    html.dark .bx { background:rgba(100,116,139,.15);color:#94a3b8;border-color:rgba(148,163,184,.2); }
+    .dot { width:5px;height:5px;border-radius:50%;display:inline-block; }
+
+    /* Stat cards */
+    .stat { background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:20px; }
+
+    /* Table */
+    .trow:hover td { background:var(--surface2); }
+
+    /* Shortcut */
+    .sc { display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 12px;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;cursor:pointer;transition:all .15s;text-align:center; }
+    .sc:hover { border-color:var(--brand-b);background:var(--brand-bg);transform:translateY(-1px); }
+    .sc-ico { width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px; }
+
+    /* Notif icons */
+    .ni-warn { background:#fef9c3;color:#b45309; }
+    .ni-err { background:#fee2e2;color:#dc2626; }
+    .ni-info { background:#eff6ff;color:#2563eb; }
+    .ni-ok { background:#f0fdf4;color:#16a34a; }
+    html.dark .ni-warn { background:rgba(180,83,9,.2);color:#fde68a; }
+    html.dark .ni-err { background:rgba(220,38,38,.2);color:#fca5a5; }
+    html.dark .ni-info { background:rgba(37,99,235,.2);color:#93c5fd; }
+    html.dark .ni-ok { background:rgba(22,163,74,.2);color:#86efac; }
+
+    /* Source text reference block */
+    .src-block { background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text-m);line-height:1.6; }
+
+    /* Demo view switcher */
+    .vbtn { padding:5px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);color:var(--text-m);background:var(--surface);transition:all .12s; }
+    .vbtn.active { background:var(--brand-bg);color:var(--brand);border-color:var(--brand-b); }
+
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-thumb { background:rgba(128,128,128,.2);border-radius:2px; }
+  </style>
+</head>
+<body>
+
+<!-- ══ COMMAND PALETTE ══ -->
+<div id="cmd-ov" onclick="if(event.target===this)cmdClose()">
+  <div id="cmd-box">
+    <div class="flex items-center gap-3 px-5 border-b" style="border-color:var(--border)">
+      <i class="fa fa-search flex-shrink-0" style="color:var(--text-s)"></i>
+      <input id="cmd-in" placeholder="Sipariş, ürün, müşteri ara… veya komut girin" autocomplete="off">
+      <kbd class="kbd flex-shrink-0">ESC</kbd>
+    </div>
+    <div class="cm-scope">
+      <button class="cm-btn active" onclick="setScp(this)">Tümü</button>
+      <button class="cm-btn" onclick="setScp(this)">Ürünler</button>
+      <button class="cm-btn" onclick="setScp(this)">Siparişler</button>
+      <button class="cm-btn" onclick="setScp(this)">Müşteriler</button>
+      <button class="cm-btn" onclick="setScp(this)">Barkod</button>
+    </div>
+    <div class="py-2 max-h-72 overflow-y-auto">
+      <div class="px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-s)">Hızlı Erişim</div>
+      <div class="cm-res sel">
+        <div class="cm-ico" style="background:var(--brand-bg)"><i class="fa fa-box" style="color:var(--brand)"></i></div>
+        <div class="flex-1"><div class="text-sm font-semibold" style="color:var(--text)">Nike Air Max 270</div><div class="text-xs" style="color:var(--text-s)">SKU: NK-AM270-42 · Ayakkabı · Stok: 45</div></div>
+        <span class="badge bb text-[11px]">Ürün</span>
+      </div>
+      <div class="cm-res">
+        <div class="cm-ico ni-ok"><i class="fa fa-shopping-bag text-[13px]"></i></div>
+        <div class="flex-1"><div class="text-sm font-semibold" style="color:var(--text)">#ORD-00892</div><div class="text-xs" style="color:var(--text-s)">Ahmet Yılmaz · 1.299 ₺ · Beklemede</div></div>
+        <span class="badge bg text-[11px]">Sipariş</span>
+      </div>
+      <div class="cm-res">
+        <div class="cm-ico" style="background:#f3e8ff"><i class="fa fa-user text-[13px]" style="color:#9333ea"></i></div>
+        <div class="flex-1"><div class="text-sm font-semibold" style="color:var(--text)">Fatma Kaya</div><div class="text-xs" style="color:var(--text-s)">fatma.kaya@email.com · 12 sipariş</div></div>
+        <span class="badge" style="background:#f3e8ff;color:#7e22ce;border:1px solid #e9d5ff" class="text-[11px]">Müşteri</span>
+      </div>
+      <div class="h-px mx-4 my-1" style="background:var(--border)"></div>
+      <div class="px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider" style="color:var(--text-s)">Sayfalar</div>
+      <div class="cm-res">
+        <div class="cm-ico" style="background:var(--surface2)"><i class="fa fa-plus" style="color:var(--text-m)"></i></div>
+        <div class="flex-1"><div class="text-sm font-medium" style="color:var(--text)">Yeni Ürün Oluştur</div></div>
+        <kbd class="kbd">Ctrl+N</kbd>
+      </div>
+      <div class="cm-res">
+        <div class="cm-ico" style="background:#fffbeb"><i class="fa fa-star text-amber-400"></i></div>
+        <div class="flex-1"><div class="text-sm font-medium" style="color:var(--text)">Bekleyen Siparişler</div></div>
+        <span class="text-[10px] font-semibold text-amber-500">Favori</span>
+      </div>
+    </div>
+    <div class="cm-foot flex items-center justify-between">
+      <div class="flex gap-4 text-[11px]" style="color:var(--text-s)">
+        <span><kbd class="kbd">↑↓</kbd> Gezin</span>
+        <span><kbd class="kbd">↵</kbd> Seç</span>
+        <span><kbd class="kbd">Esc</kbd> Kapat</span>
+      </div>
+      <span class="text-[11px]" style="color:var(--text-s)">3 sonuç</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FAVORITES SLIDE-OVER ══ -->
+<button id="fav-btn" onclick="toggleFavs()" title="Sık Kullanılanlar">
+  <i class="fa fa-star text-xs"></i>
+</button>
+<div id="fav-panel">
+  <div class="flex items-center justify-between px-4 py-4 border-b flex-shrink-0" style="border-color:var(--border)">
+    <div>
+      <h3 class="font-bold text-sm" style="color:var(--text)">Sık Kullanılanlar</h3>
+      <p class="text-xs mt-0.5" style="color:var(--text-s)">Hızlı erişim kısayolları</p>
+    </div>
+    <button onclick="toggleFavs()" class="w-7 h-7 flex items-center justify-center rounded-lg transition-colors" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <i class="fa fa-xmark text-sm"></i>
+    </button>
+  </div>
+  <div class="flex-1 overflow-y-auto px-3 py-2">
+    <div class="text-[10px] font-bold uppercase tracking-wider px-2 py-1.5" style="color:var(--text-s)">Sayfalar</div>
+    <a class="nav-link" style="color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <i class="ni fa fa-star text-amber-400"></i><span>Bekleyen Siparişler</span>
+      <span class="ml-auto bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 rounded-full">14</span>
+    </a>
+    <a class="nav-link" style="color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <i class="ni fa fa-star text-amber-400"></i><span>Stok Uyarıları</span>
+      <span class="ml-auto bg-red-100 text-red-600 text-[9px] font-bold px-1.5 rounded-full">47</span>
+    </a>
+    <a class="nav-link" style="color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <i class="ni fa fa-star text-amber-400"></i><span>Yeni Sipariş</span>
+    </a>
+    <a class="nav-link" style="color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <i class="ni fa fa-star text-amber-400"></i><span>Stok Hareketi</span>
+    </a>
+    <div class="text-[10px] font-bold uppercase tracking-wider px-2 py-1.5 mt-2" style="color:var(--text-s)">Son Ziyaret</div>
+    <a class="nav-link" style="color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <i class="ni fa fa-clock-rotate-left"></i><span>Nike Air Max 270</span>
+    </a>
+    <a class="nav-link" style="color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <i class="ni fa fa-clock-rotate-left"></i><span>Sipariş #ORD-00892</span>
+    </a>
+  </div>
+  <div class="px-4 py-3 border-t flex-shrink-0" style="border-color:var(--border)">
+    <button class="w-full py-2 rounded-xl text-sm font-semibold transition-colors" style="background:var(--brand-bg);color:var(--brand);border:1px solid var(--brand-b)">
+      <i class="fa fa-plus mr-1.5 text-xs"></i> Kısayol Ekle
+    </button>
+  </div>
+</div>
+
+<!-- ══ SIDEBAR ══ -->
+<aside id="sidebar" class="fixed top-0 left-0 h-screen flex flex-col z-40">
+  <div class="flex items-center justify-between px-4 py-4 border-b border-white/10 flex-shrink-0">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style="background:var(--brand)">
+        <span class="text-white font-black text-sm">E</span>
+      </div>
+      <span class="hc text-white font-bold text-base tracking-tight">ECSPros</span>
+    </div>
+    <button onclick="toggleSidebar()" class="hc w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors flex-shrink-0" style="color:rgba(255,255,255,.3)">
+      <i class="fa fa-bars-staggered text-sm"></i>
+    </button>
+  </div>
+
+  <div class="hc px-3 pt-3 pb-1 flex-shrink-0">
+    <button onclick="cmdOpen()" class="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-left transition-all" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.38)">
+      <i class="fa fa-search text-xs"></i>
+      <span class="flex-1">Ara veya komut gir…</span>
+      <kbd class="text-[9px] font-mono px-1.5 py-0.5 rounded" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.3)">⌘K</kbd>
+    </button>
+  </div>
+
+  <nav class="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
+    <div class="slbl hc">Genel</div>
+    <a class="nav-link active" onclick="switchView('dashboard')"><i class="ni fa fa-gauge"></i><span class="hc">Dashboard</span></a>
+
+    <div class="slbl hc">Katalog</div>
+    <a class="nav-link" onclick="switchView('list')"><i class="ni fa fa-box"></i><span class="hc">Ürünler</span></a>
+    <a class="nav-link"><i class="ni fa fa-sitemap"></i><span class="hc">Kategoriler</span></a>
+    <a class="nav-link"><i class="ni fa fa-copyright"></i><span class="hc">Markalar</span></a>
+
+    <div class="slbl hc">Satış</div>
+    <a class="nav-link"><i class="ni fa fa-shopping-bag"></i><span class="hc">Siparişler</span><span class="hc ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style="background:rgba(52,211,153,.2);color:#34d399">14</span></a>
+    <a class="nav-link"><i class="ni fa fa-rotate-left"></i><span class="hc">İadeler</span></a>
+    <a class="nav-link"><i class="ni fa fa-file-invoice-dollar"></i><span class="hc">Faturalar</span></a>
+    <a class="nav-link"><i class="ni fa fa-handshake"></i><span class="hc">Teklifler</span></a>
+
+    <div class="slbl hc">Müşteriler</div>
+    <a class="nav-link"><i class="ni fa fa-users"></i><span class="hc">Üyeler</span></a>
+    <a class="nav-link"><i class="ni fa fa-layer-group"></i><span class="hc">Gruplar</span></a>
+
+    <div class="slbl hc">Stok</div>
+    <a class="nav-link"><i class="ni fa fa-warehouse"></i><span class="hc">Depolar</span></a>
+    <a class="nav-link"><i class="ni fa fa-cubes"></i><span class="hc">Stok Takibi</span></a>
+
+    <div class="slbl hc">Pazarlama</div>
+    <a class="nav-link"><i class="ni fa fa-percent"></i><span class="hc">Kampanyalar</span></a>
+    <a class="nav-link"><i class="ni fa fa-ticket"></i><span class="hc">Kuponlar</span></a>
+    <a class="nav-link"><i class="ni fa fa-gift"></i><span class="hc">Hediye Kartı</span></a>
+
+    <div class="slbl hc">Sistem</div>
+    <a class="nav-link"><i class="ni fa fa-cash-register"></i><span class="hc">POS</span></a>
+    <a class="nav-link"><i class="ni fa fa-plug"></i><span class="hc">Entegrasyonlar</span></a>
+    <a class="nav-link"><i class="ni fa fa-file"></i><span class="hc">CMS</span></a>
+    <a class="nav-link"><i class="ni fa fa-gear"></i><span class="hc">Ayarlar</span></a>
+  </nav>
+
+  <div class="border-t border-white/10 px-3 py-3 flex items-center gap-3 flex-shrink-0">
+    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style="background:var(--brand)">AY</div>
+    <div class="hc min-w-0 flex-1">
+      <div class="text-white text-sm font-medium truncate">Ahmet Yılmaz</div>
+      <div class="text-xs" style="color:rgba(255,255,255,.35)">Süper Admin</div>
+    </div>
+    <button class="hc flex-shrink-0" style="color:rgba(255,255,255,.3)"><i class="fa fa-ellipsis-vertical text-sm"></i></button>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<div id="main" class="min-h-screen flex flex-col">
+
+  <!-- Topbar -->
+  <header id="topbar" class="sticky top-0 z-30 h-14 flex items-center px-6 gap-4">
+    <button id="ctoggle" onclick="toggleSidebar()" class="hidden w-8 h-8 items-center justify-center rounded-lg transition-colors mr-1" style="color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <i class="fa fa-bars text-sm"></i>
+    </button>
+
+    <!-- Breadcrumb -->
+    <nav id="breadcrumb" class="flex items-center gap-1.5 text-sm flex-shrink-0">
+      <span style="color:var(--brand)" class="font-semibold">Dashboard</span>
+    </nav>
+
+    <!-- Search trigger -->
+    <div class="flex-1 max-w-md mx-auto">
+      <button onclick="cmdOpen()" class="w-full flex items-center gap-3 rounded-xl px-4 py-2 text-sm text-left transition-all" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-s)">
+        <i class="fa fa-search text-sm"></i>
+        <span class="flex-1">Sipariş, ürün, müşteri ara…</span>
+        <span class="flex items-center gap-0.5">
+          <kbd class="kbd">Ctrl</kbd><kbd class="kbd">K</kbd>
+        </span>
+      </button>
+    </div>
+
+    <div class="ml-auto flex items-center gap-1">
+      <!-- Add to favorites -->
+      <button id="fav-toggle-btn" onclick="togglePageFav()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-colors text-xs font-medium" style="color:var(--text-m);border:1px solid var(--border);background:var(--surface)">
+        <i id="fav-icon" class="fa fa-star text-[11px] text-amber-400"></i>
+        <span id="fav-label">Favorilere Ekle</span>
+      </button>
+
+      <!-- Notifications -->
+      <button class="relative w-9 h-9 flex items-center justify-center rounded-xl transition-colors" style="color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <i class="fa fa-bell text-sm"></i>
+        <span class="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full ring-2" style="ring-color:var(--surface)"></span>
+      </button>
+
+      <!-- Language -->
+      <button class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-colors text-sm font-medium" style="color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <span>🇹🇷</span> TR
+      </button>
+
+      <!-- Theme -->
+      <button onclick="toggleTheme()" class="w-9 h-9 flex items-center justify-center rounded-xl transition-colors" style="color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''" title="Tema Değiştir">
+        <i id="theme-icon" class="fa fa-moon text-sm"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Demo view switcher -->
+  <div class="flex items-center gap-2 px-6 py-2 border-b" style="border-color:var(--border);background:var(--surface2)">
+    <span class="text-xs font-semibold mr-1" style="color:var(--text-s)">Demo Sayfa:</span>
+    <button class="vbtn active" onclick="switchView('dashboard',this)">Dashboard</button>
+    <button class="vbtn" onclick="switchView('list',this)">Ürün Listesi</button>
+    <button class="vbtn" onclick="switchView('detail',this)">Ürün Detayı</button>
+  </div>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- VIEW: DASHBOARD                    -->
+  <!-- ═══════════════════════════════════ -->
+  <div id="view-dashboard" class="flex-1 p-6 space-y-5">
+
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold" style="color:var(--text)">Merhaba, Ahmet 👋</h1>
+        <p class="text-sm mt-0.5" style="color:var(--text-s)">
+          <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full mr-2" style="background:var(--brand-bg);color:var(--brand);border:1px solid var(--brand-b)">
+            <i class="fa fa-shield-halved text-[10px]"></i> Süper Admin
+          </span>
+          12 Mart 2026, Perşembe
+        </p>
+      </div>
+      <select class="sel" style="width:auto;padding:7px 12px;font-size:13px">
+        <option>Son 7 gün</option>
+        <option selected>Son 30 gün</option>
+        <option>Bu ay</option>
+        <option>Bu yıl</option>
+      </select>
+    </div>
+
+    <!-- KPI -->
+    <div class="grid grid-cols-4 gap-4">
+      <div class="stat">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-s)">Toplam Sipariş</span>
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:var(--brand-bg)"><i class="fa fa-shopping-bag" style="color:var(--brand)"></i></div>
+        </div>
+        <div class="text-3xl font-black" style="color:var(--text)">1.482</div>
+        <div class="flex items-center gap-1.5 mt-2">
+          <span class="text-xs font-semibold px-1.5 py-0.5 rounded-md" style="background:var(--brand-bg);color:var(--brand)">↑ %8.2</span>
+          <span class="text-xs" style="color:var(--text-s)">geçen ay</span>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-s)">Ciro (₺)</span>
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:var(--brand-bg)"><i class="fa fa-turkish-lira-sign" style="color:var(--brand)"></i></div>
+        </div>
+        <div class="text-3xl font-black" style="color:var(--text)">284.750</div>
+        <div class="flex items-center gap-1.5 mt-2">
+          <span class="text-xs font-semibold px-1.5 py-0.5 rounded-md" style="background:var(--brand-bg);color:var(--brand)">↑ %12.4</span>
+          <span class="text-xs" style="color:var(--text-s)">geçen ay</span>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-bold uppercase tracking-wider" style="color:var(--text-s)">Yeni Üye</span>
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:#f3e8ff"><i class="fa fa-user-plus" style="color:#9333ea"></i></div>
+        </div>
+        <div class="text-3xl font-black" style="color:var(--text)">146</div>
+        <div class="flex items-center gap-1.5 mt-2">
+          <span class="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-red-50 text-red-500">↓ %3.1</span>
+          <span class="text-xs" style="color:var(--text-s)">geçen ay</span>
+        </div>
+      </div>
+      <div class="stat" style="border-color:#fecaca">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-bold uppercase tracking-wider text-red-400">Stok Dışı</span>
+          <div class="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center"><i class="fa fa-triangle-exclamation text-red-400"></i></div>
+        </div>
+        <div class="text-3xl font-black text-red-500">47</div>
+        <div class="text-xs text-red-400 font-semibold mt-2">Acil müdahale gerekli</div>
+      </div>
+    </div>
+
+    <!-- Shortcuts -->
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-bold" style="color:var(--text)">Hızlı İşlemler</h2>
+        <button class="text-xs font-semibold" style="color:var(--brand)"><i class="fa fa-pen text-[10px] mr-1"></i>Özelleştir</button>
+      </div>
+      <div class="grid grid-cols-6 gap-3">
+        <div class="sc"><div class="sc-ico" style="background:var(--brand-bg)"><i class="fa fa-plus" style="color:var(--brand)"></i></div><span class="text-xs font-semibold" style="color:var(--text)">Yeni Sipariş</span></div>
+        <div class="sc"><div class="sc-ico" style="background:var(--brand-bg)"><i class="fa fa-box" style="color:var(--brand)"></i></div><span class="text-xs font-semibold" style="color:var(--text)">Yeni Ürün</span></div>
+        <div class="sc"><div class="sc-ico" style="background:#f3e8ff"><i class="fa fa-user-plus" style="color:#9333ea"></i></div><span class="text-xs font-semibold" style="color:var(--text)">Üye Ekle</span></div>
+        <div class="sc"><div class="sc-ico" style="background:#fffbeb"><i class="fa fa-arrows-rotate text-amber-500"></i></div><span class="text-xs font-semibold" style="color:var(--text)">Stok Hareketi</span></div>
+        <div class="sc"><div class="sc-ico" style="background:#fee2e2"><i class="fa fa-percent text-red-400"></i></div><span class="text-xs font-semibold" style="color:var(--text)">Kampanya</span></div>
+        <div class="sc"><div class="sc-ico" style="background:var(--surface2)"><i class="fa fa-file-invoice" style="color:var(--text-m)"></i></div><span class="text-xs font-semibold" style="color:var(--text)">Fatura Kes</span></div>
+      </div>
+    </div>
+
+    <!-- Bottom grid -->
+    <div class="grid grid-cols-3 gap-5">
+
+      <!-- Recent orders -->
+      <div class="card col-span-2 overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b" style="border-color:var(--border)">
+          <h2 class="text-sm font-bold" style="color:var(--text)">Son Siparişler</h2>
+          <a href="#" class="text-xs font-semibold" style="color:var(--brand)">Tümünü Gör →</a>
+        </div>
+        <table class="w-full text-sm">
+          <thead>
+            <tr style="background:var(--surface2);border-bottom:1px solid var(--border)">
+              <th class="text-left px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Sipariş</th>
+              <th class="text-left px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Müşteri</th>
+              <th class="text-right px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Tutar</th>
+              <th class="text-center px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Durum</th>
+              <th class="text-right px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Tarih</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="trow"><td class="px-5 py-3" style="border-bottom:1px solid var(--border);color:var(--brand)" class="font-semibold">#ORD-00892</td><td class="px-4 py-3" style="border-bottom:1px solid var(--border);color:var(--text)">Ahmet Yılmaz</td><td class="px-4 py-3 text-right font-semibold" style="border-bottom:1px solid var(--border);color:var(--text)">1.299 ₺</td><td class="px-4 py-3 text-center" style="border-bottom:1px solid var(--border)"><span class="badge ba"><span class="dot bg-amber-500"></span>Beklemede</span></td><td class="px-5 py-3 text-right text-xs" style="border-bottom:1px solid var(--border);color:var(--text-s)">5 dk</td></tr>
+            <tr class="trow"><td class="px-5 py-3" style="border-bottom:1px solid var(--border);color:var(--brand)" class="font-semibold">#ORD-00891</td><td class="px-4 py-3" style="border-bottom:1px solid var(--border);color:var(--text)">Fatma Kaya</td><td class="px-4 py-3 text-right font-semibold" style="border-bottom:1px solid var(--border);color:var(--text)">2.899 ₺</td><td class="px-4 py-3 text-center" style="border-bottom:1px solid var(--border)"><span class="badge bb"><span class="dot bg-blue-500"></span>İşlemde</span></td><td class="px-5 py-3 text-right text-xs" style="border-bottom:1px solid var(--border);color:var(--text-s)">18 dk</td></tr>
+            <tr class="trow"><td class="px-5 py-3" style="border-bottom:1px solid var(--border);color:var(--brand)" class="font-semibold">#ORD-00890</td><td class="px-4 py-3" style="border-bottom:1px solid var(--border);color:var(--text)">Mehmet Çelik</td><td class="px-4 py-3 text-right font-semibold" style="border-bottom:1px solid var(--border);color:var(--text)">679 ₺</td><td class="px-4 py-3 text-center" style="border-bottom:1px solid var(--border)"><span class="badge bg"><span class="dot bg-emerald-500"></span>Kargoda</span></td><td class="px-5 py-3 text-right text-xs" style="border-bottom:1px solid var(--border);color:var(--text-s)">1 sa</td></tr>
+            <tr class="trow"><td class="px-5 py-3" style="color:var(--brand)" class="font-semibold">#ORD-00889</td><td class="px-4 py-3" style="color:var(--text)">Selin Yıldız</td><td class="px-4 py-3 text-right font-semibold" style="color:var(--text)">450 ₺</td><td class="px-4 py-3 text-center"><span class="badge br"><span class="dot bg-red-500"></span>İptal</span></td><td class="px-5 py-3 text-right text-xs" style="color:var(--text-s)">2 sa</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Notifications + stock -->
+      <div class="space-y-4">
+        <div class="card overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-3.5 border-b" style="border-color:var(--border)">
+            <h2 class="text-sm font-bold" style="color:var(--text)">Bildirimler</h2>
+            <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">4</span>
+          </div>
+          <div>
+            <div class="flex items-start gap-3 px-4 py-3 border-b" style="border-color:var(--border)">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ni-err"><i class="fa fa-triangle-exclamation text-sm"></i></div>
+              <div class="min-w-0 flex-1"><div class="text-xs font-semibold" style="color:var(--text)">47 ürün stok dışı</div><div class="text-[11px] mt-0.5" style="color:var(--text-s)">Acil stok girişi</div></div>
+              <span class="text-[10px] flex-shrink-0" style="color:var(--text-s)">5 dk</span>
+            </div>
+            <div class="flex items-start gap-3 px-4 py-3 border-b" style="border-color:var(--border)">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ni-warn"><i class="fa fa-rotate-left text-sm"></i></div>
+              <div class="min-w-0 flex-1"><div class="text-xs font-semibold" style="color:var(--text)">Yeni iade talebi</div><div class="text-[11px] mt-0.5" style="color:var(--text-s)">#ORD-00851</div></div>
+              <span class="text-[10px] flex-shrink-0" style="color:var(--text-s)">22 dk</span>
+            </div>
+            <div class="flex items-start gap-3 px-4 py-3">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ni-ok"><i class="fa fa-check text-sm"></i></div>
+              <div class="min-w-0 flex-1"><div class="text-xs font-semibold" style="color:var(--text)">Kampanya başladı</div><div class="text-[11px] mt-0.5" style="color:var(--text-s)">Bahar Fırsatları</div></div>
+              <span class="text-[10px] flex-shrink-0" style="color:var(--text-s)">2 sa</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card overflow-hidden" style="border-color:#fecaca">
+          <div class="flex items-center justify-between px-4 py-3.5 border-b" style="border-color:#fecaca">
+            <h2 class="text-sm font-bold text-red-500 flex items-center gap-2"><i class="fa fa-triangle-exclamation text-xs"></i> Kritik Stok</h2>
+            <span class="bg-red-100 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">5</span>
+          </div>
+          <div>
+            <div class="flex items-center justify-between px-4 py-2.5 border-b" style="border-color:var(--border)"><div><div class="text-xs font-semibold" style="color:var(--text)">Adidas Ultraboost 22</div><div class="text-[11px]" style="color:var(--text-s)">AD-UB22-43</div></div><span class="font-bold text-red-500">0</span></div>
+            <div class="flex items-center justify-between px-4 py-2.5 border-b" style="border-color:var(--border)"><div><div class="text-xs font-semibold" style="color:var(--text)">Zara Trench Coat S</div><div class="text-[11px]" style="color:var(--text-s)">ZR-TRC-S</div></div><span class="font-bold text-amber-500">2</span></div>
+            <div class="flex items-center justify-between px-4 py-2.5"><div><div class="text-xs font-semibold" style="color:var(--text)">Nike AF1 Low 40</div><div class="text-[11px]" style="color:var(--text-s)">NK-AF1-40</div></div><span class="font-bold text-amber-500">3</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- VIEW: PRODUCT LIST                 -->
+  <!-- ═══════════════════════════════════ -->
+  <div id="view-list" class="hidden flex-1 p-6 space-y-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold" style="color:var(--text)">Ürünler</h1>
+        <p class="text-sm mt-0.5" style="color:var(--text-s)">1.284 ürün · Bugün 14:32 güncellendi</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors" style="border:1px solid var(--border);background:var(--surface);color:var(--text-m)"><i class="fa fa-download text-xs"></i> CSV</button>
+        <button class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors" style="border:1px solid var(--border);background:var(--surface);color:var(--text-m)"><i class="fa fa-file-excel text-xs text-green-500"></i> Excel</button>
+        <button class="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold shadow-md" style="background:var(--brand)"><i class="fa fa-plus text-xs"></i> Yeni Ürün</button>
+      </div>
+    </div>
+
+    <div class="card overflow-hidden">
+      <!-- Filters -->
+      <div class="flex items-center gap-2.5 px-5 py-3.5 border-b flex-wrap" style="border-color:var(--border)">
+        <div class="relative">
+          <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-xs" style="color:var(--text-s)"></i>
+          <input type="text" placeholder="Ürün adı, SKU…" class="inp" style="padding-left:2rem;width:200px;border-radius:10px">
+        </div>
+        <select class="sel" style="width:auto;font-size:13px"><option>Tüm Kategoriler</option><option>Ayakkabı</option><option>Üst Giyim</option></select>
+        <select class="sel" style="width:auto;font-size:13px"><option>Tüm Durumlar</option><option>Aktif</option><option>Pasif</option><option>Stok Dışı</option></select>
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold" style="background:var(--brand-bg);color:var(--brand);border:1px solid var(--brand-b)">
+          Aktif <button class="ml-0.5 hover:opacity-70 text-base leading-none">×</button>
+        </span>
+        <div class="ml-auto flex items-center gap-2">
+          <button onclick="toggleAdvFilter()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors" style="border:1px solid var(--border);color:var(--text-m);background:var(--surface)">
+            <i class="fa fa-sliders text-xs"></i> Gelişmiş <i id="adv-chv" class="fa fa-chevron-down text-[10px]" style="color:var(--text-s)"></i>
+          </button>
+          <div class="relative">
+            <button onclick="toggleColMenu()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors" style="border:1px solid var(--border);color:var(--text-m);background:var(--surface)">
+              <i class="fa fa-table-columns text-xs"></i> Sütunlar
+            </button>
+            <div id="col-menu" class="hidden absolute right-0 top-full mt-1.5 w-44 rounded-xl shadow-lg p-1.5 z-30" style="background:var(--surface);border:1px solid var(--border)">
+              <div class="px-2 py-1 text-[10px] font-bold uppercase" style="color:var(--text-s)">Sütunlar</div>
+              <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer text-xs" style="color:var(--text-m)"><input type="checkbox" checked class="accent-emerald-600"> Kategori</label>
+              <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer text-xs" style="color:var(--text-m)"><input type="checkbox" checked class="accent-emerald-600"> Fiyat</label>
+              <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer text-xs" style="color:var(--text-m)"><input type="checkbox" checked class="accent-emerald-600"> Stok</label>
+              <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer text-xs" style="color:var(--text-m)"><input type="checkbox" class="accent-emerald-600"> Marka</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced filter panel -->
+      <div id="adv-panel" class="hidden px-5 py-4 border-b" style="border-color:var(--border);background:var(--surface2)">
+        <div class="grid grid-cols-5 gap-4">
+          <div><label class="flbl">Kategori</label><select class="sel"><option>Tümü</option><option selected>Ayakkabı</option></select></div>
+          <div><label class="flbl">Marka</label><select class="sel"><option>Tümü</option><option>Nike</option><option>Adidas</option></select></div>
+          <div><label class="flbl">Min Fiyat (₺)</label><input type="number" placeholder="0" class="inp"></div>
+          <div><label class="flbl">Max Fiyat (₺)</label><input type="number" placeholder="9999" class="inp"></div>
+          <div><label class="flbl">Stok Durumu</label><select class="sel"><option>Tümü</option><option>Stokta</option><option>Stok Dışı</option></select></div>
+        </div>
+        <div class="flex items-center gap-3 mt-3 pt-3 border-t" style="border-color:var(--border)">
+          <div class="flex gap-3">
+            <label class="flex items-center gap-1.5 text-xs cursor-pointer" style="color:var(--text-m)"><input type="checkbox" class="accent-emerald-600"> Kampanyalı</label>
+            <label class="flex items-center gap-1.5 text-xs cursor-pointer" style="color:var(--text-m)"><input type="checkbox" class="accent-emerald-600"> Öne Çıkan</label>
+          </div>
+          <button class="ml-auto px-4 py-2 rounded-xl text-white text-sm font-semibold" style="background:var(--brand)"><i class="fa fa-filter mr-1.5 text-xs"></i>Filtrele</button>
+        </div>
+      </div>
+
+      <!-- Bulk action bar -->
+      <div class="flex items-center gap-3 px-5 py-2.5 border-b" style="border-color:var(--brand-b);background:var(--brand-bg)">
+        <span class="text-sm font-semibold" style="color:var(--brand)">2 ürün seçildi</span>
+        <div class="h-4 w-px" style="background:var(--brand-b)"></div>
+        <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold" style="background:var(--surface);border:1px solid var(--border);color:var(--text-m)"><i class="fa fa-check-circle text-emerald-500 text-xs"></i> Aktif Yap</button>
+        <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold" style="background:var(--surface);border:1px solid var(--border);color:var(--text-m)"><i class="fa fa-eye-slash text-xs" style="color:var(--text-s)"></i> Pasif Yap</button>
+        <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-500" style="background:var(--surface);border:1px solid #fecaca"><i class="fa fa-trash text-xs"></i> Sil</button>
+      </div>
+
+      <table class="w-full text-sm">
+        <thead>
+          <tr style="background:var(--surface2);border-bottom:1px solid var(--border)">
+            <th class="w-10 px-5 py-3"><input type="checkbox" class="rounded accent-emerald-600"></th>
+            <th class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Ürün</th>
+            <th class="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Kategori</th>
+            <th class="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Fiyat</th>
+            <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Stok</th>
+            <th class="text-center px-4 py-3 text-[11px] font-semibold uppercase tracking-wider" style="color:var(--text-s)">Durum</th>
+            <th class="px-5 py-3 w-20"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="trow group" style="background:var(--brand-bg)">
+            <td class="px-5 py-3.5" style="border-bottom:1px solid var(--border)"><input type="checkbox" checked class="rounded accent-emerald-600"></td>
+            <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center text-[10px]" style="background:var(--surface2);color:var(--text-s)">IMG</div><div><div class="font-semibold" style="color:var(--text)">Nike Air Max 270</div><div class="text-xs mt-0.5" style="color:var(--text-s)">NK-AM270-42 · 3 varyant</div></div></div></td>
+            <td class="px-4 py-3.5 text-sm" style="border-bottom:1px solid var(--border);color:var(--text-m)">Ayakkabı</td>
+            <td class="px-4 py-3.5 text-right font-semibold" style="border-bottom:1px solid var(--border);color:var(--text)">1.299,90 ₺</td>
+            <td class="px-4 py-3.5 text-center font-medium" style="border-bottom:1px solid var(--border);color:var(--text)">45</td>
+            <td class="px-4 py-3.5 text-center" style="border-bottom:1px solid var(--border)"><span class="badge bg"><span class="dot bg-emerald-500"></span>Aktif</span></td>
+            <td class="px-5 py-3.5" style="border-bottom:1px solid var(--border)"><div class="flex items-center gap-1 opacity-0 group-hover:opacity-100"><button onclick="switchView('detail',null)" class="w-7 h-7 flex items-center justify-center rounded-lg transition-colors" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-pen text-xs"></i></button><button class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors"><i class="fa fa-trash text-xs"></i></button></div></td>
+          </tr>
+          <tr class="trow group">
+            <td class="px-5 py-3.5" style="border-bottom:1px solid var(--border)"><input type="checkbox" checked class="rounded accent-emerald-600"></td>
+            <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center text-[10px]" style="background:var(--surface2);color:var(--text-s)">IMG</div><div><div class="font-semibold" style="color:var(--text)">Levi's 501 Slim Jean</div><div class="text-xs mt-0.5" style="color:var(--text-s)">LV-501-SLM-32 · 5 varyant</div></div></div></td>
+            <td class="px-4 py-3.5 text-sm" style="border-bottom:1px solid var(--border);color:var(--text-m)">Pantolon</td>
+            <td class="px-4 py-3.5 text-right font-semibold" style="border-bottom:1px solid var(--border);color:var(--text)">899,00 ₺</td>
+            <td class="px-4 py-3.5 text-center font-medium" style="border-bottom:1px solid var(--border);color:var(--text)">128</td>
+            <td class="px-4 py-3.5 text-center" style="border-bottom:1px solid var(--border)"><span class="badge bg"><span class="dot bg-emerald-500"></span>Aktif</span></td>
+            <td class="px-5 py-3.5" style="border-bottom:1px solid var(--border)"><div class="flex items-center gap-1 opacity-0 group-hover:opacity-100"><button class="w-7 h-7 flex items-center justify-center rounded-lg transition-colors" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-pen text-xs"></i></button><button class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors"><i class="fa fa-trash text-xs"></i></button></div></td>
+          </tr>
+          <tr class="trow group" style="opacity:.9">
+            <td class="px-5 py-3.5" style="border-bottom:1px solid var(--border)"><input type="checkbox" class="rounded accent-emerald-600"></td>
+            <td class="px-4 py-3.5" style="border-bottom:1px solid var(--border)"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center text-[10px]" style="background:var(--surface2);color:var(--text-s)">IMG</div><div><div class="font-semibold" style="color:var(--text)">Adidas Ultraboost 22</div><div class="text-xs mt-0.5" style="color:var(--text-s)">AD-UB22-43 · 4 varyant</div></div></div></td>
+            <td class="px-4 py-3.5 text-sm" style="border-bottom:1px solid var(--border);color:var(--text-m)">Ayakkabı</td>
+            <td class="px-4 py-3.5 text-right font-semibold" style="border-bottom:1px solid var(--border);color:var(--text)">2.499,00 ₺</td>
+            <td class="px-4 py-3.5 text-center font-bold text-red-500" style="border-bottom:1px solid var(--border)">0</td>
+            <td class="px-4 py-3.5 text-center" style="border-bottom:1px solid var(--border)"><span class="badge br"><span class="dot bg-red-500"></span>Stok Dışı</span></td>
+            <td class="px-5 py-3.5" style="border-bottom:1px solid var(--border)"><div class="flex items-center gap-1 opacity-0 group-hover:opacity-100"><button class="w-7 h-7 flex items-center justify-center rounded-lg transition-colors" style="color:var(--text-s)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-pen text-xs"></i></button><button class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors"><i class="fa fa-trash text-xs"></i></button></div></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="flex items-center justify-between px-5 py-3.5 border-t" style="border-color:var(--border);background:var(--surface2)">
+        <div class="text-sm" style="color:var(--text-m)"><span class="font-medium" style="color:var(--text)">1–25</span> / 1.284 ürün</div>
+        <div class="flex items-center gap-1">
+          <button disabled class="w-8 h-8 flex items-center justify-center rounded-xl text-xs cursor-not-allowed" style="border:1px solid var(--border);color:var(--text-s)"><i class="fa fa-chevron-left"></i></button>
+          <button class="w-8 h-8 flex items-center justify-center rounded-xl text-white text-sm font-semibold" style="background:var(--brand)">1</button>
+          <button class="w-8 h-8 flex items-center justify-center rounded-xl text-sm" style="color:var(--text-m)">2</button>
+          <button class="w-8 h-8 flex items-center justify-center rounded-xl text-sm" style="color:var(--text-m)">3</button>
+          <span class="px-1 text-sm" style="color:var(--text-s)">…</span>
+          <button class="w-8 h-8 flex items-center justify-center rounded-xl border text-sm" style="border-color:var(--border);color:var(--text-m)"><i class="fa fa-chevron-right text-xs"></i></button>
+        </div>
+        <select class="sel" style="width:auto;font-size:13px"><option>25 / sayfa</option><option>50 / sayfa</option><option>100 / sayfa</option></select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- VIEW: PRODUCT DETAIL               -->
+  <!-- ═══════════════════════════════════ -->
+  <div id="view-detail" class="hidden">
+
+    <!-- Detail page header -->
+    <div class="border-b px-6 py-4" style="border-color:var(--border);background:var(--surface)">
+      <div class="flex items-start justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-xs font-medium flex-shrink-0" style="background:var(--surface2);color:var(--text-s)">IMG</div>
+          <div>
+            <div class="flex items-center gap-3">
+              <h1 class="text-xl font-bold" style="color:var(--text)">Nike Air Max 270</h1>
+              <span class="badge bg"><span class="dot bg-emerald-500"></span>Aktif</span>
+            </div>
+            <p class="text-sm mt-0.5" style="color:var(--text-s)">SKU: NK-AM270-42 · Ayakkabı · Nike · 3 varyant</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors" style="border:1px solid var(--border);background:var(--surface);color:var(--text-m)"><i class="fa fa-eye text-xs"></i> Önizle</button>
+          <button class="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold shadow-md" style="background:var(--brand)">
+            <i class="fa fa-floppy-disk text-xs"></i> Kaydet
+            <kbd class="kbd" style="background:rgba(255,255,255,.2);color:white;border-color:rgba(255,255,255,.3)">Ctrl+S</kbd>
+          </button>
+        </div>
+      </div>
+      <div class="flex items-center gap-0 mt-4 border-b -mb-px" style="border-color:var(--border)">
+        <button class="stab active" onclick="setSTab(this)">Genel Bilgiler</button>
+        <button class="stab" onclick="setSTab(this)">Varyantlar (3)</button>
+        <button class="stab" onclick="setSTab(this)">Stok</button>
+        <button class="stab" onclick="setSTab(this)">Görseller</button>
+        <button class="stab" onclick="setSTab(this)">SEO</button>
+      </div>
+    </div>
+
+    <!-- 2-column layout -->
+    <div class="flex gap-6 p-6 max-w-7xl">
+
+      <!-- LEFT: Main content -->
+      <div class="flex-1 space-y-5 min-w-0">
+
+        <!-- Basic info -->
+        <div class="card p-5 space-y-4">
+          <h2 class="text-sm font-bold" style="color:var(--text)">Temel Bilgiler</h2>
+          <div class="grid grid-cols-2 gap-4">
+            <div><label class="flbl">Ürün Kodu (SKU)</label><input class="inp" value="NK-AM270-42" disabled></div>
+            <div><label class="flbl">Barkod</label><input class="inp" value="0195866085967"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div><label class="flbl">Kategori</label><select class="sel"><option>Ayakkabı</option></select></div>
+            <div><label class="flbl">Marka</label><select class="sel"><option>Nike</option></select></div>
+          </div>
+          <div class="grid grid-cols-3 gap-4">
+            <div><label class="flbl">Liste Fiyatı (₺)</label><input class="inp" value="1.299,90"></div>
+            <div><label class="flbl">KDV (%)</label><select class="sel"><option>%18</option></select></div>
+            <div><label class="flbl">İndirimli Fiyat</label><input class="inp" placeholder="—"></div>
+          </div>
+        </div>
+
+        <!-- Multi-language card -->
+        <div class="card overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-3.5 border-b" style="border-color:var(--border)">
+            <h2 class="text-sm font-bold" style="color:var(--text)">Çok Dilli İçerik</h2>
+            <div class="flex items-center gap-1.5">
+              <span class="badge bg text-[10px]"><i class="fa fa-check text-[9px]"></i> TR</span>
+              <span class="badge bg text-[10px]"><i class="fa fa-check text-[9px]"></i> EN</span>
+              <span class="badge ba text-[10px]"><i class="fa fa-clock text-[9px]"></i> DE</span>
+              <span class="badge bx text-[10px]">AR</span>
+              <button class="text-xs font-semibold ml-2 flex items-center gap-1" style="color:var(--brand)"><i class="fa fa-wand-magic-sparkles text-[10px]"></i> AI Çevir</button>
+            </div>
+          </div>
+
+          <!-- Lang tabs -->
+          <div class="flex items-center border-b" style="border-color:var(--border);background:var(--surface2)">
+            <button class="lang-tab active" onclick="setLang(this,'tr')">🇹🇷 Türkçe <span class="text-[10px] font-normal ml-0.5" style="color:var(--text-s)">(kaynak)</span></button>
+            <button class="lang-tab" onclick="setLang(this,'en')">🇬🇧 İngilizce</button>
+            <button class="lang-tab warn" onclick="setLang(this,'de')">🇩🇪 Almanca</button>
+            <button class="lang-tab" onclick="setLang(this,'ar')">🇸🇦 Arapça</button>
+          </div>
+
+          <!-- TR (source) — editable -->
+          <div id="lp-tr" class="lang-panel p-5 space-y-4">
+            <div><label class="flbl">Ürün Adı</label><input class="inp ok" value="Nike Air Max 270"></div>
+            <div><label class="flbl">Kısa Açıklama</label><textarea class="ta ok">Hafif ve konforlu günlük spor ayakkabı. Görünmez Air yastıklama teknolojisi ile üretilmiştir.</textarea></div>
+            <div><label class="flbl">Açıklama</label><textarea class="ta ok" style="min-height:110px">Nike Air Max 270, şimdiye kadar yapılmış en büyük Air birimine sahip spor ayakkabı. Diz altından topuğa kadar uzanan hava yastığı maksimum konfor sağlar.</textarea></div>
+          </div>
+
+          <!-- EN — with source reference -->
+          <div id="lp-en" class="lang-panel hidden p-5 space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="flbl flex items-center gap-1.5">🇹🇷 <span style="color:var(--text-s)">Kaynak (TR)</span></label>
+                <div class="src-block">Nike Air Max 270</div>
+              </div>
+              <div>
+                <label class="flbl flex items-center gap-1.5">🇬🇧 <span style="color:var(--text)">İngilizce</span></label>
+                <input class="inp ok" value="Nike Air Max 270">
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="flbl" style="color:var(--text-s)">Kısa Açıklama (TR)</label>
+                <div class="src-block">Hafif ve konforlu günlük spor ayakkabı. Görünmez Air yastıklama teknolojisi ile üretilmiştir.</div>
+              </div>
+              <div>
+                <label class="flbl" style="color:var(--text)">Short Description</label>
+                <textarea class="ta ok">Lightweight and comfortable everyday sneaker. Made with invisible Air cushioning technology.</textarea>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="flbl" style="color:var(--text-s)">Açıklama (TR)</label>
+                <div class="src-block" style="min-height:80px">Nike Air Max 270, şimdiye kadar yapılmış en büyük Air birimine sahip spor ayakkabı. Diz altından topuğa kadar uzanan hava yastığı maksimum konfor sağlar.</div>
+              </div>
+              <div>
+                <label class="flbl" style="color:var(--text)">Description</label>
+                <textarea class="ta ok" style="min-height:80px">The Nike Air Max 270 features Nike's biggest Air unit for unprecedented underfoot cushioning comfort.</textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- DE — incomplete, source visible -->
+          <div id="lp-de" class="lang-panel hidden p-5 space-y-4">
+            <div class="flex items-center gap-2 p-3 rounded-xl border text-xs mb-1" style="background:#fffbeb;border-color:#fde68a;color:#92400e">
+              <i class="fa fa-triangle-exclamation text-amber-500"></i>
+              Bu dil için çeviriler eksik. Türkçe kaynak metin referans olarak gösterilmektedir.
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="flbl" style="color:var(--text-s)">Kaynak (TR)</label>
+                <div class="src-block">Nike Air Max 270</div>
+              </div>
+              <div>
+                <label class="flbl" style="color:var(--text)">Produktname (DE)</label>
+                <input class="inp" placeholder="Çeviri girin…">
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="flbl" style="color:var(--text-s)">Kısa Açıklama (TR)</label>
+                <div class="src-block">Hafif ve konforlu günlük spor ayakkabı. Görünmez Air yastıklama teknolojisi.</div>
+              </div>
+              <div>
+                <label class="flbl" style="color:var(--text)">Kurzbeschreibung (DE)</label>
+                <textarea class="ta" placeholder="Çeviri girin…"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- AR -->
+          <div id="lp-ar" class="lang-panel hidden p-5 space-y-4">
+            <div class="flex items-center gap-2 p-3 rounded-xl border text-xs mb-1" style="background:var(--surface2);border-color:var(--border);color:var(--text-m)">
+              <i class="fa fa-info-circle" style="color:var(--text-s)"></i>
+              Arapça dil desteği eklemek için Sistem → Dil Ayarları sayfasını ziyaret edin.
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="flbl" style="color:var(--text-s)">Kaynak (TR)</label>
+                <div class="src-block">Nike Air Max 270</div>
+              </div>
+              <div>
+                <label class="flbl" style="color:var(--text)">اسم المنتج (AR)</label>
+                <input class="inp" placeholder="الترجمة..." dir="rtl">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Metadata -->
+      <div class="w-72 flex-shrink-0 space-y-4">
+
+        <div class="card overflow-hidden">
+          <div class="px-4 py-3.5 border-b" style="border-color:var(--border)"><h3 class="text-sm font-bold" style="color:var(--text)">Durum & Görünürlük</h3></div>
+          <div class="p-4 space-y-3">
+            <div><label class="flbl">Yayın Durumu</label>
+              <select class="sel text-sm">
+                <option>🟢 Aktif — Yayında</option>
+                <option>⚪ Pasif — Gizli</option>
+                <option>📝 Taslak</option>
+              </select>
+            </div>
+            <div><label class="flbl">Mağaza Kanalları</label>
+              <div class="space-y-2">
+                <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--text-m)"><input type="checkbox" checked class="accent-emerald-600 rounded"> Web Sitesi</label>
+                <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--text-m)"><input type="checkbox" checked class="accent-emerald-600 rounded"> Mobil</label>
+                <label class="flex items-center gap-2 text-sm cursor-pointer" style="color:var(--text-m)"><input type="checkbox" class="accent-emerald-600 rounded"> POS</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card overflow-hidden">
+          <div class="px-4 py-3.5 border-b" style="border-color:var(--border)"><h3 class="text-sm font-bold" style="color:var(--text)">Kayıt Bilgisi</h3></div>
+          <div class="p-4 space-y-3">
+            <div class="flex justify-between"><span class="text-xs" style="color:var(--text-s)">Oluşturulma</span><div class="text-right"><div class="text-xs font-medium" style="color:var(--text)">12 Mar 2025</div><div class="text-[11px]" style="color:var(--text-s)">14:22</div></div></div>
+            <div class="flex justify-between"><span class="text-xs" style="color:var(--text-s)">Oluşturan</span><div class="flex items-center gap-1.5"><div class="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold" style="background:var(--brand)">AY</div><div class="text-xs font-medium" style="color:var(--text)">Ahmet Y.</div></div></div>
+            <div class="h-px" style="background:var(--border)"></div>
+            <div class="flex justify-between"><span class="text-xs" style="color:var(--text-s)">Son Güncelleme</span><div class="text-right"><div class="text-xs font-medium" style="color:var(--text)">12 Mar 2026</div><div class="text-[11px]" style="color:var(--text-s)">2 saat önce</div></div></div>
+            <div class="h-px" style="background:var(--border)"></div>
+            <div class="flex justify-between"><span class="text-xs" style="color:var(--text-s)">Toplam Stok</span><span class="text-sm font-bold" style="color:var(--text)">45 adet</span></div>
+            <div class="flex justify-between"><span class="text-xs" style="color:var(--text-s)">Son 30 gün satış</span><span class="text-sm font-bold" style="color:var(--brand)">12 adet</span></div>
+          </div>
+        </div>
+
+        <div class="card overflow-hidden">
+          <div class="px-4 py-3.5 border-b" style="border-color:var(--border)"><h3 class="text-sm font-bold" style="color:var(--text)">Etiketler</h3></div>
+          <div class="p-4">
+            <div class="flex flex-wrap gap-1.5 mb-3">
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium" style="background:var(--surface2);color:var(--text-m);border:1px solid var(--border)">spor <button class="opacity-50 hover:opacity-100">×</button></span>
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium" style="background:var(--surface2);color:var(--text-m);border:1px solid var(--border)">nike <button class="opacity-50 hover:opacity-100">×</button></span>
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium" style="background:var(--surface2);color:var(--text-m);border:1px solid var(--border)">air-max <button class="opacity-50 hover:opacity-100">×</button></span>
+            </div>
+            <input type="text" placeholder="Etiket ekle…" class="inp" style="font-size:13px;padding:7px 12px">
+          </div>
+        </div>
+
+        <div class="card overflow-hidden" style="border-color:#fecaca">
+          <div class="px-4 py-3.5 border-b" style="border-color:#fecaca"><h3 class="text-sm font-bold text-red-500">Tehlikeli Alan</h3></div>
+          <div class="p-4 space-y-2">
+            <button class="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors" style="border:1px solid var(--border);color:var(--text-m)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><i class="fa fa-eye-slash text-xs" style="color:var(--text-s)"></i> Pasife Al</button>
+            <button class="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-red-500 transition-colors" style="border:1px solid #fecaca" onmouseover="this.style.background='#fff1f2'" onmouseout="this.style.background=''"><i class="fa fa-trash text-xs"></i> Ürünü Sil</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#main -->
+
+<script>
+  // ── Sidebar ──
+  let sidebarCollapsed = false;
+  function toggleSidebar() {
+    sidebarCollapsed = !sidebarCollapsed;
+    document.getElementById('sidebar').classList.toggle('collapsed', sidebarCollapsed);
+    document.getElementById('main').classList.toggle('expanded', sidebarCollapsed);
+    const ct = document.getElementById('ctoggle');
+    if (sidebarCollapsed) { ct.classList.remove('hidden'); ct.classList.add('flex'); }
+    else { ct.classList.add('hidden'); ct.classList.remove('flex'); }
+  }
+
+  // ── Command Palette ──
+  function cmdOpen() {
+    document.getElementById('cmd-ov').classList.add('open');
+    setTimeout(() => document.getElementById('cmd-in').focus(), 40);
+  }
+  function cmdClose() { document.getElementById('cmd-ov').classList.remove('open'); }
+  function setScp(btn) {
+    document.querySelectorAll('.cm-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  // ── Favorites ──
+  let favsOpen = false;
+  let pageInFavs = false;
+  function toggleFavs() {
+    favsOpen = !favsOpen;
+    document.getElementById('fav-panel').classList.toggle('open', favsOpen);
+  }
+  function togglePageFav() {
+    pageInFavs = !pageInFavs;
+    document.getElementById('fav-icon').className = pageInFavs
+      ? 'fa fa-star text-[11px] text-amber-400'
+      : 'fa fa-star text-[11px] text-amber-400';
+    document.getElementById('fav-label').textContent = pageInFavs ? 'Favorilerden Çıkar' : 'Favorilere Ekle';
+    document.getElementById('fav-toggle-btn').style.background = pageInFavs ? 'var(--brand-bg)' : 'var(--surface)';
+    document.getElementById('fav-toggle-btn').style.borderColor = pageInFavs ? 'var(--brand-b)' : 'var(--border)';
+    document.getElementById('fav-toggle-btn').style.color = pageInFavs ? 'var(--brand)' : 'var(--text-m)';
+  }
+
+  // ── Theme ──
+  let dark = false;
+  function toggleTheme() {
+    dark = !dark;
+    document.documentElement.classList.toggle('dark', dark);
+    document.getElementById('theme-icon').className = dark ? 'fa fa-sun text-sm' : 'fa fa-moon text-sm';
+  }
+
+  // ── View switching ──
+  const views = ['dashboard','list','detail'];
+  const breadcrumbs = { dashboard:'Dashboard', list:'Katalog / Ürünler', detail:'Katalog / Ürünler / Nike Air Max 270' };
+  function switchView(name, btn) {
+    views.forEach(v => {
+      const el = document.getElementById('view-' + v);
+      if (el) el.classList.toggle('hidden', v !== name);
+      if (el && v !== name) el.classList.remove('flex-1');
+      if (el && v === name) el.classList.add('flex-1');
+    });
+    document.getElementById('breadcrumb').innerHTML =
+      breadcrumbs[name].split(' / ').map((p,i,a) =>
+        i < a.length-1
+          ? `<span style="color:var(--text-s)" class="hover:underline cursor-pointer">${p}</span><i class="fa fa-chevron-right text-[9px] mx-1" style="color:var(--text-s)"></i>`
+          : `<span style="color:var(--brand)" class="font-semibold">${p}</span>`
+      ).join('');
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    if (name === 'dashboard') document.querySelectorAll('.nav-link')[0].classList.add('active');
+    if (name === 'list' || name === 'detail') document.querySelectorAll('.nav-link')[1].classList.add('active');
+    document.querySelectorAll('.vbtn').forEach(b => b.classList.remove('active'));
+    const map = {dashboard:0,list:1,detail:2};
+    document.querySelectorAll('.vbtn')[map[name]].classList.add('active');
+  }
+
+  // ── Lang tabs ──
+  function setLang(btn, lang) {
+    document.querySelectorAll('.lang-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.lang-panel').forEach(p => p.classList.add('hidden'));
+    document.getElementById('lp-' + lang).classList.remove('hidden');
+  }
+
+  // ── Section tabs ──
+  function setSTab(btn) {
+    document.querySelectorAll('.stab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  // ── Advanced filter ──
+  let advOpen = false;
+  function toggleAdvFilter() {
+    advOpen = !advOpen;
+    document.getElementById('adv-panel').classList.toggle('hidden', !advOpen);
+    document.getElementById('adv-chv').style.transform = advOpen ? 'rotate(180deg)' : '';
+  }
+
+  // ── Column menu ──
+  function toggleColMenu() {
+    document.getElementById('col-menu').classList.toggle('hidden');
+  }
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#col-menu') && !e.target.closest('[onclick="toggleColMenu()"]')) {
+      const m = document.getElementById('col-menu');
+      if (m) m.classList.add('hidden');
+    }
+  });
+
+  // ── Keyboard ──
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); cmdOpen(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); }
+    if (e.key === 'Escape') { cmdClose(); if (favsOpen) { favsOpen = false; document.getElementById('fav-panel').classList.remove('open'); } }
+  });
+</script>
+</body>
+</html>

@@ -1,4 +1,6 @@
+using ECSPros.Inventory.Application.Commands.AddTransferItem;
 using ECSPros.Inventory.Application.Commands.AdjustStock;
+using ECSPros.Inventory.Application.Commands.BulkDeleteLocations;
 using ECSPros.Inventory.Application.Commands.CreateTransfer;
 using ECSPros.Inventory.Application.Commands.CreateWarehouse;
 using ECSPros.Inventory.Application.Commands.CreateWarehouseLocation;
@@ -140,6 +142,20 @@ public class InventoryController : ControllerBase
         return Created($"/api/inventory/warehouses/{id}/locations", new { success = true, data = new { id = result.Value } });
     }
 
+    /// <summary>Kod aralığındaki lokasyonları toplu siler (dolu lokasyon varsa engeller).</summary>
+    [HttpDelete("warehouses/{id:guid}/locations/bulk")]
+    public async Task<IActionResult> BulkDeleteLocations(
+        Guid id, [FromBody] BulkDeleteLocationsRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new BulkDeleteLocationsCommand(id, request.StartCode, request.EndCode), ct);
+
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+
+        return Ok(new { success = true, data = result.Value });
+    }
+
     /// <summary>Depo lokasyonunu günceller.</summary>
     [HttpPut("locations/{id:guid}")]
     public async Task<IActionResult> UpdateWarehouseLocation(
@@ -205,7 +221,7 @@ public class InventoryController : ControllerBase
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
         Guid.TryParse(userId, out var uid);
 
-        var items = request.Items.Select(i => new CreateTransferItemDto(
+        var items = (request.Items ?? []).Select(i => new CreateTransferItemDto(
             i.VariantId, i.RequestedQuantity, i.FromLocationId, i.ToLocationId)).ToList();
 
         var result = await _mediator.Send(new CreateTransferCommand(
@@ -216,6 +232,19 @@ public class InventoryController : ControllerBase
             return BadRequest(new { success = false, error = result.Error });
 
         return Created("/api/inventory/transfers", new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>Transfer talebine kalem ekler (sadece draft durumunda).</summary>
+    [HttpPost("transfers/{id:guid}/items")]
+    public async Task<IActionResult> AddTransferItem(Guid id, [FromBody] AddTransferItemRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new AddTransferItemCommand(
+            id, request.VariantId, request.RequestedQuantity, request.FromLocationId, request.ToLocationId), ct);
+
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+
+        return Ok(new { success = true, data = new { id = result.Value } });
     }
 
     /// <summary>Transfer durumunu günceller (draft→pending→picking→picked→in_transit→delivered→completed veya cancelled).</summary>
@@ -278,7 +307,13 @@ public record CreateTransferRequest(
     Guid ToWarehouseId,
     string TransferType,
     string? Notes,
-    List<TransferItemRequest> Items);
+    List<TransferItemRequest>? Items);
+
+public record AddTransferItemRequest(
+    Guid VariantId,
+    int RequestedQuantity,
+    Guid? FromLocationId,
+    Guid? ToLocationId);
 
 public record TransferItemRequest(
     Guid VariantId,
@@ -287,3 +322,5 @@ public record TransferItemRequest(
     Guid? ToLocationId);
 
 public record UpdateTransferStatusRequest(string Status, string? Notes);
+
+public record BulkDeleteLocationsRequest(string StartCode, string EndCode);

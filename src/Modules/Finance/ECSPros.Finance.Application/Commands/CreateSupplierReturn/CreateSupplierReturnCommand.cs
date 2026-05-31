@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ECSPros.Finance.Application.Commands.CreateSupplierReturn;
 
 public record CreateSupplierReturnCommand(
-    Guid SupplierId,
+    Guid CurrentAccountId,
     DateOnly ReturnDate,
     string Reason,
     string? Notes,
@@ -28,9 +28,6 @@ public class CreateSupplierReturnCommandHandler : IRequestHandler<CreateSupplier
 
     public async Task<Result<Guid>> Handle(CreateSupplierReturnCommand request, CancellationToken ct)
     {
-        var supplierExists = await _db.Suppliers.AnyAsync(s => s.Id == request.SupplierId, ct);
-        if (!supplierExists)
-            return Result.Failure<Guid>("Tedarikçi bulunamadı.");
 
         if (!request.Items.Any())
             return Result.Failure<Guid>("İade için en az bir kalem eklenmelidir.");
@@ -64,7 +61,7 @@ public class CreateSupplierReturnCommandHandler : IRequestHandler<CreateSupplier
         var supplierReturn = new SupplierReturn
         {
             Id = Guid.NewGuid(),
-            SupplierId = request.SupplierId,
+            CurrentAccountId = request.CurrentAccountId,
             ReturnNumber = returnNumber,
             ReturnDate = request.ReturnDate,
             Reason = request.Reason,

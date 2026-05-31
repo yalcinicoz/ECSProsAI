@@ -1,10 +1,15 @@
+using ECSPros.Core.Domain.Entities;
 using ECSPros.Core.Application.Commands.CreateCargoRule;
 using ECSPros.Core.Application.Commands.CreateExpenseType;
 using ECSPros.Core.Application.Commands.CreateFirm;
 using ECSPros.Core.Application.Commands.CreateFirmIntegration;
 using ECSPros.Core.Application.Commands.CreateFirmPlatform;
+using ECSPros.Core.Application.Commands.CreatePlatformType;
 using ECSPros.Core.Application.Commands.UpdateFirm;
 using ECSPros.Core.Application.Commands.UpdateFirmPlatform;
+using ECSPros.Core.Application.Commands.UpdatePlatformType;
+using ECSPros.Core.Application.Commands.UpsertUiTranslations;
+using ECSPros.Core.Application.Queries.GetUiTranslations;
 using ECSPros.Core.Application.Queries.GetCargoRules;
 using ECSPros.Core.Application.Queries.GetExpenseTypes;
 using ECSPros.Core.Application.Queries.GetFirmDetail;
@@ -65,6 +70,28 @@ public class CoreController : ControllerBase
     {
         var result = await _mediator.Send(new GetPlatformTypesQuery(activeOnly), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Yeni platform tipi oluşturur.</summary>
+    [HttpPost("platform-types")]
+    public async Task<IActionResult> CreatePlatformType([FromBody] CreatePlatformTypeRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new CreatePlatformTypeCommand(request.Code, request.NameI18n, request.IsMarketplace, request.SettingsSchema), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Created(string.Empty, new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>Platform tipini günceller.</summary>
+    [HttpPut("platform-types/{id:guid}")]
+    public async Task<IActionResult> UpdatePlatformType(Guid id, [FromBody] UpdatePlatformTypeRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new UpdatePlatformTypeCommand(id, request.NameI18n, request.IsMarketplace, request.IsActive, request.SettingsSchema), ct);
+        if (result.IsFailure)
+            return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true });
     }
 
     /// <summary>Entegrasyon servislerini listeler.</summary>
@@ -154,7 +181,8 @@ public class CoreController : ControllerBase
     {
         var result = await _mediator.Send(
             new CreateFirmPlatformCommand(firmId, request.PlatformTypeId, request.Code, request.NameI18n,
-                request.PriceType, request.PriceMultiplier), ct);
+                request.PriceType, request.PriceMultiplier,
+                request.Credentials ?? new(), request.Settings ?? new()), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Created(string.Empty, new { success = true, data = new { id = result.Value } });
@@ -165,7 +193,8 @@ public class CoreController : ControllerBase
     public async Task<IActionResult> UpdateFirmPlatform(Guid id, [FromBody] UpdateFirmPlatformRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
-            new UpdateFirmPlatformCommand(id, request.NameI18n, request.PriceType, request.PriceMultiplier, request.IsActive), ct);
+            new UpdateFirmPlatformCommand(id, request.NameI18n, request.PriceType, request.PriceMultiplier,
+                request.Credentials ?? new(), request.Settings ?? new(), request.IsActive), ct);
         if (result.IsFailure)
             return NotFound(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -214,6 +243,33 @@ public class CoreController : ControllerBase
             return BadRequest(new { success = false, error = result.Error });
         return Created(string.Empty, new { success = true, data = new { id = result.Value } });
     }
+
+    // ── UI Çevirileri ──────────────────────────────────────────────────────────
+
+    /// <summary>Statik metin çevirilerini listeler.</summary>
+    [HttpGet("ui-translations")]
+    public async Task<IActionResult> GetUiTranslations(
+        [FromQuery] string? @namespace,
+        [FromQuery] string? lang,
+        CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetUiTranslationsQuery(@namespace, lang), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Çevirileri toplu ekler veya günceller.</summary>
+    [HttpPut("ui-translations/batch")]
+    public async Task<IActionResult> UpsertUiTranslations(
+        [FromBody] UpsertUiTranslationsRequest request, CancellationToken ct)
+    {
+        var items = request.Items
+            .Select(i => new UiTranslationItem(i.Namespace, i.Key, i.Lang, i.Value))
+            .ToList();
+        var result = await _mediator.Send(new UpsertUiTranslationsCommand(items), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { changed = result.Value } });
+    }
 }
 
 // ── Request Modelleri ──────────────────────────────────────────────────────────
@@ -249,14 +305,18 @@ public record CreateFirmPlatformRequest(
     string Code,
     Dictionary<string, string> NameI18n,
     string? PriceType,
-    decimal? PriceMultiplier
+    decimal? PriceMultiplier,
+    Dictionary<string, object>? Credentials = null,
+    Dictionary<string, object>? Settings = null
 );
 
 public record UpdateFirmPlatformRequest(
     Dictionary<string, string> NameI18n,
     string? PriceType,
     decimal? PriceMultiplier,
-    bool IsActive
+    bool IsActive,
+    Dictionary<string, object>? Credentials = null,
+    Dictionary<string, object>? Settings = null
 );
 
 public record CreateFirmIntegrationRequest(
@@ -275,6 +335,20 @@ public record CreateCargoRuleRequest(
     int Priority
 );
 
+public record CreatePlatformTypeRequest(
+    string Code,
+    Dictionary<string, string> NameI18n,
+    bool IsMarketplace,
+    List<PlatformSchemaField>? SettingsSchema = null
+);
+
+public record UpdatePlatformTypeRequest(
+    Dictionary<string, string> NameI18n,
+    bool IsMarketplace,
+    bool IsActive,
+    List<PlatformSchemaField>? SettingsSchema = null
+);
+
 public record CreateExpenseTypeRequest(
     string Code,
     Dictionary<string, string> NameI18n,
@@ -282,3 +356,6 @@ public record CreateExpenseTypeRequest(
     decimal DefaultTaxRate,
     int SortOrder
 );
+
+public record UpsertUiTranslationsRequest(List<UiTranslationItemRequest> Items);
+public record UiTranslationItemRequest(string Namespace, string Key, string Lang, string Value);

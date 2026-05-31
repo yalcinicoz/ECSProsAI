@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ECSPros.Finance.Application.Queries.GetSupplierTransactions;
 
 public record GetSupplierTransactionsQuery(
-    Guid SupplierId,
+    Guid CurrentAccountId,
     int Page = 1,
     int PageSize = 20
 ) : IRequest<Result<PagedResult<SupplierTransactionDto>>>;
@@ -31,7 +31,7 @@ public class GetSupplierTransactionsQueryHandler : IRequestHandler<GetSupplierTr
 
     public async Task<Result<PagedResult<SupplierTransactionDto>>> Handle(GetSupplierTransactionsQuery request, CancellationToken ct)
     {
-        var query = _db.SupplierTransactions.Where(t => t.SupplierId == request.SupplierId);
+        var query = _db.SupplierTransactions.Where(t => t.CurrentAccountId == request.CurrentAccountId);
 
         var total = await query.CountAsync(ct);
 

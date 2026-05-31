@@ -80,7 +80,7 @@ public class LookupController : ControllerBase
     public async Task<IActionResult> CreateValue(string code, [FromBody] CreateLookupValueRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new CreateLookupValueCommand(
-            code, request.Code, request.NameI18n, request.Color, request.Icon,
+            code, request.NameI18n, request.Color, request.Icon,
             request.IsDefault, request.SortOrder), ct);
 
         if (result.IsFailure)
@@ -99,7 +99,6 @@ public record UpdateLookupValueRequest(
     bool IsActive,
     int SortOrder);
 public record CreateLookupValueRequest(
-    string Code,
     Dictionary<string, string> NameI18n,
     string? Color,
     string? Icon,

@@ -30,7 +30,7 @@ public record StoreVariantImageDto(Guid Id, string ImageUrl, int SortOrder, bool
 public record StoreVariantAttributeDto(
     string AttributeTypeCode,
     Dictionary<string, string> AttributeTypeNameI18n,
-    string AttributeValueCode,
+    Guid AttributeValueId,
     Dictionary<string, string> AttributeValueNameI18n);
 
 public class GetStoreProductDetailQueryHandler(ICatalogDbContext db)
@@ -62,7 +62,7 @@ public class GetStoreProductDetailQueryHandler(ICatalogDbContext db)
                 var fpv = v.FirmPlatformVariants.FirstOrDefault(x => x.FirmPlatformId == request.FirmPlatformId && x.IsActive);
                 var attrs = v.VariantAttributes.Select(a => new StoreVariantAttributeDto(
                     a.AttributeType.Code, a.AttributeType.NameI18n,
-                    a.AttributeValue.Code, a.AttributeValue.NameI18n)).ToList();
+                    a.AttributeValue.Id, a.AttributeValue.NameI18n)).ToList();
 
                 return new StoreVariantDto(
                     v.Id, v.Sku, v.BasePrice,

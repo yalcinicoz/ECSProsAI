@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ECSPros.Finance.Application.Queries.GetSupplierInvoices;
 
 public record GetSupplierInvoicesQuery(
-    Guid? SupplierId,
+    Guid? CurrentAccountId,
     string? Status,
     int Page = 1,
     int PageSize = 20
@@ -14,7 +14,7 @@ public record GetSupplierInvoicesQuery(
 
 public record SupplierInvoiceSummaryDto(
     Guid Id,
-    Guid SupplierId,
+    Guid CurrentAccountId,
     string InvoiceNumber,
     DateOnly InvoiceDate,
     DateOnly? DueDate,
@@ -33,8 +33,8 @@ public class GetSupplierInvoicesQueryHandler : IRequestHandler<GetSupplierInvoic
     {
         var query = _db.SupplierInvoices.AsQueryable();
 
-        if (request.SupplierId.HasValue)
-            query = query.Where(i => i.SupplierId == request.SupplierId.Value);
+        if (request.CurrentAccountId.HasValue)
+            query = query.Where(i => i.CurrentAccountId == request.CurrentAccountId.Value);
 
         if (!string.IsNullOrWhiteSpace(request.Status))
             query = query.Where(i => i.Status == request.Status);
@@ -46,7 +46,7 @@ public class GetSupplierInvoicesQueryHandler : IRequestHandler<GetSupplierInvoic
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(i => new SupplierInvoiceSummaryDto(
-                i.Id, i.SupplierId, i.InvoiceNumber, i.InvoiceDate, i.DueDate,
+                i.Id, i.CurrentAccountId, i.InvoiceNumber, i.InvoiceDate, i.DueDate,
                 i.GrandTotal, i.Status, i.Items.Count, i.CreatedAt))
             .ToListAsync(ct);
 

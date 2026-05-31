@@ -24,80 +24,6 @@ namespace ECSPros.Finance.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("ECSPros.Finance.Domain.Entities.Supplier", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Address")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("ContactPerson")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Phone")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
-                    b.Property<string>("TaxNumber")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
-                    b.Property<string>("TaxOffice")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.ToTable("fin_suppliers", "finance");
-                });
-
             modelBuilder.Entity("ECSPros.Finance.Domain.Entities.SupplierDelivery", b =>
                 {
                     b.Property<Guid>("Id")
@@ -108,6 +34,9 @@ namespace ECSPros.Finance.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CurrentAccountId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("DeletedAt")
@@ -142,9 +71,6 @@ namespace ECSPros.Finance.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
-
-                    b.Property<Guid>("SupplierId")
-                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -232,6 +158,9 @@ namespace ECSPros.Finance.Infrastructure.Migrations
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("CurrentAccountId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -267,9 +196,6 @@ namespace ECSPros.Finance.Infrastructure.Migrations
                     b.Property<decimal>("Subtotal")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
-
-                    b.Property<Guid>("SupplierId")
-                        .HasColumnType("uuid");
 
                     b.Property<decimal>("TotalDiscount")
                         .HasPrecision(18, 2)
@@ -379,6 +305,9 @@ namespace ECSPros.Finance.Infrastructure.Migrations
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("CurrentAccountId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -408,9 +337,6 @@ namespace ECSPros.Finance.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<Guid>("SupplierId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -437,6 +363,9 @@ namespace ECSPros.Finance.Infrastructure.Migrations
                     b.Property<Guid>("ChangedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("CurrentAccountId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("NewPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -444,9 +373,6 @@ namespace ECSPros.Finance.Infrastructure.Migrations
                     b.Property<decimal>("OldPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
-
-                    b.Property<Guid>("SupplierId")
-                        .HasColumnType("uuid");
 
                     b.Property<Guid>("VariantId")
                         .HasColumnType("uuid");
@@ -469,6 +395,9 @@ namespace ECSPros.Finance.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CurrentAccountId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("DeletedAt")
@@ -511,9 +440,6 @@ namespace ECSPros.Finance.Infrastructure.Migrations
                     b.Property<decimal>("Subtotal")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
-
-                    b.Property<Guid>("SupplierId")
-                        .HasColumnType("uuid");
 
                     b.Property<decimal>("TotalTax")
                         .HasPrecision(18, 2)
@@ -619,6 +545,9 @@ namespace ECSPros.Finance.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<Guid>("CurrentAccountId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("Debit")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -641,9 +570,6 @@ namespace ECSPros.Finance.Infrastructure.Migrations
                     b.Property<string>("ReferenceType")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
-
-                    b.Property<Guid>("SupplierId")
-                        .HasColumnType("uuid");
 
                     b.Property<DateOnly>("TransactionDate")
                         .HasColumnType("date");

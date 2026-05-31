@@ -22,11 +22,43 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
         if (product is null)
             return Result.Failure<bool>("Ürün bulunamadı.");
 
-        product.NameI18n = request.NameI18n;
+        var now = DateTime.UtcNow;
+
+        if (product.BasePrice != request.BasePrice)
+            _context.ProductPriceHistories.Add(new Domain.Entities.ProductPriceHistory
+            {
+                ProductId     = product.Id,
+                PriceField    = "base_price",
+                OldValue      = product.BasePrice,
+                NewValue      = request.BasePrice,
+                ChangedAt     = now,
+                ChangedBy     = request.UpdatedBy,
+                ChangedByName = request.UpdatedByName,
+            });
+
+        if (product.BaseCost != request.BaseCost)
+            _context.ProductPriceHistories.Add(new Domain.Entities.ProductPriceHistory
+            {
+                ProductId     = product.Id,
+                PriceField    = "base_cost",
+                OldValue      = product.BaseCost,
+                NewValue      = request.BaseCost,
+                ChangedAt     = now,
+                ChangedBy     = request.UpdatedBy,
+                ChangedByName = request.UpdatedByName,
+            });
+
+        product.NameI18n             = request.NameI18n;
         product.ShortDescriptionI18n = request.ShortDescriptionI18n;
-        product.IsActive = request.IsActive;
+        product.DescriptionI18n      = request.DescriptionI18n;
+        product.BasePrice            = request.BasePrice;
+        product.BaseCost             = request.BaseCost;
+        product.TaxRate              = request.TaxRate;
+        product.IsActive             = request.IsActive;
+        product.SupplierId           = request.SupplierId;
+        product.SupplierProductCode  = request.SupplierProductCode;
         product.UpdatedBy = request.UpdatedBy;
-        product.UpdatedAt = DateTime.UtcNow;
+        product.UpdatedAt = now;
 
         await _context.SaveChangesAsync(cancellationToken);
         return Result.Success(true);

@@ -10,6 +10,8 @@ public record UpdateFirmPlatformCommand(
     Dictionary<string, string> NameI18n,
     string? PriceType,
     decimal? PriceMultiplier,
+    Dictionary<string, object> Credentials,
+    Dictionary<string, object> Settings,
     bool IsActive
 ) : IRequest<Result<bool>>;
 
@@ -25,11 +27,13 @@ public class UpdateFirmPlatformCommandHandler : IRequestHandler<UpdateFirmPlatfo
         if (platform is null)
             return Result.Failure<bool>("Firma platformu bulunamadı.");
 
-        platform.NameI18n = request.NameI18n;
-        platform.PriceType = request.PriceType;
+        platform.NameI18n       = request.NameI18n;
+        platform.PriceType      = request.PriceType;
         platform.PriceMultiplier = request.PriceMultiplier;
-        platform.IsActive = request.IsActive;
-        platform.UpdatedAt = DateTime.UtcNow;
+        platform.Credentials    = request.Credentials;
+        platform.Settings       = request.Settings;
+        platform.IsActive       = request.IsActive;
+        platform.UpdatedAt      = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
         return Result.Success<bool>(true);

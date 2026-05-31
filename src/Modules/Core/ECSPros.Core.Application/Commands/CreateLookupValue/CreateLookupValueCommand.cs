@@ -5,7 +5,6 @@ namespace ECSPros.Core.Application.Commands.CreateLookupValue;
 
 public record CreateLookupValueCommand(
     string TypeCode,
-    string Code,
     Dictionary<string, string> NameI18n,
     string? Color,
     string? Icon,

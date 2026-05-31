@@ -10,6 +10,8 @@ public class VariantPriceHistory
     public decimal NewValue { get; set; }
     public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
     public Guid ChangedBy { get; set; }
+    public string? ChangedByName { get; set; }
+    public string? FirmPlatformCode { get; set; }
     public string? ChangeReason { get; set; }
     public bool IsDeleted { get; set; } = false;
 

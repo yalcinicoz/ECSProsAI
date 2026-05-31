@@ -4,7 +4,7 @@ namespace ECSPros.Finance.Domain.Entities;
 
 public class SupplierDelivery : BaseEntity
 {
-    public Guid SupplierId { get; set; }
+    public Guid CurrentAccountId { get; set; }
     public Guid? InvoiceId { get; set; }
     public DateOnly DeliveryDate { get; set; }
     public string? DeliveryNoteNumber { get; set; }

@@ -23,16 +23,9 @@ public class CreateLookupValueCommandHandler : IRequestHandler<CreateLookupValue
         if (type is null)
             return Result.Failure<Guid>($"Lookup type '{request.TypeCode}' bulunamadı.");
 
-        var exists = await _context.LookupValues.AnyAsync(
-            v => v.LookupTypeId == type.Id && v.Code == request.Code, cancellationToken);
-
-        if (exists)
-            return Result.Failure<Guid>($"Bu tipte '{request.Code}' kodu zaten mevcut.");
-
         var value = new LookupValue
         {
             LookupTypeId = type.Id,
-            Code = request.Code,
             NameI18n = request.NameI18n,
             Color = request.Color,
             Icon = request.Icon,

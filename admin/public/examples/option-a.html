@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ECSPros — Seçenek A: Indigo Pro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    #sidebar { width: 256px; transition: width .28s cubic-bezier(.4,0,.2,1); overflow: hidden; white-space: nowrap; }
+    #sidebar.collapsed { width: 64px; }
+    #sidebar.collapsed .hide-collapsed { display: none !important; }
+    #sidebar.collapsed .nav-link { justify-content: center; padding: 9px; border-radius: 10px; }
+    #main { margin-left: 256px; transition: margin-left .28s cubic-bezier(.4,0,.2,1); }
+    #main.expanded { margin-left: 64px; }
+    .nav-link { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: rgba(255,255,255,.62); text-decoration: none; transition: all .15s; cursor: pointer; }
+    .nav-link:hover { background: rgba(255,255,255,.09); color: rgba(255,255,255,.9); }
+    .nav-link.active { background: rgba(255,255,255,.14); color: #fff; box-shadow: inset 3px 0 0 #a5b4fc; padding-left: 7px; }
+    .sec-label { font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: rgba(255,255,255,.28); padding: 14px 10px 4px; }
+    .status-active { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 500; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .status-inactive { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 500; background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+    .status-outofstock { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 500; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+    tr.product-row:hover td { background: #f8fafc; }
+    .lang-pill { padding: 6px 16px; border-radius: 100px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; border: none; outline: none; }
+    .lang-pill.active { background: #4f46e5; color: #fff; }
+    .lang-pill:not(.active) { background: #f1f5f9; color: #64748b; }
+    .lang-pill:not(.active):hover { background: #e2e8f0; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 2px; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<aside id="sidebar" class="fixed top-0 left-0 h-screen bg-indigo-950 flex flex-col z-40">
+
+  <!-- Logo + Collapse -->
+  <div class="flex items-center justify-between px-4 py-5 border-b border-white/10 flex-shrink-0">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 bg-indigo-500 rounded-xl flex items-center justify-center flex-shrink-0">
+        <span class="text-white font-bold text-sm">E</span>
+      </div>
+      <span class="hide-collapsed text-white font-bold text-lg tracking-tight">ECSPros</span>
+    </div>
+    <button onclick="toggleSidebar()" class="hide-collapsed w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 text-white/40 hover:text-white/80 transition-colors flex-shrink-0">
+      <i class="fa fa-bars-staggered text-sm"></i>
+    </button>
+  </div>
+
+  <!-- Search -->
+  <div class="hide-collapsed px-3 pt-3 pb-1 flex-shrink-0">
+    <div class="relative">
+      <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-white/25 text-xs pointer-events-none"></i>
+      <input type="text" placeholder="Menüde ara…" class="w-full bg-white/8 border border-white/10 text-white/80 placeholder-white/25 rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:bg-white/12 focus:border-white/20">
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
+    <div class="sec-label hide-collapsed">Genel</div>
+    <a class="nav-link" href="#"><i class="fa fa-gauge w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Dashboard</span></a>
+
+    <div class="sec-label hide-collapsed">Ürün Yönetimi</div>
+    <a class="nav-link active" href="#"><i class="fa fa-box w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Ürünler</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-sitemap w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Kategoriler</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-copyright w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Markalar</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-sliders w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Varyant Tipleri</span></a>
+
+    <div class="sec-label hide-collapsed">Satış</div>
+    <a class="nav-link" href="#"><i class="fa fa-shopping-bag w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Siparişler</span><span class="hide-collapsed ml-auto bg-indigo-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">14</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-rotate-left w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">İadeler</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-file-invoice-dollar w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Faturalar</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-handshake w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Teklifler</span></a>
+
+    <div class="sec-label hide-collapsed">Müşteriler</div>
+    <a class="nav-link" href="#"><i class="fa fa-users w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Üyeler</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-layer-group w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Üye Grupları</span></a>
+
+    <div class="sec-label hide-collapsed">Stok & Lojistik</div>
+    <a class="nav-link" href="#"><i class="fa fa-warehouse w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Depolar</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-cubes w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Stok Durumu</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-truck w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Kargo Takip</span></a>
+
+    <div class="sec-label hide-collapsed">Pazarlama</div>
+    <a class="nav-link" href="#"><i class="fa fa-percent w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Kampanyalar</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-ticket w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Kuponlar</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-gift w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Hediye Kartları</span></a>
+
+    <div class="sec-label hide-collapsed">Kanal</div>
+    <a class="nav-link" href="#"><i class="fa fa-cash-register w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">POS</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-plug w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Entegrasyonlar</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-file w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">İçerik (CMS)</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-gear w-4 text-center flex-shrink-0"></i><span class="hide-collapsed">Ayarlar</span></a>
+  </nav>
+
+  <!-- Favorites -->
+  <div class="hide-collapsed border-t border-white/10 px-3 py-2 flex-shrink-0">
+    <div class="sec-label" style="padding-top:8px">Sık Kullanılanlar</div>
+    <a class="nav-link" href="#"><i class="fa fa-star w-4 text-center flex-shrink-0 text-amber-400/70"></i><span class="hide-collapsed">Bekleyen Siparişler</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-star w-4 text-center flex-shrink-0 text-amber-400/70"></i><span class="hide-collapsed">Stok Uyarıları</span></a>
+  </div>
+
+  <!-- User -->
+  <div class="border-t border-white/10 px-3 py-3 flex items-center gap-3 flex-shrink-0">
+    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">AY</div>
+    <div class="hide-collapsed min-w-0 flex-1">
+      <div class="text-white text-sm font-medium truncate">Ahmet Yılmaz</div>
+      <div class="text-white/35 text-xs">Süper Admin</div>
+    </div>
+    <button class="hide-collapsed text-white/30 hover:text-white/70 transition-colors flex-shrink-0">
+      <i class="fa fa-ellipsis-vertical text-sm"></i>
+    </button>
+  </div>
+</aside>
+
+<!-- ══════════ MAIN ══════════ -->
+<div id="main" class="min-h-screen flex flex-col">
+
+  <!-- Topbar -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200/80 h-14 flex items-center px-6 gap-4">
+    <!-- Sidebar toggle (collapsed state) -->
+    <button id="collapsed-toggle" onclick="toggleSidebar()" class="hidden w-8 h-8 items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 mr-1">
+      <i class="fa fa-bars text-sm"></i>
+    </button>
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-1.5 text-sm text-slate-400 flex-shrink-0">
+      <span class="hover:text-slate-600 cursor-pointer">Ürün Yönetimi</span>
+      <i class="fa fa-chevron-right text-[10px]"></i>
+      <span class="text-slate-800 font-semibold">Ürünler</span>
+    </nav>
+    <!-- Center search -->
+    <div class="flex-1 max-w-sm mx-auto">
+      <div class="relative">
+        <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <input type="text" placeholder='Hızlı ara…  "/" ile odaklan' class="w-full bg-slate-100 rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-all border border-transparent focus:border-indigo-300">
+      </div>
+    </div>
+    <!-- Right -->
+    <div class="ml-auto flex items-center gap-1">
+      <button class="relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
+        <i class="fa fa-bell text-sm"></i>
+        <span class="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full ring-2 ring-white"></span>
+      </button>
+      <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 text-slate-600 text-sm font-medium transition-colors">
+        <span class="text-base">🇹🇷</span> TR
+      </button>
+      <button class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-colors" title="Temayı Değiştir">
+        <i class="fa fa-moon text-sm"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Page content -->
+  <main class="flex-1 p-6 space-y-5">
+
+    <!-- Page header -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Ürünler</h1>
+        <p class="text-sm text-slate-500 mt-0.5">Toplam 1.284 ürün &middot; Son güncelleme: bugün 14:32</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm">
+          <i class="fa fa-download text-xs"></i> Dışa Aktar
+        </button>
+        <button class="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm">
+          <i class="fa fa-upload text-xs"></i> Toplu İçe Aktar
+        </button>
+        <button class="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-200">
+          <i class="fa fa-plus text-xs"></i> Yeni Ürün
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI Strip -->
+    <div class="grid grid-cols-4 gap-4">
+      <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Toplam Ürün</span>
+          <div class="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center"><i class="fa fa-box text-slate-400 text-sm"></i></div>
+        </div>
+        <div class="text-3xl font-bold text-slate-900">1.284</div>
+        <div class="text-xs text-emerald-600 mt-1.5 font-medium"><i class="fa fa-arrow-up mr-1"></i>12 bu hafta</div>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Aktif</span>
+          <div class="w-8 h-8 bg-emerald-50 rounded-xl flex items-center justify-center"><i class="fa fa-circle-check text-emerald-500 text-sm"></i></div>
+        </div>
+        <div class="text-3xl font-bold text-emerald-600">1.101</div>
+        <div class="text-xs text-slate-400 mt-1.5">Toplam'ın %85,7'si</div>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Stok Dışı</span>
+          <div class="w-8 h-8 bg-red-50 rounded-xl flex items-center justify-center"><i class="fa fa-triangle-exclamation text-red-400 text-sm"></i></div>
+        </div>
+        <div class="text-3xl font-bold text-red-500">47</div>
+        <div class="text-xs text-red-400 mt-1.5 font-medium">Acil stok gerekli</div>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pasif / Taslak</span>
+          <div class="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center"><i class="fa fa-eye-slash text-slate-400 text-sm"></i></div>
+        </div>
+        <div class="text-3xl font-bold text-slate-400">136</div>
+        <div class="text-xs text-slate-400 mt-1.5">Yayınlanmamış</div>
+      </div>
+    </div>
+
+    <!-- Table card -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+
+      <!-- Filters -->
+      <div class="flex items-center gap-3 px-5 py-3.5 border-b border-slate-100 flex-wrap gap-y-2">
+        <div class="relative">
+          <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input type="text" placeholder="Ürün adı, SKU ara…" class="pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 w-56">
+        </div>
+        <select class="text-sm border border-slate-200 rounded-xl px-3 py-2 text-slate-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option>Tüm Kategoriler</option>
+          <option>Ayakkabı</option>
+          <option>Üst Giyim</option>
+          <option>Pantolon</option>
+          <option>Dış Giyim</option>
+          <option>Elbise</option>
+        </select>
+        <select class="text-sm border border-slate-200 rounded-xl px-3 py-2 text-slate-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option>Tüm Durumlar</option>
+          <option>Aktif</option>
+          <option>Pasif</option>
+          <option>Stok Dışı</option>
+        </select>
+        <select class="text-sm border border-slate-200 rounded-xl px-3 py-2 text-slate-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option>Fiyat Aralığı</option>
+          <option>0 – 500 ₺</option>
+          <option>500 – 1.000 ₺</option>
+          <option>1.000 ₺ üzeri</option>
+        </select>
+        <!-- Active filter chip -->
+        <span class="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-semibold">
+          Aktif <button class="ml-0.5 hover:text-indigo-900 text-base leading-none">×</button>
+        </span>
+        <div class="ml-auto flex items-center gap-2">
+          <span class="text-xs text-slate-400">Sıralama:</span>
+          <select class="text-sm border border-slate-200 rounded-xl px-3 py-2 text-slate-600 bg-white focus:outline-none">
+            <option>Son Güncelleme</option>
+            <option>Ürün Adı A→Z</option>
+            <option>Fiyat Artan</option>
+            <option>Stok Azalan</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50/80 border-b border-slate-100">
+            <th class="w-10 px-5 py-3 text-left"><input type="checkbox" class="rounded border-slate-300 accent-indigo-600"></th>
+            <th class="text-left px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Ürün</th>
+            <th class="text-left px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Kategori</th>
+            <th class="text-right px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Fiyat</th>
+            <th class="text-center px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Stok</th>
+            <th class="text-center px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Durum</th>
+            <th class="text-left px-4 py-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Güncelleme</th>
+            <th class="px-5 py-3 w-28"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+
+          <!-- Row 1 -->
+          <tr class="product-row group transition-colors">
+            <td class="px-5 py-3.5"><input type="checkbox" class="rounded border-slate-300 accent-indigo-600"></td>
+            <td class="px-4 py-3.5">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-slate-200 to-slate-300 rounded-xl flex-shrink-0 flex items-center justify-center text-slate-400 text-[10px] font-medium">IMG</div>
+                <div>
+                  <div class="font-semibold text-slate-800 text-sm">Nike Air Max 270</div>
+                  <div class="text-xs text-slate-400 mt-0.5">SKU: NK-AM270-42</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3.5 text-slate-500 text-sm">Ayakkabı</td>
+            <td class="px-4 py-3.5 text-right font-semibold text-slate-800">1.299,90 ₺</td>
+            <td class="px-4 py-3.5 text-center text-slate-700 font-medium">45</td>
+            <td class="px-4 py-3.5 text-center"><span class="status-active"><span class="dot bg-emerald-500"></span>Aktif</span></td>
+            <td class="px-4 py-3.5 text-xs text-slate-400">2 saat önce</td>
+            <td class="px-5 py-3.5">
+              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onclick="showPopup()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold transition-colors">
+                  <i class="fa fa-language text-xs"></i> Çeviri
+                </button>
+                <button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                  <i class="fa fa-pen-to-square text-xs"></i>
+                </button>
+                <button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400 transition-colors">
+                  <i class="fa fa-trash text-xs"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Row 2 -->
+          <tr class="product-row group transition-colors">
+            <td class="px-5 py-3.5"><input type="checkbox" class="rounded border-slate-300 accent-indigo-600"></td>
+            <td class="px-4 py-3.5">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex-shrink-0 flex items-center justify-center text-blue-400 text-[10px] font-medium">IMG</div>
+                <div>
+                  <div class="font-semibold text-slate-800 text-sm">Levi's 501 Slim Jean</div>
+                  <div class="text-xs text-slate-400 mt-0.5">SKU: LV-501-SLM-32</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3.5 text-slate-500 text-sm">Pantolon</td>
+            <td class="px-4 py-3.5 text-right font-semibold text-slate-800">899,00 ₺</td>
+            <td class="px-4 py-3.5 text-center text-slate-700 font-medium">128</td>
+            <td class="px-4 py-3.5 text-center"><span class="status-active"><span class="dot bg-emerald-500"></span>Aktif</span></td>
+            <td class="px-4 py-3.5 text-xs text-slate-400">Dün 18:40</td>
+            <td class="px-5 py-3.5">
+              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onclick="showPopup()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold transition-colors">
+                  <i class="fa fa-language text-xs"></i> Çeviri
+                </button>
+                <button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"><i class="fa fa-pen-to-square text-xs"></i></button>
+                <button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400 transition-colors"><i class="fa fa-trash text-xs"></i></button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Row 3 — Stok Dışı -->
+          <tr class="product-row group transition-colors bg-red-50/20">
+            <td class="px-5 py-3.5"><input type="checkbox" class="rounded border-slate-300 accent-indigo-600"></td>
+            <td class="px-4 py-3.5">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-slate-200 to-slate-300 rounded-xl flex-shrink-0 flex items-center justify-center text-slate-400 text-[10px] font-medium">IMG</div>
+                <div>
+                  <div class="font-semibold text-slate-800 text-sm">Adidas Ultraboost 22</div>
+                  <div class="text-xs text-slate-400 mt-0.5">SKU: AD-UB22-43</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3.5 text-slate-500 text-sm">Ayakkabı</td>
+            <td class="px-4 py-3.5 text-right font-semibold text-slate-800">2.499,00 ₺</td>
+            <td class="px-4 py-3.5 text-center font-semibold text-red-500">0</td>
+            <td class="px-4 py-3.5 text-center"><span class="status-outofstock"><span class="dot bg-red-500"></span>Stok Dışı</span></td>
+            <td class="px-4 py-3.5 text-xs text-slate-400">3 gün önce</td>
+            <td class="px-5 py-3.5">
+              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onclick="showPopup()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold"><i class="fa fa-language text-xs"></i> Çeviri</button>
+                <button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"><i class="fa fa-pen-to-square text-xs"></i></button>
+                <button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><i class="fa fa-trash text-xs"></i></button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Row 4 -->
+          <tr class="product-row group transition-colors">
+            <td class="px-5 py-3.5"><input type="checkbox" class="rounded border-slate-300 accent-indigo-600"></td>
+            <td class="px-4 py-3.5">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex-shrink-0 flex items-center justify-center text-green-500 text-[10px] font-medium">IMG</div>
+                <div>
+                  <div class="font-semibold text-slate-800 text-sm">H&amp;M Basic T-Shirt</div>
+                  <div class="text-xs text-slate-400 mt-0.5">SKU: HM-BSC-TS-M</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3.5 text-slate-500 text-sm">Üst Giyim</td>
+            <td class="px-4 py-3.5 text-right font-semibold text-slate-800">149,90 ₺</td>
+            <td class="px-4 py-3.5 text-center text-slate-700 font-medium">256</td>
+            <td class="px-4 py-3.5 text-center"><span class="status-active"><span class="dot bg-emerald-500"></span>Aktif</span></td>
+            <td class="px-4 py-3.5 text-xs text-slate-400">5 saat önce</td>
+            <td class="px-5 py-3.5">
+              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onclick="showPopup()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold"><i class="fa fa-language text-xs"></i> Çeviri</button>
+                <button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"><i class="fa fa-pen-to-square text-xs"></i></button>
+                <button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><i class="fa fa-trash text-xs"></i></button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Row 5 — Pasif -->
+          <tr class="product-row group transition-colors opacity-55">
+            <td class="px-5 py-3.5"><input type="checkbox" class="rounded border-slate-300 accent-indigo-600"></td>
+            <td class="px-4 py-3.5">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-slate-200 to-slate-300 rounded-xl flex-shrink-0 flex items-center justify-center text-slate-400 text-[10px] font-medium">IMG</div>
+                <div>
+                  <div class="font-semibold text-slate-800 text-sm">Zara Trench Coat</div>
+                  <div class="text-xs text-slate-400 mt-0.5">SKU: ZR-TRC-S</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3.5 text-slate-500 text-sm">Dış Giyim</td>
+            <td class="px-4 py-3.5 text-right font-semibold text-slate-800">1.799,00 ₺</td>
+            <td class="px-4 py-3.5 text-center text-slate-700 font-medium">12</td>
+            <td class="px-4 py-3.5 text-center"><span class="status-inactive"><span class="dot bg-slate-400"></span>Pasif</span></td>
+            <td class="px-4 py-3.5 text-xs text-slate-400">1 hafta önce</td>
+            <td class="px-5 py-3.5">
+              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onclick="showPopup()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold"><i class="fa fa-language text-xs"></i> Çeviri</button>
+                <button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"><i class="fa fa-pen-to-square text-xs"></i></button>
+                <button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><i class="fa fa-trash text-xs"></i></button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Row 6 -->
+          <tr class="product-row group transition-colors">
+            <td class="px-5 py-3.5"><input type="checkbox" class="rounded border-slate-300 accent-indigo-600"></td>
+            <td class="px-4 py-3.5">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-pink-100 to-rose-200 rounded-xl flex-shrink-0 flex items-center justify-center text-pink-400 text-[10px] font-medium">IMG</div>
+                <div>
+                  <div class="font-semibold text-slate-800 text-sm">Mango Midi Elbise</div>
+                  <div class="text-xs text-slate-400 mt-0.5">SKU: MG-ELB-36</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-4 py-3.5 text-slate-500 text-sm">Elbise</td>
+            <td class="px-4 py-3.5 text-right font-semibold text-slate-800">679,90 ₺</td>
+            <td class="px-4 py-3.5 text-center text-slate-700 font-medium">34</td>
+            <td class="px-4 py-3.5 text-center"><span class="status-active"><span class="dot bg-emerald-500"></span>Aktif</span></td>
+            <td class="px-4 py-3.5 text-xs text-slate-400">Dün 09:15</td>
+            <td class="px-5 py-3.5">
+              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onclick="showPopup()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold"><i class="fa fa-language text-xs"></i> Çeviri</button>
+                <button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"><i class="fa fa-pen-to-square text-xs"></i></button>
+                <button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><i class="fa fa-trash text-xs"></i></button>
+              </div>
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      <div class="flex items-center justify-between px-5 py-3.5 border-t border-slate-100 bg-slate-50/40">
+        <div class="text-sm text-slate-500">
+          <span class="font-medium text-slate-700">1–25</span> / 1.284 ürün
+        </div>
+        <div class="flex items-center gap-1">
+          <button disabled class="w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 text-slate-300 cursor-not-allowed"><i class="fa fa-chevron-left text-xs"></i></button>
+          <button class="w-8 h-8 flex items-center justify-center rounded-xl bg-indigo-600 text-white text-sm font-semibold shadow-sm">1</button>
+          <button class="w-8 h-8 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 text-sm">2</button>
+          <button class="w-8 h-8 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 text-sm">3</button>
+          <span class="text-slate-400 text-sm px-1">…</span>
+          <button class="w-8 h-8 flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 text-sm">52</button>
+          <button class="w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100"><i class="fa fa-chevron-right text-xs"></i></button>
+        </div>
+        <select class="text-sm border border-slate-200 rounded-xl px-3 py-1.5 text-slate-600 bg-white focus:outline-none">
+          <option>25 / sayfa</option>
+          <option>50 / sayfa</option>
+          <option>100 / sayfa</option>
+        </select>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════ ÇEVİRİ POPUPI ══════════ -->
+<div id="popup" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="hidePopup()"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col" style="max-height: 88vh">
+
+    <!-- Header -->
+    <div class="flex items-start justify-between px-6 py-5 border-b border-slate-100 flex-shrink-0">
+      <div>
+        <h2 class="text-lg font-bold text-slate-900">Çeviri Yönetimi</h2>
+        <p class="text-sm text-slate-400 mt-0.5">Nike Air Max 270 &middot; Türkçe kaynak alınarak düzenlenir</p>
+      </div>
+      <button onclick="hidePopup()" class="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors mt-0.5 flex-shrink-0">
+        <i class="fa fa-xmark text-base"></i>
+      </button>
+    </div>
+
+    <!-- Lang selector -->
+    <div class="px-6 pt-5 pb-0 flex-shrink-0">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-xs text-slate-400 font-medium mr-1 flex-shrink-0">Hedef Dil:</span>
+        <button onclick="selectLang(this)" class="lang-pill active">🇬🇧 İngilizce</button>
+        <button onclick="selectLang(this)" class="lang-pill">🇩🇪 Almanca</button>
+        <button onclick="selectLang(this)" class="lang-pill">🇫🇷 Fransızca</button>
+        <button onclick="selectLang(this)" class="lang-pill">🇸🇦 Arapça</button>
+        <button onclick="selectLang(this)" class="lang-pill">🇯🇵 Japonca</button>
+        <button class="lang-pill flex items-center gap-1"><i class="fa fa-plus text-xs"></i> Dil Ekle</button>
+      </div>
+      <!-- Progress bar -->
+      <div class="flex items-center gap-3 mt-4 mb-1">
+        <div class="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
+          <div class="h-full w-1/4 bg-indigo-500 rounded-full"></div>
+        </div>
+        <span class="text-xs text-slate-400 flex-shrink-0">1 / 4 alan çevrildi</span>
+      </div>
+    </div>
+
+    <!-- Grid -->
+    <div class="flex-1 overflow-y-auto px-6 pb-2">
+      <table class="w-full text-sm mt-4">
+        <thead class="sticky top-0 bg-white z-10">
+          <tr class="border-b-2 border-slate-100">
+            <th class="text-left py-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider w-1/5">Alan</th>
+            <th class="text-left py-2 pl-4 text-[11px] font-semibold text-slate-400 uppercase tracking-wider w-2/5">
+              🇹🇷 Türkçe <span class="font-normal text-indigo-400 normal-case">(kaynak)</span>
+            </th>
+            <th class="text-left py-2 pl-4 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              🇬🇧 İngilizce <span class="font-normal text-amber-500 normal-case">*zorunlu</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          <tr>
+            <td class="py-3 pr-3 align-top">
+              <div class="font-medium text-slate-700 text-sm">Ürün Adı</div>
+              <div class="text-[11px] text-slate-400">name</div>
+            </td>
+            <td class="py-3 px-4 align-top">
+              <div class="bg-slate-50 text-slate-600 text-sm rounded-xl px-3 py-2">Nike Air Max 270</div>
+            </td>
+            <td class="py-3 pl-4 align-top">
+              <input type="text" value="Nike Air Max 270" class="w-full border border-emerald-300 bg-emerald-50/30 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 focus:bg-white transition-all">
+            </td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-3 align-top">
+              <div class="font-medium text-slate-700 text-sm">Kısa Açıklama</div>
+              <div class="text-[11px] text-slate-400">short_description</div>
+            </td>
+            <td class="py-3 px-4 align-top">
+              <div class="bg-slate-50 text-slate-600 text-sm rounded-xl px-3 py-2 leading-relaxed">Hafif ve konforlu günlük spor ayakkabı. Görünmez Air yastıklama teknolojisi ile üretilmiştir.</div>
+            </td>
+            <td class="py-3 pl-4 align-top">
+              <textarea rows="2" placeholder="Çeviri girin…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 resize-none transition-all"></textarea>
+            </td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-3 align-top">
+              <div class="font-medium text-slate-700 text-sm">Açıklama</div>
+              <div class="text-[11px] text-slate-400">description</div>
+            </td>
+            <td class="py-3 px-4 align-top">
+              <div class="bg-slate-50 text-slate-600 text-sm rounded-xl px-3 py-2 leading-relaxed">Nike Air Max 270, şimdiye kadar yapılmış en büyük Air birimine sahip spor ayakkabı. Diz altından topuğa kadar uzanan hava yastığı maksimum konfor sağlar.</div>
+            </td>
+            <td class="py-3 pl-4 align-top">
+              <textarea rows="3" placeholder="Çeviri girin…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 resize-none transition-all"></textarea>
+            </td>
+          </tr>
+          <tr>
+            <td class="py-3 pr-3 align-top">
+              <div class="font-medium text-slate-700 text-sm">SEO Başlık</div>
+              <div class="text-[11px] text-slate-400">seo_title</div>
+            </td>
+            <td class="py-3 px-4 align-top">
+              <div class="bg-slate-50 text-slate-600 text-sm rounded-xl px-3 py-2">Nike Air Max 270 | Erkek Spor Ayakkabı</div>
+            </td>
+            <td class="py-3 pl-4 align-top">
+              <input type="text" placeholder="Çeviri girin…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all">
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex-shrink-0">
+      <div class="text-xs text-slate-400 flex items-center gap-1.5">
+        <i class="fa fa-keyboard"></i> <kbd class="bg-white border border-slate-200 rounded px-1 text-[10px]">Esc</kbd> kapat &nbsp;·&nbsp; <kbd class="bg-white border border-slate-200 rounded px-1 text-[10px]">Ctrl+S</kbd> kaydet
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="hidePopup()" class="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors">İptal</button>
+        <button class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-200">
+          <i class="fa fa-check mr-1.5 text-xs"></i> Çevirileri Kaydet
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Demo hint -->
+<div id="hint" class="fixed bottom-6 right-6 bg-slate-900 text-white text-sm px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 z-40">
+  <i class="fa fa-circle-info text-indigo-400"></i>
+  <span>Satır üzerine gelip <strong>Çeviri</strong> butonuna tıklayın</span>
+  <button onclick="document.getElementById('hint').remove()" class="text-white/40 hover:text-white ml-1"><i class="fa fa-xmark"></i></button>
+</div>
+
+<script>
+  let collapsed = false;
+  function toggleSidebar() {
+    collapsed = !collapsed;
+    document.getElementById('sidebar').classList.toggle('collapsed', collapsed);
+    document.getElementById('main').classList.toggle('expanded', collapsed);
+    const ct = document.getElementById('collapsed-toggle');
+    if (collapsed) { ct.classList.remove('hidden'); ct.classList.add('flex'); }
+    else { ct.classList.add('hidden'); ct.classList.remove('flex'); }
+  }
+  function showPopup() {
+    document.getElementById('popup').classList.remove('hidden');
+    document.getElementById('hint').style.display = 'none';
+  }
+  function hidePopup() { document.getElementById('popup').classList.add('hidden'); }
+  function selectLang(btn) {
+    document.querySelectorAll('.lang-pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') hidePopup(); });
+</script>
+</body>
+</html>

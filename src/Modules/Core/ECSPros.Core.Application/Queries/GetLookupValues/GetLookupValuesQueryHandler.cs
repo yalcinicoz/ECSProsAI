@@ -30,7 +30,7 @@ public class GetLookupValuesQueryHandler : IRequestHandler<GetLookupValuesQuery,
 
         var items = await query
             .OrderBy(v => v.SortOrder)
-            .Select(v => new LookupValueDto(v.Id, v.Code, v.NameI18n, v.Color, v.Icon, v.IsDefault, v.IsActive, v.SortOrder))
+            .Select(v => new LookupValueDto(v.Id, v.NameI18n, v.Color, v.Icon, v.IsDefault, v.IsActive, v.SortOrder))
             .ToListAsync(cancellationToken);
 
         return Result.Success(items);

@@ -6,6 +6,7 @@ public class ProductVariant : BaseEntity
 {
     public Guid ProductId { get; set; }
     public string Sku { get; set; } = string.Empty;
+    public string? Barcode { get; set; }
     public decimal BasePrice { get; set; }
     public decimal? BaseCost { get; set; }
     public bool IsActive { get; set; } = true;

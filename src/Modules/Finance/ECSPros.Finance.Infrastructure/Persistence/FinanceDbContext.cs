@@ -9,7 +9,6 @@ public class FinanceDbContext : DbContext, IFinanceDbContext
 {
     public FinanceDbContext(DbContextOptions<FinanceDbContext> options) : base(options) { }
 
-    public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<SupplierInvoice> SupplierInvoices => Set<SupplierInvoice>();
     public DbSet<SupplierInvoiceItem> SupplierInvoiceItems => Set<SupplierInvoiceItem>();
     public DbSet<SupplierDelivery> SupplierDeliveries => Set<SupplierDelivery>();

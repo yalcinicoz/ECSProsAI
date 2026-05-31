@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ECSPros.Finance.Application.Commands.CreateSupplierPayment;
 
 public record CreateSupplierPaymentCommand(
-    Guid SupplierId,
+    Guid CurrentAccountId,
     DateOnly PaymentDate,
     decimal Amount,
     string PaymentType,
@@ -22,15 +22,12 @@ public class CreateSupplierPaymentCommandHandler : IRequestHandler<CreateSupplie
 
     public async Task<Result<Guid>> Handle(CreateSupplierPaymentCommand request, CancellationToken ct)
     {
-        var supplierExists = await _db.Suppliers.AnyAsync(s => s.Id == request.SupplierId, ct);
-        if (!supplierExists)
-            return Result.Failure<Guid>("Tedarikçi bulunamadı.");
 
         if (request.Amount <= 0)
             return Result.Failure<Guid>("Ödeme tutarı sıfırdan büyük olmalıdır.");
 
         var lastTx = await _db.SupplierTransactions
-            .Where(t => t.SupplierId == request.SupplierId)
+            .Where(t => t.CurrentAccountId == request.CurrentAccountId)
             .OrderByDescending(t => t.CreatedAt)
             .Select(t => t.BalanceAfter)
             .FirstOrDefaultAsync(ct);
@@ -40,7 +37,7 @@ public class CreateSupplierPaymentCommandHandler : IRequestHandler<CreateSupplie
         var payment = new SupplierPayment
         {
             Id = Guid.NewGuid(),
-            SupplierId = request.SupplierId,
+            CurrentAccountId = request.CurrentAccountId,
             PaymentDate = request.PaymentDate,
             Amount = request.Amount,
             PaymentType = request.PaymentType,
@@ -52,7 +49,7 @@ public class CreateSupplierPaymentCommandHandler : IRequestHandler<CreateSupplie
         var transaction = new SupplierTransaction
         {
             Id = Guid.NewGuid(),
-            SupplierId = request.SupplierId,
+            CurrentAccountId = request.CurrentAccountId,
             TransactionType = "payment",
             Debit = 0,
             Credit = request.Amount,

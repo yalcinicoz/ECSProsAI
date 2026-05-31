@@ -37,9 +37,6 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
         if (!toExists)
             return Result.Failure<Guid>("Hedef depo bulunamadı.");
 
-        if (!request.Items.Any())
-            return Result.Failure<Guid>("Transfer için en az bir ürün eklenmelidir.");
-
         var count = await _db.TransferRequests.CountAsync(ct);
         var code = $"TR-{DateTime.UtcNow:yyyyMMdd}-{(count + 1):D4}";
 

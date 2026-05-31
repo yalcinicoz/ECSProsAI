@@ -1,12 +1,8 @@
-using ECSPros.Finance.Application.Commands.CreateSupplier;
 using ECSPros.Finance.Application.Commands.CreateSupplierDelivery;
 using ECSPros.Finance.Application.Commands.CreateSupplierInvoice;
 using ECSPros.Finance.Application.Commands.CreateSupplierPayment;
 using ECSPros.Finance.Application.Commands.CreateSupplierReturn;
-using ECSPros.Finance.Application.Commands.UpdateSupplier;
-using ECSPros.Finance.Application.Queries.GetSupplierDetail;
 using ECSPros.Finance.Application.Queries.GetSupplierInvoices;
-using ECSPros.Finance.Application.Queries.GetSuppliers;
 using ECSPros.Finance.Application.Queries.GetSupplierTransactions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -26,87 +22,18 @@ public class FinanceController : ControllerBase
         _mediator = mediator;
     }
 
-    /// <summary>Tedarikçileri listeler.</summary>
-    [HttpGet("suppliers")]
-    public async Task<IActionResult> GetSuppliers(
-        [FromQuery] string? search,
-        [FromQuery] bool activeOnly = true,
-        CancellationToken ct = default)
-    {
-        var result = await _mediator.Send(new GetSuppliersQuery(search, activeOnly), ct);
-        return Ok(new { success = true, data = result.Value });
-    }
-
-    /// <summary>Tedarikçi detayını döner.</summary>
-    [HttpGet("suppliers/{id:guid}")]
-    public async Task<IActionResult> GetSupplierDetail(Guid id, CancellationToken ct)
-    {
-        var result = await _mediator.Send(new GetSupplierDetailQuery(id), ct);
-        if (result.IsFailure)
-            return NotFound(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = result.Value });
-    }
-
-    /// <summary>Yeni tedarikçi oluşturur.</summary>
-    [HttpPost("suppliers")]
-    public async Task<IActionResult> CreateSupplier([FromBody] CreateSupplierRequest request, CancellationToken ct)
-    {
-        var result = await _mediator.Send(new CreateSupplierCommand(
-            request.Code,
-            request.Name,
-            request.TaxOffice,
-            request.TaxNumber,
-            request.Phone,
-            request.Email,
-            request.Address,
-            request.ContactPerson,
-            request.Notes), ct);
-
-        if (result.IsFailure)
-            return BadRequest(new { success = false, error = result.Error });
-
-        return Created($"/api/finance/suppliers", new { success = true, data = new { id = result.Value } });
-    }
-
-    /// <summary>Tedarikçi günceller.</summary>
-    [HttpPut("suppliers/{id:guid}")]
-    public async Task<IActionResult> UpdateSupplier(Guid id, [FromBody] UpdateSupplierRequest request, CancellationToken ct)
-    {
-        var userIdClaim = User.FindFirst("sub")?.Value;
-        if (!Guid.TryParse(userIdClaim, out var userId))
-            return Unauthorized();
-
-        var result = await _mediator.Send(new UpdateSupplierCommand(
-            id,
-            request.Name,
-            request.TaxOffice,
-            request.TaxNumber,
-            request.Phone,
-            request.Email,
-            request.Address,
-            request.ContactPerson,
-            request.Notes,
-            request.IsActive,
-            userId), ct);
-
-        if (result.IsFailure)
-            return BadRequest(new { success = false, error = result.Error });
-
-        return Ok(new { success = true });
-    }
-
     // ─── Supplier Invoices ─────────────────────────────────────────────────────
 
     /// <summary>Tedarikçi faturalarını listeler.</summary>
     [HttpGet("supplier-invoices")]
     public async Task<IActionResult> GetSupplierInvoices(
-        [FromQuery] Guid? supplierId,
+        [FromQuery] Guid? currentAccountId,
         [FromQuery] string? status,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetSupplierInvoicesQuery(supplierId, status, page, pageSize), ct);
+        var result = await _mediator.Send(new GetSupplierInvoicesQuery(currentAccountId, status, page, pageSize), ct);
         return Ok(new { success = true, data = result.Value });
     }
 
@@ -118,7 +45,7 @@ public class FinanceController : ControllerBase
             i.VariantId, i.Description, i.Quantity, i.UnitPrice, i.DiscountRate, i.TaxRate)).ToList();
 
         var result = await _mediator.Send(new CreateSupplierInvoiceCommand(
-            request.SupplierId, request.InvoiceNumber, request.InvoiceDate,
+            request.CurrentAccountId, request.InvoiceNumber, request.InvoiceDate,
             request.DueDate, request.Notes, items), ct);
 
         if (result.IsFailure)
@@ -137,7 +64,7 @@ public class FinanceController : ControllerBase
             i.VariantId, i.ExpectedQuantity, i.LocationId)).ToList();
 
         var result = await _mediator.Send(new CreateSupplierDeliveryCommand(
-            request.SupplierId, request.InvoiceId, request.DeliveryDate,
+            request.CurrentAccountId, request.InvoiceId, request.DeliveryDate,
             request.DeliveryNoteNumber, request.WarehouseId, request.Notes, items), ct);
 
         if (result.IsFailure)
@@ -153,7 +80,7 @@ public class FinanceController : ControllerBase
     public async Task<IActionResult> CreateSupplierPayment([FromBody] CreateSupplierPaymentRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new CreateSupplierPaymentCommand(
-            request.SupplierId, request.PaymentDate, request.Amount,
+            request.CurrentAccountId, request.PaymentDate, request.Amount,
             request.PaymentType, request.Notes), ct);
 
         if (result.IsFailure)
@@ -172,7 +99,7 @@ public class FinanceController : ControllerBase
             i.VariantId, i.Quantity, i.UnitPrice, i.TaxRate)).ToList();
 
         var result = await _mediator.Send(new CreateSupplierReturnCommand(
-            request.SupplierId, request.ReturnDate, request.Reason, request.Notes, items), ct);
+            request.CurrentAccountId, request.ReturnDate, request.Reason, request.Notes, items), ct);
 
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
@@ -180,10 +107,10 @@ public class FinanceController : ControllerBase
         return Created("/api/finance/supplier-returns", new { success = true, data = new { id = result.Value } });
     }
 
-    // ─── Supplier Transactions (Cari Hesap) ────────────────────────────────────
+    // ─── Transactions ──────────────────────────────────────────────────────────
 
-    /// <summary>Tedarikçi cari hesap hareketleri.</summary>
-    [HttpGet("suppliers/{id:guid}/transactions")]
+    /// <summary>Cari hesap bazında tedarikçi hareketleri.</summary>
+    [HttpGet("current-accounts/{id:guid}/transactions")]
     public async Task<IActionResult> GetSupplierTransactions(
         Guid id,
         [FromQuery] int page = 1,
@@ -195,30 +122,8 @@ public class FinanceController : ControllerBase
     }
 }
 
-public record CreateSupplierRequest(
-    string Code,
-    string Name,
-    string? TaxOffice,
-    string? TaxNumber,
-    string? Phone,
-    string? Email,
-    string? Address,
-    string? ContactPerson,
-    string? Notes);
-
-public record UpdateSupplierRequest(
-    string Name,
-    string? TaxOffice,
-    string? TaxNumber,
-    string? Phone,
-    string? Email,
-    string? Address,
-    string? ContactPerson,
-    string? Notes,
-    bool IsActive);
-
 public record CreateSupplierInvoiceRequest(
-    Guid SupplierId,
+    Guid CurrentAccountId,
     string InvoiceNumber,
     DateOnly InvoiceDate,
     DateOnly? DueDate,
@@ -234,7 +139,7 @@ public record InvoiceItemRequest(
     decimal TaxRate = 0);
 
 public record CreateSupplierDeliveryRequest(
-    Guid SupplierId,
+    Guid CurrentAccountId,
     Guid? InvoiceId,
     DateOnly DeliveryDate,
     string? DeliveryNoteNumber,
@@ -245,14 +150,14 @@ public record CreateSupplierDeliveryRequest(
 public record DeliveryItemRequest(Guid VariantId, int ExpectedQuantity, Guid? LocationId);
 
 public record CreateSupplierPaymentRequest(
-    Guid SupplierId,
+    Guid CurrentAccountId,
     DateOnly PaymentDate,
     decimal Amount,
     string PaymentType,
     string? Notes);
 
 public record CreateSupplierReturnRequest(
-    Guid SupplierId,
+    Guid CurrentAccountId,
     DateOnly ReturnDate,
     string Reason,
     string? Notes,

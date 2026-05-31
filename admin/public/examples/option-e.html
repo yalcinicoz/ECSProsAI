@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ECSPros — Seçenek E: Detay Sayfası (2 Kolon + Sekme Çeviri)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    #sidebar { width: 240px; transition: width .28s cubic-bezier(.4,0,.2,1); overflow: hidden; white-space: nowrap; }
+    #sidebar.collapsed { width: 60px; }
+    #sidebar.collapsed .hide-col { display: none !important; }
+    #sidebar.collapsed .nav-link { justify-content: center; padding: 9px 8px; }
+    #main { margin-left: 240px; transition: margin-left .28s cubic-bezier(.4,0,.2,1); }
+    #main.expanded { margin-left: 60px; }
+    .nav-link { display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13px;font-weight:500;color:rgba(255,255,255,.58);text-decoration:none;transition:all .15s; }
+    .nav-link:hover { background:rgba(255,255,255,.08);color:rgba(255,255,255,.9); }
+    .nav-link.active { background:rgba(5,150,105,.2);color:#6ee7b7;box-shadow:inset 3px 0 0 #34d399;padding-left:7px; }
+    .sec-label { font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.25);padding:12px 10px 3px; }
+
+    /* Tabs */
+    .lang-tab { padding:8px 16px;font-size:13px;font-weight:500;border-bottom:2px solid transparent;color:#64748b;cursor:pointer;transition:all .15s;white-space:nowrap; }
+    .lang-tab:hover { color:#0f172a; }
+    .lang-tab.active { color:#059669;border-bottom-color:#059669;font-weight:600; }
+    .lang-tab.incomplete { position:relative; }
+    .lang-tab.incomplete::after { content:'';position:absolute;top:8px;right:8px;width:6px;height:6px;background:#f59e0b;border-radius:50%; }
+
+    /* Section tabs */
+    .section-tab { padding:9px 14px;font-size:13px;font-weight:500;border-bottom:2px solid transparent;color:#64748b;cursor:pointer;transition:all .15s; }
+    .section-tab:hover { color:#0f172a; }
+    .section-tab.active { color:#0f172a;border-bottom-color:#0f172a;font-weight:600; }
+
+    /* Form styles */
+    .form-label { font-size:12.5px;font-weight:600;color:#374151;margin-bottom:6px;display:block; }
+    .form-input { width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:9px 13px;font-size:14px;color:#0f172a;background:white;outline:none;transition:border-color .15s,box-shadow .15s; }
+    .form-input:focus { border-color:#059669;box-shadow:0 0 0 3px rgba(5,150,105,.1); }
+    .form-input:disabled { background:#f8fafc;color:#94a3b8; }
+    .form-select { width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:9px 13px;font-size:14px;color:#0f172a;background:white;outline:none;transition:border-color .15s; }
+    .form-select:focus { border-color:#059669;box-shadow:0 0 0 3px rgba(5,150,105,.1); }
+    .form-textarea { width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:9px 13px;font-size:14px;color:#0f172a;background:white;outline:none;resize:vertical;min-height:90px;transition:border-color .15s; }
+    .form-textarea:focus { border-color:#059669;box-shadow:0 0 0 3px rgba(5,150,105,.1); }
+
+    /* Command Palette */
+    #cmd-overlay { display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.6);backdrop-filter:blur(6px);align-items:flex-start;justify-content:center;padding-top:80px; }
+    #cmd-overlay.open { display:flex; }
+    #cmd-box { background:#fff;border-radius:16px;width:100%;max-width:580px;box-shadow:0 25px 60px rgba(0,0,0,.3);border:1px solid rgba(0,0,0,.08);overflow:hidden; }
+    #cmd-input { width:100%;padding:16px 20px;font-size:16px;border:none;outline:none;color:#0f172a;background:transparent; }
+    .cmd-result { display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:background .1s; }
+    .cmd-result:hover, .cmd-result.selected { background:#f1f5f9; }
+    .cmd-result-icon { width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px; }
+
+    /* Translated field indicator */
+    .tr-complete { border-color:#86efac !important;background:#f0fdf4 !important; }
+    .tr-badge { display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:20px; }
+    .tr-badge.done { background:#dcfce7;color:#166534;border:1px solid #bbf7d0; }
+    .tr-badge.todo { background:#fef9c3;color:#713f12;border:1px solid #fde68a; }
+    .tr-badge.empty { background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0; }
+  </style>
+</head>
+<body class="bg-slate-100 antialiased">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<aside id="sidebar" class="fixed top-0 left-0 h-screen flex flex-col z-40" style="background:#0f2e24">
+
+  <div class="flex items-center justify-between px-4 py-4 border-b border-white/10 flex-shrink-0">
+    <div class="flex items-center gap-2.5">
+      <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#059669">
+        <span class="text-white font-black text-sm">E</span>
+      </div>
+      <span class="hide-col text-white font-bold text-base tracking-tight">ECSPros</span>
+    </div>
+    <button onclick="toggleSidebar()" class="hide-col w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 text-white/30 hover:text-white/70 flex-shrink-0">
+      <i class="fa fa-bars-staggered text-sm"></i>
+    </button>
+  </div>
+
+  <nav class="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
+    <div class="sec-label hide-col">Genel</div>
+    <a class="nav-link" href="#"><i class="fa fa-gauge w-4 text-center flex-shrink-0"></i><span class="hide-col">Dashboard</span></a>
+    <div class="sec-label hide-col">Katalog</div>
+    <a class="nav-link active" href="#"><i class="fa fa-box w-4 text-center flex-shrink-0"></i><span class="hide-col">Ürünler</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-sitemap w-4 text-center flex-shrink-0"></i><span class="hide-col">Kategoriler</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-copyright w-4 text-center flex-shrink-0"></i><span class="hide-col">Markalar</span></a>
+    <div class="sec-label hide-col">Satış</div>
+    <a class="nav-link" href="#"><i class="fa fa-shopping-bag w-4 text-center flex-shrink-0"></i><span class="hide-col">Siparişler</span><span class="hide-col ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">14</span></a>
+    <a class="nav-link" href="#"><i class="fa fa-rotate-left w-4 text-center flex-shrink-0"></i><span class="hide-col">İadeler</span></a>
+    <div class="sec-label hide-col">Müşteriler</div>
+    <a class="nav-link" href="#"><i class="fa fa-users w-4 text-center flex-shrink-0"></i><span class="hide-col">Üyeler</span></a>
+    <div class="sec-label hide-col">Sistem</div>
+    <a class="nav-link" href="#"><i class="fa fa-gear w-4 text-center flex-shrink-0"></i><span class="hide-col">Ayarlar</span></a>
+  </nav>
+
+  <div class="border-t border-white/10 px-3 py-3 flex items-center gap-3 flex-shrink-0">
+    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style="background:#059669">AY</div>
+    <div class="hide-col min-w-0 flex-1">
+      <div class="text-white text-sm font-medium truncate">Ahmet Yılmaz</div>
+      <div class="text-white/35 text-xs">Süper Admin</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════ MAIN ══════════ -->
+<div id="main" class="min-h-screen flex flex-col">
+
+  <!-- Topbar -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200/80 h-14 flex items-center px-6 gap-4">
+    <button id="ctoggle" onclick="toggleSidebar()" class="hidden w-8 h-8 items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 mr-1">
+      <i class="fa fa-bars text-sm"></i>
+    </button>
+    <nav class="flex items-center gap-1.5 text-sm">
+      <span class="text-slate-400 hover:text-slate-600 cursor-pointer">Katalog</span>
+      <i class="fa fa-chevron-right text-[9px] text-slate-300"></i>
+      <span class="text-slate-400 hover:text-slate-600 cursor-pointer">Ürünler</span>
+      <i class="fa fa-chevron-right text-[9px] text-slate-300"></i>
+      <span class="font-semibold text-slate-800">Nike Air Max 270</span>
+    </nav>
+    <div class="ml-auto flex items-center gap-2">
+      <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-medium hover:bg-slate-50">
+        <i class="fa fa-star text-amber-400 text-xs"></i> Favorilere Ekle
+      </button>
+      <button class="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-500">
+        <i class="fa fa-bell text-sm"></i>
+        <span class="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Page header -->
+  <div class="bg-white border-b border-slate-200 px-6 py-4">
+    <div class="flex items-start justify-between">
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 bg-gradient-to-br from-slate-200 to-slate-300 rounded-2xl flex items-center justify-center text-slate-400 text-xs font-medium flex-shrink-0">IMG</div>
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-xl font-bold text-slate-900">Nike Air Max 270</h1>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-lg border border-emerald-200">
+              <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Aktif
+            </span>
+          </div>
+          <p class="text-sm text-slate-400 mt-0.5">SKU: NK-AM270-42 &bull; Ayakkabı &bull; Nike &bull; 3 varyant</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-medium hover:bg-slate-50 shadow-sm">
+          <i class="fa fa-eye text-xs text-slate-400"></i> Önizle
+        </button>
+        <button class="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold shadow-md" style="background:#059669;box-shadow:0 4px 12px #05966930">
+          <i class="fa fa-floppy-disk text-xs"></i> Kaydet
+          <kbd class="bg-white/20 text-white/80 text-[9px] font-mono px-1 py-0.5 rounded">Ctrl+S</kbd>
+        </button>
+      </div>
+    </div>
+
+    <!-- Section tabs -->
+    <div class="flex items-center gap-0 mt-4 border-b border-slate-100 -mb-px">
+      <button onclick="setSection(this,'general')" class="section-tab active">Genel Bilgiler</button>
+      <button onclick="setSection(this,'variants')" class="section-tab">Varyantlar (3)</button>
+      <button onclick="setSection(this,'stock')" class="section-tab">Stok</button>
+      <button onclick="setSection(this,'media')" class="section-tab">Görseller</button>
+      <button onclick="setSection(this,'seo')" class="section-tab">SEO</button>
+    </div>
+  </div>
+
+  <!-- ══ 2-COLUMN DETAIL LAYOUT ══ -->
+  <main class="flex-1 p-6">
+    <div class="flex gap-6 max-w-7xl">
+
+      <!-- LEFT: Main content (2/3) -->
+      <div class="flex-1 space-y-5 min-w-0">
+
+        <!-- Basic info card -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-sm font-bold text-slate-700">Temel Bilgiler</h2>
+          </div>
+          <div class="p-5 space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="form-label">Ürün Kodu (SKU)</label>
+                <input type="text" value="NK-AM270-42" class="form-input" disabled>
+              </div>
+              <div>
+                <label class="form-label">Barkod</label>
+                <input type="text" value="0195866085967" class="form-input">
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="form-label">Kategori</label>
+                <select class="form-select">
+                  <option>Ayakkabı</option>
+                  <option>Üst Giyim</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label">Marka</label>
+                <select class="form-select">
+                  <option selected>Nike</option>
+                  <option>Adidas</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pricing card -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-slate-100">
+            <h2 class="text-sm font-bold text-slate-700">Fiyatlandırma</h2>
+          </div>
+          <div class="p-5">
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="form-label">Liste Fiyatı (₺)</label>
+                <input type="text" value="1.299,90" class="form-input">
+              </div>
+              <div>
+                <label class="form-label">KDV (%)</label>
+                <select class="form-select">
+                  <option>%10</option>
+                  <option selected>%18</option>
+                  <option>%20</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label">İndirimli Fiyat (₺)</label>
+                <input type="text" placeholder="—" class="form-input">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- I18n / Translation card -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-sm font-bold text-slate-700">Çok Dilli İçerik</h2>
+            <div class="flex items-center gap-2 text-xs text-slate-400">
+              <span class="tr-badge done"><i class="fa fa-check text-[9px]"></i> TR</span>
+              <span class="tr-badge done"><i class="fa fa-check text-[9px]"></i> EN</span>
+              <span class="tr-badge todo"><i class="fa fa-clock text-[9px]"></i> DE</span>
+              <span class="tr-badge empty">AR</span>
+            </div>
+          </div>
+
+          <!-- Language tabs -->
+          <div class="flex items-center border-b border-slate-100 px-5 bg-slate-50/50">
+            <button onclick="selectLang(this,'tr')" class="lang-tab active">🇹🇷 Türkçe</button>
+            <button onclick="selectLang(this,'en')" class="lang-tab">🇬🇧 İngilizce</button>
+            <button onclick="selectLang(this,'de')" class="lang-tab incomplete">🇩🇪 Almanca</button>
+            <button onclick="selectLang(this,'ar')" class="lang-tab">🇸🇦 Arapça</button>
+            <div class="ml-auto py-2">
+              <button class="text-xs text-slate-400 hover:text-emerald-600 font-medium flex items-center gap-1">
+                <i class="fa fa-wand-magic-sparkles text-xs"></i> AI ile Çevir
+              </button>
+            </div>
+          </div>
+
+          <div id="lang-panel-tr" class="lang-panel p-5 space-y-4">
+            <div>
+              <label class="form-label">Ürün Adı <span class="text-slate-400 font-normal">(name)</span></label>
+              <input type="text" value="Nike Air Max 270" class="form-input tr-complete">
+            </div>
+            <div>
+              <label class="form-label">Kısa Açıklama <span class="text-slate-400 font-normal">(short_description)</span></label>
+              <textarea class="form-textarea tr-complete">Hafif ve konforlu günlük spor ayakkabı. Görünmez Air yastıklama teknolojisi ile üretilmiştir.</textarea>
+            </div>
+            <div>
+              <label class="form-label">Açıklama <span class="text-slate-400 font-normal">(description)</span></label>
+              <textarea class="form-textarea tr-complete" style="min-height:120px">Nike Air Max 270, şimdiye kadar yapılmış en büyük Air birimine sahip spor ayakkabı. Diz altından topuğa kadar uzanan hava yastığı maksimum konfor sağlar. Modern tasarım ve üstün malzeme kalitesiyle günlük kullanım için ideal.</textarea>
+            </div>
+          </div>
+
+          <div id="lang-panel-en" class="lang-panel hidden p-5 space-y-4">
+            <div>
+              <label class="form-label">Product Name <span class="text-slate-400 font-normal">(name)</span></label>
+              <input type="text" value="Nike Air Max 270" class="form-input tr-complete">
+            </div>
+            <div>
+              <label class="form-label">Short Description <span class="text-slate-400 font-normal">(short_description)</span></label>
+              <textarea class="form-textarea tr-complete">Lightweight and comfortable everyday sneaker. Made with invisible Air cushioning technology.</textarea>
+            </div>
+            <div>
+              <label class="form-label">Description <span class="text-slate-400 font-normal">(description)</span></label>
+              <textarea class="form-textarea tr-complete" style="min-height:120px">The Nike Air Max 270 features Nike's biggest Air unit yet for unprecedented underfoot cushioning comfort. The heel unit extends from the heel to the midfoot, allowing you to experience maximum heel-to-toe cushioning.</textarea>
+            </div>
+          </div>
+
+          <div id="lang-panel-de" class="lang-panel hidden p-5 space-y-4">
+            <div class="flex items-center gap-2 p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-700 mb-2">
+              <i class="fa fa-triangle-exclamation text-amber-500"></i>
+              Bu dil için çeviriler eksik. Türkçe metin kaynak olarak kullanılmaktadır.
+            </div>
+            <div>
+              <label class="form-label">Produktname <span class="text-slate-400 font-normal">(name)</span></label>
+              <input type="text" placeholder="Çeviri girin…" class="form-input">
+            </div>
+            <div>
+              <label class="form-label">Kurzbeschreibung <span class="text-slate-400 font-normal">(short_description)</span></label>
+              <textarea class="form-textarea" placeholder="Çeviri girin…"></textarea>
+            </div>
+            <div>
+              <label class="form-label">Beschreibung <span class="text-slate-400 font-normal">(description)</span></label>
+              <textarea class="form-textarea" style="min-height:120px" placeholder="Çeviri girin…"></textarea>
+            </div>
+          </div>
+
+          <div id="lang-panel-ar" class="lang-panel hidden p-5 space-y-4">
+            <div class="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 mb-2">
+              <i class="fa fa-info-circle text-slate-400"></i>
+              Arapça henüz eklenmemiş. Sistem ayarlarından dil ekleyebilirsiniz.
+            </div>
+            <div>
+              <label class="form-label">اسم المنتج <span class="text-slate-400 font-normal">(name)</span></label>
+              <input type="text" placeholder="الترجمة..." class="form-input" dir="rtl">
+            </div>
+            <div>
+              <label class="form-label">وصف قصير <span class="text-slate-400 font-normal">(short_description)</span></label>
+              <textarea class="form-textarea" placeholder="الترجمة..." dir="rtl"></textarea>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: Metadata (1/3) -->
+      <div class="w-72 flex-shrink-0 space-y-4">
+
+        <!-- Status card -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-4 py-3.5 border-b border-slate-100">
+            <h3 class="text-sm font-bold text-slate-700">Durum & Görünürlük</h3>
+          </div>
+          <div class="p-4 space-y-3">
+            <div>
+              <label class="form-label text-xs">Yayın Durumu</label>
+              <select class="form-select text-sm">
+                <option value="active" selected>🟢 Aktif — Yayında</option>
+                <option value="inactive">⚪ Pasif — Gizli</option>
+                <option value="draft">📝 Taslak</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label text-xs">Mağaza Kanalları</label>
+              <div class="space-y-2">
+                <label class="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                  <input type="checkbox" checked class="accent-emerald-600 rounded"> Web Sitesi
+                </label>
+                <label class="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                  <input type="checkbox" checked class="accent-emerald-600 rounded"> Mobil Uygulama
+                </label>
+                <label class="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                  <input type="checkbox" class="accent-emerald-600 rounded"> POS
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metadata card -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-4 py-3.5 border-b border-slate-100">
+            <h3 class="text-sm font-bold text-slate-700">Kayıt Bilgisi</h3>
+          </div>
+          <div class="p-4 space-y-3">
+            <div class="flex items-start justify-between">
+              <span class="text-xs text-slate-400">Oluşturulma</span>
+              <div class="text-right">
+                <div class="text-xs font-medium text-slate-700">12 Mar 2025</div>
+                <div class="text-[11px] text-slate-400">14:22</div>
+              </div>
+            </div>
+            <div class="flex items-start justify-between">
+              <span class="text-xs text-slate-400">Oluşturan</span>
+              <div class="text-right flex items-center gap-1.5">
+                <div class="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white text-[9px] font-bold">AY</div>
+                <div class="text-xs font-medium text-slate-700">Ahmet Y.</div>
+              </div>
+            </div>
+            <div class="h-px bg-slate-100"></div>
+            <div class="flex items-start justify-between">
+              <span class="text-xs text-slate-400">Son Güncelleme</span>
+              <div class="text-right">
+                <div class="text-xs font-medium text-slate-700">12 Mar 2026</div>
+                <div class="text-[11px] text-slate-400">2 saat önce</div>
+              </div>
+            </div>
+            <div class="flex items-start justify-between">
+              <span class="text-xs text-slate-400">Güncelleyen</span>
+              <div class="text-right flex items-center gap-1.5">
+                <div class="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-white text-[9px] font-bold">AY</div>
+                <div class="text-xs font-medium text-slate-700">Ahmet Y.</div>
+              </div>
+            </div>
+            <div class="h-px bg-slate-100"></div>
+            <div class="flex items-start justify-between">
+              <span class="text-xs text-slate-400">Ürün ID</span>
+              <div class="text-right">
+                <div class="text-[11px] font-mono text-slate-500 truncate max-w-28" title="3f4a8b2c-...">3f4a8b2c-…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick stats -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-4 py-3.5 border-b border-slate-100">
+            <h3 class="text-sm font-bold text-slate-700">Hızlı Özet</h3>
+          </div>
+          <div class="p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-500">Toplam Stok</span>
+              <span class="text-sm font-bold text-slate-800">45 adet</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-500">Rezerve</span>
+              <span class="text-sm font-semibold text-amber-600">3 adet</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-500">Son 30 gün satış</span>
+              <span class="text-sm font-bold text-emerald-600">12 adet</span>
+            </div>
+            <div class="h-px bg-slate-100"></div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-500">Toplam Satış Tutarı</span>
+              <span class="text-sm font-bold text-slate-800">15.599 ₺</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tags -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-4 py-3.5 border-b border-slate-100">
+            <h3 class="text-sm font-bold text-slate-700">Etiketler</h3>
+          </div>
+          <div class="p-4">
+            <div class="flex flex-wrap gap-1.5 mb-3">
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-medium rounded-lg">spor <button class="opacity-50 hover:opacity-100">×</button></span>
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-medium rounded-lg">nike <button class="opacity-50 hover:opacity-100">×</button></span>
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-medium rounded-lg">air-max <button class="opacity-50 hover:opacity-100">×</button></span>
+            </div>
+            <input type="text" placeholder="Etiket ekle…" class="form-input text-xs py-2">
+          </div>
+        </div>
+
+        <!-- Danger zone -->
+        <div class="bg-white rounded-2xl border border-red-100 overflow-hidden">
+          <div class="px-4 py-3.5 border-b border-red-100">
+            <h3 class="text-sm font-bold text-red-600">Tehlikeli Alan</h3>
+          </div>
+          <div class="p-4 space-y-2">
+            <button class="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 border border-slate-200 transition-colors">
+              <i class="fa fa-eye-slash text-xs text-slate-400"></i> Pasife Al
+            </button>
+            <button class="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 border border-red-200 transition-colors">
+              <i class="fa fa-trash text-xs"></i> Ürünü Sil
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ══════════ COMMAND PALETTE ══════════ -->
+<div id="cmd-overlay" onclick="if(event.target===this)closePalette()">
+  <div id="cmd-box">
+    <div class="flex items-center gap-3 px-5 border-b border-slate-100">
+      <i class="fa fa-search text-slate-400 text-sm flex-shrink-0"></i>
+      <input id="cmd-input" placeholder="Sipariş, ürün, müşteri ara… veya komut girin" autocomplete="off">
+      <kbd class="flex-shrink-0 bg-slate-100 text-slate-400 text-[10px] font-mono px-1.5 py-0.5 rounded border border-slate-200">ESC</kbd>
+    </div>
+    <div class="py-2 max-h-72 overflow-y-auto">
+      <div class="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hızlı Erişim</div>
+      <div class="cmd-result selected">
+        <div class="cmd-result-icon bg-indigo-50"><i class="fa fa-box text-indigo-500"></i></div>
+        <div class="flex-1"><div class="text-sm font-semibold text-slate-800">Nike Air Max 270</div><div class="text-xs text-slate-400">SKU: NK-AM270-42 &bull; Ayakkabı</div></div>
+        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-200">Ürün</span>
+      </div>
+      <div class="cmd-result">
+        <div class="cmd-result-icon bg-emerald-50"><i class="fa fa-shopping-bag text-emerald-500"></i></div>
+        <div class="flex-1"><div class="text-sm font-semibold text-slate-800">Sipariş #ORD-2024-00892</div><div class="text-xs text-slate-400">Ahmet Yılmaz &bull; 1.299,90 ₺</div></div>
+        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Sipariş</span>
+      </div>
+      <div class="h-px bg-slate-100 mx-4 my-1"></div>
+      <div class="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sayfalar</div>
+      <div class="cmd-result">
+        <div class="cmd-result-icon bg-slate-100"><i class="fa fa-plus text-slate-500"></i></div>
+        <div class="flex-1"><div class="text-sm font-medium text-slate-700">Yeni Ürün Oluştur</div></div>
+        <kbd class="text-[10px] font-mono bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded border border-slate-200">Ctrl+N</kbd>
+      </div>
+      <div class="cmd-result">
+        <div class="cmd-result-icon bg-amber-50"><i class="fa fa-star text-amber-400"></i></div>
+        <div class="flex-1"><div class="text-sm font-medium text-slate-700">Bekleyen Siparişler</div></div>
+        <span class="text-[10px] text-amber-500 font-semibold">Favori</span>
+      </div>
+    </div>
+    <div class="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/60">
+      <div class="flex items-center gap-4 text-[11px] text-slate-400">
+        <span><kbd class="bg-white border border-slate-200 rounded px-1 font-mono">↑↓</kbd> Gezin</span>
+        <span><kbd class="bg-white border border-slate-200 rounded px-1 font-mono">↵</kbd> Seç</span>
+        <span><kbd class="bg-white border border-slate-200 rounded px-1 font-mono">Esc</kbd> Kapat</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Demo hint -->
+<div id="hint" class="fixed bottom-6 right-6 bg-slate-900 text-white text-sm px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 z-40">
+  <i class="fa fa-circle-info text-emerald-400"></i>
+  <span>Dil sekmeleri <strong>TR | EN | DE | AR</strong> arasında geçiş yapın</span>
+  <button onclick="document.getElementById('hint').remove()" class="text-white/40 hover:text-white ml-1"><i class="fa fa-xmark"></i></button>
+</div>
+
+<script>
+  let collapsed = false;
+  function toggleSidebar() {
+    collapsed = !collapsed;
+    document.getElementById('sidebar').classList.toggle('collapsed', collapsed);
+    document.getElementById('main').classList.toggle('expanded', collapsed);
+    const ct = document.getElementById('ctoggle');
+    if (collapsed) { ct.classList.remove('hidden'); ct.classList.add('flex'); }
+    else { ct.classList.add('hidden'); ct.classList.remove('flex'); }
+  }
+
+  let currentLang = 'tr';
+  function selectLang(btn, lang) {
+    document.querySelectorAll('.lang-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.lang-panel').forEach(p => p.classList.add('hidden'));
+    document.getElementById('lang-panel-' + lang).classList.remove('hidden');
+    currentLang = lang;
+  }
+
+  function setSection(btn, section) {
+    document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function openPalette() {
+    document.getElementById('cmd-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('cmd-input').focus(), 50);
+  }
+  function closePalette() {
+    document.getElementById('cmd-overlay').classList.remove('open');
+  }
+
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); openPalette(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); alert('Kaydedildi! (demo)'); }
+    if (e.key === 'Escape') closePalette();
+  });
+</script>
+</body>
+</html>
