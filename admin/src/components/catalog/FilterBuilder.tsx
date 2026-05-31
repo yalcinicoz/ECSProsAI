@@ -144,6 +144,7 @@ export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
   const [groupOpen, setGroupOpen] = useState(false)
   const [suppOpen, setSuppOpen] = useState(false)
   const [tagInput, setTagInput] = useState('')
+  const [tagFocused, setTagFocused] = useState(false)
   const tagInputRef = useRef<HTMLInputElement>(null)
   const [attrFilters, setAttrFilters] = useState<AttributeFilterItem[]>(value.attributeFilters ?? [])
 
@@ -218,7 +219,10 @@ export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
   const description = useMemo(() => buildDescription(def, refs), [def, refs])
   const usedTypeIds = attrFilters.map(f => f.attributeTypeId)
   const hasFilters = description !== 'Tüm ürünler'
-  const tagSuggestions = allTags.filter(t => !def.tags?.includes(t) && t.toLowerCase().includes(tagInput.toLowerCase()))
+  // Odaklanıldığında tüm mevcut etiketler, yazılınca filtrelenir
+  const tagSuggestions = allTags.filter(
+    t => !def.tags?.includes(t) && t.toLowerCase().includes(tagInput.toLowerCase()),
+  )
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -396,34 +400,51 @@ export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
             placeholder="Etiket yaz veya listeden seç…"
             value={tagInput}
             onChange={e => setTagInput(e.target.value)}
+            onFocus={() => setTagFocused(true)}
+            onBlur={() => setTimeout(() => setTagFocused(false), 150)}
             onKeyDown={e => {
               if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(tagInput) }
+              if (e.key === 'Escape') setTagFocused(false)
             }}
           />
-          {tagInput && tagSuggestions.length > 0 && (
-            <div className="absolute z-20 mt-1 w-full rounded-xl shadow-lg py-1 overflow-y-auto max-h-40"
+
+          {/* Sağ tarafa "+ ekle" butonu — özel etiket için */}
+          {tagInput.trim() && !tagSuggestions.find(t => t === tagInput.trim()) && (
+            <button type="button"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-0.5 rounded-full"
+              style={{ background: 'var(--brand-bg)', color: 'var(--brand)' }}
+              onMouseDown={e => { e.preventDefault(); addTag(tagInput) }}>
+              + ekle
+            </button>
+          )}
+
+          {/* Açılır liste: focus olunca tüm etiketler, yazınca filtrelenir */}
+          {tagFocused && (tagSuggestions.length > 0 || tagInput.trim()) && (
+            <div className="absolute z-20 mt-1 w-full rounded-xl shadow-lg overflow-y-auto max-h-48"
               style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-              {tagSuggestions.slice(0, 8).map(t => (
+              {tagSuggestions.length === 0 && tagInput.trim() && (
+                <div className="px-3 py-2 text-sm" style={{ color: 'var(--text-s)' }}>
+                  Eşleşen etiket yok — Enter ile ekle
+                </div>
+              )}
+              {tagSuggestions.map(t => (
                 <button key={t} type="button"
                   className="w-full text-left px-3 py-1.5 text-sm hover:bg-[var(--surface2)] transition-colors"
                   style={{ color: 'var(--text)' }}
                   onMouseDown={e => { e.preventDefault(); addTag(t) }}>
-                  #{t}
+                  <span style={{ color: 'var(--text-s)' }}>#</span>{t}
                 </button>
               ))}
+              {tagSuggestions.length === 0 && !tagInput.trim() && (
+                <div className="px-3 py-2 text-sm" style={{ color: 'var(--text-s)' }}>
+                  Henüz hiç etiket yok — yazmaya başlayın
+                </div>
+              )}
             </div>
-          )}
-          {tagInput && !tagSuggestions.find(t => t === tagInput.trim()) && (
-            <button type="button"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-0.5 rounded-full"
-              style={{ background: 'var(--brand-bg)', color: 'var(--brand)' }}
-              onClick={() => addTag(tagInput)}>
-              + ekle
-            </button>
           )}
         </div>
         <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
-          Enter veya virgülle ekle. Hiç etiket olmayan ürünler için boş bırak.
+          Listeden seç veya yaz + Enter ile özel etiket ekle.
         </p>
       </Section>
 
