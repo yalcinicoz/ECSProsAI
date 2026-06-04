@@ -7,5 +7,4 @@ public record CreateCategoryCommand(
     string Code,
     Dictionary<string, string> NameI18n,
     Guid? ParentId,
-    string FillType = "manual",
     int SortOrder = 0) : IRequest<Result<Guid>>;

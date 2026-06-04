@@ -36,7 +36,7 @@ public class StoreCatalogController(IMediator mediator) : ControllerBase
         CancellationToken ct = default)
     {
         var result = await mediator.Send(
-            new GetStoreCategoryProductsQuery(id, firmPlatformId, page, pageSize), ct);
+            new GetStoreCategoryProductsQuery(id, page, pageSize), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }

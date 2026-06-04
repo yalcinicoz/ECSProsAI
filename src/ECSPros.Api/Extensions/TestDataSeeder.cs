@@ -414,7 +414,6 @@ public static class TestDataSeeder
                 Code     = code,
                 NameI18n = new() { { "tr", tr }, { "en", en } },
                 ParentId = parentId,
-                FillType = "manual",
                 IsActive = true,
                 SortOrder = order,
             };
@@ -908,7 +907,7 @@ public static class TestDataSeeder
                 ParentNavNodeId   = parentId,
                 NameOverrideI18n  = new() { { "tr", tr }, { "en", en } },
                 NodeType          = nodeType,
-                CategoryId        = categoryId,
+                ChannelCategoryId = null,
                 CustomUrl         = url,
                 IsActive          = true,
                 SortOrder         = order,

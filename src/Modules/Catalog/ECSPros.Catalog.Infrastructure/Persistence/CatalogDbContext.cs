@@ -35,7 +35,6 @@ public class CatalogDbContext : DbContext, ICatalogDbContext
     public DbSet<ProductAxisSubAttributeValue> ProductAxisSubAttributeValues => Set<ProductAxisSubAttributeValue>();
     public DbSet<FilterColor> FilterColors => Set<FilterColor>();
     public DbSet<AttributeValueFilterColor> AttributeValueFilterColors => Set<AttributeValueFilterColor>();
-    public DbSet<FilterPreset> FilterPresets => Set<FilterPreset>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

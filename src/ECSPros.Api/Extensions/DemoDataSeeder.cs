@@ -686,7 +686,7 @@ public static class DemoDataSeeder
                 ParentNavNodeId  = parentId,
                 NameOverrideI18n = new() { { "tr", nameTr }, { "en", nameEn } },
                 NodeType         = nodeType,
-                CategoryId       = categoryId,
+                ChannelCategoryId = null, // CategoryId → ChannelCategoryId geçişi yapıldı
                 CustomUrl        = url,
                 IsActive         = true,
                 SortOrder        = sort,

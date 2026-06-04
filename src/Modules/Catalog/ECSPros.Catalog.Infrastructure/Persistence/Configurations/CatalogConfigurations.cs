@@ -75,8 +75,6 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Code).HasMaxLength(100).IsRequired();
         builder.Property(x => x.NameI18n).HasColumnType("jsonb").IsRequired();
-        builder.Property(x => x.FillType).HasMaxLength(20).IsRequired();
-        builder.Property(x => x.FilterRules).HasColumnType("jsonb");
         builder.HasIndex(x => x.Code).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
 
@@ -84,27 +82,6 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
             .WithMany(x => x.Children)
             .HasForeignKey(x => x.ParentId)
             .IsRequired(false);
-
-        builder.HasOne(x => x.FilterPreset)
-            .WithMany()
-            .HasForeignKey(x => x.FilterPresetId)
-            .IsRequired(false)
-            .OnDelete(DeleteBehavior.SetNull);
-    }
-}
-
-public class FilterPresetConfiguration : IEntityTypeConfiguration<FilterPreset>
-{
-    public void Configure(EntityTypeBuilder<FilterPreset> builder)
-    {
-        builder.ToTable("catalog_filter_presets");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Code).HasMaxLength(100).IsRequired();
-        builder.Property(x => x.NameI18n).HasColumnType("jsonb").IsRequired();
-        builder.Property(x => x.Description).HasColumnType("text");
-        builder.Property(x => x.FilterDef).HasColumnType("jsonb").IsRequired();
-        builder.HasIndex(x => x.Code).IsUnique();
-        builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }
 

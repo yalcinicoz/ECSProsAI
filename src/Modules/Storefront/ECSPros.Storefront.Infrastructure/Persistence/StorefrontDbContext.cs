@@ -12,6 +12,10 @@ public class StorefrontDbContext : DbContext, IStorefrontDbContext
     public DbSet<NavigationMenu> NavigationMenus => Set<NavigationMenu>();
     public DbSet<NavNode> NavNodes => Set<NavNode>();
     public DbSet<ChannelProduct> ChannelProducts => Set<ChannelProduct>();
+    public DbSet<ChannelCategory> ChannelCategories => Set<ChannelCategory>();
+    public DbSet<ChannelCategoryGroup> ChannelCategoryGroups => Set<ChannelCategoryGroup>();
+    public DbSet<ChannelCategoryProduct> ChannelCategoryProducts => Set<ChannelCategoryProduct>();
+    public DbSet<ChannelProductGroup> ChannelProductGroups => Set<ChannelProductGroup>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

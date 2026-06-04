@@ -20,7 +20,7 @@ public record NavigationMenuDetailDto(
 public record NavNodeDto(
     Guid Id,
     Guid? ParentNavNodeId,
-    Guid? CategoryId,
+    Guid? ChannelCategoryId,
     Dictionary<string, string>? NameOverrideI18n,
     string NodeType,
     string? Slug,
@@ -67,7 +67,7 @@ public class GetNavigationMenuDetailQueryHandler(IStorefrontDbContext db)
         return all
             .Where(n => n.ParentNavNodeId == parentId)
             .Select(n => new NavNodeDto(
-                n.Id, n.ParentNavNodeId, n.CategoryId, n.NameOverrideI18n,
+                n.Id, n.ParentNavNodeId, n.ChannelCategoryId, n.NameOverrideI18n,
                 n.NodeType, n.Slug, n.CustomUrl, n.ImageUrl, n.BadgeLabel,
                 n.Icon, n.OpenInNewTab, n.IsActive, n.SortOrder,
                 n.SeoTitleI18n, n.SeoDescriptionI18n, n.CanonicalUrl,

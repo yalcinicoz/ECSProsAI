@@ -7,9 +7,6 @@ public record UpdateCategoryCommand(
     Guid Id,
     Dictionary<string, string> NameI18n,
     Guid? ParentId,
-    string FillType,
-    Guid? FilterPresetId,
-    Dictionary<string, object>? FilterRules,
     bool IsActive,
     int SortOrder,
     Guid UpdatedBy) : IRequest<Result<bool>>;

@@ -353,7 +353,6 @@ public static class DatabaseSeeder
                 Code     = code,
                 NameI18n = new() { { "tr", tr }, { "en", en } },
                 ParentId = parentId,
-                FillType = "manual",
                 IsActive = true,
                 SortOrder = sort,
             };

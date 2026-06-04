@@ -17,7 +17,7 @@ public record SaveNavNodesCommand(
 public record NavNodeInput(
     Dictionary<string, string>? NameOverrideI18n,
     string NodeType,
-    Guid? CategoryId,
+    Guid? ChannelCategoryId,
     string? Slug,
     string? CustomUrl,
     string? ImageUrl,
@@ -74,7 +74,7 @@ public class SaveNavNodesCommandHandler(IStorefrontDbContext db)
                 Id = Guid.NewGuid(),
                 NavigationMenuId = menuId,
                 ParentNavNodeId = parentId,
-                CategoryId = input.CategoryId,
+                ChannelCategoryId = input.ChannelCategoryId,
                 NameOverrideI18n = input.NameOverrideI18n,
                 NodeType = input.NodeType,
                 Slug = input.Slug,
