@@ -21,8 +21,9 @@ import { BulkImageUploadPage } from '@/pages/catalog/BulkImageUploadPage'
 import { CategoriesPage } from '@/pages/catalog/CategoriesPage'
 import { CategoryDetailPage } from '@/pages/catalog/CategoryDetailPage'
 import { FilterColorsPage } from '@/pages/catalog/FilterColorsPage'
-import { FilterPresetsPage } from '@/pages/catalog/FilterPresetsPage'
 import { MenusPage } from '@/pages/cms/MenusPage'
+import { ChannelCategoriesPage } from '@/pages/storefront/ChannelCategoriesPage'
+import { ChannelCategoryDetailPage } from '@/pages/storefront/ChannelCategoryDetailPage'
 import { MenuDetailPage } from '@/pages/cms/MenuDetailPage'
 import { WarehousesPage } from '@/pages/inventory/WarehousesPage'
 import { WarehouseDetailPage } from '@/pages/inventory/WarehouseDetailPage'
@@ -56,8 +57,9 @@ export const router = createBrowserRouter(
             { path: 'catalog/bulk-images',       element: <BulkImageUploadPage /> },
             { path: 'catalog/categories',        element: <CategoriesPage /> },
             { path: 'catalog/categories/:id',    element: <CategoryDetailPage /> },
-            { path: 'catalog/filter-colors',     element: <FilterColorsPage /> },
-            { path: 'catalog/filter-presets',    element: <FilterPresetsPage /> },
+            { path: 'catalog/filter-colors',              element: <FilterColorsPage /> },
+            { path: 'storefront/channel-categories',      element: <ChannelCategoriesPage /> },
+            { path: 'storefront/channel-categories/:id',  element: <ChannelCategoryDetailPage /> },
 
             // Envanter
             { path: 'inventory/warehouses',     element: <WarehousesPage /> },

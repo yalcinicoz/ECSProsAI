@@ -24,6 +24,131 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.ChannelCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BadgeLabel")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DisplayImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("FillType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Dictionary<string, object>>("FilterDef")
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("FirmPlatformId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Dictionary<string, string>>("MetaDescriptionI18n")
+                        .HasColumnType("jsonb");
+
+                    b.Property<Dictionary<string, string>>("MetaTitleI18n")
+                        .HasColumnType("jsonb");
+
+                    b.Property<Dictionary<string, string>>("NameI18n")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("OgImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Dictionary<string, string>>("OgTitleI18n")
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentId");
+
+                    b.ToTable("channel_categories", "storefront");
+                });
+
+            modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.ChannelCategoryGroup", b =>
+                {
+                    b.Property<Guid>("ChannelCategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductGroupId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ChannelCategoryId", "ProductGroupId");
+
+                    b.ToTable("channel_category_groups", "storefront");
+                });
+
+            modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.ChannelCategoryProduct", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChannelCategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsExcluded")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChannelCategoryId", "ProductId")
+                        .IsUnique();
+
+                    b.ToTable("channel_category_products", "storefront");
+                });
+
             modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.ChannelProduct", b =>
                 {
                     b.Property<Guid>("Id")
@@ -71,6 +196,52 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
                     b.ToTable("channel_products", "storefront");
                 });
 
+            modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.ChannelProductGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FirmPlatformId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ProductGroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FirmPlatformId", "ProductGroupId")
+                        .IsUnique();
+
+                    b.ToTable("channel_product_groups", "storefront");
+                });
+
             modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.NavNode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -85,7 +256,7 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<Guid?>("CategoryId")
+                    b.Property<Guid?>("ChannelCategoryId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -163,6 +334,8 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ChannelCategoryId");
+
                     b.HasIndex("NavigationMenuId");
 
                     b.HasIndex("ParentNavNodeId");
@@ -228,8 +401,45 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
                     b.ToTable("nav_menus", "storefront");
                 });
 
+            modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.ChannelCategory", b =>
+                {
+                    b.HasOne("ECSPros.Storefront.Domain.Entities.ChannelCategory", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.ChannelCategoryGroup", b =>
+                {
+                    b.HasOne("ECSPros.Storefront.Domain.Entities.ChannelCategory", "ChannelCategory")
+                        .WithMany("CategoryGroups")
+                        .HasForeignKey("ChannelCategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChannelCategory");
+                });
+
+            modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.ChannelCategoryProduct", b =>
+                {
+                    b.HasOne("ECSPros.Storefront.Domain.Entities.ChannelCategory", "ChannelCategory")
+                        .WithMany("CategoryProducts")
+                        .HasForeignKey("ChannelCategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChannelCategory");
+                });
+
             modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.NavNode", b =>
                 {
+                    b.HasOne("ECSPros.Storefront.Domain.Entities.ChannelCategory", "ChannelCategory")
+                        .WithMany()
+                        .HasForeignKey("ChannelCategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("ECSPros.Storefront.Domain.Entities.NavigationMenu", "NavigationMenu")
                         .WithMany("Nodes")
                         .HasForeignKey("NavigationMenuId")
@@ -241,9 +451,20 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
                         .HasForeignKey("ParentNavNodeId")
                         .OnDelete(DeleteBehavior.NoAction);
 
+                    b.Navigation("ChannelCategory");
+
                     b.Navigation("NavigationMenu");
 
                     b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.ChannelCategory", b =>
+                {
+                    b.Navigation("CategoryGroups");
+
+                    b.Navigation("CategoryProducts");
+
+                    b.Navigation("Children");
                 });
 
             modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.NavNode", b =>

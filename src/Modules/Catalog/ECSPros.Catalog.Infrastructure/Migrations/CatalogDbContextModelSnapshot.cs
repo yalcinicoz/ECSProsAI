@@ -265,17 +265,6 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("FillType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<Guid?>("FilterPresetId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Dictionary<string, object>>("FilterRules")
-                        .HasColumnType("jsonb");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -302,8 +291,6 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
-
-                    b.HasIndex("FilterPresetId");
 
                     b.HasIndex("ParentId");
 
@@ -411,63 +398,6 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("catalog_filter_colors", "catalog");
-                });
-
-            modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.FilterPreset", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<Dictionary<string, object>>("FilterDef")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<Dictionary<string, string>>("NameI18n")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique();
-
-                    b.ToTable("catalog_filter_presets", "catalog");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.FirmPlatformProduct", b =>
@@ -1555,16 +1485,9 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.Category", b =>
                 {
-                    b.HasOne("ECSPros.Catalog.Domain.Entities.FilterPreset", "FilterPreset")
-                        .WithMany()
-                        .HasForeignKey("FilterPresetId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("ECSPros.Catalog.Domain.Entities.Category", "Parent")
                         .WithMany("Children")
                         .HasForeignKey("ParentId");
-
-                    b.Navigation("FilterPreset");
 
                     b.Navigation("Parent");
                 });

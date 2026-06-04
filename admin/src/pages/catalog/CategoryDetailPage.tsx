@@ -1,9 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Plus, Trash2, RefreshCw, Save } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { FilterBuilder, type FilterDef } from '@/components/catalog/FilterBuilder'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -16,25 +15,11 @@ import { useLanguages } from '@/hooks/useLanguages'
 import { FL } from '@/lib/field-labels'
 import { buildI18nValues } from '@/lib/i18n-helper'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface FilterPresetInfo {
-  id: string
-  code: string
-  nameI18n: Record<string, string>
-  description: string | null
-  filterDef: Record<string, unknown>
-}
-
 interface CategoryDetail {
   id: string
   code: string
   nameI18n: Record<string, string>
   parentId: string | null
-  fillType: string
-  filterPresetId: string | null
-  filterPreset: FilterPresetInfo | null
-  filterRules: Record<string, unknown> | null
   isActive: boolean
   sortOrder: number
 }
@@ -57,20 +42,12 @@ interface PagedResult<T> {
   pageSize: number
 }
 
-const FILL_TYPES: Record<string, { label: string; color: string }> = {
-  manual: { label: 'Manuel',  color: '#6366f1' },
-  filter: { label: 'Filtre',  color: '#0ea5e9' },
-  mixed:  { label: 'Karma',   color: '#8b5cf6' },
-}
-
 const TABS = ['Genel', 'Ürünler'] as const
 type Tab = typeof TABS[number]
 
 function getName(i18n: Record<string, string>, code?: string): string {
   return i18n['tr'] ?? i18n[Object.keys(i18n)[0]] ?? code ?? ''
 }
-
-// ── Main Component ────────────────────────────────────────────────────────────
 
 export function CategoryDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -79,8 +56,6 @@ export function CategoryDetailPage() {
   const { data: languages = [] } = useLanguages()
 
   const [activeTab, setActiveTab] = useState<Tab>('Genel')
-
-  // ── Category fetch ────────────────────────────────────────────────────────
 
   const { data: cat, isLoading } = useQuery<CategoryDetail>({
     queryKey: ['category', id],
@@ -91,13 +66,8 @@ export function CategoryDetailPage() {
     enabled: !!id,
   })
 
-  // ── General tab state ─────────────────────────────────────────────────────
-
   const [genForm, setGenForm] = useState<{
     nameI18n: Record<string, string>
-    fillType: string
-    filterPresetId: string | null
-    filterDef: FilterDef
     isActive: boolean
     sortOrder: number
   } | null>(null)
@@ -106,29 +76,20 @@ export function CategoryDetailPage() {
   if (cat && !formInited) {
     setFormInited(true)
     setGenForm({
-      nameI18n:       { ...cat.nameI18n },
-      fillType:       cat.fillType,
-      filterPresetId: cat.filterPresetId,
-      filterDef:      (cat.filterRules ?? {}) as FilterDef,
-      isActive:       cat.isActive,
-      sortOrder:      cat.sortOrder,
+      nameI18n:  { ...cat.nameI18n },
+      isActive:  cat.isActive,
+      sortOrder: cat.sortOrder,
     })
   }
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!genForm) return
-      const filterRules = genForm.fillType !== 'manual' && Object.keys(genForm.filterDef).length > 0
-        ? genForm.filterDef
-        : null
       await api.put(`/catalog/categories/${id}`, {
-        nameI18n:       genForm.nameI18n,
-        parentId:       cat?.parentId ?? null,
-        fillType:       genForm.fillType,
-        filterPresetId: genForm.filterPresetId ?? null,
-        filterRules,
-        isActive:       genForm.isActive,
-        sortOrder:      genForm.sortOrder,
+        nameI18n:  genForm.nameI18n,
+        parentId:  cat?.parentId ?? null,
+        isActive:  genForm.isActive,
+        sortOrder: genForm.sortOrder,
       })
     },
     onSuccess: () => {
@@ -136,16 +97,6 @@ export function CategoryDetailPage() {
       setFormInited(false)
     },
   })
-
-  // ── Filter presets list (for selector) ───────────────────────────────────
-
-  const { data: filterPresets = [] } = useQuery<FilterPresetInfo[]>({
-    queryKey: ['filter-presets-active'],
-    queryFn: async () => { const { data } = await api.get('/catalog/filter-presets?activeOnly=true'); return data.data },
-  })
-
-  const selectedPreset = filterPresets.find(fp => fp.id === genForm?.filterPresetId)
-    ?? (cat?.filterPreset ?? null)
 
   // ── Products tab ─────────────────────────────────────────────────────────
 
@@ -160,7 +111,6 @@ export function CategoryDetailPage() {
       enabled: !!id && activeTab === 'Ürünler',
     })
 
-  // Add product modal
   const [addOpen, setAddOpen] = useState(false)
   const [addProductId, setAddProductId] = useState('')
   const [addSortOrder, setAddSortOrder] = useState(0)
@@ -204,24 +154,10 @@ export function CategoryDetailPage() {
     onSuccess: () => refetchProds(),
   })
 
-  // Sync mutation
-  const syncMutation = useMutation({
-    mutationFn: async () => {
-      const { data } = await api.post(`/catalog/categories/${id}/sync`)
-      return data.data?.addedCount as number
-    },
-    onSuccess: () => refetchProds(),
-  })
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-
   const sourceLang = languages.find((l) => l.isDefault)?.code ?? languages[0]?.code ?? 'tr'
   const nameFields = useMemo(() => [{ key: 'name', labels: FL.categoryName, required: true }], [])
 
   if (isLoading || !cat || !genForm) return <PageSpinner />
-
-  const fillInfo = FILL_TYPES[genForm.fillType] ?? FILL_TYPES.manual
-  const hasFilterSupport = genForm.fillType === 'filter' || genForm.fillType === 'mixed'
 
   return (
     <div className="p-6">
@@ -240,12 +176,6 @@ export function CategoryDetailPage() {
           </h1>
           <div className="flex items-center gap-2 mt-0.5">
             <code className="text-xs" style={{ color: 'var(--text-s)' }}>{cat.code}</code>
-            <span
-              className="text-xs px-1.5 py-0.5 rounded-full font-medium"
-              style={{ background: `${fillInfo.color}22`, color: fillInfo.color }}
-            >
-              {fillInfo.label}
-            </span>
             <Badge variant={cat.isActive ? 'success' : 'neutral'}>
               {cat.isActive ? 'Aktif' : 'Pasif'}
             </Badge>
@@ -269,7 +199,6 @@ export function CategoryDetailPage() {
       {/* ── Genel Tab ─────────────────────────────────────────────────────── */}
       {activeTab === 'Genel' && (
         <div className="card space-y-6">
-          {/* Ad — I18n */}
           <div>
             <label className="flbl mb-2">Ad</label>
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
@@ -285,77 +214,11 @@ export function CategoryDetailPage() {
             </div>
           </div>
 
-          {/* Dolum Tipi */}
-          <div>
-            <label className="flbl">Dolum Tipi</label>
-            <SearchableSelect
-              value={genForm.fillType}
-              onChange={(v) => v && setGenForm((f) => f && ({ ...f, fillType: v }))}
-              options={Object.entries(FILL_TYPES).map(([v, { label }]) => ({ value: v, label }))}
-              hasValue
-            />
-            <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
-              Manuel: ürünler el ile eklenir · Filtre: kural tabanlı otomatik · Karma: her ikisi
-            </p>
+          <div className="p-3 rounded-xl text-sm" style={{ background: 'var(--surface2)', color: 'var(--text-s)' }}>
+            Global katalog kategorisi — ürün organizasyonu ve raporlama için kullanılır.
+            Kanal bazlı filtreleme ve menü bağlantıları için <strong style={{ color: 'var(--text-m)' }}>Kanal Kategorileri</strong> kullanın.
           </div>
 
-          {/* Filtre — Preset seçici + görsel builder */}
-          {hasFilterSupport && (
-            <div className="space-y-4">
-              {/* Kayıtlı filtre seçici */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="flbl">Kayıtlı Filtreden Seç</label>
-                  {genForm.filterPresetId && (
-                    <button className="text-xs" style={{ color: '#ef4444' }}
-                      onClick={() => setGenForm(f => f && ({ ...f, filterPresetId: null }))}>
-                      Filtreyi kaldır
-                    </button>
-                  )}
-                </div>
-                <SearchableSelect
-                  value={genForm.filterPresetId}
-                  onChange={(v) => setGenForm(f => f && ({ ...f, filterPresetId: v ?? null }))}
-                  options={filterPresets.map(fp => ({
-                    value: fp.id,
-                    label: fp.nameI18n['tr'] ?? fp.nameI18n[Object.keys(fp.nameI18n)[0]] ?? fp.code,
-                  }))}
-                  placeholder="Kayıtlı filtreyi seç…"
-                  hasValue={!!genForm.filterPresetId}
-                />
-                {selectedPreset && (
-                  <div className="mt-2 p-2.5 rounded-xl text-xs"
-                    style={{ background: 'var(--brand-bg)', border: '1px solid var(--brand)' }}>
-                    <span className="font-semibold" style={{ color: 'var(--brand)' }}>
-                      {selectedPreset.nameI18n['tr'] ?? selectedPreset.code}
-                    </span>
-                    {selectedPreset.description && (
-                      <span style={{ color: 'var(--text-m)' }}> · {selectedPreset.description}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Ayraç */}
-              <div className="flex items-center gap-2" style={{ color: 'var(--text-s)' }}>
-                <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-                <span className="text-xs">{genForm.filterPresetId ? 'ek özel kurallar (opsiyonel)' : 'filtre kurallarını seç'}</span>
-                <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-              </div>
-
-              {/* Görsel filtre oluşturucu */}
-              <FilterBuilder
-                value={genForm.filterDef}
-                onChange={(def) => setGenForm(f => f && ({ ...f, filterDef: def }))}
-              />
-
-              <p className="text-xs" style={{ color: 'var(--text-s)' }}>
-                Ürünler sekmesinden "Sync Çalıştır" ile CategoryProducts tablosu güncellenir.
-              </p>
-            </div>
-          )}
-
-          {/* Sıra + Durum */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="flbl">Sıra</label>
@@ -397,39 +260,15 @@ export function CategoryDetailPage() {
       {/* ── Ürünler Tab ───────────────────────────────────────────────────── */}
       {activeTab === 'Ürünler' && (
         <div className="space-y-4">
-          {/* Toolbar */}
           <div className="flex items-center justify-between">
             <p className="text-sm" style={{ color: 'var(--text-s)' }}>
               {prodData?.totalCount ?? 0} ürün
             </p>
-            <div className="flex items-center gap-2">
-              {hasFilterSupport && (
-                <Button
-                  variant="secondary"
-                  onClick={() => syncMutation.mutate()}
-                  loading={syncMutation.isPending}
-                  title="FilterRules'u çalıştır, listeyi güncelle"
-                >
-                  <RefreshCw size={14} />
-                  Sync Çalıştır
-                </Button>
-              )}
-              <Button onClick={() => setAddOpen(true)}>
-                <Plus size={14} /> Ürün Ekle
-              </Button>
-            </div>
+            <Button onClick={() => setAddOpen(true)}>
+              <Plus size={14} /> Ürün Ekle
+            </Button>
           </div>
 
-          {syncMutation.isSuccess && (
-            <div
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm"
-              style={{ background: '#dcfce7', color: '#16a34a' }}
-            >
-              Sync tamamlandı — {syncMutation.data} yeni ürün eklendi.
-            </div>
-          )}
-
-          {/* Product list */}
           <div className="card overflow-hidden p-0">
             <table className="w-full">
               <thead>
@@ -437,16 +276,15 @@ export function CategoryDetailPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Ürün</th>
                   <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Sıra</th>
                   <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Sabit</th>
-                  <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Fiyat</th>
                   <th className="w-12" />
                 </tr>
               </thead>
               <tbody>
                 {prodLoading && (
-                  <tr><td colSpan={5} className="py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor…</td></tr>
+                  <tr><td colSpan={4} className="py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor…</td></tr>
                 )}
                 {!prodLoading && !prodData?.items.length && (
-                  <tr><td colSpan={5} className="py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>Henüz ürün yok</td></tr>
+                  <tr><td colSpan={4} className="py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>Henüz ürün yok</td></tr>
                 )}
                 {prodData?.items.map((p) => (
                   <tr key={p.productId} style={{ borderBottom: '1px solid var(--border)' }}>
@@ -468,16 +306,12 @@ export function CategoryDetailPage() {
                     <td className="px-4 py-3 text-center">
                       {p.isPinned && <Badge variant="info">Sabit</Badge>}
                     </td>
-                    <td className="px-4 py-3 text-center text-sm font-medium" style={{ color: 'var(--text)' }}>
-                      {p.basePrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
-                    </td>
                     <td className="px-4 py-3 text-center">
                       <button
                         onClick={() => removeMutation.mutate(p.productId)}
                         disabled={removeMutation.isPending}
                         className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors hover:bg-red-50"
                         style={{ color: '#ef4444' }}
-                        title="Kategoriden çıkar"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -487,7 +321,6 @@ export function CategoryDetailPage() {
               </tbody>
             </table>
 
-            {/* Pagination */}
             {(prodData?.totalCount ?? 0) > 20 && (
               <div className="flex items-center justify-center gap-2 p-4" style={{ borderTop: '1px solid var(--border)' }}>
                 <Button variant="secondary" disabled={prodPage <= 1} onClick={() => setProdPage((p) => p - 1)} size="sm">←</Button>
@@ -499,7 +332,6 @@ export function CategoryDetailPage() {
         </div>
       )}
 
-      {/* ── Add Product Modal ─────────────────────────────────────────────── */}
       <Modal
         open={addOpen}
         onClose={() => setAddOpen(false)}

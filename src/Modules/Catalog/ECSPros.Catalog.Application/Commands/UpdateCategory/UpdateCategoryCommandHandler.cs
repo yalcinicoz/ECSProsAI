@@ -30,15 +30,12 @@ public class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategoryComman
                 return Result.Failure<bool>("Üst kategori bulunamadı.");
         }
 
-        category.NameI18n        = request.NameI18n;
-        category.ParentId        = request.ParentId;
-        category.FillType        = request.FillType;
-        category.FilterPresetId  = request.FilterPresetId;
-        category.FilterRules     = request.FilterRules;
-        category.IsActive        = request.IsActive;
-        category.SortOrder       = request.SortOrder;
-        category.UpdatedBy       = request.UpdatedBy;
-        category.UpdatedAt       = DateTime.UtcNow;
+        category.NameI18n  = request.NameI18n;
+        category.ParentId  = request.ParentId;
+        category.IsActive  = request.IsActive;
+        category.SortOrder = request.SortOrder;
+        category.UpdatedBy = request.UpdatedBy;
+        category.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);
         return Result.Success(true);

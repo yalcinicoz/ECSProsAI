@@ -31,7 +31,6 @@ public interface ICatalogDbContext
     DbSet<FilterColor> FilterColors { get; }
     DbSet<AttributeValueFilterColor> AttributeValueFilterColors { get; }
     DbSet<VariantPriceHistory> VariantPriceHistories { get; }
-    DbSet<FilterPreset> FilterPresets { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

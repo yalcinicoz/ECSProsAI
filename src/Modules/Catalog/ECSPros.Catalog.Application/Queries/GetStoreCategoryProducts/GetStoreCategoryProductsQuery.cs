@@ -9,14 +9,12 @@ namespace ECSPros.Catalog.Application.Queries.GetStoreCategoryProducts;
 
 public record GetStoreCategoryProductsQuery(
     Guid CategoryId,
-    Guid FirmPlatformId,
     int Page = 1,
     int PageSize = 24) : IRequest<Result<StoreCategoryProductsDto>>;
 
 public record StoreCategoryProductsDto(
     Guid CategoryId,
     Dictionary<string, string> CategoryNameI18n,
-    string FillType,
     PagedResult<StoreProductListItemDto> Products);
 
 public record StoreProductListItemDto(
@@ -26,10 +24,9 @@ public record StoreProductListItemDto(
     Dictionary<string, string>? ShortDescriptionI18n,
     string? MainImageUrl,
     decimal MinPrice,
-    decimal? CompareAtPrice,
     bool IsActive);
 
-public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db, IStockService stockService)
+public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db)
     : IRequestHandler<GetStoreCategoryProductsQuery, Result<StoreCategoryProductsDto>>
 {
     public async Task<Result<StoreCategoryProductsDto>> Handle(
@@ -37,54 +34,21 @@ public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db, IStockSe
     {
         var category = await db.Categories
             .AsNoTracking()
-            .Include(c => c.FilterPreset)
             .FirstOrDefaultAsync(c => c.Id == request.CategoryId && c.IsActive, ct);
 
         if (category is null)
             return Result.Failure<StoreCategoryProductsDto>("Kategori bulunamadı.");
 
-        var effectiveFilterDef = ResolveFilterDef(category);
-        var rules = CategoryFilterRules.From(effectiveFilterDef);
-
-        // Stok filtresi gerekiyorsa önceden yükle
-        HashSet<Guid>? productIdsInStockRange = null;
-        if (rules is not null && (rules.StockMin.HasValue || rules.StockMax.HasValue))
-            productIdsInStockRange = await ResolveStockRangeProductIds(db, stockService, rules.StockMin, rules.StockMax, ct);
-
-        IQueryable<Domain.Entities.Product> productQuery;
-
-        if (category.FillType == "manual")
-        {
-            productQuery = db.CategoryProducts
-                .Where(cp => cp.CategoryId == request.CategoryId)
-                .OrderBy(cp => cp.SortOrder)
-                .Select(cp => cp.Product)
-                .Where(p => p.IsActive);
-        }
-        else if (category.FillType == "filter")
-        {
-            productQuery = BuildFilterQuery(db, rules, request.FirmPlatformId, productIdsInStockRange)
-                .Where(p => p.IsActive);
-        }
-        else // mixed
-        {
-            var filteredIds = await BuildFilterQuery(db, rules, request.FirmPlatformId, productIdsInStockRange)
-                .Select(p => p.Id).ToListAsync(ct);
-
-            var pinnedIds = await db.CategoryProducts
-                .Where(cp => cp.CategoryId == request.CategoryId && cp.IsPinned)
-                .Select(cp => cp.ProductId)
-                .ToListAsync(ct);
-
-            var allIds = filteredIds.Union(pinnedIds).Distinct().ToList();
-            productQuery = db.Products.Where(p => allIds.Contains(p.Id) && p.IsActive);
-        }
+        var productQuery = db.CategoryProducts
+            .Where(cp => cp.CategoryId == request.CategoryId)
+            .OrderBy(cp => cp.SortOrder)
+            .Select(cp => cp.Product)
+            .Where(p => p.IsActive);
 
         var total = await productQuery.CountAsync(ct);
 
         var products = await productQuery
             .Include(p => p.Variants).ThenInclude(v => v.Images)
-            .Include(p => p.Variants).ThenInclude(v => v.FirmPlatformVariants)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .ToListAsync(ct);
@@ -92,17 +56,7 @@ public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db, IStockSe
         var items = products.Select(p =>
         {
             var activeVariants = p.Variants.Where(v => v.IsActive).ToList();
-            var platformPrices = activeVariants
-                .SelectMany(v => v.FirmPlatformVariants
-                    .Where(fpv => fpv.FirmPlatformId == request.FirmPlatformId && fpv.IsActive))
-                .Select(fpv => fpv.Price ?? 0)
-                .Where(price => price > 0)
-                .ToList();
-
-            var minPrice = platformPrices.Count > 0
-                ? platformPrices.Min()
-                : activeVariants.MinBy(v => v.BasePrice)?.BasePrice ?? 0;
-
+            var minPrice = activeVariants.MinBy(v => v.BasePrice)?.BasePrice ?? 0;
             var mainImage = activeVariants
                 .SelectMany(v => v.Images)
                 .Where(i => i.IsMain)
@@ -110,54 +64,15 @@ public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db, IStockSe
                 .FirstOrDefault()?.ImageUrl;
 
             return new StoreProductListItemDto(
-                p.Id, p.Code, p.NameI18n, p.ShortDescriptionI18n,
-                mainImage, minPrice, null, p.IsActive);
+                p.Id, p.Code, p.NameI18n, p.ShortDescriptionI18n, mainImage, minPrice, p.IsActive);
         }).ToList();
 
         var paged = new PagedResult<StoreProductListItemDto>(items, total, request.Page, request.PageSize);
-        return Result.Success(new StoreCategoryProductsDto(
-            category.Id, category.NameI18n, category.FillType, paged));
+        return Result.Success(new StoreCategoryProductsDto(category.Id, category.NameI18n, paged));
     }
 
-    private static Dictionary<string, object>? ResolveFilterDef(Domain.Entities.Category category)
-    {
-        if (category.FilterPreset is null) return category.FilterRules;
-        if (category.FilterRules is null or { Count: 0 }) return category.FilterPreset.FilterDef;
-        var merged = new Dictionary<string, object>(category.FilterPreset.FilterDef);
-        foreach (var kv in category.FilterRules) merged[kv.Key] = kv.Value;
-        return merged;
-    }
-
-    /// <summary>Stok aralığına giren ürün ID'lerini döner.</summary>
-    internal static async Task<HashSet<Guid>> ResolveStockRangeProductIds(
-        ICatalogDbContext db, IStockService stockService,
-        int? stockMin, int? stockMax, CancellationToken ct)
-    {
-        var variantStocks = await stockService.GetVariantAvailableStocksAsync(ct);
-
-        // Variant → Product eşleşmesi
-        var variantIds = variantStocks.Keys.ToList();
-        var variantProductMap = await db.ProductVariants
-            .Where(v => variantIds.Contains(v.Id))
-            .Select(v => new { v.Id, v.ProductId })
-            .ToDictionaryAsync(v => v.Id, v => v.ProductId, ct);
-
-        // Ürün başına toplam stok
-        var productStocks = variantStocks
-            .Where(kv => variantProductMap.ContainsKey(kv.Key))
-            .GroupBy(kv => variantProductMap[kv.Key])
-            .ToDictionary(g => g.Key, g => g.Sum(kv => kv.Value));
-
-        return productStocks
-            .Where(kv =>
-                (stockMin == null || kv.Value >= stockMin) &&
-                (stockMax == null || kv.Value <= stockMax))
-            .Select(kv => kv.Key)
-            .ToHashSet();
-    }
-
-    /// <summary>Tüm filtre kurallarını uygular.</summary>
-    internal static IQueryable<Domain.Entities.Product> BuildFilterQuery(
+    /// <summary>Filtre kurallarını ürün sorgusuna uygular. ChannelCategory handler'ları da kullanır.</summary>
+    public static IQueryable<Domain.Entities.Product> BuildFilterQuery(
         ICatalogDbContext db,
         CategoryFilterRules? rules,
         Guid? firmPlatformId = null,
@@ -166,15 +81,12 @@ public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db, IStockSe
         var q = db.Products.AsNoTracking();
         if (rules is null) return q;
 
-        // Ürün grubu
         if (rules.ProductGroupIds is { Count: > 0 })
             q = q.Where(p => rules.ProductGroupIds.Contains(p.ProductGroupId));
 
-        // Temel fiyat
         if (rules.PriceMin.HasValue) q = q.Where(p => p.BasePrice >= rules.PriceMin.Value);
         if (rules.PriceMax.HasValue) q = q.Where(p => p.BasePrice <= rules.PriceMax.Value);
 
-        // Platform fiyatı
         if (firmPlatformId.HasValue && (rules.PlatformPriceMin.HasValue || rules.PlatformPriceMax.HasValue))
         {
             var pid = firmPlatformId.Value;
@@ -186,23 +98,18 @@ public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db, IStockSe
                     .Any(fpv => fpv.FirmPlatformId == pid && fpv.Price <= rules.PlatformPriceMax.Value)));
         }
 
-        // KDV
         if (rules.TaxRateMin.HasValue) q = q.Where(p => p.TaxRate >= rules.TaxRateMin.Value);
         if (rules.TaxRateMax.HasValue) q = q.Where(p => p.TaxRate <= rules.TaxRateMax.Value);
 
-        // Tedarikçi
         if (rules.SupplierIds is { Count: > 0 })
             q = q.Where(p => p.SupplierId.HasValue && rules.SupplierIds.Contains(p.SupplierId.Value));
 
-        // Durum
         if (rules.IsActive.HasValue)
             q = q.Where(p => p.IsActive == rules.IsActive.Value);
 
-        // Stok aralığı (önceden hesaplanmış ürün ID listesi)
         if (productIdsInStockRange is not null)
             q = q.Where(p => productIdsInStockRange.Contains(p.Id));
 
-        // Oluşturma tarihi — önce gün sayısı (dinamik), sonra mutlak tarih
         if (rules.CreatedAfterDays.HasValue)
         {
             var threshold = DateTime.UtcNow.AddDays(-rules.CreatedAfterDays.Value);
@@ -214,7 +121,6 @@ public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db, IStockSe
             if (rules.CreatedBefore.HasValue) q = q.Where(p => p.CreatedAt <= rules.CreatedBefore.Value);
         }
 
-        // Resim güncelleme tarihi
         if (rules.ImageUpdatedAfterDays.HasValue)
         {
             var threshold = DateTime.UtcNow.AddDays(-rules.ImageUpdatedAfterDays.Value);
@@ -228,11 +134,9 @@ public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db, IStockSe
                 q = q.Where(p => db.ProductImages.Any(img => img.ProductId == p.Id && img.UpdatedAt <= rules.ImageUpdatedBefore.Value));
         }
 
-        // Etiket filtresi (en az biri eşleşmeli)
         if (rules.Tags is { Count: > 0 })
             q = q.Where(p => p.Tags.Any(t => rules.Tags.Contains(t)));
 
-        // Özellik filtreleri
         if (rules.AttributeFilters is { Count: > 0 })
         {
             foreach (var af in rules.AttributeFilters)
@@ -245,5 +149,29 @@ public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db, IStockSe
         }
 
         return q;
+    }
+
+    public static async Task<HashSet<Guid>> ResolveStockRangeProductIds(
+        ICatalogDbContext db, IStockService stockService,
+        int? stockMin, int? stockMax, CancellationToken ct)
+    {
+        var variantStocks = await stockService.GetVariantAvailableStocksAsync(ct);
+        var variantIds = variantStocks.Keys.ToList();
+        var variantProductMap = await db.ProductVariants
+            .Where(v => variantIds.Contains(v.Id))
+            .Select(v => new { v.Id, v.ProductId })
+            .ToDictionaryAsync(v => v.Id, v => v.ProductId, ct);
+
+        var productStocks = variantStocks
+            .Where(kv => variantProductMap.ContainsKey(kv.Key))
+            .GroupBy(kv => variantProductMap[kv.Key])
+            .ToDictionary(g => g.Key, g => g.Sum(kv => kv.Value));
+
+        return productStocks
+            .Where(kv =>
+                (stockMin == null || kv.Value >= stockMin) &&
+                (stockMax == null || kv.Value <= stockMax))
+            .Select(kv => kv.Key)
+            .ToHashSet();
     }
 }

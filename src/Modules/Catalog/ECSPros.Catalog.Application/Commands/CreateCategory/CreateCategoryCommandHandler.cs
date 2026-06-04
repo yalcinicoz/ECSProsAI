@@ -30,12 +30,11 @@ public class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryComman
 
         var category = new Category
         {
-            Code = request.Code,
-            NameI18n = request.NameI18n,
-            ParentId = request.ParentId,
-            FillType = request.FillType,
+            Code      = request.Code,
+            NameI18n  = request.NameI18n,
+            ParentId  = request.ParentId,
             SortOrder = request.SortOrder,
-            IsActive = true
+            IsActive  = true
         };
 
         _context.Categories.Add(category);

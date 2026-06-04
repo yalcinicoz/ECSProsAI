@@ -12,7 +12,8 @@ public class NavNode : BaseEntity
 {
     public Guid NavigationMenuId { get; set; }
     public Guid? ParentNavNodeId { get; set; }
-    public Guid? CategoryId { get; set; }
+    public Guid? ChannelCategoryId { get; set; }
+    public ChannelCategory? ChannelCategory { get; set; }
 
     // Kanal özelinde kimlik — null ise Category.NameI18n kullanılır
     public Dictionary<string, string>? NameOverrideI18n { get; set; }
