@@ -1,78 +1,13 @@
-using ECSPros.Catalog.Application.Helpers;
 using ECSPros.Catalog.Application.Services;
+using ECSPros.Catalog.Domain.Entities;
 using ECSPros.Shared.Contracts;
-using ECSPros.Shared.Kernel.Common;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace ECSPros.Catalog.Application.Queries.GetStoreCategoryProducts;
+namespace ECSPros.Catalog.Application.Helpers;
 
-public record GetStoreCategoryProductsQuery(
-    Guid CategoryId,
-    int Page = 1,
-    int PageSize = 24) : IRequest<Result<StoreCategoryProductsDto>>;
-
-public record StoreCategoryProductsDto(
-    Guid CategoryId,
-    Dictionary<string, string> CategoryNameI18n,
-    PagedResult<StoreProductListItemDto> Products);
-
-public record StoreProductListItemDto(
-    Guid Id,
-    string Code,
-    Dictionary<string, string> NameI18n,
-    Dictionary<string, string>? ShortDescriptionI18n,
-    string? MainImageUrl,
-    decimal MinPrice,
-    bool IsActive);
-
-public class GetStoreCategoryProductsQueryHandler(ICatalogDbContext db)
-    : IRequestHandler<GetStoreCategoryProductsQuery, Result<StoreCategoryProductsDto>>
+public static class ProductFilterHelper
 {
-    public async Task<Result<StoreCategoryProductsDto>> Handle(
-        GetStoreCategoryProductsQuery request, CancellationToken ct)
-    {
-        var category = await db.Categories
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == request.CategoryId && c.IsActive, ct);
-
-        if (category is null)
-            return Result.Failure<StoreCategoryProductsDto>("Kategori bulunamadı.");
-
-        var productQuery = db.CategoryProducts
-            .Where(cp => cp.CategoryId == request.CategoryId)
-            .OrderBy(cp => cp.SortOrder)
-            .Select(cp => cp.Product)
-            .Where(p => p.IsActive);
-
-        var total = await productQuery.CountAsync(ct);
-
-        var products = await productQuery
-            .Include(p => p.Variants).ThenInclude(v => v.Images)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
-            .ToListAsync(ct);
-
-        var items = products.Select(p =>
-        {
-            var activeVariants = p.Variants.Where(v => v.IsActive).ToList();
-            var minPrice = activeVariants.MinBy(v => v.BasePrice)?.BasePrice ?? 0;
-            var mainImage = activeVariants
-                .SelectMany(v => v.Images)
-                .Where(i => i.IsMain)
-                .OrderBy(i => i.SortOrder)
-                .FirstOrDefault()?.ImageUrl;
-
-            return new StoreProductListItemDto(
-                p.Id, p.Code, p.NameI18n, p.ShortDescriptionI18n, mainImage, minPrice, p.IsActive);
-        }).ToList();
-
-        var paged = new PagedResult<StoreProductListItemDto>(items, total, request.Page, request.PageSize);
-        return Result.Success(new StoreCategoryProductsDto(category.Id, category.NameI18n, paged));
-    }
-
-    /// <summary>Filtre kurallarını ürün sorgusuna uygular. ChannelCategory handler'ları da kullanır.</summary>
-    public static IQueryable<Domain.Entities.Product> BuildFilterQuery(
+    public static IQueryable<Product> BuildFilterQuery(
         ICatalogDbContext db,
         CategoryFilterRules? rules,
         Guid? firmPlatformId = null,

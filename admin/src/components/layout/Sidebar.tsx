@@ -47,6 +47,7 @@ const ICON: Record<string, React.ReactNode> = {
   languages:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>,
   images:        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,
   palette:       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>,
+  layout:        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>,
 }
 
 const NAV_SECTIONS: NavSection[] = [
@@ -58,9 +59,8 @@ const NAV_SECTIONS: NavSection[] = [
     { label: 'Toplu Resim Yükleme',to: '/catalog/bulk-images',     icon: 'images' },
     { label: 'Özellik Tipleri',    to: '/catalog/attribute-types', icon: 'sliders' },
     { label: 'Filtre Renkleri',    to: '/catalog/filter-colors',             icon: 'palette' },
-    { label: 'Ürün Grupları',      to: '/catalog/product-groups',            icon: 'layers' },
-    { label: 'Kategoriler',        to: '/catalog/categories',                icon: 'sitemap' },
-    { label: 'Kanal Kategorileri', to: '/storefront/channel-categories',     icon: 'layout' },
+    { label: 'Ürün Grupları',      to: '/catalog/product-groups',        icon: 'layers' },
+    { label: 'Kanal Kategorileri', to: '/storefront/channel-categories', icon: 'layout' },
     { label: 'Katalog Ayarları',   to: '/catalog/settings',                  icon: 'settings' },
   ]},
   { label: 'Satış', items: [

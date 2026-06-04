@@ -27,10 +27,9 @@ public static class DemoDataSeeder
 
         var (attrTypes, attrValues) = await SeedAttributeTypesAndValuesAsync(sp);
         var productGroups = await SeedProductGroupsAsync(sp, attrTypes);
-        var categories = await SeedCategoriesAsync(sp);
-        var variants = await SeedProductsAsync(sp, productGroups, attrTypes, attrValues, categories);
+        var variants = await SeedProductsAsync(sp, productGroups, attrTypes, attrValues);
         await SeedInventoryAsync(sp, variants);
-        await SeedCmsMenusAsync(sp, firmPlatformId, categories);
+        await SeedCmsMenusAsync(sp, firmPlatformId);
     }
 
     // ─────────────────────────────────────────────────────────
@@ -386,27 +385,13 @@ public static class DemoDataSeeder
     }
 
     // ─────────────────────────────────────────────────────────
-    // 4. KATEGORİLER
-    // ─────────────────────────────────────────────────────────
-    private static async Task<Dictionary<string, Category>> SeedCategoriesAsync(IServiceProvider sp)
-    {
-        // Kategoriler artık DatabaseSeeder tarafından oluşturuluyor.
-        // DemoDataSeeder sadece mevcut kategorileri yükler.
-        var ctx = sp.GetRequiredService<CatalogDbContext>();
-        var all = await ctx.Categories.ToDictionaryAsync(c => c.Code);
-        Console.WriteLine($"✓ Demo Seed: {all.Count} kategori DatabaseSeeder'dan alındı.");
-        return all;
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // 5. ÜRÜNLER + VARYANTLAR
+    // 4. ÜRÜNLER + VARYANTLAR
     // ─────────────────────────────────────────────────────────
     private static async Task<List<Guid>> SeedProductsAsync(
         IServiceProvider sp,
         Dictionary<string, ProductGroup> groups,
         Dictionary<string, AttributeType> types,
-        Dictionary<string, Dictionary<string, AttributeValue>> values,
-        Dictionary<string, Category> categories)
+        Dictionary<string, Dictionary<string, AttributeValue>> values)
     {
         var ctx = sp.GetRequiredService<CatalogDbContext>();
 
@@ -423,8 +408,7 @@ public static class DemoDataSeeder
             string code, string nameTr, string nameEn,
             string groupCode, decimal basePrice, decimal baseCost, int taxRate,
             string[] colorNames, string[] sizeNames,
-            string attrSizeKey, // "size" veya "shoe_size"
-            string[] catCodes)
+            string attrSizeKey)
         {
             if (!groups.TryGetValue(groupCode, out var group))
                 return new();
@@ -441,13 +425,6 @@ public static class DemoDataSeeder
             };
             ctx.Products.Add(product);
             await ctx.SaveChangesAsync();
-
-            // Kategorilere ekle
-            foreach (var catCode in catCodes)
-            {
-                if (categories.TryGetValue(catCode, out var cat))
-                    ctx.CategoryProducts.Add(new CategoryProduct { CategoryId = cat.Id, ProductId = product.Id, SortOrder = 0 });
-            }
 
             // Varyantlar
             var colorVals = values.GetValueOrDefault("color") ?? new();
@@ -506,56 +483,49 @@ public static class DemoDataSeeder
             "tshirt", 299, 89, 18,
             colorNames: new[] { "Beyaz", "Siyah", "Lacivert", "Kırmızı", "Gri" },
             sizeNames:  new[] { "S", "M", "L", "XL", "XXL" },
-            attrSizeKey: "size",
-            catCodes: new[] { "erkek_tshirt", "giyim" }));
+            attrSizeKey: "size"));
 
         allVariantIds.AddRange(await AddProduct(
             "SHIRT-001", "Oxford Uzun Kollu Gömlek", "Oxford Long Sleeve Shirt",
             "shirt", 599, 189, 18,
             colorNames: new[] { "Beyaz", "Mavi", "Lacivert" },
             sizeNames:  new[] { "S", "M", "L", "XL" },
-            attrSizeKey: "size",
-            catCodes: new[] { "erkek_gomlek", "giyim" }));
+            attrSizeKey: "size"));
 
         allVariantIds.AddRange(await AddProduct(
             "DRESS-001", "Yazlık Midi Elbise", "Summer Midi Dress",
             "dress", 849, 249, 18,
             colorNames: new[] { "Beyaz", "Pembe", "Lacivert" },
             sizeNames:  new[] { "XS", "S", "M", "L" },
-            attrSizeKey: "size",
-            catCodes: new[] { "kadin_elbise", "giyim" }));
+            attrSizeKey: "size"));
 
         allVariantIds.AddRange(await AddProduct(
             "SNEAKER-001", "Air Cushion Spor Ayakkabı", "Air Cushion Sneaker",
             "sneaker", 1299, 399, 18,
             colorNames: new[] { "Beyaz", "Siyah", "Kırmızı" },
             sizeNames:  new[] { "38", "39", "40", "41", "42", "43", "44" },
-            attrSizeKey: "shoe_size",
-            catCodes: new[] { "spor_ayakkabi", "erkek_ayakkabi" }));
+            attrSizeKey: "shoe_size"));
 
         allVariantIds.AddRange(await AddProduct(
             "TRACK-001", "Slim Fit Eşofman Takımı", "Slim Fit Tracksuit Set",
             "tracksuit", 999, 299, 18,
             colorNames: new[] { "Siyah", "Lacivert", "Gri" },
             sizeNames:  new[] { "S", "M", "L", "XL", "XXL" },
-            attrSizeKey: "size",
-            catCodes: new[] { "erkek_esofman", "spor_giyim" }));
+            attrSizeKey: "size"));
 
         allVariantIds.AddRange(await AddProduct(
             "BAG-001", "Deri Omuz Çantası", "Leather Shoulder Bag",
             "bag", 1799, 549, 18,
             colorNames: new[] { "Siyah", "Kahverengi", "Bej" },
             sizeNames:  new[] { "S", "M", "L" },
-            attrSizeKey: "size",
-            catCodes: new[] { "kadin_canta", "canta" }));
+            attrSizeKey: "size"));
 
         allVariantIds.AddRange(await AddProduct(
             "JACKET-001", "Oversize Blazer Ceket", "Oversize Blazer Jacket",
             "jacket", 2199, 699, 18,
             colorNames: new[] { "Siyah", "Beyaz", "Bej" },
             sizeNames:  new[] { "XS", "S", "M", "L", "XL" },
-            attrSizeKey: "size",
-            catCodes: new[] { "erkek_ceket", "kadin_ceket", "giyim" }));
+            attrSizeKey: "size"));
 
         Console.WriteLine($"✓ Demo Seed: 7 ürün + {allVariantIds.Count} varyant oluşturuldu.");
         return allVariantIds;
@@ -630,8 +600,7 @@ public static class DemoDataSeeder
     // ─────────────────────────────────────────────────────────
     private static async Task SeedCmsMenusAsync(
         IServiceProvider sp,
-        Guid firmPlatformId,
-        Dictionary<string, Category> categories)
+        Guid firmPlatformId)
     {
         var ctx = sp.GetRequiredService<StorefrontDbContext>();
 
@@ -678,7 +647,7 @@ public static class DemoDataSeeder
         await ctx.SaveChangesAsync();
 
         NavNode MakeNode(Guid menuId, string nameTr, string nameEn, string nodeType,
-            Guid? parentId = null, string? url = null, Guid? categoryId = null, int sort = 0) =>
+            Guid? parentId = null, string? url = null, int sort = 0) =>
             new()
             {
                 Id               = Guid.NewGuid(),
@@ -686,7 +655,7 @@ public static class DemoDataSeeder
                 ParentNavNodeId  = parentId,
                 NameOverrideI18n = new() { { "tr", nameTr }, { "en", nameEn } },
                 NodeType         = nodeType,
-                ChannelCategoryId = null, // CategoryId → ChannelCategoryId geçişi yapıldı
+                ChannelCategoryId = null,
                 CustomUrl        = url,
                 IsActive         = true,
                 SortOrder        = sort,
@@ -694,33 +663,23 @@ public static class DemoDataSeeder
 
         var nodes = new List<NavNode>();
 
-        var navGiyim    = MakeNode(mainNav.Id, "Giyim",       "Clothing",  "category",
-            categoryId: categories.GetValueOrDefault("giyim")?.Id, sort: 1);
-        var navAyakkabi = MakeNode(mainNav.Id, "Ayakkabı",    "Shoes",     "category",
-            categoryId: categories.GetValueOrDefault("ayakkabi")?.Id, sort: 2);
-        var navCanta    = MakeNode(mainNav.Id, "Çanta",       "Bags",      "category",
-            categoryId: categories.GetValueOrDefault("canta")?.Id, sort: 3);
-        var navSpor     = MakeNode(mainNav.Id, "Spor",        "Sports",    "category",
-            categoryId: categories.GetValueOrDefault("spor")?.Id, sort: 4);
-        var navCampaign = MakeNode(mainNav.Id, "Kampanyalar", "Campaigns", "link",
-            url: "/kampanyalar", sort: 5);
+        var navGiyim    = MakeNode(mainNav.Id, "Giyim",       "Clothing",  "link", url: "/giyim",       sort: 1);
+        var navAyakkabi = MakeNode(mainNav.Id, "Ayakkabı",    "Shoes",     "link", url: "/ayakkabi",    sort: 2);
+        var navCanta    = MakeNode(mainNav.Id, "Çanta",       "Bags",      "link", url: "/canta",       sort: 3);
+        var navSpor     = MakeNode(mainNav.Id, "Spor",        "Sports",    "link", url: "/spor",        sort: 4);
+        var navCampaign = MakeNode(mainNav.Id, "Kampanyalar", "Campaigns", "link", url: "/kampanyalar", sort: 5);
 
         nodes.AddRange(new[] { navGiyim, navAyakkabi, navCanta, navSpor, navCampaign });
         ctx.NavNodes.AddRange(nodes);
         await ctx.SaveChangesAsync();
         nodes.Clear();
 
-        nodes.Add(MakeNode(mainNav.Id, "Erkek Giyim", "Men's Clothing",   "category",
-            parentId: navGiyim.Id, categoryId: categories.GetValueOrDefault("erkek_giyim")?.Id, sort: 1));
-        nodes.Add(MakeNode(mainNav.Id, "Kadın Giyim", "Women's Clothing", "category",
-            parentId: navGiyim.Id, categoryId: categories.GetValueOrDefault("kadin_giyim")?.Id, sort: 2));
-        nodes.Add(MakeNode(mainNav.Id, "Çocuk Giyim", "Kids Clothing",    "category",
-            parentId: navGiyim.Id, categoryId: categories.GetValueOrDefault("cocuk_giyim")?.Id, sort: 3));
+        nodes.Add(MakeNode(mainNav.Id, "Erkek Giyim",    "Men's Clothing",   "link", parentId: navGiyim.Id,    url: "/giyim/erkek",           sort: 1));
+        nodes.Add(MakeNode(mainNav.Id, "Kadın Giyim",    "Women's Clothing", "link", parentId: navGiyim.Id,    url: "/giyim/kadin",           sort: 2));
+        nodes.Add(MakeNode(mainNav.Id, "Çocuk Giyim",    "Kids Clothing",    "link", parentId: navGiyim.Id,    url: "/giyim/cocuk",           sort: 3));
 
-        nodes.Add(MakeNode(mainNav.Id, "Erkek Ayakkabı", "Men's Shoes",   "category",
-            parentId: navAyakkabi.Id, categoryId: categories.GetValueOrDefault("erkek_ayakkabi")?.Id, sort: 1));
-        nodes.Add(MakeNode(mainNav.Id, "Kadın Ayakkabı", "Women's Shoes", "category",
-            parentId: navAyakkabi.Id, categoryId: categories.GetValueOrDefault("kadin_ayakkabi")?.Id, sort: 2));
+        nodes.Add(MakeNode(mainNav.Id, "Erkek Ayakkabı", "Men's Shoes",      "link", parentId: navAyakkabi.Id, url: "/ayakkabi/erkek",        sort: 1));
+        nodes.Add(MakeNode(mainNav.Id, "Kadın Ayakkabı", "Women's Shoes",    "link", parentId: navAyakkabi.Id, url: "/ayakkabi/kadin",        sort: 2));
 
         nodes.Add(MakeNode(footer.Id, "Hakkımızda",    "About Us",     "link", url: "/hakkimizda",    sort: 1));
         nodes.Add(MakeNode(footer.Id, "İletişim",      "Contact",      "link", url: "/iletisim",      sort: 2));

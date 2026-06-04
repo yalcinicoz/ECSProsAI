@@ -18,8 +18,6 @@ import { FirmsPage } from '@/pages/settings/FirmsPage'
 import { FirmDetailPage } from '@/pages/settings/FirmDetailPage'
 import { CatalogSettingsPage } from '@/pages/catalog/CatalogSettingsPage'
 import { BulkImageUploadPage } from '@/pages/catalog/BulkImageUploadPage'
-import { CategoriesPage } from '@/pages/catalog/CategoriesPage'
-import { CategoryDetailPage } from '@/pages/catalog/CategoryDetailPage'
 import { FilterColorsPage } from '@/pages/catalog/FilterColorsPage'
 import { MenusPage } from '@/pages/cms/MenusPage'
 import { ChannelCategoriesPage } from '@/pages/storefront/ChannelCategoriesPage'
@@ -55,9 +53,7 @@ export const router = createBrowserRouter(
             { path: 'catalog/products/:code',  element: <ProductDetailPage /> },
             { path: 'catalog/settings',          element: <CatalogSettingsPage /> },
             { path: 'catalog/bulk-images',       element: <BulkImageUploadPage /> },
-            { path: 'catalog/categories',        element: <CategoriesPage /> },
-            { path: 'catalog/categories/:id',    element: <CategoryDetailPage /> },
-            { path: 'catalog/filter-colors',              element: <FilterColorsPage /> },
+            { path: 'catalog/filter-colors',     element: <FilterColorsPage /> },
             { path: 'storefront/channel-categories',      element: <ChannelCategoriesPage /> },
             { path: 'storefront/channel-categories/:id',  element: <ChannelCategoryDetailPage /> },
 

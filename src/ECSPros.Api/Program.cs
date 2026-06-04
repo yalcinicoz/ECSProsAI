@@ -12,7 +12,7 @@ using ECSPros.Shared.Infrastructure.Messaging;
 using FluentValidation;
 using MediatR;
 using Serilog;
-using ECSPros.Catalog.Application.Queries.GetCategories;
+using ECSPros.Catalog.Application.Queries.GetProducts;
 using ECSPros.Catalog.Infrastructure;
 using ECSPros.Crm.Application.Queries.GetMembers;
 using ECSPros.Inventory.Application.Queries.GetWarehouses;
@@ -88,7 +88,7 @@ builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(LoginCommand).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetLanguagesQuery).Assembly);
-    cfg.RegisterServicesFromAssembly(typeof(GetCategoriesQuery).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(GetProductsQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetMembersQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetOrdersQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetWarehousesQuery).Assembly);

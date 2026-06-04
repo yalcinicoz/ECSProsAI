@@ -36,7 +36,7 @@ public class UpdateChannelCategoryCommandHandler(IStorefrontDbContext db)
                         && c.Slug == request.Slug
                         && c.Id != request.Id, ct);
         if (slugConflict)
-            return Result.Failure<bool>($"'{request.Slug}' slug'ı bu kanalda zaten kullanımda.");
+            return Result.Failure<bool>($"'{request.Slug}' URL'i bu kanalda zaten kullanımda.");
 
         cat.ParentId           = request.ParentId;
         cat.NameI18n           = request.NameI18n;

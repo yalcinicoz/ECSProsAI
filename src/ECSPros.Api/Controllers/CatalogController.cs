@@ -11,7 +11,6 @@ using ECSPros.Catalog.Application.Commands.CreateAttributeType;
 using ECSPros.Catalog.Application.Commands.UpdateAttributeType;
 using ECSPros.Catalog.Application.Commands.UpdateAttributeValue;
 using ECSPros.Catalog.Application.Commands.CreateAttributeValue;
-using ECSPros.Catalog.Application.Commands.CreateCategory;
 using ECSPros.Catalog.Application.Commands.CreateProduct;
 using ECSPros.Catalog.Application.Commands.CreateProductGroup;
 using ECSPros.Catalog.Application.Commands.RemoveAxisSubAttribute;
@@ -22,16 +21,9 @@ using ECSPros.Catalog.Application.Commands.SetAttributeValueProperties;
 using ECSPros.Catalog.Application.Commands.SetFirmPlatformVariantPrice;
 using ECSPros.Catalog.Application.Commands.SetPrimaryAxis;
 using ECSPros.Catalog.Application.Commands.SetProductStatus;
-using ECSPros.Catalog.Application.Commands.AddCategoryProduct;
-using ECSPros.Catalog.Application.Commands.RemoveCategoryProduct;
-using ECSPros.Catalog.Application.Commands.SyncCategoryProducts;
-using ECSPros.Catalog.Application.Commands.UpdateCategory;
-using ECSPros.Catalog.Application.Queries.GetCategoryDetail;
-using ECSPros.Catalog.Application.Queries.GetCategoryProducts;
 using ECSPros.Catalog.Application.Commands.UpdateProduct;
 using ECSPros.Catalog.Application.Commands.UpdateProductGroup;
 using ECSPros.Catalog.Application.Queries.GetAttributeTypes;
-using ECSPros.Catalog.Application.Queries.GetCategories;
 using ECSPros.Catalog.Application.Queries.GetFirmPlatformPricing;
 using ECSPros.Catalog.Application.Queries.GetProductPriceHistory;
 using ECSPros.Catalog.Application.Commands.UpdateVariantPrice;
@@ -75,104 +67,6 @@ public class CatalogController : ControllerBase
     public CatalogController(IMediator mediator)
     {
         _mediator = mediator;
-    }
-
-    // ─── Categories ────────────────────────────────────────────────────────────
-
-    /// <summary>Global kategori listesini döner.</summary>
-    [HttpGet("categories")]
-    public async Task<IActionResult> GetCategories(
-        [FromQuery] Guid? parentId,
-        [FromQuery] bool activeOnly = true,
-        CancellationToken ct = default)
-    {
-        var result = await _mediator.Send(new GetCategoriesQuery(parentId, activeOnly), ct);
-        return Ok(new { success = true, data = result.Value });
-    }
-
-    /// <summary>Kategori detayını döner (fillType, filterRules dahil).</summary>
-    [HttpGet("categories/{id:guid}")]
-    public async Task<IActionResult> GetCategory(Guid id, CancellationToken ct)
-    {
-        var result = await _mediator.Send(new GetCategoryDetailQuery(id), ct);
-        if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = result.Value });
-    }
-
-    /// <summary>Yeni kategori oluşturur.</summary>
-    [HttpPost("categories")]
-    public async Task<IActionResult> CreateCategory([FromBody] CreateCategoryRequest request, CancellationToken ct)
-    {
-        var result = await _mediator.Send(new CreateCategoryCommand(
-            request.Code, request.NameI18n, request.ParentId, request.SortOrder), ct);
-
-        if (result.IsFailure)
-            return BadRequest(new { success = false, error = result.Error });
-
-        return Created($"/api/catalog/categories", new { success = true, data = new { id = result.Value } });
-    }
-
-    /// <summary>Kategoriyi günceller.</summary>
-    [HttpPut("categories/{id:guid}")]
-    public async Task<IActionResult> UpdateCategory(Guid id, [FromBody] UpdateCategoryRequest request, CancellationToken ct)
-    {
-        var userIdClaim = User.FindFirst("sub")?.Value;
-        if (!Guid.TryParse(userIdClaim, out var updatedBy))
-            return Unauthorized();
-
-        var result = await _mediator.Send(new UpdateCategoryCommand(
-            id, request.NameI18n, request.ParentId, request.IsActive, request.SortOrder, updatedBy), ct);
-
-        if (result.IsFailure)
-            return BadRequest(new { success = false, error = result.Error });
-
-        return Ok(new { success = true });
-    }
-
-    /// <summary>Kategorideki ürünleri listeler (admin).</summary>
-    [HttpGet("categories/{id:guid}/products")]
-    public async Task<IActionResult> GetCategoryProducts(
-        Guid id,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
-        CancellationToken ct = default)
-    {
-        var result = await _mediator.Send(new GetCategoryProductsQuery(id, page, pageSize), ct);
-        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = result.Value });
-    }
-
-    /// <summary>Kategoriye manuel ürün ekler.</summary>
-    [HttpPost("categories/{id:guid}/products")]
-    public async Task<IActionResult> AddCategoryProduct(
-        Guid id, [FromBody] AddCategoryProductRequest request, CancellationToken ct)
-    {
-        var result = await _mediator.Send(new AddCategoryProductCommand(
-            id, request.ProductId, request.SortOrder, request.IsPinned), ct);
-        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true });
-    }
-
-    /// <summary>Kategoriden ürün çıkarır.</summary>
-    [HttpDelete("categories/{id:guid}/products/{productId:guid}")]
-    public async Task<IActionResult> RemoveCategoryProduct(
-        Guid id, Guid productId, CancellationToken ct)
-    {
-        var result = await _mediator.Send(new RemoveCategoryProductCommand(id, productId), ct);
-        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true });
-    }
-
-    /// <summary>
-    /// FilterRules'u çalıştırır, CategoryProducts tablosunu günceller.
-    /// Sadece fillType=filter veya mixed olan kategoriler için geçerlidir.
-    /// </summary>
-    [HttpPost("categories/{id:guid}/sync")]
-    public async Task<IActionResult> SyncCategoryProducts(Guid id, CancellationToken ct)
-    {
-        var result = await _mediator.Send(new SyncCategoryProductsCommand(id), ct);
-        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = new { addedCount = result.Value } });
     }
 
     // ─── Products ──────────────────────────────────────────────────────────────
@@ -754,12 +648,6 @@ public class CatalogController : ControllerBase
 
 }
 
-public record CreateCategoryRequest(
-    string Code,
-    Dictionary<string, string> NameI18n,
-    Guid? ParentId,
-    int SortOrder = 0);
-
 public record CreateProductRequest(
     Guid ProductGroupId,
     string? Code,
@@ -772,17 +660,6 @@ public record CreateProductRequest(
     List<VariantRequest>? Variants = null);
 
 public record VariantRequest(string Sku, decimal BasePrice, decimal? BaseCost);
-
-public record UpdateCategoryRequest(
-    Dictionary<string, string> NameI18n,
-    Guid? ParentId,
-    bool IsActive,
-    int SortOrder);
-
-public record AddCategoryProductRequest(
-    Guid ProductId,
-    int SortOrder = 0,
-    bool IsPinned = false);
 
 public record UpdateProductRequest(
     Dictionary<string, string> NameI18n,

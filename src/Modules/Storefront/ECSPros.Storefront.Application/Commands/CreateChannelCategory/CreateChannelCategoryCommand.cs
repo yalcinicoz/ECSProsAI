@@ -10,7 +10,7 @@ public record CreateChannelCategoryCommand(
     Guid FirmPlatformId,
     Guid? ParentId,
     Dictionary<string, string> NameI18n,
-    string Slug,
+    string? Slug,
     string FillType,
     Dictionary<string, object>? FilterDef,
     int SortOrder,
@@ -22,17 +22,21 @@ public class CreateChannelCategoryCommandHandler(IStorefrontDbContext db)
 {
     public async Task<Result<Guid>> Handle(CreateChannelCategoryCommand request, CancellationToken ct)
     {
+        var slug = string.IsNullOrWhiteSpace(request.Slug)
+            ? Slugify(request.NameI18n.GetValueOrDefault("tr") ?? request.NameI18n.Values.FirstOrDefault() ?? "kategori")
+            : request.Slug.Trim().ToLowerInvariant();
+
         var slugExists = await db.ChannelCategories
-            .AnyAsync(c => c.FirmPlatformId == request.FirmPlatformId && c.Slug == request.Slug, ct);
+            .AnyAsync(c => c.FirmPlatformId == request.FirmPlatformId && c.Slug == slug, ct);
         if (slugExists)
-            return Result.Failure<Guid>($"'{request.Slug}' slug'ı bu kanalda zaten kullanımda.");
+            return Result.Failure<Guid>($"'{slug}' URL'i bu kanalda zaten kullanımda.");
 
         var cat = new ChannelCategory
         {
             FirmPlatformId   = request.FirmPlatformId,
             ParentId         = request.ParentId,
             NameI18n         = request.NameI18n,
-            Slug             = request.Slug,
+            Slug             = slug,
             Status           = "draft",
             FillType         = request.FillType,
             FilterDef        = request.FilterDef,
@@ -44,5 +48,22 @@ public class CreateChannelCategoryCommandHandler(IStorefrontDbContext db)
         db.ChannelCategories.Add(cat);
         await db.SaveChangesAsync(ct);
         return Result.Success(cat.Id);
+    }
+
+    private static string Slugify(string input)
+    {
+        var map = new Dictionary<char, string>
+        {
+            ['ğ']="g", ['Ğ']="g", ['ü']="u", ['Ü']="u", ['ş']="s", ['Ş']="s",
+            ['ı']="i", ['İ']="i", ['ö']="o", ['Ö']="o", ['ç']="c", ['Ç']="c",
+        };
+        var sb = new System.Text.StringBuilder();
+        foreach (var c in input)
+            sb.Append(map.TryGetValue(c, out var r) ? r : c.ToString());
+
+        return System.Text.RegularExpressions.Regex.Replace(
+            sb.ToString().ToLowerInvariant(),
+            @"[^a-z0-9]+", "-")
+            .Trim('-');
     }
 }

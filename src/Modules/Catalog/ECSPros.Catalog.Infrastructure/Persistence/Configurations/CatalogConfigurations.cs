@@ -67,42 +67,6 @@ public class ProductGroupAttributeConfiguration : IEntityTypeConfiguration<Produ
     }
 }
 
-public class CategoryConfiguration : IEntityTypeConfiguration<Category>
-{
-    public void Configure(EntityTypeBuilder<Category> builder)
-    {
-        builder.ToTable("catalog_categories");
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Code).HasMaxLength(100).IsRequired();
-        builder.Property(x => x.NameI18n).HasColumnType("jsonb").IsRequired();
-        builder.HasIndex(x => x.Code).IsUnique();
-        builder.HasQueryFilter(x => !x.IsDeleted);
-
-        builder.HasOne(x => x.Parent)
-            .WithMany(x => x.Children)
-            .HasForeignKey(x => x.ParentId)
-            .IsRequired(false);
-    }
-}
-
-public class CategoryProductConfiguration : IEntityTypeConfiguration<CategoryProduct>
-{
-    public void Configure(EntityTypeBuilder<CategoryProduct> builder)
-    {
-        builder.ToTable("catalog_category_products");
-        builder.HasKey(x => x.Id);
-        builder.HasIndex(x => new { x.CategoryId, x.ProductId }).IsUnique();
-        builder.HasQueryFilter(x => !x.IsDeleted);
-
-        builder.HasOne(x => x.Category)
-            .WithMany(x => x.CategoryProducts)
-            .HasForeignKey(x => x.CategoryId);
-
-        builder.HasOne(x => x.Product)
-            .WithMany(x => x.CategoryProducts)
-            .HasForeignKey(x => x.ProductId);
-    }
-}
 
 public class ProductConfiguration : IEntityTypeConfiguration<Product>
 {

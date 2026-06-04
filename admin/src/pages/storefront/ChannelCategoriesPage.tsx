@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, AlertTriangle } from 'lucide-react'
@@ -55,14 +55,34 @@ function getName(i18n: Record<string, string>): string {
   return i18n['tr'] ?? i18n[Object.keys(i18n)[0]] ?? '—'
 }
 
+function slugify(text: string): string {
+  const map: Record<string, string> = {
+    'ğ':'g','Ğ':'g','ü':'u','Ü':'u','ş':'s','Ş':'s',
+    'ı':'i','İ':'i','ö':'o','Ö':'o','ç':'c','Ç':'c',
+  }
+  return text
+    .split('').map(c => map[c] ?? c).join('')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 export function ChannelCategoriesPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const [selectedChannelId, setSelectedChannelId] = useState<string>('')
+  const [selectedChannelId, setSelectedChannelId] = useState<string>(
+    () => sessionStorage.getItem('channelCategories.channelId') ?? ''
+  )
+
+  useEffect(() => {
+    if (selectedChannelId)
+      sessionStorage.setItem('channelCategories.channelId', selectedChannelId)
+  }, [selectedChannelId])
   const [createOpen, setCreateOpen] = useState(false)
   const [newSlug, setNewSlug] = useState('')
   const [newName, setNewName] = useState('')
+  const [slugEdited, setSlugEdited] = useState(false)
 
   const { data: firms = [], isLoading: firmsLoading } = useQuery<Firm[]>({
     queryKey: ['firms'],
@@ -116,6 +136,7 @@ export function ChannelCategoriesPage() {
       setCreateOpen(false)
       setNewName('')
       setNewSlug('')
+      setSlugEdited(false)
       navigate(`/storefront/channel-categories/${id}`)
     },
   })
@@ -225,7 +246,7 @@ export function ChannelCategoriesPage() {
       {/* Create Modal */}
       <Modal
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
+        onClose={() => { setCreateOpen(false); setNewName(''); setNewSlug(''); setSlugEdited(false) }}
         title="Yeni Kanal Kategorisi"
         footer={
           <>
@@ -233,7 +254,7 @@ export function ChannelCategoriesPage() {
             <Button
               onClick={() => createMutation.mutate()}
               loading={createMutation.isPending}
-              disabled={!newName.trim() || !newSlug.trim()}
+              disabled={!newName.trim()}
             >
               Oluştur
             </Button>
@@ -248,9 +269,7 @@ export function ChannelCategoriesPage() {
               value={newName}
               onChange={(e) => {
                 setNewName(e.target.value)
-                if (!newSlug) {
-                  setNewSlug(e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''))
-                }
+                if (!slugEdited) setNewSlug(slugify(e.target.value))
               }}
               className="w-full px-3 py-2 rounded-xl text-sm"
               style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
@@ -258,15 +277,19 @@ export function ChannelCategoriesPage() {
             />
           </div>
           <div>
-            <label className="flbl">Slug</label>
-            <input
-              type="text"
-              value={newSlug}
-              onChange={(e) => setNewSlug(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl text-sm font-mono"
-              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-              placeholder="erkek-spor"
-            />
+            <label className="flbl">URL</label>
+            <div className="flex items-center rounded-xl overflow-hidden"
+              style={{ border: '1px solid var(--border)', background: 'var(--surface2)' }}>
+              <span className="px-3 text-sm select-none" style={{ color: 'var(--text-s)', borderRight: '1px solid var(--border)' }}>/</span>
+              <input
+                type="text"
+                value={newSlug}
+                onChange={(e) => { setSlugEdited(true); setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')) }}
+                className="flex-1 px-3 py-2 text-sm font-mono bg-transparent outline-none"
+                style={{ color: 'var(--text)' }}
+                placeholder="erkek-spor (boş bırakılırsa isimden üretilir)"
+              />
+            </div>
           </div>
         </div>
       </Modal>

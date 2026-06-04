@@ -15,8 +15,6 @@ public class CatalogDbContext : DbContext, ICatalogDbContext
     public DbSet<ProductGroup> ProductGroups => Set<ProductGroup>();
     public DbSet<ProductGroupAttribute> ProductGroupAttributes => Set<ProductGroupAttribute>();
     public DbSet<ProductGroupAxisSubAttribute> ProductGroupAxisSubAttributes => Set<ProductGroupAxisSubAttribute>();
-    public DbSet<Category> Categories => Set<Category>();
-    public DbSet<CategoryProduct> CategoryProducts => Set<CategoryProduct>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductAttribute> ProductAttributes => Set<ProductAttribute>();
     public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
