@@ -11,8 +11,6 @@ public interface ICatalogDbContext
     DbSet<ProductGroup> ProductGroups { get; }
     DbSet<ProductGroupAttribute> ProductGroupAttributes { get; }
     DbSet<ProductGroupAxisSubAttribute> ProductGroupAxisSubAttributes { get; }
-    DbSet<Category> Categories { get; }
-    DbSet<CategoryProduct> CategoryProducts { get; }
     DbSet<Product> Products { get; }
     DbSet<ProductAttribute> ProductAttributes { get; }
     DbSet<ProductVariant> ProductVariants { get; }

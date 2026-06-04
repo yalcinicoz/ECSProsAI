@@ -1,5 +1,4 @@
 using ECSPros.Catalog.Application.Helpers;
-using ECSPros.Catalog.Application.Queries.GetStoreCategoryProducts;
 using ECSPros.Catalog.Application.Services;
 using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
@@ -35,12 +34,12 @@ public class SyncChannelCategoryProductsCommandHandler(
 
         HashSet<Guid>? productIdsInStockRange = null;
         if (rules.StockMin.HasValue || rules.StockMax.HasValue)
-            productIdsInStockRange = await GetStoreCategoryProductsQueryHandler
+            productIdsInStockRange = await ProductFilterHelper
                 .ResolveStockRangeProductIds(catDb, stockService, rules.StockMin, rules.StockMax, ct);
 
         if (!rules.IsActive.HasValue) rules.IsActive = true;
 
-        var matchedIds = await GetStoreCategoryProductsQueryHandler
+        var matchedIds = await ProductFilterHelper
             .BuildFilterQuery(catDb, rules, cat.FirmPlatformId, productIdsInStockRange)
             .Select(p => p.Id)
             .ToListAsync(ct);

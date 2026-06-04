@@ -327,16 +327,20 @@ export function ChannelCategoryDetailPage() {
             </div>
           </div>
 
-          {/* Slug */}
+          {/* URL */}
           <div>
-            <label className="flbl">Slug</label>
-            <input
-              type="text"
-              value={form.slug}
-              onChange={e => setForm(f => f && ({ ...f, slug: e.target.value }))}
-              className="w-full px-3 py-2 rounded-xl text-sm font-mono"
-              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-            />
+            <label className="flbl">URL</label>
+            <div className="flex items-center rounded-xl overflow-hidden"
+              style={{ border: '1px solid var(--border)', background: 'var(--surface2)' }}>
+              <span className="px-3 text-sm select-none" style={{ color: 'var(--text-s)', borderRight: '1px solid var(--border)' }}>/</span>
+              <input
+                type="text"
+                value={form.slug}
+                onChange={e => setForm(f => f && ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
+                className="flex-1 px-3 py-2 text-sm font-mono bg-transparent outline-none"
+                style={{ color: 'var(--text)' }}
+              />
+            </div>
           </div>
 
           {/* Dolum Tipi + Durum */}

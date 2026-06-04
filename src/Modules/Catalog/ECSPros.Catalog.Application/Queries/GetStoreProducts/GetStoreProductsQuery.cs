@@ -7,7 +7,6 @@ namespace ECSPros.Catalog.Application.Queries.GetStoreProducts;
 
 public record GetStoreProductsQuery(
     Guid FirmPlatformId,
-    Guid? CategoryId = null,
     string? Search = null,
     int Page = 1,
     int PageSize = 24) : IRequest<Result<PagedResult<StoreProductDto>>>;
@@ -32,14 +31,6 @@ public class GetStoreProductsQueryHandler(ICatalogDbContext db)
             .Include(p => p.Variants).ThenInclude(v => v.Images)
             .Include(p => p.Variants).ThenInclude(v => v.FirmPlatformVariants)
             .Where(p => p.IsActive);
-
-        if (request.CategoryId.HasValue)
-        {
-            var productIds = db.CategoryProducts
-                .Where(cp => cp.CategoryId == request.CategoryId.Value)
-                .Select(cp => cp.ProductId);
-            q = q.Where(p => productIds.Contains(p.Id));
-        }
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {

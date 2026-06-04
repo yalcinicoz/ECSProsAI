@@ -83,7 +83,6 @@ public static class TestDataSeeder
                 catalog.catalog_product_group_axis_sub_attributes,
                 catalog.catalog_product_group_attributes,
                 catalog.catalog_product_groups,
-                catalog.catalog_categories,
                 catalog.catalog_attribute_value_properties,
                 catalog.catalog_attribute_values,
                 catalog.catalog_attribute_types
@@ -131,15 +130,13 @@ public static class TestDataSeeder
         var (firm, webPlatform)                = await SeedFirmAndPlatformsAsync(coreDb);
         var atTypes                            = await SeedAttributeTypesAsync(catalogDb);
         var groups                             = await SeedProductGroupsAsync(catalogDb, atTypes);
-        var categories                         = await SeedCategoriesAsync(catalogDb);
-        var (products, variantMap)             = await SeedProductsAsync(catalogDb, groups, atTypes, categories, webPlatform.Id);
+        var (products, variantMap)             = await SeedProductsAsync(catalogDb, groups, atTypes, webPlatform.Id);
         var warehouse                          = await SeedWarehouseAndStocksAsync(inventoryDb, variantMap);
-        await SeedMenusAsync(storefrontDb2, webPlatform.Id, categories);
+        await SeedMenusAsync(storefrontDb2, webPlatform.Id);
 
         Console.WriteLine($"  ✓ Firma + {2} satış kanalı");
         Console.WriteLine($"  ✓ {atTypes.Count} özellik tipi");
         Console.WriteLine($"  ✓ {groups.Count} ürün grubu");
-        Console.WriteLine($"  ✓ {categories.Count} kategori");
         Console.WriteLine($"  ✓ {products.Count} ürün, {variantMap.Count} varyant");
         Console.WriteLine($"  ✓ Depo: {warehouse.Code}");
         Console.WriteLine($"  ✓ Menüler oluşturuldu.");
@@ -401,106 +398,12 @@ public static class TestDataSeeder
         };
     }
 
-    // ── Kategoriler ──────────────────────────────────────────────────────────
-
-    private static async Task<Dictionary<string, Category>> SeedCategoriesAsync(
-        CatalogDbContext db)
-    {
-        var all = new Dictionary<string, Category>();
-
-        Category Make(string code, string tr, string en, int order, Guid? parentId = null) =>
-            new()
-            {
-                Code     = code,
-                NameI18n = new() { { "tr", tr }, { "en", en } },
-                ParentId = parentId,
-                IsActive = true,
-                SortOrder = order,
-            };
-
-        // ── Kök kategoriler ───────────────────────────────────────────────────
-        var erkek    = Make("ERKEK",    "Erkek",    "Men",         1);
-        var kadin    = Make("KADIN",    "Kadın",    "Women",       2);
-        var ayakkabi = Make("AYAKKABI", "Ayakkabı", "Shoes",       3);
-        var aksesuar = Make("AKSESUAR", "Aksesuar", "Accessories", 4);
-        var sale     = Make("SALE",     "İndirim",  "Sale",        5);
-
-        db.Categories.AddRange(erkek, kadin, ayakkabi, aksesuar, sale);
-        await db.SaveChangesAsync();
-
-        // ── Erkek alt kategoriler ─────────────────────────────────────────────
-        var erkekUst      = Make("ERKEK-UST",       "Üst Giyim",   "Tops",          1, erkek.Id);
-        var erkekAlt      = Make("ERKEK-ALT",       "Alt Giyim",   "Bottoms",       2, erkek.Id);
-        var erkekSpor     = Make("ERKEK-SPOR",      "Spor",        "Sport",         3, erkek.Id);
-        var erkekDisGiyim = Make("ERKEK-DIS",       "Dış Giyim",   "Outerwear",     4, erkek.Id);
-
-        db.Categories.AddRange(erkekUst, erkekAlt, erkekSpor, erkekDisGiyim);
-        await db.SaveChangesAsync();
-
-        var erkekTisort    = Make("ERKEK-TISORT",    "T-Shirt",     "T-Shirt",       1, erkekUst.Id);
-        var erkekGomlek    = Make("ERKEK-GOMLEK",    "Gömlek",      "Shirt",         2, erkekUst.Id);
-        var erkekSweatshirt= Make("ERKEK-SWEATSHIRT","Sweatshirt",  "Sweatshirt",    3, erkekUst.Id);
-        var erkekPantolon  = Make("ERKEK-PANTOLON",  "Pantolon",    "Trousers",      1, erkekAlt.Id);
-        var erkekSort      = Make("ERKEK-SORT",      "Şort",        "Shorts",        2, erkekAlt.Id);
-        var erkekEsofman   = Make("ERKEK-ESOFMAN",   "Eşofman",     "Tracksuit",     1, erkekSpor.Id);
-
-        db.Categories.AddRange(erkekTisort, erkekGomlek, erkekSweatshirt, erkekPantolon, erkekSort, erkekEsofman);
-        await db.SaveChangesAsync();
-
-        // ── Kadın alt kategoriler ─────────────────────────────────────────────
-        var kadinUst   = Make("KADIN-UST",    "Üst Giyim",       "Tops",          1, kadin.Id);
-        var kadinElbise= Make("KADIN-ELBISE", "Elbise",          "Dresses",       2, kadin.Id);
-        var kadinAlt   = Make("KADIN-ALT",    "Alt Giyim",       "Bottoms",       3, kadin.Id);
-        var kadinCanta = Make("KADIN-CANTA",  "Çanta & Aksesuar","Bags",          4, kadin.Id);
-
-        db.Categories.AddRange(kadinUst, kadinElbise, kadinAlt, kadinCanta);
-        await db.SaveChangesAsync();
-
-        var kadinTisort = Make("KADIN-TISORT", "T-Shirt",  "T-Shirt", 1, kadinUst.Id);
-        var kadinBluz   = Make("KADIN-BLUZ",   "Bluz",     "Blouse",  2, kadinUst.Id);
-
-        db.Categories.AddRange(kadinTisort, kadinBluz);
-        await db.SaveChangesAsync();
-
-        // ── Ayakkabı alt kategoriler ──────────────────────────────────────────
-        var sporAyakkabi   = Make("SPOR-AYAKKABI",   "Spor Ayakkabı", "Sneakers",      1, ayakkabi.Id);
-        var klasikAyakkabi = Make("KLASIK-AYAKKABI", "Klasik",        "Classic",       2, ayakkabi.Id);
-        var bot            = Make("BOT",             "Bot & Çizme",   "Boots",         3, ayakkabi.Id);
-
-        db.Categories.AddRange(sporAyakkabi, klasikAyakkabi, bot);
-        await db.SaveChangesAsync();
-
-        return new Dictionary<string, Category>
-        {
-            ["ERKEK"]          = erkek,
-            ["KADIN"]          = kadin,
-            ["AYAKKABI"]       = ayakkabi,
-            ["AKSESUAR"]       = aksesuar,
-            ["SALE"]           = sale,
-            ["ERKEK-UST"]      = erkekUst,
-            ["ERKEK-TISORT"]   = erkekTisort,
-            ["ERKEK-GOMLEK"]   = erkekGomlek,
-            ["ERKEK-SWEATSHIRT"]= erkekSweatshirt,
-            ["ERKEK-PANTOLON"] = erkekPantolon,
-            ["ERKEK-SORT"]     = erkekSort,
-            ["ERKEK-ESOFMAN"]  = erkekEsofman,
-            ["KADIN-UST"]      = kadinUst,
-            ["KADIN-TISORT"]   = kadinTisort,
-            ["KADIN-BLUZ"]     = kadinBluz,
-            ["KADIN-ELBISE"]   = kadinElbise,
-            ["KADIN-CANTA"]    = kadinCanta,
-            ["SPOR-AYAKKABI"]  = sporAyakkabi,
-            ["KLASIK-AYAKKABI"]= klasikAyakkabi,
-        };
-    }
-
     // ── Ürünler + Varyantlar ─────────────────────────────────────────────────
 
     private static async Task<(List<Product>, List<ProductVariant>)> SeedProductsAsync(
         CatalogDbContext db,
         Dictionary<string, ProductGroup> groups,
         Dictionary<string, AttributeType> at,
-        Dictionary<string, Category> cats,
         Guid firmPlatformId)
     {
         var allValues = await db.AttributeValues.ToListAsync();
@@ -559,8 +462,7 @@ public static class TestDataSeeder
             string shortDescTr, string shortDescEn,
             string groupCode, decimal basePrice, decimal baseCost, int taxRate,
             (AttributeValue renk, AttributeValue beden)[] variantCombos,
-            (AttributeType type, AttributeValue val)[] productAttrs,
-            string[] categoryCodes)
+            (AttributeType type, AttributeValue val)[] productAttrs)
         {
             var product = new Product
             {
@@ -648,19 +550,6 @@ public static class TestDataSeeder
                 IsActive       = true,
             });
 
-            // Kategori bağlantıları
-            foreach (var catCode in categoryCodes)
-            {
-                if (cats.TryGetValue(catCode, out var cat))
-                {
-                    db.CategoryProducts.Add(new CategoryProduct
-                    {
-                        CategoryId = cat.Id,
-                        ProductId  = product.Id,
-                    });
-                }
-            }
-
             await db.SaveChangesAsync();
 
             allProducts.Add(product);
@@ -680,8 +569,7 @@ public static class TestDataSeeder
                 (vGri,   vM), (vGri,   vL),
                 (vLacivert, vM), (vLacivert, vL),
             },
-            new[] { (at["malzeme"], vPamuk), (at["cinsiyet-urun"], vErkekTarget), (at["sezon"], vTumSezon) },
-            new[] { "ERKEK-TISORT" }
+            new[] { (at["malzeme"], vPamuk), (at["cinsiyet-urun"], vErkekTarget), (at["sezon"], vTumSezon) }
         );
 
         // ── Ürün 2: Oxford Erkek Gömlek ──────────────────────────────────────
@@ -695,8 +583,7 @@ public static class TestDataSeeder
                 (vMavi,  vM), (vMavi,  vL), (vMavi,  vXL),
                 (vLacivert, vM), (vLacivert, vL),
             },
-            new[] { (at["malzeme"], vPamukKarisim), (at["cinsiyet-urun"], vErkekTarget), (at["sezon"], vTumSezon) },
-            new[] { "ERKEK-GOMLEK" }
+            new[] { (at["malzeme"], vPamukKarisim), (at["cinsiyet-urun"], vErkekTarget), (at["sezon"], vTumSezon) }
         );
 
         // ── Ürün 3: Yazlık Kadın Elbise ──────────────────────────────────────
@@ -711,8 +598,7 @@ public static class TestDataSeeder
                 (vBeyaz, vS), (vBeyaz, vM), (vBeyaz, vL),
                 (vBej, vS), (vBej, vM),
             },
-            new[] { (at["malzeme"], vPamuk), (at["sezon"], vIlkYaz) },
-            new[] { "KADIN-ELBISE" }
+            new[] { (at["malzeme"], vPamuk), (at["sezon"], vIlkYaz) }
         );
 
         // ── Ürün 4: Unisex Spor Sneaker ──────────────────────────────────────
@@ -726,8 +612,7 @@ public static class TestDataSeeder
                 (vSiyah, v38), (vSiyah, v39), (vSiyah, v40), (vSiyah, v41), (vSiyah, v42), (vSiyah, v43),
                 (vGri,   v39), (vGri,   v40), (vGri,   v41),
             },
-            new[] { (at["sezon"], vTumSezon) },
-            new[] { "SPOR-AYAKKABI", "AYAKKABI" }
+            new[] { (at["sezon"], vTumSezon) }
         );
 
         // ── Ürün 5: Kadın Tişört ─────────────────────────────────────────────
@@ -743,8 +628,7 @@ public static class TestDataSeeder
                 (vPembe, vS),  (vPembe, vM),
                 (vKirmizi, vS),(vKirmizi, vM),
             },
-            new[] { (at["malzeme"], vPamuk), (at["sezon"], vTumSezon) },
-            new[] { "KADIN-TISORT" }
+            new[] { (at["malzeme"], vPamuk), (at["sezon"], vTumSezon) }
         );
 
         // ── Ürün 6: Erkek Eşofman Takımı ─────────────────────────────────────
@@ -758,8 +642,7 @@ public static class TestDataSeeder
                 (vGri,   vS),  (vGri,   vM),  (vGri,   vL),  (vGri,   vXL),
                 (vLacivert, vM), (vLacivert, vL),
             },
-            new[] { (at["malzeme"], vPamukKarisim), (at["cinsiyet-urun"], vErkekTarget), (at["sezon"], vTumSezon) },
-            new[] { "ERKEK-ESOFMAN", "ERKEK-SPOR" }
+            new[] { (at["malzeme"], vPamukKarisim), (at["cinsiyet-urun"], vErkekTarget), (at["sezon"], vTumSezon) }
         );
 
         // ── Ürün 7: Deri Kadın Çanta ─────────────────────────────────────────
@@ -834,11 +717,6 @@ public static class TestDataSeeder
             ProductId      = canta.Id,
             IsActive       = true,
         });
-        db.CategoryProducts.Add(new CategoryProduct
-        {
-            CategoryId = cats["KADIN-CANTA"].Id,
-            ProductId  = canta.Id,
-        });
         await db.SaveChangesAsync();
         allProducts.Add(canta);
 
@@ -882,7 +760,7 @@ public static class TestDataSeeder
     // ── CMS Menüleri ─────────────────────────────────────────────────────────
 
     private static async Task SeedMenusAsync(
-        StorefrontDbContext db, Guid firmPlatformId, Dictionary<string, Category> cats)
+        StorefrontDbContext db, Guid firmPlatformId)
     {
         // ── Ana Navigasyon Menüsü ─────────────────────────────────────────────
         var mainMenu = new NavigationMenu
@@ -899,7 +777,7 @@ public static class TestDataSeeder
         await db.SaveChangesAsync();
 
         NavNode MakeNode(Guid menuId, string tr, string en, string nodeType,
-            Guid? parentId, Guid? categoryId, string? url, int order) =>
+            Guid? parentId = null, string? url = null, int order = 0) =>
             new()
             {
                 Id                = Guid.NewGuid(),
@@ -914,34 +792,34 @@ public static class TestDataSeeder
             };
 
         // L1 menü öğeleri
-        var miErkek    = MakeNode(mainMenu.Id, "Erkek",    "Men",        "category", null, cats["ERKEK"].Id,    null, 1);
-        var miKadin    = MakeNode(mainMenu.Id, "Kadın",    "Women",      "category", null, cats["KADIN"].Id,    null, 2);
-        var miAyakkabi = MakeNode(mainMenu.Id, "Ayakkabı", "Shoes",      "category", null, cats["AYAKKABI"].Id, null, 3);
-        var miSale     = MakeNode(mainMenu.Id, "İndirim",  "Sale",       "category", null, cats["SALE"].Id,     null, 4);
+        var miErkek    = MakeNode(mainMenu.Id, "Erkek",    "Men",        "label", order: 1);
+        var miKadin    = MakeNode(mainMenu.Id, "Kadın",    "Women",      "label", order: 2);
+        var miAyakkabi = MakeNode(mainMenu.Id, "Ayakkabı", "Shoes",      "label", order: 3);
+        var miSale     = MakeNode(mainMenu.Id, "İndirim",  "Sale",       "link",  url: "/indirim", order: 4);
 
         db.NavNodes.AddRange(miErkek, miKadin, miAyakkabi, miSale);
         await db.SaveChangesAsync();
 
         // L2 — Erkek alt öğeleri
         db.NavNodes.AddRange(
-            MakeNode(mainMenu.Id, "T-Shirt",    "T-Shirt",   "category", miErkek.Id, cats["ERKEK-TISORT"].Id,   null, 1),
-            MakeNode(mainMenu.Id, "Gömlek",     "Shirts",    "category", miErkek.Id, cats["ERKEK-GOMLEK"].Id,   null, 2),
-            MakeNode(mainMenu.Id, "Eşofman",    "Tracksuits","category", miErkek.Id, cats["ERKEK-ESOFMAN"].Id,  null, 3),
-            MakeNode(mainMenu.Id, "Pantolon",   "Trousers",  "category", miErkek.Id, cats["ERKEK-PANTOLON"].Id, null, 4)
+            MakeNode(mainMenu.Id, "T-Shirt",  "T-Shirt",   "link", miErkek.Id,    "/erkek/t-shirt",  1),
+            MakeNode(mainMenu.Id, "Gömlek",   "Shirts",    "link", miErkek.Id,    "/erkek/gomlek",   2),
+            MakeNode(mainMenu.Id, "Eşofman",  "Tracksuits","link", miErkek.Id,    "/erkek/esofman",  3),
+            MakeNode(mainMenu.Id, "Pantolon", "Trousers",  "link", miErkek.Id,    "/erkek/pantolon", 4)
         );
 
         // L2 — Kadın alt öğeleri
         db.NavNodes.AddRange(
-            MakeNode(mainMenu.Id, "Elbise",  "Dresses",  "category", miKadin.Id, cats["KADIN-ELBISE"].Id, null, 1),
-            MakeNode(mainMenu.Id, "T-Shirt", "T-Shirts", "category", miKadin.Id, cats["KADIN-TISORT"].Id, null, 2),
-            MakeNode(mainMenu.Id, "Çanta",   "Bags",     "category", miKadin.Id, cats["KADIN-CANTA"].Id,  null, 3),
-            MakeNode(mainMenu.Id, "Bluz",    "Blouses",  "category", miKadin.Id, cats["KADIN-BLUZ"].Id,   null, 4)
+            MakeNode(mainMenu.Id, "Elbise",  "Dresses",  "link", miKadin.Id, "/kadin/elbise",  1),
+            MakeNode(mainMenu.Id, "T-Shirt", "T-Shirts", "link", miKadin.Id, "/kadin/t-shirt", 2),
+            MakeNode(mainMenu.Id, "Çanta",   "Bags",     "link", miKadin.Id, "/kadin/canta",   3),
+            MakeNode(mainMenu.Id, "Bluz",    "Blouses",  "link", miKadin.Id, "/kadin/bluz",    4)
         );
 
         // L2 — Ayakkabı alt öğeleri
         db.NavNodes.AddRange(
-            MakeNode(mainMenu.Id, "Spor Ayakkabı", "Sneakers", "category", miAyakkabi.Id, cats["SPOR-AYAKKABI"].Id,  null, 1),
-            MakeNode(mainMenu.Id, "Klasik",        "Classic",  "category", miAyakkabi.Id, cats["KLASIK-AYAKKABI"].Id, null, 2)
+            MakeNode(mainMenu.Id, "Spor Ayakkabı", "Sneakers", "link", miAyakkabi.Id, "/ayakkabi/spor",   1),
+            MakeNode(mainMenu.Id, "Klasik",        "Classic",  "link", miAyakkabi.Id, "/ayakkabi/klasik", 2)
         );
         await db.SaveChangesAsync();
 
@@ -960,12 +838,12 @@ public static class TestDataSeeder
         await db.SaveChangesAsync();
 
         db.NavNodes.AddRange(
-            MakeNode(footerMenu.Id, "Hakkımızda",         "About Us",       "link", null, null, "/hakkimizda", 1),
-            MakeNode(footerMenu.Id, "İletişim",           "Contact",        "link", null, null, "/iletisim",   2),
-            MakeNode(footerMenu.Id, "Kargo ve Teslimat",  "Shipping Info",  "link", null, null, "/kargo",      3),
-            MakeNode(footerMenu.Id, "İade Koşulları",     "Return Policy",  "link", null, null, "/iade",       4),
-            MakeNode(footerMenu.Id, "Gizlilik Politikası","Privacy Policy", "link", null, null, "/gizlilik",   5),
-            MakeNode(footerMenu.Id, "KVKK",               "KVKK",           "link", null, null, "/kvkk",       6)
+            MakeNode(footerMenu.Id, "Hakkımızda",         "About Us",       "link", url: "/hakkimizda", order: 1),
+            MakeNode(footerMenu.Id, "İletişim",           "Contact",        "link", url: "/iletisim",   order: 2),
+            MakeNode(footerMenu.Id, "Kargo ve Teslimat",  "Shipping Info",  "link", url: "/kargo",      order: 3),
+            MakeNode(footerMenu.Id, "İade Koşulları",     "Return Policy",  "link", url: "/iade",       order: 4),
+            MakeNode(footerMenu.Id, "Gizlilik Politikası","Privacy Policy", "link", url: "/gizlilik",   order: 5),
+            MakeNode(footerMenu.Id, "KVKK",               "KVKK",           "link", url: "/kvkk",       order: 6)
         );
 
         // ── Mobil Bottom Nav ──────────────────────────────────────────────────
@@ -983,11 +861,11 @@ public static class TestDataSeeder
         await db.SaveChangesAsync();
 
         db.NavNodes.AddRange(
-            MakeNode(mobileMenu.Id, "Anasayfa",    "Home",       "link", null, null, "/",           1),
-            MakeNode(mobileMenu.Id, "Kategoriler", "Categories", "link", null, null, "/kategoriler", 2),
-            MakeNode(mobileMenu.Id, "Favoriler",   "Favorites",  "link", null, null, "/favoriler",   3),
-            MakeNode(mobileMenu.Id, "Sepet",       "Cart",       "link", null, null, "/sepet",       4),
-            MakeNode(mobileMenu.Id, "Hesabım",     "Account",    "link", null, null, "/hesabim",     5)
+            MakeNode(mobileMenu.Id, "Anasayfa",    "Home",       "link", url: "/",            order: 1),
+            MakeNode(mobileMenu.Id, "Kategoriler", "Categories", "link", url: "/kategoriler", order: 2),
+            MakeNode(mobileMenu.Id, "Favoriler",   "Favorites",  "link", url: "/favoriler",   order: 3),
+            MakeNode(mobileMenu.Id, "Sepet",       "Cart",       "link", url: "/sepet",       order: 4),
+            MakeNode(mobileMenu.Id, "Hesabım",     "Account",    "link", url: "/hesabim",     order: 5)
         );
 
         await db.SaveChangesAsync();

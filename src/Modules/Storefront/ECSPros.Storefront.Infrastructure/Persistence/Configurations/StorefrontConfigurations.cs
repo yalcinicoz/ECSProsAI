@@ -86,6 +86,10 @@ public class ChannelCategoryConfiguration : IEntityTypeConfiguration<ChannelCate
         builder.Property(c => c.OgTitleI18n).HasColumnType("jsonb");
         builder.HasQueryFilter(c => !c.IsDeleted);
 
+        builder.HasIndex(c => new { c.FirmPlatformId, c.Slug })
+            .IsUnique()
+            .HasFilter("\"Slug\" IS NOT NULL AND \"Slug\" <> ''");
+
         builder.HasOne(c => c.Parent)
             .WithMany(c => c.Children)
             .HasForeignKey(c => c.ParentId)

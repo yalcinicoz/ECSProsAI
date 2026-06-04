@@ -1,5 +1,4 @@
 using ECSPros.Catalog.Application.Helpers;
-using ECSPros.Catalog.Application.Queries.GetStoreCategoryProducts;
 using ECSPros.Catalog.Application.Services;
 using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
@@ -59,7 +58,7 @@ public class GetChannelCategoryProductsQueryHandler(
             var rules = CategoryFilterRules.From(cat.FilterDef);
             HashSet<Guid>? stockRange = null;
             if (rules?.StockMin.HasValue == true || rules?.StockMax.HasValue == true)
-                stockRange = await GetStoreCategoryProductsQueryHandler
+                stockRange = await ProductFilterHelper
                     .ResolveStockRangeProductIds(catDb, stockService, rules!.StockMin, rules.StockMax, ct);
 
             var excludedIds = await sfDb.ChannelCategoryProducts
@@ -67,7 +66,7 @@ public class GetChannelCategoryProductsQueryHandler(
                 .Select(p => p.ProductId)
                 .ToListAsync(ct);
 
-            productQuery = GetStoreCategoryProductsQueryHandler
+            productQuery = ProductFilterHelper
                 .BuildFilterQuery(catDb, rules, cat.FirmPlatformId, stockRange)
                 .Where(p => !excludedIds.Contains(p.Id));
         }
@@ -76,7 +75,7 @@ public class GetChannelCategoryProductsQueryHandler(
             var rules = CategoryFilterRules.From(cat.FilterDef);
             HashSet<Guid>? stockRange = null;
             if (rules?.StockMin.HasValue == true || rules?.StockMax.HasValue == true)
-                stockRange = await GetStoreCategoryProductsQueryHandler
+                stockRange = await ProductFilterHelper
                     .ResolveStockRangeProductIds(catDb, stockService, rules!.StockMin, rules.StockMax, ct);
 
             var excludedIds = await sfDb.ChannelCategoryProducts
@@ -84,7 +83,7 @@ public class GetChannelCategoryProductsQueryHandler(
                 .Select(p => p.ProductId)
                 .ToListAsync(ct);
 
-            var filteredIds = await GetStoreCategoryProductsQueryHandler
+            var filteredIds = await ProductFilterHelper
                 .BuildFilterQuery(catDb, rules, cat.FirmPlatformId, stockRange)
                 .Select(p => p.Id).ToListAsync(ct);
 
