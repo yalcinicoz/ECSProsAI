@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil, Check } from 'lucide-react'
+import { Plus, Pencil, Check, Trash2 } from 'lucide-react'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -177,20 +177,20 @@ function ImageServerTab() {
 interface ImageSetFormState {
   code: string
   name: string
-  isDefault: boolean
   fallbackSetId: string
   sortPriority: number
   isActive: boolean
 }
 
 const emptyForm = (): ImageSetFormState => ({
-  code: '', name: '', isDefault: false, fallbackSetId: '', sortPriority: 0, isActive: true,
+  code: '', name: '', fallbackSetId: '', sortPriority: 0, isActive: true,
 })
 
 function ImageSetsTab() {
   const qc = useQueryClient()
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; set?: ImageSet } | null>(null)
   const [form, setForm] = useState<ImageSetFormState>(emptyForm())
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const { data: sets = [], isLoading } = useQuery<ImageSet[]>({
     queryKey: ['image-sets', false],
@@ -203,11 +203,22 @@ function ImageSetsTab() {
   const openCreate = () => { setForm(emptyForm()); setModal({ mode: 'create' }) }
   const openEdit = (s: ImageSet) => {
     setForm({
-      code: s.code, name: s.name, isDefault: s.isDefault,
+      code: s.code, name: s.name,
       fallbackSetId: s.fallbackSetId ?? '', sortPriority: s.sortPriority, isActive: s.isActive,
     })
+    setConfirmDelete(false)
     setModal({ mode: 'edit', set: s })
   }
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await api.delete(`/catalog/image-sets/${modal!.set!.id}`)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['image-sets'] })
+      setModal(null)
+    },
+  })
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -215,14 +226,12 @@ function ImageSetsTab() {
         await api.post('/catalog/image-sets', {
           code: form.code.trim(),
           name: form.name.trim(),
-          isDefault: form.isDefault,
           fallbackSetId: form.fallbackSetId || null,
           sortPriority: form.sortPriority,
         })
       } else {
         await api.put(`/catalog/image-sets/${modal!.set!.id}`, {
           name: form.name.trim(),
-          isDefault: form.isDefault,
           fallbackSetId: form.fallbackSetId || null,
           sortPriority: form.sortPriority,
           isActive: form.isActive,
@@ -258,7 +267,6 @@ function ImageSetsTab() {
             <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
               <th className="text-left px-4 py-3 font-semibold text-xs" style={{ color: 'var(--text-s)' }}>KOD</th>
               <th className="text-left px-4 py-3 font-semibold text-xs" style={{ color: 'var(--text-s)' }}>AD</th>
-              <th className="text-left px-4 py-3 font-semibold text-xs" style={{ color: 'var(--text-s)' }}>VARSAYILAN</th>
               <th className="text-left px-4 py-3 font-semibold text-xs" style={{ color: 'var(--text-s)' }}>FALLBACK</th>
               <th className="text-left px-4 py-3 font-semibold text-xs" style={{ color: 'var(--text-s)' }}>ÖNCELİK</th>
               <th className="text-left px-4 py-3 font-semibold text-xs" style={{ color: 'var(--text-s)' }}>DURUM</th>
@@ -268,7 +276,7 @@ function ImageSetsTab() {
           <tbody>
             {sets.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
+                <td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
                   Henüz resim seti tanımlanmamış.
                 </td>
               </tr>
@@ -282,13 +290,13 @@ function ImageSetsTab() {
                     style={{ borderBottom: '1px solid var(--border)' }}
                     onClick={() => openEdit(s)}
                   >
-                    <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--text-m)' }}>{s.code}</td>
-                    <td className="px-4 py-3 font-medium">{s.name}</td>
-                    <td className="px-4 py-3">
-                      {s.isDefault && (
-                        <Badge variant="success">Varsayılan</Badge>
-                      )}
+                    <td className="px-4 py-3 font-mono text-xs" style={{ color: 'var(--text-m)' }}>
+                      <span className="flex items-center gap-2">
+                        {s.code}
+                        {s.isDefault && <Badge variant="success">Varsayılan</Badge>}
+                      </span>
                     </td>
+                    <td className="px-4 py-3 font-medium">{s.name}</td>
                     <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-m)' }}>
                       {s.fallbackSetName ?? <span style={{ color: 'var(--text-s)' }}>—</span>}
                     </td>
@@ -320,101 +328,146 @@ function ImageSetsTab() {
         onClose={() => setModal(null)}
         title={modal?.mode === 'create' ? 'Yeni Resim Seti' : 'Resim Setini Düzenle'}
       >
-        <div className="space-y-4">
-          {modal?.mode === 'create' && (
-            <div>
-              <label className="flbl">Kod <span className="text-amber-500 font-bold">*</span></label>
-              <input
-                className={cn('inp', form.code.trim() && 'ok')}
-                placeholder="örn: standart"
-                value={form.code}
-                onChange={e => setForm(f => ({ ...f, code: e.target.value.toLowerCase().replace(/\s/g, '-') }))}
-              />
-              <p className="text-[11px] mt-1" style={{ color: 'var(--text-s)' }}>
-                Oluşturulduktan sonra değiştirilemez. Dosya adlarında kullanılır.
-              </p>
+        {(() => {
+          const isReadOnly = modal?.mode === 'edit' && !!modal.set?.isDefault
+          return (
+            <div className="space-y-4">
+              {isReadOnly && (
+                <div className="rounded-lg px-3 py-2 text-xs" style={{ background: 'var(--surface2)', color: 'var(--text-s)' }}>
+                  Varsayılan resim seti düzenlenemez ve silinemez.
+                </div>
+              )}
+
+              {modal?.mode === 'create' && (
+                <div>
+                  <label className="flbl">Kod <span className="text-amber-500 font-bold">*</span></label>
+                  <input
+                    className={cn('inp', form.code.trim() && 'ok')}
+                    placeholder="örn: standart"
+                    value={form.code}
+                    onChange={e => setForm(f => ({ ...f, code: e.target.value.toLowerCase().replace(/\s/g, '-') }))}
+                  />
+                  <p className="text-[11px] mt-1" style={{ color: 'var(--text-s)' }}>
+                    Oluşturulduktan sonra değiştirilemez. Dosya adlarında kullanılır.
+                  </p>
+                </div>
+              )}
+
+              {isReadOnly ? (
+                <>
+                  <div>
+                    <label className="flbl">Kod</label>
+                    <input className="inp" value={form.code} readOnly />
+                  </div>
+                  <div>
+                    <label className="flbl">Ad</label>
+                    <input className="inp" value={form.name} readOnly />
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label className="flbl">Ad <span className="text-amber-500 font-bold">*</span></label>
+                  <input
+                    className={cn('inp', form.name.trim() && 'ok')}
+                    placeholder="örn: Standart Çekim"
+                    value={form.name}
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  />
+                </div>
+              )}
+
+              {!isReadOnly && (
+                <>
+                  <div>
+                    <label className="flbl">Fallback Set</label>
+                    <select
+                      className="sel"
+                      value={form.fallbackSetId}
+                      onChange={e => setForm(f => ({ ...f, fallbackSetId: e.target.value }))}
+                    >
+                      <option value="">— Yok —</option>
+                      {otherSets.map(s => (
+                        <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] mt-1" style={{ color: 'var(--text-s)' }}>
+                      Bu sette resim yoksa kullanılacak yedek set.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="flbl">Sıra Önceliği</label>
+                    <input
+                      className="inp"
+                      type="number"
+                      min={0}
+                      value={form.sortPriority}
+                      onChange={e => setForm(f => ({ ...f, sortPriority: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+
+                  {modal?.mode === 'edit' && (
+                    <div className="flex items-center gap-4 pt-1">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded accent-[var(--brand)]"
+                          checked={form.isActive}
+                          onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
+                        />
+                        <span className="text-sm font-medium">Aktif</span>
+                      </label>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {(saveMutation.isError || deleteMutation.isError) && (
+                <p className="text-sm" style={{ color: '#ef4444' }}>
+                  {(saveMutation.error as any)?.response?.data?.error
+                    ?? (deleteMutation.error as any)?.response?.data?.error
+                    ?? 'Hata oluştu.'}
+                </p>
+              )}
+
+              <div className="flex justify-between gap-2 pt-2">
+                <div>
+                  {modal?.mode === 'edit' && !isReadOnly && (
+                    confirmDelete ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs" style={{ color: 'var(--text-s)' }}>Emin misiniz?</span>
+                        <Button variant="danger" size="sm" onClick={() => deleteMutation.mutate()} loading={deleteMutation.isPending}>
+                          Evet, Sil
+                        </Button>
+                        <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(false)}>
+                          Vazgeç
+                        </Button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDelete(true)}
+                        className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                        style={{ color: '#ef4444' }}
+                      >
+                        <Trash2 size={14} /> Sil
+                      </button>
+                    )
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={() => setModal(null)}>
+                    {isReadOnly ? 'Kapat' : 'İptal'}
+                  </Button>
+                  {!isReadOnly && (
+                    <Button onClick={() => saveMutation.mutate()} loading={saveMutation.isPending} disabled={!canSave}>
+                      {modal?.mode === 'create' ? 'Oluştur' : 'Kaydet'}
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
-          )}
-
-          <div>
-            <label className="flbl">Ad <span className="text-amber-500 font-bold">*</span></label>
-            <input
-              className={cn('inp', form.name.trim() && 'ok')}
-              placeholder="örn: Standart Çekim"
-              value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-            />
-          </div>
-
-          <div>
-            <label className="flbl">Fallback Set</label>
-            <select
-              className="sel"
-              value={form.fallbackSetId}
-              onChange={e => setForm(f => ({ ...f, fallbackSetId: e.target.value }))}
-            >
-              <option value="">— Yok —</option>
-              {otherSets.map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
-              ))}
-            </select>
-            <p className="text-[11px] mt-1" style={{ color: 'var(--text-s)' }}>
-              Bu sette resim yoksa kullanılacak yedek set.
-            </p>
-          </div>
-
-          <div>
-            <label className="flbl">Sıra Önceliği</label>
-            <input
-              className="inp"
-              type="number"
-              min={0}
-              value={form.sortPriority}
-              onChange={e => setForm(f => ({ ...f, sortPriority: parseInt(e.target.value) || 0 }))}
-            />
-          </div>
-
-          <div className="flex items-center gap-4 pt-1">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                className="w-4 h-4 rounded accent-[var(--brand)]"
-                checked={form.isDefault}
-                onChange={e => setForm(f => ({ ...f, isDefault: e.target.checked }))}
-              />
-              <span className="text-sm font-medium">Varsayılan Set</span>
-            </label>
-
-            {modal?.mode === 'edit' && (
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 rounded accent-[var(--brand)]"
-                  checked={form.isActive}
-                  onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
-                />
-                <span className="text-sm font-medium">Aktif</span>
-              </label>
-            )}
-          </div>
-
-          {saveMutation.isError && (
-            <p className="text-sm" style={{ color: '#ef4444' }}>
-              {(saveMutation.error as any)?.response?.data?.error ?? 'Hata oluştu.'}
-            </p>
-          )}
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setModal(null)}>İptal</Button>
-            <Button
-              onClick={() => saveMutation.mutate()}
-              loading={saveMutation.isPending}
-              disabled={!canSave}
-            >
-              {modal?.mode === 'create' ? 'Oluştur' : 'Kaydet'}
-            </Button>
-          </div>
-        </div>
+          )
+        })()}
       </Modal>
     </>
   )

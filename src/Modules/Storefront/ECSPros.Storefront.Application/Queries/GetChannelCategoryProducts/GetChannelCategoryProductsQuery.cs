@@ -97,29 +97,32 @@ public class GetChannelCategoryProductsQueryHandler(
 
         var total = await productQuery.CountAsync(ct);
 
-        var products = await productQuery
-            .Include(p => p.Variants).ThenInclude(v => v.Images)
+        var pagedProducts = await productQuery
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .ToListAsync(ct);
+
+        var productIds = pagedProducts.Select(p => p.Id).ToList();
+        var firstImages = await catDb.ProductImages
+            .AsNoTracking()
+            .Where(img => productIds.Contains(img.ProductId))
+            .GroupBy(img => img.ProductId)
+            .Select(g => new { ProductId = g.Key, FileName = g.OrderBy(i => i.SortOrder).First().FileName })
+            .ToDictionaryAsync(x => x.ProductId, x => x.FileName, ct);
 
         var manualProductMap = await sfDb.ChannelCategoryProducts
             .Where(p => p.ChannelCategoryId == request.ChannelCategoryId)
             .ToDictionaryAsync(p => p.ProductId, p => p, ct);
 
-        var items = products.Select(p =>
+        const string cdnBase = "https://cdn.misharitalia.com/img/640/85/";
+        var items = pagedProducts.Select(p =>
         {
-            var mainImage = p.Variants
-                .Where(v => v.IsActive)
-                .SelectMany(v => v.Images)
-                .Where(i => i.IsMain)
-                .OrderBy(i => i.SortOrder)
-                .FirstOrDefault()?.ImageUrl;
+            var mainImage = firstImages.TryGetValue(p.Id, out var fn) ? cdnBase + fn : null;
 
             manualProductMap.TryGetValue(p.Id, out var manualEntry);
 
             return new ChannelCategoryProductItemDto(
-                p.Id, p.Code, p.NameI18n, mainImage, p.BasePrice, p.IsActive,
+                p.Id, p.Code, p.NameI18n, mainImage, p.BasePrice > 0 ? p.BasePrice : 0, p.IsActive,
                 manualEntry?.SortOrder ?? 0,
                 manualEntry?.IsExcluded ?? false);
         }).ToList();

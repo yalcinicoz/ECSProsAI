@@ -10,6 +10,8 @@ public class ImageSet : BaseEntity
     public Guid? FallbackSetId { get; set; }
     public int SortPriority { get; set; } = 0;
     public bool IsActive { get; set; } = true;
+    /// <summary>CDN veya harici depodan serve edilen resimler için base URL. Boşsa CatalogSettings.ImageServer.PublicBaseUrl kullanılır.</summary>
+    public string? CdnBaseUrl { get; set; }
 
     public ImageSet? FallbackSet { get; set; }
     public ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();

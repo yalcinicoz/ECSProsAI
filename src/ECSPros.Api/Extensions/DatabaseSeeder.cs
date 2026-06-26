@@ -268,7 +268,7 @@ public static class DatabaseSeeder
             ["ImageServer.FtpUser"]       = "anonymous",
             ["ImageServer.FtpPassword"]   = "",
             ["ImageServer.FtpBasePath"]   = "/images/products/",
-            ["ImageServer.PublicBaseUrl"] = "",
+            ["ImageServer.PublicBaseUrl"] = "/media/images/products/",
             ["ImageServer.LocalSavePath"] = "/opt/ECSProsAI/media/images/products/",
             ["VideoServer.LocalSavePath"] = "/opt/ECSProsAI/media/videos/products/",
             ["VideoServer.PublicBaseUrl"] = "/media/videos/products/",
@@ -296,18 +296,34 @@ public static class DatabaseSeeder
         await context.SaveChangesAsync();
 
         // Varsayılan görsel seti
-        if (!await context.ImageSets.AnyAsync(s => s.Code == "default"))
-        {
-            context.ImageSets.Add(new ImageSet
-            {
-                Code         = "default",
-                Name         = "Varsayılan Set",
-                IsDefault    = true,
-                SortPriority = 1,
-                IsActive     = true,
-            });
-            await context.SaveChangesAsync();
-        }
+        // Adım 1: 'varsayilan' gibi görünen ama farklı byte içeren eski/bozuk satırları soft-delete et
+        // (Örn: i + Unicode combining dot — ASCII 'i'den farklı byte dizisi, ama görsel olarak aynı)
+        await context.Database.ExecuteSqlRawAsync(@"
+            UPDATE catalog.catalog_image_sets
+            SET ""IsDeleted"" = true, ""DeletedAt"" = NOW()
+            WHERE ""IsDeleted"" = false
+              AND ""Code"" LIKE 'varsay%'
+              AND ""Code"" != 'varsayilan'
+        ");
+
+        // Adım 2: UPSERT — aktif saf-ASCII 'varsayilan' satırı varsa güncelle, yoksa ekle
+        await context.Database.ExecuteSqlRawAsync($@"
+            INSERT INTO catalog.catalog_image_sets
+                (""Id"", ""Code"", ""Name"", ""IsDefault"", ""FallbackSetId"",
+                 ""SortPriority"", ""IsActive"", ""IsDeleted"", ""CreatedAt"",
+                 ""CreatedBy"", ""UpdatedAt"", ""UpdatedBy"", ""DeletedAt"", ""DeletedBy"")
+            VALUES
+                ('{Guid.NewGuid()}', 'varsayilan', 'Varsayılan Resim Seti', true, NULL,
+                 0, true, false, NOW(), NULL, NULL, NULL, NULL, NULL)
+            ON CONFLICT (""Code"") WHERE NOT ""IsDeleted""
+            DO UPDATE SET
+                ""Name""      = 'Varsayılan Resim Seti',
+                ""IsDefault"" = true,
+                ""IsActive""  = true,
+                ""IsDeleted"" = false,
+                ""DeletedAt"" = NULL,
+                ""DeletedBy"" = NULL
+        ");
 
         Console.WriteLine("✓ Seed: Catalog ayarları (ImageServer, barcode_sequence, ImageSet) oluşturuldu.");
 

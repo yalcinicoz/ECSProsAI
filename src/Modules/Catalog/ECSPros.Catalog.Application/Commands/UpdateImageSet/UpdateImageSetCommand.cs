@@ -8,7 +8,6 @@ namespace ECSPros.Catalog.Application.Commands.UpdateImageSet;
 public record UpdateImageSetCommand(
     Guid Id,
     string Name,
-    bool IsDefault,
     Guid? FallbackSetId,
     int SortPriority,
     bool IsActive) : IRequest<Result<bool>>;
@@ -26,7 +25,6 @@ public class UpdateImageSetCommandHandler : IRequestHandler<UpdateImageSetComman
             return Result.Failure<bool>("ImageSet bulunamadı.");
 
         imageSet.Name = request.Name;
-        imageSet.IsDefault = request.IsDefault;
         imageSet.FallbackSetId = request.FallbackSetId;
         imageSet.SortPriority = request.SortPriority;
         imageSet.IsActive = request.IsActive;

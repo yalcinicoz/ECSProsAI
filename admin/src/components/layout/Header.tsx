@@ -33,6 +33,7 @@ const BREADCRUMB: Record<string, string> = {
   '/settings/firms':               'Firmalar',
   '/settings/languages':           'Diller',
   '/settings/lookup-types':        'Lookup Tipleri',
+  '/settings/migration':           'Migration',
 }
 
 interface HeaderProps {

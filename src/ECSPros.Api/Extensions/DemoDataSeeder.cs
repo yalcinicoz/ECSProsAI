@@ -1,3 +1,4 @@
+using ECSPros.Catalog.Application.Helpers;
 using ECSPros.Catalog.Domain.Entities;
 using ECSPros.Catalog.Infrastructure.Persistence;
 using ECSPros.Core.Domain.Entities;
@@ -30,6 +31,57 @@ public static class DemoDataSeeder
         var variants = await SeedProductsAsync(sp, productGroups, attrTypes, attrValues);
         await SeedInventoryAsync(sp, variants);
         await SeedCmsMenusAsync(sp, firmPlatformId);
+        await SeedChannelCategoriesAsync(sp, firmPlatformId, productGroups, attrTypes, attrValues);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Ürün → Hedef Kitle (Cinsiyet) eşlemesi
+    // ─────────────────────────────────────────────────────────
+    private static readonly Dictionary<string, string> ProductTargetAudience = new()
+    {
+        ["TSHIRT-001"]  = "Erkek",
+        ["SHIRT-001"]   = "Erkek",
+        ["DRESS-001"]   = "Kadın",
+        ["SNEAKER-001"] = "Unisex",
+        ["TRACK-001"]   = "Unisex",
+        ["BAG-001"]     = "Kadın",
+        ["JACKET-001"]  = "Kadın",
+    };
+
+    private static async Task EnsureProductTargetAudienceAsync(
+        CatalogDbContext ctx,
+        Dictionary<string, AttributeType> types,
+        Dictionary<string, Dictionary<string, AttributeValue>> values)
+    {
+        if (!types.TryGetValue("target_audience", out var taType)) return;
+        var taValues = values.GetValueOrDefault("target_audience") ?? new();
+
+        var products = await ctx.Products
+            .Where(p => ProductTargetAudience.Keys.Contains(p.Code))
+            .Include(p => p.Attributes)
+            .ToListAsync();
+
+        var added = 0;
+        foreach (var p in products)
+        {
+            if (p.Attributes.Any(a => a.AttributeTypeId == taType.Id)) continue;
+            if (!ProductTargetAudience.TryGetValue(p.Code, out var genderName)) continue;
+            if (!taValues.TryGetValue(genderName, out var val)) continue;
+
+            ctx.ProductAttributes.Add(new ProductAttribute
+            {
+                ProductId        = p.Id,
+                AttributeTypeId  = taType.Id,
+                AttributeValueId = val.Id,
+            });
+            added++;
+        }
+
+        if (added > 0)
+        {
+            await ctx.SaveChangesAsync();
+            Console.WriteLine($"✓ Demo Seed: {added} ürüne hedef kitle (cinsiyet) özelliği eklendi.");
+        }
     }
 
     // ─────────────────────────────────────────────────────────
@@ -294,11 +346,17 @@ public static class DemoDataSeeder
             return existing;
         }
 
+        // Ada göre de kontrol et — migration verisi varsa aynı isimli gruba map et
+        var existingByName = await ctx.ProductGroups
+            .ToDictionaryAsync(g => g.NameI18n.GetValueOrDefault("tr", ""));
+
         var groups = new List<ProductGroup>();
 
         ProductGroup MakeGroup(string code, string nameTr, string nameEn, int sort)
         {
             if (existing.TryGetValue(code, out var ex)) return ex;
+            // Aynı Türkçe isimde bir grup zaten varsa (örn. migration'dan) onu kullan
+            if (existingByName.TryGetValue(nameTr, out var byName)) return byName;
             var g = new ProductGroup
             {
                 Code      = code,
@@ -321,9 +379,21 @@ public static class DemoDataSeeder
         ctx.ProductGroups.AddRange(groups);
         await ctx.SaveChangesAsync();
 
-        // Özellik atamaları
+        // Özellik atamaları (idempotent — mevcut olanları atla)
+        var allGroupIds = new[] {
+            grpTshirt, grpShirt, grpDress, grpSneaker, grpTrack, grpBag, grpJacket
+        }.Select(g => g.Id).ToList();
+        var existingAttrs = await ctx.ProductGroupAttributes
+            .Where(a => allGroupIds.Contains(a.ProductGroupId))
+            .Select(a => new { a.ProductGroupId, a.AttributeTypeId })
+            .ToListAsync();
+        var existingAttrSet = existingAttrs
+            .Select(a => (a.ProductGroupId, a.AttributeTypeId))
+            .ToHashSet();
+
         void AddAttr(ProductGroup g, AttributeType t, bool isVariant = false, bool isPrimary = false, int sort = 0)
         {
+            if (existingAttrSet.Contains((g.Id, t.Id))) return;
             ctx.ProductGroupAttributes.Add(new ProductGroupAttribute
             {
                 ProductGroupId  = g.Id,
@@ -378,8 +448,17 @@ public static class DemoDataSeeder
 
         await ctx.SaveChangesAsync();
 
-        var result = existing;
-        foreach (var g in groups) result[g.Code] = g;
+        // Return all 7 groups keyed by demo code (regardless of their DB code)
+        var result = new Dictionary<string, ProductGroup>
+        {
+            ["tshirt"]    = grpTshirt,
+            ["shirt"]     = grpShirt,
+            ["dress"]     = grpDress,
+            ["sneaker"]   = grpSneaker,
+            ["tracksuit"] = grpTrack,
+            ["bag"]       = grpBag,
+            ["jacket"]    = grpJacket,
+        };
         Console.WriteLine($"✓ Demo Seed: {groups.Count} ürün grubu + özellik atamaları oluşturuldu.");
         return result;
     }
@@ -395,10 +474,17 @@ public static class DemoDataSeeder
     {
         var ctx = sp.GetRequiredService<CatalogDbContext>();
 
+        var demoCodes = new[] { "TSHIRT-001", "SHIRT-001", "DRESS-001", "SNEAKER-001", "TRACK-001", "BAG-001", "JACKET-001" };
         if (await ctx.Products.AnyAsync(p => p.Code == "TSHIRT-001"))
         {
             Console.WriteLine("✓ Demo Seed: Ürünler zaten mevcut.");
-            var existing = await ctx.Products.SelectMany(p => p.Variants).Select(v => v.Id).ToListAsync();
+            await EnsureProductTargetAudienceAsync(ctx, types, values);
+            // Sadece demo ürünlerin varyantlarını döndür (tüm veritabanını yükleme)
+            var existing = await ctx.Products
+                .Where(p => demoCodes.Contains(p.Code))
+                .SelectMany(p => p.Variants)
+                .Select(v => v.Id)
+                .ToListAsync();
             return existing;
         }
 
@@ -526,6 +612,8 @@ public static class DemoDataSeeder
             colorNames: new[] { "Siyah", "Beyaz", "Bej" },
             sizeNames:  new[] { "XS", "S", "M", "L", "XL" },
             attrSizeKey: "size"));
+
+        await EnsureProductTargetAudienceAsync(ctx, types, values);
 
         Console.WriteLine($"✓ Demo Seed: 7 ürün + {allVariantIds.Count} varyant oluşturuldu.");
         return allVariantIds;
@@ -697,5 +785,187 @@ public static class DemoDataSeeder
         await ctx.SaveChangesAsync();
 
         Console.WriteLine($"✓ Demo Seed: 3 navigasyon menüsü + {nodes.Count + 5} node oluşturuldu.");
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // 8. KANAL KATEGORİLERİ (ChannelCategory)
+    // ─────────────────────────────────────────────────────────
+    private static async Task SeedChannelCategoriesAsync(
+        IServiceProvider sp,
+        Guid firmPlatformId,
+        Dictionary<string, ProductGroup> groups,
+        Dictionary<string, AttributeType> types,
+        Dictionary<string, Dictionary<string, AttributeValue>> values)
+    {
+        var sfCtx  = sp.GetRequiredService<StorefrontDbContext>();
+        var catCtx = sp.GetRequiredService<CatalogDbContext>();
+
+        var taValues = values.GetValueOrDefault("target_audience") ?? new();
+        var hasTargetAudience = types.TryGetValue("target_audience", out var taType);
+
+        Guid[] AudienceIds(params string[] names) => names
+            .Where(n => taValues.ContainsKey(n))
+            .Select(n => taValues[n].Id)
+            .ToArray();
+
+        var menAudience   = AudienceIds("Erkek", "Unisex");
+        var womenAudience = AudienceIds("Kadın", "Unisex");
+
+        // NOT: Admin panelindeki FilterBuilder camelCase alan adları bekliyor
+        // (productGroupIds, attributeFilters[].attributeTypeId/valueIds).
+        List<Guid> GroupIds(string[]? groupCodes) => (groupCodes ?? Array.Empty<string>())
+            .Where(c => groups.ContainsKey(c))
+            .Select(c => groups[c].Id)
+            .ToList();
+
+        Dictionary<string, object>? BuildFilterDef(string[]? groupCodes, Guid[]? audienceIds)
+        {
+            var dict = new Dictionary<string, object>();
+
+            var groupIds = GroupIds(groupCodes);
+            if (groupIds.Count > 0) dict["productGroupIds"] = groupIds;
+
+            if (hasTargetAudience && audienceIds is { Length: > 0 })
+            {
+                dict["attributeFilters"] = new List<Dictionary<string, object>>
+                {
+                    new() { ["attributeTypeId"] = taType!.Id, ["valueIds"] = audienceIds.ToList() },
+                };
+            }
+
+            return dict.Count > 0 ? dict : null;
+        }
+
+        // ── Kategori tanımları (slug bazlı upsert) ──────────────────────────
+        var existing = await sfCtx.ChannelCategories
+            .Where(c => c.FirmPlatformId == firmPlatformId)
+            .ToListAsync();
+        var bySlug = existing.ToDictionary(c => c.Slug);
+
+        ChannelCategory Upsert(
+            string slug, string nameTr, string nameEn, string? parentSlug,
+            string fillType, Dictionary<string, object>? filterDef, int sort)
+        {
+            if (!bySlug.TryGetValue(slug, out var cat))
+            {
+                cat = new ChannelCategory { FirmPlatformId = firmPlatformId, Slug = slug, Status = "published" };
+                sfCtx.ChannelCategories.Add(cat);
+                bySlug[slug] = cat;
+            }
+
+            cat.NameI18n  = new() { { "tr", nameTr }, { "en", nameEn } };
+            cat.FillType  = fillType;
+            // Only overwrite FilterDef for new entries; preserve manual edits on existing ones
+            if (cat.FilterDef is null) cat.FilterDef = filterDef;
+            cat.SortOrder = sort;
+            cat.ParentId  = parentSlug is not null ? bySlug[parentSlug].Id : null;
+            return cat;
+        }
+
+        // Kök kategoriler
+        Upsert("giyim",       "Giyim",              "Clothing",            null, "manual", null, 1);
+        Upsert("ayakkabi",    "Ayakkabı",           "Shoes",               null, "manual", null, 2);
+        var canta =
+        Upsert("canta",       "Çanta",              "Bags",                null, "filter", BuildFilterDef(new[] { "bag" }, null), 3);
+        var spor =
+        Upsert("spor",        "Spor & Aktif Giyim", "Sports & Activewear", null, "filter", BuildFilterDef(new[] { "tracksuit" }, null), 4);
+        Upsert("kampanyalar", "Kampanyalar",        "Campaigns",           null, "manual", null, 5);
+
+        // Alt kategoriler — ürün grubu bazlı (hedef kitle filtresi kaldırıldı; migrate ürünlerde bu özellik yok)
+        var erkekGiyim =
+        Upsert("erkek-giyim",    "Erkek Giyim",    "Men's Clothing",   "giyim",    "filter", BuildFilterDef(new[] { "tshirt", "shirt", "tracksuit", "jacket" }, null), 1);
+        var kadinGiyim =
+        Upsert("kadin-giyim",    "Kadın Giyim",    "Women's Clothing", "giyim",    "filter", BuildFilterDef(new[] { "tshirt", "shirt", "dress", "tracksuit", "jacket" }, null), 2);
+        Upsert("cocuk-giyim",    "Çocuk Giyim",    "Kids Clothing",    "giyim",    "manual", null, 3);
+        var erkekAyakkabi =
+        Upsert("erkek-ayakkabi", "Erkek Ayakkabı", "Men's Shoes",      "ayakkabi", "filter", BuildFilterDef(new[] { "sneaker" }, null), 1);
+        var kadinAyakkabi =
+        Upsert("kadin-ayakkabi", "Kadın Ayakkabı", "Women's Shoes",    "ayakkabi", "filter", BuildFilterDef(new[] { "sneaker" }, null), 2);
+
+        await sfCtx.SaveChangesAsync();
+
+        // ── Kapsam (coverage): filtre kategorilerinin sorumlu olduğu ürün grupları ──
+        var coverageMap = new Dictionary<ChannelCategory, string[]>
+        {
+            [canta]            = new[] { "bag" },
+            [spor]             = new[] { "tracksuit" },
+            [erkekGiyim]       = new[] { "tshirt", "shirt", "tracksuit", "jacket" },
+            [kadinGiyim]       = new[] { "tshirt", "shirt", "dress", "tracksuit", "jacket" },
+            [erkekAyakkabi]    = new[] { "sneaker" },
+            [kadinAyakkabi]    = new[] { "sneaker" },
+        };
+
+        var existingGroupLinks = await sfCtx.ChannelCategoryGroups
+            .Where(g => coverageMap.Keys.Select(c => c.Id).Contains(g.ChannelCategoryId))
+            .ToListAsync();
+        sfCtx.ChannelCategoryGroups.RemoveRange(existingGroupLinks);
+
+        foreach (var (cat, groupCodes) in coverageMap)
+        {
+            foreach (var groupId in GroupIds(groupCodes).Distinct())
+            {
+                sfCtx.ChannelCategoryGroups.Add(new ChannelCategoryGroup
+                {
+                    ChannelCategoryId = cat.Id,
+                    ProductGroupId    = groupId,
+                });
+            }
+        }
+
+        // ── Bu kanalda satılan ürün grupları (Layer 2 karar kaydı) ──────────
+        var existingChannelGroups = await sfCtx.ChannelProductGroups
+            .Where(g => g.FirmPlatformId == firmPlatformId)
+            .ToListAsync();
+        var existingChannelGroupIds = existingChannelGroups.Select(g => g.ProductGroupId).ToHashSet();
+
+        foreach (var group in groups.Values)
+        {
+            if (existingChannelGroupIds.Contains(group.Id)) continue;
+            sfCtx.ChannelProductGroups.Add(new ChannelProductGroup
+            {
+                FirmPlatformId = firmPlatformId,
+                ProductGroupId = group.Id,
+                Status         = "active",
+            });
+        }
+
+        await sfCtx.SaveChangesAsync();
+
+        // ── Filtreli kategoriler için ürün atamalarını hesapla ──────────────
+        var allCategories = bySlug.Values.ToList();
+        var existingCatProducts = await sfCtx.ChannelCategoryProducts
+            .Where(p => allCategories.Select(c => c.Id).Contains(p.ChannelCategoryId) && !p.IsExcluded)
+            .ToListAsync();
+        sfCtx.ChannelCategoryProducts.RemoveRange(existingCatProducts);
+
+        var categoryProducts = new List<ChannelCategoryProduct>();
+
+        foreach (var cat in allCategories.Where(c => c.FillType == "filter"))
+        {
+            var rules = CategoryFilterRules.From(cat.FilterDef);
+            if (rules is null) continue;
+            rules.IsActive ??= true;
+
+            var matchedIds = await ProductFilterHelper
+                .BuildFilterQuery(catCtx, rules, firmPlatformId, null)
+                .Select(p => p.Id)
+                .ToListAsync();
+
+            for (int i = 0; i < matchedIds.Count; i++)
+            {
+                categoryProducts.Add(new ChannelCategoryProduct
+                {
+                    ChannelCategoryId = cat.Id,
+                    ProductId         = matchedIds[i],
+                    SortOrder         = i,
+                    IsExcluded        = false,
+                });
+            }
+        }
+
+        sfCtx.ChannelCategoryProducts.AddRange(categoryProducts);
+        await sfCtx.SaveChangesAsync();
+
+        Console.WriteLine($"✓ Demo Seed: {allCategories.Count} kanal kategorisi + {categoryProducts.Count} ürün ataması + {coverageMap.Sum(kv => GroupIds(kv.Value).Count)} kapsam kaydı oluşturuldu/güncellendi.");
     }
 }

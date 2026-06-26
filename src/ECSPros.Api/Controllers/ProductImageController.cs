@@ -3,6 +3,7 @@ using ECSPros.Catalog.Application.Commands.ArchiveProductVideo;
 using ECSPros.Catalog.Application.Commands.ConfirmImageBatch;
 using ECSPros.Catalog.Application.Commands.ConfirmVideoBatch;
 using ECSPros.Catalog.Application.Commands.CreateImageSet;
+using ECSPros.Catalog.Application.Commands.DeleteImageSet;
 using ECSPros.Catalog.Application.Commands.DeleteProductImageSetMapping;
 using ECSPros.Catalog.Application.Commands.PrepareImageBatch;
 using ECSPros.Catalog.Application.Commands.PrepareVideoBatch;
@@ -55,8 +56,9 @@ public class ProductImageController : ControllerBase
     }
 
     [HttpPost("image-sets")]
-    public async Task<IActionResult> CreateImageSet([FromBody] CreateImageSetCommand command, CancellationToken ct = default)
+    public async Task<IActionResult> CreateImageSet([FromBody] CreateImageSetRequest request, CancellationToken ct = default)
     {
+        var command = new CreateImageSetCommand(request.Code, request.Name, request.FallbackSetId, request.SortPriority);
         var result = await _mediator.Send(command, ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
@@ -66,11 +68,20 @@ public class ProductImageController : ControllerBase
     [HttpPut("image-sets/{id:guid}")]
     public async Task<IActionResult> UpdateImageSet(Guid id, [FromBody] UpdateImageSetRequest request, CancellationToken ct = default)
     {
-        var command = new UpdateImageSetCommand(id, request.Name, request.IsDefault, request.FallbackSetId, request.SortPriority, request.IsActive);
+        var command = new UpdateImageSetCommand(id, request.Name, request.FallbackSetId, request.SortPriority, request.IsActive);
         var result = await _mediator.Send(command, ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
+    }
+
+    [HttpDelete("image-sets/{id:guid}")]
+    public async Task<IActionResult> DeleteImageSet(Guid id, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new DeleteImageSetCommand(id), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
     }
 
     // ─── Product Images ────────────────────────────────────────────────────────
@@ -358,13 +369,18 @@ public class ProductImageController : ControllerBase
     /// </summary>
     [HttpGet("images/file/{fileName}")]
     [AllowAnonymous]
-    public IActionResult ServeLocalImage(string fileName)
+    public async Task<IActionResult> ServeLocalImage(string fileName, CancellationToken ct = default)
     {
         // Path traversal koruması
         if (fileName.Contains('/') || fileName.Contains('\\') || fileName.Contains(".."))
             return BadRequest();
 
-        var basePath = Path.Combine(AppContext.BaseDirectory, "uploads", "images", "products");
+        var db = HttpContext.RequestServices.GetRequiredService<ECSPros.Catalog.Application.Services.ICatalogDbContext>();
+        var savePath = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions
+            .FirstOrDefaultAsync(db.CatalogSettings.Where(x => x.Key == "ImageServer.LocalSavePath"), ct);
+        var basePath = string.IsNullOrWhiteSpace(savePath?.Value)
+            ? Path.Combine(AppContext.BaseDirectory, "uploads", "images", "products")
+            : savePath.Value;
         var filePath = Path.Combine(basePath, fileName);
 
         if (!System.IO.File.Exists(filePath))
@@ -407,7 +423,8 @@ public class ProductImageController : ControllerBase
 
 // ─── Request DTOs ──────────────────────────────────────────────────────────────
 
-public record UpdateImageSetRequest(string Name, bool IsDefault, Guid? FallbackSetId, int SortPriority, bool IsActive);
+public record CreateImageSetRequest(string Code, string Name, Guid? FallbackSetId, int SortPriority);
+public record UpdateImageSetRequest(string Name, Guid? FallbackSetId, int SortPriority, bool IsActive);
 public record PrepareImageBatchRequest(Guid? VariantId, Guid ImageSetId, List<string> FileExtensions, bool ReplaceSet);
 public record UpdateImageMetadataRequest(int SortOrder, bool IsProductCover, bool IsVariantCover);
 public record UpsertMappingRequest(Guid ForSetId, Guid UseSetId);

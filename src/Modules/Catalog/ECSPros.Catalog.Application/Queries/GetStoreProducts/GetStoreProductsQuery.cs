@@ -24,11 +24,12 @@ public record StoreProductDto(
 public class GetStoreProductsQueryHandler(ICatalogDbContext db)
     : IRequestHandler<GetStoreProductsQuery, Result<PagedResult<StoreProductDto>>>
 {
+    private const string CdnBase = "https://cdn.misharitalia.com/img/640/85/";
+
     public async Task<Result<PagedResult<StoreProductDto>>> Handle(GetStoreProductsQuery request, CancellationToken ct)
     {
         var q = db.Products
             .AsNoTracking()
-            .Include(p => p.Variants).ThenInclude(v => v.Images)
             .Include(p => p.Variants).ThenInclude(v => v.FirmPlatformVariants)
             .Where(p => p.IsActive);
 
@@ -45,6 +46,14 @@ public class GetStoreProductsQueryHandler(ICatalogDbContext db)
             .Take(request.PageSize)
             .ToListAsync(ct);
 
+        var productIds = products.Select(p => p.Id).ToList();
+        var firstImages = await db.ProductImages
+            .AsNoTracking()
+            .Where(img => productIds.Contains(img.ProductId))
+            .GroupBy(img => img.ProductId)
+            .Select(g => new { ProductId = g.Key, FileName = g.OrderBy(i => i.SortOrder).First().FileName })
+            .ToDictionaryAsync(x => x.ProductId, x => x.FileName, ct);
+
         var items = products.Select(p =>
         {
             var activeVariants = p.Variants.Where(v => v.IsActive).ToList();
@@ -54,8 +63,9 @@ public class GetStoreProductsQueryHandler(ICatalogDbContext db)
                 .Where(price => price > 0)
                 .ToList();
 
-            var minPrice = platformPrices.Any() ? platformPrices.Min() : activeVariants.MinBy(v => v.BasePrice)?.BasePrice ?? 0;
-            var mainImage = activeVariants.SelectMany(v => v.Images).Where(i => i.IsMain).OrderBy(i => i.SortOrder).FirstOrDefault()?.ImageUrl;
+            var variantMin = activeVariants.Any() ? activeVariants.Min(v => v.BasePrice) : 0;
+            var minPrice = platformPrices.Any() ? platformPrices.Min() : variantMin > 0 ? variantMin : p.BasePrice;
+            var mainImage = firstImages.TryGetValue(p.Id, out var fn) ? CdnBase + fn : null;
 
             return new StoreProductDto(
                 p.Id, p.Code, p.NameI18n, p.ShortDescriptionI18n,
