@@ -36,6 +36,8 @@ public record StoreVariantAttributeDto(
 public class GetStoreProductDetailQueryHandler(ICatalogDbContext db)
     : IRequestHandler<GetStoreProductDetailQuery, Result<StoreProductDetailDto>>
 {
+    private const string CdnBase = "https://cdn.misharitalia.com/img/640/85/";
+
     public async Task<Result<StoreProductDetailDto>> Handle(GetStoreProductDetailQuery request, CancellationToken ct)
     {
         var product = await db.Products
@@ -55,6 +57,14 @@ public class GetStoreProductDetailQueryHandler(ICatalogDbContext db)
         if (product is null)
             return Result.Failure<StoreProductDetailDto>("Ürün bulunamadı.");
 
+        // Fall back to product-level images if variant images are empty (migrated products)
+        var productImages = await db.ProductImages
+            .AsNoTracking()
+            .Where(img => img.ProductId == product.Id)
+            .OrderBy(img => img.SortOrder)
+            .Select(img => new StoreVariantImageDto(img.Id, CdnBase + img.FileName, img.SortOrder, img.IsProductCover))
+            .ToListAsync(ct);
+
         var variants = product.Variants
             .Where(v => v.IsActive)
             .Select(v =>
@@ -64,12 +74,14 @@ public class GetStoreProductDetailQueryHandler(ICatalogDbContext db)
                     a.AttributeType.Code, a.AttributeType.NameI18n,
                     a.AttributeValue.Id, a.AttributeValue.NameI18n)).ToList();
 
+                var variantImages = v.Images.Count > 0
+                    ? v.Images.OrderBy(i => i.SortOrder).Select(i => new StoreVariantImageDto(i.Id, i.ImageUrl, i.SortOrder, i.IsMain)).ToList()
+                    : productImages;
+
                 return new StoreVariantDto(
                     v.Id, v.Sku, v.BasePrice,
                     fpv?.Price, fpv?.CompareAtPrice,
-                    v.IsActive,
-                    v.Images.OrderBy(i => i.SortOrder).Select(i => new StoreVariantImageDto(i.Id, i.ImageUrl, i.SortOrder, i.IsMain)).ToList(),
-                    attrs);
+                    v.IsActive, variantImages, attrs);
             }).ToList();
 
         return Result.Success(new StoreProductDetailDto(

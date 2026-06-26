@@ -311,6 +311,17 @@
   - `DemoDataSeeder.SeedCategoriesAsync` güncellendi — artık kendi kategorisini oluşturmuyor, DatabaseSeeder'ınkileri kullanıyor
   - Seed idempotent: `erkek` kodu yoksa eski kategorileri hard-delete edip yenilerini ekler
 
+- **2026-06-15 — Demo web sitesi kanal kategorileri (ChannelCategory) seed:**
+  - `DemoDataSeeder` içine `SeedChannelCategoriesAsync` eklendi — `demo_web` platformu için 10 kanal kategorisi oluşturuldu
+  - Kök: Giyim, Ayakkabı, Çanta (filter), Spor & Aktif Giyim (filter), Kampanyalar
+  - Alt: Erkek Giyim, Kadın Giyim, Çocuk Giyim (Giyim altında); Erkek Ayakkabı, Kadın Ayakkabı (Ayakkabı altında)
+  - Filter kategoriler: ProductGroupIds + target_audience (Erkek/Kadın → +Unisex) AttributeFilters birleşimi
+  - `EnsureProductTargetAudienceAsync` eklendi — demo ürünlerine eksikse `target_audience` (cinsiyet) ProductAttribute atanır (TSHIRT-001 zaten Kadın idi, diğer 6 ürüne atandı)
+  - FilterDef'e göre eşleşen ürünler `ChannelCategoryProducts`'a yazıldı (toplam 10 atama), production'da `dotnet publish` + `systemctl restart ecspros` ile çalıştırıldı
+  - **Düzeltme (aynı gün):** FilterDef alan adları PascalCase yazılmıştı, admin `FilterBuilder` camelCase (`productGroupIds`, `attributeFilters[].attributeTypeId/valueIds`) bekliyor — düzeltildi
+  - `ChannelCategoryGroups` (kapsam) ve `ChannelProductGroups` (kanalda aktif 7 ürün grubu) seed'e eklendi — coverage artık 7/7 gösteriyor
+  - Seed artık slug bazlı upsert: tekrar çalıştırıldığında kategorileri güncelleyip ürün/kapsam atamalarını yeniden hesaplar (idempotent, "zaten mevcut" ile tamamen atlamıyor)
+
 - **2026-05-31 — Filtre Şablonu (FilterPreset):**
   - `FilterPreset` entity: Code, NameI18n, Description (insan dili), FilterDef (JSONB); migration: `AddFilterPreset`
   - `Category.FilterPresetId` nullable FK; query-time merge: preset + override birleşir

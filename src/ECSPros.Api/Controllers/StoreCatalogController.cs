@@ -1,6 +1,8 @@
 using ECSPros.Catalog.Application.Queries.GetStoreProductDetail;
 using ECSPros.Catalog.Application.Queries.GetStoreProductGroupProducts;
 using ECSPros.Catalog.Application.Queries.GetStoreProducts;
+using ECSPros.Storefront.Application.Queries.GetChannelCategories;
+using ECSPros.Storefront.Application.Queries.GetChannelCategoryProducts;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -44,6 +46,31 @@ public class StoreCatalogController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> GetProduct(string code, [FromQuery] Guid firmPlatformId, CancellationToken ct)
     {
         var result = await mediator.Send(new GetStoreProductDetailQuery(code, firmPlatformId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kanal kategorilerini döner (müşteriye dönük, anonim).</summary>
+    [HttpGet("channel-categories")]
+    public async Task<IActionResult> GetChannelCategories(
+        [FromQuery] Guid firmPlatformId,
+        [FromQuery] bool activeOnly = true,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetChannelCategoriesQuery(firmPlatformId, activeOnly), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kanal kategorisine ait ürünleri döner (müşteriye dönük, anonim).</summary>
+    [HttpGet("channel-categories/{id:guid}/products")]
+    public async Task<IActionResult> GetChannelCategoryProducts(
+        Guid id,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 24,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetChannelCategoryProductsQuery(id, page, pageSize), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }

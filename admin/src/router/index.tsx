@@ -31,6 +31,7 @@ import { TransferDetailPage } from '@/pages/inventory/TransferDetailPage'
 import { AccountGroupsPage } from '@/pages/accounts/AccountGroupsPage'
 import { AccountsPage } from '@/pages/accounts/AccountsPage'
 import { AccountDetailPage, AccountCreatePage } from '@/pages/accounts/AccountDetailPage'
+import { MigrationPage } from '@/pages/settings/MigrationPage'
 
 export const router = createBrowserRouter(
   [
@@ -117,6 +118,7 @@ export const router = createBrowserRouter(
             { path: 'settings/channels',         element: <ChannelsPage /> },
             { path: 'settings/languages',       element: <PlaceholderPage title="Diller" /> },
             { path: 'settings/lookup-types',    element: <PlaceholderPage title="Lookup Tipleri" /> },
+            { path: 'settings/migration',       element: <MigrationPage /> },
           ],
         },
       ],

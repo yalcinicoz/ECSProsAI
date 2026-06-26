@@ -32,3 +32,13 @@ nohup.out
 
 # Secrets
 src/**/appsettings.Production.json
+
+# Media uploads (binary files)
+media/
+
+# SSL certificates (private key)
+docker/nginx/certs/
+
+# Tools build artifacts
+tools/**/bin/
+tools/**/obj/

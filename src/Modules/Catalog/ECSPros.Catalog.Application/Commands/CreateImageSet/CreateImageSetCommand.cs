@@ -2,13 +2,13 @@ using ECSPros.Catalog.Application.Services;
 using ECSPros.Catalog.Domain.Entities;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Catalog.Application.Commands.CreateImageSet;
 
 public record CreateImageSetCommand(
     string Code,
     string Name,
-    bool IsDefault,
     Guid? FallbackSetId,
     int SortPriority) : IRequest<Result<Guid>>;
 
@@ -20,12 +20,17 @@ public class CreateImageSetCommandHandler : IRequestHandler<CreateImageSetComman
 
     public async Task<Result<Guid>> Handle(CreateImageSetCommand request, CancellationToken ct)
     {
+        var codeExists = await _db.ImageSets.IgnoreQueryFilters()
+            .AnyAsync(x => x.Code == request.Code, ct);
+        if (codeExists)
+            return Result.Failure<Guid>($"'{request.Code}' kodu zaten kullanılıyor.");
+
         var imageSet = new ImageSet
         {
             Id = Guid.NewGuid(),
             Code = request.Code,
             Name = request.Name,
-            IsDefault = request.IsDefault,
+            IsDefault = false,
             FallbackSetId = request.FallbackSetId,
             SortPriority = request.SortPriority,
             IsActive = true

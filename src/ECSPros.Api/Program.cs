@@ -137,6 +137,7 @@ builder.Services.AddSignalR(options =>
 });
 builder.Services.AddScoped<IRealtimeNotificationService, SignalRNotificationService>();
 builder.Services.AddHostedService<DashboardMetricsWorker>();
+builder.Services.AddSingleton<ECSPros.Api.Services.MigrationService>();
 
 // ─── JWT Authentication ────────────────────────────────────────────
 var jwtSecret = builder.Configuration["Jwt:Secret"]

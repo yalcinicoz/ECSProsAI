@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ECSPros — Mağaza</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css?v=20260626">
+</head>
+<body>
+
+  <!-- ANNOUNCEMENT BAR -->
+  <div class="topbar">
+    <span>✦ Ücretsiz Kargo — 500₺ üzeri alışverişlerde ✦</span>
+  </div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a href="#/" class="nav-logo">
+        <span class="logo-mark">E</span>
+        <span class="logo-text">ECSPros</span>
+      </a>
+
+      <div class="nav-search-wrap">
+        <div class="nav-search" id="navSearchBox">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="searchInput" placeholder="Ürün veya kategori ara…" autocomplete="off">
+          <kbd>↵</kbd>
+        </div>
+      </div>
+
+      <div class="nav-right">
+        <button class="nav-icon-btn" id="cartBtn" onclick="toggleCart()" title="Sepet">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          <span class="cart-badge" id="cartBadge" style="display:none">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Category strip -->
+    <div class="cat-strip" id="catStrip">
+      <div class="cat-strip-inner" id="catStripInner">
+        <a href="#/products" class="cat-chip" data-href="#/products">Tüm Ürünler</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- PAGE CONTENT -->
+  <main id="main"></main>
+
+  <!-- CART OVERLAY + PANEL -->
+  <div class="cart-backdrop" id="cartBackdrop" onclick="toggleCart()"></div>
+  <aside class="cart-panel" id="cartPanel">
+    <div class="cart-panel-head">
+      <div>
+        <h3 class="cart-panel-title">Sepetim</h3>
+        <span class="cart-panel-sub" id="cartItemCount"></span>
+      </div>
+      <button class="icon-close" onclick="toggleCart()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="cart-panel-body" id="cartPanelBody">
+      <div class="cart-empty">
+        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <p>Sepetiniz boş</p>
+        <a href="#/products" onclick="toggleCart()" class="btn-ghost-sm">Alışverişe Başla</a>
+      </div>
+    </div>
+    <div class="cart-panel-footer" id="cartPanelFooter" style="display:none">
+      <div class="cart-subtotal">
+        <span>Ara Toplam</span>
+        <span id="cartSubtotal">₺0,00</span>
+      </div>
+      <div class="cart-total-row">
+        <span>Toplam</span>
+        <strong id="cartTotal">₺0,00</strong>
+      </div>
+      <button class="btn-checkout">Ödemeye Geç →</button>
+      <button class="btn-continue" onclick="toggleCart()">Alışverişe Devam Et</button>
+    </div>
+  </aside>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-stack" id="toastStack"></div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="footer-logo">
+          <span class="logo-mark">E</span>
+          <span class="logo-text">ECSPros</span>
+        </div>
+        <p>Modern e-ticaret çözümleri. Binlerce ürün, güvenli ödeme ve hızlı teslimat ile sizinleyiz.</p>
+        <div class="footer-trust">
+          <span>🔒 Güvenli Ödeme</span>
+          <span>🚚 Hızlı Teslimat</span>
+          <span>↩️ Kolay İade</span>
+        </div>
+      </div>
+      <div>
+        <h5>Kategoriler</h5>
+        <nav id="footerCats"><span style="color:rgba(255,255,255,.2)">Yükleniyor…</span></nav>
+      </div>
+      <div>
+        <h5>Bilgi</h5>
+        <nav>
+          <a href="#">Hakkımızda</a>
+          <a href="#">Gizlilik Politikası</a>
+          <a href="#">Kullanım Koşulları</a>
+          <a href="#">İade &amp; Değişim</a>
+          <a href="#">Sık Sorulan Sorular</a>
+          <a href="#">İletişim</a>
+        </nav>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 ECSPros Ticaret A.Ş. Tüm hakları saklıdır.</p>
+      <div class="footer-payments">
+        <span>VISA</span><span>MC</span><span>TROY</span><span>AMEX</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/app.js?v=20260626"></script>
+</body>
+</html>

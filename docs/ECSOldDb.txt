@@ -1,0 +1,1 @@
+Server=51.178.208.50;port=3306;Database=juludedb;Uid=web;Pwd={wb9&HqD&_zwg~?;Convert Zero Datetime=true;AllowLoadLocalInfile=true;Connection Timeout=530

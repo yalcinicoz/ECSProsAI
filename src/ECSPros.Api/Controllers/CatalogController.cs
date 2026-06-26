@@ -31,9 +31,6 @@ using ECSPros.Catalog.Application.Commands.DeleteVariant;
 using ECSPros.Catalog.Application.Commands.DeleteProduct;
 using ECSPros.Catalog.Application.Commands.DeleteProductGroup;
 using ECSPros.Catalog.Application.Commands.ToggleVariantStatus;
-using ECSPros.Catalog.Application.Commands.CreateImageSet;
-using ECSPros.Catalog.Application.Commands.UpdateImageSet;
-using ECSPros.Catalog.Application.Queries.GetImageSets;
 using ECSPros.Catalog.Application.Commands.UpdateProductTags;
 using ECSPros.Catalog.Application.Commands.UpdateProductSeo;
 using ECSPros.Catalog.Application.Queries.GetProductDetail;
@@ -206,35 +203,6 @@ public class CatalogController : ControllerBase
     public async Task<IActionResult> UpdateCatalogSetting(string key, [FromBody] UpdateCatalogSettingRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new UpdateCatalogSettingCommand(key, request.Value), ct);
-        if (result.IsFailure)
-            return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true });
-    }
-
-    // ─── Image Sets ────────────────────────────────────────────────────────────
-
-    [HttpGet("image-sets")]
-    public async Task<IActionResult> GetImageSets([FromQuery] bool activeOnly = true, CancellationToken ct = default)
-    {
-        var result = await _mediator.Send(new GetImageSetsQuery(activeOnly), ct);
-        return Ok(new { success = true, data = result.Value });
-    }
-
-    [HttpPost("image-sets")]
-    public async Task<IActionResult> CreateImageSet([FromBody] CreateImageSetRequest request, CancellationToken ct)
-    {
-        var result = await _mediator.Send(new CreateImageSetCommand(
-            request.Code, request.Name, request.IsDefault, request.FallbackSetId, request.SortPriority), ct);
-        if (result.IsFailure)
-            return BadRequest(new { success = false, error = result.Error });
-        return Created($"/api/catalog/image-sets/{result.Value}", new { success = true, data = new { id = result.Value } });
-    }
-
-    [HttpPut("image-sets/{id:guid}")]
-    public async Task<IActionResult> UpdateImageSet(Guid id, [FromBody] CatalogUpdateImageSetRequest request, CancellationToken ct)
-    {
-        var result = await _mediator.Send(new UpdateImageSetCommand(
-            id, request.Name, request.IsDefault, request.FallbackSetId, request.SortPriority, request.IsActive), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -734,9 +702,6 @@ public record UpdateVariantPriceRequest(decimal? BasePrice, decimal? BaseCost);
 public record ToggleVariantStatusRequest(bool IsActive);
 
 public record UpdateCatalogSettingRequest(string Value);
-public record CreateImageSetRequest(string Code, string Name, bool IsDefault, Guid? FallbackSetId, int SortPriority = 0);
-public record CatalogUpdateImageSetRequest(string Name, bool IsDefault, Guid? FallbackSetId, int SortPriority, bool IsActive);
-
 public record AddProductVariantItemRequest(string? Sku, List<VariantAxisValueItemRequest> Attributes);
 
 public record VariantAxisValueItemRequest(Guid AttributeTypeId, Guid AttributeValueId);
