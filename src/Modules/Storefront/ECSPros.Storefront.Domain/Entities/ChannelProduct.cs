@@ -10,6 +10,8 @@ public class ChannelProduct : BaseEntity
 {
     public Guid FirmPlatformId { get; set; }
     public Guid ProductId { get; set; }
+    public Dictionary<string, string>? NameI18n { get; set; }
+    public Dictionary<string, string>? ShortDescriptionI18n { get; set; }
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; }
 }

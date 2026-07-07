@@ -1,12 +1,28 @@
 using ECSPros.Catalog.Application.Helpers;
+using ECSPros.Catalog.Application.Queries.GetStoreProducts;
 using ECSPros.Catalog.Application.Services;
 using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
 using ECSPros.Storefront.Application.Services;
+using ECSPros.Storefront.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Storefront.Application.Queries.GetChannelCategoryProducts;
+
+file static class PlatformPriceFilter
+{
+    public static async Task<HashSet<Guid>?> ResolveAsync(
+        ICatalogDbContext catDb, IChannelPricingService pricingService,
+        Guid firmPlatformId, Catalog.Application.Helpers.CategoryFilterRules? rules, CancellationToken ct)
+    {
+        if (rules is null || (!rules.PlatformPriceMin.HasValue && !rules.PlatformPriceMax.HasValue))
+            return null;
+
+        return await ProductFilterHelper.ResolvePlatformPriceRangeProductIds(
+            catDb, pricingService, firmPlatformId, rules.PlatformPriceMin, rules.PlatformPriceMax, ct);
+    }
+}
 
 public record GetChannelCategoryProductsQuery(
     Guid ChannelCategoryId,
@@ -21,17 +37,49 @@ public record ChannelCategoryProductItemDto(
     decimal BasePrice,
     bool IsActive,
     int SortOrder,
-    bool IsExcluded);
+    bool IsExcluded,
+    Guid? ProductGroupId = null,
+    List<ProductListingColorDto>? Colors = null,
+    List<ProductListingAttrDto>? Attrs = null,
+    Guid? SelectedColorValueId = null,
+    Dictionary<string, string>? SelectedColorNameI18n = null);
 
 public class GetChannelCategoryProductsQueryHandler(
     IStorefrontDbContext sfDb,
     ICatalogDbContext catDb,
-    IStockService stockService)
+    IStockService stockService,
+    IChannelPricingService pricingService,
+    ICacheService cache)
     : IRequestHandler<GetChannelCategoryProductsQuery, Result<PagedResult<ChannelCategoryProductItemDto>>>
 {
+    // "filter"/"mixed" kategorilerde binlerce ürünü tarayan renk-grubu hesaplaması (bkz. HandleColorMode)
+    // büyük kategorilerde (10K+ ürün) saniyeler sürüyor — aynı sayfa tüm ziyaretçiler için aynı sonucu
+    // döndüğünden kısa süreli Redis cache ile tekrar hesaplama önleniyor. Cache erişimi try/catch ile
+    // sarılı: Redis geçici olarak erişilemezse istek hata almak yerine DB'den taze hesaplanır.
+    private static string CacheKey(Guid categoryId, int page, int pageSize) =>
+        $"channelcat:products:{categoryId}:{page}:{pageSize}";
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
+
+    private async Task<PagedResult<ChannelCategoryProductItemDto>?> TryGetCacheAsync(string key, CancellationToken ct)
+    {
+        try { return await cache.GetAsync<PagedResult<ChannelCategoryProductItemDto>>(key, ct); }
+        catch { return null; }
+    }
+
+    private async Task TrySetCacheAsync(string key, PagedResult<ChannelCategoryProductItemDto> value, CancellationToken ct)
+    {
+        try { await cache.SetAsync(key, value, CacheTtl, ct); }
+        catch { /* cache best-effort — Redis erişilemezse sessizce yok say */ }
+    }
+
     public async Task<Result<PagedResult<ChannelCategoryProductItemDto>>> Handle(
         GetChannelCategoryProductsQuery request, CancellationToken ct)
     {
+        var cacheKey = CacheKey(request.ChannelCategoryId, request.Page, request.PageSize);
+        var cached = await TryGetCacheAsync(cacheKey, ct);
+        if (cached is not null)
+            return Result.Success(cached);
+
         var cat = await sfDb.ChannelCategories
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == request.ChannelCategoryId, ct);
@@ -39,6 +87,26 @@ public class GetChannelCategoryProductsQueryHandler(
         if (cat is null)
             return Result.Failure<PagedResult<ChannelCategoryProductItemDto>>("Kanal kategorisi bulunamadı.");
 
+        var cdnBase = await CdnHelper.BuildListUrlAsync(catDb, ct);
+
+        // ── Model Modu ────────────────────────────────────────────────────────
+        if (cat.ListingMode == "model")
+        {
+            var modelResult = await HandleModelMode(request, cat.Id, cdnBase, ct);
+            if (modelResult.IsSuccess) await TrySetCacheAsync(cacheKey, modelResult.Value, ct);
+            return modelResult;
+        }
+
+        // ── Renk (Ana Varyant) Modu — "color", "product" ve diğer her değer ─
+        // "model" dışındaki tüm kategoriler renk modu olarak çalışır.
+        if (cat.ListingMode != "model")
+        {
+            var colorResult = await HandleColorMode(request, cat, cdnBase, ct);
+            if (colorResult.IsSuccess) await TrySetCacheAsync(cacheKey, colorResult.Value, ct);
+            return colorResult;
+        }
+
+        // Bu satıra artık ulaşılamaz — backward compat için bırakıldı
         IQueryable<Catalog.Domain.Entities.Product> productQuery;
 
         if (cat.FillType == "manual")
@@ -60,6 +128,7 @@ public class GetChannelCategoryProductsQueryHandler(
             if (rules?.StockMin.HasValue == true || rules?.StockMax.HasValue == true)
                 stockRange = await ProductFilterHelper
                     .ResolveStockRangeProductIds(catDb, stockService, rules!.StockMin, rules.StockMax, ct);
+            var platformPriceIds = await PlatformPriceFilter.ResolveAsync(catDb, pricingService, cat.FirmPlatformId, rules, ct);
 
             var excludedIds = await sfDb.ChannelCategoryProducts
                 .Where(p => p.ChannelCategoryId == request.ChannelCategoryId && p.IsExcluded)
@@ -67,7 +136,7 @@ public class GetChannelCategoryProductsQueryHandler(
                 .ToListAsync(ct);
 
             productQuery = ProductFilterHelper
-                .BuildFilterQuery(catDb, rules, cat.FirmPlatformId, stockRange)
+                .BuildFilterQuery(catDb, rules, platformPriceIds, stockRange)
                 .Where(p => !excludedIds.Contains(p.Id));
         }
         else // mixed
@@ -77,14 +146,14 @@ public class GetChannelCategoryProductsQueryHandler(
             if (rules?.StockMin.HasValue == true || rules?.StockMax.HasValue == true)
                 stockRange = await ProductFilterHelper
                     .ResolveStockRangeProductIds(catDb, stockService, rules!.StockMin, rules.StockMax, ct);
+            var platformPriceIds = await PlatformPriceFilter.ResolveAsync(catDb, pricingService, cat.FirmPlatformId, rules, ct);
 
             var excludedIds = await sfDb.ChannelCategoryProducts
                 .Where(p => p.ChannelCategoryId == request.ChannelCategoryId && p.IsExcluded)
-                .Select(p => p.ProductId)
-                .ToListAsync(ct);
+                .Select(p => p.ProductId).ToListAsync(ct);
 
             var filteredIds = await ProductFilterHelper
-                .BuildFilterQuery(catDb, rules, cat.FirmPlatformId, stockRange)
+                .BuildFilterQuery(catDb, rules, platformPriceIds, stockRange)
                 .Select(p => p.Id).ToListAsync(ct);
 
             var pinnedIds = await sfDb.ChannelCategoryProducts
@@ -94,6 +163,8 @@ public class GetChannelCategoryProductsQueryHandler(
             var allIds = filteredIds.Union(pinnedIds).Except(excludedIds).ToList();
             productQuery = catDb.Products.AsNoTracking().Where(p => allIds.Contains(p.Id));
         }
+
+        productQuery = productQuery.Where(p => catDb.ProductImages.Any(img => img.ProductId == p.Id));
 
         var total = await productQuery.CountAsync(ct);
 
@@ -114,20 +185,451 @@ public class GetChannelCategoryProductsQueryHandler(
             .Where(p => p.ChannelCategoryId == request.ChannelCategoryId)
             .ToDictionaryAsync(p => p.ProductId, p => p, ct);
 
-        const string cdnBase = "https://cdn.misharitalia.com/img/640/85/";
+        var (colorMap, attrMap) = await LoadVariantAttrs(catDb, productIds, ct);
+
         var items = pagedProducts.Select(p =>
         {
             var mainImage = firstImages.TryGetValue(p.Id, out var fn) ? cdnBase + fn : null;
-
             manualProductMap.TryGetValue(p.Id, out var manualEntry);
-
             return new ChannelCategoryProductItemDto(
                 p.Id, p.Code, p.NameI18n, mainImage, p.BasePrice > 0 ? p.BasePrice : 0, p.IsActive,
                 manualEntry?.SortOrder ?? 0,
-                manualEntry?.IsExcluded ?? false);
+                manualEntry?.IsExcluded ?? false,
+                Colors: colorMap.GetValueOrDefault(p.Id),
+                Attrs: attrMap.GetValueOrDefault(p.Id));
         }).ToList();
 
         return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
             items, total, request.Page, request.PageSize));
+    }
+
+    // ── Renk Modu: Her (Ürün × PrimaryAxis değeri) = 1 kart ─────────────────
+    // ProductGroupAttribute.IsPrimaryAxis=true olan attribute type → o eksenin
+    // distinct değerleri kadar kart oluşturulur.
+    // Örnek: 6 renk × 4 beden = 24 varyant → 6 kart
+    private async Task<Result<PagedResult<ChannelCategoryProductItemDto>>> HandleColorMode(
+        GetChannelCategoryProductsQuery request,
+        ChannelCategory cat,
+        string cdnBase,
+        CancellationToken ct)
+    {
+        // 1. Kategorideki tüm ürün ID'leri
+        var allProductIds = await ResolveCategoryProductIds(cat, request.ChannelCategoryId, ct);
+        if (allProductIds.Count == 0)
+            return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
+                [], 0, request.Page, request.PageSize));
+
+        // 2. Ürünlerin ProductGroupId haritası
+        var productGroupMap = await catDb.Products.AsNoTracking()
+            .Where(p => allProductIds.Contains(p.Id))
+            .Select(p => new { p.Id, p.ProductGroupId })
+            .ToDictionaryAsync(p => p.Id, p => p.ProductGroupId, ct);
+
+        var groupIds = productGroupMap.Values.Distinct().ToList();
+
+        // 3. Her grup için primary axis AttributeTypeId
+        var primaryAxisByGroup = await catDb.ProductGroupAttributes.AsNoTracking()
+            .Where(ga => groupIds.Contains(ga.ProductGroupId) && ga.IsPrimaryAxis)
+            .Select(ga => new { ga.ProductGroupId, ga.AttributeTypeId })
+            .ToDictionaryAsync(ga => ga.ProductGroupId, ga => ga.AttributeTypeId, ct);
+
+        // 4. Aktif varyantlar (fiyat dahil)
+        var allVariants = await catDb.ProductVariants.AsNoTracking()
+            .Where(v => allProductIds.Contains(v.ProductId) && v.IsActive)
+            .Select(v => new { v.Id, v.ProductId, v.BasePrice })
+            .ToListAsync(ct);
+
+        var variantIds = allVariants.Select(v => v.Id).ToList();
+        var variantToProduct = allVariants.ToDictionary(v => v.Id, v => v.ProductId);
+        var variantPrice = allVariants.ToDictionary(v => v.Id, v => v.BasePrice);
+
+        // 5. Tüm varyant attribute değerleri (primary axis tespiti için)
+        // Sadece PRIMARY AXIS tipindeki satırlar çekiliyor (ör. "beden" atlanıyor) — büyük
+        // kategorilerde (10K+ ürün) her varyantın TÜM attribute'larını (Name/Hex join'i dahil)
+        // çekmek saniyeler sürüyordu (bkz. PROGRESS.md 2026-07-06). Renk adı/hex burada
+        // kullanılmıyor, sadece sayfalanmış sonuç için adım 11'den önce ayrıca çekiliyor.
+        var axisTypeIds = primaryAxisByGroup.Values.Distinct().ToList();
+        var allVariantAttrs = variantIds.Count > 0 && axisTypeIds.Count > 0
+            ? await catDb.ProductVariantAttributes.AsNoTracking()
+                .Where(va => variantIds.Contains(va.VariantId) && axisTypeIds.Contains(va.AttributeTypeId))
+                .Select(va => new { va.VariantId, va.AttributeTypeId, va.AttributeValueId })
+                .ToListAsync(ct)
+            : [];
+
+        // 6. Primary axis değerlerine göre distinct (ProductId, ValueId) çiftleri
+        //    Her renk için O renge ait TÜM varyant ID'leri saklanır (görsel arama için)
+        var colorPairs = allVariantAttrs
+            .Where(a =>
+            {
+                if (!variantToProduct.TryGetValue(a.VariantId, out var pid)) return false;
+                if (!productGroupMap.TryGetValue(pid, out var gid)) return false;
+                return primaryAxisByGroup.TryGetValue(gid, out var axisTypeId) && a.AttributeTypeId == axisTypeId;
+            })
+            .GroupBy(a => (ProductId: variantToProduct[a.VariantId], a.AttributeValueId))
+            .Select(g => new
+            {
+                g.Key.ProductId,
+                ColorValueId  = g.Key.AttributeValueId,
+                VariantIds    = g.Select(x => x.VariantId).Distinct().ToList(),
+                // Rengin en düşük varyant fiyatı (fiyatlanmamış varyantlar 0 döner, onları atla)
+                Price = g.Select(x => variantPrice.GetValueOrDefault(x.VariantId))
+                         .Where(p => p > 0).DefaultIfEmpty(0).Min()
+            })
+            .OrderBy(x => x.ProductId).ThenBy(x => x.ColorValueId)
+            .ToList();
+
+        // Primary axis tanımlı değilse fallback: 1 kart/ürün
+        if (colorPairs.Count == 0)
+            return await BuildFallbackProductItems(allProductIds, request, cdnBase, ct);
+
+        // 7. Görseli olan renkleri filtrele — görselsiz renk listede çıkmaz
+        var allPairVariantIds = colorPairs.SelectMany(p => p.VariantIds).Distinct().ToList();
+        var variantIdsWithImage = allPairVariantIds.Count > 0
+            ? (await catDb.ProductImages.AsNoTracking()
+                .Where(img => img.VariantId != null
+                           && allPairVariantIds.Contains(img.VariantId.Value)
+                           && img.Status == Catalog.Domain.Entities.ProductImageStatus.Active)
+                .Select(img => img.VariantId!.Value)
+                .Distinct()
+                .ToListAsync(ct))
+                .ToHashSet()
+            : new HashSet<Guid>();
+
+        var visiblePairs = colorPairs
+            .Where(p => p.VariantIds.Any(vid => variantIdsWithImage.Contains(vid)))
+            .ToList();
+
+        // Görseli olan renk yoksa ürün düzeyindeki fallback ile devam et
+        if (visiblePairs.Count == 0)
+            return await BuildFallbackProductItems(allProductIds, request, cdnBase, ct);
+
+        // 8. Sayfalama
+        var total = visiblePairs.Count;
+        var pagedPairs = visiblePairs
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToList();
+
+        var pagedProductIds = pagedPairs.Select(p => p.ProductId).Distinct().ToList();
+
+        // Rengin tüm varyantlarını görsel aramasına dahil et
+        var allColorVariantIds = pagedPairs.SelectMany(p => p.VariantIds).Distinct().ToList();
+
+        // 8. Ürün bilgileri
+        var productMap = await catDb.Products.AsNoTracking()
+            .Where(p => pagedProductIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, ct);
+
+        // 9. Varyant bazlı görseller: catalog_product_images.VariantId IS NOT NULL
+        //    Admin paneli görselleri bu şekilde renk/varyanta bağlar
+        var variantImageMap = allColorVariantIds.Count > 0
+            ? await catDb.ProductImages.AsNoTracking()
+                .Where(img => img.VariantId != null
+                           && allColorVariantIds.Contains(img.VariantId.Value)
+                           && img.Status == Catalog.Domain.Entities.ProductImageStatus.Active)
+                .GroupBy(img => img.VariantId!.Value)
+                .Select(g => new { g.Key, Fn = g.OrderBy(i => i.SortOrder).First().FileName })
+                .ToDictionaryAsync(x => x.Key, x => x.Fn, ct)
+            : new Dictionary<Guid, string>();
+
+        // Ürün düzeyindeki görseller (VariantId IS NULL) — fallback
+        var productImageMap = await catDb.ProductImages.AsNoTracking()
+            .Where(img => pagedProductIds.Contains(img.ProductId)
+                       && img.VariantId == null
+                       && img.Status == Catalog.Domain.Entities.ProductImageStatus.Active)
+            .GroupBy(img => img.ProductId)
+            .Select(g => new { g.Key, Fn = g.OrderBy(i => i.SortOrder).First().FileName })
+            .ToDictionaryAsync(x => x.Key, x => x.Fn, ct);
+
+        // 10. Swatch satırı için her ürünün tüm renkleri
+        var (allColorMap, _) = await LoadVariantAttrs(catDb, pagedProductIds, ct);
+
+        // Seçili renk adı — sadece bu SAYFADAKİ ~pageSize renk için (adım 5'te tüm kategori
+        // için çekilmiyor artık, bkz. yukarıdaki not)
+        var pagedColorValueIds = pagedPairs.Select(p => p.ColorValueId).Distinct().ToList();
+        var colorValueNameMap = pagedColorValueIds.Count > 0
+            ? await catDb.AttributeValues.AsNoTracking()
+                .Where(v => pagedColorValueIds.Contains(v.Id))
+                .ToDictionaryAsync(v => v.Id, v => v.NameI18n, ct)
+            : new Dictionary<Guid, Dictionary<string, string>>();
+
+        // 11. DTO oluştur
+        var items = pagedPairs
+            .Where(pair => productMap.ContainsKey(pair.ProductId))
+            .Select(pair =>
+            {
+                var product = productMap[pair.ProductId];
+
+                // Rengin herhangi bir varyantında varyant görseli varsa kullan, yoksa ürün görseline düş
+                string? imageUrl = null;
+                foreach (var vid in pair.VariantIds)
+                {
+                    if (variantImageMap.TryGetValue(vid, out var vFn) && !string.IsNullOrEmpty(vFn))
+                    {
+                        imageUrl = cdnBase + vFn;
+                        break;
+                    }
+                }
+                if (imageUrl == null && productImageMap.TryGetValue(pair.ProductId, out var pFn))
+                    imageUrl = cdnBase + pFn;
+
+                // Fiyat: varyant fiyatı önce, yoksa ürün fiyatı
+                var price = pair.Price > 0 ? pair.Price : product.BasePrice;
+
+                return new ChannelCategoryProductItemDto(
+                    pair.ProductId, product.Code, product.NameI18n,
+                    imageUrl, price,
+                    product.IsActive, 0, false, null,
+                    Colors: allColorMap.GetValueOrDefault(pair.ProductId),
+                    SelectedColorValueId: pair.ColorValueId,
+                    SelectedColorNameI18n: colorValueNameMap.GetValueOrDefault(pair.ColorValueId));
+            })
+            .ToList();
+
+        return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
+            items, total, request.Page, request.PageSize));
+    }
+
+    // Renk tanımlaması olmayan ürünler için basit ürün listesi
+    private async Task<Result<PagedResult<ChannelCategoryProductItemDto>>> BuildFallbackProductItems(
+        List<Guid> productIds,
+        GetChannelCategoryProductsQuery request,
+        string cdnBase,
+        CancellationToken ct)
+    {
+        var total = productIds.Count;
+        var pagedIds = productIds
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToList();
+
+        var products = await catDb.Products.AsNoTracking()
+            .Where(p => pagedIds.Contains(p.Id)).ToListAsync(ct);
+        var imageMap = await catDb.ProductImages.AsNoTracking()
+            .Where(i => pagedIds.Contains(i.ProductId))
+            .GroupBy(i => i.ProductId)
+            .Select(g => new { g.Key, fn = g.OrderBy(i => i.SortOrder).First().FileName })
+            .ToDictionaryAsync(x => x.Key, x => x.fn, ct);
+        var (colorMap, attrMap) = await LoadVariantAttrs(catDb, pagedIds, ct);
+
+        var items = products.Select(p => new ChannelCategoryProductItemDto(
+            p.Id, p.Code, p.NameI18n,
+            imageMap.TryGetValue(p.Id, out var fn) ? cdnBase + fn : null,
+            p.BasePrice > 0 ? p.BasePrice : 0, p.IsActive, 0, false, null,
+            Colors: colorMap.GetValueOrDefault(p.Id),
+            Attrs: attrMap.GetValueOrDefault(p.Id))).ToList();
+
+        return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
+            items, total, request.Page, request.PageSize));
+    }
+
+    // Kategorideki tüm ürün ID'lerini dolum tipine göre çözer
+    private async Task<List<Guid>> ResolveCategoryProductIds(
+        ChannelCategory cat, Guid channelCategoryId, CancellationToken ct)
+    {
+        if (cat.FillType == "manual")
+        {
+            return await sfDb.ChannelCategoryProducts
+                .Where(p => p.ChannelCategoryId == channelCategoryId && !p.IsExcluded)
+                .OrderBy(p => p.SortOrder)
+                .Select(p => p.ProductId)
+                .ToListAsync(ct);
+        }
+
+        if (cat.FillType == "filter")
+        {
+            var rules = CategoryFilterRules.From(cat.FilterDef);
+            HashSet<Guid>? stockRange = null;
+            if (rules?.StockMin.HasValue == true || rules?.StockMax.HasValue == true)
+                stockRange = await ProductFilterHelper
+                    .ResolveStockRangeProductIds(catDb, stockService, rules!.StockMin, rules.StockMax, ct);
+            var platformPriceIds = await PlatformPriceFilter.ResolveAsync(catDb, pricingService, cat.FirmPlatformId, rules, ct);
+
+            var excludedIds = await sfDb.ChannelCategoryProducts
+                .Where(p => p.ChannelCategoryId == channelCategoryId && p.IsExcluded)
+                .Select(p => p.ProductId).ToListAsync(ct);
+
+            return await ProductFilterHelper
+                .BuildFilterQuery(catDb, rules, platformPriceIds, stockRange)
+                .Where(p => !excludedIds.Contains(p.Id) && catDb.ProductImages.Any(img => img.ProductId == p.Id))
+                .Select(p => p.Id).ToListAsync(ct);
+        }
+
+        // mixed
+        {
+            var rules = CategoryFilterRules.From(cat.FilterDef);
+            HashSet<Guid>? stockRange = null;
+            if (rules?.StockMin.HasValue == true || rules?.StockMax.HasValue == true)
+                stockRange = await ProductFilterHelper
+                    .ResolveStockRangeProductIds(catDb, stockService, rules!.StockMin, rules.StockMax, ct);
+            var platformPriceIds = await PlatformPriceFilter.ResolveAsync(catDb, pricingService, cat.FirmPlatformId, rules, ct);
+
+            var excludedIds = await sfDb.ChannelCategoryProducts
+                .Where(p => p.ChannelCategoryId == channelCategoryId && p.IsExcluded)
+                .Select(p => p.ProductId).ToListAsync(ct);
+
+            var filteredIds = await ProductFilterHelper
+                .BuildFilterQuery(catDb, rules, platformPriceIds, stockRange)
+                .Select(p => p.Id).ToListAsync(ct);
+
+            var pinnedIds = await sfDb.ChannelCategoryProducts
+                .Where(p => p.ChannelCategoryId == channelCategoryId && !p.IsExcluded)
+                .Select(p => p.ProductId).ToListAsync(ct);
+
+            return filteredIds.Union(pinnedIds).Except(excludedIds).ToList();
+        }
+    }
+
+    private async Task<Result<PagedResult<ChannelCategoryProductItemDto>>> HandleModelMode(
+        GetChannelCategoryProductsQuery request,
+        Guid channelCategoryId,
+        string cdnBase,
+        CancellationToken ct)
+    {
+        var categoryGroups = await sfDb.ChannelCategoryGroups
+            .AsNoTracking()
+            .Where(g => g.ChannelCategoryId == channelCategoryId)
+            .ToListAsync(ct);
+
+        var total = categoryGroups.Count;
+        var pagedGroups = categoryGroups
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToList();
+
+        if (!pagedGroups.Any())
+            return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
+                [], total, request.Page, request.PageSize));
+
+        var showcaseIds = pagedGroups
+            .Where(g => g.ShowcaseProductId.HasValue)
+            .Select(g => g.ShowcaseProductId!.Value)
+            .ToList();
+
+        var groupsNeedingFallback = pagedGroups
+            .Where(g => !g.ShowcaseProductId.HasValue)
+            .Select(g => g.ProductGroupId)
+            .ToList();
+
+        var fallbackProducts = groupsNeedingFallback.Count > 0
+            ? (await catDb.Products
+                .AsNoTracking()
+                .Where(p => groupsNeedingFallback.Contains(p.ProductGroupId) && p.IsActive)
+                .OrderBy(p => p.ProductGroupId).ThenBy(p => p.Id)
+                .ToListAsync(ct))
+                .GroupBy(p => p.ProductGroupId)
+                .ToDictionary(g => g.Key, g => g.First())
+            : new Dictionary<Guid, Catalog.Domain.Entities.Product>();
+
+        var allProductIds = showcaseIds
+            .Concat(fallbackProducts.Values.Select(p => p.Id))
+            .Distinct()
+            .ToList();
+
+        var productById = allProductIds.Count > 0
+            ? (await catDb.Products.AsNoTracking()
+                .Where(p => allProductIds.Contains(p.Id))
+                .ToListAsync(ct))
+                .ToDictionary(p => p.Id)
+            : new Dictionary<Guid, Catalog.Domain.Entities.Product>();
+
+        var imageMap = allProductIds.Count > 0
+            ? await catDb.ProductImages
+                .AsNoTracking()
+                .Where(img => allProductIds.Contains(img.ProductId))
+                .GroupBy(img => img.ProductId)
+                .Select(g => new { ProductId = g.Key, FileName = g.OrderBy(i => i.SortOrder).First().FileName })
+                .ToDictionaryAsync(x => x.ProductId, x => x.FileName, ct)
+            : new Dictionary<Guid, string>();
+
+        var (colorMap, attrMap) = await LoadVariantAttrs(catDb, allProductIds, ct);
+
+        var items = new List<ChannelCategoryProductItemDto>();
+        foreach (var group in pagedGroups)
+        {
+            Catalog.Domain.Entities.Product? product = null;
+
+            if (group.ShowcaseProductId.HasValue)
+                productById.TryGetValue(group.ShowcaseProductId.Value, out product);
+
+            if (product is null)
+                fallbackProducts.TryGetValue(group.ProductGroupId, out product);
+
+            if (product is null) continue;
+
+            var mainImage = imageMap.TryGetValue(product.Id, out var fn) ? cdnBase + fn : null;
+            items.Add(new ChannelCategoryProductItemDto(
+                product.Id, product.Code, product.NameI18n, mainImage,
+                product.BasePrice > 0 ? product.BasePrice : 0, product.IsActive,
+                0, false, group.ProductGroupId,
+                Colors: colorMap.GetValueOrDefault(product.Id),
+                Attrs: attrMap.GetValueOrDefault(product.Id)));
+        }
+
+        return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
+            items, total, request.Page, request.PageSize));
+    }
+
+    private static async Task<(
+        Dictionary<Guid, List<ProductListingColorDto>>,
+        Dictionary<Guid, List<ProductListingAttrDto>>)>
+        LoadVariantAttrs(ICatalogDbContext catDb, List<Guid> productIds, CancellationToken ct)
+    {
+        var colorMap = new Dictionary<Guid, List<ProductListingColorDto>>();
+        var attrMap  = new Dictionary<Guid, List<ProductListingAttrDto>>();
+
+        if (productIds.Count == 0) return (colorMap, attrMap);
+
+        var variantData = await catDb.ProductVariants
+            .AsNoTracking()
+            .Where(v => productIds.Contains(v.ProductId) && v.IsActive)
+            .Select(v => new { v.Id, v.ProductId })
+            .ToListAsync(ct);
+
+        var variantToProduct = variantData.ToDictionary(v => v.Id, v => v.ProductId);
+        var vIds = variantData.Select(v => v.Id).ToList();
+
+        if (vIds.Count == 0) return (colorMap, attrMap);
+
+        var colorAttrs = await catDb.ProductVariantAttributes
+            .AsNoTracking()
+            .Where(va => vIds.Contains(va.VariantId) && va.AttributeType.Code == "filtre_rengi")
+            .Select(va => new {
+                va.VariantId, va.AttributeValueId,
+                NameI18n = va.AttributeValue.NameI18n,
+                HexCode  = va.AttributeValue.HexCode
+            })
+            .ToListAsync(ct);
+
+        var otherAttrs = await catDb.ProductVariantAttributes
+            .AsNoTracking()
+            .Where(va => vIds.Contains(va.VariantId) && va.AttributeType.Code != "filtre_rengi")
+            .Select(va => new {
+                va.VariantId,
+                TypeCode      = va.AttributeType.Code,
+                TypeNameI18n  = va.AttributeType.NameI18n,
+                va.AttributeValueId,
+                ValueNameI18n = va.AttributeValue.NameI18n,
+                SortOrder     = va.AttributeValue.SortOrder
+            })
+            .ToListAsync(ct);
+
+        foreach (var ca in colorAttrs)
+        {
+            if (!variantToProduct.TryGetValue(ca.VariantId, out var pid)) continue;
+            if (!colorMap.TryGetValue(pid, out var list)) colorMap[pid] = list = new();
+            if (list.All(c => c.ValueId != ca.AttributeValueId))
+                list.Add(new(ca.AttributeValueId, ca.NameI18n, ca.HexCode));
+        }
+
+        foreach (var oa in otherAttrs)
+        {
+            if (!variantToProduct.TryGetValue(oa.VariantId, out var pid)) continue;
+            if (!attrMap.TryGetValue(pid, out var list)) attrMap[pid] = list = new();
+            if (list.All(a => a.TypeCode != oa.TypeCode || a.ValueId != oa.AttributeValueId))
+                list.Add(new(oa.TypeCode, oa.TypeNameI18n, oa.AttributeValueId, oa.ValueNameI18n, oa.SortOrder));
+        }
+
+        return (colorMap, attrMap);
     }
 }

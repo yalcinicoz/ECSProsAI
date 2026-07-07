@@ -20,6 +20,9 @@ public class ChannelCategory : BaseEntity
     /// <summary>manual | filter | mixed</summary>
     public string FillType { get; set; } = "manual";
 
+    /// <summary>color | model — ana varyant (renk) bazlı mı yoksa model (ProductGroup) bazlı mı listele</summary>
+    public string ListingMode { get; set; } = "color";
+
     /// <summary>CategoryFilterRules ile uyumlu JSONB filtre tanımı. FillType=filter/mixed için kullanılır.</summary>
     public Dictionary<string, object>? FilterDef { get; set; }
 

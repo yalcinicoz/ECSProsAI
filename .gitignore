@@ -42,3 +42,7 @@ docker/nginx/certs/
 # Tools build artifacts
 tools/**/bin/
 tools/**/obj/
+
+# Node dependencies
+node_modules/
+tools/misharix-sync/shots/

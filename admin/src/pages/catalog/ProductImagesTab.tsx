@@ -30,6 +30,12 @@ interface Variant { id: string; sku: string; variantAttributes: VariantAttribute
 // A primary-axis value entry: e.g. "Kırmızı" → representative variantId
 interface PrimaryAxisValue { valueId: string; label: string; representativeVariantId: string }
 
+interface CdnSettings {
+  baseUrl: string   // örn: "https://cdn.misharitalia.com/img"
+  quality: string   // örn: "85"
+  listHeight: string // örn: "640"
+}
+
 interface Props {
   productId: string
   variants: Variant[]
@@ -69,12 +75,23 @@ function SetSelector({ imageSets, selectedSetId, onSelect }: {
 
 // ── Images Section ─────────────────────────────────────────────────────────────
 
+function buildImageUrl(fileName: string, cdn: CdnSettings, publicBaseUrl: string): string {
+  if (cdn.baseUrl) {
+    return `${cdn.baseUrl.replace(/\/$/, '')}/${cdn.listHeight}/${cdn.quality}/${fileName}`
+  }
+  if (publicBaseUrl) {
+    return `${publicBaseUrl}/${fileName}`
+  }
+  return `/api/catalog/images/file/${fileName}`
+}
+
 function ImagesSection({
-  productId, imageSets, publicBaseUrl, primaryAxisValues, variants, primaryAxisAttributeTypeId,
+  productId, imageSets, publicBaseUrl, cdn, primaryAxisValues, variants, primaryAxisAttributeTypeId,
 }: {
   productId: string
   imageSets: ImageSet[]
   publicBaseUrl: string
+  cdn: CdnSettings
   primaryAxisValues: PrimaryAxisValue[]
   variants: Variant[]
   primaryAxisAttributeTypeId?: string | null
@@ -148,28 +165,31 @@ function ImagesSection({
 
   // For active tab: per-set image lists (ALL sets always shown)
   const viewGroups = useMemo(() => {
+    const noPrimaryAxis = !primaryAxisAttributeTypeId
     return imageSets.map(set => {
       const setImages = images.filter(img => img.imageSetId === set.id)
       let tabImages: ProductImageDto[]
       if (activeViewTab === '__genel__') {
-        tabImages = setImages.filter(img => img.variantId == null)
+        // Primary axis yoksa tüm resimleri göster (varyant resimleri dahil)
+        tabImages = noPrimaryAxis ? setImages : setImages.filter(img => img.variantId == null)
       } else {
         const ids = variantIdsByLabel.get(activeViewTab) ?? []
         tabImages = setImages.filter(img => img.variantId != null && ids.includes(img.variantId))
       }
       return { set, images: tabImages.sort((a, b) => a.sortOrder - b.sortOrder) }
     })
-  }, [images, imageSets, activeViewTab, variantIdsByLabel])
+  }, [images, imageSets, activeViewTab, variantIdsByLabel, primaryAxisAttributeTypeId])
 
   // Per-tab stats (computed across ALL sets, not just active tab)
   const tabStats = useMemo(() => {
+    const noPrimaryAxis = !primaryAxisAttributeTypeId
     const result = new Map<string, { total: number }>()
     for (const tab of viewTabs) {
       let total = 0
       for (const set of imageSets) {
         const setImages = images.filter(img => img.imageSetId === set.id)
         if (tab.key === '__genel__') {
-          total += setImages.filter(img => img.variantId == null).length
+          total += noPrimaryAxis ? setImages.length : setImages.filter(img => img.variantId == null).length
         } else {
           const ids = variantIdsByLabel.get(tab.key) ?? []
           total += setImages.filter(img => img.variantId != null && ids.includes(img.variantId)).length
@@ -178,7 +198,7 @@ function ImagesSection({
       result.set(tab.key, { total })
     }
     return result
-  }, [viewTabs, imageSets, images, variantIdsByLabel])
+  }, [viewTabs, imageSets, images, variantIdsByLabel, primaryAxisAttributeTypeId])
 
   const handleUpload = async () => {
     if (!selectedSetId || pendingFiles.length === 0) return
@@ -456,9 +476,7 @@ function ImagesSection({
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {setTabImages.map(img => {
-                      const url = publicBaseUrl
-                        ? `${publicBaseUrl}/${img.fileName}`
-                        : `/api/catalog/images/file/${img.fileName}`
+                      const url = buildImageUrl(img.fileName, cdn, publicBaseUrl)
                       return (
                         <div key={img.id} className="relative group rounded-xl overflow-hidden aspect-square"
                           style={{ background: 'var(--surface2)', border: img.isProductCover ? '2px solid var(--brand)' : '1px solid var(--border)' }}>
@@ -502,8 +520,8 @@ function ImagesSection({
 
 // ── Videos Section ─────────────────────────────────────────────────────────────
 
-function VideosSection({ productId, imageSets, publicBaseUrl }: {
-  productId: string; imageSets: ImageSet[]; publicBaseUrl: string
+function VideosSection({ productId, imageSets, publicBaseUrl, cdn }: {
+  productId: string; imageSets: ImageSet[]; publicBaseUrl: string; cdn: CdnSettings
 }) {
   const qc = useQueryClient()
   const videoInputRef = useRef<HTMLInputElement>(null)
@@ -693,9 +711,7 @@ function VideosSection({ productId, imageSets, publicBaseUrl }: {
         ) : (
           <div className="space-y-2">
             {videos.sort((a, b) => a.sortOrder - b.sortOrder).map(vid => {
-              const url = publicBaseUrl
-                ? `${publicBaseUrl}/${vid.fileName}`
-                : `/api/catalog/images/file/${vid.fileName}`
+              const url = buildImageUrl(vid.fileName, cdn, publicBaseUrl)
               return (
                 <div key={vid.id} className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)', background: 'var(--surface2)' }}>
                   {isPlayable(vid.fileName) ? (
@@ -777,6 +793,11 @@ export function ProductImagesTab({ productId, variants, primaryAxisAttributeType
   })
 
   const publicBaseUrl = (settings.find(s => s.key === 'ImageServer.PublicBaseUrl')?.value ?? '').replace(/\/$/, '')
+  const cdn: CdnSettings = {
+    baseUrl:    (settings.find(s => s.key === 'ImageServer.CdnBaseUrl')?.value ?? '').trim(),
+    quality:    settings.find(s => s.key === 'ImageServer.CdnQuality')?.value ?? '85',
+    listHeight: settings.find(s => s.key === 'ImageServer.CdnListHeight')?.value ?? '640',
+  }
 
   if (setsLoading) return <PageSpinner />
 
@@ -822,6 +843,7 @@ export function ProductImagesTab({ productId, variants, primaryAxisAttributeType
           productId={productId}
           imageSets={imageSets}
           publicBaseUrl={publicBaseUrl}
+          cdn={cdn}
           primaryAxisValues={primaryAxisValues}
           variants={variants}
           primaryAxisAttributeTypeId={primaryAxisAttributeTypeId}
@@ -833,6 +855,7 @@ export function ProductImagesTab({ productId, variants, primaryAxisAttributeType
           productId={productId}
           imageSets={imageSets}
           publicBaseUrl={publicBaseUrl}
+          cdn={cdn}
         />
       )}
     </div>

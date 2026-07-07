@@ -29,9 +29,24 @@ public class SetProductAttributesCommandHandler : IRequestHandler<SetProductAttr
             .Where(a => a.ProductId == request.ProductId)
             .ToListAsync(ct);
 
+        // Bir attribute type için birden fazla değer olabilir (örn. çoklu filtre rengi):
+        // eşleştirme (AttributeTypeId, AttributeValueId) çiftine göre yapılır, sadece
+        // AttributeTypeId'ye göre değil. Request'te artık bulunmayan satırlar silinir.
+        var requestKeys = request.Attributes
+            .Select(a => (a.AttributeTypeId, a.AttributeValueId))
+            .ToHashSet();
+
+        var toRemove = existing
+            .Where(a => !requestKeys.Contains((a.AttributeTypeId, a.AttributeValueId)))
+            .ToList();
+        if (toRemove.Count > 0)
+            _db.ProductAttributes.RemoveRange(toRemove);
+
         foreach (var item in request.Attributes)
         {
-            var attr = existing.FirstOrDefault(a => a.AttributeTypeId == item.AttributeTypeId);
+            var attr = existing.FirstOrDefault(a =>
+                a.AttributeTypeId == item.AttributeTypeId && a.AttributeValueId == item.AttributeValueId);
+            var customValue = ParseCustomValue(item.CustomValue);
 
             if (attr is null)
             {
@@ -41,17 +56,24 @@ public class SetProductAttributesCommandHandler : IRequestHandler<SetProductAttr
                     ProductId = request.ProductId,
                     AttributeTypeId = item.AttributeTypeId,
                     AttributeValueId = item.AttributeValueId,
+                    CustomValue = customValue,
                     CreatedAt = DateTime.UtcNow
                 });
             }
             else
             {
-                attr.AttributeValueId = item.AttributeValueId;
+                attr.CustomValue = customValue;
                 attr.UpdatedAt = DateTime.UtcNow;
             }
         }
 
         await _db.SaveChangesAsync(ct);
         return Result.Success(true);
+    }
+
+    private static Dictionary<string, object>? ParseCustomValue(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json);
     }
 }

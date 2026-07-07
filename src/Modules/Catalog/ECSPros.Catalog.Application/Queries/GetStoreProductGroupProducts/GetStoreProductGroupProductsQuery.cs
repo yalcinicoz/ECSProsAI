@@ -1,4 +1,5 @@
 using ECSPros.Catalog.Application.Services;
+using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -26,12 +27,13 @@ public record StoreGroupProductItemDto(
     decimal? CompareAtPrice,
     bool IsActive);
 
-public class GetStoreProductGroupProductsQueryHandler(ICatalogDbContext db)
+public class GetStoreProductGroupProductsQueryHandler(ICatalogDbContext db, IChannelPricingService pricingService)
     : IRequestHandler<GetStoreProductGroupProductsQuery, Result<StoreProductGroupProductsDto>>
 {
     public async Task<Result<StoreProductGroupProductsDto>> Handle(
         GetStoreProductGroupProductsQuery request, CancellationToken ct)
     {
+        var channelPrices = await pricingService.GetActiveVariantPricesAsync(request.FirmPlatformId, ct);
         var group = await db.ProductGroups
             .AsNoTracking()
             .FirstOrDefaultAsync(g => g.Id == request.ProductGroupId && g.IsActive, ct);
@@ -44,13 +46,13 @@ public class GetStoreProductGroupProductsQueryHandler(ICatalogDbContext db)
 
         var q = db.Products
             .AsNoTracking()
-            .Where(p => allGroupIds.Contains(p.ProductGroupId) && p.IsActive);
+            .Where(p => allGroupIds.Contains(p.ProductGroupId) && p.IsActive
+                     && db.ProductImages.Any(img => img.ProductId == p.Id));
 
         var total = await q.CountAsync(ct);
 
         var products = await q
             .Include(p => p.Variants).ThenInclude(v => v.Images)
-            .Include(p => p.Variants).ThenInclude(v => v.FirmPlatformVariants)
             .OrderBy(p => p.Id)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
@@ -60,9 +62,8 @@ public class GetStoreProductGroupProductsQueryHandler(ICatalogDbContext db)
         {
             var activeVariants = p.Variants.Where(v => v.IsActive).ToList();
             var platformPrices = activeVariants
-                .SelectMany(v => v.FirmPlatformVariants
-                    .Where(fpv => fpv.FirmPlatformId == request.FirmPlatformId && fpv.IsActive))
-                .Select(fpv => fpv.Price ?? 0)
+                .Where(v => channelPrices.ContainsKey(v.Id))
+                .Select(v => channelPrices[v.Id].Price ?? 0)
                 .Where(price => price > 0)
                 .ToList();
 

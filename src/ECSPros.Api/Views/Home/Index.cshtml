@@ -1,0 +1,42 @@
+@{
+    ViewData["Title"] = "Ana Sayfa";
+}
+
+<div class="ms-ana-sayfa">
+    <section class="ms-ana-sayfa-karsilama">
+        <h1 class="ms-ana-sayfa-karsilama-basligi">Misharix Online Alışveriş</h1>
+        <form class="ms-ana-sayfa-sayfa-secici" data-ms-ana-sayfa-secici>
+            <label class="ms-form-alani" for="ms-ana-sayfa-hedef">
+                <span class="ms-form-etiket">Sayfa Seç</span>
+                <select id="ms-ana-sayfa-hedef" class="ms-form-girdi" data-ms-ana-sayfa-hedef>
+                    <option value="/urun-detay">Ürün Detay</option>
+                    <option value="/urun-listesi">Ürün Listesi</option>
+                    <option value="/urun-degerlendirmeleri">Ürün Değerlendirmeleri</option>
+                    <option value="/sepet">Sepet</option>
+                    <option value="/teslimat">Teslimat</option>
+                    <option value="/odeme">Ödeme</option>
+                    <option value="/siparis-tamamlandi">Sipariş Tamamlandı</option>
+                    <option value="/Hesabim">Hesabım</option>
+                    <option value="/hakkimizda">Kurumsal</option>
+                    <option value="/ProjeElementleri">Proje Elementleri</option>
+                </select>
+            </label>
+            <button class="ms-buton ms-buton-l ms-buton-satin-al" type="submit">Git</button>
+        </form>
+    </section>
+</div>
+
+<script>
+    (() => {
+        document.querySelectorAll("[data-ms-ana-sayfa-secici]").forEach((form) => {
+            form.addEventListener("submit", (event) => {
+                event.preventDefault();
+                const hedef = form.querySelector("[data-ms-ana-sayfa-hedef]")?.value;
+
+                if (hedef) {
+                    window.location.href = hedef;
+                }
+            });
+        });
+    })();
+</script>

@@ -6,6 +6,7 @@ using ECSPros.Core.Application.Commands.CreateFirmIntegration;
 using ECSPros.Core.Application.Commands.CreateFirmPlatform;
 using ECSPros.Core.Application.Commands.CreatePlatformType;
 using ECSPros.Core.Application.Commands.UpdateFirm;
+using ECSPros.Core.Application.Commands.UpdateFirmIntegration;
 using ECSPros.Core.Application.Commands.UpdateFirmPlatform;
 using ECSPros.Core.Application.Commands.UpdatePlatformType;
 using ECSPros.Core.Application.Commands.UpsertUiTranslations;
@@ -147,7 +148,7 @@ public class CoreController : ControllerBase
     {
         var result = await _mediator.Send(
             new CreateFirmCommand(request.Code, request.NameI18n, request.TaxOffice, request.TaxNumber,
-                request.Address, request.Phone, request.Email, request.IsMain, request.PriceType, request.PriceMultiplier), ct);
+                request.Address, request.Phone, request.Email, request.IsMain), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Created(string.Empty, new { success = true, data = new { id = result.Value } });
@@ -159,7 +160,7 @@ public class CoreController : ControllerBase
     {
         var result = await _mediator.Send(
             new UpdateFirmCommand(id, request.NameI18n, request.TaxOffice, request.TaxNumber,
-                request.Address, request.Phone, request.Email, request.IsMain, request.PriceType, request.PriceMultiplier, request.IsActive), ct);
+                request.Address, request.Phone, request.Email, request.IsMain, request.IsActive), ct);
         if (result.IsFailure)
             return NotFound(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -216,10 +217,27 @@ public class CoreController : ControllerBase
     {
         var result = await _mediator.Send(
             new CreateFirmIntegrationCommand(firmId, request.IntegrationServiceId, request.Name,
-                request.Credentials ?? new(), request.Settings ?? new()), ct);
+                request.Credentials ?? new(), request.Settings ?? new(),
+                request.ContractNumber, request.StartDate, request.EndDate,
+                request.Status ?? "draft", request.Terms,
+                request.ContactName, request.ContactPhone, request.ContactEmail, request.DocumentUrl), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Created(string.Empty, new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>Firma entegrasyonunu (sözleşme bilgileri dahil) günceller.</summary>
+    [HttpPut("firm-integrations/{id:guid}")]
+    public async Task<IActionResult> UpdateFirmIntegration(Guid id, [FromBody] UpdateFirmIntegrationRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new UpdateFirmIntegrationCommand(id, request.Name, request.Credentials ?? new(), request.Settings ?? new(),
+                request.IsActive, request.ContractNumber, request.StartDate, request.EndDate,
+                request.Status ?? "draft", request.Terms,
+                request.ContactName, request.ContactPhone, request.ContactEmail, request.DocumentUrl), ct);
+        if (result.IsFailure)
+            return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true });
     }
 
     // ── Kargo Kuralları ────────────────────────────────────────────────────────
@@ -282,9 +300,7 @@ public record CreateFirmRequest(
     string Address,
     string Phone,
     string Email,
-    bool IsMain,
-    string PriceType,
-    decimal? PriceMultiplier
+    bool IsMain
 );
 
 public record UpdateFirmRequest(
@@ -295,8 +311,6 @@ public record UpdateFirmRequest(
     string Phone,
     string Email,
     bool IsMain,
-    string PriceType,
-    decimal? PriceMultiplier,
     bool IsActive
 );
 
@@ -323,7 +337,32 @@ public record CreateFirmIntegrationRequest(
     Guid IntegrationServiceId,
     string? Name,
     Dictionary<string, object>? Credentials,
-    Dictionary<string, object>? Settings
+    Dictionary<string, object>? Settings,
+    string? ContractNumber = null,
+    DateTime? StartDate = null,
+    DateTime? EndDate = null,
+    string? Status = null,
+    Dictionary<string, object>? Terms = null,
+    string? ContactName = null,
+    string? ContactPhone = null,
+    string? ContactEmail = null,
+    string? DocumentUrl = null
+);
+
+public record UpdateFirmIntegrationRequest(
+    string? Name,
+    Dictionary<string, object>? Credentials,
+    Dictionary<string, object>? Settings,
+    bool IsActive,
+    string? ContractNumber = null,
+    DateTime? StartDate = null,
+    DateTime? EndDate = null,
+    string? Status = null,
+    Dictionary<string, object>? Terms = null,
+    string? ContactName = null,
+    string? ContactPhone = null,
+    string? ContactEmail = null,
+    string? DocumentUrl = null
 );
 
 public record CreateCargoRuleRequest(

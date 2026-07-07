@@ -652,7 +652,7 @@ function ChannelsPricingTab({ product }: { product: ProductDetail }) {
   const { data: pricingData = [], isLoading: pricingLoading } = useQuery<PricingRecord[]>({
     queryKey: ['channel-pricing', selectedChannelId, product.id],
     queryFn: async () => {
-      const { data } = await api.get(`/catalog/firm-platforms/${selectedChannelId}/products/${product.id}/pricing`)
+      const { data } = await api.get(`/navigation/channel-variants/${selectedChannelId}/products/${product.id}/pricing`)
       return data.data ?? []
     },
     enabled: !!selectedChannelId,
@@ -693,7 +693,7 @@ function ChannelsPricingTab({ product }: { product: ProductDetail }) {
     if (!row) return
     setSavingRows(prev => new Set(prev).add(variantId))
     try {
-      await api.put(`/catalog/firm-platforms/${selectedChannelId}/variants/${variantId}/price`, {
+      await api.put(`/navigation/channel-variants/${selectedChannelId}/variants/${variantId}/price`, {
         priceType: row.priceType || null,
         priceMultiplier: row.priceType === 'multiplier' && row.priceMultiplier ? parseFloat(row.priceMultiplier) : null,
         price: row.priceType === 'manual' && row.price ? parseFloat(row.price) : null,
@@ -1129,13 +1129,16 @@ export function ProductDetailPage() {
   })
 
   // ── Fetch attribute types (for select dropdowns in Özellikler tab) ──
+  // includeCounts=false: bu sekme "kaç üründe kullanılıyor" bilgisini hiç göstermiyor, sadece
+  // dropdown seçenekleri lazım — sayım hesaplaması AttributeTypeDetailPage'e özel, burada gereksiz
+  // yavaşlığa yol açıyordu (bkz. project_group_schema_completion_2026-07-02).
   const { data: attrTypes = [] } = useQuery<{
     id: string; code: string; nameI18n: Record<string, string>; dataType: string
     values: { id: string; nameI18n: Record<string, string> }[]
   }[]>({
-    queryKey: ['attribute-types', false],
+    queryKey: ['attribute-types', false, 'no-counts'],
     queryFn: async () => {
-      const { data } = await api.get('/catalog/attribute-types?activeOnly=false')
+      const { data } = await api.get('/catalog/attribute-types?activeOnly=false&includeCounts=false')
       return data.data
     },
     staleTime: 5 * 60 * 1000,

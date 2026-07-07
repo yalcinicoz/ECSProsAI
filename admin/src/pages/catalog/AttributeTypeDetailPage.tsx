@@ -16,25 +16,9 @@ import { buildI18nValues } from '@/lib/i18n-helper'
 
 const PLATFORM_PERM = 'catalog.platform.manage'
 import { FL } from '@/lib/field-labels'
-import { DATA_TYPE_LABELS } from './AttributeTypesPage'
+import { DATA_TYPE_LABELS, DATA_TYPE_OPTIONS } from './AttributeTypesPage'
 
 // ── Types ────────────────────────────────────────────────────────────────────
-
-interface FilterColorMapping {
-  filterColorId: string
-  code: string
-  nameI18n: Record<string, string>
-  hexCode: string | null
-}
-
-interface FilterColor {
-  id: string
-  code: string
-  nameI18n: Record<string, string>
-  hexCode: string | null
-  sortOrder: number
-  isActive: boolean
-}
 
 interface AttributeValue {
   id: string
@@ -42,7 +26,7 @@ interface AttributeValue {
   isActive: boolean
   sortOrder: number
   usedInProductCount: number
-  filterColors: FilterColorMapping[]
+  hexCode: string | null
 }
 
 interface ProductByValue {
@@ -60,7 +44,6 @@ interface AttributeType {
   dataType: string
   isActive: boolean
   sortOrder: number
-  requiresFilterColor: boolean
   values: AttributeValue[]
 }
 
@@ -75,17 +58,21 @@ export function AttributeTypeDetailPage() {
   const hasPermission = useAuthStore(s => s.hasPermission)
   const canEdit = hasPermission(PLATFORM_PERM)
 
-  const [editNameI18n, setEditNameI18n] = useState<Record<string, string>>({})
-  const [editRequiresFilterColor, setEditRequiresFilterColor] = useState(false)
-  const [nameDirty, setNameDirty] = useState(false)
-  const [nameSaved, setNameSaved] = useState(false)
+  const [settingsForm, setSettingsForm] = useState<{
+    nameI18n: Record<string, string>
+    dataType: string
+    sortOrder: number
+    isActive: boolean
+  }>({ nameI18n: {}, dataType: 'select', sortOrder: 0, isActive: true })
+  const [settingsDirty, setSettingsDirty] = useState(false)
+  const [settingsSaved, setSettingsSaved] = useState(false)
 
   const [addValueOpen, setAddValueOpen] = useState(false)
   const [valueForm, setValueForm] = useState<{
     nameI18n: Record<string, string>
     sortOrder: number
-    filterColorIds: Set<string>
-  }>({ nameI18n: {}, sortOrder: 0, filterColorIds: new Set() })
+    hexCode: string
+  }>({ nameI18n: {}, sortOrder: 0, hexCode: '' })
 
   const [editValueOpen, setEditValueOpen] = useState(false)
   const [editingValue, setEditingValue] = useState<AttributeValue | null>(null)
@@ -94,7 +81,7 @@ export function AttributeTypeDetailPage() {
     sortOrder: number
     isActive: boolean
   }>({ nameI18n: {}, sortOrder: 0, isActive: true })
-  const [editValueFilterColorIds, setEditValueFilterColorIds] = useState<Set<string>>(new Set())
+  const [editValueHexCode, setEditValueHexCode] = useState('')
 
   const [usageValue, setUsageValue] = useState<AttributeValue | null>(null)
   const [deleteValueId, setDeleteValueId] = useState<string | null>(null)
@@ -107,10 +94,6 @@ export function AttributeTypeDetailPage() {
     },
   })
 
-  const { data: allFilterColors = [] } = useQuery<FilterColor[]>({
-    queryKey: ['filter-colors'],
-    queryFn: () => api.get('/catalog/filter-colors').then(r => r.data.data),
-  })
 
   const attrType = attrTypes.find((a) => a.id === id)
   const deleteValueName = attrType?.values.find((v) => v.id === deleteValueId)?.nameI18n
@@ -129,7 +112,7 @@ export function AttributeTypeDetailPage() {
       await api.post(`/catalog/attribute-types/${id}/values`, {
         valueI18n: valueForm.nameI18n,
         sortOrder: valueForm.sortOrder,
-        filterColorIds: Array.from(valueForm.filterColorIds),
+        hexCode: valueForm.hexCode || null,
       })
     },
     onSuccess: () => {
@@ -145,9 +128,7 @@ export function AttributeTypeDetailPage() {
         nameI18n: editValueForm.nameI18n,
         sortOrder: editValueForm.sortOrder,
         isActive: editValueForm.isActive,
-      })
-      await api.put(`/catalog/attribute-values/${editingValue.id}/filter-colors`, {
-        filterColorIds: Array.from(editValueFilterColorIds),
+        hexCode: editValueHexCode || null,
       })
     },
     onSuccess: () => {
@@ -157,21 +138,21 @@ export function AttributeTypeDetailPage() {
     },
   })
 
-  const updateNameMutation = useMutation({
+  const updateSettingsMutation = useMutation({
     mutationFn: async () => {
       if (!attrType) return
       await api.put(`/catalog/attribute-types/${id}`, {
-        nameI18n: editNameI18n,
-        sortOrder: attrType.sortOrder,
-        isActive: attrType.isActive,
-        requiresFilterColor: editRequiresFilterColor,
+        nameI18n: settingsForm.nameI18n,
+        dataType: settingsForm.dataType,
+        sortOrder: settingsForm.sortOrder,
+        isActive: settingsForm.isActive,
       })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attribute-types'] })
-      setNameDirty(false)
-      setNameSaved(true)
-      setTimeout(() => setNameSaved(false), 2500)
+      setSettingsDirty(false)
+      setSettingsSaved(true)
+      setTimeout(() => setSettingsSaved(false), 2500)
     },
   })
 
@@ -187,6 +168,8 @@ export function AttributeTypeDetailPage() {
 
 
   const sourceLang = languages.find((l) => l.isDefault)?.code ?? languages[0]?.code ?? 'tr'
+
+  function markDirty() { setSettingsDirty(true); setSettingsSaved(false) }
 
   const duplicateLang = useMemo(() => {
     if (!attrType) return null
@@ -218,32 +201,27 @@ export function AttributeTypeDetailPage() {
 
   useEffect(() => {
     if (attrType) {
-      setEditNameI18n(attrType.nameI18n)
-      setEditRequiresFilterColor(attrType.requiresFilterColor)
-      setNameDirty(false)
+      setSettingsForm({
+        nameI18n: attrType.nameI18n,
+        dataType: attrType.dataType,
+        sortOrder: attrType.sortOrder,
+        isActive: attrType.isActive,
+      })
+      setSettingsDirty(false)
     }
   }, [attrType?.id])
 
   const typeI18nValues = useMemo(
-    () => buildI18nValues(editNameI18n, languages),
-    [editNameI18n, languages],
+    () => buildI18nValues(settingsForm.nameI18n, languages),
+    [settingsForm.nameI18n, languages],
   )
 
   function getValueName(v: AttributeValue): string {
     return v.nameI18n['tr'] ?? v.nameI18n[Object.keys(v.nameI18n)[0]] ?? '—'
   }
 
-  function autoSelectFilterColors(nameI18n: Record<string, string>): Set<string> {
-    if (!attrType?.requiresFilterColor || allFilterColors.length === 0) return new Set()
-    const names = Object.values(nameI18n).map(n => n.trim().toUpperCase()).filter(Boolean)
-    const matched = allFilterColors
-      .filter(fc => Object.values(fc.nameI18n).some(n => names.includes(n.trim().toUpperCase())))
-      .map(fc => fc.id)
-    return new Set(matched)
-  }
-
   function openAddValue() {
-    setValueForm({ nameI18n: {}, sortOrder: (attrType?.values.length ?? 0) * 10, filterColorIds: new Set() })
+    setValueForm({ nameI18n: {}, sortOrder: (attrType?.values.length ?? 0) * 10, hexCode: '' })
     addValueMutation.reset()
     setAddValueOpen(true)
   }
@@ -251,14 +229,7 @@ export function AttributeTypeDetailPage() {
   function openEditValue(v: AttributeValue) {
     setEditingValue(v)
     setEditValueForm({ nameI18n: { ...v.nameI18n }, sortOrder: v.sortOrder, isActive: v.isActive })
-    const existing = new Set((v.filterColors ?? []).map(fc => fc.filterColorId))
-    // Auto-select eşleşen filtre renkleri (henüz eşleştirilmemişse)
-    if (existing.size === 0) {
-      const autoSelected = autoSelectFilterColors(v.nameI18n)
-      setEditValueFilterColorIds(autoSelected)
-    } else {
-      setEditValueFilterColorIds(existing)
-    }
+    setEditValueHexCode(v.hexCode ?? '')
     updateValueMutation.reset()
     setEditValueOpen(true)
   }
@@ -310,95 +281,114 @@ export function AttributeTypeDetailPage() {
             >
               {attrType.code}
             </code>
-            <Badge variant="info">{DATA_TYPE_LABELS[attrType.dataType] ?? attrType.dataType}</Badge>
-            <Badge variant={attrType.isActive ? 'success' : 'neutral'}>
-              {attrType.isActive ? 'Aktif' : 'Pasif'}
+            <Badge variant="info">{DATA_TYPE_LABELS[settingsForm.dataType] ?? settingsForm.dataType}</Badge>
+            <Badge variant={settingsForm.isActive ? 'success' : 'neutral'}>
+              {settingsForm.isActive ? 'Aktif' : 'Pasif'}
             </Badge>
+            <span className="text-xs" style={{ color: 'var(--text-s)' }}>{attrType.values.length} değer</span>
           </div>
         </div>
       </div>
 
-      {/* Info cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card p-4">
-          <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-s)' }}>Veri Tipi</div>
-          <div className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-            {DATA_TYPE_LABELS[attrType.dataType] ?? attrType.dataType}
-          </div>
-        </div>
-        <div className="card p-4">
-          <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-s)' }}>Değer Sayısı</div>
-          <div className="text-lg font-bold" style={{ color: 'var(--text)' }}>
-            {attrType.values.length}
-          </div>
-        </div>
-        <div className="card p-4">
-          <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-s)' }}>Sıra</div>
-          <div className="text-sm font-medium" style={{ color: 'var(--text)' }}>{attrType.sortOrder}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-s)' }}>Durum</div>
-          <Badge variant={attrType.isActive ? 'success' : 'neutral'}>
-            {attrType.isActive ? 'Aktif' : 'Pasif'}
-          </Badge>
-        </div>
-      </div>
-
-      {/* Name translations */}
-      {languages.length > 0 && (
-        <div className="card p-0 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Ad (Çeviriler)</h2>
-            {canEdit && (
-              <div className="flex items-center gap-2">
-                {nameSaved && <span className="text-xs" style={{ color: 'var(--brand)' }}>Kaydedildi</span>}
-                <Button size="sm" onClick={() => updateNameMutation.mutate()} loading={updateNameMutation.isPending} disabled={!nameDirty}>
-                  Kaydet
-                </Button>
-              </div>
-            )}
-          </div>
+      {/* Settings card */}
+      <div className="card p-0 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Özellik Ayarları</h2>
           {canEdit && (
-            <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'var(--border)' }}>
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 rounded accent-[var(--brand)]"
-                  checked={editRequiresFilterColor}
-                  onChange={(e) => {
-                    setEditRequiresFilterColor(e.target.checked)
-                    setNameDirty(true)
-                    setNameSaved(false)
+            <div className="flex items-center gap-2">
+              {settingsSaved && <span className="text-xs" style={{ color: 'var(--brand)' }}>Kaydedildi</span>}
+              {updateSettingsMutation.isError && (
+                <span className="text-xs" style={{ color: '#ef4444' }}>
+                  {(updateSettingsMutation.error as any)?.response?.data?.error ?? 'Hata oluştu'}
+                </span>
+              )}
+              <Button
+                size="sm"
+                onClick={() => updateSettingsMutation.mutate()}
+                loading={updateSettingsMutation.isPending}
+                disabled={!settingsDirty}
+              >
+                Kaydet
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Veri Tipi + Sıra + Durum */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="flbl">Veri Tipi</label>
+              {canEdit ? (
+                <select
+                  className="finput mt-1"
+                  value={settingsForm.dataType}
+                  onChange={e => { setSettingsForm(f => ({ ...f, dataType: e.target.value })); markDirty() }}
+                >
+                  {DATA_TYPE_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              ) : (
+                <div className="mt-1">
+                  <Badge variant="info">{DATA_TYPE_LABELS[settingsForm.dataType] ?? settingsForm.dataType}</Badge>
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="flbl">Sıra</label>
+              {canEdit ? (
+                <IntegerInput
+                  value={settingsForm.sortOrder}
+                  onChange={v => { setSettingsForm(f => ({ ...f, sortOrder: v ?? 0 })); markDirty() }}
+                />
+              ) : (
+                <p className="mt-1 text-sm" style={{ color: 'var(--text)' }}>{settingsForm.sortOrder}</p>
+              )}
+            </div>
+            <div>
+              <label className="flbl">Durum</label>
+              {canEdit ? (
+                <label className="flex items-center gap-2 mt-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded accent-[var(--brand)]"
+                    checked={settingsForm.isActive}
+                    onChange={e => { setSettingsForm(f => ({ ...f, isActive: e.target.checked })); markDirty() }}
+                  />
+                  <span className="text-sm" style={{ color: 'var(--text-m)' }}>Aktif</span>
+                </label>
+              ) : (
+                <div className="mt-1">
+                  <Badge variant={settingsForm.isActive ? 'success' : 'neutral'}>
+                    {settingsForm.isActive ? 'Aktif' : 'Pasif'}
+                  </Badge>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Ad çevirileri */}
+          {languages.length > 0 && (
+            <div>
+              <label className="flbl mb-2">Ad (Çeviriler)</label>
+              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                <I18nField
+                  sourceLang={sourceLang}
+                  languages={languages}
+                  fields={i18nFields}
+                  values={typeI18nValues}
+                  readOnly={!canEdit}
+                  onChange={(lang, _key, val) => {
+                    setSettingsForm(f => ({ ...f, nameI18n: { ...f.nameI18n, [lang]: val } }))
+                    markDirty()
                   }}
                 />
-                <span className="text-sm" style={{ color: 'var(--text)' }}>Filtre rengi zorunlu</span>
-              </label>
-              <span className="text-xs" style={{ color: 'var(--text-s)' }}>
-                Renk tipi özellikler için işaretleyin
-              </span>
+              </div>
             </div>
           )}
-          {!canEdit && (
-            <div className="px-5 py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-              <span className="text-xs" style={{ color: 'var(--text-m)' }}>
-                Filtre rengi zorunlu: <strong>{attrType.requiresFilterColor ? 'Evet' : 'Hayır'}</strong>
-              </span>
-            </div>
-          )}
-          <I18nField
-            sourceLang={sourceLang}
-            languages={languages}
-            fields={i18nFields}
-            values={typeI18nValues}
-            readOnly={!canEdit}
-            onChange={(lang, _key, val) => {
-              setEditNameI18n(prev => ({ ...prev, [lang]: val }))
-              setNameDirty(true)
-              setNameSaved(false)
-            }}
-          />
         </div>
-      )}
+      </div>
 
       {/* Values section — only for select types */}
       {isSelectType && (
@@ -424,8 +414,8 @@ export function AttributeTypeDetailPage() {
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Ad</th>
-                {attrType.requiresFilterColor && (
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Filtre Renkleri</th>
+                {attrType.code === 'filtre_rengi' && (
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Renk</th>
                 )}
                 <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Kullanım</th>
                 <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Sıra</th>
@@ -436,7 +426,7 @@ export function AttributeTypeDetailPage() {
             <tbody>
               {attrType.values.length === 0 && (
                 <tr>
-                  <td colSpan={attrType.requiresFilterColor ? 6 : 5} className="text-center py-8 text-sm" style={{ color: 'var(--text-s)' }}>
+                  <td colSpan={attrType.code === 'filtre_rengi' ? 6 : 5} className="text-center py-8 text-sm" style={{ color: 'var(--text-s)' }}>
                     Henüz değer eklenmemiş
                   </td>
                 </tr>
@@ -449,28 +439,19 @@ export function AttributeTypeDetailPage() {
                   <td className="px-4 py-3">
                     <span className="text-sm" style={{ color: 'var(--text)' }}>{getValueName(v)}</span>
                   </td>
-                  {attrType.requiresFilterColor && (
+                  {attrType.code === 'filtre_rengi' && (
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {(v.filterColors ?? []).length === 0 ? (
-                          <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span>
-                        ) : (
-                          (v.filterColors ?? []).map(fc => (
+                      <div className="flex items-center gap-2">
+                        {v.hexCode ? (
+                          <>
                             <span
-                              key={fc.filterColorId}
-                              className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border"
-                              style={{ borderColor: 'var(--border)', background: 'var(--surface2)', color: 'var(--text-m)' }}
-                              title={fc.nameI18n['tr'] ?? fc.code}
-                            >
-                              {fc.hexCode && (
-                                <span
-                                  className="w-2.5 h-2.5 rounded-full flex-shrink-0 border"
-                                  style={{ backgroundColor: fc.hexCode, borderColor: 'var(--border)' }}
-                                />
-                              )}
-                              {fc.nameI18n['tr'] ?? fc.code}
-                            </span>
-                          ))
+                              className="w-5 h-5 rounded-full border flex-shrink-0"
+                              style={{ backgroundColor: v.hexCode, borderColor: 'var(--border)' }}
+                            />
+                            <span className="text-xs font-mono" style={{ color: 'var(--text-m)' }}>{v.hexCode}</span>
+                          </>
+                        ) : (
+                          <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span>
                         )}
                       </div>
                     </td>
@@ -542,8 +523,7 @@ export function AttributeTypeDetailPage() {
               loading={addValueMutation.isPending}
               disabled={
                 Object.keys(valueForm.nameI18n).length === 0 ||
-                !!duplicateLang ||
-                (!!attrType?.requiresFilterColor && valueForm.filterColorIds.size === 0)
+                !!duplicateLang
               }
             >
               Kaydet
@@ -570,13 +550,7 @@ export function AttributeTypeDetailPage() {
                   fields={i18nFields}
                   values={valueI18nValues}
                   onChange={(lang, _key, val) => {
-                    const newNameI18n = { ...valueForm.nameI18n, [lang]: val }
-                    const autoIds = autoSelectFilterColors(newNameI18n)
-                    setValueForm((f) => ({
-                      ...f,
-                      nameI18n: newNameI18n,
-                      filterColorIds: autoIds.size > 0 ? autoIds : f.filterColorIds,
-                    }))
+                    setValueForm((f) => ({ ...f, nameI18n: { ...f.nameI18n, [lang]: val } }))
                   }}
                   uppercase
                 />
@@ -584,49 +558,23 @@ export function AttributeTypeDetailPage() {
             </div>
           )}
 
-          {attrType?.requiresFilterColor && allFilterColors.length > 0 && (
+          {attrType?.code === 'filtre_rengi' && (
             <div>
-              <label className="flbl mb-1">
-                Filtre Renkleri
-                <span className="ml-1 font-normal text-red-500 text-xs">*</span>
-              </label>
-              <p className="text-xs mb-2" style={{ color: 'var(--text-s)' }}>
-                Bu değerin filtre alanında eşleşeceği temel renk(ler)i seçin.
-              </p>
-              <div
-                className="rounded-xl overflow-y-auto grid grid-cols-2 gap-0.5 p-1"
-                style={{ border: '1px solid var(--border)', maxHeight: '180px', background: 'var(--surface2)' }}
-              >
-                {allFilterColors.map(fc => {
-                  const checked = valueForm.filterColorIds.has(fc.id)
-                  return (
-                    <label
-                      key={fc.id}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors"
-                      style={{ background: checked ? 'var(--brand-bg)' : 'transparent' }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => setValueForm(f => {
-                          const next = new Set(f.filterColorIds)
-                          checked ? next.delete(fc.id) : next.add(fc.id)
-                          return { ...f, filterColorIds: next }
-                        })}
-                        className="w-3.5 h-3.5 rounded accent-[var(--brand)]"
-                      />
-                      {fc.hexCode && (
-                        <span className="w-4 h-4 rounded-full border flex-shrink-0"
-                          style={{ backgroundColor: fc.hexCode, borderColor: 'var(--border)' }} />
-                      )}
-                      <span className="text-xs" style={{ color: 'var(--text)' }}>{fc.nameI18n['tr'] ?? fc.code}</span>
-                    </label>
-                  )
-                })}
+              <label className="flbl">Hex Kodu</label>
+              <div className="flex items-center gap-2 mt-1">
+                {valueForm.hexCode && (
+                  <span className="w-7 h-7 rounded-full border flex-shrink-0"
+                    style={{ backgroundColor: valueForm.hexCode, borderColor: 'var(--border)' }} />
+                )}
+                <input
+                  type="text"
+                  className="finput font-mono"
+                  placeholder="#000000"
+                  value={valueForm.hexCode}
+                  onChange={e => setValueForm(f => ({ ...f, hexCode: e.target.value }))}
+                  maxLength={9}
+                />
               </div>
-              {attrType.requiresFilterColor && valueForm.filterColorIds.size === 0 && (
-                <p className="text-xs mt-1" style={{ color: '#f97316' }}>En az bir filtre rengi seçilmeli.</p>
-              )}
             </div>
           )}
 
@@ -658,8 +606,7 @@ export function AttributeTypeDetailPage() {
                 onClick={() => updateValueMutation.mutate()}
                 loading={updateValueMutation.isPending}
                 disabled={
-                  Object.keys(editValueForm.nameI18n).length === 0 ||
-                  (!!attrType?.requiresFilterColor && editValueFilterColorIds.size === 0)
+                  Object.keys(editValueForm.nameI18n).length === 0
                 }
               >
                 Kaydet
@@ -708,59 +655,24 @@ export function AttributeTypeDetailPage() {
               </div>
             )}
 
-            {attrType?.requiresFilterColor && allFilterColors.length > 0 && (
+            {attrType?.code === 'filtre_rengi' && (
               <div>
-                <label className="flbl mb-1">
-                  Filtre Renkleri
-                  <span className="ml-1 font-normal text-red-500 text-xs">*</span>
-                </label>
-                <p className="text-xs mb-2" style={{ color: 'var(--text-s)' }}>
-                  Bu değerin web sitesi renk filtresinde hangi temel renklerle eşleşeceğini seçin. Birden fazla seçilebilir.
-                </p>
-                <div
-                  className="rounded-xl overflow-hidden overflow-y-auto grid grid-cols-2 gap-0.5 p-1"
-                  style={{ border: '1px solid var(--border)', maxHeight: '220px', background: 'var(--surface2)' }}
-                >
-                  {allFilterColors.map(fc => {
-                    const checked = editValueFilterColorIds.has(fc.id)
-                    return (
-                      <label
-                        key={fc.id}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors"
-                        style={{ background: checked ? 'var(--brand-bg)' : 'transparent' }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => {
-                            setEditValueFilterColorIds(prev => {
-                              const next = new Set(prev)
-                              checked ? next.delete(fc.id) : next.add(fc.id)
-                              return next
-                            })
-                          }}
-                          className="w-3.5 h-3.5 rounded accent-[var(--brand)]"
-                        />
-                        {fc.hexCode ? (
-                          <span
-                            className="w-4 h-4 rounded-full border flex-shrink-0"
-                            style={{ backgroundColor: fc.hexCode, borderColor: 'var(--border)' }}
-                          />
-                        ) : (
-                          <span className="w-4 h-4 rounded-full border flex-shrink-0" style={{ borderColor: 'var(--border)' }} />
-                        )}
-                        <span className="text-xs" style={{ color: 'var(--text)' }}>
-                          {fc.nameI18n['tr'] ?? fc.code}
-                        </span>
-                      </label>
-                    )
-                  })}
+                <label className="flbl">Hex Kodu</label>
+                <div className="flex items-center gap-2 mt-1">
+                  {editValueHexCode && (
+                    <span className="w-7 h-7 rounded-full border flex-shrink-0"
+                      style={{ backgroundColor: editValueHexCode, borderColor: 'var(--border)' }} />
+                  )}
+                  <input
+                    type="text"
+                    className="finput font-mono"
+                    placeholder="#000000"
+                    value={editValueHexCode}
+                    onChange={e => setEditValueHexCode(e.target.value)}
+                    maxLength={9}
+                  />
                 </div>
               </div>
-            )}
-
-            {attrType?.requiresFilterColor && editValueFilterColorIds.size === 0 && (
-              <p className="text-xs" style={{ color: '#f97316' }}>En az bir filtre rengi seçilmeli.</p>
             )}
 
             {updateValueMutation.isError && (

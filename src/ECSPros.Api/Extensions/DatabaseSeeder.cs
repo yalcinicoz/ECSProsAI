@@ -6,6 +6,7 @@ using ECSPros.Iam.Application.Services;
 using ECSPros.Iam.Domain.Entities;
 using ECSPros.Iam.Infrastructure.Persistence;
 using ECSPros.Shared.Kernel.Authorization;
+using ECSPros.Storefront.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Api.Extensions;
@@ -20,6 +21,27 @@ public static class DatabaseSeeder
         await SeedCoreAsync(scope.ServiceProvider);
         await SeedCatalogAsync(scope.ServiceProvider);
         await SeedPlatformTypesAsync(services);
+        await SeedStorefrontDefaultsAsync(scope.ServiceProvider);
+    }
+
+    /// <summary>
+    /// Storefront migration'larını uygular ve tüm kategorilere varsayılan listing_mode atar.
+    /// İdempotent — zaten doğru değeri olan kayıtlara dokunmaz.
+    /// </summary>
+    private static async Task SeedStorefrontDefaultsAsync(IServiceProvider sp)
+    {
+        var db = sp.GetRequiredService<StorefrontDbContext>();
+
+        // Bekleyen migration'ları uygula (listing_mode sütununu ekler)
+        await db.Database.MigrateAsync();
+
+        // "model" dışındaki tüm kategorilere listing_mode = "color" ata
+        var updated = await db.ChannelCategories
+            .Where(c => c.ListingMode != "model" && c.ListingMode != "color")
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.ListingMode, "color"));
+
+        if (updated > 0)
+            Console.WriteLine($"✓ Seed: {updated} kanal kategorisine listing_mode='color' atandı.");
     }
 
     private static async Task SeedIamAsync(IServiceProvider sp)
@@ -263,20 +285,26 @@ public static class DatabaseSeeder
         // ImageServer ayarları
         var imageServerKeys = new Dictionary<string, string>
         {
-            ["ImageServer.FtpHost"]       = "localhost",
-            ["ImageServer.FtpPort"]       = "21",
-            ["ImageServer.FtpUser"]       = "anonymous",
-            ["ImageServer.FtpPassword"]   = "",
-            ["ImageServer.FtpBasePath"]   = "/images/products/",
-            ["ImageServer.PublicBaseUrl"] = "/media/images/products/",
-            ["ImageServer.LocalSavePath"] = "/opt/ECSProsAI/media/images/products/",
-            ["VideoServer.LocalSavePath"] = "/opt/ECSProsAI/media/videos/products/",
-            ["VideoServer.PublicBaseUrl"] = "/media/videos/products/",
-            ["VideoServer.FtpHost"]       = "localhost",
-            ["VideoServer.FtpPort"]       = "21",
-            ["VideoServer.FtpUser"]       = "anonymous",
-            ["VideoServer.FtpPassword"]   = "",
-            ["VideoServer.FtpBasePath"]   = "/videos/products/"
+            ["ImageServer.FtpHost"]        = "localhost",
+            ["ImageServer.FtpPort"]        = "21",
+            ["ImageServer.FtpUser"]        = "anonymous",
+            ["ImageServer.FtpPassword"]    = "",
+            ["ImageServer.FtpBasePath"]    = "/images/products/",
+            ["ImageServer.PublicBaseUrl"]  = "/media/images/products/",
+            ["ImageServer.LocalSavePath"]  = "/opt/ECSProsAI/media/images/products/",
+            // CDN ayarları — https://cdn.example.com/img/{height}/{quality}/{fileName}
+            ["ImageServer.CdnBaseUrl"]     = "",
+            ["ImageServer.CdnQuality"]     = "85",
+            ["ImageServer.CdnThumbHeight"] = "240",
+            ["ImageServer.CdnListHeight"]  = "640",
+            ["ImageServer.CdnZoomHeight"]  = "1200",
+            ["VideoServer.LocalSavePath"]  = "/opt/ECSProsAI/media/videos/products/",
+            ["VideoServer.PublicBaseUrl"]  = "/media/videos/products/",
+            ["VideoServer.FtpHost"]        = "localhost",
+            ["VideoServer.FtpPort"]        = "21",
+            ["VideoServer.FtpUser"]        = "anonymous",
+            ["VideoServer.FtpPassword"]    = "",
+            ["VideoServer.FtpBasePath"]    = "/videos/products/"
         };
 
         foreach (var (key, defaultValue) in imageServerKeys)
@@ -299,7 +327,7 @@ public static class DatabaseSeeder
         // Adım 1: 'varsayilan' gibi görünen ama farklı byte içeren eski/bozuk satırları soft-delete et
         // (Örn: i + Unicode combining dot — ASCII 'i'den farklı byte dizisi, ama görsel olarak aynı)
         await context.Database.ExecuteSqlRawAsync(@"
-            UPDATE catalog.catalog_image_sets
+            UPDATE definition.image_sets
             SET ""IsDeleted"" = true, ""DeletedAt"" = NOW()
             WHERE ""IsDeleted"" = false
               AND ""Code"" LIKE 'varsay%'
@@ -308,7 +336,7 @@ public static class DatabaseSeeder
 
         // Adım 2: UPSERT — aktif saf-ASCII 'varsayilan' satırı varsa güncelle, yoksa ekle
         await context.Database.ExecuteSqlRawAsync($@"
-            INSERT INTO catalog.catalog_image_sets
+            INSERT INTO definition.image_sets
                 (""Id"", ""Code"", ""Name"", ""IsDefault"", ""FallbackSetId"",
                  ""SortPriority"", ""IsActive"", ""IsDeleted"", ""CreatedAt"",
                  ""CreatedBy"", ""UpdatedAt"", ""UpdatedBy"", ""DeletedAt"", ""DeletedBy"")
@@ -327,55 +355,613 @@ public static class DatabaseSeeder
 
         Console.WriteLine("✓ Seed: Catalog ayarları (ImageServer, barcode_sequence, ImageSet) oluşturuldu.");
 
-        // Filtre renkleri
-        await SeedFilterColorsAsync(context);
+        // Temel attribute type'ları
+        await SeedAttributeTypesAsync(context);
+
+        // "Filtre Rengi" attribute type + değerleri
+        await SeedFilterRengiAttributeTypeAsync(context);
+
+        // Demografik attribute değerleri
+        await SeedCinsiyetValuesAsync(context);
+        await SeedYasGrubuValuesAsync(context);
+
+        // Var/Yok tipi ikili özelliklerin değerleri
+        await SeedVarYokValuesAsync(context, "fermuar", "esneklik", "balen", "dolgu", "ic_cep");
+
+        // Ayakkabı beden değerleri
+        await SeedShoeBedenValuesAsync(context);
+
+        // Ürün grupları
+        await SeedProductGroupsAsync(context);
+
+        // Ürün grubu özellik atamaları
+        await SeedProductGroupAttributesAsync(context);
     }
 
-    private static async Task SeedFilterColorsAsync(CatalogDbContext context)
+    private static async Task SeedAttributeTypesAsync(CatalogDbContext db)
     {
-        var colors = new[]
+        // filtre_rengi SeedFilterRengiAttributeTypeAsync tarafından ayrıca ekleniyor
+        // (code, name_tr, dataType) — NameI18n sadece "tr" içerir, İngilizce çeviri tutulmuyor
+        var canonical = new (string Code, string Tr, string DataType)[]
         {
-            // code,              tr,                  en,               hex
-            ("siyah",            "Siyah",             "Black",          "#000000"),
-            ("beyaz",            "Beyaz",             "White",          "#FFFFFF"),
-            ("gri",              "Gri",               "Grey",           "#808080"),
-            ("acik_gri",         "Açık Gri",          "Light Grey",     "#D3D3D3"),
-            ("koyu_gri",         "Koyu Gri",          "Dark Grey",      "#404040"),
-            ("kirmizi",          "Kırmızı",           "Red",            "#E53935"),
-            ("pembe",            "Pembe",             "Pink",           "#EC407A"),
-            ("turuncu",          "Turuncu",           "Orange",         "#FB8C00"),
-            ("sari",             "Sarı",              "Yellow",         "#FDD835"),
-            ("bej",              "Bej",               "Beige",          "#F5F0DC"),
-            ("krem",             "Krem",              "Cream",          "#FFFDD0"),
-            ("yesil",            "Yeşil",             "Green",          "#43A047"),
-            ("acik_yesil",       "Açık Yeşil",        "Light Green",    "#A5D6A7"),
-            ("koyu_yesil",       "Koyu Yeşil",        "Dark Green",     "#1B5E20"),
-            ("haki",             "Haki",              "Khaki",          "#8D7156"),
-            ("mavi",             "Mavi",              "Blue",           "#1E88E5"),
-            ("acik_mavi",        "Açık Mavi",         "Light Blue",     "#90CAF9"),
-            ("koyu_mavi",        "Koyu Mavi",         "Dark Blue",      "#0D47A1"),
-            ("lacivert",         "Lacivert",          "Navy",           "#1A237E"),
-            ("turkuaz",          "Turkuaz",           "Turquoise",      "#00BCD4"),
-            ("mor",              "Mor",               "Purple",         "#8E24AA"),
-            ("lila",             "Lila",              "Lilac",          "#CE93D8"),
-            ("kahve",            "Kahve",             "Brown",          "#6D4C41"),
-            ("altin",            "Altın",             "Gold",           "#FFD600"),
-            ("gumus",            "Gümüş",             "Silver",         "#B0BEC5"),
+            // Temel varyant eksenleri
+            ("renk",         "Renk",              "select"),
+            ("beden",        "Beden",             "select"),
+            // Demografik
+            ("cinsiyet",     "Cinsiyet",          "select"),
+            ("yas_grubu",    "Yaş Grubu",         "select"),
+            ("boy",          "Boy",               "select"),
+            // Genel ürün özellikleri
+            ("season",       "Sezon",             "select"),
+            ("yil",          "Yıl",               "select"),
+            ("malzeme",      "Malzeme",           "select"),
+            ("kumas_turu",   "Kumaş Türü",        "select"),
+            ("marka",        "Marka",             "select"),
+            ("desen",        "Desen",             "select"),
+            // Kesim / silüet
+            ("kalip",        "Kalıp",             "select"),
+            ("kol_tipi",     "Kol Tipi",          "select"),
+            ("yaka_tipi",    "Yaka Tipi",         "select"),
+            ("etek_tipi",    "Etek Tipi",         "select"),
+            // Alt giyim
+            ("paca_tipi",    "Paça Tipi",         "select"),
+            ("bel_tipi",     "Bel Tipi",          "select"),
+            ("bel",          "Bel Ölçüsü",        "select"),
+            ("ic_uzunluk",   "İç Uzunluk",        "select"),
+            ("gogus",           "Göğüs Ölçüsü",   "select"),
+            ("basen",           "Basen Ölçüsü",   "select"),
+            ("kol_boyu",        "Kol Boyu",       "select"),
+            ("omuz_genisligi",  "Omuz Genişliği", "select"),
+            ("urun_boyu",       "Ürün Boyu",      "select"),
+            // Dış giyim
+            ("astar_durumu", "Astar Durumu",      "select"),
+            ("kapatma_tipi", "Kapatma Tipi",      "select"),
+            ("kalinlik",     "Kalınlık",          "select"),
+            ("fermuar",      "Fermuar",           "select"),
+            ("esneklik",     "Esneklik",          "select"),
+            ("balen",        "Balen / Tel",       "select"),
+            ("dolgu",        "Dolgu",             "select"),
+            ("ic_cep",       "İç Cep",            "select"),
+            // Ayakkabı
+            ("topuk_tipi",   "Topuk Tipi",        "select"),
+            ("topuk_boyu",   "Topuk Boyu",        "select"),
+            ("ortam",        "Ortam",             "select"),
+            ("taban_ozelligi",   "Taban Özelliği",     "select"),
+            ("taban_yuksekligi", "Taban Yüksekliği",   "select"),
+            ("dis_materyal",     "Dış Materyal",       "select"),
+            ("ic_yuzey",         "İç Yüzey",           "select"),
+            // Çanta
+            ("canta_agzi",   "Çanta Ağzı",        "select"),
+            ("aski_tipi",    "Askı Tipi",         "select"),
+            ("aski_boyu",    "Askı Boyu",         "select"),
+            // Manken (bkz. docs/manken-ozelligi-spec.md) — varyant üretmez, bilgilendirici;
+            // değeri ProductAttribute.CustomValue JSONB alanında tutulur, AttributeValue havuzu kullanılmaz
+            ("manken",       "Manken",            "json"),
+            // Diğer
+            ("cep_tipi",     "Cep Tipi",          "select"),
+            ("cep_sayisi",   "Cep Sayısı",        "select"),
         };
 
-        var existingCodes = (await context.FilterColors.Select(c => c.Code).ToListAsync()).ToHashSet();
+        var existingCodes = new HashSet<string>(await db.AttributeTypes.Select(a => a.Code).ToListAsync());
+        int added = 0, updated = 0;
+
+        foreach (var (code, tr, dt) in canonical)
+        {
+            if (!existingCodes.Contains(code))
+            {
+                db.AttributeTypes.Add(new AttributeType
+                {
+                    Id = Guid.NewGuid(), Code = code,
+                    NameI18n = new Dictionary<string, string> { ["tr"] = tr },
+                    DataType = dt, IsActive = true, CreatedAt = DateTime.UtcNow
+                });
+                added++;
+            }
+        }
+
+        if (added > 0) await db.SaveChangesAsync();
+        if (added > 0 || updated > 0)
+            Console.WriteLine($"✓ Seed: {added} attribute type eklendi.");
+        else
+            Console.WriteLine("✓ Seed: Attribute type'lar güncel.");
+    }
+
+    private static async Task SeedShoeBedenValuesAsync(CatalogDbContext db)
+    {
+        var bedenType = await db.AttributeTypes.FirstOrDefaultAsync(a => a.Code == "beden");
+        if (bedenType == null) return;
+
+        // Avrupa numaralandırması: bebek (16–27), çocuk (28–35), yetişkin (36–50)
+        var sizes = Enumerable.Range(16, 35).Select(n => n.ToString()).ToList(); // 16–50
+
+        var existingNames = new HashSet<string>(await db.AttributeValues
+            .Where(v => v.AttributeTypeId == bedenType.Id)
+            .Select(v => v.NameI18n["tr"])
+            .ToListAsync());
 
         int added = 0;
-        foreach (var (code, tr, en, hex) in colors)
+        // Başlangıç sort: mevcut maksimumun üstünden devam et
+        int sort = (await db.AttributeValues
+            .Where(v => v.AttributeTypeId == bedenType.Id)
+            .MaxAsync(v => (int?)v.SortOrder) ?? 0) + 10;
+
+        foreach (var size in sizes)
+        {
+            if (existingNames.Contains(size)) continue;
+            db.AttributeValues.Add(new AttributeValue
+            {
+                Id = Guid.NewGuid(),
+                AttributeTypeId = bedenType.Id,
+                NameI18n = new Dictionary<string, string> { ["tr"] = size, ["en"] = size },
+                SortOrder = sort,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+            });
+            sort += 10;
+            added++;
+        }
+
+        if (added > 0) await db.SaveChangesAsync();
+        Console.WriteLine($"✓ Seed: {added} ayakkabı bedeni eklendi (beden attribute).");
+    }
+
+    private static async Task SeedProductGroupsAsync(CatalogDbContext db)
+    {
+        // (code, nameTr, sortOrder)
+        var groups = new (string code, string name, int sort)[]
+        {
+            // ── Aktarım kökenli gruplar (grp_X) ──────────────────────────────
+            ("grp_1",   "Elbise",                    1),
+            ("grp_10",  "Etek",                      1),
+            ("grp_11",  "Sweatshirt",                1),
+            ("grp_118", "İç Giyim",                  1),
+            ("grp_12",  "Hırka",                     1),
+            ("grp_123", "Plaj Giyim",                1),
+            ("grp_132", "Kişisel Bakım",             1),
+            ("grp_137", "Makyaj Malzemeleri",        1),
+            ("grp_14",  "Triko",                     1),
+            ("grp_149", "Kostüm",                    1),
+            ("grp_15",  "Pijama",                    1),
+            ("grp_159", "Zıbın",                     1),
+            ("grp_16",  "Bolero",                    1),
+            ("grp_165", "Banyo Giyim",               1),
+            ("grp_17",  "Yelek",                     1),
+            ("grp_174", "Şal",                       1),
+            ("grp_176", "Telefon ve Aksesuarları",   1),
+            ("grp_177", "Bilgisayar",                1),
+            ("grp_178", "Televizyon ve Aksesuar",    1),
+            ("grp_179", "Elektirikli Ev Aletleri",   1),
+            ("grp_18",  "Tunik",                     1),
+            ("grp_180", "Beyaz Eşya",                1),
+            ("grp_181", "Mobilyalar",                1),
+            ("grp_182", "Dekorasyon ve Aydınlatma",  1),
+            ("grp_183", "Ev Tekstil",                1),
+            ("grp_184", "Mutfak Gereçleri",          1),
+            ("grp_185", "Banyo ve Ev Gereçleri",     1),
+            ("grp_186", "Çeyiz Setleri",             1),
+            ("grp_198", "Kimono",                    1),
+            ("grp_2",   "Aksesuar",                  1),
+            ("grp_21",  "Bot",                       1),
+            ("grp_44",  "Body",                      1),
+            ("grp_24",  "Çizme",                     1),
+            ("grp_25",  "Babet",                     1),
+            ("grp_254", "Kapri",                     1),
+            ("grp_262", "Trençkot",                  0),
+            ("grp_269", "Kulaklık",                  0),
+            ("grp_27",  "Sandalet",                  1),
+            ("grp_3",   "Pantolon",                  1),
+            ("grp_33",  "Terlik",                    1),
+            ("grp_36",  "Tulum",                     1),
+            ("grp_46",  "Ceket",                     1),
+            ("grp_47",  "Eşofman",                   1),
+            ("grp_48",  "İkili Takım",               1),
+            ("grp_5",   "Gömlek",                    1),
+            ("grp_6",   "Bluz",                      1),
+            ("grp_63",  "Takım Elbise",              1),
+            ("grp_7",   "T-Shirt",                   1),
+            ("grp_70",  "Aktif Spor",                1),
+            ("grp_73",  "Mont",                      1),
+            ("grp_77",  "Kap",                       1),
+            ("grp_80",  "Panço",                     1),
+            ("grp_83",  "Çanta",                     1),
+            ("grp_9",   "Bustiyer",                  1),
+            ("grp_95",  "Şort",                      1),
+            // ── Yeni gruplar ──────────────────────────────────────────────────
+            ("spor_ayakkabi",   "Spor Ayakkabı",     1),
+            ("gunluk_ayakkabi", "Günlük Ayakkabı",   1),
+            ("topuklu_ayakkabi","Topuklu Ayakkabı",  1),
+            ("stiletto",        "Stiletto",           1),
+            ("klasik_ayakkabi", "Klasik Ayakkabı",   1),
+            ("kaban",           "Kaban",              1),
+            ("atlet",           "Atlet",              1),
+            ("bornoz",          "Bornoz",             1),
+            ("bone",            "Bone",               1),
+            ("havlu",           "Havlu",              1),
+            ("pestemal",        "Peştemal",           1),
+            ("ferace",          "Ferace",             1),
+            ("esarp",           "Eşarp",              1),
+            ("pelus_terlik",        "Peluş Terlik",       1),
+            ("hamile_giyim",        "Hamile Giyim",       1),
+            ("sevgili_kombini",     "Sevgili Kombini",    1),
+        };
+
+        var existingCodes = new HashSet<string>(
+            await db.ProductGroups.Select(x => x.Code).ToListAsync());
+
+        int added = 0;
+        foreach (var (code, name, sort) in groups)
         {
             if (existingCodes.Contains(code)) continue;
-            context.FilterColors.Add(new FilterColor
+            db.ProductGroups.Add(new ProductGroup
             {
+                Id        = Guid.NewGuid(),
                 Code      = code,
-                NameI18n  = new Dictionary<string, string> { ["tr"] = tr, ["en"] = en },
-                HexCode   = hex,
-                SortOrder = added * 10,
+                NameI18n  = new Dictionary<string, string> { ["tr"] = name },
                 IsActive  = true,
+                SortOrder = sort,
+                CreatedAt = DateTime.UtcNow,
+            });
+            added++;
+        }
+
+        if (added > 0) await db.SaveChangesAsync();
+        Console.WriteLine($"✓ Seed: Ürün grupları — {added} yeni eklendi, {existingCodes.Count} zaten vardı.");
+    }
+
+    private static async Task SeedProductGroupAttributesAsync(CatalogDbContext db)
+    {
+        var attrTypes = await db.AttributeTypes
+            .ToDictionaryAsync(a => a.Code, a => a.Id);
+        var groups = await db.ProductGroups
+            .ToDictionaryAsync(g => g.Code, g => g.Id);
+
+        var existingPgas = await db.ProductGroupAttributes
+            .Select(x => new { x.ProductGroupId, x.AttributeTypeId })
+            .ToListAsync();
+        var pgaSet = new HashSet<(Guid, Guid)>(existingPgas.Select(x => (x.ProductGroupId, x.AttributeTypeId)));
+
+        var existingSubAttrs = await db.ProductGroupAxisSubAttributes
+            .Select(x => new { x.ProductGroupId, x.AxisAttributeTypeId, x.SubAttributeTypeId })
+            .ToListAsync();
+        var subSet = new HashSet<(Guid, Guid, Guid)>(existingSubAttrs.Select(x => (x.ProductGroupId, x.AxisAttributeTypeId, x.SubAttributeTypeId)));
+
+        int added = 0, subAdded = 0;
+
+        void Attr(string grpCode, string attrCode, bool isVariant, bool isPrimary, bool isRequired, int sort)
+        {
+            if (!groups.TryGetValue(grpCode, out var gid)) return;
+            if (!attrTypes.TryGetValue(attrCode, out var aid)) return;
+            if (pgaSet.Contains((gid, aid))) return;
+            db.ProductGroupAttributes.Add(new ProductGroupAttribute
+            {
+                Id = Guid.NewGuid(), ProductGroupId = gid, AttributeTypeId = aid,
+                IsVariant = isVariant, IsPrimaryAxis = isPrimary,
+                IsRequired = isRequired, SortOrder = sort, CreatedAt = DateTime.UtcNow
+            });
+            pgaSet.Add((gid, aid));
+            added++;
+        }
+
+        void Sub(string grpCode, string axisCode, string subCode, bool isRequired, int sort)
+        {
+            if (!groups.TryGetValue(grpCode, out var gid)) return;
+            if (!attrTypes.TryGetValue(axisCode, out var aid)) return;
+            if (!attrTypes.TryGetValue(subCode, out var sid)) return;
+            if (subSet.Contains((gid, aid, sid))) return;
+            db.ProductGroupAxisSubAttributes.Add(new ProductGroupAxisSubAttribute
+            {
+                Id = Guid.NewGuid(), ProductGroupId = gid, AxisAttributeTypeId = aid,
+                SubAttributeTypeId = sid, IsRequired = isRequired, SortOrder = sort,
+                CreatedAt = DateTime.UtcNow
+            });
+            subSet.Add((gid, aid, sid));
+            subAdded++;
+        }
+
+        // Giyim: renk (V,P) + beden (V) + material + cinsiyet + season + esneklik + ekstralar
+        // + ürün boyu (beden eksenine bağlı ölçü sub-attribute'ü — hemen hemen tüm giyimde geçerli)
+        // astar_durumu/boy/fermuar/kumas_turu/yas_grubu: 2026-07-02 legacy veri analizinde neredeyse
+        // tüm giyim gruplarında gerçek değer bulunduğu görüldü (bkz. project_phase13_product_attribute_values_2026-07-02),
+        // bu yüzden extras yerine ortak base attribute'e taşındı.
+        void Cloth(string g, params string[] extras)
+        {
+            Attr(g, "renk",      true,  true,  true,  1);
+            Attr(g, "beden",     true,  false, true,  2);
+            Attr(g, "malzeme",  false, false, false, 3);
+            Attr(g, "cinsiyet",  false, false, false, 4);
+            Attr(g, "season",    false, false, false, 5);
+            Attr(g, "esneklik",  false, false, false, 6);
+            Attr(g, "manken",    false, false, false, 99);
+            Attr(g, "astar_durumu", false, false, false, 100);
+            Attr(g, "boy",          false, false, false, 101);
+            Attr(g, "fermuar",      false, false, false, 102);
+            Attr(g, "kumas_turu",   false, false, false, 103);
+            Attr(g, "yas_grubu",    false, false, false, 104);
+            int s = 7;
+            foreach (var e in extras) Attr(g, e, false, false, false, s++);
+            Sub(g, "beden", "urun_boyu", false, 50);
+        }
+
+        // Ayakkabı: renk (V,P) + beden (V) + material + cinsiyet + season + taban/dış materyal + ekstralar
+        // astar_durumu/yas_grubu: 2026-07-02 legacy veri analizinde ayakkabı gruplarında da gerçek
+        // değer bulunduğu görüldü, base attribute'e taşındı (bkz. project_phase13_product_attribute_values_2026-07-02).
+        void Shoe(string g, params string[] extras)
+        {
+            Attr(g, "renk",     true,  true,  true,  1);
+            Attr(g, "beden",    true,  false, true,  2);
+            Attr(g, "malzeme", false, false, false, 3);
+            Attr(g, "cinsiyet", false, false, false, 4);
+            Attr(g, "season",   false, false, false, 5);
+            Attr(g, "taban_ozelligi",   false, false, false, 6);
+            Attr(g, "taban_yuksekligi", false, false, false, 7);
+            Attr(g, "dis_materyal",     false, false, false, 8);
+            Attr(g, "ic_yuzey",         false, false, false, 9);
+            Attr(g, "manken",           false, false, false, 99);
+            Attr(g, "astar_durumu",     false, false, false, 100);
+            Attr(g, "yas_grubu",        false, false, false, 101);
+            int s = 10;
+            foreach (var e in extras) Attr(g, e, false, false, false, s++);
+        }
+
+        // Aksesuar/çanta: renk (V,P) + material + cinsiyet + season + ekstralar (beden yok)
+        // astar_durumu/fermuar/kumas_turu/yas_grubu: 2026-07-02 legacy veri analizinde çanta/aksesuar
+        // gruplarında da gerçek değer bulunduğu görüldü, base attribute'e taşındı
+        // (bkz. project_phase13_product_attribute_values_2026-07-02).
+        void Acc(string g, params string[] extras)
+        {
+            Attr(g, "renk",     true,  true,  true,  1);
+            Attr(g, "malzeme", false, false, false, 2);
+            Attr(g, "cinsiyet", false, false, false, 3);
+            Attr(g, "season",   false, false, false, 4);
+            Attr(g, "astar_durumu", false, false, false, 100);
+            Attr(g, "fermuar",      false, false, false, 101);
+            Attr(g, "kumas_turu",   false, false, false, 102);
+            Attr(g, "yas_grubu",    false, false, false, 103);
+            int s = 5;
+            foreach (var e in extras) Attr(g, e, false, false, false, s++);
+        }
+
+        // Ev/tekstil/elektronik: renk (V,P) + ekstralar
+        void Home(string g, params string[] extras)
+        {
+            Attr(g, "renk", true, true, false, 1);
+            int s = 2;
+            foreach (var e in extras) Attr(g, e, false, false, false, s++);
+        }
+
+        // Kolu olan üst giyim için beden eksenine bağlı ölçü sub-attribute'leri
+        void UstOlcu(string g)
+        {
+            Sub(g, "beden", "gogus",          false, 10);
+            Sub(g, "beden", "kol_boyu",       false, 11);
+            Sub(g, "beden", "omuz_genisligi", false, 12);
+        }
+
+        // ── ÜST GİYİM ───────────────────────────────────────────────────
+        Cloth("grp_6",   "desen", "kol_tipi", "yaka_tipi", "kalip");           // Bluz
+        UstOlcu("grp_6");
+        Cloth("grp_16",  "desen", "kol_tipi");                                          // Bolero
+        UstOlcu("grp_16");
+        Cloth("grp_9",   "desen", "kapatma_tipi", "balen", "dolgu");                    // Bustiyer
+        Cloth("grp_46",  "desen", "kol_tipi", "yaka_tipi", "kalip", "astar_durumu", "kapatma_tipi", "cep_tipi", "fermuar", "ic_cep"); // Ceket
+        UstOlcu("grp_46");
+        Cloth("grp_47",  "desen", "kalip");                                     // Eşofman
+        Cloth("grp_5",   "desen", "kol_tipi", "yaka_tipi", "kalip");           // Gömlek
+        UstOlcu("grp_5");
+        Cloth("grp_12",  "desen", "kol_tipi", "yaka_tipi", "kalip");                   // Hırka
+        UstOlcu("grp_12");
+        Cloth("grp_77",  "desen", "kol_tipi", "yaka_tipi", "kalip", "astar_durumu");   // Kap
+        UstOlcu("grp_77");
+        Cloth("grp_198", "desen", "kol_tipi", "kalip");                                // Kimono
+        UstOlcu("grp_198");
+        Cloth("grp_73",  "desen", "kol_tipi", "yaka_tipi", "kalip", "astar_durumu", "kapatma_tipi", "kalinlik", "cep_tipi", "fermuar", "ic_cep"); // Mont
+        UstOlcu("grp_73");
+        Cloth("grp_80",  "desen", "kalip");                                             // Panço
+        Cloth("grp_11",  "desen", "kol_tipi", "yaka_tipi", "kalip");           // Sweatshirt
+        UstOlcu("grp_11");
+        Cloth("grp_7",   "desen", "kol_tipi", "yaka_tipi", "kalip");           // T-Shirt
+        UstOlcu("grp_7");
+        Cloth("grp_262", "desen", "kol_tipi", "yaka_tipi", "kalip", "astar_durumu", "kapatma_tipi", "fermuar", "ic_cep"); // Trençkot
+        UstOlcu("grp_262");
+        Cloth("grp_14",  "desen", "kol_tipi", "yaka_tipi", "kalip", "kalinlik");       // Triko
+        UstOlcu("grp_14");
+        Cloth("grp_18",  "desen", "kol_tipi", "yaka_tipi", "kalip");                   // Tunik
+        UstOlcu("grp_18");
+        Cloth("grp_17",  "desen", "yaka_tipi", "kalip");                               // Yelek
+
+        // ── ALT GİYİM ───────────────────────────────────────────────────
+        // Etek: paca_tipi yok; bel_tipi + etek_tipi grup seviyesinde
+        Cloth("grp_10",  "desen", "kalip", "bel_tipi", "etek_tipi");
+        Sub("grp_10",  "beden", "bel",   false, 1);
+        Sub("grp_10",  "beden", "basen", false, 2);
+
+        // Kapri: paca_tipi ve bel_tipi grup seviyesinde; bel ölçüsü beden sub-attr
+        Cloth("grp_254", "desen", "kalip", "bel_tipi", "paca_tipi");
+        Sub("grp_254", "beden", "bel",        false, 1);
+        Sub("grp_254", "beden", "ic_uzunluk", false, 2);
+        Sub("grp_254", "beden", "basen",      false, 3);
+
+        // Pantolon: paca_tipi ve bel_tipi grup seviyesinde; bel + iç uzunluk beden sub-attr
+        Cloth("grp_3",   "desen", "kalip", "bel_tipi", "paca_tipi", "cep_tipi");
+        Sub("grp_3",   "beden", "bel",        false, 1);
+        Sub("grp_3",   "beden", "ic_uzunluk", false, 2);
+        Sub("grp_3",   "beden", "basen",      false, 3);
+
+        // Şort: bel_tipi grup seviyesinde; bel ölçüsü beden sub-attr
+        Cloth("grp_95",  "desen", "kalip", "bel_tipi");
+        Sub("grp_95",  "beden", "bel",   false, 1);
+        Sub("grp_95",  "beden", "basen", false, 2);
+
+        // ── ELBİSE / TAM VÜCUT ──────────────────────────────────────────
+        Cloth("grp_1",   "desen", "kol_tipi", "yaka_tipi", "kalip", "etek_tipi");
+        Sub("grp_1",   "beden", "bel",   false, 1);
+        Sub("grp_1",   "beden", "basen", false, 2);
+        UstOlcu("grp_1");
+
+        Cloth("grp_44",  "desen", "kol_tipi", "yaka_tipi", "kapatma_tipi", "balen", "dolgu"); // Body
+        UstOlcu("grp_44");
+        Cloth("grp_149", "desen");                                              // Kostüm
+        Cloth("grp_36",  "desen", "kol_tipi", "yaka_tipi", "kalip");                   // Tulum
+        UstOlcu("grp_36");
+
+        // ── TAKIM / SET ─────────────────────────────────────────────────
+        Cloth("grp_48",  "desen", "kalip");                                    // İkili Takım
+        Cloth("grp_63",  "desen", "kalip", "bel_tipi", "paca_tipi");          // Takım Elbise
+        Sub("grp_63",  "beden", "bel",        false, 1);
+        Sub("grp_63",  "beden", "ic_uzunluk", false, 2);
+        Sub("grp_63",  "beden", "basen",      false, 3);
+
+        // ── İÇ GİYİM / PİJAMA ───────────────────────────────────────────
+        Cloth("grp_118", "desen", "kapatma_tipi", "balen", "dolgu");                   // İç Giyim
+        Cloth("grp_15",  "desen", "kalip");                                            // Pijama
+
+        // ── SPOR / AKTİF GİYİM ─────────────────────────────────────────
+        Cloth("grp_70",  "desen", "kalip");                                    // Aktif Spor
+
+        // ── PLAJ / BANYO GİYİM ──────────────────────────────────────────
+        Cloth("grp_123", "desen", "kalip");                                            // Plaj Giyim
+        Cloth("grp_165", "desen");                                                     // Banyo Giyim
+
+        // ── BEBEK ───────────────────────────────────────────────────────
+        Cloth("grp_159", "desen", "yas_grubu");                                        // Zıbın
+
+        // ── AYAKKABI ────────────────────────────────────────────────────
+        Shoe("grp_25",   "topuk_boyu", "topuk_tipi");                                  // Babet
+        Shoe("grp_21",   "topuk_boyu", "topuk_tipi", "astar_durumu", "ortam", "fermuar"); // Bot
+        Shoe("grp_24",   "topuk_boyu", "topuk_tipi", "astar_durumu", "ortam", "fermuar"); // Çizme
+        Shoe("grp_27",   "topuk_boyu", "topuk_tipi");                                  // Sandalet
+        Shoe("grp_33",   "ortam");                                                     // Terlik
+
+        // ── AKSESUAR / ŞAL / ÇANTA ──────────────────────────────────────
+        Acc("grp_174", "desen");                                                       // Şal
+        Acc("grp_2");                                                                  // Aksesuar
+        Acc("grp_83",  "desen", "kapatma_tipi", "fermuar", "ic_cep", "canta_agzi", "aski_tipi", "aski_boyu"); // Çanta
+
+        // ── EV TEKSTİL / ÇEYİZ ─────────────────────────────────────────
+        Home("grp_183", "malzeme", "desen", "kumas_turu", "fermuar");         // Ev Tekstil
+        Home("grp_186", "malzeme", "desen");                                          // Çeyiz Setleri
+        Home("grp_185", "malzeme");                                           // Banyo ve Ev Gereçleri
+
+        // ── ELEKTRONİK / EV ALETLERİ ───────────────────────────────────
+        Home("grp_176", "malzeme");                                                   // Telefon ve Aksesuarları
+        Home("grp_177", "malzeme");                                                   // Bilgisayar
+        Home("grp_178");                                                               // Televizyon ve Aksesuar
+        Home("grp_179");                                                               // Elektirikli Ev Aletleri
+        Home("grp_180");                                                               // Beyaz Eşya
+        Home("grp_181", "malzeme");                                           // Mobilyalar
+        Home("grp_182", "malzeme");                                           // Dekorasyon ve Aydınlatma
+        Home("grp_184", "malzeme");                                                   // Mutfak Gereçleri
+
+        // ── KİŞİSEL BAKIM / MAKYAJ ─────────────────────────────────────
+        Home("grp_132");                                                               // Kişisel Bakım
+        Home("grp_137");                                                               // Makyaj Malzemeleri
+        Home("grp_269", "malzeme");                                                   // Kulaklık
+
+        // ── YENİ GRUPLAR — Ayakkabı ─────────────────────────────────────
+        Shoe("spor_ayakkabi",        "ortam");                                         // Spor Ayakkabı
+        Shoe("gunluk_ayakkabi",      "topuk_boyu", "topuk_tipi", "ortam");             // Günlük Ayakkabı
+        Shoe("topuklu_ayakkabi",     "topuk_boyu", "topuk_tipi");                      // Topuklu Ayakkabı
+        Shoe("stiletto",             "topuk_boyu", "topuk_tipi");                      // Stiletto
+        Shoe("klasik_ayakkabi",      "topuk_boyu", "topuk_tipi", "astar_durumu", "ortam"); // Klasik Ayakkabı
+        Shoe("pelus_terlik",         "ortam");                                         // Peluş Terlik
+
+        // ── YENİ GRUPLAR — Giyim ────────────────────────────────────────
+        Cloth("kaban",           "desen", "kol_tipi", "yaka_tipi", "kalip", "astar_durumu", "kapatma_tipi", "kalinlik", "cep_tipi", "fermuar", "ic_cep"); // Kaban
+        UstOlcu("kaban");
+        Cloth("atlet",           "desen", "yaka_tipi");                                 // Atlet
+        Cloth("hamile_giyim",    "desen", "kol_tipi", "yaka_tipi", "kalip");    // Hamile Giyim
+        UstOlcu("hamile_giyim");
+        Sub("hamile_giyim", "beden", "basen", false, 1);
+        Cloth("ferace",          "desen", "kol_tipi", "yaka_tipi", "kalip");            // Ferace
+        UstOlcu("ferace");
+        Cloth("sevgili_kombini", "desen", "kalip");                             // Sevgili Kombini
+        Cloth("bornoz",          "desen", "kalip");                                     // Bornoz
+
+        // ── YENİ GRUPLAR — Aksesuar ─────────────────────────────────────
+        Acc("bone",  "desen");                                                          // Bone
+        Acc("esarp", "desen");                                                          // Eşarp
+
+        // ── YENİ GRUPLAR — Ev Tekstil ───────────────────────────────────
+        Home("havlu",    "malzeme", "desen");                                          // Havlu
+        Home("pestemal", "malzeme", "desen");                                          // Peştemal
+
+        if (added > 0 || subAdded > 0)
+            await db.SaveChangesAsync();
+
+        Console.WriteLine($"✓ Seed: {added} grup özelliği, {subAdded} eksen alt özelliği eklendi.");
+    }
+
+    private static async Task SeedFilterRengiAttributeTypeAsync(CatalogDbContext context)
+    {
+        const string typeCode = "filtre_rengi";
+
+        var attrType = await context.AttributeTypes.FirstOrDefaultAsync(a => a.Code == typeCode);
+        if (attrType is null)
+        {
+            attrType = new AttributeType
+            {
+                Id        = Guid.NewGuid(),
+                Code      = typeCode,
+                NameI18n  = new Dictionary<string, string> { ["tr"] = "Filtre Rengi", ["en"] = "Filter Color" },
+                DataType  = "select",
+                IsActive  = true,
+                SortOrder = 0,
+                CreatedAt = DateTime.UtcNow,
+            };
+            context.AttributeTypes.Add(attrType);
+            await context.SaveChangesAsync();
+            Console.WriteLine("✓ Seed: 'filtre_rengi' attribute type eklendi.");
+        }
+
+        var colors = new[]
+        {
+            ("siyah",      "Siyah",      "Black",       "#000000"),
+            ("beyaz",      "Beyaz",      "White",       "#FFFFFF"),
+            ("gri",        "Gri",        "Grey",        "#808080"),
+            ("acik_gri",   "Açık Gri",   "Light Grey",  "#D3D3D3"),
+            ("koyu_gri",   "Koyu Gri",   "Dark Grey",   "#404040"),
+            ("kirmizi",    "Kırmızı",    "Red",         "#E53935"),
+            ("pembe",      "Pembe",      "Pink",        "#EC407A"),
+            ("turuncu",    "Turuncu",    "Orange",      "#FB8C00"),
+            ("sari",       "Sarı",       "Yellow",      "#FDD835"),
+            ("bej",        "Bej",        "Beige",       "#F5F0DC"),
+            ("krem",       "Krem",       "Cream",       "#FFFDD0"),
+            ("yesil",      "Yeşil",      "Green",       "#43A047"),
+            ("acik_yesil", "Açık Yeşil", "Light Green", "#A5D6A7"),
+            ("koyu_yesil", "Koyu Yeşil", "Dark Green",  "#1B5E20"),
+            ("haki",       "Haki",       "Khaki",       "#8D7156"),
+            ("mavi",       "Mavi",       "Blue",        "#1E88E5"),
+            ("acik_mavi",  "Açık Mavi",  "Light Blue",  "#90CAF9"),
+            ("koyu_mavi",  "Koyu Mavi",  "Dark Blue",   "#0D47A1"),
+            ("lacivert",   "Lacivert",   "Navy",        "#1A237E"),
+            ("turkuaz",    "Turkuaz",    "Turquoise",   "#00BCD4"),
+            ("mor",        "Mor",        "Purple",      "#8E24AA"),
+            ("lila",       "Lila",       "Lilac",       "#CE93D8"),
+            ("kahve",      "Kahve",      "Brown",       "#6D4C41"),
+            ("altin",      "Altın",      "Gold",        "#FFD600"),
+            ("gumus",      "Gümüş",      "Silver",      "#B0BEC5"),
+        };
+
+        var existingNames = (await context.AttributeValues
+            .Where(v => v.AttributeTypeId == attrType.Id)
+            .Select(v => v.NameI18n)
+            .ToListAsync())
+            .Select(n => n.GetValueOrDefault("tr", "").ToUpperInvariant())
+            .ToHashSet();
+
+        int added = 0;
+        foreach (var (_, tr, en, hex) in colors)
+        {
+            if (existingNames.Contains(tr.ToUpperInvariant())) continue;
+            context.AttributeValues.Add(new AttributeValue
+            {
+                Id              = Guid.NewGuid(),
+                AttributeTypeId = attrType.Id,
+                NameI18n        = new Dictionary<string, string> { ["tr"] = tr, ["en"] = en },
+                HexCode         = hex,
+                SortOrder       = added * 10,
+                IsActive        = true,
+                CreatedAt       = DateTime.UtcNow,
             });
             added++;
         }
@@ -383,7 +969,108 @@ public static class DatabaseSeeder
         if (added > 0)
         {
             await context.SaveChangesAsync();
-            Console.WriteLine($"✓ Seed: {added} filtre rengi eklendi.");
+            Console.WriteLine($"✓ Seed: {added} filtre rengi değeri eklendi.");
         }
+    }
+
+    private static async Task SeedCinsiyetValuesAsync(CatalogDbContext db)
+    {
+        var attrType = await db.AttributeTypes.FirstOrDefaultAsync(a => a.Code == "cinsiyet");
+        if (attrType is null) return;
+
+        var values = new (string Tr, string En, int Sort)[]
+        {
+            ("Erkek",  "Male",   10),
+            ("Kadın",  "Female", 20),
+            ("Unisex", "Unisex", 30),
+        };
+
+        var existing = new HashSet<string>(
+            await db.AttributeValues
+                .Where(v => v.AttributeTypeId == attrType.Id)
+                .Select(v => v.NameI18n["tr"])
+                .ToListAsync());
+
+        int added = 0;
+        foreach (var (tr, en, sort) in values)
+        {
+            if (existing.Contains(tr)) continue;
+            db.AttributeValues.Add(new AttributeValue
+            {
+                Id = Guid.NewGuid(), AttributeTypeId = attrType.Id,
+                NameI18n = new Dictionary<string, string> { ["tr"] = tr, ["en"] = en },
+                SortOrder = sort, IsActive = true, CreatedAt = DateTime.UtcNow,
+            });
+            added++;
+        }
+        if (added > 0) await db.SaveChangesAsync();
+        Console.WriteLine($"✓ Seed: Cinsiyet değerleri — {added} yeni eklendi.");
+    }
+
+    private static async Task SeedYasGrubuValuesAsync(CatalogDbContext db)
+    {
+        var attrType = await db.AttributeTypes.FirstOrDefaultAsync(a => a.Code == "yas_grubu");
+        if (attrType is null) return;
+
+        var values = new (string Tr, string En, int Sort)[]
+        {
+            ("Yeni Doğan", "Newborn", 10),
+            ("Bebek",      "Baby",    20),
+            ("Çocuk",      "Kids",    30),
+            ("Genç",       "Teen",    40),
+            ("Yetişkin",   "Adult",   50),
+        };
+
+        var existing = new HashSet<string>(
+            await db.AttributeValues
+                .Where(v => v.AttributeTypeId == attrType.Id)
+                .Select(v => v.NameI18n["tr"])
+                .ToListAsync());
+
+        int added = 0;
+        foreach (var (tr, en, sort) in values)
+        {
+            if (existing.Contains(tr)) continue;
+            db.AttributeValues.Add(new AttributeValue
+            {
+                Id = Guid.NewGuid(), AttributeTypeId = attrType.Id,
+                NameI18n = new Dictionary<string, string> { ["tr"] = tr, ["en"] = en },
+                SortOrder = sort, IsActive = true, CreatedAt = DateTime.UtcNow,
+            });
+            added++;
+        }
+        if (added > 0) await db.SaveChangesAsync();
+        Console.WriteLine($"✓ Seed: Yaş grubu değerleri — {added} yeni eklendi.");
+    }
+
+    private static async Task SeedVarYokValuesAsync(CatalogDbContext db, params string[] codes)
+    {
+        var attrTypes = await db.AttributeTypes
+            .Where(a => codes.Contains(a.Code))
+            .ToListAsync();
+
+        int added = 0;
+        foreach (var attrType in attrTypes)
+        {
+            var existing = new HashSet<string>(
+                await db.AttributeValues
+                    .Where(v => v.AttributeTypeId == attrType.Id)
+                    .Select(v => v.NameI18n["tr"])
+                    .ToListAsync());
+
+            foreach (var (tr, en, sort) in new[] { ("Var", "Yes", 10), ("Yok", "No", 20) })
+            {
+                if (existing.Contains(tr)) continue;
+                db.AttributeValues.Add(new AttributeValue
+                {
+                    Id = Guid.NewGuid(), AttributeTypeId = attrType.Id,
+                    NameI18n = new Dictionary<string, string> { ["tr"] = tr, ["en"] = en },
+                    SortOrder = sort, IsActive = true, CreatedAt = DateTime.UtcNow,
+                });
+                added++;
+            }
+        }
+        if (added > 0) await db.SaveChangesAsync();
+        Console.WriteLine($"✓ Seed: Var/Yok değerleri — {added} yeni eklendi.");
     }
 }

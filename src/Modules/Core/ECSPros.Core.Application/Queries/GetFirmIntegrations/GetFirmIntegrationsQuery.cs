@@ -12,10 +12,22 @@ public record FirmIntegrationDto(
     Guid FirmId,
     Guid IntegrationServiceId,
     string ServiceCode,
+    Dictionary<string, string> ServiceNameI18n,
     string ServiceType,
     string? Name,
+    Dictionary<string, object> Credentials,
+    Dictionary<string, object> Settings,
     bool IsActive,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? ContractNumber,
+    DateTime? StartDate,
+    DateTime? EndDate,
+    string Status,
+    Dictionary<string, object>? Terms,
+    string? ContactName,
+    string? ContactPhone,
+    string? ContactEmail,
+    string? DocumentUrl
 );
 
 public class GetFirmIntegrationsQueryHandler : IRequestHandler<GetFirmIntegrationsQuery, Result<List<FirmIntegrationDto>>>
@@ -37,8 +49,10 @@ public class GetFirmIntegrationsQueryHandler : IRequestHandler<GetFirmIntegratio
             .OrderBy(fi => fi.IntegrationService.ServiceType)
             .Select(fi => new FirmIntegrationDto(
                 fi.Id, fi.FirmId, fi.IntegrationServiceId,
-                fi.IntegrationService.Code, fi.IntegrationService.ServiceType,
-                fi.Name, fi.IsActive, fi.CreatedAt))
+                fi.IntegrationService.Code, fi.IntegrationService.NameI18n, fi.IntegrationService.ServiceType,
+                fi.Name, fi.Credentials, fi.Settings, fi.IsActive, fi.CreatedAt,
+                fi.ContractNumber, fi.StartDate, fi.EndDate, fi.Status, fi.Terms,
+                fi.ContactName, fi.ContactPhone, fi.ContactEmail, fi.DocumentUrl))
             .ToListAsync(ct);
 
         return Result.Success<List<FirmIntegrationDto>>(list);

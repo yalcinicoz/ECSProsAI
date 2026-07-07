@@ -14,8 +14,6 @@ public record UpdateFirmCommand(
     string Phone,
     string Email,
     bool IsMain,
-    string PriceType,
-    decimal? PriceMultiplier,
     bool IsActive
 ) : IRequest<Result<bool>>;
 
@@ -38,8 +36,6 @@ public class UpdateFirmCommandHandler : IRequestHandler<UpdateFirmCommand, Resul
         firm.Phone = request.Phone;
         firm.Email = request.Email;
         firm.IsMain = request.IsMain;
-        firm.PriceType = request.PriceType;
-        firm.PriceMultiplier = request.PriceMultiplier;
         firm.IsActive = request.IsActive;
         firm.UpdatedAt = DateTime.UtcNow;
 

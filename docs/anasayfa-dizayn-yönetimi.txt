@@ -1,0 +1,1014 @@
+# Dinamik Anasayfa Kişiselleştirme Sistemi
+
+## Amaç
+
+Bu sistemin amacı, e-ticaret sitesinin anasayfa içeriklerini kullanıcı segmentlerine göre dinamik olarak değiştirebilmektir.
+
+Kullanıcının şehir, bölge, cinsiyet, cihaz tipi, üyelik durumu ve ileride ihtiyaç duyulabilecek farklı segment bilgilerine göre anasayfadaki içerikler gösterilecek, gizlenecek veya farklı içeriklerle değiştirilecektir.
+
+Sistem tek bir anasayfa URL’i üzerinden çalışacaktır. Kullanıcı farklı bir sayfaya yönlendirilmeyecek, bunun yerine anasayfadaki bloklar ve blok içerikleri tanımlanan kurallara göre dinamik olarak oluşturulacaktır.
+
+Örnek kullanım senaryoları:
+
+* Ankara’dan giren kullanıcıya farklı slider göstermek
+* İzmir ve Ankara kullanıcılarına aynı banner bloğunu göstermek
+* Karadeniz bölgesine özel story banner göstermek
+* Mobil kullanıcılara farklı ürün carousel’i göstermek
+* Kadın kullanıcı segmentine özel ürün listesi göstermek
+* Belirli şehirlerde farklı tab içerikleri göstermek
+* Müşterilerin oluşturduğu koleksiyonları anasayfada göstermek
+* Cihaz tipine göre banner, ürün listesi veya tabs içeriklerini değiştirmek
+
+Sistem, kod müdahalesi olmadan yönetim paneli üzerinden yönetilebilir olacaktır.
+
+---
+
+## Temel Yaklaşım
+
+Sistem blok bazlı çalışacaktır.
+
+Anasayfa sabit bir sayfa yapısına sahip olacak, fakat bu sayfadaki blokların görünürlüğü ve içerikleri kurallara göre değişecektir.
+
+Panelde yapılan değişiklikler canlı siteye anında yansımayacaktır.
+
+Panel tarafı taslak veri olarak çalışacaktır.
+
+Kullanıcı “Yayınla” dediğinde sistem aktif taslak yapıyı okuyacak, validasyon yapacak ve versiyonlu bir JSON snapshot üretecektir.
+
+Canlı site, yönetim panelindeki ana tablolara join atmayacaktır.
+
+Canlı site sadece aktif yayınlanmış JSON snapshot verisini okuyacaktır.
+
+Ürün listeleri ve koleksiyonlar gibi dinamik veri gerektiren alanlarda snapshot içerisinde ürün veya koleksiyonların tüm detayları yerine, ürün kaynağı, filtre, sıralama ve limit gibi konfigürasyon bilgileri tutulabilir. Canlı site bu konfigürasyona göre ürün veya koleksiyon verisini ilgili ürün/koleksiyon servisinden alır; fakat kişiselleştirme panelinin taslak tablolarına gitmez.
+
+Sistemin ana kavramları şunlardır:
+
+* Ziyaretçi Segmenti
+* Kural Motoru
+* Anasayfa Blokları
+* Blok Öğeleri
+* Ürün Kaynağı ve Filtreleri
+* Yayınlanmış JSON Snapshot
+* Önizleme
+* Cache
+* Audit Log / İşlem Geçmişi
+* Yayın Geçmişi
+
+---
+
+## Desteklenecek Blok Tipleri
+
+Sistem tek paket kapsamında aşağıdaki blok tiplerini destekleyecektir:
+
+1. Banner
+2. Slider
+3. Story Banner
+4. Carousel Ürün Listesi
+5. Infinity Ürün Listesi
+6. Tabs
+7. Koleksiyonlar
+
+Her blok tipi kendi yapısına uygun kural mantığı ile çalışacaktır.
+
+Her blok tipinde aynı kural seviyesi kullanılmayacaktır. Bazı yapılarda kural blok seviyesinde, bazı yapılarda öğe seviyesinde, bazı yapılarda ise hem blok hem içerik seviyesinde kullanılacaktır.
+
+---
+
+## Ziyaretçi Segmenti
+
+Kullanıcı siteye girdiğinde sistem ziyaretçi hakkında bazı bilgiler üretir.
+
+Örnek ziyaretçi segmenti:
+
+* Şehir: Ankara
+* Bölge: İç Anadolu
+* Cinsiyet: Kadın / Erkek / Bilinmiyor
+* Cihaz tipi: Mobil / Tablet / Desktop
+* Üyelik durumu: Üye / Misafir
+
+Konum bilgisi için öncelik sırası şu şekilde olabilir:
+
+1. Teslimat adresi
+2. Üye profilindeki şehir bilgisi
+3. Kullanıcının manuel seçtiği şehir
+4. IP bazlı şehir tahmini
+
+IP bazlı şehir bilgisi kesin doğru kabul edilmemelidir. Yanlış veya eksik olabilir.
+
+Cinsiyet bilgisi sadece kullanıcı profilinde varsa kullanılmalıdır. Tahmin yapılmamalıdır. Bilgi yoksa “Bilinmiyor” olarak değerlendirilmelidir.
+
+---
+
+## Genel Kural Mantığı
+
+Sistemde her blok veya öğe için kural tanımlamak zorunlu değildir.
+
+Bir blok veya öğeye herhangi bir kural verilmemişse, bu içerik herkese gösterilir.
+
+Bir blok veya öğeye kural verilmişse, bu içerik yalnızca ilgili kurallara uyan ziyaretçilere gösterilir.
+
+Kullanıcı hiçbir kurala uymuyorsa sistem otomatik olarak default bir öğe aramaz. Bu durumda ilgili blok veya öğe gösterilmez.
+
+Bu nedenle sistemde özel bir “default öğe” kavramı olmayacaktır.
+
+Herkese gösterilmesi istenen içerikler kuralsız olarak tanımlanacaktır.
+
+Özet davranış:
+
+* Kural yoksa: Herkese göster
+* Kural varsa ve kullanıcı uyuyorsa: Göster
+* Kural varsa ve kullanıcı uymuyorsa: Gösterme
+* Hiçbir kural eşleşmediğinde: Otomatik default içerik gösterme
+
+---
+
+## Çoklu Seçim Mantığı
+
+Kural tanımlarken şehir, bölge, cinsiyet, cihaz tipi gibi alanlarda çoklu seçim yapılabilecektir.
+
+Örneğin aynı kural içinde Ankara ve İzmir şehirleri birlikte seçilebilir.
+
+Aynı alan içindeki çoklu seçimler OR mantığıyla çalışacaktır.
+
+Örnek:
+
+Şehir = Ankara veya İzmir
+
+Farklı alanlar ise AND mantığıyla çalışacaktır.
+
+Örnek:
+
+Şehir = Ankara veya İzmir
+Cihaz = Mobil
+Cinsiyet = Kadın
+
+Bu kural şu anlama gelir:
+
+Kullanıcı Ankara veya İzmir’den gelmeli, mobil cihaz kullanmalı ve kadın segmentinde olmalıdır.
+
+Bir koşul alanı boş bırakılırsa, o alan kural değerlendirmesine dahil edilmez.
+
+---
+
+## Tarih Aralığı Mantığı
+
+Kurallarda başlangıç ve bitiş tarihi zorunlu olmayacaktır.
+
+Başlangıç tarihi boşsa, kural hemen geçerli kabul edilir.
+
+Bitiş tarihi boşsa, kural süresiz geçerli kabul edilir.
+
+Başlangıç ve bitiş tarihi doluysa, kural yalnızca bu tarih aralığında çalışır.
+
+Tarih aralığı dışında kalan kurallar eşleşmiş kabul edilmez.
+
+---
+
+## Öncelik Mantığı
+
+Birden fazla kuralın aynı anda eşleşebileceği durumlar olabilir.
+
+Bu nedenle kurallarda öncelik değeri bulunacaktır.
+
+Birden fazla içerik aynı anda eşleşirse, ilgili blok tipinin çalışma mantığına göre öncelik değeri dikkate alınacaktır.
+
+Örneğin:
+
+* Metin benzeri tek sonuç üreten yapılarda en yüksek öncelikli içerik gösterilir.
+* Slider ve Story Banner gibi çoklu öğe gösterebilen yapılarda eşleşen birden fazla öğe gösterilebilir.
+* Tabs yapısında eşleşen birden fazla tab gösterilebilir.
+* Aynı sıra değerine sahip bloklarda ikinci sıralama kriteri olarak öncelik kullanılabilir.
+
+---
+
+## Blok Sıralama Mantığı
+
+Anasayfadaki tüm blokların bir sıra değeri olacaktır.
+
+Bloklar bu sıra değerine göre gösterilecektir.
+
+Bir blok kuraldan dolayı görünmezse, frontend o bloğu hiç basmayacaktır.
+
+Görünmeyen blok sayfada boşluk bırakmayacaktır.
+
+Blok aktif değilse hiçbir koşulda gösterilmeyecektir.
+
+---
+
+# Blok Tipleri ve Çalışma Mantıkları
+
+---
+
+## 1. Banner
+
+Banner bloğu görsel kampanya alanıdır.
+
+Banner bloğu farklı şablonlara sahip olabilir.
+
+Örnek banner şablonları:
+
+* Tek büyük banner
+* İki banner yan yana
+* Üç banner yan yana
+* Sol büyük, sağ iki küçük banner
+* Grid banner yapısı
+
+Banner yapısı tasarımsal bütünlük gerektirdiği için kural banner öğelerine değil, banner bloğunun tamamına verilecektir.
+
+Bunun nedeni, banner öğelerine ayrı ayrı kural verildiğinde tasarımın bozulma riskidir. Örneğin üçlü banner şablonunda bir banner gizlenirse layout kırılabilir.
+
+Bu nedenle Banner bloğunda kural seviyesi blok seviyesidir.
+
+Örnek:
+
+Banner Bloğu A
+Şablon: 2’li banner
+Kural: Şehir = Ankara veya İzmir
+
+Banner Bloğu B
+Şablon: 3’lü banner
+Kural: Bölge = Karadeniz
+
+Banner bloğuna kural verilmezse herkese gösterilir.
+
+Banner bloğuna kural verilirse sadece eşleşen kullanıcıya gösterilir.
+
+Banner bloğu içinde yönetilebilecek alanlar:
+
+* Blok başlığı
+* Şablon tipi
+* Banner görselleri
+* Linkler
+* Alt metinler
+* Sıra
+* Aktif / pasif durumu
+* Kural
+* Başlangıç / bitiş tarihi
+* Öncelik
+
+---
+
+## 2. Slider
+
+Slider tek bir genel slider şablonu üzerinden çalışacaktır.
+
+Slider bloğunun tamamına kural verilmesi zorunlu olmayacaktır. Temel kişiselleştirme slide öğeleri üzerinden yapılacaktır.
+
+Her slide öğesine ayrı ayrı kural tanımlanabilecektir.
+
+Örnek:
+
+Slide 1: Kural yok, herkese göster
+Slide 2: Şehir = Ankara veya İzmir
+Slide 3: Bölge = Karadeniz
+Slide 4: Cihaz = Mobil
+
+Kullanıcı hangi slide kurallarına uyuyorsa sadece o slide’ları görecektir.
+
+Kuralsız slide’lar herkese gösterilecektir.
+
+Kullanıcı hiçbir slide kuralına uymuyorsa ve kuralsız slide da yoksa slider alanı boş kalır. Bu durumda frontend slider bloğunu hiç göstermemelidir.
+
+Slider içinde yönetilebilecek alanlar:
+
+* Slider başlığı
+* Slide görseli
+* Mobil görsel
+* Desktop görsel
+* Link
+* Buton metni
+* Sıra
+* Aktif / pasif durumu
+* Slide bazlı kural
+* Başlangıç / bitiş tarihi
+* Öncelik
+
+---
+
+## 3. Story Banner
+
+Story Banner, mobil uygulamalardaki veya sosyal medya yapısındaki story görünümüne benzer yatay kaydırılabilir görsel alanıdır.
+
+Bu yapı genellikle küçük yuvarlak veya kart görünümlü öğelerden oluşur.
+
+Story Banner için kural seviyesi öğe bazlı olacaktır.
+
+Her story öğesi ayrı kurala sahip olabilir.
+
+Örnek:
+
+Story 1: Kural yok, herkese göster
+Story 2: Şehir = Ankara
+Story 3: Cihaz = Mobil
+Story 4: Cinsiyet = Kadın
+Story 5: Bölge = Karadeniz
+
+Kullanıcı hangi story kurallarına uyuyorsa sadece o story öğelerini görecektir.
+
+Kuralsız story öğeleri herkese gösterilecektir.
+
+Hiçbir story öğesi görünür değilse Story Banner bloğu frontend tarafında hiç gösterilmeyecektir.
+
+Story Banner içinde yönetilebilecek alanlar:
+
+* Blok başlığı
+* Story görseli
+* Story adı
+* Link
+* Sıra
+* Aktif / pasif durumu
+* Story öğesi bazlı kural
+* Başlangıç / bitiş tarihi
+* Öncelik
+
+Story Banner yapısı özellikle kampanya, kategori, marka veya hızlı erişim alanları için kullanılabilir.
+
+---
+
+## 4. Carousel Ürün Listesi
+
+Carousel Ürün Listesi, yatay kaydırılabilir ürün listeleme bloğudur.
+
+Bu blokta hem blok görünürlüğü hem de listelenecek ürünlerin kaynağı / filtresi yönetilebilir olacaktır.
+
+Carousel bloğuna verilen kural, bloğun hangi kullanıcı segmentine gösterileceğini belirler.
+
+Ürün kaynağı ve ürün filtresi ise blok görünür olduğunda hangi ürünlerin getirileceğini belirler.
+
+Örnek:
+
+Carousel Bloğu: Ankara’da Çok Satanlar
+Kural: Şehir = Ankara veya İzmir
+Ürün Kaynağı: Çok Satanlar
+Ürün Filtresi: Ankara / İzmir için uygun ürünler
+Limit: 12
+Sıralama: Çok satana göre
+
+Başka bir örnek:
+
+Carousel Bloğu: Mobilde Popüler
+Kural: Cihaz = Mobil
+Ürün Kaynağı: Popüler Ürünler
+Ürün Filtresi: Mobil kullanıcı davranışına göre
+Limit: 10
+
+Carousel Ürün Listesi içinde yönetilebilecek alanlar:
+
+* Blok başlığı
+* Alt başlık
+* Ürün kaynağı
+* Ürün filtresi
+* Kategori
+* Marka
+* Stok durumu
+* Limit
+* Sıralama tipi
+* Gösterilecek ürün sayısı
+* Link / tümünü gör bağlantısı
+* Aktif / pasif durumu
+* Sıra
+* Kural
+* Başlangıç / bitiş tarihi
+* Öncelik
+
+Ürün listesi için tek tek ürüne kural verme yerine ürün kaynağı ve ürün filtresi mantığı kullanılacaktır.
+
+Bloğa verilen kurala göre ürün içeriğinin filtresi de seçilebilecektir.
+
+---
+
+## 5. Infinity Ürün Listesi
+
+Infinity Ürün Listesi, anasayfada aşağı doğru kaydırıldıkça ürünlerin devamlı yüklenmesini sağlayan ürün listeleme yapısıdır.
+
+Bu blok genellikle anasayfanın alt bölümlerinde kullanılacaktır.
+
+Carousel’den farkı, ürünlerin yatay kaydırma yerine sayfa kaydırıldıkça veya “daha fazla göster” mantığıyla yüklenmesidir.
+
+Infinity Ürün Listesi için kural blok seviyesinde olacaktır.
+
+Blok görünürse, ürünler tanımlanan ürün kaynağı ve filtrelere göre sayfalı şekilde getirilecektir.
+
+Örnek:
+
+Infinity Bloğu: Sana Özel Ürünler
+Kural: Üye kullanıcı
+Ürün Kaynağı: Önerilen Ürünler
+Ürün Filtresi: Kullanıcı davranışına göre
+Sayfa Boyutu: 24
+Sıralama: Öneri skoruna göre
+
+Başka bir örnek:
+
+Infinity Bloğu: Yeni Sezon
+Kural yok
+Ürün Kaynağı: Yeni Ürünler
+Ürün Filtresi: Aktif ve stokta olan ürünler
+Sayfa Boyutu: 24
+Sıralama: Yeni eklenen
+
+Infinity Ürün Listesi içinde yönetilebilecek alanlar:
+
+* Blok başlığı
+* Ürün kaynağı
+* Ürün filtresi
+* Kategori
+* Marka
+* Stok durumu
+* Sayfa boyutu
+* Sıralama tipi
+* Aktif / pasif durumu
+* Sıra
+* Kural
+* Başlangıç / bitiş tarihi
+* Öncelik
+
+Infinity yapısında cache sayfa numarası ile birlikte düşünülmelidir.
+
+Örnek cache anahtarı:
+
+homepage-products:{version}:{blockId}:{segmentHash}:page:{pageNo}
+
+---
+
+## 6. Tabs
+
+Tabs bloğu, aynı alan içinde birden fazla sekmeli içerik göstermeye yarar.
+
+Örnek kullanım:
+
+* Kadın
+* Erkek
+* Çocuk
+* Yeni Gelenler
+* Çok Satanlar
+* Kampanyalar
+* Ankara’ya Özel
+* Mobilde Popüler
+
+Tabs yapısı hem blok seviyesinde hem de tab öğesi seviyesinde kural destekleyebilir.
+
+Blok seviyesindeki kural, tabs alanının genel olarak kimlere gösterileceğini belirler.
+
+Tab öğesi seviyesindeki kural ise, o tab’ın hangi kullanıcı segmentine gösterileceğini belirler.
+
+Örnek:
+
+Tabs Bloğu: Öne Çıkanlar
+Blok Kuralı: Kural yok, herkese göster
+
+Tab 1: Yeni Gelenler
+Tab Kuralı: Kural yok, herkese göster
+Ürün Kaynağı: Yeni Ürünler
+
+Tab 2: Ankara’ya Özel
+Tab Kuralı: Şehir = Ankara
+Ürün Kaynağı: Ankara için uygun ürünler
+
+Tab 3: Mobilde Popüler
+Tab Kuralı: Cihaz = Mobil
+Ürün Kaynağı: Mobil popüler ürünler
+
+Tab 4: Kadın
+Tab Kuralı: Cinsiyet = Kadın
+Ürün Kaynağı: Kadın kategorisi ürünleri
+
+Kullanıcı hangi tab kurallarına uyuyorsa sadece o tab’ları görecektir.
+
+Kuralsız tab’lar herkese gösterilecektir.
+
+Hiçbir tab görünür değilse Tabs bloğu frontend tarafında hiç gösterilmeyecektir.
+
+Tabs bloğu içinde yönetilebilecek alanlar:
+
+* Blok başlığı
+* Blok alt başlığı
+* Tab adı
+* Tab sırası
+* Tab ürün kaynağı
+* Tab ürün filtresi
+* Tab linki
+* Blok aktif / pasif durumu
+* Tab aktif / pasif durumu
+* Blok kuralı
+* Tab öğesi bazlı kural
+* Başlangıç / bitiş tarihi
+* Öncelik
+
+Tabs içeriği ürün listesi, koleksiyon listesi veya kampanya listesi gibi farklı kaynaklardan beslenebilecek şekilde genişletilebilir. İlk kapsamda ürün listesi ve koleksiyon listesi desteklenmesi yeterlidir.
+
+---
+
+## 7. Koleksiyonlar
+
+Koleksiyonlar bloğu, müşterilerin oluşturduğu koleksiyonları anasayfada göstermek için kullanılacaktır.
+
+Bu yapı kullanıcıların oluşturduğu, onaylanmış veya yayına uygun koleksiyonları listeleyebilir.
+
+Örnek kullanım:
+
+* Müşterilerin favori kombinleri
+* En çok beğenilen koleksiyonlar
+* Yeni oluşturulan koleksiyonlar
+* Editörün seçtiği müşteri koleksiyonları
+* Ankara kullanıcılarının popüler koleksiyonları
+* Mobil kullanıcıların en çok gezdiği koleksiyonlar
+
+Koleksiyonlar bloğunda kural blok seviyesinde olacaktır.
+
+Blok görünürse, koleksiyonlar seçilen koleksiyon kaynağına ve filtrelere göre listelenecektir.
+
+Örnek:
+
+Koleksiyon Bloğu: Müşterilerden İlham Al
+Kural yok
+Koleksiyon Kaynağı: Onaylı ve öne çıkarılmış koleksiyonlar
+Limit: 10
+Sıralama: En yeni
+
+Başka bir örnek:
+
+Koleksiyon Bloğu: Ankara’dan Popüler Koleksiyonlar
+Kural: Şehir = Ankara
+Koleksiyon Kaynağı: Ankara kullanıcılarının koleksiyonları
+Limit: 10
+Sıralama: Popülerlik
+
+Koleksiyonlar bloğu içinde yönetilebilecek alanlar:
+
+* Blok başlığı
+* Alt başlık
+* Koleksiyon kaynağı
+* Koleksiyon filtresi
+* Manuel seçilen koleksiyonlar
+* Otomatik koleksiyon listesi
+* Limit
+* Sıralama tipi
+* Aktif / pasif durumu
+* Sıra
+* Kural
+* Başlangıç / bitiş tarihi
+* Öncelik
+
+Koleksiyonlar bloğunda sadece yayına uygun, onaylı ve herkese açık koleksiyonlar gösterilmelidir.
+
+Gizli, silinmiş, pasif veya moderasyondan geçmemiş koleksiyonlar anasayfada gösterilmemelidir.
+
+---
+
+# Ürün Kaynağı ve Filtre Mantığı
+
+Ürün listesi kullanan bloklarda ürünler tek tek kurallara bağlanmayacaktır.
+
+Bunun yerine ürün kaynağı ve ürün filtresi mantığı kullanılacaktır.
+
+Ürün kaynağı örnekleri:
+
+* Çok satanlar
+* Yeni gelenler
+* Vitrin ürünleri
+* Kampanyalı ürünler
+* Son gezilenler
+* Sepete eklenenler
+* Favorilere eklenenler
+* Kategori bazlı ürünler
+* Marka bazlı ürünler
+* Manuel seçilen ürünler
+* Segment bazlı popüler ürünler
+* Önerilen ürünler
+
+Ürün filtresi örnekleri:
+
+* Kategori
+* Marka
+* Stok durumu
+* Fiyat aralığı
+* İndirim durumu
+* Şehir / bölge uygunluğu
+* Cinsiyet segmenti
+* Cihaz tipi
+* Üyelik durumu
+* Ürün etiketi
+* Kampanya etiketi
+
+Carousel, Infinity ve Tabs içindeki ürün listelerinde bu ürün kaynağı ve filtre yapısı kullanılacaktır.
+
+---
+
+# Yönetim Paneli
+
+Sistem yönetim paneli üzerinden yönetilecektir.
+
+Panelde kullanıcılar anasayfa bloklarını oluşturabilecek, düzenleyebilecek, sıralayabilecek, aktif/pasif yapabilecek ve kurallarını tanımlayabilecektir.
+
+Panelden yapılabilecek temel işlemler:
+
+* Banner bloğu oluşturma
+* Banner şablonu seçme
+* Banner içeriklerini düzenleme
+* Slider oluşturma
+* Slide ekleme / düzenleme / silme
+* Story Banner oluşturma
+* Story öğesi ekleme / düzenleme / silme
+* Carousel ürün listesi oluşturma
+* Infinity ürün listesi oluşturma
+* Tabs bloğu oluşturma
+* Tab ekleme / düzenleme / silme
+* Koleksiyonlar bloğu oluşturma
+* Koleksiyon kaynağı ve filtresi seçme
+* Ürün kaynağı ve ürün filtresi seçme
+* Kural ekleme / düzenleme / silme
+* Blokları aktif / pasif yapma
+* Blok sıralamasını değiştirme
+* Öğe sıralamasını değiştirme
+* Önizleme yapma
+* Yayınlama yapma
+* Eski yayına geri dönme
+
+Panelde yapılan değişiklikler canlı siteye anında yansımayacaktır.
+
+Panel tarafı taslak veri olarak çalışacaktır.
+
+Canlı site yalnızca yayınlanmış veriyi okuyacaktır.
+
+---
+
+# Taslak ve Yayınlama Mantığı
+
+Panelde yapılan tüm değişiklikler önce taslak olarak saklanacaktır.
+
+Bu değişiklikler siteye otomatik yansımayacaktır.
+
+Kullanıcı “Yayınla” dediğinde sistem mevcut aktif taslak yapıyı okuyacak, validasyon yapacak ve yayınlanabilir bir JSON snapshot üretecektir.
+
+Canlı site, yönetim panelindeki ana tablolara join atmayacaktır.
+
+Canlı site sadece yayınlanmış JSON snapshot verisini okuyacaktır.
+
+Bu yaklaşımın amacı:
+
+* Canlı site performansını artırmak
+* Join karmaşasını azaltmak
+* Panelde yarım kalan değişikliklerin siteyi bozmasını engellemek
+* Yayın öncesi önizleme yapılabilmesini sağlamak
+* Yayınlanan versiyonları saklamak
+* Gerekirse eski versiyona geri dönebilmek
+* Cache yönetimini kolaylaştırmak
+
+---
+
+# Versiyonlu JSON Snapshot
+
+Her yayınlama işleminde yeni bir JSON snapshot üretilecektir.
+
+Bu snapshot versiyonlu olarak saklanacaktır.
+
+Örnek yapı:
+
+PublishedHomepageSnapshot
+
+* Id
+* Version
+* JsonData
+* PublishedAt
+* PublishedBy
+* IsActive
+* Status
+* Note
+
+Her yayınlama işleminde yeni bir versiyon oluşacaktır.
+
+Örnek:
+
+* v1
+* v2
+* v3
+* v4
+
+Canlı site her zaman aktif olan yayın versiyonunu okuyacaktır.
+
+Eğer son yayınlanan versiyonda sorun olursa, sistem eski bir versiyonu tekrar aktif hale getirebilmelidir.
+
+Bu sayede rollback yapılabilecektir.
+
+Örnek:
+
+v5 yayına alındı.
+Sorun tespit edildi.
+v4 tekrar aktif edildi.
+Canlı site v4 snapshot üzerinden çalışmaya devam etti.
+
+---
+
+# Snapshot İçeriği
+
+Yayınlanan JSON snapshot içinde anasayfanın canlıda çalışması için gerekli kişiselleştirme verileri bulunacaktır.
+
+Snapshot içinde bulunabilecek veriler:
+
+* Versiyon bilgisi
+* Yayın tarihi
+* Blok listesi
+* Blok tipleri
+* Blok sıraları
+* Blok aktiflik bilgileri
+* Blok kuralları
+* Öğe listeleri
+* Öğe kuralları
+* Banner içerikleri
+* Slide içerikleri
+* Story içerikleri
+* Ürün listesi konfigürasyonları
+* Ürün kaynağı bilgileri
+* Ürün filtreleri
+* Tabs konfigürasyonları
+* Koleksiyon listesi konfigürasyonları
+
+Canlı site bu snapshot verisini okuyarak ziyaretçi segmentine göre hangi blokların ve öğelerin gösterileceğine karar verir.
+
+---
+
+# Önizleme Sistemi
+
+Yönetim panelinde kullanıcı, yaptığı değişiklikleri canlı siteye almadan önce önizleyebilmelidir.
+
+Önizleme sistemi, seçilen ziyaretçi segmentine göre anasayfanın nasıl görüneceğini gösterecektir.
+
+Örnek önizleme parametreleri:
+
+* Şehir: Ankara
+* Bölge: İç Anadolu
+* Cinsiyet: Kadın
+* Cihaz: Mobil
+* Üyelik durumu: Üye
+
+Panel bu bilgilere göre kural motorunu çalıştıracak ve kullanıcının göreceği anasayfayı önizleme olarak gösterecektir.
+
+Önizleme canlı siteyi etkilemeyecektir.
+
+Önizleme taslak veri üzerinden çalışacaktır.
+
+Yayınlanmış site ise yalnızca aktif JSON snapshot üzerinden çalışacaktır.
+
+Önizleme ekranında hangi blokların neden göründüğü veya neden gizlendiği de gösterilebilir.
+
+Örnek:
+
+* Slider göründü: İçinde görünür slide var.
+* Banner gizlendi: Kullanıcı şehir kuralına uymuyor.
+* Story Banner göründü: 3 story öğesi eşleşti.
+* Tabs göründü: 2 tab eşleşti.
+* Koleksiyonlar gizlendi: Blok kuralı eşleşmedi.
+
+---
+
+# Cache Mantığı
+
+Anasayfa kişiselleştirileceği için cache sistemi dikkatli tasarlanmalıdır.
+
+Cache kullanıcı bazlı değil, segment bazlı çalışmalıdır.
+
+Örnek cache anahtarı:
+
+homepage:{version}:{city}:{region}:{gender}:{device}:{memberStatus}
+
+Örnek:
+
+homepage:v12:ankara:ic-anadolu:female:mobile:member
+
+Bu sayede aynı segmente giren kullanıcılar aynı cache’i kullanabilir.
+
+Cache anahtarına yayın versiyonu dahil edilmelidir.
+
+Böylece yeni yayın yapıldığında eski cache ile yeni içerik karışmaz.
+
+Yeni bir JSON snapshot yayınlandığında ilgili anasayfa cache’leri temizlenmeli veya versiyon bazlı cache anahtarı sayesinde otomatik olarak devre dışı kalmalıdır.
+
+Ürün listesi ve Infinity yapısı için ürün cache’i ayrıca ele alınabilir.
+
+Örnek ürün cache anahtarı:
+
+homepage-products:{version}:{blockId}:{segmentHash}:page:{pageNo}
+
+Canlı site cache üretirken admin panel tablolarına gitmemeli, yalnızca aktif published snapshot verisini kullanmalıdır.
+
+---
+
+# Audit Log / İşlem Geçmişi
+
+Panelde yapılan tüm önemli işlemler loglanacaktır.
+
+Amaç, sistemde kim, neyi, ne zaman değiştirdi bilgisini takip edebilmektir.
+
+Loglanacak işlemler:
+
+* Blok ekleme
+* Blok düzenleme
+* Blok silme
+* Blok aktif / pasif değiştirme
+* Banner düzenleme
+* Slider düzenleme
+* Slide ekleme
+* Slide düzenleme
+* Slide silme
+* Story ekleme
+* Story düzenleme
+* Story silme
+* Carousel ürün listesi oluşturma / değiştirme / silme
+* Infinity ürün listesi oluşturma / değiştirme / silme
+* Tabs bloğu oluşturma / değiştirme / silme
+* Tab ekleme / düzenleme / silme
+* Koleksiyon bloğu oluşturma / değiştirme / silme
+* Ürün listesi filtresi değiştirme
+* Koleksiyon filtresi değiştirme
+* Kural ekleme
+* Kural değiştirme
+* Kural silme
+* Önizleme yapma
+* Yayınlama yapma
+* Eski versiyona geri dönme
+
+Örnek AuditLog yapısı:
+
+AuditLog
+
+* Id
+* UserId
+* UserName
+* ActionType
+* EntityType
+* EntityId
+* OldValueJson
+* NewValueJson
+* CreatedAt
+* IpAddress
+* UserAgent
+
+Örnek ActionType değerleri:
+
+* Created
+* Updated
+* Deleted
+* Activated
+* Deactivated
+* Published
+* Rollback
+* Previewed
+
+Örnek EntityType değerleri:
+
+* BannerBlock
+* SliderBlock
+* Slide
+* StoryBannerBlock
+* StoryItem
+* CarouselProductBlock
+* InfinityProductBlock
+* TabsBlock
+* TabItem
+* CollectionBlock
+* Rule
+* PublishedSnapshot
+
+Bu loglar yönetim panelinde görüntülenebilir olmalıdır.
+
+Panelde “Değişiklik Geçmişi” ve “Yayın Geçmişi” gibi ekranlar bulunabilir.
+
+Bu sayede bir sorun olduğunda hangi kullanıcının hangi değişikliği yaptığı görülebilir.
+
+---
+
+# Yayın Logu
+
+Audit log dışında yayınlama işlemleri ayrıca takip edilmelidir.
+
+Her yayınlama işleminde şu bilgiler saklanmalıdır:
+
+* Kim yayınladı?
+* Ne zaman yayınladı?
+* Hangi versiyon üretildi?
+* Önceki aktif versiyon neydi?
+* Yayınlama başarılı mı?
+* Hata oluştu mu?
+* Yayın notu var mı?
+
+Örnek PublishLog yapısı:
+
+PublishLog
+
+* Id
+* Version
+* PublishedBy
+* PublishedAt
+* PreviousVersion
+* Status
+* ErrorMessage
+* Note
+
+Bu yapı sayesinde yayın geçmişi net olarak takip edilebilir.
+
+Gerekirse eski versiyona geri dönüş yapılabilir.
+
+---
+
+# Canlı Site Çalışma Mantığı
+
+Canlı site anasayfa isteği aldığında şu akışla çalışacaktır:
+
+1. Aktif published snapshot alınır.
+2. Ziyaretçi segmenti belirlenir.
+3. Snapshot içindeki bloklar ve kurallar değerlendirilir.
+4. Kullanıcının görebileceği bloklar seçilir.
+5. Blok içindeki görünür öğeler seçilir.
+6. Ürün veya koleksiyon gerektiren bloklar için ilgili kaynak / filtre konfigürasyonu çalıştırılır.
+7. Segment + versiyon bazlı cache kontrol edilir.
+8. Cache varsa cache’den cevap döner.
+9. Cache yoksa anasayfa oluşturulur ve cache’e yazılır.
+
+Canlı site bu süreçte panel tablolarına join atmayacaktır.
+
+Canlı site yalnızca yayınlanmış JSON snapshot verisini kullanacaktır.
+
+---
+
+# Temel Kural Özeti
+
+Sistemin genel davranışı aşağıdaki şekilde olacaktır:
+
+* Anasayfa tek URL üzerinden çalışır.
+* İçerikler blok bazlı yönetilir.
+* Panel değişiklikleri anında canlı siteye yansımaz.
+* Yayınla işlemi yapılınca JSON snapshot üretilir.
+* Canlı site sadece aktif published snapshot okur.
+* Snapshot versiyonlu saklanır.
+* Eski versiyona geri dönüş yapılabilir.
+* Kural yoksa içerik herkese gösterilir.
+* Kural varsa sadece eşleşen kullanıcıya gösterilir.
+* Kullanıcı hiçbir kurala uymuyorsa otomatik default içerik gösterilmez.
+* Çoklu seçim aynı alan içinde OR mantığıyla çalışır.
+* Farklı alanlar AND mantığıyla çalışır.
+* Başlangıç ve bitiş tarihi zorunlu değildir.
+* Tarih doluysa kural tarih aralığına göre değerlendirilir.
+* Banner’da kural blok seviyesinde verilir.
+* Slider’da kural slide öğesine verilir.
+* Story Banner’da kural story öğesine verilir.
+* Carousel Ürün Listesi’nde kural blok seviyesinde verilir, ürünler kaynak / filtre ile belirlenir.
+* Infinity Ürün Listesi’nde kural blok seviyesinde verilir, ürünler kaynak / filtre ile sayfalı gelir.
+* Tabs yapısında hem blok hem tab öğesi seviyesinde kural verilebilir.
+* Koleksiyonlar bloğunda kural blok seviyesinde verilir.
+* Cache segment + versiyon bazlı çalışır.
+* Tüm panel işlemleri audit log olarak saklanır.
+* Tüm yayınlama işlemleri yayın geçmişinde saklanır.
+
+---
+
+# Tek Paket Kapsamı
+
+Bu proje tek paket olarak aşağıdaki özellikleri kapsayacaktır:
+
+* Dinamik anasayfa blok sistemi
+* Banner bloğu
+* Slider bloğu
+* Story Banner bloğu
+* Carousel Ürün Listesi bloğu
+* Infinity Ürün Listesi bloğu
+* Tabs bloğu
+* Koleksiyonlar bloğu
+* Blok bazlı kural desteği
+* Öğe bazlı kural desteği
+* Şehir, bölge, cinsiyet, cihaz tipi ve üyelik durumu kuralları
+* Çoklu seçim desteği
+* Başlangıç / bitiş tarihi desteği
+* Aktif / pasif yönetimi
+* Blok sıralama
+* Öğe sıralama
+* Ürün kaynağı yönetimi
+* Ürün filtre yönetimi
+* Koleksiyon kaynağı yönetimi
+* Koleksiyon filtre yönetimi
+* Önizleme sistemi
+* Yayınla sistemi
+* Versiyonlu JSON snapshot
+* Rollback desteği
+* Segment + versiyon bazlı cache
+* Ürün listesi cache mantığı
+* Audit log
+* Yayın geçmişi
+
+---
+
+# Genel Sonuç
+
+Bu sistem sayesinde e-ticaret sitesi, tek bir anasayfa üzerinden farklı kullanıcı segmentlerine farklı içerikler gösterebilecektir.
+
+Müşteri panelden şehir, bölge, cinsiyet, cihaz tipi ve üyelik durumu gibi kriterlere göre Banner, Slider, Story Banner, Carousel Ürün Listesi, Infinity Ürün Listesi, Tabs ve Koleksiyonlar bloklarını yönetebilecektir.
+
+Panelde yapılan değişiklikler canlı siteye doğrudan yansımayacak, yalnızca yayınlama işlemi sonrası versiyonlu JSON snapshot olarak canlıya alınacaktır.
+
+Canlı site performans için yalnızca yayınlanmış snapshot verisini okuyacak, admin panel tablolarına join atmayacaktır.
+
+Ürün ve koleksiyon gibi dinamik veriler snapshot içindeki kaynak ve filtre konfigürasyonlarına göre çekilecektir.
+
+Tüm değişiklikler ve yayınlama işlemleri loglanacaktır.
+
+Sistem bu haliyle hem güvenli, hem performanslı, hem yönetilebilir, hem de kapsamlı bir dinamik anasayfa kişiselleştirme altyapısı sunacaktır.

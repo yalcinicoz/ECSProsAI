@@ -1,0 +1,15 @@
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <mask id="checkGap" maskUnits="userSpaceOnUse" x="0" y="0" width="20" height="20">
+      <rect width="20" height="20" fill="white"/>
+      <circle cx="14.0605" cy="14.0557" r="4.55" fill="black"/>
+    </mask>
+  </defs>
+  <g mask="url(#checkGap)">
+    <path d="M3.41797 5.97656L10.002 2.42773L16.5859 5.97656V11.8818C16.5859 12.2657 16.3813 12.6203 16.0498 12.8125L10.5381 16.0039C10.2059 16.1963 9.79601 16.1963 9.46387 16.0039L3.9541 12.8125C3.6224 12.6204 3.41797 12.2657 3.41797 11.8818V5.97656Z" stroke="#333333" stroke-width="1.65" stroke-linejoin="round"/>
+    <path d="M3.75586 6.16602L10.002 9.73535L16.248 6.16602" stroke="#333333" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M10.002 9.73535V13.0049" stroke="#333333" stroke-width="1.65" stroke-linecap="round"/>
+  </g>
+  <path d="M14.0605 17.5986C16.0171 17.5986 17.6035 16.0122 17.6035 14.0557C17.6035 12.0991 16.0171 10.5127 14.0605 10.5127C12.104 10.5127 10.5176 12.0991 10.5176 14.0557C10.5176 16.0122 12.104 17.5986 14.0605 17.5986Z" stroke="#333333" stroke-width="1.55"/>
+  <path d="M12.5469 14.082L13.5723 15.1074L15.6484 13.0312" stroke="#333333" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

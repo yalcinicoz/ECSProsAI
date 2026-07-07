@@ -26,20 +26,27 @@ interface ImageSet {
 // ── Image Server Keys ─────────────────────────────────────────────────────────
 
 const IMAGE_SERVER_FIELDS: { key: string; label: string; type: string; hint?: string; section?: string }[] = [
-  { key: 'ImageServer.LocalSavePath', label: 'Resim Kayıt Dizini', type: 'text',     hint: 'örn: /opt/ECSProsAI/media/images/products/', section: 'Resim Sunucusu' },
-  { key: 'ImageServer.PublicBaseUrl', label: 'Resim Sunucu URL',   type: 'text',     hint: 'örn: /media/images/products/' },
-  { key: 'ImageServer.FtpHost',       label: 'FTP Sunucu Adresi',  type: 'text',     hint: 'örn: ftp.imageserver.com' },
-  { key: 'ImageServer.FtpPort',       label: 'FTP Port',           type: 'number',   hint: '21' },
-  { key: 'ImageServer.FtpUser',       label: 'FTP Kullanıcı Adı',  type: 'text' },
-  { key: 'ImageServer.FtpPassword',   label: 'FTP Şifre',          type: 'password' },
-  { key: 'ImageServer.FtpBasePath',   label: 'FTP Dosya Yolu',     type: 'text',     hint: 'örn: /images/products/' },
-  { key: 'VideoServer.LocalSavePath', label: 'Video Kayıt Dizini', type: 'text',     hint: 'örn: /opt/ECSProsAI/media/videos/products/', section: 'Video Sunucusu' },
-  { key: 'VideoServer.PublicBaseUrl', label: 'Video Sunucu URL',   type: 'text',     hint: 'örn: /media/videos/products/' },
-  { key: 'VideoServer.FtpHost',       label: 'FTP Sunucu Adresi',  type: 'text',     hint: 'örn: ftp.imageserver.com' },
-  { key: 'VideoServer.FtpPort',       label: 'FTP Port',           type: 'number',   hint: '21' },
-  { key: 'VideoServer.FtpUser',       label: 'FTP Kullanıcı Adı',  type: 'text' },
-  { key: 'VideoServer.FtpPassword',   label: 'FTP Şifre',          type: 'password' },
-  { key: 'VideoServer.FtpBasePath',   label: 'FTP Dosya Yolu',     type: 'text',     hint: 'örn: /videos/products/' },
+  // CDN Ayarları
+  { key: 'ImageServer.CdnBaseUrl',     label: 'CDN Temel URL',         type: 'text',   hint: 'örn: https://cdn.misharitalia.com/img', section: 'CDN Ayarları' },
+  { key: 'ImageServer.CdnQuality',     label: 'CDN Kalite (%)',         type: 'number', hint: '85 (0-100 arası)' },
+  { key: 'ImageServer.CdnThumbHeight', label: 'Thumbnail Yüksekliği',  type: 'number', hint: '240 (sepet, listeleme küçük resim)' },
+  { key: 'ImageServer.CdnListHeight',  label: 'Liste/Detay Yüksekliği',type: 'number', hint: '640 (kategori listesi, ürün detayı)' },
+  { key: 'ImageServer.CdnZoomHeight',  label: 'Zoom Yüksekliği',       type: 'number', hint: '1200 (ürün detayı zoom)' },
+  // Yerel / FTP Yükleme (CDN kullanılmıyorsa)
+  { key: 'ImageServer.LocalSavePath',  label: 'Yerel Kayıt Dizini',    type: 'text',   hint: 'örn: /opt/ECSProsAI/media/images/products/', section: 'Yerel Depolama / FTP' },
+  { key: 'ImageServer.PublicBaseUrl',  label: 'Yerel Sunucu URL',      type: 'text',   hint: 'örn: /media/images/products/' },
+  { key: 'ImageServer.FtpHost',        label: 'FTP Sunucu Adresi',     type: 'text',   hint: 'örn: ftp.imageserver.com' },
+  { key: 'ImageServer.FtpPort',        label: 'FTP Port',              type: 'number', hint: '21' },
+  { key: 'ImageServer.FtpUser',        label: 'FTP Kullanıcı Adı',     type: 'text' },
+  { key: 'ImageServer.FtpPassword',    label: 'FTP Şifre',             type: 'password' },
+  { key: 'ImageServer.FtpBasePath',    label: 'FTP Dosya Yolu',        type: 'text',   hint: 'örn: /images/products/' },
+  { key: 'VideoServer.LocalSavePath',  label: 'Video Kayıt Dizini',    type: 'text',   hint: 'örn: /opt/ECSProsAI/media/videos/products/', section: 'Video Sunucusu' },
+  { key: 'VideoServer.PublicBaseUrl',  label: 'Video Sunucu URL',      type: 'text',   hint: 'örn: /media/videos/products/' },
+  { key: 'VideoServer.FtpHost',        label: 'FTP Sunucu Adresi',     type: 'text',   hint: 'örn: ftp.imageserver.com' },
+  { key: 'VideoServer.FtpPort',        label: 'FTP Port',              type: 'number', hint: '21' },
+  { key: 'VideoServer.FtpUser',        label: 'FTP Kullanıcı Adı',     type: 'text' },
+  { key: 'VideoServer.FtpPassword',    label: 'FTP Şifre',             type: 'password' },
+  { key: 'VideoServer.FtpBasePath',    label: 'FTP Dosya Yolu',        type: 'text',   hint: 'örn: /videos/products/' },
 ]
 
 // ── CatalogSettingsPage ───────────────────────────────────────────────────────

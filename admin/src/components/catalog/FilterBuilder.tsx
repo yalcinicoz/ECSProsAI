@@ -119,8 +119,8 @@ export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
     staleTime: 60_000,
   })
   const { data: attrTypes = [] } = useQuery<AttributeType[]>({
-    queryKey: ['attr-types-with-values'],
-    queryFn: async () => { const { data } = await api.get('/catalog/attribute-types'); return data.data },
+    queryKey: ['attr-types-with-values', 'no-counts'],
+    queryFn: async () => { const { data } = await api.get('/catalog/attribute-types?includeCounts=false'); return data.data },
     staleTime: 60_000,
   })
   const { data: suppliers = [] } = useQuery<Supplier[]>({

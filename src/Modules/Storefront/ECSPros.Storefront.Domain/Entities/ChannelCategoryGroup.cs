@@ -9,5 +9,8 @@ public class ChannelCategoryGroup
     public Guid ChannelCategoryId { get; set; }
     public Guid ProductGroupId { get; set; }
 
+    /// <summary>Model bazlı listeleme modunda bu grubu temsil eden vitrin ürünü. Null ise sistem otomatik seçer.</summary>
+    public Guid? ShowcaseProductId { get; set; }
+
     public ChannelCategory ChannelCategory { get; set; } = null!;
 }

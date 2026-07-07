@@ -13,9 +13,7 @@ public record CreateFirmCommand(
     string Address,
     string Phone,
     string Email,
-    bool IsMain,
-    string PriceType,
-    decimal? PriceMultiplier
+    bool IsMain
 ) : IRequest<Result<Guid>>;
 
 public class CreateFirmCommandHandler : IRequestHandler<CreateFirmCommand, Result<Guid>>
@@ -37,8 +35,6 @@ public class CreateFirmCommandHandler : IRequestHandler<CreateFirmCommand, Resul
             Phone = request.Phone,
             Email = request.Email,
             IsMain = request.IsMain,
-            PriceType = request.PriceType,
-            PriceMultiplier = request.PriceMultiplier,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };

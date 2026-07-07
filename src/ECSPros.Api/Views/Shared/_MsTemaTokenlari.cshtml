@@ -1,0 +1,17 @@
+@* Site bazlı tema token override'ı (plan A12). Platform çözülemezse veya token
+   tanımlı değilse hiçbir şey basmaz — misharix varsayılan görünümüyle devam eder. *@
+@inject ECSPros.Api.Services.IStoreContext StoreContext
+@{
+    var msPlatform = await StoreContext.GetPlatformAsync();
+}
+@if (msPlatform?.ThemeTokens is { Count: > 0 })
+{
+    <style>
+        :root {
+        @foreach (var token in msPlatform.ThemeTokens)
+        {
+            @Html.Raw($"    {token.Key}: {token.Value};\n")
+        }
+        }
+    </style>
+}

@@ -1,0 +1,17 @@
+# Bilinçli farklar — her satır check.sh'ın kullandığı görünen addır.
+# Yeni satır eklerken gerekçeyi yorum olarak yaz.
+
+# _MsTemaTokenlari partial include'ı eklendi (plan A12 — tek satır, head içinde)
+Views/Shared/_Layout.cshtml
+
+# B1: Mega menü statik örnek içeriği kanal kategorilerine bağlandı (markup sınıfları/yapısı
+# birebir korundu; kampanya şeridi statik — Faz G). Kaynak: ViewData["MsNavigasyon"].
+Views/ProjeElementleri/Navigasyon/_AnaNavigasyonDesktopMenu.cshtml
+
+# B1: Mobil menü ana sekme/yan sekme/panel'leri kanal kategorilerine bağlandı
+# (kampanya bölümü + alt nav statik — Faz G).
+Views/ProjeElementleri/Navigasyon/_AnaNavigasyonMobilMenu.cshtml
+
+# B1: Ana sayfadaki mobil kategori kaydırma şeridi kanal kategorilerine bağlandı
+# (dosyanın geri kalanı — sepet paneli vb. — statik, B5'te bağlanacak).
+Views/ProjeElementleri/Navigasyon/_AnaNavigasyonUst.cshtml

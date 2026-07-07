@@ -17,9 +17,6 @@ public record FirmDetailDto(
     string Phone,
     string Email,
     bool IsMain,
-    string PriceType,
-    decimal? PriceMultiplier,
-    Guid? InvoiceIntegratorId,
     bool IsActive,
     DateTime CreatedAt,
     List<FirmPlatformSummaryDto> Platforms,
@@ -47,8 +44,8 @@ public class GetFirmDetailQueryHandler : IRequestHandler<GetFirmDetailQuery, Res
 
         var dto = new FirmDetailDto(
             firm.Id, firm.Code, firm.NameI18n, firm.TaxOffice, firm.TaxNumber,
-            firm.Address, firm.Phone, firm.Email, firm.IsMain, firm.PriceType,
-            firm.PriceMultiplier, firm.InvoiceIntegratorId, firm.IsActive, firm.CreatedAt,
+            firm.Address, firm.Phone, firm.Email, firm.IsMain,
+            firm.IsActive, firm.CreatedAt,
             firm.FirmPlatforms.Where(p => !p.IsDeleted)
                 .Select(p => new FirmPlatformSummaryDto(p.Id, p.Code, p.NameI18n, p.IsActive)).ToList(),
             firm.FirmIntegrations.Where(i => !i.IsDeleted)

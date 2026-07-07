@@ -25,8 +25,6 @@ export interface Firm {
   phone: string
   email: string
   isMain: boolean
-  priceType: string
-  priceMultiplier: number | null
   isActive: boolean
   createdAt: string
 }
@@ -40,20 +38,13 @@ type FirmForm = {
   phone: string
   email: string
   isMain: boolean
-  priceType: string
-  priceMultiplier: string
   isActive: boolean
 }
-
-const PRICE_TYPES = [
-  { value: 'manual',     label: 'Manuel' },
-  { value: 'multiplier', label: 'Çarpan' },
-]
 
 const emptyForm = (): FirmForm => ({
   code: '', nameI18n: {}, taxOffice: '', taxNumber: '',
   address: '', phone: '', email: '',
-  isMain: false, priceType: 'manual', priceMultiplier: '', isActive: true,
+  isMain: false, isActive: true,
 })
 
 function getFirmName(f: Firm) {
@@ -94,8 +85,6 @@ export function FirmsPage() {
         phone: form.phone,
         email: form.email,
         isMain: form.isMain,
-        priceType: form.priceType,
-        priceMultiplier: form.priceMultiplier ? parseFloat(form.priceMultiplier) : null,
       })
     },
     onSuccess: () => {
@@ -115,8 +104,6 @@ export function FirmsPage() {
         phone: form.phone,
         email: form.email,
         isMain: form.isMain,
-        priceType: form.priceType,
-        priceMultiplier: form.priceMultiplier ? parseFloat(form.priceMultiplier) : null,
         isActive: form.isActive,
       })
     },
@@ -143,8 +130,6 @@ export function FirmsPage() {
       phone: f.phone,
       email: f.email,
       isMain: f.isMain,
-      priceType: f.priceType,
-      priceMultiplier: f.priceMultiplier?.toString() ?? '',
       isActive: f.isActive,
     })
   }
@@ -195,23 +180,6 @@ export function FirmsPage() {
         <textarea className="ta" rows={2} value={form.address}
           onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
           placeholder="Tam adres" />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="flbl">Fiyatlama Tipi</label>
-          <select className="inp" value={form.priceType}
-            onChange={e => setForm(f => ({ ...f, priceType: e.target.value }))}>
-            {PRICE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-        </div>
-        {form.priceType === 'multiplier' && (
-          <div>
-            <label className="flbl">Çarpan</label>
-            <input className="inp" type="number" step="0.01" value={form.priceMultiplier}
-              onChange={e => setForm(f => ({ ...f, priceMultiplier: e.target.value }))}
-              placeholder="Örn: 1.20" />
-          </div>
-        )}
       </div>
       <div className="flex items-center gap-4">
         <label className="flex items-center gap-2 cursor-pointer">

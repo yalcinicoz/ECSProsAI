@@ -11,7 +11,7 @@ public class CategoryFilterRules
     public decimal? PriceMin { get; set; }
     public decimal? PriceMax { get; set; }
 
-    // Platform fiyatı (FirmPlatformVariant.Price — sorgu zamanında platform biliniyorsa uygulanır)
+    // Platform fiyatı (Storefront.ChannelVariant.Price — sorgu zamanında platform biliniyorsa uygulanır)
     public decimal? PlatformPriceMin { get; set; }
     public decimal? PlatformPriceMax { get; set; }
 

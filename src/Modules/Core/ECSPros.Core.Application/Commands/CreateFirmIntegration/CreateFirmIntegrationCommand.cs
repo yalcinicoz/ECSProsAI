@@ -11,7 +11,16 @@ public record CreateFirmIntegrationCommand(
     Guid IntegrationServiceId,
     string? Name,
     Dictionary<string, object> Credentials,
-    Dictionary<string, object> Settings
+    Dictionary<string, object> Settings,
+    string? ContractNumber = null,
+    DateTime? StartDate = null,
+    DateTime? EndDate = null,
+    string Status = "draft",
+    Dictionary<string, object>? Terms = null,
+    string? ContactName = null,
+    string? ContactPhone = null,
+    string? ContactEmail = null,
+    string? DocumentUrl = null
 ) : IRequest<Result<Guid>>;
 
 public class CreateFirmIntegrationCommandHandler : IRequestHandler<CreateFirmIntegrationCommand, Result<Guid>>
@@ -39,6 +48,15 @@ public class CreateFirmIntegrationCommandHandler : IRequestHandler<CreateFirmInt
             Credentials = request.Credentials,
             Settings = request.Settings,
             IsActive = true,
+            ContractNumber = request.ContractNumber,
+            StartDate = AsUtc(request.StartDate),
+            EndDate = AsUtc(request.EndDate),
+            Status = request.Status,
+            Terms = request.Terms,
+            ContactName = request.ContactName,
+            ContactPhone = request.ContactPhone,
+            ContactEmail = request.ContactEmail,
+            DocumentUrl = request.DocumentUrl,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -47,4 +65,7 @@ public class CreateFirmIntegrationCommandHandler : IRequestHandler<CreateFirmInt
 
         return Result.Success<Guid>(integration.Id);
     }
+
+    private static DateTime? AsUtc(DateTime? value) =>
+        value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null;
 }

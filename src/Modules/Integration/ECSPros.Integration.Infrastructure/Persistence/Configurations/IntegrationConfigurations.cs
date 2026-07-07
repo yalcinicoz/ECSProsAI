@@ -35,3 +35,15 @@ public class MarketplaceProductConfiguration : IEntityTypeConfiguration<Marketpl
         b.HasIndex(x => x.SyncStatus);
     }
 }
+
+public class ErpVariantDataConfiguration : IEntityTypeConfiguration<ErpVariantData>
+{
+    public void Configure(EntityTypeBuilder<ErpVariantData> b)
+    {
+        b.ToTable("erp_variant_data");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Payload).HasColumnType("jsonb");
+        b.HasQueryFilter(x => !x.IsDeleted);
+        b.HasIndex(x => new { x.VariantId, x.FirmIntegrationId }).IsUnique();
+    }
+}

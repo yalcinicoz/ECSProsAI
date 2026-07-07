@@ -40,7 +40,7 @@ interface AttributeType {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const DATA_TYPE_OPTIONS = [
+export const DATA_TYPE_OPTIONS = [
   { value: 'select',       label: 'Seçim Listesi' },
   { value: 'multi_select', label: 'Çoklu Seçim' },
   { value: 'text',         label: 'Metin' },
@@ -73,8 +73,7 @@ export function AttributeTypesPage() {
     nameI18n: Record<string, string>
     dataType: string
     sortOrder: number
-    requiresFilterColor: boolean
-  }>({ nameI18n: {}, dataType: 'select', sortOrder: 0, requiresFilterColor: false })
+  }>({ nameI18n: {}, dataType: 'select', sortOrder: 0 })
 
   const { data: attrTypes = [], isLoading } = useQuery<AttributeType[]>({
     queryKey: ['attribute-types', activeOnly],
@@ -90,7 +89,6 @@ export function AttributeTypesPage() {
         nameI18n: form.nameI18n,
         dataType: form.dataType,
         sortOrder: form.sortOrder,
-        requiresFilterColor: form.requiresFilterColor,
       })
       return data.data.id as string
     },
@@ -116,7 +114,7 @@ export function AttributeTypesPage() {
   }
 
   function openCreate() {
-    setForm({ nameI18n: {}, dataType: 'select', sortOrder: 0, requiresFilterColor: false })
+    setForm({ nameI18n: {}, dataType: 'select', sortOrder: 0 })
     setCreateOpen(true)
   }
 
@@ -304,17 +302,6 @@ export function AttributeTypesPage() {
               Türkçe addan otomatik üretilir. Kayıt sonrası değiştirilemez.
             </p>
           </div>
-
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              className="w-4 h-4 rounded accent-[var(--brand)]"
-              checked={form.requiresFilterColor}
-              onChange={(e) => setForm((f) => ({ ...f, requiresFilterColor: e.target.checked }))}
-            />
-            <span className="text-sm" style={{ color: 'var(--text)' }}>Filtre rengi zorunlu</span>
-            <span className="text-xs" style={{ color: 'var(--text-s)' }}>(renk tipi özellikler için)</span>
-          </label>
 
           {mutation.isError && (
             <p className="text-sm" style={{ color: 'var(--danger, #ef4444)' }}>

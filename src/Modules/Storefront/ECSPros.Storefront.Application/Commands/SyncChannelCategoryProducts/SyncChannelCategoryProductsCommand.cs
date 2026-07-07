@@ -18,7 +18,8 @@ public record SyncChannelCategoryProductsCommand(Guid ChannelCategoryId) : IRequ
 public class SyncChannelCategoryProductsCommandHandler(
     IStorefrontDbContext sfDb,
     ICatalogDbContext catDb,
-    IStockService stockService)
+    IStockService stockService,
+    IChannelPricingService pricingService)
     : IRequestHandler<SyncChannelCategoryProductsCommand, Result<int>>
 {
     public async Task<Result<int>> Handle(SyncChannelCategoryProductsCommand request, CancellationToken ct)
@@ -37,10 +38,15 @@ public class SyncChannelCategoryProductsCommandHandler(
             productIdsInStockRange = await ProductFilterHelper
                 .ResolveStockRangeProductIds(catDb, stockService, rules.StockMin, rules.StockMax, ct);
 
+        HashSet<Guid>? platformPriceIds = null;
+        if (rules.PlatformPriceMin.HasValue || rules.PlatformPriceMax.HasValue)
+            platformPriceIds = await ProductFilterHelper.ResolvePlatformPriceRangeProductIds(
+                catDb, pricingService, cat.FirmPlatformId, rules.PlatformPriceMin, rules.PlatformPriceMax, ct);
+
         if (!rules.IsActive.HasValue) rules.IsActive = true;
 
         var matchedIds = await ProductFilterHelper
-            .BuildFilterQuery(catDb, rules, cat.FirmPlatformId, productIdsInStockRange)
+            .BuildFilterQuery(catDb, rules, platformPriceIds, productIdsInStockRange)
             .Select(p => p.Id)
             .ToListAsync(ct);
 

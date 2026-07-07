@@ -6,6 +6,7 @@ using ECSPros.Storefront.Application.Commands.DeleteNavigationMenu;
 using ECSPros.Storefront.Application.Commands.RemoveChannelCategoryProduct;
 using ECSPros.Storefront.Application.Commands.SaveChannelCategoryGroups;
 using ECSPros.Storefront.Application.Commands.SaveNavNodes;
+using ECSPros.Storefront.Application.Commands.SetChannelVariantPrice;
 using ECSPros.Storefront.Application.Commands.SyncChannelCategoryProducts;
 using ECSPros.Storefront.Application.Commands.UpdateChannelCategory;
 using ECSPros.Storefront.Application.Commands.UpdateNavigationMenu;
@@ -14,6 +15,7 @@ using ECSPros.Storefront.Application.Queries.GetChannelCategories;
 using ECSPros.Storefront.Application.Queries.GetChannelCategoryDetail;
 using ECSPros.Storefront.Application.Queries.GetChannelCategoryProducts;
 using ECSPros.Storefront.Application.Queries.GetChannelProductGroups;
+using ECSPros.Storefront.Application.Queries.GetChannelVariantPricing;
 using ECSPros.Storefront.Application.Queries.GetNavigationMenuDetail;
 using ECSPros.Storefront.Application.Queries.GetNavigationMenus;
 using MediatR;
@@ -120,6 +122,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
     {
         var result = await mediator.Send(new UpdateChannelCategoryCommand(
             id, req.ParentId, req.NameI18n, req.Slug, req.Status, req.FillType,
+            req.ListingMode ?? "product",
             req.FilterDef, req.SortOrder, req.DisplayImageUrl, req.BadgeLabel,
             req.MetaTitleI18n, req.MetaDescriptionI18n, req.OgImageUrl, req.OgTitleI18n), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
@@ -169,7 +172,9 @@ public class NavigationController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> SaveChannelCategoryGroups(
         Guid id, [FromBody] SaveChannelCategoryGroupsRequest req, CancellationToken ct)
     {
-        var result = await mediator.Send(new SaveChannelCategoryGroupsCommand(id, req.ProductGroupIds), ct);
+        var groups = req.Groups.Select(g =>
+            new GroupInput(g.ProductGroupId, g.ShowcaseProductId)).ToList();
+        var result = await mediator.Send(new SaveChannelCategoryGroupsCommand(id, groups), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
     }
@@ -201,6 +206,35 @@ public class NavigationController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new UpsertChannelProductGroupCommand(
             req.FirmPlatformId, req.ProductGroupId, req.Status), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { id = result.Value } });
+    }
+
+    // ─── Channel Variant Pricing ─────────────────────────────────────────────
+
+    /// <summary>Kanal bazlı ürün fiyatlandırmasını getirir.</summary>
+    [HttpGet("channel-variants/{firmPlatformId:guid}/products/{productId:guid}/pricing")]
+    public async Task<IActionResult> GetChannelVariantPricing(Guid firmPlatformId, Guid productId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetChannelVariantPricingQuery(firmPlatformId, productId), ct);
+        if (result.IsFailure)
+            return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kanal varyant fiyatı oluşturur veya günceller (upsert).</summary>
+    [HttpPut("channel-variants/{firmPlatformId:guid}/variants/{variantId:guid}/price")]
+    public async Task<IActionResult> SetChannelVariantPrice(
+        Guid firmPlatformId, Guid variantId, [FromBody] SetChannelVariantPriceRequest req, CancellationToken ct)
+    {
+        Guid.TryParse(User.FindFirst("sub")?.Value, out var changedBy);
+        var changedByName = User.FindFirst("full_name")?.Value ?? User.FindFirst("email")?.Value;
+
+        var result = await mediator.Send(new SetChannelVariantPriceCommand(
+            firmPlatformId, variantId, req.PriceType, req.PriceMultiplier,
+            req.Price, req.CompareAtPrice, req.IsActive,
+            changedBy, changedByName, req.FirmPlatformCode), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = new { id = result.Value } });
     }
 }
@@ -239,6 +273,7 @@ public record UpdateChannelCategoryRequest(
     string Slug,
     string Status,
     string FillType,
+    string? ListingMode,
     Dictionary<string, object>? FilterDef,
     int SortOrder,
     string? DisplayImageUrl,
@@ -253,9 +288,19 @@ public record AddChannelCategoryProductRequest(
     int SortOrder = 0,
     bool IsExcluded = false);
 
-public record SaveChannelCategoryGroupsRequest(List<Guid> ProductGroupIds);
+public record GroupRequestItem(Guid ProductGroupId, Guid? ShowcaseProductId);
+
+public record SaveChannelCategoryGroupsRequest(List<GroupRequestItem> Groups);
 
 public record UpsertChannelProductGroupRequest(
     Guid FirmPlatformId,
     Guid ProductGroupId,
     string Status = "active");
+
+public record SetChannelVariantPriceRequest(
+    string? PriceType,
+    decimal? PriceMultiplier,
+    decimal? Price,
+    decimal? CompareAtPrice,
+    bool IsActive = true,
+    string? FirmPlatformCode = null);

@@ -1,7 +1,9 @@
 using ECSPros.Catalog.Application.Queries.GetStoreProductDetail;
 using ECSPros.Catalog.Application.Queries.GetStoreProductGroupProducts;
+using ECSPros.Catalog.Application.Queries.GetStoreFacets;
 using ECSPros.Catalog.Application.Queries.GetStoreProducts;
 using ECSPros.Storefront.Application.Queries.GetChannelCategories;
+using ECSPros.Storefront.Application.Queries.GetChannelCategoryFacets;
 using ECSPros.Storefront.Application.Queries.GetChannelCategoryProducts;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -71,6 +73,29 @@ public class StoreCatalogController(IMediator mediator) : ControllerBase
         CancellationToken ct = default)
     {
         var result = await mediator.Send(new GetChannelCategoryProductsQuery(id, page, pageSize), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Genel ürün facet'lerini döner (filtre paneli için).</summary>
+    [HttpGet("products/facets")]
+    public async Task<IActionResult> GetProductsFacets(
+        [FromQuery] Guid firmPlatformId,
+        [FromQuery] string? search,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetStoreFacetsQuery(firmPlatformId, search), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kanal kategorisi facet'lerini döner (filtre paneli için).</summary>
+    [HttpGet("channel-categories/{id:guid}/facets")]
+    public async Task<IActionResult> GetChannelCategoryFacets(
+        Guid id,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetChannelCategoryFacetsQuery(id), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }

@@ -12,6 +12,7 @@ public class StorefrontDbContext : DbContext, IStorefrontDbContext
     public DbSet<NavigationMenu> NavigationMenus => Set<NavigationMenu>();
     public DbSet<NavNode> NavNodes => Set<NavNode>();
     public DbSet<ChannelProduct> ChannelProducts => Set<ChannelProduct>();
+    public DbSet<ChannelVariant> ChannelVariants => Set<ChannelVariant>();
     public DbSet<ChannelCategory> ChannelCategories => Set<ChannelCategory>();
     public DbSet<ChannelCategoryGroup> ChannelCategoryGroups => Set<ChannelCategoryGroup>();
     public DbSet<ChannelCategoryProduct> ChannelCategoryProducts => Set<ChannelCategoryProduct>();

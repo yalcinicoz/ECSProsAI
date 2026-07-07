@@ -9,7 +9,8 @@ public record UpdateAttributeValueCommand(
     Guid ValueId,
     Dictionary<string, string> NameI18n,
     int SortOrder,
-    bool IsActive
+    bool IsActive,
+    string? HexCode = null
 ) : IRequest<Result<bool>>;
 
 public class UpdateAttributeValueCommandHandler : IRequestHandler<UpdateAttributeValueCommand, Result<bool>>
@@ -46,6 +47,7 @@ public class UpdateAttributeValueCommandHandler : IRequestHandler<UpdateAttribut
         value.NameI18n = request.NameI18n;
         value.SortOrder = request.SortOrder;
         value.IsActive = request.IsActive;
+        value.HexCode = request.HexCode;
         value.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);

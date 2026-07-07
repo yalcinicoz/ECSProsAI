@@ -294,6 +294,316 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-07 — Misharix Razor taşıma planı hazırlandı (kod yazılmadı):**
+  - Karar (kullanıcı onaylı): storefront SPA'dan (`store/index.html`+`app.js`) çıkarılıp **Razor/MVC**
+    render'a geçilecek; 6 Temmuz portu tasarımı "yorumlayarak" bozduğu için partial'lar bu kez
+    **birebir dosya kopyası** ile taşınacak (HTML elden yazılmayacak).
+  - İki yeni doküman: `docs/misharix-tasarim-projesi-inceleme.md` (tasarım envanteri) ve
+    `docs/misharix-razor-tasima-plani.md` (**A→İ fazlı, checkbox'lı iş planı + Bölüm 8 işlev
+    envanteri**). Sonraki session'lar plandaki Durum Panosu'ndan devam etmeli, biten işleri
+    `[x] (tarih)` işaretlemeli.
+  - **Tüm açık kararlar kullanıcıyla tek tek kapatıldı** (plan Bölüm 6 Karar Kaydı): host=Api içinde
+    MVC (mobil app api/store/*'ı kullanmaya devam eder — API-first kuralı plan 3.4), tema=platform
+    başına + token override, ödeme=test modu, SMS=soyutlama+log, vitrin=**docs/anasayfa-dizayn-yönetimi.txt**
+    spec'ine göre blok+kural+snapshot sistemi (her sayfada yerleşim: anasayfa/duyuru/liste/detay/
+    sepet-teslimat-ödeme; iki milestone; üye grubu segmenti dahil), adres=Core'da ülke/il/ilçe/mahalle
+    tabloları, konum=pasif zincir+kullanıcı tetiklemeli izin+GeoLite2, sponsorlu=öne çıkar bayrağı,
+    TCKN=format kontrolü, stok=gerçek stok+platform anahtarı.
+  - **Faz A uygulandı (A2–A12 tamam, aynı gün):** ECSPros.Api'ye MVC view desteği eklendi
+    (AddControllersWithViews — API JSON ayarları korunarak), misharix kabuğu bayt-bayt kopyalandı
+    (Views: _Layout + 10 nav partial + footer + görsel arama modalları + Home/Index; wwwroot:
+    ikons/images/video/fontawesome + tailwind.css + site.js 4388 satır + derlenmiş site.css md5-aynı),
+    tema iskeleti kuruldu (StoreThemeViewLocationExpander — varsayılan tema kök Views ağacında;
+    tema kodu FirmPlatform.Settings'te `theme`, token override `themeTokens` → _MsTemaTokenlari
+    partial'ı; IStoreContext host→platform çözümü Store:Hosts/Store:DefaultFirmPlatformCode
+    config'inden). Drift aracı `tools/misharix-sync/check.sh` (TEMİZ ✓ — tek izinli fark _Layout
+    tema satırı) + `screenshot.mjs` hazır. Eşleme tablosu `docs/misharix-partial-vm-eslemesi.md`.
+  - **Doğrulama:** 5051'de Production duman testi — `/` 200 (nav tam render), site.css/js/ikons 200,
+    api/store/* 200, 0 hata. Canlı servise DOKUNULMADI.
+  - **FAZ A KAPANDI (2026-07-07):** kullanıcı publish+restart+`up -d nginx` çalıştırdı;
+    http://51.178.208.59:8080 canlı. Headless Chromium ile desktop+mobil ekran görüntüleri
+    alındı, tasarımla birebir doğrulandı (0 beklenmeyen konsol hatası; favicon 404'ü kaynaktan
+    kopyalanarak giderildi — sonraki publish'te canlıya gider). Certs `:ro` volume mount'u
+    artık çalışıyor; manuel cert kopyalama tarifi GEÇERSİZ (memory güncellendi).
+  - **Faz B1 TAMAMLANDI (2026-07-07, ikinci oturum):** platform **mishar**. Üç nav partial'ı
+    kanal kategorilerine bağlandı (markup birebir korunarak): `_AnaNavigasyonDesktopMenu`
+    (mega menü + üst şerit; ilk grup `-varsayilan`; kampanya şeridi statik — Faz G),
+    `_AnaNavigasyonMobilMenu` (ana sekme=kök, 2 seviyede tek yan sekme+tek panel; kampanya+alt
+    nav statik), `_AnaNavigasyonUst` (mobil kategori kaydırma şeridi; sepet/oturum B5/D6'ya).
+    Üçü `allowed-diffs.txt`'e gerekçeyle eklendi; eşleme tablosu güncellendi.
+    Kritik bulgular: nav_menus BOŞ → nav kanal kategorilerinden gelir (mishar: 4 kök + 43 çocuk,
+    2 seviye, görselsiz → grid'de <img> koşullu); linkler `/{slug}` (B7'ye kadar 404 normal);
+    SPA'nın app.js mega menü markup'ı örnek alınmaz; menü davranış JS'i `_AnaNavigasyon.cshtml`
+    içinde inline (site.js'te değil), sol kolonu runtime'da kendisi kurar.
+  - **B1 doğrulaması:** build 0 hata; 5051 Production duman testi (4 kök grup + 43 grid linki
+    desktop ve mobilde, gerçek slug href'leri); `check.sh` TEMİZ ✓ (4 izinli fark); headless
+    Chromium ile mega menü hover + mobil menü sekme geçişi ekran görüntüleri doğrulandı,
+    0 konsol hatası; api/store/* regresyon yok. Chromium tarifi yeniden kuruldu
+    (playwright-core scratchpad'e, libler apt-get download ile — binary ~/.cache'te duruyordu).
+  - **DEPLOY BEKLİYOR (kullanıcı):** `dotnet publish` + `sudo systemctl restart ecspros` —
+    sonrasında http://51.178.208.59:8080 'de gerçek kategorili nav görünür.
+  - **B14 ERKEN GEÇİŞ (2026-07-07, kullanıcı kararı):** https://new.ecspros.com artık Razor
+    storefront'u sunuyor — `locations.inc` `/` bloğu host:5000'e proxy'ye çevrildi (Cloudflare
+    Flexible: origin'e 80/HTTP gelir, https'e yönlendirme YASAK — döngü yapar). Eski SPA
+    yedeği 8080 portuna taşındı (rol değişimi; api+media blokları eklendi). appsettings
+    `Store:Hosts["new.ecspros.com"]="mishar"` eklendi (sonraki publish'te binary'ye girer;
+    default zaten mishar olduğundan acil değil). Bilinçli kabul: B7'ye kadar kategori
+    linkleri 404, ana sayfa geçici sayfa seçici. Geri dönüş: iki nginx dosyasını git'ten
+    geri al + `nginx -s reload`.
+  - **SIRADAKİ ADIM → Faz B2:** navigasyon içi arama paneli (canlı öneri — mevcut
+    `products?search` sorgusuna bağlanacak; popüler aramalar geçici statik, kalıcısı E11).
+
+- **2026-07-07 — filtre_rengi insert'i sonrası sayfa yavaşlaması çözüldü (3 katman):**
+  - **Kök neden 1 (ASIL suçlu): bayat Postgres istatistikleri.** 1.27M satırlık filtre_rengi bulk
+    insert'inden sonra `ANALYZE` çalıştırılmamıştı; planner `product_variant_attributes` join'lerinde
+    kötü plan seçiyordu. Tek satır `ANALYZE catalog.product_variant_attributes` ile Kadın kategori
+    listesi **5.8s → 0.009s**, kategori facets 0.8s → 0.009s oldu. **DERS: her toplu insert'ten
+    sonra ANALYZE çalıştır** (bkz. `feedback_analyze_after_bulk_insert.md`).
+  - **Kök neden 2: `/products/facets` zaten yapısal olarak ağırdı** (tüm varyant-attribute
+    satırlarını belleğe çekip C#'ta topluyordu — insert sonrası 3.7M satır, ~10 sn). Yeni sayfa
+    tasarımı grid'i facet'lerle birlikte beklettiği için "Tüm Ürünler" 10 sn'ye kilitleniyordu.
+    **Fix (3 parça):** (a) `GetStoreFacetsQuery.BuildFacets` DB tarafında toplanacak şekilde
+    yeniden yazıldı (Distinct→GroupBy→Count; IQueryable productIds overload'ı eklendi, 90K id
+    materialize edilmiyor; fiyat Min/Max da SQL'de) — 10s→~4s; (b) tüm-katalog facet'i
+    **IMemoryCache** ile 15 dk cache'leniyor (`AddMemoryCache()` Program.cs'e eklendi; Redis bu
+    ortamda kullanılamadığı için süreç-içi cache — arama filtreli istekler cache'lenmez);
+    (c) frontend `_renderListing` artık facet'leri BEKLEMİYOR — grid ürünler gelir gelmez render
+    ediliyor, filtre paneli facet cevabı gelince ayrıca doluyor (token guard ile sayfa değişimi
+    yarışı korumalı).
+  - İzole test (`scratchpad/facettest` console app — canlıda deneme-yanılma yapılmadı):
+    yeni BuildFacets ~3.5-6s; cache'le ilk istek sonrası anlık.
+  - Ölçümler (ANALYZE sonrası, eski binary): kategori products 0.009s, kategori facets 0.009s,
+    ürün detay 0.56s, ürün listesi 1.1s. `products/facets` restart sonrası ilk çağrıda ~4-6s
+    (arka planda, sayfayı bloklamaz), sonrasında cache'ten anlık.
+  - `index.html` asset sürümü `?v=20260707a`'ya yükseltildi (immutable cache bust).
+  - Publish edildi; **`sudo systemctl restart ecspros` kullanıcıda bekliyor** (frontend değişikliği
+    bind-mount ile zaten canlı; restart yalnızca facets DB-aggregation + IMemoryCache için gerekli).
+
+- **2026-07-06/07 (gece) — "renk" → "filtre_rengi" eşlemesi yapıldı, ürün listesi renk filtresi artık gerçek çalışıyor:**
+  - **Kullanıcı talebi:** "Ürün listesinde renk filtresinde ürünlerin 'Filtre Rengi' özellik değerleri kullanılacak."
+  - **Durum tespiti:** `filtre_rengi` attribute type'ının `definition.attribute_values`'ta 25 kürasyonlu
+    değeri (Siyah #000000 → Gümüş #B0BEC5, gerçek hex kodlarıyla) zaten TANIMLIYDI ama hiçbir
+    varyanta atanmamıştı (0 satır). Gerçek renk verisi tamamen "renk" attribute'unda (1.210.800
+    varyant-satırı, **2648 farklı serbest-metin değer** — "Koyugri", "Siyahbeyaz", "Kiremitvizon"
+    gibi birleşik/tutarsız isimler) duruyordu. Backend'in facet sorgusu (`GetStoreFacetsQuery.
+    BuildFacets`) zaten `filtre_rengi`'yi `IsColorType=true` olarak işaretliyordu — sadece veri
+    eksikti.
+  - **Yapılan:** `/tmp/.../scratchpad/map_colors.py` — Türkçe renk kökü + eş anlamlı kelime
+    sözlüğüyle (Bordo/Vişne→Kırmızı, Vizon/Taba/Camel→Bej/Kahve, Hardal/Safran→Sarı, Mint→Turkuaz,
+    Antrasit/Füme→Gri ailesi, İndigo→Lacivert, vb. — ~90 kural) 2648 değeri 25 kürasyonlu bucket'a
+    eşleyen bir sınıflandırıcı yazıldı. **Kapsama: %99,1** (1.199.641 / 1.210.800 varyant satırı
+    eşlendi). Eşlenemeyen ~11K satır gerçekten renk olmayan değerlerdi (Standart, Renkli, Rengarenk,
+    Çokrenkli, Şeffaf, Tint, Metalik, salt sayısal kodlar) — bilinçli olarak atlandı.
+    Birleşik renk isimleri (örn. "Siyahbeyaz") **birden fazla filtre_rengi değerine** eşlendi
+    (multi-value şema desteği zaten vardı, bkz. `project_multi_value_attributes_and_phase12_2026-07-02`).
+    `definition.*`'a **hiç yeni satır eklenmedi** (Altın Kural korundu) — sadece mevcut 25 bucket'a
+    eşleme yapıldı. Sonuç: `catalog.product_variant_attributes`'a 1.277.035 yeni filtre_rengi satırı
+    bulk-insert edildi (transaction içinde, NOT EXISTS ile idempotent).
+  - **Backend değişikliği:** `GetStoreFacetsQuery.BuildFacets`'ta "renk" artık facet listesinden
+    çıkarılıyor (`byType.Remove("renk")`) — 2082 farklı değeri olan kullanılamaz bir filtre yerine
+    artık sadece 25 değerli, gerçek hex'li `filtre_rengi` gösteriliyor. "renk" verisi kendisi
+    silinmedi/değişmedi, sadece listeleme filtresi olarak sunulmuyor (ürün kartı/detayında hâlâ var).
+    Publish edildi, **`sudo systemctl restart ecspros` kullanıcıda bekliyor**.
+  - **Beklenen yan etki (olumlu):** Ürün detay sayfasındaki görsel renk swatch'ları da artık
+    çalışmalı — `GetStoreProductDetailHandler`'daki `IsColor: AttributeTypeCode=="filtre_rengi"`
+    mantığı zaten oradaydı, sadece veri eksikti (önceki oturumlarda bilinen bir boşluktu).
+  - **Doğrulama (restart sonrası yapılmalı):** `/api/store/catalog/products/facets` çağrısında
+    `filtre_rengi` (25 değer, hex'li) görünmeli, `renk` artık listede olmamalı; ürün listesi
+    sayfasında sol filtrede gerçek renk swatch'ları görünmeli.
+
+- **2026-07-06 (gece) — Misharix tasarım sistemi Faz 0+1 portu (Navigasyon+Ana Sayfa+Liste+Detay):**
+  - **Kapsam kararı (kullanıcı onaylı):** `/opt/misharixWebSites` (ayrı ASP.NET+Tailwind prototipi)
+    tam kapsamlı planla ECSProsAI storefront'a portlanacak — Faz 0 (Tailwind build altyapısı) + Faz 1
+    (Nav/Home/Liste/Detay) bu oturumda uygulandı; Faz 2 (Sepet-Checkout), Faz 3 (Hesabım), Faz 4
+    (Kurumsal/CMS), Faz 5 (Değerlendirmeler) plan dosyasında tanımlı, sonraki oturumlara bırakıldı.
+    Plan: `/home/yalcin/.claude/plans/clever-tumbling-hellman.md` (referans için okunabilir, ama
+    plan dosyaları kalıcı değildir — asıl kaynak bu PROGRESS.md notu ve kod).
+  - **Faz 0 — Tailwind build:** `store/package.json` (yeni, `@tailwindcss/cli`), `store/css/tailwind.css`
+    misharix'ten **birebir kopyalandı** (11.547 satır, `@source` sadece `../index.html` + `../js`
+    olarak değiştirildi — geri kalan `@theme`/`@layer base`/`@layer components` aynen korundu, elle
+    çeviri yapılmadı). `npm run css:build` → `store/css/site.css` (828KB, minified). `main.css` artık
+    kullanılmıyor (silinmedi, referans için duruyor). `.gitignore`'a `node_modules/` eklendi.
+  - **`store/js/site.js` (yeni, ~700 satır):** Misharix'in `wwwroot/js/site.js`'inden (4388 satır)
+    gerçekten paylaşılan/global parçalar portlandı: sayfa-modülü registry (`msRegisterPageModule`/
+    `msRunPageModules`), lazy-load (IntersectionObserver, `.lazy-infinite-on` opt-in), genel modal
+    (`ms-ornek-modal`), filtre akordiyonu, sıralama select'i, özel select, mobil menü aç/kapa, arama
+    paneli, sepet dropdown, mega menü hover/click, footer akordiyonu, ürün kartı davranışları
+    (mini galeri hover/touch, favori kalp animasyonu — **localStorage bazlı, backend'i yok**, renk
+    tooltip), ürün detay galerisi (thumb rail + sürükle-geçiş + lightbox modal).
+    **Bilinçli sadeleştirmeler:** infinite-scroll motoru Misharix'te statik `<template>` klonlayan bir
+    demo motoruydu — burada **gerçek API sayfalamasıyla** çalışan bir motora dönüştürüldü
+    (`window.msInfiniteLoaders[ad]` — sayfa kendi yükleyicisini kaydeder). Ürün detay galerisinde
+    Misharix'in hover-zoom lens'i ve modal pinch-zoom'u **yok** (basit lightbox var) — fast-follow.
+    Kampanya şeridi, görsel arama, giriş/kayıt modalleri bu Faz'da **yok** (veri/kapsam yok).
+  - **Mimari:** `data-ms-page-module="..."` listesi `<body>` etiketine eklendi (ornek-modal, filtre-
+    bloklari, siralama-select, ozel-select, gorunum-carousel, urun-karti, urun-detay-resim, magaza-
+    menu, footer-akordiyon, tab-grubu) — `window.msRunPageModules(document)` her route değişiminde
+    çağrılır (idempotent, WeakMap ile). `app.js`'teki API client/Cart/LS veri mantığı **korundu**,
+    sadece render fonksiyonları (`prodCardHtml`, `listingHtml`, `pageHome`, `pageProduct`, `initNav`,
+    `renderCartPanel`) `ms-` class'larına geçirildi. Ölü kod temizlendi (`buildPagination`,
+    `prodSwatchClick`, `quickAdd` — infinite-scroll ve gerçek ürün detay sayfası bunların yerini aldı).
+  - **Bulunan ve düzeltilen 4 gerçek bug** (headless Chromium ile doğrulama sırasında bulundu):
+    (1) `#homeFeat` grid'inde `lazy-infinite-on` class'ı eksikti → hiç görsel yüklenmiyordu.
+    (2) Mega menü üst linkleri `.ms-magaza-menu-kaydirma-grubu` sarmalayıcısı olmadan doğrudan
+    2-kolonlu CSS grid'e ekleniyordu → satır kaydı bozuk sarıyordu; sarmalayıcı eklendi.
+    (3) Ürün detay lightbox modalına temel `ms-ornek-modal` class'ı eksikti → modal sayfa
+    yüklenir yüklenmez açık görünüyordu (varsayılan gizli state'i CSS'te bu class'a bağlı).
+    (4) `LS.renderFacets()` artık var olmayan `#filterPanel` id'sini arayıp erken çıkıyordu →
+    filtre facet'leri hiç render olmuyordu; kontrol kaldırıldı.
+  - **Doğrulama:** root'suz headless Chromium (`reference_headless_chromium_no_root` tarifi) ile
+    canlı sitede ana sayfa/liste/ürün detay/mobil menü uçtan uca test edildi — **0 konsol hatası**.
+    Sepet API entegrasyonu (`dpAddToCart`→API→badge→dropdown) doğrulandı, hatasız.
+  - **Bilinmesi gereken önemli veri durumu (kod hatası DEĞİL):** `inventory.inv_stocks` tablosunda
+    sadece 249 satır var ve **hiçbiri pozitif kullanılabilir stok içermiyor** (`Quantity -
+    ReservedQuantity <= 0` her yerde) — yani canlı katalogda şu an HİÇBİR ürün gerçek stokla
+    "Sepete Ekle" gösteremiyor, her yerde "Seçim Yapın" (devre dışı) görünüyor. Bu Faz 1'in bir
+    regresyonu değil, önceki app.js'te de aynı veriye dayanıyordu — sadece bu oturumda fark edildi.
+    Stok verisi ayrı bir konu (muhtemelen ERP senkronizasyonu hiç çalışmamış).
+  - **`ms-urun-detay-renk-listesi` (görsel renk swatch) boş kalıyor:** çünkü katalogda "filtre_rengi"
+    attribute'u hâlâ hiç populate edilmemiş (önceden bilinen boşluk); "renk" attribute'u generic
+    `ms-beden-secim` listesi olarak (Beden gibi) düz metin pilleri şeklinde render ediliyor — bu
+    davranış Faz 1 öncesi app.js'te de aynıydı, regresyon değil.
+  - **Sıradaki adım:** Faz 2 (Sepet→Teslimat→Ödeme→Sipariş Tamamlandı + giriş/kayıt modalı + misafir
+    sepeti `POST /cart/merge` ile üyeye taşıma) — plan dosyasında detaylı.
+
+- **2026-07-06 (akşam) — Ürün detay "resimler tekrarlı" sorunu kökten çözüldü:**
+  - **Kök neden 1 — DB'de 651.165 birebir çift resim satırı** (toplam aktif 1.465.086'nın %44'ü):
+    eski MySQL `apurunresimleri` aynı (ürün, varyant, dosya) kaydını birden çok satırla tutuyor,
+    MigrationTool Faz 7 bunları aynen kopyalıyordu. Handler'daki bellek-içi dedupe bunu store
+    detayında maskeliyordu ama her migration yeniden çalıştırıldığında çiftler geri geliyordu.
+    **Temizlik:** çiftler soft-delete edildi (kapak tercihli: `IsVariantCover DESC` sıralamasıyla
+    teki tutuldu) → 813.921 aktif satır kaldı, 0 çift grup, hiçbir varyant kapak kaybetmedi.
+  - **Kök neden 2 — MigrationTool Faz 7 tekilleştirmiyordu:** `seenTargetKeys`
+    (productGuid, variantGuid, fileName) HashSet'i eklendi; yeniden çalıştırma artık çift üretmez.
+  - **Kök neden 3 — karışık renk galerisi:** kendi görseli olmayan varyantlar TÜM renklerin
+    ürün-düzeyi (VariantId=null) havuzuna düşüyordu (örn. P-00010460: 18 resim = aynı 3 poz × 6 renk;
+    bu ürün-düzeyi satırlar, `variantMap`'te bulunamayan eski varyantların görsellerinden oluşuyor).
+    **Fix:** `GetStoreProductDetailHandler` renk grubunu artık `filtre_rengi` YOKSA `renk` ekseniyle
+    kuruyor; birleştirilen listeler dosya adına göre teke iniyor (SQL DISTINCT değil, bellek içi).
+  - **İkinci katman (P-00022181 raporu üzerine bulundu):** Eski MySQL'de İKİ resim seti var
+    (`dfresimsetleri`: 1=Varsayılan 775K satır, 2=Julude 691K satır) ve **197.078 varyantın
+    resimleri her iki sette de kayıtlı** — aynı fotoğraf set başına AYRI dosya adıyla
+    (`…_5639.webp` / `…_5650.webp`, md5 birebir aynı; son ek set kopya id'si). İlk temizlik
+    (651K) dosya adı AYNI olan set kopyalarını zaten götürmüştü; dosya adı FARKLI olan 20.958
+    kalıntı ikinci geçişte soft-delete edildi (anahtar: ProductId+VariantId+SortOrder+
+    `REGEXP_REPLACE(FileName,'_[0-9]+(\.ext)$','\1')`). Aktif satır: 792.963; kapak kaybı 0.
+  - **MigrationTool Faz 7'ye set seçimi eklendi:** varyant başına tek resim seti alınır
+    (en çok resmi olan, eşitlikte küçük id) — `chosenSet` ön-taraması. Not: `imageSetMap`
+    isimle eşleşemeyince (legacy "Varsayılan" ≠ bizim "Varsayılan Resim Seti") tüm satırlar
+    zaten Julude setine yığılıyormuş; set bilgisi PG'de ayrıştırıcı olarak kullanılamadı,
+    o yüzden dosya adı son eki kullanıldı.
+  - **Handler'a son kural:** ürün-düzeyi (VariantId=null) havuz, üründe HİÇ varyant-bağlı
+    görsel yoksa kullanılır; varsa görselsiz renk boş döner (UI görseli olan ilk varyanta
+    düşüyor) — P-00010460'ta resmi hiç olmayan Kırmızı'nın 18'lik karışık galerisi bununla kapandı.
+  - Yeni binary publish edildi; **`sudo systemctl restart ecspros` kullanıcıda** (şifresiz sudo yok).
+  - Doğrulama: P-00022181 restart'sız düzeldi (veri temizliği yetti — 5 tekil poz × tüm bedenler,
+    200 ürünlük API taramasında 0 exact + 0 set-kopyası dup). Restart sonrası P-00010460'ta
+    18'lik varyant kalmamalı ([3] olmalı).
+
+- **2026-07-06 — Mishar storefront canlıya alındı (menü + kategori listeleme + ürün detay):**
+  - **Kritik bulgu — canlı API stale binary'ydi:** `ecspros` servisi 2026-07-04'teki Catalog→Storefront
+    refactor'ünden (firm_platform_variants/products tablolarının kaldırılması) beri hiç yeniden
+    publish edilmemişti; `GET /api/store/catalog/products/{code}` TÜM platformlarda 500 veriyordu
+    (`catalog.firm_platform_variants` yok hatası). Kaynak kod zaten doğruydu — sadece
+    `dotnet publish` + `systemctl restart ecspros` gerekiyordu (kullanıcı restart'ı yaptı).
+  - **İkinci bug (bu oturumda bulundu ve düzeltildi):** `GetStoreProductDetailHandler.cs`, varyant
+    görsellerini sadece `filtre_rengi` attribute'una göre gruplu (`imgsByColor`) veya
+    VariantId=null (ürün düzeyi) görsellerle dolduruyordu. Gerçek katalogda (1.21M varyant)
+    `filtre_rengi` HİÇ atanmamış — VariantId'ye doğrudan bağlı görseller sessizce kayboluyordu.
+    Fix: `imgsByVariantId`'den doğrudan fallback eklendi (renk grubu → varyantın kendi görseli →
+    ürün düzeyi görsel). Tekrar publish + restart ile canlıya alındı.
+  - **`tools/MigrationTool/Program.cs`'e Faz 15 eklendi** (`Phase15_SeedChannelCategories`,
+    `dotnet run -- 15 <firmPlatformId>`) — cinsiyet×ürün grubu kesişimine göre (DB'den gerçek
+    sayılar çekilerek, ≥10 ürünlü kombinasyonlar) ChannelCategory ağacı kurar, slug bazlı upsert
+    (tekrar çalıştırılabilir). Mishar (`c900c659-8d0f-4754-9658-aa157ea3072e`) için çalıştırıldı:
+    **4 kök (Kadın/Erkek/Çocuk & Bebek/Ev & Yaşam) + 43 alt kategori**, hepsi `FillType=filter`
+    (117K ürünlük katalogda dinamik filtre, manuel ürün senkronu gerekmiyor).
+  - `store/js/app.js`'teki `CFG.FPID` demo_web'den mishar'a çevrildi — nginx artık `/store`'u
+    kök `/`'e yönlendiriyor (önceki oturumda değişmiş), yani canlı site artık `https://<ip>/`.
+  - Root'suz headless Chromium ile uçtan uca doğrulandı: ana sayfa, kategori listeleme (gerçek
+    görsel/fiyat/facet), ürün detay (galeri/fiyat/varyant seçimi) — hepsi çalışıyor, konsol hatası yok.
+  - **Bilinen, düzeltilmeyen iki boşluk (kapsam dışı bırakıldı, kullanıcıya bildirildi):**
+    (1) `filtre_rengi` hiç populate edilmediği için ürün detayında renk swatch/görsel-bazlı seçim
+    yerine düz metin buton listesi görünüyor (fonksiyonel ama görsel değil).
+    (2) Bazı ürün görselleri `cdn.misharitalia.com`'da (müşterinin kendi harici CDN'i) gerçekten
+    yok — CDN "RESİM HAZIRLANIYOR" placeholder görseli dönüyor (200 OK ama yer tutucu). Kaç
+    ürünü etkilediği ölçülmedi; bu ECSPros tarafında düzeltilecek bir şey değil.
+  - **Sıradaki adım:** tozlu/julude için aynı Faz 15'i çalıştırmak (istenirse), veya
+    `filtre_rengi`/CDN boşluklarının araştırılması.
+
+- **2026-07-06 (devam) — Kategori ürün listesi performans sorunu:**
+  - Kullanıcı "kategori ürün listesi çok yavaş" bildirdi. Kök neden: `GetChannelCategoryProductsQuery.HandleColorMode`
+    (renk-kartı listeleme), büyük `FillType=filter` kategorilerde (10K+ ürün) TÜM varyant+attribute
+    satırlarını uygulamaya çekip bellekte (LINQ-to-Objects) grupluyordu — kategori boyutuyla orantılı,
+    sayfa boyutuyla değil. Ölçüm: Kadın›Pantolon (22.7K ürün) 2.4sn, Kadın kökü (~84K ürün) 6.3sn.
+  - **Uygulanan düzeltme (canlıda, kalıcı):** `allVariantAttrs` sorgusu artık sadece primary-axis
+    attribute type'ı çekiyor (ör. "beden" atlanıyor) ve `ColorNameI18n`/`HexCode` bu toplu sorgudan
+    kaldırıldı — renk adı artık sadece SAYFALANMIŞ ~24 öğe için ayrı, küçük bir sorguyla çekiliyor
+    (`HexCode` zaten hiç kullanılmıyormuş, tamamen kaldırıldı). Sonuç: Kadın›Pantolon ~2.1sn,
+    Kadın kökü ~4.8sn (~%10-25 iyileşme, doğrulandı — aynı toplam sayı 40.799 korunuyor).
+    Küçük/orta kategoriler (43 kategorinin çoğu) zaten 0.16sn-1.5sn arasında, sorun değil.
+  - **Redis cache denemesi BAŞARISIZ — geri alındı, kod şu an cache'siz durumda:** `ICacheService`
+    (`Shared.Infrastructure/Caching`) hiç kullanılmıyordu, `Shared.Contracts`'a taşınıp
+    `GetChannelCategoryProductsQueryHandler`/`GetChannelCategoryFacetsQueryHandler`'a wire edildi.
+    Ama production Redis **NOAUTH/AuthenticationFailure** veriyor — appsettings.Production.json'daki
+    şifre (`EcsPros2025RedisPass!`) docker-compose.yml'dekiyle aynı görünüyor ama ÇALIŞAN container
+    farklı bir şifreyle ayağa kalkmış olmalı (muhtemelen `docker compose restart` `command:`'ı
+    yeniden uygulamıyor — gerçek çözüm `sudo docker compose up -d redis` ile container'ı yeniden
+    OLUŞTURMAK, sadece restart etmek değil). Bu denendi (kullanıcı restart etti) ama hata devam etti —
+    muhtemelen kullanıcı da sadece `restart` kullandı (`up -d` değil), ya da başka bir uyuşmazlık var.
+    **Cache kodu güvenlik için tamamen geri alındı** (2 kez düzeltip 2 kez geri almak zorunda kalındı,
+    ilk denemede Redis timeout'u istekleri 6sn'ye kadar YAVAŞLATMIŞTI). `ICacheService` arayüzü
+    `Shared.Contracts`'ta duruyor (zararsız, kullanılmıyor) ama implementasyon/wiring geri alındı.
+    **Redis şifresi konusunda ben kimlik doğrulama denemesi YAPMADIM** (auto-mode credential-guessing
+    olarak engellendi, doğru bir engelleme) — bu tamamen kullanıcının kontrol etmesi gereken bir konu.
+  - **Redis, container yeniden oluşturulduktan SONRA da denendi — daha da başarısız oldu:**
+    Kullanıcı `sudo docker exec ecommerce-redis redis-cli -a '<şifre>' ping` ile Redis'in şifreyi
+    doğru kabul ettiğini kanıtladı (**PONG** döndü). Cache kodu 3. kez eklendi, bu sefer try/catch
+    (Redis erişilemezse sessizce DB'ye düş) + `AbortOnConnectFail=false` + `ConnectTimeout=2000`
+    ile daha dayanıklı hale getirildi. Sonuç: **DAHA DA KÖTÜ** — Kadın kökü 4.8sn'den 15-22sn'ye
+    çıktı (hem cold hem "warm" istekler). Redis şifre olarak çalışıyor ama .NET/StackExchange.Redis
+    client'ının bu ortamda (network/timeout/retry davranışı belirsiz) ciddi bir uyumsuzluğu var —
+    kök neden bulunamadı. **Cache kodu 3. ve SON kez tamamen geri alındı, bu oturumda Redis
+    tamamen bırakıldı.** `ICacheService` arayüzü `Shared.Contracts`'ta duruyor (zararsız,
+    kullanılmıyor), implementasyon/wiring/`DependencyInjection.cs` ayarları hepsi geri alındı.
+    Canlıda şu an sadece sorgu optimizasyonu aktif: Kadın›Pantolon ~1.8-2.9sn, Kadın kökü ~4.6-5.0sn
+    (restart sonrası doğrulandı, 0 Redis log satırı).
+  - **Kesin teşhis (4. ve son deneme — izole test + canlı zamanlama logları):** Kullanıcı "cache
+    nerede, sorun çözülmedi" diye haklı olarak itiraz etti. İzole bir standalone .NET konsol testi
+    yazıldı (production ile AYNI StackExchange.Redis 2.7.27 + Microsoft.Extensions.Caching.
+    StackExchangeRedis 8.0.14 sürümleri, aynı şifre) — **tamamen sorunsuz çalıştı** (bağlantı 136-187ms,
+    SET/GET 0-25ms). Bu, Redis'in, şifrenin ve kütüphanenin kesinlikle sorunsuz olduğunu kanıtladı.
+    Sonra cache kodu 4. kez eklendi ama bu sefer GEÇİCİ zamanlama enstrümantasyonuyla (Stopwatch +
+    ILogger.LogWarning, her adımda: GetAsync/SetAsync/DB compute/TOTAL). Canlıda gerçek loglar:
+    `GetAsync FAILED elapsedMs=5935`, `SetAsync FAILED elapsedMs=5715` — ikisi de TAM 5000ms
+    StackExchange.Redis timeout'una çarpıyor. Exception detayları: **her seferinde birebir aynı**
+    `state: ConnectedEstablishing`, `last-heartbeat: never`, `last-recv: 309` — bu, her istekte
+    yeni bir bağlantı denemesi YAPILMADIĞINI, tek bir paylaşılan bağlantı nesnesinin bir kere (muhtemelen
+    ilk kullanımda) handshake ortasında tıkanıp kaldığını ve process ömrü boyunca hep o bozuk
+    bağlantıya karşı timeout yediğini kanıtlıyor. **Kök neden: production sürecinin içinde paylaşılan
+    Redis multiplexer'ın İLK bağlantı kurulumu sırasında bir yerde takılıp kalması — kimlik bilgisi,
+    kütüphane veya Redis'in kendisiyle ilgisi yok.** İzole tek seferlik testlerle üretilemiyor (süreç
+    ortamına özgü, muhtemelen bir başlangıç zamanlaması/eşzamanlılık sorunu).
+  - **✅ ÇÖZÜLDÜ (5. deneme) — kök neden bir config anahtarı uyuşmazlığıymış:** `NOAUTH` hatasındaki
+    kritik ipucu ("Attempted command: ECHO" — yani AUTH hiç gönderilmemiş) sonunda doğru okundu:
+    uygulama Redis'e hep **ŞİFRESİZ** bağlanıyormuş. Base `appsettings.json`'da
+    `ConnectionStrings:Redis = "localhost:6379"` (şifresiz) vardı; production şifresi ise
+    `appsettings.Production.json`'da **standart olmayan** `Redis:ConnectionString` anahtarı
+    altındaydı. Kod `GetConnectionString("Redis")` çağırınca base'deki şifresiz değeri buluyordu
+    (null olmadığı için `?? configuration["Redis:ConnectionString"]` fallback'i de hiç devreye
+    girmemişti). İzole test çalışmıştı çünkü şifre elle yazılmıştı. **Fix:** hem
+    `src/ECSPros.Api/appsettings.Production.json` hem `publish/appsettings.Production.json`'da
+    (publish bu dosyayı ÜZERİNE YAZMIYOR — ayrı ayrı düzeltildi) Redis bağlantısı standart
+    `ConnectionStrings:Redis` anahtarına taşındı, eski anahtar kaldırıldı. Cache kodu geri eklendi
+    (try/catch'li dayanıklı desen), publish + restart sonrası doğrulandı:
+    **cache hit 11-19ms** (önceden 2-5.5sn), gerçek cold (hiç açılmamış sayfa) ~5.5sn → warm 11ms,
+    restart sonrası 0 Redis hatası. Facets endpoint'i de cache'li (17-19ms).
+  - **Kalan doğal davranış:** her (kategori, sayfa) kombinasyonunun İLK ziyaretçisi hâlâ DB maliyetini
+    öder (büyük kategorilerde 2-5.5sn), sonraki 10dk (TTL) içindeki herkes ~15ms alır. İstenirse
+    popüler kategorilerin 1. sayfalarını periyodik ısıtan bir background warmer eklenebilir.
+  - **Not:** `publish/appsettings.Production.json` publish ile kopyalanmıyor (elle yönetiliyor) —
+    gelecekte config değişikliklerinde İKİ dosyanın da güncellenmesi gerektiği unutulmamalı.
+
 - **2026-05-31 — Menü-Kategori mimarisi yeniden yapılandırması (`docs/menu-kategori.md` kararları uygulandı):**
   - **Category → Global (site-bağımsız):** `FirmPlatformId` kaldırıldı; migration: `RemoveFirmPlatformIdFromCategory`
   - **Yeni Storefront modülü** oluşturuldu: `NavigationMenu` + `NavNode` + `ChannelProduct` entity'leri; schema: `storefront`; migration: `InitialStorefront`
@@ -329,6 +639,56 @@
   - `SyncCategoryProducts` ve `GetStoreCategoryProductsQuery` preset-aware hale getirildi
   - Admin Panel: `/catalog/filter-presets` — liste + create/edit/delete modal, JSON editör, kullanım sayacı
   - CategoryDetailPage: Filtre Şablonu selector, preset özeti (collapsible JSON), override kurallar
+
+- **2026-07-02 — ERP entegrasyon anahtarları (erp_variant_data) + MigrationTool düzeltmesi:**
+  - `integration.erp_variant_data` tablosu eklendi (VariantId+FirmIntegrationId unique, JSONB Payload) — ERP anahtarları (Nebim modelCode/colorCode/sizeValue/barcode) normalize edilmeden, tamamen varyant bazlı saklanıyor (kullanıcı kararı)
+  - **`tools/MigrationTool/Program.cs` tamamen bozuktu** — definition/catalog şema ayrımından önce yazılmış eski `catalog_*` tablo adlarını hedefliyordu, `catalog.products`/`catalog.product_variants` canlıda 0 satırdı. Tüm dosya güncel şemaya göre düzeltildi (DEF/CAT şema sabitleri), 500'lük batch INSERT'e çevrildi (öncesi tek tek PgExec — saatler sürerdi)
+  - Canlıya yüklendi: **117.569 ürün, 1.210.800 varyant, 2.421.591 varyant-attribute, 1.465.086 resim, 1.210.800 erp_variant_data** satırı
+  - `core_integration_services`'a 'nebim' (ServiceType=erp), `core_firm_integrations`'a demo firma↔nebim bağlantısı eklendi (idempotent, Phase 11 içinde)
+  - Detaylar: `project_erp_variant_data_2026-07-02.md` (auto-memory)
+
+- **2026-07-02 — Çoklu değerli özellik desteği + Faz 12 (beden özellikleri/açıklama aktarımı):**
+  - **Çoklu filtre rengi tereddüdü çözüldü:** `catalog.product_attributes` ve `catalog.product_variant_attributes` unique index'i `(EntityId, AttributeTypeId)` → `(EntityId, AttributeTypeId, AttributeValueId)` olarak gevşetildi (migration: `MultiValueProductAttributes`). Artık bir ürün/varyant aynı attribute type için birden fazla değer taşıyabilir (örn. "Kırmızı-Mavi Çizgili" varyantı hem kırmızı hem mavi filtre rengi altında görünebilir). `SetProductAttributesCommand` buna göre güncellendi (eşleştirme artık AttributeTypeId+AttributeValueId çiftine göre, tek AttributeTypeId'ye göre değil).
+  - **Kök neden bulundu (P-00022000 örneği):** `apurunbedenozellikleri` (beden bazlı ölçüler: Göğüs/Bel/Üst-Alt Boy) ve `apurunaciklamalari` (serbest metin: Kalıp/Astar/Fermuar/Esneklik/Kumaş Özelliği/...) kaynak tabloları migration'a HİÇ dahil edilmemişti.
+  - **`tools/MigrationTool/Program.cs`'e Faz 12 eklendi:** `apurunbedenozellikleri` → `catalog.product_axis_sub_attribute_values` (Üst Boy + Alt Boy gibi aynı tipe düşen çakışmalar tek satırda etiketli metin olarak birleştirildi, örn. "Üst Boy (Cm): 42 / Alt Boy (Cm): 33" — yeni attribute_type eklemeden); `apurunaciklamalari` → `catalog.product_attributes` (var olan tiplere eşlenen temiz anahtarlar: Kalıp/Astar/Fermuar/Esneklik/Taban Özelliği/Taban Yükseklik/Dış Materyal/Çanta Ağzı/Askı Tipi-Boyu/İç Cep/Balen/Dolgu/İç Yüzey/Topuk Boyu — Zipper/Underwire/Platform Boy İngilizce eş anlamlıları da aynı tiplere yönlendirildi).
+  - **Kumaş Özelliği (kompozisyon metni, örn. "%97 Polyester %3 Likra") bilinçli olarak picklist'e değer olarak eklenmedi** (318+ dağınık varyant, kumas_turu'nün temiz halini bozar) — bunun yerine `kumas_turu` tipi üzerinde `ProductAttribute.CustomValue` JSON alanına serbest metin olarak yazıldı.
+  - **Definition şemasına hiç yeni attribute_type eklenmedi** (kullanıcı talimatı) — sadece var olan tiplere yeni attribute_values eklendi (6094 → 7913). `primer` tipi definition şemasında artık yok (önceki oturumun notu güncel değilmiş), Faz 12 bunu tespit edip uyarı verdi ve sessizce atladı.
+  - Arapça i18n eş anahtarları ve "Ekstra Askı"/"Açıklama ve Uyarı" bu geçişte kasıtlı olarak atlandı (ayrı takip konusu, gerekirse ileride eklenebilir).
+  - Önce P-00022000 üzerinde test edildi (kullanıcı onayı ile), doğrulandı, sonra tüm 117.569 ürüne uygulandı: **21.321 axis-sub-attribute satırı + 352.453 ürün özelliği + 72.039 kumaş kompozisyonu**. Faz idempotent (yeniden çalıştırılabilir, kendi yazdığı satırları temizleyip yeniden yazıyor).
+  - **Sıradaki adım:** Admin UI'da çoklu değerli attribute girişi (örn. filtre rengi için çoklu seçim) henüz eklenmedi — backend/şema hazır, arayüz ayrı bir iş.
+
+- **2026-07-02 — Ürün Özellikleri sekmesi şema tamamlama (Faz 13 sonrası bulunan takip işi):**
+  - Kullanıcı P-00021204'te Faz 13 ile aktarılan verilerin panelde görünmediğini bildirdi. Kök neden: "Özellikler" sekmesi `product.attributes` değil, ÜRÜN GRUBUNUN `product_group_attributes` şemasını render ediyor — şemada olmayan bir attribute type'ın hiçbir yerde görünecek alanı yok (veri doğru olsa bile).
+  - Gerçek bug DEĞİL: Cinsiyet/Esneklik/Kalıp zaten şemada vardı ve doğru gösteriliyordu (kullanıcının ekran görüntüsüyle doğrulandı). Görünmeyen 6 tip (Boy, Kumaş Türü, Yaş Grubu, Malzeme zaten vardı, Astar Durumu, Fermuar) hiçbir grup şemasında (Marka) veya bu ürünün grubunda (diğerleri) tanımlı değildi.
+  - Canlı DB'de hangi grupların bu 5 tip (boy/kumas_turu/yas_grubu/astar_durumu/fermuar) için gerçek ürün verisi olduğu sorgulandı (151 grup×tip kombinasyonu, `project_group_schema_completion_2026-07-02.md`), veri kanıtına göre `Cloth()`/`Shoe()`/`Acc()` base attribute'lerine eklendi (Marka hariç — o panelde attribute olarak gösterilmiyor, ayrı konu).
+  - Canlıya direkt SQL ile 225 yeni `product_group_attributes` satırı eklendi (ON CONFLICT DO NOTHING, mevcut MAX(SortOrder)+n ile). `DatabaseSeeder.cs`'deki `Cloth()`/`Shoe()`/`Acc()` helper'ları da güncellendi (gelecek fresh install'lar için, sort 100+).
+  - Doğrulama: gerçek Chromium (playwright-core, sudo olmadan .deb paketlerinden çıkarılan shared library'lerle) ile canlı panelde login olup sayfa render edildi, Cinsiyet/Esneklik/Kalıp'ın doğru göründüğü teyit edildi.
+  - **Takip (performans):** Kullanıcı şema tamamlama sonrası "etiketler anında, değerler 10 saniye sonra doluyor" bildirdi. Kök neden: `GET /catalog/attribute-types` 15+ saniye sürüyordu (`GetAttributeTypesQueryHandler`'daki "kaç üründe kullanılıyor" sayımı `GroupBy(...).Select(g => g.Select(x=>x.ProductId).Distinct().Count())` şeklinde yazılmıştı — EF Core bunu grup başına korelasyonlu alt sorguya çeviriyor, artık 708K+2.4M satırlık tablo üzerinde çok yavaş). Önce sorgu `Select(...).Distinct().GroupBy(...).Count()` şeklinde yeniden yazıldı (15s→4s), sonra bu sayımın SADECE `AttributeTypeDetailPage`'de kullanıldığı görülüp yeni `includeCounts` parametresi eklendi; `ProductDetailPage`/`ProductGroupDetailPage`/`FilterBuilder` artık `includeCounts=false` ile çağırıyor (4s→~1s). `dotnet publish` + `systemctl restart ecspros` (kullanıcı kendi terminalinde çalıştırdı, bu oturumda sudo şifresi yok) + `npm run build` ile canlıya alındı. Detaylar: `project_group_schema_completion_2026-07-02.md`.
+
+- **2026-07-02 — Faz 13: apurunvaryanttipdegerleri (ürün bazlı gerçek özellik değerleri) migrasyonu:**
+  - **Kök neden (P-00021204 örneği, kullanıcı bildirdi):** `apurunvaryanttipleri` sadece "bu ürüne bu tip atanmış" bilgisini taşıyordu, DEĞERİ taşımıyordu. Gerçek değer (örn. Cinsiyet=Kadın) `apurunvaryanttipdegerleri` tablosunda (1.17M satır) duruyordu ve bu tablo migration'a HİÇ dahil edilmemişti. Sadece marka (Faz 5), varyant eksenleri (Faz 6, apurunvaryantlari), ve apurunaciklamalari serbest metninden parse edilen birkaç tip (Faz 12: kalıp/astar/fermuar/esneklik) aktarılıyordu. Faz 10 (cinsiyet) ise hiç çalıştırılmamıştı ve zaten ürün bazlı değil sınıf bazlı varsayım kullanıyordu.
+  - `tools/MigrationTool/Program.cs`'e Faz 13 eklendi: `apurunvaryanttipdegerleri` → `catalog.product_attributes`, ON CONFLICT DO NOTHING (Faz 10/12 ile çakışmaları güvenle atlıyor). Renk/Beden (varyant ekseni) ve ~15 ops/takip tipi (Tedarikçi, Kampanya Kodu, Ürün Grubu, vb.) atlanıyor. 3 yeniden adlandırılmış tip yönlendirildi: Kumaş Tipi(27)→`kumas_turu`, Yaka Stili(33)→`yaka_tipi`, Meteryal(42)→`malzeme`. Cep(30)/Tipi(35)/Stil(31) belirsiz/kasıtlı kaldırılmış, atlanıyor.
+  - Önce P-00021204 üzerinde test edildi (kullanıcı onayı ile), doğrulandı, sonra tüm 117.569 ürüne uygulandı: **166.786 yeni product_attributes satırı**, cinsiyet 0→115.701 ürün, kumaş türü 84.200, yaş grubu 15.566, boy 11.237 ürün.
+  - Detaylar: `project_phase13_product_attribute_values_2026-07-02.md` (auto-memory)
+
+- **2026-07-04 — Kanal-özel ürün verisi Catalog'dan Storefront'a taşındı (mimari düzeltme):**
+  - Kullanıcı kararı: platform bazlı ürün bilgisi (fiyat override, ileride URL/SEO) `Catalog` şemasında değil `Storefront` şemasında olmalı — tamamen satış kanalına özel veri, bir firmanın çok sayıda kanalı olabilir. Analiz + plan: `docs/urun-url-kanal-mimarisi.md`.
+  - `Catalog.FirmPlatformProduct`/`FirmPlatformVariant` silindi, `catalog.firm_platform_products`/`firm_platform_variants` tabloları migration ile drop edildi (0 satırdı, veri kaybı yok).
+  - `Storefront.ChannelProduct`'a `NameI18n`/`ShortDescriptionI18n` eklendi; yeni `Storefront.ChannelVariant` (`storefront.channel_variants`) eski fiyat alanlarını taşıyor. Migration'lar canlıya uygulandı.
+  - Fiyatlandırma command/query'leri Storefront.Application'a taşındı (`SetChannelVariantPriceCommand`, `GetChannelVariantPricingQuery`), API rotaları `CatalogController`'dan `NavigationController`'a (`/api/navigation/channel-variants/...`), admin `ProductDetailPage.tsx` güncellendi.
+  - **Yeni port: `IChannelPricingService`** (`Shared.Contracts`, `IStockService` ile aynı desen) — Catalog.Application'daki mağaza sorguları (`GetStoreProductsQuery`, `GetStoreProductGroupProductsQuery`, `ProductFilterHelper`) ve Api'deki `GetStoreProductDetailHandler` artık kanal fiyatını bu servis üzerinden okuyor (Catalog, Storefront'a doğrudan referans veremez — döngüsel olur). `StorefrontChannelPricingService` implementasyonu Storefront.Infrastructure'da, DI'a kayıtlı.
+  - `VariantPriceHistory` bilinçli olarak Catalog'da bırakıldı (taşınmadı).
+  - Tüm çözüm + `tools/MigrationTool` temiz derleniyor.
+  - **Sıradaki adım:** `docs/urun-url-kanal-mimarisi.md` §5'teki kalan açık sorular netleşmeden Slug/SEO/robots alanları ve `FirmPlatform.Domain` gerçek kolonu eklenmeyecek.
+
+- **2026-07-04 (devam) — Gerçek Firma/Site oluşturma + plurunler aktarımı (Faz 14):**
+  - Kullanıcı talimatı: seed/demo Firma+FirmPlatform silinsin, sadece platform 1/2/41 (tipi `site`) + Mişaroğlu/Eldi Tekstil (2 firma) aktarılsın.
+  - `tools/MigrationTool/Program.cs`'e `Phase14_FirmsAndChannelData` eklendi, production'da çalıştırıldı (`dotnet run -- 14`).
+  - Seed firmalar (Code≠`misaroglu`/`eldi`) + bağlı `core_firm_platforms`/`core_firm_integrations`/`core_cargo_rules`/`core_firm_notification_settings` silindi; storefront demo verisi (`nav_menus`, `channel_categories`, `channel_product_groups`, eski FirmPlatformId'lere göre) de temizlendi (cross-schema FK olmadığı için elle).
+  - 2 gerçek firma (`misaroglu`, `eldi` — vergi bilgisi legacy `dfinvoiceinfo`'dan) + 3 gerçek site (`tozlu`→misaroglu, `julude`→eldi, `mishar`→misaroglu, hepsi `PlatformType=site`) upsert edildi. Domain bilgisi `FirmPlatform.Settings` JSONB'sinde (`{"domain":"tozlu.com"}` vb.) — ayrı bir `Domain` kolonu henüz yok.
+  - `plurunler` (platformId 1/2/41) → platform başına **361.907 ChannelVariant + 117.495 ChannelProduct** aktarıldı (Price/CompareAtPrice/IsActive). `yayinda` bilinçli olarak kullanılmadı (veri incelemesinde tutarsız/anlamsız çıktı — platform 1/2'de neredeyse hep 0, sadece 41'de tutarlı; ayrıca int 0/1/2 değerleri var, temiz bir bayrak değil); `satista` tek başına `ChannelVariant.IsActive` oldu.
+  - Faz idempotent (Code'a göre firma/platform upsert, ürün verisi unique index üzerinden ON CONFLICT DO UPDATE).
+  - Detaylar: `docs/urun-url-kanal-mimarisi.md` (2026-07-04 revizyon notları) + `project_product_url_channel_analysis_2026-07-04.md` (auto-memory).
 
 ---
 

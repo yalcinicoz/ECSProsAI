@@ -11,6 +11,16 @@ public class FirmIntegration : BaseEntity
     public Dictionary<string, object> Settings { get; set; } = new();
     public bool IsActive { get; set; } = true;
 
+    public string? ContractNumber { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public string Status { get; set; } = "draft"; // draft, active, expired, cancelled
+    public Dictionary<string, object>? Terms { get; set; }
+    public string? ContactName { get; set; }
+    public string? ContactPhone { get; set; }
+    public string? ContactEmail { get; set; }
+    public string? DocumentUrl { get; set; }
+
     public Firm Firm { get; set; } = null!;
     public IntegrationService IntegrationService { get; set; } = null!;
 }

@@ -74,14 +74,27 @@ var npgsqlDataSource = new NpgsqlDataSourceBuilder(connectionString)
     .Build();
 builder.Services.AddSingleton(npgsqlDataSource);
 
-// ─── Controllers ───────────────────────────────────────────────────
-builder.Services.AddControllers()
+// ─── Controllers + Storefront Razor Views ──────────────────────────
+// Storefront sayfaları da bu host'tan render edilir (Razor taşıma planı 3.1);
+// API controller'ları etkilenmez, JSON ayarları aynen geçerli kalır.
+var mvcBuilder = builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+
+// Dev'de cshtml değişikliği rebuild istemesin
+if (builder.Environment.IsDevelopment())
+    mvcBuilder.AddRazorRuntimeCompilation();
+
+// Storefront tema çözümü (varsayılan tema kök ~/Views ağacında — bkz. StoreThemeViewLocationExpander)
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.Razor.RazorViewEngineOptions>(options =>
+    options.ViewLocationExpanders.Add(new StoreThemeViewLocationExpander()));
+
+// ─── Süreç-içi cache (facet gibi ağır, nadiren değişen sorgu sonuçları için) ───
+builder.Services.AddMemoryCache();
 
 // ─── MediatR ───────────────────────────────────────────────────────
 builder.Services.AddMediatR(cfg =>
@@ -136,6 +149,10 @@ builder.Services.AddSignalR(options =>
     options.EnableDetailedErrors = builder.Environment.IsDevelopment();
 });
 builder.Services.AddScoped<IRealtimeNotificationService, SignalRNotificationService>();
+
+// ─── Storefront (Razor) servisleri ─────────────────────────────────
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IStoreContext, StoreContext>();
 builder.Services.AddHostedService<DashboardMetricsWorker>();
 builder.Services.AddSingleton<ECSPros.Api.Services.MigrationService>();
 
@@ -226,6 +243,10 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseSwagger();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "ECSPros API v1"));
 
+// Storefront statik varlıkları (wwwroot: css/js/ikons/images/video/fontawesome —
+// misharix ile aynı kök yollar, partial'lardaki /ikons/... referansları değişmeden çalışır)
+app.UseStaticFiles();
+
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -243,7 +264,39 @@ await DatabaseSeeder.SeedLanguagesAsync(app.Services);
 // Temel sistem seed'i her ortamda çalışır
 await DatabaseSeeder.SeedAsync(app.Services);
 
-// Demo veri seed'i — idempotent, her ortamda çalışır
-await DemoDataSeeder.SeedAsync(app.Services);
+// Demo veri seed'i — sadece Development ortamında çalışır (production'da crash'e neden olur)
+if (app.Environment.IsDevelopment())
+    await DemoDataSeeder.SeedAsync(app.Services);
+
+// ─── Redis cache durum kontrolü (drift detektörü) ──────────────────
+// Her açılışta Redis'e bir yaz-oku denemesi yapıp sonucu loglar. Böylece şifre/ayar
+// drift'i (compose ↔ appsettings uyumsuzluğu vb.) gizemli yavaşlık olarak değil,
+// deploy anında journalctl'de tek satır olarak görünür. Arka planda çalışır — Redis
+// kapalıysa bile açılışı geciktirmez/bozamaz (ICacheService hata-güvenli).
+_ = Task.Run(async () =>
+{
+    try
+    {
+        var cache = app.Services.GetRequiredService<ECSPros.Shared.Contracts.ICacheService>();
+        if (cache is ECSPros.Shared.Infrastructure.Caching.NoOpCacheService)
+        {
+            app.Logger.LogWarning("Redis cache: YAPILANDIRILMAMIŞ (ConnectionStrings:Redis yok) — site cache'siz çalışıyor.");
+            return;
+        }
+
+        var sentinel = Guid.NewGuid().ToString("N");
+        await cache.SetAsync("startup:redis-check", sentinel, TimeSpan.FromMinutes(1));
+        var okunan = await cache.GetAsync<string>("startup:redis-check");
+
+        if (okunan == sentinel)
+            app.Logger.LogInformation("Redis cache: AKTİF ✓ (yaz-oku doğrulandı)");
+        else
+            app.Logger.LogWarning("Redis cache: ERİŞİLEMİYOR — site cache'siz çalışıyor. Muhtemel neden: şifre/ayar drift'i (docker-compose ↔ appsettings.Production.json) ya da container yeniden oluşturulmadı ('docker compose restart' requirepass değişikliğini UYGULAMAZ, 'docker compose up -d redis' gerekir).");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "Redis cache durum kontrolü tamamlanamadı.");
+    }
+});
 
 app.Run();

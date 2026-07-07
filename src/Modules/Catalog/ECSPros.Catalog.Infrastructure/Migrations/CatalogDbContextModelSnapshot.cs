@@ -62,9 +62,6 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
-                    b.Property<bool>("RequiresFilterColor")
-                        .HasColumnType("boolean");
-
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
 
@@ -79,7 +76,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
-                    b.ToTable("catalog_attribute_types", "catalog");
+                    b.ToTable("attribute_types", "definition");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.AttributeValue", b =>
@@ -106,165 +103,6 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                     b.Property<Dictionary<string, object>>("ExtraData")
                         .HasColumnType("jsonb");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<Dictionary<string, string>>("NameI18n")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AttributeTypeId");
-
-                    b.ToTable("catalog_attribute_values", "catalog");
-                });
-
-            modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.AttributeValueFilterColor", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("AttributeValueId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("FilterColorId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FilterColorId");
-
-                    b.HasIndex("AttributeValueId", "FilterColorId")
-                        .IsUnique();
-
-                    b.ToTable("catalog_attribute_value_filter_colors", "catalog");
-                });
-
-            modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.AttributeValueProperty", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("AttributeValueId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("SubAttributeTypeId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Value")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SubAttributeTypeId");
-
-                    b.HasIndex("AttributeValueId", "SubAttributeTypeId")
-                        .IsUnique();
-
-                    b.ToTable("catalog_attribute_value_properties", "catalog");
-                });
-
-            modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.CatalogSetting", b =>
-                {
-                    b.Property<string>("Key")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Value")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.HasKey("Key");
-
-                    b.ToTable("catalog_settings", "catalog");
-                });
-
-            modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.FilterColor", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("HexCode")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -290,124 +128,28 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Code")
-                        .IsUnique();
+                    b.HasIndex("AttributeTypeId");
 
-                    b.ToTable("catalog_filter_colors", "catalog");
+                    b.ToTable("attribute_values", "definition");
                 });
 
-            modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.FirmPlatformProduct", b =>
+            modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.CatalogSetting", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.HasKey("Key");
 
-                    b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("FirmPlatformId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<Dictionary<string, string>>("NameI18n")
-                        .HasColumnType("jsonb");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Dictionary<string, string>>("ShortDescriptionI18n")
-                        .HasColumnType("jsonb");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("FirmPlatformId", "ProductId")
-                        .IsUnique();
-
-                    b.ToTable("catalog_firm_platform_products", "catalog");
-                });
-
-            modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.FirmPlatformVariant", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("CompareAtPrice")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("FirmPlatformId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<decimal?>("Price")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<decimal?>("PriceMultiplier")
-                        .HasPrecision(18, 6)
-                        .HasColumnType("numeric(18,6)");
-
-                    b.Property<string>("PriceType")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("VariantId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("VariantId");
-
-                    b.HasIndex("FirmPlatformId", "VariantId")
-                        .IsUnique();
-
-                    b.ToTable("catalog_firm_platform_variants", "catalog");
+                    b.ToTable("settings", "definition");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ImageSet", b =>
@@ -415,6 +157,9 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("CdnBaseUrl")
+                        .HasColumnType("text");
 
                     b.Property<string>("Code")
                         .IsRequired()
@@ -467,7 +212,81 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
 
                     b.HasIndex("FallbackSetId");
 
-                    b.ToTable("catalog_image_sets", "catalog");
+                    b.ToTable("image_sets", "definition");
+                });
+
+            modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.Mannequin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("ChestCm")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Code")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DefaultWornSize")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Gender")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("HeightCm")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("HipCm")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LastName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("WaistCm")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("WeightKg")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("mannequins", "definition");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.Product", b =>
@@ -566,7 +385,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("\"Slug\" IS NOT NULL AND \"Slug\" <> ''");
 
-                    b.ToTable("catalog_products", "catalog");
+                    b.ToTable("products", "catalog");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ProductAttribute", b =>
@@ -614,10 +433,10 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
 
                     b.HasIndex("AttributeValueId");
 
-                    b.HasIndex("ProductId", "AttributeTypeId")
+                    b.HasIndex("ProductId", "AttributeTypeId", "AttributeValueId")
                         .IsUnique();
 
-                    b.ToTable("catalog_product_attributes", "catalog");
+                    b.ToTable("product_attributes", "catalog");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ProductAxisSubAttributeValue", b =>
@@ -670,7 +489,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                     b.HasIndex("ProductId", "AttributeValueId", "SubAttributeTypeId")
                         .IsUnique();
 
-                    b.ToTable("catalog_product_axis_sub_attribute_values", "catalog");
+                    b.ToTable("product_axis_sub_attribute_values", "catalog");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ProductGroup", b =>
@@ -720,7 +539,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
-                    b.ToTable("catalog_product_groups", "catalog");
+                    b.ToTable("product_groups", "definition");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ProductGroupAttribute", b =>
@@ -775,7 +594,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                     b.HasIndex("ProductGroupId", "AttributeTypeId")
                         .IsUnique();
 
-                    b.ToTable("catalog_product_group_attributes", "catalog");
+                    b.ToTable("product_group_attributes", "definition");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ProductGroupAxisSubAttribute", b =>
@@ -829,7 +648,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                     b.HasIndex("ProductGroupId", "AxisAttributeTypeId", "SubAttributeTypeId")
                         .IsUnique();
 
-                    b.ToTable("catalog_product_group_axis_sub_attributes", "catalog");
+                    b.ToTable("product_group_axis_sub_attributes", "definition");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ProductImage", b =>
@@ -903,7 +722,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
 
                     b.HasIndex("ProductId", "ImageSetId", "Status");
 
-                    b.ToTable("catalog_product_images", "catalog");
+                    b.ToTable("product_images", "catalog");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ProductImageSetMapping", b =>
@@ -951,7 +770,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                     b.HasIndex("ProductId", "ForSetId")
                         .IsUnique();
 
-                    b.ToTable("catalog_product_image_set_mappings", "catalog");
+                    b.ToTable("product_image_set_mappings", "catalog");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ProductPriceHistory", b =>
@@ -991,7 +810,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("catalog_product_price_history", "catalog");
+                    b.ToTable("product_price_history", "catalog");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ProductUnit", b =>
@@ -1051,7 +870,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                     b.HasIndex("VariantId", "UnitType")
                         .IsUnique();
 
-                    b.ToTable("catalog_product_units", "catalog");
+                    b.ToTable("product_units", "catalog");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ProductVariant", b =>
@@ -1115,7 +934,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                     b.HasIndex("Sku")
                         .IsUnique();
 
-                    b.ToTable("catalog_product_variants", "catalog");
+                    b.ToTable("product_variants", "catalog");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ProductVariantAttribute", b =>
@@ -1160,10 +979,10 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
 
                     b.HasIndex("AttributeValueId");
 
-                    b.HasIndex("VariantId", "AttributeTypeId")
+                    b.HasIndex("VariantId", "AttributeTypeId", "AttributeValueId")
                         .IsUnique();
 
-                    b.ToTable("catalog_product_variant_attributes", "catalog");
+                    b.ToTable("product_variant_attributes", "catalog");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ProductVariantImage", b =>
@@ -1211,7 +1030,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
 
                     b.HasIndex("VariantId");
 
-                    b.ToTable("catalog_product_variant_images", "catalog");
+                    b.ToTable("product_variant_images", "catalog");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ProductVideo", b =>
@@ -1278,7 +1097,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
 
                     b.HasIndex("ProductId", "ImageSetId", "Status");
 
-                    b.ToTable("catalog_product_videos", "catalog");
+                    b.ToTable("product_videos", "catalog");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.VariantPriceHistory", b =>
@@ -1328,7 +1147,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
 
                     b.HasIndex("VariantId");
 
-                    b.ToTable("catalog_variant_price_history", "catalog");
+                    b.ToTable("variant_price_history", "catalog");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.AttributeValue", b =>
@@ -1340,66 +1159,6 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("AttributeType");
-                });
-
-            modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.AttributeValueFilterColor", b =>
-                {
-                    b.HasOne("ECSPros.Catalog.Domain.Entities.AttributeValue", "AttributeValue")
-                        .WithMany("FilterColors")
-                        .HasForeignKey("AttributeValueId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ECSPros.Catalog.Domain.Entities.FilterColor", "FilterColor")
-                        .WithMany("AttributeValueMappings")
-                        .HasForeignKey("FilterColorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("AttributeValue");
-
-                    b.Navigation("FilterColor");
-                });
-
-            modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.AttributeValueProperty", b =>
-                {
-                    b.HasOne("ECSPros.Catalog.Domain.Entities.AttributeValue", "AttributeValue")
-                        .WithMany("Properties")
-                        .HasForeignKey("AttributeValueId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ECSPros.Catalog.Domain.Entities.AttributeType", "SubAttributeType")
-                        .WithMany()
-                        .HasForeignKey("SubAttributeTypeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("AttributeValue");
-
-                    b.Navigation("SubAttributeType");
-                });
-
-            modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.FirmPlatformProduct", b =>
-                {
-                    b.HasOne("ECSPros.Catalog.Domain.Entities.Product", "Product")
-                        .WithMany("FirmPlatformProducts")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.FirmPlatformVariant", b =>
-                {
-                    b.HasOne("ECSPros.Catalog.Domain.Entities.ProductVariant", "Variant")
-                        .WithMany("FirmPlatformVariants")
-                        .HasForeignKey("VariantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Variant");
                 });
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ImageSet", b =>
@@ -1466,8 +1225,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("SubAttributeTypeId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_catalog_product_axis_sub_attribute_values_catalog_attribut~1");
+                        .IsRequired();
 
                     b.Navigation("AttributeValue");
 
@@ -1513,8 +1271,7 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                         .WithMany("AsSubAttributeOf")
                         .HasForeignKey("SubAttributeTypeId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_catalog_product_group_axis_sub_attributes_catalog_attribut~1");
+                        .IsRequired();
 
                     b.Navigation("AxisAttributeType");
 
@@ -1688,18 +1445,6 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                     b.Navigation("Values");
                 });
 
-            modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.AttributeValue", b =>
-                {
-                    b.Navigation("FilterColors");
-
-                    b.Navigation("Properties");
-                });
-
-            modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.FilterColor", b =>
-                {
-                    b.Navigation("AttributeValueMappings");
-                });
-
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ImageSet", b =>
                 {
                     b.Navigation("MappingsAsFor");
@@ -1712,8 +1457,6 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.Product", b =>
                 {
                     b.Navigation("Attributes");
-
-                    b.Navigation("FirmPlatformProducts");
 
                     b.Navigation("Variants");
                 });
@@ -1729,8 +1472,6 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
 
             modelBuilder.Entity("ECSPros.Catalog.Domain.Entities.ProductVariant", b =>
                 {
-                    b.Navigation("FirmPlatformVariants");
-
                     b.Navigation("Images");
 
                     b.Navigation("Units");

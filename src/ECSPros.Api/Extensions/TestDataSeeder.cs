@@ -57,6 +57,7 @@ public static class TestDataSeeder
         var storefrontDb = sp.GetRequiredService<StorefrontDbContext>();
         await storefrontDb.Database.ExecuteSqlRawAsync(@"
             TRUNCATE TABLE
+                storefront.channel_variants,
                 storefront.channel_products,
                 storefront.nav_nodes,
                 storefront.nav_menus
@@ -70,12 +71,10 @@ public static class TestDataSeeder
                 catalog.catalog_product_variant_attributes,
                 catalog.catalog_product_units,
                 catalog.catalog_variant_price_history,
-                catalog.catalog_firm_platform_variants,
                 catalog.catalog_product_image_set_mappings,
                 catalog.catalog_product_images,
                 catalog.catalog_image_sets,
                 catalog.catalog_product_videos,
-                catalog.catalog_firm_platform_products,
                 catalog.catalog_category_products,
                 catalog.catalog_product_attributes,
                 catalog.catalog_product_variants,
@@ -130,7 +129,7 @@ public static class TestDataSeeder
         var (firm, webPlatform)                = await SeedFirmAndPlatformsAsync(coreDb);
         var atTypes                            = await SeedAttributeTypesAsync(catalogDb);
         var groups                             = await SeedProductGroupsAsync(catalogDb, atTypes);
-        var (products, variantMap)             = await SeedProductsAsync(catalogDb, groups, atTypes, webPlatform.Id);
+        var (products, variantMap)             = await SeedProductsAsync(catalogDb, storefrontDb2, groups, atTypes, webPlatform.Id);
         var warehouse                          = await SeedWarehouseAndStocksAsync(inventoryDb, variantMap);
         await SeedMenusAsync(storefrontDb2, webPlatform.Id);
 
@@ -158,7 +157,6 @@ public static class TestDataSeeder
             Phone          = "+90 212 000 0000",
             Email          = "demo@ecspros.com",
             IsMain         = true,
-            PriceType      = "manual",
             IsActive       = true,
         };
         db.Firms.Add(firm);
@@ -402,6 +400,7 @@ public static class TestDataSeeder
 
     private static async Task<(List<Product>, List<ProductVariant>)> SeedProductsAsync(
         CatalogDbContext db,
+        StorefrontDbContext sfDb,
         Dictionary<string, ProductGroup> groups,
         Dictionary<string, AttributeType> at,
         Guid firmPlatformId)
@@ -452,7 +451,7 @@ public static class TestDataSeeder
         var vSonKis      = allValues.First(v => v.AttributeTypeId == at["sezon"].Id && v.NameI18n["tr"] == "Sonbahar/Kış");
 
         // ─────────────────────────────────────────────────────────────────────
-        // Yardımcı: Ürün + Varyant + FirmPlatformProduct + FirmPlatformVariant
+        // Yardımcı: Ürün + Varyant + ChannelProduct + ChannelVariant
 
         var allProducts = new List<Product>();
         var allVariants = new List<ProductVariant>();
@@ -529,8 +528,8 @@ public static class TestDataSeeder
                     }
                 );
 
-                // FirmPlatformVariant (web sitesi için)
-                db.FirmPlatformVariants.Add(new FirmPlatformVariant
+                // ChannelVariant (web sitesi için — kanal-özel veri, Storefront şemasında)
+                sfDb.ChannelVariants.Add(new ChannelVariant
                 {
                     FirmPlatformId = firmPlatformId,
                     VariantId      = variant.Id,
@@ -542,8 +541,8 @@ public static class TestDataSeeder
                 variants.Add(variant);
             }
 
-            // FirmPlatformProduct
-            db.FirmPlatformProducts.Add(new FirmPlatformProduct
+            // ChannelProduct
+            sfDb.ChannelProducts.Add(new ChannelProduct
             {
                 FirmPlatformId = firmPlatformId,
                 ProductId      = product.Id,
@@ -551,6 +550,7 @@ public static class TestDataSeeder
             });
 
             await db.SaveChangesAsync();
+            await sfDb.SaveChangesAsync();
 
             allProducts.Add(product);
             allVariants.AddRange(variants);
@@ -700,7 +700,7 @@ public static class TestDataSeeder
                 AttributeTypeId  = at["renk"].Id,
                 AttributeValueId = renkVal.Id,
             });
-            db.FirmPlatformVariants.Add(new FirmPlatformVariant
+            sfDb.ChannelVariants.Add(new ChannelVariant
             {
                 FirmPlatformId = firmPlatformId,
                 VariantId      = variant.Id,
@@ -711,13 +711,14 @@ public static class TestDataSeeder
             allVariants.Add(variant);
         }
 
-        db.FirmPlatformProducts.Add(new FirmPlatformProduct
+        sfDb.ChannelProducts.Add(new ChannelProduct
         {
             FirmPlatformId = firmPlatformId,
             ProductId      = canta.Id,
             IsActive       = true,
         });
         await db.SaveChangesAsync();
+        await sfDb.SaveChangesAsync();
         allProducts.Add(canta);
 
         return (allProducts, allVariants);
