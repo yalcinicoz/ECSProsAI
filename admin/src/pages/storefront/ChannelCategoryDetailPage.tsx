@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Plus, Trash2, RefreshCw, Save, AlertTriangle, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, RefreshCw, Save, AlertTriangle, CheckCircle, ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
@@ -22,6 +22,11 @@ interface CoverageDto {
   uncoveredGroupIds: string[]
 }
 
+interface GroupWithShowcase {
+  productGroupId: string
+  showcaseProductId: string | null
+}
+
 interface CategoryDetail {
   id: string
   firmPlatformId: string
@@ -30,6 +35,7 @@ interface CategoryDetail {
   slug: string
   status: string
   fillType: string
+  listingMode: string
   filterDef: Record<string, unknown> | null
   sortOrder: number
   displayImageUrl: string | null
@@ -38,7 +44,7 @@ interface CategoryDetail {
   metaDescriptionI18n: Record<string, string> | null
   ogImageUrl: string | null
   ogTitleI18n: Record<string, string> | null
-  productGroupIds: string[]
+  groups: GroupWithShowcase[]
   coverage: CoverageDto
 }
 
@@ -51,9 +57,16 @@ interface ProductItem {
   isActive: boolean
   sortOrder: number
   isExcluded: boolean
+  productGroupId: string | null
 }
 
 interface ProductGroup {
+  id: string
+  code: string
+  nameI18n: Record<string, string>
+}
+
+interface SimpleProduct {
   id: string
   code: string
   nameI18n: Record<string, string>
@@ -76,6 +89,11 @@ const STATUS_OPTIONS = [
   { value: 'draft',     label: 'Taslak' },
   { value: 'published', label: 'Yayında' },
   { value: 'archived',  label: 'Arşiv' },
+]
+
+const LISTING_MODES = [
+  { value: 'color', label: 'Renk (Ana Varyant) Bazlı Liste' },
+  { value: 'model', label: 'Model Bazlı Liste' },
 ]
 
 const TABS = ['Genel', 'Gruplar', 'Ürünler', 'SEO'] as const
@@ -109,6 +127,7 @@ export function ChannelCategoryDetailPage() {
     slug: string
     status: string
     fillType: string
+    listingMode: string
     filterDef: FilterDef
     sortOrder: number
     displayImageUrl: string
@@ -123,6 +142,7 @@ export function ChannelCategoryDetailPage() {
       slug:           cat.slug,
       status:         cat.status,
       fillType:       cat.fillType,
+      listingMode:    cat.listingMode ?? 'color',
       filterDef:      (cat.filterDef ?? {}) as FilterDef,
       sortOrder:      cat.sortOrder,
       displayImageUrl: cat.displayImageUrl ?? '',
@@ -139,6 +159,7 @@ export function ChannelCategoryDetailPage() {
         slug:             form.slug,
         status:           form.status,
         fillType:         form.fillType,
+        listingMode:      form.listingMode,
         filterDef:        form.fillType !== 'manual' ? form.filterDef : null,
         sortOrder:        form.sortOrder,
         displayImageUrl:  form.displayImageUrl || null,
@@ -157,8 +178,9 @@ export function ChannelCategoryDetailPage() {
 
   // ── Product Groups tab ────────────────────────────────────────────────────
 
-  const [selectedGroupIds, setSelectedGroupIds] = useState<string[] | null>(null)
-  const groupIds = selectedGroupIds ?? cat?.productGroupIds ?? []
+  // Local state for groups (productGroupId → showcaseProductId)
+  const [localGroups, setLocalGroups] = useState<GroupWithShowcase[] | null>(null)
+  const activeGroups: GroupWithShowcase[] = localGroups ?? cat?.groups ?? []
 
   const { data: allGroups = [] } = useQuery<ProductGroup[]>({
     queryKey: ['product-groups-simple'],
@@ -177,14 +199,31 @@ export function ChannelCategoryDetailPage() {
   const saveGroupsMutation = useMutation({
     mutationFn: async () => {
       await api.put(`/navigation/channel-categories/${id}/groups`, {
-        productGroupIds: groupIds,
+        groups: activeGroups.map(g => ({
+          productGroupId:    g.productGroupId,
+          showcaseProductId: g.showcaseProductId ?? null,
+        })),
       })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['channel-category', id] })
-      setSelectedGroupIds(null)
+      setLocalGroups(null)
     },
   })
+
+  // Products for showcase selector (load per group when model mode)
+  const [showcaseProductsCache, setShowcaseProductsCache] = useState<Record<string, SimpleProduct[]>>({})
+
+  async function loadGroupProducts(groupId: string) {
+    if (showcaseProductsCache[groupId]) return
+    try {
+      const { data } = await api.get(`/catalog/product-groups/${groupId}/products?activeOnly=false&pageSize=200`)
+      const products: SimpleProduct[] = (data.data?.items ?? []).map((p: SimpleProduct) => p)
+      setShowcaseProductsCache(prev => ({ ...prev, [groupId]: products }))
+    } catch {
+      setShowcaseProductsCache(prev => ({ ...prev, [groupId]: [] }))
+    }
+  }
 
   // ── Products tab ──────────────────────────────────────────────────────────
 
@@ -254,6 +293,7 @@ export function ChannelCategoryDetailPage() {
   const sourceLang = languages.find(l => l.isDefault)?.code ?? languages[0]?.code ?? 'tr'
   const nameFields = useMemo(() => [{ key: 'name', labels: FL.categoryName, required: true }], [])
   const hasFilter = form?.fillType === 'filter' || form?.fillType === 'mixed'
+  const isModelMode = (form?.listingMode ?? cat?.listingMode ?? 'color') === 'model'
 
   if (isLoading || !cat || !form) return <PageSpinner />
 
@@ -279,6 +319,9 @@ export function ChannelCategoryDetailPage() {
             <code className="text-xs" style={{ color: 'var(--text-s)' }}>/{cat.slug}</code>
             <Badge variant={cat.status === 'published' ? 'success' : cat.status === 'draft' ? 'warning' : 'neutral'}>
               {cat.status === 'published' ? 'Yayında' : cat.status === 'draft' ? 'Taslak' : 'Arşiv'}
+            </Badge>
+            <Badge variant={isModelMode ? 'info' : 'neutral'}>
+              {isModelMode ? 'Model Bazlı' : 'Renk Bazlı'}
             </Badge>
           </div>
         </div>
@@ -343,8 +386,8 @@ export function ChannelCategoryDetailPage() {
             </div>
           </div>
 
-          {/* Dolum Tipi + Durum */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Dolum Tipi + Durum + Listeleme Tipi */}
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="flbl">Dolum Tipi</label>
               <SearchableSelect
@@ -363,7 +406,39 @@ export function ChannelCategoryDetailPage() {
                 hasValue
               />
             </div>
+            <div>
+              <label className="flbl">Listeleme Tipi</label>
+              <SearchableSelect
+                value={form.listingMode}
+                onChange={v => v && setForm(f => f && ({ ...f, listingMode: v }))}
+                options={LISTING_MODES}
+                hasValue
+              />
+            </div>
           </div>
+
+          {/* Listeleme modu açıklamaları */}
+          {form.listingMode === 'color' && (
+            <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl text-sm"
+              style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d' }}>
+              <ImageIcon size={16} className="mt-0.5 flex-shrink-0" />
+              <span>
+                <strong>Renk (Ana Varyant) Bazlı Liste:</strong> Her ürün (renk varyantı) ayrı bir kart olarak listelenir.
+                Trendyol gibi moda/tekstil kategorileri için varsayılan moddur.
+              </span>
+            </div>
+          )}
+          {form.listingMode === 'model' && (
+            <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl text-sm"
+              style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af' }}>
+              <ImageIcon size={16} className="mt-0.5 flex-shrink-0" />
+              <span>
+                <strong>Model Bazlı Liste:</strong> Her ürün grubu tek bir kart olarak görünür.
+                "Gruplar" sekmesinde her grup için <strong>vitrin ürünü</strong> seçin — hangi renk/varyant kartı temsil etsin.
+                Seçilmezse sistem ilk aktif ürünü otomatik kullanır.
+              </span>
+            </div>
+          )}
 
           {/* Filtre tanımı */}
           {hasFilter && (
@@ -376,7 +451,7 @@ export function ChannelCategoryDetailPage() {
             </div>
           )}
 
-          {/* Badge + Görsel */}
+          {/* Badge + Sıra */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="flbl">Badge Etiketi</label>
@@ -426,26 +501,82 @@ export function ChannelCategoryDetailPage() {
               <label className="flbl mb-1">Sorumlu Ürün Grupları</label>
               <p className="text-xs mb-3" style={{ color: 'var(--text-s)' }}>
                 Bu kategorinin ürünlerini göstermekten sorumlu olduğu gruplar — coverage kontrolü buradan hesaplanır.
+                {isModelMode && <> <strong>Model bazlı listeleme</strong> açık: her grup için vitrin ürünü seçin.</>}
               </p>
               <div className="space-y-2">
-                {groupIds.map(gid => {
-                  const grp = allGroups.find(g => g.id === gid)
+                {activeGroups.map(g => {
+                  const grp = allGroups.find(ag => ag.id === g.productGroupId)
+                  const groupProducts = showcaseProductsCache[g.productGroupId] ?? []
+                  const productSelectOptions = groupProducts.map(p => ({
+                    value: p.id,
+                    label: `${getName(p.nameI18n, p.code)} (${p.code})`,
+                  }))
+
                   return (
-                    <div key={gid} className="flex items-center justify-between px-3 py-2 rounded-xl"
-                      style={{ background: 'var(--surface2)' }}>
-                      <span className="text-sm" style={{ color: 'var(--text)' }}>
-                        {grp ? getName(grp.nameI18n, grp.code) : gid}
-                      </span>
-                      <button
-                        onClick={() => setSelectedGroupIds(groupIds.filter(id => id !== gid))}
-                        className="text-xs px-2 py-1 rounded-lg"
-                        style={{ color: '#ef4444' }}
-                      >
-                        Kaldır
-                      </button>
+                    <div key={g.productGroupId} className="rounded-xl overflow-hidden"
+                      style={{ border: '1px solid var(--border)' }}>
+                      {/* Grup satırı */}
+                      <div className="flex items-center justify-between px-3 py-2.5"
+                        style={{ background: 'var(--surface2)' }}>
+                        <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+                          {grp ? getName(grp.nameI18n, grp.code) : g.productGroupId}
+                        </span>
+                        <button
+                          onClick={() => setLocalGroups(activeGroups.filter(ag => ag.productGroupId !== g.productGroupId))}
+                          className="text-xs px-2 py-1 rounded-lg"
+                          style={{ color: '#ef4444' }}
+                        >
+                          Kaldır
+                        </button>
+                      </div>
+
+                      {/* Vitrin ürünü — sadece model modunda */}
+                      {isModelMode && (
+                        <div className="px-3 py-2.5 flex items-center gap-3"
+                          style={{ borderTop: '1px solid var(--border)' }}>
+                          <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-s)', minWidth: 90 }}>
+                            Vitrin ürünü
+                          </span>
+                          <div className="flex-1" onClick={() => loadGroupProducts(g.productGroupId)}>
+                            <SearchableSelect
+                              value={g.showcaseProductId ?? ''}
+                              onChange={v => setLocalGroups(
+                                activeGroups.map(ag =>
+                                  ag.productGroupId === g.productGroupId
+                                    ? { ...ag, showcaseProductId: v || null }
+                                    : ag
+                                )
+                              )}
+                              options={productSelectOptions}
+                              placeholder="Otomatik (ilk aktif ürün)"
+                              hasValue={!!g.showcaseProductId}
+                            />
+                          </div>
+                          {g.showcaseProductId && (
+                            <button
+                              onClick={() => setLocalGroups(
+                                activeGroups.map(ag =>
+                                  ag.productGroupId === g.productGroupId
+                                    ? { ...ag, showcaseProductId: null }
+                                    : ag
+                                )
+                              )}
+                              className="text-xs px-2 py-1 rounded-lg flex-shrink-0"
+                              style={{ color: 'var(--text-s)' }}
+                            >
+                              Temizle
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )
                 })}
+                {activeGroups.length === 0 && (
+                  <p className="text-sm py-3 text-center" style={{ color: 'var(--text-s)' }}>
+                    Henüz grup eklenmedi
+                  </p>
+                )}
               </div>
             </div>
 
@@ -455,16 +586,19 @@ export function ChannelCategoryDetailPage() {
               <SearchableSelect
                 value=""
                 onChange={v => {
-                  if (v && !groupIds.includes(v))
-                    setSelectedGroupIds([...groupIds, v])
+                  if (v && !activeGroups.find(g => g.productGroupId === v)) {
+                    const newGroup: GroupWithShowcase = { productGroupId: v, showcaseProductId: null }
+                    setLocalGroups([...activeGroups, newGroup])
+                    if (isModelMode) loadGroupProducts(v)
+                  }
                 }}
-                options={groupOptions.filter(o => !groupIds.includes(o.value))}
+                options={groupOptions.filter(o => !activeGroups.find(g => g.productGroupId === o.value))}
                 placeholder="Grup seçin…"
                 hasValue={false}
               />
             </div>
 
-            {selectedGroupIds !== null && (
+            {localGroups !== null && (
               <div className="flex justify-end pt-2" style={{ borderTop: '1px solid var(--border)' }}>
                 <Button onClick={() => saveGroupsMutation.mutate()} loading={saveGroupsMutation.isPending}>
                   <Save size={14} /> Kaydet
@@ -500,18 +634,30 @@ export function ChannelCategoryDetailPage() {
       {activeTab === 'Ürünler' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm" style={{ color: 'var(--text-s)' }}>{prodData?.totalCount ?? 0} ürün</p>
+            <p className="text-sm" style={{ color: 'var(--text-s)' }}>
+              {prodData?.totalCount ?? 0} {isModelMode ? 'model' : 'ürün'}
+            </p>
             <div className="flex items-center gap-2">
               {hasFilter && (
                 <Button variant="secondary" onClick={() => syncMutation.mutate()} loading={syncMutation.isPending}>
                   <RefreshCw size={14} /> Sync
                 </Button>
               )}
-              <Button onClick={() => setAddOpen(true)}>
-                <Plus size={14} /> Ürün Ekle
-              </Button>
+              {!isModelMode && (
+                <Button onClick={() => setAddOpen(true)}>
+                  <Plus size={14} /> Ürün Ekle
+                </Button>
+              )}
             </div>
           </div>
+
+          {isModelMode && (
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm"
+              style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af' }}>
+              <ImageIcon size={15} className="flex-shrink-0" />
+              Model bazlı modda vitrin ürünleri görüntüleniyor. Vitrin ürünlerini "Gruplar" sekmesinden yönetebilirsiniz.
+            </div>
+          )}
 
           {syncMutation.isSuccess && (
             <div className="px-3 py-2 rounded-xl text-sm" style={{ background: '#dcfce7', color: '#16a34a' }}>
@@ -524,9 +670,11 @@ export function ChannelCategoryDetailPage() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
                   <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Ürün</th>
-                  <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Sıra</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>
+                    {isModelMode ? 'Grup' : 'Sıra'}
+                  </th>
                   <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Tip</th>
-                  <th className="w-12" />
+                  {!isModelMode && <th className="w-12" />}
                 </tr>
               </thead>
               <tbody>
@@ -553,22 +701,33 @@ export function ChannelCategoryDetailPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-center text-sm" style={{ color: 'var(--text-m)' }}>{p.sortOrder}</td>
-                    <td className="px-4 py-3 text-center">
-                      {p.isExcluded
-                        ? <Badge variant="neutral">Hariç</Badge>
-                        : <Badge variant="info">Dahil</Badge>
+                    <td className="px-4 py-3 text-center text-sm" style={{ color: 'var(--text-m)' }}>
+                      {isModelMode
+                        ? (p.productGroupId
+                            ? <code className="text-xs">{p.productGroupId.slice(0, 8)}…</code>
+                            : '—')
+                        : p.sortOrder
                       }
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => removeProductMutation.mutate(p.productId)}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors hover:bg-red-50"
-                        style={{ color: '#ef4444' }}
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                      {isModelMode
+                        ? <Badge variant="info">Vitrin</Badge>
+                        : p.isExcluded
+                          ? <Badge variant="neutral">Hariç</Badge>
+                          : <Badge variant="info">Dahil</Badge>
+                      }
                     </td>
+                    {!isModelMode && (
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => removeProductMutation.mutate(p.productId)}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors hover:bg-red-50"
+                          style={{ color: '#ef4444' }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

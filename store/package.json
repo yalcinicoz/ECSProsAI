@@ -1,0 +1,17 @@
+{
+  "name": "ecspros-store",
+  "version": "1.0.0",
+  "description": "ECSPros storefront — Tailwind build (ms- component system, Misharix'ten portlandi)",
+  "scripts": {
+    "css:build": "tailwindcss -i ./css/tailwind.css -o ./css/site.css --minify",
+    "css:watch": "tailwindcss -i ./css/tailwind.css -o ./css/site.css --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.1",
+    "tailwindcss": "^4.3.1"
+  }
+}

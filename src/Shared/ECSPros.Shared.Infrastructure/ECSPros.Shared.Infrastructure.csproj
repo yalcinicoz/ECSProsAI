@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ECSPros.Shared.Kernel\ECSPros.Shared.Kernel.csproj" />
+    <ProjectReference Include="..\ECSPros.Shared.Contracts\ECSPros.Shared.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

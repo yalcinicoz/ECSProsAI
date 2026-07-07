@@ -8,9 +8,9 @@ namespace ECSPros.Catalog.Application.Commands.UpdateAttributeType;
 public record UpdateAttributeTypeCommand(
     Guid Id,
     Dictionary<string, string> NameI18n,
+    string DataType,
     int SortOrder,
-    bool IsActive,
-    bool RequiresFilterColor = false
+    bool IsActive
 ) : IRequest<Result<bool>>;
 
 public class UpdateAttributeTypeCommandHandler : IRequestHandler<UpdateAttributeTypeCommand, Result<bool>>
@@ -26,9 +26,9 @@ public class UpdateAttributeTypeCommandHandler : IRequestHandler<UpdateAttribute
             return Result.Failure<bool>("Özellik tipi bulunamadı.");
 
         attrType.NameI18n = request.NameI18n;
+        attrType.DataType = request.DataType;
         attrType.SortOrder = request.SortOrder;
         attrType.IsActive = request.IsActive;
-        attrType.RequiresFilterColor = request.RequiresFilterColor;
         attrType.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);

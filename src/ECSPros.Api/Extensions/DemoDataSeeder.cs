@@ -17,10 +17,25 @@ namespace ECSPros.Api.Extensions;
 /// </summary>
 public static class DemoDataSeeder
 {
+    /// <summary>
+    /// Bu eşiğin üzerinde ürün varsa DB gerçek (migrate edilmiş) veri içeriyor demektir —
+    /// demo seed'in "her tip zaten var mı" kontrolü bu durumda güvenilir değil (İngilizce
+    /// placeholder kodlar gerçek Türkçe kodlarla eşleşmediği için yinelenen attribute type
+    /// üretebilir, bkz. 2026-07-03 olayı) ve demo ürün/grupları gerçek katalogla karışır.
+    /// </summary>
+    private const int RealDataProductThreshold = 50;
+
     public static async Task SeedAsync(IServiceProvider services)
     {
         using var scope = services.CreateScope();
         var sp = scope.ServiceProvider;
+
+        var catalogCtx = sp.GetRequiredService<CatalogDbContext>();
+        if (await catalogCtx.Products.CountAsync() > RealDataProductThreshold)
+        {
+            Console.WriteLine("✓ Demo Seed: DB gerçek katalog verisi içeriyor (ürün sayısı eşiği aşıldı), demo seed atlandı.");
+            return;
+        }
 
         // Sıralı çalışmalı: Core → Catalog → Inventory → CMS
         var firmPlatformId = await SeedFirmAsync(sp);
@@ -162,7 +177,7 @@ public static class DemoDataSeeder
     {
         var ctx = sp.GetRequiredService<CatalogDbContext>();
 
-        var typeCodes = new[] { "color", "size", "shoe_size", "material", "target_audience", "season" };
+        var typeCodes = new[] { "renk", "size", "shoe_size", "material", "target_audience", "season" };
         var existingTypes = await ctx.AttributeTypes
             .Where(a => typeCodes.Contains(a.Code))
             .ToDictionaryAsync(a => a.Code);
@@ -202,7 +217,7 @@ public static class DemoDataSeeder
             return t;
         }
 
-        var tColor    = MakeType("color",           "Renk",           "Color",           "select", 1);
+        var tColor    = MakeType("renk",            "Renk",           "Color",           "select", 1);
         var tSize     = MakeType("size",            "Beden",          "Size",            "select", 2);
         var tShoeSize = MakeType("shoe_size",       "Ayakkabı Bedeni","Shoe Size",       "select", 3);
         var tMaterial = MakeType("material",        "Malzeme",        "Material",        "multi_select", 4);
@@ -225,7 +240,9 @@ public static class DemoDataSeeder
             if (existing.Count >= defs.Length)
             {
                 var all = await ctx.AttributeValues.Where(v => v.AttributeTypeId == attrType.Id).ToListAsync();
-                valuesMap[attrType.Code] = all.ToDictionary(v => v.NameI18n.GetValueOrDefault("tr") ?? v.Id.ToString());
+                valuesMap[attrType.Code] = all
+                    .GroupBy(v => v.NameI18n.GetValueOrDefault("tr") ?? v.Id.ToString())
+                    .ToDictionary(g => g.Key, g => g.First());
                 return;
             }
 
@@ -314,7 +331,7 @@ public static class DemoDataSeeder
         // Tipler sözlüğünü güncelle
         var allTypes = new Dictionary<string, AttributeType>
         {
-            ["color"]           = tColor,
+            ["renk"]            = tColor,
             ["size"]            = tSize,
             ["shoe_size"]       = tShoeSize,
             ["material"]        = tMaterial,
@@ -406,41 +423,41 @@ public static class DemoDataSeeder
         }
 
         // T-Shirt: Renk (varyant, birincil), Beden (varyant), Malzeme, Hedef Kitle, Sezon
-        AddAttr(grpTshirt, types["color"],           isVariant: true,  isPrimary: true, sort: 1);
+        AddAttr(grpTshirt, types["renk"],           isVariant: true,  isPrimary: true, sort: 1);
         AddAttr(grpTshirt, types["size"],            isVariant: true,  sort: 2);
         AddAttr(grpTshirt, types["material"],        sort: 3);
         AddAttr(grpTshirt, types["target_audience"], sort: 4);
         AddAttr(grpTshirt, types["season"],          sort: 5);
 
         // Gömlek: Renk (varyant, birincil), Beden (varyant), Malzeme, Hedef Kitle
-        AddAttr(grpShirt, types["color"],           isVariant: true, isPrimary: true, sort: 1);
+        AddAttr(grpShirt, types["renk"],           isVariant: true, isPrimary: true, sort: 1);
         AddAttr(grpShirt, types["size"],            isVariant: true, sort: 2);
         AddAttr(grpShirt, types["material"],        sort: 3);
         AddAttr(grpShirt, types["target_audience"], sort: 4);
 
         // Elbise: Renk (varyant, birincil), Beden (varyant), Malzeme, Hedef Kitle, Sezon
-        AddAttr(grpDress, types["color"],           isVariant: true, isPrimary: true, sort: 1);
+        AddAttr(grpDress, types["renk"],           isVariant: true, isPrimary: true, sort: 1);
         AddAttr(grpDress, types["size"],            isVariant: true, sort: 2);
         AddAttr(grpDress, types["material"],        sort: 3);
         AddAttr(grpDress, types["target_audience"], sort: 4);
 
         // Spor Ayakkabı: Renk (varyant, birincil), Ayakkabı Bedeni (varyant), Malzeme, Hedef Kitle
-        AddAttr(grpSneaker, types["color"],           isVariant: true, isPrimary: true, sort: 1);
+        AddAttr(grpSneaker, types["renk"],           isVariant: true, isPrimary: true, sort: 1);
         AddAttr(grpSneaker, types["shoe_size"],       isVariant: true, sort: 2);
         AddAttr(grpSneaker, types["material"],        sort: 3);
         AddAttr(grpSneaker, types["target_audience"], sort: 4);
 
         // Eşofman: Renk (varyant, birincil), Beden (varyant), Hedef Kitle, Sezon
-        AddAttr(grpTrack, types["color"],           isVariant: true, isPrimary: true, sort: 1);
+        AddAttr(grpTrack, types["renk"],           isVariant: true, isPrimary: true, sort: 1);
         AddAttr(grpTrack, types["size"],            isVariant: true, sort: 2);
         AddAttr(grpTrack, types["target_audience"], sort: 3);
 
         // Çanta: Renk (varyant, birincil), Malzeme
-        AddAttr(grpBag, types["color"],    isVariant: true, isPrimary: true, sort: 1);
+        AddAttr(grpBag, types["renk"],    isVariant: true, isPrimary: true, sort: 1);
         AddAttr(grpBag, types["material"], sort: 2);
 
         // Ceket/Mont: Renk (varyant, birincil), Beden (varyant), Malzeme, Hedef Kitle, Sezon
-        AddAttr(grpJacket, types["color"],           isVariant: true, isPrimary: true, sort: 1);
+        AddAttr(grpJacket, types["renk"],           isVariant: true, isPrimary: true, sort: 1);
         AddAttr(grpJacket, types["size"],            isVariant: true, sort: 2);
         AddAttr(grpJacket, types["material"],        sort: 3);
         AddAttr(grpJacket, types["target_audience"], sort: 4);
@@ -513,7 +530,7 @@ public static class DemoDataSeeder
             await ctx.SaveChangesAsync();
 
             // Varyantlar
-            var colorVals = values.GetValueOrDefault("color") ?? new();
+            var colorVals = values.GetValueOrDefault("renk") ?? new();
             var sizeVals  = values.GetValueOrDefault(attrSizeKey) ?? new();
             var variantIds = new List<Guid>();
 
@@ -542,7 +559,7 @@ public static class DemoDataSeeder
                     ctx.ProductVariantAttributes.Add(new ProductVariantAttribute
                     {
                         VariantId       = variant.Id,
-                        AttributeTypeId = types["color"].Id,
+                        AttributeTypeId = types["renk"].Id,
                         AttributeValueId = colorVal.Id,
                     });
 
@@ -947,7 +964,7 @@ public static class DemoDataSeeder
             rules.IsActive ??= true;
 
             var matchedIds = await ProductFilterHelper
-                .BuildFilterQuery(catCtx, rules, firmPlatformId, null)
+                .BuildFilterQuery(catCtx, rules, null, null)
                 .Select(p => p.Id)
                 .ToListAsync();
 

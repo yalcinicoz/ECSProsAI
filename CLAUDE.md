@@ -361,3 +361,31 @@ done
 ```
 
 **Önemli**: `docker-compose.yml`'de nginx servisine `extra_hosts: - "host.docker.internal:host-gateway"` eklenmiştir. Bu Linux'ta `host.docker.internal` çözümlemesi için zorunludur.
+
+### Redis Cache Kuralları (2026-07-07 — bozulmaması için)
+
+Redis şifresi **3 yerde birden** tanımlıdır ve HER ZAMAN birlikte değiştirilmelidir:
+1. `docker-compose.yml` → redis servisi `command: --requirepass ...`
+2. `docker-compose.yml` → redis servisi `healthcheck` içindeki `-a ...`
+3. `src/ECSPros.Api/appsettings.json` + `appsettings.Production.json` → `ConnectionStrings:Redis` (`localhost:6379,password=...`)
+
+- **`docker compose restart redis` şifre/command değişikliğini UYGULAMAZ** — container'ı yeniden
+  oluşturmak için `sudo docker compose up -d redis` kullanılmalı (2026-07-06'da bu yüzden günlerce
+  "yanlış şifre" sanılan bir drift yaşandı).
+- **Her deploy/restart sonrası doğrulama:** `journalctl -u ecspros | grep "Redis cache"` —
+  uygulama açılışta yaz-oku denemesi yapıp tek satır durum loglar:
+  `Redis cache: AKTİF ✓` / `ERİŞİLEMİYOR` / `YAPILANDIRILMAMIŞ`. Drift artık gizemli yavaşlık
+  olarak değil, deploy anında bu satırda görünür.
+- **Cache hata-güvenlidir (bozmak için kod değişikliği gerekir, ayar bozukluğu yetmez):**
+  `RedisCacheService` tüm hataları yutar + 2 dk'lık devre kesici; bağlantı seçenekleri
+  (`AbortOnConnectFail=false`, 1-1.5 sn timeout'lar) connection string'den bağımsız olarak
+  `Shared.Infrastructure/DependencyInjection.cs` içinde KODDA zorlanır. `ICacheService` her zaman
+  kayıtlıdır (Redis yapılandırılmamışsa `NoOpCacheService`) — bağlantı dizesi silinse bile
+  ICacheService enjekte eden handler'lar patlamaz. Bu güvenlik ağlarını kaldırma/zayıflatma.
+- Redis çalışmıyorken handler'lara YENİ cache bağımlılığı ekleme (site cache'siz de doğru
+  çalışacak şekilde yaz); süreç-içi kısa TTL ihtiyacı için `IMemoryCache` kullan
+  (örn. `GetStoreFacetsQueryHandler`).
+
+**Bekleyen production migration'ları** (local'de uygulandı, production'da henüz değil — bir sonraki deploy'da yukarıdaki döngü otomatik uygular):
+- `20260703110805_RemoveFirmPricingAndInvoiceIntegratorFields` (`CoreDbContext`) — `core.core_firms` tablosundan `PriceType`, `PriceMultiplier`, `InvoiceIntegratorId` kolonlarını kaldırır (bu alanlar artık sadece `FirmPlatform` seviyesinde tutuluyor).
+- `20260703115831_AddContractFieldsToFirmIntegration` (`CoreDbContext`) — `core.core_firm_integrations` tablosuna sözleşme alanları ekler: `ContractNumber`, `StartDate`, `EndDate`, `Status` (draft/active/expired/cancelled), `Terms` (jsonb), `ContactName`/`ContactPhone`/`ContactEmail`, `DocumentUrl`.

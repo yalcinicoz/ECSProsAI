@@ -62,8 +62,25 @@ public class ChannelProductConfiguration : IEntityTypeConfiguration<ChannelProdu
     {
         builder.ToTable("channel_products");
         builder.HasKey(cp => cp.Id);
+        builder.Property(cp => cp.NameI18n).HasColumnType("jsonb");
+        builder.Property(cp => cp.ShortDescriptionI18n).HasColumnType("jsonb");
         builder.HasIndex(cp => new { cp.FirmPlatformId, cp.ProductId }).IsUnique();
         builder.HasQueryFilter(cp => !cp.IsDeleted);
+    }
+}
+
+public class ChannelVariantConfiguration : IEntityTypeConfiguration<ChannelVariant>
+{
+    public void Configure(EntityTypeBuilder<ChannelVariant> builder)
+    {
+        builder.ToTable("channel_variants");
+        builder.HasKey(cv => cv.Id);
+        builder.Property(cv => cv.PriceType).HasMaxLength(20);
+        builder.Property(cv => cv.PriceMultiplier).HasPrecision(18, 6);
+        builder.Property(cv => cv.Price).HasPrecision(18, 2);
+        builder.Property(cv => cv.CompareAtPrice).HasPrecision(18, 2);
+        builder.HasIndex(cv => new { cv.FirmPlatformId, cv.VariantId }).IsUnique();
+        builder.HasQueryFilter(cv => !cv.IsDeleted);
     }
 }
 
@@ -76,6 +93,7 @@ public class ChannelCategoryConfiguration : IEntityTypeConfiguration<ChannelCate
         builder.Property(c => c.Slug).HasMaxLength(200).IsRequired();
         builder.Property(c => c.Status).HasMaxLength(20).IsRequired();
         builder.Property(c => c.FillType).HasMaxLength(20).IsRequired();
+        builder.Property(c => c.ListingMode).HasMaxLength(20).IsRequired().HasDefaultValue("product");
         builder.Property(c => c.DisplayImageUrl).HasMaxLength(500);
         builder.Property(c => c.BadgeLabel).HasMaxLength(50);
         builder.Property(c => c.OgImageUrl).HasMaxLength(500);
@@ -114,6 +132,7 @@ public class ChannelCategoryGroupConfiguration : IEntityTypeConfiguration<Channe
     {
         builder.ToTable("channel_category_groups");
         builder.HasKey(g => new { g.ChannelCategoryId, g.ProductGroupId });
+        builder.Property(g => g.ShowcaseProductId);
     }
 }
 

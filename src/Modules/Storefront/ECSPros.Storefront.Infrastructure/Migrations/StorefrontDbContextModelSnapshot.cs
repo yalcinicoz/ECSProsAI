@@ -64,6 +64,13 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("ListingMode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("product");
+
                     b.Property<Dictionary<string, string>>("MetaDescriptionI18n")
                         .HasColumnType("jsonb");
 
@@ -120,6 +127,9 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("ProductGroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ShowcaseProductId")
                         .HasColumnType("uuid");
 
                     b.HasKey("ChannelCategoryId", "ProductGroupId");
@@ -180,8 +190,14 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<Dictionary<string, string>>("NameI18n")
+                        .HasColumnType("jsonb");
+
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uuid");
+
+                    b.Property<Dictionary<string, string>>("ShortDescriptionI18n")
+                        .HasColumnType("jsonb");
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
@@ -244,6 +260,66 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("channel_product_groups", "storefront");
+                });
+
+            modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.ChannelVariant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("CompareAtPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FirmPlatformId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal?>("PriceMultiplier")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<string>("PriceType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FirmPlatformId", "VariantId")
+                        .IsUnique();
+
+                    b.ToTable("channel_variants", "storefront");
                 });
 
             modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.NavNode", b =>

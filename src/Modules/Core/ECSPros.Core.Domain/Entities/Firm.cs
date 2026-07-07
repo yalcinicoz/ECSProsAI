@@ -12,12 +12,8 @@ public class Firm : BaseEntity
     public string Phone { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public bool IsMain { get; set; } = false;
-    public string PriceType { get; set; } = "manual"; // manual, multiplier
-    public decimal? PriceMultiplier { get; set; }
-    public Guid? InvoiceIntegratorId { get; set; }
     public bool IsActive { get; set; } = true;
 
-    public FirmIntegration? InvoiceIntegrator { get; set; }
     public ICollection<FirmPlatform> FirmPlatforms { get; set; } = new List<FirmPlatform>();
     public ICollection<FirmIntegration> FirmIntegrations { get; set; } = new List<FirmIntegration>();
     public ICollection<CargoRule> CargoRules { get; set; } = new List<CargoRule>();

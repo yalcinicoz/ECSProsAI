@@ -17,14 +17,11 @@ using ECSPros.Catalog.Application.Commands.RemoveAxisSubAttribute;
 using ECSPros.Catalog.Application.Commands.RemoveProductGroupAttribute;
 using ECSPros.Catalog.Application.Commands.UpdateProductGroupAttribute;
 using ECSPros.Catalog.Application.Commands.UpdateAxisSubAttribute;
-using ECSPros.Catalog.Application.Commands.SetAttributeValueProperties;
-using ECSPros.Catalog.Application.Commands.SetFirmPlatformVariantPrice;
 using ECSPros.Catalog.Application.Commands.SetPrimaryAxis;
 using ECSPros.Catalog.Application.Commands.SetProductStatus;
 using ECSPros.Catalog.Application.Commands.UpdateProduct;
 using ECSPros.Catalog.Application.Commands.UpdateProductGroup;
 using ECSPros.Catalog.Application.Queries.GetAttributeTypes;
-using ECSPros.Catalog.Application.Queries.GetFirmPlatformPricing;
 using ECSPros.Catalog.Application.Queries.GetProductPriceHistory;
 using ECSPros.Catalog.Application.Commands.UpdateVariantPrice;
 using ECSPros.Catalog.Application.Commands.DeleteVariant;
@@ -37,11 +34,6 @@ using ECSPros.Catalog.Application.Queries.GetProductDetail;
 using ECSPros.Catalog.Application.Queries.GetVariantByBarcode;
 using ECSPros.Catalog.Application.Commands.DeleteAttributeValue;
 using ECSPros.Catalog.Application.Commands.SetProductAxisSubAttributeValues;
-using ECSPros.Catalog.Application.Commands.CreateFilterColor;
-using ECSPros.Catalog.Application.Commands.UpdateFilterColor;
-using ECSPros.Catalog.Application.Commands.DeleteFilterColor;
-using ECSPros.Catalog.Application.Commands.SetAttributeValueFilterColors;
-using ECSPros.Catalog.Application.Queries.GetFilterColors;
 using ECSPros.Catalog.Application.Queries.GetProductsByAttributeValue;
 using ECSPros.Catalog.Application.Queries.GetProductGroups;
 using ECSPros.Catalog.Application.Queries.GetProducts;
@@ -283,9 +275,9 @@ public class CatalogController : ControllerBase
 
     /// <summary>Özellik tiplerini listeler.</summary>
     [HttpGet("attribute-types")]
-    public async Task<IActionResult> GetAttributeTypes([FromQuery] bool activeOnly = true, CancellationToken ct = default)
+    public async Task<IActionResult> GetAttributeTypes([FromQuery] bool activeOnly = true, [FromQuery] bool includeCounts = true, CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetAttributeTypesQuery(activeOnly), ct);
+        var result = await _mediator.Send(new GetAttributeTypesQuery(activeOnly, includeCounts), ct);
         return Ok(new { success = true, data = result.Value });
     }
 
@@ -294,7 +286,7 @@ public class CatalogController : ControllerBase
     [RequirePermission(Permissions.CatalogPlatformManage)]
     public async Task<IActionResult> CreateAttributeType([FromBody] CreateAttributeTypeRequest request, CancellationToken ct)
     {
-        var result = await _mediator.Send(new CreateAttributeTypeCommand(request.NameI18n, request.DataType, request.SortOrder, request.RequiresFilterColor), ct);
+        var result = await _mediator.Send(new CreateAttributeTypeCommand(request.NameI18n, request.DataType, request.SortOrder), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Created("/api/catalog/attribute-types", new { success = true, data = new { id = result.Value } });
@@ -305,7 +297,7 @@ public class CatalogController : ControllerBase
     [RequirePermission(Permissions.CatalogPlatformManage)]
     public async Task<IActionResult> UpdateAttributeType(Guid id, [FromBody] UpdateAttributeTypeRequest request, CancellationToken ct)
     {
-        var result = await _mediator.Send(new UpdateAttributeTypeCommand(id, request.NameI18n, request.SortOrder, request.IsActive, request.RequiresFilterColor), ct);
+        var result = await _mediator.Send(new UpdateAttributeTypeCommand(id, request.NameI18n, request.DataType, request.SortOrder, request.IsActive), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -316,7 +308,7 @@ public class CatalogController : ControllerBase
     [RequirePermission(Permissions.CatalogPlatformManage)]
     public async Task<IActionResult> AddAttributeValue(Guid id, [FromBody] AddAttributeValueRequest request, CancellationToken ct)
     {
-        var result = await _mediator.Send(new CreateAttributeValueCommand(id, request.ValueI18n, request.SortOrder, request.FilterColorIds), ct);
+        var result = await _mediator.Send(new CreateAttributeValueCommand(id, request.ValueI18n, request.SortOrder, request.HexCode), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Created($"/api/catalog/attribute-types/{id}/values", new { success = true, data = new { id = result.Value } });
@@ -395,19 +387,7 @@ public class CatalogController : ControllerBase
     [RequirePermission(Permissions.CatalogPlatformManage)]
     public async Task<IActionResult> UpdateAttributeValue(Guid valueId, [FromBody] UpdateAttributeValueRequest request, CancellationToken ct)
     {
-        var result = await _mediator.Send(new UpdateAttributeValueCommand(valueId, request.NameI18n, request.SortOrder, request.IsActive), ct);
-        if (result.IsFailure)
-            return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true });
-    }
-
-    /// <summary>Özellik değerinin alt özellik değerlerini kaydeder (upsert).</summary>
-    [HttpPut("attribute-values/{valueId:guid}/properties")]
-    [RequirePermission(Permissions.CatalogPlatformManage)]
-    public async Task<IActionResult> SetAttributeValueProperties(Guid valueId, [FromBody] SetAttributeValuePropertiesRequest request, CancellationToken ct)
-    {
-        var items = request.Properties.Select(p => new AttributeValuePropertyItem(p.SubAttributeTypeId, p.Value)).ToList();
-        var result = await _mediator.Send(new SetAttributeValuePropertiesCommand(valueId, items), ct);
+        var result = await _mediator.Send(new UpdateAttributeValueCommand(valueId, request.NameI18n, request.SortOrder, request.IsActive, request.HexCode), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -517,53 +497,6 @@ public class CatalogController : ControllerBase
         return Ok(new { success = true });
     }
 
-    // ─── Filter Colors ─────────────────────────────────────────────────────────
-
-    [HttpGet("filter-colors")]
-    public async Task<IActionResult> GetFilterColors(CancellationToken ct)
-    {
-        var result = await _mediator.Send(new GetFilterColorsQuery(), ct);
-        return Ok(new { success = true, data = result.Value });
-    }
-
-    [HttpPost("filter-colors")]
-    [RequirePermission(Permissions.CatalogPlatformManage)]
-    public async Task<IActionResult> CreateFilterColor([FromBody] CreateFilterColorRequest request, CancellationToken ct)
-    {
-        var result = await _mediator.Send(new CreateFilterColorCommand(
-            request.Code, request.NameI18n, request.HexCode, request.SortOrder), ct);
-        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Created($"/api/catalog/filter-colors/{result.Value}", new { success = true, data = new { id = result.Value } });
-    }
-
-    [HttpPut("filter-colors/{id:guid}")]
-    [RequirePermission(Permissions.CatalogPlatformManage)]
-    public async Task<IActionResult> UpdateFilterColor(Guid id, [FromBody] UpdateFilterColorRequest request, CancellationToken ct)
-    {
-        var result = await _mediator.Send(new UpdateFilterColorCommand(
-            id, request.Code, request.NameI18n, request.HexCode, request.SortOrder, request.IsActive), ct);
-        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true });
-    }
-
-    [HttpDelete("filter-colors/{id:guid}")]
-    [RequirePermission(Permissions.CatalogPlatformManage)]
-    public async Task<IActionResult> DeleteFilterColor(Guid id, CancellationToken ct)
-    {
-        var result = await _mediator.Send(new DeleteFilterColorCommand(id), ct);
-        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true });
-    }
-
-    [HttpPut("attribute-values/{valueId:guid}/filter-colors")]
-    [RequirePermission(Permissions.CatalogPlatformManage)]
-    public async Task<IActionResult> SetAttributeValueFilterColors(Guid valueId, [FromBody] SetAttributeValueFilterColorsRequest request, CancellationToken ct)
-    {
-        var result = await _mediator.Send(new SetAttributeValueFilterColorsCommand(valueId, request.FilterColorIds), ct);
-        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true });
-    }
-
     // ─── Price History ─────────────────────────────────────────────────────────
 
     [HttpGet("products/{productId:guid}/price-history")]
@@ -573,35 +506,6 @@ public class CatalogController : ControllerBase
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
-    }
-
-    // ─── Firm Platform Pricing ─────────────────────────────────────────────────
-
-    /// <summary>Platform bazlı ürün fiyatlandırmasını getirir.</summary>
-    [HttpGet("firm-platforms/{platformId:guid}/products/{productId:guid}/pricing")]
-    public async Task<IActionResult> GetFirmPlatformPricing(Guid platformId, Guid productId, CancellationToken ct)
-    {
-        var result = await _mediator.Send(new GetFirmPlatformPricingQuery(platformId, productId), ct);
-        if (result.IsFailure)
-            return NotFound(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = result.Value });
-    }
-
-    /// <summary>Platform varyant fiyatı oluşturur veya günceller (upsert).</summary>
-    [HttpPut("firm-platforms/{platformId:guid}/variants/{variantId:guid}/price")]
-    public async Task<IActionResult> SetFirmPlatformVariantPrice(
-        Guid platformId, Guid variantId, [FromBody] SetVariantPriceRequest request, CancellationToken ct)
-    {
-        Guid.TryParse(User.FindFirst("sub")?.Value, out var changedBy);
-        var changedByName = User.FindFirst("full_name")?.Value ?? User.FindFirst("email")?.Value;
-
-        var result = await _mediator.Send(new SetFirmPlatformVariantPriceCommand(
-            platformId, variantId, request.PriceType, request.PriceMultiplier,
-            request.Price, request.CompareAtPrice, request.IsActive,
-            changedBy, changedByName, request.FirmPlatformCode), ct);
-        if (result.IsFailure)
-            return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = new { id = result.Value } });
     }
 
     // ─── Product Tags ─────────────────────────────────────────────────────────
@@ -645,19 +549,18 @@ public record AddVariantImageRequest(string ImageUrl, bool IsMain, int SortOrder
 public record CreateAttributeTypeRequest(
     Dictionary<string, string> NameI18n,
     string DataType,
-    int SortOrder = 0,
-    bool RequiresFilterColor = false);
+    int SortOrder = 0);
 
 public record UpdateAttributeTypeRequest(
     Dictionary<string, string> NameI18n,
+    string DataType = "select",
     int SortOrder = 0,
-    bool IsActive = true,
-    bool RequiresFilterColor = false);
+    bool IsActive = true);
 
 public record AddAttributeValueRequest(
     Dictionary<string, string> ValueI18n,
     int SortOrder = 0,
-    List<Guid>? FilterColorIds = null);
+    string? HexCode = null);
 
 public record CreateProductGroupRequest(
     Dictionary<string, string> NameI18n,
@@ -684,12 +587,8 @@ public record UpdateProductGroupAttributeRequest(bool IsVariant = false, bool Is
 
 public record UpdateAxisSubAttributeRequest(bool IsRequired = false, int SortOrder = 0);
 
-public record UpdateAttributeValueRequest(Dictionary<string, string> NameI18n, int SortOrder = 0, bool IsActive = true);
+public record UpdateAttributeValueRequest(Dictionary<string, string> NameI18n, int SortOrder = 0, bool IsActive = true, string? HexCode = null);
 
-public record SetAttributeValuePropertiesRequest(
-    List<ValuePropertyItemRequest> Properties);
-
-public record ValuePropertyItemRequest(Guid SubAttributeTypeId, string Value);
 
 public record SetProductAttributesRequest(List<ProductAttributeItemRequest> Attributes);
 
@@ -706,18 +605,7 @@ public record AddProductVariantItemRequest(string? Sku, List<VariantAxisValueIte
 
 public record VariantAxisValueItemRequest(Guid AttributeTypeId, Guid AttributeValueId);
 
-public record SetVariantPriceRequest(
-    string? PriceType,
-    decimal? PriceMultiplier,
-    decimal? Price,
-    decimal? CompareAtPrice,
-    bool IsActive = true,
-    string? FirmPlatformCode = null);
-
 public record UpdateTagsRequest(List<string>? Tags);
-public record CreateFilterColorRequest(string Code, Dictionary<string, string> NameI18n, string? HexCode, int SortOrder = 0);
-public record UpdateFilterColorRequest(string Code, Dictionary<string, string> NameI18n, string? HexCode, int SortOrder, bool IsActive);
-public record SetAttributeValueFilterColorsRequest(List<Guid> FilterColorIds);
 public record SetAxisSubAttributeValuesRequest(List<AxisSubAttributeValueItemRequest> Values);
 public record AxisSubAttributeValueItemRequest(Guid AttributeValueId, Guid SubAttributeTypeId, string Value);
 

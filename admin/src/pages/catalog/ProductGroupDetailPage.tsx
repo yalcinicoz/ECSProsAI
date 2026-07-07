@@ -128,8 +128,8 @@ export function ProductGroupDetailPage() {
   })
 
   const { data: attrTypes = [], isLoading: attrTypesLoading } = useQuery<AttributeType[]>({
-    queryKey: ['attribute-types', false],
-    queryFn: async () => { const { data } = await api.get('/catalog/attribute-types?activeOnly=false'); return data.data },
+    queryKey: ['attribute-types', false, 'no-counts'],
+    queryFn: async () => { const { data } = await api.get('/catalog/attribute-types?activeOnly=false&includeCounts=false'); return data.data },
   })
 
   const group = groups.find((g) => g.id === id) as ProductGroupWithAxis | undefined

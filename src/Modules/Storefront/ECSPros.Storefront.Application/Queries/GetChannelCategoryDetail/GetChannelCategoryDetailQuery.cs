@@ -7,6 +7,8 @@ namespace ECSPros.Storefront.Application.Queries.GetChannelCategoryDetail;
 
 public record GetChannelCategoryDetailQuery(Guid Id) : IRequest<Result<ChannelCategoryDetailDto>>;
 
+public record GroupWithShowcaseDto(Guid ProductGroupId, Guid? ShowcaseProductId);
+
 public record ChannelCategoryDetailDto(
     Guid Id,
     Guid FirmPlatformId,
@@ -15,6 +17,7 @@ public record ChannelCategoryDetailDto(
     string Slug,
     string Status,
     string FillType,
+    string ListingMode,
     Dictionary<string, object>? FilterDef,
     int SortOrder,
     string? DisplayImageUrl,
@@ -23,7 +26,7 @@ public record ChannelCategoryDetailDto(
     Dictionary<string, string>? MetaDescriptionI18n,
     string? OgImageUrl,
     Dictionary<string, string>? OgTitleI18n,
-    List<Guid> ProductGroupIds,
+    List<GroupWithShowcaseDto> Groups,
     CoverageDto Coverage);
 
 public record CoverageDto(int AssignedGroupCount, int CoveredGroupCount, List<Guid> UncoveredGroupIds);
@@ -41,7 +44,9 @@ public class GetChannelCategoryDetailQueryHandler(IStorefrontDbContext db)
 
         if (cat is null) return Result.Failure<ChannelCategoryDetailDto>("Kanal kategorisi bulunamadı.");
 
-        var groupIds = cat.CategoryGroups.Select(g => g.ProductGroupId).ToList();
+        var groups = cat.CategoryGroups
+            .Select(g => new GroupWithShowcaseDto(g.ProductGroupId, g.ShowcaseProductId))
+            .ToList();
 
         // Coverage: kanalda active olan gruplar içinden bu kategoride kapsanmayanlar
         var assignedGroupIds = await db.ChannelProductGroups
@@ -61,9 +66,9 @@ public class GetChannelCategoryDetailQueryHandler(IStorefrontDbContext db)
 
         return Result.Success(new ChannelCategoryDetailDto(
             cat.Id, cat.FirmPlatformId, cat.ParentId, cat.NameI18n,
-            cat.Slug, cat.Status, cat.FillType, cat.FilterDef,
+            cat.Slug, cat.Status, cat.FillType, cat.ListingMode, cat.FilterDef,
             cat.SortOrder, cat.DisplayImageUrl, cat.BadgeLabel,
             cat.MetaTitleI18n, cat.MetaDescriptionI18n, cat.OgImageUrl, cat.OgTitleI18n,
-            groupIds, coverage));
+            groups, coverage));
     }
 }

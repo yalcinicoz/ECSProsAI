@@ -17,8 +17,6 @@ public record FirmDto(
     string Phone,
     string Email,
     bool IsMain,
-    string PriceType,
-    decimal? PriceMultiplier,
     bool IsActive,
     DateTime CreatedAt
 );
@@ -38,7 +36,7 @@ public class GetFirmsQueryHandler : IRequestHandler<GetFirmsQuery, Result<List<F
         var firms = await query
             .OrderBy(f => f.Code)
             .Select(f => new FirmDto(f.Id, f.Code, f.NameI18n, f.TaxOffice, f.TaxNumber,
-                f.Address, f.Phone, f.Email, f.IsMain, f.PriceType, f.PriceMultiplier,
+                f.Address, f.Phone, f.Email, f.IsMain,
                 f.IsActive, f.CreatedAt))
             .ToListAsync(ct);
 

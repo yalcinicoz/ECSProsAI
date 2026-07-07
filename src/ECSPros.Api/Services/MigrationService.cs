@@ -141,19 +141,19 @@ public class MigrationService
         var conn = _config.GetConnectionString("DefaultConnection")!;
         var result = new Dictionary<string, long>();
 
-        var tables = new[]
+        var tables = new (string schema, string table)[]
         {
-            "catalog_image_sets", "catalog_attribute_types", "catalog_attribute_values",
-            "catalog_product_groups", "catalog_products", "catalog_product_attributes",
-            "catalog_product_variants", "catalog_product_variant_attributes", "catalog_product_images"
+            ("definition", "image_sets"), ("definition", "attribute_types"), ("definition", "attribute_values"),
+            ("definition", "product_groups"), ("catalog", "products"), ("catalog", "product_attributes"),
+            ("catalog", "product_variants"), ("catalog", "product_variant_attributes"), ("catalog", "product_images")
         };
 
         await using var pgConn = new NpgsqlConnection(conn);
         await pgConn.OpenAsync();
 
-        foreach (var table in tables)
+        foreach (var (schema, table) in tables)
         {
-            await using var cmd = new NpgsqlCommand($"SELECT COUNT(*) FROM catalog.{table}", pgConn);
+            await using var cmd = new NpgsqlCommand($"SELECT COUNT(*) FROM {schema}.{table}", pgConn);
             result[table] = (long)(await cmd.ExecuteScalarAsync())!;
         }
 

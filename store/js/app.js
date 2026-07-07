@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════
    ECSPros Store — app.js
-   Vanilla JS · Hash Router · No build step
+   Vanilla JS · History API Router · No build step
 ═══════════════════════════════════════════════════════════ */
 
 // ─────────────────────────────────────────────────────────
@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────
 const CFG = {
   API:    '/api',
-  FPID:   '3c713ebc-0666-4d02-92ff-7ef4e701e5c1', // demo_web platform
+  FPID:   'c900c659-8d0f-4754-9658-aa157ea3072e', // mishar platform
   LANG:   'tr',
   CUR:    'TRY',
 };
@@ -56,15 +56,19 @@ function escHtml(s) {
 function toast(msg, type = '') {
   const wrap = $('toastStack');
   if (!wrap) return;
+  const cls = type === 'ok' ? 'ms-bildirim-basarili' : type === 'err' ? 'ms-bildirim-hata' : 'ms-bildirim-uyari';
+  const baslik = type === 'ok' ? 'Başarılı:' : type === 'err' ? 'Hata:' : 'Bilgi:';
   const d = document.createElement('div');
-  d.className = 'toast ' + type;
-  d.textContent = msg;
+  d.className = 'ms-bildirim ' + cls;
+  d.innerHTML = `<strong class="ms-bildirim-baslik">${baslik}</strong> ${escHtml(msg)}`;
   wrap.appendChild(d);
   setTimeout(() => d.remove(), 3200);
 }
 
-function navigate(path) {
-  window.location.hash = '#/' + path;
+function navigate(path, push = true) {
+  const url = path.startsWith('/') ? path : '/' + path;
+  if (push) history.pushState(null, '', url);
+  router.route();
 }
 
 function setLoading(html = '') {
@@ -94,10 +98,20 @@ const api = {
     return this._req(`/store/catalog/channel-categories/${id}/products?${p}`);
   },
 
+  channelCategoryFacets(id) {
+    return this._req(`/store/catalog/channel-categories/${id}/facets`);
+  },
+
   products({ page = 1, pageSize = 24, search = '' } = {}) {
     const p = new URLSearchParams({ firmPlatformId: CFG.FPID, page, pageSize });
     if (search) p.set('search', search);
     return this._req(`/store/catalog/products?${p}`);
+  },
+
+  productsFacets({ search = '' } = {}) {
+    const p = new URLSearchParams({ firmPlatformId: CFG.FPID });
+    if (search) p.set('search', search);
+    return this._req(`/store/catalog/products/facets?${p}`);
   },
 
   product(code) {
@@ -161,6 +175,7 @@ const Cart = {
       this.items = [];
     }
     this._updateBadge();
+    renderCartPanel();
   },
 
   _updateBadge() {
@@ -176,77 +191,62 @@ const Cart = {
 // CART UI
 // ─────────────────────────────────────────────────────────
 function toggleCart() {
-  const panel    = $('cartPanel');
-  const backdrop = $('cartBackdrop');
-  if (!panel) return;
-  const open = panel.classList.contains('open');
-  if (open) {
-    panel.classList.remove('open');
-    backdrop.classList.remove('open');
-    document.body.style.overflow = '';
-  } else {
-    panel.classList.add('open');
-    backdrop.classList.add('open');
-    document.body.style.overflow = 'hidden';
-    renderCartPanel();
-  }
+  window.msSepetMenuToggle?.();
 }
 
 function renderCartPanel() {
-  const body   = $('cartPanelBody');
-  const footer = $('cartPanelFooter');
-  const sub    = $('cartSubtotal');
-  const total  = $('cartTotal');
-  const cnt    = $('cartItemCount');
-  if (!body) return;
+  const body    = $('cartPanelBody');
+  const footer  = $('cartPanelFooter');
+  const actions = $('cartPanelActions');
+  const total   = $('cartTotal');
+  const cnt     = $('cartItemCount');
 
-  if (cnt) cnt.textContent = Cart.count ? `${Cart.count} ürün` : '';
+  if (!body) return;
 
   if (!Cart.items.length) {
     body.innerHTML = `
-      <div class="cart-empty">
-        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <div class="ms-ana-navigasyon-sepet-bos">
         <p>Sepetiniz boş</p>
-        <a href="#/products" onclick="toggleCart()" class="btn-ghost-sm">Alışverişe Başla</a>
+        <a href="/urunler" class="ms-buton ms-buton-m ms-buton-sade">Alışverişe Başla</a>
       </div>`;
     if (footer) footer.style.display = 'none';
+    if (actions) actions.style.display = 'none';
+    if (cnt) cnt.textContent = '';
     return;
   }
 
   body.innerHTML = Cart.items.map(item => {
-    const img = imgSrc(item.img)
-      ? `<img class="cart-item-img" src="${imgSrc(item.img)}" alt="${escHtml(item.name)}" onerror="this.style.display='none'">`
-      : `<div class="cart-item-img" style="background:var(--cream-deep)"></div>`;
+    const src = imgSrc(item.img);
+    const img = src
+      ? `<img class="ms-ana-navigasyon-sepet-urun-gorsel" src="${src}" alt="${escHtml(item.name)}" onerror="this.style.display='none'">`
+      : `<div class="ms-ana-navigasyon-sepet-urun-gorsel"></div>`;
     return `
-      <div class="cart-item">
+      <div class="ms-ana-navigasyon-sepet-urun">
         ${img}
-        <div class="cart-item-info">
-          <div class="cart-item-name">${escHtml(item.name)}</div>
-          ${item.sku ? `<div class="cart-item-sku">${escHtml(item.sku)}</div>` : ''}
-          <div class="cart-item-bottom">
-            <div class="cart-qty-ctrl">
-              <button class="c-qty-btn" onclick="cartSetQty('${item.id}', ${item.qty - 1})">−</button>
-              <span class="c-qty-n">${item.qty}</span>
-              <button class="c-qty-btn" onclick="cartSetQty('${item.id}', ${item.qty + 1})">+</button>
-            </div>
-            <span class="cart-item-price">${fmt(item.price * item.qty)}</span>
-          </div>
-          <div style="margin-top:8px">
-            <span class="cart-item-del" onclick="cartRemove('${item.id}')">Kaldır</span>
+        <div class="ms-ana-navigasyon-sepet-urun-bilgi">
+          <strong class="ms-ana-navigasyon-sepet-urun-baslik">${escHtml(item.name)}</strong>
+          ${item.sku ? `<p>${escHtml(item.sku)}</p>` : ''}
+          <div class="ms-ana-navigasyon-sepet-urun-alt">
+            <span>${item.qty} adet</span>
+            <strong class="ms-fiyat-standart">${fmt(item.price * item.qty)}</strong>
           </div>
         </div>
+        <button class="ms-ana-navigasyon-sepet-sil" type="button" onclick="cartRemove('${item.id}')" aria-label="${escHtml(item.name)} ürününü sepetten sil">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
       </div>`;
   }).join('');
 
-  if (footer) footer.style.display = 'block';
-  if (sub)   sub.textContent   = fmt(Cart.total);
+  if (cnt) cnt.textContent = `${Cart.count} ürün`;
+  if (footer) footer.style.display = 'flex';
+  if (actions) actions.style.display = 'grid';
   if (total) total.textContent = fmt(Cart.total);
 }
 
-window.cartSetQty = async (itemId, newQty) => {
-  if (newQty < 1) { await window.cartRemove(itemId); return; }
+window.cartQty = async (itemId, newQty) => {
+  if (newQty < 1) { window.cartRemove(itemId); return; }
   try {
-    await api.updateItem(Cart.id, itemId, newQty);
+    if (Cart.id) await api.updateItem(Cart.id, itemId, newQty);
     const item = Cart.items.find(i => i.id === itemId);
     if (item) item.qty = newQty;
     Cart._updateBadge();
@@ -278,31 +278,199 @@ async function addToCart(variantId, qty, price) {
 }
 
 // ─────────────────────────────────────────────────────────
+// LISTING STATE — client-side filter + sort
+// ─────────────────────────────────────────────────────────
+const LS = {
+  items:         [],
+  facets:        null,   // StoreFacetsDto from API
+  priceMin:      null,
+  priceMax:      null,
+  sort:          'default',
+  selectedAttrs: new Set(),  // Set of valueId strings
+
+  filtered() {
+    let items = [...this.items];
+    if (this.priceMin !== null) items = items.filter(p => (p.minPrice ?? p.basePrice ?? 0) >= this.priceMin);
+    if (this.priceMax !== null) items = items.filter(p => (p.minPrice ?? p.basePrice ?? 0) <= this.priceMax);
+    if (this.selectedAttrs.size > 0) {
+      items = items.filter(p => {
+        const colors = (p.colors || []).map(c => c.valueId);
+        const attrs  = (p.attrs  || []).map(a => a.valueId);
+        const allIds = colors.concat(attrs);
+        return [...this.selectedAttrs].some(id => allIds.includes(id));
+      });
+    }
+    if (this.sort === 'price_asc')  items.sort((a,b) => (a.minPrice ?? a.basePrice ?? 0) - (b.minPrice ?? b.basePrice ?? 0));
+    if (this.sort === 'price_desc') items.sort((a,b) => (b.minPrice ?? b.basePrice ?? 0) - (a.minPrice ?? a.basePrice ?? 0));
+    return items;
+  },
+
+  hasActiveFilters() {
+    return this.priceMin !== null || this.priceMax !== null || this.selectedAttrs.size > 0;
+  },
+
+  _rerender() {
+    const items = this.filtered();
+    const grid  = $('prodGrid');
+    if (grid) {
+      grid.innerHTML = items.length
+        ? items.map((p, i) => prodCardHtml(p, i * 20)).join('')
+        : `<p>Ürün bulunamadı. <a href="/urunler">Tüm ürünlere dön</a></p>`;
+      window.msUrunKartDavranislariYenile?.(grid);
+      window.msLazyLoadYenile?.(grid);
+    }
+    const cnt = $('resultCount');
+    if (cnt) cnt.innerHTML = `<strong>${items.length.toLocaleString('tr-TR')}</strong> ürün listeleniyor`;
+  },
+
+  renderFacets() {
+    if (!this.facets) return;
+
+    // Price section
+    const priceSection = $('facetPriceSection');
+    if (priceSection && this.facets.priceMin != null) {
+      $('facetPriceMin').placeholder = `Min ₺${Math.floor(this.facets.priceMin)}`;
+      $('facetPriceMax').placeholder = `Max ₺${Math.ceil(this.facets.priceMax)}`;
+    }
+
+    // Attribute sections
+    const container = $('facetAttrsContainer');
+    if (!container || !this.facets.attributes?.length) return;
+
+    container.innerHTML = this.facets.attributes.map(attr => {
+      const isColor = attr.requiresFilterColor;
+      const valuesHtml = attr.values.map(v => {
+        const name = t(v.nameI18n);
+        const id   = `fa_${v.valueId.replace(/-/g,'')}`;
+        if (isColor) {
+          return `
+            <label class="ms-filtre-secim ms-filtre-renk-secim" data-filter-option>
+              <input type="checkbox" id="${id}" value="${escHtml(v.valueId)}" onchange="_lsAttrToggle(this)" ${this.selectedAttrs.has(v.valueId) ? 'checked' : ''}>
+              <span class="ms-filtre-renk" style="--ms-renk:${escHtml(v.hexCode || '#ccc')}" aria-hidden="true"></span>
+              <span class="ms-filtre-renk-bilgi"><strong>${escHtml(name)}</strong> (${v.productCount})</span>
+            </label>`;
+        }
+        return `
+          <label class="ms-filtre-secim" data-filter-option>
+            <input type="checkbox" id="${id}" value="${escHtml(v.valueId)}" onchange="_lsAttrToggle(this)" ${this.selectedAttrs.has(v.valueId) ? 'checked' : ''}>
+            <span class="ms-filtre-kutu" aria-hidden="true"></span>
+            ${escHtml(name)} <span>(${v.productCount})</span>
+          </label>`;
+      }).join('');
+
+      const typeLabel = t(attr.typeNameI18n);
+      return `
+        <div class="ms-filtre-kapsayici" data-filter-block>
+          <button class="ms-filtre-baslik" type="button" data-filter-toggle aria-expanded="true">
+            ${escHtml(typeLabel)}
+            <svg class="ms-filtre-ok ms-filtre-ok-acik" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="ms-filtre-icerik" data-filter-content>
+            <div class="ms-filtre-secim-listesi${isColor ? ' ms-filtre-renk-listesi' : ''}">${valuesHtml}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    window.msFiltreBloklariBaslat?.(container);
+  },
+};
+
+window._lsSort = val => { LS.sort = val; LS._rerender(); };
+
+window._lsPriceFilter = () => {
+  const mn = $('facetPriceMin');
+  const mx = $('facetPriceMax');
+  LS.priceMin = mn?.value ? parseFloat(mn.value) : null;
+  LS.priceMax = mx?.value ? parseFloat(mx.value) : null;
+  LS._rerender();
+};
+
+window._lsAttrToggle = (cb) => {
+  const vid = cb.value;
+  if (cb.checked) LS.selectedAttrs.add(vid);
+  else            LS.selectedAttrs.delete(vid);
+  LS._rerender();
+};
+
+window._lsClear = () => {
+  LS.priceMin = null; LS.priceMax = null;
+  LS.selectedAttrs.clear();
+  const mn = $('facetPriceMin');
+  const mx = $('facetPriceMax');
+  if (mn) mn.value = ''; if (mx) mx.value = '';
+  document.querySelectorAll('.ms-urun-listesi-filtre input[type=checkbox]').forEach(cb => cb.checked = false);
+  LS._rerender();
+};
+
+// ─────────────────────────────────────────────────────────
 // COMPONENTS
 // ─────────────────────────────────────────────────────────
 function prodCardHtml(p, delay = 0) {
-  const src = imgSrc(p.mainImageUrl);
-  const name = t(p.nameI18n);
-  const initial = name.charAt(0) || '?';
-  const img = src
-    ? `<img src="${src}" alt="${escHtml(name)}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\\'img-ph\\'>${escHtml(initial)}</div>'">`
-    : `<div class="img-ph">${escHtml(initial)}</div>`;
+  const src   = imgSrc(p.mainImageUrl);
+  const name  = t(p.nameI18n);
+  const brand = p.brandName || p.brand || '';
   const price = p.minPrice ?? p.basePrice ?? 0;
+  const cmp   = p.compareAtPrice ?? null;
+  const disc  = cmp && cmp > price ? Math.round((1 - price / cmp) * 100) : 0;
+
+  const starsHtml = Array(5).fill(0).map((_, i) => `
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="${i < 4 ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.5">
+      <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+    </svg>`).join('');
+
+  // Renk rozeti: gerçek renk listesi varsa küçük daireler + sayaç, tıklayınca tooltip (site.js renkTooltipHazirla)
+  const colors = p.colors || [];
+  const selectedColorId = p.selectedColorValueId || null;
+  const renkRozetHtml = colors.length > 0 ? `
+    <span class="ms-urun-renk-rozet">
+      <span class="ms-urun-renkler" aria-hidden="true">
+        ${colors.slice(0, 3).map((c, i) => `<span class="ms-urun-renk" style="left:${i * 6}px;background:${escHtml(c.hexCode || '#ccc')}"></span>`).join('')}
+      </span>
+      ${colors.length}
+    </span>
+    <div class="ms-urun-renk-tooltip-alani">
+      <span class="ms-urun-renk-tooltip">
+        <span class="ms-urun-renk-tooltip-baslik">
+          <span>Renk Seçenekleri <span class="ms-urun-renk-tooltip-sayac">(${colors.length})</span></span>
+          <button class="ms-urun-renk-tooltip-kapat" type="button" data-ms-renk-tooltip-kapat aria-label="Renk seçeneklerini kapat">×</button>
+        </span>
+        <span class="ms-urun-renk-tooltip-liste">
+          ${colors.map(c => `
+            <a class="ms-urun-renk-tooltip-gorsel" href="/urun/${escHtml(p.code)}?color=${escHtml(c.valueId)}">
+              <img data-ms-lazy-src="${escHtml(src || '')}" alt="${escHtml(t(c.nameI18n))} renk seçeneği">
+              <span>${escHtml(t(c.nameI18n))}</span>
+            </a>`).join('')}
+        </span>
+      </span>
+    </div>` : '';
+
+  const cardUrl = selectedColorId
+    ? `/urun/${escHtml(p.code)}?color=${escHtml(selectedColorId)}`
+    : `/urun/${escHtml(p.code)}`;
+
+  const galeriResimler = [src].filter(Boolean).join('|');
 
   return `
-    <div class="prod-card fade-up" style="animation-delay:${delay}ms" onclick="navigate('product/${escHtml(p.code)}')">
-      <div class="prod-thumb">
-        ${img}
-        ${p.compareAtPrice ? '<span class="prod-badge">İndirim</span>' : ''}
-        <div class="prod-quick">
-          <button class="btn-quick" onclick="quickAdd(event,'${escHtml(p.code)}')">Sepete Ekle</button>
-        </div>
+    <div class="ms-urun-karti fade-up" style="animation-delay:${delay}ms" data-ms-kart-link-alani data-urun-kodu="${escHtml(p.code)}">
+      <a class="ms-urun-kart-baglanti" href="${cardUrl}" data-ms-kart-link aria-label="${escHtml(name)} ürün detayına git"></a>
+      <div class="ms-urun-gorsel-alani" data-ms-urun-galeri data-ms-urun-galeri-resimler="${escHtml(galeriResimler)}">
+        <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-src="${escHtml(src || '')}" alt="${escHtml(name)}" draggable="false">
+        ${disc >= 5 ? `<span class="ms-urun-indirim-rozeti">-%${disc}</span>` : ''}
+        <button class="ms-urun-favori" type="button" data-ms-urun-favori-kod="${escHtml(p.code)}" aria-label="Favorilere ekle" aria-pressed="false">
+          <span class="ms-urun-favori-ikon"></span>
+        </button>
+        ${renkRozetHtml}
       </div>
-      <div class="prod-body">
-        <div class="prod-name">${escHtml(name)}</div>
-        <div class="prod-prices">
-          <span class="price">${fmt(price)}</span>
-          ${p.compareAtPrice ? `<span class="price-was">${fmt(p.compareAtPrice)}</span>` : ''}
+      <div class="ms-urun-icerik">
+        <h3 class="ms-urun-basligi">${brand ? `<strong>${escHtml(brand)}</strong> ` : ''}${escHtml(name)}</h3>
+        <div class="ms-urun-puan">
+          <span class="ms-urun-yildizlar" aria-label="4.3 yıldız">${starsHtml}</span>
+          <span>4.3</span>
+        </div>
+        <div class="ms-urun-fiyat-senaryolari">
+          ${disc >= 5
+            ? `<p class="ms-urun-fiyat-satiri"><span class="ms-urun-indirim-rozeti">-%${disc}</span><span class="ms-urun-fiyat-indirimli">${fmt(price)}</span><span class="ms-urun-fiyat-eski">${fmt(cmp)}</span></p>`
+            : `<p class="ms-urun-fiyat">${fmt(price)}</p>`}
         </div>
       </div>
     </div>`;
@@ -310,11 +478,96 @@ function prodCardHtml(p, delay = 0) {
 
 function skelGrid(n = 8) {
   return Array(n).fill(0).map(() => `
-    <div class="skel-card">
-      <div class="skel skel-thumb"></div>
-      <div class="skel skel-line w60"></div>
-      <div class="skel skel-line w35"></div>
+    <div class="animate-pulse">
+      <div class="aspect-[3/4] w-full rounded-xl bg-slate-100"></div>
+      <div class="mt-2 h-3 w-3/4 rounded bg-slate-100"></div>
+      <div class="mt-1.5 h-3 w-2/5 rounded bg-slate-100"></div>
     </div>`).join('');
+}
+
+// Shared listing layout builder
+function listingHtml({ title, crumbs = [], childCats = [], search = '' }) {
+  const crumbsHtml = crumbs.map((c, i) =>
+    i < crumbs.length - 1
+      ? `<a href="${escHtml(c.href)}">${escHtml(c.label)}</a> <span>/</span>`
+      : `<span>${escHtml(c.label)}</span>`
+  ).join(' ');
+
+  const subCatFilter = childCats.length ? `
+    <div class="ms-filtre-kapsayici" data-filter-block>
+      <button class="ms-filtre-baslik" type="button" data-filter-toggle aria-expanded="true">
+        Alt Kategoriler
+        <svg class="ms-filtre-ok ms-filtre-ok-acik" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div class="ms-filtre-icerik" data-filter-content>
+        <div class="ms-filtre-secim-listesi">
+          ${childCats.map(c => `
+            <a class="ms-filtre-secim" href="/${escHtml(c.slug)}">${escHtml(t(c.nameI18n))}</a>`).join('')}
+        </div>
+      </div>
+    </div>` : '';
+
+  return `
+    <div class="ms-urun-listesi-sayfa">
+      <div class="ms-urun-listesi-grid">
+        <!-- Sol filtre (masaüstü) -->
+        <aside class="ms-urun-listesi-filtre">
+          <button class="ms-buton ms-buton-s ms-buton-sade" type="button" id="filterClear" onclick="_lsClear()">Filtreleri Temizle</button>
+
+          ${subCatFilter}
+
+          <div class="ms-filtre-kapsayici" data-filter-block id="facetPriceSection">
+            <button class="ms-filtre-baslik" type="button" data-filter-toggle aria-expanded="true">
+              Fiyat Aralığı
+              <svg class="ms-filtre-ok ms-filtre-ok-acik" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div class="ms-filtre-icerik" data-filter-content>
+              <div class="ms-filtre-fiyat-araligi">
+                <input type="number" id="facetPriceMin" placeholder="En Az" min="0">
+                <span class="ms-filtre-fiyat-ayrac">–</span>
+                <input type="number" id="facetPriceMax" placeholder="En Çok" min="0">
+              </div>
+              <button class="ms-filtre-uygula-buton" type="button" onclick="_lsPriceFilter()">Filtrele</button>
+            </div>
+          </div>
+
+          <!-- Attribute facet'ler API cevabından sonra doldurulur -->
+          <div id="facetAttrsContainer"></div>
+        </aside>
+
+        <!-- Sağ içerik -->
+        <main class="ms-urun-listesi-icerik" aria-label="Ürün listeleme alanı">
+          <section class="ms-urun-listesi-urun-alani lazy-infinite-on" data-ms-page-module="infinite-scroll" data-ms-infinite-scroll data-ms-infinite-yukleyici="urun-listesi" data-ms-infinite-esik="0.6" aria-label="Ürün listesi">
+            <div class="ms-urun-listesi-ust-filtre-baslik">
+              <div class="ms-urun-listesi-kategori-ozet">
+                <h1>${escHtml(title)}</h1>
+                <span id="resultCount">Yükleniyor…</span>
+              </div>
+              ${crumbsHtml ? `<nav class="ms-urun-detay-breadcrumb">${crumbsHtml}</nav>` : ''}
+              <div class="ms-urun-listesi-filtre-satiri">
+                <div></div>
+                <div class="ms-urun-listesi-sag-araclar">
+                  <div class="ms-siralama-select" data-ms-siralama-select>
+                    <button class="ms-siralama-select-tetikleyici" type="button" data-ms-siralama-tetikleyici aria-haspopup="listbox" aria-expanded="false">
+                      <span data-ms-siralama-deger>Önerilen</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    <ul class="ms-siralama-select-panel" role="listbox">
+                      <li data-ms-siralama-secenek="default" onclick="LS.sort='default';LS._rerender()">Önerilen</li>
+                      <li data-ms-siralama-secenek="price_asc" onclick="LS.sort='price_asc';LS._rerender()">Fiyat: Düşükten Yükseğe</li>
+                      <li data-ms-siralama-secenek="price_desc" onclick="LS.sort='price_desc';LS._rerender()">Fiyat: Yüksekten Düşüğe</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="ms-urun-listesi-urun-grid ms-kart-izgara" id="prodGrid" data-ms-infinite-liste aria-live="polite">${skelGrid(12)}</div>
+            <div class="ms-infinite-ornek-yukleniyor" data-ms-infinite-yukleniyor>Daha fazla ürün yükleniyor…</div>
+          </section>
+        </main>
+      </div>
+    </div>`;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -325,227 +578,149 @@ function skelGrid(n = 8) {
 async function pageHome() {
   $('main').innerHTML = `
     <!-- HERO -->
-    <section class="hero">
-      <div class="hero-bg"></div>
-      <div class="hero-content fade-up">
-        <div class="hero-kicker">Koleksiyon 2025</div>
-        <h1 class="hero-h1">Kaliteli Ürünler,<br><em>Uygun Fiyatlar.</em></h1>
-        <p class="hero-lead">Binlerce ürün, güvenli ödeme, hızlı teslimat. Alışverişin keyfini yeniden keşfedin.</p>
-        <div class="hero-ctas">
-          <a href="#/products" class="btn-primary">Ürünleri Keşfet &nbsp;→</a>
-          <a href="#/products" class="btn-outline-light">Kampanyalar</a>
-        </div>
-      </div>
-      <div class="hero-figures">
-        <div class="hero-fig">
-          <div class="hero-fig-n">10K+</div>
-          <div class="hero-fig-l">Ürün</div>
-        </div>
-        <div class="hero-fig">
-          <div class="hero-fig-n">50K+</div>
-          <div class="hero-fig-l">Müşteri</div>
-        </div>
-        <div class="hero-fig">
-          <div class="hero-fig-n">%100</div>
-          <div class="hero-fig-l">Güvenli</div>
-        </div>
-      </div>
+    <section class="bg-ms-siyah px-6 py-16 text-center text-white sm:py-20">
+      <p class="text-[12px] font-semibold uppercase tracking-widest text-[var(--ms-renk-primary)]">ECSPros</p>
+      <h1 class="mt-3 text-[28px] font-bold leading-tight sm:text-[38px]">Kaliteli Ürünler, Uygun Fiyatlar</h1>
+      <p class="mx-auto mt-3 max-w-[520px] text-[13px] text-slate-300">Binlerce ürün, güvenli ödeme ve hızlı teslimat ile alışverişin keyfini keşfedin.</p>
+      <a href="/urunler" class="ms-buton ms-buton-l ms-buton-birincil mt-6 inline-flex">Ürünleri Keşfet</a>
     </section>
 
-    <!-- CATEGORIES -->
-    <section>
-      <div class="wrap">
-        <div class="sec-head">
-          <div>
-            <div class="sec-eyebrow">Koleksiyonlar</div>
-            <h2 class="sec-title">Kategorileri Keşfet</h2>
-          </div>
-          <a href="#/products" class="sec-link">Tümünü Gör →</a>
-        </div>
-        <div class="cat-grid" id="homeCats">${Array(6).fill(0).map(() =>
-          `<div class="cat-card"><div class="cat-art skel" style="animation:shimmer 1.5s infinite;background-size:200% 100%"></div></div>`
-        ).join('')}</div>
+    <!-- KATEGORİLER -->
+    <section class="mx-auto max-w-[1400px] px-6 py-10">
+      <div class="mb-5 flex items-center justify-between">
+        <h2 class="text-[18px] font-bold text-ms-siyah">Kategorileri Keşfet</h2>
+        <a class="text-[12px] font-semibold text-[var(--ms-renk-primary)]" href="/urunler">Tümünü Gör</a>
       </div>
+      <div class="ms-gorunum-kategori-kapsul-listesi" id="homeCats">Yükleniyor…</div>
     </section>
 
-    <!-- FEATURED PRODUCTS -->
-    <section>
-      <div class="wrap">
-        <div class="sec-head">
-          <div>
-            <div class="sec-eyebrow">Öne Çıkanlar</div>
-            <h2 class="sec-title">Popüler Ürünler</h2>
-          </div>
-          <a href="#/products" class="sec-link">Tüm Ürünler →</a>
-        </div>
+    <!-- ÖNE ÇIKAN ÜRÜNLER -->
+    <section class="mx-auto max-w-[1400px] px-6 py-10">
+      <div class="mb-5 flex items-center justify-between">
+        <h2 class="text-[18px] font-bold text-ms-siyah">Popüler Ürünler</h2>
+        <a class="text-[12px] font-semibold text-[var(--ms-renk-primary)]" href="/urunler">Tüm Ürünler</a>
       </div>
-      <div class="wrap" style="padding-bottom:0">
-        <div class="prod-grid" id="homeFeat">${skelGrid(8)}</div>
-      </div>
+      <div class="ms-kart-izgara lazy-infinite-on" id="homeFeat">${skelGrid(8)}</div>
     </section>
   `;
 
   const [catRes, prodRes] = await Promise.allSettled([
-    NAV.cats.length ? Promise.resolve(NAV.cats) : api.channelCategories(),
+    NAV.roots.length ? Promise.resolve(NAV.roots) : api.channelCategories(),
     api.products({ page: 1, pageSize: 8 }),
   ]);
 
-  // Render channel category cards
   const catEl = $('homeCats');
   if (catEl) {
     if (catRes.status === 'fulfilled') {
-      const allCats = Array.isArray(catRes.value) ? catRes.value : normalizeList(catRes.value);
-      const roots = allCats.filter(c => !c.parentId).sort((a, b) => a.sortOrder - b.sortOrder);
-      const catGrads = [
-        'linear-gradient(145deg,#1a0a2e 0%,#3d1a5e 100%)',
-        'linear-gradient(145deg,#0a1628 0%,#1e3a6e 100%)',
-        'linear-gradient(145deg,#1a2a0a 0%,#2e5a1a 100%)',
-        'linear-gradient(145deg,#2a0a0a 0%,#6e1a1a 100%)',
-        'linear-gradient(145deg,#0a2a2a 0%,#1a5e5e 100%)',
-        'linear-gradient(145deg,#2a1a0a 0%,#6e3d0a 100%)',
-        'linear-gradient(145deg,#1a0a1a 0%,#4e1a5e 100%)',
-        'linear-gradient(145deg,#0a2a1a 0%,#1a5e3d 100%)',
-      ];
+      const roots = Array.isArray(catRes.value) && catRes.value[0]?.slug
+        ? catRes.value.filter(c => !c.parentId).sort((a, b) => a.sortOrder - b.sortOrder)
+        : NAV.roots;
       catEl.innerHTML = roots.length
-        ? roots.slice(0, 8).map((c, i) => {
-            const childCount = allCats.filter(x => x.parentId === c.id).length;
-            const bg = c.displayImageUrl
-              ? `background:url('${c.displayImageUrl}') center/cover`
-              : `background:${catGrads[i % catGrads.length]}`;
-            return `
-            <div class="cat-card fade-up" style="animation-delay:${i * 40}ms"
-                 onclick="navigate('category/${escHtml(c.slug)}')">
-              <div class="cat-art" style="${bg}"></div>
-              <div class="cat-veil"></div>
-              <div class="cat-body">
-                <div class="cat-label">${escHtml(t(c.nameI18n))}</div>
-                ${childCount ? `<div class="cat-sub">${childCount} alt kategori</div>` : ''}
-                ${c.badgeLabel ? `<span class="cat-badge">${escHtml(c.badgeLabel)}</span>` : ''}
-              </div>
-            </div>`;
-          }).join('')
-        : '<p style="color:var(--ink-40);font-size:13px;padding:12px 0">Henüz kategori yok.</p>';
+        ? roots.slice(0, 8).map(c => `
+            <a class="ms-gorunum-kategori-kapsul" href="/${escHtml(c.slug)}">
+              <strong>${escHtml(t(c.nameI18n))}</strong>
+            </a>`).join('')
+        : '<p>Henüz kategori yok.</p>';
     } else {
-      catEl.innerHTML = '<p style="color:var(--ink-40);font-size:13px;padding:12px 0">Kategoriler yüklenemedi.</p>';
+      catEl.innerHTML = '<p>Kategoriler yüklenemedi.</p>';
     }
   }
 
-  // Render featured
   const featEl = $('homeFeat');
   if (featEl) {
     if (prodRes.status === 'fulfilled') {
-      const items = (prodRes.value.items || []);
+      const items = prodRes.value.items || [];
       featEl.innerHTML = items.length
         ? items.map((p, i) => prodCardHtml(p, i * 35)).join('')
-        : '<p style="color:var(--ink-40);font-size:13px;padding:24px;grid-column:1/-1">Ürün bulunamadı.</p>';
+        : '<p>Ürün bulunamadı.</p>';
+      window.msUrunKartDavranislariYenile?.(featEl);
+      window.msLazyLoadYenile?.(featEl);
     } else {
-      featEl.innerHTML = '<p style="color:var(--ink-40);font-size:13px;padding:24px;grid-column:1/-1">Ürünler yüklenemedi.</p>';
+      featEl.innerHTML = '<p>Ürünler yüklenemedi.</p>';
     }
   }
 }
 
 // ── PRODUCTS ─────────────────────────────────────────────
-async function pageProducts({ page = 1, search = '', categoryId = null } = {}) {
-  page = parseInt(page) || 1;
+// Ortak liste render'ı — sayfalama artık infinite-scroll ile ilerler (site.js'in
+// window.msInfiniteLoaders motoru), hem /urunler hem kategori sayfası bunu paylaşır.
+async function _renderListing({ title, crumbs, childCats = [], search = '', fetchPage, fetchFacets, emptyMsg }) {
+  LS.items = []; LS.facets = null; LS.priceMin = null; LS.priceMax = null;
+  LS.sort = 'default'; LS.selectedAttrs = new Set();
+  LS.page = 1; LS.totalPages = 1;
 
-  const titleText = search
-    ? `"${escHtml(search)}" Sonuçları`
-    : categoryId ? 'Kategori Ürünleri' : 'Tüm Ürünler';
+  $('main').innerHTML = listingHtml({ title, crumbs, childCats, search });
+  window.msRunPageModules(document);
 
-  $('main').innerHTML = `
-    <div class="prods-page">
-      <div class="prods-hero">
-        <div class="prods-hero-inner">
-          <div>
-            <h1 class="fade-up">${titleText}</h1>
-            <p class="fade-up fade-up-1">En iyi ürünleri keşfedin</p>
-          </div>
-          <span class="prods-count-badge" id="prodCountBadge"></span>
-        </div>
-      </div>
+  // Facet'ler grid'i BLOKLAMAZ: ürünler gelir gelmez render edilir, filtre
+  // panelini facet cevabı geldiğinde ayrıca doldururuz (facets tüm katalogda
+  // ağır bir aggregation — soğuk cache'te birkaç saniye sürebilir).
+  const listingToken = Symbol();
+  LS._listingToken = listingToken;
+  fetchFacets().then(facets => {
+    if (LS._listingToken !== listingToken) return; // kullanıcı başka sayfaya geçti
+    LS.facets = facets;
+    LS.renderFacets();
+  }).catch(() => { /* filtre paneli boş kalır, sayfa çalışmaya devam eder */ });
 
-      <div class="toolbar">
-        <div class="toolbar-inner">
-          <div class="toolbar-search">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input type="text" id="tbSearch" placeholder="Ürün ara…" value="${escHtml(search)}">
-          </div>
-          <div class="chips" id="catChips">
-            <button class="chip ${!categoryId ? 'on' : ''}" onclick="navigate('products')">Tümü</button>
-          </div>
-        </div>
-      </div>
+  const prodRes = await Promise.allSettled([fetchPage(1)]).then(r => r[0]);
 
-      <div class="prods-body">
-        <div class="result-info" id="resultInfo"></div>
-        <div class="prod-grid" id="prodGrid">${skelGrid(12)}</div>
-        <div id="paginator"></div>
-      </div>
-    </div>`;
-
-  // Wire up toolbar search
-  const tbSearch = $('tbSearch');
-  if (tbSearch) {
-    tbSearch.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && tbSearch.value.trim())
-        navigate('products?search=' + encodeURIComponent(tbSearch.value.trim()));
-    });
-  }
-
-  // Load channel category chips (non-blocking)
-  const catLoader = NAV.cats.length ? Promise.resolve(NAV.cats) : api.channelCategories();
-  catLoader.then(res => {
-    const allCats = Array.isArray(res) ? res : normalizeList(res);
-    const roots = allCats.filter(c => !c.parentId).sort((a, b) => a.sortOrder - b.sortOrder);
-    const chipsEl = $('catChips');
-    if (chipsEl && roots.length) {
-      const extra = roots.map(c => `
-        <button class="chip" onclick="navigate('category/${escHtml(c.slug)}')">
-          ${escHtml(t(c.nameI18n))}
-        </button>`).join('');
-      chipsEl.innerHTML = `<button class="chip on" onclick="navigate('products')">Tümü</button>${extra}`;
-    }
-  }).catch(() => {});
-
-  // Load products
+  const grid = $('prodGrid');
   try {
-    const data = await api.products({ page, search, categoryId });
+    if (prodRes.status === 'rejected') throw prodRes.reason;
+    const data  = prodRes.value;
     const items = data.items || [];
     const total = data.totalCount ?? data.total ?? items.length;
-    const ps    = data.pageSize  || 24;
-    const totalPages = Math.ceil(total / ps);
+    const ps    = data.pageSize || 24;
+    LS.totalPages = Math.max(1, Math.ceil(total / ps));
+    LS.items = items;
 
-    const info = $('resultInfo');
-    if (info) info.textContent = `${total.toLocaleString('tr-TR')} ürün bulundu`;
+    const cnt = $('resultCount');
+    if (cnt) cnt.innerHTML = `<strong>${total.toLocaleString('tr-TR')}</strong> ürün listeleniyor`;
 
-    const badge = $('prodCountBadge');
-    if (badge) badge.textContent = `${total.toLocaleString('tr-TR')} ürün`;
-
-    const grid = $('prodGrid');
     if (grid) {
       grid.innerHTML = items.length
-        ? items.map((p, i) => prodCardHtml(p, i * 30)).join('')
-        : `<p style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--ink-40);font-size:14px">
-             Ürün bulunamadı. <a href="#/products" style="color:var(--gold)">Tüm ürünlere dön</a>
-           </p>`;
-    }
-
-    // Pagination
-    if (totalPages > 1) {
-      const pag = $('paginator');
-      if (pag) pag.innerHTML = buildPagination(page, totalPages, { search, categoryId });
+        ? items.map((p, i) => prodCardHtml(p, i * 25)).join('')
+        : `<p>${escHtml(emptyMsg)}</p>`;
+      window.msUrunKartDavranislariYenile?.(grid);
+      window.msLazyLoadYenile?.(grid);
     }
   } catch (e) {
-    const grid = $('prodGrid');
-    if (grid) grid.innerHTML = `<p style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--ink-40);font-size:14px">Hata: ${escHtml(e.message)}</p>`;
+    if (grid) grid.innerHTML = `<p>Ürünler yüklenemedi: ${escHtml(e.message)}</p>`;
+    return;
   }
+
+  window.msInfiniteLoaders['urun-listesi'] = async () => {
+    if (LS.page >= LS.totalPages) return false;
+    LS.page += 1;
+    try {
+      const data = await fetchPage(LS.page);
+      LS.items = LS.items.concat(data.items || []);
+      LS._rerender();
+    } catch { return false; }
+    return LS.page < LS.totalPages;
+  };
+}
+
+async function pageProducts({ search = '' } = {}) {
+  const title = search ? `"${search}" Sonuçları` : 'Tüm Ürünler';
+  const crumbs = [
+    { label: 'Ana Sayfa', href: '/' },
+    { label: 'Ürünler',   href: '/urunler' },
+    ...(search ? [{ label: `"${search}"` }] : []),
+  ];
+
+  await _renderListing({
+    title, crumbs, search,
+    fetchPage:   (page) => api.products({ page, search, pageSize: 24 }),
+    fetchFacets: () => api.productsFacets({ search }),
+    emptyMsg: 'Ürün bulunamadı.',
+  });
 }
 
 // ── CATEGORY ─────────────────────────────────────────────
-async function pageCategory(slug, { page = 1 } = {}) {
-  page = parseInt(page) || 1;
+async function pageCategory(slug, params = {}) {
   const cat = NAV.bySlug[slug];
-
   if (!cat) {
     setLoading();
     try {
@@ -554,88 +729,42 @@ async function pageCategory(slug, { page = 1 } = {}) {
       NAV.cats = allCats;
       NAV.roots = allCats.filter(c => !c.parentId).sort((a, b) => a.sortOrder - b.sortOrder);
     } catch { $('main').innerHTML = '<p style="padding:80px 40px">Kategori yüklenemedi.</p>'; return; }
-    return pageCategory(slug, { page });
+    return pageCategory(slug, params);
   }
 
-  const catName = t(cat.nameI18n);
+  const catName   = t(cat.nameI18n);
   const childCats = NAV.cats.filter(c => c.parentId === cat.id).sort((a, b) => a.sortOrder - b.sortOrder);
   const parentCat = cat.parentId ? NAV.byId[cat.parentId] : null;
 
-  $('main').innerHTML = `
-    <div class="prods-page">
-      <div class="prods-hero">
-        <div class="prods-hero-inner">
-          <div>
-            ${parentCat ? `<div class="breadcrumb"><a href="#/category/${parentCat.slug}">${escHtml(t(parentCat.nameI18n))}</a> <span>›</span></div>` : ''}
-            <h1 class="fade-up">${escHtml(catName)}</h1>
-            <p class="fade-up fade-up-1">${cat.badgeLabel ? `<span class="cat-badge-inline">${escHtml(cat.badgeLabel)}</span>` : ''}</p>
-          </div>
-          <span class="prods-count-badge" id="prodCountBadge"></span>
-        </div>
-      </div>
+  const crumbs = [
+    { label: 'Ana Sayfa', href: '/' },
+    ...(parentCat ? [{ label: t(parentCat.nameI18n), href: '/' + parentCat.slug }] : []),
+    { label: catName },
+  ];
 
-      ${childCats.length ? `
-      <div class="toolbar">
-        <div class="toolbar-inner">
-          <div class="chips">
-            <button class="chip on" onclick="navigate('category/${slug}')">Tümü</button>
-            ${childCats.map(c => `
-              <button class="chip" onclick="navigate('category/${escHtml(c.slug)}')">
-                ${escHtml(t(c.nameI18n))}
-              </button>`).join('')}
-          </div>
-        </div>
-      </div>` : ''}
-
-      <div class="prods-body">
-        <div class="result-info" id="resultInfo"></div>
-        <div class="prod-grid" id="prodGrid">${skelGrid(12)}</div>
-        <div id="paginator"></div>
-      </div>
-    </div>`;
-
-  try {
-    const data = await api.channelCategoryProducts(cat.id, { page, pageSize: 24 });
-    const items = data.items || [];
-    const total = data.totalCount ?? data.total ?? items.length;
-    const ps    = data.pageSize || 24;
-    const totalPages = Math.ceil(total / ps);
-
-    const info = $('resultInfo');
-    if (info) info.textContent = `${total.toLocaleString('tr-TR')} ürün bulundu`;
-
-    const badge = $('prodCountBadge');
-    if (badge) badge.textContent = `${total.toLocaleString('tr-TR')} ürün`;
-
-    const grid = $('prodGrid');
-    if (grid) {
-      grid.innerHTML = items.length
-        ? items.map((p, i) => prodCardHtml(p, i * 30)).join('')
-        : `<p style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--ink-40);font-size:14px">Bu kategoride henüz ürün bulunmuyor.</p>`;
-    }
-
-    if (totalPages > 1) {
-      const pag = $('paginator');
-      if (pag) pag.innerHTML = buildPagination(page, totalPages, {}, `category/${slug}`);
-    }
-  } catch (e) {
-    const grid = $('prodGrid');
-    if (grid) grid.innerHTML = `<p style="grid-column:1/-1;padding:60px 20px;text-align:center;color:var(--ink-40)">Ürünler yüklenemedi: ${escHtml(e.message)}</p>`;
-  }
+  await _renderListing({
+    title: catName, crumbs, childCats,
+    fetchPage:   (page) => api.channelCategoryProducts(cat.id, { page, pageSize: 24 }),
+    fetchFacets: () => api.channelCategoryFacets(cat.id),
+    emptyMsg: 'Bu kategoride henüz ürün bulunmuyor.',
+  });
 }
 
 // ── PRODUCT DETAIL ────────────────────────────────────────
 async function pageProduct(code) {
+  const colorParam = new URLSearchParams(window.location.search).get('color');
+
   $('main').innerHTML = `
-    <div class="detail-wrap">
-      <div class="gallery">
-        <div class="gallery-main skel" style="aspect-ratio:4/5"></div>
+    <div class="dp-wrap">
+      <div class="dp-gallery">
+        <div class="dp-thumbs"></div>
+        <div class="dp-main"><div class="dp-main-ph">…</div></div>
       </div>
-      <div class="detail-info">
-        <div class="skel skel-line" style="width:55%;height:14px;margin:0 0 18px"></div>
-        <div class="skel skel-line" style="width:85%;height:40px;margin:0 0 12px"></div>
-        <div class="skel skel-line" style="width:40%;height:30px;margin:0 0 28px"></div>
-        <div class="skel skel-line" style="width:100%;height:80px;margin:0 0 28px"></div>
+      <div class="dp-info">
+        <div class="skel skel-line" style="width:40%;height:11px;margin:0 0 16px"></div>
+        <div class="skel skel-line" style="width:85%;height:28px;margin:0 0 10px"></div>
+        <div class="skel skel-line" style="width:40%;height:28px;margin:0 0 24px"></div>
+        <div class="skel skel-line" style="width:100%;height:80px"></div>
       </div>
     </div>`;
 
@@ -643,220 +772,315 @@ async function pageProduct(code) {
     const product  = await api.product(code);
     const variants = (product.variants || []).filter(v => v.isActive);
 
-    // Build attribute map: code → { name, values: [{id, name}] }
+    // Attribute map: code → { code, nameI18n, isColor, values }
     const attrMap = {};
     for (const v of variants) {
       for (const a of (v.attributes || [])) {
         if (!attrMap[a.attributeTypeCode]) {
           attrMap[a.attributeTypeCode] = {
-            code:     a.attributeTypeCode,
-            nameI18n: a.attributeTypeNameI18n,
-            values:   [],
+            code: a.attributeTypeCode, nameI18n: a.attributeTypeNameI18n,
+            isColor: a.isColor || false, values: [],
           };
         }
-        const exists = attrMap[a.attributeTypeCode].values.some(x => x.id === a.attributeValueId);
-        if (!exists) attrMap[a.attributeTypeCode].values.push({
-          id:      a.attributeValueId,
-          nameI18n: a.attributeValueNameI18n,
-        });
+        if (!attrMap[a.attributeTypeCode].values.some(x => x.id === a.attributeValueId))
+          attrMap[a.attributeTypeCode].values.push({
+            id: a.attributeValueId, nameI18n: a.attributeValueNameI18n, hexCode: a.hexCode || null,
+          });
       }
     }
-    const attrTypes = Object.values(attrMap);
+    const attrTypes     = Object.values(attrMap);
+    const colorAttrType = attrTypes.find(at => at.isColor) || null;
 
-    // Mutable state for the detail page
+    // colorImgMap: colorValueId → first imageUrl (backend garanti ediyor: aynı renkli tüm varyantlar aynı görsele sahip)
+    const colorImgMap = {};
+    if (colorAttrType) {
+      for (const val of colorAttrType.values) {
+        // Rengin herhangi bir varyantında görsel varsa kaydet
+        const cv = variants.find(v =>
+          (v.attributes || []).some(a => a.attributeTypeCode === colorAttrType.code && a.attributeValueId === val.id)
+          && (v.images || []).length > 0
+        );
+        if (cv?.images?.[0]) colorImgMap[val.id] = imgSrc(cv.images[0].imageUrl);
+      }
+    }
+
     const state = {
-      product,
-      variants,
-      attrMap,
-      attrTypes,
-      selected: {},        // { attrTypeCode: valueId }
-      variant: variants.length === 1 ? variants[0] : null,
-      qty: 1,
+      product, variants, attrMap, attrTypes, colorAttrType,
+      selected: {}, variant: variants.length === 1 ? variants[0] : null,
+      qty: 1, imgIdx: 0,
     };
 
-    // Expose for inline handlers
+    if (colorParam && colorAttrType) {
+      const found = colorAttrType.values.find(v => v.id === colorParam);
+      if (found) state.selected[colorAttrType.code] = colorParam;
+    }
     window.__dp = state;
 
-    function allImages() {
-      if (state.variant) return (state.variant.images || []).sort((a,b) => a.sortOrder - b.sortOrder);
-      return variants.flatMap(v => v.images || []).sort((a,b) => a.sortOrder - b.sortOrder);
+    // Seçili renge göre görseller — aynı renkli ilk varyantın görselleri yeterli
+    // (backend, aynı renge ait tüm varyantlara aynı görselleri atar)
+    function colorImages() {
+      const colorCode = state.colorAttrType?.code;
+      const selColor  = colorCode ? state.selected[colorCode] : null;
+      if (selColor) {
+        const cv = variants.find(v =>
+          (v.attributes || []).some(a => a.attributeTypeCode === colorCode && a.attributeValueId === selColor)
+        );
+        if (cv?.images?.length) return [...cv.images].sort((a,b) => a.sortOrder - b.sortOrder);
+      }
+      if (state.variant?.images?.length) return [...state.variant.images].sort((a,b) => a.sortOrder - b.sortOrder);
+      // Fallback: ilk görseli olan varyantı kullan (flatMap çoğaltma yapar)
+      const first = variants.find(v => v.images?.length > 0);
+      return first ? [...first.images].sort((a,b) => a.sortOrder - b.sortOrder) : [];
+    }
+
+    // Seçili renge göre mevcut beden değerlerini döndürür
+    function availSizeValues(at) {
+      const colorCode = colorAttrType?.code;
+      const selColor  = colorCode ? state.selected[colorCode] : null;
+      if (!selColor) return at.values;
+      return at.values.filter(val =>
+        variants.some(v =>
+          (v.attributes || []).some(a => a.attributeTypeCode === colorCode && a.attributeValueId === selColor)
+          && (v.attributes || []).some(a => a.attributeTypeCode === at.code && a.attributeValueId === val.id)
+        )
+      );
+    }
+
+    // Seçili renk + bu beden kombinasyonunun toplam stoğu
+    function sizeStock(at, valId) {
+      const colorCode = colorAttrType?.code;
+      const selColor  = colorCode ? state.selected[colorCode] : null;
+      return variants
+        .filter(v =>
+          (v.attributes || []).some(a => a.attributeTypeCode === at.code && a.attributeValueId === valId)
+          && (!selColor || (v.attributes || []).some(a => a.attributeTypeCode === colorCode && a.attributeValueId === selColor))
+        )
+        .reduce((sum, v) => sum + (v.stockQty ?? 0), 0);
+    }
+
+    function sizeOptsHtml(at) {
+      return availSizeValues(at).map(val => {
+        const oos = sizeStock(at, val.id) <= 0;
+        const sel = state.selected[at.code] === val.id;
+        return `<label class="ms-beden-secim${oos ? ' ms-beden-secim-tukendi' : ''}">
+          <input class="ms-beden-secim-input" type="radio" name="dp-beden-${escHtml(at.code)}"
+                 ${sel ? 'checked' : ''} ${oos ? 'disabled' : ''}
+                 onchange="dpSelect('${at.code}','${val.id}',this)">
+          <span class="ms-beden-secim-kutu">${escHtml(t(val.nameI18n))}</span>
+        </label>`;
+      }).join('');
     }
 
     function currentPrice() {
       if (state.variant) return state.variant.platformPrice ?? state.variant.basePrice;
-      const prices = variants.map(v => v.platformPrice ?? v.basePrice).filter(Boolean);
+      const colorCode = state.colorAttrType?.code;
+      const selColor  = colorCode ? state.selected[colorCode] : null;
+      const pool = selColor
+        ? variants.filter(v => (v.attributes || []).some(a => a.attributeTypeCode === colorCode && a.attributeValueId === selColor))
+        : variants;
+      const prices = pool.map(v => v.platformPrice ?? v.basePrice).filter(Boolean);
       return prices.length ? Math.min(...prices) : null;
     }
 
-    function currentCompare() {
-      return state.variant?.compareAtPrice ?? null;
-    }
+    // Galeri markup'ı üretir (data-ms-urun-detay-resim-* — bkz. site.js msUrunDetayResimBaslat)
+    function galleryHtml(imgs) {
+      const name = escHtml(t(product.nameI18n));
+      const thumbsHtml = imgs.map((img, i) => `
+        <button class="ms-urun-detay-resim-thumb${i === 0 ? ' ms-urun-detay-resim-thumb-aktif' : ''}" type="button" data-ms-urun-detay-resim-thumb aria-label="${i + 1}. görseli göster">
+          <img src="${imgSrc(img.imageUrl)}" alt="" loading="lazy">
+        </button>`).join('');
+      const slidesHtml = imgs.map((img, i) => `
+        <div class="ms-urun-detay-resim-ana${i === 0 ? ' ms-urun-detay-resim-ana-gorunur ms-urun-detay-resim-ana-aktif' : ''}" data-ms-urun-detay-resim-slide>
+          <img src="${imgSrc(img.imageUrl)}" alt="${name}" draggable="false">
+        </div>`).join('');
 
-    function render() {
-      const imgs   = allImages();
-      const main   = imgs[0];
-      const price  = currentPrice();
-      const cmp    = currentCompare();
-      const disc   = cmp && cmp > price ? Math.round((1 - price / cmp) * 100) : 0;
-      const canAdd = state.variant !== null || variants.length === 0;
-      const desc   = t(product.shortDescriptionI18n);
-
-      const imgMain = main
-        ? `<img id="galMain" src="${imgSrc(main.imageUrl)}" alt="${escHtml(t(product.nameI18n))}"
-              onerror="this.parentNode.innerHTML='<div class=\\'img-ph\\'>?</div>'">`
-        : `<div class="img-ph">${escHtml(t(product.nameI18n).charAt(0) || '?')}</div>`;
-
-      const thumbsHtml = imgs.length > 1
-        ? `<div class="gallery-thumbs">
-            ${imgs.map((img, i) => `
-              <div class="g-thumb ${i === 0 ? 'on' : ''}"
-                   onclick="dpThumb(this,'${escHtml(imgSrc(img.imageUrl))}')">
-                <img src="${imgSrc(img.imageUrl)}" alt="" loading="lazy">
-              </div>`).join('')}
-           </div>`
-        : '';
-
-      const attrsHtml = attrTypes.map(at => {
-        const curVal = state.selected[at.code];
-        const curName = curVal
-          ? escHtml(t(at.values.find(v => v.id === curVal)?.nameI18n) || '')
-          : '';
-        return `
-          <div class="var-group">
-            <div class="var-label">
-              ${escHtml(t(at.nameI18n))}
-              <span class="var-val" id="vval-${at.code}">${curName ? '— ' + curName : ''}</span>
-            </div>
-            <div class="var-opts">
-              ${at.values.map(val => `
-                <button class="var-opt ${state.selected[at.code] === val.id ? 'on' : ''}"
-                        onclick="dpSelect('${at.code}','${val.id}',this)">
-                  ${escHtml(t(val.nameI18n))}
-                </button>`).join('')}
-            </div>
-          </div>`;
-      }).join('');
-
-      $('main').innerHTML = `
-        <div class="detail-wrap fade-up">
-          <div class="gallery">
-            <div class="gallery-main">${imgMain}</div>
-            ${thumbsHtml}
-          </div>
-
-          <div class="detail-info">
-            <div class="breadcrumb">
-              <a href="#/">Ana Sayfa</a>
-              <span>›</span>
-              <a href="#/products">Ürünler</a>
-              <span>›</span>
-              <span>${escHtml(t(product.nameI18n))}</span>
-            </div>
-
-            <h1 class="detail-name">${escHtml(t(product.nameI18n))}</h1>
-
-            <div class="detail-prices">
-              <span class="detail-price">${price != null ? fmt(price) : '—'}</span>
-              ${cmp ? `<span class="detail-was">${fmt(cmp)}</span>` : ''}
-              ${disc ? `<span class="detail-off">%${disc} İndirim</span>` : ''}
-            </div>
-
-            ${desc ? `<p class="detail-desc">${escHtml(desc)}</p>` : ''}
-
-            ${attrsHtml}
-
-            <div class="atc-row">
-              <div class="qty">
-                <button class="qty-btn" onclick="dpQty(-1)">−</button>
-                <div class="qty-n" id="dpQtyN">1</div>
-                <button class="qty-btn" onclick="dpQty(1)">+</button>
+      return `
+        <div class="ms-urun-detay-resim-alani" data-ms-urun-detay-resim-alani>
+          <div class="ms-urun-detay-resim-galeri">
+            <div class="ms-urun-detay-resim-thumb-listesi">${thumbsHtml}</div>
+            <div class="ms-urun-detay-resim-ana-sutun">
+              <div class="ms-urun-detay-resim-ana-kapsayici" data-ms-urun-detay-resim-surukle>
+                <div class="ms-urun-detay-resim-track" data-ms-urun-detay-resim-track>${slidesHtml}</div>
+                ${imgs.length > 1 ? `
+                  <button class="ms-urun-detay-resim-kontrol ms-urun-detay-resim-kontrol-sol" type="button" data-ms-urun-detay-resim-yon="onceki" aria-label="Önceki görsel">‹</button>
+                  <button class="ms-urun-detay-resim-kontrol ms-urun-detay-resim-kontrol-sag" type="button" data-ms-urun-detay-resim-yon="sonraki" aria-label="Sonraki görsel">›</button>` : ''}
               </div>
-              <button class="btn-atc" id="dpAtcBtn"
-                      ${canAdd ? '' : 'disabled'}
-                      onclick="dpAddToCart()">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                ${canAdd ? 'Sepete Ekle' : 'Varyant Seçin'}
-              </button>
             </div>
-
-            <div class="trust-row">
-              <div class="trust-item"><span class="trust-icon">🚚</span><span>Ücretsiz kargo — 500₺ üzeri</span></div>
-              <div class="trust-item"><span class="trust-icon">↩️</span><span>30 gün koşulsuz iade</span></div>
-              <div class="trust-item"><span class="trust-icon">🔒</span><span>Güvenli 256-bit SSL ödeme</span></div>
+          </div>
+          <div class="ms-ornek-modal ms-urun-detay-resim-modal" data-ms-urun-detay-resim-modal aria-hidden="true">
+            <div class="ms-ornek-modal-kaplama" data-ms-urun-detay-resim-modal-kapat></div>
+            <div class="ms-urun-detay-resim-modal-kutu" role="dialog" aria-modal="true" aria-label="Ürün görseli büyütülmüş">
+              <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-detay-resim-modal-kapat aria-label="Kapat">×</button>
+              <img class="ms-urun-detay-resim-modal-gorsel" data-ms-urun-detay-resim-modal-gorsel alt="${name}">
             </div>
           </div>
         </div>`;
     }
 
-    // Gallery thumbnail click
-    window.dpThumb = (el, url) => {
-      qsa('.g-thumb').forEach(t => t.classList.remove('on'));
-      el.classList.add('on');
-      const img = $('galMain');
-      if (img) img.src = url;
-    };
+    function renderGallery() {
+      const imgs = colorImages();
+      state.imgIdx = 0;
+      const alan = qs('[data-ms-urun-detay-resim-alani]');
+      if (!alan) return;
+      alan.outerHTML = galleryHtml(imgs);
+      window.msUrunDetayResimBaslat?.(document);
+    }
+
+    function render() {
+      const imgs  = colorImages();
+      const price = currentPrice();
+      const cmp   = state.variant?.compareAtPrice ?? null;
+      const disc  = cmp && price && cmp > price ? Math.round((1 - price / cmp) * 100) : 0;
+      const canAdd = state.variant !== null;
+      const desc  = t(product.shortDescriptionI18n);
+
+      // Renk seçenekleri — sadece görseli olan renkler listelenir
+      const visibleColors = colorAttrType
+        ? colorAttrType.values.filter(val => colorImgMap[val.id])
+        : [];
+      const colorHtml = visibleColors.length > 0 ? `
+        <section class="ms-urun-detay-renk-alani" aria-label="Renk seçenekleri">
+          <p class="ms-urun-detay-renk-baslik">
+            Renk: <strong id="vval-${colorAttrType.code}">${
+              state.selected[colorAttrType.code]
+                ? escHtml(t(colorAttrType.values.find(v => v.id === state.selected[colorAttrType.code])?.nameI18n) || '')
+                : ''
+            }</strong>
+          </p>
+          <div class="ms-urun-detay-renk-listesi">
+            ${visibleColors.map(val => `
+              <button class="ms-urun-detay-renk${state.selected[colorAttrType.code] === val.id ? ' ms-urun-detay-renk-aktif' : ''}"
+                      type="button" aria-pressed="${state.selected[colorAttrType.code] === val.id}"
+                      title="${escHtml(t(val.nameI18n))}"
+                      onclick="dpSelect('${colorAttrType.code}','${val.id}',this)">
+                <img src="${colorImgMap[val.id]}" alt="${escHtml(t(val.nameI18n))}" loading="lazy">
+                <span class="ms-urun-detay-renk-secili-ikon" aria-hidden="true">✓</span>
+              </button>`).join('')}
+          </div>
+        </section>` : '';
+
+      // Diğer öznitelikler (beden vb.) — seçili renge göre filtrelenir
+      const otherAttrsHtml = attrTypes
+        .filter(at => !at.isColor)
+        .map(at => `
+          <section aria-label="${escHtml(t(at.nameI18n))} seçenekleri">
+            <p class="ms-urun-detay-renk-baslik">${escHtml(t(at.nameI18n))}: <strong id="vval-${at.code}"></strong></p>
+            <div class="ms-beden-secim-listesi" id="dp-size-${at.code}">${sizeOptsHtml(at)}</div>
+          </section>`).join('');
+
+      $('main').innerHTML = `
+        <div class="ms-urun-detay-sayfa fade-up">
+        <div class="ms-urun-detay-kapsayici">
+          <div class="ms-urun-detay-ust">
+            ${galleryHtml(imgs)}
+
+            <div class="ms-urun-detay-bilgi">
+              <h1 class="ms-urun-basligi">${escHtml(t(product.nameI18n))}</h1>
+              <p class="ms-urun-detay-renk-baslik">${escHtml(product.code)}</p>
+
+              <div class="ms-urun-fiyat-senaryolari">
+                ${disc >= 5
+                  ? `<p class="ms-urun-fiyat-satiri"><span class="ms-urun-indirim-rozeti">-%${disc}</span><span class="ms-urun-fiyat-indirimli">${price != null ? fmt(price) : '—'}</span><span class="ms-urun-fiyat-eski">${fmt(cmp)}</span></p>`
+                  : `<p class="ms-urun-fiyat">${price != null ? fmt(price) : '—'}</p>`}
+              </div>
+
+              ${colorHtml}
+              ${otherAttrsHtml}
+
+              <div class="ms-urun-detay-cta">
+                <button class="ms-buton ms-buton-l ms-buton-birincil ms-buton-tam" id="dpAtcBtn"
+                        ${canAdd ? '' : 'disabled'}
+                        onclick="dpAddToCart()">
+                  ${canAdd ? 'Sepete Ekle' : 'Seçim Yapın'}
+                </button>
+                <button class="ms-urun-favori" type="button" data-ms-urun-favori-kod="${escHtml(product.code)}" aria-label="Favorilere ekle" aria-pressed="false">
+                  <span class="ms-urun-favori-ikon"></span>
+                </button>
+              </div>
+
+              ${desc ? `
+              <div class="ms-footer-kolon" data-ms-footer-akordiyon>
+                <button class="ms-footer-akordiyon-baslik" type="button" data-ms-footer-akordiyon-tetikleyici aria-expanded="false">
+                  <span class="ms-footer-baslik">Ürün Açıklaması</span>
+                  <span class="ms-footer-akordiyon-ok" aria-hidden="true"></span>
+                </button>
+                <div class="ms-footer-akordiyon-icerik" data-ms-footer-akordiyon-icerik>${escHtml(desc)}</div>
+              </div>` : ''}
+            </div>
+          </div>
+        </div>
+        </div>`;
+
+      window.msRunPageModules(document);
+      window.msUrunKartDavranislariYenile?.($('main'));
+    }
 
     // Attribute select
     window.dpSelect = (typeCode, valueId, btn) => {
       const s = window.__dp;
       s.selected[typeCode] = valueId;
-      // Update label
+      s.imgIdx = 0;
+
       const labelEl = $(`vval-${typeCode}`);
       if (labelEl) {
         const at  = s.attrMap[typeCode];
         const val = at.values.find(v => v.id === valueId);
-        labelEl.textContent = val ? '— ' + t(val.nameI18n) : '';
+        labelEl.textContent = val ? t(val.nameI18n) : '';
       }
-      // Mark selected
-      btn.closest('.var-opts').querySelectorAll('.var-opt').forEach(b => b.classList.remove('on'));
-      btn.classList.add('on');
-      // Find matching variant
+
+      const opts = btn.closest('.ms-urun-detay-renk-listesi, .ms-beden-secim-listesi');
+      if (opts) opts.querySelectorAll('.ms-urun-detay-renk').forEach(b => { b.classList.remove('ms-urun-detay-renk-aktif'); b.setAttribute('aria-pressed', 'false'); });
+      if (btn.classList.contains('ms-urun-detay-renk')) { btn.classList.add('ms-urun-detay-renk-aktif'); btn.setAttribute('aria-pressed', 'true'); }
+
+      if (s.colorAttrType && typeCode === s.colorAttrType.code) {
+        // Renk değişince: seçili beden bu renkte yoksa temizle
+        for (const at of s.attrTypes.filter(a => !a.isColor)) {
+          const curSize = s.selected[at.code];
+          const stillOk = !curSize || s.variants.some(v =>
+            (v.attributes || []).some(a => a.attributeTypeCode === typeCode && a.attributeValueId === valueId)
+            && (v.attributes || []).some(a => a.attributeTypeCode === at.code && a.attributeValueId === curSize)
+          );
+          if (!stillOk) {
+            delete s.selected[at.code];
+            const lbl = document.getElementById(`vval-${at.code}`);
+            if (lbl) lbl.textContent = '';
+          }
+          const optsEl = document.getElementById(`dp-size-${at.code}`);
+          if (optsEl) optsEl.innerHTML = sizeOptsHtml(at);
+        }
+        const url = new URL(window.location.href);
+        url.searchParams.set('color', valueId);
+        history.replaceState(null, '', url.toString());
+        renderGallery();
+      }
+
       s.variant = s.variants.find(v =>
         Object.entries(s.selected).every(([code, id]) =>
           (v.attributes || []).some(a => a.attributeTypeCode === code && a.attributeValueId === id)
         )
       ) ?? null;
-      // Update button
+
+      const priceEl = qs('.ms-urun-fiyat, .ms-urun-fiyat-indirimli');
+      if (priceEl) priceEl.textContent = currentPrice() != null ? fmt(currentPrice()) : '—';
+
       const atcBtn = $('dpAtcBtn');
       if (atcBtn) {
         const canAdd = s.variant !== null;
         atcBtn.disabled = !canAdd;
-        atcBtn.innerHTML = `
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <path d="M16 10a4 4 0 0 1-8 0"/>
-          </svg>
-          ${canAdd ? 'Sepete Ekle' : 'Varyant Seçin'}`;
+        atcBtn.textContent = canAdd ? 'Sepete Ekle' : 'Seçim Yapın';
       }
-    };
-
-    // Qty change
-    window.dpQty = delta => {
-      const s = window.__dp;
-      s.qty = Math.max(1, s.qty + delta);
-      const el = $('dpQtyN');
-      if (el) el.textContent = s.qty;
     };
 
     // Add to cart
     window.dpAddToCart = async () => {
       const s   = window.__dp;
-      const v   = s.variant ?? (s.variants.length === 1 ? s.variants[0] : null);
-      if (!v) { toast('Lütfen varyant seçin.', 'err'); return; }
+      const v   = s.variant;
+      if (!v) { toast('Lütfen beden seçin.', 'err'); return; }
       const btn = $('dpAtcBtn');
       if (btn) { btn.disabled = true; btn.textContent = 'Ekleniyor…'; }
       const price = v.platformPrice ?? v.basePrice;
       await addToCart(v.id, s.qty, price);
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = `
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <path d="M16 10a4 4 0 0 1-8 0"/>
-          </svg>Sepete Ekle`;
-      }
+      if (btn) { btn.disabled = false; btn.textContent = 'Sepete Ekle'; }
     };
 
     render();
@@ -867,65 +1091,9 @@ async function pageProduct(code) {
         <div style="font-family:var(--font-disp);font-size:64px;margin-bottom:16px;opacity:.3">?</div>
         <h2 style="font-family:var(--font-disp);font-size:28px;margin-bottom:10px;color:var(--ink)">Ürün Bulunamadı</h2>
         <p style="font-size:14px;margin-bottom:28px">${escHtml(e.message)}</p>
-        <a href="#/products" style="color:var(--gold);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;border-bottom:1px solid currentColor;padding-bottom:2px">← Ürünlere Dön</a>
+        <a href="/urunler" style="color:var(--gold);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;border-bottom:1px solid currentColor;padding-bottom:2px">← Ürünlere Dön</a>
       </div>`;
   }
-}
-
-// ─────────────────────────────────────────────────────────
-// QUICK ADD (from product grid)
-// ─────────────────────────────────────────────────────────
-window.quickAdd = async (event, code) => {
-  event.stopPropagation();
-  const btn = event.currentTarget;
-  const orig = btn.textContent;
-  btn.textContent = '…'; btn.disabled = true;
-  try {
-    const p = await api.product(code);
-    const vs = (p.variants || []).filter(v => v.isActive);
-    if (!vs.length) { toast('Stok bulunamadı.', 'err'); return; }
-    if (vs.length === 1 || !vs[0].attributes?.length) {
-      await addToCart(vs[0].id, 1, vs[0].platformPrice ?? vs[0].basePrice);
-    } else {
-      navigate('product/' + code);
-    }
-  } catch (e) { toast('Hata: ' + e.message, 'err'); }
-  finally { btn.textContent = orig; btn.disabled = false; }
-};
-
-// ─────────────────────────────────────────────────────────
-// PAGINATION
-// ─────────────────────────────────────────────────────────
-function buildPagination(current, total, params = {}, basePath = 'products') {
-  function pgLink(p, label, disabled = false, active = false) {
-    const q = new URLSearchParams({ ...params, page: p }).toString();
-    const dest = basePath + (q ? '?' + q : '');
-    return `<button class="pg-btn${active ? ' on' : ''}"
-               ${disabled ? 'disabled' : ''}
-               onclick="navigate('${escHtml(dest)}')">${label}</button>`;
-  }
-
-  const pages = [];
-  pages.push(pgLink(current - 1, '←', current === 1));
-
-  let range;
-  if (total <= 7) {
-    range = Array.from({ length: total }, (_, i) => i + 1);
-  } else if (current <= 4) {
-    range = [1, 2, 3, 4, 5, '…', total];
-  } else if (current >= total - 3) {
-    range = [1, '…', total-4, total-3, total-2, total-1, total];
-  } else {
-    range = [1, '…', current-1, current, current+1, '…', total];
-  }
-
-  for (const p of range) {
-    if (p === '…') pages.push(`<span class="pg-dots">…</span>`);
-    else pages.push(pgLink(p, p, false, p === current));
-  }
-  pages.push(pgLink(current + 1, '→', current === total));
-
-  return `<div class="pagination">${pages.join('')}</div>`;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -939,55 +1107,140 @@ async function initNav() {
     NAV.cats = allCats;
     allCats.forEach(c => { NAV.bySlug[c.slug] = c; NAV.byId[c.id] = c; });
     NAV.roots = allCats.filter(c => !c.parentId).sort((a, b) => a.sortOrder - b.sortOrder);
+    const childrenOf = (id) => allCats.filter(c => c.parentId === id).sort((a, b) => a.sortOrder - b.sortOrder);
 
-    // Build cat-strip with mega-drop dropdowns
-    const strip = $('catStripInner');
-    if (strip) {
-      const rootsHtml = NAV.roots.map(c => {
-        const subs = allCats.filter(s => s.parentId === c.id).sort((a, b) => a.sortOrder - b.sortOrder);
-        const hasSub = subs.length > 0;
-        const subHtml = hasSub ? `
-          <div class="mega-drop">
-            ${subs.map(s => `
-              <a href="#/category/${s.slug}" class="mega-drop-item" data-href="#/category/${s.slug}">
-                ${escHtml(t(s.nameI18n))}
-              </a>`).join('')}
-          </div>` : '';
+    // ── Masaüstü mega menü ──
+    const megaIc = $('megaMenuIc');
+    if (megaIc) {
+      const solKolonHtml = NAV.roots.map(c => `
+        <div class="ms-magaza-mega-kategori-grubu" data-ms-magaza-kategori-grubu="${escHtml(c.slug)}">
+          <a class="ms-magaza-mega-sol-link" href="/${escHtml(c.slug)}" data-ms-magaza-kategori="${escHtml(c.slug)}">${escHtml(t(c.nameI18n))}</a>
+        </div>`).join('');
+
+      const panellerHtml = NAV.roots.map(c => {
+        const subs = childrenOf(c.id);
+        const linksHtml = subs.map(s => `
+          <a class="ms-magaza-mega-resimli-link" href="/${escHtml(s.slug)}"><span>${escHtml(t(s.nameI18n))}</span></a>`).join('');
         return `
-          <div class="cat-item">
-            <a href="#/category/${c.slug}" class="cat-chip${hasSub ? ' has-sub' : ''}"
-               data-href="#/category/${c.slug}">
-              ${escHtml(t(c.nameI18n))}${hasSub ? '<svg class="sub-arr" viewBox="0 0 10 6" width="8" height="8"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' : ''}
-            </a>
-            ${subHtml}
+          <div class="ms-magaza-mega-icerik" data-ms-magaza-panel="${escHtml(c.slug)}">
+            <section class="ms-magaza-mega-bolum">
+              <span class="ms-magaza-mega-baslik">${escHtml(t(c.nameI18n))} Kategorileri</span>
+              <div class="ms-magaza-mega-resimli-grid">
+                ${linksHtml || '<p>Alt kategori yok.</p>'}
+              </div>
+            </section>
           </div>`;
       }).join('');
 
-      strip.innerHTML = `
-        <div class="cat-item">
-          <a href="#/products" class="cat-chip" data-href="#/products">Tüm Ürünler</a>
+      const ustLinklerHtml = NAV.roots.map(c => `
+        <a class="ms-magaza-menu-link" href="/${escHtml(c.slug)}" data-ms-magaza-menu-link="${escHtml(c.slug)}">${escHtml(t(c.nameI18n))}</a>`).join('');
+
+      megaIc.innerHTML = `
+        <div class="ms-magaza-menu-ogesi ms-magaza-menu-tum">
+          <a class="ms-magaza-menu-link" href="/urunler">
+            <svg class="ms-magaza-menu-link-ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5m-16.5 6h16.5m-16.5 6h16.5"/></svg>
+            Kategoriler
+          </a>
+          <div class="ms-magaza-mega-menu" data-ms-magaza-mega-menu>
+            <div class="ms-magaza-mega-sol-kolon">${solKolonHtml}</div>
+            ${panellerHtml}
+          </div>
         </div>
-        ${rootsHtml}`;
+        <div class="ms-magaza-menu-kaydirma-grubu">
+          <div class="ms-magaza-menu-kaydirma">${ustLinklerHtml}</div>
+        </div>`;
+
+      window.msMagazaMenuBaslat?.(document.querySelector('[data-ms-magaza-menu]'));
     }
 
-    // Footer categories
+    // ── Mobil off-canvas menü ──
+    const mobilAnaSekmeler = $('mobilAnaSekmeler');
+    const mobilMenuIcerik  = $('mobilMenuIcerik');
+    if (mobilAnaSekmeler && mobilMenuIcerik) {
+      mobilAnaSekmeler.innerHTML = NAV.roots.map((c, i) => `
+        <button class="ms-ana-navigasyon-mobil-ana-sekme${i === 0 ? ' ms-ana-navigasyon-mobil-ana-sekme-aktif' : ''}" type="button" data-ms-mobil-ana-sekme="${escHtml(c.slug)}" aria-pressed="${i === 0 ? 'true' : 'false'}">${escHtml(t(c.nameI18n))}</button>`).join('');
+
+      mobilMenuIcerik.innerHTML = NAV.roots.map((c, i) => {
+        const subs = childrenOf(c.id);
+        const gridHtml = subs.map(s => `
+          <a class="ms-ana-navigasyon-mobil-kategori" href="/${escHtml(s.slug)}"><span>${escHtml(t(s.nameI18n))}</span></a>`).join('');
+        return `
+          <div class="ms-ana-navigasyon-mobil-yan-grup" data-ms-mobil-yan-grup="${escHtml(c.slug)}" ${i === 0 ? '' : 'hidden'}>
+            <div class="ms-ana-navigasyon-mobil-grid">${gridHtml || '<p>Alt kategori yok.</p>'}</div>
+          </div>`;
+      }).join('');
+    }
+
+    // ── Ana sayfa mobil kategori şeridi ──
+    const mobilSerit = $('mobilKategoriSeridi');
+    const mobilSeritIcerik = $('mobilKategoriSeridiIcerik');
+    if (mobilSerit && mobilSeritIcerik && window.location.pathname === '/') {
+      mobilSeritIcerik.innerHTML = NAV.roots.map(c => `
+        <a class="ms-magaza-menu-link" href="/${escHtml(c.slug)}">${escHtml(t(c.nameI18n))}</a>`).join('');
+      mobilSerit.hidden = false;
+    }
+
+    // ── Footer kategorileri ──
     const footerCats = $('footerCats');
     if (footerCats) {
       footerCats.innerHTML = NAV.roots.map(c => `
-        <a href="#/category/${c.slug}">${escHtml(t(c.nameI18n))}</a>`).join('');
+        <a href="/${escHtml(c.slug)}">${escHtml(t(c.nameI18n))}</a>`).join('');
     }
   } catch(e) {
     console.error('Nav init failed:', e);
   }
 }
 
-// Mark active nav chip
+// Aktif üst kategori linkini işaretle (mega menü hover state'iyle çakışmaz, sayfa yüklendiğinde çalışır)
 function syncNavCats() {
-  const hash = window.location.hash.replace(/\?.*$/, '');
-  qsa('.cat-chip[data-href], .mega-drop-item[data-href]').forEach(a => {
-    const href = a.dataset.href?.replace(/\?.*$/, '');
-    a.classList.toggle('active', href === hash);
+  const path = window.location.pathname;
+  qsa('[data-ms-magaza-menu-link]').forEach(a => {
+    const href = (a.getAttribute('href') || '').split('?')[0];
+    a.classList.toggle('ms-magaza-menu-link-aktif', href === path);
   });
+}
+
+// ── Nav arama: canlı sonuçlar ──
+let _navSearchTimer = null;
+window.msAramaSonuclariniGetir = (query) => {
+  clearTimeout(_navSearchTimer);
+  const el = $('navSearchResults');
+  if (!el) return;
+
+  if (!query) {
+    el.innerHTML = `<p class="ms-ana-navigasyon-arama-kategori-label"><span>Aramaya başlamak için yazın.</span></p>`;
+    return;
+  }
+
+  el.innerHTML = `<p class="ms-ana-navigasyon-arama-kategori-label"><span>Aranıyor…</span></p>`;
+  _navSearchTimer = setTimeout(async () => {
+    try {
+      const data = await api.products({ search: query, page: 1, pageSize: 6 });
+      const items = data.items || [];
+      el.innerHTML = items.length
+        ? `<div class="ms-ana-navigasyon-arama-kategori-label"><span>Arama Sonuçları</span><small>${items.length} ürün</small></div>
+           <div class="ms-ana-navigasyon-arama-sonuc-listesi">${items.map(searchResultCardHtml).join('')}</div>
+           <a class="ms-ana-navigasyon-tumunu-gor" href="/urunler?search=${encodeURIComponent(query)}">Tümünü Gör</a>`
+        : `<p class="ms-ana-navigasyon-arama-kategori-label"><span>"${escHtml(query)}" için sonuç bulunamadı.</span></p>`;
+    } catch {
+      el.innerHTML = `<p class="ms-ana-navigasyon-arama-kategori-label"><span>Arama yapılamadı.</span></p>`;
+    }
+  }, 260);
+};
+
+function searchResultCardHtml(p) {
+  const src = imgSrc(p.mainImageUrl);
+  const price = p.minPrice ?? p.basePrice ?? 0;
+  return `
+    <a class="ms-search-urun-karti" href="/urun/${escHtml(p.code)}">
+      <span class="ms-search-urun-gorsel-alani">
+        ${src ? `<img class="ms-search-urun-gorsel" src="${src}" alt="${escHtml(t(p.nameI18n))}">` : ''}
+      </span>
+      <span class="ms-search-urun-icerik">
+        <span class="ms-search-urun-baslik">${escHtml(t(p.nameI18n))}</span>
+        <span class="ms-search-urun-fiyat ms-urun-fiyat">${fmt(price)}</span>
+      </span>
+    </a>`;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -1003,74 +1256,87 @@ function normalizeList(data) {
 }
 
 // ─────────────────────────────────────────────────────────
-// ROUTER
+// ROUTER — History API
 // ─────────────────────────────────────────────────────────
 const router = {
-  parseHash() {
-    const raw   = window.location.hash.replace(/^#\/?/, '') || '';
-    const [pathPart, qsPart] = raw.split('?');
-    const segs  = pathPart.split('/').filter(Boolean);
+  parsePath() {
+    const segs = window.location.pathname.split('/').filter(Boolean);
     const params = {};
-    if (qsPart) for (const [k, v] of new URLSearchParams(qsPart)) params[k] = v;
+    for (const [k, v] of new URLSearchParams(window.location.search)) params[k] = v;
     return { segs, params };
   },
 
   async route() {
-    const { segs, params } = this.parseHash();
+    const { segs, params } = this.parsePath();
     const page = segs[0] || 'home';
 
     // Sync search bar
-    const si = $('searchInput');
+    const si = qs('[data-ms-arama-input]');
     if (si && params.search) si.value = params.search;
 
     syncNavCats();
+    window.msMobilMenuKapat?.();
+    window.msSepetMenuKapat?.();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     switch (page) {
-      case '':
       case 'home':
+      case '':
         await pageHome(); break;
-      case 'products':
+      case 'urunler':
         await pageProducts(params); break;
-      case 'product':
+      case 'urun':
         if (segs[1]) await pageProduct(segs[1]);
         else         await pageProducts(params);
         break;
-      case 'category':
-        if (segs[1]) await pageCategory(segs[1], params);
-        else         await pageHome();
-        break;
       default:
-        await pageHome();
+        // Tek segment → kategori slug olarak dene
+        if (segs.length === 1) await pageCategory(segs[0], params);
+        else await pageHome();
     }
+
+    window.msRunPageModules(document);
   },
 
   init() {
-    window.addEventListener('hashchange', () => this.route());
+    window.addEventListener('popstate', () => this.route());
     this.route();
 
-    // Search on enter
-    const si = $('searchInput');
-    if (si) {
+    // Arama kutusunda Enter → tüm sonuçlar sayfasına git
+    qsa('[data-ms-arama-input], [data-ms-arama-panel-input]').forEach(si => {
       si.addEventListener('keydown', e => {
         if (e.key === 'Enter' && si.value.trim())
-          navigate('products?search=' + encodeURIComponent(si.value.trim()));
+          navigate('/urunler?search=' + encodeURIComponent(si.value.trim()));
       });
-    }
+    });
   },
 };
+
+// ─────────────────────────────────────────────────────────
+// LINK INTERCEPT — <a href="..."> tıklamalarını SPA'ya yönlendir
+// ─────────────────────────────────────────────────────────
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[href]');
+  if (!a) return;
+  const href = a.getAttribute('href');
+  // Sadece kendi origin'imize ait, hash olmayan, gerçek navigasyon linkleri
+  if (
+    href &&
+    !href.startsWith('http') &&
+    !href.startsWith('//') &&
+    !href.startsWith('mailto:') &&
+    !href.startsWith('tel:') &&
+    href !== '#'
+  ) {
+    e.preventDefault();
+    navigate(href);
+  }
+});
 
 // ─────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Navbar scroll effect
-  window.addEventListener('scroll', () => {
-    const nav = $('navbar');
-    if (nav) nav.classList.toggle('scrolled', window.scrollY > 10);
-  }, { passive: true });
-
-  // Boot
   initNav();
   Cart.load();
   router.init();

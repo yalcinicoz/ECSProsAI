@@ -3,17 +3,21 @@ using ECSPros.Catalog.Application.Commands.ArchiveProductVideo;
 using ECSPros.Catalog.Application.Commands.ConfirmImageBatch;
 using ECSPros.Catalog.Application.Commands.ConfirmVideoBatch;
 using ECSPros.Catalog.Application.Commands.CreateImageSet;
+using ECSPros.Catalog.Application.Commands.CreateMannequin;
 using ECSPros.Catalog.Application.Commands.DeleteImageSet;
+using ECSPros.Catalog.Application.Commands.DeleteMannequin;
 using ECSPros.Catalog.Application.Commands.DeleteProductImageSetMapping;
 using ECSPros.Catalog.Application.Commands.PrepareImageBatch;
 using ECSPros.Catalog.Application.Commands.PrepareVideoBatch;
 using ECSPros.Catalog.Application.Commands.RestoreImageBatch;
 using ECSPros.Catalog.Application.Commands.RestoreVideoBatch;
 using ECSPros.Catalog.Application.Commands.UpdateImageSet;
+using ECSPros.Catalog.Application.Commands.UpdateMannequin;
 using ECSPros.Catalog.Application.Commands.UpdateProductImageMetadata;
 using ECSPros.Catalog.Application.Commands.UpdateProductVideoMetadata;
 using ECSPros.Catalog.Application.Commands.UpsertProductImageSetMapping;
 using ECSPros.Catalog.Application.Queries.GetImageSets;
+using ECSPros.Catalog.Application.Queries.GetMannequins;
 using ECSPros.Catalog.Application.Queries.GetProductImageArchive;
 using ECSPros.Catalog.Application.Queries.GetProductImageCoverageReport;
 using ECSPros.Catalog.Application.Queries.GetProductImages;
@@ -79,6 +83,47 @@ public class ProductImageController : ControllerBase
     public async Task<IActionResult> DeleteImageSet(Guid id, CancellationToken ct = default)
     {
         var result = await _mediator.Send(new DeleteImageSetCommand(id), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    // ─── Mankenler (bkz. docs/manken-ozelligi-spec.md) ─────────────────────────
+
+    [HttpGet("mannequins")]
+    public async Task<IActionResult> GetMannequins([FromQuery] bool activeOnly = true, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetMannequinsQuery(activeOnly), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    [HttpPost("mannequins")]
+    public async Task<IActionResult> CreateMannequin([FromBody] CreateMannequinCommand command, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(command, ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    [HttpPut("mannequins/{id:guid}")]
+    public async Task<IActionResult> UpdateMannequin(Guid id, [FromBody] UpdateMannequinRequest request, CancellationToken ct = default)
+    {
+        var command = new UpdateMannequinCommand(id, request.Code, request.FirstName, request.LastName, request.Gender,
+            request.HeightCm, request.WeightKg, request.ChestCm, request.WaistCm, request.HipCm,
+            request.DefaultWornSize, request.IsActive, request.Notes);
+        var result = await _mediator.Send(command, ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    [HttpDelete("mannequins/{id:guid}")]
+    public async Task<IActionResult> DeleteMannequin(Guid id, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new DeleteMannequinCommand(id), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -425,6 +470,10 @@ public class ProductImageController : ControllerBase
 
 public record CreateImageSetRequest(string Code, string Name, Guid? FallbackSetId, int SortPriority);
 public record UpdateImageSetRequest(string Name, Guid? FallbackSetId, int SortPriority, bool IsActive);
+public record UpdateMannequinRequest(
+    string? Code, string FirstName, string? LastName, string? Gender,
+    int? HeightCm, int? WeightKg, int? ChestCm, int? WaistCm, int? HipCm,
+    string? DefaultWornSize, bool IsActive, string? Notes);
 public record PrepareImageBatchRequest(Guid? VariantId, Guid ImageSetId, List<string> FileExtensions, bool ReplaceSet);
 public record UpdateImageMetadataRequest(int SortOrder, bool IsProductCover, bool IsVariantCover);
 public record UpsertMappingRequest(Guid ForSetId, Guid UseSetId);

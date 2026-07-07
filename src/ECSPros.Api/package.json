@@ -1,0 +1,13 @@
+{
+  "name": "ecspros-store-css",
+  "private": true,
+  "description": "Storefront Tailwind CSS derlemesi — kaynak: wwwroot/css/tailwind.css (misharix birebir), çıktı: wwwroot/css/site.css",
+  "scripts": {
+    "store-css:build": "tailwindcss -i ./wwwroot/css/tailwind.css -o ./wwwroot/css/site.css --minify",
+    "store-css:watch": "tailwindcss -i ./wwwroot/css/tailwind.css -o ./wwwroot/css/site.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.1",
+    "tailwindcss": "^4.3.1"
+  }
+}

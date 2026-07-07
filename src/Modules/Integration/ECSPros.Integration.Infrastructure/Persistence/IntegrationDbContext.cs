@@ -9,6 +9,7 @@ public class IntegrationDbContext(DbContextOptions<IntegrationDbContext> options
 {
     public DbSet<IntegrationLog> IntegrationLogs => Set<IntegrationLog>();
     public DbSet<MarketplaceProduct> MarketplaceProducts => Set<MarketplaceProduct>();
+    public DbSet<ErpVariantData> ErpVariantData => Set<ErpVariantData>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

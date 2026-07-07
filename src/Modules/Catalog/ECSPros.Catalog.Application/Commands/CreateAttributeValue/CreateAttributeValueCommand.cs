@@ -11,7 +11,7 @@ public record CreateAttributeValueCommand(
     Guid AttributeTypeId,
     Dictionary<string, string> NameI18n,
     int SortOrder,
-    List<Guid>? FilterColorIds = null
+    string? HexCode = null
 ) : IRequest<Result<Guid>>;
 
 public class CreateAttributeValueCommandHandler : IRequestHandler<CreateAttributeValueCommand, Result<Guid>>
@@ -25,9 +25,6 @@ public class CreateAttributeValueCommandHandler : IRequestHandler<CreateAttribut
         var attrType = await _db.AttributeTypes.FirstOrDefaultAsync(a => a.Id == request.AttributeTypeId, ct);
         if (attrType is null)
             return Result.Failure<Guid>("Özellik tipi bulunamadı.");
-
-        if (attrType.RequiresFilterColor && (request.FilterColorIds is null || request.FilterColorIds.Count == 0))
-            return Result.Failure<Guid>("Bu özellik tipi en az bir filtre rengi eşleştirmesi gerektiriyor.");
 
         var existingNames = await _db.AttributeValues
             .Where(v => v.AttributeTypeId == request.AttributeTypeId)
@@ -53,25 +50,12 @@ public class CreateAttributeValueCommandHandler : IRequestHandler<CreateAttribut
             AttributeTypeId = request.AttributeTypeId,
             NameI18n = request.NameI18n,
             SortOrder = request.SortOrder,
+            HexCode = request.HexCode,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
 
         _db.AttributeValues.Add(value);
-
-        if (request.FilterColorIds is { Count: > 0 })
-        {
-            foreach (var colorId in request.FilterColorIds)
-            {
-                _db.AttributeValueFilterColors.Add(new AttributeValueFilterColor
-                {
-                    Id = Guid.NewGuid(),
-                    AttributeValueId = value.Id,
-                    FilterColorId = colorId,
-                });
-            }
-        }
-
         await _db.SaveChangesAsync(ct);
 
         return Result.Success(value.Id);

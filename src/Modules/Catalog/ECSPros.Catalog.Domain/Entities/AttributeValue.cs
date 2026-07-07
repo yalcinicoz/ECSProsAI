@@ -10,7 +10,7 @@ public class AttributeValue : BaseEntity
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; } = 0;
 
+    public string? HexCode { get; set; }
+
     public AttributeType AttributeType { get; set; } = null!;
-    public ICollection<AttributeValueProperty> Properties { get; set; } = new List<AttributeValueProperty>();
-    public ICollection<AttributeValueFilterColor> FilterColors { get; set; } = new List<AttributeValueFilterColor>();
 }

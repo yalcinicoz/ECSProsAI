@@ -16,19 +16,12 @@ public class FirmConfiguration : IEntityTypeConfiguration<Firm>
         builder.Property(x => x.TaxNumber).HasMaxLength(20);
         builder.Property(x => x.Phone).HasMaxLength(20);
         builder.Property(x => x.Email).HasMaxLength(200);
-        builder.Property(x => x.PriceType).HasMaxLength(20).IsRequired();
-        builder.Property(x => x.PriceMultiplier).HasPrecision(18, 6);
         builder.HasIndex(x => x.Code).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
 
         builder.HasMany(x => x.FirmPlatforms)
             .WithOne(x => x.Firm)
             .HasForeignKey(x => x.FirmId);
-
-        builder.HasOne(x => x.InvoiceIntegrator)
-            .WithMany()
-            .HasForeignKey(x => x.InvoiceIntegratorId)
-            .IsRequired(false);
 
         builder.HasMany(x => x.FirmIntegrations)
             .WithOne(x => x.Firm)

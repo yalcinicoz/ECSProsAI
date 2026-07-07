@@ -11,7 +11,6 @@ public class CatalogDbContext : DbContext, ICatalogDbContext
 
     public DbSet<AttributeType> AttributeTypes => Set<AttributeType>();
     public DbSet<AttributeValue> AttributeValues => Set<AttributeValue>();
-    public DbSet<AttributeValueProperty> AttributeValueProperties => Set<AttributeValueProperty>();
     public DbSet<ProductGroup> ProductGroups => Set<ProductGroup>();
     public DbSet<ProductGroupAttribute> ProductGroupAttributes => Set<ProductGroupAttribute>();
     public DbSet<ProductGroupAxisSubAttribute> ProductGroupAxisSubAttributes => Set<ProductGroupAxisSubAttribute>();
@@ -24,15 +23,12 @@ public class CatalogDbContext : DbContext, ICatalogDbContext
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
     public DbSet<ProductImageSetMapping> ProductImageSetMappings => Set<ProductImageSetMapping>();
     public DbSet<ProductVideo> ProductVideos => Set<ProductVideo>();
-    public DbSet<FirmPlatformProduct> FirmPlatformProducts => Set<FirmPlatformProduct>();
-    public DbSet<FirmPlatformVariant> FirmPlatformVariants => Set<FirmPlatformVariant>();
     public DbSet<ProductUnit> ProductUnits => Set<ProductUnit>();
     public DbSet<VariantPriceHistory> VariantPriceHistories => Set<VariantPriceHistory>();
     public DbSet<CatalogSetting> CatalogSettings => Set<CatalogSetting>();
     public DbSet<ProductPriceHistory> ProductPriceHistories => Set<ProductPriceHistory>();
     public DbSet<ProductAxisSubAttributeValue> ProductAxisSubAttributeValues => Set<ProductAxisSubAttributeValue>();
-    public DbSet<FilterColor> FilterColors => Set<FilterColor>();
-    public DbSet<AttributeValueFilterColor> AttributeValueFilterColors => Set<AttributeValueFilterColor>();
+    public DbSet<Mannequin> Mannequins => Set<Mannequin>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

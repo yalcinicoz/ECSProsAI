@@ -12,6 +12,7 @@ public record UpdateChannelCategoryCommand(
     string Slug,
     string Status,
     string FillType,
+    string ListingMode,
     Dictionary<string, object>? FilterDef,
     int SortOrder,
     string? DisplayImageUrl,
@@ -43,6 +44,7 @@ public class UpdateChannelCategoryCommandHandler(IStorefrontDbContext db)
         cat.Slug               = request.Slug;
         cat.Status             = request.Status;
         cat.FillType           = request.FillType;
+        cat.ListingMode        = request.ListingMode;
         cat.FilterDef          = request.FilterDef;
         cat.SortOrder          = request.SortOrder;
         cat.DisplayImageUrl    = request.DisplayImageUrl;

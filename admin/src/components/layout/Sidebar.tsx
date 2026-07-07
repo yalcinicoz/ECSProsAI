@@ -59,7 +59,6 @@ const NAV_SECTIONS: NavSection[] = [
     { label: 'Ürün Kartları',      to: '/catalog/products',        icon: 'box' },
     { label: 'Toplu Resim Yükleme',to: '/catalog/bulk-images',     icon: 'images' },
     { label: 'Özellik Tipleri',    to: '/catalog/attribute-types', icon: 'sliders' },
-    { label: 'Filtre Renkleri',    to: '/catalog/filter-colors',             icon: 'palette' },
     { label: 'Ürün Grupları',      to: '/catalog/product-groups',        icon: 'layers' },
     { label: 'Kanal Kategorileri', to: '/storefront/channel-categories', icon: 'layout' },
     { label: 'Katalog Ayarları',   to: '/catalog/settings',                  icon: 'settings' },

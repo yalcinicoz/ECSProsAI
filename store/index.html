@@ -4,128 +4,187 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ECSPros — Mağaza</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/main.css?v=20260626">
+  <base href="/">
+  <link rel="stylesheet" href="/css/site.css?v=20260707a">
 </head>
-<body>
+<body data-ms-page-module="ornek-modal,filtre-bloklari,siralama-select,ozel-select,gorunum-carousel,urun-karti,urun-detay-resim,magaza-menu,footer-akordiyon,tab-grubu">
 
-  <!-- ANNOUNCEMENT BAR -->
-  <div class="topbar">
-    <span>✦ Ücretsiz Kargo — 500₺ üzeri alışverişlerde ✦</span>
-  </div>
+  <div class="ms-ana-navigasyon-wrapper">
+    <!-- DUYURU ŞERİDİ -->
+    <div class="ms-ana-duyuru-bar">
+      <div class="ms-ana-duyuru-ic">
+        <div class="ms-ana-duyuru-kayan-alan" aria-label="Duyurular">
+          <div class="ms-ana-duyuru-kayan-metin">
+            <span>Ücretsiz Kargo — 500₺ üzeri alışverişlerde</span>
+            <span>Yeni sezon ürünleri mağazamızda</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <!-- NAVBAR -->
-  <nav class="navbar" id="navbar">
-    <div class="nav-inner">
-      <a href="#/" class="nav-logo">
-        <span class="logo-mark">E</span>
-        <span class="logo-text">ECSPros</span>
+    <!-- ANA NAVİGASYON ÜST SATIR -->
+    <div class="ms-ana-navigasyon-ust">
+      <button class="ms-ana-navigasyon-mobil-menu" type="button" aria-label="Menüyü aç" aria-expanded="false" data-ms-mobil-menu-ac>
+        <span></span><span></span><span></span>
+      </button>
+
+      <a class="ms-ana-navigasyon-logo-link" href="/" aria-label="ECSPros ana sayfa">
+        <span>ECS<strong>Pros</strong></span>
       </a>
 
-      <div class="nav-search-wrap">
-        <div class="nav-search" id="navSearchBox">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" id="searchInput" placeholder="Ürün veya kategori ara…" autocomplete="off">
-          <kbd>↵</kbd>
+      <div class="ms-ana-navigasyon-arama" data-ms-arama>
+        <input class="ms-ana-navigasyon-arama-input" data-ms-arama-input type="search" placeholder="Ürün veya kategori ara" aria-label="Ürün veya kategori ara" autocomplete="off">
+        <svg class="ms-ana-navigasyon-arama-ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span class="ms-ana-navigasyon-arama-sag">
+          <button class="ms-ana-navigasyon-arama-temizle" type="button" data-ms-arama-temizle aria-label="Aramayı temizle" hidden>×</button>
+        </span>
+
+        <div class="ms-ana-navigasyon-arama-panel" data-ms-arama-panel>
+          <div class="ms-ana-navigasyon-arama-panel-icerik">
+            <div class="ms-ana-navigasyon-arama-panel-girdi-alani">
+              <button class="ms-ana-navigasyon-arama-geri" type="button" data-ms-arama-kapat aria-label="Aramadan geri dön">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/></svg>
+              </button>
+              <div class="ms-ana-navigasyon-arama-panel-girdi-kutu">
+                <input class="ms-ana-navigasyon-arama-panel-girdi" data-ms-arama-panel-input type="search" placeholder="Ürün veya kategori ara" aria-label="Ürün veya kategori ara" autocomplete="off">
+              </div>
+            </div>
+            <div class="ms-ana-navigasyon-arama-sonuc-alani" id="navSearchResults">
+              <p class="ms-ana-navigasyon-arama-kategori-label"><span>Aramaya başlamak için yazın.</span></p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="nav-right">
-        <button class="nav-icon-btn" id="cartBtn" onclick="toggleCart()" title="Sepet">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-          <span class="cart-badge" id="cartBadge" style="display:none">0</span>
+      <div class="ms-ana-navigasyon-aksiyonlar">
+        <div class="ms-ana-navigasyon-sepet" data-ms-sepet-menu>
+          <button class="ms-ana-navigasyon-aksiyon" type="button" data-ms-sepet-menu-tetikleyici aria-haspopup="true" aria-expanded="false" aria-label="Sepetim">
+            <span class="ms-ana-navigasyon-sepet-ikon-alani">
+              <span class="ms-ana-navigasyon-aksiyon-ikon-grup" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              </span>
+              <span class="ms-ana-navigasyon-sepet-rozet" id="cartBadge" style="display:none">0</span>
+            </span>
+            <span class="ms-ana-navigasyon-sepet-yazi">Sepetim</span>
+          </button>
+
+          <!-- SEPET DROPDOWN -->
+          <div class="ms-ana-navigasyon-sepet-panel" data-ms-sepet-menu-panel aria-hidden="true">
+            <div class="ms-ana-navigasyon-sepet-panel-ust">
+              <strong>Sepetim</strong>
+              <span id="cartItemCount"></span>
+            </div>
+            <div class="ms-ana-navigasyon-sepet-urun-listesi" id="cartPanelBody">
+              <div class="ms-ana-navigasyon-sepet-bos">
+                <p>Sepetiniz boş</p>
+                <a href="/urunler" class="ms-buton ms-buton-m ms-buton-sade">Alışverişe Başla</a>
+              </div>
+            </div>
+            <div class="ms-ana-navigasyon-sepet-ozet" id="cartPanelFooter" style="display:none">
+              <span>Sepet Toplamı</span>
+              <strong class="ms-urun-fiyat" id="cartTotal">₺0,00</strong>
+            </div>
+            <div class="ms-ana-navigasyon-sepet-aksiyonlar" id="cartPanelActions" style="display:none">
+              <a class="ms-ana-navigasyon-sepet-buton ms-ana-navigasyon-sepet-buton-ikincil" href="/sepet">Sepete Git</a>
+              <a class="ms-ana-navigasyon-sepet-buton ms-ana-navigasyon-sepet-buton-birincil" href="/sepet">Siparişi Tamamla</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MASAÜSTÜ MEGA MENÜ -->
+    <div class="ms-magaza-desktop-menu-kapsayici ms-magaza-desktop-menu" data-ms-magaza-menu>
+      <div class="ms-magaza-menu-ic" id="megaMenuIc">
+        <!-- JS ile doldurulur: initNav() -->
+      </div>
+    </div>
+
+    <!-- MOBİL KATEGORİ ŞERİDİ (yalnızca ana sayfa) -->
+    <nav class="ms-magaza-mobil-menu-kaydirma-alani" id="mobilKategoriSeridi" data-ms-mobil-menu-kaydirma-alani aria-label="Mobil kategori menüsü" hidden>
+      <div class="ms-magaza-menu-kaydirma ms-magaza-menu-kaydirma-kaydirilabilir" id="mobilKategoriSeridiIcerik"></div>
+    </nav>
+  </div>
+
+  <!-- MOBİL OFF-CANVAS MENÜ -->
+  <div class="ms-ana-navigasyon-mobil-panel" data-ms-mobil-menu aria-hidden="true">
+    <section class="ms-ana-navigasyon-mobil-kutu" role="dialog" aria-modal="true" aria-label="Kategori menüsü">
+      <header class="ms-ana-navigasyon-mobil-ust">
+        <a class="ms-ana-navigasyon-mobil-logo-link" href="/" aria-label="ECSPros ana sayfa">
+          <span>ECS<strong>Pros</strong></span>
+        </a>
+        <button class="ms-ana-navigasyon-mobil-kapat" type="button" data-ms-mobil-menu-kapat aria-label="Menüyü kapat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
-      </div>
-    </div>
+      </header>
 
-    <!-- Category strip -->
-    <div class="cat-strip" id="catStrip">
-      <div class="cat-strip-inner" id="catStripInner">
-        <a href="#/products" class="cat-chip" data-href="#/products">Tüm Ürünler</a>
-      </div>
-    </div>
-  </nav>
+      <nav class="ms-ana-navigasyon-mobil-ana-sekmeler" id="mobilAnaSekmeler" aria-label="Ana kategoriler">
+        <!-- JS ile doldurulur: initNav() -->
+      </nav>
 
-  <!-- PAGE CONTENT -->
+      <div class="ms-ana-navigasyon-mobil-icerik" id="mobilMenuIcerik">
+        <!-- JS ile doldurulur: initNav() -->
+      </div>
+    </section>
+  </div>
+
+  <!-- SAYFA İÇERİĞİ -->
   <main id="main"></main>
 
-  <!-- CART OVERLAY + PANEL -->
-  <div class="cart-backdrop" id="cartBackdrop" onclick="toggleCart()"></div>
-  <aside class="cart-panel" id="cartPanel">
-    <div class="cart-panel-head">
-      <div>
-        <h3 class="cart-panel-title">Sepetim</h3>
-        <span class="cart-panel-sub" id="cartItemCount"></span>
-      </div>
-      <button class="icon-close" onclick="toggleCart()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="cart-panel-body" id="cartPanelBody">
-      <div class="cart-empty">
-        <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-        <p>Sepetiniz boş</p>
-        <a href="#/products" onclick="toggleCart()" class="btn-ghost-sm">Alışverişe Başla</a>
-      </div>
-    </div>
-    <div class="cart-panel-footer" id="cartPanelFooter" style="display:none">
-      <div class="cart-subtotal">
-        <span>Ara Toplam</span>
-        <span id="cartSubtotal">₺0,00</span>
-      </div>
-      <div class="cart-total-row">
-        <span>Toplam</span>
-        <strong id="cartTotal">₺0,00</strong>
-      </div>
-      <button class="btn-checkout">Ödemeye Geç →</button>
-      <button class="btn-continue" onclick="toggleCart()">Alışverişe Devam Et</button>
-    </div>
-  </aside>
-
-  <!-- TOAST CONTAINER -->
-  <div class="toast-stack" id="toastStack"></div>
+  <!-- TOAST -->
+  <div class="ms-bildirim-listesi" id="toastStack"></div>
 
   <!-- FOOTER -->
-  <footer class="footer">
-    <div class="footer-grid">
-      <div class="footer-brand">
-        <div class="footer-logo">
-          <span class="logo-mark">E</span>
-          <span class="logo-text">ECSPros</span>
+  <footer class="ms-footer">
+    <div class="ms-footer-ust">
+      <section class="ms-footer-marka-kolon">
+        <a class="ms-footer-logo" href="/" aria-label="ECSPros ana sayfa">
+          <span>ECSPros</span>
+        </a>
+        <h2 class="ms-footer-baslik">Modern e-ticaret deneyimi.</h2>
+        <p class="ms-footer-aciklama">Binlerce ürün, güvenli ödeme ve hızlı teslimat ile sizinleyiz.</p>
+        <div class="ms-footer-guven-listesi">
+          <span>Güvenli alışveriş</span>
+          <span>Kolay iade</span>
+          <span>Hızlı teslimat</span>
         </div>
-        <p>Modern e-ticaret çözümleri. Binlerce ürün, güvenli ödeme ve hızlı teslimat ile sizinleyiz.</p>
-        <div class="footer-trust">
-          <span>🔒 Güvenli Ödeme</span>
-          <span>🚚 Hızlı Teslimat</span>
-          <span>↩️ Kolay İade</span>
-        </div>
+      </section>
+
+      <div class="ms-footer-kolon" data-ms-footer-akordiyon>
+        <button class="ms-footer-akordiyon-baslik" type="button" data-ms-footer-akordiyon-tetikleyici aria-expanded="false">
+          <span class="ms-footer-baslik">Kategoriler</span>
+          <span class="ms-footer-akordiyon-ok" aria-hidden="true"></span>
+        </button>
+        <nav class="ms-footer-akordiyon-icerik" data-ms-footer-akordiyon-icerik id="footerCats" aria-label="Kategori bağlantıları">
+          <span>Yükleniyor…</span>
+        </nav>
       </div>
-      <div>
-        <h5>Kategoriler</h5>
-        <nav id="footerCats"><span style="color:rgba(255,255,255,.2)">Yükleniyor…</span></nav>
-      </div>
-      <div>
-        <h5>Bilgi</h5>
-        <nav>
+
+      <div class="ms-footer-kolon" data-ms-footer-akordiyon>
+        <button class="ms-footer-akordiyon-baslik" type="button" data-ms-footer-akordiyon-tetikleyici aria-expanded="false">
+          <span class="ms-footer-baslik">Kurumsal</span>
+          <span class="ms-footer-akordiyon-ok" aria-hidden="true"></span>
+        </button>
+        <nav class="ms-footer-akordiyon-icerik" data-ms-footer-akordiyon-icerik aria-label="Kurumsal bağlantılar">
           <a href="#">Hakkımızda</a>
-          <a href="#">Gizlilik Politikası</a>
-          <a href="#">Kullanım Koşulları</a>
-          <a href="#">İade &amp; Değişim</a>
-          <a href="#">Sık Sorulan Sorular</a>
           <a href="#">İletişim</a>
+          <a href="#">Kargo ve Teslimat</a>
+          <a href="#">İade ve Değişim</a>
+          <a href="#">Sık Sorulan Sorular</a>
+          <a href="#">Kullanım Koşulları</a>
+          <a href="#">Gizlilik ve Güvenlik</a>
         </nav>
       </div>
     </div>
-    <div class="footer-bottom">
-      <p>© 2025 ECSPros Ticaret A.Ş. Tüm hakları saklıdır.</p>
-      <div class="footer-payments">
-        <span>VISA</span><span>MC</span><span>TROY</span><span>AMEX</span>
+
+    <div class="ms-footer-alt">
+      <div class="ms-footer-alt-ic">
+        <p>© 2026 ECSPros Ticaret A.Ş. Tüm hakları saklıdır.</p>
       </div>
     </div>
   </footer>
 
-  <script src="js/app.js?v=20260626"></script>
+  <script src="/js/site.js?v=20260707a"></script>
+  <script src="/js/app.js?v=20260707a"></script>
 </body>
 </html>

@@ -10,7 +10,7 @@ public static class ProductFilterHelper
     public static IQueryable<Product> BuildFilterQuery(
         ICatalogDbContext db,
         CategoryFilterRules? rules,
-        Guid? firmPlatformId = null,
+        HashSet<Guid>? platformPriceProductIds = null,
         HashSet<Guid>? productIdsInStockRange = null)
     {
         var q = db.Products.AsNoTracking();
@@ -22,15 +22,13 @@ public static class ProductFilterHelper
         if (rules.PriceMin.HasValue) q = q.Where(p => p.BasePrice >= rules.PriceMin.Value);
         if (rules.PriceMax.HasValue) q = q.Where(p => p.BasePrice <= rules.PriceMax.Value);
 
-        if (firmPlatformId.HasValue && (rules.PlatformPriceMin.HasValue || rules.PlatformPriceMax.HasValue))
+        // Platform (kanal) fiyatı Storefront şemasında (ChannelVariant) tutulur — bu değer
+        // çağıran taraf (Storefront) tarafından IChannelPricingService ile önceden çözülüp verilir.
+        if (rules.PlatformPriceMin.HasValue || rules.PlatformPriceMax.HasValue)
         {
-            var pid = firmPlatformId.Value;
-            if (rules.PlatformPriceMin.HasValue)
-                q = q.Where(p => p.Variants.Any(v => v.FirmPlatformVariants
-                    .Any(fpv => fpv.FirmPlatformId == pid && fpv.Price >= rules.PlatformPriceMin.Value)));
-            if (rules.PlatformPriceMax.HasValue)
-                q = q.Where(p => p.Variants.Any(v => v.FirmPlatformVariants
-                    .Any(fpv => fpv.FirmPlatformId == pid && fpv.Price <= rules.PlatformPriceMax.Value)));
+            q = platformPriceProductIds is not null
+                ? q.Where(p => platformPriceProductIds.Contains(p.Id))
+                : q.Where(p => false);
         }
 
         if (rules.TaxRateMin.HasValue) q = q.Where(p => p.TaxRate >= rules.TaxRateMin.Value);
@@ -108,5 +106,36 @@ public static class ProductFilterHelper
                 (stockMax == null || kv.Value <= stockMax))
             .Select(kv => kv.Key)
             .ToHashSet();
+    }
+
+    /// <summary>
+    /// Bir satış kanalındaki (FirmPlatform) fiyat override'larına göre eşleşen ürün ID'lerini döner.
+    /// Min ve max bağımsız olarak değerlendirilir (min'i sağlayan varyant ile max'ı sağlayan varyant aynı olmak zorunda değildir),
+    /// tıpkı eski FirmPlatformVariant tabanlı sorgunun davrandığı gibi.
+    /// </summary>
+    public static async Task<HashSet<Guid>> ResolvePlatformPriceRangeProductIds(
+        ICatalogDbContext db, IChannelPricingService pricingService,
+        Guid firmPlatformId, decimal? priceMin, decimal? priceMax, CancellationToken ct)
+    {
+        var prices = await pricingService.GetActiveVariantPricesAsync(firmPlatformId, ct);
+        var variantIds = prices.Keys.ToList();
+        var variantProductMap = await db.ProductVariants
+            .Where(v => variantIds.Contains(v.Id))
+            .Select(v => new { v.Id, v.ProductId })
+            .ToDictionaryAsync(v => v.Id, v => v.ProductId, ct);
+
+        HashSet<Guid>? minSet = priceMin.HasValue
+            ? prices.Where(kv => kv.Value.Price >= priceMin.Value && variantProductMap.ContainsKey(kv.Key))
+                .Select(kv => variantProductMap[kv.Key]).ToHashSet()
+            : null;
+
+        HashSet<Guid>? maxSet = priceMax.HasValue
+            ? prices.Where(kv => kv.Value.Price <= priceMax.Value && variantProductMap.ContainsKey(kv.Key))
+                .Select(kv => variantProductMap[kv.Key]).ToHashSet()
+            : null;
+
+        if (minSet is null) return maxSet ?? new HashSet<Guid>();
+        if (maxSet is null) return minSet;
+        return minSet.Intersect(maxSet).ToHashSet();
     }
 }

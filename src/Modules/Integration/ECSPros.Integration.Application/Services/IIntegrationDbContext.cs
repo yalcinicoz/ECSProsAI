@@ -7,5 +7,6 @@ public interface IIntegrationDbContext
 {
     DbSet<IntegrationLog> IntegrationLogs { get; }
     DbSet<MarketplaceProduct> MarketplaceProducts { get; }
+    DbSet<ErpVariantData> ErpVariantData { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

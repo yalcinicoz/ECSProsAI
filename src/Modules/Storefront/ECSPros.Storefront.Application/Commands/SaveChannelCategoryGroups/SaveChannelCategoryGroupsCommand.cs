@@ -6,9 +6,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Storefront.Application.Commands.SaveChannelCategoryGroups;
 
+public record GroupInput(Guid ProductGroupId, Guid? ShowcaseProductId);
+
 public record SaveChannelCategoryGroupsCommand(
     Guid ChannelCategoryId,
-    List<Guid> ProductGroupIds) : IRequest<Result<bool>>;
+    List<GroupInput> Groups) : IRequest<Result<bool>>;
 
 public class SaveChannelCategoryGroupsCommandHandler(IStorefrontDbContext db)
     : IRequestHandler<SaveChannelCategoryGroupsCommand, Result<bool>>
@@ -25,12 +27,13 @@ public class SaveChannelCategoryGroupsCommandHandler(IStorefrontDbContext db)
 
         db.ChannelCategoryGroups.RemoveRange(existing);
 
-        foreach (var groupId in request.ProductGroupIds.Distinct())
+        foreach (var input in request.Groups.DistinctBy(g => g.ProductGroupId))
         {
             db.ChannelCategoryGroups.Add(new ChannelCategoryGroup
             {
-                ChannelCategoryId = request.ChannelCategoryId,
-                ProductGroupId    = groupId,
+                ChannelCategoryId  = request.ChannelCategoryId,
+                ProductGroupId     = input.ProductGroupId,
+                ShowcaseProductId  = input.ShowcaseProductId,
             });
         }
 

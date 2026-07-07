@@ -1,0 +1,720 @@
+<div class="ms-ornek-modal ms-gorsel-arama-modal" data-ms-gorsel-arama-modal aria-hidden="true">
+    <div class="ms-ornek-modal-kaplama" data-ms-gorsel-arama-kapat></div>
+    <section class="ms-ornek-modal-kutu ms-gorsel-arama-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-gorsel-arama-baslik">
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-gorsel-arama-kapat aria-label="Görsel arama modalını kapat">×</button>
+        <p id="ms-gorsel-arama-baslik" class="ms-ornek-modal-baslik">Görsel ile Ara</p>
+        <p class="ms-ornek-modal-aciklama">Fotoğraf yükleyin ya da kamerayla çekin, görseldeki ürünü seçip benzerlerini arayın.</p>
+
+        <form class="ms-gorsel-arama-form" data-ms-gorsel-arama-form>
+            <div class="ms-gorsel-arama-kaynaklar">
+                <label class="ms-gorsel-arama-yukleme">
+                    <input class="ms-gorsel-arama-input" data-ms-gorsel-arama-input type="file" name="file" accept="image/*">
+                    <span class="ms-gorsel-arama-yukleme-ikon" aria-hidden="true">
+                        <i class="fa-solid fa-camera ms-fa-ikon ms-ikon-orijinal" aria-hidden="true"></i>
+                    </span>
+                    <span class="ms-gorsel-arama-yukleme-baslik">Görsel seç</span>
+                    <span class="ms-gorsel-arama-yukleme-metin" data-ms-gorsel-arama-dosya>JPG, PNG veya WEBP dosyası yükleyin.</span>
+                </label>
+
+                <button class="ms-gorsel-arama-kamera-ac" type="button" data-ms-gorsel-arama-kamera-ac>
+                    <span class="ms-gorsel-arama-kamera-ac-ikon" aria-hidden="true">
+                        <i class="fa-solid fa-camera ms-fa-ikon ms-ikon-orijinal" aria-hidden="true"></i>
+                    </span>
+                    Kamerayı aç
+                </button>
+            </div>
+
+            <div class="ms-gorsel-arama-editor" data-ms-gorsel-arama-editor hidden>
+                <div class="ms-gorsel-arama-gorsel-alani" data-ms-gorsel-arama-gorsel-alani>
+                    <div class="ms-gorsel-arama-gorsel-sahne" data-ms-gorsel-arama-gorsel-sahne>
+                        <img data-ms-gorsel-arama-onizleme-gorsel src="" alt="Seçilen görsel önizlemesi">
+                        <div class="ms-gorsel-arama-bolge-katmani" data-ms-gorsel-arama-bolge-katmani aria-label="Görselde seçilebilir ürünler"></div>
+                        <div class="ms-gorsel-arama-tarama-efekti" data-ms-gorsel-arama-tarama hidden>
+                            <span aria-hidden="true"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ms-gorsel-arama-secim-paneli">
+                    <span class="ms-gorsel-arama-durum" data-ms-gorsel-arama-durum>Görsel hazır</span>
+                    <strong data-ms-gorsel-arama-secili-baslik>Ürün seçimi bekleniyor</strong>
+                    <p data-ms-gorsel-arama-secili-metin>Resmi tarayın, sonra görsel üzerindeki noktadan aramak istediğiniz ürünü seçin.</p>
+                    <div class="ms-gorsel-arama-etiket-listesi" data-ms-gorsel-arama-etiket-listesi></div>
+                </div>
+            </div>
+
+            <div class="ms-ornek-modal-aksiyonlar">
+                <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-gorsel-arama-kapat>Vazgeç</button>
+                <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-gorsel-arama-tara disabled>Resmi tara</button>
+                <button class="ms-buton ms-buton-m ms-buton-koyu" type="submit" data-ms-gorsel-arama-gonder disabled>Seçili ürünü ara</button>
+            </div>
+        </form>
+
+        <div class="ms-gorsel-arama-sonuc" data-ms-gorsel-arama-sonuc hidden></div>
+    </section>
+</div>
+
+<div class="ms-gorsel-arama-kamera" data-ms-gorsel-arama-kamera aria-hidden="true">
+    <video class="ms-gorsel-arama-kamera-video" data-ms-gorsel-arama-kamera-video playsinline autoplay muted></video>
+    <canvas data-ms-gorsel-arama-kamera-canvas hidden></canvas>
+    <div class="ms-gorsel-arama-kamera-isleniyor" data-ms-gorsel-arama-kamera-isleniyor hidden>
+        <div class="ms-gorsel-arama-tarama-kutu" aria-hidden="true"></div>
+        <span>Görüntü hazırlanıyor</span>
+    </div>
+    <button class="ms-gorsel-arama-kamera-kapat" type="button" data-ms-gorsel-arama-kamera-kapat aria-label="Kamerayı kapat">×</button>
+    <div class="ms-gorsel-arama-kamera-kontroller">
+        <button class="ms-gorsel-arama-kamera-kontrol ms-gorsel-arama-kamera-odak" type="button" data-ms-gorsel-arama-kamera-odak>
+            <span>Odakla</span>
+        </button>
+        <button class="ms-gorsel-arama-kamera-cek" type="button" data-ms-gorsel-arama-kamera-cek aria-label="Fotoğraf çek"></button>
+        <button class="ms-gorsel-arama-kamera-kontrol ms-gorsel-arama-kamera-dondur" type="button" data-ms-gorsel-arama-kamera-dondur>
+            <span>Döndür</span>
+        </button>
+    </div>
+</div>
+
+<div class="ms-gorsel-arama-secim-tam-ekran" data-ms-gorsel-arama-secim-ekrani aria-hidden="true">
+    <div class="ms-gorsel-arama-secim-ust">
+        <strong>Ürün Seç</strong>
+        <button type="button" data-ms-gorsel-arama-secim-kapat aria-label="Ürün seçimini kapat">×</button>
+    </div>
+    <div class="ms-gorsel-arama-secim-gorsel-alani">
+        <div class="ms-gorsel-arama-secim-sahne">
+            <img data-ms-gorsel-arama-secim-gorsel src="" alt="Seçilen görselde ürün seçimi">
+            <div class="ms-gorsel-arama-bolge-katmani" data-ms-gorsel-arama-secim-bolge-katmani aria-label="Tam ekran ürün seçim noktaları"></div>
+        </div>
+    </div>
+    <div class="ms-gorsel-arama-secim-alt">
+        <span class="ms-gorsel-arama-durum" data-ms-gorsel-arama-secim-durum>Bölgeler hazır</span>
+        <strong data-ms-gorsel-arama-secim-baslik>Aramak istediğiniz alanı seçin</strong>
+        <p data-ms-gorsel-arama-secim-metin>1, 2 gibi noktalara dokunduğunuzda seçtiğiniz alan burada görünür.</p>
+        <div class="ms-gorsel-arama-etiket-listesi" data-ms-gorsel-arama-secim-etiket-listesi></div>
+        <div class="ms-gorsel-arama-secim-aksiyonlar">
+            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-gorsel-arama-secim-kapat>Geri Dön</button>
+            <button class="ms-buton ms-buton-m ms-buton-koyu" type="button" data-ms-gorsel-arama-secim-ara disabled>Seçili ürünü ara</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const modal = document.querySelector("[data-ms-gorsel-arama-modal]");
+        const form = modal?.querySelector("[data-ms-gorsel-arama-form]");
+        const input = modal?.querySelector("[data-ms-gorsel-arama-input]");
+        const dosyaMetni = modal?.querySelector("[data-ms-gorsel-arama-dosya]");
+        const editor = modal?.querySelector("[data-ms-gorsel-arama-editor]");
+        const onizlemeGorsel = modal?.querySelector("[data-ms-gorsel-arama-onizleme-gorsel]");
+        const gonderButonu = modal?.querySelector("[data-ms-gorsel-arama-gonder]");
+        const taraButonu = modal?.querySelector("[data-ms-gorsel-arama-tara]");
+        const sonuc = modal?.querySelector("[data-ms-gorsel-arama-sonuc]");
+        const kapaticilar = modal?.querySelectorAll("[data-ms-gorsel-arama-kapat]") || [];
+        const kameraAcButonu = modal?.querySelector("[data-ms-gorsel-arama-kamera-ac]");
+        const bolgeKatmani = modal?.querySelector("[data-ms-gorsel-arama-bolge-katmani]");
+        const taramaEfekti = modal?.querySelector("[data-ms-gorsel-arama-tarama]");
+        const durum = modal?.querySelector("[data-ms-gorsel-arama-durum]");
+        const seciliBaslik = modal?.querySelector("[data-ms-gorsel-arama-secili-baslik]");
+        const seciliMetin = modal?.querySelector("[data-ms-gorsel-arama-secili-metin]");
+        const etiketListesi = modal?.querySelector("[data-ms-gorsel-arama-etiket-listesi]");
+        const secimEkrani = document.querySelector("[data-ms-gorsel-arama-secim-ekrani]");
+        const secimEkraniGorsel = secimEkrani?.querySelector("[data-ms-gorsel-arama-secim-gorsel]");
+        const secimEkraniBolgeKatmani = secimEkrani?.querySelector("[data-ms-gorsel-arama-secim-bolge-katmani]");
+        const secimEkraniKapatButonlari = secimEkrani?.querySelectorAll("[data-ms-gorsel-arama-secim-kapat]") || [];
+        const secimEkraniAraButonu = secimEkrani?.querySelector("[data-ms-gorsel-arama-secim-ara]");
+        const secimEkraniDurum = secimEkrani?.querySelector("[data-ms-gorsel-arama-secim-durum]");
+        const secimEkraniBaslik = secimEkrani?.querySelector("[data-ms-gorsel-arama-secim-baslik]");
+        const secimEkraniMetin = secimEkrani?.querySelector("[data-ms-gorsel-arama-secim-metin]");
+        const secimEkraniEtiketListesi = secimEkrani?.querySelector("[data-ms-gorsel-arama-secim-etiket-listesi]");
+        const kamera = document.querySelector("[data-ms-gorsel-arama-kamera]");
+        const kameraVideo = kamera?.querySelector("[data-ms-gorsel-arama-kamera-video]");
+        const kameraCanvas = kamera?.querySelector("[data-ms-gorsel-arama-kamera-canvas]");
+        const kameraKapat = kamera?.querySelector("[data-ms-gorsel-arama-kamera-kapat]");
+        const kameraCek = kamera?.querySelector("[data-ms-gorsel-arama-kamera-cek]");
+        const kameraOdak = kamera?.querySelector("[data-ms-gorsel-arama-kamera-odak]");
+        const kameraDondur = kamera?.querySelector("[data-ms-gorsel-arama-kamera-dondur]");
+        const kameraIsleniyor = kamera?.querySelector("[data-ms-gorsel-arama-kamera-isleniyor]");
+        let onizlemeUrl = "";
+        let oncekiBodyOverflow = "";
+        let kameraAkisi = null;
+        let kameraYonu = "environment";
+        let kameraMesgul = false;
+        let aktifDosya = null;
+        let aktifBolgeler = [];
+        let seciliBolge = null;
+
+        if (!modal || !form || !input || !onizlemeGorsel || !bolgeKatmani) {
+            return;
+        }
+
+        const bolgeSablonlari = [
+            {
+                id: "bolge-1",
+                baslik: "Bölge 1",
+                metin: "Seçili görsel bölgesi aramaya hazırlanır.",
+                x: 26,
+                y: 16,
+                w: 48,
+                h: 30
+            },
+            {
+                id: "bolge-2",
+                baslik: "Bölge 2",
+                metin: "Seçili görsel bölgesi aramaya hazırlanır.",
+                x: 28,
+                y: 42,
+                w: 44,
+                h: 36
+            },
+            {
+                id: "bolge-3",
+                baslik: "Bölge 3",
+                metin: "Seçili görsel bölgesi aramaya hazırlanır.",
+                x: 18,
+                y: 64,
+                w: 24,
+                h: 22
+            },
+            {
+                id: "bolge-4",
+                baslik: "Bölge 4",
+                metin: "Seçili görsel bölgesi aramaya hazırlanır.",
+                x: 54,
+                y: 73,
+                w: 26,
+                h: 18
+            }
+        ];
+
+        const sonucYaz = (metin, tur = "bilgi") => {
+            if (!sonuc) {
+                return;
+            }
+
+            sonuc.hidden = !metin;
+            sonuc.classList.toggle("ms-gorsel-arama-sonuc-hata", tur === "hata");
+            sonuc.textContent = metin || "";
+        };
+
+        const secimMetniGuncelle = () => {
+            if (seciliBolge) {
+                durum.textContent = "Bölge seçildi";
+                seciliBaslik.textContent = seciliBolge.baslik;
+                seciliMetin.textContent = "Bu alan kırpılıp görsel aramada kullanılacak.";
+                if (secimEkraniDurum) {
+                    secimEkraniDurum.textContent = "Bölge seçildi";
+                }
+
+                if (secimEkraniBaslik) {
+                    secimEkraniBaslik.textContent = seciliBolge.baslik;
+                }
+
+                if (secimEkraniMetin) {
+                    secimEkraniMetin.textContent = "Bu alan kırpılıp görsel aramada kullanılacak.";
+                }
+            } else {
+                durum.textContent = aktifBolgeler.length ? "Bölgeler hazır" : "Görsel hazır";
+                seciliBaslik.textContent = aktifBolgeler.length ? "Aramak istediğiniz alanı seçin" : "Bölge seçimi bekleniyor";
+                seciliMetin.textContent = aktifBolgeler.length
+                    ? "Noktaya veya alttaki etikete tıklayın, seçili alanı görsel aramada kullanın."
+                    : "Resmi tarayın, sonra görsel üzerindeki noktadan aramak istediğiniz alanı seçin.";
+                if (secimEkraniDurum) {
+                    secimEkraniDurum.textContent = aktifBolgeler.length ? "Bölgeler hazır" : "Görsel hazır";
+                }
+
+                if (secimEkraniBaslik) {
+                    secimEkraniBaslik.textContent = aktifBolgeler.length ? "Aramak istediğiniz alanı seçin" : "Bölge seçimi bekleniyor";
+                }
+
+                if (secimEkraniMetin) {
+                    secimEkraniMetin.textContent = aktifBolgeler.length
+                        ? "1, 2 gibi noktalara dokunduğunuzda seçtiğiniz alan burada görünür."
+                        : "Resmi tarayın, sonra görsel üzerinde alan seçin.";
+                }
+            }
+
+            if (gonderButonu) {
+                gonderButonu.disabled = !seciliBolge;
+            }
+
+            if (secimEkraniAraButonu) {
+                secimEkraniAraButonu.disabled = !seciliBolge;
+            }
+        };
+
+        const bolgeSec = (bolgeId) => {
+            seciliBolge = aktifBolgeler.find((bolge) => bolge.id === bolgeId) || null;
+
+            [bolgeKatmani, secimEkraniBolgeKatmani].forEach((katman) => {
+                katman?.querySelectorAll("[data-ms-gorsel-arama-bolge]").forEach((buton) => {
+                    const aktif = buton.dataset.msGorselAramaBolge === bolgeId;
+                    buton.classList.toggle("ms-gorsel-arama-bolge-aktif", aktif);
+                    buton.setAttribute("aria-pressed", aktif.toString());
+                });
+            });
+
+            [etiketListesi, secimEkraniEtiketListesi].forEach((liste) => {
+                liste?.querySelectorAll("[data-ms-gorsel-arama-etiket]").forEach((buton) => {
+                    const aktif = buton.dataset.msGorselAramaEtiket === bolgeId;
+                    buton.classList.toggle("ms-gorsel-arama-etiket-aktif", aktif);
+                    buton.setAttribute("aria-pressed", aktif.toString());
+                });
+            });
+
+            secimMetniGuncelle();
+        };
+
+        const bolgeButonuOlustur = (bolge, index) => {
+            const buton = document.createElement("button");
+            buton.type = "button";
+            buton.className = "ms-gorsel-arama-bolge";
+            buton.dataset.msGorselAramaBolge = bolge.id;
+            buton.style.left = `${bolge.x}%`;
+            buton.style.top = `${bolge.y}%`;
+            buton.style.width = `${bolge.w}%`;
+            buton.style.height = `${bolge.h}%`;
+            buton.setAttribute("aria-label", `${index + 1}. bölgeyi seç`);
+            buton.setAttribute("aria-pressed", "false");
+            buton.innerHTML = `<span class="ms-gorsel-arama-bolge-nokta">${index + 1}</span>`;
+            buton.addEventListener("click", () => bolgeSec(bolge.id));
+            return buton;
+        };
+
+        const etiketButonuOlustur = (bolge) => {
+            const etiket = document.createElement("button");
+            etiket.type = "button";
+            etiket.className = "ms-gorsel-arama-etiket";
+            etiket.dataset.msGorselAramaEtiket = bolge.id;
+            etiket.setAttribute("aria-pressed", "false");
+            etiket.textContent = bolge.baslik;
+            etiket.addEventListener("click", () => bolgeSec(bolge.id));
+            return etiket;
+        };
+
+        const secimEkraniAc = () => {
+            if (!secimEkrani || !secimEkraniGorsel || !onizlemeUrl) {
+                return;
+            }
+
+            secimEkraniGorsel.src = onizlemeUrl;
+            secimEkrani.classList.add("ms-gorsel-arama-secim-tam-ekran-acik");
+            secimEkrani.setAttribute("aria-hidden", "false");
+            document.documentElement.style.overflow = "hidden";
+        };
+
+        const secimEkraniKapat = () => {
+            secimEkrani?.classList.remove("ms-gorsel-arama-secim-tam-ekran-acik");
+            secimEkrani?.setAttribute("aria-hidden", "true");
+            document.documentElement.style.overflow = "";
+        };
+
+        const bolgeleriCiz = (bolgeler) => {
+            aktifBolgeler = bolgeler;
+            seciliBolge = null;
+            bolgeKatmani.replaceChildren();
+            secimEkraniBolgeKatmani?.replaceChildren();
+            etiketListesi?.replaceChildren();
+            secimEkraniEtiketListesi?.replaceChildren();
+
+            bolgeler.forEach((bolge, index) => {
+                bolgeKatmani.appendChild(bolgeButonuOlustur(bolge, index));
+                secimEkraniBolgeKatmani?.appendChild(bolgeButonuOlustur(bolge, index));
+                etiketListesi?.appendChild(etiketButonuOlustur(bolge));
+                secimEkraniEtiketListesi?.appendChild(etiketButonuOlustur(bolge));
+            });
+
+            secimMetniGuncelle();
+            secimEkraniAc();
+        };
+
+        const bolgeleriOlustur = () => {
+            const oran = onizlemeGorsel.naturalWidth && onizlemeGorsel.naturalHeight
+                ? onizlemeGorsel.naturalWidth / onizlemeGorsel.naturalHeight
+                : 0.75;
+
+            if (oran > 1.15) {
+                return [
+                    { ...bolgeSablonlari[0], x: 10, y: 18, w: 28, h: 44 },
+                    { ...bolgeSablonlari[1], x: 38, y: 18, w: 26, h: 52 },
+                    { ...bolgeSablonlari[2], x: 64, y: 42, w: 24, h: 30 }
+                ];
+            }
+
+            return bolgeSablonlari.map((bolge) => ({ ...bolge }));
+        };
+
+        const taramaBaslat = () => {
+            if (!aktifDosya) {
+                sonucYaz("Lütfen önce bir görsel seçin.", "hata");
+                return;
+            }
+
+            sonucYaz("");
+            bolgeKatmani.replaceChildren();
+            secimEkraniBolgeKatmani?.replaceChildren();
+            etiketListesi?.replaceChildren();
+            secimEkraniEtiketListesi?.replaceChildren();
+            aktifBolgeler = [];
+            seciliBolge = null;
+            secimMetniGuncelle();
+            taramaEfekti.hidden = false;
+            taraButonu.disabled = true;
+            taraButonu.textContent = "Taranıyor";
+
+            window.setTimeout(() => {
+                taramaEfekti.hidden = true;
+                taraButonu.disabled = false;
+                taraButonu.textContent = "Resmi tara";
+                bolgeleriCiz(bolgeleriOlustur());
+            }, 760);
+        };
+
+        const dosyayiInputaYaz = (dosya) => {
+            if (!window.DataTransfer) {
+                return;
+            }
+
+            const transfer = new DataTransfer();
+            transfer.items.add(dosya);
+            input.files = transfer.files;
+        };
+
+        const dosyaSecildi = (dosya, ayarlar = {}) => {
+            aktifDosya = dosya;
+            seciliBolge = null;
+            aktifBolgeler = [];
+            bolgeKatmani.replaceChildren();
+            secimEkraniBolgeKatmani?.replaceChildren();
+            etiketListesi?.replaceChildren();
+            secimEkraniEtiketListesi?.replaceChildren();
+            sonucYaz("");
+            secimEkraniKapat();
+
+            if (onizlemeUrl) {
+                URL.revokeObjectURL(onizlemeUrl);
+                onizlemeUrl = "";
+            }
+
+            if (!dosya) {
+                editor.hidden = true;
+                dosyaMetni.textContent = "JPG, PNG veya WEBP dosyası yükleyin.";
+                taraButonu.disabled = true;
+                gonderButonu.disabled = true;
+                secimMetniGuncelle();
+                return;
+            }
+
+            dosyaMetni.textContent = ayarlar.kaynak === "kamera" ? "Kameradan çekilen görsel" : dosya.name;
+            onizlemeUrl = URL.createObjectURL(dosya);
+            onizlemeGorsel.onload = () => {
+                if (ayarlar.otomatikTara) {
+                    taramaBaslat();
+                }
+            };
+            onizlemeGorsel.src = onizlemeUrl;
+            editor.hidden = false;
+            taraButonu.disabled = false;
+            gonderButonu.disabled = true;
+            secimMetniGuncelle();
+        };
+
+        const kirpilmisDosyaOlustur = async () => {
+            if (!aktifDosya || !seciliBolge) {
+                return null;
+            }
+
+            if (onizlemeGorsel.decode) {
+                await onizlemeGorsel.decode().catch(() => {});
+            }
+
+            const dogalGenislik = onizlemeGorsel.naturalWidth;
+            const dogalYukseklik = onizlemeGorsel.naturalHeight;
+
+            if (!dogalGenislik || !dogalYukseklik) {
+                return aktifDosya;
+            }
+
+            const pay = 4;
+            const x = Math.max(0, (seciliBolge.x - pay) * dogalGenislik / 100);
+            const y = Math.max(0, (seciliBolge.y - pay) * dogalYukseklik / 100);
+            const w = Math.min(dogalGenislik - x, (seciliBolge.w + pay * 2) * dogalGenislik / 100);
+            const h = Math.min(dogalYukseklik - y, (seciliBolge.h + pay * 2) * dogalYukseklik / 100);
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.max(1, Math.round(w));
+            canvas.height = Math.max(1, Math.round(h));
+            const context = canvas.getContext("2d");
+
+            if (!context) {
+                return aktifDosya;
+            }
+
+            context.drawImage(onizlemeGorsel, x, y, w, h, 0, 0, canvas.width, canvas.height);
+
+            return new Promise((resolve) => {
+                canvas.toBlob((blob) => {
+                    if (!blob) {
+                        resolve(aktifDosya);
+                        return;
+                    }
+
+                    resolve(new File([blob], `${seciliBolge.id}-${Date.now()}.jpg`, { type: "image/jpeg" }));
+                }, "image/jpeg", 0.92);
+            });
+        };
+
+        const dosyaGonder = async (dosya) => {
+            const formData = new FormData();
+            formData.append("file", dosya);
+            gonderButonu.disabled = true;
+            gonderButonu.textContent = "Aranıyor";
+            taraButonu.disabled = true;
+            if (secimEkraniAraButonu) {
+                secimEkraniAraButonu.disabled = true;
+                secimEkraniAraButonu.textContent = "Aranıyor";
+            }
+            sonucYaz("");
+
+            try {
+                const cevap = await fetch("/gorsel-arama", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const cevapMetni = await cevap.text();
+                let sonucJson = null;
+
+                try {
+                    sonucJson = JSON.parse(cevapMetni);
+                } catch {
+                    sonucJson = null;
+                }
+
+                if (!cevap.ok || !sonucJson || !Array.isArray(sonucJson.results)) {
+                    sonucYaz("Görsel arama tamamlanamadı. Lütfen daha net bir ürün görseli deneyin.", "hata");
+                    if (secimEkraniDurum) {
+                        secimEkraniDurum.textContent = "Arama tamamlanamadı";
+                    }
+
+                    if (secimEkraniMetin) {
+                        secimEkraniMetin.textContent = "Lütfen daha net bir ürün görseli deneyin.";
+                    }
+                    return;
+                }
+
+                modalKapat();
+                document.dispatchEvent(new CustomEvent("ms:gorsel-arama-sonuc", {
+                    detail: {
+                        ...sonucJson,
+                        seciliBolge: seciliBolge?.baslik || ""
+                    }
+                }));
+            } catch {
+                sonucYaz("Görsel arama servisine ulaşılamadı. Lütfen tekrar deneyin.", "hata");
+                if (secimEkraniDurum) {
+                    secimEkraniDurum.textContent = "Bağlantı kurulamadı";
+                }
+
+                if (secimEkraniMetin) {
+                    secimEkraniMetin.textContent = "Görsel arama servisine ulaşılamadı. Lütfen tekrar deneyin.";
+                }
+            } finally {
+                gonderButonu.disabled = !seciliBolge;
+                gonderButonu.textContent = "Seçili ürünü ara";
+                taraButonu.disabled = !aktifDosya;
+                if (secimEkraniAraButonu) {
+                    secimEkraniAraButonu.disabled = !seciliBolge;
+                    secimEkraniAraButonu.textContent = "Seçili ürünü ara";
+                }
+            }
+        };
+
+        const kameraIsleniyorAyarla = (aktif) => {
+            kameraMesgul = aktif;
+
+            if (kameraIsleniyor) {
+                kameraIsleniyor.hidden = !aktif;
+            }
+
+            [kameraCek, kameraOdak, kameraDondur, kameraKapat].forEach((buton) => {
+                if (buton) {
+                    buton.disabled = aktif;
+                }
+            });
+        };
+
+        const kameraAkisiniDurdur = () => {
+            kameraAkisi?.getTracks().forEach((track) => track.stop());
+            kameraAkisi = null;
+
+            if (kameraVideo) {
+                kameraVideo.srcObject = null;
+            }
+        };
+
+        const kameraKapatma = () => {
+            kameraIsleniyorAyarla(false);
+            kameraAkisiniDurdur();
+            kamera?.classList.remove("ms-gorsel-arama-kamera-acik");
+            kamera?.setAttribute("aria-hidden", "true");
+            document.documentElement.style.overflow = "";
+        };
+
+        const kameraAc = async () => {
+            if (!kamera || !kameraVideo || !navigator.mediaDevices?.getUserMedia) {
+                sonucYaz("Bu cihazda kamera erişimi desteklenmiyor.", "hata");
+                return;
+            }
+
+            try {
+                kameraAkisiniDurdur();
+                kameraAkisi = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: { ideal: kameraYonu },
+                        width: { ideal: 1280 },
+                        height: { ideal: 1280 }
+                    },
+                    audio: false
+                });
+
+                kameraVideo.srcObject = kameraAkisi;
+                kameraVideo.classList.toggle("ms-gorsel-arama-kamera-video-on", kameraYonu === "user");
+                kamera.classList.add("ms-gorsel-arama-kamera-acik");
+                kamera.setAttribute("aria-hidden", "false");
+                document.documentElement.style.overflow = "hidden";
+                await kameraVideo.play();
+            } catch {
+                sonucYaz("Kamera açılamadı. Kamera iznini kontrol edip tekrar deneyin.", "hata");
+                kameraKapatma();
+            }
+        };
+
+        const kamerayiOdakla = async () => {
+            const track = kameraAkisi?.getVideoTracks()[0];
+
+            try {
+                await track?.applyConstraints?.({
+                    advanced: [
+                        { focusMode: "continuous" },
+                        { focusMode: "single-shot" }
+                    ]
+                });
+            } catch {
+                // Tarayici desteklemiyorsa sadece gorsel odak animasyonu gosterilir.
+            } finally {
+                kameraVideo?.classList.add("ms-gorsel-arama-kamera-odaklandi");
+                window.setTimeout(() => kameraVideo?.classList.remove("ms-gorsel-arama-kamera-odaklandi"), 450);
+            }
+        };
+
+        const kameradanCek = () => {
+            if (!kameraVideo || !kameraCanvas || kameraMesgul || !kameraVideo.videoWidth || !kameraVideo.videoHeight) {
+                return;
+            }
+
+            kameraIsleniyorAyarla(true);
+            kameraCanvas.width = kameraVideo.videoWidth;
+            kameraCanvas.height = kameraVideo.videoHeight;
+            const context = kameraCanvas.getContext("2d");
+
+            if (context) {
+                if (kameraYonu === "user") {
+                    context.translate(kameraCanvas.width, 0);
+                    context.scale(-1, 1);
+                }
+
+                context.drawImage(kameraVideo, 0, 0, kameraCanvas.width, kameraCanvas.height);
+                context.setTransform(1, 0, 0, 1, 0, 0);
+            }
+
+            kameraCanvas.toBlob((blob) => {
+                kameraIsleniyorAyarla(false);
+
+                if (!blob) {
+                    sonucYaz("Kamera görüntüsü alınamadı.", "hata");
+                    return;
+                }
+
+                const dosya = new File([blob], `kamera-gorseli-${Date.now()}.jpg`, { type: "image/jpeg" });
+                dosyayiInputaYaz(dosya);
+                kameraKapatma();
+                dosyaSecildi(dosya, { kaynak: "kamera", otomatikTara: true });
+            }, "image/jpeg", 0.92);
+        };
+
+        const aramaBaslat = async () => {
+            if (!aktifDosya) {
+                sonucYaz("Lütfen önce bir görsel seçin.", "hata");
+                return;
+            }
+
+            if (!seciliBolge) {
+                sonucYaz("Lütfen görselde aramak istediğiniz ürünü seçin.", "hata");
+                return;
+            }
+
+            const aranacakDosya = await kirpilmisDosyaOlustur();
+
+            if (!aranacakDosya) {
+                sonucYaz("Seçili ürün bölgesi hazırlanamadı.", "hata");
+                return;
+            }
+
+            await dosyaGonder(aranacakDosya);
+        };
+
+        const modalAc = () => {
+            modal.classList.add("ms-ornek-modal-acik");
+            modal.setAttribute("aria-hidden", "false");
+            oncekiBodyOverflow = document.body.style.overflow;
+            document.body.style.overflow = "hidden";
+        };
+
+        function modalKapat() {
+            secimEkraniKapat();
+            kameraKapatma();
+            modal.classList.remove("ms-ornek-modal-acik");
+            modal.setAttribute("aria-hidden", "true");
+            document.body.style.overflow = oncekiBodyOverflow;
+        }
+
+        document.addEventListener("ms:gorsel-arama-ac", modalAc);
+
+        kapaticilar.forEach((kapatici) => {
+            kapatici.addEventListener("click", modalKapat);
+        });
+
+        kameraAcButonu?.addEventListener("click", kameraAc);
+        kameraKapat?.addEventListener("click", kameraKapatma);
+        kameraCek?.addEventListener("click", kameradanCek);
+        kameraOdak?.addEventListener("click", kamerayiOdakla);
+        kameraDondur?.addEventListener("click", async () => {
+            kameraYonu = kameraYonu === "environment" ? "user" : "environment";
+            await kameraAc();
+        });
+
+        input.addEventListener("change", () => {
+            dosyaSecildi(input.files?.[0] || null);
+        });
+
+        taraButonu?.addEventListener("click", taramaBaslat);
+        secimEkraniKapatButonlari.forEach((buton) => {
+            buton.addEventListener("click", secimEkraniKapat);
+        });
+        secimEkraniAraButonu?.addEventListener("click", () => {
+            aramaBaslat();
+        });
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            await aramaBaslat();
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && modal.classList.contains("ms-ornek-modal-acik")) {
+                if (secimEkrani?.classList.contains("ms-gorsel-arama-secim-tam-ekran-acik")) {
+                    secimEkraniKapat();
+                } else {
+                    modalKapat();
+                }
+            }
+        });
+    })();
+</script>

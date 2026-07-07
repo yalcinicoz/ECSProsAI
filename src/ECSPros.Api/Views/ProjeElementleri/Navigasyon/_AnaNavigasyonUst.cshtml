@@ -1,0 +1,143 @@
+﻿@using ECSPros.Api.Models.Store
+@{
+    var mevcutYol = Context.Request.Path.Value?.TrimEnd('/').ToLowerInvariant();
+    var anaSayfaMi = string.IsNullOrWhiteSpace(mevcutYol) || mevcutYol == "/" || mevcutYol == "/home" || mevcutYol == "/home/index";
+    // B1: Mobil kategori kaydırma şeridi kanal kategorilerinden beslenir (desktop menüyle aynı kaynak).
+    var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
+}
+
+<div class="ms-ana-navigasyon-ust">
+        <button class="ms-ana-navigasyon-mobil-menu" type="button" aria-label="Menüyü aç" aria-controls="ms-ana-navigasyon-mobil-panel" aria-expanded="false" data-ms-mobil-menu-ac>
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <a class="ms-ana-navigasyon-logo-link" asp-controller="Home" asp-action="Index">
+            <img class="ms-ana-navigasyon-logo" src="/images/site_logo.png" alt="Mishar Italia">
+        </a>
+
+        <partial name="~/Views/ProjeElementleri/Navigasyon/_AnaNavigasyonSearch.cshtml" />
+
+        <partial name="_GorselAramaModal" />
+
+        <div class="ms-ana-navigasyon-aksiyonlar">
+            <partial name="~/Views/ProjeElementleri/Navigasyon/_AnaNavigasyonGirisMenu.cshtml" />
+            <a class="ms-ana-navigasyon-aksiyon" href="#">
+                <span class="ms-ana-navigasyon-aksiyon-ikon-grup" aria-hidden="true">
+                    <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-normal " src="/ikons/favorite.svg" alt="">
+                    <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-aktif " src="/ikons/favorite-active.svg" alt="">
+                </span>
+                Favorilerim
+            </a>
+            <div class="ms-ana-navigasyon-sepet" data-ms-sepet-menu>
+                <button class="ms-ana-navigasyon-aksiyon" type="button" data-ms-sepet-menu-tetikleyici aria-haspopup="true" aria-expanded="false">
+                    <span class="ms-ana-navigasyon-sepet-ikon-alani">
+                        <span class="ms-ana-navigasyon-aksiyon-ikon-grup" aria-hidden="true">
+                            <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-normal " src="/ikons/basket.svg" alt="">
+                            <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-aktif " src="/ikons/basket-active.svg" alt="">
+                        </span>
+                        <span class="ms-ana-navigasyon-sepet-rozet">3</span>
+                    </span>
+                    <span class="ms-ana-navigasyon-sepet-yazi">Sepetim</span>
+                </button>
+                <div class="ms-ana-navigasyon-sepet-panel" data-ms-sepet-menu-panel>
+                    <div class="ms-ana-navigasyon-sepet-panel-ust">
+                        <strong>Sepetim</strong>
+                        <span>3 ürün</span>
+                    </div>
+                    <div class="ms-ana-navigasyon-sepet-urun-listesi">
+                        <div class="ms-ana-navigasyon-sepet-urun">
+                            <img class="ms-ana-navigasyon-sepet-urun-gorsel" src="https://cdn.tozlu.com/img/640/85/kadin-on-citcitli-dik-yaka-kolsuz-gomlek-1f1af-1732891_0102.webp" alt="Kadın ön çıtçıtlı dik yaka gömlek">
+                            <div class="ms-ana-navigasyon-sepet-urun-bilgi">
+                                <strong class="ms-ana-navigasyon-sepet-urun-baslik">Kadın Ön Çıtçıtlı Dik Yaka Gömlek</strong>
+                                <p>Beden: M, Renk: Beyaz</p>
+                                <div class="ms-ana-navigasyon-sepet-urun-alt">
+                                    <span>1 adet</span>
+                                    <strong class="ms-fiyat-standart">350 TL</strong>
+                                </div>
+                            </div>
+                            <button class="ms-ana-navigasyon-sepet-sil" type="button" aria-label="Kadın Ön Çıtçıtlı Dik Yaka Gömlek ürününü sepetten sil">
+                                <i class="fa-solid fa-trash-can ms-fa-ikon" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="ms-ana-navigasyon-sepet-urun">
+                            <img class="ms-ana-navigasyon-sepet-urun-gorsel" src="https://cdn.tozlu.com/img/640/85/kadin-on-citcitli-dik-yaka-kolsuz-gomlek-1f1af-1732891_0102.webp" alt="Kadın polo yaka çizgili triko tişört">
+                            <div class="ms-ana-navigasyon-sepet-urun-bilgi">
+                                <strong class="ms-ana-navigasyon-sepet-urun-baslik">Kadın Polo Yaka Çizgili Triko Tişört</strong>
+                                <p>Beden: S, Renk: Siyah</p>
+                                <div class="ms-ana-navigasyon-sepet-urun-alt">
+                                    <span>1 adet</span>
+                                    <strong class="ms-fiyat-standart">249,73 TL</strong>
+                                </div>
+                            </div>
+                            <button class="ms-ana-navigasyon-sepet-sil" type="button" aria-label="Kadın Polo Yaka Çizgili Triko Tişört ürününü sepetten sil">
+                                <i class="fa-solid fa-trash-can ms-fa-ikon" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="ms-ana-navigasyon-sepet-urun">
+                            <img class="ms-ana-navigasyon-sepet-urun-gorsel" src="https://cdn.tozlu.com/img/640/85/kadin-yirtmacli-kemerli-kat-detayli-tul-etek-1e70f-16a1ff2_5149.webp" alt="Kadın yırtmaçlı kemerli kat detaylı tül etek">
+                            <div class="ms-ana-navigasyon-sepet-urun-bilgi">
+                                <strong class="ms-ana-navigasyon-sepet-urun-baslik">Kadın Desenli Kısa Kollu Elbise</strong>
+                                <p>Beden: L, Renk: Yeşil</p>
+                                <div class="ms-ana-navigasyon-sepet-urun-alt">
+                                    <span>1 adet</span>
+                                    <strong class="ms-fiyat-standart">198,50 TL</strong>
+                                </div>
+                            </div>
+                            <button class="ms-ana-navigasyon-sepet-sil" type="button" aria-label="Kadın Desenli Kısa Kollu Elbise ürününü sepetten sil">
+                                <i class="fa-solid fa-trash-can ms-fa-ikon" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ms-ana-navigasyon-sepet-ozet">
+                        <span>Sepet Toplamı</span>
+                        <strong class="ms-urun-fiyat">798,23 TL</strong>
+                    </div>
+                    <div class="ms-ana-navigasyon-sepet-aksiyonlar">
+                        <a class="ms-ana-navigasyon-sepet-buton ms-ana-navigasyon-sepet-buton-ikincil" href="#">Sepete Git</a>
+                        <a class="ms-ana-navigasyon-sepet-buton ms-ana-navigasyon-sepet-buton-birincil" href="#">Siparişi Tamamla</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @if (anaSayfaMi)
+    {
+        <nav class="ms-magaza-mobil-menu-kaydirma-alani" data-ms-mobil-menu-kaydirma-alani aria-label="Mobil kategori menüsü">
+            <div class="ms-magaza-menu-kaydirma ms-magaza-menu-kaydirma-kaydirilabilir">
+                @foreach (var kok in nav.Kokler)
+                {
+                    <a class="ms-magaza-menu-link" href="@kok.Url">@kok.Ad @if (!string.IsNullOrWhiteSpace(kok.Rozet)){<span class="ms-magaza-menu-yeni">@kok.Rozet</span>}</a>
+                }
+            </div>
+        </nav>
+    }
+    <partial name="~/Views/ProjeElementleri/Navigasyon/_AnaNavigasyonGirisModal.cshtml" />
+
+    <partial name="~/Views/ProjeElementleri/Navigasyon/_AnaNavigasyonKayitModal.cshtml" />
+
+    <div class="ms-ornek-modal" data-ms-belge-modal aria-hidden="true">
+        <div class="ms-ornek-modal-kaplama" data-ms-belge-modal-kapat></div>
+        <section class="ms-ornek-modal-kutu ms-belge-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-belge-modal-baslik">
+            <button class="ms-ornek-modal-kapat" type="button" data-ms-belge-modal-kapat aria-label="Belge modalını kapat">×</button>
+
+            <span class="ms-modal-ornek-ikon ms-modal-ornek-ikon-standart" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M5 6.75A2.75 2.75 0 0 1 7.75 4h8.5A2.75 2.75 0 0 1 19 6.75v10.5A2.75 2.75 0 0 1 16.25 20h-8.5A2.75 2.75 0 0 1 5 17.25V6.75Z" stroke="currentColor" stroke-width="1.8" />
+                    <path d="M8 9h8M8 12h8M8 15h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                </svg>
+            </span>
+            <p id="ms-belge-modal-baslik" class="ms-ornek-modal-baslik">Bilgilendirme</p>
+            <p class="ms-ornek-modal-aciklama"><strong data-ms-belge-modal-baslik>Belge</strong> içeriğini okuyup onaylayabilirsiniz.</p>
+
+            <div class="ms-belge-modal-icerik" data-ms-belge-modal-icerik>
+                <p>İlgili bilgilendirme metni burada görüntülenir.</p>
+            </div>
+
+            <div class="ms-ornek-modal-aksiyonlar">
+                <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-belge-modal-kapat>Reddet</button>
+                <button class="ms-buton ms-buton-m ms-buton-koyu" type="button" data-ms-belge-modal-kabul>Kabul Et</button>
+            </div>
+        </section>
+    </div>

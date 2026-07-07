@@ -234,9 +234,6 @@ namespace ECSPros.Core.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<Guid?>("InvoiceIntegratorId")
-                        .HasColumnType("uuid");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -251,15 +248,6 @@ namespace ECSPros.Core.Infrastructure.Migrations
                         .HasColumnType("jsonb");
 
                     b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<decimal?>("PriceMultiplier")
-                        .HasPrecision(18, 6)
-                        .HasColumnType("numeric(18,6)");
-
-                    b.Property<string>("PriceType")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -285,8 +273,6 @@ namespace ECSPros.Core.Infrastructure.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
-                    b.HasIndex("InvoiceIntegratorId");
-
                     b.ToTable("core_firms", "core");
                 });
 
@@ -295,6 +281,22 @@ namespace ECSPros.Core.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ContactEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ContactName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ContactPhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ContractNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -311,6 +313,13 @@ namespace ECSPros.Core.Infrastructure.Migrations
 
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("DocumentUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("FirmId")
                         .HasColumnType("uuid");
@@ -330,6 +339,17 @@ namespace ECSPros.Core.Infrastructure.Migrations
 
                     b.Property<Dictionary<string, object>>("Settings")
                         .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Dictionary<string, object>>("Terms")
                         .HasColumnType("jsonb");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -1166,15 +1186,6 @@ namespace ECSPros.Core.Infrastructure.Migrations
                     b.Navigation("Firm");
 
                     b.Navigation("FirmIntegration");
-                });
-
-            modelBuilder.Entity("ECSPros.Core.Domain.Entities.Firm", b =>
-                {
-                    b.HasOne("ECSPros.Core.Domain.Entities.FirmIntegration", "InvoiceIntegrator")
-                        .WithMany()
-                        .HasForeignKey("InvoiceIntegratorId");
-
-                    b.Navigation("InvoiceIntegrator");
                 });
 
             modelBuilder.Entity("ECSPros.Core.Domain.Entities.FirmIntegration", b =>
