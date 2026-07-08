@@ -70,3 +70,17 @@ Views/ProjeElementleri/UrunDetay/_UrunDetayBilgi.cshtml
 # B9: Alt bilgi — görsel/açıklama/özellikler canlı veriden; pazaryeri-özel demo maddeleri
 # (satıcı adı, stok adedi) çıkarıldı, jenerik maddeler kaldı; akordiyon davranışı değişmedi.
 Views/ProjeElementleri/UrunDetay/_UrunDetayAltBilgi.cshtml
+
+# B6: Ana sayfa geçici kompozisyonu — sayfa seçici kaldırıldı; Kapsül Kategori Şeridi +
+# Standart Carousel blokları GorunumTipleri partial'larından birebir alınıp kök kanal
+# kategorilerine/ürünlerine bağlandı. Faz G'de (G8) bu geçici sayfa kaldırılacak.
+Views/Home/Index.cshtml
+
+# B6: Canlı ürün kartı partial'ı — kaynakta karşılığı yok (misharix'te demo _UrunKartiOrnegi).
+# B7'deki UrunKarti local function'ının paylaşılan hali; ürün listesi + ana sayfa carousel'leri
+# aynı kartı kullanır (tek kaynak). Markup misharix kart component'iyle birebir.
+Views/ProjeElementleri/Urun/_UrunKarti.cshtml
+
+# B3: Duyuru şeridi geçici statik içerik — demo marka metni (Misharitalia) mishar'a uyarlandı;
+# sağ linkler Faz H (kargo takip) / Faz F (yardım) gelene kadar '#'. Kalıcısı Faz G duyuru bloğu.
+Views/ProjeElementleri/Navigasyon/_AnaNavigasyonDuyuru.cshtml

@@ -1,0 +1,107 @@
+@model ECSPros.Api.Models.Store.UrunKartVm
+@{
+    // Canlı ürün kartı — misharix _UrunKartiOrnegi component'inin veriye bağlı karşılığı.
+    // B7'de _UrunListesiUrunAlani içinde local function'dı; B6'da ana sayfa carousel'leri de
+    // aynı kartı kullandığı için paylaşılan partial'a alındı (tek kaynak). Model null ise
+    // infinite-scroll <template> iskelet kartı üretilir (boş data-ms-* alanları JS doldurur).
+    // Veri karşılığı olmayan demo blokları @if(false) ile gizli — B8/B11/Faz G'de bağlanacak.
+    var u = Model;
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+    var adParcalari = (u?.Ad ?? "").Split(' ', 2);
+    var adIlk = adParcalari.Length > 0 ? adParcalari[0] : "";
+    var adKalan = adParcalari.Length > 1 ? adParcalari[1] : "";
+}
+<div class="ms-urun-karti" data-ms-kart-link-alani
+     data-ms-fiyat="@(u?.Fiyat.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
+     data-ms-degerler="@(u is null ? "" : string.Join(",", u.DegerIdler))"
+     data-ms-dolu="@(u is null ? "" : "true")">
+    <a class="ms-urun-kart-baglanti" href="@(u?.Url ?? "#")" data-ms-kart-link aria-label="@(u?.Ad ?? "Ürün") ürün detayına git"></a>
+    <div class="ms-urun-gorsel-alani" data-ms-urun-galeri data-ms-urun-galeri-resimler="@(u?.GaleriResimleri ?? "")">
+        @if (u?.GorselUrl is not null)
+        {
+            <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-src="@u.GorselUrl" data-ms-lazy-skeleton="true" alt="@u.Ad">
+        }
+        else
+        {
+            <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-skeleton="true" alt="">
+        }
+        @if (false)
+        {
+            @* B8/Faz G: videolu ürün + kampanya etiketi — veri kaynağı yok *@
+            <span class="ms-urun-gorsel-etiketleri"></span>
+            <span class="ms-urun-sponsor">Sponsorlu</span>
+        }
+        <button class="ms-urun-favori" type="button" aria-label="Favorilere ekle" aria-pressed="false">
+            <img class="ms-urun-favori-ikon" src="/ikons/favorite.svg" alt="" aria-hidden="true">
+        </button>
+        <button class="ms-urun-koleksiyon" type="button" aria-label="Koleksiyona ekle" aria-pressed="false" data-ms-urun-koleksiyon>
+            <i class="fa-solid fa-bookmark ms-fa-ikon" aria-hidden="true"></i>
+        </button>
+        @if (u is not null && u.RenkSayisi >= 2 && u.RenkHexleri.Count > 0)
+        {
+            <span class="ms-urun-renk-rozet">
+                <span class="ms-urun-renkler" aria-hidden="true">
+                    <span class="ms-urun-renk ms-urun-renk-mavi" style="background-image:none;background-color:@u.RenkHexleri[0]"></span>
+                    @if (u.RenkHexleri.Count > 1)
+                    {
+                        <span class="ms-urun-renk ms-urun-renk-pembe" style="background-image:none;background-color:@u.RenkHexleri[1]"></span>
+                    }
+                </span>
+                @u.RenkSayisi
+            </span>
+        }
+        @if (u is not null && u.GaleriUrller.Count > 1)
+        {
+            @* B8: hover galeri nokta göstergeleri (site.js data-ms-urun-galeri modülü) *@
+            <span class="ms-urun-slider-noktalari" aria-hidden="true">
+                @for (var n = 0; n < u.GaleriUrller.Count; n++)
+                {
+                    <span class="@(n == 0 ? "ms-urun-slider-nokta-aktif" : "")"></span>
+                }
+            </span>
+        }
+    </div>
+    @if (false)
+    {
+        @* Faz G: kampanya bandı *@
+        <div class="ms-urun-kampanya-bandi"></div>
+    }
+    @if (u is not null && u.RenkSecenekleri.Count >= 2)
+    {
+        @* B8: farklı renk seçenekleri tooltip'i — eksen renkleri kendi görselleri ve
+           ?color= linkleriyle (ilk 4 desktop; tam liste mobil panel sınıfıyla) *@
+        <div class="ms-urun-renk-tooltip-alani">
+            <span class="ms-urun-renk-tooltip">
+                <span class="ms-urun-renk-tooltip-baslik">
+                    <span>Farklı Renk Seçenekleri <span class="ms-urun-renk-tooltip-sayac">(@u.RenkSecenekleri.Count)</span></span>
+                    @if (u.RenkSecenekleri.Count > 4)
+                    {
+                        <span>+@(u.RenkSecenekleri.Count - 4) Renk ›</span>
+                    }
+                    <button class="ms-urun-renk-tooltip-kapat" type="button" data-ms-renk-tooltip-kapat aria-label="Renk seçeneklerini kapat">×</button>
+                </span>
+                <span class="ms-urun-renk-tooltip-liste">
+                    @foreach (var renk in u.RenkSecenekleri.Take(4))
+                    {
+                        <a class="ms-urun-renk-tooltip-gorsel" href="@u.UrlRenkli(renk.ValueId)"><img data-ms-lazy-src="@(renk.GorselUrl ?? u.GorselUrl)" alt="@renk.Ad renk seçeneği"><span>@renk.Ad</span></a>
+                    }
+                    @foreach (var renk in u.RenkSecenekleri)
+                    {
+                        <a class="ms-urun-renk-tooltip-gorsel ms-urun-renk-tooltip-gorsel-mobil" href="@u.UrlRenkli(renk.ValueId)"><img data-ms-lazy-src="@(renk.GorselUrl ?? u.GorselUrl)" alt="@renk.Ad renk seçeneği"><span>@renk.Ad</span></a>
+                    }
+                </span>
+            </span>
+        </div>
+    }
+    <div class="ms-urun-icerik">
+        <h3 class="ms-urun-basligi"><strong>@adIlk</strong> @adKalan</h3>
+        @if (false)
+        {
+            @* B8: teslimat/favori mesajları, puan ve kargo mesajları — model alanları gelince *@
+            <p class="ms-urun-teslimat"></p>
+            <div class="ms-urun-puan"></div>
+            <p class="ms-urun-kargo"></p>
+        }
+        <p class="ms-urun-fiyat">@(u is null ? "" : u.Fiyat.ToString("N2", tr) + " TL")</p>
+    </div>
+</div>

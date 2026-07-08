@@ -15,7 +15,13 @@ sorun=0
 
 kontrol() { # $1: kaynak dosya, $2: hedef dosya, $3: görünen ad
   if [ ! -f "$2" ]; then return 0; fi                      # henüz taşınmamış — sorun değil
-  if [ ! -f "$1" ]; then echo "KAYNAKTA YOK: $3"; sorun=1; return; fi
+  if [ ! -f "$1" ]; then
+    if grep -qxF "$3" "$IZINLI" 2>/dev/null; then
+      echo "İZİNLİ YENİ : $3"                              # kaynakta karşılığı olmayan bilinçli dosya
+      return 0
+    fi
+    echo "KAYNAKTA YOK: $3"; sorun=1; return
+  fi
   if cmp -s "$1" "$2"; then return 0; fi
   if grep -qxF "$3" "$IZINLI" 2>/dev/null; then
     echo "İZİNLİ FARK : $3"

@@ -1,114 +1,11 @@
 @using ECSPros.Api.Models.Store
 @{
     // B7: Ürün alanı canlı veriye bağlandı. Kart markup'ı misharix template'inin birebir
-    // kopyasıdır (UrunKarti local function) — ilk sayfa sunucudan render edilir (plan 3.3),
-    // devamı misharix infinite-scroll modülüyle (kartHazirla/sonra hook'ları) JSON'dan gelir.
-    // Veri olmayan demo blokları (video, sponsor, kampanya, puan, teslimat/kargo mesajları,
-    // renk tooltip) HTML yapısı bozulmadan @@if ile gizlendi — B8/B11/Faz G'de bağlanacak.
+    // kopyasıdır — B6'dan itibaren paylaşılan _UrunKarti partial'ında (ana sayfa carousel'leri
+    // ile tek kaynak); ilk sayfa sunucudan render edilir (plan 3.3), devamı misharix
+    // infinite-scroll modülüyle (kartHazirla/sonra hook'ları) JSON'dan gelir.
     var vm = ViewData["MsUrunListesi"] as UrunListesiVm
              ?? new UrunListesiVm("Ürünler", 0, 24, [], "", [], 0, 0, []);
-    var tr = new System.Globalization.CultureInfo("tr-TR");
-
-    void UrunKarti(UrunKartVm? u)
-    {
-        var adParcalari = (u?.Ad ?? "").Split(' ', 2);
-        var adIlk = adParcalari.Length > 0 ? adParcalari[0] : "";
-        var adKalan = adParcalari.Length > 1 ? adParcalari[1] : "";
-        <div class="ms-urun-karti" data-ms-kart-link-alani
-             data-ms-fiyat="@(u?.Fiyat.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
-             data-ms-degerler="@(u is null ? "" : string.Join(",", u.DegerIdler))"
-             data-ms-dolu="@(u is null ? "" : "true")">
-            <a class="ms-urun-kart-baglanti" href="@(u?.Url ?? "#")" data-ms-kart-link aria-label="@(u?.Ad ?? "Ürün") ürün detayına git"></a>
-            <div class="ms-urun-gorsel-alani" data-ms-urun-galeri data-ms-urun-galeri-resimler="@(u?.GaleriResimleri ?? "")">
-                @if (u?.GorselUrl is not null)
-                {
-                    <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-src="@u.GorselUrl" data-ms-lazy-skeleton="true" alt="@u.Ad">
-                }
-                else
-                {
-                    <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-skeleton="true" alt="">
-                }
-                @if (false)
-                {
-                    @* B8/Faz G: videolu ürün + kampanya etiketi — veri kaynağı yok *@
-                    <span class="ms-urun-gorsel-etiketleri"></span>
-                    <span class="ms-urun-sponsor">Sponsorlu</span>
-                }
-                <button class="ms-urun-favori" type="button" aria-label="Favorilere ekle" aria-pressed="false">
-                    <img class="ms-urun-favori-ikon" src="/ikons/favorite.svg" alt="" aria-hidden="true">
-                </button>
-                <button class="ms-urun-koleksiyon" type="button" aria-label="Koleksiyona ekle" aria-pressed="false" data-ms-urun-koleksiyon>
-                    <i class="fa-solid fa-bookmark ms-fa-ikon" aria-hidden="true"></i>
-                </button>
-                @if (u is not null && u.RenkSayisi >= 2 && u.RenkHexleri.Count > 0)
-                {
-                    <span class="ms-urun-renk-rozet">
-                        <span class="ms-urun-renkler" aria-hidden="true">
-                            <span class="ms-urun-renk ms-urun-renk-mavi" style="background-image:none;background-color:@u.RenkHexleri[0]"></span>
-                            @if (u.RenkHexleri.Count > 1)
-                            {
-                                <span class="ms-urun-renk ms-urun-renk-pembe" style="background-image:none;background-color:@u.RenkHexleri[1]"></span>
-                            }
-                        </span>
-                        @u.RenkSayisi
-                    </span>
-                }
-                @if (u is not null && u.GaleriUrller.Count > 1)
-                {
-                    @* B8: hover galeri nokta göstergeleri (site.js data-ms-urun-galeri modülü) *@
-                    <span class="ms-urun-slider-noktalari" aria-hidden="true">
-                        @for (var n = 0; n < u.GaleriUrller.Count; n++)
-                        {
-                            <span class="@(n == 0 ? "ms-urun-slider-nokta-aktif" : "")"></span>
-                        }
-                    </span>
-                }
-            </div>
-            @if (false)
-            {
-                @* Faz G: kampanya bandı *@
-                <div class="ms-urun-kampanya-bandi"></div>
-            }
-            @if (u is not null && u.RenkSecenekleri.Count >= 2)
-            {
-                @* B8: farklı renk seçenekleri tooltip'i — eksen renkleri kendi görselleri ve
-                   ?color= linkleriyle (ilk 4 desktop; tam liste mobil panel sınıfıyla) *@
-                <div class="ms-urun-renk-tooltip-alani">
-                    <span class="ms-urun-renk-tooltip">
-                        <span class="ms-urun-renk-tooltip-baslik">
-                            <span>Farklı Renk Seçenekleri <span class="ms-urun-renk-tooltip-sayac">(@u.RenkSecenekleri.Count)</span></span>
-                            @if (u.RenkSecenekleri.Count > 4)
-                            {
-                                <span>+@(u.RenkSecenekleri.Count - 4) Renk ›</span>
-                            }
-                            <button class="ms-urun-renk-tooltip-kapat" type="button" data-ms-renk-tooltip-kapat aria-label="Renk seçeneklerini kapat">×</button>
-                        </span>
-                        <span class="ms-urun-renk-tooltip-liste">
-                            @foreach (var renk in u.RenkSecenekleri.Take(4))
-                            {
-                                <a class="ms-urun-renk-tooltip-gorsel" href="@u.UrlRenkli(renk.ValueId)"><img data-ms-lazy-src="@(renk.GorselUrl ?? u.GorselUrl)" alt="@renk.Ad renk seçeneği"><span>@renk.Ad</span></a>
-                            }
-                            @foreach (var renk in u.RenkSecenekleri)
-                            {
-                                <a class="ms-urun-renk-tooltip-gorsel ms-urun-renk-tooltip-gorsel-mobil" href="@u.UrlRenkli(renk.ValueId)"><img data-ms-lazy-src="@(renk.GorselUrl ?? u.GorselUrl)" alt="@renk.Ad renk seçeneği"><span>@renk.Ad</span></a>
-                            }
-                        </span>
-                    </span>
-                </div>
-            }
-            <div class="ms-urun-icerik">
-                <h3 class="ms-urun-basligi"><strong>@adIlk</strong> @adKalan</h3>
-                @if (false)
-                {
-                    @* B8: teslimat/favori mesajları, puan ve kargo mesajları — model alanları gelince *@
-                    <p class="ms-urun-teslimat"></p>
-                    <div class="ms-urun-puan"></div>
-                    <p class="ms-urun-kargo"></p>
-                }
-                <p class="ms-urun-fiyat">@(u is null ? "" : u.Fiyat.ToString("N2", tr) + " TL")</p>
-            </div>
-        </div>
-    }
 }
 <section class="ms-urun-listesi-urun-alani lazy-infinite-on" data-ms-page-module="infinite-scroll" data-ms-infinite-scroll data-ms-infinite-config="urun-listesi" data-ms-infinite-toplam="100" data-ms-infinite-ilk="20" data-ms-infinite-adet="20" data-ms-infinite-esik="0.8" data-ms-infinite-sadece-ilk="true" aria-label="Ürünlerin yayınlanacağı alan">
     @await Html.PartialAsync("~/Views/ProjeElementleri/UrunListesi/_UrunListesiSagUstFiltre.cshtml")
@@ -116,11 +13,11 @@
     <div class="ms-urun-listesi-urun-grid" data-ms-infinite-liste aria-live="polite">
         @foreach (var urun in vm.IlkSayfa)
         {
-            UrunKarti(urun);
+            @await Html.PartialAsync("~/Views/ProjeElementleri/Urun/_UrunKarti.cshtml", urun)
         }
     </div>
     <template data-ms-infinite-template>
-        @{ UrunKarti(null); }
+        @await Html.PartialAsync("~/Views/ProjeElementleri/Urun/_UrunKarti.cshtml", null)
     </template>
     <div class="ms-infinite-ornek-yukleniyor" data-ms-infinite-yukleniyor>Yeni ürünler yükleniyor...</div>
 </section>
