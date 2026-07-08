@@ -1,4 +1,22 @@
-﻿        <div class="ms-ana-navigasyon-arama" data-ms-arama>
+﻿@using ECSPros.Api.Models.Store
+@using System.Text.Json
+@{
+    // B2: Canlı arama önerileri — ürünler products?search'ten, kategori önerileri nav
+    // ağacından (client-side eşleşme). Demo içerik kaldırıldı; sonuç alanını sayfa
+    // altındaki script dolduruyor (misharix'in görünürlük/panel script'i değişmedi).
+    var aramaNav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
+    var aramaPlatform = ViewData["MsPlatform"] as ECSPros.Api.Services.StorePlatformBilgisi;
+    // Alt kategoriler "Kök › Çocuk" etiketiyle sunulur — aynı ada sahip kategoriler
+    // (ör. Kadın/Elbise ile Çocuk & Bebek/Elbise) ayırt edilebilsin.
+    var aramaKategorileri = aramaNav.Kokler
+        .SelectMany(k => new[] { new { ad = k.Ad, etiket = k.Ad, url = k.Url } }
+            .Concat(k.Cocuklar.SelectMany(c =>
+                new[] { new { ad = c.Ad, etiket = $"{k.Ad} › {c.Ad}", url = c.Url } }
+                    .Concat(c.Cocuklar.Select(t => new { ad = t.Ad, etiket = $"{c.Ad} › {t.Ad}", url = t.Url })))))
+        .ToList();
+    var aramaKategoriJson = JsonSerializer.Serialize(aramaKategorileri);
+}
+        <div class="ms-ana-navigasyon-arama" data-ms-arama data-ms-arama-platform="@(aramaPlatform?.Id)">
             <input class="ms-ana-navigasyon-arama-input" data-ms-arama-input type="search" name="ms-search-query-main" role="searchbox" placeholder="Ürün, kategori veya marka ara" aria-label="Ürün, kategori veya marka ara" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="search" enterkeyhint="search" aria-autocomplete="none" readonly data-ms-autocomplete-kapat data-lpignore="true" data-1p-ignore="true" data-form-type="other">
             <svg class="ms-ana-navigasyon-arama-ikon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
@@ -41,60 +59,42 @@
                     </div>
 
                     <div class="ms-ana-navigasyon-populer-aramalar" data-ms-populer-aramalar>
-                    <div class="ms-ana-navigasyon-son-aramalar">
+                    <div class="ms-ana-navigasyon-son-aramalar" data-ms-son-aramalar hidden>
                         <div class="ms-ana-navigasyon-urunler-ust">
                             <span class="ms-ana-navigasyon-arama-baslik">Son Aradıklarım</span>
-                            <button class="ms-ana-navigasyon-son-aramalar-temizle" type="button">Temizle</button>
+                            <button class="ms-ana-navigasyon-son-aramalar-temizle" type="button" data-ms-son-aramalar-temizle>Temizle</button>
                         </div>
-                        <div class="ms-ana-navigasyon-son-aramalar-listesi">
-                            <a class="ms-ana-navigasyon-son-arama-chip" href="#">
-                                <svg class="ms-ana-navigasyon-son-arama-ikon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m5-2a9 9 0 1 1-2.636-6.364" />
-                                </svg>
-                                beyaz gömlek
-                            </a>
-                            <a class="ms-ana-navigasyon-son-arama-chip" href="#">
-                                <svg class="ms-ana-navigasyon-son-arama-ikon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m5-2a9 9 0 1 1-2.636-6.364" />
-                                </svg>
-                                triko tişört
-                            </a>
-                            <a class="ms-ana-navigasyon-son-arama-chip" href="#">
-                                <svg class="ms-ana-navigasyon-son-arama-ikon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m5-2a9 9 0 1 1-2.636-6.364" />
-                                </svg>
-                                günlük elbise
-                            </a>
-                        </div>
+                        <div class="ms-ana-navigasyon-son-aramalar-listesi" data-ms-son-aramalar-listesi></div>
                     </div>
 
                     <span class="ms-ana-navigasyon-arama-baslik">Popüler Aramalar</span>
+                    @* B2 geçici statik kaynak (kalıcısı E11 arama analitiği) — gerçek katalogda karşılığı olan terimler *@
                     <div class="ms-ana-navigasyon-populer-listesi">
-                        <a class="ms-ana-navigasyon-populer-chip ms-ana-navigasyon-populer-chip-vurgu" href="#">
+                        <a class="ms-ana-navigasyon-populer-chip ms-ana-navigasyon-populer-chip-vurgu" href="#" data-ms-populer-terim="elbise">
                             <svg class="ms-ana-navigasyon-chip-ikon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M12.963 2.286a.75.75 0 0 0-1.071-.136 9.742 9.742 0 0 0-3.539 6.177 7.547 7.547 0 0 1-1.705-1.715.75.75 0 0 0-1.152-.082A9 9 0 1 0 15.68 4.534a7.46 7.46 0 0 1-2.717-2.248ZM15.75 14.25a3.75 3.75 0 1 1-7.313-1.172c.628.465 1.35.81 2.133 1a5.99 5.99 0 0 1 1.925-3.546 3.75 3.75 0 0 1 3.255 3.718Z" clip-rule="evenodd" />
                             </svg>
-                            new well
+                            elbise
                         </a>
-                        <a class="ms-ana-navigasyon-populer-chip ms-ana-navigasyon-populer-chip-vurgu" href="#">
+                        <a class="ms-ana-navigasyon-populer-chip ms-ana-navigasyon-populer-chip-vurgu" href="#" data-ms-populer-terim="tunik">
                             <svg class="ms-ana-navigasyon-chip-ikon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M12.963 2.286a.75.75 0 0 0-1.071-.136 9.742 9.742 0 0 0-3.539 6.177 7.547 7.547 0 0 1-1.705-1.715.75.75 0 0 0-1.152-.082A9 9 0 1 0 15.68 4.534a7.46 7.46 0 0 1-2.717-2.248ZM15.75 14.25a3.75 3.75 0 1 1-7.313-1.172c.628.465 1.35.81 2.133 1a5.99 5.99 0 0 1 1.925-3.546 3.75 3.75 0 0 1 3.255 3.718Z" clip-rule="evenodd" />
                             </svg>
-                            beyzana
+                            tunik
                         </a>
-                        <a class="ms-ana-navigasyon-populer-chip ms-ana-navigasyon-populer-chip-vurgu" href="#">
+                        <a class="ms-ana-navigasyon-populer-chip ms-ana-navigasyon-populer-chip-vurgu" href="#" data-ms-populer-terim="şal">
                             <svg class="ms-ana-navigasyon-chip-ikon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M12.963 2.286a.75.75 0 0 0-1.071-.136 9.742 9.742 0 0 0-3.539 6.177 7.547 7.547 0 0 1-1.705-1.715.75.75 0 0 0-1.152-.082A9 9 0 1 0 15.68 4.534a7.46 7.46 0 0 1-2.717-2.248ZM15.75 14.25a3.75 3.75 0 1 1-7.313-1.172c.628.465 1.35.81 2.133 1a5.99 5.99 0 0 1 1.925-3.546 3.75 3.75 0 0 1 3.255 3.718Z" clip-rule="evenodd" />
                             </svg>
-                            pandora
+                            şal
                         </a>
-                        <a class="ms-ana-navigasyon-populer-chip" href="#">u.s. polo assn.</a>
-                        <a class="ms-ana-navigasyon-populer-chip" href="#">flormar</a>
-                        <a class="ms-ana-navigasyon-populer-chip" href="#">yves rocher</a>
-                        <a class="ms-ana-navigasyon-populer-chip" href="#">parfois</a>
-                        <a class="ms-ana-navigasyon-populer-chip" href="#">vichy</a>
-                        <a class="ms-ana-navigasyon-populer-chip" href="#">yükselen zeka</a>
-                        <a class="ms-ana-navigasyon-populer-chip" href="#">apple watch</a>
+                        <a class="ms-ana-navigasyon-populer-chip" href="#" data-ms-populer-terim="gömlek">gömlek</a>
+                        <a class="ms-ana-navigasyon-populer-chip" href="#" data-ms-populer-terim="bluz">bluz</a>
+                        <a class="ms-ana-navigasyon-populer-chip" href="#" data-ms-populer-terim="pantolon">pantolon</a>
+                        <a class="ms-ana-navigasyon-populer-chip" href="#" data-ms-populer-terim="triko">triko</a>
+                        <a class="ms-ana-navigasyon-populer-chip" href="#" data-ms-populer-terim="etek">etek</a>
+                        <a class="ms-ana-navigasyon-populer-chip" href="#" data-ms-populer-terim="hırka">hırka</a>
+                        <a class="ms-ana-navigasyon-populer-chip" href="#" data-ms-populer-terim="pijama">pijama</a>
                     </div>
 
                     </div>
@@ -102,53 +102,17 @@
                     <div class="ms-ana-navigasyon-arama-sonuc-alani" data-ms-arama-sonuc hidden>
                         <div class="ms-ana-navigasyon-urunler-ust">
                             <span class="ms-ana-navigasyon-arama-baslik">Arama Sonuçları</span>
-                            <span class="ms-ana-navigasyon-arama-sonuc-sayisi" data-ms-arama-sonuc-sayisi>15 ürün</span>
+                            <span class="ms-ana-navigasyon-arama-sonuc-sayisi" data-ms-arama-sonuc-sayisi></span>
                         </div>
 
-                        <div class="ms-ana-navigasyon-arama-sonuc-gruplari" data-ms-arama-sonuc-gruplari>
-                            <section class="ms-ana-navigasyon-arama-sonuc-grubu">
-                                <div class="ms-ana-navigasyon-arama-kategori-label">
-                                    <span>Elbise</span>
-                                    <small>5 ürün</small>
-                                </div>
-                                <div class="ms-ana-navigasyon-arama-sonuc-listesi">
-                                    @for (var aramaUrunIndex = 0; aramaUrunIndex < 5; aramaUrunIndex++)
-                                    {
-                                        <partial name="_SearchUrunKarti" />
-                                    }
-                                </div>
-                            </section>
-                            <section class="ms-ana-navigasyon-arama-sonuc-grubu">
-                                <div class="ms-ana-navigasyon-arama-kategori-label">
-                                    <span>Kazak</span>
-                                    <small>5 ürün</small>
-                                </div>
-                                <div class="ms-ana-navigasyon-arama-sonuc-listesi">
-                                    @for (var aramaUrunIndex = 0; aramaUrunIndex < 5; aramaUrunIndex++)
-                                    {
-                                        <partial name="_SearchUrunKarti" />
-                                    }
-                                </div>
-                            </section>
-                            <section class="ms-ana-navigasyon-arama-sonuc-grubu">
-                                <div class="ms-ana-navigasyon-arama-kategori-label">
-                                    <span>Gömlek</span>
-                                    <small>5 ürün</small>
-                                </div>
-                                <div class="ms-ana-navigasyon-arama-sonuc-listesi">
-                                    @for (var aramaUrunIndex = 0; aramaUrunIndex < 5; aramaUrunIndex++)
-                                    {
-                                        <partial name="_SearchUrunKarti" />
-                                    }
-                                </div>
-                            </section>
-                        </div>
+                        @* B2: gruplar canlı arama script'i tarafından doldurulur (aşağıda) *@
+                        <div class="ms-ana-navigasyon-arama-sonuc-gruplari" data-ms-arama-sonuc-gruplari></div>
                     </div>
 
                     <div class="ms-ana-navigasyon-populer-urunler" data-ms-populer-urunler>
                     <div class="ms-ana-navigasyon-urunler-ust">
                         <span class="ms-ana-navigasyon-arama-baslik">Popüler Ürünler</span>
-                        <a class="ms-ana-navigasyon-tumunu-gor" href="#">
+                        <a class="ms-ana-navigasyon-tumunu-gor" href="/urunler">
                             Tümünü Gör
                             <svg class="ms-ana-navigasyon-tumunu-gor-ikon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
@@ -162,32 +126,8 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
                         </svg>
                     </button>
-                    <div class="ms-ana-navigasyon-urun-listesi" data-ms-arama-urun-listesi>
-                        <a class="ms-ana-navigasyon-urun-karti" href="#">
-                            <img class="ms-ana-navigasyon-urun-gorsel" src="https://cdn.tozlu.com/img/640/85/kadin-on-citcitli-dik-yaka-kolsuz-gomlek-1f1af-1732891_0102.webp" alt="Kadın ön çıtçıtlı dik yaka gömlek">
-                            <span class="ms-ana-navigasyon-urun-icerik">
-                                <span class="ms-ana-navigasyon-urun-baslik">Kadın Ön Çıtçıtlı Dik Yaka Gömlek</span>
-                                <span class="ms-ana-navigasyon-urun-fiyat ms-urun-fiyat">350 TL</span>
-                                <span class="ms-ana-navigasyon-urun-etiket">Çok Al Az Öde</span>
-                            </span>
-                        </a>
-                        <a class="ms-ana-navigasyon-urun-karti" href="#">
-                            <img class="ms-ana-navigasyon-urun-gorsel" src="https://cdn.tozlu.com/img/640/85/kadin-on-citcitli-dik-yaka-kolsuz-gomlek-1f1af-1732891_0102.webp" alt="Kadın gömlek">
-                            <span class="ms-ana-navigasyon-urun-icerik">
-                                <span class="ms-ana-navigasyon-urun-baslik">Kolsuz Gömlek ve Günlük Kombin</span>
-                                <span class="ms-ana-navigasyon-urun-fiyat ms-urun-fiyat">249,73 TL</span>
-                                <span class="ms-ana-navigasyon-urun-etiket">Sepette Fırsat</span>
-                            </span>
-                        </a>
-                        <a class="ms-ana-navigasyon-urun-karti" href="#">
-                            <img class="ms-ana-navigasyon-urun-gorsel" src="https://cdn.tozlu.com/img/640/85/kadin-on-citcitli-dik-yaka-kolsuz-gomlek-1f1af-1732891_0102.webp" alt="Dik yaka gömlek">
-                            <span class="ms-ana-navigasyon-urun-icerik">
-                                <span class="ms-ana-navigasyon-urun-baslik">Dik Yaka Kolsuz Gömlek</span>
-                                <span class="ms-ana-navigasyon-urun-fiyat ms-urun-fiyat">198,50 TL</span>
-                                <span class="ms-ana-navigasyon-urun-etiket">Çok Satan</span>
-                            </span>
-                        </a>
-                    </div>
+                    @* B2 geçici kaynak: ilk ürünler (kalıcısı E11 popülerlik verisi) — script dolduruyor *@
+                    <div class="ms-ana-navigasyon-urun-listesi" data-ms-arama-urun-listesi></div>
                     <button class="ms-ana-navigasyon-urun-kontrol ms-ana-navigasyon-urun-kontrol-sag" type="button" aria-label="Sonraki popüler ürünler" data-ms-arama-urun-kaydir="sag">
                         <svg class="ms-ana-navigasyon-urun-kontrol-ikon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
@@ -198,3 +138,217 @@
                 </div>
             </div>
         </div>
+
+@* B2: Canlı arama script'i — DOMContentLoaded'da bağlanır ki misharix'in kendi arama
+   script'inden (parse anında çalışan IIFE, _AnaNavigasyon.cshtml) SONRA tetiklensin:
+   misharix her tuş vuruşunda sonuç alanını sıfırlar (görünürlük yönetimi), bu script
+   sonrasında içerik doldurur. Markup sınıfları misharix'inkiyle birebir aynı. *@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const kategoriKaynagi = @Html.Raw(aramaKategoriJson);
+
+    document.querySelectorAll("[data-ms-arama]").forEach((aramaAlani) => {
+        const platformId = aramaAlani.dataset.msAramaPlatform;
+        if (!platformId) { return; }
+
+        const input = aramaAlani.querySelector("[data-ms-arama-input]");
+        const panelInput = aramaAlani.querySelector("[data-ms-arama-panel-input]");
+        const gruplar = aramaAlani.querySelector("[data-ms-arama-sonuc-gruplari]");
+        const sonucSayisi = aramaAlani.querySelector("[data-ms-arama-sonuc-sayisi]");
+        const urunListesi = aramaAlani.querySelector("[data-ms-arama-urun-listesi]");
+        const sonAramalarAlani = aramaAlani.querySelector("[data-ms-son-aramalar]");
+        const sonAramalarListesi = aramaAlani.querySelector("[data-ms-son-aramalar-listesi]");
+        const sonAramalarTemizle = aramaAlani.querySelector("[data-ms-son-aramalar-temizle]");
+        if (!input || !gruplar) { return; }
+
+        const SON_ARAMA_ANAHTARI = "ms-son-aramalar";
+        const fiyatYaz = (deger) => new Intl.NumberFormat("tr-TR",
+            { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(deger || 0) + " TL";
+        const kacir = (metin) => String(metin ?? "").replace(/[&<>"']/g,
+            (k) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[k]));
+
+        const urunKartiHtml = (urun) => {
+            const ad = (urun.nameI18n && (urun.nameI18n.tr || Object.values(urun.nameI18n)[0])) || urun.code;
+            const gorsel = urun.mainImageUrl
+                ? `<img class="ms-search-urun-gorsel" src="${kacir(urun.mainImageUrl)}" alt="${kacir(ad)}" loading="lazy">`
+                : "";
+            return `<a class="ms-search-urun-karti" href="/urun/${encodeURIComponent(urun.code)}" aria-label="${kacir(ad)}">
+                <span class="ms-search-urun-gorsel-alani">${gorsel}</span>
+                <span class="ms-search-urun-icerik">
+                    <span class="ms-search-urun-baslik">${kacir(ad)}</span>
+                    <span class="ms-search-urun-fiyat ms-urun-fiyat">${fiyatYaz(urun.minPrice)}</span>
+                </span>
+            </a>`;
+        };
+
+        const durumYaz = (mesaj) => {
+            gruplar.innerHTML = `<p class="ms-ana-navigasyon-arama-kategori-label"><span>${kacir(mesaj)}</span></p>`;
+        };
+
+        // ── Son aramalar (localStorage) ──
+        const sonAramalariOku = () => {
+            try { return JSON.parse(localStorage.getItem(SON_ARAMA_ANAHTARI)) || []; }
+            catch { return []; }
+        };
+
+        const sonAramalariCiz = () => {
+            if (!sonAramalarAlani || !sonAramalarListesi) { return; }
+            const kayitlar = sonAramalariOku();
+            sonAramalarAlani.hidden = kayitlar.length === 0;
+            sonAramalarListesi.innerHTML = kayitlar.map((terim) => `
+                <a class="ms-ana-navigasyon-son-arama-chip" href="#" data-ms-son-arama-terim="${kacir(terim)}">
+                    <svg class="ms-ana-navigasyon-son-arama-ikon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m5-2a9 9 0 1 1-2.636-6.364" />
+                    </svg>
+                    ${kacir(terim)}
+                </a>`).join("");
+        };
+
+        const sonAramaKaydet = (terim) => {
+            const temiz = terim.trim();
+            if (temiz.length < 2) { return; }
+            const kayitlar = [temiz, ...sonAramalariOku().filter((t) => t.toLocaleLowerCase("tr") !== temiz.toLocaleLowerCase("tr"))].slice(0, 6);
+            try { localStorage.setItem(SON_ARAMA_ANAHTARI, JSON.stringify(kayitlar)); } catch { /* dolu/kapalı storage */ }
+            sonAramalariCiz();
+        };
+
+        sonAramalarTemizle?.addEventListener("click", () => {
+            try { localStorage.removeItem(SON_ARAMA_ANAHTARI); } catch { /* yok say */ }
+            sonAramalariCiz();
+        });
+
+        sonAramalariCiz();
+
+        // ── Canlı öneri ──
+        let zamanlayici = null;
+        let istekSirasi = 0;
+
+        const canliAra = (metin) => {
+            const terim = metin.trim();
+            window.clearTimeout(zamanlayici);
+
+            if (terim.length < 2) {
+                if (sonucSayisi) { sonucSayisi.textContent = ""; }
+                if (terim.length === 1) { durumYaz("En az 2 karakter yazın."); }
+                return;
+            }
+
+            durumYaz("Aranıyor…");
+
+            zamanlayici = window.setTimeout(async () => {
+                const buIstek = ++istekSirasi;
+                try {
+                    const yanit = await fetch(`/api/store/catalog/products?firmPlatformId=${platformId}&search=${encodeURIComponent(terim)}&page=1&pageSize=10`);
+                    const veri = await yanit.json();
+                    if (buIstek !== istekSirasi) { return; } // eski cevap — yenisi yolda
+
+                    const urunler = veri?.data?.items || [];
+                    const toplam = veri?.data?.totalCount || 0;
+                    const terimKucuk = terim.toLocaleLowerCase("tr");
+                    const kategoriler = kategoriKaynagi
+                        .filter((k) => k.ad.toLocaleLowerCase("tr").includes(terimKucuk))
+                        .slice(0, 6);
+
+                    if (sonucSayisi) { sonucSayisi.textContent = `${toplam} ürün`; }
+
+                    let html = "";
+
+                    if (kategoriler.length > 0) {
+                        html += `<section class="ms-ana-navigasyon-arama-sonuc-grubu">
+                            <div class="ms-ana-navigasyon-arama-kategori-label"><span>Kategoriler</span><small>${kategoriler.length}</small></div>
+                            <div class="ms-ana-navigasyon-populer-listesi">
+                                ${kategoriler.map((k) => `<a class="ms-ana-navigasyon-populer-chip" href="${kacir(k.url)}">${kacir(k.etiket)}</a>`).join("")}
+                            </div>
+                        </section>`;
+                    }
+
+                    if (urunler.length > 0) {
+                        html += `<section class="ms-ana-navigasyon-arama-sonuc-grubu">
+                            <div class="ms-ana-navigasyon-arama-kategori-label"><span>Ürünler</span><small>${toplam} ürün</small></div>
+                            <div class="ms-ana-navigasyon-arama-sonuc-listesi">${urunler.map(urunKartiHtml).join("")}</div>
+                            <a class="ms-ana-navigasyon-tumunu-gor" href="/urunler?search=${encodeURIComponent(terim)}">
+                                Tümünü Gör
+                                <svg class="ms-ana-navigasyon-tumunu-gor-ikon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                                </svg>
+                            </a>
+                        </section>`;
+                    }
+
+                    if (html === "") {
+                        durumYaz(`"${terim}" için sonuç bulunamadı.`);
+                        return;
+                    }
+
+                    gruplar.innerHTML = html;
+                } catch {
+                    if (buIstek === istekSirasi) { durumYaz("Arama yapılamadı."); }
+                }
+            }, 300);
+        };
+
+        [input, panelInput].filter(Boolean).forEach((aramaInput) => {
+            aramaInput.addEventListener("input", () => canliAra(aramaInput.value));
+            aramaInput.addEventListener("keydown", (olay) => {
+                if (olay.key === "Enter" && aramaInput.value.trim().length >= 2) {
+                    sonAramaKaydet(aramaInput.value);
+                    window.location.href = "/urunler?search=" + encodeURIComponent(aramaInput.value.trim());
+                }
+            });
+        });
+
+        // Chip tıklamaları (popüler + son aramalar) → panel içi arama
+        const terimleAra = (terim) => {
+            input.value = terim;
+            if (panelInput) { panelInput.value = terim; }
+            // misharix'in görünürlük script'i input olayını dinliyor — durum sınıflarını o günceller
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            sonAramaKaydet(terim);
+        };
+
+        aramaAlani.addEventListener("click", (olay) => {
+            const chip = olay.target.closest("[data-ms-populer-terim], [data-ms-son-arama-terim]");
+            if (!chip) { return; }
+            olay.preventDefault();
+            terimleAra(chip.dataset.msPopulerTerim || chip.dataset.msSonAramaTerim || "");
+        });
+
+        // ── Popüler ürünler (geçici kaynak: ilk ürünler; 15 dk sessionStorage önbelleği) ──
+        const populerUrunleriDoldur = async () => {
+            if (!urunListesi) { return; }
+            const ONBELLEK_ANAHTARI = "ms-populer-urunler:" + platformId;
+
+            let urunler = null;
+            try {
+                const kayit = JSON.parse(sessionStorage.getItem(ONBELLEK_ANAHTARI));
+                if (kayit && Date.now() - kayit.zaman < 15 * 60 * 1000) { urunler = kayit.urunler; }
+            } catch { /* bozuk kayıt — yeniden çek */ }
+
+            if (!urunler) {
+                try {
+                    const yanit = await fetch(`/api/store/catalog/products?firmPlatformId=${platformId}&page=1&pageSize=8`);
+                    const veri = await yanit.json();
+                    urunler = veri?.data?.items || [];
+                    try { sessionStorage.setItem(ONBELLEK_ANAHTARI, JSON.stringify({ zaman: Date.now(), urunler })); } catch { /* yok say */ }
+                } catch { return; } // panel popüler ürünsüz de çalışır
+            }
+
+            urunListesi.innerHTML = urunler.map((urun) => {
+                const ad = (urun.nameI18n && (urun.nameI18n.tr || Object.values(urun.nameI18n)[0])) || urun.code;
+                const gorsel = urun.mainImageUrl
+                    ? `<img class="ms-ana-navigasyon-urun-gorsel" src="${kacir(urun.mainImageUrl)}" alt="${kacir(ad)}" loading="lazy">`
+                    : "";
+                return `<a class="ms-ana-navigasyon-urun-karti" href="/urun/${encodeURIComponent(urun.code)}">
+                    ${gorsel}
+                    <span class="ms-ana-navigasyon-urun-icerik">
+                        <span class="ms-ana-navigasyon-urun-baslik">${kacir(ad)}</span>
+                        <span class="ms-ana-navigasyon-urun-fiyat ms-urun-fiyat">${fiyatYaz(urun.minPrice)}</span>
+                    </span>
+                </a>`;
+            }).join("");
+        };
+
+        populerUrunleriDoldur();
+    });
+});
+</script>

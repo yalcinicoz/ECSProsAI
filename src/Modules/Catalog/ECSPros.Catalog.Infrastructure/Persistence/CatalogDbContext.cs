@@ -34,6 +34,16 @@ public class CatalogDbContext : DbContext, ICatalogDbContext
     {
         modelBuilder.HasDefaultSchema("catalog");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CatalogDbContext).Assembly);
+
+        // JSONB sözlük kolonlarında anahtar bazlı arama (NameI18n->>'tr' benzeri) —
+        // Dictionary indexer'ı dinamik JSON eşlemesinde çevrilmediği için PG'nin yerleşik
+        // fonksiyonuna bağlanır (bkz. PgJsonFunctions.JsonText kullanan store arama sorguları).
+        modelBuilder
+            .HasDbFunction(typeof(Application.Helpers.PgJsonFunctions)
+                .GetMethod(nameof(Application.Helpers.PgJsonFunctions.JsonText))!)
+            .HasName("jsonb_extract_path_text")
+            .IsBuiltIn();
+
         base.OnModelCreating(modelBuilder);
     }
 

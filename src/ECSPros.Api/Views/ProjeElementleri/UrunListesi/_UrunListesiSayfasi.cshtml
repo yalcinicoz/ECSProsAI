@@ -1,0 +1,11 @@
+﻿<section class="ms-urun-listesi-sayfa" data-ms-urun-listesi-gorunum="5" aria-label="Ürün listesi sayfa tasarımı">
+    @await Html.PartialAsync("~/Views/ProjeElementleri/UrunListesi/_UrunListesiMobilFiltre.cshtml")
+
+    <div class="ms-urun-listesi-grid">
+        @await Html.PartialAsync("~/Views/ProjeElementleri/UrunListesi/_UrunListesiSolFiltre.cshtml")
+
+        <main class="ms-urun-listesi-icerik" aria-label="Ürün listeleme alanı">
+            @await Html.PartialAsync("~/Views/ProjeElementleri/UrunListesi/_UrunListesiUrunAlani.cshtml")
+        </main>
+    </div>
+</section>

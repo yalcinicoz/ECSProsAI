@@ -52,8 +52,11 @@ public class GetStoreProductsQueryHandler(ICatalogDbContext db, IChannelPricingS
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var search = request.Search.ToLower();
-            q = q.Where(p => p.Code.ToLower().Contains(search));
+            // Kod VEYA Türkçe ad eşleşmesi (NameI18n->>'tr') — B2 canlı arama önerileri
+            // metinle arar; salt kod araması müşteri için sonuç üretmiyordu.
+            var search = request.Search.Trim().ToLower();
+            q = q.Where(p => p.Code.ToLower().Contains(search)
+                          || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(search));
         }
 
         var total = await q.CountAsync(ct);

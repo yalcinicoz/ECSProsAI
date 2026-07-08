@@ -1,0 +1,6 @@
+@{
+    // B7: başlık controller'dan gelir (kategori adı / arama terimi / "Tüm Ürünler")
+    ViewData["Title"] = (ViewData["MsUrunListesi"] as ECSPros.Api.Models.Store.UrunListesiVm)?.Baslik ?? "Ürün Listesi";
+}
+
+@await Html.PartialAsync("~/Views/ProjeElementleri/UrunListesi/_UrunListesiSayfasi.cshtml")

@@ -25,7 +25,7 @@
 | Faz | Konu | Durum |
 |---|---|---|
 | A | Razor host + kabuk altyapısı | ✅ Tamamlandı (2026-07-07) — 8080'de canlı, görüntü doğrulaması yapıldı |
-| B | Navigasyon + Ana Sayfa + Liste + Detay (gerçek port) | 🔶 Devam ediyor — B1 navigasyon ✅ (2026-07-07); sırada B2 arama paneli |
+| B | Navigasyon + Ana Sayfa + Liste + Detay (gerçek port) | 🔶 Devam ediyor — B1 nav + B2 arama + B7 ürün listesi + B14 domain geçişi ✅ (2026-07-07); sırada B8 kart derinleştirme / B9 ürün detay (kart linkleri /urun/{code} hâlâ 404) |
 | C | Sepet + Checkout | ⬜ Başlamadı |
 | D | Üye oturumu (Razor tarafı) + SMS/OTP altyapısı | ⬜ Başlamadı |
 | E | Hesabım kümesi (12 sayfa + yeni backend özellikleri) | ⬜ Başlamadı |
@@ -125,12 +125,13 @@ src/ECSPros.Api/
   - **Veriye bağlanan partial'lar (markup sınıfları birebir korunarak):** `_AnaNavigasyonDesktopMenu.cshtml` (mega gruplar + üst şerit linkleri; ilk grup `-varsayilan`; UcuncuSeviyeVar dallanması hazır; kampanya şeridi STATİK — Faz G), `_AnaNavigasyonMobilMenu.cshtml` (ana sekmeler=kökler, 2 seviyede tek yan sekme+tek panel; kampanya bölümü + alt nav statik), `_AnaNavigasyonUst.cshtml` (yalnız mobil kategori kaydırma şeridi; sepet/oturum kısmı B5/D6'ya kaldı). Üçü de gerekçeyle `allowed-diffs.txt`'e eklendi.
   - **Doğrulama:** build 0 hata; 5051 Production duman testi — 4 kök grup + 43 grid linki (desktop ve mobil ayrı ayrı), gerçek `/{slug}` href'leri, `check.sh` TEMİZ ✓; headless Chromium ile mega menü hover (Kadın varsayılan + Erkek grup geçişi) ve mobil menü (sekme geçişi Çocuk & Bebek) ekran görüntüleriyle doğrulandı, 0 konsol hatası. `api/store/*` regresyon yok (menus/header 404'ü canlıyla aynı — nav_menus boş, bilinen durum).
   - **UYARI (hâlâ geçerli):** SPA'nın `store/js/app.js`'teki mega menü markup'ı ÖRNEK ALINMAZ — orijinalde olmayan yapılar uydurmuş; orijinal misharix markup'ı korundu (JS `ms-magaza-mega-sol-kolon`u runtime'da kendisi kurar, partial'a yazılmaz).
-- [ ] B2. Navigasyon içi **arama paneli**: canlı öneri (ürün+kategori) — mevcut `products?search` sorgusuna bağla; "kategoride ara" davranışı; popüler aramalar/popüler ürünler için geçici statik kaynak (kalıcısı E11'de).
+- [x] B2. Navigasyon içi **arama paneli** — TAMAM (2026-07-07): canlı öneri `_AnaNavigasyonSearch.cshtml` sonundaki script'le (misharix'in görünürlük script'i değişmedi — bizimki DOMContentLoaded'da bağlanıp ondan sonra çalışır; debounce 300ms, min 2 karakter, eski-cevap koruması). Ürünler `products?search`'ten (10 kart + toplam sayaç + "Tümünü Gör" → `/urunler?search=`, ürün linki `/urun/{code}` — B7/B9'a kadar 404 normal); kategori önerileri nav ağacından client-side ("Kök › Çocuk" etiketiyle — çift "Elbise" karışıklığı önlendi). **Backend:** arama artık kod VEYA Türkçe ad eşleşmesi (`PgJsonFunctions.JsonText` → `jsonb_extract_path_text` DbFunction eşlemesi, CatalogDbContext'te kayıtlı; Dictionary indexer'ı dinamik JSON'da çevrilmediği için) — GetStoreProducts + GetStoreFacets tutarlı; ~0.7-0.85s/sorgu (gerekirse ileride pg_trgm index). Popüler aramalar: gerçek terimli geçici statik chip'ler; popüler ürünler: ilk ürünler (15 dk sessionStorage) — ikisinin kalıcısı E11. Son aramalar: localStorage (6 kayıt, temizle butonu çalışır). **"Kategoride ara":** buton yalnız kategori sayfalarında görünür (misharix kuralı `!anaSayfaMi`), kategori sayfası B7'de geleceği için kapsam daraltma B7'de bağlanacak — envantere not düşüldü. E2E doğrulama: headless Chromium — panel açılışı, "elbise" (8045 ürün + 2 kategori chip), sonuçsuz arama mesajı, 0 konsol hatası. NOT: bazı ürün görselleri CDN'de yok (kısa slug'lı .jpg'ler "RESİM HAZIRLANIYOR" placeholder'ı dönüyor) — B2'den bağımsız, önceden var olan veri sorunu.
 - [ ] B3. **Duyuru şeridi**: geçici statik içerikle render edilir; **kalıcısı Faz G kişiselleştirme sisteminin global "duyuru" bloğudur** (K7 kararı) — G8'de bu geçici çözüm kaldırılır.
 - [ ] B4. Giriş/kayıt modalları ve hesap paneli **UI olarak** taşınır (davranış Faz D'de canlanır; şimdilik mevcut store auth login/register API'sine e-posta yoluyla bağlanabilir, SMS sekmesi D'ye kadar pasif etiketli).
 - [ ] B5. Mini sepet (hover panel) → `GET /api/store/cart`'a bağla.
 - [ ] B6. **Ana sayfa**: Faz G'ye kadar geçici kompozisyon — GorunumTipleri partial'larından 2-3'ü (örn. Categories + Carousel + Banner) elle seçilmiş içerikle, birebir HTML.
-- [ ] B7. **Ürün Listesi**: `_UrunListesiSayfasi` + 4 alt partial birebir; sol filtre + mobil filtre `products/facets`'e, grid `channel-categories/{id}/products`'a; infinite scroll config'i gerçek toplam/sayfa değerleriyle; `msUrunKartDavranislariYenile` dinamik kartlara bağlanır.
+- [x] B7. **Ürün Listesi** — TAMAM (2026-07-07): üç yüzey tek `UrunListesiController` + `UrunListesiVm` ile — kategori `/{slug}` (regex kısıtlı `[a-z0-9-]+`; kısıtsız hali /favicon.ico gibi kök statik dosyaları yutuyordu — örtük UseRouting endpoint'i pipeline başında eşleştirince StaticFileMiddleware devre dışı kalıyor), arama `/urunler?search=` (B2 "Tümünü Gör" hedefi), tümü `/urun-listesi`. **İlk sayfa SSR** (plan 3.3; kart markup'ı `UrunKarti` local function — SSR ve `<template>` aynı markup), devamı misharix infinite-scroll modülü `kartHazirla`/`sonra` hook'larıyla (`ilk:0`, gerçek toplam; iskelet kartlar JSON gelince dolar). Facet'ler controller'da süreç içi MediatR'dan SSR (kategori facets Redis 0.01s; tüm-katalog ilk çağrı ~5-6s sonra 15dk IMemoryCache — sadece /urun-listesi'ni etkiler). **Filtre/sıralama SPA paritesiyle client-side** (seçili valueId'ler kartın colors+attrs id'leriyle OR; fiyat min/max + hazır aralıklar; fiyat artan/azalan sıralama; sayaç günceller) — sunucu tarafı filtre/sıralama B10 ile gelmeli. Sol filtre: Kategori bloğu alt/kök kategorilere gider; mobil panel/chip/detay markup'ları gerçek facet gruplarından üretilir (`anaFiltreAdlari` bağlandı); veri karşılığı olmayan demo blokları (hızlı filtre chip'leri, kampanya bloğu, kart puan/teslimat/video/sponsor) `@if` ile gizli (B8/B10/B11/Faz G). E2E: headless Chromium — Kadın 24 SSR kart → scroll 48 (24'ü JSON'la doldu), renk filtresi 33/15 + sayaç, fiyat sıralaması artan, mobil filtre panelleri, 0 konsol hatası; drift TEMİZ (5 izinli B7 girdisi).
+  - NOT: **"Kategoride ara" kapsam daraltması yine ertelendi** — backend'de kategori+arama birleşik sorgu yok (`products?search` kategori almıyor, `channel-categories/{id}/products` arama almıyor); B10'da sorgu genişleyince bağlanmalı.
 - [ ] B8. Ürün kartı template'i: görsel galerisi (varyant görselleri — `feedback_listing_variant_rules`), renk rozeti+tooltip (gerçek renk varyantları), fiyat (varyant fiyatı), puan/rozet alanları için model alanları (veri yoksa gizlenen koşullu bloklar — HTML yapısı bozulmadan `@if` ile).
 - [ ] B9. **Ürün Detay**: `_UrunDetaySayfasi` + 4 alt partial birebir; galeri (thumb/sürükle/zoom lens/tam ekran modal/pinch), beden seçimi (sabit bar dahil), sepete ekle → cart API, breadcrumb → kategori zinciri, açıklama/ek detay → ürün alanları, paylaş modalı (UI), benzer ürünler bölümü → mevcut sorgularla.
 - [ ] B10. Sıralama seçenekleri: store products sorgusunda mevcut sıralamaları doğrula, eksikse (fiyat artan/azalan, en yeni, çok satan*) ekle (*veri yoksa etiketle birlikte kullanıcıya sor).
@@ -376,19 +377,19 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 | Dönen teslimat/kargo mesajları | model alanları | B8 | ⬜ |
 | Puan + yıldız + yorum sayısı | YOK | E7 | ⬜ |
 | Fiyat (ms-urun-fiyat) | VAR (varyant fiyatı) | B8 | ⬜ |
-| Lazy load (`data-ms-lazy-src`) | — | B7 | ⬜ |
+| Lazy load (`data-ms-lazy-src`) | — | B7 | ✅ (2026-07-07 — SSR kartlar dahil tüm görseller lazy) |
 
 ### 8.3 Ürün Listesi
 | İşlev | Backend | Faz | Durum |
 |---|---|---|---|
-| Sol filtre grupları (aç/kapa, seçim, sayaç) | VAR (facets) | B7 | ⬜ |
-| Seçili filtre chip şeridi + kaldır + temizle | VAR | B7 | ⬜ |
+| Sol filtre grupları (aç/kapa, seçim, sayaç) | VAR (facets) | B7 | ✅ (2026-07-07 — SSR facet'lerden; seçim client-side) |
+| Seçili filtre chip şeridi + kaldır + temizle | VAR | B7 | ✅ (2026-07-07 — mobil şerit; misharix script'i yönetiyor) |
 | Sıralama (özel select, desktop+mobil panel) | VAR/dogrula | B10 | ⬜ |
-| Görünüm değiştirme (grid tipi) | — (UI) | B7 | ⬜ |
-| Mobil filtre paneli (detay panelleri, sayaç, hızlı filtre chip'leri) | VAR | B7 | ⬜ |
-| Infinite scroll + "yükleniyor" + state restore | VAR (paging) | B7 | ⬜ |
-| Dinamik kartlara davranış yenileme (`msUrunKartDavranislariYenile`) | — | B7 | ⬜ |
-| Sonuç sayısı gösterimi | VAR | B7 | ⬜ |
+| Görünüm değiştirme (grid tipi) | — (UI) | B7 | ✅ (2026-07-07 — misharix script'i, değişiklik yok) |
+| Mobil filtre paneli (detay panelleri, sayaç, hızlı filtre chip'leri) | VAR | B7 | ✅ (2026-07-07 — paneller gerçek facet gruplarından; Hızlı Teslimat/Ücretsiz Kargo chip'leri Faz G'ye kadar gizli) |
+| Infinite scroll + "yükleniyor" + state restore | VAR (paging) | B7 | ✅ (2026-07-07 — state restore tasarımdaki gibi kapalı: sadeceIlkYukle) |
+| Dinamik kartlara davranış yenileme (`msUrunKartDavranislariYenile`) | — | B7 | ✅ (2026-07-07 — modülün sonra hook'u + JSON dolumu sonrası) |
+| Sonuç sayısı gösterimi | VAR | B7 | ✅ (2026-07-07 — SSR toplam; filtre aktifken yüklü-görünen sayısı) |
 
 ### 8.4 Ürün Detay
 | İşlev | Backend | Faz | Durum |

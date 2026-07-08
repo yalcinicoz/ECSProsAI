@@ -1,0 +1,232 @@
+@using ECSPros.Api.Models.Store
+@{
+    // B7: Üst filtre başlığı canlı veriye bağlandı — h1/ürün sayısı gerçek; hızlı filtre
+    // chip'leri (Fiyatı Düşenler/Flash/Yeni) veri kaynağı olmadığı için gizli (Faz G);
+    // sıralama seçeneklerinden veri karşılığı olmayanlar gizli (B10'da genişler).
+    // Davranış script'i misharix'ten değişmeden alındı.
+    var vm = ViewData["MsUrunListesi"] as UrunListesiVm
+             ?? new UrunListesiVm("Ürünler", 0, 24, [], "", [], 0, 0, []);
+    var cinsiyet = vm.FiltreGruplari.FirstOrDefault(g => g.TipKodu == "cinsiyet");
+}
+<div class="ms-urun-listesi-ust-filtre-baslik" aria-label="Ürün listesi üst filtre ve sıralama alanı">
+    <div class="ms-urun-listesi-kategori-ozet">
+        <h1>@vm.Baslik</h1>
+        <span>@vm.ToplamUrunMetni Ürün</span>
+    </div>
+
+    @if (false)
+    {
+        @* Faz G: hızlı filtre chip'leri (Tümü/Fiyatı Düşenler/Flash/Yeni) — veri kaynağı yok *@
+        <div class="ms-urun-listesi-chip-satiri" aria-label="Hızlı filtreler"></div>
+    }
+
+    <div class="ms-urun-listesi-filtre-satiri">
+        <div class="ms-urun-listesi-filtre-secimler" aria-label="Liste filtreleri">
+            <div class="ms-urun-listesi-filtre-secim-grup" data-ms-urun-listesi-filtre-grup>
+                <button class="ms-urun-listesi-filtre-secim" type="button" aria-expanded="false" data-ms-urun-listesi-filtre-secim>
+                    <span>Fiyat Aralığı</span>
+                    <i class="fa-solid fa-chevron-down ms-fa-ikon " aria-hidden="true"></i>
+                </button>
+                <div class="ms-urun-listesi-filtre-secim-panel" data-ms-urun-listesi-filtre-panel hidden>
+                    <div class="ms-filtre-fiyat-araligi" aria-label="Fiyat aralığı seçimi">
+                        <input type="number" inputmode="numeric" min="0" placeholder="En Az" aria-label="En az fiyat">
+                        <span class="ms-filtre-fiyat-ayrac" aria-hidden="true">-</span>
+                        <input type="number" inputmode="numeric" min="0" placeholder="En Çok" aria-label="En çok fiyat">
+                    </div>
+                    <div class="ms-filtre-fiyat-secim-listesi" role="radiogroup" aria-label="Hazır fiyat aralıkları">
+                        <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="0-500"><input type="radio" name="urun-listesi-ust-fiyat-araligi"><span class="ms-filtre-kutu" aria-hidden="true"></span>0 TL - 500 TL</label>
+                        <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="500-1000"><input type="radio" name="urun-listesi-ust-fiyat-araligi"><span class="ms-filtre-kutu" aria-hidden="true"></span>500 TL - 1.000 TL</label>
+                        <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="1000-2000"><input type="radio" name="urun-listesi-ust-fiyat-araligi"><span class="ms-filtre-kutu" aria-hidden="true"></span>1.000 TL - 2.000 TL</label>
+                        <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="2000-3000"><input type="radio" name="urun-listesi-ust-fiyat-araligi"><span class="ms-filtre-kutu" aria-hidden="true"></span>2.000 TL - 3.000 TL</label>
+                    </div>
+                    <button class="ms-filtre-uygula-buton" type="button" data-ms-urun-listesi-filtre-kapat>Filtrele</button>
+                </div>
+            </div>
+            @if (cinsiyet is not null)
+            {
+            <div class="ms-urun-listesi-filtre-secim-grup" data-ms-urun-listesi-filtre-grup>
+                <button class="ms-urun-listesi-filtre-secim" type="button" aria-expanded="false" data-ms-urun-listesi-filtre-secim>
+                    <span>@cinsiyet.Ad</span>
+                    <i class="fa-solid fa-chevron-down ms-fa-ikon " aria-hidden="true"></i>
+                </button>
+                <div class="ms-urun-listesi-filtre-secim-panel" data-ms-urun-listesi-filtre-panel hidden>
+                    <div class="ms-filtre-secim-listesi">
+                        @foreach (var deger in cinsiyet.Degerler)
+                        {
+                        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId"><span class="ms-filtre-kutu" aria-hidden="true"></span>@deger.Ad</label>
+                        }
+                    </div>
+                    <button class="ms-filtre-uygula-buton" type="button" data-ms-urun-listesi-filtre-kapat>Filtrele</button>
+                </div>
+            </div>
+            }
+        </div>
+
+        <div class="ms-urun-listesi-sag-araclar">
+            <div class="ms-siralama-select" data-ms-siralama-select>
+                <button class="ms-siralama-select-tetikleyici" type="button" data-ms-siralama-tetikleyici aria-haspopup="listbox" aria-expanded="false">
+                    <span data-ms-siralama-deger>Önerilen Sıralama</span>
+                    <span class="ms-siralama-select-ikonlar" aria-hidden="true">
+                        <i class="fa-solid fa-chevron-down ms-fa-ikon ms-siralama-select-ok " aria-hidden="true"></i>
+                    </span>
+                </button>
+                <div class="ms-siralama-select-panel" data-ms-siralama-panel role="listbox" aria-label="Sıralama seçenekleri">
+                    <button class="ms-siralama-select-secenek ms-siralama-select-secenek-aktif" type="button" role="option" aria-selected="true" data-ms-siralama-secenek data-ms-siralama-kod="default">Önerilen Sıralama</button>
+                    <button class="ms-siralama-select-secenek" type="button" role="option" aria-selected="false" data-ms-siralama-secenek data-ms-siralama-kod="price_asc">En Düşük Fiyat</button>
+                    <button class="ms-siralama-select-secenek" type="button" role="option" aria-selected="false" data-ms-siralama-secenek data-ms-siralama-kod="price_desc">En Yüksek Fiyat</button>
+                    @if (false)
+                    {
+                        @* B10: En çok Favorilenen / En Yeniler / En Çok Satan / En Çok Değerlendirilen — veri gelince *@
+                    }
+                </div>
+            </div>
+
+            <div class="ms-urun-listesi-gorunum-secici" aria-label="Kart görünümü seçimi">
+                <button class="ms-urun-listesi-gorunum-buton ms-urun-listesi-gorunum-buton-aktif" type="button" aria-pressed="true" aria-label="5'li kart görünümü" data-ms-urun-listesi-gorunum="5">
+                    <i class="fa-solid fa-grip ms-fa-ikon" aria-hidden="true"></i>
+                </button>
+                <button class="ms-urun-listesi-gorunum-buton" type="button" aria-pressed="false" aria-label="4'lü kart görünümü" data-ms-urun-listesi-gorunum="4">
+                    <i class="fa-solid fa-table-cells ms-fa-ikon" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Bu script: Urun listesi ust chip secimleri ve ust filtre panellerini yonetir. *@
+<script>
+(() => {
+    const urunListesiUstFiltreBaslat = (kok = document) => {
+        kok.querySelectorAll(".ms-urun-listesi-ust-filtre-baslik").forEach((alan) => {
+            if (alan.dataset.msUstFiltreHazir === "true") {
+                return;
+            }
+
+            alan.dataset.msUstFiltreHazir = "true";
+            const chipler = alan.querySelectorAll("[data-ms-urun-listesi-chip]");
+            const filtreGruplari = alan.querySelectorAll("[data-ms-urun-listesi-filtre-grup]");
+            const gorunumButonlari = alan.querySelectorAll("[data-ms-urun-listesi-gorunum]");
+            const urunListesiSayfasi = alan.closest(".ms-urun-listesi-sayfa");
+
+            const seciliSecenekleriUsteTasi = (panel) => {
+                panel?.querySelectorAll(".ms-filtre-secim-listesi, .ms-filtre-fiyat-secim-listesi").forEach((kapsayici) => {
+                    const secimler = Array.from(kapsayici.querySelectorAll(":scope > .ms-filtre-secim"));
+
+                    secimler.forEach((secim, index) => {
+                        if (!secim.dataset.msUstFiltreSira) {
+                            secim.dataset.msUstFiltreSira = index.toString();
+                        }
+                    });
+
+                    secimler
+                        .sort((ilk, ikinci) => {
+                            const ilkSecili = ilk.querySelector("input")?.checked ? 0 : 1;
+                            const ikinciSecili = ikinci.querySelector("input")?.checked ? 0 : 1;
+
+                            if (ilkSecili !== ikinciSecili) {
+                                return ilkSecili - ikinciSecili;
+                            }
+
+                            return Number(ilk.dataset.msUstFiltreSira || 0) - Number(ikinci.dataset.msUstFiltreSira || 0);
+                        })
+                        .forEach((secim) => kapsayici.appendChild(secim));
+                });
+            };
+
+            const filtreGrubuKapat = (grup) => {
+                if (!grup) {
+                    return;
+                }
+
+                const buton = grup.querySelector("[data-ms-urun-listesi-filtre-secim]");
+                const panel = grup.querySelector("[data-ms-urun-listesi-filtre-panel]");
+                grup.dataset.msAcik = "false";
+                buton?.classList.remove("ms-urun-listesi-filtre-secim-aktif");
+                buton?.setAttribute("aria-expanded", "false");
+
+                if (panel) {
+                    panel.hidden = true;
+                }
+            };
+
+            const digerFiltreGruplariniKapat = (aktifGrup) => {
+                filtreGruplari.forEach((grup) => {
+                    if (grup !== aktifGrup) {
+                        filtreGrubuKapat(grup);
+                    }
+                });
+            };
+
+            chipler.forEach((chip) => {
+                chip.addEventListener("click", () => {
+                    const aktif = !chip.classList.contains("ms-urun-listesi-chip-aktif");
+                    chip.classList.toggle("ms-urun-listesi-chip-aktif", aktif);
+                    chip.setAttribute("aria-pressed", aktif ? "true" : "false");
+                });
+            });
+
+            gorunumButonlari.forEach((buton) => {
+                buton.addEventListener("click", () => {
+                    const gorunum = buton.dataset.msUrunListesiGorunum;
+
+                    if (!gorunum || !urunListesiSayfasi) {
+                        return;
+                    }
+
+                    urunListesiSayfasi.dataset.msUrunListesiGorunum = gorunum;
+                    gorunumButonlari.forEach((digerButon) => {
+                        const aktif = digerButon === buton;
+                        digerButon.classList.toggle("ms-urun-listesi-gorunum-buton-aktif", aktif);
+                        digerButon.setAttribute("aria-pressed", aktif ? "true" : "false");
+                    });
+                });
+            });
+
+            filtreGruplari.forEach((grup) => {
+                const buton = grup.querySelector("[data-ms-urun-listesi-filtre-secim]");
+                const panel = grup.querySelector("[data-ms-urun-listesi-filtre-panel]");
+
+                buton?.addEventListener("click", (event) => {
+                    event.stopPropagation();
+                    const acilacak = grup.dataset.msAcik !== "true";
+                    digerFiltreGruplariniKapat(grup);
+                    grup.dataset.msAcik = acilacak ? "true" : "false";
+                    buton.classList.toggle("ms-urun-listesi-filtre-secim-aktif", acilacak);
+                    buton.setAttribute("aria-expanded", acilacak ? "true" : "false");
+
+                    if (panel) {
+                        panel.hidden = !acilacak;
+                    }
+                });
+
+                panel?.addEventListener("click", (event) => {
+                    event.stopPropagation();
+                });
+
+                grup.querySelectorAll("[data-ms-urun-listesi-filtre-kapat]").forEach((kapatButonu) => {
+                    kapatButonu.addEventListener("click", () => {
+                        seciliSecenekleriUsteTasi(panel);
+                        filtreGrubuKapat(grup);
+                    });
+                });
+            });
+
+            document.addEventListener("click", (event) => {
+                const hedef = event.target;
+                const tiklananFiltreGrubu = hedef instanceof Element
+                    ? hedef.closest("[data-ms-urun-listesi-filtre-grup]")
+                    : null;
+
+                if (tiklananFiltreGrubu && alan.contains(tiklananFiltreGrubu)) {
+                    return;
+                }
+
+                filtreGruplari.forEach(filtreGrubuKapat);
+            });
+        });
+    };
+
+    window.msUrunListesiUstFiltreBaslat = urunListesiUstFiltreBaslat;
+    urunListesiUstFiltreBaslat();
+})();
+</script>
