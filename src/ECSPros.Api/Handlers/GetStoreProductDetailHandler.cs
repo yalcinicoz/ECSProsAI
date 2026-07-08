@@ -139,8 +139,22 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
                 stockByVariant.GetValueOrDefault(v.Id, 0));
         }).ToList();
 
+        // Ürün seviyesi özellikler (cinsiyet, kumaş türü vb.) — detay sayfası "Öne Çıkan
+        // Özellikler" bölümü için. Çoklu değer olabilir (aynı tipte birden çok satır).
+        var productAttrs = await db.ProductAttributes.AsNoTracking()
+            .Where(a => a.ProductId == product.Id && a.AttributeValueId != null)
+            .Select(a => new StoreProductAttributeDto(
+                a.AttributeType.Code, a.AttributeType.NameI18n, a.AttributeValue!.NameI18n))
+            .ToListAsync(ct);
+
+        var groupName = await db.ProductGroups.AsNoTracking()
+            .Where(g => g.Id == product.ProductGroupId)
+            .Select(g => g.NameI18n)
+            .FirstOrDefaultAsync(ct);
+
         return Result.Success(new StoreProductDetailDto(
             product.Id, product.Code, product.NameI18n, product.ShortDescriptionI18n,
-            product.IsActive, variants));
+            product.IsActive, variants,
+            product.DescriptionI18n, productAttrs, groupName));
     }
 }

@@ -1,0 +1,185 @@
+@using ECSPros.Api.Models.Store
+@{
+    // B9: canlı veri bağlama. Veri karşılığı olmayan demo blokları @if(false) ile gizli
+    // (HTML yapısı korunarak): puan tooltip'i + değerlendirme sayısı senaryosu (değerlendirme
+    // sistemi yok — sıfır durumu gösterilir), dönen teslimat mesajları, çoklu fiyat
+    // senaryoları (Sepette/Plus — Faz G kampanya), beden önerisi, model ölçüleri (manken
+    // verisi henüz ürünlere girilmedi), teslimat bilgileri (kargo entegrasyonu Faz H),
+    // beden tablosu (veri yok).
+    var vmBilgi = ViewData["MsUrunDetay"] as UrunDetayVm;
+    var b = vmBilgi!;
+}
+<aside class="ms-urun-detay-bilgi">
+                <div class="ms-urun-detay-baslik-alani">
+                    <h1 class="ms-urun-detay-baslik"><span>@b.Ad</span></h1>
+                    <p class="ms-urun-detay-kod">Ürün Kodu: <strong>@b.Kod@(b.SeciliRenkAd is null ? "" : " / " + b.SeciliRenkAd)</strong></p>
+
+                    <div class="ms-urun-puan ms-urun-detay-puan">
+                        <strong>0.0</strong>
+                        <span class="ms-urun-yildizlar ms-urun-yildizlar-pasif" aria-label="0 yıldız">
+                            <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
+                            <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
+                            <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
+                            <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
+                            <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
+                        </span>
+                        <span class="ms-urun-detay-puan-ayrac">•</span>
+                        <a class="ms-urun-detay-degerlendirme-link" href="/urun-degerlendirmeleri">0 Değerlendirme</a>
+                    </div>
+                </div>
+
+                <div class="ms-urun-detay-rozetler">
+                    <span class="ms-rozet ms-rozet-guvenilir">
+                        <i class="fa-solid fa-shield-halved ms-fa-ikon" aria-hidden="true"></i>
+                        Güvenilir Alışveriş
+                    </span>
+                    <span class="ms-rozet ms-rozet-hizli-teslimat">
+                        <i class="fa-solid fa-truck-fast ms-fa-ikon" aria-hidden="true"></i>
+                        @b.Kod
+                    </span>
+                </div>
+
+                @if (false) // B8/B11: dönen teslimat/favori mesajları — veri karşılığı yok
+                {
+                <p class="ms-urun-teslimat">
+                    <span class="ms-urun-mesaj-gecis ms-urun-teslimat-gecis"></span>
+                </p>
+                }
+
+                <div class="ms-urun-fiyat-senaryolari">
+                    @if (b.IndirimYuzdesi >= 5)
+                    {
+                    <p class="ms-urun-fiyat-satiri">
+                        <span class="ms-urun-indirim-rozeti">-%@b.IndirimYuzdesi</span>
+                        <span class="ms-urun-fiyat-indirimli ms-urun-detay-tutar">@UrunDetayVm.FiyatMetni(b.Fiyat)</span>
+                        <span class="ms-urun-fiyat-eski ms-urun-detay-tutar">@UrunDetayVm.FiyatMetni(b.EskiFiyat)</span>
+                    </p>
+                    }
+                    else
+                    {
+                    <p class="ms-urun-fiyat ms-urun-detay-tutar">@UrunDetayVm.FiyatMetni(b.Fiyat)</p>
+                    }
+                    <div class="mt-2 flex items-center gap-3 rounded-xl border border-orange-200 bg-white px-4 py-3">
+                        <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ff8a00]">
+                            <i class="fa-solid fa-truck ms-fa-ikon h-6 w-6 ms-ikon-beyaz" aria-hidden="true"></i>
+                        </span>
+                        <p class="min-w-0 !text-[13px] leading-5 text-ms-siyah">
+                            <strong class="block !text-[14px] font-bold text-black">Güvenilir Alışveriş</strong>
+                            Ürününüzü teslim aldıktan sonra <span class="font-bold text-[#ff6b00]">14 gün içerisinde</span> kolayca iade edebilirsiniz.
+                        </p>
+                    </div>
+                </div>
+
+                @if (b.Renkler.Count > 0)
+                {
+                <section class="ms-urun-detay-renk-alani" aria-label="Renk seçenekleri">
+                    <p class="ms-urun-detay-renk-baslik">
+                        Renk: <strong>@(b.SeciliRenkAd ?? "")</strong>
+                    </p>
+                    <div class="ms-urun-detay-renk-listesi">
+                        @foreach (var renk in b.Renkler)
+                        {
+                        <button class="ms-urun-detay-renk@(renk.Secili ? " ms-urun-detay-renk-aktif" : "")" type="button" aria-pressed="@(renk.Secili ? "true" : "false")" data-ms-renk-url="@renk.Url">
+                            @if (renk.Secili)
+                            {
+                            <span class="ms-urun-detay-renk-secili-ikon" aria-hidden="true">
+                                <i class="fa-solid fa-check ms-fa-ikon" aria-hidden="true"></i>
+                            </span>
+                            }
+                            <img src="@renk.GorselUrl" alt="@renk.Ad renk seçeneği" loading="lazy">
+                            <span>@renk.Ad</span>
+                        </button>
+                        }
+                    </div>
+                </section>
+                }
+
+                @if (b.Bedenler.Count > 0)
+                {
+                <fieldset class="ms-urun-detay-beden-alani">
+                    <legend class="ms-form-etiket">@b.BedenEtiketi: <strong data-ms-urun-detay-beden-secili>Seçilmedi</strong></legend>
+                    <div class="ms-beden-secim-listesi" aria-label="@b.BedenEtiketi seçimi">
+                        @foreach (var beden in b.Bedenler)
+                        {
+                        <label class="ms-beden-secim">
+                            <input class="ms-beden-secim-input" type="radio" name="beden" value="@beden.Ad">
+                            <span class="ms-beden-secim-kutu">@beden.Ad</span>
+                        </label>
+                        }
+                    </div>
+                </fieldset>
+                }
+
+                <div class="ms-urun-detay-aksiyonlar">
+                    <button class="ms-buton ms-buton-l ms-buton-simdi-al ms-urun-detay-aksiyon" type="button">Şimdi Al</button>
+                    <button class="ms-buton ms-buton-l ms-buton-satin-al ms-urun-detay-aksiyon" type="button" data-ms-urun-detay-sepete-ekle>Sepete Ekle</button>
+                    <button class="ms-urun-detay-favori" type="button" aria-label="Favorilere ekle" aria-pressed="false">
+                        <img class="ms-urun-detay-favori-ikon" src="/ikons/favorite.svg" alt="" aria-hidden="true">
+                    </button>
+                    <button class="ms-urun-detay-koleksiyon" type="button" aria-label="Koleksiyona ekle" aria-pressed="false" data-ms-urun-detay-koleksiyon>
+                        <i class="fa-solid fa-plus ms-fa-ikon" aria-hidden="true"></i>
+                    </button>
+                    <button class="ms-urun-detay-paylas" type="button" data-ms-urun-paylas-ac aria-label="Ürünü paylaş">
+                        <i class="fa-solid fa-share-nodes ms-fa-ikon" aria-hidden="true"></i>
+                    </button>
+                </div>
+
+                @if (false) // Model ölçüleri: manken verisi henüz ürünlere girilmedi (Mannequin tablosu boş bağ)
+                {
+                <div class="ms-urun-detay-model-olculeri" aria-label="Model ölçüleri">
+                    <span class="ms-urun-detay-model-olculeri-baslik">Model Ölçüleri</span>
+                    <dl class="ms-urun-detay-model-olculeri-liste"></dl>
+                </div>
+                }
+
+                @if (false) // Faz H: kargo entegrasyonu gelince teslimat bilgileri bağlanacak
+                {
+                <section class="ms-urun-detay-teslimat" aria-label="Teslimat bilgileri"></section>
+                }
+
+                @if (b.Ozellikler.Count > 0)
+                {
+                <section class="ms-urun-detay-bolum" id="urun-ozellikleri">
+                    <h2 class="ms-urun-detay-bolum-baslik">Öne Çıkan Özellikler:</h2>
+                    <div class="ms-urun-detay-ozellik-grid">
+                        @foreach (var ozellik in b.Ozellikler.Take(6))
+                        {
+                        <article class="ms-urun-detay-ozellik-kart">
+                            <span>@ozellik.Ad</span>
+                            <strong>@ozellik.Deger</strong>
+                        </article>
+                        }
+                    </div>
+                </section>
+                }
+
+                @if (false) // Beden tablosu: ölçü verisi yok
+                {
+                <section class="ms-urun-detay-bolum">
+                    <h2 class="ms-urun-detay-bolum-baslik">Beden Tablosu</h2>
+                </section>
+                }
+
+                <section class="ms-urun-detay-aciklama">
+                    <h2 class="ms-urun-detay-bolum-baslik">Ürün Bilgilendirme</h2>
+                    <ul class="ms-urun-detay-aciklama-listesi">
+                        @if (!string.IsNullOrWhiteSpace(b.KisaAciklama))
+                        {
+                        <li>@b.KisaAciklama</li>
+                        }
+                        <li>İncelemiş olduğunuz ürünün satış fiyatını satıcı belirlemektedir.</li>
+                        <li>Ürün stok, teslimat ve kampanya bilgileri güncel satış koşullarına göre değişebilir.</li>
+                    </ul>
+                    <div class="ms-urun-detay-tum-ozellikler">
+                        <a class="ms-urun-detay-tum-ozellikler-buton" href="#urun-tum-ozellikleri">
+                            ÜRÜNÜN TÜM ÖZELLİKLERİ
+                            <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
+                        </a>
+                    </div>
+                </section>
+
+                <section class="ms-urun-detay-bolum" id="urun-degerlendirmeleri">
+                    <h2 class="ms-urun-detay-bolum-baslik">Ürün Değerlendirmeleri</h2>
+                    <p class="ms-urun-detay-degerlendirme-bos">Bu ürün için henüz değerlendirme yapılmadı.</p>
+                </section>
+            </aside>

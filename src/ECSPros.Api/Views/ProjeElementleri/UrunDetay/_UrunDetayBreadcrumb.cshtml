@@ -1,0 +1,15 @@
+@using ECSPros.Api.Models.Store
+@{
+    // B9: kategori zinciri GetProductChannelCategoryChainQuery'den (filtre kuralı ters eşlemesi)
+    var vmCrumb = ViewData["MsUrunDetay"] as UrunDetayVm;
+}
+<nav class="ms-urun-detay-breadcrumb" aria-label="Sayfa yolu">
+        <a href="/">Anasayfa</a>
+        @foreach (var adim in vmCrumb?.Breadcrumb ?? [])
+        {
+        <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
+        <a href="@adim.Url">@adim.Ad</a>
+        }
+        <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
+        <span>@(vmCrumb?.Ad ?? "")</span>
+    </nav>

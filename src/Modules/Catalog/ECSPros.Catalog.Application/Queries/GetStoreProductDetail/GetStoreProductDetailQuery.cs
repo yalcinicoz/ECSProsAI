@@ -11,7 +11,15 @@ public record StoreProductDetailDto(
     Dictionary<string, string> NameI18n,
     Dictionary<string, string>? ShortDescriptionI18n,
     bool IsActive,
-    List<StoreVariantDto> Variants);
+    List<StoreVariantDto> Variants,
+    Dictionary<string, string>? DescriptionI18n = null,
+    List<StoreProductAttributeDto>? Attributes = null,
+    Dictionary<string, string>? ProductGroupNameI18n = null);
+
+public record StoreProductAttributeDto(
+    string TypeCode,
+    Dictionary<string, string> TypeNameI18n,
+    Dictionary<string, string> ValueNameI18n);
 
 public record StoreVariantDto(
     Guid Id,

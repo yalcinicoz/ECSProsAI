@@ -25,7 +25,7 @@
 | Faz | Konu | Durum |
 |---|---|---|
 | A | Razor host + kabuk altyapısı | ✅ Tamamlandı (2026-07-07) — 8080'de canlı, görüntü doğrulaması yapıldı |
-| B | Navigasyon + Ana Sayfa + Liste + Detay (gerçek port) | 🔶 Devam ediyor — B1 nav + B2 arama + B7 ürün listesi + B14 domain geçişi ✅ (2026-07-07); sırada B8 kart derinleştirme / B9 ürün detay (kart linkleri /urun/{code} hâlâ 404) |
+| B | Navigasyon + Ana Sayfa + Liste + Detay (gerçek port) | 🔶 Devam ediyor — B1 nav + B2 arama + B7 ürün listesi + B9 ürün detay + B14 domain geçişi ✅ (2026-07-08); sırada B8 kart derinleştirme / B3 duyuru / B6 ana sayfa |
 | C | Sepet + Checkout | ⬜ Başlamadı |
 | D | Üye oturumu (Razor tarafı) + SMS/OTP altyapısı | ⬜ Başlamadı |
 | E | Hesabım kümesi (12 sayfa + yeni backend özellikleri) | ⬜ Başlamadı |
@@ -133,7 +133,7 @@ src/ECSPros.Api/
 - [x] B7. **Ürün Listesi** — TAMAM (2026-07-07): üç yüzey tek `UrunListesiController` + `UrunListesiVm` ile — kategori `/{slug}` (regex kısıtlı `[a-z0-9-]+`; kısıtsız hali /favicon.ico gibi kök statik dosyaları yutuyordu — örtük UseRouting endpoint'i pipeline başında eşleştirince StaticFileMiddleware devre dışı kalıyor), arama `/urunler?search=` (B2 "Tümünü Gör" hedefi), tümü `/urun-listesi`. **İlk sayfa SSR** (plan 3.3; kart markup'ı `UrunKarti` local function — SSR ve `<template>` aynı markup), devamı misharix infinite-scroll modülü `kartHazirla`/`sonra` hook'larıyla (`ilk:0`, gerçek toplam; iskelet kartlar JSON gelince dolar). Facet'ler controller'da süreç içi MediatR'dan SSR (kategori facets Redis 0.01s; tüm-katalog ilk çağrı ~5-6s sonra 15dk IMemoryCache — sadece /urun-listesi'ni etkiler). **Filtre/sıralama SPA paritesiyle client-side** (seçili valueId'ler kartın colors+attrs id'leriyle OR; fiyat min/max + hazır aralıklar; fiyat artan/azalan sıralama; sayaç günceller) — sunucu tarafı filtre/sıralama B10 ile gelmeli. Sol filtre: Kategori bloğu alt/kök kategorilere gider; mobil panel/chip/detay markup'ları gerçek facet gruplarından üretilir (`anaFiltreAdlari` bağlandı); veri karşılığı olmayan demo blokları (hızlı filtre chip'leri, kampanya bloğu, kart puan/teslimat/video/sponsor) `@if` ile gizli (B8/B10/B11/Faz G). E2E: headless Chromium — Kadın 24 SSR kart → scroll 48 (24'ü JSON'la doldu), renk filtresi 33/15 + sayaç, fiyat sıralaması artan, mobil filtre panelleri, 0 konsol hatası; drift TEMİZ (5 izinli B7 girdisi).
   - NOT: **"Kategoride ara" kapsam daraltması yine ertelendi** — backend'de kategori+arama birleşik sorgu yok (`products?search` kategori almıyor, `channel-categories/{id}/products` arama almıyor); B10'da sorgu genişleyince bağlanmalı.
 - [ ] B8. Ürün kartı template'i: görsel galerisi (varyant görselleri — `feedback_listing_variant_rules`), renk rozeti+tooltip (gerçek renk varyantları), fiyat (varyant fiyatı), puan/rozet alanları için model alanları (veri yoksa gizlenen koşullu bloklar — HTML yapısı bozulmadan `@if` ile).
-- [ ] B9. **Ürün Detay**: `_UrunDetaySayfasi` + 4 alt partial birebir; galeri (thumb/sürükle/zoom lens/tam ekran modal/pinch), beden seçimi (sabit bar dahil), sepete ekle → cart API, breadcrumb → kategori zinciri, açıklama/ek detay → ürün alanları, paylaş modalı (UI), benzer ürünler bölümü → mevcut sorgularla.
+- [x] B9. **Ürün Detay** — TAMAM (2026-07-08): `/urun/{code}?color={valueId}` tamamen SSR — `UrunDetayController` + `UrunDetayVm`; renk değişimi ?color= navigasyonudur (SSR yeniden yükleme), beden seçimi client-side (misharix script'i değişmedi), sepete ekleme partial sonundaki config script'iyle `api/store/cart/items` (SPA ile aynı localStorage anahtarları: ecspros_sid/ecspros_cart; Şimdi Al da şimdilik sepete ekler — gerçek akış Faz C). 5 partial + Index bağlandı (allowed-diffs'te gerekçeli). **Breadcrumb**: yeni `GetProductChannelCategoryChainQuery` — kategoriler filtre tanımlı olduğundan ters eşleme kural değerlendirmesiyle (ProductGroupIds + AttributeFilters, listelemeyle aynı semantik; manuel atama/IsExcluded dahil; en derin aday kazanır). **DTO genişledi (additive)**: `StoreProductDetailDto`'ya DescriptionI18n + Attributes (ürün seviyesi) + ProductGroupNameI18n eklendi (api/store/catalog/products/{code} aynı endpoint — mobil etkilenmez). Beden sıralaması konfeksiyon sırasına göre (S<M<L<XL…, numerikler sayısal); sıfır fiyatlı varyantlar gösterim fiyatına girmez (SPA paritesi); "renk"/"filtre_rengi" eksenleri asla beden sanılmaz; filtre_rengi yoksa "renk" ekseni renk kabul edilir. **Canlı bug düzeltildi (B9 dışı ama kabul kriteri)**: `AddToCartCommand` mevcut sepete ikinci farklı ürünü hiç ekleyemiyordu (tracked cart koleksiyonuna Id'li yeni satır → EF Modified sanıp UPDATE, DbUpdateConcurrencyException) — `db.CartItems.Add`'e çevrildi. Gizlenenler (@if): puan tooltip demo, dönen teslimat mesajları (B8/B11), çoklu fiyat senaryoları (Faz G), model ölçüleri (manken verisi ürünlerde yok), teslimat bilgileri (Faz H), beden tablosu (veri yok), video/etiketler (B11/G). **Benzer ürünler bölümü misharix detay tasarımında yok** — envanterdeki satır Faz G vitrin sistemine devredildi. E2E (headless Chromium): 12/12 ✓ — galeri thumb/slide, beden seçimi+modal, sepete ekle API 200 (bedenli+bedensiz akış), renk SSR değişimi, görsel modalı, paylaş modalı gerçek adla, mobil sabit bar + sticky beden; 0 konsol hatası; drift TEMİZ (6 izinli B9 girdisi).
 - [ ] B10. Sıralama seçenekleri: store products sorgusunda mevcut sıralamaları doğrula, eksikse (fiyat artan/azalan, en yeni, çok satan*) ekle (*veri yoksa etiketle birlikte kullanıcıya sor).
 - [ ] B11. **"Öne çıkar" bayrağı** (K8 kararı): ChannelProduct'a tarih aralıklı öne çıkarma alanı + admin'den işaretleme + listede sıralama önceliği + karttaki "Sponsorlu" rozeti buna bağlanır.
 - [ ] B12. **Stok kontrolü anahtarı** (stok kararı): kod gerçek stoğu okur; FirmPlatform'da "stok kontrolü kapalı" anahtarı varken her şey satılabilir görünür (bugünkü veri durumu için varsayılan: kapalı). Stok verisi dolunca anahtar açılır, kod değişmez.
@@ -394,19 +394,19 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 ### 8.4 Ürün Detay
 | İşlev | Backend | Faz | Durum |
 |---|---|---|---|
-| Breadcrumb | VAR (kategori zinciri) | B9 | ⬜ |
-| Galeri: thumb'lar, ok, sürükleme, slide takibi | VAR | B9 | ⬜ |
-| Hover zoom lens + zoom paneli | — (UI) | B9 | ⬜ |
-| Tam ekran resim modalı (thumb, sürükle, pinch, paylaş) | — (UI) | B9 | ⬜ |
-| Beden seçimi (ana + sticky bar + beden modalı) | VAR (varyant) | B9 | ⬜ |
-| Beden/stok durumu (tükendi vb.) | VAR + B12 stok kontrolü anahtarı (karar) | B9/B12 | ⬜ |
-| Sepete ekle (+sticky) → mini sepet açılışı | VAR | B9 | ⬜ |
+| Breadcrumb | VAR (kategori zinciri) | B9 | ✅ (2026-07-08 — GetProductChannelCategoryChainQuery filtre kuralı ters eşlemesi) |
+| Galeri: thumb'lar, ok, sürükleme, slide takibi | VAR | B9 | ✅ (2026-07-08 — seçili rengin görselleri SSR; tek görselde oklar gizli) |
+| Hover zoom lens + zoom paneli | — (UI) | B9 | ✅ (2026-07-08 — misharix script'i aynen) |
+| Tam ekran resim modalı (thumb, sürükle, pinch, paylaş) | — (UI) | B9 | ✅ (2026-07-08) |
+| Beden seçimi (ana + sticky bar + beden modalı) | VAR (varyant) | B9 | ✅ (2026-07-08 — gerçek eksen değerleri, konfeksiyon sıralı; beden yoksa alanlar gizli) |
+| Beden/stok durumu (tükendi vb.) | VAR + B12 stok kontrolü anahtarı (karar) | B9/B12 | 🔶 B9: hepsi satılabilir (stok kontrolü kapalı varsayımı); tükendi işaretleme B12 anahtarına bağlı |
+| Sepete ekle (+sticky) → mini sepet açılışı | VAR | B9 | 🔶 (2026-07-08 — API'ye ekleme ✓ bedenli+bedensiz+modal akışları; mini sepet paneli B5'te bağlanınca açılış eklenecek; AddToCart çoklu-ürün bug'ı düzeltildi) |
 | Favori / koleksiyona ekle | YOK | E5/E6 | ⬜ |
-| Paylaş modalı (FB/X/WhatsApp/Pinterest/link kopyala) | — (UI) | B9 | ⬜ |
-| Açıklama "daha fazla" + ek detay akordiyonları | VAR (DescriptionI18n/özellikler) | B9 | ⬜ |
-| Ürün özellikleri tablosu | VAR (attributes) | B9 | ⬜ |
+| Paylaş modalı (FB/X/WhatsApp/Pinterest/link kopyala) | — (UI) | B9 | ✅ (2026-07-08 — gerçek ürün adı/görsel/fiyat; paylaşım metni DOM'dan) |
+| Açıklama "daha fazla" + ek detay akordiyonları | VAR (DescriptionI18n/özellikler) | B9 | ✅ (2026-07-08 — DescriptionI18n/ShortDescription; pazaryeri-özel demo maddeleri çıkarıldı) |
+| Ürün özellikleri tablosu | VAR (attributes) | B9 | ✅ (2026-07-08 — ürün seviyesi attributes + Kategori Grubu + Stok Durumu; DTO'ya additive eklendi) |
 | Değerlendirme özeti + değerlendirmeler linki | YOK | E7 | ⬜ |
-| Benzer/önerilen ürün vitrinleri | VAR (sorgu) | B9 | ⬜ |
+| Benzer/önerilen ürün vitrinleri | VAR (sorgu) | B9 | 🕐 misharix detay tasarımında benzer ürün bölümü YOK — Faz G vitrin sistemine devredildi |
 | Videolu ürün | YOK | H5 | ⬜ |
 
 ### 8.5 Sepet + Checkout

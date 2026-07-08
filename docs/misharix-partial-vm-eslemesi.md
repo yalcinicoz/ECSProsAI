@@ -29,6 +29,13 @@
 | ProjeElementleri/UrunListesi/_UrunListesiSagUstFiltre.cshtml | UrunListesiVm (başlık/sayı) + cinsiyet facet | aynı facets | B7/B10 | ✅ 2026-07-07 (hızlı chip'ler Faz G; eksik sıralamalar B10) |
 | ProjeElementleri/UrunListesi/_UrunListesiMobilFiltre.cshtml | FiltreGrupVm (paneller gruplardan üretilir) | aynı facets | B7 | ✅ 2026-07-07 (anaFiltreAdlari bağlandı; script değişmedi) |
 
-**Sonraki fazlarda eklenecek satırlar:** UrunDetay/* (B9), Sepet/* (C),
+| UrunDetay/Index.cshtml | UrunDetayVm (ViewData["MsUrunDetay"]) | UrunDetayController (/urun/{code}?color=) | B9 | ✅ 2026-07-08 (başlık bağlaması) |
+| ProjeElementleri/UrunDetay/_UrunDetaySayfasi.cshtml | UrunDetayVm (sabit beden + mobil fiyat + paylaş modal içeriği) | süreç içi MediatR; dosya sonunda sepet/renk config script'i → api/store/cart/items | B9 | ✅ 2026-07-08 (misharix davranış script'leri değişmedi) |
+| ProjeElementleri/UrunDetay/_UrunDetayBreadcrumb.cshtml | UrunDetayVm.Breadcrumb | GetProductChannelCategoryChainQuery (filtre kuralı ters eşlemesi) | B9 | ✅ 2026-07-08 |
+| ProjeElementleri/UrunDetay/_UrunDetayResimAlani.cshtml | UrunDetayVm.Gorseller (seçili renk) | GetStoreProductDetail (renk havuzu görselleri) | B9 | ✅ 2026-07-08 (video+etiketler B11/G'ye kadar gizli) |
+| ProjeElementleri/UrunDetay/_UrunDetayBilgi.cshtml | UrunDetayVm (ad/kod/fiyat/renkler/bedenler/özellikler) | GetStoreProductDetail + DTO'ya eklenen Attributes/ProductGroupNameI18n | B9 | ✅ 2026-07-08 (model ölçüleri manken verisi gelince, teslimat Faz H, beden tablosu veri yok) |
+| ProjeElementleri/UrunDetay/_UrunDetayAltBilgi.cshtml | UrunDetayVm (görsel/açıklama/özellikler) | aynı sorgu (DescriptionI18n) | B9 | ✅ 2026-07-08 |
+
+**Sonraki fazlarda eklenecek satırlar:** Sepet/* (C),
 Hesabim/* (E), Kurumsal/* (F), GorunumTipleri/* + Ortak/_Story (G), Navigasyon/_MobilAltBar (H4),
 UrunDegerlendirmeleri/* (E7). Satır formatı yukarıdakiyle aynı tutulmalı.

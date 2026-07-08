@@ -294,6 +294,46 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-08 — Faz B9 TAMAMLANDI: Ürün Detay canlıda hazır (kullanıcı seçimi: B8 yerine B9 öncelikli) — kart linkleri `/urun/{code}` artık 404 DEĞİL:**
+  - **Mimari (tamamen SSR):** `Controllers/Store/UrunDetayController` (`/urun/{code}?color={valueId}`) +
+    `Models/Store/UrunDetayVm`. Renk değişimi ?color= navigasyonudur (yeni SSR isteği — misharix'in
+    renk script'i aktif sınıfı bizden önce değiştirdiğinden karşılaştırma URL/config üzerinden);
+    beden seçimi client-side (misharix script'i değişmedi — sticky bar + beden modalı gerçek
+    bedenlerle otomatik çalışıyor); sepete ekleme partial sonundaki config script'iyle
+    `api/store/cart/items` (SPA ile aynı localStorage anahtarları; Şimdi Al da şimdilik sepete
+    ekler, gerçek akış Faz C).
+  - **Breadcrumb:** yeni `GetProductChannelCategoryChainQuery` (Storefront.Application) — kategoriler
+    filtre tanımlı (FillType=filter/mixed) olduğundan ürün→kategori TERS eşleme kural
+    değerlendirmesiyle: ProductGroupIds + AttributeFilters (listelemedeki ProductFilterHelper ile
+    aynı semantik — product-level attributes), manuel atama/IsExcluded dahil, en derin aday kazanır.
+  - **DTO additive genişledi:** `StoreProductDetailDto`'ya DescriptionI18n + Attributes (ürün
+    seviyesi özellikler) + ProductGroupNameI18n eklendi — endpoint aynı, mobil/SPA etkilenmez.
+  - **Kurallar:** beden sıralaması konfeksiyon sırası (S<M<L<XL…, numerik bedenler sayısal);
+    sıfır fiyatlı varyantlar gösterim fiyatına girmez (SPA paritesi); "renk"/"filtre_rengi"
+    eksenleri asla beden sanılmaz; filtre_rengi hiç yoksa "renk" ekseni renk kabul edilir;
+    görselsiz renkler listelenmez; stok kontrolü B12 anahtarına kadar kapalı (hepsi satılabilir).
+  - **CANLI BUG DÜZELTİLDİ (B9 dışı, CRM):** `AddToCartCommand` mevcut sepete İKİNCİ FARKLI ürünü
+    hiç ekleyemiyordu — tracked cart'ın koleksiyonuna Id'si baştan atanmış (BaseEntity Guid.NewGuid)
+    yeni CartItem eklenince EF DetectChanges bunu Added değil Modified sayıyor → var olmayan satıra
+    UPDATE → DbUpdateConcurrencyException/500. Çözüm: `db.CartItems.Add(...)`. (Aynı kalıp başka
+    handler'larda da olabilir — çocuk satırı tracked parent koleksiyonuna ekleyen yerlere dikkat.)
+  - Gizlenen demo blokları (@if): puan tooltip'i, dönen teslimat mesajları (B8/B11), çoklu fiyat
+    senaryoları (Faz G), model ölçüleri (manken verisi ürünlerde 0 satır), teslimat bilgileri
+    (Faz H kargo), beden tablosu (veri yok), video+görsel etiketleri (B11/G). **Benzer ürünler
+    bölümü misharix detay tasarımında YOK** — envanter satırı Faz G vitrinlerine devredildi.
+  - **E2E (headless Chromium, 5051 Production): 12/12 ✓** — galeri (thumb=slide, tıklama), beden
+    seçimi etiketi, sepete ekle API 200 (bedenli akış + bedensiz→modal→seçim→ekleme), renk SSR
+    değişimi (Mavi→Lacivert, galeri değişti), tam ekran görsel modalı, paylaş modalı gerçek adla,
+    mobil sabit aksiyon barı + gerçek fiyat + sticky beden paneli; **0 konsol hatası**; regresyon
+    yok (favicon/kategori/arama/api 200, olmayan ürün 404). Test sepetleri DB'den silindi.
+    Ekran görüntüleri: scratchpad `pw/shots/b9-*.png` (gerçek görselli ürün: P-034482).
+  - `check.sh` TEMİZ ✓ (6 yeni izinli B9 girdisi). Plan (B9 [x] + Durum Panosu + envanter 8.4) ve
+    `misharix-partial-vm-eslemesi.md` (6 satır) güncellendi.
+  - **DEPLOY BEKLİYOR (kullanıcı):** publish edildi (B2+B7+B9 birlikte) — `sudo systemctl restart
+    ecspros` sonrası https://new.ecspros.com 'da arama + kategori + ürün detay uçtan uca çalışır.
+  - **SIRADAKİ ADIM → B8 (kart derinleştirme: varyant görsel galerisi + renk tooltip + kart→detay
+    linki alanları) veya B3 (duyuru şeridi) / B6 (ana sayfa geçici kompozisyon).**
+
 - **2026-07-07 — Faz B7 TAMAMLANDI (üçüncü oturum): Ürün Listesi canlıya hazır (kullanıcı seçimi: B3/B6 yerine B7 öncelikli):**
   - **Üç yüzey tek controller'da** (`Controllers/Store/UrunListesiController` + `Models/Store/UrunListesiVm`):
     kategori `/{slug}` (nav ağacından çözülür, bulunamazsa 404), arama `/urunler?search=`

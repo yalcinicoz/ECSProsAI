@@ -1,0 +1,6 @@
+﻿@{
+    // B9: başlık controller'dan gelir (ürün adı)
+    ViewData["Title"] = (ViewData["MsUrunDetay"] as ECSPros.Api.Models.Store.UrunDetayVm)?.Ad ?? "Ürün Detay";
+}
+
+<partial name="~/Views/ProjeElementleri/UrunDetay/_UrunDetaySayfasi.cshtml" />

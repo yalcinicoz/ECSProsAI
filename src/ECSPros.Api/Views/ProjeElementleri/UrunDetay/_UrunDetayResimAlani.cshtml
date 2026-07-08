@@ -1,0 +1,93 @@
+@using ECSPros.Api.Models.Store
+@{
+    // B9: galeri seçili rengin görsellerinden SSR üretilir; davranış (thumb/sürükle/zoom/
+    // modal) _UrunDetaySayfasi'ndaki misharix script'ine aittir, değişmedi. Video slaytı ve
+    // görsel etiketleri (Videolu Ürün / Süper Fırsat / kampanya) veri karşılığı olmadığı
+    // için gizlendi (B11/Faz G).
+    var vmResim = ViewData["MsUrunDetay"] as UrunDetayVm;
+    var resimler = vmResim?.Gorseller ?? [];
+    var resimAd = vmResim?.Ad ?? "Ürün görseli";
+}
+<section class="ms-urun-detay-resim-alani" data-ms-urun-detay-resim-alani aria-label="Ürün görselleri">
+                <div class="ms-urun-detay-resim-galeri">
+                    <div class="ms-urun-detay-resim-thumb-listesi" aria-label="Ürün küçük görselleri">
+                        @for (var i = 0; i < resimler.Count; i++)
+                        {
+                        <button class="ms-urun-detay-resim-thumb@(i == 0 ? " ms-urun-detay-resim-thumb-aktif" : "")" type="button" data-ms-urun-detay-resim-thumb="@i" aria-label="@(i + 1). ürün görseli" aria-pressed="@(i == 0 ? "true" : "false")">
+                            <img src="@resimler[i]" alt="@resimAd @(i + 1). görsel" loading="lazy">
+                        </button>
+                        }
+                    </div>
+
+                    <div class="ms-urun-detay-resim-ana-sutun">
+                        <div class="ms-urun-detay-resim-ana-kapsayici" data-ms-urun-detay-resim-surukle aria-label="Ürün görselini büyüt">
+                            <div class="ms-urun-detay-resim-track" data-ms-urun-detay-resim-track>
+                                @foreach (var resim in resimler)
+                                {
+                                <img class="ms-urun-detay-resim-ana" data-ms-urun-detay-resim-slide src="@resim" alt="@resimAd">
+                                }
+                            </div>
+
+                            @if (false) // B11/Faz G: video rozeti + Süper Fırsat + kampanya etiketi — veri karşılığı yok
+                            {
+                            <span class="ms-urun-gorsel-etiketleri ms-urun-detay-resim-etiketleri">
+                                <span class="ms-urun-video-alani" data-ms-urun-video>
+                                    <button class="ms-urun-video-rozeti" type="button" aria-expanded="false" aria-label="Videolu ürünü göster">
+                                        <i class="fa-solid fa-play ms-fa-ikon ms-urun-video-ikon" aria-hidden="true"></i>
+                                        <span>Videolu Ürün</span>
+                                    </button>
+                                    <span class="ms-urun-video-tooltip"></span>
+                                </span>
+                                <span class="ms-urun-super-firsat-etiketi">Süper Fırsat Ürünü</span>
+                            </span>
+                            }
+
+                            @if (resimler.Count > 1)
+                            {
+                            <button class="ms-urun-detay-resim-kontrol ms-urun-detay-resim-kontrol-sol" type="button" data-ms-urun-detay-resim-yon="onceki" aria-label="Önceki ürün görseli">
+                                <i class="fa-solid fa-chevron-left ms-fa-ikon" aria-hidden="true"></i>
+                            </button>
+                            <button class="ms-urun-detay-resim-kontrol ms-urun-detay-resim-kontrol-sag" type="button" data-ms-urun-detay-resim-yon="sonraki" aria-label="Sonraki ürün görseli">
+                                <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
+                            </button>
+                            }
+                            <div class="ms-urun-detay-resim-zoom-lens" data-ms-urun-detay-resim-zoom-lens aria-hidden="true"></div>
+                        </div>
+                    </div>
+
+                    <div class="ms-urun-detay-resim-zoom-panel" data-ms-urun-detay-resim-zoom-panel aria-hidden="true"></div>
+                </div>
+
+                <div class="ms-ornek-modal ms-urun-detay-resim-modal" data-ms-urun-detay-resim-modal aria-hidden="true">
+                    <div class="ms-ornek-modal-kaplama" data-ms-urun-detay-resim-modal-kapat></div>
+                    <section class="ms-urun-detay-resim-modal-kutu" role="dialog" aria-modal="true" aria-label="Ürün görseli">
+                        <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-detay-resim-modal-kapat aria-label="Tam ekran görseli kapat">×</button>
+                        <button class="ms-urun-detay-resim-modal-paylas" type="button" data-ms-urun-detay-resim-modal-paylas aria-label="Aktif görseli paylaş">Paylaş</button>
+                        <div class="ms-urun-detay-resim-modal-viewport" data-ms-urun-detay-resim-modal-surukle>
+                            <div class="ms-urun-detay-resim-modal-track" data-ms-urun-detay-resim-modal-track>
+                                @foreach (var resim in resimler)
+                                {
+                                <img class="ms-urun-detay-resim-modal-gorsel" data-ms-urun-detay-resim-modal-slide src="@resim" alt="@resimAd">
+                                }
+                            </div>
+                        </div>
+                        @if (resimler.Count > 1)
+                        {
+                        <button class="ms-urun-detay-resim-modal-kontrol ms-urun-detay-resim-modal-kontrol-sol" type="button" data-ms-urun-detay-resim-modal-yon="onceki" aria-label="Önceki ürün görseli">
+                            <i class="fa-solid fa-chevron-left ms-fa-ikon" aria-hidden="true"></i>
+                        </button>
+                        <button class="ms-urun-detay-resim-modal-kontrol ms-urun-detay-resim-modal-kontrol-sag" type="button" data-ms-urun-detay-resim-modal-yon="sonraki" aria-label="Sonraki ürün görseli">
+                            <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
+                        </button>
+                        }
+                        <div class="ms-urun-detay-resim-modal-thumb-listesi" aria-label="Büyük görsel küçük resimleri">
+                            @for (var i = 0; i < resimler.Count; i++)
+                            {
+                            <button class="ms-urun-detay-resim-modal-thumb@(i == 0 ? " ms-urun-detay-resim-modal-thumb-aktif" : "")" type="button" data-ms-urun-detay-resim-modal-thumb="@i" aria-label="@(i + 1). büyük ürün görseli" aria-pressed="@(i == 0 ? "true" : "false")">
+                                <img src="@resimler[i]" alt="@resimAd @(i + 1). görsel" loading="lazy">
+                            </button>
+                            }
+                        </div>
+                    </section>
+                </div>
+            </section>

@@ -50,7 +50,11 @@ public class AddToCartCommandHandler(ICrmDbContext db) : IRequestHandler<AddToCa
         }
         else
         {
-            cart.Items.Add(new CartItem
+            // DbSet üzerinden eklenmeli: izlenen cart'ın koleksiyonuna Id'si baştan atanmış
+            // (BaseEntity Guid.NewGuid()) yeni satır eklenince DetectChanges bunu Added değil
+            // Modified sayıyor — var olmayan satıra UPDATE gidip DbUpdateConcurrencyException
+            // fırlatıyordu (mevcut sepete ikinci farklı ürün hep 500 dönüyordu).
+            db.CartItems.Add(new CartItem
             {
                 CartId = cart.Id,
                 VariantId = request.VariantId,
