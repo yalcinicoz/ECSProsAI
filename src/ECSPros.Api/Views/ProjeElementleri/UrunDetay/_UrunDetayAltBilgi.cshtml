@@ -1,0 +1,87 @@
+@using ECSPros.Api.Models.Store
+@{
+    // B9: alt bilgi — ürün görseli/açıklaması/özellikleri canlı veriden; değerlendirme
+    // bölümü sıfır durumu (değerlendirme sistemi yok); pazaryeri-özel demo maddeleri
+    // ("X tarafından gönderilecektir", stok adedi) veri karşılığı olmadığı için çıkarıldı.
+    var vmAlt = ViewData["MsUrunDetay"] as UrunDetayVm;
+    var a = vmAlt!;
+    var altGorsel = a.Gorseller.Count > 0 ? a.Gorseller[0] : null;
+    var altAciklama = string.IsNullOrWhiteSpace(a.Aciklama) ? a.KisaAciklama : a.Aciklama;
+}
+<section class="ms-urun-detay-alt-bilgi" id="urun-tum-ozellikleri" aria-labelledby="urun-tum-ozellikleri-baslik">
+            <section class="ms-urun-detay-alt-degerlendirme" aria-labelledby="urun-alt-degerlendirme-baslik">
+                <h2 id="urun-alt-degerlendirme-baslik" class="ms-urun-detay-alt-baslik">Ürün Değerlendirmeleri</h2>
+                <div class="ms-urun-detay-alt-puan">
+                    <strong>0</strong>
+                    <span class="ms-urun-yildizlar ms-urun-yildizlar-pasif" aria-label="0 yıldız">
+                        <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
+                        <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
+                        <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
+                        <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
+                        <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
+                    </span>
+                    <span class="ms-urun-detay-alt-ayrac">•</span>
+                    <a class="ms-urun-detay-degerlendirme-link" href="/urun-degerlendirmeleri">0 Değerlendirme</a>
+                </div>
+            </section>
+
+            <section class="ms-urun-detay-alt-urun-bilgileri" aria-labelledby="urun-tum-ozellikleri-baslik">
+                <h2 id="urun-tum-ozellikleri-baslik" class="ms-urun-detay-alt-baslik">Ürün Bilgileri</h2>
+                <div class="ms-urun-detay-alt-kart">
+                    <div class="ms-urun-detay-alt-ozet">
+                        @if (altGorsel is not null)
+                        {
+                        <img class="ms-urun-detay-alt-gorsel" src="@altGorsel" alt="@a.Ad ürün görseli" loading="lazy">
+                        }
+                        <div class="ms-urun-detay-alt-aciklama">
+                            <h3>Ürün Açıklaması</h3>
+                            <p>@a.Ad</p>
+                            <p>@a.Kod@(a.SeciliRenkAd is null ? "" : " " + a.SeciliRenkAd)</p>
+                            @if (!string.IsNullOrWhiteSpace(altAciklama))
+                            {
+                            <p>@altAciklama</p>
+                            }
+                        </div>
+
+                        <div class="ms-urun-detay-alt-ek-bilgiler">
+                            <h3>Ek Bilgiler</h3>
+                            <ul class="ms-urun-detay-aciklama-listesi">
+                                <li>İncelemiş olduğunuz ürünün satış fiyatını satıcı belirlemektedir.</li>
+                                <li>Ürün stok, teslimat ve kampanya bilgileri güncel satış koşullarına göre değişebilir.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="ms-urun-detay-alt-ek-detay" data-ms-urun-detay-ek-detay hidden>
+                        <h3>Detaylı Bilgilendirme</h3>
+                        <ul class="ms-urun-detay-aciklama-listesi">
+                            <li>Ürününüzü teslim aldıktan sonra 14 gün içerisinde kolayca iade edebilirsiniz.</li>
+                            <li>Ürün stok, teslimat ve kampanya bilgileri güncel satış koşullarına göre değişebilir.</li>
+                        </ul>
+                    </div>
+
+                    <div class="ms-urun-detay-alt-daha-fazla">
+                        <button class="ms-urun-detay-tum-ozellikler-buton" type="button" data-ms-urun-detay-daha-fazla aria-expanded="false">
+                            <span>DAHA FAZLA GÖSTER</span>
+                            <i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    @if (a.Ozellikler.Count > 0)
+                    {
+                    <section class="ms-urun-detay-alt-ozellikler" aria-labelledby="urun-alt-one-cikan-baslik">
+                        <h3 id="urun-alt-one-cikan-baslik">Öne Çıkan Özellikler:</h3>
+                        <div class="ms-urun-detay-alt-ozellik-grid">
+                            @foreach (var ozellik in a.Ozellikler)
+                            {
+                            <article class="ms-urun-detay-alt-ozellik-kart">
+                                <span>@ozellik.Ad</span>
+                                <strong>@ozellik.Deger</strong>
+                            </article>
+                            }
+                        </div>
+                    </section>
+                    }
+                </div>
+            </section>
+        </section>

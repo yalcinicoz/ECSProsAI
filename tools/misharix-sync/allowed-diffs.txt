@@ -40,3 +40,33 @@ Views/ProjeElementleri/UrunListesi/_UrunListesiSagUstFiltre.cshtml
 # B7: Mobil filtre — panel/chip/detay markup'ları birebir, gruplar gerçek facet'lerden;
 # anaFiltreAdlari sözlüğü gerçek gruplardan bağlandı; davranış script'i değişmedi.
 Views/ProjeElementleri/UrunListesi/_UrunListesiMobilFiltre.cshtml
+
+# B9: Ürün detay başlığı ViewData'dan (ürün adı).
+Views/UrunDetay/Index.cshtml
+
+# B9: Ana detay partial'ı — üstte VM/config bloğu; sabit beden radioları gerçek bedenlerden
+# (@foreach, beden yoksa @if gizli); mobil fiyat + paylaş modal ürün kartı bağlandı;
+# JS'teki sabit paylaşım metni DOM'dan okunuyor; dosya sonuna sepet/renk config script'i
+# eklendi (renk=?color= SSR navigasyonu, sepete ekle=api/store/cart, SPA ile aynı
+# localStorage anahtarları). Misharix davranış script'leri değişmedi.
+Views/ProjeElementleri/UrunDetay/_UrunDetaySayfasi.cshtml
+
+# B9: Breadcrumb kategori zincirine bağlandı (GetProductChannelCategoryChainQuery —
+# filtre kuralı ters eşlemesi) + ürün adı.
+Views/ProjeElementleri/UrunDetay/_UrunDetayBreadcrumb.cshtml
+
+# B9: Galeri seçili rengin görsellerinden @foreach ile (thumb/slide/modal aynı listeden);
+# video slaytı + görsel etiketleri (Videolu/Süper Fırsat/kampanya) veri yok — @if gizli
+# (B11/Faz G); tek görselde yön butonları gizli. Davranış script'ine dokunulmadı.
+Views/ProjeElementleri/UrunDetay/_UrunDetayResimAlani.cshtml
+
+# B9: Bilgi sütunu canlı veriye bağlandı — ad/kod/fiyat(+indirim)/renkler/bedenler/
+# öne çıkan özellikler/kısa açıklama. Veri karşılığı olmayanlar @if(false) gizli:
+# puan tooltip demo verisi, dönen teslimat mesajları (B8/B11), çoklu fiyat senaryoları
+# (Faz G), model ölçüleri (manken verisi ürünlere girilmedi), teslimat bilgileri (Faz H),
+# beden tablosu (veri yok). Değerlendirme bölümleri sıfır durumunda.
+Views/ProjeElementleri/UrunDetay/_UrunDetayBilgi.cshtml
+
+# B9: Alt bilgi — görsel/açıklama/özellikler canlı veriden; pazaryeri-özel demo maddeleri
+# (satıcı adı, stok adedi) çıkarıldı, jenerik maddeler kaldı; akordiyon davranışı değişmedi.
+Views/ProjeElementleri/UrunDetay/_UrunDetayAltBilgi.cshtml

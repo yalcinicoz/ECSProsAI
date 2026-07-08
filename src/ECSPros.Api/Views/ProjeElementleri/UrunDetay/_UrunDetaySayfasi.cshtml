@@ -1,0 +1,2000 @@
+﻿@using ECSPros.Api.Models.Store
+@{
+    // B9: canlı veri UrunDetayController'dan ViewData ile gelir; misharix davranış
+    // script'leri (galeri, beden, favori, paylaş) değişmedi — yalnız demo içerik
+    // bağlandı ve dosya sonuna sepet/renk config script'i eklendi.
+    var vmSayfa = ViewData["MsUrunDetay"] as UrunDetayVm;
+    var s = vmSayfa!;
+    var sepetConfig = System.Text.Json.JsonSerializer.Serialize(new
+    {
+        firmPlatformId = s.FirmPlatformId,
+        paraBirimi = s.ParaBirimi,
+        tekVaryant = s.TekVaryantId is { } tekId
+            ? new { id = tekId, fiyat = s.TekVaryantFiyat ?? 0 }
+            : null,
+        bedenler = s.Bedenler.ToDictionary(x => x.Ad, x => new { id = x.VariantId, fiyat = x.Fiyat }),
+        seciliRenk = s.Renkler.FirstOrDefault(r => r.Secili)?.ValueId
+    });
+}
+<div class="ms-urun-detay-sayfa">
+    <partial name="~/Views/ProjeElementleri/UrunDetay/_UrunDetayBreadcrumb.cshtml" />
+
+    <div class="ms-urun-detay-kapsayici">
+        <section class="ms-urun-detay-ust">
+            <partial name="~/Views/ProjeElementleri/UrunDetay/_UrunDetayResimAlani.cshtml" />
+
+            <partial name="~/Views/ProjeElementleri/UrunDetay/_UrunDetayBilgi.cshtml" />
+        </section>
+
+        <partial name="~/Views/ProjeElementleri/UrunDetay/_UrunDetayAltBilgi.cshtml" />
+
+        @if (s.Bedenler.Count > 0)
+        {
+        <aside class="ms-urun-detay-sabit-beden" data-ms-urun-detay-sabit-beden aria-hidden="true" aria-label="Sabit beden seçimi">
+            <fieldset class="ms-urun-detay-sabit-beden-alani">
+                <legend class="ms-form-etiket">@s.BedenEtiketi: <strong data-ms-urun-detay-sabit-beden-secili>Seçilmedi</strong></legend>
+                <div class="ms-beden-secim-listesi" aria-label="@s.BedenEtiketi seçimi">
+                    @foreach (var beden in s.Bedenler)
+                    {
+                    <label class="ms-beden-secim">
+                        <input class="ms-beden-secim-input" type="radio" name="urun-detay-sabit-beden" value="@beden.Ad">
+                        <span class="ms-beden-secim-kutu">@beden.Ad</span>
+                    </label>
+                    }
+                </div>
+            </fieldset>
+        </aside>
+        }
+
+        <div class="ms-urun-detay-mobil-sabit-aksiyon" aria-label="Mobil ürün aksiyonları">
+            <div class="ms-urun-detay-mobil-fiyat">
+                <strong class="ms-urun-fiyat ms-urun-detay-tutar">@UrunDetayVm.FiyatMetni(s.Fiyat)</strong>
+            </div>
+            <button class="ms-buton ms-buton-l ms-buton-simdi-al ms-urun-detay-mobil-buton" type="button">Şimdi Al</button>
+            <button class="ms-buton ms-buton-l ms-buton-satin-al ms-urun-detay-mobil-buton" type="button" data-ms-urun-detay-sepete-ekle>Sepete Ekle</button>
+            <button class="ms-urun-detay-favori ms-urun-detay-mobil-ikon-buton" type="button" aria-label="Favorilere ekle" aria-pressed="false">
+                <img class="ms-urun-detay-favori-ikon" src="/ikons/favorite.svg" alt="" aria-hidden="true">
+            </button>
+            <button class="ms-urun-detay-koleksiyon ms-urun-detay-mobil-ikon-buton" type="button" aria-label="Koleksiyona ekle" aria-pressed="false" data-ms-urun-detay-koleksiyon>
+                <i class="fa-solid fa-bookmark ms-fa-ikon" aria-hidden="true"></i>
+            </button>
+            <button class="ms-urun-detay-mobil-ikon-buton" type="button" data-ms-urun-paylas-ac aria-label="Ürünü paylaş">
+                <i class="fa-solid fa-share-nodes ms-fa-ikon" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <div class="ms-ornek-modal ms-urun-paylas-modal" data-ms-urun-paylas-modal aria-hidden="true">
+            <div class="ms-ornek-modal-kaplama" data-ms-urun-paylas-kapat></div>
+            <section class="ms-ornek-modal-kutu ms-ornek-modal-kutu-uyari ms-urun-paylas-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-urun-paylas-baslik">
+                <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-paylas-kapat aria-label="Paylaşım kartını kapat">×</button>
+                <h2 id="ms-urun-paylas-baslik" class="ms-ornek-modal-baslik">Ürünü Paylaş</h2>
+                <div class="ms-urun-paylas-icerik">
+                    <div class="ms-urun-paylas-urun">
+                        @if (s.Gorseller.Count > 0)
+                        {
+                        <img src="@s.Gorseller[0]" alt="@s.Ad ürün görseli">
+                        }
+                        <div>
+                            <strong>@s.Ad</strong>
+                            <span>@UrunDetayVm.FiyatMetni(s.Fiyat)</span>
+                        </div>
+                    </div>
+                    <div class="ms-urun-paylas-secenekleri">
+                        <button class="ms-urun-paylas-secenek" type="button" data-ms-urun-paylas-kopyala>
+                            <span class="ms-urun-paylas-ikon ms-urun-paylas-ikon-kopyala" aria-hidden="true">
+                                <i class="fa-solid fa-copy ms-fa-ikon" aria-hidden="true"></i>
+                            </span>
+                            <span>Bağlantıyı Kopyala</span>
+                        </button>
+                        <a class="ms-urun-paylas-secenek" href="https://wa.me/" target="_blank" rel="noopener" data-ms-urun-paylas-whatsapp>
+                            <span class="ms-urun-paylas-ikon ms-urun-paylas-ikon-gorsel" aria-hidden="true">
+                                <img src="/images/whatsapp.png" alt="">
+                            </span>
+                            <span>WhatsApp</span>
+                        </a>
+                        <a class="ms-urun-paylas-secenek" href="https://www.facebook.com/sharer/sharer.php" target="_blank" rel="noopener" data-ms-urun-paylas-facebook>
+                            <span class="ms-urun-paylas-ikon ms-urun-paylas-ikon-gorsel" aria-hidden="true">
+                                <img src="/images/facebook.png" alt="">
+                            </span>
+                            <span>Facebook</span>
+                        </a>
+                        <a class="ms-urun-paylas-secenek" href="https://www.pinterest.com/pin/create/button/" target="_blank" rel="noopener" data-ms-urun-paylas-pinterest>
+                            <span class="ms-urun-paylas-ikon ms-urun-paylas-ikon-gorsel" aria-hidden="true">
+                                <img src="/images/pinterest.png" alt="">
+                            </span>
+                            <span>Pinterest</span>
+                        </a>
+                        <a class="ms-urun-paylas-secenek" href="https://x.com/intent/tweet" target="_blank" rel="noopener" data-ms-urun-paylas-x>
+                            <span class="ms-urun-paylas-ikon ms-urun-paylas-ikon-gorsel" aria-hidden="true">
+                                <img src="/images/x.png" alt="">
+                            </span>
+                            <span>X</span>
+                        </a>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="ms-ornek-modal ms-urun-beden-modal" data-ms-urun-detay-beden-modal aria-hidden="true">
+            <div class="ms-ornek-modal-kaplama" data-ms-urun-detay-beden-modal-kapat></div>
+            <section class="ms-ornek-modal-kutu ms-ornek-modal-kutu-uyari ms-urun-beden-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-urun-beden-modal-baslik">
+                <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-detay-beden-modal-kapat aria-label="Beden seçimini kapat">×</button>
+                <h2 id="ms-urun-beden-modal-baslik" class="ms-ornek-modal-baslik">Beden Seçiniz</h2>
+                <p class="ms-ornek-modal-aciklama">Sepete eklemek için uygun bedeni seçin.</p>
+                <div class="ms-urun-beden-modal-listesi" data-ms-urun-detay-beden-modal-listesi></div>
+            </section>
+        </div>
+    </div>
+</div>
+
+    @* Bu script: Ürün detay sayfasında üst menü davranışı, görsel galeri ve renk seçimi etkileşimlerini başlatır. *@
+    <script>
+        (() => {
+            document.querySelectorAll(".ms-urun-detay-renk-alani").forEach((renkAlani) => {
+                const renkBasligi = renkAlani.querySelector(".ms-urun-detay-renk-baslik strong");
+                const renkButonlari = Array.from(renkAlani.querySelectorAll(".ms-urun-detay-renk"));
+                const seciliIkon = renkAlani.querySelector(".ms-urun-detay-renk-secili-ikon");
+
+                if (renkButonlari.length === 0) {
+                    return;
+                }
+
+                const renkSec = (seciliButon) => {
+                    renkButonlari.forEach((buton) => {
+                        const aktif = buton === seciliButon;
+                        buton.classList.toggle("ms-urun-detay-renk-aktif", aktif);
+                        buton.setAttribute("aria-pressed", aktif ? "true" : "false");
+                    });
+
+                    if (seciliIkon && seciliIkon.parentElement !== seciliButon) {
+                        seciliButon.prepend(seciliIkon);
+                    }
+
+                    const renkAdi = seciliButon.querySelector(":scope > span:last-child")?.textContent?.trim();
+                    if (renkBasligi && renkAdi) {
+                        renkBasligi.textContent = renkAdi;
+                    }
+                };
+
+                renkButonlari.forEach((buton) => {
+                    buton.addEventListener("click", () => renkSec(buton));
+                });
+            });
+        })();
+
+        (() => {
+            const bedenAlani = document.querySelector(".ms-urun-detay-beden-alani");
+            const seciliBedenYazisi = bedenAlani?.querySelector("[data-ms-urun-detay-beden-secili]");
+            const bedenSecimleri = Array.from(bedenAlani?.querySelectorAll(".ms-beden-secim-input") || []);
+            const aksiyonButonlari = Array.from(document.querySelectorAll(".ms-urun-detay-aksiyon, .ms-urun-detay-mobil-buton"));
+            const detayAksiyonAlanlari = Array.from(document.querySelectorAll(".ms-urun-detay-sayfa .ms-urun-detay-aksiyonlar"));
+            const bedenModal = document.querySelector("[data-ms-urun-detay-beden-modal]");
+            const bedenModalListe = document.querySelector("[data-ms-urun-detay-beden-modal-listesi]");
+            const bedenModalKapaticilar = document.querySelectorAll("[data-ms-urun-detay-beden-modal-kapat]");
+            const sabitBedenPanel = document.querySelector("[data-ms-urun-detay-sabit-beden]");
+            const sabitBedenSeciliYazisi = sabitBedenPanel?.querySelector("[data-ms-urun-detay-sabit-beden-secili]");
+            const sabitBedenSecimleri = Array.from(sabitBedenPanel?.querySelectorAll(".ms-beden-secim-input") || []);
+            let oncekiBodyOverflow = "";
+            let oncekiHtmlOverflow = "";
+            let bedenModalOncekiOdak = null;
+            let bekleyenAksiyonButonu = null;
+            let sabitBedenGuncellemePlanlandi = false;
+
+            if (!bedenAlani || !seciliBedenYazisi || bedenSecimleri.length === 0) {
+                return;
+            }
+
+            const aktifBedenSecimleri = bedenSecimleri.filter((secim) => !secim.disabled);
+            if (aktifBedenSecimleri.length === 1) {
+                aktifBedenSecimleri[0].checked = true;
+            } else if (aktifBedenSecimleri.length > 1) {
+                bedenSecimleri.forEach((secim) => {
+                    secim.checked = false;
+                });
+            }
+
+            const seciliBedenAl = () => bedenSecimleri.find((secim) => secim.checked && !secim.disabled);
+
+            const sabitBedenSeciminiYansit = () => {
+                const seciliBeden = seciliBedenAl();
+                const seciliDeger = seciliBeden?.value || "";
+
+                sabitBedenSecimleri.forEach((secim) => {
+                    const kaynak = bedenSecimleri.find((bedenSecimi) => bedenSecimi.value === secim.value);
+                    secim.disabled = Boolean(kaynak?.disabled);
+                    secim.checked = secim.value === seciliDeger;
+                });
+
+                if (sabitBedenSeciliYazisi) {
+                    sabitBedenSeciliYazisi.textContent = seciliDeger || "Seçilmedi";
+                }
+            };
+
+            const mobilBedenPaneliMu = () => window.matchMedia("(max-width: 767px)").matches;
+
+            const mobilYerlesimiGuncelle = () => {
+                const mobil = mobilBedenPaneliMu();
+
+                bedenAlani.style.display = mobil ? "grid" : "";
+                detayAksiyonAlanlari.forEach((aksiyonAlani) => {
+                    aksiyonAlani.style.display = mobil ? "none" : "";
+                });
+            };
+
+            const bedenAlaniGorunurMu = () => {
+                const rect = bedenAlani.getBoundingClientRect();
+                return rect.bottom > 0 && rect.top < window.innerHeight - 12;
+            };
+
+            const bedenAlaniGecildiMi = () => bedenAlani.getBoundingClientRect().bottom < 0;
+
+            const sabitBedenYuksekliginiYaz = () => {
+                if (!sabitBedenPanel) {
+                    return;
+                }
+
+                const yukseklik = sabitBedenPanel.classList.contains("ms-urun-detay-sabit-beden-acik")
+                    ? Math.ceil(sabitBedenPanel.getBoundingClientRect().height)
+                    : 0;
+                document.documentElement.style.setProperty("--ms-urun-detay-sabit-beden-yukseklik", `${yukseklik}px`);
+            };
+
+            const sabitBedenDurumunuGuncelle = () => {
+                sabitBedenGuncellemePlanlandi = false;
+
+                if (!sabitBedenPanel) {
+                    return;
+                }
+
+                const sabitGoster = mobilBedenPaneliMu() && bedenAlaniGecildiMi() && !bedenAlaniGorunurMu();
+                sabitBedenPanel.classList.toggle("ms-urun-detay-sabit-beden-acik", sabitGoster);
+                sabitBedenPanel.setAttribute("aria-hidden", (!sabitGoster).toString());
+                sabitBedenSeciminiYansit();
+                sabitBedenYuksekliginiYaz();
+            };
+
+            const sabitBedenDurumunuPlanla = () => {
+                if (sabitBedenGuncellemePlanlandi) {
+                    return;
+                }
+
+                sabitBedenGuncellemePlanlandi = true;
+                window.requestAnimationFrame(sabitBedenDurumunuGuncelle);
+            };
+
+            const bedenYazisiniGuncelle = () => {
+                const seciliBeden = seciliBedenAl();
+                seciliBedenYazisi.textContent = seciliBeden?.value || "Seçilmedi";
+                bedenAlani.classList.toggle("ms-urun-detay-beden-secildi", Boolean(seciliBeden));
+                sabitBedenSeciminiYansit();
+                sabitBedenDurumunuPlanla();
+            };
+
+            const gorunurRectMi = (rect) => rect.width > 0
+                && rect.height > 0
+                && rect.bottom > 0
+                && rect.right > 0
+                && rect.top < window.innerHeight
+                && rect.left < window.innerWidth;
+
+            const sepetHedefiAl = () => {
+                const hedefler = Array.from(document.querySelectorAll("[data-ms-sepet-menu-tetikleyici] .ms-ana-navigasyon-sepet-ikon-alani, [data-ms-sepet-menu-tetikleyici]"));
+                return hedefler.find((hedef) => gorunurRectMi(hedef.getBoundingClientRect())) || null;
+            };
+
+            const animasyonGorseliAl = () => {
+                const gorseller = Array.from(document.querySelectorAll(".ms-urun-detay-resim-ana-gorunur, .ms-urun-detay-resim-ana"));
+                return gorseller.find((gorsel) => gorsel instanceof HTMLImageElement && gorunurRectMi(gorsel.getBoundingClientRect())) || null;
+            };
+
+            const sepeteUcanAnimasyonBaslat = (buton) => {
+                const hedef = sepetHedefiAl();
+
+                if (!buton || !hedef) {
+                    return;
+                }
+
+                const kaynakGorsel = animasyonGorseliAl();
+                const kaynakRect = (kaynakGorsel || buton).getBoundingClientRect();
+                const hedefRect = hedef.getBoundingClientRect();
+
+                if (!gorunurRectMi(kaynakRect) || hedefRect.width === 0 || hedefRect.height === 0) {
+                    return;
+                }
+
+                const boyut = Math.min(74, Math.max(40, Math.min(kaynakRect.width, kaynakRect.height) * 0.28));
+                const bitisBoyutu = 18;
+                const baslangicX = kaynakRect.left + (kaynakRect.width / 2) - (boyut / 2);
+                const baslangicY = kaynakRect.top + (kaynakRect.height / 2) - (boyut / 2);
+                const bitisX = hedefRect.left + (hedefRect.width / 2) - (bitisBoyutu / 2);
+                const bitisY = hedefRect.top + (hedefRect.height / 2) - (bitisBoyutu / 2);
+                const farkX = bitisX - baslangicX;
+                const farkY = bitisY - baslangicY;
+                const kavisY = Math.min((farkY * 0.42) - 72, -56);
+                const ucan = document.createElement("span");
+
+                ucan.className = "ms-urun-detay-sepet-ucan";
+                ucan.setAttribute("aria-hidden", "true");
+                ucan.style.left = `${baslangicX}px`;
+                ucan.style.top = `${baslangicY}px`;
+                ucan.style.width = `${boyut}px`;
+                ucan.style.height = `${boyut}px`;
+
+                if (kaynakGorsel) {
+                    const gorsel = document.createElement("img");
+                    gorsel.src = kaynakGorsel.currentSrc || kaynakGorsel.src;
+                    gorsel.alt = "";
+                    ucan.appendChild(gorsel);
+                }
+
+                document.body.appendChild(ucan);
+
+                const sepetMenu = hedef.closest("[data-ms-sepet-menu]");
+                sepetMenu?.classList.remove("ms-ana-navigasyon-sepet-animasyon");
+
+                if (sepetMenu) {
+                    void sepetMenu.offsetWidth;
+                }
+
+                const animasyon = ucan.animate([
+                    { opacity: 0, transform: "translate3d(0, 0, 0) scale(0.72)" },
+                    { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)", offset: 0.14 },
+                    { opacity: 0.95, transform: `translate3d(${farkX * 0.52}px, ${kavisY}px, 0) scale(0.82)`, offset: 0.58 },
+                    { opacity: 0, transform: `translate3d(${farkX}px, ${farkY}px, 0) scale(0.22)` }
+                ], {
+                    duration: 880,
+                    easing: "cubic-bezier(0.22, 0.82, 0.2, 1)",
+                    fill: "forwards"
+                });
+
+                window.setTimeout(() => {
+                    sepetMenu?.classList.add("ms-ana-navigasyon-sepet-animasyon");
+                }, 640);
+
+                window.setTimeout(() => {
+                    sepetMenu?.classList.remove("ms-ana-navigasyon-sepet-animasyon");
+                }, 1320);
+
+                animasyon.finished
+                    .catch(() => {})
+                    .finally(() => ucan.remove());
+            };
+
+            const aksiyonGeriBildirimiGoster = (buton) => {
+                if (!buton) {
+                    return;
+                }
+
+                const oncekiMetin = buton.textContent;
+                const sepetAksiyonu = buton.matches("[data-ms-urun-detay-sepete-ekle], .ms-buton-satin-al");
+                buton.textContent = sepetAksiyonu ? "Sepete Eklendi" : "Devam Ediliyor";
+
+                if (sepetAksiyonu) {
+                    sepeteUcanAnimasyonBaslat(buton);
+                }
+
+                window.setTimeout(() => {
+                    buton.textContent = oncekiMetin;
+                }, 1300);
+            };
+
+            const bedenModalKapat = () => {
+                if (!bedenModal) {
+                    return;
+                }
+
+                if (document.activeElement instanceof HTMLElement && bedenModal.contains(document.activeElement)) {
+                    document.activeElement.blur();
+                }
+
+                bedenModal.classList.remove("ms-ornek-modal-acik");
+                bedenModal.setAttribute("aria-hidden", "true");
+                document.body.style.overflow = oncekiBodyOverflow;
+                document.documentElement.style.overflow = oncekiHtmlOverflow;
+
+                if (bedenModalOncekiOdak && document.contains(bedenModalOncekiOdak)) {
+                    bedenModalOncekiOdak.focus({ preventScroll: true });
+                }
+            };
+
+            const bedenModalAc = (buton) => {
+                if (!bedenModal) {
+                    return;
+                }
+
+                bekleyenAksiyonButonu = buton;
+                bedenModalOncekiOdak = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+                oncekiBodyOverflow = document.body.style.overflow;
+                oncekiHtmlOverflow = document.documentElement.style.overflow;
+                document.body.style.overflow = "hidden";
+                document.documentElement.style.overflow = "hidden";
+                bedenModal.classList.add("ms-ornek-modal-acik");
+                bedenModal.setAttribute("aria-hidden", "false");
+            };
+
+            const bedenSec = (deger) => {
+                const hedef = bedenSecimleri.find((secim) => secim.value === deger && !secim.disabled);
+                if (!hedef) {
+                    return;
+                }
+
+                hedef.checked = true;
+                hedef.dispatchEvent(new Event("change", { bubbles: true }));
+                bedenModalKapat();
+                aksiyonGeriBildirimiGoster(bekleyenAksiyonButonu);
+                bekleyenAksiyonButonu = null;
+            };
+
+            bedenModalListe?.replaceChildren(...aktifBedenSecimleri.map((secim) => {
+                const buton = document.createElement("button");
+                buton.className = "ms-urun-beden-modal-secim";
+                buton.type = "button";
+                buton.textContent = secim.value;
+                buton.dataset.msUrunDetayBedenModalDeger = secim.value;
+                buton.addEventListener("click", () => bedenSec(secim.value));
+                return buton;
+            }));
+
+            bedenSecimleri.forEach((secim) => {
+                secim.addEventListener("change", bedenYazisiniGuncelle);
+            });
+
+            sabitBedenSecimleri.forEach((secim) => {
+                secim.addEventListener("change", () => {
+                    const hedef = bedenSecimleri.find((bedenSecimi) => bedenSecimi.value === secim.value && !bedenSecimi.disabled);
+
+                    if (!hedef) {
+                        return;
+                    }
+
+                    hedef.checked = true;
+                    hedef.dispatchEvent(new Event("change", { bubbles: true }));
+                });
+            });
+
+            aksiyonButonlari.forEach((buton) => {
+                buton.addEventListener("click", (event) => {
+                    if (seciliBedenAl()) {
+                        aksiyonGeriBildirimiGoster(buton);
+                        return;
+                    }
+
+                    event.preventDefault();
+                    bedenModalAc(buton);
+                });
+            });
+
+            bedenModalKapaticilar.forEach((kapatici) => {
+                kapatici.addEventListener("click", bedenModalKapat);
+            });
+
+            document.addEventListener("keydown", (event) => {
+                if (event.key === "Escape" && bedenModal?.classList.contains("ms-ornek-modal-acik")) {
+                    bedenModalKapat();
+                }
+            });
+
+            window.addEventListener("scroll", sabitBedenDurumunuPlanla, { passive: true });
+            window.addEventListener("resize", () => {
+                mobilYerlesimiGuncelle();
+                sabitBedenDurumunuPlanla();
+            });
+            window.addEventListener("pageshow", sabitBedenDurumunuPlanla);
+
+            mobilYerlesimiGuncelle();
+            bedenYazisiniGuncelle();
+        })();
+
+        (() => {
+            document.querySelectorAll("[data-ms-urun-detay-resim-alani]").forEach((alan) => {
+                const anaKapsayici = alan.querySelector("[data-ms-urun-detay-resim-surukle]");
+                const track = alan.querySelector("[data-ms-urun-detay-resim-track]");
+                const slaytlar = Array.from(alan.querySelectorAll("[data-ms-urun-detay-resim-slide]"));
+                const thumbButonlari = Array.from(alan.querySelectorAll("[data-ms-urun-detay-resim-thumb]"));
+                const thumbListesi = alan.querySelector(".ms-urun-detay-resim-thumb-listesi");
+                const yonButonlari = alan.querySelectorAll("[data-ms-urun-detay-resim-yon]");
+                const zoomLens = alan.querySelector("[data-ms-urun-detay-resim-zoom-lens]");
+                const zoomPanel = alan.querySelector("[data-ms-urun-detay-resim-zoom-panel]");
+                const modal = alan.querySelector("[data-ms-urun-detay-resim-modal]");
+                const modalTrack = alan.querySelector("[data-ms-urun-detay-resim-modal-track]");
+                const modalSlaytlar = Array.from(alan.querySelectorAll("[data-ms-urun-detay-resim-modal-slide]"));
+                const modalViewport = alan.querySelector("[data-ms-urun-detay-resim-modal-surukle]");
+                const modalYonButonlari = alan.querySelectorAll("[data-ms-urun-detay-resim-modal-yon]");
+                const modalKapaticilar = alan.querySelectorAll("[data-ms-urun-detay-resim-modal-kapat]");
+                const modalThumbButonlari = Array.from(alan.querySelectorAll("[data-ms-urun-detay-resim-modal-thumb]"));
+                const modalPaylasButonu = alan.querySelector("[data-ms-urun-detay-resim-modal-paylas]");
+                const slaytKaynaklari = slaytlar.map((slayt) => slayt.currentSrc || slayt.getAttribute("src")).filter(Boolean);
+                let aktifIndex = 0;
+                let modalAktifIndex = 0;
+                let suruklemeTakipEdiliyor = false;
+                let surukleniyor = false;
+                let baslangicX = 0;
+                let baslangicY = 0;
+                let suruklemeFarki = 0;
+                let suruklemeYonu = "";
+                let anaTouchSuruklemeAktif = false;
+                let modalSurukleniyor = false;
+                let modalSuruklemeTuru = "";
+                let modalBaslangicX = 0;
+                let modalBaslangicY = 0;
+                let modalSuruklemeFarki = 0;
+                let modalTiklamaEngellenecek = false;
+                let modalZoom = 1;
+                let modalPanX = 0;
+                let modalPanY = 0;
+                let modalPanBaslangicX = 0;
+                let modalPanBaslangicY = 0;
+                let modalPinchAktif = false;
+                let modalPinchBaslangicMesafe = 0;
+                let modalPinchBaslangicZoom = 1;
+                let modalSonDokunmaZamani = 0;
+                let tiklamaEngellenecek = false;
+                let gecisYapiliyor = false;
+                let modalGecisYapiliyor = false;
+                let gecisZamani;
+                let modalGecisZamani;
+                let oncekiBodyOverflow = "";
+                let oncekiHtmlOverflow = "";
+                let modalOncekiOdak = null;
+                const zoomKatsayisi = 2.35;
+
+                if (!anaKapsayici || !track || !modalTrack || slaytlar.length === 0 || modalSlaytlar.length === 0 || slaytKaynaklari.length === 0) {
+                    return;
+                }
+
+                anaKapsayici.style.touchAction = "pan-y";
+                anaKapsayici.style.overscrollBehavior = "auto";
+
+                const sar = (index) => (index + slaytlar.length) % slaytlar.length;
+                const anaPointerBaslatilabilir = (event) => event.pointerType !== "mouse" || event.button === 0;
+                const zoomAktifOlabilir = (event) => event.pointerType === "mouse" && window.matchMedia("(min-width: 1024px)").matches;
+                const videoSlaytMi = (slayt) => slayt?.tagName?.toLowerCase() === "video";
+
+                const videoDurumlariniGuncelle = (liste, aktifListeIndex) => {
+                    liste.forEach((slayt, slaytIndex) => {
+                        if (!videoSlaytMi(slayt)) {
+                            return;
+                        }
+
+                        if (slaytIndex === aktifListeIndex) {
+                            slayt.play?.().catch(() => {});
+                        } else {
+                            slayt.pause?.();
+                        }
+                    });
+                };
+
+                const resimOraniniUygula = (resim) => {
+                    const genislik = videoSlaytMi(resim) ? resim.videoWidth : resim?.naturalWidth;
+                    const yukseklik = videoSlaytMi(resim) ? resim.videoHeight : resim?.naturalHeight;
+
+                    if (!resim || !genislik || !yukseklik) {
+                        return;
+                    }
+
+                    anaKapsayici.style.setProperty("--ms-urun-detay-resim-orani", `${genislik} / ${yukseklik}`);
+                };
+
+                const aktifResimOraniniGuncelle = () => {
+                    const aktifSlayt = slaytlar[aktifIndex];
+
+                    if (!aktifSlayt) {
+                        return;
+                    }
+
+                    if (videoSlaytMi(aktifSlayt)) {
+                        if (aktifSlayt.readyState >= 1) {
+                            resimOraniniUygula(aktifSlayt);
+                        } else {
+                            aktifSlayt.addEventListener("loadedmetadata", () => resimOraniniUygula(aktifSlayt), { once: true });
+                        }
+                    } else if (aktifSlayt.complete) {
+                        resimOraniniUygula(aktifSlayt);
+                    } else {
+                        aktifSlayt.addEventListener("load", () => resimOraniniUygula(aktifSlayt), { once: true });
+                    }
+                };
+
+                const zoomKapat = () => {
+                    alan.classList.remove("ms-urun-detay-resim-zoom-aktif");
+                    alan.style.zIndex = "";
+                    zoomPanel?.style.removeProperty("z-index");
+                };
+
+                const aktifResimYerlesimi = () => {
+                    const aktifSlayt = slaytlar[aktifIndex];
+
+                    if (!aktifSlayt || videoSlaytMi(aktifSlayt) || !aktifSlayt.naturalWidth || !aktifSlayt.naturalHeight) {
+                        return null;
+                    }
+
+                    const kapsayiciGenislik = anaKapsayici.clientWidth;
+                    const kapsayiciYukseklik = anaKapsayici.clientHeight;
+                    const resimOrani = aktifSlayt.naturalWidth / aktifSlayt.naturalHeight;
+                    const kapsayiciOrani = kapsayiciGenislik / kapsayiciYukseklik;
+                    let genislik = kapsayiciGenislik;
+                    let yukseklik = kapsayiciYukseklik;
+
+                    if (resimOrani > kapsayiciOrani) {
+                        yukseklik = genislik / resimOrani;
+                    } else {
+                        genislik = yukseklik * resimOrani;
+                    }
+
+                    return {
+                        resim: aktifSlayt,
+                        sol: (kapsayiciGenislik - genislik) / 2,
+                        ust: (kapsayiciYukseklik - yukseklik) / 2,
+                        genislik,
+                        yukseklik
+                    };
+                };
+
+                const zoomGuncelle = (event) => {
+                    if (!zoomLens || !zoomPanel || !zoomAktifOlabilir(event) || surukleniyor || gecisYapiliyor || event.target.closest("[data-ms-urun-detay-resim-yon]")) {
+                        zoomKapat();
+                        return;
+                    }
+
+                    const yerlesim = aktifResimYerlesimi();
+
+                    if (!yerlesim) {
+                        zoomKapat();
+                        return;
+                    }
+
+                    const kapsayiciRect = anaKapsayici.getBoundingClientRect();
+                    zoomPanel.style.height = `${kapsayiciRect.height}px`;
+                    zoomPanel.style.zIndex = "1000";
+                    const panelRect = zoomPanel.getBoundingClientRect();
+                    const hamX = event.clientX - kapsayiciRect.left - yerlesim.sol;
+                    const hamY = event.clientY - kapsayiciRect.top - yerlesim.ust;
+
+                    if (hamX < 0 || hamX > yerlesim.genislik || hamY < 0 || hamY > yerlesim.yukseklik) {
+                        zoomKapat();
+                        return;
+                    }
+
+                    const x = hamX;
+                    const y = hamY;
+                    const panelOrani = panelRect.width / panelRect.height;
+                    let lensGenislik = Math.min(yerlesim.genislik, panelRect.width / zoomKatsayisi);
+                    let lensYukseklik = lensGenislik / panelOrani;
+
+                    if (lensYukseklik > yerlesim.yukseklik || lensYukseklik > panelRect.height / zoomKatsayisi) {
+                        lensYukseklik = Math.min(yerlesim.yukseklik, panelRect.height / zoomKatsayisi);
+                        lensGenislik = lensYukseklik * panelOrani;
+                    }
+
+                    if (lensGenislik > yerlesim.genislik) {
+                        lensGenislik = yerlesim.genislik;
+                        lensYukseklik = lensGenislik / panelOrani;
+                    }
+
+                    const lensSol = yerlesim.sol + Math.min(Math.max(x - (lensGenislik / 2), 0), yerlesim.genislik - lensGenislik);
+                    const lensUst = yerlesim.ust + Math.min(Math.max(y - (lensYukseklik / 2), 0), yerlesim.yukseklik - lensYukseklik);
+                    const lensResimSol = lensSol - yerlesim.sol;
+                    const lensResimUst = lensUst - yerlesim.ust;
+                    const lensOlcekX = panelRect.width / lensGenislik;
+                    const lensOlcekY = panelRect.height / lensYukseklik;
+
+                    zoomPanel.style.backgroundImage = `url("${yerlesim.resim.currentSrc || yerlesim.resim.src}")`;
+                    zoomPanel.style.backgroundSize = `${yerlesim.genislik * lensOlcekX}px ${yerlesim.yukseklik * lensOlcekY}px`;
+                    zoomPanel.style.backgroundPosition = `${-(lensResimSol * lensOlcekX)}px ${-(lensResimUst * lensOlcekY)}px`;
+
+                    zoomLens.style.width = `${lensGenislik}px`;
+                    zoomLens.style.height = `${lensYukseklik}px`;
+                    zoomLens.style.transform = `translate3d(${lensSol}px, ${lensUst}px, 0)`;
+                    alan.style.zIndex = "999";
+                    alan.classList.add("ms-urun-detay-resim-zoom-aktif");
+                };
+
+                const thumbOdakTemizle = () => {
+                    if (document.activeElement instanceof HTMLElement && thumbListesi?.contains(document.activeElement)) {
+                        document.activeElement.blur();
+                    }
+                };
+
+                const sayfaScrollKoruyarak = (islem) => {
+                    const oncekiScrollX = window.scrollX;
+                    const oncekiScrollY = window.scrollY;
+
+                    islem();
+
+                    if (window.scrollX !== oncekiScrollX || window.scrollY !== oncekiScrollY) {
+                        window.scrollTo(oncekiScrollX, oncekiScrollY);
+                    }
+
+                    window.requestAnimationFrame(() => {
+                        if (window.scrollX !== oncekiScrollX || window.scrollY !== oncekiScrollY) {
+                            window.scrollTo(oncekiScrollX, oncekiScrollY);
+                        }
+                    });
+                };
+
+                const thumbGuncelle = () => {
+                    thumbOdakTemizle();
+
+                    thumbButonlari.forEach((buton, butonIndex) => {
+                        const aktif = butonIndex === aktifIndex;
+                        buton.classList.toggle("ms-urun-detay-resim-thumb-aktif", aktif);
+                        buton.setAttribute("aria-pressed", aktif.toString());
+                    });
+
+                    thumbOdakTemizle();
+                };
+
+                const modalThumbGuncelle = () => {
+                    modalThumbButonlari.forEach((buton, butonIndex) => {
+                        const aktif = butonIndex === modalAktifIndex;
+                        buton.classList.toggle("ms-urun-detay-resim-modal-thumb-aktif", aktif);
+                        buton.setAttribute("aria-pressed", aktif.toString());
+                    });
+                };
+
+                const konumlariGuncelle = (suruklemeYuzdesi = 0, yon = 0) => {
+                    const oncekiIndex = sar(aktifIndex - 1);
+                    const sonrakiIndex = sar(aktifIndex + 1);
+
+                    slaytlar.forEach((slayt, slaytIndex) => {
+                        let pozisyon = 200;
+                        let gorunur = slaytIndex === aktifIndex;
+
+                        if (slaytIndex === aktifIndex) {
+                            pozisyon = suruklemeYuzdesi;
+                        } else if (yon < 0 && slaytIndex === sonrakiIndex) {
+                            pozisyon = 100 + suruklemeYuzdesi;
+                            gorunur = true;
+                        } else if (yon > 0 && slaytIndex === oncekiIndex) {
+                            pozisyon = -100 + suruklemeYuzdesi;
+                            gorunur = true;
+                        }
+
+                        slayt.style.transform = `translate3d(${pozisyon}%, 0, 0)`;
+                        slayt.classList.toggle("ms-urun-detay-resim-ana-gorunur", gorunur);
+                        slayt.classList.toggle("ms-urun-detay-resim-ana-aktif", slaytIndex === aktifIndex);
+                    });
+
+                    if (suruklemeYuzdesi === 0 && yon === 0) {
+                        videoDurumlariniGuncelle(slaytlar, aktifIndex);
+                    }
+                };
+
+                const anaKonumuSifirla = () => {
+                    track.classList.add("ms-urun-detay-resim-gecis-hazirlaniyor");
+                    konumlariGuncelle(0, 0);
+                    track.offsetHeight;
+                    track.classList.remove("ms-urun-detay-resim-gecis-hazirlaniyor");
+                };
+
+                const anaSuruklemeTemizle = (event, tiklamayiEngelle = false, konumuSifirla = true) => {
+                    suruklemeTakipEdiliyor = false;
+                    surukleniyor = false;
+                    suruklemeYonu = "";
+                    suruklemeFarki = 0;
+                    tiklamaEngellenecek = tiklamayiEngelle;
+                    anaKapsayici.classList.remove("ms-urun-detay-resim-surukleniyor");
+
+                    if (konumuSifirla) {
+                        anaKonumuSifirla();
+                    }
+
+                    if (event?.pointerId !== undefined && anaKapsayici.hasPointerCapture?.(event.pointerId)) {
+                        anaKapsayici.releasePointerCapture(event.pointerId);
+                    }
+                };
+
+                const modalAktifResimYerlesimi = () => {
+                    const aktifSlayt = modalSlaytlar[modalAktifIndex];
+
+                    if (!aktifSlayt || videoSlaytMi(aktifSlayt) || !aktifSlayt.naturalWidth || !aktifSlayt.naturalHeight) {
+                        return null;
+                    }
+
+                    const trackRect = modalTrack.getBoundingClientRect();
+
+                    if (!trackRect.width || !trackRect.height) {
+                        return null;
+                    }
+
+                    const resimOrani = aktifSlayt.naturalWidth / aktifSlayt.naturalHeight;
+                    const trackOrani = trackRect.width / trackRect.height;
+                    let genislik = trackRect.width;
+                    let yukseklik = trackRect.height;
+
+                    if (resimOrani > trackOrani) {
+                        yukseklik = genislik / resimOrani;
+                    } else {
+                        genislik = yukseklik * resimOrani;
+                    }
+
+                    return {
+                        alanGenislik: trackRect.width,
+                        alanYukseklik: trackRect.height,
+                        genislik,
+                        yukseklik
+                    };
+                };
+
+                const modalPanSinirla = () => {
+                    if (modalZoom <= 1.02) {
+                        modalPanX = 0;
+                        modalPanY = 0;
+                        return;
+                    }
+
+                    const yerlesim = modalAktifResimYerlesimi();
+
+                    if (!yerlesim) {
+                        modalPanX = 0;
+                        modalPanY = 0;
+                        return;
+                    }
+
+                    const maksimumX = Math.max(0, ((yerlesim.genislik * modalZoom) - yerlesim.alanGenislik) / 2);
+                    const maksimumY = Math.max(0, ((yerlesim.yukseklik * modalZoom) - yerlesim.alanYukseklik) / 2);
+
+                    modalPanX = Math.min(maksimumX, Math.max(-maksimumX, modalPanX));
+                    modalPanY = Math.min(maksimumY, Math.max(-maksimumY, modalPanY));
+                };
+
+                const modalKonumlariGuncelle = (suruklemeYuzdesi = 0, yon = 0) => {
+                    const oncekiIndex = sar(modalAktifIndex - 1);
+                    const sonrakiIndex = sar(modalAktifIndex + 1);
+
+                    modalSlaytlar.forEach((slayt, slaytIndex) => {
+                        let pozisyon = 200;
+                        let gorunur = slaytIndex === modalAktifIndex;
+
+                        if (slaytIndex === modalAktifIndex) {
+                            pozisyon = suruklemeYuzdesi;
+                        } else if (yon < 0 && slaytIndex === sonrakiIndex) {
+                            pozisyon = 100 + suruklemeYuzdesi;
+                            gorunur = true;
+                        } else if (yon > 0 && slaytIndex === oncekiIndex) {
+                            pozisyon = -100 + suruklemeYuzdesi;
+                            gorunur = true;
+                        }
+
+                        const zoom = slaytIndex === modalAktifIndex ? modalZoom : 1;
+                        const panX = slaytIndex === modalAktifIndex ? modalPanX : 0;
+                        const panY = slaytIndex === modalAktifIndex ? modalPanY : 0;
+                        slayt.style.transform = `translate3d(calc(${pozisyon}% + ${panX}px), ${panY}px, 0) scale(${zoom})`;
+                        slayt.classList.toggle("ms-urun-detay-resim-modal-gorsel-gorunur", gorunur);
+                    });
+
+                    if (suruklemeYuzdesi === 0 && yon === 0) {
+                        videoDurumlariniGuncelle(modalSlaytlar, modalAktifIndex);
+                        modalThumbGuncelle();
+                    }
+                };
+
+                const modalZoomUygula = () => {
+                    modalPanSinirla();
+                    modalViewport?.classList.toggle("ms-urun-detay-resim-modal-zoomlu", modalZoom > 1.02);
+                    modalKonumlariGuncelle(0, 0);
+                };
+
+                const modalZoomDegeriniAyarla = (zoomDegeri) => {
+                    modalZoom = Math.min(3, Math.max(1, zoomDegeri));
+
+                    if (modalZoom <= 1.02) {
+                        modalZoom = 1;
+                        modalPanX = 0;
+                        modalPanY = 0;
+                    }
+
+                    modalZoomUygula();
+                };
+
+                const modalZoomSifirla = () => {
+                    modalZoom = 1;
+                    modalPanX = 0;
+                    modalPanY = 0;
+                    modalZoomUygula();
+                };
+
+                const dokunmaMesafesiAl = (event) => {
+                    if (!event.touches || event.touches.length < 2) {
+                        return 0;
+                    }
+
+                    const ilkDokunma = event.touches[0];
+                    const ikinciDokunma = event.touches[1];
+                    const xFarki = ikinciDokunma.clientX - ilkDokunma.clientX;
+                    const yFarki = ikinciDokunma.clientY - ilkDokunma.clientY;
+                    return Math.hypot(xFarki, yFarki);
+                };
+
+                const goster = (index) => {
+                    const hedefIndex = sar(index);
+
+                    if (hedefIndex === aktifIndex || gecisYapiliyor) {
+                        return;
+                    }
+
+                    let fark = hedefIndex - aktifIndex;
+
+                    if (Math.abs(fark) > slaytlar.length / 2) {
+                        fark += fark > 0 ? -slaytlar.length : slaytlar.length;
+                    }
+
+                    const yon = fark > 0 ? -1 : 1;
+                    const hedefSurukleme = fark > 0 ? -100 : 100;
+                    gecisYapiliyor = true;
+                    window.clearTimeout(gecisZamani);
+                    track.classList.add("ms-urun-detay-resim-gecis-hazirlaniyor");
+                    konumlariGuncelle(0, yon);
+                    track.offsetHeight;
+                    track.classList.remove("ms-urun-detay-resim-gecis-hazirlaniyor");
+
+                    window.requestAnimationFrame(() => {
+                        konumlariGuncelle(hedefSurukleme, yon);
+                    });
+
+                    gecisZamani = window.setTimeout(() => {
+                        aktifIndex = hedefIndex;
+                        gecisYapiliyor = false;
+                        track.classList.add("ms-urun-detay-resim-gecis-hazirlaniyor");
+                        sayfaScrollKoruyarak(() => {
+                            konumlariGuncelle(0, 0);
+                            aktifResimOraniniGuncelle();
+                        });
+                        zoomKapat();
+                        thumbGuncelle();
+                        if (modal?.classList.contains("ms-ornek-modal-acik")) {
+                            modalAktifIndex = aktifIndex;
+                            modalKonumlariGuncelle(0, 0);
+                        }
+                        track.offsetHeight;
+                        track.classList.remove("ms-urun-detay-resim-gecis-hazirlaniyor");
+                    }, 300);
+                };
+
+                const surukleyerekGoster = (fark) => {
+                    const yon = fark > 0 ? -1 : 1;
+                    const hedefIndex = sar(aktifIndex + fark);
+                    gecisYapiliyor = true;
+                    window.clearTimeout(gecisZamani);
+                    konumlariGuncelle(fark > 0 ? -100 : 100, yon);
+
+                    gecisZamani = window.setTimeout(() => {
+                        aktifIndex = hedefIndex;
+                        gecisYapiliyor = false;
+                        track.classList.add("ms-urun-detay-resim-gecis-hazirlaniyor");
+                        sayfaScrollKoruyarak(() => {
+                            konumlariGuncelle(0, 0);
+                            aktifResimOraniniGuncelle();
+                        });
+                        zoomKapat();
+                        thumbGuncelle();
+                        if (modal?.classList.contains("ms-ornek-modal-acik")) {
+                            modalAktifIndex = aktifIndex;
+                            modalKonumlariGuncelle(0, 0);
+                        }
+                        track.offsetHeight;
+                        track.classList.remove("ms-urun-detay-resim-gecis-hazirlaniyor");
+                    }, 300);
+                };
+
+                const modalGoster = (index) => {
+                    const hedefIndex = sar(index);
+
+                    if (!modal?.classList.contains("ms-ornek-modal-acik") || hedefIndex === modalAktifIndex || modalGecisYapiliyor) {
+                        return;
+                    }
+
+                    let fark = hedefIndex - modalAktifIndex;
+
+                    if (Math.abs(fark) > modalSlaytlar.length / 2) {
+                        fark += fark > 0 ? -modalSlaytlar.length : modalSlaytlar.length;
+                    }
+
+                    const yon = fark > 0 ? -1 : 1;
+                    const hedefSurukleme = fark > 0 ? -100 : 100;
+                    modalGecisYapiliyor = true;
+                    modalZoomSifirla();
+                    window.clearTimeout(modalGecisZamani);
+                    modalTrack.classList.add("ms-urun-detay-resim-modal-gecis-hazirlaniyor");
+                    modalKonumlariGuncelle(0, yon);
+                    modalTrack.offsetHeight;
+                    modalTrack.classList.remove("ms-urun-detay-resim-modal-gecis-hazirlaniyor");
+
+                    window.requestAnimationFrame(() => {
+                        modalKonumlariGuncelle(hedefSurukleme, yon);
+                    });
+
+                    modalGecisZamani = window.setTimeout(() => {
+                        modalAktifIndex = hedefIndex;
+                        modalGecisYapiliyor = false;
+                        modalTrack.classList.add("ms-urun-detay-resim-modal-gecis-hazirlaniyor");
+                        modalKonumlariGuncelle(0, 0);
+                        modalThumbGuncelle();
+                        modalTrack.offsetHeight;
+                        modalTrack.classList.remove("ms-urun-detay-resim-modal-gecis-hazirlaniyor");
+                    }, 300);
+                };
+
+                const modalSurukleyerekGoster = (fark) => {
+                    const yon = fark > 0 ? -1 : 1;
+                    const hedefIndex = sar(modalAktifIndex + fark);
+                    modalGecisYapiliyor = true;
+                    modalZoomSifirla();
+                    window.clearTimeout(modalGecisZamani);
+                    modalKonumlariGuncelle(fark > 0 ? -100 : 100, yon);
+
+                    modalGecisZamani = window.setTimeout(() => {
+                        modalAktifIndex = hedefIndex;
+                        modalGecisYapiliyor = false;
+                        modalTrack.classList.add("ms-urun-detay-resim-modal-gecis-hazirlaniyor");
+                        modalKonumlariGuncelle(0, 0);
+                        modalThumbGuncelle();
+                        modalTrack.offsetHeight;
+                        modalTrack.classList.remove("ms-urun-detay-resim-modal-gecis-hazirlaniyor");
+                    }, 300);
+                };
+
+                const sayfaPaylasimLinkiAl = () => {
+                    const paylasimLinki = new URL(window.location.href);
+                    paylasimLinki.hash = "";
+                    return paylasimLinki.href;
+                };
+
+                const paylasimLinkiniKopyala = async (paylasLinki) => {
+                    if (navigator.clipboard) {
+                        await navigator.clipboard.writeText(paylasLinki);
+                        return;
+                    }
+
+                    const geciciInput = document.createElement("input");
+                    geciciInput.value = paylasLinki;
+                    geciciInput.setAttribute("readonly", "");
+                    geciciInput.style.position = "fixed";
+                    geciciInput.style.opacity = "0";
+                    document.body.appendChild(geciciInput);
+                    geciciInput.select();
+                    document.execCommand("copy");
+                    geciciInput.remove();
+                };
+
+                const modalPaylasButonuMetniniGuncelle = (metin) => {
+                    if (!modalPaylasButonu) {
+                        return;
+                    }
+
+                    const oncekiMetin = modalPaylasButonu.textContent;
+                    modalPaylasButonu.textContent = metin;
+                    window.setTimeout(() => {
+                        modalPaylasButonu.textContent = oncekiMetin;
+                    }, 1300);
+                };
+
+                const modalAktifResmiPaylas = async () => {
+                    const paylasLinki = sayfaPaylasimLinkiAl();
+                    const paylasBaslik = document.querySelector(".ms-urun-detay-baslik")?.textContent?.trim() || "Misharitalia ürünü";
+
+                    try {
+                        if (navigator.share) {
+                            await navigator.share({
+                                title: paylasBaslik,
+                                text: paylasBaslik,
+                                url: paylasLinki
+                            });
+                        } else {
+                            await paylasimLinkiniKopyala(paylasLinki);
+                            modalPaylasButonuMetniniGuncelle("Kopyalandı");
+                        }
+                    } catch (error) {
+                        if (error?.name === "AbortError") {
+                            return;
+                        }
+
+                        await paylasimLinkiniKopyala(paylasLinki);
+                        modalPaylasButonuMetniniGuncelle("Kopyalandı");
+                    }
+                };
+
+                const modalAc = () => {
+                    if (!modal) {
+                        return;
+                    }
+
+                    const guncelAktifIndex = slaytlar.findIndex((slayt) => slayt.classList.contains("ms-urun-detay-resim-ana-aktif"));
+
+                    if (guncelAktifIndex >= 0) {
+                        aktifIndex = guncelAktifIndex;
+                    }
+
+                    modalAktifIndex = aktifIndex;
+                    modalZoomSifirla();
+                    modalOncekiOdak = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+                    modal.classList.add("ms-ornek-modal-acik");
+                    modal.setAttribute("aria-hidden", "false");
+                    modalTrack.classList.add("ms-urun-detay-resim-modal-gecis-hazirlaniyor");
+                    modalKonumlariGuncelle(0, 0);
+                    modalThumbGuncelle();
+                    modalTrack.offsetHeight;
+                    modalTrack.classList.remove("ms-urun-detay-resim-modal-gecis-hazirlaniyor");
+                    oncekiBodyOverflow = document.body.style.overflow;
+                    oncekiHtmlOverflow = document.documentElement.style.overflow;
+                    document.body.style.overflow = "hidden";
+                    document.documentElement.style.overflow = "hidden";
+                };
+
+                const modalKapat = () => {
+                    if (!modal) {
+                        return;
+                    }
+
+                    if (document.activeElement instanceof HTMLElement && modal.contains(document.activeElement)) {
+                        document.activeElement.blur();
+                    }
+
+                    modal.classList.remove("ms-ornek-modal-acik");
+                    modal.setAttribute("aria-hidden", "true");
+                    modalZoomSifirla();
+                    videoDurumlariniGuncelle(modalSlaytlar, -1);
+                    document.body.style.overflow = oncekiBodyOverflow;
+                    document.documentElement.style.overflow = oncekiHtmlOverflow;
+
+                    if (modalOncekiOdak && document.contains(modalOncekiOdak)) {
+                        modalOncekiOdak.focus({ preventScroll: true });
+                    }
+                };
+
+                thumbButonlari.forEach((buton, index) => {
+                    buton.tabIndex = -1;
+
+                    buton.addEventListener("pointerdown", (event) => {
+                        if (event.pointerType !== "mouse" && event.pointerType !== "touch" && event.pointerType !== "pen") {
+                            return;
+                        }
+
+                        event.preventDefault();
+                        thumbOdakTemizle();
+                    });
+
+                    buton.addEventListener("focus", () => {
+                        thumbOdakTemizle();
+                    });
+
+                    buton.addEventListener("click", () => {
+                        thumbOdakTemizle();
+                        goster(index);
+                    });
+                });
+
+                yonButonlari.forEach((buton) => {
+                    buton.addEventListener("click", () => {
+                        goster(aktifIndex + (buton.dataset.msUrunDetayResimYon === "sonraki" ? 1 : -1));
+                    });
+                });
+
+                modalKapaticilar.forEach((kapatici) => {
+                    kapatici.addEventListener("click", modalKapat);
+                });
+
+                modalYonButonlari.forEach((buton) => {
+                    buton.addEventListener("click", (event) => {
+                        event.stopPropagation();
+                        modalGoster(modalAktifIndex + (buton.dataset.msUrunDetayResimModalYon === "sonraki" ? 1 : -1));
+                    });
+                });
+
+                modalThumbButonlari.forEach((buton) => {
+                    buton.addEventListener("click", (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        modalGoster(Number(buton.dataset.msUrunDetayResimModalThumb || 0));
+                    });
+                });
+
+                modalPaylasButonu?.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    modalAktifResmiPaylas();
+                });
+
+                modalViewport?.addEventListener("dragstart", (event) => event.preventDefault());
+
+                modalViewport?.addEventListener("wheel", (event) => {
+                    if (!modal?.classList.contains("ms-ornek-modal-acik") || !window.matchMedia("(min-width: 1024px)").matches) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    const sonrakiZoom = modalZoom + (event.deltaY < 0 ? 0.16 : -0.16);
+                    modalZoomDegeriniAyarla(sonrakiZoom);
+                }, { passive: false });
+
+                modalViewport?.addEventListener("touchstart", (event) => {
+                    if (!modal?.classList.contains("ms-ornek-modal-acik") || event.touches.length < 2) {
+                        return;
+                    }
+
+                    modalPinchAktif = true;
+                    modalPinchBaslangicMesafe = dokunmaMesafesiAl(event);
+                    modalPinchBaslangicZoom = modalZoom;
+                    modalSurukleniyor = false;
+                    modalSuruklemeTuru = "";
+                    modalSuruklemeFarki = 0;
+                    modalViewport.classList.remove("ms-urun-detay-resim-modal-surukleniyor");
+                }, { passive: true });
+
+                modalViewport?.addEventListener("touchmove", (event) => {
+                    if (!modalPinchAktif || event.touches.length < 2 || !modalPinchBaslangicMesafe) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    modalTiklamaEngellenecek = true;
+                    const mesafe = dokunmaMesafesiAl(event);
+                    modalZoomDegeriniAyarla(modalPinchBaslangicZoom * (mesafe / modalPinchBaslangicMesafe));
+                }, { passive: false });
+
+                modalViewport?.addEventListener("touchend", (event) => {
+                    if (!modalPinchAktif || event.touches.length >= 2) {
+                        return;
+                    }
+
+                    modalPinchAktif = false;
+                    modalPinchBaslangicMesafe = 0;
+                }, { passive: true });
+
+                modalViewport?.addEventListener("pointerdown", (event) => {
+                    if (!modal?.classList.contains("ms-ornek-modal-acik") || !anaPointerBaslatilabilir(event) || event.target.closest("video") || modalGecisYapiliyor || modalPinchAktif) {
+                        return;
+                    }
+
+                    const hedefSlayt = event.target.closest("[data-ms-urun-detay-resim-modal-slide]");
+
+                    if (modalZoom > 1.02) {
+                        if (!hedefSlayt || hedefSlayt !== modalSlaytlar[modalAktifIndex]) {
+                            return;
+                        }
+
+                        event.preventDefault();
+                        event.stopPropagation();
+                        modalSurukleniyor = true;
+                        modalSuruklemeTuru = "pan";
+                        modalTiklamaEngellenecek = false;
+                        modalBaslangicX = event.clientX;
+                        modalBaslangicY = event.clientY;
+                        modalPanBaslangicX = modalPanX;
+                        modalPanBaslangicY = modalPanY;
+                        modalSuruklemeFarki = 0;
+                        modalViewport.classList.add("ms-urun-detay-resim-modal-surukleniyor");
+                        modalViewport.setPointerCapture?.(event.pointerId);
+                        return;
+                    }
+
+                    event.preventDefault();
+                    event.stopPropagation();
+                    modalSurukleniyor = true;
+                    modalSuruklemeTuru = "slayt";
+                    modalTiklamaEngellenecek = false;
+                    modalBaslangicX = event.clientX;
+                    modalBaslangicY = event.clientY;
+                    modalSuruklemeFarki = 0;
+                    modalViewport.classList.add("ms-urun-detay-resim-modal-surukleniyor");
+                    modalViewport.setPointerCapture?.(event.pointerId);
+                });
+
+                modalViewport?.addEventListener("pointermove", (event) => {
+                    if (!modalSurukleniyor || modalPinchAktif) {
+                        return;
+                    }
+
+                    if (modalSuruklemeTuru === "pan") {
+                        const panFarkiX = event.clientX - modalBaslangicX;
+                        const panFarkiY = event.clientY - modalBaslangicY;
+                        modalSuruklemeFarki = Math.hypot(panFarkiX, panFarkiY);
+
+                        if (modalSuruklemeFarki > 4) {
+                            modalTiklamaEngellenecek = true;
+                            event.preventDefault();
+                            event.stopPropagation();
+                            modalPanX = modalPanBaslangicX + panFarkiX;
+                            modalPanY = modalPanBaslangicY + panFarkiY;
+                            modalZoomUygula();
+                        }
+
+                        return;
+                    }
+
+                    modalSuruklemeFarki = event.clientX - modalBaslangicX;
+
+                    if (Math.abs(modalSuruklemeFarki) > 6) {
+                        modalTiklamaEngellenecek = true;
+                        event.preventDefault();
+                        event.stopPropagation();
+                        modalZoom = 1;
+                        modalKonumlariGuncelle((modalSuruklemeFarki / modalViewport.clientWidth) * 100, modalSuruklemeFarki < 0 ? -1 : 1);
+                    }
+                });
+
+                const modalSuruklemeyiBitir = (event) => {
+                    if (!modalSurukleniyor) {
+                        return;
+                    }
+
+                    const esik = Math.max(32, (modalViewport?.clientWidth || window.innerWidth) * 0.08);
+                    const kaymaMiktari = Math.abs(modalSuruklemeFarki);
+                    const suruklemeTuru = modalSuruklemeTuru;
+                    modalSurukleniyor = false;
+                    modalSuruklemeTuru = "";
+                    modalViewport?.classList.remove("ms-urun-detay-resim-modal-surukleniyor");
+
+                    if (suruklemeTuru === "pan") {
+                        modalPanSinirla();
+                        modalZoomUygula();
+
+                        if (modalViewport?.hasPointerCapture?.(event.pointerId)) {
+                            modalViewport.releasePointerCapture(event.pointerId);
+                        }
+
+                        modalSuruklemeFarki = 0;
+                        return;
+                    }
+
+                    if (kaymaMiktari < 24 || !modalTiklamaEngellenecek) {
+                        modalKonumlariGuncelle(0, 0);
+
+                        if ((event.pointerType === "touch" || event.pointerType === "pen") && event.target.closest("[data-ms-urun-detay-resim-modal-slide]")) {
+                            const simdi = Date.now();
+
+                            if (simdi - modalSonDokunmaZamani < 320) {
+                                modalZoomDegeriniAyarla(modalZoom > 1 ? 1 : 2.2);
+                                modalTiklamaEngellenecek = true;
+                                modalSonDokunmaZamani = 0;
+                            } else {
+                                modalSonDokunmaZamani = simdi;
+                            }
+                        }
+                    } else if (modalSuruklemeFarki <= -esik) {
+                        modalSurukleyerekGoster(1);
+                    } else if (modalSuruklemeFarki >= esik) {
+                        modalSurukleyerekGoster(-1);
+                    } else {
+                        modalKonumlariGuncelle(0, modalSuruklemeFarki < 0 ? -1 : 1);
+                        window.setTimeout(() => {
+                            modalTrack.classList.add("ms-urun-detay-resim-modal-gecis-hazirlaniyor");
+                            modalKonumlariGuncelle(0, 0);
+                            modalTrack.offsetHeight;
+                            modalTrack.classList.remove("ms-urun-detay-resim-modal-gecis-hazirlaniyor");
+                        }, 300);
+                    }
+
+                    if (modalViewport?.hasPointerCapture?.(event.pointerId)) {
+                        modalViewport.releasePointerCapture(event.pointerId);
+                    }
+
+                    modalSuruklemeFarki = 0;
+                };
+
+                modalViewport?.addEventListener("pointerup", modalSuruklemeyiBitir);
+                modalViewport?.addEventListener("pointercancel", modalSuruklemeyiBitir);
+                modalViewport?.addEventListener("lostpointercapture", modalSuruklemeyiBitir);
+
+                modalViewport?.addEventListener("click", (event) => {
+                    if (event.target.closest("video")) {
+                        return;
+                    }
+
+                    if (modalTiklamaEngellenecek) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        modalTiklamaEngellenecek = false;
+                        return;
+                    }
+
+                    if (event.target === modalViewport) {
+                        modalKapat();
+                        return;
+                    }
+
+                    if (modalZoom > 1.02 && event.target.closest("[data-ms-urun-detay-resim-modal-slide]") && window.matchMedia("(max-width: 1023px)").matches) {
+                        const simdi = Date.now();
+
+                        if (simdi - modalSonDokunmaZamani < 320) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            modalZoomDegeriniAyarla(1);
+                            modalSonDokunmaZamani = 0;
+                        } else {
+                            modalSonDokunmaZamani = simdi;
+                        }
+                    }
+                });
+
+                document.addEventListener("keydown", (event) => {
+                    if (event.key === "Escape" && modal?.classList.contains("ms-ornek-modal-acik")) {
+                        modalKapat();
+                        return;
+                    }
+
+                    if (!modal?.classList.contains("ms-ornek-modal-acik")) {
+                        return;
+                    }
+
+                    if (event.key === "ArrowRight") {
+                        modalGoster(modalAktifIndex + 1);
+                    } else if (event.key === "ArrowLeft") {
+                        modalGoster(modalAktifIndex - 1);
+                    }
+                });
+
+                anaKapsayici.addEventListener("dragstart", (event) => event.preventDefault());
+                anaKapsayici.addEventListener("pointerenter", zoomGuncelle);
+                anaKapsayici.addEventListener("pointermove", zoomGuncelle);
+                anaKapsayici.addEventListener("pointerleave", zoomKapat);
+
+                anaKapsayici.addEventListener("pointerdown", (event) => {
+                    if (event.pointerType === "touch" || suruklemeTakipEdiliyor || !anaPointerBaslatilabilir(event) || event.target.closest("video") || event.target.closest("[data-ms-urun-video]") || event.target.closest("[data-ms-urun-detay-resim-yon]") || gecisYapiliyor) {
+                        return;
+                    }
+
+                    zoomKapat();
+                    suruklemeTakipEdiliyor = true;
+                    surukleniyor = event.pointerType === "mouse";
+                    tiklamaEngellenecek = false;
+                    baslangicX = event.clientX;
+                    baslangicY = event.clientY;
+                    suruklemeFarki = 0;
+                    suruklemeYonu = "";
+
+                    if (event.pointerType === "mouse") {
+                        suruklemeYonu = "yatay";
+                        anaKapsayici.classList.add("ms-urun-detay-resim-surukleniyor");
+                        anaKapsayici.setPointerCapture?.(event.pointerId);
+                    }
+                });
+
+                anaKapsayici.addEventListener("pointermove", (event) => {
+                    if (!suruklemeTakipEdiliyor) {
+                        return;
+                    }
+
+                    const yatayFark = event.clientX - baslangicX;
+                    const dikeyFark = event.clientY - baslangicY;
+                    const yatayMesafe = Math.abs(yatayFark);
+                    const dikeyMesafe = Math.abs(dikeyFark);
+
+                    if (!suruklemeYonu && (yatayMesafe > 8 || dikeyMesafe > 8)) {
+                        if (dikeyMesafe > 10 && dikeyMesafe >= yatayMesafe * 1.25) {
+                            anaSuruklemeTemizle(event, true, false);
+                            return;
+                        }
+
+                        if (yatayMesafe > 12 && yatayMesafe >= dikeyMesafe * 1.15) {
+                            suruklemeYonu = "yatay";
+                            surukleniyor = true;
+                            anaKapsayici.classList.add("ms-urun-detay-resim-surukleniyor");
+                            anaKapsayici.setPointerCapture?.(event.pointerId);
+                        } else {
+                            return;
+                        }
+                    }
+
+                    if (suruklemeYonu !== "yatay") {
+                        return;
+                    }
+
+                    suruklemeFarki = yatayFark;
+
+                    if (Math.abs(suruklemeFarki) > 6) {
+                        tiklamaEngellenecek = true;
+                        konumlariGuncelle((suruklemeFarki / anaKapsayici.clientWidth) * 100, suruklemeFarki < 0 ? -1 : 1);
+                    }
+
+                    event.preventDefault();
+                });
+
+                const suruklemeyiBitir = (event) => {
+                    if (!suruklemeTakipEdiliyor) {
+                        return;
+                    }
+
+                    if (event.type === "pointercancel") {
+                        anaSuruklemeTemizle(event, true, suruklemeYonu === "yatay");
+                        return;
+                    }
+
+                    const esik = Math.max(32, anaKapsayici.clientWidth * 0.08);
+                    const yataySuruklendi = suruklemeYonu === "yatay";
+
+                    if (!yataySuruklendi) {
+                        const bitisX = Number.isFinite(event.clientX) ? event.clientX : baslangicX;
+                        const bitisY = Number.isFinite(event.clientY) ? event.clientY : baslangicY;
+                        const hareketEdildi = Math.abs(bitisX - baslangicX) > 6 || Math.abs(bitisY - baslangicY) > 6;
+                        anaSuruklemeTemizle(event, hareketEdildi, false);
+                        return;
+                    }
+
+                    const yatayKaymaMiktari = Math.abs(suruklemeFarki);
+                    surukleniyor = false;
+                    suruklemeTakipEdiliyor = false;
+                    suruklemeYonu = "";
+                    anaKapsayici.classList.remove("ms-urun-detay-resim-surukleniyor");
+
+                    if (yatayKaymaMiktari < 24 || !tiklamaEngellenecek) {
+                        konumlariGuncelle(0, 0);
+                    } else if (suruklemeFarki <= -esik) {
+                        surukleyerekGoster(1);
+                    } else if (suruklemeFarki >= esik) {
+                        surukleyerekGoster(-1);
+                    } else {
+                        konumlariGuncelle(0, suruklemeFarki < 0 ? -1 : 1);
+                        window.setTimeout(() => {
+                            track.classList.add("ms-urun-detay-resim-gecis-hazirlaniyor");
+                            konumlariGuncelle(0, 0);
+                            track.offsetHeight;
+                            track.classList.remove("ms-urun-detay-resim-gecis-hazirlaniyor");
+                        }, 300);
+                    }
+
+                    if (anaKapsayici.hasPointerCapture?.(event.pointerId)) {
+                        anaKapsayici.releasePointerCapture(event.pointerId);
+                    }
+
+                    suruklemeFarki = 0;
+                };
+
+                anaKapsayici.addEventListener("touchstart", (event) => {
+                    if (suruklemeTakipEdiliyor || event.touches.length !== 1 || event.target.closest("video") || event.target.closest("[data-ms-urun-video]") || event.target.closest("[data-ms-urun-detay-resim-yon]") || gecisYapiliyor) {
+                        return;
+                    }
+
+                    const dokunma = event.touches[0];
+                    anaTouchSuruklemeAktif = true;
+                    zoomKapat();
+                    suruklemeTakipEdiliyor = true;
+                    surukleniyor = false;
+                    tiklamaEngellenecek = false;
+                    baslangicX = dokunma.clientX;
+                    baslangicY = dokunma.clientY;
+                    suruklemeFarki = 0;
+                    suruklemeYonu = "";
+                }, { passive: true });
+
+                anaKapsayici.addEventListener("touchmove", (event) => {
+                    if (!anaTouchSuruklemeAktif || !suruklemeTakipEdiliyor || event.touches.length !== 1) {
+                        return;
+                    }
+
+                    const dokunma = event.touches[0];
+                    const yatayFark = dokunma.clientX - baslangicX;
+                    const dikeyFark = dokunma.clientY - baslangicY;
+                    const yatayMesafe = Math.abs(yatayFark);
+                    const dikeyMesafe = Math.abs(dikeyFark);
+
+                    if (!suruklemeYonu && (yatayMesafe > 8 || dikeyMesafe > 8)) {
+                        if (dikeyMesafe > 10 && dikeyMesafe >= yatayMesafe * 1.25) {
+                            anaTouchSuruklemeAktif = false;
+                            anaSuruklemeTemizle(null, true, false);
+                            return;
+                        }
+
+                        if (yatayMesafe > 12 && yatayMesafe >= dikeyMesafe * 1.15) {
+                            suruklemeYonu = "yatay";
+                            surukleniyor = true;
+                            anaKapsayici.classList.add("ms-urun-detay-resim-surukleniyor");
+                        } else {
+                            return;
+                        }
+                    }
+
+                    if (suruklemeYonu !== "yatay") {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    suruklemeFarki = yatayFark;
+
+                    if (Math.abs(suruklemeFarki) > 6) {
+                        tiklamaEngellenecek = true;
+                        konumlariGuncelle((suruklemeFarki / anaKapsayici.clientWidth) * 100, suruklemeFarki < 0 ? -1 : 1);
+                    }
+                }, { passive: false });
+
+                anaKapsayici.addEventListener("touchend", (event) => {
+                    if (!anaTouchSuruklemeAktif) {
+                        return;
+                    }
+
+                    anaTouchSuruklemeAktif = false;
+                    suruklemeyiBitir(event);
+                }, { passive: true });
+
+                anaKapsayici.addEventListener("touchcancel", (event) => {
+                    if (!anaTouchSuruklemeAktif) {
+                        return;
+                    }
+
+                    const yataySuruklemeVardi = suruklemeYonu === "yatay";
+                    anaTouchSuruklemeAktif = false;
+
+                    if (yataySuruklemeVardi) {
+                        suruklemeyiBitir(event);
+                        return;
+                    }
+
+                    anaSuruklemeTemizle(event, true, false);
+                }, { passive: true });
+
+                const pointerSuruklemeyiBitir = (event) => {
+                    if (event.pointerType === "touch") {
+                        return;
+                    }
+
+                    suruklemeyiBitir(event);
+                };
+
+                anaKapsayici.addEventListener("pointerup", pointerSuruklemeyiBitir);
+                anaKapsayici.addEventListener("pointercancel", pointerSuruklemeyiBitir);
+                anaKapsayici.addEventListener("lostpointercapture", pointerSuruklemeyiBitir);
+                anaKapsayici.addEventListener("click", (event) => {
+                    if (event.target.closest("video") || event.target.closest("[data-ms-urun-video]") || event.target.closest("[data-ms-urun-detay-resim-yon]")) {
+                        return;
+                    }
+
+                    if (tiklamaEngellenecek) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        tiklamaEngellenecek = false;
+                        return;
+                    }
+
+                    modalAc();
+                });
+
+                konumlariGuncelle(0, 0);
+                modalKonumlariGuncelle(0, 0);
+                aktifResimOraniniGuncelle();
+                thumbGuncelle();
+                modalThumbGuncelle();
+            });
+        })();
+
+        (() => {
+            let aktifKalpZamani;
+            let aktifKalpButonu = null;
+
+            const favoriIkonuOlustur = (src) => {
+                const ikon = document.createElement("img");
+                ikon.src = src;
+                ikon.alt = "";
+                ikon.setAttribute("aria-hidden", "true");
+                return ikon;
+            };
+
+            const ekranAnimasyonuOlustur = (aktif) => {
+                const kalp = document.createElement("span");
+                kalp.className = "ms-urun-favori-ekran-kalp";
+                kalp.appendChild(favoriIkonuOlustur(aktif ? "/ikons/kalp.svg" : "/ikons/kirik-kalp.svg"));
+                Object.assign(kalp.style, {
+                    position: "fixed",
+                    left: "50%",
+                    top: "50%",
+                    zIndex: "9999",
+                    width: "clamp(86px, 12vw, 150px)",
+                    height: "clamp(86px, 12vw, 150px)",
+                    pointerEvents: "none"
+                });
+                document.body.appendChild(kalp);
+                kalp.querySelector("img").style.cssText = "width:100%;height:100%;object-fit:contain;";
+                const animasyon = kalp.animate([
+                    { opacity: 0, transform: "translate3d(-50%, -50%, 0) scale(0.18)" },
+                    { opacity: 1, transform: "translate3d(-50%, -50%, 0) scale(0.92)", offset: 0.34 },
+                    { opacity: 0, transform: "translate3d(-50%, -50%, 0) scale(1.55)" }
+                ], { duration: 780, easing: "ease-out", fill: "forwards" });
+                animasyon.finished.finally(() => kalp.remove());
+            };
+
+            const butonKalpOlustur = () => {
+                if (!aktifKalpButonu) {
+                    return;
+                }
+
+                const kalp = document.createElement("span");
+                kalp.className = "ms-urun-detay-favori-buton-kalp";
+                kalp.appendChild(favoriIkonuOlustur("/ikons/kalp.svg"));
+                Object.assign(kalp.style, {
+                    position: "absolute",
+                    right: "-6px",
+                    top: "-8px",
+                    zIndex: "3",
+                    width: "20px",
+                    height: "20px",
+                    pointerEvents: "none"
+                });
+                aktifKalpButonu.appendChild(kalp);
+                kalp.querySelector("img").style.cssText = "width:100%;height:100%;object-fit:contain;";
+                const animasyon = kalp.animate([
+                    { opacity: 0, transform: "translate3d(0, 0, 0) scale(0.2)" },
+                    { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)", offset: 0.32 },
+                    { opacity: 0, transform: "translate3d(0, 0, 0) scale(1.75)" }
+                ], { duration: 720, easing: "ease-out", fill: "forwards" });
+                animasyon.finished.finally(() => kalp.remove());
+            };
+
+            document.querySelectorAll(".ms-urun-detay-favori").forEach((buton) => {
+                if (buton.dataset.msUrunDetayFavoriHazir === "true") {
+                    return;
+                }
+
+                buton.dataset.msUrunDetayFavoriHazir = "true";
+                buton.style.position = "relative";
+
+                buton.addEventListener("click", () => {
+                    const aktif = !buton.classList.contains("ms-urun-detay-favori-aktif");
+                    document.querySelectorAll(".ms-urun-detay-favori").forEach((favoriButonu) => {
+                        favoriButonu.classList.toggle("ms-urun-detay-favori-aktif", aktif);
+                        favoriButonu.setAttribute("aria-pressed", aktif ? "true" : "false");
+                        const favoriIkonu = favoriButonu.querySelector(".ms-urun-detay-favori-ikon");
+
+                        if (favoriIkonu) {
+                            favoriIkonu.src = aktif ? "/ikons/kalp.svg" : "/ikons/favorite.svg";
+                        }
+                        favoriButonu.setAttribute("aria-label", aktif ? "Favorilerden çıkar" : "Favorilere ekle");
+                    });
+
+                    ekranAnimasyonuOlustur(aktif);
+
+                    window.clearInterval(aktifKalpZamani);
+                    aktifKalpButonu = aktif ? buton : null;
+
+                    if (aktif) {
+                        butonKalpOlustur();
+                        aktifKalpZamani = window.setInterval(butonKalpOlustur, 1150);
+                    }
+                });
+            });
+
+            document.querySelectorAll("[data-ms-urun-detay-koleksiyon]").forEach((buton) => {
+                if (buton.dataset.msUrunDetayKoleksiyonHazir === "true") {
+                    return;
+                }
+
+                buton.dataset.msUrunDetayKoleksiyonHazir = "true";
+
+                buton.addEventListener("click", () => {
+                    const aktif = !buton.classList.contains("ms-urun-detay-koleksiyon-aktif");
+                    document.querySelectorAll("[data-ms-urun-detay-koleksiyon]").forEach((koleksiyonButonu) => {
+                        koleksiyonButonu.classList.toggle("ms-urun-detay-koleksiyon-aktif", aktif);
+                        koleksiyonButonu.setAttribute("aria-pressed", aktif ? "true" : "false");
+                        koleksiyonButonu.setAttribute("aria-label", aktif ? "Koleksiyondan çıkar" : "Koleksiyona ekle");
+                    });
+                });
+            });
+        })();
+
+        (() => {
+            document.querySelectorAll('a[href="#urun-tum-ozellikleri"]').forEach((baglanti) => {
+                baglanti.addEventListener("click", (event) => {
+                    const hedef = document.querySelector(baglanti.getAttribute("href"));
+                    if (!hedef) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    hedef.scrollIntoView({ behavior: "smooth", block: "start" });
+                });
+            });
+        })();
+
+        (() => {
+            const buton = document.querySelector("[data-ms-urun-detay-daha-fazla]");
+            const ekDetay = document.querySelector("[data-ms-urun-detay-ek-detay]");
+
+            if (!buton || !ekDetay) {
+                return;
+            }
+
+            buton.addEventListener("click", () => {
+                const acik = buton.getAttribute("aria-expanded") === "true";
+                const yeniDurum = !acik;
+                buton.setAttribute("aria-expanded", yeniDurum ? "true" : "false");
+                ekDetay.hidden = !yeniDurum;
+                const metin = buton.querySelector("span");
+                if (metin) {
+                    metin.textContent = yeniDurum ? "DAHA AZ GÖSTER" : "DAHA FAZLA GÖSTER";
+                }
+            });
+        })();
+
+        (() => {
+            const mobilSabitAksiyon = document.querySelector(".ms-urun-detay-mobil-sabit-aksiyon");
+            const modal = document.querySelector("[data-ms-urun-paylas-modal]");
+            const acButonlari = document.querySelectorAll("[data-ms-urun-paylas-ac]");
+            const kapaticilar = document.querySelectorAll("[data-ms-urun-paylas-kapat]");
+            const kopyalaButonu = document.querySelector("[data-ms-urun-paylas-kopyala]");
+            const whatsappLinki = document.querySelector("[data-ms-urun-paylas-whatsapp]");
+            const facebookLinki = document.querySelector("[data-ms-urun-paylas-facebook]");
+            const pinterestLinki = document.querySelector("[data-ms-urun-paylas-pinterest]");
+            const xLinki = document.querySelector("[data-ms-urun-paylas-x]");
+            let oncekiBodyOverflow = "";
+            let oncekiOdak = null;
+
+            if (!modal) {
+                return;
+            }
+
+            const mobilSabitYuksekligiGuncelle = () => {
+                if (!mobilSabitAksiyon) {
+                    return;
+                }
+
+                const yukseklik = Math.ceil(mobilSabitAksiyon.getBoundingClientRect().height);
+                document.documentElement.style.setProperty("--ms-urun-detay-mobil-sabit-yukseklik", `${yukseklik}px`);
+            };
+
+            mobilSabitYuksekligiGuncelle();
+            window.addEventListener("resize", mobilSabitYuksekligiGuncelle);
+            if (window.ResizeObserver && mobilSabitAksiyon) {
+                new ResizeObserver(mobilSabitYuksekligiGuncelle).observe(mobilSabitAksiyon);
+            }
+
+            const urunPaylasimMetni = document.querySelector(".ms-urun-detay-baslik")?.textContent?.trim() || document.title;
+            const paylasimUrl = encodeURIComponent(window.location.href);
+            const paylasimGorseli = encodeURIComponent(document.querySelector(".ms-urun-detay-resim-ana")?.getAttribute("src") || "");
+            whatsappLinki?.setAttribute("href", `https://wa.me/?text=${encodeURIComponent(urunPaylasimMetni)}%20${paylasimUrl}`);
+            facebookLinki?.setAttribute("href", `https://www.facebook.com/sharer/sharer.php?u=${paylasimUrl}`);
+            pinterestLinki?.setAttribute("href", `https://www.pinterest.com/pin/create/button/?url=${paylasimUrl}&media=${paylasimGorseli}&description=${encodeURIComponent(urunPaylasimMetni)}`);
+            xLinki?.setAttribute("href", `https://x.com/intent/tweet?text=${encodeURIComponent(urunPaylasimMetni)}&url=${paylasimUrl}`);
+
+            const modalAc = () => {
+                mobilSabitYuksekligiGuncelle();
+                oncekiOdak = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+                oncekiBodyOverflow = document.body.style.overflow;
+                document.body.style.overflow = "hidden";
+                document.documentElement.style.overflow = "hidden";
+                modal.classList.add("ms-ornek-modal-acik");
+                modal.setAttribute("aria-hidden", "false");
+            };
+
+            const modalKapat = () => {
+                if (document.activeElement instanceof HTMLElement && modal.contains(document.activeElement)) {
+                    document.activeElement.blur();
+                }
+
+                modal.classList.remove("ms-ornek-modal-acik");
+                modal.setAttribute("aria-hidden", "true");
+                document.body.style.overflow = oncekiBodyOverflow === "hidden" ? "" : oncekiBodyOverflow;
+                document.documentElement.style.overflow = "";
+
+                if (oncekiOdak && document.contains(oncekiOdak)) {
+                    oncekiOdak.focus({ preventScroll: true });
+                }
+            };
+
+            acButonlari.forEach((buton) => {
+                buton.addEventListener("click", modalAc);
+            });
+
+            kapaticilar.forEach((buton) => {
+                buton.addEventListener("click", modalKapat);
+            });
+
+            kopyalaButonu?.addEventListener("click", async () => {
+                const paylasLinki = window.location.href;
+                try {
+                    await navigator.clipboard.writeText(paylasLinki);
+                    kopyalaButonu.querySelector("span:last-child").textContent = "Bağlantı Kopyalandı";
+                } catch {
+                    const geciciInput = document.createElement("input");
+                    geciciInput.value = paylasLinki;
+                    document.body.appendChild(geciciInput);
+                    geciciInput.select();
+                    document.execCommand("copy");
+                    geciciInput.remove();
+                    kopyalaButonu.querySelector("span:last-child").textContent = "Bağlantı Kopyalandı";
+                }
+            });
+
+            document.addEventListener("keydown", (event) => {
+                if (event.key === "Escape" && modal.classList.contains("ms-ornek-modal-acik")) {
+                    modalKapat();
+                }
+            });
+        })();
+    </script>
+
+    @* B9 canlı veri script'i: renk seçimi SSR navigasyonu (?color=) + sepete ekleme
+       (api/store/cart — SPA ile aynı localStorage anahtarları: ecspros_sid / ecspros_cart).
+       Misharix'in beden/feedback script'ine dokunmaz; onun üstüne API çağrısını ekler. *@
+    <script type="application/json" id="ms-urun-detay-config">@Html.Raw(sepetConfig)</script>
+    <script>
+        (() => {
+            const configElemani = document.getElementById("ms-urun-detay-config");
+            const cfg = configElemani ? JSON.parse(configElemani.textContent || "null") : null;
+            if (!cfg) {
+                return;
+            }
+
+            // Renk butonları: seçim = aynı sayfanın ?color= ile SSR yeniden yüklenmesi.
+            // (Misharix'in renk script'i aktif sınıfını bizden önce değiştirdiğinden
+            // karşılaştırma sınıfla değil sunucunun bildirdiği seçili renkle yapılır.)
+            document.querySelectorAll(".ms-urun-detay-renk[data-ms-renk-url]").forEach((buton) => {
+                buton.addEventListener("click", () => {
+                    const hedefRenk = new URLSearchParams(buton.dataset.msRenkUrl).get("color");
+                    if (hedefRenk && hedefRenk !== cfg.seciliRenk) {
+                        window.location.href = buton.dataset.msRenkUrl;
+                    }
+                });
+            });
+
+            if (!localStorage.getItem("ecspros_sid")) {
+                localStorage.setItem("ecspros_sid", "sess_" + crypto.getRandomValues(new Uint32Array(2)).join(""));
+            }
+            const oturumId = localStorage.getItem("ecspros_sid");
+            const bedenSayisi = Object.keys(cfg.bedenler || {}).length;
+
+            const seciliVaryant = () => {
+                if (bedenSayisi === 0) {
+                    return cfg.tekVaryant || null;
+                }
+                const beden = document.querySelector(".ms-urun-detay-beden-alani .ms-beden-secim-input:checked")?.value;
+                return beden ? cfg.bedenler[beden] || null : null;
+            };
+
+            let gonderiliyor = false;
+            const sepeteEkle = async () => {
+                const varyant = seciliVaryant();
+                if (!varyant || gonderiliyor) {
+                    return;
+                }
+                gonderiliyor = true;
+                try {
+                    const cevap = await fetch("/api/store/cart/items", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            firmPlatformId: cfg.firmPlatformId,
+                            variantId: varyant.id,
+                            quantity: 1,
+                            price: varyant.fiyat,
+                            currencyCode: cfg.paraBirimi,
+                            sessionId: oturumId
+                        })
+                    });
+                    const veri = await cevap.json().catch(() => null);
+                    if (veri?.success && veri.data?.cartId) {
+                        localStorage.setItem("ecspros_cart", veri.data.cartId);
+                    } else if (!veri?.success) {
+                        console.error("Sepete ekleme başarısız:", veri?.error || cevap.status);
+                    }
+                } catch (hata) {
+                    console.error("Sepete ekleme hatası:", hata);
+                } finally {
+                    gonderiliyor = false;
+                }
+            };
+
+            document.querySelectorAll("[data-ms-urun-detay-sepete-ekle], .ms-buton-simdi-al").forEach((buton) => {
+                buton.addEventListener("click", () => {
+                    if (seciliVaryant()) {
+                        sepeteEkle();
+
+                        // Beden alanı yokken misharix'in geri bildirim script'i devrede olmaz;
+                        // kısa metin geri bildirimini burada veriyoruz.
+                        if (bedenSayisi === 0) {
+                            const oncekiMetin = buton.textContent;
+                            buton.textContent = "Sepete Eklendi";
+                            window.setTimeout(() => {
+                                buton.textContent = oncekiMetin;
+                            }, 1300);
+                        }
+                    }
+                });
+            });
+
+            // Beden modalından seçim: misharix radio'yu işaretleyip modalı kapatır;
+            // ardından bekleyen sepete ekleme burada gerçekleşir.
+            document.querySelector("[data-ms-urun-detay-beden-modal-listesi]")?.addEventListener("click", (event) => {
+                if (event.target.closest(".ms-urun-beden-modal-secim")) {
+                    window.setTimeout(sepeteEkle, 0);
+                }
+            });
+        })();
+    </script>
