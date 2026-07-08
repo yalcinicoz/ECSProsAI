@@ -24,7 +24,7 @@
 
 | UrunListesi/Index.cshtml | UrunListesiVm (ViewData["MsUrunListesi"]) | UrunListesiController (kategori /{slug} + /urunler?search + /urun-listesi) | B7 | ✅ 2026-07-07 (başlık bağlaması) |
 | ProjeElementleri/UrunListesi/_UrunListesiSayfasi.cshtml | — (kompozit; ViewData taşır) | — | B7 | ✅ 2026-07-07 (bayt-aynı) |
-| ProjeElementleri/UrunListesi/_UrunListesiUrunAlani.cshtml | UrunKartVm listesi (SSR ilk sayfa + template) | GetChannelCategoryProducts / GetStoreProducts (devam sayfaları api/store JSON; config script sonu) | B7/B8 | ✅ 2026-07-07 (kart demo blokları @if gizli — B8'de derinleşir) |
+| ProjeElementleri/UrunListesi/_UrunListesiUrunAlani.cshtml | UrunKartVm listesi (SSR ilk sayfa + template; KartRenkVm renk tooltip'i, GaleriUrller hover galerisi) | GetChannelCategoryProducts / GetStoreProducts (devam sayfaları api/store JSON; config script sonu) | B7/B8 | ✅ 2026-07-08 (B8: hover galeri + nokta göstergeleri + renk tooltip + ?color= detay linkleri; puan/teslimat/kampanya @if gizli — B11/E7/G) |
 | ProjeElementleri/UrunListesi/_UrunListesiSolFiltre.cshtml | FiltreGrupVm + KategoriSecenekleri | GetChannelCategoryFacets / GetStoreFacets (SSR süreç içi) | B7 | ✅ 2026-07-07 (Kampanya bloğu Faz G'ye kadar gizli) |
 | ProjeElementleri/UrunListesi/_UrunListesiSagUstFiltre.cshtml | UrunListesiVm (başlık/sayı) + cinsiyet facet | aynı facets | B7/B10 | ✅ 2026-07-07 (hızlı chip'ler Faz G; eksik sıralamalar B10) |
 | ProjeElementleri/UrunListesi/_UrunListesiMobilFiltre.cshtml | FiltreGrupVm (paneller gruplardan üretilir) | aynı facets | B7 | ✅ 2026-07-07 (anaFiltreAdlari bağlandı; script değişmedi) |

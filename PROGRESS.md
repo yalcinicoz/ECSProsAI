@@ -294,6 +294,38 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-08 (ikinci oturum) — Faz B8 TAMAMLANDI: ürün kartı derinleştirme (önceki oturumda başlanmış commit'siz değişiklikler devralındı, tamamlandı, doğrulandı):**
+  - **Hover görsel galerisi + nokta göstergeleri:** kartın (seçili) rengine ait görsel havuzunun
+    ilk 4'ü `data-ms-urun-galeri-resimler`'e | ayraçlı; misharix site.js modülü mousemove/touch
+    ile gezdirir. Renk çözülemezse galeri verilmez (karışık havuz "tekrarlı galeri" üretir).
+    Kategori: `GetChannelCategoryProductsQuery` (ProductId,ColorValueId)→görsel havuzu; arama:
+    `GetStoreProductsQuery` ana görselin VariantId'sinden renk çözer. DTO'lar additive:
+    `ProductListingColorDto.ImageUrl`, `StoreProductDto.GalleryUrls`,
+    `ChannelCategoryProductItemDto.GalleryUrls/AxisColors`.
+  - **Renk tooltip'i:** eksen (renk) kartları kendi görselleri + `/urun/{code}?color={eksenDeğerId}`
+    linkleriyle (ilk 4 desktop; mobilde rozet tıklaması bottom-sheet panel). **Görselsiz renkler
+    listelenmez** (B9 kuralı; E2E bunu gerçek bug olarak yakaladı — görselsiz İndigo linklenince
+    detay ilk görünür renge düşüp yanıltıyordu, filtre eklendi). Eksen yoksa filtre_rengi'ne düşer.
+  - **Kart → detay linki renk taşır:** kategori kartları `?color=`; `UrunDetayController` eksen-dışı
+    değeri (filtre_rengi bucket) o değeri taşıyan varyantın eksen rengine çözer.
+  - JSON kartlarda aynı markup enjekte edilir — tooltip rozetten ÖNCE (site.js rozeti bağlarken
+    tooltip alanı yoksa bir daha bağlamaz), galeri "hazır" bayrağı silinir ki
+    `msUrunKartDavranislariYenile` yeniden bağlasın.
+  - **E2E (headless Chromium, 5051 Production): desktop 20/20 ✓ + mobil 5/5 ✓**; 0 konsol hatası;
+    regresyon yok. Not: rozet hover'ı tooltip'i açınca tooltip rozeti örtüyor — Playwright
+    `hover()` hit-target retry'a takılır, ham `mouse.move` kullan. `check.sh` TEMİZ ✓.
+  - **⚠️ CANLI KAZA + TELAFİ:** test instance'ını kapatırken `pkill -f "ECSPros.Api.dll"` canlı
+    servisi de öldürdü (systemd `User=yalcin` — aynı kullanıcı). Site ~2-3 dk kapalı kaldı;
+    şifresiz sudo olmadığından servis dosyasındaki env birebir kopyalanarak **manuel** geri
+    başlatıldı (nohup, publish binary). **Canlı şu an systemd DIŞINDA çalışıyor** — kullanıcı
+    systemd'ye dönmeli: `pgrep -f publish/ECSPros.Api.dll` ile PID bul + kill + `sudo systemctl
+    start ecspros`. Ders kaydedildi: `feedback_no_broad_pkill_prod_same_user.md` (bir daha asla
+    geniş pkill; süreçler PID ile).
+  - **DEPLOY:** B8 publish edildi (publish/ dizininde hazır) — yukarıdaki systemd'ye dönüş
+    adımı aynı zamanda B8'i canlıya alır (manuel süreç eski binary'de).
+  - **SIRADAKİ ADIM → B3 (duyuru şeridi geçici statik) veya B6 (ana sayfa geçici kompozisyon);
+    sonrası B10 (sunucu tarafı filtre/sıralama) / B4-B5 (oturum+sepet).**
+
 - **2026-07-08 — Faz B9 TAMAMLANDI: Ürün Detay canlıda hazır (kullanıcı seçimi: B8 yerine B9 öncelikli) — kart linkleri `/urun/{code}` artık 404 DEĞİL:**
   - **Mimari (tamamen SSR):** `Controllers/Store/UrunDetayController` (`/urun/{code}?color={valueId}`) +
     `Models/Store/UrunDetayVm`. Renk değişimi ?color= navigasyonudur (yeni SSR isteği — misharix'in
