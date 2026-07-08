@@ -331,10 +331,15 @@
     carousel'i tek ürünün renk kartlarıyla dolu (kategori listesiyle aynı davranış).
     `check.sh` TEMİZ ✓ (3 yeni izinli girdi). Plan (B3/B6 [x] + Durum Panosu + 8.1 duyuru
     satırı) ve eşleme tablosu güncellendi.
-  - **DEPLOY:** B6+B3, B8 ile birlikte `/opt/ECSProsAI/publish`'e yayınlandı — kullanıcının
-    systemd'ye dönüş adımı (aşağıdaki B8 notundaki kill + `sudo systemctl start ecspros`)
-    hepsini birden canlıya alır. Canlı manuel süreç hâlâ ESKİ binary'de (B8 dahil hiçbiri
-    canlıda değil).
+  - **DEPLOY TAMAM + SYSTEMD'YE DÖNÜLDÜ (2026-07-08 akşam):** B8+B3+B6 canlıda, servis yeniden
+    systemd altında (Redis: AKTİF ✓). Dönüş sırasında ikinci tuzak yaşandı: kullanıcıya
+    verdiğim `kill $(pgrep -f "publish/ECSPros.Api.dll" | head -1)` komutu YANLIŞTI —
+    `pgrep -f` deseni, süreci başlatan bash wrapper'ının cmdline'ında da geçtiğinden head -1
+    wrapper'ı seçti, dotnet yetim kaldı ve 5000 portunu tutmaya devam etti; systemd süreci
+    "address in use" ile core-dump döngüsüne girdi (`systemctl is-active` yine de "active"
+    diyordu — RestartSec=5 döngüsü). Çözüm: port sahibini `ss -ltnp | grep :5000` ile bulup
+    `/proc/PID/cwd` doğrulamasından sonra o PID'i öldürmek; systemd 5 sn'de portu aldı.
+    Ders `feedback_background_nohup_pid_trap.md`'ye eklendi (pgrep -f wrapper tuzağı).
   - **SIRADAKİ ADIM → B4-B5 (giriş/kayıt modalları + mini sepet) veya B10 (sunucu tarafı
     filtre/sıralama; "kategoride ara" da burada bağlanacak); B13 görsel QA faz kapanışında.**
 
