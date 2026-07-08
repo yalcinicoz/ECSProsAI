@@ -1,5 +1,6 @@
 using ECSPros.Catalog.Application.Helpers;
 using ECSPros.Catalog.Application.Services;
+using ECSPros.Catalog.Domain.Entities;
 using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
@@ -11,7 +12,8 @@ namespace ECSPros.Catalog.Application.Queries.GetStoreProducts;
 public record ProductListingColorDto(
     Guid ValueId,
     Dictionary<string, string> NameI18n,
-    string? HexCode);
+    string? HexCode,
+    string? ImageUrl = null);   // B8: renk tooltip görseli (rengin ilk varyant görseli)
 
 public record ProductListingAttrDto(
     string TypeCode,
@@ -36,7 +38,8 @@ public record StoreProductDto(
     decimal? CompareAtPrice,
     bool IsActive,
     List<ProductListingColorDto> Colors,
-    List<ProductListingAttrDto> Attrs);
+    List<ProductListingAttrDto> Attrs,
+    List<string>? GalleryUrls = null);   // B8: kart hover galerisi (ana görselin rengine ait ilk 4 görsel)
 
 public class GetStoreProductsQueryHandler(ICatalogDbContext db, IChannelPricingService pricingService)
     : IRequestHandler<GetStoreProductsQuery, Result<PagedResult<StoreProductDto>>>
@@ -68,13 +71,18 @@ public class GetStoreProductsQueryHandler(ICatalogDbContext db, IChannelPricingS
 
         var productIds = products.Select(p => p.Id).ToList();
 
-        // Main images
+        // Main images (VariantId ile — B8 hover galerisi ana görselin RENGİNE ait görsellerden kurulur)
         var firstImages = await db.ProductImages
             .AsNoTracking()
             .Where(img => productIds.Contains(img.ProductId))
             .GroupBy(img => img.ProductId)
-            .Select(g => new { ProductId = g.Key, FileName = g.OrderBy(i => i.SortOrder).First().FileName })
-            .ToDictionaryAsync(x => x.ProductId, x => x.FileName, ct);
+            .Select(g => new
+            {
+                ProductId = g.Key,
+                FileName = g.OrderBy(i => i.SortOrder).First().FileName,
+                VariantId = g.OrderBy(i => i.SortOrder).First().VariantId
+            })
+            .ToDictionaryAsync(x => x.ProductId, x => new { x.FileName, x.VariantId }, ct);
 
         // Variant → product mapping
         var variantData = await db.ProductVariants
@@ -112,6 +120,31 @@ public class GetStoreProductsQueryHandler(ICatalogDbContext db, IChannelPricingS
             })
             .ToListAsync(ct);
 
+        // B8: varyant görselleri — renk tooltip görseli + kart hover galerisi için.
+        // Renk havuzu = o renkteki tüm varyantların görsellerinin dosya adına göre tekilleşmiş
+        // birleşimi (detay handler'ıyla aynı yaklaşım).
+        var variantColorOf = colorAttrs
+            .GroupBy(ca => ca.VariantId)
+            .ToDictionary(g => g.Key, g => g.First().AttributeValueId);
+
+        var variantImages = variantIds.Count > 0
+            ? await db.ProductImages.AsNoTracking()
+                .Where(img => img.VariantId != null
+                           && variantIds.Contains(img.VariantId.Value)
+                           && img.Status == ProductImageStatus.Active)
+                .Select(img => new { VariantId = img.VariantId!.Value, img.FileName, img.SortOrder })
+                .ToListAsync(ct)
+            : [];
+
+        var imagesByProductColor = variantImages
+            .Where(i => variantColorOf.ContainsKey(i.VariantId) && variantToProduct.ContainsKey(i.VariantId))
+            .GroupBy(i => (ProductId: variantToProduct[i.VariantId], ColorId: variantColorOf[i.VariantId]))
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(i => i.SortOrder)
+                      .GroupBy(i => i.FileName).Select(x => x.First().FileName)
+                      .ToList());
+
         // Group by product
         var colorsByProduct = new Dictionary<Guid, List<ProductListingColorDto>>();
         var attrsByProduct  = new Dictionary<Guid, List<ProductListingAttrDto>>();
@@ -122,7 +155,10 @@ public class GetStoreProductsQueryHandler(ICatalogDbContext db, IChannelPricingS
             if (!colorsByProduct.TryGetValue(pid, out var list))
                 colorsByProduct[pid] = list = new();
             if (list.All(c => c.ValueId != ca.AttributeValueId))
-                list.Add(new(ca.AttributeValueId, ca.NameI18n, ca.HexCode));
+                list.Add(new(ca.AttributeValueId, ca.NameI18n, ca.HexCode,
+                    imagesByProductColor.TryGetValue((pid, ca.AttributeValueId), out var renkImgs)
+                        ? cdnBase + renkImgs[0]
+                        : null));
         }
 
         foreach (var oa in otherAttrs)
@@ -146,13 +182,26 @@ public class GetStoreProductsQueryHandler(ICatalogDbContext db, IChannelPricingS
 
             var variantMin = activeVariants.Any() ? activeVariants.Min(v => v.BasePrice) : 0;
             var minPrice   = platformPrices.Any() ? platformPrices.Min() : variantMin > 0 ? variantMin : p.BasePrice;
-            var mainImage  = firstImages.TryGetValue(p.Id, out var fn) ? cdnBase + fn : null;
+            firstImages.TryGetValue(p.Id, out var ilkGorsel);
+            var mainImage = ilkGorsel is null ? null : cdnBase + ilkGorsel.FileName;
+
+            // B8 hover galerisi: ana görselin ait olduğu rengin görselleri (≤4). Renk
+            // çözülemiyorsa galeri verilmez — farklı renklerin karışık havuzu "tekrarlı
+            // galeri" üretir (detay handler'ındaki dersle aynı).
+            List<string>? galleryUrls = null;
+            if (ilkGorsel?.VariantId is { } anaVaryantId
+                && variantColorOf.TryGetValue(anaVaryantId, out var anaRenkId)
+                && imagesByProductColor.TryGetValue((p.Id, anaRenkId), out var galeriImgs))
+            {
+                galleryUrls = galeriImgs.Take(4).Select(fn2 => cdnBase + fn2).ToList();
+            }
 
             return new StoreProductDto(
                 p.Id, p.Code, p.NameI18n, p.ShortDescriptionI18n,
                 mainImage, minPrice, null, p.IsActive,
                 colorsByProduct.GetValueOrDefault(p.Id) ?? new(),
-                attrsByProduct.GetValueOrDefault(p.Id) ?? new());
+                attrsByProduct.GetValueOrDefault(p.Id) ?? new(),
+                galleryUrls);
         }).ToList();
 
         return Result.Success(new PagedResult<StoreProductDto>(items, total, request.Page, request.PageSize));

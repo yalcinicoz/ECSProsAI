@@ -19,7 +19,7 @@
              data-ms-degerler="@(u is null ? "" : string.Join(",", u.DegerIdler))"
              data-ms-dolu="@(u is null ? "" : "true")">
             <a class="ms-urun-kart-baglanti" href="@(u?.Url ?? "#")" data-ms-kart-link aria-label="@(u?.Ad ?? "Ürün") ürün detayına git"></a>
-            <div class="ms-urun-gorsel-alani" data-ms-urun-galeri data-ms-urun-galeri-resimler="@(u?.GorselUrl ?? "")">
+            <div class="ms-urun-gorsel-alani" data-ms-urun-galeri data-ms-urun-galeri-resimler="@(u?.GaleriResimleri ?? "")">
                 @if (u?.GorselUrl is not null)
                 {
                     <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-src="@u.GorselUrl" data-ms-lazy-skeleton="true" alt="@u.Ad">
@@ -53,17 +53,48 @@
                         @u.RenkSayisi
                     </span>
                 }
-                @if (false)
+                @if (u is not null && u.GaleriUrller.Count > 1)
                 {
-                    @* B8: hover galeri nokta göstergeleri — tek görsel olduğu sürece gizli *@
-                    <span class="ms-urun-slider-noktalari" aria-hidden="true"></span>
+                    @* B8: hover galeri nokta göstergeleri (site.js data-ms-urun-galeri modülü) *@
+                    <span class="ms-urun-slider-noktalari" aria-hidden="true">
+                        @for (var n = 0; n < u.GaleriUrller.Count; n++)
+                        {
+                            <span class="@(n == 0 ? "ms-urun-slider-nokta-aktif" : "")"></span>
+                        }
+                    </span>
                 }
             </div>
             @if (false)
             {
-                @* Faz G: kampanya bandı; B8: farklı renk tooltip listesi *@
+                @* Faz G: kampanya bandı *@
                 <div class="ms-urun-kampanya-bandi"></div>
-                <div class="ms-urun-renk-tooltip-alani"></div>
+            }
+            @if (u is not null && u.RenkSecenekleri.Count >= 2)
+            {
+                @* B8: farklı renk seçenekleri tooltip'i — eksen renkleri kendi görselleri ve
+                   ?color= linkleriyle (ilk 4 desktop; tam liste mobil panel sınıfıyla) *@
+                <div class="ms-urun-renk-tooltip-alani">
+                    <span class="ms-urun-renk-tooltip">
+                        <span class="ms-urun-renk-tooltip-baslik">
+                            <span>Farklı Renk Seçenekleri <span class="ms-urun-renk-tooltip-sayac">(@u.RenkSecenekleri.Count)</span></span>
+                            @if (u.RenkSecenekleri.Count > 4)
+                            {
+                                <span>+@(u.RenkSecenekleri.Count - 4) Renk ›</span>
+                            }
+                            <button class="ms-urun-renk-tooltip-kapat" type="button" data-ms-renk-tooltip-kapat aria-label="Renk seçeneklerini kapat">×</button>
+                        </span>
+                        <span class="ms-urun-renk-tooltip-liste">
+                            @foreach (var renk in u.RenkSecenekleri.Take(4))
+                            {
+                                <a class="ms-urun-renk-tooltip-gorsel" href="@u.UrlRenkli(renk.ValueId)"><img data-ms-lazy-src="@(renk.GorselUrl ?? u.GorselUrl)" alt="@renk.Ad renk seçeneği"><span>@renk.Ad</span></a>
+                            }
+                            @foreach (var renk in u.RenkSecenekleri)
+                            {
+                                <a class="ms-urun-renk-tooltip-gorsel ms-urun-renk-tooltip-gorsel-mobil" href="@u.UrlRenkli(renk.ValueId)"><img data-ms-lazy-src="@(renk.GorselUrl ?? u.GorselUrl)" alt="@renk.Ad renk seçeneği"><span>@renk.Ad</span></a>
+                            }
+                        </span>
+                    </span>
+                </div>
             }
             <div class="ms-urun-icerik">
                 <h3 class="ms-urun-basligi"><strong>@adIlk</strong> @adKalan</h3>
@@ -111,17 +142,30 @@
         const kacir = (metin) => String(metin ?? "").replace(/[&<>"']/g, (k) =>
             ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[k]);
 
-        // İki liste DTO'su tek biçime indirgenir (kategori: basePrice, arama: minPrice)
-        const normallestir = (p) => ({
-            kod: p.code,
-            ad: (p.nameI18n && (p.nameI18n.tr || Object.values(p.nameI18n)[0])) || "",
-            gorsel: p.mainImageUrl || "",
-            fiyat: p.basePrice ?? p.minPrice ?? 0,
-            renkler: (p.colors || []).filter((c) => c.hexCode).map((c) => c.hexCode),
-            renkSayisi: (p.colors || []).length,
-            degerler: (p.colors || []).map((c) => c.valueId)
-                .concat((p.attrs || []).map((a) => a.valueId))
-        });
+        const trAd = (i18n) => (i18n && (i18n.tr || Object.values(i18n)[0])) || "";
+
+        // İki liste DTO'su tek biçime indirgenir (kategori: basePrice, arama: minPrice).
+        // Görselsiz renkler tooltip'te listelenmez (B9 kuralı — detay onları göstermez).
+        const normallestir = (p) => {
+            const secenekler = ((p.axisColors && p.axisColors.length > 0 ? p.axisColors : p.colors) || [])
+                .filter((c) => c.imageUrl)
+                .map((c) => ({ id: c.valueId, ad: trAd(c.nameI18n), gorsel: c.imageUrl }));
+            return {
+                kod: p.code,
+                ad: trAd(p.nameI18n),
+                gorsel: p.mainImageUrl || "",
+                fiyat: p.basePrice ?? p.minPrice ?? 0,
+                renkler: (p.colors || []).filter((c) => c.hexCode).map((c) => c.hexCode),
+                renkSayisi: secenekler.length > 0 ? secenekler.length : (p.colors || []).length,
+                degerler: (p.colors || []).map((c) => c.valueId)
+                    .concat((p.attrs || []).map((a) => a.valueId)),
+                galeri: (p.galleryUrls && p.galleryUrls.length > 0)
+                    ? p.galleryUrls
+                    : (p.mainImageUrl ? [p.mainImageUrl] : []),
+                renkSecenekleri: secenekler,
+                seciliRenk: p.selectedColorValueId || null
+            };
+        };
 
         const sayfaGetir = (sayfaNo) => {
             if (durum.istenenSayfalar.has(sayfaNo)) {
@@ -146,21 +190,36 @@
             kart.dataset.msFiyat = String(v.fiyat);
             kart.dataset.msDegerler = v.degerler.join(",");
 
+            const detayUrl = "/urun/" + encodeURIComponent(v.kod)
+                + (v.seciliRenk ? "?color=" + encodeURIComponent(v.seciliRenk) : "");
             const link = kart.querySelector("[data-ms-kart-link]");
             if (link) {
-                link.href = "/urun/" + encodeURIComponent(v.kod);
+                link.href = detayUrl;
                 link.setAttribute("aria-label", v.ad + " ürün detayına git");
             }
 
+            // B8 hover galerisi: görsel listesi + nokta göstergeleri. Modül skeleton'da boş
+            // veriyle "hazır" işaretlenmiş olabilir — bayrak silinir ki yenile yeniden bağlasın.
             const galeri = kart.querySelector("[data-ms-urun-galeri]");
             if (galeri) {
-                galeri.dataset.msUrunGaleriResimler = v.gorsel;
+                galeri.dataset.msUrunGaleriResimler = v.galeri.join("|") || v.gorsel;
+                delete galeri.dataset.msUrunGaleriHazir;
             }
 
             const gorsel = kart.querySelector("[data-ms-urun-galeri-gorsel]");
             if (gorsel && v.gorsel) {
                 gorsel.dataset.msLazySrc = v.gorsel;
                 gorsel.alt = v.ad;
+            }
+
+            if (v.galeri.length > 1 && !kart.querySelector(".ms-urun-slider-noktalari")) {
+                const noktalar = document.createElement("span");
+                noktalar.className = "ms-urun-slider-noktalari";
+                noktalar.setAttribute("aria-hidden", "true");
+                noktalar.innerHTML = v.galeri
+                    .map((_, i) => `<span${i === 0 ? ' class="ms-urun-slider-nokta-aktif"' : ""}></span>`)
+                    .join("");
+                kart.querySelector(".ms-urun-gorsel-alani")?.appendChild(noktalar);
             }
 
             const baslik = kart.querySelector(".ms-urun-basligi");
@@ -174,7 +233,33 @@
                 fiyat.textContent = v.fiyat.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " TL";
             }
 
-            // Renk rozeti — SSR kartlarındaki markup'ın birebir aynısı enjekte edilir (B8: tooltip)
+            // B8 renk tooltip'i — SSR markup'ının birebir aynısı; rozetten ÖNCE eklenmeli
+            // (site.js rozeti bağlarken tooltip alanını arar, bulamazsa bir daha bağlamaz)
+            if (v.renkSecenekleri.length >= 2 && !kart.querySelector(".ms-urun-renk-tooltip-alani")) {
+                const secenekHtml = (renk, ekSinif) => `
+                    <a class="ms-urun-renk-tooltip-gorsel${ekSinif}" href="/urun/${encodeURIComponent(v.kod)}?color=${encodeURIComponent(renk.id)}">
+                        <img data-ms-lazy-src="${kacir(renk.gorsel || v.gorsel)}" alt="${kacir(renk.ad)} renk seçeneği"><span>${kacir(renk.ad)}</span></a>`;
+                const alan = document.createElement("div");
+                alan.className = "ms-urun-renk-tooltip-alani";
+                const fazlasi = v.renkSecenekleri.length > 4
+                    ? `<span>+${v.renkSecenekleri.length - 4} Renk ›</span>`
+                    : "";
+                alan.innerHTML = `
+                    <span class="ms-urun-renk-tooltip">
+                        <span class="ms-urun-renk-tooltip-baslik">
+                            <span>Farklı Renk Seçenekleri <span class="ms-urun-renk-tooltip-sayac">(${v.renkSecenekleri.length})</span></span>
+                            ${fazlasi}
+                            <button class="ms-urun-renk-tooltip-kapat" type="button" data-ms-renk-tooltip-kapat aria-label="Renk seçeneklerini kapat">×</button>
+                        </span>
+                        <span class="ms-urun-renk-tooltip-liste">
+                            ${v.renkSecenekleri.slice(0, 4).map((renk) => secenekHtml(renk, "")).join("")}
+                            ${v.renkSecenekleri.map((renk) => secenekHtml(renk, " ms-urun-renk-tooltip-gorsel-mobil")).join("")}
+                        </span>
+                    </span>`;
+                kart.querySelector(".ms-urun-gorsel-alani")?.after(alan);
+            }
+
+            // Renk rozeti — SSR kartlarındaki markup'ın birebir aynısı enjekte edilir
             if (v.renkSayisi >= 2 && v.renkler.length > 0 && !kart.querySelector(".ms-urun-renk-rozet")) {
                 const rozet = document.createElement("span");
                 rozet.className = "ms-urun-renk-rozet";

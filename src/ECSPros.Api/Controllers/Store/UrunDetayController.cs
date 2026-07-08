@@ -60,10 +60,22 @@ public class UrunDetayController(IMediator mediator, IStoreContext storeContext)
         }
         var gorunurRenkler = renkDegerleri.Where(r => renkGorselleri.ContainsKey(r.AttributeValueId)).ToList();
 
-        Guid? seciliRenk = Guid.TryParse(color, out var istenen)
-                           && gorunurRenkler.Any(r => r.AttributeValueId == istenen)
-            ? istenen
-            : gorunurRenkler.Count > 0 ? gorunurRenkler[0].AttributeValueId : null;
+        // ?color= öncelikle renk ekseninin kendi değeri; değilse eksen-dışı bir değer olabilir —
+        // liste kartları primary axis ("renk") değeriyle link verir, filtre_rengi bucket'ına
+        // burada çözülür: o değeri taşıyan varyantın rengi seçilir.
+        Guid? seciliRenk = null;
+        if (Guid.TryParse(color, out var istenen))
+        {
+            if (gorunurRenkler.Any(r => r.AttributeValueId == istenen))
+                seciliRenk = istenen;
+            else if (renkTipKodu is not null)
+                seciliRenk = varyantlar
+                    .Where(v => v.Attributes.Any(a => a.AttributeValueId == istenen))
+                    .SelectMany(v => v.Attributes.Where(a => a.AttributeTypeCode == renkTipKodu))
+                    .Select(a => (Guid?)a.AttributeValueId)
+                    .FirstOrDefault(id => gorunurRenkler.Any(r => r.AttributeValueId == id));
+        }
+        seciliRenk ??= gorunurRenkler.Count > 0 ? gorunurRenkler[0].AttributeValueId : null;
 
         // Fiyat/beden havuzu: seçili renkteki varyantlar (renk ekseni yoksa tümü)
         var havuz = seciliRenk is { } renk

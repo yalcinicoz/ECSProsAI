@@ -42,7 +42,9 @@ public record ChannelCategoryProductItemDto(
     List<ProductListingColorDto>? Colors = null,
     List<ProductListingAttrDto>? Attrs = null,
     Guid? SelectedColorValueId = null,
-    Dictionary<string, string>? SelectedColorNameI18n = null);
+    Dictionary<string, string>? SelectedColorNameI18n = null,
+    List<string>? GalleryUrls = null,               // B8: kart hover galerisi (seçili rengin ilk 4 görseli)
+    List<ProductListingColorDto>? AxisColors = null); // B8: ürünün eksen (renk) kartları — tooltip linkleri buradan
 
 public class GetChannelCategoryProductsQueryHandler(
     IStorefrontDbContext sfDb,
@@ -312,8 +314,10 @@ public class GetChannelCategoryProductsQueryHandler(
 
         var pagedProductIds = pagedPairs.Select(p => p.ProductId).Distinct().ToList();
 
-        // Rengin tüm varyantlarını görsel aramasına dahil et
-        var allColorVariantIds = pagedPairs.SelectMany(p => p.VariantIds).Distinct().ToList();
+        // Rengin tüm varyantlarını görsel aramasına dahil et. B8: renk tooltip'i sayfadaki
+        // ürünlerin TÜM renklerinin görselini ister — o ürünlerin diğer renk çiftleri de dahil.
+        var pagedProductPairs = colorPairs.Where(p => pagedProductIds.Contains(p.ProductId)).ToList();
+        var allColorVariantIds = pagedProductPairs.SelectMany(p => p.VariantIds).Distinct().ToList();
 
         // 8. Ürün bilgileri
         var productMap = await catDb.Products.AsNoTracking()
@@ -321,16 +325,31 @@ public class GetChannelCategoryProductsQueryHandler(
             .ToDictionaryAsync(p => p.Id, ct);
 
         // 9. Varyant bazlı görseller: catalog_product_images.VariantId IS NOT NULL
-        //    Admin paneli görselleri bu şekilde renk/varyanta bağlar
-        var variantImageMap = allColorVariantIds.Count > 0
+        //    Admin paneli görselleri bu şekilde renk/varyanta bağlar.
+        //    B8: varyant başına tek görsel değil tam liste — hover galerisi (renk havuzunun
+        //    ilk 4 görseli) ve tooltip renk görselleri buradan kurulur.
+        var variantImageRows = allColorVariantIds.Count > 0
             ? await catDb.ProductImages.AsNoTracking()
                 .Where(img => img.VariantId != null
                            && allColorVariantIds.Contains(img.VariantId.Value)
                            && img.Status == Catalog.Domain.Entities.ProductImageStatus.Active)
-                .GroupBy(img => img.VariantId!.Value)
-                .Select(g => new { g.Key, Fn = g.OrderBy(i => i.SortOrder).First().FileName })
-                .ToDictionaryAsync(x => x.Key, x => x.Fn, ct)
-            : new Dictionary<Guid, string>();
+                .Select(img => new { VariantId = img.VariantId!.Value, img.FileName, img.SortOrder })
+                .ToListAsync(ct)
+            : [];
+
+        var imagesByVariant = variantImageRows
+            .GroupBy(i => i.VariantId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(i => i.SortOrder).ToList());
+
+        // (ProductId, ColorValueId) → rengin dosya adına göre tekilleşmiş görsel havuzu
+        var imagesByPair = pagedProductPairs.ToDictionary(
+            pair => (pair.ProductId, pair.ColorValueId),
+            pair => pair.VariantIds
+                .Where(imagesByVariant.ContainsKey)
+                .SelectMany(vid => imagesByVariant[vid])
+                .OrderBy(i => i.SortOrder)
+                .GroupBy(i => i.FileName).Select(g => g.First().FileName)
+                .ToList());
 
         // Ürün düzeyindeki görseller (VariantId IS NULL) — fallback
         var productImageMap = await catDb.ProductImages.AsNoTracking()
@@ -344,14 +363,30 @@ public class GetChannelCategoryProductsQueryHandler(
         // 10. Swatch satırı için her ürünün tüm renkleri
         var (allColorMap, _) = await LoadVariantAttrs(catDb, pagedProductIds, ct);
 
-        // Seçili renk adı — sadece bu SAYFADAKİ ~pageSize renk için (adım 5'te tüm kategori
-        // için çekilmiyor artık, bkz. yukarıdaki not)
-        var pagedColorValueIds = pagedPairs.Select(p => p.ColorValueId).Distinct().ToList();
+        // Renk adları — B8: sadece sayfadaki kartların değil, o ürünlerin TÜM eksen
+        // renklerinin adı gerekir (renk tooltip'i diğer renk kartlarına link verir).
+        var pagedColorValueIds = pagedProductPairs.Select(p => p.ColorValueId).Distinct().ToList();
         var colorValueNameMap = pagedColorValueIds.Count > 0
             ? await catDb.AttributeValues.AsNoTracking()
                 .Where(v => pagedColorValueIds.Contains(v.Id))
-                .ToDictionaryAsync(v => v.Id, v => v.NameI18n, ct)
-            : new Dictionary<Guid, Dictionary<string, string>>();
+                .Select(v => new { v.Id, v.NameI18n, v.HexCode })
+                .ToDictionaryAsync(v => v.Id, v => (v.NameI18n, v.HexCode), ct)
+            : new Dictionary<Guid, (Dictionary<string, string>, string?)>();
+
+        // B8: kartın "diğer renk seçenekleri" — ürünün eksen (renk) çiftleri, kendi
+        // görselleriyle. Detay linki ?color={eksenDeğerId} (detay tarafı eksen değerini
+        // filtre_rengi bucket'ına çözer).
+        var axisColorsByProduct = pagedProductPairs
+            .GroupBy(p => p.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(pair => new ProductListingColorDto(
+                        pair.ColorValueId,
+                        colorValueNameMap.TryGetValue(pair.ColorValueId, out var ad) ? ad.Item1 : new(),
+                        colorValueNameMap.TryGetValue(pair.ColorValueId, out var hexAd) ? hexAd.Item2 : null,
+                        imagesByPair.TryGetValue((pair.ProductId, pair.ColorValueId), out var imgs)
+                        && imgs.Count > 0 ? cdnBase + imgs[0] : null))
+                    .ToList());
 
         // 11. DTO oluştur
         var items = pagedPairs
@@ -360,17 +395,17 @@ public class GetChannelCategoryProductsQueryHandler(
             {
                 var product = productMap[pair.ProductId];
 
-                // Rengin herhangi bir varyantında varyant görseli varsa kullan, yoksa ürün görseline düş
+                // Rengin görsel havuzu: ilk görsel kart görseli, ilk 4'ü hover galerisi.
+                // Havuz boşsa ürün görseline düş (galeri verilmez).
+                imagesByPair.TryGetValue((pair.ProductId, pair.ColorValueId), out var renkGorselleri);
                 string? imageUrl = null;
-                foreach (var vid in pair.VariantIds)
+                List<string>? galleryUrls = null;
+                if (renkGorselleri is { Count: > 0 })
                 {
-                    if (variantImageMap.TryGetValue(vid, out var vFn) && !string.IsNullOrEmpty(vFn))
-                    {
-                        imageUrl = cdnBase + vFn;
-                        break;
-                    }
+                    imageUrl = cdnBase + renkGorselleri[0];
+                    galleryUrls = renkGorselleri.Take(4).Select(fn => cdnBase + fn).ToList();
                 }
-                if (imageUrl == null && productImageMap.TryGetValue(pair.ProductId, out var pFn))
+                else if (productImageMap.TryGetValue(pair.ProductId, out var pFn))
                     imageUrl = cdnBase + pFn;
 
                 // Fiyat: varyant fiyatı önce, yoksa ürün fiyatı
@@ -382,7 +417,11 @@ public class GetChannelCategoryProductsQueryHandler(
                     product.IsActive, 0, false, null,
                     Colors: allColorMap.GetValueOrDefault(pair.ProductId),
                     SelectedColorValueId: pair.ColorValueId,
-                    SelectedColorNameI18n: colorValueNameMap.GetValueOrDefault(pair.ColorValueId));
+                    SelectedColorNameI18n: colorValueNameMap.TryGetValue(pair.ColorValueId, out var seciliAd)
+                        ? seciliAd.Item1
+                        : null,
+                    GalleryUrls: galleryUrls,
+                    AxisColors: axisColorsByProduct.GetValueOrDefault(pair.ProductId));
             })
             .ToList();
 
