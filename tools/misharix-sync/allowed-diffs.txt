@@ -15,3 +15,28 @@ Views/ProjeElementleri/Navigasyon/_AnaNavigasyonMobilMenu.cshtml
 # B1: Ana sayfadaki mobil kategori kaydırma şeridi kanal kategorilerine bağlandı
 # (dosyanın geri kalanı — sepet paneli vb. — statik, B5'te bağlanacak).
 Views/ProjeElementleri/Navigasyon/_AnaNavigasyonUst.cshtml
+
+# B2: Arama paneli canlı veriye bağlandı — demo sonuç/popüler ürün içerikleri boşaltıldı
+# (script dolduruyor), popüler arama chip'leri gerçek terimlerle değiştirildi, son aramalar
+# localStorage'a bağlandı, dosya sonuna canlı arama script'i eklendi. Markup sınıfları aynı.
+Views/ProjeElementleri/Navigasyon/_AnaNavigasyonSearch.cshtml
+
+# B7: Ürün listesi sayfası canlı veriye bağlandı — başlık ViewData'dan (kategori/arama/tümü).
+Views/UrunListesi/Index.cshtml
+
+# B7: Ürün alanı — kart markup'ı UrunKarti local function'ına alındı (template ile SSR ilk
+# sayfa aynı markup'ı kullanır, plan 3.3); veri karşılığı olmayan demo blokları @if ile gizli
+# (B8/B11/Faz G); dosya sonuna canlı veri + client-side filtre/sıralama motoru eklendi.
+Views/ProjeElementleri/UrunListesi/_UrunListesiUrunAlani.cshtml
+
+# B7: Sol filtre — blok markup'ları birebir, içerik gerçek facet'lerden @foreach ile;
+# Kategori bloğu alt kategorilere gider; Kampanya bloğu Faz G'ye kadar gizli.
+Views/ProjeElementleri/UrunListesi/_UrunListesiSolFiltre.cshtml
+
+# B7: Üst filtre — h1/ürün sayısı gerçek; hızlı filtre chip'leri Faz G'ye, veri karşılığı
+# olmayan sıralama seçenekleri B10'a kadar gizli; davranış script'i değişmedi.
+Views/ProjeElementleri/UrunListesi/_UrunListesiSagUstFiltre.cshtml
+
+# B7: Mobil filtre — panel/chip/detay markup'ları birebir, gruplar gerçek facet'lerden;
+# anaFiltreAdlari sözlüğü gerçek gruplardan bağlandı; davranış script'i değişmedi.
+Views/ProjeElementleri/UrunListesi/_UrunListesiMobilFiltre.cshtml

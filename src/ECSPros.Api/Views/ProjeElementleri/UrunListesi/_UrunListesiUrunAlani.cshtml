@@ -1,0 +1,361 @@
+@using ECSPros.Api.Models.Store
+@{
+    // B7: Ürün alanı canlı veriye bağlandı. Kart markup'ı misharix template'inin birebir
+    // kopyasıdır (UrunKarti local function) — ilk sayfa sunucudan render edilir (plan 3.3),
+    // devamı misharix infinite-scroll modülüyle (kartHazirla/sonra hook'ları) JSON'dan gelir.
+    // Veri olmayan demo blokları (video, sponsor, kampanya, puan, teslimat/kargo mesajları,
+    // renk tooltip) HTML yapısı bozulmadan @@if ile gizlendi — B8/B11/Faz G'de bağlanacak.
+    var vm = ViewData["MsUrunListesi"] as UrunListesiVm
+             ?? new UrunListesiVm("Ürünler", 0, 24, [], "", [], 0, 0, []);
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+
+    void UrunKarti(UrunKartVm? u)
+    {
+        var adParcalari = (u?.Ad ?? "").Split(' ', 2);
+        var adIlk = adParcalari.Length > 0 ? adParcalari[0] : "";
+        var adKalan = adParcalari.Length > 1 ? adParcalari[1] : "";
+        <div class="ms-urun-karti" data-ms-kart-link-alani
+             data-ms-fiyat="@(u?.Fiyat.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
+             data-ms-degerler="@(u is null ? "" : string.Join(",", u.DegerIdler))"
+             data-ms-dolu="@(u is null ? "" : "true")">
+            <a class="ms-urun-kart-baglanti" href="@(u?.Url ?? "#")" data-ms-kart-link aria-label="@(u?.Ad ?? "Ürün") ürün detayına git"></a>
+            <div class="ms-urun-gorsel-alani" data-ms-urun-galeri data-ms-urun-galeri-resimler="@(u?.GorselUrl ?? "")">
+                @if (u?.GorselUrl is not null)
+                {
+                    <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-src="@u.GorselUrl" data-ms-lazy-skeleton="true" alt="@u.Ad">
+                }
+                else
+                {
+                    <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-skeleton="true" alt="">
+                }
+                @if (false)
+                {
+                    @* B8/Faz G: videolu ürün + kampanya etiketi — veri kaynağı yok *@
+                    <span class="ms-urun-gorsel-etiketleri"></span>
+                    <span class="ms-urun-sponsor">Sponsorlu</span>
+                }
+                <button class="ms-urun-favori" type="button" aria-label="Favorilere ekle" aria-pressed="false">
+                    <img class="ms-urun-favori-ikon" src="/ikons/favorite.svg" alt="" aria-hidden="true">
+                </button>
+                <button class="ms-urun-koleksiyon" type="button" aria-label="Koleksiyona ekle" aria-pressed="false" data-ms-urun-koleksiyon>
+                    <i class="fa-solid fa-bookmark ms-fa-ikon" aria-hidden="true"></i>
+                </button>
+                @if (u is not null && u.RenkSayisi >= 2 && u.RenkHexleri.Count > 0)
+                {
+                    <span class="ms-urun-renk-rozet">
+                        <span class="ms-urun-renkler" aria-hidden="true">
+                            <span class="ms-urun-renk ms-urun-renk-mavi" style="background-image:none;background-color:@u.RenkHexleri[0]"></span>
+                            @if (u.RenkHexleri.Count > 1)
+                            {
+                                <span class="ms-urun-renk ms-urun-renk-pembe" style="background-image:none;background-color:@u.RenkHexleri[1]"></span>
+                            }
+                        </span>
+                        @u.RenkSayisi
+                    </span>
+                }
+                @if (false)
+                {
+                    @* B8: hover galeri nokta göstergeleri — tek görsel olduğu sürece gizli *@
+                    <span class="ms-urun-slider-noktalari" aria-hidden="true"></span>
+                }
+            </div>
+            @if (false)
+            {
+                @* Faz G: kampanya bandı; B8: farklı renk tooltip listesi *@
+                <div class="ms-urun-kampanya-bandi"></div>
+                <div class="ms-urun-renk-tooltip-alani"></div>
+            }
+            <div class="ms-urun-icerik">
+                <h3 class="ms-urun-basligi"><strong>@adIlk</strong> @adKalan</h3>
+                @if (false)
+                {
+                    @* B8: teslimat/favori mesajları, puan ve kargo mesajları — model alanları gelince *@
+                    <p class="ms-urun-teslimat"></p>
+                    <div class="ms-urun-puan"></div>
+                    <p class="ms-urun-kargo"></p>
+                }
+                <p class="ms-urun-fiyat">@(u is null ? "" : u.Fiyat.ToString("N2", tr) + " TL")</p>
+            </div>
+        </div>
+    }
+}
+<section class="ms-urun-listesi-urun-alani lazy-infinite-on" data-ms-page-module="infinite-scroll" data-ms-infinite-scroll data-ms-infinite-config="urun-listesi" data-ms-infinite-toplam="100" data-ms-infinite-ilk="20" data-ms-infinite-adet="20" data-ms-infinite-esik="0.8" data-ms-infinite-sadece-ilk="true" aria-label="Ürünlerin yayınlanacağı alan">
+    @await Html.PartialAsync("~/Views/ProjeElementleri/UrunListesi/_UrunListesiSagUstFiltre.cshtml")
+
+    <div class="ms-urun-listesi-urun-grid" data-ms-infinite-liste aria-live="polite">
+        @foreach (var urun in vm.IlkSayfa)
+        {
+            UrunKarti(urun);
+        }
+    </div>
+    <template data-ms-infinite-template>
+        @{ UrunKarti(null); }
+    </template>
+    <div class="ms-infinite-ornek-yukleniyor" data-ms-infinite-yukleniyor>Yeni ürünler yükleniyor...</div>
+</section>
+
+@* Bu script: Ürün listesi sayfası için infinite-scroll ayarını tanımlar (B7: canlı veri +
+   client-side filtre/sıralama motoru — SPA ile aynı davranış: filtreler yüklü kartlara uygulanır). *@
+<script>
+    window.msInfiniteConfigs = window.msInfiniteConfigs || {};
+    (() => {
+        const durum = {
+            sayfaBoyu: @vm.SayfaBoyu,
+            toplam: @vm.ToplamUrun,
+            ssrAdet: @vm.IlkSayfa.Count,
+            devamUrl: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(vm.DevamApiUrl)),
+            tampon: {},              // globalIndex -> normalize edilmiş ürün
+            istenenSayfalar: new Set()
+        };
+
+        const kacir = (metin) => String(metin ?? "").replace(/[&<>"']/g, (k) =>
+            ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[k]);
+
+        // İki liste DTO'su tek biçime indirgenir (kategori: basePrice, arama: minPrice)
+        const normallestir = (p) => ({
+            kod: p.code,
+            ad: (p.nameI18n && (p.nameI18n.tr || Object.values(p.nameI18n)[0])) || "",
+            gorsel: p.mainImageUrl || "",
+            fiyat: p.basePrice ?? p.minPrice ?? 0,
+            renkler: (p.colors || []).filter((c) => c.hexCode).map((c) => c.hexCode),
+            renkSayisi: (p.colors || []).length,
+            degerler: (p.colors || []).map((c) => c.valueId)
+                .concat((p.attrs || []).map((a) => a.valueId))
+        });
+
+        const sayfaGetir = (sayfaNo) => {
+            if (durum.istenenSayfalar.has(sayfaNo)) {
+                return;
+            }
+
+            durum.istenenSayfalar.add(sayfaNo);
+            const ayirici = durum.devamUrl.includes("?") ? "&" : "?";
+            fetch(`${durum.devamUrl}${ayirici}page=${sayfaNo}`)
+                .then((cevap) => cevap.ok ? cevap.json() : null)
+                .then((veri) => {
+                    const kayitlar = veri?.data?.items || [];
+                    kayitlar.forEach((kayit, i) => {
+                        durum.tampon[(sayfaNo - 1) * durum.sayfaBoyu + i] = normallestir(kayit);
+                    });
+                    bekleyenleriDoldur();
+                })
+                .catch(() => durum.istenenSayfalar.delete(sayfaNo));
+        };
+
+        const kartDoldur = (kart, v) => {
+            kart.dataset.msFiyat = String(v.fiyat);
+            kart.dataset.msDegerler = v.degerler.join(",");
+
+            const link = kart.querySelector("[data-ms-kart-link]");
+            if (link) {
+                link.href = "/urun/" + encodeURIComponent(v.kod);
+                link.setAttribute("aria-label", v.ad + " ürün detayına git");
+            }
+
+            const galeri = kart.querySelector("[data-ms-urun-galeri]");
+            if (galeri) {
+                galeri.dataset.msUrunGaleriResimler = v.gorsel;
+            }
+
+            const gorsel = kart.querySelector("[data-ms-urun-galeri-gorsel]");
+            if (gorsel && v.gorsel) {
+                gorsel.dataset.msLazySrc = v.gorsel;
+                gorsel.alt = v.ad;
+            }
+
+            const baslik = kart.querySelector(".ms-urun-basligi");
+            if (baslik) {
+                const [ilk, ...kalan] = v.ad.split(" ");
+                baslik.innerHTML = `<strong>${kacir(ilk)}</strong> ${kacir(kalan.join(" "))}`;
+            }
+
+            const fiyat = kart.querySelector(".ms-urun-fiyat");
+            if (fiyat) {
+                fiyat.textContent = v.fiyat.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " TL";
+            }
+
+            // Renk rozeti — SSR kartlarındaki markup'ın birebir aynısı enjekte edilir (B8: tooltip)
+            if (v.renkSayisi >= 2 && v.renkler.length > 0 && !kart.querySelector(".ms-urun-renk-rozet")) {
+                const rozet = document.createElement("span");
+                rozet.className = "ms-urun-renk-rozet";
+                const ikinci = v.renkler[1]
+                    ? `<span class="ms-urun-renk ms-urun-renk-pembe" style="background-image:none;background-color:${kacir(v.renkler[1])}"></span>`
+                    : "";
+                rozet.innerHTML = `<span class="ms-urun-renkler" aria-hidden="true"><span class="ms-urun-renk ms-urun-renk-mavi" style="background-image:none;background-color:${kacir(v.renkler[0])}"></span>${ikinci}</span> ${v.renkSayisi}`;
+                kart.querySelector(".ms-urun-gorsel-alani")?.appendChild(rozet);
+            }
+
+            kart.dataset.msDolu = "true";
+        };
+
+        const bekleyenleriDoldur = () => {
+            const liste = document.querySelector(".ms-urun-listesi-urun-alani [data-ms-infinite-liste]");
+            if (!liste) {
+                return;
+            }
+
+            let dolduruldu = false;
+            liste.querySelectorAll("[data-ms-veri-index]:not([data-ms-dolu='true'])").forEach((kart) => {
+                const index = Number(kart.dataset.msVeriIndex);
+                const veri = durum.tampon[index];
+
+                if (veri) {
+                    kartDoldur(kart, veri);
+                    dolduruldu = true;
+                } else {
+                    sayfaGetir(Math.floor(index / durum.sayfaBoyu) + 1);
+                }
+            });
+
+            if (dolduruldu) {
+                window.msLazyLoadYenile?.(liste);
+                window.msUrunKartDavranislariYenile?.(liste);
+                filtreleriUygula();
+            }
+        };
+
+        // ── Client-side filtre + sıralama (SPA paritesi: yüklü kartlara uygulanır) ──
+        const filtreDurum = { fiyatMin: null, fiyatMax: null, siralama: "default" };
+
+        const seciliDegerleriTopla = () => {
+            const secili = new Set();
+            document.querySelectorAll("[data-ms-filtre-deger]").forEach((girdi) => {
+                if (girdi.checked) {
+                    secili.add(girdi.dataset.msFiltreDeger);
+                }
+            });
+            return secili;
+        };
+
+        const sonucSayisiniGuncelle = (gorunen, filtreliMi) => {
+            const metin = (filtreliMi ? gorunen : durum.toplam).toLocaleString("tr-TR") + " Ürün";
+            document.querySelectorAll(".ms-urun-listesi-kategori-ozet span, .ms-urun-listesi-mobil-ust > div > p")
+                .forEach((alan) => { alan.textContent = metin; });
+        };
+
+        const filtreleriUygula = () => {
+            const liste = document.querySelector(".ms-urun-listesi-urun-alani [data-ms-infinite-liste]");
+            if (!liste) {
+                return;
+            }
+
+            const secili = seciliDegerleriTopla();
+            const filtreliMi = secili.size > 0 || filtreDurum.fiyatMin !== null || filtreDurum.fiyatMax !== null;
+            let gorunen = 0;
+
+            liste.querySelectorAll(".ms-urun-karti").forEach((kart) => {
+                if (kart.dataset.msDolu !== "true") {
+                    kart.hidden = filtreliMi; // iskelet kartlar filtre aktifken gizlenir
+                    return;
+                }
+
+                const fiyat = Number(kart.dataset.msFiyat || "0");
+                const degerler = (kart.dataset.msDegerler || "").split(",").filter(Boolean);
+                let uygun = true;
+
+                if (filtreDurum.fiyatMin !== null && fiyat < filtreDurum.fiyatMin) uygun = false;
+                if (filtreDurum.fiyatMax !== null && fiyat > filtreDurum.fiyatMax) uygun = false;
+                if (uygun && secili.size > 0 && ![...secili].some((d) => degerler.includes(d))) uygun = false;
+
+                kart.hidden = !uygun;
+                if (uygun) gorunen += 1;
+            });
+
+            sonucSayisiniGuncelle(gorunen, filtreliMi);
+        };
+
+        const sirala = (kod) => {
+            filtreDurum.siralama = kod;
+            const liste = document.querySelector(".ms-urun-listesi-urun-alani [data-ms-infinite-liste]");
+            if (!liste || kod === "default") {
+                return;
+            }
+
+            const kartlar = [...liste.querySelectorAll(".ms-urun-karti")];
+            const yon = kod === "price_desc" ? -1 : 1;
+            kartlar
+                .sort((a, b) => {
+                    const aDolu = a.dataset.msDolu === "true" ? 0 : 1;
+                    const bDolu = b.dataset.msDolu === "true" ? 0 : 1;
+                    if (aDolu !== bDolu) return aDolu - bDolu; // iskeletler sona
+                    return yon * (Number(a.dataset.msFiyat || "0") - Number(b.dataset.msFiyat || "0"));
+                })
+                .forEach((kart) => liste.appendChild(kart));
+        };
+
+        const panelFiyatOku = (panel) => {
+            const [enAz, enCok] = panel.querySelectorAll("input[type='number']");
+            const radyo = panel.querySelector("input[type='radio']:checked");
+            const aralik = radyo?.closest("label")?.dataset.msFiyatAralik;
+
+            if (aralik) {
+                const [min, max] = aralik.split("-").map(Number);
+                filtreDurum.fiyatMin = Number.isFinite(min) ? min : null;
+                filtreDurum.fiyatMax = Number.isFinite(max) ? max : null;
+                return;
+            }
+
+            const min = parseFloat(enAz?.value ?? "");
+            const max = parseFloat(enCok?.value ?? "");
+            filtreDurum.fiyatMin = Number.isFinite(min) ? min : null;
+            filtreDurum.fiyatMax = Number.isFinite(max) ? max : null;
+        };
+
+        document.addEventListener("change", (olay) => {
+            const girdi = olay.target;
+
+            if (girdi.matches?.("[data-ms-kategori-url]") && girdi.checked) {
+                window.location.href = girdi.dataset.msKategoriUrl;
+                return;
+            }
+
+            if (girdi.matches?.("[data-ms-filtre-deger]")) {
+                filtreleriUygula();
+            }
+        });
+
+        document.addEventListener("click", (olay) => {
+            const uygula = olay.target.closest?.(".ms-filtre-uygula-buton, [data-ms-mobil-chip-panel-kapat], [data-ms-urun-mobil-filtre-detay-kapat]");
+            if (uygula) {
+                const fiyatPaneli = uygula.closest("[data-filter-content], [data-ms-urun-listesi-filtre-panel], [data-ms-mobil-chip-panel], [data-ms-urun-mobil-filtre-detay]");
+                if (fiyatPaneli?.querySelector("input[type='number']")) {
+                    panelFiyatOku(fiyatPaneli);
+                }
+                filtreleriUygula();
+                return;
+            }
+
+            const siralamaSecenegi = olay.target.closest?.("[data-ms-siralama-kod]");
+            if (siralamaSecenegi) {
+                sirala(siralamaSecenegi.dataset.msSiralamaKod);
+            }
+        });
+
+        window.msInfiniteConfigs["urun-listesi"] = {
+            ilk: 0, // ilk sayfa sunucudan render edildi (plan 3.3) — modül devam kartlarını üretir
+            adet: durum.sayfaBoyu,
+            toplam: Math.max(0, durum.toplam - durum.ssrAdet),
+            esik: 0.8,
+            sadeceIlkYukle: true,
+            stateKey: "ms-infinite-scroll:" + window.location.pathname + window.location.search,
+            kartHazirla: (parca, sira) => {
+                parca.querySelectorAll("[data-ms-kart-link-alani]").forEach((kart) => {
+                    kart.dataset.msVeriIndex = String(durum.ssrAdet + sira - 1);
+                });
+            },
+            sonra: (liste) => {
+                window.msProjeElementleriScrollGeriYukle?.();
+                window.msUrunKartDavranislariYenile?.(liste);
+                bekleyenleriDoldur();
+            }
+        };
+
+        // İlk devam sayfasını önden getir + kısa içerikte scroll tetiklenemiyorsa modülü dürt
+        document.addEventListener("DOMContentLoaded", () => {
+            if (durum.ssrAdet < durum.toplam) {
+                sayfaGetir(2);
+                window.setTimeout(() => window.dispatchEvent(new Event("resize")), 300);
+            }
+        });
+    })();
+</script>

@@ -1,0 +1,849 @@
+@using ECSPros.Api.Models.Store
+@{
+    // B7: Mobil filtre canlı facet'lere bağlandı — panel/chip/detay markup'ları misharix'in
+    // beden/renk/fiyat panellerinin birebir kopyası, gruplar @foreach ile gerçek facet'lerden
+    // üretilir. Davranış script'i misharix'ten değişmeden alındı (tek bağlama: anaFiltreAdlari
+    // sözlüğü gerçek gruplardan gelir). Hızlı Teslimat/Ücretsiz Kargo demo chip'leri Faz G'ye
+    // kadar gizli; sıralamada veri karşılığı olmayan seçenekler B10'a kadar gizli.
+    var vm = ViewData["MsUrunListesi"] as UrunListesiVm
+             ?? new UrunListesiVm("Ürünler", 0, 24, [], "", [], 0, 0, []);
+    var anaFiltreAdlari = vm.FiltreGruplari.ToDictionary(g => g.TipKodu, g => g.Ad);
+    anaFiltreAdlari["fiyat"] = "Fiyat";
+    var anaFiltreAdlariJson = System.Text.Json.JsonSerializer.Serialize(anaFiltreAdlari);
+}
+<div class="ms-urun-listesi-mobil-sabit">
+<div class="ms-urun-listesi-mobil-ust" aria-label="Mobil ürün listesi başlığı">
+    <button class="ms-urun-listesi-mobil-geri" type="button" aria-label="Geri dön">
+        <span aria-hidden="true"></span>
+    </button>
+    <div>
+        <strong class="ms-urun-listesi-mobil-baslik">@vm.Baslik</strong>
+        <p>@vm.ToplamUrunMetni Ürün</p>
+    </div>
+</div>
+
+<div class="ms-urun-listesi-mobil-araclar-kapsayici">
+    <div class="ms-urun-listesi-mobil-araclar" aria-label="Mobil filtre ve sıralama">
+        <button class="ms-urun-listesi-mobil-arac" type="button" data-ms-urun-mobil-siralama-ac>
+            <i class="fa-solid fa-arrow-down-short-wide ms-fa-ikon ms-urun-listesi-mobil-siralama-ikon" aria-hidden="true"></i>
+            <span data-ms-urun-mobil-siralama-deger>Önerilen Sıralama</span>
+        </button>
+        <button class="ms-urun-listesi-mobil-arac" type="button" data-ms-urun-mobil-filtre-ac>
+            <i class="fa-solid fa-sliders ms-fa-ikon ms-urun-listesi-mobil-filtre-ikon" aria-hidden="true"></i>
+            Filtrele <strong></strong>
+        </button>
+    </div>
+
+    <div class="ms-urun-listesi-mobil-hizli-filtreler" data-ms-mobil-secili-filtre-seridi aria-label="Seçili ve hızlı filtreler">
+        @foreach (var grup in vm.FiltreGruplari)
+        {
+        <button class="ms-urun-listesi-mobil-chip ms-urun-listesi-mobil-chip-secili" type="button" data-ms-mobil-ana-filtre-chip="@grup.TipKodu" data-ms-mobil-chip-panel-ac="@grup.TipKodu" hidden>@grup.Ad <i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i></button>
+        }
+        <button class="ms-urun-listesi-mobil-chip ms-urun-listesi-mobil-chip-secili" type="button" data-ms-mobil-ana-filtre-chip="fiyat" data-ms-mobil-chip-panel-ac="fiyat" hidden>Fiyat <i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i></button>
+        @if (false)
+        {
+            @* Faz G: Hızlı Teslimat / Ücretsiz Kargo hızlı filtre chip'leri — veri kaynağı yok *@
+            <button class="ms-urun-listesi-mobil-chip" type="button" data-ms-mobil-hizli-filtre=""></button>
+        }
+    </div>
+</div>
+
+</div>
+
+@foreach (var grup in vm.FiltreGruplari)
+{
+<section class="ms-urun-listesi-mobil-chip-panel" data-ms-mobil-chip-panel="@grup.TipKodu" hidden aria-label="@grup.Ad hızlı filtresi">
+    <label class="ms-urun-listesi-mobil-arama">
+        <span class="sr-only">@grup.Ad ara</span>
+        <input type="search" placeholder="@grup.Ad Ara">
+    </label>
+    @if (grup.RenkTipi)
+    {
+    <div class="ms-urun-listesi-mobil-chip-secenekler ms-filtre-renk-listesi">
+        @foreach (var deger in grup.Degerler)
+        {
+        <label class="ms-filtre-secim ms-filtre-renk-secim" data-filter-option>
+            <input type="checkbox" data-ms-filtre-deger="@deger.ValueId">
+            <span class="ms-filtre-kutu" aria-hidden="true"></span>
+            <span class="ms-filtre-renk" style="--ms-renk:@(deger.Hex ?? "#E2E8F0")" aria-hidden="true"></span>
+            <span class="ms-filtre-renk-bilgi"><strong>@deger.Ad</strong></span>
+        </label>
+        }
+    </div>
+    }
+    else
+    {
+    <div class="ms-urun-listesi-mobil-chip-secenekler">
+        @foreach (var deger in grup.Degerler)
+        {
+        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>@deger.Ad</span></label>
+        }
+    </div>
+    }
+    <div class="ms-urun-listesi-mobil-chip-panel-alt">
+        <button type="button" data-ms-mobil-chip-panel-temizle>Temizle</button>
+        <button type="button" data-ms-mobil-chip-panel-kapat>Uygula</button>
+    </div>
+</section>
+}
+
+<section class="ms-urun-listesi-mobil-chip-panel" data-ms-mobil-chip-panel="fiyat" hidden aria-label="Fiyat hızlı filtresi">
+    <div class="ms-urun-listesi-mobil-fiyat-araligi">
+        <input type="number" inputmode="numeric" placeholder="En Az">
+        <span>-</span>
+        <input type="number" inputmode="numeric" placeholder="En Çok">
+    </div>
+    <div class="ms-urun-listesi-mobil-chip-secenekler">
+        <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="0-500"><input type="radio" name="mobil-fiyat-chip"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>0 TL - 500 TL</span></label>
+        <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="500-1000"><input type="radio" name="mobil-fiyat-chip"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>500 TL - 1.000 TL</span></label>
+        <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="1000-2000"><input type="radio" name="mobil-fiyat-chip"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>1.000 TL - 2.000 TL</span></label>
+        <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="2000-3000"><input type="radio" name="mobil-fiyat-chip"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>2.000 TL - 3.000 TL</span></label>
+    </div>
+    <div class="ms-urun-listesi-mobil-chip-panel-alt">
+        <button type="button" data-ms-mobil-chip-panel-temizle>Temizle</button>
+        <button type="button" data-ms-mobil-chip-panel-kapat>Uygula</button>
+    </div>
+</section>
+
+<div class="ms-ornek-modal ms-urun-listesi-mobil-siralama-modal" data-ms-urun-mobil-siralama-panel hidden aria-hidden="true">
+    <div class="ms-ornek-modal-kaplama" data-ms-urun-mobil-siralama-kapat></div>
+    <section class="ms-ornek-modal-kutu ms-urun-listesi-mobil-siralama-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-urun-listesi-mobil-siralama-baslik">
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-mobil-siralama-kapat aria-label="Sıralamayı kapat">×</button>
+        <h3 id="ms-urun-listesi-mobil-siralama-baslik" class="ms-ornek-modal-baslik">Sıralama</h3>
+        <div class="ms-urun-listesi-mobil-secenek-listesi">
+            <button class="ms-urun-listesi-mobil-siralama-secenek ms-urun-listesi-mobil-siralama-secenek-aktif" type="button" data-ms-urun-mobil-siralama-secenek data-ms-siralama-kod="default">Önerilen Sıralama</button>
+            <button class="ms-urun-listesi-mobil-siralama-secenek" type="button" data-ms-urun-mobil-siralama-secenek data-ms-siralama-kod="price_asc">En Düşük Fiyat</button>
+            <button class="ms-urun-listesi-mobil-siralama-secenek" type="button" data-ms-urun-mobil-siralama-secenek data-ms-siralama-kod="price_desc">En Yüksek Fiyat</button>
+            @if (false)
+            {
+                @* B10: En Yeniler / En Çok Satan / En Favoriler — veri gelince *@
+            }
+        </div>
+    </section>
+</div>
+
+<section class="ms-urun-listesi-mobil-filtre-panel" data-ms-urun-mobil-filtre-panel hidden aria-label="Mobil filtre paneli">
+    <header class="ms-urun-listesi-mobil-panel-baslik">
+        <button class="ms-urun-listesi-mobil-kapat" type="button" data-ms-urun-mobil-filtre-kapat aria-label="Filtreyi kapat"></button>
+        <strong>Filtrele</strong>
+    </header>
+    <nav class="ms-urun-listesi-mobil-filtre-menu" aria-label="Mobil filtre başlıkları">
+        @foreach (var grup in vm.FiltreGruplari)
+        {
+        <button type="button" data-ms-urun-mobil-filtre-detay-ac="@grup.TipKodu"><span class="ms-urun-listesi-mobil-filtre-menu-metin">@grup.Ad</span><span class="ms-urun-listesi-mobil-filtre-menu-sag"><em data-ms-urun-mobil-filtre-sayac hidden>0</em><span class="ms-urun-listesi-mobil-filtre-menu-ok" aria-hidden="true">›</span></span></button>
+        }
+        <button type="button" data-ms-urun-mobil-filtre-detay-ac="fiyat"><span class="ms-urun-listesi-mobil-filtre-menu-metin">Fiyat</span><span class="ms-urun-listesi-mobil-filtre-menu-sag"><em data-ms-urun-mobil-filtre-sayac hidden>0</em><span class="ms-urun-listesi-mobil-filtre-menu-ok" aria-hidden="true">›</span></span></button>
+    </nav>
+    <div class="ms-urun-listesi-mobil-alt">
+        <button type="button" data-ms-urun-mobil-filtre-kapat>Tüm Sonuçları Listele</button>
+    </div>
+</section>
+
+@foreach (var grup in vm.FiltreGruplari)
+{
+<section class="ms-urun-listesi-mobil-detay-panel" data-ms-urun-mobil-filtre-detay="@grup.TipKodu" hidden aria-label="@grup.Ad filtresi">
+    <header class="ms-urun-listesi-mobil-panel-baslik">
+        <button class="ms-urun-listesi-mobil-geri" type="button" data-ms-urun-mobil-filtre-detay-kapat aria-label="Filtrelere dön"><span aria-hidden="true"></span></button>
+        <strong>@grup.Ad</strong>
+        <button class="ms-urun-listesi-mobil-temizle" type="button">Temizle</button>
+    </header>
+    <label class="ms-urun-listesi-mobil-arama">
+        <span class="sr-only">@grup.Ad ara</span>
+        <input type="search" placeholder="@grup.Ad ara">
+    </label>
+    @if (grup.RenkTipi)
+    {
+    <div class="ms-urun-listesi-mobil-secenek-listesi ms-filtre-renk-listesi">
+        @foreach (var deger in grup.Degerler)
+        {
+        <label class="ms-filtre-secim ms-filtre-renk-secim" data-filter-option>
+            <input type="checkbox" data-ms-filtre-deger="@deger.ValueId">
+            <span class="ms-filtre-kutu" aria-hidden="true"></span>
+            <span class="ms-filtre-renk" style="--ms-renk:@(deger.Hex ?? "#E2E8F0")" aria-hidden="true"></span>
+            <span class="ms-filtre-renk-bilgi"><strong>@deger.Ad</strong></span>
+        </label>
+        }
+    </div>
+    }
+    else
+    {
+    <div class="ms-urun-listesi-mobil-secenek-listesi">
+        @foreach (var deger in grup.Degerler)
+        {
+        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>@deger.Ad</span></label>
+        }
+    </div>
+    }
+    <div class="ms-urun-listesi-mobil-alt"><button type="button" data-ms-urun-mobil-filtre-detay-kapat>Uygula</button></div>
+</section>
+}
+
+<section class="ms-urun-listesi-mobil-detay-panel" data-ms-urun-mobil-filtre-detay="fiyat" hidden aria-label="Fiyat filtresi">
+    <header class="ms-urun-listesi-mobil-panel-baslik">
+        <button class="ms-urun-listesi-mobil-geri" type="button" data-ms-urun-mobil-filtre-detay-kapat aria-label="Filtrelere dön"><span aria-hidden="true"></span></button>
+        <strong>Fiyat</strong>
+        <button class="ms-urun-listesi-mobil-temizle" type="button">Temizle</button>
+    </header>
+    <div class="ms-urun-listesi-mobil-fiyat-araligi">
+        <input type="number" inputmode="numeric" placeholder="En Az">
+        <span>-</span>
+        <input type="number" inputmode="numeric" placeholder="En Çok">
+    </div>
+    <div class="ms-urun-listesi-mobil-secenek-listesi">
+        <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="0-500"><input type="radio" name="mobil-fiyat-detay"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>0 TL - 500 TL</span></label>
+        <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="500-1000"><input type="radio" name="mobil-fiyat-detay"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>500 TL - 1.000 TL</span></label>
+        <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="1000-2000"><input type="radio" name="mobil-fiyat-detay"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>1.000 TL - 2.000 TL</span></label>
+        <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="2000-3000"><input type="radio" name="mobil-fiyat-detay"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>2.000 TL - 3.000 TL</span></label>
+    </div>
+    <div class="ms-urun-listesi-mobil-alt"><button type="button" data-ms-urun-mobil-filtre-detay-kapat>Uygula</button></div>
+</section>
+            @* Bu script: Mobil filtre paneli akışını, detay paneli açma/kapatma ve filtreleme etkileşimlerini yönetir. *@
+            <script>
+(() => {
+            const urunListesiMobilFiltreBaslat = (kok = document) => {
+                kok.querySelectorAll(".ms-urun-listesi-sayfa").forEach((sayfa) => {
+                if (sayfa.dataset.msMobilFiltreHazir === "true") {
+                    return;
+                }
+
+                sayfa.dataset.msMobilFiltreHazir = "true";
+                const panel = sayfa.querySelector("[data-ms-urun-mobil-filtre-panel]");
+                const acButonlari = sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-ac]");
+                const kapatButonlari = sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-kapat]");
+                const detayAcButonlari = sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-detay-ac]");
+                const detayKapatButonlari = sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-detay-kapat]");
+                const detayPanelleri = sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-detay]");
+                const detayTemizleButonlari = sayfa.querySelectorAll(".ms-urun-listesi-mobil-temizle");
+                const siralamaPanel = sayfa.querySelector("[data-ms-urun-mobil-siralama-panel]");
+                const siralamaAcButonlari = sayfa.querySelectorAll("[data-ms-urun-mobil-siralama-ac]");
+                const siralamaKapatButonlari = sayfa.querySelectorAll("[data-ms-urun-mobil-siralama-kapat]");
+                const siralamaSecenekleri = sayfa.querySelectorAll("[data-ms-urun-mobil-siralama-secenek]");
+                const siralamaDegeri = sayfa.querySelector("[data-ms-urun-mobil-siralama-deger]");
+                const filtreSayaci = sayfa.querySelector("[data-ms-urun-mobil-filtre-ac] strong");
+                const hizliFiltreButonlari = sayfa.querySelectorAll("[data-ms-mobil-hizli-filtre]");
+                const chipPanelAcButonlari = sayfa.querySelectorAll("[data-ms-mobil-chip-panel-ac]");
+                const chipPanelleri = sayfa.querySelectorAll("[data-ms-mobil-chip-panel]");
+                const chipPanelKapatButonlari = sayfa.querySelectorAll("[data-ms-mobil-chip-panel-kapat]");
+                const chipPanelTemizleButonlari = sayfa.querySelectorAll("[data-ms-mobil-chip-panel-temizle]");
+                const filtreAramalari = sayfa.querySelectorAll(".ms-urun-listesi-mobil-arama input");
+                const mobilFiltreSecimleri = sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-detay] input[type='checkbox'], [data-ms-urun-mobil-filtre-detay] input[type='radio'], [data-ms-mobil-chip-panel] input[type='checkbox'], [data-ms-mobil-chip-panel] input[type='radio']");
+                const hizliFiltreSeridi = sayfa.querySelector("[data-ms-mobil-secili-filtre-seridi]");
+                const mobilAraclar = sayfa.querySelector(".ms-urun-listesi-mobil-araclar");
+                const mobilAraclarKapsayici = sayfa.querySelector(".ms-urun-listesi-mobil-araclar-kapsayici");
+                const anaNavigasyon = document.querySelector(".ms-ana-navigasyon-wrapper");
+                const anaFiltreAdlari = @Html.Raw(anaFiltreAdlariJson);
+
+                if (!panel) {
+                    return;
+                }
+
+                const panelAc = (oge) => {
+                    if (!oge) {
+                        return;
+                    }
+
+                    oge.hidden = false;
+                    oge.dataset.msAcik = "true";
+                    oge.classList.toggle("ms-ornek-modal-acik", oge.classList.contains("ms-ornek-modal"));
+                    oge.setAttribute("aria-hidden", "false");
+                    document.body.classList.add("ms-modal-acik");
+                };
+
+                const panelKapat = (oge) => {
+                    if (!oge) {
+                        return;
+                    }
+
+                    oge.dataset.msAcik = "false";
+                    oge.classList.remove("ms-ornek-modal-acik");
+                    oge.setAttribute("aria-hidden", "true");
+                    oge.hidden = true;
+                };
+
+                const tumunuKapat = () => {
+                    panelKapat(panel);
+                    detayPanelleri.forEach(panelKapat);
+                    panelKapat(siralamaPanel);
+                    chipPanelleri.forEach(panelKapat);
+                    document.body.classList.remove("ms-modal-acik");
+                };
+
+                const detayKapat = () => {
+                    detayPanelleri.forEach(panelKapat);
+                    panelAc(panel);
+                };
+
+                const chipPanelleriKapat = () => {
+                    chipPanelleri.forEach(panelKapat);
+                    sayfa.querySelectorAll("[data-ms-mobil-chip-panel-ac]").forEach((buton) => {
+                        buton.classList.remove("ms-urun-listesi-mobil-chip-acik");
+                        const ok = buton.querySelector(".ms-fa-ikon[aria-hidden='true']");
+
+                        if (ok) {
+                            ok.classList.remove("fa-chevron-up");
+                            ok.classList.add("fa-chevron-down");
+                        }
+                    });
+                };
+
+                const detayPanelAc = (detayAdi) => {
+                    const hedefPanel = sayfa.querySelector(`[data-ms-urun-mobil-filtre-detay="${detayAdi}"]`);
+
+                    if (!hedefPanel) {
+                        return;
+                    }
+
+                    panelKapat(panel);
+                    detayPanelleri.forEach(panelKapat);
+                    chipPanelleriKapat();
+                    panelAc(hedefPanel);
+                };
+
+                const chipPanelAc = (buton) => {
+                    const panelAdi = buton?.dataset.msMobilChipPanelAc;
+                    const hedefPanel = sayfa.querySelector(`[data-ms-mobil-chip-panel="${panelAdi}"]`);
+                    const zatenAcik = hedefPanel?.dataset.msAcik === "true";
+
+                    chipPanelleriKapat();
+
+                    if (!hedefPanel || zatenAcik) {
+                        return;
+                    }
+
+                    hedefPanel.hidden = false;
+                    hedefPanel.dataset.msAcik = "true";
+                    buton.classList.add("ms-urun-listesi-mobil-chip-acik");
+                    const ok = buton.querySelector(".ms-fa-ikon[aria-hidden='true']");
+
+                    if (ok) {
+                        ok.classList.remove("fa-chevron-down");
+                        ok.classList.add("fa-chevron-up");
+                    }
+                };
+
+                const filtreGrubuAl = (input) => {
+                    const chipPanel = input.closest("[data-ms-mobil-chip-panel]");
+                    const detayPanel = input.closest("[data-ms-urun-mobil-filtre-detay]");
+
+                    return chipPanel?.dataset.msMobilChipPanel || detayPanel?.dataset.msUrunMobilFiltreDetay || "";
+                };
+
+                const inputMetniAl = (input) => input.closest("label")?.textContent.trim() || "";
+
+                const grupSeciliDegerleriAl = (grup) => {
+                    const seciliDegerler = new Set();
+
+                    mobilFiltreSecimleri.forEach((input) => {
+                        const metin = inputMetniAl(input);
+
+                        if (filtreGrubuAl(input) === grup && input.checked && metin) {
+                            seciliDegerler.add(metin);
+                        }
+                    });
+
+                    return seciliDegerler;
+                };
+
+                const grupSeciliAdediAl = (grup) => grupSeciliDegerleriAl(grup).size;
+
+                const grupSeciliMi = (grup) => grupSeciliAdediAl(grup) > 0;
+
+                const hizliFiltreSeciliAdediAl = () => Array.from(hizliFiltreButonlari)
+                    .filter((buton) => buton.classList.contains("ms-urun-listesi-mobil-chip-secili")).length;
+
+                const toplamSeciliAdediAl = () => Object.keys(anaFiltreAdlari)
+                    .reduce((toplam, grup) => toplam + grupSeciliAdediAl(grup), 0) + hizliFiltreSeciliAdediAl();
+
+                const chipPanelVarMi = (grup) => Boolean(sayfa.querySelector(`[data-ms-mobil-chip-panel="${grup}"]`));
+
+                const anaFiltreChipBulVeyaOlustur = (grup) => {
+                    if (!hizliFiltreSeridi || !grup || !anaFiltreAdlari[grup]) {
+                        return null;
+                    }
+
+                    let chip = hizliFiltreSeridi.querySelector(`[data-ms-mobil-ana-filtre-chip="${grup}"]`);
+
+                    if (chip) {
+                        return chip;
+                    }
+
+                    chip = document.createElement("button");
+                    chip.type = "button";
+                    chip.className = "ms-urun-listesi-mobil-chip ms-urun-listesi-mobil-chip-secili";
+                    chip.dataset.msMobilAnaFiltreChip = grup;
+                    chip.innerHTML = `${anaFiltreAdlari[grup]} <i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i>`;
+
+                    if (chipPanelVarMi(grup)) {
+                        chip.dataset.msMobilChipPanelAc = grup;
+                    } else {
+                        chip.dataset.msUrunMobilFiltreDetayAc = grup;
+                    }
+
+                    const ilkSabitHizliFiltre = hizliFiltreSeridi.querySelector("[data-ms-mobil-hizli-filtre]");
+                    hizliFiltreSeridi.insertBefore(chip, ilkSabitHizliFiltre || null);
+                    return chip;
+                };
+
+                const anaFiltreChipleriniGuncelle = () => {
+                    Object.keys(anaFiltreAdlari).forEach((grup) => {
+                        const secili = grupSeciliMi(grup);
+                        const chip = anaFiltreChipBulVeyaOlustur(grup);
+
+                        if (!chip) {
+                            return;
+                        }
+
+                        chip.hidden = !secili;
+                        chip.classList.toggle("ms-urun-listesi-mobil-chip-secili", secili);
+                    });
+                };
+
+                const detayMenuSayaclariniGuncelle = () => {
+                    detayAcButonlari.forEach((buton) => {
+                        const grup = buton.dataset.msUrunMobilFiltreDetayAc;
+                        const seciliAdet = grupSeciliAdediAl(grup);
+                        let sayac = buton.querySelector("[data-ms-urun-mobil-filtre-sayac]");
+
+                        if (!sayac) {
+                            sayac = document.createElement("em");
+                            sayac.dataset.msUrunMobilFiltreSayac = "";
+                            const sagAlan = buton.querySelector(".ms-urun-listesi-mobil-filtre-menu-sag");
+                            sagAlan?.prepend(sayac);
+                        }
+
+                        buton.classList.toggle("ms-urun-listesi-mobil-filtre-menu-aktif", seciliAdet > 0);
+                        buton.setAttribute("aria-pressed", (seciliAdet > 0).toString());
+                        sayac.textContent = seciliAdet.toString();
+                        sayac.hidden = seciliAdet === 0;
+                    });
+                };
+
+                const seciliSecenekleriUsteTasi = (kapsayici) => {
+                    if (!kapsayici) {
+                        return;
+                    }
+
+                    const etiketler = Array.from(kapsayici.querySelectorAll(":scope > label"));
+
+                    etiketler.forEach((etiket, index) => {
+                        if (!etiket.dataset.msSira) {
+                            etiket.dataset.msSira = index.toString();
+                        }
+                    });
+
+                    etiketler
+                        .sort((ilk, ikinci) => {
+                            const ilkSecili = ilk.querySelector("input[type='checkbox']")?.checked ? 0 : 1;
+                            const ikinciSecili = ikinci.querySelector("input[type='checkbox']")?.checked ? 0 : 1;
+
+                            if (ilkSecili !== ikinciSecili) {
+                                return ilkSecili - ikinciSecili;
+                            }
+
+                            return Number(ilk.dataset.msSira || 0) - Number(ikinci.dataset.msSira || 0);
+                        })
+                        .forEach((etiket) => kapsayici.appendChild(etiket));
+                };
+
+                const tumSeciliSecenekleriUsteTasi = () => {
+                    sayfa.querySelectorAll(".ms-urun-listesi-mobil-chip-secenekler, .ms-urun-listesi-mobil-secenek-listesi").forEach(seciliSecenekleriUsteTasi);
+                };
+
+                const seciliFiltreleriGuncelle = () => {
+                    const seciliAdet = toplamSeciliAdediAl();
+
+                    if (filtreSayaci) {
+                        filtreSayaci.textContent = seciliAdet > 0 ? `(${seciliAdet})` : "";
+                    }
+
+                    detayMenuSayaclariniGuncelle();
+                    anaFiltreChipleriniGuncelle();
+                };
+
+                const filtreMetniAl = (buton) => buton.textContent.replace("×", "").trim();
+
+                const esSecimleriGuncelle = (kaynakInput, secili) => {
+                    const grup = filtreGrubuAl(kaynakInput);
+                    const metin = kaynakInput.closest("label")?.textContent.trim();
+
+                    if (!grup || !metin) {
+                        return;
+                    }
+
+                    mobilFiltreSecimleri.forEach((input) => {
+                        if (input === kaynakInput || filtreGrubuAl(input) !== grup) {
+                            return;
+                        }
+
+                        const inputMetni = input.closest("label")?.textContent.trim();
+
+                        if (inputMetni === metin) {
+                            input.checked = secili;
+                        }
+                    });
+                };
+
+                const seciliFiltreKaldir = (metin) => {
+                    if (!metin) {
+                        return;
+                    }
+
+                    sayfa.querySelectorAll("[data-ms-mobil-filtre-kaldir]").forEach((buton) => {
+                        if (filtreMetniAl(buton) === metin) {
+                            buton.remove();
+                        }
+                    });
+
+                    hizliFiltreButonlari.forEach((buton) => {
+                        if ((buton.dataset.msMobilHizliFiltre || buton.textContent.trim()) === metin) {
+                            buton.classList.remove("ms-urun-listesi-mobil-chip-secili");
+                        }
+                    });
+
+                    mobilFiltreSecimleri.forEach((input) => {
+                        const labelMetni = input.closest("label")?.textContent.trim();
+
+                        if (labelMetni === metin) {
+                            input.checked = false;
+                        }
+                    });
+
+                    seciliFiltreleriGuncelle();
+                };
+
+                const seciliFiltreEkle = (metin) => {
+                    if (!metin) {
+                        return;
+                    }
+
+                    seciliFiltreleriGuncelle();
+                };
+
+                const panelSecimleriniTemizle = (temizlenecekPanel) => {
+                    if (!temizlenecekPanel) {
+                        return;
+                    }
+
+                    const secimler = temizlenecekPanel.querySelectorAll("input[type='checkbox'], input[type='radio']");
+
+                    secimler.forEach((input) => {
+                        const metin = input.closest("label")?.textContent.trim();
+                        input.checked = false;
+                        seciliFiltreKaldir(metin);
+                    });
+
+                    temizlenecekPanel.querySelectorAll("input[type='search'], input[type='number']").forEach((input) => {
+                        input.value = "";
+                        input.dispatchEvent(new Event("input", { bubbles: true }));
+                    });
+
+                    seciliFiltreleriGuncelle();
+                };
+
+                acButonlari.forEach((buton) => {
+                    buton.addEventListener("click", () => {
+                        panelAc(panel);
+                    });
+                });
+
+                kapatButonlari.forEach((buton) => {
+                    buton.addEventListener("click", () => {
+                        if (buton.closest(".ms-urun-listesi-mobil-alt")) {
+                            tumSeciliSecenekleriUsteTasi();
+                        }
+
+                        tumunuKapat();
+                    });
+                });
+
+                detayAcButonlari.forEach((buton) => {
+                    buton.addEventListener("click", () => {
+                        detayPanelAc(buton.dataset.msUrunMobilFiltreDetayAc);
+                    });
+                });
+
+                detayKapatButonlari.forEach((buton) => {
+                    buton.addEventListener("click", () => {
+                        if (buton.closest(".ms-urun-listesi-mobil-alt")) {
+                            tumSeciliSecenekleriUsteTasi();
+                        }
+
+                        detayKapat();
+                    });
+                });
+
+                detayTemizleButonlari.forEach((buton) => {
+                    buton.addEventListener("click", () => {
+                        panelSecimleriniTemizle(buton.closest("[data-ms-urun-mobil-filtre-detay]"));
+                    });
+                });
+
+                chipPanelAcButonlari.forEach((buton) => {
+                    buton.addEventListener("click", (event) => {
+                        event.stopPropagation();
+                        chipPanelAc(buton);
+                    });
+                });
+
+                chipPanelKapatButonlari.forEach((buton) => {
+                    buton.addEventListener("click", () => {
+                        tumSeciliSecenekleriUsteTasi();
+                        chipPanelleriKapat();
+                    });
+                });
+
+                chipPanelTemizleButonlari.forEach((buton) => {
+                    buton.addEventListener("click", () => {
+                        panelSecimleriniTemizle(buton.closest("[data-ms-mobil-chip-panel]"));
+                    });
+                });
+
+                siralamaAcButonlari.forEach((buton) => {
+                    buton.addEventListener("click", () => {
+                        panelAc(siralamaPanel);
+                    });
+                });
+
+                siralamaKapatButonlari.forEach((buton) => {
+                    buton.addEventListener("click", tumunuKapat);
+                });
+
+                siralamaSecenekleri.forEach((secenek) => {
+                    secenek.addEventListener("click", () => {
+                        const secenekMetni = secenek.textContent.trim();
+
+                        if (siralamaDegeri) {
+                            siralamaDegeri.textContent = secenekMetni;
+                        }
+
+                        siralamaSecenekleri.forEach((oge) => {
+                            oge.classList.toggle("ms-urun-listesi-mobil-siralama-secenek-aktif", oge === secenek);
+                        });
+
+                        tumunuKapat();
+                    });
+                });
+
+                let oncekiKaydirma = window.scrollY;
+                let mobilAraclarGizli = sayfa.classList.contains("ms-urun-listesi-mobil-araclar-gizli");
+                let sonKullaniciKaydirmaYonu = 0;
+                let sonKullaniciKaydirmaZamani = 0;
+                let dokunmaBaslangicY = 0;
+                let kaydirmaPlanlandi = false;
+                let ilkKaydirmaKorumaAktif = true;
+                const mobilAraclarKaydirmaEsigi = 10;
+
+                const zamanDamgasiAl = () => (window.performance?.now ? window.performance.now() : Date.now());
+
+                const mobilAraclariAc = () => {
+                    sayfa.classList.remove("ms-urun-listesi-mobil-araclar-gizli");
+                    mobilAraclarGizli = false;
+                };
+
+                const mobilAraclarKorumasiniBitir = () => {
+                    ilkKaydirmaKorumaAktif = false;
+                    oncekiKaydirma = window.scrollY;
+                };
+
+                const kullaniciKaydirmaYonunuIsaretle = (yon) => {
+                    if (yon === 0) {
+                        return;
+                    }
+
+                    sonKullaniciKaydirmaYonu = yon;
+                    sonKullaniciKaydirmaZamani = zamanDamgasiAl();
+                    ilkKaydirmaKorumaAktif = false;
+                    mobilAraclariKaydirmadaIzle();
+                };
+
+                mobilAraclariAc();
+
+                const navigasyonYuksekliginiGuncelle = () => {
+                    const mobilGorunum = window.matchMedia("(max-width: 1023px)").matches;
+                    const navigasyonYuksekligi = mobilGorunum
+                        ? Math.ceil(anaNavigasyon?.getBoundingClientRect().height || 0)
+                        : 0;
+
+                    sayfa.style.setProperty("--ms-urun-listesi-nav-yukseklik", `${navigasyonYuksekligi}px`);
+                };
+
+                const mobilAraclariGuncelle = () => {
+                    kaydirmaPlanlandi = false;
+                    navigasyonYuksekliginiGuncelle();
+
+                    if (!window.matchMedia("(max-width: 1023px)").matches || document.body.classList.contains("ms-modal-acik")) {
+                        sayfa.classList.remove("ms-urun-listesi-mobil-araclar-gizli");
+                        mobilAraclarGizli = false;
+                        oncekiKaydirma = window.scrollY;
+                        return;
+                    }
+
+                    const guncelKaydirma = window.scrollY;
+                    const kaydirmaFarki = Math.abs(guncelKaydirma - oncekiKaydirma);
+                    const araclarAltSiniri = Math.max(80, mobilAraclarKapsayici?.scrollHeight || mobilAraclar?.offsetHeight || 0);
+                    const kullaniciKaydirmaGecerli = sonKullaniciKaydirmaYonu !== 0
+                        && zamanDamgasiAl() - sonKullaniciKaydirmaZamani < 600;
+
+                    if (ilkKaydirmaKorumaAktif || !kullaniciKaydirmaGecerli) {
+                        oncekiKaydirma = guncelKaydirma;
+                        return;
+                    }
+
+                    if (kaydirmaFarki < mobilAraclarKaydirmaEsigi && guncelKaydirma >= 24) {
+                        return;
+                    }
+
+                    const kaydirmaYonu = sonKullaniciKaydirmaYonu;
+
+                    if (!mobilAraclarGizli && kaydirmaYonu > 0 && guncelKaydirma > araclarAltSiniri) {
+                        sayfa.classList.add("ms-urun-listesi-mobil-araclar-gizli");
+                        mobilAraclarGizli = true;
+                    } else if (mobilAraclarGizli && (kaydirmaYonu < 0 || guncelKaydirma < 24)) {
+                        sayfa.classList.remove("ms-urun-listesi-mobil-araclar-gizli");
+                        mobilAraclarGizli = false;
+                    }
+
+                    oncekiKaydirma = guncelKaydirma;
+                };
+
+                const mobilAraclariKaydirmadaIzle = () => {
+                    if (kaydirmaPlanlandi) {
+                        return;
+                    }
+
+                    kaydirmaPlanlandi = true;
+                    window.requestAnimationFrame(mobilAraclariGuncelle);
+                };
+
+                window.addEventListener("scroll", mobilAraclariKaydirmadaIzle, { passive: true });
+                window.addEventListener("pageshow", () => {
+                    mobilAraclariAc();
+                    sonKullaniciKaydirmaYonu = 0;
+                    sonKullaniciKaydirmaZamani = 0;
+                    ilkKaydirmaKorumaAktif = true;
+                    oncekiKaydirma = window.scrollY;
+                    navigasyonYuksekliginiGuncelle();
+                    window.setTimeout(mobilAraclarKorumasiniBitir, 600);
+                });
+                window.addEventListener("wheel", (event) => {
+                    if (Math.abs(event.deltaY) < mobilAraclarKaydirmaEsigi) {
+                        return;
+                    }
+
+                    kullaniciKaydirmaYonunuIsaretle(Math.sign(event.deltaY));
+                }, { passive: true });
+                window.addEventListener("touchstart", (event) => {
+                    dokunmaBaslangicY = event.touches[0]?.clientY || 0;
+                }, { passive: true });
+                window.addEventListener("touchmove", (event) => {
+                    const guncelDokunmaY = event.touches[0]?.clientY || 0;
+                    const dokunmaFarki = dokunmaBaslangicY - guncelDokunmaY;
+
+                    if (Math.abs(dokunmaFarki) < mobilAraclarKaydirmaEsigi) {
+                        return;
+                    }
+
+                    kullaniciKaydirmaYonunuIsaretle(Math.sign(dokunmaFarki));
+                    dokunmaBaslangicY = guncelDokunmaY;
+                }, { passive: true });
+                window.addEventListener("resize", () => {
+                    navigasyonYuksekliginiGuncelle();
+                    oncekiKaydirma = window.scrollY;
+
+                    if (!window.matchMedia("(max-width: 1023px)").matches) {
+                        mobilAraclariAc();
+                    }
+                });
+                navigasyonYuksekliginiGuncelle();
+                window.setTimeout(mobilAraclarKorumasiniBitir, 600);
+
+                hizliFiltreButonlari.forEach((buton) => {
+                    buton.addEventListener("click", () => {
+                        const filtreMetni = buton.dataset.msMobilHizliFiltre || buton.textContent.trim();
+                        const aktif = buton.classList.toggle("ms-urun-listesi-mobil-chip-secili");
+
+                        if (aktif) {
+                            seciliFiltreEkle(filtreMetni);
+                        } else {
+                            seciliFiltreKaldir(filtreMetni);
+                        }
+                    });
+                });
+
+                mobilFiltreSecimleri.forEach((input) => {
+                    input.addEventListener("change", () => {
+                        const metin = input.closest("label")?.textContent.trim();
+                        const grup = filtreGrubuAl(input);
+
+                        if (!metin) {
+                            return;
+                        }
+
+                        if (input.type === "radio" && input.checked) {
+                            mobilFiltreSecimleri.forEach((digerInput) => {
+                                if (digerInput === input || filtreGrubuAl(digerInput) !== grup || digerInput.type !== "radio") {
+                                    return;
+                                }
+
+                                const digerMetin = digerInput.closest("label")?.textContent.trim();
+
+                                if (digerMetin && digerMetin !== metin) {
+                                    seciliFiltreKaldir(digerMetin);
+                                }
+                            });
+                        }
+
+                        esSecimleriGuncelle(input, input.checked);
+
+                        if (input.checked) {
+                            seciliFiltreEkle(metin);
+                        } else {
+                            seciliFiltreKaldir(metin);
+                        }
+                    });
+                });
+
+                sayfa.addEventListener("click", (event) => {
+                    const kaldirButonu = event.target.closest("[data-ms-mobil-filtre-kaldir]");
+                    const dinamikAnaChip = event.target.closest("[data-ms-mobil-ana-filtre-chip]");
+
+                    if (dinamikAnaChip && sayfa.contains(dinamikAnaChip)) {
+                        if (dinamikAnaChip.matches("[data-ms-mobil-chip-panel-ac]")) {
+                            chipPanelAc(dinamikAnaChip);
+                        } else {
+                            detayPanelAc(dinamikAnaChip.dataset.msUrunMobilFiltreDetayAc);
+                        }
+
+                        return;
+                    }
+
+                    if (!kaldirButonu || !sayfa.contains(kaldirButonu)) {
+                        return;
+                    }
+
+                    event.stopPropagation();
+                    const kaldirilanMetin = filtreMetniAl(kaldirButonu);
+                    seciliFiltreKaldir(kaldirilanMetin);
+                });
+
+                filtreAramalari.forEach((arama) => {
+                    arama.addEventListener("input", () => {
+                        const panel = arama.closest("[data-ms-urun-mobil-filtre-detay], [data-ms-mobil-chip-panel]");
+                        const aranan = arama.value.trim().toLocaleLowerCase("tr-TR");
+                        const secenekler = panel?.querySelectorAll(".ms-urun-listesi-mobil-secenek-listesi label, .ms-urun-listesi-mobil-chip-secenekler label") || [];
+
+                        secenekler.forEach((secenek) => {
+                            const metin = secenek.textContent.trim().toLocaleLowerCase("tr-TR");
+                            secenek.hidden = aranan.length > 0 && !metin.includes(aranan);
+                        });
+                    });
+                });
+
+                seciliFiltreleriGuncelle();
+            });
+            };
+
+            window.msUrunListesiMobilFiltreBaslat = urunListesiMobilFiltreBaslat;
+            urunListesiMobilFiltreBaslat();
+})();
+</script>

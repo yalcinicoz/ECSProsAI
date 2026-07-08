@@ -1,0 +1,108 @@
+@using ECSPros.Api.Models.Store
+@{
+    // B7: Sol filtre canlı facet'lere bağlandı — blok markup'ı misharix'in
+    // Kategori/Beden/Marka/Renk/Fiyat bloklarının birebir kopyası, içerik @foreach ile
+    // gerçek verilerden gelir. Kategori bloğu alt kategorilere gider (tıklayınca sayfa
+    // değişir); Kampanya bloğu veri kaynağı gelene dek gizli (Faz G).
+    var vm = ViewData["MsUrunListesi"] as UrunListesiVm
+             ?? new UrunListesiVm("Ürünler", 0, 24, [], "", [], 0, 0, []);
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+}
+<aside class="ms-urun-listesi-filtre" aria-label="Sol filtre alanı">
+    @if (vm.KategoriSecenekleri.Count > 0)
+    {
+    <div class="ms-filtre-kapsayici" data-filter-block>
+        <button class="ms-filtre-baslik" type="button" data-filter-toggle aria-expanded="true">
+            Kategori
+            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-filtre-ok ms-filtre-ok-acik" aria-hidden="true"></i>
+        </button>
+        <div class="ms-filtre-icerik" data-filter-content>
+            <div class="ms-filtre-secim-listesi">
+                @foreach (var kategori in vm.KategoriSecenekleri)
+                {
+                <label class="ms-filtre-secim" data-filter-option>
+                    <input type="checkbox" data-ms-kategori-url="@kategori.Url">
+                    <span class="ms-filtre-kutu" aria-hidden="true"></span>
+                    @kategori.Ad
+                </label>
+                }
+            </div>
+        </div>
+    </div>
+    }
+
+    @{ var ilkGrup = true; }
+    @foreach (var grup in vm.FiltreGruplari)
+    {
+        var acik = ilkGrup;
+        ilkGrup = false;
+    <div class="ms-filtre-kapsayici" data-filter-block>
+        <button class="ms-filtre-baslik" type="button" data-filter-toggle aria-expanded="@(acik ? "true" : "false")">
+            @grup.Ad
+            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-filtre-ok@(acik ? " ms-filtre-ok-acik" : "")" aria-hidden="true"></i>
+        </button>
+        <div class="ms-filtre-icerik@(acik ? "" : " ms-gizli")" data-filter-content>
+            @if (grup.Degerler.Count > 10)
+            {
+            <input class="ms-filtre-arama" type="search" placeholder="@grup.Ad Ara" aria-label="@grup.Ad ara" data-filter-search>
+            }
+            @if (grup.RenkTipi)
+            {
+            <h3 class="ms-filtre-grup-basligi">Renkler</h3>
+            <div class="ms-filtre-secim-listesi ms-filtre-renk-listesi">
+                @foreach (var deger in grup.Degerler)
+                {
+                <label class="ms-filtre-secim ms-filtre-renk-secim" data-filter-option>
+                    <input type="checkbox" data-ms-filtre-deger="@deger.ValueId">
+                    <span class="ms-filtre-kutu" aria-hidden="true"></span>
+                    <span class="ms-filtre-renk" style="--ms-renk:@(deger.Hex ?? "#E2E8F0")" aria-hidden="true"></span>
+                    <span class="ms-filtre-renk-bilgi"><strong>@deger.Ad</strong></span>
+                </label>
+                }
+            </div>
+            }
+            else
+            {
+            <div class="ms-filtre-secim-listesi">
+                @foreach (var deger in grup.Degerler)
+                {
+                <label class="ms-filtre-secim" data-filter-option>
+                    <input type="checkbox" data-ms-filtre-deger="@deger.ValueId">
+                    <span class="ms-filtre-kutu" aria-hidden="true"></span>
+                    @deger.Ad (@deger.UrunSayisi.ToString("N0", tr))
+                </label>
+                }
+            </div>
+            }
+            <button class="ms-filtre-uygula-buton" type="button">Filtrele</button>
+        </div>
+    </div>
+    }
+
+    <div class="ms-filtre-kapsayici" data-filter-block>
+        <button class="ms-filtre-baslik" type="button" data-filter-toggle aria-expanded="false">
+            Fiyat Aralığı
+            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-filtre-ok" aria-hidden="true"></i>
+        </button>
+        <div class="ms-filtre-icerik ms-gizli" data-filter-content>
+            <div class="ms-filtre-fiyat-araligi" aria-label="Fiyat aralığı seçimi">
+                <input type="number" inputmode="numeric" min="0" placeholder="En Az@(vm.FiyatMin > 0 ? $" ({vm.FiyatMin.ToString("N0", tr)})" : "")" aria-label="En az fiyat">
+                <span class="ms-filtre-fiyat-ayrac" aria-hidden="true">-</span>
+                <input type="number" inputmode="numeric" min="0" placeholder="En Çok@(vm.FiyatMax > 0 ? $" ({vm.FiyatMax.ToString("N0", tr)})" : "")" aria-label="En çok fiyat">
+            </div>
+            <div class="ms-filtre-fiyat-secim-listesi" role="radiogroup" aria-label="Hazır fiyat aralıkları">
+                <label class="ms-filtre-secim ms-filtre-radio-secim" data-filter-option data-ms-fiyat-aralik="0-500"><input type="radio" name="urun-listesi-fiyat-araligi"><span class="ms-filtre-kutu" aria-hidden="true"></span>0TL-500TL</label>
+                <label class="ms-filtre-secim ms-filtre-radio-secim" data-filter-option data-ms-fiyat-aralik="500-1000"><input type="radio" name="urun-listesi-fiyat-araligi"><span class="ms-filtre-kutu" aria-hidden="true"></span>500TL-1000TL</label>
+                <label class="ms-filtre-secim ms-filtre-radio-secim" data-filter-option data-ms-fiyat-aralik="1000-2000"><input type="radio" name="urun-listesi-fiyat-araligi"><span class="ms-filtre-kutu" aria-hidden="true"></span>1000TL-2000TL</label>
+                <label class="ms-filtre-secim ms-filtre-radio-secim" data-filter-option data-ms-fiyat-aralik="2000-3000"><input type="radio" name="urun-listesi-fiyat-araligi"><span class="ms-filtre-kutu" aria-hidden="true"></span>2000TL-3000TL</label>
+            </div>
+            <button class="ms-filtre-uygula-buton" type="button">Filtrele</button>
+        </div>
+    </div>
+
+    @if (false)
+    {
+        @* Faz G: Kampanya filtresi — kampanya-ürün ilişkisi kişiselleştirme sistemiyle gelecek *@
+        <div class="ms-filtre-kapsayici" data-filter-block></div>
+    }
+</aside>

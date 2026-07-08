@@ -294,6 +294,44 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-07 — Faz B7 TAMAMLANDI (üçüncü oturum): Ürün Listesi canlıya hazır (kullanıcı seçimi: B3/B6 yerine B7 öncelikli):**
+  - **Üç yüzey tek controller'da** (`Controllers/Store/UrunListesiController` + `Models/Store/UrunListesiVm`):
+    kategori `/{slug}` (nav ağacından çözülür, bulunamazsa 404), arama `/urunler?search=`
+    (B2 "Tümünü Gör" hedefi artık çalışıyor), tümü `/urun-listesi`. **Nav'daki kategori
+    linkleri artık 404 DEĞİL** — B14 erken geçişinin bilinen boşluğu kapandı.
+  - **KRİTİK ROUTE DERSİ:** kısıtsız `[HttpGet("/{slug}")]` `/favicon.ico` gibi kök statik
+    dosyaları da endpoint olarak eşleştiriyor ve StaticFileMiddleware devre dışı kalıyor
+    (WebApplication örtük UseRouting'i pipeline'ın BAŞINA koyar; endpoint eşleşince statik
+    dosya sunulmaz). Çözüm: `{slug:regex(^[[a-z0-9-]]+$)}` (47 slug'ın tamamı kebab-case).
+  - **Mimari:** ilk sayfa SSR (plan 3.3) — kart markup'ı `UrunKarti` Razor local function
+    (SSR + `<template>` tek kaynak); devam sayfaları misharix infinite-scroll modülünün
+    `kartHazirla`/`sonra` hook'larıyla (ilk:0, gerçek toplam) api/store JSON'dan; iskelet
+    kartlar veri gelince dolar. Facet'ler controller'da süreç içi MediatR'dan SSR (kategori
+    facets Redis'ten 0.01-0.03s; tüm-katalog facets ilk çağrı ~6s → 15dk IMemoryCache,
+    yalnız /urun-listesi ve aramasız /urunler'i etkiler). Filtre/sıralama **SPA paritesiyle
+    client-side** (valueId OR eşleşmesi + fiyat aralığı + fiyat artan/azalan; sayaç güncellenir) —
+    sunucu tarafı filtre/sıralama B10'un işi. Mobil filtre panelleri gerçek facet gruplarından
+    üretilir (`anaFiltreAdlari` bağlandı, 650 satırlık misharix script'i değişmedi).
+  - Veri karşılığı olmayan demo blokları `@if` ile gizli: kart puan/teslimat/kargo/video/
+    sponsor/kampanya/renk-tooltip (B8/B11), hızlı filtre chip'leri + Kampanya filtre bloğu
+    (Faz G), eksik sıralama seçenekleri (B10). "Kategoride ara" YİNE ertelendi — backend'de
+    kategori+arama birleşik sorgu yok (B10'da sorgu genişleyince bağlanmalı; plana not düşüldü).
+  - **E2E (headless Chromium, 5051 Production):** Kadın 24 SSR kart → scroll 48 (24 JSON'la
+    doldu), renk filtresi 33 görünür/15 gizli + sayaç "33 Ürün", fiyat sıralaması artan
+    (4.99→9.99), arama sayfası 8.045 sonuç, mobil filtre panelleri (Filtre Rengi/Beden/Fiyat),
+    favicon/statik/swagger/api regresyon yok, **0 konsol hatası**; `check.sh` TEMİZ ✓
+    (5 yeni izinli B7 girdisi). Ekran görüntüleri scratchpad `pw/shots/b7-*.png`.
+  - Plan (B7 [x] + envanter 8.3 ✅ satırları + Durum Panosu) ve `misharix-partial-vm-eslemesi.md`
+    (6 yeni satır) güncellendi.
+  - **Bilinen veri gerçeği (B7 dışı):** Kadın kategorisinin ilk sayfası tek ürünün renk
+    kartlarıyla dolu ve görselleri CDN placeholder ("RESİM HAZIRLANIYOR" — B2'de not edilen
+    kısa-slug .jpg sorunu). Kod doğru; katalog/CDN verisi düzelince kartlar gerçek görsellerle gelir.
+  - **DEPLOY BEKLİYOR (kullanıcı):** publish edildi (B2 arama backend'i + B7 birlikte) —
+    `sudo systemctl restart ecspros` sonrası https://new.ecspros.com 'da kategori sayfaları,
+    arama sonuç sayfası ve nav araması uçtan uca çalışır olacak.
+  - **SIRADAKİ ADIM → B8 (kart derinleştirme: varyant görsel galerisi + renk tooltip) veya
+    B9 (ürün detay — kart linkleri `/urun/{code}` şu an 404); B3/B6 küçük işler araya alınabilir.**
+
 - **2026-07-07 — Misharix Razor taşıma planı hazırlandı (kod yazılmadı):**
   - Karar (kullanıcı onaylı): storefront SPA'dan (`store/index.html`+`app.js`) çıkarılıp **Razor/MVC**
     render'a geçilecek; 6 Temmuz portu tasarımı "yorumlayarak" bozduğu için partial'lar bu kez
@@ -350,8 +388,28 @@
     default zaten mishar olduğundan acil değil). Bilinçli kabul: B7'ye kadar kategori
     linkleri 404, ana sayfa geçici sayfa seçici. Geri dönüş: iki nginx dosyasını git'ten
     geri al + `nginx -s reload`.
-  - **SIRADAKİ ADIM → Faz B2:** navigasyon içi arama paneli (canlı öneri — mevcut
-    `products?search` sorgusuna bağlanacak; popüler aramalar geçici statik, kalıcısı E11).
+  - **Faz B2 TAMAMLANDI (2026-07-07):** arama paneli canlı veriye bağlandı.
+    - `_AnaNavigasyonSearch.cshtml`: demo içerik boşaltıldı, dosya sonuna canlı arama
+      script'i eklendi (DOMContentLoaded'da bağlanır — misharix'in parse-anı IIFE'sinden
+      sonra çalışır, o görünürlüğü yönetir/biz içerik doldururuz; debounce 300ms, min 2
+      karakter, istek sırası koruması). Ürün önerileri `products?search` (10 kart + toplam
+      + "Tümünü Gör"), kategori önerileri nav ağacından client-side ("Kök › Çocuk" etiketi).
+      Popüler aramalar gerçek terimli statik chip'ler; popüler ürünler ilk ürünlerden
+      (15 dk sessionStorage); son aramalar localStorage (kalıcıları E11).
+    - **Backend:** `products?search` ve `products/facets?search` artık kod VEYA Türkçe ad
+      eşleşmesi yapıyor. Dictionary indexer'ı dinamik JSON'da çevrilmediği için
+      `PgJsonFunctions.JsonText` → PG `jsonb_extract_path_text` DbFunction eşlemesi
+      eklendi (CatalogDbContext.OnModelCreating). ~0.7-0.85s/sorgu; gerekirse pg_trgm.
+    - "Kategoride ara" kapsam daraltması B7'ye bağlı (kategori sayfası yok) — plana not düşüldü.
+    - E2E: headless Chromium — "elbise" 8045 ürün + 2 kategori chip, sonuçsuz mesajı,
+      0 konsol hatası; `check.sh` TEMİZ ✓.
+    - **BULGU (B2 dışı):** bazı ürünlerin görselleri CDN'de yok — kısa slug'lı `.jpg`'ler
+      (ör. simli-abiye-elbise-2f15.jpg) hep aynı 12134b "RESİM HAZIRLANIYOR" placeholder'ını
+      dönüyor; eski uzun adlı `.webp`'ler gerçek. ImageSet/yeni adlandırma verisiyle ilgili
+      görünüyor, araştırılmalı.
+    - **DEPLOY BEKLİYOR (kullanıcı):** `dotnet publish` + `sudo systemctl restart ecspros`.
+  - **SIRADAKİ ADIM → B3 (duyuru şeridi geçici statik) veya B6 (ana sayfa geçici
+    kompozisyon) — ya da kullanıcı önceliğine göre B7 ürün listesi.**
 
 - **2026-07-07 — filtre_rengi insert'i sonrası sayfa yavaşlaması çözüldü (3 katman):**
   - **Kök neden 1 (ASIL suçlu): bayat Postgres istatistikleri.** 1.27M satırlık filtre_rengi bulk

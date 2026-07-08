@@ -1,3 +1,4 @@
+using ECSPros.Catalog.Application.Helpers;
 using ECSPros.Catalog.Application.Services;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
@@ -49,8 +50,11 @@ public class GetStoreFacetsQueryHandler(ICatalogDbContext db, IMemoryCache memor
 
         if (hasSearch)
         {
-            var s = request.Search!.ToLower();
-            q = q.Where(p => p.Code.ToLower().Contains(s));
+            // GetStoreProducts ile aynı eşleşme kuralı (kod VEYA Türkçe ad) — arama sonuç
+            // sayfasının facet'leri grid'le tutarlı kalsın.
+            var s = request.Search!.Trim().ToLower();
+            q = q.Where(p => p.Code.ToLower().Contains(s)
+                          || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(s));
         }
 
         // Ürün id'leri belleğe çekilmez — alt sorgu olarak aggregation'a gömülür
