@@ -294,6 +294,50 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-08 (üçüncü oturum) — Faz B3 + B6 TAMAMLANDI: duyuru şeridi (geçici statik) + ana sayfa (geçici kompozisyon):**
+  - **B6 ana sayfa:** sayfa seçici kaldırıldı; `Home/Index.cshtml` = Kapsül Kategori Şeridi
+    (kök kanal kategorileri; görsel: kategori görseli yoksa ilk ürün görseli; görselsiz kapsül
+    basılmaz) + kök kategori başına Standart Carousel (ilk 3 kök × 10 ürün, "Tümünü Gör" →
+    /{slug}). Banner bloğu bilinçli atlandı (banner görseli yok — Faz G vitrini). Veri:
+    `HomeController` → `GetChannelCategoryProductsQuery` kök başına PARALEL (görev başına ayrı
+    DI scope — scoped DbContext paylaşılamaz), `AnaSayfaVm` 15 dk IMemoryCache (soğuk ilk
+    istek sıralıyken 11.3s idi → paralel + PG cache ile ~ms'ler).
+  - **Kart tek kaynağa alındı:** B7'nin `UrunKarti` local function'ı paylaşılan
+    `ProjeElementleri/Urun/_UrunKarti.cshtml` partial'ına taşındı (liste SSR + `<template>` +
+    ana sayfa carousel aynı markup; `UrunKartMap` dönüştürücüsü `Models/Store`'da, listeleme
+    controller'ı delegate ediyor). Infinite scroll template'i partial'ın null-model yoluyla
+    iskelet kart üretiyor — /kadin 24→72 E2E ile doğrulandı.
+  - **KRİTİK DERS 1 (test ortamı):** `bin/Release/net8.0`'dan çalıştırılan instance'ta wwwroot
+    YOK — tüm statikler (site.js dahil) 404, hiçbir JS modülü yüklenmez, testler yanlış sonuç
+    verir. 5051 testi HER ZAMAN publish çıktısından yapılmalı (bu oturumda scratchpad'e izole
+    `dotnet publish` yapıldı, canlı publish/ dizinine dokunmadan test edildi).
+  - **KRİTİK DERS 2 (arka plan süreç):** `cd X && ENV nohup dotnet ... & echo $!` kalıbında `&`
+    tüm `&&` zincirini subshell'e alır — $! subshell PID'idir, kill dotnet'i ÖLDÜRMEZ (yetim
+    kalır, portu tutmaya devam eder; ikinci instance sessizce ölür ve testler eski süreçe
+    çarpar). Doğru kalıp: önce `cd`, sonra tek satır `nohup env ... dotnet ... &` (`$!` = dotnet).
+    Öldürmeden önce `/proc/$PID/cwd` ile doğrula.
+  - **Kart davranışları ana sayfada:** site.js bootstrap'i yalnız `data-ms-infinite-liste`
+    konteynerlerini tarar — carousel kartları için sayfa sonuna `msUrunKartDavranislariYenile`
+    çağıran config script'i eklendi (DOMContentLoaded'a ertelenir; site.js body sonunda).
+    Tooltip E2E doğrulaması B8'deki gibi `ms-urun-renk-tooltip-acik` class'ıyla yapılır —
+    tooltip anchor'ı tasarım gereği 0 yükseklikte, `isVisible()` yanlış negatif verir.
+  - **B3 duyuru:** `_AnaNavigasyonDuyuru` zaten B1'den beri her sayfada statik render;
+    "Misharitalia" demo metni mishar'a uyarlandı; linkler Faz F/H'ye kadar `#`; kalıcısı G8.
+  - **check.sh geliştirmesi:** kaynakta karşılığı olmayan bilinçli dosyalar için "İZİNLİ YENİ"
+    durumu (allowed-diffs listesindeyse) — `_UrunKarti.cshtml` bu yolla izinli.
+  - **E2E (headless Chromium, 5051 Production publish): desktop 19/19 ✓ + mobil 6/6 ✓**;
+    0 konsol hatası; ekran görüntüleri scratchpad `pw-b6/shots/b6-*.png`. Görünen veri
+    gerçekleri (kod değil): kart görselleri CDN "RESİM HAZIRLANIYOR" placeholder'ları, Kadın
+    carousel'i tek ürünün renk kartlarıyla dolu (kategori listesiyle aynı davranış).
+    `check.sh` TEMİZ ✓ (3 yeni izinli girdi). Plan (B3/B6 [x] + Durum Panosu + 8.1 duyuru
+    satırı) ve eşleme tablosu güncellendi.
+  - **DEPLOY:** B6+B3, B8 ile birlikte `/opt/ECSProsAI/publish`'e yayınlandı — kullanıcının
+    systemd'ye dönüş adımı (aşağıdaki B8 notundaki kill + `sudo systemctl start ecspros`)
+    hepsini birden canlıya alır. Canlı manuel süreç hâlâ ESKİ binary'de (B8 dahil hiçbiri
+    canlıda değil).
+  - **SIRADAKİ ADIM → B4-B5 (giriş/kayıt modalları + mini sepet) veya B10 (sunucu tarafı
+    filtre/sıralama; "kategoride ara" da burada bağlanacak); B13 görsel QA faz kapanışında.**
+
 - **2026-07-08 (ikinci oturum) — Faz B8 TAMAMLANDI: ürün kartı derinleştirme (önceki oturumda başlanmış commit'siz değişiklikler devralındı, tamamlandı, doğrulandı):**
   - **Hover görsel galerisi + nokta göstergeleri:** kartın (seçili) rengine ait görsel havuzunun
     ilk 4'ü `data-ms-urun-galeri-resimler`'e | ayraçlı; misharix site.js modülü mousemove/touch
