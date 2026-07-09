@@ -22,6 +22,31 @@ public static class DatabaseSeeder
         await SeedCatalogAsync(scope.ServiceProvider);
         await SeedPlatformTypesAsync(services);
         await SeedStorefrontDefaultsAsync(scope.ServiceProvider);
+        await SeedCrmDefaultsAsync(scope.ServiceProvider);
+    }
+
+    /// <summary>
+    /// B4: Üyelik kaydının çalışması için varsayılan üye grubu (RegisterMemberCommand
+    /// IsDefault grup arar). İdempotent — grup varsa dokunmaz. Canlıya 2026-07-09'da
+    /// aynı kayıt SQL ile eklendi (Code='standart').
+    /// </summary>
+    private static async Task SeedCrmDefaultsAsync(IServiceProvider sp)
+    {
+        var db = sp.GetRequiredService<ECSPros.Crm.Infrastructure.Persistence.CrmDbContext>();
+        await db.Database.MigrateAsync();
+
+        if (!await db.MemberGroups.AnyAsync(g => g.IsDefault))
+        {
+            db.MemberGroups.Add(new ECSPros.Crm.Domain.Entities.MemberGroup
+            {
+                Code = "standart",
+                NameI18n = new Dictionary<string, string> { ["tr"] = "Standart Üye" },
+                IsDefault = true,
+                IsActive = true
+            });
+            await db.SaveChangesAsync();
+            Console.WriteLine("✓ Seed: varsayılan üye grubu (standart) oluşturuldu.");
+        }
     }
 
     /// <summary>

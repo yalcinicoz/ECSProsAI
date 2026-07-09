@@ -84,3 +84,20 @@ Views/ProjeElementleri/Urun/_UrunKarti.cshtml
 # B3: Duyuru şeridi geçici statik içerik — demo marka metni (Misharitalia) mishar'a uyarlandı;
 # sağ linkler Faz H (kargo takip) / Faz F (yardım) gelene kadar '#'. Kalıcısı Faz G duyuru bloğu.
 Views/ProjeElementleri/Navigasyon/_AnaNavigasyonDuyuru.cshtml
+
+# B4: Giriş modalı — e-posta sekmesi varsayılan + canlı (api/store/auth/login), SMS/Telefon
+# sekmeleri Faz D'ye kadar "(Yakında)" disabled; girdilere data-ms-* bağları + hata alanı;
+# Misafir butonu modalı kapatır; dosya sonunda oturum/kayıt/merge script'i. Markup birebir.
+Views/ProjeElementleri/Navigasyon/_AnaNavigasyonGirisModal.cshtml
+
+# B4: Kayıt modalı — girdilere data-ms-* bağları, Şifre alanı eklendi (register API şifre
+# zorunlu; Faz D SMS/OTP onboarding'inde gözden geçirilir), hata alanı + gönder bağı.
+Views/ProjeElementleri/Navigasyon/_AnaNavigasyonKayitModal.cshtml
+
+# B4: Giriş menüsü — statü/harcama bloğu @if(false) gizli (puan verisi yok — Faz E/G);
+# kimlik alanlarını login script'i doldurur; hesap menü linkleri Faz E'ye kadar '#'.
+Views/ProjeElementleri/Navigasyon/_AnaNavigasyonGirisMenu.cshtml
+
+# B4: Giriş modalı varsayılan sekmesi e-posta (tek satır: tabAc("sms") → tabAc("eposta")) —
+# SMS/OTP altyapısı Faz D'ye kadar pasif olduğundan açılış canlı olan sekmeye gelir.
+Views/ProjeElementleri/Navigasyon/_AnaNavigasyon.cshtml

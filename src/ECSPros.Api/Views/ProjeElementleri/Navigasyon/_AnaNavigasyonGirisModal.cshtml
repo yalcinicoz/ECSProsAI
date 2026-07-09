@@ -12,13 +12,15 @@
                 <p class="ms-giris-modal-aciklama">Hızlı giriş yöntemlerinden birini seçin.</p>
             </div>
 
+            @* B4: E-posta girişi canlı (varsayılan sekme); SMS ve Telefon sekmeleri Faz D
+               (SMS/OTP altyapısı) gelene kadar pasif etiketli — disabled, tıklanamaz. *@
             <div class="ms-giris-tab-listesi" role="tablist" aria-label="Giriş yöntemleri">
-                <button class="ms-giris-tab ms-giris-tab-aktif" type="button" data-ms-giris-tab="sms" aria-pressed="true">SMS Kodu</button>
-                <button class="ms-giris-tab" type="button" data-ms-giris-tab="telefon" aria-pressed="false">Telefon</button>
-                <button class="ms-giris-tab" type="button" data-ms-giris-tab="eposta" aria-pressed="false">E-Posta</button>
+                <button class="ms-giris-tab" type="button" data-ms-giris-tab="sms" aria-pressed="false" disabled>SMS Kodu (Yakında)</button>
+                <button class="ms-giris-tab" type="button" data-ms-giris-tab="telefon" aria-pressed="false" disabled>Telefon (Yakında)</button>
+                <button class="ms-giris-tab ms-giris-tab-aktif" type="button" data-ms-giris-tab="eposta" aria-pressed="true">E-Posta</button>
             </div>
 
-            <div class="ms-giris-panel ms-giris-panel-aktif" data-ms-giris-panel="sms">
+            <div class="ms-giris-panel" data-ms-giris-panel="sms">
                 <div class="ms-giris-sms-adim ms-giris-sms-adim-aktif" data-ms-giris-sms-adim="telefon">
                     <label class="ms-giris-form-alani">
                         <span>Telefon Numaranız</span>
@@ -72,16 +74,17 @@
                 <button class="ms-giris-buton ms-giris-buton-birincil" type="button">Telefon ile Giriş Yap</button>
             </div>
 
-            <div class="ms-giris-panel" data-ms-giris-panel="eposta">
+            <div class="ms-giris-panel ms-giris-panel-aktif" data-ms-giris-panel="eposta">
                 <label class="ms-giris-form-alani">
                     <span>E-posta</span>
-                    <input class="ms-giris-input" type="email" name="eposta-giris" autocomplete="username email" placeholder="ornek@eposta.com">
+                    <input class="ms-giris-input" type="email" name="eposta-giris" autocomplete="username email" placeholder="ornek@eposta.com" data-ms-giris-eposta>
                 </label>
                 <label class="ms-giris-form-alani">
                     <span>Şifre</span>
-                    <input class="ms-giris-input" type="password" name="eposta-sifre" autocomplete="current-password" placeholder="Şifrenizi girin">
+                    <input class="ms-giris-input" type="password" name="eposta-sifre" autocomplete="current-password" placeholder="Şifrenizi girin" data-ms-giris-sifre>
                 </label>
-                <button class="ms-giris-buton ms-giris-buton-birincil" type="button">E-Posta ile Giriş Yap</button>
+                <div class="ms-uyari ms-uyari-hata" data-ms-giris-hata hidden></div>
+                <button class="ms-giris-buton ms-giris-buton-birincil" type="button" data-ms-giris-eposta-gonder>E-Posta ile Giriş Yap</button>
             </div>
 
             <div class="ms-giris-ayrac"><span>veya</span></div>
@@ -91,7 +94,215 @@
                 <button class="ms-giris-sosyal ms-giris-sosyal-facebook" type="button"><span class="ms-giris-sosyal-ikon">f</span>Facebook ile giriş yap</button>
             </div>
 
-            <button class="ms-giris-buton ms-giris-buton-misafir" type="button">Misafir Olarak Devam Et</button>
+            <button class="ms-giris-buton ms-giris-buton-misafir" type="button" data-ms-giris-modal-kapat>Misafir Olarak Devam Et</button>
             <button class="ms-giris-buton ms-giris-buton-kayit" type="button" data-ms-kayit-modal-ac>Kayıt Ol</button>
         </section>
     </div>
+
+@* B4: Gerçek üye oturumu — e-posta login/register api/store/auth'a bağlanır; oturum
+   localStorage token'larıyla kalıcıdır (me endpoint'i), girişte misafir sepeti merge edilir.
+   Misharix'in modal/panel davranış script'ine dokunulmaz: modal kapatma onun kapat
+   butonlarına click ile devredilir, oturum UI durumu onunla aynı class/yazı kuralıyla
+   ayarlanır. SMS/OTP gerçek akışı Faz D. *@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const TOKEN_ANAHTARI = "ecspros_member_token";
+    const REFRESH_ANAHTARI = "ecspros_member_refresh";
+    const platformId = document.querySelector("[data-ms-arama]")?.dataset.msAramaPlatform || "";
+
+    const girisModal = document.querySelector("[data-ms-giris-modal]");
+    const kayitModal = document.querySelector("[data-ms-kayit-modal]");
+    if (!girisModal) { return; }
+
+    const hataGoster = (alan, mesaj) => {
+        if (!alan) { return; }
+        alan.textContent = mesaj || "";
+        alan.hidden = !mesaj;
+    };
+
+    // Misharix'in oturumDurumuAyarla'sı IIFE içinde — aynı class/yazı kuralı burada uygulanır.
+    const oturumUiAyarla = (acik) => {
+        document.querySelectorAll("[data-ms-giris-menu]").forEach((menu) => {
+            menu.classList.toggle("ms-ana-navigasyon-giris-oturum-acik", acik);
+            menu.classList.remove("ms-ana-navigasyon-giris-acik");
+            menu.querySelector("[data-ms-giris-menu-tetikleyici]")?.setAttribute("aria-expanded", "false");
+            const yazi = menu.querySelector("[data-ms-giris-menu-yazi]");
+            if (yazi) { yazi.textContent = acik ? "Hesabım" : "Giriş Yap"; }
+        });
+    };
+
+    const hesapPaneliDoldur = (ad, iletisim) => {
+        document.querySelectorAll("[data-ms-hesap-panel]").forEach((panel) => {
+            const kimlik = panel.querySelector(".ms-hesap-kimlik");
+            if (kimlik) {
+                const adAlani = kimlik.querySelector("strong");
+                const iletisimAlani = kimlik.querySelector("span");
+                if (adAlani) { adAlani.textContent = ad; }
+                if (iletisimAlani) { iletisimAlani.textContent = iletisim || ""; }
+            }
+            const avatar = panel.querySelector(".ms-hesap-avatar");
+            if (avatar) {
+                avatar.textContent = ad.split(" ").filter(Boolean).map((p) => p[0]).join("").slice(0, 3).toLocaleUpperCase("tr");
+            }
+        });
+    };
+
+    const tokenlariSakla = (veri) => {
+        try {
+            localStorage.setItem(TOKEN_ANAHTARI, veri.accessToken);
+            localStorage.setItem(REFRESH_ANAHTARI, veri.refreshToken);
+        } catch { /* storage kapalı — oturum sayfa ömrüyle sınırlı kalır */ }
+    };
+
+    const tokenlariTemizle = () => {
+        try {
+            localStorage.removeItem(TOKEN_ANAHTARI);
+            localStorage.removeItem(REFRESH_ANAHTARI);
+        } catch { /* yok say */ }
+    };
+
+    const sepetiBirlestir = async () => {
+        const token = localStorage.getItem(TOKEN_ANAHTARI);
+        const sid = localStorage.getItem("ecspros_sid");
+        if (!token || !sid || !platformId) { return; }
+        try {
+            const cevap = await fetch("/api/store/cart/merge", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                body: JSON.stringify({ guestSessionId: sid, firmPlatformId: platformId })
+            });
+            const veri = await cevap.json().catch(() => null);
+            if (veri?.success && veri.data?.cartId) {
+                localStorage.setItem("ecspros_cart", veri.data.cartId);
+            }
+            window.msMiniSepetYenile?.();
+        } catch { /* birleşmezse misafir sepeti sonraki girişte birleşir */ }
+    };
+
+    const girisiUygula = (ad, iletisim) => {
+        hesapPaneliDoldur(ad, iletisim);
+        oturumUiAyarla(true);
+    };
+
+    // ── Oturum kalıcılığı: token varsa /me ile doğrula (401'de bir kez refresh dene) ──
+    const beniGetir = async (tekrar) => {
+        const token = localStorage.getItem(TOKEN_ANAHTARI);
+        if (!token) { return; }
+        try {
+            const cevap = await fetch("/api/store/auth/me", { headers: { Authorization: "Bearer " + token } });
+            if (cevap.status === 401) {
+                const refresh = localStorage.getItem(REFRESH_ANAHTARI);
+                if (!refresh || tekrar) { tokenlariTemizle(); return; }
+                const yenile = await fetch("/api/store/auth/refresh", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ refreshToken: refresh })
+                });
+                const yeniVeri = await yenile.json().catch(() => null);
+                if (yeniVeri?.success && yeniVeri.data?.accessToken) {
+                    tokenlariSakla(yeniVeri.data);
+                    return beniGetir(true);
+                }
+                tokenlariTemizle();
+                return;
+            }
+            const veri = await cevap.json().catch(() => null);
+            if (veri?.success && veri.data) {
+                girisiUygula(`${veri.data.firstName} ${veri.data.lastName}`.trim(), veri.data.phone || veri.data.email || "");
+            }
+        } catch { /* ağ hatası — misafir görünümünde kal */ }
+    };
+
+    // ── E-posta ile giriş ──
+    const girisHata = girisModal.querySelector("[data-ms-giris-hata]");
+    girisModal.querySelector("[data-ms-giris-eposta-gonder]")?.addEventListener("click", async (olay) => {
+        const buton = olay.currentTarget;
+        const eposta = girisModal.querySelector("[data-ms-giris-eposta]")?.value.trim();
+        const sifre = girisModal.querySelector("[data-ms-giris-sifre]")?.value;
+        hataGoster(girisHata, "");
+        if (!eposta || !sifre) { hataGoster(girisHata, "E-posta ve şifrenizi girin."); return; }
+
+        buton.disabled = true;
+        try {
+            const cevap = await fetch("/api/store/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: eposta, password: sifre })
+            });
+            const veri = await cevap.json().catch(() => null);
+            if (!veri?.success) {
+                hataGoster(girisHata, veri?.error || "Giriş yapılamadı. Bilgilerinizi kontrol edin.");
+                return;
+            }
+            tokenlariSakla(veri.data);
+            girisiUygula(veri.data.fullName || eposta, veri.data.email || eposta);
+            girisModal.querySelector("[data-ms-giris-modal-kapat]")?.click();
+            sepetiBirlestir();
+        } catch {
+            hataGoster(girisHata, "Giriş yapılamadı. Lütfen tekrar deneyin.");
+        } finally {
+            buton.disabled = false;
+        }
+    });
+
+    // ── Kayıt ──
+    const kayitHata = kayitModal?.querySelector("[data-ms-kayit-hata]");
+    kayitModal?.querySelector("[data-ms-kayit-gonder]")?.addEventListener("click", async (olay) => {
+        const buton = olay.currentTarget;
+        const ad = kayitModal.querySelector("[data-ms-kayit-ad]")?.value.trim();
+        const soyad = kayitModal.querySelector("[data-ms-kayit-soyad]")?.value.trim();
+        const eposta = kayitModal.querySelector("[data-ms-kayit-eposta]")?.value.trim();
+        const sifre = kayitModal.querySelector("[data-ms-kayit-sifre]")?.value;
+        const telefonHam = kayitModal.querySelector("[data-ms-kayit-telefon]")?.value.replace(/\D/g, "");
+        const onaylar = [...kayitModal.querySelectorAll(".ms-kayit-onay input[type='checkbox']")];
+
+        hataGoster(kayitHata, "");
+        if (!ad || !soyad || !eposta || !sifre) { hataGoster(kayitHata, "Ad, soyad, e-posta ve şifre zorunludur."); return; }
+        if (onaylar.some((o) => !o.checked)) { hataGoster(kayitHata, "Devam etmek için sözleşme ve metinleri onaylayın."); return; }
+
+        buton.disabled = true;
+        try {
+            const cevap = await fetch("/api/store/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: eposta, password: sifre, firstName: ad, lastName: soyad,
+                    phone: telefonHam ? "90" + telefonHam : null
+                })
+            });
+            const veri = await cevap.json().catch(() => null);
+            if (!veri?.success) {
+                hataGoster(kayitHata, veri?.error || "Kayıt tamamlanamadı.");
+                return;
+            }
+            // Kayıt sonrası otomatik giriş
+            const girisCevap = await fetch("/api/store/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: eposta, password: sifre })
+            });
+            const girisVeri = await girisCevap.json().catch(() => null);
+            if (girisVeri?.success) {
+                tokenlariSakla(girisVeri.data);
+                girisiUygula(girisVeri.data.fullName || `${ad} ${soyad}`, girisVeri.data.email || eposta);
+                sepetiBirlestir();
+            }
+            kayitModal.querySelector("[data-ms-kayit-modal-kapat]")?.click();
+        } catch {
+            hataGoster(kayitHata, "Kayıt tamamlanamadı. Lütfen tekrar deneyin.");
+        } finally {
+            buton.disabled = false;
+        }
+    });
+
+    // ── Çıkış: misharix script'i UI'ı sıfırlar; burada token/oturum temizlenir ──
+    document.querySelectorAll("[data-ms-hesap-cikis]").forEach((cikis) => {
+        cikis.addEventListener("click", () => {
+            tokenlariTemizle();
+            window.msMiniSepetYenile?.();
+        });
+    });
+
+    beniGetir(false);
+});
+</script>

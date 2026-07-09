@@ -1344,7 +1344,7 @@
         modal.classList.add("ms-giris-modal-acik");
         modal.setAttribute("aria-hidden", "false");
         document.body.style.overflow = "hidden";
-        tabAc("sms");
+        tabAc("eposta"); // B4: SMS/OTP Faz D'ye kadar pasif — varsayılan sekme e-posta
 
         window.setTimeout(() => {
             const ilkGirdi = modal.querySelector(".ms-giris-panel-aktif input, .ms-giris-tab-aktif");

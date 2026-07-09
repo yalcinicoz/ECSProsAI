@@ -15,11 +15,11 @@
             <div class="ms-kayit-form">
                 <label class="ms-giris-form-alani">
                     <span>Ad</span>
-                    <input class="ms-giris-input" type="text" autocomplete="given-name" placeholder="Adınızı girin">
+                    <input class="ms-giris-input" type="text" autocomplete="given-name" placeholder="Adınızı girin" data-ms-kayit-ad>
                 </label>
                 <label class="ms-giris-form-alani">
                     <span>Soyad</span>
-                    <input class="ms-giris-input" type="text" autocomplete="family-name" placeholder="Soyadınızı girin">
+                    <input class="ms-giris-input" type="text" autocomplete="family-name" placeholder="Soyadınızı girin" data-ms-kayit-soyad>
                 </label>
                 <label class="ms-giris-form-alani">
                     <span>Cinsiyet</span>
@@ -36,7 +36,13 @@
                 </label>
                 <label class="ms-giris-form-alani">
                     <span>E-posta Adresi</span>
-                    <input class="ms-giris-input" type="email" autocomplete="email" placeholder="ornek@eposta.com">
+                    <input class="ms-giris-input" type="email" autocomplete="email" placeholder="ornek@eposta.com" data-ms-kayit-eposta>
+                </label>
+                @* B4: Şifre alanı — api/store/auth/register şifre zorunlu (Faz D SMS/OTP
+                   onboarding'i gelince gözden geçirilir); mevcut form alanı sınıflarıyla. *@
+                <label class="ms-giris-form-alani">
+                    <span>Şifre</span>
+                    <input class="ms-giris-input" type="password" autocomplete="new-password" placeholder="Şifrenizi belirleyin" data-ms-kayit-sifre>
                 </label>
                 <label class="ms-giris-form-alani ms-kayit-form-genis">
                     <span>Telefon Numarası</span>
@@ -47,7 +53,7 @@
                                 <span>+90</span>
                             </span>
                         </span>
-                        <input type="tel" placeholder="___ ___ __ __" inputmode="numeric" autocomplete="tel-national" maxlength="13">
+                        <input type="tel" placeholder="___ ___ __ __" inputmode="numeric" autocomplete="tel-national" maxlength="13" data-ms-kayit-telefon>
                     </span>
                 </label>
             </div>
@@ -67,6 +73,7 @@
                 </label>
             </div>
 
-            <button class="ms-giris-buton ms-giris-buton-birincil" type="button">Kayıt Ol</button>
+            <div class="ms-uyari ms-uyari-hata" data-ms-kayit-hata hidden></div>
+            <button class="ms-giris-buton ms-giris-buton-birincil" type="button" data-ms-kayit-gonder>Kayıt Ol</button>
         </section>
     </div>
