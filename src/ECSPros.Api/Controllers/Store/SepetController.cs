@@ -7,8 +7,17 @@ namespace ECSPros.Api.Controllers.Store;
 /// satırlar sayfa içi script'le GET /api/store/cart'tan render edilir (B5 mini sepet deseni);
 /// SSR yalnız kabuğu verir. Teslimat/ödeme sayfaları C4-C5'te gelecek.
 /// </summary>
-public class SepetController : StorePageController
+public class SepetController(IConfiguration configuration) : StorePageController
 {
+    // C7: TCKN eşiği — sayfa script'leri banner/guard için okur (asıl güvence checkout'ta)
+    public override async Task OnActionExecutionAsync(
+        Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext context,
+        Microsoft.AspNetCore.Mvc.Filters.ActionExecutionDelegate next)
+    {
+        ViewData["MsTcknEsik"] = configuration.GetValue<decimal>("Store:TcknThreshold", 13000m);
+        await base.OnActionExecutionAsync(context, next);
+    }
+
     [HttpGet("/sepet")]
     public IActionResult Index() => View("~/Views/Sepet/Index.cshtml");
 

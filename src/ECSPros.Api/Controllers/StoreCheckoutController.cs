@@ -9,7 +9,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/store/checkout")]
 [Authorize(Policy = "MemberOnly")]
-public class StoreCheckoutController(IMediator mediator) : ControllerBase
+public class StoreCheckoutController(IMediator mediator, IConfiguration configuration) : ControllerBase
 {
     /// <summary>C3: sepette kupon kodu doğrulama — misafir de deneyebilir (üye kuponu
     /// koşulları MemberId üzerinden değerlendirilir); kullanım kaydı checkout'ta (C10).</summary>
@@ -30,6 +30,17 @@ public class StoreCheckoutController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> Checkout([FromBody] StoreCheckoutRequest req, CancellationToken ct)
     {
         var memberId = Guid.Parse(User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+        // C7 (K9): eşik üzeri siparişte algoritma-doğrulanmış TCKN zorunlu (asıl güvence
+        // burada — sayfa tarafı yalnız kullanıcıyı modala yönlendirir). Eşik config'ten.
+        var tcknEsik = configuration.GetValue<decimal>("Store:TcknThreshold", 13000m);
+        var araToplam = req.Items.Sum(i => i.Quantity * i.UnitPrice);
+        if (araToplam >= tcknEsik)
+        {
+            var uye = await mediator.Send(new ECSPros.Crm.Application.Queries.GetMemberDetail.GetMemberDetailQuery(memberId), ct);
+            if (uye.IsFailure || !uye.Value!.IdentityVerified)
+                return BadRequest(new { success = false, error = $"{tcknEsik.ToString("N0", new System.Globalization.CultureInfo("tr-TR"))} TL ve üzeri siparişlerde TCKN doğrulaması zorunludur. Lütfen kimlik doğrulamasını tamamlayın.", tcknRequired = true });
+        }
 
         var result = await mediator.Send(new CheckoutCommand(
             req.FirmPlatformId, memberId, req.CurrencyCode,

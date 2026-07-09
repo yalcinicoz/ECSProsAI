@@ -67,6 +67,16 @@ public class StoreAccountController(IMediator mediator) : ControllerBase
         return Ok(new { success = true });
     }
 
+    // C7 (K9): TCKN kaydı — format + kontrol basamağı algoritması sunucuda doğrulanır
+    [HttpPost("identity")]
+    public async Task<IActionResult> SetIdentity([FromBody] SetIdentityRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new ECSPros.Crm.Application.Commands.SetMemberIdentity.SetMemberIdentityCommand(
+            GetMemberId(), req.IdentityNumber, req.BirthDate), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
     // Orders
     [HttpGet("orders")]
     public async Task<IActionResult> GetOrders([FromQuery] string? status, [FromQuery] int page = 1, CancellationToken ct = default)
@@ -126,3 +136,5 @@ public record UpdateProfileRequest(
     string? Phone,
     string? Gender,
     DateOnly? BirthDate);
+
+public record SetIdentityRequest(string IdentityNumber, DateOnly? BirthDate = null);

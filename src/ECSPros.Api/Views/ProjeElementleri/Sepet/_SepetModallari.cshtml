@@ -195,3 +195,122 @@
         });
     })();
 </script>
+
+@* C7 (K9): Canlı TCKN doğrulama — modal davranışı + kontrol basamağı algoritması client'ta,
+   kayıt POST /api/store/account/identity ile sunucuda (aynı algoritma orada da doğrular;
+   NVİ/KPS ileride). Başarıda window.msTcknDogrulandi=true + "ms:tckn-dogrulandi" event'i
+   (sepet banner'ı ve ödeme guard'ı dinler). Sayfa açılışında üyenin me kaydından yüklenir. *@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const modal = document.querySelector("[data-ms-tckn-modal]");
+    if (!modal) { return; }
+    const girdi = modal.querySelector("[data-ms-tckn-girdi]");
+    const zorunlular = [...modal.querySelectorAll("[data-ms-tckn-zorunlu]")];
+    const durumlar = {
+        bekliyor: modal.querySelector("[data-ms-tckn-durum-bekliyor]"),
+        basarili: modal.querySelector("[data-ms-tckn-durum-basarili]"),
+        hata: modal.querySelector("[data-ms-tckn-durum-hata]"),
+    };
+    const token = () => localStorage.getItem("ecspros_member_token");
+
+    const durumGoster = (ad) => {
+        Object.entries(durumlar).forEach(([k, alan]) => alan?.classList.toggle("ms-gizli", k !== ad));
+    };
+
+    const alanHata = (alan, hataVar) => {
+        alan.classList.toggle("ms-form-girdi-hata", hataVar);
+        const mesaj = alan.closest(".ms-form-alani")?.querySelector("[data-ms-tckn-hata]");
+        if (mesaj) { mesaj.hidden = !hataVar; }
+    };
+
+    // TCKN kontrol basamağı algoritması (K9): sunucudaki TcknValidator ile birebir
+    const tcknGecerli = (t) => {
+        if (!/^[1-9][0-9]{10}$/.test(t)) { return false; }
+        const d = [...t].map(Number);
+        const tekler = d[0] + d[2] + d[4] + d[6] + d[8];
+        const ciftler = d[1] + d[3] + d[5] + d[7];
+        let h10 = ((tekler * 7) - ciftler) % 10;
+        if (h10 < 0) { h10 += 10; }
+        const h11 = d.slice(0, 10).reduce((a, b) => a + b, 0) % 10;
+        return d[9] === h10 && d[10] === h11;
+    };
+
+    const dogrulandiIsaretle = () => {
+        window.msTcknDogrulandi = true;
+        window.dispatchEvent(new CustomEvent("ms:tckn-dogrulandi"));
+    };
+
+    const ac = () => {
+        if (!token()) { document.querySelector("[data-ms-giris-modal-ac]")?.click(); return; }
+        modal.classList.add("ms-ornek-modal-acik");
+        modal.setAttribute("aria-hidden", "false");
+        durumGoster("bekliyor");
+        zorunlular.forEach((alan) => alanHata(alan, false));
+        window.setTimeout(() => girdi?.focus(), 50);
+    };
+    const kapat = () => {
+        modal.classList.remove("ms-ornek-modal-acik");
+        modal.setAttribute("aria-hidden", "true");
+    };
+    window.msTcknModalAc = ac;
+
+    document.querySelectorAll("[data-ms-tckn-modal-ac]").forEach((buton) => buton.addEventListener("click", ac));
+    modal.querySelectorAll("[data-ms-tckn-modal-kapat]").forEach((buton) => buton.addEventListener("click", kapat));
+
+    girdi?.addEventListener("input", () => {
+        girdi.value = girdi.value.replace(/\D/g, "").slice(0, 11);
+        durumGoster("bekliyor");
+    });
+    zorunlular.forEach((alan) => alan.addEventListener("input", () => {
+        if (alan.value.trim()) { alanHata(alan, false); }
+        durumGoster("bekliyor");
+    }));
+
+    modal.querySelector("[data-ms-tckn-dogrula]")?.addEventListener("click", async (olay) => {
+        let eksikVar = false;
+        zorunlular.forEach((alan) => {
+            const bos = !alan.value.trim();
+            alanHata(alan, bos);
+            eksikVar = eksikVar || bos;
+        });
+        if (eksikVar) { durumGoster("hata"); return; }
+
+        const tckn = (girdi?.value || "").trim();
+        if (!tcknGecerli(tckn)) {
+            alanHata(girdi, true);
+            durumGoster("hata");
+            return;
+        }
+
+        const buton = olay.currentTarget;
+        buton.disabled = true;
+        try {
+            const dogum = modal.querySelector("input[type='date']")?.value || null;
+            const cevap = await fetch("/api/store/account/identity", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token() },
+                body: JSON.stringify({ identityNumber: tckn, birthDate: dogum })
+            });
+            const veri = await cevap.json().catch(() => null);
+            if (!veri?.success) { durumGoster("hata"); return; }
+            durumGoster("basarili");
+            dogrulandiIsaretle();
+            window.setTimeout(kapat, 900);
+        } catch {
+            durumGoster("hata");
+        } finally {
+            buton.disabled = false;
+        }
+    });
+
+    // Sayfa açılışında üyenin mevcut doğrulaması yüklenir
+    (async () => {
+        if (!token()) { return; }
+        try {
+            const cevap = await fetch("/api/store/auth/me", { headers: { Authorization: "Bearer " + token() } });
+            const veri = await cevap.json().catch(() => null);
+            if (veri?.success && veri.data?.identityVerified) { dogrulandiIsaretle(); }
+        } catch { /* misafir görünümüyle devam */ }
+    })();
+});
+</script>

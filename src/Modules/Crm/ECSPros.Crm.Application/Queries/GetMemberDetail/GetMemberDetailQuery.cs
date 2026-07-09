@@ -22,4 +22,5 @@ public record MemberDetailDto(
     bool IsPhoneVerified,
     bool IsActive,
     DateTime? LastLoginAt,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    bool IdentityVerified = false); // C7: TCKN algoritma doğrulaması yapılmış mı (eşik üzeri sipariş koşulu)

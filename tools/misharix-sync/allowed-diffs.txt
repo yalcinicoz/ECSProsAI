@@ -125,3 +125,8 @@ Views/ProjeElementleri/Sepet/_SepetOdemeSayfasi.cshtml
 # C10: Sipariş tamamlandı — içerik msSiparisSonucu'ndan; kargo bilgisi Faz H'ye kadar gizli;
 # ürünler template'ten; sipariş no üyenin sipariş listesinden doğrulanır.
 Views/ProjeElementleri/Sepet/_SepetSiparisTamamlandiSayfasi.cshtml
+
+# C7: _SepetModallari dosya sonuna canlı TCKN script'i eklendi (markup bayt-aynı kaldı) —
+# kontrol basamağı algoritması + POST account/identity; sepet banner'ı ve ödeme guard'ı
+# ms:tckn-dogrulandi event'ini dinler.
+Views/ProjeElementleri/Sepet/_SepetModallari.cshtml
