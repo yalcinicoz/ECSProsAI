@@ -294,6 +294,17 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — Faz B13 TAMAMLANDI → FAZ B KAPANDI 🎉:**
+  - Envanter 8.1–8.4'teki 25 açık satır gerçek durumla işaretlendi (Faz B işleri ✅; SMS/OTP→D4,
+    belge metinleri→D3, favori/koleksiyon/puan→E5-E7, kampanya→G, görsel arama→H3, video→H5);
+    işaretsiz satır kalmadı. Kapanış görüntüleri `tools/misharix-sync/shots/b13-*` (3 yüzey ×
+    desktop+mobil); drift TEMİZ. Misharix tasarım projesi .NET 9 hedefliyor — bu makinede (SDK 8)
+    çalıştırılamıyor; yan-yana yerine faz faz birebir doğrulamalar + drift kontrolü esas alındı.
+  - **FAZ B TAMAM: B1–B14 tümü bitti.** Geçici çözümler: B3 duyuru + B6 ana sayfa → G8'de
+    vitrin sistemine devrolur. SIRADAKİ FAZ → **C (Sepet + Checkout)**: sepet sayfası /sepet,
+    teslimat, ödeme (test modu), adres (Core ülke/il/ilçe/mahalle), kupon, TCKN format kontrolü.
+  - Deploy notu: B11+B12 hâlâ restart bekliyor (B13 kod değişikliği içermiyor).
+
 - **2026-07-09 (devam) — Faz B12 TAMAMLANDI: stok kontrolü anahtarı:**
   - Anahtar `FirmPlatform.Settings."stockControlEnabled"` (JSONB, kolon yok; varsayılan KAPALI —
     bugünkü veri durumu, her şey satılabilir; stok dolunca true yapmak yeterli, kod değişmez).

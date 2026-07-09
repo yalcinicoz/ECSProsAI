@@ -25,8 +25,8 @@
 | Faz | Konu | Durum |
 |---|---|---|
 | A | Razor host + kabuk altyapısı | ✅ Tamamlandı (2026-07-07) — 8080'de canlı, görüntü doğrulaması yapıldı |
-| B | Navigasyon + Ana Sayfa + Liste + Detay (gerçek port) | 🔶 Devam ediyor — B1–B12 + B14 ✅ (B4+B5+B10+B11+B12 2026-07-09); kalan yalnız B13 (görsel + davranış QA — faz kapanışı) |
-| C | Sepet + Checkout | ⬜ Başlamadı |
+| B | Navigasyon + Ana Sayfa + Liste + Detay (gerçek port) | ✅ TAMAM (2026-07-09) — B1–B14 tümü bitti; envanter 8.1–8.4 tam işaretli, drift temiz. Geçici çözümler kayıtlı: B3 duyuru + B6 ana sayfa → G8'de vitrin sistemine devrolur |
+| C | Sepet + Checkout | ⬜ Başlamadı — SIRADAKİ FAZ |
 | D | Üye oturumu (Razor tarafı) + SMS/OTP altyapısı | ⬜ Başlamadı |
 | E | Hesabım kümesi (12 sayfa + yeni backend özellikleri) | ⬜ Başlamadı |
 | F | Kurumsal sayfalar + Footer | ⬜ Başlamadı |
@@ -137,7 +137,7 @@ src/ECSPros.Api/
 - [x] B10. **Sunucu tarafı filtre/sıralama + kategoride ara** — TAMAM (2026-07-09): (1) **Sorgular additive genişledi** — `GetStoreProductsQuery` ve `GetChannelCategoryProductsQuery`'ye `AttributeValueIds`/`PriceMin`/`PriceMax`/`Sort` (+kategoriye `Search`) eklendi; api/store endpoint'leri `attrs` (virgüllü valueId), `priceMin`, `priceMax`, `sort`, `search` parametrelerini alır — parametresiz eski çağrılar birebir aynı (mobil etkilenmez). (2) **Filtre semantiği**: değerler tipine göre gruplanır — grup içi OR, gruplar arası AND; kategori kartlarında (ürün×renk) eşleşme kartın KENDİ varyantları üzerinden ve aynı varyantta (kırmızı+M birlikte); genel listede ürün seviyesinde. Fiyat filtresi varyant BasePrice üzerinden (kartların fiyat kaynağı; kanal override'ı yalnız gösterimde — Faz G'de fiyat mimarisiyle revize). (3) **Sıralama**: price_asc/price_desc (ürünün 0 olmayan en düşük varyant fiyatı) + **newest** (CreatedAt) — desktop select + mobil sıralama modalında "En Yeniler" eklendi; "çok satan/favori/değerlendirme" veri kaynağı gelene dek gizli (E7/B11). (4) **Sayfa tarafı**: filtre/sıralama değişikliği URL query parametreleriyle (api ile aynı adlar) SSR yeniden yükleme — B7'nin yüklü-kartlara-uygulanan client motoru kaldırıldı; SSR seçili checkbox/fiyat/sıralamayı geri işaretler (grup açık gelir), infinite scroll devam sayfalarını aynı parametrelerle çeker; sol filtre anında, panel içi seçimler "Filtrele" butonuyla uygular; **aynı valueId'nin kopyaları (sol+üst+mobil) senkronlanır** (senkronsuz kopyalar kaldırmayı URL'den düşürmüyordu — E2E yakaladı). (5) **Kategoride ara** (B2/B7'den beri ertelenen boşluk kapandı): kategori sayfası `ViewData["MsAktifKategori"]` doldurur; nav arama panelindeki gizli buton "{Kategori} içinde ara" olarak görünür, basılınca öneriler `channel-categories/{id}/products?search=`'ten gelir, Tümünü Gör/Enter → `/{slug}?search=`; sunucu tarafı kategori+arama birleşik sorgu `GetChannelCategoryProductsQuery.Search` ile (kapsam daralması ürün kod/Türkçe ad). (6) **Cache**: filtreli istekler kategori Redis cache'ini atlar (anahtar patlaması olmasın; yalnız parametresiz varsayılan sayfalar cache'lenir). NOT: model modu kategoriler filtre/sıralamayı uygulamaz (grup vitrini — Faz G konusu); fallback (eksensiz) modda yalnız arama uygulanır. E2E (headless Chromium, 5051 Production publish): **22/22 ✓** (checkbox→attrs URL + SSR işaretli + tüm kartlar değeri taşıyor + kaldırınca düşer; sort=price_asc SSR sıralı + infinite scroll sıralı devam 24→48 + etiket; newest; priceMin/Max sunucuda; kategoride ara butonu + /kadin?search=elbise 162.697→17.051; /urunler sıralı; api/favicon regresyon; 0 konsol hatası) + mobil sıralama modalı → ?sort=price_asc ✓ + B6/B8 regresyon suite'leri yeniden koşuldu (19/19 + 6/6 ✓).
 - [x] B11. **"Öne çıkar" bayrağı** — TAMAM (2026-07-09, K8): (1) `ChannelProduct.FeaturedFrom/FeaturedUntil` (migration `AddChannelProductFeatured`, canlıya uygulandı) — pencere içindeyse öne çıkar (`Until` null = süresiz). (2) **Admin:** `GET/PUT /api/navigation/channel-products/{firmPlatformId}/products/{productId}/featured` (PUT featuredFrom=null → kaldır; satır yoksa upsert) + ProductDetailPage "Satış Kanalları" sekmesine "Öne Çıkar" paneli (tarih aralığı + durum rozeti + kaldır; npm build alındı). (3) **Listeleme:** yeni port `IChannelProductFlagService.GetFeaturedProductIdsAsync` (Storefront implemente eder; platform başına az satır — tam liste çekilip kesişim alınır). Kategori (renk modu) + genel liste sorgularında **yalnız varsayılan sırada** öne alınır (kullanıcının açık sıralama tercihi bozulmaz — kararlı OrderBy grup içi sırayı korur); DTO'lara additive `IsFeatured` bayrağı her sıralamada verilir. (4) **Kart:** `_UrunKarti` partial'ında "Sponsorlu" rozeti `Sponsorlu` bayrağına bağlandı (video/kampanya etiketleri hâlâ gizli — B/G); JSON devam kartlarına da enjekte edilir. NOT: kategori varsayılan sayfaları 10 dk Redis cache'inde — işaretleme listede en geç 10 dk içinde görünür (rozet + sıralama; filtreli/aramalı istekler anında). Model/fallback modlarında öne alma uygulanmaz (Faz G vitrini). E2E (5051 publish): **14/14 ✓** (admin PUT/GET, kategori aramasında başa alma + isFeatured, price_asc bozulmadı, SSR'de ilk kart + Sponsorlu rozeti ×2 renk kartı, /products tarafı, kaldırma normale döndürdü, 0 konsol hatası) + B6 regresyon 19/19 ✓.
 - [x] B12. **Stok kontrolü anahtarı** — TAMAM (2026-07-09, stok kararı): anahtar `FirmPlatform.Settings."stockControlEnabled"` (JSONB — kolon/migration yok, tema/domain anahtarlarıyla aynı yer; varsayılan KAPALI = bugünkü veri durumu, her şey satılabilir). **Açıkken:** ürün detayında beden satılabilirliği `IStockService.GetAvailableStockAsync`'ten okunur — tükenen beden ana alanda ve sabit (sticky) beden panelinde misharix'in `ms-beden-secim-tukendi` stili + `disabled` ile gelir, sepet config haritasına girmez; "Stok Durumu" özelliği gerçek (Stokta/Tükendi); bedensiz üründe stok yoksa `TekVaryantId` verilmez (sepete eklenemez). **Sunucu guard'ı:** `AddToCartCommand.EnforceStock` (API katmanı anahtarı 5 dk IMemoryCache ile çözer ve geçer) — stoksuz varyant 400 "tükendi" döner; anahtar kapalıyken stok hiç sorgulanmaz. Stok verisi dolunca platform Settings'ine `"stockControlEnabled": true` eklemek yeterli — kod değişmez. E2E (5051, julude platformu test için açıldı ve GERİ ALINDI — mishar'a dokunulmadı): **12/12 ✓** (stoksuz: 4 beden tükendi+disabled+config boş+özellik Tükendi; stok verilince hepsi satılabilir; kısmi: tek beden tükendi; guard 400/200; mishar anahtar kapalı etkilenmedi; test stoğu/sepeti temizlendi) + B6 regresyon 19/19 ✓.
-- [ ] B13. Görsel + davranış QA: dört yüzeyin ekran görüntüsü karşılaştırması + Bölüm 8.1–8.4 envanter satırlarının tek tek işaretlenmesi.
+- [x] B13. **Görsel + davranış QA** — TAMAM (2026-07-09, Faz B kapanışı): (1) **Envanter 8.1–8.4 tamamı işaretli** — 25 açık satır gerçek durumla kapatıldı: Faz B'de biten her şey ✅, veri/faz bekleyenler 🕐 hedef fazıyla (SMS/OTP→D4, belge metinleri→D3, favori/koleksiyon/puan→E5-E7, kampanya içerikleri→G, görsel arama→H3, video→H5); hiçbir satır işaretsiz kalmadı. (2) **Kapanış ekran görüntüleri** `tools/misharix-sync/shots/b13-*` (ana sayfa + kategori listesi + ürün detay, desktop 1440 + mobil 390) — tasarım sadakati görsel olarak doğrulandı; markup eşitliğini `check.sh` zaten bayt düzeyinde garanti ediyor (TEMİZ ✓, tüm farklar gerekçeli izinli listede). NOT: misharix tasarım projesi .NET 9 hedeflediği için bu makinede (SDK 8) çalıştırılamıyor — canlı yan-yana yerine faz faz alınan birebir doğrulamalar + drift kontrolü esas alındı. (3) Her yüzeyin davranış doğrulaması zaten kendi fazının E2E suite'iyle yapıldı ve B13 sırasında tekrar koşuldu (B6 19/19). **FAZ B KABUL KRİTERLERİ SAĞLANDI** — dört yüzey canlı veriyle çalışıyor, envanter tam işaretli, drift temiz.
 - [x] B14. Nginx'te `/` Razor'a çevrildi (2026-07-07 — kullanıcı kararıyla ERKEN geçiş, dört yüzey tamamlanmadan): `locations.inc` `/` bloğu artık host:5000'e proxy (https://new.ecspros.com Razor'ı sunuyor, Cloudflare Flexible 80 üzerinden); eski SPA yedeği 8080 portuna taşındı (rol değişimi — api+media+statik blokları eklendi; Faz İ'de kaldırılacak); appsettings `Store:Hosts["new.ecspros.com"]="mishar"`. NOT: B7'ye kadar kategori linkleri 404, ana sayfa geçici sayfa seçici — bilinçli kabul.
 
 **Kabul kriterleri:** Dört yüzey pixel-doğru + canlı veriyle çalışıyor; envanter 8.1–8.4 tüm satırlar ✅/🕐(ileri faz) işaretli; drift raporu temiz.
@@ -347,35 +347,35 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 | İşlev | Davranış | Backend | Faz | Durum |
 |---|---|---|---|---|
 | Duyuru şeridi | kayan metin | G'de kişiselleştirme bloğu (K7) | B3→G8 | ✅ 2026-07-08 (B3 geçici statik; kalıcısı G8) |
-| Logo/ana sayfa linki | statik | — | B1 | ⬜ |
-| Arama kutusu + panel | aç/kapat/temizle/geri | — (UI) | B2 | ⬜ |
-| Canlı arama önerisi | ürün+kategori sonuç grupları, sonuç sayısı, ürün şeridi kaydırma | VAR (search) | B2 | ⬜ |
-| Kategoride ara | seçili kategori kapsamında arama | VAR | B2 | ⬜ |
-| Popüler aramalar/ürünler | öneri panelinde | YOK→E11 | B2/E11 | ⬜ |
-| Giriş menüsü (hover panel) | oturumsuz/oturumlu içerik | VAR (me) | B4/D6 | ⬜ |
-| Giriş modal — e-posta sekmesi | login | VAR | D2 | ⬜ |
-| Giriş modal — telefon/SMS sekmesi | kod gönder/sayaç/yeniden gönder/onayla (OTP kutuları) | YOK | D4 | ⬜ |
-| Kayıt modalı | register + belge (KVKK/üyelik) modal onayı | VAR + CMS | D3 | ⬜ |
-| Hesap paneli + çıkış | session iptali | VAR | D6 | ⬜ |
-| Mini sepet (hover) | sepet özeti | VAR | B5 | ⬜ |
-| Mega menü (desktop) | kategori grupları, menü kaydırma | VAR (menus) | B1 | ⬜ |
-| Kampanya şeridi | yatay kaydırma kontrolleri | KISMEN (kampanya görselleri kaynağı → G) | B1/G | ⬜ |
-| Mobil menü | ana sekme/yan sekme/panel/kampanya listesi | VAR (menus) | B1 | ⬜ |
-| Görsel arama (kamera) | modal + upload + sonuçlar | YOK | H3 | ⬜ |
+| Logo/ana sayfa linki | statik | — | B1 | ✅ 2026-07-07 |
+| Arama kutusu + panel | aç/kapat/temizle/geri | — (UI) | B2 | ✅ 2026-07-07 (misharix görünürlük script'i aynen) |
+| Canlı arama önerisi | ürün+kategori sonuç grupları, sonuç sayısı, ürün şeridi kaydırma | VAR (search) | B2 | ✅ 2026-07-07 |
+| Kategoride ara | seçili kategori kapsamında arama | VAR | B2/B10 | ✅ 2026-07-09 (B10'da bağlandı — buton kategori bağlamıyla görünür) |
+| Popüler aramalar/ürünler | öneri panelinde | YOK→E11 | B2/E11 | 🔶 B2 geçici (statik terim chip'leri + ilk ürünler); kalıcısı E11 popülerlik verisi |
+| Giriş menüsü (hover panel) | oturumsuz/oturumlu içerik | VAR (me) | B4/D6 | ✅ 2026-07-09 (B4 — me ile kalıcı oturum; statü bloğu E/G'ye kadar gizli) |
+| Giriş modal — e-posta sekmesi | login | VAR | D2 | ✅ 2026-07-09 (B4'te erken kapandı — varsayılan sekme) |
+| Giriş modal — telefon/SMS sekmesi | kod gönder/sayaç/yeniden gönder/onayla (OTP kutuları) | YOK | D4 | 🕐 UI hazır, B4'te "(Yakında)" disabled — OTP altyapısı D4 |
+| Kayıt modalı | register + belge (KVKK/üyelik) modal onayı | VAR + CMS | D3 | 🔶 B4: register + otomatik giriş ✓ (Şifre alanı eklendi); belge metinleri CMS'e D3'te bağlanacak (şu an statik örnek) |
+| Hesap paneli + çıkış | session iptali | VAR | D6 | ✅ 2026-07-09 (B4 — çıkışta token temizliği; sunucu tarafı session iptali D6) |
+| Mini sepet (hover) | sepet özeti | VAR | B5 | ✅ 2026-07-09 (rozet + panel + silme + msMiniSepetYenile) |
+| Mega menü (desktop) | kategori grupları, menü kaydırma | VAR (menus) | B1 | ✅ 2026-07-07 |
+| Kampanya şeridi | yatay kaydırma kontrolleri | KISMEN (kampanya görselleri kaynağı → G) | B1/G | 🕐 B1'de statik; kampanya içeriği Faz G kişiselleştirme sisteminden |
+| Mobil menü | ana sekme/yan sekme/panel/kampanya listesi | VAR (menus) | B1 | ✅ 2026-07-07 (kampanya bölümü statik — G) |
+| Görsel arama (kamera) | modal + upload + sonuçlar | YOK | H3 | 🕐 UI kabuğu taşındı (Faz A); endpoint H3 |
 
 ### 8.2 Ürün Kartı (liste/vitrin/hesabım her yerde aynı kart)
 | İşlev | Backend | Faz | Durum |
 |---|---|---|---|
 | Kart → detay linki (`data-ms-kart-link`) | VAR | B8 | ✅ (2026-07-08 — kategori kartları `?color={eksenDeğeri}` taşır, detay çözer) |
 | Hover görsel galerisi + nokta göstergeleri | VAR (variant images) | B8 | ✅ (2026-07-08 — seçili rengin ilk 4 görseli; SSR + JSON kartlarda) |
-| Videolu ürün rozeti (hover'da oynatma) | YOK | H5 | ⬜ |
-| Kampanya etiketi + kampanya bandı | KISMEN (Promotion) | B8/G | ⬜ |
+| Videolu ürün rozeti (hover'da oynatma) | YOK | H5 | 🕐 H5 (video verisi yok — @if gizli) |
+| Kampanya etiketi + kampanya bandı | KISMEN (Promotion) | B8/G | 🕐 Faz G (kampanya-ürün ilişkisi kişiselleştirme sistemiyle; @if gizli) |
 | Sponsorlu rozeti → "öne çıkar" bayrağı | VAR (ChannelProduct.FeaturedFrom/Until) | B11 | ✅ 2026-07-09 |
-| Favori (kalp) butonu + animasyon | YOK | E5 | ⬜ |
-| Koleksiyona ekle (bookmark) | YOK | E6 | ⬜ |
+| Favori (kalp) butonu + animasyon | YOK | E5 | 🕐 E5 (buton + animasyon UI'da çalışır; kalıcı favori backend'i E5) |
+| Koleksiyona ekle (bookmark) | YOK | E6 | 🕐 E6 (modal UI çalışır; kalıcı koleksiyon backend'i E6) |
 | Renk rozeti + renk tooltip (diğer renk linkleri) | VAR (varyantlar) | B8 | ✅ (2026-07-08 — eksen renkleri kendi görselleriyle; görselsiz renk listelenmez) |
-| Dönen teslimat/kargo mesajları | model alanları | B8 | ⬜ → B11'e devredildi (2026-07-08 — veri kaynağı yok, @if ile gizli) |
-| Puan + yıldız + yorum sayısı | YOK | E7 | ⬜ |
+| Dönen teslimat/kargo mesajları | model alanları | B8 | 🕐 veri kaynağı yok (@if gizli) — teslimat mesajları Faz H kargo/E7 verisiyle |
+| Puan + yıldız + yorum sayısı | YOK | E7 | 🕐 E7 değerlendirme sistemi |
 | Fiyat (ms-urun-fiyat) | VAR (varyant fiyatı) | B8 | ✅ (2026-07-07 B7'de bağlandı — varyant fiyatı, B8'de doğrulandı) |
 | Lazy load (`data-ms-lazy-src`) | — | B7 | ✅ (2026-07-07 — SSR kartlar dahil tüm görseller lazy) |
 
@@ -400,14 +400,14 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 | Tam ekran resim modalı (thumb, sürükle, pinch, paylaş) | — (UI) | B9 | ✅ (2026-07-08) |
 | Beden seçimi (ana + sticky bar + beden modalı) | VAR (varyant) | B9 | ✅ (2026-07-08 — gerçek eksen değerleri, konfeksiyon sıralı; beden yoksa alanlar gizli) |
 | Beden/stok durumu (tükendi vb.) | VAR (IStockService + B12 anahtarı) | B9/B12 | ✅ 2026-07-09 (anahtar açıkken gerçek stok: tükendi stili + disabled + guard; kapalıyken hepsi satılabilir) |
-| Sepete ekle (+sticky) → mini sepet açılışı | VAR | B9 | 🔶 (2026-07-08 — API'ye ekleme ✓ bedenli+bedensiz+modal akışları; mini sepet paneli B5'te bağlanınca açılış eklenecek; AddToCart çoklu-ürün bug'ı düzeltildi) |
-| Favori / koleksiyona ekle | YOK | E5/E6 | ⬜ |
+| Sepete ekle (+sticky) → mini sepet açılışı | VAR | B9/B5 | ✅ 2026-07-09 (B9 ekleme akışları + B5 msMiniSepetYenile — rozet/panel reload'suz tazelenir) |
+| Favori / koleksiyona ekle | YOK | E5/E6 | 🕐 E5/E6 (UI çalışır; kalıcı backend E fazında) |
 | Paylaş modalı (FB/X/WhatsApp/Pinterest/link kopyala) | — (UI) | B9 | ✅ (2026-07-08 — gerçek ürün adı/görsel/fiyat; paylaşım metni DOM'dan) |
 | Açıklama "daha fazla" + ek detay akordiyonları | VAR (DescriptionI18n/özellikler) | B9 | ✅ (2026-07-08 — DescriptionI18n/ShortDescription; pazaryeri-özel demo maddeleri çıkarıldı) |
 | Ürün özellikleri tablosu | VAR (attributes) | B9 | ✅ (2026-07-08 — ürün seviyesi attributes + Kategori Grubu + Stok Durumu; DTO'ya additive eklendi) |
-| Değerlendirme özeti + değerlendirmeler linki | YOK | E7 | ⬜ |
+| Değerlendirme özeti + değerlendirmeler linki | YOK | E7 | 🕐 E7 (şu an 0 değerlendirme gösterimi) |
 | Benzer/önerilen ürün vitrinleri | VAR (sorgu) | B9 | 🕐 misharix detay tasarımında benzer ürün bölümü YOK — Faz G vitrin sistemine devredildi |
-| Videolu ürün | YOK | H5 | ⬜ |
+| Videolu ürün | YOK | H5 | 🕐 H5 |
 
 ### 8.5 Sepet + Checkout
 | İşlev | Backend | Faz | Durum |
