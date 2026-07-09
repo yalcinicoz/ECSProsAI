@@ -294,6 +294,17 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — C3 TAMAM (kupon akışı canlı):**
+  - Yeni store endpoint'i `POST /api/store/checkout/coupon/validate` (AllowAnonymous; üye
+    token'ı varsa MemberId koşulları; `use` kaydı C10 checkout'ta). Sepette uygula/kaldır +
+    gerçek indirim hesabı; sepet değişince sessiz yeniden doğrulama — koşul bozulursa otomatik
+    kaldırma + neden. Tasarımın msSepetKuponDurumu/sessionStorage/ms:sepet-kupon-degisti
+    sözleşmesi korunarak couponId+tutar eklendi (ödeme sayfası C5'te okuyacak). Demo kupon
+    mantığı script'ten çıkarıldı. Reload'da kupon yeniden doğrulanıp geri gelir.
+  - E2E (geçici C3TEST10 kuponu, sonra DB'den silindi): **10/10 ✓**; drift TEMİZ.
+  - Sıradaki: C4 (teslimat + K6 adres hiyerarşisi — Core countries/provinces/districts/
+    neighborhoods + PTT seed + kademeli select API) → C5 ödeme (test modu) → C6-C10.
+
 - **2026-07-09 (devam) — FAZ C BAŞLADI: C1+C2 TAMAM (sepet sayfası canlı):**
   - `/sepet` (SepetController) — Index/_SepetSayfasi/_SepetModallari birebir kopya; satırlar
     template + script'le GET /api/store/cart'tan (istemci-durumlu sepet, B5 deseni; ad/görsel/

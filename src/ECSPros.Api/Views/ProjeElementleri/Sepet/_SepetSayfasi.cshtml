@@ -246,23 +246,17 @@
             <div class="ms-siparis-satirlari">
                 <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Ürün Toplamı</span><span class="ms-siparis-deger ms-fiyat-standart" data-ms-sepet-urun-toplami>0,00 TL</span></div>
                 <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Kargo</span><span class="ms-siparis-deger ms-siparis-ucretsiz">Ücretsiz</span></div>
-                @if (false)
-                {
-                @* C3: kupon uygulanınca sepet indirimi satırı açılır *@
-                <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Sepet İndirimi</span><span class="ms-siparis-deger ms-urun-fiyat-indirimli">-85,00 TL</span></div>
-                }
+                @* C3: kupon uygulanınca görünür *@
+                <div class="ms-siparis-satiri" data-ms-sepet-indirim-satiri hidden><span class="ms-siparis-etiket">Sepet İndirimi</span><span class="ms-siparis-deger ms-urun-fiyat-indirimli" data-ms-sepet-indirim>-0,00 TL</span></div>
             </div>
-            @if (false)
-            {
-            @* C3: uygulanan kupon kartı + kupon kodu girişi promotion API'sine bağlanınca açılır *@
-            <div class="ms-siparis-uygulanan-kupon" data-ms-uygulanan-kupon data-ms-kupon-kod="KART25" data-ms-kupon-odeme-tipi="kart" data-ms-kupon-indirim="-25,00 TL" data-ms-kupon-aciklama="Kredi kartı ödemesine özel kupon">
+            <div class="ms-siparis-uygulanan-kupon" data-ms-uygulanan-kupon hidden>
                 <div class="ms-siparis-uygulanan-kupon-bilgi">
                     <span>Uygulanan Kupon</span>
-                    <strong data-ms-kupon-kod-yazi>KART25</strong>
-                    <small data-ms-kupon-kosul>Sadece Kart ile Ödeme</small>
+                    <strong data-ms-kupon-kod-yazi></strong>
+                    <small data-ms-kupon-kosul></small>
                 </div>
                 <div class="ms-siparis-uygulanan-kupon-aksiyon">
-                    <em class="ms-urun-fiyat-indirimli" data-ms-kupon-indirim-yazi>-25,00 TL</em>
+                    <em class="ms-urun-fiyat-indirimli" data-ms-kupon-indirim-yazi></em>
                     <button class="ms-siparis-kupon-kaldir" type="button" data-ms-kupon-kaldir>Kuponu Kaldır</button>
                 </div>
             </div>
@@ -270,22 +264,21 @@
             <label class="ms-siparis-kupon">
                 <span>Kupon Kodu</span>
                 <div class="ms-siparis-kupon-satiri">
-                    <input type="text" placeholder="KART25, KAPIDA15 veya GENEL10" data-ms-kupon-kodu>
+                    <input type="text" placeholder="Kupon kodunuzu girin" data-ms-kupon-kodu>
                     <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-kupon-uygula>Uygula</button>
                 </div>
             </label>
             <div class="ms-siparis-kupon-bildirimleri" data-ms-kupon-bildirimleri>
-                <div class="ms-siparis-kupon-bildirim ms-siparis-kupon-bildirim-basarili">
+                <div class="ms-siparis-kupon-bildirim ms-siparis-kupon-bildirim-basarili" data-ms-kupon-bildirim-basarili hidden>
                     <strong>Kupon uygulandı.</strong>
-                    <span>Sepet indirimi sipariş özetine başarıyla yansıtıldı.</span>
+                    <span data-ms-kupon-bildirim-basarili-metin>Sepet indirimi sipariş özetine başarıyla yansıtıldı.</span>
                 </div>
-                <div class="ms-siparis-kupon-bildirim ms-siparis-kupon-bildirim-hata">
+                <div class="ms-siparis-kupon-bildirim ms-siparis-kupon-bildirim-hata" data-ms-kupon-bildirim-hata hidden>
                     <strong>Geçersiz kupon.</strong>
-                    <span>Girdiğiniz kupon kodu kullanılamıyor veya kampanya koşullarını karşılamıyor.</span>
+                    <span data-ms-kupon-bildirim-hata-metin>Girdiğiniz kupon kodu kullanılamıyor veya kampanya koşullarını karşılamıyor.</span>
                 </div>
             </div>
 
-            }
             <div class="ms-siparis-ozet-aksiyonlar">
                 <a class="ms-buton ms-buton-m ms-buton-devam" href="/">Alışverişe Devam Et</a>
                 @if (false)
@@ -403,155 +396,8 @@
             });
         });
 
-        const kuponOdemeEtiketleri = {
-            kart: "Sadece Kart ile Ödeme",
-            kapida: "Kapıda Ödemeye Özel",
-            "kapida-nakit": "Sadece Kapıda Nakit",
-            "kapida-kart": "Sadece Kapıda Kart",
-            tum: "Tüm Ödeme Yöntemleri"
-        };
-
-        const kuponOdemeTipiniBul = (kod) => {
-            const temizKod = (kod || "").trim().toLocaleUpperCase("tr-TR");
-
-            if (temizKod.includes("KART") || temizKod.includes("KK")) {
-                return "kart";
-            }
-
-            if (temizKod.includes("NAKIT")) {
-                return "kapida-nakit";
-            }
-
-            if (temizKod.includes("KAPIDA")) {
-                return "kapida";
-            }
-
-            return "tum";
-        };
-
-        const kuponAciklamasiBul = (odemeTipi) => {
-            if (odemeTipi === "kart") {
-                return "Kredi kartı veya banka kartı ile ödemede geçerli kupon";
-            }
-
-            if (odemeTipi === "kapida" || odemeTipi === "kapida-nakit" || odemeTipi === "kapida-kart") {
-                return "Kapıda ödeme yöntemlerinde geçerli kupon";
-            }
-
-            return "Tüm ödeme yöntemlerinde geçerli kupon";
-        };
-
-        const kuponDurumunuYayinla = (durum) => {
-            window.msSepetKuponDurumu = durum || null;
-            try {
-                window.sessionStorage?.setItem("msSepetKuponDurumu", JSON.stringify(window.msSepetKuponDurumu));
-            } catch {
-                // Tarayıcı depolaması kapalıysa aynı sayfa içi event akışı devam eder.
-            }
-
-            window.dispatchEvent(new CustomEvent("ms:sepet-kupon-degisti", {
-                detail: window.msSepetKuponDurumu
-            }));
-        };
-
-        const kuponKartindanDurumAl = (kuponKarti) => {
-            if (!kuponKarti || kuponKarti.hidden) {
-                return null;
-            }
-
-            return {
-                kod: kuponKarti.dataset.msKuponKod || "",
-                odemeTipi: kuponKarti.dataset.msKuponOdemeTipi || "tum",
-                indirim: kuponKarti.dataset.msKuponIndirim || "-25,00 TL",
-                aciklama: kuponKarti.dataset.msKuponAciklama || kuponAciklamasiBul(kuponKarti.dataset.msKuponOdemeTipi || "tum")
-            };
-        };
-
-        const kuponKartiniGuncelle = (kuponKarti, durum) => {
-            if (!kuponKarti) {
-                return;
-            }
-
-            kuponKarti.hidden = !durum;
-
-            if (!durum) {
-                kuponDurumunuYayinla(null);
-                return;
-            }
-
-            kuponKarti.dataset.msKuponKod = durum.kod;
-            kuponKarti.dataset.msKuponOdemeTipi = durum.odemeTipi;
-            kuponKarti.dataset.msKuponIndirim = durum.indirim;
-            kuponKarti.dataset.msKuponAciklama = durum.aciklama;
-
-            const kodYazi = kuponKarti.querySelector("[data-ms-kupon-kod-yazi]");
-            const kosulYazi = kuponKarti.querySelector("[data-ms-kupon-kosul]");
-            const indirimYazi = kuponKarti.querySelector("[data-ms-kupon-indirim-yazi]");
-
-            if (kodYazi) {
-                kodYazi.textContent = durum.kod;
-            }
-
-            if (kosulYazi) {
-                kosulYazi.textContent = kuponOdemeEtiketleri[durum.odemeTipi] || kuponOdemeEtiketleri.tum;
-            }
-
-            if (indirimYazi) {
-                indirimYazi.textContent = durum.indirim;
-            }
-
-            kuponDurumunuYayinla(durum);
-        };
-
-        sepetSayfasiKok.querySelectorAll("[data-ms-kupon-uygula]").forEach((buton) => {
-            buton.addEventListener("click", () => {
-                const kuponAlani = buton.closest(".ms-siparis-kupon");
-                const ozet = buton.closest(".ms-siparis-ozeti");
-                const kuponKarti = ozet?.querySelector("[data-ms-uygulanan-kupon]");
-                const kuponInput = kuponAlani?.querySelector("[data-ms-kupon-kodu]");
-                const kod = (kuponInput?.value || "KART25").trim().toLocaleUpperCase("tr-TR");
-                const odemeTipi = kuponOdemeTipiniBul(kod);
-                const bildirimler = kuponAlani?.nextElementSibling?.matches("[data-ms-kupon-bildirimleri]")
-                    ? kuponAlani.nextElementSibling
-                    : null;
-
-                kuponKartiniGuncelle(kuponKarti, {
-                    kod,
-                    odemeTipi,
-                    indirim: odemeTipi === "tum" ? "-10,00 TL" : "-25,00 TL",
-                    aciklama: kuponAciklamasiBul(odemeTipi)
-                });
-
-                if (kuponInput) {
-                    kuponInput.value = "";
-                }
-
-                bildirimler?.querySelectorAll(".ms-siparis-kupon-bildirim").forEach((bildirim) => {
-                    bildirim.classList.add("ms-siparis-kupon-bildirim-vurgulu");
-                    window.setTimeout(() => {
-                        bildirim.classList.remove("ms-siparis-kupon-bildirim-vurgulu");
-                    }, 900);
-                });
-            });
-        });
-
-        sepetSayfasiKok.querySelectorAll("[data-ms-kupon-kaldir]").forEach((buton) => {
-            buton.addEventListener("click", () => {
-                const kuponKarti = buton.closest("[data-ms-uygulanan-kupon]");
-                const kuponInput = kuponKarti?.closest(".ms-siparis-ozeti")?.querySelector("[data-ms-kupon-kodu]");
-
-                kuponKartiniGuncelle(kuponKarti, null);
-                kuponInput?.focus();
-            });
-        });
-
-        sepetSayfasiKok.querySelectorAll("[data-ms-uygulanan-kupon]").forEach((kuponKarti) => {
-            kuponDurumunuYayinla(kuponKartindanDurumAl(kuponKarti));
-        });
-
-        sepetSayfasiKok.querySelectorAll("[data-ms-kupon-modal-ac]").forEach((buton) => {
-            buton.addEventListener("click", () => window.msKuponModalAc?.());
-        });
+        // C3: demo kupon mantığı kaldırıldı — gerçek uygula/kaldır/yeniden-doğrulama
+        // dosya sonundaki canlı sepet script'inde (promotion coupon/validate API'siyle).
 
         sepetSayfasiKok.querySelectorAll("[data-ms-sozlesme-modal-ac]").forEach((buton) => {
             buton.addEventListener("click", () => {
@@ -715,6 +561,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const urunToplami = document.querySelector("[data-ms-sepet-urun-toplami]");
     const odenecekler = [...document.querySelectorAll("[data-ms-sepet-odenecek]")];
     const tumunuSec = document.querySelector("[data-ms-sepet-tumunu-sec]");
+    const kuponKarti = document.querySelector("[data-ms-uygulanan-kupon]");
+    const kuponInput = document.querySelector("[data-ms-kupon-kodu]");
+    const indirimSatiri = document.querySelector("[data-ms-sepet-indirim-satiri]");
+    const indirimAlani = document.querySelector("[data-ms-sepet-indirim]");
+    const bildirimBasarili = document.querySelector("[data-ms-kupon-bildirim-basarili]");
+    const bildirimHata = document.querySelector("[data-ms-kupon-bildirim-hata]");
 
     const paraYaz = (deger) => new Intl.NumberFormat("tr-TR",
         { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(deger || 0) + " TL";
@@ -732,7 +584,23 @@ document.addEventListener("DOMContentLoaded", () => {
             if (secili) { toplam += birim * adet; }
         });
         if (urunToplami) { urunToplami.textContent = paraYaz(toplam); }
-        odenecekler.forEach((alan) => { alan.textContent = paraYaz(toplam); });
+        const indirim = kuponDurum?.tutar || 0;
+        const odenecek = Math.max(0, toplam - indirim);
+        if (indirimAlani) { indirimAlani.textContent = "-" + paraYaz(indirim); }
+        if (indirimSatiri) { indirimSatiri.hidden = !kuponDurum; }
+        odenecekler.forEach((alan) => { alan.textContent = paraYaz(odenecek); });
+        kuponuTazele(toplam);
+    };
+
+    const seciliToplam = () => {
+        let toplam = 0;
+        konteyner.querySelectorAll("[data-ms-sepet-satir]").forEach((satir) => {
+            if (satir.querySelector("[data-ms-sepet-urun-checkbox]")?.checked) {
+                toplam += Number(satir.dataset.msBirimFiyat || 0)
+                    * Number(satir.querySelector("[data-ms-sepet-adet-deger]")?.textContent || 0);
+            }
+        });
+        return toplam;
     };
 
     const tumunuSecDurumu = () => {
@@ -843,6 +711,123 @@ document.addEventListener("DOMContentLoaded", () => {
         kapat.addEventListener("click", () => { silinecekKalemId = null; });
     });
 
+    // ── C3: Kupon — gerçek doğrulama (promotion coupon/validate; use kaydı C10 checkout'ta).
+    // Tasarımın sayfalar-arası kupon durumu sözleşmesi korunur: window.msSepetKuponDurumu +
+    // sessionStorage msSepetKuponDurumu + "ms:sepet-kupon-degisti" event'i (ödeme sayfası okur).
+    let kuponDurum = null;
+    let kuponTazeleZamanlayici = null;
+
+    const kuponDurumunuYayinla = () => {
+        window.msSepetKuponDurumu = kuponDurum;
+        try {
+            if (kuponDurum) { sessionStorage.setItem("msSepetKuponDurumu", JSON.stringify(kuponDurum)); }
+            else { sessionStorage.removeItem("msSepetKuponDurumu"); }
+        } catch { /* depolama kapalı */ }
+        window.dispatchEvent(new CustomEvent("ms:sepet-kupon-degisti", { detail: kuponDurum }));
+    };
+
+    const kuponBildir = (basarili, mesaj) => {
+        if (bildirimBasarili) {
+            bildirimBasarili.hidden = !basarili;
+            if (basarili && mesaj) { bildirimBasarili.querySelector("[data-ms-kupon-bildirim-basarili-metin]").textContent = mesaj; }
+        }
+        if (bildirimHata) {
+            bildirimHata.hidden = basarili;
+            if (!basarili && mesaj) { bildirimHata.querySelector("[data-ms-kupon-bildirim-hata-metin]").textContent = mesaj; }
+        }
+    };
+
+    const kuponKartiniCiz = () => {
+        if (!kuponKarti) { return; }
+        kuponKarti.hidden = !kuponDurum;
+        if (!kuponDurum) { return; }
+        kuponKarti.querySelector("[data-ms-kupon-kod-yazi]").textContent = kuponDurum.kod;
+        kuponKarti.querySelector("[data-ms-kupon-kosul]").textContent = kuponDurum.aciklama || "Tüm Ödeme Yöntemleri";
+        kuponKarti.querySelector("[data-ms-kupon-indirim-yazi]").textContent = "-" + paraYaz(kuponDurum.tutar);
+    };
+
+    const kuponKaldir = (mesaj) => {
+        kuponDurum = null;
+        kuponKartiniCiz();
+        kuponDurumunuYayinla();
+        if (mesaj) { kuponBildir(false, mesaj); }
+        toplamlariGuncelle();
+    };
+
+    const uyeBasligi = () => {
+        const token = localStorage.getItem("ecspros_member_token");
+        return token ? { Authorization: "Bearer " + token } : {};
+    };
+
+    const kuponDogrula = async (kod, toplam) => {
+        const cevap = await fetch("/api/store/checkout/coupon/validate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...uyeBasligi() },
+            body: JSON.stringify({ code: kod, cartTotal: toplam })
+        });
+        return cevap.json().catch(() => null);
+    };
+
+    const kuponUygula = async (kod, sessiz) => {
+        const temizKod = (kod || "").trim().toLocaleUpperCase("tr-TR");
+        if (!temizKod) { return; }
+        try {
+            const veri = await kuponDogrula(temizKod, seciliToplam());
+            if (!veri?.success) {
+                if (!sessiz) { kuponBildir(false, veri?.error || "Kupon kodu kullanılamıyor."); }
+                else { kuponKaldir(); }
+                return;
+            }
+            kuponDurum = {
+                couponId: veri.data.couponId,
+                kod: temizKod,
+                odemeTipi: "tum",
+                tutar: veri.data.discountAmount || 0,
+                indirim: "-" + paraYaz(veri.data.discountAmount || 0),
+                aciklama: veri.data.discountDescription || ""
+            };
+            kuponKartiniCiz();
+            kuponDurumunuYayinla();
+            if (!sessiz) { kuponBildir(true, kuponDurum.aciklama || "Sepet indirimi sipariş özetine yansıtıldı."); }
+            if (kuponInput) { kuponInput.value = ""; }
+            toplamlariGuncelle();
+        } catch {
+            if (!sessiz) { kuponBildir(false, "Kupon doğrulanamadı. Lütfen tekrar deneyin."); }
+        }
+    };
+
+    // Sepet değişince uygulanan kuponu yeni toplamla sessizce yeniden doğrula
+    function kuponuTazele(toplam) {
+        if (!kuponDurum) { return; }
+        window.clearTimeout(kuponTazeleZamanlayici);
+        kuponTazeleZamanlayici = window.setTimeout(async () => {
+            try {
+                const veri = await kuponDogrula(kuponDurum.kod, toplam);
+                if (!veri?.success) {
+                    kuponKaldir(veri?.error || "Sepet değişti — kupon koşulları artık sağlanmıyor.");
+                    return;
+                }
+                if ((veri.data.discountAmount || 0) !== kuponDurum.tutar) {
+                    kuponDurum.tutar = veri.data.discountAmount || 0;
+                    kuponDurum.indirim = "-" + paraYaz(kuponDurum.tutar);
+                    kuponKartiniCiz();
+                    kuponDurumunuYayinla();
+                    toplamlariGuncelle();
+                }
+            } catch { /* geçici ağ hatası — mevcut kupon korunur */ }
+        }, 400);
+    }
+
+    document.querySelector("[data-ms-kupon-uygula]")?.addEventListener("click", () => kuponUygula(kuponInput?.value, false));
+    kuponInput?.addEventListener("keydown", (olay) => {
+        if (olay.key === "Enter") { olay.preventDefault(); kuponUygula(kuponInput.value, false); }
+    });
+    document.querySelector("[data-ms-kupon-kaldir]")?.addEventListener("click", () => {
+        kuponKaldir();
+        kuponBildir(true, "Kupon kaldırıldı.");
+        kuponInput?.focus();
+    });
+
     tumunuSec?.addEventListener("change", () => {
         konteyner.querySelectorAll("[data-ms-sepet-urun-checkbox]:not(:disabled)").forEach((kutu) => {
             kutu.checked = tumunuSec.checked;
@@ -880,6 +865,11 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch { ciz(null); }
     };
 
-    yenile();
+    yenile().then(() => {
+        try {
+            const kayitli = JSON.parse(sessionStorage.getItem("msSepetKuponDurumu") || "null");
+            if (kayitli?.kod) { kuponUygula(kayitli.kod, true); }
+        } catch { /* bozuk kayıt yok sayılır */ }
+    });
 });
 </script>

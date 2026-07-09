@@ -38,7 +38,7 @@
 | ProjeElementleri/UrunDetay/_UrunDetayAltBilgi.cshtml | UrunDetayVm (görsel/açıklama/özellikler) | aynı sorgu (DescriptionI18n) | B9 | ✅ 2026-07-08 |
 
 | Sepet/Index.cshtml | — (kabuk; script /teslimat yönlendirmesi kaynaktaki gibi) | SepetController (/sepet) | C1 | ✅ 2026-07-09 (bayt-aynı) |
-| ProjeElementleri/Sepet/_SepetSayfasi.cshtml | — (istemci-durumlu; satırlar template'ten) | GET/PUT/DELETE api/store/cart (dosya sonu script) | C1/C3/C7 | ✅ 2026-07-09 (kupon C3, TCKN koşulu C7, kargo bilgileri H, kampanya/koleksiyon G/E6 — @if gizli) |
+| ProjeElementleri/Sepet/_SepetSayfasi.cshtml | — (istemci-durumlu; satırlar template'ten) | GET/PUT/DELETE api/store/cart + POST checkout/coupon/validate (dosya sonu script) | C1/C3/C7 | ✅ 2026-07-09 (C3: kupon canlı — msSepetKuponDurumu sözleşmesi korunarak; TCKN koşulu C7, kargo H, kampanya/koleksiyon G/E6 — @if gizli) |
 | ProjeElementleri/Sepet/_SepetModallari.cshtml | — (sil onay/kupon/sözleşme/TCKN modalları) | sözleşme içerikleri C8'de CMS'ten | C1/C8 | ✅ 2026-07-09 (bayt-aynı; sil onayına API dinleyicisi sayfa script'inden eklenir) |
 
 **Sonraki fazlarda eklenecek satırlar:** Sepet/Teslimat+Odeme+SiparisTamamlandi (C4-C10),
