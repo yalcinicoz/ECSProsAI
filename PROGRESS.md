@@ -294,6 +294,21 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — FAZ C BAŞLADI: C1+C2 TAMAM (sepet sayfası canlı):**
+  - `/sepet` (SepetController) — Index/_SepetSayfasi/_SepetModallari birebir kopya; satırlar
+    template + script'le GET /api/store/cart'tan (istemci-durumlu sepet, B5 deseni; ad/görsel/
+    seçenek özeti IProductService zenginleştirmesinden). Adet ± PUT ile kalıcı (1–10), silme
+    misharix sil onay modalı üzerinden DELETE (modal script'i değişmedi — onay butonuna ikinci
+    dinleyici), tümünü seç/checkbox özet toplamını belirler, boş durum + mini sepet rozet
+    senkronu. Mini sepet "Sepete Git/Siparişi Tamamla" → /sepet (C4'te Tamamla → /teslimat).
+  - Fazına bırakılanlar @if(false): TCKN uyarısı C7, kupon alanları C3, kargo bilgileri H,
+    kampanya/koleksiyon G/E6; favoriye taşı (C2) canlı şablona alınmadı — E5'te eklenir.
+  - E2E (5051 publish): **12/12 ✓**; 0 konsol hatası; drift TEMİZ (1 yeni izinli girdi).
+  - ⚠️ Test instance başlatmada `cd X && nohup ... &` tuzağına B13'te bir kez daha düşülmüştü
+    (yetim süreç 5051'i tuttu, yeni instance core-dump) — ss -ltnp + /proc doğrulamasıyla
+    çözüldü; tek satırda cd+nohup bileşiği YASAK (bkz. feedback_background_nohup_pid_trap).
+  - Sıradaki: C3 (kupon) → C4 (teslimat+adres hiyerarşisi K6) → C5-C10.
+
 - **2026-07-09 (devam) — Faz B13 TAMAMLANDI → FAZ B KAPANDI 🎉:**
   - Envanter 8.1–8.4'teki 25 açık satır gerçek durumla işaretlendi (Faz B işleri ✅; SMS/OTP→D4,
     belge metinleri→D3, favori/koleksiyon/puan→E5-E7, kampanya→G, görsel arama→H3, video→H5);

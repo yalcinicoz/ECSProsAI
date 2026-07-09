@@ -1,0 +1,885 @@
+@await Html.PartialAsync("~/Views/ProjeElementleri/Sepet/_SepetModallari.cshtml")
+
+    <section class="ms-siparis-asama-paneli ms-siparis-asama-paneli-aktif" data-ms-siparis-asama-panel="sepet">
+    <div class="ms-sepet-mobil-sabit-aksiyon" aria-label="Mobil sepet aksiyonları">
+        <div class="ms-sepet-mobil-sabit-tutar">
+            <span>Ödenecek Tutar</span>
+            <strong class="ms-urun-fiyat" data-ms-sepet-odenecek>0,00 TL</strong>
+        </div>
+        <button class="ms-buton ms-buton-l ms-buton-satin-al ms-buton-tam" type="button">Siparişi Tamamla</button>
+    </div>
+    <div class="ms-sepet-izgara">
+        <section class="ms-sepet-liste-alani" aria-labelledby="ms-sepet-ornek-baslik">
+            @if (false)
+            {
+            @* C7: TCKN uyarısı gerçek tutar koşuluna bağlanınca açılır *@
+            <div class="ms-sepet-tckn-uyari" role="alert">
+                <div>
+                    <strong>TCKN doğrulama gerekli</strong>
+                    <p>13.000 TL üzeri sipariş verdiğiniz için TCKN doğrulama yapmanız gerekiyor.</p>
+                </div>
+                <button class="ms-buton ms-buton-s ms-buton-tehlikeli" type="button" data-ms-tckn-modal-ac>Doğrula</button>
+            </div>
+            }
+
+            <div class="ms-sepet-ust">
+                <div>
+                    <h3 id="ms-sepet-ornek-baslik" class="ms-sepet-bolum-basligi">Sepetim</h3>
+                    <p class="ms-sepet-bolum-aciklama" data-ms-sepet-ozet-aciklama>Sepetiniz yükleniyor…</p>
+                </div>
+                <label class="ms-sepet-secim">
+                    <input type="checkbox" checked data-ms-sepet-tumunu-sec>
+                    <span>Tümünü Seç</span>
+                </label>
+            </div>
+
+            <div class="ms-sepet-satici-grubu">
+                @if (false)
+                {
+                @* Faz H: kargo kuralları (bedava eşiği + tahmini teslim) gelince açılır *@
+                <div class="ms-sepet-kart-bilgi-listesi">
+                    <div class="ms-sepet-kart-bilgi ms-sepet-kart-bilgi-kargo">
+                        <i class="fa-solid fa-truck ms-fa-ikon " aria-hidden="true"></i>
+                    <span><strong class="ms-fiyat-standart">1.100 ₺</strong> daha ürün ekle, kargo bedava olsun.</span>
+                    </div>
+                    <div class="ms-sepet-kart-bilgi ms-sepet-kart-bilgi-teslimat">
+                        <i class="fa-solid fa-clock ms-fa-ikon" aria-hidden="true"></i>
+                        <span>Tahmini Kargoya Teslim: 3 gün içinde</span>
+                    </div>
+                </div>
+                }
+                @if (false)
+                {
+                @* E6: "sepeti koleksiyon olarak kaydet" koleksiyon backend'iyle; tek satıcı — başlık gizli *@
+                <div class="ms-sepet-satici-baslik">
+                    <strong>Misharix</strong>
+                    <span class="ms-sepet-satici-rozetleri">
+                        <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil" type="button">
+                            <i class="fa-solid fa-square-plus ms-fa-ikon h-5 w-5 shrink-0 " aria-hidden="true"></i>
+                            Sepeti koleksiyon olarak kaydet ve paylaş.
+                        </button>
+                    </span>
+                </div>
+                }
+
+                @* C1: satırlar canlı sepetten render edilir (aşağıdaki template + script);
+                   kampanya etiketleri (G), teslimat satırı (H), eski fiyat (G) ve favoriye
+                   taşı (E5/C2) veri kaynağı gelene dek şablona alınmadı. *@
+                <div data-ms-sepet-satir-konteyner></div>
+                <p data-ms-sepet-bos hidden>Sepetiniz henüz boş. <a href="/">Alışverişe başlayın.</a></p>
+                <template data-ms-sepet-satir-sablon>
+                <article class="ms-sepet-satiri" data-ms-sepet-satir data-ms-birim-fiyat="">
+                    <label class="ms-sepet-urun-secim">
+                        <input type="checkbox" checked data-ms-sepet-urun-checkbox>
+                        <span class="sr-only">Ürünü seç</span>
+                    </label>
+                    <a class="ms-sepet-gorsel-link" href="#" data-ms-sepet-gorsel-link>
+                        <img class="ms-sepet-gorsel" src="" alt="" data-ms-sepet-gorsel>
+                    </a>
+                    <div class="ms-sepet-bilgi">
+                        <a class="ms-sepet-basligi" href="#" data-ms-sepet-baslik></a>
+                        <p class="ms-sepet-aciklama" data-ms-sepet-secenek></p>
+                        <p class="ms-sepet-stok-uyari" data-ms-sepet-stok-uyari hidden>Stok tükendi. Bu ürünü sepetten çıkararak alışverişe devam edebilirsiniz.</p>
+                        <div class="ms-sepet-alt-satir">
+                            <div class="ms-adet-secici" data-ms-sepet-adet>
+                                <button class="ms-adet-buton" type="button" aria-label="Adedi azalt" data-ms-sepet-adet-azalt>-</button>
+                                <span class="ms-adet-deger" data-ms-sepet-adet-deger>1</span>
+                                <button class="ms-adet-buton" type="button" aria-label="Adedi artır" data-ms-sepet-adet-artir>+</button>
+                            </div>
+                            <div class="ms-sepet-fiyat-alani">
+                                <strong class="ms-urun-fiyat" data-ms-sepet-satir-tutar></strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ms-sepet-satir-aksiyonlar">
+                        <button class="ms-sepet-ikon-buton" type="button" aria-label="Ürünü sepetten kaldır" data-ms-sepet-sil>
+                            <i class="fa-solid fa-trash-can ms-fa-ikon " aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </article>
+                </template>
+
+                @if (false)
+                {
+                <article class="ms-sepet-satiri" data-ms-sepet-satir data-ms-birim-fiyat="543.15">
+                    <label class="ms-sepet-urun-secim">
+                        <input type="checkbox" checked data-ms-sepet-urun-checkbox>
+                        <span class="sr-only">Kadın yırtmaçlı kemerli tül eteği seç</span>
+                    </label>
+                    <a class="ms-sepet-gorsel-link" href="/UrunDetay">
+                        <img class="ms-sepet-gorsel" src="/images/ornek-resim.jpg" alt="Kadın yırtmaçlı kemerli kat detaylı tül etek">
+                    </a>
+                    <div class="ms-sepet-bilgi">
+                        <a class="ms-sepet-basligi" href="/UrunDetay">Kadın Yırtmaçlı Kemerli Kat Detaylı Tül Etek</a>
+                        <p class="ms-sepet-aciklama">Beden: M • Renk: Siyah</p>
+                        <p class="ms-sepet-teslimat">Tahmini teslimat: 2 iş günü</p>
+                        <div class="ms-sepet-kampanya-listesi" aria-label="Ürün kampanyaları">
+                            <span class="ms-sepet-kampanya-etiketi">Sepette %10 indirim</span>
+                            <span class="ms-sepet-kampanya-etiketi">Alt limit kargo bedava</span>
+                            <span class="ms-sepet-kampanya-etiketi">Kartla ek %5</span>
+                        </div>
+                        <div class="ms-sepet-alt-satir">
+                            <div class="ms-adet-secici" data-ms-sepet-adet>
+                                <button class="ms-adet-buton" type="button" aria-label="Adedi azalt" data-ms-sepet-adet-azalt>-</button>
+                                <span class="ms-adet-deger" data-ms-sepet-adet-deger>1</span>
+                                <button class="ms-adet-buton" type="button" aria-label="Adedi artır" data-ms-sepet-adet-artir>+</button>
+                            </div>
+                            <div class="ms-sepet-fiyat-alani">
+                                <span class="ms-urun-fiyat-eski">649,90 TL</span>
+                                <span class="ms-sepet-kampanya-sonrasi">Kampanya sonrası</span>
+                                <strong class="ms-urun-fiyat" data-ms-sepet-satir-tutar>543,15 TL</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ms-sepet-satir-aksiyonlar">
+                        <button class="ms-sepet-ikon-buton" type="button" aria-label="Favorilere ekle" aria-pressed="false" data-ms-sepet-favori>
+                            <img class="ms-ikon-siyah" src="/ikons/favorite.svg" alt="" aria-hidden="true">
+                        </button>
+                        <button class="ms-sepet-ikon-buton" type="button" aria-label="Ürünü sepetten kaldır" data-ms-sepet-sil>
+                            <i class="fa-solid fa-trash-can ms-fa-ikon " aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </article>
+
+                <article class="ms-sepet-satiri" data-ms-sepet-satir data-ms-birim-fiyat="399.90">
+                    <label class="ms-sepet-urun-secim">
+                        <input type="checkbox" checked data-ms-sepet-urun-checkbox>
+                        <span class="sr-only">Kadın dik yaka gömleği seç</span>
+                    </label>
+                    <a class="ms-sepet-gorsel-link" href="/UrunDetay">
+                        <img class="ms-sepet-gorsel" src="/images/ornek-resim-2.jpg" alt="Kadın ön çıtçıtlı dik yaka gömlek">
+                    </a>
+                    <div class="ms-sepet-bilgi">
+                        <a class="ms-sepet-basligi" href="/UrunDetay">Kadın Ön Çıtçıtlı Dik Yaka Gömlek</a>
+                        <p class="ms-sepet-aciklama">Beden: S • Renk: Ekru</p>
+                        <p class="ms-sepet-teslimat">Bugün kargoya verilir.</p>
+                        <div class="ms-sepet-kampanya-listesi" aria-label="Ürün kampanyaları">
+                            <span class="ms-sepet-kampanya-etiketi">2 al 1 öde fırsatı</span>
+                            <span class="ms-sepet-kampanya-etiketi">Sepette ek %20</span>
+                            <span class="ms-sepet-kampanya-etiketi">Hızlı teslimat</span>
+                        </div>
+                        <div class="ms-sepet-alt-satir">
+                            <div class="ms-adet-secici" data-ms-sepet-adet>
+                                <button class="ms-adet-buton" type="button" aria-label="Adedi azalt" data-ms-sepet-adet-azalt>-</button>
+                                <span class="ms-adet-deger" data-ms-sepet-adet-deger>2</span>
+                                <button class="ms-adet-buton" type="button" aria-label="Adedi artır" data-ms-sepet-adet-artir>+</button>
+                            </div>
+                            <div class="ms-sepet-fiyat-alani">
+                                <span class="ms-urun-fiyat-eski">499,90 TL</span>
+                                <span class="ms-sepet-kampanya-sonrasi">Kampanya sonrası</span>
+                                <strong class="ms-urun-fiyat" data-ms-sepet-satir-tutar>799,80 TL</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ms-sepet-satir-aksiyonlar">
+                        <button class="ms-sepet-ikon-buton" type="button" aria-label="Favorilere ekle" aria-pressed="false" data-ms-sepet-favori>
+                            <img class="ms-ikon-siyah" src="/ikons/favorite.svg" alt="" aria-hidden="true">
+                        </button>
+                        <button class="ms-sepet-ikon-buton" type="button" aria-label="Ürünü sepetten kaldır" data-ms-sepet-sil>
+                            <i class="fa-solid fa-trash-can ms-fa-ikon " aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </article>
+
+                <article class="ms-sepet-satiri ms-sepet-satiri-tukendi" aria-label="Stokta olmayan sepet ürünü">
+                    <label class="ms-sepet-urun-secim">
+                        <input type="checkbox" disabled>
+                        <span class="sr-only">Kadın desenli viskon elbise stokta yok</span>
+                    </label>
+                    <a class="ms-sepet-gorsel-link" href="/UrunDetay">
+                        <img class="ms-sepet-gorsel" src="/images/ornek-resim.jpg" alt="Kadın haki aerobin elbise">
+                        <span class="ms-sepet-gorsel-etiket">Tükendi</span>
+                    </a>
+                    <div class="ms-sepet-bilgi">
+                        <a class="ms-sepet-basligi" href="/UrunDetay">Kadın Haki Aerobin Kuşaklı Elbise</a>
+                        <p class="ms-sepet-aciklama">Beden: 38 • Renk: Haki</p>
+                        <p class="ms-sepet-stok-uyari">Stok tükendi. Bu ürünü sepetten çıkararak alışverişe devam edebilirsiniz.</p>
+                        <div class="ms-sepet-kampanya-listesi" aria-label="Ürün kampanyaları">
+                            <span class="ms-sepet-kampanya-etiketi">Sepette %15 indirim</span>
+                            <span class="ms-sepet-kampanya-etiketi">2. ürüne ek %10</span>
+                            <span class="ms-sepet-kampanya-etiketi">Kargo bedava</span>
+                        </div>
+                        <button class="ms-sepet-tukendi-sil-buton" type="button" data-ms-sepet-sil>
+                            <i class="fa-solid fa-trash-can ms-fa-ikon " aria-hidden="true"></i>
+                            Sepetten çıkar
+                        </button>
+                        <div class="ms-sepet-alt-satir">
+                            <button class="ms-sepet-tukendi-notu" type="button" data-ms-stok-haber-ver>Stok yenilenince haber ver</button>
+                            <div class="ms-sepet-fiyat-alani">
+                                <span class="ms-urun-fiyat-eski">899,90 TL</span>
+                                <span class="ms-sepet-kampanya-sonrasi">Kampanya sonrası</span>
+                                <strong class="ms-urun-fiyat">764,90 TL</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ms-sepet-satir-aksiyonlar" aria-hidden="true"></div>
+                </article>
+                }
+            </div>
+
+        </section>
+
+        <aside class="ms-siparis-ozeti" aria-labelledby="ms-siparis-ozeti-baslik">
+            <h3 id="ms-siparis-ozeti-baslik" class="ms-siparis-basligi">Sipariş Özeti</h3>
+            @if (false)
+            {
+            @* Faz G/C3/H: etiket rozetleri (kargo/kupon/puan/kapıda) veri kaynaklarıyla açılır *@
+            <div class="ms-siparis-etiket-listesi" aria-label="Sipariş etiketleri">
+                <span class="ms-siparis-etiket-rozet ms-siparis-etiket-rozet-aktif ms-siparis-etiket-rozet-kargo">
+                    <i class="fa-solid fa-truck ms-fa-ikon " aria-hidden="true"></i>
+                    <span>Ücretsiz Kargo</span>
+                </span>
+                <span class="ms-siparis-etiket-rozet ms-siparis-etiket-rozet-kupon">
+                    <i class="fa-solid fa-ticket ms-fa-ikon " aria-hidden="true"></i>
+                    <span>Kupon Uygun</span>
+                </span>
+                <span class="ms-siparis-etiket-rozet ms-siparis-etiket-rozet-puan">
+                    <i class="fa-solid fa-coins ms-fa-ikon " aria-hidden="true"></i>
+                    <span>Puan Kazandırır</span>
+                </span>
+                <span class="ms-siparis-etiket-rozet ms-siparis-etiket-rozet-odeme">
+                    <i class="fa-solid fa-money-bill-wave ms-fa-ikon " aria-hidden="true"></i>
+                    <span>Kapıda Ödeme</span>
+                </span>
+            </div>
+            }
+            <div class="ms-siparis-satirlari">
+                <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Ürün Toplamı</span><span class="ms-siparis-deger ms-fiyat-standart" data-ms-sepet-urun-toplami>0,00 TL</span></div>
+                <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Kargo</span><span class="ms-siparis-deger ms-siparis-ucretsiz">Ücretsiz</span></div>
+                @if (false)
+                {
+                @* C3: kupon uygulanınca sepet indirimi satırı açılır *@
+                <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Sepet İndirimi</span><span class="ms-siparis-deger ms-urun-fiyat-indirimli">-85,00 TL</span></div>
+                }
+            </div>
+            @if (false)
+            {
+            @* C3: uygulanan kupon kartı + kupon kodu girişi promotion API'sine bağlanınca açılır *@
+            <div class="ms-siparis-uygulanan-kupon" data-ms-uygulanan-kupon data-ms-kupon-kod="KART25" data-ms-kupon-odeme-tipi="kart" data-ms-kupon-indirim="-25,00 TL" data-ms-kupon-aciklama="Kredi kartı ödemesine özel kupon">
+                <div class="ms-siparis-uygulanan-kupon-bilgi">
+                    <span>Uygulanan Kupon</span>
+                    <strong data-ms-kupon-kod-yazi>KART25</strong>
+                    <small data-ms-kupon-kosul>Sadece Kart ile Ödeme</small>
+                </div>
+                <div class="ms-siparis-uygulanan-kupon-aksiyon">
+                    <em class="ms-urun-fiyat-indirimli" data-ms-kupon-indirim-yazi>-25,00 TL</em>
+                    <button class="ms-siparis-kupon-kaldir" type="button" data-ms-kupon-kaldir>Kuponu Kaldır</button>
+                </div>
+            </div>
+
+            <label class="ms-siparis-kupon">
+                <span>Kupon Kodu</span>
+                <div class="ms-siparis-kupon-satiri">
+                    <input type="text" placeholder="KART25, KAPIDA15 veya GENEL10" data-ms-kupon-kodu>
+                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-kupon-uygula>Uygula</button>
+                </div>
+            </label>
+            <div class="ms-siparis-kupon-bildirimleri" data-ms-kupon-bildirimleri>
+                <div class="ms-siparis-kupon-bildirim ms-siparis-kupon-bildirim-basarili">
+                    <strong>Kupon uygulandı.</strong>
+                    <span>Sepet indirimi sipariş özetine başarıyla yansıtıldı.</span>
+                </div>
+                <div class="ms-siparis-kupon-bildirim ms-siparis-kupon-bildirim-hata">
+                    <strong>Geçersiz kupon.</strong>
+                    <span>Girdiğiniz kupon kodu kullanılamıyor veya kampanya koşullarını karşılamıyor.</span>
+                </div>
+            </div>
+
+            }
+            <div class="ms-siparis-ozet-aksiyonlar">
+                <a class="ms-buton ms-buton-m ms-buton-devam" href="/">Alışverişe Devam Et</a>
+                @if (false)
+                {
+                @* C3/E9: üyenin kupon listesi *@
+                <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-kupon-modal-ac>Kuponlarım</button>
+                }
+            </div>
+
+            <div class="ms-siparis-toplam">
+                <span class="ms-siparis-toplam-etiket">Ödenecek Tutar</span>
+                <span class="ms-siparis-toplam-deger ms-urun-fiyat" data-ms-sepet-odenecek>0,00 TL</span>
+            </div>
+            <div class="ms-siparis-sozlesme-onay">
+                <input class="ms-onay-input" type="checkbox" data-ms-sozlesme-onay-input aria-label="Mesafeli satış sözleşmesini ve ön bilgilendirme formunu onayla">
+                <span class="ms-onay-kutu" aria-hidden="true"></span>
+                <p>
+                    <button class="ms-siparis-sozlesme-link" type="button" data-ms-sozlesme-modal-ac>Mesafeli Satış Sözleşmesi ve Ön Bilgilendirme Formu</button>
+                    metinlerini okudum, anladım ve elektronik ortamda onaylıyorum.
+                </p>
+            </div>
+            <button class="ms-buton ms-buton-l ms-buton-satin-al ms-buton-tam" type="button">Siparişi Tamamla</button>
+            <p class="ms-siparis-guvenli-odeme">Güvenli ödeme altyapısı ile bilgileriniz korunur.</p>
+        </aside>
+    </div>
+    </section>
+
+
+    @* Bu script: TCKN modalı ve ilgili form doğrulama davranışını yönetir. *@
+    <script>
+    (() => {
+        const sepetSayfasiKok = document.currentScript?.closest("[data-ms-sayfa-panel], .ms-panel") || document;
+        const tcknModal = sepetSayfasiKok.querySelector("[data-ms-tckn-modal]");
+        const tcknGirdi = tcknModal?.querySelector("[data-ms-tckn-girdi]");
+        const tcknZorunluAlanlar = Array.from(tcknModal?.querySelectorAll("[data-ms-tckn-zorunlu]") || []);
+        const tcknDurumBekliyor = tcknModal?.querySelector("[data-ms-tckn-durum-bekliyor]");
+        const tcknDurumBasarili = tcknModal?.querySelector("[data-ms-tckn-durum-basarili]");
+        const tcknDurumHata = tcknModal?.querySelector("[data-ms-tckn-durum-hata]");
+
+        const tcknDurumunuGoster = (durum) => {
+            tcknDurumBekliyor?.classList.toggle("ms-gizli", durum !== "bekliyor");
+            tcknDurumBasarili?.classList.toggle("ms-gizli", durum !== "basarili");
+            tcknDurumHata?.classList.toggle("ms-gizli", durum !== "hata");
+        };
+
+        const tcknAlanHatasiniAyarla = (alan, hataVar) => {
+            const hata = alan.closest(".ms-form-alani")?.querySelector("[data-ms-tckn-hata]");
+            alan.classList.toggle("ms-form-girdi-hata", hataVar);
+
+            if (hata) {
+                hata.hidden = !hataVar;
+            }
+        };
+
+        const tcknFormHatalariniTemizle = () => {
+            tcknZorunluAlanlar.forEach((alan) => tcknAlanHatasiniAyarla(alan, false));
+        };
+
+        const tcknModalAc = () => {
+            tcknModal?.classList.add("ms-ornek-modal-acik");
+            tcknModal?.setAttribute("aria-hidden", "false");
+            tcknDurumunuGoster("bekliyor");
+            tcknFormHatalariniTemizle();
+            window.setTimeout(() => tcknGirdi?.focus(), 50);
+        };
+
+        const tcknModalKapat = () => {
+            tcknModal?.classList.remove("ms-ornek-modal-acik");
+            tcknModal?.setAttribute("aria-hidden", "true");
+        };
+
+        sepetSayfasiKok.querySelectorAll("[data-ms-tckn-modal-ac]").forEach((buton) => {
+            buton.addEventListener("click", tcknModalAc);
+        });
+
+        tcknModal?.querySelectorAll("[data-ms-tckn-modal-kapat]").forEach((buton) => {
+            buton.addEventListener("click", tcknModalKapat);
+        });
+
+        tcknModal?.querySelector("[data-ms-tckn-dogrula]")?.addEventListener("click", () => {
+            const tckn = (tcknGirdi?.value || "").replace(/\D/g, "");
+            let hataVar = false;
+
+            tcknZorunluAlanlar.forEach((alan) => {
+                const bos = !alan.value.trim();
+                tcknAlanHatasiniAyarla(alan, bos);
+                hataVar = hataVar || bos;
+            });
+
+            if (hataVar) {
+                tcknDurumunuGoster("hata");
+                tcknZorunluAlanlar.find((alan) => alan.classList.contains("ms-form-girdi-hata"))?.focus();
+                return;
+            }
+
+            tcknDurumunuGoster(tckn.length === 11 ? "basarili" : "hata");
+        });
+
+        tcknGirdi?.addEventListener("input", () => {
+            tcknGirdi.value = tcknGirdi.value.replace(/\D/g, "").slice(0, 11);
+            tcknDurumunuGoster("bekliyor");
+        });
+
+        tcknZorunluAlanlar.forEach((alan) => {
+            alan.addEventListener("input", () => {
+                if (alan === tcknGirdi) {
+                    alan.value = alan.value.replace(/\D/g, "").slice(0, 11);
+                }
+
+                if (alan.value.trim()) {
+                    tcknAlanHatasiniAyarla(alan, false);
+                }
+
+                tcknDurumunuGoster("bekliyor");
+            });
+        });
+
+        const kuponOdemeEtiketleri = {
+            kart: "Sadece Kart ile Ödeme",
+            kapida: "Kapıda Ödemeye Özel",
+            "kapida-nakit": "Sadece Kapıda Nakit",
+            "kapida-kart": "Sadece Kapıda Kart",
+            tum: "Tüm Ödeme Yöntemleri"
+        };
+
+        const kuponOdemeTipiniBul = (kod) => {
+            const temizKod = (kod || "").trim().toLocaleUpperCase("tr-TR");
+
+            if (temizKod.includes("KART") || temizKod.includes("KK")) {
+                return "kart";
+            }
+
+            if (temizKod.includes("NAKIT")) {
+                return "kapida-nakit";
+            }
+
+            if (temizKod.includes("KAPIDA")) {
+                return "kapida";
+            }
+
+            return "tum";
+        };
+
+        const kuponAciklamasiBul = (odemeTipi) => {
+            if (odemeTipi === "kart") {
+                return "Kredi kartı veya banka kartı ile ödemede geçerli kupon";
+            }
+
+            if (odemeTipi === "kapida" || odemeTipi === "kapida-nakit" || odemeTipi === "kapida-kart") {
+                return "Kapıda ödeme yöntemlerinde geçerli kupon";
+            }
+
+            return "Tüm ödeme yöntemlerinde geçerli kupon";
+        };
+
+        const kuponDurumunuYayinla = (durum) => {
+            window.msSepetKuponDurumu = durum || null;
+            try {
+                window.sessionStorage?.setItem("msSepetKuponDurumu", JSON.stringify(window.msSepetKuponDurumu));
+            } catch {
+                // Tarayıcı depolaması kapalıysa aynı sayfa içi event akışı devam eder.
+            }
+
+            window.dispatchEvent(new CustomEvent("ms:sepet-kupon-degisti", {
+                detail: window.msSepetKuponDurumu
+            }));
+        };
+
+        const kuponKartindanDurumAl = (kuponKarti) => {
+            if (!kuponKarti || kuponKarti.hidden) {
+                return null;
+            }
+
+            return {
+                kod: kuponKarti.dataset.msKuponKod || "",
+                odemeTipi: kuponKarti.dataset.msKuponOdemeTipi || "tum",
+                indirim: kuponKarti.dataset.msKuponIndirim || "-25,00 TL",
+                aciklama: kuponKarti.dataset.msKuponAciklama || kuponAciklamasiBul(kuponKarti.dataset.msKuponOdemeTipi || "tum")
+            };
+        };
+
+        const kuponKartiniGuncelle = (kuponKarti, durum) => {
+            if (!kuponKarti) {
+                return;
+            }
+
+            kuponKarti.hidden = !durum;
+
+            if (!durum) {
+                kuponDurumunuYayinla(null);
+                return;
+            }
+
+            kuponKarti.dataset.msKuponKod = durum.kod;
+            kuponKarti.dataset.msKuponOdemeTipi = durum.odemeTipi;
+            kuponKarti.dataset.msKuponIndirim = durum.indirim;
+            kuponKarti.dataset.msKuponAciklama = durum.aciklama;
+
+            const kodYazi = kuponKarti.querySelector("[data-ms-kupon-kod-yazi]");
+            const kosulYazi = kuponKarti.querySelector("[data-ms-kupon-kosul]");
+            const indirimYazi = kuponKarti.querySelector("[data-ms-kupon-indirim-yazi]");
+
+            if (kodYazi) {
+                kodYazi.textContent = durum.kod;
+            }
+
+            if (kosulYazi) {
+                kosulYazi.textContent = kuponOdemeEtiketleri[durum.odemeTipi] || kuponOdemeEtiketleri.tum;
+            }
+
+            if (indirimYazi) {
+                indirimYazi.textContent = durum.indirim;
+            }
+
+            kuponDurumunuYayinla(durum);
+        };
+
+        sepetSayfasiKok.querySelectorAll("[data-ms-kupon-uygula]").forEach((buton) => {
+            buton.addEventListener("click", () => {
+                const kuponAlani = buton.closest(".ms-siparis-kupon");
+                const ozet = buton.closest(".ms-siparis-ozeti");
+                const kuponKarti = ozet?.querySelector("[data-ms-uygulanan-kupon]");
+                const kuponInput = kuponAlani?.querySelector("[data-ms-kupon-kodu]");
+                const kod = (kuponInput?.value || "KART25").trim().toLocaleUpperCase("tr-TR");
+                const odemeTipi = kuponOdemeTipiniBul(kod);
+                const bildirimler = kuponAlani?.nextElementSibling?.matches("[data-ms-kupon-bildirimleri]")
+                    ? kuponAlani.nextElementSibling
+                    : null;
+
+                kuponKartiniGuncelle(kuponKarti, {
+                    kod,
+                    odemeTipi,
+                    indirim: odemeTipi === "tum" ? "-10,00 TL" : "-25,00 TL",
+                    aciklama: kuponAciklamasiBul(odemeTipi)
+                });
+
+                if (kuponInput) {
+                    kuponInput.value = "";
+                }
+
+                bildirimler?.querySelectorAll(".ms-siparis-kupon-bildirim").forEach((bildirim) => {
+                    bildirim.classList.add("ms-siparis-kupon-bildirim-vurgulu");
+                    window.setTimeout(() => {
+                        bildirim.classList.remove("ms-siparis-kupon-bildirim-vurgulu");
+                    }, 900);
+                });
+            });
+        });
+
+        sepetSayfasiKok.querySelectorAll("[data-ms-kupon-kaldir]").forEach((buton) => {
+            buton.addEventListener("click", () => {
+                const kuponKarti = buton.closest("[data-ms-uygulanan-kupon]");
+                const kuponInput = kuponKarti?.closest(".ms-siparis-ozeti")?.querySelector("[data-ms-kupon-kodu]");
+
+                kuponKartiniGuncelle(kuponKarti, null);
+                kuponInput?.focus();
+            });
+        });
+
+        sepetSayfasiKok.querySelectorAll("[data-ms-uygulanan-kupon]").forEach((kuponKarti) => {
+            kuponDurumunuYayinla(kuponKartindanDurumAl(kuponKarti));
+        });
+
+        sepetSayfasiKok.querySelectorAll("[data-ms-kupon-modal-ac]").forEach((buton) => {
+            buton.addEventListener("click", () => window.msKuponModalAc?.());
+        });
+
+        sepetSayfasiKok.querySelectorAll("[data-ms-sozlesme-modal-ac]").forEach((buton) => {
+            buton.addEventListener("click", () => {
+                const ozet = buton.closest(".ms-siparis-ozeti");
+                window.msSozlesmeModalAc?.(ozet?.querySelector("[data-ms-sozlesme-onay-input]") || null);
+            });
+        });
+
+        sepetSayfasiKok.querySelectorAll("[data-ms-sozlesme-onay-input]").forEach((checkbox) => {
+            checkbox.addEventListener("click", (event) => {
+                if (!checkbox.checked) {
+                    return;
+                }
+
+                event.preventDefault();
+                checkbox.checked = false;
+                window.msSozlesmeModalAc?.(checkbox);
+            });
+        });
+
+        sepetSayfasiKok.querySelectorAll("[data-ms-sepet-tumunu-sec]").forEach((tumunuSec) => {
+            const sepetAlani = tumunuSec.closest(".ms-sepet-liste-alani") || sepetSayfasiKok;
+            const urunSecimleri = Array.from(sepetAlani.querySelectorAll("[data-ms-sepet-urun-checkbox]"));
+
+            if (!urunSecimleri.length) {
+                return;
+            }
+
+            const tumunuSecDurumuGuncelle = () => {
+                const seciliAdet = urunSecimleri.filter((secim) => secim.checked).length;
+                tumunuSec.checked = seciliAdet === urunSecimleri.length;
+                tumunuSec.indeterminate = seciliAdet > 0 && seciliAdet < urunSecimleri.length;
+            };
+
+            tumunuSec.addEventListener("change", () => {
+                urunSecimleri.forEach((secim) => {
+                    secim.checked = tumunuSec.checked;
+                });
+                tumunuSec.indeterminate = false;
+            });
+
+            urunSecimleri.forEach((secim) => {
+                secim.addEventListener("change", tumunuSecDurumuGuncelle);
+            });
+
+            tumunuSecDurumuGuncelle();
+        });
+
+        const favoriIkonuOlustur = (src, siyah = true) => {
+            const ikon = document.createElement("img");
+            ikon.src = src;
+            ikon.alt = "";
+            ikon.setAttribute("aria-hidden", "true");
+            if (siyah) {
+                ikon.classList.add("ms-ikon-siyah");
+            }
+                return ikon;
+        };
+
+        sepetSayfasiKok.querySelectorAll("[data-ms-sepet-favori]").forEach((buton) => {
+            if (buton.dataset.msSepetFavoriHazir === "true") {
+                return;
+            }
+
+            const butonIkonunuGuncelle = (aktif) => {
+                buton.innerHTML = "";
+                buton.appendChild(favoriIkonuOlustur(aktif ? "/ikons/kalp.svg" : "/ikons/favorite.svg"));
+            };
+
+            buton.dataset.msSepetFavoriHazir = "true";
+            butonIkonunuGuncelle(buton.getAttribute("aria-pressed") === "true");
+
+            buton.addEventListener("click", () => {
+                const aktif = buton.classList.toggle("ms-sepet-ikon-buton-aktif");
+                buton.setAttribute("aria-pressed", aktif.toString());
+                buton.setAttribute("aria-label", aktif ? "Favorilerden çıkar" : "Favorilere ekle");
+                butonIkonunuGuncelle(aktif);
+
+                const kalp = document.createElement("span");
+                kalp.className = "ms-urun-favori-ekran-kalp";
+                kalp.appendChild(favoriIkonuOlustur(aktif ? "/ikons/kalp.svg" : "/ikons/kirik-kalp.svg", false));
+                document.body.appendChild(kalp);
+                kalp.addEventListener("animationend", () => kalp.remove(), { once: true });
+            });
+        });
+
+        sepetSayfasiKok.querySelectorAll("[data-ms-sepet-sil]").forEach((buton) => {
+            if (buton.dataset.msSepetSilHazir === "true") {
+                return;
+            }
+
+            buton.dataset.msSepetSilHazir = "true";
+            buton.addEventListener("click", () => {
+                const satir = buton.closest(".ms-sepet-satiri");
+
+                if (!satir) {
+                    return;
+                }
+
+                const urunAdi = satir.querySelector(".ms-sepet-basligi")?.textContent?.replace(/\s+/g, " ").trim();
+                const aciklama = urunAdi
+                    ? `${urunAdi} sepetinizden çıkarılacak. Emin misiniz?`
+                    : "Bu ürün sepetinizden çıkarılacak. Emin misiniz?";
+
+                if (typeof window.msSepetSilModalAc === "function") {
+                    window.msSepetSilModalAc(satir, aciklama);
+                    return;
+                }
+
+                satir.remove();
+            });
+        });
+
+        const paraFormatla = (deger) => `${deger.toLocaleString("tr-TR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        })} TL`;
+
+        sepetSayfasiKok.querySelectorAll("[data-ms-sepet-satir]").forEach((satir) => {
+            const adetAlani = satir.querySelector("[data-ms-sepet-adet]");
+            const azalt = satir.querySelector("[data-ms-sepet-adet-azalt]");
+            const artir = satir.querySelector("[data-ms-sepet-adet-artir]");
+            const adetDeger = satir.querySelector("[data-ms-sepet-adet-deger]");
+            const satirTutar = satir.querySelector("[data-ms-sepet-satir-tutar]");
+            const birimFiyat = Number(satir.dataset.msBirimFiyat || 0);
+
+            if (!adetAlani || !azalt || !artir || !adetDeger || !satirTutar || !birimFiyat) {
+                return;
+            }
+
+            const adetGuncelle = (yeniAdet) => {
+                const adet = Math.max(1, Math.min(yeniAdet, 10));
+                adetDeger.textContent = adet.toString();
+                satirTutar.textContent = paraFormatla(birimFiyat * adet);
+                azalt.disabled = adet <= 1;
+                artir.disabled = adet >= 10;
+            };
+
+            azalt.addEventListener("click", () => adetGuncelle(Number(adetDeger.textContent || 1) - 1));
+            artir.addEventListener("click", () => adetGuncelle(Number(adetDeger.textContent || 1) + 1));
+            adetGuncelle(Number(adetDeger.textContent || 1));
+        });
+    })();
+</script>
+
+@* C1: Canlı sepet script'i — satırlar GET /api/store/cart'tan (B5 mini sepet deseniyle aynı
+   oturum anahtarları), adet PUT / silme DELETE (silme onayı misharix'in sil modalıyla:
+   msSepetSilModalAc + onay butonuna eklenen ikinci dinleyici API'yi çağırır). Tümünü seç /
+   satır checkbox'ları yalnız özet toplamını etkiler (sipariş C10'da tam sepetle kurulur).
+   Yukarıdaki misharix demo script'i satır bulamadığından satır-düzeyi bağlamaları etkisizdir;
+   TCKN/sözleşme modal davranışları ondan çalışmaya devam eder. *@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const platformId = document.querySelector("[data-ms-arama]")?.dataset.msAramaPlatform || "";
+    const konteyner = document.querySelector("[data-ms-sepet-satir-konteyner]");
+    const sablon = document.querySelector("[data-ms-sepet-satir-sablon]");
+    if (!platformId || !konteyner || !sablon) { return; }
+
+    const bosMesaj = document.querySelector("[data-ms-sepet-bos]");
+    const ozetAciklama = document.querySelector("[data-ms-sepet-ozet-aciklama]");
+    const urunToplami = document.querySelector("[data-ms-sepet-urun-toplami]");
+    const odenecekler = [...document.querySelectorAll("[data-ms-sepet-odenecek]")];
+    const tumunuSec = document.querySelector("[data-ms-sepet-tumunu-sec]");
+
+    const paraYaz = (deger) => new Intl.NumberFormat("tr-TR",
+        { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(deger || 0) + " TL";
+    const trAd = (i18n) => (i18n && (i18n.tr || Object.values(i18n)[0])) || "";
+
+    let sepetId = null;
+    let silinecekKalemId = null;
+
+    const toplamlariGuncelle = () => {
+        let toplam = 0;
+        konteyner.querySelectorAll("[data-ms-sepet-satir]").forEach((satir) => {
+            const secili = satir.querySelector("[data-ms-sepet-urun-checkbox]")?.checked;
+            const adet = Number(satir.querySelector("[data-ms-sepet-adet-deger]")?.textContent || 0);
+            const birim = Number(satir.dataset.msBirimFiyat || 0);
+            if (secili) { toplam += birim * adet; }
+        });
+        if (urunToplami) { urunToplami.textContent = paraYaz(toplam); }
+        odenecekler.forEach((alan) => { alan.textContent = paraYaz(toplam); });
+    };
+
+    const tumunuSecDurumu = () => {
+        const kutular = [...konteyner.querySelectorAll("[data-ms-sepet-urun-checkbox]:not(:disabled)")];
+        if (!tumunuSec || kutular.length === 0) { return; }
+        const secili = kutular.filter((k) => k.checked).length;
+        tumunuSec.checked = secili === kutular.length;
+        tumunuSec.indeterminate = secili > 0 && secili < kutular.length;
+    };
+
+    const adetGonder = async (kalemId, adet) => {
+        try {
+            await fetch(`/api/store/cart/${sepetId}/items/${kalemId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ quantity: adet })
+            });
+            window.msMiniSepetYenile?.();
+        } catch { yenile(); }
+    };
+
+    const satirKur = (kalem) => {
+        const satir = sablon.content.firstElementChild.cloneNode(true);
+        satir.dataset.msBirimFiyat = String(kalem.addedPrice || 0);
+        satir.dataset.msKalemId = kalem.id;
+
+        const ad = trAd(kalem.productNameI18n) || kalem.productCode || "Ürün";
+        const detayUrl = kalem.productCode ? "/urun/" + encodeURIComponent(kalem.productCode) : "#";
+        const gorselLink = satir.querySelector("[data-ms-sepet-gorsel-link]");
+        const gorsel = satir.querySelector("[data-ms-sepet-gorsel]");
+        const baslik = satir.querySelector("[data-ms-sepet-baslik]");
+        gorselLink.href = detayUrl;
+        baslik.href = detayUrl;
+        baslik.textContent = ad;
+        if (kalem.imageUrl) { gorsel.src = kalem.imageUrl; }
+        gorsel.alt = ad;
+        satir.querySelector("[data-ms-sepet-secenek]").textContent =
+            (kalem.optionsText || "").replaceAll(", ", " • ");
+        satir.querySelector(".sr-only").textContent = ad + " seç";
+
+        const adetDeger = satir.querySelector("[data-ms-sepet-adet-deger]");
+        const azalt = satir.querySelector("[data-ms-sepet-adet-azalt]");
+        const artir = satir.querySelector("[data-ms-sepet-adet-artir]");
+        const satirTutar = satir.querySelector("[data-ms-sepet-satir-tutar]");
+        const birim = kalem.addedPrice || 0;
+
+        const adetYaz = (adet) => {
+            adetDeger.textContent = String(adet);
+            satirTutar.textContent = paraYaz(birim * adet);
+            azalt.disabled = adet <= 1;
+            artir.disabled = adet >= 10;
+        };
+        adetYaz(kalem.quantity || 1);
+
+        const adetDegistir = (fark) => {
+            const yeni = Math.max(1, Math.min(10, Number(adetDeger.textContent || 1) + fark));
+            if (yeni === Number(adetDeger.textContent)) { return; }
+            adetYaz(yeni);
+            toplamlariGuncelle();
+            adetGonder(kalem.id, yeni);
+        };
+        azalt.addEventListener("click", () => adetDegistir(-1));
+        artir.addEventListener("click", () => adetDegistir(1));
+
+        // B12/C1: tükenen kalem tasarımdaki tükendi görünümüyle (checkbox pasif, adet gizli)
+        if (kalem.isAvailable === false) {
+            satir.classList.add("ms-sepet-satiri-tukendi");
+            const kutu = satir.querySelector("[data-ms-sepet-urun-checkbox]");
+            kutu.checked = false;
+            kutu.disabled = true;
+            satir.querySelector("[data-ms-sepet-stok-uyari]").hidden = false;
+            satir.querySelector("[data-ms-sepet-adet]").hidden = true;
+        }
+
+        satir.querySelector("[data-ms-sepet-urun-checkbox]").addEventListener("change", () => {
+            toplamlariGuncelle();
+            tumunuSecDurumu();
+        });
+
+        satir.querySelector("[data-ms-sepet-sil]").addEventListener("click", () => {
+            silinecekKalemId = kalem.id;
+            const aciklama = `${ad} sepetinizden çıkarılacak. Emin misiniz?`;
+            if (typeof window.msSepetSilModalAc === "function") {
+                window.msSepetSilModalAc(satir, aciklama);
+            } else {
+                satir.remove();
+                silmeOnaylandi();
+            }
+        });
+
+        return satir;
+    };
+
+    const silmeOnaylandi = async () => {
+        if (!silinecekKalemId || !sepetId) { return; }
+        const kalemId = silinecekKalemId;
+        silinecekKalemId = null;
+        try {
+            await fetch(`/api/store/cart/${sepetId}/items/${kalemId}`, { method: "DELETE" });
+        } catch { /* yenile gerçek durumu getirir */ }
+        window.msMiniSepetYenile?.();
+        yenile();
+    };
+    // Misharix'in sil onay modalındaki onay butonu satırı DOM'dan kaldırır (kendi dinleyicisi);
+    // bu ikinci dinleyici aynı tıklamada API silmesini yapar.
+    document.querySelector("[data-ms-sepet-sil-onayla]")?.addEventListener("click", silmeOnaylandi);
+    document.querySelectorAll("[data-ms-sepet-sil-modal-kapat]").forEach((kapat) => {
+        kapat.addEventListener("click", () => { silinecekKalemId = null; });
+    });
+
+    tumunuSec?.addEventListener("change", () => {
+        konteyner.querySelectorAll("[data-ms-sepet-urun-checkbox]:not(:disabled)").forEach((kutu) => {
+            kutu.checked = tumunuSec.checked;
+        });
+        tumunuSec.indeterminate = false;
+        toplamlariGuncelle();
+    });
+
+    const ciz = (sepet) => {
+        const kalemler = sepet?.items || [];
+        sepetId = sepet?.id || null;
+        konteyner.innerHTML = "";
+        kalemler.forEach((kalem) => konteyner.appendChild(satirKur(kalem)));
+        if (bosMesaj) { bosMesaj.hidden = kalemler.length > 0; }
+        if (ozetAciklama) {
+            ozetAciklama.textContent = kalemler.length > 0
+                ? `${kalemler.reduce((t, k) => t + (k.quantity || 0), 0)} ürün sepete eklendi.`
+                : "Sepetinizde ürün yok.";
+        }
+        toplamlariGuncelle();
+        tumunuSecDurumu();
+    };
+
+    const yenile = async () => {
+        const sid = localStorage.getItem("ecspros_sid");
+        const cartId = localStorage.getItem("ecspros_cart");
+        if (!sid && !cartId) { ciz(null); return; }
+        try {
+            const parametreler = new URLSearchParams({ firmPlatformId: platformId });
+            if (cartId) { parametreler.set("cartId", cartId); }
+            if (sid) { parametreler.set("sessionId", sid); }
+            const cevap = await fetch("/api/store/cart?" + parametreler.toString());
+            const veri = await cevap.json().catch(() => null);
+            ciz(veri?.success ? veri.data : null);
+        } catch { ciz(null); }
+    };
+
+    yenile();
+});
+</script>
