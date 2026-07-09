@@ -33,7 +33,8 @@ public record CheckoutCommand(
     List<CheckoutItem> Items,
     // Optional
     string? CustomerNotes = null,
-    Guid? CartId = null) : IRequest<Result<Guid>>;
+    Guid? CartId = null,
+    List<AcceptedContract>? AcceptedContracts = null) : IRequest<Result<Guid>>;
 
 public record CheckoutItem(
     Guid VariantId,
@@ -42,6 +43,16 @@ public record CheckoutItem(
     string VariantInfo,
     int Quantity,
     decimal UnitPrice);
+
+/// <summary>C8: sipariş anında onaylanan sözleşmelerin kaydı — Order.CustomerNotes
+/// jsonb'sine "acceptedContracts" anahtarıyla yazılır. ContentUpdatedAt, onay anında
+/// geçerli metnin sürümünü sabitler (CMS'te metin sonradan değişse de kanıt kalır).
+/// JsonPropertyName: jsonb'deki diğer anahtarlarla (note) tutarlı camelCase için.</summary>
+public record AcceptedContract(
+    [property: System.Text.Json.Serialization.JsonPropertyName("code")] string Code,
+    [property: System.Text.Json.Serialization.JsonPropertyName("title")] string Title,
+    [property: System.Text.Json.Serialization.JsonPropertyName("acceptedAt")] DateTime AcceptedAt,
+    [property: System.Text.Json.Serialization.JsonPropertyName("contentUpdatedAt")] DateTime? ContentUpdatedAt);
 
 public class CheckoutCommandHandler(IOrderDbContext db) : IRequestHandler<CheckoutCommand, Result<Guid>>
 {
@@ -89,6 +100,15 @@ public class CheckoutCommandHandler(IOrderDbContext db) : IRequestHandler<Checko
             TotalTax = 0,
             GrandTotal = subtotal
         };
+
+        // C8: müşteri notu (daha önce sessizce düşüyordu) + sözleşme kabul kaydı tek jsonb'de.
+        var notlar = new Dictionary<string, object>();
+        if (!string.IsNullOrWhiteSpace(request.CustomerNotes))
+            notlar["note"] = request.CustomerNotes!;
+        if (request.AcceptedContracts is { Count: > 0 })
+            notlar["acceptedContracts"] = request.AcceptedContracts;
+        if (notlar.Count > 0)
+            order.CustomerNotes = notlar;
 
         db.Orders.Add(order);
 

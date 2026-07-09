@@ -23,6 +23,120 @@ public static class DatabaseSeeder
         await SeedPlatformTypesAsync(services);
         await SeedStorefrontDefaultsAsync(scope.ServiceProvider);
         await SeedCrmDefaultsAsync(scope.ServiceProvider);
+        await SeedCmsLegalPagesAsync(scope.ServiceProvider);
+    }
+
+    /// <summary>
+    /// C8: checkout sözleşme modalı + ödeme bilgi grupları için legal CMS sayfaları.
+    /// Her aktif platforma 5 sayfa (mesafeli satış, ön bilgilendirme, gizlilik, kullanım,
+    /// kargo) — içerik firmanın unvan/adres/vergi bilgileriyle üretilir, CMS admin'den
+    /// düzenlenebilir. İdempotent: platformda herhangi bir legal sayfa varsa dokunmaz.
+    /// Canlıya 2026-07-09'da aynı içerik SQL ile eklendi.
+    /// </summary>
+    private static async Task SeedCmsLegalPagesAsync(IServiceProvider sp)
+    {
+        var cms = sp.GetRequiredService<ECSPros.Cms.Infrastructure.Persistence.CmsDbContext>();
+        await cms.Database.MigrateAsync();
+        var core = sp.GetRequiredService<CoreDbContext>();
+
+        var sectionType = await cms.SectionTypes.FirstOrDefaultAsync(t => t.Code == "rich_text");
+        if (sectionType is null)
+        {
+            sectionType = new ECSPros.Cms.Domain.Entities.SectionType
+            {
+                Code = "rich_text",
+                NameI18n = new() { ["tr"] = "Zengin Metin" },
+                SettingsSchema = new() { ["html"] = "string" },
+                SupportsItems = false
+            };
+            cms.SectionTypes.Add(sectionType);
+        }
+
+        var template = await cms.PageTemplates.FirstOrDefaultAsync(t => t.Code == "icerik-sayfasi");
+        if (template is null)
+        {
+            template = new ECSPros.Cms.Domain.Entities.PageTemplate
+            {
+                Code = "icerik-sayfasi",
+                NameI18n = new() { ["tr"] = "İçerik Sayfası" },
+                TemplateType = "content",
+                DefaultLayout = "full"
+            };
+            cms.PageTemplates.Add(template);
+        }
+
+        var platformlar = await core.FirmPlatforms
+            .Where(fp => fp.IsActive)
+            .Select(fp => new { fp.Id, FirmaAd = fp.Firm.NameI18n, fp.Firm.Address, fp.Firm.TaxOffice, fp.Firm.TaxNumber })
+            .ToListAsync();
+
+        var eklenen = 0;
+        foreach (var p in platformlar)
+        {
+            if (await cms.Pages.AnyAsync(s => s.FirmPlatformId == p.Id && s.PageType == "legal"))
+                continue;
+
+            var firma = p.FirmaAd.TryGetValue("tr", out var ad) ? ad : p.FirmaAd.Values.FirstOrDefault() ?? "Satıcı";
+            var satici = $"{firma} — {p.Address}. Vergi Dairesi/No: {p.TaxOffice} / {p.TaxNumber}.";
+
+            foreach (var (kod, baslik, html) in LegalSayfaIcerikleri(satici))
+            {
+                var sayfa = new ECSPros.Cms.Domain.Entities.Page
+                {
+                    FirmPlatformId = p.Id,
+                    TemplateId = template.Id,
+                    Code = kod,
+                    NameI18n = new() { ["tr"] = baslik },
+                    SlugI18n = new() { ["tr"] = kod },
+                    PageType = "legal"
+                };
+                cms.Pages.Add(sayfa);
+                cms.PageSections.Add(new ECSPros.Cms.Domain.Entities.PageSection
+                {
+                    PageId = sayfa.Id,
+                    SectionTypeId = sectionType.Id,
+                    Name = baslik,
+                    Settings = new() { ["html"] = html },
+                    SortOrder = 0
+                });
+                eklenen++;
+            }
+        }
+
+        if (eklenen > 0 || cms.ChangeTracker.HasChanges())
+        {
+            await cms.SaveChangesAsync();
+            Console.WriteLine($"✓ Seed: {eklenen} legal CMS sayfası oluşturuldu (C8 sözleşmeler).");
+        }
+    }
+
+    private static IEnumerable<(string Kod, string Baslik, string Html)> LegalSayfaIcerikleri(string satici)
+    {
+        yield return ("mesafeli-satis-sozlesmesi", "Mesafeli Satış Sözleşmesi",
+            $"<p><strong>Satıcı:</strong> {satici}</p>" +
+            "<p><strong>Konu:</strong> Alıcının internet sitesi üzerinden elektronik ortamda sipariş verdiği ürünlerin satışı ve teslimi ile tarafların 6502 sayılı Tüketicinin Korunması Hakkında Kanun ve Mesafeli Sözleşmeler Yönetmeliği kapsamındaki hak ve yükümlülüklerinin belirlenmesidir.</p>" +
+            "<p><strong>Ürün ve teslimat:</strong> Ürün cinsi, miktarı, satış bedeli, teslimat adresi, fatura adresi, teslim edilecek kişi ve teslim şekli sipariş bilgileri içinde gösterilir. Ürünler yasal süreyi aşmamak kaydıyla alıcının belirttiği adrese teslim edilir.</p>" +
+            "<p><strong>Genel hükümler:</strong> Alıcı, ürünün temel nitelikleri, vergiler dahil satış fiyatı, ödeme şekli, teslimat bilgileri, satıcı bilgileri ve cayma hakkı konusunda bilgilendirildiğini kabul eder. Teslimat sırasında ürün kontrol edilmeli, kargo kaynaklı sorunlarda tutanak tutulmalıdır.</p>" +
+            "<p><strong>Cayma hakkı:</strong> Alıcı, ürünü teslim aldığı tarihten itibaren 14 gün içinde herhangi bir gerekçe göstermeksizin cayma hakkını kullanabilir. İade edilecek ürünlerin faturası, ambalajı, varsa aksesuarları eksiksiz ve hasarsız olmalıdır.</p>");
+
+        yield return ("on-bilgilendirme-formu", "Ön Bilgilendirme Formu",
+            "<p><strong>Konu:</strong> Bu form, alıcı ile satıcı arasında kurulacak mesafeli satış sözleşmesine ilişkin tüketicinin önceden bilgilendirilmesi amacıyla hazırlanmıştır.</p>" +
+            $"<p><strong>Satıcı bilgileri:</strong> {satici}</p>" +
+            "<p><strong>Alıcı bilgileri:</strong> Alıcının adı, soyadı, adresi, telefon ve e-posta bilgileri sipariş sırasında beyan edilen bilgiler esas alınarak kullanılır.</p>" +
+            "<p><strong>Teslimat ve kargo:</strong> Teslimat masrafları kampanya koşullarına göre alıcıya yansıtılabilir veya satıcı tarafından karşılanabilir. Ürünler yasal süreyi aşmamak kaydıyla alıcının belirttiği adrese gönderilir.</p>" +
+            "<p><strong>Ödeme ve iade:</strong> Sipariş iptali veya cayma hakkı kullanımında ödeme yapılan yönteme göre iade süreci işletilir. Banka kaynaklı iade yansıma süreleri ilgili finans kuruluşunun işlem süreçlerine bağlıdır.</p>");
+
+        yield return ("gizlilik-guvenlik", "Gizlilik ve Güvenlik",
+            "<p>Kişisel verileriniz 6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında, siparişinizin oluşturulması, teslimatı ve satış sonrası süreçlerin yürütülmesi amacıyla işlenir; yasal zorunluluklar dışında üçüncü kişilerle paylaşılmaz.</p>" +
+            "<p>Ödeme sayfasında girilen kart bilgileri sitemizde saklanmaz; ödeme işlemleri güvenli ödeme altyapısı üzerinden gerçekleştirilir.</p>");
+
+        yield return ("kullanim-kosullari", "Kullanım Koşulları",
+            "<p>Bu siteyi kullanarak site kullanım koşullarını kabul etmiş sayılırsınız. Sitede yer alan ürün görselleri ve içerikler bilgilendirme amaçlıdır; izinsiz kopyalanamaz ve çoğaltılamaz.</p>" +
+            "<p>Sipariş verilmesi, mesafeli satış sözleşmesi ve ön bilgilendirme formu hükümlerinin elektronik ortamda kabulü anlamına gelir.</p>");
+
+        yield return ("kargo-teslimat", "Kargo ve Teslimat",
+            "<p>Siparişleriniz ödeme onayının ardından kargoya teslim edilir. Teslimat süresi, yasal azami süre olan 30 günü aşmamak üzere adresinize ve kargo yoğunluğuna göre değişebilir.</p>" +
+            "<p>Kargo ücreti ve varsa ücretsiz kargo koşulları ödeme adımındaki sipariş özetinde gösterilir. Teslimat sırasında paketi kontrol ediniz; hasarlı paketlerde kargo yetkilisine tutanak tutturunuz.</p>");
     }
 
     /// <summary>

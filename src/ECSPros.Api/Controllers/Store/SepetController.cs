@@ -1,4 +1,8 @@
+using ECSPros.Api.Services;
+using ECSPros.Cms.Application.Queries.GetStoreLegalPages;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ECSPros.Api.Controllers.Store;
 
@@ -9,12 +13,33 @@ namespace ECSPros.Api.Controllers.Store;
 /// </summary>
 public class SepetController(IConfiguration configuration) : StorePageController
 {
+    private static readonly TimeSpan SozlesmeCacheSuresi = TimeSpan.FromMinutes(5);
+
     // C7: TCKN eşiği — sayfa script'leri banner/guard için okur (asıl güvence checkout'ta)
+    // C8: sözleşme içerikleri CMS legal sayfalarından SSR'a taşınır (modal + ödeme bilgi grupları)
     public override async Task OnActionExecutionAsync(
         Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext context,
         Microsoft.AspNetCore.Mvc.Filters.ActionExecutionDelegate next)
     {
         ViewData["MsTcknEsik"] = configuration.GetValue<decimal>("Store:TcknThreshold", 13000m);
+
+        var services = context.HttpContext.RequestServices;
+        var platform = await services.GetRequiredService<IStoreContext>()
+            .GetPlatformAsync(context.HttpContext.RequestAborted);
+        if (platform is not null)
+        {
+            var cache = services.GetRequiredService<IMemoryCache>();
+            ViewData["MsSozlesmeler"] = await cache.GetOrCreateAsync(
+                $"store-legal:{platform.Id}", async entry =>
+                {
+                    entry.AbsoluteExpirationRelativeToNow = SozlesmeCacheSuresi;
+                    var sonuc = await services.GetRequiredService<IMediator>().Send(
+                        new GetStoreLegalPagesQuery(platform.Id),
+                        context.HttpContext.RequestAborted);
+                    return sonuc.IsSuccess ? sonuc.Value! : new List<StoreLegalPageDto>();
+                }) ?? new List<StoreLegalPageDto>();
+        }
+
         await base.OnActionExecutionAsync(context, next);
     }
 

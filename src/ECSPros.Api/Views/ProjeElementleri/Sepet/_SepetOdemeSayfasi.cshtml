@@ -1,6 +1,5 @@
-@await Html.PartialAsync("~/Views/ProjeElementleri/Sepet/_SepetModallari.cshtml")
-
-@* C5: sözleşme/TCKN modalları bu sayfada da gerekli (kaynakta _SepetSiparis kompoziti sağlıyordu) *@
+@* C5: sözleşme/TCKN modalları bu sayfada da gerekli (kaynakta _SepetSiparis kompoziti sağlıyordu);
+   C8'de fark edilen çift include kaldırıldı (modallar DOM'da iki kez render oluyordu). *@
 @await Html.PartialAsync("~/Views/ProjeElementleri/Sepet/_SepetModallari.cshtml")
 
     <section class="ms-siparis-asama-paneli" data-ms-siparis-asama-panel="odeme" hidden>
@@ -185,9 +184,16 @@
                     </label>
                 </section>
 
-                @if (false)
+                @{
+                    // C8: bilgi grupları CMS legal sayfalarından (gizlilik/kullanım/kargo) —
+                    // platformda tanımlı olanlar listelenir, hiç yoksa bölüm görünmez.
+                    var msOdemeSozlesmeleri = ViewData["MsSozlesmeler"] as List<ECSPros.Cms.Application.Queries.GetStoreLegalPages.StoreLegalPageDto> ?? new();
+                    var msBilgiGruplari = new[] { "gizlilik-guvenlik", "kullanim-kosullari", "kargo-teslimat" }
+                        .Select(kod => msOdemeSozlesmeleri.FirstOrDefault(s => s.Code == kod))
+                        .Where(s => s != null).Select(s => s!).ToList();
+                }
+                @if (msBilgiGruplari.Count > 0)
                 {
-                @* C8: sözleşme metin grupları CMS pages'ten dolacak *@
                 <section class="ms-siparis-sozlesmeler" aria-labelledby="ms-odeme-sozlesmeler-baslik">
                     <div class="ms-siparis-sozlesmeler-baslik">
                         <i class="fa-solid fa-file-lines ms-fa-ikon " aria-hidden="true"></i>
@@ -195,18 +201,13 @@
                     </div>
                     <p>Lütfen aşağıdaki sözleşmeleri okuyup onaylayın.</p>
 
+                    @foreach (var grup in msBilgiGruplari)
+                    {
                     <div class="ms-siparis-sozlesme-grubu">
-                        <h5>Gizlilik ve Güvenlik</h5>
-                        <div class="ms-siparis-sozlesme-metin">test-Sözleşmeler ve Onaylar</div>
+                        <h5>@grup.Title</h5>
+                        <div class="ms-siparis-sozlesme-metin">@Html.Raw(grup.BodyHtml)</div>
                     </div>
-                    <div class="ms-siparis-sozlesme-grubu">
-                        <h5>Kullanım Koşulları</h5>
-                        <div class="ms-siparis-sozlesme-metin">test-Sözleşmeler ve Onaylar</div>
-                    </div>
-                    <div class="ms-siparis-sozlesme-grubu">
-                        <h5>Kargo ve Teslimat</h5>
-                        <div class="ms-siparis-sozlesme-metin">test-Sözleşmeler ve Onaylar</div>
-                    </div>
+                    }
                 </section>
                 }
             </section>
@@ -779,7 +780,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     customerNotes: document.querySelector(".ms-siparis-asama-kart textarea, .ms-form-metin-alani")?.value?.trim() || null,
                     cartId: sepet.id,
                     couponId: kupon?.couponId || null,
-                    couponDiscount: kupon?.tutar || null
+                    couponDiscount: kupon?.tutar || null,
+                    // C8: onaylanan sözleşme kodları — SSR modalın belgeler kabından okunur,
+                    // kabul kaydını (başlık + metin sürümü) sunucu CMS'ten çözerek siparişe yazar.
+                    // (Onay input'u misharix script'inin scope'unda — buradan DOM'dan okunur.)
+                    acceptedContracts: (document.querySelector("[data-ms-sozlesme-onay-input]")?.checked
+                        ? (document.querySelector("[data-ms-sozlesme-kodlar]")?.dataset.msSozlesmeKodlar || "")
+                            .split(",").filter(Boolean)
+                        : null)
                 })
             });
             const veri = await cevap.json().catch(() => null);
