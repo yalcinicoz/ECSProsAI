@@ -294,6 +294,19 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — Faz B5 TAMAMLANDI: mini sepet canlı:**
+  - `_AnaNavigasyonUst` sepet hover paneli GET /api/store/cart'a bağlandı (SPA anahtarları
+    ecspros_sid/ecspros_cart); rozet adet (0'da gizli), silme DELETE ile, kalem ürüne linkli,
+    ürün detay eklemesi `window.msMiniSepetYenile()` ile reload'suz rozet günceller.
+  - **Yeni port:** `IProductService.GetVariantDisplayAsync` (Shared.Contracts +
+    `CatalogProductService` ilk implementasyon, Catalog DI'da) — CRM `CartItemDto`'ya additive
+    ProductCode/NameI18n/ImageUrl/OptionsText alanları eklendi ("Beden: ST, Renk: Pembe").
+    Faz C sepet sayfası aynı zenginleştirmeyi hazır bulacak.
+  - E2E (5051 publish): 10/10 ✓ + B6 regresyon 19/19 ✓; check.sh TEMİZ; test sepeti DB'den
+    temizlendi. **DEPLOY BEKLİYOR** (B10 ile birlikte publish'te).
+  - ⚠️ Kullanıcının önceki "restart yaptım" işlemi GERÇEKLEŞMEMİŞ (PID 08.07 20:38'den beri
+    aynı — systemctl show ile doğrulandı); B10+B5 canlıya çıkmadı, restart tekrar gerekli.
+
 - **2026-07-09 — Faz B10 TAMAMLANDI: sunucu tarafı filtre/sıralama + kategoride ara:**
   - **Sorgular additive genişledi:** `GetStoreProductsQuery` + `GetChannelCategoryProductsQuery`
     → `AttributeValueIds`/`PriceMin`/`PriceMax`/`Sort` (+kategoriye `Search`); api/store

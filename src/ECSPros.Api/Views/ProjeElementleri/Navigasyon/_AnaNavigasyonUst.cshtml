@@ -4,6 +4,8 @@
     var anaSayfaMi = string.IsNullOrWhiteSpace(mevcutYol) || mevcutYol == "/" || mevcutYol == "/home" || mevcutYol == "/home/index";
     // B1: Mobil kategori kaydırma şeridi kanal kategorilerinden beslenir (desktop menüyle aynı kaynak).
     var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
+    // B5: Mini sepet api/store/cart çağrısı için platform kimliği
+    var sepetPlatform = ViewData["MsPlatform"] as ECSPros.Api.Services.StorePlatformBilgisi;
 }
 
 <div class="ms-ana-navigasyon-ust">
@@ -30,6 +32,9 @@
                 </span>
                 Favorilerim
             </a>
+            @* B5: Mini sepet canlı veriye bağlandı — demo satırlar kaldırıldı; liste dosya
+               sonundaki script'le GET /api/store/cart'tan doldurulur (satır markup'ı demo
+               satırın birebir kopyası). Sepete Git / Siparişi Tamamla Faz C'de bağlanacak. *@
             <div class="ms-ana-navigasyon-sepet" data-ms-sepet-menu>
                 <button class="ms-ana-navigasyon-aksiyon" type="button" data-ms-sepet-menu-tetikleyici aria-haspopup="true" aria-expanded="false">
                     <span class="ms-ana-navigasyon-sepet-ikon-alani">
@@ -37,62 +42,21 @@
                             <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-normal " src="/ikons/basket.svg" alt="">
                             <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-aktif " src="/ikons/basket-active.svg" alt="">
                         </span>
-                        <span class="ms-ana-navigasyon-sepet-rozet">3</span>
+                        <span class="ms-ana-navigasyon-sepet-rozet" data-ms-sepet-rozet hidden>0</span>
                     </span>
                     <span class="ms-ana-navigasyon-sepet-yazi">Sepetim</span>
                 </button>
                 <div class="ms-ana-navigasyon-sepet-panel" data-ms-sepet-menu-panel>
                     <div class="ms-ana-navigasyon-sepet-panel-ust">
                         <strong>Sepetim</strong>
-                        <span>3 ürün</span>
+                        <span data-ms-sepet-adet>0 ürün</span>
                     </div>
-                    <div class="ms-ana-navigasyon-sepet-urun-listesi">
-                        <div class="ms-ana-navigasyon-sepet-urun">
-                            <img class="ms-ana-navigasyon-sepet-urun-gorsel" src="https://cdn.tozlu.com/img/640/85/kadin-on-citcitli-dik-yaka-kolsuz-gomlek-1f1af-1732891_0102.webp" alt="Kadın ön çıtçıtlı dik yaka gömlek">
-                            <div class="ms-ana-navigasyon-sepet-urun-bilgi">
-                                <strong class="ms-ana-navigasyon-sepet-urun-baslik">Kadın Ön Çıtçıtlı Dik Yaka Gömlek</strong>
-                                <p>Beden: M, Renk: Beyaz</p>
-                                <div class="ms-ana-navigasyon-sepet-urun-alt">
-                                    <span>1 adet</span>
-                                    <strong class="ms-fiyat-standart">350 TL</strong>
-                                </div>
-                            </div>
-                            <button class="ms-ana-navigasyon-sepet-sil" type="button" aria-label="Kadın Ön Çıtçıtlı Dik Yaka Gömlek ürününü sepetten sil">
-                                <i class="fa-solid fa-trash-can ms-fa-ikon" aria-hidden="true"></i>
-                            </button>
-                        </div>
-                        <div class="ms-ana-navigasyon-sepet-urun">
-                            <img class="ms-ana-navigasyon-sepet-urun-gorsel" src="https://cdn.tozlu.com/img/640/85/kadin-on-citcitli-dik-yaka-kolsuz-gomlek-1f1af-1732891_0102.webp" alt="Kadın polo yaka çizgili triko tişört">
-                            <div class="ms-ana-navigasyon-sepet-urun-bilgi">
-                                <strong class="ms-ana-navigasyon-sepet-urun-baslik">Kadın Polo Yaka Çizgili Triko Tişört</strong>
-                                <p>Beden: S, Renk: Siyah</p>
-                                <div class="ms-ana-navigasyon-sepet-urun-alt">
-                                    <span>1 adet</span>
-                                    <strong class="ms-fiyat-standart">249,73 TL</strong>
-                                </div>
-                            </div>
-                            <button class="ms-ana-navigasyon-sepet-sil" type="button" aria-label="Kadın Polo Yaka Çizgili Triko Tişört ürününü sepetten sil">
-                                <i class="fa-solid fa-trash-can ms-fa-ikon" aria-hidden="true"></i>
-                            </button>
-                        </div>
-                        <div class="ms-ana-navigasyon-sepet-urun">
-                            <img class="ms-ana-navigasyon-sepet-urun-gorsel" src="https://cdn.tozlu.com/img/640/85/kadin-yirtmacli-kemerli-kat-detayli-tul-etek-1e70f-16a1ff2_5149.webp" alt="Kadın yırtmaçlı kemerli kat detaylı tül etek">
-                            <div class="ms-ana-navigasyon-sepet-urun-bilgi">
-                                <strong class="ms-ana-navigasyon-sepet-urun-baslik">Kadın Desenli Kısa Kollu Elbise</strong>
-                                <p>Beden: L, Renk: Yeşil</p>
-                                <div class="ms-ana-navigasyon-sepet-urun-alt">
-                                    <span>1 adet</span>
-                                    <strong class="ms-fiyat-standart">198,50 TL</strong>
-                                </div>
-                            </div>
-                            <button class="ms-ana-navigasyon-sepet-sil" type="button" aria-label="Kadın Desenli Kısa Kollu Elbise ürününü sepetten sil">
-                                <i class="fa-solid fa-trash-can ms-fa-ikon" aria-hidden="true"></i>
-                            </button>
-                        </div>
+                    <div class="ms-ana-navigasyon-sepet-urun-listesi" data-ms-sepet-liste>
+                        <p data-ms-sepet-bos>Sepetiniz henüz boş.</p>
                     </div>
                     <div class="ms-ana-navigasyon-sepet-ozet">
                         <span>Sepet Toplamı</span>
-                        <strong class="ms-urun-fiyat">798,23 TL</strong>
+                        <strong class="ms-urun-fiyat" data-ms-sepet-toplam>0,00 TL</strong>
                     </div>
                     <div class="ms-ana-navigasyon-sepet-aksiyonlar">
                         <a class="ms-ana-navigasyon-sepet-buton ms-ana-navigasyon-sepet-buton-ikincil" href="#">Sepete Git</a>
@@ -141,3 +105,99 @@
             </div>
         </section>
     </div>
+
+@* B5: Mini sepet canlı veri script'i — GET /api/store/cart (SPA ile aynı oturum anahtarları:
+   ecspros_sid / ecspros_cart). Satır markup'ı demo satırın birebir kopyasıdır; silme
+   DELETE /api/store/cart/{cartId}/items/{itemId} sonrası yeniden çizer. Diğer sayfalar
+   (ürün detay sepete ekleme) window.msMiniSepetYenile() ile rozeti tazeleyebilir. *@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const platformId = "@(sepetPlatform?.Id)";
+    const sepetAlani = document.querySelector("[data-ms-sepet-menu]");
+    if (!platformId || !sepetAlani) { return; }
+
+    const rozet = sepetAlani.querySelector("[data-ms-sepet-rozet]");
+    const adetAlani = sepetAlani.querySelector("[data-ms-sepet-adet]");
+    const liste = sepetAlani.querySelector("[data-ms-sepet-liste]");
+    const toplamAlani = sepetAlani.querySelector("[data-ms-sepet-toplam]");
+
+    const kacir = (metin) => String(metin ?? "").replace(/[&<>"']/g,
+        (k) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[k]));
+    const fiyatYaz = (deger) => new Intl.NumberFormat("tr-TR",
+        { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(deger || 0) + " TL";
+    const trAd = (i18n) => (i18n && (i18n.tr || Object.values(i18n)[0])) || "";
+
+    let sepetId = null;
+
+    const satirHtml = (kalem) => {
+        const ad = trAd(kalem.productNameI18n) || kalem.productCode || "Ürün";
+        const gorsel = kalem.imageUrl
+            ? `<img class="ms-ana-navigasyon-sepet-urun-gorsel" src="${kacir(kalem.imageUrl)}" alt="${kacir(ad)}">`
+            : `<img class="ms-ana-navigasyon-sepet-urun-gorsel" alt="">`;
+        const linkBas = kalem.productCode ? `<a href="/urun/${encodeURIComponent(kalem.productCode)}">` : "";
+        const linkSon = kalem.productCode ? "</a>" : "";
+        return `<div class="ms-ana-navigasyon-sepet-urun" data-ms-sepet-kalem="${kacir(kalem.id)}">
+            ${linkBas}${gorsel}${linkSon}
+            <div class="ms-ana-navigasyon-sepet-urun-bilgi">
+                <strong class="ms-ana-navigasyon-sepet-urun-baslik">${kacir(ad)}</strong>
+                <p>${kacir(kalem.optionsText || "")}</p>
+                <div class="ms-ana-navigasyon-sepet-urun-alt">
+                    <span>${kalem.quantity} adet</span>
+                    <strong class="ms-fiyat-standart">${fiyatYaz(kalem.lineTotal)}</strong>
+                </div>
+            </div>
+            <button class="ms-ana-navigasyon-sepet-sil" type="button" data-ms-sepet-kalem-sil="${kacir(kalem.id)}" aria-label="${kacir(ad)} ürününü sepetten sil">
+                <i class="fa-solid fa-trash-can ms-fa-ikon" aria-hidden="true"></i>
+            </button>
+        </div>`;
+    };
+
+    const ciz = (sepet) => {
+        const kalemler = sepet?.items || [];
+        const adet = kalemler.reduce((t, k) => t + (k.quantity || 0), 0);
+        sepetId = sepet?.id || null;
+
+        if (rozet) {
+            rozet.textContent = String(adet);
+            rozet.hidden = adet === 0;
+        }
+        if (adetAlani) { adetAlani.textContent = `${adet} ürün`; }
+        if (toplamAlani) { toplamAlani.textContent = fiyatYaz(sepet?.subtotal || 0); }
+        if (liste) {
+            liste.innerHTML = kalemler.length
+                ? kalemler.map(satirHtml).join("")
+                : `<p data-ms-sepet-bos>Sepetiniz henüz boş.</p>`;
+        }
+    };
+
+    const yenile = async () => {
+        const sid = localStorage.getItem("ecspros_sid");
+        const cartId = localStorage.getItem("ecspros_cart");
+        if (!sid && !cartId) { ciz(null); return; }
+
+        try {
+            const p = new URLSearchParams({ firmPlatformId: platformId });
+            if (cartId) { p.set("cartId", cartId); }
+            if (sid) { p.set("sessionId", sid); }
+            const cevap = await fetch("/api/store/cart?" + p.toString());
+            const veri = await cevap.json().catch(() => null);
+            ciz(veri?.success ? veri.data : null);
+        } catch { ciz(null); }
+    };
+
+    liste?.addEventListener("click", async (olay) => {
+        const silButonu = olay.target.closest?.("[data-ms-sepet-kalem-sil]");
+        if (!silButonu || !sepetId) { return; }
+        olay.preventDefault();
+        olay.stopPropagation();
+        silButonu.disabled = true;
+        try {
+            await fetch(`/api/store/cart/${sepetId}/items/${silButonu.dataset.msSepetKalemSil}`, { method: "DELETE" });
+        } catch { /* ağ hatası — yenile zaten gerçek durumu getirir */ }
+        yenile();
+    });
+
+    window.msMiniSepetYenile = yenile;
+    yenile();
+});
+</script>

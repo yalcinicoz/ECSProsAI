@@ -1,5 +1,6 @@
 using ECSPros.Crm.Application.Services;
 using ECSPros.Crm.Domain.Entities;
+using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,8 @@ public record CartDto(
     List<CartItemDto> Items,
     decimal Subtotal);
 
+// B5: gösterim alanları (ProductCode/NameI18n/ImageUrl/OptionsText) additive eklendi —
+// IProductService (Catalog) üzerinden zenginleştirilir; eski istemciler etkilenmez.
 public record CartItemDto(
     Guid Id,
     Guid VariantId,
@@ -28,9 +31,14 @@ public record CartItemDto(
     decimal AddedPrice,
     decimal LineTotal,
     bool IsAvailable,
-    int AvailableQuantity);
+    int AvailableQuantity,
+    string? ProductCode = null,
+    Dictionary<string, string>? ProductNameI18n = null,
+    string? ImageUrl = null,
+    string? OptionsText = null);
 
-public class GetCartQueryHandler(ICrmDbContext db) : IRequestHandler<GetCartQuery, Result<CartDto?>>
+public class GetCartQueryHandler(ICrmDbContext db, IProductService productService)
+    : IRequestHandler<GetCartQuery, Result<CartDto?>>
 {
     public async Task<Result<CartDto?>> Handle(GetCartQuery request, CancellationToken ct)
     {
@@ -46,9 +54,17 @@ public class GetCartQueryHandler(ICrmDbContext db) : IRequestHandler<GetCartQuer
 
         if (cart is null) return Result.Success<CartDto?>(null);
 
-        var items = cart.Items.Select(i => new CartItemDto(
-            i.Id, i.VariantId, i.Quantity, i.AddedPrice, i.Quantity * i.AddedPrice,
-            i.IsAvailable, i.AvailableQuantity)).ToList();
+        var gosterim = await productService.GetVariantDisplayAsync(
+            cart.Items.Select(i => i.VariantId).ToList(), ct);
+
+        var items = cart.Items.Select(i =>
+        {
+            gosterim.TryGetValue(i.VariantId, out var g);
+            return new CartItemDto(
+                i.Id, i.VariantId, i.Quantity, i.AddedPrice, i.Quantity * i.AddedPrice,
+                i.IsAvailable, i.AvailableQuantity,
+                g?.ProductCode, g?.ProductNameI18n, g?.ImageUrl, g?.OptionsText);
+        }).ToList();
 
         var dto = new CartDto(
             cart.Id, cart.MemberId, cart.SessionId, cart.FirmPlatformId,
