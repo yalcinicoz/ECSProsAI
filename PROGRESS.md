@@ -294,6 +294,16 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — D3 TAMAM: kayıt belgeleri CMS'ten + Member.Consents onay kaydı:**
+  - 2 yeni legal sayfa: `uyelik-sozlesmesi` + `kvkk-aydinlatma` (3 platform × 7 legal;
+    seeder kod-bazlı idempotent yapıldı, canlıya SQL). `MsSozlesmeler` yüklemesi
+    StorePageController tabanına taşındı (nav belge modalı her sayfada).
+  - `_AnaNavigasyon` `belgeIcerikleri` map'i CMS'ten data-binding (demo metin yedek).
+  - Register: FirmPlatformId+AcceptedContracts → sunucu CMS'ten sürüm çözer →
+    `Member.Consents.acceptedContracts` (AddMemberConsents migration canlıda).
+  - **E2E 9/9 ✓ + B4/C8/D1 regresyonları ✓** (c8-e2e 5→7 sayfa güncellendi). Drift TEMİZ.
+  - Kalan: D4 SMS/OTP, D5 BCrypt geçişi, D7 QA.
+
 - **2026-07-09 (devam) — FAZ D BAŞLADI; D1 TAMAM: Razor oturum stratejisi:**
   - Login/refresh → HttpOnly `ecspros_member` cookie'si (SameSite=Lax, Secure=IsHttps);
     `IStoreMemberSession` cookie JWT'sini doğrular → tüm store sayfalarında

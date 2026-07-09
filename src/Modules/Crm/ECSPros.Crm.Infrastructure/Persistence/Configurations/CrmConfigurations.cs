@@ -33,6 +33,7 @@ public class MemberConfiguration : IEntityTypeConfiguration<Member>
         builder.Property(x => x.TaxOffice).HasMaxLength(200);
         builder.Property(x => x.TaxNumber).HasMaxLength(20);
         builder.Property(x => x.CompanyName).HasMaxLength(200);
+        builder.Property(x => x.Consents).HasColumnType("jsonb");
         builder.HasIndex(x => x.Email).IsUnique().HasFilter("\"Email\" IS NOT NULL");
         builder.HasIndex(x => x.Phone).IsUnique().HasFilter("\"Phone\" IS NOT NULL");
         builder.HasQueryFilter(x => !x.IsDeleted);

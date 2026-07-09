@@ -13,7 +13,17 @@ public record RegisterMemberCommand(
     string Password,
     string FirstName,
     string LastName,
-    string? Phone = null) : IRequest<Result<Guid>>;
+    string? Phone = null,
+    List<MemberConsent>? Consents = null) : IRequest<Result<Guid>>;
+
+/// <summary>D3: kayıtta onaylanan belge kaydı — Member.Consents jsonb'sine
+/// "acceptedContracts" anahtarıyla yazılır. ContentUpdatedAt, onay anındaki metin
+/// sürümünü sabitler (CMS'te metin sonradan değişse de kanıt kalır).</summary>
+public record MemberConsent(
+    [property: System.Text.Json.Serialization.JsonPropertyName("code")] string Code,
+    [property: System.Text.Json.Serialization.JsonPropertyName("title")] string Title,
+    [property: System.Text.Json.Serialization.JsonPropertyName("acceptedAt")] DateTime AcceptedAt,
+    [property: System.Text.Json.Serialization.JsonPropertyName("contentUpdatedAt")] DateTime? ContentUpdatedAt);
 
 public class RegisterMemberCommandHandler(ICrmDbContext db) : IRequestHandler<RegisterMemberCommand, Result<Guid>>
 {
@@ -40,7 +50,10 @@ public class RegisterMemberCommandHandler(ICrmDbContext db) : IRequestHandler<Re
             LastName = request.LastName,
             Phone = request.Phone,
             IsRegistered = true,
-            IsActive = true
+            IsActive = true,
+            Consents = request.Consents is { Count: > 0 }
+                ? new Dictionary<string, object> { ["acceptedContracts"] = request.Consents }
+                : null
         };
 
         db.Members.Add(member);

@@ -73,14 +73,18 @@ public static class DatabaseSeeder
         var eklenen = 0;
         foreach (var p in platformlar)
         {
-            if (await cms.Pages.AnyAsync(s => s.FirmPlatformId == p.Id && s.PageType == "legal"))
-                continue;
+            // D3: kod bazlı idempotenlik — yeni belge türleri (üyelik/KVKK) mevcut
+            // platformlara da eklenebilsin (C8'deki "hiç legal yoksa" guard'ı yetmiyordu).
+            var mevcutKodlar = await cms.Pages
+                .Where(s => s.FirmPlatformId == p.Id && s.PageType == "legal")
+                .Select(s => s.Code).ToListAsync();
 
             var firma = p.FirmaAd.TryGetValue("tr", out var ad) ? ad : p.FirmaAd.Values.FirstOrDefault() ?? "Satıcı";
             var satici = $"{firma} — {p.Address}. Vergi Dairesi/No: {p.TaxOffice} / {p.TaxNumber}.";
 
             foreach (var (kod, baslik, html) in LegalSayfaIcerikleri(satici))
             {
+                if (mevcutKodlar.Contains(kod)) continue;
                 var sayfa = new ECSPros.Cms.Domain.Entities.Page
                 {
                     FirmPlatformId = p.Id,
@@ -137,6 +141,19 @@ public static class DatabaseSeeder
         yield return ("kargo-teslimat", "Kargo ve Teslimat",
             "<p>Siparişleriniz ödeme onayının ardından kargoya teslim edilir. Teslimat süresi, yasal azami süre olan 30 günü aşmamak üzere adresinize ve kargo yoğunluğuna göre değişebilir.</p>" +
             "<p>Kargo ücreti ve varsa ücretsiz kargo koşulları ödeme adımındaki sipariş özetinde gösterilir. Teslimat sırasında paketi kontrol ediniz; hasarlı paketlerde kargo yetkilisine tutanak tutturunuz.</p>");
+
+        // D3: kayıt modalındaki belge onayları
+        yield return ("uyelik-sozlesmesi", "Üyelik Sözleşmesi",
+            $"<p><strong>Taraflar:</strong> {satici} ile siteye üye olan kullanıcı arasında, üyeliğin oluşturulmasıyla birlikte aşağıdaki koşullar yürürlüğe girer.</p>" +
+            "<p><strong>Üyelik:</strong> Üye, kayıt sırasında verdiği bilgilerin doğru ve güncel olduğunu kabul eder; hesap bilgilerini üçüncü kişilerle paylaşmamakla yükümlüdür. Hesap üzerinden yapılan işlemler üyenin sorumluluğundadır.</p>" +
+            "<p><strong>Kullanım koşulları:</strong> Üye, siteyi hukuka ve dürüstlük kurallarına uygun kullanacağını; site işleyişini bozacak müdahalelerde bulunmayacağını kabul eder. Satıcı, üyelik hizmetini ve site içeriğini değiştirme, askıya alma veya sonlandırma hakkını saklı tutar.</p>" +
+            "<p><strong>Fesih:</strong> Üye dilediği zaman üyeliğini sonlandırabilir. Sözleşmeye aykırılık hâlinde satıcı üyeliği askıya alabilir veya sonlandırabilir.</p>");
+
+        yield return ("kvkk-aydinlatma", "Aydınlatma Metni",
+            $"<p><strong>Veri sorumlusu:</strong> {satici}</p>" +
+            "<p><strong>İşleme amaçları:</strong> Kişisel verileriniz (kimlik, iletişim, adres ve alışveriş bilgileri) 6698 sayılı Kişisel Verilerin Korunması Kanunu uyarınca; üyeliğin oluşturulması, siparişlerin alınması ve teslimi, satış sonrası hizmetler, yasal yükümlülüklerin yerine getirilmesi ve açık rızanız bulunması hâlinde ticari elektronik ileti gönderimi amaçlarıyla işlenir.</p>" +
+            "<p><strong>Aktarım:</strong> Verileriniz yalnızca hizmetin gerektirdiği ölçüde kargo, ödeme ve bilişim hizmeti sağlayıcılarıyla ve yasal zorunluluk hâlinde yetkili kurumlarla paylaşılır.</p>" +
+            "<p><strong>Haklarınız:</strong> KVKK'nın 11. maddesi kapsamında verilerinize erişme, düzeltme, silme, işlemeye itiraz etme ve diğer haklarınızı veri sorumlusuna başvurarak kullanabilirsiniz.</p>");
     }
 
     /// <summary>

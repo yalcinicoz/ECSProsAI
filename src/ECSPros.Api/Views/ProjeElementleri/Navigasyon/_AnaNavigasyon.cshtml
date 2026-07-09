@@ -1218,16 +1218,28 @@
 
     const belgeModalAcikMi = () => belgeModal?.classList.contains("ms-ornek-modal-acik");
 
+    @{
+        // D3: belge içerikleri CMS legal sayfalarından (StorePageController → MsSozlesmeler);
+        // sayfa yoksa misharix'in demo metni yedek kalır. belge-tur → CMS code eşlemesi:
+        // uyelik→uyelik-sozlesmesi, aydinlatma→kvkk-aydinlatma, on-bilgilendirme→on-bilgilendirme-formu.
+        var msLegal = ViewData["MsSozlesmeler"] as List<ECSPros.Cms.Application.Queries.GetStoreLegalPages.StoreLegalPageDto> ?? new();
+        string MsBelge(string kod) => msLegal.FirstOrDefault(s => s.Code == kod)?.BodyHtml ?? "";
+    }
+    const cmsBelgeler = {
+        uyelik: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(MsBelge("uyelik-sozlesmesi"))),
+        aydinlatma: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(MsBelge("kvkk-aydinlatma"))),
+        "on-bilgilendirme": @Html.Raw(System.Text.Json.JsonSerializer.Serialize(MsBelge("on-bilgilendirme-formu")))
+    };
     const belgeIcerikleri = {
-        uyelik: `
+        uyelik: cmsBelgeler.uyelik || `
             <p>Üyelik Sözleşmesi; hesabınızın oluşturulması, sipariş süreçleri, üyelik hakları ve kullanım koşulları hakkında bilgilendirme içerir.</p>
             <p>Kabul ettiğinizde bu metni okuduğunuz ve üyelik işlemi için gerekli koşulları onayladığınız kabul edilir.</p>
         `,
-        aydinlatma: `
+        aydinlatma: cmsBelgeler.aydinlatma || `
             <p>Aydınlatma Metni; kişisel verilerinizin hangi amaçlarla işlendiği, saklandığı ve hangi haklara sahip olduğunuz hakkında bilgi verir.</p>
             <p>Kabul ettiğinizde kişisel verilerin işlenmesine ilişkin bilgilendirmeyi okuduğunuz işaretlenir.</p>
         `,
-        "on-bilgilendirme": `
+        "on-bilgilendirme": cmsBelgeler["on-bilgilendirme"] || `
             <p>Ön Bilgilendirme Formu; sipariş, ödeme, teslimat, iade ve cayma hakkı süreçlerine dair temel bilgileri içerir.</p>
             <p>Kabul ettiğinizde alışveriş öncesi bilgilendirme metnini okuduğunuz kabul edilir.</p>
         `
