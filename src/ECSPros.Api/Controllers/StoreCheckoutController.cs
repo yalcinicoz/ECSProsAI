@@ -1,4 +1,5 @@
 using ECSPros.Order.Application.Commands.Checkout;
+using ECSPros.Promotion.Application.Queries.ValidateCoupon;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,21 @@ namespace ECSPros.Api.Controllers;
 [Authorize(Policy = "MemberOnly")]
 public class StoreCheckoutController(IMediator mediator) : ControllerBase
 {
+    /// <summary>C3: sepette kupon kodu doğrulama — misafir de deneyebilir (üye kuponu
+    /// koşulları MemberId üzerinden değerlendirilir); kullanım kaydı checkout'ta (C10).</summary>
+    [HttpPost("coupon/validate")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ValidateCoupon([FromBody] StoreCouponValidateRequest req, CancellationToken ct)
+    {
+        Guid? memberId = null;
+        var sub = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (sub != null && Guid.TryParse(sub, out var mid)) memberId = mid;
+
+        var result = await mediator.Send(new ValidateCouponQuery(req.Code, req.CartTotal, memberId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
     [HttpPost]
     public async Task<IActionResult> Checkout([FromBody] StoreCheckoutRequest req, CancellationToken ct)
     {
@@ -62,3 +78,5 @@ public record StoreCheckoutItemRequest(
     string VariantInfo,
     int Quantity,
     decimal UnitPrice);
+
+public record StoreCouponValidateRequest(string Code, decimal CartTotal);
