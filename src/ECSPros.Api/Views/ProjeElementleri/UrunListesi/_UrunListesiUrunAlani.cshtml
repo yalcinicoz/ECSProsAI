@@ -60,7 +60,8 @@
                     ? p.galleryUrls
                     : (p.mainImageUrl ? [p.mainImageUrl] : []),
                 renkSecenekleri: secenekler,
-                seciliRenk: p.selectedColorValueId || null
+                seciliRenk: p.selectedColorValueId || null,
+                sponsorlu: p.isFeatured === true
             };
         };
 
@@ -154,6 +155,14 @@
                         </span>
                     </span>`;
                 kart.querySelector(".ms-urun-gorsel-alani")?.after(alan);
+            }
+
+            // B11: Sponsorlu rozeti — SSR markup'la birebir (öne çıkar penceresi içindekiler)
+            if (v.sponsorlu && !kart.querySelector(".ms-urun-sponsor")) {
+                const sponsor = document.createElement("span");
+                sponsor.className = "ms-urun-sponsor";
+                sponsor.textContent = "Sponsorlu";
+                kart.querySelector(".ms-urun-gorsel-alani")?.prepend(sponsor);
             }
 
             // Renk rozeti — SSR kartlarındaki markup'ın birebir aynısı enjekte edilir
