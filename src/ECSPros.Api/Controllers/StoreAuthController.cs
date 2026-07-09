@@ -33,7 +33,23 @@ public class StoreAuthController(IMediator mediator) : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterMemberRequest req, CancellationToken ct)
     {
-        var result = await mediator.Send(new RegisterMemberCommand(req.Email, req.Password, req.FirstName, req.LastName, req.Phone), ct);
+        // D3: onaylanan belgelerin kaydı — istemci yalnız kod gönderir; başlık ve metin
+        // sürümü sunucuda CMS'ten çözülür (C8 checkout kabul kaydıyla aynı desen).
+        List<ECSPros.Crm.Application.Commands.RegisterMember.MemberConsent>? onaylar = null;
+        if (req.AcceptedContracts is { Count: > 0 } && req.FirmPlatformId is { } platformId)
+        {
+            var belgeler = await mediator.Send(
+                new ECSPros.Cms.Application.Queries.GetStoreLegalPages.GetStoreLegalPagesQuery(
+                    platformId, req.AcceptedContracts), ct);
+            if (belgeler.IsSuccess)
+                onaylar = belgeler.Value!
+                    .Select(b => new ECSPros.Crm.Application.Commands.RegisterMember.MemberConsent(
+                        b.Code, b.Title, DateTime.UtcNow, b.ContentUpdatedAt))
+                    .ToList();
+        }
+
+        var result = await mediator.Send(new RegisterMemberCommand(
+            req.Email, req.Password, req.FirstName, req.LastName, req.Phone, onaylar), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = new { memberId = result.Value } });
     }
@@ -78,7 +94,10 @@ public class StoreAuthController(IMediator mediator) : ControllerBase
     }
 }
 
-public record RegisterMemberRequest(string Email, string Password, string FirstName, string LastName, string? Phone = null);
+public record RegisterMemberRequest(
+    string Email, string Password, string FirstName, string LastName, string? Phone = null,
+    Guid? FirmPlatformId = null,               // D3: onay kodlarının hangi platformun CMS'inden çözüleceği
+    List<string>? AcceptedContracts = null);   // D3: onaylanan belge kodları
 public record LoginMemberRequest(string Email, string Password);
 public record RefreshMemberRequest(string RefreshToken);
 public record LogoutMemberRequest(string? RefreshToken = null);

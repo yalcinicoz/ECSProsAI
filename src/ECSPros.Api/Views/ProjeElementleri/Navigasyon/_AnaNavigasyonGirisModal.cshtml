@@ -273,7 +273,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     email: eposta, password: sifre, firstName: ad, lastName: soyad,
-                    phone: telefonHam ? "90" + telefonHam : null
+                    phone: telefonHam ? "90" + telefonHam : null,
+                    // D3: 3 zorunlu onay kutusu bu belgelere karşılık gelir — kabul kaydı
+                    // (başlık + metin sürümü) sunucuda CMS'ten çözülerek üyeye yazılır
+                    firmPlatformId: platformId || null,
+                    acceptedContracts: ["uyelik-sozlesmesi", "kvkk-aydinlatma", "on-bilgilendirme-formu"]
                 })
             });
             const veri = await cevap.json().catch(() => null);

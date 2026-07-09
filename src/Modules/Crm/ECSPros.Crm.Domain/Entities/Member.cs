@@ -17,6 +17,10 @@ public class Member : BaseEntity
     public string? IdentityNumber { get; set; }
     public DateTime? IdentityVerifiedAt { get; set; }
 
+    // D3: kayıtta onaylanan belgelerin kaydı (üyelik sözleşmesi, KVKK aydınlatma…) —
+    // jsonb; "acceptedContracts" anahtarında code/title/acceptedAt/contentUpdatedAt listesi.
+    public Dictionary<string, object>? Consents { get; set; }
+
     public string? TaxOffice { get; set; }
     public string? TaxNumber { get; set; }
     public string? CompanyName { get; set; }

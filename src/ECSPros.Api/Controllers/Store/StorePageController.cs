@@ -34,7 +34,29 @@ public abstract class StorePageController : Controller
             ? NavigasyonVm.Bos
             : await NavigasyonuGetirAsync(services, platform.Id, context.HttpContext.RequestAborted);
 
+        // C8/D3: CMS legal sayfaları — sepet/ödeme sözleşme modalları + nav'daki kayıt
+        // belge modalı (üyelik/KVKK) bunlardan beslenir; nav her sayfada olduğundan
+        // yükleme burada (SepetController'dan taşındı), platform başına 5 dk cache.
+        if (platform is not null)
+            ViewData["MsSozlesmeler"] = await SozlesmeleriGetirAsync(
+                services, platform.Id, context.HttpContext.RequestAborted);
+
         await next();
+    }
+
+    private static async Task<List<ECSPros.Cms.Application.Queries.GetStoreLegalPages.StoreLegalPageDto>> SozlesmeleriGetirAsync(
+        IServiceProvider services, Guid platformId, CancellationToken ct)
+    {
+        var cache = services.GetRequiredService<IMemoryCache>();
+        return await cache.GetOrCreateAsync($"store-legal:{platformId}", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            var sonuc = await services.GetRequiredService<IMediator>().Send(
+                new ECSPros.Cms.Application.Queries.GetStoreLegalPages.GetStoreLegalPagesQuery(platformId), ct);
+            return sonuc.IsSuccess
+                ? sonuc.Value!
+                : new List<ECSPros.Cms.Application.Queries.GetStoreLegalPages.StoreLegalPageDto>();
+        }) ?? new List<ECSPros.Cms.Application.Queries.GetStoreLegalPages.StoreLegalPageDto>();
     }
 
     private static async Task<NavigasyonVm> NavigasyonuGetirAsync(
