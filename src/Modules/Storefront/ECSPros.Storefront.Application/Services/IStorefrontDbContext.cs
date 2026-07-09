@@ -13,6 +13,7 @@ public interface IStorefrontDbContext
     DbSet<ChannelCategoryGroup> ChannelCategoryGroups { get; }
     DbSet<ChannelCategoryProduct> ChannelCategoryProducts { get; }
     DbSet<ChannelProductGroup> ChannelProductGroups { get; }
+    DbSet<StockAlert> StockAlerts { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

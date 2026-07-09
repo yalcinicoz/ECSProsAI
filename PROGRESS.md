@@ -294,6 +294,19 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — C9 TAMAM: stok gelince haber ver:**
+  - **Backend:** Storefront'a `StockAlert` entity (`storefront.stock_alerts`: platform/varyant/üye +
+    Email/ProductCode/VariantInfo snapshot + Status active|notified|cancelled; `AddStockAlerts`
+    migration canlıya uygulandı). `CreateStockAlertCommand` (idempotent) + `GetMemberStockAlertsQuery`;
+    `POST/GET /api/store/stock-alerts` (MemberOnly, e-posta claim'den). Bildirim gönderimi Faz H'de.
+  - **Frontend:** sepet satır şablonuna tasarımın tükendi butonu eklendi (hidden) — isAvailable=false
+    kalemde görünür; misafir→giriş modalı, üye→POST→"Stok gelince haber verilecek ✓"; reload'da GET
+    ile işaretlenir. Not: kalem IsAvailable sepete ekleme anı değeridir (B12 bilinen sınırı).
+  - **E2E 11/11 ✓ + C1 regresyon 12/12 ✓.** Drift TEMİZ. Test notu: julude ürünü 1K00005.0001
+    ürün temizliğinde silinmiş — testler artık P-00020797 kullanıyor; localhost test instance'ı
+    artık MISHAR'a çözülüyor (B12 dönemindeki julude varsayılanı geçerli değil).
+  - **Faz C kalan:** C11 (QA kapanışı — envanter 8.5).
+
 - **2026-07-09 (devam) — C8 TAMAM: sözleşme modalları CMS'ten + kabul kaydı:**
   - **CMS:** `GetStoreLegalPagesQuery` + `GET /api/store/cms/legal` (PageType='legal',
     rich_text section'ların Settings["html"] birleşimi). Seed: Dev'de `SeedCmsLegalPagesAsync`,
