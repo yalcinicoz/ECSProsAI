@@ -294,6 +294,21 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — C5+C6+C10 TAMAM: ödeme + checkout UÇTAN UCA canlı 🎉:**
+  - `/odeme`: yöntemler + kart canlı önizleme (bilgi gönderilmez — K2 test modu, tahsilat mock),
+    özet cart+kupon durumundan, teslimatsız girişte /teslimat'a döner; taksit kutusu statik (C6,
+    K2; gerçek BIN H6); sözleşme metinleri C8'e kadar gizli, onay modalı çalışır.
+  - `/siparis-tamamlandi`: msSiparisSonucu'ndan; sipariş no üyenin sipariş listesinden.
+  - **C10:** Siparişi Tamamla → POST /api/store/checkout (msSiparisAsamasiGoster sarıldı);
+    MemberAddressDto'ya geo ID'leri additive eklendi (checkout guid'leri buradan); request'e
+    CouponId/CouponDiscount eklendi → controller sipariş sonrası UseCouponCommand (C3'ün 'use
+    checkout'ta' sözü kapandı); başarıda sepet DELETE + storage temizliği + mini sepet yenilenir.
+  - **E2E 15/15 ✓ (İLK SEFERDE):** üye+sepet+%10 kupon+adres → teslimat → ödeme (779,98→701,98)
+    → kart önizleme → sözleşme → checkout → onay; DB: sipariş pending + kupon kullanım kaydı +
+    sepet temiz. Test verileri silindi. Drift TEMİZ (2 yeni izinli girdi).
+  - **Faz C kalan:** C7 (TCKN gerçek koşul+algoritma), C8 (sözleşme CMS), C9 (stok haber ver),
+    C11 (QA kapanışı). DEPLOY BEKLİYOR (B11'den beri biriken her şeyle).
+
 - **2026-07-09 (devam) — C4-b TAMAM → C4 KAPANDI (teslimat sayfası canlı):**
   - `/teslimat` + `_SepetTeslimatSayfasi` bağlandı; adres kartları account/addresses'ten
     (oturumsuzken giriş çağrısı + Ödemeye Geç giriş modalını açar); seçilen adres

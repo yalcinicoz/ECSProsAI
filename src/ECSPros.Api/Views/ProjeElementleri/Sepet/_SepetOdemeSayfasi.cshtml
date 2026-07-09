@@ -1,0 +1,828 @@
+@await Html.PartialAsync("~/Views/ProjeElementleri/Sepet/_SepetModallari.cshtml")
+
+@* C5: sözleşme/TCKN modalları bu sayfada da gerekli (kaynakta _SepetSiparis kompoziti sağlıyordu) *@
+@await Html.PartialAsync("~/Views/ProjeElementleri/Sepet/_SepetModallari.cshtml")
+
+    <section class="ms-siparis-asama-paneli" data-ms-siparis-asama-panel="odeme" hidden>
+        <div class="ms-siparis-asama-sayfasi">
+            <section class="ms-siparis-asama-ana" aria-labelledby="ms-odeme-baslik">
+                <div class="ms-sepet-ust">
+                    <div>
+                        <h3 id="ms-odeme-baslik" class="ms-sepet-bolum-basligi">Ödeme Bilgileri</h3>
+                        <p class="ms-sepet-bolum-aciklama">Ödeme yöntemi, kart bilgileri ve taksit seçimi bu alanda yer alır.</p>
+                    </div>
+                    <span class="ms-siparis-etiket-rozet ms-siparis-etiket-rozet-aktif">Güvenli Ödeme</span>
+                </div>
+
+                <section class="ms-odeme-yontemleri" aria-labelledby="ms-odeme-yontemi-baslik" data-ms-odeme-yontemleri>
+                    <h4 id="ms-odeme-yontemi-baslik" class="ms-siparis-alt-baslik">Ödeme Yöntemi</h4>
+
+                    <div class="ms-odeme-kupon-durumu" data-ms-odeme-kupon-durumu hidden>
+                        <span class="ms-odeme-kupon-ikon" aria-hidden="true"><i class="fa-solid fa-ticket ms-fa-ikon"></i></span>
+                        <div class="ms-odeme-kupon-metin">
+                            <strong data-ms-odeme-kupon-kod>KART25</strong>
+                            <p data-ms-odeme-kupon-aciklama>Kredi kartı ödemesine özel kupon</p>
+                        </div>
+                        <em data-ms-odeme-kupon-indirim>-25,00 TL</em>
+                    </div>
+                    <div class="ms-odeme-kupon-uyari" data-ms-odeme-kupon-uyari tabindex="-1" hidden>
+                        <i class="fa-solid fa-circle-info ms-fa-ikon" aria-hidden="true"></i>
+                        <span data-ms-odeme-kupon-uyari-metin>Bu kupon seçili ödeme yöntemi ile kullanılamaz.</span>
+                    </div>
+
+                    <label class="ms-odeme-yontemi ms-odeme-yontemi-aktif">
+                        <input class="ms-onay-input" type="radio" name="siparis-odeme-tipi" value="kart" checked data-ms-odeme-yontemi>
+                        <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
+                        <span class="ms-odeme-yontemi-ikon" aria-hidden="true"><i class="fa-solid fa-credit-card ms-fa-ikon " aria-hidden="true"></i></span>
+                        <span class="ms-odeme-yontemi-metin">
+                            <strong>Kart ile Öde</strong>
+                            <span>Kredi kartı veya banka kartı ile güvenli ödeme</span>
+                        </span>
+                        <span class="ms-odeme-yontemi-kupon-etiketi" data-ms-odeme-yontemi-kupon-etiketi hidden>Kupon Geçerli</span>
+                    </label>
+
+                    <div class="ms-odeme-yontemi-panel ms-odeme-yontemi-panel-aktif" data-ms-odeme-panel="kart">
+                        <div class="ms-odeme-kart-icerik">
+                            <section class="ms-odeme-kart-formu" aria-labelledby="ms-odeme-kart-baslik">
+                                <h5 id="ms-odeme-kart-baslik">Kart Bilgileri</h5>
+                                <div class="ms-form-izgara">
+                                    <label class="ms-form-alani ms-form-alani-genis">
+                                        <span class="ms-form-etiket">Kart Numarası</span>
+                                        <input class="ms-form-girdi" type="text" placeholder="1231 2312 3123 1231" inputmode="numeric" maxlength="19" autocomplete="cc-number" data-ms-kart-alan="numara" data-ms-kart-etiket="Kart numarası">
+                                        <span class="ms-form-hata" data-ms-kart-hata="numara" hidden>Kart numarası zorunludur</span>
+                                    </label>
+                                    <label class="ms-form-alani ms-form-alani-genis">
+                                        <span class="ms-form-etiket">Kart Üzerindeki İsim</span>
+                                        <input class="ms-form-girdi" type="text" placeholder="KART SAHİBİNİN ADI SOYADI" inputmode="text" autocomplete="cc-name" pattern="[^0-9]*" data-ms-kart-alan="isim" data-ms-kart-etiket="Kart sahibi adı">
+                                        <span class="ms-form-hata" data-ms-kart-hata="isim" hidden>Kart sahibi adı zorunludur</span>
+                                    </label>
+                                    <label class="ms-form-alani">
+                                        <span class="ms-form-etiket">Son Kullanma Tarihi</span>
+                                        <input class="ms-form-girdi" type="text" placeholder="MM/YY" maxlength="5" autocomplete="cc-exp" data-ms-kart-alan="son-kullanma" data-ms-kart-etiket="Son kullanma tarihi">
+                                        <span class="ms-form-hata" data-ms-kart-hata="son-kullanma" hidden>Son kullanma tarihi zorunludur</span>
+                                    </label>
+                                    <label class="ms-form-alani">
+                                        <span class="ms-form-etiket">CVV</span>
+                                        <input class="ms-form-girdi" type="text" placeholder="123" inputmode="numeric" maxlength="3" autocomplete="cc-csc" data-ms-kart-alan="cvv" data-ms-kart-etiket="CVV">
+                                        <span class="ms-form-hata" data-ms-kart-hata="cvv" hidden>CVV zorunludur</span>
+                                    </label>
+    </div>
+    </section>
+
+<div class="ms-odeme-kart-sag-kolon">
+                                <div class="ms-kredi-kart-onizleme" data-ms-kart-onizleme data-ms-kart-tur="bilinmiyor" aria-label="Kart önizlemesi">
+                                    <div class="ms-kredi-kart-donusur">
+                                        <div class="ms-kredi-kart-yuzu ms-kredi-kart-on">
+                                            <div class="ms-kredi-kart-ust">
+                                                <span class="ms-kredi-kart-chip" aria-hidden="true"></span>
+                                                <strong data-ms-kart-tur-yazi>Kart</strong>
+                                            </div>
+                                            <div class="ms-kredi-kart-numara" data-ms-kart-onizleme-numara>•••• •••• •••• ••••</div>
+                                            <div class="ms-kredi-kart-alt">
+                                                <span>
+                                                    <small>Kart Sahibi</small>
+                                                    <strong data-ms-kart-onizleme-isim>AD SOYAD</strong>
+                                                </span>
+                                                <span>
+                                                    <small>SKT</small>
+                                                    <strong data-ms-kart-onizleme-son-kullanma>MM/YY</strong>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="ms-kredi-kart-yuzu ms-kredi-kart-arka">
+                                            <span class="ms-kredi-kart-serit" aria-hidden="true"></span>
+                                            <div class="ms-kredi-kart-imza">
+                                                <span>Güvenlik Kodu</span>
+                                                <strong data-ms-kart-onizleme-cvv>•••</strong>
+                                            </div>
+                                            <small data-ms-kart-tur-yazi-arka>Kart</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <aside class="ms-odeme-taksit-kutusu" data-ms-taksit-kutusu>
+                                    <h5>Taksit Seçenekleri</h5>
+                                    <p data-ms-taksit-bos>Kart numaranızın ilk 6 hanesini girin</p>
+                                    <div class="ms-odeme-taksit-listesi" data-ms-taksit-listesi hidden>
+                                        <label class="ms-odeme-taksit-secenegi">
+                                            <input class="ms-onay-input" type="radio" name="siparis-taksit" checked>
+                                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
+                                            <span>Tek Çekim</span>
+                                            <strong class="ms-fiyat-standart">1.399,98 ₺ <small class="ms-fiyat-standart">Toplam: 1.399,98 ₺</small></strong>
+                                        </label>
+                                        <label class="ms-odeme-taksit-secenegi">
+                                            <input class="ms-onay-input" type="radio" name="siparis-taksit">
+                                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
+                                            <span>2 Taksit</span>
+                                            <strong class="ms-fiyat-standart">699,99 ₺ <small class="ms-fiyat-standart">Toplam: 1.399,98 ₺</small></strong>
+                                        </label>
+                                        <label class="ms-odeme-taksit-secenegi">
+                                            <input class="ms-onay-input" type="radio" name="siparis-taksit">
+                                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
+                                            <span>3 Taksit</span>
+                                            <strong class="ms-fiyat-standart">503,57 ₺ <small class="ms-fiyat-standart">Toplam: 1.510,72 ₺</small></strong>
+                                        </label>
+                                        <label class="ms-odeme-taksit-secenegi">
+                                            <input class="ms-onay-input" type="radio" name="siparis-taksit">
+                                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
+                                            <span>4 Taksit</span>
+                                            <strong class="ms-fiyat-standart">384,22 ₺ <small class="ms-fiyat-standart">Toplam: 1.536,90 ₺</small></strong>
+                                        </label>
+                                    </div>
+                                </aside>
+                            </div>
+                        </div>
+                    </div>
+
+                    <label class="ms-odeme-yontemi">
+                        <input class="ms-onay-input" type="radio" name="siparis-odeme-tipi" value="kapida-nakit" data-ms-odeme-yontemi>
+                        <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
+                        <span class="ms-odeme-yontemi-ikon" aria-hidden="true"><i class="fa-solid fa-money-bill ms-fa-ikon " aria-hidden="true"></i></span>
+                        <span class="ms-odeme-yontemi-metin">
+                            <strong>Kapıda Nakit Ödeme</strong>
+                            <span>Ürün teslim edilirken nakit olarak ödeme yapın</span>
+                        </span>
+                        <span class="ms-odeme-yontemi-kupon-etiketi" data-ms-odeme-yontemi-kupon-etiketi hidden>Kupon Geçerli</span>
+                    </label>
+
+                    <div class="ms-odeme-yontemi-panel" data-ms-odeme-panel="kapida-nakit" hidden>
+                        <section class="ms-odeme-kosul-kutusu">
+                            <h5>Kapıda Nakit Ödeme</h5>
+                            <p>Ürün teslim edilirken nakit olarak ödeme yapacaksınız.</p>
+                            <p>Lütfen tam para hazır bulundurun.</p>
+                            <p>Kapıda ödeme için ek 50 TL hizmet bedeli uygulanır.</p>
+                            <p>3000 TL ve üzeri siparişlerde kapıda ödeme kabul edilmez.</p>
+                        </section>
+                    </div>
+
+                    <label class="ms-odeme-yontemi">
+                        <input class="ms-onay-input" type="radio" name="siparis-odeme-tipi" value="kapida-kart" data-ms-odeme-yontemi>
+                        <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
+                        <span class="ms-odeme-yontemi-ikon" aria-hidden="true"><i class="fa-solid fa-credit-card ms-fa-ikon " aria-hidden="true"></i></span>
+                        <span class="ms-odeme-yontemi-metin">
+                            <strong>Kapıda Kart ile Ödeme</strong>
+                            <span>Ürün teslim edilirken kart ile ödeme yapın</span>
+                        </span>
+                        <span class="ms-odeme-yontemi-kupon-etiketi" data-ms-odeme-yontemi-kupon-etiketi hidden>Kupon Geçerli</span>
+                    </label>
+
+                    <div class="ms-odeme-yontemi-panel" data-ms-odeme-panel="kapida-kart" hidden>
+                        <section class="ms-odeme-kosul-kutusu">
+                            <h5>Kapıda Kart ile Ödeme</h5>
+                            <p>Ürün teslim edilirken mobil POS cihazı ile ödeme yapacaksınız.</p>
+                            <p>Kredi kartı ve banka kartı kabul edilir.</p>
+                            <p>Temassız ödeme desteklenir.</p>
+                            <p>Kapıda ödeme için ek 50 TL hizmet bedeli uygulanır.</p>
+                        </section>
+                    </div>
+                </section>
+
+                <section class="ms-siparis-asama-kart">
+                    <strong>Sipariş Notu (Opsiyonel)</strong>
+                    <label class="ms-form-alani">
+                        <span class="ms-form-etiket">Sipariş Notu</span>
+                        <textarea class="ms-form-metin-alani" placeholder="Siparişiniz için teslimat veya paketleme notu ekleyin"></textarea>
+                    </label>
+                </section>
+
+                @if (false)
+                {
+                @* C8: sözleşme metin grupları CMS pages'ten dolacak *@
+                <section class="ms-siparis-sozlesmeler" aria-labelledby="ms-odeme-sozlesmeler-baslik">
+                    <div class="ms-siparis-sozlesmeler-baslik">
+                        <i class="fa-solid fa-file-lines ms-fa-ikon " aria-hidden="true"></i>
+                        <h4 id="ms-odeme-sozlesmeler-baslik">Sözleşmeler ve Onaylar</h4>
+                    </div>
+                    <p>Lütfen aşağıdaki sözleşmeleri okuyup onaylayın.</p>
+
+                    <div class="ms-siparis-sozlesme-grubu">
+                        <h5>Gizlilik ve Güvenlik</h5>
+                        <div class="ms-siparis-sozlesme-metin">test-Sözleşmeler ve Onaylar</div>
+                    </div>
+                    <div class="ms-siparis-sozlesme-grubu">
+                        <h5>Kullanım Koşulları</h5>
+                        <div class="ms-siparis-sozlesme-metin">test-Sözleşmeler ve Onaylar</div>
+                    </div>
+                    <div class="ms-siparis-sozlesme-grubu">
+                        <h5>Kargo ve Teslimat</h5>
+                        <div class="ms-siparis-sozlesme-metin">test-Sözleşmeler ve Onaylar</div>
+                    </div>
+                </section>
+                }
+            </section>
+
+            <aside class="ms-siparis-ozeti" aria-labelledby="ms-odeme-ozet-baslik">
+                <h3 id="ms-odeme-ozet-baslik" class="ms-siparis-basligi">Ödeme Özeti</h3>
+                <div class="ms-siparis-satirlari">
+                    <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Ürün Toplamı</span><span class="ms-siparis-deger ms-fiyat-standart" data-ms-odeme-urun-toplami>0,00 TL</span></div>
+                    <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Kargo</span><span class="ms-siparis-deger ms-siparis-ucretsiz">Ücretsiz</span></div>
+                    @if (false)
+                    {
+                    @* Faz G: kampanya kaynaklı sepet indirimi *@
+                    <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Sepet İndirimi</span><span class="ms-siparis-deger ms-urun-fiyat-indirimli">-85,00 TL</span></div>
+                    }
+                    <div class="ms-siparis-satiri" data-ms-odeme-kupon-satiri hidden><span class="ms-siparis-etiket">Kupon İndirimi <small class="ms-siparis-kupon-ozet-kodu" data-ms-odeme-kupon-ozet-kod>KART25</small></span><span class="ms-siparis-deger ms-urun-fiyat-indirimli" data-ms-odeme-kupon-ozet-indirim>-25,00 TL</span></div>
+                </div>
+                <div class="ms-siparis-toplam">
+                    <span class="ms-siparis-toplam-etiket">Ödenecek Tutar</span>
+                    <span class="ms-siparis-toplam-deger ms-urun-fiyat" data-ms-odeme-odenecek>0,00 TL</span>
+                </div>
+                <div class="ms-odeme-eksik-listesi" data-ms-odeme-eksikler hidden></div>
+                <div class="ms-siparis-sozlesme-onay">
+                    <input class="ms-onay-input" type="checkbox" data-ms-sozlesme-onay-input aria-label="Mesafeli satış sözleşmesini ve ön bilgilendirme formunu onayla">
+                    <span class="ms-onay-kutu" aria-hidden="true"></span>
+                    <p>
+                        <button class="ms-siparis-sozlesme-link" type="button" data-ms-sozlesme-modal-ac>Mesafeli Satış Sözleşmesi ve Ön Bilgilendirme Formu</button>
+                        metinlerini okudum, anladım ve elektronik ortamda onaylıyorum.
+                    </p>
+                </div>
+                <button class="ms-buton ms-buton-l ms-buton-satin-al ms-buton-tam" type="button" data-ms-odeme-onaya-gec>Siparişi Tamamla</button>
+            </aside>
+        </div>
+        <div class="ms-sepet-mobil-sabit-aksiyon" aria-label="Mobil ödeme aksiyonları">
+            <div class="ms-sepet-mobil-sabit-tutar">
+                <span>Ödenecek Tutar</span>
+                <strong class="ms-urun-fiyat" data-ms-odeme-odenecek>0,00 TL</strong>
+            </div>
+            <button class="ms-buton ms-buton-l ms-buton-satin-al ms-buton-tam" type="button" data-ms-odeme-onaya-gec>Siparişi Tamamla</button>
+        </div>
+    </section>
+
+    @* Bu script: Ödeme yöntemi kartları, panel geçişleri ve ödeme doğrulama akışını yönetir. *@
+    <script>
+    (() => {
+        const odemeSayfasiKok = document.currentScript?.closest("[data-ms-sayfa-panel], .ms-panel") || document;
+
+        odemeSayfasiKok.querySelectorAll("[data-ms-odeme-yontemleri]").forEach((odemeAlani) => {
+            const yontemler = Array.from(odemeAlani.querySelectorAll("[data-ms-odeme-yontemi]"));
+            const paneller = Array.from(odemeAlani.querySelectorAll("[data-ms-odeme-panel]"));
+            const asamaSayfasi = odemeAlani.closest(".ms-siparis-asama-sayfasi");
+            const asamaPaneli = odemeAlani.closest("[data-ms-siparis-asama-panel]");
+            const eksikListesi = asamaSayfasi?.querySelector("[data-ms-odeme-eksikler]");
+            const onayaGecButonlari = Array.from(asamaPaneli?.querySelectorAll("[data-ms-odeme-onaya-gec]") || []);
+            const sozlesmeOnayInput = asamaSayfasi?.querySelector("[data-ms-sozlesme-onay-input]");
+            const kartAlanlari = Array.from(odemeAlani.querySelectorAll("[data-ms-kart-alan]"));
+            const kartNumarasi = odemeAlani.querySelector('[data-ms-kart-alan="numara"]');
+            const kartSahibiIsmi = odemeAlani.querySelector('[data-ms-kart-alan="isim"]');
+            const sonKullanma = odemeAlani.querySelector('[data-ms-kart-alan="son-kullanma"]');
+            const cvv = odemeAlani.querySelector('[data-ms-kart-alan="cvv"]');
+            const taksitBos = odemeAlani.querySelector("[data-ms-taksit-bos]");
+            const taksitListesi = odemeAlani.querySelector("[data-ms-taksit-listesi]");
+            const kartOnizleme = odemeAlani.querySelector("[data-ms-kart-onizleme]");
+            const kartTurYazilari = Array.from(odemeAlani.querySelectorAll("[data-ms-kart-tur-yazi], [data-ms-kart-tur-yazi-arka]"));
+            const kartOnizlemeNumara = odemeAlani.querySelector("[data-ms-kart-onizleme-numara]");
+            const kartOnizlemeIsim = odemeAlani.querySelector("[data-ms-kart-onizleme-isim]");
+            const kartOnizlemeSonKullanma = odemeAlani.querySelector("[data-ms-kart-onizleme-son-kullanma]");
+            const kartOnizlemeCvv = odemeAlani.querySelector("[data-ms-kart-onizleme-cvv]");
+            const kuponDurumKarti = odemeAlani.querySelector("[data-ms-odeme-kupon-durumu]");
+            const kuponKoduYazi = odemeAlani.querySelector("[data-ms-odeme-kupon-kod]");
+            const kuponAciklamaYazi = odemeAlani.querySelector("[data-ms-odeme-kupon-aciklama]");
+            const kuponIndirimYazi = odemeAlani.querySelector("[data-ms-odeme-kupon-indirim]");
+            const kuponUyari = odemeAlani.querySelector("[data-ms-odeme-kupon-uyari]");
+            const kuponUyariMetni = odemeAlani.querySelector("[data-ms-odeme-kupon-uyari-metin]");
+            const kuponOzetSatiri = asamaSayfasi?.querySelector("[data-ms-odeme-kupon-satiri]");
+            const kuponOzetKodu = asamaSayfasi?.querySelector("[data-ms-odeme-kupon-ozet-kod]");
+            const kuponOzetIndirimi = asamaSayfasi?.querySelector("[data-ms-odeme-kupon-ozet-indirim]");
+            const varsayilanKuponDurumu = {
+                kod: "KART25",
+                odemeTipi: "kart",
+                indirim: "-25,00 TL",
+                aciklama: "Kredi kartı veya banka kartı ile ödemede geçerli kupon"
+            };
+
+            const kayitliKuponDurumuAl = () => {
+                try {
+                    const kayitliDurum = window.sessionStorage?.getItem("msSepetKuponDurumu");
+                    return kayitliDurum === null ? undefined : JSON.parse(kayitliDurum);
+                } catch {
+                    return undefined;
+                }
+            };
+
+            const kayitliKuponDurumu = kayitliKuponDurumuAl();
+            let aktifKupon = typeof window.msSepetKuponDurumu !== "undefined"
+                ? window.msSepetKuponDurumu
+                : typeof kayitliKuponDurumu !== "undefined"
+                    ? kayitliKuponDurumu
+                    : varsayilanKuponDurumu;
+
+            const odemeTipiEtiketleri = {
+                kart: "Kart ile Öde",
+                kapida: "Kapıda ödeme",
+                "kapida-nakit": "Kapıda Nakit Ödeme",
+                "kapida-kart": "Kapıda Kart ile Ödeme",
+                tum: "tüm ödeme yöntemleri"
+            };
+
+            const kuponYontemeUygunMu = (kupon, seciliYontem) => {
+                if (!kupon?.kod || !kupon.odemeTipi || kupon.odemeTipi === "tum") {
+                    return true;
+                }
+
+                if (kupon.odemeTipi === "kapida") {
+                    return seciliYontem === "kapida-nakit" || seciliYontem === "kapida-kart";
+                }
+
+                return kupon.odemeTipi === seciliYontem;
+            };
+
+            const kuponDurumunuGuncelle = (seciliYontem = yontemler.find((yontem) => yontem.checked)?.value) => {
+                const kuponVar = Boolean(aktifKupon?.kod);
+                const uyumlu = !kuponVar || kuponYontemeUygunMu(aktifKupon, seciliYontem);
+
+                if (kuponDurumKarti) {
+                    kuponDurumKarti.hidden = !kuponVar;
+                    kuponDurumKarti.classList.toggle("ms-odeme-kupon-durumu-uyumsuz", kuponVar && !uyumlu);
+                }
+
+                if (kuponKoduYazi) {
+                    kuponKoduYazi.textContent = aktifKupon?.kod || "";
+                }
+
+                if (kuponAciklamaYazi) {
+                    kuponAciklamaYazi.textContent = aktifKupon?.aciklama || "";
+                }
+
+                if (kuponIndirimYazi) {
+                    kuponIndirimYazi.textContent = aktifKupon?.indirim || "";
+                }
+
+                if (kuponUyari) {
+                    kuponUyari.hidden = !kuponVar || uyumlu;
+                }
+
+                if (kuponUyariMetni && aktifKupon?.odemeTipi) {
+                    kuponUyariMetni.textContent = `${aktifKupon.kod} kuponu yalnızca ${odemeTipiEtiketleri[aktifKupon.odemeTipi] || "ilgili ödeme yöntemi"} ile kullanılabilir. Kuponu korumak için uygun ödeme yöntemini seçin veya sepetten kuponu kaldırın.`;
+                }
+
+                yontemler.forEach((yontem) => {
+                    const etiket = yontem.closest(".ms-odeme-yontemi")?.querySelector("[data-ms-odeme-yontemi-kupon-etiketi]");
+                    if (etiket) {
+                        etiket.hidden = !kuponVar || !kuponYontemeUygunMu(aktifKupon, yontem.value);
+                    }
+                });
+
+                if (kuponOzetSatiri) {
+                    kuponOzetSatiri.hidden = !kuponVar;
+                }
+
+                if (kuponOzetKodu) {
+                    kuponOzetKodu.textContent = aktifKupon?.kod || "";
+                }
+
+                if (kuponOzetIndirimi) {
+                    kuponOzetIndirimi.textContent = aktifKupon?.indirim || "";
+                }
+
+                return uyumlu;
+            };
+
+            const odemeYontemiGoster = (hedef) => {
+                yontemler.forEach((yontem) => {
+                    const aktif = yontem.value === hedef;
+                    yontem.closest(".ms-odeme-yontemi")?.classList.toggle("ms-odeme-yontemi-aktif", aktif);
+                });
+
+                paneller.forEach((panel) => {
+                    const aktif = panel.dataset.msOdemePanel === hedef;
+                    panel.classList.toggle("ms-odeme-yontemi-panel-aktif", aktif);
+                    panel.hidden = !aktif;
+                });
+
+                kuponDurumunuGuncelle(hedef);
+            };
+
+            const sadeceRakam = (deger) => (deger || "").replace(/\D/g, "");
+            const rakamsizMetin = (deger) => (deger || "").replace(/[0-9]/g, "");
+
+            const kartTurunuBul = (numara) => {
+                if (/^4/.test(numara)) {
+                    return { kod: "visa", ad: "Visa" };
+                }
+
+                if (/^(5[1-5]|2(2[2-9]|[3-6]|7[01]|720))/.test(numara)) {
+                    return { kod: "mastercard", ad: "Mastercard" };
+                }
+
+                if (/^3[47]/.test(numara)) {
+                    return { kod: "amex", ad: "American Express" };
+                }
+
+                if (/^(9792|65)/.test(numara)) {
+                    return { kod: "troy", ad: "Troy" };
+                }
+
+                return { kod: "bilinmiyor", ad: "Kart" };
+            };
+
+            const kartOnizlemeGuncelle = () => {
+                if (!kartOnizleme) {
+                    return;
+                }
+
+                const numara = sadeceRakam(kartNumarasi?.value || "");
+                const tur = kartTurunuBul(numara);
+                const formatliNumara = (kartNumarasi?.value || "").trim();
+                const isim = kartAlanlari.find((alan) => alan.dataset.msKartAlan === "isim")?.value?.trim();
+                const sonKullanmaDegeri = sonKullanma?.value?.trim();
+                const cvvDegeri = cvv?.value?.trim();
+
+                kartOnizleme.dataset.msKartTur = tur.kod;
+                kartTurYazilari.forEach((alan) => {
+                    alan.textContent = tur.ad;
+                });
+
+                if (kartOnizlemeNumara) {
+                    kartOnizlemeNumara.textContent = formatliNumara || "•••• •••• •••• ••••";
+                }
+
+                if (kartOnizlemeIsim) {
+                    kartOnizlemeIsim.textContent = isim || "AD SOYAD";
+                }
+
+                if (kartOnizlemeSonKullanma) {
+                    kartOnizlemeSonKullanma.textContent = sonKullanmaDegeri || "MM/YY";
+                }
+
+                if (kartOnizlemeCvv) {
+                    kartOnizlemeCvv.textContent = cvvDegeri || "•••";
+                }
+            };
+
+            const kartNumarasiFormatla = () => {
+                if (!kartNumarasi) {
+                    return;
+                }
+
+                const rakamlar = sadeceRakam(kartNumarasi.value).slice(0, 16);
+                kartNumarasi.value = rakamlar.replace(/(.{4})/g, "$1 ").trim();
+
+                const taksitGoster = rakamlar.length > 0;
+
+                if (taksitBos) {
+                    taksitBos.hidden = taksitGoster;
+                }
+
+                if (taksitListesi) {
+                    taksitListesi.hidden = !taksitGoster;
+                }
+
+                kartOnizlemeGuncelle();
+            };
+
+            const sonKullanmaFormatla = () => {
+                if (!sonKullanma) {
+                    return;
+                }
+
+                const rakamlar = sadeceRakam(sonKullanma.value).slice(0, 4);
+                sonKullanma.value = rakamlar.length > 2 ? `${rakamlar.slice(0, 2)}/${rakamlar.slice(2)}` : rakamlar;
+                kartOnizlemeGuncelle();
+            };
+
+            const cvvFormatla = () => {
+                if (cvv) {
+                    cvv.value = sadeceRakam(cvv.value).slice(0, 3);
+                }
+
+                kartOnizlemeGuncelle();
+            };
+
+            const kartSahibiIsmiFormatla = () => {
+                if (kartSahibiIsmi) {
+                    kartSahibiIsmi.value = rakamsizMetin(kartSahibiIsmi.value);
+                }
+
+                kartOnizlemeGuncelle();
+            };
+
+            const kartAlanHatasiniGoster = (alan, hataVar) => {
+                const hata = odemeAlani.querySelector(`[data-ms-kart-hata="${alan.dataset.msKartAlan}"]`);
+                alan.classList.toggle("ms-form-girdi-hata", hataVar);
+
+                if (hata) {
+                    hata.hidden = !hataVar;
+                }
+            };
+
+            const kartEksikleriniAl = () => {
+                const eksikler = [];
+
+                kartAlanlari.forEach((alan) => {
+                    let hataVar = !alan.value.trim();
+
+                    if (alan.dataset.msKartAlan === "numara") {
+                        hataVar = sadeceRakam(alan.value).length !== 16;
+                    }
+
+                    kartAlanHatasiniGoster(alan, hataVar);
+
+                    if (hataVar) {
+                        eksikler.push(alan.dataset.msKartEtiket || "Kart bilgisi");
+                    }
+                });
+
+                return eksikler;
+            };
+
+            const eksikleriGoster = (eksikler) => {
+                if (!eksikListesi) {
+                    return;
+                }
+
+                eksikListesi.innerHTML = "";
+                eksikListesi.hidden = eksikler.length === 0;
+
+                eksikler.forEach((eksik) => {
+                    const satir = document.createElement("div");
+                    satir.className = "ms-odeme-eksik";
+                    satir.innerHTML = `
+                        <i class="fa-solid fa-circle-info ms-fa-ikon" aria-hidden="true"></i>
+                        <span>${eksik}</span>
+                    `;
+                    eksikListesi.appendChild(satir);
+                });
+            };
+
+            yontemler.forEach((yontem) => {
+                yontem.addEventListener("change", () => odemeYontemiGoster(yontem.value));
+            });
+
+            kartNumarasi?.addEventListener("input", () => {
+                kartNumarasiFormatla();
+                kartAlanHatasiniGoster(kartNumarasi, false);
+            });
+            sonKullanma?.addEventListener("input", () => {
+                sonKullanmaFormatla();
+                kartAlanHatasiniGoster(sonKullanma, false);
+            });
+            cvv?.addEventListener("input", () => {
+                cvvFormatla();
+                kartAlanHatasiniGoster(cvv, false);
+            });
+            kartSahibiIsmi?.addEventListener("input", () => {
+                kartSahibiIsmiFormatla();
+                kartAlanHatasiniGoster(kartSahibiIsmi, false);
+            });
+            kartAlanlari.forEach((alan) => {
+                if (alan === kartNumarasi || alan === sonKullanma || alan === cvv || alan === kartSahibiIsmi) {
+                    return;
+                }
+
+                alan.addEventListener("input", () => {
+                    kartAlanHatasiniGoster(alan, false);
+                    kartOnizlemeGuncelle();
+                });
+            });
+
+            cvv?.addEventListener("focus", () => {
+                kartOnizleme?.classList.add("ms-kredi-kart-arka-gorunur");
+            });
+
+            cvv?.addEventListener("blur", () => {
+                kartOnizleme?.classList.remove("ms-kredi-kart-arka-gorunur");
+            });
+
+            (asamaSayfasi || odemeAlani).querySelectorAll("[data-ms-sozlesme-modal-ac]").forEach((buton) => {
+                buton.addEventListener("click", () => {
+                    const ozet = buton.closest(".ms-siparis-ozeti");
+                    window.msSozlesmeModalAc?.(ozet?.querySelector("[data-ms-sozlesme-onay-input]") || null);
+                });
+            });
+
+            sozlesmeOnayInput?.addEventListener("click", (event) => {
+                if (!sozlesmeOnayInput.checked) {
+                    return;
+                }
+
+                event.preventDefault();
+                sozlesmeOnayInput.checked = false;
+                window.msSozlesmeModalAc?.(sozlesmeOnayInput);
+            });
+
+            const odemeOnayiniDogrula = () => {
+                const seciliYontem = yontemler.find((yontem) => yontem.checked)?.value;
+                const sozlesmeEksik = sozlesmeOnayInput && !sozlesmeOnayInput.checked;
+                const kuponUyumsuz = !kuponDurumunuGuncelle(seciliYontem);
+
+                if (seciliYontem !== "kart") {
+                    const eksikler = [];
+
+                    if (kuponUyumsuz) {
+                        eksikler.push("Kupon ödeme yöntemi ile uyumsuz");
+                    }
+
+                    if (sozlesmeEksik) {
+                        eksikler.push("Sözleşme onayı");
+                    }
+
+                    eksikleriGoster(eksikler);
+
+                    if (eksikler.length > 0) {
+                        if (kuponUyumsuz) {
+                            kuponUyari?.focus();
+                        } else {
+                            sozlesmeOnayInput?.focus();
+                        }
+                        return;
+                    }
+
+                    window.msSiparisAsamasiGoster?.("onay");
+                    return;
+                }
+
+                const eksikler = kartEksikleriniAl();
+                if (kuponUyumsuz) {
+                    eksikler.push("Kupon ödeme yöntemi ile uyumsuz");
+                }
+
+                if (sozlesmeEksik) {
+                    eksikler.push("Sözleşme onayı");
+                }
+
+                eksikleriGoster(eksikler);
+
+                if (eksikler.length > 0) {
+                    const hataliKartAlani = kartAlanlari.find((alan) => alan.classList.contains("ms-form-girdi-hata"));
+                    (kuponUyumsuz ? kuponUyari : hataliKartAlani || sozlesmeOnayInput)?.focus();
+                    return;
+                }
+
+                window.msSiparisAsamasiGoster?.("onay");
+            };
+
+            onayaGecButonlari.forEach((onayaGecButonu) => {
+                onayaGecButonu.addEventListener("click", odemeOnayiniDogrula);
+            });
+
+            window.addEventListener("ms:sepet-kupon-degisti", (event) => {
+                aktifKupon = event.detail || null;
+                kuponDurumunuGuncelle(yontemler.find((yontem) => yontem.checked)?.value);
+            });
+
+            kartNumarasiFormatla();
+            sonKullanmaFormatla();
+            cvvFormatla();
+            kartOnizlemeGuncelle();
+            odemeYontemiGoster(yontemler.find((yontem) => yontem.checked)?.value || yontemler[0]?.value);
+        });
+    })();
+</script>
+
+
+@* C5+C10: Canlı ödeme script'i — özet cart + msSepetKuponDurumu'ndan; teslimat adresi
+   msTeslimatDurumu'ndan (yoksa /teslimat'a döner). Misharix demo script'i eksik kontrolü,
+   kart önizleme/taksit ve kupon-yöntem uyumunu yönetir; başarıyla geçerse
+   msSiparisAsamasiGoster('onay') çağırır — burada Odeme.cshtml'in yönlendirme fonksiyonu
+   SARILIR: önce POST /api/store/checkout (K2 test modu: sipariş pending oluşur, tahsilat
+   mock), kupon kullanım kaydı checkout gövdesinde; başarıda sepet+kupon temizlenir,
+   msSiparisSonucu yazılır ve /siparis-tamamlandi'ya gidilir. *@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const platformId = document.querySelector("[data-ms-arama]")?.dataset.msAramaPlatform || "";
+    const urunToplami = document.querySelector("[data-ms-odeme-urun-toplami]");
+    const odenecekler = [...document.querySelectorAll("[data-ms-odeme-odenecek]")];
+    const eksikAlani = document.querySelector("[data-ms-odeme-eksikler]");
+    if (!platformId || !urunToplami) { return; }
+
+    const paraYaz = (deger) => new Intl.NumberFormat("tr-TR",
+        { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(deger || 0) + " TL";
+    const trAd = (i18n) => (i18n && (i18n.tr || Object.values(i18n)[0])) || "";
+    const token = () => localStorage.getItem("ecspros_member_token");
+
+    let sepet = null;
+    let teslimat = null;
+    try { teslimat = JSON.parse(sessionStorage.getItem("msTeslimatDurumu") || "null"); } catch { }
+    let kupon = null;
+    try { kupon = JSON.parse(sessionStorage.getItem("msSepetKuponDurumu") || "null"); } catch { }
+
+    if (!teslimat) { window.location.href = "/teslimat"; return; }
+
+    const toplamlar = () => {
+        const toplam = (sepet?.items || []).reduce((t, k) => t + (k.lineTotal || 0), 0);
+        const indirim = kupon?.tutar || 0;
+        urunToplami.textContent = paraYaz(toplam);
+        odenecekler.forEach((alan) => { alan.textContent = paraYaz(Math.max(0, toplam - indirim)); });
+        return { toplam, indirim };
+    };
+
+    const sepetiYukle = async () => {
+        const sid = localStorage.getItem("ecspros_sid");
+        const cartId = localStorage.getItem("ecspros_cart");
+        const parametreler = new URLSearchParams({ firmPlatformId: platformId });
+        if (cartId) { parametreler.set("cartId", cartId); }
+        if (sid) { parametreler.set("sessionId", sid); }
+        try {
+            const cevap = await fetch("/api/store/cart?" + parametreler.toString());
+            const veri = await cevap.json().catch(() => null);
+            sepet = veri?.success ? veri.data : null;
+        } catch { sepet = null; }
+        if (!sepet?.items?.length) { window.location.href = "/sepet"; return; }
+        toplamlar();
+    };
+
+    const hataGoster = (mesajlar) => {
+        if (!eksikAlani) { return; }
+        eksikAlani.innerHTML = mesajlar.map((m) => `<p>${m}</p>`).join("");
+        eksikAlani.hidden = mesajlar.length === 0;
+        if (mesajlar.length) { eksikAlani.scrollIntoView({ block: "center", behavior: "smooth" }); }
+    };
+
+    const odemeTipiEtiketi = () => {
+        const secili = document.querySelector("[data-ms-odeme-yontemi]:checked");
+        return secili?.closest(".ms-odeme-yontemi")?.querySelector("strong")?.textContent.trim()
+            || "Kart ile Öde";
+    };
+
+    let gonderiliyor = false;
+    const siparisOlustur = async () => {
+        if (gonderiliyor) { return; }
+        if (!token()) { document.querySelector("[data-ms-giris-modal-ac]")?.click(); return; }
+        if (!teslimat.countryId || !teslimat.cityId || !teslimat.districtId) {
+            hataGoster(["Adres kaydınızda il/ilçe bilgisi eksik — lütfen teslimat adımından yeni bir adres oluşturun."]);
+            return;
+        }
+        const { toplam, indirim } = toplamlar();
+        gonderiliyor = true;
+        try {
+            const cevap = await fetch("/api/store/checkout", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token() },
+                body: JSON.stringify({
+                    firmPlatformId: platformId,
+                    currencyCode: sepet.currencyCode || "TRY",
+                    shippingRecipientName: teslimat.recipientName,
+                    shippingRecipientPhone: teslimat.recipientPhone,
+                    shippingCountryId: teslimat.countryId,
+                    shippingCityId: teslimat.cityId,
+                    shippingDistrictId: teslimat.districtId,
+                    shippingAddressLine: [teslimat.neighborhoodName, teslimat.addressLine].filter(Boolean).join(" "),
+                    shippingPostalCode: teslimat.postalCode || null,
+                    shippingDeliveryNotes: teslimat.deliveryNotes || null,
+                    billingSameAsShipping: true,
+                    items: sepet.items.map((k) => ({
+                        variantId: k.variantId,
+                        sku: k.productCode || "",
+                        productName: trAd(k.productNameI18n) || k.productCode || "Ürün",
+                        variantInfo: k.optionsText || null,
+                        quantity: k.quantity,
+                        unitPrice: k.addedPrice
+                    })),
+                    customerNotes: document.querySelector(".ms-siparis-asama-kart textarea, .ms-form-metin-alani")?.value?.trim() || null,
+                    cartId: sepet.id,
+                    couponId: kupon?.couponId || null,
+                    couponDiscount: kupon?.tutar || null
+                })
+            });
+            const veri = await cevap.json().catch(() => null);
+            if (!veri?.success) {
+                hataGoster([veri?.error || "Sipariş oluşturulamadı. Lütfen tekrar deneyin."]);
+                return;
+            }
+
+            // Onay sayfası için sonucu yaz; sepet + kupon + teslimat durumları temizlenir
+            try {
+                sessionStorage.setItem("msSiparisSonucu", JSON.stringify({
+                    orderId: veri.data.orderId,
+                    odemeTipi: odemeTipiEtiketi(),
+                    tutar: toplam,
+                    indirim,
+                    odenecek: Math.max(0, toplam - indirim),
+                    adresBaslik: teslimat.title,
+                    adresYer: [teslimat.districtName, teslimat.cityName].filter(Boolean).join(", "),
+                    aliciAd: teslimat.recipientName,
+                    kuponKod: kupon?.kod || null,
+                    kalemler: sepet.items.map((k) => ({
+                        ad: trAd(k.productNameI18n) || k.productCode,
+                        kod: k.productCode || "",
+                        gorsel: k.imageUrl || "",
+                        secenek: (k.optionsText || "").replaceAll(", ", " • "),
+                        adet: k.quantity,
+                        tutar: k.lineTotal
+                    }))
+                }));
+                sessionStorage.removeItem("msSepetKuponDurumu");
+                sessionStorage.removeItem("msTeslimatDurumu");
+            } catch { /* depolama kapalı — onay sayfası sipariş no'suz açılır */ }
+
+            try { await fetch("/api/store/cart/" + sepet.id, { method: "DELETE" }); } catch { }
+            localStorage.removeItem("ecspros_cart");
+            window.msMiniSepetYenile?.();
+            window.location.href = "/siparis-tamamlandi";
+        } catch {
+            hataGoster(["Sipariş oluşturulamadı. Lütfen tekrar deneyin."]);
+        } finally {
+            gonderiliyor = false;
+        }
+    };
+
+    // Odeme.cshtml'in yönlendirme fonksiyonunu sar: 'onay' hedefi checkout üzerinden geçer
+    const oncekiGoster = window.msSiparisAsamasiGoster;
+    window.msSiparisAsamasiGoster = (hedef) => {
+        if (hedef === "onay") { siparisOlustur(); return; }
+        oncekiGoster?.(hedef);
+    };
+
+    sepetiYukle();
+});
+</script>

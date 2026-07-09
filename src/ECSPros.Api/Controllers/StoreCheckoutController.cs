@@ -43,6 +43,12 @@ public class StoreCheckoutController(IMediator mediator) : ControllerBase
             req.CustomerNotes, req.CartId), ct);
 
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+
+        // C10: kupon kullanım kaydı (C3'te yalnız doğrulanmıştı) — sipariş oluştuktan sonra
+        if (req.CouponId is { } kuponId && req.CouponDiscount is { } indirim)
+            await mediator.Send(new ECSPros.Promotion.Application.Commands.UseCoupon.UseCouponCommand(
+                kuponId, memberId, result.Value, indirim), ct);
+
         return Ok(new { success = true, data = new { orderId = result.Value } });
     }
 }
@@ -69,7 +75,9 @@ public record StoreCheckoutRequest(
     string? BillingAddressLine,
     List<StoreCheckoutItemRequest> Items,
     string? CustomerNotes = null,
-    Guid? CartId = null);
+    Guid? CartId = null,
+    Guid? CouponId = null,           // C10: uygulanan kuponun kullanım kaydı için
+    decimal? CouponDiscount = null);
 
 public record StoreCheckoutItemRequest(
     Guid VariantId,

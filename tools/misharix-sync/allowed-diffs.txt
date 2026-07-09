@@ -116,3 +116,12 @@ Views/ProjeElementleri/Sepet/_SepetTeslimatSayfasi.cshtml
 # canlıya bağlandı (data-ms-adres-* bağları; il/ilçe/mahalle aynı görsel sınıflarla ama davranış
 # sayfa script'inde — site.js ozel-select'i dinamik seçenek desteklemiyor).
 Views/ProjeElementleri/Sepet/_SepetAdresModali.cshtml
+
+# C5+C10: Ödeme sayfası canlıya bağlandı — özet cart+kupon durumundan, sözleşme metin grupları
+# C8'e kadar gizli, _SepetModallari include'ı eklendi; dosya sonunda checkout script'i
+# (msSiparisAsamasiGoster sarılır — 'onay' hedefi POST /api/store/checkout üzerinden geçer).
+Views/ProjeElementleri/Sepet/_SepetOdemeSayfasi.cshtml
+
+# C10: Sipariş tamamlandı — içerik msSiparisSonucu'ndan; kargo bilgisi Faz H'ye kadar gizli;
+# ürünler template'ten; sipariş no üyenin sipariş listesinden doğrulanır.
+Views/ProjeElementleri/Sepet/_SepetSiparisTamamlandiSayfasi.cshtml

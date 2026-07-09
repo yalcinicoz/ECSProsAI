@@ -45,6 +45,10 @@
 | ProjeElementleri/Sepet/_SepetTeslimatSayfasi.cshtml | — (adres kartları template'ten; msTeslimatDurumu yayını) | GET/POST api/store/account/addresses + api/store/geo (dosya sonu script) | C4 | ✅ 2026-07-09 (düzenleme E4; kargo statik — H) |
 | ProjeElementleri/Sepet/_SepetAdresModali.cshtml *(yeni, bizim — kaynağı _SepetSiparis demo bloğu)* | — (data-ms-adres-* bağları) | api/store/geo kademeli lookup + POST addresses | C4 | ✅ 2026-07-09 (il/ilçe/mahalle aramalı; telefon bileşeni site.js) |
 
-**Sonraki fazlarda eklenecek satırlar:** Sepet/Odeme+SiparisTamamlandi (C5-C10),
+| Sepet/Odeme.cshtml + SiparisTamamlandi.cshtml | — (kabuklar; bayt-aynı) | SepetController (/odeme, /siparis-tamamlandi) | C5/C10 | ✅ 2026-07-09 |
+| ProjeElementleri/Sepet/_SepetOdemeSayfasi.cshtml | — (özet cart+kupon; checkout script'i msSiparisAsamasiGoster'i sarar) | GET cart + POST api/store/checkout (+CouponId use kaydı) | C5/C10 | ✅ 2026-07-09 (sözleşme metinleri C8; kart bilgisi gönderilmez — K2) |
+| ProjeElementleri/Sepet/_SepetSiparisTamamlandiSayfasi.cshtml | — (msSiparisSonucu'ndan) | account/orders (sipariş no doğrulaması) | C10 | ✅ 2026-07-09 (kargo bilgisi H'ye kadar gizli) |
+
+**Sonraki fazlarda eklenecek satırlar:**
 Hesabim/* (E), Kurumsal/* (F), GorunumTipleri/* + Ortak/_Story (G), Navigasyon/_MobilAltBar (H4),
 UrunDegerlendirmeleri/* (E7). Satır formatı yukarıdakiyle aynı tutulmalı.
