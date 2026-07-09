@@ -1,0 +1,467 @@
+﻿    <section class="ms-siparis-asama-paneli" data-ms-siparis-asama-panel="teslimat" hidden>
+        <div class="ms-siparis-asama-sayfasi">
+            <section class="ms-siparis-asama-ana" aria-labelledby="ms-teslimat-baslik">
+                <div class="ms-sepet-ust">
+                    <div>
+                        <h3 id="ms-teslimat-baslik" class="ms-sepet-bolum-basligi">Teslimat Bilgileri</h3>
+                        <p class="ms-sepet-bolum-aciklama">Adres, teslimat tipi ve kargo seçimi bu alanda yönetilir.</p>
+                    </div>
+                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-adres-ekle>Yeni Adres Ekle</button>
+                </div>
+
+                @* C4-b: kartlar canlı adreslerden (template + script); Adresi Düzenle E4'e
+                   kadar gizli (update API'si hesabım-adreslerim ile gelecek). *@
+                <p data-ms-adres-uye-degil hidden>Adreslerinizi görmek için <button class="ms-siparis-sozlesme-link" type="button" data-ms-giris-modal-ac>giriş yapın</button>.</p>
+                <p data-ms-adres-bos hidden>Kayıtlı adresiniz yok. "Yeni Adres Ekle" ile ilk adresinizi oluşturun.</p>
+                <div class="ms-siparis-asama-izgara" data-ms-adres-listesi></div>
+                <template data-ms-adres-sablon>
+                    <section class="ms-siparis-asama-kart ms-siparis-adres-karti" data-ms-adres-karti>
+                        <div class="ms-siparis-asama-kart-ust">
+                            <strong data-ms-adres-baslik></strong>
+                            <span class="ms-siparis-etiket-rozet" data-ms-adres-etiket>Alternatif</span>
+                        </div>
+                        <p data-ms-adres-metin></p>
+                        <p data-ms-adres-telefon></p>
+                        <div class="ms-siparis-adres-aksiyonlar">
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-adres-sec>Bu Adresi Seç</button>
+                        </div>
+                    </section>
+                </template>
+                @if (false)
+                {
+                <div class="ms-siparis-asama-izgara">
+                    <section class="ms-siparis-asama-kart ms-siparis-adres-karti ms-siparis-adres-karti-secili" data-ms-adres-karti data-ms-adres-ad="Ev Adresim">
+                        <div class="ms-siparis-asama-kart-ust">
+                            <strong>Ev Adresim</strong>
+                            <span class="ms-siparis-etiket-rozet ms-siparis-etiket-rozet-aktif" data-ms-adres-etiket>Seçili</span>
+                        </div>
+                        <p>Emre S. • Caferağa Mah. Moda Cad. No:12 Daire:4 Kadıköy / İstanbul</p>
+                        <p>Telefon: 05xx xxx xx xx</p>
+                        <div class="ms-siparis-adres-aksiyonlar">
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-adres-duzenle>Adresi Düzenle</button>
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-adres-sec disabled>Seçili Adres</button>
+    </div>
+    </section>
+
+<section class="ms-siparis-asama-kart ms-siparis-adres-karti" data-ms-adres-karti data-ms-adres-ad="İş Adresim">
+                        <div class="ms-siparis-asama-kart-ust">
+                            <strong>İş Adresim</strong>
+                            <span class="ms-siparis-etiket-rozet" data-ms-adres-etiket>Alternatif</span>
+                        </div>
+                        <p>Maslak Mah. Büyükdere Cad. No:21 Sarıyer / İstanbul</p>
+                        <p>Hafta içi 09:00 - 18:00 teslimat uygundur.</p>
+                        <div class="ms-siparis-adres-aksiyonlar">
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-adres-duzenle>Adresi Düzenle</button>
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-adres-sec>Bu Adresi Seç</button>
+                        </div>
+                    </section>
+                </div>
+                }
+
+                @* Kargo seçenekleri Faz H kargo kurallarına kadar statik (standart seçili) *@
+                <section class="ms-siparis-asama-kart">
+                    <strong>Kargo Seçimi</strong>
+                    <div class="ms-onay-listesi">
+                        <label class="ms-onay-kart">
+                            <input class="ms-onay-input" type="radio" name="siparis-teslimat-tipi" checked>
+                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
+                            <span class="ms-onay-metin">Standart Teslimat <span class="ms-onay-yardim">Ücretsiz kargo, 2-4 iş günü.</span></span>
+                        </label>
+                        @if (false)
+                        {
+                        @* Faz H: hızlı teslimat kargo kurallarıyla *@
+                        <label class="ms-onay-kart">
+                            <input class="ms-onay-input" type="radio" name="siparis-teslimat-tipi">
+                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
+                            <span class="ms-onay-metin">Hızlı Teslimat <span class="ms-onay-yardim">Uygun ürünlerde aynı gün kargo.</span></span>
+                        </label>
+                        }
+                    </div>
+                </section>
+            </section>
+
+            <aside class="ms-siparis-ozeti" aria-labelledby="ms-teslimat-ozet-baslik">
+                <h3 id="ms-teslimat-ozet-baslik" class="ms-siparis-basligi">Teslimat Özeti</h3>
+                <div class="ms-siparis-satirlari">
+                    <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Adres</span><span class="ms-siparis-deger" data-ms-teslimat-ozet-adres>Seçilmedi</span></div>
+                    <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Kargo</span><span class="ms-siparis-deger ms-siparis-ucretsiz">Ücretsiz</span></div>
+                    <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Tahmini Teslimat</span><span class="ms-siparis-deger">2-4 iş günü</span></div>
+                </div>
+                <button class="ms-buton ms-buton-l ms-buton-satin-al ms-buton-tam" type="button" data-ms-siparis-asama-git="odeme">Ödemeye Geç</button>
+            </aside>
+        </div>
+        <div class="ms-sepet-mobil-sabit-aksiyon" aria-label="Mobil teslimat aksiyonları">
+            <div class="ms-sepet-mobil-sabit-tutar">
+                <span>Kargo</span>
+                <strong class="ms-siparis-ucretsiz">Ücretsiz</strong>
+            </div>
+            <button class="ms-buton ms-buton-l ms-buton-satin-al ms-buton-tam" type="button" data-ms-siparis-asama-git="odeme">Ödemeye Geç</button>
+        </div>
+    </section>
+
+    <partial name="~/Views/ProjeElementleri/Sepet/_SepetAdresModali.cshtml" />
+
+    @* Bu script: Teslimat/adres kartı ve teslimat adımı geçişlerini yönetir. *@
+    <script>
+    (() => {
+        const teslimatSayfasiKok = document.currentScript?.closest("[data-ms-sayfa-panel], .ms-panel") || document;
+
+        const teslimatDavranislariBaslat = () => {
+            const adresModal = teslimatSayfasiKok.querySelector("[data-ms-adres-modal]");
+            const adresModalBaslikGirdi = adresModal?.querySelector("[data-ms-adres-modal-baslik-girdi]");
+            const adresModalKaydet = adresModal?.querySelector("[data-ms-adres-modal-kaydet]");
+            let aktifAdresKarti = null;
+
+            const adresKartiSec = (kart) => {
+                const adresListesi = kart?.closest("[data-ms-adres-listesi]");
+
+                if (!kart || !adresListesi) {
+                    return;
+                }
+
+                adresListesi.querySelectorAll("[data-ms-adres-karti]").forEach((adresKarti) => {
+                    const secili = adresKarti === kart;
+                    const etiket = adresKarti.querySelector("[data-ms-adres-etiket]");
+                    const secButonu = adresKarti.querySelector("[data-ms-adres-sec]");
+
+                    adresKarti.classList.toggle("ms-siparis-adres-karti-secili", secili);
+                    etiket?.classList.toggle("ms-siparis-etiket-rozet-aktif", secili);
+
+                    if (etiket) {
+                        etiket.textContent = secili ? "Seçili" : "Alternatif";
+                    }
+
+                    if (secButonu) {
+                        secButonu.textContent = secili ? "Seçili Adres" : "Bu Adresi Seç";
+                        secButonu.disabled = secili;
+                    }
+                });
+
+                adresListesi.prepend(kart);
+            };
+
+            const adresModalAc = (kart) => {
+                if (!adresModal || !kart) {
+                    return;
+                }
+
+                aktifAdresKarti = kart;
+
+                if (adresModalBaslikGirdi) {
+                    adresModalBaslikGirdi.value = kart.dataset.msAdresAd || kart.querySelector(".ms-siparis-asama-kart-ust strong")?.textContent?.trim() || "";
+                }
+
+                adresModal.classList.add("ms-ornek-modal-acik");
+                adresModal.setAttribute("aria-hidden", "false");
+                adresModalBaslikGirdi?.focus();
+            };
+
+            const adresModalKapat = () => {
+                adresModal?.classList.remove("ms-ornek-modal-acik");
+                adresModal?.setAttribute("aria-hidden", "true");
+            };
+
+            teslimatSayfasiKok.querySelectorAll("[data-ms-adres-sec]").forEach((buton) => {
+                buton.addEventListener("click", () => adresKartiSec(buton.closest("[data-ms-adres-karti]")));
+            });
+
+            teslimatSayfasiKok.querySelectorAll("[data-ms-adres-duzenle]").forEach((buton) => {
+                buton.addEventListener("click", () => adresModalAc(buton.closest("[data-ms-adres-karti]")));
+            });
+
+            teslimatSayfasiKok.querySelectorAll("[data-ms-adres-modal-kapat]").forEach((kapatici) => {
+                kapatici.addEventListener("click", adresModalKapat);
+            });
+
+            adresModal?.querySelectorAll("[data-ms-adres-telefon-input]").forEach((input) => {
+                input.addEventListener("keydown", (event) => {
+                    if (event.key !== "Backspace" && event.key !== "Delete") {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    input.value = "";
+                    input.dispatchEvent(new Event("input", { bubbles: true }));
+                });
+            });
+
+            adresModalKaydet?.addEventListener("click", () => {
+                const yeniBaslik = adresModalBaslikGirdi?.value?.trim();
+
+                if (aktifAdresKarti && yeniBaslik) {
+                    aktifAdresKarti.dataset.msAdresAd = yeniBaslik;
+                    const baslik = aktifAdresKarti.querySelector(".ms-siparis-asama-kart-ust strong");
+
+                    if (baslik) {
+                        baslik.textContent = yeniBaslik;
+                    }
+                }
+
+                adresModalKapat();
+            });
+
+            teslimatSayfasiKok.querySelectorAll("[data-ms-siparis-asama-git]").forEach((buton) => {
+                buton.addEventListener("click", () => window.msSiparisAsamasiGoster?.(buton.dataset.msSiparisAsamaGit));
+            });
+        };
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", teslimatDavranislariBaslat, { once: true });
+        } else {
+            teslimatDavranislariBaslat();
+        }
+    })();
+</script>
+
+
+@* C4-b: Canlı teslimat script'i — adres kartları GET /api/store/account/addresses'ten (üye
+   gerektirir; oturum yoksa giriş modalına yönlendirilir), yeni adres POST ile kaydedilir;
+   İl/İlçe/Mahalle seçenekleri api/store/geo kademeli lookup'larından (aramalı — özel select
+   görseliyle, davranış burada: site.js bileşeni dinamik seçenek desteklemiyor). Seçilen adres
+   sessionStorage msTeslimatDurumu'na yazılır (ödeme/checkout C5-C10 okur); adres seçilmeden
+   Ödemeye Geç engellenir (capture dinleyici kaynak yönlendirmesinden önce çalışır). *@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const listeAlani = document.querySelector("[data-ms-adres-listesi]");
+    const sablon = document.querySelector("[data-ms-adres-sablon]");
+    if (!listeAlani || !sablon) { return; }
+
+    const uyeDegil = document.querySelector("[data-ms-adres-uye-degil]");
+    const bosMesaj = document.querySelector("[data-ms-adres-bos]");
+    const ozetAdres = document.querySelector("[data-ms-teslimat-ozet-adres]");
+    const modal = document.querySelector("[data-ms-adres-modal]");
+    const modalHata = modal?.querySelector("[data-ms-adres-modal-hata]");
+
+    const token = () => localStorage.getItem("ecspros_member_token");
+    const yetki = () => ({ Authorization: "Bearer " + token() });
+    let seciliAdres = null;
+
+    const hataGoster = (mesaj) => {
+        if (!modalHata) { return; }
+        modalHata.textContent = mesaj || "";
+        modalHata.hidden = !mesaj;
+    };
+
+    const durumuYayinla = () => {
+        try {
+            if (seciliAdres) { sessionStorage.setItem("msTeslimatDurumu", JSON.stringify(seciliAdres)); }
+            else { sessionStorage.removeItem("msTeslimatDurumu"); }
+        } catch { /* depolama kapalı */ }
+        if (ozetAdres) { ozetAdres.textContent = seciliAdres?.title || "Seçilmedi"; }
+    };
+
+    const kartlariIsaretle = () => {
+        listeAlani.querySelectorAll("[data-ms-adres-karti]").forEach((kart) => {
+            const secili = kart.dataset.msAdresId === seciliAdres?.id;
+            const etiket = kart.querySelector("[data-ms-adres-etiket]");
+            const sec = kart.querySelector("[data-ms-adres-sec]");
+            kart.classList.toggle("ms-siparis-adres-karti-secili", secili);
+            etiket?.classList.toggle("ms-siparis-etiket-rozet-aktif", secili);
+            if (etiket) { etiket.textContent = secili ? "Seçili" : "Alternatif"; }
+            if (sec) { sec.textContent = secili ? "Seçili Adres" : "Bu Adresi Seç"; sec.disabled = secili; }
+        });
+    };
+
+    const kartKur = (adres) => {
+        const kart = sablon.content.firstElementChild.cloneNode(true);
+        kart.dataset.msAdresId = adres.id;
+        kart.querySelector("[data-ms-adres-baslik]").textContent = adres.title;
+        const parcalar = [adres.addressLine, adres.neighborhoodName, adres.districtName && adres.cityName
+            ? `${adres.districtName} / ${adres.cityName}` : (adres.districtName || adres.cityName)]
+            .filter(Boolean).join(" • ");
+        kart.querySelector("[data-ms-adres-metin]").textContent = `${adres.recipientName} • ${parcalar}`;
+        kart.querySelector("[data-ms-adres-telefon]").textContent = "Telefon: " + (adres.recipientPhone || "-");
+        kart.querySelector("[data-ms-adres-sec]").addEventListener("click", () => {
+            seciliAdres = adres;
+            kartlariIsaretle();
+            durumuYayinla();
+        });
+        return kart;
+    };
+
+    const ciz = (adresler) => {
+        listeAlani.innerHTML = "";
+        (adresler || []).forEach((adres) => listeAlani.appendChild(kartKur(adres)));
+        if (bosMesaj) { bosMesaj.hidden = (adresler || []).length > 0; }
+        seciliAdres = (adresler || []).find((a) => a.isDefault) || (adresler || [])[0] || null;
+        kartlariIsaretle();
+        durumuYayinla();
+    };
+
+    const yenile = async () => {
+        if (!token()) {
+            if (uyeDegil) { uyeDegil.hidden = false; }
+            if (bosMesaj) { bosMesaj.hidden = true; }
+            ciz([]);
+            if (uyeDegil) { uyeDegil.hidden = false; }
+            return;
+        }
+        if (uyeDegil) { uyeDegil.hidden = true; }
+        try {
+            const cevap = await fetch("/api/store/account/addresses", { headers: yetki() });
+            if (cevap.status === 401) { if (uyeDegil) { uyeDegil.hidden = false; } ciz([]); if (uyeDegil) { uyeDegil.hidden = false; } return; }
+            const veri = await cevap.json().catch(() => null);
+            ciz(veri?.success ? veri.data : []);
+        } catch { ciz([]); }
+    };
+
+    // ── Geo aramalı select'ler (il/ilçe/mahalle) ──
+    const geoDurum = { ulkeId: null, il: null, ilce: null, mahalle: null };
+    const secGetir = (ad) => document.querySelector(`[data-ms-adres-select="${ad}"]`);
+
+    const selectKur = (ad, secilince) => {
+        const kok = secGetir(ad);
+        const tetik = kok.querySelector("[data-ms-adres-select-tetikleyici]");
+        const panel = kok.querySelector(".ms-ozel-select-panel");
+        const arama = kok.querySelector("[data-ms-adres-select-arama]");
+        const liste = kok.querySelector("[data-ms-adres-select-liste]");
+        const deger = kok.querySelector("[data-ms-adres-select-deger]");
+        let kayitlar = [];
+
+        const kapat = () => { kok.classList.remove("ms-ozel-select-acik"); tetik.setAttribute("aria-expanded", "false"); };
+        const doldur = (filtre) => {
+            const f = (filtre || "").toLocaleLowerCase("tr");
+            liste.innerHTML = "";
+            kayitlar
+                .filter((k) => !f || k.ad.toLocaleLowerCase("tr").includes(f))
+                .slice(0, 60)
+                .forEach((k) => {
+                    const buton = document.createElement("button");
+                    buton.type = "button";
+                    buton.className = "ms-ozel-select-secenek";
+                    buton.setAttribute("role", "option");
+                    buton.textContent = k.ad;
+                    buton.addEventListener("click", () => {
+                        deger.textContent = k.ad;
+                        kapat();
+                        secilince(k);
+                    });
+                    liste.appendChild(buton);
+                });
+        };
+
+        tetik.addEventListener("click", () => {
+            const acik = !kok.classList.contains("ms-ozel-select-acik");
+            kok.classList.toggle("ms-ozel-select-acik", acik);
+            tetik.setAttribute("aria-expanded", String(acik));
+            if (acik) { arama.value = ""; doldur(""); arama.focus(); }
+        });
+        arama.addEventListener("input", () => doldur(arama.value));
+        document.addEventListener("click", (olay) => { if (!kok.contains(olay.target)) { kapat(); } });
+
+        return {
+            yukle: (yeniKayitlar, sifirla) => {
+                kayitlar = yeniKayitlar;
+                if (sifirla) { deger.textContent = "Seçim yapın"; }
+                doldur("");
+            },
+            sifirla: () => { kayitlar = []; deger.textContent = "Seçim yapın"; liste.innerHTML = ""; }
+        };
+    };
+
+    const geoGetir = async (yol) => {
+        try {
+            const cevap = await fetch("/api/store/geo/" + yol);
+            const veri = await cevap.json().catch(() => null);
+            return veri?.success ? veri.data : [];
+        } catch { return []; }
+    };
+
+    const mahalleSelect = selectKur("mahalle", (k) => { geoDurum.mahalle = k; });
+    const ilceSelect = selectKur("ilce", async (k) => {
+        geoDurum.ilce = k; geoDurum.mahalle = null;
+        mahalleSelect.sifirla();
+        const mahalleler = await geoGetir(`neighborhoods?districtId=${k.id}&limit=200`);
+        mahalleSelect.yukle(mahalleler.map((m) => ({ id: m.id, ad: m.nameI18n?.tr || "" })), true);
+    });
+    const ilSelect = selectKur("il", async (k) => {
+        geoDurum.il = k; geoDurum.ilce = null; geoDurum.mahalle = null;
+        ilceSelect.sifirla(); mahalleSelect.sifirla();
+        const ilceler = await geoGetir(`districts?cityId=${k.id}`);
+        ilceSelect.yukle(ilceler.map((d) => ({ id: d.id, ad: d.nameI18n?.tr || "" })), true);
+    });
+
+    const geoBaslat = async () => {
+        if (geoDurum.ulkeId) { return; }
+        const ulkeler = await geoGetir("countries");
+        const tr = ulkeler.find((u) => u.code === "TR") || ulkeler[0];
+        geoDurum.ulkeId = tr?.id || null;
+        const ulkeAlani = document.querySelector("[data-ms-adres-ulke-id]");
+        if (ulkeAlani && tr) { ulkeAlani.value = tr.id; }
+        const iller = await geoGetir(`cities?countryId=${tr.id}`);
+        ilSelect.yukle(iller.map((c) => ({ id: c.id, ad: c.nameI18n?.tr || "" })), true);
+    };
+
+    // ── Modal aç / kaydet ──
+    const modalAc = () => {
+        if (!token()) {
+            document.querySelector("[data-ms-giris-modal-ac]")?.click();
+            return;
+        }
+        hataGoster("");
+        modal?.classList.add("ms-ornek-modal-acik");
+        modal?.setAttribute("aria-hidden", "false");
+        geoBaslat();
+    };
+    document.querySelector("[data-ms-adres-ekle]")?.addEventListener("click", modalAc);
+    document.querySelector("[data-ms-adres-uye-degil] [data-ms-giris-modal-ac]")?.addEventListener("click", () => {});
+
+    modal?.querySelector("[data-ms-adres-modal-kaydet]")?.addEventListener("click", async (olay) => {
+        const buton = olay.currentTarget;
+        const oku = (secici) => modal.querySelector(secici)?.value.trim() || "";
+        const baslik = oku("[data-ms-adres-modal-baslik-girdi]");
+        const ad = oku("[data-ms-adres-ad]");
+        const soyad = oku("[data-ms-adres-soyad]");
+        const adresSatiri = oku("[data-ms-adres-satiri]");
+        const telefonHam = (modal.querySelector("[data-ms-adres-telefon-input]")?.value || "").replace(/\D/g, "");
+
+        hataGoster("");
+        if (!baslik || !ad || !soyad || !adresSatiri) { hataGoster("Başlık, ad, soyad ve adres zorunludur."); return; }
+        if (!geoDurum.il || !geoDurum.ilce) { hataGoster("İl ve ilçe seçimi zorunludur."); return; }
+        if (telefonHam.length < 10) { hataGoster("Geçerli bir telefon numarası girin."); return; }
+
+        buton.disabled = true;
+        try {
+            const cevap = await fetch("/api/store/account/addresses", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", ...yetki() },
+                body: JSON.stringify({
+                    memberId: "00000000-0000-0000-0000-000000000000",
+                    title: baslik,
+                    countryId: geoDurum.ulkeId, countryName: "Türkiye",
+                    cityId: geoDurum.il.id, cityName: geoDurum.il.ad,
+                    districtId: geoDurum.ilce.id, districtName: geoDurum.ilce.ad,
+                    neighborhoodId: geoDurum.mahalle?.id || null, neighborhoodName: geoDurum.mahalle?.ad || null,
+                    addressLine: adresSatiri, postalCode: null,
+                    recipientName: `${ad} ${soyad}`,
+                    recipientPhone: "0" + telefonHam,
+                    deliveryNotes: oku("[data-ms-adres-notu]") || null,
+                    isDefault: modal.querySelector("[data-ms-adres-varsayilan]")?.checked === true
+                })
+            });
+            const veri = await cevap.json().catch(() => null);
+            if (!veri?.success) { hataGoster(veri?.error || "Adres kaydedilemedi."); return; }
+            modal.classList.remove("ms-ornek-modal-acik");
+            modal.setAttribute("aria-hidden", "true");
+            yenile();
+        } catch {
+            hataGoster("Adres kaydedilemedi. Lütfen tekrar deneyin.");
+        } finally {
+            buton.disabled = false;
+        }
+    });
+
+    // ── Ödemeye Geç guard'ı: adres seçilmeden geçilmez (capture, kaynak yönlendirmesinden önce)
+    document.querySelectorAll("[data-ms-siparis-asama-git='odeme']").forEach((buton) => {
+        buton.addEventListener("click", (olay) => {
+            if (!seciliAdres) {
+                olay.stopImmediatePropagation();
+                if (!token()) { document.querySelector("[data-ms-giris-modal-ac]")?.click(); return; }
+                modalAc();
+            }
+        }, true);
+    });
+
+    yenile();
+});
+</script>

@@ -294,6 +294,19 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — C4-b TAMAM → C4 KAPANDI (teslimat sayfası canlı):**
+  - `/teslimat` + `_SepetTeslimatSayfasi` bağlandı; adres kartları account/addresses'ten
+    (oturumsuzken giriş çağrısı + Ödemeye Geç giriş modalını açar); seçilen adres
+    `msTeslimatDurumu` sessionStorage'ına yazılır (C5/C10 okur); adres seçilmeden Ödemeye
+    Geç engelli (capture guard). Yeni partial `_SepetAdresModali` (İZİNLİ YENİ — kaynağı
+    _SepetSiparis demo bloğu): il/ilçe/mahalle aramalı select'leri api/store/geo'dan —
+    davranış sayfa script'inde (site.js ozel-select dinamik seçenek desteklemiyor; panel
+    `ms-ozel-select-acik` sınıfıyla açılıyor — hidden attr İŞE YARAMAZ, CSS invisible).
+    "Adresi Düzenle" E4'e (update API'si yok); kargo statik (H).
+  - E2E: **11/11 ✓** (İstanbul→Kadıköy→Caferağa aramalı kademeli seçim dahil); drift TEMİZ
+    (2 yeni izinli girdi). Sıradaki: C5 ödeme (test modu — msSepetKuponDurumu +
+    msTeslimatDurumu okur) → C6 taksit → C7 TCKN → C8 sözleşme → C9 stok haber → C10 checkout.
+
 - **2026-07-09 (devam) — C4-a TAMAM (adres hiyerarşisi + veri + kademeli geo API):**
   - **K6'ya gerekçeli düzeltme:** hiyerarşi Core'da değil CRM'de — crm_countries/cities/
     districts/neighborhoods tabloları ve Address FK'ları zaten mevcuttu (boştu). City.Region

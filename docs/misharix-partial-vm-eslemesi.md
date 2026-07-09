@@ -41,6 +41,10 @@
 | ProjeElementleri/Sepet/_SepetSayfasi.cshtml | — (istemci-durumlu; satırlar template'ten) | GET/PUT/DELETE api/store/cart + POST checkout/coupon/validate (dosya sonu script) | C1/C3/C7 | ✅ 2026-07-09 (C3: kupon canlı — msSepetKuponDurumu sözleşmesi korunarak; TCKN koşulu C7, kargo H, kampanya/koleksiyon G/E6 — @if gizli) |
 | ProjeElementleri/Sepet/_SepetModallari.cshtml | — (sil onay/kupon/sözleşme/TCKN modalları) | sözleşme içerikleri C8'de CMS'ten | C1/C8 | ✅ 2026-07-09 (bayt-aynı; sil onayına API dinleyicisi sayfa script'inden eklenir) |
 
-**Sonraki fazlarda eklenecek satırlar:** Sepet/Teslimat+Odeme+SiparisTamamlandi (C4-C10),
+| Sepet/Teslimat.cshtml | — (kabuk; /odeme yönlendirmesi kaynaktaki gibi) | SepetController (/teslimat) | C4 | ✅ 2026-07-09 (bayt-aynı) |
+| ProjeElementleri/Sepet/_SepetTeslimatSayfasi.cshtml | — (adres kartları template'ten; msTeslimatDurumu yayını) | GET/POST api/store/account/addresses + api/store/geo (dosya sonu script) | C4 | ✅ 2026-07-09 (düzenleme E4; kargo statik — H) |
+| ProjeElementleri/Sepet/_SepetAdresModali.cshtml *(yeni, bizim — kaynağı _SepetSiparis demo bloğu)* | — (data-ms-adres-* bağları) | api/store/geo kademeli lookup + POST addresses | C4 | ✅ 2026-07-09 (il/ilçe/mahalle aramalı; telefon bileşeni site.js) |
+
+**Sonraki fazlarda eklenecek satırlar:** Sepet/Odeme+SiparisTamamlandi (C5-C10),
 Hesabim/* (E), Kurumsal/* (F), GorunumTipleri/* + Ortak/_Story (G), Navigasyon/_MobilAltBar (H4),
 UrunDegerlendirmeleri/* (E7). Satır formatı yukarıdakiyle aynı tutulmalı.

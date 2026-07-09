@@ -11,4 +11,8 @@ public class SepetController : StorePageController
 {
     [HttpGet("/sepet")]
     public IActionResult Index() => View("~/Views/Sepet/Index.cshtml");
+
+    /// <summary>C4-b: teslimat adımı — adres seçimi üye gerektirir (sayfa script'i yönetir).</summary>
+    [HttpGet("/teslimat")]
+    public IActionResult Teslimat() => View("~/Views/Sepet/Teslimat.cshtml");
 }
