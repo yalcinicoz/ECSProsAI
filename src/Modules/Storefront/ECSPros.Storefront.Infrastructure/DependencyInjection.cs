@@ -19,6 +19,7 @@ public static class DependencyInjection
 
         services.AddScoped<IStorefrontDbContext>(sp => sp.GetRequiredService<StorefrontDbContext>());
         services.AddScoped<IChannelPricingService, StorefrontChannelPricingService>();
+        services.AddScoped<IChannelProductFlagService, StorefrontChannelProductFlagService>();
 
         return services;
     }

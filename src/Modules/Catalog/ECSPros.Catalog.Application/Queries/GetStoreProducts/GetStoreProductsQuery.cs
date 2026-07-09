@@ -48,15 +48,21 @@ public record StoreProductDto(
     bool IsActive,
     List<ProductListingColorDto> Colors,
     List<ProductListingAttrDto> Attrs,
-    List<string>? GalleryUrls = null);   // B8: kart hover galerisi (ana görselin rengine ait ilk 4 görsel)
+    List<string>? GalleryUrls = null,    // B8: kart hover galerisi (ana görselin rengine ait ilk 4 görsel)
+    bool IsFeatured = false);            // B11: öne çıkar penceresi içinde — kartta "Sponsorlu" rozeti
 
-public class GetStoreProductsQueryHandler(ICatalogDbContext db, IChannelPricingService pricingService)
+public class GetStoreProductsQueryHandler(
+    ICatalogDbContext db,
+    IChannelPricingService pricingService,
+    IChannelProductFlagService flagService)
     : IRequestHandler<GetStoreProductsQuery, Result<PagedResult<StoreProductDto>>>
 {
     public async Task<Result<PagedResult<StoreProductDto>>> Handle(GetStoreProductsQuery request, CancellationToken ct)
     {
         var cdnBase = await CdnHelper.BuildListUrlAsync(db, ct);
         var channelPrices = await pricingService.GetActiveVariantPricesAsync(request.FirmPlatformId, ct);
+        // B11: öne çıkanlar (az sayıda) — varsayılan sırada öne alınır, rozet bayrağına yazılır
+        var oneCikanlar = await flagService.GetFeaturedProductIdsAsync(request.FirmPlatformId, ct);
         var q = db.Products
             .AsNoTracking()
             .Include(p => p.Variants)
@@ -98,6 +104,8 @@ public class GetStoreProductsQueryHandler(ICatalogDbContext db, IChannelPricingS
             q = q.Where(p => p.Variants.Any(v => v.IsActive && v.BasePrice > 0 && v.BasePrice <= request.PriceMax.Value));
 
         // B10: sıralama — fiyat için ürünün en düşük fiyatlı (0 olmayan) aktif varyantı esas.
+        // B11: varsayılan sırada öne çıkanlar önce (kullanıcının açık tercihi bozulmaz).
+        var oneCikanListe = oneCikanlar.ToList();
         q = request.Sort switch
         {
             "price_asc" => q.OrderBy(p => p.Variants
@@ -109,6 +117,8 @@ public class GetStoreProductsQueryHandler(ICatalogDbContext db, IChannelPricingS
                                 .Min(v => (decimal?)v.BasePrice) ?? p.BasePrice)
                             .ThenBy(p => p.Id),
             "newest" => q.OrderByDescending(p => p.CreatedAt).ThenBy(p => p.Id),
+            _ when oneCikanListe.Count > 0 =>
+                q.OrderByDescending(p => oneCikanListe.Contains(p.Id)).ThenBy(p => p.Id),
             _ => q.OrderBy(p => p.Id)
         };
 
@@ -250,7 +260,8 @@ public class GetStoreProductsQueryHandler(ICatalogDbContext db, IChannelPricingS
                 mainImage, minPrice, null, p.IsActive,
                 colorsByProduct.GetValueOrDefault(p.Id) ?? new(),
                 attrsByProduct.GetValueOrDefault(p.Id) ?? new(),
-                galleryUrls);
+                galleryUrls,
+                IsFeatured: oneCikanlar.Contains(p.Id));
         }).ToList();
 
         return Result.Success(new PagedResult<StoreProductDto>(items, total, request.Page, request.PageSize));

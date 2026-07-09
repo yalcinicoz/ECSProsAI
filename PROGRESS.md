@@ -294,6 +294,18 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — Faz B11 TAMAMLANDI: "öne çıkar" bayrağı (K8):**
+  - `ChannelProduct.FeaturedFrom/Until` (migration canlıda); admin GET/PUT
+    `channel-products/{platform}/products/{product}/featured` + ProductDetailPage "Satış
+    Kanalları" sekmesinde "Öne Çıkar" paneli (npm build alındı — admin canlıda).
+  - Yeni port `IChannelProductFlagService` (Storefront implemente eder); kategori + genel
+    liste sorguları YALNIZ varsayılan sırada öne alır (açık sıralama tercihi bozulmaz),
+    DTO'lara additive `IsFeatured`; kartta "Sponsorlu" rozeti bağlandı (SSR + JSON devam).
+  - NOT: kategori varsayılan sayfaları 10 dk Redis cache'inde — işaretleme en geç 10 dk
+    içinde görünür; filtreli/aramalı istekler anında.
+  - E2E: **14/14 ✓** + B6 regresyon 19/19 ✓; drift TEMİZ. **DEPLOY BEKLİYOR** (restart).
+  - Kalan: B12 (stok anahtarı), B13 (görsel QA — faz kapanışı).
+
 - **2026-07-09 (devam) — Faz B4 TAMAMLANDI: giriş/kayıt modalları canlı (e-posta), SMS Faz D'ye kadar pasif:**
   - E-posta girişi varsayılan sekme (`_AnaNavigasyon`'da tek satır `tabAc("eposta")`), SMS/
     Telefon "(Yakında)" disabled. Login/register/me/refresh `api/store/auth`'a bağlı; token'lar

@@ -808,6 +808,11 @@ function ChannelsPricingTab({ product }: { product: ProductDetail }) {
         ))}
       </div>
 
+      {/* B11: Öne çıkar (Sponsorlu) — kanal ürününe tarih aralıklı bayrak */}
+      {selectedChannelId && (
+        <OneCikarPaneli firmPlatformId={selectedChannelId} productId={product.id} />
+      )}
+
       {/* Pricing table */}
       {selectedChannel && (
         <div className="card overflow-hidden p-0">
@@ -2698,6 +2703,73 @@ export function ProductDetailPage() {
         </div>
       )}
 
+    </div>
+  )
+}
+
+// ─── B11: Öne Çıkar (Sponsorlu) paneli ─────────────────────────────────────────
+// Kanal ürününe tarih aralıklı öne çıkarma: storefront listelerinde varsayılan
+// sırada öne alınır ve kartta "Sponsorlu" rozeti görünür (K8 kararı).
+function OneCikarPaneli({ firmPlatformId, productId }: { firmPlatformId: string; productId: string }) {
+  const queryClient = useQueryClient()
+  const [from, setFrom] = useState('')
+  const [until, setUntil] = useState('')
+
+  const { data: durum } = useQuery<{ featuredFrom: string | null; featuredUntil: string | null; isFeaturedNow: boolean }>({
+    queryKey: ['channel-product-featured', firmPlatformId, productId],
+    queryFn: async () => {
+      const { data } = await api.get(`/navigation/channel-products/${firmPlatformId}/products/${productId}/featured`)
+      return data.data
+    },
+  })
+
+  useEffect(() => {
+    setFrom(durum?.featuredFrom ? durum.featuredFrom.slice(0, 10) : '')
+    setUntil(durum?.featuredUntil ? durum.featuredUntil.slice(0, 10) : '')
+  }, [durum])
+
+  const kaydet = useMutation({
+    mutationFn: async (payload: { featuredFrom: string | null; featuredUntil: string | null }) => {
+      await api.put(`/navigation/channel-products/${firmPlatformId}/products/${productId}/featured`, payload)
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['channel-product-featured', firmPlatformId, productId] }),
+  })
+
+  const oneCikar = () =>
+    kaydet.mutate({
+      featuredFrom: (from ? new Date(from + 'T00:00:00') : new Date()).toISOString(),
+      featuredUntil: until ? new Date(until + 'T23:59:59').toISOString() : null,
+    })
+
+  const kaldir = () => kaydet.mutate({ featuredFrom: null, featuredUntil: null })
+
+  return (
+    <div className="card p-4 flex items-end gap-3 flex-wrap">
+      <div className="flex items-center gap-2 mr-1">
+        <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Öne Çıkar</span>
+        {durum?.isFeaturedNow ? (
+          <Badge variant="success">Sponsorlu — aktif</Badge>
+        ) : durum?.featuredFrom ? (
+          <Badge variant="warning">Planlı / süresi dolmuş</Badge>
+        ) : (
+          <Badge variant="neutral">Pasif</Badge>
+        )}
+      </div>
+      <div>
+        <label className="flbl">Başlangıç</label>
+        <input className="inp" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+      </div>
+      <div>
+        <label className="flbl">Bitiş (boş = süresiz)</label>
+        <input className="inp" type="date" value={until} onChange={(e) => setUntil(e.target.value)} />
+      </div>
+      <Button size="sm" onClick={oneCikar} loading={kaydet.isPending}>Öne Çıkar</Button>
+      {durum?.featuredFrom && (
+        <Button size="sm" variant="secondary" onClick={kaldir} disabled={kaydet.isPending}>Kaldır</Button>
+      )}
+      <span className="text-xs" style={{ color: 'var(--text-s)' }}>
+        Bu kanalın listelerinde öne alınır ve kartta "Sponsorlu" rozeti görünür.
+      </span>
     </div>
   )
 }

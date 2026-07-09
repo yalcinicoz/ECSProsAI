@@ -62,7 +62,8 @@ public record ChannelCategoryProductItemDto(
     Guid? SelectedColorValueId = null,
     Dictionary<string, string>? SelectedColorNameI18n = null,
     List<string>? GalleryUrls = null,               // B8: kart hover galerisi (seçili rengin ilk 4 görseli)
-    List<ProductListingColorDto>? AxisColors = null); // B8: ürünün eksen (renk) kartları — tooltip linkleri buradan
+    List<ProductListingColorDto>? AxisColors = null, // B8: ürünün eksen (renk) kartları — tooltip linkleri buradan
+    bool IsFeatured = false);                        // B11: öne çıkar penceresi içinde — kartta "Sponsorlu" rozeti
 
 public class GetChannelCategoryProductsQueryHandler(
     IStorefrontDbContext sfDb,
@@ -406,6 +407,22 @@ public class GetChannelCategoryProductsQueryHandler(
             return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
                 [], 0, request.Page, request.PageSize));
 
+        // ── B11: öne çıkanlar (platform başına az sayıda satır — tam liste çekilir).
+        // Varsayılan sırada öne alınır; kullanıcının açık sıralama tercihi bozulmaz,
+        // rozet bayrağı her sıralamada verilir.
+        var simdi = DateTime.UtcNow;
+        var oneCikanlar = (await sfDb.ChannelProducts.AsNoTracking()
+            .Where(cp => cp.FirmPlatformId == cat.FirmPlatformId
+                      && cp.FeaturedFrom != null && cp.FeaturedFrom <= simdi
+                      && (cp.FeaturedUntil == null || cp.FeaturedUntil >= simdi))
+            .Select(cp => cp.ProductId)
+            .ToListAsync(ct)).ToHashSet();
+
+        if (oneCikanlar.Count > 0 && string.IsNullOrEmpty(request.Sort))
+            visiblePairs = visiblePairs
+                .OrderByDescending(pair => oneCikanlar.Contains(pair.ProductId))
+                .ToList(); // OrderBy kararlı — grup içi mevcut sıra korunur
+
         // 8. Sayfalama
         var total = visiblePairs.Count;
         var pagedPairs = visiblePairs
@@ -522,7 +539,8 @@ public class GetChannelCategoryProductsQueryHandler(
                         ? seciliAd.Item1
                         : null,
                     GalleryUrls: galleryUrls,
-                    AxisColors: axisColorsByProduct.GetValueOrDefault(pair.ProductId));
+                    AxisColors: axisColorsByProduct.GetValueOrDefault(pair.ProductId),
+                    IsFeatured: oneCikanlar.Contains(pair.ProductId));
             })
             .ToList();
 

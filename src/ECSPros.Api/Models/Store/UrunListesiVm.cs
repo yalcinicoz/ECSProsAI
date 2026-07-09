@@ -19,7 +19,8 @@ public sealed record UrunKartVm(
     IReadOnlyList<Guid> DegerIdler,      // client-side filtre eşleşmesi (SPA paritesi)
     IReadOnlyList<string> GaleriUrller,  // B8: hover galerisi (seçili rengin ilk 4 görseli)
     IReadOnlyList<KartRenkVm> RenkSecenekleri, // B8: renk tooltip'i
-    Guid? SeciliRenkId)                  // kategori kartlarında kartın rengi (detay linkine taşınır)
+    Guid? SeciliRenkId,                  // kategori kartlarında kartın rengi (detay linkine taşınır)
+    bool Sponsorlu = false)              // B11: öne çıkar penceresi içinde — "Sponsorlu" rozeti
 {
     public string Url => "/urun/" + Kod + (SeciliRenkId is { } renk ? "?color=" + renk : "");
 

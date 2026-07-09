@@ -6,6 +6,7 @@ using ECSPros.Storefront.Application.Commands.DeleteNavigationMenu;
 using ECSPros.Storefront.Application.Commands.RemoveChannelCategoryProduct;
 using ECSPros.Storefront.Application.Commands.SaveChannelCategoryGroups;
 using ECSPros.Storefront.Application.Commands.SaveNavNodes;
+using ECSPros.Storefront.Application.Commands.SetChannelProductFeatured;
 using ECSPros.Storefront.Application.Commands.SetChannelVariantPrice;
 using ECSPros.Storefront.Application.Commands.SyncChannelCategoryProducts;
 using ECSPros.Storefront.Application.Commands.UpdateChannelCategory;
@@ -237,9 +238,34 @@ public class NavigationController(IMediator mediator) : ControllerBase
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = new { id = result.Value } });
     }
+
+    /// <summary>B11: kanal ürününün öne çıkarma durumunu döner.</summary>
+    [HttpGet("channel-products/{firmPlatformId:guid}/products/{productId:guid}/featured")]
+    public async Task<IActionResult> GetChannelProductFeatured(
+        Guid firmPlatformId, Guid productId, CancellationToken ct)
+    {
+        var result = await mediator.Send(
+            new ECSPros.Storefront.Application.Queries.GetChannelProductFeatured.GetChannelProductFeaturedQuery(
+                firmPlatformId, productId), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>B11 (K8): kanal ürününe tarih aralıklı "öne çıkar" bayrağı atar; featuredFrom null = kaldır.</summary>
+    [HttpPut("channel-products/{firmPlatformId:guid}/products/{productId:guid}/featured")]
+    public async Task<IActionResult> SetChannelProductFeatured(
+        Guid firmPlatformId, Guid productId, [FromBody] SetChannelProductFeaturedRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new SetChannelProductFeaturedCommand(
+            firmPlatformId, productId, req.FeaturedFrom, req.FeaturedUntil), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { id = result.Value } });
+    }
 }
 
 // ─── Request Records ─────────────────────────────────────────────────────────
+
+public record SetChannelProductFeaturedRequest(DateTime? FeaturedFrom, DateTime? FeaturedUntil);
 
 public record CreateMenuRequest(
     Guid FirmPlatformId,

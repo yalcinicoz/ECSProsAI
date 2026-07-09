@@ -29,6 +29,10 @@
         {
             @* B8/Faz G: videolu ürün + kampanya etiketi — veri kaynağı yok *@
             <span class="ms-urun-gorsel-etiketleri"></span>
+        }
+        @if (u?.Sponsorlu == true)
+        {
+            @* B11: öne çıkar penceresi içindeki ürün (ChannelProduct.FeaturedFrom/Until) *@
             <span class="ms-urun-sponsor">Sponsorlu</span>
         }
         <button class="ms-urun-favori" type="button" aria-label="Favorilere ekle" aria-pressed="false">
