@@ -294,6 +294,20 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — C8 TAMAM: sözleşme modalları CMS'ten + kabul kaydı:**
+  - **CMS:** `GetStoreLegalPagesQuery` + `GET /api/store/cms/legal` (PageType='legal',
+    rich_text section'ların Settings["html"] birleşimi). Seed: Dev'de `SeedCmsLegalPagesAsync`,
+    canlıya SQL — 3 platform × 5 sayfa (mesafeli satış, ön bilgilendirme, gizlilik, kullanım,
+    kargo; firmanın gerçek unvan/adres/VKN'siyle; 'rich_text' type + 'icerik-sayfasi' template).
+  - **SSR:** SepetController → ViewData["MsSozlesmeler"] (5 dk IMemoryCache); modal panelleri
+    CMS'ten (demo ELDİ metni gitti, `data-ms-sozlesme-kodlar`); ödeme "Sözleşmeler ve Onaylar"
+    bölümü 3 bilgi grubuyla açıldı.
+  - **Kabul kaydı:** checkout `AcceptedContracts` kodları → sunucu CMS'ten başlık+sürüm çözer →
+    `Order.CustomerNotes.acceptedContracts` (code/title/acceptedAt/contentUpdatedAt).
+  - **Bonus:** CustomerNotes sessizce düşüyordu → düzeldi (`note`); _SepetModallari ÇİFT include
+    (C5'ten beri) → tekilleştirildi; VariantInfo zorunluydu (seçeneksiz ürün 400) → nullable.
+  - **E2E 14/14 ✓ + C5+C10 regresyon 15/15 ✓.** Drift TEMİZ. Faz C kalan: C9, C11.
+
 - **2026-07-09 (devam) — C7 TAMAM: TCKN doğrulama (K9) canlı:**
   - **Backend:** `Member.IdentityNumber/IdentityVerifiedAt` + `AddMemberIdentity` migration
     (canlı DB'ye uygulandı); `SetMemberIdentityCommand` + `TcknValidator` (11 hane + kontrol

@@ -42,6 +42,20 @@ public class StoreCheckoutController(IMediator mediator, IConfiguration configur
                 return BadRequest(new { success = false, error = $"{tcknEsik.ToString("N0", new System.Globalization.CultureInfo("tr-TR"))} TL ve üzeri siparişlerde TCKN doğrulaması zorunludur. Lütfen kimlik doğrulamasını tamamlayın.", tcknRequired = true });
         }
 
+        // C8: onaylanan sözleşmelerin kabul kaydı — istemci yalnız kod gönderir; başlık ve
+        // metin sürümü (ContentUpdatedAt) sunucuda CMS'ten çözülür ki kayıt oynanamaz olsun.
+        List<AcceptedContract>? kabulKayitlari = null;
+        if (req.AcceptedContracts is { Count: > 0 })
+        {
+            var sozlesmeler = await mediator.Send(
+                new ECSPros.Cms.Application.Queries.GetStoreLegalPages.GetStoreLegalPagesQuery(
+                    req.FirmPlatformId, req.AcceptedContracts), ct);
+            if (sozlesmeler.IsSuccess)
+                kabulKayitlari = sozlesmeler.Value!
+                    .Select(s => new AcceptedContract(s.Code, s.Title, DateTime.UtcNow, s.ContentUpdatedAt))
+                    .ToList();
+        }
+
         var result = await mediator.Send(new CheckoutCommand(
             req.FirmPlatformId, memberId, req.CurrencyCode,
             req.ShippingRecipientName, req.ShippingRecipientPhone,
@@ -50,8 +64,8 @@ public class StoreCheckoutController(IMediator mediator, IConfiguration configur
             req.BillingSameAsShipping, req.BillingRecipientName,
             req.BillingTaxOffice, req.BillingTaxNumber, req.BillingCompanyName,
             req.BillingCountryId, req.BillingCityId, req.BillingDistrictId, req.BillingAddressLine,
-            req.Items.Select(i => new CheckoutItem(i.VariantId, i.Sku, i.ProductName, i.VariantInfo, i.Quantity, i.UnitPrice)).ToList(),
-            req.CustomerNotes, req.CartId), ct);
+            req.Items.Select(i => new CheckoutItem(i.VariantId, i.Sku, i.ProductName, i.VariantInfo ?? "", i.Quantity, i.UnitPrice)).ToList(),
+            req.CustomerNotes, req.CartId, kabulKayitlari), ct);
 
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
 
@@ -88,13 +102,14 @@ public record StoreCheckoutRequest(
     string? CustomerNotes = null,
     Guid? CartId = null,
     Guid? CouponId = null,           // C10: uygulanan kuponun kullanım kaydı için
-    decimal? CouponDiscount = null);
+    decimal? CouponDiscount = null,
+    List<string>? AcceptedContracts = null); // C8: onaylanan sözleşme kodları (kayıt sunucuda çözülür)
 
 public record StoreCheckoutItemRequest(
     Guid VariantId,
     string Sku,
     string ProductName,
-    string VariantInfo,
+    string? VariantInfo,     // seçeneksiz üründe null gelir — zorunlu olursa model doğrulaması 400 üretir
     int Quantity,
     decimal UnitPrice);
 

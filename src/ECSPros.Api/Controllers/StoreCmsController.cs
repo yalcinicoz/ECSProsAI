@@ -27,6 +27,24 @@ public class StoreCmsController(IMediator mediator) : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>
+    /// C8: hukuki/bilgilendirme sayfaları (mesafeli satış sözleşmesi, ön bilgilendirme…).
+    /// codes virgülle ayrılır; verilmezse platformun tüm legal sayfaları döner.
+    /// </summary>
+    [HttpGet("legal")]
+    public async Task<IActionResult> GetLegalPages(
+        [FromQuery] Guid firmPlatformId,
+        [FromQuery] string? codes,
+        CancellationToken ct)
+    {
+        var kodListesi = string.IsNullOrWhiteSpace(codes)
+            ? null
+            : codes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        var result = await mediator.Send(new ECSPros.Cms.Application.Queries.GetStoreLegalPages.GetStoreLegalPagesQuery(firmPlatformId, kodListesi), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
     [HttpGet("pages")]
     public async Task<IActionResult> GetPages([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
