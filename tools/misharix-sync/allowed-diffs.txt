@@ -101,3 +101,8 @@ Views/ProjeElementleri/Navigasyon/_AnaNavigasyonGirisMenu.cshtml
 # B4: Giriş modalı varsayılan sekmesi e-posta (tek satır: tabAc("sms") → tabAc("eposta")) —
 # SMS/OTP altyapısı Faz D'ye kadar pasif olduğundan açılış canlı olan sekmeye gelir.
 Views/ProjeElementleri/Navigasyon/_AnaNavigasyon.cshtml
+
+# C1: Sepet sayfası canlı sepete bağlandı — demo satırlar/TCKN uyarısı/kargo bilgisi/kupon
+# alanları @if(false) (C3/C7/E5-E6/G/H fazlarında açılır); satırlar template + dosya sonundaki
+# script'le GET /api/store/cart'tan; adet PUT, silme DELETE (misharix sil onay modalı üzerinden).
+Views/ProjeElementleri/Sepet/_SepetSayfasi.cshtml

@@ -147,8 +147,8 @@ src/ECSPros.Api/
 ### FAZ C — Sepet + Checkout
 > Mevcut backend: cart CRUD+merge, checkout POST, adresler, kupon validate/use → çoğu VAR; eksikler taksit, ödeme sağlayıcı, TCKN, stok haberi.
 
-- [ ] C1. `_SepetSayfasi` birebir port → cart API (adet artır/azalt, satır sil onay modalı, tümünü seç, satır tutarları).
-- [ ] C2. "Favoriye taşı" butonu: Faz E5 favorilere bağımlı — UI taşınır, E5'e kadar gizli/pasif işaretle (envantere not düş).
+- [x] C1. **Sepet sayfası** — TAMAM (2026-07-09): `Views/Sepet/Index` + `_SepetSayfasi` + `_SepetModallari` birebir kopyalandı, `/sepet` route'u (`SepetController`). **Sepet istemci-durumlu** (localStorage ecspros_sid/ecspros_cart) — satırlar template + dosya sonu script'le `GET /api/store/cart`'tan render (B5 deseni; IProductService zenginleştirmesi ad/görsel/seçenek özetini hazır veriyor). Adet ± → PUT (1–10, satır tutarı + özet anlık), silme → misharix sil onay modalı üzerinden DELETE (onay butonuna ikinci dinleyici — modal script'i değişmedi), tümünü seç / satır checkbox'ları özet toplamını belirler (sipariş C10'da tam sepetle). Boş durum + mini sepet rozet senkronu (`msMiniSepetYenile`). Tükendi satır görünümü `isAvailable=false` kalemler için hazır (B12 anahtarıyla anlamlanır). Mini sepet "Sepete Git/Siparişi Tamamla" → `/sepet` (C4'te Tamamla → /teslimat). @if(false) ile fazına bırakılanlar: TCKN uyarısı (C7), kargo bilgi/teslimat satırları (H), koleksiyon kaydet + satıcı başlığı (E6), kampanya etiketleri + eski fiyat (G), kupon alanları (C3), etiket rozetleri (G/C3/H). Misharix demo script'i dokunulmadan kaldı (satır bulamadığından satır bağlamaları etkisiz; TCKN/sözleşme modalları ondan çalışır). E2E (5051 publish): **12/12 ✓** (boş durum, ekleme→satır render ad+seçenek+görsel+link, adet 2→rozet senkron→reload kalıcı, seçim kaldırınca özet 0, sil modal→onay→API'den silindi, mini sepet linkleri, temizlik, 0 konsol hatası).
+- [x] C2. **Favoriye taşı** — TAMAM (2026-07-09, C1 içinde): buton canlı satır şablonuna alınmadı (demo satırlarla birlikte @if(false) altında duruyor) — E5 favori backend'i gelince şablona eklenir; envanter 8.5 satırına not düşüldü.
 - [ ] C3. Kupon modalı: kupon kodu uygula/kaldır → `promotion/coupon/validate` + `use`; üyenin kullanılabilir kupon listesi (E9'daki "kuponlarım" API'siyle ortak) — yoksa önce kod-girişli akış.
 - [ ] C4. `_SepetTeslimatSayfasi`: adres listesi/seçimi → account addresses; adres ekleme/düzenleme modalı (telefon ülke-kodlu input). **Adres hiyerarşisi (K6 kararı): Core modülünde `countries` → `provinces` (il + bölge alanı) → `districts` (ilçe) → `neighborhoods` (mahalle + posta kodu) tabloları + resmi veri seed'i (PTT veri seti) + kademeli aramalı-select API'si** (mahalle listesi büyük — tasarımın `data-ms-ozel-select-arama` bileşeni kullanılır). Aynı kaynak kişiselleştirme şehir seçicisini ve profil şehrini de besler.
 - [ ] C5. `_SepetOdemeSayfasi`: ödeme yöntemleri (kart formu canlı önizleme, kapıda ödeme, havale) — **K2 kararı: test modu** (sipariş oluşur, tahsilat mock); sağlayıcı seçilince H6'da gerçek entegrasyon.
@@ -412,12 +412,12 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 ### 8.5 Sepet + Checkout
 | İşlev | Backend | Faz | Durum |
 |---|---|---|---|
-| Satır adet artır/azalt, satır tutarı | VAR | C1 | ⬜ |
-| Satır sil + onay modalı | VAR | C1 | ⬜ |
-| Tümünü seç / satır checkbox | VAR (UI+cart) | C1 | ⬜ |
-| Favoriye taşı | YOK | E5 (C2 köprü) | ⬜ |
+| Satır adet artır/azalt, satır tutarı | VAR | C1 | ✅ 2026-07-09 (PUT ile kalıcı; 1–10) |
+| Satır sil + onay modalı | VAR | C1 | ✅ 2026-07-09 (misharix modalı + DELETE) |
+| Tümünü seç / satır checkbox | VAR (UI+cart) | C1 | ✅ 2026-07-09 (özet toplamını belirler; sipariş C10'da tam sepetle) |
+| Favoriye taşı | YOK | E5 (C2 köprü) | 🕐 E5 (buton canlı şablona alınmadı — favori backend'iyle eklenir) |
 | Kupon modalı: listeden seç / kod uygula / kaldır | KISMEN (validate/use VAR, üye listesi YOK) | C3/E9 | ⬜ |
-| Sipariş özeti + adım göstergesi (sepet→teslimat→ödeme) | VAR | C1–C5 | ⬜ |
+| Sipariş özeti + adım göstergesi (sepet→teslimat→ödeme) | VAR | C1–C5 | 🔶 C1: sepet adımı özeti canlı (toplam/ödenecek); adım göstergesi teslimat/ödeme sayfalarıyla (C4-C5) |
 | Adres seçimi + adres ekle/düzenle modalı | VAR | C4 | ⬜ |
 | Telefon ülke-kodlu input (arama, ülke seçimi) | — (UI) | C4 | ⬜ |
 | İl/ilçe özel select | YOK (K6) | C4 | ⬜ |
@@ -426,7 +426,7 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 | TCKN doğrulama modalı | YOK (K9) | C7 | ⬜ |
 | Sözleşme modalları + onay kaydı | KISMEN (CMS VAR) | C8 | ⬜ |
 | Ödeme eksikleri uyarısı (onaya geç kontrolü) | — (UI) | C5 | ⬜ |
-| Stok gelince haber ver | YOK | C9 | ⬜ |
+| Stok gelince haber ver | YOK | C9 | 🕐 C9 (tükendi satır görünümü hazır; buton stock_alerts API'siyle eklenir) |
 | Sipariş oluştur → tamamlandı sayfası | VAR | C10 | ⬜ |
 
 ### 8.6 Hesabım (12 sayfa)

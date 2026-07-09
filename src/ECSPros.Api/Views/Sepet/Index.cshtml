@@ -1,0 +1,13 @@
+@{
+    ViewData["Title"] = "Sepet";
+}
+
+<main class="ms-siparis-sayfa">
+    @await Html.PartialAsync("~/Views/ProjeElementleri/Sepet/_SepetSayfasi.cshtml")
+</main>
+
+<script>
+    document.querySelector(".ms-siparis-ozeti .ms-buton-tam")?.addEventListener("click", () => {
+        window.location.href = "/teslimat";
+    });
+</script>
