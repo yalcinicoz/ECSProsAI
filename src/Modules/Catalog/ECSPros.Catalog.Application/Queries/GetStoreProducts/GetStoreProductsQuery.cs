@@ -22,11 +22,20 @@ public record ProductListingAttrDto(
     Dictionary<string, string> ValueNameI18n,
     int SortOrder = 0);
 
+// B10: filtre/sıralama parametreleri additive — mobil/SPA eski çağrıları etkilenmez.
+// AttributeValueIds tip bazında gruplanır: aynı tipin değerleri OR, tipler arası AND.
+// Sort: "price_asc" | "price_desc" | "newest" | null (varsayılan sıra).
+// Fiyat filtresi varyant BasePrice üzerindendir (kategori kartlarının fiyat kaynağıyla aynı;
+// kanal fiyat override'ı yalnız gösterimde — fiyat mimarisi Faz G'de netleşince revize edilir).
 public record GetStoreProductsQuery(
     Guid FirmPlatformId,
     string? Search = null,
     int Page = 1,
-    int PageSize = 24) : IRequest<Result<PagedResult<StoreProductDto>>>;
+    int PageSize = 24,
+    List<Guid>? AttributeValueIds = null,
+    decimal? PriceMin = null,
+    decimal? PriceMax = null,
+    string? Sort = null) : IRequest<Result<PagedResult<StoreProductDto>>>;
 
 public record StoreProductDto(
     Guid Id,
@@ -62,9 +71,49 @@ public class GetStoreProductsQueryHandler(ICatalogDbContext db, IChannelPricingS
                           || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(search));
         }
 
+        // B10: özellik filtresi — seçili değerler tipine göre gruplanır; grup içi OR
+        // (herhangi bir aktif varyantta değer), gruplar arası AND (ürün seviyesinde).
+        if (request.AttributeValueIds is { Count: > 0 } seciliDegerler)
+        {
+            var degerTipleri = await db.AttributeValues.AsNoTracking()
+                .Where(v => seciliDegerler.Contains(v.Id))
+                .Select(v => new { v.Id, v.AttributeTypeId })
+                .ToListAsync(ct);
+
+            foreach (var grup in degerTipleri.GroupBy(v => v.AttributeTypeId))
+            {
+                var grupDegerleri = grup.Select(g => g.Id).ToList();
+                q = q.Where(p => p.Variants.Any(v => v.IsActive
+                    && db.ProductVariantAttributes.Any(va =>
+                        va.VariantId == v.Id && grupDegerleri.Contains(va.AttributeValueId))));
+            }
+        }
+
+        // B10: fiyat aralığı — kartın gösterdiği fiyatın kaynağı olan varyant BasePrice'ı
+        // aralıkta olan en az bir aktif varyant.
+        if (request.PriceMin.HasValue)
+            q = q.Where(p => p.Variants.Any(v => v.IsActive && v.BasePrice >= request.PriceMin.Value
+                && (!request.PriceMax.HasValue || v.BasePrice <= request.PriceMax.Value)));
+        else if (request.PriceMax.HasValue)
+            q = q.Where(p => p.Variants.Any(v => v.IsActive && v.BasePrice > 0 && v.BasePrice <= request.PriceMax.Value));
+
+        // B10: sıralama — fiyat için ürünün en düşük fiyatlı (0 olmayan) aktif varyantı esas.
+        q = request.Sort switch
+        {
+            "price_asc" => q.OrderBy(p => p.Variants
+                                .Where(v => v.IsActive && v.BasePrice > 0)
+                                .Min(v => (decimal?)v.BasePrice) ?? p.BasePrice)
+                            .ThenBy(p => p.Id),
+            "price_desc" => q.OrderByDescending(p => p.Variants
+                                .Where(v => v.IsActive && v.BasePrice > 0)
+                                .Min(v => (decimal?)v.BasePrice) ?? p.BasePrice)
+                            .ThenBy(p => p.Id),
+            "newest" => q.OrderByDescending(p => p.CreatedAt).ThenBy(p => p.Id),
+            _ => q.OrderBy(p => p.Id)
+        };
+
         var total = await q.CountAsync(ct);
         var products = await q
-            .OrderBy(p => p.Id)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .ToListAsync(ct);

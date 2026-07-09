@@ -34,7 +34,8 @@
     @{ var ilkGrup = true; }
     @foreach (var grup in vm.FiltreGruplari)
     {
-        var acik = ilkGrup;
+        // B10: içinde seçili değer olan grup açık gelir (sunucu tarafı filtre durumu korunur)
+        var acik = ilkGrup || grup.Degerler.Any(d => vm.DegerSecili(d.ValueId));
         ilkGrup = false;
     <div class="ms-filtre-kapsayici" data-filter-block>
         <button class="ms-filtre-baslik" type="button" data-filter-toggle aria-expanded="@(acik ? "true" : "false")">
@@ -53,7 +54,7 @@
                 @foreach (var deger in grup.Degerler)
                 {
                 <label class="ms-filtre-secim ms-filtre-renk-secim" data-filter-option>
-                    <input type="checkbox" data-ms-filtre-deger="@deger.ValueId">
+                    <input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
                     <span class="ms-filtre-kutu" aria-hidden="true"></span>
                     <span class="ms-filtre-renk" style="--ms-renk:@(deger.Hex ?? "#E2E8F0")" aria-hidden="true"></span>
                     <span class="ms-filtre-renk-bilgi"><strong>@deger.Ad</strong></span>
@@ -67,7 +68,7 @@
                 @foreach (var deger in grup.Degerler)
                 {
                 <label class="ms-filtre-secim" data-filter-option>
-                    <input type="checkbox" data-ms-filtre-deger="@deger.ValueId">
+                    <input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
                     <span class="ms-filtre-kutu" aria-hidden="true"></span>
                     @deger.Ad (@deger.UrunSayisi.ToString("N0", tr))
                 </label>
@@ -79,16 +80,21 @@
     </div>
     }
 
+    @{
+        // B10: seçili fiyat aralığı varsa blok açık gelir, girdiler dolu gelir
+        var fiyatSecili = vm.SeciliFiyatMin.HasValue || vm.SeciliFiyatMax.HasValue;
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+    }
     <div class="ms-filtre-kapsayici" data-filter-block>
-        <button class="ms-filtre-baslik" type="button" data-filter-toggle aria-expanded="false">
+        <button class="ms-filtre-baslik" type="button" data-filter-toggle aria-expanded="@(fiyatSecili ? "true" : "false")">
             Fiyat Aralığı
-            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-filtre-ok" aria-hidden="true"></i>
+            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-filtre-ok@(fiyatSecili ? " ms-filtre-ok-acik" : "")" aria-hidden="true"></i>
         </button>
-        <div class="ms-filtre-icerik ms-gizli" data-filter-content>
+        <div class="ms-filtre-icerik@(fiyatSecili ? "" : " ms-gizli")" data-filter-content>
             <div class="ms-filtre-fiyat-araligi" aria-label="Fiyat aralığı seçimi">
-                <input type="number" inputmode="numeric" min="0" placeholder="En Az@(vm.FiyatMin > 0 ? $" ({vm.FiyatMin.ToString("N0", tr)})" : "")" aria-label="En az fiyat">
+                <input type="number" inputmode="numeric" min="0" value="@(vm.SeciliFiyatMin?.ToString("0.##", inv))" placeholder="En Az@(vm.FiyatMin > 0 ? $" ({vm.FiyatMin.ToString("N0", tr)})" : "")" aria-label="En az fiyat">
                 <span class="ms-filtre-fiyat-ayrac" aria-hidden="true">-</span>
-                <input type="number" inputmode="numeric" min="0" placeholder="En Çok@(vm.FiyatMax > 0 ? $" ({vm.FiyatMax.ToString("N0", tr)})" : "")" aria-label="En çok fiyat">
+                <input type="number" inputmode="numeric" min="0" value="@(vm.SeciliFiyatMax?.ToString("0.##", inv))" placeholder="En Çok@(vm.FiyatMax > 0 ? $" ({vm.FiyatMax.ToString("N0", tr)})" : "")" aria-label="En çok fiyat">
             </div>
             <div class="ms-filtre-fiyat-secim-listesi" role="radiogroup" aria-label="Hazır fiyat aralıkları">
                 <label class="ms-filtre-secim ms-filtre-radio-secim" data-filter-option data-ms-fiyat-aralik="0-500"><input type="radio" name="urun-listesi-fiyat-araligi"><span class="ms-filtre-kutu" aria-hidden="true"></span>0TL-500TL</label>

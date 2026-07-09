@@ -7,6 +7,18 @@
     var vm = ViewData["MsUrunListesi"] as UrunListesiVm
              ?? new UrunListesiVm("Ürünler", 0, 24, [], "", [], 0, 0, []);
     var cinsiyet = vm.FiltreGruplari.FirstOrDefault(g => g.TipKodu == "cinsiyet");
+
+    // B10: sıralama sunucu tarafında — aktif seçenek URL'deki sort parametresinden gelir.
+    var siralamalar = new (string Kod, string Ad)[]
+    {
+        ("default", "Önerilen Sıralama"),
+        ("price_asc", "En Düşük Fiyat"),
+        ("price_desc", "En Yüksek Fiyat"),
+        ("newest", "En Yeniler")
+    };
+    var aktifSiralama = string.IsNullOrEmpty(vm.SeciliSiralama) ? "default" : vm.SeciliSiralama;
+    var aktifSiralamaAd = siralamalar.FirstOrDefault(s => s.Kod == aktifSiralama, siralamalar[0]).Ad;
+    var invUst = System.Globalization.CultureInfo.InvariantCulture;
 }
 <div class="ms-urun-listesi-ust-filtre-baslik" aria-label="Ürün listesi üst filtre ve sıralama alanı">
     <div class="ms-urun-listesi-kategori-ozet">
@@ -29,9 +41,9 @@
                 </button>
                 <div class="ms-urun-listesi-filtre-secim-panel" data-ms-urun-listesi-filtre-panel hidden>
                     <div class="ms-filtre-fiyat-araligi" aria-label="Fiyat aralığı seçimi">
-                        <input type="number" inputmode="numeric" min="0" placeholder="En Az" aria-label="En az fiyat">
+                        <input type="number" inputmode="numeric" min="0" value="@(vm.SeciliFiyatMin?.ToString("0.##", invUst))" placeholder="En Az" aria-label="En az fiyat">
                         <span class="ms-filtre-fiyat-ayrac" aria-hidden="true">-</span>
-                        <input type="number" inputmode="numeric" min="0" placeholder="En Çok" aria-label="En çok fiyat">
+                        <input type="number" inputmode="numeric" min="0" value="@(vm.SeciliFiyatMax?.ToString("0.##", invUst))" placeholder="En Çok" aria-label="En çok fiyat">
                     </div>
                     <div class="ms-filtre-fiyat-secim-listesi" role="radiogroup" aria-label="Hazır fiyat aralıkları">
                         <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="0-500"><input type="radio" name="urun-listesi-ust-fiyat-araligi"><span class="ms-filtre-kutu" aria-hidden="true"></span>0 TL - 500 TL</label>
@@ -53,7 +65,7 @@
                     <div class="ms-filtre-secim-listesi">
                         @foreach (var deger in cinsiyet.Degerler)
                         {
-                        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId"><span class="ms-filtre-kutu" aria-hidden="true"></span>@deger.Ad</label>
+                        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)"><span class="ms-filtre-kutu" aria-hidden="true"></span>@deger.Ad</label>
                         }
                     </div>
                     <button class="ms-filtre-uygula-buton" type="button" data-ms-urun-listesi-filtre-kapat>Filtrele</button>
@@ -65,18 +77,20 @@
         <div class="ms-urun-listesi-sag-araclar">
             <div class="ms-siralama-select" data-ms-siralama-select>
                 <button class="ms-siralama-select-tetikleyici" type="button" data-ms-siralama-tetikleyici aria-haspopup="listbox" aria-expanded="false">
-                    <span data-ms-siralama-deger>Önerilen Sıralama</span>
+                    <span data-ms-siralama-deger>@aktifSiralamaAd</span>
                     <span class="ms-siralama-select-ikonlar" aria-hidden="true">
                         <i class="fa-solid fa-chevron-down ms-fa-ikon ms-siralama-select-ok " aria-hidden="true"></i>
                     </span>
                 </button>
                 <div class="ms-siralama-select-panel" data-ms-siralama-panel role="listbox" aria-label="Sıralama seçenekleri">
-                    <button class="ms-siralama-select-secenek ms-siralama-select-secenek-aktif" type="button" role="option" aria-selected="true" data-ms-siralama-secenek data-ms-siralama-kod="default">Önerilen Sıralama</button>
-                    <button class="ms-siralama-select-secenek" type="button" role="option" aria-selected="false" data-ms-siralama-secenek data-ms-siralama-kod="price_asc">En Düşük Fiyat</button>
-                    <button class="ms-siralama-select-secenek" type="button" role="option" aria-selected="false" data-ms-siralama-secenek data-ms-siralama-kod="price_desc">En Yüksek Fiyat</button>
+                    @foreach (var secenek in siralamalar)
+                    {
+                        var aktif = secenek.Kod == aktifSiralama;
+                        <button class="ms-siralama-select-secenek@(aktif ? " ms-siralama-select-secenek-aktif" : "")" type="button" role="option" aria-selected="@(aktif ? "true" : "false")" data-ms-siralama-secenek data-ms-siralama-kod="@secenek.Kod">@secenek.Ad</button>
+                    }
                     @if (false)
                     {
-                        @* B10: En çok Favorilenen / En Yeniler / En Çok Satan / En Çok Değerlendirilen — veri gelince *@
+                        @* En çok Favorilenen / En Çok Satan / En Çok Değerlendirilen — veri kaynağı gelince (E7/B11) *@
                     }
                 </div>
             </div>

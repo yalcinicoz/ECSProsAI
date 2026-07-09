@@ -24,10 +24,28 @@ file static class PlatformPriceFilter
     }
 }
 
+// B10: filtre/sıralama/arama parametreleri additive — mobil/SPA eski çağrıları etkilenmez.
+// AttributeValueIds tip bazında gruplanır: grup içi OR, gruplar arası AND; eşleşme kartın
+// (ürün×renk) kendi varyantları üzerinden değerlendirilir (kırmızı+M = aynı varyantta).
+// Sort: "price_asc" | "price_desc" | "newest" | null. Search: kod veya Türkçe ad.
+// Filtreli istekler Redis cache'ini atlar (anahtar kombinasyonu patlaması olmasın diye
+// yalnız parametresiz varsayılan sayfalar cache'lenir).
 public record GetChannelCategoryProductsQuery(
     Guid ChannelCategoryId,
     int Page = 1,
-    int PageSize = 20) : IRequest<Result<PagedResult<ChannelCategoryProductItemDto>>>;
+    int PageSize = 20,
+    string? Search = null,
+    List<Guid>? AttributeValueIds = null,
+    decimal? PriceMin = null,
+    decimal? PriceMax = null,
+    string? Sort = null) : IRequest<Result<PagedResult<ChannelCategoryProductItemDto>>>
+{
+    public bool FiltreliMi =>
+        !string.IsNullOrWhiteSpace(Search)
+        || AttributeValueIds is { Count: > 0 }
+        || PriceMin.HasValue || PriceMax.HasValue
+        || !string.IsNullOrEmpty(Sort);
+}
 
 public record ChannelCategoryProductItemDto(
     Guid ProductId,
@@ -78,9 +96,12 @@ public class GetChannelCategoryProductsQueryHandler(
         GetChannelCategoryProductsQuery request, CancellationToken ct)
     {
         var cacheKey = CacheKey(request.ChannelCategoryId, request.Page, request.PageSize);
-        var cached = await TryGetCacheAsync(cacheKey, ct);
-        if (cached is not null)
-            return Result.Success(cached);
+        if (!request.FiltreliMi)
+        {
+            var cached = await TryGetCacheAsync(cacheKey, ct);
+            if (cached is not null)
+                return Result.Success(cached);
+        }
 
         var cat = await sfDb.ChannelCategories
             .AsNoTracking()
@@ -95,7 +116,7 @@ public class GetChannelCategoryProductsQueryHandler(
         if (cat.ListingMode == "model")
         {
             var modelResult = await HandleModelMode(request, cat.Id, cdnBase, ct);
-            if (modelResult.IsSuccess) await TrySetCacheAsync(cacheKey, modelResult.Value, ct);
+            if (modelResult.IsSuccess && !request.FiltreliMi) await TrySetCacheAsync(cacheKey, modelResult.Value, ct);
             return modelResult;
         }
 
@@ -104,7 +125,7 @@ public class GetChannelCategoryProductsQueryHandler(
         if (cat.ListingMode != "model")
         {
             var colorResult = await HandleColorMode(request, cat, cdnBase, ct);
-            if (colorResult.IsSuccess) await TrySetCacheAsync(cacheKey, colorResult.Value, ct);
+            if (colorResult.IsSuccess && !request.FiltreliMi) await TrySetCacheAsync(cacheKey, colorResult.Value, ct);
             return colorResult;
         }
 
@@ -217,15 +238,30 @@ public class GetChannelCategoryProductsQueryHandler(
     {
         // 1. Kategorideki tüm ürün ID'leri
         var allProductIds = await ResolveCategoryProductIds(cat, request.ChannelCategoryId, ct);
+
+        // B10: "kategoride ara" — kategori kapsamı içinde kod veya Türkçe ad eşleşmesi
+        // (GetStoreProducts aramasıyla aynı semantik). Fallback moduna da daralmış liste gider.
+        if (!string.IsNullOrWhiteSpace(request.Search) && allProductIds.Count > 0)
+        {
+            var arama = request.Search.Trim().ToLower();
+            allProductIds = await catDb.Products.AsNoTracking()
+                .Where(p => allProductIds.Contains(p.Id)
+                         && (p.Code.ToLower().Contains(arama)
+                          || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(arama)))
+                .Select(p => p.Id)
+                .ToListAsync(ct);
+        }
+
         if (allProductIds.Count == 0)
             return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
                 [], 0, request.Page, request.PageSize));
 
-        // 2. Ürünlerin ProductGroupId haritası
-        var productGroupMap = await catDb.Products.AsNoTracking()
+        // 2. Ürün bilgi haritası (grup + B10 fiyat/tarih — filtre ve sıralama için)
+        var productInfo = await catDb.Products.AsNoTracking()
             .Where(p => allProductIds.Contains(p.Id))
-            .Select(p => new { p.Id, p.ProductGroupId })
-            .ToDictionaryAsync(p => p.Id, p => p.ProductGroupId, ct);
+            .Select(p => new { p.Id, p.ProductGroupId, p.BasePrice, p.CreatedAt })
+            .ToDictionaryAsync(p => p.Id, ct);
+        var productGroupMap = productInfo.ToDictionary(kv => kv.Key, kv => kv.Value.ProductGroupId);
 
         var groupIds = productGroupMap.Values.Distinct().ToList();
 
@@ -304,6 +340,71 @@ public class GetChannelCategoryProductsQueryHandler(
         // Görseli olan renk yoksa ürün düzeyindeki fallback ile devam et
         if (visiblePairs.Count == 0)
             return await BuildFallbackProductItems(allProductIds, request, cdnBase, ct);
+
+        // ── B10: özellik filtresi — kart (ürün×renk) kendi varyantları üzerinden;
+        // grup içi OR, gruplar arası AND aynı varyantta sağlanmalı (kırmızı+M birlikte).
+        if (request.AttributeValueIds is { Count: > 0 } seciliDegerler)
+        {
+            var degerTipleri = await catDb.AttributeValues.AsNoTracking()
+                .Where(v => seciliDegerler.Contains(v.Id))
+                .Select(v => new { v.Id, v.AttributeTypeId })
+                .ToListAsync(ct);
+            var tipGruplari = degerTipleri
+                .GroupBy(v => v.AttributeTypeId)
+                .Select(g => g.Select(x => x.Id).ToHashSet())
+                .ToList();
+
+            var adayProductIds = visiblePairs.Select(p => p.ProductId).Distinct().ToList();
+            var eslesenSatirlar = await catDb.ProductVariantAttributes.AsNoTracking()
+                .Where(va => seciliDegerler.Contains(va.AttributeValueId)
+                          && adayProductIds.Contains(va.Variant.ProductId)
+                          && va.Variant.IsActive)
+                .Select(va => new { va.VariantId, va.AttributeValueId })
+                .ToListAsync(ct);
+            var degerlerByVariant = eslesenSatirlar
+                .GroupBy(r => r.VariantId)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.AttributeValueId).ToHashSet());
+
+            visiblePairs = visiblePairs
+                .Where(pair => pair.VariantIds.Any(vid =>
+                    degerlerByVariant.TryGetValue(vid, out var sahip)
+                    && tipGruplari.All(sahip.Overlaps)))
+                .ToList();
+        }
+
+        // ── B10: fiyat aralığı — kartın etkin fiyatı (renk min varyant fiyatı, 0 ise ürün fiyatı)
+        if (request.PriceMin.HasValue || request.PriceMax.HasValue)
+        {
+            visiblePairs = visiblePairs.Where(pair =>
+            {
+                var fiyat = pair.Price > 0 ? pair.Price
+                    : productInfo.TryGetValue(pair.ProductId, out var pi) ? pi.BasePrice : 0;
+                return (!request.PriceMin.HasValue || fiyat >= request.PriceMin.Value)
+                    && (!request.PriceMax.HasValue || fiyat <= request.PriceMax.Value);
+            }).ToList();
+        }
+
+        // ── B10: sıralama — varsayılan mevcut sıra (ProductId, ColorValueId)
+        visiblePairs = request.Sort switch
+        {
+            "price_asc" => visiblePairs
+                .OrderBy(pair => pair.Price > 0 ? pair.Price
+                    : productInfo.TryGetValue(pair.ProductId, out var pi) ? pi.BasePrice : 0)
+                .ToList(),
+            "price_desc" => visiblePairs
+                .OrderByDescending(pair => pair.Price > 0 ? pair.Price
+                    : productInfo.TryGetValue(pair.ProductId, out var pi) ? pi.BasePrice : 0)
+                .ToList(),
+            "newest" => visiblePairs
+                .OrderByDescending(pair => productInfo.TryGetValue(pair.ProductId, out var pi)
+                    ? pi.CreatedAt : default)
+                .ToList(),
+            _ => visiblePairs
+        };
+
+        if (visiblePairs.Count == 0)
+            return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
+                [], 0, request.Page, request.PageSize));
 
         // 8. Sayfalama
         var total = visiblePairs.Count;

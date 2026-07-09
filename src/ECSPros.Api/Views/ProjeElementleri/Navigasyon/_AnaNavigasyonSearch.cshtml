@@ -15,8 +15,11 @@
                     .Concat(c.Cocuklar.Select(t => new { ad = t.Ad, etiket = $"{c.Ad} › {t.Ad}", url = t.Url })))))
         .ToList();
     var aramaKategoriJson = JsonSerializer.Serialize(aramaKategorileri);
+    // B10: "Kategoride ara" — kategori sayfası controller'ı ViewData["MsAktifKategori"]'yi
+    // doldurur; buton yalnız bu bağlam varken görünür (misharix kuralı: !anaSayfaMi).
+    var aramaAktifKategori = ViewData["MsAktifKategori"] as NavKategori;
 }
-        <div class="ms-ana-navigasyon-arama" data-ms-arama data-ms-arama-platform="@(aramaPlatform?.Id)">
+        <div class="ms-ana-navigasyon-arama" data-ms-arama data-ms-arama-platform="@(aramaPlatform?.Id)" data-ms-arama-kategori-id="@(aramaAktifKategori?.Id)" data-ms-arama-kategori-slug="@(aramaAktifKategori?.Slug)" data-ms-arama-kategori-ad="@(aramaAktifKategori?.Ad)">
             <input class="ms-ana-navigasyon-arama-input" data-ms-arama-input type="search" name="ms-search-query-main" role="searchbox" placeholder="Ürün, kategori veya marka ara" aria-label="Ürün, kategori veya marka ara" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="search" enterkeyhint="search" aria-autocomplete="none" readonly data-ms-autocomplete-kapat data-lpignore="true" data-1p-ignore="true" data-form-type="other">
             <svg class="ms-ana-navigasyon-arama-ikon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
@@ -151,6 +154,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const platformId = aramaAlani.dataset.msAramaPlatform;
         if (!platformId) { return; }
 
+        // B10: "Kategoride ara" kapsam daraltması — yalnız kategori sayfalarında aktif olabilir
+        const kategoriId = aramaAlani.dataset.msAramaKategoriId || "";
+        const kategoriSlug = aramaAlani.dataset.msAramaKategoriSlug || "";
+        const kategoriAd = aramaAlani.dataset.msAramaKategoriAd || "";
+        let kategorideAra = false;
+        const kategorideMi = () => kategorideAra && kategoriId !== "";
+        const tumSonucUrl = (terim) => kategorideMi()
+            ? `/${encodeURIComponent(kategoriSlug)}?search=${encodeURIComponent(terim)}`
+            : `/urunler?search=${encodeURIComponent(terim)}`;
+
         const input = aramaAlani.querySelector("[data-ms-arama-input]");
         const panelInput = aramaAlani.querySelector("[data-ms-arama-panel-input]");
         const gruplar = aramaAlani.querySelector("[data-ms-arama-sonuc-gruplari]");
@@ -176,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <span class="ms-search-urun-gorsel-alani">${gorsel}</span>
                 <span class="ms-search-urun-icerik">
                     <span class="ms-search-urun-baslik">${kacir(ad)}</span>
-                    <span class="ms-search-urun-fiyat ms-urun-fiyat">${fiyatYaz(urun.minPrice)}</span>
+                    <span class="ms-search-urun-fiyat ms-urun-fiyat">${fiyatYaz(urun.minPrice ?? urun.basePrice)}</span>
                 </span>
             </a>`;
         };
@@ -219,6 +232,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
         sonAramalariCiz();
 
+        // ── B10: Kategoride ara butonları — bağlam varsa görünür, tıklayınca kapsam değişir ──
+        const kategorideAraButonlari = [...aramaAlani.querySelectorAll("[data-ms-kategoride-ara]")];
+        if (kategoriId) {
+            kategorideAraButonlari.forEach((buton) => {
+                buton.hidden = false;
+                buton.textContent = kategoriAd ? `${kategoriAd} içinde ara` : "Kategoride ara";
+                buton.addEventListener("click", () => {
+                    kategorideAra = !kategorideAra;
+                    kategorideAraButonlari.forEach((b) => {
+                        b.setAttribute("aria-pressed", kategorideAra ? "true" : "false");
+                        b.classList.toggle("ms-ana-navigasyon-kategoride-ara-aktif", kategorideAra);
+                    });
+                    canliAra(input.value || panelInput?.value || "");
+                });
+            });
+        }
+
         // ── Canlı öneri ──
         let zamanlayici = null;
         let istekSirasi = 0;
@@ -238,7 +268,10 @@ document.addEventListener("DOMContentLoaded", () => {
             zamanlayici = window.setTimeout(async () => {
                 const buIstek = ++istekSirasi;
                 try {
-                    const yanit = await fetch(`/api/store/catalog/products?firmPlatformId=${platformId}&search=${encodeURIComponent(terim)}&page=1&pageSize=10`);
+                    const kaynakUrl = kategorideMi()
+                        ? `/api/store/catalog/channel-categories/${kategoriId}/products?search=${encodeURIComponent(terim)}&page=1&pageSize=10`
+                        : `/api/store/catalog/products?firmPlatformId=${platformId}&search=${encodeURIComponent(terim)}&page=1&pageSize=10`;
+                    const yanit = await fetch(kaynakUrl);
                     const veri = await yanit.json();
                     if (buIstek !== istekSirasi) { return; } // eski cevap — yenisi yolda
 
@@ -266,7 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         html += `<section class="ms-ana-navigasyon-arama-sonuc-grubu">
                             <div class="ms-ana-navigasyon-arama-kategori-label"><span>Ürünler</span><small>${toplam} ürün</small></div>
                             <div class="ms-ana-navigasyon-arama-sonuc-listesi">${urunler.map(urunKartiHtml).join("")}</div>
-                            <a class="ms-ana-navigasyon-tumunu-gor" href="/urunler?search=${encodeURIComponent(terim)}">
+                            <a class="ms-ana-navigasyon-tumunu-gor" href="${tumSonucUrl(terim)}">
                                 Tümünü Gör
                                 <svg class="ms-ana-navigasyon-tumunu-gor-ikon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                     <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
@@ -292,7 +325,7 @@ document.addEventListener("DOMContentLoaded", () => {
             aramaInput.addEventListener("keydown", (olay) => {
                 if (olay.key === "Enter" && aramaInput.value.trim().length >= 2) {
                     sonAramaKaydet(aramaInput.value);
-                    window.location.href = "/urunler?search=" + encodeURIComponent(aramaInput.value.trim());
+                    window.location.href = tumSonucUrl(aramaInput.value.trim());
                 }
             });
         });
