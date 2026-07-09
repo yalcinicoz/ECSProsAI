@@ -294,6 +294,20 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — C4-a TAMAM (adres hiyerarşisi + veri + kademeli geo API):**
+  - **K6'ya gerekçeli düzeltme:** hiyerarşi Core'da değil CRM'de — crm_countries/cities/
+    districts/neighborhoods tabloları ve Address FK'ları zaten mevcuttu (boştu). City.Region
+    eklendi (AddCityRegion migration canlıda; G9 il→bölge buradan okuyacak).
+  - **Veri:** turkey-neighbourhoods (npm, PTT-türevi, otomatik güncellenen) → TR + 81 il
+    (coğrafi bölgeli) + 973 ilçe + 73.305 mahalle (staging+INSERT SELECT, ANALYZE ✓; Code'lar
+    varchar(20) için md5 kısaltması). **PostalCode ŞİMDİLİK BOŞ** — set mahalle→PK vermiyor;
+    formda PK manuel; resmi PTT eşleme dosyası gelince tek UPDATE (kullanıcı onayına açık).
+  - **API:** GET /api/store/geo/{countries,cities,districts,neighborhoods} (anonim, mahalle
+    aramalı+limitli, 4.7ms; Türkçe arama/sıralama bellek tarafında — B2 jsonb dersi).
+    Duman testi uçtan uca ✓ (TR→34→Kadıköy→'bostan'→Bostancı/Caddebostan).
+  - **KALAN C4-b:** _SepetTeslimatSayfasi portu + adres modalı (geo select'ler + account
+    addresses) — sonraki oturum buradan devam etmeli.
+
 - **2026-07-09 (devam) — C3 TAMAM (kupon akışı canlı):**
   - Yeni store endpoint'i `POST /api/store/checkout/coupon/validate` (AllowAnonymous; üye
     token'ı varsa MemberId koşulları; `use` kaydı C10 checkout'ta). Sepette uygula/kaldır +
