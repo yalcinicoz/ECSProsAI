@@ -12,6 +12,11 @@ public class Member : BaseEntity
     public string LastName { get; set; } = string.Empty;
     public string? Gender { get; set; }
     public DateOnly? BirthDate { get; set; }
+    // C7 (K9): TCKN — format+algoritma doğrulamasından geçmiş kimlik no (NVİ/KPS ileride).
+    // Eşik üzeri siparişlerde zorunlu; yalnızca sipariş doğrulama süreci için kullanılır.
+    public string? IdentityNumber { get; set; }
+    public DateTime? IdentityVerifiedAt { get; set; }
+
     public string? TaxOffice { get; set; }
     public string? TaxNumber { get; set; }
     public string? CompanyName { get; set; }

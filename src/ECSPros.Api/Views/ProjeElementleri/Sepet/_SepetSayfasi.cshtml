@@ -10,17 +10,14 @@
     </div>
     <div class="ms-sepet-izgara">
         <section class="ms-sepet-liste-alani" aria-labelledby="ms-sepet-ornek-baslik">
-            @if (false)
-            {
-            @* C7: TCKN uyarısı gerçek tutar koşuluna bağlanınca açılır *@
-            <div class="ms-sepet-tckn-uyari" role="alert">
+            @* C7: eşik üzeri sepette ve TCKN doğrulanmamışsa script gösterir *@
+            <div class="ms-sepet-tckn-uyari" role="alert" data-ms-tckn-banner hidden>
                 <div>
                     <strong>TCKN doğrulama gerekli</strong>
-                    <p>13.000 TL üzeri sipariş verdiğiniz için TCKN doğrulama yapmanız gerekiyor.</p>
+                    <p data-ms-tckn-banner-metin>Eşik üzeri sipariş verdiğiniz için TCKN doğrulama yapmanız gerekiyor.</p>
                 </div>
                 <button class="ms-buton ms-buton-s ms-buton-tehlikeli" type="button" data-ms-tckn-modal-ac>Doğrula</button>
             </div>
-            }
 
             <div class="ms-sepet-ust">
                 <div>
@@ -65,7 +62,7 @@
                 @* C1: satırlar canlı sepetten render edilir (aşağıdaki template + script);
                    kampanya etiketleri (G), teslimat satırı (H), eski fiyat (G) ve favoriye
                    taşı (E5/C2) veri kaynağı gelene dek şablona alınmadı. *@
-                <div data-ms-sepet-satir-konteyner></div>
+                <div data-ms-sepet-satir-konteyner data-ms-tckn-esik="@(ViewData["MsTcknEsik"] ?? 13000)"></div>
                 <p data-ms-sepet-bos hidden>Sepetiniz henüz boş. <a href="/">Alışverişe başlayın.</a></p>
                 <template data-ms-sepet-satir-sablon>
                 <article class="ms-sepet-satiri" data-ms-sepet-satir data-ms-birim-fiyat="">
@@ -311,90 +308,8 @@
     <script>
     (() => {
         const sepetSayfasiKok = document.currentScript?.closest("[data-ms-sayfa-panel], .ms-panel") || document;
-        const tcknModal = sepetSayfasiKok.querySelector("[data-ms-tckn-modal]");
-        const tcknGirdi = tcknModal?.querySelector("[data-ms-tckn-girdi]");
-        const tcknZorunluAlanlar = Array.from(tcknModal?.querySelectorAll("[data-ms-tckn-zorunlu]") || []);
-        const tcknDurumBekliyor = tcknModal?.querySelector("[data-ms-tckn-durum-bekliyor]");
-        const tcknDurumBasarili = tcknModal?.querySelector("[data-ms-tckn-durum-basarili]");
-        const tcknDurumHata = tcknModal?.querySelector("[data-ms-tckn-durum-hata]");
-
-        const tcknDurumunuGoster = (durum) => {
-            tcknDurumBekliyor?.classList.toggle("ms-gizli", durum !== "bekliyor");
-            tcknDurumBasarili?.classList.toggle("ms-gizli", durum !== "basarili");
-            tcknDurumHata?.classList.toggle("ms-gizli", durum !== "hata");
-        };
-
-        const tcknAlanHatasiniAyarla = (alan, hataVar) => {
-            const hata = alan.closest(".ms-form-alani")?.querySelector("[data-ms-tckn-hata]");
-            alan.classList.toggle("ms-form-girdi-hata", hataVar);
-
-            if (hata) {
-                hata.hidden = !hataVar;
-            }
-        };
-
-        const tcknFormHatalariniTemizle = () => {
-            tcknZorunluAlanlar.forEach((alan) => tcknAlanHatasiniAyarla(alan, false));
-        };
-
-        const tcknModalAc = () => {
-            tcknModal?.classList.add("ms-ornek-modal-acik");
-            tcknModal?.setAttribute("aria-hidden", "false");
-            tcknDurumunuGoster("bekliyor");
-            tcknFormHatalariniTemizle();
-            window.setTimeout(() => tcknGirdi?.focus(), 50);
-        };
-
-        const tcknModalKapat = () => {
-            tcknModal?.classList.remove("ms-ornek-modal-acik");
-            tcknModal?.setAttribute("aria-hidden", "true");
-        };
-
-        sepetSayfasiKok.querySelectorAll("[data-ms-tckn-modal-ac]").forEach((buton) => {
-            buton.addEventListener("click", tcknModalAc);
-        });
-
-        tcknModal?.querySelectorAll("[data-ms-tckn-modal-kapat]").forEach((buton) => {
-            buton.addEventListener("click", tcknModalKapat);
-        });
-
-        tcknModal?.querySelector("[data-ms-tckn-dogrula]")?.addEventListener("click", () => {
-            const tckn = (tcknGirdi?.value || "").replace(/\D/g, "");
-            let hataVar = false;
-
-            tcknZorunluAlanlar.forEach((alan) => {
-                const bos = !alan.value.trim();
-                tcknAlanHatasiniAyarla(alan, bos);
-                hataVar = hataVar || bos;
-            });
-
-            if (hataVar) {
-                tcknDurumunuGoster("hata");
-                tcknZorunluAlanlar.find((alan) => alan.classList.contains("ms-form-girdi-hata"))?.focus();
-                return;
-            }
-
-            tcknDurumunuGoster(tckn.length === 11 ? "basarili" : "hata");
-        });
-
-        tcknGirdi?.addEventListener("input", () => {
-            tcknGirdi.value = tcknGirdi.value.replace(/\D/g, "").slice(0, 11);
-            tcknDurumunuGoster("bekliyor");
-        });
-
-        tcknZorunluAlanlar.forEach((alan) => {
-            alan.addEventListener("input", () => {
-                if (alan === tcknGirdi) {
-                    alan.value = alan.value.replace(/\D/g, "").slice(0, 11);
-                }
-
-                if (alan.value.trim()) {
-                    tcknAlanHatasiniAyarla(alan, false);
-                }
-
-                tcknDurumunuGoster("bekliyor");
-            });
-        });
+        // C7: demo TCKN mantığı kaldırıldı — gerçek modal davranışı + algoritma +
+        // backend kaydı _SepetModallari sonundaki canlı script'te (iki sayfada da çalışır).
 
         // C3: demo kupon mantığı kaldırıldı — gerçek uygula/kaldır/yeniden-doğrulama
         // dosya sonundaki canlı sepet script'inde (promotion coupon/validate API'siyle).
@@ -590,7 +505,22 @@ document.addEventListener("DOMContentLoaded", () => {
         if (indirimSatiri) { indirimSatiri.hidden = !kuponDurum; }
         odenecekler.forEach((alan) => { alan.textContent = paraYaz(odenecek); });
         kuponuTazele(toplam);
+        tcknBanner(odenecek);
     };
+
+    // C7: eşik üzeri + TCKN doğrulanmamış → uyarı banner'ı (asıl güvence checkout guard'ında)
+    const tcknEsik = Number(document.querySelector("[data-ms-sepet-satir-konteyner]")?.dataset.msTcknEsik || 13000);
+    const tcknBanner = (odenecek) => {
+        const banner = document.querySelector("[data-ms-tckn-banner]");
+        if (!banner) { return; }
+        const gerekli = odenecek >= tcknEsik && window.msTcknDogrulandi !== true;
+        banner.hidden = !gerekli;
+        if (gerekli) {
+            const metin = banner.querySelector("[data-ms-tckn-banner-metin]");
+            if (metin) { metin.textContent = `${tcknEsik.toLocaleString("tr-TR")} TL üzeri sipariş verdiğiniz için TCKN doğrulama yapmanız gerekiyor.`; }
+        }
+    };
+    window.addEventListener("ms:tckn-dogrulandi", () => tcknBanner(0));
 
     const seciliToplam = () => {
         let toplam = 0;

@@ -214,7 +214,7 @@
             <aside class="ms-siparis-ozeti" aria-labelledby="ms-odeme-ozet-baslik">
                 <h3 id="ms-odeme-ozet-baslik" class="ms-siparis-basligi">Ödeme Özeti</h3>
                 <div class="ms-siparis-satirlari">
-                    <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Ürün Toplamı</span><span class="ms-siparis-deger ms-fiyat-standart" data-ms-odeme-urun-toplami>0,00 TL</span></div>
+                    <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Ürün Toplamı</span><span class="ms-siparis-deger ms-fiyat-standart" data-ms-odeme-urun-toplami data-ms-tckn-esik="@(ViewData["MsTcknEsik"] ?? 13000)">0,00 TL</span></div>
                     <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Kargo</span><span class="ms-siparis-deger ms-siparis-ucretsiz">Ücretsiz</span></div>
                     @if (false)
                     {
@@ -743,6 +743,14 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         const { toplam, indirim } = toplamlar();
+
+        // C7: eşik üzeri + TCKN doğrulanmamış → modal (sunucu guard'ı da 400 döner)
+        const tcknEsik = Number(document.querySelector("[data-ms-odeme-urun-toplami]")?.dataset.msTcknEsik || 13000);
+        if (Math.max(0, toplam - indirim) >= tcknEsik && window.msTcknDogrulandi !== true) {
+            hataGoster([`${tcknEsik.toLocaleString("tr-TR")} TL ve üzeri siparişlerde TCKN doğrulaması zorunludur.`]);
+            window.msTcknModalAc?.();
+            return;
+        }
         gonderiliyor = true;
         try {
             const cevap = await fetch("/api/store/checkout", {
@@ -777,6 +785,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const veri = await cevap.json().catch(() => null);
             if (!veri?.success) {
                 hataGoster([veri?.error || "Sipariş oluşturulamadı. Lütfen tekrar deneyin."]);
+                if (veri?.tcknRequired) { window.msTcknModalAc?.(); }
                 return;
             }
 

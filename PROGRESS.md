@@ -294,6 +294,25 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — C7 TAMAM: TCKN doğrulama (K9) canlı:**
+  - **Backend:** `Member.IdentityNumber/IdentityVerifiedAt` + `AddMemberIdentity` migration
+    (canlı DB'ye uygulandı); `SetMemberIdentityCommand` + `TcknValidator` (11 hane + kontrol
+    basamağı algoritması sunucuda); `POST /api/store/account/identity`;
+    `MemberDetailDto.IdentityVerified`. **Checkout guard'ı:** `Store:TcknThreshold`
+    (varsayılan 13.000) — eşik üzeri + doğrulanmamış üye → 400 `tcknRequired:true`
+    (mesaj tr-TR N0 formatlı).
+  - **Frontend:** demo TCKN bloğu `_SepetSayfasi`'ndan söküldü; canlı script `_SepetModallari`
+    sonunda (client'ta aynı checksum, POST, `window.msTcknDogrulandi` + `ms:tckn-dogrulandi`,
+    `window.msTcknModalAc`, /me'den başlangıç). Sepet banner'ı `data-ms-tckn-banner`
+    (eşik SSR'dan `data-ms-tckn-esik`, SepetController ViewData); ödeme siparisOlustur
+    ön-kontrol + sunucu tcknRequired 400'ü de modal açar.
+  - **E2E 10/10 + guard 4/4 ✓** (banner eşik koşulu, geçersiz/geçerli TCKN client+sunucu,
+    reload durumu, guard eşik altı/üstü/doğrulama sonrası). Drift TEMİZ. Test yan etkisi
+    (2 sahte 'C7 Guard' siparişi) tespit edilip silindi — sahte variantId'li checkout'un
+    200 dönmesi not: sipariş kalemleri snapshot, variantId FK'siz (bilinen tasarım).
+  - **Faz C kalan:** C8 (sözleşme CMS), C9 (stok haber ver), C11 (QA kapanışı).
+    DEPLOY BEKLİYOR (B11+B12+C1–C7+C10 birikti — `sudo systemctl restart ecspros`).
+
 - **2026-07-09 (devam) — ÜRÜN TEMİZLİĞİ (kullanıcı talimatı): yeniurunkodlari dışı her şey silindi:**
   - Kaynak: eski MySQL `yeniurunkodlari` (28.609 kod). PG analizi: 117.569 üründen 28.549
     kalacak / 89.020 silinecek / keep listesinden 60 kod PG'de yoktu (yeniden aktarımda gelir).

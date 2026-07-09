@@ -39,6 +39,7 @@ public class GetMemberDetailQueryHandler : IRequestHandler<GetMemberDetailQuery,
             member.IsPhoneVerified,
             member.IsActive,
             member.LastLoginAt,
-            member.CreatedAt));
+            member.CreatedAt,
+            IdentityVerified: member.IdentityVerifiedAt != null));
     }
 }
