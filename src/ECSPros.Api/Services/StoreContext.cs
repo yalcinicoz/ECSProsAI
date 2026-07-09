@@ -21,7 +21,11 @@ public sealed record StorePlatformBilgisi(
     Guid Id,
     string Code,
     string Theme,
-    IReadOnlyDictionary<string, string> ThemeTokens);
+    IReadOnlyDictionary<string, string> ThemeTokens,
+    // B12 (stok kararı): Settings."stockControlEnabled" — açıkken satılabilirlik gerçek
+    // stoktan okunur; kapalıyken (varsayılan — bugünkü veri durumu) her şey satılabilir.
+    // Stok verisi dolunca anahtar açılır, kod değişmez.
+    bool StokKontrolu = false);
 
 public sealed class StoreContext(
     ICoreDbContext coreDb,
@@ -71,7 +75,10 @@ public sealed class StoreContext(
                 }
             }
 
-            return new StorePlatformBilgisi(platform.Id, platform.Code, tema!, tokenlar);
+            var stokKontrolu = platform.Settings.TryGetValue("stockControlEnabled", out var stokObj)
+                && stokObj is System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.True };
+
+            return new StorePlatformBilgisi(platform.Id, platform.Code, tema!, tokenlar, stokKontrolu);
         });
     }
 }

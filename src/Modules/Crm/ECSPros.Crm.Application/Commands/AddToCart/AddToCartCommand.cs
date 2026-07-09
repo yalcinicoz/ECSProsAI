@@ -1,11 +1,14 @@
 using ECSPros.Crm.Application.Services;
 using ECSPros.Crm.Domain.Entities;
+using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Crm.Application.Commands.AddToCart;
 
+// B12: EnforceStock — platformun "stok kontrolü" anahtarı açıkken API katmanı true geçer;
+// kapalıyken (varsayılan — bugünkü veri durumu) stok hiç sorgulanmaz, her şey satılabilir.
 public record AddToCartCommand(
     Guid FirmPlatformId,
     Guid VariantId,
@@ -13,13 +16,19 @@ public record AddToCartCommand(
     decimal Price,
     string CurrencyCode,
     Guid? MemberId = null,
-    string? SessionId = null) : IRequest<Result<Guid>>;
+    string? SessionId = null,
+    bool EnforceStock = false) : IRequest<Result<Guid>>;
 
-public class AddToCartCommandHandler(ICrmDbContext db) : IRequestHandler<AddToCartCommand, Result<Guid>>
+public class AddToCartCommandHandler(ICrmDbContext db, IStockService stockService)
+    : IRequestHandler<AddToCartCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(AddToCartCommand request, CancellationToken ct)
     {
         if (request.Quantity <= 0) return Result.Failure<Guid>("Miktar sıfırdan büyük olmalıdır.");
+
+        if (request.EnforceStock
+            && !await stockService.HasSufficientStockAsync(request.VariantId, request.Quantity, null, ct))
+            return Result.Failure<Guid>("Bu ürün tükendi veya istenen adet stokta yok.");
 
         Cart? cart = null;
         if (request.MemberId.HasValue)

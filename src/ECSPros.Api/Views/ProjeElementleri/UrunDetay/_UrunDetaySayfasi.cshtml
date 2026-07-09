@@ -12,7 +12,8 @@
         tekVaryant = s.TekVaryantId is { } tekId
             ? new { id = tekId, fiyat = s.TekVaryantFiyat ?? 0 }
             : null,
-        bedenler = s.Bedenler.ToDictionary(x => x.Ad, x => new { id = x.VariantId, fiyat = x.Fiyat }),
+        // B12: tükenen bedenler haritaya girmez (radyoları zaten disabled — çifte güvence)
+        bedenler = s.Bedenler.Where(x => x.Satilabilir).ToDictionary(x => x.Ad, x => new { id = x.VariantId, fiyat = x.Fiyat }),
         seciliRenk = s.Renkler.FirstOrDefault(r => r.Secili)?.ValueId
     });
 }
@@ -36,8 +37,9 @@
                 <div class="ms-beden-secim-listesi" aria-label="@s.BedenEtiketi seçimi">
                     @foreach (var beden in s.Bedenler)
                     {
-                    <label class="ms-beden-secim">
-                        <input class="ms-beden-secim-input" type="radio" name="urun-detay-sabit-beden" value="@beden.Ad">
+                    @* B12: tükenen beden sabit panelde de disabled *@
+                    <label class="ms-beden-secim@(beden.Satilabilir ? "" : " ms-beden-secim-tukendi")">
+                        <input class="ms-beden-secim-input" type="radio" name="urun-detay-sabit-beden" value="@beden.Ad" disabled="@(!beden.Satilabilir)">
                         <span class="ms-beden-secim-kutu">@beden.Ad</span>
                     </label>
                     }

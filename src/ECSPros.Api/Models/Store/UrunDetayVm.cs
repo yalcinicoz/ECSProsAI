@@ -11,7 +11,7 @@ public sealed record RenkSecenekVm(Guid ValueId, string Ad, string GorselUrl, bo
     public string Url => "?color=" + ValueId;
 }
 
-public sealed record BedenSecenekVm(string Ad, Guid VariantId, decimal Fiyat);
+public sealed record BedenSecenekVm(string Ad, Guid VariantId, decimal Fiyat, bool Satilabilir = true); // B12: anahtar açıkken gerçek stoktan
 
 public sealed record OzellikVm(string Ad, string Deger);
 
