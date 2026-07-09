@@ -294,6 +294,22 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — ÜRÜN TEMİZLİĞİ (kullanıcı talimatı): yeniurunkodlari dışı her şey silindi:**
+  - Kaynak: eski MySQL `yeniurunkodlari` (28.609 kod). PG analizi: 117.569 üründen 28.549
+    kalacak / 89.020 silinecek / keep listesinden 60 kod PG'de yoktu (yeniden aktarımda gelir).
+  - **Yedek:** `/home/yalcin/yedekler/urun-temizligi-oncesi-2026-07-09.dump` (pg_dump -Fc,
+    463MB — etkilenen 30 tablo; pg_restore ile tablo bazlı geri yüklenebilir).
+  - **Silinen:** 89.020 ürün, 882.979 varyant, 2,69M varyant-attribute, 1,15M görsel, 481K
+    ürün-attribute, 806K erp_variant_data, 883K channel_variant, 267K channel_product, 3 sepet
+    satırı (tek transaction, FK sırasıyla). **Dokunulmayan:** sipariş/satış/finans geçmişi
+    (snapshot alanlı; yetim VariantId kabul). ShowcaseProductId silinenler için NULL.
+  - **ANALYZE** tüm etkilenen tablolarda ✓. Doğrulama: liste dışı kalan 0, yetim satır 0;
+    /kadin taze sorgu 34.588 ürünle 1.2s; kalan ürün detayı 200. Redis (10dk) + ana sayfa
+    IMemoryCache (15dk) kısa süre bayat olabilir — TTL/bekleyen restart düzeltir.
+  - **MigrationTool:** 7 noktaya `yeniurunkodlari` filtresi (Faz 3 ana SELECT + EnsureProductMap
+    guard + cinsiyet + ERP model kodları + beden özellikleri + açıklamalar + varyant tip
+    değerleri) — baştan aktarım yalnız keep listesini taşır. Build temiz. Commit: 80fb69c.
+
 - **2026-07-09 (devam) — C5+C6+C10 TAMAM: ödeme + checkout UÇTAN UCA canlı 🎉:**
   - `/odeme`: yöntemler + kart canlı önizleme (bilgi gönderilmez — K2 test modu, tahsilat mock),
     özet cart+kupon durumundan, teslimatsız girişte /teslimat'a döner; taksit kutusu statik (C6,
