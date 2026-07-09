@@ -15,4 +15,12 @@ public class SepetController : StorePageController
     /// <summary>C4-b: teslimat adımı — adres seçimi üye gerektirir (sayfa script'i yönetir).</summary>
     [HttpGet("/teslimat")]
     public IActionResult Teslimat() => View("~/Views/Sepet/Teslimat.cshtml");
+
+    /// <summary>C5: ödeme adımı (test modu — K2; tahsilat mock, sipariş C10 checkout'uyla oluşur).</summary>
+    [HttpGet("/odeme")]
+    public IActionResult Odeme() => View("~/Views/Sepet/Odeme.cshtml");
+
+    /// <summary>C10: sipariş tamamlandı — içerik sessionStorage msSiparisSonucu'ndan.</summary>
+    [HttpGet("/siparis-tamamlandi")]
+    public IActionResult SiparisTamamlandi() => View("~/Views/Sepet/SiparisTamamlandi.cshtml");
 }

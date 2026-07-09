@@ -1,0 +1,14 @@
+@{
+    ViewData["Title"] = "Sipariş Tamamlandı";
+}
+
+<main class="ms-siparis-sayfa">
+    @await Html.PartialAsync("~/Views/ProjeElementleri/Sepet/_SepetSiparisTamamlandiSayfasi.cshtml")
+</main>
+
+<script>
+    document.querySelectorAll("[data-ms-siparis-asama-panel]").forEach((panel) => {
+        panel.hidden = false;
+        panel.classList.add("ms-siparis-asama-paneli-aktif");
+    });
+</script>

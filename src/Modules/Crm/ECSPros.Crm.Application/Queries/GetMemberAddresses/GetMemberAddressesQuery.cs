@@ -7,6 +7,8 @@ namespace ECSPros.Crm.Application.Queries.GetMemberAddresses;
 
 public record GetMemberAddressesQuery(Guid MemberId) : IRequest<Result<List<MemberAddressDto>>>;
 
+// C10: Country/City/District/Neighborhood ID'leri additive — checkout shipping alanları
+// msTeslimatDurumu üzerinden bu guid'leri kullanır (adlar gösterim için kalır).
 public record MemberAddressDto(
     Guid Id,
     string Title,
@@ -18,7 +20,12 @@ public record MemberAddressDto(
     string? PostalCode,
     string RecipientName,
     string RecipientPhone,
-    bool IsDefault);
+    bool IsDefault,
+    Guid? CountryId = null,
+    Guid? CityId = null,
+    Guid? DistrictId = null,
+    Guid? NeighborhoodId = null,
+    string? DeliveryNotes = null);
 
 public class GetMemberAddressesQueryHandler : IRequestHandler<GetMemberAddressesQuery, Result<List<MemberAddressDto>>>
 {
@@ -36,7 +43,8 @@ public class GetMemberAddressesQueryHandler : IRequestHandler<GetMemberAddresses
                 a.Id, a.Title,
                 a.CountryName, a.CityName, a.DistrictName, a.NeighborhoodName,
                 a.AddressLine, a.PostalCode,
-                a.RecipientName, a.RecipientPhone, a.IsDefault))
+                a.RecipientName, a.RecipientPhone, a.IsDefault,
+                a.CountryId, a.CityId, a.DistrictId, a.NeighborhoodId, a.DeliveryNotes))
             .ToListAsync(ct);
 
         return Result.Success(items);

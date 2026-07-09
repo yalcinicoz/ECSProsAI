@@ -1,0 +1,143 @@
+    <section class="ms-siparis-asama-paneli" data-ms-siparis-asama-panel="onay" hidden>
+        <div class="ms-siparis-asama-sayfasi">
+            <section class="ms-siparis-asama-ana" aria-labelledby="ms-onay-baslik">
+                <div class="ms-siparis-tamamlandi">
+                    <div class="ms-siparis-tamamlandi-ikon" aria-hidden="true"><i class="fa-solid fa-circle-check ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></div>
+                    <div>
+                        <h3 id="ms-onay-baslik" class="ms-sepet-bolum-basligi">Siparişiniz Alınmıştır!</h3>
+                        <p class="ms-sepet-bolum-aciklama">Sipariş bilgilerinizi Hesabım › Siparişlerim sayfasından takip edebilirsiniz.</p>
+                        <span class="ms-siparis-tamamlandi-uyari" data-ms-onay-mesaj></span>
+                    </div>
+                </div>
+
+                <section class="ms-siparis-asama-kart">
+                    <strong>Sipariş Tamamlandı</strong>
+                    <div class="ms-siparis-onay-ozet">
+                        <p><span>Sipariş Numaranız</span><strong data-ms-onay-no></strong></p>
+                        <p><span>Ödeme Tipi</span><strong data-ms-onay-odeme-tipi></strong></p>
+                        <p><span>Sipariş Tutarı</span><strong class="ms-fiyat-standart" data-ms-onay-tutar></strong></p>
+                        <p><span>Ödenen Tutar</span><strong class="ms-fiyat-standart" data-ms-onay-odenen></strong></p>
+                        <p><span>Ödeyeceğiniz Tutar</span><strong class="ms-fiyat-standart" data-ms-onay-kalan></strong></p>
+                    </div>
+                </section>
+
+                @if (false)
+                {
+                @* Faz H: kargo firması/takip bilgileri kargo entegrasyonuyla *@
+                <section class="ms-siparis-asama-kart">
+                    <strong>Kargo Bilgisi</strong>
+                    <div class="ms-siparis-onay-ozet">
+                        <p><span>Kargo Firması</span><strong>Misharix Express</strong></p>
+                        <p><span>Kargo Durumu</span><strong>Hazırlanıyor</strong></p>
+                        <p><span>Tahmini Kargoya Teslim</span><strong>Bugün 18:00'e kadar</strong></p>
+                        <p><span>Tahmini Teslimat</span><strong>2-4 iş günü</strong></p>
+                        <p><span>Takip Numarası</span><strong>MX600967703</strong></p>
+                        <p><span>Teslimat Adresi</span><strong>Ev Adresim / İstanbul, Kadıköy</strong></p>
+                    </div>
+                </section>
+                }
+
+                <section class="ms-siparis-asama-kart">
+                    <strong>Alınan Ürünler</strong>
+                    <div class="ms-siparis-tamamlandi-urun-listesi" data-ms-onay-urunler></div>
+                    <template data-ms-onay-urun-sablon>
+                        <article class="ms-siparis-tamamlandi-urun">
+                            <img src="" alt="" data-ms-onay-urun-gorsel>
+                            <div>
+                                <a href="#" data-ms-onay-urun-ad></a>
+                                <span data-ms-onay-urun-secenek></span>
+                            </div>
+                            <strong class="ms-urun-fiyat" data-ms-onay-urun-tutar></strong>
+                        </article>
+                    </template>
+                </section>
+            </section>
+
+            <aside class="ms-siparis-ozeti" aria-labelledby="ms-onay-ozet-baslik">
+                <h3 id="ms-onay-ozet-baslik" class="ms-siparis-basligi">Nihai Sipariş Özeti</h3>
+                <div class="ms-siparis-satirlari">
+                    <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Ürün Toplamı</span><span class="ms-siparis-deger ms-fiyat-standart" data-ms-onay-urun-toplami></span></div>
+                    <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Kargo</span><span class="ms-siparis-deger ms-siparis-ucretsiz">Ücretsiz</span></div>
+                    
+                    <div class="ms-siparis-satiri" data-ms-onay-kupon-satiri hidden><span class="ms-siparis-etiket">Kupon İndirimi</span><span class="ms-siparis-deger ms-urun-fiyat-indirimli" data-ms-onay-kupon-indirim></span></div>
+                </div>
+                <div class="ms-siparis-toplam">
+                    <span class="ms-siparis-toplam-etiket">Nihai Toplam</span>
+                    <span class="ms-siparis-toplam-deger ms-urun-fiyat" data-ms-onay-nihai></span>
+                </div>
+                <div class="ms-siparis-satirlari">
+                    <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Ödenen Tutar</span><span class="ms-siparis-deger ms-fiyat-standart" data-ms-onay-odenen2></span></div>
+                    <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Kalan Tutar</span><span class="ms-siparis-deger ms-fiyat-standart" data-ms-onay-kalan2></span></div>
+                </div>
+                <div class="ms-siparis-ozet-aksiyonlar">
+                    <a class="ms-buton ms-buton-m ms-buton-devam" href="/">Alışverişe Devam Et</a>
+                    <a class="ms-buton ms-buton-m ms-buton-satin-al" href="/Hesabim">Siparişlerime Git</a>
+                </div>
+            </aside>
+        </div>
+    </section>
+
+
+
+@* C10: Onay içeriği sessionStorage msSiparisSonucu'ndan; sipariş numarası üyenin sipariş
+   listesinden (en yeni kayıt) doğrulanarak gösterilir. Sonuç yoksa ana sayfaya dönülür. *@
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+    let sonuc = null;
+    try { sonuc = JSON.parse(sessionStorage.getItem("msSiparisSonucu") || "null"); } catch { }
+    if (!sonuc) { window.location.href = "/"; return; }
+
+    const paraYaz = (deger) => new Intl.NumberFormat("tr-TR",
+        { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(deger || 0) + " TL";
+    const yaz = (secici, metin) => { const alan = document.querySelector(secici); if (alan) { alan.textContent = metin; } };
+
+    // Sipariş numarası: üyenin en yeni siparişi (checkout yanıtı yalnız orderId döner)
+    let siparisNo = "";
+    const token = localStorage.getItem("ecspros_member_token");
+    if (token) {
+        try {
+            const cevap = await fetch("/api/store/account/orders?page=1", { headers: { Authorization: "Bearer " + token } });
+            const veri = await cevap.json().catch(() => null);
+            const kayitlar = veri?.data?.items || veri?.data || [];
+            const eslesen = kayitlar.find?.((o) => o.id === sonuc.orderId) || kayitlar[0];
+            siparisNo = eslesen?.orderNumber || "";
+        } catch { /* no'suz devam */ }
+    }
+
+    yaz("[data-ms-onay-mesaj]", `Sayın ${sonuc.aliciAd}, ${sonuc.odemeTipi} ile yapmış olduğunuz${siparisNo ? " " + siparisNo + " nolu" : ""} siparişiniz oluşturulmuştur.`);
+    yaz("[data-ms-onay-no]", siparisNo || sonuc.orderId);
+    yaz("[data-ms-onay-odeme-tipi]", sonuc.odemeTipi);
+    yaz("[data-ms-onay-tutar]", paraYaz(sonuc.tutar));
+    // K2 test modu: tahsilat mock — kapıda ödeme mantığıyla "ödenen 0, ödeyeceğiniz = nihai"
+    yaz("[data-ms-onay-odenen]", paraYaz(0));
+    yaz("[data-ms-onay-kalan]", paraYaz(sonuc.odenecek));
+    yaz("[data-ms-onay-urun-toplami]", paraYaz(sonuc.tutar));
+    yaz("[data-ms-onay-nihai]", paraYaz(sonuc.odenecek));
+    yaz("[data-ms-onay-odenen2]", paraYaz(0));
+    yaz("[data-ms-onay-kalan2]", paraYaz(sonuc.odenecek));
+
+    const kuponSatiri = document.querySelector("[data-ms-onay-kupon-satiri]");
+    if (kuponSatiri && sonuc.indirim > 0) {
+        kuponSatiri.hidden = false;
+        yaz("[data-ms-onay-kupon-indirim]", "-" + paraYaz(sonuc.indirim));
+    }
+
+    const liste = document.querySelector("[data-ms-onay-urunler]");
+    const sablon = document.querySelector("[data-ms-onay-urun-sablon]");
+    if (liste && sablon) {
+        (sonuc.kalemler || []).forEach((kalem) => {
+            const satir = sablon.content.firstElementChild.cloneNode(true);
+            const gorsel = satir.querySelector("[data-ms-onay-urun-gorsel]");
+            if (kalem.gorsel) { gorsel.src = kalem.gorsel; }
+            gorsel.alt = kalem.ad;
+            const ad = satir.querySelector("[data-ms-onay-urun-ad]");
+            ad.textContent = kalem.ad;
+            ad.href = kalem.kod ? "/urun/" + encodeURIComponent(kalem.kod) : "#";
+            satir.querySelector("[data-ms-onay-urun-secenek]").textContent =
+                [kalem.secenek, "Adet: " + kalem.adet].filter(Boolean).join(" • ");
+            satir.querySelector("[data-ms-onay-urun-tutar]").textContent = paraYaz(kalem.tutar);
+            liste.appendChild(satir);
+        });
+    }
+});
+</script>
