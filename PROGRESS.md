@@ -308,7 +308,11 @@
     canlıya uygulandı (`dotnet ef database update --context CrmDbContext`).
   - E2E (5051 publish): **12/12 ✓** + B6 regresyon 19/19 ✓; 0 konsol hatası; test üyeleri
     (%@e2e.local) DB'den silindi. `check.sh` TEMİZ (4 yeni izinli girdi: GirisModal/
-    KayitModal/GirisMenu/_AnaNavigasyon tek satır). **DEPLOY BEKLİYOR** (B10+B5 ile birlikte).
+    KayitModal/GirisMenu/_AnaNavigasyon tek satır).
+  - **DEPLOY TAMAM (2026-07-09 07:51):** B10+B5+B4 birlikte canlıya çıktı (Redis AKTİF ✓;
+    tüm izler canlı HTML'de doğrulandı). Önceki üç başarısız 'restart' beyanının kökü:
+    kullanıcı `restart` yerine `start` yazıyormuş — aktif serviste no-op. Deploy doğrulaması
+    her zaman `systemctl show ecspros -p ExecMainStartTimestamp` ile.
   - Kalan Faz B işleri: B11 (öne çıkar bayrağı), B12 (stok anahtarı), B13 (görsel QA kapanışı).
 
 - **2026-07-09 (devam) — Faz B5 TAMAMLANDI: mini sepet canlı:**
