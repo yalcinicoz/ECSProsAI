@@ -333,6 +333,7 @@ static class Migration
             alisFiyati, satisFiyati, kdvOrani, tedarikciUrunKodu,
             interneteAcik, satisaAcik, olusturmaTarihi, guncellemeTarihi
             FROM apurunler WHERE urunKodu IS NOT NULL AND urunKodu != ''
+            AND urunKodu IN (SELECT urunkodu FROM yeniurunkodlari) -- 2026-07-09: yalnız aktif ürün listesi aktarılır
             ORDER BY Id");
 
         int count = 0;
@@ -714,7 +715,8 @@ static class Migration
             JOIN dfurungruplari g ON g.Id = p.urunGrupId
             JOIN dfurunsiniflari s ON s.Id = g.urunSinifId
             LEFT JOIN dfcinsiyetler c ON c.Id = s.cinsiyetId
-            WHERE p.urunKodu IS NOT NULL AND p.urunKodu != ''"))
+            WHERE p.urunKodu IS NOT NULL AND p.urunKodu != ''
+            AND p.urunKodu IN (SELECT urunkodu FROM yeniurunkodlari)"))
         {
             while (r.Read())
             {
@@ -791,7 +793,8 @@ static class Migration
 
         // urunId → urunKodu (model kodu)
         var modelCodes = new Dictionary<int, string>();
-        using (var r = MysqlQuery("SELECT Id, urunKodu FROM apurunler WHERE urunKodu IS NOT NULL AND urunKodu != ''"))
+        using (var r = MysqlQuery("SELECT Id, urunKodu FROM apurunler WHERE urunKodu IS NOT NULL AND urunKodu != ''" +
+            " AND urunKodu IN (SELECT urunkodu FROM yeniurunkodlari)"))
             while (r.Read()) modelCodes[r.GetInt32(0)] = r.GetString(1);
         Log($"  {modelCodes.Count} model kodu yüklendi.");
 
@@ -981,7 +984,8 @@ static class Migration
     {
         if (productMap.Count > 0) return;
         Log("  [productMap yükleniyor...]");
-        using var r0 = MysqlQuery("SELECT Id, urunKodu FROM apurunler WHERE urunKodu IS NOT NULL AND urunKodu != ''");
+        using var r0 = MysqlQuery("SELECT Id, urunKodu FROM apurunler WHERE urunKodu IS NOT NULL AND urunKodu != ''" +
+            " AND urunKodu IN (SELECT urunkodu FROM yeniurunkodlari)"); // 2026-07-09: keep listesi dışını hiçbir faz eşlemez
         var codes = new Dictionary<string, int>();
         while (r0.Read()) codes[r0.GetString(1)] = r0.GetInt32(0);
 
@@ -1271,6 +1275,7 @@ static class Migration
 
         string bedenSql = @"SELECT b.urunId, u.urunKodu, b.beden, b.ozellik, b.deger
             FROM apurunbedenozellikleri b JOIN apurunler u ON u.Id = b.urunId
+            AND u.urunKodu IN (SELECT urunkodu FROM yeniurunkodlari)
             WHERE b.deger IS NOT NULL AND b.deger != ''" +
             (codeFilter is null ? "" : " AND u.urunKodu = @code") +
             " ORDER BY b.urunId, b.beden";
@@ -1343,7 +1348,7 @@ static class Migration
             delCmd.ExecuteNonQuery();
         }
 
-        string aciklamaSql = "SELECT a.urunId, u.urunKodu, a.urunAciklama FROM apurunaciklamalari a JOIN apurunler u ON u.Id = a.urunId WHERE a.urunAciklama IS NOT NULL AND a.urunAciklama != ''" +
+        string aciklamaSql = "SELECT a.urunId, u.urunKodu, a.urunAciklama FROM apurunaciklamalari a JOIN apurunler u ON u.Id = a.urunId AND u.urunKodu IN (SELECT urunkodu FROM yeniurunkodlari) WHERE a.urunAciklama IS NOT NULL AND a.urunAciklama != ''" +
             (codeFilter is null ? "" : " AND u.urunKodu = @code");
 
         int attrInserted = 0, attrSkippedNoProduct = 0, compositionInserted = 0;
@@ -1448,6 +1453,7 @@ static class Migration
         string sql = @"SELECT avd.urunId, avd.varyantTipId, avd.varyantDegeri
             FROM apurunvaryanttipdegerleri avd
             JOIN apurunler u ON u.Id = avd.urunId
+            AND u.urunKodu IN (SELECT urunkodu FROM yeniurunkodlari)
             WHERE avd.varyantDegeri IS NOT NULL AND avd.varyantDegeri != ''" +
             (testProductCode is null ? "" : " AND u.urunKodu = @code");
 
