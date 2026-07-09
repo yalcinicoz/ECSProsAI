@@ -27,7 +27,7 @@
 | A | Razor host + kabuk altyapısı | ✅ Tamamlandı (2026-07-07) — 8080'de canlı, görüntü doğrulaması yapıldı |
 | B | Navigasyon + Ana Sayfa + Liste + Detay (gerçek port) | ✅ TAMAM (2026-07-09) — B1–B14 tümü bitti; envanter 8.1–8.4 tam işaretli, drift temiz. Geçici çözümler kayıtlı: B3 duyuru + B6 ana sayfa → G8'de vitrin sistemine devrolur |
 | C | Sepet + Checkout | ✅ TAMAM (2026-07-09) — C1–C11 bitti: sepet, kupon, teslimat+adres+geo, ödeme (K2 mock), taksit, TCKN (K9), sözleşmeler CMS+kabul kaydı, stok haber ver, checkout uçtan uca; QA 88 adım yeşil. Ertelenenler hedef fazlı: favori E5, kupon listesi E9, adres düzenle E4, tahsilat/BIN H6, bildirim H |
-| D | Üye oturumu (Razor tarafı) + SMS/OTP altyapısı | ⬜ Başlamadı |
+| D | Üye oturumu (Razor tarafı) + SMS/OTP altyapısı | 🔵 Sürüyor — D1 ✅ (HttpOnly cookie + SSR kimlik + logout/session iptali; D2 ve D6 büyük ölçüde B4+D1 ile kapandı); kalan: D3 KVKK belge modalı, D4 SMS/OTP, D5 BCrypt geçişi, D7 QA |
 | E | Hesabım kümesi (12 sayfa + yeni backend özellikleri) | ⬜ Başlamadı |
 | F | Kurumsal sayfalar + Footer | ⬜ Başlamadı |
 | G | Vitrin & Kişiselleştirme Sistemi (G-M1: bloklar+yayınla · G-M2: kural motoru) | ⬜ Başlamadı |
@@ -167,7 +167,7 @@ src/ECSPros.Api/
 ### FAZ D — Üye oturumu (Razor) + SMS/OTP altyapısı
 > Backend auth VAR (register/login/refresh/me). Eksik: Razor tarafında oturum yönetimi, SMS ile giriş/doğrulama, şifre güvenliği.
 
-- [ ] D1. Razor oturum stratejisi: store JWT'sini HttpOnly cookie'de taşı (sayfa render'da kimlik) + JS tarafına fetch'ler için mekanizma; refresh akışı.
+- [x] D1. **Razor oturum stratejisi** — TAMAM (2026-07-09): Login/refresh yanıtları access token'ı HttpOnly `ecspros_member` cookie'sine de yazar (SameSite=Lax, Secure=IsHttps — Cloudflare Flexible origin HTTP'de ve localhost testinde çalışır; süre=token süresi). **SSR kimlik:** `IStoreMemberSession` (`StoreMemberSession`) cookie'deki JWT'yi doğrular → `StorePageController` her store sayfasında `ViewData["MsUye"]` (StoreUyeKimlik: MemberId/FullName/Email; null=misafir). ⚠️ Kritik keşif: JwtBearer 8.0.14'ün getirdiği IdentityModel 7.1.2'de `JwtSecurityTokenHandler` geçerli exp'li token'a `SecurityTokenNoExpirationException` fırlatıyor — `JsonWebTokenHandler` kullanıldı (pipeline'ın kendi kullandığı handler). **JS akışı değişmedi** (localStorage + Authorization header); nav script'i SSR kimlikle oturum UI'ını /me beklemeden boyar (yalnız localStorage token'ı da varken — /me yine doğrular). **Logout endpoint'i:** `POST /api/store/auth/logout` (anonim erişilir) — `RevokeMemberSessionCommand` refresh session'ı IsActive=false yapar + cookie silinir; nav çıkışı buna bağlandı (D6'nın 'çıkış → session iptali' maddesi burada kapandı). E2E (5051 publish): **12/12 ✓** + B4 regresyon 12/12 ✓ (HttpOnly cookie yazımı, document.cookie'de görünmezlik, /me engelliyken SSR boyama, refresh cookie rotasyonu, çıkışta session 1→0 + cookie + localStorage temizliği, çıkış sonrası SSR misafir, 0 konsol hatası).
 - [ ] D2. Giriş modalı canlandırma: e-posta/şifre sekmesi → `store/auth/login`; hata/başarı durumları tasarımdaki bildirim elementleriyle.
 - [ ] D3. Kayıt modalı: form → `store/auth/register`; KVKK/üyelik sözleşmesi belge modalı (CMS'ten metin) + onay kaydı.
 - [ ] D4. **SMS/OTP altyapısı** (yeni): sağlayıcı soyutlaması (`ISmsSender`), dev'de log sağlayıcısı; OTP üretim/doğrulama (süre+deneme sınırı). Telefonla giriş sekmesi (`data-ms-giris-sms-*`, kod kutuları, geri sayım, yeniden gönder) buna bağlanır. Gerçek sağlayıcı seçimi kullanıcı kararı.

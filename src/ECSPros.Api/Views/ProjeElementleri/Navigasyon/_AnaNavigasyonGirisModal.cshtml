@@ -103,11 +103,17 @@
    localStorage token'larıyla kalıcıdır (me endpoint'i), girişte misafir sepeti merge edilir.
    Misharix'in modal/panel davranış script'ine dokunulmaz: modal kapatma onun kapat
    butonlarına click ile devredilir, oturum UI durumu onunla aynı class/yazı kuralıyla
-   ayarlanır. SMS/OTP gerçek akışı Faz D. *@
+   ayarlanır. SMS/OTP gerçek akışı Faz D.
+   D1: SSR kimlik (HttpOnly cookie → ViewData["MsUye"]) oturum UI'ını /me beklemeden
+   boyar; /me yine doğrular. Çıkış artık logout endpoint'iyle session iptali de yapar. *@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     const TOKEN_ANAHTARI = "ecspros_member_token";
     const REFRESH_ANAHTARI = "ecspros_member_refresh";
+    const ssrUye = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        ViewData["MsUye"] is ECSPros.Api.Services.StoreUyeKimlik u
+            ? new { ad = u.FullName, iletisim = u.Email ?? "" }
+            : null));
     const platformId = document.querySelector("[data-ms-arama]")?.dataset.msAramaPlatform || "";
 
     const girisModal = document.querySelector("[data-ms-giris-modal]");
@@ -295,14 +301,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ── Çıkış: misharix script'i UI'ı sıfırlar; burada token/oturum temizlenir ──
+    // ── Çıkış: misharix script'i UI'ı sıfırlar; burada oturum sunucuda iptal edilir
+    //    (session IsActive=false + SSR cookie silinir) ve token'lar temizlenir ──
     document.querySelectorAll("[data-ms-hesap-cikis]").forEach((cikis) => {
         cikis.addEventListener("click", () => {
+            const refresh = localStorage.getItem(REFRESH_ANAHTARI);
+            fetch("/api/store/auth/logout", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ refreshToken: refresh || null })
+            }).catch(() => { /* ağ hatası — cookie süresiyle düşer, tokenlar yine silinir */ });
             tokenlariTemizle();
             window.msMiniSepetYenile?.();
         });
     });
 
+    // D1: SSR kimlik varsa oturum UI'ı /me yanıtı beklenmeden boyanır (yalnız JS oturumu
+    // da varken — localStorage boşsa SSR cookie'sine güvenilmez, /me akışı belirleyicidir).
+    if (ssrUye?.ad && localStorage.getItem(TOKEN_ANAHTARI)) {
+        girisiUygula(ssrUye.ad, ssrUye.iletisim || "");
+    }
     beniGetir(false);
 });
 </script>

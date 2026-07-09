@@ -26,6 +26,10 @@ public abstract class StorePageController : Controller
         var platform = await storeContext.GetPlatformAsync(context.HttpContext.RequestAborted);
 
         ViewData["MsPlatform"] = platform;
+        // D1: HttpOnly cookie'deki JWT'den SSR kimliği — sayfalar ViewData["MsUye"] ile
+        // üye bilinen render yapabilir (null = misafir; JS localStorage akışı bağımsız).
+        ViewData["MsUye"] = await services.GetRequiredService<IStoreMemberSession>()
+            .MevcutUyeAsync(context.HttpContext);
         ViewData["MsNavigasyon"] = platform is null
             ? NavigasyonVm.Bos
             : await NavigasyonuGetirAsync(services, platform.Id, context.HttpContext.RequestAborted);

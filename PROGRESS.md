@@ -294,6 +294,19 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — FAZ D BAŞLADI; D1 TAMAM: Razor oturum stratejisi:**
+  - Login/refresh → HttpOnly `ecspros_member` cookie'si (SameSite=Lax, Secure=IsHttps);
+    `IStoreMemberSession` cookie JWT'sini doğrular → tüm store sayfalarında
+    `ViewData["MsUye"]` SSR kimliği. JS localStorage akışı değişmedi; nav SSR kimlikle
+    /me beklemeden boyanır.
+  - **⚠️ Kritik keşif:** IdentityModel 7.1.2'de (JwtBearer 8.0.14'ün getirdiği)
+    `JwtSecurityTokenHandler` geçerli exp'li token'a SecurityTokenNoExpirationException
+    fırlatıyor — SSR doğrulamada `JsonWebTokenHandler` kullan (pipeline'ınki de o).
+  - **Logout:** `POST /api/store/auth/logout` — `RevokeMemberSessionCommand` (session
+    IsActive=false) + cookie temizliği; nav çıkışı bağlandı (D6'nın session iptali kapandı).
+  - **E2E 12/12 ✓ + B4 regresyon 12/12 ✓.** Drift TEMİZ. Kalan: D3 KVKK belge modalı,
+    D4 SMS/OTP, D5 BCrypt geçişi, D7 QA.
+
 - **2026-07-09 (devam) — C11 TAMAM → FAZ C KAPANDI 🎉:**
   - Envanter 8.5 tam işaretli; ertelenenler hedef fazlı (favori E5, kupon listesi E9, adres
     düzenle E4, tahsilat/BIN H6, bildirim gönderimi H).

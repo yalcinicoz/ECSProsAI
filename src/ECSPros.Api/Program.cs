@@ -153,6 +153,7 @@ builder.Services.AddScoped<IRealtimeNotificationService, SignalRNotificationServ
 // ─── Storefront (Razor) servisleri ─────────────────────────────────
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IStoreContext, StoreContext>();
+builder.Services.AddSingleton<ECSPros.Api.Services.IStoreMemberSession, ECSPros.Api.Services.StoreMemberSession>(); // D1: SSR üye kimliği (HttpOnly cookie)
 builder.Services.AddHostedService<DashboardMetricsWorker>();
 builder.Services.AddSingleton<ECSPros.Api.Services.MigrationService>();
 
