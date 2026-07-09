@@ -294,6 +294,18 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — Faz B12 TAMAMLANDI: stok kontrolü anahtarı:**
+  - Anahtar `FirmPlatform.Settings."stockControlEnabled"` (JSONB, kolon yok; varsayılan KAPALI —
+    bugünkü veri durumu, her şey satılabilir; stok dolunca true yapmak yeterli, kod değişmez).
+  - Açıkken: detayda beden satılabilirliği IStockService'ten — tükenen beden ana alan + sabit
+    panelde `ms-beden-secim-tukendi` + disabled, config haritasına girmez; Stok Durumu gerçek;
+    bedensiz stoksuz üründe TekVaryantId verilmez. Sunucu guard'ı: `AddToCartCommand.EnforceStock`
+    (API anahtarı 5 dk cache ile çözer) → stoksuz varyant 400.
+  - E2E 12/12 ✓ (julude platformu testte açılıp GERİ ALINDI, mishar'a dokunulmadı; test stok/
+    sepet satırları temizlendi) + B6 regresyon 19/19 ✓; drift TEMİZ. NOT: inv_stocks'ta artık
+    249 pozitif satır var (2026-07-06 "hiç yok" notu güncel değil). **DEPLOY BEKLİYOR.**
+  - Faz B'de kalan tek iş: B13 (görsel + davranış QA — faz kapanışı).
+
 - **2026-07-09 (devam) — Faz B11 TAMAMLANDI: "öne çıkar" bayrağı (K8):**
   - `ChannelProduct.FeaturedFrom/Until` (migration canlıda); admin GET/PUT
     `channel-products/{platform}/products/{product}/featured` + ProductDetailPage "Satış

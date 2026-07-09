@@ -101,8 +101,9 @@
                     <div class="ms-beden-secim-listesi" aria-label="@b.BedenEtiketi seçimi">
                         @foreach (var beden in b.Bedenler)
                         {
-                        <label class="ms-beden-secim">
-                            <input class="ms-beden-secim-input" type="radio" name="beden" value="@beden.Ad">
+                        @* B12: tükenen beden misharix'in tukendi stiliyle disabled gelir *@
+                        <label class="ms-beden-secim@(beden.Satilabilir ? "" : " ms-beden-secim-tukendi")">
+                            <input class="ms-beden-secim-input" type="radio" name="beden" value="@beden.Ad" disabled="@(!beden.Satilabilir)">
                             <span class="ms-beden-secim-kutu">@beden.Ad</span>
                         </label>
                         }

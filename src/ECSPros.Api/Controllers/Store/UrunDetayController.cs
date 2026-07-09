@@ -14,7 +14,7 @@ namespace ECSPros.Api.Controllers.Store;
 /// Veri süreç içi MediatR'dan gelir; mobil uygulama aynı sorguyu api/store/catalog/
 /// products/{code} üzerinden kullanır (plan 3.4).
 /// </summary>
-public class UrunDetayController(IMediator mediator, IStoreContext storeContext) : StorePageController
+public class UrunDetayController(IMediator mediator, IStoreContext storeContext, ECSPros.Shared.Contracts.IStockService stockService) : StorePageController
 {
     [HttpGet("/urun/{code}")]
     public async Task<IActionResult> Index(string code, [FromQuery] string? color, CancellationToken ct)
@@ -98,6 +98,16 @@ public class UrunDetayController(IMediator mediator, IStoreContext storeContext)
                                  && a.AttributeTypeCode != renkTipKodu
                                  && a.AttributeTypeCode is not ("renk" or "filtre_rengi"));
 
+        // B12: platform anahtarı açıkken satılabilirlik gerçek stoktan okunur;
+        // kapalıyken (varsayılan — bugünkü veri durumu) hiç sorgulanmaz, hepsi satılabilir.
+        var stoklar = new Dictionary<Guid, int>();
+        if (platform.StokKontrolu)
+        {
+            foreach (var v in havuz)
+                stoklar[v.Id] = await stockService.GetAvailableStockAsync(v.Id, null, ct);
+        }
+        bool Satilabilir(Guid variantId) => !platform.StokKontrolu || stoklar.GetValueOrDefault(variantId) > 0;
+
         var bedenler = new List<BedenSecenekVm>();
         if (bedenTip is not null)
         {
@@ -109,7 +119,8 @@ public class UrunDetayController(IMediator mediator, IStoreContext storeContext)
                 .Select(x => new BedenSecenekVm(
                     TrAd(x.Beden!.AttributeValueNameI18n),
                     x.Varyant.Id,
-                    x.Varyant.PlatformPrice ?? x.Varyant.BasePrice))
+                    x.Varyant.PlatformPrice ?? x.Varyant.BasePrice,
+                    Satilabilir(x.Varyant.Id)))
                 .OrderBy(x => BedenSirasi(x.Ad))
                 .ThenBy(x => x.Ad, StringComparer.Create(new System.Globalization.CultureInfo("tr-TR"), true))
                 .ToList();
@@ -139,8 +150,11 @@ public class UrunDetayController(IMediator mediator, IStoreContext storeContext)
                 TrAd(g.First().TypeNameI18n),
                 string.Join(", ", g.Select(a => TrAd(a.ValueNameI18n)).Distinct())))
             .Where(o => o.Ad.Length > 0 && o.Deger.Length > 0));
-        // Stok kontrolü anahtarı (B12) gelene kadar her ürün satılabilir kabul edilir.
-        ozellikler.Add(new OzellikVm("Stok Durumu", "Stokta"));
+        // B12: anahtar açıkken gerçek durum; kapalıyken her ürün satılabilir kabul edilir.
+        var urunSatilabilir = bedenler.Count > 0
+            ? bedenler.Any(x => x.Satilabilir)
+            : Satilabilir(havuz[0].Id);
+        ozellikler.Add(new OzellikVm("Stok Durumu", urunSatilabilir ? "Stokta" : "Tükendi"));
 
         var vm = new UrunDetayVm(
             Kod: urun.Code,
@@ -158,7 +172,7 @@ public class UrunDetayController(IMediator mediator, IStoreContext storeContext)
                 .ToList(),
             BedenEtiketi: bedenTip is null ? "Beden" : TrAd(bedenTip.AttributeTypeNameI18n),
             Bedenler: bedenler,
-            TekVaryantId: bedenler.Count == 0 ? havuz[0].Id : null,
+            TekVaryantId: bedenler.Count == 0 && urunSatilabilir ? havuz[0].Id : null,
             TekVaryantFiyat: bedenler.Count == 0 ? havuz[0].PlatformPrice ?? havuz[0].BasePrice : null,
             Ozellikler: ozellikler,
             Aciklama: urun.DescriptionI18n is { } uzun ? TrAd(uzun) : null,

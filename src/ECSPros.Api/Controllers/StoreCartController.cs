@@ -4,16 +4,32 @@ using ECSPros.Crm.Application.Commands.MergeCarts;
 using ECSPros.Crm.Application.Commands.RemoveCartItem;
 using ECSPros.Crm.Application.Commands.UpdateCartItem;
 using ECSPros.Crm.Application.Queries.GetCart;
+using ECSPros.Core.Application.Services;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ECSPros.Api.Controllers;
 
 [ApiController]
 [Route("api/store/cart")]
-public class StoreCartController(IMediator mediator) : ControllerBase
+public class StoreCartController(IMediator mediator, ICoreDbContext coreDb, IMemoryCache cache) : ControllerBase
 {
+    /// <summary>B12: platformun "stok kontrolü" anahtarı (Settings.stockControlEnabled, 5 dk cache).</summary>
+    private async Task<bool> StokKontroluAcikMiAsync(Guid firmPlatformId, CancellationToken ct) =>
+        await cache.GetOrCreateAsync($"stok-kontrolu:{firmPlatformId}", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            var settings = await coreDb.FirmPlatforms.AsNoTracking()
+                .Where(p => p.Id == firmPlatformId)
+                .Select(p => p.Settings)
+                .FirstOrDefaultAsync(ct);
+            return settings is not null
+                && settings.TryGetValue("stockControlEnabled", out var deger)
+                && deger is System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.True };
+        });
     [HttpGet]
     public async Task<IActionResult> GetCart(
         [FromQuery] Guid? cartId,
@@ -45,7 +61,8 @@ public class StoreCartController(IMediator mediator) : ControllerBase
 
         var result = await mediator.Send(new AddToCartCommand(
             req.FirmPlatformId, req.VariantId, req.Quantity, req.Price,
-            req.CurrencyCode, memberId, req.SessionId), ct);
+            req.CurrencyCode, memberId, req.SessionId,
+            EnforceStock: await StokKontroluAcikMiAsync(req.FirmPlatformId, ct)), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = new { cartId = result.Value } });
     }
