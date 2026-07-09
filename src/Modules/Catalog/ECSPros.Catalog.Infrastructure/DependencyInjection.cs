@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddScoped<ICatalogDbContext>(sp => sp.GetRequiredService<CatalogDbContext>());
         services.AddScoped<IImageUploadService, LocalDiskImageUploadService>();
         services.AddScoped<IVideoUploadService, LocalDiskVideoUploadService>();
+        services.AddScoped<Shared.Contracts.IProductService, CatalogProductService>();
 
         return services;
     }

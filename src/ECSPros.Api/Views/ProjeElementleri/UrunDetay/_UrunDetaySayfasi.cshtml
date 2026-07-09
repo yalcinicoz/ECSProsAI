@@ -1961,6 +1961,7 @@
                     const veri = await cevap.json().catch(() => null);
                     if (veri?.success && veri.data?.cartId) {
                         localStorage.setItem("ecspros_cart", veri.data.cartId);
+                        window.msMiniSepetYenile?.(); // B5: mini sepet rozet/panelini tazele
                     } else if (!veri?.success) {
                         console.error("Sepete ekleme başarısız:", veri?.error || cevap.status);
                     }
