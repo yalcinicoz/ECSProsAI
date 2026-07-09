@@ -78,6 +78,8 @@
                         <p class="ms-sepet-aciklama" data-ms-sepet-secenek></p>
                         <p class="ms-sepet-stok-uyari" data-ms-sepet-stok-uyari hidden>Stok tükendi. Bu ürünü sepetten çıkararak alışverişe devam edebilirsiniz.</p>
                         <div class="ms-sepet-alt-satir">
+                            @* C9: tükendi satırında görünür (tasarımdaki tükendi örneğiyle aynı buton) *@
+                            <button class="ms-sepet-tukendi-notu" type="button" data-ms-stok-haber-ver hidden>Stok yenilenince haber ver</button>
                             <div class="ms-adet-secici" data-ms-sepet-adet>
                                 <button class="ms-adet-buton" type="button" aria-label="Adedi azalt" data-ms-sepet-adet-azalt>-</button>
                                 <span class="ms-adet-deger" data-ms-sepet-adet-deger>1</span>
@@ -603,6 +605,33 @@ document.addEventListener("DOMContentLoaded", () => {
             kutu.disabled = true;
             satir.querySelector("[data-ms-sepet-stok-uyari]").hidden = false;
             satir.querySelector("[data-ms-sepet-adet]").hidden = true;
+
+            // C9: stok gelince haber ver — üye POST atar, misafir giriş modalına yönlenir
+            const haberButon = satir.querySelector("[data-ms-stok-haber-ver]");
+            haberButon.hidden = false;
+            haberButon.dataset.msStokHaberVaryant = kalem.variantId || "";
+            haberButon.addEventListener("click", async () => {
+                if (!localStorage.getItem("ecspros_member_token")) {
+                    document.querySelector("[data-ms-giris-modal-ac]")?.click();
+                    return;
+                }
+                haberButon.disabled = true;
+                try {
+                    const cevap = await fetch("/api/store/stock-alerts", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", ...uyeBasligi() },
+                        body: JSON.stringify({
+                            firmPlatformId: platformId,
+                            variantId: kalem.variantId,
+                            productCode: kalem.productCode || null,
+                            variantInfo: kalem.optionsText || null
+                        })
+                    });
+                    const veri = await cevap.json().catch(() => null);
+                    if (veri?.success) { stokHaberIsaretle(haberButon); }
+                    else { haberButon.disabled = false; }
+                } catch { haberButon.disabled = false; }
+            });
         }
 
         satir.querySelector("[data-ms-sepet-urun-checkbox]").addEventListener("change", () => {
@@ -687,6 +716,26 @@ document.addEventListener("DOMContentLoaded", () => {
     const uyeBasligi = () => {
         const token = localStorage.getItem("ecspros_member_token");
         return token ? { Authorization: "Bearer " + token } : {};
+    };
+
+    // C9: stok haber butonu durumu — kayıt varsa metin/pasiflik; ilk yüklemede API'den işaretlenir
+    const stokHaberIsaretle = (buton) => {
+        buton.textContent = "Stok gelince haber verilecek ✓";
+        buton.disabled = true;
+    };
+    const stokHaberDurumunuIsaretle = async () => {
+        if (!localStorage.getItem("ecspros_member_token")) { return; }
+        const butonlar = [...konteyner.querySelectorAll("[data-ms-stok-haber-ver]:not([hidden])")];
+        if (!butonlar.length) { return; }
+        const idler = butonlar.map((b) => b.dataset.msStokHaberVaryant).filter(Boolean);
+        try {
+            const cevap = await fetch(`/api/store/stock-alerts?firmPlatformId=${platformId}&variantIds=${idler.join(",")}`,
+                { headers: uyeBasligi() });
+            const veri = await cevap.json().catch(() => null);
+            (veri?.data || []).forEach((vid) => {
+                butonlar.filter((b) => b.dataset.msStokHaberVaryant === vid).forEach(stokHaberIsaretle);
+            });
+        } catch { /* işaretlenemezse buton tıklanabilir kalır — POST idempotent */ }
     };
 
     const kuponDogrula = async (kod, toplam) => {
@@ -792,6 +841,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const cevap = await fetch("/api/store/cart?" + parametreler.toString());
             const veri = await cevap.json().catch(() => null);
             ciz(veri?.success ? veri.data : null);
+            stokHaberDurumunuIsaretle(); // C9: tükendi satırlarındaki mevcut kayıtları işaretle
         } catch { ciz(null); }
     };
 

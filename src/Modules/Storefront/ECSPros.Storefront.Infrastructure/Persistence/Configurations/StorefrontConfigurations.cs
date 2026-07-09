@@ -157,3 +157,20 @@ public class ChannelProductGroupConfiguration : IEntityTypeConfiguration<Channel
         builder.HasQueryFilter(g => !g.IsDeleted);
     }
 }
+
+public class StockAlertConfiguration : IEntityTypeConfiguration<StockAlert>
+{
+    public void Configure(EntityTypeBuilder<StockAlert> builder)
+    {
+        builder.ToTable("stock_alerts");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.Email).HasMaxLength(200);
+        builder.Property(a => a.ProductCode).HasMaxLength(50);
+        builder.Property(a => a.VariantInfo).HasMaxLength(200);
+        builder.Property(a => a.Status).HasMaxLength(20).IsRequired();
+        // Stok girişinde "bu varyantı bekleyenler" sorgusu + üyenin mükerrer kaydı guard'ı
+        builder.HasIndex(a => new { a.FirmPlatformId, a.VariantId, a.Status });
+        builder.HasIndex(a => new { a.MemberId, a.Status });
+        builder.HasQueryFilter(a => !a.IsDeleted);
+    }
+}

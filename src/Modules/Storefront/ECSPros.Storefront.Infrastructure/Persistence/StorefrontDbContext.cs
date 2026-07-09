@@ -17,6 +17,7 @@ public class StorefrontDbContext : DbContext, IStorefrontDbContext
     public DbSet<ChannelCategoryGroup> ChannelCategoryGroups => Set<ChannelCategoryGroup>();
     public DbSet<ChannelCategoryProduct> ChannelCategoryProducts => Set<ChannelCategoryProduct>();
     public DbSet<ChannelProductGroup> ChannelProductGroups => Set<ChannelProductGroup>();
+    public DbSet<StockAlert> StockAlerts => Set<StockAlert>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
