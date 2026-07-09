@@ -1,0 +1,148 @@
+@* C4-b (yeni dosya — kaynakta karşılığı _SepetSiparis demo kompozitindeki adres modalı):
+   markup birebir alınıp canlıya bağlandı — demo değerler boşaltıldı, alanlara data-ms-adres-*
+   bağları eklendi; İl/İlçe/Mahalle select'leri aynı görsel sınıflarla ama data-ms-adres-select
+   attribute'uyla (site.js'in ozel-select'i dinamik seçenek desteklemez — davranış teslimat
+   sayfası script'inde, seçenekler api/store/geo'dan). Fatura türü radio'ları görseldir,
+   adres kaydına girmez (kurumsal fatura C10 checkout'ta). Telefon ülke bileşeni site.js'ten. *@
+    <div class="ms-ornek-modal ms-siparis-adres-modal" data-ms-adres-modal aria-hidden="true">
+        <div class="ms-ornek-modal-kaplama" data-ms-adres-modal-kapat></div>
+        <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-xl" role="dialog" aria-modal="true" aria-labelledby="ms-siparis-adres-modal-baslik">
+            <button class="ms-ornek-modal-kapat" type="button" data-ms-adres-modal-kapat aria-label="Adres düzenleme modalını kapat">×</button>
+            <h3 id="ms-siparis-adres-modal-baslik" class="ms-ornek-modal-baslik">Adresi Düzenle</h3>
+            <p class="ms-ornek-modal-aciklama">Teslimat adresi, alıcı bilgisi ve telefon bilgisini bu alanda güncelleyebilirsiniz.</p>
+
+            <div class="ms-form-izgara">
+                <label class="ms-form-alani ms-form-alani-genis">
+                    <span class="ms-form-etiket">Adres Başlığı</span>
+                    <input class="ms-form-girdi" type="text" placeholder="Örn. Ev Adresim" data-ms-adres-modal-baslik-girdi>
+                </label>
+                <label class="ms-form-alani">
+                    <span class="ms-form-etiket">Ad</span>
+                    <input class="ms-form-girdi" type="text" autocomplete="given-name" data-ms-adres-ad>
+                </label>
+                <label class="ms-form-alani">
+                    <span class="ms-form-etiket">Soyad</span>
+                    <input class="ms-form-girdi" type="text" autocomplete="family-name" data-ms-adres-soyad>
+                </label>
+                <div class="ms-form-alani ms-form-alani-genis">
+                    <span class="ms-form-etiket">Fatura Türü</span>
+                    <div class="ms-onay-listesi ms-siparis-adres-secim-listesi">
+                        <label class="ms-onay-kart">
+                            <input class="ms-onay-input" type="radio" name="ms-adres-fatura-turu" checked>
+                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
+                            <span class="ms-onay-metin">
+                                Bireysel
+                                <span class="ms-onay-yardim">Kişisel fatura bilgileriyle devam et</span>
+                            </span>
+                        </label>
+                        <label class="ms-onay-kart">
+                            <input class="ms-onay-input" type="radio" name="ms-adres-fatura-turu">
+                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
+                            <span class="ms-onay-metin">
+                                Kurumsal
+                                <span class="ms-onay-yardim">Firma bilgileriyle fatura oluştur</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                <div class="ms-form-alani">
+                    <span class="ms-form-etiket">Ülke</span>
+                    <div class="ms-ozel-select ms-ozel-select-kilitli" data-ms-ozel-select>
+                        <button class="ms-ozel-select-tetikleyici" type="button" disabled aria-disabled="true">
+                            <span data-ms-ozel-select-deger>Türkiye</span>
+                            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-ozel-select-ok " aria-hidden="true"></i>
+                        </button>
+                        <input type="hidden" name="ulke" value="Türkiye" data-ms-adres-ulke-id>
+                    </div>
+                </div>
+                <div class="ms-form-alani">
+                    <span class="ms-form-etiket">İl</span>
+                    <div class="ms-ozel-select" data-ms-adres-select="il">
+                        <button class="ms-ozel-select-tetikleyici" type="button" data-ms-adres-select-tetikleyici aria-haspopup="listbox" aria-expanded="false">
+                            <span data-ms-adres-select-deger>Seçim yapın</span>
+                            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-ozel-select-ok " aria-hidden="true"></i>
+                        </button>
+                        <div class="ms-ozel-select-panel" role="listbox" aria-label="İl seçenekleri">
+                            <input class="ms-ozel-select-arama" type="search" placeholder="İl ara" data-ms-adres-select-arama>
+                            <div class="ms-ozel-select-secenek-listesi" data-ms-adres-select-liste></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ms-form-alani">
+                    <span class="ms-form-etiket">İlçe</span>
+                    <div class="ms-ozel-select" data-ms-adres-select="ilce">
+                        <button class="ms-ozel-select-tetikleyici" type="button" data-ms-adres-select-tetikleyici aria-haspopup="listbox" aria-expanded="false">
+                            <span data-ms-adres-select-deger>Seçim yapın</span>
+                            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-ozel-select-ok " aria-hidden="true"></i>
+                        </button>
+                        <div class="ms-ozel-select-panel" role="listbox" aria-label="İlçe seçenekleri">
+                            <input class="ms-ozel-select-arama" type="search" placeholder="İlçe ara" data-ms-adres-select-arama>
+                            <div class="ms-ozel-select-secenek-listesi" data-ms-adres-select-liste></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ms-form-alani">
+                    <span class="ms-form-etiket">Mahalle</span>
+                    <div class="ms-ozel-select" data-ms-adres-select="mahalle">
+                        <button class="ms-ozel-select-tetikleyici" type="button" data-ms-adres-select-tetikleyici aria-haspopup="listbox" aria-expanded="false">
+                            <span data-ms-adres-select-deger>Seçim yapın</span>
+                            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-ozel-select-ok " aria-hidden="true"></i>
+                        </button>
+                        <div class="ms-ozel-select-panel" role="listbox" aria-label="Mahalle seçenekleri">
+                            <input class="ms-ozel-select-arama" type="search" placeholder="Mahalle ara" data-ms-adres-select-arama>
+                            <div class="ms-ozel-select-secenek-listesi" data-ms-adres-select-liste></div>
+                        </div>
+                    </div>
+                </div>
+                <label class="ms-form-alani ms-form-alani-genis">
+                    <span class="ms-form-etiket">Adres</span>
+                    <textarea class="ms-form-metin-alani" placeholder="Cadde, sokak, bina ve daire bilgisi" data-ms-adres-satiri></textarea>
+                </label>
+                <label class="ms-form-alani ms-form-alani-genis">
+                    <span class="ms-form-etiket">Telefon</span>
+                    <span class="ms-telefon-girdi">
+                        <span class="ms-telefon-ulke" data-ms-telefon-ulke-select>
+                            <button class="ms-telefon-ulke-tetikleyici" type="button" data-ms-telefon-ulke-tetikleyici aria-haspopup="listbox" aria-expanded="false">
+                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye">
+                                <span data-ms-telefon-ulke-kod>+90</span>
+                                <i class="fa-solid fa-chevron-down ms-fa-ikon ms-telefon-ulke-ok " aria-hidden="true"></i>
+                            </button>
+                            <span class="ms-telefon-ulke-panel" role="listbox" aria-label="Ülke kodları">
+                                <input class="ms-telefon-ulke-arama" type="search" placeholder="Ülke ara" data-ms-telefon-ulke-arama>
+                                <button class="ms-telefon-ulke-secenek ms-telefon-ulke-secenek-aktif" type="button" data-ms-telefon-ulke-secenek data-kod="+90" data-bayrak="https://flagcdn.com/tr.svg" data-ulke="Türkiye">
+                                    <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt=""> Türkiye <strong>+90</strong>
+                                </button>
+                                <button class="ms-telefon-ulke-secenek" type="button" data-ms-telefon-ulke-secenek data-kod="+49" data-bayrak="https://flagcdn.com/de.svg" data-ulke="Almanya">
+                                    <img class="ms-telefon-bayrak" src="https://flagcdn.com/de.svg" alt=""> Almanya <strong>+49</strong>
+                                </button>
+                                <button class="ms-telefon-ulke-secenek" type="button" data-ms-telefon-ulke-secenek data-kod="+44" data-bayrak="https://flagcdn.com/gb.svg" data-ulke="Birleşik Krallık">
+                                    <img class="ms-telefon-bayrak" src="https://flagcdn.com/gb.svg" alt=""> Birleşik Krallık <strong>+44</strong>
+                                </button>
+                            </span>
+                        </span>
+                        <input type="tel" placeholder="___ ___ __ __" inputmode="numeric" autocomplete="tel-national" maxlength="13" data-ms-telefon-input data-ms-adres-telefon-input>
+                    </span>
+                </label>
+                <label class="ms-form-alani ms-form-alani-genis">
+                    <span class="ms-form-etiket">Teslimat Notu</span>
+                    <input class="ms-form-girdi" type="text" placeholder="Örn. hafta içi teslim uygundur" data-ms-adres-notu>
+                </label>
+                <label class="ms-onay-kart ms-siparis-varsayilan-adres">
+                    <input class="ms-onay-input" type="checkbox" data-ms-adres-varsayilan>
+                    <span class="ms-onay-kutu" aria-hidden="true"></span>
+                    <span class="ms-onay-metin">
+                        Varsayılan adres olarak ayarla
+                        <span class="ms-onay-yardim">Bu adresi varsayılan teslimat adresi olarak kullan</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="ms-uyari ms-uyari-hata" data-ms-adres-modal-hata hidden></div>
+
+            <div class="ms-ornek-modal-aksiyonlar">
+                <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-adres-modal-kapat>Vazgeç</button>
+                <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-adres-modal-kaydet>Adresi Kaydet</button>
+            </div>
+        </section>
+    </div>
+

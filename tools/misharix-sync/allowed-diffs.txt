@@ -106,3 +106,13 @@ Views/ProjeElementleri/Navigasyon/_AnaNavigasyon.cshtml
 # alanları @if(false) (C3/C7/E5-E6/G/H fazlarında açılır); satırlar template + dosya sonundaki
 # script'le GET /api/store/cart'tan; adet PUT, silme DELETE (misharix sil onay modalı üzerinden).
 Views/ProjeElementleri/Sepet/_SepetSayfasi.cshtml
+
+# C4-b: Teslimat sayfası canlıya bağlandı — demo adres kartları @if(false), kartlar template +
+# script'le account/addresses'ten; kargo statik (Faz H, hızlı teslimat gizli); adres modalı
+# partial'ı dahil edildi; dosya sonunda canlı script (geo select'ler + kaydet + Ödemeye Geç guard'ı).
+Views/ProjeElementleri/Sepet/_SepetTeslimatSayfasi.cshtml
+
+# C4-b: Adres modalı — kaynakta karşılığı _SepetSiparis demo kompozitindeki blok; birebir alınıp
+# canlıya bağlandı (data-ms-adres-* bağları; il/ilçe/mahalle aynı görsel sınıflarla ama davranış
+# sayfa script'inde — site.js ozel-select'i dinamik seçenek desteklemiyor).
+Views/ProjeElementleri/Sepet/_SepetAdresModali.cshtml
