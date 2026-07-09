@@ -294,6 +294,14 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — C11 TAMAM → FAZ C KAPANDI 🎉:**
+  - Envanter 8.5 tam işaretli; ertelenenler hedef fazlı (favori E5, kupon listesi E9, adres
+    düzenle E4, tahsilat/BIN H6, bildirim gönderimi H).
+  - **Toplu regresyon (taze publish): C1 12/12 + C3 10/10 + C4 11/11 + C5/C10 15/15 + C7 11/11
+    + guard 4/4 + C8 14/14 + C9 11/11 = 88 adım ✓**, 0 konsol hatası, drift temiz.
+  - c3-e2e düzeltildi: C3TEST10 kuponunu DB fixture'ı sanıyordu — artık kendisi oluşturup siler.
+  - Sıradaki faz: **D (üye oturumu Razor tarafı + SMS/OTP)**. DEPLOY BEKLİYOR (B11'den beri).
+
 - **2026-07-09 (devam) — C9 TAMAM: stok gelince haber ver:**
   - **Backend:** Storefront'a `StockAlert` entity (`storefront.stock_alerts`: platform/varyant/üye +
     Email/ProductCode/VariantInfo snapshot + Status active|notified|cancelled; `AddStockAlerts`
