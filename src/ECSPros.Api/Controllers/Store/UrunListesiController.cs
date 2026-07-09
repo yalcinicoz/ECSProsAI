@@ -18,12 +18,36 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
 {
     private const int SayfaBoyu = 24;
 
+    // B10: sayfa query parametreleri api/store parametreleriyle AYNI adları kullanır
+    // (attrs=virgüllü valueId, priceMin, priceMax, sort, search) — DevamApiUrl'e birebir taşınır.
+    public sealed record ListeFiltre(string? Attrs, decimal? PriceMin, decimal? PriceMax, string? Sort)
+    {
+        public List<Guid>? DegerIdler =>
+            string.IsNullOrWhiteSpace(Attrs)
+                ? null
+                : Attrs.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(s => Guid.TryParse(s, out var g) ? g : Guid.Empty)
+                    .Where(g => g != Guid.Empty)
+                    .ToList() is { Count: > 0 } ids ? ids : null;
+
+        public string QueryEki()
+        {
+            var parcalar = new List<string>();
+            if (DegerIdler is { } ids) parcalar.Add("attrs=" + string.Join(",", ids));
+            if (PriceMin.HasValue) parcalar.Add("priceMin=" + PriceMin.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            if (PriceMax.HasValue) parcalar.Add("priceMax=" + PriceMax.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            if (!string.IsNullOrEmpty(Sort)) parcalar.Add("sort=" + Uri.EscapeDataString(Sort));
+            return parcalar.Count > 0 ? "&" + string.Join("&", parcalar) : "";
+        }
+    }
+
     [HttpGet("/urun-listesi")]
-    public Task<IActionResult> Index(CancellationToken ct) => GenelListeAsync(null, ct);
+    public Task<IActionResult> Index([FromQuery] ListeFiltre filtre, CancellationToken ct)
+        => GenelListeAsync(null, filtre, ct);
 
     [HttpGet("/urunler")]
-    public Task<IActionResult> Arama([FromQuery] string? search, CancellationToken ct)
-        => GenelListeAsync(string.IsNullOrWhiteSpace(search) ? null : search.Trim(), ct);
+    public Task<IActionResult> Arama([FromQuery] string? search, [FromQuery] ListeFiltre filtre, CancellationToken ct)
+        => GenelListeAsync(string.IsNullOrWhiteSpace(search) ? null : search.Trim(), filtre, ct);
 
     // Tek segmentli kategori sayfası. Literal route'lar (/urunler, /sepet...) ASP.NET
     // route önceliğiyle her zaman bundan önce eşleşir; slug kategori değilse 404.
@@ -31,42 +55,58 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
     // endpoint olarak eşleştirir ve StaticFileMiddleware devre dışı kalır (örtük
     // UseRouting pipeline'ın başında koşar).
     [HttpGet("/{slug:regex(^[[a-z0-9-]]+$)}")]
-    public async Task<IActionResult> Kategori(string slug, CancellationToken ct)
+    public async Task<IActionResult> Kategori(
+        string slug, [FromQuery] string? search, [FromQuery] ListeFiltre filtre, CancellationToken ct)
     {
         var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
         var kategori = KategoriBul(nav.Kokler, slug);
         if (kategori is null)
             return NotFound();
 
-        var urunler = await mediator.Send(
-            new GetChannelCategoryProductsQuery(kategori.Id, 1, SayfaBoyu), ct);
+        // B10: nav arama paneli "kategoride ara" kapsam butonunu bu bağlamla gösterir
+        ViewData["MsAktifKategori"] = kategori;
+
+        var arama = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+        var urunler = await mediator.Send(new GetChannelCategoryProductsQuery(
+            kategori.Id, 1, SayfaBoyu,
+            arama, filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax, filtre.Sort), ct);
         if (urunler.IsFailure)
             return NotFound();
 
         var facets = await mediator.Send(new GetChannelCategoryFacetsQuery(kategori.Id), ct);
+
+        var devamUrl = $"/api/store/catalog/channel-categories/{kategori.Id}/products?pageSize={SayfaBoyu}"
+                       + (arama is null ? "" : "&search=" + Uri.EscapeDataString(arama))
+                       + filtre.QueryEki();
 
         var vm = new UrunListesiVm(
             Baslik: kategori.Ad,
             ToplamUrun: urunler.Value!.TotalCount,
             SayfaBoyu: SayfaBoyu,
             IlkSayfa: urunler.Value.Items.Select(KartaCevir).ToList(),
-            DevamApiUrl: $"/api/store/catalog/channel-categories/{kategori.Id}/products?pageSize={SayfaBoyu}",
+            DevamApiUrl: devamUrl,
             FiltreGruplari: FacetleriCevir(facets.IsSuccess ? facets.Value : null),
             FiyatMin: facets.IsSuccess ? facets.Value!.PriceMin : 0,
             FiyatMax: facets.IsSuccess ? facets.Value!.PriceMax : 0,
-            KategoriSecenekleri: kategori.Cocuklar);
+            KategoriSecenekleri: kategori.Cocuklar,
+            SeciliDegerler: filtre.DegerIdler,
+            SeciliFiyatMin: filtre.PriceMin,
+            SeciliFiyatMax: filtre.PriceMax,
+            SeciliSiralama: filtre.Sort,
+            KategorideArama: arama);
 
         return ListeGoster(vm);
     }
 
-    private async Task<IActionResult> GenelListeAsync(string? arama, CancellationToken ct)
+    private async Task<IActionResult> GenelListeAsync(string? arama, ListeFiltre filtre, CancellationToken ct)
     {
         var platform = await storeContext.GetPlatformAsync(ct);
         if (platform is null)
             return NotFound();
 
-        var urunler = await mediator.Send(
-            new GetStoreProductsQuery(platform.Id, arama, 1, SayfaBoyu), ct);
+        var urunler = await mediator.Send(new GetStoreProductsQuery(
+            platform.Id, arama, 1, SayfaBoyu,
+            filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax, filtre.Sort), ct);
         if (urunler.IsFailure)
             return NotFound();
 
@@ -74,7 +114,8 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
 
         var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
         var devamUrl = $"/api/store/catalog/products?firmPlatformId={platform.Id}&pageSize={SayfaBoyu}"
-                       + (arama is null ? "" : "&search=" + Uri.EscapeDataString(arama));
+                       + (arama is null ? "" : "&search=" + Uri.EscapeDataString(arama))
+                       + filtre.QueryEki();
 
         var vm = new UrunListesiVm(
             Baslik: arama is null ? "Tüm Ürünler" : $"\"{arama}\" araması",
@@ -85,7 +126,11 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             FiltreGruplari: FacetleriCevir(facets.IsSuccess ? facets.Value : null),
             FiyatMin: facets.IsSuccess ? facets.Value!.PriceMin : 0,
             FiyatMax: facets.IsSuccess ? facets.Value!.PriceMax : 0,
-            KategoriSecenekleri: nav.Kokler);
+            KategoriSecenekleri: nav.Kokler,
+            SeciliDegerler: filtre.DegerIdler,
+            SeciliFiyatMin: filtre.PriceMin,
+            SeciliFiyatMax: filtre.PriceMax,
+            SeciliSiralama: filtre.Sort);
 
         return ListeGoster(vm);
     }

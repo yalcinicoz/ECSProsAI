@@ -29,16 +29,22 @@ public class StoreCatalogController(IMediator mediator) : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
-    /// <summary>Genel ürün listesi (arama filtresi).</summary>
+    /// <summary>Genel ürün listesi (arama + B10 filtre/sıralama; attrs = virgüllü attributeValueId listesi).</summary>
     [HttpGet("products")]
     public async Task<IActionResult> GetProducts(
         [FromQuery] Guid firmPlatformId,
         [FromQuery] string? search,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 24,
+        [FromQuery] string? attrs = null,
+        [FromQuery] decimal? priceMin = null,
+        [FromQuery] decimal? priceMax = null,
+        [FromQuery] string? sort = null,
         CancellationToken ct = default)
     {
-        var result = await mediator.Send(new GetStoreProductsQuery(firmPlatformId, search, page, pageSize), ct);
+        var result = await mediator.Send(new GetStoreProductsQuery(
+            firmPlatformId, search, page, pageSize,
+            ParseGuids(attrs), priceMin, priceMax, sort), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
@@ -64,17 +70,34 @@ public class StoreCatalogController(IMediator mediator) : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
-    /// <summary>Kanal kategorisine ait ürünleri döner (müşteriye dönük, anonim).</summary>
+    /// <summary>Kanal kategorisine ait ürünleri döner (müşteriye dönük, anonim; B10: search/attrs/fiyat/sort).</summary>
     [HttpGet("channel-categories/{id:guid}/products")]
     public async Task<IActionResult> GetChannelCategoryProducts(
         Guid id,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 24,
+        [FromQuery] string? search = null,
+        [FromQuery] string? attrs = null,
+        [FromQuery] decimal? priceMin = null,
+        [FromQuery] decimal? priceMax = null,
+        [FromQuery] string? sort = null,
         CancellationToken ct = default)
     {
-        var result = await mediator.Send(new GetChannelCategoryProductsQuery(id, page, pageSize), ct);
+        var result = await mediator.Send(new GetChannelCategoryProductsQuery(
+            id, page, pageSize, search, ParseGuids(attrs), priceMin, priceMax, sort), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Virgüllü guid listesini çözer; geçersiz girdiler sessizce atlanır.</summary>
+    private static List<Guid>? ParseGuids(string? csv)
+    {
+        if (string.IsNullOrWhiteSpace(csv)) return null;
+        var ids = csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => Guid.TryParse(s, out var g) ? g : Guid.Empty)
+            .Where(g => g != Guid.Empty)
+            .ToList();
+        return ids.Count > 0 ? ids : null;
     }
 
     /// <summary>Genel ürün facet'lerini döner (filtre paneli için).</summary>

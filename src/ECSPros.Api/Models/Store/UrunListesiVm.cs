@@ -46,10 +46,19 @@ public sealed record UrunListesiVm(
     IReadOnlyList<FiltreGrupVm> FiltreGruplari,
     decimal FiyatMin,
     decimal FiyatMax,
-    IReadOnlyList<NavKategori> KategoriSecenekleri)
+    IReadOnlyList<NavKategori> KategoriSecenekleri,
+    // B10: sunucu tarafı filtre/sıralama durumu — SSR checkbox/select ön-seçimi ve
+    // URL yeniden kurma (client script navigasyonla uygular) için.
+    IReadOnlyList<Guid>? SeciliDegerler = null,
+    decimal? SeciliFiyatMin = null,
+    decimal? SeciliFiyatMax = null,
+    string? SeciliSiralama = null,
+    string? KategorideArama = null)           // yalnız kategori sayfasında dolu olabilir
 {
     /// <summary>SSR sonrası infinite scroll'un üreteceği kalan kart sayısı.</summary>
     public int KalanKart => Math.Max(0, ToplamUrun - IlkSayfa.Count);
 
     public string ToplamUrunMetni => ToplamUrun.ToString("N0", new System.Globalization.CultureInfo("tr-TR"));
+
+    public bool DegerSecili(Guid valueId) => SeciliDegerler?.Contains(valueId) == true;
 }

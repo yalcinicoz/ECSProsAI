@@ -294,6 +294,38 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 — Faz B10 TAMAMLANDI: sunucu tarafı filtre/sıralama + kategoride ara:**
+  - **Sorgular additive genişledi:** `GetStoreProductsQuery` + `GetChannelCategoryProductsQuery`
+    → `AttributeValueIds`/`PriceMin`/`PriceMax`/`Sort` (+kategoriye `Search`); api/store
+    endpoint'leri `attrs` (virgüllü valueId), `priceMin/priceMax`, `sort`, `search` alır —
+    parametresiz eski çağrılar aynı (mobil etkilenmez). Filtre semantiği: grup içi OR,
+    gruplar arası AND; kategori kartında (ürün×renk) eşleşme kartın kendi varyantlarında
+    ve AYNI varyantta; genel listede ürün seviyesinde. Fiyat filtresi varyant BasePrice
+    (kartların fiyat kaynağı). Sıralama: price_asc/desc + newest (CreatedAt).
+  - **Sayfa tarafı:** B7'nin client-side filtre motoru KALDIRILDI — her filtre/sıralama
+    değişikliği URL query parametreleriyle (api ile aynı adlar) SSR yeniden yükler; SSR
+    seçili durumu geri işaretler, infinite scroll devam sayfalarını aynı parametrelerle
+    çeker. Sol filtre anında, panel içi (üst/mobil) "Filtrele" ile uygular. **Kopya
+    checkbox senkronu şart** — aynı valueId sol+üst+mobil panellerde tekrarlanıyor;
+    senkronsuz bırakılınca kaldırma işlemi URL'den düşmüyordu (E2E yakaladı).
+  - **Kategoride ara kapandı** (B2/B7'den beri açık boşluk): kategori sayfası
+    `ViewData["MsAktifKategori"]` doldurur, nav arama panelindeki gizli buton
+    "{Kategori} içinde ara" olur; öneriler `channel-categories/{id}/products?search=`,
+    Tümünü Gör/Enter → `/{slug}?search=`.
+  - **Cache:** filtreli istekler kategori Redis cache'ini atlar (yalnız parametresiz
+    varsayılan sayfalar cache'lenir — anahtar kombinasyonu patlaması önlenir).
+  - NOT: model modu kategorilerde filtre/sıralama uygulanmaz (grup vitrini, Faz G);
+    fallback (eksensiz) modda yalnız arama. "Çok satan/favori" sıralamaları veri
+    kaynağı gelene dek gizli (E7/B11).
+  - **E2E (5051 Production publish): B10 22/22 ✓** + mobil sıralama modalı ✓ + B6/B8
+    regresyon suite'leri yeniden 19/19 + 6/6 ✓; 0 konsol hatası; `check.sh` TEMİZ ✓
+    (yeni izinli girdi yok — tüm dosyalar zaten listedeydi). Kadın kategorisi gerçek
+    toplamı 162.697 kart; "elbise" kategori araması 17.051.
+  - **DEPLOY BEKLİYOR (kullanıcı):** publish/ dizinine yayınlandı — `sudo systemctl
+    restart ecspros` sonrası canlıda filtre/sıralama/kategoride-ara aktif olur.
+  - **SIRADAKİ ADIM → B4-B5 (giriş/kayıt modalları + mini sepet) veya B11 (öne çıkar
+    bayrağı) / B12 (stok anahtarı); B13 görsel QA faz kapanışında.**
+
 - **2026-07-08 (üçüncü oturum) — Faz B3 + B6 TAMAMLANDI: duyuru şeridi (geçici statik) + ana sayfa (geçici kompozisyon):**
   - **B6 ana sayfa:** sayfa seçici kaldırıldı; `Home/Index.cshtml` = Kapsül Kategori Şeridi
     (kök kanal kategorileri; görsel: kategori görseli yoksa ilk ürün görseli; görselsiz kapsül

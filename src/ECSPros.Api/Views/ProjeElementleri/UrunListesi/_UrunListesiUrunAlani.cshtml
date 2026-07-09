@@ -22,8 +22,8 @@
     <div class="ms-infinite-ornek-yukleniyor" data-ms-infinite-yukleniyor>Yeni ürünler yükleniyor...</div>
 </section>
 
-@* Bu script: Ürün listesi sayfası için infinite-scroll ayarını tanımlar (B7: canlı veri +
-   client-side filtre/sıralama motoru — SPA ile aynı davranış: filtreler yüklü kartlara uygulanır). *@
+@* Bu script: Ürün listesi sayfası için infinite-scroll ayarını tanımlar (B7: canlı veri;
+   B10: filtre/sıralama sunucu tarafında — değişiklikler URL parametreleriyle yeniden yükler). *@
 <script>
     window.msInfiniteConfigs = window.msInfiniteConfigs || {};
     (() => {
@@ -192,77 +192,35 @@
             if (dolduruldu) {
                 window.msLazyLoadYenile?.(liste);
                 window.msUrunKartDavranislariYenile?.(liste);
-                filtreleriUygula();
             }
         };
 
-        // ── Client-side filtre + sıralama (SPA paritesi: yüklü kartlara uygulanır) ──
-        const filtreDurum = { fiyatMin: null, fiyatMax: null, siralama: "default" };
+        // ── B10: Filtre + sıralama SUNUCU tarafında — her değişiklik URL query
+        // parametreleriyle (attrs/priceMin/priceMax/sort, api/store adlarıyla birebir)
+        // sayfayı yeniden yükler; SSR seçili durumu geri işaretler, infinite scroll aynı
+        // parametrelerle devam eder. B7'nin yüklü-kartlara-uygulanan client motoru kaldırıldı.
+        const parametrelerleGit = (degisiklik = {}) => {
+            const p = new URLSearchParams(window.location.search);
 
-        const seciliDegerleriTopla = () => {
-            const secili = new Set();
-            document.querySelectorAll("[data-ms-filtre-deger]").forEach((girdi) => {
-                if (girdi.checked) {
-                    secili.add(girdi.dataset.msFiltreDeger);
-                }
-            });
-            return secili;
-        };
+            const seciliDegerler = [...new Set([...document.querySelectorAll("[data-ms-filtre-deger]")]
+                .filter((girdi) => girdi.checked)
+                .map((girdi) => girdi.dataset.msFiltreDeger))];
+            seciliDegerler.length ? p.set("attrs", seciliDegerler.join(",")) : p.delete("attrs");
 
-        const sonucSayisiniGuncelle = (gorunen, filtreliMi) => {
-            const metin = (filtreliMi ? gorunen : durum.toplam).toLocaleString("tr-TR") + " Ürün";
-            document.querySelectorAll(".ms-urun-listesi-kategori-ozet span, .ms-urun-listesi-mobil-ust > div > p")
-                .forEach((alan) => { alan.textContent = metin; });
-        };
-
-        const filtreleriUygula = () => {
-            const liste = document.querySelector(".ms-urun-listesi-urun-alani [data-ms-infinite-liste]");
-            if (!liste) {
-                return;
+            if ("fiyatMin" in degisiklik) {
+                degisiklik.fiyatMin === null ? p.delete("priceMin") : p.set("priceMin", String(degisiklik.fiyatMin));
+            }
+            if ("fiyatMax" in degisiklik) {
+                degisiklik.fiyatMax === null ? p.delete("priceMax") : p.set("priceMax", String(degisiklik.fiyatMax));
+            }
+            if ("sirala" in degisiklik) {
+                degisiklik.sirala && degisiklik.sirala !== "default"
+                    ? p.set("sort", degisiklik.sirala)
+                    : p.delete("sort");
             }
 
-            const secili = seciliDegerleriTopla();
-            const filtreliMi = secili.size > 0 || filtreDurum.fiyatMin !== null || filtreDurum.fiyatMax !== null;
-            let gorunen = 0;
-
-            liste.querySelectorAll(".ms-urun-karti").forEach((kart) => {
-                if (kart.dataset.msDolu !== "true") {
-                    kart.hidden = filtreliMi; // iskelet kartlar filtre aktifken gizlenir
-                    return;
-                }
-
-                const fiyat = Number(kart.dataset.msFiyat || "0");
-                const degerler = (kart.dataset.msDegerler || "").split(",").filter(Boolean);
-                let uygun = true;
-
-                if (filtreDurum.fiyatMin !== null && fiyat < filtreDurum.fiyatMin) uygun = false;
-                if (filtreDurum.fiyatMax !== null && fiyat > filtreDurum.fiyatMax) uygun = false;
-                if (uygun && secili.size > 0 && ![...secili].some((d) => degerler.includes(d))) uygun = false;
-
-                kart.hidden = !uygun;
-                if (uygun) gorunen += 1;
-            });
-
-            sonucSayisiniGuncelle(gorunen, filtreliMi);
-        };
-
-        const sirala = (kod) => {
-            filtreDurum.siralama = kod;
-            const liste = document.querySelector(".ms-urun-listesi-urun-alani [data-ms-infinite-liste]");
-            if (!liste || kod === "default") {
-                return;
-            }
-
-            const kartlar = [...liste.querySelectorAll(".ms-urun-karti")];
-            const yon = kod === "price_desc" ? -1 : 1;
-            kartlar
-                .sort((a, b) => {
-                    const aDolu = a.dataset.msDolu === "true" ? 0 : 1;
-                    const bDolu = b.dataset.msDolu === "true" ? 0 : 1;
-                    if (aDolu !== bDolu) return aDolu - bDolu; // iskeletler sona
-                    return yon * (Number(a.dataset.msFiyat || "0") - Number(b.dataset.msFiyat || "0"));
-                })
-                .forEach((kart) => liste.appendChild(kart));
+            const sorgu = p.toString();
+            window.location.href = window.location.pathname + (sorgu ? "?" + sorgu : "");
         };
 
         const panelFiyatOku = (panel) => {
@@ -272,15 +230,18 @@
 
             if (aralik) {
                 const [min, max] = aralik.split("-").map(Number);
-                filtreDurum.fiyatMin = Number.isFinite(min) ? min : null;
-                filtreDurum.fiyatMax = Number.isFinite(max) ? max : null;
-                return;
+                return {
+                    fiyatMin: Number.isFinite(min) ? min : null,
+                    fiyatMax: Number.isFinite(max) ? max : null
+                };
             }
 
             const min = parseFloat(enAz?.value ?? "");
             const max = parseFloat(enCok?.value ?? "");
-            filtreDurum.fiyatMin = Number.isFinite(min) ? min : null;
-            filtreDurum.fiyatMax = Number.isFinite(max) ? max : null;
+            return {
+                fiyatMin: Number.isFinite(min) ? min : null,
+                fiyatMax: Number.isFinite(max) ? max : null
+            };
         };
 
         document.addEventListener("change", (olay) => {
@@ -292,24 +253,35 @@
             }
 
             if (girdi.matches?.("[data-ms-filtre-deger]")) {
-                filtreleriUygula();
+                // Aynı değerin diğer kopyalarını senkronla (sol filtre + üst panel + mobil
+                // paneller aynı valueId'yi taşır; SSR hepsini işaretli getirir — kopya
+                // senkronlanmazsa kaldırma işlemi URL'den düşmez).
+                document.querySelectorAll(`[data-ms-filtre-deger="${girdi.dataset.msFiltreDeger}"]`)
+                    .forEach((es) => { es.checked = girdi.checked; });
+
+                // Sol filtre anında uygular; panel içindekiler (üst filtre, mobil chip/detay)
+                // kendi "Filtrele" butonunu bekler — panelde çoklu seçim her tıklamada
+                // sayfa yenilemesin.
+                if (!girdi.closest("[data-ms-urun-listesi-filtre-panel], [data-ms-mobil-chip-panel], [data-ms-urun-mobil-filtre-detay]")) {
+                    parametrelerleGit();
+                }
             }
         });
 
         document.addEventListener("click", (olay) => {
             const uygula = olay.target.closest?.(".ms-filtre-uygula-buton, [data-ms-mobil-chip-panel-kapat], [data-ms-urun-mobil-filtre-detay-kapat]");
             if (uygula) {
-                const fiyatPaneli = uygula.closest("[data-filter-content], [data-ms-urun-listesi-filtre-panel], [data-ms-mobil-chip-panel], [data-ms-urun-mobil-filtre-detay]");
-                if (fiyatPaneli?.querySelector("input[type='number']")) {
-                    panelFiyatOku(fiyatPaneli);
-                }
-                filtreleriUygula();
+                const panel = uygula.closest("[data-filter-content], [data-ms-urun-listesi-filtre-panel], [data-ms-mobil-chip-panel], [data-ms-urun-mobil-filtre-detay]");
+                const degisiklik = panel?.querySelector("input[type='number']")
+                    ? panelFiyatOku(panel)
+                    : {};
+                parametrelerleGit(degisiklik);
                 return;
             }
 
             const siralamaSecenegi = olay.target.closest?.("[data-ms-siralama-kod]");
             if (siralamaSecenegi) {
-                sirala(siralamaSecenegi.dataset.msSiralamaKod);
+                parametrelerleGit({ sirala: siralamaSecenegi.dataset.msSiralamaKod });
             }
         });
 

@@ -63,7 +63,7 @@
         @foreach (var deger in grup.Degerler)
         {
         <label class="ms-filtre-secim ms-filtre-renk-secim" data-filter-option>
-            <input type="checkbox" data-ms-filtre-deger="@deger.ValueId">
+            <input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
             <span class="ms-filtre-kutu" aria-hidden="true"></span>
             <span class="ms-filtre-renk" style="--ms-renk:@(deger.Hex ?? "#E2E8F0")" aria-hidden="true"></span>
             <span class="ms-filtre-renk-bilgi"><strong>@deger.Ad</strong></span>
@@ -76,7 +76,7 @@
     <div class="ms-urun-listesi-mobil-chip-secenekler">
         @foreach (var deger in grup.Degerler)
         {
-        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>@deger.Ad</span></label>
+        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>@deger.Ad</span></label>
         }
     </div>
     }
@@ -89,9 +89,9 @@
 
 <section class="ms-urun-listesi-mobil-chip-panel" data-ms-mobil-chip-panel="fiyat" hidden aria-label="Fiyat hızlı filtresi">
     <div class="ms-urun-listesi-mobil-fiyat-araligi">
-        <input type="number" inputmode="numeric" placeholder="En Az">
+        <input type="number" inputmode="numeric" value="@(vm.SeciliFiyatMin?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" placeholder="En Az">
         <span>-</span>
-        <input type="number" inputmode="numeric" placeholder="En Çok">
+        <input type="number" inputmode="numeric" value="@(vm.SeciliFiyatMax?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" placeholder="En Çok">
     </div>
     <div class="ms-urun-listesi-mobil-chip-secenekler">
         <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="0-500"><input type="radio" name="mobil-fiyat-chip"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>0 TL - 500 TL</span></label>
@@ -111,12 +111,20 @@
         <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-mobil-siralama-kapat aria-label="Sıralamayı kapat">×</button>
         <h3 id="ms-urun-listesi-mobil-siralama-baslik" class="ms-ornek-modal-baslik">Sıralama</h3>
         <div class="ms-urun-listesi-mobil-secenek-listesi">
-            <button class="ms-urun-listesi-mobil-siralama-secenek ms-urun-listesi-mobil-siralama-secenek-aktif" type="button" data-ms-urun-mobil-siralama-secenek data-ms-siralama-kod="default">Önerilen Sıralama</button>
-            <button class="ms-urun-listesi-mobil-siralama-secenek" type="button" data-ms-urun-mobil-siralama-secenek data-ms-siralama-kod="price_asc">En Düşük Fiyat</button>
-            <button class="ms-urun-listesi-mobil-siralama-secenek" type="button" data-ms-urun-mobil-siralama-secenek data-ms-siralama-kod="price_desc">En Yüksek Fiyat</button>
+            @foreach (var secenek in new (string Kod, string Ad)[]
+            {
+                ("default", "Önerilen Sıralama"),
+                ("price_asc", "En Düşük Fiyat"),
+                ("price_desc", "En Yüksek Fiyat"),
+                ("newest", "En Yeniler")
+            })
+            {
+                var aktifSecenek = secenek.Kod == (string.IsNullOrEmpty(vm.SeciliSiralama) ? "default" : vm.SeciliSiralama);
+                <button class="ms-urun-listesi-mobil-siralama-secenek@(aktifSecenek ? " ms-urun-listesi-mobil-siralama-secenek-aktif" : "")" type="button" data-ms-urun-mobil-siralama-secenek data-ms-siralama-kod="@secenek.Kod">@secenek.Ad</button>
+            }
             @if (false)
             {
-                @* B10: En Yeniler / En Çok Satan / En Favoriler — veri gelince *@
+                @* En Çok Satan / En Favoriler — veri kaynağı gelince (E7/B11) *@
             }
         </div>
     </section>
@@ -157,7 +165,7 @@
         @foreach (var deger in grup.Degerler)
         {
         <label class="ms-filtre-secim ms-filtre-renk-secim" data-filter-option>
-            <input type="checkbox" data-ms-filtre-deger="@deger.ValueId">
+            <input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
             <span class="ms-filtre-kutu" aria-hidden="true"></span>
             <span class="ms-filtre-renk" style="--ms-renk:@(deger.Hex ?? "#E2E8F0")" aria-hidden="true"></span>
             <span class="ms-filtre-renk-bilgi"><strong>@deger.Ad</strong></span>
@@ -170,7 +178,7 @@
     <div class="ms-urun-listesi-mobil-secenek-listesi">
         @foreach (var deger in grup.Degerler)
         {
-        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>@deger.Ad</span></label>
+        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>@deger.Ad</span></label>
         }
     </div>
     }
@@ -185,9 +193,9 @@
         <button class="ms-urun-listesi-mobil-temizle" type="button">Temizle</button>
     </header>
     <div class="ms-urun-listesi-mobil-fiyat-araligi">
-        <input type="number" inputmode="numeric" placeholder="En Az">
+        <input type="number" inputmode="numeric" value="@(vm.SeciliFiyatMin?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" placeholder="En Az">
         <span>-</span>
-        <input type="number" inputmode="numeric" placeholder="En Çok">
+        <input type="number" inputmode="numeric" value="@(vm.SeciliFiyatMax?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" placeholder="En Çok">
     </div>
     <div class="ms-urun-listesi-mobil-secenek-listesi">
         <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="0-500"><input type="radio" name="mobil-fiyat-detay"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>0 TL - 500 TL</span></label>
