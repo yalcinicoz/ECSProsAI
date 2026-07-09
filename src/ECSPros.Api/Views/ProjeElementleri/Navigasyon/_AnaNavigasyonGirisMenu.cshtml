@@ -19,6 +19,10 @@
                         </span>
                     </div>
 
+                    @* B4: Statü/harcama bloğu gizli — puan/harcama veri kaynağı yok (Faz E/G'de
+                       üye programıyla bağlanır). Kimlik alanını login script'i doldurur. *@
+                    @if (false)
+                    {
                     <div class="ms-hesap-statu ms-hesap-statu-bronz">
                         <div class="ms-hesap-statu-ust">
                             <span class="ms-hesap-statu-ikon" aria-hidden="true">
@@ -48,6 +52,7 @@
                         </div>
                         <p>Gümüş seviyeye geçmek için 5.000 ₺ daha harcama yapmanız gerekir.</p>
                     </div>
+                    }
 
                     <nav class="ms-hesap-menu" aria-label="Hesabım">
                         <a href="#"><img class="ms-hesap-menu-ikon " src="/ikons/tum-siparislerim-01.svg" alt="" aria-hidden="true">Tüm Siparişlerim</a>

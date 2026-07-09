@@ -16,9 +16,9 @@
 | ProjeElementleri/Navigasyon/_AnaNavigasyonDesktopMenu.cshtml | NavigasyonVm/NavKategori | GetChannelCategories (nav_menus boş → kategori ağacı; StorePageController 5dk cache) | B1 | ✅ 2026-07-07 (kampanya şeridi statik — Faz G) |
 | ProjeElementleri/Navigasyon/_AnaNavigasyonMobilMenu.cshtml | NavigasyonVm (aynı) | GetChannelCategories (aynı ViewData) | B1 | ✅ 2026-07-07 (kampanya bölümü + alt nav statik — Faz G) |
 | ProjeElementleri/Navigasyon/_AnaNavigasyonSearch.cshtml | — (client-side; platform id + kategori JSON gömülü) | products?search (canlı öneri + popüler ürünler); kategori önerisi nav ağacından | B2/B10 | ✅ 2026-07-09 (B10: "kategoride ara" bağlandı — kategori sayfası bağlamıyla buton görünür, öneriler kategori kapsamından, Tümünü Gör/Enter → /{slug}?search=) |
-| ProjeElementleri/Navigasyon/_AnaNavigasyonGirisMenu.cshtml | OturumVm | StoreAuth me | B4/D6 | 🕐 statik kopya |
-| ProjeElementleri/Navigasyon/_AnaNavigasyonGirisModal.cshtml | — (form → JS → api/store/auth) | StoreAuth login + OTP (D4) | B4/D2/D4 | 🕐 statik kopya |
-| ProjeElementleri/Navigasyon/_AnaNavigasyonKayitModal.cshtml | — (form → JS → api/store/auth) | StoreAuth register + CMS sözleşme | B4/D3 | 🕐 statik kopya |
+| ProjeElementleri/Navigasyon/_AnaNavigasyonGirisMenu.cshtml | — (login script'i doldurur) | StoreAuth me (B4) | B4/D6 | ✅ 2026-07-09 (kimlik/avatar gerçek; statü bloğu @if(false) — Faz E/G; menü linkleri Faz E) |
+| ProjeElementleri/Navigasyon/_AnaNavigasyonGirisModal.cshtml | — (dosya sonu oturum script'i) | StoreAuth login/me/refresh + cart/merge (B4) | B4/D2/D4 | ✅ 2026-07-09 (e-posta canlı varsayılan; SMS/Telefon '(Yakında)' disabled — OTP Faz D) |
+| ProjeElementleri/Navigasyon/_AnaNavigasyonKayitModal.cshtml | — (giriş modalındaki script bağlar) | StoreAuth register (B4; sözleşme metinleri CMS'e D3'te bağlanır) | B4/D3 | ✅ 2026-07-09 (Şifre alanı eklendi — API zorunlu; onay kutuları zorunlu) |
 | Shared/_GorselAramaModal(+Kutu).cshtml | — | H3 görsel arama endpoint'i | H3 | 🕐 statik kopya |
 | Shared/_SearchUrunKarti.cshtml | — (kullanılmıyor; kartlar B2 script'inde aynı markup'la üretiliyor) | — | B2 | ✅ 2026-07-07 (dosya bayt-aynı duruyor) |
 

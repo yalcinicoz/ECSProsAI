@@ -294,6 +294,23 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-09 (devam) — Faz B4 TAMAMLANDI: giriş/kayıt modalları canlı (e-posta), SMS Faz D'ye kadar pasif:**
+  - E-posta girişi varsayılan sekme (`_AnaNavigasyon`'da tek satır `tabAc("eposta")`), SMS/
+    Telefon "(Yakında)" disabled. Login/register/me/refresh `api/store/auth`'a bağlı; token'lar
+    `ecspros_member_token`/`ecspros_member_refresh`; oturum reload'da `me` ile kalıcı (401'de
+    bir kez refresh); girişte `cart/merge` + mini sepet tazelenir; çıkışta token temizliği.
+    Kayıt formuna Şifre alanı eklendi (API zorunlu; Faz D OTP'de gözden geçirilir); hesap
+    panelinde statü/harcama bloğu @if(false) (veri yok — Faz E/G).
+  - **CANLI DB'DE İKİ EKSİK BULUNDU (üyelik hiç çalışamazdı):** (1) `crm_member_groups` BOŞ —
+    register "Varsayılan üye grubu bulunamadı" veriyordu → 'standart' grubu SQL ile eklendi +
+    `SeedCrmDefaultsAsync` seeder'a eklendi (idempotent). (2) `crm.member_sessions` tablosu
+    YOKTU — login 500 veriyordu → bekleyen `20260310131553_AddMemberSession` migration'ı
+    canlıya uygulandı (`dotnet ef database update --context CrmDbContext`).
+  - E2E (5051 publish): **12/12 ✓** + B6 regresyon 19/19 ✓; 0 konsol hatası; test üyeleri
+    (%@e2e.local) DB'den silindi. `check.sh` TEMİZ (4 yeni izinli girdi: GirisModal/
+    KayitModal/GirisMenu/_AnaNavigasyon tek satır). **DEPLOY BEKLİYOR** (B10+B5 ile birlikte).
+  - Kalan Faz B işleri: B11 (öne çıkar bayrağı), B12 (stok anahtarı), B13 (görsel QA kapanışı).
+
 - **2026-07-09 (devam) — Faz B5 TAMAMLANDI: mini sepet canlı:**
   - `_AnaNavigasyonUst` sepet hover paneli GET /api/store/cart'a bağlandı (SPA anahtarları
     ecspros_sid/ecspros_cart); rozet adet (0'da gizli), silme DELETE ile, kalem ürüne linkli,
