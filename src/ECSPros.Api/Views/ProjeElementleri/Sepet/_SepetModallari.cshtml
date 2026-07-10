@@ -5,16 +5,20 @@
         <h3 id="ms-sepet-kupon-modal-baslik" class="ms-ornek-modal-baslik">Kuponlarım</h3>
         <p class="ms-ornek-modal-aciklama">Sepette kullanabileceğiniz kuponları bu alanda görüntüleyebilirsiniz.</p>
 
-        <div class="ms-siparis-kupon-modal-icerik">
+        @* E9: kartlar üyenin kupon listesinden (GET /api/store/account/coupons) JS ile
+           dolar; demo kart şablona çevrildi. Misafirde/kupon yokken boş durum görünür. *@
+        <div class="ms-siparis-kupon-modal-icerik" data-ms-kupon-modal-icerik>
+            <template data-ms-kupon-kart-sablon>
             <section class="ms-siparis-kupon-karti">
                 <div>
-                    <strong>Aktif Kuponum</strong>
-                    <span>Sepette ekstra indirim için örnek kupon alanı</span>
+                    <strong data-ms-kupon-kart-baslik></strong>
+                    <span data-ms-kupon-kart-aciklama></span>
                 </div>
-                <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-kupon-modal-kapat>Kullan</button>
+                <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-kupon-kart-kullan>Kullan</button>
             </section>
+            </template>
 
-            <section class="ms-siparis-kupon-bos-durum">
+            <section class="ms-siparis-kupon-bos-durum" data-ms-kupon-bos-durum>
                 <h4>Kupon Bulunmuyor</h4>
                 <p>Henüz kullanılabilir kuponunuz bulunmuyor. Kampanyalarımızı takip ederek avantajlı fırsatları kaçırmayın!</p>
             </section>
@@ -149,6 +153,76 @@
         let sepetSilHedef = null;
 
         window.msKuponModalAc = () => modalAc(kuponModal, "[data-ms-kupon-modal-kapat]");
+
+        // E9: sepetteki "Kuponlarım" butonu — üyenin kuponları çekilip modal doldurulur.
+        // "Kullan" kupon kodunu sepetteki alana yazıp mevcut Uygula akışını tetikler
+        // (doğrulama/uygulama C3 script'inde tek yerden). Misafirde/kupon yokken boş durum.
+        const kuponKartlariniDoldur = (kuponlar) => {
+            const icerik = kuponModal?.querySelector("[data-ms-kupon-modal-icerik]");
+            const sablon = icerik?.querySelector("[data-ms-kupon-kart-sablon]");
+            const bosDurum = icerik?.querySelector("[data-ms-kupon-bos-durum]");
+
+            if (!icerik || !sablon || !bosDurum) {
+                return;
+            }
+
+            icerik.querySelectorAll(".ms-siparis-kupon-karti").forEach((kart) => kart.remove());
+            bosDurum.hidden = kuponlar.length > 0;
+
+            kuponlar.forEach((kupon) => {
+                const kart = sablon.content.firstElementChild.cloneNode(true);
+                const kosullar = [];
+
+                if (kupon.minimumCartTotal) {
+                    kosullar.push(`${kupon.minimumCartTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL ve üzeri sepette geçerli.`);
+                }
+
+                if (kupon.validForFirstOrderOnly) {
+                    kosullar.push("Yalnızca ilk siparişte geçerli.");
+                }
+
+                if (kupon.endsAt) {
+                    kosullar.push(`Son kullanım: ${new Date(kupon.endsAt).toLocaleDateString("tr-TR")}`);
+                }
+
+                kart.querySelector("[data-ms-kupon-kart-baslik]").textContent = `${kupon.code} · ${kupon.discountText}`;
+                kart.querySelector("[data-ms-kupon-kart-aciklama]").textContent = kosullar.join(" ") || "Sepette kullanılabilir.";
+                kart.querySelector("[data-ms-kupon-kart-kullan]").addEventListener("click", () => {
+                    const kodInput = document.querySelector("[data-ms-kupon-kodu]");
+
+                    if (kodInput) {
+                        kodInput.value = kupon.code;
+                    }
+
+                    document.querySelector("[data-ms-kupon-uygula]")?.click();
+                    modalKapat(kuponModal);
+                });
+
+                icerik.insertBefore(kart, bosDurum);
+            });
+        };
+
+        // delegation: bu partial sayfa başında include edilir — buton henüz parse edilmedi
+        document.addEventListener("click", async (olay) => {
+            if (!olay.target.closest("[data-ms-kupon-modal-ac]")) {
+                return;
+            }
+
+            let kuponlar = [];
+            const token = localStorage.getItem("ecspros_member_token");
+
+            if (token) {
+                try {
+                    const cevap = await fetch("/api/store/account/coupons",
+                        { headers: { Authorization: "Bearer " + token } });
+                    const veri = await cevap.json().catch(() => null);
+                    kuponlar = veri?.success ? (veri.data || []) : [];
+                } catch { /* liste alınamazsa boş durum gösterilir */ }
+            }
+
+            kuponKartlariniDoldur(kuponlar);
+            window.msKuponModalAc();
+        });
 
         window.msSozlesmeModalAc = (checkbox) => {
             sozlesmeHedefCheckbox = checkbox || null;

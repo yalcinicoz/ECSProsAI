@@ -231,6 +231,21 @@ public class StoreAccountController(IMediator mediator, IConfiguration configura
         return Ok(new { success = true });
     }
 
+    /// <summary>E9: üyenin kullanabileceği kuponlar — yalnız üyeye/üye grubuna tanımlı
+    /// olanlar (genel pazarlama kodları listelenmez). Grup kimliği CRM'den çözülür.</summary>
+    [HttpGet("coupons")]
+    public async Task<IActionResult> GetCoupons(CancellationToken ct)
+    {
+        var memberId = GetMemberId();
+        var uye = await mediator.Send(new GetMemberDetailQuery(memberId), ct);
+        var grupId = uye.IsSuccess ? uye.Value!.MemberGroupId : (Guid?)null;
+
+        var result = await mediator.Send(
+            new ECSPros.Promotion.Application.Queries.GetMemberCoupons.GetMemberCouponsQuery(memberId, grupId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
     // Wallet
     [HttpGet("wallet")]
     public async Task<IActionResult> GetWallet(CancellationToken ct)

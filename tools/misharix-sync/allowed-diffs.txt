@@ -134,6 +134,9 @@ Views/ProjeElementleri/Sepet/_SepetSiparisTamamlandiSayfasi.cshtml
 # C7: _SepetModallari dosya sonuna canlı TCKN script'i eklendi (markup bayt-aynı kaldı) —
 # kontrol basamağı algoritması + POST account/identity; sepet banner'ı ve ödeme guard'ı
 # ms:tckn-dogrulandi event'ini dinler.
+# E9: Kuponlarım modalı canlıya bağlandı — demo kart template'e çevrildi; "Kuponlarım"
+# butonu GET /api/store/account/coupons ile modalı doldurur (misafirde/boşta boş durum);
+# "Kullan" kodu sepet alanına yazıp mevcut Uygula akışını tetikler.
 Views/ProjeElementleri/Sepet/_SepetModallari.cshtml
 
 # E1: Hesabım yan menüsü — statü/harcama bloğu @if(false) gizli (puan-statü verisi yok,
@@ -210,3 +213,9 @@ Views/ProjeElementleri/Hesabim/_HesabimIadeSayfasiModali.cshtml
 # seçici kaldırıldı — kod her koşulda kayıtlı numaraya gider); durum kutuları sonuca göre;
 # iade kodu modalı POST sonucundaki gerçek kodlarla dolar (sipariş başına bir kod).
 Views/ProjeElementleri/Hesabim/_HesabimIadeDogrulamaModallari.cshtml
+
+# E9: İndirim Kuponlarım canlıya bağlandı — kartlar SSR (yalnız üyeye/üye grubuna tanımlı
+# kullanılabilir kuponlar; genel pazarlama kodları listelenmez); "Sepette Kullan" C3
+# sessionStorage kupon sözleşmesiyle ({kod}) sepete gider; "Kupon Kodu Ekle" demo'su gizli
+# (kod girişi sepetteki alandan — ayrı claim modeli yok).
+Views/ProjeElementleri/Hesabim/_HesabimIndirimKuponlarim.cshtml

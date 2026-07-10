@@ -294,6 +294,21 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — E9 TAMAM: İndirim Kuponlarım:**
+  - **Backend:** `GetMemberCouponsQuery` — yalnız üyeye (Coupon.MemberId) veya üyenin
+    grubuna (MemberGroupId) tanımlı kuponlar (genel pazarlama kodları sızdırılmaz);
+    aktiflik/tarih/limit koşulları ValidateCoupon'la aynı; grup kimliği API katmanında
+    CRM'den. `GET /api/store/account/coupons`. Şema değişikliği YOK (alanlar zaten vardı).
+  - **Sayfa SSR:** kod + indirim + koşul metinleri; "Sepette Kullan" C3'ün sessionStorage
+    kupon sözleşmesine ({kod}) yazıp sepete gider — sepet açılışta sessizce doğrulayıp
+    uygular (C3'te hazırdı). "Kupon Kodu Ekle" demo'su gizli (claim modeli yok).
+  - **C3 kupon modalı canlı:** sepetteki "Kuponlarım" butonu açıldı (C3'ten beri
+    @if(false) idi); modal üye listesiyle dolar, "Kullan" kodu sepet alanına yazıp
+    mevcut Uygula akışını tetikler. Dinleyici delegation'la — modal partial'ı sayfa
+    başında include ediliyor, buton parse edilmeden script çalışıyor (ilk koşu dersi).
+  - **E2E 13/13 ✓ + C3 10/10 + C5/C10 15/15 + E1 13/13 ✓; drift TEMİZ.**
+    Sıradaki: E10 Tekrar Satın Al (geçmiş sipariş kalemlerinden liste + toplu sepete ekle).
+
 - **2026-07-10 (devam) — E8 TAMAM: İadelerim + iade talebi akışı:**
   - **Nedenler Lookup'ta:** `return_reason` tipi + 9 ana neden; alt nedenler değerin
     `ExtraData.subReasons`'ında (LookupValue'da hiyerarşi yok — alt nedenler metin
