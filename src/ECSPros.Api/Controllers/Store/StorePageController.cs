@@ -38,10 +38,31 @@ public abstract class StorePageController : Controller
         // belge modalı (üyelik/KVKK) bunlardan beslenir; nav her sayfada olduğundan
         // yükleme burada (SepetController'dan taşındı), platform başına 5 dk cache.
         if (platform is not null)
+        {
             ViewData["MsSozlesmeler"] = await SozlesmeleriGetirAsync(
                 services, platform.Id, context.HttpContext.RequestAborted);
+            // F4: footer kolonları admin'in "footer" kodlu nav menüsünden (varsa);
+            // yoksa _Footer tasarımın statik kolonlarını basar.
+            ViewData["MsFooterMenu"] = await FooterMenusunuGetirAsync(
+                services, platform.Id, context.HttpContext.RequestAborted);
+        }
 
         await next();
+    }
+
+    private static async Task<ECSPros.Storefront.Application.Queries.GetNavigationMenuDetail.NavigationMenuDetailDto?> FooterMenusunuGetirAsync(
+        IServiceProvider services, Guid platformId, CancellationToken ct)
+    {
+        var cache = services.GetRequiredService<IMemoryCache>();
+        return await cache.GetOrCreateAsync<ECSPros.Storefront.Application.Queries.GetNavigationMenuDetail.NavigationMenuDetailDto?>(
+            $"store-footer-menu:{platformId}", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            var sonuc = await services.GetRequiredService<IMediator>().Send(
+                new ECSPros.Storefront.Application.Queries.GetStoreNavigationMenu.GetStoreNavigationMenuQuery(
+                    "footer", platformId), ct);
+            return sonuc.IsSuccess ? sonuc.Value : null;
+        });
     }
 
     private static async Task<List<ECSPros.Cms.Application.Queries.GetStoreLegalPages.StoreLegalPageDto>> SozlesmeleriGetirAsync(
