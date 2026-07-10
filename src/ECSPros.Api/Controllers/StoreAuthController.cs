@@ -3,6 +3,8 @@ using ECSPros.Crm.Application.Commands.LoginMember;
 using ECSPros.Crm.Application.Commands.RefreshMemberToken;
 using ECSPros.Crm.Application.Commands.RegisterMember;
 using ECSPros.Crm.Application.Commands.RevokeMemberSession;
+using ECSPros.Crm.Application.Commands.SendLoginOtp;
+using ECSPros.Crm.Application.Commands.VerifyLoginOtp;
 using ECSPros.Crm.Application.Queries.GetMemberDetail;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -72,6 +74,27 @@ public class StoreAuthController(IMediator mediator) : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>D4: SMS ile giriş — 1. adım, kayıtlı üyenin telefonuna tek kullanımlık
+    /// kod gönderilir (120 sn geçerli; yeniden gönderim ve saatlik sınırlar komutta).</summary>
+    [HttpPost("otp/send")]
+    public async Task<IActionResult> SendOtp([FromBody] SendOtpRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new SendLoginOtpCommand(req.Phone), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>D4: SMS ile giriş — 2. adım, kod doğruysa şifresiz oturum açılır
+    /// (login ile aynı yanıt + SSR cookie'si).</summary>
+    [HttpPost("otp/verify")]
+    public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new VerifyLoginOtpCommand(req.Phone, req.Code), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        UyeCerezYaz(result.Value!);
+        return Ok(new { success = true, data = result.Value });
+    }
+
     /// <summary>D1/D6: çıkış — refresh oturumu iptal edilir (varsa) + SSR cookie'si silinir.
     /// Anonim erişilebilir: access token süresi dolmuş olsa da çıkış tamamlanabilmeli.</summary>
     [HttpPost("logout")]
@@ -101,3 +124,5 @@ public record RegisterMemberRequest(
 public record LoginMemberRequest(string Email, string Password);
 public record RefreshMemberRequest(string RefreshToken);
 public record LogoutMemberRequest(string? RefreshToken = null);
+public record SendOtpRequest(string Phone);
+public record VerifyOtpRequest(string Phone, string Code);
