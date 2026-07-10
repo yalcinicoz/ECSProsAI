@@ -158,6 +158,37 @@ public class ChannelProductGroupConfiguration : IEntityTypeConfiguration<Channel
     }
 }
 
+public class CollectionConfiguration : IEntityTypeConfiguration<Collection>
+{
+    public void Configure(EntityTypeBuilder<Collection> builder)
+    {
+        builder.ToTable("collections");
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Name).HasMaxLength(150).IsRequired();
+        builder.Property(c => c.Description).HasMaxLength(500);
+        builder.Property(c => c.ShareCode).HasMaxLength(16).IsRequired();
+        builder.Property(c => c.Status).HasMaxLength(20).IsRequired();
+        builder.HasIndex(c => c.ShareCode).IsUnique();
+        builder.HasIndex(c => new { c.FirmPlatformId, c.MemberId });
+        builder.HasIndex(c => new { c.FirmPlatformId, c.Status }); // moderasyon kuyruğu + G bloğu
+        builder.HasQueryFilter(c => !c.IsDeleted);
+        builder.HasMany(c => c.Items).WithOne(i => i.Collection)
+            .HasForeignKey(i => i.CollectionId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class CollectionItemConfiguration : IEntityTypeConfiguration<CollectionItem>
+{
+    public void Configure(EntityTypeBuilder<CollectionItem> builder)
+    {
+        builder.ToTable("collection_items");
+        builder.HasKey(i => i.Id);
+        builder.Property(i => i.ProductCode).HasMaxLength(50).IsRequired();
+        builder.HasIndex(i => new { i.CollectionId, i.ProductCode }).IsUnique();
+        builder.HasQueryFilter(i => !i.IsDeleted);
+    }
+}
+
 public class FavoriteConfiguration : IEntityTypeConfiguration<Favorite>
 {
     public void Configure(EntityTypeBuilder<Favorite> builder)

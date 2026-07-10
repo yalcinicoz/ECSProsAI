@@ -15,6 +15,8 @@ public interface IStorefrontDbContext
     DbSet<ChannelProductGroup> ChannelProductGroups { get; }
     DbSet<StockAlert> StockAlerts { get; }
     DbSet<Favorite> Favorites { get; }
+    DbSet<Collection> Collections { get; }
+    DbSet<CollectionItem> CollectionItems { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

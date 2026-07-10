@@ -202,10 +202,79 @@ public class HesabimController(
         return HesabimSayfasi("Favorilerim", "~/Views/ProjeElementleri/Hesabim/_HesabimFavorilerim.cshtml");
     }
 
+    /// <summary>E6: koleksiyon kartları SSR — kapaklar Catalog kart verisinden; oluşturma
+    /// modalının Favorilerim/Koleksiyonlarım panelleri de gerçek ürünlerle SSR dolar.</summary>
     [HttpGet("/Hesabim/Koleksiyonlarim")]
     [HttpGet("/koleksiyonlarim")]
-    public IActionResult Koleksiyonlarim() =>
-        HesabimSayfasi("Koleksiyonlarım", "~/Views/ProjeElementleri/Hesabim/_HesabimKoleksiyonlarim.cshtml");
+    public async Task<IActionResult> Koleksiyonlarim(CancellationToken ct)
+    {
+        var tr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+        var koleksiyonlar = new List<HesabimKoleksiyonVm>();
+        var favoriUrunler = new List<HesabimKoleksiyonUrunVm>();
+        var platform = await storeContext.GetPlatformAsync(ct);
+
+        if (platform is not null)
+        {
+            var listeSonucu = await mediator.Send(
+                new ECSPros.Storefront.Application.Queries.GetMemberCollections.GetMemberCollectionsQuery(
+                    platform.Id, _memberId), ct);
+            var kayitlar = listeSonucu.IsSuccess ? listeSonucu.Value! : new();
+
+            var favoriSonucu = await mediator.Send(
+                new ECSPros.Storefront.Application.Queries.GetMemberFavorites.GetMemberFavoritesQuery(
+                    platform.Id, _memberId), ct);
+            var favoriKodlar = favoriSonucu.IsSuccess ? favoriSonucu.Value! : new List<string>();
+
+            // Tüm koleksiyon + favori kodları tek Catalog sorgusuyla ürün bilgisine çevrilir
+            var tumKodlar = kayitlar.SelectMany(k => k.ItemCodes).Concat(favoriKodlar).Distinct().ToList();
+            var urunMap = new Dictionary<string, HesabimKoleksiyonUrunVm>();
+            if (tumKodlar.Count > 0)
+            {
+                var urunler = await mediator.Send(
+                    new ECSPros.Catalog.Application.Queries.GetStoreProducts.GetStoreProductsQuery(
+                        platform.Id, ProductCodes: tumKodlar, PageSize: tumKodlar.Count), ct);
+                if (urunler.IsSuccess)
+                    urunMap = urunler.Value!.Items.ToDictionary(
+                        p => p.Code,
+                        p => new HesabimKoleksiyonUrunVm(p.Code, UrunKartMap.TrAd(p.NameI18n), p.MainImageUrl));
+            }
+
+            string GoreliZaman(DateTime? t)
+            {
+                if (t is null) return "—";
+                var fark = DateTime.UtcNow - t.Value;
+                if (fark.TotalHours < 24) return "bugün";
+                if (fark.TotalHours < 48) return "dün";
+                return t.Value.ToString("d MMMM yyyy", tr);
+            }
+
+            koleksiyonlar = kayitlar.Select(k =>
+            {
+                var urunlerVm = k.ItemCodes.Where(urunMap.ContainsKey).Select(kod => urunMap[kod]).ToList();
+                return new HesabimKoleksiyonVm(
+                    k.Id, k.Name, k.Description, k.IsPublic, k.IsShareable, k.ShareCode,
+                    k.Status, k.ViewCount, k.IsQuickSave,
+                    GoreliZaman(k.UpdatedAt ?? k.CreatedAt),
+                    urunlerVm.Count, urunlerVm.Take(3).ToList());
+            }).ToList();
+
+            favoriUrunler = favoriKodlar.Where(urunMap.ContainsKey).Select(kod => urunMap[kod]).ToList();
+
+            // Modalın "Koleksiyonlarım" paneli: koleksiyonlardaki tüm ürünler (kod başına
+            // bir kez; meta = ilk geçtiği koleksiyonun adı)
+            var panel = new List<(HesabimKoleksiyonUrunVm Urun, string Meta)>();
+            var gorulen = new HashSet<string>();
+            foreach (var k in kayitlar)
+                foreach (var kod in k.ItemCodes)
+                    if (urunMap.TryGetValue(kod, out var u) && gorulen.Add(kod))
+                        panel.Add((u, k.Name));
+            ViewData["MsKoleksiyonPanelUrunleri"] = panel;
+        }
+
+        ViewData["MsKoleksiyonlar"] = koleksiyonlar;
+        ViewData["MsKoleksiyonFavorileri"] = favoriUrunler;
+        return HesabimSayfasi("Koleksiyonlarım", "~/Views/ProjeElementleri/Hesabim/_HesabimKoleksiyonlarim.cshtml");
+    }
 
     [HttpGet("/Hesabim/IndirimKuponlarim")]
     [HttpGet("/indirim-kuponlarim")]

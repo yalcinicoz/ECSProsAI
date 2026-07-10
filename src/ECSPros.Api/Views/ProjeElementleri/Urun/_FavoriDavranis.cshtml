@@ -11,6 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const token = () => localStorage.getItem("ecspros_member_token");
     const favoriKodlar = new Set();
     window.msFavoriKodlar = favoriKodlar;
+    // E6: kart/detay bookmark'ı "Kaydedilenler" hızlı koleksiyonuyla çalışır
+    const kayitliKodlar = new Set();
 
     const kodBul = (buton) => {
         const kart = buton.closest("[data-ms-urun-kod]");
@@ -32,6 +34,15 @@ document.addEventListener("DOMContentLoaded", () => {
             buton.setAttribute("aria-label", aktif ? "Favorilerden çıkar" : "Favorilere ekle");
             const ikon = buton.querySelector(".ms-urun-favori-ikon");
             if (ikon) { ikon.src = aktif ? "/ikons/kalp.svg" : "/ikons/favorite.svg"; }
+        });
+        // E6: bookmark işaretleme (Kaydedilenler içeriğinden)
+        kok.querySelectorAll(".ms-urun-karti [data-ms-urun-koleksiyon]").forEach((buton) => {
+            const kod = kodBul(buton);
+            const aktif = !!kod && kayitliKodlar.has(kod);
+            if (aktif === buton.classList.contains("ms-urun-koleksiyon-aktif")) { return; }
+            buton.classList.toggle("ms-urun-koleksiyon-aktif", aktif);
+            buton.setAttribute("aria-pressed", aktif.toString());
+            buton.setAttribute("aria-label", aktif ? "Koleksiyondan çıkar" : "Koleksiyona ekle");
         });
     };
 
@@ -64,6 +75,17 @@ document.addEventListener("DOMContentLoaded", () => {
             const veri = await cevap.json().catch(() => null);
             if (!veri?.success) { return; }
             veri.data.forEach((kod) => favoriKodlar.add(kod));
+
+            // E6: Kaydedilenler koleksiyonu — bookmark işaretleme seti
+            try {
+                const kcevap = await fetch("/api/store/collections?firmPlatformId=" + platformId, {
+                    headers: { Authorization: "Bearer " + token() }
+                });
+                const kveri = await kcevap.json().catch(() => null);
+                (kveri?.data || []).filter((k) => k.isQuickSave)
+                    .forEach((k) => (k.itemCodes || []).forEach((kod) => kayitliKodlar.add(kod)));
+            } catch { /* bookmark işaretlemesi yapılamadı */ }
+
             kartIsaretle(document);
             detayIsaretle();
             document.querySelectorAll("[data-ms-sepet-favori]").forEach((buton) => {
@@ -95,9 +117,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Capture: misafirde site.js toggle'ından ÖNCE yakalanıp giriş modalına yönlendirilir;
     // üyede yeni durum = mevcutun tersi (site.js bubble'da toggle'lar).
+    // E6: bookmark toggle — Kaydedilenler hızlı koleksiyonuna ekle/çıkar
+    const kayitliKaydet = async (kod, ekle) => {
+        try {
+            if (ekle) { kayitliKodlar.add(kod); } else { kayitliKodlar.delete(kod); }
+            await fetch("/api/store/collections/saved/toggle", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token() },
+                body: JSON.stringify({ firmPlatformId: platformId, productCode: kod, add: ekle })
+            });
+        } catch { /* ağ hatası — bir sonraki yüklemede gerçek durum işaretlenir */ }
+    };
+
     document.addEventListener("click", (olay) => {
         const buton = olay.target.closest(
-            ".ms-urun-karti .ms-urun-favori, .ms-urun-detay-favori, [data-ms-sepet-favori]");
+            ".ms-urun-karti .ms-urun-favori, .ms-urun-detay-favori, [data-ms-sepet-favori],"
+            + " .ms-urun-karti [data-ms-urun-koleksiyon], .ms-urun-detay-koleksiyon");
         if (!buton) { return; }
 
         if (!token()) {
@@ -109,13 +144,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const kod = kodBul(buton);
         if (!kod) { return; }
+        const koleksiyonMu = buton.matches("[data-ms-urun-koleksiyon], .ms-urun-detay-koleksiyon");
         const aktifti = buton.classList.contains("ms-urun-favori-aktif")
+            || buton.classList.contains("ms-urun-koleksiyon-aktif")
             || buton.classList.contains("ms-sepet-ikon-buton-aktif")
             || buton.getAttribute("aria-pressed") === "true";
         if (buton.matches("[data-ms-sepet-favori]")) {
             sepetIsaretle(buton, !aktifti); // sepet satırları dinamik — görsel toggle burada
         }
-        kaydet(kod, !aktifti);
+        if (koleksiyonMu) { kayitliKaydet(kod, !aktifti); }
+        else { kaydet(kod, !aktifti); }
     }, true);
 
     // Sonradan eklenen kartlar (infinite scroll şablon kartları)
