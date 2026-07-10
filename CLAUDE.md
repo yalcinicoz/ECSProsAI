@@ -315,7 +315,7 @@ public static IServiceCollection AddXxxInfrastructure(
   - `pending` → `confirmed` → `processing` → `shipped` → `delivered`
   - `pending` veya `confirmed` → `cancelled`
   - `OrderShippedEvent` → `OrderShippedEventHandler` (Inventory): rezervasyonları "picked" yapar, Quantity gerçekten düşer
-- **Password hashing**: IAM'da `IPasswordHasher` (BCrypt). CRM'deki SHA256 geçici; production'da değiştirilmeli.
+- **Password hashing**: IAM'da `IPasswordHasher`, CRM'de `IMemberPasswordHasher` — ikisi de BCrypt (wf12). CRM Verify eski SHA256 hash'lerini (hex/Base64) de tanır ve başarılı girişte BCrypt'e yükseltir (D5, 2026-07-10).
 - **GitHub push**: SSH 22 portu engellidir. `ssh.github.com:443` veya HTTPS kullanılmalı.
 - **API portu**: Production'da `http://0.0.0.0:5000`, Development'ta `http://localhost:5050`
 - **Swagger**: `http://localhost:5050/swagger` (Development) / `http://51.178.208.59/swagger` (Production)
