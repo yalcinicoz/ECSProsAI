@@ -294,6 +294,23 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — E7 TAMAM: Ürün Değerlendirme modülü (en büyük kalem):**
+  - **Backend:** `storefront.product_reviews` (AddProductReviews canlıda) — puan/metin/
+    pending|approved|rejected + red nedeni + maskeli ad snapshot'ı; Create (mükerrer engeli)/
+    Moderate/Delete (soft — Silinenler sekmesi); GetMemberReviews/GetProductReviews/
+    GetReviewsForModeration. **Satın alma şartı** API katmanında: delivered kalem
+    VariantId'leri Catalog'la koda çözülür (modüller birbirini bilmez).
+  - **Puanlar gerçek ortalamadan (yalnız approved):** yeni port IProductReviewStatsService;
+    GetStoreProducts + GetChannelCategoryProducts DTO'larına additive Rating/ReviewCount
+    (kategori handler'ı sarmalandı — cache'ten bağımsız taze); kart puan bölümü açıldı
+    (SSR + infinite JS), detay puan + ilk 10 yorum SSR.
+  - **UI:** Yorumlarım 5 sekme SSR + yorum yazma modalı (tasarımda yoktu) + Yeniden Düzenle;
+    admin ReviewsModerationPage (npm build alındı). /urun-degerlendirmeleri sayfası (595
+    satır tasarım) taşınmadı — ileri iş, backend hazır.
+  - **E2E 17/17 ✓ + B6/B10/E1/E4/E5 regresyon ✓; drift TEMİZ.** ⚠️ B10'da bilinen sınır
+    kayda geçti: sıralama anahtarı (BasePrice) ↔ kart kanal fiyatı ayrışması — Faz G fiyat
+    mimarisi (test notu b10-e2e'de). Sıradaki: E8 İadelerim + iade talebi akışı.
+
 - **2026-07-10 (devam) — E6 TAMAM: Koleksiyonlar canlı (yeni backend + admin onay ekranı):**
   - **Backend:** `storefront.collections` + `collection_items` (AddCollections canlıda) —
     ShareCode + Status (pending/approved/rejected) + IsQuickSave; item'lar ProductCode

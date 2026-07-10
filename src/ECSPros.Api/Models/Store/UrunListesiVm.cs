@@ -20,7 +20,9 @@ public sealed record UrunKartVm(
     IReadOnlyList<string> GaleriUrller,  // B8: hover galerisi (seçili rengin ilk 4 görseli)
     IReadOnlyList<KartRenkVm> RenkSecenekleri, // B8: renk tooltip'i
     Guid? SeciliRenkId,                  // kategori kartlarında kartın rengi (detay linkine taşınır)
-    bool Sponsorlu = false)              // B11: öne çıkar penceresi içinde — "Sponsorlu" rozeti
+    bool Sponsorlu = false,              // B11: öne çıkar penceresi içinde — "Sponsorlu" rozeti
+    double Puan = 0,                     // E7: onaylı yorum ortalaması (0 = yorum yok)
+    int PuanSayisi = 0)                  // E7: onaylı yorum sayısı
 {
     public string Url => "/urun/" + Kod + (SeciliRenkId is { } renk ? "?color=" + renk : "");
 

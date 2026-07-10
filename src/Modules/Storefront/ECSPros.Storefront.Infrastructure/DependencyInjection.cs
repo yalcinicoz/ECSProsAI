@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IStorefrontDbContext>(sp => sp.GetRequiredService<StorefrontDbContext>());
         services.AddScoped<IChannelPricingService, StorefrontChannelPricingService>();
         services.AddScoped<IChannelProductFlagService, StorefrontChannelProductFlagService>();
+        services.AddScoped<IProductReviewStatsService, StorefrontProductReviewStatsService>(); // E7: kart/detay puanları
 
         return services;
     }

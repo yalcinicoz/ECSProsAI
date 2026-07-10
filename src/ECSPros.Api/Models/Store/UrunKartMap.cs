@@ -27,7 +27,7 @@ public static class UrunKartMap
             p.Code, TrAd(p.NameI18n), p.MainImageUrl, p.BasePrice,
             renkler.Where(c => c.HexCode is not null).Select(c => c.HexCode!).Take(2).ToList(),
             secenekler.Count > 0 ? secenekler.Count : renkler.Count, degerIdler,
-            p.GalleryUrls ?? [], secenekler, p.SelectedColorValueId, p.IsFeatured);
+            p.GalleryUrls ?? [], secenekler, p.SelectedColorValueId, p.IsFeatured, p.Rating, p.ReviewCount);
     }
 
     public static UrunKartVm KartaCevir(StoreProductDto p)
@@ -44,7 +44,7 @@ public static class UrunKartMap
             p.Code, TrAd(p.NameI18n), p.MainImageUrl, p.MinPrice,
             p.Colors.Where(c => c.HexCode is not null).Select(c => c.HexCode!).Take(2).ToList(),
             secenekler.Count > 0 ? secenekler.Count : p.Colors.Count, degerIdler,
-            p.GalleryUrls ?? [], secenekler, null, p.IsFeatured);
+            p.GalleryUrls ?? [], secenekler, null, p.IsFeatured, p.Rating, p.ReviewCount);
     }
 
     public static string TrAd(Dictionary<string, string> nameI18n) =>

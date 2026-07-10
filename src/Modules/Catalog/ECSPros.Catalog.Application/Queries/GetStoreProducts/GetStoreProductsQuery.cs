@@ -50,12 +50,15 @@ public record StoreProductDto(
     List<ProductListingColorDto> Colors,
     List<ProductListingAttrDto> Attrs,
     List<string>? GalleryUrls = null,    // B8: kart hover galerisi (ana görselin rengine ait ilk 4 görsel)
-    bool IsFeatured = false);            // B11: öne çıkar penceresi içinde — kartta "Sponsorlu" rozeti
+    bool IsFeatured = false,             // B11: öne çıkar penceresi içinde — kartta "Sponsorlu" rozeti
+    double Rating = 0,                   // E7: onaylı yorum ortalaması (0 = yorum yok)
+    int ReviewCount = 0);                // E7: onaylı yorum sayısı
 
 public class GetStoreProductsQueryHandler(
     ICatalogDbContext db,
     IChannelPricingService pricingService,
-    IChannelProductFlagService flagService)
+    IChannelProductFlagService flagService,
+    IProductReviewStatsService reviewStats)
     : IRequestHandler<GetStoreProductsQuery, Result<PagedResult<StoreProductDto>>>
 {
     public async Task<Result<PagedResult<StoreProductDto>>> Handle(GetStoreProductsQuery request, CancellationToken ct)
@@ -269,6 +272,13 @@ public class GetStoreProductsQueryHandler(
                 galleryUrls,
                 IsFeatured: oneCikanlar.Contains(p.Id));
         }).ToList();
+
+        // E7: kart puanları onaylı yorum ortalamasından (additive alanlar)
+        var puanlar = await reviewStats.GetStatsAsync(
+            request.FirmPlatformId, items.Select(i => i.Code).Distinct().ToList(), ct);
+        for (var i = 0; i < items.Count; i++)
+            if (puanlar.TryGetValue(items[i].Code, out var p))
+                items[i] = items[i] with { Rating = p.Average, ReviewCount = p.Count };
 
         return Result.Success(new PagedResult<StoreProductDto>(items, total, request.Page, request.PageSize));
     }

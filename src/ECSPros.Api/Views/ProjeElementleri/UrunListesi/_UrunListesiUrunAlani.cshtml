@@ -61,7 +61,9 @@
                     : (p.mainImageUrl ? [p.mainImageUrl] : []),
                 renkSecenekleri: secenekler,
                 seciliRenk: p.selectedColorValueId || null,
-                sponsorlu: p.isFeatured === true
+                sponsorlu: p.isFeatured === true,
+                puan: p.rating || 0,          // E7: onaylı yorum ortalaması
+                puanSayisi: p.reviewCount || 0
             };
         };
 
@@ -87,6 +89,20 @@
         const kartDoldur = (kart, v) => {
             kart.dataset.msFiyat = String(v.fiyat);
             kart.dataset.msDegerler = v.degerler.join(",");
+            kart.dataset.msUrunKod = v.kod; // E5 favori/bookmark kod çözümü
+
+            // E7: puan bölümü (SSR markup'la birebir; yorumsuz üründe gizli kalır)
+            const puanAlani = kart.querySelector("[data-ms-kart-puan]");
+            if (puanAlani && v.puanSayisi > 0) {
+                const dolu = Math.round(v.puan);
+                puanAlani.innerHTML = `
+                    <span>${v.puan.toLocaleString("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>
+                    <span class="ms-urun-yildizlar" aria-label="${v.puan} yıldız">
+                        ${[1, 2, 3, 4, 5].map((y) => `<i class="fa-${y <= dolu ? "solid" : "regular"} fa-star ms-fa-ikon " aria-hidden="true"></i>`).join("")}
+                    </span>
+                    <span>(${v.puanSayisi})</span>`;
+                puanAlani.hidden = false;
+            }
 
             const detayUrl = "/urun/" + encodeURIComponent(v.kod)
                 + (v.seciliRenk ? "?color=" + encodeURIComponent(v.seciliRenk) : "");

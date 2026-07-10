@@ -34,7 +34,10 @@ public sealed record UrunDetayVm(
     string? KisaAciklama,
     IReadOnlyList<BreadcrumbAdimVm> Breadcrumb,   // kategori zinciri (Anasayfa hariç)
     Guid FirmPlatformId,
-    string ParaBirimi)
+    string ParaBirimi,
+    double Puan = 0,                          // E7: onaylı yorum ortalaması
+    int PuanSayisi = 0,                       // E7: onaylı yorum sayısı
+    IReadOnlyList<YorumVm>? Yorumlar = null)  // E7: yayında ilk 10 yorum (SSR)
 {
     public int IndirimYuzdesi =>
         EskiFiyat is { } eski && Fiyat is { } yeni && eski > yeni
@@ -46,3 +49,6 @@ public sealed record UrunDetayVm(
     public static string FiyatMetni(decimal? fiyat) =>
         fiyat is { } f ? f.ToString("N2", Tr) + " TL" : "—";
 }
+
+/// <summary>E7: detay sayfası değerlendirme satırı.</summary>
+public sealed record YorumVm(int Puan, string? Metin, string Ad, string TarihMetni);

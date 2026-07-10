@@ -1,3 +1,18 @@
+@* E7: Yorumlarım canlı — 5 sekme SSR (Değerlendir = teslim edilmiş − yorumlanmış; diğerleri
+   üyenin yorumlarından; sekme davranışı misharix site.js'te). "Yorum Yaz" modalı sayfa
+   sonunda (tasarımda modal yoktu — puan+metin, POST /api/store/reviews, pending doğar);
+   reddedilende "Yeniden Düzenle" eski yorumu silip yenisini gönderir. Silinen kartındaki
+   işlevsiz "Detayı Gör" kaldırıldı. "Değerlendirmelere Git" ayrı sayfa taşınmadı — gizli. *@
+@{
+    var msDegerlendir = ViewData["MsYorumDegerlendir"] as List<ECSPros.Api.Models.Store.HesabimKoleksiyonUrunVm> ?? new();
+    var msYorumlar = ViewData["MsYorumlar"] as List<(ECSPros.Storefront.Application.Queries.GetMemberReviews.MemberReviewDto Yorum, ECSPros.Api.Models.Store.HesabimKoleksiyonUrunVm? Urun)> ?? new();
+    var msBekleyen = msYorumlar.Where(y => !y.Yorum.IsDeleted && y.Yorum.Status == "pending").ToList();
+    var msOnayli = msYorumlar.Where(y => !y.Yorum.IsDeleted && y.Yorum.Status == "approved").ToList();
+    var msRed = msYorumlar.Where(y => !y.Yorum.IsDeleted && y.Yorum.Status == "rejected").ToList();
+    var msSilinen = msYorumlar.Where(y => y.Yorum.IsDeleted).ToList();
+    var trKultur = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+}
+
 <section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-yorumlar-baslik">
     <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model='@("yorumlar")' />
 
@@ -12,19 +27,24 @@
                     <h3>Ürün değerlendirmeleri</h3>
                     <p>Yayınlanan yorumlarınızı, onay bekleyen değerlendirmelerinizi ve yorum yazabileceğiniz alışverişlerinizi yönetin.</p>
                 </div>
+                @if (false)
+                {
                 <a class="ms-buton ms-buton-m ms-buton-sade" href="/urun-degerlendirmeleri">Değerlendirmelere Git</a>
+                }
             </div>
 
             <div class="ms-hesabim-yorum-sekmeleri" data-ms-yorum-sekmeleri aria-label="Yorum durumları">
                 <div class="ms-kod-sekmeleri" role="tablist" aria-label="Yorum filtreleri">
-                    <button class="ms-kod-sekme ms-kod-sekme-aktif" type="button" role="tab" data-ms-yorum-tab="degerlendir" aria-pressed="true">Değerlendir <span class="ms-kod-sekme-sayac">2</span></button>
-                    <button class="ms-kod-sekme" type="button" role="tab" data-ms-yorum-tab="onay-bekleyenler" aria-pressed="false">Onay Bekleyenler <span class="ms-kod-sekme-sayac">1</span></button>
-                    <button class="ms-kod-sekme" type="button" role="tab" data-ms-yorum-tab="onaylananlar" aria-pressed="false">Onaylananlar <span class="ms-kod-sekme-sayac">2</span></button>
-                    <button class="ms-kod-sekme" type="button" role="tab" data-ms-yorum-tab="reddedilenler" aria-pressed="false">Reddedilenler <span class="ms-kod-sekme-sayac">1</span></button>
-                    <button class="ms-kod-sekme" type="button" role="tab" data-ms-yorum-tab="silinenler" aria-pressed="false">Silinenler <span class="ms-kod-sekme-sayac">1</span></button>
+                    <button class="ms-kod-sekme ms-kod-sekme-aktif" type="button" role="tab" data-ms-yorum-tab="degerlendir" aria-pressed="true">Değerlendir <span class="ms-kod-sekme-sayac">@msDegerlendir.Count</span></button>
+                    <button class="ms-kod-sekme" type="button" role="tab" data-ms-yorum-tab="onay-bekleyenler" aria-pressed="false">Onay Bekleyenler <span class="ms-kod-sekme-sayac">@msBekleyen.Count</span></button>
+                    <button class="ms-kod-sekme" type="button" role="tab" data-ms-yorum-tab="onaylananlar" aria-pressed="false">Onaylananlar <span class="ms-kod-sekme-sayac">@msOnayli.Count</span></button>
+                    <button class="ms-kod-sekme" type="button" role="tab" data-ms-yorum-tab="reddedilenler" aria-pressed="false">Reddedilenler <span class="ms-kod-sekme-sayac">@msRed.Count</span></button>
+                    <button class="ms-kod-sekme" type="button" role="tab" data-ms-yorum-tab="silinenler" aria-pressed="false">Silinenler <span class="ms-kod-sekme-sayac">@msSilinen.Count</span></button>
                 </div>
 
                 <section class="ms-hesabim-yorum-paneli" data-ms-yorum-panel="degerlendir" aria-labelledby="ms-yorum-degerlendir-baslik">
+                    @if (msDegerlendir.Count == 0)
+                    {
                     <section class="ms-hesabim-bos-durum" aria-labelledby="ms-yorum-degerlendir-bos-baslik">
                         <i class="fa-solid fa-pen-to-square ms-fa-ikon " aria-hidden="true"></i>
                         <div>
@@ -33,151 +53,292 @@
                         </div>
                         <a class="ms-buton ms-buton-m ms-buton-sade" href="/Hesabim/Siparislerim">Siparişlere Git</a>
                     </section>
-
+                    }
+                    else
+                    {
                     <div class="ms-hesabim-durum-listesi" aria-labelledby="ms-yorum-degerlendir-baslik">
                         <h3 class="sr-only" id="ms-yorum-degerlendir-baslik">Değerlendirilecek ürünler</h3>
+                        @foreach (var u in msDegerlendir)
+                        {
                         <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
-                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Polo Yaka Desenli Erkek Triko Tişört ürün detayına git"></a>
-                            <img src="/images/ornek-resim.jpg" alt="Polo yaka desenli erkek triko tişört">
+                            <a class="ms-hesabim-kart-baglanti" href="/urun/@u.Kod" data-ms-kart-link aria-label="@u.Ad ürün detayına git"></a>
+                            @if (u.GorselUrl is not null)
+                            {
+                            <img src="@u.GorselUrl" alt="@u.Ad">
+                            }
                             <div>
                                 <span class="ms-hesabim-durum-etiket ms-hesabim-durum-beklemede">Yorum Bekliyor</span>
-                                <strong>Polo Yaka Desenli Erkek Triko Tişört</strong>
+                                <strong>@u.Ad</strong>
                                 <p>Teslim edildi. Ürün deneyiminizi paylaşarak diğer kullanıcılara yardımcı olabilirsiniz.</p>
                                 <div class="ms-hesabim-kart-aksiyonlar">
-                                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button">Yorum Yaz</button>
+                                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-yorum-yaz="@u.Kod" data-urun-ad="@u.Ad">Yorum Yaz</button>
                                     <a class="ms-buton ms-buton-s ms-buton-sade" href="/Hesabim/Siparislerim">Siparişi Gör</a>
                                 </div>
                             </div>
                         </article>
-                        <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
-                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="İç Astarlı Salaş Tesettür Bluz ürün detayına git"></a>
-                            <img src="/images/ornek-resim-2.jpg" alt="İç astarlı salaş tesettür bluz">
-                            <div>
-                                <span class="ms-hesabim-durum-etiket ms-hesabim-durum-beklemede">Yorum Bekliyor</span>
-                                <strong>İç Astarlı Salaş Tesettür Bluz</strong>
-                                <p>Son alışverişinizden sonra değerlendirme süresi devam ediyor.</p>
-                                <div class="ms-hesabim-kart-aksiyonlar">
-                                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button">Yorum Yaz</button>
-                                </div>
-                            </div>
-                        </article>
+                        }
                     </div>
+                    }
                 </section>
 
                 <section class="ms-hesabim-yorum-paneli ms-gizli" data-ms-yorum-panel="onay-bekleyenler" aria-labelledby="ms-yorum-onay-bekleyen-baslik" hidden>
-                    <section class="ms-hesabim-bos-durum" aria-labelledby="ms-yorum-onay-bekleyen-bos-baslik">
+                    @if (msBekleyen.Count == 0)
+                    {
+                    <section class="ms-hesabim-bos-durum">
                         <i class="fa-solid fa-clock ms-fa-ikon " aria-hidden="true"></i>
                         <div>
-                            <h3 id="ms-yorum-onay-bekleyen-bos-baslik">Onay bekleyen yorumunuz yok</h3>
+                            <h3>Onay bekleyen yorumunuz yok</h3>
                             <p>Yeni gönderdiğiniz yorumlar kontrol sürecindeyken bu alanda listelenir.</p>
                         </div>
-                        <button class="ms-buton ms-buton-m ms-buton-sade" type="button">Yenile</button>
                     </section>
-
-                    <div class="ms-hesabim-durum-listesi" aria-labelledby="ms-yorum-onay-bekleyen-baslik">
+                    }
+                    else
+                    {
+                    <div class="ms-hesabim-durum-listesi">
                         <h3 class="sr-only" id="ms-yorum-onay-bekleyen-baslik">Onay bekleyen yorumlar</h3>
+                        @foreach (var (yorum, urun) in msBekleyen)
+                        {
                         <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
-                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek ürün detayına git"></a>
-                            <img src="/images/ornek-resim.jpg" alt="Kadın ön çıtçıtlı dik yaka kolsuz gömlek">
+                            <a class="ms-hesabim-kart-baglanti" href="/urun/@yorum.ProductCode" data-ms-kart-link aria-label="@(urun?.Ad ?? yorum.ProductCode) ürün detayına git"></a>
+                            @if (urun?.GorselUrl is not null)
+                            {
+                            <img src="@urun.GorselUrl" alt="@urun.Ad">
+                            }
                             <div>
                                 <span class="ms-hesabim-durum-etiket ms-hesabim-durum-uyari">Onay Bekliyor</span>
-                                <strong>Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek</strong>
-                                <p>Yorumunuz editör kontrolünde. Onaylandığında ürün sayfasında yayınlanacak.</p>
-                                <div class="ms-hesabim-puan" aria-label="5 üzerinden 4 puan">4/5</div>
+                                <strong>@(urun?.Ad ?? yorum.ProductCode)</strong>
+                                <p>@(string.IsNullOrWhiteSpace(yorum.Text) ? "Yorumunuz editör kontrolünde. Onaylandığında ürün sayfasında yayınlanacak." : yorum.Text)</p>
+                                <div class="ms-hesabim-puan" aria-label="5 üzerinden @yorum.Rating puan">@yorum.Rating/5</div>
                             </div>
                         </article>
+                        }
                     </div>
+                    }
                 </section>
 
                 <section class="ms-hesabim-yorum-paneli ms-gizli" data-ms-yorum-panel="onaylananlar" aria-labelledby="ms-yorum-onaylanan-baslik" hidden>
-                    <section class="ms-hesabim-bos-durum" aria-labelledby="ms-yorum-onaylanan-bos-baslik">
+                    @if (msOnayli.Count == 0)
+                    {
+                    <section class="ms-hesabim-bos-durum">
                         <i class="fa-solid fa-circle-check ms-fa-ikon " aria-hidden="true"></i>
                         <div>
-                            <h3 id="ms-yorum-onaylanan-bos-baslik">Onaylanan yorumunuz yok</h3>
+                            <h3>Onaylanan yorumunuz yok</h3>
                             <p>Yayına alınan ürün değerlendirmeleriniz burada görünür.</p>
                         </div>
-                        <a class="ms-buton ms-buton-m ms-buton-sade" href="/urun-degerlendirmeleri">Değerlendirme Yap</a>
                     </section>
-
-                    <div class="ms-hesabim-durum-listesi" aria-labelledby="ms-yorum-onaylanan-baslik">
+                    }
+                    else
+                    {
+                    <div class="ms-hesabim-durum-listesi">
                         <h3 class="sr-only" id="ms-yorum-onaylanan-baslik">Onaylanan yorumlar</h3>
+                        @foreach (var (yorum, urun) in msOnayli)
+                        {
                         <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
-                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek ürün detayına git"></a>
-                            <img src="/images/ornek-resim-2.jpg" alt="Kadın ön çıtçıtlı dik yaka kolsuz gömlek">
+                            <a class="ms-hesabim-kart-baglanti" href="/urun/@yorum.ProductCode" data-ms-kart-link aria-label="@(urun?.Ad ?? yorum.ProductCode) ürün detayına git"></a>
+                            @if (urun?.GorselUrl is not null)
+                            {
+                            <img src="@urun.GorselUrl" alt="@urun.Ad">
+                            }
                             <div>
                                 <span class="ms-hesabim-durum-etiket ms-hesabim-durum-basarili">Onaylandı</span>
-                                <strong>Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek</strong>
-                                <p>Ürün kumaşı ve kalıbı çok iyi. Teslimat hızlıydı.</p>
-                                <div class="ms-hesabim-puan" aria-label="5 üzerinden 5 puan">5/5</div>
+                                <strong>@(urun?.Ad ?? yorum.ProductCode)</strong>
+                                @if (!string.IsNullOrWhiteSpace(yorum.Text))
+                                {
+                                <p>@yorum.Text</p>
+                                }
+                                <div class="ms-hesabim-puan" aria-label="5 üzerinden @yorum.Rating puan">@yorum.Rating/5</div>
                             </div>
                         </article>
-                        <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
-                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Polo Yaka Desenli Erkek Triko Tişört ürün detayına git"></a>
-                            <img src="/images/ornek-resim.jpg" alt="Mavi polo yaka desenli erkek triko tişört">
-                            <div>
-                                <span class="ms-hesabim-durum-etiket ms-hesabim-durum-basarili">Onaylandı</span>
-                                <strong>Polo Yaka Desenli Erkek Triko Tişört</strong>
-                                <p>Rengi görseldeki gibi, beden önerisi doğru çıktı.</p>
-                                <div class="ms-hesabim-puan" aria-label="5 üzerinden 5 puan">5/5</div>
-                            </div>
-                        </article>
+                        }
                     </div>
+                    }
                 </section>
 
                 <section class="ms-hesabim-yorum-paneli ms-gizli" data-ms-yorum-panel="reddedilenler" aria-labelledby="ms-yorum-reddedilen-baslik" hidden>
-                    <section class="ms-hesabim-bos-durum" aria-labelledby="ms-yorum-reddedilen-bos-baslik">
+                    @if (msRed.Count == 0)
+                    {
+                    <section class="ms-hesabim-bos-durum">
                         <i class="fa-solid fa-circle-xmark ms-fa-ikon " aria-hidden="true"></i>
                         <div>
-                            <h3 id="ms-yorum-reddedilen-bos-baslik">Reddedilen yorumunuz yok</h3>
+                            <h3>Reddedilen yorumunuz yok</h3>
                             <p>Yayın kriterlerine takılan değerlendirmeleriniz olursa burada sebebiyle birlikte gösterilir.</p>
                         </div>
-                        <a class="ms-buton ms-buton-m ms-buton-sade" href="/Yardim">Yorum Kuralları</a>
                     </section>
-
-                    <div class="ms-hesabim-durum-listesi" aria-labelledby="ms-yorum-reddedilen-baslik">
+                    }
+                    else
+                    {
+                    <div class="ms-hesabim-durum-listesi">
                         <h3 class="sr-only" id="ms-yorum-reddedilen-baslik">Reddedilen yorumlar</h3>
+                        @foreach (var (yorum, urun) in msRed)
+                        {
                         <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
-                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Kadın Yüksek Bel Bol Paça Pantolon ürün detayına git"></a>
-                            <img src="/images/ornek-resim-2.jpg" alt="Kadın yüksek bel bol paça pantolon">
+                            <a class="ms-hesabim-kart-baglanti" href="/urun/@yorum.ProductCode" data-ms-kart-link aria-label="@(urun?.Ad ?? yorum.ProductCode) ürün detayına git"></a>
+                            @if (urun?.GorselUrl is not null)
+                            {
+                            <img src="@urun.GorselUrl" alt="@urun.Ad">
+                            }
                             <div>
                                 <span class="ms-hesabim-durum-etiket ms-hesabim-durum-tehlike">Reddedildi</span>
-                                <strong>Kadın Yüksek Bel Bol Paça Pantolon</strong>
-                                <p>Yorum metninde ürün dışı kampanya ve iletişim bilgisi yer aldığı için yayınlanmadı.</p>
+                                <strong>@(urun?.Ad ?? yorum.ProductCode)</strong>
+                                <p>@(yorum.RejectReason ?? "Yayın kriterlerine uygun bulunmadı.")</p>
                                 <div class="ms-hesabim-kart-aksiyonlar">
-                                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button">Yeniden Düzenle</button>
+                                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-yorum-yaz="@yorum.ProductCode" data-urun-ad="@(urun?.Ad ?? yorum.ProductCode)" data-eski-yorum-id="@yorum.Id">Yeniden Düzenle</button>
                                 </div>
                             </div>
                         </article>
+                        }
                     </div>
+                    }
                 </section>
 
                 <section class="ms-hesabim-yorum-paneli ms-gizli" data-ms-yorum-panel="silinenler" aria-labelledby="ms-yorum-silinen-baslik" hidden>
-                    <section class="ms-hesabim-bos-durum" aria-labelledby="ms-yorum-silinen-bos-baslik">
+                    @if (msSilinen.Count == 0)
+                    {
+                    <section class="ms-hesabim-bos-durum">
                         <i class="fa-solid fa-trash ms-fa-ikon " aria-hidden="true"></i>
                         <div>
-                            <h3 id="ms-yorum-silinen-bos-baslik">Silinen yorumunuz yok</h3>
+                            <h3>Silinen yorumunuz yok</h3>
                             <p>Kendi sildiğiniz veya kaldırılan yorumlar bu alanda arşivlenir.</p>
                         </div>
-                        <button class="ms-buton ms-buton-m ms-buton-sade" type="button">Arşivi Yenile</button>
                     </section>
-
-                    <div class="ms-hesabim-durum-listesi" aria-labelledby="ms-yorum-silinen-baslik">
+                    }
+                    else
+                    {
+                    <div class="ms-hesabim-durum-listesi">
                         <h3 class="sr-only" id="ms-yorum-silinen-baslik">Silinen yorumlar</h3>
+                        @foreach (var (yorum, urun) in msSilinen)
+                        {
                         <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
-                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="İç Astarlı Salaş Tesettür Bluz ürün detayına git"></a>
-                            <img src="/images/ornek-resim.jpg" alt="İç astarlı salaş tesettür bluz">
+                            <a class="ms-hesabim-kart-baglanti" href="/urun/@yorum.ProductCode" data-ms-kart-link aria-label="@(urun?.Ad ?? yorum.ProductCode) ürün detayına git"></a>
+                            @if (urun?.GorselUrl is not null)
+                            {
+                            <img src="@urun.GorselUrl" alt="@urun.Ad">
+                            }
                             <div>
                                 <span class="ms-hesabim-durum-etiket ms-hesabim-durum-pasif">Silindi</span>
-                                <strong>İç Astarlı Salaş Tesettür Bluz</strong>
-                                <p>Bu yorum 24.06.2026 tarihinde kullanıcı isteğiyle kaldırıldı.</p>
-                                <div class="ms-hesabim-kart-aksiyonlar">
-                                    <button class="ms-buton ms-buton-s ms-buton-sade" type="button">Detayı Gör</button>
-                                </div>
+                                <strong>@(urun?.Ad ?? yorum.ProductCode)</strong>
+                                <p>Bu yorum @(yorum.DeletedAt?.ToString("dd.MM.yyyy", trKultur) ?? "") tarihinde kaldırıldı.</p>
                             </div>
                         </article>
+                        }
                     </div>
+                    }
                 </section>
             </div>
         </div>
     </section>
+
+    @* E7: yorum yazma modalı — tasarımda karşılığı yok (buton işlevsiz demo idi); misharix
+       ms-ornek-modal kalıbıyla puan (5 yıldız) + metin; POST /api/store/reviews (satın alma
+       şartı sunucuda), başarıda reload. Reddedilenin "Yeniden Düzenle"si önce eskiyi siler. *@
+    <div class="ms-ornek-modal ms-yorum-yaz-modal" data-ms-yorum-modal aria-hidden="true">
+        <div class="ms-ornek-modal-kaplama" data-ms-yorum-modal-kapat></div>
+        <section class="ms-ornek-modal-kutu ms-ornek-modal-kutu-uyari" role="dialog" aria-modal="true" aria-labelledby="ms-yorum-modal-baslik">
+            <button class="ms-ornek-modal-kapat" type="button" aria-label="Yorum modalını kapat" data-ms-yorum-modal-kapat>&times;</button>
+            <div>
+                <h3 class="ms-ornek-modal-baslik" id="ms-yorum-modal-baslik">Ürünü Değerlendir</h3>
+                <p class="ms-ornek-modal-aciklama" data-ms-yorum-modal-urun></p>
+            </div>
+            <div class="ms-form-alani">
+                <span class="ms-form-etiket">Puanınız</span>
+                <div class="ms-urun-yildizlar" data-ms-yorum-yildizlar aria-label="Puan seçimi">
+                    @for (var y = 1; y <= 5; y++)
+                    {
+                    <button type="button" data-ms-yorum-puan="@y" aria-label="@y yıldız" style="background:none;border:0;cursor:pointer;padding:2px">
+                        <i class="fa-regular fa-star ms-fa-ikon " aria-hidden="true"></i>
+                    </button>
+                    }
+                </div>
+            </div>
+            <label class="ms-form-alani">
+                <span class="ms-form-etiket">Yorumunuz</span>
+                <textarea class="ms-form-metin-alani" rows="4" maxlength="2000" data-ms-yorum-metin placeholder="Ürün deneyiminizi yazın (isteğe bağlı)"></textarea>
+            </label>
+            <div class="ms-uyari ms-uyari-hata" data-ms-yorum-hata hidden></div>
+            <div class="ms-ornek-modal-aksiyonlar">
+                <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-yorum-modal-kapat>Vazgeç</button>
+                <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-yorum-gonder>Gönder</button>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        (() => {
+            const kok = document.currentScript?.closest(".ms-hesabim-sayfa");
+            if (!kok || kok.dataset.msYorumCanliHazir === "true") { return; }
+            kok.dataset.msYorumCanliHazir = "true";
+
+            const modal = kok.querySelector("[data-ms-yorum-modal]");
+            const platformId = document.querySelector("[data-ms-arama]")?.dataset.msAramaPlatform || "";
+            const hataAlani = modal.querySelector("[data-ms-yorum-hata]");
+            let seciliPuan = 0;
+            let seciliKod = null;
+            let eskiYorumId = null;
+
+            const hata = (m) => { hataAlani.textContent = m || ""; hataAlani.hidden = !m; };
+            const yildizlariBoya = () => {
+                modal.querySelectorAll("[data-ms-yorum-puan] i").forEach((ikon, i) => {
+                    ikon.className = `fa-${i < seciliPuan ? "solid" : "regular"} fa-star ms-fa-ikon `;
+                });
+            };
+            const ac = (kod, ad, eskiId) => {
+                seciliKod = kod; eskiYorumId = eskiId || null; seciliPuan = 0;
+                modal.querySelector("[data-ms-yorum-modal-urun]").textContent = ad;
+                modal.querySelector("[data-ms-yorum-metin]").value = "";
+                hata(""); yildizlariBoya();
+                modal.classList.add("ms-ornek-modal-acik");
+                modal.setAttribute("aria-hidden", "false");
+                document.body.style.overflow = "hidden";
+            };
+            const kapat = () => {
+                modal.classList.remove("ms-ornek-modal-acik");
+                modal.setAttribute("aria-hidden", "true");
+                document.body.style.overflow = "";
+            };
+
+            kok.querySelectorAll("[data-ms-yorum-yaz]").forEach((buton) => {
+                buton.addEventListener("click", () =>
+                    ac(buton.dataset.msYorumYaz, buton.dataset.urunAd, buton.dataset.eskiYorumId));
+            });
+            modal.querySelectorAll("[data-ms-yorum-modal-kapat]").forEach((b) => b.addEventListener("click", kapat));
+            modal.querySelectorAll("[data-ms-yorum-puan]").forEach((buton) => {
+                buton.addEventListener("click", () => {
+                    seciliPuan = Number(buton.dataset.msYorumPuan);
+                    yildizlariBoya();
+                });
+            });
+
+            modal.querySelector("[data-ms-yorum-gonder]").addEventListener("click", async (olay) => {
+                hata("");
+                if (!seciliPuan) { hata("Lütfen bir puan seçin."); return; }
+                const buton = olay.currentTarget;
+                buton.disabled = true;
+                try {
+                    const basliklar = {
+                        "Content-Type": "application/json",
+                        Authorization: "Bearer " + localStorage.getItem("ecspros_member_token")
+                    };
+                    if (eskiYorumId) {
+                        await fetch("/api/store/reviews/" + eskiYorumId, { method: "DELETE", headers: basliklar });
+                    }
+                    const cevap = await fetch("/api/store/reviews", {
+                        method: "POST", headers: basliklar,
+                        body: JSON.stringify({
+                            firmPlatformId: platformId,
+                            productCode: seciliKod,
+                            rating: seciliPuan,
+                            text: modal.querySelector("[data-ms-yorum-metin]").value.trim() || null
+                        })
+                    });
+                    const veri = await cevap.json().catch(() => null);
+                    if (veri?.success) { location.href = location.pathname + "?utm_yorum=onay-bekleyenler"; return; }
+                    hata(veri?.error || "Yorum gönderilemedi.");
+                } catch {
+                    hata("Yorum gönderilemedi. Lütfen tekrar deneyin.");
+                } finally {
+                    buton.disabled = false;
+                }
+            });
+        })();
+    </script>
 </section>
