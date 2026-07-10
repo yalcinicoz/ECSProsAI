@@ -1,0 +1,10 @@
+@{
+    var partial = ViewData["MsHesabimPartial"] as string;
+}
+
+<main class="ms-hesabim-sayfa-kapsayici">
+    @if (!string.IsNullOrWhiteSpace(partial))
+    {
+        @await Html.PartialAsync(partial)
+    }
+</main>

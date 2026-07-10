@@ -1,0 +1,51 @@
+<section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-gezdiklerim-baslik">
+    <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model='@("onceden-gezdiklerim")' />
+
+    <section class="ms-hesabim-icerik">
+        <header class="ms-hesabim-baslik">
+            <h2 id="ms-hesabim-gezdiklerim-baslik">Önceden Gezdiklerim</h2>
+        </header>
+
+        <div class="ms-hesabim-liste-sayfa">
+            <div class="ms-hesabim-liste-ust">
+                <div>
+                    <h3>Son görüntülenen ürünler</h3>
+                    <p>İncelediğiniz ürünlere kaldığınız yerden devam edin.</p>
+                </div>
+                <button class="ms-buton ms-buton-m ms-buton-sade" type="button">Listeyi Temizle</button>
+            </div>
+
+            <section class="ms-hesabim-bos-durum" aria-labelledby="ms-gezdiklerim-bos-baslik">
+                <i class="fa-solid fa-clock-rotate-left ms-fa-ikon " aria-hidden="true"></i>
+                <div>
+                    <h3 id="ms-gezdiklerim-bos-baslik">Henüz gezdiğiniz ürün yok</h3>
+                    <p>Ürünleri inceledikçe son görüntüledikleriniz burada listelenir.</p>
+                </div>
+                <a class="ms-buton ms-buton-m ms-buton-satin-al" href="/Arama">Ürünleri Keşfet</a>
+            </section>
+
+            <div class="ms-hesabim-urun-grid">
+                <article class="ms-hesabim-urun-karti" data-ms-kart-link-alani>
+                    <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Polo Yaka Desenli Erkek Triko Tişört ürün detayına git"></a>
+                    <img src="/images/ornek-resim.jpg" alt="Polo yaka desenli erkek triko tişört">
+                    <div>
+                        <strong>Polo Yaka Desenli Erkek Triko Tişört</strong>
+                        <p>Bugün 14:20 tarihinde görüntülendi.</p>
+                        <span class="ms-urun-fiyat">599,90 TL</span>
+                    </div>
+                    <a class="ms-buton ms-buton-s ms-buton-sade" href="/UrunDetay">Ürüne Git</a>
+                </article>
+                <article class="ms-hesabim-urun-karti" data-ms-kart-link-alani>
+                    <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Kadın Yüksek Bel Bol Paça Pantolon ürün detayına git"></a>
+                    <img src="/images/ornek-resim-2.jpg" alt="Kadın yüksek bel bol paça pantolon">
+                    <div>
+                        <strong>Kadın Yüksek Bel Bol Paça Pantolon</strong>
+                        <p>Dün 21:05 tarihinde görüntülendi.</p>
+                        <span class="ms-urun-fiyat">849,90 TL</span>
+                    </div>
+                    <a class="ms-buton ms-buton-s ms-buton-sade" href="/UrunDetay">Ürüne Git</a>
+                </article>
+            </div>
+        </div>
+    </section>
+</section>

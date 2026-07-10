@@ -1,0 +1,46 @@
+<section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-varsayilan-baslik">
+    <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model="@string.Empty" />
+
+    <section class="ms-hesabim-icerik">
+        <header class="ms-hesabim-baslik">
+            <h2 id="ms-hesabim-varsayilan-baslik">Hesabım</h2>
+        </header>
+
+        @* E1: karşılama adı SSR kimlikten (D1 ViewData["MsUye"] — guard'lı sayfada hep dolu). *@
+        <div class="ms-hesabim-karsilama">
+            <h3>Merhaba @(((ViewData["MsUye"] as ECSPros.Api.Services.StoreUyeKimlik)?.FullName ?? "").ToUpper(System.Globalization.CultureInfo.GetCultureInfo("tr-TR")))</h3>
+            <p>"Hesabım" sayfasından siparişlerinizi ve arıza/iade/değişim işlemlerinizi takip edebilir, kazandığınız hediye çeki ve puanları görüntüleyebilir, üyelik bilgisi güncelleme, şifre ve adres değişikliği gibi hesap ayarlarınızı kolayca yapabilirsiniz.</p>
+        </div>
+
+        <div class="ms-hesabim-kisayol-grid" aria-label="Hesabım kısayolları">
+            <a class="ms-hesabim-kisayol" href="/Hesabim/UyelikBilgilerim">
+                <img src=\
+                <span>Üyelik Bilgilerim</span>
+            </a>
+            <a class="ms-hesabim-kisayol" href="/Hesabim/Adreslerim">
+                <img src=\
+                <span>Adreslerim</span>
+            </a>
+            <a class="ms-hesabim-kisayol" href="/Hesabim/Siparislerim">
+                <img src=\
+                <span>Siparişlerim</span>
+            </a>
+            <a class="ms-hesabim-kisayol" href="/Favorilerim">
+                <img src=\
+                <span>Favorilerim</span>
+            </a>
+            <a class="ms-hesabim-kisayol" href="/Hesabim/Koleksiyonlarim">
+                <img src=\
+                <span>Koleksiyonlarım</span>
+            </a>
+            <a class="ms-hesabim-kisayol" href="/Hesabim/Yorumlarim">
+                <img src=\
+                <span>Yorumlarım</span>
+            </a>
+            <a class="ms-hesabim-kisayol" href="/Hesabim/Iadelerim">
+                <img src=\
+                <span>İadelerim</span>
+            </a>
+        </div>
+    </section>
+</section>

@@ -1,0 +1,48 @@
+<section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-favori-aramalar-baslik">
+    <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model='@("favori-aramalar")' />
+
+    <section class="ms-hesabim-icerik">
+        <header class="ms-hesabim-baslik">
+            <h2 id="ms-hesabim-favori-aramalar-baslik">Favori Aramalarım</h2>
+        </header>
+
+        <div class="ms-hesabim-liste-sayfa">
+            <div class="ms-hesabim-liste-ust">
+                <div>
+                    <h3>Kayıtlı aramalar</h3>
+                    <p>Arama kriterlerinizi kaydedin, yeni ürün geldiğinde hızlıca kontrol edin.</p>
+                </div>
+                <button class="ms-buton ms-buton-m ms-buton-sade" type="button">Yeni Arama Kaydet</button>
+            </div>
+
+            <section class="ms-hesabim-bos-durum" aria-labelledby="ms-favori-aramalar-bos-baslik">
+                <img class="ms-ikon-siyah" src="/ikons/favori-aramalarim-sade-icon.svg" alt="" aria-hidden="true">
+                <div>
+                    <h3 id="ms-favori-aramalar-bos-baslik">Henüz favori aramanız yok</h3>
+                    <p>Sık kullandığınız arama filtrelerini kaydettiğinizde burada listelenir.</p>
+                </div>
+                <a class="ms-buton ms-buton-m ms-buton-satin-al" href="/Arama">Arama Yap</a>
+            </section>
+
+            <div class="ms-hesabim-durum-listesi">
+                <article class="ms-hesabim-durum-karti">
+                    <span class="ms-hesabim-durum-etiket ms-hesabim-durum-basarili">Aktif</span>
+                    <strong>Siyah pantolon · 38 beden</strong>
+                    <p>Kadın > Pantolon kategorisinde, 500-1000 TL fiyat aralığı.</p>
+                    <div class="ms-hesabim-kart-aksiyonlar">
+                        <a class="ms-buton ms-buton-s ms-buton-satin-al" href="/Arama?q=siyah%20pantolon">Sonuçları Gör</a>
+                        <button class="ms-buton ms-buton-s ms-buton-sade" type="button">Düzenle</button>
+                    </div>
+                </article>
+                <article class="ms-hesabim-durum-karti">
+                    <span class="ms-hesabim-durum-etiket ms-hesabim-durum-beklemede">Bildirim Açık</span>
+                    <strong>Triko tişört · L beden</strong>
+                    <p>Yeni ürün geldiğinde e-posta bildirimi gönderilecek.</p>
+                    <div class="ms-hesabim-kart-aksiyonlar">
+                        <a class="ms-buton ms-buton-s ms-buton-satin-al" href="/Arama?q=triko%20tisort">Sonuçları Gör</a>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+</section>

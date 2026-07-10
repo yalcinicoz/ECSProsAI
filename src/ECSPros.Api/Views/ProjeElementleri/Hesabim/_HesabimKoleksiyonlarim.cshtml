@@ -1,0 +1,288 @@
+<section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-koleksiyonlar-baslik">
+    <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model='@("koleksiyonlar")' />
+
+    <section class="ms-hesabim-icerik">
+        <header class="ms-hesabim-baslik">
+            <h2 id="ms-hesabim-koleksiyonlar-baslik">Koleksiyonlarım</h2>
+        </header>
+
+        <div class="ms-hesabim-liste-sayfa">
+            <div class="ms-hesabim-liste-ust">
+                <div>
+                    <h3>Ürün koleksiyonları</h3>
+                    <p>Favori ürünlerinizi alışveriş listelerine, kombinlere veya hediye planlarına göre düzenleyin.</p>
+                </div>
+                <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-koleksiyon-modal-ac>Yeni Koleksiyon</button>
+            </div>
+
+            <section class="ms-hesabim-bos-durum" aria-labelledby="ms-koleksiyonlar-bos-baslik">
+                <i class="fa-solid fa-layer-group ms-fa-ikon " aria-hidden="true"></i>
+                <div>
+                    <h3 id="ms-koleksiyonlar-bos-baslik">Henüz koleksiyonunuz yoksa buradan başlayın</h3>
+                    <p>Ürünleri temalara göre gruplayabilir, herkese açık veya paylaşılabilir koleksiyonlar hazırlayabilirsiniz.</p>
+                </div>
+                <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-koleksiyon-modal-ac>Koleksiyon Oluştur</button>
+            </section>
+
+            <div class="ms-hesabim-koleksiyon-grid" data-ms-koleksiyon-listesi>
+                <article class="ms-hesabim-koleksiyon-karti">
+                    <div class="ms-hesabim-koleksiyon-ust">
+                        <div class="ms-hesabim-koleksiyon-kullanici">
+                            <span class="ms-hesabim-koleksiyon-avatar" aria-hidden="true">ESA</span>
+                            <div>
+                                <strong>Emre SAĞLAM</strong>
+                                <p>Yazlık Kombinler</p>
+                            </div>
+                        </div>
+                        <button class="ms-hesabim-koleksiyon-ikon-buton" type="button" aria-label="Koleksiyon seçenekleri"><i class="fa-solid fa-ellipsis-vertical ms-fa-ikon " aria-hidden="true"></i></button>
+                    </div>
+
+                    <div class="ms-hesabim-koleksiyon-kapak">
+                        <a href="/#" aria-label="Yazlık Kombinler koleksiyonunu aç">
+                            <img src="/images/ornek-resim.jpg" alt="İç astarlı salaş tesettür bluz" />
+                        </a>
+                        <a href="/#" aria-label="Yazlık Kombinler koleksiyonundaki etek ürününü aç">
+                            <img src="/images/ornek-resim-2.jpg" alt="Kadın siyah desenli kloş etek" />
+                        </a>
+                        <a href="/#" aria-label="Yazlık Kombinler koleksiyonundaki elbise ürününü aç">
+                            <img src="/images/ornek-resim.jpg" alt="Kadın haki aerobin elbise" />
+                        </a>
+                    </div>
+
+                    <div class="ms-hesabim-koleksiyon-icerik">
+                        <h3><a href="/#">Yazlık Kombinler</a></h3>
+                        <p>Hafif kumaşlı, günlük kullanıma uygun parçalar ve tamamlayıcı ürünler.</p>
+                        <div class="ms-hesabim-koleksiyon-rozetler" aria-label="Koleksiyon bilgileri">
+                            <span>8 Ürün</span>
+                            <span>Herkese açık</span>
+                            <span>Paylaşılabilir</span>
+                            <span>128 Görüntülenme</span>
+                        </div>
+                        <div class="ms-hesabim-koleksiyon-alt">
+                            <span class="ms-hesabim-koleksiyon-rozet ms-hesabim-koleksiyon-rozet-indirim">2 ürün indirimde</span>
+                            <span class="ms-hesabim-koleksiyon-rozet">Son güncelleme bugün</span>
+                        </div>
+                        <div class="ms-hesabim-koleksiyon-aksiyonlar">
+                            <a class="ms-buton ms-buton-s ms-buton-sade" href="/#">Koleksiyonu Aç</a>
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button">Paylaş</button>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ms-hesabim-koleksiyon-karti">
+                    <div class="ms-hesabim-koleksiyon-ust">
+                        <div class="ms-hesabim-koleksiyon-kullanici">
+                            <span class="ms-hesabim-koleksiyon-avatar" aria-hidden="true">ESA</span>
+                            <div>
+                                <strong>Emre SAĞLAM</strong>
+                                <p>Hediye Listem</p>
+                            </div>
+                        </div>
+                        <button class="ms-hesabim-koleksiyon-ikon-buton" type="button" aria-label="Koleksiyon seçenekleri"><i class="fa-solid fa-ellipsis-vertical ms-fa-ikon " aria-hidden="true"></i></button>
+                    </div>
+
+                    <div class="ms-hesabim-koleksiyon-kapak">
+                        <a href="/#" aria-label="Hediye Listem koleksiyonundaki tunik ürününü aç">
+                            <img src="/images/ornek-resim-2.jpg" alt="Kadın çağla yeşili bisiklet yaka tunik" />
+                        </a>
+                        <a href="/#" aria-label="Hediye Listem koleksiyonundaki gömlek ürününü aç">
+                            <img src="/images/ornek-resim.jpg" alt="Kadın beyaz düğmeli gömlek" />
+                        </a>
+                        <span class="ms-hesabim-koleksiyon-kapak-bos">+3</span>
+                    </div>
+
+                    <div class="ms-hesabim-koleksiyon-icerik">
+                        <h3><a href="/#">Hediye Listem</a></h3>
+                        <p>Tekrar bakılacak ürünler ve kampanya bekleyen hediye alternatifleri.</p>
+                        <div class="ms-hesabim-koleksiyon-rozetler" aria-label="Koleksiyon bilgileri">
+                            <span>5 Ürün</span>
+                            <span>Gizli</span>
+                            <span>Paylaşılabilir</span>
+                            <span>42 Görüntülenme</span>
+                        </div>
+                        <div class="ms-hesabim-koleksiyon-alt">
+                            <span class="ms-hesabim-koleksiyon-rozet ms-hesabim-koleksiyon-rozet-indirim">1 ürün indirimde</span>
+                            <span class="ms-hesabim-koleksiyon-rozet">Son güncelleme dün</span>
+                        </div>
+                        <div class="ms-hesabim-koleksiyon-aksiyonlar">
+                            <a class="ms-buton ms-buton-s ms-buton-sade" href="/#">Koleksiyonu Aç</a>
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button">Paylaş</button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <div class="ms-ornek-modal ms-koleksiyon-modal" data-ms-koleksiyon-modal aria-hidden="true">
+        <div class="ms-ornek-modal-kaplama" data-ms-koleksiyon-modal-kapat></div>
+        <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-xl ms-koleksiyon-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-koleksiyon-modal-baslik">
+            <button class="ms-ornek-modal-kapat" type="button" aria-label="Koleksiyon modalını kapat" data-ms-koleksiyon-modal-kapat>&times;</button>
+            <div>
+                <h3 class="ms-ornek-modal-baslik" id="ms-koleksiyon-modal-baslik">Koleksiyon Oluştur</h3>
+                <p class="ms-ornek-modal-aciklama">Koleksiyon bilgilerini yazın, koleksiyonlarınızdan veya favorilerinizden ürün seçerek listenizi hazırlayın.</p>
+            </div>
+
+            <div class="ms-koleksiyon-form-grid">
+                <label class="ms-form-alani">
+                    <span class="ms-form-etiket">Koleksiyon Adı</span>
+                    <input class="ms-form-girdi" type="text" data-ms-koleksiyon-ad placeholder="Örn. Bayram Kombinleri" />
+                </label>
+                <label class="ms-form-alani">
+                    <span class="ms-form-etiket">Açıklama</span>
+                    <textarea class="ms-form-metin-alani" data-ms-koleksiyon-aciklama placeholder="Bu koleksiyonda hangi ürünleri takip edeceğinizi yazın."></textarea>
+                </label>
+            </div>
+
+            <div class="ms-koleksiyon-onaylar">
+                <label class="ms-onay-kart">
+                    <input class="ms-onay-input" type="checkbox" data-ms-koleksiyon-herkese-acik checked />
+                    <span class="ms-onay-kutu" aria-hidden="true"></span>
+                    <span class="ms-onay-metin">
+                        Herkese açık
+                        <span class="ms-onay-yardim">Diğer kullanıcılar bu koleksiyonu görebilir.</span>
+                    </span>
+                </label>
+                <label class="ms-onay-kart">
+                    <input class="ms-onay-input" type="checkbox" data-ms-koleksiyon-paylasilabilir checked />
+                    <span class="ms-onay-kutu" aria-hidden="true"></span>
+                    <span class="ms-onay-metin">
+                        Paylaşılabilir
+                        <span class="ms-onay-yardim">Bu koleksiyon paylaşılabilir olsun.</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="ms-koleksiyon-secim-alani">
+                <div class="ms-koleksiyon-sekmeleri" role="tablist" aria-label="Koleksiyona ürün ekleme sekmeleri">
+                    <button class="ms-koleksiyon-sekme ms-koleksiyon-sekme-aktif" type="button" role="tab" aria-selected="true" data-ms-koleksiyon-sekme="koleksiyonlarim">Koleksiyonlarım</button>
+                    <button class="ms-koleksiyon-sekme" type="button" role="tab" aria-selected="false" data-ms-koleksiyon-sekme="favorilerim">Favorilerim</button>
+                    <button class="ms-koleksiyon-sekme" type="button" role="tab" aria-selected="false" data-ms-koleksiyon-sekme="sectiklerim">Seçtiklerim <span data-ms-koleksiyon-secili-sayac>0</span></button>
+                </div>
+
+                <div class="ms-koleksiyon-panel ms-koleksiyon-panel-aktif" data-ms-koleksiyon-panel="koleksiyonlarim">
+                    <div class="ms-koleksiyon-urun-grid">
+                        <button class="ms-koleksiyon-urun-secim" type="button" data-ms-koleksiyon-urun data-urun-id="kol-1" data-urun-ad="İç Astarlı Salaş Tesettür Bluz" data-urun-gorsel="/images/ornek-resim.jpg" data-urun-meta="Yazlık Kombinler">
+                            <img src="/images/ornek-resim.jpg" alt="İç astarlı salaş tesettür bluz" />
+                            <span><strong>İç Astarlı Salaş Tesettür Bluz</strong><small>Yazlık Kombinler</small></span>
+                            <em>Seçildi</em>
+                        </button>
+                        <button class="ms-koleksiyon-urun-secim" type="button" data-ms-koleksiyon-urun data-urun-id="kol-2" data-urun-ad="Kadın Siyah Desenli Kloş Etek" data-urun-gorsel="/images/ornek-resim-2.jpg" data-urun-meta="Yazlık Kombinler">
+                            <img src="/images/ornek-resim-2.jpg" alt="Kadın siyah desenli kloş etek" />
+                            <span><strong>Kadın Siyah Desenli Kloş Etek</strong><small>Yazlık Kombinler</small></span>
+                            <em>Seçildi</em>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="ms-koleksiyon-panel" data-ms-koleksiyon-panel="favorilerim" hidden>
+                    <div class="ms-koleksiyon-urun-grid">
+                        <button class="ms-koleksiyon-urun-secim" type="button" data-ms-koleksiyon-urun data-urun-id="fav-1" data-urun-ad="Kadın Haki Aerobin Elbise" data-urun-gorsel="/images/ornek-resim.jpg" data-urun-meta="Favorilerim">
+                            <img src="/images/ornek-resim.jpg" alt="Kadın haki aerobin elbise" />
+                            <span><strong>Kadın Haki Aerobin Elbise</strong><small>Favorilerim</small></span>
+                            <em>Seçildi</em>
+                        </button>
+                        <button class="ms-koleksiyon-urun-secim" type="button" data-ms-koleksiyon-urun data-urun-id="fav-2" data-urun-ad="Kadın Beyaz Düğmeli Gömlek" data-urun-gorsel="/images/ornek-resim-2.jpg" data-urun-meta="Favorilerim">
+                            <img src="/images/ornek-resim-2.jpg" alt="Kadın beyaz düğmeli gömlek" />
+                            <span><strong>Kadın Beyaz Düğmeli Gömlek</strong><small>Favorilerim</small></span>
+                            <em>Seçildi</em>
+                        </button>
+                        <button class="ms-koleksiyon-urun-secim" type="button" data-ms-koleksiyon-urun data-urun-id="fav-3" data-urun-ad="Kadın Çağla Yeşili Tunik" data-urun-gorsel="/images/ornek-resim-2.jpg" data-urun-meta="Favorilerim">
+                            <img src="/images/ornek-resim-2.jpg" alt="Kadın çağla yeşili tunik" />
+                            <span><strong>Kadın Çağla Yeşili Tunik</strong><small>Favorilerim</small></span>
+                            <em>Seçildi</em>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="ms-koleksiyon-panel" data-ms-koleksiyon-panel="sectiklerim" hidden>
+                    <div class="ms-koleksiyon-bos" data-ms-koleksiyon-secili-bos>
+                        <strong>Henüz ürün seçmediniz</strong>
+                        <p>Koleksiyonlarım veya Favorilerim sekmesinden ürün seçtiğinizde burada görünecek.</p>
+                    </div>
+                    <div class="ms-koleksiyon-secili-liste" data-ms-koleksiyon-secili-liste></div>
+                </div>
+            </div>
+
+            <div class="ms-ornek-modal-aksiyonlar">
+                <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-koleksiyon-modal-kapat>Vazgeç</button>
+                <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-koleksiyon-olustur>Koleksiyon Oluştur</button>
+            </div>
+        </section>
+    </div>
+
+    @* Bu script: Koleksiyon oluşturma modalı ve koleksiyon verisi etkileşimlerini yönetir. *@
+    <script>
+        (() => {
+            const kok = document.currentScript?.closest(".ms-hesabim-sayfa");
+
+            if (!kok || kok.dataset.msKoleksiyonDemoHazir === "true") {
+                return;
+            }
+
+            kok.dataset.msKoleksiyonDemoHazir = "true";
+
+            const modal = kok.querySelector("[data-ms-koleksiyon-modal]");
+            const koleksiyonListesi = kok.querySelector("[data-ms-koleksiyon-listesi]");
+
+            if (!modal || !koleksiyonListesi) {
+                return;
+            }
+
+            const metniGuvenliYap = (metin) => (metin || "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+
+            modal.addEventListener("ms:koleksiyon-olustur", (event) => {
+                const detay = event.detail || {};
+                const ad = detay.ad || "Yeni Koleksiyon";
+                const aciklama = detay.aciklama || "Yeni seçilen ürünlerle oluşturulan alışveriş koleksiyonu.";
+                const urunler = Array.isArray(detay.urunler) ? detay.urunler : [];
+                const kapakUrunleri = urunler.slice(0, 3);
+                const kapakHtml = kapakUrunleri.length > 0
+                    ? kapakUrunleri.map((urun) => `
+                        <a href="/#" aria-label="${metniGuvenliYap(ad)} koleksiyonundaki ${metniGuvenliYap(urun.ad)} ürününü aç">
+                            <img src="${metniGuvenliYap(urun.gorsel)}" alt="${metniGuvenliYap(urun.ad)}" />
+                        </a>`).join("") + (kapakUrunleri.length < 3 ? `<span class="ms-hesabim-koleksiyon-kapak-bos">+${Math.max(0, urunler.length - kapakUrunleri.length)}</span>` : "")
+                    : `<span class="ms-hesabim-koleksiyon-kapak-bos">Ürün bekliyor</span>`;
+                const kart = document.createElement("article");
+
+                kart.className = "ms-hesabim-koleksiyon-karti";
+                kart.innerHTML = `
+                    <div class="ms-hesabim-koleksiyon-ust">
+                        <div class="ms-hesabim-koleksiyon-kullanici">
+                            <span class="ms-hesabim-koleksiyon-avatar" aria-hidden="true">ESA</span>
+                            <div>
+                                <strong>Emre SAĞLAM</strong>
+                                <p>${metniGuvenliYap(ad)}</p>
+                            </div>
+                        </div>
+                        <button class="ms-hesabim-koleksiyon-ikon-buton" type="button" aria-label="Koleksiyon seçenekleri"><i class="fa-solid fa-ellipsis-vertical ms-fa-ikon " aria-hidden="true"></i></button>
+                    </div>
+                    <div class="ms-hesabim-koleksiyon-kapak">${kapakHtml}</div>
+                    <div class="ms-hesabim-koleksiyon-icerik">
+                        <h3><a href="/#">${metniGuvenliYap(ad)}</a></h3>
+                        <p>${metniGuvenliYap(aciklama)}</p>
+                        <div class="ms-hesabim-koleksiyon-rozetler" aria-label="Koleksiyon bilgileri">
+                            <span>${urunler.length} Ürün</span>
+                            <span>${detay.herkeseAcik ? "Herkese açık" : "Gizli"}</span>
+                            <span>${detay.paylasilabilir ? "Paylaşılabilir" : "Paylaşıma kapalı"}</span>
+                            <span>0 Görüntülenme</span>
+                        </div>
+                        <div class="ms-hesabim-koleksiyon-alt">
+                            <span class="ms-hesabim-koleksiyon-rozet ms-hesabim-koleksiyon-rozet-indirim">İndirim takibi açık</span>
+                            <span class="ms-hesabim-koleksiyon-rozet">Son güncelleme şimdi</span>
+                        </div>
+                        <div class="ms-hesabim-koleksiyon-aksiyonlar">
+                            <a class="ms-buton ms-buton-s ms-buton-sade" href="/#">Koleksiyonu Aç</a>
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button">Paylaş</button>
+                        </div>
+                    </div>`;
+                koleksiyonListesi.prepend(kart);
+            });
+        })();
+    </script>
+</section>

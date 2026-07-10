@@ -294,6 +294,20 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — FAZ E BAŞLADI; E1 TAMAM: Hesabım çerçevesi:**
+  - `HesabimController` (StorePageController tabanı) — misharix çift route şeması birebir:
+    12 sayfa × (/Hesabim/... + kebab-case), tek Sayfa.cshtml + partial adı kalıbı.
+    **SSR üye guard'ı:** cookie kimliği yoksa köke redirect.
+  - 18 Hesabim partial'ı + Sayfa.cshtml bayt-birebir (Faz A kabuk yöntemi — sayfalar
+    E2-E13'te teker teker bağlanır, o güne dek tasarım demo içeriği render olur).
+    İzinli fark 2: YanMenu statü bloğu @if(false) (E13/G); Varsayilan karşılama adı
+    SSR kimlikten (tr-TR upper). Nav hesap paneli linkleri ('#'tı) route'lara bağlandı.
+  - ⚠️ Tasarım kaynağı kusuru: kısayol grid'inde `<img src=\` bozuk markup — bayt-birebir
+    korundu (etiketler görünür, ikonlar kırık placeholder); E13'te ele alınacak.
+  - **E2E 13/13 ✓ + B4 regresyon 12/12 ✓; drift TEMİZ** (2 yeni izinli girdi; D4'te
+    bayatlayan 3 gerekçe yorumu da güncellendi). Sıradaki: E2 Üyelik Bilgilerim
+    (profile GET/PUT + cinsiyet/şehir alanları — G9 segmenti bunlardan beslenir).
+
 - **2026-07-10 (devam) — D7 TAMAM → FAZ D KAPANDI 🎉:**
   - Envanter 8.1 auth satırları gerçek durumla güncellendi (kayıt modalı 🔶→✅ D3;
     hesap paneli/çıkış D1 logout notu; e-posta sekmesi "varsayılan artık SMS" notu).

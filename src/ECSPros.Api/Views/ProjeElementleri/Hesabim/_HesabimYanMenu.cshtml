@@ -1,0 +1,150 @@
+@model string
+@{
+    var aktif = Model ?? string.Empty;
+}
+
+<div class="ms-hesabim-mobil-menu-kontrol">
+    <button class="ms-hesabim-mobil-menu-ac" type="button" data-ms-hesabim-menu-ac aria-expanded="false" aria-label="Hesabım menüsünü aç">
+        <span class="ms-hesabim-mobil-menu-cizgi" aria-hidden="true"></span>
+        <i class="fa-solid fa-user ms-fa-ikon " aria-hidden="true"></i>
+        <span>Hesabım Menüsü</span>
+    </button>
+</div>
+
+<div class="ms-hesabim-menu-perde" data-ms-hesabim-menu-kapat aria-hidden="true"></div>
+
+<aside class="ms-hesabim-yan-menu" aria-label="Hesabım menüsü">
+    <div class="ms-hesabim-menu-mobil-baslik">
+        <strong>Hesabım</strong>
+        <button type="button" data-ms-hesabim-menu-kapat aria-label="Hesabım menüsünü kapat">×</button>
+    </div>
+
+    @* E1: statü/harcama bloğu puan-statü verisi gelene kadar gizli (B4'teki hover panel
+       kararıyla aynı gerekçe — E13/G'de gerçek veriyle açılır). *@
+    @if (false)
+    {
+    <section class="ms-hesap-statu ms-hesap-statu-premium ms-hesabim-menu-statu">
+        <div class="ms-hesap-statu-ust">
+            <span class="ms-hesap-statu-ikon" aria-hidden="true"><i class="fa-solid fa-crown ms-fa-ikon " aria-hidden="true"></i></span>
+            <span class="ms-hesap-statu-bilgi">
+                <small>Statünüz</small>
+                <strong>Premium</strong>
+            </span>
+            <span class="ms-hesap-harcama">
+                <small>Aylık</small>
+                <strong>48.000 ₺</strong>
+            </span>
+        </div>
+        <div class="ms-hesap-statu-metrikler">
+            <span><small>Aralık</small>35.000 ₺ +</span>
+            <span><small>Kazanç</small>%6 puan</span>
+        </div>
+        <div class="ms-hesap-statu-progress" aria-label="Premium statü ilerleme yüzde 100">
+            <span style="width: 100%"></span>
+        </div>
+        <p>Premium avantajlarınız aktif.</p>
+    </section>
+    }
+
+    <section class="ms-hesabim-menu-grubu">
+        <h3>Üyeliğim</h3>
+        <nav class="ms-hesabim-menu-linkleri">
+            <a class="@(aktif == "uyelik" ? "ms-hesabim-menu-aktif" : null)" href="/Hesabim/UyelikBilgilerim">
+                <i class="fa-solid fa-user ms-fa-ikon " aria-hidden="true"></i>
+                <span>Üyelik Bilgilerim</span>
+            </a>
+            <a class="@(aktif == "adresler" ? "ms-hesabim-menu-aktif" : null)" href="/Hesabim/Adreslerim">
+                <i class="fa-solid fa-location-dot ms-fa-ikon " aria-hidden="true"></i>
+                <span>Adreslerim</span>
+            </a>
+        </nav>
+    </section>
+
+    <section class="ms-hesabim-menu-grubu">
+        <h3>Bana Özel</h3>
+        <nav class="ms-hesabim-menu-linkleri">
+            <a class="@(aktif == "siparisler" ? "ms-hesabim-menu-aktif" : null)" href="/Hesabim/Siparislerim">
+                <i class="fa-solid fa-box ms-fa-ikon " aria-hidden="true"></i>
+                <span>Siparişlerim</span>
+            </a>
+            <a class="@(aktif == "tekrar-satin-al" ? "ms-hesabim-menu-aktif" : null)" href="/Hesabim/TekrarSatinAl">
+                <i class="fa-solid fa-arrow-rotate-right ms-fa-ikon " aria-hidden="true"></i>
+                <span>Tekrar Satın Al</span>
+            </a>
+            <a class="@(aktif == "onceden-gezdiklerim" ? "ms-hesabim-menu-aktif" : null)" href="/Hesabim/OncedenGezdiklerim">
+                <i class="fa-solid fa-clock-rotate-left ms-fa-ikon " aria-hidden="true"></i>
+                <span>Önceden Gezdiklerim</span>
+            </a>
+            <a class="@(aktif == "iadeler" ? "ms-hesabim-menu-aktif" : null)" href="/Hesabim/Iadelerim">
+                <i class="fa-solid fa-arrow-rotate-left ms-fa-ikon " aria-hidden="true"></i>
+                <span>İadelerim</span>
+            </a>
+            <a class="@(aktif == "yorumlar" ? "ms-hesabim-menu-aktif" : null)" href="/Hesabim/Yorumlarim">
+                <i class="fa-solid fa-comment ms-fa-ikon " aria-hidden="true"></i>
+                <span>Yorumlarım</span>
+            </a>
+            <a class="@(aktif == "favoriler" ? "ms-hesabim-menu-aktif" : null)" href="/Favorilerim">
+                <img class="ms-ikon-siyah" src="/ikons/favorilerim-sade-icon.svg" alt="" aria-hidden="true">
+                <span>Favorilerim</span>
+            </a>
+            <a class="@(aktif == "koleksiyonlar" ? "ms-hesabim-menu-aktif" : null)" href="/Hesabim/Koleksiyonlarim">
+                <i class="fa-solid fa-layer-group ms-fa-ikon " aria-hidden="true"></i>
+                <span>Koleksiyonlarım</span>
+            </a>
+            <a class="@(aktif == "kuponlar" ? "ms-hesabim-menu-aktif" : null)" href="/Hesabim/IndirimKuponlarim">
+                <i class="fa-solid fa-ticket ms-fa-ikon " aria-hidden="true"></i>
+                <span>İndirim Kuponlarım</span>
+            </a>
+            <a class="@(aktif == "favori-aramalar" ? "ms-hesabim-menu-aktif" : null)" href="/Hesabim/FavoriAramalarim">
+                <img class="ms-ikon-siyah" src="/ikons/favori-aramalarim-sade-icon.svg" alt="" aria-hidden="true">
+                <span>Favori Aramalarım</span>
+            </a>
+        </nav>
+    </section>
+</aside>
+
+    @* Bu script: Hesabım yan menüsünün açma/kapatma ve perde davranışını yönetir. *@
+    <script>
+    (() => {
+        document.querySelectorAll(".ms-hesabim-sayfa").forEach((sayfa) => {
+            if (sayfa.dataset.msHesabimMenuHazir === "true") {
+                return;
+            }
+
+            sayfa.dataset.msHesabimMenuHazir = "true";
+
+            const acButon = sayfa.querySelector("[data-ms-hesabim-menu-ac]");
+            const menu = sayfa.querySelector(".ms-hesabim-yan-menu");
+            const perde = sayfa.querySelector(".ms-hesabim-menu-perde");
+            const kapatButonlari = sayfa.querySelectorAll("[data-ms-hesabim-menu-kapat]");
+
+            const menuDurumunuAyarla = (acik) => {
+                menu?.classList.toggle("ms-hesabim-yan-menu-acik", acik);
+                sayfa.classList.toggle("ms-hesabim-menu-acik", acik);
+                acButon?.setAttribute("aria-expanded", acik.toString());
+                perde?.setAttribute("aria-hidden", (!acik).toString());
+                document.body.classList.toggle("ms-hesabim-menu-body-kilitli", acik);
+
+                if (acik) {
+                    menu?.querySelector("[data-ms-hesabim-menu-kapat]")?.focus();
+                }
+            };
+
+            acButon?.addEventListener("click", () => menuDurumunuAyarla(true));
+
+            kapatButonlari.forEach((buton) => {
+                buton.addEventListener("click", () => menuDurumunuAyarla(false));
+            });
+
+            menu?.querySelectorAll("a").forEach((link) => {
+                link.addEventListener("click", () => menuDurumunuAyarla(false));
+            });
+
+            document.addEventListener("keydown", (event) => {
+                if (event.key === "Escape" && menu?.classList.contains("ms-hesabim-yan-menu-acik")) {
+                    menuDurumunuAyarla(false);
+                }
+            });
+        });
+    })();
+</script>
