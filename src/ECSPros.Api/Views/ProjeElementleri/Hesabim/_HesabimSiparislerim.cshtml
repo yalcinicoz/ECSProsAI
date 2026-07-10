@@ -1,0 +1,1227 @@
+<section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-siparisler-baslik">
+    <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model='@("siparisler")' />
+
+    <section class="ms-hesabim-icerik">
+        <header class="ms-hesabim-baslik">
+            <h2 id="ms-hesabim-siparisler-baslik">Siparişlerim</h2>
+        </header>
+
+        <div class="ms-hesabim-siparis-sayfa">
+            <div class="ms-hesabim-siparis-ust">
+                <div>
+                    <h3>Sipariş takibi</h3>
+                    <p>Son siparişlerinizi, kargo durumlarını, ödeme özetlerini ve iade/değişim aksiyonlarını bu alandan takip edebilirsiniz.</p>
+                </div>
+                <div class="ms-hesabim-siparis-filtreler" aria-label="Sipariş filtreleri">
+                    <button class="ms-buton ms-buton-s ms-buton-koyu" type="button" data-ms-siparis-filtre="tumu">Tümü</button>
+                    <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-siparis-filtre="devam">Devam Eden</button>
+                    <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-siparis-filtre="tamamlanan">Tamamlanan</button>
+                </div>
+            </div>
+
+            <section class="ms-hesabim-bos-durum" aria-labelledby="ms-siparisler-bos-baslik">
+                <i class="fa-solid fa-box ms-fa-ikon " aria-hidden="true"></i>
+                <div>
+                    <h3 id="ms-siparisler-bos-baslik">Henüz siparişiniz yok</h3>
+                    <p>İlk alışverişinizi yaptığınızda sipariş durumu, kargo takibi ve ödeme özeti bu alanda görüntülenir.</p>
+                </div>
+                <a class="ms-buton ms-buton-m ms-buton-satin-al" href="/">Alışverişe Başla</a>
+            </section>
+
+            <section class="ms-hesabim-siparis-ozet-grid" aria-label="Sipariş özeti">
+                <article>
+                    <span>Toplam Sipariş</span>
+                    <strong>14</strong>
+                </article>
+                <article>
+                    <span>Devam Eden</span>
+                    <strong>4</strong>
+                </article>
+                <article>
+                    <span>Teslim Edilen</span>
+                    <strong>9</strong>
+                </article>
+                <article>
+                    <span>İade Süreci</span>
+                    <strong>2</strong>
+                </article>
+            </section>
+
+            <div class="ms-hesabim-siparis-listesi">
+                <article class="ms-hesabim-siparis-karti" data-ms-siparis-kart-filtre="devam">
+                    <div class="ms-hesabim-siparis-kart-ust">
+                        <div>
+                            <span class="ms-hesabim-siparis-no">Sipariş No: MSX-240701-7815</span>
+                            <strong>1 Temmuz 2026</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-ust-aksiyonlar">
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-alindi">Sipariş Alındı</span>
+                            <a class="ms-buton ms-buton-s ms-buton-sade" href="https://portal.doganedonusum.com/earchive/view-earchive/view-pdf-earchive.xhtml?webValidationKey=33847dd4893c03d6877a9fae1110c37a47c7345abfd410fc130cbae21c4ef8ff1d448f593635405c&viewType=PDF" target="_blank" rel="noopener" data-ms-fatura-modal-ac>Faturayı Görüntüle</a>
+                            <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-siparis-kart-toggle aria-expanded="false">Aç</button>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-akis" aria-label="Sipariş durumu">
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-alindi ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-box ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Devam Ediyor</span>
+                            <strong>Sipariş Alındı</strong>
+                            <small>1 Temmuz 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-hazirlaniyor">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-box-open ms-fa-ikon " aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Bekliyor</span>
+                            <strong>Hazırlanıyor</strong>
+                            <small>Sıradaki adım</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-kargoda">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-truck-fast ms-fa-ikon " aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Bekliyor</span>
+                            <strong>Kargoda</strong>
+                            <small>Planlanıyor</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-teslim">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-circle-check ms-fa-ikon " aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Bekliyor</span>
+                            <strong>Teslim Edildi</strong>
+                            <small>Tahmini 5 Temmuz 2026</small>
+                        </span>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-urunler">
+                        <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek ürün detayına git"></a>
+                            <img src="/images/ornek-resim.jpg" alt="Kadın ön çıtçıtlı dik yaka kolsuz gömlek">
+                            <div>
+                                <strong>Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek</strong>
+                                <p>Beden: S · Renk: Siyah · Adet: 1</p>
+                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">749,90 TL</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-alt">
+                        <div class="ms-hesabim-siparis-tutar">
+                            <span>Toplam Tutar</span>
+                            <strong class="ms-urun-fiyat">749,90 TL</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-aksiyonlar">
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-siparis-detay-ac>Detay</button>
+                            <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil" type="button" data-ms-iade-talep-ac>İade Et</button>
+                            <button class="ms-buton ms-buton-s ms-buton-bilgi" type="button">Siparişi Takip Et</button>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ms-hesabim-siparis-karti" data-ms-siparis-kart-filtre="devam">
+                    <div class="ms-hesabim-siparis-kart-ust">
+                        <div>
+                            <span class="ms-hesabim-siparis-no">Sipariş No: MSX-240630-4421</span>
+                            <strong>30 Haziran 2026</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-ust-aksiyonlar">
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-hazirlaniyor">Hazırlanıyor</span>
+                            <a class="ms-buton ms-buton-s ms-buton-sade" href="https://portal.doganedonusum.com/earchive/view-earchive/view-pdf-earchive.xhtml?webValidationKey=33847dd4893c03d6877a9fae1110c37a47c7345abfd410fc130cbae21c4ef8ff1d448f593635405c&viewType=PDF" target="_blank" rel="noopener" data-ms-fatura-modal-ac>Faturayı Görüntüle</a>
+                            <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-siparis-kart-toggle aria-expanded="false">Aç</button>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-akis" aria-label="Sipariş durumu">
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-alindi ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-box ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>Sipariş Alındı</strong>
+                            <small>30 Haziran 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-hazirlaniyor ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-box-open ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Devam Ediyor</span>
+                            <strong>Hazırlanıyor</strong>
+                            <small>1 Temmuz 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-kargoda">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-truck-fast ms-fa-ikon " aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Bekliyor</span>
+                            <strong>Kargoda</strong>
+                            <small>Tahmini 2 Temmuz 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-teslim">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-circle-check ms-fa-ikon " aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Bekliyor</span>
+                            <strong>Teslim Edildi</strong>
+                            <small>Tahmini 4 Temmuz 2026</small>
+                        </span>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-urunler">
+                        <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Polo Yaka Desenli Erkek Triko Tişört ürün detayına git"></a>
+                            <img src="/images/ornek-resim-2.jpg" alt="Polo yaka desenli erkek triko tişört">
+                            <div>
+                                <strong>Polo Yaka Desenli Erkek Triko Tişört</strong>
+                                <p>Beden: M · Renk: Yeşil · Adet: 1</p>
+                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">489,90 TL</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-alt">
+                        <div class="ms-hesabim-siparis-tutar">
+                            <span>Toplam Tutar</span>
+                            <strong class="ms-urun-fiyat">489,90 TL</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-aksiyonlar">
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-siparis-detay-ac>Detay</button>
+                            <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil" type="button" data-ms-iade-talep-ac>İade Et</button>
+                            <button class="ms-buton ms-buton-s ms-buton-uyari" type="button">Hazırlık Durumu</button>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ms-hesabim-siparis-karti" data-ms-siparis-kart-filtre="devam">
+                    <div class="ms-hesabim-siparis-kart-ust">
+                        <div>
+                            <span class="ms-hesabim-siparis-no">Sipariş No: MSX-240628-1842</span>
+                            <strong>28 Haziran 2026</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-ust-aksiyonlar">
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-yolda">Kargoda</span>
+                            <a class="ms-buton ms-buton-s ms-buton-sade" href="https://portal.doganedonusum.com/earchive/view-earchive/view-pdf-earchive.xhtml?webValidationKey=33847dd4893c03d6877a9fae1110c37a47c7345abfd410fc130cbae21c4ef8ff1d448f593635405c&viewType=PDF" target="_blank" rel="noopener" data-ms-fatura-modal-ac>Faturayı Görüntüle</a>
+                            <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-siparis-kart-toggle aria-expanded="false">Aç</button>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-akis" aria-label="Sipariş durumu">
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-alindi ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-box ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>Sipariş Alındı</strong>
+                            <small>28 Haziran 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-hazirlaniyor ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-box-open ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>Hazırlanıyor</strong>
+                            <small>29 Haziran 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-kargoda ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-truck-fast ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>Kargoda</strong>
+                            <small>1 Temmuz 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-teslim">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-circle-check ms-fa-ikon " aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Devam Ediyor</span>
+                            <strong>Teslim Edildi</strong>
+                            <small>Tahmini 3 Temmuz 2026</small>
+                        </span>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-urunler">
+                        <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek ürün detayına git"></a>
+                            <img src="/images/ornek-resim.jpg" alt="Kadın ön çıtçıtlı dik yaka kolsuz gömlek">
+                            <div>
+                                <strong>Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek</strong>
+                                <p>Beden: M · Renk: Ekru · Adet: 1</p>
+                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">699,90 TL</strong>
+                            </div>
+                        </div>
+                        <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Polo Yaka Desenli Erkek Triko Tişört ürün detayına git"></a>
+                            <img src="/images/ornek-resim-2.jpg" alt="Polo yaka desenli erkek triko tişört">
+                            <div>
+                                <strong>Polo Yaka Desenli Erkek Triko Tişört</strong>
+                                <p>Beden: L · Renk: Siyah · Adet: 1</p>
+                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">548,90 TL</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-alt">
+                        <div class="ms-hesabim-siparis-tutar">
+                            <span>Toplam Tutar</span>
+                            <strong class="ms-urun-fiyat">1.248,80 TL</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-aksiyonlar">
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-siparis-detay-ac>Detay</button>
+                            <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil" type="button" data-ms-iade-talep-ac>İade Et</button>
+                            <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-kargo-takip-ac="MSX-240628-1842">Kargoyu Takip Et</button>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ms-hesabim-siparis-karti" data-ms-siparis-kart-filtre="tamamlanan">
+                    <div class="ms-hesabim-siparis-kart-ust">
+                        <div>
+                            <span class="ms-hesabim-siparis-no">Sipariş No: MSX-240612-0928</span>
+                            <strong>12 Haziran 2026</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-ust-aksiyonlar">
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-tamamlandi">Teslim Edildi</span>
+                            <a class="ms-buton ms-buton-s ms-buton-sade" href="https://portal.doganedonusum.com/earchive/view-earchive/view-pdf-earchive.xhtml?webValidationKey=33847dd4893c03d6877a9fae1110c37a47c7345abfd410fc130cbae21c4ef8ff1d448f593635405c&viewType=PDF" target="_blank" rel="noopener" data-ms-fatura-modal-ac>Faturayı Görüntüle</a>
+                            <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-siparis-kart-toggle aria-expanded="false">Aç</button>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-akis" aria-label="Sipariş durumu">
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-alindi ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-box ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>Sipariş Alındı</strong>
+                            <small>12 Haziran 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-hazirlaniyor ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-box-open ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>Hazırlanıyor</strong>
+                            <small>12 Haziran 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-kargoda ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-truck-fast ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>Kargoda</strong>
+                            <small>13 Haziran 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-teslim ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-circle-check ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>Teslim Edildi</strong>
+                            <small>14 Haziran 2026</small>
+                        </span>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-urunler">
+                        <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="İç Astarlı Salaş Tesettür Bluz ürün detayına git"></a>
+                            <img src="/images/ornek-resim.jpg" alt="İç astarlı salaş tesettür bluz">
+                            <div>
+                                <strong>İç Astarlı Salaş Tesettür Bluz</strong>
+                                <p>Beden: S · Renk: Beyaz · Adet: 2</p>
+                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">579,90 TL</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-alt">
+                        <div class="ms-hesabim-siparis-tutar">
+                            <span>Toplam Tutar</span>
+                            <strong class="ms-urun-fiyat">579,90 TL</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-aksiyonlar">
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-siparis-detay-ac>Detay</button>
+                            <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil" type="button" data-ms-iade-talep-ac>İade Et</button>
+                            <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button">Tekrar Satın Al</button>
+                            <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil" type="button">Yorum Yaz</button>
+                            <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil ms-siparis-yorum-indirim-buton" type="button" aria-describedby="ms-siparis-yorum-indirim-tooltip">
+                                <span>Yorum Yaz</span>
+                                <span class="ms-siparis-yorum-indirim-etiket">%10 İndirim</span>
+                                <span class="ms-siparis-yorum-indirim-tooltip" id="ms-siparis-yorum-indirim-tooltip" role="tooltip">Yorum yap %10 indirim kazan</span>
+                            </button>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ms-hesabim-siparis-karti" data-ms-siparis-kart-filtre="devam">
+                    <div class="ms-hesabim-siparis-kart-ust">
+                        <div>
+                            <span class="ms-hesabim-siparis-no">Sipariş No: MSX-240526-3314</span>
+                            <strong>26 Mayıs 2026</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-ust-aksiyonlar">
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-iade">İade İnceleniyor</span>
+                            <a class="ms-buton ms-buton-s ms-buton-sade" href="https://portal.doganedonusum.com/earchive/view-earchive/view-pdf-earchive.xhtml?webValidationKey=33847dd4893c03d6877a9fae1110c37a47c7345abfd410fc130cbae21c4ef8ff1d448f593635405c&viewType=PDF" target="_blank" rel="noopener" data-ms-fatura-modal-ac>Faturayı Görüntüle</a>
+                            <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-siparis-kart-toggle aria-expanded="false">Aç</button>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-urunler">
+                        <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Kadın Yüksek Bel Bol Paça Pantolon ürün detayına git"></a>
+                            <img src="/images/ornek-resim-2.jpg" alt="Kadın yüksek bel bol paça pantolon">
+                            <div>
+                                <strong>Kadın Yüksek Bel Bol Paça Pantolon</strong>
+                                <p>Beden: 38 · Renk: Siyah · Adet: 1</p>
+                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">849,90 TL</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-alt">
+                        <div class="ms-hesabim-siparis-tutar">
+                            <span>Toplam Tutar</span>
+                            <strong class="ms-urun-fiyat">849,90 TL</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-aksiyonlar">
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-siparis-detay-ac>Detay</button>
+                            <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil" type="button" data-ms-iade-talep-ac>İade Et</button>
+                            <button class="ms-buton ms-buton-s ms-buton-uyari" type="button">İade Durumu</button>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ms-hesabim-siparis-karti" data-ms-siparis-kart-filtre="tamamlanan">
+                    <div class="ms-hesabim-siparis-kart-ust">
+                        <div>
+                            <span class="ms-hesabim-siparis-no">Sipariş No: MSX-240518-2047</span>
+                            <strong>18 Mayıs 2026</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-ust-aksiyonlar">
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-iade-onaylandi">İade Onaylandı</span>
+                            <a class="ms-buton ms-buton-s ms-buton-sade" href="https://portal.doganedonusum.com/earchive/view-earchive/view-pdf-earchive.xhtml?webValidationKey=33847dd4893c03d6877a9fae1110c37a47c7345abfd410fc130cbae21c4ef8ff1d448f593635405c&viewType=PDF" target="_blank" rel="noopener" data-ms-fatura-modal-ac>Faturayı Görüntüle</a>
+                            <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-siparis-kart-toggle aria-expanded="false">Aç</button>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-urunler">
+                        <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Polo Yaka Desenli Erkek Triko Tişört ürün detayına git"></a>
+                            <img src="/images/ornek-resim-2.jpg" alt="Polo yaka desenli erkek triko tişört">
+                            <div>
+                                <strong>Polo Yaka Desenli Erkek Triko Tişört</strong>
+                                <p>Beden: XL · Renk: Lacivert · Adet: 1</p>
+                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">629,90 TL</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-iade-bilgi">
+                        <strong>İade tutarı onaylandı</strong>
+                        <p>629,90 TL iade tutarı 7 iş günü içerisinde kullanıcının hesabına yatacak.</p>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-alt">
+                        <div class="ms-hesabim-siparis-tutar">
+                            <span>İade Tutarı</span>
+                            <strong class="ms-urun-fiyat">629,90 TL</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-aksiyonlar">
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-siparis-detay-ac>Detay</button>
+                            <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil" type="button" data-ms-iade-talep-ac>İade Et</button>
+                            <button class="ms-buton ms-buton-s ms-buton-basarili" type="button">İade Dekontu</button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    @await Html.PartialAsync("~/Views/ProjeElementleri/Hesabim/_HesabimSiparislerimDetayModal.cshtml")
+    @await Html.PartialAsync("~/Views/ProjeElementleri/Hesabim/_HesabimSiparislerimIadeModal.cshtml")
+
+    <div class="ms-ornek-modal ms-kargo-takip-modal" data-ms-kargo-takip-modal="MSX-240628-1842" aria-hidden="true">
+        <div class="ms-ornek-modal-kaplama" data-ms-kargo-takip-kapat></div>
+        <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-xl ms-kargo-takip-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-kargo-takip-baslik">
+            <button class="ms-ornek-modal-kapat" type="button" data-ms-kargo-takip-kapat aria-label="Kargo takip modalını kapat">×</button>
+            <div class="ms-kargo-takip-hero">
+                <img src="/images/hepsijet.png" alt="HepsiJet">
+                <div>
+                    <a class="ms-kargo-takip-no" href="https://www.hepsijet.com/gonderi-takibi" target="_blank" rel="noopener">Takip No: HJ7429685130</a>
+                    <h3 id="ms-kargo-takip-baslik" class="ms-ornek-modal-baslik">Paketiniz dağıtım merkezinde</h3>
+                    <p class="ms-ornek-modal-aciklama">Tahmini teslimat: 3 Temmuz 2026, 09:00 - 18:00</p>
+                </div>
+            </div>
+
+            <div class="ms-kargo-takip-ozet">
+                <article><span>Kargo Firması</span><strong>HepsiJet</strong></article>
+                <article><span>Son İşlem</span><strong>İstanbul Avrupa TM</strong></article>
+                <article><span>Alıcı</span><strong>Emre Sağlam</strong></article>
+            </div>
+
+            <ol class="ms-kargo-takip-zaman">
+                <li class="ms-kargo-takip-adim-aktif ms-kargo-takip-adim-guncel" aria-current="step">
+                    <span></span>
+                    <div><strong>Dağıtım merkezine ulaştı</strong><p>Aktif durum · 2 Temmuz 2026 · 08:45 · İstanbul Avrupa TM</p></div>
+                </li>
+                <li class="ms-kargo-takip-adim-aktif">
+                    <span></span>
+                    <div><strong>Transfer sürecinde</strong><p>1 Temmuz 2026 · 22:10 · Kocaeli Transfer Merkezi</p></div>
+                </li>
+                <li class="ms-kargo-takip-adim-aktif">
+                    <span></span>
+                    <div><strong>HepsiJet tarafından teslim alındı</strong><p>1 Temmuz 2026 · 15:35 · Satıcı deposu</p></div>
+                </li>
+                <li>
+                    <span></span>
+                    <div><strong>Teslim edilecek</strong><p>Kurye dağıtıma çıktığında bildirim gönderilecek.</p></div>
+                </li>
+            </ol>
+        </section>
+    </div>
+
+</section>
+
+    @* Bu script: Sipariş kartlarının tekli açılma davranışını, adım geçişlerini ve modal etkileşimlerini yönetir. *@
+    <script>
+    (() => {
+        let oncekiBodyOverflow = "";
+        const acikModalSecici = ".ms-siparis-detay-modal.ms-ornek-modal-acik, .ms-kargo-takip-modal.ms-ornek-modal-acik, .ms-fatura-pdf-modal.ms-ornek-modal-acik, .ms-iade-talep-modal.ms-ornek-modal-acik, .ms-iade-kodu-modal.ms-ornek-modal-acik, .ms-iade-hata-modal.ms-ornek-modal-acik";
+
+        const kartDurumunuAyarla = (kart, acik) => {
+            const buton = kart?.querySelector("[data-ms-siparis-kart-toggle]");
+
+            if (acik) {
+                document.querySelectorAll("[data-ms-siparis-kart-filtre].ms-hesabim-siparis-karti-acik").forEach((acikKart) => {
+                    if (acikKart !== kart) {
+                        kartDurumunuAyarla(acikKart, false);
+                    }
+                });
+            }
+
+            kart?.classList.toggle("ms-hesabim-siparis-karti-acik", acik);
+            buton?.setAttribute("aria-expanded", acik.toString());
+
+            if (buton) {
+                buton.textContent = acik ? "Kapat" : "Aç";
+            }
+        };
+
+        document.querySelectorAll("[data-ms-siparis-kart-filtre]").forEach((kart) => {
+            const baslik = kart.querySelector(".ms-hesabim-siparis-kart-ust");
+            const toggleButon = kart.querySelector("[data-ms-siparis-kart-toggle]");
+
+            kartDurumunuAyarla(kart, false);
+
+            toggleButon?.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                kartDurumunuAyarla(kart, !kart.classList.contains("ms-hesabim-siparis-karti-acik"));
+            });
+
+            baslik?.addEventListener("click", (event) => {
+                if (event.target.closest("a, button, input, select, textarea, [role='button']")) {
+                    return;
+                }
+
+                kartDurumunuAyarla(kart, !kart.classList.contains("ms-hesabim-siparis-karti-acik"));
+            });
+        });
+
+        document.querySelectorAll("[data-ms-siparis-filtre]").forEach((buton) => {
+            buton.addEventListener("click", () => {
+                const filtre = buton.dataset.msSiparisFiltre;
+
+                document.querySelectorAll("[data-ms-siparis-filtre]").forEach((filtreButon) => {
+                    const aktif = filtreButon === buton;
+                    filtreButon.classList.toggle("ms-buton-koyu", aktif);
+                    filtreButon.classList.toggle("ms-buton-sade", !aktif);
+                });
+
+                document.querySelectorAll("[data-ms-siparis-kart-filtre]").forEach((kart) => {
+                    const gorunur = filtre === "tumu" || kart.dataset.msSiparisKartFiltre === filtre;
+                    kart.hidden = !gorunur;
+
+                    if (!gorunur) {
+                        kartDurumunuAyarla(kart, false);
+                    }
+                });
+            });
+        });
+
+        const iadeNedenleri = {
+            "Beden / Kalıp Problemi": ["Küçük geldi", "Büyük geldi", "Dar geldi", "Bol geldi", "Kalıbı dar", "Kalıbı geniş", "Belden olmadı", "Basenden olmadı", "Kalçadan olmadı", "Göğüs kısmı olmadı", "Omuzdan olmadı", "Kol kısmı dar geldi", "Kol kısmı bol geldi", "Bacak kısmı dar geldi", "Normal bedenime uymadı", "Beden tablosu ile uyumsuz", "Üzerimde istediğim gibi durmadı"],
+            "Ürün Beklediğim Gibi Değil": ["Fotoğraftaki gibi değil", "Açıklamadaki gibi değil", "Ürün görselden farklı duruyor", "Beklediğim kalitede değil", "Beklediğim tarzda değil", "Ürün üzerimde güzel durmadı", "Kesimi beklediğim gibi değil", "Kumaşı beklediğim gibi değil", "Ürün beklentimi karşılamadı", "Ürün anlatıldığı gibi değil", "Ürün ölçüleri beklentime uymadı"],
+            "Defolu / Hasarlı Ürün": ["Yırtık geldi", "Sökük geldi", "Leke var", "Delik var", "İp çekilmesi var", "Dikiş hatası var", "Fermuar bozuk", "Düğme eksik", "Düğme kopuk", "Baskı hatalı", "Taş / aksesuar eksik", "Ürün deforme olmuş", "Ürün ezilmiş geldi", "Ambalaj hasarlı geldi", "Kargo sırasında zarar görmüş"],
+            "Yanlış veya Eksik Ürün Geldi": ["Yanlış ürün gönderildi", "Yanlış beden gönderildi", "Yanlış renk gönderildi", "Yanlış model gönderildi", "Siparişimde olmayan ürün geldi", "Eksik ürün geldi", "Takımın parçası eksik geldi", "Ürünün aksesuarı eksik geldi", "Kemer / kuşak eksik geldi", "Hediye ürün eksik geldi", "Ürün adedi eksik geldi"],
+            "Renk / Model / Kumaş Problemi": ["Rengi görselden farklı", "Renk tonu beklediğim gibi değil", "Yanlış renk gönderildi", "Modelini beğenmedim", "Model üzerimde iyi durmadı", "Kumaşı ince", "Kumaşı kalın", "Kumaşı sert", "Kumaşı esnemiyor", "Kumaşı rahatsız etti", "Kumaşı iç gösteriyor", "Kumaşı terletiyor", "Dokusu hoşuma gitmedi", "Deseni görselden farklı", "Kumaş kalitesi beklentimi karşılamadı"],
+            "Sipariş Hatası Yaptım": ["Yanlış beden sipariş verdim", "Yanlış renk sipariş verdim", "Yanlış ürün sipariş verdim", "Yanlış adet sipariş verdim", "Yanlışlıkla sipariş verdim", "Aynı üründen fazla sipariş verdim", "Sepete yanlış ürün ekledim", "Farklı ürün almak istiyorum", "Farklı beden almak istiyorum", "Farklı renk almak istiyorum"],
+            "Vazgeçtim / Beğenmedim": ["Almaktan vazgeçtim", "Ürünü beğenmedim", "Ürüne ihtiyacım kalmadı", "Fikrimi değiştirdim", "Hediye olarak uygun olmadı", "Hediye edilen kişi beğenmedi", "Kombinime uymadı", "Tarzıma uygun değil", "Başka ürün almaya karar verdim", "Fiyatına değmediğini düşündüm"],
+            "Teslimat Problemi": ["Geç teslim edildi", "İhtiyacım olan tarihe yetişmedi", "Teslimat süreci uzadı", "Yanlış adrese teslim edildi", "Kargo paketi hasarlı geldi", "Kargo firması kaynaklı sorun yaşadım", "Ürün teslim edilmeden iade etmek istiyorum", "Siparişi iptal edemedim, iade etmek istiyorum", "Kargo sürecinden memnun kalmadım"],
+            "Diğer": []
+        };
+
+        const iadeHataGoster = (baslik, mesaj) => {
+            const modal = document.querySelector("[data-ms-iade-hata-modal]");
+            modal.querySelector("[data-ms-iade-hata-baslik]").textContent = baslik;
+            modal.querySelector("[data-ms-iade-hata-mesaj]").textContent = mesaj;
+            ac(modal);
+        };
+
+        const iadeGorselOnizlemeUrlHaritasi = new WeakMap();
+
+        const iadeGorselOnizlemeTemizle = (modal) => {
+            const liste = modal?.querySelector("[data-ms-iade-gorsel-onizleme]");
+
+            if (!liste) {
+                return;
+            }
+
+            (iadeGorselOnizlemeUrlHaritasi.get(liste) || []).forEach((url) => URL.revokeObjectURL(url));
+            iadeGorselOnizlemeUrlHaritasi.delete(liste);
+            liste.replaceChildren();
+            liste.hidden = true;
+        };
+
+        const iadeGorselOnizlemeGuncelle = (input) => {
+            const modal = input.closest("[data-ms-iade-talep-modal]") || document;
+            const bilgi = modal.querySelector("[data-ms-iade-gorsel-bilgi]");
+            const liste = modal.querySelector("[data-ms-iade-gorsel-onizleme]");
+            const dosyalar = [...(input.files || [])].filter((dosya) => dosya.type.startsWith("image/"));
+
+            iadeGorselOnizlemeTemizle(modal);
+
+            if (bilgi) {
+                bilgi.textContent = dosyalar.length
+                    ? `${dosyalar.length} görsel seçildi.`
+                    : "Defolu, hasarlı veya yanlış ürün durumunda görsel ekleyebilirsiniz.";
+            }
+
+            if (!liste || !dosyalar.length) {
+                return;
+            }
+
+            const urlListesi = [];
+
+            dosyalar.forEach((dosya) => {
+                const url = URL.createObjectURL(dosya);
+                const kart = document.createElement("figure");
+                const gorsel = document.createElement("img");
+                const ad = document.createElement("span");
+
+                urlListesi.push(url);
+                kart.className = "ms-iade-gorsel-onizleme-karti";
+                gorsel.src = url;
+                gorsel.alt = `${dosya.name} önizlemesi`;
+                ad.textContent = dosya.name;
+                kart.append(gorsel, ad);
+                liste.appendChild(kart);
+            });
+
+            iadeGorselOnizlemeUrlHaritasi.set(liste, urlListesi);
+            liste.hidden = false;
+        };
+
+        const iadeKartDurumlari = new WeakMap();
+
+        const iadeKartDurumu = (kart) => {
+            if (!iadeKartDurumlari.has(kart)) {
+                iadeKartDurumlari.set(kart, {
+                    altSecimler: new Set(),
+                    digerMetni: ""
+                });
+            }
+
+            return iadeKartDurumlari.get(kart);
+        };
+
+        const iadeAltNedenSecimleri = (kart) => {
+            return [...iadeKartDurumu(kart).altSecimler];
+        };
+
+        const iadeAnaNedenSecimleri = (kart) => {
+            const durum = iadeKartDurumu(kart);
+            const anaNedenler = new Set();
+
+            durum.altSecimler.forEach((secim) => {
+                const { anaNeden } = iadeAltNedenParcala(secim);
+
+                if (anaNeden) {
+                    anaNedenler.add(anaNeden);
+                }
+            });
+
+            if (durum.digerMetni.trim()) {
+                anaNedenler.add("Diğer");
+            }
+
+            return Object.keys(iadeNedenleri).filter((neden) => anaNedenler.has(neden));
+        };
+
+        const iadeAltNedenParcala = (secim) => {
+            const ayracIndex = secim.indexOf(": ");
+
+            if (ayracIndex === -1) {
+                return { anaNeden: "", altNeden: secim };
+            }
+
+            return {
+                anaNeden: secim.slice(0, ayracIndex),
+                altNeden: secim.slice(ayracIndex + 2)
+            };
+        };
+
+        const iadeSecimTimelineOlustur = (anaNeden, altNedenler) => {
+            const satir = document.createElement("div");
+            satir.className = "ms-iade-secim-timeline-satir";
+
+            const nokta = document.createElement("span");
+            nokta.className = "ms-iade-secim-timeline-nokta";
+            nokta.setAttribute("aria-hidden", "true");
+
+            const icerik = document.createElement("div");
+            icerik.className = "ms-iade-secim-timeline-icerik";
+
+            const anaChip = document.createElement("span");
+            anaChip.className = "ms-iade-secim-ana-chip";
+            anaChip.textContent = anaNeden;
+
+            const altListe = document.createElement("div");
+            altListe.className = "ms-iade-secim-alt-listesi";
+
+            altNedenler.forEach((altNeden) => {
+                const altChip = document.createElement("span");
+                altChip.className = "ms-iade-secim-alt-chip";
+                altChip.textContent = altNeden;
+                altListe.appendChild(altChip);
+            });
+
+            icerik.append(anaChip, altListe);
+            satir.append(nokta, icerik);
+            return satir;
+        };
+
+        const iadeAltNedenSayacGuncelle = (kart) => {
+            const secimler = iadeAltNedenSecimleri(kart);
+            const deger = kart.querySelector("[data-ms-iade-alt-neden-deger]");
+            const sayac = kart.querySelector("[data-ms-iade-alt-neden-sayac]");
+            const sonSecilenAnaNeden = kart.dataset.msIadeSonAnaNeden;
+            const sonSecilenAnaNedenAltSecimleri = sonSecilenAnaNeden
+                ? secimler.filter((secim) => secim.startsWith(`${sonSecilenAnaNeden}: `))
+                : [];
+
+            if (deger) {
+                if (sonSecilenAnaNeden && !sonSecilenAnaNedenAltSecimleri.length) {
+                    deger.textContent = "Alt neden seçin";
+                } else if (sonSecilenAnaNedenAltSecimleri.length === 1) {
+                    deger.textContent = iadeAltNedenParcala(sonSecilenAnaNedenAltSecimleri[0]).altNeden;
+                } else {
+                    deger.textContent = "Alt neden seçin";
+                }
+            }
+
+            if (sayac) {
+                sayac.hidden = sonSecilenAnaNedenAltSecimleri.length === 0;
+                sayac.textContent = `${sonSecilenAnaNedenAltSecimleri.length} adet seçildi`;
+            }
+        };
+
+        const iadeNedenButonDurumlariniGuncelle = (kart) => {
+            const seciliAnaNeden = kart.dataset.msIadeSonAnaNeden || "";
+            const tamamlananAnaNedenler = new Set(iadeAnaNedenSecimleri(kart));
+
+            kart.querySelectorAll("[data-ms-iade-ana-neden]").forEach((buton) => {
+                const anaNeden = buton.dataset.msIadeAnaNeden;
+                buton.classList.toggle("ms-iade-neden-buton-secili", anaNeden === seciliAnaNeden);
+                buton.classList.toggle("ms-iade-neden-buton-aktif", tamamlananAnaNedenler.has(anaNeden));
+            });
+        };
+
+        const iadeGirdiAlaniniVurgula = (kart) => {
+            const hedef = kart.dataset.msIadeSonAnaNeden === "Diğer"
+                ? kart.querySelector(".ms-iade-diger-neden")
+                : kart.querySelector(".ms-iade-alt-neden");
+
+            if (!hedef || hedef.hidden) {
+                return;
+            }
+
+            hedef.classList.remove("ms-iade-girdi-vurgula");
+            void hedef.offsetWidth;
+            hedef.classList.add("ms-iade-girdi-vurgula");
+
+            window.setTimeout(() => {
+                hedef.classList.remove("ms-iade-girdi-vurgula");
+            }, 950);
+        };
+
+        const iadeSecimleriGuncelle = (kart) => {
+            const altSecimler = iadeAltNedenSecimleri(kart);
+            const secimGruplari = new Map();
+            const digerMetni = iadeKartDurumu(kart).digerMetni.trim();
+            const alan = kart.querySelector("[data-ms-iade-secimler]");
+            const anaAlan = kart.querySelector("[data-ms-iade-ana-secimler]");
+            const altAlan = kart.querySelector("[data-ms-iade-alt-secimler]");
+            const anaListe = kart.querySelector("[data-ms-iade-ana-secim-listesi]");
+            const altListe = kart.querySelector("[data-ms-iade-alt-secim-listesi]");
+
+            altSecimler.forEach((secim) => {
+                const { anaNeden, altNeden } = iadeAltNedenParcala(secim);
+
+                if (!anaNeden || !altNeden) {
+                    return;
+                }
+
+                if (!secimGruplari.has(anaNeden)) {
+                    secimGruplari.set(anaNeden, []);
+                }
+
+                secimGruplari.get(anaNeden).push(altNeden);
+            });
+
+            if (digerMetni) {
+                secimGruplari.set("Diğer", [digerMetni]);
+            }
+
+            alan.hidden = secimGruplari.size === 0;
+            anaAlan.hidden = secimGruplari.size === 0;
+            altAlan.hidden = true;
+            anaListe.innerHTML = "";
+            altListe.innerHTML = "";
+            anaListe.classList.add("ms-iade-secim-timeline");
+
+            secimGruplari.forEach((altNedenler, anaNeden) => {
+                anaListe.appendChild(iadeSecimTimelineOlustur(anaNeden, altNedenler));
+            });
+
+            iadeNedenButonDurumlariniGuncelle(kart);
+        };
+
+        const iadeAltNedenSifirla = (kart) => {
+            const select = kart.querySelector("[data-ms-iade-alt-neden-select]");
+            const deger = kart.querySelector("[data-ms-iade-alt-neden-deger]");
+            const sayac = kart.querySelector("[data-ms-iade-alt-neden-sayac]");
+            const arama = kart.querySelector("[data-ms-iade-alt-neden-arama]");
+            const secenekler = kart.querySelector("[data-ms-iade-alt-neden-secenekler]");
+
+            select?.classList.remove("ms-ozel-select-acik");
+            select?.querySelector("[data-ms-iade-alt-neden-tetikleyici]")?.setAttribute("aria-expanded", "false");
+
+            if (deger) {
+                deger.textContent = "Alt neden seçin";
+            }
+
+            if (sayac) {
+                sayac.hidden = true;
+                sayac.textContent = "0 adet seçildi";
+            }
+
+            if (arama) {
+                arama.value = "";
+            }
+
+            if (secenekler) {
+                secenekler.innerHTML = "";
+            }
+        };
+
+        const iadeAltNedenDoldur = (kart) => {
+            const altNedenAlani = kart.querySelector(".ms-iade-alt-neden");
+            const digerAlani = kart.querySelector(".ms-iade-diger-neden");
+            const digerTextarea = kart.querySelector("[data-ms-iade-diger-neden]");
+            const secenekler = kart.querySelector("[data-ms-iade-alt-neden-secenekler]");
+            const sonSecilenAnaNeden = kart.dataset.msIadeSonAnaNeden;
+            const durum = iadeKartDurumu(kart);
+
+            iadeAltNedenSifirla(kart);
+
+            if (!sonSecilenAnaNeden) {
+                altNedenAlani.hidden = true;
+                digerAlani.hidden = true;
+                iadeSecimleriGuncelle(kart);
+                return;
+            }
+
+            if (sonSecilenAnaNeden === "Diğer") {
+                altNedenAlani.hidden = true;
+                digerAlani.hidden = false;
+                digerTextarea.value = durum.digerMetni;
+                iadeSecimleriGuncelle(kart);
+                return;
+            }
+
+            digerAlani.hidden = true;
+            digerTextarea.value = "";
+
+            iadeNedenleri[sonSecilenAnaNeden].forEach((neden) => {
+                const deger = `${sonSecilenAnaNeden}: ${neden}`;
+                const buton = document.createElement("button");
+                const checkboxGorsel = document.createElement("span");
+                const metin = document.createElement("span");
+
+                buton.className = "ms-ozel-select-secenek ms-ozel-select-coklu-secenek";
+                buton.type = "button";
+                buton.role = "option";
+                buton.dataset.msIadeAltNedenSecenek = deger;
+                checkboxGorsel.className = "ms-form-checkbox-gorsel";
+                metin.dataset.msOzelSelectMetin = "";
+                metin.textContent = neden;
+                buton.append(checkboxGorsel, metin);
+
+                if (durum.altSecimler.has(deger)) {
+                    buton.classList.add("ms-ozel-select-secenek-aktif");
+                    buton.setAttribute("aria-selected", "true");
+                }
+
+                secenekler.appendChild(buton);
+            });
+
+            altNedenAlani.hidden = false;
+            secenekler.scrollTop = 0;
+            iadeAltNedenSayacGuncelle(kart);
+            iadeSecimleriGuncelle(kart);
+        };
+
+        const iadeNedenButonlariniOlustur = (kart) => {
+            const hedef = kart.querySelector("[data-ms-iade-nedenler]");
+
+            Object.keys(iadeNedenleri).forEach((neden) => {
+                const buton = document.createElement("button");
+                buton.className = "ms-iade-neden-buton";
+                buton.type = "button";
+                buton.textContent = neden;
+                buton.dataset.msIadeAnaNeden = neden;
+                hedef.appendChild(buton);
+            });
+        };
+
+        const iadeUrunDurumunuAyarla = (kart, secili) => {
+            kart.classList.toggle("ms-iade-urun-kart-secili", secili);
+            kart.querySelector(".ms-iade-neden-alani").hidden = !secili;
+
+            if (!secili) {
+                kart.querySelectorAll(".ms-iade-neden-buton").forEach((buton) => buton.classList.remove("ms-iade-neden-buton-aktif"));
+                kart.querySelectorAll(".ms-iade-neden-buton").forEach((buton) => buton.classList.remove("ms-iade-neden-buton-secili"));
+                iadeKartDurumu(kart).altSecimler.clear();
+                iadeKartDurumu(kart).digerMetni = "";
+                kart.dataset.msIadeSonAnaNeden = "";
+                iadeAltNedenSifirla(kart);
+                kart.querySelector("[data-ms-iade-diger-neden]").value = "";
+                kart.querySelector(".ms-iade-alt-neden").hidden = true;
+                kart.querySelector(".ms-iade-diger-neden").hidden = true;
+                iadeSecimleriGuncelle(kart);
+            }
+        };
+
+        const iadeModaliSifirla = () => {
+            const modal = document.querySelector("[data-ms-iade-talep-modal]");
+
+            modal.querySelectorAll("[data-ms-iade-urun-kart]").forEach((kart) => {
+                kart.querySelector("[data-ms-iade-urun-sec]").checked = false;
+                iadeUrunDurumunuAyarla(kart, false);
+                kart.querySelector("[data-ms-iade-edildi-neden-panel]")?.setAttribute("hidden", "");
+                kart.querySelector("[data-ms-iade-edildi-neden-ac]")?.setAttribute("aria-expanded", "false");
+            });
+
+            modal.querySelector("[data-ms-iade-gorsel]").value = "";
+            modal.querySelector("[data-ms-iade-gorsel-bilgi]").textContent = "Defolu, hasarlı veya yanlış ürün durumunda görsel ekleyebilirsiniz.";
+            iadeGorselOnizlemeTemizle(modal);
+        };
+
+        const iadeFormuGecerliMi = () => {
+            const seciliKartlar = [...document.querySelectorAll("[data-ms-iade-urun-kart].ms-iade-urun-kart-secili")];
+
+            if (!seciliKartlar.length) {
+                iadeHataGoster("Ürün Seçmelisiniz", "İade kodu alabilmek için en az bir ürün seçmelisiniz.");
+                return false;
+            }
+
+            for (const kart of seciliKartlar) {
+                const anaNedenler = iadeAnaNedenSecimleri(kart);
+
+                if (!anaNedenler.length) {
+                    iadeHataGoster("İade Nedeni Eksik", "Seçtiğiniz her ürün için ana iade nedenini seçmelisiniz.");
+                    return false;
+                }
+
+                if (anaNedenler.includes("Diğer")) {
+                    if (!iadeKartDurumu(kart).digerMetni.trim()) {
+                        iadeHataGoster("Açıklama Gerekli", "Diğer nedenini seçtiğiniz ürün için açıklama yazmalısınız.");
+                        return false;
+                    }
+                }
+
+                for (const anaNeden of anaNedenler.filter((neden) => neden !== "Diğer")) {
+                    const altNedenSecildi = iadeAltNedenSecimleri(kart).some((secim) => secim.startsWith(`${anaNeden}: `));
+
+                    if (!altNedenSecildi) {
+                        iadeHataGoster("Alt Neden Eksik", "Seçtiğiniz her ana iade nedeni için en az bir alt neden seçmelisiniz.");
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        };
+
+        document.querySelectorAll("[data-ms-iade-urun-kart]").forEach((kart) => {
+            iadeNedenButonlariniOlustur(kart);
+
+            kart.querySelector("[data-ms-iade-edildi-neden-ac]")?.addEventListener("click", () => {
+                const buton = kart.querySelector("[data-ms-iade-edildi-neden-ac]");
+                const panel = kart.querySelector("[data-ms-iade-edildi-neden-panel]");
+                const acik = panel.hidden;
+
+                panel.hidden = !acik;
+                buton.setAttribute("aria-expanded", acik.toString());
+            });
+
+            kart.querySelector("[data-ms-iade-urun-sec]").addEventListener("change", (event) => {
+                iadeUrunDurumunuAyarla(kart, event.currentTarget.checked);
+            });
+
+            kart.querySelector("[data-ms-iade-nedenler]").addEventListener("click", (event) => {
+                const buton = event.target.closest("[data-ms-iade-ana-neden]");
+
+                if (!buton) {
+                    return;
+                }
+
+                kart.dataset.msIadeSonAnaNeden = buton.dataset.msIadeAnaNeden;
+
+                iadeAltNedenDoldur(kart);
+                iadeGirdiAlaniniVurgula(kart);
+            });
+
+            kart.querySelector("[data-ms-iade-alt-neden-tetikleyici]")?.addEventListener("click", () => {
+                const select = kart.querySelector("[data-ms-iade-alt-neden-select]");
+                const acik = select.classList.toggle("ms-ozel-select-acik");
+                select.querySelector("[data-ms-iade-alt-neden-tetikleyici]").setAttribute("aria-expanded", acik.toString());
+
+                if (acik) {
+                    window.setTimeout(() => select.querySelector("[data-ms-iade-alt-neden-arama]")?.focus(), 40);
+                }
+            });
+
+            kart.querySelector("[data-ms-iade-diger-neden]")?.addEventListener("input", () => {
+                iadeKartDurumu(kart).digerMetni = kart.querySelector("[data-ms-iade-diger-neden]").value;
+                iadeSecimleriGuncelle(kart);
+            });
+
+            kart.querySelector("[data-ms-iade-alt-neden-arama]")?.addEventListener("input", (event) => {
+                const aranan = event.currentTarget.value.trim().toLocaleLowerCase("tr-TR");
+
+                kart.querySelectorAll("[data-ms-iade-alt-neden-secenek]").forEach((secenek) => {
+                    secenek.hidden = !secenek.textContent.trim().toLocaleLowerCase("tr-TR").includes(aranan);
+                });
+            });
+
+            kart.querySelector("[data-ms-iade-alt-neden-secenekler]")?.addEventListener("click", (event) => {
+                const secenek = event.target.closest("[data-ms-iade-alt-neden-secenek]");
+
+                if (!secenek) {
+                    return;
+                }
+
+                secenek.classList.toggle("ms-ozel-select-secenek-aktif");
+                secenek.setAttribute("aria-selected", secenek.classList.contains("ms-ozel-select-secenek-aktif").toString());
+                const durum = iadeKartDurumu(kart);
+
+                if (secenek.classList.contains("ms-ozel-select-secenek-aktif")) {
+                    durum.altSecimler.add(secenek.dataset.msIadeAltNedenSecenek);
+                } else {
+                    durum.altSecimler.delete(secenek.dataset.msIadeAltNedenSecenek);
+                }
+
+                const secenekListesi = kart.querySelector("[data-ms-iade-alt-neden-secenekler]");
+                [...secenekListesi.querySelectorAll("[data-ms-iade-alt-neden-secenek].ms-ozel-select-secenek-aktif")].reverse().forEach((aktifSecenek) => {
+                    secenekListesi.prepend(aktifSecenek);
+                });
+
+                iadeAltNedenSayacGuncelle(kart);
+                iadeSecimleriGuncelle(kart);
+            });
+        });
+
+        document.addEventListener("click", (event) => {
+            document.querySelectorAll("[data-ms-iade-alt-neden-select].ms-ozel-select-acik").forEach((select) => {
+                if (select.contains(event.target)) {
+                    return;
+                }
+
+                select.classList.remove("ms-ozel-select-acik");
+                select.querySelector("[data-ms-iade-alt-neden-tetikleyici]")?.setAttribute("aria-expanded", "false");
+            });
+        });
+
+        document.querySelectorAll("[data-ms-iade-gorsel]").forEach((input) => {
+            input.addEventListener("change", (event) => {
+                iadeGorselOnizlemeGuncelle(event.currentTarget);
+            });
+        });
+
+        const ac = (modal) => {
+            if (!modal) {
+                return;
+            }
+
+            if (!document.querySelector(acikModalSecici)) {
+                oncekiBodyOverflow = document.body.style.overflow;
+            }
+
+            modal.classList.add("ms-ornek-modal-acik");
+            modal.setAttribute("aria-hidden", "false");
+            document.body.style.overflow = "hidden";
+            modal.querySelector("button")?.focus();
+        };
+
+        let iadeSmsSayacZamanlayici = 0;
+        let iadeSmsBilgiZamanlayici = 0;
+
+        const iadeSmsSayacBaslat = () => {
+            const hedef = document.querySelector("[data-ms-iade-sms-sayac]");
+            let kalan = 120;
+            window.clearInterval(iadeSmsSayacZamanlayici);
+
+            const yaz = () => {
+                const dakika = Math.floor(kalan / 60).toString().padStart(2, "0");
+                const saniye = (kalan % 60).toString().padStart(2, "0");
+                hedef.textContent = `${dakika}:${saniye}`;
+            };
+
+            yaz();
+            iadeSmsSayacZamanlayici = window.setInterval(() => {
+                kalan = Math.max(0, kalan - 1);
+                yaz();
+
+                if (kalan === 0) {
+                    window.clearInterval(iadeSmsSayacZamanlayici);
+                }
+            }, 1000);
+        };
+
+        const iadeSmsBilgiGoster = () => {
+            const bilgi = document.querySelector("[data-ms-iade-sms-bilgi]");
+            const ulkeKodu = document.querySelector("[data-ms-iade-sms-modal] [data-ms-telefon-ulke-kod]")?.textContent.trim() || "+90";
+            const telefon = document.querySelector("[data-ms-iade-sms-modal] [data-ms-telefon-input]")?.value.trim() || "555 123 45 67";
+
+            if (!bilgi) {
+                return;
+            }
+
+            bilgi.textContent = `Kod ${ulkeKodu} ${telefon} numarasına tekrar gönderildi.`;
+            bilgi.classList.remove("ms-gizli");
+            window.clearTimeout(iadeSmsBilgiZamanlayici);
+            iadeSmsBilgiZamanlayici = window.setTimeout(() => {
+                bilgi.classList.add("ms-gizli");
+                bilgi.textContent = "";
+            }, 3000);
+        };
+
+        const kapat = (modal) => {
+            modal?.classList.remove("ms-ornek-modal-acik");
+            modal?.setAttribute("aria-hidden", "true");
+
+            if (modal?.matches("[data-ms-iade-sms-modal]")) {
+                window.clearInterval(iadeSmsSayacZamanlayici);
+                window.clearTimeout(iadeSmsBilgiZamanlayici);
+                const bilgi = modal.querySelector("[data-ms-iade-sms-bilgi]");
+                bilgi?.classList.add("ms-gizli");
+                if (bilgi) {
+                    bilgi.textContent = "";
+                }
+            }
+
+            if (modal?.matches("[data-ms-fatura-modal]")) {
+                modal.querySelector("[data-ms-fatura-pdf-frame]")?.removeAttribute("src");
+                modal.querySelector("[data-ms-fatura-pdf-fallback]")?.classList.remove("ms-fatura-pdf-fallback-gizli");
+            }
+
+            if (!document.querySelector(acikModalSecici)) {
+                document.body.style.overflow = oncekiBodyOverflow;
+            }
+        };
+
+        document.querySelectorAll("[data-ms-siparis-detay-ac]").forEach((buton) => {
+            buton.addEventListener("click", () => {
+                ac(document.querySelector("[data-ms-siparis-detay-modal]"));
+            });
+        });
+
+        document.querySelectorAll("[data-ms-kargo-takip-ac]").forEach((buton) => {
+            buton.addEventListener("click", () => {
+                ac(document.querySelector(`[data-ms-kargo-takip-modal="${buton.dataset.msKargoTakipAc}"]`));
+            });
+        });
+
+        document.querySelectorAll("[data-ms-iade-talep-ac]").forEach((buton) => {
+            buton.addEventListener("click", () => {
+                iadeModaliSifirla();
+                ac(document.querySelector("[data-ms-iade-talep-modal]"));
+            });
+        });
+
+        document.querySelector("[data-ms-iade-kodu-al]")?.addEventListener("click", () => {
+            if (iadeFormuGecerliMi()) {
+                ac(document.querySelector("[data-ms-iade-kodu-modal]"));
+            }
+        });
+
+        document.querySelector("[data-ms-iade-sms-ac]")?.addEventListener("click", () => {
+            ac(document.querySelector("[data-ms-iade-sms-modal]"));
+            iadeSmsSayacBaslat();
+        });
+
+        document.querySelector("[data-ms-iade-sms-yeniden-gonder]")?.addEventListener("click", () => {
+            iadeSmsSayacBaslat();
+            iadeSmsBilgiGoster();
+        });
+
+        document.querySelectorAll("[data-ms-iade-kodu-kopyala]").forEach((buton) => {
+            buton.addEventListener("click", async () => {
+                const kod = "IAD-HJ-482913";
+
+                try {
+                    if (!navigator.clipboard) {
+                        throw new Error("Clipboard desteklenmiyor.");
+                    }
+
+                    await navigator.clipboard.writeText(kod);
+                    document.querySelector("[data-ms-iade-kodu-kopya-bilgi]").textContent = "İade kodu kopyalandı.";
+                } catch {
+                    document.querySelector("[data-ms-iade-kodu-kopya-bilgi]").textContent = "Kopyalama desteklenmiyor, kodu manuel seçebilirsiniz.";
+                }
+            });
+        });
+
+        document.querySelectorAll("[data-ms-fatura-modal-ac]").forEach((baglanti) => {
+            baglanti.addEventListener("click", (event) => {
+                event.preventDefault();
+
+                const modal = document.querySelector("[data-ms-fatura-modal]");
+                const faturaUrl = baglanti.href;
+                const pdfUrl = `/fatura/pdf?url=${encodeURIComponent(faturaUrl)}`;
+                const indirmeUrl = `${pdfUrl}&indir=true`;
+                const fallback = modal?.querySelector("[data-ms-fatura-pdf-fallback]");
+                const iframe = modal?.querySelector("[data-ms-fatura-pdf-frame]");
+
+                iframe?.setAttribute("src", pdfUrl);
+                modal?.querySelector("[data-ms-fatura-indir]")?.setAttribute("href", indirmeUrl);
+                modal?.querySelector("[data-ms-fatura-yeni-sekme]")?.setAttribute("href", pdfUrl);
+                modal?.querySelector("[data-ms-fatura-fallback-link]")?.setAttribute("href", pdfUrl);
+                fallback?.classList.remove("ms-fatura-pdf-fallback-gizli");
+                ac(modal);
+            });
+        });
+
+        document.querySelector("[data-ms-fatura-pdf-frame]")?.addEventListener("load", () => {
+            document.querySelector("[data-ms-fatura-pdf-fallback]")?.classList.add("ms-fatura-pdf-fallback-gizli");
+        });
+
+        document.querySelectorAll("[data-ms-siparis-detay-kapat]").forEach((kapatici) => {
+            kapatici.addEventListener("click", () => kapat(kapatici.closest("[data-ms-siparis-detay-modal]")));
+        });
+
+        document.querySelectorAll("[data-ms-kargo-takip-kapat]").forEach((kapatici) => {
+            kapatici.addEventListener("click", () => kapat(kapatici.closest("[data-ms-kargo-takip-modal]")));
+        });
+
+        document.querySelectorAll("[data-ms-iade-talep-kapat]").forEach((kapatici) => {
+            kapatici.addEventListener("click", () => kapat(kapatici.closest("[data-ms-iade-talep-modal]")));
+        });
+
+        document.querySelectorAll("[data-ms-iade-kodu-kapat]").forEach((kapatici) => {
+            kapatici.addEventListener("click", () => kapat(kapatici.closest("[data-ms-iade-kodu-modal]")));
+        });
+
+        document.querySelectorAll("[data-ms-iade-sms-kapat]").forEach((kapatici) => {
+            kapatici.addEventListener("click", () => kapat(kapatici.closest("[data-ms-iade-sms-modal]")));
+        });
+
+        document.querySelectorAll("[data-ms-iade-hata-kapat]").forEach((kapatici) => {
+            kapatici.addEventListener("click", () => kapat(kapatici.closest("[data-ms-iade-hata-modal]")));
+        });
+
+        document.querySelectorAll("[data-ms-fatura-modal-kapat]").forEach((kapatici) => {
+            kapatici.addEventListener("click", () => kapat(kapatici.closest("[data-ms-fatura-modal]")));
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key !== "Escape") {
+                return;
+            }
+
+            document.querySelectorAll(acikModalSecici).forEach(kapat);
+        });
+    })();
+</script>

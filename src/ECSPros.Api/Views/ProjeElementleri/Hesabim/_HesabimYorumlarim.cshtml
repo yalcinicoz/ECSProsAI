@@ -1,0 +1,183 @@
+<section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-yorumlar-baslik">
+    <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model='@("yorumlar")' />
+
+    <section class="ms-hesabim-icerik">
+        <header class="ms-hesabim-baslik">
+            <h2 id="ms-hesabim-yorumlar-baslik">Yorumlarım</h2>
+        </header>
+
+        <div class="ms-hesabim-liste-sayfa">
+            <div class="ms-hesabim-liste-ust">
+                <div>
+                    <h3>Ürün değerlendirmeleri</h3>
+                    <p>Yayınlanan yorumlarınızı, onay bekleyen değerlendirmelerinizi ve yorum yazabileceğiniz alışverişlerinizi yönetin.</p>
+                </div>
+                <a class="ms-buton ms-buton-m ms-buton-sade" href="/urun-degerlendirmeleri">Değerlendirmelere Git</a>
+            </div>
+
+            <div class="ms-hesabim-yorum-sekmeleri" data-ms-yorum-sekmeleri aria-label="Yorum durumları">
+                <div class="ms-kod-sekmeleri" role="tablist" aria-label="Yorum filtreleri">
+                    <button class="ms-kod-sekme ms-kod-sekme-aktif" type="button" role="tab" data-ms-yorum-tab="degerlendir" aria-pressed="true">Değerlendir <span class="ms-kod-sekme-sayac">2</span></button>
+                    <button class="ms-kod-sekme" type="button" role="tab" data-ms-yorum-tab="onay-bekleyenler" aria-pressed="false">Onay Bekleyenler <span class="ms-kod-sekme-sayac">1</span></button>
+                    <button class="ms-kod-sekme" type="button" role="tab" data-ms-yorum-tab="onaylananlar" aria-pressed="false">Onaylananlar <span class="ms-kod-sekme-sayac">2</span></button>
+                    <button class="ms-kod-sekme" type="button" role="tab" data-ms-yorum-tab="reddedilenler" aria-pressed="false">Reddedilenler <span class="ms-kod-sekme-sayac">1</span></button>
+                    <button class="ms-kod-sekme" type="button" role="tab" data-ms-yorum-tab="silinenler" aria-pressed="false">Silinenler <span class="ms-kod-sekme-sayac">1</span></button>
+                </div>
+
+                <section class="ms-hesabim-yorum-paneli" data-ms-yorum-panel="degerlendir" aria-labelledby="ms-yorum-degerlendir-baslik">
+                    <section class="ms-hesabim-bos-durum" aria-labelledby="ms-yorum-degerlendir-bos-baslik">
+                        <i class="fa-solid fa-pen-to-square ms-fa-ikon " aria-hidden="true"></i>
+                        <div>
+                            <h3 id="ms-yorum-degerlendir-bos-baslik">Değerlendirilecek ürün yok</h3>
+                            <p>Teslim edilen ve yorum bekleyen ürünleriniz olduğunda burada görünür.</p>
+                        </div>
+                        <a class="ms-buton ms-buton-m ms-buton-sade" href="/Hesabim/Siparislerim">Siparişlere Git</a>
+                    </section>
+
+                    <div class="ms-hesabim-durum-listesi" aria-labelledby="ms-yorum-degerlendir-baslik">
+                        <h3 class="sr-only" id="ms-yorum-degerlendir-baslik">Değerlendirilecek ürünler</h3>
+                        <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Polo Yaka Desenli Erkek Triko Tişört ürün detayına git"></a>
+                            <img src="/images/ornek-resim.jpg" alt="Polo yaka desenli erkek triko tişört">
+                            <div>
+                                <span class="ms-hesabim-durum-etiket ms-hesabim-durum-beklemede">Yorum Bekliyor</span>
+                                <strong>Polo Yaka Desenli Erkek Triko Tişört</strong>
+                                <p>Teslim edildi. Ürün deneyiminizi paylaşarak diğer kullanıcılara yardımcı olabilirsiniz.</p>
+                                <div class="ms-hesabim-kart-aksiyonlar">
+                                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button">Yorum Yaz</button>
+                                    <a class="ms-buton ms-buton-s ms-buton-sade" href="/Hesabim/Siparislerim">Siparişi Gör</a>
+                                </div>
+                            </div>
+                        </article>
+                        <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="İç Astarlı Salaş Tesettür Bluz ürün detayına git"></a>
+                            <img src="/images/ornek-resim-2.jpg" alt="İç astarlı salaş tesettür bluz">
+                            <div>
+                                <span class="ms-hesabim-durum-etiket ms-hesabim-durum-beklemede">Yorum Bekliyor</span>
+                                <strong>İç Astarlı Salaş Tesettür Bluz</strong>
+                                <p>Son alışverişinizden sonra değerlendirme süresi devam ediyor.</p>
+                                <div class="ms-hesabim-kart-aksiyonlar">
+                                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button">Yorum Yaz</button>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="ms-hesabim-yorum-paneli ms-gizli" data-ms-yorum-panel="onay-bekleyenler" aria-labelledby="ms-yorum-onay-bekleyen-baslik" hidden>
+                    <section class="ms-hesabim-bos-durum" aria-labelledby="ms-yorum-onay-bekleyen-bos-baslik">
+                        <i class="fa-solid fa-clock ms-fa-ikon " aria-hidden="true"></i>
+                        <div>
+                            <h3 id="ms-yorum-onay-bekleyen-bos-baslik">Onay bekleyen yorumunuz yok</h3>
+                            <p>Yeni gönderdiğiniz yorumlar kontrol sürecindeyken bu alanda listelenir.</p>
+                        </div>
+                        <button class="ms-buton ms-buton-m ms-buton-sade" type="button">Yenile</button>
+                    </section>
+
+                    <div class="ms-hesabim-durum-listesi" aria-labelledby="ms-yorum-onay-bekleyen-baslik">
+                        <h3 class="sr-only" id="ms-yorum-onay-bekleyen-baslik">Onay bekleyen yorumlar</h3>
+                        <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek ürün detayına git"></a>
+                            <img src="/images/ornek-resim.jpg" alt="Kadın ön çıtçıtlı dik yaka kolsuz gömlek">
+                            <div>
+                                <span class="ms-hesabim-durum-etiket ms-hesabim-durum-uyari">Onay Bekliyor</span>
+                                <strong>Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek</strong>
+                                <p>Yorumunuz editör kontrolünde. Onaylandığında ürün sayfasında yayınlanacak.</p>
+                                <div class="ms-hesabim-puan" aria-label="5 üzerinden 4 puan">4/5</div>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="ms-hesabim-yorum-paneli ms-gizli" data-ms-yorum-panel="onaylananlar" aria-labelledby="ms-yorum-onaylanan-baslik" hidden>
+                    <section class="ms-hesabim-bos-durum" aria-labelledby="ms-yorum-onaylanan-bos-baslik">
+                        <i class="fa-solid fa-circle-check ms-fa-ikon " aria-hidden="true"></i>
+                        <div>
+                            <h3 id="ms-yorum-onaylanan-bos-baslik">Onaylanan yorumunuz yok</h3>
+                            <p>Yayına alınan ürün değerlendirmeleriniz burada görünür.</p>
+                        </div>
+                        <a class="ms-buton ms-buton-m ms-buton-sade" href="/urun-degerlendirmeleri">Değerlendirme Yap</a>
+                    </section>
+
+                    <div class="ms-hesabim-durum-listesi" aria-labelledby="ms-yorum-onaylanan-baslik">
+                        <h3 class="sr-only" id="ms-yorum-onaylanan-baslik">Onaylanan yorumlar</h3>
+                        <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek ürün detayına git"></a>
+                            <img src="/images/ornek-resim-2.jpg" alt="Kadın ön çıtçıtlı dik yaka kolsuz gömlek">
+                            <div>
+                                <span class="ms-hesabim-durum-etiket ms-hesabim-durum-basarili">Onaylandı</span>
+                                <strong>Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek</strong>
+                                <p>Ürün kumaşı ve kalıbı çok iyi. Teslimat hızlıydı.</p>
+                                <div class="ms-hesabim-puan" aria-label="5 üzerinden 5 puan">5/5</div>
+                            </div>
+                        </article>
+                        <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Polo Yaka Desenli Erkek Triko Tişört ürün detayına git"></a>
+                            <img src="/images/ornek-resim.jpg" alt="Mavi polo yaka desenli erkek triko tişört">
+                            <div>
+                                <span class="ms-hesabim-durum-etiket ms-hesabim-durum-basarili">Onaylandı</span>
+                                <strong>Polo Yaka Desenli Erkek Triko Tişört</strong>
+                                <p>Rengi görseldeki gibi, beden önerisi doğru çıktı.</p>
+                                <div class="ms-hesabim-puan" aria-label="5 üzerinden 5 puan">5/5</div>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="ms-hesabim-yorum-paneli ms-gizli" data-ms-yorum-panel="reddedilenler" aria-labelledby="ms-yorum-reddedilen-baslik" hidden>
+                    <section class="ms-hesabim-bos-durum" aria-labelledby="ms-yorum-reddedilen-bos-baslik">
+                        <i class="fa-solid fa-circle-xmark ms-fa-ikon " aria-hidden="true"></i>
+                        <div>
+                            <h3 id="ms-yorum-reddedilen-bos-baslik">Reddedilen yorumunuz yok</h3>
+                            <p>Yayın kriterlerine takılan değerlendirmeleriniz olursa burada sebebiyle birlikte gösterilir.</p>
+                        </div>
+                        <a class="ms-buton ms-buton-m ms-buton-sade" href="/Yardim">Yorum Kuralları</a>
+                    </section>
+
+                    <div class="ms-hesabim-durum-listesi" aria-labelledby="ms-yorum-reddedilen-baslik">
+                        <h3 class="sr-only" id="ms-yorum-reddedilen-baslik">Reddedilen yorumlar</h3>
+                        <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Kadın Yüksek Bel Bol Paça Pantolon ürün detayına git"></a>
+                            <img src="/images/ornek-resim-2.jpg" alt="Kadın yüksek bel bol paça pantolon">
+                            <div>
+                                <span class="ms-hesabim-durum-etiket ms-hesabim-durum-tehlike">Reddedildi</span>
+                                <strong>Kadın Yüksek Bel Bol Paça Pantolon</strong>
+                                <p>Yorum metninde ürün dışı kampanya ve iletişim bilgisi yer aldığı için yayınlanmadı.</p>
+                                <div class="ms-hesabim-kart-aksiyonlar">
+                                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button">Yeniden Düzenle</button>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="ms-hesabim-yorum-paneli ms-gizli" data-ms-yorum-panel="silinenler" aria-labelledby="ms-yorum-silinen-baslik" hidden>
+                    <section class="ms-hesabim-bos-durum" aria-labelledby="ms-yorum-silinen-bos-baslik">
+                        <i class="fa-solid fa-trash ms-fa-ikon " aria-hidden="true"></i>
+                        <div>
+                            <h3 id="ms-yorum-silinen-bos-baslik">Silinen yorumunuz yok</h3>
+                            <p>Kendi sildiğiniz veya kaldırılan yorumlar bu alanda arşivlenir.</p>
+                        </div>
+                        <button class="ms-buton ms-buton-m ms-buton-sade" type="button">Arşivi Yenile</button>
+                    </section>
+
+                    <div class="ms-hesabim-durum-listesi" aria-labelledby="ms-yorum-silinen-baslik">
+                        <h3 class="sr-only" id="ms-yorum-silinen-baslik">Silinen yorumlar</h3>
+                        <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="İç Astarlı Salaş Tesettür Bluz ürün detayına git"></a>
+                            <img src="/images/ornek-resim.jpg" alt="İç astarlı salaş tesettür bluz">
+                            <div>
+                                <span class="ms-hesabim-durum-etiket ms-hesabim-durum-pasif">Silindi</span>
+                                <strong>İç Astarlı Salaş Tesettür Bluz</strong>
+                                <p>Bu yorum 24.06.2026 tarihinde kullanıcı isteğiyle kaldırıldı.</p>
+                                <div class="ms-hesabim-kart-aksiyonlar">
+                                    <button class="ms-buton ms-buton-s ms-buton-sade" type="button">Detayı Gör</button>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </section>
+</section>

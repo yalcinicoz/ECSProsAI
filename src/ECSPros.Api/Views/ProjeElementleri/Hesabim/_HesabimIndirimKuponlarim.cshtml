@@ -1,0 +1,43 @@
+<section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-kuponlar-baslik">
+    <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model='@("kuponlar")' />
+
+    <section class="ms-hesabim-icerik">
+        <header class="ms-hesabim-baslik">
+            <h2 id="ms-hesabim-kuponlar-baslik">İndirim Kuponlarım</h2>
+        </header>
+
+        <div class="ms-hesabim-liste-sayfa">
+            <div class="ms-hesabim-liste-ust">
+                <div>
+                    <h3>Kullanılabilir kuponlar</h3>
+                    <p>Sepette kullanabileceğiniz kuponları ve son kullanım tarihlerini takip edin.</p>
+                </div>
+                <button class="ms-buton ms-buton-m ms-buton-sade" type="button">Kupon Kodu Ekle</button>
+            </div>
+
+            <section class="ms-hesabim-bos-durum" aria-labelledby="ms-kuponlar-bos-baslik">
+                <i class="fa-solid fa-ticket ms-fa-ikon " aria-hidden="true"></i>
+                <div>
+                    <h3 id="ms-kuponlar-bos-baslik">Kullanılabilir kuponunuz yok</h3>
+                    <p>Size özel kampanya veya indirim kuponu tanımlandığında burada görünür.</p>
+                </div>
+                <a class="ms-buton ms-buton-m ms-buton-sade" href="/">Kampanyaları Gör</a>
+            </section>
+
+            <div class="ms-hesabim-mini-grid">
+                <article class="ms-hesabim-kupon-karti">
+                    <span>HOŞGELDİN</span>
+                    <strong>150 TL indirim</strong>
+                    <p>750 TL ve üzeri alışverişlerde geçerli. Son kullanım: 15.07.2026</p>
+                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button">Sepette Kullan</button>
+                </article>
+                <article class="ms-hesabim-kupon-karti">
+                    <span>KARGO</span>
+                    <strong>Ücretsiz kargo</strong>
+                    <p>Seçili kategorilerde geçerli. Son kullanım: 30.07.2026</p>
+                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button">Sepette Kullan</button>
+                </article>
+            </div>
+        </div>
+    </section>
+</section>

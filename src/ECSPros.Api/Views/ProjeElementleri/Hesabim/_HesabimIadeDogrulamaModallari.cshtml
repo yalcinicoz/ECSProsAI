@@ -1,0 +1,87 @@
+<div class="ms-ornek-modal ms-iade-sms-modal" data-ms-iade-sms-modal aria-hidden="true">
+    <div class="ms-ornek-modal-kaplama" data-ms-iade-sms-kapat></div>
+    <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-l ms-iade-sms-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-iade-sms-baslik">
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-iade-sms-kapat aria-label="SMS doğrulama modalını kapat">×</button>
+        <h3 id="ms-iade-sms-baslik" class="ms-ornek-modal-baslik">SMS Doğrulama</h3>
+        <p class="ms-ornek-modal-aciklama">İade kodu oluşturulmadan önce telefon numaranızın doğrulanması gerekebilir.</p>
+
+        <div class="ms-iade-sms-formu">
+            <label class="ms-form-alani">
+                <span class="ms-form-etiket">Ülke Kodlu Telefon</span>
+                <div class="ms-telefon-girdi">
+                    <div class="ms-telefon-ulke" data-ms-telefon-ulke-select>
+                        <button class="ms-telefon-ulke-tetikleyici" type="button" data-ms-telefon-ulke-tetikleyici aria-haspopup="listbox" aria-expanded="false">
+                            <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye">
+                            <span data-ms-telefon-ulke-kod>+90</span>
+                            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-telefon-ulke-ok " aria-hidden="true"></i>
+                        </button>
+                        <div class="ms-telefon-ulke-panel" role="listbox">
+                            <input class="ms-telefon-ulke-arama" type="search" placeholder="Ülke ara" data-ms-telefon-ulke-arama>
+                            <button class="ms-telefon-ulke-secenek ms-telefon-ulke-secenek-aktif" type="button" data-ms-telefon-ulke-secenek data-kod="+90" data-bayrak="https://flagcdn.com/tr.svg" data-ulke="Türkiye">
+                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye"> Türkiye <strong>+90</strong>
+                            </button>
+                            <button class="ms-telefon-ulke-secenek" type="button" data-ms-telefon-ulke-secenek data-kod="+49" data-bayrak="https://flagcdn.com/de.svg" data-ulke="Almanya">
+                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/de.svg" alt="Almanya"> Almanya <strong>+49</strong>
+                            </button>
+                            <button class="ms-telefon-ulke-secenek" type="button" data-ms-telefon-ulke-secenek data-kod="+44" data-bayrak="https://flagcdn.com/gb.svg" data-ulke="Birleşik Krallık">
+                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/gb.svg" alt="Birleşik Krallık"> Birleşik Krallık <strong>+44</strong>
+                            </button>
+                        </div>
+                    </div>
+                    <input type="tel" inputmode="numeric" value="555 123 45 67" data-ms-telefon-input aria-label="Telefon numarası">
+                </div>
+            </label>
+
+            <div class="ms-iade-sms-kod-alani">
+                <div class="ms-iade-sms-kod-baslik">
+                    <span>6 Haneli Kod</span>
+                    <strong data-ms-iade-sms-sayac>02:00</strong>
+                </div>
+                <div class="ms-kod-giris" data-ms-kod-giris aria-label="SMS doğrulama kodu">
+                    <input class="ms-kod-giris-input" type="text" inputmode="numeric" maxlength="1" aria-label="1. hane">
+                    <input class="ms-kod-giris-input" type="text" inputmode="numeric" maxlength="1" aria-label="2. hane">
+                    <input class="ms-kod-giris-input" type="text" inputmode="numeric" maxlength="1" aria-label="3. hane">
+                    <input class="ms-kod-giris-input" type="text" inputmode="numeric" maxlength="1" aria-label="4. hane">
+                    <input class="ms-kod-giris-input" type="text" inputmode="numeric" maxlength="1" aria-label="5. hane">
+                    <input class="ms-kod-giris-input" type="text" inputmode="numeric" maxlength="1" aria-label="6. hane">
+                </div>
+                <span class="ms-iade-sms-bilgi-etiketi ms-gizli" data-ms-iade-sms-bilgi role="status" aria-live="polite"></span>
+            </div>
+
+            <div class="ms-iade-sms-durumlari">
+                <article class="ms-iade-sms-durum ms-iade-sms-durum-basarili">
+                    <strong>Telefon doğrulandı</strong>
+                    <small>İade kodu oluşturma adımına devam edebilirsiniz.</small>
+                </article>
+                <article class="ms-iade-sms-durum ms-iade-sms-durum-hata">
+                    <strong>Telefon doğrulanmadı</strong>
+                    <small>İade kodu alabilmek için SMS kodu ile numaranızı doğrulamalısınız.</small>
+                </article>
+            </div>
+        </div>
+
+        <div class="ms-ornek-modal-aksiyonlar">
+            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-iade-sms-kapat>Vazgeç</button>
+            <button class="ms-buton ms-buton-m ms-buton-ikincil" type="button" data-ms-iade-sms-yeniden-gonder>Kodu Tekrar Gönder</button>
+            <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-iade-sms-onayla>Doğrula</button>
+        </div>
+    </section>
+</div>
+
+<div class="ms-ornek-modal ms-iade-kodu-modal" data-ms-iade-kodu-modal aria-hidden="true">
+    <div class="ms-ornek-modal-kaplama" data-ms-iade-kodu-kapat></div>
+    <section class="ms-ornek-modal-kutu ms-ornek-modal-kutu-basarili ms-iade-kodu-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-iade-kodu-baslik">
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-iade-kodu-kapat aria-label="İade kodu modalını kapat">×</button>
+        <h3 id="ms-iade-kodu-baslik" class="ms-ornek-modal-baslik">İade Kodunuz Hazır</h3>
+        <p class="ms-ornek-modal-aciklama">Paketi HepsiJet teslim noktasına bu kod ile bırakabilirsiniz.</p>
+        <div class="ms-iade-kodu-kutu">
+            <span>HepsiJet İade Kodu</span>
+            <button type="button" data-ms-iade-kodu-kopyala>IAD-HJ-482913</button>
+            <small data-ms-iade-kodu-kopya-bilgi>Kodu kopyalamak için tıklayın.</small>
+        </div>
+        <div class="ms-ornek-modal-aksiyonlar">
+            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-iade-kodu-kapat>Kapat</button>
+            <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-iade-kodu-kopyala>IAD-HJ-482913 Kopyala</button>
+        </div>
+    </section>
+</div>

@@ -1,0 +1,24 @@
+<div class="ms-ornek-modal ms-fatura-pdf-modal" data-ms-fatura-modal aria-hidden="true">
+    <div class="ms-ornek-modal-kaplama" data-ms-fatura-modal-kapat></div>
+    <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-2xl ms-fatura-pdf-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-fatura-pdf-baslik">
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-fatura-modal-kapat aria-label="Fatura modalını kapat">×</button>
+        <div class="ms-fatura-pdf-ust">
+            <div>
+                <h3 id="ms-fatura-pdf-baslik" class="ms-ornek-modal-baslik">Fatura Görüntüle</h3>
+                <p class="ms-ornek-modal-aciklama">E-arşiv faturanızı PDF olarak görüntüleyebilir veya indirebilirsiniz.</p>
+            </div>
+            <div class="ms-fatura-pdf-aksiyonlar">
+                <a class="ms-buton ms-buton-s ms-buton-sade" href="#" target="_blank" rel="noopener" data-ms-fatura-yeni-sekme>Yeni Sekmede Aç</a>
+                <a class="ms-buton ms-buton-s ms-buton-satin-al" href="#" target="_blank" rel="noopener" download data-ms-fatura-indir>Faturayı İndir</a>
+            </div>
+        </div>
+        <div class="ms-fatura-pdf-govde">
+            <iframe title="Fatura PDF önizleme" data-ms-fatura-pdf-frame></iframe>
+            <div class="ms-fatura-pdf-fallback" data-ms-fatura-pdf-fallback>
+                <strong>PDF önizleme yükleniyor</strong>
+                <p>PDF bazı tarayıcılarda veya servis izinlerinde modal içinde açılmayabilir. Bu durumda yeni sekmede açabilir ya da indirebilirsiniz.</p>
+                <a class="ms-buton ms-buton-m ms-buton-satin-al" href="#" target="_blank" rel="noopener" data-ms-fatura-fallback-link>Yeni Sekmede Aç</a>
+            </div>
+        </div>
+    </section>
+</div>

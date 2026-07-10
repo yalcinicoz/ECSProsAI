@@ -28,7 +28,7 @@
 | B | Navigasyon + Ana Sayfa + Liste + Detay (gerçek port) | ✅ TAMAM (2026-07-09) — B1–B14 tümü bitti; envanter 8.1–8.4 tam işaretli, drift temiz. Geçici çözümler kayıtlı: B3 duyuru + B6 ana sayfa → G8'de vitrin sistemine devrolur |
 | C | Sepet + Checkout | ✅ TAMAM (2026-07-09) — C1–C11 bitti: sepet, kupon, teslimat+adres+geo, ödeme (K2 mock), taksit, TCKN (K9), sözleşmeler CMS+kabul kaydı, stok haber ver, checkout uçtan uca; QA 88 adım yeşil. Ertelenenler hedef fazlı: favori E5, kupon listesi E9, adres düzenle E4, tahsilat/BIN H6, bildirim H |
 | D | Üye oturumu (Razor tarafı) + SMS/OTP altyapısı | ✅ TAMAM (2026-07-10) — D1–D7 bitti: HttpOnly cookie + SSR kimlik + logout/session iptali; kayıt belgeleri CMS + Member.Consents; SMS/OTP girişi canlı (crm.otp_codes + ISmsSender — gerçek sağlayıcı seçimi bekliyor); şifreler BCrypt + ilk girişte re-hash; QA 51 adım yeşil, d7-* görüntüleri alındı |
-| E | Hesabım kümesi (12 sayfa + yeni backend özellikleri) | ⬜ Başlamadı |
+| E | Hesabım kümesi (12 sayfa + yeni backend özellikleri) | 🔵 Sürüyor — E1 ✅ (çerçeve: çift route + SSR guard + yan menü + 18 partial bayt-birebir; sayfalar E2-E13'te bağlanacak) |
 | F | Kurumsal sayfalar + Footer | ⬜ Başlamadı |
 | G | Vitrin & Kişiselleştirme Sistemi (G-M1: bloklar+yayınla · G-M2: kural motoru) | ⬜ Başlamadı |
 | H | Özel yetenekler (görsel arama, fatura PDF, kargo takip, mobil alt bar) | ⬜ Başlamadı |
@@ -182,7 +182,7 @@ src/ECSPros.Api/
 ### FAZ E — Hesabım kümesi (12 sayfa)
 > Her sayfa = partial birebir port + üye-kapsamlı API + gerekiyorsa yeni backend özelliği. Yan menü (`_HesabimYanMenu`) + mobil menü ilk iş.
 
-- [ ] E1. Hesabım çerçevesi: yan menü + route'lar (`/Hesabim/...` + kebab-case kısa yollar, misharix'teki çift route şeması).
+- [x] E1. **Hesabım çerçevesi** — TAMAM (2026-07-10): `HesabimController` (StorePageController tabanı) misharix'in çift route şemasıyla birebir — 12 sayfa × (`/Hesabim/...` + kebab-case kısa yol), tek `Sayfa.cshtml` view'ına partial adı geçiren kalıp aynı. **SSR üye guard'ı:** D1 cookie kimliği yoksa köke redirect (canlıda cookie'siz oturum yok — üyelik B4'te bu akışla açıldı). 18 Hesabim partial'ı + Sayfa.cshtml bayt-birebir kopyalandı (Faz A kabuk yöntemi; sayfalar E2-E13'te teker teker gerçek veriye bağlanacak, o güne dek tasarım demo içeriği). İzinli farklar: `_HesabimYanMenu` statü bloğu @if(false) (puan verisi yok — E13/G), `_HesabimVarsayilan` karşılama adı SSR kimlikten (tr-TR büyük harf). **Nav hesap paneli linkleri** (B4'ten beri '#') Hesabım route'larına bağlandı. NOT: tasarım kaynağının kısayol grid'inde `<img src=\` bozuk ikon markup'ı var (kaynağın kendi kusuru, bayt-birebir korundu — etiketler görünür, E13 bağlamasında ele alınır). E2E (5051 publish): **13/13 ✓** (misafir guard redirect, karşılama ELA IŞIK, 7 kısayol, statü gizli, 11 yan menü linki, 24 URL'nin tümü 200, aktif menü durumu, panel linkleri, mobil menü aç/kapa, 0 konsol hatası) + B4 regresyon 12/12 ✓; drift TEMİZ.
 - [ ] E2. **Üyelik Bilgilerim** → profile GET/PUT (telefon ülke-kodlu input, şifre değiştirme, TCKN alanı). **+ Cinsiyet ve şehir alanları** (kişiselleştirme segmenti bunlardan beslenir — G9 bağımlılığı; cinsiyet yalnızca profilde varsa kullanılır, tahmin yok).
 - [ ] E3. **Adreslerim** → addresses CRUD (C4'teki modal yeniden kullanılır).
 - [ ] E4. **Siparişlerim** → account orders (+detay modal); durum filtre chip'leri; kargo takip modalı (H2'ye köprü — takip verisi yoksa "kargo firması+takip no" gösterimi); fatura PDF modalı (H1'e köprü).
