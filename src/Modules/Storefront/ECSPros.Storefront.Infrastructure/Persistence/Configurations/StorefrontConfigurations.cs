@@ -252,3 +252,18 @@ public class SavedSearchConfiguration : IEntityTypeConfiguration<SavedSearch>
         builder.HasQueryFilter(s => !s.IsDeleted);
     }
 }
+
+public class ViewedProductConfiguration : IEntityTypeConfiguration<ViewedProduct>
+{
+    public void Configure(EntityTypeBuilder<ViewedProduct> builder)
+    {
+        builder.ToTable("viewed_products");
+        builder.HasKey(v => v.Id);
+        builder.Property(v => v.ProductCode).HasMaxLength(50).IsRequired();
+        // Ürün başına tek kayıt (tekrar gezmede ViewedAt güncellenir)
+        builder.HasIndex(v => new { v.FirmPlatformId, v.MemberId, v.ProductCode }).IsUnique();
+        // Üyenin son gezdikleri sorgusu + budama
+        builder.HasIndex(v => new { v.MemberId, v.ViewedAt });
+        builder.HasQueryFilter(v => !v.IsDeleted);
+    }
+}

@@ -19,6 +19,7 @@ public interface IStorefrontDbContext
     DbSet<CollectionItem> CollectionItems { get; }
     DbSet<ProductReview> ProductReviews { get; }
     DbSet<SavedSearch> SavedSearches { get; }
+    DbSet<ViewedProduct> ViewedProducts { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

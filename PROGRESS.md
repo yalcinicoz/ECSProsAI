@@ -294,6 +294,21 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — E12 TAMAM: Önceden Gezdiklerim:**
+  - **Backend (YENİ):** `storefront.viewed_products` (AddViewedProducts canlıda) —
+    ürün başına TEK kayıt (tekrar gezmede ViewedAt güncellenir), üye başına son 50
+    (kayıt anında budanır). RecordProductView/ClearViewedProducts +
+    GetMemberViewedProducts (Faz G "son gezilenler" bloğu da kullanacak);
+    GET/DELETE /api/store/viewed-products.
+  - **Kayıt noktası:** ürün detayı render'ında sunucuda (MsUye varsa; hata sayfayı
+    düşürmez). **Misafir fallback:** detay config script'i — token yokken
+    localStorage.ms_gezilenler {kod,t} (dedupe + 50; üyeyken yazılmaz).
+  - **Sayfa SSR:** gezme kayıtları × canlı katalog kartları (silinen/pasif gizli,
+    güncel fiyat); zaman "Bugün/Dün HH:mm" TR saatiyle; Listeyi Temizle DELETE.
+  - **E2E 10/10 ✓ + B6 19/19 + B5 10/10 + E1 13/13 + C1 12/12 ✓; drift TEMİZ.**
+    Sıradaki: E13 Hesabım ana sayfası (_HesabimVarsayilan özet kartları + E1'deki
+    bozuk ikon grid'i), sonra E14 QA → Faz E kapanışı.
+
 - **2026-07-10 (devam) — E11 TAMAM: Favori Aramalarım:**
   - **Backend (YENİ):** `storefront.saved_searches` (AddSavedSearches canlıda) —
     Name/Query/Filters jsonb (UI şimdilik yalnız metin; filtre entegrasyonu ileri iş)/

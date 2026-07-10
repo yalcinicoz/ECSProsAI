@@ -9,6 +9,7 @@
     {
         firmPlatformId = s.FirmPlatformId,
         paraBirimi = s.ParaBirimi,
+        urunKod = s.Kod, // E12: misafir gezme geçmişi (localStorage fallback)
         tekVaryant = s.TekVaryantId is { } tekId
             ? new { id = tekId, fiyat = s.TekVaryantFiyat ?? 0 }
             : null,
@@ -1913,6 +1914,18 @@
             if (!cfg) {
                 return;
             }
+
+            // E12: misafir gezme geçmişi — üye kayıtları sunucuda tutulur (render'da);
+            // misafirde son 50 ürün localStorage'a yazılır (Faz G "son gezilenler"
+            // bloğu iki kaynağı da kullanır). Üye girişliyse yazılmaz (çift kaynak olmasın).
+            try {
+                if (cfg.urunKod && !localStorage.getItem("ecspros_member_token")) {
+                    const liste = JSON.parse(localStorage.getItem("ms_gezilenler") || "[]")
+                        .filter((kayit) => kayit.kod !== cfg.urunKod);
+                    liste.unshift({ kod: cfg.urunKod, t: Date.now() });
+                    localStorage.setItem("ms_gezilenler", JSON.stringify(liste.slice(0, 50)));
+                }
+            } catch { /* depolama kapalıysa gezme geçmişi tutulmaz */ }
 
             // Renk butonları: seçim = aynı sayfanın ?color= ile SSR yeniden yüklenmesi.
             // (Misharix'in renk script'i aktif sınıfını bizden önce değiştirdiğinden
