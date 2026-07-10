@@ -58,7 +58,9 @@ public class GetReturnDetailQueryHandler : IRequestHandler<GetReturnDetailQuery,
                 r.RefundMethod,
                 r.Amount,
                 r.Status,
-                r.ProcessedAt)).ToList());
+                r.ProcessedAt)).ToList(),
+            @return.CargoReturnCode,
+            @return.ImageUrls);
 
         return Result.Success(dto);
     }

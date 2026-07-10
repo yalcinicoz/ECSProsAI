@@ -162,10 +162,185 @@ public class HesabimController(
     public IActionResult OncedenGezdiklerim() =>
         HesabimSayfasi("Önceden Gezdiklerim", "~/Views/ProjeElementleri/Hesabim/_HesabimOncedenGezdiklerim.cshtml");
 
+    /// <summary>E8: İadelerim — kartlar SSR (E4 deseni: ilk 20 iade, detay + sipariş PK
+    /// sorguları). Yeni İade Talebi modalı teslim edilmiş siparişlerin henüz iadesi
+    /// olmayan kalemlerini listeler; neden listesi Lookup'tan (return_reason).</summary>
     [HttpGet("/Hesabim/Iadelerim")]
     [HttpGet("/iadelerim")]
-    public IActionResult Iadelerim() =>
-        HesabimSayfasi("İadelerim", "~/Views/ProjeElementleri/Hesabim/_HesabimIadelerim.cshtml");
+    public async Task<IActionResult> Iadelerim(CancellationToken ct)
+    {
+        var tr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+        var iadeler = new List<HesabimIadeVm>();
+        var siparisDetayCache = new Dictionary<Guid, OrderDetailDto>();
+
+        async Task<OrderDetailDto?> SiparisDetay(Guid orderId)
+        {
+            if (siparisDetayCache.TryGetValue(orderId, out var d)) return d;
+            var sonuc = await mediator.Send(new GetOrderDetailQuery(orderId), ct);
+            if (sonuc.IsFailure) return null;
+            siparisDetayCache[orderId] = sonuc.Value!;
+            return sonuc.Value;
+        }
+
+        // Üyenin iadeleri (ilk 20) — kalem adı/görseli için iade detayı + sipariş detayı çekilir
+        var iadeListesi = await mediator.Send(new GetReturnsQuery(null, _memberId, null, 1, 20), ct);
+        var iadeDetaylari = new List<Order.Application.Queries.GetReturnDetail.ReturnDetailDto>();
+        if (iadeListesi.IsSuccess)
+            foreach (var ozet in iadeListesi.Value!.Items)
+            {
+                var detay = await mediator.Send(new Order.Application.Queries.GetReturnDetail.GetReturnDetailQuery(ozet.Id), ct);
+                if (detay.IsSuccess) iadeDetaylari.Add(detay.Value!);
+            }
+
+        // Teslim edilmiş siparişler → modalın iade edilebilir kalemleri
+        var teslimSiparisler = new List<OrderDetailDto>();
+        var teslimListesi = await mediator.Send(new GetOrdersQuery("delivered", _memberId, null, 1, 50), ct);
+        if (teslimListesi.IsSuccess)
+            foreach (var ozet in teslimListesi.Value!.Items)
+            {
+                var detay = await SiparisDetay(ozet.Id);
+                if (detay is not null) teslimSiparisler.Add(detay);
+            }
+
+        // Ürün zenginleştirmesi tek seferde (iade kalemleri + teslim kalemleri)
+        var varyantIdler = iadeDetaylari.SelectMany(r => r.Items.Select(i => i.VariantId))
+            .Concat(teslimSiparisler.SelectMany(o => o.Items.Select(i => i.VariantId)))
+            .Distinct().ToList();
+        var gorunumler = await productService.GetVariantDisplayAsync(varyantIdler, ct);
+
+        static List<HesabimIadeNedenSecimVm> NedenSnapshotCoz(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return new();
+            try
+            {
+                using var dok = System.Text.Json.JsonDocument.Parse(json);
+                var liste = new List<HesabimIadeNedenSecimVm>();
+                if (dok.RootElement.TryGetProperty("reasons", out var reasons))
+                    foreach (var g in reasons.EnumerateArray())
+                        liste.Add(new HesabimIadeNedenSecimVm(
+                            g.GetProperty("main").GetString() ?? "",
+                            g.TryGetProperty("subs", out var subs)
+                                ? subs.EnumerateArray().Select(s => s.GetString() ?? "").Where(s => s.Length > 0).ToList()
+                                : new List<string>()));
+                if (dok.RootElement.TryGetProperty("other", out var other)
+                    && other.ValueKind == System.Text.Json.JsonValueKind.String
+                    && !string.IsNullOrWhiteSpace(other.GetString()))
+                    liste.Add(new HesabimIadeNedenSecimVm("Diğer", new List<string> { other.GetString()! }));
+                return liste;
+            }
+            catch { return new(); } // eski/serbest metin notu — panel boş kalır
+        }
+
+        foreach (var iade in iadeDetaylari)
+        {
+            var siparis = await SiparisDetay(iade.OrderId);
+            var (durumMetni, durumSinifi, filtre, adim) = iade.Status switch
+            {
+                "requested" => ("İade Talebi Alındı", "iade", "devam", 1),
+                "approved"  => ("İade Onaylandı", "iade", "devam", 2),
+                "received"  => ("İade İnceleniyor", "iade", "devam", 3),
+                "refunded"  => ("İade Tamamlandı", "iade-onaylandi", "tamamlanan", 4),
+                "rejected"  => ("İade Reddedildi", "iade", "tamamlanan", 0),
+                _           => (iade.Status, "iade", "devam", 1)
+            };
+
+            var (bilgiBaslik, bilgiMetin, bilgiUyari) = iade.Status switch
+            {
+                "requested" => ("İade talebiniz alındı",
+                    $"Paketi kargo iade kodunuzla anlaşmalı kargoya bırakabilirsiniz. Talebiniz incelendikten sonra süreç adımları burada güncellenir.", true),
+                "approved"  => ("İade talebiniz onaylandı",
+                    "Paketi kargo iade kodunuzla anlaşmalı kargoya bırakabilirsiniz. Ürün depomuza ulaştığında kontrol süreci başlar.", true),
+                "received"  => ("İade incelemesi devam ediyor",
+                    "İade kargonuz depoya ulaştı. Ürün kontrolü tamamlandıktan sonra ödeme iadesi başlatılacak.", true),
+                "refunded"  => ("İade ödemeniz tamamlandı",
+                    $"İade onaylandı ve {iade.RefundAmount.ToString("N2", tr)} TL ödeme iadesi kartınıza gönderildi.", false),
+                "rejected"  => ("İade talebiniz onaylanmadı",
+                    string.IsNullOrWhiteSpace(iade.InspectionNotes)
+                        ? "Yapılan inceleme sonucunda iade talebiniz uygun bulunmadı. Detay için müşteri hizmetlerine ulaşabilirsiniz."
+                        : iade.InspectionNotes!, true),
+                _ => ("", "", false)
+            };
+
+            var urunler = iade.Items.Select(i =>
+            {
+                gorunumler.TryGetValue(i.VariantId, out var g);
+                var kalem = siparis?.Items.FirstOrDefault(k => k.Id == i.OrderItemId);
+                return new HesabimSiparisUrunVm(
+                    g?.ProductNameI18n.GetValueOrDefault("tr") ?? kalem?.ProductName ?? "Ürün",
+                    string.IsNullOrWhiteSpace(kalem?.VariantInfo) ? g?.OptionsText : kalem!.VariantInfo,
+                    i.Quantity,
+                    i.TotalRefundAmount,
+                    g?.ImageUrl,
+                    g is null ? null : "/urun/" + g.ProductCode);
+            }).ToList();
+
+            iadeler.Add(new HesabimIadeVm(
+                iade.Id, iade.ReturnNumber,
+                iade.CreatedAt.ToString("d MMMM yyyy", tr),
+                iade.Status, durumMetni, durumSinifi, filtre, adim,
+                urunler, iade.CargoReturnCode,
+                bilgiBaslik, bilgiMetin, bilgiUyari,
+                iade.RefundAmount, iade.Status == "refunded"));
+        }
+
+        // Modal: iade edilebilir kalemler — reddedilmemiş bir iadede yer alan kalem
+        // "iade edildi" işaretlenir ve önceki neden seçimi panelde gösterilir
+        var iadeliKalemler = iadeDetaylari
+            .Where(r => r.Status != "rejected")
+            .SelectMany(r => r.Items)
+            .GroupBy(i => i.OrderItemId)
+            .ToDictionary(g => g.Key, g => NedenSnapshotCoz(g.First().CustomerNotes));
+
+        var edilebilirler = new List<HesabimIadeEdilebilirUrunVm>();
+        foreach (var siparis in teslimSiparisler.OrderByDescending(o => o.CreatedAt))
+            foreach (var kalem in siparis.Items)
+            {
+                gorunumler.TryGetValue(kalem.VariantId, out var g);
+                var iadeli = iadeliKalemler.TryGetValue(kalem.Id, out var oncekiler);
+                edilebilirler.Add(new HesabimIadeEdilebilirUrunVm(
+                    kalem.Id,
+                    siparis.OrderNumber,
+                    siparis.CreatedAt.ToString("d MMMM yyyy", tr),
+                    siparis.GrandTotal,
+                    g?.ProductNameI18n.GetValueOrDefault("tr") ?? kalem.ProductName,
+                    string.IsNullOrWhiteSpace(kalem.VariantInfo) ? g?.OptionsText : kalem.VariantInfo,
+                    kalem.Quantity,
+                    kalem.Total,
+                    g?.ImageUrl,
+                    iadeli,
+                    oncekiler ?? new()));
+            }
+
+        // Neden listesi Lookup'tan — alt nedenler ExtraData.subReasons (jsonb → JsonElement)
+        var nedenler = new List<HesabimIadeNedeniVm>();
+        var nedenSonucu = await mediator.Send(
+            new ECSPros.Core.Application.Queries.GetLookupValues.GetLookupValuesQuery("return_reason"), ct);
+        if (nedenSonucu.IsSuccess)
+            foreach (var deger in nedenSonucu.Value!)
+            {
+                var altlar = new List<string>();
+                if (deger.ExtraData is not null && deger.ExtraData.TryGetValue("subReasons", out var ham))
+                {
+                    if (ham is System.Text.Json.JsonElement el && el.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        altlar = el.EnumerateArray().Select(s => s.GetString() ?? "").Where(s => s.Length > 0).ToList();
+                    else if (ham is List<string> liste)
+                        altlar = liste;
+                }
+                nedenler.Add(new HesabimIadeNedeniVm(deger.Id, deger.NameI18n.GetValueOrDefault("tr") ?? "", altlar));
+            }
+
+        // Modal üst bilgileri: üye + son teslim edilen siparişin teslimat adresi
+        var uye = await mediator.Send(new ECSPros.Crm.Application.Queries.GetMemberDetail.GetMemberDetailQuery(_memberId), ct);
+        var sonTeslim = teslimSiparisler.OrderByDescending(o => o.CreatedAt).FirstOrDefault();
+
+        ViewData["MsIadeler"] = iadeler;
+        ViewData["MsIadeEdilebilirler"] = edilebilirler;
+        ViewData["MsIadeNedenleri"] = nedenler;
+        ViewData["MsIadeUye"] = uye.IsSuccess ? uye.Value : null;
+        ViewData["MsIadeTeslimatAdi"] = sonTeslim?.ShippingRecipientName;
+        ViewData["MsIadeTeslimatAdresi"] = sonTeslim?.ShippingAddressLine;
+        return HesabimSayfasi("İadelerim", "~/Views/ProjeElementleri/Hesabim/_HesabimIadelerim.cshtml");
+    }
 
     /// <summary>E7: Yorumlarım SSR — "Değerlendir" sekmesi teslim edilmiş ama henüz
     /// yorumlanmamış ürünler (kalem VariantId'leri Catalog'la koda çözülür); diğer

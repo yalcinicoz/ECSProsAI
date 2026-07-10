@@ -1,34 +1,36 @@
+@* E8: SMS doğrulama + iade kodu modalları canlıya bağlandı. Kod üyenin KAYITLI
+   telefonuna gider (D4 OTP altyapısı, purpose=phone_verify) — bu yüzden telefon alanı
+   salt okunur, tasarımdaki ülke seçici kaldırıldı. Durum kutuları doğrulama sonucuna
+   göre gösterilir. İade kodu modalı POST sonucundaki gerçek kodlarla dolar (sipariş
+   başına bir iade açıldığından birden çok kod olabilir). *@
+@{
+    var msIadeSmsUye = ViewData["MsIadeUye"] as ECSPros.Crm.Application.Queries.GetMemberDetail.MemberDetailDto;
+
+    string MsIadeSmsTelefonYaz(string? telefon)
+    {
+        var rakamlar = new string((telefon ?? "").Where(char.IsDigit).ToArray());
+        if (rakamlar.Length < 10) return telefon ?? "";
+        var son10 = rakamlar[^10..];
+        return $"{son10[..3]} {son10[3..6]} {son10[6..8]} {son10[8..]}";
+    }
+}
 <div class="ms-ornek-modal ms-iade-sms-modal" data-ms-iade-sms-modal aria-hidden="true">
     <div class="ms-ornek-modal-kaplama" data-ms-iade-sms-kapat></div>
     <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-l ms-iade-sms-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-iade-sms-baslik">
         <button class="ms-ornek-modal-kapat" type="button" data-ms-iade-sms-kapat aria-label="SMS doğrulama modalını kapat">×</button>
         <h3 id="ms-iade-sms-baslik" class="ms-ornek-modal-baslik">SMS Doğrulama</h3>
-        <p class="ms-ornek-modal-aciklama">İade kodu oluşturulmadan önce telefon numaranızın doğrulanması gerekebilir.</p>
+        <p class="ms-ornek-modal-aciklama">İade kodu oluşturulmadan önce telefon numaranızın doğrulanması gerekir. Kod, üyeliğinizde kayıtlı numaraya gönderilir.</p>
 
         <div class="ms-iade-sms-formu">
             <label class="ms-form-alani">
                 <span class="ms-form-etiket">Ülke Kodlu Telefon</span>
                 <div class="ms-telefon-girdi">
-                    <div class="ms-telefon-ulke" data-ms-telefon-ulke-select>
-                        <button class="ms-telefon-ulke-tetikleyici" type="button" data-ms-telefon-ulke-tetikleyici aria-haspopup="listbox" aria-expanded="false">
-                            <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye">
+                    <div class="ms-telefon-ulke">
+                        <button class="ms-telefon-ulke-tetikleyici" type="button" disabled>
                             <span data-ms-telefon-ulke-kod>+90</span>
-                            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-telefon-ulke-ok " aria-hidden="true"></i>
                         </button>
-                        <div class="ms-telefon-ulke-panel" role="listbox">
-                            <input class="ms-telefon-ulke-arama" type="search" placeholder="Ülke ara" data-ms-telefon-ulke-arama>
-                            <button class="ms-telefon-ulke-secenek ms-telefon-ulke-secenek-aktif" type="button" data-ms-telefon-ulke-secenek data-kod="+90" data-bayrak="https://flagcdn.com/tr.svg" data-ulke="Türkiye">
-                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye"> Türkiye <strong>+90</strong>
-                            </button>
-                            <button class="ms-telefon-ulke-secenek" type="button" data-ms-telefon-ulke-secenek data-kod="+49" data-bayrak="https://flagcdn.com/de.svg" data-ulke="Almanya">
-                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/de.svg" alt="Almanya"> Almanya <strong>+49</strong>
-                            </button>
-                            <button class="ms-telefon-ulke-secenek" type="button" data-ms-telefon-ulke-secenek data-kod="+44" data-bayrak="https://flagcdn.com/gb.svg" data-ulke="Birleşik Krallık">
-                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/gb.svg" alt="Birleşik Krallık"> Birleşik Krallık <strong>+44</strong>
-                            </button>
-                        </div>
                     </div>
-                    <input type="tel" inputmode="numeric" value="555 123 45 67" data-ms-telefon-input aria-label="Telefon numarası">
+                    <input type="tel" inputmode="numeric" value="@MsIadeSmsTelefonYaz(msIadeSmsUye?.Phone)" data-ms-telefon-input aria-label="Telefon numarası" readonly>
                 </div>
             </label>
 
@@ -49,7 +51,8 @@
             </div>
 
             <div class="ms-iade-sms-durumlari">
-                <article class="ms-iade-sms-durum ms-iade-sms-durum-basarili">
+                @* inline display: sınıf display'i hidden attribute'ünü ezebilir *@
+                <article class="ms-iade-sms-durum ms-iade-sms-durum-basarili" style="display:none">
                     <strong>Telefon doğrulandı</strong>
                     <small>İade kodu oluşturma adımına devam edebilirsiniz.</small>
                 </article>
@@ -73,15 +76,16 @@
     <section class="ms-ornek-modal-kutu ms-ornek-modal-kutu-basarili ms-iade-kodu-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-iade-kodu-baslik">
         <button class="ms-ornek-modal-kapat" type="button" data-ms-iade-kodu-kapat aria-label="İade kodu modalını kapat">×</button>
         <h3 id="ms-iade-kodu-baslik" class="ms-ornek-modal-baslik">İade Kodunuz Hazır</h3>
-        <p class="ms-ornek-modal-aciklama">Paketi HepsiJet teslim noktasına bu kod ile bırakabilirsiniz.</p>
-        <div class="ms-iade-kodu-kutu">
-            <span>HepsiJet İade Kodu</span>
-            <button type="button" data-ms-iade-kodu-kopyala>IAD-HJ-482913</button>
-            <small data-ms-iade-kodu-kopya-bilgi>Kodu kopyalamak için tıklayın.</small>
+        <p class="ms-ornek-modal-aciklama">Paketi anlaşmalı kargonun teslim noktasına bu kod ile bırakabilirsiniz.</p>
+        <div data-ms-iade-kodu-liste>
+            <div class="ms-iade-kodu-kutu">
+                <span>Kargo İade Kodu</span>
+                <button type="button" data-ms-iade-kodu-kopyala></button>
+                <small data-ms-iade-kodu-kopya-bilgi>Kodu kopyalamak için tıklayın.</small>
+            </div>
         </div>
         <div class="ms-ornek-modal-aksiyonlar">
-            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-iade-kodu-kapat>Kapat</button>
-            <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-iade-kodu-kopyala>IAD-HJ-482913 Kopyala</button>
+            <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-iade-kodu-kapat>Tamam</button>
         </div>
     </section>
 </div>

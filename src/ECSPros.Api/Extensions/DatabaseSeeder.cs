@@ -24,6 +24,60 @@ public static class DatabaseSeeder
         await SeedStorefrontDefaultsAsync(scope.ServiceProvider);
         await SeedCrmDefaultsAsync(scope.ServiceProvider);
         await SeedCmsLegalPagesAsync(scope.ServiceProvider);
+        await SeedReturnReasonsAsync(scope.ServiceProvider);
+    }
+
+    /// <summary>
+    /// E8: iade neden listesi — tasarımın _HesabimIadelerim script'indeki ana/alt neden
+    /// haritası Lookup'a taşındı (plan şartı). Ana nedenler `return_reason` tipinin
+    /// değerleri; alt nedenler ilgili değerin ExtraData["subReasons"] listesinde
+    /// (LookupValue'da hiyerarşi yok; alt nedenler seçim anında metin snapshot olarak
+    /// ReturnItem'a yazılır). İdempotent: tip varsa dokunmaz. Canlıya SQL ile eklendi.
+    /// </summary>
+    private static async Task SeedReturnReasonsAsync(IServiceProvider sp)
+    {
+        var context = sp.GetRequiredService<CoreDbContext>();
+
+        if (await context.LookupTypes.AnyAsync(t => t.Code == "return_reason"))
+            return;
+
+        var type = new LookupType
+        {
+            Code = "return_reason",
+            NameI18n = new() { { "tr", "İade Nedeni" }, { "en", "Return Reason" } },
+            IsSystem = true
+        };
+        context.LookupTypes.Add(type);
+        await context.SaveChangesAsync();
+
+        var nedenler = new (string Ad, string[] AltNedenler)[]
+        {
+            ("Beden / Kalıp Problemi", new[] { "Küçük geldi", "Büyük geldi", "Dar geldi", "Bol geldi", "Kalıbı dar", "Kalıbı geniş", "Belden olmadı", "Basenden olmadı", "Kalçadan olmadı", "Göğüs kısmı olmadı", "Omuzdan olmadı", "Kol kısmı dar geldi", "Kol kısmı bol geldi", "Bacak kısmı dar geldi", "Normal bedenime uymadı", "Beden tablosu ile uyumsuz", "Üzerimde istediğim gibi durmadı" }),
+            ("Ürün Beklediğim Gibi Değil", new[] { "Fotoğraftaki gibi değil", "Açıklamadaki gibi değil", "Ürün görselden farklı duruyor", "Beklediğim kalitede değil", "Beklediğim tarzda değil", "Ürün üzerimde güzel durmadı", "Kesimi beklediğim gibi değil", "Kumaşı beklediğim gibi değil", "Ürün beklentimi karşılamadı", "Ürün anlatıldığı gibi değil", "Ürün ölçüleri beklentime uymadı" }),
+            ("Defolu / Hasarlı Ürün", new[] { "Yırtık geldi", "Sökük geldi", "Leke var", "Delik var", "İp çekilmesi var", "Dikiş hatası var", "Fermuar bozuk", "Düğme eksik", "Düğme kopuk", "Baskı hatalı", "Aksesuar eksik", "Ürün deforme olmuş", "Ürün ezilmiş geldi", "Ambalaj hasarlı geldi", "Kargo sırasında zarar görmüş" }),
+            ("Yanlış veya Eksik Ürün Geldi", new[] { "Yanlış ürün gönderildi", "Yanlış beden gönderildi", "Yanlış renk gönderildi", "Yanlış model gönderildi", "Siparişimde olmayan ürün geldi", "Eksik ürün geldi", "Takımın parçası eksik geldi", "Ürünün aksesuarı eksik geldi", "Kemer / kuşak eksik geldi", "Hediye ürün eksik geldi", "Ürün adedi eksik geldi" }),
+            ("Renk / Model / Kumaş Problemi", new[] { "Rengi görselden farklı", "Renk tonu beklediğim gibi değil", "Yanlış renk gönderildi", "Modelini beğenmedim", "Model üzerimde iyi durmadı", "Kumaşı ince", "Kumaşı kalın", "Kumaşı sert", "Kumaşı esnemiyor", "Kumaşı rahatsız etti", "Kumaşı iç gösteriyor", "Kumaşı terletiyor", "Dokusu hoşuma gitmedi", "Deseni görselden farklı", "Kumaş kalitesi beklentimi karşılamadı" }),
+            ("Sipariş Hatası Yaptım", new[] { "Yanlış beden sipariş verdim", "Yanlış renk sipariş verdim", "Yanlış ürün sipariş verdim", "Yanlış adet sipariş verdim", "Yanlışlıkla sipariş verdim", "Aynı üründen fazla sipariş verdim", "Sepete yanlış ürün ekledim", "Farklı ürün almak istiyorum", "Farklı beden almak istiyorum", "Farklı renk almak istiyorum" }),
+            ("Vazgeçtim / Beğenmedim", new[] { "Almaktan vazgeçtim", "Ürünü beğenmedim", "Ürüne ihtiyacım kalmadı", "Fikrimi değiştirdim", "Hediye olarak uygun olmadı", "Hediye edilen kişi beğenmedi", "Kombinime uymadı", "Tarzıma uygun değil", "Başka ürün almaya karar verdim", "Fiyatına değmediğini düşündüm" }),
+            ("Teslimat Problemi", new[] { "Geç teslim edildi", "İhtiyacım olan tarihe yetişmedi", "Teslimat süreci uzadı", "Yanlış adrese teslim edildi", "Kargo paketi hasarlı geldi", "Kargo firması kaynaklı sorun yaşadım", "Ürün teslim edilmeden iade etmek istiyorum", "Siparişi iptal edemedim, iade etmek istiyorum", "Kargo sürecinden memnun kalmadım" }),
+            ("Diğer", Array.Empty<string>())
+        };
+
+        var sira = 1;
+        foreach (var (ad, altNedenler) in nedenler)
+        {
+            context.LookupValues.Add(new LookupValue
+            {
+                LookupTypeId = type.Id,
+                NameI18n = new() { { "tr", ad } },
+                ExtraData = new() { ["subReasons"] = altNedenler.ToList() },
+                SortOrder = sira++,
+                IsActive = true
+            });
+        }
+
+        await context.SaveChangesAsync();
+        Console.WriteLine("✓ Seed: İade nedenleri (return_reason) oluşturuldu.");
     }
 
     /// <summary>

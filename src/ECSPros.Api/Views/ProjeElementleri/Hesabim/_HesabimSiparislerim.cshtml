@@ -138,10 +138,15 @@
                         </div>
                         <div class="ms-hesabim-siparis-aksiyonlar">
                             <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-siparis-detay-ac data-siparis-id="@s.Id">Detay</button>
+                            @if (s.Status == "delivered")
+                            {
+                            @* E8: İade Et — İadelerim sayfasındaki tek iade talebi akışına köprü
+                               (?iade=yeni modalı otomatik açar; E7'nin utm_yorum deseni). *@
+                            <a class="ms-buton ms-buton-s ms-buton-cizgili-birincil" href="/Hesabim/Iadelerim?iade=yeni">İade Et</a>
+                            }
                             @if (false)
                             {
-                            @* İade akışı E8'de, tekrar satın al E10'da, yorum E7'de bağlanır. *@
-                            <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil" type="button" data-ms-iade-talep-ac>İade Et</button>
+                            @* Tekrar satın al E10'da, yorum E7 modalından bağımsız buton ileri işte. *@
                             <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button">Tekrar Satın Al</button>
                             <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil" type="button">Yorum Yaz</button>
                             }
