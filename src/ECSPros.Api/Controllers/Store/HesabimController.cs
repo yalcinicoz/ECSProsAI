@@ -610,10 +610,26 @@ public class HesabimController(
         return HesabimSayfasi("İndirim Kuponlarım", "~/Views/ProjeElementleri/Hesabim/_HesabimIndirimKuponlarim.cshtml");
     }
 
+    /// <summary>E11: Favori Aramalarım — kayıtlı aramalar SSR; kaydet/düzenle/sil
+    /// modal + API ile, "Sonuçları Gör" /urunler?search=... çalıştırır.</summary>
     [HttpGet("/Hesabim/FavoriAramalarim")]
     [HttpGet("/favori-aramalarim")]
-    public IActionResult FavoriAramalarim() =>
-        HesabimSayfasi("Favori Aramalarım", "~/Views/ProjeElementleri/Hesabim/_HesabimFavoriAramalarim.cshtml");
+    public async Task<IActionResult> FavoriAramalarim(CancellationToken ct)
+    {
+        var aramalar = new List<ECSPros.Storefront.Application.Queries.GetMemberSavedSearches.SavedSearchDto>();
+        var platform = await storeContext.GetPlatformAsync(ct);
+        if (platform is not null)
+        {
+            var sonuc = await mediator.Send(
+                new ECSPros.Storefront.Application.Queries.GetMemberSavedSearches.GetMemberSavedSearchesQuery(
+                    platform.Id, _memberId), ct);
+            if (sonuc.IsSuccess) aramalar = sonuc.Value!;
+        }
+
+        ViewData["MsAramalar"] = aramalar;
+        ViewData["MsAramaPlatformId"] = platform?.Id;
+        return HesabimSayfasi("Favori Aramalarım", "~/Views/ProjeElementleri/Hesabim/_HesabimFavoriAramalarim.cshtml");
+    }
 
     private IActionResult HesabimSayfasi(string baslik, string partial)
     {

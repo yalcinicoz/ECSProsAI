@@ -22,6 +22,7 @@ public class StorefrontDbContext : DbContext, IStorefrontDbContext
     public DbSet<Collection> Collections => Set<Collection>();
     public DbSet<CollectionItem> CollectionItems => Set<CollectionItem>();
     public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
+    public DbSet<SavedSearch> SavedSearches => Set<SavedSearch>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
