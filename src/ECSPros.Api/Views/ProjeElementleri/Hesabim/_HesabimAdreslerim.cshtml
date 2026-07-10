@@ -12,62 +12,54 @@
                     <h3>Teslimat ve fatura adresleri</h3>
                     <p>Siparişlerinizde kullanacağınız teslimat ve fatura adreslerini bu alandan yönetebilirsiniz.</p>
                 </div>
-                <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button">Yeni Adres Ekle</button>
+                <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-adresler-yeni>Yeni Adres Ekle</button>
             </div>
 
             <div class="ms-hesabim-adres-grid">
+                @* E3: kartlar account/addresses'ten — demo iki kart tek template oldu;
+                   varsayılan kartta Sil yok (tasarımdaki gibi), diğerlerinde Varsayılan+Sil. *@
                 <section class="ms-hesabim-adres-listesi" aria-labelledby="ms-kayitli-adresler-baslik">
                     <h3 id="ms-kayitli-adresler-baslik">Kayıtlı Adresler</h3>
-
-                    <article class="ms-hesabim-adres-karti ms-hesabim-adres-varsayilan">
-                        <div class="ms-hesabim-adres-kart-ust">
-                            <div>
-                                <strong>Ev Adresim</strong>
-                                <span>Varsayılan Teslimat</span>
-                            </div>
-                            <span class="ms-hesabim-adres-etiket">Aktif</span>
-                        </div>
-                        <p>Emre Sağlam</p>
-                        <address>Atatürk Mahallesi, Çiçek Sokak No:12 Daire:5, Kadıköy / İstanbul</address>
-                        <p>Telefon: 555 123 45 67</p>
-                        <div class="ms-hesabim-adres-aksiyonlar">
-                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button">Düzenle</button>
-                            <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil" type="button">Varsayılan</button>
-                        </div>
-                    </article>
-
+                    <p data-ms-adresler-bos hidden>Kayıtlı adresiniz yok. Sağdaki formdan ilk adresinizi ekleyin.</p>
+                    <div data-ms-adresler-liste></div>
+                    <template data-ms-adresler-kart-sablon>
                     <article class="ms-hesabim-adres-karti">
                         <div class="ms-hesabim-adres-kart-ust">
                             <div>
-                                <strong>İş Adresim</strong>
-                                <span>Fatura Adresi</span>
+                                <strong data-alan="baslik"></strong>
+                                <span data-alan="altbaslik">Varsayılan Teslimat</span>
                             </div>
+                            <span class="ms-hesabim-adres-etiket" data-alan="etiket">Aktif</span>
                         </div>
-                        <p>Emre Sağlam</p>
-                        <address>Merkez Mahallesi, Ofis Caddesi No:34 Kat:3, Şişli / İstanbul</address>
-                        <p>Telefon: 555 987 65 43</p>
+                        <p data-alan="alici"></p>
+                        <address data-alan="adres"></address>
+                        <p data-alan="telefon"></p>
                         <div class="ms-hesabim-adres-aksiyonlar">
-                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button">Düzenle</button>
-                            <button class="ms-buton ms-buton-s ms-buton-tehlikeli" type="button">Sil</button>
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-aksiyon="duzenle">Düzenle</button>
+                            <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil" type="button" data-aksiyon="varsayilan">Varsayılan</button>
+                            <button class="ms-buton ms-buton-s ms-buton-tehlikeli" type="button" data-aksiyon="sil">Sil</button>
                         </div>
                     </article>
+                    </template>
                 </section>
 
                 <section class="ms-hesabim-adres-form-karti" aria-labelledby="ms-adres-form-baslik">
                     <h3 id="ms-adres-form-baslik">Adres Bilgileri</h3>
                     <form class="ms-hesabim-adres-formu" action="/Hesabim/Adreslerim" method="post">
                         <div class="ms-form-izgara">
+                            @* E3: form canlı — yeni adres POST, Düzenle PUT; geo seçimleri
+                               api/store/geo'dan (mahalle tasarımdaki gibi serbest metin). *@
                             <label class="ms-form-alani ms-form-alani-genis">
                                 <span class="ms-form-etiket">Adres Başlığı</span>
-                                <input class="ms-form-girdi" type="text" name="AdresBasligi" value="Ev Adresim" autocomplete="address-line1" />
+                                <input class="ms-form-girdi" type="text" name="AdresBasligi" value="" autocomplete="address-line1" data-ms-adres-form="baslik" />
                             </label>
                             <label class="ms-form-alani">
                                 <span class="ms-form-etiket">Ad</span>
-                                <input class="ms-form-girdi" type="text" name="Ad" value="Emre" autocomplete="given-name" />
+                                <input class="ms-form-girdi" type="text" name="Ad" value="" autocomplete="given-name" data-ms-adres-form="ad" />
                             </label>
                             <label class="ms-form-alani">
                                 <span class="ms-form-etiket">Soyad</span>
-                                <input class="ms-form-girdi" type="text" name="Soyad" value="Sağlam" autocomplete="family-name" />
+                                <input class="ms-form-girdi" type="text" name="Soyad" value="" autocomplete="family-name" data-ms-adres-form="soyad" />
                             </label>
                             <label class="ms-form-alani ms-form-alani-genis">
                                 <span class="ms-form-etiket">Telefon</span>
@@ -91,37 +83,33 @@
                                             </button>
                                         </span>
                                     </span>
-                                    <input type="tel" name="Telefon" value="555 123 45 67" placeholder="___ ___ __ __" inputmode="numeric" autocomplete="tel-national" maxlength="13" data-ms-telefon-input>
+                                    <input type="tel" name="Telefon" value="" placeholder="___ ___ __ __" inputmode="numeric" autocomplete="tel-national" maxlength="13" data-ms-telefon-input data-ms-adres-form="telefon">
                                 </span>
                             </label>
                             <label class="ms-form-alani">
                                 <span class="ms-form-etiket">İl</span>
-                                <select class="ms-form-girdi" name="Il">
-                                    <option>İstanbul</option>
-                                    <option>Ankara</option>
-                                    <option>İzmir</option>
+                                <select class="ms-form-girdi" name="Il" data-ms-adres-form="il">
+                                    <option value="">Seçim yapın</option>
                                 </select>
                             </label>
                             <label class="ms-form-alani">
                                 <span class="ms-form-etiket">İlçe</span>
-                                <select class="ms-form-girdi" name="Ilce">
-                                    <option>Kadıköy</option>
-                                    <option>Şişli</option>
-                                    <option>Beşiktaş</option>
+                                <select class="ms-form-girdi" name="Ilce" data-ms-adres-form="ilce">
+                                    <option value="">Seçim yapın</option>
                                 </select>
                             </label>
                             <label class="ms-form-alani ms-form-alani-genis">
                                 <span class="ms-form-etiket">Mahalle</span>
-                                <input class="ms-form-girdi" type="text" name="Mahalle" value="Atatürk Mahallesi" autocomplete="address-level3" />
+                                <input class="ms-form-girdi" type="text" name="Mahalle" value="" autocomplete="address-level3" data-ms-adres-form="mahalle" />
                             </label>
                             <label class="ms-form-alani ms-form-alani-genis">
                                 <span class="ms-form-etiket">Açık Adres</span>
-                                <textarea class="ms-form-metin-alani" name="AcikAdres" rows="4" autocomplete="street-address">Çiçek Sokak No:12 Daire:5</textarea>
+                                <textarea class="ms-form-metin-alani" name="AcikAdres" rows="4" autocomplete="street-address" data-ms-adres-form="acikadres"></textarea>
                             </label>
                         </div>
 
                         <label class="ms-onay-kart ms-hesabim-adres-varsayilan-secim">
-                            <input class="ms-onay-input" type="checkbox" name="VarsayilanAdres" checked>
+                            <input class="ms-onay-input" type="checkbox" name="VarsayilanAdres" data-ms-adres-form="varsayilan">
                             <span class="ms-onay-kutu" aria-hidden="true"></span>
                             <span class="ms-onay-metin">
                                 Varsayılan adres olarak kullan
@@ -129,8 +117,9 @@
                             </span>
                         </label>
 
+                        <div class="ms-uyari ms-uyari-hata" data-ms-adres-form-mesaj hidden></div>
                         <div class="ms-hesabim-adres-form-aksiyonlar">
-                            <button class="ms-buton ms-buton-m ms-buton-sade" type="button">Temizle</button>
+                            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-adres-form-temizle>Temizle</button>
                             <button class="ms-buton ms-buton-m ms-buton-satin-al" type="submit">Adresi Kaydet</button>
                         </div>
                     </form>
@@ -139,3 +128,198 @@
         </div>
     </section>
 </section>
+
+@* E3: Adreslerim canlı — kartlar GET addresses; form yeni adres POST / Düzenle PUT;
+   Varsayılan POST default; Sil DELETE. İl/ilçe geo API'den kademeli; mahalle serbest
+   metin (tasarımdaki gibi); ülke TR sabit (telefon ülke seçici görsel — site.js). *@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const sayfa = document.querySelector(".ms-hesabim-adres-sayfa");
+    if (!sayfa) { return; }
+    const token = () => localStorage.getItem("ecspros_member_token");
+    const basliklar = () => ({ "Content-Type": "application/json", Authorization: "Bearer " + token() });
+    const el = (sec) => sayfa.querySelector(sec);
+    const form = el(".ms-hesabim-adres-formu");
+    const alan = (ad) => sayfa.querySelector(`[data-ms-adres-form="${ad}"]`);
+    const mesaj = el("[data-ms-adres-form-mesaj]");
+    let adresler = [];
+    let duzenlenenId = null;
+    let trUlke = null; // { id, ad }
+    let iller = [];
+
+    const mesajGoster = (metin, hata) => {
+        mesaj.textContent = metin || "";
+        mesaj.hidden = !metin;
+        mesaj.classList.toggle("ms-uyari-hata", !!hata);
+    };
+
+    const geoGetir = async (yol) => {
+        try {
+            const cevap = await (await fetch("/api/store/geo/" + yol)).json();
+            return cevap?.success ? cevap.data : [];
+        } catch { return []; }
+    };
+
+    const secimDoldur = (secim, kayitlar) => {
+        secim.querySelectorAll("option:not([value=''])").forEach((s) => s.remove());
+        kayitlar.forEach((k) => {
+            const secenek = document.createElement("option");
+            secenek.value = k.id;
+            secenek.textContent = k.nameI18n?.tr || k.code || "";
+            secim.appendChild(secenek);
+        });
+    };
+
+    const ilceleriYukle = async (cityId, secilecek) => {
+        const ilceler = await geoGetir("districts?cityId=" + cityId);
+        secimDoldur(alan("ilce"), ilceler);
+        if (secilecek) { alan("ilce").value = secilecek; }
+    };
+
+    alan("il").addEventListener("change", () => {
+        alan("ilce").value = "";
+        alan("ilce").querySelectorAll("option:not([value=''])").forEach((s) => s.remove());
+        if (alan("il").value) { ilceleriYukle(alan("il").value); }
+    });
+
+    // ── Kart listesi ──
+    const liste = el("[data-ms-adresler-liste]");
+    const sablon = el("[data-ms-adresler-kart-sablon]");
+    const bosMesaj = el("[data-ms-adresler-bos]");
+
+    const kartlariCiz = () => {
+        liste.innerHTML = "";
+        bosMesaj.hidden = adresler.length > 0;
+        adresler.forEach((adres) => {
+            const kart = sablon.content.cloneNode(true);
+            const kutu = kart.querySelector("article");
+            kutu.classList.toggle("ms-hesabim-adres-varsayilan", adres.isDefault);
+            kart.querySelector('[data-alan="baslik"]').textContent = adres.title;
+            kart.querySelector('[data-alan="altbaslik"]').style.display = adres.isDefault ? "" : "none";
+            kart.querySelector('[data-alan="etiket"]').style.display = adres.isDefault ? "" : "none";
+            kart.querySelector('[data-alan="alici"]').textContent = adres.recipientName;
+            kart.querySelector('[data-alan="adres"]').textContent = [
+                adres.neighborhoodName, adres.addressLine,
+                [adres.districtName, adres.cityName].filter(Boolean).join(" / ")
+            ].filter(Boolean).join(", ");
+            const tel = (adres.recipientPhone || "").replace(/\D/g, "").replace(/^90/, "");
+            kart.querySelector('[data-alan="telefon"]').textContent = tel
+                ? "Telefon: " + [tel.slice(0, 3), tel.slice(3, 6), tel.slice(6, 8), tel.slice(8, 10)].filter(Boolean).join(" ")
+                : "";
+            if (adres.isDefault) {
+                kart.querySelector('[data-aksiyon="varsayilan"]').remove();
+                kart.querySelector('[data-aksiyon="sil"]').remove();
+            }
+            kart.querySelector('[data-aksiyon="duzenle"]').addEventListener("click", () => formaAl(adres));
+            kart.querySelector('[data-aksiyon="varsayilan"]')?.addEventListener("click", async () => {
+                await fetch(`/api/store/account/addresses/${adres.id}/default`, { method: "POST", headers: basliklar() });
+                await adresleriYukle();
+            });
+            kart.querySelector('[data-aksiyon="sil"]')?.addEventListener("click", async () => {
+                await fetch(`/api/store/account/addresses/${adres.id}`, { method: "DELETE", headers: basliklar() });
+                if (duzenlenenId === adres.id) { formuTemizle(); }
+                await adresleriYukle();
+            });
+            liste.appendChild(kart);
+        });
+    };
+
+    const adresleriYukle = async () => {
+        try {
+            const cevap = await (await fetch("/api/store/account/addresses", { headers: basliklar() })).json();
+            adresler = cevap?.success ? cevap.data : [];
+            kartlariCiz();
+        } catch { /* liste yüklenemedi */ }
+    };
+
+    // ── Form ──
+    const formuTemizle = () => {
+        duzenlenenId = null;
+        form.reset();
+        alan("ilce").querySelectorAll("option:not([value=''])").forEach((s) => s.remove());
+        mesajGoster("");
+    };
+
+    const formaAl = async (adres) => {
+        duzenlenenId = adres.id;
+        alan("baslik").value = adres.title || "";
+        const adParcalari = (adres.recipientName || "").split(" ");
+        alan("soyad").value = adParcalari.length > 1 ? adParcalari.pop() : "";
+        alan("ad").value = adParcalari.join(" ");
+        const tel = (adres.recipientPhone || "").replace(/\D/g, "").replace(/^90/, "");
+        alan("telefon").value = [tel.slice(0, 3), tel.slice(3, 6), tel.slice(6, 8), tel.slice(8, 10)].filter(Boolean).join(" ");
+        alan("mahalle").value = adres.neighborhoodName || "";
+        alan("acikadres").value = adres.addressLine || "";
+        alan("varsayilan").checked = !!adres.isDefault;
+        alan("il").value = adres.cityId || "";
+        if (adres.cityId) { await ilceleriYukle(adres.cityId, adres.districtId || ""); }
+        mesajGoster("");
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
+    el("[data-ms-adresler-yeni]").addEventListener("click", () => {
+        formuTemizle();
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+        alan("baslik").focus();
+    });
+    el("[data-ms-adres-form-temizle]").addEventListener("click", formuTemizle);
+
+    form.addEventListener("submit", async (olay) => {
+        olay.preventDefault();
+        mesajGoster("");
+        const ilSecenek = alan("il").selectedOptions[0];
+        const ilceSecenek = alan("ilce").selectedOptions[0];
+        if (!alan("baslik").value.trim() || !alan("ad").value.trim()) {
+            mesajGoster("Adres başlığı ve ad zorunludur.", true); return;
+        }
+        if (!alan("il").value || !alan("ilce").value) {
+            mesajGoster("İl ve ilçe seçin.", true); return;
+        }
+        const rakamlar = alan("telefon").value.replace(/\D/g, "");
+        const govde = {
+            title: alan("baslik").value.trim(),
+            countryId: trUlke?.id || null,
+            countryName: trUlke?.ad || "Türkiye",
+            cityId: alan("il").value,
+            cityName: ilSecenek.textContent.trim(),
+            districtId: alan("ilce").value,
+            districtName: ilceSecenek.textContent.trim(),
+            neighborhoodId: null,
+            neighborhoodName: alan("mahalle").value.trim() || null,
+            addressLine: alan("acikadres").value.trim() || null,
+            postalCode: null,
+            recipientName: (alan("ad").value.trim() + " " + alan("soyad").value.trim()).trim(),
+            recipientPhone: rakamlar ? "90" + rakamlar : "",
+            deliveryNotes: null,
+            isDefault: alan("varsayilan").checked
+        };
+        try {
+            const cevap = await fetch(
+                duzenlenenId ? `/api/store/account/addresses/${duzenlenenId}` : "/api/store/account/addresses",
+                { method: duzenlenenId ? "PUT" : "POST", headers: basliklar(), body: JSON.stringify(govde) });
+            const veri = await cevap.json().catch(() => null);
+            if (!veri?.success) {
+                mesajGoster(veri?.error || "Adres kaydedilemedi.", true); return;
+            }
+            const guncellemeydi = !!duzenlenenId;
+            formuTemizle();
+            await adresleriYukle();
+            mesajGoster(guncellemeydi ? "Adres güncellendi." : "Adres kaydedildi.", false);
+        } catch {
+            mesajGoster("Adres kaydedilemedi. Lütfen tekrar deneyin.", true);
+        }
+    });
+
+    // ── Başlangıç: TR + iller + kartlar ──
+    (async () => {
+        const ulkeler = await geoGetir("countries");
+        const tr = ulkeler.find((u) => u.code === "TR") || ulkeler[0];
+        if (tr) {
+            trUlke = { id: tr.id, ad: tr.nameI18n?.tr || "Türkiye" };
+            iller = await geoGetir("cities?countryId=" + tr.id);
+            secimDoldur(alan("il"), iller);
+        }
+        await adresleriYukle();
+    })();
+});
+</script>

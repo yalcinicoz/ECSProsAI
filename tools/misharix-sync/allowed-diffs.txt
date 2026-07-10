@@ -149,3 +149,9 @@ Views/ProjeElementleri/Hesabim/_HesabimVarsayilan.cshtml
 # account/sessions'tan (demo kartlar template oldu); dosya sonunda canlı script. Hesabı Sil
 # bölümü tasarım demo'su olarak duruyor (kapsam dışı — ileri faz/kullanıcı kararı).
 Views/ProjeElementleri/Hesabim/_HesabimUyelikBilgilerim.cshtml
+
+# E3: Adreslerim canlıya bağlandı — demo iki kart tek template oldu (varsayılan kartta
+# tasarımdaki gibi Sil yok); form yeni adres POST / Düzenle PUT (update API'si E3'te eklendi)
+# / Varsayılan POST default / Sil DELETE; il-ilçe geo API'den kademeli, mahalle tasarımdaki
+# gibi serbest metin; boş durum satırı eklendi; dosya sonunda canlı script.
+Views/ProjeElementleri/Hesabim/_HesabimAdreslerim.cshtml

@@ -80,6 +80,26 @@ public class StoreAccountController(IMediator mediator) : ControllerBase
         return Ok(new { success = true, data = new { addressId = result.Value } });
     }
 
+    /// <summary>E3: adres güncelleme (C4'te ertelenmişti).</summary>
+    [HttpPut("addresses/{addressId}")]
+    public async Task<IActionResult> UpdateAddress(Guid addressId, [FromBody] ECSPros.Crm.Application.Commands.UpdateMemberAddress.UpdateMemberAddressCommand req, CancellationToken ct)
+    {
+        var cmd = req with { MemberId = GetMemberId(), AddressId = addressId };
+        var result = await mediator.Send(cmd, ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>E3: adresi varsayılan yap — önceki varsayılanlar düşer.</summary>
+    [HttpPost("addresses/{addressId}/default")]
+    public async Task<IActionResult> SetDefaultAddress(Guid addressId, CancellationToken ct)
+    {
+        var result = await mediator.Send(
+            new ECSPros.Crm.Application.Commands.SetDefaultMemberAddress.SetDefaultMemberAddressCommand(GetMemberId(), addressId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
     [HttpDelete("addresses/{addressId}")]
     public async Task<IActionResult> DeleteAddress(Guid addressId, CancellationToken ct)
     {
