@@ -141,13 +141,14 @@
                             @if (s.Status == "delivered")
                             {
                             @* E8: İade Et — İadelerim sayfasındaki tek iade talebi akışına köprü
-                               (?iade=yeni modalı otomatik açar; E7'nin utm_yorum deseni). *@
+                               (?iade=yeni modalı otomatik açar; E7'nin utm_yorum deseni).
+                               E10: Tekrar Satın Al — geçmiş kalemlerden türetilen sayfaya köprü. *@
                             <a class="ms-buton ms-buton-s ms-buton-cizgili-birincil" href="/Hesabim/Iadelerim?iade=yeni">İade Et</a>
+                            <a class="ms-buton ms-buton-s ms-buton-satin-al" href="/Hesabim/TekrarSatinAl">Tekrar Satın Al</a>
                             }
                             @if (false)
                             {
-                            @* Tekrar satın al E10'da, yorum E7 modalından bağımsız buton ileri işte. *@
-                            <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button">Tekrar Satın Al</button>
+                            @* Yorum E7 modalından bağımsız buton ileri işte. *@
                             <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil" type="button">Yorum Yaz</button>
                             }
                             @if (s.Kargo is not null)

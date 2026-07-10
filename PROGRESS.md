@@ -294,6 +294,18 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — E10 TAMAM: Tekrar Satın Al:**
+  - **Yeni backend gerekmedi** — teslim edilmiş siparişlerin kalemleri → varyant başına
+    bir kart (distinct, en son alışveriş öne, 24 sınır); ad/görsel GetVariantDisplayAsync,
+    **fiyat GÜNCEL satış fiyatı** (GetStoreProductDetail → PlatformPrice ?? BasePrice —
+    ürün detayıyla aynı kaynak; snapshot fiyat değil); silinen/pasif/fiyatsız varyant
+    listelenmez. Sepete Ekle ürün detayının cart/items deseniyle (ecspros_cart + mini
+    sepet tazeleme + "Eklendi ✓"); tasarımda olmayan boş durum eklendi.
+  - **Siparişlerim köprüsü:** teslim kartlarındaki "Tekrar Satın Al" açıldı →
+    /Hesabim/TekrarSatinAl linki.
+  - **E2E 10/10 ✓ + E4 15/15 + C1 12/12 + E1 13/13 ✓; drift TEMİZ.**
+    Sıradaki: E11 Favori Aramalarım (YENİ backend: saved_searches + kaydet/sil/çalıştır).
+
 - **2026-07-10 (devam) — E9 TAMAM: İndirim Kuponlarım:**
   - **Backend:** `GetMemberCouponsQuery` — yalnız üyeye (Coupon.MemberId) veya üyenin
     grubuna (MemberGroupId) tanımlı kuponlar (genel pazarlama kodları sızdırılmaz);

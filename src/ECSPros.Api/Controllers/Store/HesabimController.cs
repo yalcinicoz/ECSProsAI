@@ -152,10 +152,78 @@ public class HesabimController(
         return HesabimSayfasi("Siparişlerim", "~/Views/ProjeElementleri/Hesabim/_HesabimSiparislerim.cshtml");
     }
 
+    /// <summary>E10: Tekrar Satın Al — teslim edilmiş sipariş kalemlerinden varyant
+    /// başına bir kart (en son alışveriş öne). Fiyat GÜNCEL satış fiyatı (ürün detayıyla
+    /// aynı kaynak: PlatformPrice ?? BasePrice); silinen/pasif varyant ve fiyatsız
+    /// (eksik veri) kalemler listelenmez. Sepete Ekle C1 sepet API'siyle.</summary>
     [HttpGet("/Hesabim/TekrarSatinAl")]
     [HttpGet("/tekrar-satin-al")]
-    public IActionResult TekrarSatinAl() =>
-        HesabimSayfasi("Tekrar Satın Al", "~/Views/ProjeElementleri/Hesabim/_HesabimTekrarSatinAl.cshtml");
+    public async Task<IActionResult> TekrarSatinAl(CancellationToken ct)
+    {
+        const int KartSiniri = 24;
+        var tr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+        var kartlar = new List<HesabimTekrarUrunVm>();
+        var platform = await storeContext.GetPlatformAsync(ct);
+
+        var teslimler = await mediator.Send(new GetOrdersQuery("delivered", _memberId, null, 1, 50), ct);
+        if (platform is not null && teslimler.IsSuccess)
+        {
+            // Varyant başına en son alışveriş (siparişler zaten yeniden eskiye sıralı)
+            var kalemler = new List<(Guid VariantId, string? VariantInfo, DateTime Tarih)>();
+            var gorulen = new HashSet<Guid>();
+            foreach (var ozet in teslimler.Value!.Items.OrderByDescending(o => o.CreatedAt))
+            {
+                var detay = await mediator.Send(new GetOrderDetailQuery(ozet.Id), ct);
+                if (detay.IsFailure) continue;
+                foreach (var kalem in detay.Value!.Items)
+                    if (gorulen.Add(kalem.VariantId))
+                        kalemler.Add((kalem.VariantId, kalem.VariantInfo, detay.Value.CreatedAt));
+            }
+
+            var gorunumler = await productService.GetVariantDisplayAsync(
+                kalemler.Select(k => k.VariantId).ToList(), ct);
+
+            // Güncel varyant fiyatı + aktiflik: ürün başına tek detay sorgusu (ürün
+            // detayının fiyat kaynağıyla birebir aynı olsun diye — B10 BasePrice sınırı)
+            var urunKodlari = kalemler
+                .Where(k => gorunumler.ContainsKey(k.VariantId))
+                .Select(k => gorunumler[k.VariantId].ProductCode)
+                .Distinct().Take(KartSiniri).ToList();
+            var varyantFiyatlari = new Dictionary<Guid, decimal>();
+            foreach (var kod in urunKodlari)
+            {
+                var urun = await mediator.Send(
+                    new ECSPros.Catalog.Application.Queries.GetStoreProductDetail.GetStoreProductDetailQuery(
+                        kod, platform.Id), ct);
+                if (urun.IsFailure || !urun.Value!.IsActive) continue;
+                foreach (var varyant in urun.Value.Variants.Where(v => v.IsActive))
+                {
+                    var fiyat = varyant.PlatformPrice ?? varyant.BasePrice;
+                    if (fiyat > 0) varyantFiyatlari[varyant.Id] = fiyat;
+                }
+            }
+
+            kartlar = kalemler
+                .Where(k => gorunumler.ContainsKey(k.VariantId) && varyantFiyatlari.ContainsKey(k.VariantId))
+                .Take(KartSiniri)
+                .Select(k =>
+                {
+                    var g = gorunumler[k.VariantId];
+                    return new HesabimTekrarUrunVm(
+                        k.VariantId,
+                        g.ProductNameI18n.GetValueOrDefault("tr") ?? g.ProductCode,
+                        string.IsNullOrWhiteSpace(k.VariantInfo) ? g.OptionsText : k.VariantInfo,
+                        k.Tarih.ToString("dd.MM.yyyy", tr),
+                        varyantFiyatlari[k.VariantId],
+                        g.ImageUrl,
+                        "/urun/" + g.ProductCode);
+                }).ToList();
+        }
+
+        ViewData["MsTekrarUrunler"] = kartlar;
+        ViewData["MsTekrarPlatformId"] = platform?.Id;
+        return HesabimSayfasi("Tekrar Satın Al", "~/Views/ProjeElementleri/Hesabim/_HesabimTekrarSatinAl.cshtml");
+    }
 
     [HttpGet("/Hesabim/OncedenGezdiklerim")]
     [HttpGet("/onceden-gezdiklerim")]
