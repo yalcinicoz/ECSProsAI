@@ -1,0 +1,126 @@
+@* E5: favori kalplerinin API bağlaması (İZİNLİ YENİ — kaynakta karşılığı yok; görsel
+   toggle/animasyon misharix site.js'te). Capture-phase dinleyici: misafirde site.js
+   toggle'ı ENGELLENİR ve giriş modalı açılır; üyede site.js görseli yönetir, burada
+   POST/DELETE atılır. Kart kodu data-ms-urun-kod'dan (JS dolan kartlarda link href'inden),
+   detayda URL'den, sepette satırın data'sından. Sayfa yüklenince GET favorites ile
+   işaretlenir; sonradan eklenen kartlar (infinite) MutationObserver ile işaretlenir. *@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const platformId = document.querySelector("[data-ms-arama]")?.dataset.msAramaPlatform || "";
+    if (!platformId) { return; }
+    const token = () => localStorage.getItem("ecspros_member_token");
+    const favoriKodlar = new Set();
+    window.msFavoriKodlar = favoriKodlar;
+
+    const kodBul = (buton) => {
+        const kart = buton.closest("[data-ms-urun-kod]");
+        if (kart?.dataset.msUrunKod) { return kart.dataset.msUrunKod; }
+        const link = buton.closest("[data-ms-kart-link-alani]")?.querySelector("[data-ms-kart-link]");
+        const eslesme = link?.getAttribute("href")?.match(/\/urun\/([^/?#]+)/);
+        if (eslesme) { return decodeURIComponent(eslesme[1]); }
+        const detay = location.pathname.match(/^\/urun\/([^/?#]+)/);
+        return detay ? decodeURIComponent(detay[1]) : null;
+    };
+
+    const kartIsaretle = (kok) => {
+        kok.querySelectorAll(".ms-urun-karti .ms-urun-favori").forEach((buton) => {
+            const kod = kodBul(buton);
+            const aktif = !!kod && favoriKodlar.has(kod);
+            if (aktif === buton.classList.contains("ms-urun-favori-aktif")) { return; }
+            buton.classList.toggle("ms-urun-favori-aktif", aktif);
+            buton.setAttribute("aria-pressed", aktif.toString());
+            buton.setAttribute("aria-label", aktif ? "Favorilerden çıkar" : "Favorilere ekle");
+            const ikon = buton.querySelector(".ms-urun-favori-ikon");
+            if (ikon) { ikon.src = aktif ? "/ikons/kalp.svg" : "/ikons/favorite.svg"; }
+        });
+    };
+
+    const detayIsaretle = () => {
+        const detay = location.pathname.match(/^\/urun\/([^/?#]+)/);
+        if (!detay || !favoriKodlar.has(decodeURIComponent(detay[1]))) { return; }
+        document.querySelectorAll(".ms-urun-detay-favori").forEach((buton) => {
+            buton.setAttribute("aria-pressed", "true");
+            buton.setAttribute("aria-label", "Favorilerden çıkar");
+            const ikon = buton.querySelector(".ms-urun-detay-favori-ikon");
+            if (ikon) { ikon.src = "/ikons/kalp.svg"; }
+        });
+    };
+
+    const sepetIsaretle = (buton, aktif) => {
+        buton.classList.toggle("ms-sepet-ikon-buton-aktif", aktif);
+        buton.setAttribute("aria-pressed", aktif.toString());
+        buton.setAttribute("aria-label", aktif ? "Favorilerden çıkar" : "Favorilere ekle");
+        const ikon = buton.querySelector("img");
+        if (ikon) { ikon.src = aktif ? "/ikons/kalp.svg" : "/ikons/favorite.svg"; }
+    };
+    window.msSepetFavoriIsaretle = sepetIsaretle;
+
+    const yukle = async () => {
+        if (!token()) { return; }
+        try {
+            const cevap = await fetch("/api/store/favorites?firmPlatformId=" + platformId, {
+                headers: { Authorization: "Bearer " + token() }
+            });
+            const veri = await cevap.json().catch(() => null);
+            if (!veri?.success) { return; }
+            veri.data.forEach((kod) => favoriKodlar.add(kod));
+            kartIsaretle(document);
+            detayIsaretle();
+            document.querySelectorAll("[data-ms-sepet-favori]").forEach((buton) => {
+                const kod = buton.closest("[data-ms-urun-kod]")?.dataset.msUrunKod;
+                if (kod && favoriKodlar.has(kod)) { sepetIsaretle(buton, true); }
+            });
+            document.dispatchEvent(new CustomEvent("ms:favoriler-yuklendi"));
+        } catch { /* işaretleme yapılamadı — kalpler pasif başlar */ }
+    };
+
+    const kaydet = async (kod, ekle) => {
+        try {
+            if (ekle) {
+                favoriKodlar.add(kod);
+                await fetch("/api/store/favorites", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: "Bearer " + token() },
+                    body: JSON.stringify({ firmPlatformId: platformId, productCode: kod })
+                });
+            } else {
+                favoriKodlar.delete(kod);
+                await fetch(`/api/store/favorites/${encodeURIComponent(kod)}?firmPlatformId=${platformId}`, {
+                    method: "DELETE",
+                    headers: { Authorization: "Bearer " + token() }
+                });
+            }
+        } catch { /* ağ hatası — bir sonraki yüklemede gerçek durum işaretlenir */ }
+    };
+
+    // Capture: misafirde site.js toggle'ından ÖNCE yakalanıp giriş modalına yönlendirilir;
+    // üyede yeni durum = mevcutun tersi (site.js bubble'da toggle'lar).
+    document.addEventListener("click", (olay) => {
+        const buton = olay.target.closest(
+            ".ms-urun-karti .ms-urun-favori, .ms-urun-detay-favori, [data-ms-sepet-favori]");
+        if (!buton) { return; }
+
+        if (!token()) {
+            olay.preventDefault();
+            olay.stopPropagation();
+            document.querySelector("[data-ms-giris-modal-ac]")?.click();
+            return;
+        }
+
+        const kod = kodBul(buton);
+        if (!kod) { return; }
+        const aktifti = buton.classList.contains("ms-urun-favori-aktif")
+            || buton.classList.contains("ms-sepet-ikon-buton-aktif")
+            || buton.getAttribute("aria-pressed") === "true";
+        if (buton.matches("[data-ms-sepet-favori]")) {
+            sepetIsaretle(buton, !aktifti); // sepet satırları dinamik — görsel toggle burada
+        }
+        kaydet(kod, !aktifti);
+    }, true);
+
+    // Sonradan eklenen kartlar (infinite scroll şablon kartları)
+    new MutationObserver(() => kartIsaretle(document)).observe(document.body, { childList: true, subtree: true });
+
+    yukle();
+});
+</script>

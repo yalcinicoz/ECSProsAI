@@ -18,7 +18,8 @@ namespace ECSPros.Api.Controllers.Store;
 /// oturum kalmadı — üyelik B4'te bu akışla açıldı). Partial'lar E2-E13'te teker teker
 /// gerçek veriye bağlanır; o güne dek tasarımın demo içeriği render olur.
 /// </summary>
-public class HesabimController(IMediator mediator, IProductService productService) : StorePageController
+public class HesabimController(
+    IMediator mediator, IProductService productService, IStoreContext storeContext) : StorePageController
 {
     private Guid _memberId;
 
@@ -171,10 +172,35 @@ public class HesabimController(IMediator mediator, IProductService productServic
     public IActionResult Yorumlarim() =>
         HesabimSayfasi("Yorumlarım", "~/Views/ProjeElementleri/Hesabim/_HesabimYorumlarim.cshtml");
 
+    /// <summary>E5: favori kodlar → Catalog'dan kart verisi (liste/ana sayfayla aynı kart
+    /// kaynağı); silinen/pasif ürünün favorisi listelenmez, favori sırası korunur.</summary>
     [HttpGet("/Favorilerim")]
     [HttpGet("/Hesabim/Favorilerim")]
-    public IActionResult Favorilerim() =>
-        HesabimSayfasi("Favorilerim", "~/Views/ProjeElementleri/Hesabim/_HesabimFavorilerim.cshtml");
+    public async Task<IActionResult> Favorilerim(CancellationToken ct)
+    {
+        var kartlar = new List<UrunKartVm>();
+        var platform = await storeContext.GetPlatformAsync(ct);
+        if (platform is not null)
+        {
+            var kodSonucu = await mediator.Send(
+                new ECSPros.Storefront.Application.Queries.GetMemberFavorites.GetMemberFavoritesQuery(
+                    platform.Id, _memberId), ct);
+            var kodlar = kodSonucu.IsSuccess ? kodSonucu.Value! : new List<string>();
+            if (kodlar.Count > 0)
+            {
+                var urunler = await mediator.Send(
+                    new ECSPros.Catalog.Application.Queries.GetStoreProducts.GetStoreProductsQuery(
+                        platform.Id, ProductCodes: kodlar, PageSize: kodlar.Count), ct);
+                if (urunler.IsSuccess)
+                {
+                    var kartMap = urunler.Value!.Items.ToDictionary(p => p.Code, UrunKartMap.KartaCevir);
+                    kartlar = kodlar.Where(kartMap.ContainsKey).Select(k => kartMap[k]).ToList();
+                }
+            }
+        }
+        ViewData["MsFavoriKartlar"] = kartlar;
+        return HesabimSayfasi("Favorilerim", "~/Views/ProjeElementleri/Hesabim/_HesabimFavorilerim.cshtml");
+    }
 
     [HttpGet("/Hesabim/Koleksiyonlarim")]
     [HttpGet("/koleksiyonlarim")]

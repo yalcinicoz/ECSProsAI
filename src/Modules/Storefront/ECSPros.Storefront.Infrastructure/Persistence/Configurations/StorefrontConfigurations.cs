@@ -158,6 +158,19 @@ public class ChannelProductGroupConfiguration : IEntityTypeConfiguration<Channel
     }
 }
 
+public class FavoriteConfiguration : IEntityTypeConfiguration<Favorite>
+{
+    public void Configure(EntityTypeBuilder<Favorite> builder)
+    {
+        builder.ToTable("favorites");
+        builder.HasKey(f => f.Id);
+        builder.Property(f => f.ProductCode).HasMaxLength(50).IsRequired();
+        // Üye bir ürünü platform başına bir kez favoriler (ekleme idempotent)
+        builder.HasIndex(f => new { f.FirmPlatformId, f.MemberId, f.ProductCode }).IsUnique();
+        builder.HasQueryFilter(f => !f.IsDeleted);
+    }
+}
+
 public class StockAlertConfiguration : IEntityTypeConfiguration<StockAlert>
 {
     public void Configure(EntityTypeBuilder<StockAlert> builder)

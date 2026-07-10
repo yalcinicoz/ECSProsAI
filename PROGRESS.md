@@ -294,6 +294,22 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — E5 TAMAM: Favoriler canlı (yeni backend):**
+  - **Backend:** `storefront.favorites` (AddFavorites migration canlıda) — anahtar
+    **ProductCode** (plan ProductId diyordu; kartların kullandığı stabil kod seçildi,
+    C9 StockAlert deseni); Add idempotent (soft kayıt geri açılır) / Remove soft delete /
+    GetMemberFavorites kod listesi; GET/POST/DELETE /api/store/favorites (MemberOnly);
+    GetStoreProductsQuery'ye additive ProductCodes filtresi.
+  - **Frontend:** `_FavoriDavranis` (izinli yeni, _Layout'ta) — site.js kalp toggle/
+    animasyonuna dokunmadan **capture-phase** dinleyici (misafir: toggle engellenir +
+    giriş modalı; üye: POST/DELETE); GET ile kart/detay/sepet işaretleme + MutationObserver.
+    Kart köküne data-ms-urun-kod. **Sepet favori butonu canlı şablona alındı** (C1'de
+    ertelenmişti — görünen butonlar gizli demo bloğundaymış, E2E yakaladı).
+  - **Favorilerim SSR:** kodlar → Catalog kart verisi → paylaşılan _UrunKarti; boş durum;
+    Paylaş gizli (E6 kararına dek).
+  - **E2E 13/13 ✓ + C1 12/12 + B6 19/19 + E1 13/13 ✓; drift TEMİZ.**
+    Sıradaki: E6 Koleksiyonlarım (collections + collection_items + moderasyon).
+
 - **2026-07-10 (devam) — E4 TAMAM: Siparişlerim canlı:**
   - **Kartlar SSR** (misharix kart/filtre script'i parse anında dinleyici bağlıyor —
     dinamik karta bağlanamaz; `HesabimSiparisVm`, ilk 20 sipariş). Kalemler IProductService

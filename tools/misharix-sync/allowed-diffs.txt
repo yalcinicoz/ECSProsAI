@@ -1,7 +1,7 @@
 # Bilinçli farklar — her satır check.sh'ın kullandığı görünen addır.
 # Yeni satır eklerken gerekçeyi yorum olarak yaz.
 
-# _MsTemaTokenlari partial include'ı eklendi (plan A12 — tek satır, head içinde)
+# A12+E5: _MsTemaTokenlari include (head) + _FavoriDavranis include (E5, site.js sonrası tek satır)
 Views/Shared/_Layout.cshtml
 
 # B1: Mega menü statik örnek içeriği kanal kategorilerine bağlandı (markup sınıfları/yapısı
@@ -167,3 +167,13 @@ Views/ProjeElementleri/Hesabim/_HesabimSiparislerim.cshtml
 # E4: Sipariş detay modalı — demo içerik data-alan kancalarına çevrildi, ürün satırı
 # template; Fatura Bilgileri sütunu H1'e kadar yok (e-fatura verisi yok).
 Views/ProjeElementleri/Hesabim/_HesabimSiparislerimDetayModal.cshtml
+
+# E5: Favori kalplerinin API bağlaması — kaynakta karşılığı yok (İZİNLİ YENİ); görsel
+# toggle/animasyon misharix site.js'te kaldı, burada capture dinleyicisi misafiri giriş
+# modalına yönlendirir + üyede POST/DELETE atar; sayfa yükünde GET ile işaretler.
+Views/ProjeElementleri/Urun/_FavoriDavranis.cshtml
+
+# E5: Favorilerim canlıya bağlandı — demo kartlar paylaşılan _UrunKarti partial'ına
+# (SSR, favori sırasıyla; silinen/pasif ürün listelenmez); boş durum gerçek; Paylaş
+# butonu gizli (E6 koleksiyon paylaşım kararına dek).
+Views/ProjeElementleri/Hesabim/_HesabimFavorilerim.cshtml

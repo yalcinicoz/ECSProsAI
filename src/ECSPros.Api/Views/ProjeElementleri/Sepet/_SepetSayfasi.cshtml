@@ -91,6 +91,11 @@
                         </div>
                     </div>
                     <div class="ms-sepet-satir-aksiyonlar">
+                        @* E5: favori butonu canlı şablona alındı (C1'de ertelenmişti) —
+                           API + görsel toggle _FavoriDavranis'ta, kod satırın data'sından. *@
+                        <button class="ms-sepet-ikon-buton" type="button" aria-label="Favorilere ekle" aria-pressed="false" data-ms-sepet-favori>
+                            <img class="ms-ikon-siyah" src="/ikons/favorite.svg" alt="" aria-hidden="true">
+                        </button>
                         <button class="ms-sepet-ikon-buton" type="button" aria-label="Ürünü sepetten kaldır" data-ms-sepet-sil>
                             <i class="fa-solid fa-trash-can ms-fa-ikon " aria-hidden="true"></i>
                         </button>
@@ -558,6 +563,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const satir = sablon.content.firstElementChild.cloneNode(true);
         satir.dataset.msBirimFiyat = String(kalem.addedPrice || 0);
         satir.dataset.msKalemId = kalem.id;
+        // E5: favori butonu satırın ürün kodunu buradan okur (_FavoriDavranis capture
+        // dinleyicisi API'yi + görsel toggle'ı yönetir); mevcut favori işaretlenir.
+        satir.dataset.msUrunKod = kalem.productCode || "";
+        const favoriButonu = satir.querySelector("[data-ms-sepet-favori]");
+        if (favoriButonu && kalem.productCode && window.msFavoriKodlar?.has(kalem.productCode)) {
+            window.msSepetFavoriIsaretle?.(favoriButonu, true);
+        }
 
         const ad = trAd(kalem.productNameI18n) || kalem.productCode || "Ürün";
         const detayUrl = kalem.productCode ? "/urun/" + encodeURIComponent(kalem.productCode) : "#";
