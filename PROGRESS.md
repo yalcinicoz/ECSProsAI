@@ -285,7 +285,7 @@
 - [ ] API URL versiyonlaması: `/api/...` → `/api/v1/...` (breaking change, dikkatli planlanmalı)
 - [ ] AutoMapper entegrasyonu (DTO mapping şu an manuel)
 - [ ] Tüm command'lara FluentValidation eklenmesi
-- [ ] CRM üye şifre hashing: SHA256 → BCrypt (güvenlik borcu)
+- [x] CRM üye şifre hashing: SHA256 → BCrypt (D5, 2026-07-10 — ilk girişte re-hash; legacy hex + Base64 tanınır)
 - [ ] Elasticsearch entegrasyonu (ürün arama için)
 
 ---
@@ -293,6 +293,19 @@
 ## Aktif Session Notları
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
+
+- **2026-07-10 (devam) — D5 TAMAM: üye şifreleri BCrypt:**
+  - `IMemberPasswordHasher` (Crm.Application) + `MemberPasswordHasher` (Crm.Infrastructure,
+    BCrypt.Net-Next wf12 — IAM'la aynı). Yeni yazımlar hep BCrypt: Register + admin
+    CreateMember (oradaki Base64-SHA256 "geçici" yolu da kaldırıldı).
+  - **İlk girişte re-hash:** LoginMember üç formatı doğrular ($2*=BCrypt, 64 hex, 44 Base64);
+    doğrulama başarılıysa eski hash BCrypt'e yükseltilir (login'in SaveChanges'iyle kalıcı) —
+    toplu migration yok. OTP girişi şifreye dokunmaz.
+  - Not: canlı `crm_members` bu tarihte BOŞtu (test üyeleri temizlenmişti) — legacy yol yine de
+    korundu (dump geri yükleme / eski aktarım ihtimali).
+  - **Doğrulama:** yeni kayıt `$2a$` ✓; legacy hex+Base64 üye login ✓ → hash `$2a$`'ya yükseldi
+    → tekrar login ✓; yanlış şifre ✗; B4 12/12 + D4 18/18 + D1 12/12 ✓. Test üyeleri silindi.
+  - **Faz D'de kalan: yalnız D7 QA.**
 
 - **2026-07-10 — D4 TAMAM: SMS/OTP girişi canlı:**
   - **Backend:** `crm.otp_codes` (`AddOtpCodes` migration canlıda) + `SendLoginOtpCommand`

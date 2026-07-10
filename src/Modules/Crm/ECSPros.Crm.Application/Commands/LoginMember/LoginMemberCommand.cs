@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using ECSPros.Crm.Application.Services;
 using ECSPros.Crm.Domain.Entities;
 using ECSPros.Shared.Kernel.Common;
@@ -18,7 +16,8 @@ public record MemberLoginResponse(
     string FullName,
     string Email);
 
-public class LoginMemberCommandHandler(ICrmDbContext db, IMemberTokenService tokenService)
+public class LoginMemberCommandHandler(
+    ICrmDbContext db, IMemberTokenService tokenService, IMemberPasswordHasher passwordHasher)
     : IRequestHandler<LoginMemberCommand, Result<MemberLoginResponse>>
 {
     public async Task<Result<MemberLoginResponse>> Handle(LoginMemberCommand request, CancellationToken ct)
@@ -26,12 +25,16 @@ public class LoginMemberCommandHandler(ICrmDbContext db, IMemberTokenService tok
         var member = await db.Members
             .FirstOrDefaultAsync(m => m.Email == request.Email.ToLowerInvariant() && m.IsActive, ct);
 
-        if (member is null)
+        if (member is null || string.IsNullOrEmpty(member.PasswordHash))
             return Result.Failure<MemberLoginResponse>("E-posta veya şifre hatalı.");
 
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(request.Password))).ToLowerInvariant();
-        if (member.PasswordHash != hash)
+        if (!passwordHasher.Verify(request.Password, member.PasswordHash))
             return Result.Failure<MemberLoginResponse>("E-posta veya şifre hatalı.");
+
+        // D5: eski SHA256 hash başarılı girişte BCrypt'e yükseltilir (aşağıdaki
+        // SaveChanges ile kalıcılaşır) — toplu migration gerekmez.
+        if (passwordHasher.NeedsRehash(member.PasswordHash))
+            member.PasswordHash = passwordHasher.Hash(request.Password);
 
         var rawRefresh = tokenService.GenerateRefreshToken();
         var refreshHash = tokenService.HashRefreshToken(rawRefresh);

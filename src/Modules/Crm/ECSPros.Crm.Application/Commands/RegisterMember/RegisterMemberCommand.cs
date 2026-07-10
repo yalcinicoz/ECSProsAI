@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using ECSPros.Crm.Application.Services;
 using ECSPros.Crm.Domain.Entities;
 using ECSPros.Shared.Kernel.Common;
@@ -25,7 +23,8 @@ public record MemberConsent(
     [property: System.Text.Json.Serialization.JsonPropertyName("acceptedAt")] DateTime AcceptedAt,
     [property: System.Text.Json.Serialization.JsonPropertyName("contentUpdatedAt")] DateTime? ContentUpdatedAt);
 
-public class RegisterMemberCommandHandler(ICrmDbContext db) : IRequestHandler<RegisterMemberCommand, Result<Guid>>
+public class RegisterMemberCommandHandler(ICrmDbContext db, IMemberPasswordHasher passwordHasher)
+    : IRequestHandler<RegisterMemberCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(RegisterMemberCommand request, CancellationToken ct)
     {
@@ -39,13 +38,11 @@ public class RegisterMemberCommandHandler(ICrmDbContext db) : IRequestHandler<Re
         if (defaultGroup is null)
             return Result.Failure<Guid>("Varsayılan üye grubu bulunamadı.");
 
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(request.Password))).ToLowerInvariant();
-
         var member = new Member
         {
             MemberGroupId = defaultGroup.Id,
             Email = request.Email.ToLowerInvariant(),
-            PasswordHash = hash,
+            PasswordHash = passwordHasher.Hash(request.Password), // D5: BCrypt
             FirstName = request.FirstName,
             LastName = request.LastName,
             Phone = request.Phone,

@@ -17,6 +17,7 @@ public static class DependencyInjection
 
         services.AddScoped<ICrmDbContext>(sp => sp.GetRequiredService<CrmDbContext>());
         services.AddScoped<IMemberTokenService, MemberTokenService>();
+        services.AddSingleton<IMemberPasswordHasher, MemberPasswordHasher>();
 
         return services;
     }

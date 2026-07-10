@@ -9,10 +9,12 @@ namespace ECSPros.Crm.Application.Commands.CreateMember;
 public class CreateMemberCommandHandler : IRequestHandler<CreateMemberCommand, Result<Guid>>
 {
     private readonly ICrmDbContext _context;
+    private readonly IMemberPasswordHasher _passwordHasher;
 
-    public CreateMemberCommandHandler(ICrmDbContext context)
+    public CreateMemberCommandHandler(ICrmDbContext context, IMemberPasswordHasher passwordHasher)
     {
         _context = context;
+        _passwordHasher = passwordHasher;
     }
 
     public async Task<Result<Guid>> Handle(CreateMemberCommand request, CancellationToken cancellationToken)
@@ -46,12 +48,7 @@ public class CreateMemberCommandHandler : IRequestHandler<CreateMemberCommand, R
         };
 
         if (!string.IsNullOrWhiteSpace(request.Password))
-        {
-            // Basit hash — production'da BCrypt kullanılmalı; burası Application layer
-            member.PasswordHash = Convert.ToBase64String(
-                System.Security.Cryptography.SHA256.HashData(
-                    System.Text.Encoding.UTF8.GetBytes(request.Password)));
-        }
+            member.PasswordHash = _passwordHasher.Hash(request.Password); // D5: BCrypt
 
         _context.Members.Add(member);
         await _context.SaveChangesAsync(cancellationToken);
