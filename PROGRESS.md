@@ -294,6 +294,15 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — F2 TAMAM: SSS akordiyonu CMS'ten:**
+  - Yeni `faq` section type (SupportsItems) + `kurumsal-sss` sayfası; soru/cevap
+    item'ları PageSectionItem.TitleI18n/DescriptionI18n (9 soru seed, 3 platform,
+    canlı DB'de). GetStoreFaqQuery + partial @foreach (ilk soru açık); CMS boşsa demo
+    yedek; 5 dk cache. Tek-açık davranışı site.js'te (dokunulmadı).
+  - **E2E 6/6 ✓ + F1 16/16 ✓** (f1 seed sayımı 6'ya güncellendi); drift TEMİZ.
+    Sıradaki: F3 İletişim (⚠️ kullanıcı kararı: form contact_messages kaydına mı
+    e-postaya mı bağlanacak).
+
 - **2026-07-10 (devam) — FAZ F BAŞLADI; F1 TAMAM: Kurumsal çerçeve + CMS içerikleri:**
   - `KurumsalController` — misharix'in 7 kök route'u birebir; Sayfa.cshtml + 7 partial
     bayt-birebir (yan menü aktiflik + mobil menü kaynak script'i). Literal route'lar

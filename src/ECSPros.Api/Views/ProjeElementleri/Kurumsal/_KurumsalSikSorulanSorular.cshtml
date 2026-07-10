@@ -1,3 +1,10 @@
+@* F2: soru/cevap listesi CMS'ten (ViewData["MsSssListesi"] — faq section item'ları,
+   admin'den soru eklenir/düzenlenir); CMS boşsa tasarımın demo soruları yedek (D3
+   deseni). Akordiyonun tek-açık davranışı site.js'te (details/summary). *@
+@{
+    var msSssListesi = ViewData["MsSssListesi"]
+        as List<ECSPros.Cms.Application.Queries.GetStoreFaq.StoreFaqItemDto>;
+}
 <section class="ms-kurumsal-panel" data-ms-kurumsal-panel="sss" aria-labelledby="ms-kurumsal-sss-baslik">
     <header class="ms-kurumsal-panel-baslik">
         <span>Yardım</span>
@@ -5,6 +12,15 @@
         <p>En çok sorulan konuları akordiyon yapısında inceleyebilirsiniz.</p>
     </header>
     <div class="ms-kurumsal-sss">
+        @if (msSssListesi is { Count: > 0 })
+        {
+            for (var i = 0; i < msSssListesi.Count; i++)
+            {
+        <details open="@(i == 0 ? "open" : null)"><summary><span>@msSssListesi[i].Soru</span><i class="fa-solid fa-chevron-down ms-fa-ikon ms-kurumsal-sss-ok " aria-hidden="true"></i></summary><p>@msSssListesi[i].Cevap</p></details>
+            }
+        }
+        else
+        {
         <details open><summary><span>Üyelik</span><i class="fa-solid fa-chevron-down ms-fa-ikon ms-kurumsal-sss-ok " aria-hidden="true"></i></summary><p>Üyelik ücretsizdir. Ana sayfadaki “ÜYE OL” seçeneğine tıklayarak kayıt olabilirsiniz. Üyeliğinizi iptal etmek veya şifrenizi değiştirmek için Müşteri Hizmetleri ile iletişime geçebilirsiniz.</p></details>
         <details><summary><span>İptal ve Değişim</span><i class="fa-solid fa-chevron-down ms-fa-ikon ms-kurumsal-sss-ok " aria-hidden="true"></i></summary><p>Ürün iadeleri için faturada belirtilen adrese ürün gönderebilirsiniz. Değişim yapılmamaktadır.</p></details>
         <details><summary><span>Kargo ve Teslimat</span><i class="fa-solid fa-chevron-down ms-fa-ikon ms-kurumsal-sss-ok " aria-hidden="true"></i></summary><p>Siparişiniz anlaşmalı kargo firmalarımız aracılığıyla teslim edilir. Siparişinizin durumunu “Hesabım” altından takip edebilirsiniz.</p></details>
@@ -14,5 +30,6 @@
         <details><summary><span>Fatura</span><i class="fa-solid fa-chevron-down ms-fa-ikon ms-kurumsal-sss-ok " aria-hidden="true"></i></summary><p>Faturalar sipariş sırasında belirttiğiniz adrese gönderilir. Şirket adına fatura düzenlenmemektedir.</p></details>
         <details><summary><span>Hesabım</span><i class="fa-solid fa-chevron-down ms-fa-ikon ms-kurumsal-sss-ok " aria-hidden="true"></i></summary><p>Şifre ve e-posta adresi güncellemelerinizi “Hesabım” üzerinden yapabilirsiniz.</p></details>
         <details><summary><span>Şikayet ve Öneriler</span><i class="fa-solid fa-chevron-down ms-fa-ikon ms-kurumsal-sss-ok " aria-hidden="true"></i></summary><p>Şikayetlerinizi mesai saatlerinde çağrı merkezimize iletebilirsiniz.</p></details>
+        }
     </div>
 </section>
