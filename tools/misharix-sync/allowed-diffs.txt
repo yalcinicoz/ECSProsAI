@@ -219,3 +219,9 @@ Views/ProjeElementleri/Hesabim/_HesabimIadeDogrulamaModallari.cshtml
 # sessionStorage kupon sözleşmesiyle ({kod}) sepete gider; "Kupon Kodu Ekle" demo'su gizli
 # (kod girişi sepetteki alandan — ayrı claim modeli yok).
 Views/ProjeElementleri/Hesabim/_HesabimIndirimKuponlarim.cshtml
+
+# E10: Tekrar Satın Al canlıya bağlandı — kartlar teslim edilmiş sipariş kalemlerinden SSR
+# (varyant başına bir kart, güncel satış fiyatı; silinen/pasif/fiyatsız varyant listelenmez);
+# Sepete Ekle ürün detayının sepet desenini kullanır; tasarımda olmayan boş durum diğer
+# Hesabım sayfalarının kalıbıyla eklendi.
+Views/ProjeElementleri/Hesabim/_HesabimTekrarSatinAl.cshtml

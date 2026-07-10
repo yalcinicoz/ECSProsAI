@@ -1,3 +1,12 @@
+@* E10: Tekrar Satın Al canlıya bağlandı — kartlar teslim edilmiş sipariş kalemlerinden
+   SSR (varyant başına bir kart, en son alışveriş öne; fiyat GÜNCEL satış fiyatı).
+   Sepete Ekle ürün detayının sepet desenini kullanır (POST /api/store/cart/items,
+   ecspros_cart oturumu + mini sepet tazeleme). Tasarımda boş durum yoktu — diğer
+   Hesabım sayfalarının boş durum kalıbı eklendi. *@
+@{
+    var msTekrarUrunler = ViewData["MsTekrarUrunler"] as List<ECSPros.Api.Models.Store.HesabimTekrarUrunVm> ?? new();
+    var msTekrarTr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+}
 <section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-tekrar-baslik">
     <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model='@("tekrar-satin-al")' />
 
@@ -15,28 +24,96 @@
                 <a class="ms-buton ms-buton-m ms-buton-sade" href="/Hesabim/Siparislerim">Siparişlerime Git</a>
             </div>
 
+            @if (msTekrarUrunler.Count == 0)
+            {
+            <section class="ms-hesabim-bos-durum" aria-labelledby="ms-tekrar-bos-baslik">
+                <i class="fa-solid fa-cart-shopping ms-fa-ikon " aria-hidden="true"></i>
+                <div>
+                    <h3 id="ms-tekrar-bos-baslik">Tekrar alınabilecek ürününüz yok</h3>
+                    <p>Siparişleriniz teslim edildikçe satın aldığınız ürünler bu alanda listelenir.</p>
+                </div>
+                <a class="ms-buton ms-buton-m ms-buton-sade" href="/">Alışverişe Başla</a>
+            </section>
+            }
+            else
+            {
             <div class="ms-hesabim-urun-grid">
+                @foreach (var u in msTekrarUrunler)
+                {
                 <article class="ms-hesabim-urun-karti" data-ms-kart-link-alani>
-                    <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek ürün detayına git"></a>
-                    <img src="/images/ornek-resim.jpg" alt="Kadın ön çıtçıtlı dik yaka kolsuz gömlek">
+                    @if (u.UrunLink is not null)
+                    {
+                    <a class="ms-hesabim-kart-baglanti" href="@u.UrunLink" data-ms-kart-link aria-label="@u.Ad ürün detayına git"></a>
+                    }
+                    @if (u.GorselUrl is not null)
+                    {
+                    <img src="@u.GorselUrl" alt="@u.Ad">
+                    }
                     <div>
-                        <strong>Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek</strong>
-                        <p>Beden: M · Son alışveriş: 28.06.2026</p>
-                        <span class="ms-urun-fiyat">649,90 TL</span>
+                        <strong>@u.Ad</strong>
+                        <p>@(string.IsNullOrWhiteSpace(u.SecenekOzeti) ? "" : u.SecenekOzeti + " · ")Son alışveriş: @u.SonAlisverisMetni</p>
+                        <span class="ms-urun-fiyat">@u.Fiyat.ToString("N2", msTekrarTr) TL</span>
                     </div>
-                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button">Sepete Ekle</button>
+                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button"
+                            data-ms-tekrar-sepete-ekle="@u.VariantId" data-ms-tekrar-fiyat="@u.Fiyat.ToString(System.Globalization.CultureInfo.InvariantCulture)">Sepete Ekle</button>
                 </article>
-                <article class="ms-hesabim-urun-karti" data-ms-kart-link-alani>
-                    <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="İç Astarlı Salaş Tesettür Bluz ürün detayına git"></a>
-                    <img src="/images/ornek-resim-2.jpg" alt="İç astarlı salaş tesettür bluz">
-                    <div>
-                        <strong>İç Astarlı Salaş Tesettür Bluz</strong>
-                        <p>Beden: S · Son alışveriş: 12.06.2026</p>
-                        <span class="ms-urun-fiyat">289,90 TL</span>
-                    </div>
-                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button">Sepete Ekle</button>
-                </article>
+                }
             </div>
+            }
         </div>
     </section>
 </section>
+
+@* E10: Sepete Ekle — ürün detayının sepet deseni (cart/items + ecspros_cart oturumu +
+   mini sepet tazeleme); buton kısa süreliğine "Eklendi ✓" olur. *@
+<script>
+    (() => {
+        const platformId = "@(ViewData["MsTekrarPlatformId"])";
+
+        document.querySelectorAll("[data-ms-tekrar-sepete-ekle]").forEach((buton) => {
+            const varsayilanMetin = buton.textContent;
+            let gonderiliyor = false;
+
+            buton.addEventListener("click", async (olay) => {
+                olay.preventDefault();
+                olay.stopPropagation();
+
+                if (gonderiliyor || !platformId) {
+                    return;
+                }
+
+                gonderiliyor = true;
+                try {
+                    const cevap = await fetch("/api/store/cart/items", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            firmPlatformId: platformId,
+                            variantId: buton.dataset.msTekrarSepeteEkle,
+                            quantity: 1,
+                            price: parseFloat(buton.dataset.msTekrarFiyat),
+                            currencyCode: "TRY",
+                            sessionId: localStorage.getItem("ecspros_cart")
+                        })
+                    });
+                    const veri = await cevap.json().catch(() => null);
+
+                    if (veri?.success && veri.data?.cartId) {
+                        localStorage.setItem("ecspros_cart", veri.data.cartId);
+                        window.msMiniSepetYenile?.();
+                        buton.textContent = "Eklendi ✓";
+                        window.setTimeout(() => { buton.textContent = varsayilanMetin; }, 1600);
+                    } else {
+                        buton.textContent = "Eklenemedi";
+                        window.setTimeout(() => { buton.textContent = varsayilanMetin; }, 1600);
+                    }
+                } catch {
+                    buton.textContent = "Eklenemedi";
+                    window.setTimeout(() => { buton.textContent = varsayilanMetin; }, 1600);
+                } finally {
+                    gonderiliyor = false;
+                }
+            });
+        });
+    })();
+</script>
