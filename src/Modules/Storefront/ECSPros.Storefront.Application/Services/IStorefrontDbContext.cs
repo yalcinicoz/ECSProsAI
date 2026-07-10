@@ -20,6 +20,7 @@ public interface IStorefrontDbContext
     DbSet<ProductReview> ProductReviews { get; }
     DbSet<SavedSearch> SavedSearches { get; }
     DbSet<ViewedProduct> ViewedProducts { get; }
+    DbSet<ContactMessage> ContactMessages { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

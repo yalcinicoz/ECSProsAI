@@ -24,6 +24,7 @@ public class StorefrontDbContext : DbContext, IStorefrontDbContext
     public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
     public DbSet<SavedSearch> SavedSearches => Set<SavedSearch>();
     public DbSet<ViewedProduct> ViewedProducts => Set<ViewedProduct>();
+    public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

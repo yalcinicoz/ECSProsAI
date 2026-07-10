@@ -267,3 +267,22 @@ public class ViewedProductConfiguration : IEntityTypeConfiguration<ViewedProduct
         builder.HasQueryFilter(v => !v.IsDeleted);
     }
 }
+
+public class ContactMessageConfiguration : IEntityTypeConfiguration<ContactMessage>
+{
+    public void Configure(EntityTypeBuilder<ContactMessage> builder)
+    {
+        builder.ToTable("contact_messages");
+        builder.HasKey(m => m.Id);
+        builder.Property(m => m.Name).HasMaxLength(100).IsRequired();
+        builder.Property(m => m.Email).HasMaxLength(200).IsRequired();
+        builder.Property(m => m.Phone).HasMaxLength(30);
+        builder.Property(m => m.Subject).HasMaxLength(150);
+        builder.Property(m => m.Message).HasMaxLength(4000).IsRequired();
+        builder.Property(m => m.Status).HasMaxLength(20).IsRequired();
+        // Admin kuyruğu + aynı e-postadan gönderim sınırı (throttle) sorguları
+        builder.HasIndex(m => new { m.FirmPlatformId, m.Status });
+        builder.HasIndex(m => new { m.Email, m.CreatedAt });
+        builder.HasQueryFilter(m => !m.IsDeleted);
+    }
+}

@@ -254,3 +254,8 @@ Views/ProjeElementleri/Kurumsal/_KurumsalGizlilikGuvenlik.cshtml
 # (@foreach, ilk soru açık — tasarımdaki gibi); CMS boşsa tasarımın demo soruları yedek.
 # Tek-açık davranışı site.js'te değişmedi.
 Views/ProjeElementleri/Kurumsal/_KurumsalSikSorulanSorular.cshtml
+
+# F3: İletişim sayfasına form eklendi (tasarımda form yoktu — kullanıcı kararı: mesajlar
+# storefront.contact_messages'a kaydedilir, POST /api/store/contact, saatte 5 mesaj
+# throttle'ı; girişli üyede kimlik kaydedilir). Harita + bilgi grid'i birebir.
+Views/ProjeElementleri/Kurumsal/_KurumsalIletisim.cshtml
