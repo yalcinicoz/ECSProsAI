@@ -1,3 +1,21 @@
+@* E1: karşılama adı SSR kimlikten. E13: özet kartları eklendi (plan şartı — tasarımda
+   yoktu; E4 Siparişlerim özet grid kalıbı: sipariş/iade/kupon/favori sayıları + hediye
+   çeki bakiyesi + kullanılabilir puan, hepsi gerçek sorgulardan). Kısayol grid'inin
+   tasarım kaynağındaki bozuk markup'ı (`<img src=\` — E1'de kayda geçen kaynak kusuru)
+   mevcut sade ikon setiyle onarıldı. *@
+@{
+    var msOzetTr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+    var msKisayollar = new (string Link, string Ikon, string Ad)[]
+    {
+        ("/Hesabim/UyelikBilgilerim", "uyelik-bilgilerim-sade-icon.svg", "Üyelik Bilgilerim"),
+        ("/Hesabim/Adreslerim", "adreslerim-sade-icon.svg", "Adreslerim"),
+        ("/Hesabim/Siparislerim", "siparislerim-sade-icon.svg", "Siparişlerim"),
+        ("/Favorilerim", "favorilerim-sade-icon.svg", "Favorilerim"),
+        ("/Hesabim/Koleksiyonlarim", "koleksiyonlarim-sade-icon.svg", "Koleksiyonlarım"),
+        ("/Hesabim/Yorumlarim", "yorumlarim-sade-icon.svg", "Yorumlarım"),
+        ("/Hesabim/Iadelerim", "iadelerim-sade-icon.svg", "İadelerim")
+    };
+}
 <section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-varsayilan-baslik">
     <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model="@string.Empty" />
 
@@ -12,35 +30,41 @@
             <p>"Hesabım" sayfasından siparişlerinizi ve arıza/iade/değişim işlemlerinizi takip edebilir, kazandığınız hediye çeki ve puanları görüntüleyebilir, üyelik bilgisi güncelleme, şifre ve adres değişikliği gibi hesap ayarlarınızı kolayca yapabilirsiniz.</p>
         </div>
 
+        <section class="ms-hesabim-siparis-ozet-grid" aria-label="Hesap özeti">
+            <article>
+                <span>Toplam Sipariş</span>
+                <strong>@(ViewData["MsOzetSiparis"] ?? 0)</strong>
+            </article>
+            <article>
+                <span>İade Süreci</span>
+                <strong>@(ViewData["MsOzetIade"] ?? 0)</strong>
+            </article>
+            <article>
+                <span>Kullanılabilir Kupon</span>
+                <strong>@(ViewData["MsOzetKupon"] ?? 0)</strong>
+            </article>
+            <article>
+                <span>Favori Ürün</span>
+                <strong>@(ViewData["MsOzetFavori"] ?? 0)</strong>
+            </article>
+            <article>
+                <span>Hediye Çeki Bakiyesi</span>
+                <strong>@(((decimal)(ViewData["MsOzetBakiye"] ?? 0m)).ToString("N2", msOzetTr)) TL</strong>
+            </article>
+            <article>
+                <span>Kullanılabilir Puan</span>
+                <strong>@(ViewData["MsOzetPuan"] ?? 0)</strong>
+            </article>
+        </section>
+
         <div class="ms-hesabim-kisayol-grid" aria-label="Hesabım kısayolları">
-            <a class="ms-hesabim-kisayol" href="/Hesabim/UyelikBilgilerim">
-                <img src=\
-                <span>Üyelik Bilgilerim</span>
+            @foreach (var (link, ikon, ad) in msKisayollar)
+            {
+            <a class="ms-hesabim-kisayol" href="@link">
+                <img class="ms-ikon-siyah" src="/ikons/@ikon" alt="" aria-hidden="true">
+                <span>@ad</span>
             </a>
-            <a class="ms-hesabim-kisayol" href="/Hesabim/Adreslerim">
-                <img src=\
-                <span>Adreslerim</span>
-            </a>
-            <a class="ms-hesabim-kisayol" href="/Hesabim/Siparislerim">
-                <img src=\
-                <span>Siparişlerim</span>
-            </a>
-            <a class="ms-hesabim-kisayol" href="/Favorilerim">
-                <img src=\
-                <span>Favorilerim</span>
-            </a>
-            <a class="ms-hesabim-kisayol" href="/Hesabim/Koleksiyonlarim">
-                <img src=\
-                <span>Koleksiyonlarım</span>
-            </a>
-            <a class="ms-hesabim-kisayol" href="/Hesabim/Yorumlarim">
-                <img src=\
-                <span>Yorumlarım</span>
-            </a>
-            <a class="ms-hesabim-kisayol" href="/Hesabim/Iadelerim">
-                <img src=\
-                <span>İadelerim</span>
-            </a>
+            }
         </div>
     </section>
 </section>

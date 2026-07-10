@@ -39,10 +39,46 @@ public class HesabimController(
         await base.OnActionExecutionAsync(context, next);
     }
 
+    /// <summary>E13: Hesabım ana sayfası — özet kartları (sipariş/iade/kupon/favori
+    /// sayıları + hediye çeki bakiyesi + puan) hazır sorgulardan; cüzdan/puan kaydı
+    /// olmayan üyede 0 gösterilir (kayıt sipariş akışlarında açılır).</summary>
     [HttpGet("/Hesabim")]
     [HttpGet("/hesabim-varsayilan")]
-    public IActionResult Index() =>
-        HesabimSayfasi("Hesabım Varsayılan", "~/Views/ProjeElementleri/Hesabim/_HesabimVarsayilan.cshtml");
+    public async Task<IActionResult> Index(CancellationToken ct)
+    {
+        var platform = await storeContext.GetPlatformAsync(ct);
+
+        var siparisler = await mediator.Send(new GetOrdersQuery(null, _memberId, null, 1, 1), ct);
+        var iadeler = await mediator.Send(new GetReturnsQuery(null, _memberId, null, 1, 1), ct);
+
+        var uye = await mediator.Send(
+            new ECSPros.Crm.Application.Queries.GetMemberDetail.GetMemberDetailQuery(_memberId), ct);
+        var kuponlar = await mediator.Send(
+            new ECSPros.Promotion.Application.Queries.GetMemberCoupons.GetMemberCouponsQuery(
+                _memberId, uye.IsSuccess ? uye.Value!.MemberGroupId : null), ct);
+
+        var favoriSayisi = 0;
+        if (platform is not null)
+        {
+            var favoriler = await mediator.Send(
+                new ECSPros.Storefront.Application.Queries.GetMemberFavorites.GetMemberFavoritesQuery(
+                    platform.Id, _memberId), ct);
+            if (favoriler.IsSuccess) favoriSayisi = favoriler.Value!.Count;
+        }
+
+        var cuzdan = await mediator.Send(
+            new ECSPros.Crm.Application.Queries.GetMemberWallet.GetMemberWalletQuery(_memberId), ct);
+        var puan = await mediator.Send(
+            new ECSPros.Crm.Application.Queries.GetMemberLoyalty.GetMemberLoyaltyQuery(_memberId), ct);
+
+        ViewData["MsOzetSiparis"] = siparisler.IsSuccess ? siparisler.Value!.TotalCount : 0;
+        ViewData["MsOzetIade"] = iadeler.IsSuccess ? iadeler.Value!.TotalCount : 0;
+        ViewData["MsOzetKupon"] = kuponlar.IsSuccess ? kuponlar.Value!.Count : 0;
+        ViewData["MsOzetFavori"] = favoriSayisi;
+        ViewData["MsOzetBakiye"] = cuzdan.IsSuccess ? cuzdan.Value!.Balance : 0m;
+        ViewData["MsOzetPuan"] = puan.IsSuccess ? puan.Value!.AvailablePoints : 0;
+        return HesabimSayfasi("Hesabım Varsayılan", "~/Views/ProjeElementleri/Hesabim/_HesabimVarsayilan.cshtml");
+    }
 
     [HttpGet("/Hesabim/UyelikBilgilerim")]
     [HttpGet("/uyelik-bilgilerim")]

@@ -294,6 +294,17 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — E13 TAMAM: Hesabım ana sayfası:**
+  - **Yeni backend gerekmedi** — 6 özet kartı (tasarımda yoktu, plan şartı; E4 grid
+    kalıbı): sipariş/iade/kupon/favori sayıları + Hediye Çeki Bakiyesi (wallet) +
+    Kullanılabilir Puan (loyalty); cüzdan/puan kaydı olmayan üyede 0.
+  - **Kaynak kusuru onarıldı:** E1'deki bozuk `<img src=\` kısayol grid'i sade ikon
+    setiyle değiştirildi (7 kısayol, hepsi /ikons/'ta mevcut).
+  - **YanMenu statü bloğu kararı:** statü/harcama eşikleri tanımsız — Faz G
+    segmentasyonuyla açılacak (yorum güncellendi, @if(false) kaldı).
+  - **E2E 8/8 ✓ + E1 13/13 ✓; drift TEMİZ.** Sıradaki: E14 QA (envanter 8.6 +
+    12 sayfa görüntü karşılaştırması) → FAZ E KAPANIŞI.
+
 - **2026-07-10 (devam) — E12 TAMAM: Önceden Gezdiklerim:**
   - **Backend (YENİ):** `storefront.viewed_products` (AddViewedProducts canlıda) —
     ürün başına TEK kayıt (tekrar gezmede ViewedAt güncellenir), üye başına son 50
