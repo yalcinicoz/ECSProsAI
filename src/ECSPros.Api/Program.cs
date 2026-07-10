@@ -154,6 +154,7 @@ builder.Services.AddScoped<IRealtimeNotificationService, SignalRNotificationServ
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IStoreContext, StoreContext>();
 builder.Services.AddSingleton<ECSPros.Api.Services.IStoreMemberSession, ECSPros.Api.Services.StoreMemberSession>(); // D1: SSR üye kimliği (HttpOnly cookie)
+builder.Services.AddTransient<ECSPros.Crm.Application.Services.ISmsSender, ECSPros.Api.Services.CrmSmsSenderAdapter>(); // D4: OTP SMS köprüsü
 builder.Services.AddHostedService<DashboardMetricsWorker>();
 builder.Services.AddSingleton<ECSPros.Api.Services.MigrationService>();
 

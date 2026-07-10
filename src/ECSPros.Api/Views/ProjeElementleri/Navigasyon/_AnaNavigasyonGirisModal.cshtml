@@ -12,15 +12,15 @@
                 <p class="ms-giris-modal-aciklama">Hızlı giriş yöntemlerinden birini seçin.</p>
             </div>
 
-            @* B4: E-posta girişi canlı (varsayılan sekme); SMS ve Telefon sekmeleri Faz D
-               (SMS/OTP altyapısı) gelene kadar pasif etiketli — disabled, tıklanamaz. *@
+            @* D4: SMS girişi canlı — tasarımın varsayılan sekmesi (SMS) geri döndü.
+               Telefon+şifre sekmesi backend'i olmadığından hâlâ pasif. *@
             <div class="ms-giris-tab-listesi" role="tablist" aria-label="Giriş yöntemleri">
-                <button class="ms-giris-tab" type="button" data-ms-giris-tab="sms" aria-pressed="false" disabled>SMS Kodu (Yakında)</button>
+                <button class="ms-giris-tab ms-giris-tab-aktif" type="button" data-ms-giris-tab="sms" aria-pressed="true">SMS Kodu</button>
                 <button class="ms-giris-tab" type="button" data-ms-giris-tab="telefon" aria-pressed="false" disabled>Telefon (Yakında)</button>
-                <button class="ms-giris-tab ms-giris-tab-aktif" type="button" data-ms-giris-tab="eposta" aria-pressed="true">E-Posta</button>
+                <button class="ms-giris-tab" type="button" data-ms-giris-tab="eposta" aria-pressed="false">E-Posta</button>
             </div>
 
-            <div class="ms-giris-panel" data-ms-giris-panel="sms">
+            <div class="ms-giris-panel ms-giris-panel-aktif" data-ms-giris-panel="sms">
                 <div class="ms-giris-sms-adim ms-giris-sms-adim-aktif" data-ms-giris-sms-adim="telefon">
                     <label class="ms-giris-form-alani">
                         <span>Telefon Numaranız</span>
@@ -52,6 +52,7 @@
                     </div>
                     <button class="ms-giris-buton ms-giris-buton-birincil" type="button" data-ms-giris-kod-onayla>Kodu Onayla</button>
                 </div>
+                <div class="ms-uyari ms-uyari-hata" data-ms-giris-sms-hata hidden></div>
             </div>
 
             <div class="ms-giris-panel" data-ms-giris-panel="telefon">
@@ -74,7 +75,7 @@
                 <button class="ms-giris-buton ms-giris-buton-birincil" type="button">Telefon ile Giriş Yap</button>
             </div>
 
-            <div class="ms-giris-panel ms-giris-panel-aktif" data-ms-giris-panel="eposta">
+            <div class="ms-giris-panel" data-ms-giris-panel="eposta">
                 <label class="ms-giris-form-alani">
                     <span>E-posta</span>
                     <input class="ms-giris-input" type="email" name="eposta-giris" autocomplete="username email" placeholder="ornek@eposta.com" data-ms-giris-eposta>
@@ -319,6 +320,14 @@ document.addEventListener("DOMContentLoaded", () => {
             window.msMiniSepetYenile?.();
         });
     });
+
+    // D4: SMS/OTP girişi (nav script'indeki kod adımı) başarılı doğrulamada bu köprüyü
+    // çağırır — token saklama, hesap paneli ve sepet birleştirme e-posta girişiyle ortak.
+    window.msGirisBasarili = (veri) => {
+        tokenlariSakla(veri);
+        girisiUygula(veri.fullName || "", veri.email || "");
+        sepetiBirlestir();
+    };
 
     // D1: SSR kimlik varsa oturum UI'ı /me yanıtı beklenmeden boyanır (yalnız JS oturumu
     // da varken — localStorage boşsa SSR cookie'sine güvenilmez, /me akışı belirleyicidir).

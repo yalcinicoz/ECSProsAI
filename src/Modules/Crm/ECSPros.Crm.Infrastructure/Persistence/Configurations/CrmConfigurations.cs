@@ -295,6 +295,20 @@ public class OrderTemplateItemConfiguration : IEntityTypeConfiguration<OrderTemp
     }
 }
 
+public class OtpCodeConfiguration : IEntityTypeConfiguration<OtpCode>
+{
+    public void Configure(EntityTypeBuilder<OtpCode> b)
+    {
+        b.ToTable("otp_codes");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Phone).HasMaxLength(20).IsRequired();
+        b.Property(x => x.CodeHash).HasMaxLength(128).IsRequired();
+        b.Property(x => x.Purpose).HasMaxLength(30).IsRequired();
+        b.HasIndex(x => new { x.Phone, x.Purpose });
+        b.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
 public class MemberSessionConfiguration : IEntityTypeConfiguration<MemberSession>
 {
     public void Configure(EntityTypeBuilder<MemberSession> b)

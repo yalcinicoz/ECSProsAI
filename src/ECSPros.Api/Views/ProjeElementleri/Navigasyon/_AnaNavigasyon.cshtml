@@ -1356,7 +1356,7 @@
         modal.classList.add("ms-giris-modal-acik");
         modal.setAttribute("aria-hidden", "false");
         document.body.style.overflow = "hidden";
-        tabAc("eposta"); // B4: SMS/OTP Faz D'ye kadar pasif — varsayılan sekme e-posta
+        tabAc("sms"); // D4: SMS/OTP canlı — tasarımın varsayılan sekmesi geri döndü
 
         window.setTimeout(() => {
             const ilkGirdi = modal.querySelector(".ms-giris-panel-aktif input, .ms-giris-tab-aktif");
@@ -1512,37 +1512,94 @@
         });
     });
 
-    kodGonder?.addEventListener("click", () => {
+    // D4: SMS girişi canlı — kod gönderimi/doğrulaması api/store/auth/otp'a bağlandı;
+    // adım geçişi, 02:00 sayacı ve kod kutuları misharix davranışıyla aynı kaldı.
+    // Başarılı doğrulamada token/panel/sepet işleri giriş modalı script'inin
+    // window.msGirisBasarili köprüsüne devredilir.
+    const smsHata = modal.querySelector("[data-ms-giris-sms-hata]");
+    const smsHataGoster = (mesaj) => {
+        if (!smsHata) {
+            return;
+        }
+
+        smsHata.textContent = mesaj || "";
+        smsHata.hidden = !mesaj;
+    };
+
+    kodGonder?.addEventListener("click", async () => {
         const telefonRakamlari = smsTelefon?.value.replace(/\D/g, "") ?? "";
+        smsHataGoster("");
 
         if (telefonRakamlari.length < 10) {
             smsTelefon?.focus();
             return;
         }
 
-        smsAdiminiGoster("kod");
-        kodSayacBaslat();
-        kodInputlari.forEach((input) => {
-            input.value = "";
-        });
-        kodInputlari[0]?.focus();
+        kodGonder.disabled = true;
+        try {
+            const cevap = await fetch("/api/store/auth/otp/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ phone: "90" + telefonRakamlari })
+            });
+            const veri = await cevap.json().catch(() => null);
+
+            if (!veri?.success) {
+                smsHataGoster(veri?.error || "Kod gönderilemedi. Lütfen tekrar deneyin.");
+                return;
+            }
+
+            smsAdiminiGoster("kod");
+            kodSayacBaslat();
+            kodInputlari.forEach((input) => {
+                input.value = "";
+            });
+            kodInputlari[0]?.focus();
+        } catch {
+            smsHataGoster("Kod gönderilemedi. Lütfen tekrar deneyin.");
+        } finally {
+            kodGonder.disabled = false;
+        }
     });
 
     smsGeri?.addEventListener("click", () => {
         smsAdiminiGoster("telefon");
+        smsHataGoster("");
         smsTelefon?.focus();
     });
 
-    kodOnayla?.addEventListener("click", () => {
+    kodOnayla?.addEventListener("click", async () => {
         const girilenKod = kodInputlari.map((input) => input.value).join("");
+        smsHataGoster("");
 
         if (girilenKod.length < kodInputlari.length) {
             kodInputlari.find((input) => !input.value)?.focus();
             return;
         }
 
-        oturumDurumuAyarla(true);
-        modalKapat();
+        const telefonRakamlari = smsTelefon?.value.replace(/\D/g, "") ?? "";
+        kodOnayla.disabled = true;
+        try {
+            const cevap = await fetch("/api/store/auth/otp/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ phone: "90" + telefonRakamlari, code: girilenKod })
+            });
+            const veri = await cevap.json().catch(() => null);
+
+            if (!veri?.success) {
+                smsHataGoster(veri?.error || "Kod doğrulanamadı. Lütfen tekrar deneyin.");
+                return;
+            }
+
+            window.msGirisBasarili?.(veri.data);
+            oturumDurumuAyarla(true);
+            modalKapat();
+        } catch {
+            smsHataGoster("Kod doğrulanamadı. Lütfen tekrar deneyin.");
+        } finally {
+            kodOnayla.disabled = false;
+        }
     });
 
     kodInputlari.forEach((input, index) => {

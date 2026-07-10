@@ -294,6 +294,22 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 — D4 TAMAM: SMS/OTP girişi canlı:**
+  - **Backend:** `crm.otp_codes` (`AddOtpCodes` migration canlıda) + `SendLoginOtpCommand`
+    (yalnız kayıtlı üye — son 10 hane eşleşmesi; 6 haneli kriptografik kod, 120 sn geçerli,
+    60 sn yeniden gönderim + saatte 5 sınırı, yeni kod eskileri yakar) + `VerifyLoginOtpCommand`
+    (5 deneme sınırı, tek kullanımlık; başarıda LoginMember'la aynı session+token +
+    `IsPhoneVerified=true`). Port: `ISmsSender` (Crm.Application) → `CrmSmsSenderAdapter` (Api)
+    → Shared `ISmsService` (dev'de LogSmsService; gerçek sağlayıcı = kullanıcı kararı).
+    Endpoint: `POST /api/store/auth/otp/{send,verify}` — verify SSR cookie'sini de yazar.
+  - **Frontend:** SMS sekmesi canlı + **tasarımın varsayılan sekmesi (sms) geri döndü**;
+    misharix'in adım geçişi/02:00 sayacı/kod kutuları korunarak API'ye bağlandı; hata alanı
+    `data-ms-giris-sms-hata`; başarıda `window.msGirisBasarili` köprüsü (token/panel/sepet
+    birleştirme e-postayla ortak). Telefon+şifre sekmesi pasif (backend yok).
+  - **E2E 18/18 ✓ + B4 12/12 (sms varsayılana göre güncellendi) + D1 12/12 + D3 9/9 ✓.**
+    Drift TEMİZ. Test üyeleri + otp kayıtları silindi. D2+D6 plan dosyasında resmen
+    işaretlendi (B4+D1'de kapanmışlardı). Kalan: D5 BCrypt geçişi, D7 QA.
+
 - **2026-07-09 (devam) — D3 TAMAM: kayıt belgeleri CMS'ten + Member.Consents onay kaydı:**
   - 2 yeni legal sayfa: `uyelik-sozlesmesi` + `kvkk-aydinlatma` (3 platform × 7 legal;
     seeder kod-bazlı idempotent yapıldı, canlıya SQL). `MsSozlesmeler` yüklemesi
