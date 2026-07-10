@@ -35,7 +35,8 @@ public record GetStoreProductsQuery(
     List<Guid>? AttributeValueIds = null,
     decimal? PriceMin = null,
     decimal? PriceMax = null,
-    string? Sort = null) : IRequest<Result<PagedResult<StoreProductDto>>>;
+    string? Sort = null,
+    List<string>? ProductCodes = null) : IRequest<Result<PagedResult<StoreProductDto>>>; // E5: Favorilerim — kod listesiyle kart verisi
 
 public record StoreProductDto(
     Guid Id,
@@ -67,6 +68,11 @@ public class GetStoreProductsQueryHandler(
             .AsNoTracking()
             .Include(p => p.Variants)
             .Where(p => p.IsActive && db.ProductImages.Any(img => img.ProductId == p.Id));
+
+        // E5: Favorilerim — yalnız verilen kodlar (canlı katalogla birleşim: silinen/pasif
+        // ürünün favorisi listelenmez)
+        if (request.ProductCodes is { Count: > 0 } kodlar)
+            q = q.Where(p => kodlar.Contains(p.Code));
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {

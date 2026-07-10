@@ -1,5 +1,8 @@
+@* E5: Favorilerim canlı — demo kartlar yerine paylaşılan _UrunKarti partial'ı (liste/ana
+   sayfayla tek kart kaynağı; kalpler _FavoriDavranis'ın GET işaretlemesiyle aktif gelir,
+   çıkarma aynı kalpten). Paylaş butonu gizli (paylaşılabilir liste E6 koleksiyon kararıyla). *@
 @{
-    var favoriUrunler = Enumerable.Range(1, 5);
+    var msFavoriKartlar = ViewData["MsFavoriKartlar"] as List<ECSPros.Api.Models.Store.UrunKartVm> ?? new();
 }
 
 <section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-favoriler-baslik">
@@ -16,135 +19,32 @@
                     <h3>Favori ürünler</h3>
                     <p>Beğendiğiniz ürünleri takip edin, stok ve fiyat değişikliklerini kaçırmayın.</p>
                 </div>
+                @if (false)
+                {
                 <button class="ms-buton ms-buton-m ms-buton-sade" type="button">Paylaş</button>
+                }
             </div>
 
+            @if (msFavoriKartlar.Count == 0)
+            {
             <section class="ms-hesabim-bos-durum" aria-labelledby="ms-favoriler-bos-baslik">
                 <img class="ms-ikon-siyah" src="/ikons/favorilerim-sade-icon.svg" alt="" aria-hidden="true">
                 <div>
                     <h3 id="ms-favoriler-bos-baslik">Henüz favori ürününüz yok</h3>
                     <p>Beğendiğiniz ürünleri favorilere eklediğinizde burada saklanır.</p>
                 </div>
-                <a class="ms-buton ms-buton-m ms-buton-satin-al" href="/Arama">Favori Ekle</a>
+                <a class="ms-buton ms-buton-m ms-buton-satin-al" href="/urunler">Favori Ekle</a>
             </section>
-
+            }
+            else
+            {
             <div class="ms-hesabim-favori-urun-listesi">
-                @foreach (var urunIndex in favoriUrunler)
+                @foreach (var kart in msFavoriKartlar)
                 {
-                    <article class="ms-urun-karti ms-urun-karti-super-firsat" data-ms-kart-link-alani aria-label="Favori ürün @urunIndex">
-                        <a class="ms-urun-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Misharix Yurin Erkek Premium Müslin gömlek ürün detayına git"></a>
-                        <div class="ms-urun-gorsel-alani" data-ms-urun-galeri data-ms-urun-galeri-resimler="/images/ornek-resim.jpg|/images/ornek-resim-2.jpg">
-                            <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel src="/images/ornek-resim.jpg" alt="Polo yaka desenli erkek triko tişört">
-                            <span class="ms-urun-gorsel-etiketleri">
-                                <span class="ms-urun-super-firsat-etiketi">Süper Fırsat Ürünü</span>
-                                <img class="ms-urun-kampanya-etiketi" src="/images/ornek-resim.jpg" alt="Avantajlı ürün etiketi">
-                            </span>
-                            <span class="ms-urun-sponsor">Sponsorlu</span>
-                            <button class="ms-urun-favori ms-urun-favori-aktif" type="button" aria-label="Favorilerden çıkar" aria-pressed="true">
-                                <img class="ms-urun-favori-ikon " src="/ikons/kalp.svg" alt="" aria-hidden="true">
-                            </button>
-                            <span class="ms-urun-renk-rozet">
-                                <span class="ms-urun-renkler" aria-hidden="true">
-                                    <span class="ms-urun-renk ms-urun-renk-mavi"></span>
-                                    <span class="ms-urun-renk ms-urun-renk-pembe"></span>
-                                </span>
-                                10
-                            </span>
-                            <span class="ms-urun-slider-noktalari" aria-hidden="true">
-                                <span class="ms-urun-slider-nokta-aktif"></span><span></span><span></span><span></span>
-                            </span>
-                        </div>
-                        <div class="ms-urun-kampanya-bandi">Birlikte Al Kazan</div>
-                        <div class="ms-urun-renk-tooltip-alani">
-                            <span class="ms-urun-renk-tooltip">
-                                <span class="ms-urun-renk-tooltip-baslik">
-                                    <span>Farklı Renk Seçenekleri <span class="ms-urun-renk-tooltip-sayac">(7)</span></span>
-                                    <span>+9 Renk ›</span>
-                                    <button class="ms-urun-renk-tooltip-kapat" type="button" data-ms-renk-tooltip-kapat aria-label="Renk seçeneklerini kapat">×</button>
-                                </span>
-                                <span class="ms-urun-renk-tooltip-liste">
-                                    <a class="ms-urun-renk-tooltip-gorsel" href="/UrunDetay?renk=kahverengi"><img src="/images/ornek-resim.jpg" alt="Kahverengi renk seçeneği"><span>Popüler</span></a>
-                                    <a class="ms-urun-renk-tooltip-gorsel" href="/UrunDetay?renk=mavi"><img src="/images/ornek-resim-2.jpg" alt="Mavi renk seçeneği"><span>Popüler</span></a>
-                                    <a class="ms-urun-renk-tooltip-gorsel" href="/UrunDetay?renk=gri"><img src="/images/ornek-resim.jpg" alt="Gri renk seçeneği"></a>
-                                    <a class="ms-urun-renk-tooltip-gorsel" href="/UrunDetay?renk=siyah"><img src="/images/ornek-resim-2.jpg" alt="Siyah renk seçeneği"></a>
-                                </span>
-                            </span>
-                        </div>
-                        <div class="ms-urun-icerik">
-                            <h3 class="ms-urun-basligi"><strong>Misharix</strong> Yurin Erkek Premium Müslin %100 Pamuk Oversize Uzun Kollu Gömlek</h3>
-                            <p class="ms-urun-teslimat">
-                                <span class="ms-urun-mesaj-gecis ms-urun-teslimat-gecis" aria-label="Hızlı teslimat yapılıyor, 47B kişi favoriledi, 3 günde 2,8B kişi ekledi">
-                                    <span class="ms-urun-mesaj-satiri">
-                                        <i class="fa-solid fa-truck ms-fa-ikon ms-urun-mini-ikon " aria-hidden="true"></i>
-                                        <span><span class="ms-metin-yesil">Hızlı teslimat</span> yapılıyor!</span>
-                                    </span>
-                                    <span class="ms-urun-mesaj-satiri">
-                                        <i class="fa-solid fa-camera ms-fa-ikon ms-urun-mini-ikon" aria-hidden="true"></i>
-                                        <span><span class="ms-metin-turuncu">47B kişi</span> favoriledi!</span>
-                                    </span>
-                                    <span class="ms-urun-mesaj-satiri">
-                                        <i class="fa-solid fa-truck ms-fa-ikon ms-urun-mini-ikon " aria-hidden="true"></i>
-                                        <span>3 günde <span class="ms-metin-turuncu">2,8B kişi</span> ekledi</span>
-                                    </span>
-                                </span>
-                            </p>
-                            <div class="ms-urun-puan">
-                                <span>4.5</span>
-                                <span class="ms-urun-yildizlar" aria-label="4.5 yıldız">
-                                    <i class="fa-solid fa-star ms-fa-ikon " aria-hidden="true"></i>
-                                    <i class="fa-solid fa-star ms-fa-ikon " aria-hidden="true"></i>
-                                    <i class="fa-solid fa-star ms-fa-ikon " aria-hidden="true"></i>
-                                    <i class="fa-solid fa-star ms-fa-ikon " aria-hidden="true"></i>
-                                    <i class="fa-solid fa-star ms-fa-ikon " aria-hidden="true"></i>
-                                </span>
-                                <span>(91)</span>
-                                <i class="fa-solid fa-camera ms-fa-ikon ms-urun-puan-kamera" aria-hidden="true"></i>
-                            </div>
-                            <p class="ms-urun-kargo">
-                                <span class="ms-urun-mesaj-gecis ms-urun-kargo-gecis" aria-label="Kargo Bedava, Sepette %2 İndirim, Son 10 Günün En Düşük Fiyatı, Çok Al Az Öde, Kupon Fırsatı">
-                                    <span class="ms-urun-mesaj-satiri">
-                                        <i class="fa-solid fa-truck ms-fa-ikon ms-urun-mini-ikon " aria-hidden="true"></i>
-                                        <span>Kargo Bedava</span>
-                                    </span>
-                                    <span class="ms-urun-mesaj-satiri">
-                                        <i class="fa-solid fa-percent ms-fa-ikon ms-urun-mini-ikon " aria-hidden="true"></i>
-                                        <span>Sepette %2 İndirim</span>
-                                    </span>
-                                    <span class="ms-urun-mesaj-satiri">
-                                        <i class="fa-solid fa-truck ms-fa-ikon ms-urun-mini-ikon " aria-hidden="true"></i>
-                                        <span class="ms-metin-bordo">Son 10 Günün En Düşük Fiyatı</span>
-                                    </span>
-                                    <span class="ms-urun-mesaj-satiri">
-                                        <i class="fa-solid fa-tags ms-fa-ikon ms-urun-mini-ikon " aria-hidden="true"></i>
-                                        <span class="ms-metin-turuncu">Çok Al Az Öde</span>
-                                    </span>
-                                    <span class="ms-urun-mesaj-satiri">
-                                        <i class="fa-solid fa-ticket ms-fa-ikon ms-urun-mini-ikon " aria-hidden="true"></i>
-                                        <span class="ms-metin-pembe">Kupon Fırsatı</span>
-                                    </span>
-                                </span>
-                            </p>
-                            <div class="ms-urun-fiyat-senaryolari">
-                                <p class="ms-urun-fiyat">899,90 TL</p>
-                                <p class="ms-urun-fiyat-satiri ms-urun-fiyat-sepette">
-                                    <span class="text-[11px]">Sepette</span><span>543,15 TL</span>
-                                    <span class="ms-urun-fiyat-eski">639 TL</span>
-                                </p>
-                                <p class="ms-urun-fiyat-satiri">
-                                    <span class="ms-urun-fiyat-indirimli">162,98 TL</span>
-                                    <span class="ms-urun-fiyat-eski">173,82 TL</span>
-                                </p>
-                                <p class="ms-urun-fiyat-satiri">
-                                    <span class="ms-urun-indirim-rozeti">-%23</span>
-                                    <span class="ms-urun-fiyat-indirimli">495,79 TL</span>
-                                    <span class="ms-urun-fiyat-eski">649,90 TL</span>
-                                </p>
-                                <p class="ms-urun-plus-fiyat"><span class="text-[11px]">Misharix Plus'a</span> 1.201,09 TL</p>
-                            </div>
-                        </div>
-                    </article>
+                    <partial name="~/Views/ProjeElementleri/Urun/_UrunKarti.cshtml" model="kart" />
                 }
             </div>
+            }
         </div>
     </section>
 </section>

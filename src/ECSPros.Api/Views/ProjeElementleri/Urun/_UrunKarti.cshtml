@@ -12,6 +12,7 @@
     var adKalan = adParcalari.Length > 1 ? adParcalari[1] : "";
 }
 <div class="ms-urun-karti" data-ms-kart-link-alani
+     data-ms-urun-kod="@(u?.Kod ?? "")"
      data-ms-fiyat="@(u?.Fiyat.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
      data-ms-degerler="@(u is null ? "" : string.Join(",", u.DegerIdler))"
      data-ms-dolu="@(u is null ? "" : "true")">
