@@ -36,3 +36,27 @@ public record ContactMessageRequest(
     string Message,
     string? Phone = null,
     string? Subject = null);
+
+/// <summary>F4: footer bülten aboneliği — idempotent, misafir de kaydolabilir.</summary>
+[ApiController]
+[Route("api/store/newsletter")]
+public class StoreNewsletterController(IMediator mediator) : ControllerBase
+{
+    [HttpPost]
+    [AllowAnonymous]
+    public async Task<IActionResult> Subscribe([FromBody] NewsletterRequest req, CancellationToken ct)
+    {
+        Guid? memberId = null;
+        var sub = User.FindFirst("sub")?.Value
+                  ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (Guid.TryParse(sub, out var kimlik)) memberId = kimlik;
+
+        var result = await mediator.Send(
+            new ECSPros.Storefront.Application.Commands.SubscribeNewsletter.SubscribeNewsletterCommand(
+                req.FirmPlatformId, req.Email, memberId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+}
+
+public record NewsletterRequest(Guid FirmPlatformId, string Email);

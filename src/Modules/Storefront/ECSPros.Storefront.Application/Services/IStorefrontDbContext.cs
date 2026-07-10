@@ -21,6 +21,7 @@ public interface IStorefrontDbContext
     DbSet<SavedSearch> SavedSearches { get; }
     DbSet<ViewedProduct> ViewedProducts { get; }
     DbSet<ContactMessage> ContactMessages { get; }
+    DbSet<NewsletterSubscription> NewsletterSubscriptions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

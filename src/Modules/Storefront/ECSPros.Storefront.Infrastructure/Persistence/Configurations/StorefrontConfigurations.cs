@@ -286,3 +286,16 @@ public class ContactMessageConfiguration : IEntityTypeConfiguration<ContactMessa
         builder.HasQueryFilter(m => !m.IsDeleted);
     }
 }
+
+public class NewsletterSubscriptionConfiguration : IEntityTypeConfiguration<NewsletterSubscription>
+{
+    public void Configure(EntityTypeBuilder<NewsletterSubscription> builder)
+    {
+        builder.ToTable("newsletter_subscriptions");
+        builder.HasKey(n => n.Id);
+        builder.Property(n => n.Email).HasMaxLength(200).IsRequired();
+        // E-posta platform başına bir kez (kayıt idempotent)
+        builder.HasIndex(n => new { n.FirmPlatformId, n.Email }).IsUnique();
+        builder.HasQueryFilter(n => !n.IsDeleted);
+    }
+}

@@ -259,3 +259,9 @@ Views/ProjeElementleri/Kurumsal/_KurumsalSikSorulanSorular.cshtml
 # storefront.contact_messages'a kaydedilir, POST /api/store/contact, saatte 5 mesaj
 # throttle'ı; girişli üyede kimlik kaydedilir). Harita + bilgi grid'i birebir.
 Views/ProjeElementleri/Kurumsal/_KurumsalIletisim.cshtml
+
+# F4: Footer canlıya bağlandı — kolonlar admin'in "footer" kodlu nav menüsünden
+# (kök label = kolon başlığı, çocuklar linkler; menü tanımsızsa tasarımın statik
+# kolonları yedek); bülten formu POST /api/store/newsletter'a bağlı (idempotent,
+# misafir de kaydolur); mobil uygulama/sosyal linkler statik '#' (config/Faz G).
+Views/Shared/_Footer.cshtml

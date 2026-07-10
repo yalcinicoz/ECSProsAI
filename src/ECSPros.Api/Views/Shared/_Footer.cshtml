@@ -1,3 +1,18 @@
+@* F4: kolonlar admin'in "footer" kodlu nav menüsünden (ViewData["MsFooterMenu"] —
+   kök label node = kolon başlığı, çocuk link node'ları = bağlantılar); menü tanımlı
+   değilse tasarımın statik kolonları basılır. Bülten formu POST /api/store/newsletter'a
+   bağlı. Mobil uygulama/sosyal linkler statik '#' (gerçek URL'ler config/Faz G). *@
+@{
+    var msFooterMenu = ViewData["MsFooterMenu"]
+        as ECSPros.Storefront.Application.Queries.GetNavigationMenuDetail.NavigationMenuDetailDto;
+    var msFooterKolonlar = msFooterMenu?.Nodes?.Where(n => n.Children.Count > 0).ToList();
+
+    static string MsFooterAd(ECSPros.Storefront.Application.Queries.GetNavigationMenuDetail.NavNodeDto n) =>
+        n.NameOverrideI18n?.GetValueOrDefault("tr") ?? n.Slug ?? "";
+    static string MsFooterUrl(ECSPros.Storefront.Application.Queries.GetNavigationMenuDetail.NavNodeDto n) =>
+        !string.IsNullOrWhiteSpace(n.CustomUrl) ? n.CustomUrl! :
+        !string.IsNullOrWhiteSpace(n.Slug) ? "/" + n.Slug : "/";
+}
 <footer class="ms-footer">
     <div class="ms-footer-ust">
         <section class="ms-footer-marka-kolon" aria-labelledby="ms-footer-marka-baslik">
@@ -14,6 +29,26 @@
             </div>
         </section>
 
+        @if (msFooterKolonlar is { Count: > 0 })
+        {
+            foreach (var kolon in msFooterKolonlar)
+            {
+        <div class="ms-footer-kolon" data-ms-footer-akordiyon>
+            <button class="ms-footer-akordiyon-baslik" type="button" data-ms-footer-akordiyon-tetikleyici aria-expanded="false">
+                <span class="ms-footer-baslik">@MsFooterAd(kolon)</span>
+                <span class="ms-footer-akordiyon-ok" aria-hidden="true"></span>
+            </button>
+            <nav class="ms-footer-akordiyon-icerik" data-ms-footer-akordiyon-icerik aria-label="@MsFooterAd(kolon) bağlantıları">
+                @foreach (var link in kolon.Children)
+                {
+                <a href="@MsFooterUrl(link)" target="@(link.OpenInNewTab ? "_blank" : null)" rel="@(link.OpenInNewTab ? "noopener" : null)">@MsFooterAd(link)</a>
+                }
+            </nav>
+        </div>
+            }
+        }
+        else
+        {
         <div class="ms-footer-kolon" data-ms-footer-akordiyon>
             <button class="ms-footer-akordiyon-baslik" type="button" data-ms-footer-akordiyon-tetikleyici aria-expanded="false">
                 <span class="ms-footer-baslik">Kurumsal</span>
@@ -44,18 +79,20 @@
                 <a href="/Hesabim/IndirimKuponlarim">İndirim Kuponlarım</a>
             </nav>
         </div>
+        }
 
         <section class="ms-footer-sag" aria-labelledby="ms-footer-bulten-baslik">
             <div class="ms-footer-bulten-kutu">
                 <span class="ms-footer-eyebrow">Misharitalia haberleri</span>
                 <h2 id="ms-footer-bulten-baslik" class="ms-footer-baslik">Fırsatları kaçırmayın</h2>
                 <p class="ms-footer-aciklama">Yeni ürün, kampanya ve kupon bildirimlerini almak için kaydolun.</p>
-                <form class="ms-footer-form">
+                <form class="ms-footer-form" data-ms-bulten-form>
                     <label class="ms-footer-abone-satiri">
                         <span class="sr-only">E-posta adresi</span>
-                        <input type="email" placeholder="E-posta adresiniz">
-                        <button type="button">Kaydol</button>
+                        <input type="email" placeholder="E-posta adresiniz" data-ms-bulten-eposta>
+                        <button type="submit" data-ms-bulten-kaydol>Kaydol</button>
                     </label>
+                    <small class="ms-footer-aciklama" data-ms-bulten-bilgi role="status" aria-live="polite" hidden></small>
                 </form>
             </div>
 
@@ -103,6 +140,64 @@
 </footer>
 
 <script data-ms-footer-script>
+// F4: bülten aboneliği — POST /api/store/newsletter (idempotent; misafir de kaydolur).
+(() => {
+    const form = document.querySelector("[data-ms-bulten-form]");
+
+    if (!form || form.dataset.msBultenHazir === "true") {
+        return;
+    }
+
+    form.dataset.msBultenHazir = "true";
+    const eposta = form.querySelector("[data-ms-bulten-eposta]");
+    const bilgi = form.querySelector("[data-ms-bulten-bilgi]");
+    const kaydol = form.querySelector("[data-ms-bulten-kaydol]");
+
+    const bildir = (mesaj) => {
+        if (bilgi) {
+            bilgi.textContent = mesaj || "";
+            bilgi.hidden = !mesaj;
+        }
+    };
+
+    form.addEventListener("submit", async (olay) => {
+        olay.preventDefault();
+
+        if (kaydol.disabled) {
+            return;
+        }
+
+        kaydol.disabled = true;
+        try {
+            const token = localStorage.getItem("ecspros_member_token");
+            const cevap = await fetch("/api/store/newsletter", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: "Bearer " + token } : {})
+                },
+                body: JSON.stringify({
+                    firmPlatformId: "@((ViewData["MsPlatform"] as ECSPros.Api.Services.StorePlatformBilgisi)?.Id)",
+                    email: eposta?.value || ""
+                })
+            });
+            const veri = await cevap.json().catch(() => null);
+
+            if (!veri?.success) {
+                bildir(veri?.error || "Kaydolunamadı. Lütfen tekrar deneyin.");
+                return;
+            }
+
+            bildir("Bülten kaydınız alındı. ✓");
+            if (eposta) { eposta.value = ""; }
+        } catch {
+            bildir("Kaydolunamadı. Lütfen tekrar deneyin.");
+        } finally {
+            kaydol.disabled = false;
+        }
+    });
+})();
+
 // Mobil footer akordiyon davranışı.
 (() => {
     const akordiyonlar = document.querySelectorAll("[data-ms-footer-akordiyon]");

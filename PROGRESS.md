@@ -294,6 +294,20 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — F4 TAMAM: Footer canlı:**
+  - **Kolonlar admin footer menüsünden:** StorePageController tabanı "footer" kodlu nav
+    menüsünü yükler (5 dk cache); kök label = kolon başlığı, çocuklar linkler; menü
+    tanımsızsa tasarımın statik kolonları yedek (bugünkü durum — nav_menus boş; admin
+    Menus editöründen tanımlayınca devreye girer; testte menülü görünüm doğrulandı).
+  - **Bülten:** storefront.newsletter_subscriptions (AddNewsletterSubscriptions canlıda;
+    unique platform+email) + SubscribeNewsletter (idempotent, normalize) + POST
+    /api/store/newsletter (anonim); footer formu bağlandı. Gönderim entegrasyonu ileri iş.
+  - Mobil uygulama/sosyal linkler statik '#' (config/Faz G — firma hesapları verilince).
+  - **E2E 6/6 ✓ + statik yedek taze instance'la ✓ + B6/F1/F3/E1 regresyon ✓; drift
+    TEMİZ.** Test dersi: type=email inputta native validation submit'i engeller —
+    sunucu doğrulama testi 'a@b' gibi native-geçer değerle yapılır. Sıradaki: F5 QA
+    (envanter 8.7) → Faz F kapanışı.
+
 - **2026-07-10 (devam) — F3 TAMAM: İletişim formu (kullanıcı kararı: mesaj kaydı):**
   - `storefront.contact_messages` (AddContactMessages canlıda) + CreateContactMessage
     (doğrulamalar + aynı e-postadan saatte 5 throttle) + POST /api/store/contact
