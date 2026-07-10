@@ -1,3 +1,13 @@
+@* E12: Önceden Gezdiklerim canlıya bağlandı — kartlar SSR (viewed_products; kayıt ürün
+   detayı render'ında atılır, üye başına son 50; misafir gezmeleri detay script'inin
+   localStorage fallback'inde — bu sayfa üye-özel olduğundan yalnız DB okur). Silinen/
+   pasif ürün listelenmez; fiyat güncel kart fiyatı. "Listeyi Temizle" DELETE
+   /api/store/viewed-products; boş durumun "Ürünleri Keşfet" linki tasarımın /Arama'sı
+   yerine köke gider (ayrı /Arama sayfası yok). *@
+@{
+    var msGezilenler = ViewData["MsGezilenler"] as List<ECSPros.Api.Models.Store.HesabimGezilenUrunVm> ?? new();
+    var msGezilenTr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+}
 <section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-gezdiklerim-baslik">
     <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model='@("onceden-gezdiklerim")' />
 
@@ -12,40 +22,61 @@
                     <h3>Son görüntülenen ürünler</h3>
                     <p>İncelediğiniz ürünlere kaldığınız yerden devam edin.</p>
                 </div>
-                <button class="ms-buton ms-buton-m ms-buton-sade" type="button">Listeyi Temizle</button>
+                @if (msGezilenler.Count > 0)
+                {
+                <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-gezilen-temizle>Listeyi Temizle</button>
+                }
             </div>
 
+            @if (msGezilenler.Count == 0)
+            {
             <section class="ms-hesabim-bos-durum" aria-labelledby="ms-gezdiklerim-bos-baslik">
                 <i class="fa-solid fa-clock-rotate-left ms-fa-ikon " aria-hidden="true"></i>
                 <div>
                     <h3 id="ms-gezdiklerim-bos-baslik">Henüz gezdiğiniz ürün yok</h3>
                     <p>Ürünleri inceledikçe son görüntüledikleriniz burada listelenir.</p>
                 </div>
-                <a class="ms-buton ms-buton-m ms-buton-satin-al" href="/Arama">Ürünleri Keşfet</a>
+                <a class="ms-buton ms-buton-m ms-buton-satin-al" href="/">Ürünleri Keşfet</a>
             </section>
-
+            }
+            else
+            {
             <div class="ms-hesabim-urun-grid">
+                @foreach (var u in msGezilenler)
+                {
                 <article class="ms-hesabim-urun-karti" data-ms-kart-link-alani>
-                    <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Polo Yaka Desenli Erkek Triko Tişört ürün detayına git"></a>
-                    <img src="/images/ornek-resim.jpg" alt="Polo yaka desenli erkek triko tişört">
+                    <a class="ms-hesabim-kart-baglanti" href="@u.UrunLink" data-ms-kart-link aria-label="@u.Ad ürün detayına git"></a>
+                    @if (u.GorselUrl is not null)
+                    {
+                    <img src="@u.GorselUrl" alt="@u.Ad">
+                    }
                     <div>
-                        <strong>Polo Yaka Desenli Erkek Triko Tişört</strong>
-                        <p>Bugün 14:20 tarihinde görüntülendi.</p>
-                        <span class="ms-urun-fiyat">599,90 TL</span>
+                        <strong>@u.Ad</strong>
+                        <p>@u.ZamanMetni tarihinde görüntülendi.</p>
+                        <span class="ms-urun-fiyat">@u.Fiyat.ToString("N2", msGezilenTr) TL</span>
                     </div>
-                    <a class="ms-buton ms-buton-s ms-buton-sade" href="/UrunDetay">Ürüne Git</a>
+                    <a class="ms-buton ms-buton-s ms-buton-sade" href="@u.UrunLink">Ürüne Git</a>
                 </article>
-                <article class="ms-hesabim-urun-karti" data-ms-kart-link-alani>
-                    <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Kadın Yüksek Bel Bol Paça Pantolon ürün detayına git"></a>
-                    <img src="/images/ornek-resim-2.jpg" alt="Kadın yüksek bel bol paça pantolon">
-                    <div>
-                        <strong>Kadın Yüksek Bel Bol Paça Pantolon</strong>
-                        <p>Dün 21:05 tarihinde görüntülendi.</p>
-                        <span class="ms-urun-fiyat">849,90 TL</span>
-                    </div>
-                    <a class="ms-buton ms-buton-s ms-buton-sade" href="/UrunDetay">Ürüne Git</a>
-                </article>
+                }
             </div>
+            }
         </div>
     </section>
 </section>
+
+<script>
+    document.querySelector("[data-ms-gezilen-temizle]")?.addEventListener("click", async (olay) => {
+        const buton = olay.currentTarget;
+        if (buton.disabled) { return; }
+        buton.disabled = true;
+        try {
+            const cevap = await fetch("/api/store/viewed-products?firmPlatformId=@(ViewData["MsGezilenPlatformId"])", {
+                method: "DELETE",
+                headers: { Authorization: "Bearer " + localStorage.getItem("ecspros_member_token") }
+            });
+            const veri = await cevap.json().catch(() => null);
+            if (veri?.success) { window.location.reload(); return; }
+        } catch { /* aşağıda buton geri açılır */ }
+        buton.disabled = false;
+    });
+</script>

@@ -225,10 +225,63 @@ public class HesabimController(
         return HesabimSayfasi("Tekrar Satın Al", "~/Views/ProjeElementleri/Hesabim/_HesabimTekrarSatinAl.cshtml");
     }
 
+    /// <summary>E12: Önceden Gezdiklerim — gezme kayıtları (viewed_products, render'da
+    /// yazılır) canlı katalog kart verisiyle birleşir; silinen/pasif ürün listelenmez.
+    /// Zaman TR saatiyle "Bugün/Dün HH:mm" biçiminde.</summary>
     [HttpGet("/Hesabim/OncedenGezdiklerim")]
     [HttpGet("/onceden-gezdiklerim")]
-    public IActionResult OncedenGezdiklerim() =>
-        HesabimSayfasi("Önceden Gezdiklerim", "~/Views/ProjeElementleri/Hesabim/_HesabimOncedenGezdiklerim.cshtml");
+    public async Task<IActionResult> OncedenGezdiklerim(CancellationToken ct)
+    {
+        var tr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+        var trSaat = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+        var kartlar = new List<HesabimGezilenUrunVm>();
+        var platform = await storeContext.GetPlatformAsync(ct);
+
+        if (platform is not null)
+        {
+            var kayitSonucu = await mediator.Send(
+                new ECSPros.Storefront.Application.Queries.GetMemberViewedProducts.GetMemberViewedProductsQuery(
+                    platform.Id, _memberId), ct);
+            var kayitlar = kayitSonucu.IsSuccess ? kayitSonucu.Value! : new();
+
+            if (kayitlar.Count > 0)
+            {
+                var kodlar = kayitlar.Select(k => k.ProductCode).ToList();
+                var urunler = await mediator.Send(
+                    new ECSPros.Catalog.Application.Queries.GetStoreProducts.GetStoreProductsQuery(
+                        platform.Id, ProductCodes: kodlar, PageSize: kodlar.Count), ct);
+                var urunMap = urunler.IsSuccess
+                    ? urunler.Value!.Items.ToDictionary(p => p.Code)
+                    : new Dictionary<string, Catalog.Application.Queries.GetStoreProducts.StoreProductDto>();
+
+                string ZamanYaz(DateTime utc)
+                {
+                    var yerel = TimeZoneInfo.ConvertTimeFromUtc(utc, trSaat);
+                    var bugun = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, trSaat).Date;
+                    if (yerel.Date == bugun) return $"Bugün {yerel:HH:mm}";
+                    if (yerel.Date == bugun.AddDays(-1)) return $"Dün {yerel:HH:mm}";
+                    return yerel.ToString("dd.MM.yyyy HH:mm", tr);
+                }
+
+                kartlar = kayitlar
+                    .Where(k => urunMap.ContainsKey(k.ProductCode))
+                    .Select(k =>
+                    {
+                        var urun = urunMap[k.ProductCode];
+                        return new HesabimGezilenUrunVm(
+                            UrunKartMap.TrAd(urun.NameI18n),
+                            ZamanYaz(k.ViewedAt),
+                            urun.MinPrice,
+                            urun.MainImageUrl,
+                            "/urun/" + urun.Code);
+                    }).ToList();
+            }
+        }
+
+        ViewData["MsGezilenler"] = kartlar;
+        ViewData["MsGezilenPlatformId"] = platform?.Id;
+        return HesabimSayfasi("Önceden Gezdiklerim", "~/Views/ProjeElementleri/Hesabim/_HesabimOncedenGezdiklerim.cshtml");
+    }
 
     /// <summary>E8: İadelerim — kartlar SSR (E4 deseni: ilk 20 iade, detay + sipariş PK
     /// sorguları). Yeni İade Talebi modalı teslim edilmiş siparişlerin henüz iadesi

@@ -200,6 +200,18 @@ public class UrunDetayController(IMediator mediator, IStoreContext storeContext,
             PuanSayisi: puanIstatistik?.Count ?? 0,
             Yorumlar: yorumlarVm);
 
+        // E12: üyenin gezme kaydı (Önceden Gezdiklerim) — render'ı aksatmaz;
+        // misafir gezmeleri detay script'indeki localStorage fallback'ine düşer.
+        if (ViewData["MsUye"] is ECSPros.Api.Services.StoreUyeKimlik uye)
+        {
+            try
+            {
+                await mediator.Send(new ECSPros.Storefront.Application.Commands.RecordProductView
+                    .RecordProductViewCommand(platform.Id, uye.MemberId, urun.Code), ct);
+            }
+            catch { /* gezme kaydı sayfayı düşürmez */ }
+        }
+
         ViewData["MsUrunDetay"] = vm;
         ViewData["Title"] = vm.Ad;
         return View("~/Views/UrunDetay/Index.cshtml");

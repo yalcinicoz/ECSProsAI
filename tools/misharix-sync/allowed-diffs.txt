@@ -232,3 +232,9 @@ Views/ProjeElementleri/Hesabim/_HesabimTekrarSatinAl.cshtml
 # canlı arama rotasına (/urunler?search=) gider; boş durumun "Arama Yap" linki modalı açan
 # butona çevrildi (ayrı /Arama sayfası yok). Bildirim gönderimi Faz H — rozet tercihtir.
 Views/ProjeElementleri/Hesabim/_HesabimFavoriAramalarim.cshtml
+
+# E12: Önceden Gezdiklerim canlıya bağlandı — kartlar SSR (viewed_products, kayıt detay
+# render'ında; misafir localStorage fallback'i detay script'inde); silinen/pasif ürün
+# listelenmez, fiyat güncel kart fiyatı; Listeyi Temizle DELETE'e bağlı; boş durumun
+# "Ürünleri Keşfet" linki köke (ayrı /Arama sayfası yok).
+Views/ProjeElementleri/Hesabim/_HesabimOncedenGezdiklerim.cshtml
