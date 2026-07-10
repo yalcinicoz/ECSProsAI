@@ -294,6 +294,20 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — E14 TAMAM → FAZ E KAPANDI 🎉:**
+  - Envanter 8.6 satır satır işaretlendi (ertelenenler hedef fazlı: fatura/dekont PDF
+    H1, kargo firması adı/logosu H2, YanMenu statü bloğu + koleksiyon public sayfası
+    Faz G, /urun-degerlendirmeleri sayfası ileri iş).
+  - 12 Hesabım sayfası görüntülendi: `tools/misharix-sync/shots/e14-*.png`.
+  - **Faz E toplu regresyon (taze publish): E1-E13 = 186 adım ✓; drift TEMİZ.**
+    QA'da düzelen test kırılganlıkları: e12 ikinci ürün seçimi GetStoreProducts
+    görünürlük şartını (aktif + ürün görseli) hesaba katmıyordu; yetim viewed_products
+    assertion'ı koşu sırasına duyarlıydı (hard-delete edilen test üyeleri kayıt
+    bırakıyor) → önce/sonra farkına çevrildi, yetimler temizlendi.
+  - **FAZ E TAMAM (E1–E14).** SIRADAKİ FAZ → **F (Kurumsal/statik sayfalar: F1-F5)**;
+    F3 iletişim formu kararı (mesaj kaydı mı e-posta mı) kullanıcıya sorulacak.
+    DEPLOY BEKLİYOR (B11'den beri; artık Faz E de dahil).
+
 - **2026-07-10 (devam) — E13 TAMAM: Hesabım ana sayfası:**
   - **Yeni backend gerekmedi** — 6 özet kartı (tasarımda yoktu, plan şartı; E4 grid
     kalıbı): sipariş/iade/kupon/favori sayıları + Hediye Çeki Bakiyesi (wallet) +
