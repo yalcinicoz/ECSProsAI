@@ -240,3 +240,12 @@ Views/ProjeElementleri/Hesabim/_HesabimFavoriAramalarim.cshtml
 # listelenmez, fiyat güncel kart fiyatı; Listeyi Temizle DELETE'e bağlı; boş durumun
 # "Ürünleri Keşfet" linki köke (ayrı /Arama sayfası yok).
 Views/ProjeElementleri/Hesabim/_HesabimOncedenGezdiklerim.cshtml
+
+# F1: Kurumsal içerik partial'ları CMS'e bağlandı — section kökü birebir; iç HTML
+# ViewData["MsKurumsalIcerik"] (PageType=corporate, admin'den düzenlenebilir) doluysa
+# ondan, boşsa tasarımın demo içeriği yedek (D3 belge modalı deseni).
+Views/ProjeElementleri/Kurumsal/_KurumsalHakkimizda.cshtml
+Views/ProjeElementleri/Kurumsal/_KurumsalKargoTeslimat.cshtml
+Views/ProjeElementleri/Kurumsal/_KurumsalIadeDegisim.cshtml
+Views/ProjeElementleri/Kurumsal/_KurumsalKullanimKosullari.cshtml
+Views/ProjeElementleri/Kurumsal/_KurumsalGizlilikGuvenlik.cshtml

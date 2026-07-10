@@ -1,0 +1,22 @@
+@* F1: içerik CMS'ten (PageType=corporate — ViewData["MsKurumsalIcerik"], admin'den
+   düzenlenebilir); CMS boşsa tasarımın demo içeriği yedek olarak render edilir (D3 deseni). *@
+<section class="ms-kurumsal-panel" data-ms-kurumsal-panel="kargo-teslimat" aria-labelledby="ms-kurumsal-kargo-baslik">
+@if (ViewData["MsKurumsalIcerik"] is string msKurumsalIcerik && !string.IsNullOrWhiteSpace(msKurumsalIcerik))
+{
+    @Html.Raw(msKurumsalIcerik)
+}
+else
+{
+    <header class="ms-kurumsal-panel-baslik">
+        <span>Teslimat</span>
+        <h2 id="ms-kurumsal-kargo-baslik">Kargomu Nasıl Takip Ederim?</h2>
+        <p>Kargo bilgileriniz e-posta ve sipariş takip bilgileriniz üzerinden kontrol edilebilir.</p>
+    </header>
+    <div class="ms-kurumsal-adimlar">
+        <article><strong>1</strong><span>Ürünleriniz kargo firmasına teslim edildiğinde e-posta adresinize “Teslimat Bilginiz” konulu otomatik bilgilendirme gönderilir.</span></article>
+        <article><strong>2</strong><span>Bu e-postada kargoya verilen ürünleriniz, teslimat adresiniz, teslimat bilginiz ve kargo firması bilgileri yer alır.</span></article>
+        <article><strong>3</strong><span>E-postanın alt kısmındaki izleme numarası veya sipariş numaranız ile kargonuzun durumunu takip edebilirsiniz.</span></article>
+        <article><strong>4</strong><span>E-posta bilgisi bulunmayan müşterilerimiz sipariş numarasını müşteri temsilcilerimizden öğrenerek kargo durumunu sorgulayabilir.</span></article>
+    </div>
+}
+</section>

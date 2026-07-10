@@ -294,6 +294,21 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — FAZ F BAŞLADI; F1 TAMAM: Kurumsal çerçeve + CMS içerikleri:**
+  - `KurumsalController` — misharix'in 7 kök route'u birebir; Sayfa.cshtml + 7 partial
+    bayt-birebir (yan menü aktiflik + mobil menü kaynak script'i). Literal route'lar
+    /{slug} kategori route'unu ezmiyor (B6 regresyonla doğrulandı). NOT: lazy panel
+    (data-ms-lazy-panel-url) yalnız kaynak demo galerisindeymiş — gerçek sayfalar
+    route-bazlı SSR.
+  - **İçerik CMS'ten:** GetStoreLegalPages'e PageType parametresi (additive); 5 sayfa
+    PageType='corporate', kod 'kurumsal-*' (legal kodlarıyla çakışmaz); partial section
+    kökünü koruyup iç HTML'i basar, CMS boşsa tasarım demo yedeği (D3 deseni); 5 dk
+    IMemoryCache. Seed idempotent → canlı DB'ye 15 sayfa (3 platform × 5). SSS F2'ye,
+    İletişim F3'e kabuk kaldı. Footer kurumsal linkleri çalışır oldu.
+  - **E2E 16/16 ✓ + B6 19/19 + E1 13/13 + C8 14/14 ✓; drift TEMİZ.**
+    Sıradaki: F2 SSS akordiyonu (CMS soru/cevap yapısıyla), sonra F3 İletişim
+    (⚠️ kullanıcı kararı: form mesaj kaydına mı e-postaya mı bağlanacak).
+
 - **2026-07-10 (devam) — E14 TAMAM → FAZ E KAPANDI 🎉:**
   - Envanter 8.6 satır satır işaretlendi (ertelenenler hedef fazlı: fatura/dekont PDF
     H1, kargo firması adı/logosu H2, YanMenu statü bloğu + koleksiyon public sayfası

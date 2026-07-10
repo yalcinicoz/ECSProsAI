@@ -1,0 +1,25 @@
+@* F1: içerik CMS'ten (PageType=corporate — ViewData["MsKurumsalIcerik"], admin'den
+   düzenlenebilir); CMS boşsa tasarımın demo içeriği yedek olarak render edilir (D3 deseni). *@
+<section class="ms-kurumsal-panel" data-ms-kurumsal-panel="gizlilik-guvenlik" aria-labelledby="ms-kurumsal-gizlilik-baslik">
+@if (ViewData["MsKurumsalIcerik"] is string msKurumsalIcerik && !string.IsNullOrWhiteSpace(msKurumsalIcerik))
+{
+    @Html.Raw(msKurumsalIcerik)
+}
+else
+{
+    <header class="ms-kurumsal-panel-baslik">
+        <span>Güvenlik</span>
+        <h2 id="ms-kurumsal-gizlilik-baslik">Gizlilik ve Güvenlik</h2>
+        <p>misharitalia.com olarak gizliliğinize önem veriyoruz. Siteyi kullanarak aşağıdaki şartları kabul etmiş sayılırsınız.</p>
+    </header>
+    <div class="ms-kurumsal-madde-listesi">
+        <article><strong>Kişisel Bilgiler</strong><p>Üyelik aşamasında ve sonrasında talep edilen kişisel bilgiler, Üyelik Sözleşmesi'nde belirtilen amaçlar dışında kullanılmaz ve üçüncü şahıslarla paylaşılmaz.</p></article>
+        <article><strong>IP Adresleri</strong><p>Sistem sorunlarının tespiti ve çözümü için IP adresleri kullanılabilir; ayrıca demografik bilgi toplamak için anonim biçimde değerlendirilebilir.</p></article>
+        <article><strong>Verilerin Kullanım Amaçları</strong><p>Siparişlerin alınması, ödeme ve teslimat süreçleri, üyelik yönetimi, pazarlama iletişimi ve size özel önerilerin sunulması için bilgileriniz işlenebilir.</p></article>
+        <article><strong>Bilgilendirme E-postaları</strong><p>Üye olduğunuz andan itibaren, aksi talep edilmedikçe günlük ve haftalık bilgilendirme e-postaları gönderilebilir. Dilediğiniz zaman vazgeçebilirsiniz.</p></article>
+        <article><strong>Mali Bilgiler</strong><p>Satın alma işlemlerinde mali bilgiler, işleminizi gerçekleştirmek için gerekli banka ve kredi kartı kuruluşlarıyla paylaşılabilir.</p></article>
+        <article><strong>Güvenlik</strong><p>Tüm kredi kartı ve kişisel bilgileriniz SSL Secure sistemi ile 256 bit şifrelenerek korunur.</p></article>
+        <article><strong>KVKK</strong><p>Kişisel verileriniz izin tercihleriniz doğrultusunda analiz edilebilir ve gerekli güvenlik önlemleri alınarak işlenebilir. Sorularınız için iletişim bölümünden bize ulaşabilirsiniz.</p></article>
+    </div>
+}
+</section>

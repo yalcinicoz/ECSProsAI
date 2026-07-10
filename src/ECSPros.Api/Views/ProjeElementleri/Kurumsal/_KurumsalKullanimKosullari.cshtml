@@ -1,0 +1,24 @@
+@* F1: içerik CMS'ten (PageType=corporate — ViewData["MsKurumsalIcerik"], admin'den
+   düzenlenebilir); CMS boşsa tasarımın demo içeriği yedek olarak render edilir (D3 deseni). *@
+<section class="ms-kurumsal-panel" data-ms-kurumsal-panel="kullanim-kosullari" aria-labelledby="ms-kurumsal-kosullar-baslik">
+@if (ViewData["MsKurumsalIcerik"] is string msKurumsalIcerik && !string.IsNullOrWhiteSpace(msKurumsalIcerik))
+{
+    @Html.Raw(msKurumsalIcerik)
+}
+else
+{
+    <header class="ms-kurumsal-panel-baslik">
+        <span>Koşullar</span>
+        <h2 id="ms-kurumsal-kosullar-baslik">Kullanım Koşulları</h2>
+        <p>Bu internet sitesine girmeniz veya sitedeki bilgileri kullanmanız aşağıdaki koşulları kabul ettiğiniz anlamına gelir.</p>
+    </header>
+    <div class="ms-kurumsal-madde-listesi">
+        <article><strong>1. Sorumluluk Reddi</strong><p>Bu internet sitesine girilmesi veya sitedeki bilgilerin kullanılması sebebiyle doğabilecek doğrudan ya da dolaylı hiçbir zarardan firmamız sorumlu değildir.</p></article>
+        <article><strong>2. Değişiklik ve Güncellemeler</strong><p>misharitalia.com, hizmetleri, ürünleri, kullanım koşullarını ve sitede sunulan bilgileri önceden haber vermeksizin değiştirme hakkını saklı tutar.</p></article>
+        <article><strong>3. Bağlantılı Siteler</strong><p>Bu internet sitesi, kontrolümüz altında olmayan başka sitelere bağlantı içerebilir. Bu sitelerin içeriklerinden sorumluluk kabul edilmez.</p></article>
+        <article><strong>4. Fikri Mülkiyet Hakları</strong><p>Sitedeki marka, logo, tasarım, yazılım, görsel ve tüm materyaller yasal koruma altındadır; izinsiz kullanılamaz, kopyalanamaz veya dağıtılamaz.</p></article>
+        <article><strong>5. Yurtdışı Siparişleri</strong><p>Yurtdışı siparişlerde gümrük bedelleri ülkeye göre değişebilir. Gönderilerin gümrüğe takılması durumunda sorumluluk müşteriye aittir.</p></article>
+        <article><strong>6. Yasal Uyarı Güncellemeleri</strong><p>misharitalia.com, yasal uyarı sayfası içeriğini dilediği zaman güncelleme hakkını saklı tutar.</p></article>
+    </div>
+}
+</section>

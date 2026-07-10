@@ -25,6 +25,158 @@ public static class DatabaseSeeder
         await SeedCrmDefaultsAsync(scope.ServiceProvider);
         await SeedCmsLegalPagesAsync(scope.ServiceProvider);
         await SeedReturnReasonsAsync(scope.ServiceProvider);
+        await SeedCorporatePagesAsync(scope.ServiceProvider);
+    }
+
+    /// <summary>
+    /// F1: kurumsal içerik sayfaları — PageType "corporate", kod "kurumsal-*" önekli
+    /// (legal sayfalarla kod çakışmasın). İçerik tasarım partial'larının panel HTML'i;
+    /// admin'den düzenlenebilir, Kurumsal sayfaları CMS'ten basar (boşsa tasarım demo
+    /// yedeği — D3 deseni). SSS (F2) ve İletişim (F3) ayrı yapıda. Kod bazlı idempotent;
+    /// canlıya SQL ile eklendi.
+    /// </summary>
+    private static async Task SeedCorporatePagesAsync(IServiceProvider sp)
+    {
+        var cms = sp.GetRequiredService<ECSPros.Cms.Infrastructure.Persistence.CmsDbContext>();
+        var core = sp.GetRequiredService<CoreDbContext>();
+
+        var sectionType = await cms.SectionTypes.FirstAsync(t => t.Code == "rich_text");
+        var template = await cms.PageTemplates.FirstAsync(t => t.Code == "icerik-sayfasi");
+
+        var platformIdler = await core.FirmPlatforms
+            .Where(fp => fp.IsActive).Select(fp => fp.Id).ToListAsync();
+
+        var eklenen = 0;
+        foreach (var platformId in platformIdler)
+        {
+            var mevcutKodlar = await cms.Pages
+                .Where(s => s.FirmPlatformId == platformId && s.PageType == "corporate")
+                .Select(s => s.Code).ToListAsync();
+
+            foreach (var (kod, baslik, html) in KurumsalSayfaIcerikleri())
+            {
+                if (mevcutKodlar.Contains(kod)) continue;
+                var sayfa = new ECSPros.Cms.Domain.Entities.Page
+                {
+                    FirmPlatformId = platformId,
+                    TemplateId = template.Id,
+                    Code = kod,
+                    NameI18n = new() { ["tr"] = baslik },
+                    SlugI18n = new() { ["tr"] = kod },
+                    PageType = "corporate"
+                };
+                cms.Pages.Add(sayfa);
+                cms.PageSections.Add(new ECSPros.Cms.Domain.Entities.PageSection
+                {
+                    PageId = sayfa.Id,
+                    SectionTypeId = sectionType.Id,
+                    Name = baslik,
+                    Settings = new() { ["html"] = html },
+                    SortOrder = 0
+                });
+                eklenen++;
+            }
+        }
+
+        if (eklenen > 0)
+        {
+            await cms.SaveChangesAsync();
+            Console.WriteLine($"✓ Seed: {eklenen} kurumsal CMS sayfası oluşturuldu.");
+        }
+    }
+
+    /// <summary>F1: kurumsal sayfa içerikleri — tasarım partial'larının panel iç HTML'i
+    /// (section kökü partial'da kalır; buradaki içerik admin'den düzenlenir).</summary>
+    private static IEnumerable<(string Kod, string Baslik, string Html)> KurumsalSayfaIcerikleri()
+    {
+        yield return ("kurumsal-hakkimizda", "Hakkımızda", """
+<header class="ms-kurumsal-hero">
+    <span>Premium Moda</span>
+    <h2>Mishar Italia: Premium Modanın Yeni Tanımı</h2>
+    <p>Mishar Italia, kadın, erkek ve çocuk giyiminde şıklığı ve üst segment kalite standartlarını bir araya getiren premium bir moda markasıdır.</p>
+</header>
+<div class="ms-kurumsal-metin">
+    <p>Her yaşa ve her tarza hitap eden seçkin koleksiyonlarımızla, modern gardıropların vazgeçilmez markası olma vizyonuyla hareket ediyoruz.</p>
+    <p>Markamızın şık duruşu ve sunduğu premium deneyim, arkasındaki güçlü üretim altyapısıyla desteklenmektedir. Mishar Italia bünyesindeki tüm koleksiyonların üretimi, sektörün öncü ve köklü kuruluşu GÜLSELİ TEKSTİL tarafından gerçekleştirilmektedir.</p>
+    <p>Tasarımlarımızı, GÜLSELİ TEKSTİL'in yüksek kalite standartları ve kurumsal güvencesiyle sizlere sunmaktan gurur duyuyoruz.</p>
+</div>
+<div class="ms-kurumsal-bilgi-kartlari">
+    <article><strong>Segment</strong><span>Premium kadın, erkek ve çocuk giyim koleksiyonları.</span></article>
+    <article><strong>Üretim güvencesi</strong><span>GÜLSELİ TEKSTİL kalite standartlarıyla desteklenen güçlü altyapı.</span></article>
+</div>
+""");
+
+        yield return ("kurumsal-kargo-teslimat", "Kargo ve Teslimat", """
+<header class="ms-kurumsal-panel-baslik">
+    <span>Teslimat</span>
+    <h2>Kargomu Nasıl Takip Ederim?</h2>
+    <p>Kargo bilgileriniz e-posta ve sipariş takip bilgileriniz üzerinden kontrol edilebilir.</p>
+</header>
+<div class="ms-kurumsal-adimlar">
+    <article><strong>1</strong><span>Ürünleriniz kargo firmasına teslim edildiğinde e-posta adresinize "Teslimat Bilginiz" konulu otomatik bilgilendirme gönderilir.</span></article>
+    <article><strong>2</strong><span>Bu e-postada kargoya verilen ürünleriniz, teslimat adresiniz, teslimat bilginiz ve kargo firması bilgileri yer alır.</span></article>
+    <article><strong>3</strong><span>E-postanın alt kısmındaki izleme numarası veya sipariş numaranız ile kargonuzun durumunu takip edebilirsiniz.</span></article>
+    <article><strong>4</strong><span>E-posta bilgisi bulunmayan müşterilerimiz sipariş numarasını müşteri temsilcilerimizden öğrenerek kargo durumunu sorgulayabilir.</span></article>
+</div>
+""");
+
+        yield return ("kurumsal-iade-degisim", "İade ve Değişim", """
+<header class="ms-kurumsal-panel-baslik">
+    <span>İade</span>
+    <h2>İade ve Değişim Şartları</h2>
+    <p>İade süresi, ücretsiz gönderim ve kabul edilmeyen ürün koşulları.</p>
+</header>
+<div class="ms-kurumsal-vurgu-grid">
+    <article><strong>14 Gün</strong><span>Sebep göstermeden cayma hakkı, ürünü teslim aldığınız günü takip eden ilk 14 gün içinde geçerlidir.</span></article>
+    <article><strong>30 Gün</strong><span>Kusurlu ürünlerde iade süresi 30 güne kadar uzamaktadır.</span></article>
+    <article><strong>Ücretsiz İade</strong><span>Anlaşmalı kargo firmalarımızla ücretsiz gönderim yapılabilir; iade kodunuzu İadelerim sayfasından alabilirsiniz.</span></article>
+</div>
+<div class="ms-kurumsal-metin">
+    <h3>Hangi ürünler iade edilemez?</h3>
+    <ul>
+        <li>Tasarım ve abiye ürünler 48 saat içinde iade edilebilir; süre aşımında iade kabul edilmez.</li>
+        <li>Kozmetik, kişisel bakım, iç giyim, mayo ve bikini ürünleri iade edilemez.</li>
+        <li>Kitap, kopyalanabilir yazılım, DVD, VCD, CD ve kasetlerde ambalaj açılmamış olmalıdır.</li>
+        <li>Ev tekstili, kişisel ürünler ve küçük ev aletleri orijinal ambalajında, eksiksiz ve kullanılmamış olmalıdır.</li>
+    </ul>
+    <h3>İade süreci</h3>
+    <p>İade talebi teslimat tarihinden itibaren en geç 14 gün içinde oluşturulmalı ve anlaşmalı kargolarla gönderilmelidir. Faturasız, etiketsiz, yıkanmış, kullanılmış veya hasar görmüş ürünler iade edilmez.</p>
+    <p>İade onaylandığında ürün tutarı en geç 3 gün içinde iade edilir. Taksitli ödemelerde iade bankanız tarafından taksitli olarak yansıtılır.</p>
+</div>
+""");
+
+        yield return ("kurumsal-kullanim-kosullari", "Kullanım Koşulları", """
+<header class="ms-kurumsal-panel-baslik">
+    <span>Koşullar</span>
+    <h2>Kullanım Koşulları</h2>
+    <p>Bu internet sitesine girmeniz veya sitedeki bilgileri kullanmanız aşağıdaki koşulları kabul ettiğiniz anlamına gelir.</p>
+</header>
+<div class="ms-kurumsal-madde-listesi">
+    <article><strong>1. Sorumluluk Reddi</strong><p>Bu internet sitesine girilmesi veya sitedeki bilgilerin kullanılması sebebiyle doğabilecek doğrudan ya da dolaylı hiçbir zarardan firmamız sorumlu değildir.</p></article>
+    <article><strong>2. Değişiklik ve Güncellemeler</strong><p>Hizmetlerimizi, ürünlerimizi, kullanım koşullarını ve sitede sunulan bilgileri önceden haber vermeksizin değiştirme hakkımız saklıdır.</p></article>
+    <article><strong>3. Bağlantılı Siteler</strong><p>Bu internet sitesi, kontrolümüz altında olmayan başka sitelere bağlantı içerebilir. Bu sitelerin içeriklerinden sorumluluk kabul edilmez.</p></article>
+    <article><strong>4. Fikri Mülkiyet Hakları</strong><p>Sitedeki marka, logo, tasarım, yazılım, görsel ve tüm materyaller yasal koruma altındadır; izinsiz kullanılamaz, kopyalanamaz veya dağıtılamaz.</p></article>
+    <article><strong>5. Yurtdışı Siparişleri</strong><p>Yurtdışı siparişlerde gümrük bedelleri ülkeye göre değişebilir. Gönderilerin gümrüğe takılması durumunda sorumluluk müşteriye aittir.</p></article>
+    <article><strong>6. Yasal Uyarı Güncellemeleri</strong><p>Yasal uyarı sayfası içeriğini dilediğimiz zaman güncelleme hakkımız saklıdır.</p></article>
+</div>
+""");
+
+        yield return ("kurumsal-gizlilik-guvenlik", "Gizlilik ve Güvenlik", """
+<header class="ms-kurumsal-panel-baslik">
+    <span>Güvenlik</span>
+    <h2>Gizlilik ve Güvenlik</h2>
+    <p>Gizliliğinize önem veriyoruz. Siteyi kullanarak aşağıdaki şartları kabul etmiş sayılırsınız.</p>
+</header>
+<div class="ms-kurumsal-madde-listesi">
+    <article><strong>Kişisel Bilgiler</strong><p>Üyelik aşamasında ve sonrasında talep edilen kişisel bilgiler, Üyelik Sözleşmesi'nde belirtilen amaçlar dışında kullanılmaz ve üçüncü şahıslarla paylaşılmaz.</p></article>
+    <article><strong>IP Adresleri</strong><p>Sistem sorunlarının tespiti ve çözümü için IP adresleri kullanılabilir; ayrıca demografik bilgi toplamak için anonim biçimde değerlendirilebilir.</p></article>
+    <article><strong>Verilerin Kullanım Amaçları</strong><p>Siparişlerin alınması, ödeme ve teslimat süreçleri, üyelik yönetimi, pazarlama iletişimi ve size özel önerilerin sunulması için bilgileriniz işlenebilir.</p></article>
+    <article><strong>Bilgilendirme E-postaları</strong><p>Üye olduğunuz andan itibaren, aksi talep edilmedikçe bilgilendirme e-postaları gönderilebilir. Dilediğiniz zaman vazgeçebilirsiniz.</p></article>
+    <article><strong>Mali Bilgiler</strong><p>Satın alma işlemlerinde mali bilgiler, işleminizi gerçekleştirmek için gerekli banka ve kredi kartı kuruluşlarıyla paylaşılabilir.</p></article>
+    <article><strong>Güvenlik</strong><p>Tüm kredi kartı ve kişisel bilgileriniz SSL Secure sistemi ile 256 bit şifrelenerek korunur.</p></article>
+    <article><strong>KVKK</strong><p>Kişisel verileriniz izin tercihleriniz doğrultusunda analiz edilebilir ve gerekli güvenlik önlemleri alınarak işlenebilir. Sorularınız için iletişim bölümünden bize ulaşabilirsiniz.</p></article>
+</div>
+""");
     }
 
     /// <summary>

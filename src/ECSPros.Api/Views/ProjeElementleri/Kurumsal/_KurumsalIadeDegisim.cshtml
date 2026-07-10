@@ -1,0 +1,33 @@
+@* F1: içerik CMS'ten (PageType=corporate — ViewData["MsKurumsalIcerik"], admin'den
+   düzenlenebilir); CMS boşsa tasarımın demo içeriği yedek olarak render edilir (D3 deseni). *@
+<section class="ms-kurumsal-panel" data-ms-kurumsal-panel="iade-degisim" aria-labelledby="ms-kurumsal-iade-baslik">
+@if (ViewData["MsKurumsalIcerik"] is string msKurumsalIcerik && !string.IsNullOrWhiteSpace(msKurumsalIcerik))
+{
+    @Html.Raw(msKurumsalIcerik)
+}
+else
+{
+    <header class="ms-kurumsal-panel-baslik">
+        <span>İade</span>
+        <h2 id="ms-kurumsal-iade-baslik">İade ve Değişim Şartları</h2>
+        <p>İade süresi, ücretsiz gönderim ve kabul edilmeyen ürün koşulları.</p>
+    </header>
+    <div class="ms-kurumsal-vurgu-grid">
+        <article><strong>14 Gün</strong><span>Sebep göstermeden cayma hakkı, ürünü teslim aldığınız günü takip eden ilk 14 gün içinde geçerlidir.</span></article>
+        <article><strong>30 Gün</strong><span>Kusurlu ürünlerde iade süresi 30 güne kadar uzamaktadır.</span></article>
+        <article><strong>Ücretsiz İade</strong><span>PTT: 905158578, MNG: 906021547 anlaşma numaralarıyla gönderim yapılabilir.</span></article>
+    </div>
+    <div class="ms-kurumsal-metin">
+        <h3>Hangi ürünler iade edilemez?</h3>
+        <ul>
+            <li>Tasarım ve abiye ürünler 48 saat içinde iade edilebilir; süre aşımında iade kabul edilmez.</li>
+            <li>Kozmetik, kişisel bakım, iç giyim, mayo ve bikini ürünleri iade edilemez.</li>
+            <li>Kitap, kopyalanabilir yazılım, DVD, VCD, CD ve kasetlerde ambalaj açılmamış olmalıdır.</li>
+            <li>Ev tekstili, kişisel ürünler ve küçük ev aletleri orijinal ambalajında, eksiksiz ve kullanılmamış olmalıdır.</li>
+        </ul>
+        <h3>İade süreci</h3>
+        <p>İade formu teslimat tarihinden itibaren en geç 14 gün içinde doldurulmalı ve anlaşmalı kargolarla gönderilmelidir. Faturasız, etiketsiz, yıkanmış, kullanılmış veya hasar görmüş ürünler iade edilmez.</p>
+        <p>İade onaylandığında ürün tutarı en geç 3 gün içinde iade edilir. Taksitli ödemelerde iade bankanız tarafından taksitli olarak yansıtılır.</p>
+    </div>
+}
+</section>
