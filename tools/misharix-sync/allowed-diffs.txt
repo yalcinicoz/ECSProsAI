@@ -143,8 +143,10 @@ Views/ProjeElementleri/Sepet/_SepetModallari.cshtml
 # B4 hover panel kararıyla aynı; E13/G'de gerçek veriyle açılır). Menü/link markup'ı birebir.
 Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml
 
-# E1: Hesabım varsayılan — karşılama adı SSR kimlikten (ViewData["MsUye"], demo "EMRE SAĞLAM"
-# yerine); kısayol grid'i ve kalan markup birebir.
+# E1+E13: Hesabım varsayılan — karşılama adı SSR kimlikten (E1); özet kartları eklendi
+# (E13 plan şartı — tasarımda yoktu; E4 özet grid kalıbı: sipariş/iade/kupon/favori +
+# hediye çeki bakiyesi + puan, gerçek sorgulardan); kısayol grid'inin kaynaktaki bozuk
+# `<img src=\` markup'ı sade ikon setiyle onarıldı (E1'de kayda geçen kaynak kusuru).
 Views/ProjeElementleri/Hesabim/_HesabimVarsayilan.cshtml
 
 # E2: Üyelik Bilgilerim canlıya bağlandı — form değerleri profile GET/PUT'tan (e-posta
