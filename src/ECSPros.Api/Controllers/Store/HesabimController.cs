@@ -1,4 +1,11 @@
+using ECSPros.Api.Models.Store;
 using ECSPros.Api.Services;
+using ECSPros.Order.Application.Queries.GetOrderDetail;
+using ECSPros.Order.Application.Queries.GetOrders;
+using ECSPros.Order.Application.Queries.GetOrderShipments;
+using ECSPros.Order.Application.Queries.GetReturns;
+using ECSPros.Shared.Contracts;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -11,8 +18,10 @@ namespace ECSPros.Api.Controllers.Store;
 /// oturum kalmadı — üyelik B4'te bu akışla açıldı). Partial'lar E2-E13'te teker teker
 /// gerçek veriye bağlanır; o güne dek tasarımın demo içeriği render olur.
 /// </summary>
-public class HesabimController : StorePageController
+public class HesabimController(IMediator mediator, IProductService productService) : StorePageController
 {
+    private Guid _memberId;
+
     public override async Task OnActionExecutionAsync(
         ActionExecutingContext context, ActionExecutionDelegate next)
     {
@@ -25,6 +34,7 @@ public class HesabimController : StorePageController
             return;
         }
 
+        _memberId = uye.MemberId;
         await base.OnActionExecutionAsync(context, next);
     }
 
@@ -43,10 +53,103 @@ public class HesabimController : StorePageController
     public IActionResult Adreslerim() =>
         HesabimSayfasi("Adreslerim", "~/Views/ProjeElementleri/Hesabim/_HesabimAdreslerim.cshtml");
 
+    /// <summary>E4: kartlar SSR — misharix kart/filtre script'i parse anında dinleyici
+    /// bağladığından liste sunucuda render edilir; detay modalı gömülü JSON'dan dolar.
+    /// Sayfa ilk 20 siparişi gösterir (tasarımda sayfalama yok).</summary>
     [HttpGet("/Hesabim/Siparislerim")]
     [HttpGet("/siparislerim")]
-    public IActionResult Siparislerim() =>
-        HesabimSayfasi("Siparişlerim", "~/Views/ProjeElementleri/Hesabim/_HesabimSiparislerim.cshtml");
+    public async Task<IActionResult> Siparislerim(CancellationToken ct)
+    {
+        var tr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+        var siparisler = new List<HesabimSiparisVm>();
+        var listeSonucu = await mediator.Send(new GetOrdersQuery(null, _memberId, null, 1, 20), ct);
+
+        if (listeSonucu.IsSuccess)
+        {
+            // Kalem/kargo bilgisi liste DTO'sunda yok — sayfadaki her sipariş için detay çekilir
+            // (PK sorguları; sayfa 20 kayıtla sınırlı).
+            var detaylar = new List<OrderDetailDto>();
+            foreach (var ozet in listeSonucu.Value!.Items)
+            {
+                var detay = await mediator.Send(new GetOrderDetailQuery(ozet.Id), ct);
+                if (detay.IsSuccess) detaylar.Add(detay.Value!);
+            }
+
+            // Ürün adı/görsel/seçenek zenginleştirmesi (B5 deseni) — silinen varyantlar
+            // sözlükte olmaz (sipariş kalemleri snapshot, VariantId FK'siz).
+            var varyantIdler = detaylar.SelectMany(d => d.Items.Select(i => i.VariantId)).Distinct().ToList();
+            var gorunumler = await productService.GetVariantDisplayAsync(varyantIdler, ct);
+
+            foreach (var detay in detaylar)
+            {
+                var (durumMetni, durumSinifi, filtre, adim) = detay.Status switch
+                {
+                    "pending" or "confirmed" => ("Sipariş Alındı", "alindi", "devam", 1),
+                    "processing"             => ("Hazırlanıyor", "hazirlaniyor", "devam", 2),
+                    "shipped"                => ("Kargoda", "yolda", "devam", 3),
+                    "delivered"              => ("Teslim Edildi", "tamamlandi", "tamamlanan", 4),
+                    "cancelled"              => ("İptal Edildi", "iade", "tamamlanan", 1),
+                    "returned"               => ("İade Edildi", "iade-onaylandi", "tamamlanan", 4),
+                    _                        => (detay.Status, "alindi", "devam", 1)
+                };
+
+                HesabimKargoVm? kargo = null;
+                if (detay.Status is "shipped" or "delivered")
+                {
+                    var kargoSonuc = await mediator.Send(new GetOrderShipmentsQuery(detay.Id), ct);
+                    var gonderi = kargoSonuc.IsSuccess ? kargoSonuc.Value!.FirstOrDefault() : null;
+                    if (gonderi is not null)
+                        kargo = new HesabimKargoVm(
+                            gonderi.TrackingNumber,
+                            gonderi.TrackingUrl,
+                            detay.Status == "delivered" ? "Paketiniz teslim edildi" : "Paketiniz yolda",
+                            gonderi.EstimatedDeliveryDate?.ToString("d MMMM yyyy", tr),
+                            gonderi.Events
+                                .OrderByDescending(e => e.EventDate)
+                                .Select(e => (e.EventDescription,
+                                    $"{e.EventDate.ToString("d MMMM yyyy · HH:mm", tr)}{(e.EventLocation is null ? "" : " · " + e.EventLocation)}",
+                                    true))
+                                .ToList());
+                }
+
+                siparisler.Add(new HesabimSiparisVm(
+                    detay.Id,
+                    detay.OrderNumber,
+                    detay.CreatedAt.ToString("d MMMM yyyy", tr),
+                    detay.Status,
+                    durumMetni, durumSinifi, filtre, adim,
+                    detay.GrandTotal,
+                    detay.Subtotal,
+                    detay.TotalDiscount,
+                    detay.PaymentStatus switch
+                    {
+                        "paid" => "Ödendi",
+                        "refunded" => "İade Edildi",
+                        _ => "Ödeme Bekliyor"
+                    },
+                    detay.Items.Select(i =>
+                    {
+                        gorunumler.TryGetValue(i.VariantId, out var g);
+                        return new HesabimSiparisUrunVm(
+                            g?.ProductNameI18n.GetValueOrDefault("tr") ?? i.ProductName,
+                            string.IsNullOrWhiteSpace(i.VariantInfo) ? g?.OptionsText : i.VariantInfo,
+                            i.Quantity,
+                            i.Total,
+                            g?.ImageUrl,
+                            g is null ? null : "/urun/" + g.ProductCode);
+                    }).ToList(),
+                    kargo,
+                    detay.ShippingRecipientName,
+                    detay.ShippingAddressLine));
+            }
+        }
+
+        var iadeSonucu = await mediator.Send(new GetReturnsQuery(null, _memberId, null, 1, 1), ct);
+
+        ViewData["MsSiparisler"] = siparisler;
+        ViewData["MsIadeSayisi"] = iadeSonucu.IsSuccess ? iadeSonucu.Value!.TotalCount : 0;
+        return HesabimSayfasi("Siparişlerim", "~/Views/ProjeElementleri/Hesabim/_HesabimSiparislerim.cshtml");
+    }
 
     [HttpGet("/Hesabim/TekrarSatinAl")]
     [HttpGet("/tekrar-satin-al")]

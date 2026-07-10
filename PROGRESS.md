@@ -294,6 +294,19 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — E4 TAMAM: Siparişlerim canlı:**
+  - **Kartlar SSR** (misharix kart/filtre script'i parse anında dinleyici bağlıyor —
+    dinamik karta bağlanamaz; `HesabimSiparisVm`, ilk 20 sipariş). Kalemler IProductService
+    zenginleştirmesi (silinen varyantta snapshot ad/fiyat, görsel/link yok). Durum→rozet/
+    akış/filtre eşlemesi; cancelled'da akış şeridi gizli (tasarımda iptal akışı yok).
+  - **Detay modalı** gömülü JSON'dan; **kargo takip modalı sipariş başına SSR** (H2 köprüsü:
+    takip no + olay çizelgesi; firma adı/logo H2'de). Gizli faz köprüleri: fatura H1,
+    iade E8, tekrar satın al E10, yorum E7.
+  - **E2E 15/15 ✓ + E1/E2/E3 regresyon ✓; drift TEMİZ.** Test dersi: ord_shipments.
+    ShipmentNumber UNIQUE — sabit test numarası önceki yarım koşuyla çakışıp INSERT'i
+    sessizce düşürdü (psql exit 0); testler artık koşu başına tekil numara + ön temizlik.
+  - Sıradaki: E5 Favorilerim (YENİ backend: favorites tablosu + API + kalp butonları).
+
 - **2026-07-10 (devam) — E3 TAMAM: Adreslerim canlı:**
   - NOT: tasarımın Adreslerim'i C4 modalını değil sayfa içi form kullanıyor (sol kartlar +
     sağ form) — plan buna göre uygulandı; C4 modalı teslimatta kalmaya devam ediyor.

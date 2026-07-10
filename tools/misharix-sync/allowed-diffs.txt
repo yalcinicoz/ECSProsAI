@@ -155,3 +155,15 @@ Views/ProjeElementleri/Hesabim/_HesabimUyelikBilgilerim.cshtml
 # / Varsayılan POST default / Sil DELETE; il-ilçe geo API'den kademeli, mahalle tasarımdaki
 # gibi serbest metin; boş durum satırı eklendi; dosya sonunda canlı script.
 Views/ProjeElementleri/Hesabim/_HesabimAdreslerim.cshtml
+
+# E4: Siparişlerim canlıya bağlandı — 6 demo kart SSR @foreach oldu (misharix kart/filtre/
+# modal script'i değişmedi; dinamik karta dinleyici bağlayamadığından SSR seçildi); özet
+# grid + boş durum gerçek; kargo takip modalı sipariş başına SSR (H2 köprüsü: olaylar varsa
+# zaman çizelgesi, yoksa takip no); fatura H1, iade E8, tekrar satın al E10, yorum E7
+# butonları @if(false); iptalde akış şeridi gizli (tasarımda iptal akışı yok); dosya sonunda
+# detay modalı doldurma script'i (gömülü JSON).
+Views/ProjeElementleri/Hesabim/_HesabimSiparislerim.cshtml
+
+# E4: Sipariş detay modalı — demo içerik data-alan kancalarına çevrildi, ürün satırı
+# template; Fatura Bilgileri sütunu H1'e kadar yok (e-fatura verisi yok).
+Views/ProjeElementleri/Hesabim/_HesabimSiparislerimDetayModal.cshtml
