@@ -294,6 +294,18 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — E3 TAMAM: Adreslerim canlı:**
+  - NOT: tasarımın Adreslerim'i C4 modalını değil sayfa içi form kullanıyor (sol kartlar +
+    sağ form) — plan buna göre uygulandı; C4 modalı teslimatta kalmaya devam ediyor.
+  - **Backend:** `UpdateMemberAddressCommand` (C4'te ertelenen güncelleme; sahiplik denetimli)
+    + PUT addresses/{id}; `SetDefaultMemberAddressCommand` + POST addresses/{id}/default.
+  - **Frontend:** kartlar GET addresses'ten (varsayılan kartta Sil yok — tasarım); form
+    POST/PUT ikili mod; il→ilçe kademeli geo, mahalle serbest metin (NeighborhoodId'siz —
+    checkout istemiyor); Varsayılan/Sil aksiyonları; boş durum satırı.
+  - **E2E 16/16 ✓ + E1 13/13 + C4 11/11 + E2 19/19 ✓; drift TEMİZ.**
+    Sıradaki: E4 Siparişlerim (account orders + detay modal + durum chip'leri;
+    kargo takip H2 köprüsü, fatura PDF H1 köprüsü).
+
 - **2026-07-10 (devam) — E2 TAMAM: Üyelik Bilgilerim canlı:**
   - **Backend:** `Member.CityId` (`AddMemberCity` migration canlıda, crm_cities FK — G9
     segmenti); UpdateMemberProfile genişledi (telefon normalize+benzersizlik+değişince
