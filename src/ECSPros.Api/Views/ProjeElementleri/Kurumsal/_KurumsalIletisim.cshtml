@@ -1,3 +1,6 @@
+@* F3: iletişim formu eklendi (tasarımda form yoktu — kullanıcı kararı: mesajlar DB'ye
+   kaydedilir, POST /api/store/contact; girişli üyede kimlik de kaydedilir). Harita +
+   bilgi grid'i tasarımla birebir. Form mevcut ms-form kalıplarıyla. *@
 <section class="ms-kurumsal-panel" data-ms-kurumsal-panel="iletisim" aria-labelledby="ms-kurumsal-iletisim-baslik">
     <div class="ms-kurumsal-harita">
         <iframe title="Samsun konum haritası" src="https://maps.google.com/maps?q=Samsun%2C%20T%C3%BCrkiye&t=&z=11&ie=UTF8&iwloc=&output=embed" loading="lazy"></iframe>
@@ -17,4 +20,102 @@
         <article><strong>Telefon</strong><a href="tel:08502595515">0850 259 55 15</a></article>
         <article><strong>Whatsapp Destek Hattı</strong><a href="tel:05300180111">0530 018 01 11</a></article>
     </div>
+
+    <div class="ms-kurumsal-metin">
+        <h3>Bize Yazın</h3>
+        <p>Soru, öneri ve taleplerinizi aşağıdaki formla iletebilirsiniz; mesajınız ekibimize ulaşır.</p>
+    </div>
+    <form class="ms-kurumsal-iletisim-formu" data-ms-iletisim-form>
+        <label class="ms-form-alani">
+            <span class="ms-form-etiket">Ad Soyad</span>
+            <input class="ms-form-girdi" type="text" maxlength="100" autocomplete="name" data-ms-iletisim-ad>
+        </label>
+        <label class="ms-form-alani">
+            <span class="ms-form-etiket">E-posta</span>
+            <input class="ms-form-girdi" type="email" maxlength="200" autocomplete="email" data-ms-iletisim-eposta>
+        </label>
+        <label class="ms-form-alani">
+            <span class="ms-form-etiket">Telefon (isteğe bağlı)</span>
+            <input class="ms-form-girdi" type="tel" maxlength="30" autocomplete="tel" data-ms-iletisim-telefon>
+        </label>
+        <label class="ms-form-alani">
+            <span class="ms-form-etiket">Konu (isteğe bağlı)</span>
+            <input class="ms-form-girdi" type="text" maxlength="150" data-ms-iletisim-konu>
+        </label>
+        <label class="ms-form-alani">
+            <span class="ms-form-etiket">Mesajınız</span>
+            <textarea class="ms-form-metin-alani" rows="5" maxlength="4000" placeholder="Mesajınızı yazın" data-ms-iletisim-mesaj></textarea>
+        </label>
+        <div class="ms-uyari ms-uyari-hata" data-ms-iletisim-hata hidden></div>
+        <div class="ms-uyari ms-uyari-basarili" data-ms-iletisim-basarili hidden>Mesajınız alındı. En kısa sürede dönüş yapacağız.</div>
+        <button class="ms-buton ms-buton-m ms-buton-satin-al" type="submit" data-ms-iletisim-gonder>Gönder</button>
+    </form>
+
+    <script>
+        (() => {
+            const form = document.querySelector("[data-ms-iletisim-form]");
+
+            if (!form || form.dataset.msIletisimHazir === "true") {
+                return;
+            }
+
+            form.dataset.msIletisimHazir = "true";
+            const hataAlani = form.querySelector("[data-ms-iletisim-hata]");
+            const basariliAlani = form.querySelector("[data-ms-iletisim-basarili]");
+
+            const bildir = (hata) => {
+                if (hataAlani) {
+                    hataAlani.textContent = hata || "";
+                    hataAlani.hidden = !hata;
+                }
+
+                if (basariliAlani) {
+                    basariliAlani.hidden = !!hata;
+                }
+            };
+
+            form.addEventListener("submit", async (olay) => {
+                olay.preventDefault();
+                const gonder = form.querySelector("[data-ms-iletisim-gonder]");
+
+                if (gonder.disabled) {
+                    return;
+                }
+
+                if (basariliAlani) { basariliAlani.hidden = true; }
+                gonder.disabled = true;
+                try {
+                    const token = localStorage.getItem("ecspros_member_token");
+                    const cevap = await fetch("/api/store/contact", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            ...(token ? { Authorization: "Bearer " + token } : {})
+                        },
+                        body: JSON.stringify({
+                            firmPlatformId: "@((ViewData["MsPlatform"] as ECSPros.Api.Services.StorePlatformBilgisi)?.Id)",
+                            name: form.querySelector("[data-ms-iletisim-ad]")?.value || "",
+                            email: form.querySelector("[data-ms-iletisim-eposta]")?.value || "",
+                            phone: form.querySelector("[data-ms-iletisim-telefon]")?.value || null,
+                            subject: form.querySelector("[data-ms-iletisim-konu]")?.value || null,
+                            message: form.querySelector("[data-ms-iletisim-mesaj]")?.value || ""
+                        })
+                    });
+                    const veri = await cevap.json().catch(() => null);
+
+                    if (!veri?.success) {
+                        bildir(veri?.error || "Mesaj gönderilemedi. Lütfen tekrar deneyin.");
+                        return;
+                    }
+
+                    bildir(null);
+                    form.reset();
+                } catch {
+                    bildir("Mesaj gönderilemedi. Lütfen tekrar deneyin.");
+                } finally {
+                    gonder.disabled = false;
+                }
+            });
+        })();
+    </script>
 </section>

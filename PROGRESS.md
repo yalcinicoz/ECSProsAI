@@ -294,6 +294,15 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — F3 TAMAM: İletişim formu (kullanıcı kararı: mesaj kaydı):**
+  - `storefront.contact_messages` (AddContactMessages canlıda) + CreateContactMessage
+    (doğrulamalar + aynı e-postadan saatte 5 throttle) + POST /api/store/contact
+    (anonim; bearer varsa MemberId kaydedilir). Admin mesaj listesi ileri iş.
+  - Tasarımın İletişim sayfasında form YOKTU — ms-form kalıplarıyla eklendi (izinli
+    fark); harita + 8 bilgi kartı birebir.
+  - **E2E 8/8 ✓ + F1 16/16 + F2 6/6 ✓; drift TEMİZ.** Sıradaki: F4 Footer
+    (menus footer kodundan + bülten aboneliği newsletter_subscriptions) + F5 QA.
+
 - **2026-07-10 (devam) — F2 TAMAM: SSS akordiyonu CMS'ten:**
   - Yeni `faq` section type (SupportsItems) + `kurumsal-sss` sayfası; soru/cevap
     item'ları PageSectionItem.TitleI18n/DescriptionI18n (9 soru seed, 3 platform,
