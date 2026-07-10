@@ -202,7 +202,7 @@ src/ECSPros.Api/
 ---
 
 ### FAZ F — Kurumsal + Footer
-- [ ] F1. `_KurumsalSayfasi` çerçevesi (yan menü + tab + `data-ms-lazy-panel-url` lazy panel yüklemesi) → CMS pages'e bağla; 7 sayfanın içerikleri CMS'e girilir (admin'den düzenlenebilir).
+- [x] F1. **Kurumsal çerçeve + CMS içerikleri** — TAMAM (2026-07-10): `KurumsalController` (StorePageController tabanı) — misharix'in 7 kök route'u birebir (/hakkimizda, /iletisim, /kargo-ve-teslimat, /iade-ve-degisim, /sik-sorulan-sorular, /kullanim-kosullari, /gizlilik-ve-guvenlik; literal route'lar B7 /{slug} kategori route'unu ezmez — precedence doğrulandı); `Views/Kurumsal/Sayfa.cshtml` + 7 partial bayt-birebir kopya (yan menü aktiflik + mobil menü aç/kapat kaynak script'iyle). NOT: kaynakta gerçek sayfalar route-bazlı SSR — `data-ms-lazy-panel-url` lazy yüklemesi yalnız ProjeElementleri demo galerisi kompozitinde, canlı mimaride kullanılmıyor. **İçerik CMS'ten:** `GetStoreLegalPagesQuery`'ye additive PageType parametresi; 5 içerik sayfası PageType='corporate', kod 'kurumsal-*' önekli (legal kodlarıyla çakışmasın); partial'lar section kökünü koruyup iç HTML'i ViewData'dan basar, CMS boşsa tasarım demo yedeği (D3 deseni); 5 dk IMemoryCache (C8 deseni). Seed idempotent — Development açılışında canlı DB'ye 3 platform × 5 = 15 sayfa eklendi (admin CMS'ten düzenlenebilir). SSS (F2 akordiyon yapısı) ve İletişim (F3 form) tasarım demo kabuk. Footer'daki kurumsal linkler (/hakkimizda vb.) route'lar açılınca çalışır oldu. E2E (5051 publish): **16/16 ✓** (seed 5 sayfa, 7 route + yan menü aktifliği, CMS içerik render, CMS düzenlenebilirlik + geri alma, footer köprüsü, mobil menü aç/kapat) + B6 19/19 + E1 13/13 + C8 14/14 regresyon ✓; drift TEMİZ.
 - [ ] F2. SSS akordiyonu: CMS içerik yapısıyla (soru/cevap listesi) uyumlu render.
 - [ ] F3. İletişim sayfası: form → basit mesaj kaydı (Storefront `contact_messages` — YENİ, küçük) veya e-posta; kullanıcıya sor.
 - [ ] F4. `_Footer` (127 satır) birebir; footer menüleri nav menus `footer` kodundan; abonelik (bülten) formu → YENİ küçük tablo `newsletter_subscriptions` + API.
@@ -450,8 +450,8 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 ### 8.7 Kurumsal + Footer
 | İşlev | Backend | Faz | Durum |
 |---|---|---|---|
-| Yan menü + tab + lazy panel yükleme (`data-ms-lazy-panel-url`) | VAR (CMS) | F1 | ⬜ |
-| 7 içerik sayfası (Hakkımızda…Gizlilik) | VAR (CMS, içerik girilecek) | F1 | ⬜ |
+| Yan menü + tab + lazy panel yükleme (`data-ms-lazy-panel-url`) | VAR (CMS) | F1 | ✅ 2026-07-10 (F1 — route-bazlı SSR; lazy panel yalnız kaynak demo galerisindeydi) |
+| 7 içerik sayfası (Hakkımızda…Gizlilik) | VAR (CMS) | F1 | ✅ 2026-07-10 (F1 — 5 sayfa corporate CMS'ten; SSS F2, İletişim F3) |
 | SSS akordiyonu (tek soru açık) | VAR (CMS) | F2 | ⬜ |
 | İletişim formu | YOK (küçük) | F3 | ⬜ |
 | Footer kolonları + mobil akordiyon | VAR (menus) | F4 | ⬜ |

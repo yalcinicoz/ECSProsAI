@@ -10,10 +10,13 @@ namespace ECSPros.Cms.Application.Queries.GetStoreLegalPages;
 /// ön bilgilendirme formu, gizlilik…) — PageType "legal", içerik sayfanın aktif
 /// "rich_text" section'larının Settings["html"] alanlarından birleşir.
 /// Codes verilirse yalnız o kodlar döner; verilmezse platformun tüm legal sayfaları.
+/// F1: PageType parametreli — kurumsal içerik sayfaları "corporate" tipiyle aynı
+/// mekanizmayı kullanır.
 /// </summary>
 public record GetStoreLegalPagesQuery(
     Guid FirmPlatformId,
-    List<string>? Codes = null) : IRequest<Result<List<StoreLegalPageDto>>>;
+    List<string>? Codes = null,
+    string PageType = "legal") : IRequest<Result<List<StoreLegalPageDto>>>;
 
 public record StoreLegalPageDto(
     string Code,
@@ -30,7 +33,7 @@ public class GetStoreLegalPagesQueryHandler(ICmsDbContext db)
 
         var sayfalar = await db.Pages
             .Where(p => p.FirmPlatformId == request.FirmPlatformId
-                        && p.PageType == "legal"
+                        && p.PageType == request.PageType
                         && p.IsActive
                         && (p.PublishAt == null || p.PublishAt <= now)
                         && (p.UnpublishAt == null || p.UnpublishAt > now))

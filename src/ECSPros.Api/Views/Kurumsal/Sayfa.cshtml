@@ -1,0 +1,90 @@
+@{
+    var partial = ViewData["MsKurumsalPartial"] as string;
+    var aktifMenu = ViewData["MsKurumsalAktifMenu"] as string ?? "hakkimizda";
+    var kurumsalBasliklar = new[]
+    {
+        new { Id = "hakkimizda", Baslik = "Hakkımızda", Url = "/hakkimizda" },
+        new { Id = "iletisim", Baslik = "İletişim", Url = "/iletisim" },
+        new { Id = "kargo-teslimat", Baslik = "Kargo ve Teslimat", Url = "/kargo-ve-teslimat" },
+        new { Id = "iade-degisim", Baslik = "İade ve Değişim", Url = "/iade-ve-degisim" },
+        new { Id = "sss", Baslik = "Sık Sorulan Sorular", Url = "/sik-sorulan-sorular" },
+        new { Id = "kullanim-kosullari", Baslik = "Kullanım Koşulları", Url = "/kullanim-kosullari" },
+        new { Id = "gizlilik-guvenlik", Baslik = "Gizlilik ve Güvenlik", Url = "/gizlilik-ve-guvenlik" }
+    };
+}
+
+<main class="ms-kurumsal-tekil-sayfa" data-ms-kurumsal-tekil-sayfa>
+    <div class="ms-kurumsal-mobil-menu-kontrol">
+        <button class="ms-kurumsal-mobil-menu-ac" type="button" data-ms-kurumsal-menu-ac aria-expanded="false" aria-label="Kurumsal menüyü aç">
+            <span class="ms-hesabim-mobil-menu-cizgi" aria-hidden="true"></span>
+            <span>Kurumsal Menü</span>
+        </button>
+    </div>
+    <div class="ms-kurumsal-menu-perde" data-ms-kurumsal-menu-kapat aria-hidden="true"></div>
+
+    <div class="ms-kurumsal-govde">
+        <aside class="ms-kurumsal-yan-menu" aria-label="Kurumsal menü">
+            <div class="ms-kurumsal-menu-mobil-baslik">
+                <strong>Kurumsal</strong>
+                <button type="button" data-ms-kurumsal-menu-kapat aria-label="Kurumsal menüyü kapat">×</button>
+            </div>
+            <section class="ms-hesabim-menu-grubu">
+                <h3>Kurumsal</h3>
+                <nav class="ms-kurumsal-menu-linkleri">
+                    @foreach (var baslik in kurumsalBasliklar)
+                    {
+                        var aktif = baslik.Id == aktifMenu;
+                        <a class="@(aktif ? "ms-kurumsal-menu-aktif" : null)" href="@baslik.Url" aria-current="@(aktif ? "page" : null)">
+                            <span class="ms-kurumsal-menu-nokta" aria-hidden="true"></span>
+                            <span>@baslik.Baslik</span>
+                        </a>
+                    }
+                </nav>
+            </section>
+        </aside>
+
+        <div class="ms-kurumsal-icerik">
+            @if (!string.IsNullOrWhiteSpace(partial))
+            {
+                @await Html.PartialAsync(partial)
+            }
+        </div>
+    </div>
+</main>
+
+<script>
+    (() => {
+        const sayfa = document.querySelector("[data-ms-kurumsal-tekil-sayfa]");
+
+        if (!sayfa) {
+            return;
+        }
+
+        const menuAc = sayfa.querySelector("[data-ms-kurumsal-menu-ac]");
+        const menu = sayfa.querySelector(".ms-kurumsal-yan-menu");
+        const perde = sayfa.querySelector(".ms-kurumsal-menu-perde");
+
+        const menuDurumunuAyarla = (acik) => {
+            menu?.classList.toggle("ms-kurumsal-yan-menu-acik", acik);
+            sayfa.classList.toggle("ms-kurumsal-menu-acik", acik);
+            menuAc?.setAttribute("aria-expanded", acik.toString());
+            perde?.setAttribute("aria-hidden", (!acik).toString());
+            document.body.classList.toggle("ms-hesabim-menu-body-kilitli", acik);
+
+            if (acik) {
+                menu?.querySelector("[data-ms-kurumsal-menu-kapat]")?.focus();
+            }
+        };
+
+        menuAc?.addEventListener("click", () => menuDurumunuAyarla(true));
+        sayfa.querySelectorAll("[data-ms-kurumsal-menu-kapat]").forEach((kapat) => {
+            kapat.addEventListener("click", () => menuDurumunuAyarla(false));
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && sayfa.classList.contains("ms-kurumsal-menu-acik")) {
+                menuDurumunuAyarla(false);
+            }
+        });
+    })();
+</script>

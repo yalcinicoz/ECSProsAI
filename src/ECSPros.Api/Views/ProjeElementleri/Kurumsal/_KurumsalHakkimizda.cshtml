@@ -1,0 +1,25 @@
+@* F1: içerik CMS'ten (PageType=corporate — ViewData["MsKurumsalIcerik"], admin'den
+   düzenlenebilir); CMS boşsa tasarımın demo içeriği yedek olarak render edilir (D3 deseni). *@
+<section class="ms-kurumsal-panel" data-ms-kurumsal-panel="hakkimizda" aria-labelledby="ms-kurumsal-hakkimizda-baslik">
+@if (ViewData["MsKurumsalIcerik"] is string msKurumsalIcerik && !string.IsNullOrWhiteSpace(msKurumsalIcerik))
+{
+    @Html.Raw(msKurumsalIcerik)
+}
+else
+{
+    <header class="ms-kurumsal-hero">
+        <span>Premium Moda</span>
+        <h2 id="ms-kurumsal-hakkimizda-baslik">Mishar Italia: Premium Modanın Yeni Tanımı</h2>
+        <p>Mishar Italia, kadın, erkek ve çocuk giyiminde şıklığı ve üst segment kalite standartlarını bir araya getiren premium bir moda markasıdır.</p>
+    </header>
+    <div class="ms-kurumsal-metin">
+        <p>Her yaşa ve her tarza hitap eden seçkin koleksiyonlarımızla, modern gardıropların vazgeçilmez markası olma vizyonuyla hareket ediyoruz.</p>
+        <p>Markamızın şık duruşu ve sunduğu premium deneyim, arkasındaki güçlü üretim altyapısıyla desteklenmektedir. Mishar Italia bünyesindeki tüm koleksiyonların üretimi, sektörün öncü ve köklü kuruluşu GÜLSELİ TEKSTİL tarafından gerçekleştirilmektedir.</p>
+        <p>Tasarımlarımızı, GÜLSELİ TEKSTİL'in yüksek kalite standartları ve kurumsal güvencesiyle sizlere sunmaktan gurur duyuyoruz.</p>
+    </div>
+    <div class="ms-kurumsal-bilgi-kartlari">
+        <article><strong>Segment</strong><span>Premium kadın, erkek ve çocuk giyim koleksiyonları.</span></article>
+        <article><strong>Üretim güvencesi</strong><span>GÜLSELİ TEKSTİL kalite standartlarıyla desteklenen güçlü altyapı.</span></article>
+    </div>
+}
+</section>
