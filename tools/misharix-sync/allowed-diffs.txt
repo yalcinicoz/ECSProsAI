@@ -249,3 +249,8 @@ Views/ProjeElementleri/Kurumsal/_KurumsalKargoTeslimat.cshtml
 Views/ProjeElementleri/Kurumsal/_KurumsalIadeDegisim.cshtml
 Views/ProjeElementleri/Kurumsal/_KurumsalKullanimKosullari.cshtml
 Views/ProjeElementleri/Kurumsal/_KurumsalGizlilikGuvenlik.cshtml
+
+# F2: SSS akordiyonu CMS'e bağlandı — soru/cevap listesi faq section item'larından
+# (@foreach, ilk soru açık — tasarımdaki gibi); CMS boşsa tasarımın demo soruları yedek.
+# Tek-açık davranışı site.js'te değişmedi.
+Views/ProjeElementleri/Kurumsal/_KurumsalSikSorulanSorular.cshtml

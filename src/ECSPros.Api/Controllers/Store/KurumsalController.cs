@@ -36,10 +36,27 @@ public class KurumsalController(
         KurumsalSayfasi("İade ve Değişim", "~/Views/ProjeElementleri/Kurumsal/_KurumsalIadeDegisim.cshtml",
             "iade-degisim", "kurumsal-iade-degisim", ct);
 
+    /// <summary>F2: SSS — soru/cevap listesi CMS'ten (faq section item'ları,
+    /// admin'den yönetilir); akordiyonun tek-açık davranışı site.js'te.</summary>
     [HttpGet("/sik-sorulan-sorular")]
-    public Task<IActionResult> SikSorulanSorular(CancellationToken ct) =>
-        KurumsalSayfasi("Sık Sorulan Sorular", "~/Views/ProjeElementleri/Kurumsal/_KurumsalSikSorulanSorular.cshtml",
-            "sss", null, ct); // F2: SSS akordiyonu CMS soru/cevap yapısıyla bağlanacak
+    public async Task<IActionResult> SikSorulanSorular(CancellationToken ct)
+    {
+        var platform = await storeContext.GetPlatformAsync(ct);
+        if (platform is not null)
+        {
+            var sorular = await cache.GetOrCreateAsync($"kurumsal-sss:{platform.Id}", async girdi =>
+            {
+                girdi.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+                var sonuc = await mediator.Send(
+                    new ECSPros.Cms.Application.Queries.GetStoreFaq.GetStoreFaqQuery(platform.Id), ct);
+                return sonuc.IsSuccess ? sonuc.Value : null;
+            });
+            ViewData["MsSssListesi"] = sorular;
+        }
+
+        return await KurumsalSayfasi("Sık Sorulan Sorular",
+            "~/Views/ProjeElementleri/Kurumsal/_KurumsalSikSorulanSorular.cshtml", "sss", null, ct);
+    }
 
     [HttpGet("/kullanim-kosullari")]
     public Task<IActionResult> KullanimKosullari(CancellationToken ct) =>

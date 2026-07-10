@@ -26,6 +26,96 @@ public static class DatabaseSeeder
         await SeedCmsLegalPagesAsync(scope.ServiceProvider);
         await SeedReturnReasonsAsync(scope.ServiceProvider);
         await SeedCorporatePagesAsync(scope.ServiceProvider);
+        await SeedFaqPageAsync(scope.ServiceProvider);
+    }
+
+    /// <summary>
+    /// F2: SSS sayfası — "kurumsal-sss" (PageType corporate) + "faq" section'ı +
+    /// soru/cevap item'ları (TitleI18n=soru, DescriptionI18n=cevap; tasarımın 9 sorusu).
+    /// Admin CMS'ten soru ekler/düzenler; Kurumsal SSS akordiyonu buradan render olur.
+    /// Kod bazlı idempotent.
+    /// </summary>
+    private static async Task SeedFaqPageAsync(IServiceProvider sp)
+    {
+        var cms = sp.GetRequiredService<ECSPros.Cms.Infrastructure.Persistence.CmsDbContext>();
+        var core = sp.GetRequiredService<CoreDbContext>();
+
+        var sectionType = await cms.SectionTypes.FirstOrDefaultAsync(t => t.Code == "faq");
+        if (sectionType is null)
+        {
+            sectionType = new ECSPros.Cms.Domain.Entities.SectionType
+            {
+                Code = "faq",
+                NameI18n = new() { ["tr"] = "Soru / Cevap Listesi" },
+                SettingsSchema = new(),
+                SupportsItems = true
+            };
+            cms.SectionTypes.Add(sectionType);
+        }
+
+        var template = await cms.PageTemplates.FirstAsync(t => t.Code == "icerik-sayfasi");
+        var platformIdler = await core.FirmPlatforms
+            .Where(fp => fp.IsActive).Select(fp => fp.Id).ToListAsync();
+
+        var sorular = new (string Soru, string Cevap)[]
+        {
+            ("Üyelik", "Üyelik ücretsizdir. Ana sayfadaki \"ÜYE OL\" seçeneğine tıklayarak kayıt olabilirsiniz. Üyeliğinizi iptal etmek veya şifrenizi değiştirmek için Müşteri Hizmetleri ile iletişime geçebilirsiniz."),
+            ("İptal ve Değişim", "Ürün iadeleri için İadelerim sayfasından iade talebi oluşturabilirsiniz. Değişim yapılmamaktadır."),
+            ("Kargo ve Teslimat", "Siparişiniz anlaşmalı kargo firmalarımız aracılığıyla teslim edilir. Siparişinizin durumunu \"Hesabım\" altından takip edebilirsiniz."),
+            ("Sipariş", "Sipariş durumunuzu, değişiklik veya iptal işlemlerinizi \"Hesabım\" üzerinden yönetebilirsiniz."),
+            ("Ödeme", "Banka veya kredi kartı ile ödeme seçeneklerimiz mevcuttur. Taksit seçenekleri için kredi kartınızı kullanabilirsiniz."),
+            ("İndirim Kuponları ve Kodları", "Sepet özetinin altında yer alan alana indirim kodunuzu girebilirsiniz. Bazı butiklerimiz indirimlere kapalıdır."),
+            ("Fatura", "Faturalar sipariş sırasında belirttiğiniz adrese gönderilir. Şirket adına fatura düzenlenmemektedir."),
+            ("Hesabım", "Şifre ve e-posta adresi güncellemelerinizi \"Hesabım\" üzerinden yapabilirsiniz."),
+            ("Şikayet ve Öneriler", "Şikayetlerinizi mesai saatlerinde çağrı merkezimize iletebilirsiniz.")
+        };
+
+        var eklenen = 0;
+        foreach (var platformId in platformIdler)
+        {
+            if (await cms.Pages.AnyAsync(p => p.FirmPlatformId == platformId
+                                              && p.PageType == "corporate" && p.Code == "kurumsal-sss"))
+                continue;
+
+            var sayfa = new ECSPros.Cms.Domain.Entities.Page
+            {
+                FirmPlatformId = platformId,
+                TemplateId = template.Id,
+                Code = "kurumsal-sss",
+                NameI18n = new() { ["tr"] = "Sık Sorulan Sorular" },
+                SlugI18n = new() { ["tr"] = "kurumsal-sss" },
+                PageType = "corporate"
+            };
+            cms.Pages.Add(sayfa);
+
+            var section = new ECSPros.Cms.Domain.Entities.PageSection
+            {
+                PageId = sayfa.Id,
+                SectionTypeId = sectionType.Id,
+                Name = "SSS",
+                Settings = new(),
+                SortOrder = 0
+            };
+            cms.PageSections.Add(section);
+
+            var sira = 0;
+            foreach (var (soru, cevap) in sorular)
+                cms.PageSectionItems.Add(new ECSPros.Cms.Domain.Entities.PageSectionItem
+                {
+                    SectionId = section.Id,
+                    ItemType = "faq",
+                    TitleI18n = new() { ["tr"] = soru },
+                    DescriptionI18n = new() { ["tr"] = cevap },
+                    SortOrder = sira++
+                });
+            eklenen++;
+        }
+
+        if (eklenen > 0)
+        {
+            await cms.SaveChangesAsync();
+            Console.WriteLine($"✓ Seed: {eklenen} platforma SSS sayfası oluşturuldu.");
+        }
     }
 
     /// <summary>
