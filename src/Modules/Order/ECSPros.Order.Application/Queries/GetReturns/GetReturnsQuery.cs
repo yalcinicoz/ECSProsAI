@@ -20,4 +20,5 @@ public record ReturnListDto(
     string RefundMethod,
     string RefundStatus,
     decimal RefundAmount,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string? CargoReturnCode = null); // E8: kargo iade kodu

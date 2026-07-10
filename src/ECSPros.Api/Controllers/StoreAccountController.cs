@@ -18,7 +18,7 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/store/account")]
 [Authorize(Policy = "MemberOnly")]
-public class StoreAccountController(IMediator mediator) : ControllerBase
+public class StoreAccountController(IMediator mediator, IConfiguration configuration) : ControllerBase
 {
     private Guid GetMemberId() =>
         Guid.Parse(User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
@@ -132,6 +132,8 @@ public class StoreAccountController(IMediator mediator) : ControllerBase
     {
         var result = await mediator.Send(new GetOrderDetailQuery(orderId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        if (result.Value!.MemberId != GetMemberId()) // E8: sahiplik denetimi — başkasının siparişi sızmaz
+            return NotFound(new { success = false, error = "Sipariş bulunamadı." });
         return Ok(new { success = true, data = result.Value });
     }
 
@@ -149,7 +151,84 @@ public class StoreAccountController(IMediator mediator) : ControllerBase
     {
         var result = await mediator.Send(new GetReturnDetailQuery(returnId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        if (result.Value!.MemberId != GetMemberId()) // E8: sahiplik denetimi
+            return NotFound(new { success = false, error = "İade talebi bulunamadı." });
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>E8: mağazadan iade talebi — kalemler farklı teslim edilmiş siparişlerden
+    /// olabilir, sipariş başına bir Return açılır. Doğrulanmış telefon şarttır (SMS
+    /// doğrulama modalı); değilse istemcinin OTP akışını başlatması için özel kod döner.</summary>
+    [HttpPost("returns")]
+    public async Task<IActionResult> CreateReturn([FromBody] StoreCreateReturnRequest req, CancellationToken ct)
+    {
+        var memberId = GetMemberId();
+
+        var uye = await mediator.Send(new GetMemberDetailQuery(memberId), ct);
+        if (uye.IsFailure) return BadRequest(new { success = false, error = uye.Error });
+        if (!uye.Value!.IsPhoneVerified)
+            return BadRequest(new { success = false, error = "İade kodu alabilmek için telefon numaranızı SMS ile doğrulamalısınız.", code = "phone_verification_required" });
+
+        var result = await mediator.Send(new ECSPros.Order.Application.Commands.CreateStoreReturn.CreateStoreReturnCommand(
+            memberId, req.Items, req.ImageUrls), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>E8: iade talebi görselleri — /media/returns altına yazılır (nginx sunar).
+    /// En çok 5 dosya × 5 MB; içerik tipine göre uzantı verilir (istemci adı kullanılmaz).</summary>
+    [HttpPost("returns/images")]
+    [RequestSizeLimit(30_000_000)]
+    public async Task<IActionResult> UploadReturnImages([FromForm] List<IFormFile> files, CancellationToken ct)
+    {
+        var uzantilar = new Dictionary<string, string>
+        {
+            ["image/jpeg"] = ".jpg", ["image/png"] = ".png", ["image/webp"] = ".webp", ["image/gif"] = ".gif"
+        };
+
+        if (files.Count == 0)
+            return BadRequest(new { success = false, error = "Yüklenecek görsel bulunamadı." });
+        if (files.Count > 5)
+            return BadRequest(new { success = false, error = "En fazla 5 görsel yükleyebilirsiniz." });
+        if (files.Any(f => f.Length > 5_000_000))
+            return BadRequest(new { success = false, error = "Her görsel en fazla 5 MB olabilir." });
+        if (files.Any(f => !uzantilar.ContainsKey(f.ContentType)))
+            return BadRequest(new { success = false, error = "Yalnızca JPEG, PNG, WebP veya GIF görselleri yükleyebilirsiniz." });
+
+        var kok = configuration["Store:MediaRootPath"] ?? "/opt/ECSProsAI/media";
+        var altDizin = Path.Combine("returns", DateTime.UtcNow.ToString("yyyyMM"));
+        Directory.CreateDirectory(Path.Combine(kok, altDizin));
+
+        var urls = new List<string>();
+        foreach (var dosya in files)
+        {
+            var ad = $"{Guid.NewGuid():N}{uzantilar[dosya.ContentType]}";
+            await using var hedef = System.IO.File.Create(Path.Combine(kok, altDizin, ad));
+            await dosya.CopyToAsync(hedef, ct);
+            urls.Add($"/media/{altDizin.Replace(Path.DirectorySeparatorChar, '/')}/{ad}");
+        }
+
+        return Ok(new { success = true, data = new { urls } });
+    }
+
+    /// <summary>E8: telefon doğrulama SMS'i — kod üyenin KAYITLI telefonuna gider.</summary>
+    [HttpPost("phone-verification/send")]
+    public async Task<IActionResult> SendPhoneVerification(CancellationToken ct)
+    {
+        var result = await mediator.Send(
+            new ECSPros.Crm.Application.Commands.SendPhoneVerificationOtp.SendPhoneVerificationOtpCommand(GetMemberId()), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>E8: telefon doğrulama kodu kontrolü — başarıda IsPhoneVerified işaretlenir.</summary>
+    [HttpPost("phone-verification/verify")]
+    public async Task<IActionResult> VerifyPhoneVerification([FromBody] VerifyPhoneRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(
+            new ECSPros.Crm.Application.Commands.VerifyPhoneVerificationOtp.VerifyPhoneVerificationOtpCommand(GetMemberId(), req.Code), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
     }
 
     // Wallet
@@ -180,5 +259,12 @@ public record UpdateProfileRequest(
     Guid? CityId = null);   // E2: yaşadığı şehir (G9 segmenti)
 
 public record MarketingConsentsRequest(bool Email, bool Sms, bool Phone);
+
+/// <summary>E8: iade talebi isteği — kalem + neden seçimleri + yüklenen görsel URL'leri.</summary>
+public record StoreCreateReturnRequest(
+    List<ECSPros.Order.Application.Commands.CreateStoreReturn.StoreReturnItemRequest> Items,
+    List<string>? ImageUrls = null);
+
+public record VerifyPhoneRequest(string Code);
 
 public record SetIdentityRequest(string IdentityNumber, DateOnly? BirthDate = null);

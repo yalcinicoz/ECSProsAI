@@ -193,3 +193,20 @@ Views/ProjeElementleri/Hesabim/_HesabimKoleksiyonlarim.cshtml
 # Düzenle eskiyi silip yeniden gönderir; silinen kartındaki işlevsiz "Detayı Gör" ve ayrı
 # değerlendirmeler sayfası linki gizli (o sayfa taşınmadı — ileri iş).
 Views/ProjeElementleri/Hesabim/_HesabimYorumlarim.cshtml
+
+# E8: İadelerim canlıya bağlandı — kartlar SSR (requested→approved→received→refunded
+# akış eşlemesi; rejected'da akış gizli, inceleme notu bilgi kutusunda); kargo iade kodu
+# gerçek koddan, kargo firması badge'i H2'ye dek gizli; "Dekontu Gör" H1'e dek gizli;
+# neden listesi Lookup'tan gömülü JSON, SMS doğrulama phone-verification API'sine,
+# İade Kodu Al POST /api/store/account/returns'a bağlı; ?iade=yeni modalı otomatik açar.
+Views/ProjeElementleri/Hesabim/_HesabimIadelerim.cshtml
+
+# E8: Yeni İade Talebi modalı — iade edilebilir ürünler teslim edilmiş siparişlerden SSR;
+# daha önce iade edilen kalem seçilemez + önceki neden seçimi panelde; özet/müşteri grid
+# gerçek veriden; kargo sütunları H2'ye dek gizli; neden verisi gömülü JSON (Lookup).
+Views/ProjeElementleri/Hesabim/_HesabimIadeSayfasiModali.cshtml
+
+# E8: SMS doğrulama modalı kayıtlı telefona kod gönderir (telefon salt okunur, ülke
+# seçici kaldırıldı — kod her koşulda kayıtlı numaraya gider); durum kutuları sonuca göre;
+# iade kodu modalı POST sonucundaki gerçek kodlarla dolar (sipariş başına bir kod).
+Views/ProjeElementleri/Hesabim/_HesabimIadeDogrulamaModallari.cshtml

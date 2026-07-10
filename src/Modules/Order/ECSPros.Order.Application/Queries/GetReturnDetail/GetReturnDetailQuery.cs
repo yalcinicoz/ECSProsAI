@@ -23,7 +23,9 @@ public record ReturnDetailDto(
     decimal RefundAmount,
     DateTime CreatedAt,
     List<ReturnItemDto> Items,
-    List<ReturnRefundDto> Refunds);
+    List<ReturnRefundDto> Refunds,
+    string? CargoReturnCode = null,     // E8: kargo iade kodu
+    List<string>? ImageUrls = null);    // E8: talep görselleri
 
 public record ReturnItemDto(
     Guid Id,

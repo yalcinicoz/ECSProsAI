@@ -1,3 +1,20 @@
+@* E8: İadelerim canlıya bağlandı — kartlar SSR (ViewData["MsIadeler"], E4 deseni);
+   durum akışı requested→approved→received→refunded eşlemesiyle; kargo iade kodu +
+   kopyala gerçek koddan (kargo firması adı/logosu H2'de). "Dekontu Gör" H1'e
+   (e-fatura/dekont) kadar gizli. Yeni İade Talebi modalı SSR verisiyle dolar;
+   neden listesi Lookup'tan (return_reason), SMS doğrulama D4 OTP altyapısına,
+   İade Kodu Al POST /api/store/account/returns'a bağlı. *@
+@{
+    var msIadeler = ViewData["MsIadeler"] as List<ECSPros.Api.Models.Store.HesabimIadeVm> ?? new();
+    var msIadeTrKultur = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+    var msIadeAkisAdimlari = new[]
+    {
+        ("alindi", "fa-arrow-rotate-left", "Talep Oluşturuldu"),
+        ("hazirlaniyor", "fa-circle-check", "Onaylandı"),
+        ("kargoda", "fa-truck-fast", "Depoya Ulaştı"),
+        ("teslim", "fa-circle-check", "İade Ödendi")
+    };
+}
 <section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-iadeler-baslik">
     <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model='@("iadeler")' />
 
@@ -20,6 +37,8 @@
                 <button class="ms-buton ms-buton-m ms-buton-satin-al ms-hesabim-iade-yeni-talep" type="button" data-ms-iade-sayfasi-modal-ac>Yeni İade Talebi</button>
             </div>
 
+            @if (msIadeler.Count == 0)
+            {
             <section class="ms-hesabim-bos-durum" aria-labelledby="ms-iadeler-bos-baslik">
                 <i class="fa-solid fa-arrow-rotate-left ms-fa-ikon " aria-hidden="true"></i>
                 <div>
@@ -28,171 +47,114 @@
                 </div>
                 <a class="ms-buton ms-buton-m ms-buton-sade" href="/Hesabim/Siparislerim">Siparişlerime Git</a>
             </section>
+            }
 
             <div class="ms-hesabim-siparis-listesi" data-ms-iade-kart-listesi>
-                <article class="ms-hesabim-siparis-karti ms-hesabim-iade-karti" data-ms-iade-kart-filtre="devam">
+                @foreach (var iade in msIadeler)
+                {
+                <article class="ms-hesabim-siparis-karti ms-hesabim-iade-karti" data-ms-iade-kart-filtre="@iade.FiltreAnahtari">
                     <div class="ms-hesabim-siparis-kart-ust">
                         <div>
-                            <span class="ms-hesabim-siparis-no">İade No: IAD-240529-3314</span>
-                            <strong>29 Mayıs 2026</strong>
+                            <span class="ms-hesabim-siparis-no">İade No: @iade.ReturnNumber</span>
+                            <strong>@iade.TarihMetni</strong>
                         </div>
                         <div class="ms-hesabim-siparis-ust-aksiyonlar">
-                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-iade">İade İnceleniyor</span>
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-@iade.DurumSinifi">@iade.DurumMetni</span>
+                            @if (false)
+                            {
+                            @* Dekont/iade belgesi H1'de (e-fatura entegrasyonu) — link o güne dek gizli. *@
+                            <a class="ms-buton ms-buton-s ms-buton-sade" href="#" target="_blank" rel="noopener" data-ms-fatura-modal-ac>Dekontu Gör</a>
+                            }
                             <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-iade-kart-toggle aria-expanded="false">Aç</button>
                         </div>
                     </div>
 
+                    @if (iade.Status != "rejected")
+                    {
                     <div class="ms-hesabim-siparis-akis" aria-label="İade durumu">
-                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-alindi ms-hesabim-siparis-akis-aktif">
-                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-arrow-rotate-left ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
-                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
-                            <strong>Talep Oluşturuldu</strong>
-                            <small>29 Mayıs 2026</small>
+                        @for (var i = 0; i < 4; i++)
+                        {
+                            var tamamlandi = i < iade.AkisAdimi;
+                            var guncel = !tamamlandi && i == iade.AkisAdimi && iade.FiltreAnahtari == "devam";
+                            var aktif = tamamlandi || guncel;
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-@msIadeAkisAdimlari[i].Item1@(aktif ? " ms-hesabim-siparis-akis-aktif" : "")">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid @msIadeAkisAdimlari[i].Item2 ms-fa-ikon @(aktif ? "ms-ikon-beyaz" : "")" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">@(tamamlandi ? "Tamamlandı" : guncel ? "Devam Ediyor" : "Bekliyor")</span>
+                            <strong>@msIadeAkisAdimlari[i].Item3</strong>
+                            <small>@(i == 0 ? iade.TarihMetni : tamamlandi ? "Tamamlandı" : guncel ? "Devam ediyor" : "Sıradaki adım")</small>
                         </span>
-                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-kargoda ms-hesabim-siparis-akis-aktif">
-                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-truck-fast ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
-                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
-                            <strong>Depoya Ulaştı</strong>
-                            <small>31 Mayıs 2026</small>
-                        </span>
-                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-hazirlaniyor ms-hesabim-siparis-akis-aktif">
-                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-clock ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
-                            <span class="ms-hesabim-siparis-akis-rozet">Devam Ediyor</span>
-                            <strong>İnceleniyor</strong>
-                            <small>Kalite kontrol aşaması</small>
-                        </span>
-                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-teslim">
-                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-circle-check ms-fa-ikon " aria-hidden="true"></i></span>
-                            <span class="ms-hesabim-siparis-akis-rozet">Bekliyor</span>
-                            <strong>İade Ödemesi</strong>
-                            <small>Onay sonrası başlatılır</small>
-                        </span>
+                        }
                     </div>
+                    }
 
                     <div class="ms-hesabim-siparis-urunler">
+                        @foreach (var u in iade.Urunler)
+                        {
                         <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
-                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Kadın Yüksek Bel Bol Paça Pantolon ürün detayına git"></a>
-                            <img src="/images/ornek-resim-2.jpg" alt="Kadın yüksek bel bol paça pantolon">
+                            @if (u.UrunLink is not null)
+                            {
+                            <a class="ms-hesabim-kart-baglanti" href="@u.UrunLink" data-ms-kart-link aria-label="@u.Ad ürün detayına git"></a>
+                            }
+                            @if (u.GorselUrl is not null)
+                            {
+                            <img src="@u.GorselUrl" alt="@u.Ad">
+                            }
                             <div>
-                                <strong>Kadın Yüksek Bel Bol Paça Pantolon</strong>
-                                <p>Beden: 38 · Renk: Siyah · Adet: 1</p>
-                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">849,90 TL</strong>
+                                <strong>@u.Ad</strong>
+                                <p>@(string.IsNullOrWhiteSpace(u.SecenekOzeti) ? "" : u.SecenekOzeti + " · ")Adet: @u.Adet</p>
+                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">@u.Fiyat.ToString("N2", msIadeTrKultur) TL</strong>
                             </div>
                         </div>
+                        }
                     </div>
 
+                    @if (!string.IsNullOrWhiteSpace(iade.KargoIadeKodu))
+                    {
                     <div class="ms-hesabim-iade-kodu" aria-label="Kargo iade kodu">
                         <span>Kargo İade Kodu</span>
                         <div class="ms-hesabim-iade-kodu-detay">
-                            <strong>HJ-IAD-893742</strong>
+                            <strong>@iade.KargoIadeKodu</strong>
                         </div>
                         <div class="ms-hesabim-iade-kodu-aksiyonlar">
+                            @if (false)
+                            {
+                            @* Kargo firması adı/logosu H2 kargo entegrasyonunda. *@
                             <span class="ms-hesabim-iade-kargo-badge">
                                 <i class="fa-solid fa-truck-fast ms-fa-ikon " aria-hidden="true"></i>
-                                Yurtiçi Kargo
+                                Anlaşmalı Kargo
                             </span>
-                            <button type="button" data-ms-iade-kodu-kopyala="HJ-IAD-893742">Kopyala</button>
+                            }
+                            <button type="button" data-ms-iade-kodu-kopyala="@iade.KargoIadeKodu">Kopyala</button>
                         </div>
                     </div>
+                    }
 
-                    <div class="ms-hesabim-iade-bilgi ms-hesabim-iade-bilgi-uyari">
-                        <strong>İade incelemesi devam ediyor</strong>
-                        <p>İade kargonuz depoya ulaştı. Ürün kontrolü tamamlandıktan sonra ödeme iadesi başlatılacak.</p>
+                    @if (!string.IsNullOrWhiteSpace(iade.BilgiBaslik))
+                    {
+                    <div class="ms-hesabim-iade-bilgi@(iade.BilgiUyari ? " ms-hesabim-iade-bilgi-uyari" : "")">
+                        <strong>@iade.BilgiBaslik</strong>
+                        <p>@iade.BilgiMetin</p>
                     </div>
+                    }
 
                     <div class="ms-hesabim-siparis-alt">
                         <div class="ms-hesabim-siparis-tutar">
-                            <span>Beklenen İade Tutarı</span>
-                            <strong class="ms-urun-fiyat">849,90 TL</strong>
+                            <span>@(iade.Tamamlandi ? "İade Tutarı" : "Beklenen İade Tutarı")</span>
+                            <strong class="ms-urun-fiyat">@iade.BeklenenTutar.ToString("N2", msIadeTrKultur) TL</strong>
                         </div>
                         <div class="ms-hesabim-siparis-aksiyonlar">
+                            @if (iade.Tamamlandi && iade.Urunler.FirstOrDefault()?.UrunLink is string urunLink)
+                            {
+                            <a class="ms-buton ms-buton-s ms-buton-sade" href="@urunLink">Ürüne Git</a>
+                            }
+                            else
+                            {
                             <button class="ms-buton ms-buton-s ms-buton-sade" type="button">Destek Al</button>
+                            }
                         </div>
                     </div>
                 </article>
-
-                <article class="ms-hesabim-siparis-karti ms-hesabim-iade-karti" data-ms-iade-kart-filtre="tamamlanan">
-                    <div class="ms-hesabim-siparis-kart-ust">
-                        <div>
-                            <span class="ms-hesabim-siparis-no">İade No: IAD-240401-1180</span>
-                            <strong>1 Nisan 2026</strong>
-                        </div>
-                        <div class="ms-hesabim-siparis-ust-aksiyonlar">
-                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-iade-onaylandi">İade Tamamlandı</span>
-                            <a class="ms-buton ms-buton-s ms-buton-sade" href="https://portal.doganedonusum.com/earchive/view-earchive/view-pdf-earchive.xhtml?webValidationKey=33847dd4893c03d6877a9fae1110c37a47c7345abfd410fc130cbae21c4ef8ff1d448f593635405c&viewType=PDF" target="_blank" rel="noopener" data-ms-fatura-modal-ac>Dekontu Gör</a>
-                            <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-iade-kart-toggle aria-expanded="false">Aç</button>
-                        </div>
-                    </div>
-
-                    <div class="ms-hesabim-siparis-akis" aria-label="İade durumu">
-                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-alindi ms-hesabim-siparis-akis-aktif">
-                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-arrow-rotate-left ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
-                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
-                            <strong>Talep Oluşturuldu</strong>
-                            <small>1 Nisan 2026</small>
-                        </span>
-                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-kargoda ms-hesabim-siparis-akis-aktif">
-                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-truck-fast ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
-                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
-                            <strong>Depoya Ulaştı</strong>
-                            <small>3 Nisan 2026</small>
-                        </span>
-                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-hazirlaniyor ms-hesabim-siparis-akis-aktif">
-                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-circle-check ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
-                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
-                            <strong>Onaylandı</strong>
-                            <small>4 Nisan 2026</small>
-                        </span>
-                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-teslim ms-hesabim-siparis-akis-aktif">
-                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-circle-check ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
-                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
-                            <strong>İade Ödendi</strong>
-                            <small>5 Nisan 2026</small>
-                        </span>
-                    </div>
-
-                    <div class="ms-hesabim-siparis-urunler">
-                        <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
-                            <a class="ms-hesabim-kart-baglanti" href="/UrunDetay" data-ms-kart-link aria-label="Basic Tişört ürün detayına git"></a>
-                            <img src="/images/ornek-resim.jpg" alt="Basic tişört">
-                            <div>
-                                <strong>Basic Tişört</strong>
-                                <p>Beden: M · Renk: Beyaz · Adet: 1</p>
-                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">289,90 TL</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="ms-hesabim-iade-kodu" aria-label="Kargo iade kodu">
-                        <span>Kargo İade Kodu</span>
-                        <div class="ms-hesabim-iade-kodu-detay">
-                            <strong>HJ-IAD-221980</strong>
-                        </div>
-                        <div class="ms-hesabim-iade-kodu-aksiyonlar">
-                            <span class="ms-hesabim-iade-kargo-badge">
-                                <i class="fa-solid fa-truck-fast ms-fa-ikon " aria-hidden="true"></i>
-                                PTT Kargo
-                            </span>
-                            <button type="button" data-ms-iade-kodu-kopyala="HJ-IAD-221980">Kopyala</button>
-                        </div>
-                    </div>
-
-                    <div class="ms-hesabim-iade-bilgi">
-                        <strong>İade ödemeniz tamamlandı</strong>
-                        <p>İade onaylandı ve 289,90 TL ödeme iadesi kartınıza gönderildi.</p>
-                    </div>
-
-                    <div class="ms-hesabim-siparis-alt">
-                        <div class="ms-hesabim-siparis-tutar">
-                            <span>İade Tutarı</span>
-                            <strong class="ms-urun-fiyat">289,90 TL</strong>
-                        </div>
-                        <div class="ms-hesabim-siparis-aksiyonlar">
-                            <a class="ms-buton ms-buton-s ms-buton-basarili" href="https://portal.doganedonusum.com/earchive/view-earchive/view-pdf-earchive.xhtml?webValidationKey=33847dd4893c03d6877a9fae1110c37a47c7345abfd410fc130cbae21c4ef8ff1d448f593635405c&viewType=PDF" target="_blank" rel="noopener" data-ms-fatura-modal-ac>Dekontu Gör</a>
-                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button">Ürüne Git</button>
-                        </div>
-                    </div>
-                </article>
+                }
             </div>
         </div>
     </section>
@@ -201,7 +163,10 @@
 @await Html.PartialAsync("~/Views/ProjeElementleri/Hesabim/_HesabimIadeSayfasiModali.cshtml")
 @await Html.PartialAsync("~/Views/ProjeElementleri/Hesabim/_HesabimFaturaPdfModal.cshtml")
 
-    @* Bu script: İade kartlarının tek tek açılıp kapanmasını ve aksiyon metinlerinin güncellenmesini yönetir. *@
+    @* Bu script: İade kartlarının tek tek açılıp kapanmasını ve aksiyon metinlerinin güncellenmesini yönetir.
+       E8: neden listesi SSR JSON'dan (Lookup), SMS doğrulama phone-verification API'sine,
+       İade Kodu Al POST /api/store/account/returns'a bağlandı; görseller önce
+       returns/images'a yüklenir. Kod modalı kapatılınca sayfa yenilenir. *@
     <script>
     (() => {
         const kartDurumunuAyarla = (kart, acik) => {
@@ -314,18 +279,23 @@
         let iadeSayfasiGorselUrlListesi = [];
         let iadeSayfasiSmsSayacZamanlayici = 0;
         let iadeSayfasiSmsBilgiZamanlayici = 0;
+        let iadeSayfasiKodModaliAcildi = false; // kapatılınca sayfa yenilenir (yeni kart + liste)
 
-        const iadeSayfasiNedenleri = {
-            "Beden / Kalıp Problemi": ["Küçük geldi", "Büyük geldi", "Dar geldi", "Bol geldi", "Kalıbı dar", "Kalıbı geniş", "Belden olmadı", "Basenden olmadı", "Kalçadan olmadı", "Göğüs kısmı olmadı", "Omuzdan olmadı", "Kol kısmı dar geldi", "Kol kısmı bol geldi", "Bacak kısmı dar geldi", "Normal bedenime uymadı", "Beden tablosu ile uyumsuz", "Üzerimde istediğim gibi durmadı"],
-            "Ürün Beklediğim Gibi Değil": ["Fotoğraftaki gibi değil", "Açıklamadaki gibi değil", "Ürün görselden farklı duruyor", "Beklediğim kalitede değil", "Beklediğim tarzda değil", "Ürün üzerimde güzel durmadı", "Kesimi beklediğim gibi değil", "Kumaşı beklediğim gibi değil", "Ürün beklentimi karşılamadı", "Ürün anlatıldığı gibi değil", "Ürün ölçüleri beklentime uymadı"],
-            "Defolu / Hasarlı Ürün": ["Yırtık geldi", "Sökük geldi", "Leke var", "Delik var", "İp çekilmesi var", "Dikiş hatası var", "Fermuar bozuk", "Düğme eksik", "Düğme kopuk", "Baskı hatalı", "Aksesuar eksik", "Ürün deforme olmuş", "Ürün ezilmiş geldi", "Ambalaj hasarlı geldi", "Kargo sırasında zarar görmüş"],
-            "Yanlış veya Eksik Ürün Geldi": ["Yanlış ürün gönderildi", "Yanlış beden gönderildi", "Yanlış renk gönderildi", "Yanlış model gönderildi", "Siparişimde olmayan ürün geldi", "Eksik ürün geldi", "Takımın parçası eksik geldi", "Ürünün aksesuarı eksik geldi", "Kemer / kuşak eksik geldi", "Hediye ürün eksik geldi", "Ürün adedi eksik geldi"],
-            "Renk / Model / Kumaş Problemi": ["Rengi görselden farklı", "Renk tonu beklediğim gibi değil", "Yanlış renk gönderildi", "Modelini beğenmedim", "Model üzerimde iyi durmadı", "Kumaşı ince", "Kumaşı kalın", "Kumaşı sert", "Kumaşı esnemiyor", "Kumaşı rahatsız etti", "Kumaşı iç gösteriyor", "Kumaşı terletiyor", "Dokusu hoşuma gitmedi", "Deseni görselden farklı", "Kumaş kalitesi beklentimi karşılamadı"],
-            "Sipariş Hatası Yaptım": ["Yanlış beden sipariş verdim", "Yanlış renk sipariş verdim", "Yanlış ürün sipariş verdim", "Yanlış adet sipariş verdim", "Yanlışlıkla sipariş verdim", "Aynı üründen fazla sipariş verdim", "Sepete yanlış ürün ekledim", "Farklı ürün almak istiyorum", "Farklı beden almak istiyorum", "Farklı renk almak istiyorum"],
-            "Vazgeçtim / Beğenmedim": ["Almaktan vazgeçtim", "Ürünü beğenmedim", "Ürüne ihtiyacım kalmadı", "Fikrimi değiştirdim", "Hediye olarak uygun olmadı", "Hediye edilen kişi beğenmedi", "Kombinime uymadı", "Tarzıma uygun değil", "Başka ürün almaya karar verdim", "Fiyatına değmediğini düşündüm"],
-            "Teslimat Problemi": ["Geç teslim edildi", "İhtiyacım olan tarihe yetişmedi", "Teslimat süreci uzadı", "Yanlış adrese teslim edildi", "Kargo paketi hasarlı geldi", "Kargo firması kaynaklı sorun yaşadım", "Ürün teslim edilmeden iade etmek istiyorum", "Siparişi iptal edemedim, iade etmek istiyorum", "Kargo sürecinden memnun kalmadım"],
-            "Diğer": []
-        };
+        // E8: üye API çağrıları JWT bearer ile (E5 _FavoriDavranis deseni).
+        const iadeSayfasiToken = () => localStorage.getItem("ecspros_member_token");
+
+        // E8: ana/alt neden listesi Lookup'tan SSR JSON ile gelir ({id, ad, altNedenler}).
+        const iadeSayfasiNedenVerisi = JSON.parse(
+            document.querySelector("[data-ms-iade-nedenler-json]")?.textContent || "[]");
+        const iadeSayfasiNedenleri = {};
+        const iadeSayfasiNedenIdleri = {};
+        iadeSayfasiNedenVerisi.forEach((neden) => {
+            iadeSayfasiNedenleri[neden.ad] = neden.altNedenler;
+            iadeSayfasiNedenIdleri[neden.ad] = neden.id;
+        });
+
+        const iadeSayfasiTelefonDogrulandiMi = () =>
+            iadeSayfasiModal?.dataset.msIadeTelefonDogrulandi === "true";
 
         const iadeSayfasiKartDurumlari = new WeakMap();
 
@@ -367,6 +337,11 @@
                 if (bilgi) {
                     bilgi.textContent = "";
                 }
+            }
+
+            if (modal?.matches("[data-ms-iade-kodu-modal]") && iadeSayfasiKodModaliAcildi) {
+                window.location.reload();
+                return;
             }
 
             if (modal?.matches("[data-ms-fatura-modal]")) {
@@ -781,9 +756,10 @@
 
             if (kodButonu) {
                 kodButonu.textContent = "İade Kodu Al";
+                kodButonu.disabled = false;
             }
 
-            if (smsButonu) {
+            if (smsButonu && !iadeSayfasiTelefonDogrulandiMi()) {
                 smsButonu.textContent = "SMS Doğrula";
                 smsButonu.classList.add("ms-buton-ikincil");
                 smsButonu.classList.remove("ms-buton-basarili");
@@ -815,6 +791,11 @@
         document.querySelectorAll("[data-ms-iade-sayfasi-modal-kapat]").forEach((kapatici) => {
             kapatici.addEventListener("click", iadeSayfasiModaliKapat);
         });
+
+        // E8: Siparişlerim "İade Et" köprüsü — ?iade=yeni ile gelindiğinde modal açılır.
+        if (new URLSearchParams(window.location.search).get("iade") === "yeni") {
+            iadeSayfasiModaliAc();
+        }
 
         iadeSayfasiModal?.querySelectorAll("[data-ms-iade-sayfasi-urun-kart]").forEach((kart) => {
             iadeSayfasiNedenButonlariniOlustur(kart);
@@ -949,16 +930,16 @@
             kapatici.addEventListener("click", () => iadeSayfasiModalKapat(iadeSayfasiFaturaModal));
         });
 
-        const iadeSayfasiSmsSayacBaslat = () => {
+        const iadeSayfasiSmsSayacBaslat = (saniye) => {
             const hedef = iadeSayfasiSmsModal?.querySelector("[data-ms-iade-sms-sayac]");
-            let kalan = 120;
+            let kalan = saniye || 120;
             window.clearInterval(iadeSayfasiSmsSayacZamanlayici);
 
             const yaz = () => {
                 const dakika = Math.floor(kalan / 60).toString().padStart(2, "0");
-                const saniye = (kalan % 60).toString().padStart(2, "0");
+                const saniyeMetni = (kalan % 60).toString().padStart(2, "0");
                 if (hedef) {
-                    hedef.textContent = `${dakika}:${saniye}`;
+                    hedef.textContent = `${dakika}:${saniyeMetni}`;
                 }
             };
 
@@ -973,47 +954,293 @@
             }, 1000);
         };
 
-        const iadeSayfasiSmsBilgiGoster = () => {
+        const iadeSayfasiSmsBilgiGoster = (mesaj, hataMi) => {
             const bilgi = iadeSayfasiSmsModal?.querySelector("[data-ms-iade-sms-bilgi]");
-            const ulkeKodu = iadeSayfasiSmsModal?.querySelector("[data-ms-telefon-ulke-kod]")?.textContent.trim() || "+90";
-            const telefon = iadeSayfasiSmsModal?.querySelector("[data-ms-telefon-input]")?.value.trim() || "555 123 45 67";
 
             if (!bilgi) {
                 return;
             }
 
-            bilgi.textContent = `Kod ${ulkeKodu} ${telefon} numarasına tekrar gönderildi.`;
+            bilgi.textContent = mesaj;
+            bilgi.classList.toggle("ms-form-hata", !!hataMi);
             bilgi.classList.remove("ms-gizli");
             window.clearTimeout(iadeSayfasiSmsBilgiZamanlayici);
             iadeSayfasiSmsBilgiZamanlayici = window.setTimeout(() => {
                 bilgi.classList.add("ms-gizli");
                 bilgi.textContent = "";
-            }, 3000);
+            }, 4000);
         };
 
-        iadeSayfasiModal?.querySelector("[data-ms-iade-sayfasi-sms-dogrula]")?.addEventListener("click", () => {
+        // E8: SMS kodu üyenin KAYITLI telefonuna gider (D4 OTP altyapısı, purpose ayrı).
+        const iadeSayfasiSmsKoduGonder = async () => {
+            try {
+                const cevap = await fetch("/api/store/account/phone-verification/send", {
+                    method: "POST",
+                    headers: { Authorization: "Bearer " + iadeSayfasiToken() }
+                });
+                const veri = await cevap.json().catch(() => null);
+
+                if (!veri?.success) {
+                    iadeSayfasiSmsBilgiGoster(veri?.error || "Kod gönderilemedi. Lütfen tekrar deneyin.", true);
+                    return false;
+                }
+
+                iadeSayfasiSmsSayacBaslat(veri.data?.expiresInSeconds);
+                iadeSayfasiSmsModal?.querySelectorAll(".ms-kod-giris-input").forEach((input) => {
+                    input.value = "";
+                });
+                return true;
+            } catch {
+                iadeSayfasiSmsBilgiGoster("Kod gönderilemedi. Lütfen tekrar deneyin.", true);
+                return false;
+            }
+        };
+
+        const iadeSayfasiSmsDurumGoster = (dogrulandi) => {
+            const basarili = iadeSayfasiSmsModal?.querySelector(".ms-iade-sms-durum-basarili");
+            const hataKutu = iadeSayfasiSmsModal?.querySelector(".ms-iade-sms-durum-hata");
+
+            if (basarili) {
+                basarili.style.display = dogrulandi ? "" : "none";
+            }
+
+            if (hataKutu) {
+                hataKutu.style.display = dogrulandi ? "none" : "";
+            }
+        };
+
+        const iadeSayfasiSmsModaliAc = async () => {
             iadeSayfasiHataGizle();
+            iadeSayfasiSmsDurumGoster(false);
             iadeSayfasiModalAc(iadeSayfasiSmsModal);
-            iadeSayfasiSmsSayacBaslat();
-        });
+            await iadeSayfasiSmsKoduGonder();
+        };
 
-        iadeSayfasiSmsModal?.querySelector("[data-ms-iade-sms-yeniden-gonder]")?.addEventListener("click", () => {
-            iadeSayfasiSmsSayacBaslat();
-            iadeSayfasiSmsBilgiGoster();
-        });
+        const iadeSayfasiDogrulandiIsaretle = () => {
+            if (iadeSayfasiModal) {
+                iadeSayfasiModal.dataset.msIadeTelefonDogrulandi = "true";
+            }
 
-        iadeSayfasiSmsModal?.querySelector("[data-ms-iade-sms-onayla]")?.addEventListener("click", () => {
             const smsButonu = iadeSayfasiModal?.querySelector("[data-ms-iade-sayfasi-sms-dogrula]");
-
             if (smsButonu) {
                 smsButonu.textContent = "SMS Doğrulandı";
                 smsButonu.classList.remove("ms-buton-ikincil");
                 smsButonu.classList.add("ms-buton-basarili");
+                smsButonu.disabled = true;
             }
 
-            iadeSayfasiModalKapat(iadeSayfasiSmsModal);
-            iadeSayfasiHataGizle();
+            const onayliRozet = document.querySelector("[data-ms-iade-telefon-durum-onayli]");
+            const bekliyorRozet = document.querySelector("[data-ms-iade-telefon-durum-bekliyor]");
+
+            if (onayliRozet) {
+                onayliRozet.style.display = "";
+            }
+
+            if (bekliyorRozet) {
+                bekliyorRozet.style.display = "none";
+            }
+        };
+
+        let iadeSayfasiDogrulamaSonrasiGonder = false;
+
+        iadeSayfasiModal?.querySelector("[data-ms-iade-sayfasi-sms-dogrula]")?.addEventListener("click", () => {
+            if (iadeSayfasiTelefonDogrulandiMi()) {
+                return;
+            }
+
+            iadeSayfasiDogrulamaSonrasiGonder = false;
+            iadeSayfasiSmsModaliAc();
         });
+
+        iadeSayfasiSmsModal?.querySelector("[data-ms-iade-sms-yeniden-gonder]")?.addEventListener("click", async () => {
+            if (await iadeSayfasiSmsKoduGonder()) {
+                iadeSayfasiSmsBilgiGoster("Kod kayıtlı telefon numaranıza tekrar gönderildi.");
+            }
+        });
+
+        iadeSayfasiSmsModal?.querySelector("[data-ms-iade-sms-onayla]")?.addEventListener("click", async (event) => {
+            const onayla = event.currentTarget;
+            const kodInputlari = [...(iadeSayfasiSmsModal?.querySelectorAll(".ms-kod-giris-input") || [])];
+            const girilenKod = kodInputlari.map((input) => input.value).join("");
+
+            if (girilenKod.length < kodInputlari.length) {
+                kodInputlari.find((input) => !input.value)?.focus();
+                return;
+            }
+
+            onayla.disabled = true;
+            try {
+                const cevap = await fetch("/api/store/account/phone-verification/verify", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: "Bearer " + iadeSayfasiToken() },
+                    body: JSON.stringify({ code: girilenKod })
+                });
+                const veri = await cevap.json().catch(() => null);
+
+                if (!veri?.success) {
+                    iadeSayfasiSmsDurumGoster(false);
+                    iadeSayfasiSmsBilgiGoster(veri?.error || "Kod doğrulanamadı. Lütfen tekrar deneyin.", true);
+                    return;
+                }
+
+                iadeSayfasiDogrulandiIsaretle();
+                iadeSayfasiSmsDurumGoster(true);
+                iadeSayfasiModalKapat(iadeSayfasiSmsModal);
+
+                if (iadeSayfasiDogrulamaSonrasiGonder) {
+                    iadeSayfasiDogrulamaSonrasiGonder = false;
+                    iadeSayfasiTalebiGonder();
+                }
+            } catch {
+                iadeSayfasiSmsBilgiGoster("Kod doğrulanamadı. Lütfen tekrar deneyin.", true);
+            } finally {
+                onayla.disabled = false;
+            }
+        });
+
+        // Seçili kartlardan istek gövdesi: kalem + ana neden Id'si + seçim snapshot'ları.
+        const iadeSayfasiIstekKalemleri = (seciliKartlar) => seciliKartlar.map((kart) => {
+            const durum = iadeSayfasiKartDurumu(kart);
+            const gruplar = new Map();
+
+            durum.altSecimler.forEach((secim) => {
+                const { anaNeden, altNeden } = iadeSayfasiAltNedenParcala(secim);
+
+                if (!anaNeden) {
+                    return;
+                }
+
+                if (!gruplar.has(anaNeden)) {
+                    gruplar.set(anaNeden, []);
+                }
+
+                gruplar.get(anaNeden).push(altNeden);
+            });
+
+            const digerMetni = durum.digerMetni.trim();
+            const anaAdlar = [...gruplar.keys()];
+
+            if (digerMetni && !anaAdlar.includes("Diğer")) {
+                anaAdlar.push("Diğer");
+            }
+
+            return {
+                orderItemId: kart.dataset.msIadeSayfasiKalemId,
+                mainReasonId: iadeSayfasiNedenIdleri[anaAdlar[0]],
+                reasons: [...gruplar.entries()].map(([main, subs]) => ({ main, subs })),
+                otherText: digerMetni || null
+            };
+        });
+
+        const iadeSayfasiGorselleriYukle = async () => {
+            const input = iadeSayfasiModal?.querySelector("[data-ms-iade-sayfasi-gorsel]");
+            const dosyalar = [...(input?.files || [])].filter((dosya) => dosya.type.startsWith("image/"));
+
+            if (!dosyalar.length) {
+                return [];
+            }
+
+            const form = new FormData();
+            dosyalar.forEach((dosya) => form.append("files", dosya));
+
+            const cevap = await fetch("/api/store/account/returns/images", {
+                method: "POST",
+                headers: { Authorization: "Bearer " + iadeSayfasiToken() },
+                body: form
+            });
+            const veri = await cevap.json().catch(() => null);
+
+            if (!veri?.success) {
+                throw new Error(veri?.error || "Görseller yüklenemedi. Lütfen tekrar deneyin.");
+            }
+
+            return veri.data?.urls || [];
+        };
+
+        const iadeSayfasiKodModaliniDoldur = (olusturulanlar) => {
+            const liste = iadeSayfasiKoduModal?.querySelector("[data-ms-iade-kodu-liste]");
+
+            if (!liste) {
+                return;
+            }
+
+            liste.replaceChildren();
+            olusturulanlar.forEach((iade) => {
+                const kutu = document.createElement("div");
+                kutu.className = "ms-iade-kodu-kutu";
+
+                const etiket = document.createElement("span");
+                etiket.textContent = olusturulanlar.length > 1
+                    ? `Kargo İade Kodu (${iade.returnNumber})`
+                    : "Kargo İade Kodu";
+
+                const kodButonu = document.createElement("button");
+                kodButonu.type = "button";
+                kodButonu.dataset.msIadeKoduKopyala = "";
+                kodButonu.textContent = iade.cargoReturnCode;
+
+                const bilgi = document.createElement("small");
+                bilgi.dataset.msIadeKoduKopyaBilgi = "";
+                bilgi.textContent = "Kodu kopyalamak için tıklayın.";
+
+                kodButonu.addEventListener("click", async () => {
+                    try {
+                        await kopyala(iade.cargoReturnCode);
+                        bilgi.textContent = "İade kodu kopyalandı.";
+                    }
+                    catch {
+                        bilgi.textContent = "Kod kopyalanamadı. Elle seçip kopyalayabilirsiniz.";
+                    }
+                });
+
+                kutu.append(etiket, kodButonu, bilgi);
+                liste.appendChild(kutu);
+            });
+        };
+
+        const iadeSayfasiTalebiGonder = async () => {
+            const seciliKartlar = [...iadeSayfasiModal.querySelectorAll("[data-ms-iade-sayfasi-urun-kart].ms-iade-urun-kart-secili")];
+            const kodButonu = iadeSayfasiModal?.querySelector("[data-ms-iade-sayfasi-kodu-al]");
+
+            if (kodButonu) {
+                kodButonu.disabled = true;
+                kodButonu.textContent = "Gönderiliyor...";
+            }
+
+            try {
+                const imageUrls = await iadeSayfasiGorselleriYukle();
+                const cevap = await fetch("/api/store/account/returns", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: "Bearer " + iadeSayfasiToken() },
+                    body: JSON.stringify({ items: iadeSayfasiIstekKalemleri(seciliKartlar), imageUrls })
+                });
+                const veri = await cevap.json().catch(() => null);
+
+                if (!veri?.success) {
+                    if (veri?.code === "phone_verification_required") {
+                        iadeSayfasiDogrulamaSonrasiGonder = true;
+                        iadeSayfasiSmsModaliAc();
+                        return;
+                    }
+
+                    iadeSayfasiHataGoster(veri?.error || "İade talebi oluşturulamadı. Lütfen tekrar deneyin.");
+                    return;
+                }
+
+                iadeSayfasiHataGizle();
+                iadeSayfasiKodModaliniDoldur(veri.data || []);
+                iadeSayfasiKodModaliAcildi = true;
+                iadeSayfasiModalKapat(iadeSayfasiModal);
+                iadeSayfasiModalAc(iadeSayfasiKoduModal);
+            } catch (hata) {
+                iadeSayfasiHataGoster(hata?.message || "İade talebi oluşturulamadı. Lütfen tekrar deneyin.");
+            } finally {
+                if (kodButonu) {
+                    kodButonu.disabled = false;
+                    kodButonu.textContent = "İade Kodu Al";
+                }
+            }
+        };
 
         iadeSayfasiModal?.querySelector("[data-ms-iade-sayfasi-kodu-al]")?.addEventListener("click", () => {
             const seciliKartlar = [...iadeSayfasiModal.querySelectorAll("[data-ms-iade-sayfasi-urun-kart].ms-iade-urun-kart-secili")];
@@ -1054,7 +1281,14 @@
             }
 
             iadeSayfasiHataGizle();
-            iadeSayfasiModalAc(iadeSayfasiKoduModal);
+
+            if (!iadeSayfasiTelefonDogrulandiMi()) {
+                iadeSayfasiDogrulamaSonrasiGonder = true;
+                iadeSayfasiSmsModaliAc();
+                return;
+            }
+
+            iadeSayfasiTalebiGonder();
         });
 
         document.querySelectorAll("[data-ms-iade-sms-kapat]").forEach((kapatici) => {
@@ -1063,25 +1297,6 @@
 
         document.querySelectorAll("[data-ms-iade-kodu-kapat]").forEach((kapatici) => {
             kapatici.addEventListener("click", () => iadeSayfasiModalKapat(iadeSayfasiKoduModal));
-        });
-
-        iadeSayfasiKoduModal?.querySelectorAll("[data-ms-iade-kodu-kopyala]").forEach((buton) => {
-            buton.addEventListener("click", async () => {
-                const kod = buton.textContent.trim().split(" ")[0] || "IAD-HJ-482913";
-                const bilgi = iadeSayfasiKoduModal?.querySelector("[data-ms-iade-kodu-kopya-bilgi]");
-
-                try {
-                    await kopyala(kod);
-                    if (bilgi) {
-                        bilgi.textContent = "İade kodu kopyalandı.";
-                    }
-                }
-                catch {
-                    if (bilgi) {
-                        bilgi.textContent = "Kod kopyalanamadı. Elle seçip kopyalayabilirsiniz.";
-                    }
-                }
-            });
         });
 
         document.addEventListener("keydown", (event) => {

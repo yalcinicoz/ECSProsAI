@@ -1,4 +1,31 @@
-<div class="ms-ornek-modal ms-iade-talep-modal ms-iade-sayfasi-modal" data-ms-iade-sayfasi-modal aria-hidden="true">
+@* E8: Yeni İade Talebi modalı canlıya bağlandı — iade edilebilir ürünler teslim edilmiş
+   siparişlerin kalemlerinden SSR (ViewData["MsIadeEdilebilirler"]); daha önce iade edilen
+   kalem seçilemez ve önceki neden seçimi panelde gösterilir. Neden listesi Lookup'tan
+   gömülü JSON'la ({id, ad, altNedenler}); telefon doğrulama durumu modal data attribute'ünde.
+   Kargo sütunları H2 kargo entegrasyonuna dek gizli. *@
+@{
+    var msIadeUrunler = ViewData["MsIadeEdilebilirler"] as List<ECSPros.Api.Models.Store.HesabimIadeEdilebilirUrunVm> ?? new();
+    var msIadeNedenler = ViewData["MsIadeNedenleri"] as List<ECSPros.Api.Models.Store.HesabimIadeNedeniVm> ?? new();
+    var msIadeUye = ViewData["MsIadeUye"] as ECSPros.Crm.Application.Queries.GetMemberDetail.MemberDetailDto;
+    var msIadeModalTr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+
+    var msIadeSecilebilirler = msIadeUrunler.Where(u => !u.IadeEdildi).ToList();
+    var msIadeSiparisSayisi = msIadeSecilebilirler.Select(u => u.SiparisNo).Distinct().Count();
+    var msIadeToplamTutar = msIadeSecilebilirler.Select(u => (u.SiparisNo, u.SiparisTutari)).Distinct().Sum(x => x.SiparisTutari);
+
+    string MsIadeTelefonYaz(string? telefon)
+    {
+        var rakamlar = new string((telefon ?? "").Where(char.IsDigit).ToArray());
+        if (rakamlar.Length < 10) return telefon ?? "—";
+        var son10 = rakamlar[^10..];
+        return $"+90 {son10[..3]} {son10[3..6]} {son10[6..8]} {son10[8..]}";
+    }
+
+    var msIadeTelefonDogrulandi = msIadeUye?.IsPhoneVerified == true;
+    var msIadeNedenlerJson = System.Text.Json.JsonSerializer.Serialize(
+        msIadeNedenler.Select(n => new { id = n.Id, ad = n.Ad, altNedenler = n.AltNedenler }));
+}
+<div class="ms-ornek-modal ms-iade-talep-modal ms-iade-sayfasi-modal" data-ms-iade-sayfasi-modal data-ms-iade-telefon-dogrulandi="@(msIadeTelefonDogrulandi ? "true" : "false")" aria-hidden="true">
     <div class="ms-ornek-modal-kaplama" data-ms-iade-sayfasi-modal-kapat></div>
     <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-2xl ms-iade-talep-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-iade-sayfasi-modal-baslik">
         <button class="ms-ornek-modal-kapat" type="button" data-ms-iade-sayfasi-modal-kapat aria-label="İade talebi modalını kapat">×</button>
@@ -9,155 +36,78 @@
         </div>
 
         <div class="ms-siparis-detay-bilgi-grid">
-            <article><span>İade Edilebilecek Sipariş Sayısı</span><strong>4</strong></article>
-            <article><span>İade Edilebilecek Toplam Ürün Sayısı</span><strong>8</strong></article>
-            <article><span>Kargolar</span><strong>HepsiJet · PTT Kargo</strong></article>
-            <article><span>Toplam Ödenen Tutar</span><strong>5.427,40 TL</strong></article>
+            <article><span>İade Edilebilecek Sipariş Sayısı</span><strong>@msIadeSiparisSayisi</strong></article>
+            <article><span>İade Edilebilecek Toplam Ürün Sayısı</span><strong>@msIadeSecilebilirler.Count</strong></article>
+            @if (false)
+            {
+            @* Kargo firması bilgisi H2 kargo entegrasyonunda. *@
+            <article><span>Kargolar</span><strong>—</strong></article>
+            }
+            <article><span>Toplam Ödenen Tutar</span><strong>@msIadeToplamTutar.ToString("N2", msIadeModalTr) TL</strong></article>
         </div>
 
         <div class="ms-iade-musteri-grid">
             <article>
                 <span>Müşteri</span>
-                <strong>Emre Sağlam</strong>
-                <p>emre.saglam@example.com</p>
+                <strong>@msIadeUye?.FirstName @msIadeUye?.LastName</strong>
+                <p>@(msIadeUye?.Email ?? "—")</p>
             </article>
             <article>
                 <span>Telefon</span>
-                <strong>+90 555 123 45 67</strong>
+                <strong>@MsIadeTelefonYaz(msIadeUye?.Phone)</strong>
                 <div class="ms-iade-telefon-durumlari">
-                    <span class="ms-iade-telefon-durum ms-iade-telefon-durum-onayli">Doğrulandı</span>
-                    <span class="ms-iade-telefon-durum ms-iade-telefon-durum-bekliyor">Doğrulanmadı</span>
+                    @* inline display: sınıf display'i (inline-flex) hidden attribute'ünü ezebilir *@
+                    <span class="ms-iade-telefon-durum ms-iade-telefon-durum-onayli" data-ms-iade-telefon-durum-onayli style="@(msIadeTelefonDogrulandi ? "" : "display:none")">Doğrulandı</span>
+                    <span class="ms-iade-telefon-durum ms-iade-telefon-durum-bekliyor" data-ms-iade-telefon-durum-bekliyor style="@(msIadeTelefonDogrulandi ? "display:none" : "")">Doğrulanmadı</span>
                 </div>
             </article>
             <article>
                 <span>Teslimat Adresi</span>
-                <strong>Şişli / İstanbul</strong>
-                <p>Merkez Mah. Operia Sok. No: 12/4</p>
+                <strong>@(ViewData["MsIadeTeslimatAdi"] as string ?? "—")</strong>
+                <p>@(ViewData["MsIadeTeslimatAdresi"] as string ?? "")</p>
             </article>
         </div>
 
         <div class="ms-siparis-detay-bolum">
             <h4>İade Edilebilecek Ürünler</h4>
             <div class="ms-iade-urun-listesi">
-                <article class="ms-iade-urun-kart" data-ms-iade-sayfasi-urun-kart>
+                @if (msIadeUrunler.Count == 0)
+                {
+                <p class="ms-ornek-modal-aciklama">İade edilebilecek ürününüz bulunmuyor. Teslim edilmiş bir siparişiniz olduğunda ürünleri buradan iade edebilirsiniz.</p>
+                }
+                @foreach (var u in msIadeUrunler)
+                {
+                <article class="ms-iade-urun-kart@(u.IadeEdildi ? " ms-iade-urun-kart-iade-edildi" : "")" data-ms-iade-sayfasi-urun-kart data-ms-iade-sayfasi-kalem-id="@u.OrderItemId">
                     <div class="ms-iade-urun-siparis-bilgisi">
-                        <article><span>Sipariş No</span><strong>MSX-240701-7815</strong></article>
-                        <article><span>Sipariş Tarihi</span><strong>1 Temmuz 2026</strong></article>
-                        <article><span>Kargo</span><strong>HepsiJet</strong></article>
-                        <article><span>Ödenen Tutar</span><strong>749,90 TL</strong></article>
-                    </div>
-                    <label class="ms-iade-urun-secim">
-                        <input type="checkbox" data-ms-iade-sayfasi-urun-sec>
-                        <img src="/images/ornek-resim.jpg" alt="Kadın ön çıtçıtlı dik yaka kolsuz gömlek">
-                        <span>
-                            <strong>Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek</strong>
-                            <small>Beden: M · Renk: Ekru · Adet: 1</small>
-                        </span>
-                        <b class="ms-urun-fiyat">749,90 TL</b>
-                    </label>
-                    <div class="ms-iade-neden-alani" hidden>
-                        <div class="ms-iade-neden-baslik">Ana iade nedeni</div>
-                        <div class="ms-iade-nedenler" data-ms-iade-sayfasi-nedenler></div>
-                        <div class="ms-iade-alt-neden" hidden data-ms-iade-sayfasi-alt-neden>
-                            <span>Alt neden</span>
-                            <div class="ms-ozel-select ms-ozel-select-coklu ms-ozel-select-aramali-coklu ms-iade-alt-neden-select" data-ms-iade-sayfasi-alt-neden-select>
-                                <button class="ms-ozel-select-tetikleyici" type="button" data-ms-iade-sayfasi-alt-neden-tetikleyici aria-haspopup="listbox" aria-expanded="false">
-                                    <span class="ms-ozel-select-etiketler" data-ms-iade-sayfasi-alt-neden-deger><span class="ms-ozel-select-placeholder">Alt neden seçin</span></span>
-                                    <span class="ms-ozel-select-sayac" data-ms-iade-sayfasi-alt-neden-sayac hidden>0 adet seçildi</span>
-                                    <i class="fa-solid fa-chevron-down ms-fa-ikon ms-ozel-select-ok " aria-hidden="true"></i>
-                                </button>
-                                <div class="ms-ozel-select-panel" role="listbox">
-                                    <input class="ms-ozel-select-arama" type="search" placeholder="Alt neden ara" data-ms-iade-sayfasi-alt-neden-arama>
-                                    <div class="ms-ozel-select-secenek-listesi" data-ms-iade-sayfasi-alt-neden-secenekler></div>
-                                </div>
-                            </div>
-                        </div>
-                        <label class="ms-iade-diger-neden" hidden>
-                            <span>Diğer açıklaması</span>
-                            <textarea rows="3" data-ms-iade-sayfasi-diger-neden placeholder="İade nedeninizi kısaca yazın"></textarea>
-                        </label>
-                        <div class="ms-iade-secimler" data-ms-iade-sayfasi-secimler hidden>
-                            <strong>Seçim yapılanlar</strong>
-                            <div class="ms-iade-secim-grup" data-ms-iade-sayfasi-ana-secimler hidden>
-                                <span>İade nedenleri</span>
-                                <div data-ms-iade-sayfasi-ana-secim-listesi></div>
-                            </div>
-                            <div class="ms-iade-secim-grup" data-ms-iade-sayfasi-alt-secimler hidden>
-                                <span>Alt nedenler</span>
-                                <div data-ms-iade-sayfasi-alt-secim-listesi></div>
-                            </div>
-                        </div>
-                    </div>
-                </article>
-
-                <article class="ms-iade-urun-kart" data-ms-iade-sayfasi-urun-kart>
-                    <div class="ms-iade-urun-siparis-bilgisi">
-                        <article><span>Sipariş No</span><strong>MSX-240628-4419</strong></article>
-                        <article><span>Sipariş Tarihi</span><strong>28 Haziran 2026</strong></article>
-                        <article><span>Kargo</span><strong>PTT Kargo</strong></article>
-                        <article><span>Ödenen Tutar</span><strong>1.299,80 TL</strong></article>
-                    </div>
-                    <label class="ms-iade-urun-secim">
-                        <input type="checkbox" data-ms-iade-sayfasi-urun-sec>
-                        <img src="/images/ornek-resim-2.jpg" alt="Polo yaka desenli erkek triko tişört">
-                        <span>
-                            <strong>Polo Yaka Desenli Erkek Triko Tişört</strong>
-                            <small>Beden: L · Renk: Siyah · Adet: 1</small>
-                        </span>
-                        <b class="ms-urun-fiyat">649,90 TL</b>
-                    </label>
-                    <div class="ms-iade-neden-alani" hidden>
-                        <div class="ms-iade-neden-baslik">Ana iade nedeni</div>
-                        <div class="ms-iade-nedenler" data-ms-iade-sayfasi-nedenler></div>
-                        <div class="ms-iade-alt-neden" hidden data-ms-iade-sayfasi-alt-neden>
-                            <span>Alt neden</span>
-                            <div class="ms-ozel-select ms-ozel-select-coklu ms-ozel-select-aramali-coklu ms-iade-alt-neden-select" data-ms-iade-sayfasi-alt-neden-select>
-                                <button class="ms-ozel-select-tetikleyici" type="button" data-ms-iade-sayfasi-alt-neden-tetikleyici aria-haspopup="listbox" aria-expanded="false">
-                                    <span class="ms-ozel-select-etiketler" data-ms-iade-sayfasi-alt-neden-deger><span class="ms-ozel-select-placeholder">Alt neden seçin</span></span>
-                                    <span class="ms-ozel-select-sayac" data-ms-iade-sayfasi-alt-neden-sayac hidden>0 adet seçildi</span>
-                                    <i class="fa-solid fa-chevron-down ms-fa-ikon ms-ozel-select-ok " aria-hidden="true"></i>
-                                </button>
-                                <div class="ms-ozel-select-panel" role="listbox">
-                                    <input class="ms-ozel-select-arama" type="search" placeholder="Alt neden ara" data-ms-iade-sayfasi-alt-neden-arama>
-                                    <div class="ms-ozel-select-secenek-listesi" data-ms-iade-sayfasi-alt-neden-secenekler></div>
-                                </div>
-                            </div>
-                        </div>
-                        <label class="ms-iade-diger-neden" hidden>
-                            <span>Diğer açıklaması</span>
-                            <textarea rows="3" data-ms-iade-sayfasi-diger-neden placeholder="İade nedeninizi kısaca yazın"></textarea>
-                        </label>
-                        <div class="ms-iade-secimler" data-ms-iade-sayfasi-secimler hidden>
-                            <strong>Seçim yapılanlar</strong>
-                            <div class="ms-iade-secim-grup" data-ms-iade-sayfasi-ana-secimler hidden>
-                                <span>İade nedenleri</span>
-                                <div data-ms-iade-sayfasi-ana-secim-listesi></div>
-                            </div>
-                            <div class="ms-iade-secim-grup" data-ms-iade-sayfasi-alt-secimler hidden>
-                                <span>Alt nedenler</span>
-                                <div data-ms-iade-sayfasi-alt-secim-listesi></div>
-                            </div>
-                        </div>
-                    </div>
-                </article>
-
-                <article class="ms-iade-urun-kart ms-iade-urun-kart-iade-edildi" data-ms-iade-sayfasi-urun-kart>
-                    <div class="ms-iade-urun-siparis-bilgisi">
-                        <article><span>Sipariş No</span><strong>MSX-240624-1180</strong></article>
-                        <article><span>Sipariş Tarihi</span><strong>24 Haziran 2026</strong></article>
-                        <article><span>Kargo</span><strong>Yurtiçi Kargo</strong></article>
+                        <article><span>Sipariş No</span><strong>@u.SiparisNo</strong></article>
+                        <article><span>Sipariş Tarihi</span><strong>@u.SiparisTarihi</strong></article>
+                        @if (u.IadeEdildi)
+                        {
                         <article><span>İade Durumu</span><strong>Daha önce iade edildi</strong></article>
+                        }
+                        else
+                        {
+                        <article><span>Ödenen Tutar</span><strong>@u.SiparisTutari.ToString("N2", msIadeModalTr) TL</strong></article>
+                        }
                     </div>
                     <label class="ms-iade-urun-secim">
-                        <input type="checkbox" data-ms-iade-sayfasi-urun-sec disabled>
-                        <img src="/images/ornek-resim-2.jpg" alt="Polo yaka desenli erkek triko tişört">
+                        <input type="checkbox" data-ms-iade-sayfasi-urun-sec disabled="@(u.IadeEdildi ? "disabled" : null)">
+                        @if (u.GorselUrl is not null)
+                        {
+                        <img src="@u.GorselUrl" alt="@u.Ad">
+                        }
                         <span>
-                            <strong>Polo Yaka Desenli Erkek Triko Tişört</strong>
-                            <small>Beden: L · Renk: Siyah · Adet: 1</small>
+                            <strong>@u.Ad</strong>
+                            <small>@(string.IsNullOrWhiteSpace(u.SecenekOzeti) ? "" : u.SecenekOzeti + " · ")Adet: @u.Adet</small>
+                            @if (u.IadeEdildi)
+                            {
                             <em class="ms-iade-urun-durum-etiketi">İade edildi</em>
+                            }
                         </span>
-                        <b class="ms-urun-fiyat">649,90 TL</b>
+                        <b class="ms-urun-fiyat">@u.Tutar.ToString("N2", msIadeModalTr) TL</b>
                     </label>
+                    @if (u.IadeEdildi)
+                    {
                     <button class="ms-iade-edildi-neden-buton" type="button" data-ms-iade-sayfasi-edildi-neden-ac aria-expanded="false">
                         <span>Önceki İade Nedeni</span>
                         <i class="fa-solid fa-chevron-down ms-fa-ikon " aria-hidden="true"></i>
@@ -168,38 +118,28 @@
                             <div class="ms-iade-secim-grup">
                                 <span>İade nedenleri</span>
                                 <div class="ms-iade-secim-timeline">
+                                    @foreach (var secim in u.OncekiNedenler)
+                                    {
                                     <div class="ms-iade-secim-timeline-satir">
                                         <span class="ms-iade-secim-timeline-nokta" aria-hidden="true"></span>
                                         <div class="ms-iade-secim-timeline-icerik">
-                                            <span class="ms-iade-secim-ana-chip">Beden / Kalıp Problemi</span>
+                                            <span class="ms-iade-secim-ana-chip">@secim.Ana</span>
                                             <div class="ms-iade-secim-alt-listesi">
-                                                <span class="ms-iade-secim-alt-chip">Küçük geldi</span>
-                                                <span class="ms-iade-secim-alt-chip">Normal bedenime uymadı</span>
+                                                @foreach (var alt in secim.Altlar)
+                                                {
+                                                <span class="ms-iade-secim-alt-chip">@alt</span>
+                                                }
                                             </div>
                                         </div>
                                     </div>
+                                    }
                                 </div>
                             </div>
                         </div>
                     </div>
-                </article>
-
-                <article class="ms-iade-urun-kart" data-ms-iade-sayfasi-urun-kart>
-                    <div class="ms-iade-urun-siparis-bilgisi">
-                        <article><span>Sipariş No</span><strong>MSX-240620-3362</strong></article>
-                        <article><span>Sipariş Tarihi</span><strong>20 Haziran 2026</strong></article>
-                        <article><span>Kargo</span><strong>HepsiJet</strong></article>
-                        <article><span>Ödenen Tutar</span><strong>2.079,80 TL</strong></article>
-                    </div>
-                    <label class="ms-iade-urun-secim">
-                        <input type="checkbox" data-ms-iade-sayfasi-urun-sec>
-                        <img src="/images/ornek-resim.jpg" alt="İç astarlı salaş tesettür bluz">
-                        <span>
-                            <strong>İç Astarlı Salaş Tesettür Bluz</strong>
-                            <small>Beden: S · Renk: Beyaz · Adet: 2</small>
-                        </span>
-                        <b class="ms-urun-fiyat">1.039,90 TL</b>
-                    </label>
+                    }
+                    else
+                    {
                     <div class="ms-iade-neden-alani" hidden>
                         <div class="ms-iade-neden-baslik">Ana iade nedeni</div>
                         <div class="ms-iade-nedenler" data-ms-iade-sayfasi-nedenler></div>
@@ -233,7 +173,9 @@
                             </div>
                         </div>
                     </div>
+                    }
                 </article>
+                }
             </div>
         </div>
 
@@ -248,10 +190,19 @@
 
         <div class="ms-ornek-modal-aksiyonlar">
             <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-iade-sayfasi-modal-kapat>Vazgeç</button>
+            @if (msIadeTelefonDogrulandi)
+            {
+            <button class="ms-buton ms-buton-m ms-buton-basarili" type="button" data-ms-iade-sayfasi-sms-dogrula disabled>SMS Doğrulandı</button>
+            }
+            else
+            {
             <button class="ms-buton ms-buton-m ms-buton-ikincil" type="button" data-ms-iade-sayfasi-sms-dogrula>SMS Doğrula</button>
+            }
             <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-iade-sayfasi-kodu-al>İade Kodu Al</button>
         </div>
     </section>
 </div>
+
+<script type="application/json" data-ms-iade-nedenler-json>@Html.Raw(msIadeNedenlerJson)</script>
 
 @await Html.PartialAsync("~/Views/ProjeElementleri/Hesabim/_HesabimIadeDogrulamaModallari.cshtml")

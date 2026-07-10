@@ -294,6 +294,30 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — E8 TAMAM: İadelerim + iade talebi akışı:**
+  - **Nedenler Lookup'ta:** `return_reason` tipi + 9 ana neden; alt nedenler değerin
+    `ExtraData.subReasons`'ında (LookupValue'da hiyerarşi yok — alt nedenler metin
+    snapshot). Seeder idempotent + canlıya SQL uygulandı.
+  - **Backend:** `Return.CargoReturnCode`+`ImageUrls` (AddReturnStoreFields canlıda);
+    `CreateStoreReturn` — üye kapsamlı, yalnız delivered, kalemler farklı siparişlerden
+    (sipariş başına Return; kod modalı tüm kodları listeler), mükerrer engeli, beklenen
+    tutar kalem toplamından, kod `IAD-XXXXXX`. Neden = ana LookupId + CustomerNotes
+    JSON snapshot (relaxed encoding). Görsel: POST returns/images (5×5MB) →
+    `Store:MediaRootPath` altına /media/returns/yyyyMM (nginx sunar). SMS: D4
+    otp_codes purpose=phone_verify — kod KAYITLI telefona (send|verify endpoint'leri);
+    doğrulanmamışsa POST returns `phone_verification_required` döner, akış SMS
+    modalından sonra otomatik devam eder; başarı IsPhoneVerified=true.
+    **Sahiplik düzeltmesi:** store GetOrder/GetReturn MemberId denetler (404).
+  - **Frontend:** İadelerim SSR kartlar (4 adımlı akış; rejected'da akış gizli +
+    inceleme notu; Dekont H1, kargo firması H2 gizli); talep modalı SSR ürünlerle
+    (iade edilen kalem kilitli + önceki neden chip'leri); Siparişlerim "İade Et" →
+    `/Hesabim/Iadelerim?iade=yeni` köprüsü (modal otomatik).
+  - **E2E 35/35 ✓ + E1 13/13 + E4 15/15 + E7 17/17 + D4 18/18 ✓; drift TEMİZ.**
+    Test dersi: üye API'leri JWT bearer ister — sayfa script'i localStorage token'ıyla
+    çağırmalı (ilk koşuda 401); rozet/durum kutularında `hidden` attribute sınıf
+    display'ine yenilebilir → inline style kullanıldı. Sıradaki: E9 İndirim Kuponlarım
+    (üyeye tanımlı kupon listesi API'si + sayfa; C3 kupon modalı da bundan beslenir).
+
 - **2026-07-10 (devam) — E7 TAMAM: Ürün Değerlendirme modülü (en büyük kalem):**
   - **Backend:** `storefront.product_reviews` (AddProductReviews canlıda) — puan/metin/
     pending|approved|rejected + red nedeni + maskeli ad snapshot'ı; Create (mükerrer engeli)/

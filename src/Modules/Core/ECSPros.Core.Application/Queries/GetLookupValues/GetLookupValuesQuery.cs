@@ -12,4 +12,5 @@ public record LookupValueDto(
     string? Icon,
     bool IsDefault,
     bool IsActive,
-    int SortOrder);
+    int SortOrder,
+    Dictionary<string, object>? ExtraData = null); // E8: iade alt nedenleri (subReasons) gibi ek veri
