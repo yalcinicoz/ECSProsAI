@@ -12,25 +12,28 @@
                     <h3>Hesap bilgileri</h3>
                     <p>Alışveriş, teslimat ve kampanya bildirimlerinde kullanılacak üyelik bilgilerinizi bu alandan düzenleyebilirsiniz.</p>
                 </div>
+                @* E2: rozetler gerçek doğrulama durumundan — script uygun olanları gösterir. *@
                 <div class="ms-hesabim-uyelik-rozetler" aria-label="Hesap durumları">
-                    <span class="ms-hesabim-uyelik-rozet">E-posta doğrulandı</span>
-                    <span class="ms-hesabim-uyelik-rozet ms-hesabim-uyelik-rozet-basarili">Telefon doğrulandı</span>
-                    <span class="ms-hesabim-uyelik-rozet ms-hesabim-uyelik-rozet-hata">Telefon doğrulanmadı</span>
+                    <span class="ms-hesabim-uyelik-rozet ms-hesabim-uyelik-rozet-basarili" data-ms-profil-rozet="eposta-ok" style="display:none">E-posta doğrulandı</span>
+                    <span class="ms-hesabim-uyelik-rozet ms-hesabim-uyelik-rozet-hata" data-ms-profil-rozet="eposta-yok" style="display:none">E-posta doğrulanmadı</span>
+                    <span class="ms-hesabim-uyelik-rozet ms-hesabim-uyelik-rozet-basarili" data-ms-profil-rozet="telefon-ok" style="display:none">Telefon doğrulandı</span>
+                    <span class="ms-hesabim-uyelik-rozet ms-hesabim-uyelik-rozet-hata" data-ms-profil-rozet="telefon-yok" style="display:none">Telefon doğrulanmadı</span>
                 </div>
             </div>
 
             <div class="ms-hesabim-uyelik-ana-grid">
                 <section class="ms-hesabim-uyelik-kart" aria-labelledby="ms-kisisel-bilgiler-baslik">
                     <article class="ms-panel ms-hesabim-uyelik-kart-bildirim" aria-label="Telefon doğrulama bilgisi">
+                        @* E2: iki demo durumdan yalnız gerçek olan gösterilir (script). *@
                         <div class="ms-telefon-dogrulama-durumlari" aria-label="Telefon doğrulama durumları">
-                            <span class="ms-telefon-dogrulama-durumu ms-telefon-dogrulama-durumu-basarili">
+                            <span class="ms-telefon-dogrulama-durumu ms-telefon-dogrulama-durumu-basarili" data-ms-profil-tel-durum="ok" style="display:none">
                                 <i class="fa-solid fa-circle-check ms-fa-ikon " aria-hidden="true"></i>
                                 <span>
                                     <strong>Telefon no doğrulandı</strong>
                                     <small>SMS doğrulaması tamamlandı.</small>
                                 </span>
                             </span>
-                            <span class="ms-telefon-dogrulama-durumu ms-telefon-dogrulama-durumu-hata">
+                            <span class="ms-telefon-dogrulama-durumu ms-telefon-dogrulama-durumu-hata" data-ms-profil-tel-durum="yok" style="display:none">
                                 <i class="fa-solid fa-circle-xmark ms-fa-ikon " aria-hidden="true"></i>
                                 <span>
                                     <strong>Telefon no doğrulanmadı</strong>
@@ -41,17 +44,19 @@
                     </article>
                     <h3 id="ms-kisisel-bilgiler-baslik">Kişisel Bilgiler</h3>
                     <div class="ms-form-izgara">
+                        @* E2: değerler GET profile'dan; e-posta giriş kimliği olduğundan salt
+                           okunur (değişikliği doğrulama akışı ister — ileri faz). *@
                         <label class="ms-form-alani">
                             <span class="ms-form-etiket">Ad</span>
-                            <input class="ms-form-girdi" type="text" name="Ad" value="Emre" autocomplete="given-name" />
+                            <input class="ms-form-girdi" type="text" name="Ad" value="" autocomplete="given-name" data-ms-profil-ad />
                         </label>
                         <label class="ms-form-alani">
                             <span class="ms-form-etiket">Soyad</span>
-                            <input class="ms-form-girdi" type="text" name="Soyad" value="Sağlam" autocomplete="family-name" />
+                            <input class="ms-form-girdi" type="text" name="Soyad" value="" autocomplete="family-name" data-ms-profil-soyad />
                         </label>
                         <label class="ms-form-alani">
                             <span class="ms-form-etiket">E-posta</span>
-                            <input class="ms-form-girdi" type="email" name="Eposta" value="emre.saglam@example.com" autocomplete="email" />
+                            <input class="ms-form-girdi" type="email" name="Eposta" value="" autocomplete="email" readonly data-ms-profil-eposta />
                         </label>
                             <label class="ms-form-alani">
                                 <span class="ms-form-etiket">Telefon</span>
@@ -75,19 +80,27 @@
                                         </button>
                                     </span>
                                 </span>
-                                <input type="tel" name="Telefon" value="555 123 45 67" placeholder="___ ___ __ __" inputmode="numeric" autocomplete="tel-national" maxlength="13" data-ms-telefon-input>
+                                <input type="tel" name="Telefon" value="" placeholder="___ ___ __ __" inputmode="numeric" autocomplete="tel-national" maxlength="13" data-ms-telefon-input data-ms-profil-telefon>
                             </span>
                         </label>
                         <label class="ms-form-alani">
                             <span class="ms-form-etiket">Doğum Tarihi</span>
-                            <input class="ms-form-girdi" type="date" name="DogumTarihi" value="1992-05-14" autocomplete="bday" />
+                            <input class="ms-form-girdi" type="date" name="DogumTarihi" value="" autocomplete="bday" data-ms-profil-dogum />
                         </label>
                         <label class="ms-form-alani">
                             <span class="ms-form-etiket">Cinsiyet</span>
-                            <select class="ms-form-girdi" name="Cinsiyet">
-                                <option>Belirtmek istemiyorum</option>
-                                <option>Kadın</option>
-                                <option>Erkek</option>
+                            <select class="ms-form-girdi" name="Cinsiyet" data-ms-profil-cinsiyet>
+                                <option value="">Belirtmek istemiyorum</option>
+                                <option value="female">Kadın</option>
+                                <option value="male">Erkek</option>
+                            </select>
+                        </label>
+                        @* E2 eki (tasarımda yok): yaşadığı şehir — kişiselleştirme segmenti (G9)
+                           bundan beslenir; liste geo API'sinden (TR illeri). *@
+                        <label class="ms-form-alani">
+                            <span class="ms-form-etiket">Şehir</span>
+                            <select class="ms-form-girdi" name="Sehir" data-ms-profil-sehir>
+                                <option value="">Seçim yapın</option>
                             </select>
                         </label>
                     </div>
@@ -103,7 +116,7 @@
                         </h4>
                         <div class="ms-hesabim-guvenlik-onaylar">
                             <label class="ms-hesabim-guvenlik-onay">
-                                <input class="ms-onay-input" type="checkbox" name="EpostaIzin" checked />
+                                <input class="ms-onay-input" type="checkbox" name="EpostaIzin" data-ms-profil-izin="email" />
                                 <span class="ms-onay-kutu" aria-hidden="true"></span>
                                 <span>
                                     <span class="ms-onay-metin">E-mail</span>
@@ -111,7 +124,7 @@
                                 </span>
                             </label>
                             <label class="ms-hesabim-guvenlik-onay">
-                                <input class="ms-onay-input" type="checkbox" name="SmsIzin" />
+                                <input class="ms-onay-input" type="checkbox" name="SmsIzin" data-ms-profil-izin="sms" />
                                 <span class="ms-onay-kutu" aria-hidden="true"></span>
                                 <span>
                                     <span class="ms-onay-metin">SMS</span>
@@ -119,7 +132,7 @@
                                 </span>
                             </label>
                             <label class="ms-hesabim-guvenlik-onay">
-                                <input class="ms-onay-input" type="checkbox" name="TelefonIzin" />
+                                <input class="ms-onay-input" type="checkbox" name="TelefonIzin" data-ms-profil-izin="phone" />
                                 <span class="ms-onay-kutu" aria-hidden="true"></span>
                                 <span>
                                     <span class="ms-onay-metin">Telefon</span>
@@ -127,7 +140,8 @@
                                 </span>
                             </label>
                         </div>
-                        <button class="ms-buton ms-buton-m ms-buton-koyu ms-buton-tam" type="button">Güncelle</button>
+                        <div class="ms-uyari ms-uyari-hata" data-ms-profil-izin-hata hidden></div>
+                        <button class="ms-buton ms-buton-m ms-buton-koyu ms-buton-tam" type="button" data-ms-profil-izin-kaydet>Güncelle</button>
                     </section>
 
                     <section class="ms-hesabim-guvenlik-bolum" aria-labelledby="ms-aktif-cihazlar-baslik">
@@ -135,13 +149,17 @@
                             <i class="fa-solid fa-mobile-screen-button ms-fa-ikon " aria-hidden="true"></i>
                             <span>Aktif Cihazlar</span>
                         </h4>
+                        @* E2: aktif oturumlardan (account/sessions) — demo kart template oldu. *@
+                        <div data-ms-profil-cihazlar></div>
+                        <template data-ms-profil-cihaz-sablon>
                         <div class="ms-hesabim-cihaz-karti">
                             <i class="fa-solid fa-mobile-screen-button ms-fa-ikon " aria-hidden="true"></i>
                             <div>
-                                <strong>Windows 10 <span>Mevcut</span></strong>
-                                <p>Chrome 149.0.0.0 <small>4 gün önce</small></p>
+                                <strong><span data-alan="cihaz"></span> <span data-alan="mevcut"></span></strong>
+                                <p><span data-alan="tarayici"></span> <small data-alan="zaman"></small></p>
                             </div>
                         </div>
+                        </template>
                     </section>
 
                     <section class="ms-hesabim-guvenlik-bolum" aria-labelledby="ms-giris-gecmisi-baslik">
@@ -149,24 +167,18 @@
                             <i class="fa-solid fa-clock-rotate-left ms-fa-ikon " aria-hidden="true"></i>
                             <span>Giriş Geçmişi</span>
                         </h4>
-                        <div class="ms-hesabim-giris-listesi">
+                        @* E2: son oturumlardan (account/sessions) — demo kayıtlar template oldu. *@
+                        <div class="ms-hesabim-giris-listesi" data-ms-profil-girisler></div>
+                        <template data-ms-profil-giris-sablon>
                             <div class="ms-hesabim-giris-kaydi">
                                 <i class="fa-solid fa-circle-check ms-fa-ikon " aria-hidden="true"></i>
                                 <div>
                                     <strong>Başarılı giriş</strong>
-                                    <p>Chrome - Windows 10 <span>IP: 212.156.97.162</span></p>
+                                    <p><span data-alan="cihaz"></span> <span data-alan="ip"></span></p>
                                 </div>
-                                <time>4 gün önce</time>
+                                <time data-alan="zaman"></time>
                             </div>
-                            <div class="ms-hesabim-giris-kaydi">
-                                <i class="fa-solid fa-circle-check ms-fa-ikon " aria-hidden="true"></i>
-                                <div>
-                                    <strong>Başarılı giriş</strong>
-                                    <p>Chrome - Windows 10 <span>IP: 212.156.97.162</span></p>
-                                </div>
-                                <time>4 gün önce</time>
-                            </div>
-                        </div>
+                        </template>
                     </section>
 
                     <section class="ms-hesabim-guvenlik-bolum ms-hesabim-hesap-sil" aria-labelledby="ms-hesap-sil-baslik">
@@ -184,9 +196,209 @@
             </div>
 
             <div class="ms-hesabim-uyelik-aksiyonlar">
-                <button class="ms-buton ms-buton-m ms-buton-sade" type="button">Vazgeç</button>
+                <div class="ms-uyari ms-uyari-hata" data-ms-profil-mesaj hidden></div>
+                <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-profil-vazgec>Vazgeç</button>
                 <button class="ms-buton ms-buton-m ms-buton-satin-al" type="submit">Bilgileri Güncelle</button>
             </div>
         </form>
     </section>
 </section>
+
+@* E2: Üyelik Bilgilerim canlı veri — profil GET/PUT, duyuru tercihleri, aktif cihazlar +
+   giriş geçmişi (account/sessions). Misharix davranış script'lerine dokunulmadı; ülke
+   seçici görsel olarak duruyor, telefon TR (+90) olarak normalize edilir. *@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.querySelector(".ms-hesabim-uyelik-formu");
+    if (!form) { return; }
+    const token = () => localStorage.getItem("ecspros_member_token");
+    const basliklar = () => ({ "Content-Type": "application/json", Authorization: "Bearer " + token() });
+    const el = (sec) => form.closest(".ms-hesabim-sayfa").querySelector(sec);
+    let sonProfil = null;
+
+    const mesajGoster = (alan, metin, hata) => {
+        if (!alan) { return; }
+        alan.textContent = metin || "";
+        alan.hidden = !metin;
+        alan.classList.toggle("ms-uyari-hata", !!hata);
+    };
+
+    const goreliZaman = (iso) => {
+        const fark = Math.max(0, Date.now() - new Date(iso).getTime());
+        const dk = Math.floor(fark / 60000);
+        if (dk < 1) { return "az önce"; }
+        if (dk < 60) { return dk + " dk önce"; }
+        const saat = Math.floor(dk / 60);
+        if (saat < 24) { return saat + " saat önce"; }
+        return Math.floor(saat / 24) + " gün önce";
+    };
+
+    const uaCozumle = (ua) => {
+        if (!ua) { return { cihaz: "Bilinmeyen cihaz", tarayici: "" }; }
+        const isletim =
+            /Windows NT 10/.test(ua) ? "Windows 10" :
+            /Windows/.test(ua) ? "Windows" :
+            /Android/.test(ua) ? "Android" :
+            /iPhone|iPad/.test(ua) ? "iOS" :
+            /Mac OS X/.test(ua) ? "macOS" :
+            /Linux/.test(ua) ? "Linux" : "Bilinmeyen cihaz";
+        const t = ua.match(/(Edg|OPR|Firefox|Chrome|Safari)\/([\d.]+)/);
+        const adlar = { Edg: "Edge", OPR: "Opera" };
+        return { cihaz: isletim, tarayici: t ? (adlar[t[1]] || t[1]) + " " + t[2] : "" };
+    };
+
+    const telefonYaz = (telefon) => {
+        const rakamlar = (telefon || "").replace(/\D/g, "").replace(/^90/, "").slice(-10);
+        const girdi = el("[data-ms-profil-telefon]");
+        if (girdi) {
+            girdi.value = rakamlar
+                ? [rakamlar.slice(0, 3), rakamlar.slice(3, 6), rakamlar.slice(6, 8), rakamlar.slice(8, 10)].filter(Boolean).join(" ")
+                : "";
+        }
+    };
+
+    const rozetleriYaz = (p) => {
+        const goster = (ad, acik) => {
+            const rozet = el(`[data-ms-profil-rozet="${ad}"]`);
+            if (rozet) { rozet.style.display = acik ? "" : "none"; }
+        };
+        goster("eposta-ok", p.isEmailVerified); goster("eposta-yok", !p.isEmailVerified);
+        goster("telefon-ok", p.isPhoneVerified); goster("telefon-yok", !p.isPhoneVerified);
+        const telOk = el('[data-ms-profil-tel-durum="ok"]');
+        const telYok = el('[data-ms-profil-tel-durum="yok"]');
+        if (telOk) { telOk.style.display = p.isPhoneVerified ? "" : "none"; }
+        if (telYok) { telYok.style.display = p.isPhoneVerified ? "none" : ""; }
+    };
+
+    const formuDoldur = (p) => {
+        el("[data-ms-profil-ad]").value = p.firstName || "";
+        el("[data-ms-profil-soyad]").value = p.lastName || "";
+        el("[data-ms-profil-eposta]").value = p.email || "";
+        telefonYaz(p.phone);
+        el("[data-ms-profil-dogum]").value = p.birthDate || "";
+        el("[data-ms-profil-cinsiyet]").value = p.gender || "";
+        const sehir = el("[data-ms-profil-sehir]");
+        if (sehir) { sehir.value = p.cityId || ""; }
+        form.querySelectorAll("[data-ms-profil-izin]").forEach((kutu) => {
+            kutu.checked = !!p.marketingConsents?.[kutu.dataset.msProfilIzin];
+        });
+        rozetleriYaz(p);
+    };
+
+    const sehirleriYukle = async () => {
+        try {
+            const ulkeler = await (await fetch("/api/store/geo/countries")).json();
+            const tr = (ulkeler?.data || []).find((u) => u.code === "TR") || (ulkeler?.data || [])[0];
+            if (!tr) { return; }
+            const iller = await (await fetch("/api/store/geo/cities?countryId=" + tr.id)).json();
+            const secim = el("[data-ms-profil-sehir]");
+            (iller?.data || []).forEach((il) => {
+                const secenek = document.createElement("option");
+                secenek.value = il.id;
+                secenek.textContent = il.nameI18n?.tr || il.code;
+                secim.appendChild(secenek);
+            });
+            if (sonProfil?.cityId) { secim.value = sonProfil.cityId; }
+        } catch { /* şehir listesi yüklenemedi — alan boş kalır */ }
+    };
+
+    const oturumlariYukle = async () => {
+        try {
+            const cevap = await (await fetch("/api/store/account/sessions", { headers: basliklar() })).json();
+            if (!cevap?.success) { return; }
+            const oturumlar = cevap.data || [];
+
+            const cihazAlani = el("[data-ms-profil-cihazlar]");
+            const cihazSablon = el("[data-ms-profil-cihaz-sablon]");
+            const aktifler = oturumlar.filter((o) => o.isActive).slice(0, 3);
+            aktifler.forEach((o, sira) => {
+                const kart = cihazSablon.content.cloneNode(true);
+                const bilgi = uaCozumle(o.userAgent);
+                kart.querySelector('[data-alan="cihaz"]').textContent = bilgi.cihaz;
+                kart.querySelector('[data-alan="mevcut"]').textContent = sira === 0 ? "Mevcut" : "";
+                kart.querySelector('[data-alan="tarayici"]').textContent = bilgi.tarayici || "—";
+                kart.querySelector('[data-alan="zaman"]').textContent = goreliZaman(o.createdAt);
+                cihazAlani.appendChild(kart);
+            });
+
+            const girisAlani = el("[data-ms-profil-girisler]");
+            const girisSablon = el("[data-ms-profil-giris-sablon]");
+            oturumlar.slice(0, 5).forEach((o) => {
+                const kayit = girisSablon.content.cloneNode(true);
+                const bilgi = uaCozumle(o.userAgent);
+                kayit.querySelector('[data-alan="cihaz"]').textContent =
+                    bilgi.tarayici ? `${bilgi.tarayici.split(" ")[0]} - ${bilgi.cihaz}` : bilgi.cihaz;
+                kayit.querySelector('[data-alan="ip"]').textContent = o.ipAddress ? "IP: " + o.ipAddress : "";
+                kayit.querySelector('[data-alan="zaman"]').textContent = goreliZaman(o.createdAt);
+                girisAlani.appendChild(kayit);
+            });
+        } catch { /* oturum listesi yüklenemedi */ }
+    };
+
+    const profilYukle = async () => {
+        const cevap = await (await fetch("/api/store/account/profile", { headers: basliklar() })).json();
+        if (cevap?.success) {
+            sonProfil = cevap.data;
+            formuDoldur(sonProfil);
+        }
+    };
+
+    // ── Kaydet / Vazgeç ──
+    const mesaj = el("[data-ms-profil-mesaj]");
+    form.addEventListener("submit", async (olay) => {
+        olay.preventDefault();
+        mesajGoster(mesaj, "");
+        const govde = {
+            firstName: el("[data-ms-profil-ad]").value.trim(),
+            lastName: el("[data-ms-profil-soyad]").value.trim(),
+            phone: el("[data-ms-profil-telefon]").value.replace(/\D/g, "") || null,
+            gender: el("[data-ms-profil-cinsiyet]").value || null,
+            birthDate: el("[data-ms-profil-dogum]").value || null,
+            cityId: el("[data-ms-profil-sehir]").value || null
+        };
+        try {
+            const cevap = await fetch("/api/store/account/profile", {
+                method: "PUT", headers: basliklar(), body: JSON.stringify(govde)
+            });
+            const veri = await cevap.json().catch(() => null);
+            if (!veri?.success) {
+                mesajGoster(mesaj, veri?.error || "Bilgiler kaydedilemedi.", true);
+                return;
+            }
+            await profilYukle(); // rozetler değişmiş olabilir (telefon değişince doğrulama düşer)
+            mesajGoster(mesaj, "Bilgileriniz güncellendi.", false);
+        } catch {
+            mesajGoster(mesaj, "Bilgiler kaydedilemedi. Lütfen tekrar deneyin.", true);
+        }
+    });
+
+    el("[data-ms-profil-vazgec]")?.addEventListener("click", () => {
+        if (sonProfil) { formuDoldur(sonProfil); }
+        mesajGoster(mesaj, "");
+    });
+
+    // ── Duyuru tercihleri ──
+    const izinMesaj = el("[data-ms-profil-izin-hata]");
+    el("[data-ms-profil-izin-kaydet]")?.addEventListener("click", async (olay) => {
+        const buton = olay.currentTarget;
+        mesajGoster(izinMesaj, "");
+        const oku = (ad) => !!form.querySelector(`[data-ms-profil-izin="${ad}"]`)?.checked;
+        buton.disabled = true;
+        try {
+            const cevap = await fetch("/api/store/account/marketing-consents", {
+                method: "PUT", headers: basliklar(),
+                body: JSON.stringify({ email: oku("email"), sms: oku("sms"), phone: oku("phone") })
+            });
+            const veri = await cevap.json().catch(() => null);
+            mesajGoster(izinMesaj, veri?.success ? "Tercihleriniz kaydedildi." : (veri?.error || "Kaydedilemedi."), !veri?.success);
+        } catch {
+            mesajGoster(izinMesaj, "Kaydedilemedi. Lütfen tekrar deneyin.", true);
+        } finally {
+            buton.disabled = false;
+        }
+    });
+
+    profilYukle().then(sehirleriYukle);
+    oturumlariYukle();
+});
+</script>

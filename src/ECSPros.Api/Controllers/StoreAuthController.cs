@@ -32,6 +32,14 @@ public class StoreAuthController(IMediator mediator) : ControllerBase
     private void UyeCerezSil() =>
         Response.Cookies.Delete(StoreMemberSession.CookieAdi, new CookieOptions { Path = "/" });
 
+    // E2: Aktif Cihazlar / Giriş Geçmişi için oturuma cihaz bilgisi yazılır.
+    private string? IstemciIp() => HttpContext.Connection.RemoteIpAddress?.ToString();
+    private string? IstemciUa()
+    {
+        var ua = Request.Headers.UserAgent.ToString();
+        return string.IsNullOrWhiteSpace(ua) ? null : ua[..Math.Min(ua.Length, 500)];
+    }
+
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterMemberRequest req, CancellationToken ct)
     {
@@ -59,7 +67,8 @@ public class StoreAuthController(IMediator mediator) : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginMemberRequest req, CancellationToken ct)
     {
-        var result = await mediator.Send(new LoginMemberCommand(req.Email, req.Password), ct);
+        var result = await mediator.Send(
+            new LoginMemberCommand(req.Email, req.Password, IstemciIp(), IstemciUa()), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         UyeCerezYaz(result.Value!);
         return Ok(new { success = true, data = result.Value });
@@ -89,7 +98,8 @@ public class StoreAuthController(IMediator mediator) : ControllerBase
     [HttpPost("otp/verify")]
     public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest req, CancellationToken ct)
     {
-        var result = await mediator.Send(new VerifyLoginOtpCommand(req.Phone, req.Code), ct);
+        var result = await mediator.Send(
+            new VerifyLoginOtpCommand(req.Phone, req.Code, IstemciIp(), IstemciUa()), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         UyeCerezYaz(result.Value!);
         return Ok(new { success = true, data = result.Value });

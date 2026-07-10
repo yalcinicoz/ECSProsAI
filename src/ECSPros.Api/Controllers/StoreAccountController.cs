@@ -36,9 +36,30 @@ public class StoreAccountController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new UpdateMemberProfileCommand(
-            GetMemberId(), req.FirstName, req.LastName, req.Phone, req.Gender, req.BirthDate), ct);
+            GetMemberId(), req.FirstName, req.LastName, req.Phone, req.Gender, req.BirthDate, req.CityId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
+    }
+
+    /// <summary>E2: duyuru tercihleri (kampanya e-posta/SMS/telefon izinleri).</summary>
+    [HttpPut("marketing-consents")]
+    public async Task<IActionResult> UpdateMarketingConsents([FromBody] MarketingConsentsRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(
+            new ECSPros.Crm.Application.Commands.UpdateMemberMarketingConsents.UpdateMemberMarketingConsentsCommand(
+                GetMemberId(), req.Email, req.Sms, req.Phone), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>E2: Aktif Cihazlar + Giriş Geçmişi — üyenin son oturumları.</summary>
+    [HttpGet("sessions")]
+    public async Task<IActionResult> GetSessions(CancellationToken ct)
+    {
+        var result = await mediator.Send(
+            new ECSPros.Crm.Application.Queries.GetMemberSessions.GetMemberSessionsQuery(GetMemberId()), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
     }
 
     // Addresses
@@ -135,6 +156,9 @@ public record UpdateProfileRequest(
     string LastName,
     string? Phone,
     string? Gender,
-    DateOnly? BirthDate);
+    DateOnly? BirthDate,
+    Guid? CityId = null);   // E2: yaşadığı şehir (G9 segmenti)
+
+public record MarketingConsentsRequest(bool Email, bool Sms, bool Phone);
 
 public record SetIdentityRequest(string IdentityNumber, DateOnly? BirthDate = null);

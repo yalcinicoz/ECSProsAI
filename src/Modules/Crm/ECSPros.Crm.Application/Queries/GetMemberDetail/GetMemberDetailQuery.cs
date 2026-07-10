@@ -23,4 +23,8 @@ public record MemberDetailDto(
     bool IsActive,
     DateTime? LastLoginAt,
     DateTime CreatedAt,
-    bool IdentityVerified = false); // C7: TCKN algoritma doğrulaması yapılmış mı (eşik üzeri sipariş koşulu)
+    bool IdentityVerified = false,   // C7: TCKN algoritma doğrulaması yapılmış mı (eşik üzeri sipariş koşulu)
+    Guid? CityId = null,             // E2: yaşadığı şehir (G9 segmenti)
+    MarketingConsentsDto? MarketingConsents = null); // E2: duyuru tercihleri (Consents jsonb "marketing")
+
+public record MarketingConsentsDto(bool Email, bool Sms, bool Phone);

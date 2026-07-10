@@ -36,7 +36,10 @@ public class RefreshMemberTokenCommandHandler(ICrmDbContext db, IMemberTokenServ
             MemberId = session.MemberId,
             RefreshTokenHash = refreshHash,
             ExpiresAt = expiresAt,
-            IsActive = true
+            IsActive = true,
+            // E2: rotasyonda cihaz bilgisi taşınır (Aktif Cihazlar kaydı kopmasın)
+            IpAddress = session.IpAddress,
+            UserAgent = session.UserAgent
         });
 
         await db.SaveChangesAsync(ct);
