@@ -36,6 +36,7 @@ public class MemberConfiguration : IEntityTypeConfiguration<Member>
         builder.Property(x => x.Consents).HasColumnType("jsonb");
         builder.HasIndex(x => x.Email).IsUnique().HasFilter("\"Email\" IS NOT NULL");
         builder.HasIndex(x => x.Phone).IsUnique().HasFilter("\"Phone\" IS NOT NULL");
+        builder.HasOne<City>().WithMany().HasForeignKey(x => x.CityId); // E2: şehir (G9 segmenti)
         builder.HasQueryFilter(x => !x.IsDeleted);
 
         builder.HasMany(x => x.Addresses).WithOne(x => x.Member).HasForeignKey(x => x.MemberId);

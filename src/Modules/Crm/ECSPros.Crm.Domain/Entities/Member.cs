@@ -12,6 +12,8 @@ public class Member : BaseEntity
     public string LastName { get; set; } = string.Empty;
     public string? Gender { get; set; }
     public DateOnly? BirthDate { get; set; }
+    // E2: yaşadığı şehir (crm_cities) — kişiselleştirme segmenti (G9 il→bölge) buradan beslenir.
+    public Guid? CityId { get; set; }
     // C7 (K9): TCKN — format+algoritma doğrulamasından geçmiş kimlik no (NVİ/KPS ileride).
     // Eşik üzeri siparişlerde zorunlu; yalnızca sipariş doğrulama süreci için kullanılır.
     public string? IdentityNumber { get; set; }

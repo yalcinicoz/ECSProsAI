@@ -141,3 +141,11 @@ Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml
 # E1: Hesabım varsayılan — karşılama adı SSR kimlikten (ViewData["MsUye"], demo "EMRE SAĞLAM"
 # yerine); kısayol grid'i ve kalan markup birebir.
 Views/ProjeElementleri/Hesabim/_HesabimVarsayilan.cshtml
+
+# E2: Üyelik Bilgilerim canlıya bağlandı — form değerleri profile GET/PUT'tan (e-posta
+# salt okunur: giriş kimliği, değişikliği doğrulama akışı ister); rozetler + telefon
+# doğrulama durumu gerçek; Şehir alanı EKLENDİ (tasarımda yok — G9 segmenti, kullanıcı planı
+# 6. bölüm); duyuru tercihleri Consents jsonb "marketing"; aktif cihazlar + giriş geçmişi
+# account/sessions'tan (demo kartlar template oldu); dosya sonunda canlı script. Hesabı Sil
+# bölümü tasarım demo'su olarak duruyor (kapsam dışı — ileri faz/kullanıcı kararı).
+Views/ProjeElementleri/Hesabim/_HesabimUyelikBilgilerim.cshtml

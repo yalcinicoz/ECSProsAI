@@ -6,7 +6,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Crm.Application.Commands.LoginMember;
 
-public record LoginMemberCommand(string Email, string Password) : IRequest<Result<MemberLoginResponse>>;
+public record LoginMemberCommand(
+    string Email, string Password,
+    string? IpAddress = null, string? UserAgent = null) // E2: Aktif Cihazlar/Giriş Geçmişi
+    : IRequest<Result<MemberLoginResponse>>;
 
 public record MemberLoginResponse(
     string AccessToken,
@@ -45,7 +48,9 @@ public class LoginMemberCommandHandler(
             MemberId = member.Id,
             RefreshTokenHash = refreshHash,
             ExpiresAt = expiresAt,
-            IsActive = true
+            IsActive = true,
+            IpAddress = request.IpAddress,
+            UserAgent = request.UserAgent
         });
 
         member.LastLoginAt = DateTime.UtcNow;

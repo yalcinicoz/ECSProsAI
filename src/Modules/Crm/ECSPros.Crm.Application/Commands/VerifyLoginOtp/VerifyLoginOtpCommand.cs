@@ -13,7 +13,10 @@ namespace ECSPros.Crm.Application.Commands.VerifyLoginOtp;
 /// (LoginMember ile aynı session + token akışı) ve telefon doğrulanmış işaretlenir.
 /// Kod tek kullanımlıktır; yanlış denemeler sayılır, sınır aşımında kod yanar.
 /// </summary>
-public record VerifyLoginOtpCommand(string Phone, string Code) : IRequest<Result<MemberLoginResponse>>;
+public record VerifyLoginOtpCommand(
+    string Phone, string Code,
+    string? IpAddress = null, string? UserAgent = null) // E2: Aktif Cihazlar/Giriş Geçmişi
+    : IRequest<Result<MemberLoginResponse>>;
 
 public class VerifyLoginOtpCommandHandler(ICrmDbContext db, IMemberTokenService tokenService)
     : IRequestHandler<VerifyLoginOtpCommand, Result<MemberLoginResponse>>
@@ -65,7 +68,9 @@ public class VerifyLoginOtpCommandHandler(ICrmDbContext db, IMemberTokenService 
             MemberId = member.Id,
             RefreshTokenHash = tokenService.HashRefreshToken(rawRefresh),
             ExpiresAt = expiresAt,
-            IsActive = true
+            IsActive = true,
+            IpAddress = request.IpAddress,
+            UserAgent = request.UserAgent
         });
 
         member.IsPhoneVerified = true; // kod telefona ulaştı ve doğrulandı

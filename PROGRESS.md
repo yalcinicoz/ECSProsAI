@@ -294,6 +294,20 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — E2 TAMAM: Üyelik Bilgilerim canlı:**
+  - **Backend:** `Member.CityId` (`AddMemberCity` migration canlıda, crm_cities FK — G9
+    segmenti); UpdateMemberProfile genişledi (telefon normalize+benzersizlik+değişince
+    IsPhoneVerified düşer; CityId denetimi; e-posta bu komutla değişmez);
+    `UpdateMemberMarketingConsents` (Consents jsonb "marketing") + PUT marketing-consents;
+    `GetMemberSessions` + GET sessions; login/OTP/refresh oturumlarına IP+UserAgent yazılır.
+  - **Frontend:** form profile GET/PUT'a bağlı (e-posta readonly); rozetler + telefon
+    doğrulama durumu gerçek; **Şehir alanı eklendi** (tasarımda yoktu — G9); duyuru
+    tercihleri; Aktif Cihazlar + Giriş Geçmişi sessions'tan (UA çözümleme + göreli zaman).
+    Hesabı Sil tasarım demo'su kaldı (kullanıcı kararı bekler); şifre değiştirme/TCKN
+    alanı tasarımda yok (TCKN C7 modalında; şifre forgot-password ile ileri fazda).
+  - **E2E 19/19 ✓ + E1 13/13 + B4 12/12 + D1 12/12 + D4 18/18 ✓; drift TEMİZ.**
+    Sıradaki: E3 Adreslerim (C4 modalı yeniden kullanılır; adres güncelleme API'si gerekli).
+
 - **2026-07-10 (devam) — FAZ E BAŞLADI; E1 TAMAM: Hesabım çerçevesi:**
   - `HesabimController` (StorePageController tabanı) — misharix çift route şeması birebir:
     12 sayfa × (/Hesabim/... + kebab-case), tek Sayfa.cshtml + partial adı kalıbı.
