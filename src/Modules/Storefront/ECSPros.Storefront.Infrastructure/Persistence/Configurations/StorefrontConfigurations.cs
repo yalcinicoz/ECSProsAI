@@ -158,6 +158,25 @@ public class ChannelProductGroupConfiguration : IEntityTypeConfiguration<Channel
     }
 }
 
+public class ProductReviewConfiguration : IEntityTypeConfiguration<ProductReview>
+{
+    public void Configure(EntityTypeBuilder<ProductReview> builder)
+    {
+        builder.ToTable("product_reviews");
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.ProductCode).HasMaxLength(50).IsRequired();
+        builder.Property(r => r.Text).HasMaxLength(2000);
+        builder.Property(r => r.Status).HasMaxLength(20).IsRequired();
+        builder.Property(r => r.RejectReason).HasMaxLength(500);
+        builder.Property(r => r.MemberName).HasMaxLength(100).IsRequired();
+        // Üye bir ürünü bir kez değerlendirir (silinen tekrar yazılabilir — filtre IsDeleted'ı eler)
+        builder.HasIndex(r => new { r.FirmPlatformId, r.MemberId, r.ProductCode });
+        builder.HasIndex(r => new { r.FirmPlatformId, r.ProductCode, r.Status }); // ürün sayfası + istatistik
+        builder.HasIndex(r => new { r.FirmPlatformId, r.Status });                // moderasyon kuyruğu
+        builder.HasQueryFilter(r => !r.IsDeleted);
+    }
+}
+
 public class CollectionConfiguration : IEntityTypeConfiguration<Collection>
 {
     public void Configure(EntityTypeBuilder<Collection> builder)

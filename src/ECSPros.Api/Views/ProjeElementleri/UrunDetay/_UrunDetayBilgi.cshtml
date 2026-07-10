@@ -8,23 +8,25 @@
     // beden tablosu (veri yok).
     var vmBilgi = ViewData["MsUrunDetay"] as UrunDetayVm;
     var b = vmBilgi!;
+    var tr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
 }
 <aside class="ms-urun-detay-bilgi">
                 <div class="ms-urun-detay-baslik-alani">
                     <h1 class="ms-urun-detay-baslik"><span>@b.Ad</span></h1>
                     <p class="ms-urun-detay-kod">Ürün Kodu: <strong>@b.Kod@(b.SeciliRenkAd is null ? "" : " / " + b.SeciliRenkAd)</strong></p>
 
+                    @* E7: puan onaylı yorum ortalamasından; link sayfa içi değerlendirme
+                       bölümüne (ayrı değerlendirmeler sayfası taşınmadı — ileri iş). *@
                     <div class="ms-urun-puan ms-urun-detay-puan">
-                        <strong>0.0</strong>
-                        <span class="ms-urun-yildizlar ms-urun-yildizlar-pasif" aria-label="0 yıldız">
-                            <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
-                            <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
-                            <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
-                            <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
-                            <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
+                        <strong>@b.Puan.ToString("0.0", tr)</strong>
+                        <span class="ms-urun-yildizlar@(b.PuanSayisi == 0 ? " ms-urun-yildizlar-pasif" : "")" aria-label="@b.Puan.ToString("0.0", tr) yıldız">
+                            @for (var y = 1; y <= 5; y++)
+                            {
+                                <i class="fa-@(b.PuanSayisi > 0 && y <= Math.Round(b.Puan, MidpointRounding.AwayFromZero) ? "solid" : "solid") fa-star ms-fa-ikon@(b.PuanSayisi > 0 && y > Math.Round(b.Puan, MidpointRounding.AwayFromZero) ? " ms-urun-yildizlar-pasif" : "")" aria-hidden="true"></i>
+                            }
                         </span>
                         <span class="ms-urun-detay-puan-ayrac">•</span>
-                        <a class="ms-urun-detay-degerlendirme-link" href="/urun-degerlendirmeleri">0 Değerlendirme</a>
+                        <a class="ms-urun-detay-degerlendirme-link" href="#urun-degerlendirmeleri">@b.PuanSayisi Değerlendirme</a>
                     </div>
                 </div>
 
@@ -181,6 +183,33 @@
 
                 <section class="ms-urun-detay-bolum" id="urun-degerlendirmeleri">
                     <h2 class="ms-urun-detay-bolum-baslik">Ürün Değerlendirmeleri</h2>
+                    @if (b.Yorumlar is { Count: > 0 })
+                    {
+                        @* E7: yayında ilk 10 yorum SSR — tam liste/filtreli değerlendirmeler
+                           sayfası ayrı iş (tasarımdaki _UrunDegerlendirmeleriSayfasi). *@
+                        foreach (var yorum in b.Yorumlar)
+                        {
+                        <article class="ms-urun-detay-degerlendirme">
+                            <div class="ms-urun-puan">
+                                <span class="ms-urun-yildizlar" aria-label="@yorum.Puan yıldız">
+                                    @for (var y = 1; y <= 5; y++)
+                                    {
+                                        <i class="fa-solid fa-star ms-fa-ikon@(y > yorum.Puan ? " ms-urun-yildizlar-pasif" : "")" aria-hidden="true"></i>
+                                    }
+                                </span>
+                                <span>@yorum.Ad</span>
+                                <span>@yorum.TarihMetni</span>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(yorum.Metin))
+                            {
+                            <p>@yorum.Metin</p>
+                            }
+                        </article>
+                        }
+                    }
+                    else
+                    {
                     <p class="ms-urun-detay-degerlendirme-bos">Bu ürün için henüz değerlendirme yapılmadı.</p>
+                    }
                 </section>
             </aside>

@@ -167,10 +167,67 @@ public class HesabimController(
     public IActionResult Iadelerim() =>
         HesabimSayfasi("İadelerim", "~/Views/ProjeElementleri/Hesabim/_HesabimIadelerim.cshtml");
 
+    /// <summary>E7: Yorumlarım SSR — "Değerlendir" sekmesi teslim edilmiş ama henüz
+    /// yorumlanmamış ürünler (kalem VariantId'leri Catalog'la koda çözülür); diğer
+    /// sekmeler üyenin yorumlarından (silinenler dahil).</summary>
     [HttpGet("/Hesabim/Yorumlarim")]
     [HttpGet("/yorumlarim")]
-    public IActionResult Yorumlarim() =>
-        HesabimSayfasi("Yorumlarım", "~/Views/ProjeElementleri/Hesabim/_HesabimYorumlarim.cshtml");
+    public async Task<IActionResult> Yorumlarim(CancellationToken ct)
+    {
+        var platform = await storeContext.GetPlatformAsync(ct);
+        var degerlendirilecekler = new List<HesabimKoleksiyonUrunVm>();
+        var yorumlar = new List<(ECSPros.Storefront.Application.Queries.GetMemberReviews.MemberReviewDto Yorum, HesabimKoleksiyonUrunVm? Urun)>();
+
+        if (platform is not null)
+        {
+            // Teslim edilen ürün kodları (kod → sipariş kalemi)
+            var teslimKodlari = new List<string>();
+            var siparisler = await mediator.Send(new GetOrdersQuery("delivered", _memberId, null, 1, 50), ct);
+            if (siparisler.IsSuccess)
+            {
+                var varyantIdler = new List<Guid>();
+                foreach (var ozet in siparisler.Value!.Items)
+                {
+                    var detay = await mediator.Send(new GetOrderDetailQuery(ozet.Id), ct);
+                    if (detay.IsSuccess) varyantIdler.AddRange(detay.Value!.Items.Select(i => i.VariantId));
+                }
+                if (varyantIdler.Count > 0)
+                {
+                    var gorunumler = await productService.GetVariantDisplayAsync(varyantIdler.Distinct().ToList(), ct);
+                    teslimKodlari = gorunumler.Values.Select(g => g.ProductCode).Distinct().ToList();
+                }
+            }
+
+            var yorumSonucu = await mediator.Send(
+                new ECSPros.Storefront.Application.Queries.GetMemberReviews.GetMemberReviewsQuery(
+                    platform.Id, _memberId), ct);
+            var uyeYorumlari = yorumSonucu.IsSuccess ? yorumSonucu.Value! : new();
+
+            var yorumlananlar = uyeYorumlari.Where(y => !y.IsDeleted).Select(y => y.ProductCode).ToHashSet();
+            var degerlendirKodlari = teslimKodlari.Where(k => !yorumlananlar.Contains(k)).ToList();
+
+            // Ürün ad/görsel haritası (tek Catalog sorgusu)
+            var tumKodlar = degerlendirKodlari.Concat(uyeYorumlari.Select(y => y.ProductCode)).Distinct().ToList();
+            var urunMap = new Dictionary<string, HesabimKoleksiyonUrunVm>();
+            if (tumKodlar.Count > 0)
+            {
+                var urunler = await mediator.Send(
+                    new ECSPros.Catalog.Application.Queries.GetStoreProducts.GetStoreProductsQuery(
+                        platform.Id, ProductCodes: tumKodlar, PageSize: tumKodlar.Count), ct);
+                if (urunler.IsSuccess)
+                    urunMap = urunler.Value!.Items.ToDictionary(
+                        p => p.Code,
+                        p => new HesabimKoleksiyonUrunVm(p.Code, UrunKartMap.TrAd(p.NameI18n), p.MainImageUrl));
+            }
+
+            degerlendirilecekler = degerlendirKodlari.Where(urunMap.ContainsKey).Select(k => urunMap[k]).ToList();
+            yorumlar = uyeYorumlari.Select(y => (y, urunMap.GetValueOrDefault(y.ProductCode))).ToList();
+        }
+
+        ViewData["MsYorumDegerlendir"] = degerlendirilecekler;
+        ViewData["MsYorumlar"] = yorumlar;
+        return HesabimSayfasi("Yorumlarım", "~/Views/ProjeElementleri/Hesabim/_HesabimYorumlarim.cshtml");
+    }
 
     /// <summary>E5: favori kodlar → Catalog'dan kart verisi (liste/ana sayfayla aynı kart
     /// kaynağı); silinen/pasif ürünün favorisi listelenmez, favori sırası korunur.</summary>

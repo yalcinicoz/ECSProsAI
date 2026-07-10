@@ -24,9 +24,10 @@ Views/ProjeElementleri/Navigasyon/_AnaNavigasyonSearch.cshtml
 # B7: Ürün listesi sayfası canlı veriye bağlandı — başlık ViewData'dan (kategori/arama/tümü).
 Views/UrunListesi/Index.cshtml
 
-# B7: Ürün alanı — kart markup'ı UrunKarti local function'ına alındı (template ile SSR ilk
+# B7+E7: Ürün alanı — kart markup'ı UrunKarti local function'ına alındı (template ile SSR ilk
 # sayfa aynı markup'ı kullanır, plan 3.3); veri karşılığı olmayan demo blokları @if ile gizli
 # (B8/B11/Faz G); dosya sonuna canlı veri + client-side filtre/sıralama motoru eklendi.
+# E7: JSON→kart eşlemesine puan alanları + kartDoldur'a puan bölümü dolumu eklendi.
 Views/ProjeElementleri/UrunListesi/_UrunListesiUrunAlani.cshtml
 
 # B7: Sol filtre — blok markup'ları birebir, içerik gerçek facet'lerden @foreach ile;
@@ -60,11 +61,12 @@ Views/ProjeElementleri/UrunDetay/_UrunDetayBreadcrumb.cshtml
 # (B11/Faz G); tek görselde yön butonları gizli. Davranış script'ine dokunulmadı.
 Views/ProjeElementleri/UrunDetay/_UrunDetayResimAlani.cshtml
 
-# B9: Bilgi sütunu canlı veriye bağlandı — ad/kod/fiyat(+indirim)/renkler/bedenler/
+# B9+E7: Bilgi sütunu canlı veriye bağlandı — ad/kod/fiyat(+indirim)/renkler/bedenler/
 # öne çıkan özellikler/kısa açıklama. Veri karşılığı olmayanlar @if(false) gizli:
 # puan tooltip demo verisi, dönen teslimat mesajları (B8/B11), çoklu fiyat senaryoları
 # (Faz G), model ölçüleri (manken verisi ürünlere girilmedi), teslimat bilgileri (Faz H),
-# beden tablosu (veri yok). Değerlendirme bölümleri sıfır durumunda.
+# beden tablosu (veri yok). E7: puan + değerlendirme sayısı onaylı yorum ortalamasından,
+# değerlendirme bölümü yayında ilk 10 yorumu SSR listeler (link sayfa içi bölüme).
 Views/ProjeElementleri/UrunDetay/_UrunDetayBilgi.cshtml
 
 # B9: Alt bilgi — görsel/açıklama/özellikler canlı veriden; pazaryeri-özel demo maddeleri
@@ -184,3 +186,10 @@ Views/ProjeElementleri/Hesabim/_HesabimFavorilerim.cshtml
 # script'i yerine ms:koleksiyon-olustur → POST + reload; Paylaş linki panoya kopyalar
 # (public koleksiyon sayfası + "Koleksiyonu Aç" Faz G koleksiyon bloğuyla).
 Views/ProjeElementleri/Hesabim/_HesabimKoleksiyonlarim.cshtml
+
+# E7: Yorumlarım canlıya bağlandı — 5 sekme SSR (Değerlendir = teslim edilen − yorumlanan;
+# sekme davranışı site.js'te değişmedi); yorum yazma modalı eklendi (tasarımda yoktu —
+# ms-ornek-modal kalıbı, puan+metin, POST + utm_yorum yönlendirmesi); reddedilende Yeniden
+# Düzenle eskiyi silip yeniden gönderir; silinen kartındaki işlevsiz "Detayı Gör" ve ayrı
+# değerlendirmeler sayfası linki gizli (o sayfa taşınmadı — ileri iş).
+Views/ProjeElementleri/Hesabim/_HesabimYorumlarim.cshtml

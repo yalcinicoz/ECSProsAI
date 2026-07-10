@@ -63,7 +63,9 @@ public record ChannelCategoryProductItemDto(
     Dictionary<string, string>? SelectedColorNameI18n = null,
     List<string>? GalleryUrls = null,               // B8: kart hover galerisi (seçili rengin ilk 4 görseli)
     List<ProductListingColorDto>? AxisColors = null, // B8: ürünün eksen (renk) kartları — tooltip linkleri buradan
-    bool IsFeatured = false);                        // B11: öne çıkar penceresi içinde — kartta "Sponsorlu" rozeti
+    bool IsFeatured = false,                         // B11: öne çıkar penceresi içinde — kartta "Sponsorlu" rozeti
+    double Rating = 0,                               // E7: onaylı yorum ortalaması (0 = yorum yok)
+    int ReviewCount = 0);                            // E7: onaylı yorum sayısı
 
 public class GetChannelCategoryProductsQueryHandler(
     IStorefrontDbContext sfDb,
@@ -93,7 +95,35 @@ public class GetChannelCategoryProductsQueryHandler(
         catch { /* cache best-effort — Redis erişilemezse sessizce yok say */ }
     }
 
+    /// <summary>E7: puanlar (approved yorum ortalaması) dönüş öncesi eklenir — cache'lenen
+    /// sonuçtan bağımsız, moderasyon sonrası taze kalır; DTO alanları additive.</summary>
     public async Task<Result<PagedResult<ChannelCategoryProductItemDto>>> Handle(
+        GetChannelCategoryProductsQuery request, CancellationToken ct)
+    {
+        var sonuc = await HandleCore(request, ct);
+        if (sonuc.IsFailure) return sonuc;
+        var items = sonuc.Value!.Items.ToList();
+        if (items.Count == 0) return sonuc;
+
+        var platformId = await sfDb.ChannelCategories.AsNoTracking()
+            .Where(c => c.Id == request.ChannelCategoryId)
+            .Select(c => c.FirmPlatformId).FirstOrDefaultAsync(ct);
+        var kodlar = items.Select(i => i.Code).Distinct().ToList();
+        var puanlar = await sfDb.ProductReviews.AsNoTracking()
+            .Where(r => r.FirmPlatformId == platformId && r.Status == "approved" && kodlar.Contains(r.ProductCode))
+            .GroupBy(r => r.ProductCode)
+            .Select(g => new { Kod = g.Key, Ortalama = g.Average(r => r.Rating), Sayi = g.Count() })
+            .ToDictionaryAsync(g => g.Kod, ct);
+        if (puanlar.Count == 0) return sonuc;
+
+        for (var i = 0; i < items.Count; i++)
+            if (puanlar.TryGetValue(items[i].Code, out var p))
+                items[i] = items[i] with { Rating = Math.Round(p.Ortalama, 1), ReviewCount = p.Sayi };
+        return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
+            items, sonuc.Value.TotalCount, sonuc.Value.Page, sonuc.Value.PageSize));
+    }
+
+    private async Task<Result<PagedResult<ChannelCategoryProductItemDto>>> HandleCore(
         GetChannelCategoryProductsQuery request, CancellationToken ct)
     {
         var cacheKey = CacheKey(request.ChannelCategoryId, request.Page, request.PageSize);

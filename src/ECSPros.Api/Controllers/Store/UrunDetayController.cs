@@ -14,7 +14,7 @@ namespace ECSPros.Api.Controllers.Store;
 /// Veri süreç içi MediatR'dan gelir; mobil uygulama aynı sorguyu api/store/catalog/
 /// products/{code} üzerinden kullanır (plan 3.4).
 /// </summary>
-public class UrunDetayController(IMediator mediator, IStoreContext storeContext, ECSPros.Shared.Contracts.IStockService stockService) : StorePageController
+public class UrunDetayController(IMediator mediator, IStoreContext storeContext, ECSPros.Shared.Contracts.IStockService stockService, ECSPros.Shared.Contracts.IProductReviewStatsService reviewStats) : StorePageController
 {
     [HttpGet("/urun/{code}")]
     public async Task<IActionResult> Index(string code, [FromQuery] string? color, CancellationToken ct)
@@ -156,6 +156,22 @@ public class UrunDetayController(IMediator mediator, IStoreContext storeContext,
             : Satilabilir(havuz[0].Id);
         ozellikler.Add(new OzellikVm("Stok Durumu", urunSatilabilir ? "Stokta" : "Tükendi"));
 
+        // E7: puan + yayında ilk 10 yorum (SSR — kart/detay puanları gerçek ortalamadan)
+        var puanlar = await reviewStats.GetStatsAsync(platform.Id, new[] { urun.Code }, ct);
+        var puanIstatistik = puanlar.TryGetValue(urun.Code, out var pi) ? pi : null;
+        IReadOnlyList<YorumVm>? yorumlarVm = null;
+        if (puanIstatistik is not null)
+        {
+            var yorumSonucu = await mediator.Send(
+                new ECSPros.Storefront.Application.Queries.GetProductReviews.GetProductReviewsQuery(
+                    platform.Id, urun.Code, 1, 10), ct);
+            if (yorumSonucu.IsSuccess)
+                yorumlarVm = yorumSonucu.Value!.Items
+                    .Select(y => new YorumVm(y.Rating, y.Text, y.MemberName,
+                        y.CreatedAt.ToString("d MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"))))
+                    .ToList();
+        }
+
         var vm = new UrunDetayVm(
             Kod: urun.Code,
             Ad: TrAd(urun.NameI18n),
@@ -179,7 +195,10 @@ public class UrunDetayController(IMediator mediator, IStoreContext storeContext,
             KisaAciklama: urun.ShortDescriptionI18n is { } kisa ? TrAd(kisa) : null,
             Breadcrumb: breadcrumb,
             FirmPlatformId: platform.Id,
-            ParaBirimi: "TRY");
+            ParaBirimi: "TRY",
+            Puan: puanIstatistik?.Average ?? 0,
+            PuanSayisi: puanIstatistik?.Count ?? 0,
+            Yorumlar: yorumlarVm);
 
         ViewData["MsUrunDetay"] = vm;
         ViewData["Title"] = vm.Ad;

@@ -21,6 +21,7 @@ public class StorefrontDbContext : DbContext, IStorefrontDbContext
     public DbSet<Favorite> Favorites => Set<Favorite>();
     public DbSet<Collection> Collections => Set<Collection>();
     public DbSet<CollectionItem> CollectionItems => Set<CollectionItem>();
+    public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

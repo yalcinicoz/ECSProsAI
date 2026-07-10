@@ -102,10 +102,28 @@
         <h3 class="ms-urun-basligi"><strong>@adIlk</strong> @adKalan</h3>
         @if (false)
         {
-            @* B8: teslimat/favori mesajları, puan ve kargo mesajları — model alanları gelince *@
+            @* B8: teslimat/favori mesajları ve kargo mesajları — model alanları gelince *@
             <p class="ms-urun-teslimat"></p>
-            <div class="ms-urun-puan"></div>
             <p class="ms-urun-kargo"></p>
+        }
+        @* E7: puan onaylı yorum ortalamasından (yorumsuz üründe bölüm yok — sıfır durumu);
+           şablon kartında (u null) alan JS ile dolar. Kamera ikonu fotolu yorumla gelecek. *@
+        @if (u is null)
+        {
+            <div class="ms-urun-puan" data-ms-kart-puan hidden></div>
+        }
+        else if (u.PuanSayisi > 0)
+        {
+            <div class="ms-urun-puan">
+                <span>@u.Puan.ToString("0.0", tr)</span>
+                <span class="ms-urun-yildizlar" aria-label="@u.Puan.ToString("0.0", tr) yıldız">
+                    @for (var y = 1; y <= 5; y++)
+                    {
+                        <i class="fa-@(y <= Math.Round(u.Puan, MidpointRounding.AwayFromZero) ? "solid" : "regular") fa-star ms-fa-ikon " aria-hidden="true"></i>
+                    }
+                </span>
+                <span>(@u.PuanSayisi)</span>
+            </div>
         }
         <p class="ms-urun-fiyat">@(u is null ? "" : u.Fiyat.ToString("N2", tr) + " TL")</p>
     </div>
