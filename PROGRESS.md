@@ -294,6 +294,18 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — D7 TAMAM → FAZ D KAPANDI 🎉:**
+  - Envanter 8.1 auth satırları gerçek durumla güncellendi (kayıt modalı 🔶→✅ D3;
+    hesap paneli/çıkış D1 logout notu; e-posta sekmesi "varsayılan artık SMS" notu).
+  - Oturumlu/oturumsuz nav görüntüleri `tools/misharix-sync/shots/d7-*` (6 adet:
+    desktop 1440 + mobil 390 × oturumsuz/oturumlu + SMS'li giriş modalı + açık hesap
+    paneli) — "Giriş Yap"→"Hesabım", avatar, panel linkleri görsel doğrulandı.
+  - **Faz D toplu regresyon (taze publish): B4 12/12 + D1 12/12 + D3 9/9 + D4 18/18 =
+    51 adım ✓**; drift TEMİZ; test verileri silindi (canlı crm_members yine 0 kayıt).
+  - **FAZ D TAMAM (D1–D7).** Bekleyen tek dış karar: gerçek SMS sağlayıcısı (şimdilik
+    LogSmsService). SIRADAKİ FAZ → **E (Hesabım kümesi — 12 sayfa + yeni backend
+    özellikleri)**. DEPLOY BEKLİYOR (B11'den beri; artık Faz D de dahil).
+
 - **2026-07-10 (devam) — D5 TAMAM: üye şifreleri BCrypt:**
   - `IMemberPasswordHasher` (Crm.Application) + `MemberPasswordHasher` (Crm.Infrastructure,
     BCrypt.Net-Next wf12 — IAM'la aynı). Yeni yazımlar hep BCrypt: Register + admin
