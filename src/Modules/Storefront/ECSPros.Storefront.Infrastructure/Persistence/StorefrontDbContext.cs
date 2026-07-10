@@ -19,6 +19,8 @@ public class StorefrontDbContext : DbContext, IStorefrontDbContext
     public DbSet<ChannelProductGroup> ChannelProductGroups => Set<ChannelProductGroup>();
     public DbSet<StockAlert> StockAlerts => Set<StockAlert>();
     public DbSet<Favorite> Favorites => Set<Favorite>();
+    public DbSet<Collection> Collections => Set<Collection>();
+    public DbSet<CollectionItem> CollectionItems => Set<CollectionItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -294,6 +294,24 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — E6 TAMAM: Koleksiyonlar canlı (yeni backend + admin onay ekranı):**
+  - **Backend:** `storefront.collections` + `collection_items` (AddCollections canlıda) —
+    ShareCode + Status (pending/approved/rejected) + IsQuickSave; item'lar ProductCode
+    anahtarlı. CreateCollection (pending doğar) / ToggleQuickSave / ModerateCollection;
+    GET/POST /api/store/collections + POST saved/toggle; admin /api/collections
+    (liste+approve/reject).
+  - **Admin UI:** React CollectionsModerationPage (sekmeli kuyruk; sidebar girişi;
+    npm build alındı) — Faz G koleksiyon bloğu yalnız approved+public gösterir.
+  - **Bookmark kararı:** tasarımda seçici yok → kart/detay bookmark'ı otomatik
+    "Kaydedilenler" hızlı koleksiyonuyla çalışır (toggle-off yalnız oradan çıkarır);
+    misafir giriş modalına (E5 capture deseni).
+  - **Koleksiyonlarım SSR:** kartlar + durum rozeti (Onay bekliyor/Onaylanmadı — tasarıma
+    eklendi); modal panelleri gerçek favori/koleksiyon ürünleriyle; ms:koleksiyon-olustur
+    → POST + reload; Paylaş linki panoya (public sayfa Faz G).
+  - **E2E 15/15 ✓ + E5 13/13 + C1 12/12 + E1 13/13 ✓; drift TEMİZ.**
+    Sıradaki: E7 Yorumlarım + Ürün Değerlendirme modülü (en büyük kalem — product_reviews
+    + satın alma şartı + admin moderasyon + kart/detay puanları gerçek ortalamadan).
+
 - **2026-07-10 (devam) — E5 TAMAM: Favoriler canlı (yeni backend):**
   - **Backend:** `storefront.favorites` (AddFavorites migration canlıda) — anahtar
     **ProductCode** (plan ProductId diyordu; kartların kullandığı stabil kod seçildi,

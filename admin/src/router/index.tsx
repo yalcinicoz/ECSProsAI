@@ -21,6 +21,7 @@ import { BulkImageUploadPage } from '@/pages/catalog/BulkImageUploadPage'
 import { MenusPage } from '@/pages/cms/MenusPage'
 import { ChannelCategoriesPage } from '@/pages/storefront/ChannelCategoriesPage'
 import { ChannelCategoryDetailPage } from '@/pages/storefront/ChannelCategoryDetailPage'
+import { CollectionsModerationPage } from '@/pages/storefront/CollectionsModerationPage'
 import { MenuDetailPage } from '@/pages/cms/MenuDetailPage'
 import { WarehousesPage } from '@/pages/inventory/WarehousesPage'
 import { WarehouseDetailPage } from '@/pages/inventory/WarehouseDetailPage'
@@ -55,6 +56,7 @@ export const router = createBrowserRouter(
             { path: 'catalog/bulk-images',       element: <BulkImageUploadPage /> },
             { path: 'storefront/channel-categories',      element: <ChannelCategoriesPage /> },
             { path: 'storefront/channel-categories/:id',  element: <ChannelCategoryDetailPage /> },
+            { path: 'storefront/collections',              element: <CollectionsModerationPage /> },
 
             // Envanter
             { path: 'inventory/warehouses',     element: <WarehousesPage /> },

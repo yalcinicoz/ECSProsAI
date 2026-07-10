@@ -177,3 +177,10 @@ Views/ProjeElementleri/Urun/_FavoriDavranis.cshtml
 # (SSR, favori sırasıyla; silinen/pasif ürün listelenmez); boş durum gerçek; Paylaş
 # butonu gizli (E6 koleksiyon paylaşım kararına dek).
 Views/ProjeElementleri/Hesabim/_HesabimFavorilerim.cshtml
+
+# E6: Koleksiyonlarım canlıya bağlandı — demo kartlar SSR @foreach (avatar/ad üyeden,
+# kapaklar Catalog kart verisinden, durum rozeti pending/rejected eklendi — moderasyon
+# spec şartı); modal panelleri gerçek favori/koleksiyon ürünleriyle SSR; demo kart-render
+# script'i yerine ms:koleksiyon-olustur → POST + reload; Paylaş linki panoya kopyalar
+# (public koleksiyon sayfası + "Koleksiyonu Aç" Faz G koleksiyon bloğuyla).
+Views/ProjeElementleri/Hesabim/_HesabimKoleksiyonlarim.cshtml
