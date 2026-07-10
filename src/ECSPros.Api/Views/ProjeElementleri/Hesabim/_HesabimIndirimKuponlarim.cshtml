@@ -1,3 +1,11 @@
+@* E9: İndirim Kuponlarım canlıya bağlandı — kartlar SSR (ViewData["MsKuponlar"];
+   yalnız üyeye/üye grubuna tanımlı kullanılabilir kuponlar). "Sepette Kullan" C3'ün
+   sessionStorage kupon sözleşmesine ({kod}) yazıp sepete gider — sepet açılışta kodu
+   sessizce doğrulayıp uygular. "Kupon Kodu Ekle" tasarım demo'su gizli (kupon kodu
+   sepetteki alandan girilir — ayrı bir "kod tanımlama/claim" modeli yok). *@
+@{
+    var msKuponlar = ViewData["MsKuponlar"] as List<ECSPros.Api.Models.Store.HesabimKuponVm> ?? new();
+}
 <section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-kuponlar-baslik">
     <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model='@("kuponlar")' />
 
@@ -12,9 +20,15 @@
                     <h3>Kullanılabilir kuponlar</h3>
                     <p>Sepette kullanabileceğiniz kuponları ve son kullanım tarihlerini takip edin.</p>
                 </div>
+                @if (false)
+                {
+                @* Kupon kodu girişi sepetteki alandan yapılır — ayrı kod tanımlama akışı yok. *@
                 <button class="ms-buton ms-buton-m ms-buton-sade" type="button">Kupon Kodu Ekle</button>
+                }
             </div>
 
+            @if (msKuponlar.Count == 0)
+            {
             <section class="ms-hesabim-bos-durum" aria-labelledby="ms-kuponlar-bos-baslik">
                 <i class="fa-solid fa-ticket ms-fa-ikon " aria-hidden="true"></i>
                 <div>
@@ -23,21 +37,35 @@
                 </div>
                 <a class="ms-buton ms-buton-m ms-buton-sade" href="/">Kampanyaları Gör</a>
             </section>
-
+            }
+            else
+            {
             <div class="ms-hesabim-mini-grid">
+                @foreach (var kupon in msKuponlar)
+                {
                 <article class="ms-hesabim-kupon-karti">
-                    <span>HOŞGELDİN</span>
-                    <strong>150 TL indirim</strong>
-                    <p>750 TL ve üzeri alışverişlerde geçerli. Son kullanım: 15.07.2026</p>
-                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button">Sepette Kullan</button>
+                    <span>@kupon.Code</span>
+                    <strong>@kupon.IndirimMetni</strong>
+                    <p>@kupon.KosulMetni</p>
+                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-kupon-sepette-kullan="@kupon.Code">Sepette Kullan</button>
                 </article>
-                <article class="ms-hesabim-kupon-karti">
-                    <span>KARGO</span>
-                    <strong>Ücretsiz kargo</strong>
-                    <p>Seçili kategorilerde geçerli. Son kullanım: 30.07.2026</p>
-                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button">Sepette Kullan</button>
-                </article>
+                }
             </div>
+            }
         </div>
     </section>
 </section>
+
+@* E9: Sepette Kullan — C3 kupon sözleşmesi: sepet sayfası açılışta sessionStorage
+   msSepetKuponDurumu.kod'u sessizce yeniden doğrulayıp uygular. *@
+<script>
+    document.querySelectorAll("[data-ms-kupon-sepette-kullan]").forEach((buton) => {
+        buton.addEventListener("click", () => {
+            try {
+                sessionStorage.setItem("msSepetKuponDurumu",
+                    JSON.stringify({ kod: buton.dataset.msKuponSepetteKullan }));
+            } catch { /* depolama kapalıysa kod sepette elle girilir */ }
+            window.location.href = "/Sepet";
+        });
+    });
+</script>

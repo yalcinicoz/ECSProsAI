@@ -508,10 +508,39 @@ public class HesabimController(
         return HesabimSayfasi("Koleksiyonlarım", "~/Views/ProjeElementleri/Hesabim/_HesabimKoleksiyonlarim.cshtml");
     }
 
+    /// <summary>E9: İndirim Kuponlarım — üyeye/üye grubuna tanımlı kullanılabilir
+    /// kuponlar SSR (genel pazarlama kodları listelenmez); "Sepette Kullan" C3'ün
+    /// sessionStorage kupon sözleşmesiyle sepete taşır.</summary>
     [HttpGet("/Hesabim/IndirimKuponlarim")]
     [HttpGet("/indirim-kuponlarim")]
-    public IActionResult IndirimKuponlarim() =>
-        HesabimSayfasi("İndirim Kuponlarım", "~/Views/ProjeElementleri/Hesabim/_HesabimIndirimKuponlarim.cshtml");
+    public async Task<IActionResult> IndirimKuponlarim(CancellationToken ct)
+    {
+        var tr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+        var kuponlar = new List<HesabimKuponVm>();
+
+        var uye = await mediator.Send(
+            new ECSPros.Crm.Application.Queries.GetMemberDetail.GetMemberDetailQuery(_memberId), ct);
+        var listeSonucu = await mediator.Send(
+            new ECSPros.Promotion.Application.Queries.GetMemberCoupons.GetMemberCouponsQuery(
+                _memberId, uye.IsSuccess ? uye.Value!.MemberGroupId : null), ct);
+
+        if (listeSonucu.IsSuccess)
+            kuponlar = listeSonucu.Value!.Select(k =>
+            {
+                var kosullar = new List<string>();
+                if (k.MinimumCartTotal is decimal min)
+                    kosullar.Add($"{min.ToString("N2", tr)} TL ve üzeri alışverişlerde geçerli.");
+                if (k.ValidForFirstOrderOnly)
+                    kosullar.Add("Yalnızca ilk siparişte geçerli.");
+                kosullar.Add(k.EndsAt is DateTime son
+                    ? $"Son kullanım: {son.ToString("dd.MM.yyyy", tr)}"
+                    : "Süre sınırı yok.");
+                return new HesabimKuponVm(k.Code, k.DiscountText, string.Join(" ", kosullar));
+            }).ToList();
+
+        ViewData["MsKuponlar"] = kuponlar;
+        return HesabimSayfasi("İndirim Kuponlarım", "~/Views/ProjeElementleri/Hesabim/_HesabimIndirimKuponlarim.cshtml");
+    }
 
     [HttpGet("/Hesabim/FavoriAramalarim")]
     [HttpGet("/favori-aramalarim")]
