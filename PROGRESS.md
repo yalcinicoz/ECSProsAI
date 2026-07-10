@@ -294,6 +294,20 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-10 (devam) — E11 TAMAM: Favori Aramalarım:**
+  - **Backend (YENİ):** `storefront.saved_searches` (AddSavedSearches canlıda) —
+    Name/Query/Filters jsonb (UI şimdilik yalnız metin; filtre entegrasyonu ileri iş)/
+    NotifyEnabled; unique (platform, member, Query). Create (mükerrer engeli + soft
+    geri açma) / Update (sahiplik) / Delete (soft, idempotent) / GetMemberSavedSearches;
+    GET/POST/PUT/DELETE /api/store/saved-searches (MemberOnly).
+  - **Sayfa SSR:** kartlar (Bildirim Açık/Aktif rozeti); kaydet/düzenle modalı eklendi
+    (tasarımda yoktu — E7 yorum modalı deseni); Sil eklendi (plan şartı); "Sonuçları
+    Gör" canlı arama rotasına (/urunler?search=). Bildirim gönderimi Faz H (rozet tercih).
+  - NOT: "popüler aramalar" agregasyonu ertelendi (kayıt hacmi gerekir; B2 kaynağı kaldı).
+  - **E2E 12/12 ✓ + E1 13/13 + B6 19/19 ✓; drift TEMİZ.**
+    Sıradaki: E12 Önceden Gezdiklerim (YENİ backend: viewed_products + detay kaydı +
+    misafir localStorage fallback).
+
 - **2026-07-10 (devam) — E10 TAMAM: Tekrar Satın Al:**
   - **Yeni backend gerekmedi** — teslim edilmiş siparişlerin kalemleri → varyant başına
     bir kart (distinct, en son alışveriş öne, 24 sınır); ad/görsel GetVariantDisplayAsync,

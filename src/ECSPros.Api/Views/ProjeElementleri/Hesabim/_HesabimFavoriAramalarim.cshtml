@@ -1,3 +1,11 @@
+@* E11: Favori Aramalarım canlıya bağlandı — kartlar SSR (ViewData["MsAramalar"]);
+   "Yeni Arama Kaydet" + "Düzenle" modalı eklendi (tasarımda modal yoktu — ms-ornek-modal
+   kalıbı, ad + arama metni + bildirim tercihi); kart aksiyonlarına Sil eklendi (plan
+   şartı); "Sonuçları Gör" tasarımın /Arama?q yerine canlı arama rotasına gider
+   (/urunler?search=...). Bildirim gönderimi Faz H'de — "Bildirim Açık" rozeti tercihtir. *@
+@{
+    var msAramalar = ViewData["MsAramalar"] as List<ECSPros.Storefront.Application.Queries.GetMemberSavedSearches.SavedSearchDto> ?? new();
+}
 <section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-favori-aramalar-baslik">
     <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model='@("favori-aramalar")' />
 
@@ -12,37 +20,195 @@
                     <h3>Kayıtlı aramalar</h3>
                     <p>Arama kriterlerinizi kaydedin, yeni ürün geldiğinde hızlıca kontrol edin.</p>
                 </div>
-                <button class="ms-buton ms-buton-m ms-buton-sade" type="button">Yeni Arama Kaydet</button>
+                <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-arama-kaydet-ac>Yeni Arama Kaydet</button>
             </div>
 
+            @if (msAramalar.Count == 0)
+            {
             <section class="ms-hesabim-bos-durum" aria-labelledby="ms-favori-aramalar-bos-baslik">
                 <img class="ms-ikon-siyah" src="/ikons/favori-aramalarim-sade-icon.svg" alt="" aria-hidden="true">
                 <div>
                     <h3 id="ms-favori-aramalar-bos-baslik">Henüz favori aramanız yok</h3>
                     <p>Sık kullandığınız arama filtrelerini kaydettiğinizde burada listelenir.</p>
                 </div>
-                <a class="ms-buton ms-buton-m ms-buton-satin-al" href="/Arama">Arama Yap</a>
+                <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-arama-kaydet-ac>Arama Kaydet</button>
             </section>
-
+            }
+            else
+            {
             <div class="ms-hesabim-durum-listesi">
+                @foreach (var arama in msAramalar)
+                {
                 <article class="ms-hesabim-durum-karti">
-                    <span class="ms-hesabim-durum-etiket ms-hesabim-durum-basarili">Aktif</span>
-                    <strong>Siyah pantolon · 38 beden</strong>
-                    <p>Kadın > Pantolon kategorisinde, 500-1000 TL fiyat aralığı.</p>
-                    <div class="ms-hesabim-kart-aksiyonlar">
-                        <a class="ms-buton ms-buton-s ms-buton-satin-al" href="/Arama?q=siyah%20pantolon">Sonuçları Gör</a>
-                        <button class="ms-buton ms-buton-s ms-buton-sade" type="button">Düzenle</button>
-                    </div>
-                </article>
-                <article class="ms-hesabim-durum-karti">
+                    @if (arama.NotifyEnabled)
+                    {
                     <span class="ms-hesabim-durum-etiket ms-hesabim-durum-beklemede">Bildirim Açık</span>
-                    <strong>Triko tişört · L beden</strong>
-                    <p>Yeni ürün geldiğinde e-posta bildirimi gönderilecek.</p>
+                    }
+                    else
+                    {
+                    <span class="ms-hesabim-durum-etiket ms-hesabim-durum-basarili">Aktif</span>
+                    }
+                    <strong>@(string.IsNullOrWhiteSpace(arama.Name) ? arama.Query : arama.Name)</strong>
+                    <p>@(arama.NotifyEnabled ? "Yeni ürün geldiğinde e-posta bildirimi gönderilecek." : $"Arama: \"{arama.Query}\"")</p>
                     <div class="ms-hesabim-kart-aksiyonlar">
-                        <a class="ms-buton ms-buton-s ms-buton-satin-al" href="/Arama?q=triko%20tisort">Sonuçları Gör</a>
+                        <a class="ms-buton ms-buton-s ms-buton-satin-al" href="/urunler?search=@(Uri.EscapeDataString(arama.Query))">Sonuçları Gör</a>
+                        <button class="ms-buton ms-buton-s ms-buton-sade" type="button"
+                                data-ms-arama-duzenle="@arama.Id"
+                                data-ms-arama-ad="@arama.Name"
+                                data-ms-arama-sorgu="@arama.Query"
+                                data-ms-arama-bildirim="@(arama.NotifyEnabled ? "true" : "false")">Düzenle</button>
+                        <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-arama-sil="@arama.Id">Sil</button>
                     </div>
                 </article>
+                }
             </div>
+            }
         </div>
     </section>
 </section>
+
+@* E11: kaydet/düzenle modalı — tasarımda yoktu; ms-ornek-modal kalıbıyla eklendi. *@
+<div class="ms-ornek-modal ms-arama-kaydet-modal" data-ms-arama-modal aria-hidden="true">
+    <div class="ms-ornek-modal-kaplama" data-ms-arama-modal-kapat></div>
+    <section class="ms-ornek-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-arama-modal-baslik">
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-arama-modal-kapat aria-label="Arama kaydetme modalını kapat">×</button>
+        <h3 id="ms-arama-modal-baslik" class="ms-ornek-modal-baslik" data-ms-arama-modal-baslik>Yeni Arama Kaydet</h3>
+        <p class="ms-ornek-modal-aciklama">Arama metninizi kaydedin; sonuçlara tek tıkla ulaşın.</p>
+
+        <label class="ms-form-alani">
+            <span class="ms-form-etiket">Arama Metni</span>
+            <input class="ms-form-girdi" type="text" maxlength="200" placeholder="örn. siyah pantolon" data-ms-arama-form-sorgu>
+        </label>
+        <label class="ms-form-alani">
+            <span class="ms-form-etiket">Ad (isteğe bağlı)</span>
+            <input class="ms-form-girdi" type="text" maxlength="100" placeholder="örn. Kışlık kombin" data-ms-arama-form-ad>
+        </label>
+        <label class="ms-form-checkbox">
+            <input type="checkbox" data-ms-arama-form-bildirim>
+            <span class="ms-form-checkbox-gorsel"></span>
+            <span>Yeni ürün geldiğinde e-posta bildirimi istiyorum</span>
+        </label>
+        <div class="ms-uyari ms-uyari-hata" data-ms-arama-form-hata hidden></div>
+
+        <div class="ms-ornek-modal-aksiyonlar">
+            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-arama-modal-kapat>Vazgeç</button>
+            <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-arama-form-kaydet>Kaydet</button>
+        </div>
+    </section>
+</div>
+
+<script>
+    (() => {
+        const platformId = "@(ViewData["MsAramaPlatformId"])";
+        const token = () => localStorage.getItem("ecspros_member_token");
+        const modal = document.querySelector("[data-ms-arama-modal]");
+        const baslik = modal?.querySelector("[data-ms-arama-modal-baslik]");
+        const sorguInput = modal?.querySelector("[data-ms-arama-form-sorgu]");
+        const adInput = modal?.querySelector("[data-ms-arama-form-ad]");
+        const bildirimInput = modal?.querySelector("[data-ms-arama-form-bildirim]");
+        const hataAlani = modal?.querySelector("[data-ms-arama-form-hata]");
+        let duzenlenenId = null;
+
+        const hataGoster = (mesaj) => {
+            if (hataAlani) {
+                hataAlani.textContent = mesaj || "";
+                hataAlani.hidden = !mesaj;
+            }
+        };
+
+        const modalAc = (id, ad, sorgu, bildirim) => {
+            duzenlenenId = id;
+            if (baslik) { baslik.textContent = id ? "Aramayı Düzenle" : "Yeni Arama Kaydet"; }
+            if (sorguInput) { sorguInput.value = sorgu || ""; }
+            if (adInput) { adInput.value = ad || ""; }
+            if (bildirimInput) { bildirimInput.checked = bildirim === "true"; }
+            hataGoster("");
+            modal?.classList.add("ms-ornek-modal-acik");
+            modal?.setAttribute("aria-hidden", "false");
+            window.setTimeout(() => sorguInput?.focus(), 30);
+        };
+
+        const modalKapat = () => {
+            modal?.classList.remove("ms-ornek-modal-acik");
+            modal?.setAttribute("aria-hidden", "true");
+        };
+
+        document.querySelectorAll("[data-ms-arama-kaydet-ac]").forEach((buton) => {
+            buton.addEventListener("click", () => modalAc(null, "", "", "false"));
+        });
+
+        document.querySelectorAll("[data-ms-arama-duzenle]").forEach((buton) => {
+            buton.addEventListener("click", () => modalAc(
+                buton.dataset.msAramaDuzenle,
+                buton.dataset.msAramaAd,
+                buton.dataset.msAramaSorgu,
+                buton.dataset.msAramaBildirim));
+        });
+
+        document.querySelectorAll("[data-ms-arama-modal-kapat]").forEach((kapatici) => {
+            kapatici.addEventListener("click", modalKapat);
+        });
+
+        modal?.querySelector("[data-ms-arama-form-kaydet]")?.addEventListener("click", async (olay) => {
+            const kaydet = olay.currentTarget;
+            const sorgu = (sorguInput?.value || "").trim();
+
+            if (sorgu.length < 2) {
+                hataGoster("Arama metni en az 2 karakter olmalıdır.");
+                sorguInput?.focus();
+                return;
+            }
+
+            kaydet.disabled = true;
+            try {
+                const govde = {
+                    firmPlatformId: platformId,
+                    query: sorgu,
+                    name: (adInput?.value || "").trim() || null,
+                    notifyEnabled: !!bildirimInput?.checked
+                };
+                const cevap = await fetch(
+                    duzenlenenId ? "/api/store/saved-searches/" + duzenlenenId : "/api/store/saved-searches",
+                    {
+                        method: duzenlenenId ? "PUT" : "POST",
+                        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token() },
+                        body: JSON.stringify(govde)
+                    });
+                const veri = await cevap.json().catch(() => null);
+
+                if (!veri?.success) {
+                    hataGoster(veri?.error || "Arama kaydedilemedi. Lütfen tekrar deneyin.");
+                    return;
+                }
+
+                window.location.reload();
+            } catch {
+                hataGoster("Arama kaydedilemedi. Lütfen tekrar deneyin.");
+            } finally {
+                kaydet.disabled = false;
+            }
+        });
+
+        document.querySelectorAll("[data-ms-arama-sil]").forEach((buton) => {
+            buton.addEventListener("click", async () => {
+                if (buton.disabled) { return; }
+                buton.disabled = true;
+                try {
+                    const cevap = await fetch("/api/store/saved-searches/" + buton.dataset.msAramaSil, {
+                        method: "DELETE",
+                        headers: { Authorization: "Bearer " + token() }
+                    });
+                    const veri = await cevap.json().catch(() => null);
+                    if (veri?.success) { window.location.reload(); return; }
+                } catch { /* aşağıda buton geri açılır */ }
+                buton.disabled = false;
+            });
+        });
+
+        document.addEventListener("keydown", (olay) => {
+            if (olay.key === "Escape" && modal?.classList.contains("ms-ornek-modal-acik")) {
+                modalKapat();
+            }
+        });
+    })();
+</script>

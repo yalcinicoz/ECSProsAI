@@ -225,3 +225,10 @@ Views/ProjeElementleri/Hesabim/_HesabimIndirimKuponlarim.cshtml
 # Sepete Ekle ürün detayının sepet desenini kullanır; tasarımda olmayan boş durum diğer
 # Hesabım sayfalarının kalıbıyla eklendi.
 Views/ProjeElementleri/Hesabim/_HesabimTekrarSatinAl.cshtml
+
+# E11: Favori Aramalarım canlıya bağlandı — kartlar SSR (saved_searches); kaydet/düzenle
+# modalı eklendi (tasarımda modal yoktu — ms-ornek-modal kalıbı, E7 yorum modalı deseni);
+# kart aksiyonlarına Sil eklendi (plan şartı); "Sonuçları Gör" tasarımın /Arama?q'su yerine
+# canlı arama rotasına (/urunler?search=) gider; boş durumun "Arama Yap" linki modalı açan
+# butona çevrildi (ayrı /Arama sayfası yok). Bildirim gönderimi Faz H — rozet tercihtir.
+Views/ProjeElementleri/Hesabim/_HesabimFavoriAramalarim.cshtml

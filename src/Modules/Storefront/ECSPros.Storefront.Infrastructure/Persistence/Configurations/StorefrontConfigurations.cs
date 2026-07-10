@@ -237,3 +237,18 @@ public class StockAlertConfiguration : IEntityTypeConfiguration<StockAlert>
         builder.HasQueryFilter(a => !a.IsDeleted);
     }
 }
+
+public class SavedSearchConfiguration : IEntityTypeConfiguration<SavedSearch>
+{
+    public void Configure(EntityTypeBuilder<SavedSearch> builder)
+    {
+        builder.ToTable("saved_searches");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Name).HasMaxLength(100);
+        builder.Property(s => s.Query).HasMaxLength(200).IsRequired();
+        builder.Property(s => s.Filters).HasColumnType("jsonb");
+        // Üye aynı arama metnini platform başına bir kez kaydeder (mükerrer engeli komutta)
+        builder.HasIndex(s => new { s.FirmPlatformId, s.MemberId, s.Query }).IsUnique();
+        builder.HasQueryFilter(s => !s.IsDeleted);
+    }
+}
