@@ -265,3 +265,10 @@ Views/ProjeElementleri/Kurumsal/_KurumsalIletisim.cshtml
 # kolonları yedek); bülten formu POST /api/store/newsletter'a bağlı (idempotent,
 # misafir de kaydolur); mobil uygulama/sosyal linkler statik '#' (config/Faz G).
 Views/Shared/_Footer.cshtml
+
+# G5: Vitrin blok render partial'ı — kaynakta karşılığı olmayan bilinçli yeni dosya.
+# Markup'lar GorunumTipleri/_Banner,_Carousel,_Tabs,_Grid,_Categories,_Brands,_Collection,
+# _Instagram + Ortak/_Slider,_Story + _AnaNavigasyonDuyuru'dan birebir; demo kabukları
+# (açıklama kutuları, tema seçici, elle kurulan flash sayacı) taşınmadı — flash sayaç
+# config'teki bitiş zamanından, infinity devamı G4 endpoint'inden.
+Views/Shared/Store/_VitrinBloklar.cshtml

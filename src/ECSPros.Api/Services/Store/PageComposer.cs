@@ -80,12 +80,14 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver)
                 .ToList();
             if (def.SupportsItems && ogeler.Count == 0) continue; // içeriksiz öğeli blok basılmaz
 
+            // Kaynak zorunlu olmayan tiplerde de config'te varsa çözülür (banner "reklam"
+            // kompoziti ürün şeridi taşır) — görünürlüğü yalnız zorunlu tiplerde bağlar.
             List<StoreProductDto>? urunler = null;
-            if (def.RequiresProductSource)
+            var urunKaynagi = resolver.ParseProductSource(blok.Config);
+            if (urunKaynagi is not null || def.RequiresProductSource)
             {
-                var kaynak = resolver.ParseProductSource(blok.Config);
-                urunler = kaynak is null ? [] : await resolver.ResolveProductsAsync(firmPlatformId, kaynak, 1, ct);
-                if (urunler.Count == 0) continue; // ürünsüz ürün bloğu basılmaz
+                urunler = urunKaynagi is null ? [] : await resolver.ResolveProductsAsync(firmPlatformId, urunKaynagi, 1, ct);
+                if (def.RequiresProductSource && urunler.Count == 0) continue; // ürünsüz ürün bloğu basılmaz
             }
 
             List<ShowcaseCollectionDto>? koleksiyonlar = null;

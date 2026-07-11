@@ -1,0 +1,584 @@
+@using ECSPros.Api.Models.Store
+@using System.Text.Json
+@model IReadOnlyList<ECSPros.Api.Models.Store.VitrinBlokVm>
+@{
+    // G5: vitrin blokları — her tipin markup'ı tasarımın GorunumTipleri/Ortak
+    // partial'larından birebir alındı (demo sayfa kabukları — açıklama kutuları,
+    // tema seçici — taşınmadı). Görünmeyen/boş blok PageComposer'da elendi; burada
+    // her blok basılır. site.js modülleri (slider, story, carousel kontrol,
+    // içerik tabs, reklam vitrin, lazy) markup'taki data-ms-* kancalarıyla çalışır.
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+    string Fiyat(decimal f) => f.ToString("N2", tr) + " TL";
+    var msVitrinPlatformId = (ViewData["MsPlatform"] as ECSPros.Api.Services.StorePlatformBilgisi)?.Id.ToString() ?? "";
+}
+
+@foreach (var blok in Model)
+{
+    switch (blok.Tip)
+    {
+        case "slider":
+            <section class="ms-slider" data-ms-slider data-ms-page-module="slider" aria-label="@(blok.Baslik.Length > 0 ? blok.Baslik : "Kampanya slider")">
+                <div class="ms-slider-gorsel-alani" data-ms-slider-gorsel-alani>
+                    @for (var i = 0; i < blok.Ogeler.Count; i++)
+                    {
+                        var slide = blok.Ogeler[i];
+                        <a class="ms-slider-slide @(i == 0 ? "ms-slider-slide-gorunur ms-slider-slide-aktif" : "")" href="@(slide.LinkUrl ?? "#")" target="@(slide.YeniSekme ? "_blank" : null)" aria-label="@slide.Baslik kampanyasına git">
+                            <img src="@(slide.GorselUrl ?? slide.MobilGorselUrl)" alt="@slide.Baslik">
+                        </a>
+                    }
+                </div>
+
+                <button class="ms-slider-kontrol ms-slider-kontrol-sol" type="button" aria-label="Önceki görsel" data-ms-slider-yon="onceki">
+                    <i class="fa-solid fa-chevron-left ms-fa-ikon" aria-hidden="true"></i>
+                </button>
+                <button class="ms-slider-kontrol ms-slider-kontrol-sag" type="button" aria-label="Sonraki görsel" data-ms-slider-yon="sonraki">
+                    <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
+                </button>
+
+                <div class="ms-slider-noktalar" data-ms-slider-noktalar aria-label="Slider görsel seçimi">
+                    @for (var i = 0; i < blok.Ogeler.Count; i++)
+                    {
+                        <button class="ms-slider-nokta @(i == 0 ? "ms-slider-nokta-aktif" : "")" type="button" aria-label="@(i + 1). görsel" data-ms-slider-index="@i" aria-pressed="@(i == 0 ? "true" : "false")"></button>
+                    }
+                </div>
+            </section>
+            break;
+
+        case "story":
+            <section class="ms-story" data-ms-story aria-label="Story alanı">
+                <div class="ms-story-listesi">
+                    @foreach (var story in blok.Ogeler)
+                    {
+                        <button class="ms-story-karti" type="button" data-ms-story-grup="@story.Id.ToString("N")" data-ms-story-ac="@blok.Ogeler.ToList().IndexOf(story)">
+                            <span class="ms-story-gorsel">
+                                <img src="@story.GorselUrl" alt="@story.Baslik story görseli">
+                            </span>
+                            <span class="ms-story-etiket">@story.Baslik</span>
+                        </button>
+                    }
+                </div>
+
+                @* Story frame verisi: öğe config.frames'ten; yoksa öğenin görsel/videosundan tek kare *@
+                <script type="application/json" data-ms-story-veri>@Html.Raw(StoryVerisi(blok))</script>
+
+                <div class="ms-story-modal ms-gizli" data-ms-story-modal aria-hidden="true">
+                    <div class="ms-story-modal-arkaplan" data-ms-story-kapat></div>
+                    <div class="ms-story-cerceve" role="dialog" aria-modal="true" aria-label="Story görüntüleyici">
+                        <div class="ms-story-progress-listesi" data-ms-story-progress-listesi></div>
+
+                        <div class="ms-story-modal-ust">
+                            <span class="ms-story-modal-avatar">
+                                <img data-ms-story-avatar src="" alt="">
+                            </span>
+                            <strong data-ms-story-modal-baslik>Story</strong>
+                            <span class="ms-story-modal-bosluk"></span>
+                            <button class="ms-story-ikon-buton" type="button" data-ms-story-kapat aria-label="Kapat">
+                                <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
+                            </button>
+                        </div>
+
+                        <img class="ms-story-modal-gorsel" data-ms-story-modal-gorsel src="" alt="">
+                        <video class="ms-story-modal-gorsel ms-gizli" data-ms-story-modal-video muted playsinline preload="metadata"></video>
+
+                        <button class="ms-story-yon ms-story-yon-sol" type="button" data-ms-story-yon="onceki" aria-label="Önceki story">
+                            <i class="fa-solid fa-chevron-left ms-fa-ikon" aria-hidden="true"></i>
+                        </button>
+                        <button class="ms-story-yon ms-story-yon-sag" type="button" data-ms-story-yon="sonraki" aria-label="Sonraki story">
+                            <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
+                        </button>
+
+                        <button class="ms-story-orta-oynat" type="button" data-ms-story-orta-oynat aria-label="Oynat">
+                            <i class="fa-solid fa-play ms-fa-ikon" data-ms-story-orta-ikon aria-hidden="true"></i>
+                        </button>
+
+                        <div class="ms-story-modal-alt">
+                            <strong data-ms-story-alt-baslik>Story</strong>
+                            <a class="ms-story-aksiyon" href="#" data-ms-story-aksiyon>İncele</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            break;
+
+        case "banner" when blok.Sablon == "reklam":
+            <div class="ms-gorunum-reklam-vitrin lazy-infinite-on" data-ms-gorunum-reklam-vitrin>
+                @if (blok.Ogeler.FirstOrDefault() is { } reklamBanner)
+                {
+                    <a class="ms-gorunum-reklam-vitrin-banner" href="@(reklamBanner.LinkUrl ?? "#")" aria-label="@reklamBanner.Baslik">
+                        <img src="@reklamBanner.GorselUrl" alt="@reklamBanner.Baslik">
+                    </a>
+                }
+
+                <div class="ms-gorunum-reklam-vitrin-icerik">
+                    <div class="ms-gorunum-reklam-vitrin-ust">
+                        <h3>@blok.Baslik</h3>
+                        <a class="ms-gorunum-tumunu-gor" href="@(blok.TumunuGorUrl ?? "#")">@(blok.AltBaslik ?? "Kategoriye Git")</a>
+                    </div>
+
+                    <div class="ms-gorunum-reklam-vitrin-kaydirma">
+                        <button class="ms-gorunum-reklam-vitrin-kontrol" type="button" data-ms-gorunum-reklam-vitrin-kontrol="sol" aria-label="Önceki ürünler">‹</button>
+                        <div class="ms-gorunum-reklam-vitrin-liste" data-ms-gorunum-reklam-vitrin-liste>
+                            @foreach (var urun in blok.Urunler)
+                            {
+                                <a class="ms-gorunum-reklam-vitrin-urun" href="@urun.Url">
+                                    <img data-ms-lazy-src="@urun.GorselUrl" alt="@urun.Ad">
+                                    <span>
+                                        @urun.Ad
+                                        <em>@Fiyat(urun.Fiyat)</em>
+                                    </span>
+                                </a>
+                            }
+                        </div>
+                        <button class="ms-gorunum-reklam-vitrin-kontrol" type="button" data-ms-gorunum-reklam-vitrin-kontrol="sag" aria-label="Sonraki ürünler">›</button>
+                    </div>
+                </div>
+            </div>
+            break;
+
+        case "banner":
+            <div class="ms-gorunum-demo">
+                @if (blok.Baslik.Length > 0)
+                {
+                    <div class="ms-gorunum-baslik-satiri">
+                        <h3>@blok.Baslik</h3>
+                    </div>
+                }
+                <div class="ms-gorunum-banner-grid ms-gorunum-banner-grid-@(blok.Sablon ?? "tekli") @(blok.MobilCarousel ? "ms-gorunum-banner-mobil-carousel" : "")">
+                    @foreach (var banner in blok.Ogeler)
+                    {
+                        <a class="ms-gorunum-banner-karti" href="@(banner.LinkUrl ?? "#")" target="@(banner.YeniSekme ? "_blank" : null)">
+                            <img src="@banner.GorselUrl" alt="@banner.Baslik">
+                        </a>
+                    }
+                </div>
+            </div>
+            break;
+
+        case "carousel":
+        {
+            var sablon = blok.Sablon ?? "standart";
+            var demoSinifi = sablon switch
+            {
+                "ozel-fiyat" => "ms-gorunum-carousel-demo-ozel-fiyat",
+                "flash" => "ms-gorunum-carousel-demo-flash",
+                _ => "ms-gorunum-carousel-demo-standart ms-gorunum-carousel-tema-" + (blok.Tema ?? "varsayilan"),
+            };
+            var listeSinifi = sablon switch
+            {
+                "ozel-fiyat" => " ms-gorunum-carousel-urun-sik",
+                "flash" => " ms-gorunum-carousel-urun-genis",
+                _ => "",
+            };
+            <div class="ms-gorunum-demo ms-gorunum-carousel-demo @demoSinifi ms-gorunum-carousel-demo-market lazy-infinite-on" data-ms-gorunum-carousel>
+                <div class="ms-gorunum-baslik-satiri">
+                    <div>
+                        @if (sablon == "flash")
+                        {
+                            <h2 class="ms-gorunum-flash-baslik">
+                                <i class="fa-solid fa-bolt-lightning ms-fa-ikon ms-ikon-orijinal" aria-hidden="true"></i>
+                                @blok.Baslik
+                            </h2>
+                        }
+                        else
+                        {
+                            <h2>@blok.Baslik</h2>
+                        }
+                        @if (blok.AltBaslik is not null)
+                        {
+                            <p>@blok.AltBaslik</p>
+                        }
+                    </div>
+                    <div class="ms-gorunum-carousel-sag">
+                        @if (blok.TumunuGorUrl is not null)
+                        {
+                            <a class="ms-gorunum-tumunu-gor" href="@blok.TumunuGorUrl">Tümünü Gör</a>
+                        }
+                        @if (sablon == "flash" && blok.FlashBitis is { } bitis)
+                        {
+                            <span class="ms-gorunum-flash-sayac" data-ms-vitrin-flash-sayac data-ms-vitrin-flash-bitis="@bitis.ToString("O")" aria-label="Flash ürünler bitiş sayacı">
+                                <input type="number" min="0" max="30" value="0" inputmode="numeric" aria-label="Gün" data-ms-gorunum-flash-input="gun" readonly>
+                                :
+                                <input type="number" min="0" max="23" value="0" inputmode="numeric" aria-label="Saat" data-ms-gorunum-flash-input="saat" readonly>
+                                :
+                                <input type="number" min="0" max="59" value="0" inputmode="numeric" aria-label="Dakika" data-ms-gorunum-flash-input="dakika" readonly>
+                                :
+                                <input type="number" min="0" max="59" value="0" inputmode="numeric" aria-label="Saniye" data-ms-gorunum-flash-input="saniye" readonly>
+                            </span>
+                        }
+                        <span class="ms-gorunum-etiket" data-ms-gorunum-carousel-sayac>1 / @blok.Urunler.Count</span>
+                    </div>
+                </div>
+
+                <div class="ms-gorunum-carousel-kapsayici">
+                    <button class="ms-gorunum-carousel-kontrol ms-slider-kontrol ms-slider-kontrol-sol" type="button" data-ms-gorunum-carousel-kontrol="sol" aria-label="Önceki @blok.Baslik ürünlerini göster">
+                        <i class="fa-solid fa-chevron-left ms-fa-ikon" aria-hidden="true"></i>
+                    </button>
+                    <div class="ms-gorunum-carousel ms-gorunum-carousel-urun@(listeSinifi)" data-ms-gorunum-carousel-liste aria-label="@blok.Baslik ürünleri">
+                        @foreach (var urun in blok.Urunler)
+                        {
+                            @await Html.PartialAsync("~/Views/ProjeElementleri/Urun/_UrunKarti.cshtml", urun)
+                        }
+                    </div>
+                    <button class="ms-gorunum-carousel-kontrol ms-slider-kontrol ms-slider-kontrol-sag" type="button" data-ms-gorunum-carousel-kontrol="sag" aria-label="Sonraki @blok.Baslik ürünlerini göster">
+                        <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+            break;
+        }
+
+        case "infinity":
+            <div class="ms-gorunum-demo" data-ms-vitrin-infinity data-ms-vitrin-blok-id="@blok.Id" data-ms-vitrin-platform="@msVitrinPlatformId" data-ms-vitrin-sayfa="1">
+                <div class="ms-gorunum-baslik-satiri">
+                    <h3>@blok.Baslik</h3>
+                    @if (blok.TumunuGorUrl is not null)
+                    {
+                        <a class="ms-gorunum-link" href="@blok.TumunuGorUrl">Tümünü Gör</a>
+                    }
+                </div>
+
+                <div class="ms-gorunum-grid ms-gorunum-grid-anasayfa" data-ms-vitrin-infinity-liste>
+                    @foreach (var urun in blok.Urunler)
+                    {
+                        <a class="ms-gorunum-kart" href="@urun.Url">
+                            <img src="@urun.GorselUrl" alt="@urun.Ad">
+                            <div class="ms-gorunum-kart-icerik">
+                                <strong>@urun.Ad</strong>
+                                <span class="ms-gorunum-fiyat">@Fiyat(urun.Fiyat)</span>
+                            </div>
+                        </a>
+                    }
+                </div>
+
+                <div class="ms-gorunum-daha-fazla-alani">
+                    <button class="ms-buton ms-buton-sade" type="button" data-ms-vitrin-daha-fazla>Daha Fazla Göster</button>
+                </div>
+            </div>
+            break;
+
+        case "tabs":
+            <div class="ms-gorunum-demo" data-ms-gorunum-icerik-tabs>
+                @if (blok.Baslik.Length > 0)
+                {
+                    <div class="ms-gorunum-baslik-satiri">
+                        <div>
+                            <h3>@blok.Baslik</h3>
+                            @if (blok.AltBaslik is not null)
+                            {
+                                <p>@blok.AltBaslik</p>
+                            }
+                        </div>
+                    </div>
+                }
+                <div class="ms-gorunum-sekme-seridi" role="tablist" aria-label="Vitrin sekmeleri">
+                    @for (var i = 0; i < blok.Ogeler.Count; i++)
+                    {
+                        <button class="ms-gorunum-mini-tab @(i == 0 ? "ms-gorunum-mini-tab-aktif" : "")" type="button" data-ms-gorunum-icerik-tab="@blok.Ogeler[i].Id.ToString("N")" aria-pressed="@(i == 0 ? "true" : "false")">@blok.Ogeler[i].Baslik</button>
+                    }
+                </div>
+
+                @for (var i = 0; i < blok.Ogeler.Count; i++)
+                {
+                    var sekme = blok.Ogeler[i];
+                    <div class="ms-gorunum-paneli @(i == 0 ? "" : "ms-gizli")" data-ms-gorunum-icerik-panel="@sekme.Id.ToString("N")">
+                        <div class="ms-gorunum-grid ms-gorunum-grid-kompakt">
+                            @foreach (var urun in sekme.Urunler)
+                            {
+                                <a class="ms-gorunum-kart" href="@urun.Url">
+                                    <img src="@urun.GorselUrl" alt="@urun.Ad">
+                                    <div class="ms-gorunum-kart-icerik">
+                                        <strong>@urun.Ad</strong>
+                                        <span class="ms-gorunum-fiyat">@Fiyat(urun.Fiyat)</span>
+                                    </div>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+            break;
+
+        case "collection":
+            <div class="ms-gorunum-demo">
+                @if (blok.Baslik.Length > 0)
+                {
+                    <div class="ms-gorunum-baslik-satiri">
+                        <div>
+                            <h3>@blok.Baslik</h3>
+                            @if (blok.AltBaslik is not null)
+                            {
+                                <p>@blok.AltBaslik</p>
+                            }
+                        </div>
+                    </div>
+                }
+                <div class="ms-hesabim-koleksiyon-grid @(blok.MobilCarousel ? "ms-gorunum-banner-mobil-carousel" : "")">
+                    @foreach (var koleksiyon in blok.Koleksiyonlar)
+                    {
+                        <article class="ms-hesabim-koleksiyon-karti">
+                            <div class="ms-hesabim-koleksiyon-ust">
+                                <div class="ms-hesabim-koleksiyon-kullanici">
+                                    <span class="ms-hesabim-koleksiyon-avatar" aria-hidden="true">@koleksiyon.UyeBasHarfleri</span>
+                                    <div>
+                                        <strong>@koleksiyon.UyeAdi</strong>
+                                        <p>@koleksiyon.Ad</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ms-hesabim-koleksiyon-kapak">
+                                @foreach (var kapak in koleksiyon.Kapak)
+                                {
+                                    <a href="@kapak.UrunUrl" aria-label="@koleksiyon.Ad koleksiyonundaki @kapak.UrunAdi ürününü aç">
+                                        <img src="@kapak.GorselUrl" alt="@kapak.UrunAdi" />
+                                    </a>
+                                }
+                                @if (koleksiyon.KalanUrun > 0)
+                                {
+                                    <span class="ms-hesabim-koleksiyon-kapak-bos">+@koleksiyon.KalanUrun</span>
+                                }
+                            </div>
+
+                            <div class="ms-hesabim-koleksiyon-icerik">
+                                <h3>@koleksiyon.Ad</h3>
+                                @if (koleksiyon.Aciklama is not null)
+                                {
+                                    <p>@koleksiyon.Aciklama</p>
+                                }
+                                <div class="ms-hesabim-koleksiyon-rozetler" aria-label="Koleksiyon bilgileri">
+                                    <span>@koleksiyon.UrunSayisi Ürün</span>
+                                    <span>Herkese açık</span>
+                                    <span>@koleksiyon.Goruntulenme Görüntülenme</span>
+                                </div>
+                                @* Koleksiyonu Aç / Paylaş aksiyonları public koleksiyon sayfasıyla birlikte açılacak (Faz G ileri iş) *@
+                            </div>
+                        </article>
+                    }
+                </div>
+            </div>
+            break;
+
+        case "categories" when blok.Gorunum == "vitrin":
+            <div class="ms-gorunum-demo">
+                <div class="ms-gorunum-baslik-satiri">
+                    <h3>@blok.Baslik</h3>
+                </div>
+                <div class="ms-gorunum-kategori-vitrin-grid">
+                    @foreach (var kategori in blok.Ogeler)
+                    {
+                        <a class="ms-gorunum-kategori-vitrin-karti" href="@(kategori.LinkUrl ?? "#")">
+                            <img src="@kategori.GorselUrl" alt="@kategori.Baslik">
+                            <span>
+                                <strong>@kategori.Baslik</strong>
+                                <small>@kategori.AltBaslik</small>
+                            </span>
+                        </a>
+                    }
+                </div>
+            </div>
+            break;
+
+        case "categories":
+            <div class="ms-gorunum-demo">
+                <div class="ms-gorunum-baslik-satiri">
+                    <h3>@blok.Baslik</h3>
+                </div>
+                <div class="ms-gorunum-kategori-kapsul-listesi @(blok.MobilCarousel ? "ms-gorunum-banner-mobil-carousel" : "")" aria-label="@blok.Baslik">
+                    @foreach (var kategori in blok.Ogeler)
+                    {
+                        <a class="ms-gorunum-kategori-kapsul" href="@(kategori.LinkUrl ?? "#")">
+                            <img src="@kategori.GorselUrl" alt="@kategori.Baslik">
+                            <strong>@kategori.Baslik</strong>
+                        </a>
+                    }
+                </div>
+            </div>
+            break;
+
+        case "brands":
+            <div class="ms-gorunum-demo">
+                @if (blok.Baslik.Length > 0)
+                {
+                    <div class="ms-gorunum-baslik-satiri">
+                        <h3>@blok.Baslik</h3>
+                    </div>
+                }
+                <div class="ms-gorunum-marka-grid @(blok.MobilCarousel ? "ms-gorunum-banner-mobil-carousel" : "")">
+                    @foreach (var marka in blok.Ogeler)
+                    {
+                        <a class="ms-gorunum-marka-karti" href="@(marka.LinkUrl ?? "#")">
+                            @if (marka.Rozet is not null)
+                            {
+                                <span class="ms-gorunum-marka-etiket">@marka.Rozet</span>
+                            }
+                            <span class="ms-gorunum-marka-urunler" aria-hidden="true">
+                                @foreach (var gorsel in marka.EkGorseller.Take(4))
+                                {
+                                    <span class="ms-gorunum-marka-urun">
+                                        <img src="@gorsel" alt="">
+                                    </span>
+                                }
+                            </span>
+                            <span class="ms-gorunum-marka-bilgi">
+                                <strong>@marka.Baslik</strong>
+                                @if (marka.UrunSayisiMetni is not null)
+                                {
+                                    <small>@marka.UrunSayisiMetni adet + ürün</small>
+                                }
+                                <span>@marka.AltBaslik</span>
+                            </span>
+                        </a>
+                    }
+                </div>
+            </div>
+            break;
+
+        case "instagram":
+            <div class="ms-gorunum-demo">
+                @if (blok.Baslik.Length > 0)
+                {
+                    <div class="ms-gorunum-baslik-satiri">
+                        <h3>@blok.Baslik</h3>
+                    </div>
+                }
+                <div class="ms-gorunum-instagram-grid @(blok.MobilCarousel ? "ms-gorunum-banner-mobil-carousel" : "")">
+                    @foreach (var hesap in blok.Ogeler)
+                    {
+                        <article class="ms-gorunum-instagram-karti">
+                            <header class="ms-gorunum-instagram-profil">
+                                <img class="ms-gorunum-instagram-avatar" src="@hesap.GorselUrl" alt="@hesap.Baslik profil görseli">
+                                <div class="ms-gorunum-instagram-profil-bilgi">
+                                    <strong>@hesap.Baslik</strong>
+                                    <span>@hesap.AltBaslik</span>
+                                </div>
+                            </header>
+
+                            <a class="ms-gorunum-instagram-kolaj" href="@(hesap.LinkUrl ?? "#")" aria-label="@hesap.Baslik ürünlerini gör">
+                                @foreach (var gorsel in hesap.EkGorseller.Take(3))
+                                {
+                                    <span class="ms-gorunum-instagram-gorsel">
+                                        <img src="@gorsel" alt="">
+                                    </span>
+                                }
+                            </a>
+                        </article>
+                    }
+                </div>
+            </div>
+            break;
+
+        case "announcement":
+            @* Duyuru şeridi kayan metinleri — _AnaNavigasyonDuyuru'nun kayan alanına
+               yerleşir (G8'de bağlanır); span dizilimi kaynak markup'la aynı *@
+            <div class="ms-ana-duyuru-kayan-metin">
+                @foreach (var duyuru in blok.Ogeler)
+                {
+                    <span>@duyuru.Baslik</span>
+                }
+            </div>
+            break;
+    }
+}
+
+@functions {
+    // Story frame JSON'u: {"<grupId>": [{url,tip,avatar,baslik,aksiyon}, ...]} —
+    // site.js story modülünün beklediği alan adlarıyla (demo veri setiyle aynı şema).
+    private string StoryVerisi(ECSPros.Api.Models.Store.VitrinBlokVm blok)
+    {
+        var gruplar = new Dictionary<string, object>();
+        foreach (var oge in blok.Ogeler)
+        {
+            if (oge.StoryFramesJson is { } ham)
+            {
+                gruplar[oge.Id.ToString("N")] = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(ham);
+                continue;
+            }
+            gruplar[oge.Id.ToString("N")] = new[]
+            {
+                new Dictionary<string, string?>
+                {
+                    ["url"] = oge.VideoUrl ?? oge.GorselUrl,
+                    ["tip"] = oge.VideoUrl is null ? "image" : "video",
+                    ["avatar"] = oge.GorselUrl,
+                    ["baslik"] = oge.Baslik,
+                    ["aksiyon"] = oge.ButonMetni ?? "İncele",
+                },
+            };
+        }
+        return System.Text.Json.JsonSerializer.Serialize(gruplar);
+    }
+}
+
+@* Bu script: flash geri sayımı config'teki bitiş zamanından çalıştırır (demo'daki
+   elle kurulan sayacın canlı karşılığı) + infinity "Daha Fazla Göster" devam
+   yüklemesini G4 devam endpoint'ine bağlar. *@
+<script>
+    (() => {
+        // ── Flash geri sayımı ──
+        document.querySelectorAll("[data-ms-vitrin-flash-sayac]").forEach((sayac) => {
+            if (sayac.dataset.msVitrinFlashHazir === "true") return;
+            sayac.dataset.msVitrinFlashHazir = "true";
+            const bitis = Date.parse(sayac.dataset.msVitrinFlashBitis || "");
+            if (!Number.isFinite(bitis)) return;
+            const alan = (ad) => sayac.querySelector(`[data-ms-gorunum-flash-input='${ad}']`);
+            const inputlar = { gun: alan("gun"), saat: alan("saat"), dakika: alan("dakika"), saniye: alan("saniye") };
+            const ikiHane = (deger) => Math.max(0, deger).toString().padStart(2, "0");
+            let timerId = 0;
+            const yaz = () => {
+                const kalan = Math.max(0, Math.floor((bitis - Date.now()) / 1000));
+                if (inputlar.gun) inputlar.gun.value = ikiHane(Math.floor(kalan / 86400));
+                if (inputlar.saat) inputlar.saat.value = ikiHane(Math.floor((kalan % 86400) / 3600));
+                if (inputlar.dakika) inputlar.dakika.value = ikiHane(Math.floor((kalan % 3600) / 60));
+                if (inputlar.saniye) inputlar.saniye.value = ikiHane(kalan % 60);
+                if (kalan <= 0) window.clearInterval(timerId);
+            };
+            yaz();
+            timerId = window.setInterval(yaz, 1000);
+        });
+
+        // ── Infinity devam yüklemesi ──
+        document.querySelectorAll("[data-ms-vitrin-infinity]").forEach((alan) => {
+            const platformId = alan.dataset.msVitrinPlatform || "";
+            if (alan.dataset.msVitrinInfinityHazir === "true") return;
+            alan.dataset.msVitrinInfinityHazir = "true";
+            const liste = alan.querySelector("[data-ms-vitrin-infinity-liste]");
+            const buton = alan.querySelector("[data-ms-vitrin-daha-fazla]");
+            if (!liste || !buton) return;
+
+            const fiyatYaz = (deger) =>
+                new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(deger) + " TL";
+
+            buton.addEventListener("click", async () => {
+                const sonraki = Number(alan.dataset.msVitrinSayfa || "1") + 1;
+                buton.disabled = true;
+                try {
+                    const cevap = await fetch(`/api/store/pages/blocks/${alan.dataset.msVitrinBlokId}/products?firmPlatformId=${platformId}&page=${sonraki}`);
+                    const veri = await cevap.json();
+                    const urunler = veri?.data?.items || [];
+                    urunler.forEach((urun) => {
+                        const kart = document.createElement("a");
+                        kart.className = "ms-gorunum-kart";
+                        kart.href = "/urun/" + urun.code;
+                        const gorsel = document.createElement("img");
+                        gorsel.src = urun.mainImageUrl || "";
+                        gorsel.alt = urun.nameI18n?.tr || urun.code;
+                        const icerik = document.createElement("div");
+                        icerik.className = "ms-gorunum-kart-icerik";
+                        const ad = document.createElement("strong");
+                        ad.textContent = urun.nameI18n?.tr || urun.code;
+                        const fiyat = document.createElement("span");
+                        fiyat.className = "ms-gorunum-fiyat";
+                        fiyat.textContent = fiyatYaz(urun.minPrice || 0);
+                        icerik.append(ad, fiyat);
+                        kart.append(gorsel, icerik);
+                        liste.appendChild(kart);
+                    });
+                    alan.dataset.msVitrinSayfa = String(sonraki);
+                    if (urunler.length === 0) buton.closest(".ms-gorunum-daha-fazla-alani")?.remove();
+                } finally {
+                    buton.disabled = false;
+                }
+            });
+        });
+    })();
+</script>
