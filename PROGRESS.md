@@ -305,9 +305,12 @@
     şehir modalı — gözle doğrulandı).
   - Test altyapısı: b4 artık kendini temizliyor; admin-mutasyonlu suite'lere audit
     temizliği eklendi (G13'ten beri suite'ler audit üretiyor).
-  - **⚠️ DEPLOY BEKLİYOR: G-M2'nin tamamı (G9a+G9b+G10+G11+G12+G13+G14) canlıda YOK**
-    (son deploy 2026-07-11 16:33, G-M1'e kadar). Publish'i Claude alır, kullanıcı
-    `sudo systemctl restart ecspros` çalıştırır.
+  - **⚠️ DEPLOY BEKLİYOR — publish ALINDI (22:04, /opt/ECSProsAI/publish):** kullanıcı
+    `sudo systemctl restart ecspros` çalıştırınca G-M2'nin tamamı (G9a→G14) canlıya
+    çıkar. Yeni migration YOK — restart yeterli. NOT: admin/dist yeniden build
+    edildiği için admin paneli YENİ halini şimdiden sunuyor; Önizleme/Değişiklik
+    Geçmişi restart'a kadar API'de 404 alır — restart geciktirilmemeli.
+    Doğrulama: `journalctl -u ecspros | grep "Redis cache"` + anasayfa + şehir çipi.
   - **SIRADAKİ FAZ → H** (plan: H1 fatura/dekont PDF, H2 kargo entegrasyonu, ...;
     planlamayla başlanmalı). Faz G'den devreden işler: koleksiyon public sayfası,
     /urun-degerlendirmeleri, stok/etiket kaynak filtreleri, son gezilenler/favoriler
