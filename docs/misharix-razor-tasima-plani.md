@@ -246,7 +246,7 @@ src/ECSPros.Api/
 - [x] G11. **Segment bazlı cache anahtarı — TAMAM (2026-07-11, G10 ile birlikte; kural filtresi segmentsiz anahtarla yanlış cache üretirdi — ayrılamazdı).** Kompozisyon: `page:{yerlesim}:{platform}:v{n}:{snapshotId}:seg:{segmentHash}`; ürün devamı: `page-products:v{n}:{snapshotId}:{blockId}:seg:{segmentHash}:page:{p}`. segmentHash = `VisitorSegment.CacheHash()` — CacheKey'in (sehir:bolge:cinsiyet:cihaz:uyelik:grup) SHA256'sının ilk 16 hex'i (anahtar uzunluğu sınırlı). Yeni yayın eski anahtarları versiyonla geçersizleştirmeye devam eder (G7); kuralsız yayında segment başına içerik tekrarı kabul edildi (TTL 5 dk, paket küçük). Ürün devam cache'i kural denetiminden SONRA yazılır — gizli bloğun ürünleri o segmente hiç cache'lenmez.
 - [x] G12. **Admin önizleme — TAMAM (2026-07-11).** `PagePreviewService` (Api) — TASLAK page_blocks üzerinde (spec: yayınlanmamış değişiklik önizlemede görünür, canlı yalnız aktif snapshot okur) PageComposer'ın karar noktalarını AYNI SIRAYLA yürütür ama gizleneni atlamak yerine nedeniyle listeler: 'Blok pasif' / 'Bilinmeyen tip' / 'Tarih penceresi dışında' / 'Blok kuralı segmente uymuyor' / 'Görünür öğe kalmadı (N öğeden 0)' / 'Ürün kaynağı boş' / 'Koleksiyon kaynağı boş'; görünürlerde 'N öğe eşleşti / N ürün bulundu (+kural durumu)'. Cache'e yazmaz. `POST /api/pages/preview` ([Authorize]; firmPlatformId+placement+city/gender/device/isMember/memberGroupId) — kurgu segment `IVisitorSegmentResolver.BuildAsync` (plaka→il adı+bölge çözümü, değer normalizasyonu); yanıt çözülen segment yankısı + blok listesi (id/tip/şablon/başlık/sıra/isActive/visible/reason/itemVisible/itemTotal/productCount). React: PagesManagementPage'e 'Önizleme' modalı — segment formu (81 il SearchableSelect + cinsiyet/cihaz/üyelik + üye grubu [crm/member-groups]) + sonuç listesi (Görünür/Gizli rozeti + neden + öğe-ürün sayıları); npm build alındı. E2E g12 (5051 publish): **15/15 ✓** (anonim 401, geçersiz yerleşim 400, 7 taslak gizliler dahil listelendi, 6 neden metni, segment yankısı 06→Ankara/ic-anadolu, 06+grup/35 segmentlerinde kurallılar açıldı, canlı store API'de G12TEST yok) + G4 19/19 + G6 19/19 + G10 17/17 + G9b 15/15 regresyon ✓; drift TEMİZ.
 - [x] G13. **Audit log + yayın logu — TAMAM (2026-07-11).** `VitrinAuditLogger` (Api) — IAM'ın `iam.iam_audit_logs` tablosuna yazar (tablo+listeleme Faz 4a'dan beri vardı, İLK yazan vitrin oldu; şema spec'le birebir: UserId/EntityType/EntityId/Action/OldValues/NewValues/IpAddress/UserAgent/Context). Spec adları: ActionType Created/Updated/Deleted/Activated-Deactivated (isActive farkından)/Published/Rollback/Previewed; EntityType BannerBlock..AnnouncementBlock + Slide/StoryItem/TabItem/BlockItem + Rule + PublishedSnapshot + PagePlacement (sıralama/önizleme). Kural değişimi AYRICA Rule kaydı düşürür (eski/yeni RuleJson). Context jsonb: firmPlatformId + userName (full_name claim) + blok başlığı. Audit hatası admin işlemini düşürmez (yutulur+loglanır). PagesController tüm mutasyonlarda loglar (update/delete öncesi eski değer okunur). `GET /api/pages/audit-logs?firmPlatformId` — vitrin varlık tipleriyle süzülü son 500 pencere, platform süzgeci Context'ten bellek tarafında (jsonb sözlük indeksi SQL'e çevrilmiyor — B2 dersi). React: PagesManagementPage'e 'Değişiklik Geçmişi' paneli (aksiyon rozeti TR + başlık + varlık tipi + kullanıcı + zaman); Yayın Geçmişi ekranı G6'dan beri var (publish_logs — spec yayın logu alanları G4'te tamamdı). E2E g13 (5051 publish): **11/11 ✓** (Created+Rule/Created, Rule/Updated eski-yeni dolu, Activated/Deactivated, BlockItem/Updated, Published/Rollback/Previewed, Deleted eski değer dolu, sıralama, platform süzgeci, anonim 401) + G4/G6/G10/G12 + G8 regresyon ✓; drift TEMİZ. Test altyapısı: tüm admin-mutasyonlu g-suite'lerinin temizliğine audit silme eklendi (suite'ler artık audit üretiyor).
-- [ ] G14. QA: Bölüm 8.8 envanteri + her blok tipi/şablonu görüntü karşılaştırması + kural senaryo matrisi (şehir/bölge/cihaz/cinsiyet/üyelik/grup kombinasyonları) + rollback tatbikatı.
+- [x] G14. **QA — TAMAM (2026-07-11) → FAZ G KAPANDI.** Envanter 8.8 satır satır işaretlendi (tek 🔶: mobilde manuel şehir seçimi girişi — duyuru barı tasarımda mobilde gizli, kullanıcı kararı bekler; GeoLite2 IP halkası mmdb edinilince). **Faz G toplu regresyonu (taze 5051 publish): g4 19 + g5 20 + g6 19 + g7 6 + g8 10 + g9a 9 + g9b 15 + g10 17 + g12 15 + g13 11 = 141 adım ✓** + çekirdek b6 19 + b4 12 + e2 19 + e5 13 + f1 16 = 79 adım ✓. Kural senaryo matrisi g10'da (şehir OR/bölge/cihaz/cinsiyet/üyelik/grup + AND kombinasyonu + öğe süzme), rollback tatbikatı g4+g7+g13'te (audit'li). Görüntüler: `tools/misharix-sync/shots/g14-anasayfa-vitrin.png` + `g14-sehir-modal.png` + `g14-anasayfa-mobil.png` (modal gözle doğrulandı: 81 il grid + arama + Konumumu Kullan). Blok tipi/şablon markup karşılaştırması G5 E2E'sinde assertion'lı (GorunumTipleri birebir). Drift TEMİZ; test artığı 0 (b4 suite'i artık kendini temizliyor; admin-mutasyonlu suite'lere audit temizliği eklendi).
 
 **Kabul kriterleri:** Tüm yerleşimler admin'den yönetiliyor; Yayınla/rollback çalışıyor; canlı site sadece snapshot okuyor; kurallar segmentlere göre doğru içerik gösteriyor; önizleme taslaktan çalışıyor; audit/yayın logları tutuluyor.
 
@@ -461,24 +461,24 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 ### 8.8 Vitrin & Kişiselleştirme Sistemi (Faz G — spec: anasayfa-dizayn-yönetimi.txt)
 | Bölüm tipi / yetenek | Backend | Faz | Durum |
 |---|---|---|---|
-| Banner (Tekli/İkili/Üçlü/Dörtlü/Beşli/Reklam/Bilgi/İkon/Çoklu) — kural: blok | YOK → blok sistemi | G-M1 | ⬜ |
-| Slider — kural: slide öğesi | YOK | G-M1 | ⬜ |
-| Story (grup, progress, video/görsel, aksiyon linki, modal) — kural: story öğesi | YOK | G-M1 | ⬜ |
-| Carousel Ürün Listesi (Standart/Özel Fiyatlar/Flash+geri sayım) — kural: blok + kaynak/filtre | YOK | G-M1 | ⬜ |
-| Infinity Ürün Listesi (Grid + infinite scroll) — kural: blok + kaynak/filtre | YOK | G-M1 | ⬜ |
-| Tabs — kural: blok + tab öğesi | YOK | G-M1 | ⬜ |
-| Koleksiyonlar bloğu (yalnız onaylı+açık) — E6 bağımlı | YOK | G-M1 | ⬜ |
-| Categories / Brands / Instagram vitrinleri | YOK (kategori verisi VAR) | G-M1 | ⬜ |
-| Duyuru bloğu (global yerleşim) | YOK | G-M1 | ⬜ |
-| Yerleşimler: anasayfa/liste üst-alt/detay alt/sepet-teslimat-ödeme/global | YOK | G-M1 | ⬜ |
-| Ürün kaynağı/filtre motoru (çok satan, yeni, kampanyalı, manuel...) | YOK | G-M1 | ⬜ |
-| Taslak→Yayınla→versiyonlu snapshot→rollback + yayın logu | YOK | G-M1 | ⬜ |
-| Admin: blok/öğe CRUD + sıralama + yayın geçmişi | YOK | G-M1 | ⬜ |
-| Kural motoru (OR-içi/AND-arası, tarih, öncelik, default yok) | YOK | G-M2 | ⬜ |
-| Segment tespiti (şehir/bölge/cinsiyet/cihaz/üyelik/üye grubu + konum zinciri) | YOK | G-M2 | ⬜ |
-| Segment+versiyon bazlı cache | YOK | G-M2 | ⬜ |
-| Admin önizleme (segment seçerek, "neden görünüyor/gizli") | YOK | G-M2 | ⬜ |
-| Audit log + değişiklik geçmişi ekranları | YOK | G-M2 | ⬜ |
+| Banner (tekli/ikili/uclu/dortlu/besli/reklam) — kural: blok | G1-G5 blok sistemi | G-M1 | ✅ G5 (banner grid + reklam kompoziti; "Bilgi/İkon/Çoklu" kaynak demo galerisi varyasyonu — şablon paleti PageBlockCatalog'da, gerekirse ileride eklenir) |
+| Slider — kural: slide öğesi | G1-G5 | G-M1 | ✅ G5 render + G10 öğe kuralı |
+| Story (grup, progress, video/görsel, aksiyon linki, modal) — kural: story öğesi | G1-G5 | G-M1 | ✅ G5 (frame JSON: config.frames ya da görsel/videodan) + G10 öğe kuralı |
+| Carousel Ürün Listesi (Standart 16 tema/Özel Fiyatlar/Flash+geri sayım) — kural: blok + kaynak/filtre | G1-G5 | G-M1 | ✅ G5 (flash sayacı config.endsAt'ten) + G10 blok kuralı |
+| Infinity Ürün Listesi (Grid + infinite scroll) — kural: blok + kaynak/filtre | G1-G5 | G-M1 | ✅ G5 + devam endpoint'i G4; G10: gizli bloğa devam 404 |
+| Tabs — kural: blok + tab öğesi | G1-G5 | G-M1 | ✅ G5 (öğe config'inden ürün) + G10 blok+öğe kuralı |
+| Koleksiyonlar bloğu (yalnız onaylı+açık) — E6 bağımlı | G3 GetShowcaseCollections | G-M1 | ✅ G5 (maskeli üye adı + kapak kolajı; public koleksiyon sayfası ileri iş) |
+| Categories / Brands / Instagram vitrinleri | G5 | G-M1 | ✅ (kapsül+vitrin / config.images / statik grid) |
+| Duyuru bloğu (global yerleşim) | G8 | G-M1 | ✅ nav duyuru barı announcement bloklarından; G10: öğe kuralı segmentli |
+| Yerleşimler: anasayfa/liste üst-alt/detay alt/sepet-teslimat-ödeme/global | G2 (8 kod) | G-M1 | ✅ store API tümünü sunar; Razor render'ı homepage+global-top'ta canlı (diğer yerleşimlerin sayfa içi render bağları içerik üretilince) |
+| Ürün kaynağı/filtre motoru (çok satan, yeni, kampanyalı, manuel...) | G3 (6 kaynak) | G-M1 | ✅ (stok/etiket filtresi + son gezilenler/favoriler kaynakları ileri iş) |
+| Taslak→Yayınla→versiyonlu snapshot→rollback + yayın logu | G4 | G-M1 | ✅ (bozuk yayın reddi + failed log; rollback JsonData değişmez) |
+| Admin: blok/öğe CRUD + sıralama + yayın geçmişi | G6 | G-M1 | ✅ PagesManagementPage + PageBlockDetailPage |
+| Kural motoru (OR-içi/AND-arası, tarih, öncelik, default yok) | G10 PageRuleEvaluator | G-M2 | ✅ E2E 17/17 (öncelik=ikincil sıralama; tek-sonuç seçimi tek-sonuç üreten tip gelirse) |
+| Segment tespiti (şehir/bölge/cinsiyet/cihaz/üyelik/üye grubu + konum zinciri) | G9a resolver + G9b şehir çipi | G-M2 | ✅ (GeoLite2 IP halkası mmdb edinilince — yuva hazır; 🔶 mobilde manuel şehir seçimi girişi yok: duyuru barı tasarımda mobilde gizli — kullanıcı kararı bekler) |
+| Segment+versiyon bazlı cache | G11 | G-M2 | ✅ anahtarlar seg:{hash}'li; yayın versiyonu eskiyi geçersizleştirir |
+| Admin önizleme (segment seçerek, "neden görünüyor/gizli") | G12 | G-M2 | ✅ taslak+kurgu segment, nedenli liste; canlıya dokunmaz |
+| Audit log + değişiklik geçmişi ekranları | G13 | G-M2 | ✅ iam_audit_logs + Değişiklik Geçmişi paneli (spec ActionType/EntityType) |
 
 ### 8.9 Diğer sayfalar + ortak elementler
 | İşlev | Backend | Faz | Durum |
