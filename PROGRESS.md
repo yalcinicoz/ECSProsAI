@@ -294,6 +294,22 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-11 — F5 TAMAM → FAZ F KAPANDI 🎉:**
+  - Envanter 8.7 tam işaretli (tek 🔶: banka logoları/sosyal linkler statik '#' —
+    gerçek URL'ler config/Faz G, firma hesapları verilince).
+  - 9 görüntü: 7 kurumsal sayfa + footer desktop + footer mobil (akordiyon açık) →
+    `tools/misharix-sync/shots/f5-*.png`; Hakkımızda CMS içerik + yan menü aktifliği
+    gözle doğrulandı.
+  - **Faz F toplu regresyon (taze 5051 publish): F1 16 + F2 6 + F3 8 + F4 6 = 36 adım ✓.**
+    f4 orkestrasyonu: footer test menüsü SQL ile instance'tan ÖNCE (5 dk cache) →
+    menülü instance 6/6 → menü silindi → menüsüz taze instance'ta statik yedek
+    kolonları (Kurumsal|Hesabım) doğrulandı. Drift TEMİZ; test artığı 0
+    (newsletter/contact/nav_menus boş).
+  - **FAZ F TAMAM (F1–F5). SIRADAKİ FAZ → G (Vitrin & Kişiselleştirme — G-M1 blok
+    sistemi; spec: anasayfa-dizayn-yönetimi.txt; büyük mimari, planlamayla başlanmalı).**
+    DEPLOY BEKLİYOR (B11'den beri; artık Faz E+F de dahil) — kullanıcı
+    `sudo systemctl restart ecspros`.
+
 - **2026-07-10 (devam) — F4 TAMAM: Footer canlı:**
   - **Kolonlar admin footer menüsünden:** StorePageController tabanı "footer" kodlu nav
     menüsünü yükler (5 dk cache); kök label = kolon başlığı, çocuklar linkler; menü
