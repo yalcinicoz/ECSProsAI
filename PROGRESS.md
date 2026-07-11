@@ -294,6 +294,28 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-11 (devam) — G5+G7 TAMAM (vitrin render + versiyonlu cache):**
+  - **G5 Razor render:** `Views/Shared/Store/_VitrinBloklar.cshtml` (izinli yeni) —
+    11 blok tipi GorunumTipleri markup'ıyla birebir: slider/story (frame JSON +
+    modal iskeleti)/banner grid+reklam kompoziti/carousel 3 şablon (tema config'ten;
+    flash geri sayımı config.endsAt'ten canlı script)/infinity (Daha Fazla → G4 devam
+    endpoint'i)/tabs/collection (maskeli üye adı + kapak kolajı — YENİ CrmMemberService,
+    IMemberService'in İLK implementasyonu)/categories kapsül+vitrin/brands/instagram/
+    announcement (span'lar, G8'de duyuru barına). `VitrinVmBuilder` + HomeController:
+    yayın varsa vitrin, yoksa B6 geçici kompozisyon (G8'e köprü). **E2E 20/20 ✓ +
+    B6/B4/E5/F1 regresyon (60 adım) ✓.**
+  - **G7 Versiyonlu cache:** PageComposer ICacheService'le sarıldı — anahtar
+    `page:{yerlesim}:{platform}:v{n}:{snapshotId}` + infinity `page-products:...`;
+    yeni yayın eski cache'i kendiliğinden geçersizleştirir; TTL 5 dk. **E2E 6/6 ✓
+    (cache hit kanıtı: DB snapshot'ı bozuldu, GET eskiyi döndü; v2 anında görünür;
+    rollback dönüşü) + G4 19/19 + G5 20/20 + B6 19/19 ✓.** E2E'nin yakaladığı ders:
+    versiyon numarası tek başına anahtar olamaz (silinip yeniden üretilirse çakışır)
+    → SnapshotId anahtara eklendi.
+  - **SIRADAKİ: G6** Admin UI (blok/öğe CRUD + sıralama + Yayınla/rollback ekranı —
+    publish/rollback/snapshots/publish-logs endpoint'leri G4'te hazır; blok/öğe CRUD
+    endpoint'leri eksik) → **G8** B6 geçici anasayfa + B3 statik duyuru kaldırma
+    (admin vitrini yönetebilir olunca). Sonra G-M2 (kural motoru + segment).
+
 - **2026-07-11 (devam) — FAZ G BAŞLADI; G1+G2+G3+G4 TAMAM (G-M1 backend çekirdeği):**
   - **G1 Veri modeli:** `storefront.page_blocks` + `page_block_items` + `published_snapshots`
     + `publish_logs` (AddPageBlocksAndSnapshots canlıda). Taslak/yayın ayrımı baştan:
