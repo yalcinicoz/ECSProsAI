@@ -294,6 +294,21 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-11 (devam) — G13 TAMAM (audit/değişiklik geçmişi) → G14 QA kaldı:**
+  - **VitrinAuditLogger (Api):** IAM'ın `iam_audit_logs` tablosuna yazar (İLK yazan
+    vitrin oldu; şema spec'le birebir). ActionType: Created/Updated/Deleted/Activated/
+    Deactivated/Published/Rollback/Previewed; EntityType: BannerBlock..AnnouncementBlock
+    + Slide/StoryItem/TabItem/BlockItem + Rule + PublishedSnapshot + PagePlacement.
+    Kural değişimi ayrıca Rule kaydı düşürür (eski/yeni). Audit hatası admin işlemini
+    düşürmez. PagesController tüm mutasyonlar + publish/rollback/preview'da loglar.
+  - **GET /api/pages/audit-logs** (platform süzgeci Context jsonb'sinden bellek tarafında)
+    + React "Değişiklik Geçmişi" paneli (rozet + başlık + kullanıcı + zaman); npm build.
+  - **E2E g13 11/11 ✓ + G4/G6/G10/G12/G8 regresyon ✓; drift TEMİZ; audit artığı 0**
+    (admin-mutasyonlu g-suite'lerinin temizliğine audit silme eklendi — artık kendileri
+    audit üretiyor).
+  - **SIRADAKİ: G14** QA (envanter 8.8 + faz kapanış regresyonu) → Faz G kapanışı.
+    Sonrasında DEPLOY (G9a'dan beri biriken G-M2 + bugünkü G9b-G13).
+
 - **2026-07-11 (devam) — G12 TAMAM (admin önizleme):**
   - **PagePreviewService (Api):** TASLAK bloklar + kurgu segment üzerinde kural motoru —
     composer'ın karar sırasıyla ama gizleneni nedeniyle listeler (pasif / tarih penceresi /

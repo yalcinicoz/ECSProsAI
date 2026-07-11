@@ -160,6 +160,7 @@ builder.Services.AddScoped<ECSPros.Api.Services.Store.IPageComposer, ECSPros.Api
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IVitrinVmBuilder, ECSPros.Api.Services.Store.VitrinVmBuilder>(); // G5: blok → Razor VM (koleksiyon kartı zenginleştirme dahil)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IVisitorSegmentResolver, ECSPros.Api.Services.Store.VisitorSegmentResolver>(); // G9: ziyaretçi segmenti (kural motoru + segment cache girdisi)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IPagePreviewService, ECSPros.Api.Services.Store.PagePreviewService>(); // G12: admin önizleme (taslak + kurgu segment)
+builder.Services.AddScoped<ECSPros.Api.Services.Store.IVitrinAuditLogger, ECSPros.Api.Services.Store.VitrinAuditLogger>(); // G13: vitrin değişiklik geçmişi (iam.audit_logs)
 builder.Services.AddHostedService<DashboardMetricsWorker>();
 builder.Services.AddSingleton<ECSPros.Api.Services.MigrationService>();
 
