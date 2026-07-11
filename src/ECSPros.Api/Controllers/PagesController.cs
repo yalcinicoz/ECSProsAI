@@ -1,6 +1,13 @@
 using System.Security.Claims;
+using ECSPros.Storefront.Application.Commands.DeletePageBlock;
 using ECSPros.Storefront.Application.Commands.PublishPageSnapshot;
+using ECSPros.Storefront.Application.Commands.ReorderPageBlocks;
 using ECSPros.Storefront.Application.Commands.RollbackPageSnapshot;
+using ECSPros.Storefront.Application.Commands.SavePageBlock;
+using ECSPros.Storefront.Application.Commands.SavePageBlockItems;
+using ECSPros.Storefront.Application.Queries.GetPageBlockDetail;
+using ECSPros.Storefront.Application.Queries.GetPageBlocks;
+using ECSPros.Storefront.Domain;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +26,97 @@ public class PagesController(IMediator mediator, ECSPros.Storefront.Application.
 {
     public record PublishRequest(Guid FirmPlatformId, string? Note);
     public record RollbackRequest(Guid FirmPlatformId, int TargetVersion, string? Note);
+    public record BlockRequest(
+        Guid FirmPlatformId, string Placement, string BlockType, string? Template,
+        Dictionary<string, string> TitleI18n, Dictionary<string, string>? SubtitleI18n,
+        int SortOrder, bool IsActive, DateTime? StartAt, DateTime? EndAt, int Priority,
+        string? RuleJson, string? ConfigJson);
+    public record ReorderRequest(Guid FirmPlatformId, string Placement, List<Guid> OrderedIds);
+    public record ItemsRequest(Guid FirmPlatformId, List<PageBlockItemInput> Items);
+
+    /// <summary>Blok paleti — admin dropdown'ları PageBlockCatalog'dan beslenir (G2 tek kaynak).</summary>
+    [HttpGet("catalog")]
+    public IActionResult Catalog() => Ok(new
+    {
+        success = true,
+        data = new
+        {
+            placements = PageBlockCatalog.Placements.Select(p => new { code = p.Code, displayName = p.DisplayName }),
+            blockTypes = PageBlockCatalog.BlockTypes.Select(t => new
+            {
+                code = t.Code,
+                displayName = t.DisplayName,
+                ruleLevel = t.Rules.ToString(),
+                supportsItems = t.SupportsItems,
+                templates = t.Templates,
+                requiresProductSource = t.RequiresProductSource,
+                requiresCollectionSource = t.RequiresCollectionSource,
+            }),
+            carouselThemes = PageBlockCatalog.CarouselThemes,
+        },
+    });
+
+    [HttpGet("blocks")]
+    public async Task<IActionResult> GetBlocks(
+        [FromQuery] Guid firmPlatformId, [FromQuery] string? placement, CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetPageBlocksQuery(firmPlatformId, placement), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    [HttpGet("blocks/{id:guid}")]
+    public async Task<IActionResult> GetBlock(Guid id, [FromQuery] Guid firmPlatformId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetPageBlockDetailQuery(id, firmPlatformId), ct);
+        if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    [HttpPost("blocks")]
+    public async Task<IActionResult> CreateBlock([FromBody] BlockRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(BlokKomutu(null, req), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Created($"/api/pages/blocks/{result.Value}", new { success = true, data = new { id = result.Value } });
+    }
+
+    [HttpPut("blocks/{id:guid}")]
+    public async Task<IActionResult> UpdateBlock(Guid id, [FromBody] BlockRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(BlokKomutu(id, req), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { id = result.Value } });
+    }
+
+    [HttpDelete("blocks/{id:guid}")]
+    public async Task<IActionResult> DeleteBlock(Guid id, [FromQuery] Guid firmPlatformId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new DeletePageBlockCommand(id, firmPlatformId), ct);
+        if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    [HttpPut("blocks/order")]
+    public async Task<IActionResult> ReorderBlocks([FromBody] ReorderRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new ReorderPageBlocksCommand(req.FirmPlatformId, req.Placement, req.OrderedIds), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Öğe listesi replace (SaveNavNodes deseni — editör tam listeyi gönderir).</summary>
+    [HttpPut("blocks/{id:guid}/items")]
+    public async Task<IActionResult> SaveItems(Guid id, [FromBody] ItemsRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new SavePageBlockItemsCommand(id, req.FirmPlatformId, req.Items), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    private static SavePageBlockCommand BlokKomutu(Guid? id, BlockRequest req) => new(
+        id, req.FirmPlatformId, req.Placement, req.BlockType, req.Template,
+        req.TitleI18n, req.SubtitleI18n, req.SortOrder, req.IsActive,
+        req.StartAt, req.EndAt, req.Priority, req.RuleJson, req.ConfigJson);
 
     [HttpPost("publish")]
     public async Task<IActionResult> Publish([FromBody] PublishRequest request, CancellationToken ct)
