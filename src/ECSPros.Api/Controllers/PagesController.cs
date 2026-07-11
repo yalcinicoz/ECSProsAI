@@ -11,6 +11,7 @@ using ECSPros.Storefront.Domain;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Api.Controllers;
 
@@ -22,7 +23,10 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/pages")]
 [Authorize]
-public class PagesController(IMediator mediator, ECSPros.Storefront.Application.Services.IStorefrontDbContext db) : ControllerBase
+public class PagesController(
+    IMediator mediator,
+    ECSPros.Storefront.Application.Services.IStorefrontDbContext db,
+    ECSPros.Api.Services.Store.IVitrinAuditLogger audit) : ControllerBase
 {
     public record PublishRequest(Guid FirmPlatformId, string? Note);
     public record RollbackRequest(Guid FirmPlatformId, int TargetVersion, string? Note);
@@ -77,22 +81,45 @@ public class PagesController(IMediator mediator, ECSPros.Storefront.Application.
     {
         var result = await mediator.Send(BlokKomutu(null, req), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        await audit.LogAsync(HttpContext, "Created",
+            ECSPros.Api.Services.Store.VitrinAuditLogger.BlockEntityType(req.BlockType),
+            result.Value, null, req, req.FirmPlatformId, BaslikYaz(req.TitleI18n), ct);
+        if (req.RuleJson is not null)
+            await audit.LogAsync(HttpContext, "Created", "Rule", result.Value,
+                null, new { ruleJson = req.RuleJson }, req.FirmPlatformId, BaslikYaz(req.TitleI18n), ct);
         return Created($"/api/pages/blocks/{result.Value}", new { success = true, data = new { id = result.Value } });
     }
 
     [HttpPut("blocks/{id:guid}")]
     public async Task<IActionResult> UpdateBlock(Guid id, [FromBody] BlockRequest req, CancellationToken ct)
     {
+        // G13: eski değer audit için mutasyondan ÖNCE okunur (aktiflik/kural farkı da buradan)
+        var eski = (await mediator.Send(new GetPageBlockDetailQuery(id, req.FirmPlatformId), ct)).Value;
         var result = await mediator.Send(BlokKomutu(id, req), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+
+        var aksiyon = eski is not null && eski.IsActive != req.IsActive
+            ? (req.IsActive ? "Activated" : "Deactivated") : "Updated";
+        await audit.LogAsync(HttpContext, aksiyon,
+            ECSPros.Api.Services.Store.VitrinAuditLogger.BlockEntityType(req.BlockType),
+            id, eski, req, req.FirmPlatformId, BaslikYaz(req.TitleI18n), ct);
+        if (eski is not null && eski.RuleJson != req.RuleJson)
+            await audit.LogAsync(HttpContext,
+                eski.RuleJson is null ? "Created" : req.RuleJson is null ? "Deleted" : "Updated",
+                "Rule", id, new { ruleJson = eski.RuleJson }, new { ruleJson = req.RuleJson },
+                req.FirmPlatformId, BaslikYaz(req.TitleI18n), ct);
         return Ok(new { success = true, data = new { id = result.Value } });
     }
 
     [HttpDelete("blocks/{id:guid}")]
     public async Task<IActionResult> DeleteBlock(Guid id, [FromQuery] Guid firmPlatformId, CancellationToken ct)
     {
+        var eski = (await mediator.Send(new GetPageBlockDetailQuery(id, firmPlatformId), ct)).Value;
         var result = await mediator.Send(new DeletePageBlockCommand(id, firmPlatformId), ct);
         if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
+        await audit.LogAsync(HttpContext, "Deleted",
+            ECSPros.Api.Services.Store.VitrinAuditLogger.BlockEntityType(eski?.BlockType ?? ""),
+            id, eski, null, firmPlatformId, BaslikYaz(eski?.TitleI18n), ct);
         return Ok(new { success = true });
     }
 
@@ -101,6 +128,8 @@ public class PagesController(IMediator mediator, ECSPros.Storefront.Application.
     {
         var result = await mediator.Send(new ReorderPageBlocksCommand(req.FirmPlatformId, req.Placement, req.OrderedIds), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        await audit.LogAsync(HttpContext, "Updated", "PagePlacement", req.FirmPlatformId,
+            null, new { req.Placement, req.OrderedIds }, req.FirmPlatformId, $"Sıralama: {req.Placement}", ct);
         return Ok(new { success = true });
     }
 
@@ -108,10 +137,18 @@ public class PagesController(IMediator mediator, ECSPros.Storefront.Application.
     [HttpPut("blocks/{id:guid}/items")]
     public async Task<IActionResult> SaveItems(Guid id, [FromBody] ItemsRequest req, CancellationToken ct)
     {
+        var eski = (await mediator.Send(new GetPageBlockDetailQuery(id, req.FirmPlatformId), ct)).Value;
         var result = await mediator.Send(new SavePageBlockItemsCommand(id, req.FirmPlatformId, req.Items), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        await audit.LogAsync(HttpContext, "Updated",
+            ECSPros.Api.Services.Store.VitrinAuditLogger.ItemEntityType(eski?.BlockType ?? ""),
+            id, eski?.Items, req.Items, req.FirmPlatformId, BaslikYaz(eski?.TitleI18n), ct);
         return Ok(new { success = true });
     }
+
+    private static string? BaslikYaz(Dictionary<string, string>? baslik) =>
+        baslik is null ? null
+        : baslik.TryGetValue("tr", out var tr) ? tr : baslik.Values.FirstOrDefault();
 
     private static SavePageBlockCommand BlokKomutu(Guid? id, BlockRequest req) => new(
         id, req.FirmPlatformId, req.Placement, req.BlockType, req.Template,
@@ -142,6 +179,9 @@ public class PagesController(IMediator mediator, ECSPros.Storefront.Application.
         var segment = await segmentResolver.BuildAsync(
             req.City, req.Gender, req.Device, req.IsMember, req.MemberGroupId, ct);
         var bloklar = await preview.PreviewAsync(req.FirmPlatformId, req.Placement, segment, ct);
+        await audit.LogAsync(HttpContext, "Previewed", "PagePlacement", req.FirmPlatformId,
+            null, new { req.Placement, segment = segment.CacheKey() }, req.FirmPlatformId,
+            $"Önizleme: {req.Placement}", ct);
         return Ok(new
         {
             success = true,
@@ -169,6 +209,9 @@ public class PagesController(IMediator mediator, ECSPros.Storefront.Application.
             request.FirmPlatformId, KullaniciId(), request.Note), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
+        await audit.LogAsync(HttpContext, "Published", "PublishedSnapshot", request.FirmPlatformId,
+            null, new { version = result.Value, request.Note }, request.FirmPlatformId,
+            $"Yayın v{result.Value}", ct);
         return Ok(new { success = true, data = new { version = result.Value } });
     }
 
@@ -179,7 +222,47 @@ public class PagesController(IMediator mediator, ECSPros.Storefront.Application.
             request.FirmPlatformId, request.TargetVersion, KullaniciId(), request.Note), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
+        await audit.LogAsync(HttpContext, "Rollback", "PublishedSnapshot", request.FirmPlatformId,
+            null, new { request.TargetVersion, request.Note }, request.FirmPlatformId,
+            $"Geri dönüş v{request.TargetVersion}", ct);
         return Ok(new { success = true });
+    }
+
+    /// <summary>
+    /// G13: değişiklik geçmişi — vitrin varlıklarının audit kayıtları (iam.audit_logs;
+    /// spec 'Değişiklik Geçmişi' ekranı). Platform süzgeci Context jsonb'sinden bellek
+    /// tarafında (jsonb sözlük indeksi SQL'e çevrilemiyor — B2 dersi; kayıt hacmi admin
+    /// işlemleriyle sınırlı, son 500 pencere yeterli).
+    /// </summary>
+    [HttpGet("audit-logs")]
+    public IActionResult AuditLogs(
+        [FromQuery] Guid firmPlatformId,
+        [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromQuery] int limit = 100)
+    {
+        var vitrinTipleri = ECSPros.Api.Services.Store.VitrinAuditLogger.EntityTypes;
+        var kayitlar = iam.AuditLogs.AsNoTracking()
+            .Where(l => vitrinTipleri.Contains(l.EntityType))
+            .OrderByDescending(l => l.CreatedAt)
+            .Take(500)
+            .ToList()
+            .Where(l => l.Context != null
+                && l.Context.TryGetValue("firmPlatformId", out var p)
+                && p?.ToString() == firmPlatformId.ToString())
+            .Take(Math.Clamp(limit, 1, 200))
+            .Select(l => new
+            {
+                l.Id,
+                action = l.Action,
+                l.EntityType,
+                l.EntityId,
+                l.CreatedAt,
+                userName = l.Context!.TryGetValue("userName", out var u) ? u?.ToString() : null,
+                title = l.Context!.TryGetValue("title", out var t) ? t?.ToString() : null,
+                oldValues = l.OldValues,
+                newValues = l.NewValues,
+            });
+        return Ok(new { success = true, data = kayitlar });
     }
 
     /// <summary>Yayın geçmişi — spec PublishLog listesi (yeniden eskiye).</summary>

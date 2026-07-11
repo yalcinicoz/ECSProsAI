@@ -42,6 +42,17 @@ interface PreviewResult {
   blocks: PreviewBlock[]
 }
 interface MemberGroup { id: string; nameI18n?: Record<string, string>; code?: string }
+// G13: değişiklik geçmişi (vitrin audit kayıtları — iam.audit_logs)
+interface AuditRow {
+  id: string; action: string; entityType: string; entityId: string
+  createdAt: string; userName: string | null; title: string | null
+}
+
+const AUDIT_ACTION_TR: Record<string, string> = {
+  Created: 'Oluşturuldu', Updated: 'Güncellendi', Deleted: 'Silindi',
+  Activated: 'Aktifleştirildi', Deactivated: 'Pasifleştirildi',
+  Published: 'Yayınlandı', Rollback: 'Geri Dönüş', Previewed: 'Önizlendi',
+}
 
 // 81 il (plaka + ad) — önizleme segment seçicisi; storefront şehir çipiyle aynı referans veri.
 const IL_LISTESI: [string, string][] = [
@@ -127,11 +138,17 @@ export function PagesManagementPage() {
     queryFn: async () => (await api.get('/pages/publish-logs', { params: { firmPlatformId: platformId } })).data.data ?? [],
     enabled: !!platformId,
   })
+  const { data: auditLogs = [] } = useQuery<AuditRow[]>({
+    queryKey: ['page-audit-logs', platformId],
+    queryFn: async () => (await api.get('/pages/audit-logs', { params: { firmPlatformId: platformId } })).data.data ?? [],
+    enabled: !!platformId,
+  })
 
   const yenile = () => {
     queryClient.invalidateQueries({ queryKey: ['page-blocks', platformId] })
     queryClient.invalidateQueries({ queryKey: ['page-snapshots', platformId] })
     queryClient.invalidateQueries({ queryKey: ['publish-logs', platformId] })
+    queryClient.invalidateQueries({ queryKey: ['page-audit-logs', platformId] })
   }
 
   const createBlock = useMutation({
@@ -362,6 +379,28 @@ export function PagesManagementPage() {
                 ))}
                 {publishLogs.length === 0 && <p className="text-sm text-[var(--text-m)]">Kayıt yok.</p>}
               </div>
+            </div>
+          </div>
+
+          {/* G13: değişiklik geçmişi — kim, neyi, ne zaman (spec audit ekranı) */}
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+            <h2 className="mb-3 text-sm font-semibold">Değişiklik Geçmişi</h2>
+            <div className="max-h-80 space-y-1 overflow-y-auto">
+              {auditLogs.map((l) => (
+                <div key={l.id} className="flex items-center justify-between rounded-lg bg-[var(--surface2)] px-3 py-1.5 text-sm">
+                  <div className="min-w-0 truncate">
+                    <Badge variant={l.action === 'Deleted' || l.action === 'Deactivated' ? 'danger' : l.action === 'Created' || l.action === 'Published' ? 'success' : 'neutral'}>
+                      {AUDIT_ACTION_TR[l.action] ?? l.action}
+                    </Badge>
+                    <span className="ml-2 font-medium">{l.title ?? '—'}</span>
+                    <span className="ml-2 text-xs text-[var(--text-m)]">{l.entityType}</span>
+                  </div>
+                  <div className="ml-3 shrink-0 text-xs text-[var(--text-m)]">
+                    {l.userName || 'bilinmeyen'} · {new Date(l.createdAt).toLocaleString('tr-TR')}
+                  </div>
+                </div>
+              ))}
+              {auditLogs.length === 0 && <p className="text-sm text-[var(--text-m)]">Henüz kayıt yok.</p>}
             </div>
           </div>
         </>
