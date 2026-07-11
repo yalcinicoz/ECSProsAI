@@ -36,7 +36,8 @@ public record GetStoreProductsQuery(
     decimal? PriceMin = null,
     decimal? PriceMax = null,
     string? Sort = null,
-    List<string>? ProductCodes = null) : IRequest<Result<PagedResult<StoreProductDto>>>; // E5: Favorilerim — kod listesiyle kart verisi
+    List<string>? ProductCodes = null,   // E5: Favorilerim — kod listesiyle kart verisi
+    List<Guid>? ProductIds = null) : IRequest<Result<PagedResult<StoreProductDto>>>; // G3: kampanya kaynağı — id listesiyle kart verisi
 
 public record StoreProductDto(
     Guid Id,
@@ -76,6 +77,10 @@ public class GetStoreProductsQueryHandler(
         // ürünün favorisi listelenmez)
         if (request.ProductCodes is { Count: > 0 } kodlar)
             q = q.Where(p => kodlar.Contains(p.Code));
+
+        // G3: kampanya kaynağı — yalnız verilen id'ler (kod listesiyle aynı davranış)
+        if (request.ProductIds is { Count: > 0 } idler)
+            q = q.Where(p => idler.Contains(p.Id));
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
