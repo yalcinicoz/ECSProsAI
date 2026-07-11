@@ -37,6 +37,12 @@ public interface IVisitorSegmentResolver
 {
     /// <summary>İstekten segmenti çözer. memberId SSR cookie kimliğinden ya da bearer claim'den verilir (null = misafir).</summary>
     Task<VisitorSegment> ResolveAsync(HttpContext http, Guid? memberId, CancellationToken ct = default);
+
+    /// <summary>G12: kurgu segment (admin önizlemesi) — plaka kodundan bölge/il adı çözülür,
+    /// geçersiz/boş plaka konumsuz segment üretir; gender/device değerleri normalize edilir.</summary>
+    Task<VisitorSegment> BuildAsync(
+        string? cityCode, string? gender, string? device, bool isMember, Guid? memberGroupId,
+        CancellationToken ct = default);
 }
 
 /// <summary>
@@ -93,6 +99,22 @@ public class VisitorSegmentResolver(IMemberService memberService, ICrmDbContext 
         };
 
         return new VisitorSegment(cityCode, cityName, region, gender, device, uye is not null, uye?.MemberGroupId);
+    }
+
+    public async Task<VisitorSegment> BuildAsync(
+        string? cityCode, string? gender, string? device, bool isMember, Guid? memberGroupId,
+        CancellationToken ct = default)
+    {
+        string? kod = null, ad = null, bolge = null;
+        if (cityCode is { Length: 2 })
+        {
+            var iller = await IlleriGetirAsync(ct);
+            if (iller.ByCode.TryGetValue(cityCode, out var il))
+                (kod, ad, bolge) = (cityCode, il.Name, il.Region);
+        }
+        var cinsiyet = gender?.ToLowerInvariant() is "male" or "female" ? gender!.ToLowerInvariant() : "unknown";
+        var cihaz = device?.ToLowerInvariant() is "mobile" or "tablet" ? device!.ToLowerInvariant() : "desktop";
+        return new VisitorSegment(kod, ad, bolge, cinsiyet, cihaz, isMember, isMember ? memberGroupId : null);
     }
 
     /// <summary>UA sınıflaması — tablet önce denenir (Android tablet UA'sında "Mobile" geçmez).</summary>

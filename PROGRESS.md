@@ -294,6 +294,19 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-11 (devam) — G12 TAMAM (admin önizleme):**
+  - **PagePreviewService (Api):** TASLAK bloklar + kurgu segment üzerinde kural motoru —
+    composer'ın karar sırasıyla ama gizleneni nedeniyle listeler (pasif / tarih penceresi /
+    blok kuralı / öğe kalmadı / ürün-koleksiyon kaynağı boş; görünürde "N öğe eşleşti /
+    N ürün"). Cache'e yazmaz, canlıyı etkilemez (spec).
+  - **POST /api/pages/preview** ([Authorize]) — kurgu segment `BuildAsync` (plaka→il
+    adı+bölge); yanıtta segment yankısı + blok listesi.
+  - **React:** PagesManagementPage'e "Önizleme" modalı (81 il + cinsiyet/cihaz/üyelik +
+    üye grubu formu → Görünür/Gizli rozetli, nedenli sonuç listesi); npm build alındı.
+  - **E2E g12 15/15 ✓ + G4/G6/G10/G9b regresyon ✓; drift TEMİZ; test artığı 0.**
+  - **SIRADAKİ: G13** audit/yayın logu ekranları (spec ActionType/EntityType; yayın
+    geçmişi ekranı G6'da var — değişiklik geçmişi/audit tarafı kaldı) → G14 QA 8.8.
+
 - **2026-07-11 (devam) — G10+G11 TAMAM (kural motoru + segmentli cache):**
   - **PageRuleEvaluator (Api):** alan içi OR, alanlar arası AND, boş alan atlanır,
     kural yoksa herkese, uymayana blok/öğe basılmaz + default aranmaz (spec birebir);
