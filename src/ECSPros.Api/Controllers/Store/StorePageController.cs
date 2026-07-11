@@ -45,9 +45,28 @@ public abstract class StorePageController : Controller
             // yoksa _Footer tasarımın statik kolonlarını basar.
             ViewData["MsFooterMenu"] = await FooterMenusunuGetirAsync(
                 services, platform.Id, context.HttpContext.RequestAborted);
+            // G8: duyuru şeridi metinleri vitrin "announcement" bloklarından (global-top;
+            // PageComposer G7 versiyonlu cache'iyle). Blok yoksa _AnaNavigasyonDuyuru
+            // tasarımın statik metinlerini basar (F4 footer yedek deseni).
+            ViewData["MsDuyurular"] = await DuyurulariGetirAsync(
+                services, platform.Id, context.HttpContext.RequestAborted);
         }
 
         await next();
+    }
+
+    private static async Task<List<string>?> DuyurulariGetirAsync(
+        IServiceProvider services, Guid platformId, CancellationToken ct)
+    {
+        var composer = services.GetRequiredService<ECSPros.Api.Services.Store.IPageComposer>();
+        var (_, bloklar) = await composer.ComposeAsync(platformId, "global-top", ct);
+        var metinler = bloklar
+            .Where(b => b.BlockType == "announcement")
+            .SelectMany(b => b.Items)
+            .Select(i => i.Title.TryGetValue("tr", out var tr) ? tr : i.Title.Values.FirstOrDefault() ?? "")
+            .Where(m => m.Length > 0)
+            .ToList();
+        return metinler.Count > 0 ? metinler : null;
     }
 
     private static async Task<ECSPros.Storefront.Application.Queries.GetNavigationMenuDetail.NavigationMenuDetailDto?> FooterMenusunuGetirAsync(

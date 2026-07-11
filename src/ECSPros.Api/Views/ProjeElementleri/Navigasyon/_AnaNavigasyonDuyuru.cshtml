@@ -16,13 +16,28 @@
         </div>
 
         <div class="ms-ana-duyuru-kayan-alan" aria-label="Duyurular">
-            @* B3: geçici statik duyurular — kalıcısı Faz G global "duyuru" bloğu (G8'de kaldırılır) *@
-            <div class="ms-ana-duyuru-kayan-metin">
-                <span>Yeni sezon koleksiyonunu keşfet!</span>
-                <span>Mishar'a özel fırsatlar seni bekliyor.</span>
-                <span>Sepette avantajlı ürünleri kaçırma.</span>
-                <span>Yeni sezon koleksiyonunu keşfet!</span>
-            </div>
+            @* G8: metinler vitrin "announcement" bloklarından (global-top yerleşimi;
+               admin Vitrin Yönetimi'nden). Kaynaktaki gibi ilk metin sona tekrar basılır
+               (kayan döngü sürekliliği). Blok yoksa tasarımın statik metinleri yedek. *@
+            @if (ViewData["MsDuyurular"] is List<string> msDuyurular)
+            {
+                <div class="ms-ana-duyuru-kayan-metin">
+                    @foreach (var duyuru in msDuyurular)
+                    {
+                        <span>@duyuru</span>
+                    }
+                    <span>@msDuyurular[0]</span>
+                </div>
+            }
+            else
+            {
+                <div class="ms-ana-duyuru-kayan-metin">
+                    <span>Yeni sezon koleksiyonunu keşfet!</span>
+                    <span>Mishar'a özel fırsatlar seni bekliyor.</span>
+                    <span>Sepette avantajlı ürünleri kaçırma.</span>
+                    <span>Yeni sezon koleksiyonunu keşfet!</span>
+                </div>
+            }
         </div>
 
         <div class="ms-ana-duyuru-sag-linkler">

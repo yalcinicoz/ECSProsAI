@@ -27,6 +27,7 @@ public static class DatabaseSeeder
         await SeedReturnReasonsAsync(scope.ServiceProvider);
         await SeedCorporatePagesAsync(scope.ServiceProvider);
         await SeedFaqPageAsync(scope.ServiceProvider);
+        await SeedDefaultVitrinAsync(scope.ServiceProvider);
     }
 
     /// <summary>
@@ -1524,5 +1525,114 @@ public static class DatabaseSeeder
         }
         if (added > 0) await db.SaveChangesAsync();
         Console.WriteLine($"✓ Seed: Var/Yok değerleri — {added} yeni eklendi.");
+    }
+
+    /// <summary>
+    /// G8: varsayılan vitrin — platformda hiç taslak blok ve yayın yoksa B6 geçici
+    /// kompozisyonunun birebir karşılığını taslak bloklar olarak kurar ve v1 olarak
+    /// yayınlar: duyuru şeridi (B3 metinleri) + kapsül kategori şeridi (kök kanal
+    /// kategorileri; görsel = ilk ürün görseli, görselsüz kapsül basılmaz — B6 kuralı)
+    /// + ilk 3 kök kategori için standart carousel (category kaynağı, 10 ürün).
+    /// Böylece B6/B3 geçici kodları kaldırılınca canlı görünüm DEĞİŞMEZ; içerik artık
+    /// admin Vitrin Yönetimi'nden yönetilir. Blok/yayın var olan platforma dokunulmaz.
+    /// </summary>
+    private static async Task SeedDefaultVitrinAsync(IServiceProvider sp)
+    {
+        var storefront = sp.GetRequiredService<StorefrontDbContext>();
+        var core = sp.GetRequiredService<CoreDbContext>();
+        var mediator = sp.GetRequiredService<MediatR.IMediator>();
+
+        var platformlar = await core.FirmPlatforms.Where(fp => fp.IsActive).Select(fp => fp.Id).ToListAsync();
+        foreach (var platformId in platformlar)
+        {
+            var dokunulmus = await storefront.PageBlocks.IgnoreQueryFilters().AnyAsync(b => b.FirmPlatformId == platformId)
+                || await storefront.PublishedSnapshots.IgnoreQueryFilters().AnyAsync(x => x.FirmPlatformId == platformId);
+            if (dokunulmus) continue;
+
+            // Duyuru şeridi (B3 statik metinleri — artık admin'den yönetilir)
+            var duyuru = new ECSPros.Storefront.Domain.Entities.PageBlock
+            {
+                FirmPlatformId = platformId, Placement = "global-top", BlockType = "announcement",
+                TitleI18n = new() { ["tr"] = "Duyuru Şeridi" }, SortOrder = 1, IsActive = true,
+            };
+            var metinler = new[]
+            {
+                "Yeni sezon koleksiyonunu keşfet!",
+                "Mishar'a özel fırsatlar seni bekliyor.",
+                "Sepette avantajlı ürünleri kaçırma.",
+            };
+            for (var i = 0; i < metinler.Length; i++)
+                duyuru.Items.Add(new ECSPros.Storefront.Domain.Entities.PageBlockItem
+                {
+                    TitleI18n = new() { ["tr"] = metinler[i] }, SortOrder = i + 1, IsActive = true,
+                });
+            storefront.PageBlocks.Add(duyuru);
+
+            // Kök kategoriler (aktif, sıralı)
+            var kokler = await storefront.ChannelCategories
+                .Where(c => c.FirmPlatformId == platformId && c.ParentId == null && c.Status == "published")
+                .OrderBy(c => c.SortOrder)
+                .Select(c => new { c.Id, c.NameI18n, c.Slug, c.DisplayImageUrl })
+                .ToListAsync();
+
+            // Kapsül görseli: kategorinin kendi görseli yoksa ilk ürün görseli (B6 kuralı)
+            var kapsulOgeleri = new List<ECSPros.Storefront.Domain.Entities.PageBlockItem>();
+            var carouselKokleri = new List<(Guid Id, string Ad, string Slug)>();
+            foreach (var kok in kokler)
+            {
+                var ad = kok.NameI18n.TryGetValue("tr", out var tr) ? tr : kok.NameI18n.Values.FirstOrDefault() ?? kok.Slug;
+                var urunler = await mediator.Send(
+                    new ECSPros.Storefront.Application.Queries.GetChannelCategoryProducts.GetChannelCategoryProductsQuery(kok.Id, 1, 1));
+                var ilkUrunGorseli = urunler.IsSuccess ? urunler.Value!.Items.FirstOrDefault()?.MainImageUrl : null;
+                if (urunler.IsSuccess && urunler.Value!.Items.Any() && carouselKokleri.Count < 3)
+                    carouselKokleri.Add((kok.Id, ad, kok.Slug));
+
+                var gorsel = kok.DisplayImageUrl ?? ilkUrunGorseli;
+                if (gorsel is null) continue;
+                kapsulOgeleri.Add(new ECSPros.Storefront.Domain.Entities.PageBlockItem
+                {
+                    TitleI18n = new() { ["tr"] = ad }, ImageUrl = gorsel, LinkUrl = "/" + kok.Slug,
+                    SortOrder = kapsulOgeleri.Count + 1, IsActive = true,
+                });
+            }
+
+            var sira = 0;
+            if (kapsulOgeleri.Count >= 2) // B6: kapsül şeridi yalnız >=2 kategoriyle basılırdı
+            {
+                var kapsul = new ECSPros.Storefront.Domain.Entities.PageBlock
+                {
+                    FirmPlatformId = platformId, Placement = "homepage", BlockType = "categories",
+                    TitleI18n = new() { ["tr"] = "Öne Çıkan Kategoriler" }, SortOrder = ++sira, IsActive = true,
+                    ConfigJson = "{\"gorunum\":\"kapsul\",\"mobileCarousel\":true}",
+                };
+                foreach (var oge in kapsulOgeleri) kapsul.Items.Add(oge);
+                storefront.PageBlocks.Add(kapsul);
+            }
+
+            foreach (var (kokId, ad, slug) in carouselKokleri)
+            {
+                storefront.PageBlocks.Add(new ECSPros.Storefront.Domain.Entities.PageBlock
+                {
+                    FirmPlatformId = platformId, Placement = "homepage", BlockType = "carousel", Template = "standart",
+                    TitleI18n = new() { ["tr"] = ad },
+                    SubtitleI18n = new() { ["tr"] = ad + " kategorisinden öne çıkan ürünler." },
+                    SortOrder = ++sira, IsActive = true,
+                    ConfigJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        productSource = new { source = "category", categoryId = kokId, limit = 10 },
+                        tema = "varsayilan",
+                        seeAllUrl = "/" + slug,
+                    }),
+                });
+            }
+
+            await storefront.SaveChangesAsync();
+            var yayin = await mediator.Send(
+                new ECSPros.Storefront.Application.Commands.PublishPageSnapshot.PublishPageSnapshotCommand(
+                    platformId, null, "G8 varsayılan vitrin (B6 kompozisyonu)"));
+            Console.WriteLine(yayin.IsSuccess
+                ? $"✓ Seed: {platformId} için varsayılan vitrin yayınlandı (v{yayin.Value})."
+                : $"⚠ Seed: {platformId} vitrin yayını başarısız: {yayin.Error}");
+        }
     }
 }
