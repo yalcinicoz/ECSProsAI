@@ -103,4 +103,61 @@ public static class PageBlockCatalog
     /// <summary>Blok kuralı bu tipte anlamlı mı (slider/story/duyuru yalnız öğe kuralı taşır).</summary>
     public static bool AllowsBlockRules(string blockType) =>
         Find(blockType)?.Rules is RuleLevel.Block or RuleLevel.BlockAndItem;
+
+    /// <summary>G10 kural şemasının alanları — segment boyutlarıyla birebir (G9).</summary>
+    public static readonly IReadOnlyList<string> RuleFields =
+        ["city", "region", "gender", "device", "membership", "memberGroup"];
+
+    /// <summary>
+    /// G10: RuleJson yapısal doğrulaması (admin kaydet + Yayınla aynı kaynaktan — iki
+    /// katmanlı). Şema: {"city":["06"],"device":["mobile"],...} — her alan string dizisi;
+    /// alan içi OR, alanlar arası AND; boş/eksik alan değerlendirilmez. Şehir plaka
+    /// kodudur (DB'ye Domain'den bakılamaz — 2 haneli rakam yapısal kontrolü yeterli;
+    /// runtime'da bilinmeyen plaka zaten hiçbir ziyaretçiyle eşleşmez).
+    /// </summary>
+    public static List<string> ValidateRule(string? ruleJson)
+    {
+        var hatalar = new List<string>();
+        if (string.IsNullOrWhiteSpace(ruleJson)) return hatalar;
+
+        System.Text.Json.JsonDocument belge;
+        try { belge = System.Text.Json.JsonDocument.Parse(ruleJson); }
+        catch { hatalar.Add("kural JSON değil."); return hatalar; }
+
+        using (belge)
+        {
+            if (belge.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+            { hatalar.Add("kural bir JSON nesnesi olmalı."); return hatalar; }
+
+            foreach (var alan in belge.RootElement.EnumerateObject())
+            {
+                if (!RuleFields.Contains(alan.Name))
+                { hatalar.Add($"bilinmeyen kural alanı '{alan.Name}'."); continue; }
+                if (alan.Value.ValueKind != System.Text.Json.JsonValueKind.Array)
+                { hatalar.Add($"kural alanı '{alan.Name}' dizi olmalı."); continue; }
+
+                foreach (var eleman in alan.Value.EnumerateArray())
+                {
+                    var deger = eleman.ValueKind == System.Text.Json.JsonValueKind.String
+                        ? eleman.GetString() : null;
+                    if (string.IsNullOrWhiteSpace(deger))
+                    { hatalar.Add($"kural alanı '{alan.Name}' boş olmayan string'ler içermeli."); break; }
+
+                    var gecerli = alan.Name switch
+                    {
+                        "city" => deger.Length == 2 && deger.All(char.IsAsciiDigit),
+                        "region" => deger.All(ch => ch is >= 'a' and <= 'z' or >= '0' and <= '9' or '-'),
+                        "gender" => deger is "male" or "female",
+                        "device" => deger is "mobile" or "tablet" or "desktop",
+                        "membership" => deger is "member" or "guest",
+                        "memberGroup" => Guid.TryParse(deger, out _),
+                        _ => true,
+                    };
+                    if (!gecerli)
+                        hatalar.Add($"kural alanı '{alan.Name}' geçersiz değer içeriyor: '{deger}'.");
+                }
+            }
+        }
+        return hatalar;
+    }
 }

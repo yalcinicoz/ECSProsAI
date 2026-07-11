@@ -53,6 +53,9 @@ public class SavePageBlockItemsCommandHandler(IStorefrontDbContext db)
                 return Result.Failure($"'{blok.BlockType}' tipinde öğe kuralı verilemez.");
             if (!GecerliJson(oge.RuleJson) || !GecerliJson(oge.ConfigJson))
                 return Result.Failure("Öğe JSON alanı geçersiz.");
+            // G10: kural şeması — Yayınla'yla aynı katalog kaynağı (iki katmanlı)
+            if (PageBlockCatalog.ValidateRule(oge.RuleJson) is { Count: > 0 } kuralHatalari)
+                return Result.Failure("Öğe kuralı geçersiz: " + string.Join(" | ", kuralHatalari));
         }
 
         var mevcutlar = await db.PageBlockItems

@@ -11,11 +11,14 @@ namespace ECSPros.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/store/pages")]
-public class StorePagesController(IPageComposer composer) : ControllerBase
+public class StorePagesController(IPageComposer composer, IVisitorSegmentResolver segmentResolver) : ControllerBase
 {
     /// <summary>
     /// Yerleşimin görünür blokları (ürün/koleksiyon blokları kaynak konfigürasyonundan
-    /// doldurulmuş). Yayın yoksa boş dizi. Örnek: GET /api/store/pages/homepage?firmPlatformId=...
+    /// doldurulmuş). Yayın yoksa boş dizi. G10: kompozisyon ziyaretçi segmentine göre —
+    /// anonim çalışır, geçerli üye bearer'ı segmenti üye bağlamıyla zenginleştirir
+    /// (mobil app aynı endpoint'i header'larıyla kullanır).
+    /// Örnek: GET /api/store/pages/homepage?firmPlatformId=...
     /// </summary>
     [HttpGet("{placement}")]
     public async Task<IActionResult> GetPlacement(
@@ -26,11 +29,14 @@ public class StorePagesController(IPageComposer composer) : ControllerBase
         if (firmPlatformId == Guid.Empty)
             return BadRequest(new { success = false, error = "firmPlatformId zorunlu." });
 
-        var (version, blocks) = await composer.ComposeAsync(firmPlatformId, placement, ct);
+        var segment = await segmentResolver.ResolveAsync(
+            HttpContext, VisitorSegmentResolver.MemberIdFromClaims(User), ct);
+        var (version, blocks) = await composer.ComposeAsync(firmPlatformId, placement, segment, ct);
         return Ok(new { success = true, data = new { version, blocks } });
     }
 
-    /// <summary>Infinity ürün bloğunun devam sayfası. Blok aktif snapshot'ta yoksa 404.</summary>
+    /// <summary>Infinity ürün bloğunun devam sayfası. Blok aktif snapshot'ta yoksa ya da
+    /// kuraldan bu segmente görünmüyorsa 404 (içerik sızmaz).</summary>
     [HttpGet("blocks/{blockId:guid}/products")]
     public async Task<IActionResult> GetBlockProducts(
         Guid blockId, [FromQuery] Guid firmPlatformId, [FromQuery] int page = 2, CancellationToken ct = default)
@@ -38,7 +44,9 @@ public class StorePagesController(IPageComposer composer) : ControllerBase
         if (firmPlatformId == Guid.Empty)
             return BadRequest(new { success = false, error = "firmPlatformId zorunlu." });
 
-        var urunler = await composer.ResolveBlockProductsAsync(firmPlatformId, blockId, page, ct);
+        var segment = await segmentResolver.ResolveAsync(
+            HttpContext, VisitorSegmentResolver.MemberIdFromClaims(User), ct);
+        var urunler = await composer.ResolveBlockProductsAsync(firmPlatformId, blockId, page, segment, ct);
         if (urunler is null)
             return NotFound(new { success = false, error = "Blok aktif yayında bulunamadı." });
         return Ok(new { success = true, data = new { items = urunler, page } });

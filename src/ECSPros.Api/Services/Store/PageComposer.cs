@@ -39,13 +39,16 @@ public record ResolvedItemDto(
 
 public interface IPageComposer
 {
-    /// <summary>Aktif snapshot'tan bir yerleşimin görünür bloklarını çözer (yayın yoksa boş).</summary>
+    /// <summary>Aktif snapshot'tan bir yerleşimin, verilen segmentin görebileceği bloklarını
+    /// çözer (yayın yoksa boş). Segment zorunludur — misafir için VisitorSegment.Misafir;
+    /// G12 admin önizlemesi kurgu segment geçer.</summary>
     Task<(int Version, List<ResolvedBlockDto> Blocks)> ComposeAsync(
-        Guid firmPlatformId, string placement, CancellationToken ct = default);
+        Guid firmPlatformId, string placement, VisitorSegment segment, CancellationToken ct = default);
 
-    /// <summary>Infinity devam yüklemesi: snapshot'taki ürün bloğunun N. sayfası.</summary>
+    /// <summary>Infinity devam yüklemesi: snapshot'taki ürün bloğunun N. sayfası
+    /// (blok bu segmente kuraldan görünmüyorsa null — içerik sızmaz).</summary>
     Task<List<StoreProductDto>?> ResolveBlockProductsAsync(
-        Guid firmPlatformId, Guid blockId, int page, CancellationToken ct = default);
+        Guid firmPlatformId, Guid blockId, int page, VisitorSegment segment, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -69,12 +72,15 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver,
     private sealed record UrunPaketi(List<StoreProductDto> Items);
 
     public async Task<(int Version, List<ResolvedBlockDto> Blocks)> ComposeAsync(
-        Guid firmPlatformId, string placement, CancellationToken ct = default)
+        Guid firmPlatformId, string placement, VisitorSegment segment, CancellationToken ct = default)
     {
         var aktif = await AktifVersiyonAsync(firmPlatformId, ct);
         if (aktif.Version == 0) return (0, []);
 
-        var anahtar = $"page:{placement}:{firmPlatformId}:v{aktif.Version}:{aktif.SnapshotId:N}";
+        // G10/G11: anahtar segment hash'i içerir (spec) — aynı yayında farklı segmentler
+        // farklı kompozisyon görebilir; kuralsız yayında hash misafir/üye başına aynı
+        // içeriği tekrarlar (kabul: TTL 5 dk, paket küçük).
+        var anahtar = $"page:{placement}:{firmPlatformId}:v{aktif.Version}:{aktif.SnapshotId:N}:seg:{segment.CacheHash()}";
         var hazir = await cache.GetAsync<BlokPaketi>(anahtar, ct);
         if (hazir is not null) return (aktif.Version, hazir.Blocks);
 
@@ -91,8 +97,13 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver,
             var def = PageBlockCatalog.Find(blok.BlockType);
             if (def is null) continue; // eski snapshot'ta artık tanınmayan tip — sessizce atla
 
+            // G10: blok kuralı — uymayan ziyaretçiye blok hiç basılmaz (boşluk bırakmaz,
+            // default aranmaz — spec). Kural yoksa herkese.
+            if (!PageRuleEvaluator.Matches(blok.Rule, segment)) continue;
+
             var ogeler = blok.Items
-                .Where(i => TarihPenceresinde(i.StartAt, i.EndAt, simdi))
+                .Where(i => TarihPenceresinde(i.StartAt, i.EndAt, simdi)
+                            && PageRuleEvaluator.Matches(i.Rule, segment)) // G10: öğe kuralı
                 .OrderBy(i => i.SortOrder).ThenBy(i => i.Priority)
                 .ToList();
             if (def.SupportsItems && ogeler.Count == 0) continue; // içeriksiz öğeli blok basılmaz
@@ -142,20 +153,24 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver,
     }
 
     public async Task<List<StoreProductDto>?> ResolveBlockProductsAsync(
-        Guid firmPlatformId, Guid blockId, int page, CancellationToken ct = default)
+        Guid firmPlatformId, Guid blockId, int page, VisitorSegment segment, CancellationToken ct = default)
     {
         page = Math.Max(1, page);
         var aktif = await AktifVersiyonAsync(firmPlatformId, ct);
         if (aktif.Version == 0) return null;
 
-        // Spec anahtarı: homepage-products:{version}:{blockId}:{segmentHash}:page:{n} — segment G-M2'de
-        var anahtar = $"page-products:v{aktif.Version}:{aktif.SnapshotId:N}:{blockId}:page:{page}";
+        // G11: spec anahtarı — segment hash'li. Ürün içeriği M2'de segmentten bağımsız,
+        // ama blok görünürlüğü değil: cache miss'te kural denetlenir, hit o segment için
+        // zaten doğrulanmış sonuçtur (gizli bloğun ürünleri bu segmente hiç yazılmaz).
+        var anahtar = $"page-products:v{aktif.Version}:{aktif.SnapshotId:N}:{blockId}:seg:{segment.CacheHash()}:page:{page}";
         var hazir = await cache.GetAsync<UrunPaketi>(anahtar, ct);
         if (hazir is not null) return hazir.Items;
 
         var snapshot = await AktifSnapshotAsync(firmPlatformId, ct);
         var blok = snapshot?.Blocks.FirstOrDefault(b => b.Id == blockId);
         if (blok is null) return null;
+        // G10: kuraldan görünmeyen bloğun devam sayfası da bu segmente kapalı (404 ile aynı yol)
+        if (!PageRuleEvaluator.Matches(blok.Rule, segment)) return null;
 
         var kaynak = resolver.ParseProductSource(blok.Config);
         if (kaynak is null) return null;
