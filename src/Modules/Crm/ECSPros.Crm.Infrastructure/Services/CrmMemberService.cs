@@ -18,7 +18,10 @@ public class CrmMemberService(ICrmDbContext db) : IMemberService
             .Select(m => new MemberInfo(
                 m.Id,
                 (m.FirstName + " " + m.LastName).Trim(),
-                m.Email, m.Phone, m.MemberGroupId, m.IsActive))
+                m.Email, m.Phone, m.MemberGroupId, m.IsActive,
+                m.Gender, m.CityId,
+                db.Addresses.Where(a => a.MemberId == m.Id && a.IsDefault && !a.IsDeleted)
+                    .Select(a => a.CityId).FirstOrDefault()))
             .FirstOrDefaultAsync(ct);
     }
 
