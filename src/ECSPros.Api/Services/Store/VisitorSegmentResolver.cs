@@ -13,13 +13,14 @@ namespace ECSPros.Api.Services.Store;
 /// </summary>
 public sealed record VisitorSegment(
     string? CityCode,
+    string? CityName,
     string? Region,
     string Gender,
     string Device,
     bool IsMember,
     Guid? MemberGroupId)
 {
-    public static readonly VisitorSegment Misafir = new(null, null, "unknown", "desktop", false, null);
+    public static readonly VisitorSegment Misafir = new(null, null, null, "unknown", "desktop", false, null);
 
     /// <summary>G11 cache anahtarı parçası: sehir:bolge:cinsiyet:cihaz:uyelik:grup (spec anahtar düzeni).</summary>
     public string CacheKey() =>
@@ -64,8 +65,9 @@ public class VisitorSegmentResolver(IMemberService memberService, ICrmDbContext 
             cityCode = manuel;
         // 4) IP tahmini yuvası: GeoLite2 mmdb edinilince buraya bağlanır (ileri iş)
 
-        var region = cityCode is not null && iller.ByCode.TryGetValue(cityCode, out var il)
-            ? il.Region : null;
+        string? region = null, cityName = null;
+        if (cityCode is not null && iller.ByCode.TryGetValue(cityCode, out var il))
+            (region, cityName) = (il.Region, il.Name);
 
         var gender = uye?.Gender?.ToLowerInvariant() switch
         {
@@ -74,7 +76,7 @@ public class VisitorSegmentResolver(IMemberService memberService, ICrmDbContext 
             _ => "unknown",
         };
 
-        return new VisitorSegment(cityCode, region, gender, device, uye is not null, uye?.MemberGroupId);
+        return new VisitorSegment(cityCode, cityName, region, gender, device, uye is not null, uye?.MemberGroupId);
     }
 
     /// <summary>UA sınıflaması — tablet önce denenir (Android tablet UA'sında "Mobile" geçmez).</summary>
@@ -92,7 +94,7 @@ public class VisitorSegmentResolver(IMemberService memberService, ICrmDbContext 
         return "desktop";
     }
 
-    private sealed record IlBilgisi(string Code, string? Region);
+    private sealed record IlBilgisi(string Code, string? Name, string? Region);
     private sealed record IlHaritasi(Dictionary<Guid, IlBilgisi> ById, Dictionary<string, IlBilgisi> ByCode);
 
     /// <summary>81 il — kod + kebab bölge; süreç içi 1 saat cache (referans veri, değişmez).</summary>
@@ -103,13 +105,14 @@ public class VisitorSegmentResolver(IMemberService memberService, ICrmDbContext 
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1);
             var sehirler = await crm.Cities.AsNoTracking()
                 .Where(c => c.IsActive)
-                .Select(c => new { c.Id, c.Code, c.Region })
+                .Select(c => new { c.Id, c.Code, c.NameI18n, c.Region })
                 .ToListAsync(ct);
             var byId = new Dictionary<Guid, IlBilgisi>();
             var byCode = new Dictionary<string, IlBilgisi>();
             foreach (var s in sehirler)
             {
-                var bilgi = new IlBilgisi(s.Code, Kebab(s.Region));
+                var ad = s.NameI18n.TryGetValue("tr", out var tr) ? tr : s.NameI18n.Values.FirstOrDefault();
+                var bilgi = new IlBilgisi(s.Code, ad, Kebab(s.Region));
                 byId[s.Id] = bilgi;
                 byCode[s.Code] = bilgi;
             }

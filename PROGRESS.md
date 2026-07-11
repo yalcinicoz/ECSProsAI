@@ -294,6 +294,24 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-11 (devam) — G9b TAMAM → G9 KAPANDI (segment tespiti uçtan uca):**
+  - **Şehir çipi:** duyuru barı sağ link alanında (SSR etiket — StorePageController
+    artık her sayfada `ViewData["MsSegment"]` çözer; G10 kural motoru aynı segmenti
+    kullanacak). Segment API'ye additive `cityName`.
+  - **_SehirSecim.cshtml (izinli yeni, ms-ornek-modal kalıbı):** 81 il modalı
+    (plaka+ad gömülü, arama filtresi, mevcut seçim işaretli), seçim → `ms_sehir`
+    cookie (1 yıl) + reload; Seçimi Temizle; **Konumumu Kullan** — izin YALNIZ
+    butonla, 81 il merkezi koordinatı gömülü, en-yakın-nokta LOKAL hesap (dış
+    servis yok) → cookie + reload.
+  - ⚠️ **Bilinçli sınır:** duyuru barı tasarımda mobilde TAMAMEN gizli → çip yalnız
+    masaüstünde. Mobil manuel seçim girişi (ör. mobil menü paneli) ayrı karar —
+    G14'te değerlendirilecek; adres/profil halkaları mobilde de çalışır.
+  - **E2E 15/15 ✓ + G9a 9/9 + G8 10/10 + G5 20/20 + E2 19/19 + B4 12/12 regresyon ✓;
+    drift TEMİZ; test artığı 0** (b4 kalıntı üyeleri de temizlendi).
+  - **SIRADAKİ: G10** kural motoru (RuleJson şeması: alan içi OR, alanlar arası AND,
+    boş alan değerlendirilmez; PageComposer'a segment parametresi) → G11 segment
+    cache → G12 önizleme → G13 audit ekranları → G14 QA 8.8.
+
 - **2026-07-11 (devam) — DEPLOY YAPILDI + G-M2 BAŞLADI (G9a TAMAM):**
   - **DEPLOY:** publish'i Claude aldı, kullanıcı 16:33'te restart etti; canlı duman
     testi yeşil (Redis AKTİF, anasayfa vitrinden 4 kapsül + carousel'ler + duyuru,

@@ -31,6 +31,7 @@ public class StoreSegmentController(IVisitorSegmentResolver resolver) : Controll
             data = new
             {
                 city = segment.CityCode,
+                cityName = segment.CityName,
                 region = segment.Region,
                 gender = segment.Gender,
                 device = segment.Device,

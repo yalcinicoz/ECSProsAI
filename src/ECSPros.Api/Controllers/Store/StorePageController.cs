@@ -28,8 +28,15 @@ public abstract class StorePageController : Controller
         ViewData["MsPlatform"] = platform;
         // D1: HttpOnly cookie'deki JWT'den SSR kimliği — sayfalar ViewData["MsUye"] ile
         // üye bilinen render yapabilir (null = misafir; JS localStorage akışı bağımsız).
-        ViewData["MsUye"] = await services.GetRequiredService<IStoreMemberSession>()
+        var uye = await services.GetRequiredService<IStoreMemberSession>()
             .MevcutUyeAsync(context.HttpContext);
+        ViewData["MsUye"] = uye;
+        // G9b: ziyaretçi segmenti — duyuru barındaki şehir çipi mevcut konumu buradan
+        // gösterir; G10 kural motoru da aynı segmenti kullanacak (il haritası süreç içi
+        // cache'li; üye sorgusu yalnız oturumlularda).
+        ViewData["MsSegment"] = await services
+            .GetRequiredService<ECSPros.Api.Services.Store.IVisitorSegmentResolver>()
+            .ResolveAsync(context.HttpContext, uye?.MemberId);
         ViewData["MsNavigasyon"] = platform is null
             ? NavigasyonVm.Bos
             : await NavigasyonuGetirAsync(services, platform.Id, context.HttpContext.RequestAborted);
