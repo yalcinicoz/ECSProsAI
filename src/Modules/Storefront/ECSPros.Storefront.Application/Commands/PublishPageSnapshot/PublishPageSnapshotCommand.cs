@@ -59,9 +59,17 @@ public class PublishPageSnapshotCommandHandler(IStorefrontDbContext db)
                 hatalar.Add($"{ad}: koleksiyon kaynağı tanımsız (config.collectionSource).");
             if (b.RuleJson is not null && !PageBlockCatalog.AllowsBlockRules(b.BlockType))
                 hatalar.Add($"{ad}: bu tipte blok kuralı verilemez (kural öğe seviyesinde).");
+            // G10: kural İÇERİĞİ de yayın engelidir — runtime bozuk kuralı gizleyerek
+            // karşılar ama bozuk kural yayına hiç girmemeli (katalog tek doğruluk kaynağı).
+            foreach (var h in PageBlockCatalog.ValidateRule(b.RuleJson))
+                hatalar.Add($"{ad}: {h}");
             foreach (var i in b.Items.Where(i => i.IsActive && i.RuleJson is not null))
+            {
                 if (!PageBlockCatalog.AllowsItemRules(b.BlockType))
                     hatalar.Add($"{ad}: bu tipte öğe kuralı verilemez (spec: banner öğeleri kuralsız).");
+                foreach (var h in PageBlockCatalog.ValidateRule(i.RuleJson))
+                    hatalar.Add($"{ad}: öğe kuralı — {h}");
+            }
         }
 
         if (hatalar.Count > 0)

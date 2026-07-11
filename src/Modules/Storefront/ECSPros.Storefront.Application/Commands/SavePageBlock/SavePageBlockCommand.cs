@@ -46,6 +46,9 @@ public class SavePageBlockCommandHandler(IStorefrontDbContext db)
             return Result.Failure<Guid>("Bu blok tipinde kural öğe seviyesindedir; blok kuralı verilemez.");
         if (!GecerliJson(request.RuleJson))
             return Result.Failure<Guid>("Kural JSON'ı geçersiz.");
+        // G10: kural şeması (alan adları/değer kümeleri) — Yayınla'yla aynı katalog kaynağı
+        if (PageBlockCatalog.ValidateRule(request.RuleJson) is { Count: > 0 } kuralHatalari)
+            return Result.Failure<Guid>("Kural geçersiz: " + string.Join(" | ", kuralHatalari));
         if (!GecerliJson(request.ConfigJson))
             return Result.Failure<Guid>("Config JSON'ı geçersiz.");
         if (request.StartAt is not null && request.EndAt is not null && request.EndAt < request.StartAt)

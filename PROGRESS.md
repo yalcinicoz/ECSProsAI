@@ -294,6 +294,24 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-11 (devam) — G10+G11 TAMAM (kural motoru + segmentli cache):**
+  - **PageRuleEvaluator (Api):** alan içi OR, alanlar arası AND, boş alan atlanır,
+    kural yoksa herkese, uymayana blok/öğe basılmaz + default aranmaz (spec birebir);
+    bilinmeyen segment boyutu kısıtlı kuralla eşleşmez; bozuk JSON gizler (ama yayına
+    giremez). PageComposer'ın iki metodu da `VisitorSegment` alır (zorunlu parametre);
+    infinity devamı gizli bloğa 404. Çağıranlar: store pages API (bearer'lı segment,
+    `MemberIdFromClaims` ortak yardımcı), HomeController + duyuru şeridi (MsSegment).
+  - **Kural şeması doğrulaması** `PageBlockCatalog.ValidateRule` (Domain tek kaynak):
+    SavePageBlock/Items 400 + Yayınla reddi (iki katmanlı).
+  - **G11 birlikte kapandı** (kural filtresi segmentsiz anahtarla yanlış cache üretirdi):
+    anahtarlara `:seg:{CacheHash()}` eklendi (SHA256 ilk 16 hex); ürün devam cache'i
+    kural denetiminden sonra yazılır — gizli bloğun ürünleri o segmente cache'lenmez.
+  - **E2E g10 17/17 ✓ + G4/G5/G6/G7/G8/G9a/G9b/B6 (117 adım) regresyon ✓; drift TEMİZ;
+    test artığı 0.**
+  - **SIRADAKİ: G12** admin önizleme (kurgu segmentle kompozisyon — ComposeAsync zaten
+    segment alıyor, endpoint + React ekranı kaldı) → G13 audit/yayın logu ekranları →
+    G14 QA 8.8.
+
 - **2026-07-11 (devam) — G9b TAMAM → G9 KAPANDI (segment tespiti uçtan uca):**
   - **Şehir çipi:** duyuru barı sağ link alanında (SSR etiket — StorePageController
     artık her sayfada `ViewData["MsSegment"]` çözer; G10 kural motoru aynı segmenti

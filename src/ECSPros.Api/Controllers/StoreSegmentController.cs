@@ -18,13 +18,8 @@ public class StoreSegmentController(IVisitorSegmentResolver resolver) : Controll
     [AllowAnonymous]
     public async Task<IActionResult> Get(CancellationToken ct)
     {
-        Guid? memberId = null;
-        if (User.FindFirst("type")?.Value == "member"
-            && Guid.TryParse(User.FindFirst("sub")?.Value
-                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id))
-            memberId = id;
-
-        var segment = await resolver.ResolveAsync(HttpContext, memberId, ct);
+        var segment = await resolver.ResolveAsync(
+            HttpContext, VisitorSegmentResolver.MemberIdFromClaims(User), ct);
         return Ok(new
         {
             success = true,

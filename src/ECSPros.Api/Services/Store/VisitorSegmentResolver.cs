@@ -25,6 +25,12 @@ public sealed record VisitorSegment(
     /// <summary>G11 cache anahtarı parçası: sehir:bolge:cinsiyet:cihaz:uyelik:grup (spec anahtar düzeni).</summary>
     public string CacheKey() =>
         $"{CityCode ?? "-"}:{Region ?? "-"}:{Gender}:{Device}:{(IsMember ? "member" : "guest")}:{(MemberGroupId?.ToString("N") ?? "-")}";
+
+    /// <summary>G11: cache anahtarındaki kısa segment hash'i (spec: {segmentHash}) —
+    /// CacheKey'in SHA256'sının ilk 16 hex karakteri (anahtar uzunluğu sınırlı kalır).</summary>
+    public string CacheHash() =>
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(CacheKey())))[..16].ToLowerInvariant();
 }
 
 public interface IVisitorSegmentResolver
@@ -44,6 +50,16 @@ public class VisitorSegmentResolver(IMemberService memberService, ICrmDbContext 
     : IVisitorSegmentResolver
 {
     public const string SehirCookie = "ms_sehir";
+
+    /// <summary>Anonim endpoint'lerde opsiyonel üye bağlamı: bearer claim'lerinden üye Id'si
+    /// (type=member değilse ya da token yoksa null — misafir). Segment/pages controller'ları paylaşır.</summary>
+    public static Guid? MemberIdFromClaims(System.Security.Claims.ClaimsPrincipal user)
+    {
+        if (user.FindFirst("type")?.Value != "member") return null;
+        return Guid.TryParse(user.FindFirst("sub")?.Value
+            ?? user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var id)
+            ? id : null;
+    }
 
     public async Task<VisitorSegment> ResolveAsync(HttpContext http, Guid? memberId, CancellationToken ct = default)
     {

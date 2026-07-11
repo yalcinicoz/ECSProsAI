@@ -32,11 +32,12 @@ public abstract class StorePageController : Controller
             .MevcutUyeAsync(context.HttpContext);
         ViewData["MsUye"] = uye;
         // G9b: ziyaretçi segmenti — duyuru barındaki şehir çipi mevcut konumu buradan
-        // gösterir; G10 kural motoru da aynı segmenti kullanacak (il haritası süreç içi
-        // cache'li; üye sorgusu yalnız oturumlularda).
-        ViewData["MsSegment"] = await services
+        // gösterir; G10 kural motoru (PageComposer) aynı segmentle kompozisyon yapar
+        // (il haritası süreç içi cache'li; üye sorgusu yalnız oturumlularda).
+        var segment = await services
             .GetRequiredService<ECSPros.Api.Services.Store.IVisitorSegmentResolver>()
             .ResolveAsync(context.HttpContext, uye?.MemberId);
+        ViewData["MsSegment"] = segment;
         ViewData["MsNavigasyon"] = platform is null
             ? NavigasyonVm.Bos
             : await NavigasyonuGetirAsync(services, platform.Id, context.HttpContext.RequestAborted);
@@ -53,20 +54,21 @@ public abstract class StorePageController : Controller
             ViewData["MsFooterMenu"] = await FooterMenusunuGetirAsync(
                 services, platform.Id, context.HttpContext.RequestAborted);
             // G8: duyuru şeridi metinleri vitrin "announcement" bloklarından (global-top;
-            // PageComposer G7 versiyonlu cache'iyle). Blok yoksa _AnaNavigasyonDuyuru
-            // tasarımın statik metinlerini basar (F4 footer yedek deseni).
+            // PageComposer G7 versiyonlu cache'iyle; G10: öğe kuralları segmentle süzülür).
+            // Blok yoksa _AnaNavigasyonDuyuru tasarımın statik metinlerini basar (F4 deseni).
             ViewData["MsDuyurular"] = await DuyurulariGetirAsync(
-                services, platform.Id, context.HttpContext.RequestAborted);
+                services, platform.Id, segment, context.HttpContext.RequestAborted);
         }
 
         await next();
     }
 
     private static async Task<List<string>?> DuyurulariGetirAsync(
-        IServiceProvider services, Guid platformId, CancellationToken ct)
+        IServiceProvider services, Guid platformId,
+        ECSPros.Api.Services.Store.VisitorSegment segment, CancellationToken ct)
     {
         var composer = services.GetRequiredService<ECSPros.Api.Services.Store.IPageComposer>();
-        var (_, bloklar) = await composer.ComposeAsync(platformId, "global-top", ct);
+        var (_, bloklar) = await composer.ComposeAsync(platformId, "global-top", segment, ct);
         var metinler = bloklar
             .Where(b => b.BlockType == "announcement")
             .SelectMany(b => b.Items)
