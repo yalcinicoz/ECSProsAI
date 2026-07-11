@@ -23,6 +23,8 @@ import { ChannelCategoriesPage } from '@/pages/storefront/ChannelCategoriesPage'
 import { ChannelCategoryDetailPage } from '@/pages/storefront/ChannelCategoryDetailPage'
 import { CollectionsModerationPage } from '@/pages/storefront/CollectionsModerationPage'
 import { ReviewsModerationPage } from '@/pages/storefront/ReviewsModerationPage'
+import { PagesManagementPage } from '@/pages/storefront/PagesManagementPage'
+import { PageBlockDetailPage } from '@/pages/storefront/PageBlockDetailPage'
 import { MenuDetailPage } from '@/pages/cms/MenuDetailPage'
 import { WarehousesPage } from '@/pages/inventory/WarehousesPage'
 import { WarehouseDetailPage } from '@/pages/inventory/WarehouseDetailPage'
@@ -59,6 +61,8 @@ export const router = createBrowserRouter(
             { path: 'storefront/channel-categories/:id',  element: <ChannelCategoryDetailPage /> },
             { path: 'storefront/collections',              element: <CollectionsModerationPage /> },
             { path: 'storefront/reviews',                  element: <ReviewsModerationPage /> },
+            { path: 'storefront/pages',                    element: <PagesManagementPage /> },
+            { path: 'storefront/pages/:id',                element: <PageBlockDetailPage /> },
 
             // Envanter
             { path: 'inventory/warehouses',     element: <WarehousesPage /> },
