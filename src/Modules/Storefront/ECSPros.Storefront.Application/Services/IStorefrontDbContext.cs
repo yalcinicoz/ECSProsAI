@@ -22,6 +22,10 @@ public interface IStorefrontDbContext
     DbSet<ViewedProduct> ViewedProducts { get; }
     DbSet<ContactMessage> ContactMessages { get; }
     DbSet<NewsletterSubscription> NewsletterSubscriptions { get; }
+    DbSet<PageBlock> PageBlocks { get; }
+    DbSet<PageBlockItem> PageBlockItems { get; }
+    DbSet<PublishedSnapshot> PublishedSnapshots { get; }
+    DbSet<PublishLog> PublishLogs { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

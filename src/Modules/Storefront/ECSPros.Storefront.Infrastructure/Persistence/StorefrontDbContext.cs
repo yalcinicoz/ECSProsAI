@@ -26,6 +26,10 @@ public class StorefrontDbContext : DbContext, IStorefrontDbContext
     public DbSet<ViewedProduct> ViewedProducts => Set<ViewedProduct>();
     public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
     public DbSet<NewsletterSubscription> NewsletterSubscriptions => Set<NewsletterSubscription>();
+    public DbSet<PageBlock> PageBlocks => Set<PageBlock>();
+    public DbSet<PageBlockItem> PageBlockItems => Set<PageBlockItem>();
+    public DbSet<PublishedSnapshot> PublishedSnapshots => Set<PublishedSnapshot>();
+    public DbSet<PublishLog> PublishLogs => Set<PublishLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

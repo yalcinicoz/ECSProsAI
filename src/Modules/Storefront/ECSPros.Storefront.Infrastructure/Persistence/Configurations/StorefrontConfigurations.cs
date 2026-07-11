@@ -299,3 +299,79 @@ public class NewsletterSubscriptionConfiguration : IEntityTypeConfiguration<News
         builder.HasQueryFilter(n => !n.IsDeleted);
     }
 }
+
+public class PageBlockConfiguration : IEntityTypeConfiguration<PageBlock>
+{
+    public void Configure(EntityTypeBuilder<PageBlock> builder)
+    {
+        builder.ToTable("page_blocks");
+        builder.HasKey(b => b.Id);
+        builder.Property(b => b.Placement).HasMaxLength(30).IsRequired();
+        builder.Property(b => b.BlockType).HasMaxLength(30).IsRequired();
+        builder.Property(b => b.Template).HasMaxLength(30);
+        builder.Property(b => b.TitleI18n).HasColumnType("jsonb");
+        builder.Property(b => b.SubtitleI18n).HasColumnType("jsonb");
+        builder.Property(b => b.RuleJson).HasColumnType("jsonb");
+        builder.Property(b => b.ConfigJson).HasColumnType("jsonb");
+        // Admin yerleşim editörü + Yayınla taraması bu sırayla okur
+        builder.HasIndex(b => new { b.FirmPlatformId, b.Placement, b.SortOrder });
+        builder.HasQueryFilter(b => !b.IsDeleted);
+
+        builder.HasMany(b => b.Items)
+            .WithOne(i => i.PageBlock)
+            .HasForeignKey(i => i.PageBlockId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class PageBlockItemConfiguration : IEntityTypeConfiguration<PageBlockItem>
+{
+    public void Configure(EntityTypeBuilder<PageBlockItem> builder)
+    {
+        builder.ToTable("page_block_items");
+        builder.HasKey(i => i.Id);
+        builder.Property(i => i.TitleI18n).HasColumnType("jsonb");
+        builder.Property(i => i.SubtitleI18n).HasColumnType("jsonb");
+        builder.Property(i => i.ButtonTextI18n).HasColumnType("jsonb");
+        builder.Property(i => i.RuleJson).HasColumnType("jsonb");
+        builder.Property(i => i.ConfigJson).HasColumnType("jsonb");
+        builder.Property(i => i.ImageUrl).HasMaxLength(500);
+        builder.Property(i => i.MobileImageUrl).HasMaxLength(500);
+        builder.Property(i => i.VideoUrl).HasMaxLength(500);
+        builder.Property(i => i.LinkUrl).HasMaxLength(500);
+        builder.Property(i => i.BadgeLabel).HasMaxLength(50);
+        builder.HasIndex(i => new { i.PageBlockId, i.SortOrder });
+        builder.HasQueryFilter(i => !i.IsDeleted);
+    }
+}
+
+public class PublishedSnapshotConfiguration : IEntityTypeConfiguration<PublishedSnapshot>
+{
+    public void Configure(EntityTypeBuilder<PublishedSnapshot> builder)
+    {
+        builder.ToTable("published_snapshots");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.JsonData).HasColumnType("jsonb").IsRequired();
+        builder.Property(s => s.Status).HasMaxLength(20).IsRequired();
+        builder.Property(s => s.Note).HasMaxLength(500);
+        builder.HasIndex(s => new { s.FirmPlatformId, s.Version }).IsUnique();
+        // Canlı sitenin tek sorgusu: platformun aktif snapshot'ı
+        builder.HasIndex(s => new { s.FirmPlatformId, s.IsActive });
+        builder.HasQueryFilter(s => !s.IsDeleted);
+    }
+}
+
+public class PublishLogConfiguration : IEntityTypeConfiguration<PublishLog>
+{
+    public void Configure(EntityTypeBuilder<PublishLog> builder)
+    {
+        builder.ToTable("publish_logs");
+        builder.HasKey(l => l.Id);
+        builder.Property(l => l.Status).HasMaxLength(20).IsRequired();
+        builder.Property(l => l.ErrorMessage).HasMaxLength(2000);
+        builder.Property(l => l.Note).HasMaxLength(500);
+        // Yayın Geçmişi ekranı yeniden eskiye listeler
+        builder.HasIndex(l => new { l.FirmPlatformId, l.PublishedAt });
+        builder.HasQueryFilter(l => !l.IsDeleted);
+    }
+}
