@@ -72,10 +72,13 @@ public class PageBlockSourceResolver(IMediator mediator, IProductService product
 
             case "manual":
             {
+                // Config sırası korunur; sayfalama kod listesi üzerinde (infinity devamı)
                 if (source.ProductCodes is not { Count: > 0 }) return [];
+                var sayfaKodlari = source.ProductCodes.Skip((page - 1) * limit).Take(limit).ToList();
+                if (sayfaKodlari.Count == 0) return [];
                 var kartlar = await KartlariGetirAsync(firmPlatformId, source, 1, limit,
-                    productCodes: source.ProductCodes, ct: ct);
-                return kartlar.OrderBy(k => source.ProductCodes.IndexOf(k.Code)).ToList();
+                    productCodes: sayfaKodlari, ct: ct);
+                return kartlar.OrderBy(k => sayfaKodlari.IndexOf(k.Code)).ToList();
             }
 
             case "brand":
