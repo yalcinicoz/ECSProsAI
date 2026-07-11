@@ -8,6 +8,7 @@ public interface IPromotionDbContext
     DbSet<CampaignType> CampaignTypes { get; }
     DbSet<Campaign> Campaigns { get; }
     DbSet<CampaignProduct> CampaignProducts { get; }
+    DbSet<CampaignPlatform> CampaignPlatforms { get; }
     DbSet<Coupon> Coupons { get; }
     DbSet<CouponUsage> CouponUsages { get; }
 
