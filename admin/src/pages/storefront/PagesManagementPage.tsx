@@ -31,6 +31,38 @@ interface BlockRow {
 }
 interface SnapshotRow { id: string; version: number; publishedAt: string; isActive: boolean; status: string; note: string | null }
 interface PublishLogRow { id: string; version: number; previousVersion: number | null; publishedAt: string; status: string; errorMessage: string | null; note: string | null }
+// G12: önizleme sonucu — taslak blokların seçilen segmentteki görünürlüğü + nedeni
+interface PreviewBlock {
+  id: string; blockType: string; template: string | null; title: Record<string, string>
+  sortOrder: number; isActive: boolean; visible: boolean; reason: string
+  itemTotal: number; itemVisible: number; productCount: number | null
+}
+interface PreviewResult {
+  segment: { city: string | null; cityName: string | null; region: string | null; gender: string; device: string; membership: string }
+  blocks: PreviewBlock[]
+}
+interface MemberGroup { id: string; nameI18n?: Record<string, string>; code?: string }
+
+// 81 il (plaka + ad) — önizleme segment seçicisi; storefront şehir çipiyle aynı referans veri.
+const IL_LISTESI: [string, string][] = [
+  ['01', 'Adana'], ['02', 'Adıyaman'], ['03', 'Afyonkarahisar'], ['04', 'Ağrı'], ['05', 'Amasya'],
+  ['06', 'Ankara'], ['07', 'Antalya'], ['08', 'Artvin'], ['09', 'Aydın'], ['10', 'Balıkesir'],
+  ['11', 'Bilecik'], ['12', 'Bingöl'], ['13', 'Bitlis'], ['14', 'Bolu'], ['15', 'Burdur'],
+  ['16', 'Bursa'], ['17', 'Çanakkale'], ['18', 'Çankırı'], ['19', 'Çorum'], ['20', 'Denizli'],
+  ['21', 'Diyarbakır'], ['22', 'Edirne'], ['23', 'Elazığ'], ['24', 'Erzincan'], ['25', 'Erzurum'],
+  ['26', 'Eskişehir'], ['27', 'Gaziantep'], ['28', 'Giresun'], ['29', 'Gümüşhane'], ['30', 'Hakkari'],
+  ['31', 'Hatay'], ['32', 'Isparta'], ['33', 'Mersin'], ['34', 'İstanbul'], ['35', 'İzmir'],
+  ['36', 'Kars'], ['37', 'Kastamonu'], ['38', 'Kayseri'], ['39', 'Kırklareli'], ['40', 'Kırşehir'],
+  ['41', 'Kocaeli'], ['42', 'Konya'], ['43', 'Kütahya'], ['44', 'Malatya'], ['45', 'Manisa'],
+  ['46', 'Kahramanmaraş'], ['47', 'Mardin'], ['48', 'Muğla'], ['49', 'Muş'], ['50', 'Nevşehir'],
+  ['51', 'Niğde'], ['52', 'Ordu'], ['53', 'Rize'], ['54', 'Sakarya'], ['55', 'Samsun'],
+  ['56', 'Siirt'], ['57', 'Sinop'], ['58', 'Sivas'], ['59', 'Tekirdağ'], ['60', 'Tokat'],
+  ['61', 'Trabzon'], ['62', 'Tunceli'], ['63', 'Şanlıurfa'], ['64', 'Uşak'], ['65', 'Van'],
+  ['66', 'Yozgat'], ['67', 'Zonguldak'], ['68', 'Aksaray'], ['69', 'Bayburt'], ['70', 'Karaman'],
+  ['71', 'Kırıkkale'], ['72', 'Batman'], ['73', 'Şırnak'], ['74', 'Bartın'], ['75', 'Ardahan'],
+  ['76', 'Iğdır'], ['77', 'Yalova'], ['78', 'Karabük'], ['79', 'Kilis'], ['80', 'Osmaniye'],
+  ['81', 'Düzce'],
+]
 
 const getChannelLabel = (c: Channel) => c.name ?? c.platformTypeName ?? c.code ?? c.id
 
@@ -47,6 +79,14 @@ export function PagesManagementPage() {
   const [newTitle, setNewTitle] = useState('')
   const [publishNote, setPublishNote] = useState('')
   const [publishError, setPublishError] = useState('')
+  // G12: önizleme segment seçimi + sonuç
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [prevCity, setPrevCity] = useState<string | null>(null)
+  const [prevGender, setPrevGender] = useState<string | null>(null)
+  const [prevDevice, setPrevDevice] = useState<string | null>('desktop')
+  const [prevMember, setPrevMember] = useState<string | null>('guest')
+  const [prevGroup, setPrevGroup] = useState<string | null>(null)
+  const [previewResult, setPreviewResult] = useState<PreviewResult | null>(null)
 
   const { data: firms = [] } = useQuery<Firm[]>({
     queryKey: ['firms'],
@@ -134,6 +174,22 @@ export function PagesManagementPage() {
     onSuccess: yenile,
   })
 
+  // G12: önizleme — taslak veri + kurgu segment; canlıyı etkilemez (spec)
+  const { data: memberGroups = [] } = useQuery<MemberGroup[]>({
+    queryKey: ['member-groups'],
+    queryFn: async () => (await api.get('/crm/member-groups')).data.data ?? [],
+    enabled: previewOpen && prevMember === 'member',
+  })
+  const preview = useMutation({
+    mutationFn: async () => (await api.post('/pages/preview', {
+      firmPlatformId: platformId, placement,
+      city: prevCity, gender: prevGender, device: prevDevice,
+      isMember: prevMember === 'member',
+      memberGroupId: prevMember === 'member' ? prevGroup : null,
+    })).data.data as PreviewResult,
+    onSuccess: setPreviewResult,
+  })
+
   const tasima = (index: number, yon: -1 | 1) => {
     const ids = blocks.map((b) => b.id)
     const hedef = index + yon
@@ -187,7 +243,12 @@ export function PagesManagementPage() {
           </div>
 
           <div className="flex items-center justify-between">
-            <Button size="sm" onClick={() => setCreateOpen(true)}>Yeni Blok</Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={() => setCreateOpen(true)}>Yeni Blok</Button>
+              <Button size="sm" variant="secondary" onClick={() => { setPreviewResult(null); setPreviewOpen(true) }}>
+                Önizleme
+              </Button>
+            </div>
             <div className="flex items-center gap-2">
               <Input
                 value={publishNote}
@@ -305,6 +366,114 @@ export function PagesManagementPage() {
           </div>
         </>
       )}
+
+      {/* G12: önizleme — seçilen segmentle kural motoru taslak üzerinde çalışır;
+          bloklar görünür/gizli + nedenle listelenir. Canlı yayına dokunmaz. */}
+      <Modal open={previewOpen} onClose={() => setPreviewOpen(false)} title="Segment Önizlemesi" size="lg"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setPreviewOpen(false)}>Kapat</Button>
+            <Button onClick={() => preview.mutate()} disabled={preview.isPending}>Önizle</Button>
+          </>
+        }>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-sm text-[var(--text-m)]">Şehir</label>
+              <SearchableSelect
+                value={prevCity}
+                onChange={setPrevCity}
+                options={IL_LISTESI.map(([kod, ad]) => ({ value: kod, label: `${ad} (${kod})` }))}
+                placeholder="Konumsuz"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-[var(--text-m)]">Cinsiyet</label>
+              <SearchableSelect
+                value={prevGender}
+                onChange={setPrevGender}
+                options={[{ value: 'female', label: 'Kadın' }, { value: 'male', label: 'Erkek' }]}
+                placeholder="Bilinmiyor"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-[var(--text-m)]">Cihaz</label>
+              <SearchableSelect
+                value={prevDevice}
+                onChange={setPrevDevice}
+                options={[
+                  { value: 'desktop', label: 'Masaüstü' },
+                  { value: 'mobile', label: 'Mobil' },
+                  { value: 'tablet', label: 'Tablet' },
+                ]}
+                placeholder="Masaüstü"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-[var(--text-m)]">Üyelik</label>
+              <SearchableSelect
+                value={prevMember}
+                onChange={(v) => { setPrevMember(v); if (v !== 'member') setPrevGroup(null) }}
+                options={[{ value: 'guest', label: 'Misafir' }, { value: 'member', label: 'Üye' }]}
+                placeholder="Misafir"
+              />
+            </div>
+            {prevMember === 'member' && (
+              <div>
+                <label className="mb-1 block text-sm text-[var(--text-m)]">Üye Grubu</label>
+                <SearchableSelect
+                  value={prevGroup}
+                  onChange={setPrevGroup}
+                  options={memberGroups.map((g) => ({
+                    value: g.id,
+                    label: g.nameI18n?.tr ?? Object.values(g.nameI18n ?? {})[0] ?? g.code ?? g.id,
+                  }))}
+                  placeholder="Grupsuz"
+                />
+              </div>
+            )}
+          </div>
+
+          {previewResult && (
+            <>
+              <div className="rounded-lg bg-[var(--surface2)] px-3 py-2 text-xs text-[var(--text-m)]">
+                Çözülen segment: {previewResult.segment.cityName ?? 'konumsuz'}
+                {previewResult.segment.region ? ` / ${previewResult.segment.region}` : ''} ·{' '}
+                {previewResult.segment.gender} · {previewResult.segment.device} · {previewResult.segment.membership}
+                {' '}— yerleşim: {(catalog?.placements ?? []).find((p) => p.code === placement)?.displayName ?? placement}
+              </div>
+              <div className="space-y-2">
+                {previewResult.blocks.map((b) => (
+                  <div key={b.id} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">
+                        {b.sortOrder}. {b.title?.tr ?? Object.values(b.title ?? {})[0] ?? '—'}
+                        <span className="ml-2 text-xs text-[var(--text-m)]">
+                          {typeDef(b.blockType)?.displayName ?? b.blockType}{b.template ? ` / ${b.template}` : ''}
+                        </span>
+                      </span>
+                      <Badge variant={b.visible ? 'success' : 'neutral'}>{b.visible ? 'Görünür' : 'Gizli'}</Badge>
+                    </div>
+                    <div className={`mt-1 text-xs ${b.visible ? 'text-[var(--text-m)]' : 'text-amber-700'}`}>
+                      {b.reason}
+                      {b.itemTotal > 0 && ` · öğe: ${b.itemVisible}/${b.itemTotal}`}
+                      {b.productCount != null && ` · ürün: ${b.productCount}`}
+                    </div>
+                  </div>
+                ))}
+                {previewResult.blocks.length === 0 && (
+                  <p className="text-sm text-[var(--text-m)]">Bu yerleşimde taslak blok yok.</p>
+                )}
+              </div>
+            </>
+          )}
+          {!previewResult && !preview.isPending && (
+            <p className="text-xs text-[var(--text-s)]">
+              Önizleme TASLAK veriler üzerinde çalışır — yayınlanmamış değişiklikler de değerlendirilir; canlı yayını etkilemez.
+            </p>
+          )}
+        </div>
+      </Modal>
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Yeni Blok" size="md"
         footer={

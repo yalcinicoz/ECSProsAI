@@ -118,6 +118,50 @@ public class PagesController(IMediator mediator, ECSPros.Storefront.Application.
         req.TitleI18n, req.SubtitleI18n, req.SortOrder, req.IsActive,
         req.StartAt, req.EndAt, req.Priority, req.RuleJson, req.ConfigJson);
 
+    public record PreviewRequest(
+        Guid FirmPlatformId, string Placement, string? City, string? Gender,
+        string? Device, bool IsMember, Guid? MemberGroupId);
+
+    /// <summary>
+    /// G12: önizleme — TASLAK veri + kurgu segment üzerinde kural motorunu çalıştırır,
+    /// blokları görünür/gizli + nedeniyle listeler (spec: canlı siteyi etkilemez, cache'e
+    /// yazmaz; yayınlanmamış değişiklikler burada görünür).
+    /// </summary>
+    [HttpPost("preview")]
+    public async Task<IActionResult> Preview(
+        [FromBody] PreviewRequest req,
+        [FromServices] ECSPros.Api.Services.Store.IPagePreviewService preview,
+        [FromServices] ECSPros.Api.Services.Store.IVisitorSegmentResolver segmentResolver,
+        CancellationToken ct)
+    {
+        if (!PageBlockCatalog.IsValidPlacement(req.Placement))
+            return BadRequest(new { success = false, error = "Geçersiz yerleşim." });
+        if (req.FirmPlatformId == Guid.Empty)
+            return BadRequest(new { success = false, error = "firmPlatformId zorunlu." });
+
+        var segment = await segmentResolver.BuildAsync(
+            req.City, req.Gender, req.Device, req.IsMember, req.MemberGroupId, ct);
+        var bloklar = await preview.PreviewAsync(req.FirmPlatformId, req.Placement, segment, ct);
+        return Ok(new
+        {
+            success = true,
+            data = new
+            {
+                segment = new
+                {
+                    city = segment.CityCode,
+                    cityName = segment.CityName,
+                    region = segment.Region,
+                    gender = segment.Gender,
+                    device = segment.Device,
+                    membership = segment.IsMember ? "member" : "guest",
+                    memberGroup = segment.MemberGroupId,
+                },
+                blocks = bloklar,
+            },
+        });
+    }
+
     [HttpPost("publish")]
     public async Task<IActionResult> Publish([FromBody] PublishRequest request, CancellationToken ct)
     {
