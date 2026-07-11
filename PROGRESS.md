@@ -294,6 +294,21 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-11 (devam) — DEPLOY YAPILDI + G-M2 BAŞLADI (G9a TAMAM):**
+  - **DEPLOY:** publish'i Claude aldı, kullanıcı 16:33'te restart etti; canlı duman
+    testi yeşil (Redis AKTİF, anasayfa vitrinden 4 kapsül + carousel'ler + duyuru,
+    store pages API v1, kurumsal/sepet 200). B11'den beri biriken her şey canlıda.
+    Deploy akışı netleşti: publish Claude'un işi, yalnız `sudo systemctl restart
+    ecspros` kullanıcıda.
+  - **G9a Segment backend:** `VisitorSegmentResolver` + `GET /api/store/segment` —
+    konum zinciri (varsayılan adres → profil → ms_sehir cookie → GeoLite2 yuvası →
+    unknown), cihaz UA sınıfı, cinsiyet yalnız profilden, üyelik/grup. Kural
+    kimlikleri: plaka kodu + kebab bölge. crm_cities.Region zaten doluymuş (C4).
+    MemberInfo additive genişledi. **E2E 9/9 ✓ + G5/E2/B4 regresyon ✓; drift TEMİZ.**
+  - **SIRADAKİ: G9b** şehir çipi UI (duyuru barına çip + 81 il modalı + Konumumu
+    kullan) → **G10** kural motoru (composer'a segment) → G11 segment cache →
+    G12 önizleme → G13 audit ekranları → G14 QA.
+
 - **2026-07-11 (devam) — G6+G8 TAMAM → G-M1 KAPANDI 🎉 (vitrin sistemi uçtan uca canlı):**
   - **G6 Admin:** blok/öğe CRUD backend (SavePageBlock upsert — katalog doğrulamalı,
     DeletePageBlock yayına dokunmaz, Reorder, SavePageBlockItems replace [SaveNavNodes
