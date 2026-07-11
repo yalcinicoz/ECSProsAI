@@ -294,6 +294,27 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-11 (devam) — G6+G8 TAMAM → G-M1 KAPANDI 🎉 (vitrin sistemi uçtan uca canlı):**
+  - **G6 Admin:** blok/öğe CRUD backend (SavePageBlock upsert — katalog doğrulamalı,
+    DeletePageBlock yayına dokunmaz, Reorder, SavePageBlockItems replace [SaveNavNodes
+    deseni; banner öğesine kural 400], GetPageBlocks/Detail; /api/pages/catalog +
+    blocks CRUD endpoint'leri). **E2E 19/19** — bug: jsonb kolonda LIKE (42883) →
+    hasProductSource bellek tarafına. React: PagesManagementPage (platform + 8 yerleşim
+    sekmesi + sıralı blok tablosu ↑↓ + Yeni Blok modalı + Yayınla/hata + versiyonlar/
+    rollback + yayın geçmişi) + PageBlockDetailPage (form + config JSON editörü [örnek
+    iskelet] + öğe editör modalı); sidebar 'Vitrin Yönetimi'; npm build.
+  - **G8 Geçici kodlar kalktı:** SeedDefaultVitrinAsync — blok+yayın olmayan platforma
+    B6 kompozisyonunun birebir karşılığını kurup v1 yayınlar (duyuru + kapsül +
+    3 kategori carousel'i; 3 platformda yayınlandı — canlı görünüm değişmez).
+    HomeController/Index B6 yolu + AnaSayfaVm silindi; yayın yoksa yerleşim boş.
+    Duyuru şeridi announcement bloklarından (StorePageController + _AnaNavigasyonDuyuru;
+    statik yedek F4 deseni). Seed düzeltmesi: kök kategori Status='published'.
+    **E2E 10/10 ✓ + g4/g7/g6/g5 (64) + b6/b4/e5/f1 (60) regresyon ✓; drift TEMİZ.**
+  - **Test altyapısı G8'e uyarlandı:** suite'ler seed bloklarını koşu boyunca
+    pasifleştirip sonda geri açar + platform yayınını taslaklardan geri üretir.
+  - **G-M1 TAMAM (G1-G8).** SIRADAKİ: **G-M2** (G9 segment tespiti → G10 kural motoru →
+    G11 segment cache → G12 admin önizleme → G13 audit/yayın logu ekranları → G14 QA 8.8).
+
 - **2026-07-11 (devam) — G5+G7 TAMAM (vitrin render + versiyonlu cache):**
   - **G5 Razor render:** `Views/Shared/Store/_VitrinBloklar.cshtml` (izinli yeni) —
     11 blok tipi GorunumTipleri markup'ıyla birebir: slider/story (frame JSON +
