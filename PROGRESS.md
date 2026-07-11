@@ -294,6 +294,25 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-11 (devam) — G14 TAMAM → FAZ G KAPANDI 🎉 (Vitrin & Kişiselleştirme uçtan uca):**
+  - Envanter 8.8 tam işaretli. **Tek 🔶 (kullanıcı kararı bekleyen): mobilde manuel
+    şehir seçimi girişi yok** — duyuru barı tasarımda mobilde tamamen gizli; istenirse
+    mobil menü paneline çip eklenebilir. GeoLite2 IP halkası mmdb edinilince bağlanır.
+  - **Faz G toplu regresyon (taze 5051 publish): 10 G-suite = 141 adım ✓ + çekirdek
+    b6/b4/e2/e5/f1 = 79 adım ✓; drift TEMİZ; test artığı 0.** Kural matrisi g10'da,
+    rollback tatbikatı g4/g7/g13'te.
+  - Görüntüler: `tools/misharix-sync/shots/g14-*` (anasayfa vitrin desktop+mobil +
+    şehir modalı — gözle doğrulandı).
+  - Test altyapısı: b4 artık kendini temizliyor; admin-mutasyonlu suite'lere audit
+    temizliği eklendi (G13'ten beri suite'ler audit üretiyor).
+  - **⚠️ DEPLOY BEKLİYOR: G-M2'nin tamamı (G9a+G9b+G10+G11+G12+G13+G14) canlıda YOK**
+    (son deploy 2026-07-11 16:33, G-M1'e kadar). Publish'i Claude alır, kullanıcı
+    `sudo systemctl restart ecspros` çalıştırır.
+  - **SIRADAKİ FAZ → H** (plan: H1 fatura/dekont PDF, H2 kargo entegrasyonu, ...;
+    planlamayla başlanmalı). Faz G'den devreden işler: koleksiyon public sayfası,
+    /urun-degerlendirmeleri, stok/etiket kaynak filtreleri, son gezilenler/favoriler
+    vitrin kaynakları, YanMenu statü bloğu.
+
 - **2026-07-11 (devam) — G13 TAMAM (audit/değişiklik geçmişi) → G14 QA kaldı:**
   - **VitrinAuditLogger (Api):** IAM'ın `iam_audit_logs` tablosuna yazar (İLK yazan
     vitrin oldu; şema spec'le birebir). ActionType: Created/Updated/Deleted/Activated/
