@@ -294,6 +294,31 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-11 (devam) — FAZ G BAŞLADI; G1+G2+G3+G4 TAMAM (G-M1 backend çekirdeği):**
+  - **G1 Veri modeli:** `storefront.page_blocks` + `page_block_items` + `published_snapshots`
+    + `publish_logs` (AddPageBlocksAndSnapshots canlıda). Taslak/yayın ayrımı baştan:
+    canlı site taslak tabloları OKUMAZ, yalnız aktif snapshot okur.
+  - **G2 Katalog:** `PageBlockCatalog` (Domain) — 11 blok tipi + kural seviyeleri
+    (spec'e birebir) + şablonlar (banner 6, carousel 3 + 16 tema) + 8 yerleşim +
+    doğrulama yardımcıları. Palet başka yerde tekrarlanmaz.
+  - **G3 Kaynak motoru:** `PageBlockSourceResolver` (Api) — 6 ürün kaynağı
+    (new-arrivals/manual/brand/category/campaign/best-sellers) + koleksiyon kaynağı
+    (yalnız approved+IsPublic). Yeni sorgular: GetTopSellingVariants (Order),
+    GetActiveCampaignProductRefs (Promotion), GetShowcaseCollections (Storefront);
+    GetStoreProducts'a additive ProductIds. ConfigJson sözleşmesi: productSource/
+    collectionSource düğümleri.
+  - **G4 Yayın çekirdeği + store API:** PublishPageSnapshot (katalog validasyonu;
+    hata varsa yayın YOK + failed log) / RollbackPageSnapshot / GetActivePageSnapshot;
+    `IPageComposer` (store API + G5 Razor ortak; RuleJson müşteriye sızmaz);
+    `GET /api/store/pages/{placement}` + blocks/{id}/products devamı; admin
+    /api/pages/publish|rollback|snapshots|publish-logs. **E2E 19/19 ✓ + B6/E5/F1
+    regresyon ✓; drift TEMİZ.** İlk koşu bug yakaladı: manuel kaynakta page yok
+    sayılıyordu → kod listesi üzerinde sayfalama.
+  - **SIRADAKİ: G5** Razor render (yerleşim → blok → GorunumTipleri partial'ları
+    birebir HTML; boş blok basılmaz; flash geri sayımı config'ten) → sonra G6 admin UI,
+    G7 versiyon cache, G8 B6 geçici anasayfanın kaldırılması. M1'de kurallar
+    değerlendirilmiyor (herkese görünür — plan kararı).
+
 - **2026-07-11 — F5 TAMAM → FAZ F KAPANDI 🎉:**
   - Envanter 8.7 tam işaretli (tek 🔶: banka logoları/sosyal linkler statik '#' —
     gerçek URL'ler config/Faz G, firma hesapları verilince).
