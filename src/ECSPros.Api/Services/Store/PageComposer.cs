@@ -1,4 +1,5 @@
 using ECSPros.Catalog.Application.Queries.GetStoreProducts;
+using ECSPros.Shared.Contracts;
 using ECSPros.Storefront.Application.Commands.PublishPageSnapshot;
 using ECSPros.Storefront.Application.Queries.GetActivePageSnapshot;
 using ECSPros.Storefront.Application.Queries.GetShowcaseCollections;
@@ -56,11 +57,27 @@ public interface IPageComposer
 /// verilmez (spec: boş blok basılmaz, boşluk bırakmaz). Versiyon bazlı cache G7'de
 /// bu servisin önüne gelir.
 /// </summary>
-public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver) : IPageComposer
+public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver, ICacheService cache) : IPageComposer
 {
+    // G7: anahtar versiyonu içerir — yeni yayın eski anahtarları kendiliğinden geçersiz
+    // kılar (spec). TTL kısa: kompozisyon içinde ürün fiyat/puan gibi versiyondan
+    // bağımsız tazelenen veri var. Redis kuralları: ICacheService hata-güvenli, Redis
+    // yoksa NoOp — cache'siz de doğru çalışır (kod cache'e bağımlılık kurmaz).
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
+
+    private sealed record BlokPaketi(List<ResolvedBlockDto> Blocks);
+    private sealed record UrunPaketi(List<StoreProductDto> Items);
+
     public async Task<(int Version, List<ResolvedBlockDto> Blocks)> ComposeAsync(
         Guid firmPlatformId, string placement, CancellationToken ct = default)
     {
+        var aktif = await AktifVersiyonAsync(firmPlatformId, ct);
+        if (aktif.Version == 0) return (0, []);
+
+        var anahtar = $"page:{placement}:{firmPlatformId}:v{aktif.Version}:{aktif.SnapshotId:N}";
+        var hazir = await cache.GetAsync<BlokPaketi>(anahtar, ct);
+        if (hazir is not null) return (aktif.Version, hazir.Blocks);
+
         var snapshot = await AktifSnapshotAsync(firmPlatformId, ct);
         if (snapshot is null) return (0, []);
 
@@ -120,19 +137,37 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver)
                 blok.SortOrder, blok.Config, cozulmusOgeler, urunler, koleksiyonlar));
         }
 
+        await cache.SetAsync(anahtar, new BlokPaketi(sonuc), CacheTtl, ct);
         return (snapshot.Version, sonuc);
     }
 
     public async Task<List<StoreProductDto>?> ResolveBlockProductsAsync(
         Guid firmPlatformId, Guid blockId, int page, CancellationToken ct = default)
     {
+        page = Math.Max(1, page);
+        var aktif = await AktifVersiyonAsync(firmPlatformId, ct);
+        if (aktif.Version == 0) return null;
+
+        // Spec anahtarı: homepage-products:{version}:{blockId}:{segmentHash}:page:{n} — segment G-M2'de
+        var anahtar = $"page-products:v{aktif.Version}:{aktif.SnapshotId:N}:{blockId}:page:{page}";
+        var hazir = await cache.GetAsync<UrunPaketi>(anahtar, ct);
+        if (hazir is not null) return hazir.Items;
+
         var snapshot = await AktifSnapshotAsync(firmPlatformId, ct);
         var blok = snapshot?.Blocks.FirstOrDefault(b => b.Id == blockId);
         if (blok is null) return null;
 
         var kaynak = resolver.ParseProductSource(blok.Config);
         if (kaynak is null) return null;
-        return await resolver.ResolveProductsAsync(firmPlatformId, kaynak, Math.Max(1, page), ct);
+        var urunler = await resolver.ResolveProductsAsync(firmPlatformId, kaynak, page, ct);
+        await cache.SetAsync(anahtar, new UrunPaketi(urunler), CacheTtl, ct);
+        return urunler;
+    }
+
+    private async Task<SnapshotVersionDto> AktifVersiyonAsync(Guid firmPlatformId, CancellationToken ct)
+    {
+        var sonuc = await mediator.Send(new GetActivePageSnapshotVersionQuery(firmPlatformId), ct);
+        return sonuc.IsSuccess ? sonuc.Value! : new SnapshotVersionDto(0, Guid.Empty);
     }
 
     private async Task<PageSnapshotDto?> AktifSnapshotAsync(Guid firmPlatformId, CancellationToken ct)
