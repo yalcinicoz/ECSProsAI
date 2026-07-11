@@ -16,6 +16,7 @@ public static class DependencyInjection
                 o => o.MigrationsHistoryTable("__ef_migrations_crm", "crm")));
 
         services.AddScoped<ICrmDbContext>(sp => sp.GetRequiredService<CrmDbContext>());
+        services.AddScoped<Shared.Contracts.IMemberService, CrmMemberService>(); // G5: modüller arası üye bilgisi
         services.AddScoped<IMemberTokenService, MemberTokenService>();
         services.AddSingleton<IMemberPasswordHasher, MemberPasswordHasher>();
 

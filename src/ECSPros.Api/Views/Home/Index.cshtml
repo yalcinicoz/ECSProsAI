@@ -1,71 +1,84 @@
 @using ECSPros.Api.Models.Store
 @{
+    // G5: yayınlanmış vitrin varsa ana sayfa tamamen blok sisteminden render edilir
+    // (B6 geçici kompozisyonu atlanır; G8'de kaldırılacak).
     // B6: Faz G vitrin/kişiselleştirme sistemi gelene kadar GEÇİCİ ana sayfa kompozisyonu.
     // Bloklar GorunumTipleri partial'larından birebir alındı (Kapsül Kategori Şeridi +
     // Standart Carousel); demo sayfa iskeleti (açıklama kutuları, tema seçici) taşınmadı.
     // İçerik: kök kanal kategorileri + kategori başına ilk ürünler (HomeController, 15 dk cache).
-    // G8'de bu sayfa kaldırılıp yerleşim tamamen vitrin sisteminden render edilecek.
     ViewData["Title"] = "Ana Sayfa";
+    var vitrinBloklar = ViewData["MsVitrinBloklar"] as IReadOnlyList<VitrinBlokVm>;
     var vm = ViewData["MsAnaSayfa"] as AnaSayfaVm ?? AnaSayfaVm.Bos;
 }
 
-<div class="ms-ana-sayfa">
-    <div class="ms-ana-yerlesim">
-        @if (vm.KapsulKategoriler.Count >= 2)
-        {
-            <div class="ms-gorunum-demo">
-                <div class="ms-gorunum-baslik-satiri">
-                    <h3>Öne Çıkan Kategoriler</h3>
-                </div>
-                <div class="ms-gorunum-kategori-kapsul-listesi ms-gorunum-banner-mobil-carousel" aria-label="Öne çıkan kategoriler">
-                    @foreach (var kategori in vm.KapsulKategoriler)
-                    {
-                        <a class="ms-gorunum-kategori-kapsul" href="@kategori.Url">
-                            <img src="@kategori.GorselUrl" alt="@kategori.Ad">
-                            <strong>@kategori.Ad</strong>
-                        </a>
-                    }
-                </div>
-            </div>
-        }
-
-        @foreach (var vitrin in vm.Vitrinler)
-        {
-            <div class="ms-gorunum-demo ms-gorunum-carousel-demo ms-gorunum-carousel-demo-standart ms-gorunum-carousel-demo-market ms-gorunum-carousel-tema-varsayilan lazy-infinite-on" data-ms-gorunum-carousel>
-                <div class="ms-gorunum-baslik-satiri">
-                    <div>
-                        <h2>@vitrin.Baslik</h2>
-                        <p>@vitrin.Baslik kategorisinden öne çıkan ürünler.</p>
+@if (vitrinBloklar is { Count: > 0 })
+{
+    <div class="ms-ana-sayfa">
+        <div class="ms-ana-yerlesim">
+            @await Html.PartialAsync("~/Views/Shared/Store/_VitrinBloklar.cshtml", vitrinBloklar)
+        </div>
+    </div>
+}
+else
+{
+    <div class="ms-ana-sayfa">
+        <div class="ms-ana-yerlesim">
+            @if (vm.KapsulKategoriler.Count >= 2)
+            {
+                <div class="ms-gorunum-demo">
+                    <div class="ms-gorunum-baslik-satiri">
+                        <h3>Öne Çıkan Kategoriler</h3>
                     </div>
-                    <div class="ms-gorunum-carousel-sag">
-                        <a class="ms-gorunum-tumunu-gor" href="@vitrin.TumUrl">Tümünü Gör</a>
-                        <span class="ms-gorunum-etiket" data-ms-gorunum-carousel-sayac>1 / @vitrin.Urunler.Count</span>
-                    </div>
-                </div>
-
-                <div class="ms-gorunum-carousel-kapsayici">
-                    <button class="ms-gorunum-carousel-kontrol ms-slider-kontrol ms-slider-kontrol-sol" type="button" data-ms-gorunum-carousel-kontrol="sol" aria-label="Önceki @vitrin.Baslik ürünlerini göster">
-                        <i class="fa-solid fa-chevron-left ms-fa-ikon" aria-hidden="true"></i>
-                    </button>
-                    <div class="ms-gorunum-carousel ms-gorunum-carousel-urun" data-ms-gorunum-carousel-liste aria-label="@vitrin.Baslik ürünleri">
-                        @foreach (var urun in vitrin.Urunler)
+                    <div class="ms-gorunum-kategori-kapsul-listesi ms-gorunum-banner-mobil-carousel" aria-label="Öne çıkan kategoriler">
+                        @foreach (var kategori in vm.KapsulKategoriler)
                         {
-                            @await Html.PartialAsync("~/Views/ProjeElementleri/Urun/_UrunKarti.cshtml", urun)
+                            <a class="ms-gorunum-kategori-kapsul" href="@kategori.Url">
+                                <img src="@kategori.GorselUrl" alt="@kategori.Ad">
+                                <strong>@kategori.Ad</strong>
+                            </a>
                         }
                     </div>
-                    <button class="ms-gorunum-carousel-kontrol ms-slider-kontrol ms-slider-kontrol-sag" type="button" data-ms-gorunum-carousel-kontrol="sag" aria-label="Sonraki @vitrin.Baslik ürünlerini göster">
-                        <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
-                    </button>
                 </div>
-            </div>
-        }
+            }
+
+            @foreach (var vitrin in vm.Vitrinler)
+            {
+                <div class="ms-gorunum-demo ms-gorunum-carousel-demo ms-gorunum-carousel-demo-standart ms-gorunum-carousel-demo-market ms-gorunum-carousel-tema-varsayilan lazy-infinite-on" data-ms-gorunum-carousel>
+                    <div class="ms-gorunum-baslik-satiri">
+                        <div>
+                            <h2>@vitrin.Baslik</h2>
+                            <p>@vitrin.Baslik kategorisinden öne çıkan ürünler.</p>
+                        </div>
+                        <div class="ms-gorunum-carousel-sag">
+                            <a class="ms-gorunum-tumunu-gor" href="@vitrin.TumUrl">Tümünü Gör</a>
+                            <span class="ms-gorunum-etiket" data-ms-gorunum-carousel-sayac>1 / @vitrin.Urunler.Count</span>
+                        </div>
+                    </div>
+
+                    <div class="ms-gorunum-carousel-kapsayici">
+                        <button class="ms-gorunum-carousel-kontrol ms-slider-kontrol ms-slider-kontrol-sol" type="button" data-ms-gorunum-carousel-kontrol="sol" aria-label="Önceki @vitrin.Baslik ürünlerini göster">
+                            <i class="fa-solid fa-chevron-left ms-fa-ikon" aria-hidden="true"></i>
+                        </button>
+                        <div class="ms-gorunum-carousel ms-gorunum-carousel-urun" data-ms-gorunum-carousel-liste aria-label="@vitrin.Baslik ürünleri">
+                            @foreach (var urun in vitrin.Urunler)
+                            {
+                                @await Html.PartialAsync("~/Views/ProjeElementleri/Urun/_UrunKarti.cshtml", urun)
+                            }
+                        </div>
+                        <button class="ms-gorunum-carousel-kontrol ms-slider-kontrol ms-slider-kontrol-sag" type="button" data-ms-gorunum-carousel-kontrol="sag" aria-label="Sonraki @vitrin.Baslik ürünlerini göster">
+                            <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
     </div>
-</div>
+}
 
 @* Bu script: ana sayfa carousel kartlarına kart davranışlarını (hover galerisi, renk tooltip,
    favori/koleksiyon) bağlar — site.js bootstrap'i yalnız data-ms-infinite-liste
-   konteynerlerini tarar, B6 carousel'leri onun dışında kalır. site.js body sonunda
-   yüklendiğinden çağrı DOMContentLoaded'a ertelenir. *@
+   konteynerlerini tarar, ana sayfa carousel'leri onun dışında kalır. site.js body sonunda
+   yüklendiğinden çağrı DOMContentLoaded'a ertelenir. Vitrin ve B6 yolu için ortaktır. *@
 <script>
     (() => {
         const kartlariBagla = () => window.msUrunKartDavranislariYenile?.(document);
