@@ -12,4 +12,7 @@ public record MemberInfo(
     string? Email,
     string? Phone,
     Guid? MemberGroupId,
-    bool IsActive);
+    bool IsActive,
+    string? Gender = null,               // G9: segment — yalnız profilden, tahmin yok (spec)
+    Guid? CityId = null,                 // G9: profil şehri (konum zinciri 2. halka)
+    Guid? DefaultAddressCityId = null);  // G9: varsayılan teslimat adresi şehri (1. halka)
