@@ -1,0 +1,217 @@
+@* G9b: şehir seçim modalı — izinli yeni dosya (tasarımda karşılığı yok; ms-ornek-modal
+   kalıbıyla kuruldu). Duyuru barındaki şehir çipi (data-ms-sehir-cip) bu modalı açar;
+   seçim `ms_sehir` cookie'sine plaka kodu yazar + sayfayı yeniler (segment SSR'da çözülür).
+   "Konumumu Kullan" tarayıcı konumunu 81 il merkezine en-yakın-nokta hesabıyla LOKAL
+   çözer (dış servis yok, plan kararı); izin isteği YALNIZ butonla tetiklenir — sayfa
+   açılışında izin pop-up'ı yok. Üyede adres/profil şehri cookie'den önceliklidir
+   (G9a konum zinciri) — modal açıklaması bunu söyler. *@
+@* NOT: tasarımda duyuru barının TAMAMI mobilde display:none — çip bu yüzden yalnız
+   masaüstünde görünür. Mobil için manuel şehir seçimi girişi (ör. mobil menü paneli)
+   ayrı bir karar/iş — G14 QA'da değerlendirilecek; konum zinciri (adres/profil) mobilde
+   de çalışır, yalnız manuel seçim girişi yoktur. *@
+<style>
+    .ms-sehir-modal-arac { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 10px; }
+    .ms-sehir-modal-arac input {
+        flex: 1; min-width: 160px; height: 40px; padding: 0 12px; font-size: 14px;
+        border: 1px solid var(--color-slate-200); border-radius: 10px; outline: none;
+    }
+    .ms-sehir-modal-arac input:focus { border-color: var(--ms-renk-primary); }
+    .ms-sehir-modal-durum { margin: 0 0 10px; font-size: 13px; color: var(--color-slate-500); }
+    .ms-sehir-modal-liste {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 8px; max-height: 46vh; overflow-y: auto; padding: 2px;
+    }
+    .ms-sehir-secenek {
+        display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 10px;
+        border: 1px solid var(--color-slate-200); border-radius: 10px; background: #fff;
+        font-size: 13px; color: var(--color-slate-700); cursor: pointer; text-align: left;
+    }
+    .ms-sehir-secenek small { color: var(--color-slate-400); font-size: 11px; }
+    .ms-sehir-secenek:hover { border-color: var(--ms-renk-primary); color: var(--ms-renk-primary); }
+    .ms-sehir-secenek-secili {
+        border-color: var(--ms-renk-primary); background: var(--color-orange-50);
+        color: var(--ms-renk-primary); font-weight: 600;
+    }
+</style>
+
+<div class="ms-ornek-modal ms-sehir-modal" data-ms-sehir-modal aria-hidden="true">
+    <div class="ms-ornek-modal-kaplama" data-ms-sehir-kapat></div>
+    <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-l" role="dialog" aria-modal="true" aria-labelledby="ms-sehir-modal-baslik">
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-sehir-kapat aria-label="Konum seçme modalını kapat">×</button>
+        <h3 id="ms-sehir-modal-baslik" class="ms-ornek-modal-baslik">Konum Seçin</h3>
+        <p class="ms-ornek-modal-aciklama">Kampanya ve vitrin içerikleri seçtiğiniz şehre göre kişiselleştirilir. Üyeliğinizde kayıtlı teslimat adresi varsa konum öncelikle oradan alınır.</p>
+
+        <div class="ms-sehir-modal-arac">
+            <button class="ms-buton ms-buton-m ms-buton-ikincil" type="button" data-ms-sehir-konumumu>
+                <i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i>
+                Konumumu Kullan
+            </button>
+            <input type="text" data-ms-sehir-ara placeholder="Şehir ara..." aria-label="Şehir ara">
+        </div>
+        <p class="ms-sehir-modal-durum" data-ms-sehir-durum role="status" aria-live="polite" style="display:none"></p>
+
+        <div class="ms-sehir-modal-liste" data-ms-sehir-liste aria-label="81 il listesi"></div>
+
+        <div class="ms-ornek-modal-aksiyonlar">
+            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-sehir-temizle style="display:none">Seçimi Temizle</button>
+            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-sehir-kapat>Vazgeç</button>
+        </div>
+    </section>
+</div>
+
+<script>
+    (function () {
+        "use strict";
+
+        // 81 il — plaka, ad (crm_cities NameI18n.tr ile birebir), il merkezi enlem/boylam.
+        // Koordinatlar yalnız "Konumumu Kullan" en-yakın-nokta hesabı içindir (lokal, dış servis yok).
+        var MS_ILLER = [
+            ["01", "Adana", 37.00, 35.32], ["02", "Adıyaman", 37.76, 38.28], ["03", "Afyonkarahisar", 38.76, 30.54],
+            ["04", "Ağrı", 39.72, 43.05], ["05", "Amasya", 40.65, 35.83], ["06", "Ankara", 39.93, 32.85],
+            ["07", "Antalya", 36.89, 30.71], ["08", "Artvin", 41.18, 41.82], ["09", "Aydın", 37.85, 27.84],
+            ["10", "Balıkesir", 39.65, 27.89], ["11", "Bilecik", 40.15, 29.98], ["12", "Bingöl", 38.88, 40.50],
+            ["13", "Bitlis", 38.40, 42.11], ["14", "Bolu", 40.74, 31.61], ["15", "Burdur", 37.72, 30.29],
+            ["16", "Bursa", 40.19, 29.06], ["17", "Çanakkale", 40.15, 26.41], ["18", "Çankırı", 40.60, 33.62],
+            ["19", "Çorum", 40.55, 34.95], ["20", "Denizli", 37.78, 29.09], ["21", "Diyarbakır", 37.91, 40.24],
+            ["22", "Edirne", 41.68, 26.56], ["23", "Elazığ", 38.68, 39.22], ["24", "Erzincan", 39.75, 39.49],
+            ["25", "Erzurum", 39.90, 41.27], ["26", "Eskişehir", 39.78, 30.52], ["27", "Gaziantep", 37.07, 37.38],
+            ["28", "Giresun", 40.91, 38.39], ["29", "Gümüşhane", 40.46, 39.48], ["30", "Hakkari", 37.58, 43.74],
+            ["31", "Hatay", 36.20, 36.16], ["32", "Isparta", 37.76, 30.55], ["33", "Mersin", 36.81, 34.64],
+            ["34", "İstanbul", 41.01, 28.98], ["35", "İzmir", 38.42, 27.13], ["36", "Kars", 40.60, 43.10],
+            ["37", "Kastamonu", 41.38, 33.78], ["38", "Kayseri", 38.72, 35.49], ["39", "Kırklareli", 41.73, 27.22],
+            ["40", "Kırşehir", 39.15, 34.16], ["41", "Kocaeli", 40.77, 29.92], ["42", "Konya", 37.87, 32.48],
+            ["43", "Kütahya", 39.42, 29.98], ["44", "Malatya", 38.35, 38.31], ["45", "Manisa", 38.61, 27.43],
+            ["46", "Kahramanmaraş", 37.58, 36.93], ["47", "Mardin", 37.31, 40.74], ["48", "Muğla", 37.22, 28.36],
+            ["49", "Muş", 38.73, 41.49], ["50", "Nevşehir", 38.62, 34.71], ["51", "Niğde", 37.97, 34.68],
+            ["52", "Ordu", 40.98, 37.88], ["53", "Rize", 41.02, 40.52], ["54", "Sakarya", 40.77, 30.40],
+            ["55", "Samsun", 41.29, 36.33], ["56", "Siirt", 37.93, 41.94], ["57", "Sinop", 42.03, 35.15],
+            ["58", "Sivas", 39.75, 37.02], ["59", "Tekirdağ", 40.98, 27.51], ["60", "Tokat", 40.31, 36.55],
+            ["61", "Trabzon", 41.00, 39.72], ["62", "Tunceli", 39.11, 39.55], ["63", "Şanlıurfa", 37.16, 38.79],
+            ["64", "Uşak", 38.68, 29.41], ["65", "Van", 38.49, 43.38], ["66", "Yozgat", 39.82, 34.81],
+            ["67", "Zonguldak", 41.45, 31.79], ["68", "Aksaray", 38.37, 34.03], ["69", "Bayburt", 40.26, 40.22],
+            ["70", "Karaman", 37.18, 33.22], ["71", "Kırıkkale", 39.85, 33.51], ["72", "Batman", 37.88, 41.13],
+            ["73", "Şırnak", 37.52, 42.46], ["74", "Bartın", 41.63, 32.34], ["75", "Ardahan", 41.11, 42.70],
+            ["76", "Iğdır", 39.92, 44.04], ["77", "Yalova", 40.65, 29.27], ["78", "Karabük", 41.20, 32.62],
+            ["79", "Kilis", 36.72, 37.12], ["80", "Osmaniye", 37.07, 36.25], ["81", "Düzce", 40.84, 31.16]
+        ];
+
+        var modal = document.querySelector("[data-ms-sehir-modal]");
+        var cipler = document.querySelectorAll("[data-ms-sehir-cip]");
+        if (!modal || !cipler.length) { return; }
+
+        var liste = modal.querySelector("[data-ms-sehir-liste]");
+        var arama = modal.querySelector("[data-ms-sehir-ara]");
+        var durum = modal.querySelector("[data-ms-sehir-durum]");
+        var temizleButonu = modal.querySelector("[data-ms-sehir-temizle]");
+        var listeHazir = false;
+        var oncekiBodyOverflow = "";
+
+        var cookieOku = function () {
+            var kayit = document.cookie.split("; ").find(function (s) { return s.indexOf("ms_sehir=") === 0; });
+            return kayit ? kayit.split("=")[1] : null;
+        };
+        var cookieYaz = function (kod) {
+            document.cookie = "ms_sehir=" + kod + "; path=/; max-age=31536000; SameSite=Lax";
+        };
+
+        var durumGoster = function (mesaj) {
+            durum.textContent = mesaj || "";
+            durum.style.display = mesaj ? "block" : "none";
+        };
+
+        var sec = function (kod) {
+            cookieYaz(kod);
+            window.location.reload();
+        };
+
+        var listeyiKur = function () {
+            if (listeHazir) { return; }
+            listeHazir = true;
+            var seciliKod = cipler[0].getAttribute("data-ms-sehir-kod") || "";
+            MS_ILLER.slice()
+                .sort(function (a, b) { return a[1].localeCompare(b[1], "tr"); })
+                .forEach(function (il) {
+                    var buton = document.createElement("button");
+                    buton.type = "button";
+                    buton.className = "ms-sehir-secenek" + (il[0] === seciliKod ? " ms-sehir-secenek-secili" : "");
+                    buton.setAttribute("data-ms-sehir-secenek", il[0]);
+                    buton.innerHTML = "<small>" + il[0] + "</small>" + il[1];
+                    buton.addEventListener("click", function () { sec(il[0]); });
+                    liste.appendChild(buton);
+                });
+        };
+
+        var ac = function () {
+            listeyiKur();
+            temizleButonu.style.display = cookieOku() ? "" : "none";
+            durumGoster("");
+            arama.value = "";
+            filtrele("");
+            oncekiBodyOverflow = document.body.style.overflow;
+            modal.classList.add("ms-ornek-modal-acik");
+            modal.setAttribute("aria-hidden", "false");
+            document.body.style.overflow = "hidden";
+            arama.focus();
+        };
+
+        var kapat = function () {
+            modal.classList.remove("ms-ornek-modal-acik");
+            modal.setAttribute("aria-hidden", "true");
+            document.body.style.overflow = oncekiBodyOverflow;
+        };
+
+        var filtrele = function (metin) {
+            var arananlar = metin.toLocaleLowerCase("tr");
+            liste.querySelectorAll("[data-ms-sehir-secenek]").forEach(function (buton) {
+                var uyuyor = buton.textContent.toLocaleLowerCase("tr").indexOf(arananlar) !== -1;
+                buton.style.display = uyuyor ? "" : "none";
+            });
+        };
+
+        cipler.forEach(function (cip) {
+            cip.addEventListener("click", function (olay) {
+                olay.preventDefault();
+                ac();
+            });
+        });
+
+        modal.querySelectorAll("[data-ms-sehir-kapat]").forEach(function (eleman) {
+            eleman.addEventListener("click", kapat);
+        });
+
+        document.addEventListener("keydown", function (olay) {
+            if (olay.key === "Escape" && modal.classList.contains("ms-ornek-modal-acik")) { kapat(); }
+        });
+
+        arama.addEventListener("input", function () { filtrele(arama.value); });
+
+        temizleButonu.addEventListener("click", function () {
+            document.cookie = "ms_sehir=; path=/; max-age=0";
+            window.location.reload();
+        });
+
+        modal.querySelector("[data-ms-sehir-konumumu]").addEventListener("click", function () {
+            if (!navigator.geolocation) {
+                durumGoster("Tarayıcınız konum bilgisini desteklemiyor — listeden şehir seçebilirsiniz.");
+                return;
+            }
+            durumGoster("Konumunuz alınıyor…");
+            navigator.geolocation.getCurrentPosition(function (konum) {
+                var lat = konum.coords.latitude;
+                var lon = konum.coords.longitude;
+                var enYakin = null;
+                var enKisa = Infinity;
+                MS_ILLER.forEach(function (il) {
+                    // Eş-dikdörtgen yaklaşımı — il merkezleri arası ayrım için fazlasıyla yeterli.
+                    var dLat = lat - il[2];
+                    var dLon = (lon - il[3]) * Math.cos(lat * Math.PI / 180);
+                    var uzaklik = dLat * dLat + dLon * dLon;
+                    if (uzaklik < enKisa) { enKisa = uzaklik; enYakin = il; }
+                });
+                if (enYakin) { sec(enYakin[0]); }
+            }, function () {
+                durumGoster("Konum izni alınamadı — listeden şehir seçebilirsiniz.");
+            }, { timeout: 8000, maximumAge: 300000 });
+        });
+    })();
+</script>

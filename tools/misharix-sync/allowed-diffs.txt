@@ -1,7 +1,8 @@
 # Bilinçli farklar — her satır check.sh'ın kullandığı görünen addır.
 # Yeni satır eklerken gerekçeyi yorum olarak yaz.
 
-# A12+E5: _MsTemaTokenlari include (head) + _FavoriDavranis include (E5, site.js sonrası tek satır)
+# A12+E5+G9b: _MsTemaTokenlari include (head) + _FavoriDavranis include (E5, site.js
+# sonrası tek satır) + _SehirSecim include (G9b, aynı yerde tek satır)
 Views/Shared/_Layout.cshtml
 
 # B1: Mega menü statik örnek içeriği kanal kategorilerine bağlandı (markup sınıfları/yapısı
@@ -83,8 +84,9 @@ Views/Home/Index.cshtml
 # aynı kartı kullanır (tek kaynak). Markup misharix kart component'iyle birebir.
 Views/ProjeElementleri/Urun/_UrunKarti.cshtml
 
-# B3: Duyuru şeridi geçici statik içerik — demo marka metni (Misharitalia) mishar'a uyarlandı;
-# sağ linkler Faz H (kargo takip) / Faz F (yardım) gelene kadar '#'. Kalıcısı Faz G duyuru bloğu.
+# B3+G8+G9b: Duyuru şeridi — metinler vitrin announcement bloklarından (blok yoksa statik
+# yedek); sağ linkler Faz H (kargo takip) / Faz F (yardım) gelene kadar '#'. G9b: sağ link
+# alanına şehir çipi eklendi (segmentin çözdüğü konum; tıklayınca _SehirSecim modalı).
 Views/ProjeElementleri/Navigasyon/_AnaNavigasyonDuyuru.cshtml
 
 # B4+D4: Giriş modalı — e-posta + SMS sekmeleri canlı (login + otp/send-verify; SMS
@@ -272,3 +274,9 @@ Views/Shared/_Footer.cshtml
 # (açıklama kutuları, tema seçici, elle kurulan flash sayacı) taşınmadı — flash sayaç
 # config'teki bitiş zamanından, infinity devamı G4 endpoint'inden.
 Views/Shared/Store/_VitrinBloklar.cshtml
+
+# G9b: Şehir seçim modalı — kaynakta karşılığı olmayan bilinçli yeni dosya (ms-ornek-modal
+# kalıbı). 81 il gömülü (plaka+ad+merkez koordinatı); "Konumumu Kullan" en-yakın-nokta
+# hesabını lokal yapar (dış servis yok, izin yalnız butonla). Seçim ms_sehir cookie + reload.
+# Duyuru barı tasarımda mobilde tamamen gizli — çip yalnız masaüstünde (mobil girişi ayrı karar).
+Views/Shared/Store/_SehirSecim.cshtml
