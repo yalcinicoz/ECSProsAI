@@ -31,6 +31,8 @@ Views/UrunListesi/Index.cshtml
 # sayfa aynı markup'ı kullanır, plan 3.3); veri karşılığı olmayan demo blokları @if ile gizli
 # (B8/B11/Faz G); dosya sonuna canlı veri + client-side filtre/sıralama motoru eklendi.
 # E7: JSON→kart eşlemesine puan alanları + kartDoldur'a puan bölümü dolumu eklendi.
+# H5: JSON'a videoUrl + kartDoldur'a Videolu Ürün rozeti enjeksiyonu (SSR markup'ıyla birebir;
+# davranış window.msUrunVideoDavranisiHazirla ile bağlanır).
 Views/ProjeElementleri/UrunListesi/_UrunListesiUrunAlani.cshtml
 
 # B7: Sol filtre — blok markup'ları birebir, içerik gerçek facet'lerden @foreach ile;
@@ -59,9 +61,10 @@ Views/ProjeElementleri/UrunDetay/_UrunDetaySayfasi.cshtml
 # filtre kuralı ters eşlemesi) + ürün adı.
 Views/ProjeElementleri/UrunDetay/_UrunDetayBreadcrumb.cshtml
 
-# B9: Galeri seçili rengin görsellerinden @foreach ile (thumb/slide/modal aynı listeden);
-# video slaytı + görsel etiketleri (Videolu/Süper Fırsat/kampanya) veri yok — @if gizli
-# (B11/Faz G); tek görselde yön butonları gizli. Davranış script'ine dokunulmadı.
+# B9+H5: Galeri seçili rengin görsellerinden @foreach ile (thumb/slide/modal aynı listeden).
+# H5: video thumb + slayt + Videolu Ürün rozeti + modal video slaytı gerçek veriye bağlandı
+# (video yoksa render edilmez); Süper Fırsat/kampanya etiketi veri gelene dek gizli (Faz G);
+# yön butonları görsel+video toplamına bakar. Davranış script'ine dokunulmadı.
 Views/ProjeElementleri/UrunDetay/_UrunDetayResimAlani.cshtml
 
 # B9+E7: Bilgi sütunu canlı veriye bağlandı — ad/kod/fiyat(+indirim)/renkler/bedenler/
@@ -84,6 +87,7 @@ Views/Home/Index.cshtml
 # B6: Canlı ürün kartı partial'ı — kaynakta karşılığı yok (misharix'te demo _UrunKartiOrnegi).
 # B7'deki UrunKarti local function'ının paylaşılan hali; ürün listesi + ana sayfa carousel'leri
 # aynı kartı kullanır (tek kaynak). Markup misharix kart component'iyle birebir.
+# H5: Videolu Ürün rozeti gerçek veriye bağlandı (VideoUrl doluysa; tooltip videosu dahil).
 Views/ProjeElementleri/Urun/_UrunKarti.cshtml
 
 # B3+G8+G9b+H2: Duyuru şeridi — metinler vitrin announcement bloklarından (blok yoksa statik

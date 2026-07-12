@@ -302,6 +302,20 @@ public class ProductImageController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>H5 (K15): URL ile video ekleme — kullanıcının video sunucusundaki ya da
+    /// dış kaynaktaki adres; dosya yükleme akışının yanında ikinci yol (kayıt Active doğar).</summary>
+    [HttpPost("products/{productId:guid}/videos/by-url")]
+    public async Task<IActionResult> AddVideoByUrl(
+        Guid productId, [FromBody] AddVideoByUrlRequest request, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(
+            new ECSPros.Catalog.Application.Commands.AddProductVideoByUrl.AddProductVideoByUrlCommand(
+                productId, request.ImageSetId, request.VideoUrl, request.ThumbnailUrl, request.SortOrder), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { id = result.Value } });
+    }
+
     [HttpPost("products/{productId:guid}/videos/prepare")]
     public async Task<IActionResult> PrepareVideoBatch(Guid productId, [FromBody] PrepareVideoBatchRequest request, CancellationToken ct = default)
     {
@@ -478,4 +492,5 @@ public record PrepareImageBatchRequest(Guid? VariantId, Guid ImageSetId, List<st
 public record UpdateImageMetadataRequest(int SortOrder, bool IsProductCover, bool IsVariantCover);
 public record UpsertMappingRequest(Guid ForSetId, Guid UseSetId);
 public record PrepareVideoBatchRequest(Guid ImageSetId, List<string> FileExtensions, bool ReplaceSet);
+public record AddVideoByUrlRequest(Guid ImageSetId, string VideoUrl, string? ThumbnailUrl = null, int SortOrder = 0); // H5
 public record UpdateVideoMetadataRequest(int SortOrder, string? ThumbnailFileName);

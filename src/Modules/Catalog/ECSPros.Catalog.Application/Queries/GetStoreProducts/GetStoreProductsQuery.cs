@@ -54,7 +54,8 @@ public record StoreProductDto(
     List<string>? GalleryUrls = null,    // B8: kart hover galerisi (ana görselin rengine ait ilk 4 görsel)
     bool IsFeatured = false,             // B11: öne çıkar penceresi içinde — kartta "Sponsorlu" rozeti
     double Rating = 0,                   // E7: onaylı yorum ortalaması (0 = yorum yok)
-    int ReviewCount = 0);                // E7: onaylı yorum sayısı
+    int ReviewCount = 0,                 // E7: onaylı yorum sayısı
+    string? VideoUrl = null);            // H5: ilk aktif videonun efektif URL'i — null ise kartta rozet yok
 
 public class GetStoreProductsQueryHandler(
     ICatalogDbContext db,
@@ -160,6 +161,20 @@ public class GetStoreProductsQueryHandler(
                 VariantId = g.OrderBy(i => i.SortOrder).First().VariantId
             })
             .ToDictionaryAsync(x => x.ProductId, x => new { x.FileName, x.VariantId }, ct);
+
+        // H5: kart video rozeti — ürün başına ilk aktif videonun efektif URL'i
+        // (VideoUrl ?? video CDN tabanı + FileName; taban ayarı yoksa dosya kayıtları atlanır).
+        var videoBase = await CdnHelper.BuildVideoBaseAsync(db, ct);
+        var videolar = (await db.ProductVideos
+            .AsNoTracking()
+            .Where(v => productIds.Contains(v.ProductId) && v.Status == Domain.Entities.ProductImageStatus.Active)
+            .OrderBy(v => v.SortOrder)
+            .Select(v => new { v.ProductId, v.VideoUrl, v.FileName })
+            .ToListAsync(ct))
+            .Select(v => new { v.ProductId, Url = v.VideoUrl ?? (videoBase != null && v.FileName != "" ? videoBase + "/" + v.FileName : null) })
+            .Where(v => v.Url != null)
+            .GroupBy(v => v.ProductId)
+            .ToDictionary(g => g.Key, g => g.First().Url);
 
         // Variant → product mapping
         var variantData = await db.ProductVariants
@@ -279,7 +294,8 @@ public class GetStoreProductsQueryHandler(
                 colorsByProduct.GetValueOrDefault(p.Id) ?? new(),
                 attrsByProduct.GetValueOrDefault(p.Id) ?? new(),
                 galleryUrls,
-                IsFeatured: oneCikanlar.Contains(p.Id));
+                IsFeatured: oneCikanlar.Contains(p.Id),
+                VideoUrl: videolar.GetValueOrDefault(p.Id));
         }).ToList();
 
         // E7: kart puanları onaylı yorum ortalamasından (additive alanlar)

@@ -21,6 +21,7 @@ interface ProductVideoDto {
   id: string; productId: string; imageSetId: string; imageSetCode: string
   fileName: string; thumbnailFileName: string | null
   sortOrder: number; status: string; batchId: string
+  videoUrl?: string | null; thumbnailUrl?: string | null // H5: URL tabanlı kayıt
 }
 
 interface CatalogSetting { key: string; value: string }
@@ -532,6 +533,9 @@ function VideosSection({ productId, imageSets, publicBaseUrl, cdn }: {
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadDone, setUploadDone] = useState(false)
+  // H5 (K15): URL ile video ekleme — video sunucusundaki ya da dış kaynaktaki adres
+  const [videoUrlInput, setVideoUrlInput] = useState('')
+  const [urlError, setUrlError] = useState<string | null>(null)
 
   useEffect(() => {
     if (imageSets.length > 0 && !selectedSetId) {
@@ -611,6 +615,20 @@ function VideosSection({ productId, imageSets, publicBaseUrl, cdn }: {
       setUploadProgress(null)
     }
   }
+
+  const addByUrlMutation = useMutation({
+    mutationFn: () => api.post(`/catalog/products/${productId}/videos/by-url`, {
+      imageSetId: selectedSetId, videoUrl: videoUrlInput.trim(), sortOrder: videos.length + 1,
+    }),
+    onSuccess: () => {
+      setVideoUrlInput(''); setUrlError(null)
+      qc.invalidateQueries({ queryKey: ['product-videos', productId] })
+    },
+    onError: (e: unknown) => {
+      const err = e as { response?: { data?: { error?: string } } }
+      setUrlError(err.response?.data?.error ?? 'Video eklenemedi.')
+    },
+  })
 
   const archiveMutation = useMutation({
     mutationFn: (videoId: string) => api.delete(`/catalog/products/${productId}/videos/${videoId}`),
@@ -694,6 +712,28 @@ function VideosSection({ productId, imageSets, publicBaseUrl, cdn }: {
         </div>
       </div>
 
+      {/* H5: URL ile video ekle — kendi video sunucusu veya dış kaynak adresi */}
+      <div className="card" style={{ maxWidth: 680 }}>
+        <h2 className="text-sm font-bold mb-3" style={{ color: 'var(--text)' }}>URL ile Video Ekle</h2>
+        <div className="flex gap-2">
+          <input
+            type="url"
+            value={videoUrlInput}
+            onChange={e => setVideoUrlInput(e.target.value)}
+            placeholder="https://video.sunucunuz.com/urun.mp4"
+            className="flex-1 px-3 py-2 rounded-lg text-sm outline-none border"
+            style={{ background: 'var(--surface2)', borderColor: 'var(--border)', color: 'var(--text)' }}
+          />
+          <Button size="sm" onClick={() => addByUrlMutation.mutate()}
+            loading={addByUrlMutation.isPending}
+            disabled={!videoUrlInput.trim() || !selectedSetId}>
+            Ekle
+          </Button>
+        </div>
+        <p className="text-xs mt-2" style={{ color: 'var(--text-s)' }}>Video sunucunuzdaki ya da dış kaynaktaki doğrudan video adresi (mp4/webm). Dosya yükleme yerine ikinci yoldur; kayıt anında aktifleşir.</p>
+        {urlError && <p className="text-xs mt-2" style={{ color: '#ef4444' }}>{urlError}</p>}
+      </div>
+
       {/* Active videos list */}
       <div style={{ maxWidth: 680 }}>
         <div className="flex items-center justify-between mb-3">
@@ -711,10 +751,10 @@ function VideosSection({ productId, imageSets, publicBaseUrl, cdn }: {
         ) : (
           <div className="space-y-2">
             {videos.sort((a, b) => a.sortOrder - b.sortOrder).map(vid => {
-              const url = buildImageUrl(vid.fileName, cdn, publicBaseUrl)
+              const url = vid.videoUrl ?? buildImageUrl(vid.fileName, cdn, publicBaseUrl) // H5: URL kaydı önce
               return (
                 <div key={vid.id} className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)', background: 'var(--surface2)' }}>
-                  {isPlayable(vid.fileName) ? (
+                  {(vid.videoUrl ? isPlayable(vid.videoUrl) : isPlayable(vid.fileName)) ? (
                     <video
                       src={url}
                       controls
@@ -730,7 +770,7 @@ function VideosSection({ productId, imageSets, publicBaseUrl, cdn }: {
                   <div className="flex items-center justify-between px-3 py-2.5">
                     <div className="flex items-center gap-2 min-w-0">
                       <Film size={13} style={{ color: 'var(--text-s)', flexShrink: 0 }} />
-                      <span className="text-xs truncate font-mono" style={{ color: 'var(--text-m)' }}>{vid.fileName}</span>
+                      <span className="text-xs truncate font-mono" style={{ color: 'var(--text-m)' }}>{vid.videoUrl ?? vid.fileName}</span>
                     </div>
                     <button
                       title="Arşivle"

@@ -152,9 +152,28 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
             .Select(g => g.NameI18n)
             .FirstOrDefaultAsync(ct);
 
+        // H5: aktif videolar — efektif URL: VideoUrl (K15 birincil) ?? video CDN tabanı +
+        // FileName (taban ayarı yoksa dosya kayıtları atlanır; galeri video slaytı bundan beslenir).
+        var videoBase = await CdnHelper.BuildVideoBaseAsync(db, ct);
+        var videos = (await db.ProductVideos.AsNoTracking()
+            .Where(v => v.ProductId == product.Id
+                        && v.Status == ECSPros.Catalog.Domain.Entities.ProductImageStatus.Active)
+            .OrderBy(v => v.SortOrder)
+            .Select(v => new { v.VideoUrl, v.FileName, v.ThumbnailUrl })
+            .ToListAsync(ct))
+            .Select(v => new
+            {
+                Url = v.VideoUrl ?? (videoBase != null && v.FileName != "" ? videoBase + "/" + v.FileName : null),
+                v.ThumbnailUrl
+            })
+            .Where(v => v.Url != null)
+            .Select(v => new StoreProductVideoDto(v.Url!, v.ThumbnailUrl))
+            .ToList();
+
         return Result.Success(new StoreProductDetailDto(
             product.Id, product.Code, product.NameI18n, product.ShortDescriptionI18n,
             product.IsActive, variants,
-            product.DescriptionI18n, productAttrs, groupName));
+            product.DescriptionI18n, productAttrs, groupName,
+            videos.Count > 0 ? videos : null));
     }
 }

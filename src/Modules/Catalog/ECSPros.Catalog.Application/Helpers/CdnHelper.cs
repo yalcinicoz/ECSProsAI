@@ -20,6 +20,18 @@ public static class CdnHelper
     public static async Task<string> BuildZoomUrlAsync(ICatalogDbContext db, CancellationToken ct = default)
         => await BuildAsync(db, "ImageServer.CdnZoomHeight", FallbackZoomHeight, ct);
 
+    /// <summary>H5: FTP'yle yüklenen video dosyalarının servis tabanı ("VideoServer.CdnBaseUrl"
+    /// ayarı) — sonu /'sız döner; ayar yoksa null (dosya kayıtları storefront'ta atlanır;
+    /// URL tabanlı kayıtlar — K15 birincil yol — bundan bağımsız çalışır).</summary>
+    public static async Task<string?> BuildVideoBaseAsync(ICatalogDbContext db, CancellationToken ct = default)
+    {
+        var deger = await db.CatalogSettings
+            .Where(x => x.Key == "VideoServer.CdnBaseUrl")
+            .Select(x => x.Value)
+            .FirstOrDefaultAsync(ct);
+        return string.IsNullOrWhiteSpace(deger) ? null : deger.Trim().TrimEnd('/');
+    }
+
     private static async Task<string> BuildAsync(ICatalogDbContext db, string heightKey, string fallbackHeight, CancellationToken ct)
     {
         var keys = new[] { "ImageServer.CdnBaseUrl", "ImageServer.CdnQuality", heightKey };

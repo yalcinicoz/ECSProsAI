@@ -19,7 +19,9 @@ public record ProductVideoDto(
     string? ThumbnailFileName,
     int SortOrder,
     string Status,
-    Guid BatchId);
+    Guid BatchId,
+    string? VideoUrl = null,      // H5 additive: URL tabanlı kayıt (doluysa efektif kaynak)
+    string? ThumbnailUrl = null); // H5 additive
 
 public class GetProductVideosQueryHandler : IRequestHandler<GetProductVideosQuery, Result<List<ProductVideoDto>>>
 {
@@ -47,7 +49,9 @@ public class GetProductVideosQueryHandler : IRequestHandler<GetProductVideosQuer
                 x.ThumbnailFileName,
                 x.SortOrder,
                 x.Status.ToString(),
-                x.BatchId))
+                x.BatchId,
+                x.VideoUrl,
+                x.ThumbnailUrl))
             .ToListAsync(ct);
 
         return Result<List<ProductVideoDto>>.Success(videos);

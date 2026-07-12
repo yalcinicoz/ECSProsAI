@@ -26,10 +26,22 @@
         {
             <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-skeleton="true" alt="">
         }
-        @if (false)
+        @if (u?.VideoUrl is not null)
         {
-            @* B8/Faz G: videolu ürün + kampanya etiketi — veri kaynağı yok *@
-            <span class="ms-urun-gorsel-etiketleri"></span>
+            @* H5: Videolu Ürün rozeti — markup tasarımın kart örneğinden (hover tooltip
+               videosu site.js data-ms-urun-video davranışıyla). Kampanya etiketi veri
+               kaynağı gelene dek yok (Faz G). *@
+            <span class="ms-urun-gorsel-etiketleri">
+                <span class="ms-urun-video-alani" data-ms-urun-video>
+                    <button class="ms-urun-video-rozeti" type="button" aria-expanded="false" aria-label="Videolu ürünü göster">
+                        <i class="fa-solid fa-play ms-fa-ikon ms-urun-video-ikon" aria-hidden="true"></i>
+                        Videolu Ürün
+                    </button>
+                    <span class="ms-urun-video-tooltip">
+                        <video class="ms-urun-video" src="@u.VideoUrl" muted loop playsinline preload="none"></video>
+                    </span>
+                </span>
+            </span>
         }
         @if (u?.Sponsorlu == true)
         {

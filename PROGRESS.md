@@ -294,6 +294,21 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-12 (devam) — H5 TAMAM → H-M3 KAPANDI (alt bar + değerlendirmeler + videolar):**
+  - Keşif: product_videos + TAM dosya yükleme pipeline'ı (FTP+batch+admin sekmesi) zaten
+    kuruluymuş (0 kayıt). K15'le URL yolu eklendi: additive VideoUrl/ThumbnailUrl
+    (migration CANLIDA), POST videos/by-url + admin "URL ile Video Ekle" kartı (npm build).
+  - Efektif URL: VideoUrl ?? "VideoServer.CdnBaseUrl" ayarı + FileName (ayar yoksa dosya
+    kayıtları storefront'ta atlanır). Storefront: detay galerisi video thumb+slayt+rozet+
+    modal; kart rozeti SSR + liste client kartları (StoreProductDto.VideoUrl additive).
+  - Bilinçli sınır: vitrin infinity client kartlarında rozet yok (SSR vitrin rozetli).
+  - **E2E h5 9/9 ✓ + b10/b6/h9 regresyon 59 adım ✓; drift TEMİZ; artık 0.**
+  - **⚠️ DEPLOY BEKLİYOR — H1..H9 (H-M1+M2+M3) publish ALINDI (/opt/ECSProsAI/publish):**
+    4 migration da canlı DB'de; restart tek adım. admin/dist yeni build'i şimdiden sunuluyor
+    (by-url endpoint'i restart'a kadar 404 — restart geciktirilmemeli).
+  - **SIRADAKİ: H-M4 / H3 görsel arama — KULLANICIDAN API KEY GEREKLİ** (K13: servis
+    çalışıyor; key appsettings.Production'a girilecek). SMTP bilgileri de hâlâ bekleniyor.
+
 - **2026-07-12 (devam) — H9 TAMAM (ürün değerlendirmeleri sayfası — K14 çekirdek port):**
   - Route ürün bazlı: `/urun-degerlendirmeleri/{code}`; girişler detay üst linki + alt
     bilgi bölümü (E7'de statik 0 kalmıştı — gerçek puana bağlandı).

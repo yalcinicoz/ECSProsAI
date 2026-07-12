@@ -44,7 +44,8 @@ public static class UrunKartMap
             p.Code, TrAd(p.NameI18n), p.MainImageUrl, p.MinPrice,
             p.Colors.Where(c => c.HexCode is not null).Select(c => c.HexCode!).Take(2).ToList(),
             secenekler.Count > 0 ? secenekler.Count : p.Colors.Count, degerIdler,
-            p.GalleryUrls ?? [], secenekler, null, p.IsFeatured, p.Rating, p.ReviewCount);
+            p.GalleryUrls ?? [], secenekler, null, p.IsFeatured, p.Rating, p.ReviewCount,
+            p.VideoUrl); // H5
     }
 
     public static string TrAd(Dictionary<string, string> nameI18n) =>
