@@ -294,6 +294,25 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-12 — FAZ H PLANLANDI (kullanıcıyla 4 karar netleşti):**
+  - **Kapsam (K10):** H1–H7'ye ek: H8 bildirim gönderimi (C9 stok + E11 favori arama devri),
+    H9 ürün değerlendirmeleri sayfası (E7 devri, 595 satır tasarım), H10 Faz G devredenleri
+    (koleksiyon public, kaynak filtreleri, son gezilenler/favoriler kaynakları, YanMenu
+    statü, GeoLite2).
+  - **K11:** H6 ödeme entegrasyonu ERTELENDİ (sağlayıcı seçilmedi, mock sürer).
+    **K12:** bildirim kanalı yalnız e-posta (SMTP — IEmailService'in ilk gerçek
+    implementasyonu); SMS LogSmsService'te kalır. **K13:** görsel arama servisi çalışıyor,
+    API key kullanıcıda — indeks doğrulaması H3 başında.
+  - **5 milestone:** H-M1 fatura(H1)+kargo(H2) → H-M2 bildirimler(H8) → H-M3 alt bar(H4)+
+    değerlendirmeler(H9)+videolar(H5) → H-M4 görsel arama(H3) → H-M5 devredenler(H10)+QA(H7).
+    Detay: `docs/misharix-razor-tasima-plani.md` FAZ H bölümü (durum panosu + karar kaydı
+    K10-K13 de güncellendi).
+  - Temel hazırlık notları: H1 için `Invoice.IntegratorInvoiceUrl` mevcut (proxy misharix'te
+    119 satır; ECSPros'ta URL server-side çözülecek — client'a sızmaz); H2 için `Shipment`
+    TrackingNumber/Url/Events mevcut (eksik: kargo firma tanımı ad/logo/URL şablonu);
+    H5 veri modeli + video kaynak biçimi H5 başında kullanıcıya sorulacak.
+  - **SIRADAKİ: H-M1 / H1** (fatura PDF proxy + modal + E4/E8 butonları).
+
 - **2026-07-12 — G9c TAMAM (mobilde manuel şehir seçimi girişi — Faz G'nin tek 🔶'si kapandı):**
   - **Kullanıcı kararı (2026-07-11):** duyuru barı mobilde tasarım gereği gizli olduğundan
     mobil giriş, mobil menü alt nav'ına eklenen **'Konum Seç' satırı** oldu
