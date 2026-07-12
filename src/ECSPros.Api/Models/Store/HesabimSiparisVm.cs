@@ -36,4 +36,7 @@ public record HesabimKargoVm(
     string? TakipUrl,
     string DurumMetni,
     string? TahminiTeslim,
-    List<(string Baslik, string Detay, bool Aktif)> Adimlar);
+    List<(string Baslik, string Detay, bool Aktif)> Adimlar,
+    string? FirmaAdi = null,     // H2: kargo firması (FirmIntegration → cargo IntegrationService)
+    string? FirmaLogoUrl = null, // H2: logo (yoksa yalnız ad basılır)
+    string? SonIslem = null);    // H2: son olayın konumu (tasarımın "Son İşlem" özeti)

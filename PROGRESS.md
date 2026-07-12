@@ -294,6 +294,28 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-12 (devam) — H2 TAMAM → H-M1 KAPANDI (fatura + kargo):**
+  - **Kargo firması tanımı = IntegrationService (cargo)** — additive LogoUrl +
+    TrackingUrlTemplate (migration canlıda); 8 firmalık katalog seed'i (aras/yurtici/mng/
+    ptt/surat/hepsijet/kolaygelsin/ups, idempotent) canlı DB'de. Admin, firma-sözleşme
+    ekranından cargo FirmIntegration açınca storefront bağlanır.
+  - **Çözümleme:** GetCargoCarriersByFirmIntegrations + GetPlatformActiveCargoCarrier —
+    müşteriye SERVİS adı basılır, sözleşme etiketi değil (E2E yakaladı, düzeltildi).
+  - **UI:** kargo modalı tasarım üçlüsüne döndü (Kargo Firması/Son İşlem/Alıcı; yetim
+    gönderide E4 düzeni korunur) + logo (varsa) + şablondan takip linki; detay modal
+    kargo-bilgi'ye firma adı; duyuru barı Kargo Takip (üye→Siparişlerim, misafir→giriş
+    modalı) + Yardım & Destek→/sik-sorulan-sorular (F artığı); C10 onay Kargo Bilgisi
+    açıldı (firma SSR, Hazırlanıyor, adres client-side).
+  - Bilinçli sınırlar: B9 teslimat bilgileri/dönen mesajlar tahmini-teslimat konfigü
+    gelene dek gizli; C4 hızlı teslimat gizli.
+  - **E2E h2 15/15 ✓ + e4/h1/b6/c5c10 regresyon 66 adım ✓; drift TEMİZ; artık 0.**
+  - **⚠️ DEPLOY BEKLİYOR — H-M1 (H1+H2) publish ALINDI (/opt/ECSProsAI/publish):**
+    kullanıcı `sudo systemctl restart ecspros` çalıştırınca canlıya çıkar. Migration
+    CANLIYA UYGULANDI (AddCargoCarrierFieldsToIntegrationService — additive, eski binary
+    etkilenmez); kargo kataloğu seed'i de DB'de. Doğrulama: duyuru barı Kargo Takip/
+    Yardım linkleri + journalctl'de hata yok.
+  - **SIRADAKİ: H-M2 / H8** (SMTP e-posta + stok/favori arama bildirimleri).
+
 - **2026-07-12 (devam) — H1 TAMAM (fatura PDF modalı — H-M1'in ilk yarısı):**
   - **Backend:** `FaturaPdfProxy` (Api/Services/Store — misharix mantığı + config allowlist
     `Store:InvoiceProxy`, https + /earchive/ şartı, hata yutulmaz) +

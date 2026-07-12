@@ -28,6 +28,55 @@ public static class DatabaseSeeder
         await SeedCorporatePagesAsync(scope.ServiceProvider);
         await SeedFaqPageAsync(scope.ServiceProvider);
         await SeedDefaultVitrinAsync(scope.ServiceProvider);
+        await SeedCargoCarriersAsync(scope.ServiceProvider);
+    }
+
+    /// <summary>
+    /// H2: Kargo firması kataloğu — IntegrationService (ServiceType=cargo) satırları
+    /// takip URL şablonlarıyla. Firma hangi kargolarla çalışacaksa admin firma-sözleşme
+    /// ekranından FirmIntegration açar; storefront kargo modalı adı/logoyu/takip linkini
+    /// buradan çözer. Kod bazlı idempotent (var olana dokunmaz — admin düzenlemesi ezilmez).
+    /// </summary>
+    private static async Task SeedCargoCarriersAsync(IServiceProvider sp)
+    {
+        var context = sp.GetRequiredService<CoreDbContext>();
+
+        var firmalar = new (string Kod, string Ad, string SablonUrl)[]
+        {
+            ("aras", "Aras Kargo", "https://kargotakip.araskargo.com.tr/mainpage.aspx?code={trackingNumber}"),
+            ("yurtici", "Yurtiçi Kargo", "https://www.yurticikargo.com/tr/online-servisler/gonderi-sorgula?code={trackingNumber}"),
+            ("mng", "MNG Kargo", "https://kargotakip.mngkargo.com.tr/?takipNo={trackingNumber}"),
+            ("ptt", "PTT Kargo", "https://gonderitakip.ptt.gov.tr/Track/Verify?q={trackingNumber}"),
+            ("surat", "Sürat Kargo", "https://www.suratkargo.com.tr/KargoTakip/?kargotakipno={trackingNumber}"),
+            ("hepsijet", "HepsiJet", "https://www.hepsijet.com/gonderi-takibi/{trackingNumber}"),
+            ("kolaygelsin", "Kolay Gelsin", "https://esube.kolaygelsin.com/shipments?trackingId={trackingNumber}"),
+            ("ups", "UPS", "https://www.ups.com/track?loc=tr_TR&tracknum={trackingNumber}")
+        };
+
+        var mevcutKodlar = await context.IntegrationServices
+            .Where(s => s.ServiceType == "cargo")
+            .Select(s => s.Code)
+            .ToListAsync();
+
+        var yeniler = firmalar
+            .Where(f => !mevcutKodlar.Contains(f.Kod))
+            .Select(f => new IntegrationService
+            {
+                Code = f.Kod,
+                NameI18n = new() { { "tr", f.Ad }, { "en", f.Ad } },
+                ServiceType = "cargo",
+                IsAvailable = true,
+                TrackingUrlTemplate = f.SablonUrl
+                // LogoUrl bilinçli null — logo görselleri edinildikçe admin/SQL ile dolar,
+                // storefront logo yoksa yalnız adı basar.
+            })
+            .ToList();
+
+        if (yeniler.Count == 0) return;
+
+        context.IntegrationServices.AddRange(yeniler);
+        await context.SaveChangesAsync();
+        Console.WriteLine($"✓ Seed: {yeniler.Count} kargo firması eklendi (cargo IntegrationService).");
     }
 
     /// <summary>

@@ -1,3 +1,5 @@
+using ECSPros.Api.Services;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ECSPros.Api.Controllers.Store;
@@ -31,7 +33,22 @@ public class SepetController(IConfiguration configuration) : StorePageController
     [HttpGet("/odeme")]
     public IActionResult Odeme() => View("~/Views/Sepet/Odeme.cshtml");
 
-    /// <summary>C10: sipariş tamamlandı — içerik sessionStorage msSiparisSonucu'ndan.</summary>
+    /// <summary>C10+H2: sipariş tamamlandı — içerik sessionStorage msSiparisSonucu'ndan;
+    /// Kargo Bilgisi bölümü H2'de açıldı (firma adı platformun aktif kargo anlaşmasından
+    /// SSR — gönderi henüz yokken durum "Hazırlanıyor"; anlaşma yoksa firma satırı gizli).</summary>
     [HttpGet("/siparis-tamamlandi")]
-    public IActionResult SiparisTamamlandi() => View("~/Views/Sepet/SiparisTamamlandi.cshtml");
+    public async Task<IActionResult> SiparisTamamlandi(
+        [FromServices] IMediator mediator, [FromServices] IStoreContext storeContext, CancellationToken ct)
+    {
+        var platform = await storeContext.GetPlatformAsync(ct);
+        if (platform is not null)
+        {
+            var firma = await mediator.Send(
+                new ECSPros.Core.Application.Queries.GetPlatformActiveCargoCarrier
+                    .GetPlatformActiveCargoCarrierQuery(platform.Id), ct);
+            ViewData["MsKargoFirmaAdi"] = firma.IsSuccess ? firma.Value?.Name : null;
+        }
+
+        return View("~/Views/Sepet/SiparisTamamlandi.cshtml");
+    }
 }

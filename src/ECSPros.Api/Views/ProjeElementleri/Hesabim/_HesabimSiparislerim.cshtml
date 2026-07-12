@@ -166,8 +166,10 @@
     @await Html.PartialAsync("~/Views/ProjeElementleri/Hesabim/_HesabimSiparislerimDetayModal.cshtml")
     @await Html.PartialAsync("~/Views/ProjeElementleri/Hesabim/_HesabimSiparislerimIadeModal.cshtml")
 
-    @* E4: kargo takip modalı sipariş başına SSR — H2 köprüsü: takip olayları varsa zaman
-       çizelgesi, yoksa yalnız takip no gösterilir; kargo firması adı/logosu H2'de. *@
+    @* E4+H2: kargo takip modalı sipariş başına SSR — takip olayları varsa zaman çizelgesi,
+       yoksa yalnız takip no. H2: kargo firması bağlandı — logo hero'da (varsa), özet
+       tasarımdaki üçlü (Kargo Firması / Son İşlem / Alıcı); firma ÇÖZÜLEMEYENDE (eski/yetim
+       FirmIntegrationId) E4'ün bilgi kaybetmeyen üçlüsü korunur. *@
     @foreach (var s in msSiparisler.Where(x => x.Kargo is not null))
     {
     <div class="ms-ornek-modal ms-kargo-takip-modal" data-ms-kargo-takip-modal="@s.OrderNumber" aria-hidden="true">
@@ -175,8 +177,12 @@
         <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-xl ms-kargo-takip-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-kargo-takip-baslik-@s.OrderNumber">
             <button class="ms-ornek-modal-kapat" type="button" data-ms-kargo-takip-kapat aria-label="Kargo takip modalını kapat">×</button>
             <div class="ms-kargo-takip-hero">
+                @if (s.Kargo!.FirmaAdi is not null && !string.IsNullOrWhiteSpace(s.Kargo.FirmaLogoUrl))
+                {
+                <img src="@s.Kargo.FirmaLogoUrl" alt="@s.Kargo.FirmaAdi">
+                }
                 <div>
-                    @if (!string.IsNullOrWhiteSpace(s.Kargo!.TakipNo))
+                    @if (!string.IsNullOrWhiteSpace(s.Kargo.TakipNo))
                     {
                     <a class="ms-kargo-takip-no" href="@(string.IsNullOrWhiteSpace(s.Kargo.TakipUrl) ? "#" : s.Kargo.TakipUrl)" target="_blank" rel="noopener">Takip No: @s.Kargo.TakipNo</a>
                     }
@@ -188,11 +194,22 @@
                 </div>
             </div>
 
+            @if (s.Kargo.FirmaAdi is not null)
+            {
+            <div class="ms-kargo-takip-ozet">
+                <article><span>Kargo Firması</span><strong>@s.Kargo.FirmaAdi</strong></article>
+                <article><span>Son İşlem</span><strong>@(s.Kargo.SonIslem ?? "—")</strong></article>
+                <article><span>Alıcı</span><strong>@s.TeslimatAdi</strong></article>
+            </div>
+            }
+            else
+            {
             <div class="ms-kargo-takip-ozet">
                 <article><span>Sipariş No</span><strong>@s.OrderNumber</strong></article>
                 <article><span>Takip No</span><strong>@(s.Kargo.TakipNo ?? "—")</strong></article>
                 <article><span>Alıcı</span><strong>@s.TeslimatAdi</strong></article>
             </div>
+            }
 
             @if (s.Kargo.Adimlar.Count > 0)
             {
@@ -1007,6 +1024,7 @@ document.addEventListener("DOMContentLoaded", () => {
         faturaAlicisi = s.FaturaAlicisi,
         kargoTakipNo = s.Kargo == null ? null : s.Kargo.TakipNo,
         kargoDurum = s.Kargo == null ? null : s.Kargo.DurumMetni,
+        kargoFirma = s.Kargo == null ? null : s.Kargo.FirmaAdi,
         urunler = s.Urunler.Select(u => new { ad = u.Ad, secenek = u.SecenekOzeti, adet = u.Adet, fiyat = u.Fiyat, gorsel = u.GorselUrl })
     })));
     const modal = document.querySelector("[data-ms-siparis-detay-modal]");
@@ -1031,7 +1049,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 ? `${s.faturaAlicisi} — E-arşiv fatura oluşturuldu.`
                 : "Fatura oluşturulduğunda burada görünür.";
             alan("kargo-bilgi").textContent = s.kargoDurum
-                ? `${s.kargoDurum}${s.kargoTakipNo ? " · Takip No: " + s.kargoTakipNo : ""}`
+                ? `${s.kargoFirma ? s.kargoFirma + " · " : ""}${s.kargoDurum}${s.kargoTakipNo ? " · Takip No: " + s.kargoTakipNo : ""}`
                 : "Kargoya verildiğinde takip bilgisi burada görünür.";
             alan("ara-toplam").textContent = tl(s.araToplam);
             alan("indirim").textContent = s.indirim > 0 ? "-" + tl(s.indirim) : "—";
