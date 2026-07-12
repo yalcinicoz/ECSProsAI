@@ -145,9 +145,29 @@ public class HesabimController(
                     var kargoSonuc = await mediator.Send(new GetOrderShipmentsQuery(detay.Id), ct);
                     var gonderi = kargoSonuc.IsSuccess ? kargoSonuc.Value!.FirstOrDefault() : null;
                     if (gonderi is not null)
+                    {
+                        // H2: kargo firması kimliği — FirmIntegration cargo kaydı yoksa
+                        // (eski/yetim id) firma alanları boş kalır, modal eski hâliyle çalışır.
+                        var firmaSonucu = await mediator.Send(
+                            new ECSPros.Core.Application.Queries.GetCargoCarriersByFirmIntegrations
+                                .GetCargoCarriersByFirmIntegrationsQuery([gonderi.FirmIntegrationId]), ct);
+                        var firma = firmaSonucu.IsSuccess
+                            ? firmaSonucu.Value!.GetValueOrDefault(gonderi.FirmIntegrationId)
+                            : null;
+
+                        var takipUrl = gonderi.TrackingUrl;
+                        if (string.IsNullOrWhiteSpace(takipUrl)
+                            && firma?.TrackingUrlTemplate is not null
+                            && !string.IsNullOrWhiteSpace(gonderi.TrackingNumber))
+                        {
+                            takipUrl = firma.TrackingUrlTemplate.Replace(
+                                "{trackingNumber}", Uri.EscapeDataString(gonderi.TrackingNumber));
+                        }
+
+                        var sonOlay = gonderi.Events.OrderByDescending(e => e.EventDate).FirstOrDefault();
                         kargo = new HesabimKargoVm(
                             gonderi.TrackingNumber,
-                            gonderi.TrackingUrl,
+                            takipUrl,
                             detay.Status == "delivered" ? "Paketiniz teslim edildi" : "Paketiniz yolda",
                             gonderi.EstimatedDeliveryDate?.ToString("d MMMM yyyy", tr),
                             gonderi.Events
@@ -155,7 +175,11 @@ public class HesabimController(
                                 .Select(e => (e.EventDescription,
                                     $"{e.EventDate.ToString("d MMMM yyyy · HH:mm", tr)}{(e.EventLocation is null ? "" : " · " + e.EventLocation)}",
                                     true))
-                                .ToList());
+                                .ToList(),
+                            firma?.Name,
+                            firma?.LogoUrl,
+                            sonOlay?.EventLocation ?? sonOlay?.EventDescription);
+                    }
                 }
 
                 siparisler.Add(new HesabimSiparisVm(

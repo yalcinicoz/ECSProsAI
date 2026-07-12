@@ -12,7 +12,9 @@ public record IntegrationServiceDto(
     string Code,
     Dictionary<string, string> NameI18n,
     string ServiceType,
-    bool IsAvailable
+    bool IsAvailable,
+    string? LogoUrl = null,             // H2 additive: kargo servislerinde logo
+    string? TrackingUrlTemplate = null  // H2 additive: {trackingNumber} yer tutuculu takip linki
 );
 
 public class GetIntegrationServicesQueryHandler : IRequestHandler<GetIntegrationServicesQuery, Result<List<IntegrationServiceDto>>>
@@ -29,7 +31,8 @@ public class GetIntegrationServicesQueryHandler : IRequestHandler<GetIntegration
 
         var list = await query
             .OrderBy(s => s.ServiceType).ThenBy(s => s.Code)
-            .Select(s => new IntegrationServiceDto(s.Id, s.Code, s.NameI18n, s.ServiceType, s.IsAvailable))
+            .Select(s => new IntegrationServiceDto(
+                s.Id, s.Code, s.NameI18n, s.ServiceType, s.IsAvailable, s.LogoUrl, s.TrackingUrlTemplate))
             .ToListAsync(ct);
 
         return Result.Success<List<IntegrationServiceDto>>(list);

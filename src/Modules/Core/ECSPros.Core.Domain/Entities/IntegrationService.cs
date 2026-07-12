@@ -10,5 +10,10 @@ public class IntegrationService : BaseEntity
     public bool IsAvailable { get; set; } = false;
     public Dictionary<string, object>? SettingsSchema { get; set; }
 
+    // H2: kargo servisleri için görsel kimlik + takip linki — firma sözleşmesine değil
+    // kargo firmasının kendisine ait (tüm firmalar için aynı); diğer tiplerde null.
+    public string? LogoUrl { get; set; }
+    public string? TrackingUrlTemplate { get; set; } // {trackingNumber} yer tutucusu
+
     public ICollection<FirmIntegration> FirmIntegrations { get; set; } = new List<FirmIntegration>();
 }

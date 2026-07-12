@@ -85,9 +85,10 @@ Views/Home/Index.cshtml
 # aynı kartı kullanır (tek kaynak). Markup misharix kart component'iyle birebir.
 Views/ProjeElementleri/Urun/_UrunKarti.cshtml
 
-# B3+G8+G9b: Duyuru şeridi — metinler vitrin announcement bloklarından (blok yoksa statik
-# yedek); sağ linkler Faz H (kargo takip) / Faz F (yardım) gelene kadar '#'. G9b: sağ link
-# alanına şehir çipi eklendi (segmentin çözdüğü konum; tıklayınca _SehirSecim modalı).
+# B3+G8+G9b+H2: Duyuru şeridi — metinler vitrin announcement bloklarından (blok yoksa statik
+# yedek). G9b: sağ link alanına şehir çipi (segmentin çözdüğü konum; _SehirSecim modalı).
+# H2: Kargo Takip bağlandı (üye → /Hesabim/Siparislerim, misafir → giriş modalı);
+# Yardım & Destek → /sik-sorulan-sorular (F2 rotası — F'nin '#' artığı burada kapandı).
 Views/ProjeElementleri/Navigasyon/_AnaNavigasyonDuyuru.cshtml
 
 # B4+D4: Giriş modalı — e-posta + SMS sekmeleri canlı (login + otp/send-verify; SMS
@@ -130,8 +131,10 @@ Views/ProjeElementleri/Sepet/_SepetAdresModali.cshtml
 # (msSiparisAsamasiGoster sarılır — 'onay' hedefi POST /api/store/checkout üzerinden geçer).
 Views/ProjeElementleri/Sepet/_SepetOdemeSayfasi.cshtml
 
-# C10: Sipariş tamamlandı — içerik msSiparisSonucu'ndan; kargo bilgisi Faz H'ye kadar gizli;
-# ürünler template'ten; sipariş no üyenin sipariş listesinden doğrulanır.
+# C10+H2: Sipariş tamamlandı — içerik msSiparisSonucu'ndan; ürünler template'ten; sipariş no
+# üyenin sipariş listesinden doğrulanır. H2: Kargo Bilgisi açıldı — firma adı platformun
+# aktif kargo anlaşmasından SSR (yoksa satır gizli), durum 'Hazırlanıyor', teslimat adresi
+# client-side; tahmini teslim/takip no satırları tasarımdan gizli (veri sipariş anında yok).
 Views/ProjeElementleri/Sepet/_SepetSiparisTamamlandiSayfasi.cshtml
 
 # C7: _SepetModallari dosya sonuna canlı TCKN script'i eklendi (markup bayt-aynı kaldı) —
@@ -173,7 +176,10 @@ Views/ProjeElementleri/Hesabim/_HesabimAdreslerim.cshtml
 # akış şeridi gizli (tasarımda iptal akışı yok); dosya sonunda detay modalı doldurma
 # script'i (gömülü JSON). H1: "Faturayı Görüntüle" PDF'li faturada görünür — href sunucuda
 # çözülmüş /hesabim/fatura/... proxy rotası (kaynaktaki /fatura/pdf?url= sarması kalktı,
-# entegratör URL'i istemciye inmez); gömülü JSON'a faturaAlicisi eklendi.
+# entegratör URL'i istemciye inmez); gömülü JSON'a faturaAlicisi eklendi. H2: kargo takip
+# modalı firma kimliğiyle — hero'da logo (varsa), özet tasarım üçlüsü Kargo Firması/Son
+# İşlem/Alıcı (firma çözülemeyende E4 üçlüsü korunur); takip linki TrackingUrl ?? firma
+# şablonu; JSON'a kargoFirma, detay modal kargo-bilgi metnine firma adı eklendi.
 Views/ProjeElementleri/Hesabim/_HesabimSiparislerim.cshtml
 
 # E4+H1: Sipariş detay modalı — demo içerik data-alan kancalarına çevrildi, ürün satırı

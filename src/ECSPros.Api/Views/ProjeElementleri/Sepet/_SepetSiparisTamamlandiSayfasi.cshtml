@@ -21,21 +21,24 @@
                     </div>
                 </section>
 
-                @if (false)
-                {
-                @* Faz H: kargo firması/takip bilgileri kargo entegrasyonuyla *@
+                @* H2 (2026-07-12): Kargo Bilgisi açıldı — firma adı platformun aktif kargo
+                   anlaşmasından SSR (anlaşma yoksa satır gizli); durum sipariş anında hep
+                   "Hazırlanıyor" (gönderi sonra oluşur, takibi Siparişlerim'de); teslimat
+                   adresi msSiparisSonucu'ndan client-side. Tahmini teslim/takip no satırları
+                   tasarımdan GİZLİ kaldı — o veriler sipariş anında yok (teslimat süresi
+                   konfigürasyonu ileri iş, plan H2 bilinçli sınırı). *@
+                @{ var msKargoFirmaAdi = ViewData["MsKargoFirmaAdi"] as string; }
                 <section class="ms-siparis-asama-kart">
                     <strong>Kargo Bilgisi</strong>
                     <div class="ms-siparis-onay-ozet">
-                        <p><span>Kargo Firması</span><strong>Misharix Express</strong></p>
+                        @if (!string.IsNullOrWhiteSpace(msKargoFirmaAdi))
+                        {
+                        <p><span>Kargo Firması</span><strong>@msKargoFirmaAdi</strong></p>
+                        }
                         <p><span>Kargo Durumu</span><strong>Hazırlanıyor</strong></p>
-                        <p><span>Tahmini Kargoya Teslim</span><strong>Bugün 18:00'e kadar</strong></p>
-                        <p><span>Tahmini Teslimat</span><strong>2-4 iş günü</strong></p>
-                        <p><span>Takip Numarası</span><strong>MX600967703</strong></p>
-                        <p><span>Teslimat Adresi</span><strong>Ev Adresim / İstanbul, Kadıköy</strong></p>
+                        <p hidden data-ms-onay-adres-satiri><span>Teslimat Adresi</span><strong data-ms-onay-adres></strong></p>
                     </div>
                 </section>
-                }
 
                 <section class="ms-siparis-asama-kart">
                     <strong>Alınan Ürünler</strong>
@@ -120,6 +123,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (kuponSatiri && sonuc.indirim > 0) {
         kuponSatiri.hidden = false;
         yaz("[data-ms-onay-kupon-indirim]", "-" + paraYaz(sonuc.indirim));
+    }
+
+    // H2: Kargo Bilgisi'ndeki teslimat adresi — checkout'un yazdığı özet (başlık / ilçe, il)
+    const adresSatiri = document.querySelector("[data-ms-onay-adres-satiri]");
+    if (adresSatiri && (sonuc.adresBaslik || sonuc.adresYer)) {
+        adresSatiri.hidden = false;
+        yaz("[data-ms-onay-adres]", [sonuc.adresBaslik, sonuc.adresYer].filter(Boolean).join(" / "));
     }
 
     const liste = document.querySelector("[data-ms-onay-urunler]");

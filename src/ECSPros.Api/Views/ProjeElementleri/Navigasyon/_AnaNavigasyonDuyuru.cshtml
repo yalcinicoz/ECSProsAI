@@ -41,12 +41,21 @@
         </div>
 
         <div class="ms-ana-duyuru-sag-linkler">
-            <a href="#">Kargo Takip</a>
-            <a href="#">Yardım &amp; Destek</a>
+            @{ var msSegment = ViewData["MsSegment"] as ECSPros.Api.Services.Store.VisitorSegment; }
+            @* H2: Kargo Takip — üye Siparişlerim'e (takip modalları orada), misafir giriş
+               modalına (B3'ten beri '#' bekliyordu). Yardım & Destek → kurumsal SSS (F2 rotası). *@
+            @if (msSegment?.IsMember == true)
+            {
+            <a href="/Hesabim/Siparislerim">Kargo Takip</a>
+            }
+            else
+            {
+            <a href="#" data-ms-giris-modal-ac role="button">Kargo Takip</a>
+            }
+            <a href="/sik-sorulan-sorular">Yardım &amp; Destek</a>
             @* G9b: şehir çipi — segmentin çözdüğü konumu gösterir, tıklayınca 81 il
                modalı (_SehirSecim) açılır. Konum zinciri: adres → profil → ms_sehir
                cookie'si; modal cookie'yi yazar. *@
-            @{ var msSegment = ViewData["MsSegment"] as ECSPros.Api.Services.Store.VisitorSegment; }
             <a href="#" data-ms-sehir-cip data-ms-sehir-kod="@(msSegment?.CityCode)"
                role="button" aria-haspopup="dialog" aria-label="Konum seç">
                 <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
