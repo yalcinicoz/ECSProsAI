@@ -37,7 +37,8 @@ public sealed record UrunDetayVm(
     string ParaBirimi,
     double Puan = 0,                          // E7: onaylı yorum ortalaması
     int PuanSayisi = 0,                       // E7: onaylı yorum sayısı
-    IReadOnlyList<YorumVm>? Yorumlar = null)  // E7: yayında ilk 10 yorum (SSR)
+    IReadOnlyList<YorumVm>? Yorumlar = null,  // E7: yayında ilk 10 yorum (SSR)
+    IReadOnlyList<UrunVideoVm>? Videolar = null) // H5: galeri video slaytları (efektif URL)
 {
     public int IndirimYuzdesi =>
         EskiFiyat is { } eski && Fiyat is { } yeni && eski > yeni
@@ -52,3 +53,5 @@ public sealed record UrunDetayVm(
 
 /// <summary>E7: detay sayfası değerlendirme satırı.</summary>
 public sealed record YorumVm(int Puan, string? Metin, string Ad, string TarihMetni);
+
+public sealed record UrunVideoVm(string Url, string? ThumbnailUrl); // H5

@@ -63,7 +63,8 @@
                 seciliRenk: p.selectedColorValueId || null,
                 sponsorlu: p.isFeatured === true,
                 puan: p.rating || 0,          // E7: onaylı yorum ortalaması
-                puanSayisi: p.reviewCount || 0
+                puanSayisi: p.reviewCount || 0,
+                videoUrl: p.videoUrl || null  // H5: Videolu Ürün rozeti
             };
         };
 
@@ -171,6 +172,24 @@
                         </span>
                     </span>`;
                 kart.querySelector(".ms-urun-gorsel-alani")?.after(alan);
+            }
+
+            // H5: Videolu Ürün rozeti — SSR kartlarındaki markup'ın birebir aynısı enjekte
+            // edilir (hover tooltip videosu site.js data-ms-urun-video davranışıyla).
+            if (v.videoUrl && !kart.querySelector("[data-ms-urun-video]")) {
+                const etiketAlani = document.createElement("span");
+                etiketAlani.className = "ms-urun-gorsel-etiketleri";
+                etiketAlani.innerHTML = `<span class="ms-urun-video-alani" data-ms-urun-video>
+                    <button class="ms-urun-video-rozeti" type="button" aria-expanded="false" aria-label="Videolu ürünü göster">
+                        <i class="fa-solid fa-play ms-fa-ikon ms-urun-video-ikon" aria-hidden="true"></i>
+                        Videolu Ürün
+                    </button>
+                    <span class="ms-urun-video-tooltip">
+                        <video class="ms-urun-video" src="${kacir(v.videoUrl)}" muted loop playsinline preload="none"></video>
+                    </span>
+                </span>`;
+                kart.querySelector(".ms-urun-gorsel-alani")?.prepend(etiketAlani);
+                window.msUrunVideoDavranisiHazirla?.(etiketAlani);
             }
 
             // B11: Sponsorlu rozeti — SSR markup'la birebir (öne çıkar penceresi içindekiler)

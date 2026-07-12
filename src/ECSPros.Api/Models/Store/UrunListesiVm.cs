@@ -22,7 +22,8 @@ public sealed record UrunKartVm(
     Guid? SeciliRenkId,                  // kategori kartlarında kartın rengi (detay linkine taşınır)
     bool Sponsorlu = false,              // B11: öne çıkar penceresi içinde — "Sponsorlu" rozeti
     double Puan = 0,                     // E7: onaylı yorum ortalaması (0 = yorum yok)
-    int PuanSayisi = 0)                  // E7: onaylı yorum sayısı
+    int PuanSayisi = 0,                  // E7: onaylı yorum sayısı
+    string? VideoUrl = null)             // H5: Videolu Ürün rozeti + hover tooltip videosu
 {
     public string Url => "/urun/" + Kod + (SeciliRenkId is { } renk ? "?color=" + renk : "");
 

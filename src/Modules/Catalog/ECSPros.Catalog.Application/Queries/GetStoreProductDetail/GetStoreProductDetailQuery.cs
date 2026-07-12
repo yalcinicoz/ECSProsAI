@@ -14,7 +14,10 @@ public record StoreProductDetailDto(
     List<StoreVariantDto> Variants,
     Dictionary<string, string>? DescriptionI18n = null,
     List<StoreProductAttributeDto>? Attributes = null,
-    Dictionary<string, string>? ProductGroupNameI18n = null);
+    Dictionary<string, string>? ProductGroupNameI18n = null,
+    List<StoreProductVideoDto>? Videos = null); // H5 additive: efektif URL'li aktif videolar
+
+public record StoreProductVideoDto(string VideoUrl, string? ThumbnailUrl); // H5
 
 public record StoreProductAttributeDto(
     string TypeCode,

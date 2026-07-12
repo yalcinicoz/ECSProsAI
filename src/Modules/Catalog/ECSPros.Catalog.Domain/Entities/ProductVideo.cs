@@ -13,6 +13,12 @@ public class ProductVideo : BaseEntity
     public Guid BatchId { get; set; }
     public DateTime? ArchivedAt { get; set; }
 
+    // H5 (K15): URL tabanlı video — kullanıcının video sunucusundaki ya da dış kaynaktaki
+    // adres. Doluysa efektif kaynak budur; FileName/FTP yükleme akışı olduğu gibi durur,
+    // iki yol bir arada yaşar (URL kayıtlarında FileName boş kalır).
+    public string? VideoUrl { get; set; }
+    public string? ThumbnailUrl { get; set; }
+
     public Product Product { get; set; } = null!;
     public ImageSet ImageSet { get; set; } = null!;
 }

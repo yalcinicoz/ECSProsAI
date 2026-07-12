@@ -198,7 +198,8 @@ public class UrunDetayController(IMediator mediator, IStoreContext storeContext,
             ParaBirimi: "TRY",
             Puan: puanIstatistik?.Average ?? 0,
             PuanSayisi: puanIstatistik?.Count ?? 0,
-            Yorumlar: yorumlarVm);
+            Yorumlar: yorumlarVm,
+            Videolar: urun.Videos?.Select(v => new UrunVideoVm(v.VideoUrl, v.ThumbnailUrl)).ToList());
 
         // E12: üyenin gezme kaydı (Önceden Gezdiklerim) — render'ı aksatmaz;
         // misafir gezmeleri detay script'indeki localStorage fallback'ine düşer.
