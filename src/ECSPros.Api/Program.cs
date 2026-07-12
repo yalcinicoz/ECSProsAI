@@ -162,6 +162,9 @@ builder.Services.AddScoped<ECSPros.Api.Services.Store.IVisitorSegmentResolver, E
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IPagePreviewService, ECSPros.Api.Services.Store.PagePreviewService>(); // G12: admin önizleme (taslak + kurgu segment)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IVitrinAuditLogger, ECSPros.Api.Services.Store.VitrinAuditLogger>(); // G13: vitrin değişiklik geçmişi (iam.audit_logs)
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IFaturaPdfProxy, ECSPros.Api.Services.Store.FaturaPdfProxy>(); // H1: entegratör fatura PDF proxy'si (allowlist config'ten)
+builder.Services.AddScoped<ECSPros.Api.Services.Store.IStoreLinkBuilder, ECSPros.Api.Services.Store.StoreLinkBuilder>(); // H8: e-postalardaki mutlak site linki (Store:Hosts tersinden)
+builder.Services.AddScoped<ECSPros.Api.Services.Store.ISavedSearchNotifier, ECSPros.Api.Services.Store.SavedSearchNotifier>(); // H8: favori arama bildirimi taraması
+builder.Services.AddHostedService<ECSPros.Api.Services.Store.SavedSearchNotifyWorker>(); // H8: periyodik tarama (günde-1 sınırı LastNotifiedAt'ta)
 builder.Services.AddHostedService<DashboardMetricsWorker>();
 builder.Services.AddSingleton<ECSPros.Api.Services.MigrationService>();
 

@@ -44,8 +44,14 @@ public static class DependencyInjection
             services.AddSingleton<ICacheService, NoOpCacheService>();
         }
 
-        // ─── Email / SMS (Stub — replace with real providers in production) ─
-        services.AddTransient<IEmailService, LogEmailService>();
+        // ─── Email / SMS ────────────────────────────────────────────────
+        // H8 (K12 kararı): e-posta gerçek kanal — Email:Smtp:Host yapılandırılmışsa SMTP,
+        // yoksa Log stub'ı (site e-postasız da çalışır; Redis kayıt deseniyle aynı güvenlik
+        // ağı). SMS için sağlayıcı kararı (K3) hâlâ açık — Log stub'ı kalır.
+        if (!string.IsNullOrWhiteSpace(configuration["Email:Smtp:Host"]))
+            services.AddTransient<IEmailService, SmtpEmailService>();
+        else
+            services.AddTransient<IEmailService, LogEmailService>();
         services.AddTransient<ISmsService, LogSmsService>();
 
         return services;

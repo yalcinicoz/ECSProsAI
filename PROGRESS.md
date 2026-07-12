@@ -294,6 +294,25 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-12 (devam) — H8 TAMAM → H-M2 KAPANDI (bildirimler):**
+  - **SmtpEmailService** (Shared) — `Email:Smtp:Host` config'liyse SMTP, yoksa Log stub
+    (⚠️ SMTP kimlik bilgileri KULLANICIDAN BEKLENİYOR — appsettings.Production'a girilince
+    gerçek gönderim kendiliğinden açılır, kod değişmez). Gönderim hatası akışları düşürmez.
+  - **Stok bildirimi (C9 devri):** yeni `StockIncreasedEvent` — AdjustStock(+)/
+    ReturnReceived/PosSaleRefunded yayınlar; `StockAlertNotifier` (Api) active alert →
+    e-posta → notified (idempotent; gönderilemeyen active kalır; e-postasız cancelled).
+  - **Favori arama bildirimi (E11 devri):** `LastNotifiedAt` migration CANLIDA;
+    `SavedSearchNotifier` + `SavedSearchNotifyWorker` (6 saatte bir; günde-1 sınırı) +
+    admin tetik POST /api/store-notifications/saved-search-scan; GetStoreProducts'a
+    additive `CreatedSince`. `IStoreLinkBuilder` (Store:Hosts tersinden mutlak link).
+  - **E2E h8 16/16 ✓ + c9/e11/e8 regresyon 58 adım ✓; drift TEMİZ; artık 0.**
+  - H5 notu: `catalog.product_videos` tablosu ZATEN VAR (H8 keşfi) — H5 veri modeli
+    kararında önce bu şema incelenmeli.
+  - **⚠️ DEPLOY BEKLİYOR — H-M1+H-M2 (H1+H2+H8) publish ALINDI (/opt/ECSProsAI/publish):**
+    restart sonrası her şey canlıda; iki migration da canlı DB'ye uygulandı. Bildirimler
+    SMTP config'i girilene dek log'a yazar (canlıda gerçek e-posta GİTMEZ — bilinçli).
+  - **SIRADAKİ: H-M3** (H4 mobil alt bar + H9 ürün değerlendirmeleri sayfası + H5 videolar).
+
 - **2026-07-12 (devam) — H2 TAMAM → H-M1 KAPANDI (fatura + kargo):**
   - **Kargo firması tanımı = IntegrationService (cargo)** — additive LogoUrl +
     TrackingUrlTemplate (migration canlıda); 8 firmalık katalog seed'i (aras/yurtici/mng/

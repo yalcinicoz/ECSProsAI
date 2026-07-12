@@ -1,5 +1,6 @@
 using ECSPros.Inventory.Application.Services;
 using ECSPros.Inventory.Domain.Entities;
+using ECSPros.Inventory.Domain.Events;
 using ECSPros.Pos.Domain.Events;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -9,10 +10,12 @@ namespace ECSPros.Inventory.Application.EventHandlers;
 public class PosSaleRefundedEventHandler : INotificationHandler<PosSaleRefundedEvent>
 {
     private readonly IInventoryDbContext _context;
+    private readonly IPublisher _publisher;
 
-    public PosSaleRefundedEventHandler(IInventoryDbContext context)
+    public PosSaleRefundedEventHandler(IInventoryDbContext context, IPublisher publisher)
     {
         _context = context;
+        _publisher = publisher;
     }
 
     public async Task Handle(PosSaleRefundedEvent notification, CancellationToken cancellationToken)
@@ -56,5 +59,11 @@ public class PosSaleRefundedEventHandler : INotificationHandler<PosSaleRefundedE
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        // H8: POS iadesi stok girişi de "stok gelince haber ver" kayıtlarını tetikler.
+        if (notification.Items.Count > 0)
+            await _publisher.Publish(
+                new StockIncreasedEvent(notification.Items.Select(i => i.VariantId).Distinct().ToList()),
+                cancellationToken);
     }
 }
