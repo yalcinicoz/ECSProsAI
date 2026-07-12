@@ -29,9 +29,9 @@
 | C | Sepet + Checkout | ✅ TAMAM (2026-07-09) — C1–C11 bitti: sepet, kupon, teslimat+adres+geo, ödeme (K2 mock), taksit, TCKN (K9), sözleşmeler CMS+kabul kaydı, stok haber ver, checkout uçtan uca; QA 88 adım yeşil. Ertelenenler hedef fazlı: favori E5, kupon listesi E9, adres düzenle E4, tahsilat/BIN H6, bildirim H |
 | D | Üye oturumu (Razor tarafı) + SMS/OTP altyapısı | ✅ TAMAM (2026-07-10) — D1–D7 bitti: HttpOnly cookie + SSR kimlik + logout/session iptali; kayıt belgeleri CMS + Member.Consents; SMS/OTP girişi canlı (crm.otp_codes + ISmsSender — gerçek sağlayıcı seçimi bekliyor); şifreler BCrypt + ilk girişte re-hash; QA 51 adım yeşil, d7-* görüntüleri alındı |
 | E | Hesabım kümesi (12 sayfa + yeni backend özellikleri) | ✅ TAMAM (2026-07-10) — E1–E14 bitti: çerçeve, üyelik, adres, sipariş, favori, koleksiyon, yorum, iade, kupon, tekrar satın al, favori arama, gezilenler, özet sayfası; QA 186 adım yeşil. Ertelenenler hedef fazlı: fatura PDF H1, kargo firması H2, statü bloğu/koleksiyon public/değerlendirme sayfası G-ileri |
-| F | Kurumsal sayfalar + Footer | ⬜ Başlamadı |
-| G | Vitrin & Kişiselleştirme Sistemi (G-M1: bloklar+yayınla · G-M2: kural motoru) | ⬜ Başlamadı |
-| H | Özel yetenekler (görsel arama, fatura PDF, kargo takip, mobil alt bar) | ⬜ Başlamadı |
+| F | Kurumsal sayfalar + Footer | ✅ TAMAM (2026-07-11) — F1–F5 bitti: 7 kurumsal route + corporate/faq CMS + contact_messages + footer/bülten; QA 36 adım + f5-* görüntüleri |
+| G | Vitrin & Kişiselleştirme Sistemi (G-M1: bloklar+yayınla · G-M2: kural motoru) | ✅ TAMAM (2026-07-11) — G1–G14 bitti (+G9c mobil şehir girişi 2026-07-12); envanter 8.8 tam; toplu regresyon 141+79 adım; canlıda |
+| H | Özel yetenekler (fatura PDF, kargo takip, bildirimler, görsel arama, alt bar, videolar + devredenler) | 🔵 PLANLANDI (2026-07-12) — H-M1..H-M5 dilimleri; H6 ödeme ertelendi (K2) |
 | İ | SPA emekliliği + son QA + kural devri | ⬜ Başlamadı |
 
 ---
@@ -252,16 +252,32 @@ src/ECSPros.Api/
 
 ---
 
-### FAZ H — Özel yetenekler
-- [ ] H1. **Fatura PDF modalı**: misharix `FaturaController` proxy'si ECSPros'a taşınır (host allowlist config'e); Order invoice → entegratör URL'i → modal iframe + indir + yeni sekme + fallback.
-- [ ] H2. **Kargo takip**: Fulfillment shipment verisinden takip modalı; kargo firması takip URL şablonları (FirmIntegration sözleşme alanlarıyla uyumlu).
-- [ ] H3. **Görsel arama**: `POST /gorsel-arama` benzeri endpoint — dış servis (`search.misharitalia.com`) API key config'ten; sonuçlar ECSPros katalog eşlemesiyle (barkod/modelCode üzerinden `erp_variant_data`); nav'daki kamera butonu + sonuç modalı (`_GorselAramaModal*`) port edilir. Servisin ECSPros kataloğuyla eğitim/kapsam durumu kullanıcıyla netleştirilir.
-- [ ] H4. **Mobil Alt Bar** (`_MobilAltBar`): mobilde sabit alt navigasyon; rota-duyarlı aktif durum.
-- [ ] H5. **Ürün videoları**: `product_videos` (veya ProductImage'a tip alanı) — videolu ürün rozetinin gerçek veriye bağlanması; video yoksa rozet render edilmez.
-- [ ] H6. Ödeme sağlayıcı gerçek entegrasyonu (C5/C6 kararına bağlı — sağlayıcı seçilince taksit/BIN, 3DS akışı).
-- [ ] H7. QA: Bölüm 8.9 envanteri.
+### FAZ H — Özel yetenekler + devreden işler
+> **Kapsam kararı (2026-07-12, kullanıcı):** H1–H7'ye ek olarak bildirim gönderimi (C9+E11 devri, H8), ürün değerlendirmeleri sayfası (E7 devri, H9) ve Faz G devredenleri (H10) DAHİL. **H6 ödeme entegrasyonu ERTELENDİ** (K2 — sağlayıcı seçilmedi; mock sürer). Bildirim kanalı: **yalnız e-posta (SMTP)** — SMS LogSmsService'te kalır (K3 sağlayıcı kararı hâlâ açık). Görsel arama servisi çalışıyor, API key kullanıcıda (K5) — indeks güncelliği H3 başında doğrulanır.
+> **Teslimat: beş milestone.** Sıra gerekçesi: H-M1 canlı siparişlerdeki en görünür eksikleri kapatır (fatura/kargo); H-M2 bekleyen bildirim borçlarını gerçek kanala bağlar; H-M3 saf UI portları; H-M4 dış servise bağımlı tek iş; H-M5 devredenler + kapanış QA.
 
-**Kabul kriterleri:** Fatura/kargo/görsel arama/alt bar canlı; video rozeti veriye bağlı.
+**H-M1 — Sipariş sonrası deneyim (fatura + kargo):**
+- [ ] H1. **Fatura PDF modalı**: misharix `FaturaController` (119 satır) ECSPros'a taşınır — **güvenlik iyileştirmesiyle**: misharix URL'i query'den alıyordu; burada `GET /api/store/orders/{orderId}/invoices/{invoiceId}/pdf?indir=` (MemberOnly, sipariş sahipliği doğrulanır) — entegratör URL'i server-side `Invoice.IntegratorInvoiceUrl`'den çözülür, client'a hiç sızmaz (API-first: mobil de kullanır). Host allowlist + `/earchive/` yol şartı config'e (`Store:InvoiceProxy:AllowedHosts`). `_HesabimFaturaPdfModal` port; E4/E8'deki `@if(false)` fatura/dekont butonları açılır (yalnız `IntegratorInvoiceUrl` dolu faturada görünür); iframe + indir + yeni sekme + fallback. Ön kontrol: canlıda IntegratorInvoiceUrl dolduran akış var mı — yoksa E2E test verisiyle + boş durumda buton gizli davranışı.
+- [ ] H2. **Kargo takip**: kargo firması tanımı (ad + logo + takip URL şablonu `{trackingNumber}` yer tutuculu) — FirmIntegration sözleşme alanlarıyla uyumlu (Terms jsonb / lookup; H2 başında mevcut FirmIntegration kayıtlarına bakılıp yer seçilir). E4 kargo takip modalı zenginleşir: firma adı/logo + "Kargo firmasında takip et" linki (`Shipment.TrackingUrl` ?? şablon+takip no). Duyuru barındaki "Kargo Takip" sağ linki bağlanır (üye → siparişlerim; misafir → giriş modalı). C10 onay sayfasının gizli kargo bölümü açılır (shipment henüz yokken "hazırlanıyor" durumu). B9 detaydaki teslimat bilgileri + 8.2 dönen teslimat/kargo mesajları: tahmini teslimat gün aralığı konfigürasyonundan (kargo firma tanımı/FirmPlatform settings) — veri girilmeyen platformda @if gizli kalır (bilinçli). C4 hızlı teslimat seçeneği: birden çok kargo seçeneği konfigürasyonu gelene dek statik Standart + @if gizli kalır (bilinçli sınır olarak kayda geçer).
+
+**H-M2 — Bildirimler (gerçek e-posta kanalı):**
+- [ ] H8. **SMTP e-posta + bildirim gönderimi** (C9+E11 devri): `SmtpEmailService` — `IEmailService`'in ilk gerçek implementasyonu (Shared.Infrastructure; config `Email:Smtp:*` yalnız appsettings.Production — gitignore'lu; Redis kuralları deseni: hata-güvenli, config yoksa LogEmailService'e düşer, gönderim hatası iş akışını düşürmez). **Stok bildirimi:** stok artışı yollarında (adjust girişi / iade teslim / POS iade — mevcut Inventory event handler noktaları) ilgili varyantın `active` stock_alerts kayıtları tüketilir → e-posta → `notified` + NotifiedAt (idempotent; kayıt zaten notified ise atlanır). **Favori arama bildirimi:** `NotifyEnabled` saved_searches için günlük HostedService job'ı — sorguya son 24 saatte eklenen yeni ürün düşmüşse e-posta; `saved_searches`'e `LastNotifiedAt` alanı (migration) — spam koruması günde en fazla 1. Basit markalı HTML şablonu (platform adı + ürün kartı linki). E2E: SMTP stub'ıyla (yerel smtp4dev/log doğrulaması) gönderim + durum geçişleri.
+
+**H-M3 — UI yetenekleri:**
+- [ ] H4. **Mobil Alt Bar** (`_MobilAltBar`, 50 satır): mobilde sabit alt navigasyon; rota-duyarlı aktif durum; mevcut mobil sabit elemanlarla (detay sepet barı) çakışma kontrolü.
+- [ ] H9. **Ürün Değerlendirmeleri sayfası** (E7 devri): 595 satırlık tasarım sayfası port — sekmeler, çoklu-seçim filtreler, liste+sayfalama, yorum formu, kriter modalı; backend reviews API E7'den hazır; route `/urun-degerlendirmeleri` (+ ürün detayından giriş linki).
+- [ ] H5. **Ürün videoları**: veri modeli kararı H5 başında netleşir (ayrı `product_videos` tablosu ↔ ProductImage'a MediaType; kaynak biçimi: dosya mı embed URL mi — **kullanıcıya sorulacak**). Admin ürün detayına yükleme/URL UI; videolu ürün rozeti gerçek veriye bağlanır (video yoksa rozet render edilmez); detayda oynatma.
+
+**H-M4 — Görsel arama:**
+- [ ] H3. **Görsel arama**: Ön adım — servis smoke testi: ECSPros katalog örnekleriyle isabet/indeks güncelliği doğrulaması (K5); API key kullanıcıdan alınıp güvenli config'e (`Store:VisualSearch:*`, appsettings.Production). `GorselAramaController` (278 satır) port — **legacy-MySQL zenginleştirmesi HARİÇ** (Bölüm 7): sonuçlar ECSPros kataloğundan `erp_variant_data` barkod/modelCode eşlemesiyle zenginleşir. Nav kamera butonu + `_GorselAramaModal*` (720 satır) port.
+
+**H-M5 — Devredenler + kapanış:**
+- [ ] H10. **Faz G devredenleri**: koleksiyon public sayfası (E6 ShareCode; vitrin collection kartındaki gizli Aç/Paylaş açılır) · vitrin kaynak filtreleri: stok/etiket/indirim bayrağı (G3 ertelenenleri) · son gezilenler/favoriler vitrin kaynakları (üye bağlamlı — cache üye bazında, segment hash yetmez; dikkat) · YanMenu statü bloğu (hesabım yan menü) · GeoLite2 IP halkası — **mmdb edinimi kullanıcı aksiyonu** (MaxMind lisansı); mmdb gelince VisitorSegmentResolver'daki yuva bağlanır, gelmezse bilinçli açık kalır.
+- [ ] H7. **QA**: Bölüm 8.9 envanteri + 8.2/8.4/8.5/8.6'daki H işaretli satırlar (teslimat mesajları, fatura/kargo, stok bildirimi) + faz kapanış toplu regresyonu (h-suite'ler + çekirdek) + drift + görüntüler.
+
+- [~] H6. ~~Ödeme sağlayıcı gerçek entegrasyonu~~ **ERTELENDİ (2026-07-12, K2):** sağlayıcı seçilmedi; ödeme K2 mock modunda sürer. Sağlayıcı seçilince ayrı iş olarak planlanır (taksit/BIN, 3DS).
+
+**Kabul kriterleri:** Fatura/kargo/alt bar/değerlendirme sayfası/görsel arama canlı; stok + favori arama bildirimleri gerçek e-postayla gidiyor; video rozeti veriye bağlı; G devredenleri kapandı (GeoLite2 mmdb edinilemezse bilinçli açık); ödeme mock (bilinçli, K2).
 
 ---
 
@@ -322,7 +338,13 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 - [x] **Faz G dilimleme:** İki milestone — G-M1 (bloklar+yayınla/snapshot/rollback) sonunda anasayfa canlıya çıkabilir; G-M2 kural motoru+segment+önizleme+audit.
 - [x] **Üye grubu segmenti:** İlk sürümde kural alanı olarak DAHİL (CRM MemberGroup).
 
-**Kalan açık noktalar:** ödeme sağlayıcısı adı (K2), SMS sağlayıcısı adı (K3), görsel arama indeks güncelliği (K5/H3), Instagram bloğunun içerik kaynağı (elle görsel mi, API mi — G2'de sorulacak).
+**Faz H planlama kararları (2026-07-12, kullanıcı):**
+- [x] K10. **H kapsamı:** H1–H7'ye ek bildirim gönderimi (H8) + ürün değerlendirmeleri sayfası (H9) + Faz G devredenleri (H10) dahil.
+- [x] K11. **Ödeme (K2 devamı):** H6 ERTELENDİ — sağlayıcı seçilmedi, mock sürer; seçilince ayrı iş.
+- [x] K12. **Bildirim kanalı (K3 devamı):** yalnız e-posta (SMTP) gerçek; SMS LogSmsService'te kalır — SMS sağlayıcısı adı hâlâ açık.
+- [x] K13. **Görsel arama (K5 devamı):** servis çalışıyor, API key kullanıcıda; indeks güncelliği H3 başında birlikte doğrulanır, key güvenli config'e.
+
+**Kalan açık noktalar:** ödeme sağlayıcısı adı (K2/H6 ertelendi), SMS sağlayıcısı adı (K3), Instagram bloğunun içerik kaynağı (elle görsel mi, API mi), ürün videosu veri modeli + kaynak biçimi (dosya mı embed URL mi — H5 başında sorulacak), GeoLite2 mmdb edinimi (H10 — kullanıcı aksiyonu).
 
 ---
 
