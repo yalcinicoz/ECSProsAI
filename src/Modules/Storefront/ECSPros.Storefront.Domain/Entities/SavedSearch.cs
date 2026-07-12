@@ -6,8 +6,8 @@ namespace ECSPros.Storefront.Domain.Entities;
 /// E11: üyenin kayıtlı araması (Favori Aramalarım). Query arama metnidir
 /// (/urunler?search=... ile çalıştırılır); Filters sorgu dışı filtre parametreleri
 /// için ayrılmıştır (plan şartı — liste sayfası filtre entegrasyonu ileri iş,
-/// bugünkü UI yalnız metin kaydeder). Bildirim gönderimi Faz H'de (StockAlert gibi);
-/// NotifyEnabled o güne dek yalnız kartta "Bildirim Açık" rozetini belirler.
+/// bugünkü UI yalnız metin kaydeder). H8: NotifyEnabled kayıtlara günlük job
+/// (SavedSearchNotifier) sorguya uyan YENİ ürün düştüğünde e-posta atar.
 /// </summary>
 public class SavedSearch : BaseEntity
 {
@@ -18,4 +18,6 @@ public class SavedSearch : BaseEntity
     public string Query { get; set; } = string.Empty;
     public Dictionary<string, string>? Filters { get; set; }
     public bool NotifyEnabled { get; set; }
+    /// <summary>H8: son bildirim zamanı — spam koruması (günde en fazla 1) + yeni-ürün penceresi başlangıcı.</summary>
+    public DateTime? LastNotifiedAt { get; set; }
 }

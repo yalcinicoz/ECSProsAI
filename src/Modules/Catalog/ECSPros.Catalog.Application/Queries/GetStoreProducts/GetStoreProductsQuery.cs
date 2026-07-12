@@ -37,7 +37,8 @@ public record GetStoreProductsQuery(
     decimal? PriceMax = null,
     string? Sort = null,
     List<string>? ProductCodes = null,   // E5: Favorilerim — kod listesiyle kart verisi
-    List<Guid>? ProductIds = null) : IRequest<Result<PagedResult<StoreProductDto>>>; // G3: kampanya kaynağı — id listesiyle kart verisi
+    List<Guid>? ProductIds = null,       // G3: kampanya kaynağı — id listesiyle kart verisi
+    DateTime? CreatedSince = null) : IRequest<Result<PagedResult<StoreProductDto>>>; // H8: favori arama bildirimi — yalnız bu tarihten sonra eklenen ürünler (G3'ün ertelenen 'days' filtresi)
 
 public record StoreProductDto(
     Guid Id,
@@ -90,6 +91,9 @@ public class GetStoreProductsQueryHandler(
             q = q.Where(p => p.Code.ToLower().Contains(search)
                           || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(search));
         }
+
+        if (request.CreatedSince.HasValue)
+            q = q.Where(p => p.CreatedAt >= request.CreatedSince.Value);
 
         // B10: özellik filtresi — seçili değerler tipine göre gruplanır; grup içi OR
         // (herhangi bir aktif varyantta değer), gruplar arası AND (ürün seviyesinde).

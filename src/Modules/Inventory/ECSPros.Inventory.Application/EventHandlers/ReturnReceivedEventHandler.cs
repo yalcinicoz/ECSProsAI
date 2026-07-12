@@ -1,5 +1,6 @@
 using ECSPros.Inventory.Application.Services;
 using ECSPros.Inventory.Domain.Entities;
+using ECSPros.Inventory.Domain.Events;
 using ECSPros.Order.Domain.Events;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -9,10 +10,12 @@ namespace ECSPros.Inventory.Application.EventHandlers;
 public class ReturnReceivedEventHandler : INotificationHandler<ReturnReceivedEvent>
 {
     private readonly IInventoryDbContext _context;
+    private readonly IPublisher _publisher;
 
-    public ReturnReceivedEventHandler(IInventoryDbContext context)
+    public ReturnReceivedEventHandler(IInventoryDbContext context, IPublisher publisher)
     {
         _context = context;
+        _publisher = publisher;
     }
 
     public async Task Handle(ReturnReceivedEvent notification, CancellationToken cancellationToken)
@@ -52,5 +55,11 @@ public class ReturnReceivedEventHandler : INotificationHandler<ReturnReceivedEve
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        // H8: iade stok girişi de "stok gelince haber ver" kayıtlarını tetikler.
+        if (notification.Items.Count > 0)
+            await _publisher.Publish(
+                new StockIncreasedEvent(notification.Items.Select(i => i.VariantId).Distinct().ToList()),
+                cancellationToken);
     }
 }

@@ -1,5 +1,6 @@
 using ECSPros.Inventory.Application.Services;
 using ECSPros.Inventory.Domain.Entities;
+using ECSPros.Inventory.Domain.Events;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -9,10 +10,12 @@ namespace ECSPros.Inventory.Application.Commands.AdjustStock;
 public class AdjustStockCommandHandler : IRequestHandler<AdjustStockCommand, Result<Guid>>
 {
     private readonly IInventoryDbContext _context;
+    private readonly IPublisher _publisher;
 
-    public AdjustStockCommandHandler(IInventoryDbContext context)
+    public AdjustStockCommandHandler(IInventoryDbContext context, IPublisher publisher)
     {
         _context = context;
+        _publisher = publisher;
     }
 
     public async Task<Result<Guid>> Handle(AdjustStockCommand request, CancellationToken cancellationToken)
@@ -56,6 +59,11 @@ public class AdjustStockCommandHandler : IRequestHandler<AdjustStockCommand, Res
 
         _context.StockMovements.Add(movement);
         await _context.SaveChangesAsync(cancellationToken);
+
+        // H8: stok girişi — "stok gelince haber ver" tüketicisi dinler (kayıttan sonra).
+        if (request.QuantityDelta > 0)
+            await _publisher.Publish(new StockIncreasedEvent([request.VariantId]), cancellationToken);
+
         return Result.Success(movement.Id);
     }
 }
