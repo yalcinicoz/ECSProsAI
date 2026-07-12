@@ -1,0 +1,57 @@
+@* H4: mobil sabit alt navigasyon — izinli yeni dosya. Kaynağı tasarım kataloğundaki
+   "Mobil Alt Bar" elementinin nav bloğu (ProjeElementleri/_MobilAltBar.cshtml katalog
+   önizleme paneli olarak bayt-aynı durur; panel/telefon-çerçevesi kabuğu canlıya
+   taşınmaz). CSS .ms-mobil-alt-bar zaten fixed bottom + yalnız <1024px'te grid.
+   Aktif durum rota-duyarlı SSR. ÜRÜN DETAYI ve SEPET AKIŞI sayfalarında render edilmez —
+   o sayfaların kendi sabit aksiyon barları var (ms-urun-detay/ms-sepet-mobil-sabit-aksiyon,
+   z-90; alt bar z-120 üstlerine binerdi — H4 bilinçli kararı). Favorilerim/Hesabım
+   misafirde giriş modalını açar (duyuru barı Kargo Takip deseni; include _AnaNavigasyon'dan
+   ÖNCE olmalı — modal-aç dinleyicileri parse anında bağlanır). Kategoriler tasarımın
+   /urun-listesi'si yerine canlı liste rotasına (/urunler) gider. *@
+@{
+    var msAltBarYol = (Context.Request.Path.Value ?? "/").ToLowerInvariant();
+    var msAltBarGizli = msAltBarYol.StartsWith("/urun/")
+        || msAltBarYol is "/sepet" or "/teslimat" or "/odeme" or "/siparis-tamamlandi";
+    var msAltBarSegment = ViewData["MsSegment"] as ECSPros.Api.Services.Store.VisitorSegment;
+    var msAltBarUye = msAltBarSegment?.IsMember == true;
+    var msAnaAktif = msAltBarYol is "/" or "/home" or "/home/index";
+    var msKatAktif = msAltBarYol.StartsWith("/urunler") || msAltBarYol.StartsWith("/kategori");
+    var msFavAktif = msAltBarYol.Contains("favorilerim");
+    var msHesapAktif = !msFavAktif && (msAltBarYol.StartsWith("/hesabim") || msAltBarYol.StartsWith("/siparislerim")
+        || msAltBarYol.StartsWith("/iadelerim") || msAltBarYol.StartsWith("/uyelik-bilgilerim"));
+}
+@if (!msAltBarGizli)
+{
+<nav class="ms-mobil-alt-bar" aria-label="Mobil alt navigasyon">
+    <a class="ms-mobil-alt-bar-link@(msAnaAktif ? " ms-mobil-alt-bar-link-aktif" : "")" href="/"@(msAnaAktif ? Html.Raw(" aria-current=\"page\"") : null)>
+        <span class="ms-mobil-alt-bar-ikon ms-mobil-alt-bar-ikon-ana" aria-hidden="true"></span>
+        <span>Ana Sayfa</span>
+    </a>
+    <a class="ms-mobil-alt-bar-link@(msKatAktif ? " ms-mobil-alt-bar-link-aktif" : "")" href="/urunler"@(msKatAktif ? Html.Raw(" aria-current=\"page\"") : null)>
+        <span class="ms-mobil-alt-bar-ikon ms-mobil-alt-bar-ikon-kategoriler" aria-hidden="true"></span>
+        <span>Kategoriler</span>
+    </a>
+    @if (msAltBarUye)
+    {
+    <a class="ms-mobil-alt-bar-link@(msFavAktif ? " ms-mobil-alt-bar-link-aktif" : "")" href="/Favorilerim"@(msFavAktif ? Html.Raw(" aria-current=\"page\"") : null)>
+        <span class="ms-mobil-alt-bar-ikon ms-mobil-alt-bar-ikon-mask ms-mobil-alt-bar-ikon-favori" aria-hidden="true"></span>
+        <span>Favorilerim</span>
+    </a>
+    <a class="ms-mobil-alt-bar-link@(msHesapAktif ? " ms-mobil-alt-bar-link-aktif" : "")" href="/Hesabim"@(msHesapAktif ? Html.Raw(" aria-current=\"page\"") : null)>
+        <span class="ms-mobil-alt-bar-ikon ms-mobil-alt-bar-ikon-mask ms-mobil-alt-bar-ikon-hesap" aria-hidden="true"></span>
+        <span>Hesabım</span>
+    </a>
+    }
+    else
+    {
+    <a class="ms-mobil-alt-bar-link" href="#" role="button" data-ms-giris-modal-ac>
+        <span class="ms-mobil-alt-bar-ikon ms-mobil-alt-bar-ikon-mask ms-mobil-alt-bar-ikon-favori" aria-hidden="true"></span>
+        <span>Favorilerim</span>
+    </a>
+    <a class="ms-mobil-alt-bar-link" href="#" role="button" data-ms-giris-modal-ac>
+        <span class="ms-mobil-alt-bar-ikon ms-mobil-alt-bar-ikon-mask ms-mobil-alt-bar-ikon-hesap" aria-hidden="true"></span>
+        <span>Hesabım</span>
+    </a>
+    }
+</nav>
+}

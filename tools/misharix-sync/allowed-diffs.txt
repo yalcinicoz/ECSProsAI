@@ -1,8 +1,9 @@
 # Bilinçli farklar — her satır check.sh'ın kullandığı görünen addır.
 # Yeni satır eklerken gerekçeyi yorum olarak yaz.
 
-# A12+E5+G9b: _MsTemaTokenlari include (head) + _FavoriDavranis include (E5, site.js
-# sonrası tek satır) + _SehirSecim include (G9b, aynı yerde tek satır)
+# A12+E5+G9b+H4: _MsTemaTokenlari include (head) + _FavoriDavranis include (E5, site.js
+# sonrası tek satır) + _SehirSecim include (G9b, aynı yerde tek satır) + _MobilAltBarNav
+# include (H4 — _AnaNavigasyon'dan ÖNCE: giriş-modalı dinleyicileri parse anında bağlanır)
 Views/Shared/_Layout.cshtml
 
 # B1: Mega menü statik örnek içeriği kanal kategorilerine bağlandı (markup sınıfları/yapısı
@@ -292,3 +293,10 @@ Views/Shared/Store/_VitrinBloklar.cshtml
 # hesabını lokal yapar (dış servis yok, izin yalnız butonla). Seçim ms_sehir cookie + reload.
 # Duyuru barı tasarımda mobilde tamamen gizli — çip yalnız masaüstünde (mobil girişi ayrı karar).
 Views/Shared/Store/_SehirSecim.cshtml
+
+# H4: Mobil alt bar canlı nav'ı — kaynağı katalogdaki "Mobil Alt Bar" elementinin nav bloğu
+# (ProjeElementleri/_MobilAltBar.cshtml katalog paneli olarak bayt-aynı durur; kabuk taşınmadı).
+# Rota-duyarlı aktif durum SSR; detay + sepet akışı sayfalarında render edilmez (kendi sabit
+# aksiyon barları z-90 — çakışma H4 bilinçli kararı); misafirde Favorilerim/Hesabım giriş
+# modalını açar; Kategoriler canlı /urunler rotasına.
+Views/Shared/Store/_MobilAltBarNav.cshtml
