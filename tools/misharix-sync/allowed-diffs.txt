@@ -300,3 +300,15 @@ Views/Shared/Store/_SehirSecim.cshtml
 # aksiyon barları z-90 — çakışma H4 bilinçli kararı); misafirde Favorilerim/Hesabım giriş
 # modalını açar; Kategoriler canlı /urunler rotasına.
 Views/Shared/Store/_MobilAltBarNav.cshtml
+
+# H9 (K14 çekirdek port): Değerlendirmeler sayfası ürün bazlı gerçek veriye bağlandı —
+# sol ürün özeti kart verisinden (beden/sepet aksiyonları detayın işi — gizli), puan
+# filtresi gerçek dağılım adetleriyle, başlık istatistiği SSR, yorumlar canlı API'den
+# infinite (demo dizi kaldırıldı); verisiz bloklar gizli: AI özeti, fotoğraflı yorumlar,
+# konu/beden filtreleri, favori sayısı, teslimat/Plus satırları, üyeye özel durum
+# sekmeleri + yorum formu (Hesabım→Yorumlarım E7'de). Kriter modalındaki Trendyol'a özgü
+# demo metin markasız uyarlandı (görsel kuralları çıkarıldı — yorum görseli yok).
+Views/ProjeElementleri/UrunDegerlendirmeleri/_UrunDegerlendirmeleriSayfasi.cshtml
+
+# H9: sayfa wrapper'ı — Title'ı controller atar (ürün adıyla); partial include aynı.
+Views/UrunDegerlendirmeleri/Index.cshtml
