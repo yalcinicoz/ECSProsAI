@@ -62,7 +62,10 @@
                             <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-@iade.DurumSinifi">@iade.DurumMetni</span>
                             @if (false)
                             {
-                            @* Dekont/iade belgesi H1'de (e-fatura entegrasyonu) — link o güne dek gizli. *@
+                            @* H1 kararı (2026-07-12): dekont GİZLİ KALDI — iade dekontu üreten
+                               entegratör akışı/alanı yok (Invoice.IntegratorInvoiceUrl sipariş
+                               faturasıdır; "Dekontu Gör" etiketiyle fatura açmak yanıltıcı olur).
+                               İade belgesi akışı gelince bağlanır. *@
                             <a class="ms-buton ms-buton-s ms-buton-sade" href="#" target="_blank" rel="noopener" data-ms-fatura-modal-ac>Dekontu Gör</a>
                             }
                             <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-iade-kart-toggle aria-expanded="false">Aç</button>

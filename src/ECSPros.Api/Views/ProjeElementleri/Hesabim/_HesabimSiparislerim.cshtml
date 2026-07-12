@@ -83,10 +83,10 @@
                         </div>
                         <div class="ms-hesabim-siparis-ust-aksiyonlar">
                             <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-@s.DurumSinifi">@s.DurumMetni</span>
-                            @if (false)
+                            @if (s.FaturaPdfUrl is not null)
                             {
-                            @* Fatura PDF'i H1'de (e-fatura entegrasyonu) — link o güne dek gizli. *@
-                            <a class="ms-buton ms-buton-s ms-buton-sade" href="#" target="_blank" rel="noopener" data-ms-fatura-modal-ac>Faturayı Görüntüle</a>
+                            @* H1: href sunucuda sahipliği doğrulanmış proxy rotası — entegratör URL'i sızmaz. *@
+                            <a class="ms-buton ms-buton-s ms-buton-sade" href="@s.FaturaPdfUrl" target="_blank" rel="noopener" data-ms-fatura-modal-ac>Faturayı Görüntüle</a>
                             }
                             <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-siparis-kart-toggle aria-expanded="false">Aç</button>
                         </div>
@@ -929,9 +929,10 @@
                 event.preventDefault();
 
                 const modal = document.querySelector("[data-ms-fatura-modal]");
-                const faturaUrl = baglanti.href;
-                const pdfUrl = `/fatura/pdf?url=${encodeURIComponent(faturaUrl)}`;
-                const indirmeUrl = `${pdfUrl}&indir=true`;
+                // H1: href zaten sunucu tarafında çözülmüş proxy rotası — kaynaktaki
+                // /fatura/pdf?url= sarması gereksizleşti (URL istemciye inmiyor).
+                const pdfUrl = baglanti.getAttribute("href");
+                const indirmeUrl = `${pdfUrl}?indir=true`;
                 const fallback = modal?.querySelector("[data-ms-fatura-pdf-fallback]");
                 const iframe = modal?.querySelector("[data-ms-fatura-pdf-frame]");
 
@@ -1003,6 +1004,7 @@ document.addEventListener("DOMContentLoaded", () => {
         genelToplam = s.ToplamTutar,
         teslimatAdi = s.TeslimatAdi,
         teslimatAdresi = s.TeslimatAdresi,
+        faturaAlicisi = s.FaturaAlicisi,
         kargoTakipNo = s.Kargo == null ? null : s.Kargo.TakipNo,
         kargoDurum = s.Kargo == null ? null : s.Kargo.DurumMetni,
         urunler = s.Urunler.Select(u => new { ad = u.Ad, secenek = u.SecenekOzeti, adet = u.Adet, fiyat = u.Fiyat, gorsel = u.GorselUrl })
@@ -1025,6 +1027,9 @@ document.addEventListener("DOMContentLoaded", () => {
             alan("odeme").textContent = s.odeme;
             alan("kargo").textContent = s.kargoTakipNo ? "Takip No: " + s.kargoTakipNo : "—";
             alan("teslimat").textContent = `${s.teslimatAdi} — ${s.teslimatAdresi}`;
+            alan("fatura-bilgi").textContent = s.faturaAlicisi
+                ? `${s.faturaAlicisi} — E-arşiv fatura oluşturuldu.`
+                : "Fatura oluşturulduğunda burada görünür.";
             alan("kargo-bilgi").textContent = s.kargoDurum
                 ? `${s.kargoDurum}${s.kargoTakipNo ? " · Takip No: " + s.kargoTakipNo : ""}`
                 : "Kargoya verildiğinde takip bilgisi burada görünür.";

@@ -19,7 +19,9 @@ public record HesabimSiparisVm(
     List<HesabimSiparisUrunVm> Urunler,
     HesabimKargoVm? Kargo,
     string TeslimatAdi,
-    string TeslimatAdresi);
+    string TeslimatAdresi,
+    string? FaturaPdfUrl = null,   // H1: /hesabim/fatura/{orderId}/{invoiceId}/pdf — yalnız PDF'li faturada dolu
+    string? FaturaAlicisi = null); // H1: detay modalı "Fatura Bilgileri" metni (RecipientName)
 
 public record HesabimSiparisUrunVm(
     string Ad,

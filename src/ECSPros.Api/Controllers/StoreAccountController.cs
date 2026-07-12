@@ -137,6 +137,53 @@ public class StoreAccountController(IMediator mediator, IConfiguration configura
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>H1: Siparişin faturaları — entegratör URL'i sızmaz, yalnız hasIntegratorPdf
+    /// bayrağı döner (PDF aşağıdaki proxy'den alınır; mobil app aynı endpoint'leri kullanır).</summary>
+    [HttpGet("orders/{orderId}/invoices")]
+    public async Task<IActionResult> GetOrderInvoices(Guid orderId, CancellationToken ct)
+    {
+        var siparis = await mediator.Send(new GetOrderDetailQuery(orderId), ct);
+        if (siparis.IsFailure || siparis.Value!.MemberId != GetMemberId())
+            return NotFound(new { success = false, error = "Sipariş bulunamadı." });
+
+        var result = await mediator.Send(
+            new ECSPros.Order.Application.Queries.GetInvoices.GetInvoicesQuery(orderId, null, 1, 20), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+
+        return Ok(new
+        {
+            success = true,
+            data = result.Value!.Items
+                .Where(i => i.Status != "cancelled")
+                .Select(i => new { i.Id, i.InvoiceNumber, i.InvoiceType, i.InvoiceDate, i.HasIntegratorPdf })
+        });
+    }
+
+    /// <summary>H1: Fatura PDF proxy — sahiplik + URL çözümü sunucu tarafında
+    /// (GetMemberInvoicePdfSource), allowlist denetimi FaturaPdfProxy'de. Bearer'lı
+    /// istemciler (mobil) için; web iframe'i cookie kimlikli /hesabim/fatura rotasını kullanır.</summary>
+    [HttpGet("orders/{orderId}/invoices/{invoiceId}/pdf")]
+    public async Task<IActionResult> GetOrderInvoicePdf(
+        Guid orderId, Guid invoiceId, [FromQuery] bool indir,
+        [FromServices] Services.Store.IFaturaPdfProxy faturaPdfProxy, CancellationToken ct)
+    {
+        var kaynak = await mediator.Send(
+            new ECSPros.Order.Application.Queries.GetMemberInvoicePdfSource.GetMemberInvoicePdfSourceQuery(
+                invoiceId, orderId, GetMemberId()), ct);
+        if (kaynak.IsFailure) return NotFound(new { success = false, error = kaynak.Error });
+
+        var sonuc = await faturaPdfProxy.GetirAsync(kaynak.Value!, ct);
+        if (!sonuc.Basarili)
+            return StatusCode(sonuc.HataKodu, new { success = false, error = sonuc.HataMesaji });
+
+        Response.Headers.CacheControl = "no-store";
+        Response.Headers.Pragma = "no-cache";
+        Response.Headers.ContentDisposition = indir
+            ? "attachment; filename=\"fatura.pdf\""
+            : "inline; filename=\"fatura.pdf\"";
+        return File(sonuc.Pdf!, "application/pdf", enableRangeProcessing: true);
+    }
+
     // Returns
     [HttpGet("returns")]
     public async Task<IActionResult> GetReturns([FromQuery] string? status, [FromQuery] int page = 1, CancellationToken ct = default)
