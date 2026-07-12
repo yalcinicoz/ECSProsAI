@@ -9,8 +9,9 @@ Views/Shared/_Layout.cshtml
 # birebir korundu; kampanya şeridi statik — Faz G). Kaynak: ViewData["MsNavigasyon"].
 Views/ProjeElementleri/Navigasyon/_AnaNavigasyonDesktopMenu.cshtml
 
-# B1: Mobil menü ana sekme/yan sekme/panel'leri kanal kategorilerine bağlandı
-# (kampanya bölümü + alt nav statik — Faz G).
+# B1+G9c: Mobil menü ana sekme/yan sekme/panel'leri kanal kategorilerine bağlandı
+# (kampanya bölümü statik). G9c: alt nav'a 'Konum Seç' satırı (kullanıcı kararı —
+# masaüstü şehir çipinin mobil girişi; aynı _SehirSecim modalını açar).
 Views/ProjeElementleri/Navigasyon/_AnaNavigasyonMobilMenu.cshtml
 
 # B1: Ana sayfadaki mobil kategori kaydırma şeridi kanal kategorilerine bağlandı

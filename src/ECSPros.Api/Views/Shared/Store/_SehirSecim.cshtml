@@ -6,9 +6,9 @@
    açılışında izin pop-up'ı yok. Üyede adres/profil şehri cookie'den önceliklidir
    (G9a konum zinciri) — modal açıklaması bunu söyler. *@
 @* NOT: tasarımda duyuru barının TAMAMI mobilde display:none — çip bu yüzden yalnız
-   masaüstünde görünür. Mobil için manuel şehir seçimi girişi (ör. mobil menü paneli)
-   ayrı bir karar/iş — G14 QA'da değerlendirilecek; konum zinciri (adres/profil) mobilde
-   de çalışır, yalnız manuel seçim girişi yoktur. *@
+   masaüstünde görünür. G9c (kullanıcı kararı 2026-07-11): mobil giriş, mobil menü alt
+   nav'ındaki 'Konum Seç' satırıdır (_AnaNavigasyonMobilMenu, aynı data-ms-sehir-cip) —
+   script tüm çipleri querySelectorAll ile bağlar. *@
 <style>
     .ms-sehir-modal-arac { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 10px; }
     .ms-sehir-modal-arac input {
