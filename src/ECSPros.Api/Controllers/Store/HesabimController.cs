@@ -1,5 +1,6 @@
 using ECSPros.Api.Models.Store;
 using ECSPros.Api.Services;
+using ECSPros.Api.Services.Store;
 using ECSPros.Order.Application.Queries.GetOrderDetail;
 using ECSPros.Order.Application.Queries.GetOrders;
 using ECSPros.Order.Application.Queries.GetOrderShipments;
@@ -130,6 +131,14 @@ public class HesabimController(
                     _                        => (detay.Status, "alindi", "devam", 1)
                 };
 
+                // H1: entegratör PDF'li en güncel fatura — buton yalnız o zaman görünür
+                // (canlıda fatura kaydı olmayan siparişte hiçbir şey değişmez).
+                var faturaSonucu = await mediator.Send(
+                    new ECSPros.Order.Application.Queries.GetInvoices.GetInvoicesQuery(detay.Id), ct);
+                var fatura = faturaSonucu.IsSuccess
+                    ? faturaSonucu.Value!.Items.FirstOrDefault(f => f.Status != "cancelled" && f.HasIntegratorPdf)
+                    : null;
+
                 HesabimKargoVm? kargo = null;
                 if (detay.Status is "shipped" or "delivered")
                 {
@@ -177,7 +186,9 @@ public class HesabimController(
                     }).ToList(),
                     kargo,
                     detay.ShippingRecipientName,
-                    detay.ShippingAddressLine));
+                    detay.ShippingAddressLine,
+                    fatura is null ? null : $"/hesabim/fatura/{detay.Id}/{fatura.Id}/pdf",
+                    fatura?.RecipientName));
             }
         }
 
@@ -718,6 +729,31 @@ public class HesabimController(
         ViewData["MsAramalar"] = aramalar;
         ViewData["MsAramaPlatformId"] = platform?.Id;
         return HesabimSayfasi("Favori Aramalarım", "~/Views/ProjeElementleri/Hesabim/_HesabimFavoriAramalarim.cshtml");
+    }
+
+    /// <summary>H1: Fatura PDF — iframe/indir/yeni sekme linkleri Authorization header
+    /// taşıyamadığından kimlik D1 cookie'sinden (sınıf guard'ı). Sahiplik + entegratör
+    /// URL çözümü sunucu tarafında; URL istemciye hiç inmez. Mobil app'in bearer'lı
+    /// karşılığı: GET /api/store/account/orders/{orderId}/invoices/{invoiceId}/pdf.</summary>
+    [HttpGet("/hesabim/fatura/{orderId:guid}/{invoiceId:guid}/pdf")]
+    public async Task<IActionResult> FaturaPdf(
+        Guid orderId, Guid invoiceId, bool indir,
+        [FromServices] IFaturaPdfProxy faturaPdfProxy, CancellationToken ct)
+    {
+        var kaynak = await mediator.Send(
+            new ECSPros.Order.Application.Queries.GetMemberInvoicePdfSource.GetMemberInvoicePdfSourceQuery(
+                invoiceId, orderId, _memberId), ct);
+        if (kaynak.IsFailure) return NotFound();
+
+        var sonuc = await faturaPdfProxy.GetirAsync(kaynak.Value!, ct);
+        if (!sonuc.Basarili) return StatusCode(sonuc.HataKodu, sonuc.HataMesaji);
+
+        Response.Headers.CacheControl = "no-store";
+        Response.Headers.Pragma = "no-cache";
+        Response.Headers.ContentDisposition = indir
+            ? "attachment; filename=\"fatura.pdf\""
+            : "inline; filename=\"fatura.pdf\"";
+        return File(sonuc.Pdf!, "application/pdf", enableRangeProcessing: true);
     }
 
     private IActionResult HesabimSayfasi(string baslik, string partial)

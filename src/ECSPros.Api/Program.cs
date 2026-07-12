@@ -161,6 +161,7 @@ builder.Services.AddScoped<ECSPros.Api.Services.Store.IVitrinVmBuilder, ECSPros.
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IVisitorSegmentResolver, ECSPros.Api.Services.Store.VisitorSegmentResolver>(); // G9: ziyaretçi segmenti (kural motoru + segment cache girdisi)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IPagePreviewService, ECSPros.Api.Services.Store.PagePreviewService>(); // G12: admin önizleme (taslak + kurgu segment)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IVitrinAuditLogger, ECSPros.Api.Services.Store.VitrinAuditLogger>(); // G13: vitrin değişiklik geçmişi (iam.audit_logs)
+builder.Services.AddSingleton<ECSPros.Api.Services.Store.IFaturaPdfProxy, ECSPros.Api.Services.Store.FaturaPdfProxy>(); // H1: entegratör fatura PDF proxy'si (allowlist config'ten)
 builder.Services.AddHostedService<DashboardMetricsWorker>();
 builder.Services.AddSingleton<ECSPros.Api.Services.MigrationService>();
 

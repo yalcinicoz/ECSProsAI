@@ -19,4 +19,5 @@ public record InvoiceListDto(
     decimal GrandTotal,
     string Status,
     string IntegratorStatus,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    bool HasIntegratorPdf = false); // H1 additive: entegratör PDF'i var mı (URL sızmaz)

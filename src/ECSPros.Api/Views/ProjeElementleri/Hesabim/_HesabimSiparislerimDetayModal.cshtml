@@ -1,7 +1,8 @@
 @* E4: detay modalı canlı — içerik, Siparişlerim sayfasındaki gömülü sipariş JSON'undan
    Detay butonunun data-siparis-id'siyle dolar (doldurma script'i _HesabimSiparislerim
    sonunda). Demo değerler data-alan kancalarına çevrildi; ürün satırı template oldu.
-   Kargo bilgisi H2'ye, fatura H1'e köprü — veri varsa gösterilir. *@
+   Kargo bilgisi H2'ye köprü — veri varsa gösterilir. H1 (2026-07-12): Fatura Bilgileri
+   sütunu tasarımdaki yerine döndü — faturalı siparişte alıcı adı, yoksa bilgi metni. *@
 <div class="ms-ornek-modal ms-siparis-detay-modal" data-ms-siparis-detay-modal aria-hidden="true">
     <div class="ms-ornek-modal-kaplama" data-ms-siparis-detay-kapat></div>
     <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-xl ms-siparis-detay-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-siparis-detay-baslik">
@@ -35,6 +36,10 @@
             <article>
                 <h4>Teslimat Adresi</h4>
                 <p data-alan="teslimat"></p>
+            </article>
+            <article>
+                <h4>Fatura Bilgileri</h4>
+                <p data-alan="fatura-bilgi"></p>
             </article>
             <article>
                 <h4>Kargo Bilgisi</h4>

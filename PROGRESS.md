@@ -294,6 +294,26 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-12 (devam) — H1 TAMAM (fatura PDF modalı — H-M1'in ilk yarısı):**
+  - **Backend:** `FaturaPdfProxy` (Api/Services/Store — misharix mantığı + config allowlist
+    `Store:InvoiceProxy`, https + /earchive/ şartı, hata yutulmaz) +
+    `GetMemberInvoicePdfSourceQuery` (Order.Application — sahiplik fatura→sipariş→MemberId;
+    URL istemciye HİÇ inmez). İki giriş: MVC `/hesabim/fatura/{orderId}/{invoiceId}/pdf`
+    (iframe/indir — cookie kimlik) + API `/api/store/account/orders/{orderId}/invoices(+/pdf)`
+    (mobil, bearer). `InvoiceListDto`'ya additive `HasIntegratorPdf`.
+  - **Frontend:** Siparişlerim "Faturayı Görüntüle" yalnız PDF'li faturada; detay modalına
+    tasarımdaki Fatura Bilgileri sütunu döndü. **E8 "Dekontu Gör" bilinçli gizli** (iade
+    dekontu üreten akış yok — yanıltıcı olurdu).
+  - **E2E h1 17/17 ✓ + e4 15/15 + e8 35/35 ✓; drift TEMİZ; test artığı 0.**
+    Test altyapısı: e8'in log/media yolları TEST_LOG/TEST_MEDIA env'ine bağlandı
+    (⚠️ 5051 instance'ı `Store__MediaRootPath` ile başlatılmalı — bugün canlı media'ya
+    sızan 1 test görseli temizlendi).
+  - ⚠️ Bilinen sınır: dış servis BAŞARI yolu (gerçek key → PDF) canlıda ilk gerçek fatura
+    oluşunca duman testi. Canlıda ord_invoices 0 satır — butonlar veri gelene dek gizli.
+  - **SIRADAKİ: H2 kargo takip** (kargo firma tanımı ad/logo/URL şablonu + E4 modal
+    zenginleştirme + duyuru barı Kargo Takip linki + C10 onay kargo bölümü).
+  - NOT: Deploy H-M1 kapanınca (H2 ile birlikte) yapılacak.
+
 - **2026-07-12 — FAZ H PLANLANDI (kullanıcıyla 4 karar netleşti):**
   - **Kapsam (K10):** H1–H7'ye ek: H8 bildirim gönderimi (C9 stok + E11 favori arama devri),
     H9 ürün değerlendirmeleri sayfası (E7 devri, 595 satır tasarım), H10 Faz G devredenleri

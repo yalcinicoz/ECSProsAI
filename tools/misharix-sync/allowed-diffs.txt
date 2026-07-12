@@ -166,16 +166,19 @@ Views/ProjeElementleri/Hesabim/_HesabimUyelikBilgilerim.cshtml
 # gibi serbest metin; boş durum satırı eklendi; dosya sonunda canlı script.
 Views/ProjeElementleri/Hesabim/_HesabimAdreslerim.cshtml
 
-# E4: Siparişlerim canlıya bağlandı — 6 demo kart SSR @foreach oldu (misharix kart/filtre/
+# E4+H1: Siparişlerim canlıya bağlandı — 6 demo kart SSR @foreach oldu (misharix kart/filtre/
 # modal script'i değişmedi; dinamik karta dinleyici bağlayamadığından SSR seçildi); özet
 # grid + boş durum gerçek; kargo takip modalı sipariş başına SSR (H2 köprüsü: olaylar varsa
-# zaman çizelgesi, yoksa takip no); fatura H1, iade E8, tekrar satın al E10, yorum E7
-# butonları @if(false); iptalde akış şeridi gizli (tasarımda iptal akışı yok); dosya sonunda
-# detay modalı doldurma script'i (gömülü JSON).
+# zaman çizelgesi, yoksa takip no); iade E8, tekrar satın al E10, yorum E7 bağlı; iptalde
+# akış şeridi gizli (tasarımda iptal akışı yok); dosya sonunda detay modalı doldurma
+# script'i (gömülü JSON). H1: "Faturayı Görüntüle" PDF'li faturada görünür — href sunucuda
+# çözülmüş /hesabim/fatura/... proxy rotası (kaynaktaki /fatura/pdf?url= sarması kalktı,
+# entegratör URL'i istemciye inmez); gömülü JSON'a faturaAlicisi eklendi.
 Views/ProjeElementleri/Hesabim/_HesabimSiparislerim.cshtml
 
-# E4: Sipariş detay modalı — demo içerik data-alan kancalarına çevrildi, ürün satırı
-# template; Fatura Bilgileri sütunu H1'e kadar yok (e-fatura verisi yok).
+# E4+H1: Sipariş detay modalı — demo içerik data-alan kancalarına çevrildi, ürün satırı
+# template; H1: Fatura Bilgileri sütunu tasarımdaki yerine döndü (data-alan="fatura-bilgi" —
+# faturalı siparişte alıcı adı, yoksa bilgi metni).
 Views/ProjeElementleri/Hesabim/_HesabimSiparislerimDetayModal.cshtml
 
 # E5: Favori kalplerinin API bağlaması — kaynakta karşılığı yok (İZİNLİ YENİ); görsel
@@ -204,7 +207,9 @@ Views/ProjeElementleri/Hesabim/_HesabimYorumlarim.cshtml
 
 # E8: İadelerim canlıya bağlandı — kartlar SSR (requested→approved→received→refunded
 # akış eşlemesi; rejected'da akış gizli, inceleme notu bilgi kutusunda); kargo iade kodu
-# gerçek koddan, kargo firması badge'i H2'ye dek gizli; "Dekontu Gör" H1'e dek gizli;
+# gerçek koddan, kargo firması badge'i H2'ye dek gizli; "Dekontu Gör" GİZLİ KALDI
+# (H1 kararı 2026-07-12: iade dekontu üreten entegratör akışı yok — sipariş faturasını
+# "dekont" diye açmak yanıltıcı; iade belgesi akışı gelince bağlanır);
 # neden listesi Lookup'tan gömülü JSON, SMS doğrulama phone-verification API'sine,
 # İade Kodu Al POST /api/store/account/returns'a bağlı; ?iade=yeni modalı otomatik açar.
 Views/ProjeElementleri/Hesabim/_HesabimIadelerim.cshtml
