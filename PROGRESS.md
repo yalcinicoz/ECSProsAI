@@ -294,6 +294,28 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-12 — G9c TAMAM (mobilde manuel şehir seçimi girişi — Faz G'nin tek 🔶'si kapandı):**
+  - **Kullanıcı kararı (2026-07-11):** duyuru barı mobilde tasarım gereği gizli olduğundan
+    mobil giriş, mobil menü alt nav'ına eklenen **'Konum Seç' satırı** oldu
+    (_AnaNavigasyonMobilMenu — konum ikonu + SSR şehir adı + ok; Üye Ol/Giriş Yap
+    satırıyla aynı kalıp). Aynı `data-ms-sehir-cip` özniteliği — _SehirSecim script'i
+    zaten querySelectorAll ile tüm çipleri bağlıyor, JS değişikliği GEREKMEDİ.
+    `data-ms-mobil-menu-kapat` ile menü kapanır + modal açılır (listener sırası doğru:
+    nav script layout'ta modaldan önce → önce menü kapanır, overflow çakışmaz).
+  - allowed-diffs.txt B1+G9c olarak güncellendi; _SehirSecim'deki "mobilde giriş yok"
+    notu düzeltildi. **Drift TEMİZ ✓**
+  - **E2E (izole 5051 publish): g9c YENİ suite 6/6 ✓** (menüde satır, tıkla→menü kapanır
+    modal açılır, 81 il, seçim cookie 35 + reload sonrası SSR 'İzmir', masaüstü çipi
+    regresyonu) **+ g9b 15/15 + g9a 9/9 + b6 19/19 ✓**. g9b lokatörleri duyuru barına
+    kapsamlandı (çip artık 2 yerde — strict mode). Görüntüler:
+    `tools/misharix-sync/shots/g9c-*` (2, gözle doğrulandı). Test artığı 0.
+  - Kalan (Faz G'den devreden, değişmedi): GeoLite2 mmdb, koleksiyon public sayfası,
+    /urun-degerlendirmeleri, stok/etiket kaynak filtreleri, son gezilenler/favoriler
+    vitrin kaynakları, YanMenu statü bloğu.
+  - **⚠️ DEPLOY BEKLİYOR — publish ALINDI (/opt/ECSProsAI/publish):** kullanıcı
+    `sudo systemctl restart ecspros` çalıştırınca G9c canlıya çıkar. Migration YOK.
+    Doğrulama: mobil görünümde menü → 'Konum Seç'.
+
 - **2026-07-11 (devam) — G14 TAMAM → FAZ G KAPANDI 🎉 (Vitrin & Kişiselleştirme uçtan uca):**
   - Envanter 8.8 tam işaretli. **Tek 🔶 (kullanıcı kararı bekleyen): mobilde manuel
     şehir seçimi girişi yok** — duyuru barı tasarımda mobilde tamamen gizli; istenirse
@@ -305,12 +327,10 @@
     şehir modalı — gözle doğrulandı).
   - Test altyapısı: b4 artık kendini temizliyor; admin-mutasyonlu suite'lere audit
     temizliği eklendi (G13'ten beri suite'ler audit üretiyor).
-  - **⚠️ DEPLOY BEKLİYOR — publish ALINDI (22:04, /opt/ECSProsAI/publish):** kullanıcı
-    `sudo systemctl restart ecspros` çalıştırınca G-M2'nin tamamı (G9a→G14) canlıya
-    çıkar. Yeni migration YOK — restart yeterli. NOT: admin/dist yeniden build
-    edildiği için admin paneli YENİ halini şimdiden sunuyor; Önizleme/Değişiklik
-    Geçmişi restart'a kadar API'de 404 alır — restart geciktirilmemeli.
-    Doğrulama: `journalctl -u ecspros | grep "Redis cache"` + anasayfa + şehir çipi.
+  - **✅ DEPLOY YAPILDI (2026-07-11 22:09):** kullanıcı restart etti; canlı duman
+    testi yeşil — Redis AKTİF ✓, anasayfa vitrinden + şehir çipi ("Konum Seç"),
+    segment API (cookie 06 → Ankara/ic-anadolu), store pages v4/4 blok, yeni admin
+    endpoint'leri auth'lu (401), kurumsal 200. G-M2'nin tamamı canlıda.
   - **SIRADAKİ FAZ → H** (plan: H1 fatura/dekont PDF, H2 kargo entegrasyonu, ...;
     planlamayla başlanmalı). Faz G'den devreden işler: koleksiyon public sayfası,
     /urun-degerlendirmeleri, stok/etiket kaynak filtreleri, son gezilenler/favoriler
