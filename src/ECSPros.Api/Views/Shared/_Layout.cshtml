@@ -10,6 +10,9 @@
     <partial name="~/Views/Shared/_MsTemaTokenlari.cshtml" />
 </head>
 <body class="min-h-screen bg-white text-ms-siyah">
+    @* H4: mobil alt bar _AnaNavigasyon'dan ÖNCE — misafir Favorilerim/Hesabım linklerinin
+       data-ms-giris-modal-ac dinleyicileri nav script'inde parse anında bağlanır. *@
+    <partial name="~/Views/Shared/Store/_MobilAltBarNav.cshtml" />
     <partial name="~/Views/ProjeElementleri/Navigasyon/_AnaNavigasyon.cshtml" />
 
     <main role="main">

@@ -294,6 +294,18 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-12 (devam) — H4 TAMAM (mobil alt bar — H-M3 başladı):**
+  - Kaynak dosya katalog önizleme paneliydi — canlıya nav bloğu `_MobilAltBarNav.cshtml`
+    (İZİNLİ YENİ) olarak taşındı; CSS hazırdı (fixed bottom z-120, <1024px grid).
+  - Rota-duyarlı aktif durum SSR; **detay + sepet akışında render edilmez** (sabit aksiyon
+    barları z-90 — çakışma kararı); misafirde Favorilerim/Hesabım giriş modalı; layout'ta
+    _AnaNavigasyon'dan ÖNCE include (dinleyici parse sırası).
+  - **E2E h4 12/12 ✓ + b6/b4/g9c regresyon ✓** (b4 lokatörü :visible'a kapsamlandı);
+    drift TEMİZ; `shots/h4-mobil-alt-bar.png` gözle doğrulandı.
+  - **SIRADAKİ: H9** ürün değerlendirmeleri sayfası (595 satır tasarım; backend E7 hazır);
+    sonra H5 videolar (⚠️ veri modeli + dosya/embed kararı KULLANICIYA SORULACAK —
+    `catalog.product_videos` tablosu zaten var, önce şeması incelenecek).
+
 - **2026-07-12 (devam) — H8 TAMAM → H-M2 KAPANDI (bildirimler):**
   - **SmtpEmailService** (Shared) — `Email:Smtp:Host` config'liyse SMTP, yoksa Log stub
     (⚠️ SMTP kimlik bilgileri KULLANICIDAN BEKLENİYOR — appsettings.Production'a girilince
