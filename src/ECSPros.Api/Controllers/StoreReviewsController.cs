@@ -50,13 +50,30 @@ public class StoreReviewsController(IMediator mediator, IProductService productS
         return sonuc;
     }
 
-    /// <summary>Ürünün yayında yorumları (anonim erişim — ürün sayfası/değerlendirmeler).</summary>
+    /// <summary>Ürünün yayında yorumları (anonim erişim — ürün sayfası/değerlendirmeler).
+    /// H9 additive: ratings (çoklu puan), sort (newest|oldest), search (metin).</summary>
     [HttpGet("product/{productCode}")]
     [AllowAnonymous]
     public async Task<IActionResult> GetForProduct(
-        string productCode, [FromQuery] Guid firmPlatformId, [FromQuery] int page = 1, CancellationToken ct = default)
+        string productCode, [FromQuery] Guid firmPlatformId, [FromQuery] int page = 1,
+        [FromQuery] List<int>? ratings = null, [FromQuery] string? sort = null,
+        [FromQuery] string? search = null, CancellationToken ct = default)
     {
-        var result = await mediator.Send(new GetProductReviewsQuery(firmPlatformId, productCode, page, 10), ct);
+        var result = await mediator.Send(
+            new GetProductReviewsQuery(firmPlatformId, productCode, page, 10, ratings, sort, search), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>H9: değerlendirme istatistiği — ortalama + toplam + puan dağılımı (anonim).</summary>
+    [HttpGet("product/{productCode}/summary")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetProductSummary(
+        string productCode, [FromQuery] Guid firmPlatformId, CancellationToken ct = default)
+    {
+        var result = await mediator.Send(
+            new ECSPros.Storefront.Application.Queries.GetProductReviewSummary
+                .GetProductReviewSummaryQuery(firmPlatformId, productCode), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }

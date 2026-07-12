@@ -15,8 +15,9 @@
                     <h1 class="ms-urun-detay-baslik"><span>@b.Ad</span></h1>
                     <p class="ms-urun-detay-kod">Ürün Kodu: <strong>@b.Kod@(b.SeciliRenkAd is null ? "" : " / " + b.SeciliRenkAd)</strong></p>
 
-                    @* E7: puan onaylı yorum ortalamasından; link sayfa içi değerlendirme
-                       bölümüne (ayrı değerlendirmeler sayfası taşınmadı — ileri iş). *@
+                    @* E7: puan onaylı yorum ortalamasından. H9: link artık ürünün
+                       değerlendirmeler SAYFASINA (filtre/sıralama/tam liste orada;
+                       sayfa içi bölüm ilk 10'u göstermeye devam eder). *@
                     <div class="ms-urun-puan ms-urun-detay-puan">
                         <strong>@b.Puan.ToString("0.0", tr)</strong>
                         <span class="ms-urun-yildizlar@(b.PuanSayisi == 0 ? " ms-urun-yildizlar-pasif" : "")" aria-label="@b.Puan.ToString("0.0", tr) yıldız">
@@ -26,7 +27,7 @@
                             }
                         </span>
                         <span class="ms-urun-detay-puan-ayrac">•</span>
-                        <a class="ms-urun-detay-degerlendirme-link" href="#urun-degerlendirmeleri">@b.PuanSayisi Değerlendirme</a>
+                        <a class="ms-urun-detay-degerlendirme-link" href="/urun-degerlendirmeleri/@b.Kod">@b.PuanSayisi Değerlendirme</a>
                     </div>
                 </div>
 

@@ -1,27 +1,29 @@
 @using ECSPros.Api.Models.Store
 @{
-    // B9: alt bilgi — ürün görseli/açıklaması/özellikleri canlı veriden; değerlendirme
-    // bölümü sıfır durumu (değerlendirme sistemi yok); pazaryeri-özel demo maddeleri
-    // ("X tarafından gönderilecektir", stok adedi) veri karşılığı olmadığı için çıkarıldı.
+    // B9: alt bilgi — ürün görseli/açıklaması/özellikleri canlı veriden; pazaryeri-özel
+    // demo maddeleri ("X tarafından gönderilecektir", stok adedi) veri karşılığı olmadığı
+    // için çıkarıldı. H9: değerlendirme bölümü gerçek puana bağlandı (E7'de statik 0
+    // kalmıştı), link ürünün değerlendirmeler sayfasına.
     var vmAlt = ViewData["MsUrunDetay"] as UrunDetayVm;
     var a = vmAlt!;
     var altGorsel = a.Gorseller.Count > 0 ? a.Gorseller[0] : null;
     var altAciklama = string.IsNullOrWhiteSpace(a.Aciklama) ? a.KisaAciklama : a.Aciklama;
+    var altTr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+    var altTamYildiz = (int)Math.Round(a.Puan, MidpointRounding.AwayFromZero);
 }
 <section class="ms-urun-detay-alt-bilgi" id="urun-tum-ozellikleri" aria-labelledby="urun-tum-ozellikleri-baslik">
             <section class="ms-urun-detay-alt-degerlendirme" aria-labelledby="urun-alt-degerlendirme-baslik">
                 <h2 id="urun-alt-degerlendirme-baslik" class="ms-urun-detay-alt-baslik">Ürün Değerlendirmeleri</h2>
                 <div class="ms-urun-detay-alt-puan">
-                    <strong>0</strong>
-                    <span class="ms-urun-yildizlar ms-urun-yildizlar-pasif" aria-label="0 yıldız">
-                        <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
-                        <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
-                        <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
-                        <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
-                        <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
+                    <strong>@a.Puan.ToString("0.0", altTr)</strong>
+                    <span class="ms-urun-yildizlar@(a.PuanSayisi == 0 ? " ms-urun-yildizlar-pasif" : "")" aria-label="@a.Puan.ToString("0.0", altTr) yıldız">
+                        @for (var y = 1; y <= 5; y++)
+                        {
+                        <i class="fa-solid fa-star ms-fa-ikon@(a.PuanSayisi > 0 && y > altTamYildiz ? " ms-urun-yildizlar-pasif" : "")" aria-hidden="true"></i>
+                        }
                     </span>
                     <span class="ms-urun-detay-alt-ayrac">•</span>
-                    <a class="ms-urun-detay-degerlendirme-link" href="/urun-degerlendirmeleri">0 Değerlendirme</a>
+                    <a class="ms-urun-detay-degerlendirme-link" href="/urun-degerlendirmeleri/@a.Kod">@a.PuanSayisi Değerlendirme</a>
                 </div>
             </section>
 

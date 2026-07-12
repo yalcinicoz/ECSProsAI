@@ -294,6 +294,19 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-12 (devam) — H9 TAMAM (ürün değerlendirmeleri sayfası — K14 çekirdek port):**
+  - Route ürün bazlı: `/urun-degerlendirmeleri/{code}`; girişler detay üst linki + alt
+    bilgi bölümü (E7'de statik 0 kalmıştı — gerçek puana bağlandı).
+  - SSR: ürün özeti + istatistik + puan dağılımı (yeni GetProductReviewSummaryQuery);
+    liste canlı API'den infinite (GetProductReviews'a additive Ratings/Sort/Search +
+    summary endpoint'i). Verisiz bloklar gizli (AI özeti/fotoğraflı/konu-beden/sekmeler).
+  - ⚠️ İki gerçek bulgu: site.js özel-select çifte bağlanması (sayfa C4 deseniyle kendi
+    mekaniğini taşıdı) + alt bilgi E7 eksiği.
+  - **E2E h9 18/18 ✓ + e7 17/17 + b6 19/19 ✓; drift TEMİZ; h9-degerlendirmeler.png.**
+  - **KARARLAR: K14 (H9 çekirdek) + K15 (H5 video URL tabanlı — kullanıcının video
+    sunucusu/dış kaynak URL'i; product_videos'a additive VideoUrl/ThumbnailUrl).**
+  - **SIRADAKİ: H5 videolar** (K15'e göre) → H-M3 kapanışı → H-M4 görsel arama.
+
 - **2026-07-12 (devam) — H4 TAMAM (mobil alt bar — H-M3 başladı):**
   - Kaynak dosya katalog önizleme paneliydi — canlıya nav bloğu `_MobilAltBarNav.cshtml`
     (İZİNLİ YENİ) olarak taşındı; CSS hazırdı (fixed bottom z-120, <1024px grid).
