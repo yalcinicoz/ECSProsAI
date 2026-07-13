@@ -32,6 +32,10 @@ public class OrderConfiguration : IEntityTypeConfiguration<Domain.Entities.Order
         builder.Property(x => x.PackingStationCode).HasMaxLength(50);
         builder.Property(x => x.CustomerNotes).HasColumnType("jsonb");
         builder.HasIndex(x => x.OrderNumber).IsUnique();
+        // Admin sipariş listesi (P1a): durum sekmeleri + tarih aralığı milyonlarca satırda
+        // da anlık dönsün — soft-delete filtreli kısmi indeksler
+        builder.HasIndex(x => new { x.Status, x.CreatedAt }).HasFilter("\"IsDeleted\" = false");
+        builder.HasIndex(x => x.CreatedAt).HasFilter("\"IsDeleted\" = false");
         builder.HasQueryFilter(x => !x.IsDeleted);
         builder.Ignore(x => x.DomainEvents);
         builder.HasMany(x => x.Items).WithOne(x => x.Order).HasForeignKey(x => x.OrderId);

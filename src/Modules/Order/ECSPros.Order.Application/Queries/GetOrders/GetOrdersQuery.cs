@@ -8,7 +8,10 @@ public record GetOrdersQuery(
     Guid? MemberId = null,
     string? Search = null,
     int Page = 1,
-    int PageSize = 20) : IRequest<Result<PagedOrderResult>>;
+    int PageSize = 20,
+    List<string>? Statuses = null,
+    DateTime? CreatedFrom = null,
+    DateTime? CreatedTo = null) : IRequest<Result<PagedOrderResult>>;
 
 public record PagedOrderResult(List<OrderListDto> Items, int TotalCount, int Page, int PageSize)
 {
@@ -23,4 +26,5 @@ public record OrderListDto(
     string PaymentStatus,
     decimal GrandTotal,
     string CurrencyCode,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string? RecipientName = null);

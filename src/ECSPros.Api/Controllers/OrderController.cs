@@ -24,6 +24,7 @@ using ECSPros.Order.Application.Queries.GetOrderDetail;
 using ECSPros.Order.Application.Queries.GetOrderPayments;
 using ECSPros.Order.Application.Queries.GetOrderShipments;
 using ECSPros.Order.Application.Queries.GetOrders;
+using ECSPros.Order.Application.Queries.GetOrderStatusCounts;
 using ECSPros.Order.Application.Queries.GetQuotes;
 using ECSPros.Order.Application.Queries.GetReturnDetail;
 using ECSPros.Order.Application.Queries.GetReturns;
@@ -48,15 +49,36 @@ public class OrderController : ControllerBase
 
     // ─── Orders ───────────────────────────────────────────────────────────────
 
-    /// <summary>Siparişleri sayfalı listeler.</summary>
+    /// <summary>Siparişleri sayfalı listeler. `statuses` virgüllü çoklu durum; `to` exclusive üst sınır.</summary>
     [HttpGet]
     public async Task<IActionResult> GetOrders(
-        [FromQuery] string? status, [FromQuery] Guid? memberId, [FromQuery] string? search,
+        [FromQuery] string? status, [FromQuery] string? statuses, [FromQuery] Guid? memberId,
+        [FromQuery] string? search, [FromQuery] DateTime? from, [FromQuery] DateTime? to,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetOrdersQuery(status, memberId, search, page, pageSize), ct);
+        var statusList = string.IsNullOrWhiteSpace(statuses)
+            ? null
+            : statuses.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        var result = await _mediator.Send(new GetOrdersQuery(
+            status, memberId, search, page, pageSize,
+            statusList, AsUtc(from), AsUtc(to)), ct);
         return Ok(new { success = true, data = result.Value });
     }
+
+    /// <summary>Durum bazlı sipariş sayıları — yalnız aktif durumlar sayılır (kapalı durumlar milyonlara ulaşır).</summary>
+    [HttpGet("status-counts")]
+    public async Task<IActionResult> GetOrderStatusCounts([FromQuery] string? statuses, CancellationToken ct)
+    {
+        var statusList = string.IsNullOrWhiteSpace(statuses)
+            ? new List<string> { "pending", "confirmed", "processing", "shipped" }
+            : statuses.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        var result = await _mediator.Send(new GetOrderStatusCountsQuery(statusList), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    // timestamptz kolonlara Kind=Unspecified DateTime yazılamaz (Npgsql)
+    private static DateTime? AsUtc(DateTime? d) => d is null ? null
+        : d.Value.Kind == DateTimeKind.Utc ? d : d.Value.ToUniversalTime();
 
     /// <summary>Sipariş detayını döner.</summary>
     [HttpGet("{orderId:guid}")]

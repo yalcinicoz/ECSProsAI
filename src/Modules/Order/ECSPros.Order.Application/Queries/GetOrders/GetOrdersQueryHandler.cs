@@ -21,11 +21,25 @@ public class GetOrdersQueryHandler : IRequestHandler<GetOrdersQuery, Result<Page
         if (!string.IsNullOrWhiteSpace(request.Status))
             query = query.Where(o => o.Status == request.Status);
 
+        if (request.Statuses is { Count: > 0 })
+            query = query.Where(o => request.Statuses.Contains(o.Status));
+
         if (request.MemberId.HasValue)
             query = query.Where(o => o.MemberId == request.MemberId);
 
+        if (request.CreatedFrom.HasValue)
+            query = query.Where(o => o.CreatedAt >= request.CreatedFrom.Value);
+
+        if (request.CreatedTo.HasValue)
+            query = query.Where(o => o.CreatedAt < request.CreatedTo.Value); // exclusive üst sınır
+
         if (!string.IsNullOrWhiteSpace(request.Search))
-            query = query.Where(o => o.OrderNumber.Contains(request.Search));
+        {
+            var term = request.Search.Trim().ToLower();
+            query = query.Where(o =>
+                o.OrderNumber.ToLower().Contains(term) ||
+                o.ShippingRecipientName.ToLower().Contains(term));
+        }
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -41,7 +55,8 @@ public class GetOrdersQueryHandler : IRequestHandler<GetOrdersQuery, Result<Page
                 o.PaymentStatus,
                 o.GrandTotal,
                 o.CurrencyCode,
-                o.CreatedAt))
+                o.CreatedAt,
+                o.ShippingRecipientName))
             .ToListAsync(cancellationToken);
 
         return Result.Success(new PagedOrderResult(items, totalCount, request.Page, request.PageSize));
