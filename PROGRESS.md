@@ -312,8 +312,16 @@
     girilince — K13-ek: key artık config değil DB/visual_search servisi) → P-M2 → P-M3 →
     H-M5 (H7 QA'sına panel-senkron denetimi eklendi) → R → İ. Durum panosu güncellendi
     (H: 🟡 M-1..3 tamam).
-  - **SIRADAKİ: P-M1/P0** geriye dönük tarama; ardından P1 öncesi kullanıcıyla sipariş
-    ekranı kurgusu konuşması.
+  - **K18 (2026-07-13):** iş kapanış raporu kısa — sonuç 2-3 cümle + deploy tek satır +
+    🧪 numaralı kullanıcı test talimatı (olumsuz senaryolu) + bilinen sınırlar +
+    **kalan iş listesi** (raporun sonunda, toplam sayıyla). P1 (a-d) ve P2 (a-c) alt
+    dilimlere bölündü — her dilim ayrı E2E + raporla kapanır, BÜYÜK işlerde başlamadan
+    kullanıcıyla ekran kurgusu konuşulur.
+  - **Kalan iş sayımı (2026-07-13):** 25 iş — P:11 (P0, P1a-d, P2a-c, P3-P5) + H:3
+    (H3/H10/H7) + R:5 + İ:6. Tahmin: ~8-10 aktif çalışma günü / takvimde ~2 hafta.
+  - **SIRADAKİ: P-M1/P0** geriye dönük panel taraması; ardından P1 öncesi kullanıcıyla
+    sipariş ekranı kurgusu konuşması. (Restart hâlâ bekliyor — H1..H9 + bugünkü 3 iş
+    tek restart'la canlıya çıkar.)
 
 - **2026-07-13 — Platform servis entegrasyonları yeniden yapılandırıldı (kullanıcı kararı;
   ayarlar DB'de + Data Protection):**
