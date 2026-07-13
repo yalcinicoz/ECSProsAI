@@ -345,10 +345,17 @@
     **İade Nedenleri modalı** (return_reason lookup CRUD; alt nedenler
     ExtraData.subReasons — Create/UpdateLookupValueCommand'a additive ExtraData).
     Doğrulama: izole 5052 routing 401/200 ✓. Migration yok.
-  - **SIRADAKİ: P1d faturalar** (listele/oluştur/iptal + IntegratorInvoiceUrl girişi —
-    H1 storefront butonunun veri kaynağı). Restart öncesi bilinen pencere: lookup
-    ExtraData kaydetmesi eski binary'de yok sayılır (alt neden düzenlemesi restart
-    sonrası çalışır).
+  - **P1d TAMAM (2026-07-13) → P1 + P-M1 KAPANDI:** `/orders/invoices` (durum sekmeli;
+    satır → modal: PDF adresi girişi + iptal) + "Fatura Serileri" modalı (yeni
+    `GET/POST /api/orders/invoice-series` — tablo boştu, API yoktu) + sipariş
+    detayından "Fatura Oluştur" (seri/tip/tarih + alıcı öndolumu) + yeni
+    `PATCH /api/orders/invoices/{id}/integrator-url` (https zorunlu; H1 "Faturayı
+    Görüntüle" kaynağı artık panelden) + OrderDetailPage'e Faturalar/İadeler bölümleri
+    (K19). Doğrulama: izole 5052 routing 401/200 ✓. Migration yok.
+  - **SIRADAKİ: P-M2 / P2 CMS içerik yönetimi (BÜYÜK — başlamadan ekran kurgusu
+    kullanıcıyla konuşulacak, K16).** Restart bekleyen backend: P1c (lookup ExtraData)
+    + P1d (invoice-series, integrator-url) — publish güncel; admin/dist şimdiden yeni
+    (restart öncesi bu iki sayfanın yeni endpoint'leri 404/yoksayılır).
   - **SIRADAKİ: P1c iadeler** (liste+aksiyonlar+iade nedenleri lookup yönetimi).
     Restart hâlâ bekliyor — H1..H9 + platform entegrasyonları + P1a/P1b backend tek
     restart'la çıkar (admin/dist şimdiden yeni; restart öncesi: sayaçlar gizli, Aktif
