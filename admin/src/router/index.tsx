@@ -36,6 +36,7 @@ import { AccountGroupsPage } from '@/pages/accounts/AccountGroupsPage'
 import { AccountsPage } from '@/pages/accounts/AccountsPage'
 import { AccountDetailPage, AccountCreatePage } from '@/pages/accounts/AccountDetailPage'
 import { MigrationPage } from '@/pages/settings/MigrationPage'
+import { OrdersPage } from '@/pages/orders/OrdersPage'
 
 export const router = createBrowserRouter(
   [
@@ -73,7 +74,7 @@ export const router = createBrowserRouter(
             { path: 'inventory/transfers/:id',  element: <TransferDetailPage /> },
 
             // Siparişler
-            { path: 'orders',              element: <PlaceholderPage title="Siparişler" /> },
+            { path: 'orders',              element: <OrdersPage /> },
             { path: 'orders/:id',          element: <PlaceholderPage title="Sipariş Detayı" /> },
             { path: 'orders/returns',      element: <PlaceholderPage title="İadeler" /> },
             { path: 'orders/quotes',       element: <PlaceholderPage title="Teklifler" /> },

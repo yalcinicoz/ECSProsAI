@@ -321,10 +321,28 @@ src/ECSPros.Api/
       form yalnız şema alanlarını gönderiyor) → `ChannelsPage.tsx`'te DÜZELTİLDİ
       (şema dışı anahtarlar korunur; npm build alındı). B12 stok anahtarının panel yolu:
       PlatformType şemasına boolean alan eklemek (veri işi) → Kanallar formunda görünür.
-- [ ] P1. **Sipariş yönetimi** (BÜYÜK — başlamadan kullanıcıyla ekran kurgusu konuşulacak).
+- [ ] P1. **Sipariş yönetimi** (BÜYÜK). **Ekran kurgusu kullanıcıyla konuşuldu (2026-07-13, K19):**
+      (1) Liste SEKMELİ, açılış **"Aktif"** (pending+confirmed+processing+shipped) — sipariş
+      sayısı milyonlara çıkacağından açılış anlık olmalı: sayaç YALNIZ aktif durum
+      sekmelerinde; Tümü/Teslim/İptal sayaçsız + son-30-gün varsayılan tarih aralığı;
+      `(Status, CreatedAt)` + `CreatedAt` index'leri (IsDeleted=false filtreli) P1a
+      kapsamında. (2) Detay TEK SAYFA dikey bölümler (kalemler/özet/ödemeler/adresler/
+      kargo/notlar+sözleşmeler/durum geçmişi; aksiyonlar üstte). (3) İadeler ve Faturalar
+      AYRI liste sayfaları + sipariş detayında ilgili bölüm.
       **Alt dilimler — her biri kendi E2E'si + kapanış raporuyla AYRI kapanır, sonrakine
       öyle geçilir (raydan çıkma önlemi):**
-  - [ ] P1a. Sipariş listesi: durum/tarih/arama filtreli, sayfalı; satır → detay.
+  - [x] P1a. **Sipariş listesi — TAMAM (2026-07-13):** `/orders` OrdersPage — K19 kurgusu:
+        durum sekmeleri (açılış **Aktif**; sayaç yalnız aktif durumlarda, 60 sn tazelenir,
+        endpoint yoksa fail-soft gizli), Teslim/İptal/Tümü sekmeleri sayaçsız + ilk geçişte
+        son-30-gün öndolumu; arama (sipariş no VEYA alıcı adı, case-insensitive), tarih
+        aralığı (`to` exclusive), sayfalı; satır → `/orders/{id}` (detay P1b'de dolar).
+        Backend: GetOrdersQuery'ye additive `Statuses/CreatedFrom/CreatedTo` + DTO'ya
+        `RecipientName`; yeni `GET /api/orders/status-counts`; `AddOrderListIndexes`
+        migration'ı ((Status,CreatedAt) + CreatedAt, IsDeleted=false filtreli) CANLI DB'DE.
+        Doğrulama: izole 5052 publish — endpoint routing 401/404 ayrımı ✓; psql'de iki
+        indeks ✓; EXPLAIN `Index Scan Backward using IX_ord_orders_Status_CreatedAt`
+        (sort node'suz) ✓. Kimlikli UI testi kullanıcı duman testinde (kural gereği
+        credential'lı deneme yapılmadı).
   - [ ] P1b. Sipariş detayı + durum aksiyonları: kalemler, ödemeler, adresler, kabul
         edilen sözleşmeler, sipariş notu, kargo bilgisi + takip linki; onayla / iptal /
         kargoya ver (takip no + kargo anlaşması seçimi) / teslim.

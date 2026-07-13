@@ -307,9 +307,23 @@
     silinirdi) → `ChannelsPage.tsx` düzeltildi (şema dışı anahtarlar korunur), npm build
     alındı (admin/dist canlıda). B12 stok anahtarının panel yolu: PlatformType şemasına
     boolean alan eklemek yeterli (veri işi, kod gerekmez).
-  - **SIRADAKİ: P1a sipariş listesi — başlamadan ekran kurgusu kullanıcıyla konuşulacak**
-    (kurgu önerisi kullanıcıya sunuldu, yanıt bekleniyor). Restart hâlâ bekliyor —
-    H1..H9 + platform entegrasyonları tek restart'la canlıya çıkar.
+  - **K19 (2026-07-13, kullanıcıyla konuşuldu):** Sipariş ekranı kurgusu — (1) liste
+    SEKMELİ, açılış "Aktif"; sayaç yalnız aktif durum sekmelerinde; Teslim/İptal/Tümü
+    sayaçsız + son-30-gün varsayılanı (sipariş sayısı milyonlara çıkacak — açılış anlık
+    olmalı, kullanıcı şartı); (2) detay TEK SAYFA dikey bölümler; (3) İadeler/Faturalar
+    AYRI sayfalar + detayda bölüm.
+  - **P1a TAMAM (2026-07-13):** `/orders` OrdersPage (sekmeler+sayaçlar+arama+tarih+
+    sayfalama; satır→detay) + backend additive `Statuses/CreatedFrom/CreatedTo` +
+    `RecipientName` + `GET /api/orders/status-counts` + `AddOrderListIndexes` migration
+    CANLI DB'DE ((Status,CreatedAt)+CreatedAt, IsDeleted=false filtreli). Doğrulama:
+    izole 5052 publish routing 401/404 ✓; psql indeksler ✓; EXPLAIN Index Scan Backward
+    sort'suz ✓. Kimlikli UI duman testi kullanıcıda (credential kuralı). NOT: 5051'i
+    başka bir session'ın test instance'ı tutuyordu — dokunulmadı, 5052 kullanıldı.
+  - **SIRADAKİ: P1b sipariş detayı** (tek sayfa kurgusu K19'da hazır). Restart hâlâ
+    bekliyor — H1..H9 + platform entegrasyonları + P1a backend tek restart'la canlıya
+    çıkar (admin/dist şimdiden yeni; restart öncesi Siparişler sayfasında sayaçlar
+    gizli kalır, Aktif sekmesi eski binary'de filtresiz döner — canlıda 0 sipariş,
+    etki yok).
 
 - **2026-07-13 (devam) — İŞ LİSTESİ GÜNCELLENDİ: Site–Panel senkron kuralı (K16) + FAZ P/R:**
   - **Yeni kural (kullanıcı):** sitede canlı her işlev panelde yönetim karşılığı olmadan
