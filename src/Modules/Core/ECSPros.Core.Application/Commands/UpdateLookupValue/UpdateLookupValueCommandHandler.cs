@@ -28,6 +28,8 @@ public class UpdateLookupValueCommandHandler : IRequestHandler<UpdateLookupValue
         lookupValue.IsDefault = request.IsDefault;
         lookupValue.IsActive = request.IsActive;
         lookupValue.SortOrder = request.SortOrder;
+        if (request.ExtraData is not null)
+            lookupValue.ExtraData = request.ExtraData;
         lookupValue.UpdatedAt = DateTime.UtcNow;
         lookupValue.UpdatedBy = request.UpdatedBy;
 

@@ -67,7 +67,8 @@ public class LookupController : ControllerBase
             request.IsDefault,
             request.IsActive,
             request.SortOrder,
-            uid), ct);
+            uid,
+            request.ExtraData), ct);
 
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
@@ -81,7 +82,7 @@ public class LookupController : ControllerBase
     {
         var result = await _mediator.Send(new CreateLookupValueCommand(
             code, request.NameI18n, request.Color, request.Icon,
-            request.IsDefault, request.SortOrder), ct);
+            request.IsDefault, request.SortOrder, request.ExtraData), ct);
 
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
@@ -97,10 +98,12 @@ public record UpdateLookupValueRequest(
     string? Icon,
     bool IsDefault,
     bool IsActive,
-    int SortOrder);
+    int SortOrder,
+    Dictionary<string, object>? ExtraData = null);
 public record CreateLookupValueRequest(
     Dictionary<string, string> NameI18n,
     string? Color,
     string? Icon,
     bool IsDefault = false,
-    int SortOrder = 0);
+    int SortOrder = 0,
+    Dictionary<string, object>? ExtraData = null);

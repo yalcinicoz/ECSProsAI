@@ -31,6 +31,7 @@ public class CreateLookupValueCommandHandler : IRequestHandler<CreateLookupValue
             Icon = request.Icon,
             IsDefault = request.IsDefault,
             SortOrder = request.SortOrder,
+            ExtraData = request.ExtraData,
             IsActive = true
         };
 
