@@ -17,6 +17,12 @@
 4. Her faz kapanışında bu dosyanın Durum Panosu'nu ve `PROGRESS.md`'yi güncelle.
 5. Bölüm 2'deki **Değişmez Kurallar**'a aykırı hiçbir şey yapma; kural ile görev çelişirse durup kullanıcıya sor.
 6. Bölüm 8'deki **İşlev Envanteri** kutsal listedir: bir yüzey "bitti" sayılmadan önce o yüzeyin envanterindeki her satır tek tek doğrulanır.
+7. **İş kapanış raporu (K18, 2026-07-13):** her iş bitiminde chat raporu KISA tutulur — 4 kalem:
+   (1) Sonuç 2-3 cümle (teknik detay PROGRESS.md'ye), (2) Deploy durumu tek satır,
+   (3) 🧪 **kullanıcı test talimatı**: 3-7 numaralı adım, her adımda "nereye gir → neye
+   tıkla → ne görmelisin" + en az bir olumsuz senaryo + gerekirse test verisini kur/sil
+   adımı (hazır sahte veri bırakılmaz), (4) bilinen sınırlar. Kullanıcı sorun bildirirken
+   "adım no + gördüğü" yeterli olacak şekilde yazılır.
 
 ---
 
@@ -307,20 +313,28 @@ src/ECSPros.Api/
       satır "panel karşılığı var mı?" gözüyle taranır; her bölüme panel notu düşülür;
       bulunan ek eksikler bu faza iş maddesi olarak işlenir (bilinen liste: sipariş/iade/
       fatura, CMS içerik, kampanya/kupon, üyeler, iletişim mesajları, bildirim izleme).
-- [ ] P1. **Sipariş yönetimi** (BÜYÜK — başlamadan kullanıcıyla ekran kurgusu konuşulacak):
-      sipariş listesi (durum/tarih/arama filtreli) + detay (kalemler, ödemeler, adresler,
-      kabul edilen sözleşmeler, sipariş notu, kargo bilgisi + takip linki) + durum
-      aksiyonları (onayla / iptal / kargoya ver [takip no + kargo anlaşması seçimi] /
-      teslim) + **iadeler** (liste + onay/red/teslim al/geri ödeme) + **faturalar**
-      (listele/oluştur/iptal + `IntegratorInvoiceUrl` girişi — H1'deki storefront
-      "Faturayı Görüntüle" butonunun veri kaynağı bugün yalnız API'den doldurulabiliyor).
+- [ ] P1. **Sipariş yönetimi** (BÜYÜK — başlamadan kullanıcıyla ekran kurgusu konuşulacak).
+      **Alt dilimler — her biri kendi E2E'si + kapanış raporuyla AYRI kapanır, sonrakine
+      öyle geçilir (raydan çıkma önlemi):**
+  - [ ] P1a. Sipariş listesi: durum/tarih/arama filtreli, sayfalı; satır → detay.
+  - [ ] P1b. Sipariş detayı + durum aksiyonları: kalemler, ödemeler, adresler, kabul
+        edilen sözleşmeler, sipariş notu, kargo bilgisi + takip linki; onayla / iptal /
+        kargoya ver (takip no + kargo anlaşması seçimi) / teslim.
+  - [ ] P1c. İadeler: liste + onay/red/teslim al/geri ödeme aksiyonları.
+  - [ ] P1d. Faturalar: listele/oluştur/iptal + `IntegratorInvoiceUrl` girişi (H1'deki
+        storefront "Faturayı Görüntüle" butonunun veri kaynağı bugün yalnız API'den
+        doldurulabiliyor).
 
 **P-M2 — İçerik + kampanya:**
-- [ ] P2. **CMS içerik yönetimi** (BÜYÜK — başlamadan kullanıcıyla konuşulacak): sayfa
-      listesi/detay + rich_text section editörü — sözleşme metinleri (C8), kurumsal
-      sayfalar (F), SSS (F2) panelden düzenlenebilir olur (bugün seed/SQL ile giriliyor;
-      yasal metinler için kabul edilemez); yayın penceresi + sürüm görünürlüğü
-      (ContentUpdatedAt — sözleşme kabul kayıtları bu sürüme bağlanıyor).
+- [ ] P2. **CMS içerik yönetimi** (BÜYÜK — başlamadan kullanıcıyla konuşulacak).
+      **Alt dilimler — P1 gibi ayrı ayrı kapanır:**
+  - [ ] P2a. Sayfa listesi + detay çatısı (PageType filtreli: legal/corporate/faq;
+        platform seçimi; aktiflik/yayın penceresi).
+  - [ ] P2b. rich_text section editörü — sözleşme metinleri (C8), kurumsal sayfalar (F),
+        SSS soru/cevapları (F2) panelden düzenlenebilir olur (bugün seed/SQL ile
+        giriliyor; yasal metinler için kabul edilemez).
+  - [ ] P2c. Sürüm görünürlüğü: ContentUpdatedAt gösterimi (sözleşme kabul kayıtları bu
+        sürüme bağlanıyor) + değişiklik uyarısı.
 - [ ] P3. **Kampanya + kupon yönetimi** (orta): kampanya CRUD (backend endpoint'leri
       mevcut) + kupon tanımlama/listeleme/kullanım kayıtları (storefront C3/C10 kupon
       akışı canlı; tanım bugün yalnız API'den).
@@ -416,6 +430,7 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 - [x] K16. **Site–Panel senkron kuralı (2026-07-13):** sitede canlı her işlev panelde yönetim/izleme karşılığıyla birlikte "bitti" sayılır; API/DB müdahalesi yönetim yolu değildir. Geriye dönük tarama YAPILIR (P0); BÜYÜK panel işlerinde işe başlamadan ekran kurgusu kullanıcıyla konuşulur. → FAZ P açıldı, kural Bölüm 2 madde 11.
 - [x] K17. **ERP ekranları kapsamı (2026-07-13):** sitede karşılığı olmayan saf ERP placeholder'ları (IAM/POS/fulfillment/finans/hediye kartı/entegrasyon logları) plana AYRI FAZ olarak girer (FAZ R) — sıra P sonrası, başlamadan kapsam kullanıcıyla gözden geçirilir.
 - [x] K13-ek (2026-07-13): görsel arama API key'i artık config'e değil **DB'ye** girilir — admin Servis Kataloğu'ndaki `visual_search` servisi + firma entegrasyonu (Credentials şifreli); H3 okuyucusu `DbSmtpSettingsProvider` deseniyle yazılır.
+- [x] K18. **İş kapanış raporu (2026-07-13):** chat raporu kısa (sonuç 2-3 cümle + deploy tek satır + 🧪 kullanıcı test talimatı [3-7 numaralı adım, beklenen sonuçlu, en az bir olumsuz senaryo] + bilinen sınırlar); teknik detay PROGRESS.md'ye. → Bölüm 0 madde 7.
 
 **Kalan açık noktalar:** ödeme sağlayıcısı adı (K2/H6 ertelendi), SMS sağlayıcısı adı (K3), Instagram bloğunun içerik kaynağı (elle görsel mi, API mi), ürün videosu veri modeli + kaynak biçimi (dosya mı embed URL mi — H5 başında sorulacak), GeoLite2 mmdb edinimi (H10 — kullanıcı aksiyonu).
 
