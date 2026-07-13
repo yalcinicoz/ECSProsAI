@@ -368,9 +368,15 @@
     K20 kopyalama → yeni `POST /cms/pages/{id}/copy-content` (aynı Code şartı, tip+sıra
     eşleme, hedef öğeler soft-delete+klon). ICmsDbContext'e PageSectionItems eklendi.
     Doğrulama: izole 5052 — 5 yeni route 401 ✓ + storefront regresyon 200 ✓.
-  - **SIRADAKİ: P2c — sürüm görünürlüğü** (ContentUpdatedAt zaten listede/detayda;
-    kalan: sözleşme kabul kayıtlarıyla ilişkiyi gösteren değişiklik uyarısı — küçük).
-    Restart bekleyen backend: P1c + P1d + P2a + P2b — publish güncel.
+  - **P2c TAMAM (2026-07-13, yalnız frontend) → P2 KAPANDI:** yasal sayfa detayında
+    "⚖️ sürüm takibi" kartı (güncel sözleşme sürümü + açıklama) + sipariş detayı kabul
+    kayıtlarında "⚠ metin bu kabulden sonra güncellendi" rozeti (kabul sürümü <
+    sayfanın güncel LastContentUpdatedAt'i; kod eşlemesi platform legal sayfalarından).
+    Bilinen sınır: sürüm-başına kabul sayacı yok (jsonb sorgusu Application'a Npgsql
+    getirirdi — kalıp bozulmadı).
+  - **SIRADAKİ: P3 kampanya + kupon yönetimi (orta)** — kampanya CRUD backend'i mevcut;
+    kupon tanımlama/listeleme/kullanım kayıtları eklenecek. Restart bekleyen backend:
+    P1c + P1d + P2a + P2b — publish güncel.
   - **SIRADAKİ: P1c iadeler** (liste+aksiyonlar+iade nedenleri lookup yönetimi).
     Restart hâlâ bekliyor — H1..H9 + platform entegrasyonları + P1a/P1b backend tek
     restart'la çıkar (admin/dist şimdiden yeni; restart öncesi: sayaçlar gizli, Aktif

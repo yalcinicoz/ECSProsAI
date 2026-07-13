@@ -414,8 +414,17 @@ src/ECSPros.Api/
         DbSet'i eklendi. Doğrulama: izole 5052 — 5 yeni route 401 ✓; storefront
         regresyon /, /kullanim-kosullari, /sik-sorulan-sorular, /hakkimizda 200 ✓.
         Migration yok.
-  - [ ] P2c. Sürüm görünürlüğü: ContentUpdatedAt gösterimi (sözleşme kabul kayıtları bu
-        sürüme bağlanıyor) + değişiklik uyarısı.
+  - [x] P2c. **Sürüm görünürlüğü — TAMAM (2026-07-13, yalnız frontend):** (1) Yasal
+        sayfa detayında "⚖️ sürüm takibi" kartı — güncel sözleşme sürümü (bölümlerin en
+        son değişikliği) + kaydetmenin yeni sürüm oluşturduğu, eski kabullerin eski
+        sürümle saklandığı açıklaması. (2) Sipariş detayındaki kabul kayıtlarında
+        **"⚠ metin bu kabulden sonra güncellendi"** rozeti — kabul anındaki
+        contentUpdatedAt, sayfanın güncel LastContentUpdatedAt'inden eskiyse (kod
+        eşlemesi platformun legal sayfalarından; tooltip güncel sürümü gösterir).
+        Liste SON İÇERİK kolonu P2a'da gelmişti. Bilinen sınır: "bu sürümü kaç sipariş
+        kabul etti" sayacı yok — CustomerNotes jsonb sorgusu Application katmanına
+        Npgsql bağımlılığı getirirdi (kalıp bozulmadı); ihtiyaç olursa ayrı iş.
+        **P2 KAPANDI.**
 - [ ] P3. **Kampanya + kupon yönetimi** (orta): kampanya CRUD (backend endpoint'leri
       mevcut) + kupon tanımlama/listeleme/kullanım kayıtları (storefront C3/C10 kupon
       akışı canlı; tanım bugün yalnız API'den).
