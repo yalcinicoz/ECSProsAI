@@ -40,7 +40,7 @@
 | F | Kurumsal sayfalar + Footer | ✅ TAMAM (2026-07-11) — F1–F5 bitti: 7 kurumsal route + corporate/faq CMS + contact_messages + footer/bülten; QA 36 adım + f5-* görüntüleri |
 | G | Vitrin & Kişiselleştirme Sistemi (G-M1: bloklar+yayınla · G-M2: kural motoru) | ✅ TAMAM (2026-07-11) — G1–G14 bitti (+G9c mobil şehir girişi 2026-07-12); envanter 8.8 tam; toplu regresyon 141+79 adım; canlıda |
 | H | Özel yetenekler (fatura PDF, kargo takip, bildirimler, görsel arama, alt bar, videolar + devredenler) | 🟡 SÜRÜYOR — H-M1+M2+M3 TAMAM (2026-07-12); kalan: H-M4 (H3 görsel arama — API key bekliyor) + H-M5 (H10 devredenler + H7 QA); H6 ödeme ertelendi (K2) |
-| P | **Panel Senkronizasyonu** — sitede canlı işlevlerin admin panel karşılıkları (K16 kuralı) | 🔵 PLANLANDI (2026-07-13) — P-M1..P-M3; sıra: P-M1 öne çekildi (sipariş yönetimi ödeme açılmadan hazır olmalı) |
+| P | **Panel Senkronizasyonu** — sitede canlı işlevlerin admin panel karşılıkları (K16 kuralı) | 🟡 SÜRÜYOR — P0 TAMAM (2026-07-13: 8.1–8.9 panel notları + 3 bulgu; Kanallar settings-silme bugu düzeltildi); sıradaki P1a (ekran kurgusu kullanıcıyla konuşulduktan sonra) |
 | R | ERP panel ekranları (sitede karşılığı olmayan placeholder'lar: IAM/POS/fulfillment/finans...) | ⬜ Planlandı (2026-07-13, K17) — sıra P sonrası; başlamadan kapsam kullanıcıyla gözden geçirilir |
 | İ | SPA emekliliği + son QA + kural devri | ⬜ Başlamadı |
 
@@ -311,10 +311,16 @@ src/ECSPros.Api/
 > (option-h, liste satırı tıklanabilir → detay [`feedback_list_row_click`], PermissionGuard).
 
 **P-M1 — Geriye dönük tarama + Sipariş operasyonu:**
-- [ ] P0. **Geriye dönük panel taraması** (küçük-orta): İşlev envanteri 8.1–8.9'daki her ✅
-      satır "panel karşılığı var mı?" gözüyle taranır; her bölüme panel notu düşülür;
-      bulunan ek eksikler bu faza iş maddesi olarak işlenir (bilinen liste: sipariş/iade/
-      fatura, CMS içerik, kampanya/kupon, üyeler, iletişim mesajları, bildirim izleme).
+- [x] P0. **Geriye dönük panel taraması** — TAMAM (2026-07-13): 8.1–8.9'un her bölümüne
+      "Panel (P0)" notu düşüldü. Bilinen liste doğrulandı (sipariş/iade/fatura → P1,
+      CMS içerik → P2, kampanya/kupon → P3, üyeler → P4, iletişim+bildirim → P5).
+      **Yeni bulgular:** (1) iade nedenleri `return_reason` Lookup değerleri panelden
+      yönetilemiyor → P1c kapsamına eklendi; (2) bülten aboneleri listesi panelde yok →
+      P5'e eklendi; (3) ⚠️ Kanallar formu şema dışı `Settings`/`Credentials` anahtarlarını
+      (stockControlEnabled, tema/domain) kayıtta sessizce siliyordu (backend replace,
+      form yalnız şema alanlarını gönderiyor) → `ChannelsPage.tsx`'te DÜZELTİLDİ
+      (şema dışı anahtarlar korunur; npm build alındı). B12 stok anahtarının panel yolu:
+      PlatformType şemasına boolean alan eklemek (veri işi) → Kanallar formunda görünür.
 - [ ] P1. **Sipariş yönetimi** (BÜYÜK — başlamadan kullanıcıyla ekran kurgusu konuşulacak).
       **Alt dilimler — her biri kendi E2E'si + kapanış raporuyla AYRI kapanır, sonrakine
       öyle geçilir (raydan çıkma önlemi):**
@@ -322,7 +328,9 @@ src/ECSPros.Api/
   - [ ] P1b. Sipariş detayı + durum aksiyonları: kalemler, ödemeler, adresler, kabul
         edilen sözleşmeler, sipariş notu, kargo bilgisi + takip linki; onayla / iptal /
         kargoya ver (takip no + kargo anlaşması seçimi) / teslim.
-  - [ ] P1c. İadeler: liste + onay/red/teslim al/geri ödeme aksiyonları.
+  - [ ] P1c. İadeler: liste + onay/red/teslim al/geri ödeme aksiyonları + iade görselleri/
+        neden görünümü + **iade nedenleri (`return_reason` Lookup değerleri) yönetimi
+        (P0 bulgusu — lookup ekranı placeholder, değerler bugün yalnız API/SQL'den).**
   - [ ] P1d. Faturalar: listele/oluştur/iptal + `IntegratorInvoiceUrl` girişi (H1'deki
         storefront "Faturayı Görüntüle" butonunun veri kaynağı bugün yalnız API'den
         doldurulabiliyor).
@@ -346,7 +354,8 @@ src/ECSPros.Api/
       koleksiyon özeti, üye grubu ataması, OTP/oturum bilgisi görünümü).
 - [ ] P5. **İletişim mesajları gelen kutusu** (küçük — F4 `contact_messages` bugün yalnız
       tabloya düşüyor) + **bildirim izleme** (küçük): stok alarmları (C9/H8) + kayıtlı
-      aramalar (E11/H8) listesi ve gönderim durumları; H8 scan tetiğine buton.
+      aramalar (E11/H8) listesi ve gönderim durumları; H8 scan tetiğine buton +
+      **bülten aboneleri listesi (`newsletter_subscriptions` — P0 bulgusu, küçük).**
 
 **Kabul kriterleri:** P0 taraması tam ve bulguları kapanmış; P1–P5 ekranları canlı; sitede
 canlı işlev kümesi için admin'de placeholder kalmadı; her ekran E2E duman testinden geçti.
@@ -472,6 +481,8 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 | Mobil menü | ana sekme/yan sekme/panel/kampanya listesi | VAR (menus) | B1 | ✅ 2026-07-07 (kampanya bölümü statik — G) |
 | Görsel arama (kamera) | modal + upload + sonuçlar | YOK | H3 | 🕐 UI kabuğu taşındı (Faz A); endpoint H3 |
 
+> **Panel (P0, 2026-07-13):** Mega/mobil/footer menüleri → admin **Menüler ✓**; duyuru şeridi → **Vitrin Yönetimi (announcement) ✓**; giriş/kayıt üye akışları → üye yönetimi YOK (**P4**); kayıt sözleşme metinleri (KVKK/üyelik, CMS) → içerik editörü YOK (**P2**); arama ürün verisinden — ayrı yönetim gerektirmez; görsel arama H3 (key → Servis Kataloğu ✓).
+
 ### 8.2 Ürün Kartı (liste/vitrin/hesabım her yerde aynı kart)
 | İşlev | Backend | Faz | Durum |
 |---|---|---|---|
@@ -488,6 +499,8 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 | Fiyat (ms-urun-fiyat) | VAR (varyant fiyatı) | B8 | ✅ (2026-07-07 B7'de bağlandı — varyant fiyatı, B8'de doğrulandı) |
 | Lazy load (`data-ms-lazy-src`) | — | B7 | ✅ (2026-07-07 — SSR kartlar dahil tüm görseller lazy) |
 
+> **Panel (P0, 2026-07-13):** Ürün/varyant/görsel/fiyat → **Catalog sayfaları ✓**; öne çıkar (Featured) → **ProductDetailPage ✓**; puan/yorum → **Yorum Moderasyonu ✓**; koleksiyon → **Koleksiyon Moderasyonu ✓** (üye favori özeti **P4**); video → ürün detay **"URL ile Video Ekle" ✓**; kampanya etiketi → kampanya yönetimi **P3**.
+
 ### 8.3 Ürün Listesi
 | İşlev | Backend | Faz | Durum |
 |---|---|---|---|
@@ -499,6 +512,8 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 | Infinite scroll + "yükleniyor" + state restore | VAR (paging) | B7 | ✅ (2026-07-07 — state restore tasarımdaki gibi kapalı: sadeceIlkYukle) |
 | Dinamik kartlara davranış yenileme (`msUrunKartDavranislariYenile`) | — | B7 | ✅ (2026-07-07 — modülün sonra hook'u + JSON dolumu sonrası) |
 | Sonuç sayısı gösterimi | VAR | B7/B10 | ✅ (2026-07-09 — her durumda SSR gerçek toplam; filtreli toplam sunucudan gelir) |
+
+> **Panel (P0, 2026-07-13):** Facet'ler ürün özelliklerinden üretilir → **Catalog ✓**; sıralama/görünüm yönetim gerektirmez. Panel eksiği yok.
 
 ### 8.4 Ürün Detay
 | İşlev | Backend | Faz | Durum |
@@ -517,6 +532,8 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 | Değerlendirme özeti + değerlendirmeler linki | VAR (product_reviews) | E7 | ✅ 2026-07-10 (E7 — puan+sayı gerçek, link sayfa içi bölüme; ilk 10 yorum SSR) |
 | Benzer/önerilen ürün vitrinleri | VAR (sorgu) | B9 | 🕐 misharix detay tasarımında benzer ürün bölümü YOK — Faz G vitrin sistemine devredildi |
 | Videolu ürün | YOK | H5 | 🕐 H5 |
+
+> **Panel (P0, 2026-07-13):** İçerik/özellik/görsel → **Catalog ✓**; değerlendirmeler → **Yorum Moderasyonu ✓**. Stok kontrol anahtarı (B12, `FirmPlatform.Settings.stockControlEnabled`) → **Kanallar** sayfasından yönetilebilir (PlatformType şemasına boolean alan eklenerek — veri işi, kod gerekmez). ⚠️ **P0 bulgusu (düzeltildi):** Kanallar formu şema dışı Settings/Credentials anahtarlarını (stockControlEnabled, tema/domain) kayıtta sessizce SİLİYORDU — artık korunuyor (`ChannelsPage.tsx`).
 
 ### 8.5 Sepet + Checkout
 | İşlev | Backend | Faz | Durum |
@@ -537,6 +554,8 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 | Ödeme eksikleri uyarısı (onaya geç kontrolü) | — (UI) | C5 | ✅ 2026-07-09 (misharix script'i + checkout hataları aynı alanda) |
 | Stok gelince haber ver | YOK | C9 | ✅ 2026-07-09 (stock_alerts + API + sepet butonu; bildirim gönderimi Faz H) |
 | Sipariş oluştur → tamamlandı sayfası | VAR | C10 | ✅ 2026-07-09 (pending sipariş + kupon kaydı + sepet temizliği + onay sayfası) |
+
+> **Panel (P0, 2026-07-13):** Sipariş görüntüleme/aksiyonları → YOK (**P1a-b**); kupon tanımı/kullanımı → YOK (**P3**); stok alarmı izleme → YOK (**P5**); sözleşme metinleri (C8 CMS) → YOK (**P2**); taksit listesi config — ödeme mock, bilinçli sınır (K2/H6); TCKN algoritmik — yönetim gerektirmez; il/ilçe/mahalle referans verisi seed'li — panel ihtiyacı yok (gerekirse R).
 
 ### 8.6 Hesabım (12 sayfa)
 | Sayfa / işlev | Backend | Faz | Durum |
@@ -559,6 +578,8 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 | İndirim kuponlarım | VAR | E9 | ✅ 2026-07-10 (E9 — GetMemberCoupons + SSR kartlar + Sepette Kullan köprüsü) |
 | Favori aramalarım (kaydet/sil/çalıştır) | VAR | E11 | ✅ 2026-07-10 (E11 — saved_searches + kaydet/düzenle/sil modalı + /urunler?search çalıştırma) |
 
+> **Panel (P0, 2026-07-13):** Siparişlerim/iadelerim → YOK (**P1a-c**); iade nedenleri `return_reason` Lookup değerleri panelden yönetilemiyor (lookup ekranı placeholder) → **P1c kapsamına eklendi**; üye profil/adres/oturum/duyuru tercihleri → YOK (**P4**); kuponlarım → **P3**; favori aramalarım izleme → **P5**; yorumlarım → **Yorum Moderasyonu ✓**; koleksiyonlarım → **Koleksiyon Moderasyonu ✓**; fatura `IntegratorInvoiceUrl` girişi → **P1d**.
+
 ### 8.7 Kurumsal + Footer
 | İşlev | Backend | Faz | Durum |
 |---|---|---|---|
@@ -569,6 +590,8 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 | Footer kolonları + mobil akordiyon | VAR (menus) | F4 | ✅ 2026-07-10 (F4 — footer nav menüsünden, tanımsızsa statik yedek; akordiyon kaynak script'i) |
 | Bülten aboneliği | VAR | F4 | ✅ 2026-07-10 (F4 — newsletter_subscriptions + idempotent API; gönderim ileri iş) |
 | Banka logoları / sosyal linkler | statik/config | F4 | 🔶 statik '#' — gerçek URL'ler config/Faz G (firma hesapları verilince) |
+
+> **Panel (P0, 2026-07-13):** İçerik sayfaları + SSS (CMS) → içerik editörü YOK (**P2a-b**); iletişim mesajları gelen kutusu → YOK (**P5**); footer kolonları → **Menüler ✓**; **P0 bulgusu:** bülten aboneleri (`newsletter_subscriptions`) panelde görüntülenemiyor → **P5'e eklendi**; banka/sosyal linkler statik — firma hesapları verilince (G notu).
 
 ### 8.8 Vitrin & Kişiselleştirme Sistemi (Faz G — spec: anasayfa-dizayn-yönetimi.txt)
 | Bölüm tipi / yetenek | Backend | Faz | Durum |
@@ -592,6 +615,8 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 | Admin önizleme (segment seçerek, "neden görünüyor/gizli") | G12 | G-M2 | ✅ taslak+kurgu segment, nedenli liste; canlıya dokunmaz |
 | Audit log + değişiklik geçmişi ekranları | G13 | G-M2 | ✅ iam_audit_logs + Değişiklik Geçmişi paneli (spec ActionType/EntityType) |
 
+> **Panel (P0, 2026-07-13):** Tam kapsama ✓ — blok/öğe CRUD + sıralama + Yayınla/rollback + segmentli önizleme + audit paneli (**PagesManagementPage + PageBlockDetailPage**). Panel-senkron için örnek model.
+
 ### 8.9 Diğer sayfalar + ortak elementler
 | İşlev | Backend | Faz | Durum |
 |---|---|---|---|
@@ -607,5 +632,7 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 | ProjeElementleri scroll-restore, SSS akordiyon, favori animasyonu | — | A5 | ⬜ |
 
 ---
+
+> **Panel (P0, 2026-07-13):** Değerlendirmeler sayfası (H9 canlı) → **Yorum Moderasyonu ✓**; mobil alt bar + site.js element ailesi saf UI — yönetim gerektirmez.
 
 *Bu plan `docs/misharix-tasarim-projesi-inceleme.md` ile birlikte okunmalıdır. Kaynak tasarımda değişiklik olursa önce envanter güncellenir, sonra ilgili faz görevi revize edilir.*

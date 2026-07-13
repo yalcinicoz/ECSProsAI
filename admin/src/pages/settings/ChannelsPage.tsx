@@ -184,6 +184,13 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
     mutationFn: async () => {
       const credentials: Record<string, unknown> = {}
       const settings: Record<string, unknown> = {}
+      // Şema dışı mevcut anahtarlar korunur (stockControlEnabled, tema/domain vb. —
+      // backend Settings/Credentials'ı olduğu gibi değiştirir, merge etmez)
+      if (target) {
+        const schemaKeys = new Set(schema.map(f => f.key))
+        for (const [k, v] of Object.entries(target.credentials ?? {})) if (v != null && !schemaKeys.has(k)) credentials[k] = v
+        for (const [k, v] of Object.entries(target.settings ?? {})) if (v != null && !schemaKeys.has(k)) settings[k] = v
+      }
       for (const f of schema) {
         const v = fieldValues[f.key] ?? ''
         if (v) {
