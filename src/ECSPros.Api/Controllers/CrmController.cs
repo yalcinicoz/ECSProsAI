@@ -162,6 +162,24 @@ public class CrmController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>Üyenin oturumlarını listeler (P4 — OTP/oturum görünümü).</summary>
+    [HttpGet("members/{id:guid}/sessions")]
+    public async Task<IActionResult> GetMemberSessions(Guid id, [FromQuery] int limit = 10, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(
+            new ECSPros.Crm.Application.Queries.GetMemberSessions.GetMemberSessionsQuery(id, limit), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Üyenin storefront etkileşim özeti — favori/koleksiyon/yorum/arama sayıları (P4).</summary>
+    [HttpGet("members/{id:guid}/engagement")]
+    public async Task<IActionResult> GetMemberEngagement(Guid id, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(
+            new ECSPros.Storefront.Application.Queries.GetMemberEngagementSummary.GetMemberEngagementSummaryQuery(id), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
     /// <summary>Üye grubu oluşturur.</summary>
     [HttpPost("member-groups")]
     public async Task<IActionResult> CreateMemberGroup([FromBody] CreateMemberGroupRequest request, CancellationToken ct)

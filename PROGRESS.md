@@ -382,9 +382,15 @@
     GET/POST/PUT coupons + usages endpoint'leri). Doğrulama: izole 5052 — 6 route
     401 ✓, / ve /sepet 200 ✓. Migration yok. Sınır: kampanya ürün seçimi yalnız
     "tüm ürünler" (specific → Faz G kampanya etiketi işiyle).
-  - **SIRADAKİ: P-M3 — P4 üyeler (orta) + P5 iletişim mesajları + bildirim izleme +
-    bülten aboneleri (küçük).** Restart bekleyen backend: P1c+P1d+P2a+P2b+P3 —
-    publish güncel.
+  - **P4 TAMAM (2026-07-13):** Üyeler listesi (arama+sekme+sayfalı) + üye detayı
+    (doğrulama rozetleri, 8'li özet şeridi — yeni engagement endpoint'i Storefront
+    GetMemberEngagementSummary'den, üye grubu ataması+aktiflik, duyuru tercihleri
+    salt-okunur, adresler, son 10 sipariş → sipariş detayı linki, oturumlar — yeni
+    sessions endpoint'i) + Üye Grupları CRUD (placeholder'dan gerçeğe). Doğrulama:
+    izole 5052 — 3 route 401 ✓, /hesabim 302 + / 200 ✓. Migration yok.
+  - **SIRADAKİ: P5 (küçük) — iletişim mesajları gelen kutusu + bildirim izleme (stok
+    alarmları + kayıtlı aramalar + H8 scan tetiği) + bülten aboneleri listesi. P5 ile
+    FAZ P KAPANIR.** Restart bekleyen backend: P1c+P1d+P2a+P2b+P3+P4 — publish güncel.
   - **SIRADAKİ: P1c iadeler** (liste+aksiyonlar+iade nedenleri lookup yönetimi).
     Restart hâlâ bekliyor — H1..H9 + platform entegrasyonları + P1a/P1b backend tek
     restart'la çıkar (admin/dist şimdiden yeni; restart öncesi: sayaçlar gizli, Aktif
