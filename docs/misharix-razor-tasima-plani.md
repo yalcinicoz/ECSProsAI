@@ -21,8 +21,10 @@
    (1) Sonuç 2-3 cümle (teknik detay PROGRESS.md'ye), (2) Deploy durumu tek satır,
    (3) 🧪 **kullanıcı test talimatı**: 3-7 numaralı adım, her adımda "nereye gir → neye
    tıkla → ne görmelisin" + en az bir olumsuz senaryo + gerekirse test verisini kur/sil
-   adımı (hazır sahte veri bırakılmaz), (4) bilinen sınırlar. Kullanıcı sorun bildirirken
-   "adım no + gördüğü" yeterli olacak şekilde yazılır.
+   adımı (hazır sahte veri bırakılmaz), (4) bilinen sınırlar, (5) **kalan iş listesi** —
+   raporun en sonunda kalan işlerin tek satırlık listesi + toplam sayısı (kullanıcı
+   takibi için; 2026-07-13 eki). Kullanıcı sorun bildirirken "adım no + gördüğü" yeterli
+   olacak şekilde yazılır.
 
 ---
 
