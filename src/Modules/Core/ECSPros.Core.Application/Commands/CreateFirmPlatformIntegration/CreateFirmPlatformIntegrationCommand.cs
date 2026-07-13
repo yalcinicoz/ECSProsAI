@@ -4,32 +4,33 @@ using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace ECSPros.Core.Application.Commands.CreateFirmIntegration;
+namespace ECSPros.Core.Application.Commands.CreateFirmPlatformIntegration;
 
-public record CreateFirmIntegrationCommand(
+/// <summary>
+/// FirmPlatformId null → firma geneli (tüm platformlar); dolu → yalnız o platforma özel.
+/// Credentials DB'ye şifreli yazılır (Infrastructure converter).
+/// </summary>
+public record CreateFirmPlatformIntegrationCommand(
     Guid FirmId,
     Guid IntegrationServiceId,
     string? Name,
     Dictionary<string, object> Credentials,
     Dictionary<string, object> Settings,
-    string? ContractNumber = null,
+    Guid? FirmPlatformId = null,
     DateTime? StartDate = null,
     DateTime? EndDate = null,
     string Status = "draft",
-    Dictionary<string, object>? Terms = null,
-    string? ContactName = null,
-    string? ContactPhone = null,
-    string? ContactEmail = null,
-    string? DocumentUrl = null
+    Dictionary<string, object>? Terms = null
 ) : IRequest<Result<Guid>>;
 
-public class CreateFirmIntegrationCommandHandler : IRequestHandler<CreateFirmIntegrationCommand, Result<Guid>>
+public class CreateFirmPlatformIntegrationCommandHandler
+    : IRequestHandler<CreateFirmPlatformIntegrationCommand, Result<Guid>>
 {
     private readonly ICoreDbContext _db;
 
-    public CreateFirmIntegrationCommandHandler(ICoreDbContext db) => _db = db;
+    public CreateFirmPlatformIntegrationCommandHandler(ICoreDbContext db) => _db = db;
 
-    public async Task<Result<Guid>> Handle(CreateFirmIntegrationCommand request, CancellationToken ct)
+    public async Task<Result<Guid>> Handle(CreateFirmPlatformIntegrationCommand request, CancellationToken ct)
     {
         var firmExists = await _db.Firms.AnyAsync(f => f.Id == request.FirmId, ct);
         if (!firmExists)
@@ -39,28 +40,32 @@ public class CreateFirmIntegrationCommandHandler : IRequestHandler<CreateFirmInt
         if (!serviceExists)
             return Result.Failure<Guid>("Entegrasyon servisi bulunamadı.");
 
-        var integration = new FirmIntegration
+        if (request.FirmPlatformId.HasValue)
+        {
+            var platformOk = await _db.FirmPlatforms.AnyAsync(
+                p => p.Id == request.FirmPlatformId.Value && p.FirmId == request.FirmId, ct);
+            if (!platformOk)
+                return Result.Failure<Guid>("Platform bulunamadı veya bu firmaya ait değil.");
+        }
+
+        var integration = new FirmPlatformIntegration
         {
             Id = Guid.NewGuid(),
             FirmId = request.FirmId,
             IntegrationServiceId = request.IntegrationServiceId,
+            FirmPlatformId = request.FirmPlatformId,
             Name = request.Name,
             Credentials = request.Credentials,
             Settings = request.Settings,
             IsActive = true,
-            ContractNumber = request.ContractNumber,
             StartDate = AsUtc(request.StartDate),
             EndDate = AsUtc(request.EndDate),
             Status = request.Status,
             Terms = request.Terms,
-            ContactName = request.ContactName,
-            ContactPhone = request.ContactPhone,
-            ContactEmail = request.ContactEmail,
-            DocumentUrl = request.DocumentUrl,
             CreatedAt = DateTime.UtcNow
         };
 
-        _db.FirmIntegrations.Add(integration);
+        _db.FirmPlatformIntegrations.Add(integration);
         await _db.SaveChangesAsync(ct);
 
         return Result.Success<Guid>(integration.Id);

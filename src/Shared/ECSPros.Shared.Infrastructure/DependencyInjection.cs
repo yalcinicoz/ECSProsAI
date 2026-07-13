@@ -45,13 +45,11 @@ public static class DependencyInjection
         }
 
         // ─── Email / SMS ────────────────────────────────────────────────
-        // H8 (K12 kararı): e-posta gerçek kanal — Email:Smtp:Host yapılandırılmışsa SMTP,
-        // yoksa Log stub'ı (site e-postasız da çalışır; Redis kayıt deseniyle aynı güvenlik
-        // ağı). SMS için sağlayıcı kararı (K3) hâlâ açık — Log stub'ı kalır.
-        if (!string.IsNullOrWhiteSpace(configuration["Email:Smtp:Host"]))
-            services.AddTransient<IEmailService, SmtpEmailService>();
-        else
-            services.AddTransient<IEmailService, LogEmailService>();
+        // H8 (K12 kararı): e-posta gerçek kanal. SmtpEmailService ayarları sırayla çözer:
+        // DB (ISmtpSettingsProvider — Api kaydeder) → Email:Smtp config → ikisi de yoksa
+        // log'a yazar (site e-postasız da çalışır; Redis kayıt deseniyle aynı güvenlik ağı).
+        // SMS için sağlayıcı kararı (K3) hâlâ açık — Log stub'ı kalır.
+        services.AddTransient<IEmailService, SmtpEmailService>();
         services.AddTransient<ISmsService, LogSmsService>();
 
         return services;

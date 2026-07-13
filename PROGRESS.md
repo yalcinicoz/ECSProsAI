@@ -294,6 +294,45 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-13 — Platform servis entegrasyonları yeniden yapılandırıldı (kullanıcı kararı;
+  ayarlar DB'de + Data Protection):**
+  - **Tablo:** `core_firm_integrations` → **`core_firm_platform_integrations`**
+    (`RestructureFirmPlatformIntegrations` migration'ı CANLI DB'YE UYGULANDI — tablo boştu).
+    `ContactName/Phone/Email`, `ContractNumber`, `DocumentUrl` kolonları KALDIRILDI
+    (gerekirse SettingsSchema'da tanımlanıp Settings jsonb'sine girilir);
+    **nullable `FirmPlatformId` eklendi**: null → firma geneli, dolu → platforma özel;
+    çözümlemede platforma özel kayıt firma-geneline TERCİH edilir (H2
+    GetPlatformActiveCargoCarrier bu kurala güncellendi). Entity/DbSet adları
+    FirmPlatformIntegration/FirmPlatformIntegrations; CargoRule FK'sı da yeniden adlandı.
+  - **Şifreleme:** `Credentials` at-rest Data Protection ile şifreli (jsonb→text; EF value
+    converter `EncryptedCredentials`). Key ring `~/.ecspros/dp-keys`
+    (`DataProtection:KeysPath` config'i; ⚠️ key ring silinirse kimlik bilgileri çözülemez —
+    yedeğe dahil edilmeli). Admin GET yanıtları maskeli (`•••`); güncellemede maskeli
+    bırakılan alanın saklı değeri korunur (`CredentialsMasking.MergeMasked`).
+  - **SMTP artık DB'den:** `ISmtpSettingsProvider` (Api: `DbSmtpSettingsProvider`,
+    IMemoryCache 2 dk) — aktif email-tipli kayıt (firma geneli öncelikli) → yoksa
+    `Email:Smtp:*` config → ikisi de yoksa log (eski LogEmailService biçimi korundu,
+    h8 log denetimleri bozulmaz). Seed: `smtp` (email) + `visual_search` IntegrationService
+    satırları SettingsSchema'lı — CANLI DB'DE (5051 test instance'ının seeder'ı ekledi).
+  - **Admin:** FirmDetailPage entegrasyon formu — sözleşme-no/yetkili/belge alanları
+    kalktı, Platform seçici geldi (Tüm platformlar = firma geneli); liste kolonunda
+    PLATFORM; maskeli credential ipucu. npm build alındı (admin/dist güncel).
+  - **Doğrulama (izole 5051 publish, canlı DB):** create firma-geneli + platforma-özel +
+    yanlış-firma-platformu reddi ✓; GET maskeli + platform adı ✓; DB'de ciphertext
+    (`CfDJ8...`) ✓; **decrypt aracıyla maskeli-merge birebir doğrulandı** (maskeli host/user
+    korundu, yeni password/from yazıldı) ✓; anasayfa 200 + cargo servisleri 8 ✓; drift
+    TEMİZ ✓; TEST kayıtları silindi (artık 0), 5051 kapatıldı (PID cwd doğrulamalı).
+    NOT: eski h2/e4 E2E suite'leri repoda değil (oturum-içi scriptlerdi) — birebir
+    koşulamadı; kargo çözümlemesi kod + duman testiyle doğrulandı, tam h2 akışı canlı
+    doğrulamada izlenecek.
+  - **⚠️ DEPLOY BEKLİYOR — publish GÜNCELLENDİ (/opt/ECSProsAI/publish):** H1..H9 + bu iş
+    tek restart'la canlıya çıkar. Migration canlı DB'de olduğundan ESKİ binary'nin admin
+    firma-sözleşme ekranı restart'a kadar çalışmaz (bilinçli kısa pencere) — restart
+    geciktirilmemeli. Doğrulama: admin firma detayı → Entegrasyonlar + `journalctl`.
+  - **SIRADAKİ:** H-M4/H3 görsel arama — API key artık admin'den `visual_search` servisine
+    girilecek (appsettings yerine DB; K13 bu yönde güncellenmeli). SMTP bilgileri de
+    admin'den girilebilir (smtp servisi, firma geneli kayıt).
+
 - **2026-07-12 (devam) — H5 TAMAM → H-M3 KAPANDI (alt bar + değerlendirmeler + videolar):**
   - Keşif: product_videos + TAM dosya yükleme pipeline'ı (FTP+batch+admin sekmesi) zaten
     kuruluymuş (0 kayıt). K15'le URL yolu eklendi: additive VideoUrl/ThumbnailUrl

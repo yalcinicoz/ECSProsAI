@@ -23,7 +23,7 @@ public class FirmConfiguration : IEntityTypeConfiguration<Firm>
             .WithOne(x => x.Firm)
             .HasForeignKey(x => x.FirmId);
 
-        builder.HasMany(x => x.FirmIntegrations)
+        builder.HasMany(x => x.PlatformIntegrations)
             .WithOne(x => x.Firm)
             .HasForeignKey(x => x.FirmId);
 

@@ -6,22 +6,26 @@ using Microsoft.Extensions.Logging;
 namespace ECSPros.Shared.Infrastructure.Messaging;
 
 /// <summary>
-/// H8: IEmailService'in ilk gerçek implementasyonu — SMTP. Yalnız `Email:Smtp:Host`
-/// yapılandırıldığında kaydedilir (DependencyInjection), yoksa LogEmailService kalır.
+/// H8: IEmailService'in gerçek implementasyonu — SMTP. Ayar çözümleme sırası:
+/// 1) DB — ISmtpSettingsProvider (admin'in girdiği smtp servis tanımı; şifreli saklanır),
+/// 2) config — Email:Smtp:{Host,Port=587,User,Password,From,FromName,UseSsl=true},
+/// 3) ikisi de yoksa e-posta gönderilmez, LogEmailService biçiminde loglanır (site
+/// e-postasız da çalışır — güvenlik ağı).
 /// Gönderim hatası FIRLATILIR — çağıran (bildirim tüketicileri) yakalayıp kaydı
 /// 'gönderilmedi' bırakır; iş akışları e-posta hatasıyla düşmemelidir (çağıran sözleşmesi).
-/// Config: Email:Smtp:{Host,Port=587,User,Password,From,FromName,UseSsl=true}
-/// — kimlik bilgileri yalnız appsettings.Production.json'da (gitignore'lu).
 /// </summary>
 public class SmtpEmailService : IEmailService
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<SmtpEmailService> _logger;
+    private readonly ISmtpSettingsProvider? _settingsProvider;
 
-    public SmtpEmailService(IConfiguration configuration, ILogger<SmtpEmailService> logger)
+    public SmtpEmailService(IConfiguration configuration, ILogger<SmtpEmailService> logger,
+        ISmtpSettingsProvider? settingsProvider = null)
     {
         _configuration = configuration;
         _logger = logger;
+        _settingsProvider = settingsProvider;
     }
 
     public Task SendAsync(string to, string subject, string htmlBody, CancellationToken ct = default)
@@ -29,30 +33,39 @@ public class SmtpEmailService : IEmailService
 
     public async Task SendAsync(IEnumerable<string> recipients, string subject, string htmlBody, CancellationToken ct = default)
     {
-        var host = _configuration["Email:Smtp:Host"]!;
-        var from = _configuration["Email:Smtp:From"] ?? _configuration["Email:Smtp:User"] ?? "noreply@localhost";
-        var fromName = _configuration["Email:Smtp:FromName"] ?? "ECSPros";
-        var user = _configuration["Email:Smtp:User"];
+        var alicilar = recipients.Where(a => !string.IsNullOrWhiteSpace(a)).ToList();
+        if (alicilar.Count == 0) return;
 
-        using var client = new SmtpClient(host, _configuration.GetValue("Email:Smtp:Port", 587))
+        var settings = _settingsProvider is null ? null : await _settingsProvider.GetAsync(ct);
+        settings ??= FromConfiguration();
+
+        if (settings is null)
         {
-            EnableSsl = _configuration.GetValue("Email:Smtp:UseSsl", true),
+            // SMTP hiç yapılandırılmamış — eski LogEmailService davranışı (log biçimi aynı).
+            _logger.LogInformation("[EMAIL] To: {Recipients} | Subject: {Subject}",
+                string.Join(", ", alicilar), subject);
+            return;
+        }
+
+        var from = settings.From ?? settings.User ?? "noreply@localhost";
+
+        using var client = new SmtpClient(settings.Host, settings.Port)
+        {
+            EnableSsl = settings.UseSsl,
             DeliveryMethod = SmtpDeliveryMethod.Network
         };
-        if (!string.IsNullOrWhiteSpace(user))
-            client.Credentials = new NetworkCredential(user, _configuration["Email:Smtp:Password"]);
+        if (!string.IsNullOrWhiteSpace(settings.User))
+            client.Credentials = new NetworkCredential(settings.User, settings.Password);
 
         using var mesaj = new MailMessage
         {
-            From = new MailAddress(from, fromName),
+            From = new MailAddress(from, settings.FromName ?? "ECSPros"),
             Subject = subject,
             Body = htmlBody,
             IsBodyHtml = true
         };
-        foreach (var alici in recipients.Where(a => !string.IsNullOrWhiteSpace(a)))
+        foreach (var alici in alicilar)
             mesaj.To.Add(alici);
-
-        if (mesaj.To.Count == 0) return;
 
         try
         {
@@ -66,5 +79,20 @@ public class SmtpEmailService : IEmailService
                 subject, string.Join(", ", mesaj.To.Select(t => t.Address)));
             throw;
         }
+    }
+
+    private SmtpSettings? FromConfiguration()
+    {
+        var host = _configuration["Email:Smtp:Host"];
+        if (string.IsNullOrWhiteSpace(host)) return null;
+
+        return new SmtpSettings(
+            host,
+            _configuration.GetValue("Email:Smtp:Port", 587),
+            _configuration["Email:Smtp:User"],
+            _configuration["Email:Smtp:Password"],
+            _configuration["Email:Smtp:From"],
+            _configuration["Email:Smtp:FromName"],
+            _configuration.GetValue("Email:Smtp:UseSsl", true));
     }
 }

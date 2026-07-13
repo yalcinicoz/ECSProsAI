@@ -36,7 +36,7 @@ public class GetFirmDetailQueryHandler : IRequestHandler<GetFirmDetailQuery, Res
     {
         var firm = await _db.Firms
             .Include(f => f.FirmPlatforms)
-            .Include(f => f.FirmIntegrations).ThenInclude(fi => fi.IntegrationService)
+            .Include(f => f.PlatformIntegrations).ThenInclude(fi => fi.IntegrationService)
             .FirstOrDefaultAsync(f => f.Id == request.Id, ct);
 
         if (firm is null)
@@ -48,7 +48,7 @@ public class GetFirmDetailQueryHandler : IRequestHandler<GetFirmDetailQuery, Res
             firm.IsActive, firm.CreatedAt,
             firm.FirmPlatforms.Where(p => !p.IsDeleted)
                 .Select(p => new FirmPlatformSummaryDto(p.Id, p.Code, p.NameI18n, p.IsActive)).ToList(),
-            firm.FirmIntegrations.Where(i => !i.IsDeleted)
+            firm.PlatformIntegrations.Where(i => !i.IsDeleted)
                 .Select(i => new FirmIntegrationSummaryDto(i.Id, i.Name, i.IntegrationService.ServiceType, i.IsActive)).ToList()
         );
 

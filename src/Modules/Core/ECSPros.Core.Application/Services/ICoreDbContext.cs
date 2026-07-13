@@ -18,7 +18,7 @@ public interface ICoreDbContext
     DbSet<Firm> Firms { get; }
     DbSet<FirmPlatform> FirmPlatforms { get; }
     DbSet<IntegrationService> IntegrationServices { get; }
-    DbSet<FirmIntegration> FirmIntegrations { get; }
+    DbSet<FirmPlatformIntegration> FirmPlatformIntegrations { get; }
     DbSet<NotificationType> NotificationTypes { get; }
     DbSet<NotificationTemplate> NotificationTemplates { get; }
     DbSet<UiTranslation> UiTranslations { get; }

@@ -29,12 +29,73 @@ public static class DatabaseSeeder
         await SeedFaqPageAsync(scope.ServiceProvider);
         await SeedDefaultVitrinAsync(scope.ServiceProvider);
         await SeedCargoCarriersAsync(scope.ServiceProvider);
+        await SeedPlatformServiceCatalogAsync(scope.ServiceProvider);
+    }
+
+    /// <summary>
+    /// Platform servisleri kataloğu — SMTP (email) + görsel arama (visual_search)
+    /// IntegrationService satırları. Kimlik bilgileri buraya DEĞİL, admin firma detayından
+    /// açılan FirmPlatformIntegration kaydına girilir (Credentials şifreli); SettingsSchema
+    /// admin formunun alanlarını tanımlar (secret=true → Credentials'a, değilse Settings'e).
+    /// Kod bazlı idempotent.
+    /// </summary>
+    private static async Task SeedPlatformServiceCatalogAsync(IServiceProvider sp)
+    {
+        var context = sp.GetRequiredService<CoreDbContext>();
+
+        var servisler = new (string Kod, string Ad, string Tip, Dictionary<string, object> Sema)[]
+        {
+            ("smtp", "SMTP E-Posta", "email", new Dictionary<string, object>
+            {
+                ["fields"] = new object[]
+                {
+                    new { code = "host",     label = "Sunucu",       type = "string", secret = false, required = true },
+                    new { code = "port",     label = "Port",         type = "number", secret = false, required = false, @default = 587 },
+                    new { code = "user",     label = "Kullanıcı",    type = "string", secret = true,  required = false },
+                    new { code = "password", label = "Şifre",        type = "string", secret = true,  required = false },
+                    new { code = "from",     label = "Gönderen",     type = "string", secret = false, required = false },
+                    new { code = "fromName", label = "Gönderen Adı", type = "string", secret = false, required = false },
+                    new { code = "useSsl",   label = "SSL",          type = "boolean", secret = false, required = false, @default = true }
+                }
+            }),
+            ("visual_search", "Görsel Arama", "visual_search", new Dictionary<string, object>
+            {
+                ["fields"] = new object[]
+                {
+                    new { code = "apiUrl", label = "API Adresi",  type = "string", secret = false, required = true },
+                    new { code = "apiKey", label = "API Anahtarı", type = "string", secret = true,  required = true }
+                }
+            })
+        };
+
+        var mevcutKodlar = await context.IntegrationServices
+            .Where(s => s.ServiceType == "email" || s.ServiceType == "visual_search")
+            .Select(s => s.Code)
+            .ToListAsync();
+
+        var yeniler = servisler
+            .Where(s => !mevcutKodlar.Contains(s.Kod))
+            .Select(s => new IntegrationService
+            {
+                Code = s.Kod,
+                NameI18n = new() { { "tr", s.Ad }, { "en", s.Ad } },
+                ServiceType = s.Tip,
+                IsAvailable = true,
+                SettingsSchema = s.Sema
+            })
+            .ToList();
+
+        if (yeniler.Count == 0) return;
+
+        context.IntegrationServices.AddRange(yeniler);
+        await context.SaveChangesAsync();
+        Console.WriteLine($"✓ Seed: {yeniler.Count} platform servisi eklendi (smtp/visual_search IntegrationService).");
     }
 
     /// <summary>
     /// H2: Kargo firması kataloğu — IntegrationService (ServiceType=cargo) satırları
     /// takip URL şablonlarıyla. Firma hangi kargolarla çalışacaksa admin firma-sözleşme
-    /// ekranından FirmIntegration açar; storefront kargo modalı adı/logoyu/takip linkini
+    /// ekranından FirmPlatformIntegration açar; storefront kargo modalı adı/logoyu/takip linkini
     /// buradan çözer. Kod bazlı idempotent (var olana dokunmaz — admin düzenlemesi ezilmez).
     /// </summary>
     private static async Task SeedCargoCarriersAsync(IServiceProvider sp)

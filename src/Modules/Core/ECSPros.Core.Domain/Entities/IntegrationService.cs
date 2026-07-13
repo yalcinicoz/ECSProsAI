@@ -6,7 +6,7 @@ public class IntegrationService : BaseEntity
 {
     public string Code { get; set; } = string.Empty;
     public Dictionary<string, string> NameI18n { get; set; } = new();
-    public string ServiceType { get; set; } = string.Empty; // marketplace, cargo, invoice_integrator, payment, sms, erp, other
+    public string ServiceType { get; set; } = string.Empty; // marketplace, cargo, invoice_integrator, payment, sms, email, visual_search, erp, other
     public bool IsAvailable { get; set; } = false;
     public Dictionary<string, object>? SettingsSchema { get; set; }
 
@@ -15,5 +15,5 @@ public class IntegrationService : BaseEntity
     public string? LogoUrl { get; set; }
     public string? TrackingUrlTemplate { get; set; } // {trackingNumber} yer tutucusu
 
-    public ICollection<FirmIntegration> FirmIntegrations { get; set; } = new List<FirmIntegration>();
+    public ICollection<FirmPlatformIntegration> PlatformIntegrations { get; set; } = new List<FirmPlatformIntegration>();
 }

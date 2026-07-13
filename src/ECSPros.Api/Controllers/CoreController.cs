@@ -2,11 +2,11 @@ using ECSPros.Core.Domain.Entities;
 using ECSPros.Core.Application.Commands.CreateCargoRule;
 using ECSPros.Core.Application.Commands.CreateExpenseType;
 using ECSPros.Core.Application.Commands.CreateFirm;
-using ECSPros.Core.Application.Commands.CreateFirmIntegration;
+using ECSPros.Core.Application.Commands.CreateFirmPlatformIntegration;
 using ECSPros.Core.Application.Commands.CreateFirmPlatform;
 using ECSPros.Core.Application.Commands.CreatePlatformType;
 using ECSPros.Core.Application.Commands.UpdateFirm;
-using ECSPros.Core.Application.Commands.UpdateFirmIntegration;
+using ECSPros.Core.Application.Commands.UpdateFirmPlatformIntegration;
 using ECSPros.Core.Application.Commands.UpdateFirmPlatform;
 using ECSPros.Core.Application.Commands.UpdatePlatformType;
 using ECSPros.Core.Application.Commands.UpsertUiTranslations;
@@ -14,7 +14,7 @@ using ECSPros.Core.Application.Queries.GetUiTranslations;
 using ECSPros.Core.Application.Queries.GetCargoRules;
 using ECSPros.Core.Application.Queries.GetExpenseTypes;
 using ECSPros.Core.Application.Queries.GetFirmDetail;
-using ECSPros.Core.Application.Queries.GetFirmIntegrations;
+using ECSPros.Core.Application.Queries.GetFirmPlatformIntegrations;
 using ECSPros.Core.Application.Queries.GetFirmPlatforms;
 using ECSPros.Core.Application.Queries.GetFirms;
 using ECSPros.Core.Application.Queries.GetIntegrationServices;
@@ -201,40 +201,39 @@ public class CoreController : ControllerBase
         return Ok(new { success = true });
     }
 
-    // ── Firma Entegrasyonları ──────────────────────────────────────────────────
+    // ── Firma-Platform Entegrasyonları ─────────────────────────────────────────
+    // FirmPlatformId null → firma geneli; dolu → yalnız o platform. Credentials
+    // yanıtlarda maskeli döner, DB'de şifreli tutulur.
 
-    /// <summary>Firmaya ait entegrasyonları listeler.</summary>
+    /// <summary>Firmaya ait servis entegrasyonlarını listeler (credentials maskeli).</summary>
     [HttpGet("firms/{firmId:guid}/integrations")]
-    public async Task<IActionResult> GetFirmIntegrations(Guid firmId, [FromQuery] string? serviceType = null, CancellationToken ct = default)
+    public async Task<IActionResult> GetFirmPlatformIntegrations(Guid firmId, [FromQuery] string? serviceType = null, CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetFirmIntegrationsQuery(firmId, serviceType), ct);
+        var result = await _mediator.Send(new GetFirmPlatformIntegrationsQuery(firmId, serviceType), ct);
         return Ok(new { success = true, data = result.Value });
     }
 
-    /// <summary>Firmaya yeni entegrasyon ekler.</summary>
+    /// <summary>Firmaya yeni servis entegrasyonu ekler.</summary>
     [HttpPost("firms/{firmId:guid}/integrations")]
-    public async Task<IActionResult> CreateFirmIntegration(Guid firmId, [FromBody] CreateFirmIntegrationRequest request, CancellationToken ct)
+    public async Task<IActionResult> CreateFirmPlatformIntegration(Guid firmId, [FromBody] CreateFirmPlatformIntegrationRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
-            new CreateFirmIntegrationCommand(firmId, request.IntegrationServiceId, request.Name,
-                request.Credentials ?? new(), request.Settings ?? new(),
-                request.ContractNumber, request.StartDate, request.EndDate,
-                request.Status ?? "draft", request.Terms,
-                request.ContactName, request.ContactPhone, request.ContactEmail, request.DocumentUrl), ct);
+            new CreateFirmPlatformIntegrationCommand(firmId, request.IntegrationServiceId, request.Name,
+                request.Credentials ?? new(), request.Settings ?? new(), request.FirmPlatformId,
+                request.StartDate, request.EndDate, request.Status ?? "draft", request.Terms), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Created(string.Empty, new { success = true, data = new { id = result.Value } });
     }
 
-    /// <summary>Firma entegrasyonunu (sözleşme bilgileri dahil) günceller.</summary>
+    /// <summary>Servis entegrasyonunu günceller (maskeli credential alanları korunur).</summary>
     [HttpPut("firm-integrations/{id:guid}")]
-    public async Task<IActionResult> UpdateFirmIntegration(Guid id, [FromBody] UpdateFirmIntegrationRequest request, CancellationToken ct)
+    public async Task<IActionResult> UpdateFirmPlatformIntegration(Guid id, [FromBody] UpdateFirmPlatformIntegrationRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
-            new UpdateFirmIntegrationCommand(id, request.Name, request.Credentials ?? new(), request.Settings ?? new(),
-                request.IsActive, request.ContractNumber, request.StartDate, request.EndDate,
-                request.Status ?? "draft", request.Terms,
-                request.ContactName, request.ContactPhone, request.ContactEmail, request.DocumentUrl), ct);
+            new UpdateFirmPlatformIntegrationCommand(id, request.Name, request.Credentials ?? new(), request.Settings ?? new(),
+                request.IsActive, request.FirmPlatformId, request.StartDate, request.EndDate,
+                request.Status ?? "draft", request.Terms), ct);
         if (result.IsFailure)
             return NotFound(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -255,7 +254,7 @@ public class CoreController : ControllerBase
     public async Task<IActionResult> CreateCargoRule(Guid firmId, [FromBody] CreateCargoRuleRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
-            new CreateCargoRuleCommand(firmId, request.FirmIntegrationId, request.RuleType,
+            new CreateCargoRuleCommand(firmId, request.FirmPlatformIntegrationId, request.RuleType,
                 request.PaymentType, request.NeighborhoodId, request.CityId, request.Priority), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
@@ -333,40 +332,32 @@ public record UpdateFirmPlatformRequest(
     Dictionary<string, object>? Settings = null
 );
 
-public record CreateFirmIntegrationRequest(
+public record CreateFirmPlatformIntegrationRequest(
     Guid IntegrationServiceId,
     string? Name,
     Dictionary<string, object>? Credentials,
     Dictionary<string, object>? Settings,
-    string? ContractNumber = null,
+    Guid? FirmPlatformId = null,
     DateTime? StartDate = null,
     DateTime? EndDate = null,
     string? Status = null,
-    Dictionary<string, object>? Terms = null,
-    string? ContactName = null,
-    string? ContactPhone = null,
-    string? ContactEmail = null,
-    string? DocumentUrl = null
+    Dictionary<string, object>? Terms = null
 );
 
-public record UpdateFirmIntegrationRequest(
+public record UpdateFirmPlatformIntegrationRequest(
     string? Name,
     Dictionary<string, object>? Credentials,
     Dictionary<string, object>? Settings,
     bool IsActive,
-    string? ContractNumber = null,
+    Guid? FirmPlatformId = null,
     DateTime? StartDate = null,
     DateTime? EndDate = null,
     string? Status = null,
-    Dictionary<string, object>? Terms = null,
-    string? ContactName = null,
-    string? ContactPhone = null,
-    string? ContactEmail = null,
-    string? DocumentUrl = null
+    Dictionary<string, object>? Terms = null
 );
 
 public record CreateCargoRuleRequest(
-    Guid FirmIntegrationId,
+    Guid FirmPlatformIntegrationId,
     string RuleType,
     string? PaymentType,
     Guid? NeighborhoodId,

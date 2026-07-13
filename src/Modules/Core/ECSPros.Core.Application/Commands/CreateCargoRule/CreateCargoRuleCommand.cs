@@ -8,7 +8,7 @@ namespace ECSPros.Core.Application.Commands.CreateCargoRule;
 
 public record CreateCargoRuleCommand(
     Guid FirmId,
-    Guid FirmIntegrationId,
+    Guid FirmPlatformIntegrationId,
     string RuleType,
     string? PaymentType,
     Guid? NeighborhoodId,
@@ -24,8 +24,8 @@ public class CreateCargoRuleCommandHandler : IRequestHandler<CreateCargoRuleComm
 
     public async Task<Result<Guid>> Handle(CreateCargoRuleCommand request, CancellationToken ct)
     {
-        var integrationExists = await _db.FirmIntegrations
-            .AnyAsync(fi => fi.Id == request.FirmIntegrationId && fi.FirmId == request.FirmId, ct);
+        var integrationExists = await _db.FirmPlatformIntegrations
+            .AnyAsync(fi => fi.Id == request.FirmPlatformIntegrationId && fi.FirmId == request.FirmId, ct);
         if (!integrationExists)
             return Result.Failure<Guid>("Firma entegrasyonu bulunamadı.");
 
@@ -33,7 +33,7 @@ public class CreateCargoRuleCommandHandler : IRequestHandler<CreateCargoRuleComm
         {
             Id = Guid.NewGuid(),
             FirmId = request.FirmId,
-            FirmIntegrationId = request.FirmIntegrationId,
+            FirmPlatformIntegrationId = request.FirmPlatformIntegrationId,
             RuleType = request.RuleType,
             PaymentType = request.PaymentType,
             NeighborhoodId = request.NeighborhoodId,

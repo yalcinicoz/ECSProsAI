@@ -316,6 +316,17 @@ public static IServiceCollection AddXxxInfrastructure(
   - `pending` veya `confirmed` → `cancelled`
   - `OrderShippedEvent` → `OrderShippedEventHandler` (Inventory): rezervasyonları "picked" yapar, Quantity gerçekten düşer
 - **Password hashing**: IAM'da `IPasswordHasher`, CRM'de `IMemberPasswordHasher` — ikisi de BCrypt (wf12). CRM Verify eski SHA256 hash'lerini (hex/Base64) de tanır ve başarılı girişte BCrypt'e yükseltir (D5, 2026-07-10).
+- **Platform servis entegrasyonları (2026-07-13)**: `core.core_firm_platform_integrations`
+  (eski `core_firm_integrations`'ın yerine) — SMTP/görsel arama/kargo gibi dış servis
+  tanımları DB'de tutulur. `FirmPlatformId` null → firma geneli, dolu → platforma özel;
+  çözümlemede platforma özel kayıt tercih edilir. `Credentials` **Data Protection ile
+  şifreli** (text kolon; key ring `~/.ecspros/dp-keys`, `DataProtection:KeysPath` ile
+  değiştirilebilir — **key ring silinirse DB'deki kimlik bilgileri çözülemez, yedeğe dahil et**).
+  Admin GET yanıtlarında credential değerleri maskeli (`•••`) döner; güncellemede maskeli
+  bırakılan alanın saklı değeri korunur. SMTP ayarı önce DB'den (`ISmtpSettingsProvider`,
+  ServiceType=email aktif kayıt), yoksa `Email:Smtp:*` config'ten, ikisi de yoksa log'a
+  yazılır. Katalog seed'i: `smtp` (email) + `visual_search` IntegrationService satırları
+  (`SettingsSchema` admin form alanlarını tanımlar; secret alanlar Credentials'a girilir).
 - **GitHub push**: SSH 22 portu engellidir. `ssh.github.com:443` veya HTTPS kullanılmalı.
 - **API portu**: Production'da `http://0.0.0.0:5000`, Development'ta `http://localhost:5050`
 - **Swagger**: `http://localhost:5050/swagger` (Development) / `http://51.178.208.59/swagger` (Production)
@@ -386,6 +397,10 @@ Redis şifresi **3 yerde birden** tanımlıdır ve HER ZAMAN birlikte değiştir
   çalışacak şekilde yaz); süreç-içi kısa TTL ihtiyacı için `IMemoryCache` kullan
   (örn. `GetStoreFacetsQueryHandler`).
 
-**Bekleyen production migration'ları** (local'de uygulandı, production'da henüz değil — bir sonraki deploy'da yukarıdaki döngü otomatik uygular):
-- `20260703110805_RemoveFirmPricingAndInvoiceIntegratorFields` (`CoreDbContext`) — `core.core_firms` tablosundan `PriceType`, `PriceMultiplier`, `InvoiceIntegratorId` kolonlarını kaldırır (bu alanlar artık sadece `FirmPlatform` seviyesinde tutuluyor).
-- `20260703115831_AddContractFieldsToFirmIntegration` (`CoreDbContext`) — `core.core_firm_integrations` tablosuna sözleşme alanları ekler: `ContractNumber`, `StartDate`, `EndDate`, `Status` (draft/active/expired/cancelled), `Terms` (jsonb), `ContactName`/`ContactPhone`/`ContactEmail`, `DocumentUrl`.
+**Bekleyen production migration'ı yok** (2026-07-13 itibarıyla): CoreDbContext dahil tüm
+migration'lar canlı DB'ye uygulandı. Son büyük değişiklik
+`20260713120559_RestructureFirmPlatformIntegrations` — `core_firm_integrations` →
+`core_firm_platform_integrations` (iletişim/sözleşme-no kolonları kaldırıldı, nullable
+`FirmPlatformId` eklendi, `Credentials` jsonb→şifreli text; tablo boştu, veri kaybı yok).
+Eski binary çalışırken uygulandığı için restart'a kadar yalnız admin firma-sözleşme
+ekranı eski tabloyu arar (bilinçli, kısa pencere).
