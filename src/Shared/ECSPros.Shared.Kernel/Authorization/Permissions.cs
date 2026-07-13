@@ -13,6 +13,10 @@ public static class Permissions
     /// <summary>Özellik tipleri, değerleri, ürün grupları ve grup konfigürasyonu yönetimi.</summary>
     public const string CatalogPlatformManage = "catalog.platform.manage";
 
+    /// <summary>Definition şeması yönetimi (servis kataloğu vb.) — geliştirici firma
+    /// tarafından doldurulan, kullanıcı firmanın operasyonundan bağımsız tanım verisi.</summary>
+    public const string DefinitionManage = "definition.manage";
+
     // ── Layer 2: Firma kullanıcısı işlemleri ──────────────────────────────────
 
     public const string CatalogProductsManage    = "catalog.products.manage";
@@ -37,6 +41,7 @@ public static class Permissions
     public static readonly IReadOnlyList<string> AllPermissions =
     [
         CatalogPlatformManage,
+        DefinitionManage,
         CatalogProductsManage,
         CatalogCategoriesManage,
         CatalogImagesManage,

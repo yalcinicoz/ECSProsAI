@@ -656,6 +656,7 @@ public static class DatabaseSeeder
         var permDefs = new[]
         {
             (Code: Permissions.CatalogPlatformManage,   Name: "Katalog Platform Yönetimi",  Module: "catalog"),
+            (Code: Permissions.DefinitionManage,        Name: "Tanım Verisi Yönetimi",      Module: "definition"),
             (Code: Permissions.CatalogProductsManage,   Name: "Ürün Yönetimi",              Module: "catalog"),
             (Code: Permissions.CatalogCategoriesManage, Name: "Kategori Yönetimi",           Module: "catalog"),
             (Code: Permissions.CatalogImagesManage,     Name: "Görsel Yönetimi",             Module: "catalog"),

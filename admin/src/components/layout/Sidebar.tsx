@@ -12,6 +12,8 @@ interface NavItem {
   to: string
   icon: string        // CSS class suffix or svg path — we'll use a small icon map
   badge?: number
+  /** Verilirse, yalnız bu permission'a sahip kullanıcıda görünür (super_admin '*' geçer). */
+  permission?: string
 }
 interface NavSection {
   label: string
@@ -100,7 +102,7 @@ const NAV_SECTIONS: NavSection[] = [
     { label: 'Fulfillment',   to: '/fulfillment/picking-plans', icon: 'boxes' },
     { label: 'Firmalar',        to: '/settings/firms',          icon: 'building2' },
     { label: 'Platform Tipleri',to: '/settings/platform-types', icon: 'globe' },
-    { label: 'Servis Kataloğu', to: '/settings/integration-services', icon: 'plug' },
+    { label: 'Servis Kataloğu', to: '/settings/integration-services', icon: 'plug', permission: 'definition.manage' },
     { label: 'Satış Kanalları', to: '/settings/channels',       icon: 'shoppingbag' },
     { label: 'Çeviriler',       to: '/settings/translations',   icon: 'languages' },
     { label: 'Migration',       to: '/settings/migration',      icon: 'databasezap' },
@@ -117,15 +119,22 @@ interface SidebarProps {
 export function Sidebar({ onMobileClose }: SidebarProps) {
   const { sidebarCollapsed, toggleSidebar } = useUIStore()
   const { user, logout } = useAuthStore()
+  const hasPermission = useAuthStore((s) => s.hasPermission)
   const [search, setSearch] = useState('')
+
+  // Permission'lı öğeler yalnız yetkili kullanıcıda görünür; sonra arama filtresi uygulanır
+  const visibleSections = NAV_SECTIONS.map((s) => ({
+    ...s,
+    items: s.items.filter((i) => !i.permission || hasPermission(i.permission)),
+  })).filter((s) => s.items.length > 0)
 
   // Filter menu items when search is active
   const filtered = search.trim()
-    ? NAV_SECTIONS.map((s) => ({
+    ? visibleSections.map((s) => ({
         ...s,
         items: s.items.filter((i) => i.label.toLowerCase().includes(search.toLowerCase())),
       })).filter((s) => s.items.length > 0)
-    : NAV_SECTIONS
+    : visibleSections
 
   // Initials for user avatar
   const initials = user?.fullName

@@ -8,7 +8,10 @@ public class IntegrationServiceConfiguration : IEntityTypeConfiguration<Integrat
 {
     public void Configure(EntityTypeBuilder<IntegrationService> builder)
     {
-        builder.ToTable("core_integration_services");
+        // definition şeması: geliştirici firmanın (superadmin) doldurduğu, kullanıcı
+        // firmanın operasyonundan bağımsız tanım verisi — altın kural: veri
+        // aktarımları/eşlemeler bu tabloya kayıt EKLEYEMEZ (bkz. CLAUDE.md).
+        builder.ToTable("integration_services", "definition");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Code).HasMaxLength(100).IsRequired();
         builder.Property(x => x.NameI18n).HasColumnType("jsonb").IsRequired();

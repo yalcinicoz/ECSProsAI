@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/Modal'
 import { I18nField } from '@/components/ui/I18nField'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { useLanguages } from '@/hooks/useLanguages'
+import { useAuthStore } from '@/store/auth'
 import { FL } from '@/lib/field-labels'
 import { buildI18nValues } from '@/lib/i18n-helper'
 import { SchemaEditor, getFieldLabel } from './PlatformTypesPage'
@@ -64,6 +65,9 @@ function getName(s: Pick<IntegrationServiceRow, 'nameI18n' | 'code'>) {
 export function IntegrationServicesPage() {
   const queryClient = useQueryClient()
   const { data: languages = [], isLoading: langsLoading } = useLanguages()
+  // definition şeması: yalnız platform yönetimi (geliştirici firma) erişir —
+  // sıradan firma kullanıcısına sayfa tamamen kapalı (sidebar'da da görünmez).
+  const canManage = useAuthStore(s => s.hasPermission)('definition.manage')
 
   const [typeFilter, setTypeFilter] = useState<string>('')
   const [createOpen, setCreateOpen] = useState(false)
@@ -145,6 +149,21 @@ export function IntegrationServicesPage() {
   function closeEdit() {
     setEditTarget(null)
     setSavedOk(false)
+  }
+
+  if (!canManage) {
+    return (
+      <div className="p-6">
+        <div className="card p-8 text-center">
+          <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+            Bu sayfa yalnız platform yönetimine açıktır.
+          </p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+            Servis kataloğu (definition şeması) geliştirici firma tarafından yönetilir.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   if (isLoading || langsLoading) return <PageSpinner />

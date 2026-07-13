@@ -351,6 +351,22 @@
       şemalı serviste entegrasyon (boolean/number tipli settings korunur: `aktif_mi:true`)
       ✓, maskeli GET + decrypt (`api_key: gizli-abc`) ✓. TEST kayıtları silindi.
     - Publish güncellendi — aynı restart'la canlıya çıkar.
+  - **(devam) Servis kataloğu → definition şeması (kullanıcı kararı):**
+    - Tablo `core.core_integration_services` → **`definition.integration_services`**
+      (`MoveIntegrationServicesToDefinitionSchema` — EF gerçek RenameTable üretti, 11
+      satır + FK korunarak CANLI DB'YE UYGULANDI). Definition altın kuralı bu tabloya da
+      uygulanır: yalnız geliştirici firma doldurur, aktarımlar kayıt ekleyemez.
+    - **Yeni Layer-1 permission `definition.manage`** (Permissions.DefinitionManage;
+      AllPermissions'a eklendi → super_admin/platform_admin; firm_admin'de YOK; seeder
+      permission satırını + rol atamalarını canlı DB'ye ekledi). POST/PUT
+      integration-services `[RequirePermission]` ile korundu; **GET bilinçli açık**
+      (firma entegrasyon formunun servis dropdown'ı + şema buradan okunur).
+    - **Admin:** Sidebar NavItem'a `permission` alanı eklendi (genel mekanizma) —
+      'Servis Kataloğu' yalnız yetkili kullanıcıda görünür; sayfa permission'sız
+      kullanıcıya "yalnız platform yönetimine açık" mesajıyla kapalı.
+    - **Doğrulama (5051):** permission seed + super_admin ataması ✓; super_admin POST
+      201 ✓; rolsüz kullanıcı POST **403** / GET **200** ✓ (test kullanıcısı+kayıtlar
+      silindi, artık 0). Publish güncellendi — aynı restart'la çıkar.
 
 - **2026-07-12 (devam) — H5 TAMAM → H-M3 KAPANDI (alt bar + değerlendirmeler + videolar):**
   - Keşif: product_videos + TAM dosya yükleme pipeline'ı (FTP+batch+admin sekmesi) zaten
