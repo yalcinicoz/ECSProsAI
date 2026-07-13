@@ -9,4 +9,5 @@ public record CreateLookupValueCommand(
     string? Color,
     string? Icon,
     bool IsDefault = false,
-    int SortOrder = 0) : IRequest<Result<Guid>>;
+    int SortOrder = 0,
+    Dictionary<string, object>? ExtraData = null) : IRequest<Result<Guid>>;

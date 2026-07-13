@@ -294,6 +294,16 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-13 — Kategori listesi lazy-load düzeltmesi (ayrı oturum, hata bildirimi):**
+  Infinite-scroll'la eklenen kartların görselleri kaydırınca yüklenmiyordu (yalnız hover'da
+  beliriyordu). Kök neden: `site.js gorselHazirla`, `data-ms-lazy-src`'si henüz yazılmamış
+  iskelet görseli `msLazyHazir="true"` damgalıyor, `kartDoldur` adresi yazınca ikinci
+  `msLazyLoadYenile` bayrağa takılıyordu. Bayrak artık görsel gerçekten kurulunca basılıyor.
+  Tasarım kaynağı yazma-korumalı olduğundan `wwwroot/js/site.js` gerekçesiyle
+  `allowed-diffs.txt`'e eklendi. E2E kanıt (5051, eski↔yeni): eski sürümde 288 JS kartın
+  tümü src'siz; yenide görünür kartlar 12/12 yüklü. Düzeltme 18:24 publish + 18:26
+  restart'la (paralel oturumun deploy'u) canlıya çıktı, canlıda doğrulandı. Commit bekliyor.
+
 - **2026-07-13 (devam) — P0 TAMAM (geriye dönük panel taraması, K16):**
   - **8.1–8.9'un her bölümüne "Panel (P0)" notu düşüldü** (plan Bölüm 8). Bilinen boşluk
     listesi doğrulandı: sipariş/iade/fatura → P1, CMS içerik → P2, kampanya/kupon → P3,
@@ -325,6 +335,20 @@
     `GET /api/crm/geo-names` — CRM GetGeoNamesQuery)+kargo (anlaşma adı+takip linki+
     olaylar)+notlar+sözleşme kabulleri+türetilmiş durum geçmişi. OrderDetailDto'ya
     additive 16 alan. Doğrulama: izole 5052 routing 401/200 ✓; tsc+build temiz.
+  - **✅ DEPLOY (2026-07-13 18:40, paralel oturumun restart'ı):** H1..H9 + platform
+    entegrasyonları + P0 düzeltmesi + P1a + P1b CANLIDA — canlı 5000'de status-counts
+    401 ✓, geo-names 401 ✓, anasayfa 200 ✓, Redis AKTİF ✓. **P1c backend'i restart
+    bekliyor** (publish 18:44'te güncellendi).
+  - **P1c TAMAM (2026-07-13):** `/orders/returns` (durum sekmeli, açılış "Talep Edilen")
+    + `/orders/returns/{id}` detay (kalemler+neden adları+görseller+muayene+geri
+    ödemeler) + aksiyonlar (Onayla/Reddet-PATCH-nedenli/Teslim Al-depolu/Geri Ödeme) +
+    **İade Nedenleri modalı** (return_reason lookup CRUD; alt nedenler
+    ExtraData.subReasons — Create/UpdateLookupValueCommand'a additive ExtraData).
+    Doğrulama: izole 5052 routing 401/200 ✓. Migration yok.
+  - **SIRADAKİ: P1d faturalar** (listele/oluştur/iptal + IntegratorInvoiceUrl girişi —
+    H1 storefront butonunun veri kaynağı). Restart öncesi bilinen pencere: lookup
+    ExtraData kaydetmesi eski binary'de yok sayılır (alt neden düzenlemesi restart
+    sonrası çalışır).
   - **SIRADAKİ: P1c iadeler** (liste+aksiyonlar+iade nedenleri lookup yönetimi).
     Restart hâlâ bekliyor — H1..H9 + platform entegrasyonları + P1a/P1b backend tek
     restart'la çıkar (admin/dist şimdiden yeni; restart öncesi: sayaçlar gizli, Aktif

@@ -11,4 +11,6 @@ public record UpdateLookupValueCommand(
     bool IsDefault,
     bool IsActive,
     int SortOrder,
-    Guid UpdatedBy) : IRequest<Result<bool>>;
+    Guid UpdatedBy,
+    // P1c: null = ExtraData'ya dokunma; dolu = olduğu gibi yaz (iade alt nedenleri vb.)
+    Dictionary<string, object>? ExtraData = null) : IRequest<Result<bool>>;

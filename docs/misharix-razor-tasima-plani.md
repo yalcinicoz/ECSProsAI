@@ -356,9 +356,18 @@ src/ECSPros.Api/
         anasayfa 200 ✓; tsc + build temiz. Hata mesajları modal içinde (BadRequest
         error'ı basılır); geo-names eski binary'de 404 → adres bölge adsız gösterilir
         (fail-soft).
-  - [ ] P1c. İadeler: liste + onay/red/teslim al/geri ödeme aksiyonları + iade görselleri/
-        neden görünümü + **iade nedenleri (`return_reason` Lookup değerleri) yönetimi
-        (P0 bulgusu — lookup ekranı placeholder, değerler bugün yalnız API/SQL'den).**
+  - [x] P1c. **İadeler — TAMAM (2026-07-13):** `/orders/returns` ReturnsPage (durum
+        sekmeleri, açılış "Talep Edilen" kuyruğu; satır → detay) + `/orders/returns/{id}`
+        ReturnDetailPage: talep bilgisi (kargo iade kodu/takip/tarihler), kalemler (ürün
+        adı sipariş kalemlerinden, neden adı lookup'tan, alt neden müşteri notunda),
+        talep görselleri, muayene, geri ödemeler; aksiyonlar durum makinesine göre:
+        Onayla / Reddet (nedenli, PATCH) / Teslim Al (depo + muayene notu — stok geri
+        yüklenir) / Geri Ödeme Yap (yöntem + tutar). **İade nedenleri yönetimi (P0
+        bulgusu):** ReturnsPage'te "İade Nedenleri" modalı — return_reason lookup
+        değerleri liste/düzenle/ekle, alt nedenler (ExtraData.subReasons) satır-başına
+        editörle; backend Create/UpdateLookupValueCommand'a additive `ExtraData`
+        (null = dokunma). Doğrulama: izole 5052 — returns/lookup/reject-PATCH routing
+        401 ✓, anasayfa 200 ✓; tsc+build temiz. Migration yok.
   - [ ] P1d. Faturalar: listele/oluştur/iptal + `IntegratorInvoiceUrl` girişi (H1'deki
         storefront "Faturayı Görüntüle" butonunun veri kaynağı bugün yalnız API'den
         doldurulabiliyor).
