@@ -20,4 +20,25 @@ public record PageDetailDto(
     bool IsActive,
     DateTime? PublishAt,
     DateTime? UnpublishAt,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    // P2a additive: bölümler (P2b editörü bunların içeriğini düzenler)
+    List<PageSectionDto>? Sections = null);
+
+public record PageSectionDto(
+    Guid Id,
+    string SectionTypeCode,
+    string? Name,
+    Dictionary<string, string>? TitleI18n,
+    Dictionary<string, object> Settings,
+    bool IsActive,
+    int SortOrder,
+    DateTime? UpdatedAt,
+    List<PageSectionItemDto> Items);
+
+public record PageSectionItemDto(
+    Guid Id,
+    string ItemType,
+    Dictionary<string, string>? TitleI18n,
+    Dictionary<string, string>? DescriptionI18n,
+    bool IsActive,
+    int SortOrder);

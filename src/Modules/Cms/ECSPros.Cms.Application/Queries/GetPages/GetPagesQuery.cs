@@ -3,7 +3,10 @@ using MediatR;
 
 namespace ECSPros.Cms.Application.Queries.GetPages;
 
-public record GetPagesQuery(Guid? FirmPlatformId = null, bool ActiveOnly = true) : IRequest<Result<List<PageDto>>>;
+public record GetPagesQuery(
+    Guid? FirmPlatformId = null,
+    bool ActiveOnly = true,
+    string? PageType = null) : IRequest<Result<List<PageDto>>>;
 
 public record PageDto(
     Guid Id,
@@ -13,4 +16,7 @@ public record PageDto(
     string PageType,
     bool IsActive,
     DateTime? PublishAt,
-    DateTime? UnpublishAt);
+    DateTime? UnpublishAt,
+    // P2a additive: platform + son içerik değişikliği (sözleşme sürümü bu tarihe bağlanır)
+    Guid FirmPlatformId = default,
+    DateTime? LastContentUpdatedAt = null);

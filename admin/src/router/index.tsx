@@ -41,6 +41,8 @@ import { OrderDetailPage as OrderAdminDetailPage } from '@/pages/orders/OrderDet
 import { ReturnsPage } from '@/pages/orders/ReturnsPage'
 import { ReturnDetailPage } from '@/pages/orders/ReturnDetailPage'
 import { InvoicesPage } from '@/pages/orders/InvoicesPage'
+import { CmsPagesPage } from '@/pages/cms/CmsPagesPage'
+import { CmsPageDetailPage } from '@/pages/cms/CmsPageDetailPage'
 
 export const router = createBrowserRouter(
   [
@@ -113,7 +115,8 @@ export const router = createBrowserRouter(
             { path: 'fulfillment/packing-stations', element: <PlaceholderPage title="Paketleme İstasyonları" /> },
 
             // CMS
-            { path: 'cms/pages',                element: <PlaceholderPage title="Sayfalar" /> },
+            { path: 'cms/pages',                element: <CmsPagesPage /> },
+            { path: 'cms/pages/:id',            element: <CmsPageDetailPage /> },
             { path: 'navigation/menus',         element: <MenusPage /> },
             { path: 'navigation/menus/:id',     element: <MenuDetailPage /> },
 

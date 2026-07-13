@@ -25,9 +25,10 @@ public class CmsController : ControllerBase
     public async Task<IActionResult> GetPages(
         [FromQuery] Guid? firmPlatformId,
         [FromQuery] bool activeOnly = true,
+        [FromQuery] string? pageType = null,
         CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetPagesQuery(firmPlatformId, activeOnly), ct);
+        var result = await _mediator.Send(new GetPagesQuery(firmPlatformId, activeOnly, pageType), ct);
         return Ok(new { success = true, data = result.Value });
     }
 

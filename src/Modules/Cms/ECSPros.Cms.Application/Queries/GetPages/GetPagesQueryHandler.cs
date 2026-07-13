@@ -24,9 +24,19 @@ public class GetPagesQueryHandler : IRequestHandler<GetPagesQuery, Result<List<P
         if (request.ActiveOnly)
             query = query.Where(p => p.IsActive);
 
+        if (!string.IsNullOrWhiteSpace(request.PageType))
+            query = query.Where(p => p.PageType == request.PageType);
+
         var items = await query
             .OrderBy(p => p.Code)
-            .Select(p => new PageDto(p.Id, p.Code, p.NameI18n, p.SlugI18n, p.PageType, p.IsActive, p.PublishAt, p.UnpublishAt))
+            .Select(p => new PageDto(
+                p.Id, p.Code, p.NameI18n, p.SlugI18n, p.PageType, p.IsActive,
+                p.PublishAt, p.UnpublishAt,
+                p.FirmPlatformId,
+                // Sözleşme sürüm tarihi kuralı GetStoreLegalPages ile aynı:
+                // en son bölüm/sayfa değişikliği
+                p.Sections.Where(s => !s.IsDeleted).Select(s => s.UpdatedAt)
+                    .Concat(new DateTime?[] { p.UpdatedAt ?? p.CreatedAt }).Max()))
             .ToListAsync(cancellationToken);
 
         return Result.Success(items);

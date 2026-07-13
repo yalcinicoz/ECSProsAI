@@ -352,10 +352,18 @@
     `PATCH /api/orders/invoices/{id}/integrator-url` (https zorunlu; H1 "Faturayı
     Görüntüle" kaynağı artık panelden) + OrderDetailPage'e Faturalar/İadeler bölümleri
     (K19). Doğrulama: izole 5052 routing 401/200 ✓. Migration yok.
-  - **SIRADAKİ: P-M2 / P2 CMS içerik yönetimi (BÜYÜK — başlamadan ekran kurgusu
-    kullanıcıyla konuşulacak, K16).** Restart bekleyen backend: P1c (lookup ExtraData)
-    + P1d (invoice-series, integrator-url) — publish güncel; admin/dist şimdiden yeni
-    (restart öncesi bu iki sayfanın yeni endpoint'leri 404/yoksayılır).
+  - **K20 (2026-07-13, kullanıcıyla konuşuldu):** P2 CMS kurgusu — (1) tür sekmeli düz
+    liste + platform seçici; (2) WYSIWYG (Quill, gömülü) + HTML kaynağı sekmesi;
+    (3) platform kopyaları ayrı düzenlenir + "diğer platformlara kopyala" butonu.
+  - **P2a TAMAM (2026-07-13):** `/cms/pages` liste (tür sekmeleri + platform seçici +
+    SON İÇERİK kolonu — sözleşme sürüm kuralıyla aynı max hesabı) + `/cms/pages/{id}`
+    detay çatısı (ad/slug/meta/aktiflik/yayın penceresi PUT ile; bölüm listesi
+    read-only). Backend additive: GetPagesQuery.PageType + DTO FirmPlatformId/
+    LastContentUpdatedAt; GetPageDetail.Sections (settings+faq items — P2b temeli).
+    Doğrulama: izole 5052 routing 401 ✓ + storefront kurumsal/yasal/SSS/anasayfa 200 ✓.
+  - **SIRADAKİ: P2b — rich_text WYSIWYG (Quill) + faq soru/cevap editörü + "diğer
+    platformlara kopyala"; bölüm içeriği güncelleme API'si yazılacak (bugün yok).**
+    Restart bekleyen backend: P1c + P1d + P2a — publish güncel.
   - **SIRADAKİ: P1c iadeler** (liste+aksiyonlar+iade nedenleri lookup yönetimi).
     Restart hâlâ bekliyor — H1..H9 + platform entegrasyonları + P1a/P1b backend tek
     restart'la çıkar (admin/dist şimdiden yeni; restart öncesi: sayaçlar gizli, Aktif
