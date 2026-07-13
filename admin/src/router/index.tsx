@@ -45,6 +45,9 @@ import { CmsPagesPage } from '@/pages/cms/CmsPagesPage'
 import { CmsPageDetailPage } from '@/pages/cms/CmsPageDetailPage'
 import { CampaignsPage } from '@/pages/promotion/CampaignsPage'
 import { CouponsPage } from '@/pages/promotion/CouponsPage'
+import { MembersPage } from '@/pages/crm/MembersPage'
+import { MemberDetailPage } from '@/pages/crm/MemberDetailPage'
+import { MemberGroupsPage } from '@/pages/crm/MemberGroupsPage'
 
 export const router = createBrowserRouter(
   [
@@ -97,9 +100,9 @@ export const router = createBrowserRouter(
             { path: 'accounts/:id',    element: <AccountDetailPage /> },
 
             // CRM
-            { path: 'crm/members',       element: <PlaceholderPage title="Üyeler" /> },
-            { path: 'crm/members/:id',   element: <PlaceholderPage title="Üye Detayı" /> },
-            { path: 'crm/member-groups', element: <PlaceholderPage title="Üye Grupları" /> },
+            { path: 'crm/members',       element: <MembersPage /> },
+            { path: 'crm/members/:id',   element: <MemberDetailPage /> },
+            { path: 'crm/member-groups', element: <MemberGroupsPage /> },
 
             // POS
             { path: 'pos/sales',     element: <PlaceholderPage title="POS Satışları" /> },

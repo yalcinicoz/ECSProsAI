@@ -442,8 +442,18 @@ src/ECSPros.Api/
       (specific + kampanya-ürün ilişkisi Faz G kampanya etiketi işiyle birlikte).
 
 **P-M3 — Üye + destek:**
-- [ ] P4. **Üyeler** (orta): liste/arama + detay (profil, adresler, siparişler, favori/
-      koleksiyon özeti, üye grubu ataması, OTP/oturum bilgisi görünümü).
+- [x] P4. **Üyeler — TAMAM (2026-07-13):** `/crm/members` MembersPage (Aktif/Tümü +
+      ad/e-posta/telefon arama, sayfalı; satır → detay) + `/crm/members/{id}`
+      MemberDetailPage: doğrulama rozetleri (Tel/E-posta/TCKN), 8'li özet şeridi
+      (sipariş/favori/koleksiyon/yorum/kayıtlı arama/stok alarmı/cüzdan/puan — yeni
+      `GET /api/crm/members/{id}/engagement` ← Storefront GetMemberEngagementSummary),
+      üye grubu ataması + aktiflik (mevcut PUT), duyuru tercihleri (salt okunur — üye
+      belirler), adresler (çözülmüş bölge adlarıyla), son 10 sipariş (→ sipariş
+      detayına link), oturumlar (yeni `GET /api/crm/members/{id}/sessions` — IP +
+      cihaz + açık/kapalı). **Üye Grupları** `/crm/member-groups` placeholder'dan
+      gerçek CRUD'a (mevcut GET/POST/PUT; B2B/vade/min-sipariş/onay alanları).
+      Doğrulama: izole 5052 — 3 route 401 ✓, /hesabim 302 guard + / 200 ✓.
+      Migration yok.
 - [ ] P5. **İletişim mesajları gelen kutusu** (küçük — F4 `contact_messages` bugün yalnız
       tabloya düşüyor) + **bildirim izleme** (küçük): stok alarmları (C9/H8) + kayıtlı
       aramalar (E11/H8) listesi ve gönderim durumları; H8 scan tetiğine buton +
