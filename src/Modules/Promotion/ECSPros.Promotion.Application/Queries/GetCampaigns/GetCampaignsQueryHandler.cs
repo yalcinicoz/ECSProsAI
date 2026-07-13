@@ -26,7 +26,10 @@ public class GetCampaignsQueryHandler : IRequestHandler<GetCampaignsQuery, Resul
 
         var items = await query
             .OrderByDescending(c => c.Priority)
-            .Select(c => new CampaignDto(c.Id, c.Code, c.NameI18n, c.StartsAt, c.EndsAt, c.IsActive, c.Priority, c.ProductSelectionType))
+            .Select(c => new CampaignDto(
+                c.Id, c.Code, c.NameI18n, c.StartsAt, c.EndsAt, c.IsActive, c.Priority,
+                c.ProductSelectionType,
+                c.CampaignTypeId, c.CampaignType.Code, c.DescriptionI18n, c.Settings))
             .ToListAsync(cancellationToken);
 
         return Result.Success(items);

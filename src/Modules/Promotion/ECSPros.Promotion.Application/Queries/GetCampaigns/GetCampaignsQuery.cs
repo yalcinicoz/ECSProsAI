@@ -13,4 +13,9 @@ public record CampaignDto(
     DateTime? EndsAt,
     bool IsActive,
     int Priority,
-    string ProductSelectionType);
+    string ProductSelectionType,
+    // P3 additive: admin düzenleme formu için tip + ayarlar
+    Guid CampaignTypeId = default,
+    string? CampaignTypeCode = null,
+    Dictionary<string, string>? DescriptionI18n = null,
+    Dictionary<string, object>? Settings = null);

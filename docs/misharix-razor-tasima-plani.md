@@ -425,9 +425,21 @@ src/ECSPros.Api/
         kabul etti" sayacı yok — CustomerNotes jsonb sorgusu Application katmanına
         Npgsql bağımlılığı getirirdi (kalıp bozulmadı); ihtiyaç olursa ayrı iş.
         **P2 KAPANDI.**
-- [ ] P3. **Kampanya + kupon yönetimi** (orta): kampanya CRUD (backend endpoint'leri
-      mevcut) + kupon tanımlama/listeleme/kullanım kayıtları (storefront C3/C10 kupon
-      akışı canlı; tanım bugün yalnız API'den).
+- [x] P3. **Kampanya + kupon yönetimi — TAMAM (2026-07-13):**
+      **Kampanyalar** `/promotion/campaigns`: liste (Yayında/Tümü) + oluşturma/düzenleme
+      modalı — tip seçici yeni `GET /api/promotion/campaign-types`'tan; tip-özel ayar
+      alanları CampaignEngine'le birebir (percentage_discount/fixed_discount/
+      buy_x_get_y/min_cart_discount); UpdateCampaignCommand'a additive `Settings`,
+      CampaignDto'ya additive tip+ayarlar. **4 kampanya tipi canlı DB'ye idempotent
+      seed edildi** (prm_campaign_types 0 satırdı — kampanya sistemi veri yokluğundan
+      ölüydü) + DatabaseSeeder'a SeedCampaignTypesAsync eklendi (dev paritesi).
+      **Kuponlar** `/promotion/coupons` (sidebar 'Kuponlar'): sayfalı liste + kod arama
+      + oluşturma/düzenleme (kod unique + tip/değer doğrulama percentage≤100) +
+      kullanım kayıtları modalı — yeni `GET/POST /api/promotion/coupons`,
+      `PUT /coupons/{id}`, `GET /coupons/{id}/usages` (GetCoupons/GetCouponUsages/
+      Create/UpdateCoupon). Doğrulama: izole 5052 — 6 route 401 ✓, / ve /sepet 200 ✓.
+      Migration yok. Bilinen sınır: kampanya ürün seçimi yalnız "tüm ürünler"
+      (specific + kampanya-ürün ilişkisi Faz G kampanya etiketi işiyle birlikte).
 
 **P-M3 — Üye + destek:**
 - [ ] P4. **Üyeler** (orta): liste/arama + detay (profil, adresler, siparişler, favori/

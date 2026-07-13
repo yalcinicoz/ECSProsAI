@@ -43,6 +43,8 @@ import { ReturnDetailPage } from '@/pages/orders/ReturnDetailPage'
 import { InvoicesPage } from '@/pages/orders/InvoicesPage'
 import { CmsPagesPage } from '@/pages/cms/CmsPagesPage'
 import { CmsPageDetailPage } from '@/pages/cms/CmsPageDetailPage'
+import { CampaignsPage } from '@/pages/promotion/CampaignsPage'
+import { CouponsPage } from '@/pages/promotion/CouponsPage'
 
 export const router = createBrowserRouter(
   [
@@ -108,7 +110,8 @@ export const router = createBrowserRouter(
             { path: 'finance/supplier-invoices', element: <PlaceholderPage title="Tedarikçi Faturaları" /> },
 
             // Promosyon
-            { path: 'promotion/campaigns', element: <PlaceholderPage title="Kampanyalar" /> },
+            { path: 'promotion/campaigns', element: <CampaignsPage /> },
+            { path: 'promotion/coupons',   element: <CouponsPage /> },
 
             // Fulfillment
             { path: 'fulfillment/picking-plans',    element: <PlaceholderPage title="Picking Planları" /> },

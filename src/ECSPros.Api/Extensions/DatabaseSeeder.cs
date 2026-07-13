@@ -30,6 +30,45 @@ public static class DatabaseSeeder
         await SeedDefaultVitrinAsync(scope.ServiceProvider);
         await SeedCargoCarriersAsync(scope.ServiceProvider);
         await SeedPlatformServiceCatalogAsync(scope.ServiceProvider);
+        await SeedCampaignTypesAsync(scope.ServiceProvider);
+    }
+
+    /// <summary>
+    /// P3: Kampanya tipleri — CampaignEngine'deki işleyicilerle birebir eşleşir
+    /// (kod eklemek yeni tip yaratmaz; engine'de karşılığı olmalı). Kod bazlı idempotent.
+    /// </summary>
+    private static async Task SeedCampaignTypesAsync(IServiceProvider sp)
+    {
+        var context = sp.GetRequiredService<ECSPros.Promotion.Infrastructure.Persistence.PromotionDbContext>();
+
+        var tipler = new (string Kod, string Ad, string Aciklama, bool UrunIster, bool Birlesir, int Sira)[]
+        {
+            ("percentage_discount", "Yüzde İndirim", "Kapsama giren ürünlerde yüzde indirim (discountRate, maxDiscountAmount)", false, false, 1),
+            ("fixed_discount", "Tutar İndirim", "Sabit tutar indirim (discountAmount, minCartTotal)", false, false, 2),
+            ("buy_x_get_y", "Çok Al Az Öde", "X adet alana Y adet bedava (buyQuantity, getQuantity)", false, false, 3),
+            ("min_cart_discount", "Sepet Tutarı İndirimi", "Sepet eşiğini aşınca yüzde indirim (minCartTotal, discountRate)", false, true, 4)
+        };
+
+        var mevcutKodlar = await context.CampaignTypes.Select(t => t.Code).ToListAsync();
+        var yeniler = tipler
+            .Where(t => !mevcutKodlar.Contains(t.Kod))
+            .Select(t => new ECSPros.Promotion.Domain.Entities.CampaignType
+            {
+                Code = t.Kod,
+                NameI18n = new() { { "tr", t.Ad } },
+                DescriptionI18n = new() { { "tr", t.Aciklama } },
+                HandlerClass = $"CampaignEngine.{t.Kod}",
+                RequiresProducts = t.UrunIster,
+                IsStackable = t.Birlesir,
+                IsActive = true,
+                SortOrder = t.Sira
+            })
+            .ToList();
+
+        if (yeniler.Count == 0) return;
+        context.CampaignTypes.AddRange(yeniler);
+        await context.SaveChangesAsync();
+        Console.WriteLine($"✓ Seed: {yeniler.Count} kampanya tipi eklendi (CampaignEngine eşleşmeli).");
     }
 
     /// <summary>

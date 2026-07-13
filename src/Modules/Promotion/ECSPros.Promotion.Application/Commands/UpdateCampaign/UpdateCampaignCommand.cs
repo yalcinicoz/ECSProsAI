@@ -11,4 +11,6 @@ public record UpdateCampaignCommand(
     DateTime? EndsAt,
     bool IsActive,
     int Priority,
-    Guid UpdatedBy) : IRequest<Result<bool>>;
+    Guid UpdatedBy,
+    // P3 additive: null = ayarlara dokunma; dolu = olduğu gibi yaz (indirim oranı vb.)
+    Dictionary<string, object>? Settings = null) : IRequest<Result<bool>>;
