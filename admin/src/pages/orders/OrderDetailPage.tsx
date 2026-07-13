@@ -237,6 +237,15 @@ export function OrderDetailPage() {
     enabled: invoiceOpen,
   })
 
+  // P2c: kabul edilen sözleşmelerin metni sonradan değişti mi? (kod → güncel sürüm tarihi)
+  const { data: legalPages = [] } = useQuery<{ code: string; lastContentUpdatedAt?: string }[]>({
+    queryKey: ['cms-legal-versions', order?.firmPlatformId],
+    queryFn: async () =>
+      (await api.get(`/cms/pages?pageType=legal&activeOnly=false&firmPlatformId=${order!.firmPlatformId}`)).data.data,
+    enabled: !!order?.firmPlatformId && (order?.customerNotes?.acceptedContracts?.length ?? 0) > 0,
+    retry: false,
+  })
+
   // Adres id'leri → görünen adlar
   const geoIds = useMemo(() => {
     if (!order) return []
@@ -565,14 +574,26 @@ export function OrderDetailPage() {
             {contracts.length > 0 && (
               <div className="mt-2">
                 <h3 className="text-xs font-semibold mb-1" style={{ color: 'var(--text-s)' }}>KABUL EDİLEN SÖZLEŞMELER</h3>
-                {contracts.map(c => (
-                  <div key={c.code} className="text-sm py-0.5" style={{ color: 'var(--text-m)' }}>
-                    {c.title} <span className="text-xs" style={{ color: 'var(--text-s)' }}>
-                      — {new Date(c.acceptedAt).toLocaleString('tr-TR')}
-                      {c.contentUpdatedAt ? ` (metin sürümü: ${new Date(c.contentUpdatedAt).toLocaleDateString('tr-TR')})` : ''}
-                    </span>
-                  </div>
-                ))}
+                {contracts.map(c => {
+                  const sayfa = legalPages.find(p => p.code === c.code)
+                  const sonradanDegisti = !!(sayfa?.lastContentUpdatedAt && c.contentUpdatedAt
+                    && new Date(sayfa.lastContentUpdatedAt) > new Date(c.contentUpdatedAt))
+                  return (
+                    <div key={c.code} className="text-sm py-0.5" style={{ color: 'var(--text-m)' }}>
+                      {c.title} <span className="text-xs" style={{ color: 'var(--text-s)' }}>
+                        — {new Date(c.acceptedAt).toLocaleString('tr-TR')}
+                        {c.contentUpdatedAt ? ` (metin sürümü: ${new Date(c.contentUpdatedAt).toLocaleDateString('tr-TR')})` : ''}
+                      </span>
+                      {sonradanDegisti && (
+                        <span className="text-xs ml-1 px-1.5 py-0.5 rounded-full"
+                          style={{ background: 'var(--surface2)', color: 'var(--text-m)' }}
+                          title={`Güncel metin: ${new Date(sayfa!.lastContentUpdatedAt!).toLocaleString('tr-TR')}`}>
+                          ⚠ metin bu kabulden sonra güncellendi
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
             {!customerNote && !order.internalNotes && contracts.length === 0 && (

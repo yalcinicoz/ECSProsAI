@@ -362,6 +362,27 @@ export function CmsPageDetailPage() {
         {platform && <> · Platform: {platform.nameI18n?.['tr']}</>}
       </p>
 
+      {/* P2c: yasal sözleşme sürüm uyarısı */}
+      {page.pageType === 'legal' && (
+        <div className="card p-4 mb-4" style={{ borderLeft: '3px solid var(--brand)' }}>
+          <h2 className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>
+            ⚖️ Yasal sözleşme metni — sürüm takibi
+          </h2>
+          <p className="text-sm" style={{ color: 'var(--text-m)' }}>
+            Sözleşme sürümü: <b>{(() => {
+              const tarihler = (page.sections ?? []).map(s => s.updatedAt).filter(Boolean) as string[]
+              const son = tarihler.length ? tarihler.sort().at(-1)! : page.createdAt
+              return new Date(son).toLocaleString('tr-TR')
+            })()}</b>
+          </p>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+            Sipariş ve üyelik kabulleri, kabul anındaki sürüm tarihiyle saklanır. İçeriği
+            kaydettiğinizde yeni bir sürüm oluşur; önceki kabuller eski sürüm tarihini taşımaya
+            devam eder (sipariş detayındaki "kabul edilen sözleşmeler" bölümünde görünür).
+          </p>
+        </div>
+      )}
+
       {/* Sayfa bilgileri */}
       <div className="card p-4 mb-4">
         <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--text)' }}>Sayfa Bilgileri</h2>
