@@ -37,6 +37,7 @@ import { AccountsPage } from '@/pages/accounts/AccountsPage'
 import { AccountDetailPage, AccountCreatePage } from '@/pages/accounts/AccountDetailPage'
 import { MigrationPage } from '@/pages/settings/MigrationPage'
 import { OrdersPage } from '@/pages/orders/OrdersPage'
+import { OrderDetailPage as OrderAdminDetailPage } from '@/pages/orders/OrderDetailPage'
 
 export const router = createBrowserRouter(
   [
@@ -75,7 +76,7 @@ export const router = createBrowserRouter(
 
             // Siparişler
             { path: 'orders',              element: <OrdersPage /> },
-            { path: 'orders/:id',          element: <PlaceholderPage title="Sipariş Detayı" /> },
+            { path: 'orders/:id',          element: <OrderAdminDetailPage /> },
             { path: 'orders/returns',      element: <PlaceholderPage title="İadeler" /> },
             { path: 'orders/quotes',       element: <PlaceholderPage title="Teklifler" /> },
             { path: 'orders/invoices',     element: <PlaceholderPage title="Faturalar" /> },

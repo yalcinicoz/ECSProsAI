@@ -47,6 +47,22 @@ public class GetOrderDetailQueryHandler : IRequestHandler<GetOrderDetailQuery, R
                 i.Id, i.VariantId, i.Sku, i.ProductName, i.VariantInfo,
                 i.Quantity, i.UnitPrice, i.DiscountAmount, i.TaxAmount, i.Total, i.Status)).ToList(),
             order.Payments.Select(p => new OrderDetailPaymentDto(
-                p.Id, p.PaymentMethodId, p.Amount, p.CurrencyCode, p.Status)).ToList()));
+                p.Id, p.PaymentMethodId, p.Amount, p.CurrencyCode, p.Status)).ToList(),
+            order.FirmPlatformId,
+            order.TotalExpense,
+            order.ShippingPostalCode,
+            order.ShippingDeliveryNotes,
+            order.ShippingCityId,
+            order.ShippingDistrictId,
+            order.ShippingNeighborhoodId,
+            order.BillingSameAsShipping,
+            order.BillingRecipientName,
+            order.BillingCompanyName,
+            order.BillingTaxOffice,
+            order.BillingTaxNumber,
+            order.BillingAddressLine,
+            order.BillingCityId,
+            order.BillingDistrictId,
+            order.CustomerNotes));
     }
 }

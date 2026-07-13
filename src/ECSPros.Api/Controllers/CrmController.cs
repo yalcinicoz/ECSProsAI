@@ -217,6 +217,19 @@ public class CrmController : ControllerBase
         var result = await _mediator.Send(new GetDistrictsQuery(cityId, activeOnly), ct);
         return Ok(new { success = true, data = result.Value });
     }
+
+    /// <summary>Ülke/il/ilçe/mahalle id'lerini görünen ada çözer (P1b — admin adres gösterimi, en çok 50 id).</summary>
+    [HttpGet("geo-names")]
+    public async Task<IActionResult> GetGeoNames([FromQuery] string ids, CancellationToken ct = default)
+    {
+        var idList = (ids ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => Guid.TryParse(s, out var g) ? g : Guid.Empty)
+            .Where(g => g != Guid.Empty)
+            .ToList();
+        var result = await _mediator.Send(new ECSPros.Crm.Application.Queries.GetGeoLookups.GetGeoNamesQuery(idList), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
 }
 
 public record CreateMemberRequest(

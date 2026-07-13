@@ -87,3 +87,37 @@ public class GetGeoNeighborhoodsQueryHandler(ICrmDbContext db)
             .ToList());
     }
 }
+
+// P1b: id → görünen ad çözümü — admin sipariş detayı adres bölümü (ülke/il/ilçe/mahalle
+// tek istekle). Genel amaçlı: P4 üye adresleri de kullanır.
+public record GetGeoNamesQuery(List<Guid> Ids) : IRequest<Result<Dictionary<Guid, string>>>;
+
+public class GetGeoNamesQueryHandler(ICrmDbContext db)
+    : IRequestHandler<GetGeoNamesQuery, Result<Dictionary<Guid, string>>>
+{
+    public async Task<Result<Dictionary<Guid, string>>> Handle(GetGeoNamesQuery request, CancellationToken ct)
+    {
+        var sonuc = new Dictionary<Guid, string>();
+        if (request.Ids.Count == 0) return Result.Success(sonuc);
+
+        var ids = request.Ids.Distinct().Take(50).ToList();
+
+        foreach (var s in await db.Countries.AsNoTracking()
+            .Where(x => ids.Contains(x.Id)).Select(x => new { x.Id, x.NameI18n }).ToListAsync(ct))
+            sonuc[s.Id] = s.NameI18n.GetValueOrDefault("tr", "");
+
+        foreach (var s in await db.Cities.AsNoTracking()
+            .Where(x => ids.Contains(x.Id)).Select(x => new { x.Id, x.NameI18n }).ToListAsync(ct))
+            sonuc[s.Id] = s.NameI18n.GetValueOrDefault("tr", "");
+
+        foreach (var s in await db.Districts.AsNoTracking()
+            .Where(x => ids.Contains(x.Id)).Select(x => new { x.Id, x.NameI18n }).ToListAsync(ct))
+            sonuc[s.Id] = s.NameI18n.GetValueOrDefault("tr", "");
+
+        foreach (var s in await db.Neighborhoods.AsNoTracking()
+            .Where(x => ids.Contains(x.Id)).Select(x => new { x.Id, x.NameI18n }).ToListAsync(ct))
+            sonuc[s.Id] = s.NameI18n.GetValueOrDefault("tr", "");
+
+        return Result.Success(sonuc);
+    }
+}

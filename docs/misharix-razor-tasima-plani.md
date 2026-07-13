@@ -343,9 +343,19 @@ src/ECSPros.Api/
         indeks ✓; EXPLAIN `Index Scan Backward using IX_ord_orders_Status_CreatedAt`
         (sort node'suz) ✓. Kimlikli UI testi kullanıcı duman testinde (kural gereği
         credential'lı deneme yapılmadı).
-  - [ ] P1b. Sipariş detayı + durum aksiyonları: kalemler, ödemeler, adresler, kabul
-        edilen sözleşmeler, sipariş notu, kargo bilgisi + takip linki; onayla / iptal /
-        kargoya ver (takip no + kargo anlaşması seçimi) / teslim.
+  - [x] P1b. **Sipariş detayı + durum aksiyonları — TAMAM (2026-07-13):** `/orders/{id}`
+        OrderDetailPage — K19 tek-sayfa kurgusu: başlıkta durum + duruma göre aksiyonlar
+        (Onayla[depo seçimi] / İşleme Al / Kargoya Ver[kargo anlaşması + takip no + paket
+        sayısı] / Teslim Edildi / İptal[nedenli]); kalemler, özet, ödemeler (yöntem adı
+        core_payment_methods'tan), teslimat+fatura adresleri (bölge adları yeni
+        `GET /api/crm/geo-names` ile), kargo gönderileri (firma adı + takip linki + olay
+        çizelgesi), müşteri notu + kabul edilen sözleşmeler (CustomerNotes jsonb,
+        metin sürümü tarihiyle), türetilmiş durum geçmişi. Backend: OrderDetailDto'ya
+        additive 16 alan (platform/fatura adresi/sözleşmeler); CRM `GetGeoNamesQuery`
+        (id→ad, ≤50). Doğrulama: izole 5052 — detay/geo-names/shipments routing 401 ✓,
+        anasayfa 200 ✓; tsc + build temiz. Hata mesajları modal içinde (BadRequest
+        error'ı basılır); geo-names eski binary'de 404 → adres bölge adsız gösterilir
+        (fail-soft).
   - [ ] P1c. İadeler: liste + onay/red/teslim al/geri ödeme aksiyonları + iade görselleri/
         neden görünümü + **iade nedenleri (`return_reason` Lookup değerleri) yönetimi
         (P0 bulgusu — lookup ekranı placeholder, değerler bugün yalnız API/SQL'den).**
