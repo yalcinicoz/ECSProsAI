@@ -1,3 +1,5 @@
+using ECSPros.Api.Authorization;
+using ECSPros.Shared.Kernel.Authorization;
 using ECSPros.Core.Domain.Entities;
 using ECSPros.Core.Application.Commands.CreateCargoRule;
 using ECSPros.Core.Application.Commands.CreateExpenseType;
@@ -105,8 +107,10 @@ public class CoreController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
-    /// <summary>Servis kataloğuna yeni servis tanımı ekler (SMTP, kargo firması vb.).</summary>
+    /// <summary>Servis kataloğuna yeni servis tanımı ekler — yalnız platform yönetimi
+    /// (definition şeması: geliştirici firma doldurur, kullanıcı firma yalnız okur).</summary>
     [HttpPost("integration-services")]
+    [RequirePermission(Permissions.DefinitionManage)]
     public async Task<IActionResult> CreateIntegrationService([FromBody] CreateIntegrationServiceRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
@@ -117,8 +121,9 @@ public class CoreController : ControllerBase
         return Created(string.Empty, new { success = true, data = new { id = result.Value } });
     }
 
-    /// <summary>Servis tanımını günceller (kod ve tip değiştirilemez).</summary>
+    /// <summary>Servis tanımını günceller (kod ve tip değiştirilemez) — yalnız platform yönetimi.</summary>
     [HttpPut("integration-services/{id:guid}")]
+    [RequirePermission(Permissions.DefinitionManage)]
     public async Task<IActionResult> UpdateIntegrationService(Guid id, [FromBody] UpdateIntegrationServiceRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(

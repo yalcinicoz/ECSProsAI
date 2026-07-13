@@ -326,12 +326,17 @@ public static IServiceCollection AddXxxInfrastructure(
   bırakılan alanın saklı değeri korunur. SMTP ayarı önce DB'den (`ISmtpSettingsProvider`,
   ServiceType=email aktif kayıt), yoksa `Email:Smtp:*` config'ten, ikisi de yoksa log'a
   yazılır. Katalog seed'i: `smtp` (email) + `visual_search` IntegrationService satırları.
-  **Servis kataloğu admin'den yönetilir:** `GET/POST /api/core/integration-services` +
-  `PUT /api/core/integration-services/{id}` (edit'te code+serviceType kilitli); admin
-  sayfası `/settings/integration-services`. `SettingsSchemaJson` (camelCase
-  `List<PlatformSchemaField>`, PlatformType kalıbı) firma entegrasyon formunun alanlarını
-  tanımlar — FirmDetailPage formu şemadan üretilir, section=credentials alanları şifreli
-  Credentials'a, settings alanları Settings jsonb'sine yazılır.
+  **Servis kataloğu `definition.integration_services` tablosundadır (2026-07-13'te
+  core'dan taşındı)** — definition şeması kuralı geçerli: yalnız geliştirici firma
+  (platform yönetimi) doldurur, veri aktarımları/eşlemeler kayıt EKLEYEMEZ. Yazma
+  endpoint'leri `POST/PUT /api/core/integration-services` `[RequirePermission(
+  Permissions.DefinitionManage)]` ("definition.manage" — yalnız super_admin/
+  platform_admin; okuma GET herkese açık, firma entegrasyon formunun dropdown'ı buradan
+  beslenir). Admin sayfası `/settings/integration-services` permission'sız kullanıcıya
+  kapalı, sidebar'da görünmez (NavItem.permission filtresi). `SettingsSchemaJson`
+  (camelCase `List<PlatformSchemaField>`, PlatformType kalıbı) firma entegrasyon formunun
+  alanlarını tanımlar — FirmDetailPage formu şemadan üretilir, section=credentials
+  alanları şifreli Credentials'a, settings alanları Settings jsonb'sine yazılır.
 - **GitHub push**: SSH 22 portu engellidir. `ssh.github.com:443` veya HTTPS kullanılmalı.
 - **API portu**: Production'da `http://0.0.0.0:5000`, Development'ta `http://localhost:5050`
 - **Swagger**: `http://localhost:5050/swagger` (Development) / `http://51.178.208.59/swagger` (Production)
