@@ -12,6 +12,8 @@ import { useQuery as usePlatformTypesQuery } from '@tanstack/react-query'
 import type { PlatformType } from './PlatformTypesPage'
 import { ChannelForm } from './ChannelsPage'
 import type { FirmPlatformWithFirm, Firm } from './ChannelsPage'
+import { getFieldLabel } from './PlatformTypesPage'
+import type { SchemaField } from './PlatformTypesPage'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -36,6 +38,7 @@ interface IntegrationService {
   nameI18n: Record<string, string>
   serviceType: string
   isAvailable: boolean
+  settingsSchema: SchemaField[] | null
 }
 
 interface FirmIntegration {
@@ -151,6 +154,76 @@ function KeyValueEditor({
   )
 }
 
+// ── Schema-Driven Fields (servis kataloğundaki SettingsSchema'dan üretilir) ───
+
+function schemaFieldInput(
+  f: SchemaField,
+  value: string,
+  onChange: (v: string) => void,
+) {
+  if (f.type === 'boolean') {
+    return (
+      <label className="flex items-center gap-2 cursor-pointer py-2">
+        <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
+          checked={value === 'true'}
+          onChange={e => onChange(e.target.checked ? 'true' : 'false')} />
+        <span className="text-sm" style={{ color: 'var(--text)' }}>{getFieldLabel(f)}</span>
+      </label>
+    )
+  }
+  const inputType = f.type === 'password' ? 'password' : f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'
+  return (
+    <div>
+      <label className="flbl">
+        {getFieldLabel(f)} {f.required && <span style={{ color: '#ef4444' }}>*</span>}
+      </label>
+      <input className="inp" type={inputType} value={value} onChange={e => onChange(e.target.value)} />
+    </div>
+  )
+}
+
+function SchemaSectionFields({
+  fields, values, onChange,
+}: {
+  fields: SchemaField[]
+  values: Record<string, string>
+  onChange: (key: string, v: string) => void
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      {fields.map(f => (
+        <div key={f.key}>{schemaFieldInput(f, values[f.key] ?? '', v => onChange(f.key, v))}</div>
+      ))}
+    </div>
+  )
+}
+
+/** Şema alan değerini API gövdesine çevirir — boolean/number tipine göre. */
+function schemaValueToBody(f: SchemaField, raw: string): unknown {
+  if (f.type === 'boolean') return raw === 'true'
+  if (f.type === 'number') {
+    const n = Number(raw)
+    return Number.isFinite(n) ? n : raw
+  }
+  return raw
+}
+
+function initSchemaValues(schema: SchemaField[], target: FirmIntegration | null): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const f of schema) {
+    const src = f.section === 'credentials' ? target?.credentials : target?.settings
+    const v = src?.[f.key]
+    if (v !== undefined && v !== null) out[f.key] = String(v)
+  }
+  return out
+}
+
+/** Şemada tanımlı olmayan mevcut anahtarlar — serbest editörde korunur. */
+function extraRows(rec: Record<string, unknown> | null | undefined, schema: SchemaField[], section: SchemaField['section']): KVRow[] {
+  const schemaKeys = new Set(schema.filter(f => f.section === section).map(f => f.key))
+  return recordToRows(rec).filter(r => !schemaKeys.has(r.key))
+}
+
 // ── Integration Form ──────────────────────────────────────────────────────────
 
 interface IntegrationFormProps {
@@ -173,9 +246,29 @@ function IntegrationForm({ firmId, platforms, integrationServices, target, onClo
   const [startDate, setStartDate] = useState(toDateInputValue(target?.startDate ?? null))
   const [endDate, setEndDate] = useState(toDateInputValue(target?.endDate ?? null))
   const [status, setStatus] = useState(target?.status ?? 'draft')
-  const [credRows, setCredRows] = useState<KVRow[]>(() => recordToRows(target?.credentials))
-  const [settingsRows, setSettingsRows] = useState<KVRow[]>(() => recordToRows(target?.settings))
+
+  const selectedService = integrationServices.find(s => s.id === integrationServiceId)
+  const schema = selectedService?.settingsSchema ?? []
+  const hasSchema = schema.length > 0
+
+  const [schemaValues, setSchemaValues] = useState<Record<string, string>>(
+    () => initSchemaValues(schema, target))
+  // Şema dışı anahtarlar (ya da şemasız serviste tüm anahtarlar) serbest editörde
+  const [credRows, setCredRows] = useState<KVRow[]>(() => extraRows(target?.credentials, schema, 'credentials'))
+  const [settingsRows, setSettingsRows] = useState<KVRow[]>(() => extraRows(target?.settings, schema, 'settings'))
   const [termsRows, setTermsRows] = useState<KVRow[]>(() => recordToRows(target?.terms))
+
+  function selectService(id: string) {
+    setIntegrationServiceId(id)
+    // yeni servisin şemasına göre alanlar sıfırlanır (create modunda)
+    const svc = integrationServices.find(s => s.id === id)
+    setSchemaValues(initSchemaValues(svc?.settingsSchema ?? [], target))
+    setCredRows(extraRows(target?.credentials, svc?.settingsSchema ?? [], 'credentials'))
+    setSettingsRows(extraRows(target?.settings, svc?.settingsSchema ?? [], 'settings'))
+  }
+
+  const credSchemaFields = schema.filter(f => f.section === 'credentials')
+  const settingsSchemaFields = schema.filter(f => f.section === 'settings')
 
   const serviceOptions = integrationServices.map(s => ({
     value: s.id,
@@ -184,12 +277,24 @@ function IntegrationForm({ firmId, platforms, integrationServices, target, onClo
 
   const mutation = useMutation({
     mutationFn: async () => {
+      // şema alanları + serbest satırlar bölümlerine göre birleşir; boş bırakılan şema
+      // alanı gönderilmez (maskeli "•••" gönderilir → backend saklı değeri korur)
+      const credentials: Record<string, unknown> = { ...rowsToRecord(credRows) }
+      const settings: Record<string, unknown> = { ...rowsToRecord(settingsRows) }
+      for (const f of credSchemaFields) {
+        const raw = schemaValues[f.key]
+        if (raw !== undefined && raw !== '') credentials[f.key] = schemaValueToBody(f, raw)
+      }
+      for (const f of settingsSchemaFields) {
+        const raw = schemaValues[f.key]
+        if (raw !== undefined && raw !== '') settings[f.key] = schemaValueToBody(f, raw)
+      }
       const body = {
         integrationServiceId: isEdit ? undefined : integrationServiceId,
         firmPlatformId: firmPlatformId || null,
         name: name || null,
-        credentials: rowsToRecord(credRows),
-        settings: rowsToRecord(settingsRows),
+        credentials,
+        settings,
         isActive,
         startDate: startDate || null,
         endDate: endDate || null,
@@ -215,7 +320,7 @@ function IntegrationForm({ firmId, platforms, integrationServices, target, onClo
           <label className="flbl">Servis <span style={{ color: '#ef4444' }}>*</span></label>
           <SearchableSelect
             value={integrationServiceId || null}
-            onChange={v => setIntegrationServiceId(v ?? '')}
+            onChange={v => selectService(v ?? '')}
             options={serviceOptions}
             placeholder="— Servis seçin —"
             hasValue={!!integrationServiceId}
@@ -262,13 +367,40 @@ function IntegrationForm({ firmId, platforms, integrationServices, target, onClo
       </div>
 
       <div className="p-4 rounded-xl space-y-4" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
-        <KeyValueEditor label="Kimlik Bilgileri (API)"
-          hint="Şifreli saklanır; kayıttan sonra değerler maskeli (•••) görünür. Değiştirmek için maskenin üzerine yeni değeri yazın; maskeli bırakılan alan aynen korunur."
-          rows={credRows} onChange={setCredRows} />
+        {credSchemaFields.length > 0 && (
+          <div>
+            <label className="flbl mb-1">Kimlik Bilgileri (API)</label>
+            <p className="text-xs mb-3" style={{ color: 'var(--text-s)' }}>
+              Şifreli saklanır; kayıttan sonra değerler maskeli (•••) görünür. Değiştirmek için
+              maskenin üzerine yeni değeri yazın; maskeli bırakılan alan aynen korunur.
+            </p>
+            <SchemaSectionFields fields={credSchemaFields} values={schemaValues}
+              onChange={(k, v) => setSchemaValues(s => ({ ...s, [k]: v }))} />
+          </div>
+        )}
+        {(!hasSchema || credRows.length > 0) && (
+          <KeyValueEditor
+            label={hasSchema ? 'Şema Dışı Kimlik Bilgileri' : 'Kimlik Bilgileri (API)'}
+            hint={hasSchema
+              ? 'Bu serviste şemada tanımlı olmayan mevcut anahtarlar.'
+              : 'Şifreli saklanır; kayıttan sonra değerler maskeli (•••) görünür. Değiştirmek için maskenin üzerine yeni değeri yazın; maskeli bırakılan alan aynen korunur.'}
+            rows={credRows} onChange={setCredRows} />
+        )}
       </div>
 
       <div className="p-4 rounded-xl space-y-4" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-        <KeyValueEditor label="Ayarlar" rows={settingsRows} onChange={setSettingsRows} />
+        {settingsSchemaFields.length > 0 && (
+          <div>
+            <label className="flbl mb-3 block">Ayarlar</label>
+            <SchemaSectionFields fields={settingsSchemaFields} values={schemaValues}
+              onChange={(k, v) => setSchemaValues(s => ({ ...s, [k]: v }))} />
+          </div>
+        )}
+        {(!hasSchema || settingsRows.length > 0) && (
+          <KeyValueEditor
+            label={hasSchema ? 'Şema Dışı Ayarlar' : 'Ayarlar'}
+            rows={settingsRows} onChange={setSettingsRows} />
+        )}
       </div>
 
       <div className="p-4 rounded-xl space-y-4" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>

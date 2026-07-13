@@ -156,7 +156,7 @@ function SchemaFieldCard({
 
 // ── Schema Editor ─────────────────────────────────────────────────────────────
 
-function SchemaEditor({
+export function SchemaEditor({
   schema, onChange, languages,
 }: {
   schema: SchemaField[]

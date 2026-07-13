@@ -1,4 +1,6 @@
+using System.Text.Json;
 using ECSPros.Core.Application.Services;
+using ECSPros.Core.Domain.Entities;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -14,11 +16,13 @@ public record IntegrationServiceDto(
     string ServiceType,
     bool IsAvailable,
     string? LogoUrl = null,             // H2 additive: kargo servislerinde logo
-    string? TrackingUrlTemplate = null  // H2 additive: {trackingNumber} yer tutuculu takip linki
+    string? TrackingUrlTemplate = null, // H2 additive: {trackingNumber} yer tutuculu takip linki
+    List<PlatformSchemaField>? SettingsSchema = null // admin form alanları (credentials/settings ayrımı)
 );
 
 public class GetIntegrationServicesQueryHandler : IRequestHandler<GetIntegrationServicesQuery, Result<List<IntegrationServiceDto>>>
 {
+    private static readonly JsonSerializerOptions _json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private readonly ICoreDbContext _db;
 
     public GetIntegrationServicesQueryHandler(ICoreDbContext db) => _db = db;
@@ -29,12 +33,34 @@ public class GetIntegrationServicesQueryHandler : IRequestHandler<GetIntegration
         if (!string.IsNullOrEmpty(request.ServiceType))
             query = query.Where(s => s.ServiceType == request.ServiceType);
 
-        var list = await query
+        var kayitlar = await query
             .OrderBy(s => s.ServiceType).ThenBy(s => s.Code)
-            .Select(s => new IntegrationServiceDto(
-                s.Id, s.Code, s.NameI18n, s.ServiceType, s.IsAvailable, s.LogoUrl, s.TrackingUrlTemplate))
+            .Select(s => new
+            {
+                s.Id, s.Code, s.NameI18n, s.ServiceType, s.IsAvailable,
+                s.LogoUrl, s.TrackingUrlTemplate, s.SettingsSchemaJson
+            })
             .ToListAsync(ct);
 
+        var list = kayitlar.Select(s => new IntegrationServiceDto(
+            s.Id, s.Code, s.NameI18n, s.ServiceType, s.IsAvailable, s.LogoUrl, s.TrackingUrlTemplate,
+            DeserializeSchema(s.SettingsSchemaJson))).ToList();
+
         return Result.Success<List<IntegrationServiceDto>>(list);
+    }
+
+    private static List<PlatformSchemaField>? DeserializeSchema(string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return null;
+        try
+        {
+            // Eski biçim ({"fields":[...]} sözlüğü) diziye çevrilemez — null döner, form
+            // serbest key-value editörüne düşer (bozuk şema admin'i kilitlemesin).
+            return JsonSerializer.Deserialize<List<PlatformSchemaField>>(json, _json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }

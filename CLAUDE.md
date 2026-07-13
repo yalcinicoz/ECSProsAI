@@ -325,8 +325,13 @@ public static IServiceCollection AddXxxInfrastructure(
   Admin GET yanıtlarında credential değerleri maskeli (`•••`) döner; güncellemede maskeli
   bırakılan alanın saklı değeri korunur. SMTP ayarı önce DB'den (`ISmtpSettingsProvider`,
   ServiceType=email aktif kayıt), yoksa `Email:Smtp:*` config'ten, ikisi de yoksa log'a
-  yazılır. Katalog seed'i: `smtp` (email) + `visual_search` IntegrationService satırları
-  (`SettingsSchema` admin form alanlarını tanımlar; secret alanlar Credentials'a girilir).
+  yazılır. Katalog seed'i: `smtp` (email) + `visual_search` IntegrationService satırları.
+  **Servis kataloğu admin'den yönetilir:** `GET/POST /api/core/integration-services` +
+  `PUT /api/core/integration-services/{id}` (edit'te code+serviceType kilitli); admin
+  sayfası `/settings/integration-services`. `SettingsSchemaJson` (camelCase
+  `List<PlatformSchemaField>`, PlatformType kalıbı) firma entegrasyon formunun alanlarını
+  tanımlar — FirmDetailPage formu şemadan üretilir, section=credentials alanları şifreli
+  Credentials'a, settings alanları Settings jsonb'sine yazılır.
 - **GitHub push**: SSH 22 portu engellidir. `ssh.github.com:443` veya HTTPS kullanılmalı.
 - **API portu**: Production'da `http://0.0.0.0:5000`, Development'ta `http://localhost:5050`
 - **Swagger**: `http://localhost:5050/swagger` (Development) / `http://51.178.208.59/swagger` (Production)
