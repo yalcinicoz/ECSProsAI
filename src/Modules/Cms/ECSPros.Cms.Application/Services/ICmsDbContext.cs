@@ -8,6 +8,7 @@ public interface ICmsDbContext
     DbSet<Page> Pages { get; }
     DbSet<PageTemplate> PageTemplates { get; }
     DbSet<PageSection> PageSections { get; }
+    DbSet<PageSectionItem> PageSectionItems { get; }
     DbSet<SectionType> SectionTypes { get; }
     DbSet<ProductList> ProductLists { get; }
 

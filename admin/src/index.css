@@ -228,3 +228,12 @@ html.dark .bx { background: rgba(100,116,139,.15); color: #94a3b8; border-color:
   .mob-hide { display: none !important; }
   #fav-btn  { display: none; }
 }
+
+/* Quill (P2b içerik editörü) — panel temasına uyum */
+.quill-wrap .ql-toolbar { border: none; border-bottom: 1px solid var(--border); background: var(--surface2); }
+.quill-wrap .ql-container { border: none; font-size: 14px; font-family: inherit; }
+.quill-wrap .ql-editor { min-height: 200px; color: var(--text); }
+.quill-wrap .ql-snow .ql-stroke { stroke: var(--text-m); }
+.quill-wrap .ql-snow .ql-fill { fill: var(--text-m); }
+.quill-wrap .ql-snow .ql-picker { color: var(--text-m); }
+.quill-wrap .ql-snow .ql-picker-options { background: var(--surface); border-color: var(--border); }
