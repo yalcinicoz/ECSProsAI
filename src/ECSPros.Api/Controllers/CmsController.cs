@@ -1,5 +1,8 @@
+using ECSPros.Cms.Application.Commands.CopyPageContent;
 using ECSPros.Cms.Application.Commands.CreatePage;
+using ECSPros.Cms.Application.Commands.ManageSectionItems;
 using ECSPros.Cms.Application.Commands.UpdatePage;
+using ECSPros.Cms.Application.Commands.UpdateSectionContent;
 using ECSPros.Cms.Application.Queries.GetPageDetail;
 using ECSPros.Cms.Application.Queries.GetPages;
 using MediatR;
@@ -89,7 +92,72 @@ public class CmsController : ControllerBase
 
         return Ok(new { success = true });
     }
+
+    // ─── P2b: bölüm içeriği + SSS öğeleri + platforma kopyalama ───────────────
+
+    private Guid CurrentUserId =>
+        Guid.TryParse(User.FindFirst("sub")?.Value, out var uid) ? uid : Guid.Empty;
+
+    /// <summary>rich_text bölümünün HTML içeriğini günceller (P2b).</summary>
+    [HttpPut("sections/{id:guid}/content")]
+    public async Task<IActionResult> UpdateSectionContent(Guid id, [FromBody] UpdateSectionContentRequest request, CancellationToken ct)
+    {
+        if (CurrentUserId == Guid.Empty) return Unauthorized();
+        var result = await _mediator.Send(new UpdateSectionContentCommand(id, request.Html ?? "", CurrentUserId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Bölüme SSS öğesi ekler (soru=title, cevap=description) (P2b).</summary>
+    [HttpPost("sections/{id:guid}/items")]
+    public async Task<IActionResult> CreateSectionItem(Guid id, [FromBody] SectionItemRequest request, CancellationToken ct)
+    {
+        if (CurrentUserId == Guid.Empty) return Unauthorized();
+        var result = await _mediator.Send(new CreateSectionItemCommand(
+            id, request.TitleI18n, request.DescriptionI18n, request.SortOrder, CurrentUserId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Created($"/api/cms/sections/{id}/items", new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>SSS öğesini günceller (P2b).</summary>
+    [HttpPut("section-items/{id:guid}")]
+    public async Task<IActionResult> UpdateSectionItem(Guid id, [FromBody] SectionItemRequest request, CancellationToken ct)
+    {
+        if (CurrentUserId == Guid.Empty) return Unauthorized();
+        var result = await _mediator.Send(new UpdateSectionItemCommand(
+            id, request.TitleI18n, request.DescriptionI18n, request.SortOrder, request.IsActive, CurrentUserId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>SSS öğesini siler (soft delete) (P2b).</summary>
+    [HttpDelete("section-items/{id:guid}")]
+    public async Task<IActionResult> DeleteSectionItem(Guid id, CancellationToken ct)
+    {
+        if (CurrentUserId == Guid.Empty) return Unauthorized();
+        var result = await _mediator.Send(new DeleteSectionItemCommand(id, CurrentUserId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Sayfa içeriğini aynı Code'lu diğer platform sayfalarına kopyalar (P2b, K20).</summary>
+    [HttpPost("pages/{id:guid}/copy-content")]
+    public async Task<IActionResult> CopyPageContent(Guid id, [FromBody] CopyPageContentRequest request, CancellationToken ct)
+    {
+        if (CurrentUserId == Guid.Empty) return Unauthorized();
+        var result = await _mediator.Send(new CopyPageContentCommand(id, request.TargetPageIds, CurrentUserId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { copiedSections = result.Value } });
+    }
 }
+
+public record UpdateSectionContentRequest(string? Html);
+public record SectionItemRequest(
+    Dictionary<string, string> TitleI18n,
+    Dictionary<string, string> DescriptionI18n,
+    int SortOrder = 0,
+    bool IsActive = true);
+public record CopyPageContentRequest(List<Guid> TargetPageIds);
 
 public record CreatePageRequest(
     Guid FirmPlatformId,

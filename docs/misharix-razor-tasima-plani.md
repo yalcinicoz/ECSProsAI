@@ -399,9 +399,21 @@ src/ECSPros.Api/
         Doğrulama: izole 5052 — pageType filtre + detay routing 401 ✓; storefront
         regresyon: /hakkimizda /kullanim-kosullari /gizlilik-ve-guvenlik /iade-ve-degisim
         /sik-sorulan-sorular hepsi 200 ✓, anasayfa 200 ✓. Migration yok.
-  - [ ] P2b. rich_text section editörü — sözleşme metinleri (C8), kurumsal sayfalar (F),
-        SSS soru/cevapları (F2) panelden düzenlenebilir olur (bugün seed/SQL ile
-        giriliyor; yasal metinler için kabul edilemez).
+  - [x] P2b. **İçerik editörü — TAMAM (2026-07-13):** Sayfa detayında bölüme tıklayınca
+        editör açılır. **rich_text:** Quill WYSIWYG (pakete gömülü, dış CDN yok; tema
+        uyumlu) + HTML Kaynağı sekmesi → yeni `PUT /api/cms/sections/{id}/content`
+        (UpdateSectionContentCommand — yalnız rich_text; Settings.html; UpdatedAt
+        ilerler → sözleşme sürüm tarihi otomatik güncellenir, jsonb diff için Settings
+        yeniden atanır). **faq:** soru/cevap listesi + ekle/düzenle/sil modalı →
+        yeni `POST /api/cms/sections/{id}/items`, `PUT/DELETE /api/cms/section-items/{id}`
+        (Create/Update/DeleteSectionItemCommand; DbSet.Add — EF tracked-parent tuzağına
+        düşülmedi; öğe değişince bölüm UpdatedAt'i de ilerler). **K20 kopyalama:**
+        "Diğer Platformlara Kopyala" → yeni `POST /api/cms/pages/{id}/copy-content`
+        (CopyPageContentCommand — yalnız aynı Code'lu hedefler; bölümler tip+sıra ile
+        eşlenir, hedef öğeler soft-delete + klon). ICmsDbContext'e PageSectionItems
+        DbSet'i eklendi. Doğrulama: izole 5052 — 5 yeni route 401 ✓; storefront
+        regresyon /, /kullanim-kosullari, /sik-sorulan-sorular, /hakkimizda 200 ✓.
+        Migration yok.
   - [ ] P2c. Sürüm görünürlüğü: ContentUpdatedAt gösterimi (sözleşme kabul kayıtları bu
         sürüme bağlanıyor) + değişiklik uyarısı.
 - [ ] P3. **Kampanya + kupon yönetimi** (orta): kampanya CRUD (backend endpoint'leri

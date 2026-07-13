@@ -361,9 +361,16 @@
     read-only). Backend additive: GetPagesQuery.PageType + DTO FirmPlatformId/
     LastContentUpdatedAt; GetPageDetail.Sections (settings+faq items — P2b temeli).
     Doğrulama: izole 5052 routing 401 ✓ + storefront kurumsal/yasal/SSS/anasayfa 200 ✓.
-  - **SIRADAKİ: P2b — rich_text WYSIWYG (Quill) + faq soru/cevap editörü + "diğer
-    platformlara kopyala"; bölüm içeriği güncelleme API'si yazılacak (bugün yok).**
-    Restart bekleyen backend: P1c + P1d + P2a — publish güncel.
+  - **P2b TAMAM (2026-07-13):** sayfa detayında bölüm editörleri — rich_text: Quill
+    WYSIWYG (gömülü) + HTML kaynağı sekmesi → yeni `PUT /cms/sections/{id}/content`
+    (UpdatedAt → sözleşme sürümü otomatik ilerler); faq: soru/cevap ekle/düzenle/sil →
+    yeni `POST /cms/sections/{id}/items` + `PUT/DELETE /cms/section-items/{id}`;
+    K20 kopyalama → yeni `POST /cms/pages/{id}/copy-content` (aynı Code şartı, tip+sıra
+    eşleme, hedef öğeler soft-delete+klon). ICmsDbContext'e PageSectionItems eklendi.
+    Doğrulama: izole 5052 — 5 yeni route 401 ✓ + storefront regresyon 200 ✓.
+  - **SIRADAKİ: P2c — sürüm görünürlüğü** (ContentUpdatedAt zaten listede/detayda;
+    kalan: sözleşme kabul kayıtlarıyla ilişkiyi gösteren değişiklik uyarısı — küçük).
+    Restart bekleyen backend: P1c + P1d + P2a + P2b — publish güncel.
   - **SIRADAKİ: P1c iadeler** (liste+aksiyonlar+iade nedenleri lookup yönetimi).
     Restart hâlâ bekliyor — H1..H9 + platform entegrasyonları + P1a/P1b backend tek
     restart'la çıkar (admin/dist şimdiden yeni; restart öncesi: sayaçlar gizli, Aktif
