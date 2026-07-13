@@ -294,6 +294,23 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-13 (devam) — P0 TAMAM (geriye dönük panel taraması, K16):**
+  - **8.1–8.9'un her bölümüne "Panel (P0)" notu düşüldü** (plan Bölüm 8). Bilinen boşluk
+    listesi doğrulandı: sipariş/iade/fatura → P1, CMS içerik → P2, kampanya/kupon → P3,
+    üyeler (+üye grupları placeholder) → P4, iletişim+bildirim izleme → P5. Panel karşılığı
+    TAM olanlar: menüler, vitrin (8.8 örnek model), yorum+koleksiyon moderasyonu, katalog
+    (ürün/görsel/fiyat/featured/video), servis kataloğu + firma entegrasyonları.
+  - **3 yeni bulgu:** (1) `return_reason` Lookup değerleri panelden yönetilemiyor → P1c'ye
+    eklendi; (2) bülten aboneleri listesi yok → P5'e eklendi; (3) ⚠️ **Kanallar formu şema
+    dışı Settings/Credentials anahtarlarını kayıtta sessizce siliyordu** (backend Settings'i
+    replace eder; form yalnız şema alanlarını gönderiyordu — stockControlEnabled/tema/domain
+    silinirdi) → `ChannelsPage.tsx` düzeltildi (şema dışı anahtarlar korunur), npm build
+    alındı (admin/dist canlıda). B12 stok anahtarının panel yolu: PlatformType şemasına
+    boolean alan eklemek yeterli (veri işi, kod gerekmez).
+  - **SIRADAKİ: P1a sipariş listesi — başlamadan ekran kurgusu kullanıcıyla konuşulacak**
+    (kurgu önerisi kullanıcıya sunuldu, yanıt bekleniyor). Restart hâlâ bekliyor —
+    H1..H9 + platform entegrasyonları tek restart'la canlıya çıkar.
+
 - **2026-07-13 (devam) — İŞ LİSTESİ GÜNCELLENDİ: Site–Panel senkron kuralı (K16) + FAZ P/R:**
   - **Yeni kural (kullanıcı):** sitede canlı her işlev panelde yönetim karşılığı olmadan
     "bitti" sayılmaz; API/DB müdahalesi yönetim yolu DEĞİLDİR. Plan Bölüm 2 madde 11 +
