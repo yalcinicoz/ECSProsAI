@@ -374,9 +374,17 @@
     sayfanın güncel LastContentUpdatedAt'i; kod eşlemesi platform legal sayfalarından).
     Bilinen sınır: sürüm-başına kabul sayacı yok (jsonb sorgusu Application'a Npgsql
     getirirdi — kalıp bozulmadı).
-  - **SIRADAKİ: P3 kampanya + kupon yönetimi (orta)** — kampanya CRUD backend'i mevcut;
-    kupon tanımlama/listeleme/kullanım kayıtları eklenecek. Restart bekleyen backend:
-    P1c + P1d + P2a + P2b — publish güncel.
+  - **P3 TAMAM (2026-07-13) → P-M2 KAPANDI:** Kampanyalar sayfası (tip seçici +
+    CampaignEngine'le birebir tip-özel ayar alanları; UpdateCampaign'e additive
+    Settings) + **4 kampanya tipi canlı DB'ye seed edildi** (tablo 0 satırdı — sistem
+    veri yokluğundan ölüydü; DatabaseSeeder'a da eklendi) + Kuponlar sayfası (sidebar
+    'Kuponlar': sayfalı liste + arama + CRUD + kullanım kayıtları modalı; yeni
+    GET/POST/PUT coupons + usages endpoint'leri). Doğrulama: izole 5052 — 6 route
+    401 ✓, / ve /sepet 200 ✓. Migration yok. Sınır: kampanya ürün seçimi yalnız
+    "tüm ürünler" (specific → Faz G kampanya etiketi işiyle).
+  - **SIRADAKİ: P-M3 — P4 üyeler (orta) + P5 iletişim mesajları + bildirim izleme +
+    bülten aboneleri (küçük).** Restart bekleyen backend: P1c+P1d+P2a+P2b+P3 —
+    publish güncel.
   - **SIRADAKİ: P1c iadeler** (liste+aksiyonlar+iade nedenleri lookup yönetimi).
     Restart hâlâ bekliyor — H1..H9 + platform entegrasyonları + P1a/P1b backend tek
     restart'la çıkar (admin/dist şimdiden yeni; restart öncesi: sayaçlar gizli, Aktif

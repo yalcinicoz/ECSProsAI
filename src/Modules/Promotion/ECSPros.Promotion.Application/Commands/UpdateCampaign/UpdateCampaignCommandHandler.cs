@@ -28,6 +28,8 @@ public class UpdateCampaignCommandHandler : IRequestHandler<UpdateCampaignComman
         campaign.EndsAt = request.EndsAt;
         campaign.IsActive = request.IsActive;
         campaign.Priority = request.Priority;
+        if (request.Settings is not null)
+            campaign.Settings = request.Settings;
         campaign.UpdatedAt = DateTime.UtcNow;
         campaign.UpdatedBy = request.UpdatedBy;
 
