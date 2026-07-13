@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -96,6 +97,17 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.Razor.RazorViewEngineOptions
 // ─── Süreç-içi cache (facet gibi ağır, nadiren değişen sorgu sonuçları için) ───
 builder.Services.AddMemoryCache();
 
+// ─── Data Protection (FirmPlatformIntegration.Credentials at-rest şifreleme) ──
+// Key ring publish dizini DIŞINDA kalıcı dizinde tutulur — publish/deploy'da silinirse
+// DB'deki şifreli kimlik bilgileri ÇÖZÜLEMEZ (yeniden girilmeleri gerekir). Yol
+// DataProtection:KeysPath ile değiştirilebilir; varsayılan ~/.ecspros/dp-keys.
+var dpKeysPath = builder.Configuration["DataProtection:KeysPath"]
+    ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ecspros", "dp-keys");
+Directory.CreateDirectory(dpKeysPath);
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dpKeysPath))
+    .SetApplicationName("ECSPros");
+
 // ─── MediatR ───────────────────────────────────────────────────────
 builder.Services.AddMediatR(cfg =>
 {
@@ -126,6 +138,9 @@ builder.Services.AddValidatorsFromAssembly(typeof(GetOrdersQuery).Assembly);
 
 // ─── Shared Infrastructure (Redis, Email, SMS stubs) ───────────────
 builder.Services.AddSharedInfrastructure(builder.Configuration);
+// SMTP ayarları DB'deki platform servis tanımından (yoksa Email:Smtp config yedeği)
+builder.Services.AddScoped<ECSPros.Shared.Infrastructure.Messaging.ISmtpSettingsProvider,
+    ECSPros.Api.Services.DbSmtpSettingsProvider>();
 
 // ─── Infrastructure Modules ────────────────────────────────────────
 builder.Services.AddIamInfrastructure(npgsqlDataSource, builder.Configuration);

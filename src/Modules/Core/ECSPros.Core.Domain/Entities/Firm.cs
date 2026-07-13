@@ -15,7 +15,7 @@ public class Firm : BaseEntity
     public bool IsActive { get; set; } = true;
 
     public ICollection<FirmPlatform> FirmPlatforms { get; set; } = new List<FirmPlatform>();
-    public ICollection<FirmIntegration> FirmIntegrations { get; set; } = new List<FirmIntegration>();
+    public ICollection<FirmPlatformIntegration> PlatformIntegrations { get; set; } = new List<FirmPlatformIntegration>();
     public ICollection<CargoRule> CargoRules { get; set; } = new List<CargoRule>();
     public ICollection<FirmNotificationSetting> NotificationSettings { get; set; } = new List<FirmNotificationSetting>();
 }

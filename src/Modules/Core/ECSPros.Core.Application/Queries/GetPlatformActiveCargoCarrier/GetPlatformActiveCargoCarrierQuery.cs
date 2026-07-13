@@ -7,9 +7,11 @@ using Microsoft.EntityFrameworkCore;
 namespace ECSPros.Core.Application.Queries.GetPlatformActiveCargoCarrier;
 
 /// <summary>
-/// H2: Platformun firmasının aktif kargo anlaşmasını döner (sipariş onay sayfası "Kargo
-/// Firması" satırı — gönderi henüz yokken firma tek aktif anlaşmadan bilinir). Birden çok
-/// aktif kargo anlaşması varsa ilki (Name sırasıyla) döner; hiç yoksa null — satır gizli.
+/// H2: Platformun aktif kargo anlaşmasını döner (sipariş onay sayfası "Kargo Firması"
+/// satırı — gönderi henüz yokken firma aktif anlaşmadan bilinir). Çözümleme kuralı:
+/// platforma özel kayıt (FirmPlatformId eşleşen) firma-geneline (FirmPlatformId null)
+/// tercih edilir; aynı seviyede birden çok kayıt varsa ilki (Name sırasıyla) döner;
+/// hiç yoksa null — satır gizli.
 /// </summary>
 public record GetPlatformActiveCargoCarrierQuery(Guid FirmPlatformId)
     : IRequest<Result<CargoCarrierDto?>>;
@@ -24,11 +26,14 @@ public class GetPlatformActiveCargoCarrierQueryHandler
     public async Task<Result<CargoCarrierDto?>> Handle(
         GetPlatformActiveCargoCarrierQuery request, CancellationToken ct)
     {
-        var kayit = await _db.FirmIntegrations
+        var kayit = await _db.FirmPlatformIntegrations
             .Where(fi => fi.IsActive
                          && fi.IntegrationService.ServiceType == "cargo"
-                         && fi.Firm.FirmPlatforms.Any(p => p.Id == request.FirmPlatformId))
-            .OrderBy(fi => fi.Name)
+                         && (fi.FirmPlatformId == request.FirmPlatformId
+                             || (fi.FirmPlatformId == null
+                                 && fi.Firm.FirmPlatforms.Any(p => p.Id == request.FirmPlatformId))))
+            .OrderBy(fi => fi.FirmPlatformId == null ? 1 : 0)
+            .ThenBy(fi => fi.Name)
             .Select(fi => new
             {
                 SozlesmeAdi = fi.Name,

@@ -33,7 +33,7 @@ public class GetCargoCarriersByFirmIntegrationsQueryHandler
         if (idler.Count == 0)
             return Result.Success(new Dictionary<Guid, CargoCarrierDto>());
 
-        var kayitlar = await _db.FirmIntegrations
+        var kayitlar = await _db.FirmPlatformIntegrations
             .Where(fi => idler.Contains(fi.Id) && fi.IntegrationService.ServiceType == "cargo")
             .Select(fi => new
             {

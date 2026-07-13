@@ -10,7 +10,7 @@ public record GetCargoRulesQuery(Guid FirmId) : IRequest<Result<List<CargoRuleDt
 public record CargoRuleDto(
     Guid Id,
     Guid FirmId,
-    Guid FirmIntegrationId,
+    Guid FirmPlatformIntegrationId,
     string? IntegrationName,
     string RuleType,
     string? PaymentType,
@@ -29,11 +29,11 @@ public class GetCargoRulesQueryHandler : IRequestHandler<GetCargoRulesQuery, Res
     public async Task<Result<List<CargoRuleDto>>> Handle(GetCargoRulesQuery request, CancellationToken ct)
     {
         var list = await _db.CargoRules
-            .Include(r => r.FirmIntegration)
+            .Include(r => r.FirmPlatformIntegration)
             .Where(r => r.FirmId == request.FirmId)
             .OrderByDescending(r => r.Priority)
             .Select(r => new CargoRuleDto(
-                r.Id, r.FirmId, r.FirmIntegrationId, r.FirmIntegration.Name,
+                r.Id, r.FirmId, r.FirmPlatformIntegrationId, r.FirmPlatformIntegration.Name,
                 r.RuleType, r.PaymentType, r.NeighborhoodId, r.CityId,
                 r.Priority, r.IsActive))
             .ToListAsync(ct);

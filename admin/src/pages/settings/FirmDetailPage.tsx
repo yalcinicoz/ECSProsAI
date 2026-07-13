@@ -45,20 +45,17 @@ interface FirmIntegration {
   serviceCode: string
   serviceNameI18n: Record<string, string>
   serviceType: string
+  firmPlatformId: string | null
+  firmPlatformNameI18n: Record<string, string> | null
   name: string | null
-  credentials: Record<string, unknown>
+  credentials: Record<string, unknown> // maskeli gelir ("•••") — değer değiştirilmezse maske geri yollanır, backend saklı değeri korur
   settings: Record<string, unknown>
   isActive: boolean
   createdAt: string
-  contractNumber: string | null
   startDate: string | null
   endDate: string | null
   status: string
   terms: Record<string, unknown> | null
-  contactName: string | null
-  contactPhone: string | null
-  contactEmail: string | null
-  documentUrl: string | null
 }
 
 const CONTRACT_STATUSES = [
@@ -158,27 +155,24 @@ function KeyValueEditor({
 
 interface IntegrationFormProps {
   firmId: string
+  platforms: FirmDetail['platforms']
   integrationServices: IntegrationService[]
   target: FirmIntegration | null
   onClose: () => void
   onSuccess: () => void
 }
 
-function IntegrationForm({ firmId, integrationServices, target, onClose, onSuccess }: IntegrationFormProps) {
+function IntegrationForm({ firmId, platforms, integrationServices, target, onClose, onSuccess }: IntegrationFormProps) {
   const queryClient = useQueryClient()
   const isEdit = !!target
 
   const [integrationServiceId, setIntegrationServiceId] = useState(target?.integrationServiceId ?? '')
+  const [firmPlatformId, setFirmPlatformId] = useState(target?.firmPlatformId ?? '')
   const [name, setName] = useState(target?.name ?? '')
   const [isActive, setIsActive] = useState(target?.isActive ?? true)
-  const [contractNumber, setContractNumber] = useState(target?.contractNumber ?? '')
   const [startDate, setStartDate] = useState(toDateInputValue(target?.startDate ?? null))
   const [endDate, setEndDate] = useState(toDateInputValue(target?.endDate ?? null))
   const [status, setStatus] = useState(target?.status ?? 'draft')
-  const [contactName, setContactName] = useState(target?.contactName ?? '')
-  const [contactPhone, setContactPhone] = useState(target?.contactPhone ?? '')
-  const [contactEmail, setContactEmail] = useState(target?.contactEmail ?? '')
-  const [documentUrl, setDocumentUrl] = useState(target?.documentUrl ?? '')
   const [credRows, setCredRows] = useState<KVRow[]>(() => recordToRows(target?.credentials))
   const [settingsRows, setSettingsRows] = useState<KVRow[]>(() => recordToRows(target?.settings))
   const [termsRows, setTermsRows] = useState<KVRow[]>(() => recordToRows(target?.terms))
@@ -192,19 +186,15 @@ function IntegrationForm({ firmId, integrationServices, target, onClose, onSucce
     mutationFn: async () => {
       const body = {
         integrationServiceId: isEdit ? undefined : integrationServiceId,
+        firmPlatformId: firmPlatformId || null,
         name: name || null,
         credentials: rowsToRecord(credRows),
         settings: rowsToRecord(settingsRows),
         isActive,
-        contractNumber: contractNumber || null,
         startDate: startDate || null,
         endDate: endDate || null,
         status,
         terms: rowsToRecord(termsRows),
-        contactName: contactName || null,
-        contactPhone: contactPhone || null,
-        contactEmail: contactEmail || null,
-        documentUrl: documentUrl || null,
       }
       if (isEdit) {
         await api.put(`/core/firm-integrations/${target!.id}`, body)
@@ -241,8 +231,16 @@ function IntegrationForm({ firmId, integrationServices, target, onClose, onSucce
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="flbl">Sözleşme No</label>
-          <input className="inp" value={contractNumber} onChange={e => setContractNumber(e.target.value)} />
+          <label className="flbl">Platform</label>
+          <select className="sel" value={firmPlatformId} onChange={e => setFirmPlatformId(e.target.value)}>
+            <option value="">Tüm platformlar (firma geneli)</option>
+            {platforms.map(p => (
+              <option key={p.id} value={p.id}>{getI18nName(p.nameI18n)}</option>
+            ))}
+          </select>
+          <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+            Platforma özel kayıt, firma geneline tercih edilir.
+          </p>
         </div>
         <div>
           <label className="flbl">Durum</label>
@@ -263,29 +261,9 @@ function IntegrationForm({ firmId, integrationServices, target, onClose, onSucce
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <label className="flbl">Yetkili Kişi</label>
-          <input className="inp" value={contactName} onChange={e => setContactName(e.target.value)} />
-        </div>
-        <div>
-          <label className="flbl">Telefon</label>
-          <input className="inp" value={contactPhone} onChange={e => setContactPhone(e.target.value)} />
-        </div>
-        <div>
-          <label className="flbl">E-posta</label>
-          <input className="inp" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} />
-        </div>
-      </div>
-
-      <div>
-        <label className="flbl">Sözleşme Belgesi (URL)</label>
-        <input className="inp" value={documentUrl} onChange={e => setDocumentUrl(e.target.value)}
-          placeholder="https://…" />
-      </div>
-
       <div className="p-4 rounded-xl space-y-4" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
-        <KeyValueEditor label="Kimlik Bilgileri (API)" hint="Şifreli/gizli bağlantı bilgileri."
+        <KeyValueEditor label="Kimlik Bilgileri (API)"
+          hint="Şifreli saklanır; kayıttan sonra değerler maskeli (•••) görünür. Değiştirmek için maskenin üzerine yeni değeri yazın; maskeli bırakılan alan aynen korunur."
           rows={credRows} onChange={setCredRows} />
       </div>
 
@@ -590,7 +568,7 @@ export function FirmDetailPage() {
             <table className="w-full">
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-                  {['SERVİS', 'İSİM', 'SÖZLEŞME NO', 'DÖNEM', 'SÖZLEŞME DURUMU', 'AKTİF', ''].map(h => (
+                  {['SERVİS', 'İSİM', 'PLATFORM', 'DÖNEM', 'SÖZLEŞME DURUMU', 'AKTİF', ''].map(h => (
                     <th key={h}
                       className={`px-4 py-3 text-left text-xs font-semibold tracking-wider ${h === '' ? 'w-24' : ''}`}
                       style={{ color: 'var(--text-s)' }}>
@@ -619,7 +597,9 @@ export function FirmDetailPage() {
                       <span className="text-sm" style={{ color: 'var(--text-m)' }}>{fi.name || '—'}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm" style={{ color: 'var(--text-m)' }}>{fi.contractNumber || '—'}</span>
+                      <span className="text-sm" style={{ color: 'var(--text-m)' }}>
+                        {fi.firmPlatformId ? getI18nName(fi.firmPlatformNameI18n ?? {}) : 'Tüm platformlar'}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-sm" style={{ color: 'var(--text-m)' }}>
@@ -684,6 +664,7 @@ export function FirmDetailPage() {
       >
         <IntegrationForm
           firmId={firm.id}
+          platforms={firm.platforms}
           integrationServices={integrationServices}
           target={integrationEditTarget}
           onClose={closeIntegrationModal}

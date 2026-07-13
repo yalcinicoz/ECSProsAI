@@ -1,12 +1,19 @@
 using ECSPros.Core.Application.Services;
 using ECSPros.Core.Domain.Entities;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Core.Infrastructure.Persistence;
 
 public class CoreDbContext : DbContext, ICoreDbContext
 {
-    public CoreDbContext(DbContextOptions<CoreDbContext> options) : base(options) { }
+    private readonly IDataProtectionProvider? _dataProtectionProvider;
+
+    public CoreDbContext(DbContextOptions<CoreDbContext> options,
+        IDataProtectionProvider? dataProtectionProvider = null) : base(options)
+    {
+        _dataProtectionProvider = dataProtectionProvider;
+    }
 
     public DbSet<Language> Languages => Set<Language>();
     public DbSet<Content> Contents => Set<Content>();
@@ -16,7 +23,7 @@ public class CoreDbContext : DbContext, ICoreDbContext
     public DbSet<Firm> Firms => Set<Firm>();
     public DbSet<FirmPlatform> FirmPlatforms => Set<FirmPlatform>();
     public DbSet<IntegrationService> IntegrationServices => Set<IntegrationService>();
-    public DbSet<FirmIntegration> FirmIntegrations => Set<FirmIntegration>();
+    public DbSet<FirmPlatformIntegration> FirmPlatformIntegrations => Set<FirmPlatformIntegration>();
     public DbSet<ExpenseType> ExpenseTypes => Set<ExpenseType>();
     public DbSet<CargoRule> CargoRules => Set<CargoRule>();
     public DbSet<OrderStatus> OrderStatuses => Set<OrderStatus>();
@@ -32,6 +39,17 @@ public class CoreDbContext : DbContext, ICoreDbContext
     {
         modelBuilder.HasDefaultSchema("core");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CoreDbContext).Assembly);
+
+        // Credentials at-rest şifreli (Data Protection) — protector DI'dan geldiği için
+        // burada bağlanır; kolonun geri kalan eşlemesi FirmPlatformIntegrationConfiguration'da.
+        var protector = _dataProtectionProvider?.CreateProtector(
+            "ECSPros.Core.FirmPlatformIntegration.Credentials");
+        modelBuilder.Entity<FirmPlatformIntegration>()
+            .Property(x => x.Credentials)
+            .HasConversion(EncryptedCredentials.CreateConverter(protector), EncryptedCredentials.Comparer)
+            .HasColumnType("text")
+            .IsRequired();
+
         base.OnModelCreating(modelBuilder);
     }
 

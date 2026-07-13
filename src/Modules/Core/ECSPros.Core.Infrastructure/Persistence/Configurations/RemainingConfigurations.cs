@@ -28,9 +28,9 @@ public class CargoRuleConfiguration : IEntityTypeConfiguration<CargoRule>
         builder.Property(x => x.PaymentType).HasMaxLength(20);
         builder.HasQueryFilter(x => !x.IsDeleted);
 
-        builder.HasOne(x => x.FirmIntegration)
+        builder.HasOne(x => x.FirmPlatformIntegration)
             .WithMany()
-            .HasForeignKey(x => x.FirmIntegrationId);
+            .HasForeignKey(x => x.FirmPlatformIntegrationId);
     }
 }
 
