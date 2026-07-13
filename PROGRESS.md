@@ -332,6 +332,25 @@
   - **SIRADAKİ:** H-M4/H3 görsel arama — API key artık admin'den `visual_search` servisine
     girilecek (appsettings yerine DB; K13 bu yönde güncellenmeli). SMTP bilgileri de
     admin'den girilebilir (smtp servisi, firma geneli kayıt).
+  - **(devam, aynı gün) Servis Kataloğu CRUD + şema-tabanlı form:**
+    - `IntegrationService.SettingsSchema` → `SettingsSchemaJson` (PlatformType kalıbı:
+      camelCase JSON, `List<PlatformSchemaField>` — key/labelI18n/type/section/required;
+      section=credentials → şifreli, settings → jsonb). Kolon adı DB'de değişmedi
+      (migration YOK); canlıdaki smtp/visual_search satır içerikleri SQL ile yeni biçime
+      çevrildi, seed de güncellendi.
+    - **Yeni endpoint'ler:** `POST/PUT /api/core/integration-services` (Create/Update
+      IntegrationServiceCommand; kod unique, edit'te code+serviceType KİLİTLİ — çözümleme
+      sorguları ServiceType'a bağlı). GET artık `settingsSchema` da döner (eski/bozuk
+      şema JSON'ı null'a düşer — admin kilitlenmez, serbest editör devreye girer).
+    - **Admin:** yeni sayfa `/settings/integration-services` (Sidebar 'Servis Kataloğu') —
+      liste + create/edit modal + `SchemaEditor` (PlatformTypesPage'den export edilip
+      yeniden kullanıldı); FirmDetailPage entegrasyon formu artık seçilen servisin
+      şemasından alan üretir (tip bazlı input, credentials/settings otomatik ayrışır,
+      şema dışı mevcut anahtarlar serbest editörde korunur). npm build alındı.
+    - **Doğrulama (5051):** şema DTO'su ✓, katalog create+duplicate reddi+update ✓,
+      şemalı serviste entegrasyon (boolean/number tipli settings korunur: `aktif_mi:true`)
+      ✓, maskeli GET + decrypt (`api_key: gizli-abc`) ✓. TEST kayıtları silindi.
+    - Publish güncellendi — aynı restart'la canlıya çıkar.
 
 - **2026-07-12 (devam) — H5 TAMAM → H-M3 KAPANDI (alt bar + değerlendirmeler + videolar):**
   - Keşif: product_videos + TAM dosya yükleme pipeline'ı (FTP+batch+admin sekmesi) zaten

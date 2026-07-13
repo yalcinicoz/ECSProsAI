@@ -36,35 +36,37 @@ public static class DatabaseSeeder
     /// Platform servisleri kataloğu — SMTP (email) + görsel arama (visual_search)
     /// IntegrationService satırları. Kimlik bilgileri buraya DEĞİL, admin firma detayından
     /// açılan FirmPlatformIntegration kaydına girilir (Credentials şifreli); SettingsSchema
-    /// admin formunun alanlarını tanımlar (secret=true → Credentials'a, değilse Settings'e).
-    /// Kod bazlı idempotent.
+    /// admin formunun alanlarını tanımlar (PlatformSchemaField listesi, camelCase JSON:
+    /// section=credentials → şifreli Credentials'a, settings → Settings jsonb'sine).
+    /// Kod bazlı idempotent — var olana dokunmaz (admin'in şema düzenlemesi ezilmez).
     /// </summary>
     private static async Task SeedPlatformServiceCatalogAsync(IServiceProvider sp)
     {
         var context = sp.GetRequiredService<CoreDbContext>();
-
-        var servisler = new (string Kod, string Ad, string Tip, Dictionary<string, object> Sema)[]
+        var json = new System.Text.Json.JsonSerializerOptions
         {
-            ("smtp", "SMTP E-Posta", "email", new Dictionary<string, object>
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        };
+
+        static PlatformSchemaField Alan(string key, string etiket, string tip, string bolum, bool zorunlu = false) =>
+            new() { Key = key, LabelI18n = new() { ["tr"] = etiket }, Type = tip, Section = bolum, Required = zorunlu };
+
+        var servisler = new (string Kod, string Ad, string Tip, List<PlatformSchemaField> Sema)[]
+        {
+            ("smtp", "SMTP E-Posta", "email", new List<PlatformSchemaField>
             {
-                ["fields"] = new object[]
-                {
-                    new { code = "host",     label = "Sunucu",       type = "string", secret = false, required = true },
-                    new { code = "port",     label = "Port",         type = "number", secret = false, required = false, @default = 587 },
-                    new { code = "user",     label = "Kullanıcı",    type = "string", secret = true,  required = false },
-                    new { code = "password", label = "Şifre",        type = "string", secret = true,  required = false },
-                    new { code = "from",     label = "Gönderen",     type = "string", secret = false, required = false },
-                    new { code = "fromName", label = "Gönderen Adı", type = "string", secret = false, required = false },
-                    new { code = "useSsl",   label = "SSL",          type = "boolean", secret = false, required = false, @default = true }
-                }
+                Alan("host",     "Sunucu",       "text",     "settings", zorunlu: true),
+                Alan("port",     "Port",         "number",   "settings"),
+                Alan("user",     "Kullanıcı",    "text",     "credentials"),
+                Alan("password", "Şifre",        "password", "credentials"),
+                Alan("from",     "Gönderen",     "text",     "settings"),
+                Alan("fromName", "Gönderen Adı", "text",     "settings"),
+                Alan("useSsl",   "SSL",          "boolean",  "settings")
             }),
-            ("visual_search", "Görsel Arama", "visual_search", new Dictionary<string, object>
+            ("visual_search", "Görsel Arama", "visual_search", new List<PlatformSchemaField>
             {
-                ["fields"] = new object[]
-                {
-                    new { code = "apiUrl", label = "API Adresi",  type = "string", secret = false, required = true },
-                    new { code = "apiKey", label = "API Anahtarı", type = "string", secret = true,  required = true }
-                }
+                Alan("apiUrl", "API Adresi",   "text",     "settings",    zorunlu: true),
+                Alan("apiKey", "API Anahtarı", "password", "credentials", zorunlu: true)
             })
         };
 
@@ -81,7 +83,7 @@ public static class DatabaseSeeder
                 NameI18n = new() { { "tr", s.Ad }, { "en", s.Ad } },
                 ServiceType = s.Tip,
                 IsAvailable = true,
-                SettingsSchema = s.Sema
+                SettingsSchemaJson = System.Text.Json.JsonSerializer.Serialize(s.Sema, json)
             })
             .ToList();
 

@@ -13,6 +13,7 @@ import { ProductDetailPage } from '@/pages/catalog/ProductDetailPage'
 import { ProductCreatePage } from '@/pages/catalog/ProductCreatePage'
 import { TranslationsPage } from '@/pages/settings/TranslationsPage'
 import { PlatformTypesPage } from '@/pages/settings/PlatformTypesPage'
+import { IntegrationServicesPage } from '@/pages/settings/IntegrationServicesPage'
 import { ChannelsPage } from '@/pages/settings/ChannelsPage'
 import { FirmsPage } from '@/pages/settings/FirmsPage'
 import { FirmDetailPage } from '@/pages/settings/FirmDetailPage'
@@ -121,6 +122,7 @@ export const router = createBrowserRouter(
             { path: 'settings/firms',           element: <FirmsPage /> },
             { path: 'settings/firms/:id',       element: <FirmDetailPage /> },
             { path: 'settings/platform-types',  element: <PlatformTypesPage /> },
+            { path: 'settings/integration-services', element: <IntegrationServicesPage /> },
             { path: 'settings/channels',         element: <ChannelsPage /> },
             { path: 'settings/languages',       element: <PlaceholderPage title="Diller" /> },
             { path: 'settings/lookup-types',    element: <PlaceholderPage title="Lookup Tipleri" /> },

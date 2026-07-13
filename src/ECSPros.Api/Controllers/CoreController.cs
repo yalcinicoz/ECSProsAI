@@ -3,6 +3,8 @@ using ECSPros.Core.Application.Commands.CreateCargoRule;
 using ECSPros.Core.Application.Commands.CreateExpenseType;
 using ECSPros.Core.Application.Commands.CreateFirm;
 using ECSPros.Core.Application.Commands.CreateFirmPlatformIntegration;
+using ECSPros.Core.Application.Commands.CreateIntegrationService;
+using ECSPros.Core.Application.Commands.UpdateIntegrationService;
 using ECSPros.Core.Application.Commands.CreateFirmPlatform;
 using ECSPros.Core.Application.Commands.CreatePlatformType;
 using ECSPros.Core.Application.Commands.UpdateFirm;
@@ -102,6 +104,31 @@ public class CoreController : ControllerBase
         var result = await _mediator.Send(new GetIntegrationServicesQuery(serviceType), ct);
         return Ok(new { success = true, data = result.Value });
     }
+
+    /// <summary>Servis kataloğuna yeni servis tanımı ekler (SMTP, kargo firması vb.).</summary>
+    [HttpPost("integration-services")]
+    public async Task<IActionResult> CreateIntegrationService([FromBody] CreateIntegrationServiceRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new CreateIntegrationServiceCommand(request.Code, request.NameI18n, request.ServiceType,
+                request.IsAvailable, request.LogoUrl, request.TrackingUrlTemplate, request.SettingsSchema), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Created(string.Empty, new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>Servis tanımını günceller (kod ve tip değiştirilemez).</summary>
+    [HttpPut("integration-services/{id:guid}")]
+    public async Task<IActionResult> UpdateIntegrationService(Guid id, [FromBody] UpdateIntegrationServiceRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new UpdateIntegrationServiceCommand(id, request.NameI18n, request.IsAvailable,
+                request.LogoUrl, request.TrackingUrlTemplate, request.SettingsSchema), ct);
+        if (result.IsFailure)
+            return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
 
     /// <summary>Masraf tiplerini listeler.</summary>
     [HttpGet("expense-types")]
@@ -354,6 +381,24 @@ public record UpdateFirmPlatformIntegrationRequest(
     DateTime? EndDate = null,
     string? Status = null,
     Dictionary<string, object>? Terms = null
+);
+
+public record CreateIntegrationServiceRequest(
+    string Code,
+    Dictionary<string, string> NameI18n,
+    string ServiceType,
+    bool IsAvailable = true,
+    string? LogoUrl = null,
+    string? TrackingUrlTemplate = null,
+    List<PlatformSchemaField>? SettingsSchema = null
+);
+
+public record UpdateIntegrationServiceRequest(
+    Dictionary<string, string> NameI18n,
+    bool IsAvailable,
+    string? LogoUrl = null,
+    string? TrackingUrlTemplate = null,
+    List<PlatformSchemaField>? SettingsSchema = null
 );
 
 public record CreateCargoRuleRequest(

@@ -100,6 +100,7 @@ const NAV_SECTIONS: NavSection[] = [
     { label: 'Fulfillment',   to: '/fulfillment/picking-plans', icon: 'boxes' },
     { label: 'Firmalar',        to: '/settings/firms',          icon: 'building2' },
     { label: 'Platform Tipleri',to: '/settings/platform-types', icon: 'globe' },
+    { label: 'Servis Kataloğu', to: '/settings/integration-services', icon: 'plug' },
     { label: 'Satış Kanalları', to: '/settings/channels',       icon: 'shoppingbag' },
     { label: 'Çeviriler',       to: '/settings/translations',   icon: 'languages' },
     { label: 'Migration',       to: '/settings/migration',      icon: 'databasezap' },

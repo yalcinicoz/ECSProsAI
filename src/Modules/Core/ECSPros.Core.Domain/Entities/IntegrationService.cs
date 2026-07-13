@@ -8,7 +8,10 @@ public class IntegrationService : BaseEntity
     public Dictionary<string, string> NameI18n { get; set; } = new();
     public string ServiceType { get; set; } = string.Empty; // marketplace, cargo, invoice_integrator, payment, sms, email, visual_search, erp, other
     public bool IsAvailable { get; set; } = false;
-    public Dictionary<string, object>? SettingsSchema { get; set; }
+    /// <summary>Admin form alan şeması — camelCase JSON, List&lt;PlatformSchemaField&gt;
+    /// (PlatformType.SettingsSchemaJson kalıbı): section=credentials → şifreli
+    /// Credentials'a, settings → Settings jsonb'sine yazılır.</summary>
+    public string? SettingsSchemaJson { get; set; }
 
     // H2: kargo servisleri için görsel kimlik + takip linki — firma sözleşmesine değil
     // kargo firmasının kendisine ait (tüm firmalar için aynı); diğer tiplerde null.
