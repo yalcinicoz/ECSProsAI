@@ -382,10 +382,23 @@ src/ECSPros.Api/
         NOT: fatura detayı modaldır (tek-fatura GET endpoint'i yok; liste DTO'su yeterli).
 
 **P-M2 — İçerik + kampanya:**
-- [ ] P2. **CMS içerik yönetimi** (BÜYÜK — başlamadan kullanıcıyla konuşulacak).
+- [ ] P2. **CMS içerik yönetimi** (BÜYÜK). **Ekran kurgusu kullanıcıyla konuşuldu
+      (2026-07-13, K20):** (1) liste TÜR SEKMELİ düz liste (Yasal/Kurumsal/Tümü) +
+      platform seçici; kolonlar AD/TÜR/PLATFORM/AKTİF/SON İÇERİK; satır → detay.
+      (2) editör WYSIWYG (Quill, pakete gömülü — dış CDN yok) + HTML kaynağı sekmesi.
+      (3) platform kopyaları AYRI düzenlenir + "diğer platformlara kopyala" butonu
+      (firma/taraf bilgileri farklı olabildiğinden otomatik senkron YOK).
       **Alt dilimler — P1 gibi ayrı ayrı kapanır:**
-  - [ ] P2a. Sayfa listesi + detay çatısı (PageType filtreli: legal/corporate/faq;
-        platform seçimi; aktiflik/yayın penceresi).
+  - [x] P2a. **Sayfa listesi + detay çatısı — TAMAM (2026-07-13):** `/cms/pages`
+        CmsPagesPage (K20 kurgusu; GetPagesQuery'ye additive `PageType` filtresi +
+        DTO'ya `FirmPlatformId` ve `LastContentUpdatedAt` — GetStoreLegalPages'ın sürüm
+        kuralıyla aynı: max(bölüm/sayfa değişikliği)) + `/cms/pages/{id}`
+        CmsPageDetailPage: ad/slug/meta/aktiflik/yayın penceresi düzenleme (mevcut PUT)
+        + içerik bölümleri listesi (tip/ad/soru sayısı/son değişiklik — düzenleme P2b).
+        GetPageDetail'e additive `Sections` (settings + faq items dahil — P2b temeli).
+        Doğrulama: izole 5052 — pageType filtre + detay routing 401 ✓; storefront
+        regresyon: /hakkimizda /kullanim-kosullari /gizlilik-ve-guvenlik /iade-ve-degisim
+        /sik-sorulan-sorular hepsi 200 ✓, anasayfa 200 ✓. Migration yok.
   - [ ] P2b. rich_text section editörü — sözleşme metinleri (C8), kurumsal sayfalar (F),
         SSS soru/cevapları (F2) panelden düzenlenebilir olur (bugün seed/SQL ile
         giriliyor; yasal metinler için kabul edilemez).
