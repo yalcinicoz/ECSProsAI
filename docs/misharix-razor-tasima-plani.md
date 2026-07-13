@@ -31,8 +31,14 @@
 | E | Hesabım kümesi (12 sayfa + yeni backend özellikleri) | ✅ TAMAM (2026-07-10) — E1–E14 bitti: çerçeve, üyelik, adres, sipariş, favori, koleksiyon, yorum, iade, kupon, tekrar satın al, favori arama, gezilenler, özet sayfası; QA 186 adım yeşil. Ertelenenler hedef fazlı: fatura PDF H1, kargo firması H2, statü bloğu/koleksiyon public/değerlendirme sayfası G-ileri |
 | F | Kurumsal sayfalar + Footer | ✅ TAMAM (2026-07-11) — F1–F5 bitti: 7 kurumsal route + corporate/faq CMS + contact_messages + footer/bülten; QA 36 adım + f5-* görüntüleri |
 | G | Vitrin & Kişiselleştirme Sistemi (G-M1: bloklar+yayınla · G-M2: kural motoru) | ✅ TAMAM (2026-07-11) — G1–G14 bitti (+G9c mobil şehir girişi 2026-07-12); envanter 8.8 tam; toplu regresyon 141+79 adım; canlıda |
-| H | Özel yetenekler (fatura PDF, kargo takip, bildirimler, görsel arama, alt bar, videolar + devredenler) | 🔵 PLANLANDI (2026-07-12) — H-M1..H-M5 dilimleri; H6 ödeme ertelendi (K2) |
+| H | Özel yetenekler (fatura PDF, kargo takip, bildirimler, görsel arama, alt bar, videolar + devredenler) | 🟡 SÜRÜYOR — H-M1+M2+M3 TAMAM (2026-07-12); kalan: H-M4 (H3 görsel arama — API key bekliyor) + H-M5 (H10 devredenler + H7 QA); H6 ödeme ertelendi (K2) |
+| P | **Panel Senkronizasyonu** — sitede canlı işlevlerin admin panel karşılıkları (K16 kuralı) | 🔵 PLANLANDI (2026-07-13) — P-M1..P-M3; sıra: P-M1 öne çekildi (sipariş yönetimi ödeme açılmadan hazır olmalı) |
+| R | ERP panel ekranları (sitede karşılığı olmayan placeholder'lar: IAM/POS/fulfillment/finans...) | ⬜ Planlandı (2026-07-13, K17) — sıra P sonrası; başlamadan kapsam kullanıcıyla gözden geçirilir |
 | İ | SPA emekliliği + son QA + kural devri | ⬜ Başlamadı |
+
+**Uygulama sırası (2026-07-13, kullanıcı sıralamayı Claude'a bıraktı):**
+P-M1 → (H3 araya girer — API key admin'e girilince, dış bağımlı tek iş) → P-M2 → P-M3 →
+H-M5 (H10+H7 — H7 QA'sı artık panel-senkron denetimini de içerir) → R → İ.
 
 ---
 
@@ -48,6 +54,12 @@
 8. **Hassas veri taşınmaz:** misharix `appsettings.json`'daki MySQL bağlantısı ve `GorselAramaController`'daki hardcoded API key kopyalanmaz; gerekli olanlar ECSPros config'ine (gitignore'lu) alınır.
 9. Canlıda deneme-yanılma yok (`feedback_avoid_repeated_live_prod_iteration`); şema değişikliğinde migration + `database update` birlikte biter; toplu insert sonrası `ANALYZE`.
 10. Build/publish/restart adımlarını kullanıcıyla koordine et (bu box'ta şifresiz sudo yok).
+11. **Site–Panel senkron kuralı (2026-07-13, kullanıcı — K16):** Storefront'ta yayına giren
+    her işlev, admin panelde yönetim/izleme karşılığı da hazır olmadan **"bitti" sayılmaz**.
+    API'den veya DB'den müdahale, yönetim yolu olarak KABUL EDİLMEZ — site ve panel senkron
+    ilerler. İşlev envanteri denetimi her satır için "panel karşılığı var mı?" sorusunu da
+    içerir. BÜYÜK panel işlerinde (örn. sipariş liste/detay) işe başlamadan ekran kurgusu
+    kullanıcıyla konuşulur (kullanıcı talimatı).
 
 ---
 
@@ -269,7 +281,7 @@ src/ECSPros.Api/
 - [x] H5. **Ürün videoları — TAMAM (2026-07-12, K15 URL tabanlı).** Keşif: `catalog.product_videos` + TAM dosya yükleme pipeline'ı (FTP + batch + admin Videolar sekmesi) ZATEN kuruluymuş (0 kayıt). K15 kararıyla ikinci yol eklendi: **URL tabanlı video** — additive `VideoUrl`/`ThumbnailUrl` (migration `AddProductVideoUrlFields` canlıda; iki yol bir arada, URL kaydı Active doğar, FileName boş). `POST /api/catalog/products/{id}/videos/by-url` (http/https doğrulamalı) + admin Videolar sekmesine "URL ile Video Ekle" kartı (liste URL kayıtlarını oynatır; npm build). **Efektif URL:** `VideoUrl ?? CdnHelper.BuildVideoBaseAsync ("VideoServer.CdnBaseUrl" ayarı) + FileName` — taban ayarı yoksa dosya kayıtları storefront'ta atlanır (bilinçli). **Storefront:** detay galerisi video thumb + slaytı + Videolu Ürün rozeti (tooltip videosu) + modal video slaytı (tasarım markup'ı; `StoreProductDetailDto.Videos` additive); kartlarda rozet — SSR `_UrunKarti` + liste client kartlarına kartDoldur enjeksiyonu (`StoreProductDto.VideoUrl` additive; site.js `msUrunVideoDavranisiHazirla` ile bağlanır). ⚠️ Bilinçli sınır: vitrin infinity "Daha Fazla" client kartlarında rozet yok (G5 kart üreticisine dokunulmadı — SSR vitrin kartları rozetli). **E2E h5 9/9 ✓** (geçersiz URL 400, by-url ekleme, listede Active URL kaydı, detay thumb+slayt+rozet+modal, liste kartı rozeti, videosuz üründe öğe yok, artık 0) + b10 22/22 + b6 19/19 + h9 18/18 regresyon ✓; drift TEMİZ.
 
 **H-M4 — Görsel arama:**
-- [ ] H3. **Görsel arama**: Ön adım — servis smoke testi: ECSPros katalog örnekleriyle isabet/indeks güncelliği doğrulaması (K5); API key kullanıcıdan alınıp güvenli config'e (`Store:VisualSearch:*`, appsettings.Production). `GorselAramaController` (278 satır) port — **legacy-MySQL zenginleştirmesi HARİÇ** (Bölüm 7): sonuçlar ECSPros kataloğundan `erp_variant_data` barkod/modelCode eşlemesiyle zenginleşir. Nav kamera butonu + `_GorselAramaModal*` (720 satır) port.
+- [ ] H3. **Görsel arama**: Ön adım — servis smoke testi: ECSPros katalog örnekleriyle isabet/indeks güncelliği doğrulaması (K5); API key **admin'den girilir** (K13-ek, 2026-07-13): Servis Kataloğu'ndaki `visual_search` servisi için firma entegrasyonu açılır (apiUrl+apiKey — Credentials şifreli); H3'te `DbSmtpSettingsProvider` deseninde okuyucu yazılır (config fallback'li). `GorselAramaController` (278 satır) port — **legacy-MySQL zenginleştirmesi HARİÇ** (Bölüm 7): sonuçlar ECSPros kataloğundan `erp_variant_data` barkod/modelCode eşlemesiyle zenginleşir. Nav kamera butonu + `_GorselAramaModal*` (720 satır) port.
 
 **H-M5 — Devredenler + kapanış:**
 - [ ] H10. **Faz G devredenleri**: koleksiyon public sayfası (E6 ShareCode; vitrin collection kartındaki gizli Aç/Paylaş açılır) · vitrin kaynak filtreleri: stok/etiket/indirim bayrağı (G3 ertelenenleri) · son gezilenler/favoriler vitrin kaynakları (üye bağlamlı — cache üye bazında, segment hash yetmez; dikkat) · YanMenu statü bloğu (hesabım yan menü) · GeoLite2 IP halkası — **mmdb edinimi kullanıcı aksiyonu** (MaxMind lisansı); mmdb gelince VisitorSegmentResolver'daki yuva bağlanır, gelmezse bilinçli açık kalır.
@@ -277,7 +289,63 @@ src/ECSPros.Api/
 
 - [~] H6. ~~Ödeme sağlayıcı gerçek entegrasyonu~~ **ERTELENDİ (2026-07-12, K2):** sağlayıcı seçilmedi; ödeme K2 mock modunda sürer. Sağlayıcı seçilince ayrı iş olarak planlanır (taksit/BIN, 3DS).
 
-**Kabul kriterleri:** Fatura/kargo/alt bar/değerlendirme sayfası/görsel arama canlı; stok + favori arama bildirimleri gerçek e-postayla gidiyor; video rozeti veriye bağlı; G devredenleri kapandı (GeoLite2 mmdb edinilemezse bilinçli açık); ödeme mock (bilinçli, K2).
+**Kabul kriterleri:** Fatura/kargo/alt bar/değerlendirme sayfası/görsel arama canlı; stok + favori arama bildirimleri gerçek e-postayla gidiyor; video rozeti veriye bağlı; G devredenleri kapandı (GeoLite2 mmdb edinilemezse bilinçli açık); ödeme mock (bilinçli, K2); **H7 QA panel-senkron denetimini de içerir (K16 — P0 taramasının bulguları kapanmış olmalı)**.
+
+---
+
+### FAZ P — Panel Senkronizasyonu (2026-07-13, K16)
+> **Gerekçe:** Kullanıcı kuralı — sitede canlı her işlev panelde yönetim karşılığıyla birlikte
+> "bitti" sayılır; API/DB müdahalesi yönetim yolu değildir. Mevcut admin (option-h iskeleti)
+> katalog/storefront öncelikli kurulduğundan ERP-yüzü sayfalar placeholder kalmıştı; sitede
+> canlı olup panelde karşılığı olmayanlar bu fazda kapanır.
+> **Çalışma talimatı:** BÜYÜK işaretli işlerde işe başlamadan ekran kurgusu/akış kullanıcıyla
+> konuşulur (kullanıcı talimatı, 2026-07-13). Ekranlar mevcut admin kalıplarıyla yazılır
+> (option-h, liste satırı tıklanabilir → detay [`feedback_list_row_click`], PermissionGuard).
+
+**P-M1 — Geriye dönük tarama + Sipariş operasyonu:**
+- [ ] P0. **Geriye dönük panel taraması** (küçük-orta): İşlev envanteri 8.1–8.9'daki her ✅
+      satır "panel karşılığı var mı?" gözüyle taranır; her bölüme panel notu düşülür;
+      bulunan ek eksikler bu faza iş maddesi olarak işlenir (bilinen liste: sipariş/iade/
+      fatura, CMS içerik, kampanya/kupon, üyeler, iletişim mesajları, bildirim izleme).
+- [ ] P1. **Sipariş yönetimi** (BÜYÜK — başlamadan kullanıcıyla ekran kurgusu konuşulacak):
+      sipariş listesi (durum/tarih/arama filtreli) + detay (kalemler, ödemeler, adresler,
+      kabul edilen sözleşmeler, sipariş notu, kargo bilgisi + takip linki) + durum
+      aksiyonları (onayla / iptal / kargoya ver [takip no + kargo anlaşması seçimi] /
+      teslim) + **iadeler** (liste + onay/red/teslim al/geri ödeme) + **faturalar**
+      (listele/oluştur/iptal + `IntegratorInvoiceUrl` girişi — H1'deki storefront
+      "Faturayı Görüntüle" butonunun veri kaynağı bugün yalnız API'den doldurulabiliyor).
+
+**P-M2 — İçerik + kampanya:**
+- [ ] P2. **CMS içerik yönetimi** (BÜYÜK — başlamadan kullanıcıyla konuşulacak): sayfa
+      listesi/detay + rich_text section editörü — sözleşme metinleri (C8), kurumsal
+      sayfalar (F), SSS (F2) panelden düzenlenebilir olur (bugün seed/SQL ile giriliyor;
+      yasal metinler için kabul edilemez); yayın penceresi + sürüm görünürlüğü
+      (ContentUpdatedAt — sözleşme kabul kayıtları bu sürüme bağlanıyor).
+- [ ] P3. **Kampanya + kupon yönetimi** (orta): kampanya CRUD (backend endpoint'leri
+      mevcut) + kupon tanımlama/listeleme/kullanım kayıtları (storefront C3/C10 kupon
+      akışı canlı; tanım bugün yalnız API'den).
+
+**P-M3 — Üye + destek:**
+- [ ] P4. **Üyeler** (orta): liste/arama + detay (profil, adresler, siparişler, favori/
+      koleksiyon özeti, üye grubu ataması, OTP/oturum bilgisi görünümü).
+- [ ] P5. **İletişim mesajları gelen kutusu** (küçük — F4 `contact_messages` bugün yalnız
+      tabloya düşüyor) + **bildirim izleme** (küçük): stok alarmları (C9/H8) + kayıtlı
+      aramalar (E11/H8) listesi ve gönderim durumları; H8 scan tetiğine buton.
+
+**Kabul kriterleri:** P0 taraması tam ve bulguları kapanmış; P1–P5 ekranları canlı; sitede
+canlı işlev kümesi için admin'de placeholder kalmadı; her ekran E2E duman testinden geçti.
+
+---
+
+### FAZ R — ERP Panel Ekranları (sitede karşılığı yok — K17)
+> Sitede karşılığı olmayan saf ERP yüzeyleri; K16 kuralının kapsamı dışında ama placeholder
+> olarak beklemesinler diye plana alındı (2026-07-13, kullanıcı). **Sıra P sonrası;
+> işe başlamadan kapsam/öncelik kullanıcıyla gözden geçirilir** (operasyon ihtiyacına göre).
+- [ ] R1. IAM: kullanıcılar/roller/oturumlar/audit logları
+- [ ] R2. POS: satış listesi/detay, kasalar, oturum aç/kapat + gün sonu raporu
+- [ ] R3. Fulfillment: picking planları, paketleme istasyonları, dashboard
+- [ ] R4. Finans: tedarikçiler, tedarikçi faturaları/ödemeleri/hareketleri
+- [ ] R5. Hediye kartları + entegrasyon logları + teklifler (quote)
 
 ---
 
@@ -345,6 +413,9 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 - [x] K13. **Görsel arama (K5 devamı):** servis çalışıyor, API key kullanıcıda; indeks güncelliği H3 başında birlikte doğrulanır, key güvenli config'e.
 - [x] K14. **H9 kapsamı (2026-07-12):** ÇEKİRDEK PORT — ürün özeti + tüm yorumlar + puan filtresi + sıralama + sayfalama + kriter modalı; veri karşılığı olmayan bloklar (AI özeti, fotoğraflı yorumlar, konu/beden filtreleri) @if gizli; üyeye özel durum sekmeleri gizli (Hesabım→Yorumlarım E7'de zaten var).
 - [x] K15. **H5 video kaynağı (2026-07-12):** URL TABANLI — kullanıcının kendi video sunucusundaki URL veya dış kaynak URL; `catalog.product_videos`'a additive `VideoUrl`/`ThumbnailUrl` (dosya alanları olası ileri akış için durur); admin ürün detayına URL girişi.
+- [x] K16. **Site–Panel senkron kuralı (2026-07-13):** sitede canlı her işlev panelde yönetim/izleme karşılığıyla birlikte "bitti" sayılır; API/DB müdahalesi yönetim yolu değildir. Geriye dönük tarama YAPILIR (P0); BÜYÜK panel işlerinde işe başlamadan ekran kurgusu kullanıcıyla konuşulur. → FAZ P açıldı, kural Bölüm 2 madde 11.
+- [x] K17. **ERP ekranları kapsamı (2026-07-13):** sitede karşılığı olmayan saf ERP placeholder'ları (IAM/POS/fulfillment/finans/hediye kartı/entegrasyon logları) plana AYRI FAZ olarak girer (FAZ R) — sıra P sonrası, başlamadan kapsam kullanıcıyla gözden geçirilir.
+- [x] K13-ek (2026-07-13): görsel arama API key'i artık config'e değil **DB'ye** girilir — admin Servis Kataloğu'ndaki `visual_search` servisi + firma entegrasyonu (Credentials şifreli); H3 okuyucusu `DbSmtpSettingsProvider` deseniyle yazılır.
 
 **Kalan açık noktalar:** ödeme sağlayıcısı adı (K2/H6 ertelendi), SMS sağlayıcısı adı (K3), Instagram bloğunun içerik kaynağı (elle görsel mi, API mi), ürün videosu veri modeli + kaynak biçimi (dosya mı embed URL mi — H5 başında sorulacak), GeoLite2 mmdb edinimi (H10 — kullanıcı aksiyonu).
 

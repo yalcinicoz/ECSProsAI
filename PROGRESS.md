@@ -294,6 +294,27 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-13 (devam) — İŞ LİSTESİ GÜNCELLENDİ: Site–Panel senkron kuralı (K16) + FAZ P/R:**
+  - **Yeni kural (kullanıcı):** sitede canlı her işlev panelde yönetim karşılığı olmadan
+    "bitti" sayılmaz; API/DB müdahalesi yönetim yolu DEĞİLDİR. Plan Bölüm 2 madde 11 +
+    K16 + `feedback_site_panel_sync.md` hafızası. Geriye dönük tarama YAPILACAK (P0).
+  - **FAZ P (Panel Senkronizasyonu) plana eklendi:** P-M1 = P0 geriye dönük envanter
+    taraması + P1 sipariş yönetimi (BÜYÜK — **başlamadan ekran kurgusu kullanıcıyla
+    konuşulacak**, kullanıcı talimatı); P-M2 = P2 CMS içerik editörü (BÜYÜK — konuşulacak)
+    + P3 kampanya/kupon; P-M3 = P4 üyeler + P5 iletişim mesajları + bildirim izleme.
+    Bilinen boşluklar: sipariş/iade/fatura, CMS içerik (yasal metinler SQL'le giriliyor —
+    kabul edilemez), kampanya/kupon, üyeler, contact_messages, stok alarm/kayıtlı arama
+    izleme. (Yorum + koleksiyon moderasyonu ve vitrin yönetimi panelde ZATEN VAR.)
+  - **FAZ R (K17):** saf ERP placeholder ekranları (IAM/POS/fulfillment/finans/hediye
+    kartı/entegrasyon logları/teklifler) ayrı faz — P sonrası, başlamadan kapsam
+    kullanıcıyla.
+  - **Uygulama sırası (Claude'a bırakıldı):** P-M1 → (H3 araya girer, key admin'e
+    girilince — K13-ek: key artık config değil DB/visual_search servisi) → P-M2 → P-M3 →
+    H-M5 (H7 QA'sına panel-senkron denetimi eklendi) → R → İ. Durum panosu güncellendi
+    (H: 🟡 M-1..3 tamam).
+  - **SIRADAKİ: P-M1/P0** geriye dönük tarama; ardından P1 öncesi kullanıcıyla sipariş
+    ekranı kurgusu konuşması.
+
 - **2026-07-13 — Platform servis entegrasyonları yeniden yapılandırıldı (kullanıcı kararı;
   ayarlar DB'de + Data Protection):**
   - **Tablo:** `core_firm_integrations` → **`core_firm_platform_integrations`**
