@@ -25,6 +25,9 @@ using ECSPros.Order.Application.Queries.GetOrderPayments;
 using ECSPros.Order.Application.Queries.GetOrderShipments;
 using ECSPros.Order.Application.Queries.GetOrders;
 using ECSPros.Order.Application.Queries.GetOrderStatusCounts;
+using ECSPros.Order.Application.Queries.GetInvoiceSeries;
+using ECSPros.Order.Application.Commands.CreateInvoiceSeries;
+using ECSPros.Order.Application.Commands.SetInvoiceIntegratorUrl;
 using ECSPros.Order.Application.Queries.GetQuotes;
 using ECSPros.Order.Application.Queries.GetReturnDetail;
 using ECSPros.Order.Application.Queries.GetReturns;
@@ -270,6 +273,40 @@ public class OrderController : ControllerBase
         return Created($"/api/orders/invoices/{result.Value}", new { success = true, data = new { invoiceId = result.Value } });
     }
 
+    /// <summary>Fatura serileri (P1d — fatura oluşturma formunun seri seçicisi).</summary>
+    [HttpGet("invoice-series")]
+    public async Task<IActionResult> GetInvoiceSeries([FromQuery] bool activeOnly = true, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetInvoiceSeriesQuery(activeOnly), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Yeni fatura serisi tanımlar (P1d).</summary>
+    [HttpPost("invoice-series")]
+    public async Task<IActionResult> CreateInvoiceSeries([FromBody] CreateInvoiceSeriesRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
+
+        var result = await _mediator.Send(new CreateInvoiceSeriesCommand(
+            request.FirmId, request.Name, request.EArchiveSerial,
+            request.EInvoiceSerial ?? "", request.ExportSerial ?? "", uid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Created("/api/orders/invoice-series", new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>Entegratör PDF adresini kaydeder (P1d — storefront "Faturayı Görüntüle" kaynağı).</summary>
+    [HttpPatch("invoices/{invoiceId:guid}/integrator-url")]
+    public async Task<IActionResult> SetInvoiceIntegratorUrl(Guid invoiceId, [FromBody] SetInvoiceIntegratorUrlRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
+
+        var result = await _mediator.Send(new SetInvoiceIntegratorUrlCommand(invoiceId, request.IntegratorInvoiceUrl, uid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
     /// <summary>Fatura iptali.</summary>
     [HttpPost("invoices/{invoiceId:guid}/cancel")]
     public async Task<IActionResult> CancelInvoice(Guid invoiceId, CancellationToken ct)
@@ -444,6 +481,12 @@ public record CreateReturnRequest(
     string RefundMethod, List<CreateReturnItemRequest> Items);
 
 public record ReceiveReturnRequest(Guid WarehouseId, string? InspectionNotes);
+
+public record CreateInvoiceSeriesRequest(
+    Guid FirmId, string? Name, string EArchiveSerial,
+    string? EInvoiceSerial = null, string? ExportSerial = null);
+
+public record SetInvoiceIntegratorUrlRequest(string? IntegratorInvoiceUrl);
 
 public record CompleteRefundRequest(
     string RefundMethod, decimal Amount, Dictionary<string, object>? Details = null);

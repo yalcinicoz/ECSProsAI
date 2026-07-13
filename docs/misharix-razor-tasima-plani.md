@@ -40,7 +40,7 @@
 | F | Kurumsal sayfalar + Footer | ✅ TAMAM (2026-07-11) — F1–F5 bitti: 7 kurumsal route + corporate/faq CMS + contact_messages + footer/bülten; QA 36 adım + f5-* görüntüleri |
 | G | Vitrin & Kişiselleştirme Sistemi (G-M1: bloklar+yayınla · G-M2: kural motoru) | ✅ TAMAM (2026-07-11) — G1–G14 bitti (+G9c mobil şehir girişi 2026-07-12); envanter 8.8 tam; toplu regresyon 141+79 adım; canlıda |
 | H | Özel yetenekler (fatura PDF, kargo takip, bildirimler, görsel arama, alt bar, videolar + devredenler) | 🟡 SÜRÜYOR — H-M1+M2+M3 TAMAM (2026-07-12); kalan: H-M4 (H3 görsel arama — API key bekliyor) + H-M5 (H10 devredenler + H7 QA); H6 ödeme ertelendi (K2) |
-| P | **Panel Senkronizasyonu** — sitede canlı işlevlerin admin panel karşılıkları (K16 kuralı) | 🟡 SÜRÜYOR — P0 TAMAM (2026-07-13: 8.1–8.9 panel notları + 3 bulgu; Kanallar settings-silme bugu düzeltildi); sıradaki P1a (ekran kurgusu kullanıcıyla konuşulduktan sonra) |
+| P | **Panel Senkronizasyonu** — sitede canlı işlevlerin admin panel karşılıkları (K16 kuralı) | 🟡 SÜRÜYOR — **P-M1 TAMAM (2026-07-13): P0 + P1a-d** (sipariş listesi/detayı/aksiyonlar + iadeler + faturalar + iade nedenleri + fatura serileri; K19 kurgusu); sıradaki P-M2 (P2 CMS — BÜYÜK, başlamadan kullanıcıyla konuşulacak) |
 | R | ERP panel ekranları (sitede karşılığı olmayan placeholder'lar: IAM/POS/fulfillment/finans...) | ⬜ Planlandı (2026-07-13, K17) — sıra P sonrası; başlamadan kapsam kullanıcıyla gözden geçirilir |
 | İ | SPA emekliliği + son QA + kural devri | ⬜ Başlamadı |
 
@@ -368,9 +368,18 @@ src/ECSPros.Api/
         editörle; backend Create/UpdateLookupValueCommand'a additive `ExtraData`
         (null = dokunma). Doğrulama: izole 5052 — returns/lookup/reject-PATCH routing
         401 ✓, anasayfa 200 ✓; tsc+build temiz. Migration yok.
-  - [ ] P1d. Faturalar: listele/oluştur/iptal + `IntegratorInvoiceUrl` girişi (H1'deki
-        storefront "Faturayı Görüntüle" butonunun veri kaynağı bugün yalnız API'den
-        doldurulabiliyor).
+  - [x] P1d. **Faturalar — TAMAM (2026-07-13):** `/orders/invoices` InvoicesPage (durum
+        sekmeleri; satır → detay modalı: PDF adresi girişi + iptal + sipariş linki) +
+        **"Fatura Serileri" modalı** (seri listesi + oluşturma — tablo boştu, API'si
+        yoktu: yeni `GET/POST /api/orders/invoice-series`). Fatura oluşturma sipariş
+        detayından: seri/tip/tarih + alıcı öndolumu (fatura adresi varsa ondan), numara
+        seriden otomatik. **`IntegratorInvoiceUrl` girişi:** yeni
+        `PATCH /api/orders/invoices/{id}/integrator-url` (https zorunlu; boş = sil) —
+        H1 storefront "Faturayı Görüntüle" butonunun veri kaynağı artık panelden.
+        OrderDetailPage'e K19 gereği Faturalar + İadeler bölümleri eklendi. Doğrulama:
+        izole 5052 — series GET/POST + integrator-url PATCH + invoices routing 401 ✓,
+        anasayfa 200 ✓; tsc+build temiz. Migration yok.
+        NOT: fatura detayı modaldır (tek-fatura GET endpoint'i yok; liste DTO'su yeterli).
 
 **P-M2 — İçerik + kampanya:**
 - [ ] P2. **CMS içerik yönetimi** (BÜYÜK — başlamadan kullanıcıyla konuşulacak).

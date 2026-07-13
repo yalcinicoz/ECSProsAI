@@ -6,7 +6,10 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { Link } from 'react-router-dom'
 import { ORDER_STATUS_MAP, PAYMENT_STATUS_MAP } from './OrdersPage'
+import { RETURN_STATUS_MAP, type ReturnSummary } from './ReturnsPage'
+import { INVOICE_STATUS_MAP, INVOICE_TYPE_MAP, type InvoiceSummary, type InvoiceSeries } from './InvoicesPage'
 
 interface OrderItem {
   id: string
@@ -158,6 +161,15 @@ export function OrderDetailPage() {
   const [trackingNumber, setTrackingNumber] = useState('')
   const [packageCount, setPackageCount] = useState(1)
   const [actionError, setActionError] = useState('')
+  const [invoiceOpen, setInvoiceOpen] = useState(false)
+  const [invSeriesId, setInvSeriesId] = useState('')
+  const [invType, setInvType] = useState('e_archive')
+  const [invDate, setInvDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [invRecipient, setInvRecipient] = useState('')
+  const [invAddress, setInvAddress] = useState('')
+  const [invTaxOffice, setInvTaxOffice] = useState('')
+  const [invTaxNumber, setInvTaxNumber] = useState('')
+  const [invCompany, setInvCompany] = useState('')
 
   const { data: order, isLoading } = useQuery<OrderDetail>({
     queryKey: ['order-detail', id],
@@ -206,6 +218,23 @@ export function OrderDetailPage() {
     queryKey: ['warehouses', true],
     queryFn: async () => (await api.get('/inventory/warehouses')).data.data,
     enabled: confirmOpen,
+  })
+
+  // K19: iade + fatura bölümleri (ayrı sayfaların sipariş-içi görünümü)
+  const { data: orderReturns = [] } = useQuery<ReturnSummary[]>({
+    queryKey: ['order-returns', id],
+    queryFn: async () => (await api.get(`/orders/returns?orderId=${id}&pageSize=50`)).data.data.items,
+    enabled: !!id,
+  })
+  const { data: orderInvoices = [] } = useQuery<InvoiceSummary[]>({
+    queryKey: ['order-invoices', id],
+    queryFn: async () => (await api.get(`/orders/invoices?orderId=${id}&pageSize=50`)).data.data.items,
+    enabled: !!id,
+  })
+  const { data: invoiceSeries = [] } = useQuery<InvoiceSeries[]>({
+    queryKey: ['invoice-series-active'],
+    queryFn: async () => (await api.get('/orders/invoice-series')).data.data,
+    enabled: invoiceOpen,
   })
 
   // Adres id'leri → görünen adlar
@@ -269,6 +298,31 @@ export function OrderDetailPage() {
     onSuccess: () => setConfirmOpen(false),
   })
 
+  const createInvoice = useMutation({
+    mutationFn: async () => {
+      setActionError('')
+      try {
+        await api.post(`/orders/${id}/invoices`, {
+          invoiceSeriesId: invSeriesId,
+          invoiceType: invType,
+          invoiceDate: new Date(`${invDate}T12:00:00`).toISOString(),
+          recipientName: invRecipient,
+          recipientAddress: invAddress,
+          recipientTaxOffice: invTaxOffice || null,
+          recipientTaxNumber: invTaxNumber || null,
+          recipientCompanyName: invCompany || null,
+        })
+        queryClient.invalidateQueries({ queryKey: ['order-invoices', id] })
+        queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      } catch (e: unknown) {
+        const err = e as { response?: { data?: { error?: string } } }
+        setActionError(err.response?.data?.error ?? 'Fatura oluşturulamadı.')
+        throw e
+      }
+    },
+    onSuccess: () => setInvoiceOpen(false),
+  })
+
   if (isLoading || !order) return <PageSpinner />
 
   const st = ORDER_STATUS_MAP[order.status] ?? { label: order.status, variant: 'neutral' as const }
@@ -287,6 +341,20 @@ export function OrderDetailPage() {
     ...shipments.map(s => ({ label: `Kargoya verildi (${s.shipmentNumber})`, at: s.createdAt })),
     ...shipments.filter(s => s.deliveredAt).map(s => ({ label: 'Teslim edildi', at: s.deliveredAt! })),
   ].sort((a, b) => a.at.localeCompare(b.at))
+
+  function openInvoiceModal() {
+    setActionError('')
+    setInvSeriesId('')
+    setInvType('e_archive')
+    setInvDate(new Date().toISOString().slice(0, 10))
+    const ayrıFatura = order!.billingSameAsShipping === false
+    setInvRecipient((ayrıFatura ? order!.billingRecipientName : null) ?? order!.shippingRecipientName)
+    setInvAddress((ayrıFatura ? order!.billingAddressLine : null) ?? order!.shippingAddressLine)
+    setInvTaxOffice(order!.billingTaxOffice ?? '')
+    setInvTaxNumber(order!.billingTaxNumber ?? '')
+    setInvCompany(order!.billingCompanyName ?? '')
+    setInvoiceOpen(true)
+  }
 
   const geo = (gid?: string) => (gid ? geoNames[gid] : undefined)
   const shippingGeo = [geo(order.shippingNeighborhoodId), geo(order.shippingDistrictId), geo(order.shippingCityId)]
@@ -444,6 +512,53 @@ export function OrderDetailPage() {
             ))}
           </Section>
 
+          <Section title={`Faturalar (${orderInvoices.length})`}>
+            {orderInvoices.map(inv => {
+              const ist = INVOICE_STATUS_MAP[inv.status] ?? { label: inv.status, variant: 'neutral' as const }
+              return (
+                <div key={inv.id} className="flex flex-wrap items-center gap-2 text-sm py-1.5"
+                  style={{ borderBottom: '1px solid var(--border)' }}>
+                  <code className="text-xs font-mono" style={{ color: 'var(--text)' }}>{inv.invoiceNumber}</code>
+                  <span className="text-xs" style={{ color: 'var(--text-s)' }}>
+                    {INVOICE_TYPE_MAP[inv.invoiceType] ?? inv.invoiceType}
+                  </span>
+                  <span className="font-medium" style={{ color: 'var(--text)' }}>{money(inv.grandTotal, cur)}</span>
+                  <Badge variant={ist.variant}>{ist.label}</Badge>
+                  {inv.hasIntegratorPdf && <span className="text-xs" style={{ color: 'var(--text-s)' }}>PDF ✓</span>}
+                  <Link to="/orders/invoices" className="text-xs ml-auto underline" style={{ color: 'var(--brand)' }}>
+                    Faturalarda aç →
+                  </Link>
+                </div>
+              )
+            })}
+            {orderInvoices.length === 0 && (
+              <p className="text-sm mb-2" style={{ color: 'var(--text-s)' }}>Bu sipariş için fatura kesilmedi.</p>
+            )}
+            <div className="mt-2">
+              <Button size="sm" variant="secondary" onClick={openInvoiceModal}>+ Fatura Oluştur</Button>
+            </div>
+          </Section>
+
+          {orderReturns.length > 0 && (
+            <Section title={`İadeler (${orderReturns.length})`}>
+              {orderReturns.map(r => {
+                const rst = RETURN_STATUS_MAP[r.status] ?? { label: r.status, variant: 'neutral' as const }
+                return (
+                  <Link key={r.id} to={`/orders/returns/${r.id}`}
+                    className="flex flex-wrap items-center gap-2 text-sm py-1.5 hover:bg-[var(--surface2)] rounded-lg px-1"
+                    style={{ borderBottom: '1px solid var(--border)' }}>
+                    <code className="text-xs font-mono" style={{ color: 'var(--text)' }}>{r.returnNumber}</code>
+                    <span className="font-medium" style={{ color: 'var(--text)' }}>
+                      {r.refundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                    </span>
+                    <Badge variant={rst.variant}>{rst.label}</Badge>
+                    <span className="text-xs ml-auto" style={{ color: 'var(--text-s)' }}>Detay →</span>
+                  </Link>
+                )
+              })}
+            </Section>
+          )}
+
           <Section title="Notlar ve Sözleşmeler">
             <InfoRow label="Müşteri Notu" value={customerNote} />
             <InfoRow label="İç Not" value={order.internalNotes} />
@@ -572,6 +687,70 @@ export function OrderDetailPage() {
         <div className="flex justify-end gap-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
           <Button variant="secondary" onClick={() => setShipOpen(false)}>Vazgeç</Button>
           <Button onClick={() => shipMutation.mutate()} loading={shipMutation.isPending}>Kargoya Ver</Button>
+        </div>
+      </Modal>
+
+      <Modal open={invoiceOpen} onClose={() => setInvoiceOpen(false)} title="Fatura Oluştur">
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="flbl">Fatura Serisi <span className="text-red-500">*</span></label>
+              <select className="inp" value={invSeriesId} onChange={e => setInvSeriesId(e.target.value)}>
+                <option value="">Seri seçin</option>
+                {invoiceSeries.map(s => (
+                  <option key={s.id} value={s.id}>{s.name ?? s.eArchiveSerial}</option>
+                ))}
+              </select>
+              {invoiceSeries.length === 0 && (
+                <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+                  Aktif seri yok — Faturalar sayfasındaki "Fatura Serileri"nden tanımlanır.
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="flbl">Tip</label>
+              <select className="inp" value={invType} onChange={e => setInvType(e.target.value)}>
+                {Object.entries(INVOICE_TYPE_MAP).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="flbl">Fatura Tarihi</label>
+            <input type="date" className="inp" value={invDate} onChange={e => setInvDate(e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="flbl">Alıcı Adı <span className="text-red-500">*</span></label>
+              <input className="inp" value={invRecipient} onChange={e => setInvRecipient(e.target.value)} />
+            </div>
+            <div>
+              <label className="flbl">Firma Adı</label>
+              <input className="inp" value={invCompany} onChange={e => setInvCompany(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <label className="flbl">Adres <span className="text-red-500">*</span></label>
+            <textarea className="ta" rows={2} value={invAddress} onChange={e => setInvAddress(e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="flbl">Vergi Dairesi</label>
+              <input className="inp" value={invTaxOffice} onChange={e => setInvTaxOffice(e.target.value)} />
+            </div>
+            <div>
+              <label className="flbl">Vergi/TC No</label>
+              <input className="inp" value={invTaxNumber} onChange={e => setInvTaxNumber(e.target.value)} />
+            </div>
+          </div>
+          <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+            Tutarlar siparişten alınır: {money(order.grandTotal, cur)}. Fatura numarası seriden otomatik üretilir.
+          </p>
+        </div>
+        {actionError && <p className="text-sm mt-2 text-red-500">{actionError}</p>}
+        <div className="flex justify-end gap-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+          <Button variant="secondary" onClick={() => setInvoiceOpen(false)}>Vazgeç</Button>
+          <Button onClick={() => createInvoice.mutate()} loading={createInvoice.isPending}
+            disabled={!invSeriesId || !invRecipient.trim() || !invAddress.trim()}>Fatura Oluştur</Button>
         </div>
       </Modal>
 

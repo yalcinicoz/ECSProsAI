@@ -40,6 +40,7 @@ import { OrdersPage } from '@/pages/orders/OrdersPage'
 import { OrderDetailPage as OrderAdminDetailPage } from '@/pages/orders/OrderDetailPage'
 import { ReturnsPage } from '@/pages/orders/ReturnsPage'
 import { ReturnDetailPage } from '@/pages/orders/ReturnDetailPage'
+import { InvoicesPage } from '@/pages/orders/InvoicesPage'
 
 export const router = createBrowserRouter(
   [
@@ -82,7 +83,7 @@ export const router = createBrowserRouter(
             { path: 'orders/returns',      element: <ReturnsPage /> },
             { path: 'orders/returns/:id',  element: <ReturnDetailPage /> },
             { path: 'orders/quotes',       element: <PlaceholderPage title="Teklifler" /> },
-            { path: 'orders/invoices',     element: <PlaceholderPage title="Faturalar" /> },
+            { path: 'orders/invoices',     element: <InvoicesPage /> },
             { path: 'orders/gift-cards',   element: <PlaceholderPage title="Hediye Kartları" /> },
 
             // Cari Kartlar
