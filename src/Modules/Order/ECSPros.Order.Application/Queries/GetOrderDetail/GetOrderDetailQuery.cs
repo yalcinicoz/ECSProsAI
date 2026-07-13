@@ -25,7 +25,24 @@ public record OrderDetailDto(
     DateTime CreatedAt,
     DateTime? ConfirmedAt,
     List<OrderDetailItemDto> Items,
-    List<OrderDetailPaymentDto> Payments);
+    List<OrderDetailPaymentDto> Payments,
+    // P1b additive alanlar — admin sipariş detayı (adresler, sözleşme kabulleri, platform)
+    Guid FirmPlatformId = default,
+    decimal TotalExpense = 0,
+    string? ShippingPostalCode = null,
+    string? ShippingDeliveryNotes = null,
+    Guid? ShippingCityId = null,
+    Guid? ShippingDistrictId = null,
+    Guid? ShippingNeighborhoodId = null,
+    bool BillingSameAsShipping = true,
+    string? BillingRecipientName = null,
+    string? BillingCompanyName = null,
+    string? BillingTaxOffice = null,
+    string? BillingTaxNumber = null,
+    string? BillingAddressLine = null,
+    Guid? BillingCityId = null,
+    Guid? BillingDistrictId = null,
+    Dictionary<string, object>? CustomerNotes = null);
 
 public record OrderDetailItemDto(
     Guid Id,

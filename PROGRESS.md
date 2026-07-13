@@ -319,11 +319,16 @@
     izole 5052 publish routing 401/404 ✓; psql indeksler ✓; EXPLAIN Index Scan Backward
     sort'suz ✓. Kimlikli UI duman testi kullanıcıda (credential kuralı). NOT: 5051'i
     başka bir session'ın test instance'ı tutuyordu — dokunulmadı, 5052 kullanıldı.
-  - **SIRADAKİ: P1b sipariş detayı** (tek sayfa kurgusu K19'da hazır). Restart hâlâ
-    bekliyor — H1..H9 + platform entegrasyonları + P1a backend tek restart'la canlıya
-    çıkar (admin/dist şimdiden yeni; restart öncesi Siparişler sayfasında sayaçlar
-    gizli kalır, Aktif sekmesi eski binary'de filtresiz döner — canlıda 0 sipariş,
-    etki yok).
+  - **P1b TAMAM (2026-07-13):** `/orders/{id}` OrderDetailPage (K19 tek-sayfa):
+    duruma göre aksiyonlar (Onayla+depo / İşleme Al / Kargoya Ver+anlaşma+takip+paket /
+    Teslim / İptal+neden), kalemler+özet+ödemeler+adresler (bölge adları yeni
+    `GET /api/crm/geo-names` — CRM GetGeoNamesQuery)+kargo (anlaşma adı+takip linki+
+    olaylar)+notlar+sözleşme kabulleri+türetilmiş durum geçmişi. OrderDetailDto'ya
+    additive 16 alan. Doğrulama: izole 5052 routing 401/200 ✓; tsc+build temiz.
+  - **SIRADAKİ: P1c iadeler** (liste+aksiyonlar+iade nedenleri lookup yönetimi).
+    Restart hâlâ bekliyor — H1..H9 + platform entegrasyonları + P1a/P1b backend tek
+    restart'la çıkar (admin/dist şimdiden yeni; restart öncesi: sayaçlar gizli, Aktif
+    sekmesi filtresiz, adres bölge adları boş — canlıda 0 sipariş, etki yok).
 
 - **2026-07-13 (devam) — İŞ LİSTESİ GÜNCELLENDİ: Site–Panel senkron kuralı (K16) + FAZ P/R:**
   - **Yeni kural (kullanıcı):** sitede canlı her işlev panelde yönetim karşılığı olmadan
