@@ -26,6 +26,9 @@ import { CollectionsModerationPage } from '@/pages/storefront/CollectionsModerat
 import { ReviewsModerationPage } from '@/pages/storefront/ReviewsModerationPage'
 import { PagesManagementPage } from '@/pages/storefront/PagesManagementPage'
 import { PageBlockDetailPage } from '@/pages/storefront/PageBlockDetailPage'
+import { ContactMessagesPage } from '@/pages/storefront/ContactMessagesPage'
+import { NotificationsMonitorPage } from '@/pages/storefront/NotificationsMonitorPage'
+import { NewsletterSubscribersPage } from '@/pages/storefront/NewsletterSubscribersPage'
 import { MenuDetailPage } from '@/pages/cms/MenuDetailPage'
 import { WarehousesPage } from '@/pages/inventory/WarehousesPage'
 import { WarehouseDetailPage } from '@/pages/inventory/WarehouseDetailPage'
@@ -76,6 +79,9 @@ export const router = createBrowserRouter(
             { path: 'storefront/reviews',                  element: <ReviewsModerationPage /> },
             { path: 'storefront/pages',                    element: <PagesManagementPage /> },
             { path: 'storefront/pages/:id',                element: <PageBlockDetailPage /> },
+            { path: 'storefront/contact-messages',         element: <ContactMessagesPage /> },
+            { path: 'storefront/notifications',            element: <NotificationsMonitorPage /> },
+            { path: 'storefront/newsletter',               element: <NewsletterSubscribersPage /> },
 
             // Envanter
             { path: 'inventory/warehouses',     element: <WarehousesPage /> },

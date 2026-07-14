@@ -454,10 +454,18 @@ src/ECSPros.Api/
       gerçek CRUD'a (mevcut GET/POST/PUT; B2B/vade/min-sipariş/onay alanları).
       Doğrulama: izole 5052 — 3 route 401 ✓, /hesabim 302 guard + / 200 ✓.
       Migration yok.
-- [ ] P5. **İletişim mesajları gelen kutusu** (küçük — F4 `contact_messages` bugün yalnız
-      tabloya düşüyor) + **bildirim izleme** (küçük): stok alarmları (C9/H8) + kayıtlı
-      aramalar (E11/H8) listesi ve gönderim durumları; H8 scan tetiğine buton +
-      **bülten aboneleri listesi (`newsletter_subscriptions` — P0 bulgusu, küçük).**
+- [x] P5. **İletişim mesajları gelen kutusu + bildirim izleme + bülten aboneleri —
+      TAMAM (2026-07-14):** `/storefront/contact-messages` (Yeni/Okundu/Tümü sekmeleri +
+      platform seçici + arama; satır → mesaj modalı, yeni mesaj açılınca otomatik okundu,
+      geri "yeni" işaretlenebilir — yeni `GET /api/contact-messages` +
+      `PATCH /api/contact-messages/{id}/status`); `/storefront/notifications` (sekmeler:
+      Stok Alarmları C9/H8 durum+bildirim zamanı, Kayıtlı Aramalar E11/H8 bildirim
+      açık/kapalı+son bildirim; "Şimdi Tara" butonu → mevcut H8
+      `POST /api/store-notifications/saved-search-scan`); `/storefront/newsletter`
+      bülten aboneleri (Aktif/Tümü + e-posta arama). Yeni GET'ler:
+      `store-notifications/stock-alerts|saved-searches|newsletter-subscriptions`.
+      Doğrulama: izole 5052 — 5 yeni route 401 ✓, `/`+`/iletisim`+`/sepet` 200 ✓.
+      Migration yok.
 
 **Kabul kriterleri:** P0 taraması tam ve bulguları kapanmış; P1–P5 ekranları canlı; sitede
 canlı işlev kümesi için admin'de placeholder kalmadı; her ekran E2E duman testinden geçti.

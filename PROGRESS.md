@@ -294,6 +294,22 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-13 — Stok/depo aktarım analizi — ÖNERİ ONAYLANDI (2026-07-14), kod değişikliği YOK:**
+  Eski DB'de gerçek stok `opproductlocations` (1 satır = 1 fiziksel adet; 278.283 adet,
+  rezerv: 754 sipariş + 1.099 özel toplama; `stokAdedi` ve `opmagazadepo` aktarım DIŞI —
+  kullanıcı kararı). Üçlü depo yapısı önerildi: `inv_warehouses` (fiziki depo, IsCentral +
+  ErpCode) → `inv_warehouse_sections` (YENİ — kat/bölme, **IsSellableOnline burada**) →
+  `inv_warehouse_bins` (raf; mevcut locations sadeleşir). Rezervler `LegacyReferenceId` ile
+  taşınacak; hareketler süreçsiz tek satır (ad-hoc `duzeltme` dahil). Kullanıcı 45 eksik
+  ürün kodunu `yeniurunkodlari`'na ekledi → Faz 5/6/7 delete-reload olduğundan TAM katalog
+  reload gerekir (Faz 16 stok testiyle birlikte koşulacak). **Kararlar (2026-07-14):**
+  depolar Merkez (IsCentral, D012) / Mağaza (M002) / Ayakkabı (M004); Tekkeköy kullanım
+  dışı — oluşturulmayacak (13 dolu rafı aktarım dışı, doğrulama toplamından düşülecek);
+  İade/Defo/Bağış merkez kısımları, IsSellableOnline kapalı başlar. Uygulama FAZ P
+  kapandığı için planlanabilir; sıralama önerisi: şema+Faz 16 kodu önce (eklemeli),
+  handler cutover + tam katalog reload sessiz pencerede. Detay: hafıza
+  `project_legacy_stock_model_2026-07-13.md` + `docs/stok-aktarimi-analizi-2026-07-13.md`.
+
 - **2026-07-13 — Kategori listesi lazy-load düzeltmesi (ayrı oturum, hata bildirimi):**
   Infinite-scroll'la eklenen kartların görselleri kaydırınca yüklenmiyordu (yalnız hover'da
   beliriyordu). Kök neden: `site.js gorselHazirla`, `data-ms-lazy-src`'si henüz yazılmamış
@@ -388,13 +404,19 @@
     salt-okunur, adresler, son 10 sipariş → sipariş detayı linki, oturumlar — yeni
     sessions endpoint'i) + Üye Grupları CRUD (placeholder'dan gerçeğe). Doğrulama:
     izole 5052 — 3 route 401 ✓, /hesabim 302 + / 200 ✓. Migration yok.
-  - **SIRADAKİ: P5 (küçük) — iletişim mesajları gelen kutusu + bildirim izleme (stok
-    alarmları + kayıtlı aramalar + H8 scan tetiği) + bülten aboneleri listesi. P5 ile
-    FAZ P KAPANIR.** Restart bekleyen backend: P1c+P1d+P2a+P2b+P3+P4 — publish güncel.
-  - **SIRADAKİ: P1c iadeler** (liste+aksiyonlar+iade nedenleri lookup yönetimi).
-    Restart hâlâ bekliyor — H1..H9 + platform entegrasyonları + P1a/P1b backend tek
-    restart'la çıkar (admin/dist şimdiden yeni; restart öncesi: sayaçlar gizli, Aktif
-    sekmesi filtresiz, adres bölge adları boş — canlıda 0 sipariş, etki yok).
+  - **P5 TAMAM (2026-07-14) → P-M3 + FAZ P KAPANDI:** İletişim Mesajları gelen kutusu
+    (`/storefront/contact-messages` — Yeni/Okundu/Tümü + platform seçici + arama; mesaj
+    modalı, yeni mesaj açılınca otomatik okundu; yeni `GET /api/contact-messages` +
+    `PATCH .../{id}/status`) + Bildirimler izleme (`/storefront/notifications` — Stok
+    Alarmları ve Kayıtlı Aramalar sekmeleri, gönderim durumları, "Şimdi Tara" → mevcut
+    H8 scan endpoint'i) + Bülten Aboneleri (`/storefront/newsletter`). Yeni GET'ler:
+    `store-notifications/stock-alerts|saved-searches|newsletter-subscriptions`.
+    Sidebar: Müşteriler→İletişim Mesajları; Pazarlama→Bildirimler+Bülten Aboneleri.
+    Doğrulama: izole 5052 — 5 yeni route 401 ✓, `/`+`/iletisim`+`/sepet` 200 ✓.
+    Migration yok. admin/dist build alındı (canlıda).
+  - **RESTART BEKLİYOR (publish güncel, 2026-07-14):** P1c+P1d+P2a+P2b+P3+P4+P5
+    backend'leri tek restart'la çıkar. Restart öncesi bilinen durum: yeni admin
+    sayfaları API'den 404 alır (boş liste/hata görünümü), storefront etkilenmez.
 
 - **2026-07-13 (devam) — İŞ LİSTESİ GÜNCELLENDİ: Site–Panel senkron kuralı (K16) + FAZ P/R:**
   - **Yeni kural (kullanıcı):** sitede canlı her işlev panelde yönetim karşılığı olmadan
