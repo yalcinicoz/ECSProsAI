@@ -79,8 +79,10 @@ public class GetChannelCategoryProductsQueryHandler(
     // büyük kategorilerde (10K+ ürün) saniyeler sürüyor — aynı sayfa tüm ziyaretçiler için aynı sonucu
     // döndüğünden kısa süreli Redis cache ile tekrar hesaplama önleniyor. Cache erişimi try/catch ile
     // sarılı: Redis geçici olarak erişilemezse istek hata almak yerine DB'den taze hesaplanır.
+    // v2: IsSaleOpen (global satış anahtarı) geçidi eklendi — eski binary'nin filtresiz
+    // cache'lediği listeler geçersiz kılınsın diye anahtar sürümü artırıldı (TTL beklemeden).
     private static string CacheKey(Guid categoryId, int page, int pageSize) =>
-        $"channelcat:products:{categoryId}:{page}:{pageSize}";
+        $"channelcat:products:v2:{categoryId}:{page}:{pageSize}";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
 
     private async Task<PagedResult<ChannelCategoryProductItemDto>?> TryGetCacheAsync(string key, CancellationToken ct)
@@ -218,8 +220,8 @@ public class GetChannelCategoryProductsQueryHandler(
             productQuery = catDb.Products.AsNoTracking().Where(p => allIds.Contains(p.Id));
         }
 
-        // Katman 1 (global satış anahtarı): satışa kapalı ürün listelenmez. Bu geçit önceden
-        // YOKTU — ürün liste kartında görünüp detayda 404 veriyordu (satış görünürlüğü tutarlılığı).
+        // NOT: Bu blok artık ulaşılamaz (yukarıda ListingMode != "model" için HandleColorMode
+        // döner). Satış geçidi asıl yol olan ResolveCategoryProductIds'de uygulanır.
         productQuery = productQuery.Where(p => p.IsSaleOpen
             && catDb.ProductImages.Any(img => img.ProductId == p.Id));
 
@@ -618,16 +620,16 @@ public class GetChannelCategoryProductsQueryHandler(
     private async Task<List<Guid>> ResolveCategoryProductIds(
         ChannelCategory cat, Guid channelCategoryId, CancellationToken ct)
     {
+        List<Guid> ids;
         if (cat.FillType == "manual")
         {
-            return await sfDb.ChannelCategoryProducts
+            ids = await sfDb.ChannelCategoryProducts
                 .Where(p => p.ChannelCategoryId == channelCategoryId && !p.IsExcluded)
                 .OrderBy(p => p.SortOrder)
                 .Select(p => p.ProductId)
                 .ToListAsync(ct);
         }
-
-        if (cat.FillType == "filter")
+        else if (cat.FillType == "filter")
         {
             var rules = CategoryFilterRules.From(cat.FilterDef);
             HashSet<Guid>? stockRange = null;
@@ -640,13 +642,12 @@ public class GetChannelCategoryProductsQueryHandler(
                 .Where(p => p.ChannelCategoryId == channelCategoryId && p.IsExcluded)
                 .Select(p => p.ProductId).ToListAsync(ct);
 
-            return await ProductFilterHelper
+            ids = await ProductFilterHelper
                 .BuildFilterQuery(catDb, rules, platformPriceIds, stockRange)
                 .Where(p => !excludedIds.Contains(p.Id) && catDb.ProductImages.Any(img => img.ProductId == p.Id))
                 .Select(p => p.Id).ToListAsync(ct);
         }
-
-        // mixed
+        else // mixed
         {
             var rules = CategoryFilterRules.From(cat.FilterDef);
             HashSet<Guid>? stockRange = null;
@@ -667,8 +668,18 @@ public class GetChannelCategoryProductsQueryHandler(
                 .Where(p => p.ChannelCategoryId == channelCategoryId && !p.IsExcluded)
                 .Select(p => p.ProductId).ToListAsync(ct);
 
-            return filteredIds.Union(pinnedIds).Except(excludedIds).ToList();
+            ids = filteredIds.Union(pinnedIds).Except(excludedIds).ToList();
         }
+
+        // Katman 1 (global satış anahtarı): satışa kapalı ürün HİÇBİR modda/kategoride
+        // listelenmez — manuel/filtre/mixed hepsi bu geçitten geçer. Sıra korunur.
+        // (Önceki bug: bu geçit yalnız artık ulaşılamayan eski kod yolundaydı; asıl
+        // liste HandleColorMode → ResolveCategoryProductIds'den besleniyor.)
+        if (ids.Count == 0) return ids;
+        var acikOlanlar = (await catDb.Products.AsNoTracking()
+            .Where(p => ids.Contains(p.Id) && p.IsSaleOpen)
+            .Select(p => p.Id).ToListAsync(ct)).ToHashSet();
+        return ids.Where(acikOlanlar.Contains).ToList();
     }
 
     private async Task<Result<PagedResult<ChannelCategoryProductItemDto>>> HandleModelMode(
