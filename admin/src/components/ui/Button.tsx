@@ -34,9 +34,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         )}
         {...props}
       >
-        {loading && (
-          <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-        )}
+        {/* Düğüm her zaman DOM'da kalır, yalnız görünürlüğü değişir — tarayıcı çeviri/
+            yazım denetimi uzantılarının metin düğümlerini sarmalamasıyla React'in
+            loading geçişinde yeni kardeş düğüm eklemesi (insertBefore) çakışmasın diye. */}
+        <span
+          className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"
+          style={{ display: loading ? undefined : 'none' }}
+        />
         {children}
       </button>
     )
