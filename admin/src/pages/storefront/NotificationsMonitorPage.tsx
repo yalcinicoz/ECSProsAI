@@ -253,7 +253,12 @@ export function NotificationsMonitorPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {scanResult && <span className="text-sm" style={{ color: 'var(--text-s)' }}>{scanResult}</span>}
+          {/* Düğüm her zaman DOM'da kalır, yalnız metni/görünürlüğü değişir — tarayıcı
+              çeviri/yazım uzantılarının metin düğümlerini sarmalamasıyla React'in yeni
+              kardeş düğüm eklemesi (insertBefore) çakışmasın diye. */}
+          <span className="text-sm" style={{ color: 'var(--text-s)', display: scanResult ? undefined : 'none' }}>
+            {scanResult}
+          </span>
           <Button size="sm" variant="secondary" loading={scan.isPending}
             onClick={() => { setScanResult(''); scan.mutate() }}
             title="Kayıtlı arama taramasını beklemeden şimdi çalıştırır; günde-1 sınırı korunur, yinelenen e-posta üretmez.">
