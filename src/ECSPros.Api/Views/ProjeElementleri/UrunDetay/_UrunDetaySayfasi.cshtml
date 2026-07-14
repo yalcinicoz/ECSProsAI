@@ -2098,6 +2098,9 @@
             gonderBtn.addEventListener("click", async () => {
                 if (!seciliVaryantId) { return; }
                 if (!localStorage.getItem("ecspros_member_token")) {
+                    // Giriş modalı z-120, bu modal z-130 → önce bu popup'ı kapat, yoksa login
+                    // altında soluk/erişilemez açılır. Kullanıcı giriş yapıp yeniden deneyebilir.
+                    kapat();
                     document.querySelector("[data-ms-giris-modal-ac]")?.click();
                     return;
                 }
