@@ -294,6 +294,41 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION KAPANIŞ ÖZETİ (2026-07-14) — SONRAKİ OTURUM BURADAN DEVAM
+**Bu oturumda tamamlananlar (hepsi canlı DB'de + commit'li):**
+1. **Stok/depo üçlü yapı + aktarım:** entity temeli (WarehouseSection/Bin, IsCentral/ErpCode) →
+   katalog reload (`dotnet run 20`: 28.651 ürün +102, kanal verisi yeniden kuruldu) → stok
+   aktarımı (Faz 16 genişletildi: inv_stocks 165.110 satır/277.879 adet + 1.207 rezerv, BinId'li)
+   → **handler cutover** (StockOps: 8 handler + okuma kısım-duyarlı; online = satışa-açık kısımlar).
+2. **Satış görünürlüğü M1:** `catalog.products.IsActive`→`IsSaleOpen` (satışa kapalı → liste dışı
+   + detay 301 kategoriye/ana sayfaya). Kalan M2/M3 (kanal seçim/durdurma) + değer aktarımı.
+3. **Stok görünürlüğü (Sıra 1+1.5+2):** kanal ayarlı "stoğu biteni listede göster" (aç/kapa +
+   tarih eşiği; admin ChannelsPage 'Stok Görünürlüğü'); liste/arama/facet/grup filtreli;
+   detay beden-gating + 'gelince haber ver' popup. Stok HER ZAMAN aktif (stockControlEnabled emekli).
+
+**⚠️ RESTART BEKLİYOR:** Sıra 2 (commit 0e148ae) publish'te — kullanıcı `sudo systemctl restart
+ecspros` yapmadı. Yeni publish'te Sıra 1+1.5+2'nin tamamı var; restart sonrası doğrula.
+
+**SIRADAKİ İŞLER (öncelik sırasız — kullanıcı seçecek):**
+- (a) Sıra 2 restart + storefront doğrulama (stoğu biten ürün detayı + popup).
+- (b) **erp_variant_data Phase11 FIX:** EnsureNebimFirmIntegration bayat (demo firma yok +
+  core_integration_services→definition.integration_services, core_firm_integrations→
+  core_firm_platform_integrations taşındı). Reload'da çöktü, erp aktarımı ERTELENDİ; H3/entegrasyon
+  işiyle düzeltilecek. erp_variant_data şu an eski GUID'li (327.821, ölü entegrasyon id'li).
+- (c) **Satış görünürlüğü M2/M3:** kanal seçim (plurunler.satisaAcik) + kanal anlık/zamanlı
+  durdurma (plurunler.yayinda + pencere) + değer aktarımı (apurunler.satisaAcik→IsSaleOpen).
+  Bkz. `project_sale_visibility_model_2026-07-14.md`.
+- (d) **DEPRECATED TEMİZLİK:** Warehouse.IsSellableOnline, inv_stocks.LocationId,
+  inv_warehouse_locations tablosu + eski admin komutları, eski catalog.products.IsActive kolonu.
+- (e) **FAZ H kalanı:** H3 görsel arama (API key admin'den `visual_search` servisine — KULLANICI
+  BEKLENİYOR), H-M5 (H10 devredenler + H7 QA). Bkz. `project_misharix_razor_phase_status.md`.
+- (f) FAZ R (ERP placeholder ekranları).
+
+**BEKLEYEN DIŞ GİRDİLER:** H3 görsel arama API key, H8 SMTP kimlik bilgileri, başka oturumun
+`site.js` lazy-load değişikliği (deploy edilmiş, commit bekliyor — ona DOKUNMA).
+**YEDEK:** `~/yedekler/reload-oncesi-2026-07-14-1441.dump` (reload öncesi tam DB).
+**Detay hafıza:** `project_legacy_stock_model_2026-07-13.md` (stok/depo), `project_sale_visibility_model_2026-07-14.md` (satış+stok görünürlük).
+
 - **2026-07-14 — STOK GÖRÜNÜRLÜĞÜ Sıra 1 TAMAM (commit 2f4fe2e) — RESTART BEKLİYOR:**
   Kullanıcı modeli: firma satış kanalı bazında "stoğu biten ürünleri listede göster" +
   ekleme-tarihi eşiği. Stok artık HER ZAMAN aktif (stockControlEnabled emekli). Liste
