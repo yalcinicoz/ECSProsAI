@@ -15,6 +15,9 @@
             : null,
         // B12: tükenen bedenler haritaya girmez (radyoları zaten disabled — çifte güvence)
         bedenler = s.Bedenler.Where(x => x.Satilabilir).ToDictionary(x => x.Ad, x => new { id = x.VariantId, fiyat = x.Fiyat }),
+        // Sıra 2 (2026-07-14): stoğu biten bedenler + tek-varyant stoksuz → "gelince haber ver" popup
+        stoksuzBedenler = s.Bedenler.Where(x => !x.Satilabilir).ToDictionary(x => x.Ad, x => new { id = x.VariantId }),
+        stoksuzTekVaryant = s.StoksuzTekVaryantId is { } sv ? new { id = sv } : null,
         seciliRenk = s.Renkler.FirstOrDefault(r => r.Secili)?.ValueId
     });
 }
@@ -125,6 +128,19 @@
                 <h2 id="ms-urun-beden-modal-baslik" class="ms-ornek-modal-baslik">Beden Seçiniz</h2>
                 <p class="ms-ornek-modal-aciklama">Sepete eklemek için uygun bedeni seçin.</p>
                 <div class="ms-urun-beden-modal-listesi" data-ms-urun-detay-beden-modal-listesi></div>
+            </section>
+        </div>
+
+        @* Sıra 2: stok gelince haber ver — tükenen bedene tıklanınca veya tümü tükendiyse açılışta *@
+        <div class="ms-ornek-modal ms-urun-beden-modal" data-ms-stok-haber-modal aria-hidden="true">
+            <div class="ms-ornek-modal-kaplama" data-ms-stok-haber-kapat></div>
+            <section class="ms-ornek-modal-kutu ms-ornek-modal-kutu-uyari ms-urun-beden-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-stok-haber-baslik">
+                <button class="ms-ornek-modal-kapat" type="button" data-ms-stok-haber-kapat aria-label="Kapat">×</button>
+                <h2 id="ms-stok-haber-baslik" class="ms-ornek-modal-baslik">Stok Gelince Haber Ver</h2>
+                <p class="ms-ornek-modal-aciklama" data-ms-stok-haber-aciklama>Bedeniniz stoğa girince e-posta ile haber verelim.</p>
+                <div class="ms-urun-beden-modal-listesi" data-ms-stok-haber-listesi></div>
+                <button class="ms-buton ms-buton-l ms-buton-satin-al" type="button" data-ms-stok-haber-gonder disabled style="margin-top:12px;width:100%;">Haber Ver</button>
+                <p class="ms-ornek-modal-aciklama" data-ms-stok-haber-sonuc hidden style="margin-top:10px;color:var(--ms-renk-basari,#16a34a);"></p>
             </section>
         </div>
     </div>
@@ -2012,5 +2028,109 @@
                     window.setTimeout(sepeteEkle, 0);
                 }
             });
+        })();
+
+        // Sıra 2: stok gelince haber ver — tükenen bedene tıklama + tümü tükendiyse açılışta popup.
+        (() => {
+            const cfgEl = document.getElementById("ms-urun-detay-config");
+            const cfg = cfgEl ? JSON.parse(cfgEl.textContent || "null") : null;
+            const modal = document.querySelector("[data-ms-stok-haber-modal]");
+            if (!cfg || !modal) { return; }
+
+            const stoksuzBedenler = cfg.stoksuzBedenler || {};   // { ad: {id} }
+            const stoksuzTek = cfg.stoksuzTekVaryant || null;    // {id} | null
+            const stokluSayi = Object.keys(cfg.bedenler || {}).length;
+
+            const liste = modal.querySelector("[data-ms-stok-haber-listesi]");
+            const aciklama = modal.querySelector("[data-ms-stok-haber-aciklama]");
+            const gonderBtn = modal.querySelector("[data-ms-stok-haber-gonder]");
+            const sonuc = modal.querySelector("[data-ms-stok-haber-sonuc]");
+            let seciliVaryantId = null;
+
+            const uyeBasligi = () => {
+                const t = localStorage.getItem("ecspros_member_token");
+                return t ? { Authorization: "Bearer " + t } : {};
+            };
+
+            const kapat = () => { modal.setAttribute("aria-hidden", "true"); document.body.style.overflow = ""; };
+            modal.querySelectorAll("[data-ms-stok-haber-kapat]").forEach((x) => x.addEventListener("click", kapat));
+
+            const ac = (secilecekAd) => {
+                liste.innerHTML = "";
+                liste.style.display = "";
+                seciliVaryantId = null;
+                sonuc.hidden = true;
+                gonderBtn.disabled = true;
+                gonderBtn.textContent = "Haber Ver";
+
+                const girdiler = Object.entries(stoksuzBedenler);
+                if (girdiler.length > 0) {
+                    aciklama.textContent = "Bedeninizi seçin; stoğa girince e-posta ile haber verelim.";
+                    girdiler.forEach(([ad, v]) => {
+                        const b = document.createElement("button");
+                        b.type = "button";
+                        b.className = "ms-urun-beden-modal-secim";
+                        b.textContent = ad;
+                        b.addEventListener("click", () => {
+                            liste.querySelectorAll(".ms-urun-beden-modal-secim").forEach((x) => { x.style.outline = ""; });
+                            b.style.outline = "2px solid var(--ms-renk-primary, #111)";
+                            seciliVaryantId = v.id;
+                            gonderBtn.disabled = false;
+                        });
+                        liste.appendChild(b);
+                        if (secilecekAd && ad === secilecekAd) { b.click(); }
+                    });
+                } else if (stoksuzTek) {
+                    // Beden ekseni olmayan ürün — beden seçtirme yok, tek varyant.
+                    aciklama.textContent = "Ürün stoğa girince e-posta ile haber verelim.";
+                    liste.style.display = "none";
+                    seciliVaryantId = stoksuzTek.id;
+                    gonderBtn.disabled = false;
+                }
+                modal.setAttribute("aria-hidden", "false");
+                document.body.style.overflow = "hidden";
+            };
+
+            gonderBtn.addEventListener("click", async () => {
+                if (!seciliVaryantId) { return; }
+                if (!localStorage.getItem("ecspros_member_token")) {
+                    document.querySelector("[data-ms-giris-modal-ac]")?.click();
+                    return;
+                }
+                gonderBtn.disabled = true;
+                try {
+                    const cevap = await fetch("/api/store/stock-alerts", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", ...uyeBasligi() },
+                        body: JSON.stringify({
+                            firmPlatformId: cfg.firmPlatformId,
+                            variantId: seciliVaryantId,
+                            productCode: cfg.urunKod || null,
+                            variantInfo: null
+                        })
+                    });
+                    const veri = await cevap.json().catch(() => null);
+                    if (veri?.success) {
+                        sonuc.textContent = "Kaydedildi — stoğa girince e-posta ile haber vereceğiz.";
+                        sonuc.hidden = false;
+                        gonderBtn.textContent = "✓ Kaydedildi";
+                    } else { gonderBtn.disabled = false; }
+                } catch { gonderBtn.disabled = false; }
+            });
+
+            // Tükenen beden etiketine tıklama → notify (o bedeni ön-seç).
+            document.querySelectorAll(".ms-urun-detay-beden-alani .ms-beden-secim-tukendi, .ms-urun-detay-sabit-beden .ms-beden-secim-tukendi")
+                .forEach((lbl) => {
+                    lbl.addEventListener("click", (e) => {
+                        e.preventDefault();
+                        const ad = lbl.querySelector(".ms-beden-secim-kutu")?.textContent?.trim();
+                        ac(ad);
+                    });
+                });
+
+            // Açılışta: tüm bedenler tükendiyse (stoklu yok, stoksuz var) veya tek-varyant stoksuz.
+            if ((stokluSayi === 0 && Object.keys(stoksuzBedenler).length > 0) || stoksuzTek) {
+                window.setTimeout(() => ac(null), 450);
+            }
         })();
     </script>

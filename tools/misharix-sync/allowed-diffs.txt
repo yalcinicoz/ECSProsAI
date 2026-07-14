@@ -55,6 +55,9 @@ Views/UrunDetay/Index.cshtml
 # JS'teki sabit paylaşım metni DOM'dan okunuyor; dosya sonuna sepet/renk config script'i
 # eklendi (renk=?color= SSR navigasyonu, sepete ekle=api/store/cart, SPA ile aynı
 # localStorage anahtarları). Misharix davranış script'leri değişmedi.
+# Sıra 2 (2026-07-14): stoğu biten beden/ürün için "gelince haber ver" modalı + config'e
+# stoksuzBedenler/stoksuzTekVaryant + ikinci config-script (tükenen bedene tıklama, tümü
+# tükendiyse açılışta popup, /api/store/stock-alerts). Yine yalnız eklemeli.
 Views/ProjeElementleri/UrunDetay/_UrunDetaySayfasi.cshtml
 
 # B9: Breadcrumb kategori zincirine bağlandı (GetProductChannelCategoryChainQuery —
@@ -316,3 +319,11 @@ Views/ProjeElementleri/UrunDegerlendirmeleri/_UrunDegerlendirmeleriSayfasi.cshtm
 
 # H9: sayfa wrapper'ı — Title'ı controller atar (ürün adıyla); partial include aynı.
 Views/UrunDegerlendirmeleri/Index.cshtml
+
+# 2026-07-13 lazy-load düzeltmesi: gorselHazirla, data-ms-lazy-src'si HENÜZ yazılmamış
+# infinite-scroll iskelet görselini msLazyHazir="true" damgalıyordu — kartDoldur adresi
+# sonradan yazınca ikinci msLazyLoadYenile çağrısı bayrak yüzünden görseli atlıyor, kart
+# görselsiz kalıyordu (hover galerisi src'yi doğrudan yazdığı için ancak hover'da beliriyordu).
+# Bayrak artık yalnız görsel gerçekten kurulunca basılır. Kaynak şablon yazma-korumalı olduğu
+# için aynı düzeltme oraya uygulanamadı; kaynak güncellenince bu kayıt kaldırılabilir.
+wwwroot/js/site.js
