@@ -11,6 +11,8 @@ public class InventoryDbContext : DbContext, IInventoryDbContext
 
     public DbSet<Warehouse> Warehouses => Set<Warehouse>();
     public DbSet<WarehouseLocation> WarehouseLocations => Set<WarehouseLocation>();
+    public DbSet<WarehouseSection> WarehouseSections => Set<WarehouseSection>();
+    public DbSet<WarehouseBin> WarehouseBins => Set<WarehouseBin>();
     public DbSet<Stock> Stocks => Set<Stock>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<StockReservation> StockReservations => Set<StockReservation>();

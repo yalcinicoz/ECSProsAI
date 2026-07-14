@@ -13,11 +13,43 @@ public class WarehouseConfiguration : IEntityTypeConfiguration<Warehouse>
         builder.Property(x => x.Code).HasMaxLength(50).IsRequired();
         builder.Property(x => x.NameI18n).HasColumnType("jsonb").IsRequired();
         builder.Property(x => x.WarehouseType).HasMaxLength(30).IsRequired();
+        builder.Property(x => x.ErpCode).HasMaxLength(50);
         builder.HasIndex(x => x.Code).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
 
         builder.HasMany(x => x.Locations).WithOne(x => x.Warehouse).HasForeignKey(x => x.WarehouseId);
+        builder.HasMany(x => x.Sections).WithOne(x => x.Warehouse).HasForeignKey(x => x.WarehouseId);
         builder.HasMany(x => x.Stocks).WithOne(x => x.Warehouse).HasForeignKey(x => x.WarehouseId);
+    }
+}
+
+public class WarehouseSectionConfiguration : IEntityTypeConfiguration<WarehouseSection>
+{
+    public void Configure(EntityTypeBuilder<WarehouseSection> builder)
+    {
+        builder.ToTable("inv_warehouse_sections");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Code).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        builder.HasIndex(x => new { x.WarehouseId, x.Code }).IsUnique();
+        builder.HasQueryFilter(x => !x.IsDeleted);
+
+        builder.HasMany(x => x.Bins).WithOne(x => x.Section).HasForeignKey(x => x.SectionId);
+    }
+}
+
+public class WarehouseBinConfiguration : IEntityTypeConfiguration<WarehouseBin>
+{
+    public void Configure(EntityTypeBuilder<WarehouseBin> builder)
+    {
+        builder.ToTable("inv_warehouse_bins");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Code).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Barcode).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Name).HasMaxLength(200);
+        builder.HasIndex(x => x.Barcode).IsUnique();
+        builder.HasIndex(x => new { x.SectionId, x.Code }).IsUnique();
+        builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }
 

@@ -407,10 +407,12 @@ Redis şifresi **3 yerde birden** tanımlıdır ve HER ZAMAN birlikte değiştir
   çalışacak şekilde yaz); süreç-içi kısa TTL ihtiyacı için `IMemoryCache` kullan
   (örn. `GetStoreFacetsQueryHandler`).
 
-**Bekleyen production migration'ı yok** (2026-07-13 itibarıyla): CoreDbContext dahil tüm
-migration'lar canlı DB'ye uygulandı. Son büyük değişiklik
+**Bekleyen production migration'ı yok** (2026-07-14 itibarıyla): tüm migration'lar canlı
+DB'ye uygulandı. Son değişiklik `20260714111509_AddWarehouseSectionsAndBins`
+(InventoryDbContext) — üçlü depo yapısının additive temeli: yeni boş `inv_warehouse_sections`
++ `inv_warehouse_bins` tabloları + `inv_warehouses`'a `IsCentral`/`ErpCode` kolonları.
+Eklemeli olduğundan çalışan (eski) binary'yi etkilemez; yeni entity'ler yalnız sonraki
+deploy'da devreye girer. Bir önceki büyük değişiklik
 `20260713120559_RestructureFirmPlatformIntegrations` — `core_firm_integrations` →
 `core_firm_platform_integrations` (iletişim/sözleşme-no kolonları kaldırıldı, nullable
 `FirmPlatformId` eklendi, `Credentials` jsonb→şifreli text; tablo boştu, veri kaybı yok).
-Eski binary çalışırken uygulandığı için restart'a kadar yalnız admin firma-sözleşme
-ekranı eski tabloyu arar (bilinçli, kısa pencere).
