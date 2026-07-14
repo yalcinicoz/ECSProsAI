@@ -294,6 +294,18 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-14 — Satış görünürlüğü M1 TAMAM (commit e713ddd) — RESTART BEKLİYOR:**
+  "Ürün listede var ama detay 404" hatası → 3 katmanlı satış modelinin Katman 1'i uygulandı.
+  `catalog.products.IsActive`→`IsSaleOpen` (yeni ürün default kapalı); migration
+  `AddProductIsSaleOpen` EXPAND-CONTRACT (yeni kolon + backfill; iki kolon canlıda, eski
+  IsActive sonra düşürülecek) CANLI DB'DE. Liste/detay/facet/checkout artık IsSaleOpen
+  filtreliyor (liste filtresi = asıl bug); 404→301 (kapalı ürün → kategorisine, yoksa ana
+  sayfa); admin durum etiketleri "Satışta/Satışa Aç/Kapat". İzole 5053 doğrulandı
+  (kapalı→301, açık 200, admin 401). Publish alındı → kullanıcı `sudo systemctl restart
+  ecspros`. Bilinen sınır: DTO/kontrat alan adları hâlâ isActive (değer IsSaleOpen).
+  Kalan: eski IsActive kolonu temizlik migration'ı (restart sonrası); M2 (kanal seçimi) +
+  M3 (kanal durdurma) + değer aktarımı. Detay: `project_sale_visibility_model_2026-07-14.md`.
+
 - **2026-07-14 — Stok/depo üçlü yapı: TEMEL DİLİM TAMAM (kullanıcı FAZ P sonrası bu işi
   seçti, additive/güvenli ilk adım):** Yeni entity'ler `WarehouseSection`
   (`inv_warehouse_sections`: WarehouseId, Code, Name, **IsSellableOnline** yönetim noktası,
