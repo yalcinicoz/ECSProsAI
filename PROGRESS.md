@@ -294,6 +294,18 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-14 — STOK AKTARIMI için KATALOG RELOAD hazırlığı TAMAM, YIKICI ADIM BEKLİYOR
+  (commit 4a7c3a0):** Kullanıcı kararı: önce katalog reload (102 eksik ürün + GUID tazeleme),
+  sonra stok; handler cutover ertelenecek (stok kontrolü kapalı). Reload denetlendi ve YIKICI
+  DEĞİL: firma/platform Phase14 upsert korunur (CMS/vitrin/entegrasyon güvende), manuel pin/
+  vitrin ürün-ref/product_groups = 0, kategori kuralları için Faz 1-4 koşulmayacak (gruplar
+  korunur). Sadece channel_variants(279K)+channel_products(85K) yetim → Phase14 yeniden kurar.
+  **Hazırlık:** (1) tam yedek `~/yedekler/reload-oncesi-2026-07-14-1441.dump` (122MB); (2)
+  MigrationTool Faz 20 orkestratörü (`dotnet run 20` → 5→6→7→11→12→13→14, ClearAll+Faz1-4 YOK)
+  + channel delete-first. **SIRADAKİ: kullanıcı onaylı kesinti penceresinde `dotnet run 20`
+  koş → doğrula → sonra stok aktarımı (opproductlocations→inv_stocks) ayrı adım.** Detay:
+  `project_legacy_stock_model_2026-07-13.md`.
+
 - **2026-07-14 — Satış görünürlüğü M1 TAMAM (commit e713ddd) — RESTART BEKLİYOR:**
   "Ürün listede var ama detay 404" hatası → 3 katmanlı satış modelinin Katman 1'i uygulandı.
   `catalog.products.IsActive`→`IsSaleOpen` (yeni ürün default kapalı); migration
