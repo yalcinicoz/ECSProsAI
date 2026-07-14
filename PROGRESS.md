@@ -307,9 +307,16 @@
   329.047 varyant, 205.912 görsel, 228.857 özellik, 3 platform channel_variants 280.749
   (yetim=0); ürün detayı+ana sayfa origin 200. Faz 1-4 korundu. Yol boyu çözülen: (1) Phase5
   IsSaleOpen doldurmuyordu → reload sonrası tüm ürün kapalı → düzeltildi + UPDATE (26.862 açık);
-  (2) Phase11 erp bayat → çöktü → **erp ERTELENDİ** (kritik değil). ⚠️ DOĞRULA: görsel 205.912
-  (öncesi ~318K — dedup mu?). **SIRADAKİ: (a) kullanıcı `sudo systemctl restart ecspros`
-  (cache temizliği); (b) stok aktarımı.** Detay: `project_legacy_stock_model_2026-07-13.md`.
+  (2) Phase11 erp bayat → çöktü → **erp ERTELENDİ** (kritik değil). Görsel 205.912 dedup'lu doğru
+  (kullanıcı onayladı). Restart yapıldı, storefront sağlıklı.
+  **STOK AKTARIMI TAMAM (Faz 16 genişletildi):** inv_stocks 165.110 satır (BinId'li yeni şekil;
+  toplam 277.879 adet, rezerv 1.207) + 1.207 rezervasyon (LegacyReferenceId'li); atlanan 447 adet
+  (%0.16). Depo: Merkez 240.363/Mağaza 30.467/Ayakkabı 7.049. Şema additive (SectionId/BinId/
+  LegacyReferenceId), handler cutover ERTELENDİ (stok kontrolü kapalı, redeploy gerekmez).
+  **KALAN:** (a) handler cutover (8 handler kısım-duyarlı + inv_stocks eski şekli emekli) — stok
+  kontrolü açılırken; (b) erp_variant_data (Phase11) entegrasyon-şeması düzeltmesi; (c) satış
+  görünürlüğü M2/M3 (kanal seçimi/durdurma). Yedek: reload-oncesi-2026-07-14-1441.dump.
+  Detay: `project_legacy_stock_model_2026-07-13.md`.
 
 - **2026-07-14 — Satış görünürlüğü M1 TAMAM (commit e713ddd) — RESTART BEKLİYOR:**
   "Ürün listede var ama detay 404" hatası → 3 katmanlı satış modelinin Katman 1'i uygulandı.
