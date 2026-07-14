@@ -37,8 +37,10 @@ public static class ProductFilterHelper
         if (rules.SupplierIds is { Count: > 0 })
             q = q.Where(p => p.SupplierId.HasValue && rules.SupplierIds.Contains(p.SupplierId.Value));
 
+        // Kural alanı adı (IsActive) kontratı korumak için sabit; anlamı artık global satış
+        // anahtarı (Product.IsSaleOpen). Kanal kategori filtre kurallarında 0 saklı kullanım var.
         if (rules.IsActive.HasValue)
-            q = q.Where(p => p.IsActive == rules.IsActive.Value);
+            q = q.Where(p => p.IsSaleOpen == rules.IsActive.Value);
 
         if (productIdsInStockRange is not null)
             q = q.Where(p => productIdsInStockRange.Contains(p.Id));

@@ -218,7 +218,10 @@ public class GetChannelCategoryProductsQueryHandler(
             productQuery = catDb.Products.AsNoTracking().Where(p => allIds.Contains(p.Id));
         }
 
-        productQuery = productQuery.Where(p => catDb.ProductImages.Any(img => img.ProductId == p.Id));
+        // Katman 1 (global satış anahtarı): satışa kapalı ürün listelenmez. Bu geçit önceden
+        // YOKTU — ürün liste kartında görünüp detayda 404 veriyordu (satış görünürlüğü tutarlılığı).
+        productQuery = productQuery.Where(p => p.IsSaleOpen
+            && catDb.ProductImages.Any(img => img.ProductId == p.Id));
 
         var total = await productQuery.CountAsync(ct);
 
@@ -246,7 +249,7 @@ public class GetChannelCategoryProductsQueryHandler(
             var mainImage = firstImages.TryGetValue(p.Id, out var fn) ? cdnBase + fn : null;
             manualProductMap.TryGetValue(p.Id, out var manualEntry);
             return new ChannelCategoryProductItemDto(
-                p.Id, p.Code, p.NameI18n, mainImage, p.BasePrice > 0 ? p.BasePrice : 0, p.IsActive,
+                p.Id, p.Code, p.NameI18n, mainImage, p.BasePrice > 0 ? p.BasePrice : 0, p.IsSaleOpen,
                 manualEntry?.SortOrder ?? 0,
                 manualEntry?.IsExcluded ?? false,
                 Colors: colorMap.GetValueOrDefault(p.Id),
@@ -562,7 +565,7 @@ public class GetChannelCategoryProductsQueryHandler(
                 return new ChannelCategoryProductItemDto(
                     pair.ProductId, product.Code, product.NameI18n,
                     imageUrl, price,
-                    product.IsActive, 0, false, null,
+                    product.IsSaleOpen, 0, false, null,
                     Colors: allColorMap.GetValueOrDefault(pair.ProductId),
                     SelectedColorValueId: pair.ColorValueId,
                     SelectedColorNameI18n: colorValueNameMap.TryGetValue(pair.ColorValueId, out var seciliAd)
@@ -603,7 +606,7 @@ public class GetChannelCategoryProductsQueryHandler(
         var items = products.Select(p => new ChannelCategoryProductItemDto(
             p.Id, p.Code, p.NameI18n,
             imageMap.TryGetValue(p.Id, out var fn) ? cdnBase + fn : null,
-            p.BasePrice > 0 ? p.BasePrice : 0, p.IsActive, 0, false, null,
+            p.BasePrice > 0 ? p.BasePrice : 0, p.IsSaleOpen, 0, false, null,
             Colors: colorMap.GetValueOrDefault(p.Id),
             Attrs: attrMap.GetValueOrDefault(p.Id))).ToList();
 
@@ -702,7 +705,7 @@ public class GetChannelCategoryProductsQueryHandler(
         var fallbackProducts = groupsNeedingFallback.Count > 0
             ? (await catDb.Products
                 .AsNoTracking()
-                .Where(p => groupsNeedingFallback.Contains(p.ProductGroupId) && p.IsActive)
+                .Where(p => groupsNeedingFallback.Contains(p.ProductGroupId) && p.IsSaleOpen)
                 .OrderBy(p => p.ProductGroupId).ThenBy(p => p.Id)
                 .ToListAsync(ct))
                 .GroupBy(p => p.ProductGroupId)
@@ -748,7 +751,7 @@ public class GetChannelCategoryProductsQueryHandler(
             var mainImage = imageMap.TryGetValue(product.Id, out var fn) ? cdnBase + fn : null;
             items.Add(new ChannelCategoryProductItemDto(
                 product.Id, product.Code, product.NameI18n, mainImage,
-                product.BasePrice > 0 ? product.BasePrice : 0, product.IsActive,
+                product.BasePrice > 0 ? product.BasePrice : 0, product.IsSaleOpen,
                 0, false, group.ProductGroupId,
                 Colors: colorMap.GetValueOrDefault(product.Id),
                 Attrs: attrMap.GetValueOrDefault(product.Id)));

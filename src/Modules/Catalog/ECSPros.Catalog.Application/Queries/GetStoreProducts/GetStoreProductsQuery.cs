@@ -73,7 +73,7 @@ public class GetStoreProductsQueryHandler(
         var q = db.Products
             .AsNoTracking()
             .Include(p => p.Variants)
-            .Where(p => p.IsActive && db.ProductImages.Any(img => img.ProductId == p.Id));
+            .Where(p => p.IsSaleOpen && db.ProductImages.Any(img => img.ProductId == p.Id));
 
         // E5: Favorilerim — yalnız verilen kodlar (canlı katalogla birleşim: silinen/pasif
         // ürünün favorisi listelenmez)
@@ -290,7 +290,7 @@ public class GetStoreProductsQueryHandler(
 
             return new StoreProductDto(
                 p.Id, p.Code, p.NameI18n, p.ShortDescriptionI18n,
-                mainImage, minPrice, null, p.IsActive,
+                mainImage, minPrice, null, p.IsSaleOpen,
                 colorsByProduct.GetValueOrDefault(p.Id) ?? new(),
                 attrsByProduct.GetValueOrDefault(p.Id) ?? new(),
                 galleryUrls,

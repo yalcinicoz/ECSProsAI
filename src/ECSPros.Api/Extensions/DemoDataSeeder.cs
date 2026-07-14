@@ -524,7 +524,7 @@ public static class DemoDataSeeder
                 BasePrice        = basePrice,
                 BaseCost         = baseCost,
                 TaxRate          = taxRate,
-                IsActive         = true,
+                IsSaleOpen       = true,
             };
             ctx.Products.Add(product);
             await ctx.SaveChangesAsync();

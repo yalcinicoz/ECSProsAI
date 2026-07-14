@@ -69,7 +69,7 @@ public class GetProductDetailQueryHandler : IRequestHandler<GetProductDetailQuer
             product.ShortDescriptionI18n,
             product.DescriptionI18n,
             product.ProductGroupId,
-            product.IsActive,
+            product.IsSaleOpen,
             product.BasePrice,
             product.BaseCost,
             product.TaxRate,

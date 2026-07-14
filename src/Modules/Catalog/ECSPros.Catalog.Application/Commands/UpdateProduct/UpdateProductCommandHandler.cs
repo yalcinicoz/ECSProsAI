@@ -54,7 +54,7 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
         product.BasePrice            = request.BasePrice;
         product.BaseCost             = request.BaseCost;
         product.TaxRate              = request.TaxRate;
-        product.IsActive             = request.IsActive;
+        product.IsSaleOpen           = request.IsActive;   // kontrat adı IsActive, anlamı satış anahtarı
         product.SupplierId           = request.SupplierId;
         product.SupplierProductCode  = request.SupplierProductCode;
         product.UpdatedBy = request.UpdatedBy;

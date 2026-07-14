@@ -130,7 +130,7 @@ export function ProductsPage() {
               onClick={() => { setActiveOnly(true); setPage(1) }}
               className={cn('px-3 py-1 rounded-lg text-sm font-medium transition-all', activeOnly ? 'bg-white shadow-sm' : 'text-[var(--text-s)]')}
               style={activeOnly ? { color: 'var(--text)' } : {}}
-            >Aktif</button>
+            >Satışta</button>
           </div>
 
           <Button onClick={() => navigate('/catalog/products/new')}>
@@ -223,7 +223,7 @@ export function ProductsPage() {
                 {/* Durum */}
                 <td className="px-4 py-3.5 text-center">
                   <Badge variant={item.isActive ? 'success' : 'neutral'}>
-                    {item.isActive ? 'Aktif' : 'Pasif'}
+                    {item.isActive ? 'Satışta' : 'Satış Kapalı'}
                   </Badge>
                 </td>
 

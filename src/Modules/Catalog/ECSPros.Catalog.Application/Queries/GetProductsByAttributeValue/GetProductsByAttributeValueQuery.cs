@@ -22,14 +22,14 @@ public class GetProductsByAttributeValueQueryHandler
         // Ürün seviyesinde doğrudan kullanım
         var direct = await _db.ProductAttributes
             .Where(pa => pa.AttributeValueId == request.AttributeValueId)
-            .Select(pa => new { pa.Product.Id, pa.Product.Code, pa.Product.NameI18n, pa.Product.IsActive })
+            .Select(pa => new { pa.Product.Id, pa.Product.Code, pa.Product.NameI18n, IsActive = pa.Product.IsSaleOpen })
             .Distinct()
             .ToListAsync(ct);
 
         // Varyant üzerinden kullanım
         var viaVariant = await _db.ProductVariantAttributes
             .Where(pva => pva.AttributeValueId == request.AttributeValueId)
-            .Select(pva => new { pva.Variant.Product.Id, pva.Variant.Product.Code, pva.Variant.Product.NameI18n, pva.Variant.Product.IsActive })
+            .Select(pva => new { pva.Variant.Product.Id, pva.Variant.Product.Code, pva.Variant.Product.NameI18n, IsActive = pva.Variant.Product.IsSaleOpen })
             .Distinct()
             .ToListAsync(ct);
 

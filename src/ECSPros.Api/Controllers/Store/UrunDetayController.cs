@@ -1,5 +1,6 @@
 using ECSPros.Api.Models.Store;
 using ECSPros.Api.Services;
+using ECSPros.Catalog.Application.Queries.GetProductIdByCode;
 using ECSPros.Catalog.Application.Queries.GetStoreProductDetail;
 using ECSPros.Storefront.Application.Queries.GetProductChannelCategoryChain;
 using MediatR;
@@ -21,16 +22,18 @@ public class UrunDetayController(IMediator mediator, IStoreContext storeContext,
     {
         var platform = await storeContext.GetPlatformAsync(ct);
         if (platform is null)
-            return NotFound();
+            return Redirect("/");   // platform çözülemedi — 404 yerine ana sayfa
 
+        // Satışa kapalı / erişilemeyen ürün: 404 yerine ürünün kategorisine, yoksa ana sayfaya
+        // 301 (kullanıcı kararı — 404'ten kaçınılıyor). Kapalı ürün detay sorgusundan düşer.
         var sonuc = await mediator.Send(new GetStoreProductDetailQuery(code, platform.Id), ct);
         if (sonuc.IsFailure)
-            return NotFound();
+            return await KapaliUrunYonlendir(code, platform.Id, ct);
 
         var urun = sonuc.Value!;
         var varyantlar = urun.Variants.Where(v => v.IsActive).ToList();
         if (varyantlar.Count == 0)
-            return NotFound();
+            return await KapaliUrunYonlendir(code, platform.Id, ct);
 
         // Renk ekseni: filtre_rengi (IsColor) öncelikli; hiç atanmamışsa serbest-metin "renk"
         // ekseni renk kabul edilir (handler görsel gruplamada da aynı geri düşüşü yapar).
@@ -233,6 +236,20 @@ public class UrunDetayController(IMediator mediator, IStoreContext storeContext,
                 System.Globalization.CultureInfo.InvariantCulture, out var sayi))
             return 100 + (int)sayi;
         return 10_000;
+    }
+
+    // Satışa kapalı/erişilemeyen ürün için 301: ürünün (satış durumundan bağımsız) kanal
+    // kategorisine, tespit edilemezse ana sayfaya. 404'ten kaçınma (kullanıcı kararı).
+    private async Task<IActionResult> KapaliUrunYonlendir(string code, Guid platformId, CancellationToken ct)
+    {
+        var idSonuc = await mediator.Send(new GetProductIdByCodeQuery(code), ct);
+        if (idSonuc.IsSuccess && idSonuc.Value is { } urunId)
+        {
+            var zincir = await mediator.Send(new GetProductChannelCategoryChainQuery(platformId, urunId), ct);
+            if (zincir.IsSuccess && zincir.Value!.Count > 0)
+                return RedirectPermanent("/" + zincir.Value[^1].Slug);
+        }
+        return RedirectPermanent("/");
     }
 
     private static bool VaryantRenktenMi(StoreVariantDto varyant, string renkTipKodu, Guid valueId) =>

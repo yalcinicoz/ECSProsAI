@@ -57,7 +57,7 @@ public class GetChannelCategoryFacetsQueryHandler(
             var fallbackIds = groupsNeedingFallback.Count > 0
                 ? (await catDb.Products
                     .AsNoTracking()
-                    .Where(p => groupsNeedingFallback.Contains(p.ProductGroupId) && p.IsActive)
+                    .Where(p => groupsNeedingFallback.Contains(p.ProductGroupId) && p.IsSaleOpen)
                     .OrderBy(p => p.ProductGroupId).ThenBy(p => p.Id)
                     .Select(p => new { p.Id, p.ProductGroupId })
                     .ToListAsync(ct))
@@ -77,10 +77,10 @@ public class GetChannelCategoryFacetsQueryHandler(
         }
         else
         {
-            // filter / mixed — tüm aktif ürünler (yeterli)
+            // filter / mixed — tüm satışa açık ürünler (yeterli)
             productIds = await catDb.Products
                 .AsNoTracking()
-                .Where(p => p.IsActive && catDb.ProductImages.Any(img => img.ProductId == p.Id))
+                .Where(p => p.IsSaleOpen && catDb.ProductImages.Any(img => img.ProductId == p.Id))
                 .Select(p => p.Id)
                 .Take(2000)
                 .ToListAsync(ct);

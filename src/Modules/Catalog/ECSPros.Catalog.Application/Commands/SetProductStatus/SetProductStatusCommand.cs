@@ -19,7 +19,8 @@ public class SetProductStatusCommandHandler : IRequestHandler<SetProductStatusCo
         if (product is null)
             return Result.Failure<bool>("Ürün bulunamadı.");
 
-        product.IsActive = request.IsActive;
+        // request.IsActive kontrat adı korunuyor; anlamı global satış anahtarı (IsSaleOpen).
+        product.IsSaleOpen = request.IsActive;
         product.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);

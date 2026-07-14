@@ -46,7 +46,7 @@ public class GetStoreFacetsQueryHandler(ICatalogDbContext db, IMemoryCache memor
 
         var q = db.Products
             .AsNoTracking()
-            .Where(p => p.IsActive && db.ProductImages.Any(img => img.ProductId == p.Id));
+            .Where(p => p.IsSaleOpen && db.ProductImages.Any(img => img.ProductId == p.Id));
 
         if (hasSearch)
         {
