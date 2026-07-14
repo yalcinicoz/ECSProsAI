@@ -27,8 +27,9 @@ public sealed record UrunDetayVm(
     IReadOnlyList<RenkSecenekVm> Renkler,
     string BedenEtiketi,                      // varyant ekseninin adı ("Beden", "Numara"...)
     IReadOnlyList<BedenSecenekVm> Bedenler,
-    Guid? TekVaryantId,                       // beden ekseni yokken sepete eklenecek varyant
+    Guid? TekVaryantId,                       // beden ekseni yokken sepete eklenecek varyant (stoklu)
     decimal? TekVaryantFiyat,
+    Guid? StoksuzTekVaryantId,                // beden ekseni yok VE stok yoksa "gelince haber ver" varyantı
     IReadOnlyList<OzellikVm> Ozellikler,
     string? Aciklama,
     string? KisaAciklama,
