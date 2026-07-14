@@ -294,6 +294,18 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-14 — STOK GÖRÜNÜRLÜĞÜ Sıra 1 TAMAM (commit 2f4fe2e) — RESTART BEKLİYOR:**
+  Kullanıcı modeli: firma satış kanalı bazında "stoğu biten ürünleri listede göster" +
+  ekleme-tarihi eşiği. Stok artık HER ZAMAN aktif (stockControlEnabled emekli). Liste
+  (SSR+API kategori) varsayılan olarak stoğu bitenleri GİZLER; kanal ayarı açıksa VE ürün
+  CreatedAt >= eşik ise gösterir. InStockProductProvider (raw-SQL, IMemoryCache 2dk) +
+  StoreContext.StokBitenGoster/Tarih + GetChannelCategoryProductsQuery filtresi (cache v3) +
+  admin ChannelsPage 'Stok Görünürlüğü' bölümü. Doğrulama: kadin-elbise 3098→1505 (kapalı),
+  show-on(2025+) 1754. **KALAN Sıra 2:** ürün detayı beden-gating (Tükendi/sepet engeli) +
+  'gelince haber ver' popup (tüm-tükendi açılışta + beden bazında). Ayrıca: GetStoreProducts
+  (arama) + facet/grup listelerine de aynı stok filtresi (tutarlılık) — Sıra 1.5. Detay:
+  `project_sale_visibility_model_2026-07-14.md`.
+
 - **2026-07-14 — STOK AKTARIMI için KATALOG RELOAD hazırlığı TAMAM, YIKICI ADIM BEKLİYOR
   (commit 4a7c3a0):** Kullanıcı kararı: önce katalog reload (102 eksik ürün + GUID tazeleme),
   sonra stok; handler cutover ertelenecek (stok kontrolü kapalı). Reload denetlendi ve YIKICI
