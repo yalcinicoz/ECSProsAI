@@ -1071,7 +1071,8 @@ static class Migration
     // gerçek stok opproductlocations (1 satır = 1 fiziksel adet). Onaylanan tasarım (2026-07-14):
     //   3 fiziki depo — Merkez (IsCentral, D012) / Mağaza (M002) / Ayakkabı (M004).
     //   Tekkeköy (kod TD) KULLANIM DIŞI → oluşturulmaz (stoklu rafları düşer, raporlanır).
-    //   İade/Defo/Bağış = Merkez'in kısımları, IsSellableOnline=KAPALI başlar; katlar+reyonlar AÇIK.
+    //   İnternet satışına açıklık (IsSellableOnline) eski dfstorages.type'tan gelir: 1=AÇIK, 2=KAPALI
+    //   (İade/Defo/Bağış + Mağaza Reyonu type=2 → kapalı; blok katları + Ayakkabı Reyon type=1 → açık).
     //   Yalnız STOKLU raflar taşınır (opproductlocations'ta geçen storageUnitId'ler).
     // BU FAZ YALNIZ YAPIYI yazar (inv_warehouses/sections/bins). Stok MİKTARI + rezervler
     // inv_stocks'un yeniden şekillenmesine (BinId — cutover) bağlı olduğundan burada YAZILMAZ;
@@ -1088,31 +1089,36 @@ static class Migration
             ("AYAKKABI", "Ayakkabı",    "M004", false),
         };
 
-        // Eski dfstorages.code → (hedef depo Code, IsSellableOnline). Listede olmayan her
-        // kod bilinçli olarak DIŞARIDA (boş WEBDEPO bölümleri, Tekkeköy TD, Güngören, sanal,
-        // stüdyo, satıcı/kabul/sipariş/çağrı/resimlik/personel/kapalı/pazaryeri...).
-        var sectionMap = new Dictionary<string, (string Wh, bool Sellable)>(StringComparer.OrdinalIgnoreCase)
+        // Eski dfstorages.code → hedef fiziki depo Code. Listede olmayan her kod bilinçli
+        // olarak DIŞARIDA (boş WEBDEPO bölümleri, Tekkeköy TD, Güngören, sanal, stüdyo,
+        // satıcı/kabul/sipariş/çağrı/resimlik/personel/kapalı/pazaryeri...).
+        // İnternet satışına açıklık (IsSellableOnline) burada DEĞİL, dfstorages.type'tan
+        // türetilir: eski sistemde type=1 internet satışına AÇIK, type=2 KAPALI
+        // (fnGetStorageType + fninternetstokbyvaryantid tek kaynak). Örn. Mağaza Reyonu (MR)
+        // type=2 → kapalı; Ayakkabı Reyon (AR) type=1 → açık.
+        var sectionMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            // Merkez — A/B blok katları + merdiven (satışa açık)
-            ["K0B"] = ("MERKEZ", true), ["K1A"] = ("MERKEZ", true), ["K1B"] = ("MERKEZ", true),
-            ["K2A"] = ("MERKEZ", true), ["K2B"] = ("MERKEZ", true), ["K3A"] = ("MERKEZ", true),
-            ["K3B"] = ("MERKEZ", true), ["K4A"] = ("MERKEZ", true), ["K4B"] = ("MERKEZ", true),
-            ["K5A"] = ("MERKEZ", true), ["K5B"] = ("MERKEZ", true), ["MDA"] = ("MERKEZ", true),
-            // Merkez — iade/defo/bağış kısımları (satışa KAPALI başlar)
-            ["IADE"] = ("MERKEZ", false), ["DEFO"] = ("MERKEZ", false), ["BAGIS"] = ("MERKEZ", false),
-            // Mağaza + Ayakkabı reyonları (satışa açık)
-            ["MR"] = ("MAGAZA", true),
-            ["AR"] = ("AYAKKABI", true),
+            // Merkez — A/B blok katları + merdiven
+            ["K0B"] = "MERKEZ", ["K1A"] = "MERKEZ", ["K1B"] = "MERKEZ",
+            ["K2A"] = "MERKEZ", ["K2B"] = "MERKEZ", ["K3A"] = "MERKEZ",
+            ["K3B"] = "MERKEZ", ["K4A"] = "MERKEZ", ["K4B"] = "MERKEZ",
+            ["K5A"] = "MERKEZ", ["K5B"] = "MERKEZ", ["MDA"] = "MERKEZ",
+            // Merkez — iade/defo/bağış kısımları
+            ["IADE"] = "MERKEZ", ["DEFO"] = "MERKEZ", ["BAGIS"] = "MERKEZ",
+            // Mağaza + Ayakkabı reyonları
+            ["MR"] = "MAGAZA",
+            ["AR"] = "AYAKKABI",
         };
 
-        // 1) dfstorages: Id → (code, name, sortOrder)
-        var storages = new Dictionary<int, (string Code, string Name, int Sort)>();
-        using (var r = MysqlQuery("SELECT Id, code, name, sortOrder FROM dfstorages"))
+        // 1) dfstorages: Id → (code, name, sortOrder, type) — type: 1=internet satışına açık, 2=kapalı
+        var storages = new Dictionary<int, (string Code, string Name, int Sort, int Type)>();
+        using (var r = MysqlQuery("SELECT Id, code, name, sortOrder, type FROM dfstorages"))
             while (r.Read())
                 storages[r.GetInt32(0)] = (
                     r.IsDBNull(1) ? "" : r.GetString(1).Trim(),
                     r.IsDBNull(2) ? "" : r.GetString(2).Trim(),
-                    r.IsDBNull(3) ? 0 : r.GetInt32(3));
+                    r.IsDBNull(3) ? 0 : r.GetInt32(3),
+                    r.IsDBNull(4) ? 2 : r.GetInt32(4));
         Log($"  {storages.Count} dfstorages yüklendi.");
 
         // 2) Stoklu birimler: storageUnitId → adet (opproductlocations satır sayısı) + rezerv
@@ -1172,18 +1178,19 @@ static class Migration
         int sectionCount = 0;
         foreach (var (sid, s) in storages)
         {
-            if (!stockedStorageIds.Contains(sid)) continue;            // boş kısım atlanır
-            if (!sectionMap.TryGetValue(s.Code, out var m)) continue;  // eşlenmeyen (Tekkeköy/Güngören/...) atlanır
+            if (!stockedStorageIds.Contains(sid)) continue;             // boş kısım atlanır
+            if (!sectionMap.TryGetValue(s.Code, out var whCode)) continue; // eşlenmeyen (Tekkeköy/Güngören/...) atlanır
+            bool sellable = s.Type == 1;                                // eski dfstorages.type: 1=internet açık, 2=kapalı
             var id = NewId();
             sectionId[sid] = id;
-            sectionWarehouse[sid] = whId[m.Wh];
+            sectionWarehouse[sid] = whId[whCode];
             PgExec(@"INSERT INTO inventory.inv_warehouse_sections
                 (""Id"",""WarehouseId"",""Code"",""Name"",""IsSellableOnline"",""PickingOrder"",
                  ""IsActive"",""SortOrder"",""CreatedAt"",""IsDeleted"")
                 VALUES (@id,@wh,@code,@name,@sell,@pick,TRUE,@sort,@now,FALSE)",
-                ("id", id), ("wh", whId[m.Wh]), ("code", s.Code),
+                ("id", id), ("wh", whId[whCode]), ("code", s.Code),
                 ("name", string.IsNullOrEmpty(s.Name) ? s.Code : s.Name),
-                ("sell", m.Sellable), ("pick", s.Sort), ("sort", s.Sort), ("now", Now));
+                ("sell", sellable), ("pick", s.Sort), ("sort", s.Sort), ("now", Now));
             sectionCount++;
         }
         Log($"  ✓ {sectionCount} kısım (eşlenen + stoklu).");
