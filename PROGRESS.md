@@ -302,9 +302,14 @@
   korunur). Sadece channel_variants(279K)+channel_products(85K) yetim → Phase14 yeniden kurar.
   **Hazırlık:** (1) tam yedek `~/yedekler/reload-oncesi-2026-07-14-1441.dump` (122MB); (2)
   MigrationTool Faz 20 orkestratörü (`dotnet run 20` → 5→6→7→11→12→13→14, ClearAll+Faz1-4 YOK)
-  + channel delete-first. **SIRADAKİ: kullanıcı onaylı kesinti penceresinde `dotnet run 20`
-  koş → doğrula → sonra stok aktarımı (opproductlocations→inv_stocks) ayrı adım.** Detay:
-  `project_legacy_stock_model_2026-07-13.md`.
+  + channel delete-first.
+  **KATALOG RELOAD KOŞULDU + DB DOĞRULANDI — RESTART BEKLİYOR:** 28.651 ürün (+102),
+  329.047 varyant, 205.912 görsel, 228.857 özellik, 3 platform channel_variants 280.749
+  (yetim=0); ürün detayı+ana sayfa origin 200. Faz 1-4 korundu. Yol boyu çözülen: (1) Phase5
+  IsSaleOpen doldurmuyordu → reload sonrası tüm ürün kapalı → düzeltildi + UPDATE (26.862 açık);
+  (2) Phase11 erp bayat → çöktü → **erp ERTELENDİ** (kritik değil). ⚠️ DOĞRULA: görsel 205.912
+  (öncesi ~318K — dedup mu?). **SIRADAKİ: (a) kullanıcı `sudo systemctl restart ecspros`
+  (cache temizliği); (b) stok aktarımı.** Detay: `project_legacy_stock_model_2026-07-13.md`.
 
 - **2026-07-14 — Satış görünürlüğü M1 TAMAM (commit e713ddd) — RESTART BEKLİYOR:**
   "Ürün listede var ama detay 404" hatası → 3 katmanlı satış modelinin Katman 1'i uygulandı.
