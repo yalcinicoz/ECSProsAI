@@ -12,7 +12,7 @@ namespace ECSPros.Api.Controllers;
 
 [ApiController]
 [Route("api/store/catalog")]
-public class StoreCatalogController(IMediator mediator) : ControllerBase
+public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.IStoreContext storeContext) : ControllerBase
 {
     /// <summary>Ürün grubu ürünlerini listeler (alt gruplar dahil).</summary>
     [HttpGet("product-groups/{id:guid}/products")]
@@ -83,8 +83,10 @@ public class StoreCatalogController(IMediator mediator) : ControllerBase
         [FromQuery] string? sort = null,
         CancellationToken ct = default)
     {
+        var platform = await storeContext.GetPlatformAsync(ct);
         var result = await mediator.Send(new GetChannelCategoryProductsQuery(
-            id, page, pageSize, search, ParseGuids(attrs), priceMin, priceMax, sort), ct);
+            id, page, pageSize, search, ParseGuids(attrs), priceMin, priceMax, sort,
+            platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }

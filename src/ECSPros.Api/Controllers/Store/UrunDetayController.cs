@@ -101,15 +101,12 @@ public class UrunDetayController(IMediator mediator, IStoreContext storeContext,
                                  && a.AttributeTypeCode != renkTipKodu
                                  && a.AttributeTypeCode is not ("renk" or "filtre_rengi"));
 
-        // B12: platform anahtarı açıkken satılabilirlik gerçek stoktan okunur;
-        // kapalıyken (varsayılan — bugünkü veri durumu) hiç sorgulanmaz, hepsi satılabilir.
+        // 2026-07-14: stok HER ZAMAN dikkate alınır — satılabilirlik gerçek online stoktan
+        // (satışa-açık kısımlar). Beden bazında Tükendi/sepet gating buradan beslenir.
         var stoklar = new Dictionary<Guid, int>();
-        if (platform.StokKontrolu)
-        {
-            foreach (var v in havuz)
-                stoklar[v.Id] = await stockService.GetAvailableStockAsync(v.Id, null, ct);
-        }
-        bool Satilabilir(Guid variantId) => !platform.StokKontrolu || stoklar.GetValueOrDefault(variantId) > 0;
+        foreach (var v in havuz)
+            stoklar[v.Id] = await stockService.GetAvailableStockAsync(v.Id, null, ct);
+        bool Satilabilir(Guid variantId) => stoklar.GetValueOrDefault(variantId) > 0;
 
         var bedenler = new List<BedenSecenekVm>();
         if (bedenTip is not null)

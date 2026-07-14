@@ -66,10 +66,12 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         // B10: nav arama paneli "kategoride ara" kapsam butonunu bu bağlamla gösterir
         ViewData["MsAktifKategori"] = kategori;
 
+        var platform = await storeContext.GetPlatformAsync(ct);
         var arama = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
         var urunler = await mediator.Send(new GetChannelCategoryProductsQuery(
             kategori.Id, 1, SayfaBoyu,
-            arama, filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax, filtre.Sort), ct);
+            arama, filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax, filtre.Sort,
+            platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih), ct);
         if (urunler.IsFailure)
             return NotFound();
 
