@@ -2052,7 +2052,7 @@
                 return t ? { Authorization: "Bearer " + t } : {};
             };
 
-            const kapat = () => { modal.setAttribute("aria-hidden", "true"); document.body.style.overflow = ""; };
+            const kapat = () => { modal.classList.remove("ms-ornek-modal-acik"); modal.setAttribute("aria-hidden", "true"); document.body.style.overflow = ""; };
             modal.querySelectorAll("[data-ms-stok-haber-kapat]").forEach((x) => x.addEventListener("click", kapat));
 
             const ac = (secilecekAd) => {
@@ -2087,6 +2087,10 @@
                     seciliVaryantId = stoksuzTek.id;
                     gonderBtn.disabled = false;
                 }
+                // .ms-ornek-modal varsayılan display:none — görünürlük ms-ornek-modal-acik ile
+                // gelir (diğer modallarla aynı). Bu sınıf eklenmezse modal görünmez ama body
+                // scroll'u kilitli kalır → sayfa kaydırılamaz (stoğu tükenmiş renk detayında yaşandı).
+                modal.classList.add("ms-ornek-modal-acik");
                 modal.setAttribute("aria-hidden", "false");
                 document.body.style.overflow = "hidden";
             };
