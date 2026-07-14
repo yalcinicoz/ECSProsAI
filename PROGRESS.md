@@ -302,8 +302,10 @@
   StoreContext.StokBitenGoster/Tarih + GetChannelCategoryProductsQuery filtresi (cache v3) +
   admin ChannelsPage 'Stok Görünürlüğü' bölümü. Doğrulama: kadin-elbise 3098→1505 (kapalı),
   show-on(2025+) 1754. **KALAN Sıra 2:** ürün detayı beden-gating (Tükendi/sepet engeli) +
-  'gelince haber ver' popup (tüm-tükendi açılışta + beden bazında). Ayrıca: GetStoreProducts
-  (arama) + facet/grup listelerine de aynı stok filtresi (tutarlılık) — Sıra 1.5. Detay:
+  'gelince haber ver' popup (tüm-tükendi açılışta + beden bazında). Sıra 1.5 TAMAM
+  (commit 8bad0e0): arama (GetStoreProducts, ApplyStockFilter bayrağı — vitrin/bildirim hariç) +
+  arama/kategori facet'leri + grup listesi de aynı stok filtresini uygular; controller'lar platform
+  ayarını geçirir; izole: arama 7.133 stoklu. Detay:
   `project_sale_visibility_model_2026-07-14.md`.
 
 - **2026-07-14 — STOK AKTARIMI için KATALOG RELOAD hazırlığı TAMAM, YIKICI ADIM BEKLİYOR
