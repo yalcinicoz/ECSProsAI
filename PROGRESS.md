@@ -313,8 +313,10 @@
   toplam 277.879 adet, rezerv 1.207) + 1.207 rezervasyon (LegacyReferenceId'li); atlanan 447 adet
   (%0.16). Depo: Merkez 240.363/Mağaza 30.467/Ayakkabı 7.049. Şema additive (SectionId/BinId/
   LegacyReferenceId), handler cutover ERTELENDİ (stok kontrolü kapalı, redeploy gerekmez).
-  **KALAN:** (a) handler cutover (8 handler kısım-duyarlı + inv_stocks eski şekli emekli) — stok
-  kontrolü açılırken; (b) erp_variant_data (Phase11) entegrasyon-şeması düzeltmesi; (c) satış
+  **HANDLER CUTOVER TAMAM (commit 5b4d0ea) — RESTART BEKLİYOR:** StockOps + tüm handler'lar
+  (variant,BinId) yapısına geçti; online satılabilir = satışa-açık kısımlar (doğrulama: 275.170
+  = 276.672 − İade/Defo/Bağış 1.502); eski unique index düşürüldü. Stok kontrolü kapalı → canlı etkisi yok.
+  **KALAN:** (b) erp_variant_data (Phase11) entegrasyon-şeması düzeltmesi; (c) satış
   görünürlüğü M2/M3 (kanal seçimi/durdurma). Yedek: reload-oncesi-2026-07-14-1441.dump.
   Detay: `project_legacy_stock_model_2026-07-13.md`.
 
