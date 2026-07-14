@@ -308,11 +308,24 @@
   - **DOKUNULMADI (bilinçli — cutover işi):** Stock/StockReservation/StockMovement şekli,
     event handler'lar, inv_stocks'un VariantId+BinId'ye inişi, satışa-açıklığın
     Warehouse→Section'a taşınması, eski inv_warehouse_locations'ın emekliye ayrılması.
+  - **MigrationTool Faz 16 TAMAM (2026-07-14) — DEPO YAPISI aktarımı (yapı; stok MİKTARI
+    değil):** `Phase16_WarehouseStructure` — 3 depo (Merkez IsCentral/D012, Mağaza M002,
+    Ayakkabı M004) + dfstorages→kısımlar (onaylı kod eşlemesi; yalnız stoklu+eşlenen) +
+    stoklu dfstorageunits→raflar. **Canlı sonuç:** 3 depo, **15 kısım** (İade/Defo/Bağış
+    IsSellableOnline=false, katlar+reyonlar=true — doğrulandı), **13.541 raf**. Stok
+    dağılımı READ-ONLY raporlandı: 276.696 fiziksel adet, **tamamı eşlenen kısımlarda,
+    düşen=0** (Tekkeköy TD + Güngören + boş WEBDEPO bölümleri ŞU AN stoksuz — analizdeki
+    "Tekkeköy 13 raf" artık boş; canlı drift). Rezerv ~1.573 (drift; analiz 1.853). Yeni
+    boş tablolara + 3 yeni koda yazdı (mevcut demo depolar DEPO-01/merkez korundu).
+  - **⚠️ Faz 16 stok MİKTARI + rezerv YAZMADI (bilinçli):** inv_stocks'un VariantId+BinId'ye
+    yeniden şekillenmesine (cutover — 8 handler + 249 demo satır etkiler) bağlı. Kod stok
+    dağılımını yalnız raporluyor. Ayrıca tam sayısal aktarım katalog reload'a bağlı
+    (45 eksik ürün → variantMap). Miktar/rezerv yazımı cutover adımında yapılacak.
   - **SIRADAKİ (kullanıcı girdisi/karar bekler):** (1) admin Depo/Kısım/Birim ekranları —
-    **K16 gereği başlamadan ekran kurgusu konuşulacak**; (2) MigrationTool Faz 16 (eski
-    opproductlocations → yeni yapı, GROUP BY variant+raf, rezervler LegacyReferenceId'li);
-    (3) handler cutover + tam katalog reload — deploy penceresi ister. Bu commit'te
-    yalnız veri modeli temeli var; henüz kullanılan bir yüzey yok.
+    **K16 gereği başlamadan ekran kurgusu konuşulacak**; (2) handler cutover: inv_stocks
+    reshape (BinId/SectionId + yeni unique index) + 8 handler kısım-duyarlı + Faz 16 stok
+    miktarı/rezerv yazımı + satışa-açıklığın Warehouse→Section'a taşınması — deploy penceresi;
+    (3) tam katalog reload (45 ürün) + nihai stok aktarımı doğrulaması.
   - Detay/kararlar: hafıza `project_legacy_stock_model_2026-07-13.md` +
     `docs/stok-aktarimi-analizi-2026-07-13.md`.
 
