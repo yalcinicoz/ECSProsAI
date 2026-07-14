@@ -370,6 +370,7 @@ static class Migration
             {
                 newId, groupId, kod, I18n(ad), satisFiyati,
                 alisFiyati == 0m ? null : (object)alisFiyati, kdv, isActive,
+                isActive,   // IsSaleOpen = isActive (M1 backfill'le tutarlı; satisaAcik değer-migration'ı ayrı karar)
                 string.IsNullOrEmpty(tedUrunKod) ? null : (object)tedUrunKod,
                 null, "[]", created, (object?)updated, false
             });
@@ -401,9 +402,9 @@ static class Migration
 
     static readonly string[] ProductCols =
         { "Id", "ProductGroupId", "Code", "NameI18n", "BasePrice", "BaseCost", "TaxRate",
-          "IsActive", "SupplierProductCode", "Slug", "Tags", "CreatedAt", "UpdatedAt", "IsDeleted" };
+          "IsActive", "IsSaleOpen", "SupplierProductCode", "Slug", "Tags", "CreatedAt", "UpdatedAt", "IsDeleted" };
     static readonly string?[] ProductCasts =
-        { null, null, null, "jsonb", null, null, null, null, null, null, "jsonb", null, null, null };
+        { null, null, null, "jsonb", null, null, null, null, null, null, null, "jsonb", null, null, null };
 
     static void FlushProducts(List<object?[]> batch) => PgBatchInsert($"{CAT}.products", ProductCols, ProductCasts, batch);
 
