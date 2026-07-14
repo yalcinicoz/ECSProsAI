@@ -301,8 +301,10 @@
   CreatedAt >= eşik ise gösterir. InStockProductProvider (raw-SQL, IMemoryCache 2dk) +
   StoreContext.StokBitenGoster/Tarih + GetChannelCategoryProductsQuery filtresi (cache v3) +
   admin ChannelsPage 'Stok Görünürlüğü' bölümü. Doğrulama: kadin-elbise 3098→1505 (kapalı),
-  show-on(2025+) 1754. **KALAN Sıra 2:** ürün detayı beden-gating (Tükendi/sepet engeli) +
-  'gelince haber ver' popup (tüm-tükendi açılışta + beden bazında). Sıra 1.5 TAMAM
+  show-on(2025+) 1754. **STOK GÖRÜNÜRLÜĞÜ TAMAM (Sıra 2, commit 0e148ae):** stoğu biten ürün
+  detayla/linkle erişilebilir (301 yok) ama alınamaz; tükenen beden 'Tükendi'; tüm bedenler
+  tükendiyse açılışta 'gelince haber ver' popup (beden seçimli), tükenen bedene tıklayınca notify
+  popup; üye→POST stock-alerts/misafir→giriş modalı; headless doğrulandı. Sıra 1+1.5+2 bitti. Sıra 1.5 TAMAM
   (commit 8bad0e0): arama (GetStoreProducts, ApplyStockFilter bayrağı — vitrin/bildirim hariç) +
   arama/kategori facet'leri + grup listesi de aynı stok filtresini uygular; controller'lar platform
   ayarını geçirir; izole: arama 7.133 stoklu. Detay:
