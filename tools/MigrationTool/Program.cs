@@ -65,6 +65,7 @@ static class Migration
         if (phase == 14) await Phase14_FirmsAndChannelData();
         if (phase == 15) await Phase15_SeedChannelCategories(Guid.Parse(args[1]));
         if (phase == 16) await Phase16_WarehouseStructure();
+        if (phase == 20) await RunCatalogReload();
 
         Log("=== Migration tamamlandı! ===");
         Log($"  image_sets                  : {PgCount($"{DEF}.image_sets")}");
@@ -1042,6 +1043,28 @@ static class Migration
     }
 
     // ─── DB HELPERS ──────────────────────────────────────────────────────────
+    // ── Faz 20: GÜVENLİ KATALOG RELOAD ORKESTRATÖRÜ (tek komut) ───────────────────
+    // Kataloğu (ürün/varyant/görsel) yeniden yükler; eksik ürünleri (yeniurunkodlari)
+    // katar; tüm katalog GUID'leri yenilenir. ClearAll ÇAĞIRMAZ ve Faz 1–4'ü (image_sets/
+    // attribute_types/values/product_groups) çalıştırmaz — böylece grup/özellik GUID'leri
+    // ve bunlara bağlı kanal kategori filtre kuralları KORUNUR. Firma/platform da korunur
+    // (Phase14 upsert). Fazlar haritalarını mevcut DB'den (Ensure*) kurduğundan tek process'te
+    // sıralı koşabilirler. Phase14 artık gerçek platformların eski channel verisini de siler.
+    // Stok aktarımı BUNA DAHİL DEĞİL — reload doğrulandıktan sonra ayrı adımda koşulur.
+    static async Task RunCatalogReload()
+    {
+        Log("╔══ FAZ 20: GÜVENLİ KATALOG RELOAD ══╗");
+        Log("  (ClearAll YOK; Faz 1–4 YOK — gruplar/özellikler/kategori kuralları korunur)");
+        await Phase5_Products();
+        await Phase6_Variants();
+        await Phase7_Images();
+        await Phase11_ErpVariantData();
+        await Phase12_ProductSpecs(null);
+        await Phase13_ProductAttributeValues(null);
+        await Phase14_FirmsAndChannelData();
+        Log("╚══ FAZ 20 tamamlandı — doğrulama sonrası stok aktarımı ayrı koşulur ══╝");
+    }
+
     // ── Faz 16: Depo yapısı (üçlü: Depo → Kısım → Birim/Raf) ──────────────────────
     // Eski juludedb: dfstorages (38 "depo") = yeni KISIM; dfstorageunits (124K raf) = yeni BİRİM;
     // gerçek stok opproductlocations (1 satır = 1 fiziksel adet). Onaylanan tasarım (2026-07-14):
@@ -2001,6 +2024,14 @@ static class Migration
     static void MigrateChannelDataForPlatform(int legacyPlatformId, Guid firmPlatformId)
     {
         Log($"  Platform {legacyPlatformId} → ürün/varyant fiyat+durum aktarımı...");
+
+        // Reload sonrası katalog GUID'leri değiştiğinden bu platformun MEVCUT channel_variants/
+        // channel_products'ı YETİM kalır (eski VariantId/ProductId'lere bağlı). Upsert yeni
+        // GUID'leri ekler ama eskiyi TEMİZLEMEZ → önce bu platformun kaydını sil, sonra yeniden
+        // kur. (Bilinen kayıp: admin'in channel_products'ta ayarladığı Featured/NameI18n
+        // override'ları — zaten ProductId GUID'i değiştiği için kaçınılmaz.)
+        PgExec("DELETE FROM storefront.channel_variants WHERE \"FirmPlatformId\" = @fp", ("fp", firmPlatformId));
+        PgExec("DELETE FROM storefront.channel_products WHERE \"FirmPlatformId\" = @fp", ("fp", firmPlatformId));
 
         var seenProducts = new HashSet<Guid>();
         var variantBatch = new List<(Guid variantId, decimal? price, decimal? compareAt, bool isActive)>();
