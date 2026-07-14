@@ -7,44 +7,31 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Inventory.Application.Commands.AdjustStock;
 
-public class AdjustStockCommandHandler : IRequestHandler<AdjustStockCommand, Result<Guid>>
+// Cutover (2026-07-14): elle stok düzeltmesi depo seviyesinde (StockOps ile raflara yansır).
+// + delta → deponun rafına eklenir; − delta → deponun raflarından düşülür (negatife düşemez).
+// NOT: belirli bir rafa düzeltme ileride BinId parametresiyle eklenebilir (komut+admin UI işi).
+public class AdjustStockCommandHandler(IInventoryDbContext context, IPublisher publisher)
+    : IRequestHandler<AdjustStockCommand, Result<Guid>>
 {
-    private readonly IInventoryDbContext _context;
-    private readonly IPublisher _publisher;
-
-    public AdjustStockCommandHandler(IInventoryDbContext context, IPublisher publisher)
-    {
-        _context = context;
-        _publisher = publisher;
-    }
-
     public async Task<Result<Guid>> Handle(AdjustStockCommand request, CancellationToken cancellationToken)
     {
-        var warehouseExists = await _context.Warehouses.AnyAsync(w => w.Id == request.WarehouseId, cancellationToken);
+        var warehouseExists = await context.Warehouses.AnyAsync(w => w.Id == request.WarehouseId, cancellationToken);
         if (!warehouseExists)
             return Result.Failure<Guid>("Depo bulunamadı.");
 
-        var stock = await _context.Stocks.FirstOrDefaultAsync(
-            s => s.VariantId == request.VariantId && s.WarehouseId == request.WarehouseId,
-            cancellationToken);
-
-        if (stock == null)
+        if (request.QuantityDelta < 0)
         {
-            stock = new Stock
-            {
-                VariantId = request.VariantId,
-                WarehouseId = request.WarehouseId,
-                Quantity = 0,
-                ReservedQuantity = 0
-            };
-            _context.Stocks.Add(stock);
+            var mevcut = await context.Stocks
+                .Where(s => s.VariantId == request.VariantId && s.WarehouseId == request.WarehouseId)
+                .SumAsync(s => (int?)s.Quantity, cancellationToken) ?? 0;
+            if (mevcut + request.QuantityDelta < 0)
+                return Result.Failure<Guid>("Stok miktarı negatife düşemez.");
+            await StockOps.ConsumeAsync(context, request.VariantId, request.WarehouseId, -request.QuantityDelta, cancellationToken);
         }
-
-        var newQuantity = stock.Quantity + request.QuantityDelta;
-        if (newQuantity < 0)
-            return Result.Failure<Guid>("Stok miktarı negatife düşemez.");
-
-        stock.Quantity = newQuantity;
+        else if (request.QuantityDelta > 0)
+        {
+            await StockOps.ReceiveAsync(context, request.VariantId, request.WarehouseId, request.QuantityDelta, preferReturns: false, cancellationToken);
+        }
 
         var movement = new StockMovement
         {
@@ -56,13 +43,11 @@ public class AdjustStockCommandHandler : IRequestHandler<AdjustStockCommand, Res
             Notes = request.Notes,
             CreatedBy = request.CreatedBy
         };
+        context.StockMovements.Add(movement);
+        await context.SaveChangesAsync(cancellationToken);
 
-        _context.StockMovements.Add(movement);
-        await _context.SaveChangesAsync(cancellationToken);
-
-        // H8: stok girişi — "stok gelince haber ver" tüketicisi dinler (kayıttan sonra).
         if (request.QuantityDelta > 0)
-            await _publisher.Publish(new StockIncreasedEvent([request.VariantId]), cancellationToken);
+            await publisher.Publish(new StockIncreasedEvent([request.VariantId]), cancellationToken);
 
         return Result.Success(movement.Id);
     }

@@ -79,8 +79,9 @@ public class StockConfiguration : IEntityTypeConfiguration<Stock>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.StockType).HasMaxLength(20).IsRequired();
         builder.Ignore(x => x.AvailableQuantity);
-        builder.HasIndex(x => new { x.VariantId, x.WarehouseId, x.LocationId, x.StockType }).IsUnique();
-        // Yeni şekil (üçlü depo): varyant+raf başına tek satır. Kısmi (BinId dolu) unique.
+        // Cutover (2026-07-14): eski (VariantId,WarehouseId,LocationId,StockType) unique index
+        // KALDIRILDI — yeni şekil (VariantId,BinId) kısmi unique tarafından geçersiz kılındı.
+        // (LocationId eski yapıdan kalan; yeni satırlarda hep null.)
         builder.HasIndex(x => new { x.VariantId, x.BinId }).IsUnique().HasFilter("\"BinId\" IS NOT NULL");
         builder.HasQueryFilter(x => !x.IsDeleted);
 

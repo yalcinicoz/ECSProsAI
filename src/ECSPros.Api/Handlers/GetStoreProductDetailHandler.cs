@@ -96,12 +96,15 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
             .Select(i => new StoreVariantImageDto(i.Id, cdnBase + i.FileName, i.SortOrder, i.IsProductCover))
             .ToList();
 
-        // Stok
+        // Stok — cutover (2026-07-14): yalnız satışa-AÇIK kısımların (aktif depo) serbest stoğu.
         var stockByVariant = activeVariantIds.Count > 0
-            ? await invDb.Stocks.AsNoTracking()
-                .Where(s => activeVariantIds.Contains(s.VariantId))
-                .GroupBy(s => s.VariantId)
-                .Select(g => new { VariantId = g.Key, Total = g.Sum(s => s.Quantity - s.ReservedQuantity) })
+            ? await (from s in invDb.Stocks.AsNoTracking()
+                     where activeVariantIds.Contains(s.VariantId) && s.BinId != null
+                     join sec in invDb.WarehouseSections on s.SectionId equals sec.Id
+                     join w in invDb.Warehouses on s.WarehouseId equals w.Id
+                     where sec.IsSellableOnline && w.IsActive
+                     group (s.Quantity - s.ReservedQuantity) by s.VariantId into g
+                     select new { VariantId = g.Key, Total = g.Sum() })
                 .ToDictionaryAsync(x => x.VariantId, x => x.Total, ct)
             : new Dictionary<Guid, int>();
 
