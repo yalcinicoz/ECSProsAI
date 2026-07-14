@@ -80,6 +80,8 @@ public class StockConfiguration : IEntityTypeConfiguration<Stock>
         builder.Property(x => x.StockType).HasMaxLength(20).IsRequired();
         builder.Ignore(x => x.AvailableQuantity);
         builder.HasIndex(x => new { x.VariantId, x.WarehouseId, x.LocationId, x.StockType }).IsUnique();
+        // Yeni şekil (üçlü depo): varyant+raf başına tek satır. Kısmi (BinId dolu) unique.
+        builder.HasIndex(x => new { x.VariantId, x.BinId }).IsUnique().HasFilter("\"BinId\" IS NOT NULL");
         builder.HasQueryFilter(x => !x.IsDeleted);
 
         builder.HasOne(x => x.Location).WithMany().HasForeignKey(x => x.LocationId).IsRequired(false);

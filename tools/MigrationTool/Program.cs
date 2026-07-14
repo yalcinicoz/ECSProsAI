@@ -1168,6 +1168,7 @@ static class Migration
         // 6) Kısımlar — yalnız eşlenen VE ≥1 stoklu rafı olan dfstorages
         var stockedStorageIds = units.Values.Select(u => u.StorageId).ToHashSet();
         var sectionId = new Dictionary<int, Guid>(); // storageId → yeni section Id
+        var sectionWarehouse = new Dictionary<int, Guid>(); // storageId → depo GUID (stok denormalizasyonu için)
         int sectionCount = 0;
         foreach (var (sid, s) in storages)
         {
@@ -1175,6 +1176,7 @@ static class Migration
             if (!sectionMap.TryGetValue(s.Code, out var m)) continue;  // eşlenmeyen (Tekkeköy/Güngören/...) atlanır
             var id = NewId();
             sectionId[sid] = id;
+            sectionWarehouse[sid] = whId[m.Wh];
             PgExec(@"INSERT INTO inventory.inv_warehouse_sections
                 (""Id"",""WarehouseId"",""Code"",""Name"",""IsSellableOnline"",""PickingOrder"",
                  ""IsActive"",""SortOrder"",""CreatedAt"",""IsDeleted"")
@@ -1190,6 +1192,7 @@ static class Migration
         var binRows = new List<object?[]>();
         var seenCode = new HashSet<string>();   // sectionId|code
         var seenBarcode = new HashSet<string>();
+        var binByUnit = new Dictionary<int, (Guid Bin, Guid Section, Guid Warehouse)>(); // stok için: unitId → yeni raf/kısım/depo
         int binCount = 0;
         foreach (var (uid, u) in units)
         {
@@ -1198,7 +1201,9 @@ static class Migration
             if (!seenCode.Add(secId + "|" + code.ToLowerInvariant())) code = $"{code}-{uid}";
             string barcode = string.IsNullOrEmpty(u.Barcode) ? $"AUTO-{uid}" : u.Barcode;
             if (!seenBarcode.Add(barcode.ToLowerInvariant())) barcode = $"{barcode}-{uid}";
-            binRows.Add(new object?[] { NewId(), secId, code, barcode, DBNull.Value, 0, true, 0, Now, false });
+            var binId = NewId();
+            binByUnit[uid] = (binId, secId, sectionWarehouse[u.StorageId]);
+            binRows.Add(new object?[] { binId, secId, code, barcode, DBNull.Value, 0, true, 0, Now, false });
             binCount++;
             if (binRows.Count >= 500)
             {
@@ -1213,28 +1218,61 @@ static class Migration
             new string?[] { null, null, null, null, null, null, null, null, null, null }, binRows);
         Log($"  ✓ {binCount} raf (birim).");
 
-        // 8) Stok dağılımı raporu (READ-ONLY — inv_stocks'a yazılmaz; miktar/rezerv cutover'da)
-        //    Kısım bazında adet + eşlenen/düşen ayrımı. Düşen = stoklu ama taşınmayan kısımlar.
-        long tasinanAdet = 0, dusenAdet = 0, tasinanRezerv = 0;
-        var dusenKisimlar = new Dictionary<string, long>(); // storage code → adet
-        foreach (var (uid, adet) in unitStock)
-        {
-            if (!units.TryGetValue(uid, out var u)) { dusenAdet += adet; continue; }
-            bool tasindi = sectionId.ContainsKey(u.StorageId);
-            if (tasindi) { tasinanAdet += adet; tasinanRezerv += unitReserved.GetValueOrDefault(uid); }
-            else
+        // 8) STOK MİKTARI + REZERVLER: opproductlocations → inv_stocks (varyant+raf başına adet).
+        //    1 satır = 1 fiziksel adet; transactionDetailId dolu = rezerve. Handler cutover
+        //    ERTELENDİ (kullanıcı kararı) — yalnız VERİ yazılır; mevcut handler'lara dokunulmaz.
+        EnsureVariantMap();
+        Log("  Stok aktarımı: opproductlocations → inv_stocks...");
+
+        // Temizle (reload sonrası eski/demo inv_stocks yetim; rezerv FK'si önce silinir)
+        PgExec("DELETE FROM inventory.inv_stock_reservations");
+        PgExec("DELETE FROM inventory.inv_stocks");
+
+        string[] stockCols = { "Id", "VariantId", "WarehouseId", "LocationId", "SectionId", "BinId", "StockType", "Quantity", "ReservedQuantity", "CreatedAt", "IsDeleted" };
+        var stockByVarBin = new Dictionary<(Guid v, Guid b), Guid>();
+        var stockRows = new List<object?[]>();
+        long yazilanAdet = 0, yazilanRezerv = 0; int stokSatir = 0, atlananAdet = 0;
+        using (var r = MysqlQuery(
+            "SELECT productVariantId, storageUnitId, COUNT(*) AS adet, " +
+            "SUM(CASE WHEN transactionDetailId IS NOT NULL THEN 1 ELSE 0 END) AS rezerv " +
+            "FROM opproductlocations GROUP BY productVariantId, storageUnitId"))
+            while (r.Read())
             {
-                dusenAdet += adet;
-                string code = storages.TryGetValue(u.StorageId, out var s) ? (string.IsNullOrEmpty(s.Code) ? s.Name : s.Code) : $"storage#{u.StorageId}";
-                dusenKisimlar[code] = dusenKisimlar.GetValueOrDefault(code) + adet;
+                int lvid = r.GetInt32(0), luid = r.GetInt32(1);
+                int adet = Convert.ToInt32(r.GetValue(2)), rez = Convert.ToInt32(r.GetValue(3));
+                if (!variantMap.TryGetValue(lvid, out var vg) || !binByUnit.TryGetValue(luid, out var b)) { atlananAdet += adet; continue; }
+                var stockId = NewId();
+                stockByVarBin[(vg, b.Bin)] = stockId;
+                stockRows.Add(new object?[] { stockId, vg, b.Warehouse, DBNull.Value, b.Section, b.Bin, "physical", adet, rez, Now, false });
+                yazilanAdet += adet; yazilanRezerv += rez; stokSatir++;
+                if (stockRows.Count >= 1000) { PgBatchInsert("inventory.inv_stocks", stockCols, new string?[stockCols.Length], stockRows); stockRows.Clear(); }
             }
-        }
-        Log($"  ── Stok dağılımı raporu (yapı aktarıldı; MİKTAR henüz YAZILMADI — cutover) ──");
-        Log($"     Toplam fiziksel adet (opproductlocations) : {toplamAdet}");
-        Log($"     Taşınan kısımlardaki adet                 : {tasinanAdet} (rezerv: {tasinanRezerv})");
-        Log($"     Düşen adet (taşınmayan/dışlanan kısımlar) : {dusenAdet}");
-        foreach (var (code, adet) in dusenKisimlar.OrderByDescending(x => x.Value))
-            Log($"        · {code}: {adet}");
+        PgBatchInsert("inventory.inv_stocks", stockCols, new string?[stockCols.Length], stockRows);
+        Log($"  ✓ {stokSatir} inv_stocks (adet={yazilanAdet}, rezerv={yazilanRezerv}); atlanan adet={atlananAdet} (eşleşmeyen varyant/raf).");
+
+        // Rezervler: (variant, raf, tip, detailId) başına — LegacyReferenceId = eski detailId.
+        string[] resCols = { "Id", "StockId", "VariantId", "WarehouseId", "LocationId", "Quantity", "ReferenceType", "ReferenceId", "LegacyReferenceId", "Status", "CreatedAt", "IsDeleted" };
+        var resRows = new List<object?[]>();
+        int resSatir = 0, resAtlanan = 0;
+        using (var r = MysqlQuery(
+            "SELECT productVariantId, storageUnitId, transactionType, transactionDetailId, COUNT(*) AS adet " +
+            "FROM opproductlocations WHERE transactionDetailId IS NOT NULL " +
+            "GROUP BY productVariantId, storageUnitId, transactionType, transactionDetailId"))
+            while (r.Read())
+            {
+                int lvid = r.GetInt32(0), luid = r.GetInt32(1), ttype = r.GetInt32(2);
+                long detailId = Convert.ToInt64(r.GetValue(3));
+                int adet = Convert.ToInt32(r.GetValue(4));
+                if (!variantMap.TryGetValue(lvid, out var vg) || !binByUnit.TryGetValue(luid, out var b)
+                    || !stockByVarBin.TryGetValue((vg, b.Bin), out var stockId)) { resAtlanan++; continue; }
+                string refType = ttype == 1 ? "legacy_order" : ttype == 2 ? "legacy_pick" : "legacy_other";
+                resRows.Add(new object?[] { NewId(), stockId, vg, b.Warehouse, DBNull.Value, adet, refType, Guid.Empty, detailId, "reserved", Now, false });
+                resSatir++;
+                if (resRows.Count >= 1000) { PgBatchInsert("inventory.inv_stock_reservations", resCols, new string?[resCols.Length], resRows); resRows.Clear(); }
+            }
+        PgBatchInsert("inventory.inv_stock_reservations", resCols, new string?[resCols.Length], resRows);
+        Log($"  ✓ {resSatir} inv_stock_reservations (LegacyReferenceId'li); atlanan={resAtlanan}.");
+        Log($"  ── Stok aktarımı tamamlandı (adet={yazilanAdet}, düşen/eşleşmeyen={atlananAdet}) ──");
 
         return Task.CompletedTask;
     }
