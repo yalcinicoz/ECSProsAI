@@ -12,7 +12,10 @@ public class Product : BaseEntity
     public decimal BasePrice { get; set; } = 0;
     public decimal? BaseCost { get; set; }
     public int TaxRate { get; set; } = 18;
-    public bool IsActive { get; set; } = true;
+    // Global satış anahtarı (Katman 1): ürün TÜM sistemde satışa açık mı. Kapalıysa hiçbir
+    // kanalda satılmaz (kanal ayarları ne olursa olsun). Eski ürün seviyesi IsActive'in
+    // yerini aldı (IsDeleted zaten varlık için yeterli). Yeni ürünlerde varsayılan KAPALI.
+    public bool IsSaleOpen { get; set; } = false;
     public Guid? SupplierId { get; set; }
     public string? SupplierProductCode { get; set; }
     public List<string> Tags { get; set; } = new();

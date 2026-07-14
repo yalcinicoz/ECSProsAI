@@ -49,7 +49,7 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
             BasePrice            = request.BasePrice,
             BaseCost             = request.BaseCost,
             TaxRate              = request.TaxRate,
-            IsActive             = true
+            IsSaleOpen           = false   // yeni ürün varsayılan satışa KAPALI (panelden açılır)
         };
 
         foreach (var v in variants)

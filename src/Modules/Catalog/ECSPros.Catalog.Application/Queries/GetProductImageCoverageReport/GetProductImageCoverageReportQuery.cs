@@ -23,7 +23,7 @@ public class GetProductImageCoverageReportQueryHandler
     {
         var variants = await _db.ProductVariants
             .Include(x => x.Product)
-            .Where(x => x.Product.IsActive)
+            .Where(x => x.Product.IsSaleOpen)
             .Select(x => new { x.Id, x.Sku, x.ProductId, ProductCode = x.Product.Code })
             .ToListAsync(ct);
 

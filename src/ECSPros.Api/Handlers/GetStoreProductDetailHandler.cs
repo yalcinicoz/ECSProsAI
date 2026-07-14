@@ -22,7 +22,7 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
             .AsNoTracking()
             .Include(p => p.Variants).ThenInclude(v => v.VariantAttributes).ThenInclude(va => va.AttributeType)
             .Include(p => p.Variants).ThenInclude(v => v.VariantAttributes).ThenInclude(va => va.AttributeValue)
-            .FirstOrDefaultAsync(p => p.Code == request.ProductCode && p.IsActive, ct);
+            .FirstOrDefaultAsync(p => p.Code == request.ProductCode && p.IsSaleOpen, ct);
 
         if (product is null)
             return Result.Failure<StoreProductDetailDto>("Ürün bulunamadı.");
@@ -172,7 +172,7 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
 
         return Result.Success(new StoreProductDetailDto(
             product.Id, product.Code, product.NameI18n, product.ShortDescriptionI18n,
-            product.IsActive, variants,
+            product.IsSaleOpen, variants,
             product.DescriptionI18n, productAttrs, groupName,
             videos.Count > 0 ? videos : null));
     }

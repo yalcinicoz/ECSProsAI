@@ -46,7 +46,7 @@ public class GetStoreProductGroupProductsQueryHandler(ICatalogDbContext db, ICha
 
         var q = db.Products
             .AsNoTracking()
-            .Where(p => allGroupIds.Contains(p.ProductGroupId) && p.IsActive
+            .Where(p => allGroupIds.Contains(p.ProductGroupId) && p.IsSaleOpen
                      && db.ProductImages.Any(img => img.ProductId == p.Id));
 
         var total = await q.CountAsync(ct);
@@ -79,7 +79,7 @@ public class GetStoreProductGroupProductsQueryHandler(ICatalogDbContext db, ICha
 
             return new StoreGroupProductItemDto(
                 p.Id, p.Code, p.NameI18n, p.ShortDescriptionI18n,
-                mainImage, minPrice, null, p.IsActive);
+                mainImage, minPrice, null, p.IsSaleOpen);
         }).ToList();
 
         var paged = new PagedResult<StoreGroupProductItemDto>(items, total, request.Page, request.PageSize);

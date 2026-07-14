@@ -1621,7 +1621,7 @@ export function ProductDetailPage() {
               <div className="flex items-center flex-wrap gap-2">
                 <h1 className="text-lg font-bold" style={{ color: 'var(--text)' }}>{productName}</h1>
                 <Badge variant={isActive ? 'success' : 'default'}>
-                  {isActive ? 'Aktif' : 'Pasif'}
+                  {isActive ? 'Satışta' : 'Satış Kapalı'}
                 </Badge>
               </div>
               <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>
@@ -1814,11 +1814,11 @@ export function ProductDetailPage() {
             {/* Durum */}
             <div className="card overflow-hidden">
               <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
-                <h3 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Durum</h3>
+                <h3 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Satış Durumu</h3>
               </div>
               <div className="p-4">
                 <Badge variant={isActive ? 'success' : 'danger'}>
-                  {isActive ? 'Aktif' : 'Pasif'}
+                  {isActive ? 'Satışta' : 'Satış Kapalı'}
                 </Badge>
               </div>
             </div>
@@ -1863,7 +1863,7 @@ export function ProductDetailPage() {
                   style={{ border: '1px solid var(--border)', color: 'var(--text-m)' }}
                 >
                   <EyeOff size={12} style={{ color: 'var(--text-s)' }} />
-                  {isActive ? 'Pasife Al' : 'Aktife Al'}
+                  {isActive ? 'Satışı Kapat' : 'Satışa Aç'}
                 </button>
                 <button
                   className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-red-500 transition-colors hover:bg-red-50"
@@ -1906,7 +1906,7 @@ export function ProductDetailPage() {
       <Modal
         open={confirmStatusChange !== null}
         onClose={() => setConfirmStatusChange(null)}
-        title={confirmStatusChange ? 'Ürünü Aktife Al' : 'Ürünü Pasife Al'}
+        title={confirmStatusChange ? 'Ürünü Satışa Aç' : 'Ürünü Satışa Kapat'}
         size="sm"
         footer={
           <>
@@ -1915,13 +1915,13 @@ export function ProductDetailPage() {
               variant={confirmStatusChange ? 'primary' : 'danger'}
               onClick={() => { const t = confirmStatusChange!; setConfirmStatusChange(null); handleSetActive(t) }}
             >
-              {confirmStatusChange ? 'Aktife Al' : 'Pasife Al'}
+              {confirmStatusChange ? 'Satışa Aç' : 'Satışı Kapat'}
             </Button>
           </>
         }
       >
         <p className="text-sm" style={{ color: 'var(--text)' }}>
-          <strong>{productName}</strong> ürünü {confirmStatusChange ? 'aktife alınacak ve yayınlanacak' : 'pasife alınacak ve yayından kaldırılacak'}. Emin misiniz?
+          <strong>{productName}</strong> ürünü {confirmStatusChange ? 'satışa açılacak (tüm kanallarda)' : 'satışa kapatılacak — tüm satış kanallarında satışı durur'}. Emin misiniz?
         </p>
       </Modal>
 

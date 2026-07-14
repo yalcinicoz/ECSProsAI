@@ -54,12 +54,23 @@ public record AcceptedContract(
     [property: System.Text.Json.Serialization.JsonPropertyName("acceptedAt")] DateTime AcceptedAt,
     [property: System.Text.Json.Serialization.JsonPropertyName("contentUpdatedAt")] DateTime? ContentUpdatedAt);
 
-public class CheckoutCommandHandler(IOrderDbContext db) : IRequestHandler<CheckoutCommand, Result<Guid>>
+public class CheckoutCommandHandler(IOrderDbContext db, ECSPros.Shared.Contracts.IProductService productService)
+    : IRequestHandler<CheckoutCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(CheckoutCommand request, CancellationToken ct)
     {
         if (!request.Items.Any())
             return Result.Failure<Guid>("Sepet boş.");
+
+        // Katman 1 (global satış anahtarı): satışa kapalı ürün SATILAMAZ — kanal ayarları ne
+        // olursa olsun. ProductInfo.IsActive = varyant aktif VE ürün IsSaleOpen. Kapalı ürün
+        // sepette kalmışsa (kapatılmadan önce eklenmiş) sipariş oluşturulmaz.
+        foreach (var item in request.Items)
+        {
+            var bilgi = await productService.GetVariantAsync(item.VariantId, ct);
+            if (bilgi is null || !bilgi.IsActive)
+                return Result.Failure<Guid>($"'{item.ProductName}' şu an satışa kapalı; siparişi tamamlamak için sepetten çıkarın.");
+        }
 
         var orderNumber = $"ORD-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 

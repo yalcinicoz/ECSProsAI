@@ -473,7 +473,7 @@ public static class TestDataSeeder
                 BasePrice           = basePrice,
                 BaseCost            = baseCost,
                 TaxRate             = taxRate,
-                IsActive            = true,
+                IsSaleOpen          = true,
             };
             db.Products.Add(product);
             await db.SaveChangesAsync();
@@ -664,7 +664,7 @@ public static class TestDataSeeder
             BasePrice           = 1799.90m,
             BaseCost            = 539.90m,
             TaxRate             = 18,
-            IsActive            = true,
+            IsSaleOpen          = true,
         };
         db.Products.Add(canta);
         await db.SaveChangesAsync();

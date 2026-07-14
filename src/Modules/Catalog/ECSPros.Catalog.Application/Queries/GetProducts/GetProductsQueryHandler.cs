@@ -19,7 +19,7 @@ public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, Result<
         var query = _context.Products.AsQueryable();
 
         if (request.ActiveOnly)
-            query = query.Where(x => x.IsActive);
+            query = query.Where(x => x.IsSaleOpen);
 
         if (request.ProductGroupId.HasValue)
             query = query.Where(x => x.ProductGroupId == request.ProductGroupId);
@@ -38,7 +38,7 @@ public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, Result<
                 x.Code,
                 x.NameI18n,
                 x.ProductGroupId,
-                x.IsActive,
+                x.IsSaleOpen,
                 x.Variants.Count))
             .ToListAsync(cancellationToken);
 
