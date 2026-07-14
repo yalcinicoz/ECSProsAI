@@ -168,6 +168,7 @@ builder.Services.AddScoped<IRealtimeNotificationService, SignalRNotificationServ
 // ─── Storefront (Razor) servisleri ─────────────────────────────────
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IStoreContext, StoreContext>();
+builder.Services.AddScoped<ECSPros.Shared.Contracts.IInStockProductProvider, ECSPros.Api.Services.InStockProductProvider>();
 builder.Services.AddSingleton<ECSPros.Api.Services.IStoreMemberSession, ECSPros.Api.Services.StoreMemberSession>(); // D1: SSR üye kimliği (HttpOnly cookie)
 builder.Services.AddTransient<ECSPros.Crm.Application.Services.ISmsSender, ECSPros.Api.Services.CrmSmsSenderAdapter>(); // D4: OTP SMS köprüsü
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IPageBlockSourceResolver, ECSPros.Api.Services.Store.PageBlockSourceResolver>(); // G3: vitrin ürün/koleksiyon kaynağı motoru

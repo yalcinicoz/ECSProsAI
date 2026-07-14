@@ -38,7 +38,10 @@ public record GetChannelCategoryProductsQuery(
     List<Guid>? AttributeValueIds = null,
     decimal? PriceMin = null,
     decimal? PriceMax = null,
-    string? Sort = null) : IRequest<Result<PagedResult<ChannelCategoryProductItemDto>>>
+    string? Sort = null,
+    // Kanal ayarı: stoğu biten ürünleri listede göster mi + hangi tarihten sonra açılanlar.
+    bool ShowOutOfStock = false,
+    DateTime? OutOfStockSince = null) : IRequest<Result<PagedResult<ChannelCategoryProductItemDto>>>
 {
     public bool FiltreliMi =>
         !string.IsNullOrWhiteSpace(Search)
@@ -72,6 +75,7 @@ public class GetChannelCategoryProductsQueryHandler(
     ICatalogDbContext catDb,
     IStockService stockService,
     IChannelPricingService pricingService,
+    IInStockProductProvider inStock,
     ICacheService cache)
     : IRequestHandler<GetChannelCategoryProductsQuery, Result<PagedResult<ChannelCategoryProductItemDto>>>
 {
@@ -82,7 +86,7 @@ public class GetChannelCategoryProductsQueryHandler(
     // v2: IsSaleOpen (global satış anahtarı) geçidi eklendi — eski binary'nin filtresiz
     // cache'lediği listeler geçersiz kılınsın diye anahtar sürümü artırıldı (TTL beklemeden).
     private static string CacheKey(Guid categoryId, int page, int pageSize) =>
-        $"channelcat:products:v2:{categoryId}:{page}:{pageSize}";
+        $"channelcat:products:v3:{categoryId}:{page}:{pageSize}";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
 
     private async Task<PagedResult<ChannelCategoryProductItemDto>?> TryGetCacheAsync(string key, CancellationToken ct)
@@ -273,7 +277,8 @@ public class GetChannelCategoryProductsQueryHandler(
         CancellationToken ct)
     {
         // 1. Kategorideki tüm ürün ID'leri
-        var allProductIds = await ResolveCategoryProductIds(cat, request.ChannelCategoryId, ct);
+        var allProductIds = await ResolveCategoryProductIds(cat, request.ChannelCategoryId,
+            request.ShowOutOfStock, request.OutOfStockSince, ct);
 
         // B10: "kategoride ara" — kategori kapsamı içinde kod veya Türkçe ad eşleşmesi
         // (GetStoreProducts aramasıyla aynı semantik). Fallback moduna da daralmış liste gider.
@@ -618,7 +623,7 @@ public class GetChannelCategoryProductsQueryHandler(
 
     // Kategorideki tüm ürün ID'lerini dolum tipine göre çözer
     private async Task<List<Guid>> ResolveCategoryProductIds(
-        ChannelCategory cat, Guid channelCategoryId, CancellationToken ct)
+        ChannelCategory cat, Guid channelCategoryId, bool showOutOfStock, DateTime? outOfStockSince, CancellationToken ct)
     {
         List<Guid> ids;
         if (cat.FillType == "manual")
@@ -679,7 +684,25 @@ public class GetChannelCategoryProductsQueryHandler(
         var acikOlanlar = (await catDb.Products.AsNoTracking()
             .Where(p => ids.Contains(p.Id) && p.IsSaleOpen)
             .Select(p => p.Id).ToListAsync(ct)).ToHashSet();
-        return ids.Where(acikOlanlar.Contains).ToList();
+        var salesOpen = ids.Where(acikOlanlar.Contains).ToList();
+
+        // Stok görünürlüğü (2026-07-14): stoğu biten (online serbest = 0) ürün, YALNIZ kanal
+        // "stoğu bitenleri göster" açıksa VE (tarih kısıtı yoksa ya da Product.CreatedAt >= eşik)
+        // listelenir; aksi halde gizlenir. Stoklu ürünler her zaman görünür. Sıra korunur.
+        if (salesOpen.Count == 0) return salesOpen;
+        var inStockSet = await inStock.GetInStockProductIdsAsync(ct);
+        var gosterilecekStoksuz = new HashSet<Guid>();
+        if (showOutOfStock)
+        {
+            var stoksuz = salesOpen.Where(id => !inStockSet.Contains(id)).ToList();
+            if (stoksuz.Count > 0)
+                gosterilecekStoksuz = outOfStockSince is null
+                    ? stoksuz.ToHashSet()
+                    : (await catDb.Products.AsNoTracking()
+                        .Where(p => stoksuz.Contains(p.Id) && p.CreatedAt >= outOfStockSince.Value)
+                        .Select(p => p.Id).ToListAsync(ct)).ToHashSet();
+        }
+        return salesOpen.Where(id => inStockSet.Contains(id) || gosterilecekStoksuz.Contains(id)).ToList();
     }
 
     private async Task<Result<PagedResult<ChannelCategoryProductItemDto>>> HandleModelMode(

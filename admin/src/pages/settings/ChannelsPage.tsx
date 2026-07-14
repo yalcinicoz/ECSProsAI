@@ -160,6 +160,12 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
     target?.priceMultiplier != null ? String(target.priceMultiplier) : ''
   )
   const [isActive, setIsActive] = useState(target?.isActive ?? true)
+  // Stok görünürlüğü (şema-dışı, kanal ayarı): stoğu biten ürünleri listede göster + tarih eşiği.
+  const [showOutOfStock, setShowOutOfStock] = useState(target?.settings?.['showOutOfStock'] === true)
+  const [oosSince, setOosSince] = useState(
+    typeof target?.settings?.['outOfStockVisibleSince'] === 'string'
+      ? String(target.settings['outOfStockVisibleSince']).slice(0, 10) : ''
+  )
   const [fieldValues, setFieldValues] = useState<Record<string, string>>(() => {
     const merged: Record<string, string> = {}
     if (target) {
@@ -186,11 +192,15 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
       const settings: Record<string, unknown> = {}
       // Şema dışı mevcut anahtarlar korunur (stockControlEnabled, tema/domain vb. —
       // backend Settings/Credentials'ı olduğu gibi değiştirir, merge etmez)
+      // Stok görünürlüğü anahtarları burada özel ele alınıyor — genel korumadan hariç tut.
+      const ozelSettings = new Set(['showOutOfStock', 'outOfStockVisibleSince'])
       if (target) {
         const schemaKeys = new Set(schema.map(f => f.key))
         for (const [k, v] of Object.entries(target.credentials ?? {})) if (v != null && !schemaKeys.has(k)) credentials[k] = v
-        for (const [k, v] of Object.entries(target.settings ?? {})) if (v != null && !schemaKeys.has(k)) settings[k] = v
+        for (const [k, v] of Object.entries(target.settings ?? {})) if (v != null && !schemaKeys.has(k) && !ozelSettings.has(k)) settings[k] = v
       }
+      settings['showOutOfStock'] = showOutOfStock
+      if (showOutOfStock && oosSince) settings['outOfStockVisibleSince'] = oosSince
       for (const f of schema) {
         const v = fieldValues[f.key] ?? ''
         if (v) {
@@ -331,6 +341,25 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
           Bu platform tipi için alan şeması tanımlı değil. Platform Tipleri sayfasından şema ekleyebilirsiniz.
         </p>
       )}
+
+      {/* Stok görünürlüğü (kanal ayarı) */}
+      <div className="space-y-3 p-4 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Stok Görünürlüğü</p>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
+            checked={showOutOfStock} onChange={e => setShowOutOfStock(e.target.checked)} />
+          <span className="text-sm" style={{ color: 'var(--text)' }}>Stoğu biten ürünleri listede göster</span>
+        </label>
+        {showOutOfStock && (
+          <div>
+            <label className="flbl">Yalnız bu tarihten sonra açılanlar (boş = tümü)</label>
+            <input type="date" className="inp" value={oosSince} onChange={e => setOosSince(e.target.value)} />
+            <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+              Stoğu biten ürünlerden yalnız stok kartı bu tarihten sonra açılanlar listelenir.
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Active toggle (edit only) */}
       {isEdit && (

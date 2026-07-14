@@ -22,10 +22,13 @@ public sealed record StorePlatformBilgisi(
     string Code,
     string Theme,
     IReadOnlyDictionary<string, string> ThemeTokens,
-    // B12 (stok kararı): Settings."stockControlEnabled" — açıkken satılabilirlik gerçek
-    // stoktan okunur; kapalıyken (varsayılan — bugünkü veri durumu) her şey satılabilir.
-    // Stok verisi dolunca anahtar açılır, kod değişmez.
-    bool StokKontrolu = false);
+    // 2026-07-14: stok artık HER ZAMAN dikkate alınır (eski stockControlEnabled emekli).
+    // Kanal ayarı yalnız "stoğu biten ürünleri listede göster" kuralını yönetir:
+    //   StokBitenGoster (Settings."showOutOfStock") — aç/kapa (müşteri kararı);
+    //   StokBitenGosterTarih (Settings."outOfStockVisibleSince") — yalnız bu tarihten SONRA
+    //   açılmış stok kartlarının (Product.CreatedAt) stoğu bitenleri gösterilir (null = kısıt yok).
+    bool StokBitenGoster = false,
+    DateTime? StokBitenGosterTarih = null);
 
 public sealed class StoreContext(
     ICoreDbContext coreDb,
@@ -75,10 +78,17 @@ public sealed class StoreContext(
                 }
             }
 
-            var stokKontrolu = platform.Settings.TryGetValue("stockControlEnabled", out var stokObj)
-                && stokObj is System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.True };
+            var stokBitenGoster = platform.Settings.TryGetValue("showOutOfStock", out var sbgObj)
+                && sbgObj is System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.True };
 
-            return new StorePlatformBilgisi(platform.Id, platform.Code, tema!, tokenlar, stokKontrolu);
+            DateTime? stokBitenTarih = null;
+            if (platform.Settings.TryGetValue("outOfStockVisibleSince", out var tObj)
+                && tObj is System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.String } te
+                && DateTime.TryParse(te.GetString(), System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var td))
+                stokBitenTarih = td;
+
+            return new StorePlatformBilgisi(platform.Id, platform.Code, tema!, tokenlar, stokBitenGoster, stokBitenTarih);
         });
     }
 }
