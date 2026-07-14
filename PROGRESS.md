@@ -294,6 +294,28 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+- **2026-07-14 — Stok/depo üçlü yapı: TEMEL DİLİM TAMAM (kullanıcı FAZ P sonrası bu işi
+  seçti, additive/güvenli ilk adım):** Yeni entity'ler `WarehouseSection`
+  (`inv_warehouse_sections`: WarehouseId, Code, Name, **IsSellableOnline** yönetim noktası,
+  PickingOrder/IsActive/SortOrder) + `WarehouseBin` (`inv_warehouse_bins`: SectionId, Code,
+  Barcode, Name?; ParentId/LocationType YOK — sadeleşmiş raf) + `Warehouse`'a **IsCentral**
+  + **ErpCode** (mevcut alanlar KORUNDU — IsSellableOnline/WarehouseType/Locations hâlâ
+  yerinde). Config + DbContext + IInventoryDbContext DbSet'leri eklendi. Migration
+  `20260714111509_AddWarehouseSectionsAndBins` **CANLI DB'YE UYGULANDI** (yalnız 2 yeni
+  boş tablo + 2 kolon [ErpCode nullable, IsCentral default false]; 2 depo/100 lokasyona
+  eklemeli, çalışan binary'yi etkilemez — yeni tablolar yok sayılır). Doğrulama: psql ile
+  tablolar + kolonlar mevcut ✓; tam API build 0 hata.
+  - **DOKUNULMADI (bilinçli — cutover işi):** Stock/StockReservation/StockMovement şekli,
+    event handler'lar, inv_stocks'un VariantId+BinId'ye inişi, satışa-açıklığın
+    Warehouse→Section'a taşınması, eski inv_warehouse_locations'ın emekliye ayrılması.
+  - **SIRADAKİ (kullanıcı girdisi/karar bekler):** (1) admin Depo/Kısım/Birim ekranları —
+    **K16 gereği başlamadan ekran kurgusu konuşulacak**; (2) MigrationTool Faz 16 (eski
+    opproductlocations → yeni yapı, GROUP BY variant+raf, rezervler LegacyReferenceId'li);
+    (3) handler cutover + tam katalog reload — deploy penceresi ister. Bu commit'te
+    yalnız veri modeli temeli var; henüz kullanılan bir yüzey yok.
+  - Detay/kararlar: hafıza `project_legacy_stock_model_2026-07-13.md` +
+    `docs/stok-aktarimi-analizi-2026-07-13.md`.
+
 - **2026-07-13 — Stok/depo aktarım analizi — ÖNERİ ONAYLANDI (2026-07-14), kod değişikliği YOK:**
   Eski DB'de gerçek stok `opproductlocations` (1 satır = 1 fiziksel adet; 278.283 adet,
   rezerv: 754 sipariş + 1.099 özel toplama; `stokAdedi` ve `opmagazadepo` aktarım DIŞI —
@@ -404,6 +426,17 @@
     salt-okunur, adresler, son 10 sipariş → sipariş detayı linki, oturumlar — yeni
     sessions endpoint'i) + Üye Grupları CRUD (placeholder'dan gerçeğe). Doğrulama:
     izole 5052 — 3 route 401 ✓, /hesabim 302 + / 200 ✓. Migration yok.
+  - **P5 hata düzeltmesi (2026-07-14, commit 7f76bba):** kullanıcı canlıda "İletişim
+    Mesajları" modal butonu ve "Bildirimler → Şimdi Tara"da `insertBefore: node not a
+    child` React çökmesi bildirdi. İzole headless-tarayıcı testiyle (gerçek router+
+    layout, simüle edilmiş çeviri-uzantısı DOM mutasyonu) doğrulandı: kök neden P5'e
+    özgü değil, paylaşılan `Button.tsx`'in `loading` spinner span'ini koşullu mount
+    etmesiydi (herhangi bir `loading` prop'lu buton risk altındaydı, uzantı DOM'u
+    değiştirdiğinde React'in yeni kardeş düğümü mevcut düğümün önüne eklemesi
+    çöküyordu). Düzeltme: spinner + NotificationsMonitorPage'in scanResult span'i
+    artık her zaman DOM'da, yalnız `display` değişiyor. admin/dist build alındı
+    (restart gerektirmez, nginx statik dosyayı direkt sunuyor). **Kullanıcı canlıda
+    doğruladı (2026-07-14): restart sonrası testler sorunsuz.**
   - **P5 TAMAM (2026-07-14) → P-M3 + FAZ P KAPANDI:** İletişim Mesajları gelen kutusu
     (`/storefront/contact-messages` — Yeni/Okundu/Tümü + platform seçici + arama; mesaj
     modalı, yeni mesaj açılınca otomatik okundu; yeni `GET /api/contact-messages` +

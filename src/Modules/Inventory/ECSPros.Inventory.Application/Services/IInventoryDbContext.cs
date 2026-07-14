@@ -7,6 +7,8 @@ public interface IInventoryDbContext
 {
     DbSet<Warehouse> Warehouses { get; }
     DbSet<WarehouseLocation> WarehouseLocations { get; }
+    DbSet<WarehouseSection> WarehouseSections { get; }
+    DbSet<WarehouseBin> WarehouseBins { get; }
     DbSet<Stock> Stocks { get; }
     DbSet<StockMovement> StockMovements { get; }
     DbSet<StockReservation> StockReservations { get; }

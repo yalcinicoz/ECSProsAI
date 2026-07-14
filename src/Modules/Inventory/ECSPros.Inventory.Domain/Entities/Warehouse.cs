@@ -13,6 +13,14 @@ public class Warehouse : BaseEntity
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; } = 0;
 
+    // Üçlü depo yapısı (onaylanan tasarım 2026-07-14). Cutover'a dek mevcut alanlarla
+    // bir arada durur; satışa-açıklık cutover'da Warehouse'tan Section'a taşınacak.
+    /// <summary>Sipariş konsolidasyonunun yapıldığı tek merkez depo işareti.</summary>
+    public bool IsCentral { get; set; } = false;
+    /// <summary>ERP'nin gördüğü depo kodu (ör. D012) — birden çok fiziki depo tek ERP koduna eşlenebilir.</summary>
+    public string? ErpCode { get; set; }
+
     public ICollection<WarehouseLocation> Locations { get; set; } = new List<WarehouseLocation>();
+    public ICollection<WarehouseSection> Sections { get; set; } = new List<WarehouseSection>();
     public ICollection<Stock> Stocks { get; set; } = new List<Stock>();
 }
