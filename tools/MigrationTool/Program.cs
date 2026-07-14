@@ -64,6 +64,7 @@ static class Migration
         if (phase == 13) await Phase13_ProductAttributeValues(args.Length > 1 ? args[1] : null);
         if (phase == 14) await Phase14_FirmsAndChannelData();
         if (phase == 15) await Phase15_SeedChannelCategories(Guid.Parse(args[1]));
+        if (phase == 16) await Phase16_WarehouseStructure();
 
         Log("=== Migration tamamlandı! ===");
         Log($"  image_sets                  : {PgCount($"{DEF}.image_sets")}");
@@ -1041,6 +1042,179 @@ static class Migration
     }
 
     // ─── DB HELPERS ──────────────────────────────────────────────────────────
+    // ── Faz 16: Depo yapısı (üçlü: Depo → Kısım → Birim/Raf) ──────────────────────
+    // Eski juludedb: dfstorages (38 "depo") = yeni KISIM; dfstorageunits (124K raf) = yeni BİRİM;
+    // gerçek stok opproductlocations (1 satır = 1 fiziksel adet). Onaylanan tasarım (2026-07-14):
+    //   3 fiziki depo — Merkez (IsCentral, D012) / Mağaza (M002) / Ayakkabı (M004).
+    //   Tekkeköy (kod TD) KULLANIM DIŞI → oluşturulmaz (stoklu rafları düşer, raporlanır).
+    //   İade/Defo/Bağış = Merkez'in kısımları, IsSellableOnline=KAPALI başlar; katlar+reyonlar AÇIK.
+    //   Yalnız STOKLU raflar taşınır (opproductlocations'ta geçen storageUnitId'ler).
+    // BU FAZ YALNIZ YAPIYI yazar (inv_warehouses/sections/bins). Stok MİKTARI + rezervler
+    // inv_stocks'un yeniden şekillenmesine (BinId — cutover) bağlı olduğundan burada YAZILMAZ;
+    // yalnız dağılım read-only RAPORLANIR (doğrulama + düşen birim görünürlüğü için).
+    static Task Phase16_WarehouseStructure()
+    {
+        Log("FAZ 16: Depo yapısı (Depo → Kısım → Birim)...");
+
+        // 3 fiziki depo: Code → (Ad, ErpKodu, IsCentral)
+        var warehouses = new (string Code, string Name, string Erp, bool Central)[]
+        {
+            ("MERKEZ",   "Merkez Depo", "D012", true),
+            ("MAGAZA",   "Mağaza",      "M002", false),
+            ("AYAKKABI", "Ayakkabı",    "M004", false),
+        };
+
+        // Eski dfstorages.code → (hedef depo Code, IsSellableOnline). Listede olmayan her
+        // kod bilinçli olarak DIŞARIDA (boş WEBDEPO bölümleri, Tekkeköy TD, Güngören, sanal,
+        // stüdyo, satıcı/kabul/sipariş/çağrı/resimlik/personel/kapalı/pazaryeri...).
+        var sectionMap = new Dictionary<string, (string Wh, bool Sellable)>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Merkez — A/B blok katları + merdiven (satışa açık)
+            ["K0B"] = ("MERKEZ", true), ["K1A"] = ("MERKEZ", true), ["K1B"] = ("MERKEZ", true),
+            ["K2A"] = ("MERKEZ", true), ["K2B"] = ("MERKEZ", true), ["K3A"] = ("MERKEZ", true),
+            ["K3B"] = ("MERKEZ", true), ["K4A"] = ("MERKEZ", true), ["K4B"] = ("MERKEZ", true),
+            ["K5A"] = ("MERKEZ", true), ["K5B"] = ("MERKEZ", true), ["MDA"] = ("MERKEZ", true),
+            // Merkez — iade/defo/bağış kısımları (satışa KAPALI başlar)
+            ["IADE"] = ("MERKEZ", false), ["DEFO"] = ("MERKEZ", false), ["BAGIS"] = ("MERKEZ", false),
+            // Mağaza + Ayakkabı reyonları (satışa açık)
+            ["MR"] = ("MAGAZA", true),
+            ["AR"] = ("AYAKKABI", true),
+        };
+
+        // 1) dfstorages: Id → (code, name, sortOrder)
+        var storages = new Dictionary<int, (string Code, string Name, int Sort)>();
+        using (var r = MysqlQuery("SELECT Id, code, name, sortOrder FROM dfstorages"))
+            while (r.Read())
+                storages[r.GetInt32(0)] = (
+                    r.IsDBNull(1) ? "" : r.GetString(1).Trim(),
+                    r.IsDBNull(2) ? "" : r.GetString(2).Trim(),
+                    r.IsDBNull(3) ? 0 : r.GetInt32(3));
+        Log($"  {storages.Count} dfstorages yüklendi.");
+
+        // 2) Stoklu birimler: storageUnitId → adet (opproductlocations satır sayısı) + rezerv
+        var unitStock = new Dictionary<int, int>();
+        var unitReserved = new Dictionary<int, int>();
+        using (var r = MysqlQuery(
+            "SELECT storageUnitId, COUNT(*) AS adet, " +
+            "SUM(CASE WHEN transactionDetailId IS NOT NULL THEN 1 ELSE 0 END) AS rezerv " +
+            "FROM opproductlocations GROUP BY storageUnitId"))
+            while (r.Read())
+            {
+                int uid = r.GetInt32(0);
+                unitStock[uid] = Convert.ToInt32(r.GetValue(1));
+                unitReserved[uid] = Convert.ToInt32(r.GetValue(2));
+            }
+        long toplamAdet = unitStock.Values.Sum(v => (long)v);
+        Log($"  {unitStock.Count} stoklu raf, toplam {toplamAdet} fiziksel adet (opproductlocations).");
+
+        // 3) Stoklu birimlerin raf bilgisi: unitId → (storageId, barcode, shelfNo)
+        var units = new Dictionary<int, (int StorageId, string Barcode, string ShelfNo)>();
+        using (var r = MysqlQuery(
+            "SELECT u.Id, u.storageId, u.barcode, u.shelfUnitNumber FROM dfstorageunits u " +
+            "WHERE u.Id IN (SELECT DISTINCT storageUnitId FROM opproductlocations)"))
+            while (r.Read())
+                units[r.GetInt32(0)] = (
+                    r.IsDBNull(1) ? 0 : r.GetInt32(1),
+                    r.IsDBNull(2) ? "" : r.GetString(2).Trim(),
+                    r.IsDBNull(3) ? "" : r.GetString(3).Trim());
+        Log($"  {units.Count} stoklu rafın yeri çözüldü.");
+
+        // 4) Hedef temizle (yeni/boş tablolar — GUID'ler yeniden üretilir, henüz referanslayan yok)
+        PgExec("DELETE FROM inventory.inv_warehouse_bins");
+        PgExec("DELETE FROM inventory.inv_warehouse_sections");
+        PgExec("DELETE FROM inventory.inv_warehouses WHERE \"Code\" = ANY(@codes)",
+            ("codes", warehouses.Select(w => w.Code).ToArray()));
+
+        // 5) Depolar
+        var whId = new Dictionary<string, Guid>();
+        foreach (var w in warehouses)
+        {
+            var id = NewId();
+            whId[w.Code] = id;
+            PgExec(@"INSERT INTO inventory.inv_warehouses
+                (""Id"",""Code"",""NameI18n"",""WarehouseType"",""IsSellableOnline"",""ReservePriority"",
+                 ""IsActive"",""SortOrder"",""IsCentral"",""ErpCode"",""CreatedAt"",""IsDeleted"")
+                VALUES (@id,@code,@name::jsonb,@type,TRUE,0,TRUE,@sort,@central,@erp,@now,FALSE)",
+                ("id", id), ("code", w.Code), ("name", I18n(w.Name)),
+                ("type", w.Central ? "depo" : "magaza"),
+                ("sort", Array.IndexOf(warehouses, w)), ("central", w.Central), ("erp", w.Erp), ("now", Now));
+        }
+        Log($"  ✓ {warehouses.Length} depo.");
+
+        // 6) Kısımlar — yalnız eşlenen VE ≥1 stoklu rafı olan dfstorages
+        var stockedStorageIds = units.Values.Select(u => u.StorageId).ToHashSet();
+        var sectionId = new Dictionary<int, Guid>(); // storageId → yeni section Id
+        int sectionCount = 0;
+        foreach (var (sid, s) in storages)
+        {
+            if (!stockedStorageIds.Contains(sid)) continue;            // boş kısım atlanır
+            if (!sectionMap.TryGetValue(s.Code, out var m)) continue;  // eşlenmeyen (Tekkeköy/Güngören/...) atlanır
+            var id = NewId();
+            sectionId[sid] = id;
+            PgExec(@"INSERT INTO inventory.inv_warehouse_sections
+                (""Id"",""WarehouseId"",""Code"",""Name"",""IsSellableOnline"",""PickingOrder"",
+                 ""IsActive"",""SortOrder"",""CreatedAt"",""IsDeleted"")
+                VALUES (@id,@wh,@code,@name,@sell,@pick,TRUE,@sort,@now,FALSE)",
+                ("id", id), ("wh", whId[m.Wh]), ("code", s.Code),
+                ("name", string.IsNullOrEmpty(s.Name) ? s.Code : s.Name),
+                ("sell", m.Sellable), ("pick", s.Sort), ("sort", s.Sort), ("now", Now));
+            sectionCount++;
+        }
+        Log($"  ✓ {sectionCount} kısım (eşlenen + stoklu).");
+
+        // 7) Raflar — stoklu birimler, yalnız taşınan kısımlarda; (SectionId,Code) tekilliği korunur
+        var binRows = new List<object?[]>();
+        var seenCode = new HashSet<string>();   // sectionId|code
+        var seenBarcode = new HashSet<string>();
+        int binCount = 0;
+        foreach (var (uid, u) in units)
+        {
+            if (!sectionId.TryGetValue(u.StorageId, out var secId)) continue; // düşen (Tekkeköy vs.) — 9. adımda raporlanır
+            string code = string.IsNullOrEmpty(u.ShelfNo) ? (string.IsNullOrEmpty(u.Barcode) ? $"AUTO-{uid}" : u.Barcode) : u.ShelfNo;
+            if (!seenCode.Add(secId + "|" + code.ToLowerInvariant())) code = $"{code}-{uid}";
+            string barcode = string.IsNullOrEmpty(u.Barcode) ? $"AUTO-{uid}" : u.Barcode;
+            if (!seenBarcode.Add(barcode.ToLowerInvariant())) barcode = $"{barcode}-{uid}";
+            binRows.Add(new object?[] { NewId(), secId, code, barcode, DBNull.Value, 0, true, 0, Now, false });
+            binCount++;
+            if (binRows.Count >= 500)
+            {
+                PgBatchInsert("inventory.inv_warehouse_bins",
+                    new[] { "Id", "SectionId", "Code", "Barcode", "Name", "PickingOrder", "IsActive", "SortOrder", "CreatedAt", "IsDeleted" },
+                    new string?[] { null, null, null, null, null, null, null, null, null, null }, binRows);
+                binRows.Clear();
+            }
+        }
+        PgBatchInsert("inventory.inv_warehouse_bins",
+            new[] { "Id", "SectionId", "Code", "Barcode", "Name", "PickingOrder", "IsActive", "SortOrder", "CreatedAt", "IsDeleted" },
+            new string?[] { null, null, null, null, null, null, null, null, null, null }, binRows);
+        Log($"  ✓ {binCount} raf (birim).");
+
+        // 8) Stok dağılımı raporu (READ-ONLY — inv_stocks'a yazılmaz; miktar/rezerv cutover'da)
+        //    Kısım bazında adet + eşlenen/düşen ayrımı. Düşen = stoklu ama taşınmayan kısımlar.
+        long tasinanAdet = 0, dusenAdet = 0, tasinanRezerv = 0;
+        var dusenKisimlar = new Dictionary<string, long>(); // storage code → adet
+        foreach (var (uid, adet) in unitStock)
+        {
+            if (!units.TryGetValue(uid, out var u)) { dusenAdet += adet; continue; }
+            bool tasindi = sectionId.ContainsKey(u.StorageId);
+            if (tasindi) { tasinanAdet += adet; tasinanRezerv += unitReserved.GetValueOrDefault(uid); }
+            else
+            {
+                dusenAdet += adet;
+                string code = storages.TryGetValue(u.StorageId, out var s) ? (string.IsNullOrEmpty(s.Code) ? s.Name : s.Code) : $"storage#{u.StorageId}";
+                dusenKisimlar[code] = dusenKisimlar.GetValueOrDefault(code) + adet;
+            }
+        }
+        Log($"  ── Stok dağılımı raporu (yapı aktarıldı; MİKTAR henüz YAZILMADI — cutover) ──");
+        Log($"     Toplam fiziksel adet (opproductlocations) : {toplamAdet}");
+        Log($"     Taşınan kısımlardaki adet                 : {tasinanAdet} (rezerv: {tasinanRezerv})");
+        Log($"     Düşen adet (taşınmayan/dışlanan kısımlar) : {dusenAdet}");
+        foreach (var (code, adet) in dusenKisimlar.OrderByDescending(x => x.Value))
+            Log($"        · {code}: {adet}");
+
+        return Task.CompletedTask;
+    }
+
     static MySqlDataReader MysqlQuery(string sql)
     {
         var cmd = new MySqlCommand(sql, mysql) { CommandTimeout = 600 };
