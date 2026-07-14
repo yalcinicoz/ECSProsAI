@@ -1,3 +1,4 @@
+using ECSPros.Shared.Contracts;
 using ECSPros.Catalog.Application.Helpers;
 using ECSPros.Catalog.Application.Services;
 using ECSPros.Shared.Kernel.Common;
@@ -9,7 +10,10 @@ namespace ECSPros.Catalog.Application.Queries.GetStoreFacets;
 
 public record GetStoreFacetsQuery(
     Guid FirmPlatformId,
-    string? Search = null) : IRequest<Result<StoreFacetsDto>>;
+    string? Search = null,
+    // Stok görünürlüğü — arama listesiyle facet sayıları tutarlı kalsın (2026-07-14).
+    bool ShowOutOfStock = false,
+    DateTime? OutOfStockSince = null) : IRequest<Result<StoreFacetsDto>>;
 
 public record StoreFacetsDto(
     decimal PriceMin,
@@ -28,25 +32,33 @@ public record AttributeFacetValueDto(
     string? HexCode,
     int ProductCount);
 
-public class GetStoreFacetsQueryHandler(ICatalogDbContext db, IMemoryCache memoryCache)
+public class GetStoreFacetsQueryHandler(ICatalogDbContext db, IInStockProductProvider inStock, IMemoryCache memoryCache)
     : IRequestHandler<GetStoreFacetsQuery, Result<StoreFacetsDto>>
 {
     // Tüm-katalog facet'i sorgu başına ~4 sn süren bir aggregation; katalog nadiren
     // değiştiği için süreç-içi cache yeterli (Redis bu ortamda kullanılamıyor —
     // bkz. PROGRESS.md 2026-07-06 Redis notu). Arama filtreli istekler cache'lenmez.
-    private const string AllProductsCacheKey = "store:facets:all";
+    // Cache anahtarı stok görünürlük paramlarını içerir (platform bazlı ayar farkı için).
+    private static string AllKey(bool showOos, DateTime? since) => $"store:facets:all:v2:{showOos}:{since:yyyyMMdd}";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(15);
 
     public async Task<Result<StoreFacetsDto>> Handle(GetStoreFacetsQuery request, CancellationToken ct)
     {
         var hasSearch = !string.IsNullOrWhiteSpace(request.Search);
+        var allKey = AllKey(request.ShowOutOfStock, request.OutOfStockSince);
 
-        if (!hasSearch && memoryCache.TryGetValue(AllProductsCacheKey, out StoreFacetsDto? cached) && cached is not null)
+        if (!hasSearch && memoryCache.TryGetValue(allKey, out StoreFacetsDto? cached) && cached is not null)
             return Result.Success(cached);
 
+        // Stok görünürlüğü: arama grid'iyle aynı kural (stoğu biten, kanal açık VE CreatedAt>=eşik
+        // değilse facet'lerden de çıkar).
+        var inStockIds = await inStock.GetInStockProductIdsAsync(ct);
+        var showOos = request.ShowOutOfStock;
+        var oosSince = request.OutOfStockSince;
         var q = db.Products
             .AsNoTracking()
-            .Where(p => p.IsSaleOpen && db.ProductImages.Any(img => img.ProductId == p.Id));
+            .Where(p => p.IsSaleOpen && db.ProductImages.Any(img => img.ProductId == p.Id))
+            .Where(p => inStockIds.Contains(p.Id) || (showOos && (oosSince == null || p.CreatedAt >= oosSince)));
 
         if (hasSearch)
         {
@@ -62,7 +74,7 @@ public class GetStoreFacetsQueryHandler(ICatalogDbContext db, IMemoryCache memor
         var result = await BuildFacets(db, q.Select(p => p.Id), ct);
 
         if (!hasSearch && result.IsSuccess)
-            memoryCache.Set(AllProductsCacheKey, result.Value, CacheTtl);
+            memoryCache.Set(allKey, result.Value, CacheTtl);
 
         return result;
     }

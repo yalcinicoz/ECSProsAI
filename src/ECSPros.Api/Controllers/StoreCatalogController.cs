@@ -23,8 +23,10 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
         [FromQuery] int pageSize = 24,
         CancellationToken ct = default)
     {
+        var platform = await storeContext.GetPlatformAsync(ct);
         var result = await mediator.Send(
-            new GetStoreProductGroupProductsQuery(id, firmPlatformId, page, pageSize), ct);
+            new GetStoreProductGroupProductsQuery(id, firmPlatformId, page, pageSize,
+                platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
@@ -42,9 +44,11 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
         [FromQuery] string? sort = null,
         CancellationToken ct = default)
     {
+        var platform = await storeContext.GetPlatformAsync(ct);
         var result = await mediator.Send(new GetStoreProductsQuery(
             firmPlatformId, search, page, pageSize,
-            ParseGuids(attrs), priceMin, priceMax, sort), ct);
+            ParseGuids(attrs), priceMin, priceMax, sort,
+            ApplyStockFilter: true, ShowOutOfStock: platform?.StokBitenGoster ?? false, OutOfStockSince: platform?.StokBitenGosterTarih), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
@@ -109,7 +113,9 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
         [FromQuery] string? search,
         CancellationToken ct = default)
     {
-        var result = await mediator.Send(new GetStoreFacetsQuery(firmPlatformId, search), ct);
+        var platform = await storeContext.GetPlatformAsync(ct);
+        var result = await mediator.Send(new GetStoreFacetsQuery(
+            firmPlatformId, search, platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }

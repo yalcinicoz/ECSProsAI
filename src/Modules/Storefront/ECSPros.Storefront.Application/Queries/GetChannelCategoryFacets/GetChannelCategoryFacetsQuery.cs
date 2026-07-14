@@ -9,18 +9,23 @@ using Microsoft.EntityFrameworkCore;
 namespace ECSPros.Storefront.Application.Queries.GetChannelCategoryFacets;
 
 public record GetChannelCategoryFacetsQuery(
-    Guid ChannelCategoryId) : IRequest<Result<StoreFacetsDto>>;
+    Guid ChannelCategoryId,
+    // Stok görünürlüğü — kategori listesiyle facet sayıları tutarlı (2026-07-14).
+    bool ShowOutOfStock = false,
+    DateTime? OutOfStockSince = null) : IRequest<Result<StoreFacetsDto>>;
 
 public class GetChannelCategoryFacetsQueryHandler(
     IStorefrontDbContext sfDb,
     ICatalogDbContext catDb,
+    IInStockProductProvider inStock,
     ICacheService cache)
     : IRequestHandler<GetChannelCategoryFacetsQuery, Result<StoreFacetsDto>>
 {
     public async Task<Result<StoreFacetsDto>> Handle(
         GetChannelCategoryFacetsQuery request, CancellationToken ct)
     {
-        var cacheKey = $"channelcat:facets:{request.ChannelCategoryId}";
+        // v2 + stok paramları: stok filtresi eklendiğinden eski/ayar-farklı girdiler ayrışsın.
+        var cacheKey = $"channelcat:facets:v2:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
         StoreFacetsDto? cached = null;
         try { cached = await cache.GetAsync<StoreFacetsDto>(cacheKey, ct); } catch { /* Redis erişilemezse taze hesapla */ }
         if (cached is not null)
@@ -84,6 +89,19 @@ public class GetChannelCategoryFacetsQueryHandler(
                 .Select(p => p.Id)
                 .Take(2000)
                 .ToListAsync(ct);
+        }
+
+        // Stok görünürlüğü: stoğu biteni (kanal açık VE CreatedAt>=eşik değilse) facet'ten çıkar.
+        if (productIds.Count > 0)
+        {
+            var inStockIds = await inStock.GetInStockProductIdsAsync(ct);
+            var showOos = request.ShowOutOfStock;
+            var oosSince = request.OutOfStockSince;
+            var gorunur = (await catDb.Products.AsNoTracking()
+                .Where(p => productIds.Contains(p.Id)
+                            && (inStockIds.Contains(p.Id) || (showOos && (oosSince == null || p.CreatedAt >= oosSince))))
+                .Select(p => p.Id).ToListAsync(ct)).ToHashSet();
+            productIds = productIds.Where(gorunur.Contains).ToList();
         }
 
         var result = await GetStoreFacetsQueryHandler.BuildFacets(catDb, productIds, ct);
