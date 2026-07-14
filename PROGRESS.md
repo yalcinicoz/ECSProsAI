@@ -303,7 +303,10 @@
   sayfa); admin durum etiketleri "Satışta/Satışa Aç/Kapat". İzole 5053 doğrulandı
   (kapalı→301, açık 200, admin 401). Publish alındı → kullanıcı `sudo systemctl restart
   ecspros`. Bilinen sınır: DTO/kontrat alan adları hâlâ isActive (değer IsSaleOpen).
-  Kalan: eski IsActive kolonu temizlik migration'ı (restart sonrası); M2 (kanal seçimi) +
+  **Ek düzeltme (commit 0e4593e):** kullanıcı "ürün hâlâ kategoride listeleniyor" bildirdi —
+  ilk liste filtresi ölü koda konmuştu; asıl yol ResolveCategoryProductIds'e taşındı +
+  Redis cache v2. TEMİZ publish alındı (--no-restore stale assembly tuzağı — bkz. feedback).
+  RESTART BEKLİYOR. Kalan: eski IsActive kolonu temizlik migration'ı (restart sonrası); M2 (kanal seçimi) +
   M3 (kanal durdurma) + değer aktarımı. Detay: `project_sale_visibility_model_2026-07-14.md`.
 
 - **2026-07-14 — Stok/depo üçlü yapı: TEMEL DİLİM TAMAM (kullanıcı FAZ P sonrası bu işi
