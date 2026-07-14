@@ -85,8 +85,10 @@ public class GetChannelCategoryProductsQueryHandler(
     // sarılı: Redis geçici olarak erişilemezse istek hata almak yerine DB'den taze hesaplanır.
     // v2: IsSaleOpen (global satış anahtarı) geçidi eklendi — eski binary'nin filtresiz
     // cache'lediği listeler geçersiz kılınsın diye anahtar sürümü artırıldı (TTL beklemeden).
+    // v4: renk düzeyi stok görünürlüğü (stoğu biten renk kartı elenir) — eski v3 listeleri
+    // stoksuz renkleri içerdiğinden sürüm artırıldı.
     private static string CacheKey(Guid categoryId, int page, int pageSize) =>
-        $"channelcat:products:v3:{categoryId}:{page}:{pageSize}";
+        $"channelcat:products:v4:{categoryId}:{page}:{pageSize}";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
 
     private async Task<PagedResult<ChannelCategoryProductItemDto>?> TryGetCacheAsync(string key, CancellationToken ct)
@@ -381,6 +383,27 @@ public class GetChannelCategoryProductsQueryHandler(
         // Görseli olan renk yoksa ürün düzeyindeki fallback ile devam et
         if (visiblePairs.Count == 0)
             return await BuildFallbackProductItems(allProductIds, request, cdnBase, ct);
+
+        // ── Stok görünürlüğü (RENK düzeyi, 2026-07-14): tekstilde ürünler renk varyantıyla
+        // listelenir. Ürün düzeyi filtre (ResolveCategoryProductIds) yalnız TÜM renkleri stoksuz
+        // ürünü eler; burada aynı ürünün stoğu biten RENGİ (o rengin tüm varyantları online
+        // satılabilir stok kümesinde yoksa) ayrıca elenir. Stoklu renkler her zaman görünür.
+        // Kanal "stoğu bitenleri göster" açıksa (+ tarih eşiği) stoksuz renk de gösterilir.
+        {
+            var inStockVariants = await inStock.GetInStockVariantIdsAsync(ct);
+            visiblePairs = visiblePairs.Where(pair =>
+            {
+                if (pair.VariantIds.Any(inStockVariants.Contains)) return true;   // renkte stok var
+                if (!request.ShowOutOfStock) return false;                        // stoksuz renk gizli
+                if (request.OutOfStockSince is null) return true;
+                return productInfo.TryGetValue(pair.ProductId, out var pi)
+                    && pi.CreatedAt >= request.OutOfStockSince.Value;
+            }).ToList();
+
+            if (visiblePairs.Count == 0)
+                return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
+                    [], 0, request.Page, request.PageSize));
+        }
 
         // ── B10: özellik filtresi — kart (ürün×renk) kendi varyantları üzerinden;
         // grup içi OR, gruplar arası AND aynı varyantta sağlanmalı (kırmızı+M birlikte).
