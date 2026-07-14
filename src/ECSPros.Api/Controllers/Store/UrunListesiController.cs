@@ -75,7 +75,8 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         if (urunler.IsFailure)
             return NotFound();
 
-        var facets = await mediator.Send(new GetChannelCategoryFacetsQuery(kategori.Id), ct);
+        var facets = await mediator.Send(new GetChannelCategoryFacetsQuery(
+            kategori.Id, platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih), ct);
 
         var devamUrl = $"/api/store/catalog/channel-categories/{kategori.Id}/products?pageSize={SayfaBoyu}"
                        + (arama is null ? "" : "&search=" + Uri.EscapeDataString(arama))
@@ -108,11 +109,13 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
 
         var urunler = await mediator.Send(new GetStoreProductsQuery(
             platform.Id, arama, 1, SayfaBoyu,
-            filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax, filtre.Sort), ct);
+            filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax, filtre.Sort,
+            ApplyStockFilter: true, ShowOutOfStock: platform.StokBitenGoster, OutOfStockSince: platform.StokBitenGosterTarih), ct);
         if (urunler.IsFailure)
             return NotFound();
 
-        var facets = await mediator.Send(new GetStoreFacetsQuery(platform.Id, arama), ct);
+        var facets = await mediator.Send(new GetStoreFacetsQuery(
+            platform.Id, arama, platform.StokBitenGoster, platform.StokBitenGosterTarih), ct);
 
         var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
         var devamUrl = $"/api/store/catalog/products?firmPlatformId={platform.Id}&pageSize={SayfaBoyu}"

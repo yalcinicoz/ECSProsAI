@@ -38,7 +38,11 @@ public record GetStoreProductsQuery(
     string? Sort = null,
     List<string>? ProductCodes = null,   // E5: Favorilerim — kod listesiyle kart verisi
     List<Guid>? ProductIds = null,       // G3: kampanya kaynağı — id listesiyle kart verisi
-    DateTime? CreatedSince = null) : IRequest<Result<PagedResult<StoreProductDto>>>; // H8: favori arama bildirimi — yalnız bu tarihten sonra eklenen ürünler (G3'ün ertelenen 'days' filtresi)
+    DateTime? CreatedSince = null,       // H8: favori arama bildirimi — yalnız bu tarihten sonra eklenen ürünler
+    // Stok görünürlüğü (2026-07-14): yalnız arama/liste çağrılarında true — vitrin/bildirim etkilenmez.
+    bool ApplyStockFilter = false,
+    bool ShowOutOfStock = false,
+    DateTime? OutOfStockSince = null) : IRequest<Result<PagedResult<StoreProductDto>>>;
 
 public record StoreProductDto(
     Guid Id,
@@ -61,6 +65,7 @@ public class GetStoreProductsQueryHandler(
     ICatalogDbContext db,
     IChannelPricingService pricingService,
     IChannelProductFlagService flagService,
+    IInStockProductProvider inStock,
     IProductReviewStatsService reviewStats)
     : IRequestHandler<GetStoreProductsQuery, Result<PagedResult<StoreProductDto>>>
 {
@@ -74,6 +79,17 @@ public class GetStoreProductsQueryHandler(
             .AsNoTracking()
             .Include(p => p.Variants)
             .Where(p => p.IsSaleOpen && db.ProductImages.Any(img => img.ProductId == p.Id));
+
+        // Stok görünürlüğü (yalnız arama/liste): stoğu biten (in-stock kümesinde yok) ürün,
+        // kanal açık VE CreatedAt >= eşik değilse gizlenir. inStock kümesi = ANY(array) (verimli).
+        if (request.ApplyStockFilter)
+        {
+            var inStockIds = await inStock.GetInStockProductIdsAsync(ct);
+            var showOos = request.ShowOutOfStock;
+            var oosSince = request.OutOfStockSince;
+            q = q.Where(p => inStockIds.Contains(p.Id)
+                             || (showOos && (oosSince == null || p.CreatedAt >= oosSince)));
+        }
 
         // E5: Favorilerim — yalnız verilen kodlar (canlı katalogla birleşim: silinen/pasif
         // ürünün favorisi listelenmez)

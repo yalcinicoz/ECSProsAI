@@ -10,7 +10,10 @@ public record GetStoreProductGroupProductsQuery(
     Guid ProductGroupId,
     Guid FirmPlatformId,
     int Page = 1,
-    int PageSize = 24) : IRequest<Result<StoreProductGroupProductsDto>>;
+    int PageSize = 24,
+    // Stok görünürlüğü (2026-07-14) — liste ile tutarlı.
+    bool ShowOutOfStock = false,
+    DateTime? OutOfStockSince = null) : IRequest<Result<StoreProductGroupProductsDto>>;
 
 public record StoreProductGroupProductsDto(
     Guid ProductGroupId,
@@ -27,7 +30,8 @@ public record StoreGroupProductItemDto(
     decimal? CompareAtPrice,
     bool IsActive);
 
-public class GetStoreProductGroupProductsQueryHandler(ICatalogDbContext db, IChannelPricingService pricingService)
+public class GetStoreProductGroupProductsQueryHandler(
+    ICatalogDbContext db, IChannelPricingService pricingService, IInStockProductProvider inStock)
     : IRequestHandler<GetStoreProductGroupProductsQuery, Result<StoreProductGroupProductsDto>>
 {
     public async Task<Result<StoreProductGroupProductsDto>> Handle(
@@ -48,6 +52,12 @@ public class GetStoreProductGroupProductsQueryHandler(ICatalogDbContext db, ICha
             .AsNoTracking()
             .Where(p => allGroupIds.Contains(p.ProductGroupId) && p.IsSaleOpen
                      && db.ProductImages.Any(img => img.ProductId == p.Id));
+
+        // Stok görünürlüğü: stoğu biteni (kanal açık VE CreatedAt>=eşik değilse) gizle.
+        var inStockIds = await inStock.GetInStockProductIdsAsync(ct);
+        var showOos = request.ShowOutOfStock;
+        var oosSince = request.OutOfStockSince;
+        q = q.Where(p => inStockIds.Contains(p.Id) || (showOos && (oosSince == null || p.CreatedAt >= oosSince)));
 
         var total = await q.CountAsync(ct);
 
