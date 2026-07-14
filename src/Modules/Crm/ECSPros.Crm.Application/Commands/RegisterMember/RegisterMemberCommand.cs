@@ -12,7 +12,9 @@ public record RegisterMemberCommand(
     string FirstName,
     string LastName,
     string? Phone = null,
-    List<MemberConsent>? Consents = null) : IRequest<Result<Guid>>;
+    List<MemberConsent>? Consents = null,
+    string? Gender = null,
+    DateOnly? BirthDate = null) : IRequest<Result<Guid>>;
 
 /// <summary>D3: kayıtta onaylanan belge kaydı — Member.Consents jsonb'sine
 /// "acceptedContracts" anahtarıyla yazılır. ContentUpdatedAt, onay anındaki metin
@@ -46,6 +48,8 @@ public class RegisterMemberCommandHandler(ICrmDbContext db, IMemberPasswordHashe
             FirstName = request.FirstName,
             LastName = request.LastName,
             Phone = request.Phone,
+            Gender = request.Gender,
+            BirthDate = request.BirthDate,
             IsRegistered = true,
             IsActive = true,
             Consents = request.Consents is { Count: > 0 }

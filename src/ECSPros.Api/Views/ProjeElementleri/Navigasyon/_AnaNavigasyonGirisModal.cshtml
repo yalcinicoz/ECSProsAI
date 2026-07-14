@@ -261,6 +261,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const eposta = kayitModal.querySelector("[data-ms-kayit-eposta]")?.value.trim();
         const sifre = kayitModal.querySelector("[data-ms-kayit-sifre]")?.value;
         const telefonHam = kayitModal.querySelector("[data-ms-kayit-telefon]")?.value.replace(/\D/g, "");
+        const cinsiyet = kayitModal.querySelector("[data-ms-kayit-cinsiyet]")?.value || null;
+        const dogum = kayitModal.querySelector("[data-ms-kayit-dogum]")?.value || null;
         const onaylar = [...kayitModal.querySelectorAll(".ms-kayit-onay input[type='checkbox']")];
 
         hataGoster(kayitHata, "");
@@ -275,6 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({
                     email: eposta, password: sifre, firstName: ad, lastName: soyad,
                     phone: telefonHam ? "90" + telefonHam : null,
+                    gender: cinsiyet, birthDate: dogum,
                     // D3: 3 zorunlu onay kutusu bu belgelere karşılık gelir — kabul kaydı
                     // (başlık + metin sürümü) sunucuda CMS'ten çözülerek üyeye yazılır
                     firmPlatformId: platformId || null,
