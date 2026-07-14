@@ -104,6 +104,16 @@
                             </select>
                         </label>
                     </div>
+
+                    @* Aksiyonlar Kişisel Bilgiler kartının içinde: masaüstünde alanların hemen
+                       altında, mobilde tek sütun akışında Kişisel Bilgiler'in ardında görünür
+                       (önceden tüm ızgaranın altında olduğundan uzun Güvenlik kartı yüzünden
+                       sayfa dibine/sağ köşeye kayıyordu). *@
+                    <div class="ms-hesabim-uyelik-aksiyonlar">
+                        <div class="ms-uyari ms-uyari-hata" data-ms-profil-mesaj hidden></div>
+                        <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-profil-vazgec>Vazgeç</button>
+                        <button class="ms-buton ms-buton-m ms-buton-satin-al" type="submit">Bilgileri Güncelle</button>
+                    </div>
                 </section>
 
                 <section class="ms-hesabim-uyelik-kart ms-hesabim-guvenlik-karti" aria-labelledby="ms-guvenlik-baslik">
@@ -193,12 +203,6 @@
                         </button>
                     </section>
                 </section>
-            </div>
-
-            <div class="ms-hesabim-uyelik-aksiyonlar">
-                <div class="ms-uyari ms-uyari-hata" data-ms-profil-mesaj hidden></div>
-                <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-profil-vazgec>Vazgeç</button>
-                <button class="ms-buton ms-buton-m ms-buton-satin-al" type="submit">Bilgileri Güncelle</button>
             </div>
         </form>
     </section>
