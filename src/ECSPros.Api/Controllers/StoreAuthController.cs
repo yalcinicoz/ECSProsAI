@@ -59,7 +59,8 @@ public class StoreAuthController(IMediator mediator) : ControllerBase
         }
 
         var result = await mediator.Send(new RegisterMemberCommand(
-            req.Email, req.Password, req.FirstName, req.LastName, req.Phone, onaylar), ct);
+            req.Email, req.Password, req.FirstName, req.LastName, req.Phone, onaylar,
+            req.Gender, req.BirthDate), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = new { memberId = result.Value } });
     }
@@ -130,7 +131,9 @@ public class StoreAuthController(IMediator mediator) : ControllerBase
 public record RegisterMemberRequest(
     string Email, string Password, string FirstName, string LastName, string? Phone = null,
     Guid? FirmPlatformId = null,               // D3: onay kodlarının hangi platformun CMS'inden çözüleceği
-    List<string>? AcceptedContracts = null);   // D3: onaylanan belge kodları
+    List<string>? AcceptedContracts = null,    // D3: onaylanan belge kodları
+    string? Gender = null,                     // kayıt formundaki cinsiyet (female/male/null)
+    DateOnly? BirthDate = null);               // kayıt formundaki doğum tarihi (yyyy-MM-dd, opsiyonel)
 public record LoginMemberRequest(string Email, string Password);
 public record RefreshMemberRequest(string RefreshToken);
 public record LogoutMemberRequest(string? RefreshToken = null);
