@@ -61,6 +61,10 @@ public class GesTelekomSmsService : ISmsService
         var apiUrl = string.IsNullOrWhiteSpace(settings.ApiUrl)
             ? DefaultApiUrl
             : settings.ApiUrl.TrimEnd('/');
+        // Yol parçaları burada eklenir ("/api/Login/..."); admin'e taban adres "/api" ekiyle
+        // girilirse çift "/api/api/" oluşup 404 dönüyordu (2026-07-15 canlıda yaşandı) — ek atılır.
+        if (apiUrl.EndsWith("/api", StringComparison.OrdinalIgnoreCase))
+            apiUrl = apiUrl[..^4].TrimEnd('/');
 
         try
         {
@@ -98,6 +102,8 @@ public class GesTelekomSmsService : ISmsService
         var client = _httpFactory.CreateClient(nameof(GesTelekomSmsService));
         using var istek = new HttpRequestMessage(HttpMethod.Post, $"{apiUrl}/api/SendSms/SendSingle");
         istek.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        // ed/recipentType/brandCode dokümanda opsiyonel yazsa da API validasyonu zorunlu tutuyor
+        // (2026-07-15 canlı testte doğrulandı: eksikken 400 "field is required").
         istek.Content = JsonContent.Create(new
         {
             username = settings.Username,
@@ -105,8 +111,11 @@ public class GesTelekomSmsService : ISmsService
             numbers = numara,
             message,
             origin = settings.Origin,
-            sd = "0", // hemen gönder
-            isNotification = settings.IsNotification
+            sd = "0",                                                  // hemen gönder
+            ed = DateTime.Now.AddHours(24).ToString("yyyyMMddHHmm"),   // son teslim: 24 saat
+            isNotification = settings.IsNotification,
+            recipentType = "BIREYSEL",
+            brandCode = ""
         });
 
         return await client.SendAsync(istek, ct);
