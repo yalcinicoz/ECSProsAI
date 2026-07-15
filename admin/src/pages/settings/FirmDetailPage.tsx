@@ -156,21 +156,28 @@ function KeyValueEditor({
 
 // ── Schema-Driven Fields (servis kataloğundaki SettingsSchema'dan üretilir) ───
 
-/** Şemadaki helpI18n metni — info ikonuna tıklanınca açılan açıklama balonu. */
+/** Şemadaki helpI18n metni — info ikonuna tıklanınca açılan açıklama balonu.
+ * Balon, ikon ekranın sağ yarısındaysa sola, solundaysa sağa doğru açılır
+ * (sabit right-0 sol kenardan taşıyordu — docs/otp-bilgilendirme-format-sorunu.png). */
 function FieldHelp({ text }: { text: string }) {
   const [open, setOpen] = useState(false)
+  const [solaAcilir, setSolaAcilir] = useState(false)
   return (
     <span className="relative inline-flex align-middle">
       <button type="button" aria-label="Alan açıklaması" aria-expanded={open}
         className="inline-flex items-center hover:opacity-70"
-        onClick={e => { e.preventDefault(); setOpen(o => !o) }}>
+        onClick={e => {
+          e.preventDefault()
+          setSolaAcilir(e.currentTarget.getBoundingClientRect().left > window.innerWidth / 2)
+          setOpen(o => !o)
+        }}>
         <Info size={14} style={{ color: 'var(--text-s)' }} />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div role="tooltip"
-            className="absolute right-0 top-full mt-1.5 z-50 w-72 rounded-lg p-3 text-xs font-normal normal-case leading-relaxed shadow-lg whitespace-normal text-left"
+            className={`absolute ${solaAcilir ? 'right-0' : 'left-0'} top-full mt-1.5 z-50 w-64 rounded-lg p-3 text-xs font-normal normal-case leading-relaxed shadow-lg whitespace-normal text-left`}
             style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-m)' }}>
             {text}
           </div>
