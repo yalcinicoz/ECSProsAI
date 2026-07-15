@@ -1943,12 +1943,13 @@
                 }
             } catch { /* depolama kapalıysa gezme geçmişi tutulmaz */ }
 
-            // Renk butonları: seçim = aynı sayfanın ?color= ile SSR yeniden yüklenmesi.
-            // (Misharix'in renk script'i aktif sınıfını bizden önce değiştirdiğinden
-            // karşılaştırma sınıfla değil sunucunun bildirdiği seçili renkle yapılır.)
+            // Renk butonları: seçim = o rengin kendi URL'ine (gerçek slug; yoksa ?color=) SSR
+            // yeniden yüklenmesi. Karşılaştırma data-ms-renk-deger (renk değeri) ile — URL artık
+            // slug olabildiğinden ?color parse edilmez. (Misharix renk script'i aktif sınıfını
+            // bizden önce değiştirir; seçili renk sunucudan gelir.)
             document.querySelectorAll(".ms-urun-detay-renk[data-ms-renk-url]").forEach((buton) => {
                 buton.addEventListener("click", () => {
-                    const hedefRenk = new URLSearchParams(buton.dataset.msRenkUrl).get("color");
+                    const hedefRenk = buton.dataset.msRenkDeger;
                     if (hedefRenk && hedefRenk !== cfg.seciliRenk) {
                         window.location.href = buton.dataset.msRenkUrl;
                     }
