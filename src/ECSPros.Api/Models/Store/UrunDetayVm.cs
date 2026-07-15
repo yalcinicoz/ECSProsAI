@@ -6,9 +6,12 @@ namespace ECSPros.Api.Models.Store;
 /// Beden seçimi client-side'dır (misharix'in kendi script'i); sepete ekleme
 /// partial sonundaki config script'i üzerinden api/store/cart'a gider.
 /// </summary>
-public sealed record RenkSecenekVm(Guid ValueId, string Ad, string GorselUrl, bool Secili)
+public sealed record RenkSecenekVm(Guid ValueId, string Ad, string GorselUrl, bool Secili, string? Slug = null)
 {
-    public string Url => "?color=" + ValueId;
+    // URL aktarımı 2b: rengin kendi gerçek slug'ı varsa detay linki DOĞRUDAN /{slug} olur
+    // (adres çubuğunda o rengin URL'i görünür, ?color YOK). Slug yoksa eski ?color= davranışı
+    // (aktarılmamış ürün — güvenlik ağı).
+    public string Url => Slug is { Length: > 0 } s ? "/" + s : "?color=" + ValueId;
 }
 
 public sealed record BedenSecenekVm(string Ad, Guid VariantId, decimal Fiyat, bool Satilabilir = true); // B12: anahtar açıkken gerçek stoktan

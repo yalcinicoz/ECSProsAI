@@ -82,7 +82,7 @@
                     <div class="ms-urun-detay-renk-listesi">
                         @foreach (var renk in b.Renkler)
                         {
-                        <button class="ms-urun-detay-renk@(renk.Secili ? " ms-urun-detay-renk-aktif" : "")" type="button" aria-pressed="@(renk.Secili ? "true" : "false")" data-ms-renk-url="@renk.Url">
+                        <button class="ms-urun-detay-renk@(renk.Secili ? " ms-urun-detay-renk-aktif" : "")" type="button" aria-pressed="@(renk.Secili ? "true" : "false")" data-ms-renk-url="@renk.Url" data-ms-renk-deger="@renk.ValueId">
                             @if (renk.Secili)
                             {
                             <span class="ms-urun-detay-renk-secili-ikon" aria-hidden="true">

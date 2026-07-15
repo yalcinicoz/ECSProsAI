@@ -1,5 +1,6 @@
 using ECSPros.Api.Models.Store;
 using ECSPros.Catalog.Application.Queries.GetStoreProductDetail;
+using ECSPros.Storefront.Application.Queries.GetChannelVariantSlugs;
 using ECSPros.Storefront.Application.Queries.GetProductChannelCategoryChain;
 using MediatR;
 
@@ -52,6 +53,17 @@ public class StoreUrunDetayBuilder(
                 renkGorselleri[valueId] = gorselluVaryant.Images[0].ImageUrl;
         }
         var gorunurRenkler = renkDegerleri.Where(r => renkGorselleri.ContainsKey(r.AttributeValueId)).ToList();
+
+        // URL aktarımı 2b: renk butonları o rengin kendi gerçek slug'ına link versin (adres
+        // çubuğu tıklanan rengin URL'ine dönsün, ?color YOK). Varyant→slug haritası (bu platform).
+        var slugMap = renkTipKodu is not null && varyantlar.Count > 0
+            ? (await mediator.Send(new GetChannelVariantSlugsQuery(
+                    platformId, varyantlar.Select(v => v.Id).ToList()), ct)).Value ?? new()
+            : new Dictionary<Guid, string>();
+        string? RenkSlug(Guid colorValueId) => varyantlar
+            .Where(v => VaryantRenktenMi(v, renkTipKodu!, colorValueId))
+            .Select(v => slugMap.GetValueOrDefault(v.Id))
+            .FirstOrDefault(s => s != null);
 
         Guid? seciliRenk = null;
         if (Guid.TryParse(color, out var istenen))
@@ -160,7 +172,8 @@ public class StoreUrunDetayBuilder(
             Renkler: gorunurRenkler
                 .Select(r => new RenkSecenekVm(
                     r.AttributeValueId, r.Ad, renkGorselleri[r.AttributeValueId],
-                    r.AttributeValueId == seciliRenk))
+                    r.AttributeValueId == seciliRenk,
+                    RenkSlug(r.AttributeValueId)))   // 2b: rengin kendi slug'ı
                 .ToList(),
             BedenEtiketi: bedenTip is null ? "Beden" : TrAd(bedenTip.AttributeTypeNameI18n),
             Bedenler: bedenler,
