@@ -19,7 +19,8 @@ public record ProductInfo(
     string Sku,
     string ProductName,
     decimal BasePrice,
-    bool IsActive);
+    bool IsActive,
+    Guid ProductId = default);   // M2/M3: kanal seçimi/durdurma geçidi için (checkout)
 
 public record VariantDisplayInfo(
     Guid VariantId,

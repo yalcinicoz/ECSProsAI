@@ -25,7 +25,8 @@ public class GetChannelCategoryFacetsQueryHandler(
         GetChannelCategoryFacetsQuery request, CancellationToken ct)
     {
         // v2 + stok paramları: stok filtresi eklendiğinden eski/ayar-farklı girdiler ayrışsın.
-        var cacheKey = $"channelcat:facets:v2:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
+        // v3: kanal seçimi/durdurma (M2/M3) geçidi eklendi.
+        var cacheKey = $"channelcat:facets:v3:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
         StoreFacetsDto? cached = null;
         try { cached = await cache.GetAsync<StoreFacetsDto>(cacheKey, ct); } catch { /* Redis erişilemezse taze hesapla */ }
         if (cached is not null)
@@ -102,6 +103,21 @@ public class GetChannelCategoryFacetsQueryHandler(
                             && (inStockIds.Contains(p.Id) || (showOos && (oosSince == null || p.CreatedAt >= oosSince))))
                 .Select(p => p.Id).ToListAsync(ct)).ToHashSet();
             productIds = productIds.Where(gorunur.Contains).ToList();
+        }
+
+        // Kanal seçimi/durdurma (M2/M3): kanaldan çıkarılan/durdurulan ürünü facet'ten de çıkar
+        // (liste ile tutarlı sayım). Opt-out: satır yok/seçili → dahil.
+        if (productIds.Count > 0)
+        {
+            var simdi = DateTime.UtcNow;
+            var kanalDisi = (await sfDb.ChannelProducts.AsNoTracking()
+                .Where(cp => cp.FirmPlatformId == cat.FirmPlatformId && productIds.Contains(cp.ProductId)
+                          && (!cp.IsActive
+                              || (cp.SaleStoppedFrom != null && cp.SaleStoppedFrom <= simdi
+                                  && (cp.SaleStoppedUntil == null || cp.SaleStoppedUntil >= simdi))))
+                .Select(cp => cp.ProductId).ToListAsync(ct)).ToHashSet();
+            if (kanalDisi.Count > 0)
+                productIds = productIds.Where(id => !kanalDisi.Contains(id)).ToList();
         }
 
         var result = await GetStoreFacetsQueryHandler.BuildFacets(catDb, productIds, ct);

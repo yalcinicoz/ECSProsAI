@@ -20,7 +20,7 @@ public class CatalogProductService(ICatalogDbContext db) : IProductService
                 v.Id, v.Sku,
                 v.Product.NameI18n.ContainsKey("tr") ? v.Product.NameI18n["tr"] : v.Product.Code,
                 // Satılabilir = varyant aktif VE ürün global satışa açık (Katman 1).
-                v.BasePrice, v.IsActive && v.Product.IsSaleOpen))
+                v.BasePrice, v.IsActive && v.Product.IsSaleOpen, v.ProductId))
             .FirstOrDefaultAsync(ct);
     }
 

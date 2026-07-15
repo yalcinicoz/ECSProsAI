@@ -87,8 +87,9 @@ public class GetChannelCategoryProductsQueryHandler(
     // cache'lediği listeler geçersiz kılınsın diye anahtar sürümü artırıldı (TTL beklemeden).
     // v4: renk düzeyi stok görünürlüğü (stoğu biten renk kartı elenir) — eski v3 listeleri
     // stoksuz renkleri içerdiğinden sürüm artırıldı.
+    // v5: kanal seçimi/durdurma (M2/M3) geçidi — kanaldan çıkarılan/durdurulan ürün elenir.
     private static string CacheKey(Guid categoryId, int page, int pageSize) =>
-        $"channelcat:products:v4:{categoryId}:{page}:{pageSize}";
+        $"channelcat:products:v5:{categoryId}:{page}:{pageSize}";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
 
     private async Task<PagedResult<ChannelCategoryProductItemDto>?> TryGetCacheAsync(string key, CancellationToken ct)
@@ -708,6 +709,22 @@ public class GetChannelCategoryProductsQueryHandler(
             .Where(p => ids.Contains(p.Id) && p.IsSaleOpen)
             .Select(p => p.Id).ToListAsync(ct)).ToHashSet();
         var salesOpen = ids.Where(acikOlanlar.Contains).ToList();
+
+        // Katman 2/3 (kanal seçimi + durdurma — M2/M3): bu kanalda çıkarılan (IsActive=false)
+        // VEYA an itibarıyla durdurulmuş ürünler listeden düşer (opt-out; satır yok/seçili →
+        // görünür). Sıra korunur. sorgu-zamanı: durdurma penceresi bitince otomatik geri döner.
+        if (salesOpen.Count > 0)
+        {
+            var simdi = DateTime.UtcNow;
+            var kanalDisi = (await sfDb.ChannelProducts.AsNoTracking()
+                .Where(cp => cp.FirmPlatformId == cat.FirmPlatformId && salesOpen.Contains(cp.ProductId)
+                          && (!cp.IsActive
+                              || (cp.SaleStoppedFrom != null && cp.SaleStoppedFrom <= simdi
+                                  && (cp.SaleStoppedUntil == null || cp.SaleStoppedUntil >= simdi))))
+                .Select(cp => cp.ProductId).ToListAsync(ct)).ToHashSet();
+            if (kanalDisi.Count > 0)
+                salesOpen = salesOpen.Where(id => !kanalDisi.Contains(id)).ToList();
+        }
 
         // Stok görünürlüğü (2026-07-14): stoğu biten (online serbest = 0) ürün, YALNIZ kanal
         // "stoğu bitenleri göster" açıksa VE (tarih kısıtı yoksa ya da Product.CreatedAt >= eşik)

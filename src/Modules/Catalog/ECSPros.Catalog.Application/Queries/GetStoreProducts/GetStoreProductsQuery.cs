@@ -75,10 +75,14 @@ public class GetStoreProductsQueryHandler(
         var channelPrices = await pricingService.GetActiveVariantPricesAsync(request.FirmPlatformId, ct);
         // B11: öne çıkanlar (az sayıda) — varsayılan sırada öne alınır, rozet bayrağına yazılır
         var oneCikanlar = await flagService.GetFeaturedProductIdsAsync(request.FirmPlatformId, ct);
+        // Kanal seçimi/durdurma (M2/M3): bu kanalda çıkarılan/durdurulan ürünler — IsSaleOpen
+        // gibi sert satılabilirlik kuralı, her zaman uygulanır (opt-out: satır yok/seçili → dahil).
+        var kanalDisi = await flagService.GetChannelExcludedProductIdsAsync(request.FirmPlatformId, ct);
         var q = db.Products
             .AsNoTracking()
             .Include(p => p.Variants)
-            .Where(p => p.IsSaleOpen && db.ProductImages.Any(img => img.ProductId == p.Id));
+            .Where(p => p.IsSaleOpen && db.ProductImages.Any(img => img.ProductId == p.Id)
+                     && !kanalDisi.Contains(p.Id));
 
         // Stok görünürlüğü (yalnız arama/liste): stoğu biten (in-stock kümesinde yok) ürün,
         // kanal açık VE CreatedAt >= eşik değilse gizlenir. inStock kümesi = ANY(array) (verimli).

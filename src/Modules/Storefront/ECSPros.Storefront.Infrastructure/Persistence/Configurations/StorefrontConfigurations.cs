@@ -65,6 +65,8 @@ public class ChannelProductConfiguration : IEntityTypeConfiguration<ChannelProdu
         builder.Property(cp => cp.NameI18n).HasColumnType("jsonb");
         builder.Property(cp => cp.ShortDescriptionI18n).HasColumnType("jsonb");
         builder.HasIndex(cp => new { cp.FirmPlatformId, cp.ProductId }).IsUnique();
+        // M2/M3 deny-set sorgusu: platformda çıkarılan (IsActive=false) / durdurulan ürünler.
+        builder.HasIndex(cp => new { cp.FirmPlatformId, cp.IsActive });
         builder.HasQueryFilter(cp => !cp.IsDeleted);
     }
 }
