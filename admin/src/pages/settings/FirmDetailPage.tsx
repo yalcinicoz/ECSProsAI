@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronRight, Plus, X } from 'lucide-react'
+import { ChevronRight, Info, Plus, X } from 'lucide-react'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -12,7 +12,7 @@ import { useQuery as usePlatformTypesQuery } from '@tanstack/react-query'
 import type { PlatformType } from './PlatformTypesPage'
 import { ChannelForm } from './ChannelsPage'
 import type { FirmPlatformWithFirm, Firm } from './ChannelsPage'
-import { getFieldLabel } from './PlatformTypesPage'
+import { getFieldHelp, getFieldLabel } from './PlatformTypesPage'
 import type { SchemaField } from './PlatformTypesPage'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -156,11 +156,36 @@ function KeyValueEditor({
 
 // ── Schema-Driven Fields (servis kataloğundaki SettingsSchema'dan üretilir) ───
 
+/** Şemadaki helpI18n metni — info ikonuna tıklanınca açılan açıklama balonu. */
+function FieldHelp({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <span className="relative inline-flex align-middle">
+      <button type="button" aria-label="Alan açıklaması" aria-expanded={open}
+        className="inline-flex items-center hover:opacity-70"
+        onClick={e => { e.preventDefault(); setOpen(o => !o) }}>
+        <Info size={14} style={{ color: 'var(--text-s)' }} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div role="tooltip"
+            className="absolute right-0 top-full mt-1.5 z-50 w-72 rounded-lg p-3 text-xs font-normal normal-case leading-relaxed shadow-lg whitespace-normal text-left"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-m)' }}>
+            {text}
+          </div>
+        </>
+      )}
+    </span>
+  )
+}
+
 function schemaFieldInput(
   f: SchemaField,
   value: string,
   onChange: (v: string) => void,
 ) {
+  const help = getFieldHelp(f)
   if (f.type === 'boolean') {
     return (
       <label className="flex items-center gap-2 cursor-pointer py-2">
@@ -168,6 +193,7 @@ function schemaFieldInput(
           checked={value === 'true'}
           onChange={e => onChange(e.target.checked ? 'true' : 'false')} />
         <span className="text-sm" style={{ color: 'var(--text)' }}>{getFieldLabel(f)}</span>
+        {help && <FieldHelp text={help} />}
       </label>
     )
   }
@@ -176,6 +202,7 @@ function schemaFieldInput(
     <div>
       <label className="flbl">
         {getFieldLabel(f)} {f.required && <span style={{ color: '#ef4444' }}>*</span>}
+        {help && <FieldHelp text={help} />}
       </label>
       <input className="inp" type={inputType} value={value} onChange={e => onChange(e.target.value)} />
     </div>

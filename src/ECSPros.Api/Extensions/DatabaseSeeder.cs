@@ -84,11 +84,16 @@ public static class DatabaseSeeder
         var context = sp.GetRequiredService<CoreDbContext>();
         var json = new System.Text.Json.JsonSerializerOptions
         {
-            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
         };
 
-        static PlatformSchemaField Alan(string key, string etiket, string tip, string bolum, bool zorunlu = false) =>
-            new() { Key = key, LabelI18n = new() { ["tr"] = etiket }, Type = tip, Section = bolum, Required = zorunlu };
+        static PlatformSchemaField Alan(string key, string etiket, string tip, string bolum, bool zorunlu = false, string? yardim = null) =>
+            new()
+            {
+                Key = key, LabelI18n = new() { ["tr"] = etiket }, Type = tip, Section = bolum, Required = zorunlu,
+                HelpI18n = yardim is null ? null : new() { ["tr"] = yardim }
+            };
 
         var servisler = new (string Kod, string Ad, string Tip, List<PlatformSchemaField> Sema)[]
         {
@@ -114,8 +119,14 @@ public static class DatabaseSeeder
                 Alan("apiUrl",         "API Adresi (boşsa restapi.ttmesaj.com)", "text",     "settings"),
                 Alan("username",       "API Kullanıcı Adı",                      "text",     "credentials", zorunlu: true),
                 Alan("password",       "API Şifresi",                            "password", "credentials", zorunlu: true),
-                Alan("origin",         "Mesaj Başlığı (Originator)",             "text",     "settings",    zorunlu: true),
-                Alan("isNotification", "İYS: Bilgilendirme mesajı",              "boolean",  "settings")
+                Alan("origin",         "Mesaj Başlığı (Originator)",             "text",     "settings",    zorunlu: true,
+                    yardim: "GES Telekom tarafında ONAYLI mesaj başlığınız. Onaysız başlıkla gönderim API tarafından reddedilir."),
+                Alan("isNotification", "İYS: Bilgilendirme mesajı",              "boolean",  "settings",
+                    yardim: "İYS (İleti Yönetim Sistemi) uyumu. İşaretliyse mesajlar \"bilgilendirme\" sayılır " +
+                            "(OTP/doğrulama kodu, sipariş durumu gibi işlemsel iletiler) ve İYS izin kontrolü yapılmadan iletilir. " +
+                            "İşaretsizse mesaj ticari/kampanya sayılır: alıcının İYS'de kayıtlı izni yoksa operatör mesajı iletmez. " +
+                            "Bu sistemde SMS yalnız OTP doğrulama için kullanıldığından kutu İŞARETLİ olmalıdır — " +
+                            "işaretsiz kalırsa doğrulama kodları İYS izni olmayan kullanıcılara ulaşmaz (\"kod gelmiyor\" şikâyeti).")
             })
         };
 
