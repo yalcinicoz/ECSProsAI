@@ -1490,6 +1490,36 @@ export function ProductDetailPage() {
     return variantAxisAttrs.find((a) => a.isPrimaryAxis)?.attributeTypeId ?? null
   }, [variantAxisAttrs])
 
+  // Varyantlar sekmesi: renk (primary axis) değerine göre gruplama — her renk bir iç sekme.
+  const [variantColorTab, setVariantColorTab] = useState<string | null>(null)
+  const variantColorGroups = useMemo(() => {
+    if (!primaryAxisAttributeTypeId || !product) return []
+    const groups = new Map<string, { id: string; name: string; count: number }>()
+    for (const v of product.variants) {
+      const va = v.variantAttributes?.find((a) => a.attributeTypeId === primaryAxisAttributeTypeId)
+      const id = va?.attributeValueId ?? '_none'
+      const name = va
+        ? (va.attributeValueNameI18n['tr'] ?? va.attributeValueNameI18n[Object.keys(va.attributeValueNameI18n)[0]] ?? '—')
+        : 'Diğer'
+      const g = groups.get(id)
+      if (g) g.count++
+      else groups.set(id, { id, name, count: 1 })
+    }
+    return Array.from(groups.values())
+  }, [product, primaryAxisAttributeTypeId])
+  // Seçili sekme grup listesinde yoksa (ürün değişti/ilk açılış) ilk gruba düş.
+  const activeColorTab = variantColorGroups.some((g) => g.id === variantColorTab)
+    ? variantColorTab
+    : (variantColorGroups[0]?.id ?? null)
+  const visibleVariants = useMemo(() => {
+    const list = product?.variants ?? []
+    if (variantColorGroups.length < 2 || !activeColorTab) return list
+    return list.filter((v) => {
+      const va = v.variantAttributes?.find((a) => a.attributeTypeId === primaryAxisAttributeTypeId)
+      return (va?.attributeValueId ?? '_none') === activeColorTab
+    })
+  }, [product, variantColorGroups, activeColorTab, primaryAxisAttributeTypeId])
+
   // combinations from axis selections
   const variantCombinations = useMemo(() => {
     const axes = variantAxisAttrs
@@ -2050,6 +2080,20 @@ export function ProductDetailPage() {
               </div>
             ) : (
               <>
+                {/* Renk (primary axis) sekmeleri — varyantlar renk bazında gruplanır */}
+                {variantColorGroups.length >= 2 && (
+                  <div className="tab-scroll border-b" style={{ borderColor: 'var(--border)', background: 'var(--surface2)' }}>
+                    {variantColorGroups.map((g) => (
+                      <button
+                        key={g.id}
+                        className={cn('lang-tab', activeColorTab === g.id && 'active')}
+                        onClick={() => setVariantColorTab(g.id)}
+                      >
+                        {g.name} ({g.count})
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="tbl-wrap">
                   <table className="w-full" style={{ minWidth: 520 }}>
                     <thead>
@@ -2064,7 +2108,7 @@ export function ProductDetailPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {product.variants.map((v) => {
+                      {visibleVariants.map((v) => {
                         const stock = allStocks.filter((s) => s.variantId === v.id)
                         const avail = stock.reduce((s, x) => s + x.availableQuantity, 0)
                         return (
