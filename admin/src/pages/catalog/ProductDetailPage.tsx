@@ -2076,7 +2076,22 @@ export function ProductDetailPage() {
 
             {variantCount === 0 ? (
               <div className="px-4 py-12 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Bu ürün henüz varyant içermiyor.
+                {variantAxisAttrs.length === 0 ? (
+                  <>
+                    <p>Bu ürünün grubunda varyant ekseni yok; satış için özniteliksiz tek varyant gerekir.</p>
+                    <div className="mt-3">
+                      <Button
+                        size="sm"
+                        onClick={() => addVariantsMutation.mutate([{ attributes: [] }])}
+                        loading={addVariantsMutation.isPending}
+                      >
+                        Default Varyant Oluştur
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  'Bu ürün henüz varyant içermiyor.'
+                )}
               </div>
             ) : (
               <>
