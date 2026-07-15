@@ -122,11 +122,9 @@ public static class DatabaseSeeder
                 Alan("origin",         "Mesaj Başlığı (Originator)",             "text",     "settings",    zorunlu: true,
                     yardim: "GES Telekom tarafında ONAYLI mesaj başlığınız. Onaysız başlıkla gönderim API tarafından reddedilir."),
                 Alan("isNotification", "İYS: Bilgilendirme mesajı",              "boolean",  "settings",
-                    yardim: "İYS (İleti Yönetim Sistemi) uyumu. İşaretliyse mesajlar \"bilgilendirme\" sayılır " +
-                            "(OTP/doğrulama kodu, sipariş durumu gibi işlemsel iletiler) ve İYS izin kontrolü yapılmadan iletilir. " +
-                            "İşaretsizse mesaj ticari/kampanya sayılır: alıcının İYS'de kayıtlı izni yoksa operatör mesajı iletmez. " +
-                            "Bu sistemde SMS yalnız OTP doğrulama için kullanıldığından kutu İŞARETLİ olmalıdır — " +
-                            "işaretsiz kalırsa doğrulama kodları İYS izni olmayan kullanıcılara ulaşmaz (\"kod gelmiyor\" şikâyeti).")
+                    yardim: "İşaretli: SMS'ler bilgilendirme (OTP, sipariş bildirimi) sayılır, İYS izni aranmaz. " +
+                            "İşaretsiz: kampanya sayılır, İYS izni olmayan alıcıya SMS gitmez. " +
+                            "Sistem SMS'i yalnız OTP için kullanıyor — işaretli bırakın.")
             })
         };
 
