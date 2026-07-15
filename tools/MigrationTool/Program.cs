@@ -67,6 +67,7 @@ static class Migration
         if (phase == 16) await Phase16_WarehouseStructure();
         if (phase == 17) Phase17_ChannelSaleFlags();
         if (phase == 18) Phase18_ChannelVariantUrls();
+        if (phase == 19) Phase19_FiltreRengi();
         if (phase == 20) await RunCatalogReload();
 
         Log("=== Migration tamamlandı! ===");
@@ -1064,8 +1065,116 @@ static class Migration
         await Phase11_ErpVariantData();
         await Phase12_ProductSpecs(null);
         await Phase13_ProductAttributeValues(null);
+        Phase19_FiltreRengi();   // renk (Phase13) → filtre_rengi (dfcolors.colorGroup); reload'da kalıcı
         await Phase14_FirmsAndChannelData();
         Log("╚══ FAZ 20 tamamlandı — doğrulama sonrası stok aktarımı ayrı koşulur ══╝");
+    }
+
+    // ── Faz 19: filtre_rengi (kürasyonlu renk facet'i) — KAYNAK: dfcolors.colorGroup ─────────
+    // Serbest-metin "renk" (colorName) → legacy'nin kürasyonlu grubu (colorGroup) → bizim 25
+    // filtre_rengi bucket'ı. Metin sınıflandırma YOK; legacy verisi kullanılır. Bir colorName
+    // dfcolors'ta >1 grup taşıyabilir (birleşik renk) → çoklu-değer; sıra dfcolors.Id (ilk = badge).
+    // Reload'un parçası (Phase20) olduğundan bir daha silinmez.
+    static readonly Dictionary<string, string?> ColorGroupToBucket = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Siyah"]="Siyah", ["Beyaz"]="Beyaz", ["Krem"]="Krem", ["Gri"]="Gri", ["Antrasit"]="Koyu Gri",
+        ["Füme"]="Koyu Gri", ["Bej"]="Bej", ["Vizon"]="Bej", ["Kahve"]="Kahve", ["Bakır"]="Kahve",
+        ["Lacivert"]="Lacivert", ["Mavi"]="Mavi", ["Saks Mavisi"]="Mavi", ["Turuncu"]="Turuncu",
+        ["Kiremit"]="Turuncu", ["Kırmızı"]="Kırmızı", ["Bordo"]="Kırmızı", ["Pembe"]="Pembe",
+        ["Pudra"]="Pembe", ["Fuşya"]="Pembe", ["Somon"]="Pembe", ["Mor"]="Mor", ["Sarı"]="Sarı",
+        ["Hardal"]="Sarı", ["Yeşil"]="Yeşil", ["Haki"]="Haki",
+        // renk olmayan gruplar → atla
+        ["Diğer"]=null, ["Renksiz"]=null, ["Desenli"]=null,
+    };
+
+    static void Phase19_FiltreRengi()
+    {
+        Log("FAZ 19: filtre_rengi (dfcolors.colorGroup kaynaklı, kürasyonlu)...");
+        var filtreTypeId = PgScalar<Guid>("SELECT \"Id\" FROM definition.attribute_types WHERE \"Code\"='filtre_rengi'");
+        var renkTypeId = PgScalar<Guid>("SELECT \"Id\" FROM definition.attribute_types WHERE \"Code\"='renk'");
+
+        // bucket adı → id (bizim 25 değer)
+        var bucketId = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        using (var r = new NpgsqlCommand(
+            $"SELECT \"NameI18n\"->>'tr', \"Id\" FROM definition.attribute_values WHERE \"AttributeTypeId\"='{filtreTypeId}'", pg).ExecuteReader())
+            while (r.Read()) bucketId[r.GetString(0)] = r.GetGuid(1);
+
+        // colorName → sıralı distinct colorGroup (dfcolors, Id sırası = ilk kazanır)
+        var nameGroups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        using (var r = MysqlQuery("SELECT colorName, colorGroup FROM dfcolors WHERE colorName<>'' AND colorGroup IS NOT NULL AND colorGroup<>'' ORDER BY Id"))
+            while (r.Read())
+            {
+                string nm = r.GetString(0).Trim(), gp = r.GetString(1).Trim();
+                if (!nameGroups.TryGetValue(nm, out var list)) nameGroups[nm] = list = new();
+                if (!list.Contains(gp, StringComparer.OrdinalIgnoreCase)) list.Add(gp);
+            }
+        Log($"  {nameGroups.Count} dfcolors renk adı (grup eşlemeli) yüklendi.");
+
+        // bizim renk değerleri: value id → metin
+        var renkValues = new List<(Guid id, string txt)>();
+        using (var r = new NpgsqlCommand(
+            $"SELECT \"Id\", \"NameI18n\"->>'tr' FROM definition.attribute_values WHERE \"AttributeTypeId\"='{renkTypeId}'", pg).ExecuteReader())
+            while (r.Read()) if (!r.IsDBNull(1)) renkValues.Add((r.GetGuid(0), r.GetString(1)));
+
+        // renk value id → sıralı bucket id listesi (dfcolors grup üzerinden)
+        var mappings = new List<(Guid renkId, Guid bkt, int ord)>();
+        int eslesmeyenAd = 0, gruptanBucketYok = 0, cokluDeger = 0;
+        foreach (var (rid, txt) in renkValues)
+        {
+            if (!nameGroups.TryGetValue(txt.Trim(), out var groups)) { eslesmeyenAd++; continue; }
+            int ord = 0; var seen = new HashSet<Guid>();
+            foreach (var gp in groups)
+            {
+                if (!ColorGroupToBucket.TryGetValue(gp, out var bname) || bname is null) continue; // Diğer/Renksiz/Desenli
+                if (!bucketId.TryGetValue(bname, out var bid)) continue;
+                if (seen.Add(bid)) mappings.Add((rid, bid, ord++));
+            }
+            if (seen.Count == 0) gruptanBucketYok++;
+            else if (seen.Count > 1) cokluDeger++;
+        }
+        Log($"  {renkValues.Count} renk değeri → {mappings.Count} filtre_rengi eşleme ({eslesmeyenAd} dfcolors'ta yok, {gruptanBucketYok} yalnız renk-olmayan grup, {cokluDeger} çoklu-değer).");
+
+        // Mevcut filtre_rengi atamalarını sil (idempotent) + temp eşleme tablosundan set-based yeniden kur
+        PgExec($"DELETE FROM {CAT}.product_variant_attributes WHERE \"AttributeTypeId\" = @t", ("t", filtreTypeId));
+        PgExec("DROP TABLE IF EXISTS tmp_renk_bucket");
+        PgExec("CREATE TEMP TABLE tmp_renk_bucket (renk uuid, bucket uuid, ord int)");
+        for (int i = 0; i < mappings.Count; i += 500)
+        {
+            var sb = new StringBuilder("INSERT INTO tmp_renk_bucket (renk,bucket,ord) VALUES ");
+            using var cmd = new NpgsqlCommand { Connection = pg };
+            int p = 0;
+            var slice = mappings.Skip(i).Take(500).ToList();
+            for (int j = 0; j < slice.Count; j++)
+            {
+                if (j > 0) sb.Append(',');
+                string a = "p" + p++, b = "p" + p++, c = "p" + p++;
+                sb.Append($"(@{a},@{b},@{c})");
+                cmd.Parameters.AddWithValue(a, slice[j].renkId);
+                cmd.Parameters.AddWithValue(b, slice[j].bkt);
+                cmd.Parameters.AddWithValue(c, slice[j].ord);
+            }
+            cmd.CommandText = sb.ToString();
+            cmd.ExecuteNonQuery();
+        }
+
+        // Her varyantın renk atamasına karşılık filtre_rengi ata (çoklu-grup → çoklu satır)
+        using (var cmd = new NpgsqlCommand($@"INSERT INTO {CAT}.product_variant_attributes
+            (""Id"",""VariantId"",""AttributeTypeId"",""AttributeValueId"",""CreatedAt"",""IsDeleted"")
+            SELECT gen_random_uuid(), va.""VariantId"", @ft, m.bucket, @now, false
+            FROM {CAT}.product_variant_attributes va
+            JOIN tmp_renk_bucket m ON m.renk = va.""AttributeValueId""
+            WHERE va.""AttributeTypeId"" = @rt", pg)
+        { CommandTimeout = 300 })
+        {
+            cmd.Parameters.AddWithValue("ft", filtreTypeId);
+            cmd.Parameters.AddWithValue("rt", renkTypeId);
+            cmd.Parameters.AddWithValue("now", Now);
+            int eklenen = cmd.ExecuteNonQuery();
+            Log($"  ✓ {eklenen} filtre_rengi ataması yazıldı.");
+        }
+        PgExec("DROP TABLE IF EXISTS tmp_renk_bucket");
+        PgExec($"ANALYZE {CAT}.product_variant_attributes");
+        Log("FAZ 19 tamam.");
     }
 
     // ── Faz 16: Depo yapısı (üçlü: Depo → Kısım → Birim/Raf) ──────────────────────
