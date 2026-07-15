@@ -294,6 +294,19 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION KAPANIŞ ÖZETİ (2026-07-15, 3. oturum) — SMS GERÇEK KANAL: GES TELEKOM (RESTART BEKLİYOR)
+**K3 (SMS sağlayıcı) kapandı:** GES Telekom (TT Mesaj, restapi.ttmesaj.com). SMTP kalıbı birebir:
+`GesTelekomSmsService` (token 23s cache + 401'de yenile → SendSingle; "*OK*" değilse fırlatır;
+ayar yoksa log yedeği) + `ISmsSettingsProvider`/`DbSmsSettingsProvider` (aktif sms-tipli
+FirmPlatformIntegration, firma geneli öncelikli, 2 dk cache). Servis kataloğu `gestelekom`
+kaydı: seed + canlı DB'ye SQL ile basıldı (satır DB'DE HAZIR). Kimlik bilgileri admin firma
+detayından girilecek (username/password credentials-şifreli; origin=mesaj başlığı zorunlu).
+API sözleşmesi gestelekom.com/tr/api-baslangic-metotlari + /tr/sms-gonderim-metotlari'ndan.
+Commit 46414ce; publish alındı → restart SONRASI OTP SMS'leri gerçek kanaldan çıkar
+(admin kaydı girilene kadar log yedeğinde kalır, davranış değişmez).
+
+---
+
 ### ⭐ SESSION KAPANIŞ ÖZETİ (2026-07-15, 2. oturum) — VARYANTSIZ ÜRÜN: DEFAULT VARYANT MODELİ (RESTART BEKLİYOR)
 **Karar (kullanıcı onaylı):** Satılabilir birim her zaman `ProductVariant`; varyantsız ürün =
 özniteliksiz tek "default" varyant (Shopify kalıbı). Kurallar: (1) invariant komut katmanında —
