@@ -13,7 +13,8 @@ public record ProductListingColorDto(
     Guid ValueId,
     Dictionary<string, string> NameI18n,
     string? HexCode,
-    string? ImageUrl = null);   // B8: renk tooltip görseli (rengin ilk varyant görseli)
+    string? ImageUrl = null,   // B8: renk tooltip görseli (rengin ilk varyant görseli)
+    string? Slug = null);      // URL aktarımı 2b: rengin gerçek (legacy) URL slug'ı (o platform)
 
 public record ProductListingAttrDto(
     string TypeCode,

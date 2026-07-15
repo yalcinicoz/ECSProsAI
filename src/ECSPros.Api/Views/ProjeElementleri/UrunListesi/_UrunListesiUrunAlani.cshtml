@@ -46,7 +46,7 @@
         const normallestir = (p) => {
             const secenekler = ((p.axisColors && p.axisColors.length > 0 ? p.axisColors : p.colors) || [])
                 .filter((c) => c.imageUrl)
-                .map((c) => ({ id: c.valueId, ad: trAd(c.nameI18n), gorsel: c.imageUrl }));
+                .map((c) => ({ id: c.valueId, ad: trAd(c.nameI18n), gorsel: c.imageUrl, slug: c.slug || null })); // 2b: renk slug'ı
             return {
                 kod: p.code,
                 ad: trAd(p.nameI18n),
@@ -61,6 +61,7 @@
                     : (p.mainImageUrl ? [p.mainImageUrl] : []),
                 renkSecenekleri: secenekler,
                 seciliRenk: p.selectedColorValueId || null,
+                slug: p.slug || null,         // 2b: kartın gerçek URL slug'ı (varsa doğrudan link)
                 sponsorlu: p.isFeatured === true,
                 puan: p.rating || 0,          // E7: onaylı yorum ortalaması
                 puanSayisi: p.reviewCount || 0,
@@ -105,8 +106,11 @@
                 puanAlani.hidden = false;
             }
 
-            const detayUrl = "/urun/" + encodeURIComponent(v.kod)
-                + (v.seciliRenk ? "?color=" + encodeURIComponent(v.seciliRenk) : "");
+            // 2b: gerçek URL slug'ı varsa doğrudan (301 hop'u yok); yoksa /urun/{kod}?color= (güvenlik ağı)
+            const detayUrl = v.slug
+                ? "/" + v.slug
+                : "/urun/" + encodeURIComponent(v.kod)
+                    + (v.seciliRenk ? "?color=" + encodeURIComponent(v.seciliRenk) : "");
             const link = kart.querySelector("[data-ms-kart-link]");
             if (link) {
                 link.href = detayUrl;
@@ -152,7 +156,7 @@
             // (site.js rozeti bağlarken tooltip alanını arar, bulamazsa bir daha bağlamaz)
             if (v.renkSecenekleri.length >= 2 && !kart.querySelector(".ms-urun-renk-tooltip-alani")) {
                 const secenekHtml = (renk, ekSinif) => `
-                    <a class="ms-urun-renk-tooltip-gorsel${ekSinif}" href="/urun/${encodeURIComponent(v.kod)}?color=${encodeURIComponent(renk.id)}">
+                    <a class="ms-urun-renk-tooltip-gorsel${ekSinif}" href="${renk.slug ? "/" + renk.slug : "/urun/" + encodeURIComponent(v.kod) + "?color=" + encodeURIComponent(renk.id)}">
                         <img data-ms-lazy-src="${kacir(renk.gorsel || v.gorsel)}" alt="${kacir(renk.ad)} renk seçeneği"><span>${kacir(renk.ad)}</span></a>`;
                 const alan = document.createElement("div");
                 alan.className = "ms-urun-renk-tooltip-alani";

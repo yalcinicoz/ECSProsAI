@@ -21,13 +21,14 @@ public static class UrunKartMap
         // linklenirse ilk görünür renge düşer ve kullanıcı yanılır.
         var secenekler = (p.AxisColors is { Count: > 0 } eksen ? eksen : renkler)
             .Where(c => c.ImageUrl is not null)
-            .Select(c => new KartRenkVm(c.ValueId, TrAd(c.NameI18n), c.ImageUrl))
+            .Select(c => new KartRenkVm(c.ValueId, TrAd(c.NameI18n), c.ImageUrl, c.Slug))  // 2b: renk slug'ı
             .ToList();
         return new UrunKartVm(
             p.Code, TrAd(p.NameI18n), p.MainImageUrl, p.BasePrice,
             renkler.Where(c => c.HexCode is not null).Select(c => c.HexCode!).Take(2).ToList(),
             secenekler.Count > 0 ? secenekler.Count : renkler.Count, degerIdler,
-            p.GalleryUrls ?? [], secenekler, p.SelectedColorValueId, p.IsFeatured, p.Rating, p.ReviewCount);
+            p.GalleryUrls ?? [], secenekler, p.SelectedColorValueId, p.IsFeatured, p.Rating, p.ReviewCount,
+            Slug: p.Slug);   // 2b: kartın seçili renk slug'ı
     }
 
     public static UrunKartVm KartaCevir(StoreProductDto p)

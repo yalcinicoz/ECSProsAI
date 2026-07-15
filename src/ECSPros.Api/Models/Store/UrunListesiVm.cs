@@ -7,7 +7,9 @@ namespace ECSPros.Api.Models.Store;
 /// config script'i üzerinden api/store/* JSON'dan yüklenir.
 /// </summary>
 /// <summary>B8: renk tooltip satırı — eksen renginin kendi görseli ve detay linki.</summary>
-public sealed record KartRenkVm(Guid ValueId, string Ad, string? GorselUrl);
+// Slug: rengin gerçek (legacy) URL slug'ı — varsa detay linki doğrudan /{slug}, yoksa
+// /urun/{kod}?color= (301 güvenlik ağı). URL aktarımı 2b.
+public sealed record KartRenkVm(Guid ValueId, string Ad, string? GorselUrl, string? Slug = null);
 
 public sealed record UrunKartVm(
     string Kod,
@@ -23,11 +25,18 @@ public sealed record UrunKartVm(
     bool Sponsorlu = false,              // B11: öne çıkar penceresi içinde — "Sponsorlu" rozeti
     double Puan = 0,                     // E7: onaylı yorum ortalaması (0 = yorum yok)
     int PuanSayisi = 0,                  // E7: onaylı yorum sayısı
-    string? VideoUrl = null)             // H5: Videolu Ürün rozeti + hover tooltip videosu
+    string? VideoUrl = null,             // H5: Videolu Ürün rozeti + hover tooltip videosu
+    string? Slug = null)                 // URL aktarımı 2b: kartın (seçili renk) gerçek URL slug'ı
 {
-    public string Url => "/urun/" + Kod + (SeciliRenkId is { } renk ? "?color=" + renk : "");
+    // 2b: slug varsa doğrudan gerçek URL (301 hop'u yok); yoksa /urun/{kod}?color= (güvenlik ağı).
+    public string Url => Slug is { Length: > 0 } s
+        ? "/" + s
+        : "/urun/" + Kod + (SeciliRenkId is { } renk ? "?color=" + renk : "");
 
-    public string UrlRenkli(Guid renkValueId) => "/urun/" + Kod + "?color=" + renkValueId;
+    public string UrlRenkli(Guid renkValueId) =>
+        RenkSecenekleri.FirstOrDefault(r => r.ValueId == renkValueId)?.Slug is { Length: > 0 } rs
+            ? "/" + rs
+            : "/urun/" + Kod + "?color=" + renkValueId;
 
     public string GaleriResimleri =>
         GaleriUrller.Count > 0 ? string.Join("|", GaleriUrller) : GorselUrl ?? "";
