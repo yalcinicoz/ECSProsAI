@@ -53,6 +53,12 @@ public class AddProductVariantsCommandHandler : IRequestHandler<AddProductVarian
 
         foreach (var item in request.Variants)
         {
+            // Özniteliksiz (default) varyant ile öznitelikli varyant aynı anda aktif olamaz:
+            // öznitelikli varyantı olan ürüne yeni bir default açılmaz.
+            if (item.Attributes.Count == 0 &&
+                existingVariants.Any(ev => ev.IsActive && ev.VariantAttributes.Count > 0))
+                continue;
+
             // Check duplicate combination
             var isDuplicate = existingVariants.Any(ev =>
             {
@@ -100,6 +106,17 @@ public class AddProductVariantsCommandHandler : IRequestHandler<AddProductVarian
             added++;
         }
 
+        // İlk gerçek kombinasyon eklendiğinde özniteliksiz default varyant pasife çekilir
+        // (silinmez — stok/sipariş geçmişi ona bağlı olabilir).
+        if (existingVariants.Any(v => v.IsActive && v.VariantAttributes.Count > 0))
+        {
+            foreach (var def in existingVariants.Where(v => v.IsActive && v.VariantAttributes.Count == 0))
+            {
+                def.IsActive  = false;
+                def.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
         await _db.SaveChangesAsync(ct);
         return Result.Success(added);
     }
@@ -109,6 +126,9 @@ public class AddProductVariantsCommandHandler : IRequestHandler<AddProductVarian
         List<VariantAxisValueItem> attrs,
         Dictionary<Guid, Dictionary<string, string>> valueCodeMap)
     {
+        if (attrs.Count == 0)
+            return productCode; // özniteliksiz default varyant: SKU = ürün kodu
+
         var parts = attrs.Select(a =>
         {
             if (valueCodeMap.TryGetValue(a.AttributeValueId, out var nameI18n))

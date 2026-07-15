@@ -60,6 +60,51 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
         product.UpdatedBy = request.UpdatedBy;
         product.UpdatedAt = now;
 
+        // Varyantsız üründe (tek özniteliksiz default varyant) fiyatın sahibi varyanttır —
+        // kart fiyatı ve fiyat filtresi varyant BasePrice'ından okur. Ürün fiyatı değişince
+        // default varyanta senkron yazılır; çok varyantlı üründe varyant fiyatına dokunulmaz.
+        var varyantlar = await _context.ProductVariants
+            .Where(v => v.ProductId == product.Id)
+            .Select(v => new { Variant = v, AttrCount = v.VariantAttributes.Count })
+            .ToListAsync(cancellationToken);
+
+        if (varyantlar.Count == 1 && varyantlar[0].AttrCount == 0)
+        {
+            var defaultVaryant = varyantlar[0].Variant;
+
+            if (defaultVaryant.BasePrice != request.BasePrice)
+            {
+                _context.VariantPriceHistories.Add(new Domain.Entities.VariantPriceHistory
+                {
+                    VariantId     = defaultVaryant.Id,
+                    PriceType     = "base_price",
+                    OldValue      = defaultVaryant.BasePrice,
+                    NewValue      = request.BasePrice,
+                    ChangedBy     = request.UpdatedBy,
+                    ChangedByName = request.UpdatedByName,
+                });
+                defaultVaryant.BasePrice = request.BasePrice;
+                defaultVaryant.UpdatedAt = now;
+                defaultVaryant.UpdatedBy = request.UpdatedBy;
+            }
+
+            if (request.BaseCost.HasValue && defaultVaryant.BaseCost != request.BaseCost)
+            {
+                _context.VariantPriceHistories.Add(new Domain.Entities.VariantPriceHistory
+                {
+                    VariantId     = defaultVaryant.Id,
+                    PriceType     = "base_cost",
+                    OldValue      = defaultVaryant.BaseCost ?? 0,
+                    NewValue      = request.BaseCost.Value,
+                    ChangedBy     = request.UpdatedBy,
+                    ChangedByName = request.UpdatedByName,
+                });
+                defaultVaryant.BaseCost  = request.BaseCost;
+                defaultVaryant.UpdatedAt = now;
+                defaultVaryant.UpdatedBy = request.UpdatedBy;
+            }
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
         return Result.Success(true);
     }

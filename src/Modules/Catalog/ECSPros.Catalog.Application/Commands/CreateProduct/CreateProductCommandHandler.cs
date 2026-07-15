@@ -63,6 +63,31 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
             });
         }
 
+        // Satılabilir birim ProductVariant satırıdır (sepet/stok/sipariş VariantId'ye bağlı);
+        // grubun varyant ekseni yoksa ürün özniteliksiz tek "default" varyantla doğar —
+        // "her ürünün en az 1 varyantı vardır" kuralı UI'a değil buraya bağlıdır.
+        // Eksenli grupta 0 varyant = taslak: varyantlar kombinasyon seçilerek sonradan açılır.
+        if (variants.Count == 0)
+        {
+            var grupEksenli = await _context.ProductGroupAttributes
+                .AnyAsync(a => a.ProductGroupId == request.ProductGroupId && a.IsVariant, cancellationToken);
+
+            if (!grupEksenli)
+            {
+                var sku = code;
+                if (await _context.ProductVariants.AnyAsync(v => v.Sku == sku, cancellationToken))
+                    sku = $"{sku}-{Guid.NewGuid().ToString("N")[..4].ToUpper()}";
+
+                product.Variants.Add(new ProductVariant
+                {
+                    Sku       = sku,
+                    BasePrice = request.BasePrice,
+                    BaseCost  = request.BaseCost,
+                    IsActive  = true
+                });
+            }
+        }
+
         _context.Products.Add(product);
         await _context.SaveChangesAsync(cancellationToken);
         return Result.Success(new CreateProductResult(product.Id, product.Code));
