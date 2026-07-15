@@ -204,18 +204,12 @@
                 kart.querySelector(".ms-urun-gorsel-alani")?.prepend(sponsor);
             }
 
-            // Renk rozeti (tooltip tetikleyicisi) — çok renkli her üründe (SSR ile aynı koşul:
-            // renkSecenekleri >= 2). Hex (filtre_rengi) varsa renkli nokta; yoksa rengin görseli
-            // mini swatch (serbest-metin 'renk' ekseninde hex bulunmaz).
+            // Renk rozeti — tasarım kaynağı markup'ı BİREBİR (iki sabit dekoratif nokta + sayı).
+            // Çok renkli her üründe (SSR ile aynı koşul: renkSecenekleri >= 2). Yorum/inline style yok.
             if (v.renkSecenekleri.length >= 2 && !kart.querySelector(".ms-urun-renk-rozet")) {
                 const rozet = document.createElement("span");
                 rozet.className = "ms-urun-renk-rozet";
-                const swatch = (i) => v.renkler[i]
-                    ? `<span class="ms-urun-renk" style="background-image:none;background-color:${kacir(v.renkler[i])}"></span>`
-                    : (v.renkSecenekleri[i]
-                        ? `<span class="ms-urun-renk" style="background-image:url('${kacir(v.renkSecenekleri[i].gorsel)}');background-size:cover;background-position:center"></span>`
-                        : "");
-                rozet.innerHTML = `<span class="ms-urun-renkler" aria-hidden="true">${swatch(0)}${swatch(1)}</span> ${v.renkSayisi}`;
+                rozet.innerHTML = `<span class="ms-urun-renkler" aria-hidden="true"><span class="ms-urun-renk ms-urun-renk-mavi"></span><span class="ms-urun-renk ms-urun-renk-pembe"></span></span> ${v.renkSayisi}`;
                 kart.querySelector(".ms-urun-gorsel-alani")?.appendChild(rozet);
             }
 
