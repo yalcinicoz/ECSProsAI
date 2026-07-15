@@ -4,6 +4,7 @@ import { Search } from 'lucide-react'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { Pagination } from '@/components/ui/Pagination'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { PermissionGuard } from '@/components/ui/PermissionGuard'
 import { cn } from '@/lib/utils'
@@ -21,15 +22,31 @@ const MOVEMENT_TYPES = [
   { value: 'transfer_out',label: 'Transfer Çıkış' },
 ]
 
-interface Stock {
+// Admin stok satırı: sayfalı + ürün/depo/kısım/raf bilgisiyle zenginleştirilmiş
+// (eski /inventory/stocks 165K satırı sayfasız döndürüp tarayıcıyı donduruyordu).
+interface StockAdminRow {
   id: string
   variantId: string
-  warehouseId: string
-  stockType: string
+  productCode: string
+  productName: string
+  options: string | null       // "Beden: M, Renk: Beyaz"
+  imageUrl: string | null
+  warehouseName: string
+  sectionName: string | null
+  binCode: string | null
   quantity: number
   reservedQuantity: number
   availableQuantity: number
 }
+
+interface StockPage {
+  items: StockAdminRow[]
+  totalCount: number
+  page: number
+  pageSize: number
+}
+
+const PAGE_SIZE = 30
 
 interface VariantInfo {
   id: string
@@ -54,6 +71,9 @@ export function StocksPage() {
   const [warehouseId, setWarehouseId] = useState<string>('')
   const [availableOnly, setAvailableOnly] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState(false)
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')     // uygulanmış arama (Ara/Enter ile)
+  const [page, setPage] = useState(1)
 
   const [barcodeInput, setBarcodeInput] = useState('')
   const [variantLookup, setVariantLookup] = useState<VariantInfo | null>(null)
@@ -73,16 +93,25 @@ export function StocksPage() {
     },
   })
 
-  const { data: stocks = [], isLoading: sLoading } = useQuery<Stock[]>({
-    queryKey: ['stocks', warehouseId, availableOnly],
+  // Sayfa BOŞ açılır: filtre (arama veya depo) girilmeden sorgu atılmaz — 165K satırı
+  // topluca çekmek tarayıcıyı donduruyordu.
+  const filtreVar = !!(search || warehouseId)
+  const { data: stockPage, isLoading: sLoading } = useQuery<StockPage>({
+    queryKey: ['stocks-admin', search, warehouseId, availableOnly, page],
     queryFn: async () => {
-      const params = new URLSearchParams()
+      const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) })
+      if (search) params.set('search', search)
       if (warehouseId) params.set('warehouseId', warehouseId)
       if (availableOnly) params.set('availableOnly', 'true')
-      const { data } = await api.get(`/inventory/stocks?${params}`)
+      const { data } = await api.get(`/inventory/stocks/admin-list?${params}`)
       return data.data
     },
+    enabled: filtreVar,
   })
+  const stocks = stockPage?.items ?? []
+  const totalCount = stockPage?.totalCount ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+  const applySearch = () => { setPage(1); setSearch(searchInput.trim()) }
 
   const adjustMutation = useMutation({
     mutationFn: async () => {
@@ -95,7 +124,7 @@ export function StocksPage() {
       })
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['stocks'] })
+      queryClient.invalidateQueries({ queryKey: ['stocks-admin'] })
       setAdjustOpen(false)
       resetAdjustForm()
     },
@@ -131,8 +160,6 @@ export function StocksPage() {
     setTimeout(() => barcodeRef.current?.focus(), 100)
   }
 
-  const warehouseMap = Object.fromEntries(warehouses.map(w => [w.id, w]))
-
   if (wLoading) return <PageSpinner />
 
   const isFormValid = form.variantId && form.warehouseId && form.quantityDelta !== 0
@@ -143,13 +170,26 @@ export function StocksPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Stok</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{stocks.length} kayıt</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>
+            {filtreVar ? `${totalCount} kayıt` : 'Listelemek için ürün arayın veya depo seçin'}
+          </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex gap-1">
+            <input
+              className="inp text-sm py-1.5 px-3 h-auto"
+              style={{ minWidth: 220 }}
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && applySearch()}
+              placeholder="Ürün kodu / adı / barkod ara…"
+            />
+            <Button size="sm" variant="secondary" onClick={applySearch}><Search size={14} /></Button>
+          </div>
           <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
             {[false, true].map(v => (
               <button key={String(v)}
-                onClick={() => setAvailableOnly(v)}
+                onClick={() => { setPage(1); setAvailableOnly(v) }}
                 className={cn('px-3 py-1 rounded-lg text-sm font-medium transition-all',
                   availableOnly === v ? 'bg-white shadow-sm' : 'text-[var(--text-s)]')}
                 style={availableOnly === v ? { color: 'var(--text)' } : {}}>
@@ -158,7 +198,7 @@ export function StocksPage() {
             ))}
           </div>
           <select className="inp text-sm py-1.5 px-3 h-auto" value={warehouseId}
-            onChange={e => setWarehouseId(e.target.value)}
+            onChange={e => { setPage(1); setWarehouseId(e.target.value) }}
             style={{ minWidth: 160 }}>
             <option value="">Tüm Depolar</option>
             {warehouses.map(w => (
@@ -176,61 +216,76 @@ export function StocksPage() {
         <table className="w-full">
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['VARYANT ID', 'DEPO', 'TİP', 'STOK', 'REZ.', 'MEVCUT'].map(h => (
+              {['ÜRÜN', 'DEPO', 'KISIM', 'RAF', 'STOK', 'REZ.', 'MEVCUT'].map(h => (
                 <th key={h} className="px-4 py-3 text-xs font-semibold text-left"
                   style={{ color: 'var(--text-s)' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {sLoading && (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
+            {!filtreVar && (
+              <tr><td colSpan={7} className="px-4 py-14 text-center text-sm" style={{ color: 'var(--text-s)' }}>
+                Ürün kodu/adı/barkod arayın veya bir depo seçin — sonuçlar burada listelenir.
+              </td></tr>
+            )}
+            {filtreVar && sLoading && (
+              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
                 Yükleniyor...
               </td></tr>
             )}
-            {!sLoading && stocks.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
+            {filtreVar && !sLoading && stocks.length === 0 && (
+              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
                 Stok kaydı bulunamadı.
               </td></tr>
             )}
             {stocks.map(s => (
               <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3">
-                  <code className="text-xs font-mono" style={{ color: 'var(--text-m)' }}>
-                    {s.variantId.slice(0, 8)}…
-                  </code>
+                <td className="px-4 py-2">
+                  <div className="flex items-center gap-2">
+                    {s.imageUrl
+                      ? <img src={s.imageUrl} alt="" className="w-9 h-9 rounded object-cover shrink-0" style={{ background: 'var(--surface2)' }} />
+                      : <div className="w-9 h-9 rounded shrink-0" style={{ background: 'var(--surface2)' }} />}
+                    <div className="min-w-0">
+                      <div className="text-sm truncate" style={{ color: 'var(--text)' }}>{s.productName}</div>
+                      <div className="text-xs" style={{ color: 'var(--text-s)' }}>
+                        <code className="font-mono">{s.productCode}</code>
+                        {s.options ? <span> · {s.options}</span> : null}
+                      </div>
+                    </div>
+                  </div>
                 </td>
-                <td className="px-4 py-3">
-                  <span className="text-sm" style={{ color: 'var(--text)' }}>
-                    {warehouseMap[s.warehouseId] ? getWarehouseName(warehouseMap[s.warehouseId]) : s.warehouseId.slice(0, 8)}
-                  </span>
+                <td className="px-4 py-2">
+                  <span className="text-sm" style={{ color: 'var(--text)' }}>{s.warehouseName}</span>
                 </td>
-                <td className="px-4 py-3">
-                  <span className="text-xs px-2 py-0.5 rounded-full"
-                    style={{ background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>
-                    {s.stockType}
-                  </span>
+                <td className="px-4 py-2">
+                  <span className="text-sm" style={{ color: 'var(--text-m)' }}>{s.sectionName ?? '—'}</span>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-2">
+                  {s.binCode
+                    ? <code className="text-xs font-mono" style={{ color: 'var(--text-m)' }}>{s.binCode}</code>
+                    : <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span>}
+                </td>
+                <td className="px-4 py-2">
                   <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{s.quantity}</span>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-2">
                   <span className="text-sm" style={{ color: s.reservedQuantity > 0 ? 'var(--brand)' : 'var(--text-s)' }}>
                     {s.reservedQuantity}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-2">
                   <span className={cn('text-sm font-medium',
                     s.availableQuantity <= 0 ? 'text-red-500' : s.availableQuantity <= 5 ? 'text-yellow-600' : '')}>
-                    {s.availableQuantity <= 0
-                      ? <span className="text-red-500">{s.availableQuantity}</span>
-                      : s.availableQuantity}
+                    {s.availableQuantity}
                   </span>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {filtreVar && (
+          <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onChange={setPage} />
+        )}
       </div>
 
       {/* Adjust Modal */}

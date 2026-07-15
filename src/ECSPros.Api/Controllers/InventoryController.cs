@@ -95,6 +95,23 @@ public class InventoryController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>Admin stok listesi: sayfalı + ürün/depo/kısım/raf bilgisiyle zenginleştirilmiş
+    /// (eski /stocks 165K satırı sayfasız döndürüyordu — admin sayfası artık bunu kullanır).</summary>
+    [HttpGet("stocks/admin-list")]
+    public async Task<IActionResult> GetStocksAdmin(
+        [FromQuery] string? search,
+        [FromQuery] Guid? warehouseId,
+        [FromQuery] bool availableOnly = false,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 30,
+        CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new ECSPros.Api.Handlers.GetStocksAdminQuery(
+            search, warehouseId, availableOnly, page, pageSize), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
     /// <summary>Stok hareketi (giriş/çıkış/düzeltme) kaydeder.</summary>
     [HttpPost("stocks/adjust")]
     public async Task<IActionResult> AdjustStock([FromBody] AdjustStockRequest request, CancellationToken ct)
