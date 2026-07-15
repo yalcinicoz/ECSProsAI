@@ -82,6 +82,9 @@ public class ChannelVariantConfiguration : IEntityTypeConfiguration<ChannelVaria
         builder.Property(cv => cv.Price).HasPrecision(18, 2);
         builder.Property(cv => cv.CompareAtPrice).HasPrecision(18, 2);
         builder.HasIndex(cv => new { cv.FirmPlatformId, cv.VariantId }).IsUnique();
+        builder.Property(cv => cv.Slug).HasMaxLength(255);
+        // Slug → varyant çözümü routing sıcak yolu (kök /{slug} isteği).
+        builder.HasIndex(cv => new { cv.FirmPlatformId, cv.Slug });
         builder.HasQueryFilter(cv => !cv.IsDeleted);
     }
 }

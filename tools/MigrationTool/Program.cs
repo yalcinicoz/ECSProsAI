@@ -66,6 +66,7 @@ static class Migration
         if (phase == 15) await Phase15_SeedChannelCategories(Guid.Parse(args[1]));
         if (phase == 16) await Phase16_WarehouseStructure();
         if (phase == 17) Phase17_ChannelSaleFlags();
+        if (phase == 18) Phase18_ChannelVariantUrls();
         if (phase == 20) await RunCatalogReload();
 
         Log("=== Migration tamamlandı! ===");
@@ -2237,6 +2238,81 @@ static class Migration
         }
         FlushChannelSaleFlags(firmPlatformId, batch, now);
         Log($"  ✓ Platform {legacyPlatformId}: {matched} ürün ({cikarilan} kanaldan çıkarıldı, {durdurulan} durduruldu; {skipped} eşleşmeyen atlandı).");
+    }
+
+    // ─── FAZ 18: LEGACY ÜRÜN URL'LERİ → ChannelVariant.Slug (per-platform, per-varyant) ──────
+    // Eski sitenin gerçek URL'leri (plurunler.urunUrl, slug biçimi) yeni sitede çalışsın diye
+    // her (platform × varyant) çiftinin URL'i channel_variants.Slug'a taşınır. Hedefli/reload'suz/
+    // idempotent. urunAnaVaryantId = legacy varyant id (apurunvaryantlari.Id) → variantMap ile GUID.
+    static void Phase18_ChannelVariantUrls()
+    {
+        Log("FAZ 18: Legacy ürün URL'leri → channel_variants.Slug (per-platform/varyant)...");
+        EnsureVariantMap();
+
+        var tozluId  = PgScalar<Guid>("SELECT \"Id\" FROM core.core_firm_platforms WHERE \"Code\"='tozlu'");
+        var juludeId = PgScalar<Guid>("SELECT \"Id\" FROM core.core_firm_platforms WHERE \"Code\"='julude'");
+        var misharId = PgScalar<Guid>("SELECT \"Id\" FROM core.core_firm_platforms WHERE \"Code\"='mishar'");
+
+        foreach (var (legacyPlatformId, firmPlatformId) in new[] { (1, tozluId), (2, juludeId), (41, misharId) })
+            MigrateChannelVariantUrlsForPlatform(legacyPlatformId, firmPlatformId);
+
+        PgExec("ANALYZE storefront.channel_variants");
+        Log("FAZ 18 tamam.");
+    }
+
+    static void MigrateChannelVariantUrlsForPlatform(int legacyPlatformId, Guid firmPlatformId)
+    {
+        Log($"  Platform {legacyPlatformId} → varyant URL aktarımı...");
+        var batch = new List<(Guid variantId, string slug)>();
+        var seenVariant = new HashSet<Guid>();   // aynı platformda ilk gelen kazanır (savunma)
+        int matched = 0, skipped = 0, dup = 0;
+
+        using (var r = MysqlQuery($@"SELECT urunAnaVaryantId, urunUrl FROM plurunler
+            WHERE platformId = {legacyPlatformId} AND urunUrl IS NOT NULL AND urunUrl <> ''"))
+        {
+            while (r.Read())
+            {
+                int lvid = r.GetInt32(0);
+                string url = r.GetString(1).Trim();
+                if (url.Length == 0) { skipped++; continue; }
+                if (!variantMap.TryGetValue(lvid, out var variantGuid)) { skipped++; continue; }
+                if (!seenVariant.Add(variantGuid)) { dup++; continue; }
+
+                batch.Add((variantGuid, url.Length > 255 ? url[..255] : url));
+                matched++;
+                if (batch.Count >= 500) { FlushChannelVariantSlugs(firmPlatformId, batch); batch.Clear(); }
+            }
+        }
+        FlushChannelVariantSlugs(firmPlatformId, batch);
+        Log($"  ✓ Platform {legacyPlatformId}: {matched} varyant slug'landı ({skipped} eşleşmeyen atlandı, {dup} yinelenen varyant atlandı).");
+    }
+
+    static void FlushChannelVariantSlugs(Guid firmPlatformId, List<(Guid variantId, string slug)> batch)
+    {
+        if (batch.Count == 0) return;
+        var sb = new StringBuilder();
+        sb.Append(@"INSERT INTO storefront.channel_variants
+            (""Id"",""FirmPlatformId"",""VariantId"",""Slug"",""IsActive"",""CreatedAt"",""IsDeleted"") VALUES ");
+        using var cmd = new NpgsqlCommand { Connection = pg, CommandTimeout = 120 };
+        int p = 0;
+        var now = Now;
+        for (int i = 0; i < batch.Count; i++)
+        {
+            if (i > 0) sb.Append(',');
+            var (vid, slug) = batch[i];
+            string pvid = "p" + p++, pslug = "p" + p++, pid = "p" + p++, pnow = "p" + p++;
+            sb.Append($"(@{pid},@fpid,@{pvid},@{pslug},TRUE,@{pnow},FALSE)");
+            cmd.Parameters.AddWithValue(pid, NewId());
+            cmd.Parameters.AddWithValue(pvid, vid);
+            cmd.Parameters.AddWithValue(pslug, slug);
+            cmd.Parameters.AddWithValue(pnow, now);
+        }
+        cmd.Parameters.AddWithValue("fpid", firmPlatformId);
+        // Mevcut ChannelVariant satırını (Phase14 fiyat/durum) KORU, yalnız Slug'ı yaz.
+        sb.Append(@" ON CONFLICT (""FirmPlatformId"",""VariantId"") DO UPDATE SET
+            ""Slug""=EXCLUDED.""Slug"", ""UpdatedAt""=EXCLUDED.""CreatedAt""");
+        cmd.CommandText = sb.ToString();
+        cmd.ExecuteNonQuery();
     }
 
     static void FlushChannelSaleFlags(Guid firmPlatformId,
