@@ -54,14 +54,29 @@
         <button class="ms-urun-koleksiyon" type="button" aria-label="Koleksiyona ekle" aria-pressed="false" data-ms-urun-koleksiyon>
             <i class="fa-solid fa-bookmark ms-fa-ikon" aria-hidden="true"></i>
         </button>
-        @if (u is not null && u.RenkSayisi >= 2 && u.RenkHexleri.Count > 0)
+        @* "Diğer renkler" rozeti = tooltip tetikleyicisi. Çok renkli her üründe gösterilir
+           (tooltip ile aynı koşul: RenkSecenekleri >= 2). Renk hex'i (filtre_rengi) varsa
+           renkli nokta; yoksa rengin görseli mini swatch olur (renk ekseni serbest-metin
+           'renk' olduğunda hex bulunmaz). *@
+        @if (u is not null && u.RenkSecenekleri.Count >= 2)
         {
             <span class="ms-urun-renk-rozet">
                 <span class="ms-urun-renkler" aria-hidden="true">
-                    <span class="ms-urun-renk ms-urun-renk-mavi" style="background-image:none;background-color:@u.RenkHexleri[0]"></span>
-                    @if (u.RenkHexleri.Count > 1)
+                    @if (u.RenkHexleri.Count > 0)
                     {
-                        <span class="ms-urun-renk ms-urun-renk-pembe" style="background-image:none;background-color:@u.RenkHexleri[1]"></span>
+                        <span class="ms-urun-renk ms-urun-renk-mavi" style="background-image:none;background-color:@u.RenkHexleri[0]"></span>
+                        @if (u.RenkHexleri.Count > 1)
+                        {
+                            <span class="ms-urun-renk ms-urun-renk-pembe" style="background-image:none;background-color:@u.RenkHexleri[1]"></span>
+                        }
+                    }
+                    else
+                    {
+                        <span class="ms-urun-renk" style="background-image:url('@u.RenkSecenekleri[0].GorselUrl');background-size:cover;background-position:center"></span>
+                        @if (u.RenkSecenekleri.Count > 1)
+                        {
+                            <span class="ms-urun-renk" style="background-image:url('@u.RenkSecenekleri[1].GorselUrl');background-size:cover;background-position:center"></span>
+                        }
                     }
                 </span>
                 @u.RenkSayisi
