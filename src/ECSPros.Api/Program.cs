@@ -141,6 +141,9 @@ builder.Services.AddSharedInfrastructure(builder.Configuration);
 // SMTP ayarları DB'deki platform servis tanımından (yoksa Email:Smtp config yedeği)
 builder.Services.AddScoped<ECSPros.Shared.Infrastructure.Messaging.ISmtpSettingsProvider,
     ECSPros.Api.Services.DbSmtpSettingsProvider>();
+// SMS ayarları DB'deki platform servis tanımından (yoksa log yedeği — GES Telekom)
+builder.Services.AddScoped<ECSPros.Shared.Infrastructure.Messaging.ISmsSettingsProvider,
+    ECSPros.Api.Services.DbSmsSettingsProvider>();
 
 // ─── Infrastructure Modules ────────────────────────────────────────
 builder.Services.AddIamInfrastructure(npgsqlDataSource, builder.Configuration);

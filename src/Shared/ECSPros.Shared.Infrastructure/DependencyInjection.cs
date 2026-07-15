@@ -48,9 +48,11 @@ public static class DependencyInjection
         // H8 (K12 kararı): e-posta gerçek kanal. SmtpEmailService ayarları sırayla çözer:
         // DB (ISmtpSettingsProvider — Api kaydeder) → Email:Smtp config → ikisi de yoksa
         // log'a yazar (site e-postasız da çalışır; Redis kayıt deseniyle aynı güvenlik ağı).
-        // SMS için sağlayıcı kararı (K3) hâlâ açık — Log stub'ı kalır.
+        // SMS gerçek kanal (2026-07-15, K3 kapandı): GES Telekom (TT Mesaj) — ayarlar DB'den
+        // (ISmsSettingsProvider — Api kaydeder); kayıt yoksa log'a yazar (eski stub davranışı).
+        services.AddHttpClient();
         services.AddTransient<IEmailService, SmtpEmailService>();
-        services.AddTransient<ISmsService, LogSmsService>();
+        services.AddTransient<ISmsService, GesTelekomSmsService>();
 
         return services;
     }
