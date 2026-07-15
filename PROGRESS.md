@@ -311,10 +311,16 @@ modelinin M2 (kanal seçimi) + M3 (kanalda durdurma) katmanları.
 5. **İzole doğrulama (5053 Production):** çıkar→301, durdurma penceresi→301, pencere geçmiş→otomatik 200,
    geri al→200. Deploy DLL'leri doğrulanan staging ile byte-AYNI.
 
-**⚠️ RESTART BEKLİYOR:** temiz publish `/opt/ECSProsAI/publish` hazır — kullanıcı `sudo systemctl
-restart ecspros`. Restart sonrası: geçit + yeni endpoint'ler aktif, Mishar'da 344 ürün gizlenir.
-Değişiklikler COMMIT edilmedi (kullanıcı isteğine bırakıldı; çalışma ağacında ayrıca dokunulmayan
-site.js var). Detay: `project_sale_visibility_model_2026-07-14.md`.
+**DEPLOY + DOĞRULANDI + COMMIT:** kullanıcı restart yaptı (10:20); canlıda Redis AKTİF, kanaldaki
+ürün 200, durdurulmuş ürün→301, endpoint 401. 5 commit (geçit+panel+Faz17+PROGRESS+M1-contract);
+site.js dokunulmadı/commit dışı.
+
+**DEPRECATED TEMİZLİK (kısmi):** `catalog.products.IsActive` KOLONU DÜŞÜRÜLDÜ (migration
+DropProductIsActive, canlı DB'de; M1 contract tamam — kolon yetim+NOT NULL/default'suz insert
+riskiydi; redeploy gerekmedi). ⚠️ Diğer 3 "deprecated" kalem (Warehouse.IsSellableOnline,
+inv_stocks.LocationId, inv_warehouse_locations) ÖLÜ DEĞİL — hâlâ canlı-bağlı (depo/transfer/
+rezervasyon CRUD); emekliye ayırmak Inventory refactoru gerektirir, hızlı temizlik değil.
+Detay: `project_sale_visibility_model_2026-07-14.md`.
 
 ---
 
