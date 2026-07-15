@@ -20,6 +20,8 @@ export interface SchemaField {
   type: 'text' | 'password' | 'number' | 'date' | 'boolean'
   section: 'credentials' | 'settings'
   required: boolean
+  /** Alan yanındaki info ikonunda gösterilen açıklama — yoksa ikon çıkmaz. */
+  helpI18n?: Record<string, string> | null
 }
 
 export interface PlatformType {
@@ -54,6 +56,12 @@ function getName(p: Pick<PlatformType, 'nameI18n' | 'code'>) {
 export function getFieldLabel(f: SchemaField, lang = 'tr'): string {
   if (!f.labelI18n) return f.key
   return f.labelI18n[lang] ?? f.labelI18n['tr'] ?? f.labelI18n[Object.keys(f.labelI18n)[0]] ?? f.key
+}
+
+export function getFieldHelp(f: SchemaField, lang = 'tr'): string | null {
+  const h = f.helpI18n
+  if (!h) return null
+  return h[lang] ?? h['tr'] ?? h[Object.keys(h)[0]] ?? null
 }
 
 // ── Schema Field Card ─────────────────────────────────────────────────────────
