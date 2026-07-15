@@ -294,6 +294,19 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION KAPANIŞ ÖZETİ (2026-07-15, 2. oturum) — VARYANTSIZ ÜRÜN: DEFAULT VARYANT MODELİ (RESTART BEKLİYOR)
+**Karar (kullanıcı onaylı):** Satılabilir birim her zaman `ProductVariant`; varyantsız ürün =
+özniteliksiz tek "default" varyant (Shopify kalıbı). Kurallar: (1) invariant komut katmanında —
+eksensiz grupta CreateProduct default varyantı otomatik açar (SKU=ürün kodu, fiyat=BasePrice);
+eksenli grupta 0 varyant = taslak. (2) Özniteliksiz ve öznitelikli varyant aynı anda aktif olamaz —
+ilk gerçek kombinasyon eklenince default pasife çekilir (AddProductVariants). (3) Fiyatın sahibi
+varyant — UpdateProduct tek özniteliksiz varyanta fiyat/maliyeti senkron yazar (VariantPriceHistory'li).
+Admin: eksensiz grupta 0 varyantlı eski ürün için boş durumda "Default Varyant Oluştur" butonu.
+Vitrin tarafı değişmedi (TekVaryantId yolu zaten hazırdı). Commit 92fbee5; admin/dist canlıda,
+API publish alındı → `sudo systemctl restart ecspros` BEKLİYOR.
+
+---
+
 ### ⭐ SESSION KAPANIŞ ÖZETİ (2026-07-15) — SATIŞ GÖRÜNÜRLÜĞÜ M2+M3 TAMAM (RESTART BEKLİYOR)
 **Bu oturumda tamamlananlar (kod + migration + değer aktarımı canlı DB'de):** Satış görünürlüğü
 modelinin M2 (kanal seçimi) + M3 (kanalda durdurma) katmanları.
