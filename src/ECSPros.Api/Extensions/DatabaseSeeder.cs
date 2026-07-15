@@ -106,11 +106,22 @@ public static class DatabaseSeeder
             {
                 Alan("apiUrl", "API Adresi",   "text",     "settings",    zorunlu: true),
                 Alan("apiKey", "API Anahtarı", "password", "credentials", zorunlu: true)
+            }),
+            // GES Telekom (TT Mesaj) — restapi.ttmesaj.com; alan adları GesTelekomSmsService/
+            // DbSmsSettingsProvider'ın okuduğu anahtarlarla birebir aynı olmalı.
+            ("gestelekom", "GES Telekom SMS", "sms", new List<PlatformSchemaField>
+            {
+                Alan("apiUrl",         "API Adresi (boşsa restapi.ttmesaj.com)", "text",     "settings"),
+                Alan("username",       "API Kullanıcı Adı",                      "text",     "credentials", zorunlu: true),
+                Alan("password",       "API Şifresi",                            "password", "credentials", zorunlu: true),
+                Alan("origin",         "Mesaj Başlığı (Originator)",             "text",     "settings",    zorunlu: true),
+                Alan("isNotification", "İYS: Bilgilendirme mesajı",              "boolean",  "settings")
             })
         };
 
+        var katalogKodlari = servisler.Select(s => s.Kod).ToList();
         var mevcutKodlar = await context.IntegrationServices
-            .Where(s => s.ServiceType == "email" || s.ServiceType == "visual_search")
+            .Where(s => katalogKodlari.Contains(s.Code))
             .Select(s => s.Code)
             .ToListAsync();
 
@@ -130,7 +141,7 @@ public static class DatabaseSeeder
 
         context.IntegrationServices.AddRange(yeniler);
         await context.SaveChangesAsync();
-        Console.WriteLine($"✓ Seed: {yeniler.Count} platform servisi eklendi (smtp/visual_search IntegrationService).");
+        Console.WriteLine($"✓ Seed: {yeniler.Count} platform servisi eklendi ({string.Join("/", yeniler.Select(y => y.Code))} IntegrationService).");
     }
 
     /// <summary>
