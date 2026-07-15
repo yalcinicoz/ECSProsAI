@@ -46,6 +46,20 @@ interface StockPage {
   pageSize: number
 }
 
+// İkincil filtre: arama sonucundan türetilen seçenekler (varyant / depo / kısım / raf)
+interface FacetOption {
+  id: string
+  label: string
+  count: number
+  parentId: string | null   // kısım→depo, raf→kısım (kademeli daraltma)
+}
+interface StockFacets {
+  variants: FacetOption[]
+  warehouses: FacetOption[]
+  sections: FacetOption[]
+  bins: FacetOption[]
+}
+
 const PAGE_SIZE = 30
 
 interface VariantInfo {
@@ -74,6 +88,10 @@ export function StocksPage() {
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')     // uygulanmış arama (Ara/Enter ile)
   const [page, setPage] = useState(1)
+  // İkincil filtre seçimleri (arama facet'lerinden)
+  const [variantId, setVariantId] = useState('')
+  const [sectionId, setSectionId] = useState('')
+  const [binId, setBinId] = useState('')
 
   const [barcodeInput, setBarcodeInput] = useState('')
   const [variantLookup, setVariantLookup] = useState<VariantInfo | null>(null)
@@ -97,12 +115,15 @@ export function StocksPage() {
   // topluca çekmek tarayıcıyı donduruyordu.
   const filtreVar = !!(search || warehouseId)
   const { data: stockPage, isLoading: sLoading } = useQuery<StockPage>({
-    queryKey: ['stocks-admin', search, warehouseId, availableOnly, page],
+    queryKey: ['stocks-admin', search, warehouseId, availableOnly, variantId, sectionId, binId, page],
     queryFn: async () => {
       const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) })
       if (search) params.set('search', search)
       if (warehouseId) params.set('warehouseId', warehouseId)
       if (availableOnly) params.set('availableOnly', 'true')
+      if (variantId) params.set('variantId', variantId)
+      if (sectionId) params.set('sectionId', sectionId)
+      if (binId) params.set('binId', binId)
       const { data } = await api.get(`/inventory/stocks/admin-list?${params}`)
       return data.data
     },
@@ -111,7 +132,26 @@ export function StocksPage() {
   const stocks = stockPage?.items ?? []
   const totalCount = stockPage?.totalCount ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
-  const applySearch = () => { setPage(1); setSearch(searchInput.trim()) }
+
+  // İkincil filtre seçenekleri — yalnız arama varken (bulunan ürünün varyant/depo/kısım/rafları)
+  const { data: facets } = useQuery<StockFacets>({
+    queryKey: ['stocks-facets', search, warehouseId, availableOnly],
+    queryFn: async () => {
+      const params = new URLSearchParams({ search })
+      if (warehouseId) params.set('warehouseId', warehouseId)
+      if (availableOnly) params.set('availableOnly', 'true')
+      const { data } = await api.get(`/inventory/stocks/admin-list/facets?${params}`)
+      return data.data
+    },
+    enabled: !!search,
+  })
+
+  const resetSecondary = () => { setVariantId(''); setSectionId(''); setBinId('') }
+  const applySearch = () => { setPage(1); resetSecondary(); setSearch(searchInput.trim()) }
+
+  // Kademeli daraltma: depo seçiliyse kısımlar o depoya, kısım seçiliyse raflar o kısma süzülür.
+  const sectionOptions = (facets?.sections ?? []).filter(s => !warehouseId || s.parentId === warehouseId)
+  const binOptions = (facets?.bins ?? []).filter(b => !sectionId || b.parentId === sectionId)
 
   const adjustMutation = useMutation({
     mutationFn: async () => {
@@ -198,7 +238,7 @@ export function StocksPage() {
             ))}
           </div>
           <select className="inp text-sm py-1.5 px-3 h-auto" value={warehouseId}
-            onChange={e => { setPage(1); setWarehouseId(e.target.value) }}
+            onChange={e => { setPage(1); setSectionId(''); setBinId(''); setWarehouseId(e.target.value) }}
             style={{ minWidth: 160 }}>
             <option value="">Tüm Depolar</option>
             {warehouses.map(w => (
@@ -210,6 +250,51 @@ export function StocksPage() {
           </PermissionGuard>
         </div>
       </div>
+
+      {/* İkincil filtre — arama sonucundan türetilen varyant/kısım/raf seçenekleri */}
+      {!!search && facets && (facets.variants.length > 0 || facets.sections.length > 0) && (
+        <div className="card mb-4 flex items-end gap-3 flex-wrap">
+          <div>
+            <label className="flbl mb-1">Varyant</label>
+            <select className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 220 }}
+              value={variantId}
+              onChange={e => { setPage(1); setVariantId(e.target.value) }}>
+              <option value="">Tümü ({facets.variants.length})</option>
+              {facets.variants.map(v => (
+                <option key={v.id} value={v.id}>{v.label} — {v.count} kayıt</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="flbl mb-1">Kısım</label>
+            <select className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 170 }}
+              value={sectionId}
+              onChange={e => { setPage(1); setBinId(''); setSectionId(e.target.value) }}>
+              <option value="">Tümü ({sectionOptions.length})</option>
+              {sectionOptions.map(s => (
+                <option key={s.id} value={s.id}>{s.label} — {s.count} kayıt</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="flbl mb-1">Raf</label>
+            <select className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 150 }}
+              value={binId}
+              onChange={e => { setPage(1); setBinId(e.target.value) }}>
+              <option value="">Tümü ({binOptions.length})</option>
+              {binOptions.map(b => (
+                <option key={b.id} value={b.id}>{b.label} — {b.count} kayıt</option>
+              ))}
+            </select>
+          </div>
+          {(variantId || sectionId || binId) && (
+            <button className="text-xs underline pb-2" style={{ color: 'var(--text-s)' }}
+              onClick={() => { setPage(1); resetSecondary() }}>
+              İkincil filtreyi temizle
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Table */}
       <div className="card overflow-hidden">
