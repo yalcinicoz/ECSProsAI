@@ -294,6 +294,30 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION KAPANIŞ ÖZETİ (2026-07-15) — SATIŞ GÖRÜNÜRLÜĞÜ M2+M3 TAMAM (RESTART BEKLİYOR)
+**Bu oturumda tamamlananlar (kod + migration + değer aktarımı canlı DB'de):** Satış görünürlüğü
+modelinin M2 (kanal seçimi) + M3 (kanalda durdurma) katmanları.
+1. **Domain+migration:** `ChannelProduct.IsActive` = K2 kanal seçimi (opt-out); yeni
+   `SaleStoppedFrom/Until` = K3 durdurma penceresi. Migration `AddChannelProductSaleStop` CANLI DB'DE.
+2. **Ortak geçit:** `IChannelProductFlagService.GetChannelExcludedProductIdsAsync` opt-out deny-set;
+   tüm storefront yüzeyleri (liste/arama/facet/grup/detay→301) + sepet/ödeme uygular. Cache sürümleri
+   artırıldı (channelcat products v5, facets v3, store facets v3).
+3. **Panel:** yeni "Kanal Ürünleri" toplu sayfası (storefront/channel-products) — kanal seçici +
+   arama/durum + satır toggle + toplu Kanala Al/Çıkar + Satışı Durdur(tarih)/Başlat + tümünü seç.
+   Backend: NavigationController manage/ids + bulk-select + bulk-stop. **admin/dist canlıda** (nginx).
+4. **Değer aktarımı (MigrationTool Faz 17, ÇALIŞTIRILDI):** legacy `plurunler.satisaAcik` YOK →
+   gerçek `satista`(K2)+`yayinda`(K3); kullanıcı onayıyla satista→K2, yayinda→K3, 3 site.
+   Sonuç: **Mishar(canlı) 344 durduruldu/0 çıkarıldı**; Tozlu 28.129 durd.; Julude 22.507 çıkar.+28.139 durd.
+5. **İzole doğrulama (5053 Production):** çıkar→301, durdurma penceresi→301, pencere geçmiş→otomatik 200,
+   geri al→200. Deploy DLL'leri doğrulanan staging ile byte-AYNI.
+
+**⚠️ RESTART BEKLİYOR:** temiz publish `/opt/ECSProsAI/publish` hazır — kullanıcı `sudo systemctl
+restart ecspros`. Restart sonrası: geçit + yeni endpoint'ler aktif, Mishar'da 344 ürün gizlenir.
+Değişiklikler COMMIT edilmedi (kullanıcı isteğine bırakıldı; çalışma ağacında ayrıca dokunulmayan
+site.js var). Detay: `project_sale_visibility_model_2026-07-14.md`.
+
+---
+
 ### ⭐ SESSION KAPANIŞ ÖZETİ (2026-07-14) — SONRAKİ OTURUM BURADAN DEVAM
 **Bu oturumda tamamlananlar (hepsi canlı DB'de + commit'li):**
 1. **Stok/depo üçlü yapı + aktarım:** entity temeli (WarehouseSection/Bin, IsCentral/ErpCode) →
