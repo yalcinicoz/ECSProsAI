@@ -18,6 +18,7 @@ const BREADCRUMB: Record<string, string> = {
   '/orders/gift-cards':            'Hediye Kartları',
   '/crm/members':                  'Üyeler',
   '/crm/member-groups':            'Üye Grupları',
+  '/storefront/channel-products':  'Kanal Ürünleri',
   '/storefront/contact-messages':  'İletişim Mesajları',
   '/storefront/notifications':     'Bildirimler',
   '/storefront/newsletter':        'Bülten Aboneleri',

@@ -21,6 +21,7 @@ import { CatalogSettingsPage } from '@/pages/catalog/CatalogSettingsPage'
 import { BulkImageUploadPage } from '@/pages/catalog/BulkImageUploadPage'
 import { MenusPage } from '@/pages/cms/MenusPage'
 import { ChannelCategoriesPage } from '@/pages/storefront/ChannelCategoriesPage'
+import { ChannelProductsPage } from '@/pages/storefront/ChannelProductsPage'
 import { ChannelCategoryDetailPage } from '@/pages/storefront/ChannelCategoryDetailPage'
 import { CollectionsModerationPage } from '@/pages/storefront/CollectionsModerationPage'
 import { ReviewsModerationPage } from '@/pages/storefront/ReviewsModerationPage'
@@ -75,6 +76,7 @@ export const router = createBrowserRouter(
             { path: 'catalog/bulk-images',       element: <BulkImageUploadPage /> },
             { path: 'storefront/channel-categories',      element: <ChannelCategoriesPage /> },
             { path: 'storefront/channel-categories/:id',  element: <ChannelCategoryDetailPage /> },
+            { path: 'storefront/channel-products',         element: <ChannelProductsPage /> },
             { path: 'storefront/collections',              element: <CollectionsModerationPage /> },
             { path: 'storefront/reviews',                  element: <ReviewsModerationPage /> },
             { path: 'storefront/pages',                    element: <PagesManagementPage /> },

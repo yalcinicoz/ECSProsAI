@@ -261,11 +261,65 @@ public class NavigationController(IMediator mediator) : ControllerBase
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = new { id = result.Value } });
     }
+
+    // ─── Kanal Ürünleri (satış görünürlüğü M2/M3) — toplu yönetim ─────────────
+
+    /// <summary>Kanal ürünleri toplu yönetim listesi (seçili mi / durdurma durumu; arama+durum+sayfa).</summary>
+    [HttpGet("channel-products/{firmPlatformId:guid}/manage")]
+    public async Task<IActionResult> GetChannelProductsAdmin(
+        Guid firmPlatformId, [FromQuery] string? search, [FromQuery] string? status,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 30, CancellationToken ct = default)
+    {
+        var result = await mediator.Send(
+            new ECSPros.Storefront.Application.Queries.GetChannelProductsAdmin.GetChannelProductsAdminQuery(
+                firmPlatformId, search, status, page, pageSize), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>"Tüm eşleşenleri seç" — filtreye uyan tüm ürün Id'leri (toplu işlem için).</summary>
+    [HttpGet("channel-products/{firmPlatformId:guid}/manage/ids")]
+    public async Task<IActionResult> GetChannelProductIdsAdmin(
+        Guid firmPlatformId, [FromQuery] string? search, [FromQuery] string? status, CancellationToken ct)
+    {
+        var result = await mediator.Send(
+            new ECSPros.Storefront.Application.Queries.GetChannelProductsAdmin.GetChannelProductIdsAdminQuery(
+                firmPlatformId, search, status), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>M2: verilen ürünleri kanala alır (selected=true) / kanaldan çıkarır (false).</summary>
+    [HttpPost("channel-products/{firmPlatformId:guid}/bulk-select")]
+    public async Task<IActionResult> BulkSetChannelProductSelection(
+        Guid firmPlatformId, [FromBody] BulkSelectRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(
+            new ECSPros.Storefront.Application.Commands.BulkSetChannelProductSelection.BulkSetChannelProductSelectionCommand(
+                firmPlatformId, req.ProductIds ?? new(), req.Selected), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { affected = result.Value } });
+    }
+
+    /// <summary>M3: verilen ürünlerin satışını durdurur (from/until) veya durdurmayı temizler (from null).</summary>
+    [HttpPost("channel-products/{firmPlatformId:guid}/bulk-stop")]
+    public async Task<IActionResult> BulkSetChannelProductStop(
+        Guid firmPlatformId, [FromBody] BulkStopRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(
+            new ECSPros.Storefront.Application.Commands.BulkSetChannelProductStop.BulkSetChannelProductStopCommand(
+                firmPlatformId, req.ProductIds ?? new(), req.From, req.Until), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { affected = result.Value } });
+    }
 }
 
 // ─── Request Records ─────────────────────────────────────────────────────────
 
 public record SetChannelProductFeaturedRequest(DateTime? FeaturedFrom, DateTime? FeaturedUntil);
+
+public record BulkSelectRequest(List<Guid>? ProductIds, bool Selected);
+public record BulkStopRequest(List<Guid>? ProductIds, DateTime? From, DateTime? Until);
 
 public record CreateMenuRequest(
     Guid FirmPlatformId,
