@@ -304,6 +304,11 @@ detayından girilecek (username/password credentials-şifreli; origin=mesaj baş
 API sözleşmesi gestelekom.com/tr/api-baslangic-metotlari + /tr/sms-gonderim-metotlari'ndan.
 Commit 46414ce; publish alındı → restart SONRASI OTP SMS'leri gerçek kanaldan çıkar
 (admin kaydı girilene kadar log yedeğinde kalır, davranış değişmez).
+**Ek (commit eb28120):** `PlatformSchemaField.HelpI18n` (camelCase helpI18n) — firma entegrasyon
+formunda alan yanı Info ikonu + tıklanır açıklama balonu (FirmDetailPage FieldHelp). GES Telekom
+şemasında isNotification (İYS bilgilendirme/kampanya — OTP'de İŞARETLİ olmalı) + origin (onaylı
+başlık) açıklamaları seed + canlı DB'de. helpI18n GET yanıtında RESTART SONRASI görünür
+(eski binary PlatformSchemaField'de alanı tanımaz, düşürür); admin/dist şimdiden canlıda.
 
 ---
 
