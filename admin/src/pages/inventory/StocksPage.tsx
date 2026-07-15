@@ -133,17 +133,22 @@ export function StocksPage() {
   const totalCount = stockPage?.totalCount ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
-  // İkincil filtre seçenekleri — yalnız arama varken (bulunan ürünün varyant/depo/kısım/rafları)
+  // İkincil filtre seçenekleri — yalnız arama varken. Mevcut seçimler de gönderilir:
+  // her boyut diğer seçimlerle daraltılmış hesaplanır (sayaçlar listeyle tutarlı kalır).
   const { data: facets } = useQuery<StockFacets>({
-    queryKey: ['stocks-facets', search, warehouseId, availableOnly],
+    queryKey: ['stocks-facets', search, warehouseId, availableOnly, variantId, sectionId, binId],
     queryFn: async () => {
       const params = new URLSearchParams({ search })
       if (warehouseId) params.set('warehouseId', warehouseId)
       if (availableOnly) params.set('availableOnly', 'true')
+      if (variantId) params.set('variantId', variantId)
+      if (sectionId) params.set('sectionId', sectionId)
+      if (binId) params.set('binId', binId)
       const { data } = await api.get(`/inventory/stocks/admin-list/facets?${params}`)
       return data.data
     },
     enabled: !!search,
+    placeholderData: (prev) => prev,   // seçim değişince seçenekler yenilenirken çubuk titremesin
   })
 
   const resetSecondary = () => { setVariantId(''); setSectionId(''); setBinId('') }
