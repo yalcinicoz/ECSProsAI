@@ -1,5 +1,6 @@
 using ECSPros.Api.Services;
 using ECSPros.Catalog.Application.Queries.GetProductIdByCode;
+using ECSPros.Storefront.Application.Queries.GetChannelSlugForProduct;
 using ECSPros.Storefront.Application.Queries.GetProductChannelCategoryChain;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +21,13 @@ public class UrunDetayController(IMediator mediator, IStoreContext storeContext,
         var platform = await storeContext.GetPlatformAsync(ct);
         if (platform is null)
             return Redirect("/");   // platform çözülemedi — 404 yerine ana sayfa
+
+        // Aşama 2: gerçek URL tam geçiş — bu ürünün o platformdaki kanonik slug'ı varsa
+        // /urun/{code} → 301 slug (seçili renge göre). Slug yoksa normal render (güvenlik ağı).
+        Guid? renkId = Guid.TryParse(color, out var rg) ? rg : null;
+        var slugSonuc = await mediator.Send(new GetChannelSlugForProductQuery(platform.Id, code, renkId), ct);
+        if (slugSonuc.IsSuccess && slugSonuc.Value is { Length: > 0 } kanonikSlug)
+            return RedirectPermanent("/" + kanonikSlug);
 
         // Satışa kapalı / erişilemeyen ürün: 404 yerine ürünün kategorisine, yoksa ana sayfaya 301.
         var vm = await detayBuilder.BuildAsync(code, color, platform.Id, ViewData["MsUye"] as StoreUyeKimlik, ct);

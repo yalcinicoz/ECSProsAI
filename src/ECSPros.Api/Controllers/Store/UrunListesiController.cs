@@ -149,27 +149,48 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
     }
 
     // Kök /{slug} kategori değilse: gerçek (legacy) ÜRÜN URL'i mi? (URL aktarımı 2026-07-15)
-    // Bulunursa ürün detayı slug URL'inde in-place render edilir (301 yok); yoksa 404.
+    // Bulunursa ürün detayı slug URL'inde in-place render edilir (301 yok). Slug bir ürüne
+    // ait ama ürün satışa KAPALI/erişilemezse: 404 yerine ürünün kategorisine 301 (kullanıcı
+    // kararı — /urun/{code} ile tutarlı). Slug hiçbir ürüne ait değilse gerçek 404.
     private async Task<IActionResult> UrunSlugDeneVeyaNotFound(string slug, CancellationToken ct)
     {
         var platform = await storeContext.GetPlatformAsync(ct);
-        if (platform is not null)
+        if (platform is null)
+            return NotFound();
+
+        var sonuc = await mediator.Send(new GetProductByChannelSlugQuery(platform.Id, slug), ct);
+        if (sonuc.IsFailure || sonuc.Value is not { } bulunan)
+            return NotFound();   // slug bir ürüne ait değil — bilinmeyen URL
+
+        var vm = await detayBuilder.BuildAsync(
+            bulunan.ProductCode, bulunan.ColorValueId?.ToString(),
+            platform.Id, ViewData["MsUye"] as StoreUyeKimlik, ct);
+        if (vm is not null)
         {
-            var sonuc = await mediator.Send(new GetProductByChannelSlugQuery(platform.Id, slug), ct);
-            if (sonuc.IsSuccess && sonuc.Value is { } bulunan)
-            {
-                var vm = await detayBuilder.BuildAsync(
-                    bulunan.ProductCode, bulunan.ColorValueId?.ToString(),
-                    platform.Id, ViewData["MsUye"] as StoreUyeKimlik, ct);
-                if (vm is not null)
-                {
-                    ViewData["MsUrunDetay"] = vm;
-                    ViewData["Title"] = vm.Ad;
-                    return View("~/Views/UrunDetay/Index.cshtml");
-                }
-            }
+            ViewData["MsUrunDetay"] = vm;
+            ViewData["Title"] = vm.Ad;
+            return View("~/Views/UrunDetay/Index.cshtml");
         }
-        return NotFound();
+
+        // Slug bir ürüne ait ama render edilemedi (satışa kapalı) → kategorisine 301.
+        return await KapaliUrunKategoriyeYonlendir(bulunan.ProductCode, platform.Id, ct);
+    }
+
+    // /urun/{code}'daki KapaliUrunYonlendir ile aynı: kapalı/erişilemez ürünü kategorisine
+    // (yoksa ana sayfaya) 301'ler — 404'ten kaçınma (kullanıcı kararı).
+    private async Task<IActionResult> KapaliUrunKategoriyeYonlendir(string code, Guid platformId, CancellationToken ct)
+    {
+        var idSonuc = await mediator.Send(
+            new ECSPros.Catalog.Application.Queries.GetProductIdByCode.GetProductIdByCodeQuery(code), ct);
+        if (idSonuc.IsSuccess && idSonuc.Value is { } urunId)
+        {
+            var zincir = await mediator.Send(
+                new ECSPros.Storefront.Application.Queries.GetProductChannelCategoryChain
+                    .GetProductChannelCategoryChainQuery(platformId, urunId), ct);
+            if (zincir.IsSuccess && zincir.Value!.Count > 0)
+                return RedirectPermanent("/" + zincir.Value[^1].Slug);
+        }
+        return RedirectPermanent("/");
     }
 
     private static NavKategori? KategoriBul(IReadOnlyList<NavKategori> dallar, string slug)
