@@ -43,7 +43,7 @@ public class GetStoreFacetsQueryHandler(
     // Cache anahtarı stok görünürlük paramlarını + platformu içerir (kanal seçimi/durdurma
     // deny-set'i platform bazlı — M2/M3).
     private static string AllKey(Guid platformId, bool showOos, DateTime? since) =>
-        $"store:facets:all:v3:{platformId}:{showOos}:{since:yyyyMMdd}";
+        $"store:facets:all:v4:{platformId}:{showOos}:{since:yyyyMMdd}";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(15);
 
     public async Task<Result<StoreFacetsDto>> Handle(GetStoreFacetsQuery request, CancellationToken ct)

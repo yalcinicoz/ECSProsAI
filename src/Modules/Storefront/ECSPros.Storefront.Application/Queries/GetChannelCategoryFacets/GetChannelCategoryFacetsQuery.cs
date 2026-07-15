@@ -26,7 +26,7 @@ public class GetChannelCategoryFacetsQueryHandler(
     {
         // v2 + stok paramları: stok filtresi eklendiğinden eski/ayar-farklı girdiler ayrışsın.
         // v3: kanal seçimi/durdurma (M2/M3) geçidi eklendi.
-        var cacheKey = $"channelcat:facets:v3:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
+        var cacheKey = $"channelcat:facets:v4:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
         StoreFacetsDto? cached = null;
         try { cached = await cache.GetAsync<StoreFacetsDto>(cacheKey, ct); } catch { /* Redis erişilemezse taze hesapla */ }
         if (cached is not null)
