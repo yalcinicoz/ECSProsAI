@@ -18,7 +18,25 @@ public record GetStocksAdminQuery(
     Guid? WarehouseId = null,
     bool AvailableOnly = false,
     int Page = 1,
-    int PageSize = 30) : IRequest<Result<PagedResult<StockAdminRowDto>>>;
+    int PageSize = 30,
+    // İkincil filtre (arama sonucundan türetilen facet seçimleri)
+    Guid? VariantId = null,
+    Guid? SectionId = null,
+    Guid? BinId = null) : IRequest<Result<PagedResult<StockAdminRowDto>>>;
+
+/// <summary>Arama sonucundan türetilen ikincil filtre seçenekleri: bulunan ürünün varyantları
+/// ve stoğun bulunduğu depo/kısım/raflar (sayaçlı). ParentId: kısım→depo, raf→kısım
+/// (frontend kademeli daraltma için).</summary>
+public record GetStocksAdminFacetsQuery(
+    string? Search, Guid? WarehouseId, bool AvailableOnly) : IRequest<Result<StockAdminFacetsDto>>;
+
+public record StockFacetOption(Guid Id, string Label, int Count, Guid? ParentId = null);
+
+public record StockAdminFacetsDto(
+    List<StockFacetOption> Variants,
+    List<StockFacetOption> Warehouses,
+    List<StockFacetOption> Sections,
+    List<StockFacetOption> Bins);
 
 public record StockAdminRowDto(
     Guid Id,
@@ -54,19 +72,16 @@ public class GetStocksAdminHandler(
         // Arama: katalogda ürün kodu / Türkçe ad / barkod / SKU eşleşen varyant kümesi.
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var s = request.Search.Trim().ToLower();
-            var variantIds = await catDb.ProductVariants.AsNoTracking()
-                .Where(v => v.Product.Code.ToLower().Contains(s)
-                         || (v.Barcode != null && v.Barcode.ToLower() == s)
-                         || v.Sku.ToLower() == s
-                         || Catalog.Application.Helpers.PgJsonFunctions.JsonText(v.Product.NameI18n, "tr")!.ToLower().Contains(s))
-                .Select(v => v.Id)
-                .Take(20000)
-                .ToListAsync(ct);
+            var variantIds = await SearchVariantIdsAsync(catDb, request.Search, ct);
             if (variantIds.Count == 0)
                 return Result.Success(new PagedResult<StockAdminRowDto>([], 0, request.Page, request.PageSize));
             query = query.Where(st => variantIds.Contains(st.VariantId));
         }
+
+        // İkincil filtre (arama facet'lerinden seçilenler)
+        if (request.VariantId.HasValue) query = query.Where(st => st.VariantId == request.VariantId);
+        if (request.SectionId.HasValue) query = query.Where(st => st.SectionId == request.SectionId);
+        if (request.BinId.HasValue) query = query.Where(st => st.BinId == request.BinId);
 
         var total = await query.CountAsync(ct);
 
@@ -120,5 +135,115 @@ public class GetStocksAdminHandler(
         }).ToList();
 
         return Result.Success(new PagedResult<StockAdminRowDto>(items, total, request.Page, request.PageSize));
+    }
+
+    /// <summary>Katalogda ürün kodu / Türkçe ad / barkod / SKU eşleşen varyant id kümesi
+    /// (liste + facet sorguları aynı eşleşme kuralını kullanır).</summary>
+    internal static async Task<List<Guid>> SearchVariantIdsAsync(ICatalogDbContext catDb, string search, CancellationToken ct)
+    {
+        var s = search.Trim().ToLower();
+        return await catDb.ProductVariants.AsNoTracking()
+            .Where(v => v.Product.Code.ToLower().Contains(s)
+                     || (v.Barcode != null && v.Barcode.ToLower() == s)
+                     || v.Sku.ToLower() == s
+                     || Catalog.Application.Helpers.PgJsonFunctions.JsonText(v.Product.NameI18n, "tr")!.ToLower().Contains(s))
+            .Select(v => v.Id)
+            .Take(20000)
+            .ToListAsync(ct);
+    }
+}
+
+/// <summary>Arama sonucunun ikincil filtre seçenekleri: varyantlar + stoğun bulunduğu
+/// depo/kısım/raflar (satır sayaçlı). Yalnız arama varken anlamlı — aramasız boş döner
+/// (tüm kataloğun raf facet'i gereksiz/pahalı).</summary>
+public class GetStocksAdminFacetsHandler(
+    IInventoryDbContext invDb,
+    ICatalogDbContext catDb,
+    IProductService productService)
+    : IRequestHandler<GetStocksAdminFacetsQuery, Result<StockAdminFacetsDto>>
+{
+    public async Task<Result<StockAdminFacetsDto>> Handle(GetStocksAdminFacetsQuery request, CancellationToken ct)
+    {
+        var bos = new StockAdminFacetsDto([], [], [], []);
+        if (string.IsNullOrWhiteSpace(request.Search))
+            return Result.Success(bos);
+
+        var variantIds = await GetStocksAdminHandler.SearchVariantIdsAsync(catDb, request.Search, ct);
+        if (variantIds.Count == 0)
+            return Result.Success(bos);
+
+        var query = invDb.Stocks.AsNoTracking().Where(st => variantIds.Contains(st.VariantId));
+        if (request.WarehouseId.HasValue) query = query.Where(st => st.WarehouseId == request.WarehouseId);
+        if (request.AvailableOnly) query = query.Where(st => st.Quantity > st.ReservedQuantity);
+
+        var rows = await query
+            .Select(st => new { st.VariantId, st.WarehouseId, st.SectionId, st.BinId })
+            .ToListAsync(ct);
+        if (rows.Count == 0)
+            return Result.Success(bos);
+
+        static string TrAd(Dictionary<string, string>? i18n) =>
+            i18n is null ? "" : i18n.TryGetValue("tr", out var ad) ? ad : i18n.Values.FirstOrDefault() ?? "";
+
+        // Varyantlar (en çok satırlı 200) — etiket: ürün kodu · seçenekler
+        var variantGroups = rows.GroupBy(r => r.VariantId)
+            .Select(g => new { Id = g.Key, Count = g.Count() })
+            .OrderByDescending(g => g.Count).Take(200).ToList();
+        var displays = await productService.GetVariantDisplayAsync(variantGroups.Select(g => g.Id).ToList(), ct);
+        var variants = variantGroups.Select(g =>
+        {
+            displays.TryGetValue(g.Id, out var d);
+            var label = d is null ? g.Id.ToString()[..8]
+                : string.IsNullOrEmpty(d.OptionsText) ? d.ProductCode : $"{d.ProductCode} · {d.OptionsText}";
+            return new StockFacetOption(g.Id, label, g.Count);
+        }).OrderBy(v => v.Label).ToList();
+
+        // Depolar
+        var whIds = rows.Select(r => r.WarehouseId).Distinct().ToList();
+        var whNames = await invDb.Warehouses.AsNoTracking()
+            .Where(w => whIds.Contains(w.Id))
+            .Select(w => new { w.Id, w.NameI18n })
+            .ToDictionaryAsync(w => w.Id, w => w.NameI18n, ct);
+        var warehouses = rows.GroupBy(r => r.WarehouseId)
+            .Select(g => new StockFacetOption(g.Key,
+                whNames.TryGetValue(g.Key, out var n) ? TrAd(n) : "—", g.Count()))
+            .OrderBy(w => w.Label).ToList();
+
+        // Kısımlar (parent = depo)
+        var secIds = rows.Where(r => r.SectionId.HasValue).Select(r => r.SectionId!.Value).Distinct().ToList();
+        var secInfo = secIds.Count > 0
+            ? await invDb.WarehouseSections.AsNoTracking()
+                .Where(x => secIds.Contains(x.Id))
+                .Select(x => new { x.Id, x.Name, x.WarehouseId })
+                .ToDictionaryAsync(x => x.Id, ct)
+            : null;
+        var sections = rows.Where(r => r.SectionId.HasValue)
+            .GroupBy(r => r.SectionId!.Value)
+            .Select(g => new StockFacetOption(g.Key,
+                secInfo != null && secInfo.TryGetValue(g.Key, out var si) ? si.Name : "—",
+                g.Count(),
+                secInfo != null && secInfo.TryGetValue(g.Key, out var si2) ? si2.WarehouseId : null))
+            .OrderBy(x => x.Label).ToList();
+
+        // Raflar (parent = kısım; en çok satırlı 300)
+        var binGroups = rows.Where(r => r.BinId.HasValue)
+            .GroupBy(r => r.BinId!.Value)
+            .Select(g => new { Id = g.Key, Count = g.Count() })
+            .OrderByDescending(g => g.Count).Take(300).ToList();
+        var binIds = binGroups.Select(g => g.Id).ToList();
+        var binInfo = binIds.Count > 0
+            ? await invDb.WarehouseBins.AsNoTracking()
+                .Where(x => binIds.Contains(x.Id))
+                .Select(x => new { x.Id, x.Code, x.SectionId })
+                .ToDictionaryAsync(x => x.Id, ct)
+            : null;
+        var bins = binGroups
+            .Select(g => new StockFacetOption(g.Id,
+                binInfo != null && binInfo.TryGetValue(g.Id, out var bi) ? bi.Code : "—",
+                g.Count,
+                binInfo != null && binInfo.TryGetValue(g.Id, out var bi2) ? bi2.SectionId : null))
+            .OrderBy(x => x.Label).ToList();
+
+        return Result.Success(new StockAdminFacetsDto(variants, warehouses, sections, bins));
     }
 }

@@ -104,10 +104,28 @@ public class InventoryController : ControllerBase
         [FromQuery] bool availableOnly = false,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 30,
+        [FromQuery] Guid? variantId = null,
+        [FromQuery] Guid? sectionId = null,
+        [FromQuery] Guid? binId = null,
         CancellationToken ct = default)
     {
         var result = await _mediator.Send(new ECSPros.Api.Handlers.GetStocksAdminQuery(
-            search, warehouseId, availableOnly, page, pageSize), ct);
+            search, warehouseId, availableOnly, page, pageSize, variantId, sectionId, binId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Arama sonucundan türetilen ikincil filtre seçenekleri: bulunan ürünün
+    /// varyantları + stoğun bulunduğu depo/kısım/raflar (sayaçlı).</summary>
+    [HttpGet("stocks/admin-list/facets")]
+    public async Task<IActionResult> GetStocksAdminFacets(
+        [FromQuery] string? search,
+        [FromQuery] Guid? warehouseId,
+        [FromQuery] bool availableOnly = false,
+        CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new ECSPros.Api.Handlers.GetStocksAdminFacetsQuery(
+            search, warehouseId, availableOnly), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
