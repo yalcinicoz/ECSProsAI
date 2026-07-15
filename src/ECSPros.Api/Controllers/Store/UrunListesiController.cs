@@ -4,6 +4,7 @@ using ECSPros.Catalog.Application.Queries.GetStoreFacets;
 using ECSPros.Catalog.Application.Queries.GetStoreProducts;
 using ECSPros.Storefront.Application.Queries.GetChannelCategoryFacets;
 using ECSPros.Storefront.Application.Queries.GetChannelCategoryProducts;
+using ECSPros.Storefront.Application.Queries.GetProductByChannelSlug;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,7 +15,7 @@ namespace ECSPros.Api.Controllers.Store;
 /// tüm ürünler (/urun-listesi). İlk sayfa + facet'ler sunucudan (MediatR süreç içi,
 /// plan 3.4); devam sayfaları partial config script'i üzerinden api/store/* JSON.
 /// </summary>
-public class UrunListesiController(IMediator mediator, IStoreContext storeContext) : StorePageController
+public class UrunListesiController(IMediator mediator, IStoreContext storeContext, StoreUrunDetayBuilder detayBuilder) : StorePageController
 {
     private const int SayfaBoyu = 24;
 
@@ -61,7 +62,7 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
         var kategori = KategoriBul(nav.Kokler, slug);
         if (kategori is null)
-            return NotFound();
+            return await UrunSlugDeneVeyaNotFound(slug, ct);
 
         // B10: nav arama paneli "kategoride ara" kapsam butonunu bu bağlamla gösterir
         ViewData["MsAktifKategori"] = kategori;
@@ -145,6 +146,30 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         ViewData["MsUrunListesi"] = vm;
         ViewData["Title"] = vm.Baslik;
         return View("~/Views/UrunListesi/Index.cshtml");
+    }
+
+    // Kök /{slug} kategori değilse: gerçek (legacy) ÜRÜN URL'i mi? (URL aktarımı 2026-07-15)
+    // Bulunursa ürün detayı slug URL'inde in-place render edilir (301 yok); yoksa 404.
+    private async Task<IActionResult> UrunSlugDeneVeyaNotFound(string slug, CancellationToken ct)
+    {
+        var platform = await storeContext.GetPlatformAsync(ct);
+        if (platform is not null)
+        {
+            var sonuc = await mediator.Send(new GetProductByChannelSlugQuery(platform.Id, slug), ct);
+            if (sonuc.IsSuccess && sonuc.Value is { } bulunan)
+            {
+                var vm = await detayBuilder.BuildAsync(
+                    bulunan.ProductCode, bulunan.ColorValueId?.ToString(),
+                    platform.Id, ViewData["MsUye"] as StoreUyeKimlik, ct);
+                if (vm is not null)
+                {
+                    ViewData["MsUrunDetay"] = vm;
+                    ViewData["Title"] = vm.Ad;
+                    return View("~/Views/UrunDetay/Index.cshtml");
+                }
+            }
+        }
+        return NotFound();
     }
 
     private static NavKategori? KategoriBul(IReadOnlyList<NavKategori> dallar, string slug)
