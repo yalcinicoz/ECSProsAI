@@ -65,6 +65,7 @@ static class Migration
         if (phase == 14) await Phase14_FirmsAndChannelData();
         if (phase == 15) await Phase15_SeedChannelCategories(Guid.Parse(args[1]));
         if (phase == 16) await Phase16_WarehouseStructure();
+        if (phase == 17) Phase17_ChannelSaleFlags();
         if (phase == 20) await RunCatalogReload();
 
         Log("=== Migration tamamlandı! ===");
@@ -2180,6 +2181,91 @@ static class Migration
         cmd.Parameters.AddWithValue("fpid", firmPlatformId);
         sb.Append(@" ON CONFLICT (""FirmPlatformId"",""ProductId"") DO UPDATE SET
             ""IsActive""=EXCLUDED.""IsActive"", ""UpdatedAt""=EXCLUDED.""CreatedAt""");
+        cmd.CommandText = sb.ToString();
+        cmd.ExecuteNonQuery();
+    }
+
+    // ─── FAZ 17: KANAL SEÇİMİ (K2) + DURDURMA (K3) DEĞER AKTARIMI (satış görünürlüğü M2/M3) ──
+    // Hedefli/reload'suz. Legacy plurunler (per-varyant satır) → ürün düzeyine indirgenir:
+    //   K2 IsActive     = MAX(satista)   — ürünün EN AZ BİR varyantı satıştaysa kanalda (yelpaze).
+    //   K3 durdurma      = MAX(yayinda)=0 → SaleStoppedFrom=now (süresiz); aksi halde durdurma yok.
+    // Mevcut channel_products satırını UPSERT eder (Phase14 satırları korunur; Featured alanlarına
+    // dokunulmaz). Kolon eşlemesi kullanıcı kararı (2026-07-15): satisaAcik YOK → satista=K2, yayinda=K3.
+    static void Phase17_ChannelSaleFlags()
+    {
+        Log("FAZ 17: Kanal seçimi (K2=satista) + durdurma (K3=yayinda) değer aktarımı (M2/M3)...");
+        EnsureProductMap();
+
+        var tozluId  = PgScalar<Guid>("SELECT \"Id\" FROM core.core_firm_platforms WHERE \"Code\"='tozlu'");
+        var juludeId = PgScalar<Guid>("SELECT \"Id\" FROM core.core_firm_platforms WHERE \"Code\"='julude'");
+        var misharId = PgScalar<Guid>("SELECT \"Id\" FROM core.core_firm_platforms WHERE \"Code\"='mishar'");
+
+        foreach (var (legacyPlatformId, firmPlatformId) in new[] { (1, tozluId), (2, juludeId), (41, misharId) })
+            MigrateChannelSaleFlagsForPlatform(legacyPlatformId, firmPlatformId);
+
+        PgExec("ANALYZE storefront.channel_products");
+        Log("FAZ 17 tamam.");
+    }
+
+    static void MigrateChannelSaleFlagsForPlatform(int legacyPlatformId, Guid firmPlatformId)
+    {
+        Log($"  Platform {legacyPlatformId} → kanal seçimi/durdurma aktarımı...");
+        var now = Now;
+        var batch = new List<(Guid productId, bool isActive, DateTime? stoppedFrom)>();
+        int matched = 0, skipped = 0, cikarilan = 0, durdurulan = 0;
+
+        using (var r = MysqlQuery($@"SELECT urunId, MAX(satista+0) AS sat, MAX(yayinda) AS yay
+            FROM plurunler WHERE platformId = {legacyPlatformId} AND urunId IS NOT NULL GROUP BY urunId"))
+        {
+            while (r.Read())
+            {
+                int urunId = r.GetInt32(0);
+                if (!productMap.TryGetValue(urunId, out var productGuid)) { skipped++; continue; }
+
+                bool isActive = Convert.ToInt32(r.GetValue(1)) >= 1;   // K2: en az bir varyant satışta
+                int yayMax = r.IsDBNull(2) ? 0 : Convert.ToInt32(r.GetValue(2));
+                DateTime? stoppedFrom = yayMax == 0 ? now : null;      // K3: hiç yayında değilse durdur
+
+                if (!isActive) cikarilan++;
+                if (stoppedFrom.HasValue) durdurulan++;
+
+                batch.Add((productGuid, isActive, stoppedFrom));
+                matched++;
+
+                if (batch.Count >= 500) { FlushChannelSaleFlags(firmPlatformId, batch, now); batch.Clear(); }
+            }
+        }
+        FlushChannelSaleFlags(firmPlatformId, batch, now);
+        Log($"  ✓ Platform {legacyPlatformId}: {matched} ürün ({cikarilan} kanaldan çıkarıldı, {durdurulan} durduruldu; {skipped} eşleşmeyen atlandı).");
+    }
+
+    static void FlushChannelSaleFlags(Guid firmPlatformId,
+        List<(Guid productId, bool isActive, DateTime? stoppedFrom)> batch, DateTime now)
+    {
+        if (batch.Count == 0) return;
+        var sb = new StringBuilder();
+        sb.Append(@"INSERT INTO storefront.channel_products
+            (""Id"",""FirmPlatformId"",""ProductId"",""IsActive"",""SaleStoppedFrom"",""SaleStoppedUntil"",""SortOrder"",""CreatedAt"",""IsDeleted"") VALUES ");
+        using var cmd = new NpgsqlCommand { Connection = pg, CommandTimeout = 120 };
+        int p = 0;
+        for (int i = 0; i < batch.Count; i++)
+        {
+            if (i > 0) sb.Append(',');
+            var (pid, active, sfrom) = batch[i];
+            string pidp = "p" + p++, ppid = "p" + p++, pact = "p" + p++, psf = "p" + p++, pnow = "p" + p++;
+            sb.Append($"(@{pidp},@fpid,@{ppid},@{pact},@{psf},NULL,0,@{pnow},FALSE)");
+            cmd.Parameters.AddWithValue(pidp, NewId());
+            cmd.Parameters.AddWithValue(ppid, pid);
+            cmd.Parameters.AddWithValue(pact, active);
+            cmd.Parameters.AddWithValue(psf, (object?)sfrom ?? DBNull.Value);
+            cmd.Parameters.AddWithValue(pnow, now);
+        }
+        cmd.Parameters.AddWithValue("fpid", firmPlatformId);
+        // Mevcut satırı güncelle (Featured/Name alanlarına dokunma). Durdurma bitişi bu aktarımda
+        // her zaman NULL (süresiz veya durdurma yok) — panelden tarih penceresi kurulur.
+        sb.Append(@" ON CONFLICT (""FirmPlatformId"",""ProductId"") DO UPDATE SET
+            ""IsActive""=EXCLUDED.""IsActive"", ""SaleStoppedFrom""=EXCLUDED.""SaleStoppedFrom"",
+            ""SaleStoppedUntil""=EXCLUDED.""SaleStoppedUntil"", ""UpdatedAt""=EXCLUDED.""CreatedAt""");
         cmd.CommandText = sb.ToString();
         cmd.ExecuteNonQuery();
     }
