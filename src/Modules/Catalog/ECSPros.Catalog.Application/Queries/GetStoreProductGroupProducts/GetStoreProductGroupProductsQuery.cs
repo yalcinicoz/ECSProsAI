@@ -31,13 +31,16 @@ public record StoreGroupProductItemDto(
     bool IsActive);
 
 public class GetStoreProductGroupProductsQueryHandler(
-    ICatalogDbContext db, IChannelPricingService pricingService, IInStockProductProvider inStock)
+    ICatalogDbContext db, IChannelPricingService pricingService, IInStockProductProvider inStock,
+    IChannelProductFlagService flagService)
     : IRequestHandler<GetStoreProductGroupProductsQuery, Result<StoreProductGroupProductsDto>>
 {
     public async Task<Result<StoreProductGroupProductsDto>> Handle(
         GetStoreProductGroupProductsQuery request, CancellationToken ct)
     {
         var channelPrices = await pricingService.GetActiveVariantPricesAsync(request.FirmPlatformId, ct);
+        // Kanal seçimi/durdurma (M2/M3): kanaldan çıkarılan/durdurulan ürünler gruptan da düşer.
+        var kanalDisi = await flagService.GetChannelExcludedProductIdsAsync(request.FirmPlatformId, ct);
         var group = await db.ProductGroups
             .AsNoTracking()
             .FirstOrDefaultAsync(g => g.Id == request.ProductGroupId && g.IsActive, ct);
@@ -51,7 +54,8 @@ public class GetStoreProductGroupProductsQueryHandler(
         var q = db.Products
             .AsNoTracking()
             .Where(p => allGroupIds.Contains(p.ProductGroupId) && p.IsSaleOpen
-                     && db.ProductImages.Any(img => img.ProductId == p.Id));
+                     && db.ProductImages.Any(img => img.ProductId == p.Id)
+                     && !kanalDisi.Contains(p.Id));
 
         // Stok görünürlüğü: stoğu biteni (kanal açık VE CreatedAt>=eşik değilse) gizle.
         var inStockIds = await inStock.GetInStockProductIdsAsync(ct);

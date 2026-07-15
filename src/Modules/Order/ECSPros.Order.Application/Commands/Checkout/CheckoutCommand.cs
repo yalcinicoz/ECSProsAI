@@ -54,13 +54,19 @@ public record AcceptedContract(
     [property: System.Text.Json.Serialization.JsonPropertyName("acceptedAt")] DateTime AcceptedAt,
     [property: System.Text.Json.Serialization.JsonPropertyName("contentUpdatedAt")] DateTime? ContentUpdatedAt);
 
-public class CheckoutCommandHandler(IOrderDbContext db, ECSPros.Shared.Contracts.IProductService productService)
+public class CheckoutCommandHandler(
+    IOrderDbContext db,
+    ECSPros.Shared.Contracts.IProductService productService,
+    ECSPros.Shared.Contracts.IChannelProductFlagService flagService)
     : IRequestHandler<CheckoutCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(CheckoutCommand request, CancellationToken ct)
     {
         if (!request.Items.Any())
             return Result.Failure<Guid>("Sepet boş.");
+
+        // Kanal seçimi/durdurma (M2/M3): bu kanalda çıkarılan/durdurulan ürün siparişe geçemez.
+        var kanalDisi = await flagService.GetChannelExcludedProductIdsAsync(request.FirmPlatformId, ct);
 
         // Katman 1 (global satış anahtarı): satışa kapalı ürün SATILAMAZ — kanal ayarları ne
         // olursa olsun. ProductInfo.IsActive = varyant aktif VE ürün IsSaleOpen. Kapalı ürün
@@ -70,6 +76,8 @@ public class CheckoutCommandHandler(IOrderDbContext db, ECSPros.Shared.Contracts
             var bilgi = await productService.GetVariantAsync(item.VariantId, ct);
             if (bilgi is null || !bilgi.IsActive)
                 return Result.Failure<Guid>($"'{item.ProductName}' şu an satışa kapalı; siparişi tamamlamak için sepetten çıkarın.");
+            if (kanalDisi.Contains(bilgi.ProductId))
+                return Result.Failure<Guid>($"'{item.ProductName}' şu an bu kanalda satışa kapalı; siparişi tamamlamak için sepetten çıkarın.");
         }
 
         var orderNumber = $"ORD-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";

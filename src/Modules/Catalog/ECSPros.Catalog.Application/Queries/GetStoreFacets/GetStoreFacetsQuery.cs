@@ -32,20 +32,24 @@ public record AttributeFacetValueDto(
     string? HexCode,
     int ProductCount);
 
-public class GetStoreFacetsQueryHandler(ICatalogDbContext db, IInStockProductProvider inStock, IMemoryCache memoryCache)
+public class GetStoreFacetsQueryHandler(
+    ICatalogDbContext db, IInStockProductProvider inStock, IMemoryCache memoryCache,
+    IChannelProductFlagService flagService)
     : IRequestHandler<GetStoreFacetsQuery, Result<StoreFacetsDto>>
 {
     // Tüm-katalog facet'i sorgu başına ~4 sn süren bir aggregation; katalog nadiren
     // değiştiği için süreç-içi cache yeterli (Redis bu ortamda kullanılamıyor —
     // bkz. PROGRESS.md 2026-07-06 Redis notu). Arama filtreli istekler cache'lenmez.
-    // Cache anahtarı stok görünürlük paramlarını içerir (platform bazlı ayar farkı için).
-    private static string AllKey(bool showOos, DateTime? since) => $"store:facets:all:v2:{showOos}:{since:yyyyMMdd}";
+    // Cache anahtarı stok görünürlük paramlarını + platformu içerir (kanal seçimi/durdurma
+    // deny-set'i platform bazlı — M2/M3).
+    private static string AllKey(Guid platformId, bool showOos, DateTime? since) =>
+        $"store:facets:all:v3:{platformId}:{showOos}:{since:yyyyMMdd}";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(15);
 
     public async Task<Result<StoreFacetsDto>> Handle(GetStoreFacetsQuery request, CancellationToken ct)
     {
         var hasSearch = !string.IsNullOrWhiteSpace(request.Search);
-        var allKey = AllKey(request.ShowOutOfStock, request.OutOfStockSince);
+        var allKey = AllKey(request.FirmPlatformId, request.ShowOutOfStock, request.OutOfStockSince);
 
         if (!hasSearch && memoryCache.TryGetValue(allKey, out StoreFacetsDto? cached) && cached is not null)
             return Result.Success(cached);
@@ -53,11 +57,14 @@ public class GetStoreFacetsQueryHandler(ICatalogDbContext db, IInStockProductPro
         // Stok görünürlüğü: arama grid'iyle aynı kural (stoğu biten, kanal açık VE CreatedAt>=eşik
         // değilse facet'lerden de çıkar).
         var inStockIds = await inStock.GetInStockProductIdsAsync(ct);
+        // Kanal seçimi/durdurma (M2/M3): kanaldan çıkarılan/durdurulan ürünü facet'ten de çıkar.
+        var kanalDisi = await flagService.GetChannelExcludedProductIdsAsync(request.FirmPlatformId, ct);
         var showOos = request.ShowOutOfStock;
         var oosSince = request.OutOfStockSince;
         var q = db.Products
             .AsNoTracking()
-            .Where(p => p.IsSaleOpen && db.ProductImages.Any(img => img.ProductId == p.Id))
+            .Where(p => p.IsSaleOpen && db.ProductImages.Any(img => img.ProductId == p.Id)
+                     && !kanalDisi.Contains(p.Id))
             .Where(p => inStockIds.Contains(p.Id) || (showOos && (oosSince == null || p.CreatedAt >= oosSince)));
 
         if (hasSearch)

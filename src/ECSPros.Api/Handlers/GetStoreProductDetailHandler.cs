@@ -10,7 +10,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Api.Handlers;
 
-public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbContext invDb, IChannelPricingService pricingService)
+public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbContext invDb,
+    IChannelPricingService pricingService, IChannelProductFlagService flagService)
     : IRequestHandler<GetStoreProductDetailQuery, Result<StoreProductDetailDto>>
 {
     public async Task<Result<StoreProductDetailDto>> Handle(GetStoreProductDetailQuery request, CancellationToken ct)
@@ -26,6 +27,12 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
 
         if (product is null)
             return Result.Failure<StoreProductDetailDto>("Ürün bulunamadı.");
+
+        // Kanal seçimi/durdurma (M2/M3): bu kanalda çıkarılan/durdurulan ürün detaydan da düşer
+        // (Failure → UrunDetayController 301 ile kategoriye/ana sayfaya yönlendirir).
+        var kanalDisi = await flagService.GetChannelExcludedProductIdsAsync(request.FirmPlatformId, ct);
+        if (kanalDisi.Contains(product.Id))
+            return Result.Failure<StoreProductDetailDto>("Ürün bu kanalda satışa kapalı.");
 
         var activeVariantIds = product.Variants.Where(v => v.IsActive).Select(v => v.Id).ToList();
 

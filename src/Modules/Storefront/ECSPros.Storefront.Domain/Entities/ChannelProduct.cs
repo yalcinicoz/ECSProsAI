@@ -12,6 +12,10 @@ public class ChannelProduct : BaseEntity
     public Guid ProductId { get; set; }
     public Dictionary<string, string>? NameI18n { get; set; }
     public Dictionary<string, string>? ShortDescriptionI18n { get; set; }
+
+    // K2 (kanal seçimi — satış görünürlüğü M2): ürünün bu kanalda satılıp satılmayacağı.
+    // Opt-out semantiği: satır yok VEYA IsActive=true → kanalda satılır; IsActive=false →
+    // kanaldan çıkarılmış (listelerden ve satıştan düşer). Legacy plurunler.satisaAcik.
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; }
 
@@ -24,4 +28,15 @@ public class ChannelProduct : BaseEntity
     public bool IsFeaturedAt(DateTime now) =>
         FeaturedFrom.HasValue && FeaturedFrom.Value <= now
         && (!FeaturedUntil.HasValue || FeaturedUntil.Value >= now);
+
+    // K3 (kanalda durdurma — satış görünürlüğü M3): kanalda satılan ürünü anlık VEYA
+    // [başlangıç, bitiş] penceresiyle durdurma. SaleStoppedFrom dolu ve an aralıktaysa ürün
+    // o kanalda satıştan düşer; pencere bitince sorgu-zamanı otomatik geri açılır (job yok).
+    // SaleStoppedUntil null = süresiz durdurma. Legacy plurunler.yayinda (=false → durdurulmuş).
+    public DateTime? SaleStoppedFrom { get; set; }
+    public DateTime? SaleStoppedUntil { get; set; }
+
+    public bool IsSaleStoppedAt(DateTime now) =>
+        SaleStoppedFrom.HasValue && SaleStoppedFrom.Value <= now
+        && (!SaleStoppedUntil.HasValue || SaleStoppedUntil.Value >= now);
 }
