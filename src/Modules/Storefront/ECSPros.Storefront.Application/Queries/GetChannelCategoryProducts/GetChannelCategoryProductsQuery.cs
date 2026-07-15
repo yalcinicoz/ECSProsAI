@@ -68,7 +68,8 @@ public record ChannelCategoryProductItemDto(
     List<ProductListingColorDto>? AxisColors = null, // B8: ürünün eksen (renk) kartları — tooltip linkleri buradan
     bool IsFeatured = false,                         // B11: öne çıkar penceresi içinde — kartta "Sponsorlu" rozeti
     double Rating = 0,                               // E7: onaylı yorum ortalaması (0 = yorum yok)
-    int ReviewCount = 0);                            // E7: onaylı yorum sayısı
+    int ReviewCount = 0,                             // E7: onaylı yorum sayısı
+    string? Slug = null);                            // URL aktarımı 2b: kartın (seçili renk) gerçek URL slug'ı
 
 public class GetChannelCategoryProductsQueryHandler(
     IStorefrontDbContext sfDb,
@@ -501,6 +502,18 @@ public class GetChannelCategoryProductsQueryHandler(
         var pagedProductPairs = colorPairs.Where(p => pagedProductIds.Contains(p.ProductId)).ToList();
         var allColorVariantIds = pagedProductPairs.SelectMany(p => p.VariantIds).Distinct().ToList();
 
+        // URL aktarımı 2b: bu platformdaki gerçek slug'lar — (product×renk) kartlarının doğrudan
+        // slug linki bassın (301 hop'u olmadan). Slug rengin temsilci (legacy ana) varyantındadır.
+        var slugByVariant = allColorVariantIds.Count > 0
+            ? await sfDb.ChannelVariants.AsNoTracking()
+                .Where(cv => cv.FirmPlatformId == cat.FirmPlatformId && cv.Slug != null
+                          && allColorVariantIds.Contains(cv.VariantId))
+                .Select(cv => new { cv.VariantId, cv.Slug })
+                .ToDictionaryAsync(x => x.VariantId, x => x.Slug!, ct)
+            : new Dictionary<Guid, string>();
+        string? PairSlug(List<Guid> variantIds) =>
+            variantIds.Select(v => slugByVariant.GetValueOrDefault(v)).FirstOrDefault(s => s != null);
+
         // 8. Ürün bilgileri
         var productMap = await catDb.Products.AsNoTracking()
             .Where(p => pagedProductIds.Contains(p.Id))
@@ -567,7 +580,8 @@ public class GetChannelCategoryProductsQueryHandler(
                         colorValueNameMap.TryGetValue(pair.ColorValueId, out var ad) ? ad.Item1 : new(),
                         colorValueNameMap.TryGetValue(pair.ColorValueId, out var hexAd) ? hexAd.Item2 : null,
                         imagesByPair.TryGetValue((pair.ProductId, pair.ColorValueId), out var imgs)
-                        && imgs.Count > 0 ? cdnBase + imgs[0] : null))
+                        && imgs.Count > 0 ? cdnBase + imgs[0] : null,
+                        PairSlug(pair.VariantIds)))   // 2b: rengin gerçek URL slug'ı
                     .ToList());
 
         // 11. DTO oluştur
@@ -604,7 +618,8 @@ public class GetChannelCategoryProductsQueryHandler(
                         : null,
                     GalleryUrls: galleryUrls,
                     AxisColors: axisColorsByProduct.GetValueOrDefault(pair.ProductId),
-                    IsFeatured: oneCikanlar.Contains(pair.ProductId));
+                    IsFeatured: oneCikanlar.Contains(pair.ProductId),
+                    Slug: PairSlug(pair.VariantIds));   // 2b: kartın seçili renk slug'ı
             })
             .ToList();
 
