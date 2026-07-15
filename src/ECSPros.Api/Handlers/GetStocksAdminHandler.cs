@@ -28,7 +28,11 @@ public record GetStocksAdminQuery(
 /// ve stoğun bulunduğu depo/kısım/raflar (sayaçlı). ParentId: kısım→depo, raf→kısım
 /// (frontend kademeli daraltma için).</summary>
 public record GetStocksAdminFacetsQuery(
-    string? Search, Guid? WarehouseId, bool AvailableOnly) : IRequest<Result<StockAdminFacetsDto>>;
+    string? Search, Guid? WarehouseId, bool AvailableOnly,
+    // Mevcut ikincil seçimler: her facet boyutu DİĞER seçimlerle daraltılır (klasik facet
+    // kuralı) — yoksa sayaçlar listeyle tutmaz (örn. varyant seçiliyken raf sayıları tüm
+    // varyantların raflarını gösterir, seçilen raf boş liste döndürebilirdi).
+    Guid? VariantId = null, Guid? SectionId = null, Guid? BinId = null) : IRequest<Result<StockAdminFacetsDto>>;
 
 public record StockFacetOption(Guid Id, string Label, int Count, Guid? ParentId = null);
 
@@ -185,8 +189,20 @@ public class GetStocksAdminFacetsHandler(
         static string TrAd(Dictionary<string, string>? i18n) =>
             i18n is null ? "" : i18n.TryGetValue("tr", out var ad) ? ad : i18n.Values.FirstOrDefault() ?? "";
 
+        // Her boyut, KENDİSİ HARİÇ diğer seçimlerle daraltılmış satır kümesinden hesaplanır —
+        // sayaçlar hep görünen listeyle tutarlı kalır.
+        var forVariants = rows.Where(r =>
+            (!request.SectionId.HasValue || r.SectionId == request.SectionId)
+            && (!request.BinId.HasValue || r.BinId == request.BinId)).ToList();
+        var forSections = rows.Where(r =>
+            (!request.VariantId.HasValue || r.VariantId == request.VariantId)
+            && (!request.BinId.HasValue || r.BinId == request.BinId)).ToList();
+        var forBins = rows.Where(r =>
+            (!request.VariantId.HasValue || r.VariantId == request.VariantId)
+            && (!request.SectionId.HasValue || r.SectionId == request.SectionId)).ToList();
+
         // Varyantlar (en çok satırlı 200) — etiket: ürün kodu · seçenekler
-        var variantGroups = rows.GroupBy(r => r.VariantId)
+        var variantGroups = forVariants.GroupBy(r => r.VariantId)
             .Select(g => new { Id = g.Key, Count = g.Count() })
             .OrderByDescending(g => g.Count).Take(200).ToList();
         var displays = await productService.GetVariantDisplayAsync(variantGroups.Select(g => g.Id).ToList(), ct);
@@ -198,26 +214,30 @@ public class GetStocksAdminFacetsHandler(
             return new StockFacetOption(g.Id, label, g.Count);
         }).OrderBy(v => v.Label).ToList();
 
-        // Depolar
-        var whIds = rows.Select(r => r.WarehouseId).Distinct().ToList();
+        // Depolar (tüm ikincil seçimlerle daraltılmış)
+        var forWarehouses = rows.Where(r =>
+            (!request.VariantId.HasValue || r.VariantId == request.VariantId)
+            && (!request.SectionId.HasValue || r.SectionId == request.SectionId)
+            && (!request.BinId.HasValue || r.BinId == request.BinId)).ToList();
+        var whIds = forWarehouses.Select(r => r.WarehouseId).Distinct().ToList();
         var whNames = await invDb.Warehouses.AsNoTracking()
             .Where(w => whIds.Contains(w.Id))
             .Select(w => new { w.Id, w.NameI18n })
             .ToDictionaryAsync(w => w.Id, w => w.NameI18n, ct);
-        var warehouses = rows.GroupBy(r => r.WarehouseId)
+        var warehouses = forWarehouses.GroupBy(r => r.WarehouseId)
             .Select(g => new StockFacetOption(g.Key,
                 whNames.TryGetValue(g.Key, out var n) ? TrAd(n) : "—", g.Count()))
             .OrderBy(w => w.Label).ToList();
 
         // Kısımlar (parent = depo)
-        var secIds = rows.Where(r => r.SectionId.HasValue).Select(r => r.SectionId!.Value).Distinct().ToList();
+        var secIds = forSections.Where(r => r.SectionId.HasValue).Select(r => r.SectionId!.Value).Distinct().ToList();
         var secInfo = secIds.Count > 0
             ? await invDb.WarehouseSections.AsNoTracking()
                 .Where(x => secIds.Contains(x.Id))
                 .Select(x => new { x.Id, x.Name, x.WarehouseId })
                 .ToDictionaryAsync(x => x.Id, ct)
             : null;
-        var sections = rows.Where(r => r.SectionId.HasValue)
+        var sections = forSections.Where(r => r.SectionId.HasValue)
             .GroupBy(r => r.SectionId!.Value)
             .Select(g => new StockFacetOption(g.Key,
                 secInfo != null && secInfo.TryGetValue(g.Key, out var si) ? si.Name : "—",
@@ -226,7 +246,7 @@ public class GetStocksAdminFacetsHandler(
             .OrderBy(x => x.Label).ToList();
 
         // Raflar (parent = kısım; en çok satırlı 300)
-        var binGroups = rows.Where(r => r.BinId.HasValue)
+        var binGroups = forBins.Where(r => r.BinId.HasValue)
             .GroupBy(r => r.BinId!.Value)
             .Select(g => new { Id = g.Key, Count = g.Count() })
             .OrderByDescending(g => g.Count).Take(300).ToList();

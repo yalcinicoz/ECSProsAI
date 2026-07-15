@@ -122,10 +122,13 @@ public class InventoryController : ControllerBase
         [FromQuery] string? search,
         [FromQuery] Guid? warehouseId,
         [FromQuery] bool availableOnly = false,
+        [FromQuery] Guid? variantId = null,
+        [FromQuery] Guid? sectionId = null,
+        [FromQuery] Guid? binId = null,
         CancellationToken ct = default)
     {
         var result = await _mediator.Send(new ECSPros.Api.Handlers.GetStocksAdminFacetsQuery(
-            search, warehouseId, availableOnly), ct);
+            search, warehouseId, availableOnly, variantId, sectionId, binId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
