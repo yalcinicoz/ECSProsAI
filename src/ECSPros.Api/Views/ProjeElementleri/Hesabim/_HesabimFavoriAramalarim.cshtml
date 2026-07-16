@@ -23,15 +23,24 @@
                 <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-arama-kaydet-ac>Yeni Arama Kaydet</button>
             </div>
 
+<<<<<<< ECSPros
             @if (msAramalar.Count == 0)
             {
             <section class="ms-hesabim-bos-durum" aria-labelledby="ms-favori-aramalar-bos-baslik">
                 <img class="ms-ikon-siyah" src="/ikons/favori-aramalarim-sade-icon.svg" alt="" aria-hidden="true">
+=======
+            <section class="ms-hesabim-bos-durum" aria-labelledby="ms-favori-aramalar-bos-baslik">
+                <img class="ms-ikon-siyah" src="/ikons/favori-aramalarim-sade-icon.svg" alt="" aria-hidden="true" width="20" height="20" loading="lazy">
+>>>>>>> yeni-tasarim
                 <div>
                     <h3 id="ms-favori-aramalar-bos-baslik">Henüz favori aramanız yok</h3>
                     <p>Sık kullandığınız arama filtrelerini kaydettiğinizde burada listelenir.</p>
                 </div>
+<<<<<<< ECSPros
                 <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-arama-kaydet-ac>Arama Kaydet</button>
+=======
+                <a class="ms-buton ms-buton-m ms-buton-satin-al" href="/urun-listesi">Arama Yap</a>
+>>>>>>> yeni-tasarim
             </section>
             }
             else
@@ -40,8 +49,20 @@
                 @foreach (var arama in msAramalar)
                 {
                 <article class="ms-hesabim-durum-karti">
+<<<<<<< ECSPros
                     @if (arama.NotifyEnabled)
                     {
+=======
+                    <span class="ms-hesabim-durum-etiket ms-hesabim-durum-basarili">Aktif</span>
+                    <strong>Siyah pantolon · 38 beden</strong>
+                    <p>Kadın > Pantolon kategorisinde, 500-1000 TL fiyat aralığı.</p>
+                    <div class="ms-hesabim-kart-aksiyonlar">
+                        <a class="ms-buton ms-buton-s ms-buton-satin-al" href="/urun-listesi?q=siyah%20pantolon">Sonuçları Gör</a>
+                        <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-mavi ms-buton-x" type="button">Düzenle</button>
+                    </div>
+                </article>
+                <article class="ms-hesabim-durum-karti">
+>>>>>>> yeni-tasarim
                     <span class="ms-hesabim-durum-etiket ms-hesabim-durum-beklemede">Bildirim Açık</span>
                     }
                     else
@@ -51,6 +72,7 @@
                     <strong>@(string.IsNullOrWhiteSpace(arama.Name) ? arama.Query : arama.Name)</strong>
                     <p>@(arama.NotifyEnabled ? "Yeni ürün geldiğinde e-posta bildirimi gönderilecek." : $"Arama: \"{arama.Query}\"")</p>
                     <div class="ms-hesabim-kart-aksiyonlar">
+<<<<<<< ECSPros
                         <a class="ms-buton ms-buton-s ms-buton-satin-al" href="/urunler?search=@(Uri.EscapeDataString(arama.Query))">Sonuçları Gör</a>
                         <button class="ms-buton ms-buton-s ms-buton-sade" type="button"
                                 data-ms-arama-duzenle="@arama.Id"
@@ -58,6 +80,9 @@
                                 data-ms-arama-sorgu="@arama.Query"
                                 data-ms-arama-bildirim="@(arama.NotifyEnabled ? "true" : "false")">Düzenle</button>
                         <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-arama-sil="@arama.Id">Sil</button>
+=======
+                        <a class="ms-buton ms-buton-s ms-buton-satin-al" href="/urun-listesi?q=triko%20tisort">Sonuçları Gör</a>
+>>>>>>> yeni-tasarim
                     </div>
                 </article>
                 }

@@ -30,9 +30,9 @@
                     <p>İade sürecindeki ürünlerinizi, kargo ve ödeme durumunu takip edin.</p>
                 </div>
                 <div class="ms-hesabim-siparis-filtreler" aria-label="İade filtreleri">
-                    <button class="ms-buton ms-buton-s ms-buton-koyu" type="button" data-ms-iade-filtre="tumu">Tümü</button>
-                    <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-iade-filtre="devam">Devam Eden</button>
-                    <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-iade-filtre="tamamlanan">Tamamlanan</button>
+                    <button class="ms-buton ms-buton-s ms-buton-standart-gri ms-buton-standart-gri-aktif" type="button" data-ms-iade-filtre="tumu">Tümü</button>
+                    <button class="ms-buton ms-buton-s ms-buton-standart-gri" type="button" data-ms-iade-filtre="devam">Devam Eden</button>
+                    <button class="ms-buton ms-buton-s ms-buton-standart-gri" type="button" data-ms-iade-filtre="tamamlanan">Tamamlanan</button>
                 </div>
                 <button class="ms-buton ms-buton-m ms-buton-satin-al ms-hesabim-iade-yeni-talep" type="button" data-ms-iade-sayfasi-modal-ac>Yeni İade Talebi</button>
             </div>
@@ -45,7 +45,7 @@
                     <h3 id="ms-iadeler-bos-baslik">Henüz iade talebiniz yok</h3>
                     <p>İade veya değişim talebi oluşturduğunuzda süreç adımları burada görünür.</p>
                 </div>
-                <a class="ms-buton ms-buton-m ms-buton-sade" href="/Hesabim/Siparislerim">Siparişlerime Git</a>
+                <a class="ms-buton ms-buton-m ms-buton-sade" href="/siparislerim">Siparişlerime Git</a>
             </section>
             }
 
@@ -59,6 +59,7 @@
                             <strong>@iade.TarihMetni</strong>
                         </div>
                         <div class="ms-hesabim-siparis-ust-aksiyonlar">
+<<<<<<< ECSPros
                             <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-@iade.DurumSinifi">@iade.DurumMetni</span>
                             @if (false)
                             {
@@ -69,6 +70,10 @@
                             <a class="ms-buton ms-buton-s ms-buton-sade" href="#" target="_blank" rel="noopener" data-ms-fatura-modal-ac>Dekontu Gör</a>
                             }
                             <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-iade-kart-toggle aria-expanded="false">Aç</button>
+=======
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-iade">İade İnceleniyor</span>
+                            <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-iade-kart-toggle aria-expanded="false" aria-label="İade detayını aç"><i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i><span class="sr-only" data-ms-iade-kart-toggle-metin>Aç</span></button>
+>>>>>>> yeni-tasarim
                         </div>
                     </div>
 
@@ -94,6 +99,7 @@
                         @foreach (var u in iade.Urunler)
                         {
                         <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+<<<<<<< ECSPros
                             @if (u.UrunLink is not null)
                             {
                             <a class="ms-hesabim-kart-baglanti" href="@u.UrunLink" data-ms-kart-link aria-label="@u.Ad ürün detayına git"></a>
@@ -102,6 +108,10 @@
                             {
                             <img src="@u.GorselUrl" alt="@u.Ad">
                             }
+=======
+                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="Kadın Yüksek Bel Bol Paça Pantolon ürün detayına git"></a>
+                            <img src="/images/ornek-resim-2.jpg" alt="Kadın yüksek bel bol paça pantolon" width="554" height="554" loading="lazy">
+>>>>>>> yeni-tasarim
                             <div>
                                 <strong>@u.Ad</strong>
                                 <p>@(string.IsNullOrWhiteSpace(u.SecenekOzeti) ? "" : u.SecenekOzeti + " · ")Adet: @u.Adet</p>
@@ -126,8 +136,12 @@
                                 <i class="fa-solid fa-truck-fast ms-fa-ikon " aria-hidden="true"></i>
                                 Anlaşmalı Kargo
                             </span>
+<<<<<<< ECSPros
                             }
                             <button type="button" data-ms-iade-kodu-kopyala="@iade.KargoIadeKodu">Kopyala</button>
+=======
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-yesil ms-buton-x" type="button" data-ms-iade-kodu-kopyala="HJ-IAD-893742">Kopyala</button>
+>>>>>>> yeni-tasarim
                         </div>
                     </div>
                     }
@@ -146,6 +160,7 @@
                             <strong class="ms-urun-fiyat">@iade.BeklenenTutar.ToString("N2", msIadeTrKultur) TL</strong>
                         </div>
                         <div class="ms-hesabim-siparis-aksiyonlar">
+<<<<<<< ECSPros
                             @if (iade.Tamamlandi && iade.Urunler.FirstOrDefault()?.UrunLink is string urunLink)
                             {
                             <a class="ms-buton ms-buton-s ms-buton-sade" href="@urunLink">Ürüne Git</a>
@@ -158,6 +173,95 @@
                     </div>
                 </article>
                 }
+=======
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-amber ms-buton-x" type="button">Destek Al</button>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ms-hesabim-siparis-karti ms-hesabim-iade-karti" data-ms-iade-kart-filtre="tamamlanan">
+                    <div class="ms-hesabim-siparis-kart-ust">
+                        <div>
+                            <span class="ms-hesabim-siparis-no">İade No: IAD-240401-1180</span>
+                            <strong>1 Nisan 2026</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-ust-aksiyonlar">
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-iade-onaylandi">İade Tamamlandı</span>
+                            <a class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-mor ms-buton-x" href="/siparislerim" data-ms-fatura-modal-ac>Dekontu Gör</a>
+                            <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-iade-kart-toggle aria-expanded="false" aria-label="İade detayını aç"><i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i><span class="sr-only" data-ms-iade-kart-toggle-metin>Aç</span></button>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-akis" aria-label="İade durumu">
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-alindi ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-arrow-rotate-left ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>Talep Oluşturuldu</strong>
+                            <small>1 Nisan 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-kargoda ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-truck-fast ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>Depoya Ulaştı</strong>
+                            <small>3 Nisan 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-hazirlaniyor ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-circle-check ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>Onaylandı</strong>
+                            <small>4 Nisan 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-teslim ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-circle-check ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>İade Ödendi</strong>
+                            <small>5 Nisan 2026</small>
+                        </span>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-urunler">
+                        <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="Basic Tişört ürün detayına git"></a>
+                            <img src="/images/ornek-resim.jpg" alt="Basic tişört" width="612" height="612" loading="lazy">
+                            <div>
+                                <strong>Basic Tişört</strong>
+                                <p>Beden: M · Renk: Beyaz · Adet: 1</p>
+                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">289,90 TL</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-iade-kodu" aria-label="Kargo iade kodu">
+                        <span>Kargo İade Kodu</span>
+                        <div class="ms-hesabim-iade-kodu-detay">
+                            <strong>HJ-IAD-221980</strong>
+                        </div>
+                        <div class="ms-hesabim-iade-kodu-aksiyonlar">
+                            <span class="ms-hesabim-iade-kargo-badge">
+                                <i class="fa-solid fa-truck-fast ms-fa-ikon " aria-hidden="true"></i>
+                                PTT Kargo
+                            </span>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-yesil ms-buton-x" type="button" data-ms-iade-kodu-kopyala="HJ-IAD-221980">Kopyala</button>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-iade-bilgi">
+                        <strong>İade ödemeniz tamamlandı</strong>
+                        <p>İade onaylandı ve 289,90 TL ödeme iadesi kartınıza gönderildi.</p>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-alt">
+                        <div class="ms-hesabim-siparis-tutar">
+                            <span>İade Tutarı</span>
+                            <strong class="ms-urun-fiyat">289,90 TL</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-aksiyonlar">
+                            <a class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-mor ms-buton-x" href="/siparislerim" data-ms-fatura-modal-ac>Dekontu Gör</a>
+                            <a class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-klasik ms-buton-x" href="/urun-detay">Ürüne Git</a>
+                        </div>
+                    </div>
+                </article>
+>>>>>>> yeni-tasarim
             </div>
         </div>
     </section>
@@ -187,7 +291,12 @@
             buton?.setAttribute("aria-expanded", acik.toString());
 
             if (buton) {
-                buton.textContent = acik ? "Kapat" : "Aç";
+                buton.setAttribute("aria-label", acik ? "İade detayını kapat" : "İade detayını aç");
+
+                const metin = buton.querySelector("[data-ms-iade-kart-toggle-metin]");
+                if (metin) {
+                    metin.textContent = acik ? "Kapat" : "Aç";
+                }
             }
         };
 
@@ -218,8 +327,8 @@
 
                 document.querySelectorAll("[data-ms-iade-filtre]").forEach((filtreButon) => {
                     const aktif = filtreButon === buton;
-                    filtreButon.classList.toggle("ms-buton-koyu", aktif);
-                    filtreButon.classList.toggle("ms-buton-sade", !aktif);
+                    filtreButon.classList.toggle("ms-buton-standart-gri-aktif", aktif);
+                    filtreButon.classList.add("ms-buton-standart-gri");
                 });
 
                 document.querySelectorAll("[data-ms-iade-kart-filtre]").forEach((kart) => {
@@ -909,24 +1018,8 @@
         document.querySelectorAll("[data-ms-fatura-modal-ac]").forEach((baglanti) => {
             baglanti.addEventListener("click", (event) => {
                 event.preventDefault();
-
-                const faturaUrl = baglanti.href;
-                const pdfUrl = `/fatura/pdf?url=${encodeURIComponent(faturaUrl)}`;
-                const indirmeUrl = `${pdfUrl}&indir=true`;
-                const fallback = iadeSayfasiFaturaModal?.querySelector("[data-ms-fatura-pdf-fallback]");
-                const iframe = iadeSayfasiFaturaModal?.querySelector("[data-ms-fatura-pdf-frame]");
-
-                iframe?.setAttribute("src", pdfUrl);
-                iadeSayfasiFaturaModal?.querySelector("[data-ms-fatura-indir]")?.setAttribute("href", indirmeUrl);
-                iadeSayfasiFaturaModal?.querySelector("[data-ms-fatura-yeni-sekme]")?.setAttribute("href", pdfUrl);
-                iadeSayfasiFaturaModal?.querySelector("[data-ms-fatura-fallback-link]")?.setAttribute("href", pdfUrl);
-                fallback?.classList.remove("ms-fatura-pdf-fallback-gizli");
                 iadeSayfasiModalAc(iadeSayfasiFaturaModal);
             });
-        });
-
-        iadeSayfasiFaturaModal?.querySelector("[data-ms-fatura-pdf-frame]")?.addEventListener("load", () => {
-            iadeSayfasiFaturaModal.querySelector("[data-ms-fatura-pdf-fallback]")?.classList.add("ms-fatura-pdf-fallback-gizli");
         });
 
         document.querySelectorAll("[data-ms-fatura-modal-kapat]").forEach((kapatici) => {

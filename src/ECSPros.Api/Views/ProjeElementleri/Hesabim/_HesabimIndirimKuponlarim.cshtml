@@ -6,7 +6,7 @@
 @{
     var msKuponlar = ViewData["MsKuponlar"] as List<ECSPros.Api.Models.Store.HesabimKuponVm> ?? new();
 }
-<section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-kuponlar-baslik">
+<section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-kuponlar-baslik" data-ms-kuponlar-sayfasi>
     <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model='@("kuponlar")' />
 
     <section class="ms-hesabim-icerik">
@@ -14,11 +14,14 @@
             <h2 id="ms-hesabim-kuponlar-baslik">İndirim Kuponlarım</h2>
         </header>
 
-        <div class="ms-hesabim-liste-sayfa">
-            <div class="ms-hesabim-liste-ust">
+        <div class="ms-hesabim-liste-sayfa ms-hesabim-kupon-sayfasi">
+            <div class="ms-hesabim-kupon-hero">
+                <span class="ms-hesabim-kupon-hero-ikon" aria-hidden="true">
+                    <i class="fa-solid fa-ticket ms-fa-ikon"></i>
+                </span>
                 <div>
                     <h3>Kullanılabilir kuponlar</h3>
-                    <p>Sepette kullanabileceğiniz kuponları ve son kullanım tarihlerini takip edin.</p>
+                    <p>Kupon kodunu kopyalayabilir veya sepette kullanmak için sepet sayfasına geçebilirsiniz.</p>
                 </div>
                 @if (false)
                 {
@@ -40,15 +43,37 @@
             }
             else
             {
-            <div class="ms-hesabim-mini-grid">
+            <div class="ms-hesabim-kupon-grid">
                 @foreach (var kupon in msKuponlar)
                 {
-                <article class="ms-hesabim-kupon-karti">
-                    <span>@kupon.Code</span>
-                    <strong>@kupon.IndirimMetni</strong>
-                    <p>@kupon.KosulMetni</p>
-                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-kupon-sepette-kullan="@kupon.Code">Sepette Kullan</button>
-                </article>
+                    <article class="ms-hesabim-kupon-karti ms-hesabim-kupon-karti-turuncu">
+                        <span class="ms-hesabim-kupon-delik ms-hesabim-kupon-delik-sol" aria-hidden="true"></span>
+                        <span class="ms-hesabim-kupon-delik ms-hesabim-kupon-delik-sag" aria-hidden="true"></span>
+
+                        <div class="ms-hesabim-kupon-kart-ust">
+                            <span class="ms-hesabim-kupon-rozet">Aktif</span>
+                            <strong>@kupon.IndirimMetni</strong>
+                        </div>
+
+                        <div class="ms-hesabim-kupon-metin">
+                            <h3>@kupon.Code</h3>
+                            <p>@kupon.KosulMetni</p>
+                        </div>
+
+                        <div class="ms-hesabim-kupon-kod-alani">
+                            <span>Kupon Kodu</span>
+                            <code>@kupon.Code</code>
+                            <button class="ms-hesabim-kupon-kopyala" type="button" data-ms-kupon-kopyala="@kupon.Code" aria-label="@kupon.Code kupon kodunu kopyala">
+                                <i class="fa-regular fa-copy ms-fa-ikon" aria-hidden="true"></i>
+                                <span>Kopyala</span>
+                            </button>
+                        </div>
+
+                        <div class="ms-hesabim-kupon-aksiyonlar">
+                            <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-kupon-sepette-kullan="@kupon.Code">Sepette Kullan</button>
+                            @* Sayaçlı kupon (data-ms-kupon-sayac): bitiş anı VM'e gelince açılır — tasarım sözleşmesi hazır. *@
+                        </div>
+                    </article>
                 }
             </div>
             }
@@ -68,4 +93,55 @@
             window.location.href = "/Sepet";
         });
     });
+
+    // Tasarım: kupon kodu kopyalama + sayaç başlatma
+    (() => {
+        const kuponSayfasi = document.querySelector("[data-ms-kuponlar-sayfasi]");
+
+        if (!kuponSayfasi || kuponSayfasi.dataset.msKuponlarHazir === "true") {
+            return;
+        }
+
+        kuponSayfasi.dataset.msKuponlarHazir = "true";
+
+        const kopyala = async (metin) => {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(metin);
+                return;
+            }
+
+            const geciciAlan = document.createElement("textarea");
+            geciciAlan.value = metin;
+            geciciAlan.setAttribute("readonly", "");
+            geciciAlan.style.position = "fixed";
+            geciciAlan.style.opacity = "0";
+            document.body.appendChild(geciciAlan);
+            geciciAlan.select();
+            document.execCommand("copy");
+            geciciAlan.remove();
+        };
+
+        kuponSayfasi.querySelectorAll("[data-ms-kupon-kopyala]").forEach((buton) => {
+            const varsayilanMetin = buton.querySelector("span")?.textContent || buton.textContent;
+
+            buton.addEventListener("click", async () => {
+                try {
+                    await kopyala(buton.dataset.msKuponKopyala || "");
+                    buton.classList.add("ms-hesabim-kupon-kopyalandi");
+                    const yazi = buton.querySelector("span") || buton;
+                    yazi.textContent = "Kopyalandı";
+
+                    window.setTimeout(() => {
+                        buton.classList.remove("ms-hesabim-kupon-kopyalandi");
+                        yazi.textContent = varsayilanMetin;
+                    }, 1600);
+                } catch {
+                    const yazi = buton.querySelector("span") || buton;
+                    yazi.textContent = "Elle kopyalayın";
+                }
+            });
+        });
+
+        window.msKuponSayacBaslat?.(kuponSayfasi);
+    })();
 </script>
