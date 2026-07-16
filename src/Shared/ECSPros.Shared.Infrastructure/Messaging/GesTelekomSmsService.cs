@@ -13,8 +13,12 @@ namespace ECSPros.Shared.Infrastructure.Messaging;
 /// detayından girilir, Credentials şifreli); kayıt yoksa SMS gönderilmez, LogSmsService
 /// biçiminde loglanır (site SMS'siz de çalışır — SMTP ile aynı güvenlik ağı).
 /// Akış: POST /api/Login/TokenJson (userName/password → bearer, API ömrü 24 saat;
-/// 23 saat cache'lenir) → POST /api/SendSms/SendSingle. Yanıtta message/sonuc "*OK*"
+/// 23 saat cache'lenir) → POST /api/Otp/SendSms. Yanıtta message/sonuc "*OK*"
 /// ile başlamıyorsa hata. 401'de token cache'i düşürülüp bir kez yenilenir.
+/// OTP ucu kullanılır çünkü hesap GES'te OTP hesabıdır: SendSingle doğru gönderim
+/// şifresiyle bile sonuc=16 "Bu servisten otp sms gönderimi gerçekleşmemektedir" döner
+/// (canlı test 2026-07-16). Gövde şifresi TokenJson şifresinden AYRIDIR — settings.SendPassword
+/// (boşsa Password'e düşülür); yanlış gövde şifresi sonuc=1/3 "Kullanici adi/parola yanlis" verir.
 /// Gönderim hatası FIRLATILIR — SMTP ile aynı çağıran sözleşmesi (OTP akışı kullanıcıya
 /// hata döndürmelidir; sessizce yutulursa "kod gelmiyor" olarak yaşanır).
 /// </summary>
@@ -100,22 +104,20 @@ public class GesTelekomSmsService : ISmsService
         var token = await TokenAlAsync(apiUrl, settings, tokenYenile, ct);
 
         var client = _httpFactory.CreateClient(nameof(GesTelekomSmsService));
-        using var istek = new HttpRequestMessage(HttpMethod.Post, $"{apiUrl}/api/SendSms/SendSingle");
+        using var istek = new HttpRequestMessage(HttpMethod.Post, $"{apiUrl}/api/Otp/SendSms");
         istek.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        // ed/recipentType/brandCode dokümanda opsiyonel yazsa da API validasyonu zorunlu tutuyor
-        // (2026-07-15 canlı testte doğrulandı: eksikken 400 "field is required").
+        // messageText üst sınırı 160 karakterdir (GES OTP sözleşmesi); sistemin OTP mesajları
+        // ~60 karakter. endDate sunucu UTC'sinden ileride kalmalı — kısa pay (1 saat) TR
+        // saat farkı yüzünden "endDate sendDate'ten önce olamaz" (sonuc=13) veriyor, 24 saat verilir.
         istek.Content = JsonContent.Create(new
         {
             username = settings.Username,
-            password = settings.Password,
-            numbers = numara,
-            message,
+            password = string.IsNullOrWhiteSpace(settings.SendPassword) ? settings.Password : settings.SendPassword,
+            number = numara,
             origin = settings.Origin,
-            sd = "0",                                                  // hemen gönder
-            ed = DateTime.Now.AddHours(24).ToString("yyyyMMddHHmm"),   // son teslim: 24 saat
-            isNotification = settings.IsNotification,
-            recipentType = "BIREYSEL",
-            brandCode = ""
+            messageText = message,
+            sendDate = "0",                                                 // hemen gönder
+            endDate = DateTime.Now.AddHours(24).ToString("yyyyMMddHHmm")    // son teslim: 24 saat
         });
 
         return await client.SendAsync(istek, ct);

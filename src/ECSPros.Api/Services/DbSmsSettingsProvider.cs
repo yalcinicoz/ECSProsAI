@@ -66,7 +66,7 @@ public class DbSmsSettingsProvider : ISmsSettingsProvider
                         username,
                         password,
                         origin,
-                        string.Equals(GetString(degerler, "isNotification"), "true", StringComparison.OrdinalIgnoreCase));
+                        GetString(degerler, "sendPassword"));
                 }
             }
         }

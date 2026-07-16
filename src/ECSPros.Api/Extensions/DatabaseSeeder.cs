@@ -116,15 +116,16 @@ public static class DatabaseSeeder
             // DbSmsSettingsProvider'ın okuduğu anahtarlarla birebir aynı olmalı.
             ("gestelekom", "GES Telekom SMS", "sms", new List<PlatformSchemaField>
             {
-                Alan("apiUrl",         "API Adresi (boşsa restapi.ttmesaj.com)", "text",     "settings"),
-                Alan("username",       "API Kullanıcı Adı",                      "text",     "credentials", zorunlu: true),
-                Alan("password",       "API Şifresi",                            "password", "credentials", zorunlu: true),
-                Alan("origin",         "Mesaj Başlığı (Originator)",             "text",     "settings",    zorunlu: true,
-                    yardim: "GES Telekom tarafında ONAYLI mesaj başlığınız. Onaysız başlıkla gönderim API tarafından reddedilir."),
-                Alan("isNotification", "İYS: Bilgilendirme mesajı",              "boolean",  "settings",
-                    yardim: "İşaretli: SMS'ler bilgilendirme (OTP, sipariş bildirimi) sayılır, İYS izni aranmaz. " +
-                            "İşaretsiz: kampanya sayılır, İYS izni olmayan alıcıya SMS gitmez. " +
-                            "Sistem SMS'i yalnız OTP için kullanıyor — işaretli bırakın.")
+                Alan("apiUrl",       "API Adresi (boşsa restapi.ttmesaj.com)", "text",     "settings"),
+                Alan("username",     "API Kullanıcı Adı",                      "text",     "credentials", zorunlu: true),
+                Alan("password",     "API Şifresi",                            "password", "credentials", zorunlu: true,
+                    yardim: "GES API girişinin (TokenJson) şifresi — panel/API şifreniz."),
+                Alan("sendPassword", "Gönderim Şifresi",                       "password", "credentials",
+                    yardim: "SMS gönderim gövdesinin istediği AYRI şifre. GES bazı hesaplarda API şifresinden " +
+                            "farklı bir gönderim şifresi tanımlar; boş bırakılırsa API şifresi kullanılır. " +
+                            "Gönderimde 'Kullanici adi/parola yanlis' hatası alınıyorsa bu alan yanlış/eksik demektir."),
+                Alan("origin",       "Mesaj Başlığı (Originator)",             "text",     "settings",    zorunlu: true,
+                    yardim: "GES Telekom tarafında ONAYLI mesaj başlığınız. Onaysız başlıkla gönderim API tarafından reddedilir.")
             })
         };
 
