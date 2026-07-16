@@ -35,9 +35,9 @@ sitenin gerçek sayfaları içindir.
   - Subset'te olmayan FA ikonları: `fa-location-crosshairs` (ECSPros'a özgü `_SehirSecim` — kalıcı ihtiyaç), `fa-cart-shopping` (_HesabimTekrarSatinAl) ve `fa-square-plus` (_SepetSayfasi) — son ikisi Faz 4 merge'ünde tasarımın yeni markup'ıyla muhtemelen kaybolur. **Çözüm:** tasarımın `fontawesome-subset.mjs` aracı ECSPros'a alınır ve ECSPros Views+site.js üzerinden çalıştırılır → subset otomatik tam olur (Faz 1/2).
   - Kökten `ikons/kullanilmayanlar`a taşınan 55 dosyanın 6'sına ECSPros'ta hâlâ referans var — hepsi `_AnaNavigasyonGirisMenu.cshtml`'de; tasarım bu ikonları FA'ya çevirdi, Faz 4 merge'ü referansları zaten kaldırır. **Kural:** Faz 1 asset senkronu EKLEMELİ yapılır (silme yok); kök ikon temizliği Faz 4 sonrası sıfır-referans doğrulamasıyla yapılır.
 
-### Faz 1 — Asset'ler
-- [ ] `testimage/`, `images/`, `ikons/` (taşımalar dahil), `video/`, `fontawesome-free-7.2.0-web/` (yeni `ikonall.min.css` dahil) birebir senkron.
-- [ ] Faz 0 denetiminde ECSPros'a özgü eksik ikon çıkarsa subset'e ekleme yolu: tasarımın `scripts/fontawesome-subset.mjs` aracı ECSPros view'larını da tarayacak şekilde ECSPros tarafında çalıştırılır (kaynağa dokunulmaz).
+### Faz 1 — Asset'ler ✅ (2026-07-16)
+- [x] `testimage/` (52), `images/` (210), `ikons/` (67, kullanilmayanlar dahil), `video/` (1), `fontawesome-free-7.2.0-web/` (7, `ikonall.min.css` dahil) rsync ile EKLEMELİ senkronlandı — tasarımla bayt-aynı; kök `ikons/` fazlalıkları (55 taşınan + ECSPros'a özgüler) Faz 4 sonrası temizliğe kadar duruyor. favicon aynı çıktı. `lib/` (validation), `robots.txt`/`sitemap.xml` bilinçli atlandı (Faz 4/8 konusu); `misharix-skils/` tasarım aracı, taşınmaz.
+- [x] Subset aracı (`fontawesome-subset.mjs`) Faz 2'ye alındı — package.json/esbuild işleriyle birlikte.
 
 ### Faz 2 — site.js + site.min.js
 - [ ] YENİ `site.js` bütün olarak alınır (LF-temiz — CRLF tuzağı biter), ECSPros'un ~10 satırlık deltası (lazy-load iskelet düzeltmesi) yeniden uygulanır.
