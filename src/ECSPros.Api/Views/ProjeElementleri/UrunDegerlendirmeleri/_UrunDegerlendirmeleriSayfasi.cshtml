@@ -46,7 +46,7 @@
                     <div class="ms-yorum-aksiyon-satir">
                         <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button">Sepete Ekle</button>
                         <button class="ms-urun-detay-favori" type="button" aria-label="Favorilere ekle" aria-pressed="false">
-                            <img class="ms-urun-detay-favori-ikon" src="/ikons/favorite.svg" alt="" aria-hidden="true">
+                            <img class="ms-urun-detay-favori-ikon" src="/ikons/favorite.svg" alt="" aria-hidden="true" width="20" height="20" loading="lazy">
                         </button>
                     </div>
                     }
@@ -71,7 +71,7 @@
                         <div class="ms-ozel-select-icerik">
                             <label class="ms-ozel-select-arama-alani">
                                 <i class="fa-solid fa-magnifying-glass ms-fa-ikon ms-ozel-select-arama-ikon" aria-hidden="true"></i>
-                                <input class="ms-ozel-select-arama" type="search" placeholder="Puan Ara" data-ms-ozel-select-arama>
+                                <input name="konu_ara" class="ms-ozel-select-arama" type="search" placeholder="Konu ara" data-ms-yorum-select-arama>
                             </label>
                             <div class="ms-ozel-select-secenek-listesi">
                                 @for (var puan = 5; puan >= 1; puan--)
@@ -81,8 +81,8 @@
                             </div>
                         </div>
                         <div class="ms-ozel-select-alt">
-                            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-ozel-select-temizle>Temizle</button>
-                            <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-ozel-select-uygula>Uygula</button>
+                            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-yorum-select-temizle>Temizle</button>
+                            <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-yorum-select-uygula>Uygula</button>
                         </div>
                     </div>
                 </div>
@@ -138,17 +138,21 @@
                 <section class="ms-yorum-fotograflar"></section>
                 }
                 <div class="ms-yorum-liste" data-ms-yorum-liste></div>
+                <section class="ms-yorum-bos" data-ms-yorum-sonuc-bos hidden>
+                    <strong>Filtreye uygun değerlendirme bulunamadı</strong>
+                    <p>Seçili filtreleri temizleyerek tüm değerlendirmeleri tekrar görebilirsiniz.</p>
+                </section>
                 <div class="ms-yorum-yukleniyor" data-ms-yorum-yukleniyor>Yorumlar yükleniyor...</div>
             </section>
         </section>
     </section>
-    </main>
+    </div>
 
     <div class="ms-ornek-modal ms-yorum-kriter-modal" data-ms-yorum-kriter-modal aria-hidden="true">
         <div class="ms-ornek-modal-kaplama" data-ms-yorum-kriter-kapat></div>
         <section class="ms-ornek-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-yorum-kriter-baslik">
-            <button class="ms-ornek-modal-kapat" type="button" data-ms-yorum-kriter-kapat aria-label="Modalı kapat">×</button>
-            <h3 id="ms-yorum-kriter-baslik" class="ms-ornek-modal-baslik">Yorum Yayınlama Kriterleri</h3>
+            <button class="ms-ornek-modal-kapat" type="button" data-ms-yorum-kriter-kapat aria-label="Modalı kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+            <h3 id="ms-yorum-kriter-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>Yorum Yayınlama Kriterleri</h3>
             <div class="ms-yorum-kriter-icerik">
                 <p>Ürün Değerlendirmeleri, müşterilerimizin platform üzerinden satın aldıkları ürünlere ilişkin deneyimlerine yönelik yorum ve puanlarını paylaşabilecekleri önemli bir araçtır.</p>
                 <p>Ürün Değerlendirmeleri, içerdiği metin bakımından aşağıdaki kriterler dahilinde, olumlu veya olumsuz ayrımı ya da herhangi bir yönlendirme yapılmaksızın yayımlanır.</p>
@@ -288,6 +292,13 @@
                     if (!select.contains(event.target)) kapat();
                 });
             });
+            select.classList.toggle("ms-ozel-select-acik", acikOlacak);
+            tetikleyici.setAttribute("aria-expanded", acikOlacak.toString());
+            if (acikOlacak) {
+                acilisYonunuAyarla();
+                window.setTimeout(() => arama?.focus(), 30);
+            }
+        });
 
             const kriterModalAc = () => {
                 if (!kriterModal) return;
@@ -309,7 +320,30 @@
                 if (event.key === "Escape" && kriterModal?.classList.contains("ms-ornek-modal-acik")) {
                     kriterModalKapat();
                 }
+                degeriGuncelle();
+                yorumlariYenile();
             });
+        });
+
+        arama?.addEventListener("input", () => {
+            const aranan = metniKucult(arama.value);
+            secenekler.forEach((secenek) => {
+                secenek.hidden = !metniKucult(secenek.textContent).includes(aranan);
+            });
+        });
+        temizle?.addEventListener("click", () => {
+            secimleriTemizle();
+            yorumlariYenile();
+        });
+        uygula?.addEventListener("click", kapat);
+        document.addEventListener("click", (event) => {
+            if (!select.contains(event.target)) {
+                kapat();
+            }
+        });
+        select.msYorumSecimleriTemizle = secimleriTemizle;
+        degeriGuncelle();
+    });
 
             // ── Yorum listesi: canlı API'den infinite (tasarımın demo dizisi yerine) ──
             const esc = (metin) => { const e = document.createElement("span"); e.textContent = metin ?? ""; return e.innerHTML; };
