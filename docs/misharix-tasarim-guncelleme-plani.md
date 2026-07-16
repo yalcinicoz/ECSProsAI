@@ -51,8 +51,20 @@ sitenin gerçek sayfaları içindir.
 - [x] `tailwind.css` birebir kopya; `site.css` tasarımın derlenmiş çıktısıyla değiştirildi (971.581 bayt, md5 eşit — A4 kalıbı sürüyor: ECSPros yeniden derlemez, tasarım çıktısını kullanır). Değişen `css/fontawesome-all.css` de senkronlandı (hiçbir view referans etmiyor, bayt-eşitlik için).
 - [x] Kapsam denetimi GEÇTİ: 7 ECSPros'a özgü view'daki tüm class'lar tarandı; site.css'te olmayan 8 aday (`ms-sehir-modal*`, `ms-uyari*`, `lazy-infinite-on`, `ms-gorunum-daha-fazla-alani`) ESKİ css'te de yoktu — JS marker'ı/view-içi stil, regresyon değil.
 
-### Faz 4 — 60 ortak view üçlü merge
-- [ ] `git merge-file` (baz=ESKİ, tasarım=YENİ) toplu geçiş; çakışmalar elle.
+### Faz 4 — 60 ortak view üçlü merge (SÜRÜYOR — 2026-07-16)
+- [x] Toplu geçiş yapıldı: 12 trivial kopya + 44 dosyada merge-file (43 çakıştı). ÇÖZÜLENLER (commit'li):
+  4 host Index, _AnaNavigasyon (OTP bloğu korunarak 7 satıra indi), Duyuru, GirisMenu, Footer,
+  Breadcrumb, HesabimYanMenu, _Layout, Search (canlı arama korundu — demo şablon bilinçli yok),
+  DesktopMenu + MobilMenu (yeniden kuruldu: template'li lazy + FA + bizim döngüler), Ust (sepet
+  paneli yeni sözleşme data-ms-sepet-urun-listesi/-urun-sayisi; script uyarlandı; mobil kategori
+  şeridi tasarım gereği SİLİNDİ), Sepet grubu 5 dosya. _ViewImports/_ViewStart bizde doğru, dokunulmadı.
+- [ ] KALAN 23 çakışmalı dosya: Hesabim 14, UrunDetay 4 (Breadcrumb hariç), UrunListesi 4,
+  UrunDegerlendirmeleri 1 — kalan liste: `grep -rl '<<<<<<< ECSPros' src/ECSPros.Api/Views/`.
+- **Çözüm kuralları (devam eden oturumlar için):** yapı/markup YENİ tasarımdan; @Model/@foreach/
+  data hook'ları bizden; tasarımın demo doldurma şablonları (site.js'in beslediği) BİLİNÇLİ
+  konulmaz → site.js demo dolumu no-op kalır, gerçek veriyi bizim sayfa script'leri basar
+  (Search + sepet paneli kalıbı); ECSPros rotaları korunur (lowercase hizalama Faz 8);
+  theirs tarafı boşsa ours aynen kalır (bizim canlı script hunk'ları).
 - [ ] **En hassas ikisi EN SONA ve elle:** `_AnaNavigasyonGirisModal` + `_AnaNavigasyonKayitModal`
       (tasarımın SMS kod odak/otomatik onay/yeniden gönder/`onayRedModal` davranışları ile
       GERÇEK GES Telekom OTP akışının birleşimi — regresyon riski en yüksek yer).
