@@ -5,15 +5,16 @@
    mevcut sade ikon setiyle onarıldı. *@
 @{
     var msOzetTr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+    // Tasarım nihai: kısayol ikonları Font Awesome (SVG dosyaları kullanilmayanlar'a taşındı)
     var msKisayollar = new (string Link, string Ikon, string Ad)[]
     {
-        ("/Hesabim/UyelikBilgilerim", "uyelik-bilgilerim-sade-icon.svg", "Üyelik Bilgilerim"),
-        ("/Hesabim/Adreslerim", "adreslerim-sade-icon.svg", "Adreslerim"),
-        ("/Hesabim/Siparislerim", "siparislerim-sade-icon.svg", "Siparişlerim"),
-        ("/Favorilerim", "favorilerim-sade-icon.svg", "Favorilerim"),
-        ("/Hesabim/Koleksiyonlarim", "koleksiyonlarim-sade-icon.svg", "Koleksiyonlarım"),
-        ("/Hesabim/Yorumlarim", "yorumlarim-sade-icon.svg", "Yorumlarım"),
-        ("/Hesabim/Iadelerim", "iadelerim-sade-icon.svg", "İadelerim")
+        ("/Hesabim/UyelikBilgilerim", "fa-regular fa-user", "Üyelik Bilgilerim"),
+        ("/Hesabim/Adreslerim", "fa-regular fa-map", "Adreslerim"),
+        ("/Hesabim/Siparislerim", "fa-solid fa-box-open", "Siparişlerim"),
+        ("/Favorilerim", "fa-regular fa-heart", "Favorilerim"),
+        ("/Hesabim/Koleksiyonlarim", "fa-solid fa-layer-group", "Koleksiyonlarım"),
+        ("/Hesabim/Yorumlarim", "fa-regular fa-comment-dots", "Yorumlarım"),
+        ("/Hesabim/Iadelerim", "fa-solid fa-arrow-rotate-left", "İadelerim")
     };
 }
 <section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-varsayilan-baslik">
@@ -61,7 +62,7 @@
             @foreach (var (link, ikon, ad) in msKisayollar)
             {
             <a class="ms-hesabim-kisayol" href="@link">
-                <img class="ms-ikon-siyah" src="/ikons/@ikon" alt="" aria-hidden="true">
+                <i class="@ikon ms-fa-ikon" aria-hidden="true"></i>
                 <span>@ad</span>
             </a>
             }

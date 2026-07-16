@@ -22,14 +22,17 @@
                     <p>Son siparişlerinizi, kargo durumlarını, ödeme özetlerini ve iade/değişim aksiyonlarını bu alandan takip edebilirsiniz.</p>
                 </div>
                 <div class="ms-hesabim-siparis-filtreler" aria-label="Sipariş filtreleri">
-                    <button class="ms-buton ms-buton-s ms-buton-koyu" type="button" data-ms-siparis-filtre="tumu">Tümü</button>
-                    <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-siparis-filtre="devam">Devam Eden</button>
-                    <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-siparis-filtre="tamamlanan">Tamamlanan</button>
+                    <button class="ms-buton ms-buton-s ms-buton-standart-gri ms-buton-standart-gri-aktif" type="button" data-ms-siparis-filtre="tumu">Tümü</button>
+                    <button class="ms-buton ms-buton-s ms-buton-standart-gri" type="button" data-ms-siparis-filtre="devam">Devam Eden</button>
+                    <button class="ms-buton ms-buton-s ms-buton-standart-gri" type="button" data-ms-siparis-filtre="tamamlanan">Tamamlanan</button>
                 </div>
             </div>
 
+<<<<<<< ECSPros
             @if (msSiparisler.Count == 0)
             {
+=======
+>>>>>>> yeni-tasarim
             <section class="ms-hesabim-bos-durum" aria-labelledby="ms-siparisler-bos-baslik">
                 <i class="fa-solid fa-box ms-fa-ikon " aria-hidden="true"></i>
                 <div>
@@ -62,6 +65,7 @@
             }
 
             <div class="ms-hesabim-siparis-listesi">
+<<<<<<< ECSPros
                 @* E4: kart markup'ı tasarımın demo kartlarıyla birebir — durum sınıfları,
                    akış adımları ve aksiyonlar veriden. İptal edilmiş siparişte akış şeridi
                    gizli (tasarımda iptal akışı yok). *@
@@ -76,12 +80,220 @@
                 };
                 var tamamlananSayisi = s.Status == "delivered" || s.Status == "returned" ? 4 : s.AkisAdimi - 1;
                 <article class="ms-hesabim-siparis-karti" data-ms-siparis-kart-filtre="@s.FiltreAnahtari">
+=======
+                <article class="ms-hesabim-siparis-karti" data-ms-siparis-kart-filtre="devam">
+                    <div class="ms-hesabim-siparis-kart-ust">
+                        <div>
+                            <span class="ms-hesabim-siparis-no">Sipariş No: MSX-240701-7815</span>
+                            <strong>1 Temmuz 2026</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-ust-aksiyonlar">
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-alindi">Sipariş Alındı</span>
+                            <a class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-klasik ms-buton-x" href="/siparislerim" data-ms-fatura-modal-ac>Faturayı Görüntüle</a>
+                            <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-siparis-kart-toggle aria-expanded="false" aria-label="Sipariş detayını aç"><i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i><span class="sr-only" data-ms-siparis-kart-toggle-metin>Aç</span></button>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-akis" aria-label="Sipariş durumu">
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-alindi ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-box ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Devam Ediyor</span>
+                            <strong>Sipariş Alındı</strong>
+                            <small>1 Temmuz 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-hazirlaniyor">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-box-open ms-fa-ikon " aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Bekliyor</span>
+                            <strong>Hazırlanıyor</strong>
+                            <small>Sıradaki adım</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-kargoda">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-truck-fast ms-fa-ikon " aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Bekliyor</span>
+                            <strong>Kargoda</strong>
+                            <small>Planlanıyor</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-teslim">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-circle-check ms-fa-ikon " aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Bekliyor</span>
+                            <strong>Teslim Edildi</strong>
+                            <small>Tahmini 5 Temmuz 2026</small>
+                        </span>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-urunler">
+                        <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek ürün detayına git"></a>
+                            <img src="/images/ornek-resim.jpg" alt="Kadın ön çıtçıtlı dik yaka kolsuz gömlek" width="612" height="612" loading="lazy">
+                            <div>
+                                <strong>Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek</strong>
+                                <p>Beden: S · Renk: Siyah · Adet: 1</p>
+                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">749,90 TL</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-alt">
+                        <div class="ms-hesabim-siparis-tutar">
+                            <span>Toplam Tutar</span>
+                            <strong class="ms-urun-fiyat">749,90 TL</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-aksiyonlar">
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-x" type="button" data-ms-siparis-detay-ac>Detay</button>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-kirmizi ms-buton-x" type="button" data-ms-iade-talep-ac>İade Et</button>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-mavi ms-buton-x" type="button">Siparişi Takip Et</button>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ms-hesabim-siparis-karti" data-ms-siparis-kart-filtre="devam">
+                    <div class="ms-hesabim-siparis-kart-ust">
+                        <div>
+                            <span class="ms-hesabim-siparis-no">Sipariş No: MSX-240630-4421</span>
+                            <strong>30 Haziran 2026</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-ust-aksiyonlar">
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-hazirlaniyor">Hazırlanıyor</span>
+                            <a class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-klasik ms-buton-x" href="/siparislerim" data-ms-fatura-modal-ac>Faturayı Görüntüle</a>
+                            <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-siparis-kart-toggle aria-expanded="false" aria-label="Sipariş detayını aç"><i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i><span class="sr-only" data-ms-siparis-kart-toggle-metin>Aç</span></button>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-akis" aria-label="Sipariş durumu">
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-alindi ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-box ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>Sipariş Alındı</strong>
+                            <small>30 Haziran 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-hazirlaniyor ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-box-open ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Devam Ediyor</span>
+                            <strong>Hazırlanıyor</strong>
+                            <small>1 Temmuz 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-kargoda">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-truck-fast ms-fa-ikon " aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Bekliyor</span>
+                            <strong>Kargoda</strong>
+                            <small>Tahmini 2 Temmuz 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-teslim">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-circle-check ms-fa-ikon " aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Bekliyor</span>
+                            <strong>Teslim Edildi</strong>
+                            <small>Tahmini 4 Temmuz 2026</small>
+                        </span>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-urunler">
+                        <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="Polo Yaka Desenli Erkek Triko Tişört ürün detayına git"></a>
+                            <img src="/images/ornek-resim-2.jpg" alt="Polo yaka desenli erkek triko tişört" width="554" height="554" loading="lazy">
+                            <div>
+                                <strong>Polo Yaka Desenli Erkek Triko Tişört</strong>
+                                <p>Beden: M · Renk: Yeşil · Adet: 1</p>
+                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">489,90 TL</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-alt">
+                        <div class="ms-hesabim-siparis-tutar">
+                            <span>Toplam Tutar</span>
+                            <strong class="ms-urun-fiyat">489,90 TL</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-aksiyonlar">
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-x" type="button" data-ms-siparis-detay-ac>Detay</button>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-kirmizi ms-buton-x" type="button" data-ms-iade-talep-ac>İade Et</button>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-amber ms-buton-x" type="button" data-ms-hazirlik-durumu-ac>Hazırlık Durumu</button>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ms-hesabim-siparis-karti" data-ms-siparis-kart-filtre="devam">
+                    <div class="ms-hesabim-siparis-kart-ust">
+                        <div>
+                            <span class="ms-hesabim-siparis-no">Sipariş No: MSX-240628-1842</span>
+                            <strong>28 Haziran 2026</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-ust-aksiyonlar">
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-yolda">Kargoda</span>
+                            <a class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-klasik ms-buton-x" href="/siparislerim" data-ms-fatura-modal-ac>Faturayı Görüntüle</a>
+                            <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-siparis-kart-toggle aria-expanded="false" aria-label="Sipariş detayını aç"><i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i><span class="sr-only" data-ms-siparis-kart-toggle-metin>Aç</span></button>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-akis" aria-label="Sipariş durumu">
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-alindi ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-box ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>Sipariş Alındı</strong>
+                            <small>28 Haziran 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-hazirlaniyor ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-box-open ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>Hazırlanıyor</strong>
+                            <small>29 Haziran 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-kargoda ms-hesabim-siparis-akis-aktif">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-truck-fast ms-fa-ikon ms-ikon-beyaz" aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Tamamlandı</span>
+                            <strong>Kargoda</strong>
+                            <small>1 Temmuz 2026</small>
+                        </span>
+                        <span class="ms-hesabim-siparis-akis-etiket ms-hesabim-siparis-akis-teslim">
+                            <span class="ms-hesabim-siparis-akis-ikon"><i class="fa-solid fa-circle-check ms-fa-ikon " aria-hidden="true"></i></span>
+                            <span class="ms-hesabim-siparis-akis-rozet">Devam Ediyor</span>
+                            <strong>Teslim Edildi</strong>
+                            <small>Tahmini 3 Temmuz 2026</small>
+                        </span>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-urunler">
+                        <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek ürün detayına git"></a>
+                            <img src="/images/ornek-resim.jpg" alt="Kadın ön çıtçıtlı dik yaka kolsuz gömlek" width="612" height="612" loading="lazy">
+                            <div>
+                                <strong>Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek</strong>
+                                <p>Beden: M · Renk: Ekru · Adet: 1</p>
+                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">699,90 TL</strong>
+                            </div>
+                        </div>
+                        <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="Polo Yaka Desenli Erkek Triko Tişört ürün detayına git"></a>
+                            <img src="/images/ornek-resim-2.jpg" alt="Polo yaka desenli erkek triko tişört" width="554" height="554" loading="lazy">
+                            <div>
+                                <strong>Polo Yaka Desenli Erkek Triko Tişört</strong>
+                                <p>Beden: L · Renk: Siyah · Adet: 1</p>
+                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">548,90 TL</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-alt">
+                        <div class="ms-hesabim-siparis-tutar">
+                            <span>Toplam Tutar</span>
+                            <strong class="ms-urun-fiyat">1.248,80 TL</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-aksiyonlar">
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-x" type="button" data-ms-siparis-detay-ac>Detay</button>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-kirmizi ms-buton-x" type="button" data-ms-iade-talep-ac>İade Et</button>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-mavi ms-buton-x" type="button" data-ms-kargo-takip-ac="MSX-240628-1842">Kargoyu Takip Et</button>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ms-hesabim-siparis-karti" data-ms-siparis-kart-filtre="tamamlanan">
+>>>>>>> yeni-tasarim
                     <div class="ms-hesabim-siparis-kart-ust">
                         <div>
                             <span class="ms-hesabim-siparis-no">Sipariş No: @s.OrderNumber</span>
                             <strong>@s.TarihMetni</strong>
                         </div>
                         <div class="ms-hesabim-siparis-ust-aksiyonlar">
+<<<<<<< ECSPros
                             <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-@s.DurumSinifi">@s.DurumMetni</span>
                             @if (s.FaturaPdfUrl is not null)
                             {
@@ -89,6 +301,11 @@
                             <a class="ms-buton ms-buton-s ms-buton-sade" href="@s.FaturaPdfUrl" target="_blank" rel="noopener" data-ms-fatura-modal-ac>Faturayı Görüntüle</a>
                             }
                             <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-siparis-kart-toggle aria-expanded="false">Aç</button>
+=======
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-tamamlandi">Teslim Edildi</span>
+                            <a class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-klasik ms-buton-x" href="/siparislerim" data-ms-fatura-modal-ac>Faturayı Görüntüle</a>
+                            <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-siparis-kart-toggle aria-expanded="false" aria-label="Sipariş detayını aç"><i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i><span class="sr-only" data-ms-siparis-kart-toggle-metin>Aç</span></button>
+>>>>>>> yeni-tasarim
                         </div>
                     </div>
 
@@ -114,6 +331,7 @@
                         @foreach (var u in s.Urunler)
                         {
                         <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+<<<<<<< ECSPros
                             @if (u.UrunLink is not null)
                             {
                             <a class="ms-hesabim-kart-baglanti" href="@u.UrunLink" data-ms-kart-link aria-label="@u.Ad ürün detayına git"></a>
@@ -122,6 +340,10 @@
                             {
                             <img src="@u.GorselUrl" alt="@u.Ad">
                             }
+=======
+                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="İç Astarlı Salaş Tesettür Bluz ürün detayına git"></a>
+                            <img src="/images/ornek-resim.jpg" alt="İç astarlı salaş tesettür bluz" width="612" height="612" loading="lazy">
+>>>>>>> yeni-tasarim
                             <div>
                                 <strong>@u.Ad</strong>
                                 <p>@(string.IsNullOrWhiteSpace(u.SecenekOzeti) ? "" : u.SecenekOzeti + " · ")Adet: @u.Adet</p>
@@ -137,6 +359,7 @@
                             <strong class="ms-urun-fiyat">@s.ToplamTutar.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("tr-TR")) TL</strong>
                         </div>
                         <div class="ms-hesabim-siparis-aksiyonlar">
+<<<<<<< ECSPros
                             <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-siparis-detay-ac data-siparis-id="@s.Id">Detay</button>
                             @if (s.Status == "delivered")
                             {
@@ -155,6 +378,98 @@
                             {
                             <button class="ms-buton ms-buton-s ms-buton-bilgi" type="button" data-ms-kargo-takip-ac="@s.OrderNumber">Siparişi Takip Et</button>
                             }
+=======
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-x" type="button" data-ms-siparis-detay-ac>Detay</button>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-kirmizi ms-buton-x" type="button" data-ms-iade-talep-ac>İade Et</button>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-yesil ms-buton-x" type="button">Tekrar Satın Al</button>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-mor ms-buton-x" type="button">Yorum Yaz</button>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-mor ms-buton-x ms-siparis-yorum-indirim-buton" type="button" aria-describedby="ms-siparis-yorum-indirim-tooltip">
+                                <span>Yorum Yaz</span>
+                                <span class="ms-siparis-yorum-indirim-etiket">%10 İndirim</span>
+                                <span class="ms-siparis-yorum-indirim-tooltip" id="ms-siparis-yorum-indirim-tooltip" role="tooltip">Yorum yap %10 indirim kazan</span>
+                            </button>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ms-hesabim-siparis-karti" data-ms-siparis-kart-filtre="devam">
+                    <div class="ms-hesabim-siparis-kart-ust">
+                        <div>
+                            <span class="ms-hesabim-siparis-no">Sipariş No: MSX-240526-3314</span>
+                            <strong>26 Mayıs 2026</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-ust-aksiyonlar">
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-iade">İade İnceleniyor</span>
+                            <a class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-klasik ms-buton-x" href="/siparislerim" data-ms-fatura-modal-ac>Faturayı Görüntüle</a>
+                            <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-siparis-kart-toggle aria-expanded="false" aria-label="Sipariş detayını aç"><i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i><span class="sr-only" data-ms-siparis-kart-toggle-metin>Aç</span></button>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-urunler">
+                        <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="Kadın Yüksek Bel Bol Paça Pantolon ürün detayına git"></a>
+                            <img src="/images/ornek-resim-2.jpg" alt="Kadın yüksek bel bol paça pantolon" width="554" height="554" loading="lazy">
+                            <div>
+                                <strong>Kadın Yüksek Bel Bol Paça Pantolon</strong>
+                                <p>Beden: 38 · Renk: Siyah · Adet: 1</p>
+                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">849,90 TL</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-alt">
+                        <div class="ms-hesabim-siparis-tutar">
+                            <span>Toplam Tutar</span>
+                            <strong class="ms-urun-fiyat">849,90 TL</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-aksiyonlar">
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-x" type="button" data-ms-siparis-detay-ac>Detay</button>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-kirmizi ms-buton-x" type="button" data-ms-iade-talep-ac>İade Et</button>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-amber ms-buton-x" type="button">İade Durumu</button>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="ms-hesabim-siparis-karti" data-ms-siparis-kart-filtre="tamamlanan">
+                    <div class="ms-hesabim-siparis-kart-ust">
+                        <div>
+                            <span class="ms-hesabim-siparis-no">Sipariş No: MSX-240518-2047</span>
+                            <strong>18 Mayıs 2026</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-ust-aksiyonlar">
+                            <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-iade-onaylandi">İade Onaylandı</span>
+                            <a class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-klasik ms-buton-x" href="/siparislerim" data-ms-fatura-modal-ac>Faturayı Görüntüle</a>
+                            <button class="ms-hesabim-siparis-ac-kapat" type="button" data-ms-siparis-kart-toggle aria-expanded="false" aria-label="Sipariş detayını aç"><i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i><span class="sr-only" data-ms-siparis-kart-toggle-metin>Aç</span></button>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-urunler">
+                        <div class="ms-hesabim-siparis-urun" data-ms-kart-link-alani>
+                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="Polo Yaka Desenli Erkek Triko Tişört ürün detayına git"></a>
+                            <img src="/images/ornek-resim-2.jpg" alt="Polo yaka desenli erkek triko tişört" width="554" height="554" loading="lazy">
+                            <div>
+                                <strong>Polo Yaka Desenli Erkek Triko Tişört</strong>
+                                <p>Beden: XL · Renk: Lacivert · Adet: 1</p>
+                                <strong class="ms-urun-fiyat ms-hesabim-siparis-urun-fiyat">629,90 TL</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ms-hesabim-iade-bilgi">
+                        <strong>İade tutarı onaylandı</strong>
+                        <p>629,90 TL iade tutarı 7 iş günü içerisinde kullanıcının hesabına yatacak.</p>
+                    </div>
+
+                    <div class="ms-hesabim-siparis-alt">
+                        <div class="ms-hesabim-siparis-tutar">
+                            <span>İade Tutarı</span>
+                            <strong class="ms-urun-fiyat">629,90 TL</strong>
+                        </div>
+                        <div class="ms-hesabim-siparis-aksiyonlar">
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-x" type="button" data-ms-siparis-detay-ac>Detay</button>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-kirmizi ms-buton-x" type="button" data-ms-iade-talep-ac>İade Et</button>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-mor ms-buton-x" type="button">Dekontu Gör</button>
+>>>>>>> yeni-tasarim
                         </div>
                     </div>
                 </article>
@@ -165,6 +480,7 @@
 
     @await Html.PartialAsync("~/Views/ProjeElementleri/Hesabim/_HesabimSiparislerimDetayModal.cshtml")
     @await Html.PartialAsync("~/Views/ProjeElementleri/Hesabim/_HesabimSiparislerimIadeModal.cshtml")
+    @await Html.PartialAsync("~/Views/ProjeElementleri/Hesabim/_HazirlikDurumuModal.cshtml")
 
     @* E4+H2: kargo takip modalı sipariş başına SSR — takip olayları varsa zaman çizelgesi,
        yoksa yalnız takip no. H2: kargo firması bağlandı — logo hero'da (varsa), özet
@@ -174,6 +490,7 @@
     {
     <div class="ms-ornek-modal ms-kargo-takip-modal" data-ms-kargo-takip-modal="@s.OrderNumber" aria-hidden="true">
         <div class="ms-ornek-modal-kaplama" data-ms-kargo-takip-kapat></div>
+<<<<<<< ECSPros
         <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-xl ms-kargo-takip-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-kargo-takip-baslik-@s.OrderNumber">
             <button class="ms-ornek-modal-kapat" type="button" data-ms-kargo-takip-kapat aria-label="Kargo takip modalını kapat">×</button>
             <div class="ms-kargo-takip-hero">
@@ -181,6 +498,12 @@
                 {
                 <img src="@s.Kargo.FirmaLogoUrl" alt="@s.Kargo.FirmaAdi">
                 }
+=======
+        <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-xl ms-kargo-takip-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-kargo-takip-baslik">
+            <button class="ms-ornek-modal-kapat" type="button" data-ms-kargo-takip-kapat aria-label="Kargo takip modalını kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+            <div class="ms-kargo-takip-hero" data-ms-modal-surukleme-alani>
+                <img src="/images/hepsijet.png" alt="HepsiJet" width="774" height="258" loading="lazy">
+>>>>>>> yeni-tasarim
                 <div>
                     @if (!string.IsNullOrWhiteSpace(s.Kargo.TakipNo))
                     {
@@ -233,7 +556,7 @@
     <script>
     (() => {
         let oncekiBodyOverflow = "";
-        const acikModalSecici = ".ms-siparis-detay-modal.ms-ornek-modal-acik, .ms-kargo-takip-modal.ms-ornek-modal-acik, .ms-fatura-pdf-modal.ms-ornek-modal-acik, .ms-iade-talep-modal.ms-ornek-modal-acik, .ms-iade-kodu-modal.ms-ornek-modal-acik, .ms-iade-hata-modal.ms-ornek-modal-acik";
+        const acikModalSecici = ".ms-siparis-detay-modal.ms-ornek-modal-acik, .ms-kargo-takip-modal.ms-ornek-modal-acik, .ms-hazirlik-durumu-modal.ms-ornek-modal-acik, .ms-fatura-pdf-modal.ms-ornek-modal-acik, .ms-iade-talep-modal.ms-ornek-modal-acik, .ms-iade-kodu-modal.ms-ornek-modal-acik, .ms-iade-hata-modal.ms-ornek-modal-acik";
 
         const kartDurumunuAyarla = (kart, acik) => {
             const buton = kart?.querySelector("[data-ms-siparis-kart-toggle]");
@@ -250,7 +573,12 @@
             buton?.setAttribute("aria-expanded", acik.toString());
 
             if (buton) {
-                buton.textContent = acik ? "Kapat" : "Aç";
+                buton.setAttribute("aria-label", acik ? "Sipariş detayını kapat" : "Sipariş detayını aç");
+
+                const metin = buton.querySelector("[data-ms-siparis-kart-toggle-metin]");
+                if (metin) {
+                    metin.textContent = acik ? "Kapat" : "Aç";
+                }
             }
         };
 
@@ -281,8 +609,8 @@
 
                 document.querySelectorAll("[data-ms-siparis-filtre]").forEach((filtreButon) => {
                     const aktif = filtreButon === buton;
-                    filtreButon.classList.toggle("ms-buton-koyu", aktif);
-                    filtreButon.classList.toggle("ms-buton-sade", !aktif);
+                    filtreButon.classList.toggle("ms-buton-standart-gri-aktif", aktif);
+                    filtreButon.classList.add("ms-buton-standart-gri");
                 });
 
                 document.querySelectorAll("[data-ms-siparis-kart-filtre]").forEach((kart) => {
@@ -901,6 +1229,12 @@
             });
         });
 
+        document.querySelectorAll("[data-ms-hazirlik-durumu-ac]").forEach((buton) => {
+            buton.addEventListener("click", () => {
+                ac(document.querySelector("[data-ms-hazirlik-durumu-modal]"));
+            });
+        });
+
         document.querySelectorAll("[data-ms-iade-talep-ac]").forEach((buton) => {
             buton.addEventListener("click", () => {
                 iadeModaliSifirla();
@@ -944,8 +1278,8 @@
         document.querySelectorAll("[data-ms-fatura-modal-ac]").forEach((baglanti) => {
             baglanti.addEventListener("click", (event) => {
                 event.preventDefault();
-
                 const modal = document.querySelector("[data-ms-fatura-modal]");
+<<<<<<< ECSPros
                 // H1: href zaten sunucu tarafında çözülmüş proxy rotası — kaynaktaki
                 // /fatura/pdf?url= sarması gereksizleşti (URL istemciye inmiyor).
                 const pdfUrl = baglanti.getAttribute("href");
@@ -958,12 +1292,10 @@
                 modal?.querySelector("[data-ms-fatura-yeni-sekme]")?.setAttribute("href", pdfUrl);
                 modal?.querySelector("[data-ms-fatura-fallback-link]")?.setAttribute("href", pdfUrl);
                 fallback?.classList.remove("ms-fatura-pdf-fallback-gizli");
+=======
+>>>>>>> yeni-tasarim
                 ac(modal);
             });
-        });
-
-        document.querySelector("[data-ms-fatura-pdf-frame]")?.addEventListener("load", () => {
-            document.querySelector("[data-ms-fatura-pdf-fallback]")?.classList.add("ms-fatura-pdf-fallback-gizli");
         });
 
         document.querySelectorAll("[data-ms-siparis-detay-kapat]").forEach((kapatici) => {
@@ -972,6 +1304,10 @@
 
         document.querySelectorAll("[data-ms-kargo-takip-kapat]").forEach((kapatici) => {
             kapatici.addEventListener("click", () => kapat(kapatici.closest("[data-ms-kargo-takip-modal]")));
+        });
+
+        document.querySelectorAll("[data-ms-hazirlik-durumu-kapat]").forEach((kapatici) => {
+            kapatici.addEventListener("click", () => kapat(kapatici.closest("[data-ms-hazirlik-durumu-modal]")));
         });
 
         document.querySelectorAll("[data-ms-iade-talep-kapat]").forEach((kapatici) => {
@@ -1004,6 +1340,7 @@
     })();
 </script>
 
+<<<<<<< ECSPros
 @* E4: detay modalı doldurma — gömülü sipariş JSON'undan; misharix'in açma dinleyicisi
    modalı açar, bu dinleyici içeriği yazar (ikisi de aynı tıklamada çalışır). *@
 <script>
@@ -1072,3 +1409,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 </script>
+=======
+
+
+
+>>>>>>> yeni-tasarim

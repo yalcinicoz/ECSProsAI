@@ -36,7 +36,7 @@
                     <h3 id="ms-gezdiklerim-bos-baslik">Henüz gezdiğiniz ürün yok</h3>
                     <p>Ürünleri inceledikçe son görüntüledikleriniz burada listelenir.</p>
                 </div>
-                <a class="ms-buton ms-buton-m ms-buton-satin-al" href="/">Ürünleri Keşfet</a>
+                <a class="ms-buton ms-buton-m ms-buton-satin-al" href="/urun-listesi">Ürünleri Keşfet</a>
             </section>
             }
             else
@@ -48,7 +48,7 @@
                     <a class="ms-hesabim-kart-baglanti" href="@u.UrunLink" data-ms-kart-link aria-label="@u.Ad ürün detayına git"></a>
                     @if (u.GorselUrl is not null)
                     {
-                    <img src="@u.GorselUrl" alt="@u.Ad">
+                    <img src="@u.GorselUrl" alt="@u.Ad" loading="lazy">
                     }
                     <div>
                         <strong>@u.Ad</strong>

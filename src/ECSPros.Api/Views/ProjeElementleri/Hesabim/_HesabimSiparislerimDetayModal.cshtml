@@ -6,8 +6,8 @@
 <div class="ms-ornek-modal ms-siparis-detay-modal" data-ms-siparis-detay-modal aria-hidden="true">
     <div class="ms-ornek-modal-kaplama" data-ms-siparis-detay-kapat></div>
     <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-xl ms-siparis-detay-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-siparis-detay-baslik">
-        <button class="ms-ornek-modal-kapat" type="button" data-ms-siparis-detay-kapat aria-label="Sipariş detay modalını kapat">×</button>
-        <div class="ms-siparis-modal-ust">
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-siparis-detay-kapat aria-label="Sipariş detay modalını kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+        <div class="ms-siparis-modal-ust" data-ms-modal-surukleme-alani>
             <span class="ms-hesabim-siparis-durum" data-alan="durum"></span>
             <h3 id="ms-siparis-detay-baslik" class="ms-ornek-modal-baslik">Sipariş Detayı</h3>
             <p class="ms-ornek-modal-aciklama" data-alan="aciklama"></p>
@@ -25,7 +25,7 @@
             <div data-alan="urunler"></div>
             <template data-ms-detay-urun-sablon>
             <div class="ms-siparis-detay-urun">
-                <img data-alan="gorsel" src="" alt="">
+                <img data-alan="gorsel" src="" alt="" loading="lazy">
                 <div><strong data-alan="ad"></strong><p data-alan="secenek"></p></div>
                 <strong class="ms-urun-fiyat" data-alan="fiyat"></strong>
             </div>
