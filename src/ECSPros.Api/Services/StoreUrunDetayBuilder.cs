@@ -100,6 +100,19 @@ public class StoreUrunDetayBuilder(
             stoklar[v.Id] = await stockService.GetAvailableStockAsync(v.Id, null, ct);
         bool Satilabilir(Guid variantId) => stoklar.GetValueOrDefault(variantId) > 0;
 
+        // Fiyat sıfır düzeltmesi (2026-07-16): kanal kaydı olmayan / kanal fiyatı 0 olan
+        // varyantlarda PlatformPrice ?? BasePrice 0 dönebiliyordu ve sepete 0 TL gidiyordu.
+        // Varyant fiyatı çözümü: kanal fiyatı → varyant fiyatı → havuzun en düşük pozitif
+        // fiyatı → ürün taban fiyatı.
+        var enDusukPozitif = havuz
+            .Select(v => v.PlatformPrice ?? v.BasePrice)
+            .Where(f => f > 0)
+            .DefaultIfEmpty(urun.BasePrice)
+            .Min();
+        decimal VaryantFiyati(decimal? platform, decimal taban) =>
+            (platform ?? taban) > 0 ? (platform ?? taban)
+            : (taban > 0 ? taban : (enDusukPozitif > 0 ? enDusukPozitif : urun.BasePrice));
+
         var bedenler = new List<BedenSecenekVm>();
         if (bedenTip is not null)
         {
@@ -111,7 +124,7 @@ public class StoreUrunDetayBuilder(
                 .Select(x => new BedenSecenekVm(
                     TrAd(x.Beden!.AttributeValueNameI18n),
                     x.Varyant.Id,
-                    x.Varyant.PlatformPrice ?? x.Varyant.BasePrice,
+                    VaryantFiyati(x.Varyant.PlatformPrice, x.Varyant.BasePrice),
                     Satilabilir(x.Varyant.Id)))
                 .OrderBy(x => BedenSirasi(x.Ad))
                 .ThenBy(x => x.Ad, StringComparer.Create(new System.Globalization.CultureInfo("tr-TR"), true))
@@ -123,6 +136,7 @@ public class StoreUrunDetayBuilder(
             .OrderBy(v => v.PlatformPrice ?? v.BasePrice)
             .FirstOrDefault() ?? havuz[0];
         var fiyat = fiyatliVaryant.PlatformPrice ?? fiyatliVaryant.BasePrice;
+        if (fiyat <= 0) fiyat = urun.BasePrice;
         var eskiFiyat = fiyatliVaryant.CompareAtPrice is { } eski && eski > fiyat ? eski : (decimal?)null;
 
         var zincir = await mediator.Send(
@@ -178,7 +192,7 @@ public class StoreUrunDetayBuilder(
             BedenEtiketi: bedenTip is null ? "Beden" : TrAd(bedenTip.AttributeTypeNameI18n),
             Bedenler: bedenler,
             TekVaryantId: bedenler.Count == 0 && urunSatilabilir ? havuz[0].Id : null,
-            TekVaryantFiyat: bedenler.Count == 0 ? havuz[0].PlatformPrice ?? havuz[0].BasePrice : null,
+            TekVaryantFiyat: bedenler.Count == 0 ? VaryantFiyati(havuz[0].PlatformPrice, havuz[0].BasePrice) : null,
             StoksuzTekVaryantId: bedenler.Count == 0 && !urunSatilabilir ? havuz[0].Id : null,
             Ozellikler: ozellikler,
             Aciklama: urun.DescriptionI18n is { } uzun ? TrAd(uzun) : null,

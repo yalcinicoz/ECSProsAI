@@ -59,6 +59,11 @@ public class StoreCartController(IMediator mediator, ICoreDbContext coreDb, IMem
             if (sub != null && Guid.TryParse(sub, out var mid)) memberId = mid;
         }
 
+        // Fiyat sıfır güvencesi (2026-07-16): fiyatı doğrulanamayan kalem sepete giremez —
+        // istemci 0/negatif fiyat gönderirse (varyantta fiyat çözülememiş demektir) reddedilir.
+        if (req.Price <= 0)
+            return BadRequest(new { success = false, error = "Ürün fiyatı doğrulanamadı; ürün sepete eklenemedi." });
+
         var result = await mediator.Send(new AddToCartCommand(
             req.FirmPlatformId, req.VariantId, req.Quantity, req.Price,
             req.CurrencyCode, memberId, req.SessionId,
