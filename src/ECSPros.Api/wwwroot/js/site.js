@@ -546,8 +546,6 @@
             return;
         }
 
-        img.dataset.msLazyHazir = "true";
-
         if (!img.hasAttribute("loading")) {
             img.loading = "lazy";
         }
@@ -556,9 +554,13 @@
             img.decoding = "async";
         }
 
+        // Kaynagi henuz atanmamis (infinite-scroll iskelet) gorsel "hazir" sayilmaz;
+        // kartDoldur data-ms-lazy-src yazinca sonraki yenile cagrisi burayi yeniden isler.
         if (!img.dataset.msLazySrc && !img.dataset.msLazySrcset) {
             return;
         }
+
+        img.dataset.msLazyHazir = "true";
 
         img.classList.add("ms-lazy-gorsel");
         skeletonHazirla(img);
@@ -1229,7 +1231,6 @@
                         baslangicX = event.clientX;
                         baslangicScroll = liste.scrollLeft;
                         liste.classList.add("ms-gorunum-carousel-surukleniyor");
-                        liste.setPointerCapture?.(event.pointerId);
                     });
                     liste.addEventListener("pointermove", (event) => {
                         if (!surukleniyor) {
@@ -1239,6 +1240,7 @@
                         const fark = event.clientX - baslangicX;
 
                         if (Math.abs(fark) > 6) {
+                            liste.setPointerCapture?.(event.pointerId);
                             suruklemeYapildi = true;
                             tiklamaEngellenecek = true;
                             event.preventDefault();
@@ -1393,7 +1395,6 @@
                         baslangicX = event.clientX;
                         baslangicScroll = liste.scrollLeft;
                         liste.classList.add("ms-gorunum-reklam-vitrin-surukleniyor");
-                        liste.setPointerCapture?.(event.pointerId);
                     });
                     liste.addEventListener("pointermove", (event) => {
                         if (!surukleniyor) {
@@ -1402,6 +1403,7 @@
 
                         event.preventDefault();
                         if (Math.abs(event.clientX - baslangicX) > 6) {
+                            liste.setPointerCapture?.(event.pointerId);
                             tiklamaEngellenecek = true;
                         }
                         liste.scrollLeft = baslangicScroll - (event.clientX - baslangicX);
