@@ -1,0 +1,120 @@
+<div class="ms-ornek-modal ms-koleksiyon-modal ms-koleksiyon-secim-modal" data-ms-koleksiyon-secim-modal aria-hidden="true">
+    <div class="ms-ornek-modal-kaplama" data-ms-koleksiyon-secim-modal-kapat></div>
+    <section class="ms-ornek-modal-kutu ms-ornek-modal-kutu-uyari" role="dialog" aria-modal="true" aria-labelledby="ms-koleksiyon-secim-baslik">
+        <button class="ms-ornek-modal-kapat" type="button" aria-label="Koleksiyon secimini kapat" data-ms-koleksiyon-secim-modal-kapat>
+            <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
+        </button>
+
+        <div data-ms-modal-surukleme-alani>
+            <h3 class="ms-ornek-modal-baslik" id="ms-koleksiyon-secim-baslik">Koleksiyona Ekle</h3>
+            <p class="ms-ornek-modal-aciklama">Bu urunu yeni bir koleksiyona mi, yoksa var olan bir koleksiyona mi eklemek istiyorsunuz?</p>
+        </div>
+
+        <div class="ms-koleksiyon-akis-secimleri">
+            <button class="ms-koleksiyon-akis-buton" type="button" data-ms-koleksiyon-secim-yeni>
+                <i class="fa-solid fa-plus ms-fa-ikon" aria-hidden="true"></i>
+                <span>
+                    <strong>Yeni Koleksiyon</strong>
+                    <small>Yeni koleksiyon adi ve aciklamasi gir.</small>
+                </span>
+            </button>
+            <button class="ms-koleksiyon-akis-buton" type="button" data-ms-koleksiyon-secim-varolan>
+                <i class="fa-solid fa-bookmark ms-fa-ikon" aria-hidden="true"></i>
+                <span>
+                    <strong>Var Olan Koleksiyon</strong>
+                    <small>Mevcut koleksiyonlardan birini sec.</small>
+                </span>
+            </button>
+        </div>
+    </section>
+</div>
+
+<div class="ms-ornek-modal ms-koleksiyon-modal ms-koleksiyon-varolan-modal" data-ms-koleksiyon-varolan-modal aria-hidden="true">
+    <div class="ms-ornek-modal-kaplama" data-ms-koleksiyon-varolan-modal-kapat></div>
+    <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-xl ms-koleksiyon-modal-kutu ms-koleksiyon-varolan-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-koleksiyon-varolan-baslik">
+        <button class="ms-ornek-modal-kapat" type="button" aria-label="Var olan koleksiyon modalini kapat" data-ms-koleksiyon-varolan-modal-kapat>
+            <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
+        </button>
+
+        <div data-ms-modal-surukleme-alani>
+            <h3 class="ms-ornek-modal-baslik" id="ms-koleksiyon-varolan-baslik">Var Olan Koleksiyona Ekle</h3>
+            <p class="ms-ornek-modal-aciklama">Sectiginiz urunu mevcut koleksiyonlardan birine ekleyebilirsiniz.</p>
+        </div>
+
+        <div class="ms-koleksiyon-varolan-icerik">
+            <aside class="ms-koleksiyon-varolan-urun" aria-label="Koleksiyona eklenecek urun">
+                <img src="/images/ornek-resim.jpg" alt="Koleksiyona eklenecek urun" data-ms-koleksiyon-varolan-urun-gorsel width="612" height="612" loading="lazy">
+                <strong data-ms-koleksiyon-varolan-urun-ad>Urun</strong>
+                <small data-ms-koleksiyon-varolan-urun-meta>Urun bilgisi</small>
+            </aside>
+
+            <div class="ms-koleksiyon-varolan-form">
+                <div class="ms-koleksiyon-varolan-bilgi" role="note">
+                    <i class="fa-solid fa-circle-info ms-fa-ikon" aria-hidden="true"></i>
+                    <span>Seçim kutusundan birden fazla koleksiyon seçerek ürünü aynı anda farklı koleksiyonlara ekleyebilirsiniz.</span>
+                </div>
+
+                <label class="ms-form-alani">
+                    <span class="ms-form-etiket">Var olan koleksiyonlar</span>
+                    <div class="ms-ozel-select ms-ozel-select-coklu ms-ozel-select-aramali-coklu" data-ms-ozel-select data-ms-ozel-select-coklu data-ms-koleksiyon-varolan-select>
+                        <button class="ms-ozel-select-tetikleyici" type="button" data-ms-ozel-select-tetikleyici aria-haspopup="listbox" aria-expanded="false">
+                            <span class="ms-ozel-select-etiketler" data-ms-ozel-select-deger>
+                                <span class="ms-ozel-select-placeholder">Koleksiyon Seçimi Yapınız</span>
+                            </span>
+                            <span class="ms-ozel-select-sayac" data-ms-ozel-select-sayac hidden>0 adet seçildi</span>
+                            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-ozel-select-ok" aria-hidden="true"></i>
+                        </button>
+                        <div class="ms-ozel-select-panel" role="listbox" aria-label="Var olan koleksiyonlar">
+                            <input name="koleksiyon_ara" class="ms-ozel-select-arama" type="search" placeholder="Koleksiyon ara" data-ms-ozel-select-arama>
+                            <div class="ms-ozel-select-secenek-listesi">
+                                <button class="ms-ozel-select-secenek ms-ozel-select-coklu-secenek" type="button" role="option" data-ms-ozel-select-secenek>
+                                    <span class="ms-form-checkbox-gorsel"></span>
+                                    <span data-ms-ozel-select-metin>Yazlik Kombinler</span>
+                                </button>
+                                <button class="ms-ozel-select-secenek ms-ozel-select-coklu-secenek" type="button" role="option" data-ms-ozel-select-secenek>
+                                    <span class="ms-form-checkbox-gorsel"></span>
+                                    <span data-ms-ozel-select-metin>Hediye Listem</span>
+                                </button>
+                                <button class="ms-ozel-select-secenek ms-ozel-select-coklu-secenek" type="button" role="option" data-ms-ozel-select-secenek>
+                                    <span class="ms-form-checkbox-gorsel"></span>
+                                    <span data-ms-ozel-select-metin>Indirim Takibi</span>
+                                </button>
+                                <button class="ms-ozel-select-secenek ms-ozel-select-coklu-secenek" type="button" role="option" data-ms-ozel-select-secenek>
+                                    <span class="ms-form-checkbox-gorsel"></span>
+                                    <span data-ms-ozel-select-metin>Bayram Kombinleri</span>
+                                </button>
+                                <button class="ms-ozel-select-secenek ms-ozel-select-coklu-secenek" type="button" role="option" data-ms-ozel-select-secenek>
+                                    <span class="ms-form-checkbox-gorsel"></span>
+                                    <span data-ms-ozel-select-metin>Test Koleksiyonu 1</span>
+                                </button>
+                                <button class="ms-ozel-select-secenek ms-ozel-select-coklu-secenek" type="button" role="option" data-ms-ozel-select-secenek>
+                                    <span class="ms-form-checkbox-gorsel"></span>
+                                    <span data-ms-ozel-select-metin>Test Koleksiyonu 2</span>
+                                </button>
+                                <button class="ms-ozel-select-secenek ms-ozel-select-coklu-secenek" type="button" role="option" data-ms-ozel-select-secenek>
+                                    <span class="ms-form-checkbox-gorsel"></span>
+                                    <span data-ms-ozel-select-metin>Test Koleksiyonu 3</span>
+                                </button>
+                                <button class="ms-ozel-select-secenek ms-ozel-select-coklu-secenek" type="button" role="option" data-ms-ozel-select-secenek>
+                                    <span class="ms-form-checkbox-gorsel"></span>
+                                    <span data-ms-ozel-select-metin>Test Koleksiyonu 4</span>
+                                </button>
+                                <button class="ms-ozel-select-secenek ms-ozel-select-coklu-secenek" type="button" role="option" data-ms-ozel-select-secenek>
+                                    <span class="ms-form-checkbox-gorsel"></span>
+                                    <span data-ms-ozel-select-metin>Test Koleksiyonu 5</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <div class="ms-ornek-modal-aksiyonlar">
+            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-koleksiyon-varolan-modal-kapat>Vazgec</button>
+            <button class="ms-buton ms-buton-m ms-buton-cizgili-basarili" type="button" data-ms-onay-red-ac data-ms-onay-red-tip="onay" data-ms-onay-red-baslik="Koleksiyon Onaylandi" data-ms-onay-red-metin="Secilen koleksiyon islemi onaylandi.">Onaylandi</button>
+            <button class="ms-buton ms-buton-m ms-buton-cizgili-tehlikeli" type="button" data-ms-onay-red-ac data-ms-onay-red-tip="red" data-ms-onay-red-baslik="Koleksiyon Reddedildi" data-ms-onay-red-metin="Secilen koleksiyon islemi reddedildi.">Reddedildi</button>
+            <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-koleksiyon-varolan-onay>Koleksiyona Ekle</button>
+        </div>
+    </section>
+</div>

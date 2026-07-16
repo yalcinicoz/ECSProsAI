@@ -1,19 +1,57 @@
+@{
+    const string markaAdi = "Misharitalia";
+    const string canonicalKok = "https://www.misharitalia.com";
+    var sayfaBasligi = ViewData["Title"]?.ToString() ?? markaAdi;
+    var metaDescription = ViewData["MetaDescription"]?.ToString() ?? "Misharitalia ile kadın, erkek ve çocuk modasında yeni sezon ürünlerini keşfedin.";
+    var canonicalPath = ViewData["CanonicalPath"]?.ToString() ?? Context.Request.Path.Value ?? "/";
+    canonicalPath = canonicalPath.StartsWith('/') ? canonicalPath : $"/{canonicalPath}";
+    var canonicalUrl = $"{canonicalKok}{canonicalPath}";
+    var robots = ViewData["Robots"]?.ToString() ?? "index, follow";
+    var openGraphType = ViewData["OpenGraphType"]?.ToString() ?? "website";
+    var openGraphImage = ViewData["OpenGraphImage"]?.ToString() ?? "/images/site_logo.png";
+    var openGraphImageUrl = openGraphImage.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+        ? openGraphImage
+        : $"{canonicalKok}{(openGraphImage.StartsWith('/') ? openGraphImage : $"/{openGraphImage}")}";
+    var jsonLd = ViewData["JsonLd"]?.ToString();
+}
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - misharix</title>
-    <script type="importmap"></script>
-    <link rel="stylesheet" href="~/fontawesome-free-7.2.0-web/css/all.min.css" asp-append-version="true" />
+    <title>@sayfaBasligi | @markaAdi</title>
+    <meta name="description" content="@metaDescription" />
+    <meta name="robots" content="@robots" />
+    <link rel="canonical" href="@canonicalUrl" />
+    <meta property="og:locale" content="tr_TR" />
+    <meta property="og:site_name" content="@markaAdi" />
+    <meta property="og:type" content="@openGraphType" />
+    <meta property="og:title" content="@sayfaBasligi" />
+    <meta property="og:description" content="@metaDescription" />
+    <meta property="og:url" content="@canonicalUrl" />
+    <meta property="og:image" content="@openGraphImageUrl" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="~/fontawesome-free-7.2.0-web/css/ikonall.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <partial name="~/Views/Shared/_MsTemaTokenlari.cshtml" />
+    @if (!string.IsNullOrWhiteSpace(jsonLd))
+    {
+        <script type="application/ld+json">@Html.Raw(jsonLd)</script>
+    }
 </head>
 <body class="min-h-screen bg-white text-ms-siyah">
     @* H4: mobil alt bar _AnaNavigasyon'dan ÖNCE — misafir Favorilerim/Hesabım linklerinin
        data-ms-giris-modal-ac dinleyicileri nav script'inde parse anında bağlanır. *@
     <partial name="~/Views/Shared/Store/_MobilAltBarNav.cshtml" />
     <partial name="~/Views/ProjeElementleri/Navigasyon/_AnaNavigasyon.cshtml" />
+    <template data-ms-koleksiyon-modallari-sablon>
+        <partial name="~/Views/ProjeElementleri/Ortak/_KoleksiyonModal.cshtml" />
+        <partial name="~/Views/ProjeElementleri/Ortak/_KoleksiyonVarolanModal.cshtml" />
+        <partial name="~/Views/ProjeElementleri/Ortak/_KoleksiyonYeniOzetModal.cshtml" />
+    </template>
+    <template data-ms-onay-red-modal-sablon>
+        <partial name="~/Views/ProjeElementleri/Ortak/onayRedModal.cshtml" />
+    </template>
 
     <main role="main">
         @RenderBody()
@@ -21,7 +59,12 @@
 
     <partial name="~/Views/Shared/_Footer.cshtml" />
 
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <environment include="Development">
+        <script src="~/js/site.js" asp-append-version="true"></script>
+    </environment>
+    <environment exclude="Development">
+        <script src="~/js/site.min.js" asp-append-version="true"></script>
+    </environment>
     <partial name="~/Views/ProjeElementleri/Urun/_FavoriDavranis.cshtml" />
     <partial name="~/Views/Shared/Store/_SehirSecim.cshtml" />
     @await RenderSectionAsync("Scripts", required: false)

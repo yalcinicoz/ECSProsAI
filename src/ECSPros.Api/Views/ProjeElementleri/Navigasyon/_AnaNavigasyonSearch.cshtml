@@ -21,12 +21,10 @@
 }
         <div class="ms-ana-navigasyon-arama" data-ms-arama data-ms-arama-platform="@(aramaPlatform?.Id)" data-ms-arama-kategori-id="@(aramaAktifKategori?.Id)" data-ms-arama-kategori-slug="@(aramaAktifKategori?.Slug)" data-ms-arama-kategori-ad="@(aramaAktifKategori?.Ad)">
             <input class="ms-ana-navigasyon-arama-input" data-ms-arama-input type="search" name="ms-search-query-main" role="searchbox" placeholder="Ürün, kategori veya marka ara" aria-label="Ürün, kategori veya marka ara" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="search" enterkeyhint="search" aria-autocomplete="none" readonly data-ms-autocomplete-kapat data-lpignore="true" data-1p-ignore="true" data-form-type="other">
-            <svg class="ms-ana-navigasyon-arama-ikon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-            </svg>
+            <i class="fa-solid fa-magnifying-glass ms-fa-ikon ms-ana-navigasyon-arama-ikon" aria-hidden="true"></i>
             <span class="ms-ana-navigasyon-arama-sag" aria-hidden="false">
                 <button class="ms-ana-navigasyon-kategoride-ara" type="button" data-ms-kategoride-ara aria-pressed="false" hidden>Kategoride ara</button>
-                <button class="ms-ana-navigasyon-arama-temizle" type="button" data-ms-arama-temizle aria-label="Aramayı temizle" hidden>×</button>
+                <button class="ms-ana-navigasyon-arama-temizle" type="button" data-ms-arama-temizle aria-label="Aramayı temizle" hidden><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
                 <button class="ms-ana-navigasyon-arama-kamera" type="button" aria-label="Görsel ile ara">
                     <svg class="ms-ana-navigasyon-arama-kamera-ikon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 8.584 5.4h6.832a2.31 2.31 0 0 1 1.757.775l.803.922c.276.317.675.5 1.095.5h.429A2.5 2.5 0 0 1 22 10.097v7.403A2.5 2.5 0 0 1 19.5 20h-15A2.5 2.5 0 0 1 2 17.5v-7.403a2.5 2.5 0 0 1 2.5-2.5h.429c.42 0 .819-.183 1.095-.5l.803-.922Z" />
@@ -50,7 +48,7 @@
                         </svg>
                         <span class="ms-ana-navigasyon-arama-sag" aria-hidden="false">
                             <button class="ms-ana-navigasyon-kategoride-ara" type="button" data-ms-kategoride-ara aria-pressed="false" hidden>Kategoride ara</button>
-                            <button class="ms-ana-navigasyon-arama-temizle" type="button" data-ms-arama-temizle aria-label="Aramayı temizle" hidden>×</button>
+                            <button class="ms-ana-navigasyon-arama-temizle" type="button" data-ms-arama-temizle aria-label="Aramayı temizle" hidden><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
                             <button class="ms-ana-navigasyon-arama-panel-kamera" type="button" aria-label="Görsel ile ara">
                                 <svg class="ms-ana-navigasyon-arama-kamera-ikon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 8.584 5.4h6.832a2.31 2.31 0 0 1 1.757.775l.803.922c.276.317.675.5 1.095.5h.429A2.5 2.5 0 0 1 22 10.097v7.403A2.5 2.5 0 0 1 19.5 20h-15A2.5 2.5 0 0 1 2 17.5v-7.403a2.5 2.5 0 0 1 2.5-2.5h.429c.42 0 .819-.183 1.095-.5l.803-.922Z" />
@@ -71,7 +69,6 @@
                     </div>
 
                     <span class="ms-ana-navigasyon-arama-baslik">Popüler Aramalar</span>
-                    @* B2 geçici statik kaynak (kalıcısı E11 arama analitiği) — gerçek katalogda karşılığı olan terimler *@
                     <div class="ms-ana-navigasyon-populer-listesi">
                         <a class="ms-ana-navigasyon-populer-chip ms-ana-navigasyon-populer-chip-vurgu" href="#" data-ms-populer-terim="elbise">
                             <svg class="ms-ana-navigasyon-chip-ikon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -108,8 +105,9 @@
                             <span class="ms-ana-navigasyon-arama-sonuc-sayisi" data-ms-arama-sonuc-sayisi></span>
                         </div>
 
-                        @* B2: gruplar canlı arama script'i tarafından doldurulur (aşağıda) *@
                         <div class="ms-ana-navigasyon-arama-sonuc-gruplari" data-ms-arama-sonuc-gruplari></div>
+                        @* ECSPros: demo sonuç şablonu bilinçli yok — site.js'in demo doldurması
+                           boş kalır (no-op), gerçek sonuçları aşağıdaki B2 canlı arama script'i basar. *@
                     </div>
 
                     <div class="ms-ana-navigasyon-populer-urunler" data-ms-populer-urunler>

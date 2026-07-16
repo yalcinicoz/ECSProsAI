@@ -1,0 +1,59 @@
+<div class="ms-ornek-modal ms-koleksiyon-modal ms-koleksiyon-yeni-ozet-modal" data-ms-koleksiyon-yeni-ozet-modal aria-hidden="true">
+    <div class="ms-ornek-modal-kaplama" data-ms-koleksiyon-yeni-ozet-modal-kapat></div>
+    <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-xl ms-koleksiyon-modal-kutu ms-koleksiyon-yeni-ozet-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-koleksiyon-yeni-ozet-baslik">
+        <button class="ms-ornek-modal-kapat" type="button" aria-label="Yeni koleksiyon modalini kapat" data-ms-koleksiyon-yeni-ozet-modal-kapat>
+            <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
+        </button>
+
+        <div data-ms-modal-surukleme-alani>
+            <h3 class="ms-ornek-modal-baslik" id="ms-koleksiyon-yeni-ozet-baslik">Yeni Koleksiyon Oluştur</h3>
+            <p class="ms-ornek-modal-aciklama">Seçtiğiniz ürünü yeni bir koleksiyona eklemek için koleksiyon bilgilerini doldurun.</p>
+        </div>
+
+        <div class="ms-koleksiyon-varolan-icerik ms-koleksiyon-yeni-ozet-icerik">
+            <aside class="ms-koleksiyon-varolan-urun" aria-label="Koleksiyona eklenecek urun">
+                <img src="/images/ornek-resim.jpg" alt="Koleksiyona eklenecek urun" data-ms-koleksiyon-yeni-ozet-urun-gorsel width="612" height="612" loading="lazy">
+                <strong data-ms-koleksiyon-yeni-ozet-urun-ad>Ürün</strong>
+                <small data-ms-koleksiyon-yeni-ozet-urun-meta>Ürün bilgisi</small>
+            </aside>
+
+            <form class="ms-koleksiyon-varolan-form ms-koleksiyon-yeni-ozet-form" data-ms-koleksiyon-yeni-ozet-form>
+                <label class="ms-form-alani">
+                    <span class="ms-form-etiket">Koleksiyon Adı</span>
+                    <input name="orn_bayram_kombinleri" class="ms-form-girdi" type="text" data-ms-koleksiyon-yeni-ozet-ad placeholder="Örn. Bayram Kombinleri" />
+                </label>
+
+                <label class="ms-form-alani">
+                    <span class="ms-form-etiket">Açıklama</span>
+                    <textarea name="bu_koleksiyonda_hangi_urunleri_takip_edeceginizi_yazin" class="ms-form-metin-alani" data-ms-koleksiyon-yeni-ozet-aciklama placeholder="Bu koleksiyonda hangi ürünleri takip edeceğinizi yazın."></textarea>
+                </label>
+
+                <div class="ms-koleksiyon-onaylar">
+                    <label class="ms-onay-kart">
+                        <input name="koleksiyon_yeni_ozet_herkese_acik" class="ms-onay-input" type="checkbox" data-ms-koleksiyon-yeni-ozet-herkese-acik checked />
+                        <span class="ms-onay-kutu" aria-hidden="true"></span>
+                        <span class="ms-onay-metin">
+                            Herkese açık
+                            <span class="ms-onay-yardim">Diğer kullanıcılar bu koleksiyonu görebilir.</span>
+                        </span>
+                    </label>
+                    <label class="ms-onay-kart">
+                        <input name="koleksiyon_yeni_ozet_paylasilabilir" class="ms-onay-input" type="checkbox" data-ms-koleksiyon-yeni-ozet-paylasilabilir checked />
+                        <span class="ms-onay-kutu" aria-hidden="true"></span>
+                        <span class="ms-onay-metin">
+                            Paylaşılabilir
+                            <span class="ms-onay-yardim">Bu koleksiyon paylaşılabilir olsun.</span>
+                        </span>
+                    </label>
+                </div>
+            </form>
+        </div>
+
+        <div class="ms-ornek-modal-aksiyonlar">
+            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-koleksiyon-yeni-ozet-modal-kapat>Vazgeç</button>
+            <button class="ms-buton ms-buton-m ms-buton-cizgili-basarili" type="button" data-ms-onay-red-ac data-ms-onay-red-tip="onay" data-ms-onay-red-baslik="Koleksiyon Onaylandı" data-ms-onay-red-metin="Yeni koleksiyon işlemi onaylandı.">Onaylandı</button>
+            <button class="ms-buton ms-buton-m ms-buton-cizgili-tehlikeli" type="button" data-ms-onay-red-ac data-ms-onay-red-tip="red" data-ms-onay-red-baslik="Koleksiyon Reddedildi" data-ms-onay-red-metin="Yeni koleksiyon işlemi reddedildi.">Reddedildi</button>
+            <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-koleksiyon-yeni-ozet-onay>Koleksiyon Ekle</button>
+        </div>
+    </section>
+</div>
