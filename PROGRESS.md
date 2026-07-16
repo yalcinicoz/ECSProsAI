@@ -294,7 +294,15 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
-### ⭐ SESSION KAPANIŞ ÖZETİ (2026-07-16) — GES TELEKOM SMS ÇALIŞIR DURUMA GELDİ (RESTART BEKLİYOR)
+### 📋 SIRADAKİ BÜYÜK İŞ (2026-07-16, plan onaylandı — kodlama başlamadı)
+**Misharix tasarım güncelleme senkronu:** `/opt/misharix` (kullanıcının verdiği NİHAİ paket,
+patch 2026-07-06→07-16) ECSPros'a birebir uygulanacak. Plan + kesin kararlar:
+`docs/misharix-tasarim-guncelleme-plani.md` (10 faz; yeni vitrin blokları ŞART, site.min.js ŞART,
+kargo takip DEMO kalır). ESKİ kaynak `/opt/misharixWebSites/misharix` üçlü merge bazı — iş bitene
+kadar SİLME. En riskli merge: giriş/kayıt modalı ↔ gerçek GES OTP akışı.
+Ön koşul kapandı: kullanıcı restart'ı yaptı, OTP canlıda test edildi (2026-07-16) — Faz P + GES birikimi canlıda.
+
+### ⭐ SESSION KAPANIŞ ÖZETİ (2026-07-16) — GES TELEKOM SMS ÇALIŞIR DURUMA GELDİ (✅ RESTART YAPILDI, OTP CANLIDA KULLANICI TARAFINDAN TEST EDİLDİ 2026-07-16)
 **"Kullanici adi/parola yanlis" kök nedeni bulundu (GES desteği beklemeye gerek kalmadı):**
 eski projenin canlı MySQL'i (juludedb `plentegreservisler`/`dfentegreservisler`) ile karşılaştırıldı.
 İki bulgu: (1) **GES iki ayrı şifre kullanıyor** — bizdeki 12 karakterlik şifre yalnız TokenJson

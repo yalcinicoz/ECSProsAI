@@ -1,0 +1,87 @@
+# Misharix Tasarım Güncelleme Senkronu — İş Planı (2026-07-16)
+
+> **Amaç:** `/opt/misharix`'teki güncel tasarım paketini (patch notları 2026-07-06 → 2026-07-16)
+> ECSPros storefront'una **yorumsuz/birebir** uygulamak. Tasarım nihai kabul edilir;
+> ekleme-çıkarma yapılmaz, "iyileştirme" yasak (bkz. `feedback_use_design_source_verbatim`).
+>
+> **Kaynaklar:**
+> - ESKİ kaynak (merge bazı): `/opt/misharixWebSites/misharix` — Faz A–H taşımasının temeli (2026-07-06 durumu)
+> - YENİ kaynak (nihai tasarım): `/opt/misharix` — özet sözleşme: `/opt/misharix/md/patch-notlari-ozet.md`
+> - Uygulama yöntemi: 60 ortak view'da üçlü merge (baz=ESKİ, tasarım=YENİ, bizim=ECSPros data-binding'li)
+
+## Kullanıcı Kararları (2026-07-16 — kesin)
+
+1. **Tasarım nihaidir, birebir uygulanır.** Yorum/ekleme/çıkarma yok. Tasarımın kaldırdıkları
+   (videolu carousel, Flash Vitrin/Senin İçin ara tasarımları) ECSPros'tan da kaldırılır.
+2. **Yeni görünüm tipleri ŞART:** `_CokluBanner`, `_GorselliYorumlarCarousel`, `_KategoriCokSatanlar`
+   vitrin sistemine yeni blok tipi olarak eklenir (katalog + admin Vitrin Yönetimi + Razor render — K16 gereği panel karşılığıyla).
+3. **`site.min.js` hattı ŞART:** tasarımın esbuild `build-js` adımı ECSPros'a alınır;
+   layout Production'da `site.min.js`, diğer ortamlarda `site.js` kullanır (tasarım _Layout kalıbı).
+4. **Kargo takip DEMO kalır:** `/uyeliksiz-kargo-takip(-sonuc)` sayfaları statik demo veriyle taşınır.
+   ⏰ **HATIRLATMA:** Kargo servisi entegrasyonu gündeme geldiğinde bu iki sayfa gerçek takip
+   servisine bağlanacak (sözleşme: `/opt/misharix/md/backend-devir-entegrasyonlari.md`).
+
+**Varsayım (kullanıcı itiraz etmedikçe):** ProjeElementleri **katalog kabuğu** (Index.cshtml,
+_Sayfalar, _Modallar, GorunumTipleri demo sayfaları vb. tasarım-aracı sayfaları) eskiden olduğu
+gibi taşınMAZ; yalnız gerçek sayfaların kullandığı partial'lar taşınır. "Birebir uygula" kuralı
+sitenin gerçek sayfaları içindir.
+
+## Fazlar
+
+### Faz 0 — Hazırlık
+- [ ] Bekleyen `site.js` düzeltmesi (lazy-load, 6+/4-) + docs görselleri commit'lenir; `publish-staging/` gitignore değerlendirilir.
+- [ ] `tools/misharix-sync/check.sh` KAYNAK → `/opt/misharix` (ESKİ klasör merge bazı olarak iş bitene kadar tutulur).
+- [ ] Kaldırılan ikon/subset denetimi: ECSPros'a özgü partial'ların (`_VitrinBloklar`, `_SehirSecim`, `_UrunKarti`, `_MobilAltBarNav`…) kullandığı FA ikonları `ikonall.min.css`'te var mı; kökten `ikons/kullanilmayanlar`a taşınan SVG'lere referans kalmış mı.
+
+### Faz 1 — Asset'ler
+- [ ] `testimage/`, `images/`, `ikons/` (taşımalar dahil), `video/`, `fontawesome-free-7.2.0-web/` (yeni `ikonall.min.css` dahil) birebir senkron.
+- [ ] Faz 0 denetiminde ECSPros'a özgü eksik ikon çıkarsa subset'e ekleme yolu: tasarımın `scripts/fontawesome-subset.mjs` aracı ECSPros view'larını da tarayacak şekilde ECSPros tarafında çalıştırılır (kaynağa dokunulmaz).
+
+### Faz 2 — site.js + site.min.js
+- [ ] YENİ `site.js` bütün olarak alınır (LF-temiz — CRLF tuzağı biter), ECSPros'un ~10 satırlık deltası (lazy-load iskelet düzeltmesi) yeniden uygulanır.
+- [ ] esbuild `build-js` script'i ECSPros `package.json`'a eklenir; publish/deploy akışına minify adımı bağlanır.
+- [ ] `_Layout.cshtml`: Production'da `site.min.js`, diğer ortamlarda `site.js` (tasarım kalıbı birebir).
+
+### Faz 3 — CSS
+- [ ] `tailwind.css` birebir kopya; `site.css` tasarımın derlenmiş çıktısıyla (971.581 bayt) değiştirilir (A4 kalıbı: md5 eşit).
+- [ ] ECSPros'a özgü view'larda kullanılan class'ların yeni `site.css`'te kapsandığı denetlenir (grep örneklemesi).
+
+### Faz 4 — 60 ortak view üçlü merge
+- [ ] `git merge-file` (baz=ESKİ, tasarım=YENİ) toplu geçiş; çakışmalar elle.
+- [ ] **En hassas ikisi EN SONA ve elle:** `_AnaNavigasyonGirisModal` + `_AnaNavigasyonKayitModal`
+      (tasarımın SMS kod odak/otomatik onay/yeniden gönder/`onayRedModal` davranışları ile
+      GERÇEK GES Telekom OTP akışının birleşimi — regresyon riski en yüksek yer).
+- [ ] Sepet paneli merge'ünde tasarımın demo sepet-silme mantığının gerçek sepet backend'ini ezmediği doğrulanır (`data-ms-sepet-rozet/-urun-sayisi/-toplam` gerçek veriye bağlanır).
+- [ ] `allowed-diffs.txt` güncellenir; `check.sh` (YENİ kaynağa karşı) TEMİZ.
+
+### Faz 5 — Yeni sayfa/partial'lar
+- [ ] Koleksiyon modalları (`_KoleksiyonModal`, `_KoleksiyonVarolanModal`, `_KoleksiyonYeniOzetModal`) + `onayRedModal` layout'ta TEK SEFER render (tasarım sözleşmesi).
+- [ ] `_HazirlikDurumuModal`, `yorumYapModal`, `_UrunRenkModal` (kart başına gizli modal → sayfa seviyesinde tek modal + ürün kimliğine göre JSON renk verisi — backend bağlama dahil).
+- [ ] Üyeliksiz kargo takip: 2 route (`/uyeliksiz-kargo-takip`, `/uyeliksiz-kargo-takip-sonuc`) + `Views/Home` sayfaları + `KargoTakip` partial'ları; **demo veri**, `noindex`; duyuru barındaki Kargo Takip linki yeni rotaya.
+- [ ] `_UrunListesiKartiOrnegi`, `_MobilMenuKaydirma`, `_TemelBilgilendirme`: gerçek sayfalarda kullanım varsa taşınır (katalog-yalnızı ise varsayım gereği atlanır — taşıma anında tek tek doğrulanır).
+
+### Faz 6 — Yeni vitrin blok tipleri (K16: panel karşılığıyla)
+- [ ] `coklu_banner`, `gorselli_yorumlar_carousel`, `kategori_cok_satanlar` blok tipleri: katalog kaydı + kaynak motoru + Razor render (YENİ partial markup'ı birebir) + admin Vitrin Yönetimi formu.
+- [ ] Kaldırılan tasarımların (videolu carousel, Flash Vitrin/Senin İçin) vitrin kataloğunda karşılığı varsa kaldırılır; yayınlanmış snapshot'larda kullanım taranır, gerekirse yeniden yayın.
+
+### Faz 7 — Vitrin blok eşlemesi (check.sh görmez — elle)
+- [ ] Tasarımın `_Story`/`_Slider`/carousel/banner değişiklikleri (story etiket renkleri+tipografi, nokta zeminleri `bg-transparent`, kontrast düzeltmeleri, Flash Ürünler "Tümünü Gör" kaldırma, çerçevesiz carousel, tek `src` görsel sözleşmesi…) `Views/Shared/Store/_VitrinBloklar.cshtml`'e satır satır uygulanır.
+- [ ] Ana sayfa görsel sözleşmesi: `srcset/sizes/data-ms-lazy-srcset/-sizes` YOK; tek `src`/`data-ms-lazy-src` + gerçek `width/height`.
+
+### Faz 8 — Layout/SEO/Program.cs seçici uyarlama
+- [ ] `_Layout` merge: SEO ViewData sözleşmesi (Title/MetaDescription/CanonicalPath/Robots/OG/JsonLd) farkları hizalanır; ortak modal partial'ları layout seviyesinde.
+- [ ] Program.cs'ten SEÇİCİ alınır (kopyalanmaz): Brotli/Gzip response compression (Production), sürüm sorgulu CSS/JS/görsel/FA için 1 yıl `immutable`, HTML `no-cache`.
+- [ ] `robots.txt`/`sitemap.xml` ECSPros karşılığı denetlenir (vitrin/dinamik rotalarla çelişmesin).
+
+### Faz 9 — QA + Deploy
+- [ ] `check.sh` TEMİZ; yan yana ekran görüntüleri (1440 + 390) misharix ↔ ECSPros.
+- [ ] Regresyon: GERÇEK OTP ile giriş/kayıt (GES Telekom restart sonrası), sepet, şehir çipi (g9b/g9c), vitrin sayfaları, kurumsal, ürün listesi/detay/yorumlar, Hesabım.
+- [ ] Vitrin versiyonlu cache: deploy sonrası cache temizliği/yeniden yayın gerekliliği doğrulanır.
+- [ ] Publish `publish-staging` üzerinden (çalışan servisin publish'ine rm YOK); `sudo systemctl restart ecspros` kullanıcıda. (Faz P + GES birikimi 2026-07-16 restart'ıyla canlıya çıktı; OTP canlıda kullanıcı tarafından doğrulandı — giriş modalı merge regresyonu için referans çalışır durum mevcut.)
+
+## Bilinen Riskler
+- Giriş/kayıt modalı: tasarım demo SMS davranışları ↔ gerçek OTP backend birleşimi (en riskli merge).
+- Sepet: tasarımın demo silme/rozet hesabı gerçek sepeti ezmemeli.
+- İkon subset'i: ECSPros'a özgü markup'ın ikonları subset dışında kalabilir (Faz 0 denetimi).
+- Vitrin cache'i bayat HTML sunabilir (Faz 9'da ele alınır).
+- CRLF: mevcut ECSPros `site.js` karışık — Faz 2 wholesale değişimle çözülür; ara düzenleme yapılacaksa python bayt-patch kuralı geçerli.
