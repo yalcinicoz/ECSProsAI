@@ -38,7 +38,8 @@ public class UrunDegerlendirmeleriController(
         ViewData["Title"] = $"{ad} — Ürün Değerlendirmeleri";
         ViewData["MsDegerlendirmeVm"] = new UrunDegerlendirmeleriVm(
             kart.Code, ad, kart.MinPrice, kart.CompareAtPrice, kart.MainImageUrl,
-            platform.Id, ozet.Average, ozet.TotalCount, ozet.TextCount, ozet.RatingCounts);
+            platform.Id, ozet.Average, ozet.TotalCount, ozet.TextCount, ozet.RatingCounts,
+            ozet.TopicCounts, ozet.PhotoReviewCount);
 
         return View("~/Views/UrunDegerlendirmeleri/Index.cshtml");
     }

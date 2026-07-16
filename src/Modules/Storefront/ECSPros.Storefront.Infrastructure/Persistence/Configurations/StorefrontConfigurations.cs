@@ -178,7 +178,20 @@ public class ProductReviewConfiguration : IEntityTypeConfiguration<ProductReview
         builder.HasIndex(r => new { r.FirmPlatformId, r.MemberId, r.ProductCode });
         builder.HasIndex(r => new { r.FirmPlatformId, r.ProductCode, r.Status }); // ürün sayfası + istatistik
         builder.HasIndex(r => new { r.FirmPlatformId, r.Status });                // moderasyon kuyruğu
+        builder.Property(r => r.Topic).HasMaxLength(50);
         builder.HasQueryFilter(r => !r.IsDeleted);
+    }
+}
+
+public class ProductReviewPhotoConfiguration : IEntityTypeConfiguration<ProductReviewPhoto>
+{
+    public void Configure(EntityTypeBuilder<ProductReviewPhoto> builder)
+    {
+        builder.ToTable("product_review_photos");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.PhotoUrl).HasMaxLength(500).IsRequired();
+        builder.HasIndex(p => p.ReviewId);
+        builder.HasQueryFilter(p => !p.IsDeleted);
     }
 }
 

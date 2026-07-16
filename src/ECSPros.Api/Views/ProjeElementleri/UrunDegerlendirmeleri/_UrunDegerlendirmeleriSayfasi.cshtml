@@ -1,15 +1,20 @@
-@* H9 (K14 — ÇEKİRDEK PORT): tasarımın demo sayfası ürün bazlı gerçek veriye bağlandı.
-   Sol ürün özeti kart verisinden (görsel/ad/fiyat; geri linki detaya); sağda başlık
-   istatistiği SSR, yorum listesi client fetch'iyle infinite (API: /api/store/reviews/
-   product/{kod} — ratings/sort/search parametreleri H9'da eklendi). GİZLİ bırakılanlar
-   (@if (false) — veri karşılığı yok): favori sayısı satırı, teslimat mesajları, kargo
-   rozeti, Plus fiyatı, beden seçimi + sepete ekle/favori aksiyonları (detay sayfasında),
-   Konu/Beden/Fotoğraflı filtreleri, üyeye özel durum sekmeleri + panelleri + yorum formu
-   (Hesabım→Yorumlarım E7'de), AI özeti, fotoğraflı değerlendirmeler, beden önerisi satırı.
-   Kriter modalı + özel-select mekaniği + infinite kalıbı tasarımdan aynen. *@
+@* İP-5 (2026-07-16): tasarımın YENİ değerlendirme sayfası gerçek veriye bağlandı.
+   Sol: ürün özeti + Konu/Puan filtre select'leri + Fotoğraflı Yorumlar chip'i (özet
+   istatistiği SSR — KonuDagilimi/FotografliYorumSayisi). Sağ: 5 durum sekmesi —
+   Değerlendir (yorum formu: puan/konu select + foto yükleme → /api/store/reviews/images
+   sonra POST /api/store/reviews), Onay Bekleyenler / Reddedilenler / Silinenler (üyenin
+   bu ürüne ait yorumları — /api/store/reviews/mine), Onaylananlar (ürünün yayındaki
+   yorumları — arama/sıralama/filtre + infinite + fotoğraflı değerlendirme şeridi +
+   resim büyütme modalı). Üye sekmeleri girişsiz kullanıcıya giriş çağrısı gösterir
+   (data-ms-giris-modal-ac). @if(false) GİZLİ (veri kaynağı yok): favori sayısı,
+   teslimat mesajları, kargo rozeti, Plus fiyatı, beden seçimi/aksiyonlar, beden filtresi,
+   AI özeti, beden önerisi, Faydalı butonu. Tasarımdaki "Adınız" alanı YOK — yayın adı
+   üyelik adından maskeli üretilir (E7 kuralı). *@
 @{
     var b = (ECSPros.Api.Models.Store.UrunDegerlendirmeleriVm)ViewData["MsDegerlendirmeVm"]!;
     var tamYildiz = (int)Math.Round(b.Ortalama);
+    var konuEtiketleri = new (string Deger, string Etiket)[]
+        { ("beden", "Beden"), ("kumas", "Kumaş"), ("kalip", "Kalıp"), ("renk", "Renk") };
 }
 <div class="ms-urun-degerlendirme-sayfa">
     <main class="ms-yorum-sayfa" data-ms-yorum-sayfa>
@@ -29,42 +34,25 @@
                     <h1 class="ms-yorum-urun-baslik">@b.Ad</h1>
                     @if (false)
                     {
-                    @* Favori sayısı verisi yok (agregasyon ileri iş). *@
-                    <p class="ms-yorum-turuncu"><img class="ms-yorum-mini-ikon " src="/ikons/kalp.svg" alt="" aria-hidden="true">64,4B kişi favoriledi!</p>
+                    @* Favori sayısı + teslimat mesajları + kargo rozeti + Plus fiyatı +
+                       beden seçimi + sepete ekle/favori: veri kaynağı yok / detay
+                       sayfasının işi (K14 kararı sürüyor). *@
+                    <p class="ms-yorum-turuncu"></p>
+                    <p class="ms-urun-teslimat"></p>
+                    <p class="ms-yorum-gri-rozet"></p>
+                    <p class="ms-urun-plus-fiyat"></p>
+                    <fieldset class="ms-urun-detay-beden-alani"></fieldset>
+                    <div class="ms-yorum-aksiyon-satir"></div>
                     }
                     <p class="ms-urun-fiyat ms-urun-detay-tutar">@b.Fiyat.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("tr-TR")) TL</p>
-                    @if (false)
-                    {
-                    @* Dönen teslimat mesajları + kargo rozeti + Plus fiyatı: veri kaynağı yok
-                       (8.2 satırı — tahmini teslimat konfigürasyonu ileri iş; Plus senaryosu
-                       kapsam dışı). Beden seçimi + sepete ekle/favori: detay sayfasının işi —
-                       çekirdek portta ürün özeti salt bilgilendirme (K14). *@
-                    <p class="ms-urun-teslimat"></p>
-                    <p class="ms-yorum-gri-rozet"><i class="fa-solid fa-truck ms-fa-ikon ms-yorum-mini-ikon " aria-hidden="true"></i>Kargo Bedava</p>
-                    <p class="ms-urun-plus-fiyat"><span>Plus'a Özel Sepette</span> <strong>—</strong></p>
-                    <fieldset class="ms-urun-detay-beden-alani"></fieldset>
-                    <div class="ms-yorum-aksiyon-satir">
-                        <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button">Sepete Ekle</button>
-                        <button class="ms-urun-detay-favori" type="button" aria-label="Favorilere ekle" aria-pressed="false">
-                            <img class="ms-urun-detay-favori-ikon" src="/ikons/favorite.svg" alt="" aria-hidden="true" width="20" height="20" loading="lazy">
-                        </button>
-                    </div>
-                    }
                 </div>
             </article>
 
-            <div class="ms-yorum-filtreler">
-                @if (false)
-                {
-                @* Konu filtresi: yorumlarda konu verisi yok. *@
-                <button class="ms-yorum-chip" type="button"><i class="fa-solid fa-list ms-fa-ikon" aria-hidden="true"></i>Konu</button>
-                }
-                @* Kök data-ms-ozel-select BİLİNÇLİ yok: site.js modülü kapsam başlatıcısını
-                   iki kez çağırıp tetikleyiciyi çifte bağlıyor (toggle sıfırlanıyor — E2E
-                   yakaladı); C4 deseniyle aynı görsel sınıflar + davranış sayfa script'inde. *@
-                <div class="ms-ozel-select ms-ozel-select-checkboxli ms-yorum-filtre-select" data-ms-yorum-puan-select>
-                    <button class="ms-yorum-chip ms-ozel-select-tetikleyici" type="button" data-ms-ozel-select-tetikleyici aria-haspopup="listbox" aria-expanded="false">
-                        <span data-ms-ozel-select-deger>Puan</span>
+            <div class="ms-yorum-filtreler" data-ms-yorum-filtreler>
+                <div class="ms-ozel-select ms-ozel-select-checkboxli ms-yorum-filtre-select" data-ms-yorum-select data-ms-yorum-filtre="konu">
+                    <button class="ms-yorum-chip ms-ozel-select-tetikleyici" type="button" data-ms-yorum-select-tetikleyici aria-haspopup="listbox" aria-expanded="false">
+                        <i class="fa-solid fa-list ms-fa-ikon" aria-hidden="true"></i>
+                        <span data-ms-yorum-select-deger>Konu</span>
                         <span class="ms-yorum-chip-ok" aria-hidden="true"></span>
                     </button>
                     <div class="ms-ozel-select-panel" role="listbox">
@@ -74,9 +62,33 @@
                                 <input name="konu_ara" class="ms-ozel-select-arama" type="search" placeholder="Konu ara" data-ms-yorum-select-arama>
                             </label>
                             <div class="ms-ozel-select-secenek-listesi">
+                                @foreach (var (deger, etiket) in konuEtiketleri)
+                                {
+                                <label class="ms-ozel-select-checkbox-secenek" data-ms-yorum-select-secenek><input type="checkbox" value="@deger"><span>@etiket</span><span class="ms-ozel-select-checkbox-adet">(@(b.KonuDagilimi?.GetValueOrDefault(deger) ?? 0))</span></label>
+                                }
+                            </div>
+                        </div>
+                        <div class="ms-ozel-select-alt">
+                            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-yorum-select-temizle>Temizle</button>
+                            <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-yorum-select-uygula>Uygula</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="ms-ozel-select ms-ozel-select-checkboxli ms-yorum-filtre-select" data-ms-yorum-select data-ms-yorum-filtre="puan">
+                    <button class="ms-yorum-chip ms-ozel-select-tetikleyici" type="button" data-ms-yorum-select-tetikleyici aria-haspopup="listbox" aria-expanded="false">
+                        <span data-ms-yorum-select-deger>Puan</span>
+                        <span class="ms-yorum-chip-ok" aria-hidden="true"></span>
+                    </button>
+                    <div class="ms-ozel-select-panel" role="listbox">
+                        <div class="ms-ozel-select-icerik">
+                            <label class="ms-ozel-select-arama-alani">
+                                <i class="fa-solid fa-magnifying-glass ms-fa-ikon ms-ozel-select-arama-ikon" aria-hidden="true"></i>
+                                <input name="puan_ara" class="ms-ozel-select-arama" type="search" placeholder="Puan ara" data-ms-yorum-select-arama>
+                            </label>
+                            <div class="ms-ozel-select-secenek-listesi">
                                 @for (var puan = 5; puan >= 1; puan--)
                                 {
-                                <label class="ms-ozel-select-checkbox-secenek" data-ms-ozel-select-secenek><input type="checkbox" value="@puan"><strong>@puan</strong><span class="ms-ozel-select-yildizlar" aria-hidden="true">@for (var y = 1; y <= 5; y++){<i data-bos="@(y <= puan ? null : "true")"></i>}</span><span class="ms-ozel-select-checkbox-adet">(@b.PuanDagilimi.GetValueOrDefault(puan))</span></label>
+                                <label class="ms-ozel-select-checkbox-secenek" data-ms-yorum-select-secenek><input type="checkbox" value="@puan"><strong>@puan</strong><span class="ms-ozel-select-yildizlar" aria-hidden="true">@for (var y = 1; y <= 5; y++){<i data-bos="@(y <= puan ? null : "true")"></i>}</span><span class="ms-ozel-select-checkbox-adet">(@b.PuanDagilimi.GetValueOrDefault(puan))</span></label>
                                 }
                             </div>
                         </div>
@@ -88,11 +100,11 @@
                 </div>
                 @if (false)
                 {
-                @* Beden filtresi (yorumlarda beden verisi yok) + Fotoğraflı Yorumlar
-                   (yorum görseli şemada yok) — veri gelince açılır. *@
+                @* Beden filtresi: yorumlarda beden verisi yok — veri gelince açılır. *@
                 <div class="ms-ozel-select ms-ozel-select-checkboxli ms-yorum-filtre-select"></div>
-                <button class="ms-yorum-chip" type="button"><i class="fa-solid fa-camera ms-fa-ikon ms-yorum-mini-ikon" aria-hidden="true"></i>Fotoğraflı Yorumlar</button>
                 }
+                <button class="ms-yorum-chip" type="button" data-ms-yorum-fotografli><i class="fa-solid fa-camera ms-fa-ikon ms-yorum-mini-ikon" aria-hidden="true"></i>Fotoğraflı Yorumlar</button>
+                <button class="ms-yorum-chip ms-yorum-chip-temizle" type="button" data-ms-yorum-filtre-temizle hidden>Filtreleri Temizle</button>
             </div>
         </aside>
 
@@ -105,14 +117,104 @@
                 <button class="ms-yorum-kriter-buton" type="button" data-ms-yorum-kriter-ac>ⓘ Yorum Yayınlama Kriterleri</button>
             </div>
 
-            @if (false)
-            {
-            @* Üyeye özel durum sekmeleri + Değerlendir/Onay Bekleyen/Reddedilen/Silinen
-               panelleri + yorum yazma formu: Hesabım → Yorumlarım (E7) bu işi görür;
-               çekirdek port kararı (K14) bu sayfayı "ürünün tüm değerlendirmeleri"
-               görünümü olarak bırakır. *@
-            <div class="ms-yorum-durum-sekmeleri" data-ms-degerlendirme-sekmeleri role="tablist" aria-label="Değerlendirme durumları"></div>
-            }
+            <div class="ms-yorum-durum-sekmeleri" data-ms-degerlendirme-sekmeleri role="tablist" aria-label="Değerlendirme durumları">
+                <button class="ms-yorum-durum-sekme" type="button" role="tab" data-ms-degerlendirme-tab="degerlendir" aria-pressed="false">Değerlendir</button>
+                <button class="ms-yorum-durum-sekme" type="button" role="tab" data-ms-degerlendirme-tab="onay-bekleyenler" aria-pressed="false">Onay Bekleyenler</button>
+                <button class="ms-yorum-durum-sekme ms-aktif" type="button" role="tab" data-ms-degerlendirme-tab="onaylananlar" aria-pressed="true">Onaylananlar</button>
+                <button class="ms-yorum-durum-sekme" type="button" role="tab" data-ms-degerlendirme-tab="reddedilenler" aria-pressed="false">Reddedilenler</button>
+                <button class="ms-yorum-durum-sekme" type="button" role="tab" data-ms-degerlendirme-tab="silinenler" aria-pressed="false">Silinenler</button>
+            </div>
+
+            <section class="ms-yorum-durum-panel" data-ms-degerlendirme-panel="degerlendir" hidden>
+                <section class="ms-yorum-bos" data-ms-yorum-giris-gerekli hidden>
+                    <strong>Değerlendirme yapmak için giriş yapın</strong>
+                    <p>Satın aldığınız ürünleri değerlendirmek için hesabınıza giriş yapmanız gerekir.</p>
+                    <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-giris-modal-ac>Giriş Yap</button>
+                </section>
+                <section class="ms-yorum-bos" data-ms-degerlendir-bos hidden>
+                    <strong>Bu ürün için değerlendirme yapamazsınız</strong>
+                    <p>Yalnızca teslim edilmiş siparişlerinizdeki ürünleri değerlendirebilirsiniz; daha önce değerlendirdiyseniz durumunu diğer sekmelerden izleyebilirsiniz.</p>
+                </section>
+                <div class="ms-yorum-durum-liste" data-ms-degerlendir-kart hidden>
+                    <article class="ms-yorum-durum-kart">
+                        @if (b.GorselUrl is not null)
+                        {
+                        <img src="@b.GorselUrl" alt="@b.Ad" loading="lazy">
+                        }
+                        <div class="ms-yorum-durum-kart-icerik">
+                            <span class="ms-yorum-durum-etiket ms-yorum-durum-etiket-bekliyor">Yorum Bekliyor</span>
+                            <strong>@b.Ad</strong>
+                            <p>Satın aldığınız ürün teslim edildi. Deneyiminizi paylaşarak diğer müşterilere yardımcı olabilirsiniz.</p>
+                        </div>
+                    </article>
+                </div>
+                <form class="ms-yorum-yaz-formu" data-ms-yorum-form hidden>
+                    <strong>Yorum Yap</strong>
+                    <div class="ms-yorum-yaz-ust">
+                        <div class="ms-form-alani">
+                            <span class="ms-form-etiket">Puan</span>
+                            <div class="ms-ozel-select ms-yorum-puan-select" data-ms-yorum-puan-select>
+                                <input type="hidden" name="puan" value="5" data-ms-yorum-puan-deger>
+                                <button class="ms-form-girdi ms-yorum-puan-tetikleyici" type="button" data-ms-yorum-puan-tetikleyici aria-haspopup="listbox" aria-expanded="false">
+                                    <span data-ms-yorum-puan-yazi>5 yıldız</span>
+                                    <span class="ms-yorum-yildizlar" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+                                    <i class="fa-solid fa-chevron-down ms-fa-ikon ms-yorum-puan-ok" aria-hidden="true"></i>
+                                </button>
+                                <div class="ms-ozel-select-panel" role="listbox" aria-label="Yorum puanı seçimi">
+                                    <div class="ms-ozel-select-icerik">
+                                        @for (var puan = 5; puan >= 1; puan--)
+                                        {
+                                        <button class="ms-yorum-puan-secenek@(puan == 5 ? " ms-aktif" : "")" type="button" data-ms-yorum-puan-secenek="@puan"><strong>@puan</strong><span class="ms-yorum-yildizlar" aria-hidden="true">@for (var y = 1; y <= 5; y++){<i data-bos="@(y <= puan ? null : "true")"></i>}</span></button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ms-form-alani">
+                            <span class="ms-form-etiket">Konu</span>
+                            <input type="hidden" name="konu" value="beden" data-ms-yorum-konu-deger>
+                            <div class="ms-ozel-select ms-yorum-konu-select" data-ms-yorum-konu-select>
+                                <button class="ms-ozel-select-tetikleyici" type="button" data-ms-yorum-konu-tetikleyici aria-haspopup="listbox" aria-expanded="false">
+                                    <span data-ms-yorum-konu-yazi>Beden</span>
+                                    <i class="fa-solid fa-chevron-down ms-fa-ikon ms-ozel-select-ok" aria-hidden="true"></i>
+                                </button>
+                                <div class="ms-ozel-select-panel" role="listbox" aria-label="Yorum konusu seçimi">
+                                    <div class="ms-ozel-select-secenek-listesi">
+                                        @foreach (var (deger, etiket) in konuEtiketleri)
+                                        {
+                                        <button class="ms-ozel-select-secenek@(deger == "beden" ? " ms-ozel-select-secenek-aktif" : "")" type="button" role="option" data-ms-yorum-konu-secenek="@deger"><span data-ms-ozel-select-metin>@etiket</span></button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <label class="ms-form-alani">
+                        <span class="ms-form-etiket">Yorumunuz</span>
+                        <textarea class="ms-form-metin-alani ms-yorum-textarea" name="yorum" placeholder="Ürünle ilgili yorumunuzu yazın"></textarea>
+                    </label>
+                    <div class="ms-uyari ms-uyari-hata" data-ms-yorum-form-hata hidden></div>
+                    <div class="ms-yorum-form-alt">
+                        <input name="yorum_foto_input" class="sr-only" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple data-ms-yorum-foto-input>
+                        <button class="ms-yorum-chip" type="button" data-ms-yorum-foto-ekle aria-pressed="false"><i class="fa-solid fa-camera ms-fa-ikon ms-yorum-mini-ikon" aria-hidden="true"></i><span data-ms-yorum-foto-metin>Fotoğraf ekle</span></button>
+                        <button class="ms-yorum-buton" type="submit">Yorumu Gönder</button>
+                    </div>
+                    <div class="ms-yorum-foto-onizleme" data-ms-yorum-foto-onizleme hidden></div>
+                </form>
+            </section>
+
+            <section class="ms-yorum-durum-panel" data-ms-degerlendirme-panel="onay-bekleyenler" hidden>
+                <section class="ms-yorum-bos" data-ms-bekleyen-giris hidden>
+                    <strong>Giriş yapın</strong>
+                    <p>Onay bekleyen yorumlarınızı görmek için hesabınıza giriş yapın.</p>
+                    <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-giris-modal-ac>Giriş Yap</button>
+                </section>
+                <section class="ms-yorum-bos" data-ms-bekleyen-bos hidden>
+                    <strong>Onay bekleyen yorumunuz yok</strong>
+                    <p>Yeni gönderilen yorumlar kontrol sürecindeyken burada listelenir.</p>
+                </section>
+                <div class="ms-yorum-durum-liste" data-ms-bekleyen-liste></div>
+            </section>
 
             <section class="ms-yorum-durum-panel" data-ms-degerlendirme-panel="onaylananlar">
                 @if (b.ToplamDegerlendirme == 0)
@@ -125,17 +227,27 @@
                 else
                 {
                 <div class="ms-yorum-araclar">
-                    <input class="ms-yorum-input" type="search" placeholder="Değerlendirmelerde Ara" data-ms-yorum-ara>
-                    <select class="ms-yorum-input" data-ms-yorum-sirala><option value="">Önerilen Sıralama</option><option value="newest">En Yeni</option><option value="oldest">En Eski</option><option value="top">En Yüksek Puan</option></select>
+                    <input name="degerlendirmelerde_ara" class="ms-yorum-input" type="search" placeholder="Değerlendirmelerde Ara" data-ms-yorum-arama>
+                    <select name="yorum_siralama" class="ms-yorum-input" data-ms-yorum-siralama aria-label="Yorum sıralama">
+                        <option value="">Önerilen Sıralama</option>
+                        <option value="newest">En Yeni</option>
+                        <option value="oldest">En Eski</option>
+                        <option value="top">En Yüksek Puan</option>
+                    </select>
                 </div>
                 }
                 @if (false)
                 {
-                @* Beden önerisi + AI özeti + fotoğraflı değerlendirmeler: veri kaynağı yok
-                   (AI özeti ileri iş; yorum görseli/beden şemada yok). *@
+                @* Beden önerisi + AI özeti: veri kaynağı yok (AI özet backend'i ileri iş). *@
                 <div class="ms-yorum-oneri"></div>
                 <section class="ms-yorum-ozet"><h2>AI Değerlendirme Özeti ⓘ</h2></section>
-                <section class="ms-yorum-fotograflar"></section>
+                }
+                @if (b.FotografliYorumSayisi > 0)
+                {
+                <section class="ms-yorum-fotograflar">
+                    <div class="ms-yorum-foto-baslik"><span>Fotoğraflı Değerlendirmeler</span><button class="ms-yorum-turuncu" type="button" data-ms-yorum-foto-tumu>Tümü <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i></button></div>
+                    <div class="ms-yorum-foto-liste" data-ms-yorum-foto-liste></div>
+                </section>
                 }
                 <div class="ms-yorum-liste" data-ms-yorum-liste></div>
                 <section class="ms-yorum-bos" data-ms-yorum-sonuc-bos hidden>
@@ -144,9 +256,35 @@
                 </section>
                 <div class="ms-yorum-yukleniyor" data-ms-yorum-yukleniyor>Yorumlar yükleniyor...</div>
             </section>
+
+            <section class="ms-yorum-durum-panel" data-ms-degerlendirme-panel="reddedilenler" hidden>
+                <section class="ms-yorum-bos" data-ms-red-giris hidden>
+                    <strong>Giriş yapın</strong>
+                    <p>Reddedilen yorumlarınızı görmek için hesabınıza giriş yapın.</p>
+                    <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-giris-modal-ac>Giriş Yap</button>
+                </section>
+                <section class="ms-yorum-bos" data-ms-red-bos hidden>
+                    <strong>Reddedilen yorumunuz yok</strong>
+                    <p>Yayın kriterlerine takılan değerlendirmeniz olmadığında bu alan boş görünür.</p>
+                </section>
+                <div class="ms-yorum-durum-liste" data-ms-red-liste></div>
+            </section>
+
+            <section class="ms-yorum-durum-panel" data-ms-degerlendirme-panel="silinenler" hidden>
+                <section class="ms-yorum-bos" data-ms-silinen-giris hidden>
+                    <strong>Giriş yapın</strong>
+                    <p>Silinen yorumlarınızı görmek için hesabınıza giriş yapın.</p>
+                    <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-giris-modal-ac>Giriş Yap</button>
+                </section>
+                <section class="ms-yorum-bos" data-ms-silinen-bos hidden>
+                    <strong>Silinen yorumunuz yok</strong>
+                    <p>Sildiğiniz veya kaldırılan yorum bulunmadığında bu alan boş görünür.</p>
+                </section>
+                <div class="ms-yorum-durum-liste" data-ms-silinen-liste></div>
+            </section>
         </section>
     </section>
-    </div>
+    </main>
 
     <div class="ms-ornek-modal ms-yorum-kriter-modal" data-ms-yorum-kriter-modal aria-hidden="true">
         <div class="ms-ornek-modal-kaplama" data-ms-yorum-kriter-kapat></div>
@@ -155,7 +293,7 @@
             <h3 id="ms-yorum-kriter-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>Yorum Yayınlama Kriterleri</h3>
             <div class="ms-yorum-kriter-icerik">
                 <p>Ürün Değerlendirmeleri, müşterilerimizin platform üzerinden satın aldıkları ürünlere ilişkin deneyimlerine yönelik yorum ve puanlarını paylaşabilecekleri önemli bir araçtır.</p>
-                <p>Ürün Değerlendirmeleri, içerdiği metin bakımından aşağıdaki kriterler dahilinde, olumlu veya olumsuz ayrımı ya da herhangi bir yönlendirme yapılmaksızın yayımlanır.</p>
+                <p>Ürün Değerlendirmeleri, içerdiği metin ve varsa görseller bakımından aşağıdaki kriterler dahilinde, olumlu veya olumsuz ayrımı ya da herhangi bir yönlendirme yapılmaksızın yayımlanır.</p>
                 <ul>
                     <li>Hukuka, genel ahlaka ve kamu düzenine uygun olma</li>
                     <li>Kişisel verileri ve özel hayatın gizliliğini ihlal etmeme</li>
@@ -172,6 +310,8 @@
                     <li>Soru ve fiyat bilgisi içermeme</li>
                     <li>Siyasi ve/veya politik söylem ve değerlendirme içermeme</li>
                     <li>Farklı sitelere yönlendirme, link, reklam ya da karşılaştırma içermeme</li>
+                    <li>Dijital ortamdan alınmış ekran görüntülerini içermeme</li>
+                    <li>Teknik açıdan uygun görseller içerme (her görsel en fazla 5 MB olabilir)</li>
                 </ul>
                 <p>Belirtilmelidir ki, Ürün Değerlendirmeleri'nin, sadece ilgili ürünü satın alan müşterilerimiz tarafından yapılmasına izin verilir.</p>
                 <p>Ürün Değerlendirmeleri yukarıda belirtilen kriterlere uygun olmadığı gerekçesiyle reddedilen müşterilerimize düzeltme yaparak yeniden değerlendirme yapma hakkı verilir (Hesabım → Yorumlarım → Yeniden Düzenle).</p>
@@ -188,228 +328,574 @@
             </div>
         </section>
     </div>
+
+    <div class="ms-ornek-modal ms-urun-detay-resim-modal ms-yorum-resim-modal" data-ms-yorum-resim-modal aria-hidden="true">
+        <div class="ms-ornek-modal-kaplama" data-ms-yorum-resim-modal-kapat></div>
+        <section class="ms-urun-detay-resim-modal-kutu" role="dialog" aria-modal="true" aria-label="Yorum görseli">
+            <button class="ms-ornek-modal-kapat" type="button" data-ms-yorum-resim-modal-kapat aria-label="Yorum görselini kapat">
+                <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
+            </button>
+            <div class="ms-urun-detay-resim-modal-viewport">
+                <div class="ms-urun-detay-resim-modal-track">
+                    <img class="ms-urun-detay-resim-modal-gorsel ms-urun-detay-resim-modal-gorsel-gorunur" data-ms-yorum-resim-modal-gorsel alt="" loading="lazy">
+                </div>
+            </div>
+            <button class="ms-urun-detay-resim-modal-kontrol ms-urun-detay-resim-modal-kontrol-sol" type="button" data-ms-yorum-resim-modal-yon="onceki" aria-label="Önceki yorum görseli">
+                <i class="fa-solid fa-chevron-left ms-fa-ikon" aria-hidden="true"></i>
+            </button>
+            <button class="ms-urun-detay-resim-modal-kontrol ms-urun-detay-resim-modal-kontrol-sag" type="button" data-ms-yorum-resim-modal-yon="sonraki" aria-label="Sonraki yorum görseli">
+                <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
+            </button>
+        </section>
+    </div>
+
+    <div class="ms-ornek-modal ms-yorum-basarili-modal" data-ms-yorum-basarili-modal aria-hidden="true">
+        <div class="ms-ornek-modal-kaplama" data-ms-yorum-basarili-kapat></div>
+        <section class="ms-ornek-modal-kutu ms-ornek-modal-kutu-basarili" role="dialog" aria-modal="true" aria-labelledby="ms-yorum-basarili-baslik">
+            <button class="ms-ornek-modal-kapat" type="button" data-ms-yorum-basarili-kapat aria-label="Modalı kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+            <span class="ms-modal-ornek-ikon ms-modal-ornek-ikon-basarili" aria-hidden="true">
+                <i class="fa-solid fa-circle-check ms-fa-ikon" aria-hidden="true"></i>
+            </span>
+            <h3 id="ms-yorum-basarili-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>Yorum Gönderildi</h3>
+            <p class="ms-ornek-modal-aciklama">Yorumunuz onay sürecine alındı. Kontrol tamamlandığında yayınlanacaktır.</p>
+            <div class="ms-ornek-modal-aksiyonlar">
+                <button class="ms-buton ms-buton-m ms-buton-basarili" type="button" data-ms-yorum-basarili-kapat>Tamam</button>
+            </div>
+        </section>
+    </div>
 </div>
 
-@* Bu script: Değerlendirme sayfasında puan filtresi/sıralama/arama + kriter modalı +
-   onaylı yorumların canlı API'den infinite yüklenmesini yönetir (özel-select ve modal
-   mekaniği tasarımdan aynen; demo yorum üretimi API fetch'iyle değiştirildi). *@
+@* Bu script: sekme/panel akışı, Konu-Puan-Fotoğraflı filtreleri, onaylı yorumların canlı
+   API'den infinite yüklenmesi (fotoğraflarıyla), fotoğraflı değerlendirme şeridi + resim
+   büyütme modalı, üyenin bekleyen/reddedilen/silinen yorumları ve foto yüklemeli yorum
+   formunu yönetir. Özel-select mekaniği sayfa içindedir (site.js modülüne bağlanmadı —
+   kapsam başlatıcısının çifte bağlama sorunu H9'dan biliniyor). *@
 <script>
 (() => {
-            const sayfa = document.querySelector(".ms-urun-degerlendirme-sayfa");
-            if (!sayfa) return;
-            const liste = sayfa.querySelector("[data-ms-yorum-liste]");
-            const yukleniyor = sayfa.querySelector("[data-ms-yorum-yukleniyor]");
-            const kriterAcButonu = sayfa.querySelector("[data-ms-yorum-kriter-ac]");
-            const kriterModal = sayfa.querySelector("[data-ms-yorum-kriter-modal]");
-            const kriterKapaticilar = sayfa.querySelectorAll("[data-ms-yorum-kriter-kapat]");
-            const aramaGirdisi = sayfa.querySelector("[data-ms-yorum-ara]");
-            const siralaSecimi = sayfa.querySelector("[data-ms-yorum-sirala]");
-            const ayarlar = {
-                kod: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(b.Kod)),
-                platform: "@b.FirmPlatformId",
-                toplam: @b.ToplamDegerlendirme
-            };
+    const sayfa = document.querySelector(".ms-urun-degerlendirme-sayfa");
+    if (!sayfa) return;
 
-            // Özel-select mekaniği tasarım sayfasındaki inline hâliyle (yalnız puan
-            // select'ine kapsamlı) — site.js modülüne bağlanılmadı: kapsam başlatıcısı
-            // iki kez koşup tetikleyiciyi çifte bağlıyor, toggle sıfırlanıyordu (E2E).
-            sayfa.querySelectorAll("[data-ms-yorum-puan-select]").forEach((select) => {
-                const tetikleyici = select.querySelector("[data-ms-ozel-select-tetikleyici]");
-                const deger = select.querySelector("[data-ms-ozel-select-deger]");
-                const panel = select.querySelector(".ms-ozel-select-panel");
-                const secenekler = select.querySelectorAll("[data-ms-ozel-select-secenek]");
-                const arama = select.querySelector("[data-ms-ozel-select-arama]");
-                const temizleButonu = select.querySelector("[data-ms-ozel-select-temizle]");
-                const uygulaButonu = select.querySelector("[data-ms-ozel-select-uygula]");
+    const ayarlar = {
+        kod: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(b.Kod)),
+        ad: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(b.Ad)),
+        gorsel: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(b.GorselUrl)),
+        platform: "@b.FirmPlatformId",
+        toplam: @b.ToplamDegerlendirme
+    };
+    const konuEtiketleri = { beden: "Beden", kumas: "Kumaş", kalip: "Kalıp", renk: "Renk" };
 
-                if (!tetikleyici || !deger) return;
+    const esc = (metin) => { const e = document.createElement("span"); e.textContent = metin ?? ""; return e.innerHTML; };
+    const tarihYaz = (iso) => new Date(iso).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+    const yildizHtml = (puan) => `<span class="ms-yorum-yildizlar" aria-label="${puan} yıldız">${Array.from({ length: 5 }, (_, i) => `<i${i < puan ? "" : " data-bos=\"true\""}></i>`).join("")}</span>`;
+    const token = () => localStorage.getItem("ecspros_member_token");
+    const yetkiliBasliklar = () => ({ Authorization: "Bearer " + token() });
 
-                const varsayilanDeger = deger.textContent.trim();
-                const kapat = () => {
-                    select.classList.remove("ms-ozel-select-acik");
-                    select.classList.remove("ms-ozel-select-yukari");
-                    tetikleyici.setAttribute("aria-expanded", "false");
-                };
-                const acilisYonunuAyarla = () => {
-                    if (!panel) return;
-                    select.classList.remove("ms-ozel-select-yukari");
-                    const selectKonumu = select.getBoundingClientRect();
-                    const panelYuksekligi = panel.offsetHeight || 0;
-                    const alttakiAlan = window.innerHeight - selectKonumu.bottom;
-                    const usttekiAlan = selectKonumu.top;
-                    if (panelYuksekligi + 12 > alttakiAlan && usttekiAlan > alttakiAlan) {
-                        select.classList.add("ms-ozel-select-yukari");
-                    }
-                };
-                const degeriGuncelle = () => {
-                    const seciliCheckboxlar = Array.from(select.querySelectorAll("[data-ms-ozel-select-secenek] input[type='checkbox']:checked"));
-                    deger.textContent = seciliCheckboxlar.length === 0 ? varsayilanDeger : seciliCheckboxlar.length === 1 ? seciliCheckboxlar[0].value : `${seciliCheckboxlar.length} seçim`;
-                };
+    // ── Genel modal aç/kapat yardımcıları ──
+    const modallar = [];
+    const modalAc = (modal, odak) => {
+        modal.classList.add("ms-ornek-modal-acik");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+        odak?.focus();
+    };
+    const modalKapat = (modal) => {
+        modal.classList.remove("ms-ornek-modal-acik");
+        modal.setAttribute("aria-hidden", "true");
+        if (!modallar.some((m) => m.classList.contains("ms-ornek-modal-acik"))) {
+            document.body.style.overflow = "";
+        }
+    };
 
-                tetikleyici.addEventListener("click", (event) => {
-                    event.stopPropagation();
-                    const acik = !select.classList.contains("ms-ozel-select-acik");
-                    select.classList.toggle("ms-ozel-select-acik", acik);
-                    tetikleyici.setAttribute("aria-expanded", acik.toString());
-                    if (acik) {
-                        acilisYonunuAyarla();
-                        window.setTimeout(() => arama?.focus(), 30);
-                    }
-                });
+    // ── Kriter modalı ──
+    const kriterModal = sayfa.querySelector("[data-ms-yorum-kriter-modal]");
+    modallar.push(kriterModal);
+    sayfa.querySelector("[data-ms-yorum-kriter-ac]")?.addEventListener("click", () => modalAc(kriterModal, kriterModal.querySelector("[data-ms-yorum-kriter-kapat]")));
+    sayfa.querySelectorAll("[data-ms-yorum-kriter-kapat]").forEach((k) => k.addEventListener("click", () => modalKapat(kriterModal)));
 
-                secenekler.forEach((secenek) => {
-                    secenek.addEventListener("click", (event) => {
-                        const checkbox = secenek.querySelector("input[type='checkbox']");
-                        if (checkbox && event.target !== checkbox) {
-                            event.preventDefault();
-                            checkbox.checked = !checkbox.checked;
-                        }
-                        degeriGuncelle();
-                    });
-                });
+    // ── Resim modalı (yorum görselleri + form önizlemesi) ──
+    const resimModal = sayfa.querySelector("[data-ms-yorum-resim-modal]");
+    const resimModalGorsel = sayfa.querySelector("[data-ms-yorum-resim-modal-gorsel]");
+    const resimModalYonlar = sayfa.querySelectorAll("[data-ms-yorum-resim-modal-yon]");
+    modallar.push(resimModal);
+    let aktifGorseller = [];
+    let aktifGorselIndex = 0;
+    const resimModalGuncelle = () => {
+        if (!resimModalGorsel || aktifGorseller.length === 0) return;
+        resimModalGorsel.src = aktifGorseller[aktifGorselIndex];
+        resimModalGorsel.alt = `Yorum görseli ${aktifGorselIndex + 1}`;
+        resimModalYonlar.forEach((buton) => { buton.hidden = aktifGorseller.length < 2; });
+    };
+    const resimModalAc = (gorseller, index = 0) => {
+        aktifGorseller = gorseller;
+        aktifGorselIndex = Math.max(0, Math.min(index, gorseller.length - 1));
+        resimModalGuncelle();
+        modalAc(resimModal, resimModal.querySelector("[data-ms-yorum-resim-modal-kapat]"));
+    };
+    sayfa.querySelectorAll("[data-ms-yorum-resim-modal-kapat]").forEach((k) => k.addEventListener("click", () => {
+        modalKapat(resimModal);
+        resimModalGorsel?.removeAttribute("src");
+        aktifGorseller = [];
+    }));
+    resimModalYonlar.forEach((buton) => buton.addEventListener("click", () => {
+        if (aktifGorseller.length === 0) return;
+        const adim = buton.dataset.msYorumResimModalYon === "onceki" ? -1 : 1;
+        aktifGorselIndex = (aktifGorselIndex + adim + aktifGorseller.length) % aktifGorseller.length;
+        resimModalGuncelle();
+    }));
 
-                arama?.addEventListener("input", () => {
-                    const aranan = arama.value.trim().toLocaleLowerCase("tr-TR");
-                    secenekler.forEach((secenek) => {
-                        secenek.hidden = !secenek.textContent.trim().toLocaleLowerCase("tr-TR").includes(aranan);
-                    });
-                });
+    // ── Başarılı modalı ──
+    const basariliModal = sayfa.querySelector("[data-ms-yorum-basarili-modal]");
+    modallar.push(basariliModal);
+    sayfa.querySelectorAll("[data-ms-yorum-basarili-kapat]").forEach((k) => k.addEventListener("click", () => modalKapat(basariliModal)));
 
-                temizleButonu?.addEventListener("click", () => {
-                    select.querySelectorAll("[data-ms-ozel-select-secenek] input[type='checkbox']").forEach((checkbox) => {
-                        checkbox.checked = false;
-                    });
-                    if (arama) {
-                        arama.value = "";
-                        secenekler.forEach((secenek) => secenek.hidden = false);
-                    }
-                    degeriGuncelle();
-                    listeyiYenile();
-                });
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            modallar.forEach((m) => { if (m?.classList.contains("ms-ornek-modal-acik")) modalKapat(m); });
+        }
+        if (resimModal?.classList.contains("ms-ornek-modal-acik") && aktifGorseller.length > 1) {
+            if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                aktifGorselIndex = (aktifGorselIndex + (event.key === "ArrowLeft" ? -1 : 1) + aktifGorseller.length) % aktifGorseller.length;
+                resimModalGuncelle();
+            }
+        }
+    });
 
-                uygulaButonu?.addEventListener("click", () => { kapat(); listeyiYenile(); });
-                document.addEventListener("click", (event) => {
-                    if (!select.contains(event.target)) kapat();
-                });
-            });
+    // ── Filtre select'leri (Konu/Puan — tasarım mekaniği sayfa içinde) ──
+    const yorumSelectler = Array.from(sayfa.querySelectorAll("[data-ms-yorum-select]"));
+    const fotografliButon = sayfa.querySelector("[data-ms-yorum-fotografli]");
+    const temizleButonu = sayfa.querySelector("[data-ms-yorum-filtre-temizle]");
+    const aramaInput = sayfa.querySelector("[data-ms-yorum-arama]");
+    const siralamaSelect = sayfa.querySelector("[data-ms-yorum-siralama]");
+    const metniKucult = (deger) => (deger || "").toString().trim().toLocaleLowerCase("tr-TR");
+
+    yorumSelectler.forEach((select) => {
+        const tetikleyici = select.querySelector("[data-ms-yorum-select-tetikleyici]");
+        const deger = select.querySelector("[data-ms-yorum-select-deger]");
+        const panel = select.querySelector(".ms-ozel-select-panel");
+        const secenekler = Array.from(select.querySelectorAll("[data-ms-yorum-select-secenek]"));
+        const arama = select.querySelector("[data-ms-yorum-select-arama]");
+        const temizle = select.querySelector("[data-ms-yorum-select-temizle]");
+        const uygula = select.querySelector("[data-ms-yorum-select-uygula]");
+        const varsayilanDeger = deger?.textContent.trim() || "";
+
+        const kapat = () => {
+            select.classList.remove("ms-ozel-select-acik", "ms-ozel-select-yukari");
+            tetikleyici?.setAttribute("aria-expanded", "false");
+        };
+        const acilisYonunuAyarla = () => {
+            if (!panel) return;
+            select.classList.remove("ms-ozel-select-yukari");
+            const konum = select.getBoundingClientRect();
+            const alttakiAlan = window.innerHeight - konum.bottom;
+            if ((panel.offsetHeight || 0) + 12 > alttakiAlan && konum.top > alttakiAlan) {
+                select.classList.add("ms-ozel-select-yukari");
+            }
+        };
+        const degeriGuncelle = () => {
+            const secili = Array.from(select.querySelectorAll("[data-ms-yorum-select-secenek] input[type='checkbox']:checked"));
+            if (deger) deger.textContent = secili.length === 0 ? varsayilanDeger : secili.length === 1 ? (secili[0].closest("label")?.querySelector("span,strong")?.textContent || secili[0].value) : `${secili.length} seçim`;
+        };
+        const secimleriTemizle = () => {
+            select.querySelectorAll("input[type='checkbox']").forEach((c) => { c.checked = false; });
+            if (arama) { arama.value = ""; secenekler.forEach((s) => { s.hidden = false; }); }
+            degeriGuncelle();
+        };
+
+        tetikleyici?.addEventListener("click", (event) => {
+            event.stopPropagation();
+            const acikOlacak = !select.classList.contains("ms-ozel-select-acik");
+            yorumSelectler.forEach((diger) => { if (diger !== select) { diger.classList.remove("ms-ozel-select-acik"); diger.querySelector("[data-ms-yorum-select-tetikleyici]")?.setAttribute("aria-expanded", "false"); } });
             select.classList.toggle("ms-ozel-select-acik", acikOlacak);
             tetikleyici.setAttribute("aria-expanded", acikOlacak.toString());
-            if (acikOlacak) {
-                acilisYonunuAyarla();
-                window.setTimeout(() => arama?.focus(), 30);
-            }
+            if (acikOlacak) { acilisYonunuAyarla(); window.setTimeout(() => arama?.focus(), 30); }
         });
-
-            const kriterModalAc = () => {
-                if (!kriterModal) return;
-                kriterModal.classList.add("ms-ornek-modal-acik");
-                kriterModal.setAttribute("aria-hidden", "false");
-                document.body.style.overflow = "hidden";
-                kriterModal.querySelector("[data-ms-yorum-kriter-kapat]")?.focus();
-            };
-            const kriterModalKapat = () => {
-                if (!kriterModal) return;
-                kriterModal.classList.remove("ms-ornek-modal-acik");
-                kriterModal.setAttribute("aria-hidden", "true");
-                document.body.style.overflow = "";
-                kriterAcButonu?.focus();
-            };
-            kriterAcButonu?.addEventListener("click", kriterModalAc);
-            kriterKapaticilar.forEach((kapatici) => kapatici.addEventListener("click", kriterModalKapat));
-            document.addEventListener("keydown", (event) => {
-                if (event.key === "Escape" && kriterModal?.classList.contains("ms-ornek-modal-acik")) {
-                    kriterModalKapat();
-                }
+        secenekler.forEach((secenek) => {
+            secenek.addEventListener("click", (event) => {
+                const checkbox = secenek.querySelector("input[type='checkbox']");
+                if (checkbox && event.target !== checkbox) { event.preventDefault(); checkbox.checked = !checkbox.checked; }
                 degeriGuncelle();
-                yorumlariYenile();
             });
         });
-
         arama?.addEventListener("input", () => {
             const aranan = metniKucult(arama.value);
-            secenekler.forEach((secenek) => {
-                secenek.hidden = !metniKucult(secenek.textContent).includes(aranan);
-            });
+            secenekler.forEach((secenek) => { secenek.hidden = !metniKucult(secenek.textContent).includes(aranan); });
         });
-        temizle?.addEventListener("click", () => {
-            secimleriTemizle();
-            yorumlariYenile();
-        });
-        uygula?.addEventListener("click", kapat);
-        document.addEventListener("click", (event) => {
-            if (!select.contains(event.target)) {
-                kapat();
-            }
-        });
+        temizle?.addEventListener("click", () => { secimleriTemizle(); yorumlariYenile(); });
+        uygula?.addEventListener("click", () => { kapat(); yorumlariYenile(); });
+        document.addEventListener("click", (event) => { if (!select.contains(event.target)) kapat(); });
         select.msYorumSecimleriTemizle = secimleriTemizle;
         degeriGuncelle();
     });
 
-            // ── Yorum listesi: canlı API'den infinite (tasarımın demo dizisi yerine) ──
-            const esc = (metin) => { const e = document.createElement("span"); e.textContent = metin ?? ""; return e.innerHTML; };
-            const tarihYaz = (iso) => new Date(iso).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
-            const yildizHtml = (puan) => `<span class="ms-yorum-yildizlar" aria-label="${puan} yıldız">${Array.from({ length: 5 }, (_, i) => `<i${i < puan ? "" : " data-bos=\"true\""}></i>`).join("")}</span>`;
-            const yorumHtml = (yorum) => `<article class="ms-yorum-kart">${yildizHtml(yorum.rating)}<div class="ms-yorum-meta"><span>${esc(yorum.memberName)}</span><span>${tarihYaz(yorum.createdAt)}</span></div>${yorum.text ? `<p class="ms-yorum-metin">${esc(yorum.text)}</p>` : ""}</article>`;
+    const seciliDegerleriAl = (tip) => {
+        const select = yorumSelectler.find((oge) => oge.dataset.msYorumFiltre === tip);
+        if (!select) return [];
+        return Array.from(select.querySelectorAll("input[type='checkbox']:checked")).map((c) => c.value);
+    };
+    const filtreAktifMi = () =>
+        seciliDegerleriAl("puan").length > 0 || seciliDegerleriAl("konu").length > 0
+        || fotografliButon?.classList.contains("ms-aktif") || (aramaInput?.value.trim() || "").length > 0
+        || (siralamaSelect?.value || "") !== "";
 
-            let sayfaNo = 0;
-            let toplam = ayarlar.toplam;
-            let gosterilen = 0;
-            let yuklemeVar = false;
-            let aramaZamanlayici = null;
+    // ── Onaylananlar: canlı API'den infinite ──
+    const liste = sayfa.querySelector("[data-ms-yorum-liste]");
+    const yukleniyor = sayfa.querySelector("[data-ms-yorum-yukleniyor]");
+    const sonucBos = sayfa.querySelector("[data-ms-yorum-sonuc-bos]");
+    let sayfaNo = 0, toplam = ayarlar.toplam, gosterilen = 0, yuklemeVar = false, aramaZamanlayici = null;
+    let aktifPanel = "onaylananlar";
 
-            const filtreParametreleri = () => {
-                const puanlar = Array.from(sayfa.querySelectorAll(".ms-yorum-filtre-select input[type='checkbox']:checked")).map((c) => c.value);
-                const parametreler = new URLSearchParams({ firmPlatformId: ayarlar.platform, page: String(sayfaNo + 1) });
-                puanlar.forEach((p) => parametreler.append("ratings", p));
-                if (siralaSecimi?.value) parametreler.set("sort", siralaSecimi.value);
-                const aranan = aramaGirdisi?.value.trim();
-                if (aranan) parametreler.set("search", aranan);
-                return parametreler;
-            };
+    const yorumHtml = (yorum) => {
+        const gorseller = yorum.photos || [];
+        const gorselHtml = gorseller.length
+            ? `<div class="ms-yorum-gorseller">${gorseller.map((src, index) => `<button class="ms-yorum-gorsel-buton" type="button" data-ms-yorum-gorsel="${esc(src)}" data-ms-yorum-gorsel-index="${index}" aria-label="Yorum görseli ${index + 1}"><img src="${esc(src)}" alt="Yorum görseli ${index + 1}" loading="lazy"></button>`).join("")}</div>`
+            : "";
+        const konuHtml = yorum.topic && konuEtiketleri[yorum.topic]
+            ? `<span class="ms-yorum-konu-etiket">${esc(konuEtiketleri[yorum.topic])}</span>` : "";
+        return `<article class="ms-yorum-kart" data-ms-yorum-id="${esc(yorum.id)}">
+            <div class="ms-yorum-kart-ust">${yildizHtml(yorum.rating)}${konuHtml}</div>
+            <div class="ms-yorum-meta"><strong>${esc(yorum.memberName)}</strong><span>${tarihYaz(yorum.createdAt)}</span></div>
+            ${yorum.text ? `<p class="ms-yorum-metin">${esc(yorum.text)}</p>` : ""}
+            ${gorselHtml}
+        </article>`;
+    };
 
-            const yorumEkle = async () => {
-                if (!liste || yuklemeVar || (toplam > 0 && gosterilen >= toplam)) return;
-                yuklemeVar = true;
-                yukleniyor?.classList.add("ms-aktif");
-                try {
-                    const cevap = await fetch(`/api/store/reviews/product/${encodeURIComponent(ayarlar.kod)}?${filtreParametreleri()}`);
-                    const veri = await cevap.json();
-                    const kayitlar = veri?.data?.items || [];
-                    toplam = veri?.data?.totalCount ?? toplam;
-                    liste.insertAdjacentHTML("beforeend", kayitlar.map(yorumHtml).join(""));
-                    sayfaNo += 1;
-                    gosterilen += kayitlar.length;
-                    if (kayitlar.length === 0) toplam = gosterilen; // güvenlik: boş sayfada dur
-                } catch { /* sonraki kaydırmada yeniden denenir */ }
-                yuklemeVar = false;
-                yukleniyor?.classList.remove("ms-aktif");
-            };
+    const filtreParametreleri = () => {
+        const parametreler = new URLSearchParams({ firmPlatformId: ayarlar.platform, page: String(sayfaNo + 1) });
+        seciliDegerleriAl("puan").forEach((p) => parametreler.append("ratings", p));
+        seciliDegerleriAl("konu").forEach((k) => parametreler.append("topics", k));
+        if (fotografliButon?.classList.contains("ms-aktif")) parametreler.set("photosOnly", "true");
+        if (siralamaSelect?.value) parametreler.set("sort", siralamaSelect.value);
+        const aranan = aramaInput?.value.trim();
+        if (aranan) parametreler.set("search", aranan);
+        return parametreler;
+    };
 
-            const listeyiYenile = () => {
-                if (!liste) return;
-                liste.innerHTML = "";
-                sayfaNo = 0;
-                gosterilen = 0;
-                toplam = -1; // ilk cevapta güncellenir
-                yorumEkle();
-            };
+    const yorumEkle = async () => {
+        if (!liste || yuklemeVar || (toplam >= 0 && gosterilen >= toplam)) return;
+        yuklemeVar = true;
+        yukleniyor?.classList.add("ms-aktif");
+        try {
+            const cevap = await fetch(`/api/store/reviews/product/${encodeURIComponent(ayarlar.kod)}?${filtreParametreleri()}`);
+            const veri = await cevap.json();
+            const kayitlar = veri?.data?.items || [];
+            toplam = veri?.data?.totalCount ?? toplam;
+            liste.insertAdjacentHTML("beforeend", kayitlar.map(yorumHtml).join(""));
+            sayfaNo += 1;
+            gosterilen += kayitlar.length;
+            if (kayitlar.length === 0) toplam = gosterilen; // güvenlik: boş sayfada dur
+        } catch { /* sonraki kaydırmada yeniden denenir */ }
+        yuklemeVar = false;
+        yukleniyor?.classList.remove("ms-aktif");
+        if (sonucBos) sonucBos.hidden = gosterilen > 0;
+    };
 
-            const sonsuzKaydir = () => {
-                const esik = document.documentElement.scrollHeight * 0.8;
-                if (window.scrollY + window.innerHeight >= esik) yorumEkle();
-            };
+    const yorumlariYenile = () => {
+        if (!liste) return;
+        liste.innerHTML = "";
+        sayfaNo = 0;
+        gosterilen = 0;
+        toplam = -1; // ilk cevapta güncellenir
+        temizleButonu?.toggleAttribute("hidden", !filtreAktifMi());
+        yorumEkle();
+    };
 
-            siralaSecimi?.addEventListener("change", listeyiYenile);
-            aramaGirdisi?.addEventListener("input", () => {
-                window.clearTimeout(aramaZamanlayici);
-                aramaZamanlayici = window.setTimeout(listeyiYenile, 400);
-            });
+    const sonsuzKaydir = () => {
+        if (aktifPanel !== "onaylananlar") return;
+        const esik = document.documentElement.scrollHeight * 0.8;
+        if (window.scrollY + window.innerHeight >= esik) yorumEkle();
+    };
 
-            if (liste && ayarlar.toplam > 0) {
-                yorumEkle();
-                window.addEventListener("scroll", sonsuzKaydir, { passive: true });
-            } else {
-                yukleniyor?.classList.remove("ms-aktif");
+    siralamaSelect?.addEventListener("change", yorumlariYenile);
+    aramaInput?.addEventListener("input", () => {
+        window.clearTimeout(aramaZamanlayici);
+        aramaZamanlayici = window.setTimeout(yorumlariYenile, 400);
+    });
+    fotografliButon?.addEventListener("click", () => {
+        fotografliButon.classList.toggle("ms-aktif");
+        fotografliButon.setAttribute("aria-pressed", fotografliButon.classList.contains("ms-aktif").toString());
+        yorumlariYenile();
+    });
+    temizleButonu?.addEventListener("click", () => {
+        yorumSelectler.forEach((select) => select.msYorumSecimleriTemizle?.());
+        if (aramaInput) aramaInput.value = "";
+        if (siralamaSelect) siralamaSelect.value = "";
+        fotografliButon?.classList.remove("ms-aktif");
+        yorumlariYenile();
+    });
+    window.addEventListener("scroll", sonsuzKaydir, { passive: true });
+
+    // Yorum kartındaki görsele tıklama → resim modalı (o yorumun görsellerinde gezinir)
+    liste?.addEventListener("click", (event) => {
+        const buton = event.target.closest("[data-ms-yorum-gorsel]");
+        if (!buton) return;
+        const kart = buton.closest(".ms-yorum-kart");
+        const gorseller = Array.from(kart?.querySelectorAll("[data-ms-yorum-gorsel]") || []).map((oge) => oge.dataset.msYorumGorsel);
+        resimModalAc(gorseller, Number(buton.dataset.msYorumGorselIndex || 0));
+    });
+
+    // ── Fotoğraflı değerlendirme şeridi ──
+    const fotoListe = sayfa.querySelector("[data-ms-yorum-foto-liste]");
+    let seritGorselleri = [];
+    const fotoSeridiniYukle = async () => {
+        if (!fotoListe) return;
+        try {
+            const parametreler = new URLSearchParams({ firmPlatformId: ayarlar.platform, page: "1", photosOnly: "true" });
+            const cevap = await fetch(`/api/store/reviews/product/${encodeURIComponent(ayarlar.kod)}?${parametreler}`);
+            const veri = await cevap.json();
+            seritGorselleri = (veri?.data?.items || []).flatMap((yorum) => yorum.photos || []).slice(0, 8);
+            fotoListe.innerHTML = seritGorselleri.map((src, index) =>
+                `<button class="ms-yorum-foto-buton" type="button" data-ms-yorum-foto-gorsel="${esc(src)}" data-ms-yorum-foto-index="${index}"><img src="${esc(src)}" alt="Fotoğraflı değerlendirme görseli" loading="lazy"></button>`).join("");
+        } catch { /* şerit yüklenemedi — liste yine çalışır */ }
+    };
+    fotoListe?.addEventListener("click", (event) => {
+        const buton = event.target.closest("[data-ms-yorum-foto-gorsel]");
+        if (!buton) return;
+        resimModalAc(seritGorselleri, Number(buton.dataset.msYorumFotoIndex || 0));
+    });
+    sayfa.querySelector("[data-ms-yorum-foto-tumu]")?.addEventListener("click", () => {
+        fotografliButon?.classList.add("ms-aktif");
+        fotografliButon?.setAttribute("aria-pressed", "true");
+        yorumlariYenile();
+    });
+
+    // ── Sekmeler + üye panelleri ──
+    const sekmeler = Array.from(sayfa.querySelectorAll("[data-ms-degerlendirme-tab]"));
+    const paneller = Array.from(sayfa.querySelectorAll("[data-ms-degerlendirme-panel]"));
+    let benimYorumlar = null; // null = henüz yüklenmedi
+    let degerlendirilebilir = false;
+
+    const durumKartHtml = (yorum, etiketSinif, etiket, aciklama) => `<article class="ms-yorum-durum-kart">
+        ${ayarlar.gorsel ? `<img src="${esc(ayarlar.gorsel)}" alt="${esc(ayarlar.ad)}" loading="lazy">` : ""}
+        <div class="ms-yorum-durum-kart-icerik">
+            <span class="ms-yorum-durum-etiket ${etiketSinif}">${etiket}</span>
+            <strong>${esc(ayarlar.ad)}</strong>
+            <p>${aciklama}</p>
+            <span>${yildizHtml(yorum.rating)}${yorum.text ? ` ${esc(yorum.text)}` : ""}</span>
+        </div>
+    </article>`;
+
+    const uyePanelleriniCiz = () => {
+        const girisli = !!token();
+        sayfa.querySelectorAll("[data-ms-bekleyen-giris], [data-ms-red-giris], [data-ms-silinen-giris], [data-ms-yorum-giris-gerekli]")
+            .forEach((oge) => { oge.hidden = girisli; });
+        if (!girisli || benimYorumlar === null) return;
+
+        const bunlar = benimYorumlar.filter((y) => y.productCode === ayarlar.kod);
+        const bekleyenler = bunlar.filter((y) => !y.isDeleted && y.status === "pending");
+        const redler = bunlar.filter((y) => !y.isDeleted && y.status === "rejected");
+        const silinenler = bunlar.filter((y) => y.isDeleted);
+
+        const bekleyenListe = sayfa.querySelector("[data-ms-bekleyen-liste]");
+        const bekleyenBos = sayfa.querySelector("[data-ms-bekleyen-bos]");
+        if (bekleyenListe) bekleyenListe.innerHTML = bekleyenler.map((y) =>
+            durumKartHtml(y, "ms-yorum-durum-etiket-bekliyor", "Onay Bekliyor", "Yorumunuz kontrol sürecinde; onaylanınca yayınlanacaktır.")).join("");
+        if (bekleyenBos) bekleyenBos.hidden = bekleyenler.length > 0;
+
+        const redListe = sayfa.querySelector("[data-ms-red-liste]");
+        const redBos = sayfa.querySelector("[data-ms-red-bos]");
+        if (redListe) redListe.innerHTML = redler.map((y) =>
+            durumKartHtml(y, "ms-yorum-durum-etiket-red", "Reddedildi", esc(y.rejectReason || "Yayın kriterlerine uygun bulunmadı."))).join("");
+        if (redBos) redBos.hidden = redler.length > 0;
+
+        const silinenListe = sayfa.querySelector("[data-ms-silinen-liste]");
+        const silinenBos = sayfa.querySelector("[data-ms-silinen-bos]");
+        if (silinenListe) silinenListe.innerHTML = silinenler.map((y) =>
+            durumKartHtml(y, "ms-yorum-durum-etiket-silindi", "Silindi", `Bu yorum ${y.deletedAt ? tarihYaz(y.deletedAt) : ""} tarihinde isteğinizle kaldırıldı.`)).join("");
+        if (silinenBos) silinenBos.hidden = silinenler.length > 0;
+
+        // Değerlendir paneli: teslim edilmiş + henüz yorumlanmamışsa form açılır.
+        const form = sayfa.querySelector("[data-ms-yorum-form]");
+        const kart = sayfa.querySelector("[data-ms-degerlendir-kart]");
+        const bos = sayfa.querySelector("[data-ms-degerlendir-bos]");
+        if (form) form.hidden = !degerlendirilebilir;
+        if (kart) kart.hidden = !degerlendirilebilir;
+        if (bos) bos.hidden = degerlendirilebilir;
+    };
+
+    const uyeVerisiniYukle = async () => {
+        if (!token()) { uyePanelleriniCiz(); return; }
+        try {
+            const [yorumCevap, yorumlanabilirCevap] = await Promise.all([
+                fetch(`/api/store/reviews/mine?firmPlatformId=${ayarlar.platform}`, { headers: yetkiliBasliklar() }),
+                fetch(`/api/store/reviews/reviewable?firmPlatformId=${ayarlar.platform}`, { headers: yetkiliBasliklar() })
+            ]);
+            const yorumVeri = await yorumCevap.json();
+            const yorumlanabilirVeri = await yorumlanabilirCevap.json();
+            benimYorumlar = yorumVeri?.success ? yorumVeri.data : [];
+            degerlendirilebilir = !!yorumlanabilirVeri?.success && (yorumlanabilirVeri.data || []).includes(ayarlar.kod);
+        } catch {
+            benimYorumlar = [];
+        }
+        uyePanelleriniCiz();
+    };
+
+    const panelGoster = (panelAdi) => {
+        aktifPanel = panelAdi;
+        sekmeler.forEach((sekme) => {
+            const aktif = sekme.dataset.msDegerlendirmeTab === panelAdi;
+            sekme.classList.toggle("ms-aktif", aktif);
+            sekme.setAttribute("aria-pressed", aktif.toString());
+        });
+        paneller.forEach((panel) => { panel.hidden = panel.dataset.msDegerlendirmePanel !== panelAdi; });
+        if (panelAdi !== "onaylananlar" && benimYorumlar === null) uyeVerisiniYukle();
+    };
+    sekmeler.forEach((sekme) => sekme.addEventListener("click", () => panelGoster(sekme.dataset.msDegerlendirmeTab)));
+
+    // ── Yorum formu (puan/konu seçimi + foto yükleme + gönderim) ──
+    const form = sayfa.querySelector("[data-ms-yorum-form]");
+    const formHata = sayfa.querySelector("[data-ms-yorum-form-hata]");
+    const hataGoster = (metin) => { if (formHata) { formHata.textContent = metin || ""; formHata.hidden = !metin; } };
+
+    const puanSelect = sayfa.querySelector("[data-ms-yorum-puan-select]");
+    if (puanSelect) {
+        const tetikleyici = puanSelect.querySelector("[data-ms-yorum-puan-tetikleyici]");
+        const degerInput = puanSelect.querySelector("[data-ms-yorum-puan-deger]");
+        const yazi = puanSelect.querySelector("[data-ms-yorum-puan-yazi]");
+        const secenekler = Array.from(puanSelect.querySelectorAll("[data-ms-yorum-puan-secenek]"));
+        const kapat = () => { puanSelect.classList.remove("ms-ozel-select-acik"); tetikleyici?.setAttribute("aria-expanded", "false"); };
+        const puaniYaz = (puan) => {
+            if (degerInput) degerInput.value = puan;
+            if (yazi) yazi.textContent = `${puan} yıldız`;
+            secenekler.forEach((secenek) => secenek.classList.toggle("ms-aktif", secenek.dataset.msYorumPuanSecenek === puan));
+            const yildizAlani = tetikleyici?.querySelector(".ms-yorum-yildizlar");
+            if (yildizAlani) yildizAlani.innerHTML = Array.from({ length: 5 }, (_, index) => `<i${index < Number(puan) ? "" : " data-bos=\"true\""}></i>`).join("");
+        };
+        tetikleyici?.addEventListener("click", (event) => {
+            event.stopPropagation();
+            const acik = !puanSelect.classList.contains("ms-ozel-select-acik");
+            puanSelect.classList.toggle("ms-ozel-select-acik", acik);
+            tetikleyici.setAttribute("aria-expanded", acik.toString());
+        });
+        secenekler.forEach((secenek) => secenek.addEventListener("click", () => { puaniYaz(secenek.dataset.msYorumPuanSecenek || "5"); kapat(); }));
+        document.addEventListener("click", (event) => { if (!puanSelect.contains(event.target)) kapat(); });
+        form?.addEventListener("reset", () => window.setTimeout(() => puaniYaz("5"), 0));
+        puaniYaz(degerInput?.value || "5");
+    }
+
+    const konuSelect = sayfa.querySelector("[data-ms-yorum-konu-select]");
+    const konuDegerInput = sayfa.querySelector("[data-ms-yorum-konu-deger]");
+    const konuYazi = sayfa.querySelector("[data-ms-yorum-konu-yazi]");
+    const konuSec = (deger = "beden") => {
+        if (konuDegerInput) konuDegerInput.value = deger;
+        if (konuYazi) konuYazi.textContent = konuEtiketleri[deger] || "Beden";
+        konuSelect?.querySelectorAll("[data-ms-yorum-konu-secenek]").forEach((secenek) => {
+            const aktif = secenek.dataset.msYorumKonuSecenek === deger;
+            secenek.classList.toggle("ms-ozel-select-secenek-aktif", aktif);
+            secenek.setAttribute("aria-selected", aktif ? "true" : "false");
+        });
+    };
+    if (konuSelect) {
+        const tetikleyici = konuSelect.querySelector("[data-ms-yorum-konu-tetikleyici]");
+        tetikleyici?.addEventListener("click", (event) => {
+            event.stopPropagation();
+            const acik = !konuSelect.classList.contains("ms-ozel-select-acik");
+            konuSelect.classList.toggle("ms-ozel-select-acik", acik);
+            tetikleyici.setAttribute("aria-expanded", acik.toString());
+        });
+        konuSelect.addEventListener("click", (event) => {
+            const secenek = event.target.closest("[data-ms-yorum-konu-secenek]");
+            if (!secenek) return;
+            konuSec(secenek.dataset.msYorumKonuSecenek || "beden");
+            konuSelect.classList.remove("ms-ozel-select-acik");
+            tetikleyici?.setAttribute("aria-expanded", "false");
+        });
+        document.addEventListener("click", (event) => {
+            if (!konuSelect.contains(event.target)) {
+                konuSelect.classList.remove("ms-ozel-select-acik");
+                tetikleyici?.setAttribute("aria-expanded", "false");
             }
-        })();
+        });
+    }
+
+    // Foto seçme + önizleme (gönderimde upload edilir; önizleme objectURL'dir)
+    const fotoInput = sayfa.querySelector("[data-ms-yorum-foto-input]");
+    const fotoEkleButonu = sayfa.querySelector("[data-ms-yorum-foto-ekle]");
+    const fotoMetin = sayfa.querySelector("[data-ms-yorum-foto-metin]");
+    const fotoOnizleme = sayfa.querySelector("[data-ms-yorum-foto-onizleme]");
+    let seciliFotograflar = []; // { dosya, url }
+    const fotoOnizlemeRenderEt = () => {
+        const secildi = seciliFotograflar.length > 0;
+        fotoEkleButonu?.classList.toggle("ms-aktif", secildi);
+        fotoEkleButonu?.setAttribute("aria-pressed", secildi.toString());
+        if (fotoMetin) fotoMetin.textContent = secildi ? `${seciliFotograflar.length} fotoğraf eklendi` : "Fotoğraf ekle";
+        if (!fotoOnizleme) return;
+        fotoOnizleme.hidden = !secildi;
+        fotoOnizleme.innerHTML = seciliFotograflar.map((foto, index) =>
+            `<button class="ms-yorum-foto-onizleme-kart" type="button" data-ms-yorum-foto-onizleme-ac="${index}" aria-label="Seçilen fotoğraf ${index + 1} önizlemesi"><img src="${foto.url}" alt="Seçilen fotoğraf ${index + 1}" loading="lazy"></button>`).join("");
+    };
+    fotoEkleButonu?.addEventListener("click", () => fotoInput?.click());
+    fotoInput?.addEventListener("change", () => {
+        seciliFotograflar.forEach((foto) => URL.revokeObjectURL(foto.url));
+        seciliFotograflar = Array.from(fotoInput.files || [])
+            .filter((dosya) => dosya.type.startsWith("image/"))
+            .slice(0, 5)
+            .map((dosya) => ({ dosya, url: URL.createObjectURL(dosya) }));
+        hataGoster("");
+        if (seciliFotograflar.some((f) => f.dosya.size > 5_000_000)) {
+            hataGoster("Her fotoğraf en fazla 5 MB olabilir.");
+            seciliFotograflar = [];
+            fotoInput.value = "";
+        }
+        fotoOnizlemeRenderEt();
+    });
+    fotoOnizleme?.addEventListener("click", (event) => {
+        const buton = event.target.closest("[data-ms-yorum-foto-onizleme-ac]");
+        if (!buton) return;
+        resimModalAc(seciliFotograflar.map((foto) => foto.url), Number(buton.dataset.msYorumFotoOnizlemeAc || 0));
+    });
+
+    let gonderimVar = false;
+    form?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (gonderimVar) return;
+        hataGoster("");
+        const metin = form.querySelector("[name='yorum']")?.value.trim();
+        if (!metin) { hataGoster("Yorum metni gereklidir."); return; }
+        gonderimVar = true;
+        try {
+            let fotoUrlleri = [];
+            if (seciliFotograflar.length > 0) {
+                const paket = new FormData();
+                seciliFotograflar.forEach((foto) => paket.append("files", foto.dosya));
+                const yukleCevap = await fetch("/api/store/reviews/images", { method: "POST", headers: yetkiliBasliklar(), body: paket });
+                const yukleVeri = await yukleCevap.json().catch(() => null);
+                if (!yukleVeri?.success) { hataGoster(yukleVeri?.error || "Fotoğraflar yüklenemedi."); gonderimVar = false; return; }
+                fotoUrlleri = yukleVeri.data.urls || [];
+            }
+            const cevap = await fetch("/api/store/reviews", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", ...yetkiliBasliklar() },
+                body: JSON.stringify({
+                    firmPlatformId: ayarlar.platform,
+                    productCode: ayarlar.kod,
+                    rating: Number.parseInt(form.querySelector("[data-ms-yorum-puan-deger]")?.value || "5", 10) || 5,
+                    text: metin,
+                    topic: konuDegerInput?.value || null,
+                    photoUrls: fotoUrlleri
+                })
+            });
+            const veri = await cevap.json().catch(() => null);
+            if (!veri?.success) { hataGoster(veri?.error || "Yorum gönderilemedi."); gonderimVar = false; return; }
+            form.reset();
+            konuSec("beden");
+            seciliFotograflar.forEach((foto) => URL.revokeObjectURL(foto.url));
+            seciliFotograflar = [];
+            if (fotoInput) fotoInput.value = "";
+            fotoOnizlemeRenderEt();
+            benimYorumlar = null; // yeniden yüklensin
+            await uyeVerisiniYukle();
+            panelGoster("onay-bekleyenler");
+            modalAc(basariliModal, basariliModal?.querySelector("[data-ms-yorum-basarili-kapat]"));
+        } catch {
+            hataGoster("Yorum gönderilemedi. Lütfen tekrar deneyin.");
+        }
+        gonderimVar = false;
+    });
+
+    // ── Başlangıç ──
+    uyePanelleriniCiz(); // girişsiz durum mesajları
+    if (ayarlar.toplam > 0) yorumlariYenile();
+    else yukleniyor?.classList.remove("ms-aktif");
+    fotoSeridiniYukle();
+})();
 </script>

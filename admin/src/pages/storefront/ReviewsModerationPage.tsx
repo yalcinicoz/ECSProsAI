@@ -18,6 +18,8 @@ interface ModerationReview {
   status: string
   rejectReason: string | null
   createdAt: string
+  topic: string | null
+  photos: string[] | null
 }
 
 interface PagedResult {
@@ -116,6 +118,18 @@ export function ReviewsModerationPage() {
                   <td className="px-4 py-3">{'★'.repeat(y.rating)}{'☆'.repeat(5 - y.rating)}</td>
                   <td className="px-4 py-3 max-w-md">
                     <div className="text-[var(--text-m)]">{y.text || '—'}</div>
+                    {y.topic && (
+                      <span className="mt-1 inline-block rounded bg-[var(--surface2)] px-1.5 py-0.5 text-xs text-[var(--text-m)]">{y.topic}</span>
+                    )}
+                    {y.photos && y.photos.length > 0 && (
+                      <div className="mt-1.5 flex gap-1.5">
+                        {y.photos.map((foto) => (
+                          <a key={foto} href={foto} target="_blank" rel="noreferrer" title="Fotoğrafı yeni sekmede aç">
+                            <img src={foto} alt="Yorum fotoğrafı" className="h-12 w-12 rounded object-cover border border-[var(--border)]" loading="lazy" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
                     {y.status === 'rejected' && y.rejectReason && (
                       <div className="mt-1 text-xs text-red-600">Red nedeni: {y.rejectReason}</div>
                     )}

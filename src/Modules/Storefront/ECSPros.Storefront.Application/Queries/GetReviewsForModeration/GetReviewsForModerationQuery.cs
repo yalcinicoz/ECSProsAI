@@ -22,7 +22,9 @@ public record ModerationReviewDto(
     string Status,
     string? RejectReason,
     DateTime CreatedAt,
-    DateTime? ModeratedAt);
+    DateTime? ModeratedAt,
+    string? Topic = null,                          // İP-5
+    IReadOnlyList<string>? Photos = null);         // İP-5: moderasyon foto önizlemesi (K16)
 
 public class GetReviewsForModerationQueryHandler(IStorefrontDbContext db)
     : IRequestHandler<GetReviewsForModerationQuery, Result<PagedResult<ModerationReviewDto>>>
@@ -40,8 +42,27 @@ public class GetReviewsForModerationQueryHandler(IStorefrontDbContext db)
             .Take(request.PageSize)
             .Select(r => new ModerationReviewDto(
                 r.Id, r.FirmPlatformId, r.MemberId, r.MemberName, r.ProductCode,
-                r.Rating, r.Text, r.Status, r.RejectReason, r.CreatedAt, r.ModeratedAt))
+                r.Rating, r.Text, r.Status, r.RejectReason, r.CreatedAt, r.ModeratedAt, r.Topic, null))
             .ToListAsync(ct);
+
+        // İP-5 (K16): foto önizlemeleri — yorumla birlikte moderatöre gösterilir.
+        var idler = kayitlar.Select(k => k.Id).ToList();
+        if (idler.Count > 0)
+        {
+            var fotolar = await db.ProductReviewPhotos.AsNoTracking()
+                .Where(p => idler.Contains(p.ReviewId))
+                .OrderBy(p => p.SortOrder)
+                .ToListAsync(ct);
+            if (fotolar.Count > 0)
+            {
+                var grup = fotolar.GroupBy(p => p.ReviewId)
+                    .ToDictionary(g => g.Key, g => (IReadOnlyList<string>)g.Select(p => p.PhotoUrl).ToList());
+                kayitlar = kayitlar
+                    .Select(k => grup.TryGetValue(k.Id, out var f) ? k with { Photos = f } : k)
+                    .ToList();
+            }
+        }
+
         return Result.Success(new PagedResult<ModerationReviewDto>(kayitlar, toplam, request.Page, request.PageSize));
     }
 }

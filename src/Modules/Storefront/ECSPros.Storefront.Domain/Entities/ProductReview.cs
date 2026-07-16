@@ -22,4 +22,14 @@ public class ProductReview : BaseEntity
     public string? RejectReason { get; set; }
     public string MemberName { get; set; } = string.Empty;
     public DateTime? ModeratedAt { get; set; }
+    public string? Topic { get; set; }             // İP-5: tasarımın konu etiketi (Kalıp/Kumaş/Kargo...)
+}
+
+/// <summary>İP-5: yorum fotoğrafı — /media/reviews altına yüklenir, yorumla birlikte
+/// moderasyondan geçer (yorum reddedilirse fotoğraflar da yayınlanmaz).</summary>
+public class ProductReviewPhoto : BaseEntity
+{
+    public Guid ReviewId { get; set; }
+    public string PhotoUrl { get; set; } = string.Empty;
+    public int SortOrder { get; set; }
 }

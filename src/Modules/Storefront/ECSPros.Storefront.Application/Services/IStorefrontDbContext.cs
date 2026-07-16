@@ -18,6 +18,7 @@ public interface IStorefrontDbContext
     DbSet<Collection> Collections { get; }
     DbSet<CollectionItem> CollectionItems { get; }
     DbSet<ProductReview> ProductReviews { get; }
+    DbSet<ProductReviewPhoto> ProductReviewPhotos { get; }
     DbSet<SavedSearch> SavedSearches { get; }
     DbSet<ViewedProduct> ViewedProducts { get; }
     DbSet<ContactMessage> ContactMessages { get; }
