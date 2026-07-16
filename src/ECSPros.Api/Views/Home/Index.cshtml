@@ -4,6 +4,7 @@
     // kaldırıldı — varsayılan içerik seed'le yayınlandı, admin Vitrin Yönetimi'nden
     // düzenlenir). Yayın yoksa yerleşim boş kalır (admin kararı).
     ViewData["Title"] = "Ana Sayfa";
+    ViewData["MsMobilAltBar"] = true;
     var vitrinBloklar = ViewData["MsVitrinBloklar"] as IReadOnlyList<VitrinBlokVm> ?? [];
 }
 

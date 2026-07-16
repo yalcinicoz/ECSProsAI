@@ -42,7 +42,12 @@
 <body class="min-h-screen bg-white text-ms-siyah">
     @* H4: mobil alt bar _AnaNavigasyon'dan ÖNCE — misafir Favorilerim/Hesabım linklerinin
        data-ms-giris-modal-ac dinleyicileri nav script'inde parse anında bağlanır. *@
+    @* Mobil alt bar yalnız ana sayfa ve ürün listesi/kategori sayfalarında (kullanıcı
+       kararı 2026-07-16) — ilgili view ViewData["MsMobilAltBar"]=true set eder. *@
+    @if (ViewData["MsMobilAltBar"] is true)
+    {
     <partial name="~/Views/Shared/Store/_MobilAltBarNav.cshtml" />
+    }
     <partial name="~/Views/ProjeElementleri/Navigasyon/_AnaNavigasyon.cshtml" />
     @if (ViewData["MsOrtakKoleksiyonModallariGizle"] is not true)
     {
