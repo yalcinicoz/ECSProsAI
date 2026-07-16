@@ -32,4 +32,13 @@ public class HomeController(
 
         return View();
     }
+
+    // Faz 5 (2026-07-16): üyeliksiz kargo takip — tasarımın demo verili sayfaları.
+    // ⏰ Kargo servisi entegrasyonu gündeme gelince gerçek takip servisine bağlanacak
+    // (sözleşme: /opt/misharix/md/backend-devir-entegrasyonlari.md).
+    [HttpGet("/uyeliksiz-kargo-takip")]
+    public IActionResult UyelikSizKargoTakip() => View("uyeliksizKargoTakip");
+
+    [HttpGet("/uyeliksiz-kargo-takip-sonuc")]
+    public IActionResult UyelikSizKargoTakipSonuc() => View("uyeliksizKargoTakipSonuc");
 }

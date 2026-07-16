@@ -16,6 +16,11 @@
     </div>
 </div>
 
+@* Faz 5: tasarımın sayfa-seviyesi ortak renk modalı — yalnız data-ms-urun-renk-ortak
+   işaretli tetikleyiciler açar (renk verisi JSON'u vitrin kart eşlemesiyle, Faz 7'de
+   bağlanır; o zamana dek kartlar mevcut rozet/tooltip davranışında). *@
+<partial name="~/Views/ProjeElementleri/Urun/_UrunRenkModal.cshtml" />
+
 @* Bu script: ana sayfa carousel kartlarına kart davranışlarını (hover galerisi, renk tooltip,
    favori/koleksiyon) bağlar — site.js bootstrap'i yalnız data-ms-infinite-liste
    konteynerlerini tarar, vitrin carousel'leri onun dışında kalır. site.js body sonunda
