@@ -55,11 +55,13 @@
             break;
 
         case "story":
+        {
+            var storyAnahtarlari = StoryAnahtarlari(blok);
             <section class="ms-story" data-ms-story aria-label="Story alanı">
                 <div class="ms-story-listesi no-lazy">
                     @foreach (var story in blok.Ogeler)
                     {
-                        <button class="ms-story-karti" type="button" data-ms-story-grup="@story.Id.ToString("N")" data-ms-story-ac="@blok.Ogeler.ToList().IndexOf(story)">
+                        <button class="ms-story-karti" type="button" data-ms-story-grup="@storyAnahtarlari[story.Id]" data-ms-story-ac="@blok.Ogeler.ToList().IndexOf(story)">
                             <span class="ms-story-gorsel">
                                 <img class="no-lazy" src="@story.GorselUrl" alt="@story.Baslik story görseli" width="64" height="64">
                             </span>
@@ -69,7 +71,7 @@
                 </div>
 
                 @* Story frame verisi: öğe config.frames'ten; yoksa öğenin görsel/videosundan tek kare *@
-                <script type="application/json" data-ms-story-veri>@Html.Raw(StoryVerisi(blok))</script>
+                <script type="application/json" data-ms-story-veri>@Html.Raw(StoryVerisi(blok, storyAnahtarlari))</script>
 
                 <div class="ms-story-modal ms-gizli" data-ms-story-modal aria-hidden="true">
                     <div class="ms-story-modal-arkaplan" data-ms-story-kapat></div>
@@ -109,6 +111,7 @@
                 </div>
             </section>
             break;
+        }
 
         case "banner" when blok.Sablon == "reklam":
             <div class="ms-gorunum-reklam-vitrin lazy-infinite-on" data-ms-gorunum-reklam-vitrin>
@@ -645,17 +648,42 @@
 @functions {
     // Story frame JSON'u: {"<grupId>": [{url,tip,avatar,baslik,aksiyon}, ...]} —
     // site.js story modülünün beklediği alan adlarıyla (demo veri setiyle aynı şema).
-    private string StoryVerisi(ECSPros.Api.Models.Store.VitrinBlokVm blok)
+    // 2026-07-16: story grup anahtarı — tasarım CSS'i kart rengini
+    // [data-ms-story-grup="elbiseler|ceketler|etekler|cantalar|ayakkabilar|ikiliTakim"]
+    // seçicileriyle verir; anahtar başlıktan türetilir ki border/etiket kategori
+    // rengini alsın. Çakışan/eşleşmeyen başlık GUID'e düşer (modal veri eşleşmesi bozulmaz).
+    private static string StoryGrupAnahtari(ECSPros.Api.Models.Store.VitrinBlokOgeVm oge, HashSet<string> kullanilan)
+    {
+        var tr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+        var duz = oge.Baslik.ToLower(tr)
+            .Replace("ç", "c").Replace("ğ", "g").Replace("ı", "i").Replace("ö", "o")
+            .Replace("ş", "s").Replace("ü", "u");
+        var parcalar = duz.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        // tasarım anahtarları tek kelime + camelCase (ikiliTakim)
+        var aday = parcalar.Length == 0
+            ? oge.Id.ToString("N")
+            : parcalar[0] + string.Concat(parcalar.Skip(1).Select(pk => char.ToUpperInvariant(pk[0]) + pk[1..]));
+        if (!kullanilan.Add(aday)) { aday = oge.Id.ToString("N"); kullanilan.Add(aday); }
+        return aday;
+    }
+
+    private static Dictionary<Guid, string> StoryAnahtarlari(ECSPros.Api.Models.Store.VitrinBlokVm blok)
+    {
+        var kullanilan = new HashSet<string>();
+        return blok.Ogeler.ToDictionary(o => o.Id, o => StoryGrupAnahtari(o, kullanilan));
+    }
+
+    private string StoryVerisi(ECSPros.Api.Models.Store.VitrinBlokVm blok, Dictionary<Guid, string> anahtarlar)
     {
         var gruplar = new Dictionary<string, object>();
         foreach (var oge in blok.Ogeler)
         {
             if (oge.StoryFramesJson is { } ham)
             {
-                gruplar[oge.Id.ToString("N")] = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(ham);
+                gruplar[anahtarlar[oge.Id]] = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(ham);
                 continue;
             }
-            gruplar[oge.Id.ToString("N")] = new[]
+            gruplar[anahtarlar[oge.Id]] = new[]
             {
                 new Dictionary<string, string?>
                 {
