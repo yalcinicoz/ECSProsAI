@@ -87,7 +87,11 @@
                     <div class="ms-urun-detay-resim-zoom-panel" data-ms-urun-detay-resim-zoom-panel aria-hidden="true"></div>
                 </div>
 
-                <div class="ms-ornek-modal ms-urun-detay-resim-modal" data-ms-urun-detay-resim-modal aria-hidden="true">
+                @* Kullanıcı kararı (2026-07-16): bu modalda aşağı-sürükleyerek kapatma KAPALI
+                   (data-ms-modal-asagi-surukle-hazir işaretiyle site.js başlatıcısı atlar —
+                   tutamaç bandı eklenmez, kapat butonu taşınmaz) ve kapat butonu mobilde
+                   sağ üstte sabit tutulur (aşağıdaki sayfa-özel stil). *@
+                <div class="ms-ornek-modal ms-urun-detay-resim-modal" data-ms-urun-detay-resim-modal data-ms-modal-asagi-surukle-hazir="true" aria-hidden="true">
                     <div class="ms-ornek-modal-kaplama" data-ms-urun-detay-resim-modal-kapat></div>
                     <section class="ms-urun-detay-resim-modal-kutu" role="dialog" aria-modal="true" aria-label="Ürün görseli">
                         <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-detay-resim-modal-kapat aria-label="Tam ekran görseli kapat">
@@ -136,3 +140,17 @@
                     </section>
                 </div>
             </section>
+
+@* Sayfa-özel stil (kullanıcı kararı): mobil tam ekran görsel modalında kapat butonu
+   sağ üstte sabit — içerik kaydırılsa da yerinde kalır. *@
+<style>
+    @media (max-width: 1023px) {
+        .ms-urun-detay-resim-modal .ms-urun-detay-resim-modal-kutu > .ms-ornek-modal-kapat {
+            position: fixed;
+            top: max(10px, env(safe-area-inset-top));
+            right: 12px;
+            left: auto;
+            z-index: 30;
+        }
+    }
+</style>
