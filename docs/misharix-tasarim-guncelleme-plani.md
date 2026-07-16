@@ -113,9 +113,25 @@ sitenin gerçek sayfaları içindir.
 - [x] Kaldırılan tasarımlar (videolu carousel, Flash Vitrin/Senin İçin) katalogda hiç yoktu —
   temizlik gerekmedi (H5 'Videolu Ürün' kart rozeti ayrı özellik, tasarımda da var, kaldı).
 
-### Faz 7 — Vitrin blok eşlemesi (check.sh görmez — elle)
-- [ ] Tasarımın `_Story`/`_Slider`/carousel/banner değişiklikleri (story etiket renkleri+tipografi, nokta zeminleri `bg-transparent`, kontrast düzeltmeleri, Flash Ürünler "Tümünü Gör" kaldırma, çerçevesiz carousel, tek `src` görsel sözleşmesi…) `Views/Shared/Store/_VitrinBloklar.cshtml`'e satır satır uygulanır.
-- [ ] Ana sayfa görsel sözleşmesi: `srcset/sizes/data-ms-lazy-srcset/-sizes` YOK; tek `src`/`data-ms-lazy-src` + gerçek `width/height`.
+### Faz 7 — Vitrin blok eşlemesi ✅ (2026-07-16 — build 0 hata)
+
+- [x] Mevcut case'lere tasarım deltaları: slider (tek img, ilk slide eager/fetchpriority=high,
+  intrinsic 1200x525, ms-mobil-yatay/dikey config.gorunum'dan), story (no-lazy liste/görsel,
+  64x64, modal sürükleme alanı + intrinsic avatar/görsel), flash carousel (Tümünü Gör kaldırıldı,
+  başlık liste linki), kapsul/banner/marka/reklam görselleri data-ms-lazy-src + intrinsic.
+  Nokta zeminleri/kontrast/etiket renkleri CSS'te (Faz 3'te geldi).
+- [x] Tasarımın nihai ana sayfasındaki 3 inline blok vitrin tipi olarak eklendi (toplam 6 yeni tip):
+  `bilgi-banner`, `ikon-banner`, `cercevesiz-carousel` (öğe-tabanlı; FA ikon class'ı öğe Rozet
+  alanından). Admin katalogdan otomatik.
+- [x] Kart denetimi: _UrunKarti tasarımın nihai kart şablonuyla eşitlendi — data-ms-urun-id,
+  intrinsic/lazy görseller, renk rozeti span→button (aria'lı), tooltip role=dialog + FA
+  chevron/xmark + intrinsic; yıldızlar aria-hidden. Infinite-scroll enjeksiyonları SSR ile
+  birebir eşitlendi. Kartlar tasarımın VARSAYILAN tooltip varyantında; ortak renk modalı
+  (data-ms-urun-renk-ortak) altyapısı hazır ama kartlarda kullanılmıyor (tasarımda da yalnız
+  işaretli varyantta) — renk JSON üretimi o varyanta geçilirse yapılır.
+- [x] FA subset ECSPros Views+site.js üzerinden yeniden üretildi (64 ikon —
+  fa-location-crosshairs dahil); kök `ikons/` temizliği: taşınan 55 dosyanın kök kopyaları
+  sıfır-referans doğrulamasıyla silindi, klasör tasarımla birebir.
 
 ### Faz 8 — Layout/SEO/Program.cs seçici uyarlama
 - [ ] `_Layout` merge: SEO ViewData sözleşmesi (Title/MetaDescription/CanonicalPath/Robots/OG/JsonLd) farkları hizalanır; ortak modal partial'ları layout seviyesinde.

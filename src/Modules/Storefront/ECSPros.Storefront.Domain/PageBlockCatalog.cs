@@ -86,6 +86,13 @@ public static class PageBlockCatalog
             RequiresProductSource: false, RequiresCollectionSource: false),
         new("kategori-cok-satanlar", "Kategori Çok Satanları", RuleLevel.Block, SupportsItems: false, [],
             RequiresProductSource: true, RequiresCollectionSource: false),
+        // Faz 7 (2026-07-16): tasarımın nihai ana sayfasındaki üç inline blok — vitrin karşılığı.
+        new("bilgi-banner", "Bilgi Bandı", RuleLevel.Item, SupportsItems: true, [],
+            RequiresProductSource: false, RequiresCollectionSource: false),
+        new("ikon-banner", "İkon Banner", RuleLevel.Item, SupportsItems: true, [],
+            RequiresProductSource: false, RequiresCollectionSource: false),
+        new("cercevesiz-carousel", "Çerçevesiz Carousel", RuleLevel.Item, SupportsItems: true, [],
+            RequiresProductSource: false, RequiresCollectionSource: false),
     ];
 
     public static BlockTypeDef? Find(string blockType) =>

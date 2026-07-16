@@ -12,6 +12,7 @@
     var adKalan = adParcalari.Length > 1 ? adParcalari[1] : "";
 }
 <div class="ms-urun-karti" data-ms-kart-link-alani
+     data-ms-urun-id="@(u?.Kod ?? "")"
      data-ms-urun-kod="@(u?.Kod ?? "")"
      data-ms-fiyat="@(u?.Fiyat.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
      data-ms-degerler="@(u is null ? "" : string.Join(",", u.DegerIdler))"
@@ -20,11 +21,11 @@
     <div class="ms-urun-gorsel-alani" data-ms-urun-galeri data-ms-urun-galeri-resimler="@(u?.GaleriResimleri ?? "")">
         @if (u?.GorselUrl is not null)
         {
-            <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-src="@u.GorselUrl" data-ms-lazy-skeleton="true" alt="@u.Ad">
+            <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-src="@u.GorselUrl" data-ms-lazy-skeleton="true" alt="@u.Ad" loading="lazy" decoding="async" width="240" height="320">
         }
         else
         {
-            <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-skeleton="true" alt="">
+            <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-skeleton="true" alt="" loading="lazy" decoding="async" width="240" height="320">
         }
         @if (u?.VideoUrl is not null)
         {
@@ -49,7 +50,7 @@
             <span class="ms-urun-sponsor">Sponsorlu</span>
         }
         <button class="ms-urun-favori" type="button" aria-label="Favorilere ekle" aria-pressed="false">
-            <img class="ms-urun-favori-ikon" src="/ikons/favorite.svg" alt="" aria-hidden="true">
+            <img class="ms-urun-favori-ikon" src="/ikons/favorite.svg" alt="" aria-hidden="true" width="20" height="20" loading="lazy">
         </button>
         <button class="ms-urun-koleksiyon" type="button" aria-label="Koleksiyona ekle" aria-pressed="false" data-ms-urun-koleksiyon>
             <i class="fa-solid fa-bookmark ms-fa-ikon" aria-hidden="true"></i>
@@ -59,13 +60,13 @@
            (tooltip ile aynı koşul: RenkSecenekleri >= 2). Yoruma/inline style'a girilmez. *@
         @if (u is not null && u.RenkSecenekleri.Count >= 2)
         {
-            <span class="ms-urun-renk-rozet">
+            <button class="ms-urun-renk-rozet" type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="@u.RenkSayisi diğer renk seçeneğini göster">
                 <span class="ms-urun-renkler" aria-hidden="true">
                     <span class="ms-urun-renk ms-urun-renk-mavi"></span>
                     <span class="ms-urun-renk ms-urun-renk-pembe"></span>
                 </span>
                 @u.RenkSayisi
-            </span>
+            </button>
         }
         @if (u is not null && u.GaleriUrller.Count > 1)
         {
@@ -87,24 +88,24 @@
     {
         @* B8: farklı renk seçenekleri tooltip'i — eksen renkleri kendi görselleri ve
            ?color= linkleriyle (ilk 4 desktop; tam liste mobil panel sınıfıyla) *@
-        <div class="ms-urun-renk-tooltip-alani">
+        <div class="ms-urun-renk-tooltip-alani" role="dialog" aria-label="Ürünün diğer renkleri">
             <span class="ms-urun-renk-tooltip">
                 <span class="ms-urun-renk-tooltip-baslik">
                     <span>Farklı Renk Seçenekleri <span class="ms-urun-renk-tooltip-sayac">(@u.RenkSecenekleri.Count)</span></span>
                     @if (u.RenkSecenekleri.Count > 4)
                     {
-                        <span>+@(u.RenkSecenekleri.Count - 4) Renk ›</span>
+                        <span>+@(u.RenkSecenekleri.Count - 4) Renk <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i></span>
                     }
-                    <button class="ms-urun-renk-tooltip-kapat" type="button" data-ms-renk-tooltip-kapat aria-label="Renk seçeneklerini kapat">×</button>
+                    <button class="ms-urun-renk-tooltip-kapat" type="button" data-ms-renk-tooltip-kapat aria-label="Renk seçeneklerini kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
                 </span>
                 <span class="ms-urun-renk-tooltip-liste">
                     @foreach (var renk in u.RenkSecenekleri.Take(4))
                     {
-                        <a class="ms-urun-renk-tooltip-gorsel" href="@u.UrlRenkli(renk.ValueId)"><img data-ms-lazy-src="@(renk.GorselUrl ?? u.GorselUrl)" alt="@renk.Ad renk seçeneği"><span>@renk.Ad</span></a>
+                        <a class="ms-urun-renk-tooltip-gorsel" href="@u.UrlRenkli(renk.ValueId)"><img data-ms-lazy-src="@(renk.GorselUrl ?? u.GorselUrl)" alt="@renk.Ad renk seçeneği" width="90" height="134" loading="lazy" decoding="async"><span>@renk.Ad</span></a>
                     }
                     @foreach (var renk in u.RenkSecenekleri)
                     {
-                        <a class="ms-urun-renk-tooltip-gorsel ms-urun-renk-tooltip-gorsel-mobil" href="@u.UrlRenkli(renk.ValueId)"><img data-ms-lazy-src="@(renk.GorselUrl ?? u.GorselUrl)" alt="@renk.Ad renk seçeneği"><span>@renk.Ad</span></a>
+                        <a class="ms-urun-renk-tooltip-gorsel ms-urun-renk-tooltip-gorsel-mobil" href="@u.UrlRenkli(renk.ValueId)"><img data-ms-lazy-src="@(renk.GorselUrl ?? u.GorselUrl)" alt="@renk.Ad renk seçeneği" width="90" height="134" loading="lazy" decoding="async"><span>@renk.Ad</span></a>
                     }
                 </span>
             </span>
@@ -128,7 +129,7 @@
         {
             <div class="ms-urun-puan">
                 <span>@u.Puan.ToString("0.0", tr)</span>
-                <span class="ms-urun-yildizlar" aria-label="@u.Puan.ToString("0.0", tr) yıldız">
+                <span class="ms-urun-yildizlar" aria-hidden="true">
                     @for (var y = 1; y <= 5; y++)
                     {
                         <i class="fa-@(y <= Math.Round(u.Puan, MidpointRounding.AwayFromZero) ? "solid" : "regular") fa-star ms-fa-ikon " aria-hidden="true"></i>
