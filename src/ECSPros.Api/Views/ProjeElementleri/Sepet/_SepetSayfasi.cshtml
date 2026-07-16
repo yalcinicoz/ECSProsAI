@@ -25,7 +25,7 @@
                     <p class="ms-sepet-bolum-aciklama" data-ms-sepet-ozet-aciklama>Sepetiniz yükleniyor…</p>
                 </div>
                 <label class="ms-sepet-secim">
-                    <input type="checkbox" checked data-ms-sepet-tumunu-sec>
+                    <input name="sepet_tumunu_sec" type="checkbox" checked data-ms-sepet-tumunu-sec>
                     <span>Tümünü Seç</span>
                 </label>
             </div>
@@ -51,9 +51,9 @@
                 <div class="ms-sepet-satici-baslik">
                     <strong>Misharix</strong>
                     <span class="ms-sepet-satici-rozetleri">
-                        <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil" type="button">
-                            <i class="fa-solid fa-square-plus ms-fa-ikon h-5 w-5 shrink-0 " aria-hidden="true"></i>
-                            Sepeti koleksiyon olarak kaydet ve paylaş.
+                        <button class="ms-buton ms-buton-s ms-buton-cizgili-birincil" type="button" data-ms-koleksiyon-modal-ac>
+                            <i class="fa-solid fa-bookmark ms-fa-ikon" aria-hidden="true"></i>
+                            Koleksiyon Ekle
                         </button>
                     </span>
                 </div>
@@ -107,14 +107,14 @@
                 {
                 <article class="ms-sepet-satiri" data-ms-sepet-satir data-ms-birim-fiyat="543.15">
                     <label class="ms-sepet-urun-secim">
-                        <input type="checkbox" checked data-ms-sepet-urun-checkbox>
+                        <input name="sepet_urun_checkbox" type="checkbox" checked data-ms-sepet-urun-checkbox>
                         <span class="sr-only">Kadın yırtmaçlı kemerli tül eteği seç</span>
                     </label>
-                    <a class="ms-sepet-gorsel-link" href="/UrunDetay">
-                        <img class="ms-sepet-gorsel" src="/images/ornek-resim.jpg" alt="Kadın yırtmaçlı kemerli kat detaylı tül etek">
+                    <a class="ms-sepet-gorsel-link" href="/urun-detay">
+                        <img class="ms-sepet-gorsel" src="/images/ornek-resim.jpg" alt="Kadın yırtmaçlı kemerli kat detaylı tül etek" width="612" height="612" loading="lazy">
                     </a>
                     <div class="ms-sepet-bilgi">
-                        <a class="ms-sepet-basligi" href="/UrunDetay">Kadın Yırtmaçlı Kemerli Kat Detaylı Tül Etek</a>
+                        <a class="ms-sepet-basligi" href="/urun-detay">Kadın Yırtmaçlı Kemerli Kat Detaylı Tül Etek</a>
                         <p class="ms-sepet-aciklama">Beden: M • Renk: Siyah</p>
                         <p class="ms-sepet-teslimat">Tahmini teslimat: 2 iş günü</p>
                         <div class="ms-sepet-kampanya-listesi" aria-label="Ürün kampanyaları">
@@ -137,7 +137,7 @@
                     </div>
                     <div class="ms-sepet-satir-aksiyonlar">
                         <button class="ms-sepet-ikon-buton" type="button" aria-label="Favorilere ekle" aria-pressed="false" data-ms-sepet-favori>
-                            <img class="ms-ikon-siyah" src="/ikons/favorite.svg" alt="" aria-hidden="true">
+                            <img class="ms-ikon-siyah" src="/ikons/favorite.svg" alt="" aria-hidden="true" width="20" height="20" loading="lazy">
                         </button>
                         <button class="ms-sepet-ikon-buton" type="button" aria-label="Ürünü sepetten kaldır" data-ms-sepet-sil>
                             <i class="fa-solid fa-trash-can ms-fa-ikon " aria-hidden="true"></i>
@@ -147,14 +147,14 @@
 
                 <article class="ms-sepet-satiri" data-ms-sepet-satir data-ms-birim-fiyat="399.90">
                     <label class="ms-sepet-urun-secim">
-                        <input type="checkbox" checked data-ms-sepet-urun-checkbox>
+                        <input name="sepet_urun_checkbox" type="checkbox" checked data-ms-sepet-urun-checkbox>
                         <span class="sr-only">Kadın dik yaka gömleği seç</span>
                     </label>
-                    <a class="ms-sepet-gorsel-link" href="/UrunDetay">
-                        <img class="ms-sepet-gorsel" src="/images/ornek-resim-2.jpg" alt="Kadın ön çıtçıtlı dik yaka gömlek">
+                    <a class="ms-sepet-gorsel-link" href="/urun-detay">
+                        <img class="ms-sepet-gorsel" src="/images/ornek-resim-2.jpg" alt="Kadın ön çıtçıtlı dik yaka gömlek" width="554" height="554" loading="lazy">
                     </a>
                     <div class="ms-sepet-bilgi">
-                        <a class="ms-sepet-basligi" href="/UrunDetay">Kadın Ön Çıtçıtlı Dik Yaka Gömlek</a>
+                        <a class="ms-sepet-basligi" href="/urun-detay">Kadın Ön Çıtçıtlı Dik Yaka Gömlek</a>
                         <p class="ms-sepet-aciklama">Beden: S • Renk: Ekru</p>
                         <p class="ms-sepet-teslimat">Bugün kargoya verilir.</p>
                         <div class="ms-sepet-kampanya-listesi" aria-label="Ürün kampanyaları">
@@ -177,7 +177,7 @@
                     </div>
                     <div class="ms-sepet-satir-aksiyonlar">
                         <button class="ms-sepet-ikon-buton" type="button" aria-label="Favorilere ekle" aria-pressed="false" data-ms-sepet-favori>
-                            <img class="ms-ikon-siyah" src="/ikons/favorite.svg" alt="" aria-hidden="true">
+                            <img class="ms-ikon-siyah" src="/ikons/favorite.svg" alt="" aria-hidden="true" width="20" height="20" loading="lazy">
                         </button>
                         <button class="ms-sepet-ikon-buton" type="button" aria-label="Ürünü sepetten kaldır" data-ms-sepet-sil>
                             <i class="fa-solid fa-trash-can ms-fa-ikon " aria-hidden="true"></i>
@@ -187,15 +187,15 @@
 
                 <article class="ms-sepet-satiri ms-sepet-satiri-tukendi" aria-label="Stokta olmayan sepet ürünü">
                     <label class="ms-sepet-urun-secim">
-                        <input type="checkbox" disabled>
+                        <input name="checkbox_1" type="checkbox" disabled>
                         <span class="sr-only">Kadın desenli viskon elbise stokta yok</span>
                     </label>
-                    <a class="ms-sepet-gorsel-link" href="/UrunDetay">
-                        <img class="ms-sepet-gorsel" src="/images/ornek-resim.jpg" alt="Kadın haki aerobin elbise">
+                    <a class="ms-sepet-gorsel-link" href="/urun-detay">
+                        <img class="ms-sepet-gorsel" src="/images/ornek-resim.jpg" alt="Kadın haki aerobin elbise" width="612" height="612" loading="lazy">
                         <span class="ms-sepet-gorsel-etiket">Tükendi</span>
                     </a>
                     <div class="ms-sepet-bilgi">
-                        <a class="ms-sepet-basligi" href="/UrunDetay">Kadın Haki Aerobin Kuşaklı Elbise</a>
+                        <a class="ms-sepet-basligi" href="/urun-detay">Kadın Haki Aerobin Kuşaklı Elbise</a>
                         <p class="ms-sepet-aciklama">Beden: 38 • Renk: Haki</p>
                         <p class="ms-sepet-stok-uyari">Stok tükendi. Bu ürünü sepetten çıkararak alışverişe devam edebilirsiniz.</p>
                         <div class="ms-sepet-kampanya-listesi" aria-label="Ürün kampanyaları">
@@ -268,7 +268,7 @@
             <label class="ms-siparis-kupon">
                 <span>Kupon Kodu</span>
                 <div class="ms-siparis-kupon-satiri">
-                    <input type="text" placeholder="Kupon kodunuzu girin" data-ms-kupon-kodu>
+                    <input name="kupon_kodu" type="text" placeholder="Kupon kodunuzu girin" data-ms-kupon-kodu>
                     <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-kupon-uygula>Uygula</button>
                 </div>
             </label>
@@ -294,7 +294,7 @@
                 <span class="ms-siparis-toplam-deger ms-urun-fiyat" data-ms-sepet-odenecek>0,00 TL</span>
             </div>
             <div class="ms-siparis-sozlesme-onay">
-                <input class="ms-onay-input" type="checkbox" data-ms-sozlesme-onay-input aria-label="Mesafeli satış sözleşmesini ve ön bilgilendirme formunu onayla">
+                <input name="sozlesme_onay_input" class="ms-onay-input" type="checkbox" data-ms-sozlesme-onay-input aria-label="Mesafeli satış sözleşmesini ve ön bilgilendirme formunu onayla">
                 <span class="ms-onay-kutu" aria-hidden="true"></span>
                 <p>
                     <button class="ms-siparis-sozlesme-link" type="button" data-ms-sozlesme-modal-ac>Mesafeli Satış Sözleşmesi ve Ön Bilgilendirme Formu</button>

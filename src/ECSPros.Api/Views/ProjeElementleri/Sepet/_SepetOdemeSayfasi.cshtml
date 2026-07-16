@@ -47,22 +47,22 @@
                                 <div class="ms-form-izgara">
                                     <label class="ms-form-alani ms-form-alani-genis">
                                         <span class="ms-form-etiket">Kart Numarası</span>
-                                        <input class="ms-form-girdi" type="text" placeholder="1231 2312 3123 1231" inputmode="numeric" maxlength="19" autocomplete="cc-number" data-ms-kart-alan="numara" data-ms-kart-etiket="Kart numarası">
+                                        <input name="kart_alan" class="ms-form-girdi" type="text" placeholder="1231 2312 3123 1231" inputmode="numeric" maxlength="19" autocomplete="cc-number" data-ms-kart-alan="numara" data-ms-kart-etiket="Kart numarası">
                                         <span class="ms-form-hata" data-ms-kart-hata="numara" hidden>Kart numarası zorunludur</span>
                                     </label>
                                     <label class="ms-form-alani ms-form-alani-genis">
                                         <span class="ms-form-etiket">Kart Üzerindeki İsim</span>
-                                        <input class="ms-form-girdi" type="text" placeholder="KART SAHİBİNİN ADI SOYADI" inputmode="text" autocomplete="cc-name" pattern="[^0-9]*" data-ms-kart-alan="isim" data-ms-kart-etiket="Kart sahibi adı">
+                                        <input name="kart_alan" class="ms-form-girdi" type="text" placeholder="KART SAHİBİNİN ADI SOYADI" inputmode="text" autocomplete="cc-name" pattern="[^0-9]*" data-ms-kart-alan="isim" data-ms-kart-etiket="Kart sahibi adı">
                                         <span class="ms-form-hata" data-ms-kart-hata="isim" hidden>Kart sahibi adı zorunludur</span>
                                     </label>
                                     <label class="ms-form-alani">
                                         <span class="ms-form-etiket">Son Kullanma Tarihi</span>
-                                        <input class="ms-form-girdi" type="text" placeholder="MM/YY" maxlength="5" autocomplete="cc-exp" data-ms-kart-alan="son-kullanma" data-ms-kart-etiket="Son kullanma tarihi">
+                                        <input name="kart_alan" class="ms-form-girdi" type="text" placeholder="MM/YY" maxlength="5" autocomplete="cc-exp" data-ms-kart-alan="son-kullanma" data-ms-kart-etiket="Son kullanma tarihi">
                                         <span class="ms-form-hata" data-ms-kart-hata="son-kullanma" hidden>Son kullanma tarihi zorunludur</span>
                                     </label>
                                     <label class="ms-form-alani">
                                         <span class="ms-form-etiket">CVV</span>
-                                        <input class="ms-form-girdi" type="text" placeholder="123" inputmode="numeric" maxlength="3" autocomplete="cc-csc" data-ms-kart-alan="cvv" data-ms-kart-etiket="CVV">
+                                        <input name="kart_alan" class="ms-form-girdi" type="text" placeholder="123" inputmode="numeric" maxlength="3" autocomplete="cc-csc" data-ms-kart-alan="cvv" data-ms-kart-etiket="CVV">
                                         <span class="ms-form-hata" data-ms-kart-hata="cvv" hidden>CVV zorunludur</span>
                                     </label>
     </div>
@@ -180,7 +180,7 @@
                     <strong>Sipariş Notu (Opsiyonel)</strong>
                     <label class="ms-form-alani">
                         <span class="ms-form-etiket">Sipariş Notu</span>
-                        <textarea class="ms-form-metin-alani" placeholder="Siparişiniz için teslimat veya paketleme notu ekleyin"></textarea>
+                        <textarea name="siparisiniz_icin_teslimat_veya_paketleme_notu_ekleyin" class="ms-form-metin-alani" placeholder="Siparişiniz için teslimat veya paketleme notu ekleyin"></textarea>
                     </label>
                 </section>
 
@@ -230,7 +230,7 @@
                 </div>
                 <div class="ms-odeme-eksik-listesi" data-ms-odeme-eksikler hidden></div>
                 <div class="ms-siparis-sozlesme-onay">
-                    <input class="ms-onay-input" type="checkbox" data-ms-sozlesme-onay-input aria-label="Mesafeli satış sözleşmesini ve ön bilgilendirme formunu onayla">
+                    <input name="sozlesme_onay_input" class="ms-onay-input" type="checkbox" data-ms-sozlesme-onay-input aria-label="Mesafeli satış sözleşmesini ve ön bilgilendirme formunu onayla">
                     <span class="ms-onay-kutu" aria-hidden="true"></span>
                     <p>
                         <button class="ms-siparis-sozlesme-link" type="button" data-ms-sozlesme-modal-ac>Mesafeli Satış Sözleşmesi ve Ön Bilgilendirme Formu</button>
