@@ -60,6 +60,10 @@
     <template data-ms-onay-red-modal-sablon>
         <partial name="~/Views/ProjeElementleri/Ortak/onayRedModal.cshtml" />
     </template>
+    @if (ViewData["MsOrtakKoleksiyonModallariGizle"] is not true)
+    {
+    <partial name="~/Views/Shared/Store/_KoleksiyonAkisKoprusu.cshtml" />
+    }
 
     <main role="main">
         @RenderBody()

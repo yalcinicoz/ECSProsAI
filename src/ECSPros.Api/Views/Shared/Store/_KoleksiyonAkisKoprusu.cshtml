@@ -1,0 +1,135 @@
+@* 2026-07-16: ortak "Koleksiyona Ekle" akışının API köprüsü. site.js UI'ı yönetir
+   (seçim → Yeni Özet / Varolan modalları) ve şu event'leri yayar:
+   - ms:koleksiyon-olustur  {ad, aciklama, herkeseAcik, paylasilabilir, urunler:[{id,ad,gorsel}]}
+   - ms:koleksiyon-varolan-ekle {urun, koleksiyonlar:[ad metinleri]}
+   Köprü bunları gerçek koleksiyon API'sine bağlar; sonuçta tasarımın onay/red modalı
+   açılır (süre kullanıcı kararıyla 1500 ms). Varolan modalının demo seçenekleri ilk
+   açılışta üyenin gerçek koleksiyonlarıyla değiştirilir. Koleksiyonlarım sayfası kendi
+   sayfa modalını taşıdığından bu köprü orada basılmaz (layout @if'i). *@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const platformId = document.querySelector("[data-ms-arama]")?.dataset.msAramaPlatform || "";
+    if (!platformId) { return; }
+    const token = () => localStorage.getItem("ecspros_member_token");
+    const yetki = () => ({ "Content-Type": "application/json", Authorization: "Bearer " + token() });
+
+    const sonucGoster = (basarili, baslik, metin) => {
+        window.msOnayRedModalAc?.({
+            tip: basarili ? "onay" : "red",
+            baslik,
+            altBaslik: basarili ? "İşlem Tamamlandı" : "İşlem Başarısız",
+            metin,
+            sure: 1500
+        });
+    };
+
+    const koleksiyonlariGetir = async () => {
+        const cevap = await fetch("/api/store/collections?firmPlatformId=" + platformId, {
+            headers: { Authorization: "Bearer " + token() }
+        });
+        const veri = await cevap.json().catch(() => null);
+        return veri?.success ? (veri.data || []) : [];
+    };
+
+    // ── Varolan modalının seçeneklerini gerçek koleksiyonlarla doldur (ilk açılışta) ──
+    document.addEventListener("click", async (olay) => {
+        const tetik = olay.target instanceof Element
+            ? olay.target.closest("[data-ms-koleksiyon-secim-varolan]") : null;
+        if (!tetik || !token()) { return; }
+
+        const modal = document.querySelector("[data-ms-koleksiyon-varolan-modal]");
+        const liste = modal?.querySelector("[data-ms-koleksiyon-varolan-select] .ms-ozel-select-secenek-listesi");
+        if (!modal || !liste || modal.dataset.msGercekKoleksiyonlarYuklendi === "true") { return; }
+        modal.dataset.msGercekKoleksiyonlarYuklendi = "true";
+
+        try {
+            const koleksiyonlar = (await koleksiyonlariGetir()).filter((k) => !k.isQuickSave);
+            const ornek = liste.querySelector(".ms-ozel-select-secenek");
+            if (!ornek) { return; }
+            liste.querySelectorAll(".ms-ozel-select-secenek").forEach((secenek, i) => { if (i > 0) secenek.remove(); });
+            if (koleksiyonlar.length === 0) {
+                ornek.remove();
+                return;
+            }
+            koleksiyonlar.forEach((k, i) => {
+                const secenek = i === 0 ? ornek : ornek.cloneNode(true);
+                secenek.classList.remove("ms-ozel-select-secenek-aktif");
+                secenek.setAttribute("aria-selected", "false");
+                const metin = secenek.querySelector("span, strong") || secenek;
+                metin.textContent = k.name;
+                secenek.dataset.msKoleksiyonId = k.id;
+                if (i > 0) { liste.appendChild(secenek); }
+            });
+        } catch { /* seçenekler demo kalır — ekleme adı eşlemesiyle yine çalışır */ }
+    }, true);
+
+    // ── Yeni koleksiyon oluştur ──
+    document.addEventListener("ms:koleksiyon-olustur", async (olay) => {
+        // Koleksiyonlarım sayfa modalının kendi dinleyicisi vardır — yalnız ortak
+        // akış modallarından gelen event işlenir.
+        const kaynak = olay.target instanceof Element ? olay.target : null;
+        if (!kaynak?.matches("[data-ms-koleksiyon-yeni-ozet-modal], [data-ms-koleksiyon-modal]")) { return; }
+        if (kaynak.closest("[data-ms-koleksiyonlarim-sayfasi]")) { return; }
+        if (!token()) { document.querySelector("[data-ms-giris-modal-ac]")?.click(); return; }
+
+        const d = olay.detail || {};
+        try {
+            const cevap = await fetch("/api/store/collections", {
+                method: "POST",
+                headers: yetki(),
+                body: JSON.stringify({
+                    firmPlatformId: platformId,
+                    name: d.ad || "Yeni Koleksiyon",
+                    description: d.aciklama || null,
+                    isPublic: Boolean(d.herkeseAcik),
+                    isShareable: Boolean(d.paylasilabilir),
+                    productCodes: (d.urunler || []).map((u) => u.id).filter(Boolean)
+                })
+            });
+            const veri = await cevap.json().catch(() => null);
+            if (veri?.success) {
+                sonucGoster(true, "Koleksiyon Onaylandı", `"${d.ad || "Yeni Koleksiyon"}" koleksiyonu oluşturuldu.`);
+            } else {
+                sonucGoster(false, "Koleksiyon Reddedildi", veri?.error || "Koleksiyon oluşturulamadı.");
+            }
+        } catch {
+            sonucGoster(false, "Koleksiyon Reddedildi", "Koleksiyon oluşturulamadı. Lütfen tekrar deneyin.");
+        }
+    });
+
+    // ── Var olan koleksiyon(lar)a ekle ──
+    document.addEventListener("ms:koleksiyon-varolan-ekle", async (olay) => {
+        if (!token()) { document.querySelector("[data-ms-giris-modal-ac]")?.click(); return; }
+
+        const d = olay.detail || {};
+        const urunKodu = d.urun?.id;
+        const adlar = d.koleksiyonlar || [];
+        if (!urunKodu || adlar.length === 0) {
+            sonucGoster(false, "Koleksiyon Reddedildi", "Eklemek için en az bir koleksiyon seçin.");
+            return;
+        }
+
+        try {
+            const koleksiyonlar = await koleksiyonlariGetir();
+            const hedefler = koleksiyonlar.filter((k) => adlar.includes(k.name));
+            if (hedefler.length === 0) {
+                sonucGoster(false, "Koleksiyon Reddedildi", "Seçilen koleksiyon bulunamadı.");
+                return;
+            }
+            for (const k of hedefler) {
+                const cevap = await fetch(`/api/store/collections/${k.id}/items`, {
+                    method: "POST",
+                    headers: yetki(),
+                    body: JSON.stringify({ firmPlatformId: platformId, productCodes: [urunKodu] })
+                });
+                const veri = await cevap.json().catch(() => null);
+                if (!veri?.success) { throw new Error(veri?.error || "eklenemedi"); }
+            }
+            sonucGoster(true, "Koleksiyon Onaylandı",
+                `Ürün ${hedefler.map((k) => `"${k.name}"`).join(", ")} koleksiyonuna eklendi.`);
+        } catch {
+            sonucGoster(false, "Koleksiyon Reddedildi", "Ürün koleksiyona eklenemedi. Lütfen tekrar deneyin.");
+        }
+    });
+});
+</script>
