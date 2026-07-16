@@ -294,6 +294,23 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION KAPANIŞ ÖZETİ (2026-07-16) — GES TELEKOM SMS ÇALIŞIR DURUMA GELDİ (RESTART BEKLİYOR)
+**"Kullanici adi/parola yanlis" kök nedeni bulundu (GES desteği beklemeye gerek kalmadı):**
+eski projenin canlı MySQL'i (juludedb `plentegreservisler`/`dfentegreservisler`) ile karşılaştırıldı.
+İki bulgu: (1) **GES iki ayrı şifre kullanıyor** — bizdeki 12 karakterlik şifre yalnız TokenJson
+(API girişi) şifresi; gönderim gövdesi eski projedeki 8 karakterlik AYRI gönderim şifresini istiyor.
+(2) **Hesap OTP hesabı** — doğru gönderim şifresiyle bile SendSingle sonuc=16 "Bu servisten otp sms
+gönderimi gerçekleşmemektedir" döner; gönderim yalnız `/api/Otp/SendSms`'ten geçer (eski katalogda da
+tip=OTP). İzole test aracıyla Otp/SendSms → `*OK*` + SMS telefona ULAŞTI (905532977301).
+**Yapılanlar (commit 44c23ca):** GesTelekomSmsService SendSingle→Otp/SendSms (messageText ≤160,
+endDate +24h — kısa pay UTC/TR farkında sonuc=13); SmsSettings +SendPassword/-IsNotification;
+gestelekom şeması (seed + canlı DB) +sendPassword(helpI18n)/-isNotification; firma kaydının şifreli
+Credentials'ına gönderim şifresi eklendi (DP ile, eski DB'den). Publish canlıya kopyalandı →
+`sudo systemctl restart ecspros` BEKLİYOR; restart sonrası sitedeki telefonla giriş OTP'si gerçek
+kanaldan çıkar.
+
+---
+
 ### ⭐ SESSION KAPANIŞ ÖZETİ (2026-07-15, 3. oturum) — SMS GERÇEK KANAL: GES TELEKOM (RESTART BEKLİYOR)
 **K3 (SMS sağlayıcı) kapandı:** GES Telekom (TT Mesaj, restapi.ttmesaj.com). SMTP kalıbı birebir:
 `GesTelekomSmsService` (token 23s cache + 401'de yenile → SendSingle; "*OK*" değilse fırlatır;
