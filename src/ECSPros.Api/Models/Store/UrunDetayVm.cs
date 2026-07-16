@@ -42,7 +42,8 @@ public sealed record UrunDetayVm(
     double Puan = 0,                          // E7: onaylı yorum ortalaması
     int PuanSayisi = 0,                       // E7: onaylı yorum sayısı
     IReadOnlyList<YorumVm>? Yorumlar = null,  // E7: yayında ilk 10 yorum (SSR)
-    IReadOnlyList<UrunVideoVm>? Videolar = null) // H5: galeri video slaytları (efektif URL)
+    IReadOnlyList<UrunVideoVm>? Videolar = null, // H5: galeri video slaytları (efektif URL)
+    IReadOnlyDictionary<int, int>? PuanDagilimi = null) // İP-2.1: yıldız tooltip'i (5→adet ... 1→adet)
 {
     public int IndirimYuzdesi =>
         EskiFiyat is { } eski && Fiyat is { } yeni && eski > yeni

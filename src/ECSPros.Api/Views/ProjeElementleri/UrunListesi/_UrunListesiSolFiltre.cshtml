@@ -2,8 +2,9 @@
 @{
     // B7: Sol filtre canlı facet'lere bağlandı — blok markup'ı misharix'in
     // Kategori/Beden/Marka/Renk/Fiyat bloklarının birebir kopyası, içerik @foreach ile
-    // gerçek verilerden gelir. Kategori bloğu alt kategorilere gider (tıklayınca sayfa
-    // değişir); Kampanya bloğu veri kaynağı gelene dek gizli (Faz G).
+    // gerçek verilerden gelir. Tasarım davranışı: seçimler birikir, her blok kendi
+    // "Filtrele" butonuyla uygular (kategori tek seçim, buton o kategoriye götürür);
+    // Kampanya bloğu veri kaynağı gelene dek gizli (Faz G).
     var vm = ViewData["MsUrunListesi"] as UrunListesiVm
              ?? new UrunListesiVm("Ürünler", 0, 24, [], "", [], 0, 0, []);
     var tr = new System.Globalization.CultureInfo("tr-TR");
@@ -30,6 +31,7 @@
                 </label>
                 }
             </div>
+            <button class="ms-filtre-uygula-buton" type="button">Filtrele</button>
         </div>
     </div>
     }

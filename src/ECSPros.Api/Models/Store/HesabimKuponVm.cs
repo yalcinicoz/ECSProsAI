@@ -5,7 +5,17 @@ namespace ECSPros.Api.Models.Store;
 public record HesabimKuponVm(
     string Code,
     string IndirimMetni,    // "%10 indirim" / "150,00 TL indirim"
-    string KosulMetni);     // "750,00 TL ve üzeri alışverişlerde geçerli. Son kullanım: 15.07.2026"
+    string KosulMetni,      // "750,00 TL ve üzeri alışverişlerde geçerli. Son kullanım: 15.07.2026"
+    DateTime? Bitis = null) // İP-4.3: kupon bitiş anı (UTC) — sayaç bundan sayar
+{
+    /// <summary>Son 7 güne giren kuponda tasarımın geri sayım sayacı gösterilir.</summary>
+    public bool Sayacli =>
+        Bitis is { } b && b > DateTime.UtcNow && b - DateTime.UtcNow <= TimeSpan.FromDays(7);
+
+    /// <summary>data-ms-kupon-hedef değeri — site.js new Date() ile parse eder (UTC ISO).</summary>
+    public string? BitisIso =>
+        Bitis is { } b ? DateTime.SpecifyKind(b, DateTimeKind.Utc).ToString("o") : null;
+}
 
 /// <summary>E12: Önceden Gezdiklerim kartı — üyenin gezme kayıtları (viewed_products)
 /// canlı katalog kart verisiyle birleşir; silinen/pasif ürün listelenmez.</summary>

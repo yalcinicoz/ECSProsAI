@@ -273,8 +273,15 @@
                     : p.delete("sort");
             }
 
+            // Seçili kategori varsa hedef o kategorinin sayfasıdır; mevcut seçimler
+            // query ile taşınır (SSR yeniden işaretler).
+            const seciliKategori = document.querySelector("[data-ms-kategori-url]:checked");
+            const hedefYol = seciliKategori
+                ? seciliKategori.dataset.msKategoriUrl
+                : window.location.pathname;
+
             const sorgu = p.toString();
-            window.location.href = window.location.pathname + (sorgu ? "?" + sorgu : "");
+            window.location.href = hedefYol + (sorgu ? "?" + sorgu : "");
         };
 
         const panelFiyatOku = (panel) => {
@@ -301,8 +308,12 @@
         document.addEventListener("change", (olay) => {
             const girdi = olay.target;
 
+            // Tasarım davranışı: hiçbir seçim anında uygulanmaz — tüm bloklar kendi
+            // "Filtrele" butonunu bekler. Kategori tek seçimdir (diğer kopyalar düşer).
             if (girdi.matches?.("[data-ms-kategori-url]") && girdi.checked) {
-                window.location.href = girdi.dataset.msKategoriUrl;
+                document.querySelectorAll("[data-ms-kategori-url]:checked").forEach((es) => {
+                    if (es !== girdi) { es.checked = false; }
+                });
                 return;
             }
 
@@ -312,13 +323,15 @@
                 // senkronlanmazsa kaldırma işlemi URL'den düşmez).
                 document.querySelectorAll(`[data-ms-filtre-deger="${girdi.dataset.msFiltreDeger}"]`)
                     .forEach((es) => { es.checked = girdi.checked; });
+            }
+        });
 
-                // Sol filtre anında uygular; panel içindekiler (üst filtre, mobil chip/detay)
-                // kendi "Filtrele" butonunu bekler — panelde çoklu seçim her tıklamada
-                // sayfa yenilemesin.
-                if (!girdi.closest("[data-ms-urun-listesi-filtre-panel], [data-ms-mobil-chip-panel], [data-ms-urun-mobil-filtre-detay]")) {
-                    parametrelerleGit();
-                }
+        // "Filtreleri Temizle": site.js checkbox/girdileri boşaltıp bu olayı yayınlar;
+        // URL'de uygulanmış filtre varsa tek tıkta filtresiz listeye dönülür.
+        document.addEventListener("ms:filtreler-temizlendi", () => {
+            const p = new URLSearchParams(window.location.search);
+            if (p.has("attrs") || p.has("priceMin") || p.has("priceMax")) {
+                parametrelerleGit({ fiyatMin: null, fiyatMax: null });
             }
         });
 

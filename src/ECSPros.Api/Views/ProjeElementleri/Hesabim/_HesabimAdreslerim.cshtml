@@ -16,14 +16,15 @@
             </div>
 
             <div class="ms-hesabim-adres-grid">
-                @* E3: kartlar account/addresses'ten — demo iki kart tek template oldu;
-                   varsayılan kartta Sil yok (tasarımdaki gibi), diğerlerinde Varsayılan+Sil. *@
+                @* E3: kartlar account/addresses'ten; İP-4.4: form yan panelden tasarımın
+                   ortak adres MODALINA taşındı (data-ms-adres-modal). Varsayılan kartta
+                   Sil yok (tasarımdaki gibi), diğerlerinde Varsayılan+Sil. *@
                 <section class="ms-hesabim-adres-listesi" aria-labelledby="ms-kayitli-adresler-baslik">
                     <h3 id="ms-kayitli-adresler-baslik">Kayıtlı Adresler</h3>
-                    <p data-ms-adresler-bos hidden>Kayıtlı adresiniz yok. Sağdaki formdan ilk adresinizi ekleyin.</p>
+                    <p data-ms-adresler-bos hidden>Kayıtlı adresiniz yok. "Yeni Adres Ekle" ile ilk adresinizi ekleyin.</p>
                     <div data-ms-adresler-liste></div>
                     <template data-ms-adresler-kart-sablon>
-                    <article class="ms-hesabim-adres-karti">
+                    <article class="ms-hesabim-adres-karti" data-ms-hesabim-adres-karti>
                         <div class="ms-hesabim-adres-kart-ust">
                             <div>
                                 <strong data-alan="baslik"></strong>
@@ -35,117 +36,152 @@
                         <address data-alan="adres"></address>
                         <p data-alan="telefon"></p>
                         <div class="ms-hesabim-adres-aksiyonlar">
-                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-mavi ms-buton-x" type="button" data-aksiyon="duzenle">Düzenle</button>
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-mavi ms-buton-x" type="button" data-aksiyon="duzenle" data-ms-hesabim-adres-duzenle>Düzenle</button>
                             <button class="ms-buton ms-buton-x ms-buton-cizgili-birincil" type="button" data-aksiyon="varsayilan">Varsayılan</button>
                             <button class="ms-buton ms-buton-x ms-buton-tehlikeli" type="button" data-aksiyon="sil">Sil</button>
                         </div>
                     </article>
                     </template>
                 </section>
-
-                <section class="ms-hesabim-adres-form-karti" aria-labelledby="ms-adres-form-baslik">
-                    <h3 id="ms-adres-form-baslik">Adres Bilgileri</h3>
-                    <form class="ms-hesabim-adres-formu" action="/Hesabim/Adreslerim" method="post">
-                        <div class="ms-form-izgara">
-                            @* E3: form canlı — yeni adres POST, Düzenle PUT; geo seçimleri
-                               api/store/geo'dan (mahalle tasarımdaki gibi serbest metin). *@
-                            <label class="ms-form-alani ms-form-alani-genis">
-                                <span class="ms-form-etiket">Adres Başlığı</span>
-                                <input class="ms-form-girdi" type="text" name="AdresBasligi" value="" autocomplete="address-line1" data-ms-adres-form="baslik" />
-                            </label>
-                            <label class="ms-form-alani">
-                                <span class="ms-form-etiket">Ad</span>
-                                <input class="ms-form-girdi" type="text" name="Ad" value="" autocomplete="given-name" data-ms-adres-form="ad" />
-                            </label>
-                            <label class="ms-form-alani">
-                                <span class="ms-form-etiket">Soyad</span>
-                                <input class="ms-form-girdi" type="text" name="Soyad" value="" autocomplete="family-name" data-ms-adres-form="soyad" />
-                            </label>
-                            <label class="ms-form-alani ms-form-alani-genis">
-                                <span class="ms-form-etiket">Telefon</span>
-                                <span class="ms-telefon-girdi">
-                                    <span class="ms-telefon-ulke" data-ms-telefon-ulke-select>
-                                        <button class="ms-telefon-ulke-tetikleyici" type="button" data-ms-telefon-ulke-tetikleyici aria-haspopup="listbox" aria-expanded="false">
-                                            <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye">
-                                            <span data-ms-telefon-ulke-kod>+90</span>
-                                            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-telefon-ulke-ok " aria-hidden="true"></i>
-                                        </button>
-                                        <span class="ms-telefon-ulke-panel" role="listbox">
-                                            <input class="ms-telefon-ulke-arama" type="search" placeholder="Ülke ara" data-ms-telefon-ulke-arama>
-                                            <button class="ms-telefon-ulke-secenek ms-telefon-ulke-secenek-aktif" type="button" data-ms-telefon-ulke-secenek data-kod="+90" data-bayrak="https://flagcdn.com/tr.svg" data-ulke="Türkiye">
-                                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt=""> Türkiye <strong>+90</strong>
-                                            </button>
-                                            <button class="ms-telefon-ulke-secenek" type="button" data-ms-telefon-ulke-secenek data-kod="+49" data-bayrak="https://flagcdn.com/de.svg" data-ulke="Almanya">
-                                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/de.svg" alt=""> Almanya <strong>+49</strong>
-                                            </button>
-                                            <button class="ms-telefon-ulke-secenek" type="button" data-ms-telefon-ulke-secenek data-kod="+44" data-bayrak="https://flagcdn.com/gb.svg" data-ulke="Birleşik Krallık">
-                                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/gb.svg" alt=""> Birleşik Krallık <strong>+44</strong>
-                                            </button>
-                                        </span>
-                                    </span>
-                                    <input type="tel" name="Telefon" value="" placeholder="___ ___ __ __" inputmode="numeric" autocomplete="tel-national" maxlength="13" data-ms-telefon-input data-ms-adres-form="telefon">
-                                </span>
-                            </label>
-                            <label class="ms-form-alani">
-                                <span class="ms-form-etiket">İl</span>
-                                <select class="ms-form-girdi" name="Il" data-ms-adres-form="il">
-                                    <option value="">Seçim yapın</option>
-                                </select>
-                            </label>
-                            <label class="ms-form-alani">
-                                <span class="ms-form-etiket">İlçe</span>
-                                <select class="ms-form-girdi" name="Ilce" data-ms-adres-form="ilce">
-                                    <option value="">Seçim yapın</option>
-                                </select>
-                            </label>
-                            <label class="ms-form-alani ms-form-alani-genis">
-                                <span class="ms-form-etiket">Mahalle</span>
-                                <input class="ms-form-girdi" type="text" name="Mahalle" value="" autocomplete="address-level3" data-ms-adres-form="mahalle" />
-                            </label>
-                            <label class="ms-form-alani ms-form-alani-genis">
-                                <span class="ms-form-etiket">Açık Adres</span>
-                                <textarea class="ms-form-metin-alani" name="AcikAdres" rows="4" autocomplete="street-address" data-ms-adres-form="acikadres"></textarea>
-                            </label>
-                        </div>
-
-                        <label class="ms-onay-kart ms-hesabim-adres-varsayilan-secim">
-                            <input class="ms-onay-input" type="checkbox" name="VarsayilanAdres" data-ms-adres-form="varsayilan">
-                            <span class="ms-onay-kutu" aria-hidden="true"></span>
-                            <span class="ms-onay-metin">
-                                Varsayılan adres olarak kullan
-                                <span class="ms-onay-yardim">Sepet ve ödeme adımlarında bu adres otomatik seçilir.</span>
-                            </span>
-                        </label>
-
-                        <div class="ms-uyari ms-uyari-hata" data-ms-adres-form-mesaj hidden></div>
-                        <div class="ms-hesabim-adres-form-aksiyonlar">
-                            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-adres-form-temizle>Temizle</button>
-                            <button class="ms-buton ms-buton-m ms-buton-satin-al" type="submit">Adresi Kaydet</button>
-                        </div>
-                    </form>
-                </section>
             </div>
         </div>
     </section>
+
+    @* İP-4.4: tasarımın ortak adres modalı — form canlı (E3): yeni adres POST, Düzenle PUT;
+       il/ilçe aramalı özel-select (api/store/geo'dan doldurulur), ülke TR kilitli. *@
+    <div class="ms-ornek-modal ms-siparis-adres-modal" data-ms-adres-modal aria-hidden="true">
+        <div class="ms-ornek-modal-kaplama" data-ms-adres-modal-kapat></div>
+        <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-xl" role="dialog" aria-modal="true" aria-labelledby="ms-hesabim-adres-modal-baslik">
+            <button class="ms-ornek-modal-kapat" type="button" data-ms-adres-modal-kapat aria-label="Adres düzenleme modalını kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+            <h3 id="ms-hesabim-adres-modal-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani data-ms-adres-modal-ana-baslik>Adresi Düzenle</h3>
+            <p class="ms-ornek-modal-aciklama">Teslimat adresi, alıcı bilgisi ve telefon bilgisini bu alanda güncelleyebilirsiniz.</p>
+
+            <form class="ms-hesabim-adres-formu" action="/Hesabim/Adreslerim" method="post">
+            <div class="ms-form-izgara">
+                <label class="ms-form-alani ms-form-alani-genis">
+                    <span class="ms-form-etiket">Adres Başlığı</span>
+                    <input name="AdresBasligi" class="ms-form-girdi" type="text" value="" autocomplete="address-line1" data-ms-adres-modal-baslik-girdi data-ms-adres-form="baslik">
+                </label>
+                <label class="ms-form-alani">
+                    <span class="ms-form-etiket">Ad</span>
+                    <input name="Ad" class="ms-form-girdi" type="text" value="" autocomplete="given-name" data-ms-adres-form="ad">
+                </label>
+                <label class="ms-form-alani">
+                    <span class="ms-form-etiket">Soyad</span>
+                    <input name="Soyad" class="ms-form-girdi" type="text" value="" autocomplete="family-name" data-ms-adres-form="soyad">
+                </label>
+                @if (false)
+                {
+                @* Tasarımın Fatura Türü (Bireysel/Kurumsal) seçimi — adres modelinde alan
+                   karşılığı yok; kurumsal fatura alanları backend'e gelince açılır. *@
+                <div class="ms-form-alani ms-form-alani-genis">
+                    <span class="ms-form-etiket">Fatura Türü</span>
+                    <div class="ms-onay-listesi ms-siparis-adres-secim-listesi">
+                        <label class="ms-onay-kart">
+                            <input class="ms-onay-input" type="radio" name="ms-hesabim-adres-fatura-turu" checked>
+                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
+                            <span class="ms-onay-metin">
+                                Bireysel
+                                <span class="ms-onay-yardim">Kişisel fatura bilgileriyle devam et</span>
+                            </span>
+                        </label>
+                        <label class="ms-onay-kart">
+                            <input class="ms-onay-input" type="radio" name="ms-hesabim-adres-fatura-turu">
+                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
+                            <span class="ms-onay-metin">
+                                Kurumsal
+                                <span class="ms-onay-yardim">Firma bilgileriyle fatura oluştur</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                }
+                <div class="ms-form-alani">
+                    <span class="ms-form-etiket">Ülke</span>
+                    <div class="ms-ozel-select ms-ozel-select-kilitli" data-ms-ozel-select>
+                        <button class="ms-ozel-select-tetikleyici" type="button" disabled aria-disabled="true">
+                            <span data-ms-ozel-select-deger>Türkiye</span>
+                            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-ozel-select-ok" aria-hidden="true"></i>
+                        </button>
+                        <input type="hidden" name="Ulke" value="Türkiye">
+                    </div>
+                </div>
+                <div class="ms-form-alani">
+                    <span class="ms-form-etiket">İl</span>
+                    <div data-ms-adres-il-kapsayici></div>
+                    <input type="hidden" name="Il" data-ms-adres-form="il">
+                </div>
+                <div class="ms-form-alani">
+                    <span class="ms-form-etiket">İlçe</span>
+                    <div data-ms-adres-ilce-kapsayici></div>
+                    <input type="hidden" name="Ilce" data-ms-adres-form="ilce">
+                </div>
+                <label class="ms-form-alani ms-form-alani-genis">
+                    <span class="ms-form-etiket">Mahalle</span>
+                    <input name="Mahalle" class="ms-form-girdi" type="text" value="" autocomplete="address-level3" data-ms-adres-form="mahalle">
+                </label>
+                <label class="ms-form-alani ms-form-alani-genis">
+                    <span class="ms-form-etiket">Adres</span>
+                    <textarea name="AcikAdres" class="ms-form-metin-alani" rows="4" autocomplete="street-address" data-ms-adres-form="acikadres"></textarea>
+                </label>
+                <label class="ms-form-alani ms-form-alani-genis">
+                    <span class="ms-form-etiket">Telefon</span>
+                    <span class="ms-telefon-girdi">
+                        <span class="ms-telefon-ulke" data-ms-telefon-ulke-select>
+                            <button class="ms-telefon-ulke-tetikleyici" type="button" data-ms-telefon-ulke-tetikleyici aria-haspopup="listbox" aria-expanded="false">
+                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye" loading="lazy">
+                                <span data-ms-telefon-ulke-kod>+90</span>
+                                <i class="fa-solid fa-chevron-down ms-fa-ikon ms-telefon-ulke-ok" aria-hidden="true"></i>
+                            </button>
+                            <span class="ms-telefon-ulke-panel" role="listbox" aria-label="Ülke kodları">
+                                <input name="telefon_ulke_arama" class="ms-telefon-ulke-arama" type="search" placeholder="Ülke ara" data-ms-telefon-ulke-arama>
+                                <button class="ms-telefon-ulke-secenek ms-telefon-ulke-secenek-aktif" type="button" data-ms-telefon-ulke-secenek data-kod="+90" data-bayrak="https://flagcdn.com/tr.svg" data-ulke="Türkiye">
+                                    <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="" loading="lazy"> Türkiye <strong>+90</strong>
+                                </button>
+                            </span>
+                        </span>
+                        <input name="Telefon" type="tel" value="" placeholder="___ ___ __ __" inputmode="numeric" autocomplete="tel-national" maxlength="13" data-ms-telefon-input data-ms-adres-telefon-input data-ms-adres-form="telefon">
+                    </span>
+                </label>
+                <label class="ms-onay-kart ms-siparis-varsayilan-adres">
+                    <input name="VarsayilanAdres" class="ms-onay-input" type="checkbox" data-ms-adres-form="varsayilan">
+                    <span class="ms-onay-kutu" aria-hidden="true"></span>
+                    <span class="ms-onay-metin">
+                        Varsayılan adres olarak ayarla
+                        <span class="ms-onay-yardim">Bu adresi varsayılan teslimat adresi olarak kullan</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="ms-uyari ms-uyari-hata" data-ms-adres-form-mesaj hidden></div>
+            <div class="ms-ornek-modal-aksiyonlar">
+                <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-adres-modal-kapat>Vazgeç</button>
+                <button class="ms-buton ms-buton-m ms-buton-satin-al" type="submit" data-ms-adres-modal-kaydet>Adresi Kaydet</button>
+            </div>
+            </form>
+        </section>
+    </div>
 </section>
 
-@* E3: Adreslerim canlı — kartlar GET addresses; form yeni adres POST / Düzenle PUT;
-   Varsayılan POST default; Sil DELETE. İl/ilçe geo API'den kademeli; mahalle serbest
-   metin (tasarımdaki gibi); ülke TR sabit (telefon ülke seçici görsel — site.js). *@
+@* E3 + İP-4.4: Adreslerim canlı — kartlar GET addresses; modal formu yeni adres POST /
+   Düzenle PUT; Varsayılan POST default; Sil DELETE. İl/ilçe geo API'den tasarımın aramalı
+   özel-select'iyle (seçenekler dinamik geldiğinden select düğümü her dolumda yeniden
+   kurulur ve window.msOzelSelectleriBaslat ile bağlanır); mahalle serbest metin; ülke TR sabit. *@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    const sayfa = document.querySelector(".ms-hesabim-adres-sayfa");
+    const sayfa = document.querySelector(".ms-hesabim-adres-sayfa")?.closest(".ms-hesabim-sayfa");
     if (!sayfa) { return; }
     const token = () => localStorage.getItem("ecspros_member_token");
     const basliklar = () => ({ "Content-Type": "application/json", Authorization: "Bearer " + token() });
     const el = (sec) => sayfa.querySelector(sec);
-    const form = el(".ms-hesabim-adres-formu");
-    const alan = (ad) => sayfa.querySelector(`[data-ms-adres-form="${ad}"]`);
-    const mesaj = el("[data-ms-adres-form-mesaj]");
+    const modal = el("[data-ms-adres-modal]");
+    const form = modal.querySelector(".ms-hesabim-adres-formu");
+    const alan = (ad) => modal.querySelector(`[data-ms-adres-form="${ad}"]`);
+    const mesaj = modal.querySelector("[data-ms-adres-form-mesaj]");
+    const anaBaslik = modal.querySelector("[data-ms-adres-modal-ana-baslik]");
     let adresler = [];
     let duzenlenenId = null;
     let trUlke = null; // { id, ad }
-    let iller = [];
 
     const mesajGoster = (metin, hata) => {
         mesaj.textContent = metin || "";
@@ -153,6 +189,24 @@ document.addEventListener("DOMContentLoaded", () => {
         mesaj.classList.toggle("ms-uyari-hata", !!hata);
     };
 
+    // ── Modal aç/kapat (tasarım kalıbı: ms-ornek-modal-acik) ──
+    const modalAc = (baslik) => {
+        anaBaslik.textContent = baslik;
+        modal.classList.add("ms-ornek-modal-acik");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+        alan("baslik").focus();
+    };
+    const modalKapat = () => {
+        modal.classList.remove("ms-ornek-modal-acik");
+        modal.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
+    };
+    modal.querySelectorAll("[data-ms-adres-modal-kapat]").forEach((buton) => {
+        buton.addEventListener("click", modalKapat);
+    });
+
+    // ── Aramalı özel-select (il/ilçe) — dinamik seçenek: düğüm her dolumda yeniden kurulur ──
     const geoGetir = async (yol) => {
         try {
             const cevap = await (await fetch("/api/store/geo/" + yol)).json();
@@ -160,26 +214,60 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch { return []; }
     };
 
-    const secimDoldur = (secim, kayitlar) => {
-        secim.querySelectorAll("option:not([value=''])").forEach((s) => s.remove());
+    const ozelSelectKur = (kapsayici, girdi, kayitlar, placeholder, aramaEtiketi, secildi) => {
+        kapsayici.innerHTML = "";
+        girdi.value = "";
+        girdi.dataset.msSecilenAd = "";
+        const kok = document.createElement("div");
+        kok.className = "ms-ozel-select";
+        kok.setAttribute("data-ms-ozel-select", "");
+        kok.innerHTML = `
+            <button class="ms-ozel-select-tetikleyici" type="button" data-ms-ozel-select-tetikleyici aria-haspopup="listbox" aria-expanded="false">
+                <span data-ms-ozel-select-deger>${placeholder}</span>
+                <i class="fa-solid fa-chevron-down ms-fa-ikon ms-ozel-select-ok" aria-hidden="true"></i>
+            </button>
+            <div class="ms-ozel-select-panel" role="listbox" aria-label="${aramaEtiketi} seçenekleri">
+                <input name="ozel_select_arama" class="ms-ozel-select-arama" type="search" placeholder="${aramaEtiketi} ara" data-ms-ozel-select-arama>
+                <div class="ms-ozel-select-secenek-listesi"></div>
+            </div>`;
+        const listeKutusu = kok.querySelector(".ms-ozel-select-secenek-listesi");
         kayitlar.forEach((k) => {
-            const secenek = document.createElement("option");
-            secenek.value = k.id;
-            secenek.textContent = k.nameI18n?.tr || k.code || "";
-            secim.appendChild(secenek);
+            const ad = k.nameI18n?.tr || k.code || "";
+            const secenek = document.createElement("button");
+            secenek.className = "ms-ozel-select-secenek" + (secildi === k.id ? " ms-ozel-select-secenek-aktif" : "");
+            secenek.type = "button";
+            secenek.setAttribute("role", "option");
+            secenek.setAttribute("data-ms-ozel-select-secenek", "");
+            secenek.dataset.msDeger = k.id;
+            secenek.textContent = ad;
+            secenek.addEventListener("click", () => {
+                girdi.value = k.id;
+                girdi.dataset.msSecilenAd = ad;
+                girdi.dispatchEvent(new Event("change", { bubbles: true }));
+            });
+            listeKutusu.appendChild(secenek);
+            if (secildi === k.id) {
+                kok.querySelector("[data-ms-ozel-select-deger]").textContent = ad;
+                girdi.value = k.id;
+                girdi.dataset.msSecilenAd = ad;
+            }
         });
+        kapsayici.appendChild(kok);
+        window.msOzelSelectleriBaslat?.(kok);
     };
 
+    const ilKapsayici = modal.querySelector("[data-ms-adres-il-kapsayici]");
+    const ilceKapsayici = modal.querySelector("[data-ms-adres-ilce-kapsayici]");
+    let iller = [];
+
+    const illeriKur = (secilecek) => ozelSelectKur(ilKapsayici, alan("il"), iller, "Seçim yapın", "İl", secilecek || null);
     const ilceleriYukle = async (cityId, secilecek) => {
-        const ilceler = await geoGetir("districts?cityId=" + cityId);
-        secimDoldur(alan("ilce"), ilceler);
-        if (secilecek) { alan("ilce").value = secilecek; }
+        const ilceler = cityId ? await geoGetir("districts?cityId=" + cityId) : [];
+        ozelSelectKur(ilceKapsayici, alan("ilce"), ilceler, "Seçim yapın", "İlçe", secilecek || null);
     };
 
     alan("il").addEventListener("change", () => {
-        alan("ilce").value = "";
-        alan("ilce").querySelectorAll("option:not([value=''])").forEach((s) => s.remove());
-        if (alan("il").value) { ilceleriYukle(alan("il").value); }
+        ilceleriYukle(alan("il").value);
     });
 
     // ── Kart listesi ──
@@ -194,6 +282,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const kart = sablon.content.cloneNode(true);
             const kutu = kart.querySelector("article");
             kutu.classList.toggle("ms-hesabim-adres-varsayilan", adres.isDefault);
+            kutu.dataset.msAdresAd = adres.title || "";
             kart.querySelector('[data-alan="baslik"]').textContent = adres.title;
             kart.querySelector('[data-alan="altbaslik"]').style.display = adres.isDefault ? "" : "none";
             kart.querySelector('[data-alan="etiket"]').style.display = adres.isDefault ? "" : "none";
@@ -217,7 +306,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             kart.querySelector('[data-aksiyon="sil"]')?.addEventListener("click", async () => {
                 await fetch(`/api/store/account/addresses/${adres.id}`, { method: "DELETE", headers: basliklar() });
-                if (duzenlenenId === adres.id) { formuTemizle(); }
+                if (duzenlenenId === adres.id) { duzenlenenId = null; }
                 await adresleriYukle();
             });
             liste.appendChild(kart);
@@ -236,7 +325,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const formuTemizle = () => {
         duzenlenenId = null;
         form.reset();
-        alan("ilce").querySelectorAll("option:not([value=''])").forEach((s) => s.remove());
+        illeriKur(null);
+        ilceleriYukle(null);
         mesajGoster("");
     };
 
@@ -251,24 +341,20 @@ document.addEventListener("DOMContentLoaded", () => {
         alan("mahalle").value = adres.neighborhoodName || "";
         alan("acikadres").value = adres.addressLine || "";
         alan("varsayilan").checked = !!adres.isDefault;
-        alan("il").value = adres.cityId || "";
-        if (adres.cityId) { await ilceleriYukle(adres.cityId, adres.districtId || ""); }
+        illeriKur(adres.cityId || null);
+        await ilceleriYukle(adres.cityId || null, adres.districtId || null);
         mesajGoster("");
-        form.scrollIntoView({ behavior: "smooth", block: "start" });
+        modalAc("Adresi Düzenle");
     };
 
     el("[data-ms-adresler-yeni]").addEventListener("click", () => {
         formuTemizle();
-        form.scrollIntoView({ behavior: "smooth", block: "start" });
-        alan("baslik").focus();
+        modalAc("Yeni Adres Ekle");
     });
-    el("[data-ms-adres-form-temizle]").addEventListener("click", formuTemizle);
 
     form.addEventListener("submit", async (olay) => {
         olay.preventDefault();
         mesajGoster("");
-        const ilSecenek = alan("il").selectedOptions[0];
-        const ilceSecenek = alan("ilce").selectedOptions[0];
         if (!alan("baslik").value.trim() || !alan("ad").value.trim()) {
             mesajGoster("Adres başlığı ve ad zorunludur.", true); return;
         }
@@ -281,9 +367,9 @@ document.addEventListener("DOMContentLoaded", () => {
             countryId: trUlke?.id || null,
             countryName: trUlke?.ad || "Türkiye",
             cityId: alan("il").value,
-            cityName: ilSecenek.textContent.trim(),
+            cityName: alan("il").dataset.msSecilenAd || "",
             districtId: alan("ilce").value,
-            districtName: ilceSecenek.textContent.trim(),
+            districtName: alan("ilce").dataset.msSecilenAd || "",
             neighborhoodId: null,
             neighborhoodName: alan("mahalle").value.trim() || null,
             addressLine: alan("acikadres").value.trim() || null,
@@ -301,10 +387,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!veri?.success) {
                 mesajGoster(veri?.error || "Adres kaydedilemedi.", true); return;
             }
-            const guncellemeydi = !!duzenlenenId;
             formuTemizle();
+            modalKapat();
             await adresleriYukle();
-            mesajGoster(guncellemeydi ? "Adres güncellendi." : "Adres kaydedildi.", false);
         } catch {
             mesajGoster("Adres kaydedilemedi. Lütfen tekrar deneyin.", true);
         }
@@ -317,8 +402,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (tr) {
             trUlke = { id: tr.id, ad: tr.nameI18n?.tr || "Türkiye" };
             iller = await geoGetir("cities?countryId=" + tr.id);
-            secimDoldur(alan("il"), iller);
         }
+        illeriKur(null);
+        ilceleriYukle(null);
         await adresleriYukle();
     })();
 });
