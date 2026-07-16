@@ -153,7 +153,14 @@
                             }
                             @if (s.Kargo is not null)
                             {
-                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-mavi ms-buton-x" type="button" data-ms-kargo-takip-ac="@s.OrderNumber">Siparişi Takip Et</button>
+                            @* İP-3.1: tasarım etiketi — kargodaki sipariş "Kargoyu Takip Et",
+                               öncesi "Siparişi Takip Et" der. *@
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-mavi ms-buton-x" type="button" data-ms-kargo-takip-ac="@s.OrderNumber">@(s.Status == "shipped" ? "Kargoyu Takip Et" : "Siparişi Takip Et")</button>
+                            }
+                            @if (s.Status == "returned")
+                            {
+                            @* İP-3.2: tasarımın İade Durumu aksiyonu — İadelerim'deki kayda götürür. *@
+                            <a class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-amber ms-buton-x" href="/Hesabim/Iadelerim">İade Durumu</a>
                             }
                             @if (false)
                             {
@@ -184,7 +191,7 @@
         <div class="ms-ornek-modal-kaplama" data-ms-kargo-takip-kapat></div>
         <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-xl ms-kargo-takip-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-kargo-takip-baslik-@s.OrderNumber">
             <button class="ms-ornek-modal-kapat" type="button" data-ms-kargo-takip-kapat aria-label="Kargo takip modalını kapat">×</button>
-            <div class="ms-kargo-takip-hero">
+            <div class="ms-kargo-takip-hero" data-ms-modal-surukleme-alani>
                 @if (s.Kargo!.FirmaAdi is not null && !string.IsNullOrWhiteSpace(s.Kargo.FirmaLogoUrl))
                 {
                 <img src="@s.Kargo.FirmaLogoUrl" alt="@s.Kargo.FirmaAdi">

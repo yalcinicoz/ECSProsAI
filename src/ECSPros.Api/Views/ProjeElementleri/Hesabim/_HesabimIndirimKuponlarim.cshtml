@@ -71,7 +71,16 @@
 
                         <div class="ms-hesabim-kupon-aksiyonlar">
                             <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-kupon-sepette-kullan="@kupon.Code">Sepette Kullan</button>
-                            @* Sayaçlı kupon (data-ms-kupon-sayac): bitiş anı VM'e gelince açılır — tasarım sözleşmesi hazır. *@
+                            @if (kupon.Sayacli)
+                            {
+                            @* İP-4.3: son 7 güne giren kuponda tasarımın geri sayımı (site.js sayar). *@
+                            <div class="ms-hesabim-kupon-sayac" data-ms-kupon-sayac data-ms-kupon-hedef="@kupon.BitisIso" aria-label="@kupon.Code kupon süresi">
+                                <span><strong data-ms-kupon-gun>00</strong><small>Gün</small></span>
+                                <span><strong data-ms-kupon-saat>00</strong><small>Saat</small></span>
+                                <span><strong data-ms-kupon-dakika>00</strong><small>Dakika</small></span>
+                                <span><strong data-ms-kupon-saniye>00</strong><small>Saniye</small></span>
+                            </div>
+                            }
                         </div>
                     </article>
                 }

@@ -1,11 +1,11 @@
 @using ECSPros.Api.Models.Store
 @{
     // B9: canlı veri bağlama. Veri karşılığı olmayan demo blokları @if(false) ile gizli
-    // (HTML yapısı korunarak): puan tooltip'i + değerlendirme sayısı senaryosu (değerlendirme
-    // sistemi yok — sıfır durumu gösterilir), dönen teslimat mesajları, çoklu fiyat
-    // senaryoları (Sepette/Plus — Faz G kampanya), beden önerisi, model ölçüleri (manken
-    // verisi henüz ürünlere girilmedi), teslimat bilgileri (kargo entegrasyonu Faz H),
-    // beden tablosu (veri yok).
+    // (HTML yapısı korunarak): dönen teslimat mesajları, çoklu fiyat senaryoları
+    // (Sepette/Plus — Faz G kampanya), model ölçüleri (manken verisi henüz ürünlere
+    // girilmedi), beden tablosu (ölçü verisi yok). İP-2 (2026-07-16): puan dağılım
+    // tooltip'i gerçek dağılımla, teslimat bloğu ilk satırıyla, beden önerisi tasarım
+    // metniyle AÇILDI.
     var vmBilgi = ViewData["MsUrunDetay"] as UrunDetayVm;
     var b = vmBilgi!;
     var tr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
@@ -24,6 +24,25 @@
                             @for (var y = 1; y <= 5; y++)
                             {
                                 <i class="fa-solid fa-star ms-fa-ikon@(b.PuanSayisi == 0 || y > Math.Round(b.Puan, MidpointRounding.AwayFromZero) ? " ms-urun-yildizlar-pasif" : "")" aria-hidden="true"></i>
+                            }
+                            @if (b.PuanSayisi > 0 && b.PuanDagilimi is { } dagilim)
+                            {
+                                // İP-2.1: puan dağılım tooltip'i — bar genişliği en kalabalık
+                                // puanın adetine oranlanır (tasarım kalıbı).
+                                var enCok = Math.Max(1, dagilim.Values.Max());
+                            <span class="ms-urun-puan-tooltip" role="tooltip">
+                                <span class="ms-urun-puan-tooltip-baslik"><strong>@b.Puan.ToString("0.0", tr)</strong> Ortalama Puan</span>
+                                @for (var p = 5; p >= 1; p--)
+                                {
+                                    var adet = dagilim.TryGetValue(p, out var a) ? a : 0;
+                                <span class="ms-urun-puan-tooltip-satir">
+                                    <span>@p</span>
+                                    <span class="ms-urun-puan-tooltip-yildizlar" aria-hidden="true">@for (var y2 = 1; y2 <= 5; y2++) { if (y2 <= p) { <i></i> } else { <i data-bos="true"></i> } }</span>
+                                    <span class="ms-urun-puan-tooltip-bar"><span style="width: @((int)Math.Round(adet * 100.0 / enCok))%;"></span></span>
+                                    <span class="ms-urun-puan-tooltip-sayi">@adet</span>
+                                </span>
+                                }
+                            </span>
                             }
                         </span>
                         <span class="ms-urun-detay-puan-ayrac">•</span>
@@ -111,6 +130,10 @@
                         </label>
                         }
                     </div>
+                    <p class="ms-beden-secim-oneri">
+                        <i class="fa-solid fa-arrow-up ms-fa-ikon" aria-hidden="true"></i>
+                        Kullanıcıların çoğu kendi bedeninizi almanızı öneriyor.
+                    </p>
                 </fieldset>
                 }
 
@@ -136,10 +159,17 @@
                 </div>
                 }
 
-                @if (false) // Faz H: kargo entegrasyonu gelince teslimat bilgileri bağlanacak
-                {
-                <section class="ms-urun-detay-teslimat" aria-label="Teslimat bilgileri"></section>
-                }
+                @* İP-2.2: teslimat bloğu tasarımdaki ilk satırla açıldı; kargo markası +
+                   tahmini teslim tarihi satırı kargo entegrasyonunda (Faz H) eklenecek. *@
+                <section class="ms-urun-detay-teslimat" aria-label="Teslimat bilgileri">
+                    <h2 class="ms-urun-detay-bolum-baslik">Teslimat Bilgileri</h2>
+                    <div class="ms-urun-detay-teslimat-satir">
+                        <span class="ms-urun-detay-teslimat-ikon" aria-hidden="true">
+                            <i class="fa-solid fa-truck-fast ms-fa-ikon" aria-hidden="true"></i>
+                        </span>
+                        <strong>Siparişiniz en kısa sürede kargoya verilecektir.</strong>
+                    </div>
+                </section>
 
                 @if (b.Ozellikler.Count > 0)
                 {

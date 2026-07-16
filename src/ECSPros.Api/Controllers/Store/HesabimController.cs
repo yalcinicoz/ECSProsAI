@@ -751,7 +751,7 @@ public class HesabimController(
                 kosullar.Add(k.EndsAt is DateTime son
                     ? $"Son kullanım: {son.ToString("dd.MM.yyyy", tr)}"
                     : "Süre sınırı yok.");
-                return new HesabimKuponVm(k.Code, k.DiscountText, string.Join(" ", kosullar));
+                return new HesabimKuponVm(k.Code, k.DiscountText, string.Join(" ", kosullar), k.EndsAt);
             }).ToList();
 
         ViewData["MsKuponlar"] = kuponlar;

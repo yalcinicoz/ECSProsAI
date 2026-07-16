@@ -161,8 +161,16 @@ public class StoreUrunDetayBuilder(
         var puanlar = await reviewStats.GetStatsAsync(platformId, new[] { urun.Code }, ct);
         var puanIstatistik = puanlar.TryGetValue(urun.Code, out var pi) ? pi : null;
         IReadOnlyList<YorumVm>? yorumlarVm = null;
+        IReadOnlyDictionary<int, int>? puanDagilimi = null;
         if (puanIstatistik is not null)
         {
+            // İP-2.1: yıldız tooltip'inin 5→1 dağılımı (değerlendirmeler sayfasıyla aynı sorgu)
+            var ozetSonucu = await mediator.Send(
+                new ECSPros.Storefront.Application.Queries.GetProductReviewSummary.GetProductReviewSummaryQuery(
+                    platformId, urun.Code), ct);
+            if (ozetSonucu.IsSuccess)
+                puanDagilimi = ozetSonucu.Value!.RatingCounts;
+
             var yorumSonucu = await mediator.Send(
                 new ECSPros.Storefront.Application.Queries.GetProductReviews.GetProductReviewsQuery(
                     platformId, urun.Code, 1, 10), ct);
@@ -202,7 +210,8 @@ public class StoreUrunDetayBuilder(
             Puan: puanIstatistik?.Average ?? 0,
             PuanSayisi: puanIstatistik?.Count ?? 0,
             Yorumlar: yorumlarVm,
-            Videolar: urun.Videos?.Select(v => new UrunVideoVm(v.VideoUrl, v.ThumbnailUrl)).ToList());
+            Videolar: urun.Videos?.Select(v => new UrunVideoVm(v.VideoUrl, v.ThumbnailUrl)).ToList(),
+            PuanDagilimi: puanDagilimi);
 
         // E12: üyenin gezme kaydı — render'ı aksatmaz.
         if (uye is not null)
