@@ -26,10 +26,35 @@
         <span>@vm.ToplamUrunMetni Ürün</span>
     </div>
 
+    @* Faz G: hızlı filtre chip'leri — veri kaynağı gelene dek gizli; markup tasarımın nihai chip yapısıyla güncel. *@
     @if (false)
     {
-        @* Faz G: hızlı filtre chip'leri (Tümü/Fiyatı Düşenler/Flash/Yeni) — veri kaynağı yok *@
-        <div class="ms-urun-listesi-chip-satiri" aria-label="Hızlı filtreler"></div>
+    <div class="ms-urun-listesi-chip-satiri" aria-label="Hızlı filtreler">
+        <button class="ms-urun-listesi-chip ms-urun-listesi-chip-aktif" type="button" aria-pressed="true" data-ms-urun-listesi-chip>
+            <i class="fa-solid fa-boxes-stacked ms-fa-ikon" aria-hidden="true"></i>
+            <span>Tümü</span>
+        </button>
+        <button class="ms-urun-listesi-chip" type="button" aria-pressed="false" data-ms-urun-listesi-chip>
+            <i class="fa-solid fa-bolt-lightning ms-fa-ikon" aria-hidden="true"></i>
+            <span>Flaş Ürünler</span>
+        </button>
+        <button class="ms-urun-listesi-chip" type="button" aria-pressed="false" data-ms-urun-listesi-chip>
+            <i class="fa-solid fa-star ms-fa-ikon" aria-hidden="true"></i>
+            <span>Yüksek Puanlı Ürünler</span>
+        </button>
+        <button class="ms-urun-listesi-chip" type="button" aria-pressed="false" data-ms-urun-listesi-chip>
+            <i class="fa-solid fa-box ms-fa-ikon" aria-hidden="true"></i>
+            <span>Kargo Bedava</span>
+        </button>
+        <button class="ms-urun-listesi-chip" type="button" aria-pressed="false" data-ms-urun-listesi-chip>
+            <i class="fa-solid fa-truck-fast ms-fa-ikon" aria-hidden="true"></i>
+            <span>Hızlı Teslimat</span>
+        </button>
+        <button class="ms-urun-listesi-chip" type="button" aria-pressed="false" data-ms-urun-listesi-chip>
+            <i class="fa-solid fa-tag ms-fa-ikon" aria-hidden="true"></i>
+            <span>Çok Al Az Öde</span>
+        </button>
+    </div>
     }
 
     <div class="ms-urun-listesi-filtre-satiri">
@@ -41,9 +66,9 @@
                 </button>
                 <div class="ms-urun-listesi-filtre-secim-panel" data-ms-urun-listesi-filtre-panel hidden>
                     <div class="ms-filtre-fiyat-araligi" aria-label="Fiyat aralığı seçimi">
-                        <input type="number" inputmode="numeric" min="0" value="@(vm.SeciliFiyatMin?.ToString("0.##", invUst))" placeholder="En Az" aria-label="En az fiyat">
+                        <input name="en_az_fiyat" type="number" inputmode="numeric" min="0" value="@(vm.SeciliFiyatMin?.ToString("0.##", invUst))" placeholder="En Az" aria-label="En az fiyat">
                         <span class="ms-filtre-fiyat-ayrac" aria-hidden="true">-</span>
-                        <input type="number" inputmode="numeric" min="0" value="@(vm.SeciliFiyatMax?.ToString("0.##", invUst))" placeholder="En Çok" aria-label="En çok fiyat">
+                        <input name="en_cok_fiyat" type="number" inputmode="numeric" min="0" value="@(vm.SeciliFiyatMax?.ToString("0.##", invUst))" placeholder="En Çok" aria-label="En çok fiyat">
                     </div>
                     <div class="ms-filtre-fiyat-secim-listesi" role="radiogroup" aria-label="Hazır fiyat aralıkları">
                         <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="0-500"><input type="radio" name="urun-listesi-ust-fiyat-araligi"><span class="ms-filtre-kutu" aria-hidden="true"></span>0 TL - 500 TL</label>
@@ -65,7 +90,7 @@
                     <div class="ms-filtre-secim-listesi">
                         @foreach (var deger in cinsiyet.Degerler)
                         {
-                        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)"><span class="ms-filtre-kutu" aria-hidden="true"></span>@deger.Ad</label>
+                        <label class="ms-filtre-secim"><input name="checkbox_1" type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)"><span class="ms-filtre-kutu" aria-hidden="true"></span>@deger.Ad</label>
                         }
                     </div>
                     <button class="ms-filtre-uygula-buton" type="button" data-ms-urun-listesi-filtre-kapat>Filtrele</button>
@@ -106,6 +131,8 @@
         </div>
     </div>
 </div>
+
+@await Html.PartialAsync("~/Views/ProjeElementleri/GorunumTipleri/_KategoriCokSatanlar.cshtml")
 
 @* Bu script: Urun listesi ust chip secimleri ve ust filtre panellerini yonetir. *@
 <script>

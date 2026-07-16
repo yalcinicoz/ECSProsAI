@@ -9,6 +9,9 @@
     var tr = new System.Globalization.CultureInfo("tr-TR");
 }
 <aside class="ms-urun-listesi-filtre" aria-label="Sol filtre alanı">
+    <button class="ms-btn ms-buton-s ms-buton-ikincil w-full" type="button" data-ms-filtre-tumunu-temizle>
+        Filtreleri Temizle
+    </button>
     @if (vm.KategoriSecenekleri.Count > 0)
     {
     <div class="ms-filtre-kapsayici" data-filter-block>
@@ -21,7 +24,7 @@
                 @foreach (var kategori in vm.KategoriSecenekleri)
                 {
                 <label class="ms-filtre-secim" data-filter-option>
-                    <input type="checkbox" data-ms-kategori-url="@kategori.Url">
+                    <input name="checkbox_1" type="checkbox" data-ms-kategori-url="@kategori.Url">
                     <span class="ms-filtre-kutu" aria-hidden="true"></span>
                     @kategori.Ad
                 </label>
@@ -54,7 +57,7 @@
                 @foreach (var deger in grup.Degerler)
                 {
                 <label class="ms-filtre-secim ms-filtre-renk-secim" data-filter-option>
-                    <input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
+                    <input name="checkbox_1" type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
                     <span class="ms-filtre-kutu" aria-hidden="true"></span>
                     <span class="ms-filtre-renk" style="--ms-renk:@(deger.Hex ?? "#E2E8F0")" aria-hidden="true"></span>
                     <span class="ms-filtre-renk-bilgi"><strong>@deger.Ad</strong></span>
@@ -68,7 +71,7 @@
                 @foreach (var deger in grup.Degerler)
                 {
                 <label class="ms-filtre-secim" data-filter-option>
-                    <input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
+                    <input name="checkbox_1" type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
                     <span class="ms-filtre-kutu" aria-hidden="true"></span>
                     @deger.Ad (@deger.UrunSayisi.ToString("N0", tr))
                 </label>
@@ -92,9 +95,9 @@
         </button>
         <div class="ms-filtre-icerik@(fiyatSecili ? "" : " ms-gizli")" data-filter-content>
             <div class="ms-filtre-fiyat-araligi" aria-label="Fiyat aralığı seçimi">
-                <input type="number" inputmode="numeric" min="0" value="@(vm.SeciliFiyatMin?.ToString("0.##", inv))" placeholder="En Az@(vm.FiyatMin > 0 ? $" ({vm.FiyatMin.ToString("N0", tr)})" : "")" aria-label="En az fiyat">
+                <input name="en_az_fiyat" type="number" inputmode="numeric" min="0" value="@(vm.SeciliFiyatMin?.ToString("0.##", inv))" placeholder="En Az@(vm.FiyatMin > 0 ? $" ({vm.FiyatMin.ToString("N0", tr)})" : "")" aria-label="En az fiyat">
                 <span class="ms-filtre-fiyat-ayrac" aria-hidden="true">-</span>
-                <input type="number" inputmode="numeric" min="0" value="@(vm.SeciliFiyatMax?.ToString("0.##", inv))" placeholder="En Çok@(vm.FiyatMax > 0 ? $" ({vm.FiyatMax.ToString("N0", tr)})" : "")" aria-label="En çok fiyat">
+                <input name="en_cok_fiyat" type="number" inputmode="numeric" min="0" value="@(vm.SeciliFiyatMax?.ToString("0.##", inv))" placeholder="En Çok@(vm.FiyatMax > 0 ? $" ({vm.FiyatMax.ToString("N0", tr)})" : "")" aria-label="En çok fiyat">
             </div>
             <div class="ms-filtre-fiyat-secim-listesi" role="radiogroup" aria-label="Hazır fiyat aralıkları">
                 <label class="ms-filtre-secim ms-filtre-radio-secim" data-filter-option data-ms-fiyat-aralik="0-500"><input type="radio" name="urun-listesi-fiyat-araligi"><span class="ms-filtre-kutu" aria-hidden="true"></span>0TL-500TL</label>
@@ -106,9 +109,22 @@
         </div>
     </div>
 
+    @* Faz G: Kampanya filtresi — kampanya-ürün ilişkisi gelene dek gizli; markup tasarımın nihai yapısıyla güncel. *@
     @if (false)
     {
-        @* Faz G: Kampanya filtresi — kampanya-ürün ilişkisi kişiselleştirme sistemiyle gelecek *@
-        <div class="ms-filtre-kapsayici" data-filter-block></div>
+    <div class="ms-filtre-kapsayici" data-filter-block>
+        <button class="ms-filtre-baslik" type="button" data-filter-toggle aria-expanded="false">
+            Kampanya
+            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-filtre-ok" aria-hidden="true"></i>
+        </button>
+        <div class="ms-filtre-icerik ms-gizli" data-filter-content>
+            <div class="ms-filtre-secim-listesi">
+                <label class="ms-filtre-secim" data-filter-option><input name="checkbox_1" type="checkbox"><span class="ms-filtre-kutu" aria-hidden="true"></span>Sepette indirim</label>
+                <label class="ms-filtre-secim" data-filter-option><input name="checkbox_1" type="checkbox"><span class="ms-filtre-kutu" aria-hidden="true"></span>Hızlı teslimat</label>
+                <label class="ms-filtre-secim" data-filter-option><input name="checkbox_1" type="checkbox"><span class="ms-filtre-kutu" aria-hidden="true"></span>Kupon uygun</label>
+            </div>
+            <button class="ms-filtre-uygula-buton" type="button">Filtrele</button>
+        </div>
+    </div>
     }
 </aside>
