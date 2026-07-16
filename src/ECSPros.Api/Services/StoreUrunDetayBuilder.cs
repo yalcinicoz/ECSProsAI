@@ -105,13 +105,12 @@ public class StoreUrunDetayBuilder(
         // Varyant fiyatı çözümü: kanal fiyatı → varyant fiyatı → havuzun en düşük pozitif
         // fiyatı → ürün taban fiyatı.
         var enDusukPozitif = havuz
-            .Select(v => v.PlatformPrice ?? v.BasePrice)
+            .SelectMany(v => new[] { v.PlatformPrice ?? 0m, v.BasePrice })
             .Where(f => f > 0)
-            .DefaultIfEmpty(urun.BasePrice)
+            .DefaultIfEmpty(0m)
             .Min();
         decimal VaryantFiyati(decimal? platform, decimal taban) =>
-            (platform ?? taban) > 0 ? (platform ?? taban)
-            : (taban > 0 ? taban : (enDusukPozitif > 0 ? enDusukPozitif : urun.BasePrice));
+            platform is > 0 ? platform.Value : (taban > 0 ? taban : enDusukPozitif);
 
         var bedenler = new List<BedenSecenekVm>();
         if (bedenTip is not null)
@@ -136,7 +135,7 @@ public class StoreUrunDetayBuilder(
             .OrderBy(v => v.PlatformPrice ?? v.BasePrice)
             .FirstOrDefault() ?? havuz[0];
         var fiyat = fiyatliVaryant.PlatformPrice ?? fiyatliVaryant.BasePrice;
-        if (fiyat <= 0) fiyat = urun.BasePrice;
+        if (fiyat <= 0) fiyat = enDusukPozitif;
         var eskiFiyat = fiyatliVaryant.CompareAtPrice is { } eski && eski > fiyat ? eski : (decimal?)null;
 
         var zincir = await mediator.Send(
