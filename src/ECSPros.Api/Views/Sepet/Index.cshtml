@@ -1,10 +1,13 @@
 @{
     ViewData["Title"] = "Sepet";
+    ViewData["Robots"] = "noindex, nofollow";
+    ViewData["CanonicalPath"] = "/sepet";
 }
 
-<main class="ms-siparis-sayfa">
+<div class="ms-siparis-sayfa">
+    <h1 class="sr-only">Alışveriş Sepeti</h1>
     @await Html.PartialAsync("~/Views/ProjeElementleri/Sepet/_SepetSayfasi.cshtml")
-</main>
+</div>
 
 <script>
     document.querySelector(".ms-siparis-ozeti .ms-buton-tam")?.addEventListener("click", () => {

@@ -2,6 +2,23 @@
     <h2 class="ms-panel-basligi">Mobil Alt Bar</h2>
     <p class="ms-panel-aciklama">Mobil kullanıcıların ana sayfa, kategori, favori ve hesap alanlarına tek dokunuşla ulaşması için kullanılacak alt navigasyon örneği.</p>
 
+    <div class="ms-infinite-kullanim">
+        <div>
+            <strong>Mobil Alt Bar kullanım kuralı</strong>
+            <p>Ana sayfaya eklemek için aşağıdaki <code>nav.ms-mobil-alt-bar</code> bloğu layout veya ana sayfa view içinde kapanış <code>&lt;/body&gt;</code> alanına yakın bir noktaya eklenmelidir.</p>
+            <p>Element mobilde sabit alt bar olarak çalışır. Desktopta gizli kalması için ana kapsayıcıda <code>ms-mobil-gorunur</code> class'ı kullanılabilir.</p>
+        </div>
+        <pre><code>&lt;nav class="ms-mobil-alt-bar ms-mobil-gorunur" aria-label="Mobil alt navigasyon"&gt;
+  &lt;a class="ms-mobil-alt-bar-link ms-mobil-alt-bar-link-aktif" href="/" aria-current="page"&gt;
+    &lt;span class="ms-mobil-alt-bar-ikon ms-mobil-alt-bar-ikon-ana" aria-hidden="true"&gt;&lt;/span&gt;
+    &lt;span&gt;Ana Sayfa&lt;/span&gt;
+  &lt;/a&gt;
+  &lt;a class="ms-mobil-alt-bar-link" href="/urun-listesi"&gt;...&lt;/a&gt;
+  &lt;a class="ms-mobil-alt-bar-link" href="/favorilerim"&gt;...&lt;/a&gt;
+  &lt;a class="ms-mobil-alt-bar-link" href="/hesabim-varsayilan"&gt;...&lt;/a&gt;
+&lt;/nav&gt;</code></pre>
+    </div>
+
     <div class="ms-mobil-alt-bar-ornek" aria-label="Mobil alt bar önizlemesi">
         <div class="ms-mobil-alt-bar-telefon">
             <header class="ms-mobil-alt-bar-telefon-ust">
@@ -9,7 +26,7 @@
                 <span class="ms-mobil-alt-bar-telefon-rozet">Mobil</span>
             </header>
 
-            <main class="ms-mobil-alt-bar-telefon-icerik" aria-label="Örnek mobil sayfa içeriği">
+            <div class="ms-mobil-alt-bar-telefon-icerik" aria-label="Örnek mobil sayfa içeriği">
                 <section class="ms-mobil-alt-bar-vitrin">
                     <strong>Yeni sezon seçkileri</strong>
                     <span>Favorilere eklediğin ürünlere, kategorilere ve hesabına hızlı eriş.</span>
@@ -20,7 +37,7 @@
                     <span></span>
                     <span></span>
                 </div>
-            </main>
+            </div>
 
             <nav class="ms-mobil-alt-bar" aria-label="Mobil alt navigasyon">
                 <a class="ms-mobil-alt-bar-link ms-mobil-alt-bar-link-aktif" href="/" aria-current="page">
@@ -31,11 +48,11 @@
                     <span class="ms-mobil-alt-bar-ikon ms-mobil-alt-bar-ikon-kategoriler" aria-hidden="true"></span>
                     <span>Kategoriler</span>
                 </a>
-                <a class="ms-mobil-alt-bar-link" href="/Favorilerim">
+                <a class="ms-mobil-alt-bar-link" href="/favorilerim">
                     <span class="ms-mobil-alt-bar-ikon ms-mobil-alt-bar-ikon-mask ms-mobil-alt-bar-ikon-favori" aria-hidden="true"></span>
                     <span>Favorilerim</span>
                 </a>
-                <a class="ms-mobil-alt-bar-link" href="/Hesabim">
+                <a class="ms-mobil-alt-bar-link" href="/hesabim-varsayilan">
                     <span class="ms-mobil-alt-bar-ikon ms-mobil-alt-bar-ikon-mask ms-mobil-alt-bar-ikon-hesap" aria-hidden="true"></span>
                     <span>Hesabım</span>
                 </a>

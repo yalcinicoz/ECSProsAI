@@ -1,8 +1,8 @@
     <div class="ms-ornek-modal ms-siparis-kupon-modal" data-ms-kupon-modal aria-hidden="true">
         <div class="ms-ornek-modal-kaplama" data-ms-kupon-modal-kapat></div>
         <section class="ms-ornek-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-siparis-kupon-modal-baslik">
-            <button class="ms-ornek-modal-kapat" type="button" data-ms-kupon-modal-kapat aria-label="Kuponlarım modalını kapat">×</button>
-            <h3 id="ms-siparis-kupon-modal-baslik" class="ms-ornek-modal-baslik">Kuponlarım</h3>
+            <button class="ms-ornek-modal-kapat" type="button" data-ms-kupon-modal-kapat aria-label="Kuponlarım modalını kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+            <h3 id="ms-siparis-kupon-modal-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>Kuponlarım</h3>
             <p class="ms-ornek-modal-aciklama">Sepette kullanabileceğiniz kuponları bu alanda görüntüleyebilirsiniz.</p>
 
             <div class="ms-siparis-kupon-modal-icerik">
@@ -25,8 +25,8 @@
     <div class="ms-ornek-modal ms-siparis-sozlesme-modal" data-ms-sozlesme-modal aria-hidden="true">
         <div class="ms-ornek-modal-kaplama" data-ms-sozlesme-modal-kapat></div>
         <section class="ms-ornek-modal-kutu ms-siparis-sozlesme-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-siparis-sozlesme-modal-baslik">
-            <button class="ms-ornek-modal-kapat" type="button" data-ms-sozlesme-modal-kapat aria-label="Sözleşme bilgilendirme modalını kapat">×</button>
-            <h3 id="ms-siparis-sozlesme-modal-baslik" class="ms-ornek-modal-baslik">Mesafeli Satış Sözleşmesi ve Ön Bilgilendirme</h3>
+            <button class="ms-ornek-modal-kapat" type="button" data-ms-sozlesme-modal-kapat aria-label="Sözleşme bilgilendirme modalını kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+            <h3 id="ms-siparis-sozlesme-modal-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>Mesafeli Satış Sözleşmesi ve Ön Bilgilendirme</h3>
             <p class="ms-ornek-modal-aciklama">Siparişi tamamlamadan önce satış, teslimat, ödeme, cayma hakkı ve kişisel veri bilgilendirme koşullarını okuyup onaylamanız gerekir.</p>
 
             <div class="ms-siparis-sozlesme-belgeler">
@@ -70,30 +70,30 @@
 <div class="ms-ornek-modal ms-tckn-dogrulama-modal" data-ms-tckn-modal aria-hidden="true">
     <div class="ms-ornek-modal-kaplama" data-ms-tckn-modal-kapat></div>
     <section class="ms-ornek-modal-kutu ms-ornek-modal-kutu-uyari ms-ornek-modal-boyut-xl" role="dialog" aria-modal="true" aria-labelledby="ms-tckn-modal-baslik">
-        <button class="ms-ornek-modal-kapat" type="button" data-ms-tckn-modal-kapat aria-label="TCKN doğrulama modalını kapat">×</button>
-        <h3 id="ms-tckn-modal-baslik" class="ms-ornek-modal-baslik">TCKN Doğrulama</h3>
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-tckn-modal-kapat aria-label="TCKN doğrulama modalını kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+        <h3 id="ms-tckn-modal-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>TCKN Doğrulama</h3>
         <p class="ms-ornek-modal-aciklama">Sipariş tutarınız 13.000 TL üzeri olduğu için kimlik doğrulama bilgisini kontrol etmeniz gerekiyor.</p>
 
         <div class="ms-tckn-dogrulama-formu">
             <div class="ms-tckn-form-grid">
                 <label class="ms-form-alani">
                     <span class="ms-form-etiket">T.C. Kimlik Numarası</span>
-                    <input class="ms-form-girdi" type="text" inputmode="numeric" maxlength="11" placeholder="11 haneli TCKN" data-ms-tckn-girdi data-ms-tckn-zorunlu data-ms-tckn-etiket="TCKN">
+                    <input name="tckn_girdi" class="ms-form-girdi" type="text" inputmode="numeric" maxlength="11" placeholder="11 haneli TCKN" data-ms-tckn-girdi data-ms-tckn-zorunlu data-ms-tckn-etiket="TCKN">
                     <span class="ms-form-hata" data-ms-tckn-hata hidden>TCKN zorunludur.</span>
                 </label>
                 <label class="ms-form-alani">
                     <span class="ms-form-etiket">Ad</span>
-                    <input class="ms-form-girdi" type="text" placeholder="Adınızı yazın" autocomplete="given-name" data-ms-tckn-zorunlu data-ms-tckn-etiket="Ad">
+                    <input name="tckn_zorunlu" class="ms-form-girdi" type="text" placeholder="Adınızı yazın" autocomplete="given-name" data-ms-tckn-zorunlu data-ms-tckn-etiket="Ad">
                     <span class="ms-form-hata" data-ms-tckn-hata hidden>Ad zorunludur.</span>
                 </label>
                 <label class="ms-form-alani">
                     <span class="ms-form-etiket">Soyad</span>
-                    <input class="ms-form-girdi" type="text" placeholder="Soyadınızı yazın" autocomplete="family-name" data-ms-tckn-zorunlu data-ms-tckn-etiket="Soyad">
+                    <input name="tckn_zorunlu" class="ms-form-girdi" type="text" placeholder="Soyadınızı yazın" autocomplete="family-name" data-ms-tckn-zorunlu data-ms-tckn-etiket="Soyad">
                     <span class="ms-form-hata" data-ms-tckn-hata hidden>Soyad zorunludur.</span>
                 </label>
                 <label class="ms-form-alani">
                     <span class="ms-form-etiket">Doğum Tarihi</span>
-                    <input class="ms-form-girdi" type="date" autocomplete="bday" data-ms-tckn-zorunlu data-ms-tckn-etiket="Doğum tarihi">
+                    <input name="tckn_zorunlu" class="ms-form-girdi" type="date" autocomplete="bday" data-ms-tckn-zorunlu data-ms-tckn-etiket="Doğum tarihi">
                     <span class="ms-form-hata" data-ms-tckn-hata hidden>Doğum tarihi zorunludur.</span>
                 </label>
             </div>
@@ -117,8 +117,8 @@
 <div class="ms-ornek-modal ms-iade-talep-modal" data-ms-iade-talep-modal aria-hidden="true">
     <div class="ms-ornek-modal-kaplama" data-ms-iade-talep-kapat></div>
     <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-2xl ms-iade-talep-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-iade-talep-baslik">
-        <button class="ms-ornek-modal-kapat" type="button" data-ms-iade-talep-kapat aria-label="İade talebi modalını kapat">×</button>
-        <div class="ms-siparis-modal-ust">
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-iade-talep-kapat aria-label="İade talebi modalını kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+        <div class="ms-siparis-modal-ust" data-ms-modal-surukleme-alani>
             <span class="ms-hesabim-siparis-durum ms-hesabim-siparis-durum-tamamlandi">Teslim Edildi</span>
             <h3 id="ms-iade-talep-baslik" class="ms-ornek-modal-baslik">İade Talebi Oluştur</h3>
             <p class="ms-ornek-modal-aciklama">MSX-240612-0928 numaralı örnek sipariş için iade etmek istediğiniz ürünleri seçin.</p>
@@ -157,8 +157,8 @@
             <div class="ms-iade-urun-listesi">
                 <article class="ms-iade-urun-kart" data-ms-iade-urun-kart>
                     <label class="ms-iade-urun-secim">
-                        <input type="checkbox" data-ms-iade-urun-sec>
-                        <img src="/images/ornek-resim.jpg" alt="Kadın ön çıtçıtlı dik yaka kolsuz gömlek">
+                        <input name="iade_urun_sec" type="checkbox" data-ms-iade-urun-sec>
+                        <img src="/images/ornek-resim.jpg" alt="Kadın ön çıtçıtlı dik yaka kolsuz gömlek" width="612" height="612" loading="lazy">
                         <span>
                             <strong>Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek</strong>
                             <small>Beden: M · Renk: Ekru · Adet: 1</small>
@@ -176,14 +176,14 @@
                                     <i class="fa-solid fa-chevron-down ms-fa-ikon ms-ozel-select-ok " aria-hidden="true"></i>
                                 </button>
                                 <div class="ms-ozel-select-panel" role="listbox">
-                                    <input class="ms-ozel-select-arama" type="search" placeholder="Alt neden ara" data-ms-iade-alt-neden-arama>
+                                    <input name="iade_alt_neden_arama" class="ms-ozel-select-arama" type="search" placeholder="Alt neden ara" data-ms-iade-alt-neden-arama>
                                     <div class="ms-ozel-select-secenek-listesi" data-ms-iade-alt-neden-secenekler></div>
                                 </div>
                             </div>
                         </div>
                         <label class="ms-iade-diger-neden" hidden>
                             <span>Diğer açıklaması</span>
-                            <textarea rows="3" data-ms-iade-diger-neden placeholder="İade nedeninizi kısaca yazın"></textarea>
+                            <textarea name="iade_nedeninizi_kisaca_yazin" rows="3" data-ms-iade-diger-neden placeholder="İade nedeninizi kısaca yazın"></textarea>
                         </label>
                         <div class="ms-iade-secimler" data-ms-iade-secimler hidden>
                             <strong>Seçim yapılanlar</strong>
@@ -201,8 +201,8 @@
 
                 <article class="ms-iade-urun-kart ms-iade-urun-kart-iade-edildi" data-ms-iade-urun-kart>
                     <label class="ms-iade-urun-secim">
-                        <input type="checkbox" data-ms-iade-urun-sec disabled>
-                        <img src="/images/ornek-resim-2.jpg" alt="Polo yaka desenli erkek triko tişört">
+                        <input name="iade_urun_sec" type="checkbox" data-ms-iade-urun-sec disabled>
+                        <img src="/images/ornek-resim-2.jpg" alt="Polo yaka desenli erkek triko tişört" width="554" height="554" loading="lazy">
                         <span>
                             <strong>Polo Yaka Desenli Erkek Triko Tişört</strong>
                             <small>Beden: L · Renk: Siyah · Adet: 1</small>
@@ -254,14 +254,14 @@
                                     <i class="fa-solid fa-chevron-down ms-fa-ikon ms-ozel-select-ok " aria-hidden="true"></i>
                                 </button>
                                 <div class="ms-ozel-select-panel" role="listbox">
-                                    <input class="ms-ozel-select-arama" type="search" placeholder="Alt neden ara" data-ms-iade-alt-neden-arama>
+                                    <input name="iade_alt_neden_arama" class="ms-ozel-select-arama" type="search" placeholder="Alt neden ara" data-ms-iade-alt-neden-arama>
                                     <div class="ms-ozel-select-secenek-listesi" data-ms-iade-alt-neden-secenekler></div>
                                 </div>
                             </div>
                         </div>
                         <label class="ms-iade-diger-neden" hidden>
                             <span>Diğer açıklaması</span>
-                            <textarea rows="3" data-ms-iade-diger-neden placeholder="İade nedeninizi kısaca yazın"></textarea>
+                            <textarea name="iade_nedeninizi_kisaca_yazin" rows="3" data-ms-iade-diger-neden placeholder="İade nedeninizi kısaca yazın"></textarea>
                         </label>
                         <div class="ms-iade-secimler" data-ms-iade-secimler hidden>
                             <strong>Seçim yapılanlar</strong>
@@ -279,8 +279,8 @@
 
                 <article class="ms-iade-urun-kart" data-ms-iade-urun-kart>
                     <label class="ms-iade-urun-secim">
-                        <input type="checkbox" data-ms-iade-urun-sec>
-                        <img src="/images/ornek-resim.jpg" alt="İç astarlı salaş tesettür bluz">
+                        <input name="iade_urun_sec" type="checkbox" data-ms-iade-urun-sec>
+                        <img src="/images/ornek-resim.jpg" alt="İç astarlı salaş tesettür bluz" width="612" height="612" loading="lazy">
                         <span>
                             <strong>İç Astarlı Salaş Tesettür Bluz</strong>
                             <small>Beden: S · Renk: Beyaz · Adet: 2</small>
@@ -298,14 +298,14 @@
                                     <i class="fa-solid fa-chevron-down ms-fa-ikon ms-ozel-select-ok " aria-hidden="true"></i>
                                 </button>
                                 <div class="ms-ozel-select-panel" role="listbox">
-                                    <input class="ms-ozel-select-arama" type="search" placeholder="Alt neden ara" data-ms-iade-alt-neden-arama>
+                                    <input name="iade_alt_neden_arama" class="ms-ozel-select-arama" type="search" placeholder="Alt neden ara" data-ms-iade-alt-neden-arama>
                                     <div class="ms-ozel-select-secenek-listesi" data-ms-iade-alt-neden-secenekler></div>
                                 </div>
                             </div>
                         </div>
                         <label class="ms-iade-diger-neden" hidden>
                             <span>Diğer açıklaması</span>
-                            <textarea rows="3" data-ms-iade-diger-neden placeholder="İade nedeninizi kısaca yazın"></textarea>
+                            <textarea name="iade_nedeninizi_kisaca_yazin" rows="3" data-ms-iade-diger-neden placeholder="İade nedeninizi kısaca yazın"></textarea>
                         </label>
                         <div class="ms-iade-secimler" data-ms-iade-secimler hidden>
                             <strong>Seçim yapılanlar</strong>
@@ -323,8 +323,8 @@
 
                 <article class="ms-iade-urun-kart" data-ms-iade-urun-kart>
                     <label class="ms-iade-urun-secim">
-                        <input type="checkbox" data-ms-iade-urun-sec>
-                        <img src="/images/ornek-resim-2.jpg" alt="Kadın yüksek bel bol paça pantolon">
+                        <input name="iade_urun_sec" type="checkbox" data-ms-iade-urun-sec>
+                        <img src="/images/ornek-resim-2.jpg" alt="Kadın yüksek bel bol paça pantolon" width="554" height="554" loading="lazy">
                         <span>
                             <strong>Kadın Yüksek Bel Bol Paça Pantolon</strong>
                             <small>Beden: 38 · Renk: Siyah · Adet: 1</small>
@@ -342,14 +342,14 @@
                                     <i class="fa-solid fa-chevron-down ms-fa-ikon ms-ozel-select-ok " aria-hidden="true"></i>
                                 </button>
                                 <div class="ms-ozel-select-panel" role="listbox">
-                                    <input class="ms-ozel-select-arama" type="search" placeholder="Alt neden ara" data-ms-iade-alt-neden-arama>
+                                    <input name="iade_alt_neden_arama" class="ms-ozel-select-arama" type="search" placeholder="Alt neden ara" data-ms-iade-alt-neden-arama>
                                     <div class="ms-ozel-select-secenek-listesi" data-ms-iade-alt-neden-secenekler></div>
                                 </div>
                             </div>
                         </div>
                         <label class="ms-iade-diger-neden" hidden>
                             <span>Diğer açıklaması</span>
-                            <textarea rows="3" data-ms-iade-diger-neden placeholder="İade nedeninizi kısaca yazın"></textarea>
+                            <textarea name="iade_nedeninizi_kisaca_yazin" rows="3" data-ms-iade-diger-neden placeholder="İade nedeninizi kısaca yazın"></textarea>
                         </label>
                         <div class="ms-iade-secimler" data-ms-iade-secimler hidden>
                             <strong>Seçim yapılanlar</strong>
@@ -368,7 +368,7 @@
         </div>
 
         <label class="ms-iade-yukleme-alani">
-            <input type="file" multiple accept="image/*" data-ms-iade-gorsel>
+            <input name="iade_gorsel" type="file" multiple accept="image/*" data-ms-iade-gorsel>
             <strong>İade görsellerini yükle</strong>
             <span data-ms-iade-gorsel-bilgi>Defolu, hasarlı veya yanlış ürün durumunda görsel ekleyebilirsiniz.</span>
         </label>
@@ -387,8 +387,8 @@
 <div class="ms-ornek-modal ms-iade-hata-modal" data-ms-iade-hata-modal aria-hidden="true">
     <div class="ms-ornek-modal-kaplama" data-ms-iade-hata-kapat></div>
     <section class="ms-ornek-modal-kutu ms-ornek-modal-kutu-hata" role="dialog" aria-modal="true" aria-labelledby="ms-iade-hata-baslik">
-        <button class="ms-ornek-modal-kapat" type="button" data-ms-iade-hata-kapat aria-label="İade uyarı modalını kapat">×</button>
-        <h3 id="ms-iade-hata-baslik" class="ms-ornek-modal-baslik" data-ms-iade-hata-baslik>Eksik Bilgi</h3>
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-iade-hata-kapat aria-label="İade uyarı modalını kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+        <h3 id="ms-iade-hata-baslik" class="ms-ornek-modal-baslik" data-ms-iade-hata-baslik data-ms-modal-surukleme-alani>Eksik Bilgi</h3>
         <p class="ms-ornek-modal-aciklama" data-ms-iade-hata-mesaj>İade kodu alabilmek için ürün ve iade nedeni seçmelisiniz.</p>
         <div class="ms-ornek-modal-aksiyonlar">
             <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-iade-hata-kapat>Tamam</button>
