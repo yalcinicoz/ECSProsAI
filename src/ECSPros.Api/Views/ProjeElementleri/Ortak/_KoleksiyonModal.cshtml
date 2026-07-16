@@ -1,0 +1,132 @@
+<div class="ms-ornek-modal ms-koleksiyon-modal" data-ms-koleksiyon-modal aria-hidden="true">
+    <div class="ms-ornek-modal-kaplama" data-ms-koleksiyon-modal-kapat></div>
+    <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-xl ms-koleksiyon-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-koleksiyon-modal-baslik">
+        <button class="ms-ornek-modal-kapat" type="button" aria-label="Koleksiyon modalını kapat" data-ms-koleksiyon-modal-kapat>
+            <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
+        </button>
+
+        <div data-ms-modal-surukleme-alani>
+            <h3 class="ms-ornek-modal-baslik" id="ms-koleksiyon-modal-baslik">Koleksiyon Ekle</h3>
+            <p class="ms-ornek-modal-aciklama">Seçili ürünleri var olan bir koleksiyona ekleyebilir veya yeni koleksiyon bilgisi oluşturabilirsiniz.</p>
+        </div>
+
+        <div class="ms-koleksiyon-form-grid">
+            <label class="ms-form-alani">
+                <span class="ms-form-etiket">Var olan koleksiyonlar</span>
+                <div class="ms-ozel-select" data-ms-ozel-select>
+                    <button class="ms-ozel-select-tetikleyici" type="button" data-ms-ozel-select-tetikleyici aria-haspopup="listbox" aria-expanded="false">
+                        <span data-ms-ozel-select-deger>Yeni koleksiyon oluştur</span>
+                        <i class="fa-solid fa-chevron-down ms-fa-ikon ms-ozel-select-ok" aria-hidden="true"></i>
+                    </button>
+                    <div class="ms-ozel-select-panel" role="listbox" aria-label="Koleksiyon seçenekleri">
+                        <input name="koleksiyon_ara" class="ms-ozel-select-arama" type="search" placeholder="Koleksiyon ara" data-ms-ozel-select-arama>
+                        <div class="ms-ozel-select-secenek-listesi">
+                            <button class="ms-ozel-select-secenek ms-ozel-select-secenek-aktif" type="button" role="option" aria-selected="true" data-ms-ozel-select-secenek>
+                                <span data-ms-ozel-select-metin>Yeni koleksiyon oluştur</span>
+                            </button>
+                            <button class="ms-ozel-select-secenek" type="button" role="option" aria-selected="false" data-ms-ozel-select-secenek>
+                                <span data-ms-ozel-select-metin>Yazlık Kombinler</span>
+                            </button>
+                            <button class="ms-ozel-select-secenek" type="button" role="option" aria-selected="false" data-ms-ozel-select-secenek>
+                                <span data-ms-ozel-select-metin>Hediye Listem</span>
+                            </button>
+                            <button class="ms-ozel-select-secenek" type="button" role="option" aria-selected="false" data-ms-ozel-select-secenek>
+                                <span data-ms-ozel-select-metin>İndirim Takibi</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </label>
+            <label class="ms-form-alani">
+                <span class="ms-form-etiket">Koleksiyon Adı</span>
+                <input name="orn_bayram_kombinleri" class="ms-form-girdi" type="text" data-ms-koleksiyon-ad placeholder="Örn. Bayram Kombinleri" />
+            </label>
+            <label class="ms-form-alani ms-form-alani-genis">
+                <span class="ms-form-etiket">Açıklama</span>
+                <textarea name="bu_koleksiyonda_hangi_urunleri_takip_edeceginizi_yazin" class="ms-form-metin-alani" data-ms-koleksiyon-aciklama placeholder="Bu koleksiyonda hangi ürünleri takip edeceğinizi yazın."></textarea>
+            </label>
+        </div>
+
+        <div class="ms-koleksiyon-onaylar">
+            <label class="ms-onay-kart">
+                <input name="koleksiyon_herkese_acik" class="ms-onay-input" type="checkbox" data-ms-koleksiyon-herkese-acik checked />
+                <span class="ms-onay-kutu" aria-hidden="true"></span>
+                <span class="ms-onay-metin">
+                    Herkese açık
+                    <span class="ms-onay-yardim">Diğer kullanıcılar bu koleksiyonu görebilir.</span>
+                </span>
+            </label>
+            <label class="ms-onay-kart">
+                <input name="koleksiyon_paylasilabilir" class="ms-onay-input" type="checkbox" data-ms-koleksiyon-paylasilabilir checked />
+                <span class="ms-onay-kutu" aria-hidden="true"></span>
+                <span class="ms-onay-metin">
+                    Paylaşılabilir
+                    <span class="ms-onay-yardim">Bu koleksiyon paylaşılabilir olsun.</span>
+                </span>
+            </label>
+        </div>
+
+        <div class="ms-koleksiyon-secim-alani">
+            <div class="ms-koleksiyon-sekmeleri" role="tablist" aria-label="Koleksiyon ürünleri">
+                <button class="ms-koleksiyon-sekme ms-koleksiyon-sekme-aktif" type="button" role="tab" aria-selected="true" data-ms-koleksiyon-sekme="favoriler">Favoriden Ekle</button>
+                <button class="ms-koleksiyon-sekme" type="button" role="tab" aria-selected="false" data-ms-koleksiyon-sekme="koleksiyonlar">Koleksiyondan Ekle</button>
+                <button class="ms-koleksiyon-sekme" type="button" role="tab" aria-selected="false" data-ms-koleksiyon-sekme="sectiklerim">Seçilenler <span data-ms-koleksiyon-secili-sayac>0</span></button>
+            </div>
+
+            <div class="ms-koleksiyon-panel ms-koleksiyon-panel-aktif" data-ms-koleksiyon-panel="favoriler">
+                <div class="ms-koleksiyon-urun-grid">
+                    <button class="ms-koleksiyon-urun-secim" type="button" data-ms-koleksiyon-urun data-ms-koleksiyon-urun-secili data-urun-id="kol-ortak-1" data-urun-ad="Kadın Yırtmaçlı Kemerli Kat Detaylı Tül Etek" data-urun-gorsel="/images/ornek-resim.jpg" data-urun-meta="Beden: M - Renk: Siyah">
+                        <img src="/images/ornek-resim.jpg" alt="Kadın yırtmaçlı kemerli kat detaylı tül etek" / width="612" height="612" loading="lazy">
+                        <span><strong>Kadın Yırtmaçlı Kemerli Kat Detaylı Tül Etek</strong><small>Beden: M - Renk: Siyah</small></span>
+                        <em>Seçildi</em>
+                    </button>
+                    <button class="ms-koleksiyon-urun-secim" type="button" data-ms-koleksiyon-urun data-ms-koleksiyon-urun-secili data-urun-id="kol-ortak-2" data-urun-ad="Kadın Ön Çıtçıtlı Dik Yaka Gömlek" data-urun-gorsel="/images/ornek-resim-2.jpg" data-urun-meta="Beden: S - Renk: Ekru">
+                        <img src="/images/ornek-resim-2.jpg" alt="Kadın ön çıtçıtlı dik yaka gömlek" / width="554" height="554" loading="lazy">
+                        <span><strong>Kadın Ön Çıtçıtlı Dik Yaka Gömlek</strong><small>Beden: S - Renk: Ekru</small></span>
+                        <em>Seçildi</em>
+                    </button>
+                    <button class="ms-koleksiyon-urun-secim" type="button" data-ms-koleksiyon-urun data-ms-koleksiyon-urun-secili data-urun-id="kol-ortak-3" data-urun-ad="Kadın Haki Aerobin Kuşaklı Elbise" data-urun-gorsel="/images/ornek-resim.jpg" data-urun-meta="Beden: 38 - Renk: Haki">
+                        <img src="/images/ornek-resim.jpg" alt="Kadın haki aerobin kuşaklı elbise" / width="612" height="612" loading="lazy">
+                        <span><strong>Kadın Haki Aerobin Kuşaklı Elbise</strong><small>Beden: 38 - Renk: Haki</small></span>
+                        <em>Seçildi</em>
+                    </button>
+                </div>
+            </div>
+
+            <div class="ms-koleksiyon-panel" data-ms-koleksiyon-panel="koleksiyonlar" hidden>
+                <div class="ms-koleksiyon-urun-grid">
+                    <button class="ms-koleksiyon-urun-secim" type="button" data-ms-koleksiyon-urun data-urun-id="kol-yazlik-1" data-urun-ad="Yazlık Kombinler - Düğmeli Triko Kazak" data-urun-gorsel="/testimage/urun-detay/1.webp" data-urun-meta="Yazlık Kombinler koleksiyonundan">
+                        <img src="/testimage/urun-detay/1.webp" alt="Yazlık kombinler koleksiyonundaki düğmeli triko kazak" / width="214" height="268" loading="lazy">
+                        <span><strong>Yazlık Kombinler - Düğmeli Triko Kazak</strong><small>Yazlık Kombinler koleksiyonundan</small></span>
+                        <em>Seçildi</em>
+                    </button>
+                    <button class="ms-koleksiyon-urun-secim" type="button" data-ms-koleksiyon-urun data-urun-id="kol-hediye-1" data-urun-ad="Hediye Listem - Mini Triko Elbise" data-urun-gorsel="/testimage/urun-detay/2.webp" data-urun-meta="Hediye Listem koleksiyonundan">
+                        <img src="/testimage/urun-detay/2.webp" alt="Hediye listem koleksiyonundaki mini triko elbise" / width="214" height="268" loading="lazy">
+                        <span><strong>Hediye Listem - Mini Triko Elbise</strong><small>Hediye Listem koleksiyonundan</small></span>
+                        <em>Seçildi</em>
+                    </button>
+                    <button class="ms-koleksiyon-urun-secim" type="button" data-ms-koleksiyon-urun data-urun-id="kol-indirim-1" data-urun-ad="İndirim Takibi - Kat Kat Volanlı Etek" data-urun-gorsel="/testimage/urun-detay/3.webp" data-urun-meta="İndirim Takibi koleksiyonundan">
+                        <img src="/testimage/urun-detay/3.webp" alt="İndirim takibi koleksiyonundaki kat kat volanlı etek" / width="214" height="268" loading="lazy">
+                        <span><strong>İndirim Takibi - Kat Kat Volanlı Etek</strong><small>İndirim Takibi koleksiyonundan</small></span>
+                        <em>Seçildi</em>
+                    </button>
+                </div>
+            </div>
+
+            <div class="ms-koleksiyon-panel" data-ms-koleksiyon-panel="sectiklerim" hidden>
+                <div class="ms-koleksiyon-bos" data-ms-koleksiyon-secili-bos>
+                    <strong>Henüz ürün seçmediniz</strong>
+                    <p>Ürünlerden seçim yaptığınızda burada görünür.</p>
+                </div>
+                <div class="ms-koleksiyon-secili-liste" data-ms-koleksiyon-secili-liste></div>
+            </div>
+        </div>
+
+        <div class="ms-ornek-modal-aksiyonlar">
+            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-koleksiyon-modal-kapat>Vazgec</button>
+            <button class="ms-buton ms-buton-m ms-buton-cizgili-basarili" type="button" data-ms-onay-red-ac data-ms-onay-red-tip="onay" data-ms-onay-red-baslik="Koleksiyon Onaylandi" data-ms-onay-red-metin="Yeni koleksiyon islemi onaylandi.">Onaylandi</button>
+            <button class="ms-buton ms-buton-m ms-buton-cizgili-tehlikeli" type="button" data-ms-onay-red-ac data-ms-onay-red-tip="red" data-ms-onay-red-baslik="Koleksiyon Reddedildi" data-ms-onay-red-metin="Yeni koleksiyon islemi reddedildi.">Reddedildi</button>
+            <button class="ms-buton ms-buton-m ms-buton-satin-al" type="button" data-ms-koleksiyon-olustur>Koleksiyon Ekle</button>
+        </div>
+    </section>
+</div>
