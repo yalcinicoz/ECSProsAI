@@ -103,7 +103,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     headers: { Authorization: "Bearer " + token() }
                 });
                 const kveri = await kcevap.json().catch(() => null);
-                (kveri?.data || []).filter((k) => k.isQuickSave)
+                // 2026-07-16: bookmark işaretlemesi üyenin TÜM koleksiyonlarındaki ürünlere göre
+                (kveri?.data || [])
                     .forEach((k) => (k.itemCodes || []).forEach((kod) => kayitliKodlar.add(kod)));
             } catch { /* bookmark işaretlemesi yapılamadı */ }
 
@@ -174,8 +175,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (buton.matches("[data-ms-sepet-favori]")) {
             sepetIsaretle(buton, !aktifti); // sepet satırları dinamik — görsel toggle burada
         }
-        if (koleksiyonMu) { kayitliKaydet(kod, !aktifti); }
-        else { kaydet(kod, renkBul(buton), !aktifti); }
+        // 2026-07-16: koleksiyon butonu artık sessiz quick-save YAPMAZ — site.js'in ortak
+        // "Koleksiyona Ekle" modal akışı açılır, kayıt köprü script'inden (gerçek API) yapılır.
+        if (!koleksiyonMu) { kaydet(kod, renkBul(buton), !aktifti); }
     }, true);
 
     // Sonradan eklenen kartlar (infinite scroll şablon kartları)
