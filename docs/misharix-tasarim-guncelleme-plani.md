@@ -51,7 +51,23 @@ sitenin gerçek sayfaları içindir.
 - [x] `tailwind.css` birebir kopya; `site.css` tasarımın derlenmiş çıktısıyla değiştirildi (971.581 bayt, md5 eşit — A4 kalıbı sürüyor: ECSPros yeniden derlemez, tasarım çıktısını kullanır). Değişen `css/fontawesome-all.css` de senkronlandı (hiçbir view referans etmiyor, bayt-eşitlik için).
 - [x] Kapsam denetimi GEÇTİ: 7 ECSPros'a özgü view'daki tüm class'lar tarandı; site.css'te olmayan 8 aday (`ms-sehir-modal*`, `ms-uyari*`, `lazy-infinite-on`, `ms-gorunum-daha-fazla-alani`) ESKİ css'te de yoktu — JS marker'ı/view-içi stil, regresyon değil.
 
-### Faz 4 — 60 ortak view üçlü merge (SÜRÜYOR — 2026-07-16)
+### Faz 4 — 60 ortak view üçlü merge ✅ (2026-07-16 — build 0 hata, check.sh DRIFT TEMİZ)
+- [x] TAMAMLANDI: 60 dosyanın hepsi + giriş/kayıt modalları çözüldü. Giriş mimarisi:
+  UI akışı (modal/sekme/adım/sayaç/kod kutuları/otomatik onay) YENİ site.js'te; _AnaNavigasyon
+  inline script'i 126 satıra indi — yalnız gerçek OTP: Kodu Onayla document-capture'da kesilir,
+  demo "Giriş Başarılı" yalnız gerçek doğrulama başarısında gösterilir; oturum omurgası
+  GirisModal script'inde. **Faz 4'te doğan bilinen sınırlar/ertelemeler:**
+  - UrunDegerlendirmeleri sayfası: tasarımın yeni filtre-select/durum-sekmesi UI'ına geçiş
+    yapılmadı (çalışan gerçek sayfa korundu) — ayrı bağlama işi.
+  - Hesabım Adreslerim: tasarımın ortak-adres-modalı akışına geçilmedi (E3 gerçek form korundu).
+  - Yorum yaz: bizim E7 modalı iş başında; tasarımın yorumYapModal'ına geçiş Faz 5'te değerlendirilecek.
+  - Koleksiyon: bizim E6 API'li sayfa modalı + layout'taki ortak koleksiyon şablonları yan yana —
+    Faz 5'te uzlaştırılacak (çifte modal riski denetlenecek).
+  - Statü/harcama, hızlı filtre chip'leri, kampanya filtresi, Süper Fırsat etiketi: veri
+    kaynağı yok — tasarımın güncel markup'ı @if(false)/yorum içinde hazır bekliyor.
+  - Hesap menü rotaları /Hesabim/* kaldı (lowercase hizalama Faz 8).
+
+#### (arşiv) Faz 4 ara notları
 - [x] Toplu geçiş yapıldı: 12 trivial kopya + 44 dosyada merge-file (43 çakıştı). ÇÖZÜLENLER (commit'li):
   4 host Index, _AnaNavigasyon (OTP bloğu korunarak 7 satıra indi), Duyuru, GirisMenu, Footer,
   Breadcrumb, HesabimYanMenu, _Layout, Search (canlı arama korundu — demo şablon bilinçli yok),
