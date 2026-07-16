@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.ResponseCompression;
+using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -78,6 +80,28 @@ builder.Services.AddSingleton(npgsqlDataSource);
 // ─── Controllers + Storefront Razor Views ──────────────────────────
 // Storefront sayfaları da bu host'tan render edilir (Razor taşıma planı 3.1);
 // API controller'ları etkilenmez, JSON ayarları aynen geçerli kalır.
+// Faz 8 (misharix tasarım sözleşmesi): Production'da dinamik Brotli/Gzip sıkıştırma.
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
+    {
+        "application/javascript",
+        "application/json",
+        "image/svg+xml"
+    });
+});
+builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.SmallestSize;
+});
+builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.SmallestSize;
+});
+
 var mvcBuilder = builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
     {
@@ -274,6 +298,43 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseSwagger();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "ECSPros API v1"));
+
+// Faz 8 (misharix tasarım sözleşmesi): sürüm sorgulu (?v=) CSS/JS, performans görselleri
+// ve Font Awesome dosyalarına 1 yıl immutable cache; HTML'e no-cache (tarayıcı bayat
+// vitrin HTML'i tutmaz — sunucu tarafı versiyonlu vitrin cache'i ayrıdır).
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        var response = context.Response;
+        var requestPath = context.Request.Path.Value ?? string.Empty;
+        var contentType = response.ContentType ?? string.Empty;
+        var surumluStatikDosya = context.Request.Query.ContainsKey("v")
+            || requestPath.StartsWith("/images/performance/", StringComparison.OrdinalIgnoreCase)
+            || requestPath.StartsWith("/fontawesome-free-7.2.0-web/", StringComparison.OrdinalIgnoreCase);
+
+        if (response.StatusCode == StatusCodes.Status200OK && surumluStatikDosya)
+        {
+            response.Headers.CacheControl = "public,max-age=31536000,immutable";
+        }
+        else if (response.StatusCode == StatusCodes.Status200OK
+            && contentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
+        {
+            response.Headers.CacheControl = "no-cache,no-store,must-revalidate";
+            response.Headers.Pragma = "no-cache";
+            response.Headers.Expires = "0";
+        }
+
+        return Task.CompletedTask;
+    });
+
+    await next();
+});
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseResponseCompression();
+}
 
 // Storefront statik varlıkları (wwwroot: css/js/ikons/images/video/fontawesome —
 // misharix ile aynı kök yollar, partial'lardaki /ikons/... referansları değişmeden çalışır)

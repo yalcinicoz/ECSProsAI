@@ -133,10 +133,17 @@ sitenin gerçek sayfaları içindir.
   fa-location-crosshairs dahil); kök `ikons/` temizliği: taşınan 55 dosyanın kök kopyaları
   sıfır-referans doğrulamasıyla silindi, klasör tasarımla birebir.
 
-### Faz 8 — Layout/SEO/Program.cs seçici uyarlama
-- [ ] `_Layout` merge: SEO ViewData sözleşmesi (Title/MetaDescription/CanonicalPath/Robots/OG/JsonLd) farkları hizalanır; ortak modal partial'ları layout seviyesinde.
-- [ ] Program.cs'ten SEÇİCİ alınır (kopyalanmaz): Brotli/Gzip response compression (Production), sürüm sorgulu CSS/JS/görsel/FA için 1 yıl `immutable`, HTML `no-cache`.
-- [ ] `robots.txt`/`sitemap.xml` ECSPros karşılığı denetlenir (vitrin/dinamik rotalarla çelişmesin).
+### Faz 8 — Layout/SEO/Program.cs seçici uyarlama ✅ (2026-07-16)
+
+- [x] SEO ViewData sözleşmesi Faz 4 layout merge'üyle gelmişti (Title/MetaDescription/Canonical/
+  Robots/OG/JsonLd); ürün/liste sayfalarında gerçek-veri JsonLd ayrı iş (sahte demo JSON-LD basılmıyor).
+- [x] Program.cs: Brotli/Gzip response compression (Production, SmallestSize, EnableForHttps) +
+  sürüm sorgulu (?v=) / images-performance / fontawesome dosyalarına 1 yıl immutable cache +
+  HTML'e no-cache (tarayıcı bayat vitrin HTML'i tutmaz).
+- [x] robots.txt tasarımdan uyarlandı (sabit alan adlı Sitemap satırı çıkarıldı); statik demo
+  sitemap.xml EKLENMEDİ — gerçek katalog için dinamik sitemap go-live işi.
+- [x] Lowercase rotalar: HesabimController'da lowercase alias'lar zaten mevcut + ASP.NET rota
+  eşleşmesi harf-duyarsız — ayrıca iş çıkmadı (canonical'lar layout sözleşmesinden).
 
 ### Faz 9 — QA + Deploy
 - [ ] `check.sh` TEMİZ; yan yana ekran görüntüleri (1440 + 390) misharix ↔ ECSPros.
