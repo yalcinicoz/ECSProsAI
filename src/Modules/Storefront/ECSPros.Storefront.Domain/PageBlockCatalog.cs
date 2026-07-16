@@ -79,6 +79,13 @@ public static class PageBlockCatalog
             RequiresProductSource: false, RequiresCollectionSource: false),
         new("announcement", "Duyuru Şeridi", RuleLevel.Item, SupportsItems: true, [],
             RequiresProductSource: false, RequiresCollectionSource: false),
+        // Faz 6 (2026-07-16, misharix tasarım güncellemesi): üç yeni görünüm tipi.
+        new("coklu-banner", "Çoklu Banner", RuleLevel.Item, SupportsItems: true, [],
+            RequiresProductSource: false, RequiresCollectionSource: false),
+        new("gorselli-yorumlar", "Görselli Yorumlar Carousel", RuleLevel.Item, SupportsItems: true, [],
+            RequiresProductSource: false, RequiresCollectionSource: false),
+        new("kategori-cok-satanlar", "Kategori Çok Satanları", RuleLevel.Block, SupportsItems: false, [],
+            RequiresProductSource: true, RequiresCollectionSource: false),
     ];
 
     public static BlockTypeDef? Find(string blockType) =>
