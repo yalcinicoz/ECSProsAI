@@ -14,7 +14,7 @@
 
             <div class="ms-giris-tab-listesi" role="tablist" aria-label="Giriş yöntemleri">
                 <button class="ms-giris-tab ms-giris-tab-aktif" type="button" data-ms-giris-tab="sms" aria-pressed="true">SMS Kodu</button>
-                <button class="ms-giris-tab" type="button" data-ms-giris-tab="telefon" aria-pressed="false" disabled>Telefon (Yakında)</button>
+                <button class="ms-giris-tab" type="button" data-ms-giris-tab="telefon" aria-pressed="false">Telefon</button>
                 <button class="ms-giris-tab" type="button" data-ms-giris-tab="eposta" aria-pressed="false">E-Posta</button>
             </div>
 
@@ -64,14 +64,15 @@
                                 <span>+90</span>
                             </span>
                         </span>
-                        <input type="tel" name="telefon-giris" placeholder="___ ___ __ __" inputmode="numeric" autocomplete="username tel-national" maxlength="13">
+                        <input type="tel" name="telefon-giris" placeholder="___ ___ __ __" inputmode="numeric" autocomplete="username tel-national" maxlength="13" data-ms-giris-telefon-no>
                     </span>
                 </label>
                 <label class="ms-giris-form-alani">
                     <span>Şifre</span>
-                    <input class="ms-giris-input" type="password" name="telefon-sifre" autocomplete="current-password" placeholder="Şifrenizi girin">
+                    <input class="ms-giris-input" type="password" name="telefon-sifre" autocomplete="current-password" placeholder="Şifrenizi girin" data-ms-giris-telefon-sifre>
                 </label>
-                <button class="ms-giris-buton ms-giris-buton-birincil" type="button">Telefon ile Giriş Yap</button>
+                <div class="ms-uyari ms-uyari-hata" data-ms-giris-telefon-hata hidden></div>
+                <button class="ms-giris-buton ms-giris-buton-birincil" type="button" data-ms-giris-telefon-gonder>Telefon ile Giriş Yap</button>
             </div>
 
             <div class="ms-giris-panel" data-ms-giris-panel="eposta">
@@ -247,6 +248,38 @@ document.addEventListener("DOMContentLoaded", () => {
             sepetiBirlestir();
         } catch {
             hataGoster(girisHata, "Giriş yapılamadı. Lütfen tekrar deneyin.");
+        } finally {
+            buton.disabled = false;
+        }
+    });
+
+    // ── Telefon + şifre ile giriş (2026-07-16) ──
+    const telefonHata = girisModal.querySelector("[data-ms-giris-telefon-hata]");
+    girisModal.querySelector("[data-ms-giris-telefon-gonder]")?.addEventListener("click", async (olay) => {
+        const buton = olay.currentTarget;
+        const rakamlar = (girisModal.querySelector("[data-ms-giris-telefon-no]")?.value || "").replace(/\D/g, "");
+        const sifre = girisModal.querySelector("[data-ms-giris-telefon-sifre]")?.value;
+        hataGoster(telefonHata, "");
+        if (rakamlar.length < 10 || !sifre) { hataGoster(telefonHata, "Telefon numaranızı ve şifrenizi girin."); return; }
+
+        buton.disabled = true;
+        try {
+            const cevap = await fetch("/api/store/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ phone: "90" + rakamlar.slice(-10), password: sifre })
+            });
+            const veri = await cevap.json().catch(() => null);
+            if (!veri?.success) {
+                hataGoster(telefonHata, veri?.error || "Giriş yapılamadı. Bilgilerinizi kontrol edin.");
+                return;
+            }
+            tokenlariSakla(veri.data);
+            girisiUygula(veri.data.fullName || "", veri.data.email || "");
+            girisModal.querySelector("[data-ms-giris-modal-kapat]")?.click();
+            sepetiBirlestir();
+        } catch {
+            hataGoster(telefonHata, "Giriş yapılamadı. Lütfen tekrar deneyin.");
         } finally {
             buton.disabled = false;
         }

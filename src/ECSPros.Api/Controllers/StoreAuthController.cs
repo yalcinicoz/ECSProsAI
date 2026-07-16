@@ -69,7 +69,7 @@ public class StoreAuthController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginMemberRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(
-            new LoginMemberCommand(req.Email, req.Password, IstemciIp(), IstemciUa()), ct);
+            new LoginMemberCommand(req.Email ?? string.Empty, req.Password, IstemciIp(), IstemciUa(), req.Phone), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         UyeCerezYaz(result.Value!);
         return Ok(new { success = true, data = result.Value });
@@ -134,7 +134,7 @@ public record RegisterMemberRequest(
     List<string>? AcceptedContracts = null,    // D3: onaylanan belge kodları
     string? Gender = null,                     // kayıt formundaki cinsiyet (female/male/null)
     DateOnly? BirthDate = null);               // kayıt formundaki doğum tarihi (yyyy-MM-dd, opsiyonel)
-public record LoginMemberRequest(string Email, string Password);
+public record LoginMemberRequest(string Email, string Password, string? Phone = null);
 public record RefreshMemberRequest(string RefreshToken);
 public record LogoutMemberRequest(string? RefreshToken = null);
 public record SendOtpRequest(string Phone);
