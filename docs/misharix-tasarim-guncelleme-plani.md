@@ -145,11 +145,20 @@ sitenin gerçek sayfaları içindir.
 - [x] Lowercase rotalar: HesabimController'da lowercase alias'lar zaten mevcut + ASP.NET rota
   eşleşmesi harf-duyarsız — ayrıca iş çıkmadı (canonical'lar layout sözleşmesinden).
 
-### Faz 9 — QA + Deploy
-- [ ] `check.sh` TEMİZ; yan yana ekran görüntüleri (1440 + 390) misharix ↔ ECSPros.
-- [ ] Regresyon: GERÇEK OTP ile giriş/kayıt (GES Telekom restart sonrası), sepet, şehir çipi (g9b/g9c), vitrin sayfaları, kurumsal, ürün listesi/detay/yorumlar, Hesabım.
-- [ ] Vitrin versiyonlu cache: deploy sonrası cache temizliği/yeniden yayın gerekliliği doğrulanır.
-- [ ] Publish `publish-staging` üzerinden (çalışan servisin publish'ine rm YOK); `sudo systemctl restart ecspros` kullanıcıda. (Faz P + GES birikimi 2026-07-16 restart'ıyla canlıya çıktı; OTP canlıda kullanıcı tarafından doğrulandı — giriş modalı merge regresyonu için referans çalışır durum mevcut.)
+### Faz 9 — QA + Deploy ✅ (2026-07-16 — RESTART KULLANICIDA)
+
+- [x] check.sh DRIFT TEMİZ (yeni kaynağa karşı). Temiz izole publish → 5051 Production duman testi:
+  ana sayfa/liste/detay(301→slug)/kurumsal/kargo-takip/robots 200; site.min.js + ikonall.min.css
+  yükleniyor; yeni nav (fa-bars, template mega menü), giriş modalı yeni SMS sözleşmesi,
+  sepet paneli yeni sözleşme, şehir çipi, renk modalı sayfada; Redis AKTİF; log 0 hata.
+  Duman testinde yakalanan 1 hata düzeltildi: liste üst filtresindeki _KategoriCokSatanlar
+  demo include'u (dosya taşınmamıştı) @if(false)'a alındı — gerçek karşılığı vitrin blok tipi.
+- [x] Cache header doğrulaması: ?v='li statik 1 yıl immutable, HTML no-cache (tarayıcı bayat
+  vitrin HTML'i tutmaz; sunucu tarafı vitrin cache'i zaten versiyonlu).
+- [x] Deploy: temiz publish → publish-staging → rsync (rm'siz) → /opt/ECSProsAI/publish.
+  **`sudo systemctl restart ecspros` KULLANICIDA.** Admin dist Faz 6'da derlendi (nginx doğrudan sunar).
+- [ ] Restart sonrası kullanıcı testi: gerçek OTP giriş + sepet + mobil + yan yana görsel
+  karşılaştırma (talimat kapanış raporunda).
 
 ## Bilinen Riskler
 - Giriş/kayıt modalı: tasarım demo SMS davranışları ↔ gerçek OTP backend birleşimi (en riskli merge).
