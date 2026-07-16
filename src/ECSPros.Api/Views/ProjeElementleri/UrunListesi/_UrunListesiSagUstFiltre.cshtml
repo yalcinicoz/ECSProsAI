@@ -132,7 +132,13 @@
     </div>
 </div>
 
+@* Tasarımın "Kategorinin Çok Satanları" vitrini: demo partial'ı gerçek sayfada basılmaz
+   (sahte ürün gösterir); gerçek karşılığı vitrin sistemindeki kategori-cok-satanlar blok
+   tipidir (admin, list-top yerleşimi / SSR bağlaması veri işiyle gelir). *@
+@if (false)
+{
 @await Html.PartialAsync("~/Views/ProjeElementleri/GorunumTipleri/_KategoriCokSatanlar.cshtml")
+}
 
 @* Bu script: Urun listesi ust chip secimleri ve ust filtre panellerini yonetir. *@
 <script>
