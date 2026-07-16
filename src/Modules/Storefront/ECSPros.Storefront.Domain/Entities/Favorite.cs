@@ -15,4 +15,8 @@ public class Favorite : BaseEntity
     public Guid MemberId { get; set; }
     public string ProductCode { get; set; } = string.Empty;
     public Guid? VariantId { get; set; }
+
+    /// <summary>Favorilenen renk (attribute value) — null: renk ekseni olmayan ürün/renksiz
+    /// favori. 2026-07-16: favori artık ürün+renk bazlıdır (tüm renkler birden işaretlenmez).</summary>
+    public Guid? ColorValueId { get; set; }
 }

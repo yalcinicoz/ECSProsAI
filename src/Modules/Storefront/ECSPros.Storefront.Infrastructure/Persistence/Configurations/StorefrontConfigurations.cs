@@ -221,7 +221,8 @@ public class FavoriteConfiguration : IEntityTypeConfiguration<Favorite>
         builder.HasKey(f => f.Id);
         builder.Property(f => f.ProductCode).HasMaxLength(50).IsRequired();
         // Üye bir ürünü platform başına bir kez favoriler (ekleme idempotent)
-        builder.HasIndex(f => new { f.FirmPlatformId, f.MemberId, f.ProductCode }).IsUnique();
+        // 2026-07-16: favori ürün+renk bazlı — aynı ürünün farklı renkleri ayrı kayıt.
+        builder.HasIndex(f => new { f.FirmPlatformId, f.MemberId, f.ProductCode, f.ColorValueId }).IsUnique();
         builder.HasQueryFilter(f => !f.IsDeleted);
     }
 }

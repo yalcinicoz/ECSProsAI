@@ -12,7 +12,8 @@ public record AddFavoriteCommand(
     Guid FirmPlatformId,
     Guid MemberId,
     string ProductCode,
-    Guid? VariantId = null) : IRequest<Result<Guid>>;
+    Guid? VariantId = null,
+    Guid? ColorValueId = null) : IRequest<Result<Guid>>;
 
 public class AddFavoriteCommandHandler(IStorefrontDbContext db)
     : IRequestHandler<AddFavoriteCommand, Result<Guid>>
@@ -27,7 +28,8 @@ public class AddFavoriteCommandHandler(IStorefrontDbContext db)
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(f => f.FirmPlatformId == request.FirmPlatformId
                                       && f.MemberId == request.MemberId
-                                      && f.ProductCode == kod, ct);
+                                      && f.ProductCode == kod
+                                      && f.ColorValueId == request.ColorValueId, ct);
         if (mevcut is not null)
         {
             if (mevcut.IsDeleted)
@@ -46,7 +48,8 @@ public class AddFavoriteCommandHandler(IStorefrontDbContext db)
             FirmPlatformId = request.FirmPlatformId,
             MemberId = request.MemberId,
             ProductCode = kod,
-            VariantId = request.VariantId
+            VariantId = request.VariantId,
+            ColorValueId = request.ColorValueId
         };
         db.Favorites.Add(favori);
         await db.SaveChangesAsync(ct);

@@ -33,18 +33,19 @@ public class StoreFavoritesController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> Add([FromBody] StoreFavoriteRequest req, CancellationToken ct)
     {
         var result = await mediator.Send(new AddFavoriteCommand(
-            req.FirmPlatformId, MemberId, req.ProductCode, req.VariantId), ct);
+            req.FirmPlatformId, MemberId, req.ProductCode, req.VariantId, req.ColorValueId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
 
     [HttpDelete("{productCode}")]
-    public async Task<IActionResult> Remove(string productCode, [FromQuery] Guid firmPlatformId, CancellationToken ct)
+    public async Task<IActionResult> Remove(string productCode, [FromQuery] Guid firmPlatformId,
+        [FromQuery] Guid? colorValueId, CancellationToken ct)
     {
-        var result = await mediator.Send(new RemoveFavoriteCommand(firmPlatformId, MemberId, productCode), ct);
+        var result = await mediator.Send(new RemoveFavoriteCommand(firmPlatformId, MemberId, productCode, colorValueId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
     }
 }
 
-public record StoreFavoriteRequest(Guid FirmPlatformId, string ProductCode, Guid? VariantId = null);
+public record StoreFavoriteRequest(Guid FirmPlatformId, string ProductCode, Guid? VariantId = null, Guid? ColorValueId = null);

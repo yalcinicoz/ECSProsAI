@@ -564,7 +564,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // dinleyicisi API'yi + görsel toggle'ı yönetir); mevcut favori işaretlenir.
         satir.dataset.msUrunKod = kalem.productCode || "";
         const favoriButonu = satir.querySelector("[data-ms-sepet-favori]");
-        if (favoriButonu && kalem.productCode && window.msFavoriKodlar?.has(kalem.productCode)) {
+        if (favoriButonu && kalem.productCode && window.msFavoriKodlar?.has(window.msFavoriAnahtar ? window.msFavoriAnahtar(kalem.productCode, null) : kalem.productCode)) {
             window.msSepetFavoriIsaretle?.(favoriButonu, true);
         }
 

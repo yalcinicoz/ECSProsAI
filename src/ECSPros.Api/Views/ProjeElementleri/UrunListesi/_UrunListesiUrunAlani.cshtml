@@ -93,6 +93,7 @@
             kart.dataset.msDegerler = v.degerler.join(",");
             kart.dataset.msUrunKod = v.kod; // E5 favori/bookmark kod çözümü
             kart.dataset.msUrunId = v.kod;  // tasarım sözleşmesi: ortak renk modalı ürün kimliği
+            kart.dataset.msSeciliRenk = v.seciliRenk || ""; // favori anahtarı ürün+renk
 
             // E7: puan bölümü (SSR markup'la birebir; yorumsuz üründe gizli kalır)
             const puanAlani = kart.querySelector("[data-ms-kart-puan]");
