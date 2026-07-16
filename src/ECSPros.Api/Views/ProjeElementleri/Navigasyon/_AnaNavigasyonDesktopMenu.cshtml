@@ -1,25 +1,28 @@
 @using ECSPros.Api.Models.Store
 @{
     // B1: Mega menü kanal kategorilerinden beslenir (nav_menus boş olduğu sürece).
-    // Markup misharix orijinaliyle birebir aynı — yalnızca statik örnek içerik veriye bağlandı.
+    // Markup misharix nihai tasarımıyla birebir — yalnızca statik örnek içerik veriye bağlandı.
     // Kampanya şeridi Faz G'ye kadar STATİK kalır (plan B1/K7).
     var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
+
+    static string BasHarfler(string ad) =>
+        string.Concat(ad.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(p => char.ToUpperInvariant(p[0])));
 }
 <div class="ms-magaza-desktop-menu-kapsayici d-none d-lg-block ms-magaza-desktop-menu" data-ms-magaza-menu>
         <div class="ms-magaza-menu-ic">
+            <div class="ms-magaza-menu-kaydirma-grubu">
             <div class="ms-magaza-menu-ogesi ms-magaza-menu-tum">
-                <a class="ms-magaza-menu-link" href="#">
-                    <svg class="ms-magaza-menu-link-ikon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5m-16.5 6h16.5m-16.5 6h16.5" />
-                    </svg>
+                <a class="ms-magaza-menu-link" href="/urun-listesi">
+                    <i class="fa-solid fa-bars ms-fa-ikon ms-magaza-menu-link-ikon" aria-hidden="true"></i>
                     Kategoriler <span class="ms-magaza-menu-yeni">Yeni</span>
                 </a>
+                <template data-ms-magaza-mega-menu-sablon>
                 <div class="ms-magaza-mega-menu" data-ms-magaza-mega-menu>
                     @for (var i = 0; i < nav.Kokler.Count; i++)
                     {
                         var kok = nav.Kokler[i];
                         <div class="ms-magaza-mega-kategori-grubu" data-ms-magaza-kategori-grubu="@kok.Slug">
-                            <a class="ms-magaza-mega-sol-link" href="@kok.Url" data-ms-magaza-kategori="@kok.Slug">@kok.Ad</a>
+                            <a class="ms-magaza-mega-sol-link" href="@kok.Url" data-ms-magaza-kategori="@kok.Slug">@kok.Ad <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i></a>
                             <div class="@(i == 0 ? "ms-magaza-mega-icerik ms-magaza-mega-icerik-varsayilan" : "ms-magaza-mega-icerik")">
                                 @if (kok.UcuncuSeviyeVar)
                                 {
@@ -30,7 +33,14 @@
                                             <div class="ms-magaza-mega-resimli-grid">
                                                 @foreach (var alt in cocuk.Cocuklar)
                                                 {
-                                                    <a class="ms-magaza-mega-resimli-link" href="@alt.Url">@if (!string.IsNullOrWhiteSpace(alt.GorselUrl)){<img src="@alt.GorselUrl" alt="@alt.Ad">}<span>@alt.Ad</span></a>
+                                                    if (!string.IsNullOrWhiteSpace(alt.GorselUrl))
+                                                    {
+                                                    <a class="ms-magaza-mega-resimli-link" href="@alt.Url"><img src="@alt.GorselUrl" alt="@alt.Ad" width="110" height="165" loading="lazy"><span>@alt.Ad</span></a>
+                                                    }
+                                                    else
+                                                    {
+                                                    <a class="ms-magaza-mega-resimli-link ms-magaza-mega-resimli-link-resimsiz" href="@alt.Url"><span class="ms-magaza-mega-resimsiz-gorsel" aria-hidden="true"><span>@BasHarfler(alt.Ad)</span></span><span>@alt.Ad</span></a>
+                                                    }
                                                 }
                                             </div>
                                         </section>
@@ -43,11 +53,18 @@
                                         <div class="ms-magaza-mega-resimli-grid">
                                             @if (kok.Cocuklar.Count == 0)
                                             {
-                                                <a class="ms-magaza-mega-resimli-link" href="@kok.Url"><span>@kok.Ad</span></a>
+                                                <a class="ms-magaza-mega-resimli-link ms-magaza-mega-resimli-link-resimsiz" href="@kok.Url"><span class="ms-magaza-mega-resimsiz-gorsel" aria-hidden="true"><span>@BasHarfler(kok.Ad)</span></span><span>@kok.Ad</span></a>
                                             }
                                             @foreach (var alt in kok.Cocuklar)
                                             {
-                                                <a class="ms-magaza-mega-resimli-link" href="@alt.Url">@if (!string.IsNullOrWhiteSpace(alt.GorselUrl)){<img src="@alt.GorselUrl" alt="@alt.Ad">}<span>@alt.Ad</span></a>
+                                                if (!string.IsNullOrWhiteSpace(alt.GorselUrl))
+                                                {
+                                                <a class="ms-magaza-mega-resimli-link" href="@alt.Url"><img src="@alt.GorselUrl" alt="@alt.Ad" width="110" height="165" loading="lazy"><span>@alt.Ad</span></a>
+                                                }
+                                                else
+                                                {
+                                                <a class="ms-magaza-mega-resimli-link ms-magaza-mega-resimli-link-resimsiz" href="@alt.Url"><span class="ms-magaza-mega-resimsiz-gorsel" aria-hidden="true"><span>@BasHarfler(alt.Ad)</span></span><span>@alt.Ad</span></a>
+                                                }
                                             }
                                         </div>
                                     </section>
@@ -59,55 +76,63 @@
                 <div class="ms-magaza-mega-kampanya-seridi" aria-label="Kampanyalar">
                     <span class="ms-magaza-mega-kampanya-etiket">Kampanyalar</span>
                     <button class="ms-magaza-mega-kampanya-kontrol ms-magaza-mega-kampanya-kontrol-sol" type="button" aria-label="Önceki kampanyalar" data-ms-kampanya-kaydir="sol">
-                        <svg class="ms-magaza-mega-kampanya-kontrol-ikon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-                        </svg>
+                        <i class="fa-solid fa-chevron-left ms-fa-ikon ms-magaza-mega-kampanya-kontrol-ikon" aria-hidden="true"></i>
                     </button>
                     <div class="ms-magaza-mega-kampanya-listesi">
-                        <a class="ms-magaza-mega-kampanya-link" href="#">
-                            <img src="https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png" alt="Yeni Gelen Ürünler">
+                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
+                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="Yeni Gelen Ürünler" width="110" height="165" loading="lazy">
                             <span title="Yeni Gelen Ürünler">Yeni Gelen Ürünler</span>
                         </a>
-                        <a class="ms-magaza-mega-kampanya-link" href="#">
-                            <img src="https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png" alt="Kampanya Detayları">
+                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
+                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="Kampanya Detayları" width="110" height="165" loading="lazy">
                             <span title="Kampanya Detayları">Kampanya Detayları</span>
                         </a>
-                        <a class="ms-magaza-mega-kampanya-link" href="#">
-                            <img src="https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png" alt="İyi Fiyatlı Ürünler">
+                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
+                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="İyi Fiyatlı Ürünler" width="110" height="165" loading="lazy">
                             <span title="İyi Fiyatlı Ürünler">İyi Fiyatlı Ürünler</span>
                         </a>
-                        <a class="ms-magaza-mega-kampanya-link" href="#">
-                            <img src="https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png" alt="Avantajlı Ürünler">
+                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
+                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="Avantajlı Ürünler" width="110" height="165" loading="lazy">
                             <span title="Avantajlı Ürünler">Avantajlı Ürünler</span>
                         </a>
-                        <a class="ms-magaza-mega-kampanya-link" href="#">
-                            <img src="https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png" alt="İndirim Kuponları">
+                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
+                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="İndirim Kuponları" width="110" height="165" loading="lazy">
                             <span title="İndirim Kuponları">İndirim Kuponları</span>
                         </a>
-                        <a class="ms-magaza-mega-kampanya-link" href="#">
-                            <img src="https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png" alt="Fırsat Ürünleri">
+                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
+                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="Fırsat Ürünleri" width="110" height="165" loading="lazy">
                             <span title="Fırsat Ürünleri">Fırsat Ürünleri</span>
                         </a>
-                        <a class="ms-magaza-mega-kampanya-link" href="#">
-                            <img src="https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png" alt="Çok Satanlar">
+                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
+                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="Çok Satanlar" width="110" height="165" loading="lazy">
                             <span title="Çok Satanlar">Çok Satanlar</span>
                         </a>
-                        <a class="ms-magaza-mega-kampanya-link" href="#">
-                            <img src="https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png" alt="Sepette Fırsat">
+                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
+                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="Sepette Fırsat" width="110" height="165" loading="lazy">
                             <span title="Sepette Fırsat">Sepette Fırsat</span>
                         </a>
                     </div>
                     <button class="ms-magaza-mega-kampanya-kontrol ms-magaza-mega-kampanya-kontrol-sag" type="button" aria-label="Sonraki kampanyalar" data-ms-kampanya-kaydir="sag">
-                        <svg class="ms-magaza-mega-kampanya-kontrol-ikon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                        </svg>
+                        <i class="fa-solid fa-chevron-right ms-fa-ikon ms-magaza-mega-kampanya-kontrol-ikon" aria-hidden="true"></i>
                     </button>
                 </div>
+                </template>
             </div>
 
+            <div class="ms-magaza-menu-kaydirma" data-ms-magaza-menu-kaydirma>
             @foreach (var kok in nav.Kokler)
             {
                 <a class="ms-magaza-menu-link" href="@kok.Url" data-ms-magaza-menu-link="@kok.Slug">@kok.Ad @if (!string.IsNullOrWhiteSpace(kok.Rozet)){<span class="ms-magaza-menu-yeni">@kok.Rozet</span>}</a>
             }
+            </div>
+            </div>
+            <div class="ms-magaza-menu-kaydirma-kontrolleri" data-ms-magaza-menu-kaydirma-kontrolleri>
+                <button class="ms-magaza-menu-kaydirma-kontrol" type="button" aria-label="Menüyü sola kaydır" data-ms-menu-kaydir="sol">
+                    <i class="fa-solid fa-chevron-left ms-fa-ikon" aria-hidden="true"></i>
+                </button>
+                <button class="ms-magaza-menu-kaydirma-kontrol" type="button" aria-label="Menüyü sağa kaydır" data-ms-menu-kaydir="sag">
+                    <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
+                </button>
+            </div>
         </div>
     </div>
