@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-label="No image">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#e2e8f0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="520" rx="28" fill="url(#bg)"/>
+  <rect x="36" y="36" width="1128" height="448" rx="20" fill="none" stroke="#cbd5e1" stroke-width="8" stroke-dasharray="22 18"/>
+  <circle cx="445" cy="205" r="46" fill="#cbd5e1"/>
+  <path d="M320 360l145-135 96 92 69-64 250 107H320z" fill="#cbd5e1"/>
+  <text x="600" y="430" text-anchor="middle" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#94a3b8">NO IMAGE</text>
+</svg>
