@@ -1,9 +1,4 @@
-﻿@using ECSPros.Api.Models.Store
-@{
-    var mevcutYol = Context.Request.Path.Value?.TrimEnd('/').ToLowerInvariant();
-    var anaSayfaMi = string.IsNullOrWhiteSpace(mevcutYol) || mevcutYol == "/" || mevcutYol == "/home" || mevcutYol == "/home/index";
-    // B1: Mobil kategori kaydırma şeridi kanal kategorilerinden beslenir (desktop menüyle aynı kaynak).
-    var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
+﻿@{
     // B5: Mini sepet api/store/cart çağrısı için platform kimliği
     var sepetPlatform = ViewData["MsPlatform"] as ECSPros.Api.Services.StorePlatformBilgisi;
 }
@@ -16,7 +11,7 @@
         </button>
 
         <a class="ms-ana-navigasyon-logo-link" asp-controller="Home" asp-action="Index">
-            <img class="ms-ana-navigasyon-logo" src="/images/site_logo.png" alt="Mishar Italia">
+            <img class="ms-ana-navigasyon-logo" src="/images/site_logo-144.png" alt="Mishar Italia" width="144" height="21" decoding="async">
         </a>
 
         <partial name="~/Views/ProjeElementleri/Navigasyon/_AnaNavigasyonSearch.cshtml" />
@@ -25,22 +20,22 @@
 
         <div class="ms-ana-navigasyon-aksiyonlar">
             <partial name="~/Views/ProjeElementleri/Navigasyon/_AnaNavigasyonGirisMenu.cshtml" />
-            <a class="ms-ana-navigasyon-aksiyon" href="#">
+            <a class="ms-ana-navigasyon-aksiyon" href="/Hesabim/Favorilerim">
                 <span class="ms-ana-navigasyon-aksiyon-ikon-grup" aria-hidden="true">
-                    <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-normal " src="/ikons/favorite.svg" alt="">
-                    <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-aktif " src="/ikons/favorite-active.svg" alt="">
+                    <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-normal " src="/ikons/favorite.svg" alt="" width="20" height="20" loading="lazy">
+                    <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-aktif " src="/ikons/favorite-active.svg" alt="" width="20" height="20" loading="lazy">
                 </span>
                 Favorilerim
             </a>
-            @* B5: Mini sepet canlı veriye bağlandı — demo satırlar kaldırıldı; liste dosya
-               sonundaki script'le GET /api/store/cart'tan doldurulur (satır markup'ı demo
-               satırın birebir kopyası). Sepete Git / Siparişi Tamamla Faz C'de bağlanacak. *@
+            @* B5: Mini sepet canlı veriye bağlı — liste dosya sonundaki script'le
+               GET /api/store/cart'tan doldurulur; demo sepet şablonu bilinçli yok
+               (site.js'in demo dolumu şablonsuz no-op kalır). *@
             <div class="ms-ana-navigasyon-sepet" data-ms-sepet-menu>
                 <button class="ms-ana-navigasyon-aksiyon" type="button" data-ms-sepet-menu-tetikleyici aria-haspopup="true" aria-expanded="false">
                     <span class="ms-ana-navigasyon-sepet-ikon-alani">
                         <span class="ms-ana-navigasyon-aksiyon-ikon-grup" aria-hidden="true">
-                            <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-normal " src="/ikons/basket.svg" alt="">
-                            <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-aktif " src="/ikons/basket-active.svg" alt="">
+                            <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-normal " src="/ikons/basket.svg" alt="" width="20" height="20" loading="lazy">
+                            <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-aktif " src="/ikons/basket-active.svg" alt="" width="20" height="20" loading="lazy">
                         </span>
                         <span class="ms-ana-navigasyon-sepet-rozet" data-ms-sepet-rozet hidden>0</span>
                     </span>
@@ -48,36 +43,34 @@
                 </button>
                 <div class="ms-ana-navigasyon-sepet-panel" data-ms-sepet-menu-panel>
                     <div class="ms-ana-navigasyon-sepet-panel-ust">
-                        <strong>Sepetim</strong>
-                        <span data-ms-sepet-adet>0 ürün</span>
+                        <span class="ms-ana-navigasyon-sepet-panel-baslik">
+                            <strong>Sepetim</strong>
+                            <span data-ms-sepet-urun-sayisi>0 ürün</span>
+                        </span>
+                        <button class="ms-ana-navigasyon-panel-kapat" type="button" data-ms-sepet-panel-kapat aria-label="Sepet panelini kapat">
+                            <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
+                        </button>
                     </div>
-                    <div class="ms-ana-navigasyon-sepet-urun-listesi" data-ms-sepet-liste>
-                        <p data-ms-sepet-bos>Sepetiniz henüz boş.</p>
+                    <div class="ms-ana-navigasyon-sepet-urun-listesi" data-ms-sepet-urun-listesi>
+                        <p class="ms-ana-navigasyon-sepet-bos" data-ms-sepet-bos>Sepetiniz henüz boş.</p>
                     </div>
                     <div class="ms-ana-navigasyon-sepet-ozet">
                         <span>Sepet Toplamı</span>
                         <strong class="ms-urun-fiyat" data-ms-sepet-toplam>0,00 TL</strong>
                     </div>
                     <div class="ms-ana-navigasyon-sepet-aksiyonlar">
-                        @* C1: Sepete Git canlı; Siparişi Tamamla C4 teslimat sayfası gelene dek sepete götürür *@
                         <a class="ms-ana-navigasyon-sepet-buton ms-ana-navigasyon-sepet-buton-ikincil" href="/sepet">Sepete Git</a>
-                        <a class="ms-ana-navigasyon-sepet-buton ms-ana-navigasyon-sepet-buton-birincil" href="/sepet">Siparişi Tamamla</a>
+                        <a class="ms-ana-navigasyon-sepet-buton ms-ana-navigasyon-sepet-buton-birincil" href="/teslimat">Siparişi Tamamla</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    @if (anaSayfaMi)
-    {
-        <nav class="ms-magaza-mobil-menu-kaydirma-alani" data-ms-mobil-menu-kaydirma-alani aria-label="Mobil kategori menüsü">
-            <div class="ms-magaza-menu-kaydirma ms-magaza-menu-kaydirma-kaydirilabilir">
-                @foreach (var kok in nav.Kokler)
-                {
-                    <a class="ms-magaza-menu-link" href="@kok.Url">@kok.Ad @if (!string.IsNullOrWhiteSpace(kok.Rozet)){<span class="ms-magaza-menu-yeni">@kok.Rozet</span>}</a>
-                }
-            </div>
-        </nav>
-    }
+    @* Tasarım nihai: mobil kategori şeridi gerçek sayfalardan kaldırıldı (yalnız katalogda
+       _MobilMenuKaydirma örneği var) — B1'deki anaSayfaMi şeridi de buna uyularak silindi.
+       Giriş/kayıt modalları tasarımda template'e alındı; gerçek OTP akışının parse-anı
+       script'i modalları DOM'da beklediği için ECSPros'ta direkt render (giriş modalı
+       merge adımında yeniden değerlendirilecek — plan Faz 4 sonu). *@
     <partial name="~/Views/ProjeElementleri/Navigasyon/_AnaNavigasyonGirisModal.cshtml" />
 
     <partial name="~/Views/ProjeElementleri/Navigasyon/_AnaNavigasyonKayitModal.cshtml" />
@@ -85,7 +78,7 @@
     <div class="ms-ornek-modal" data-ms-belge-modal aria-hidden="true">
         <div class="ms-ornek-modal-kaplama" data-ms-belge-modal-kapat></div>
         <section class="ms-ornek-modal-kutu ms-belge-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-belge-modal-baslik">
-            <button class="ms-ornek-modal-kapat" type="button" data-ms-belge-modal-kapat aria-label="Belge modalını kapat">×</button>
+            <button class="ms-ornek-modal-kapat" type="button" data-ms-belge-modal-kapat aria-label="Belge modalını kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
 
             <span class="ms-modal-ornek-ikon ms-modal-ornek-ikon-standart" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none">
@@ -93,7 +86,7 @@
                     <path d="M8 9h8M8 12h8M8 15h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
                 </svg>
             </span>
-            <p id="ms-belge-modal-baslik" class="ms-ornek-modal-baslik">Bilgilendirme</p>
+            <p id="ms-belge-modal-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>Bilgilendirme</p>
             <p class="ms-ornek-modal-aciklama"><strong data-ms-belge-modal-baslik>Belge</strong> içeriğini okuyup onaylayabilirsiniz.</p>
 
             <div class="ms-belge-modal-icerik" data-ms-belge-modal-icerik>
@@ -118,8 +111,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!platformId || !sepetAlani) { return; }
 
     const rozet = sepetAlani.querySelector("[data-ms-sepet-rozet]");
-    const adetAlani = sepetAlani.querySelector("[data-ms-sepet-adet]");
-    const liste = sepetAlani.querySelector("[data-ms-sepet-liste]");
+    const adetAlani = sepetAlani.querySelector("[data-ms-sepet-urun-sayisi]");
+    const liste = sepetAlani.querySelector("[data-ms-sepet-urun-listesi]");
     const toplamAlani = sepetAlani.querySelector("[data-ms-sepet-toplam]");
 
     const kacir = (metin) => String(metin ?? "").replace(/[&<>"']/g,
@@ -167,7 +160,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (liste) {
             liste.innerHTML = kalemler.length
                 ? kalemler.map(satirHtml).join("")
-                : `<p data-ms-sepet-bos>Sepetiniz henüz boş.</p>`;
+                : `<p class="ms-ana-navigasyon-sepet-bos" data-ms-sepet-bos>Sepetiniz henüz boş.</p>`;
         }
     };
 
