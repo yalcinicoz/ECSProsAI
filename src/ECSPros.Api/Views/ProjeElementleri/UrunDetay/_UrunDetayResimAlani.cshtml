@@ -1,13 +1,15 @@
 @using ECSPros.Api.Models.Store
 @{
     // B9: galeri seçili rengin görsellerinden SSR üretilir; davranış (thumb/sürükle/zoom/
-    // modal) _UrunDetaySayfasi'ndaki misharix script'ine aittir, değişmedi. H5: video
-    // slaytı + Videolu Ürün rozeti gerçek veriye bağlandı (tasarım markup'ıyla; video
-    // yoksa render edilmez); Süper Fırsat / kampanya etiketi veri gelene dek gizli (Faz G).
+    // modal) misharix script'ine aittir, değişmedi. H5: video slaytı + Videolu Ürün rozeti
+    // gerçek veriye bağlandı (video yoksa render edilmez); Süper Fırsat / kampanya etiketi
+    // veri gelene dek gizli (Faz G). Tasarım sözleşmesi: video <source>+poster, ilk ana
+    // görsel eager/fetchpriority=high, görsellerde intrinsic ölçüler.
     var vmResim = ViewData["MsUrunDetay"] as UrunDetayVm;
     var resimler = vmResim?.Gorseller ?? [];
     var resimAd = vmResim?.Ad ?? "Ürün görseli";
     var videolar = vmResim?.Videolar ?? [];
+    var videoPoster = resimler.Count > 0 ? resimler[0] : null;
 }
 <section class="ms-urun-detay-resim-alani" data-ms-urun-detay-resim-alani aria-label="Ürün görselleri">
                 <div class="ms-urun-detay-resim-galeri">
@@ -15,13 +17,15 @@
                         @for (var i = 0; i < resimler.Count; i++)
                         {
                         <button class="ms-urun-detay-resim-thumb@(i == 0 ? " ms-urun-detay-resim-thumb-aktif" : "")" type="button" data-ms-urun-detay-resim-thumb="@i" aria-label="@(i + 1). ürün görseli" aria-pressed="@(i == 0 ? "true" : "false")">
-                            <img src="@resimler[i]" alt="@resimAd @(i + 1). görsel" loading="lazy">
+                            <img src="@resimler[i]" alt="@resimAd @(i + 1). görsel" width="214" height="268" loading="lazy">
                         </button>
                         }
                         @for (var v = 0; v < videolar.Count; v++)
                         {
                         <button class="ms-urun-detay-resim-thumb ms-urun-detay-resim-thumb-video" type="button" data-ms-urun-detay-resim-thumb="@(resimler.Count + v)" aria-label="Ürün videosu" aria-pressed="false">
-                            <video src="@videolar[v].Url" muted loop playsinline preload="metadata"></video>
+                            <video muted loop playsinline preload="metadata" poster="@videoPoster">
+                                <source src="@videolar[v].Url" type="video/mp4">
+                            </video>
                             <i class="fa-solid fa-play ms-fa-ikon ms-urun-detay-resim-thumb-video-ikon" aria-hidden="true"></i>
                         </button>
                         }
@@ -30,13 +34,22 @@
                     <div class="ms-urun-detay-resim-ana-sutun">
                         <div class="ms-urun-detay-resim-ana-kapsayici" data-ms-urun-detay-resim-surukle aria-label="Ürün görselini büyüt">
                             <div class="ms-urun-detay-resim-track" data-ms-urun-detay-resim-track>
-                                @foreach (var resim in resimler)
+                                @for (var r = 0; r < resimler.Count; r++)
                                 {
-                                <img class="ms-urun-detay-resim-ana" data-ms-urun-detay-resim-slide src="@resim" alt="@resimAd">
+                                if (r == 0)
+                                {
+                                <img class="ms-urun-detay-resim-ana" data-ms-urun-detay-resim-slide src="@resimler[r]" alt="@resimAd" width="214" height="268" fetchpriority="high" loading="eager">
+                                }
+                                else
+                                {
+                                <img class="ms-urun-detay-resim-ana" data-ms-urun-detay-resim-slide src="@resimler[r]" alt="@resimAd" width="214" height="268" loading="lazy">
+                                }
                                 }
                                 @foreach (var video in videolar)
                                 {
-                                <video class="ms-urun-detay-resim-ana ms-urun-detay-resim-ana-video" data-ms-urun-detay-resim-slide src="@video.Url" controls muted loop playsinline preload="metadata" aria-label="Ürün videosu"></video>
+                                <video class="ms-urun-detay-resim-ana ms-urun-detay-resim-ana-video" data-ms-urun-detay-resim-slide controls muted loop playsinline preload="metadata" poster="@videoPoster" aria-label="Ürün videosu">
+                                    <source src="@video.Url" type="video/mp4">
+                                </video>
                                 }
                             </div>
 
@@ -49,9 +62,12 @@
                                         <span>Videolu Ürün</span>
                                     </button>
                                     <span class="ms-urun-video-tooltip">
-                                        <video class="ms-urun-video" src="@videolar[0].Url" muted loop playsinline preload="none"></video>
+                                        <video class="ms-urun-video" autoplay muted loop playsinline preload="none" poster="@videoPoster">
+                                            <source src="@videolar[0].Url" type="video/mp4">
+                                        </video>
                                     </span>
                                 </span>
+                                @* Tasarımın Süper Fırsat / kampanya etiketi: veri karşılığı gelene dek basılmıyor (Faz G kampanya). *@
                             </span>
                             }
 
@@ -74,17 +90,21 @@
                 <div class="ms-ornek-modal ms-urun-detay-resim-modal" data-ms-urun-detay-resim-modal aria-hidden="true">
                     <div class="ms-ornek-modal-kaplama" data-ms-urun-detay-resim-modal-kapat></div>
                     <section class="ms-urun-detay-resim-modal-kutu" role="dialog" aria-modal="true" aria-label="Ürün görseli">
-                        <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-detay-resim-modal-kapat aria-label="Tam ekran görseli kapat">×</button>
+                        <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-detay-resim-modal-kapat aria-label="Tam ekran görseli kapat">
+                            <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
+                        </button>
                         <button class="ms-urun-detay-resim-modal-paylas" type="button" data-ms-urun-detay-resim-modal-paylas aria-label="Aktif görseli paylaş">Paylaş</button>
                         <div class="ms-urun-detay-resim-modal-viewport" data-ms-urun-detay-resim-modal-surukle>
                             <div class="ms-urun-detay-resim-modal-track" data-ms-urun-detay-resim-modal-track>
                                 @foreach (var resim in resimler)
                                 {
-                                <img class="ms-urun-detay-resim-modal-gorsel" data-ms-urun-detay-resim-modal-slide src="@resim" alt="@resimAd">
+                                <img class="ms-urun-detay-resim-modal-gorsel" data-ms-urun-detay-resim-modal-slide src="@resim" alt="@resimAd" width="214" height="268" loading="lazy">
                                 }
                                 @foreach (var video in videolar)
                                 {
-                                <video class="ms-urun-detay-resim-modal-gorsel ms-urun-detay-resim-modal-video" data-ms-urun-detay-resim-modal-slide src="@video.Url" controls muted loop playsinline preload="metadata" aria-label="Ürün videosu"></video>
+                                <video class="ms-urun-detay-resim-modal-gorsel ms-urun-detay-resim-modal-video" data-ms-urun-detay-resim-modal-slide controls muted loop playsinline preload="metadata" poster="@videoPoster" aria-label="Ürün videosu">
+                                    <source src="@video.Url" type="video/mp4">
+                                </video>
                                 }
                             </div>
                         </div>
@@ -101,13 +121,15 @@
                             @for (var i = 0; i < resimler.Count; i++)
                             {
                             <button class="ms-urun-detay-resim-modal-thumb@(i == 0 ? " ms-urun-detay-resim-modal-thumb-aktif" : "")" type="button" data-ms-urun-detay-resim-modal-thumb="@i" aria-label="@(i + 1). büyük ürün görseli" aria-pressed="@(i == 0 ? "true" : "false")">
-                                <img src="@resimler[i]" alt="@resimAd @(i + 1). görsel" loading="lazy">
+                                <img src="@resimler[i]" alt="@resimAd @(i + 1). görsel" width="214" height="268" loading="lazy">
                             </button>
                             }
                             @for (var v = 0; v < videolar.Count; v++)
                             {
                             <button class="ms-urun-detay-resim-modal-thumb ms-urun-detay-resim-modal-thumb-video" type="button" data-ms-urun-detay-resim-modal-thumb="@(resimler.Count + v)" aria-label="Ürün videosu" aria-pressed="false">
-                                <video src="@videolar[v].Url" muted loop playsinline preload="metadata"></video>
+                                <video muted loop playsinline preload="metadata" poster="@videoPoster">
+                                    <source src="@videolar[v].Url" type="video/mp4">
+                                </video>
                             </button>
                             }
                         </div>
