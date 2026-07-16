@@ -47,9 +47,9 @@ sitenin gerçek sayfaları içindir.
 - [x] `package.json`: `build-js`/`watch-js` (esbuild ^0.28.1) + `fontawesome-subset` script'leri; `scripts/fontawesome-subset.mjs` kopyalandı (çalıştırma Faz 4/5/7 sonrası — Views nihai olunca). `site.min.js` üretildi (137 KB, syntax OK); publish `wwwroot` ile otomatik taşır, **site.js her değiştiğinde `npm run build-js` şart** (Faz 9'da deploy talimatına eklenecek).
 - [x→Faz 4] `_Layout.cshtml` Production `site.min.js` geçişi layout merge'üyle birlikte gelecek (tasarım _Layout'u zaten environment-etiketli).
 
-### Faz 3 — CSS
-- [ ] `tailwind.css` birebir kopya; `site.css` tasarımın derlenmiş çıktısıyla (971.581 bayt) değiştirilir (A4 kalıbı: md5 eşit).
-- [ ] ECSPros'a özgü view'larda kullanılan class'ların yeni `site.css`'te kapsandığı denetlenir (grep örneklemesi).
+### Faz 3 — CSS ✅ (2026-07-16)
+- [x] `tailwind.css` birebir kopya; `site.css` tasarımın derlenmiş çıktısıyla değiştirildi (971.581 bayt, md5 eşit — A4 kalıbı sürüyor: ECSPros yeniden derlemez, tasarım çıktısını kullanır). Değişen `css/fontawesome-all.css` de senkronlandı (hiçbir view referans etmiyor, bayt-eşitlik için).
+- [x] Kapsam denetimi GEÇTİ: 7 ECSPros'a özgü view'daki tüm class'lar tarandı; site.css'te olmayan 8 aday (`ms-sehir-modal*`, `ms-uyari*`, `lazy-infinite-on`, `ms-gorunum-daha-fazla-alani`) ESKİ css'te de yoktu — JS marker'ı/view-içi stil, regresyon değil.
 
 ### Faz 4 — 60 ortak view üçlü merge
 - [ ] `git merge-file` (baz=ESKİ, tasarım=YENİ) toplu geçiş; çakışmalar elle.
