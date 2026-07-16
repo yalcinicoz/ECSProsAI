@@ -13,7 +13,7 @@
 }
 <div class="ms-urun-listesi-mobil-sabit">
 <div class="ms-urun-listesi-mobil-ust" aria-label="Mobil ürün listesi başlığı">
-    <button class="ms-urun-listesi-mobil-geri" type="button" aria-label="Geri dön">
+    <button class="ms-urun-listesi-mobil-geri" type="button" data-ms-urun-listesi-geri aria-label="Geri dön">
         <span aria-hidden="true"></span>
     </button>
     <div>
@@ -25,7 +25,7 @@
 <div class="ms-urun-listesi-mobil-araclar-kapsayici">
     <div class="ms-urun-listesi-mobil-araclar" aria-label="Mobil filtre ve sıralama">
         <button class="ms-urun-listesi-mobil-arac" type="button" data-ms-urun-mobil-siralama-ac>
-            <i class="fa-solid fa-arrow-down-short-wide ms-fa-ikon ms-urun-listesi-mobil-siralama-ikon" aria-hidden="true"></i>
+            <i class="fa-solid fa-right-left ms-fa-ikon ms-urun-listesi-mobil-siralama-ikon" aria-hidden="true"></i>
             <span data-ms-urun-mobil-siralama-deger>Önerilen Sıralama</span>
         </button>
         <button class="ms-urun-listesi-mobil-arac" type="button" data-ms-urun-mobil-filtre-ac>
@@ -35,6 +35,7 @@
     </div>
 
     <div class="ms-urun-listesi-mobil-hizli-filtreler" data-ms-mobil-secili-filtre-seridi aria-label="Seçili ve hızlı filtreler">
+        <button class="ms-urun-listesi-mobil-chip" type="button" data-ms-filtre-tumunu-temizle>Filtreleri Temizle</button>
         @foreach (var grup in vm.FiltreGruplari)
         {
         <button class="ms-urun-listesi-mobil-chip ms-urun-listesi-mobil-chip-secili" type="button" data-ms-mobil-ana-filtre-chip="@grup.TipKodu" data-ms-mobil-chip-panel-ac="@grup.TipKodu" hidden>@grup.Ad <i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i></button>
@@ -55,7 +56,7 @@
 <section class="ms-urun-listesi-mobil-chip-panel" data-ms-mobil-chip-panel="@grup.TipKodu" hidden aria-label="@grup.Ad hızlı filtresi">
     <label class="ms-urun-listesi-mobil-arama">
         <span class="sr-only">@grup.Ad ara</span>
-        <input type="search" placeholder="@grup.Ad Ara">
+        <input name="@(grup.TipKodu)_ara" type="search" placeholder="@grup.Ad Ara">
     </label>
     @if (grup.RenkTipi)
     {
@@ -63,7 +64,7 @@
         @foreach (var deger in grup.Degerler)
         {
         <label class="ms-filtre-secim ms-filtre-renk-secim" data-filter-option>
-            <input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
+            <input name="checkbox_1" type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
             <span class="ms-filtre-kutu" aria-hidden="true"></span>
             <span class="ms-filtre-renk" style="--ms-renk:@(deger.Hex ?? "#E2E8F0")" aria-hidden="true"></span>
             <span class="ms-filtre-renk-bilgi"><strong>@deger.Ad</strong></span>
@@ -89,9 +90,9 @@
 
 <section class="ms-urun-listesi-mobil-chip-panel" data-ms-mobil-chip-panel="fiyat" hidden aria-label="Fiyat hızlı filtresi">
     <div class="ms-urun-listesi-mobil-fiyat-araligi">
-        <input type="number" inputmode="numeric" value="@(vm.SeciliFiyatMin?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" placeholder="En Az">
+        <input name="en_az" type="number" inputmode="numeric" value="@(vm.SeciliFiyatMin?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" placeholder="En Az">
         <span>-</span>
-        <input type="number" inputmode="numeric" value="@(vm.SeciliFiyatMax?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" placeholder="En Çok">
+        <input name="en_cok" type="number" inputmode="numeric" value="@(vm.SeciliFiyatMax?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" placeholder="En Çok">
     </div>
     <div class="ms-urun-listesi-mobil-chip-secenekler">
         <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="0-500"><input type="radio" name="mobil-fiyat-chip"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>0 TL - 500 TL</span></label>
@@ -108,8 +109,8 @@
 <div class="ms-ornek-modal ms-urun-listesi-mobil-siralama-modal" data-ms-urun-mobil-siralama-panel hidden aria-hidden="true">
     <div class="ms-ornek-modal-kaplama" data-ms-urun-mobil-siralama-kapat></div>
     <section class="ms-ornek-modal-kutu ms-urun-listesi-mobil-siralama-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-urun-listesi-mobil-siralama-baslik">
-        <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-mobil-siralama-kapat aria-label="Sıralamayı kapat">×</button>
-        <h3 id="ms-urun-listesi-mobil-siralama-baslik" class="ms-ornek-modal-baslik">Sıralama</h3>
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-mobil-siralama-kapat aria-label="Sıralamayı kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+        <h3 id="ms-urun-listesi-mobil-siralama-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>Sıralama</h3>
         <div class="ms-urun-listesi-mobil-secenek-listesi">
             @foreach (var secenek in new (string Kod, string Ad)[]
             {
@@ -138,9 +139,9 @@
     <nav class="ms-urun-listesi-mobil-filtre-menu" aria-label="Mobil filtre başlıkları">
         @foreach (var grup in vm.FiltreGruplari)
         {
-        <button type="button" data-ms-urun-mobil-filtre-detay-ac="@grup.TipKodu"><span class="ms-urun-listesi-mobil-filtre-menu-metin">@grup.Ad</span><span class="ms-urun-listesi-mobil-filtre-menu-sag"><em data-ms-urun-mobil-filtre-sayac hidden>0</em><span class="ms-urun-listesi-mobil-filtre-menu-ok" aria-hidden="true">›</span></span></button>
+        <button type="button" data-ms-urun-mobil-filtre-detay-ac="@grup.TipKodu"><span class="ms-urun-listesi-mobil-filtre-menu-metin">@grup.Ad</span><span class="ms-urun-listesi-mobil-filtre-menu-sag"><em data-ms-urun-mobil-filtre-sayac hidden>0</em><span class="ms-urun-listesi-mobil-filtre-menu-ok" aria-hidden="true"><i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i></span></span></button>
         }
-        <button type="button" data-ms-urun-mobil-filtre-detay-ac="fiyat"><span class="ms-urun-listesi-mobil-filtre-menu-metin">Fiyat</span><span class="ms-urun-listesi-mobil-filtre-menu-sag"><em data-ms-urun-mobil-filtre-sayac hidden>0</em><span class="ms-urun-listesi-mobil-filtre-menu-ok" aria-hidden="true">›</span></span></button>
+        <button type="button" data-ms-urun-mobil-filtre-detay-ac="fiyat"><span class="ms-urun-listesi-mobil-filtre-menu-metin">Fiyat</span><span class="ms-urun-listesi-mobil-filtre-menu-sag"><em data-ms-urun-mobil-filtre-sayac hidden>0</em><span class="ms-urun-listesi-mobil-filtre-menu-ok" aria-hidden="true"><i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i></span></span></button>
     </nav>
     <div class="ms-urun-listesi-mobil-alt">
         <button type="button" data-ms-urun-mobil-filtre-kapat>Tüm Sonuçları Listele</button>
@@ -157,7 +158,7 @@
     </header>
     <label class="ms-urun-listesi-mobil-arama">
         <span class="sr-only">@grup.Ad ara</span>
-        <input type="search" placeholder="@grup.Ad ara">
+        <input name="@(grup.TipKodu)_ara" type="search" placeholder="@grup.Ad ara">
     </label>
     @if (grup.RenkTipi)
     {
@@ -165,7 +166,7 @@
         @foreach (var deger in grup.Degerler)
         {
         <label class="ms-filtre-secim ms-filtre-renk-secim" data-filter-option>
-            <input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
+            <input name="checkbox_1" type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
             <span class="ms-filtre-kutu" aria-hidden="true"></span>
             <span class="ms-filtre-renk" style="--ms-renk:@(deger.Hex ?? "#E2E8F0")" aria-hidden="true"></span>
             <span class="ms-filtre-renk-bilgi"><strong>@deger.Ad</strong></span>
@@ -193,9 +194,9 @@
         <button class="ms-urun-listesi-mobil-temizle" type="button">Temizle</button>
     </header>
     <div class="ms-urun-listesi-mobil-fiyat-araligi">
-        <input type="number" inputmode="numeric" value="@(vm.SeciliFiyatMin?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" placeholder="En Az">
+        <input name="en_az" type="number" inputmode="numeric" value="@(vm.SeciliFiyatMin?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" placeholder="En Az">
         <span>-</span>
-        <input type="number" inputmode="numeric" value="@(vm.SeciliFiyatMax?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" placeholder="En Çok">
+        <input name="en_cok" type="number" inputmode="numeric" value="@(vm.SeciliFiyatMax?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" placeholder="En Çok">
     </div>
     <div class="ms-urun-listesi-mobil-secenek-listesi">
         <label class="ms-filtre-secim ms-filtre-radio-secim" data-ms-fiyat-aralik="0-500"><input type="radio" name="mobil-fiyat-detay"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>0 TL - 500 TL</span></label>
@@ -236,14 +237,25 @@
                 const filtreAramalari = sayfa.querySelectorAll(".ms-urun-listesi-mobil-arama input");
                 const mobilFiltreSecimleri = sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-detay] input[type='checkbox'], [data-ms-urun-mobil-filtre-detay] input[type='radio'], [data-ms-mobil-chip-panel] input[type='checkbox'], [data-ms-mobil-chip-panel] input[type='radio']");
                 const hizliFiltreSeridi = sayfa.querySelector("[data-ms-mobil-secili-filtre-seridi]");
+                const mobilSabitAlan = sayfa.querySelector(".ms-urun-listesi-mobil-sabit");
                 const mobilAraclar = sayfa.querySelector(".ms-urun-listesi-mobil-araclar");
                 const mobilAraclarKapsayici = sayfa.querySelector(".ms-urun-listesi-mobil-araclar-kapsayici");
                 const anaNavigasyon = document.querySelector(".ms-ana-navigasyon-wrapper");
+                const sayfaGeriButonu = sayfa.querySelector("[data-ms-urun-listesi-geri]");
                 const anaFiltreAdlari = @Html.Raw(anaFiltreAdlariJson);
 
                 if (!panel) {
                     return;
                 }
+
+                sayfaGeriButonu?.addEventListener("click", () => {
+                    if (window.history.length > 1) {
+                        window.history.back();
+                        return;
+                    }
+
+                    window.location.assign("/ana-sayfa");
+                });
 
                 const panelAc = (oge) => {
                     if (!oge) {
@@ -318,6 +330,7 @@
                         return;
                     }
 
+                    navigasyonYuksekliginiGuncelle();
                     hedefPanel.hidden = false;
                     hedefPanel.dataset.msAcik = "true";
                     buton.classList.add("ms-urun-listesi-mobil-chip-acik");
@@ -658,6 +671,7 @@
                         return;
                     }
 
+                    chipPanelleriKapat();
                     sonKullaniciKaydirmaYonu = yon;
                     sonKullaniciKaydirmaZamani = zamanDamgasiAl();
                     ilkKaydirmaKorumaAktif = false;
@@ -667,12 +681,11 @@
                 mobilAraclariAc();
 
                 const navigasyonYuksekliginiGuncelle = () => {
-                    const mobilGorunum = window.matchMedia("(max-width: 1023px)").matches;
-                    const navigasyonYuksekligi = mobilGorunum
-                        ? Math.ceil(anaNavigasyon?.getBoundingClientRect().height || 0)
-                        : 0;
+                    const navigasyonYuksekligi = Math.ceil(anaNavigasyon?.getBoundingClientRect().height || 0);
+                    const mobilSabitAltKonumu = Math.ceil(mobilSabitAlan?.getBoundingClientRect().bottom || navigasyonYuksekligi);
 
                     sayfa.style.setProperty("--ms-urun-listesi-nav-yukseklik", `${navigasyonYuksekligi}px`);
+                    sayfa.style.setProperty("--ms-urun-listesi-chip-panel-top", `${Math.max(navigasyonYuksekligi, mobilSabitAltKonumu)}px`);
                 };
 
                 const mobilAraclariGuncelle = () => {
@@ -723,7 +736,13 @@
                     window.requestAnimationFrame(mobilAraclariGuncelle);
                 };
 
-                window.addEventListener("scroll", mobilAraclariKaydirmadaIzle, { passive: true });
+                window.addEventListener("scroll", () => {
+                    if (window.matchMedia("(max-width: 1023px)").matches) {
+                        chipPanelleriKapat();
+                    }
+
+                    mobilAraclariKaydirmadaIzle();
+                }, { passive: true });
                 window.addEventListener("pageshow", () => {
                     mobilAraclariAc();
                     sonKullaniciKaydirmaYonu = 0;
