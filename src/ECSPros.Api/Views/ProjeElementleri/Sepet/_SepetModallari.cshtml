@@ -1,8 +1,8 @@
 <div class="ms-ornek-modal ms-siparis-kupon-modal" data-ms-kupon-modal aria-hidden="true">
     <div class="ms-ornek-modal-kaplama" data-ms-kupon-modal-kapat></div>
     <section class="ms-ornek-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-sepet-kupon-modal-baslik">
-        <button class="ms-ornek-modal-kapat" type="button" data-ms-kupon-modal-kapat aria-label="Kuponlarım modalını kapat">×</button>
-        <h3 id="ms-sepet-kupon-modal-baslik" class="ms-ornek-modal-baslik">Kuponlarım</h3>
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-kupon-modal-kapat aria-label="Kuponlarım modalını kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+        <h3 id="ms-sepet-kupon-modal-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>Kuponlarım</h3>
         <p class="ms-ornek-modal-aciklama">Sepette kullanabileceğiniz kuponları bu alanda görüntüleyebilirsiniz.</p>
 
         @* E9: kartlar üyenin kupon listesinden (GET /api/store/account/coupons) JS ile
@@ -10,9 +10,16 @@
         <div class="ms-siparis-kupon-modal-icerik" data-ms-kupon-modal-icerik>
             <template data-ms-kupon-kart-sablon>
             <section class="ms-siparis-kupon-karti">
-                <div>
+                <span class="ms-siparis-kupon-karti-delik ms-siparis-kupon-karti-delik-sol" aria-hidden="true"></span>
+                <span class="ms-siparis-kupon-karti-delik ms-siparis-kupon-karti-delik-sag" aria-hidden="true"></span>
+                <div class="ms-siparis-kupon-karti-deger">
+                    <strong data-ms-kupon-kart-tutar></strong>
+                    <span>Aktif</span>
+                </div>
+                <div class="ms-siparis-kupon-karti-bilgi">
                     <strong data-ms-kupon-kart-baslik></strong>
                     <span data-ms-kupon-kart-aciklama></span>
+                    <code data-ms-kupon-kart-kod></code>
                 </div>
                 <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-kupon-kart-kullan>Kullan</button>
             </section>
@@ -29,8 +36,8 @@
 <div class="ms-ornek-modal ms-siparis-sozlesme-modal" data-ms-sozlesme-modal aria-hidden="true">
     <div class="ms-ornek-modal-kaplama" data-ms-sozlesme-modal-kapat></div>
     <section class="ms-ornek-modal-kutu ms-siparis-sozlesme-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-sepet-sozlesme-modal-baslik">
-        <button class="ms-ornek-modal-kapat" type="button" data-ms-sozlesme-modal-kapat aria-label="Sözleşme bilgilendirme modalını kapat">×</button>
-        <h3 id="ms-sepet-sozlesme-modal-baslik" class="ms-ornek-modal-baslik">Mesafeli Satış Sözleşmesi ve Ön Bilgilendirme</h3>
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-sozlesme-modal-kapat aria-label="Sözleşme bilgilendirme modalını kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+        <h3 id="ms-sepet-sozlesme-modal-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>Mesafeli Satış Sözleşmesi ve Ön Bilgilendirme</h3>
         <p class="ms-ornek-modal-aciklama">Siparişi tamamlamadan önce satış, teslimat, ödeme, cayma hakkı ve kişisel veri bilgilendirme koşullarını okuyup onaylamanız gerekir.</p>
 
         @{
@@ -73,30 +80,30 @@
 <div class="ms-ornek-modal ms-tckn-dogrulama-modal" data-ms-tckn-modal aria-hidden="true">
     <div class="ms-ornek-modal-kaplama" data-ms-tckn-modal-kapat></div>
     <section class="ms-ornek-modal-kutu ms-ornek-modal-kutu-uyari ms-ornek-modal-boyut-xl" role="dialog" aria-modal="true" aria-labelledby="ms-sepet-tckn-modal-baslik">
-        <button class="ms-ornek-modal-kapat" type="button" data-ms-tckn-modal-kapat aria-label="TCKN doğrulama modalını kapat">×</button>
-        <h3 id="ms-sepet-tckn-modal-baslik" class="ms-ornek-modal-baslik">TCKN Doğrulama</h3>
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-tckn-modal-kapat aria-label="TCKN doğrulama modalını kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+        <h3 id="ms-sepet-tckn-modal-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>TCKN Doğrulama</h3>
         <p class="ms-ornek-modal-aciklama">Sipariş tutarınız 13.000 TL üzeri olduğu için kimlik doğrulama bilgisini kontrol etmeniz gerekiyor.</p>
 
         <div class="ms-tckn-dogrulama-formu">
             <div class="ms-tckn-form-grid">
                 <label class="ms-form-alani">
                     <span class="ms-form-etiket">T.C. Kimlik Numarası</span>
-                    <input class="ms-form-girdi" type="text" inputmode="numeric" maxlength="11" placeholder="11 haneli TCKN" data-ms-tckn-girdi data-ms-tckn-zorunlu data-ms-tckn-etiket="TCKN">
+                    <input name="tckn_girdi" class="ms-form-girdi" type="text" inputmode="numeric" maxlength="11" placeholder="11 haneli TCKN" data-ms-tckn-girdi data-ms-tckn-zorunlu data-ms-tckn-etiket="TCKN">
                     <span class="ms-form-hata" data-ms-tckn-hata hidden>TCKN zorunludur.</span>
                 </label>
                 <label class="ms-form-alani">
                     <span class="ms-form-etiket">Ad</span>
-                    <input class="ms-form-girdi" type="text" placeholder="Adınızı yazın" autocomplete="given-name" data-ms-tckn-zorunlu data-ms-tckn-etiket="Ad">
+                    <input name="tckn_zorunlu" class="ms-form-girdi" type="text" placeholder="Adınızı yazın" autocomplete="given-name" data-ms-tckn-zorunlu data-ms-tckn-etiket="Ad">
                     <span class="ms-form-hata" data-ms-tckn-hata hidden>Ad zorunludur.</span>
                 </label>
                 <label class="ms-form-alani">
                     <span class="ms-form-etiket">Soyad</span>
-                    <input class="ms-form-girdi" type="text" placeholder="Soyadınızı yazın" autocomplete="family-name" data-ms-tckn-zorunlu data-ms-tckn-etiket="Soyad">
+                    <input name="tckn_zorunlu" class="ms-form-girdi" type="text" placeholder="Soyadınızı yazın" autocomplete="family-name" data-ms-tckn-zorunlu data-ms-tckn-etiket="Soyad">
                     <span class="ms-form-hata" data-ms-tckn-hata hidden>Soyad zorunludur.</span>
                 </label>
                 <label class="ms-form-alani">
                     <span class="ms-form-etiket">Doğum Tarihi</span>
-                    <input class="ms-form-girdi" type="date" autocomplete="bday" data-ms-tckn-zorunlu data-ms-tckn-etiket="Doğum tarihi">
+                    <input name="tckn_zorunlu" class="ms-form-girdi" type="date" autocomplete="bday" data-ms-tckn-zorunlu data-ms-tckn-etiket="Doğum tarihi">
                     <span class="ms-form-hata" data-ms-tckn-hata hidden>Doğum tarihi zorunludur.</span>
                 </label>
             </div>
@@ -118,8 +125,8 @@
 <div class="ms-ornek-modal" data-ms-sepet-sil-modal aria-hidden="true">
     <div class="ms-ornek-modal-kaplama" data-ms-sepet-sil-modal-kapat></div>
     <section class="ms-ornek-modal-kutu ms-ornek-modal-kutu-hata" role="dialog" aria-modal="true" aria-labelledby="ms-sepet-sil-modal-baslik">
-        <button class="ms-ornek-modal-kapat" type="button" data-ms-sepet-sil-modal-kapat aria-label="Sepetten çıkarma modalını kapat">×</button>
-        <h3 id="ms-sepet-sil-modal-baslik" class="ms-ornek-modal-baslik">Ürünü Sepetten Çıkar</h3>
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-sepet-sil-modal-kapat aria-label="Sepetten çıkarma modalını kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+        <h3 id="ms-sepet-sil-modal-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>Ürünü Sepetten Çıkar</h3>
         <p class="ms-ornek-modal-aciklama" data-ms-sepet-sil-modal-aciklama>Bu ürün sepetinizden çıkarılacak. Emin misiniz?</p>
         <div class="ms-ornek-modal-aksiyonlar">
             <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-sepet-sil-modal-kapat>Vazgeç</button>
@@ -185,8 +192,10 @@
                     kosullar.push(`Son kullanım: ${new Date(kupon.endsAt).toLocaleDateString("tr-TR")}`);
                 }
 
-                kart.querySelector("[data-ms-kupon-kart-baslik]").textContent = `${kupon.code} · ${kupon.discountText}`;
+                kart.querySelector("[data-ms-kupon-kart-tutar]").textContent = kupon.discountText || "";
+                kart.querySelector("[data-ms-kupon-kart-baslik]").textContent = kupon.title || kupon.code || "Kupon";
                 kart.querySelector("[data-ms-kupon-kart-aciklama]").textContent = kosullar.join(" ") || "Sepette kullanılabilir.";
+                kart.querySelector("[data-ms-kupon-kart-kod]").textContent = kupon.code || "";
                 kart.querySelector("[data-ms-kupon-kart-kullan]").addEventListener("click", () => {
                     const kodInput = document.querySelector("[data-ms-kupon-kodu]");
 
