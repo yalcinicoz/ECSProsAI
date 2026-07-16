@@ -294,7 +294,30 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
-### ⭐ SESSION ÖZETİ (2026-07-16, 4. oturum) — 9 MADDELİK DÜZELTME TURU TAMAM (⚠️ RESTART BEKLİYOR)
+### ⭐ SESSION ÖZETİ (2026-07-16, 5. oturum) — TASARIM FARK TURU: İP-1..4,6 CANLIDA + İP-5 TAMAM (⚠️ RESTART BEKLİYOR)
+İP-1..4,6 restart edildi ve canlıda doğrulandı (duman testi yeşil). Ardından İP-5
+(kullanıcı kurgu onayıyla) TAMAMLANDI: `product_review_photos` tablosu + `Topic` kolonu
+(migration canlı DB'ye uygulandı, additive) + foto upload endpoint'i + admin moderasyonda
+foto önizleme (K16, admin dist derlendi) + tasarımın 5 sekmeli değerlendirme sayfası gerçek
+veriyle + Yorumlarım'da yorumYapModal (E7 modal emekli). Anonim akış E2E 14/14; girişli
+akış (form+foto upload+üye sekmeleri) KULLANICI TESTİ bekliyor. Canlı publish alındı —
+`sudo systemctl restart ecspros` kullanıcıda. Detay: `docs/misharix-tasarim-fark-duzeltme-plani.md`.
+
+### (aynı gün, önceki tur) İP-1..4,6 özeti
+Tasarım (/opt/misharix) ↔ uygulama genel karşılaştırması yapıldı; rapor + iş planı:
+`docs/misharix-tasarim-fark-duzeltme-plani.md` (yanlış alarmlar da kayıtlı). Kullanıcı genel
+onay verdi. TAMAMLANAN: İP-1 filtreler yalnız "Filtrele" butonuyla uygulanır (E2E 11/11,
+kategori tek seçim + butonla gezinme, Temizle tek tık); İP-2 puan dağılım tooltip'i (yeni
+`UrunDetayVm.PuanDagilimi` ← GetProductReviewSummary) + Teslimat Bilgileri bloğu + beden
+önerisi; İP-3 "Kargoyu Takip Et" etiketi (shipped) + "İade Durumu" butonu + eksik modal
+sürükleme alanları; İP-4 kupon geri sayımı (`HesabimKuponVm.Bitis`) + Adreslerim tasarımın
+ortak adres MODALINA geçirildi (aramalı il/ilçe özel-select, E3 API korunarak — girişli akış
+KULLANICI TESTİ bekliyor); İP-6 iş çıkmadı (koşul metni zaten gerçek). ERTELENEN: 2.4/2.5/
+2.6/3.3/3.4/6.1 (veri kaynağı yok). İP-5 (Değerlendirmeler yenileme + foto upload + panel
+moderasyonu K16) KURGU ONAYI BEKLİYOR — plan dosyası 5.a–5.d. Canlı publish alındı
+(`/opt/ECSProsAI/publish`), `sudo systemctl restart ecspros` kullanıcıda. site.js değişmedi.
+
+### (önceki) SESSION ÖZETİ (2026-07-16, 4. oturum) — 9 MADDELİK DÜZELTME TURU TAMAM (restart yapıldı)
 1) Sepette sıfır fiyat: kök neden 329K varyantta BasePrice 0 (fiyat kanalda; kanal kaydı
 olmayan ~48K varyant 0 taşıyordu) — veri onarımı (328.982 satır + ANALYZE) + detay builder
 fiyat çözücü + Cart API fiyat<=0 reddi. 2) Telefon+şifre girişi uçtan uca (LoginMember Phone

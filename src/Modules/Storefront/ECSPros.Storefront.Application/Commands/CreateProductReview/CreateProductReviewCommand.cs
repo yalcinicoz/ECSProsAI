@@ -19,7 +19,9 @@ public record CreateProductReviewCommand(
     Guid? OrderItemId,
     int Rating,
     string? Text,
-    string MemberName) : IRequest<Result<Guid>>;
+    string MemberName,
+    string? Topic = null,                    // İP-5: tasarımın konu etiketi
+    List<string>? PhotoUrls = null) : IRequest<Result<Guid>>; // İP-5: /media/reviews URL'leri (çağıran doğrular)
 
 public class CreateProductReviewCommandHandler(IStorefrontDbContext db)
     : IRequestHandler<CreateProductReviewCommand, Result<Guid>>
@@ -47,9 +49,23 @@ public class CreateProductReviewCommandHandler(IStorefrontDbContext db)
             Rating = request.Rating,
             Text = string.IsNullOrWhiteSpace(request.Text) ? null : request.Text.Trim(),
             Status = "pending",
-            MemberName = request.MemberName
+            MemberName = request.MemberName,
+            Topic = string.IsNullOrWhiteSpace(request.Topic) ? null : request.Topic.Trim()
         };
         db.ProductReviews.Add(yorum);
+
+        var fotolar = (request.PhotoUrls ?? [])
+            .Where(u => !string.IsNullOrWhiteSpace(u)).Distinct().Take(5).ToList();
+        for (var i = 0; i < fotolar.Count; i++)
+        {
+            db.ProductReviewPhotos.Add(new ProductReviewPhoto
+            {
+                ReviewId = yorum.Id,
+                PhotoUrl = fotolar[i].Trim(),
+                SortOrder = i
+            });
+        }
+
         await db.SaveChangesAsync(ct);
         return Result.Success(yorum.Id);
     }

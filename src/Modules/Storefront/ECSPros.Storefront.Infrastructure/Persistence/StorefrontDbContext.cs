@@ -22,6 +22,7 @@ public class StorefrontDbContext : DbContext, IStorefrontDbContext
     public DbSet<Collection> Collections => Set<Collection>();
     public DbSet<CollectionItem> CollectionItems => Set<CollectionItem>();
     public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
+    public DbSet<ProductReviewPhoto> ProductReviewPhotos => Set<ProductReviewPhoto>();
     public DbSet<SavedSearch> SavedSearches => Set<SavedSearch>();
     public DbSet<ViewedProduct> ViewedProducts => Set<ViewedProduct>();
     public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();

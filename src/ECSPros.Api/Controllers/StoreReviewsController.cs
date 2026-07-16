@@ -57,10 +57,12 @@ public class StoreReviewsController(IMediator mediator, IProductService productS
     public async Task<IActionResult> GetForProduct(
         string productCode, [FromQuery] Guid firmPlatformId, [FromQuery] int page = 1,
         [FromQuery] List<int>? ratings = null, [FromQuery] string? sort = null,
-        [FromQuery] string? search = null, CancellationToken ct = default)
+        [FromQuery] string? search = null, [FromQuery] List<string>? topics = null,
+        [FromQuery] bool photosOnly = false, CancellationToken ct = default)
     {
         var result = await mediator.Send(
-            new GetProductReviewsQuery(firmPlatformId, productCode, page, 10, ratings, sort, search), ct);
+            new GetProductReviewsQuery(firmPlatformId, productCode, page, 10, ratings, sort, search,
+                topics, photosOnly), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
@@ -101,10 +103,57 @@ public class StoreReviewsController(IMediator mediator, IProductService productS
         var maskeli = string.Join(" ", tamAd.Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Select(p => p.Length <= 1 ? p : p[0] + new string('*', Math.Min(3, p.Length - 1))));
 
+        // İP-5: yalnız kendi upload endpoint'imizin ürettiği /media/reviews/ URL'leri kabul edilir.
+        var fotolar = (req.PhotoUrls ?? [])
+            .Where(u => !string.IsNullOrWhiteSpace(u)).Select(u => u.Trim()).Distinct().ToList();
+        if (fotolar.Count > 5)
+            return BadRequest(new { success = false, error = "En fazla 5 fotoğraf ekleyebilirsiniz." });
+        if (fotolar.Any(u => !u.StartsWith("/media/reviews/", StringComparison.Ordinal) || u.Contains("..")))
+            return BadRequest(new { success = false, error = "Geçersiz fotoğraf adresi." });
+
         var result = await mediator.Send(new CreateProductReviewCommand(
-            req.FirmPlatformId, MemberId, req.ProductCode!, orderItemId, req.Rating, req.Text, maskeli), ct);
+            req.FirmPlatformId, MemberId, req.ProductCode!, orderItemId, req.Rating, req.Text, maskeli,
+            req.Topic, fotolar), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = new { reviewId = result.Value } });
+    }
+
+    /// <summary>İP-5: yorum fotoğrafları — /media/reviews altına yazılır (nginx sunar).
+    /// E8 iade görseli kalıbının kopyası: en çok 5 dosya × 5 MB; uzantı içerik tipinden.</summary>
+    [HttpPost("images")]
+    [Authorize(Policy = "MemberOnly")]
+    [RequestSizeLimit(30_000_000)]
+    public async Task<IActionResult> UploadReviewImages(
+        [FromForm] List<IFormFile> files, [FromServices] IConfiguration configuration, CancellationToken ct)
+    {
+        var uzantilar = new Dictionary<string, string>
+        {
+            ["image/jpeg"] = ".jpg", ["image/png"] = ".png", ["image/webp"] = ".webp", ["image/gif"] = ".gif"
+        };
+
+        if (files.Count == 0)
+            return BadRequest(new { success = false, error = "Yüklenecek fotoğraf bulunamadı." });
+        if (files.Count > 5)
+            return BadRequest(new { success = false, error = "En fazla 5 fotoğraf yükleyebilirsiniz." });
+        if (files.Any(f => f.Length > 5_000_000))
+            return BadRequest(new { success = false, error = "Her fotoğraf en fazla 5 MB olabilir." });
+        if (files.Any(f => !uzantilar.ContainsKey(f.ContentType)))
+            return BadRequest(new { success = false, error = "Yalnızca JPEG, PNG, WebP veya GIF yükleyebilirsiniz." });
+
+        var kok = configuration["Store:MediaRootPath"] ?? "/opt/ECSProsAI/media";
+        var altDizin = Path.Combine("reviews", DateTime.UtcNow.ToString("yyyyMM"));
+        Directory.CreateDirectory(Path.Combine(kok, altDizin));
+
+        var urls = new List<string>();
+        foreach (var dosya in files)
+        {
+            var ad = $"{Guid.NewGuid():N}{uzantilar[dosya.ContentType]}";
+            await using var hedef = System.IO.File.Create(Path.Combine(kok, altDizin, ad));
+            await dosya.CopyToAsync(hedef, ct);
+            urls.Add($"/media/{altDizin.Replace(Path.DirectorySeparatorChar, '/')}/{ad}");
+        }
+
+        return Ok(new { success = true, data = new { urls } });
     }
 
     /// <summary>Üyenin yorumlayabileceği ürün kodları (teslim edilmiş − yorumlanmış).</summary>
@@ -130,4 +179,6 @@ public class StoreReviewsController(IMediator mediator, IProductService productS
     }
 }
 
-public record StoreReviewRequest(Guid FirmPlatformId, string? ProductCode, int Rating, string? Text);
+public record StoreReviewRequest(
+    Guid FirmPlatformId, string? ProductCode, int Rating, string? Text,
+    string? Topic = null, List<string>? PhotoUrls = null); // İP-5

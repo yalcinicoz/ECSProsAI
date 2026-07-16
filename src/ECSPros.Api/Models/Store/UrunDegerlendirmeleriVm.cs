@@ -13,4 +13,6 @@ public sealed record UrunDegerlendirmeleriVm(
     double Ortalama,
     int ToplamDegerlendirme,
     int YorumSayisi,
-    IReadOnlyDictionary<int, int> PuanDagilimi); // 5..1 → adet
+    IReadOnlyDictionary<int, int> PuanDagilimi,               // 5..1 → adet
+    IReadOnlyDictionary<string, int>? KonuDagilimi = null,    // İP-5: konu → adet
+    int FotografliYorumSayisi = 0);                           // İP-5
