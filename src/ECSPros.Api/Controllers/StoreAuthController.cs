@@ -134,7 +134,7 @@ public record RegisterMemberRequest(
     List<string>? AcceptedContracts = null,    // D3: onaylanan belge kodları
     string? Gender = null,                     // kayıt formundaki cinsiyet (female/male/null)
     DateOnly? BirthDate = null);               // kayıt formundaki doğum tarihi (yyyy-MM-dd, opsiyonel)
-public record LoginMemberRequest(string Email, string Password, string? Phone = null);
+public record LoginMemberRequest(string? Email, string Password, string? Phone = null);
 public record RefreshMemberRequest(string RefreshToken);
 public record LogoutMemberRequest(string? RefreshToken = null);
 public record SendOtpRequest(string Phone);
