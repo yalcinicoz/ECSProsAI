@@ -304,7 +304,12 @@ Bilinen sınırlar/ertelemeler plan dosyasında (Faz 4 bölümü). DEPLOY YOK �
 KALAN: Faz 5 (kargo takip demo sayfaları + hazırlık/yorum/renk modalları + koleksiyon
 uzlaştırma) → 6 (3 yeni vitrin blok tipi) → 7 (_VitrinBloklar eşleme) → 8 → 9 (QA+deploy).
 
-### ⭐ SESSION ÖZETİ (2026-07-16, 3. oturum) — MİSHARİX TASARIM SENKRONU FAZ 5-9 TAMAM (⚠️ RESTART BEKLİYOR)
+### ⭐ SESSION ÖZETİ (2026-07-16, 3. oturum) — MİSHARİX TASARIM SENKRONU FAZ 5-9 TAMAM (✅ RESTART YAPILDI, CANLI DOĞRULANDI)
+Restart sonrası canlı duman testi yeşil (2026-07-16): nginx/5000 ana sayfa+liste+kargo-takip+
+robots 200; site.min.js + ikonall.min.css sunuluyor; yeni giriş/sepet sözleşmeleri ve şehir
+çipi HTML'de; ?v='li statik immutable + HTML no-cache + Brotli aktif. Kullanıcı fonksiyonel
+testleri (gerçek OTP yanlış-kod senaryosu, sepet, mobil, yeni vitrin blokları) rapor
+talimatındaki gibi kullanıcıda.
 Faz 5 (kargo takip demo sayfaları + hazırlık/renk modalları + çifte koleksiyon modalı engeli),
 Faz 6 (3 yeni vitrin blok tipi: coklu-banner/gorselli-yorumlar/kategori-cok-satanlar + admin),
 Faz 7 (blok eşlemesi + _UrunKarti tasarım kartıyla eşitlendi + 3 inline blok tipi daha:
