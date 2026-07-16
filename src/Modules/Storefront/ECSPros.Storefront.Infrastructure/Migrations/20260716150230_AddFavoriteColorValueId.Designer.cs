@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using ECSPros.Storefront.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ECSPros.Storefront.Infrastructure.Migrations
 {
     [DbContext(typeof(StorefrontDbContext))]
-    partial class StorefrontDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260716150230_AddFavoriteColorValueId")]
+    partial class AddFavoriteColorValueId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -580,7 +583,7 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("FirmPlatformId", "MemberId", "ProductCode", "ColorValueId")
+                    b.HasIndex("FirmPlatformId", "MemberId", "ProductCode")
                         .IsUnique();
 
                     b.ToTable("favorites", "storefront");

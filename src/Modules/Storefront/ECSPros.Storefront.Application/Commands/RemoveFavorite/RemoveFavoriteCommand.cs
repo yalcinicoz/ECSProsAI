@@ -9,7 +9,8 @@ namespace ECSPros.Storefront.Application.Commands.RemoveFavorite;
 public record RemoveFavoriteCommand(
     Guid FirmPlatformId,
     Guid MemberId,
-    string ProductCode) : IRequest<Result<bool>>;
+    string ProductCode,
+    Guid? ColorValueId = null) : IRequest<Result<bool>>;
 
 public class RemoveFavoriteCommandHandler(IStorefrontDbContext db)
     : IRequestHandler<RemoveFavoriteCommand, Result<bool>>
@@ -20,7 +21,8 @@ public class RemoveFavoriteCommandHandler(IStorefrontDbContext db)
         var favori = await db.Favorites.FirstOrDefaultAsync(
             f => f.FirmPlatformId == request.FirmPlatformId
                  && f.MemberId == request.MemberId
-                 && f.ProductCode == kod, ct);
+                 && f.ProductCode == kod
+                 && f.ColorValueId == request.ColorValueId, ct);
         if (favori is not null)
         {
             favori.IsDeleted = true;

@@ -609,7 +609,10 @@ public class HesabimController(
             var kodSonucu = await mediator.Send(
                 new ECSPros.Storefront.Application.Queries.GetMemberFavorites.GetMemberFavoritesQuery(
                     platform.Id, _memberId), ct);
-            var kodlar = kodSonucu.IsSuccess ? kodSonucu.Value! : new List<string>();
+            var favoriler = kodSonucu.IsSuccess
+                ? kodSonucu.Value!
+                : new List<ECSPros.Storefront.Application.Queries.GetMemberFavorites.FavoriteKeyDto>();
+            var kodlar = favoriler.Select(f => f.ProductCode).Distinct().ToList();
             if (kodlar.Count > 0)
             {
                 var urunler = await mediator.Send(
@@ -617,8 +620,23 @@ public class HesabimController(
                         platform.Id, ProductCodes: kodlar, PageSize: kodlar.Count), ct);
                 if (urunler.IsSuccess)
                 {
+                    // 2026-07-16: favori ürün+renk bazlı — aynı ürünün iki rengi iki ayrı kart,
+                    // kart favorilenen rengin görseli/kimliğiyle gösterilir.
                     var kartMap = urunler.Value!.Items.ToDictionary(p => p.Code, UrunKartMap.KartaCevir);
-                    kartlar = kodlar.Where(kartMap.ContainsKey).Select(k => kartMap[k]).ToList();
+                    kartlar = favoriler
+                        .Where(f => kartMap.ContainsKey(f.ProductCode))
+                        .Select(f =>
+                        {
+                            var kart = kartMap[f.ProductCode];
+                            if (f.ColorValueId is not { } renkId) return kart;
+                            var renk = kart.RenkSecenekleri.FirstOrDefault(r => r.ValueId == renkId);
+                            return kart with
+                            {
+                                SeciliRenkId = renkId,
+                                GorselUrl = renk?.GorselUrl ?? kart.GorselUrl,
+                            };
+                        })
+                        .ToList();
                 }
             }
         }
@@ -647,7 +665,9 @@ public class HesabimController(
             var favoriSonucu = await mediator.Send(
                 new ECSPros.Storefront.Application.Queries.GetMemberFavorites.GetMemberFavoritesQuery(
                     platform.Id, _memberId), ct);
-            var favoriKodlar = favoriSonucu.IsSuccess ? favoriSonucu.Value! : new List<string>();
+            var favoriKodlar = favoriSonucu.IsSuccess
+                ? favoriSonucu.Value!.Select(f => f.ProductCode).Distinct().ToList()
+                : new List<string>();
 
             // Tüm koleksiyon + favori kodları tek Catalog sorgusuyla ürün bilgisine çevrilir
             var tumKodlar = kayitlar.SelectMany(k => k.ItemCodes).Concat(favoriKodlar).Distinct().ToList();

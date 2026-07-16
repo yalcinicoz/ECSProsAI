@@ -9,8 +9,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const platformId = document.querySelector("[data-ms-arama]")?.dataset.msAramaPlatform || "";
     if (!platformId) { return; }
     const token = () => localStorage.getItem("ecspros_member_token");
+    // 2026-07-16: favori anahtarı ürün+renk — "kod|renkId" (renksiz: "kod|").
+    // Bir rengin kalbi diğer renk kartlarını işaretlemez.
     const favoriKodlar = new Set();
     window.msFavoriKodlar = favoriKodlar;
+    const favoriAnahtar = (kod, renk) => kod + "|" + (renk || "");
+    window.msFavoriAnahtar = favoriAnahtar;
     // E6: kart/detay bookmark'ı "Kaydedilenler" hızlı koleksiyonuyla çalışır
     const kayitliKodlar = new Set();
 
@@ -24,10 +28,24 @@ document.addEventListener("DOMContentLoaded", () => {
         return detay ? decodeURIComponent(detay[1]) : null;
     };
 
+    const detayConfig = () => {
+        try { return JSON.parse(document.getElementById("ms-urun-detay-config")?.textContent || "null"); }
+        catch { return null; }
+    };
+
+    const renkBul = (buton) => {
+        const kart = buton.closest("[data-ms-secili-renk]");
+        if (kart) { return kart.dataset.msSeciliRenk || null; }
+        if (buton.matches(".ms-urun-detay-favori, .ms-urun-detay-koleksiyon")) {
+            return detayConfig()?.seciliRenk || null;
+        }
+        return null;
+    };
+
     const kartIsaretle = (kok) => {
         kok.querySelectorAll(".ms-urun-karti .ms-urun-favori").forEach((buton) => {
             const kod = kodBul(buton);
-            const aktif = !!kod && favoriKodlar.has(kod);
+            const aktif = !!kod && favoriKodlar.has(favoriAnahtar(kod, renkBul(buton)));
             if (aktif === buton.classList.contains("ms-urun-favori-aktif")) { return; }
             buton.classList.toggle("ms-urun-favori-aktif", aktif);
             buton.setAttribute("aria-pressed", aktif.toString());
@@ -48,7 +66,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const detayIsaretle = () => {
         const detay = location.pathname.match(/^\/urun\/([^/?#]+)/);
-        if (!detay || !favoriKodlar.has(decodeURIComponent(detay[1]))) { return; }
+        if (!detay) { return; }
+        const detayRenk = detayConfig()?.seciliRenk || null;
+        if (!favoriKodlar.has(favoriAnahtar(decodeURIComponent(detay[1]), detayRenk))) { return; }
         document.querySelectorAll(".ms-urun-detay-favori").forEach((buton) => {
             buton.setAttribute("aria-pressed", "true");
             buton.setAttribute("aria-label", "Favorilerden çıkar");
@@ -74,7 +94,8 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const veri = await cevap.json().catch(() => null);
             if (!veri?.success) { return; }
-            veri.data.forEach((kod) => favoriKodlar.add(kod));
+            veri.data.forEach((f) => favoriKodlar.add(
+                typeof f === "string" ? favoriAnahtar(f, null) : favoriAnahtar(f.productCode, f.colorValueId)));
 
             // E6: Kaydedilenler koleksiyonu — bookmark işaretleme seti
             try {
@@ -90,24 +111,25 @@ document.addEventListener("DOMContentLoaded", () => {
             detayIsaretle();
             document.querySelectorAll("[data-ms-sepet-favori]").forEach((buton) => {
                 const kod = buton.closest("[data-ms-urun-kod]")?.dataset.msUrunKod;
-                if (kod && favoriKodlar.has(kod)) { sepetIsaretle(buton, true); }
+                if (kod && favoriKodlar.has(favoriAnahtar(kod, null))) { sepetIsaretle(buton, true); }
             });
             document.dispatchEvent(new CustomEvent("ms:favoriler-yuklendi"));
         } catch { /* işaretleme yapılamadı — kalpler pasif başlar */ }
     };
 
-    const kaydet = async (kod, ekle) => {
+    const kaydet = async (kod, renk, ekle) => {
         try {
             if (ekle) {
-                favoriKodlar.add(kod);
+                favoriKodlar.add(favoriAnahtar(kod, renk));
                 await fetch("/api/store/favorites", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", Authorization: "Bearer " + token() },
-                    body: JSON.stringify({ firmPlatformId: platformId, productCode: kod })
+                    body: JSON.stringify({ firmPlatformId: platformId, productCode: kod, colorValueId: renk || null })
                 });
             } else {
-                favoriKodlar.delete(kod);
-                await fetch(`/api/store/favorites/${encodeURIComponent(kod)}?firmPlatformId=${platformId}`, {
+                favoriKodlar.delete(favoriAnahtar(kod, renk));
+                await fetch(`/api/store/favorites/${encodeURIComponent(kod)}?firmPlatformId=${platformId}`
+                    + (renk ? `&colorValueId=${encodeURIComponent(renk)}` : ""), {
                     method: "DELETE",
                     headers: { Authorization: "Bearer " + token() }
                 });
@@ -153,7 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
             sepetIsaretle(buton, !aktifti); // sepet satırları dinamik — görsel toggle burada
         }
         if (koleksiyonMu) { kayitliKaydet(kod, !aktifti); }
-        else { kaydet(kod, !aktifti); }
+        else { kaydet(kod, renkBul(buton), !aktifti); }
     }, true);
 
     // Sonradan eklenen kartlar (infinite scroll şablon kartları)

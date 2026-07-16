@@ -14,6 +14,7 @@
 <div class="ms-urun-karti" data-ms-kart-link-alani
      data-ms-urun-id="@(u?.Kod ?? "")"
      data-ms-urun-kod="@(u?.Kod ?? "")"
+     data-ms-secili-renk="@(u?.SeciliRenkId?.ToString() ?? "")"
      data-ms-fiyat="@(u?.Fiyat.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
      data-ms-degerler="@(u is null ? "" : string.Join(",", u.DegerIdler))"
      data-ms-dolu="@(u is null ? "" : "true")">
