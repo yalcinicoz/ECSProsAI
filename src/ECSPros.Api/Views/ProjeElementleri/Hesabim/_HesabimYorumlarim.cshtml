@@ -43,11 +43,8 @@
                 </div>
 
                 <section class="ms-hesabim-yorum-paneli" data-ms-yorum-panel="degerlendir" aria-labelledby="ms-yorum-degerlendir-baslik">
-<<<<<<< ECSPros
                     @if (msDegerlendir.Count == 0)
                     {
-=======
->>>>>>> yeni-tasarim
                     <section class="ms-hesabim-bos-durum" aria-labelledby="ms-yorum-degerlendir-bos-baslik">
                         <i class="fa-solid fa-pen-to-square ms-fa-ikon " aria-hidden="true"></i>
                         <div>
@@ -64,65 +61,33 @@
                         @foreach (var u in msDegerlendir)
                         {
                         <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
-<<<<<<< ECSPros
                             <a class="ms-hesabim-kart-baglanti" href="/urun/@u.Kod" data-ms-kart-link aria-label="@u.Ad ürün detayına git"></a>
                             @if (u.GorselUrl is not null)
                             {
-                            <img src="@u.GorselUrl" alt="@u.Ad">
+                            <img src="@u.GorselUrl" alt="@u.Ad" loading="lazy">
                             }
-=======
-                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="Polo Yaka Desenli Erkek Triko Tişört ürün detayına git"></a>
-                            <img src="/images/ornek-resim.jpg" alt="Polo yaka desenli erkek triko tişört" width="612" height="612" loading="lazy">
->>>>>>> yeni-tasarim
                             <div>
                                 <span class="ms-hesabim-durum-etiket ms-hesabim-durum-beklemede">Yorum Bekliyor</span>
                                 <strong>@u.Ad</strong>
                                 <p>Teslim edildi. Ürün deneyiminizi paylaşarak diğer kullanıcılara yardımcı olabilirsiniz.</p>
                                 <div class="ms-hesabim-kart-aksiyonlar">
-<<<<<<< ECSPros
                                     <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-yorum-yaz="@u.Kod" data-urun-ad="@u.Ad">Yorum Yaz</button>
                                     <a class="ms-buton ms-buton-s ms-buton-sade" href="/Hesabim/Siparislerim">Siparişi Gör</a>
                                 </div>
                             </div>
                         </article>
                         }
-=======
-                                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-yorum-yap-ac>Yorum Yaz</button>
-                                    <a class="ms-buton ms-buton-s ms-buton-sade" href="/siparislerim">Siparişi Gör</a>
-                                </div>
-                            </div>
-                        </article>
-                        <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
-                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="İç Astarlı Salaş Tesettür Bluz ürün detayına git"></a>
-                            <img src="/images/ornek-resim-2.jpg" alt="İç astarlı salaş tesettür bluz" width="554" height="554" loading="lazy">
-                            <div>
-                                <span class="ms-hesabim-durum-etiket ms-hesabim-durum-beklemede">Yorum Bekliyor</span>
-                                <strong>İç Astarlı Salaş Tesettür Bluz</strong>
-                                <p>Son alışverişinizden sonra değerlendirme süresi devam ediyor.</p>
-                                <div class="ms-hesabim-kart-aksiyonlar">
-                                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-yorum-yap-ac>Yorum Yaz</button>
-                                </div>
-                            </div>
-                        </article>
->>>>>>> yeni-tasarim
                     </div>
                     }
                 </section>
 
                 <section class="ms-hesabim-yorum-paneli ms-gizli" data-ms-yorum-panel="onay-bekleyenler" aria-labelledby="ms-yorum-onay-bekleyen-baslik" hidden>
-<<<<<<< ECSPros
                     @if (msBekleyen.Count == 0)
                     {
                     <section class="ms-hesabim-bos-durum">
                         <i class="fa-solid fa-clock ms-fa-ikon " aria-hidden="true"></i>
                         <div>
                             <h3>Onay bekleyen yorumunuz yok</h3>
-=======
-                    <section class="ms-hesabim-bos-durum" aria-labelledby="ms-yorum-onay-bekleyen-bos-baslik">
-                        <i class="fa-solid fa-clock ms-fa-ikon " aria-hidden="true"></i>
-                        <div>
-                            <h3 id="ms-yorum-onay-bekleyen-bos-baslik">Onay bekleyen yorumunuz yok</h3>
->>>>>>> yeni-tasarim
                             <p>Yeni gönderdiğiniz yorumlar kontrol sürecindeyken bu alanda listelenir.</p>
                         </div>
                     </section>
@@ -134,16 +99,11 @@
                         @foreach (var (yorum, urun) in msBekleyen)
                         {
                         <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
-<<<<<<< ECSPros
                             <a class="ms-hesabim-kart-baglanti" href="/urun/@yorum.ProductCode" data-ms-kart-link aria-label="@(urun?.Ad ?? yorum.ProductCode) ürün detayına git"></a>
                             @if (urun?.GorselUrl is not null)
                             {
                             <img src="@urun.GorselUrl" alt="@urun.Ad">
                             }
-=======
-                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek ürün detayına git"></a>
-                            <img src="/images/ornek-resim.jpg" alt="Kadın ön çıtçıtlı dik yaka kolsuz gömlek" width="612" height="612" loading="lazy">
->>>>>>> yeni-tasarim
                             <div>
                                 <span class="ms-hesabim-durum-etiket ms-hesabim-durum-uyari">Onay Bekliyor</span>
                                 <strong>@(urun?.Ad ?? yorum.ProductCode)</strong>
@@ -157,19 +117,12 @@
                 </section>
 
                 <section class="ms-hesabim-yorum-paneli ms-gizli" data-ms-yorum-panel="onaylananlar" aria-labelledby="ms-yorum-onaylanan-baslik" hidden>
-<<<<<<< ECSPros
                     @if (msOnayli.Count == 0)
                     {
                     <section class="ms-hesabim-bos-durum">
                         <i class="fa-solid fa-circle-check ms-fa-ikon " aria-hidden="true"></i>
                         <div>
                             <h3>Onaylanan yorumunuz yok</h3>
-=======
-                    <section class="ms-hesabim-bos-durum" aria-labelledby="ms-yorum-onaylanan-bos-baslik">
-                        <i class="fa-solid fa-circle-check ms-fa-ikon " aria-hidden="true"></i>
-                        <div>
-                            <h3 id="ms-yorum-onaylanan-bos-baslik">Onaylanan yorumunuz yok</h3>
->>>>>>> yeni-tasarim
                             <p>Yayına alınan ürün değerlendirmeleriniz burada görünür.</p>
                         </div>
                     </section>
@@ -181,26 +134,11 @@
                         @foreach (var (yorum, urun) in msOnayli)
                         {
                         <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
-<<<<<<< ECSPros
                             <a class="ms-hesabim-kart-baglanti" href="/urun/@yorum.ProductCode" data-ms-kart-link aria-label="@(urun?.Ad ?? yorum.ProductCode) ürün detayına git"></a>
                             @if (urun?.GorselUrl is not null)
                             {
                             <img src="@urun.GorselUrl" alt="@urun.Ad">
                             }
-=======
-                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek ürün detayına git"></a>
-                            <img src="/images/ornek-resim-2.jpg" alt="Kadın ön çıtçıtlı dik yaka kolsuz gömlek" width="554" height="554" loading="lazy">
-                            <div>
-                                <span class="ms-hesabim-durum-etiket ms-hesabim-durum-basarili">Onaylandı</span>
-                                <strong>Kadın Ön Çıtçıtlı Dik Yaka Kolsuz Gömlek</strong>
-                                <p>Ürün kumaşı ve kalıbı çok iyi. Teslimat hızlıydı.</p>
-                                <div class="ms-hesabim-puan" aria-label="5 üzerinden 5 puan">5/5</div>
-                            </div>
-                        </article>
-                        <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
-                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="Polo Yaka Desenli Erkek Triko Tişört ürün detayına git"></a>
-                            <img src="/images/ornek-resim.jpg" alt="Mavi polo yaka desenli erkek triko tişört" width="612" height="612" loading="lazy">
->>>>>>> yeni-tasarim
                             <div>
                                 <span class="ms-hesabim-durum-etiket ms-hesabim-durum-basarili">Onaylandı</span>
                                 <strong>@(urun?.Ad ?? yorum.ProductCode)</strong>
@@ -217,7 +155,6 @@
                 </section>
 
                 <section class="ms-hesabim-yorum-paneli ms-gizli" data-ms-yorum-panel="reddedilenler" aria-labelledby="ms-yorum-reddedilen-baslik" hidden>
-<<<<<<< ECSPros
                     @if (msRed.Count == 0)
                     {
                     <section class="ms-hesabim-bos-durum">
@@ -226,15 +163,6 @@
                             <h3>Reddedilen yorumunuz yok</h3>
                             <p>Yayın kriterlerine takılan değerlendirmeleriniz olursa burada sebebiyle birlikte gösterilir.</p>
                         </div>
-=======
-                    <section class="ms-hesabim-bos-durum" aria-labelledby="ms-yorum-reddedilen-bos-baslik">
-                        <i class="fa-solid fa-circle-xmark ms-fa-ikon " aria-hidden="true"></i>
-                        <div>
-                            <h3 id="ms-yorum-reddedilen-bos-baslik">Reddedilen yorumunuz yok</h3>
-                            <p>Yayın kriterlerine takılan değerlendirmeleriniz olursa burada sebebiyle birlikte gösterilir.</p>
-                        </div>
-                        <a class="ms-buton ms-buton-m ms-buton-sade" href="/sik-sorulan-sorular">Yorum Kuralları</a>
->>>>>>> yeni-tasarim
                     </section>
                     }
                     else
@@ -244,26 +172,17 @@
                         @foreach (var (yorum, urun) in msRed)
                         {
                         <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
-<<<<<<< ECSPros
                             <a class="ms-hesabim-kart-baglanti" href="/urun/@yorum.ProductCode" data-ms-kart-link aria-label="@(urun?.Ad ?? yorum.ProductCode) ürün detayına git"></a>
                             @if (urun?.GorselUrl is not null)
                             {
                             <img src="@urun.GorselUrl" alt="@urun.Ad">
                             }
-=======
-                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="Kadın Yüksek Bel Bol Paça Pantolon ürün detayına git"></a>
-                            <img src="/images/ornek-resim-2.jpg" alt="Kadın yüksek bel bol paça pantolon" width="554" height="554" loading="lazy">
->>>>>>> yeni-tasarim
                             <div>
                                 <span class="ms-hesabim-durum-etiket ms-hesabim-durum-tehlike">Reddedildi</span>
                                 <strong>@(urun?.Ad ?? yorum.ProductCode)</strong>
                                 <p>@(yorum.RejectReason ?? "Yayın kriterlerine uygun bulunmadı.")</p>
                                 <div class="ms-hesabim-kart-aksiyonlar">
-<<<<<<< ECSPros
-                                    <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-yorum-yaz="@yorum.ProductCode" data-urun-ad="@(urun?.Ad ?? yorum.ProductCode)" data-eski-yorum-id="@yorum.Id">Yeniden Düzenle</button>
-=======
-                                    <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-mavi ms-buton-x" type="button" data-ms-yorum-yap-ac>Yeniden Düzenle</button>
->>>>>>> yeni-tasarim
+                                    <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-mavi ms-buton-x" type="button" data-ms-yorum-yaz="@yorum.ProductCode" data-urun-ad="@(urun?.Ad ?? yorum.ProductCode)" data-eski-yorum-id="@yorum.Id">Yeniden Düzenle</button>
                                 </div>
                             </div>
                         </article>
@@ -273,19 +192,12 @@
                 </section>
 
                 <section class="ms-hesabim-yorum-paneli ms-gizli" data-ms-yorum-panel="silinenler" aria-labelledby="ms-yorum-silinen-baslik" hidden>
-<<<<<<< ECSPros
                     @if (msSilinen.Count == 0)
                     {
                     <section class="ms-hesabim-bos-durum">
                         <i class="fa-solid fa-trash ms-fa-ikon " aria-hidden="true"></i>
                         <div>
                             <h3>Silinen yorumunuz yok</h3>
-=======
-                    <section class="ms-hesabim-bos-durum" aria-labelledby="ms-yorum-silinen-bos-baslik">
-                        <i class="fa-solid fa-trash ms-fa-ikon " aria-hidden="true"></i>
-                        <div>
-                            <h3 id="ms-yorum-silinen-bos-baslik">Silinen yorumunuz yok</h3>
->>>>>>> yeni-tasarim
                             <p>Kendi sildiğiniz veya kaldırılan yorumlar bu alanda arşivlenir.</p>
                         </div>
                     </section>
@@ -297,16 +209,11 @@
                         @foreach (var (yorum, urun) in msSilinen)
                         {
                         <article class="ms-hesabim-durum-karti ms-hesabim-yorum-karti" data-ms-kart-link-alani>
-<<<<<<< ECSPros
                             <a class="ms-hesabim-kart-baglanti" href="/urun/@yorum.ProductCode" data-ms-kart-link aria-label="@(urun?.Ad ?? yorum.ProductCode) ürün detayına git"></a>
                             @if (urun?.GorselUrl is not null)
                             {
                             <img src="@urun.GorselUrl" alt="@urun.Ad">
                             }
-=======
-                            <a class="ms-hesabim-kart-baglanti" href="/urun-detay" data-ms-kart-link aria-label="İç Astarlı Salaş Tesettür Bluz ürün detayına git"></a>
-                            <img src="/images/ornek-resim.jpg" alt="İç astarlı salaş tesettür bluz" width="612" height="612" loading="lazy">
->>>>>>> yeni-tasarim
                             <div>
                                 <span class="ms-hesabim-durum-etiket ms-hesabim-durum-pasif">Silindi</span>
                                 <strong>@(urun?.Ad ?? yorum.ProductCode)</strong>
@@ -321,7 +228,6 @@
         </div>
     </section>
 
-<<<<<<< ECSPros
     @* E7: yorum yazma modalı — tasarımda karşılığı yok (buton işlevsiz demo idi); misharix
        ms-ornek-modal kalıbıyla puan (5 yıldız) + metin; POST /api/store/reviews (satın alma
        şartı sunucuda), başarıda reload. Reddedilenin "Yeniden Düzenle"si önce eskiyi siler. *@
@@ -435,7 +341,4 @@
             });
         })();
     </script>
-=======
-    @await Html.PartialAsync("~/Views/ProjeElementleri/Hesabim/yorumYapModal.cshtml")
->>>>>>> yeni-tasarim
 </section>
