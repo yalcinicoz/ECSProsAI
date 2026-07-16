@@ -165,7 +165,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
                 </svg>
-                <span data-ms-sehir-cip-ad>@(msMobilSegment?.CityName ?? "Konum Seç")</span>
+                <span data-ms-sehir-cip-ad data-ms-sehir-cip-ad-bicim="parantez">@(msMobilSegment?.CityName is { Length: > 0 } msSehirAd ? $"Konum Seç ({msSehirAd})" : "Konum Seç")</span>
                 <svg class="ms-ana-navigasyon-mobil-alt-ok" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
                 </svg>

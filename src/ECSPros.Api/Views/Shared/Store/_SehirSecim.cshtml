@@ -96,8 +96,7 @@
         ];
 
         var modal = document.querySelector("[data-ms-sehir-modal]");
-        var cipler = document.querySelectorAll("[data-ms-sehir-cip]");
-        if (!modal || !cipler.length) { return; }
+        if (!modal) { return; }
 
         var liste = modal.querySelector("[data-ms-sehir-liste]");
         var arama = modal.querySelector("[data-ms-sehir-ara]");
@@ -168,11 +167,13 @@
             });
         };
 
-        cipler.forEach(function (cip) {
-            cip.addEventListener("click", function (olay) {
-                olay.preventDefault();
-                ac();
-            });
+        // Delegation (2026-07-16 düzeltmesi): mobil menünün 'Konum Seç' satırı artık
+        // template'ten geç eklendiğinden çipler sayfa yüklenirken bulunamıyordu.
+        document.addEventListener("click", function (olay) {
+            var cip = olay.target instanceof Element ? olay.target.closest("[data-ms-sehir-cip]") : null;
+            if (!cip) { return; }
+            olay.preventDefault();
+            ac();
         });
 
         modal.querySelectorAll("[data-ms-sehir-kapat]").forEach(function (eleman) {
