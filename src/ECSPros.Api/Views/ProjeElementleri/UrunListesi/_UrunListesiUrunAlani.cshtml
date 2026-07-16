@@ -92,6 +92,7 @@
             kart.dataset.msFiyat = String(v.fiyat);
             kart.dataset.msDegerler = v.degerler.join(",");
             kart.dataset.msUrunKod = v.kod; // E5 favori/bookmark kod çözümü
+            kart.dataset.msUrunId = v.kod;  // tasarım sözleşmesi: ortak renk modalı ürün kimliği
 
             // E7: puan bölümü (SSR markup'la birebir; yorumsuz üründe gizli kalır)
             const puanAlani = kart.querySelector("[data-ms-kart-puan]");
@@ -157,18 +158,20 @@
             if (v.renkSecenekleri.length >= 2 && !kart.querySelector(".ms-urun-renk-tooltip-alani")) {
                 const secenekHtml = (renk, ekSinif) => `
                     <a class="ms-urun-renk-tooltip-gorsel${ekSinif}" href="${renk.slug ? "/" + renk.slug : "/urun/" + encodeURIComponent(v.kod) + "?color=" + encodeURIComponent(renk.id)}">
-                        <img data-ms-lazy-src="${kacir(renk.gorsel || v.gorsel)}" alt="${kacir(renk.ad)} renk seçeneği"><span>${kacir(renk.ad)}</span></a>`;
+                        <img data-ms-lazy-src="${kacir(renk.gorsel || v.gorsel)}" alt="${kacir(renk.ad)} renk seçeneği" width="90" height="134" loading="lazy" decoding="async"><span>${kacir(renk.ad)}</span></a>`;
                 const alan = document.createElement("div");
                 alan.className = "ms-urun-renk-tooltip-alani";
+                alan.setAttribute("role", "dialog");
+                alan.setAttribute("aria-label", "Ürünün diğer renkleri");
                 const fazlasi = v.renkSecenekleri.length > 4
-                    ? `<span>+${v.renkSecenekleri.length - 4} Renk ›</span>`
+                    ? `<span>+${v.renkSecenekleri.length - 4} Renk <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i></span>`
                     : "";
                 alan.innerHTML = `
                     <span class="ms-urun-renk-tooltip">
                         <span class="ms-urun-renk-tooltip-baslik">
                             <span>Farklı Renk Seçenekleri <span class="ms-urun-renk-tooltip-sayac">(${v.renkSecenekleri.length})</span></span>
                             ${fazlasi}
-                            <button class="ms-urun-renk-tooltip-kapat" type="button" data-ms-renk-tooltip-kapat aria-label="Renk seçeneklerini kapat">×</button>
+                            <button class="ms-urun-renk-tooltip-kapat" type="button" data-ms-renk-tooltip-kapat aria-label="Renk seçeneklerini kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
                         </span>
                         <span class="ms-urun-renk-tooltip-liste">
                             ${v.renkSecenekleri.slice(0, 4).map((renk) => secenekHtml(renk, "")).join("")}
@@ -207,8 +210,12 @@
             // Renk rozeti — tasarım kaynağı markup'ı BİREBİR (iki sabit dekoratif nokta + sayı).
             // Çok renkli her üründe (SSR ile aynı koşul: renkSecenekleri >= 2). Yorum/inline style yok.
             if (v.renkSecenekleri.length >= 2 && !kart.querySelector(".ms-urun-renk-rozet")) {
-                const rozet = document.createElement("span");
+                const rozet = document.createElement("button");
+                rozet.type = "button";
                 rozet.className = "ms-urun-renk-rozet";
+                rozet.setAttribute("aria-haspopup", "dialog");
+                rozet.setAttribute("aria-expanded", "false");
+                rozet.setAttribute("aria-label", `${v.renkSayisi} diğer renk seçeneğini göster`);
                 rozet.innerHTML = `<span class="ms-urun-renkler" aria-hidden="true"><span class="ms-urun-renk ms-urun-renk-mavi"></span><span class="ms-urun-renk ms-urun-renk-pembe"></span></span> ${v.renkSayisi}`;
                 kart.querySelector(".ms-urun-gorsel-alani")?.appendChild(rozet);
             }

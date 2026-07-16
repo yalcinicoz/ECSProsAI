@@ -17,13 +17,23 @@
     switch (blok.Tip)
     {
         case "slider":
-            <section class="ms-slider" data-ms-slider data-ms-page-module="slider" aria-label="@(blok.Baslik.Length > 0 ? blok.Baslik : "Kampanya slider")">
+            @* Tasarım nihai (2026-07-16): tek <img> kaynağı; ilk slide eager/high, sonrakiler
+               data-ms-lazy-src; intrinsic 1200x525; mobil oran class'ı config.gorunum'dan
+               (mobil-dikey → ms-mobil-dikey, varsayılan ms-mobil-yatay — ana sayfa kalıbı). *@
+            <section class="ms-slider @(blok.Gorunum == "mobil-dikey" ? "ms-mobil-dikey" : "ms-mobil-yatay")" data-ms-slider data-ms-page-module="slider" aria-label="@(blok.Baslik.Length > 0 ? blok.Baslik : "Kampanya slider")">
                 <div class="ms-slider-gorsel-alani" data-ms-slider-gorsel-alani>
                     @for (var i = 0; i < blok.Ogeler.Count; i++)
                     {
                         var slide = blok.Ogeler[i];
                         <a class="ms-slider-slide @(i == 0 ? "ms-slider-slide-gorunur ms-slider-slide-aktif" : "")" href="@(slide.LinkUrl ?? "#")" target="@(slide.YeniSekme ? "_blank" : null)" aria-label="@slide.Baslik kampanyasına git">
-                            <img src="@(slide.GorselUrl ?? slide.MobilGorselUrl)" alt="@slide.Baslik">
+                            @if (i == 0)
+                            {
+                            <img class="no-lazy" src="@(slide.GorselUrl ?? slide.MobilGorselUrl)" alt="@slide.Baslik" width="1200" height="525" loading="eager" fetchpriority="high" decoding="async" data-ms-lazy="false">
+                            }
+                            else
+                            {
+                            <img data-ms-lazy-src="@(slide.GorselUrl ?? slide.MobilGorselUrl)" alt="@slide.Baslik" width="1200" height="525" loading="lazy">
+                            }
                         </a>
                     }
                 </div>
@@ -46,12 +56,12 @@
 
         case "story":
             <section class="ms-story" data-ms-story aria-label="Story alanı">
-                <div class="ms-story-listesi">
+                <div class="ms-story-listesi no-lazy">
                     @foreach (var story in blok.Ogeler)
                     {
                         <button class="ms-story-karti" type="button" data-ms-story-grup="@story.Id.ToString("N")" data-ms-story-ac="@blok.Ogeler.ToList().IndexOf(story)">
                             <span class="ms-story-gorsel">
-                                <img src="@story.GorselUrl" alt="@story.Baslik story görseli">
+                                <img class="no-lazy" src="@story.GorselUrl" alt="@story.Baslik story görseli" width="64" height="64">
                             </span>
                             <span class="ms-story-etiket">@story.Baslik</span>
                         </button>
@@ -66,9 +76,9 @@
                     <div class="ms-story-cerceve" role="dialog" aria-modal="true" aria-label="Story görüntüleyici">
                         <div class="ms-story-progress-listesi" data-ms-story-progress-listesi></div>
 
-                        <div class="ms-story-modal-ust">
+                        <div class="ms-story-modal-ust" data-ms-modal-surukleme-alani>
                             <span class="ms-story-modal-avatar">
-                                <img data-ms-story-avatar src="" alt="">
+                                <img data-ms-story-avatar alt="" width="40" height="40" loading="lazy" decoding="async">
                             </span>
                             <strong data-ms-story-modal-baslik>Story</strong>
                             <span class="ms-story-modal-bosluk"></span>
@@ -77,7 +87,7 @@
                             </button>
                         </div>
 
-                        <img class="ms-story-modal-gorsel" data-ms-story-modal-gorsel src="" alt="">
+                        <img class="ms-story-modal-gorsel" data-ms-story-modal-gorsel alt="" width="800" height="1200" loading="lazy" decoding="async">
                         <video class="ms-story-modal-gorsel ms-gizli" data-ms-story-modal-video muted playsinline preload="metadata"></video>
 
                         <button class="ms-story-yon ms-story-yon-sol" type="button" data-ms-story-yon="onceki" aria-label="Önceki story">
@@ -105,7 +115,7 @@
                 @if (blok.Ogeler.FirstOrDefault() is { } reklamBanner)
                 {
                     <a class="ms-gorunum-reklam-vitrin-banner" href="@(reklamBanner.LinkUrl ?? "#")" aria-label="@reklamBanner.Baslik">
-                        <img src="@reklamBanner.GorselUrl" alt="@reklamBanner.Baslik">
+                        <img data-ms-lazy-src="@reklamBanner.GorselUrl" alt="@reklamBanner.Baslik" width="1200" height="525" loading="lazy" decoding="async">
                     </a>
                 }
 
@@ -147,7 +157,7 @@
                     @foreach (var banner in blok.Ogeler)
                     {
                         <a class="ms-gorunum-banner-karti" href="@(banner.LinkUrl ?? "#")" target="@(banner.YeniSekme ? "_blank" : null)">
-                            <img src="@banner.GorselUrl" alt="@banner.Baslik">
+                            <img data-ms-lazy-src="@banner.GorselUrl" alt="@banner.Baslik" width="400" height="164" loading="lazy" decoding="async">
                         </a>
                     }
                 </div>
@@ -174,9 +184,12 @@
                     <div>
                         @if (sablon == "flash")
                         {
+                            @* Tasarım nihai: Tümünü Gör flash'ta kaldırıldı; başlık liste linkidir. *@
                             <h2 class="ms-gorunum-flash-baslik">
-                                <i class="fa-solid fa-bolt-lightning ms-fa-ikon ms-ikon-orijinal" aria-hidden="true"></i>
-                                @blok.Baslik
+                                <a class="ms-gorunum-flash-baslik-link" href="@(blok.TumunuGorUrl ?? "/urun-listesi")">
+                                    <i class="fa-solid fa-bolt-lightning ms-fa-ikon ms-ikon-orijinal" aria-hidden="true"></i>
+                                    @blok.Baslik
+                                </a>
                             </h2>
                         }
                         else
@@ -189,7 +202,7 @@
                         }
                     </div>
                     <div class="ms-gorunum-carousel-sag">
-                        @if (blok.TumunuGorUrl is not null)
+                        @if (blok.TumunuGorUrl is not null && sablon != "flash")
                         {
                             <a class="ms-gorunum-tumunu-gor" href="@blok.TumunuGorUrl">Tümünü Gör</a>
                         }
@@ -387,7 +400,7 @@
                     @foreach (var kategori in blok.Ogeler)
                     {
                         <a class="ms-gorunum-kategori-kapsul" href="@(kategori.LinkUrl ?? "#")">
-                            <img src="@kategori.GorselUrl" alt="@kategori.Baslik">
+                            <img data-ms-lazy-src="@kategori.GorselUrl" alt="@kategori.Baslik" width="64" height="64" loading="lazy">
                             <strong>@kategori.Baslik</strong>
                         </a>
                     }
@@ -415,7 +428,7 @@
                                 @foreach (var gorsel in marka.EkGorseller.Take(4))
                                 {
                                     <span class="ms-gorunum-marka-urun">
-                                        <img src="@gorsel" alt="">
+                                        <img data-ms-lazy-src="@gorsel" alt="" width="90" height="134" loading="lazy" decoding="async">
                                     </span>
                                 }
                             </span>
@@ -565,6 +578,66 @@
                     }
                 </div>
             </section>
+            break;
+
+        case "bilgi-banner":
+            @* Faz 7: tasarım ana sayfası bilgi bandı — öğe: Rozet=FA ikon class'ı,
+               Baslik=kalın metin, AltBaslik=küçük metin. *@
+            <section class="ms-gorunum-bilgi-banner" aria-label="@(blok.Baslik.Length > 0 ? blok.Baslik : "Alışveriş bilgilendirmeleri")">
+                @foreach (var oge in blok.Ogeler)
+                {
+                    <div class="ms-gorunum-bilgi-banner-oge">
+                        <i class="@(oge.Rozet ?? "fa-regular fa-circle-info") ms-fa-ikon" aria-hidden="true"></i>
+                        <span><strong>@oge.Baslik</strong><small>@oge.AltBaslik</small></span>
+                    </div>
+                }
+            </section>
+            break;
+
+        case "ikon-banner":
+            @* Faz 7: hızlı bağlantı ikon bandı — öğe: Rozet=FA ikon class'ı, Baslik, LinkUrl. *@
+            <nav class="ms-gorunum-ikon-banner" aria-label="@(blok.Baslik.Length > 0 ? blok.Baslik : "Hızlı ürün bağlantıları")">
+                @foreach (var oge in blok.Ogeler)
+                {
+                    <a class="ms-gorunum-ikon-banner-oge" href="@(oge.LinkUrl ?? "#")" target="@(oge.YeniSekme ? "_blank" : null)">
+                        <i class="@(oge.Rozet ?? "fa-regular fa-star") ms-fa-ikon" aria-hidden="true"></i>
+                        <strong>@oge.Baslik</strong>
+                    </a>
+                }
+            </nav>
+            break;
+
+        case "cercevesiz-carousel":
+            @* Faz 7: tasarımın çerçevesiz carousel'i — öğe: görsel+başlık+alt başlık+link;
+               noktalar data-ms-gorunum-carousel-nokta sözleşmesiyle site.js'e bağlı. *@
+            <div class="ms-gorunum-demo ms-gorunum-carousel-demo ms-gorunum-carousel-demo-cercevesiz lazy-infinite-on" data-ms-gorunum-carousel>
+                <div class="ms-gorunum-carousel-kapsayici">
+                    <button class="ms-gorunum-carousel-kontrol ms-slider-kontrol ms-slider-kontrol-sol" type="button" data-ms-gorunum-carousel-kontrol="sol" aria-label="Önceki çerçevesiz görselleri göster">
+                        <i class="fa-solid fa-chevron-left ms-fa-ikon" aria-hidden="true"></i>
+                    </button>
+                    <div class="ms-gorunum-carousel ms-gorunum-carousel-cercevesiz-liste" data-ms-gorunum-carousel-liste aria-label="Çerçevesiz carousel görselleri">
+                        @foreach (var oge in blok.Ogeler)
+                        {
+                            <a class="ms-gorunum-carousel-cercevesiz-kart" href="@(oge.LinkUrl ?? "#")" target="@(oge.YeniSekme ? "_blank" : null)">
+                                <img data-ms-lazy-src="@oge.GorselUrl" alt="@oge.Baslik çerçevesiz carousel görseli" width="400" height="489" loading="lazy">
+                                <span class="ms-gorunum-carousel-cercevesiz-yazi">
+                                    <strong>@oge.Baslik</strong>
+                                    <small>@oge.AltBaslik</small>
+                                </span>
+                            </a>
+                        }
+                    </div>
+                    <button class="ms-gorunum-carousel-kontrol ms-slider-kontrol ms-slider-kontrol-sag" type="button" data-ms-gorunum-carousel-kontrol="sag" aria-label="Sonraki çerçevesiz görselleri göster">
+                        <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
+                    </button>
+                    <div class="ms-gorunum-carousel-cercevesiz-noktalar" data-ms-gorunum-carousel-noktalar aria-label="Çerçevesiz carousel görsel seçimi">
+                        @for (var noktaIndex = 0; noktaIndex < blok.Ogeler.Count; noktaIndex++)
+                        {
+                            <button class="ms-gorunum-carousel-cercevesiz-nokta @(noktaIndex == 0 ? "ms-gorunum-carousel-cercevesiz-nokta-aktif" : "")" type="button" aria-label="@((noktaIndex + 1)). görsel" aria-pressed="@(noktaIndex == 0 ? "true" : "false")" data-ms-gorunum-carousel-nokta="@noktaIndex"></button>
+                        }
+                    </div>
+                </div>
+            </div>
             break;
     }
 }
