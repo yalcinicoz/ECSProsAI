@@ -27,6 +27,8 @@ public class GetTopSellingVariantsQueryHandler(IOrderDbContext db)
     {
         var cutoff = DateTime.UtcNow.AddDays(-Math.Max(1, request.Days));
 
+        // EF, GroupBy sonrası record constructor projeksiyonunu SQL'e çeviremiyor
+        // (ilk canlı kullanımda yakalandı) — anonim projeksiyonla çekilip bellekte map'lenir.
         var items = await db.OrderItems
             .AsNoTracking()
             .Where(i => db.Orders.Any(o => o.Id == i.OrderId
@@ -34,11 +36,11 @@ public class GetTopSellingVariantsQueryHandler(IOrderDbContext db)
                 && SoldStatuses.Contains(o.Status)
                 && o.CreatedAt >= cutoff))
             .GroupBy(i => i.VariantId)
-            .Select(g => new TopSellingVariantDto(g.Key, g.Sum(i => i.Quantity)))
+            .Select(g => new { VariantId = g.Key, TotalQuantity = g.Sum(i => i.Quantity) })
             .OrderByDescending(x => x.TotalQuantity)
             .Take(Math.Clamp(request.Limit, 1, 200))
             .ToListAsync(ct);
 
-        return Result.Success(items);
+        return Result.Success(items.Select(x => new TopSellingVariantDto(x.VariantId, x.TotalQuantity)).ToList());
     }
 }
