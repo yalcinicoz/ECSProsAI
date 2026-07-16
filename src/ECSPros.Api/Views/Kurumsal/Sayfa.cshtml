@@ -13,7 +13,8 @@
     };
 }
 
-<main class="ms-kurumsal-tekil-sayfa" data-ms-kurumsal-tekil-sayfa>
+<div class="ms-kurumsal-tekil-sayfa" data-ms-kurumsal-tekil-sayfa>
+    <h1 class="sr-only">@ViewData["Title"]</h1>
     <div class="ms-kurumsal-mobil-menu-kontrol">
         <button class="ms-kurumsal-mobil-menu-ac" type="button" data-ms-kurumsal-menu-ac aria-expanded="false" aria-label="Kurumsal menüyü aç">
             <span class="ms-hesabim-mobil-menu-cizgi" aria-hidden="true"></span>
@@ -26,7 +27,7 @@
         <aside class="ms-kurumsal-yan-menu" aria-label="Kurumsal menü">
             <div class="ms-kurumsal-menu-mobil-baslik">
                 <strong>Kurumsal</strong>
-                <button type="button" data-ms-kurumsal-menu-kapat aria-label="Kurumsal menüyü kapat">×</button>
+                <button type="button" data-ms-kurumsal-menu-kapat aria-label="Kurumsal menüyü kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
             </div>
             <section class="ms-hesabim-menu-grubu">
                 <h3>Kurumsal</h3>
@@ -50,7 +51,7 @@
             }
         </div>
     </div>
-</main>
+</div>
 
 <script>
     (() => {

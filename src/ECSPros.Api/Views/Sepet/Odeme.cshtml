@@ -1,10 +1,13 @@
 @{
     ViewData["Title"] = "Ödeme";
+    ViewData["Robots"] = "noindex, nofollow";
+    ViewData["CanonicalPath"] = "/odeme";
 }
 
-<main class="ms-siparis-sayfa">
+<div class="ms-siparis-sayfa">
+    <h1 class="sr-only">Ödeme Bilgileri</h1>
     @await Html.PartialAsync("~/Views/ProjeElementleri/Sepet/_SepetOdemeSayfasi.cshtml")
-</main>
+</div>
 
 <script>
     document.querySelectorAll("[data-ms-siparis-asama-panel]").forEach((panel) => {

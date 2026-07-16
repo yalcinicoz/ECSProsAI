@@ -1,9 +1,11 @@
 <div class="ms-ornek-modal ms-gorsel-arama-modal" data-ms-gorsel-arama-modal aria-hidden="true">
     <div class="ms-ornek-modal-kaplama" data-ms-gorsel-arama-kapat></div>
     <section class="ms-ornek-modal-kutu ms-gorsel-arama-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-gorsel-arama-baslik">
-        <button class="ms-ornek-modal-kapat" type="button" data-ms-gorsel-arama-kapat aria-label="Görsel arama modalını kapat">×</button>
-        <p id="ms-gorsel-arama-baslik" class="ms-ornek-modal-baslik">Görsel ile Ara</p>
-        <p class="ms-ornek-modal-aciklama">Fotoğraf yükleyin ya da kamerayla çekin, görseldeki ürünü seçip benzerlerini arayın.</p>
+        <button class="ms-ornek-modal-kapat" type="button" data-ms-gorsel-arama-kapat aria-label="Görsel arama modalını kapat">
+            <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
+        </button>
+        <p id="ms-gorsel-arama-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>Görsel ile Ara</p>
+        <p class="ms-ornek-modal-aciklama">Fotoğraf yükleyin ya da kamerayla çekin; görselin tamamıyla benzer ürünleri arayın.</p>
 
         <form class="ms-gorsel-arama-form" data-ms-gorsel-arama-form>
             <div class="ms-gorsel-arama-kaynaklar">
@@ -27,7 +29,7 @@
             <div class="ms-gorsel-arama-editor" data-ms-gorsel-arama-editor hidden>
                 <div class="ms-gorsel-arama-gorsel-alani" data-ms-gorsel-arama-gorsel-alani>
                     <div class="ms-gorsel-arama-gorsel-sahne" data-ms-gorsel-arama-gorsel-sahne>
-                        <img data-ms-gorsel-arama-onizleme-gorsel src="" alt="Seçilen görsel önizlemesi">
+                        <img data-ms-gorsel-arama-onizleme-gorsel alt="Seçilen görsel önizlemesi" loading="lazy">
                         <div class="ms-gorsel-arama-bolge-katmani" data-ms-gorsel-arama-bolge-katmani aria-label="Görselde seçilebilir ürünler"></div>
                         <div class="ms-gorsel-arama-tarama-efekti" data-ms-gorsel-arama-tarama hidden>
                             <span aria-hidden="true"></span>
@@ -37,16 +39,16 @@
 
                 <div class="ms-gorsel-arama-secim-paneli">
                     <span class="ms-gorsel-arama-durum" data-ms-gorsel-arama-durum>Görsel hazır</span>
-                    <strong data-ms-gorsel-arama-secili-baslik>Ürün seçimi bekleniyor</strong>
-                    <p data-ms-gorsel-arama-secili-metin>Resmi tarayın, sonra görsel üzerindeki noktadan aramak istediğiniz ürünü seçin.</p>
+                    <strong data-ms-gorsel-arama-secili-baslik>Görselin tamamı aranacak</strong>
+                    <p data-ms-gorsel-arama-secili-metin>Seçtiğiniz görsel doğrudan görsel aramaya gönderilecek.</p>
                     <div class="ms-gorsel-arama-etiket-listesi" data-ms-gorsel-arama-etiket-listesi></div>
                 </div>
             </div>
 
             <div class="ms-ornek-modal-aksiyonlar">
                 <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-gorsel-arama-kapat>Vazgeç</button>
-                <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-gorsel-arama-tara disabled>Resmi tara</button>
-                <button class="ms-buton ms-buton-m ms-buton-koyu" type="submit" data-ms-gorsel-arama-gonder disabled>Seçili ürünü ara</button>
+                <button class="ms-buton ms-buton-m ms-buton-sade hidden" type="button" data-ms-gorsel-arama-tara hidden disabled>Resmi tara</button>
+                <button class="ms-buton ms-buton-m ms-buton-koyu" type="submit" data-ms-gorsel-arama-gonder disabled>Görseli ara</button>
             </div>
         </form>
 
@@ -61,7 +63,9 @@
         <div class="ms-gorsel-arama-tarama-kutu" aria-hidden="true"></div>
         <span>Görüntü hazırlanıyor</span>
     </div>
-    <button class="ms-gorsel-arama-kamera-kapat" type="button" data-ms-gorsel-arama-kamera-kapat aria-label="Kamerayı kapat">×</button>
+    <button class="ms-gorsel-arama-kamera-kapat" type="button" data-ms-gorsel-arama-kamera-kapat aria-label="Kamerayı kapat">
+        <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
+    </button>
     <div class="ms-gorsel-arama-kamera-kontroller">
         <button class="ms-gorsel-arama-kamera-kontrol ms-gorsel-arama-kamera-odak" type="button" data-ms-gorsel-arama-kamera-odak>
             <span>Odakla</span>
@@ -76,11 +80,13 @@
 <div class="ms-gorsel-arama-secim-tam-ekran" data-ms-gorsel-arama-secim-ekrani aria-hidden="true">
     <div class="ms-gorsel-arama-secim-ust">
         <strong>Ürün Seç</strong>
-        <button type="button" data-ms-gorsel-arama-secim-kapat aria-label="Ürün seçimini kapat">×</button>
+        <button type="button" data-ms-gorsel-arama-secim-kapat aria-label="Ürün seçimini kapat">
+            <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
+        </button>
     </div>
     <div class="ms-gorsel-arama-secim-gorsel-alani">
         <div class="ms-gorsel-arama-secim-sahne">
-            <img data-ms-gorsel-arama-secim-gorsel src="" alt="Seçilen görselde ürün seçimi">
+            <img data-ms-gorsel-arama-secim-gorsel alt="Seçilen görselde ürün seçimi" loading="lazy">
             <div class="ms-gorsel-arama-bolge-katmani" data-ms-gorsel-arama-secim-bolge-katmani aria-label="Tam ekran ürün seçim noktaları"></div>
         </div>
     </div>
@@ -195,48 +201,14 @@
         };
 
         const secimMetniGuncelle = () => {
-            if (seciliBolge) {
-                durum.textContent = "Bölge seçildi";
-                seciliBaslik.textContent = seciliBolge.baslik;
-                seciliMetin.textContent = "Bu alan kırpılıp görsel aramada kullanılacak.";
-                if (secimEkraniDurum) {
-                    secimEkraniDurum.textContent = "Bölge seçildi";
-                }
-
-                if (secimEkraniBaslik) {
-                    secimEkraniBaslik.textContent = seciliBolge.baslik;
-                }
-
-                if (secimEkraniMetin) {
-                    secimEkraniMetin.textContent = "Bu alan kırpılıp görsel aramada kullanılacak.";
-                }
-            } else {
-                durum.textContent = aktifBolgeler.length ? "Bölgeler hazır" : "Görsel hazır";
-                seciliBaslik.textContent = aktifBolgeler.length ? "Aramak istediğiniz alanı seçin" : "Bölge seçimi bekleniyor";
-                seciliMetin.textContent = aktifBolgeler.length
-                    ? "Noktaya veya alttaki etikete tıklayın, seçili alanı görsel aramada kullanın."
-                    : "Resmi tarayın, sonra görsel üzerindeki noktadan aramak istediğiniz alanı seçin.";
-                if (secimEkraniDurum) {
-                    secimEkraniDurum.textContent = aktifBolgeler.length ? "Bölgeler hazır" : "Görsel hazır";
-                }
-
-                if (secimEkraniBaslik) {
-                    secimEkraniBaslik.textContent = aktifBolgeler.length ? "Aramak istediğiniz alanı seçin" : "Bölge seçimi bekleniyor";
-                }
-
-                if (secimEkraniMetin) {
-                    secimEkraniMetin.textContent = aktifBolgeler.length
-                        ? "1, 2 gibi noktalara dokunduğunuzda seçtiğiniz alan burada görünür."
-                        : "Resmi tarayın, sonra görsel üzerinde alan seçin.";
-                }
-            }
+            durum.textContent = aktifDosya ? "Görsel hazır" : "Görsel bekleniyor";
+            seciliBaslik.textContent = aktifDosya ? "Görselin tamamı aranacak" : "Görsel seçin";
+            seciliMetin.textContent = aktifDosya
+                ? "Seçtiğiniz görsel doğrudan görsel aramaya gönderilecek."
+                : "JPG, PNG veya WEBP biçiminde bir görsel seçin.";
 
             if (gonderButonu) {
-                gonderButonu.disabled = !seciliBolge;
-            }
-
-            if (secimEkraniAraButonu) {
-                secimEkraniAraButonu.disabled = !seciliBolge;
+                gonderButonu.disabled = !aktifDosya;
             }
         };
 
@@ -395,6 +367,8 @@
 
             if (!dosya) {
                 editor.hidden = true;
+                onizlemeGorsel.removeAttribute("src");
+                secimEkraniGorsel?.removeAttribute("src");
                 dosyaMetni.textContent = "JPG, PNG veya WEBP dosyası yükleyin.";
                 taraButonu.disabled = true;
                 gonderButonu.disabled = true;
@@ -404,16 +378,13 @@
 
             dosyaMetni.textContent = ayarlar.kaynak === "kamera" ? "Kameradan çekilen görsel" : dosya.name;
             onizlemeUrl = URL.createObjectURL(dosya);
-            onizlemeGorsel.onload = () => {
-                if (ayarlar.otomatikTara) {
-                    taramaBaslat();
-                }
-            };
             onizlemeGorsel.src = onizlemeUrl;
             editor.hidden = false;
-            taraButonu.disabled = false;
-            gonderButonu.disabled = true;
             secimMetniGuncelle();
+
+            if (ayarlar.otomatikGonder) {
+                aramaBaslat();
+            }
         };
 
         const kirpilmisDosyaOlustur = async () => {
@@ -460,9 +431,43 @@
             });
         };
 
-        const dosyaGonder = async (dosya) => {
-            const formData = new FormData();
-            formData.append("file", dosya);
+        const demoGorselAramaSonuclari = [
+            {
+                id: 1001,
+                productName: "Gomlek Yaka Dugmeli Triko Kazak",
+                color: "Kahverengi",
+                imageUrl: "/testimage/urun-detay/1.webp",
+                price: 799.90,
+                listPrice: 999.90,
+                discountRate: 20,
+                productUrl: "/urun-detay",
+                modelCode: "MSX-TRK-1001"
+            },
+            {
+                id: 1002,
+                productName: "Kendinden Desenli Triko Bluz",
+                color: "Siyah",
+                imageUrl: "/testimage/rastgele-urun-resim/kendinden-desenli-triko-bluz-1f2c1-173f471_2032.webp",
+                price: 649.90,
+                listPrice: 749.90,
+                discountRate: 13,
+                productUrl: "/urun-detay",
+                modelCode: "MSX-BLZ-1002"
+            },
+            {
+                id: 1003,
+                productName: "Bel Kusakli Desenli Viskon Elbise",
+                color: "Yesil",
+                imageUrl: "/testimage/rastgele-urun-resim/bel-kusakli-desenli-viskon-elbise-1afca-175c871_3200.webp",
+                price: 899.90,
+                listPrice: 1099.90,
+                discountRate: 18,
+                productUrl: "/urun-detay",
+                modelCode: "MSX-ELB-1003"
+            }
+        ];
+
+        const dosyaGonder = async () => {
             gonderButonu.disabled = true;
             gonderButonu.textContent = "Aranıyor";
             taraButonu.disabled = true;
@@ -473,55 +478,31 @@
             sonucYaz("");
 
             try {
-                const cevap = await fetch("/gorsel-arama", {
-                    method: "POST",
-                    body: formData
-                });
-
-                const cevapMetni = await cevap.text();
-                let sonucJson = null;
-
-                try {
-                    sonucJson = JSON.parse(cevapMetni);
-                } catch {
-                    sonucJson = null;
-                }
-
-                if (!cevap.ok || !sonucJson || !Array.isArray(sonucJson.results)) {
-                    sonucYaz("Görsel arama tamamlanamadı. Lütfen daha net bir ürün görseli deneyin.", "hata");
-                    if (secimEkraniDurum) {
-                        secimEkraniDurum.textContent = "Arama tamamlanamadı";
-                    }
-
-                    if (secimEkraniMetin) {
-                        secimEkraniMetin.textContent = "Lütfen daha net bir ürün görseli deneyin.";
-                    }
-                    return;
-                }
-
+                await new Promise((resolve) => window.setTimeout(resolve, 450));
+                const sonucSeciliBolge = seciliBolge?.baslik || "";
                 modalKapat();
                 document.dispatchEvent(new CustomEvent("ms:gorsel-arama-sonuc", {
                     detail: {
-                        ...sonucJson,
-                        seciliBolge: seciliBolge?.baslik || ""
+                        count: demoGorselAramaSonuclari.length,
+                        results: demoGorselAramaSonuclari,
+                        seciliBolge: sonucSeciliBolge
                     }
                 }));
             } catch {
-                sonucYaz("Görsel arama servisine ulaşılamadı. Lütfen tekrar deneyin.", "hata");
+                sonucYaz("Demo görsel arama sonuçları hazırlanamadı. Lütfen tekrar deneyin.", "hata");
                 if (secimEkraniDurum) {
-                    secimEkraniDurum.textContent = "Bağlantı kurulamadı";
+                    secimEkraniDurum.textContent = "Sonuç hazırlanamadı";
                 }
 
                 if (secimEkraniMetin) {
-                    secimEkraniMetin.textContent = "Görsel arama servisine ulaşılamadı. Lütfen tekrar deneyin.";
+                    secimEkraniMetin.textContent = "Demo sonuçları hazırlanamadı. Lütfen tekrar deneyin.";
                 }
             } finally {
-                gonderButonu.disabled = !seciliBolge;
-                gonderButonu.textContent = "Seçili ürünü ara";
-                taraButonu.disabled = !aktifDosya;
+                gonderButonu.disabled = !aktifDosya;
+                gonderButonu.textContent = "Görseli ara";
                 if (secimEkraniAraButonu) {
-                    secimEkraniAraButonu.disabled = !seciliBolge;
-                    secimEkraniAraButonu.textContent = "Seçili ürünü ara";
+                    secimEkraniAraButonu.disabled = !aktifDosya;
+                    secimEkraniAraButonu.textContent = "Görseli ara";
                 }
             }
         };
@@ -635,7 +616,7 @@
                 const dosya = new File([blob], `kamera-gorseli-${Date.now()}.jpg`, { type: "image/jpeg" });
                 dosyayiInputaYaz(dosya);
                 kameraKapatma();
-                dosyaSecildi(dosya, { kaynak: "kamera", otomatikTara: true });
+                dosyaSecildi(dosya, { kaynak: "kamera", otomatikGonder: true });
             }, "image/jpeg", 0.92);
         };
 
@@ -645,19 +626,7 @@
                 return;
             }
 
-            if (!seciliBolge) {
-                sonucYaz("Lütfen görselde aramak istediğiniz ürünü seçin.", "hata");
-                return;
-            }
-
-            const aranacakDosya = await kirpilmisDosyaOlustur();
-
-            if (!aranacakDosya) {
-                sonucYaz("Seçili ürün bölgesi hazırlanamadı.", "hata");
-                return;
-            }
-
-            await dosyaGonder(aranacakDosya);
+            await dosyaGonder(aktifDosya);
         };
 
         const modalAc = () => {
@@ -670,6 +639,23 @@
         function modalKapat() {
             secimEkraniKapat();
             kameraKapatma();
+            if (onizlemeUrl) {
+                URL.revokeObjectURL(onizlemeUrl);
+                onizlemeUrl = "";
+            }
+            aktifDosya = null;
+            aktifBolgeler = [];
+            seciliBolge = null;
+            input.value = "";
+            editor.hidden = true;
+            onizlemeGorsel.removeAttribute("src");
+            secimEkraniGorsel?.removeAttribute("src");
+            bolgeKatmani.replaceChildren();
+            secimEkraniBolgeKatmani?.replaceChildren();
+            etiketListesi?.replaceChildren();
+            secimEkraniEtiketListesi?.replaceChildren();
+            sonucYaz("");
+            secimMetniGuncelle();
             modal.classList.remove("ms-ornek-modal-acik");
             modal.setAttribute("aria-hidden", "true");
             document.body.style.overflow = oncekiBodyOverflow;
@@ -691,10 +677,9 @@
         });
 
         input.addEventListener("change", () => {
-            dosyaSecildi(input.files?.[0] || null);
+            dosyaSecildi(input.files?.[0] || null, { otomatikGonder: true });
         });
 
-        taraButonu?.addEventListener("click", taramaBaslat);
         secimEkraniKapatButonlari.forEach((buton) => {
             buton.addEventListener("click", secimEkraniKapat);
         });

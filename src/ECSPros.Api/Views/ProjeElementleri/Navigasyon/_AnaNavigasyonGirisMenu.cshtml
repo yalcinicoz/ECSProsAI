@@ -1,8 +1,8 @@
 ﻿            <div class="ms-ana-navigasyon-giris" data-ms-giris-menu>
                 <button class="ms-ana-navigasyon-aksiyon" type="button" data-ms-giris-menu-tetikleyici aria-haspopup="true" aria-expanded="false">
                     <span class="ms-ana-navigasyon-aksiyon-ikon-grup" aria-hidden="true">
-                        <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-normal " src="/ikons/user.svg" alt="">
-                        <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-aktif " src="/ikons/user-active.svg" alt="">
+                        <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-normal " src="/ikons/user.svg" alt="" width="20" height="20" loading="lazy">
+                        <img class="ms-ana-navigasyon-aksiyon-ikon ms-ana-navigasyon-aksiyon-ikon-aktif " src="/ikons/user-active.svg" alt="" width="21" height="21" loading="lazy">
                     </span>
                     <span data-ms-giris-menu-yazi>Giriş Yap</span>
                 </button>
@@ -11,6 +11,9 @@
                     <button class="ms-ana-navigasyon-giris-buton ms-ana-navigasyon-giris-buton-ikincil" type="button" data-ms-kayit-modal-ac>Kayıt Ol</button>
                 </div>
                 <div class="ms-ana-navigasyon-hesap-panel" data-ms-hesap-panel>
+                    <button class="ms-ana-navigasyon-panel-kapat" type="button" data-ms-hesap-panel-kapat aria-label="Hesap panelini kapat">
+                        <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
+                    </button>
                     <div class="ms-hesap-ozet">
                         <span class="ms-hesap-avatar">ESA</span>
                         <span class="ms-hesap-kimlik">
@@ -19,16 +22,14 @@
                         </span>
                     </div>
 
-                    @* B4: Statü/harcama bloğu gizli — puan/harcama veri kaynağı yok (Faz E/G'de
-                       üye programıyla bağlanır). Kimlik alanını login script'i doldurur. *@
+                    @* B4/E13: statü-harcama veri kaynağı gelene kadar gizli; markup tasarımın
+                       katlanabilir nihai yapısıyla güncel. *@
                     @if (false)
                     {
-                    <div class="ms-hesap-statu ms-hesap-statu-bronz">
+                    <div class="ms-hesap-statu ms-hesap-statu-bronz ms-hesap-statu-katlanabilir">
                         <div class="ms-hesap-statu-ust">
                             <span class="ms-hesap-statu-ikon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none">
-                                    <path d="M12 3l2.1 5.2 5.6.4-4.3 3.6 1.3 5.4L12 14.7 7.3 17.6l1.3-5.4-4.3-3.6 5.6-.4L12 3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
-                                </svg>
+                                <i class="fa-solid fa-medal ms-fa-ikon" aria-hidden="true"></i>
                             </span>
                             <span class="ms-hesap-statu-bilgi">
                                 <small>Statünüz</small>
@@ -38,34 +39,38 @@
                                 <small>Aylık Harcamanız</small>
                                 <strong>0 ₺</strong>
                             </span>
+                            <button class="ms-hesap-statu-toggle" type="button" aria-expanded="false" aria-label="Bronz statü detayını aç" data-ms-hesap-statu-toggle>
+                                <i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i>
+                            </button>
                         </div>
-                        <div class="ms-hesap-statu-metrikler">
-                            <span><small>Aralık</small>0 - 5.000 ₺</span>
-                            <span><small>Kazanç</small>%1 puan</span>
+                        <div class="ms-hesap-statu-detay" data-ms-hesap-statu-detay hidden>
+                            <div class="ms-hesap-statu-metrikler">
+                                <span><small>Aralık</small>0 - 5.000 ₺</span>
+                                <span><small>Kazanç</small>%1 puan</span>
+                            </div>
+                            <div class="ms-hesap-statu-hedef">
+                                <span>Başlangıç</span>
+                                <span>5.000 ₺</span>
+                            </div>
+                            <div class="ms-hesap-statu-progress" aria-label="Statü ilerleme yüzde 20">
+                                <span style="width: 20%"></span>
+                            </div>
+                            <p>Gümüş seviyeye geçmek için 5.000 ₺ daha harcama yapmanız gerekir.</p>
                         </div>
-                        <div class="ms-hesap-statu-hedef">
-                            <span>Başlangıç</span>
-                            <span>5.000 ₺</span>
-                        </div>
-                        <div class="ms-hesap-statu-progress" aria-label="Statü ilerleme yüzde 20">
-                            <span style="width: 20%"></span>
-                        </div>
-                        <p>Gümüş seviyeye geçmek için 5.000 ₺ daha harcama yapmanız gerekir.</p>
                     </div>
                     }
 
-                    @* E1: hesap menü linkleri Hesabım route'larına bağlandı (tasarımda '#'). *@
                     <nav class="ms-hesap-menu" aria-label="Hesabım">
-                        <a href="/Hesabim/Siparislerim"><img class="ms-hesap-menu-ikon " src="/ikons/tum-siparislerim-01.svg" alt="" aria-hidden="true">Tüm Siparişlerim</a>
-                        <a href="/Hesabim/Adreslerim"><img class="ms-hesap-menu-ikon " src="/ikons/adreslerim.svg" alt="" aria-hidden="true">Adreslerim</a>
-                        <a href="/Hesabim/Yorumlarim"><img class="ms-hesap-menu-ikon " src="/ikons/degerlendirmelerim-01.svg" alt="" aria-hidden="true">Değerlendirmelerim</a>
-                        <a href="/Hesabim/IndirimKuponlarim"><img class="ms-hesap-menu-ikon " src="/ikons/indirim-kuponlarim.svg" alt="" aria-hidden="true">İndirim Kuponlarım</a>
-                        <a href="/Hesabim/UyelikBilgilerim"><img class="ms-hesap-menu-ikon " src="/ikons/kullanici-bilgilerim-01.svg" alt="" aria-hidden="true">Kullanıcı Bilgilerim</a>
+                        <a href="/Hesabim/Siparislerim"><i class="fa-solid fa-box-open ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>Tüm Siparişlerim</a>
+                        <a href="/Hesabim/Adreslerim"><i class="fa-solid fa-location-dot ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>Adreslerim</a>
+                        <a href="/Hesabim/Yorumlarim"><i class="fa-solid fa-star-half-stroke ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>Değerlendirmelerim</a>
+                        <a href="/Hesabim/IndirimKuponlarim"><i class="fa-solid fa-ticket ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>İndirim Kuponlarım</a>
+                        <a href="/Hesabim/UyelikBilgilerim"><i class="fa-solid fa-user-gear ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>Kullanıcı Bilgilerim</a>
                     </nav>
 
-                    <a class="ms-hesap-cikis" href="#" data-ms-hesap-cikis>
-                        <img class="ms-hesap-menu-ikon " src="/ikons/cikis-icon.svg" alt="" aria-hidden="true">
+                    <button class="ms-hesap-cikis" type="button" data-ms-hesap-cikis>
+                        <i class="fa-solid fa-right-from-bracket ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>
                         Çıkış Yap
-                    </a>
+                    </button>
                 </div>
             </div>

@@ -6,7 +6,7 @@
             <h2 id="ms-hesabim-uyelik-baslik">Üyelik Bilgilerim</h2>
         </header>
 
-        <form class="ms-hesabim-uyelik-formu" action="/Hesabim/UyelikBilgilerim" method="post">
+        <form class="ms-hesabim-uyelik-formu" action="/uyelik-bilgilerim" method="post">
             <div class="ms-hesabim-uyelik-ust">
                 <div>
                     <h3>Hesap bilgileri</h3>
@@ -63,20 +63,20 @@
                                 <span class="ms-telefon-girdi">
                                 <span class="ms-telefon-ulke" data-ms-telefon-ulke-select>
                                     <button class="ms-telefon-ulke-tetikleyici" type="button" data-ms-telefon-ulke-tetikleyici aria-haspopup="listbox" aria-expanded="false">
-                                        <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye">
+                                        <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye" loading="lazy">
                                         <span data-ms-telefon-ulke-kod>+90</span>
                                         <i class="fa-solid fa-chevron-down ms-fa-ikon ms-telefon-ulke-ok " aria-hidden="true"></i>
                                     </button>
                                     <span class="ms-telefon-ulke-panel" role="listbox">
-                                        <input class="ms-telefon-ulke-arama" type="search" placeholder="Ülke ara" data-ms-telefon-ulke-arama>
+                                        <input name="telefon_ulke_arama" class="ms-telefon-ulke-arama" type="search" placeholder="Ülke ara" data-ms-telefon-ulke-arama>
                                         <button class="ms-telefon-ulke-secenek ms-telefon-ulke-secenek-aktif" type="button" data-ms-telefon-ulke-secenek data-kod="+90" data-bayrak="https://flagcdn.com/tr.svg" data-ulke="Türkiye">
-                                            <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt=""> Türkiye <strong>+90</strong>
+                                            <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="" loading="lazy"> Türkiye <strong>+90</strong>
                                         </button>
                                         <button class="ms-telefon-ulke-secenek" type="button" data-ms-telefon-ulke-secenek data-kod="+49" data-bayrak="https://flagcdn.com/de.svg" data-ulke="Almanya">
-                                            <img class="ms-telefon-bayrak" src="https://flagcdn.com/de.svg" alt=""> Almanya <strong>+49</strong>
+                                            <img class="ms-telefon-bayrak" src="https://flagcdn.com/de.svg" alt="" loading="lazy"> Almanya <strong>+49</strong>
                                         </button>
                                         <button class="ms-telefon-ulke-secenek" type="button" data-ms-telefon-ulke-secenek data-kod="+44" data-bayrak="https://flagcdn.com/gb.svg" data-ulke="Birleşik Krallık">
-                                            <img class="ms-telefon-bayrak" src="https://flagcdn.com/gb.svg" alt=""> Birleşik Krallık <strong>+44</strong>
+                                            <img class="ms-telefon-bayrak" src="https://flagcdn.com/gb.svg" alt="" loading="lazy"> Birleşik Krallık <strong>+44</strong>
                                         </button>
                                     </span>
                                 </span>

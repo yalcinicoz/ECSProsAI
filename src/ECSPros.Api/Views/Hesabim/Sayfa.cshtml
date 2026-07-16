@@ -2,9 +2,10 @@
     var partial = ViewData["MsHesabimPartial"] as string;
 }
 
-<main class="ms-hesabim-sayfa-kapsayici">
+<div class="ms-hesabim-sayfa-kapsayici">
+    <h1 class="sr-only">@ViewData["Title"]</h1>
     @if (!string.IsNullOrWhiteSpace(partial))
     {
         @await Html.PartialAsync(partial)
     }
-</main>
+</div>
