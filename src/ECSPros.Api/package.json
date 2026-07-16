@@ -1,13 +1,17 @@
 {
   "name": "ecspros-store-css",
   "private": true,
-  "description": "Storefront Tailwind CSS derlemesi — kaynak: wwwroot/css/tailwind.css (misharix birebir), çıktı: wwwroot/css/site.css",
+  "description": "Storefront asset derlemesi — CSS: wwwroot/css/tailwind.css → site.css (misharix birebir); JS: site.js → site.min.js (esbuild); FA subset: ikonall.min.css",
   "scripts": {
     "store-css:build": "tailwindcss -i ./wwwroot/css/tailwind.css -o ./wwwroot/css/site.css --minify",
-    "store-css:watch": "tailwindcss -i ./wwwroot/css/tailwind.css -o ./wwwroot/css/site.css --watch"
+    "store-css:watch": "tailwindcss -i ./wwwroot/css/tailwind.css -o ./wwwroot/css/site.css --watch",
+    "build-js": "esbuild ./wwwroot/js/site.js --minify --legal-comments=none --outfile=./wwwroot/js/site.min.js",
+    "watch-js": "esbuild ./wwwroot/js/site.js --minify --legal-comments=none --outfile=./wwwroot/js/site.min.js --watch",
+    "fontawesome-subset": "node ./scripts/fontawesome-subset.mjs"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.1",
+    "esbuild": "^0.28.1",
     "tailwindcss": "^4.3.1"
   }
 }

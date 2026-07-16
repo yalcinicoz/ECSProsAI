@@ -1,6 +1,410 @@
 // Misharix global UI davranislari.
 // Bu dosyada veri uretimi veya sayfaya ozel fetch/listeleme mantigi tutulmaz.
 
+// Kapali koleksiyon modallarini ilk kullanimda DOM'a alir.
+(() => {
+    const koleksiyonModallariniHazirla = () => {
+        const sablon = document.querySelector("[data-ms-koleksiyon-modallari-sablon]");
+
+        if (!(sablon instanceof HTMLTemplateElement)) {
+            return;
+        }
+
+        sablon.parentNode?.insertBefore(sablon.content.cloneNode(true), sablon);
+        sablon.remove();
+        window.msOzelSelectleriBaslat?.(document);
+        window.msKoleksiyonAkisModallariBaslat?.();
+        window.msKoleksiyonModallariBaslat?.(document);
+        window.msModalAsagiSurukleBaslat?.(document);
+    };
+
+    document.addEventListener("click", (event) => {
+        if (event.target.closest("[data-ms-urun-koleksiyon], [data-ms-koleksiyon-modal-ac]")) {
+            koleksiyonModallariniHazirla();
+        }
+    }, true);
+})();
+
+// Kupon sayaçları için ortak geri sayım davranışı.
+(() => {
+    const sayiYaz = (deger) => String(Math.max(0, deger)).padStart(2, "0");
+
+    const sayaciGuncelle = (sayac) => {
+        const hedefMetin = sayac.dataset.msKuponHedef;
+        const hedefTarih = hedefMetin ? new Date(hedefMetin) : null;
+
+        if (!hedefTarih || Number.isNaN(hedefTarih.getTime())) {
+            return;
+        }
+
+        const kalanMs = Math.max(0, hedefTarih.getTime() - Date.now());
+        const toplamSaniye = Math.floor(kalanMs / 1000);
+        const gun = Math.floor(toplamSaniye / 86400);
+        const saat = Math.floor((toplamSaniye % 86400) / 3600);
+        const dakika = Math.floor((toplamSaniye % 3600) / 60);
+        const saniye = toplamSaniye % 60;
+
+        const gunAlani = sayac.querySelector("[data-ms-kupon-gun]");
+        const saatAlani = sayac.querySelector("[data-ms-kupon-saat]");
+        const dakikaAlani = sayac.querySelector("[data-ms-kupon-dakika]");
+        const saniyeAlani = sayac.querySelector("[data-ms-kupon-saniye]");
+
+        if (gunAlani) {
+            gunAlani.textContent = sayiYaz(gun);
+        }
+
+        if (saatAlani) {
+            saatAlani.textContent = sayiYaz(saat);
+        }
+
+        if (dakikaAlani) {
+            dakikaAlani.textContent = sayiYaz(dakika);
+        }
+
+        if (saniyeAlani) {
+            saniyeAlani.textContent = sayiYaz(saniye);
+        }
+
+        sayac.classList.toggle("ms-kupon-sayac-bitti", kalanMs <= 0);
+    };
+
+    window.msKuponSayacBaslat = (kok = document) => {
+        if (!kok?.querySelectorAll) {
+            return;
+        }
+
+        kok.querySelectorAll("[data-ms-kupon-sayac]").forEach((sayac) => {
+            if (sayac.dataset.msKuponSayacHazir === "true") {
+                sayaciGuncelle(sayac);
+                return;
+            }
+
+            sayac.dataset.msKuponSayacHazir = "true";
+            sayaciGuncelle(sayac);
+            window.setInterval(() => sayaciGuncelle(sayac), 1000);
+        });
+    };
+
+    const baslat = () => window.msKuponSayacBaslat(document);
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", baslat, { once: true });
+    } else {
+        baslat();
+    }
+})();
+
+// Mobil modallarda ust alandan asagi surukleyerek kapatma davranisi.
+(() => {
+    const mobilEslesmesi = window.matchMedia("(max-width: 639px)");
+    const modalSecici = ".ms-giris-modal, .ms-ornek-modal, .ms-story-modal, [data-ms-giris-modal], [data-ms-kayit-modal], [data-ms-ornek-modal], [data-ms-tckn-modal], [data-ms-story-modal]";
+    const kutuSecici = ".ms-giris-modal-kutu, .ms-ornek-modal-kutu, .ms-story-cerceve, .ms-urun-detay-resim-modal-kutu";
+    const kapaticiSecici = "[data-ms-giris-modal-kapat], [data-ms-kayit-modal-kapat], [data-ms-ornek-modal-kapat], [data-ms-belge-modal-kapat], [data-ms-tckn-modal-kapat], [data-ms-siparis-detay-kapat], [data-ms-kargo-takip-kapat], [data-ms-hazirlik-durumu-kapat], [data-ms-iade-sayfasi-modal-kapat], [data-ms-iade-kodu-kapat], [data-ms-story-kapat], [data-ms-urun-detay-resim-modal-kapat], [data-ms-urun-paylas-kapat], [data-ms-gorsel-arama-kapat], [data-ms-koleksiyon-modal-kapat], [data-ms-koleksiyon-secim-modal-kapat], [data-ms-koleksiyon-varolan-modal-kapat], [data-ms-koleksiyon-yeni-ozet-modal-kapat], [data-ms-onay-red-modal-kapat], [data-ms-fatura-modal-kapat], [data-ms-iade-sms-kapat], [data-ms-iade-hata-kapat], [data-ms-adres-modal-kapat], [data-ms-kupon-modal-kapat], [data-ms-sozlesme-modal-kapat], [data-ms-sepet-sil-modal-kapat], [data-ms-yorum-kriter-kapat], [data-ms-yorum-yap-kapat], .ms-giris-modal-kapat, .ms-ornek-modal-kapat";
+    const suruklemeAlaniSecici = [
+        "[data-ms-modal-surukleme-alani]",
+        ".ms-giris-modal-baslik-alani",
+        ".ms-giris-modal-baslik",
+        ".ms-giris-modal-aciklama",
+        ".ms-ornek-modal-baslik",
+        ".ms-ornek-modal-aciklama",
+        ".ms-modal-ornek-ikon"
+    ].join(", ");
+    const suruklemeBaslikYuksekligi = 88;
+    const kapatmaMesafesi = 96;
+
+    const etkilesimliHedefMi = (hedef) => hedef instanceof Element
+        && Boolean(hedef.closest("button, a, input, select, textarea, label, [role='button'], [data-ms-modal-surukleme-yok]"));
+
+    const modalAcmaTetikleyicisiMi = (hedef) => {
+        if (!(hedef instanceof Element)) {
+            return false;
+        }
+
+        const tetikleyici = hedef.closest("button, a, [role='button'], [data-ms-ornek-modal-ac], [data-ms-giris-modal-ac], [data-ms-kayit-modal-ac]");
+
+        if (!tetikleyici) {
+            return false;
+        }
+
+        return Array.from(tetikleyici.attributes).some((attribute) => {
+            const ad = attribute.name.toLowerCase();
+            return ad.startsWith("data-ms-") && ad.includes("modal") && (ad.endsWith("-ac") || ad.includes("-modal-ac"));
+        });
+    };
+
+    const modalViewportYuksekliginiGuncelle = () => {
+        const viewportYuksekligi = Math.round(window.visualViewport?.height || window.innerHeight);
+
+        if (viewportYuksekligi > 0) {
+            document.documentElement.style.setProperty("--ms-modal-viewport-yuksekligi", `${viewportYuksekligi}px`);
+        }
+    };
+
+    const modalKapat = (modal) => {
+        const kapatici = modal.querySelector(kapaticiSecici)
+            || Array.from(modal.querySelectorAll("[data-ms-ornek-modal-kapat], [class*='modal-kapat'], [data-ms-giris-modal-kapat], [data-ms-kayit-modal-kapat], button, a"))
+                .find((oge) => Array.from(oge.attributes).some((attribute) => attribute.name.toLowerCase().startsWith("data-ms-") && attribute.name.toLowerCase().includes("kapat")));
+        kapatici?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    };
+
+    const suruklemeTutamaciEkle = (kutu) => {
+        if (!kutu.matches(kutuSecici)) {
+            return;
+        }
+
+        let tutamacAlani = kutu.querySelector(":scope > .ms-modal-surukleme-tutamac-alani");
+
+        if (!tutamacAlani) {
+            tutamacAlani = document.createElement("div");
+            tutamacAlani.className = "ms-modal-surukleme-tutamac-alani";
+            tutamacAlani.dataset.msModalSuruklemeAlani = "";
+
+            const tutamac = document.createElement("span");
+            tutamac.className = "ms-modal-surukleme-tutamac";
+            tutamac.setAttribute("aria-hidden", "true");
+            tutamacAlani.append(tutamac);
+            kutu.prepend(tutamacAlani);
+        }
+
+        const kapatmaButonu = kutu.querySelector(kapaticiSecici);
+        if (kapatmaButonu && kapatmaButonu.parentElement !== tutamacAlani) {
+            tutamacAlani.append(kapatmaButonu);
+        }
+    };
+
+    window.msModalAsagiSurukleBaslat = (kok = document) => {
+        if (!kok?.querySelectorAll) {
+            return;
+        }
+
+        kok.querySelectorAll(modalSecici).forEach((modal) => {
+            if (modal.dataset.msModalAsagiSurukleHazir === "true") {
+                return;
+            }
+
+            const kutu = modal.querySelector(kutuSecici);
+
+            if (!kutu) {
+                return;
+            }
+
+            suruklemeTutamaciEkle(kutu);
+
+            modal.dataset.msModalAsagiSurukleHazir = "true";
+
+            let surukleniyor = false;
+            let baslangicY = 0;
+            let sonKayma = 0;
+            let hedefKayma = 0;
+            let animasyonId = 0;
+
+            const kaymayiUygula = () => {
+                animasyonId = 0;
+                kutu.style.transform = hedefKayma > 0 ? `translateY(${hedefKayma}px)` : "";
+                modal.style.setProperty("--ms-modal-kaplama-opaklik", String(Math.max(0.2, 0.45 - Math.min(hedefKayma / 420, 0.22))));
+            };
+
+            const kaymayiPlanla = () => {
+                if (animasyonId) {
+                    return;
+                }
+
+                animasyonId = window.requestAnimationFrame(kaymayiUygula);
+            };
+
+            const kaymayiSifirla = () => {
+                if (animasyonId) {
+                    window.cancelAnimationFrame(animasyonId);
+                    animasyonId = 0;
+                }
+
+                hedefKayma = 0;
+                sonKayma = 0;
+                kutu.style.transform = "";
+                kutu.style.transition = "";
+                kutu.style.willChange = "";
+                modal.style.removeProperty("--ms-modal-kaplama-opaklik");
+                modal.classList.remove("ms-modal-asagi-surukleniyor");
+            };
+
+            kutu.addEventListener("pointerdown", (event) => {
+                const suruklemeAlani = event.target instanceof Element
+                    ? event.target.closest(suruklemeAlaniSecici)
+                    : null;
+                const isaretliSuruklemeAlani = suruklemeAlani && kutu.contains(suruklemeAlani);
+                const etkilesimliHedef = etkilesimliHedefMi(event.target);
+
+                if (!mobilEslesmesi.matches || etkilesimliHedef) {
+                    return;
+                }
+
+                const kutuSiniri = kutu.getBoundingClientRect();
+                const ustMesafe = event.clientY - kutuSiniri.top;
+
+                if (!isaretliSuruklemeAlani) {
+                    if ((ustMesafe < 0 || ustMesafe > suruklemeBaslikYuksekligi) || kutu.scrollTop > 0) {
+                        return;
+                    }
+                }
+
+                surukleniyor = true;
+                baslangicY = event.clientY;
+                sonKayma = 0;
+                hedefKayma = 0;
+                kutu.style.transition = "none";
+                kutu.style.willChange = "transform";
+                modal.classList.add("ms-modal-asagi-surukleniyor");
+                event.preventDefault();
+                kutu.setPointerCapture?.(event.pointerId);
+            });
+
+            kutu.addEventListener("pointermove", (event) => {
+                if (!surukleniyor) {
+                    return;
+                }
+
+                const fark = event.clientY - baslangicY;
+
+                if (fark <= 0) {
+                    sonKayma = 0;
+                    hedefKayma = 0;
+                    kaymayiPlanla();
+                    return;
+                }
+
+                const enFazlaKayma = Math.max(window.innerHeight || 0, kutu.offsetHeight || 0, 320);
+                sonKayma = Math.min(fark, enFazlaKayma);
+                hedefKayma = sonKayma;
+                event.preventDefault();
+                kaymayiPlanla();
+            });
+
+            const suruklemeyiBitir = (event) => {
+                if (!surukleniyor) {
+                    return;
+                }
+
+                surukleniyor = false;
+
+                if (event?.pointerId && kutu.hasPointerCapture?.(event.pointerId)) {
+                    kutu.releasePointerCapture(event.pointerId);
+                }
+
+                if (animasyonId) {
+                    window.cancelAnimationFrame(animasyonId);
+                    animasyonId = 0;
+                }
+
+                if (sonKayma >= kapatmaMesafesi) {
+                    kutu.style.transition = "transform 220ms ease";
+                    kutu.style.transform = "translateY(110%)";
+                    window.setTimeout(() => {
+                        modalKapat(modal);
+                        kaymayiSifirla();
+                    }, 180);
+                    return;
+                }
+
+                kutu.style.transition = "transform 220ms ease";
+                kutu.style.transform = "";
+                modal.style.removeProperty("--ms-modal-kaplama-opaklik");
+                window.setTimeout(kaymayiSifirla, 230);
+            };
+
+            kutu.addEventListener("pointerup", suruklemeyiBitir);
+            kutu.addEventListener("pointercancel", suruklemeyiBitir);
+        });
+    };
+
+    document.addEventListener("pointerup", (event) => {
+        if (modalAcmaTetikleyicisiMi(event.target)) {
+            window.msModalAsagiSurukleBaslat(document);
+            modalViewportYuksekliginiGuncelle();
+        }
+    }, true);
+
+    document.addEventListener("click", (event) => {
+        if (modalAcmaTetikleyicisiMi(event.target)) {
+            window.msModalAsagiSurukleBaslat(document);
+            modalViewportYuksekliginiGuncelle();
+            window.setTimeout(() => window.msModalAsagiSurukleBaslat(document), 0);
+            window.setTimeout(modalViewportYuksekliginiGuncelle, 40);
+        }
+    }, true);
+
+    const modalAcikMi = (modal) => modal.classList.contains("ms-giris-modal-acik")
+        || modal.classList.contains("ms-ornek-modal-acik")
+        || !modal.classList.contains("ms-gizli") && modal.getAttribute("aria-hidden") === "false";
+
+    if (typeof MutationObserver !== "undefined") {
+        const modalGozlemci = new MutationObserver((kayitlar) => {
+            if (!mobilEslesmesi.matches) {
+                return;
+            }
+
+            if (kayitlar.some((kayit) => kayit.target instanceof Element && kayit.target.matches(modalSecici) && modalAcikMi(kayit.target))) {
+                modalViewportYuksekliginiGuncelle();
+            }
+        });
+
+        const modalGozle = (kok = document) => {
+            kok.querySelectorAll(modalSecici).forEach((modal) => {
+                modalGozlemci.observe(modal, {
+                    attributes: true,
+                    attributeFilter: ["class", "aria-hidden", "hidden"]
+                });
+            });
+        };
+
+        modalGozle(document);
+        document.addEventListener("DOMContentLoaded", () => modalGozle(document), { once: true });
+
+        const yeniModalGozlemci = new MutationObserver((kayitlar) => {
+            const modalEklendi = kayitlar.some((kayit) => Array.from(kayit.addedNodes).some((dugum) => dugum instanceof Element
+                && (dugum.matches(modalSecici) || dugum.querySelector(modalSecici))));
+
+            if (!modalEklendi) {
+                return;
+            }
+
+            window.msModalAsagiSurukleBaslat(document);
+            modalGozle(document);
+        });
+
+        yeniModalGozlemci.observe(document.documentElement, { childList: true, subtree: true });
+    }
+
+    window.msModalAsagiSurukleBaslat(document);
+    modalViewportYuksekliginiGuncelle();
+    window.visualViewport?.addEventListener("resize", modalViewportYuksekliginiGuncelle, { passive: true });
+    window.visualViewport?.addEventListener("scroll", modalViewportYuksekliginiGuncelle, { passive: true });
+    window.addEventListener("orientationchange", modalViewportYuksekliginiGuncelle, { passive: true });
+    document.addEventListener("DOMContentLoaded", () => window.msModalAsagiSurukleBaslat(document), { once: true });
+})();
+
+// Mobil alt bar Kategoriler kisa yolu ana mobil menuyu acar.
+(() => {
+    document.addEventListener("click", (event) => {
+        const hedef = event.target instanceof Element
+            ? event.target.closest(".ms-mobil-alt-bar-link")
+            : null;
+
+        if (!hedef?.querySelector(".ms-mobil-alt-bar-ikon-kategoriler")) {
+            return;
+        }
+
+        const mobilMenuAcButonu = document.querySelector("[data-ms-mobil-menu-ac]");
+
+        if (!mobilMenuAcButonu) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        mobilMenuAcButonu.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+})();
+
 // ProjeElementleri scroll konumunu reload sonrasi kaldigi yerden devam ettirir.
 (() => {
     if (!window.location.pathname.toLowerCase().includes("/projeelementleri")) {
@@ -514,8 +918,9 @@
         const lazySrc = img.dataset.msLazySrc;
         const lazySrcset = img.dataset.msLazySrcset;
         const lazySizes = img.dataset.msLazySizes;
+        const lazyPictureSources = img.closest("picture")?.querySelectorAll("source[data-ms-lazy-srcset]") || [];
 
-        if (!lazySrc && !lazySrcset) {
+        if (!lazySrc && !lazySrcset && lazyPictureSources.length === 0) {
             img.classList.add("ms-lazy-gorsel-yuklendi");
             return;
         }
@@ -531,6 +936,17 @@
         if (lazySrcset) {
             img.srcset = lazySrcset;
         }
+
+        lazyPictureSources.forEach((source) => {
+            source.srcset = source.dataset.msLazySrcset;
+
+            if (source.dataset.msLazySizes) {
+                source.sizes = source.dataset.msLazySizes;
+            }
+
+            source.removeAttribute("data-ms-lazy-srcset");
+            source.removeAttribute("data-ms-lazy-sizes");
+        });
 
         if (lazySrc) {
             img.src = lazySrc;
@@ -695,9 +1111,6 @@
             const viewportButonlari = Array.from(projeKapsam.querySelectorAll("[data-ms-proje-viewport]"));
             const butonBoyutlari = document.querySelectorAll(".ms-buton-boyut");
             const ornekButonlar = document.querySelectorAll(".ms-buton-ornek");
-            const ozelSelectler = document.querySelectorAll("[data-ms-ozel-select]");
-            const telefonUlkeSelectleri = document.querySelectorAll("[data-ms-telefon-ulke-select]");
-            const telefonInputlari = document.querySelectorAll("[data-ms-telefon-input]");
             const kodGirisleri = document.querySelectorAll("[data-ms-kod-giris]");
             const kodDetaylari = document.querySelectorAll("[data-code-detail]");
             const ornekModalAcButonlari = document.querySelectorAll("[data-ms-ornek-modal-ac]");
@@ -705,7 +1118,7 @@
             const ornekModalBoyutClasslari = ["ms-ornek-modal-boyut-m", "ms-ornek-modal-boyut-l", "ms-ornek-modal-boyut-xl", "ms-ornek-modal-boyut-2xl"];
             const boyutClasslari = ["ms-buton-x", "ms-buton-s", "ms-buton-m", "ms-buton-l", "ms-buton-xl", "ms-buton-xxl"];
             const varsayilanProjeSekmesi = projeKok?.dataset.msProjeVarsayilanSekme || projeKapsam.querySelector(".ms-sekme-aktif")?.dataset.tab || "gorunum-tipleri";
-            const arayuzTablari = new Set(["butonlar", "filtreler", "rozetler", "ikons", "bildirimler", "modallar"]);
+            const arayuzTablari = new Set(["butonlar", "filtreler", "rozetler", "ikons", "bildirimler", "mobil-menu-kaydirma", "modallar"]);
             const panelYuklemeIstekleri = new WeakMap();
 
             let sonOdaklananEleman = null;
@@ -1137,11 +1550,19 @@
                     const solKontrol = carousel.querySelector("[data-ms-gorunum-carousel-kontrol='sol']");
                     const sagKontrol = carousel.querySelector("[data-ms-gorunum-carousel-kontrol='sag']");
                     const sayac = carousel.querySelector("[data-ms-gorunum-carousel-sayac]");
+                    const noktalar = Array.from(carousel.querySelectorAll("[data-ms-gorunum-carousel-nokta]"));
+                    const serbestKaydirma = carousel.hasAttribute("data-ms-gorunum-carousel-serbest");
+                    const cercevesizCarousel = carousel.classList.contains("ms-gorunum-carousel-demo-cercevesiz");
                     let surukleniyor = false;
                     let suruklemeYapildi = false;
                     let baslangicX = 0;
+                    let baslangicY = 0;
                     let baslangicScroll = 0;
+                    let suruklemeYonu = null;
                     let tiklamaEngellenecek = false;
+                    let suruklemeAnimasyonKaresi = 0;
+                    let guncellemeAnimasyonKaresi = 0;
+                    let hedefScroll = 0;
 
                     if (!liste) {
                         return;
@@ -1189,6 +1610,26 @@
                         });
                     };
 
+                    const suruklemeScrollunuAyarla = (deger) => {
+                        if (!cercevesizCarousel) {
+                            liste.scrollLeft = deger;
+                            guncellePlanla();
+                            return;
+                        }
+
+                        hedefScroll = deger;
+
+                        if (suruklemeAnimasyonKaresi) {
+                            return;
+                        }
+
+                        suruklemeAnimasyonKaresi = window.requestAnimationFrame(() => {
+                            liste.scrollLeft = hedefScroll;
+                            suruklemeAnimasyonKaresi = 0;
+                            guncellePlanla();
+                        });
+                    };
+
                     const guncelle = () => {
                         const kartlar = kartlariAl();
                         const kaydirilabilir = liste.scrollWidth > liste.clientWidth + 2;
@@ -1198,12 +1639,33 @@
                         solKontrol?.toggleAttribute("disabled", !kaydirilabilir || basta);
                         sagKontrol?.toggleAttribute("disabled", !kaydirilabilir || sonda);
 
-                        if (sayac && kartlar.length > 0) {
-                            sayac.textContent = `${aktifKartIndexiniBul() + 1} / ${kartlar.length}`;
+                        if (kartlar.length > 0) {
+                            const aktifIndex = aktifKartIndexiniBul();
+
+                            if (sayac) {
+                                sayac.textContent = `${aktifIndex + 1} / ${kartlar.length}`;
+                            }
+
+                            noktalar.forEach((nokta, noktaIndex) => {
+                                const aktif = noktaIndex === aktifIndex;
+                                nokta.classList.toggle("ms-gorunum-carousel-cercevesiz-nokta-aktif", aktif);
+                                nokta.setAttribute("aria-pressed", aktif.toString());
+                            });
                         }
                     };
 
-                    carousel.msGorunumCarouselGuncelle = () => window.requestAnimationFrame(guncelle);
+                    const guncellePlanla = () => {
+                        if (guncellemeAnimasyonKaresi) {
+                            return;
+                        }
+
+                        guncellemeAnimasyonKaresi = window.requestAnimationFrame(() => {
+                            guncellemeAnimasyonKaresi = 0;
+                            guncelle();
+                        });
+                    };
+
+                    carousel.msGorunumCarouselGuncelle = guncellePlanla;
 
                     const kaydir = (yon) => {
                         const yonCarpani = yon === "sag" ? 1 : -1;
@@ -1212,7 +1674,12 @@
 
                     solKontrol?.addEventListener("click", () => kaydir("sol"));
                     sagKontrol?.addEventListener("click", () => kaydir("sag"));
-                    liste.addEventListener("scroll", guncelle, { passive: true });
+                    noktalar.forEach((nokta) => {
+                        nokta.addEventListener("click", () => {
+                            kartaGit(Number(nokta.dataset.msGorunumCarouselNokta || 0));
+                        });
+                    });
+                    liste.addEventListener("scroll", guncellePlanla, { passive: true });
                     liste.addEventListener("dragstart", (event) => event.preventDefault());
                     liste.addEventListener("click", (event) => {
                         if (tiklamaEngellenecek) {
@@ -1220,7 +1687,14 @@
                             tiklamaEngellenecek = false;
                         }
                     });
+                    const kartIciEtkilesimliHedefMi = (hedef) => hedef instanceof Element
+                        && Boolean(hedef.closest("button, input, select, textarea, [role='button'], [data-ms-kart-link-yoksay], [data-ms-urun-video], .ms-urun-video-alani, .ms-urun-renk-tooltip-alani, .ms-urun-renk-rozet, .ms-urun-slider-noktalari"));
+
                     liste.addEventListener("pointerdown", (event) => {
+                        if (kartIciEtkilesimliHedefMi(event.target)) {
+                            return;
+                        }
+
                         if (event.button !== undefined && event.button !== 0) {
                             return;
                         }
@@ -1229,8 +1703,9 @@
                         suruklemeYapildi = false;
                         tiklamaEngellenecek = false;
                         baslangicX = event.clientX;
+                        baslangicY = event.clientY;
                         baslangicScroll = liste.scrollLeft;
-                        liste.classList.add("ms-gorunum-carousel-surukleniyor");
+                        suruklemeYonu = null;
                     });
                     liste.addEventListener("pointermove", (event) => {
                         if (!surukleniyor) {
@@ -1238,16 +1713,32 @@
                         }
 
                         const fark = event.clientX - baslangicX;
+                        const dikeyFark = event.clientY - baslangicY;
 
-                        if (Math.abs(fark) > 6) {
-                            liste.setPointerCapture?.(event.pointerId);
+                        if (!suruklemeYonu && (Math.abs(fark) > 6 || Math.abs(dikeyFark) > 6)) {
+                            suruklemeYonu = Math.abs(fark) > Math.abs(dikeyFark) ? "yatay" : "dikey";
+
+                            if (suruklemeYonu === "yatay") {
+                                liste.classList.add("ms-gorunum-carousel-surukleniyor");
+                                liste.setPointerCapture?.(event.pointerId);
+                            } else {
+                                surukleniyor = false;
+                                liste.classList.remove("ms-gorunum-carousel-surukleniyor");
+                                return;
+                            }
+                        }
+
+                        if (suruklemeYonu === "yatay" && Math.abs(fark) > 6) {
                             suruklemeYapildi = true;
                             tiklamaEngellenecek = true;
                             event.preventDefault();
                         }
 
-                        liste.scrollLeft = baslangicScroll - fark;
-                        guncelle();
+                        if (suruklemeYonu !== "yatay") {
+                            return;
+                        }
+
+                        suruklemeScrollunuAyarla(baslangicScroll - fark);
                     });
 
                     const suruklemeyiBitir = (event) => {
@@ -1255,8 +1746,15 @@
                             return;
                         }
 
-                        const hizalanacakIndex = suruklemeYapildi ? aktifKartIndexiniBul() : -1;
+                        if (cercevesizCarousel && suruklemeAnimasyonKaresi) {
+                            window.cancelAnimationFrame(suruklemeAnimasyonKaresi);
+                            suruklemeAnimasyonKaresi = 0;
+                            liste.scrollLeft = hedefScroll;
+                        }
+
+                        const hizalanacakIndex = suruklemeYapildi && !serbestKaydirma ? aktifKartIndexiniBul() : -1;
                         surukleniyor = false;
+                        suruklemeYonu = null;
                         liste.classList.remove("ms-gorunum-carousel-surukleniyor");
 
                         if (typeof event.pointerId === "number" && liste.hasPointerCapture?.(event.pointerId)) {
@@ -1266,15 +1764,20 @@
                         if (hizalanacakIndex >= 0) {
                             kartaGit(hizalanacakIndex);
                         } else {
-                            guncelle();
+                            guncellePlanla();
                         }
                     };
 
                     liste.addEventListener("pointerup", suruklemeyiBitir);
                     liste.addEventListener("pointercancel", suruklemeyiBitir);
                     liste.addEventListener("mouseleave", suruklemeyiBitir);
-                    window.addEventListener("resize", guncelle);
-                    window.requestAnimationFrame(guncelle);
+                    if ("ResizeObserver" in window) {
+                        const carouselBoyutGozlemcisi = new ResizeObserver(guncellePlanla);
+                        carouselBoyutGozlemcisi.observe(liste);
+                    } else {
+                        window.addEventListener("resize", guncellePlanla);
+                    }
+                    guncellePlanla();
                 });
 
                 alanlariSec(kok, "[data-ms-gorunum-icerik-tabs]").forEach((tabAlani) => {
@@ -1302,6 +1805,43 @@
                     panelGoster(sekmeler[0]?.dataset.msGorunumIcerikTab);
                     sekmeler.forEach((sekme) => {
                         sekme.addEventListener("click", () => panelGoster(sekme.dataset.msGorunumIcerikTab));
+                    });
+                });
+
+                // Carousel vitrin türlerini aynı alandaki mini sekmelerle değiştirir.
+                alanlariSec(kok, "[data-ms-gorunum-carousel-tabs]").forEach((tabAlani) => {
+                    if (tabAlani.dataset.msGorunumCarouselTabsHazir === "true") {
+                        return;
+                    }
+
+                    tabAlani.dataset.msGorunumCarouselTabsHazir = "true";
+
+                    const sekmeler = Array.from(tabAlani.querySelectorAll("[data-ms-gorunum-carousel-tab]"));
+                    const paneller = Array.from(tabAlani.querySelectorAll("[data-ms-gorunum-carousel-panel]"));
+
+                    const panelGoster = (hedef) => {
+                        sekmeler.forEach((sekme) => {
+                            const aktif = sekme.dataset.msGorunumCarouselTab === hedef;
+                            sekme.classList.toggle("ms-gorunum-mini-tab-aktif", aktif);
+                            sekme.setAttribute("aria-pressed", aktif.toString());
+                        });
+
+                        paneller.forEach((panel) => {
+                            panel.classList.toggle("ms-gizli", panel.dataset.msGorunumCarouselPanel !== hedef);
+                        });
+
+                        const aktifPanel = paneller.find((panel) => panel.dataset.msGorunumCarouselPanel === hedef);
+                        window.msLazyLoadYenile?.(aktifPanel || tabAlani);
+                        window.requestAnimationFrame(() => {
+                            aktifPanel?.querySelectorAll("[data-ms-gorunum-carousel]").forEach((carousel) => {
+                                carousel.msGorunumCarouselGuncelle?.();
+                            });
+                        });
+                    };
+
+                    panelGoster(sekmeler[0]?.dataset.msGorunumCarouselTab);
+                    sekmeler.forEach((sekme) => {
+                        sekme.addEventListener("click", () => panelGoster(sekme.dataset.msGorunumCarouselTab));
                     });
                 });
 
@@ -1490,6 +2030,8 @@
                 butonOrnekleriBaslat(kok);
                 ornekModallariBaslat(kok);
                 window.msKoleksiyonModallariBaslat?.(kok);
+                window.msHesapStatuKartlariBaslat?.(kok);
+                window.msTelefonAlanlariniBaslat?.(kok);
 
                 alanlariSec(kok, "[data-panel='sayfalar']").forEach((sayfalarPaneli) => {
                     if (sayfalarPaneli.dataset.msSayfalarHazir === "true") {
@@ -1528,6 +2070,26 @@
                     hesabimSekmeleri.forEach((sekme) => {
                         sekme.addEventListener("click", () => {
                             tabGrubuGoster(hesabimSekmeleri, hesabimPanelleri, sekme.dataset.msHesabimTab, "msHesabimTab", "msHesabimPanel", "ms-kod-sekme-aktif", "utm_hesabim");
+                        });
+                    });
+                });
+
+                alanlariSec(kok, "[data-ms-kargo-takip-sekmeleri]").forEach((kargoTakipPaneli) => {
+                    if (kargoTakipPaneli.dataset.msKargoTakipSekmeleriHazir === "true") {
+                        return;
+                    }
+
+                    kargoTakipPaneli.dataset.msKargoTakipSekmeleriHazir = "true";
+
+                    const kargoTakipSekmeleri = Array.from(kargoTakipPaneli.querySelectorAll("[data-ms-kargo-takip-tab]"));
+                    const kargoTakipPanelleri = Array.from(kargoTakipPaneli.querySelectorAll("[data-ms-kargo-takip-panel]"));
+                    const urlKargoTakipSekmesi = new URLSearchParams(window.location.search).get("utm_kargo_takip");
+
+                    tabGrubuGoster(kargoTakipSekmeleri, kargoTakipPanelleri, urlKargoTakipSekmesi || "kargo-takip", "msKargoTakipTab", "msKargoTakipPanel", "ms-kod-sekme-aktif", "utm_kargo_takip", false);
+
+                    kargoTakipSekmeleri.forEach((sekme) => {
+                        sekme.addEventListener("click", () => {
+                            tabGrubuGoster(kargoTakipSekmeleri, kargoTakipPanelleri, sekme.dataset.msKargoTakipTab, "msKargoTakipTab", "msKargoTakipPanel", "ms-kod-sekme-aktif", "utm_kargo_takip");
                         });
                     });
                 });
@@ -1648,6 +2210,354 @@
                 });
             });
 
+            const onayRedModalBaslat = () => {
+                let modal = document.querySelector("[data-ms-onay-red-modal]");
+
+                if (!modal) {
+                    const sablon = document.querySelector("[data-ms-onay-red-modal-sablon]");
+
+                    if (!(sablon instanceof HTMLTemplateElement)) {
+                        return;
+                    }
+
+                    const modalHazirlaVeAc = (ayarlar = {}) => {
+                        sablon.parentNode?.insertBefore(sablon.content.cloneNode(true), sablon);
+                        sablon.remove();
+                        onayRedModalBaslat();
+                        window.msOnayRedModalAc?.(ayarlar);
+                    };
+
+                    window.msOnayRedModalAc = modalHazirlaVeAc;
+                    document.addEventListener("click", (event) => {
+                        const buton = event.target.closest?.("[data-ms-onay-red-ac]");
+
+                        if (!buton || document.querySelector("[data-ms-onay-red-modal]")) {
+                            return;
+                        }
+
+                        event.preventDefault();
+                        modalHazirlaVeAc({
+                            tip: buton.dataset.msOnayRedTip || "onay",
+                            baslik: buton.dataset.msOnayRedBaslik,
+                            altBaslik: buton.dataset.msOnayRedAltBaslik,
+                            metin: buton.dataset.msOnayRedMetin,
+                            sure: buton.dataset.msOnayRedSure
+                        });
+                    });
+                    return;
+                }
+
+                if (!modal || modal.dataset.msOnayRedModalHazir === "true") {
+                    return;
+                }
+
+                modal.dataset.msOnayRedModalHazir = "true";
+
+                const kapatButonlari = modal.querySelectorAll("[data-ms-onay-red-modal-kapat]");
+                const baslik = modal.querySelector("[data-ms-onay-red-baslik]");
+                const altBaslik = modal.querySelector("[data-ms-onay-red-alt-baslik]");
+                const metin = modal.querySelector("[data-ms-onay-red-metin]");
+                const ikon = modal.querySelector("[data-ms-onay-red-ikon]");
+                const sureCizgisi = modal.querySelector("[data-ms-onay-red-sure-cizgisi]");
+                let sonOdaklananEleman = null;
+                let otomatikKapatTimer = null;
+
+                const modalAc = (ayarlar = {}) => {
+                    const tip = ayarlar.tip === "red" ? "red" : "onay";
+                    const sure = Number(ayarlar.sure || ayarlar.sureMs || 2000);
+                    sonOdaklananEleman = document.activeElement;
+                    window.clearTimeout(otomatikKapatTimer);
+                    modal.classList.remove("ms-onay-red-modal-zamanli");
+
+                    if (baslik) {
+                        baslik.textContent = ayarlar.baslik || (tip === "red" ? "Islem Reddedildi" : "Islem Onaylandi");
+                    }
+
+                    if (altBaslik) {
+                        altBaslik.textContent = ayarlar.altBaslik || (tip === "red" ? "Reddedildi" : "Onaylandi");
+                    }
+
+                    if (metin) {
+                        metin.textContent = ayarlar.metin || (tip === "red" ? "Islem reddedildi." : "Islem basariyla onaylandi.");
+                    }
+
+                    if (ikon) {
+                        ikon.classList.toggle("ms-onay-red-modal-ikon-onay", tip !== "red");
+                        ikon.classList.toggle("ms-onay-red-modal-ikon-red", tip === "red");
+                        ikon.innerHTML = `<i class="fa-solid ${tip === "red" ? "fa-xmark" : "fa-check"} ms-fa-ikon" aria-hidden="true"></i>`;
+                    }
+
+                    if (sureCizgisi) {
+                        sureCizgisi.style.animation = "none";
+                        sureCizgisi.offsetHeight;
+                        sureCizgisi.style.animation = "";
+                    }
+
+                    modal.style.setProperty("--ms-onay-red-sure", `${sure}ms`);
+                    modal.classList.add("ms-ornek-modal-acik");
+                    modal.setAttribute("aria-hidden", "false");
+                    document.body.style.overflow = "hidden";
+
+                    if (sure > 0) {
+                        modal.classList.add("ms-onay-red-modal-zamanli");
+                        otomatikKapatTimer = window.setTimeout(modalKapat, sure);
+                    }
+
+                    window.setTimeout(() => {
+                        modal.querySelector(".ms-ornek-modal-aksiyonlar button")?.focus();
+                    }, 30);
+                };
+
+                const modalKapat = () => {
+                    window.clearTimeout(otomatikKapatTimer);
+                    modal.classList.remove("ms-onay-red-modal-zamanli");
+                    modal.classList.remove("ms-ornek-modal-acik");
+                    modal.setAttribute("aria-hidden", "true");
+
+                    if (!document.querySelector(".ms-ornek-modal.ms-ornek-modal-acik, .ms-giris-modal.ms-giris-modal-acik")) {
+                        document.body.style.overflow = "";
+                    }
+
+                    sonOdaklananEleman?.focus?.();
+                };
+
+                window.msOnayRedModalAc = modalAc;
+
+                kapatButonlari.forEach((buton) => {
+                    buton.addEventListener("click", modalKapat);
+                });
+
+                document.addEventListener("click", (event) => {
+                    const buton = event.target.closest("[data-ms-onay-red-ac]");
+
+                    if (!buton) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    modalAc({
+                        tip: buton.dataset.msOnayRedTip || "onay",
+                        baslik: buton.dataset.msOnayRedBaslik,
+                        altBaslik: buton.dataset.msOnayRedAltBaslik,
+                        metin: buton.dataset.msOnayRedMetin,
+                        sure: buton.dataset.msOnayRedSure
+                    });
+                });
+
+                document.addEventListener("keydown", (event) => {
+                    if (event.key === "Escape" && modal.classList.contains("ms-ornek-modal-acik")) {
+                        modalKapat();
+                    }
+                });
+            };
+
+            const koleksiyonAkisModallariBaslat = () => {
+                const secimModal = document.querySelector("[data-ms-koleksiyon-secim-modal]");
+                const varolanModal = document.querySelector("[data-ms-koleksiyon-varolan-modal]");
+                const yeniOzetModal = document.querySelector("[data-ms-koleksiyon-yeni-ozet-modal]");
+
+                if (!secimModal || !varolanModal || !yeniOzetModal || secimModal.dataset.msKoleksiyonAkisHazir === "true") {
+                    return;
+                }
+
+                secimModal.dataset.msKoleksiyonAkisHazir = "true";
+
+                const secimKapatButonlari = secimModal.querySelectorAll("[data-ms-koleksiyon-secim-modal-kapat]");
+                const varolanKapatButonlari = varolanModal.querySelectorAll("[data-ms-koleksiyon-varolan-modal-kapat]");
+                const yeniOzetKapatButonlari = yeniOzetModal.querySelectorAll("[data-ms-koleksiyon-yeni-ozet-modal-kapat]");
+                const yeniButonu = secimModal.querySelector("[data-ms-koleksiyon-secim-yeni]");
+                const varolanButonu = secimModal.querySelector("[data-ms-koleksiyon-secim-varolan]");
+                const varolanOnayButonu = varolanModal.querySelector("[data-ms-koleksiyon-varolan-onay]");
+                const varolanSelect = varolanModal.querySelector("[data-ms-koleksiyon-varolan-select]");
+                const varolanUrunGorsel = varolanModal.querySelector("[data-ms-koleksiyon-varolan-urun-gorsel]");
+                const varolanUrunAd = varolanModal.querySelector("[data-ms-koleksiyon-varolan-urun-ad]");
+                const varolanUrunMeta = varolanModal.querySelector("[data-ms-koleksiyon-varolan-urun-meta]");
+                const yeniOzetOnayButonu = yeniOzetModal.querySelector("[data-ms-koleksiyon-yeni-ozet-onay]");
+                const yeniOzetUrunGorsel = yeniOzetModal.querySelector("[data-ms-koleksiyon-yeni-ozet-urun-gorsel]");
+                const yeniOzetUrunAd = yeniOzetModal.querySelector("[data-ms-koleksiyon-yeni-ozet-urun-ad]");
+                const yeniOzetUrunMeta = yeniOzetModal.querySelector("[data-ms-koleksiyon-yeni-ozet-urun-meta]");
+                const yeniOzetAd = yeniOzetModal.querySelector("[data-ms-koleksiyon-yeni-ozet-ad]");
+                const yeniOzetAciklama = yeniOzetModal.querySelector("[data-ms-koleksiyon-yeni-ozet-aciklama]");
+                const yeniOzetHerkeseAcik = yeniOzetModal.querySelector("[data-ms-koleksiyon-yeni-ozet-herkese-acik]");
+                const yeniOzetPaylasilabilir = yeniOzetModal.querySelector("[data-ms-koleksiyon-yeni-ozet-paylasilabilir]");
+                let aktifUrun = null;
+                let sonOdaklananEleman = null;
+
+                const urunBilgisiVarMi = (urunBilgisi) => Boolean(urunBilgisi && (urunBilgisi.id || urunBilgisi.ad || urunBilgisi.gorsel || urunBilgisi.meta));
+
+                const urunBilgisiniTamamla = (urunBilgisi = {}) => {
+                    const kaynak = urunBilgisi || {};
+
+                    return {
+                        id: kaynak.id || `koleksiyon-urun-${Date.now()}`,
+                        ad: kaynak.ad || "Urun",
+                        gorsel: kaynak.gorsel || "/images/ornek-resim.jpg",
+                        meta: kaynak.meta || "Urun bilgisi"
+                    };
+                };
+
+                const modalAc = (modal) => {
+                    sonOdaklananEleman = document.activeElement;
+                    modal.classList.add("ms-ornek-modal-acik");
+                    modal.setAttribute("aria-hidden", "false");
+                    document.body.style.overflow = "hidden";
+                };
+
+                const modalKapat = (modal) => {
+                    modal.classList.remove("ms-ornek-modal-acik");
+                    modal.setAttribute("aria-hidden", "true");
+
+                    if (!document.querySelector(".ms-ornek-modal.ms-ornek-modal-acik, .ms-giris-modal.ms-giris-modal-acik")) {
+                        document.body.style.overflow = "";
+                    }
+
+                    sonOdaklananEleman?.focus?.();
+                };
+
+                const varolanUrunuGuncelle = () => {
+                    const urun = urunBilgisiniTamamla(aktifUrun);
+
+                    if (varolanUrunGorsel) {
+                        varolanUrunGorsel.src = urun.gorsel;
+                        varolanUrunGorsel.alt = urun.ad;
+                    }
+
+                    if (varolanUrunAd) {
+                        varolanUrunAd.textContent = urun.ad;
+                    }
+
+                    if (varolanUrunMeta) {
+                        varolanUrunMeta.textContent = urun.meta;
+                    }
+                };
+
+                const yeniOzetUrunuGuncelle = () => {
+                    const urun = urunBilgisiniTamamla(aktifUrun);
+
+                    if (yeniOzetUrunGorsel) {
+                        yeniOzetUrunGorsel.src = urun.gorsel;
+                        yeniOzetUrunGorsel.alt = urun.ad;
+                    }
+
+                    if (yeniOzetUrunAd) {
+                        yeniOzetUrunAd.textContent = urun.ad;
+                    }
+
+                    if (yeniOzetUrunMeta) {
+                        yeniOzetUrunMeta.textContent = urun.meta;
+                    }
+                };
+
+                const secenekMetniAl = (secenek) => secenek?.querySelector("[data-ms-ozel-select-metin]")?.textContent?.trim()
+                    || secenek?.textContent?.trim()
+                    || "";
+
+                const secimModalAc = (urunBilgisi) => {
+                    sonOdaklananEleman = document.activeElement;
+                    aktifUrun = urunBilgisiVarMi(urunBilgisi) ? urunBilgisiniTamamla(urunBilgisi) : null;
+
+                    if (!aktifUrun) {
+                        return;
+                    }
+
+                    modalAc(secimModal);
+                };
+
+                const varolanModalAc = () => {
+                    varolanUrunuGuncelle();
+                    modalKapat(secimModal);
+                    modalAc(varolanModal);
+                    window.setTimeout(() => {
+                        varolanModal.querySelector("[data-ms-ozel-select-tetikleyici]")?.focus();
+                    }, 40);
+                };
+
+                const yeniKoleksiyonModalAc = () => {
+                    yeniOzetUrunuGuncelle();
+                    if (secimModal.classList.contains("ms-ornek-modal-acik")) {
+                        modalKapat(secimModal);
+                    }
+                    modalAc(yeniOzetModal);
+                    window.setTimeout(() => yeniOzetAd?.focus(), 40);
+                };
+
+                const yeniKoleksiyonOlustur = () => {
+                    const urun = urunBilgisiniTamamla(aktifUrun);
+                    const ad = yeniOzetAd?.value.trim() || "Yeni Koleksiyon";
+                    const aciklama = yeniOzetAciklama?.value.trim() || "Yeni seçilen ürünle oluşturulan alışveriş koleksiyonu.";
+                    const olay = new CustomEvent("ms:koleksiyon-olustur", {
+                        bubbles: true,
+                        cancelable: true,
+                        detail: {
+                            ad,
+                            aciklama,
+                            herkeseAcik: Boolean(yeniOzetHerkeseAcik?.checked),
+                            paylasilabilir: Boolean(yeniOzetPaylasilabilir?.checked),
+                            urunler: aktifUrun ? [urun] : [],
+                            modal: yeniOzetModal,
+                            kapat: () => modalKapat(yeniOzetModal)
+                        }
+                    });
+
+                    if (yeniOzetModal.dispatchEvent(olay)) {
+                        modalKapat(yeniOzetModal);
+                    }
+                };
+
+                const varolanKoleksiyonaEkle = () => {
+                    const seciliKoleksiyonlar = Array.from(varolanModal.querySelectorAll("[data-ms-koleksiyon-varolan-select] .ms-ozel-select-secenek-aktif"))
+                        .map(secenekMetniAl)
+                        .filter(Boolean);
+                    const olay = new CustomEvent("ms:koleksiyon-varolan-ekle", {
+                        bubbles: true,
+                        detail: {
+                            urun: urunBilgisiniTamamla(aktifUrun),
+                            koleksiyonlar: seciliKoleksiyonlar,
+                            modal: varolanModal
+                        }
+                    });
+
+                    varolanModal.dispatchEvent(olay);
+                    modalKapat(varolanModal);
+                };
+
+                window.msKoleksiyonAkisBaslat = secimModalAc;
+                window.msKoleksiyonVarolanModalAc = (urunBilgisi) => {
+                    aktifUrun = urunBilgisiniTamamla(urunBilgisi);
+                    varolanModalAc();
+                };
+
+                secimKapatButonlari.forEach((buton) => {
+                    buton.addEventListener("click", () => modalKapat(secimModal));
+                });
+
+                varolanKapatButonlari.forEach((buton) => {
+                    buton.addEventListener("click", () => modalKapat(varolanModal));
+                });
+
+                yeniOzetKapatButonlari.forEach((buton) => {
+                    buton.addEventListener("click", () => modalKapat(yeniOzetModal));
+                });
+
+                yeniButonu?.addEventListener("click", yeniKoleksiyonModalAc);
+                varolanButonu?.addEventListener("click", varolanModalAc);
+                varolanOnayButonu?.addEventListener("click", varolanKoleksiyonaEkle);
+                yeniOzetOnayButonu?.addEventListener("click", yeniKoleksiyonOlustur);
+                document.addEventListener("keydown", (event) => {
+                    if (event.key !== "Escape") {
+                        return;
+                    }
+
+                    if (yeniOzetModal.classList.contains("ms-ornek-modal-acik")) {
+                        modalKapat(yeniOzetModal);
+                    } else if (varolanModal.classList.contains("ms-ornek-modal-acik")) {
+                        modalKapat(varolanModal);
+                    } else if (secimModal.classList.contains("ms-ornek-modal-acik")) {
+                        modalKapat(secimModal);
+                    }
+                });
+            };
+
             const koleksiyonModallariBaslat = (kok = document) => {
             alanlariSec(kok, "[data-ms-koleksiyon-modal]").forEach((modal) => {
                 if (modal.dataset.msKoleksiyonModalHazir === "true") {
@@ -1679,8 +2589,87 @@
                     .replace(/"/g, "&quot;")
                     .replace(/'/g, "&#039;");
 
-                const modalAc = () => {
+                const hariciUrunSec = (urunBilgisi) => {
+                    if (!urunBilgisi || !(urunBilgisi.id || urunBilgisi.ad || urunBilgisi.gorsel)) {
+                        return;
+                    }
+
+                    const id = urunBilgisi.id || `harici-${Date.now()}`;
+                    secilenUrunler.set(id, {
+                        id,
+                        ad: urunBilgisi.ad || "Ürün",
+                        gorsel: urunBilgisi.gorsel || "/images/ornek-resim.jpg",
+                        meta: urunBilgisi.meta || "Ürün kartı"
+                    });
+                    seciliListeyiGuncelle();
+                };
+
+                const hariciUrunleriSec = (urunler) => {
+                    (Array.isArray(urunler) ? urunler : [urunler]).forEach(hariciUrunSec);
+                };
+
+                const tetikleyiciUrunBilgisiOlustur = (buton) => {
+                    const sepetGrubu = buton.closest(".ms-sepet-satici-grubu");
+                    const sepetSatiri = sepetGrubu?.querySelector(".ms-sepet-satiri input[type='checkbox']:checked")?.closest(".ms-sepet-satiri")
+                        || sepetGrubu?.querySelector(".ms-sepet-satiri");
+
+                    if (!sepetSatiri) {
+                        return null;
+                    }
+
+                    const baslik = sepetSatiri.querySelector(".ms-sepet-basligi")?.textContent?.trim();
+                    const gorsel = sepetSatiri.querySelector(".ms-sepet-gorsel, img");
+                    const gorselYolu = gorsel?.currentSrc
+                        || gorsel?.getAttribute("src")
+                        || gorsel?.getAttribute("data-ms-lazy-src")
+                        || "/images/ornek-resim.jpg";
+                    const fiyat = sepetSatiri.querySelector(".ms-urun-fiyat, [data-ms-sepet-satir-tutar]")?.textContent?.trim();
+
+                    return {
+                        id: sepetSatiri.dataset.msSepetSatir || `sepet-${Date.now()}`,
+                        ad: baslik || "Sepet urunu",
+                        gorsel: gorselYolu,
+                        meta: fiyat ? `Sepet - ${fiyat}` : "Sepet urunu"
+                    };
+                };
+
+                const tetikleyiciSepetUrunleriniOlustur = (buton) => {
+                    const sepetGrubu = buton.closest(".ms-sepet-satici-grubu");
+
+                    if (!sepetGrubu) {
+                        return [];
+                    }
+
+                    const seciliSatirlar = Array.from(sepetGrubu.querySelectorAll(".ms-sepet-satiri"))
+                        .filter((satir) => satir.querySelector("input[type='checkbox']")?.checked);
+                    const satirlar = seciliSatirlar.length ? seciliSatirlar : Array.from(sepetGrubu.querySelectorAll(".ms-sepet-satiri"));
+
+                    return satirlar.map((satir, index) => {
+                        const baslik = satir.querySelector(".ms-sepet-basligi")?.textContent?.trim();
+                        const gorsel = satir.querySelector(".ms-sepet-gorsel, img");
+                        const gorselYolu = gorsel?.currentSrc
+                            || gorsel?.getAttribute("src")
+                            || gorsel?.getAttribute("data-ms-lazy-src")
+                            || "/images/ornek-resim.jpg";
+                        const fiyat = satir.querySelector(".ms-urun-fiyat, [data-ms-sepet-satir-tutar]")?.textContent?.trim();
+
+                        return {
+                            id: satir.dataset.msSepetSatir || `sepet-${index}-${Date.now()}`,
+                            ad: baslik || "Sepet urunu",
+                            gorsel: gorselYolu,
+                            meta: fiyat ? `Sepet - ${fiyat}` : "Sepet urunu"
+                        };
+                    });
+                };
+
+                const modalAc = (urunBilgisi, secimiSifirla = false) => {
                     sonOdaklananEleman = document.activeElement;
+
+                    if (secimiSifirla) {
+                        secilenUrunler.clear();
+                    }
+
+                    hariciUrunleriSec(urunBilgisi);
                     modal.classList.add("ms-ornek-modal-acik");
                     modal.setAttribute("aria-hidden", "false");
                     document.body.style.overflow = "hidden";
@@ -1695,6 +2684,9 @@
                     document.body.style.overflow = "";
                     sonOdaklananEleman?.focus?.();
                 };
+
+                modal.msKoleksiyonModalAc = modalAc;
+                window.msKoleksiyonModalAc = modalAc;
 
                 const sekmeGoster = (sekmeAdi) => {
                     sekmeler.forEach((sekme) => {
@@ -1828,7 +2820,24 @@
                 };
 
                 acButonlari.forEach((buton) => {
-                    buton.addEventListener("click", modalAc);
+                    buton.addEventListener("click", () => {
+                        const sepetUrunleri = tetikleyiciSepetUrunleriniOlustur(buton);
+
+                        if (sepetUrunleri.length) {
+                            modalAc(sepetUrunleri, true);
+                            sekmeGoster("sectiklerim");
+                            return;
+                        }
+
+                        const urunBilgisi = tetikleyiciUrunBilgisiOlustur(buton);
+
+                        if (urunBilgisi && typeof window.msKoleksiyonAkisBaslat === "function") {
+                            window.msKoleksiyonAkisBaslat(urunBilgisi);
+                            return;
+                        }
+
+                        modalAc(urunBilgisi);
+                    });
                 });
 
                 kapatButonlari.forEach((buton) => {
@@ -1843,6 +2852,10 @@
                     buton.setAttribute("aria-pressed", "false");
                     buton.addEventListener("click", () => urunSec(buton));
                 });
+
+                urunButonlari
+                    .filter((buton) => buton.hasAttribute("data-ms-koleksiyon-urun-secili"))
+                    .forEach((buton) => urunSec(buton));
 
                 seciliListe?.addEventListener("click", (event) => {
                     const kaldirButonu = event.target.closest("[data-ms-koleksiyon-secili-kaldir]");
@@ -1865,8 +2878,40 @@
             });
             };
 
+            const hesapStatuKartlariBaslat = (kok = document) => {
+                alanlariSec(kok, "[data-ms-hesap-statu-toggle]").forEach((buton) => {
+                    if (buton.dataset.msHesapStatuToggleHazir === "true") {
+                        return;
+                    }
+
+                    buton.dataset.msHesapStatuToggleHazir = "true";
+                    const kart = buton.closest(".ms-hesap-statu-katlanabilir");
+                    const detay = kart?.querySelector("[data-ms-hesap-statu-detay]");
+                    const ikon = buton.querySelector(".ms-fa-ikon");
+
+                    if (!kart || !detay) {
+                        return;
+                    }
+
+                    const durumAyarla = (acik) => {
+                        detay.hidden = !acik;
+                        buton.setAttribute("aria-expanded", acik.toString());
+                        ikon?.classList.toggle("fa-chevron-up", acik);
+                        ikon?.classList.toggle("fa-chevron-down", !acik);
+                    };
+
+                    durumAyarla(buton.getAttribute("aria-expanded") === "true");
+                    buton.addEventListener("click", () => durumAyarla(detay.hidden));
+                });
+            };
+
             window.msKoleksiyonModallariBaslat = koleksiyonModallariBaslat;
+            window.msKoleksiyonAkisModallariBaslat = koleksiyonAkisModallariBaslat;
+            window.msHesapStatuKartlariBaslat = hesapStatuKartlariBaslat;
+            onayRedModalBaslat();
+            koleksiyonAkisModallariBaslat();
             koleksiyonModallariBaslat();
+            hesapStatuKartlariBaslat();
 
             const infiniteOrnekleriBaslat = (kok = document) => {
                 const lazyInfiniteSecici = ".lazy-infinite-on";
@@ -2184,6 +3229,37 @@
                     uygulaButonu.addEventListener("click", seciliSecenekleriUsteTasi);
                 });
             });
+
+                kok.querySelectorAll("[data-ms-filtre-tumunu-temizle]").forEach((temizleButonu) => {
+                    if (temizleButonu.dataset.msFiltreTemizleHazir === "true") {
+                        return;
+                    }
+
+                    temizleButonu.dataset.msFiltreTemizleHazir = "true";
+                    temizleButonu.addEventListener("click", () => {
+                        const filtreAlani = temizleButonu.closest(".ms-urun-listesi-sayfa") || document;
+
+                        filtreAlani.querySelectorAll("input[type='checkbox']:checked, input[type='radio']:checked").forEach((input) => {
+                            input.checked = false;
+                            input.dispatchEvent(new Event("change", { bubbles: true }));
+                        });
+
+                        filtreAlani.querySelectorAll("input[type='search'], input[type='number']").forEach((input) => {
+                            if (!input.value) {
+                                return;
+                            }
+
+                            input.value = "";
+                            input.dispatchEvent(new Event("input", { bubbles: true }));
+                        });
+
+                        filtreAlani.querySelectorAll("[data-ms-mobil-hizli-filtre].ms-urun-listesi-mobil-chip-secili").forEach((buton) => {
+                            buton.click();
+                        });
+
+                        filtreAlani.dispatchEvent(new CustomEvent("ms:filtreler-temizlendi", { bubbles: true }));
+                    });
+                });
             };
 
             window.msFiltreBloklariBaslat = filtreBloklariBaslat;
@@ -2241,7 +3317,20 @@
             window.msSiralamaSelectleriBaslat = siralamaSelectleriBaslat;
             siralamaSelectleriBaslat();
 
-            ozelSelectler.forEach((select) => {
+            const ozelSelectleriBaslat = (kok = document) => {
+            const selectler = [];
+
+            if (kok instanceof Element && kok.matches("[data-ms-ozel-select]")) {
+                selectler.push(kok);
+            }
+
+            kok?.querySelectorAll?.("[data-ms-ozel-select]").forEach((select) => selectler.push(select));
+
+            selectler.forEach((select) => {
+                if (select.dataset.msOzelSelectHazir === "true") {
+                    return;
+                }
+
                 const tetikleyici = select.querySelector("[data-ms-ozel-select-tetikleyici]");
                 const deger = select.querySelector("[data-ms-ozel-select-deger]");
                 const secenekler = select.querySelectorAll("[data-ms-ozel-select-secenek]");
@@ -2251,10 +3340,13 @@
                 const temizleButonu = select.querySelector("[data-ms-ozel-select-temizle]");
                 const uygulaButonu = select.querySelector("[data-ms-ozel-select-uygula]");
                 const sayac = select.querySelector("[data-ms-ozel-select-sayac]");
+                const okIkonu = select.querySelector(".ms-ozel-select-ok");
 
                 if (!tetikleyici || !deger) {
                     return;
                 }
+
+                select.dataset.msOzelSelectHazir = "true";
 
                 secenekler.forEach((secenek, index) => {
                     if (!secenek.dataset.msOzelSelectSira) {
@@ -2269,9 +3361,19 @@
                     || tetikleyici.dataset.msOzelSelectVarsayilan
                     || "Seçim yapın";
 
+                const okIkonunuGuncelle = (acik) => {
+                    if (!okIkonu) {
+                        return;
+                    }
+
+                    okIkonu.classList.toggle("fa-chevron-up", acik);
+                    okIkonu.classList.toggle("fa-chevron-down", !acik);
+                };
+
                 const kapat = () => {
                     select.classList.remove("ms-ozel-select-acik");
                     tetikleyici.setAttribute("aria-expanded", "false");
+                    okIkonunuGuncelle(false);
                 };
 
                 if (coklu) {
@@ -2343,6 +3445,13 @@
                         sayac.hidden = aktifler.length === 0;
                         sayac.textContent = `${aktifler.length} adet seçildi`;
                     }
+                    select.dispatchEvent(new CustomEvent("ms:ozel-select-degisti", {
+                        bubbles: true,
+                        detail: {
+                            seciliAdet: aktifler.length,
+                            seciliMetinler: aktifler.map(secenekMetniAl)
+                        }
+                    }));
                 };
 
                 const cokluSecilileriUsteTasi = () => {
@@ -2378,6 +3487,7 @@
                 tetikleyici.addEventListener("click", () => {
                     const acik = select.classList.toggle("ms-ozel-select-acik");
                     tetikleyici.setAttribute("aria-expanded", acik.toString());
+                    okIkonunuGuncelle(acik);
 
                     if (acik && arama) {
                         window.setTimeout(() => arama.focus(), 30);
@@ -2461,16 +3571,40 @@
                 });
             });
 
-            telefonUlkeSelectleri.forEach((select) => {
+            };
+
+            window.msOzelSelectleriBaslat = ozelSelectleriBaslat;
+            ozelSelectleriBaslat(document);
+
+            const telefonAlanlariniBaslat = (kok = document) => {
+            const kapsamdakiAlanlariBul = (secici) => {
+                const alanlar = [];
+
+                if (kok?.matches?.(secici)) {
+                    alanlar.push(kok);
+                }
+
+                kok?.querySelectorAll?.(secici).forEach((alan) => alanlar.push(alan));
+                return alanlar;
+            };
+
+            kapsamdakiAlanlariBul("[data-ms-telefon-ulke-select]").forEach((select) => {
+                if (select.dataset.msTelefonUlkeHazir === "true") {
+                    return;
+                }
+
                 const tetikleyici = select.querySelector("[data-ms-telefon-ulke-tetikleyici]");
                 const kod = select.querySelector("[data-ms-telefon-ulke-kod]");
                 const bayrak = select.querySelector(".ms-telefon-ulke-tetikleyici .ms-telefon-bayrak");
                 const arama = select.querySelector("[data-ms-telefon-ulke-arama]");
                 const secenekler = select.querySelectorAll("[data-ms-telefon-ulke-secenek]");
+                const ulkeKoduDegeri = select.closest(".ms-telefon-girdi")?.querySelector("[data-ms-telefon-ulke-deger]");
 
                 if (!tetikleyici || !kod || !bayrak) {
                     return;
                 }
+
+                select.dataset.msTelefonUlkeHazir = "true";
 
                 const kapat = () => {
                     select.classList.remove("ms-telefon-ulke-acik");
@@ -2492,8 +3626,13 @@
                         bayrak.src = secenek.dataset.bayrak;
                         bayrak.alt = secenek.dataset.ulke;
 
+                        if (ulkeKoduDegeri) {
+                            ulkeKoduDegeri.value = secenek.dataset.kod || "";
+                        }
+
                         secenekler.forEach((oge) => {
                             oge.classList.toggle("ms-telefon-ulke-secenek-aktif", oge === secenek);
+                            oge.setAttribute("aria-selected", (oge === secenek).toString());
                         });
 
                         kapat();
@@ -2518,7 +3657,12 @@
                 });
             });
 
-            telefonInputlari.forEach((input) => {
+            kapsamdakiAlanlariBul("[data-ms-telefon-input]").forEach((input) => {
+                if (input.dataset.msTelefonInputHazir === "true") {
+                    return;
+                }
+
+                input.dataset.msTelefonInputHazir = "true";
                 const telefonuFormatla = () => {
                     let rakamlar = input.value.replace(/\D/g, "");
 
@@ -2541,6 +3685,10 @@
                 input.addEventListener("input", telefonuFormatla);
                 input.addEventListener("paste", () => window.setTimeout(telefonuFormatla, 0));
             });
+            };
+
+            window.msTelefonAlanlariniBaslat = telefonAlanlariniBaslat;
+            telefonAlanlariniBaslat(document);
 
             kodGirisleri.forEach((kodGiris) => {
                 const inputlar = Array.from(kodGiris.querySelectorAll(".ms-kod-giris-input"));
@@ -3502,6 +4650,30 @@
             });
         };
 
+        const koleksiyonUrunBilgisiOlustur = (buton) => {
+            const kart = buton.closest(".ms-urun-karti");
+            const baslik = kart?.querySelector(".ms-urun-basligi")?.textContent?.trim();
+            const gorsel = kart?.querySelector(".ms-urun-gorsel, [data-ms-urun-galeri-gorsel], img");
+            const gorselYolu = gorsel?.currentSrc
+                || gorsel?.getAttribute("src")
+                || gorsel?.getAttribute("data-ms-lazy-src")
+                || "/images/ornek-resim.jpg";
+            const fiyat = kart?.querySelector(".ms-urun-fiyat, .ms-fiyat")?.textContent?.trim();
+            const idKaynak = `${baslik || "urun"}-${gorselYolu}`;
+            const id = idKaynak
+                .toLocaleLowerCase("tr-TR")
+                .replace(/[^a-z0-9ğüşöçıİĞÜŞÖÇ]+/gi, "-")
+                .replace(/^-+|-+$/g, "")
+                .slice(0, 80) || `urun-${Date.now()}`;
+
+            return {
+                id,
+                ad: baslik || "Ürün",
+                gorsel: gorselYolu,
+                meta: fiyat || "Ürün kartı"
+            };
+        };
+
         const koleksiyonHazirla = (kok) => {
             kok.querySelectorAll(".ms-urun-karti [data-ms-urun-koleksiyon]").forEach((buton) => {
                 if (buton.dataset.msUrunKoleksiyonHazir === "true") {
@@ -3525,12 +4697,160 @@
                 buton.addEventListener("click", (event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    durumGuncelle(!buton.classList.contains("ms-urun-koleksiyon-aktif"));
+                    durumGuncelle(true);
+                    const urunBilgisi = koleksiyonUrunBilgisiOlustur(buton);
+
+                    if (typeof window.msKoleksiyonAkisBaslat === "function") {
+                        window.msKoleksiyonAkisBaslat(urunBilgisi);
+                        return;
+                    }
+
+                    if (typeof window.msKoleksiyonModallariBaslat === "function") {
+                        window.msKoleksiyonModallariBaslat(document);
+                    }
+                    if (typeof window.msKoleksiyonModalAc === "function") {
+                        window.msKoleksiyonModalAc(urunBilgisi);
+                    }
                 });
             });
         };
 
+        const ortakRenkModalHazirla = () => {
+            const modal = document.querySelector("[data-ms-urun-renk-modal]");
+            const veriElemani = document.querySelector("[data-ms-urun-renk-verisi]");
+
+            if (!modal || !veriElemani || modal.dataset.msUrunRenkModalHazir === "true") {
+                return;
+            }
+
+            modal.dataset.msUrunRenkModalHazir = "true";
+            const liste = modal.querySelector("[data-ms-urun-renk-modal-liste]");
+            const aciklama = modal.querySelector("[data-ms-urun-renk-modal-aciklama]");
+            const kapaticilar = modal.querySelectorAll("[data-ms-urun-renk-modal-kapat]");
+            let renkVerisi = {};
+            let aktifTetikleyici = null;
+            let oncekiBodyOverflow = "";
+
+            try {
+                renkVerisi = JSON.parse(veriElemani.textContent || "{}");
+            } catch {
+                renkVerisi = {};
+            }
+
+            const kapat = () => {
+                modal.classList.remove("ms-ornek-modal-acik");
+                modal.setAttribute("aria-hidden", "true");
+                modal.inert = true;
+                document.body.style.overflow = oncekiBodyOverflow;
+                document.documentElement.classList.remove("ms-urun-renk-tooltip-body-kilitli");
+                document.body.classList.remove("ms-urun-renk-tooltip-body-kilitli");
+                aktifTetikleyici?.setAttribute("aria-expanded", "false");
+                aktifTetikleyici?.focus();
+                aktifTetikleyici = null;
+            };
+
+            const renkleriYaz = (renkler) => {
+                if (!liste) {
+                    return;
+                }
+
+                const parca = document.createDocumentFragment();
+
+                renkler.forEach((renk) => {
+                    const baglanti = document.createElement("a");
+                    const gorsel = document.createElement("img");
+                    baglanti.className = "ms-urun-renk-tooltip-gorsel";
+                    baglanti.href = renk.href || "/urun-detay";
+                    baglanti.setAttribute("aria-label", `${renk.ad || "Ürün"} renk seçeneğini aç`);
+                    gorsel.src = renk.gorsel || "/images/performance/urun/urun-1-90x134-v2.webp";
+                    if (gorsel.src.includes("-90x134-v2.webp")) {
+                        gorsel.srcset = `${gorsel.src} 1x, ${gorsel.src.replace("-90x134-v2.webp", "-180x268-v2.webp")} 2x`;
+                    }
+                    gorsel.alt = `${renk.ad || "Ürün"} renk seçeneği`;
+                    gorsel.width = 90;
+                    gorsel.height = 134;
+                    gorsel.loading = "lazy";
+                    gorsel.decoding = "async";
+                    gorsel.decoding = "async";
+                    baglanti.appendChild(gorsel);
+
+                    if (renk.etiket) {
+                        const etiket = document.createElement("span");
+                        etiket.textContent = renk.etiket;
+                        baglanti.appendChild(etiket);
+                    }
+
+                    parca.appendChild(baglanti);
+                });
+
+                liste.replaceChildren(parca);
+            };
+
+            const ac = (tetikleyici) => {
+                const grup = tetikleyici.dataset.msUrunRenkGrubu || "varsayilan";
+                const renkler = renkVerisi.renkGruplari?.[grup] || [];
+
+                if (renkler.length === 0) {
+                    return;
+                }
+
+                aktifTetikleyici = tetikleyici;
+                renkleriYaz(renkler);
+                if (aciklama) {
+                    const urunId = tetikleyici.closest("[data-ms-urun-id]")?.dataset.msUrunId;
+                    aciklama.textContent = urunId ? `${urunId} için diğer renkler` : "Ürünün diğer renklerini inceleyin.";
+                }
+
+                oncekiBodyOverflow = document.body.style.overflow;
+                modal.inert = false;
+                modal.classList.add("ms-ornek-modal-acik");
+                modal.setAttribute("aria-hidden", "false");
+                tetikleyici.setAttribute("aria-expanded", "true");
+                document.body.style.overflow = "hidden";
+                document.documentElement.classList.add("ms-urun-renk-tooltip-body-kilitli");
+                document.body.classList.add("ms-urun-renk-tooltip-body-kilitli");
+                window.setTimeout(() => modal.querySelector("[data-ms-urun-renk-modal-kapat]")?.focus(), 40);
+            };
+
+            document.addEventListener("click", (event) => {
+                const tetikleyici = event.target.closest("[data-ms-urun-renk-ortak]");
+
+                if (!tetikleyici) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                ac(tetikleyici);
+            });
+
+            kapaticilar.forEach((kapatici) => kapatici.addEventListener("click", kapat));
+            document.addEventListener("keydown", (event) => {
+                if (event.key === "Escape" && modal.classList.contains("ms-ornek-modal-acik")) {
+                    kapat();
+                }
+            });
+        };
+
         const renkTooltipHazirla = (kok) => {
+            ortakRenkModalHazirla();
+            if (document.documentElement.dataset.msUrunRenkEscapeHazir !== "true") {
+                document.documentElement.dataset.msUrunRenkEscapeHazir = "true";
+                document.addEventListener("keydown", (event) => {
+                    if (event.key !== "Escape") {
+                        return;
+                    }
+
+                    const acikKart = document.querySelector(".ms-urun-karti.ms-urun-renk-tooltip-acik");
+                    const rozet = acikKart?.querySelector(".ms-urun-renk-rozet");
+                    acikKart?.classList.remove("ms-urun-renk-tooltip-acik");
+                    rozet?.setAttribute("aria-expanded", "false");
+                    document.documentElement.classList.remove("ms-urun-renk-tooltip-body-kilitli");
+                    document.body.classList.remove("ms-urun-renk-tooltip-body-kilitli");
+                    rozet?.focus();
+                });
+            }
+
             const renkTooltipDurumunuGuncelle = () => {
                 const acikKartVar = Boolean(document.querySelector(".ms-urun-karti.ms-urun-renk-tooltip-acik"));
                 document.documentElement.classList.toggle("ms-urun-renk-tooltip-body-kilitli", acikKartVar);
@@ -3539,6 +4859,7 @@
 
             const renkTooltipKapat = (kart) => {
                 kart?.classList.remove("ms-urun-renk-tooltip-acik");
+                kart?.querySelector(".ms-urun-renk-rozet")?.setAttribute("aria-expanded", "false");
                 renkTooltipDurumunuGuncelle();
             };
 
@@ -3554,6 +4875,7 @@
                 });
 
                 kart.classList.add("ms-urun-renk-tooltip-acik");
+                kart.querySelector(".ms-urun-renk-rozet")?.setAttribute("aria-expanded", "true");
                 renkTooltipDurumunuGuncelle();
             };
 
@@ -3668,6 +4990,12 @@
         document.querySelectorAll("[data-ms-infinite-liste]").forEach((liste) => {
             window.msUrunKartDavranislariYenile(liste);
         });
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => window.msUrunKartDavranislariYenile(document), { once: true });
+        } else {
+            window.msUrunKartDavranislariYenile(document);
+        }
 
         koleksiyonHazirla(document);
     })();
@@ -4019,6 +5347,7 @@
 // ProjeElementleri story liste ve modal oynatma davranislari.
 (() => {
         const storySuresi = 3000;
+        const grupGecisSuresi = 280;
 
         document.querySelectorAll("[data-ms-story]").forEach((storyAlani) => {
             const tetikleyiciler = Array.from(storyAlani.querySelectorAll("[data-ms-story-ac]"));
@@ -4037,11 +5366,17 @@
             const yonButonlari = storyAlani.querySelectorAll("[data-ms-story-yon]");
             const kapatmaButonlari = storyAlani.querySelectorAll("[data-ms-story-kapat]");
             const storyGruplari = storyVeri ? JSON.parse(storyVeri.textContent || "{}") : {};
+            const grupSirasi = tetikleyiciler
+                .map((buton) => buton.dataset.msStoryGrup)
+                .filter((grupAdi, index, liste) => grupAdi && Array.isArray(storyGruplari[grupAdi]) && storyGruplari[grupAdi].length && liste.indexOf(grupAdi) === index);
             let hikayeler = [];
+            let aktifGrupIndex = 0;
             let aktifIndex = 0;
+            let aktifStorySuresi = storySuresi;
             let baslangic = 0;
             let gecenSure = 0;
             let animasyonKaresi = 0;
+            let grupGecisZamanlayici = 0;
             let duraklatildi = false;
             let modalAcik = false;
             let storyBasili = false;
@@ -4050,7 +5385,7 @@
             let storyBasiliZamanlayici = 0;
             const mobilStoryEslesmesi = window.matchMedia("(max-width: 639px)");
 
-            if (!modal || !cerceve || !modalGorsel || !modalVideo || Object.keys(storyGruplari).length === 0) {
+            if (!modal || !cerceve || !modalGorsel || !modalVideo || !grupSirasi.length) {
                 return;
             }
 
@@ -4152,6 +5487,32 @@
                 });
             };
 
+            const hikayeSuresiniOku = (hikaye) => {
+                if (hikaye?.sureMs && Number.isFinite(Number(hikaye.sureMs))) {
+                    return Math.max(1000, Number(hikaye.sureMs));
+                }
+
+                if (hikaye?.sure && Number.isFinite(Number(hikaye.sure))) {
+                    return Math.max(1000, Number(hikaye.sure) * 1000);
+                }
+
+                if (hikaye?.tip === "video" && Number.isFinite(modalVideo.duration) && modalVideo.duration > 0) {
+                    return Math.max(1000, modalVideo.duration * 1000);
+                }
+
+                return storySuresi;
+            };
+
+            const grupGecisiniOynat = () => {
+                window.clearTimeout(grupGecisZamanlayici);
+                cerceve.classList.remove("ms-story-grup-gecis");
+                void cerceve.offsetWidth;
+                cerceve.classList.add("ms-story-grup-gecis");
+                grupGecisZamanlayici = window.setTimeout(() => {
+                    cerceve.classList.remove("ms-story-grup-gecis");
+                }, grupGecisSuresi);
+            };
+
             const ilerlet = (zaman) => {
                 if (!modalAcik || duraklatildi) {
                     return;
@@ -4162,7 +5523,7 @@
                 }
 
                 gecenSure = zaman - baslangic;
-                const oran = Math.min(1, gecenSure / storySuresi);
+                const oran = Math.min(1, gecenSure / aktifStorySuresi);
                 progressleriGuncelle(oran);
 
                 if (oran >= 1) {
@@ -4174,6 +5535,31 @@
             };
 
             const aktifVideoMu = () => !modalVideo.classList.contains("ms-gizli");
+
+            const grupYukle = (grupIndex, storyIndex = 0, animasyonlu = false) => {
+                aktifGrupIndex = (grupIndex + grupSirasi.length) % grupSirasi.length;
+                hikayeler = storyGruplari[grupSirasi[aktifGrupIndex]] || [];
+
+                if (!hikayeler.length) {
+                    return;
+                }
+
+                progressleriOlustur();
+
+                if (animasyonlu) {
+                    grupGecisiniOynat();
+                }
+
+                goster(storyIndex);
+            };
+
+            const grupDegistir = (yon) => {
+                const hedefGrupIndex = aktifGrupIndex + yon;
+                const hedefGrupAdi = grupSirasi[(hedefGrupIndex + grupSirasi.length) % grupSirasi.length];
+                const hedefHikayeler = storyGruplari[hedefGrupAdi] || [];
+                const hedefStoryIndex = yon > 0 ? 0 : Math.max(0, hedefHikayeler.length - 1);
+                grupYukle(hedefGrupIndex, hedefStoryIndex, true);
+            };
 
             const otomatikBaslat = () => {
                 window.cancelAnimationFrame(animasyonKaresi);
@@ -4191,19 +5577,42 @@
             };
 
             const goster = (index) => {
-                aktifIndex = (index + hikayeler.length) % hikayeler.length;
+                if (index >= hikayeler.length) {
+                    grupDegistir(1);
+                    return;
+                }
+
+                if (index < 0) {
+                    grupDegistir(-1);
+                    return;
+                }
+
+                aktifIndex = index;
                 const hikaye = hikayeler[aktifIndex];
                 const videoMu = hikaye.tip === "video";
 
+                aktifStorySuresi = hikayeSuresiniOku(hikaye);
                 modalGorsel.classList.toggle("ms-gizli", videoMu);
                 modalVideo.classList.toggle("ms-gizli", !videoMu);
                 modalVideo.pause();
+                modalVideo.onloadedmetadata = null;
 
                 if (videoMu) {
                     modalVideo.src = hikaye.url;
                     modalVideo.setAttribute("aria-label", `${hikaye.baslik} story videosu`);
                     modalGorsel.removeAttribute("src");
                     modalGorsel.alt = "";
+                    modalVideo.onloadedmetadata = () => {
+                        aktifStorySuresi = hikayeSuresiniOku(hikaye);
+                        baslangic = 0;
+                        gecenSure = 0;
+                        progressleriGuncelle(0);
+
+                        if (!duraklatildi && modalAcik) {
+                            window.cancelAnimationFrame(animasyonKaresi);
+                            animasyonKaresi = window.requestAnimationFrame(ilerlet);
+                        }
+                    };
                 } else {
                     modalGorsel.src = hikaye.url;
                     modalGorsel.alt = `${hikaye.baslik} story görseli`;
@@ -4221,9 +5630,9 @@
             };
 
             const ac = (grupAdi) => {
-                hikayeler = storyGruplari[grupAdi] || [];
+                const grupIndex = grupSirasi.indexOf(grupAdi);
 
-                if (!hikayeler.length) {
+                if (grupIndex < 0) {
                     return;
                 }
 
@@ -4231,8 +5640,7 @@
                 modal.classList.remove("ms-gizli");
                 modal.setAttribute("aria-hidden", "false");
                 document.body.classList.add("ms-story-modal-acik");
-                progressleriOlustur();
-                goster(0);
+                grupYukle(grupIndex, 0, false);
             };
 
             const kapat = () => {
@@ -4241,6 +5649,16 @@
                 modal.classList.add("ms-gizli");
                 modal.setAttribute("aria-hidden", "true");
                 modalVideo.pause();
+                modalVideo.removeAttribute("src");
+                modalVideo.load();
+                modalGorsel.removeAttribute("src");
+                modalGorsel.alt = "";
+                window.clearTimeout(grupGecisZamanlayici);
+                cerceve.classList.remove("ms-story-grup-gecis");
+                avatar?.removeAttribute("src");
+                if (avatar) {
+                    avatar.alt = "";
+                }
                 document.body.classList.remove("ms-story-modal-acik");
             };
 
@@ -4369,6 +5787,11 @@
                 }
             });
             ortaOynat.addEventListener("click", oynat);
+            modalVideo.addEventListener("ended", () => {
+                if (modalAcik && aktifVideoMu()) {
+                    goster(aktifIndex + 1);
+                }
+            });
 
             document.addEventListener("keydown", (event) => {
                 if (!modalAcik) {
@@ -4388,3 +5811,2038 @@
             });
         });
     })();
+
+// Ana navigasyon ortak davranislari (Razor disina tasindi).
+// Desktop navigasyonda aşağı kaydırırken yalnızca üst barı sabit bırakır, yukarı kaydırmada tüm alanı geri getirir.
+(() => {
+    const wrapperlar = document.querySelectorAll(".ms-ana-navigasyon-wrapper");
+
+    if (wrapperlar.length === 0) {
+        return;
+    }
+
+    const desktopMedya = window.matchMedia("(min-width: 1024px)");
+    const kompaktBaslamaMesafesi = 120;
+    const geriAcmaMesafesi = 32;
+    const classDegisimBekleme = 240;
+    let sonScrollY = window.scrollY || window.pageYOffset || 0;
+    let guncellemePlanlandi = false;
+    let sonClassDegisimZamani = 0;
+    let asagiMesafe = 0;
+    let yukariMesafe = 0;
+
+    const zamanDamgasiAl = () => (window.performance?.now ? window.performance.now() : Date.now());
+
+    const navigasyonYuksekliginiYaz = () => {
+        const yukseklik = Math.ceil(Math.max(...Array.from(wrapperlar).map((wrapper) => wrapper.getBoundingClientRect().height), 0));
+        document.documentElement.style.setProperty("--ms-ana-navigasyon-aktif-yukseklik", `${yukseklik}px`);
+    };
+
+    const panelAcikMi = (wrapper) => wrapper.querySelector(
+        ".ms-ana-navigasyon-arama-panel-acik, .ms-ana-navigasyon-sepet-acik, .ms-ana-navigasyon-giris-acik"
+    );
+
+    const kompaktDurumuAyarla = (kompakt) => {
+        let degisti = false;
+
+        wrapperlar.forEach((wrapper) => {
+            const uygulanacak = kompakt && !panelAcikMi(wrapper);
+            if (wrapper.classList.contains("ms-ana-navigasyon-kompakt") !== uygulanacak) {
+                degisti = true;
+            }
+
+            wrapper.classList.toggle("ms-ana-navigasyon-kompakt", uygulanacak);
+        });
+
+        if (degisti) {
+            sonClassDegisimZamani = zamanDamgasiAl();
+            window.requestAnimationFrame(navigasyonYuksekliginiYaz);
+        }
+    };
+
+    const navigasyonuGuncelle = () => {
+        guncellemePlanlandi = false;
+
+        if (!desktopMedya.matches) {
+            kompaktDurumuAyarla(false);
+            asagiMesafe = 0;
+            yukariMesafe = 0;
+            sonScrollY = window.scrollY || window.pageYOffset || 0;
+            return;
+        }
+
+        const simdikiScrollY = Math.max(0, window.scrollY || window.pageYOffset || 0);
+        const fark = simdikiScrollY - sonScrollY;
+        const simdi = zamanDamgasiAl();
+
+        if (simdikiScrollY < 24) {
+            kompaktDurumuAyarla(false);
+            asagiMesafe = 0;
+            yukariMesafe = 0;
+            sonScrollY = simdikiScrollY;
+            return;
+        }
+
+        if (simdi - sonClassDegisimZamani < classDegisimBekleme) {
+            sonScrollY = simdikiScrollY;
+            return;
+        }
+
+        if (fark > 0) {
+            const kompaktMi = Array.from(wrapperlar).some((wrapper) => wrapper.classList.contains("ms-ana-navigasyon-kompakt"));
+            asagiMesafe += fark;
+            yukariMesafe = 0;
+
+            if (kompaktMi || asagiMesafe >= kompaktBaslamaMesafesi) {
+                kompaktDurumuAyarla(true);
+                asagiMesafe = 0;
+            }
+        } else if (fark < 0) {
+            yukariMesafe += Math.abs(fark);
+            asagiMesafe = 0;
+
+            if (yukariMesafe >= geriAcmaMesafesi) {
+                kompaktDurumuAyarla(false);
+                yukariMesafe = 0;
+            }
+        }
+
+        sonScrollY = simdikiScrollY;
+    };
+
+    const navigasyonuPlanla = () => {
+        if (guncellemePlanlandi) {
+            return;
+        }
+
+        guncellemePlanlandi = true;
+        window.requestAnimationFrame(navigasyonuGuncelle);
+    };
+
+    window.addEventListener("scroll", navigasyonuPlanla, { passive: true });
+    window.addEventListener("resize", () => {
+        navigasyonYuksekliginiYaz();
+        navigasyonuPlanla();
+    });
+    desktopMedya.addEventListener?.("change", () => {
+        navigasyonYuksekliginiYaz();
+        navigasyonuPlanla();
+    });
+    navigasyonYuksekliginiYaz();
+    navigasyonuGuncelle();
+})();
+
+// Mobil kategori menüsü aç/kapat, üst sekme ve sol kategori davranışları.
+(() => {
+    const panel = document.querySelector("[data-ms-mobil-menu]");
+    const acButonu = document.querySelector("[data-ms-mobil-menu-ac]");
+
+    if (!panel || !acButonu) {
+        return;
+    }
+
+    const mobilMenuBaslat = () => {
+        const sablon = panel.querySelector("[data-ms-mobil-menu-sablon]");
+
+        if (sablon instanceof HTMLTemplateElement) {
+            panel.appendChild(sablon.content.cloneNode(true));
+            sablon.remove();
+        }
+
+    const mobilMenuKaydirmaAlani = document.querySelector("[data-ms-mobil-menu-kaydirma-alani]");
+    const mobilAramaAlani = document.querySelector(".ms-ana-navigasyon-arama");
+    const mobilAramaUstAlani = mobilAramaAlani?.closest(".ms-ana-navigasyon-ust");
+    const anaSayfaYollari = ["/", "/home", "/home/index"];
+    const anaSayfaMobilNavigasyonAktif = Boolean(document.querySelector(".ms-ana-sayfa"))
+        || anaSayfaYollari.includes(window.location.pathname.toLowerCase());
+    const kapatButonlari = panel.querySelectorAll("[data-ms-mobil-menu-kapat]");
+    const anaSekmeler = panel.querySelectorAll("[data-ms-mobil-ana-sekme]");
+    const yanSekmeler = panel.querySelectorAll("[data-ms-mobil-yan-sekme]");
+    const yanGruplar = panel.querySelectorAll("[data-ms-mobil-yan-grup]");
+    const paneller = panel.querySelectorAll("[data-ms-mobil-panel]");
+    const kampanyaAlani = panel.querySelector(".ms-ana-navigasyon-mobil-kampanya");
+    const kampanyaAcButonu = panel.querySelector("[data-ms-mobil-kampanya-ac]");
+    const kampanyaListesi = panel.querySelector("[data-ms-mobil-kampanya-listesi]");
+    const kampanyaKontrolleri = panel.querySelectorAll("[data-ms-mobil-kampanya-kaydir]");
+    let sonOdaklananEleman = null;
+
+    const yanSekmeAc = (hedef) => {
+        yanSekmeler.forEach((sekme) => {
+            const aktif = sekme.dataset.msMobilYanSekme === hedef;
+            sekme.classList.toggle("ms-ana-navigasyon-mobil-yan-sekme-aktif", aktif);
+            sekme.setAttribute("aria-pressed", aktif ? "true" : "false");
+        });
+
+        paneller.forEach((mobilPanel) => {
+            mobilPanel.hidden = mobilPanel.dataset.msMobilPanel !== hedef;
+        });
+    };
+
+    const anaSekmeAc = (hedef) => {
+        anaSekmeler.forEach((sekme) => {
+            const aktif = sekme.dataset.msMobilAnaSekme === hedef;
+            sekme.classList.toggle("ms-ana-navigasyon-mobil-ana-sekme-aktif", aktif);
+            sekme.setAttribute("aria-pressed", aktif ? "true" : "false");
+        });
+
+        yanGruplar.forEach((grup) => {
+            grup.hidden = grup.dataset.msMobilYanGrup !== hedef;
+        });
+
+        const ilkYanSekme = panel.querySelector(`[data-ms-mobil-yan-grup="${hedef}"] [data-ms-mobil-yan-sekme]`);
+        if (ilkYanSekme) {
+            yanSekmeAc(ilkYanSekme.dataset.msMobilYanSekme);
+        }
+    };
+
+    const panelAc = () => {
+        sonOdaklananEleman = document.activeElement;
+        panel.inert = false;
+        panel.classList.add("ms-ana-navigasyon-mobil-panel-acik");
+        panel.setAttribute("aria-hidden", "false");
+        acButonu.setAttribute("aria-expanded", "true");
+        document.body.style.overflow = "hidden";
+        window.setTimeout(() => panel.querySelector("[data-ms-mobil-menu-kapat]")?.focus(), 40);
+    };
+
+    const panelKapat = () => {
+        panel.classList.remove("ms-ana-navigasyon-mobil-panel-acik");
+        panel.setAttribute("aria-hidden", "true");
+        panel.inert = true;
+        acButonu.setAttribute("aria-expanded", "false");
+        kampanyaKapat();
+        document.body.style.overflow = "";
+        sonOdaklananEleman?.focus?.();
+    };
+
+    acButonu.addEventListener("click", panelAc);
+    kapatButonlari.forEach((buton) => buton.addEventListener("click", panelKapat));
+    anaSekmeler.forEach((sekme) => sekme.addEventListener("click", () => anaSekmeAc(sekme.dataset.msMobilAnaSekme)));
+    yanSekmeler.forEach((sekme) => sekme.addEventListener("click", () => yanSekmeAc(sekme.dataset.msMobilYanSekme)));
+
+    const kampanyaKapat = () => {
+        kampanyaAlani?.classList.remove("ms-ana-navigasyon-mobil-kampanya-acik");
+        kampanyaAcButonu?.setAttribute("aria-expanded", "false");
+    };
+
+    const kampanyaToggle = () => {
+        if (!kampanyaAlani || !kampanyaAcButonu) {
+            return;
+        }
+
+        const acik = kampanyaAlani.classList.toggle("ms-ana-navigasyon-mobil-kampanya-acik");
+        kampanyaAcButonu.setAttribute("aria-expanded", acik ? "true" : "false");
+
+        if (acik) {
+            requestAnimationFrame(kampanyaKaydirmaDurumuGuncelle);
+        }
+    };
+
+    kampanyaAcButonu?.addEventListener("click", (event) => {
+        event.stopPropagation();
+        kampanyaToggle();
+    });
+
+    const kampanyaKaydirmaDurumuGuncelle = () => {
+        if (!kampanyaListesi || kampanyaKontrolleri.length === 0) {
+            return;
+        }
+
+        const kaydirilabilir = kampanyaListesi.scrollWidth > kampanyaListesi.clientWidth + 1;
+        const enSolda = kampanyaListesi.scrollLeft <= 1;
+        const enSagda = kampanyaListesi.scrollLeft + kampanyaListesi.clientWidth >= kampanyaListesi.scrollWidth - 1;
+
+        kampanyaListesi.classList.toggle("ms-magaza-mega-kampanya-listesi-kaydirilabilir", kaydirilabilir);
+        kampanyaKontrolleri.forEach((kontrol) => {
+            const solKontrol = kontrol.dataset.msMobilKampanyaKaydir === "sol";
+            kontrol.classList.toggle("ms-magaza-mega-kampanya-kontrol-aktif", kaydirilabilir);
+            kontrol.disabled = !kaydirilabilir || (solKontrol && enSolda) || (!solKontrol && enSagda);
+        });
+    };
+
+    kampanyaKontrolleri.forEach((kontrol) => {
+        kontrol.addEventListener("click", () => {
+            if (!kampanyaListesi) {
+                return;
+            }
+
+            const yon = kontrol.dataset.msMobilKampanyaKaydir === "sol" ? -1 : 1;
+            kampanyaListesi.scrollTo({
+                left: kampanyaListesi.scrollLeft + (kampanyaListesi.clientWidth * 0.72 * yon),
+                behavior: "smooth"
+            });
+        });
+    });
+
+    if (kampanyaListesi) {
+        let surukleniyor = false;
+        let baslangicX = 0;
+        let baslangicScroll = 0;
+        let tiklamayiEngelle = false;
+
+        kampanyaListesi.addEventListener("dragstart", (event) => event.preventDefault());
+        kampanyaListesi.addEventListener("pointerdown", (event) => {
+            if (event.button !== 0) {
+                return;
+            }
+
+            surukleniyor = true;
+            baslangicX = event.clientX;
+            baslangicScroll = kampanyaListesi.scrollLeft;
+            tiklamayiEngelle = false;
+            kampanyaListesi.classList.add("ms-magaza-mega-kampanya-listesi-surukleniyor");
+            kampanyaListesi.setPointerCapture?.(event.pointerId);
+        });
+
+        kampanyaListesi.addEventListener("pointermove", (event) => {
+            if (!surukleniyor) {
+                return;
+            }
+
+            const fark = event.clientX - baslangicX;
+            if (Math.abs(fark) > 5) {
+                tiklamayiEngelle = true;
+            }
+
+            kampanyaListesi.scrollLeft = baslangicScroll - fark;
+            kampanyaKaydirmaDurumuGuncelle();
+        });
+
+        const suruklemeyiBitir = (event) => {
+            if (!surukleniyor) {
+                return;
+            }
+
+            surukleniyor = false;
+            kampanyaListesi.classList.remove("ms-magaza-mega-kampanya-listesi-surukleniyor");
+
+            if (kampanyaListesi.hasPointerCapture?.(event.pointerId)) {
+                kampanyaListesi.releasePointerCapture(event.pointerId);
+            }
+        };
+
+        kampanyaListesi.addEventListener("pointerup", suruklemeyiBitir);
+        kampanyaListesi.addEventListener("pointercancel", suruklemeyiBitir);
+        kampanyaListesi.addEventListener("scroll", kampanyaKaydirmaDurumuGuncelle, { passive: true });
+        kampanyaListesi.addEventListener("click", (event) => {
+            if (!tiklamayiEngelle) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            tiklamayiEngelle = false;
+        }, true);
+        window.addEventListener("resize", kampanyaKaydirmaDurumuGuncelle);
+        requestAnimationFrame(kampanyaKaydirmaDurumuGuncelle);
+    }
+
+    if (mobilMenuKaydirmaAlani || mobilAramaAlani) {
+        let sonKaydirmaYonu = 0;
+        let sonKaydirmaZamani = 0;
+        let dokunmaBaslangicY = 0;
+        let mobilMenuGizli = false;
+        let mobilAramaGizli = false;
+        let guncellemePlanlandi = false;
+
+        const mobilNavigasyonMu = () => window.matchMedia("(max-width: 1023px)").matches;
+        const zamanDamgasiAl = () => (window.performance?.now ? window.performance.now() : Date.now());
+
+        const mobilMenuGorunumunuAyarla = (gizli) => {
+            if (!mobilNavigasyonMu() || !anaSayfaMobilNavigasyonAktif || !mobilMenuKaydirmaAlani) {
+                mobilMenuKaydirmaAlani?.classList.remove("ms-magaza-mobil-menu-kaydirma-gizli");
+                mobilMenuGizli = false;
+                return;
+            }
+
+            if (mobilMenuGizli === gizli) {
+                return;
+            }
+
+            mobilMenuGizli = gizli;
+            mobilMenuKaydirmaAlani.classList.toggle("ms-magaza-mobil-menu-kaydirma-gizli", gizli);
+        };
+
+        const mobilAramaGorunumunuAyarla = (gizli) => {
+            gizli = false;
+
+            if (!mobilNavigasyonMu() || !mobilAramaAlani || mobilAramaAlani.classList.contains("ms-ana-navigasyon-arama-acik")) {
+                mobilAramaAlani?.classList.remove("ms-ana-navigasyon-arama-gizli");
+                mobilAramaUstAlani?.classList.remove("ms-ana-navigasyon-ust-arama-gizli");
+                mobilAramaGizli = false;
+                return;
+            }
+
+            if (mobilAramaGizli === gizli) {
+                return;
+            }
+
+            mobilAramaGizli = gizli;
+            mobilAramaAlani.classList.toggle("ms-ana-navigasyon-arama-gizli", gizli);
+            mobilAramaUstAlani?.classList.toggle("ms-ana-navigasyon-ust-arama-gizli", gizli);
+        };
+
+        const mobilNavigasyonuGuncelle = () => {
+            guncellemePlanlandi = false;
+
+            if (!mobilNavigasyonMu() || document.body.classList.contains("ms-modal-acik")) {
+                mobilMenuGorunumunuAyarla(false);
+                mobilAramaGorunumunuAyarla(false);
+                return;
+            }
+
+            const kullaniciKaydirdi = sonKaydirmaYonu !== 0
+                && zamanDamgasiAl() - sonKaydirmaZamani < 600;
+
+            if (!kullaniciKaydirdi) {
+                return;
+            }
+
+            if (sonKaydirmaYonu > 0 && window.scrollY > 24) {
+                mobilMenuGorunumunuAyarla(true);
+                mobilAramaGorunumunuAyarla(true);
+            } else if (sonKaydirmaYonu < 0 || window.scrollY < 8) {
+                mobilMenuGorunumunuAyarla(false);
+                mobilAramaGorunumunuAyarla(false);
+            }
+        };
+
+        const mobilNavigasyonuPlanla = () => {
+            if (guncellemePlanlandi) {
+                return;
+            }
+
+            guncellemePlanlandi = true;
+            requestAnimationFrame(mobilNavigasyonuGuncelle);
+        };
+
+        const kaydirmaYonunuIsaretle = (yon) => {
+            if (yon === 0) {
+                return;
+            }
+
+            sonKaydirmaYonu = yon;
+            sonKaydirmaZamani = zamanDamgasiAl();
+            mobilNavigasyonuPlanla();
+        };
+
+        window.addEventListener("scroll", mobilNavigasyonuPlanla, { passive: true });
+        window.addEventListener("wheel", (event) => {
+            if (Math.abs(event.deltaY) < 4) {
+                return;
+            }
+
+            kaydirmaYonunuIsaretle(Math.sign(event.deltaY));
+        }, { passive: true });
+        window.addEventListener("touchstart", (event) => {
+            dokunmaBaslangicY = event.touches[0]?.clientY || 0;
+        }, { passive: true });
+        window.addEventListener("touchmove", (event) => {
+            const guncelDokunmaY = event.touches[0]?.clientY || 0;
+            const dokunmaFarki = dokunmaBaslangicY - guncelDokunmaY;
+
+            if (Math.abs(dokunmaFarki) < 8) {
+                return;
+            }
+
+            kaydirmaYonunuIsaretle(Math.sign(dokunmaFarki));
+            dokunmaBaslangicY = guncelDokunmaY;
+        }, { passive: true });
+        window.addEventListener("resize", () => {
+            mobilMenuGorunumunuAyarla(false);
+            mobilAramaGorunumunuAyarla(false);
+        });
+        window.addEventListener("pageshow", () => {
+            mobilMenuGorunumunuAyarla(false);
+            mobilAramaGorunumunuAyarla(false);
+        });
+    }
+
+    panel.addEventListener("click", (event) => {
+        if (event.target === panel) {
+            panelKapat();
+        }
+    });
+
+    document.addEventListener("pointerdown", (event) => {
+        if (!kampanyaAlani?.classList.contains("ms-ana-navigasyon-mobil-kampanya-acik")) {
+            return;
+        }
+
+        if (kampanyaAlani.contains(event.target) || kampanyaAcButonu?.contains(event.target)) {
+            return;
+        }
+
+        kampanyaKapat();
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && panel.classList.contains("ms-ana-navigasyon-mobil-panel-acik")) {
+            if (kampanyaAlani?.classList.contains("ms-ana-navigasyon-mobil-kampanya-acik")) {
+                kampanyaKapat();
+                return;
+            }
+
+            panelKapat();
+        }
+    });
+
+    panelAc();
+    };
+
+    acButonu.addEventListener("click", mobilMenuBaslat, { once: true });
+})();
+
+// Ana navigasyon arama paneli, görsel arama sonuçları ve ürün kaydırma davranışları.
+(() => {
+    const aramaAlanlari = document.querySelectorAll("[data-ms-arama]");
+
+    aramaAlanlari.forEach((aramaAlani) => {
+        const input = aramaAlani.querySelector("[data-ms-arama-input]");
+        const panel = aramaAlani.querySelector("[data-ms-arama-panel]");
+        const kapat = aramaAlani.querySelector("[data-ms-arama-kapat]");
+        const panelInput = aramaAlani.querySelector("[data-ms-arama-panel-input]");
+        const populerAramalar = aramaAlani.querySelector("[data-ms-populer-aramalar]");
+        const populerUrunler = aramaAlani.querySelector("[data-ms-populer-urunler]");
+        const aramaSonuc = aramaAlani.querySelector("[data-ms-arama-sonuc]");
+        const aramaSonucSayisi = aramaAlani.querySelector("[data-ms-arama-sonuc-sayisi]");
+        const aramaSonucGruplari = aramaAlani.querySelector("[data-ms-arama-sonuc-gruplari]");
+        const aramaSonucSablon = aramaAlani.querySelector("[data-ms-arama-sonuc-sablon]");
+        const kategorideAraButonlari = aramaAlani.querySelectorAll("[data-ms-kategoride-ara]");
+        const temizleButonlari = aramaAlani.querySelectorAll("[data-ms-arama-temizle]");
+        const kameraButonlari = aramaAlani.querySelectorAll(".ms-ana-navigasyon-arama-kamera, .ms-ana-navigasyon-arama-panel-kamera");
+
+        if (!input || !panel) {
+            return;
+        }
+
+        const anaSayfaMi = window.location.pathname === "/" || window.location.pathname.toLowerCase() === "/home/index";
+        const kategorideAraGosterilebilir = !anaSayfaMi;
+        const varsayilanAramaSonucHtml = aramaSonucSablon instanceof HTMLTemplateElement
+            ? aramaSonucSablon.innerHTML
+            : aramaSonucGruplari?.innerHTML || "";
+        const varsayilanAramaSonucSayisi = aramaSonucSayisi?.textContent || "15 ürün";
+        let gorselAramaSonucuAktif = false;
+
+        const varsayilanAramaSonuclariniHazirla = () => {
+            if (aramaSonucGruplari && aramaSonucGruplari.childElementCount === 0) {
+                aramaSonucGruplari.innerHTML = varsayilanAramaSonucHtml;
+            }
+        };
+
+        [input, panelInput].filter(Boolean).forEach((aramaInput) => {
+            const yazilabilirYap = () => {
+                if (aramaInput === input && window.matchMedia("(max-width: 1023px)").matches) {
+                    return;
+                }
+
+                aramaInput.removeAttribute("readonly");
+            };
+
+            aramaInput.addEventListener("pointerdown", yazilabilirYap, { capture: true });
+            aramaInput.addEventListener("touchstart", yazilabilirYap, { capture: true, passive: true });
+            aramaInput.addEventListener("focus", yazilabilirYap);
+        });
+
+        const varsayilanAramaSonuclariniYukle = () => {
+            if (!gorselAramaSonucuAktif) {
+                return;
+            }
+
+            if (aramaSonucGruplari) {
+                aramaSonucGruplari.innerHTML = varsayilanAramaSonucHtml;
+            }
+
+            if (aramaSonucSayisi) {
+                aramaSonucSayisi.textContent = varsayilanAramaSonucSayisi;
+            }
+
+            gorselAramaSonucuAktif = false;
+        };
+
+        const aramaDurumunuGuncelle = (ayarlar = {}) => {
+            if (!ayarlar.gorselAramaSonucunuKoru) {
+                varsayilanAramaSonuclariniYukle();
+            }
+
+            const aramaMetni = (panelInput?.value || input.value || "").trim();
+            const sonucVar = aramaMetni.length > 0;
+
+            if (sonucVar && !gorselAramaSonucuAktif) {
+                varsayilanAramaSonuclariniHazirla();
+            }
+
+            aramaAlani.classList.toggle("ms-ana-navigasyon-arama-sonuclu", sonucVar);
+            aramaAlani.classList.toggle("ms-ana-navigasyon-arama-yazili", sonucVar);
+
+            temizleButonlari.forEach((temizleButonu) => {
+                temizleButonu.hidden = !sonucVar;
+            });
+
+            if (populerAramalar) {
+                populerAramalar.hidden = sonucVar;
+            }
+
+            if (aramaSonuc) {
+                aramaSonuc.hidden = !sonucVar;
+            }
+
+            if (populerUrunler) {
+                populerUrunler.hidden = sonucVar;
+            }
+
+            kategorideAraButonlari.forEach((kategorideAra) => {
+                kategorideAra.hidden = !sonucVar || !kategorideAraGosterilebilir;
+
+                if (!sonucVar || !kategorideAraGosterilebilir) {
+                    kategorideAra.classList.remove("ms-ana-navigasyon-kategoride-ara-aktif");
+                    kategorideAra.setAttribute("aria-pressed", "false");
+                }
+            });
+        };
+
+        const paneliAc = (ayarlar = {}) => {
+            panel.classList.add("ms-ana-navigasyon-arama-panel-acik");
+            aramaAlani.classList.add("ms-ana-navigasyon-arama-acik");
+            if (panelInput) {
+                panelInput.removeAttribute("readonly");
+                panelInput.value = input.value;
+            }
+
+            aramaDurumunuGuncelle(ayarlar);
+
+            if (panelInput && window.matchMedia("(max-width: 1023px)").matches) {
+                window.setTimeout(() => panelInput.focus(), 40);
+            }
+        };
+
+        input.addEventListener("pointerdown", (event) => {
+            if (!window.matchMedia("(max-width: 1023px)").matches) {
+                return;
+            }
+
+            event.preventDefault();
+            paneliAc();
+        });
+
+        const paneliKapat = () => {
+            panel.classList.remove("ms-ana-navigasyon-arama-panel-acik");
+            aramaAlani.classList.remove("ms-ana-navigasyon-arama-acik");
+        };
+
+        const gorselAramaKartiOlustur = (sonuc, index) => {
+            const kart = document.createElement("a");
+            kart.className = "ms-search-urun-karti";
+            kart.href = sonuc.productUrl || "/urun-detay";
+            kart.setAttribute("aria-label", sonuc.productName || "Görsel arama ürün kartı");
+
+            const gorselAlani = document.createElement("span");
+            gorselAlani.className = "ms-search-urun-gorsel-alani";
+
+            const gorsel = document.createElement("img");
+            gorsel.className = "ms-search-urun-gorsel";
+            gorsel.src = sonuc.imageUrl;
+            gorsel.alt = sonuc.productName || `Görsel arama sonucu ${index + 1}`;
+
+            const icerik = document.createElement("span");
+            icerik.className = "ms-search-urun-icerik";
+
+            const baslik = document.createElement("span");
+            baslik.className = "ms-search-urun-baslik";
+
+            const marka = document.createElement("strong");
+            marka.textContent = "Misharix";
+            baslik.append(marka, ` ${sonuc.productName || "Ürün"}`);
+
+            const meta = document.createElement("span");
+            meta.className = "ms-search-urun-meta";
+            meta.textContent = sonuc.modelCode || "Model kodu yok";
+
+            const fiyat = document.createElement("span");
+            fiyat.className = "ms-search-urun-fiyat ms-urun-fiyat";
+            fiyat.textContent = typeof sonuc.price === "number"
+                ? new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(sonuc.price) + " TL"
+                : "Fiyat bilgisi yok";
+
+            icerik.append(baslik, meta, fiyat);
+
+            gorselAlani.appendChild(gorsel);
+            kart.append(gorselAlani, icerik);
+
+            return kart;
+        };
+
+        const gorselAramaSonuclariniGoster = (sonuclar) => {
+            if (!aramaSonuc || !aramaSonucGruplari) {
+                return;
+            }
+
+            const resimliSonuclar = (sonuclar || []).filter((sonuc) => Boolean(sonuc.imageUrl));
+            const sonucMetni = `${resimliSonuclar.length} ürün`;
+
+            input.value = "Görsel arama";
+
+            if (panelInput) {
+                panelInput.value = "Görsel arama";
+            }
+
+            if (aramaSonucSayisi) {
+                aramaSonucSayisi.textContent = sonucMetni;
+            }
+
+            aramaSonucGruplari.innerHTML = "";
+
+            const grup = document.createElement("section");
+            grup.className = "ms-ana-navigasyon-arama-sonuc-grubu";
+
+            const label = document.createElement("div");
+            label.className = "ms-ana-navigasyon-arama-kategori-label";
+            label.innerHTML = `<span>Görsel Arama</span><small>${sonucMetni}</small>`;
+
+            const liste = document.createElement("div");
+            liste.className = "ms-ana-navigasyon-arama-sonuc-listesi";
+
+            if (resimliSonuclar.length === 0) {
+                const bos = document.createElement("p");
+                bos.className = "ms-gorsel-arama-bos-sonuc";
+                bos.textContent = "Görsel arama için eşleşen ürün bulunamadı.";
+                liste.appendChild(bos);
+            } else {
+                resimliSonuclar.forEach((sonuc, index) => {
+                    liste.appendChild(gorselAramaKartiOlustur(sonuc, index));
+                });
+            }
+
+            grup.append(label, liste);
+            aramaSonucGruplari.appendChild(grup);
+            gorselAramaSonucuAktif = true;
+
+            aramaAlani.classList.add("ms-ana-navigasyon-arama-sonuclu");
+            aramaSonuc.hidden = false;
+
+            if (populerAramalar) {
+                populerAramalar.hidden = true;
+            }
+
+            if (populerUrunler) {
+                populerUrunler.hidden = true;
+            }
+
+            kategorideAraButonlari.forEach((kategorideAra) => {
+                kategorideAra.hidden = !kategorideAraGosterilebilir;
+            });
+
+            paneliAc({ gorselAramaSonucunuKoru: true });
+        };
+
+        input.addEventListener("focus", paneliAc);
+        input.addEventListener("click", paneliAc);
+        input.addEventListener("input", () => {
+            if (panelInput) {
+                panelInput.value = input.value;
+            }
+
+            varsayilanAramaSonuclariniYukle();
+            aramaDurumunuGuncelle();
+        });
+        panelInput?.addEventListener("input", () => {
+            input.value = panelInput.value;
+            varsayilanAramaSonuclariniYukle();
+            aramaDurumunuGuncelle();
+        });
+
+        temizleButonlari.forEach((temizleButonu) => {
+            temizleButonu.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                input.value = "";
+
+                if (panelInput) {
+                    panelInput.value = "";
+                }
+
+                varsayilanAramaSonuclariniYukle();
+                aramaDurumunuGuncelle();
+                (panel.classList.contains("ms-ana-navigasyon-arama-panel-acik") ? panelInput : input)?.focus();
+            });
+        });
+
+        kapat?.addEventListener("click", () => {
+            paneliKapat();
+            input.blur();
+        });
+
+        kameraButonlari.forEach((buton) => {
+            buton.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                paneliKapat();
+                document.dispatchEvent(new CustomEvent("ms:gorsel-arama-ac"));
+            });
+        });
+
+        document.addEventListener("ms:gorsel-arama-sonuc", (event) => {
+            gorselAramaSonuclariniGoster(event.detail?.results || []);
+        });
+
+        kategorideAraButonlari.forEach((kategorideAra) => {
+            kategorideAra.addEventListener("click", () => {
+                const aktif = !kategorideAra.classList.contains("ms-ana-navigasyon-kategoride-ara-aktif");
+
+                kategorideAraButonlari.forEach((buton) => {
+                    buton.classList.toggle("ms-ana-navigasyon-kategoride-ara-aktif", aktif);
+                    buton.setAttribute("aria-pressed", aktif ? "true" : "false");
+                });
+            });
+        });
+
+        document.addEventListener("pointerdown", (event) => {
+            if (!aramaAlani.contains(event.target)) {
+                paneliKapat();
+            }
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                paneliKapat();
+                input.blur();
+            }
+        });
+
+        aramaAlani.querySelectorAll("[data-ms-arama-urun-listesi]").forEach((liste) => {
+            const kaydirmaAlani = liste.closest(".ms-ana-navigasyon-urun-kaydirma-alani");
+            const kontroller = kaydirmaAlani?.querySelectorAll("[data-ms-arama-urun-kaydir]") || [];
+            let surukleniyor = false;
+            let baslangicX = 0;
+            let baslangicScroll = 0;
+            let tiklamaEngellenecek = false;
+
+            const kaydirmaDurumuGuncelle = () => {
+                if (kontroller.length === 0) {
+                    return;
+                }
+
+                const kaydirilabilir = liste.scrollWidth > liste.clientWidth + 1;
+                const enSolda = liste.scrollLeft <= 1;
+                const enSagda = liste.scrollLeft + liste.clientWidth >= liste.scrollWidth - 1;
+
+                kontroller.forEach((kontrol) => {
+                    kontrol.classList.toggle("ms-ana-navigasyon-urun-kontrol-aktif", kaydirilabilir);
+                    kontrol.disabled = !kaydirilabilir
+                        || (kontrol.dataset.msAramaUrunKaydir === "sol" && enSolda)
+                        || (kontrol.dataset.msAramaUrunKaydir === "sag" && enSagda);
+                });
+            };
+
+            kontroller.forEach((kontrol) => {
+                kontrol.addEventListener("click", () => {
+                    const yon = kontrol.dataset.msAramaUrunKaydir === "sol" ? -1 : 1;
+                    liste.scrollTo({
+                        left: liste.scrollLeft + (liste.clientWidth * 0.8 * yon),
+                        behavior: "smooth"
+                    });
+                });
+            });
+
+            liste.addEventListener("dragstart", (event) => event.preventDefault());
+
+            liste.addEventListener("pointerdown", (event) => {
+                if (event.button !== 0) {
+                    return;
+                }
+
+                surukleniyor = true;
+                baslangicX = event.clientX;
+                baslangicScroll = liste.scrollLeft;
+                tiklamaEngellenecek = false;
+                liste.classList.add("ms-ana-navigasyon-urun-listesi-surukleniyor");
+                liste.setPointerCapture(event.pointerId);
+            });
+
+            liste.addEventListener("pointermove", (event) => {
+                if (!surukleniyor) {
+                    return;
+                }
+
+                const fark = event.clientX - baslangicX;
+
+                if (Math.abs(fark) > 5) {
+                    tiklamaEngellenecek = true;
+                }
+
+                liste.scrollLeft = baslangicScroll - fark;
+            });
+
+            const suruklemeyiBitir = (event) => {
+                if (!surukleniyor) {
+                    return;
+                }
+
+                surukleniyor = false;
+                liste.classList.remove("ms-ana-navigasyon-urun-listesi-surukleniyor");
+
+                if (liste.hasPointerCapture(event.pointerId)) {
+                    liste.releasePointerCapture(event.pointerId);
+                }
+            };
+
+            liste.addEventListener("pointerup", suruklemeyiBitir);
+            liste.addEventListener("pointercancel", suruklemeyiBitir);
+            liste.addEventListener("scroll", kaydirmaDurumuGuncelle, { passive: true });
+            window.addEventListener("resize", kaydirmaDurumuGuncelle);
+            liste.addEventListener("click", (event) => {
+                if (!tiklamaEngellenecek) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                tiklamaEngellenecek = false;
+            }, true);
+            requestAnimationFrame(kaydirmaDurumuGuncelle);
+        });
+    });
+})();
+
+// Ana navigasyon sepet menüsü aç/kapat davranışı.
+(() => {
+    const sepetMenuleri = document.querySelectorAll("[data-ms-sepet-menu]");
+
+    sepetMenuleri.forEach((menu) => {
+        const tetikleyici = menu.querySelector("[data-ms-sepet-menu-tetikleyici]");
+        const panel = menu.querySelector("[data-ms-sepet-menu-panel]");
+        const kapatButonu = menu.querySelector("[data-ms-sepet-panel-kapat]");
+        const urunListesi = menu.querySelector("[data-ms-sepet-urun-listesi]");
+        const urunSablonu = menu.querySelector("[data-ms-sepet-urun-sablon]");
+        const urunSayisi = menu.querySelector("[data-ms-sepet-urun-sayisi]");
+        const sepetRozeti = menu.querySelector("[data-ms-sepet-rozet]");
+        const sepetToplami = menu.querySelector("[data-ms-sepet-toplam]");
+
+        if (!tetikleyici) {
+            return;
+        }
+
+        const menuKapat = () => {
+            menu.classList.remove("ms-ana-navigasyon-sepet-acik");
+            tetikleyici.setAttribute("aria-expanded", "false");
+        };
+
+        const fiyatSayiyaCevir = (metin) => {
+            const temizMetin = String(metin || "")
+                .replace(/[^\d,.-]/g, "")
+                .replace(/\./g, "")
+                .replace(",", ".");
+
+            return Number.parseFloat(temizMetin) || 0;
+        };
+
+        const sepetOzetiniGuncelle = () => {
+            if (!urunListesi) {
+                return;
+            }
+
+            const urunler = Array.from(urunListesi.querySelectorAll(".ms-ana-navigasyon-sepet-urun"));
+            const adet = urunler.length;
+            const toplam = urunler.reduce((deger, urun) => {
+                const fiyat = urun.querySelector(".ms-ana-navigasyon-sepet-urun-alt strong");
+                return deger + fiyatSayiyaCevir(fiyat?.textContent);
+            }, 0);
+
+            if (urunSayisi) {
+                urunSayisi.textContent = `${adet} ürün`;
+            }
+
+            if (sepetRozeti) {
+                sepetRozeti.textContent = adet.toString();
+                sepetRozeti.hidden = adet === 0;
+            }
+
+            if (sepetToplami) {
+                sepetToplami.textContent = `${toplam.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL`;
+            }
+
+            let bosDurum = urunListesi.querySelector("[data-ms-sepet-bos]");
+
+            if (adet === 0 && !bosDurum) {
+                bosDurum = document.createElement("p");
+                bosDurum.className = "ms-ana-navigasyon-sepet-bos";
+                bosDurum.dataset.msSepetBos = "";
+                bosDurum.textContent = "Sepetinizde ürün bulunmuyor.";
+                urunListesi.appendChild(bosDurum);
+            } else if (adet > 0) {
+                bosDurum?.remove();
+            }
+        };
+
+        const menuToggle = () => {
+            if (!menu.classList.contains("ms-ana-navigasyon-sepet-acik")
+                && urunListesi
+                && urunListesi.dataset.msSepetYuklendi !== "true"
+                && urunSablonu instanceof HTMLTemplateElement) {
+                urunListesi.appendChild(urunSablonu.content.cloneNode(true));
+                urunListesi.dataset.msSepetYuklendi = "true";
+                sepetOzetiniGuncelle();
+            }
+
+            const acik = menu.classList.toggle("ms-ana-navigasyon-sepet-acik");
+            tetikleyici.setAttribute("aria-expanded", acik ? "true" : "false");
+        };
+
+        tetikleyici.addEventListener("pointerdown", (event) => {
+            event.stopPropagation();
+        });
+
+        tetikleyici.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            menuToggle();
+        });
+
+        panel?.addEventListener("pointerdown", (event) => {
+            event.stopPropagation();
+        });
+
+        panel?.addEventListener("click", (event) => {
+            event.stopPropagation();
+        });
+
+        urunListesi?.addEventListener("click", (event) => {
+            const silButonu = event.target instanceof Element
+                ? event.target.closest(".ms-ana-navigasyon-sepet-sil")
+                : null;
+
+            if (!silButonu || !urunListesi.contains(silButonu)) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            silButonu.closest(".ms-ana-navigasyon-sepet-urun")?.remove();
+            sepetOzetiniGuncelle();
+        });
+
+        kapatButonu?.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            menuKapat();
+            tetikleyici.blur();
+        });
+
+        document.addEventListener("pointerdown", (event) => {
+            if (!menu.contains(event.target)) {
+                menuKapat();
+            }
+        });
+
+        window.addEventListener("scroll", () => {
+            if (menu.classList.contains("ms-ana-navigasyon-sepet-acik")) {
+                menuKapat();
+            }
+        }, { passive: true });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                menuKapat();
+                tetikleyici.blur();
+            }
+        });
+    });
+})();
+
+// Mağaza üst menü, mega menü ve kampanya kaydırma davranışları.
+(() => {
+    const menuler = document.querySelectorAll("[data-ms-magaza-menu]");
+
+    menuler.forEach((menu) => {
+        let magazaMenuBaslatildi = false;
+
+        const magazaMenuBaslat = () => {
+        if (magazaMenuBaslatildi) {
+            return;
+        }
+
+        magazaMenuBaslatildi = true;
+        const sablon = menu.querySelector("[data-ms-magaza-mega-menu-sablon]");
+
+        if (sablon instanceof HTMLTemplateElement) {
+            sablon.parentNode?.insertBefore(sablon.content.cloneNode(true), sablon);
+            sablon.remove();
+        }
+
+        const megaMenu = menu.querySelector("[data-ms-magaza-mega-menu]");
+        const anaMenuLink = menu.querySelector(".ms-magaza-menu-tum > .ms-magaza-menu-link");
+        const ustLinkler = menu.querySelectorAll("[data-ms-magaza-menu-link]");
+        const kampanyaListesi = menu.querySelector(".ms-magaza-mega-kampanya-listesi");
+        const kampanyaKontrolleri = menu.querySelectorAll("[data-ms-kampanya-kaydir]");
+        const menuIc = menu.querySelector(".ms-magaza-menu-ic");
+
+        if (!megaMenu || !anaMenuLink) {
+            return;
+        }
+
+        const solKolon = document.createElement("div");
+        solKolon.className = "ms-magaza-mega-sol-kolon";
+
+        Array.from(megaMenu.querySelectorAll(":scope > .ms-magaza-mega-kategori-grubu")).forEach((grup) => {
+            const kategori = grup.dataset.msMagazaKategoriGrubu;
+            const panel = grup.querySelector(".ms-magaza-mega-icerik");
+
+            if (panel && kategori) {
+                panel.dataset.msMagazaPanel = kategori;
+                megaMenu.appendChild(panel);
+            }
+
+            solKolon.appendChild(grup);
+        });
+
+        megaMenu.prepend(solKolon);
+
+        const solLinkler = megaMenu.querySelectorAll("[data-ms-magaza-kategori]");
+        let menuKaydirma = menu.querySelector("[data-ms-magaza-menu-kaydirma]");
+        let menuKaydirmaGrubu = menuKaydirma?.closest(".ms-magaza-menu-kaydirma-grubu") || null;
+        let menuKaydirmaKontrolleri = menu.querySelector("[data-ms-magaza-menu-kaydirma-kontrolleri]");
+        let menuKaydirmaTiklamayiEngelle = false;
+
+        if (menuIc && ustLinkler.length > 0) {
+            if (!menuKaydirma || !menuKaydirmaGrubu) {
+            menuKaydirmaGrubu = document.createElement("div");
+            menuKaydirmaGrubu.className = "ms-magaza-menu-kaydirma-grubu";
+
+            menuKaydirma = document.createElement("div");
+            menuKaydirma.className = "ms-magaza-menu-kaydirma";
+            menuKaydirma.dataset.msMagazaMenuKaydirma = "";
+
+            menuKaydirmaGrubu.appendChild(menu.querySelector(".ms-magaza-menu-tum"));
+            ustLinkler.forEach((link) => menuKaydirma.appendChild(link));
+            menuKaydirmaGrubu.appendChild(menuKaydirma);
+            menuIc.appendChild(menuKaydirmaGrubu);
+            }
+
+            if (!menuKaydirmaKontrolleri) {
+            menuKaydirmaKontrolleri = document.createElement("div");
+            menuKaydirmaKontrolleri.className = "ms-magaza-menu-kaydirma-kontrolleri";
+            menuKaydirmaKontrolleri.dataset.msMagazaMenuKaydirmaKontrolleri = "";
+            menuKaydirmaKontrolleri.innerHTML = `
+                <button class="ms-magaza-menu-kaydirma-kontrol" type="button" aria-label="Menüyü sola kaydır" data-ms-menu-kaydir="sol">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                    </svg>
+                </button>
+                <button class="ms-magaza-menu-kaydirma-kontrol" type="button" aria-label="Menüyü sağa kaydır" data-ms-menu-kaydir="sag">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                </button>
+            `;
+            menuIc.appendChild(menuKaydirmaKontrolleri);
+            }
+        }
+
+        const menuKaydirmaKontrolDurumuGuncelle = (kaydirilabilir) => {
+            if (!menuKaydirma || !menuKaydirmaKontrolleri) {
+                return;
+            }
+
+            const solKontrol = menuKaydirmaKontrolleri.querySelector("[data-ms-menu-kaydir='sol']");
+            const sagKontrol = menuKaydirmaKontrolleri.querySelector("[data-ms-menu-kaydir='sag']");
+            const enSolda = menuKaydirma.scrollLeft <= 1;
+            const enSagda = menuKaydirma.scrollLeft + menuKaydirma.clientWidth >= menuKaydirma.scrollWidth - 1;
+
+            if (solKontrol) {
+                solKontrol.disabled = !kaydirilabilir || enSolda;
+            }
+
+            if (sagKontrol) {
+                sagKontrol.disabled = !kaydirilabilir || enSagda;
+            }
+        };
+
+        const menuKaydirmaDurumuGuncelle = () => {
+            if (!menuKaydirma || !menuKaydirmaKontrolleri) {
+                return;
+            }
+
+            const tumMenuGenisligi = menu.querySelector(".ms-magaza-menu-tum")?.getBoundingClientRect().width || 0;
+            const kontrollerGenisligi = 80;
+            const boslukPayi = 40;
+            const kullanilabilirGenislik = Math.max(menuIc.clientWidth - tumMenuGenisligi - kontrollerGenisligi - boslukPayi, 120);
+            const kaydirilabilir = menuKaydirma.scrollWidth > kullanilabilirGenislik + 1;
+
+            menuIc?.classList.toggle("ms-magaza-menu-ic-kaydirilabilir", kaydirilabilir);
+            menuKaydirmaGrubu?.classList.toggle("ms-magaza-menu-kaydirma-grubu-kaydirilabilir", kaydirilabilir);
+            menuKaydirma.classList.toggle("ms-magaza-menu-kaydirma-kaydirilabilir", kaydirilabilir);
+            menuKaydirmaKontrolleri.classList.toggle("ms-magaza-menu-kaydirma-kontrolleri-aktif", kaydirilabilir);
+
+            if (!kaydirilabilir) {
+                menuKaydirma.scrollLeft = 0;
+            }
+
+            requestAnimationFrame(() => menuKaydirmaKontrolDurumuGuncelle(kaydirilabilir));
+        };
+
+        const kampanyaKaydirmaDurumuGuncelle = () => {
+            if (!kampanyaListesi || kampanyaKontrolleri.length === 0) {
+                return;
+            }
+
+            const kaydirilabilir = kampanyaListesi.scrollWidth > kampanyaListesi.clientWidth + 1;
+            kampanyaListesi.classList.toggle("ms-magaza-mega-kampanya-listesi-kaydirilabilir", kaydirilabilir);
+            kampanyaKontrolleri.forEach((kontrol) => {
+                kontrol.classList.toggle("ms-magaza-mega-kampanya-kontrol-aktif", kaydirilabilir);
+                kontrol.disabled = !kaydirilabilir;
+            });
+        };
+
+        const menuAc = () => {
+            megaMenu.classList.add("ms-magaza-mega-menu-acik");
+            requestAnimationFrame(kampanyaKaydirmaDurumuGuncelle);
+            requestAnimationFrame(menuKaydirmaDurumuGuncelle);
+        };
+
+        const kategoriAc = (kategori, solLinkeKaydir = false) => {
+            const hedefGrup = menu.querySelector(`[data-ms-magaza-kategori-grubu="${kategori}"]`);
+            const hedefPanel = megaMenu.querySelector(`[data-ms-magaza-panel="${kategori}"]`);
+            const hedefSolLink = hedefGrup?.querySelector(".ms-magaza-mega-sol-link");
+
+            if (!hedefPanel) {
+                return;
+            }
+
+            menu.querySelectorAll(".ms-magaza-mega-icerik").forEach((panel) => {
+                panel.classList.remove("ms-magaza-mega-icerik-aktif");
+            });
+
+            menu.querySelectorAll(".ms-magaza-mega-sol-link").forEach((link) => {
+                link.classList.remove("ms-magaza-mega-sol-link-aktif");
+            });
+
+            ustLinkler.forEach((link) => {
+                link.classList.toggle("ms-magaza-menu-link-aktif", link.dataset.msMagazaMenuLink === kategori);
+            });
+
+            hedefPanel.classList.add("ms-magaza-mega-icerik-aktif");
+            hedefSolLink?.classList.add("ms-magaza-mega-sol-link-aktif");
+
+            if (solLinkeKaydir && hedefGrup && solKolon) {
+                requestAnimationFrame(() => {
+                    solKolon.scrollTo({
+                        top: Math.max(hedefGrup.offsetTop - 4, 0),
+                        behavior: "smooth"
+                    });
+                });
+            }
+        };
+
+        const kategoriKapat = () => {
+            megaMenu.classList.remove("ms-magaza-mega-menu-acik");
+            menu.querySelectorAll(".ms-magaza-mega-icerik").forEach((panel) => {
+                panel.classList.remove("ms-magaza-mega-icerik-aktif");
+            });
+            menu.querySelectorAll(".ms-magaza-mega-sol-link").forEach((link) => {
+                link.classList.remove("ms-magaza-mega-sol-link-aktif");
+            });
+            ustLinkler.forEach((link) => link.classList.remove("ms-magaza-menu-link-aktif"));
+        };
+
+        anaMenuLink.addEventListener("mouseenter", menuAc);
+        anaMenuLink.addEventListener("focus", menuAc);
+        anaMenuLink.addEventListener("click", (event) => {
+            event.preventDefault();
+            menuAc();
+        });
+
+        ustLinkler.forEach((link) => {
+            const kategori = link.dataset.msMagazaMenuLink;
+
+            link.addEventListener("mouseenter", () => {
+                menuAc();
+                kategoriAc(kategori, true);
+            });
+            link.addEventListener("focus", () => {
+                menuAc();
+                kategoriAc(kategori, true);
+            });
+            link.addEventListener("click", (event) => {
+                if (menuKaydirmaTiklamayiEngelle) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    menuKaydirmaTiklamayiEngelle = false;
+                    return;
+                }
+
+                event.preventDefault();
+                menuAc();
+                kategoriAc(kategori, true);
+            });
+        });
+
+        solLinkler.forEach((link) => {
+            const kategori = link.dataset.msMagazaKategori;
+
+            link.addEventListener("mouseenter", () => {
+                menuAc();
+                kategoriAc(kategori);
+            });
+            link.addEventListener("click", (event) => {
+                event.preventDefault();
+                menuAc();
+                kategoriAc(kategori);
+            });
+        });
+
+        menu.addEventListener("mouseleave", kategoriKapat);
+
+        if (menuKaydirma && menuKaydirmaKontrolleri) {
+            menuKaydirmaKontrolleri.querySelectorAll("[data-ms-menu-kaydir]").forEach((kontrol) => {
+                kontrol.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    const yon = kontrol.dataset.msMenuKaydir === "sol" ? -1 : 1;
+                    const maksimumScroll = menuKaydirma.scrollWidth - menuKaydirma.clientWidth;
+                    if (maksimumScroll <= 0) {
+                        menuKaydirmaDurumuGuncelle();
+                        return;
+                    }
+
+                    const hedefScroll = Math.min(Math.max(menuKaydirma.scrollLeft + (menuKaydirma.clientWidth * 0.7 * yon), 0), maksimumScroll);
+
+                    menuKaydirma.scrollTo({
+                        left: hedefScroll,
+                        behavior: "smooth"
+                    });
+
+                    window.setTimeout(() => menuKaydirmaKontrolDurumuGuncelle(true), 220);
+                });
+            });
+
+            let menuSurukleniyor = false;
+            let menuBaslangicX = 0;
+            let menuBaslangicScroll = 0;
+
+            menuKaydirma.addEventListener("dragstart", (event) => event.preventDefault());
+
+            menuKaydirma.addEventListener("pointerdown", (event) => {
+                if (event.button !== 0) {
+                    return;
+                }
+
+                event.preventDefault();
+                menuSurukleniyor = true;
+                menuBaslangicX = event.clientX;
+                menuBaslangicScroll = menuKaydirma.scrollLeft;
+                menuKaydirmaTiklamayiEngelle = false;
+                menuKaydirma.classList.add("ms-magaza-menu-kaydirma-surukleniyor");
+                menuKaydirma.setPointerCapture?.(event.pointerId);
+            });
+
+            menuKaydirma.addEventListener("pointermove", (event) => {
+                if (!menuSurukleniyor) {
+                    return;
+                }
+
+                const fark = event.clientX - menuBaslangicX;
+
+                if (Math.abs(fark) > 5) {
+                    menuKaydirmaTiklamayiEngelle = true;
+                }
+
+                menuKaydirma.scrollLeft = menuBaslangicScroll - fark;
+                menuKaydirmaKontrolDurumuGuncelle(true);
+            });
+
+            const menuSuruklemeyiBitir = (event) => {
+                if (!menuSurukleniyor) {
+                    return;
+                }
+
+                menuSurukleniyor = false;
+                menuKaydirma.classList.remove("ms-magaza-menu-kaydirma-surukleniyor");
+
+                if (menuKaydirma.hasPointerCapture?.(event.pointerId)) {
+                    menuKaydirma.releasePointerCapture(event.pointerId);
+                }
+            };
+
+            menuKaydirma.addEventListener("pointerup", menuSuruklemeyiBitir);
+            menuKaydirma.addEventListener("pointercancel", menuSuruklemeyiBitir);
+            menuKaydirma.addEventListener("scroll", menuKaydirmaDurumuGuncelle, { passive: true });
+            window.addEventListener("resize", menuKaydirmaDurumuGuncelle);
+            requestAnimationFrame(menuKaydirmaDurumuGuncelle);
+        }
+
+        kampanyaKontrolleri.forEach((kontrol) => kontrol.addEventListener("click", () => {
+            if (!kampanyaListesi) {
+                return;
+            }
+
+            const yon = kontrol.dataset.msKampanyaKaydir === "sol" ? -1 : 1;
+
+            kampanyaListesi.scrollTo({
+                left: kampanyaListesi.scrollLeft + (kampanyaListesi.clientWidth * 0.75 * yon),
+                behavior: "smooth"
+            });
+        }));
+
+        if (kampanyaListesi) {
+            let surukleniyor = false;
+            let baslangicX = 0;
+            let baslangicScroll = 0;
+            let suruklemeTiklamayiEngelle = false;
+
+            kampanyaListesi.addEventListener("dragstart", (event) => {
+                event.preventDefault();
+            });
+
+            kampanyaListesi.addEventListener("pointerdown", (event) => {
+                if (event.button !== 0) {
+                    return;
+                }
+
+                surukleniyor = true;
+                baslangicX = event.clientX;
+                baslangicScroll = kampanyaListesi.scrollLeft;
+                suruklemeTiklamayiEngelle = false;
+                kampanyaListesi.classList.add("ms-magaza-mega-kampanya-listesi-surukleniyor");
+                kampanyaListesi.setPointerCapture(event.pointerId);
+            });
+
+            kampanyaListesi.addEventListener("pointermove", (event) => {
+                if (!surukleniyor) {
+                    return;
+                }
+
+                const fark = event.clientX - baslangicX;
+                if (Math.abs(fark) > 5) {
+                    suruklemeTiklamayiEngelle = true;
+                }
+
+                kampanyaListesi.scrollLeft = baslangicScroll - fark;
+            });
+
+            const kampanyaSuruklemeBitir = (event) => {
+                if (!surukleniyor) {
+                    return;
+                }
+
+                surukleniyor = false;
+                kampanyaListesi.classList.remove("ms-magaza-mega-kampanya-listesi-surukleniyor");
+
+                if (kampanyaListesi.hasPointerCapture(event.pointerId)) {
+                    kampanyaListesi.releasePointerCapture(event.pointerId);
+                }
+            };
+
+            kampanyaListesi.addEventListener("pointerup", kampanyaSuruklemeBitir);
+            kampanyaListesi.addEventListener("pointercancel", kampanyaSuruklemeBitir);
+            kampanyaListesi.addEventListener("click", (event) => {
+                if (!suruklemeTiklamayiEngelle) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                suruklemeTiklamayiEngelle = false;
+            }, true);
+        }
+
+        window.addEventListener("resize", kampanyaKaydirmaDurumuGuncelle);
+        kampanyaKaydirmaDurumuGuncelle();
+
+        document.addEventListener("pointerdown", (event) => {
+            if (!menu.contains(event.target)) {
+                kategoriKapat();
+            }
+        });
+        };
+
+        menu.addEventListener("pointerenter", magazaMenuBaslat, { once: true });
+        menu.addEventListener("focusin", magazaMenuBaslat, { once: true });
+        menu.addEventListener("pointerdown", magazaMenuBaslat, { once: true, capture: true });
+    });
+})();
+
+// Giriş, kayıt, belge modalı ve hesap oturumu örnek davranışları.
+(() => {
+    let girisDavranislariBaslatildi = false;
+
+    const girisDavranislariniBaslat = () => {
+    if (girisDavranislariBaslatildi) {
+        return;
+    }
+
+    girisDavranislariBaslatildi = true;
+    document.querySelectorAll("[data-ms-giris-modaller-sablon]").forEach((sablon) => {
+        if (sablon instanceof HTMLTemplateElement) {
+            sablon.parentNode?.insertBefore(sablon.content.cloneNode(true), sablon);
+            sablon.remove();
+        }
+    });
+
+    const girisMenuleri = document.querySelectorAll("[data-ms-giris-menu]");
+    const modal = document.querySelector("[data-ms-giris-modal]");
+    const modalAcButonlari = document.querySelectorAll("[data-ms-giris-modal-ac]");
+    const kayitModal = document.querySelector("[data-ms-kayit-modal]");
+    const kayitModalAcButonlari = document.querySelectorAll("[data-ms-kayit-modal-ac]");
+    const kayitModalKapaticilar = kayitModal ? kayitModal.querySelectorAll("[data-ms-kayit-modal-kapat]") : [];
+    const belgeModal = document.querySelector("[data-ms-belge-modal]");
+    const belgeModalAcButonlari = document.querySelectorAll("[data-ms-belge-modal-ac]");
+    const belgeModalKapaticilar = belgeModal ? belgeModal.querySelectorAll("[data-ms-belge-modal-kapat]") : [];
+    const belgeModalBaslik = belgeModal ? belgeModal.querySelector("[data-ms-belge-modal-baslik]") : null;
+    const belgeModalIcerik = belgeModal ? belgeModal.querySelector("[data-ms-belge-modal-icerik]") : null;
+    const belgeModalKabul = belgeModal ? belgeModal.querySelector("[data-ms-belge-modal-kabul]") : null;
+    const modalKapaticilar = modal ? modal.querySelectorAll("[data-ms-giris-modal-kapat]") : [];
+    const tablar = modal ? modal.querySelectorAll("[data-ms-giris-tab]") : [];
+    const paneller = modal ? modal.querySelectorAll("[data-ms-giris-panel]") : [];
+    const smsTelefonAdim = modal ? modal.querySelector('[data-ms-giris-sms-adim="telefon"]') : null;
+    const smsKodAdim = modal ? modal.querySelector('[data-ms-giris-sms-adim="kod"]') : null;
+    const kodGonder = modal ? modal.querySelector("[data-ms-giris-kod-gonder]") : null;
+    const kodOnayla = modal ? modal.querySelector("[data-ms-giris-kod-onayla]") : null;
+    const smsGeri = modal ? modal.querySelector("[data-ms-giris-sms-geri]") : null;
+    const smsTelefon = modal ? modal.querySelector("[data-ms-giris-telefon]") : null;
+    const kodInputlari = modal ? Array.from(modal.querySelectorAll(".ms-giris-kod-input")) : [];
+    const kodSayac = modal ? modal.querySelector("[data-ms-giris-kod-sayac]") : null;
+    const kodSayacAlani = kodSayac?.closest(".ms-giris-kod-sayac") || null;
+    const kodYenidenGonder = modal ? modal.querySelector("[data-ms-giris-kod-yeniden-gonder]") : null;
+    const smsKodOdakDisiAlanlar = modal ? [
+        modal.querySelector(".ms-giris-tab-listesi"),
+        modal.querySelector(".ms-giris-ayrac"),
+        modal.querySelector(".ms-giris-sosyal-listesi"),
+        modal.querySelector(".ms-giris-buton-misafir"),
+        modal.querySelector(".ms-giris-buton-kayit")
+    ].filter(Boolean) : [];
+    let kodSayacTimer = null;
+    let kodKalanSaniye = 120;
+    let sonOdaklananEleman = null;
+    let aktifBelgeCheckbox = null;
+
+    const belgeModalAcikMi = () => belgeModal?.classList.contains("ms-ornek-modal-acik");
+
+    const belgeIcerikleri = {
+        uyelik: `
+            <p>Üyelik Sözleşmesi; hesabınızın oluşturulması, sipariş süreçleri, üyelik hakları ve kullanım koşulları hakkında bilgilendirme içerir.</p>
+            <p>Kabul ettiğinizde bu metni okuduğunuz ve üyelik işlemi için gerekli koşulları onayladığınız kabul edilir.</p>
+        `,
+        aydinlatma: `
+            <p>Aydınlatma Metni; kişisel verilerinizin hangi amaçlarla işlendiği, saklandığı ve hangi haklara sahip olduğunuz hakkında bilgi verir.</p>
+            <p>Kabul ettiğinizde kişisel verilerin işlenmesine ilişkin bilgilendirmeyi okuduğunuz işaretlenir.</p>
+        `,
+        "on-bilgilendirme": `
+            <p>Ön Bilgilendirme Formu; sipariş, ödeme, teslimat, iade ve cayma hakkı süreçlerine dair temel bilgileri içerir.</p>
+            <p>Kabul ettiğinizde alışveriş öncesi bilgilendirme metnini okuduğunuz kabul edilir.</p>
+        `
+    };
+
+    girisMenuleri.forEach((menu) => {
+        const tetikleyici = menu.querySelector("[data-ms-giris-menu-tetikleyici]");
+        const girisPanel = menu.querySelector("[data-ms-giris-menu-panel]");
+        const hesapPanelKapat = menu.querySelector("[data-ms-hesap-panel-kapat]");
+        const desktopHoverMedya = window.matchMedia("(min-width: 1024px)");
+        let hoverKapatTimer = null;
+
+        if (!tetikleyici) {
+            return;
+        }
+
+        const menuKapat = () => {
+            if (hoverKapatTimer) {
+                window.clearTimeout(hoverKapatTimer);
+                hoverKapatTimer = null;
+            }
+
+            menu.classList.remove("ms-ana-navigasyon-giris-acik");
+            tetikleyici.setAttribute("aria-expanded", "false");
+        };
+
+        const menuAc = () => {
+            if (hoverKapatTimer) {
+                window.clearTimeout(hoverKapatTimer);
+                hoverKapatTimer = null;
+            }
+
+            menu.classList.add("ms-ana-navigasyon-giris-acik");
+            tetikleyici.setAttribute("aria-expanded", "true");
+        };
+
+        const menuToggle = () => {
+            const acik = menu.classList.toggle("ms-ana-navigasyon-giris-acik");
+            tetikleyici.setAttribute("aria-expanded", acik ? "true" : "false");
+        };
+
+        tetikleyici.addEventListener("click", (event) => {
+            event.preventDefault();
+            menuToggle();
+        });
+
+        hesapPanelKapat?.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            menuKapat();
+            tetikleyici.blur();
+        });
+
+        girisPanel?.addEventListener("pointerdown", (event) => {
+            event.stopPropagation();
+        });
+
+        girisPanel?.addEventListener("click", (event) => {
+            event.stopPropagation();
+        });
+
+        menu.addEventListener("pointerenter", () => {
+            if (desktopHoverMedya.matches) {
+                menuAc();
+            }
+        });
+
+        menu.addEventListener("pointerleave", () => {
+            if (!desktopHoverMedya.matches) {
+                return;
+            }
+
+            hoverKapatTimer = window.setTimeout(menuKapat, 120);
+        });
+
+        window.addEventListener("scroll", menuKapat, { passive: true });
+
+        document.addEventListener("pointerdown", (event) => {
+            if (!menu.contains(event.target)) {
+                menuKapat();
+            }
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                menuKapat();
+                tetikleyici.blur();
+            }
+        });
+    });
+
+    if (!modal) {
+        return;
+    }
+
+    const kodSayacYaz = () => {
+        if (!kodSayac) {
+            return;
+        }
+
+        const dakika = Math.floor(kodKalanSaniye / 60).toString().padStart(2, "0");
+        const saniye = (kodKalanSaniye % 60).toString().padStart(2, "0");
+        const sureDoldu = kodKalanSaniye <= 0;
+        kodSayac.textContent = `${dakika}:${saniye}`;
+        kodSayacAlani?.classList.toggle("ms-giris-kod-sayac-suresi-doldu", sureDoldu);
+
+        if (kodYenidenGonder) {
+            kodYenidenGonder.hidden = !sureDoldu;
+        }
+
+        if (kodOnayla) {
+            kodOnayla.disabled = sureDoldu;
+            kodOnayla.setAttribute("aria-disabled", sureDoldu.toString());
+        }
+    };
+
+    const kodSayacDurdur = () => {
+        if (kodSayacTimer) {
+            window.clearInterval(kodSayacTimer);
+            kodSayacTimer = null;
+        }
+    };
+
+    const kodSayacBaslat = () => {
+        kodSayacDurdur();
+        kodKalanSaniye = 120;
+        kodSayacYaz();
+
+        kodSayacTimer = window.setInterval(() => {
+            kodKalanSaniye = Math.max(0, kodKalanSaniye - 1);
+            kodSayacYaz();
+
+            if (kodKalanSaniye === 0) {
+                kodSayacDurdur();
+            }
+        }, 1000);
+    };
+
+    const smsAdiminiGoster = (adim) => {
+        if (!smsTelefonAdim || !smsKodAdim) {
+            return;
+        }
+
+        smsTelefonAdim.classList.toggle("ms-giris-sms-adim-aktif", adim === "telefon");
+        smsKodAdim.classList.toggle("ms-giris-sms-adim-aktif", adim === "kod");
+        modal.classList.toggle("ms-giris-sms-kod-odak", adim === "kod");
+        smsKodOdakDisiAlanlar.forEach((alan) => {
+            alan.inert = adim === "kod";
+        });
+
+        if (adim === "telefon") {
+            kodSayacDurdur();
+            kodKalanSaniye = 120;
+            kodSayacYaz();
+        }
+    };
+
+    const tabAc = (hedef) => {
+        tablar.forEach((tab) => {
+            const aktif = tab.dataset.msGirisTab === hedef;
+            tab.classList.toggle("ms-giris-tab-aktif", aktif);
+            tab.setAttribute("aria-pressed", aktif ? "true" : "false");
+        });
+
+        paneller.forEach((panel) => {
+            panel.classList.toggle("ms-giris-panel-aktif", panel.dataset.msGirisPanel === hedef);
+        });
+
+        if (hedef === "sms") {
+            smsAdiminiGoster("telefon");
+        } else {
+            kodSayacDurdur();
+        }
+    };
+
+    const modalAc = () => {
+        sonOdaklananEleman = document.activeElement;
+        modal.classList.add("ms-giris-modal-acik");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+        tabAc("sms");
+
+        window.setTimeout(() => {
+            const ilkGirdi = modal.querySelector(".ms-giris-panel-aktif input, .ms-giris-tab-aktif");
+            ilkGirdi?.focus();
+        }, 40);
+    };
+
+    const modalKapat = () => {
+        kodSayacDurdur();
+        modal.classList.remove("ms-giris-modal-acik");
+        modal.setAttribute("aria-hidden", "true");
+        if (!kayitModal?.classList.contains("ms-giris-modal-acik") && !belgeModalAcikMi()) {
+            document.body.style.overflow = "";
+        }
+        sonOdaklananEleman?.focus?.();
+    };
+
+    const kayitModalAc = () => {
+        sonOdaklananEleman = document.activeElement;
+        modalKapat();
+        girisMenuleri.forEach((menu) => {
+            menu.classList.remove("ms-ana-navigasyon-giris-acik");
+            menu.querySelector("[data-ms-giris-menu-tetikleyici]")?.setAttribute("aria-expanded", "false");
+        });
+        kayitModal?.classList.add("ms-giris-modal-acik");
+        kayitModal?.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+
+        window.setTimeout(() => {
+            kayitModal?.querySelector("input, select, button")?.focus();
+        }, 40);
+    };
+
+    const kayitModalKapat = () => {
+        kayitModal?.classList.remove("ms-giris-modal-acik");
+        kayitModal?.setAttribute("aria-hidden", "true");
+        if (!modal.classList.contains("ms-giris-modal-acik") && !belgeModalAcikMi()) {
+            document.body.style.overflow = "";
+        }
+        sonOdaklananEleman?.focus?.();
+    };
+
+    const navigasyonGirisPanelleriniKapat = () => {
+        girisMenuleri.forEach((girisMenu) => {
+            girisMenu.classList.remove("ms-ana-navigasyon-giris-acik");
+            girisMenu.querySelector("[data-ms-giris-menu-tetikleyici]")?.setAttribute("aria-expanded", "false");
+        });
+    };
+
+    const mobilPaneliKapat = () => {
+        const mobilPanel = document.querySelector("[data-ms-mobil-menu]");
+        const mobilMenuAcButonu = document.querySelector("[data-ms-mobil-menu-ac]");
+
+        mobilPanel?.classList.remove("ms-ana-navigasyon-mobil-panel-acik");
+        mobilPanel?.setAttribute("aria-hidden", "true");
+        if (mobilPanel) {
+            mobilPanel.inert = true;
+        }
+        mobilMenuAcButonu?.setAttribute("aria-expanded", "false");
+    };
+
+    document.addEventListener("click", (event) => {
+        const girisButonu = event.target.closest("[data-ms-giris-modal-ac]");
+        const kayitButonu = event.target.closest("[data-ms-kayit-modal-ac]");
+
+        if (!girisButonu && !kayitButonu) {
+            return;
+        }
+
+        const navigasyonPanelindenMi = event.target.closest("[data-ms-mobil-menu], [data-ms-giris-menu-panel]");
+
+        if (!navigasyonPanelindenMi) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        mobilPaneliKapat();
+        navigasyonGirisPanelleriniKapat();
+
+        if (girisButonu) {
+            modalAc();
+            return;
+        }
+
+        kayitModalAc();
+    }, true);
+
+    const belgeModalAc = (baslik, belgeTuru, tetikleyici) => {
+        if (belgeModalBaslik) {
+            belgeModalBaslik.textContent = baslik || "Belge";
+        }
+
+        if (belgeModalIcerik) {
+            belgeModalIcerik.innerHTML = belgeIcerikleri[belgeTuru] || "<p>İlgili bilgilendirme metni burada görüntülenir.</p>";
+        }
+
+        aktifBelgeCheckbox = tetikleyici?.closest(".ms-kayit-onay")?.querySelector('input[type="checkbox"]') || null;
+        belgeModal?.classList.add("ms-ornek-modal-acik");
+        belgeModal?.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+
+        window.setTimeout(() => {
+            belgeModal?.querySelector("[data-ms-belge-modal-kabul]")?.focus();
+        }, 40);
+    };
+
+    const belgeModalKapat = () => {
+        belgeModal?.classList.remove("ms-ornek-modal-acik");
+        belgeModal?.setAttribute("aria-hidden", "true");
+        if (!modal.classList.contains("ms-giris-modal-acik") && !kayitModal?.classList.contains("ms-giris-modal-acik")) {
+            document.body.style.overflow = "";
+        }
+    };
+
+    const belgeModalKabulEt = () => {
+        if (aktifBelgeCheckbox) {
+            aktifBelgeCheckbox.checked = true;
+            aktifBelgeCheckbox.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
+        belgeModalKapat();
+    };
+
+    const telefonBicimlendir = (input) => {
+        const rakamlar = input.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 10);
+        input.value = [
+            rakamlar.slice(0, 3),
+            rakamlar.slice(3, 6),
+            rakamlar.slice(6, 8),
+            rakamlar.slice(8, 10)
+        ].filter(Boolean).join(" ");
+    };
+
+    const oturumDurumuAyarla = (oturumAcik, acikKalacakMenu = null) => {
+        girisMenuleri.forEach((menu) => {
+            const tetikleyici = menu.querySelector("[data-ms-giris-menu-tetikleyici]");
+            const yazi = menu.querySelector("[data-ms-giris-menu-yazi]");
+            const acikKalacak = !oturumAcik && acikKalacakMenu === menu;
+
+            menu.classList.toggle("ms-ana-navigasyon-giris-oturum-acik", oturumAcik);
+            menu.classList.toggle("ms-ana-navigasyon-giris-acik", acikKalacak);
+            tetikleyici?.setAttribute("aria-expanded", acikKalacak ? "true" : "false");
+
+            if (yazi) {
+                yazi.textContent = oturumAcik ? "Hesabım" : "Giriş Yap";
+            }
+        });
+    };
+
+    modalAcButonlari.forEach((buton) => {
+        buton.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            girisMenuleri.forEach((menu) => {
+                menu.classList.remove("ms-ana-navigasyon-giris-acik");
+                menu.querySelector("[data-ms-giris-menu-tetikleyici]")?.setAttribute("aria-expanded", "false");
+            });
+            modalAc();
+        });
+    });
+
+    kayitModalAcButonlari.forEach((buton) => {
+        buton.addEventListener("click", (event) => {
+            event.preventDefault();
+            kayitModalAc();
+        });
+    });
+
+    modalKapaticilar.forEach((kapatici) => {
+        kapatici.addEventListener("click", modalKapat);
+    });
+
+    kayitModalKapaticilar.forEach((kapatici) => {
+        kapatici.addEventListener("click", kayitModalKapat);
+    });
+
+    belgeModalAcButonlari.forEach((buton) => {
+        buton.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            belgeModalAc(buton.dataset.baslik, buton.dataset.belgeTur, buton);
+        });
+    });
+
+    belgeModalKapaticilar.forEach((kapatici) => {
+        kapatici.addEventListener("click", belgeModalKapat);
+    });
+
+    belgeModalKabul?.addEventListener("click", belgeModalKabulEt);
+
+    tablar.forEach((tab) => {
+        tab.addEventListener("click", () => tabAc(tab.dataset.msGirisTab));
+    });
+
+    smsTelefon?.addEventListener("input", () => telefonBicimlendir(smsTelefon));
+
+    [modal, kayitModal].forEach((modalAlani) => {
+        modalAlani?.querySelectorAll('input[type="tel"]').forEach((input) => {
+            input.addEventListener("input", () => telefonBicimlendir(input));
+        });
+    });
+
+    kodGonder?.addEventListener("click", () => {
+        const telefonRakamlari = smsTelefon?.value.replace(/\D/g, "") ?? "";
+
+        if (telefonRakamlari.length < 10) {
+            smsTelefon?.focus();
+            return;
+        }
+
+        smsAdiminiGoster("kod");
+        kodSayacBaslat();
+        kodInputlari.forEach((input) => {
+            input.value = "";
+        });
+        kodInputlari[0]?.focus();
+    });
+
+    smsGeri?.addEventListener("click", () => {
+        smsAdiminiGoster("telefon");
+        smsTelefon?.focus();
+    });
+
+    kodYenidenGonder?.addEventListener("click", () => {
+        kodInputlari.forEach((input) => {
+            input.value = "";
+        });
+        kodSayacBaslat();
+        kodInputlari[0]?.focus();
+    });
+
+    kodOnayla?.addEventListener("click", () => {
+        const girilenKod = kodInputlari.map((input) => input.value).join("");
+
+        if (girilenKod.length < kodInputlari.length) {
+            kodInputlari.find((input) => !input.value)?.focus();
+            return;
+        }
+
+        oturumDurumuAyarla(true);
+        modalKapat();
+        window.setTimeout(() => {
+            window.msOnayRedModalAc?.({
+                tip: "onay",
+                baslik: "Giriş Başarılı",
+                altBaslik: "Giriş Yapıldı",
+                metin: "Hesabınıza başarıyla giriş yaptınız.",
+                sure: 3000
+            });
+        }, 40);
+    });
+
+    const kodTamamlandiysaOnayla = () => {
+        const kodTamamlandi = kodInputlari.length > 0
+            && kodInputlari.every((input) => input.value.length === 1);
+
+        if (!kodTamamlandi || !kodOnayla || kodOnayla.disabled) {
+            return;
+        }
+
+        window.setTimeout(() => kodOnayla.click(), 0);
+    };
+
+    kodInputlari.forEach((input, index) => {
+        input.addEventListener("input", () => {
+            input.value = input.value.replace(/\D/g, "").slice(0, 1);
+
+            if (input.value && kodInputlari[index + 1]) {
+                kodInputlari[index + 1].focus();
+            }
+
+            kodTamamlandiysaOnayla();
+        });
+
+        input.addEventListener("keydown", (event) => {
+            if (event.key === "Backspace" && !input.value && kodInputlari[index - 1]) {
+                kodInputlari[index - 1].focus();
+            }
+        });
+
+        input.addEventListener("paste", (event) => {
+            const yapistirilanKod = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, kodInputlari.length);
+
+            if (!yapistirilanKod) {
+                return;
+            }
+
+            event.preventDefault();
+            kodInputlari.forEach((kodInput, kodIndex) => {
+                kodInput.value = yapistirilanKod[kodIndex] ?? "";
+            });
+
+            const odakIndex = Math.min(yapistirilanKod.length, kodInputlari.length) - 1;
+            kodInputlari[Math.max(odakIndex, 0)]?.focus();
+            kodTamamlandiysaOnayla();
+        });
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") {
+            return;
+        }
+
+        if (belgeModalAcikMi()) {
+            belgeModalKapat();
+            return;
+        }
+
+        if (kayitModal?.classList.contains("ms-giris-modal-acik")) {
+            kayitModalKapat();
+            return;
+        }
+
+        if (modal.classList.contains("ms-giris-modal-acik")) {
+            modalKapat();
+        }
+    });
+
+    document.querySelectorAll("[data-ms-hesap-cikis]").forEach((cikisButonu) => {
+        cikisButonu.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            oturumDurumuAyarla(false, cikisButonu.closest("[data-ms-giris-menu]"));
+        });
+    });
+    };
+
+    const girisEtkilesimiMi = (event) => event.target instanceof Element
+        && Boolean(event.target.closest("[data-ms-giris-menu], [data-ms-giris-modal-ac], [data-ms-kayit-modal-ac]"));
+
+    ["pointerdown", "focusin", "mouseover", "click"].forEach((eventAdi) => {
+        document.addEventListener(eventAdi, (event) => {
+            if (girisEtkilesimiMi(event)) {
+                girisDavranislariniBaslat();
+            }
+        }, { capture: true, once: false });
+    });
+})();
