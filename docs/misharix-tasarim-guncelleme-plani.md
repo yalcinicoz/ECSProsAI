@@ -28,10 +28,12 @@ sitenin gerçek sayfaları içindir.
 
 ## Fazlar
 
-### Faz 0 — Hazırlık
-- [ ] Bekleyen `site.js` düzeltmesi (lazy-load, 6+/4-) + docs görselleri commit'lenir; `publish-staging/` gitignore değerlendirilir.
-- [ ] `tools/misharix-sync/check.sh` KAYNAK → `/opt/misharix` (ESKİ klasör merge bazı olarak iş bitene kadar tutulur).
-- [ ] Kaldırılan ikon/subset denetimi: ECSPros'a özgü partial'ların (`_VitrinBloklar`, `_SehirSecim`, `_UrunKarti`, `_MobilAltBarNav`…) kullandığı FA ikonları `ikonall.min.css`'te var mı; kökten `ikons/kullanilmayanlar`a taşınan SVG'lere referans kalmış mı.
+### Faz 0 — Hazırlık ✅ (2026-07-16)
+- [x] Bekleyen `site.js` düzeltmesi (lazy-load + pointerCapture) + docs görselleri commit'lendi (5a841f7); `publish-staging/` gitignore'a eklendi.
+- [x] `tools/misharix-sync/check.sh` KAYNAK → `/opt/misharix` (ESKİ klasör merge bazı olarak iş bitene kadar tutulur).
+- [x] İkon denetimi yapıldı — bulgular:
+  - Subset'te olmayan FA ikonları: `fa-location-crosshairs` (ECSPros'a özgü `_SehirSecim` — kalıcı ihtiyaç), `fa-cart-shopping` (_HesabimTekrarSatinAl) ve `fa-square-plus` (_SepetSayfasi) — son ikisi Faz 4 merge'ünde tasarımın yeni markup'ıyla muhtemelen kaybolur. **Çözüm:** tasarımın `fontawesome-subset.mjs` aracı ECSPros'a alınır ve ECSPros Views+site.js üzerinden çalıştırılır → subset otomatik tam olur (Faz 1/2).
+  - Kökten `ikons/kullanilmayanlar`a taşınan 55 dosyanın 6'sına ECSPros'ta hâlâ referans var — hepsi `_AnaNavigasyonGirisMenu.cshtml`'de; tasarım bu ikonları FA'ya çevirdi, Faz 4 merge'ü referansları zaten kaldırır. **Kural:** Faz 1 asset senkronu EKLEMELİ yapılır (silme yok); kök ikon temizliği Faz 4 sonrası sıfır-referans doğrulamasıyla yapılır.
 
 ### Faz 1 — Asset'ler
 - [ ] `testimage/`, `images/`, `ikons/` (taşımalar dahil), `video/`, `fontawesome-free-7.2.0-web/` (yeni `ikonall.min.css` dahil) birebir senkron.
