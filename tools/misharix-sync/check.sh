@@ -7,7 +7,7 @@
 # Kullanım: tools/misharix-sync/check.sh   (çıkış kodu 0 = temiz)
 
 set -u
-KAYNAK="/opt/misharixWebSites/misharix"
+KAYNAK="/opt/misharix"   # 2026-07-16: nihai tasarım paketi (eski baz: /opt/misharixWebSites/misharix — üçlü merge bitene kadar silinmez)
 HEDEF="/opt/ECSProsAI/src/ECSPros.Api"
 BURASI="$(cd "$(dirname "$0")" && pwd)"
 IZINLI="$BURASI/allowed-diffs.txt"
