@@ -8,22 +8,37 @@
 
     var mobilKampanyalar = new[]
     {
-        ("Yeni Gelen Ürünler", "Yeni gelen ürünler", "https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png"),
-        ("Kampanya Detayları", "Kampanya detayları", "https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png"),
-        ("İyi Fiyatlı Ürünler", "İyi fiyatlı ürünler", "https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png"),
-        ("Avantajlı Ürünler", "Avantajlı ürünler", "https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png"),
-        ("İndirim Kuponları", "İndirim kuponları", "https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png"),
-        ("Fırsat Ürünleri", "Fırsat ürünleri", "https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png"),
-        ("Çok Satanlar", "Çok satanlar", "https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png"),
-        ("Sepette Fırsat", "Sepette fırsat", "https://www.tozlu.com/img/menu/kadin-ayakkabi-yeni-gelenler.png")
+        ("Yeni Gelen Ürünler", "Yeni gelen ürünler", "/images/performance/coklu-banner/ayakkabi-menu-ikon-v2.webp"),
+        ("Kampanya Detayları", "Kampanya detayları", "/images/performance/coklu-banner/ayakkabi-menu-ikon-v2.webp"),
+        ("İyi Fiyatlı Ürünler", "İyi fiyatlı ürünler", "/images/performance/coklu-banner/ayakkabi-menu-ikon-v2.webp"),
+        ("Avantajlı Ürünler", "Avantajlı ürünler", "/images/performance/coklu-banner/ayakkabi-menu-ikon-v2.webp"),
+        ("İndirim Kuponları", "İndirim kuponları", "/images/performance/coklu-banner/ayakkabi-menu-ikon-v2.webp"),
+        ("Fırsat Ürünleri", "Fırsat ürünleri", "/images/performance/coklu-banner/ayakkabi-menu-ikon-v2.webp"),
+        ("Çok Satanlar", "Çok satanlar", "/images/performance/coklu-banner/ayakkabi-menu-ikon-v2.webp"),
+        ("Sepette Fırsat", "Sepette fırsat", "/images/performance/coklu-banner/ayakkabi-menu-ikon-v2.webp")
     };
+
+    string KategoriKisaltmasi(string kategoriAdi)
+    {
+        if (string.IsNullOrWhiteSpace(kategoriAdi))
+        {
+            return "";
+        }
+
+        var kultur = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+        var parcalar = kategoriAdi.Split(new[] { ' ', '&', '-', '/', '\\', '_' }, StringSplitOptions.RemoveEmptyEntries);
+        var kisaltma = string.Concat(parcalar.Select(parca => parca.Trim()[0])).ToUpper(kultur);
+
+        return string.IsNullOrWhiteSpace(kisaltma) ? kategoriAdi[..1].ToUpper(kultur) : kisaltma;
+    }
 }
 
-<div id="ms-ana-navigasyon-mobil-panel" class="ms-ana-navigasyon-mobil-panel" data-ms-mobil-menu aria-hidden="true">
+<div id="ms-ana-navigasyon-mobil-panel" class="ms-ana-navigasyon-mobil-panel" data-ms-mobil-menu aria-hidden="true" inert>
+    <template data-ms-mobil-menu-sablon>
     <section class="ms-ana-navigasyon-mobil-kutu" role="dialog" aria-modal="true" aria-label="Mobil kategori menüsü">
         <header class="ms-ana-navigasyon-mobil-ust">
             <a class="ms-ana-navigasyon-mobil-logo-link" asp-controller="Home" asp-action="Index" aria-label="Mishar Italia ana sayfa">
-                <img class="ms-ana-navigasyon-mobil-logo" src="/images/site_logo.png" alt="Mishar Italia">
+                <img class="ms-ana-navigasyon-mobil-logo" src="/images/site_logo-144.png" alt="Mishar Italia" width="144" height="21" loading="lazy" decoding="async">
             </a>
             <button class="ms-ana-navigasyon-mobil-kapat" type="button" data-ms-mobil-menu-kapat aria-label="Menüyü kapat">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -75,11 +90,18 @@
                             <div class="ms-ana-navigasyon-mobil-grid" data-ms-mobil-panel="@cocuk.Slug" hidden="@(!(i == 0 && j == 0))">
                                 @if (cocuk.Cocuklar.Count == 0)
                                 {
-                                    <a class="ms-ana-navigasyon-mobil-kategori" href="@cocuk.Url"><span>@cocuk.Ad</span></a>
+                                    <a class="ms-ana-navigasyon-mobil-kategori ms-ana-navigasyon-mobil-kategori-resimsiz" href="@cocuk.Url"><span class="ms-ana-navigasyon-mobil-resimsiz-gorsel" aria-hidden="true">@KategoriKisaltmasi(cocuk.Ad)</span><span>@cocuk.Ad</span></a>
                                 }
                                 @foreach (var alt in cocuk.Cocuklar)
                                 {
-                                    <a class="ms-ana-navigasyon-mobil-kategori" href="@alt.Url">@if (!string.IsNullOrWhiteSpace(alt.GorselUrl)){<img src="@alt.GorselUrl" alt="@alt.Ad">}<span>@alt.Ad</span></a>
+                                    if (!string.IsNullOrWhiteSpace(alt.GorselUrl))
+                                    {
+                                    <a class="ms-ana-navigasyon-mobil-kategori" href="@alt.Url"><img src="@alt.GorselUrl" alt="@alt.Ad" width="76" height="114" loading="lazy" decoding="async"><span>@alt.Ad</span></a>
+                                    }
+                                    else
+                                    {
+                                    <a class="ms-ana-navigasyon-mobil-kategori ms-ana-navigasyon-mobil-kategori-resimsiz" href="@alt.Url"><span class="ms-ana-navigasyon-mobil-resimsiz-gorsel" aria-hidden="true">@KategoriKisaltmasi(alt.Ad)</span><span>@alt.Ad</span></a>
+                                    }
                                 }
                             </div>
                         }
@@ -89,11 +111,18 @@
                         <div class="ms-ana-navigasyon-mobil-grid" data-ms-mobil-panel="@kok.Slug" hidden="@(i > 0)">
                             @if (kok.Cocuklar.Count == 0)
                             {
-                                <a class="ms-ana-navigasyon-mobil-kategori" href="@kok.Url"><span>@kok.Ad</span></a>
+                                <a class="ms-ana-navigasyon-mobil-kategori ms-ana-navigasyon-mobil-kategori-resimsiz" href="@kok.Url"><span class="ms-ana-navigasyon-mobil-resimsiz-gorsel" aria-hidden="true">@KategoriKisaltmasi(kok.Ad)</span><span>@kok.Ad</span></a>
                             }
                             @foreach (var alt in kok.Cocuklar)
                             {
-                                <a class="ms-ana-navigasyon-mobil-kategori" href="@alt.Url">@if (!string.IsNullOrWhiteSpace(alt.GorselUrl)){<img src="@alt.GorselUrl" alt="@alt.Ad">}<span>@alt.Ad</span></a>
+                                if (!string.IsNullOrWhiteSpace(alt.GorselUrl))
+                                {
+                                <a class="ms-ana-navigasyon-mobil-kategori" href="@alt.Url"><img src="@alt.GorselUrl" alt="@alt.Ad" width="76" height="114" loading="lazy" decoding="async"><span>@alt.Ad</span></a>
+                                }
+                                else
+                                {
+                                <a class="ms-ana-navigasyon-mobil-kategori ms-ana-navigasyon-mobil-kategori-resimsiz" href="@alt.Url"><span class="ms-ana-navigasyon-mobil-resimsiz-gorsel" aria-hidden="true">@KategoriKisaltmasi(alt.Ad)</span><span>@alt.Ad</span></a>
+                                }
                             }
                         </div>
                     }
@@ -111,8 +140,8 @@
             <div class="ms-magaza-mega-kampanya-listesi" data-ms-mobil-kampanya-listesi>
                 @foreach (var kampanya in mobilKampanyalar)
                 {
-                    <a class="ms-magaza-mega-kampanya-link" href="#">
-                        <img src="@kampanya.Item3" alt="@kampanya.Item2">
+                    <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
+                        <img src="@kampanya.Item3" alt="@kampanya.Item2" width="48" height="48" loading="lazy" decoding="async">
                         <span title="@kampanya.Item1">@kampanya.Item1</span>
                     </a>
                 }
@@ -151,7 +180,7 @@
                 </svg>
             </button>
             <button class="ms-ana-navigasyon-mobil-alt-link" type="button" data-ms-mobil-kampanya-ac aria-expanded="false">
-                <img class="ms-ana-navigasyon-mobil-alt-gorsel" src="https://www.tozlu.com/banner/2193-4223-1-kargo-bedava-1782459517.png" alt="Kampanyalar">
+                <img class="ms-ana-navigasyon-mobil-alt-gorsel" src="/images/kampanyalar-optimized.webp" alt="Kampanyalar" width="565" height="72" loading="lazy" decoding="async">
                 <strong>Kampanyalar</strong>
                 <span>Kampanyalar</span>
                 <svg class="ms-ana-navigasyon-mobil-alt-ok" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -160,4 +189,5 @@
             </button>
         </nav>
     </section>
+    </template>
 </div>
