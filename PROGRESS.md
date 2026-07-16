@@ -294,6 +294,22 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION ÖZETİ (2026-07-16, 4. oturum) — 9 MADDELİK DÜZELTME TURU TAMAM (⚠️ RESTART BEKLİYOR)
+1) Sepette sıfır fiyat: kök neden 329K varyantta BasePrice 0 (fiyat kanalda; kanal kaydı
+olmayan ~48K varyant 0 taşıyordu) — veri onarımı (328.982 satır + ANALYZE) + detay builder
+fiyat çözücü + Cart API fiyat<=0 reddi. 2) Telefon+şifre girişi uçtan uca (LoginMember Phone
+desteği + modal sekmesi/paneli). 3) Detayda 0 puan = pasif yıldız (koşul iki dalda 'solid'
+basıyordu). 4) Mobil alt bar yalnız ana sayfa + liste (MsMobilAltBar bayrağı). 5) Mobil görsel
+modalı: sürükle-kapat kapalı (data-ms-modal-asagi-surukle-hazir opt-out) + kapat sağ üst sabit.
+6) Mobil Konum Seç: çip bağlama delegation'a alındı (template'e taşınınca kopmuştu) + etiket
+'Konum Seç (Şehir)'. 7) Favoriler ürün+renk bazlı: ColorValueId kolonu + unique index
+(2 migration CANLIYA UYGULANDI), API/JS/Favorilerim renkli. 8) Ortak koleksiyon akışı gerçek
+API'de: köprü script (ms:koleksiyon-olustur/varolan-ekle→POST), varolan modal gerçek
+koleksiyonlarla, AddCollectionItems endpoint'i, TÜM test butonları kaldırıldı, onay/red 1500ms.
+9) Story kart renkleri: data-ms-story-grup başlık-slug anahtarıyla (elbiseler/ikiliTakim...)
+tasarım CSS renk kurallarıyla eşleşir. QA 5051 yeşil; publish rsync'lendi —
+`sudo systemctl restart ecspros` KULLANICIDA.
+
 ### ⭐ SESSION ÖZETİ (2026-07-16, 2. oturum) — MİSHARİX TASARIM SENKRONU FAZ 0-4 TAMAM
 Faz 0 (hazırlık+ikon denetimi), Faz 1 (337 asset), Faz 2 (site.js 7846 satır + esbuild
 site.min.js hattı; lazy-load+reklam-vitrini deltaları yeniden uygulandı), Faz 3 (CSS'ler
