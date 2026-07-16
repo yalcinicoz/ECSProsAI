@@ -102,9 +102,16 @@ sitenin gerçek sayfaları içindir.
 - [x] `_UrunListesiKartiOrnegi`/`_TemelBilgilendirme` gerçek sayfalarda kullanılmıyor → taşınmadı;
   kart markup fark denetimi (bizim _UrunKarti ↔ tasarım kart şablonu) Faz 7'de.
 
-### Faz 6 — Yeni vitrin blok tipleri (K16: panel karşılığıyla)
-- [ ] `coklu_banner`, `gorselli_yorumlar_carousel`, `kategori_cok_satanlar` blok tipleri: katalog kaydı + kaynak motoru + Razor render (YENİ partial markup'ı birebir) + admin Vitrin Yönetimi formu.
-- [ ] Kaldırılan tasarımların (videolu carousel, Flash Vitrin/Senin İçin) vitrin kataloğunda karşılığı varsa kaldırılır; yayınlanmış snapshot'larda kullanım taranır, gerekirse yeniden yayın.
+### Faz 6 — Yeni vitrin blok tipleri ✅ (2026-07-16 — API+admin build 0 hata)
+- [x] 3 tip PageBlockCatalog'a eklendi: `coklu-banner` (öğe: görsel+ad+link), `gorselli-yorumlar`
+  (öğe eşlemesi: GorselUrl=yorum foto, MobilGorselUrl=ürün küçük görseli, AltBaslik=yorum,
+  Baslik=ürün adı, Rozet=marka), `kategori-cok-satanlar` (RequiresProductSource — mevcut G3
+  kaynak motoru generic işler; ilk 4 ürün + config.seeAllUrl 'Kategoriye Git').
+- [x] Razor render: _VitrinBloklar.cshtml'e tasarım markup'ıyla 3 case. Admin form katalog
+  API'sinden otomatik beslenir (tip dropdown/şablon/öğe generic); kategori-cok-satanlar için
+  ORNEK_CONFIG eklendi; admin dist yeniden derlendi.
+- [x] Kaldırılan tasarımlar (videolu carousel, Flash Vitrin/Senin İçin) katalogda hiç yoktu —
+  temizlik gerekmedi (H5 'Videolu Ürün' kart rozeti ayrı özellik, tasarımda da var, kaldı).
 
 ### Faz 7 — Vitrin blok eşlemesi (check.sh görmez — elle)
 - [ ] Tasarımın `_Story`/`_Slider`/carousel/banner değişiklikleri (story etiket renkleri+tipografi, nokta zeminleri `bg-transparent`, kontrast düzeltmeleri, Flash Ürünler "Tümünü Gör" kaldırma, çerçevesiz carousel, tek `src` görsel sözleşmesi…) `Views/Shared/Store/_VitrinBloklar.cshtml`'e satır satır uygulanır.

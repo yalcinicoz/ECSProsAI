@@ -54,6 +54,7 @@ const ORNEK_CONFIG: Record<string, object> = {
   collection: { collectionSource: { limit: 10, sort: 'popular' } },
   banner: { mobileCarousel: true },
   categories: { gorunum: 'kapsul', mobileCarousel: true },
+  'kategori-cok-satanlar': { productSource: { source: 'category', categoryId: '00000000-0000-0000-0000-000000000000', limit: 4, sort: 'best-sellers' }, seeAllUrl: '/urun-listesi' },
 }
 const KAYNAKLAR = ['new-arrivals', 'best-sellers', 'campaign', 'category', 'brand', 'manual']
 

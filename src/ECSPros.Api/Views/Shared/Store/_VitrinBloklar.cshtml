@@ -477,6 +477,95 @@
                 }
             </div>
             break;
+
+        case "coklu-banner":
+            @* Faz 6: tasarımın _CokluBanner markup'ı — öğeler admin'den (görsel+ad+link) *@
+            <section class="ms-gorunum-carousel-kapsayici ms-gorunum-coklu-banner" data-ms-gorunum-carousel data-ms-gorunum-carousel-serbest aria-label="@(blok.Baslik.Length > 0 ? blok.Baslik : "Çoklu banner")">
+                <button class="ms-gorunum-carousel-kontrol ms-slider-kontrol ms-slider-kontrol-sol" type="button" data-ms-gorunum-carousel-kontrol="sol" aria-label="Önceki çoklu bannerları göster">
+                    <i class="fa-solid fa-chevron-left ms-fa-ikon" aria-hidden="true"></i>
+                </button>
+                <div class="ms-gorunum-carousel ms-gorunum-banner-grid ms-gorunum-banner-mobil-carousel ms-gorunum-banner-desktop-carousel ms-gorunum-coklu-banner-carousel" data-ms-gorunum-carousel-liste aria-label="Çoklu bannerlar">
+                    @foreach (var oge in blok.Ogeler)
+                    {
+                        <a class="ms-gorunum-banner-karti" href="@(oge.LinkUrl ?? "#")" target="@(oge.YeniSekme ? "_blank" : null)" aria-label="@oge.Baslik bannerını incele">
+                            <img data-ms-lazy-src="@oge.GorselUrl" alt="@oge.Baslik banner görseli" width="110" height="165" loading="lazy">
+                        </a>
+                    }
+                </div>
+                <button class="ms-gorunum-carousel-kontrol ms-slider-kontrol ms-slider-kontrol-sag" type="button" data-ms-gorunum-carousel-kontrol="sag" aria-label="Sonraki çoklu bannerları göster">
+                    <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
+                </button>
+            </section>
+            break;
+
+        case "gorselli-yorumlar":
+            @* Faz 6: tasarımın _GorselliYorumlarCarousel markup'ı. Öğe eşlemesi:
+               GorselUrl=yorum fotoğrafı, MobilGorselUrl=ürün küçük görseli,
+               AltBaslik=yorum metni, Baslik=ürün adı, Rozet=marka (opsiyonel). *@
+            <section class="ms-gorunum-gorselli-yorumlar lazy-infinite-on" data-ms-gorunum-carousel aria-labelledby="ms-gorselli-yorumlar-baslik-@blok.Id">
+                <header class="ms-gorunum-gorselli-yorumlar-ust">
+                    <h2 id="ms-gorselli-yorumlar-baslik-@blok.Id">@(blok.Baslik.Length > 0 ? blok.Baslik : "Popüler Görselli Yorumlar")</h2>
+                </header>
+                <div class="ms-gorunum-carousel-kapsayici">
+                    <button class="ms-gorunum-carousel-kontrol ms-slider-kontrol ms-slider-kontrol-sol" type="button" data-ms-gorunum-carousel-kontrol="sol" aria-label="Önceki görselli yorumları göster">
+                        <i class="fa-solid fa-chevron-left ms-fa-ikon" aria-hidden="true"></i>
+                    </button>
+                    <div class="ms-gorunum-carousel ms-gorunum-gorselli-yorumlar-liste" data-ms-gorunum-carousel-liste aria-label="@(blok.Baslik.Length > 0 ? blok.Baslik : "Popüler görselli yorumlar")">
+                        @foreach (var oge in blok.Ogeler)
+                        {
+                            <a class="ms-gorunum-gorselli-yorum-kart" href="@(oge.LinkUrl ?? "#")">
+                                <span class="ms-gorunum-gorselli-yorum-gorsel">
+                                    <img data-ms-lazy-src="@oge.GorselUrl" alt="@oge.Baslik görselli yorum fotoğrafı" width="214" height="268" loading="lazy" decoding="async">
+                                    <strong>@oge.AltBaslik</strong>
+                                </span>
+                                <span class="ms-gorunum-gorselli-yorum-urun">
+                                    @if (oge.MobilGorselUrl is not null)
+                                    {
+                                    <img data-ms-lazy-src="@oge.MobilGorselUrl" alt="@oge.Baslik ürün görseli" width="40" height="40" loading="lazy" decoding="async">
+                                    }
+                                    <span>
+                                        @if (!string.IsNullOrWhiteSpace(oge.Rozet))
+                                        {
+                                        <strong>@oge.Rozet</strong>
+                                        }
+                                        <small>@oge.Baslik</small>
+                                    </span>
+                                </span>
+                            </a>
+                        }
+                    </div>
+                    <button class="ms-gorunum-carousel-kontrol ms-slider-kontrol ms-slider-kontrol-sag" type="button" data-ms-gorunum-carousel-kontrol="sag" aria-label="Sonraki görselli yorumları göster">
+                        <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </section>
+            break;
+
+        case "kategori-cok-satanlar":
+            @* Faz 6: tasarımın _KategoriCokSatanlar markup'ı — ürünler kaynak motorundan
+               (config.productSource, ilk 4), "Kategoriye Git" config.seeAllUrl'den. *@
+            <section class="ms-gorunum-kategori-cok-satanlar" aria-labelledby="ms-kategori-cok-satanlar-baslik-@blok.Id">
+                <header class="ms-gorunum-kategori-cok-satanlar-ust">
+                    <h2 id="ms-kategori-cok-satanlar-baslik-@blok.Id">@(blok.Baslik.Length > 0 ? blok.Baslik : "Kategorinin Çok Satanları")</h2>
+                    @if (blok.TumunuGorUrl is not null)
+                    {
+                    <a class="ms-gorunum-kategori-cok-satanlar-link" href="@blok.TumunuGorUrl">Kategoriye Git</a>
+                    }
+                </header>
+                <div class="ms-gorunum-kategori-cok-satanlar-liste" aria-label="@(blok.Baslik.Length > 0 ? blok.Baslik : "Kategorinin çok satan ürünleri")">
+                    @foreach (var urun in blok.Urunler.Take(4))
+                    {
+                        <a class="ms-gorunum-kategori-cok-satanlar-kart" href="@urun.Url">
+                            <img data-ms-lazy-src="@urun.GorselUrl" alt="@urun.Ad" loading="lazy">
+                            <span>
+                                <strong>@urun.Ad</strong>
+                                <em>@Fiyat(urun.Fiyat)</em>
+                            </span>
+                        </a>
+                    }
+                </div>
+            </section>
+            break;
     }
 }
 
