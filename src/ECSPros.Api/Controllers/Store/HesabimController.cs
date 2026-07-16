@@ -697,6 +697,10 @@ public class HesabimController(
 
         ViewData["MsKoleksiyonlar"] = koleksiyonlar;
         ViewData["MsKoleksiyonFavorileri"] = favoriUrunler;
+        // Faz 5: bu sayfa kendi GERÇEK verili koleksiyon modalını taşır (E6, SSR panelli) —
+        // layout'un ortak koleksiyon modal şablonu basılmaz ki site.js ilk etkileşimde
+        // ikinci (demo) modalı klonlamasın (çifte modal çakışması).
+        ViewData["MsOrtakKoleksiyonModallariGizle"] = true;
         return HesabimSayfasi("Koleksiyonlarım", "~/Views/ProjeElementleri/Hesabim/_HesabimKoleksiyonlarim.cshtml");
     }
 

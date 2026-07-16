@@ -44,11 +44,14 @@
        data-ms-giris-modal-ac dinleyicileri nav script'inde parse anında bağlanır. *@
     <partial name="~/Views/Shared/Store/_MobilAltBarNav.cshtml" />
     <partial name="~/Views/ProjeElementleri/Navigasyon/_AnaNavigasyon.cshtml" />
+    @if (ViewData["MsOrtakKoleksiyonModallariGizle"] is not true)
+    {
     <template data-ms-koleksiyon-modallari-sablon>
         <partial name="~/Views/ProjeElementleri/Ortak/_KoleksiyonModal.cshtml" />
         <partial name="~/Views/ProjeElementleri/Ortak/_KoleksiyonVarolanModal.cshtml" />
         <partial name="~/Views/ProjeElementleri/Ortak/_KoleksiyonYeniOzetModal.cshtml" />
     </template>
+    }
     <template data-ms-onay-red-modal-sablon>
         <partial name="~/Views/ProjeElementleri/Ortak/onayRedModal.cshtml" />
     </template>

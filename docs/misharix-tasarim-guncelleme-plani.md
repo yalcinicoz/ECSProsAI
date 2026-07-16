@@ -87,11 +87,20 @@ sitenin gerçek sayfaları içindir.
 - [ ] Sepet paneli merge'ünde tasarımın demo sepet-silme mantığının gerçek sepet backend'ini ezmediği doğrulanır (`data-ms-sepet-rozet/-urun-sayisi/-toplam` gerçek veriye bağlanır).
 - [ ] `allowed-diffs.txt` güncellenir; `check.sh` (YENİ kaynağa karşı) TEMİZ.
 
-### Faz 5 — Yeni sayfa/partial'lar
-- [ ] Koleksiyon modalları (`_KoleksiyonModal`, `_KoleksiyonVarolanModal`, `_KoleksiyonYeniOzetModal`) + `onayRedModal` layout'ta TEK SEFER render (tasarım sözleşmesi).
-- [ ] `_HazirlikDurumuModal`, `yorumYapModal`, `_UrunRenkModal` (kart başına gizli modal → sayfa seviyesinde tek modal + ürün kimliğine göre JSON renk verisi — backend bağlama dahil).
-- [ ] Üyeliksiz kargo takip: 2 route (`/uyeliksiz-kargo-takip`, `/uyeliksiz-kargo-takip-sonuc`) + `Views/Home` sayfaları + `KargoTakip` partial'ları; **demo veri**, `noindex`; duyuru barındaki Kargo Takip linki yeni rotaya.
-- [ ] `_UrunListesiKartiOrnegi`, `_MobilMenuKaydirma`, `_TemelBilgilendirme`: gerçek sayfalarda kullanım varsa taşınır (katalog-yalnızı ise varsayım gereği atlanır — taşıma anında tek tek doğrulanır).
+### Faz 5 — Yeni sayfa/partial'lar ✅ (2026-07-16 — build 0 hata)
+- [x] Koleksiyon modalları + `onayRedModal` layout'ta TEK SEFER (Faz 4'te geldi). ÇİFTE MODAL ENGELİ:
+  Koleksiyonlarım sayfası kendi gerçek-verili E6 modalını taşıdığından controller
+  `MsOrtakKoleksiyonModallariGizle` bayrağıyla layout şablonunu kapatır; `ms:koleksiyon-olustur`
+  köprüsü yeni site.js'te de yaşıyor (2486/2801) — API bağı çalışır.
+- [x] `_HazirlikDurumuModal` kopyalandı (include Siparişlerim'de hazır); tetik butonu @if(false) —
+  modal timeline'ı statik demo, gerçek fulfillment adım verisi gelince açılır.
+  `yorumYapModal`a GEÇİLMEDİ (bizim E7 gerçek modal iş başında; foto upload backend'i yok — bilinen sınır).
+- [x] `_UrunRenkModal` kopyalandı + Home/Index'e eklendi — yalnız `data-ms-urun-renk-ortak`
+  tetikleyicileri açar (bizim kartlarda yok → nötr); renk JSON'u vitrin kart eşlemesiyle Faz 7'de.
+- [x] Üyeliksiz kargo takip: 2 route (Store/HomeController) + 2 Home view + 2 KargoTakip partial'ı
+  birebir; DEMO veri + noindex; duyuru linki Faz 4'te bağlanmıştı. ⏰ kargo entegrasyonunda gerçek servise bağlanacak.
+- [x] `_UrunListesiKartiOrnegi`/`_TemelBilgilendirme` gerçek sayfalarda kullanılmıyor → taşınmadı;
+  kart markup fark denetimi (bizim _UrunKarti ↔ tasarım kart şablonu) Faz 7'de.
 
 ### Faz 6 — Yeni vitrin blok tipleri (K16: panel karşılığıyla)
 - [ ] `coklu_banner`, `gorselli_yorumlar_carousel`, `kategori_cok_satanlar` blok tipleri: katalog kaydı + kaynak motoru + Razor render (YENİ partial markup'ı birebir) + admin Vitrin Yönetimi formu.

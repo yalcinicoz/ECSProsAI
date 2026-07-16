@@ -1,0 +1,60 @@
+<section class="ms-uyeliksiz-kargo-sayfa" aria-labelledby="ms-uyeliksiz-kargo-baslik">
+    <div class="ms-uyeliksiz-kargo-kapsayici ms-uyeliksiz-kargo-kapsayici-dar">
+        <a class="ms-uyeliksiz-kargo-geri" href="/ana-sayfa">
+            <i class="fa-solid fa-chevron-left ms-fa-ikon" aria-hidden="true"></i>
+            Ana sayfaya dön
+        </a>
+
+        <header class="ms-uyeliksiz-kargo-baslik-alani">
+            <span class="ms-uyeliksiz-kargo-baslik-ikon" aria-hidden="true">
+                <i class="fa-solid fa-truck-fast ms-fa-ikon"></i>
+            </span>
+            <div>
+                <h1 id="ms-uyeliksiz-kargo-baslik">Sipariş Bilgileriniz</h1>
+                <p>Üye iseniz giriş yapıp <a href="/siparislerim">Siparişlerim</a> sayfasından da takip edebilirsiniz.</p>
+            </div>
+        </header>
+
+        <form class="ms-uyeliksiz-kargo-form" method="get" action="/uyeliksiz-kargo-takip-sonuc">
+            <label class="ms-form-alani">
+                <span class="ms-form-etiket">Sipariş No</span>
+                <input name="siparisNo" class="ms-form-girdi" type="text" placeholder="Örn. T702074145" autocomplete="off" maxlength="24" required>
+            </label>
+
+            <label class="ms-form-alani">
+                <span class="ms-form-etiket">Telefon Numarası</span>
+                <span class="ms-telefon-girdi">
+                    <span class="ms-telefon-ulke" data-ms-telefon-ulke-select>
+                        <button class="ms-telefon-ulke-tetikleyici" type="button" data-ms-telefon-ulke-tetikleyici aria-haspopup="listbox" aria-expanded="false" aria-label="Telefon ülke kodunu seç">
+                            <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye" width="28" height="20" loading="lazy">
+                            <span data-ms-telefon-ulke-kod>+90</span>
+                            <i class="fa-solid fa-chevron-down ms-fa-ikon ms-telefon-ulke-ok" aria-hidden="true"></i>
+                        </button>
+                        <span class="ms-telefon-ulke-panel" role="listbox" aria-label="Telefon ülke kodları">
+                            <input name="ulkeArama" class="ms-telefon-ulke-arama" type="search" placeholder="Ülke ara" autocomplete="off" data-ms-telefon-ulke-arama aria-label="Ülke ara">
+                            <button class="ms-telefon-ulke-secenek ms-telefon-ulke-secenek-aktif" type="button" data-ms-telefon-ulke-secenek data-kod="+90" data-bayrak="https://flagcdn.com/tr.svg" data-ulke="Türkiye" role="option" aria-selected="true">
+                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="" width="28" height="20" loading="lazy"> Türkiye <strong>+90</strong>
+                            </button>
+                            <button class="ms-telefon-ulke-secenek" type="button" data-ms-telefon-ulke-secenek data-kod="+49" data-bayrak="https://flagcdn.com/de.svg" data-ulke="Almanya" role="option" aria-selected="false">
+                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/de.svg" alt="" width="28" height="20" loading="lazy"> Almanya <strong>+49</strong>
+                            </button>
+                            <button class="ms-telefon-ulke-secenek" type="button" data-ms-telefon-ulke-secenek data-kod="+44" data-bayrak="https://flagcdn.com/gb.svg" data-ulke="Birleşik Krallık" role="option" aria-selected="false">
+                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/gb.svg" alt="" width="28" height="20" loading="lazy"> Birleşik Krallık <strong>+44</strong>
+                            </button>
+                            <button class="ms-telefon-ulke-secenek" type="button" data-ms-telefon-ulke-secenek data-kod="+1" data-bayrak="https://flagcdn.com/us.svg" data-ulke="Amerika" role="option" aria-selected="false">
+                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/us.svg" alt="" width="28" height="20" loading="lazy"> Amerika <strong>+1</strong>
+                            </button>
+                        </span>
+                    </span>
+                    <input name="ulkeKodu" type="hidden" value="+90" data-ms-telefon-ulke-deger>
+                    <input name="telefon" type="tel" placeholder="5xx xxx xx xx" inputmode="numeric" autocomplete="tel-national" maxlength="13" data-ms-telefon-input required aria-label="Telefon numarası">
+                </span>
+            </label>
+
+            <button class="ms-buton ms-buton-m ms-buton-satin-al ms-uyeliksiz-kargo-gonder" type="submit">
+                <i class="fa-solid fa-magnifying-glass ms-fa-ikon" aria-hidden="true"></i>
+                Kargomu Takip Et
+            </button>
+        </form>
+    </div>
+</section>
