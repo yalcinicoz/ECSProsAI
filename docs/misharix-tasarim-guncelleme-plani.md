@@ -39,10 +39,13 @@ sitenin gerçek sayfaları içindir.
 - [x] `testimage/` (52), `images/` (210), `ikons/` (67, kullanilmayanlar dahil), `video/` (1), `fontawesome-free-7.2.0-web/` (7, `ikonall.min.css` dahil) rsync ile EKLEMELİ senkronlandı — tasarımla bayt-aynı; kök `ikons/` fazlalıkları (55 taşınan + ECSPros'a özgüler) Faz 4 sonrası temizliğe kadar duruyor. favicon aynı çıktı. `lib/` (validation), `robots.txt`/`sitemap.xml` bilinçli atlandı (Faz 4/8 konusu); `misharix-skils/` tasarım aracı, taşınmaz.
 - [x] Subset aracı (`fontawesome-subset.mjs`) Faz 2'ye alındı — package.json/esbuild işleriyle birlikte.
 
-### Faz 2 — site.js + site.min.js
-- [ ] YENİ `site.js` bütün olarak alınır (LF-temiz — CRLF tuzağı biter), ECSPros'un ~10 satırlık deltası (lazy-load iskelet düzeltmesi) yeniden uygulanır.
-- [ ] esbuild `build-js` script'i ECSPros `package.json`'a eklenir; publish/deploy akışına minify adımı bağlanır.
-- [ ] `_Layout.cshtml`: Production'da `site.min.js`, diğer ortamlarda `site.js` (tasarım kalıbı birebir).
+### Faz 2 — site.js + site.min.js ✅ (2026-07-16)
+- [x] YENİ `site.js` (7846 satır, LF-temiz — CRLF tuzağı bitti) bütün alındı; ECSPros deltalarından **yalnız ikisi** yeniden uygulandı:
+  - Lazy-load: `msLazyHazir` bayrağı kaynak kontrolünden SONRA (infinite-scroll iskelet düzeltmesi — tasarımda hata aynen vardı).
+  - Reklam vitrini: pointerCapture yalnız gerçek sürüklemede (tasarım carousel'i yön-duyarlı çözümle düzeltmiş ama reklam vitrinini düzeltmemişti).
+  - Carousel pointerCapture deltası UYGULANMADI — tasarımın yön-duyarlı sürüklemesi (satır ~1716) bizim düzeltmeyi kapsıyor.
+- [x] `package.json`: `build-js`/`watch-js` (esbuild ^0.28.1) + `fontawesome-subset` script'leri; `scripts/fontawesome-subset.mjs` kopyalandı (çalıştırma Faz 4/5/7 sonrası — Views nihai olunca). `site.min.js` üretildi (137 KB, syntax OK); publish `wwwroot` ile otomatik taşır, **site.js her değiştiğinde `npm run build-js` şart** (Faz 9'da deploy talimatına eklenecek).
+- [x→Faz 4] `_Layout.cshtml` Production `site.min.js` geçişi layout merge'üyle birlikte gelecek (tasarım _Layout'u zaten environment-etiketli).
 
 ### Faz 3 — CSS
 - [ ] `tailwind.css` birebir kopya; `site.css` tasarımın derlenmiş çıktısıyla (971.581 bayt) değiştirilir (A4 kalıbı: md5 eşit).
