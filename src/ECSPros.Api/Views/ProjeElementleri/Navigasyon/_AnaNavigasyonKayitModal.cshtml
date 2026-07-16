@@ -1,10 +1,8 @@
-﻿    <div class="ms-giris-modal" data-ms-kayit-modal aria-hidden="true">
+    <div class="ms-giris-modal" data-ms-kayit-modal aria-hidden="true">
         <div class="ms-giris-modal-kaplama" data-ms-kayit-modal-kapat></div>
         <section class="ms-giris-modal-kutu ms-kayit-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-kayit-modal-baslik">
             <button class="ms-giris-modal-kapat" type="button" data-ms-kayit-modal-kapat aria-label="Kayıt modalını kapat">
-                <svg class="ms-giris-modal-kapat-ikon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-                </svg>
+                <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
             </button>
 
             <div class="ms-giris-modal-baslik-alani">
@@ -12,18 +10,19 @@
                 <p class="ms-giris-modal-aciklama">Üyeliğinizi oluşturmak için bilgilerinizi girin.</p>
             </div>
 
+            <form class="ms-giris-modal-form" data-ms-kayit-form>
             <div class="ms-kayit-form">
                 <label class="ms-giris-form-alani">
                     <span>Ad</span>
-                    <input class="ms-giris-input" type="text" autocomplete="given-name" placeholder="Adınızı girin" data-ms-kayit-ad>
+                    <input name="ad" class="ms-giris-input" type="text" autocomplete="given-name" placeholder="Adınızı girin" data-ms-kayit-ad>
                 </label>
                 <label class="ms-giris-form-alani">
                     <span>Soyad</span>
-                    <input class="ms-giris-input" type="text" autocomplete="family-name" placeholder="Soyadınızı girin" data-ms-kayit-soyad>
+                    <input name="soyad" class="ms-giris-input" type="text" autocomplete="family-name" placeholder="Soyadınızı girin" data-ms-kayit-soyad>
                 </label>
                 <label class="ms-giris-form-alani">
                     <span>Cinsiyet</span>
-                    <select class="ms-giris-input" data-ms-kayit-cinsiyet>
+                    <select class="ms-giris-input" name="cinsiyet" data-ms-kayit-cinsiyet>
                         <option value="">Seçiniz</option>
                         <option value="female">Kadın</option>
                         <option value="male">Erkek</option>
@@ -32,48 +31,56 @@
                 </label>
                 <label class="ms-giris-form-alani">
                     <span>Doğum Tarihi (zorunlu değildir)</span>
-                    <input class="ms-giris-input" type="date" autocomplete="bday" data-ms-kayit-dogum>
+                    <input name="dogumTarihi" class="ms-giris-input" type="date" autocomplete="bday" data-ms-kayit-dogum>
                 </label>
                 <label class="ms-giris-form-alani">
                     <span>E-posta Adresi</span>
-                    <input class="ms-giris-input" type="email" autocomplete="email" placeholder="ornek@eposta.com" data-ms-kayit-eposta>
+                    <input name="eposta" class="ms-giris-input" type="email" autocomplete="email" placeholder="ornek@eposta.com" data-ms-kayit-eposta>
                 </label>
-                @* B4: Şifre alanı — api/store/auth/register şifre zorunlu (Faz D SMS/OTP
-                   onboarding'i gelince gözden geçirilir); mevcut form alanı sınıflarıyla. *@
+                @* B4: Şifre alanı — api/store/auth/register şifre zorunlu (SMS/OTP onboarding'i
+                   gelince gözden geçirilir); tasarım form alanı sınıflarıyla. *@
                 <label class="ms-giris-form-alani">
                     <span>Şifre</span>
                     <input class="ms-giris-input" type="password" autocomplete="new-password" placeholder="Şifrenizi belirleyin" data-ms-kayit-sifre>
+                </label>
+                <label class="ms-giris-form-alani">
+                    <span>Ülke</span>
+                    <select class="ms-giris-input" name="ulke-secimi" autocomplete="country-name" disabled aria-disabled="true">
+                        <option value="TR" selected>Türkiye</option>
+                    </select>
+                    <input type="hidden" name="ulke" value="TR">
                 </label>
                 <label class="ms-giris-form-alani ms-kayit-form-genis">
                     <span>Telefon Numarası</span>
                     <span class="ms-telefon-girdi ms-giris-telefon-girdi">
                         <span class="ms-telefon-ulke ms-giris-telefon-ulke">
                             <span class="ms-telefon-ulke-tetikleyici ms-giris-telefon-ulke-tetikleyici" aria-label="Türkiye ülke kodu">
-                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye">
+                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye" loading="lazy">
                                 <span>+90</span>
                             </span>
                         </span>
-                        <input type="tel" placeholder="___ ___ __ __" inputmode="numeric" autocomplete="tel-national" maxlength="13" data-ms-kayit-telefon>
+                        <input name="telefon" type="tel" placeholder="___ ___ __ __" inputmode="numeric" autocomplete="tel-national" maxlength="13" data-ms-kayit-telefon>
                     </span>
                 </label>
             </div>
 
             <div class="ms-kayit-izinler" aria-label="İzinler ve onaylar">
                 <label class="ms-kayit-onay">
-                    <input type="checkbox">
+                    <input name="uyelikSozlesmesiOnayi" type="checkbox">
                     <span><button type="button" data-ms-belge-modal-ac data-baslik="Üyelik Sözleşmesi" data-belge-tur="uyelik">Üyelik Sözleşmesi</button>'ni okudum ve anladım.*</span>
                 </label>
                 <label class="ms-kayit-onay">
-                    <input type="checkbox">
+                    <input name="aydinlatmaMetniOnayi" type="checkbox">
                     <span>Kişisel verilerimin işlenmesine yönelik <button type="button" data-ms-belge-modal-ac data-baslik="Aydınlatma Metni" data-belge-tur="aydinlatma">Aydınlatma Metni</button>'ni okudum ve anladım.*</span>
                 </label>
                 <label class="ms-kayit-onay">
-                    <input type="checkbox">
+                    <input name="onBilgilendirmeOnayi" type="checkbox">
                     <span><button type="button" data-ms-belge-modal-ac data-baslik="Ön Bilgilendirme Formu" data-belge-tur="on-bilgilendirme">Ön Bilgilendirme Formu</button>'nu okudum ve anladım.*</span>
                 </label>
             </div>
 
             <div class="ms-uyari ms-uyari-hata" data-ms-kayit-hata hidden></div>
-            <button class="ms-giris-buton ms-giris-buton-birincil" type="button" data-ms-kayit-gonder>Kayıt Ol</button>
+            <button class="ms-giris-buton ms-buton-basarili" type="button" data-ms-kayit-gonder>Kayıt Ol</button>
+            </form>
         </section>
     </div>

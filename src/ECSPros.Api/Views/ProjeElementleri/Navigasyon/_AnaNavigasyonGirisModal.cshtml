@@ -1,10 +1,8 @@
-﻿    <div class="ms-giris-modal" data-ms-giris-modal aria-hidden="true">
+    <div class="ms-giris-modal" data-ms-giris-modal aria-hidden="true">
         <div class="ms-giris-modal-kaplama" data-ms-giris-modal-kapat></div>
         <section class="ms-giris-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-giris-modal-baslik">
             <button class="ms-giris-modal-kapat" type="button" data-ms-giris-modal-kapat aria-label="Giriş modalını kapat">
-                <svg class="ms-giris-modal-kapat-ikon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-                </svg>
+                <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
             </button>
 
             <div class="ms-giris-modal-baslik-alani">
@@ -12,8 +10,8 @@
                 <p class="ms-giris-modal-aciklama">Hızlı giriş yöntemlerinden birini seçin.</p>
             </div>
 
-            @* D4: SMS girişi canlı — tasarımın varsayılan sekmesi (SMS) geri döndü.
-               Telefon+şifre sekmesi backend'i olmadığından hâlâ pasif. *@
+            <form class="ms-giris-modal-form" data-ms-giris-form>
+
             <div class="ms-giris-tab-listesi" role="tablist" aria-label="Giriş yöntemleri">
                 <button class="ms-giris-tab ms-giris-tab-aktif" type="button" data-ms-giris-tab="sms" aria-pressed="true">SMS Kodu</button>
                 <button class="ms-giris-tab" type="button" data-ms-giris-tab="telefon" aria-pressed="false" disabled>Telefon (Yakında)</button>
@@ -21,17 +19,18 @@
             </div>
 
             <div class="ms-giris-panel ms-giris-panel-aktif" data-ms-giris-panel="sms">
+                <div class="ms-uyari ms-uyari-hata" data-ms-giris-sms-hata hidden></div>
                 <div class="ms-giris-sms-adim ms-giris-sms-adim-aktif" data-ms-giris-sms-adim="telefon">
                     <label class="ms-giris-form-alani">
                         <span>Telefon Numaranız</span>
                         <span class="ms-telefon-girdi ms-giris-telefon-girdi">
                             <span class="ms-telefon-ulke ms-giris-telefon-ulke">
                                 <span class="ms-telefon-ulke-tetikleyici ms-giris-telefon-ulke-tetikleyici" aria-label="Türkiye ülke kodu">
-                                    <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye">
+                                    <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye" loading="lazy">
                                     <span>+90</span>
                                 </span>
                             </span>
-                            <input type="tel" placeholder="___ ___ __ __" inputmode="numeric" autocomplete="tel-national" maxlength="13" data-ms-giris-telefon>
+                            <input name="giris_telefon" type="tel" placeholder="___ ___ __ __" inputmode="numeric" autocomplete="tel-national" maxlength="13" data-ms-giris-telefon>
                         </span>
                     </label>
                     <button class="ms-giris-buton ms-giris-buton-birincil" type="button" data-ms-giris-kod-gonder>Giriş Yap</button>
@@ -41,18 +40,18 @@
                     <p class="ms-giris-kod-yardim">Telefonunuza gelen 6 haneli kodu girin.</p>
                     <div class="ms-giris-kod-alani">
                     <div class="ms-giris-kod-giris" data-ms-giris-kod-giris>
-                        <input class="ms-giris-kod-input" type="text" inputmode="numeric" maxlength="1" aria-label="Kod 1. hane">
-                        <input class="ms-giris-kod-input" type="text" inputmode="numeric" maxlength="1" aria-label="Kod 2. hane">
-                        <input class="ms-giris-kod-input" type="text" inputmode="numeric" maxlength="1" aria-label="Kod 3. hane">
-                        <input class="ms-giris-kod-input" type="text" inputmode="numeric" maxlength="1" aria-label="Kod 4. hane">
-                        <input class="ms-giris-kod-input" type="text" inputmode="numeric" maxlength="1" aria-label="Kod 5. hane">
-                        <input class="ms-giris-kod-input" type="text" inputmode="numeric" maxlength="1" aria-label="Kod 6. hane">
+                        <input name="kod_1_hane" class="ms-giris-kod-input" type="text" inputmode="numeric" maxlength="1" aria-label="Kod 1. hane">
+                        <input name="kod_2_hane" class="ms-giris-kod-input" type="text" inputmode="numeric" maxlength="1" aria-label="Kod 2. hane">
+                        <input name="kod_3_hane" class="ms-giris-kod-input" type="text" inputmode="numeric" maxlength="1" aria-label="Kod 3. hane">
+                        <input name="kod_4_hane" class="ms-giris-kod-input" type="text" inputmode="numeric" maxlength="1" aria-label="Kod 4. hane">
+                        <input name="kod_5_hane" class="ms-giris-kod-input" type="text" inputmode="numeric" maxlength="1" aria-label="Kod 5. hane">
+                        <input name="kod_6_hane" class="ms-giris-kod-input" type="text" inputmode="numeric" maxlength="1" aria-label="Kod 6. hane">
                     </div>
                     <p class="ms-giris-kod-sayac" aria-live="polite">Kodun geçerlilik süresi: <strong data-ms-giris-kod-sayac>02:00</strong></p>
+                    <button class="ms-giris-kod-yeniden-gonder" type="button" data-ms-giris-kod-yeniden-gonder hidden>Yeniden Kod Gönder</button>
                     </div>
                     <button class="ms-giris-buton ms-giris-buton-birincil" type="button" data-ms-giris-kod-onayla>Kodu Onayla</button>
                 </div>
-                <div class="ms-uyari ms-uyari-hata" data-ms-giris-sms-hata hidden></div>
             </div>
 
             <div class="ms-giris-panel" data-ms-giris-panel="telefon">
@@ -61,7 +60,7 @@
                     <span class="ms-telefon-girdi ms-giris-telefon-girdi">
                         <span class="ms-telefon-ulke ms-giris-telefon-ulke">
                             <span class="ms-telefon-ulke-tetikleyici ms-giris-telefon-ulke-tetikleyici" aria-label="Türkiye ülke kodu">
-                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye">
+                                <img class="ms-telefon-bayrak" src="https://flagcdn.com/tr.svg" alt="Türkiye" loading="lazy">
                                 <span>+90</span>
                             </span>
                         </span>
@@ -97,6 +96,7 @@
 
             <button class="ms-giris-buton ms-giris-buton-misafir" type="button" data-ms-giris-modal-kapat>Misafir Olarak Devam Et</button>
             <button class="ms-giris-buton ms-giris-buton-kayit" type="button" data-ms-kayit-modal-ac>Kayıt Ol</button>
+            </form>
         </section>
     </div>
 

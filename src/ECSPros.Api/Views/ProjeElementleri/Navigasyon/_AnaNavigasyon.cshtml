@@ -5,486 +5,122 @@
     <partial name="~/Views/ProjeElementleri/Navigasyon/_AnaNavigasyonMobilMenu.cshtml" />
 </div>
 
-@* ECSPros: gerçek giriş/kayıt/oturum akışı (GES Telekom OTP — /api/store/auth/otp/*).
-   Tasarımın genel nav davranışları site.js'e taşındı (mobil menü, arama, sepet, mega menü
-   inline blokları kaldırıldı); bu blok sayfaya özel backend akışı olduğundan Razor'da kalır.
-   Yeni site.js'in SMS kod demo davranışlarıyla uzlaştırma: giriş modalı merge adımı
-   (misharix-tasarim-guncelleme-plani.md Faz 4 sonu). *@
+@* ECSPros: gerçek SMS/OTP giriş akışı (GES Telekom — /api/store/auth/otp/*).
+   UI akışı (modal aç/kapat, sekmeler, adım geçişi, 02:00 sayacı, kod kutuları,
+   otomatik onay, yeniden gönder görünürlüğü) tasarımın site.js'ine aittir; burada
+   YALNIZ backend bağları vardır (sözleşme: sayfaya özel endpoint Razor'da kalır).
+   - Kod Gönder / Yeniden Gönder: tıklama site.js'e de akar (UI adımı o ilerletir),
+     burada gerçek OTP gönderimi yapılır; API hatasında telefon adımına dönülür.
+   - Kodu Onayla: document-capture'da DURDURULUR (site.js'in demo "Giriş Başarılı"
+     akışı gerçek doğrulama olmadan çalışmasın); gerçek doğrulama başarılıysa token
+     işleri _AnaNavigasyonGirisModal'daki msGirisBasarili köprüsüne devredilir,
+     modal kapatılır ve tasarımın onay modalı (msOnayRedModalAc) gösterilir.
+   Bu script parse anında kaydolur — document-capture dinleyicisi site.js'inkinden
+   önce sıradadır; stopPropagation buton üstündeki demo handler'a inişi keser. *@
 <script data-ms-ana-navigasyon-script>
-// Giriş, kayıt, belge modalı ve hesap oturumu örnek davranışları.
 (() => {
-    const girisMenuleri = document.querySelectorAll("[data-ms-giris-menu]");
-    const modal = document.querySelector("[data-ms-giris-modal]");
-    const modalAcButonlari = document.querySelectorAll("[data-ms-giris-modal-ac]");
-    const kayitModal = document.querySelector("[data-ms-kayit-modal]");
-    const kayitModalAcButonlari = document.querySelectorAll("[data-ms-kayit-modal-ac]");
-    const kayitModalKapaticilar = kayitModal ? kayitModal.querySelectorAll("[data-ms-kayit-modal-kapat]") : [];
-    const belgeModal = document.querySelector("[data-ms-belge-modal]");
-    const belgeModalAcButonlari = document.querySelectorAll("[data-ms-belge-modal-ac]");
-    const belgeModalKapaticilar = belgeModal ? belgeModal.querySelectorAll("[data-ms-belge-modal-kapat]") : [];
-    const belgeModalBaslik = belgeModal ? belgeModal.querySelector("[data-ms-belge-modal-baslik]") : null;
-    const belgeModalIcerik = belgeModal ? belgeModal.querySelector("[data-ms-belge-modal-icerik]") : null;
-    const belgeModalKabul = belgeModal ? belgeModal.querySelector("[data-ms-belge-modal-kabul]") : null;
-    const modalKapaticilar = modal ? modal.querySelectorAll("[data-ms-giris-modal-kapat]") : [];
-    const tablar = modal ? modal.querySelectorAll("[data-ms-giris-tab]") : [];
-    const paneller = modal ? modal.querySelectorAll("[data-ms-giris-panel]") : [];
-    const smsTelefonAdim = modal ? modal.querySelector('[data-ms-giris-sms-adim="telefon"]') : null;
-    const smsKodAdim = modal ? modal.querySelector('[data-ms-giris-sms-adim="kod"]') : null;
-    const kodGonder = modal ? modal.querySelector("[data-ms-giris-kod-gonder]") : null;
-    const kodOnayla = modal ? modal.querySelector("[data-ms-giris-kod-onayla]") : null;
-    const smsGeri = modal ? modal.querySelector("[data-ms-giris-sms-geri]") : null;
-    const smsTelefon = modal ? modal.querySelector("[data-ms-giris-telefon]") : null;
-    const kodInputlari = modal ? Array.from(modal.querySelectorAll(".ms-giris-kod-input")) : [];
-    const kodSayac = modal ? modal.querySelector("[data-ms-giris-kod-sayac]") : null;
-    const kodSayacAlani = kodSayac?.closest(".ms-giris-kod-sayac") || null;
-    let kodSayacTimer = null;
-    let kodKalanSaniye = 120;
-    let sonOdaklananEleman = null;
-    let aktifBelgeCheckbox = null;
+    const modalGetir = () => document.querySelector("[data-ms-giris-modal]");
 
-    const belgeModalAcikMi = () => belgeModal?.classList.contains("ms-ornek-modal-acik");
-
-    @{
-        // D3: belge içerikleri CMS legal sayfalarından (StorePageController → MsSozlesmeler);
-        // sayfa yoksa misharix'in demo metni yedek kalır. belge-tur → CMS code eşlemesi:
-        // uyelik→uyelik-sozlesmesi, aydinlatma→kvkk-aydinlatma, on-bilgilendirme→on-bilgilendirme-formu.
-        var msLegal = ViewData["MsSozlesmeler"] as List<ECSPros.Cms.Application.Queries.GetStoreLegalPages.StoreLegalPageDto> ?? new();
-        string MsBelge(string kod) => msLegal.FirstOrDefault(s => s.Code == kod)?.BodyHtml ?? "";
-    }
-    const cmsBelgeler = {
-        uyelik: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(MsBelge("uyelik-sozlesmesi"))),
-        aydinlatma: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(MsBelge("kvkk-aydinlatma"))),
-        "on-bilgilendirme": @Html.Raw(System.Text.Json.JsonSerializer.Serialize(MsBelge("on-bilgilendirme-formu")))
-    };
-    const belgeIcerikleri = {
-        uyelik: cmsBelgeler.uyelik || `
-            <p>Üyelik Sözleşmesi; hesabınızın oluşturulması, sipariş süreçleri, üyelik hakları ve kullanım koşulları hakkında bilgilendirme içerir.</p>
-            <p>Kabul ettiğinizde bu metni okuduğunuz ve üyelik işlemi için gerekli koşulları onayladığınız kabul edilir.</p>
-        `,
-        aydinlatma: cmsBelgeler.aydinlatma || `
-            <p>Aydınlatma Metni; kişisel verilerinizin hangi amaçlarla işlendiği, saklandığı ve hangi haklara sahip olduğunuz hakkında bilgi verir.</p>
-            <p>Kabul ettiğinizde kişisel verilerin işlenmesine ilişkin bilgilendirmeyi okuduğunuz işaretlenir.</p>
-        `,
-        "on-bilgilendirme": cmsBelgeler["on-bilgilendirme"] || `
-            <p>Ön Bilgilendirme Formu; sipariş, ödeme, teslimat, iade ve cayma hakkı süreçlerine dair temel bilgileri içerir.</p>
-            <p>Kabul ettiğinizde alışveriş öncesi bilgilendirme metnini okuduğunuz kabul edilir.</p>
-        `
+    const hataGoster = (mesaj) => {
+        const alan = modalGetir()?.querySelector("[data-ms-giris-sms-hata]");
+        if (!alan) { return; }
+        alan.textContent = mesaj || "";
+        alan.hidden = !mesaj;
     };
 
-    girisMenuleri.forEach((menu) => {
-        const tetikleyici = menu.querySelector("[data-ms-giris-menu-tetikleyici]");
+    const telefonRakamlari = () =>
+        (modalGetir()?.querySelector("[data-ms-giris-telefon]")?.value || "").replace(/\D/g, "");
 
-        if (!tetikleyici) {
-            return;
-        }
+    let gonderiliyor = false;
+    const kodGonderApi = async () => {
+        const rakamlar = telefonRakamlari();
+        if (rakamlar.length < 10 || gonderiliyor) { return; }
 
-        const menuKapat = () => {
-            menu.classList.remove("ms-ana-navigasyon-giris-acik");
-            tetikleyici.setAttribute("aria-expanded", "false");
-        };
-
-        const menuToggle = () => {
-            const acik = menu.classList.toggle("ms-ana-navigasyon-giris-acik");
-            tetikleyici.setAttribute("aria-expanded", acik ? "true" : "false");
-        };
-
-        tetikleyici.addEventListener("click", (event) => {
-            event.preventDefault();
-            menuToggle();
-        });
-
-        document.addEventListener("pointerdown", (event) => {
-            if (!menu.contains(event.target)) {
-                menuKapat();
-            }
-        });
-
-        document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") {
-                menuKapat();
-                tetikleyici.blur();
-            }
-        });
-    });
-
-    if (!modal) {
-        return;
-    }
-
-    const kodSayacYaz = () => {
-        if (!kodSayac) {
-            return;
-        }
-
-        const dakika = Math.floor(kodKalanSaniye / 60).toString().padStart(2, "0");
-        const saniye = (kodKalanSaniye % 60).toString().padStart(2, "0");
-        kodSayac.textContent = `${dakika}:${saniye}`;
-        kodSayacAlani?.classList.toggle("ms-giris-kod-sayac-suresi-doldu", kodKalanSaniye <= 0);
-    };
-
-    const kodSayacDurdur = () => {
-        if (kodSayacTimer) {
-            window.clearInterval(kodSayacTimer);
-            kodSayacTimer = null;
-        }
-    };
-
-    const kodSayacBaslat = () => {
-        kodSayacDurdur();
-        kodKalanSaniye = 120;
-        kodSayacYaz();
-
-        kodSayacTimer = window.setInterval(() => {
-            kodKalanSaniye = Math.max(0, kodKalanSaniye - 1);
-            kodSayacYaz();
-
-            if (kodKalanSaniye === 0) {
-                kodSayacDurdur();
-            }
-        }, 1000);
-    };
-
-    const smsAdiminiGoster = (adim) => {
-        if (!smsTelefonAdim || !smsKodAdim) {
-            return;
-        }
-
-        smsTelefonAdim.classList.toggle("ms-giris-sms-adim-aktif", adim === "telefon");
-        smsKodAdim.classList.toggle("ms-giris-sms-adim-aktif", adim === "kod");
-
-        if (adim === "telefon") {
-            kodSayacDurdur();
-            kodKalanSaniye = 120;
-            kodSayacYaz();
-        }
-    };
-
-    const tabAc = (hedef) => {
-        tablar.forEach((tab) => {
-            const aktif = tab.dataset.msGirisTab === hedef;
-            tab.classList.toggle("ms-giris-tab-aktif", aktif);
-            tab.setAttribute("aria-pressed", aktif ? "true" : "false");
-        });
-
-        paneller.forEach((panel) => {
-            panel.classList.toggle("ms-giris-panel-aktif", panel.dataset.msGirisPanel === hedef);
-        });
-
-        if (hedef === "sms") {
-            smsAdiminiGoster("telefon");
-        } else {
-            kodSayacDurdur();
-        }
-    };
-
-    const modalAc = () => {
-        sonOdaklananEleman = document.activeElement;
-        modal.classList.add("ms-giris-modal-acik");
-        modal.setAttribute("aria-hidden", "false");
-        document.body.style.overflow = "hidden";
-        tabAc("sms"); // D4: SMS/OTP canlı — tasarımın varsayılan sekmesi geri döndü
-
-        window.setTimeout(() => {
-            const ilkGirdi = modal.querySelector(".ms-giris-panel-aktif input, .ms-giris-tab-aktif");
-            ilkGirdi?.focus();
-        }, 40);
-    };
-
-    const modalKapat = () => {
-        kodSayacDurdur();
-        modal.classList.remove("ms-giris-modal-acik");
-        modal.setAttribute("aria-hidden", "true");
-        if (!kayitModal?.classList.contains("ms-giris-modal-acik") && !belgeModalAcikMi()) {
-            document.body.style.overflow = "";
-        }
-        sonOdaklananEleman?.focus?.();
-    };
-
-    const kayitModalAc = () => {
-        sonOdaklananEleman = document.activeElement;
-        modalKapat();
-        girisMenuleri.forEach((menu) => {
-            menu.classList.remove("ms-ana-navigasyon-giris-acik");
-            menu.querySelector("[data-ms-giris-menu-tetikleyici]")?.setAttribute("aria-expanded", "false");
-        });
-        kayitModal?.classList.add("ms-giris-modal-acik");
-        kayitModal?.setAttribute("aria-hidden", "false");
-        document.body.style.overflow = "hidden";
-
-        window.setTimeout(() => {
-            kayitModal?.querySelector("input, select, button")?.focus();
-        }, 40);
-    };
-
-    const kayitModalKapat = () => {
-        kayitModal?.classList.remove("ms-giris-modal-acik");
-        kayitModal?.setAttribute("aria-hidden", "true");
-        if (!modal.classList.contains("ms-giris-modal-acik") && !belgeModalAcikMi()) {
-            document.body.style.overflow = "";
-        }
-        sonOdaklananEleman?.focus?.();
-    };
-
-    const belgeModalAc = (baslik, belgeTuru, tetikleyici) => {
-        if (belgeModalBaslik) {
-            belgeModalBaslik.textContent = baslik || "Belge";
-        }
-
-        if (belgeModalIcerik) {
-            belgeModalIcerik.innerHTML = belgeIcerikleri[belgeTuru] || "<p>İlgili bilgilendirme metni burada görüntülenir.</p>";
-        }
-
-        aktifBelgeCheckbox = tetikleyici?.closest(".ms-kayit-onay")?.querySelector('input[type="checkbox"]') || null;
-        belgeModal?.classList.add("ms-ornek-modal-acik");
-        belgeModal?.setAttribute("aria-hidden", "false");
-        document.body.style.overflow = "hidden";
-
-        window.setTimeout(() => {
-            belgeModal?.querySelector("[data-ms-belge-modal-kabul]")?.focus();
-        }, 40);
-    };
-
-    const belgeModalKapat = () => {
-        belgeModal?.classList.remove("ms-ornek-modal-acik");
-        belgeModal?.setAttribute("aria-hidden", "true");
-        if (!modal.classList.contains("ms-giris-modal-acik") && !kayitModal?.classList.contains("ms-giris-modal-acik")) {
-            document.body.style.overflow = "";
-        }
-    };
-
-    const belgeModalKabulEt = () => {
-        if (aktifBelgeCheckbox) {
-            aktifBelgeCheckbox.checked = true;
-            aktifBelgeCheckbox.dispatchEvent(new Event("change", { bubbles: true }));
-        }
-
-        belgeModalKapat();
-    };
-
-    const telefonBicimlendir = (input) => {
-        const rakamlar = input.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 10);
-        input.value = [
-            rakamlar.slice(0, 3),
-            rakamlar.slice(3, 6),
-            rakamlar.slice(6, 8),
-            rakamlar.slice(8, 10)
-        ].filter(Boolean).join(" ");
-    };
-
-    const oturumDurumuAyarla = (oturumAcik) => {
-        girisMenuleri.forEach((menu) => {
-            const tetikleyici = menu.querySelector("[data-ms-giris-menu-tetikleyici]");
-            const yazi = menu.querySelector("[data-ms-giris-menu-yazi]");
-
-            menu.classList.toggle("ms-ana-navigasyon-giris-oturum-acik", oturumAcik);
-            menu.classList.remove("ms-ana-navigasyon-giris-acik");
-            tetikleyici?.setAttribute("aria-expanded", "false");
-
-            if (yazi) {
-                yazi.textContent = oturumAcik ? "Hesabım" : "Giriş Yap";
-            }
-        });
-    };
-
-    modalAcButonlari.forEach((buton) => {
-        buton.addEventListener("click", (event) => {
-            event.preventDefault();
-            girisMenuleri.forEach((menu) => {
-                menu.classList.remove("ms-ana-navigasyon-giris-acik");
-                menu.querySelector("[data-ms-giris-menu-tetikleyici]")?.setAttribute("aria-expanded", "false");
-            });
-            modalAc();
-        });
-    });
-
-    kayitModalAcButonlari.forEach((buton) => {
-        buton.addEventListener("click", (event) => {
-            event.preventDefault();
-            kayitModalAc();
-        });
-    });
-
-    modalKapaticilar.forEach((kapatici) => {
-        kapatici.addEventListener("click", modalKapat);
-    });
-
-    kayitModalKapaticilar.forEach((kapatici) => {
-        kapatici.addEventListener("click", kayitModalKapat);
-    });
-
-    belgeModalAcButonlari.forEach((buton) => {
-        buton.addEventListener("click", (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            belgeModalAc(buton.dataset.baslik, buton.dataset.belgeTur, buton);
-        });
-    });
-
-    belgeModalKapaticilar.forEach((kapatici) => {
-        kapatici.addEventListener("click", belgeModalKapat);
-    });
-
-    belgeModalKabul?.addEventListener("click", belgeModalKabulEt);
-
-    tablar.forEach((tab) => {
-        tab.addEventListener("click", () => tabAc(tab.dataset.msGirisTab));
-    });
-
-    smsTelefon?.addEventListener("input", () => telefonBicimlendir(smsTelefon));
-
-    [modal, kayitModal].forEach((modalAlani) => {
-        modalAlani?.querySelectorAll('input[type="tel"]').forEach((input) => {
-            input.addEventListener("input", () => telefonBicimlendir(input));
-        });
-    });
-
-    // D4: SMS girişi canlı — kod gönderimi/doğrulaması api/store/auth/otp'a bağlandı;
-    // adım geçişi, 02:00 sayacı ve kod kutuları misharix davranışıyla aynı kaldı.
-    // Başarılı doğrulamada token/panel/sepet işleri giriş modalı script'inin
-    // window.msGirisBasarili köprüsüne devredilir.
-    const smsHata = modal.querySelector("[data-ms-giris-sms-hata]");
-    const smsHataGoster = (mesaj) => {
-        if (!smsHata) {
-            return;
-        }
-
-        smsHata.textContent = mesaj || "";
-        smsHata.hidden = !mesaj;
-    };
-
-    kodGonder?.addEventListener("click", async () => {
-        const telefonRakamlari = smsTelefon?.value.replace(/\D/g, "") ?? "";
-        smsHataGoster("");
-
-        if (telefonRakamlari.length < 10) {
-            smsTelefon?.focus();
-            return;
-        }
-
-        kodGonder.disabled = true;
+        gonderiliyor = true;
         try {
             const cevap = await fetch("/api/store/auth/otp/send", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ phone: "90" + telefonRakamlari })
+                body: JSON.stringify({ phone: "90" + rakamlar })
             });
             const veri = await cevap.json().catch(() => null);
 
             if (!veri?.success) {
-                smsHataGoster(veri?.error || "Kod gönderilemedi. Lütfen tekrar deneyin.");
-                return;
+                hataGoster(veri?.error || "Kod gönderilemedi. Lütfen tekrar deneyin.");
+                modalGetir()?.querySelector("[data-ms-giris-sms-geri]")?.click();
             }
-
-            smsAdiminiGoster("kod");
-            kodSayacBaslat();
-            kodInputlari.forEach((input) => {
-                input.value = "";
-            });
-            kodInputlari[0]?.focus();
         } catch {
-            smsHataGoster("Kod gönderilemedi. Lütfen tekrar deneyin.");
+            hataGoster("Kod gönderilemedi. Lütfen tekrar deneyin.");
+            modalGetir()?.querySelector("[data-ms-giris-sms-geri]")?.click();
         } finally {
-            kodGonder.disabled = false;
+            gonderiliyor = false;
         }
-    });
+    };
 
-    smsGeri?.addEventListener("click", () => {
-        smsAdiminiGoster("telefon");
-        smsHataGoster("");
-        smsTelefon?.focus();
-    });
+    let dogrulaniyor = false;
+    const kodOnaylaApi = async (buton) => {
+        const modal = modalGetir();
+        if (!modal || dogrulaniyor) { return; }
 
-    kodOnayla?.addEventListener("click", async () => {
+        const kodInputlari = Array.from(modal.querySelectorAll(".ms-giris-kod-input"));
         const girilenKod = kodInputlari.map((input) => input.value).join("");
-        smsHataGoster("");
 
         if (girilenKod.length < kodInputlari.length) {
             kodInputlari.find((input) => !input.value)?.focus();
             return;
         }
 
-        const telefonRakamlari = smsTelefon?.value.replace(/\D/g, "") ?? "";
-        kodOnayla.disabled = true;
+        dogrulaniyor = true;
+        if (buton) { buton.disabled = true; }
         try {
             const cevap = await fetch("/api/store/auth/otp/verify", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ phone: "90" + telefonRakamlari, code: girilenKod })
+                body: JSON.stringify({ phone: "90" + telefonRakamlari(), code: girilenKod })
             });
             const veri = await cevap.json().catch(() => null);
 
             if (!veri?.success) {
-                smsHataGoster(veri?.error || "Kod doğrulanamadı. Lütfen tekrar deneyin.");
+                hataGoster(veri?.error || "Kod doğrulanamadı. Lütfen tekrar deneyin.");
                 return;
             }
 
+            hataGoster("");
             window.msGirisBasarili?.(veri.data);
-            oturumDurumuAyarla(true);
-            modalKapat();
+            modal.querySelector("[data-ms-giris-modal-kapat]")?.click();
+            window.setTimeout(() => {
+                window.msOnayRedModalAc?.({
+                    tip: "onay",
+                    baslik: "Giriş Başarılı",
+                    altBaslik: "Giriş Yapıldı",
+                    metin: "Hesabınıza başarıyla giriş yaptınız.",
+                    sure: 3000
+                });
+            }, 40);
         } catch {
-            smsHataGoster("Kod doğrulanamadı. Lütfen tekrar deneyin.");
+            hataGoster("Kod doğrulanamadı. Lütfen tekrar deneyin.");
         } finally {
-            kodOnayla.disabled = false;
+            dogrulaniyor = false;
+            if (buton) { buton.disabled = false; }
         }
-    });
+    };
 
-    kodInputlari.forEach((input, index) => {
-        input.addEventListener("input", () => {
-            input.value = input.value.replace(/\D/g, "").slice(0, 1);
+    document.addEventListener("click", (event) => {
+        const hedef = event.target instanceof Element ? event.target : null;
+        if (!hedef) { return; }
 
-            if (input.value && kodInputlari[index + 1]) {
-                kodInputlari[index + 1].focus();
-            }
-        });
-
-        input.addEventListener("keydown", (event) => {
-            if (event.key === "Backspace" && !input.value && kodInputlari[index - 1]) {
-                kodInputlari[index - 1].focus();
-            }
-        });
-
-        input.addEventListener("paste", (event) => {
-            const yapistirilanKod = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, kodInputlari.length);
-
-            if (!yapistirilanKod) {
-                return;
-            }
-
+        const onayla = hedef.closest("[data-ms-giris-kod-onayla]");
+        if (onayla) {
             event.preventDefault();
-            kodInputlari.forEach((kodInput, kodIndex) => {
-                kodInput.value = yapistirilanKod[kodIndex] ?? "";
-            });
-
-            const odakIndex = Math.min(yapistirilanKod.length, kodInputlari.length) - 1;
-            kodInputlari[Math.max(odakIndex, 0)]?.focus();
-        });
-    });
-
-    document.addEventListener("keydown", (event) => {
-        if (event.key !== "Escape") {
+            event.stopPropagation();
+            kodOnaylaApi(onayla);
             return;
         }
 
-        if (belgeModalAcikMi()) {
-            belgeModalKapat();
-            return;
+        if (hedef.closest("[data-ms-giris-kod-gonder]") || hedef.closest("[data-ms-giris-kod-yeniden-gonder]")) {
+            hataGoster("");
+            kodGonderApi();
         }
-
-        if (kayitModal?.classList.contains("ms-giris-modal-acik")) {
-            kayitModalKapat();
-            return;
-        }
-
-        if (modal.classList.contains("ms-giris-modal-acik")) {
-            modalKapat();
-        }
-    });
-
-    document.querySelectorAll("[data-ms-hesap-cikis]").forEach((cikisButonu) => {
-        cikisButonu.addEventListener("click", (event) => {
-            event.preventDefault();
-            oturumDurumuAyarla(false);
-        });
-    });
+    }, true);
 })();
 </script>
