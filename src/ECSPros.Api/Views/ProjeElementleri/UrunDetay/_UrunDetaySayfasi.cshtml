@@ -59,7 +59,7 @@
             <button class="ms-buton ms-buton-l ms-buton-simdi-al ms-urun-detay-mobil-buton" type="button">Şimdi Al</button>
             <button class="ms-buton ms-buton-l ms-buton-satin-al ms-urun-detay-mobil-buton" type="button" data-ms-urun-detay-sepete-ekle>Sepete Ekle</button>
             <button class="ms-urun-detay-favori ms-urun-detay-mobil-ikon-buton" type="button" aria-label="Favorilere ekle" aria-pressed="false">
-                <img class="ms-urun-detay-favori-ikon" src="/ikons/favorite.svg" alt="" aria-hidden="true">
+                <img class="ms-urun-detay-favori-ikon" src="/ikons/favorite.svg" alt="" aria-hidden="true" width="20" height="20" loading="lazy">
             </button>
             <button class="ms-urun-detay-koleksiyon ms-urun-detay-mobil-ikon-buton" type="button" aria-label="Koleksiyona ekle" aria-pressed="false" data-ms-urun-detay-koleksiyon>
                 <i class="fa-solid fa-bookmark ms-fa-ikon" aria-hidden="true"></i>
@@ -72,8 +72,8 @@
         <div class="ms-ornek-modal ms-urun-paylas-modal" data-ms-urun-paylas-modal aria-hidden="true">
             <div class="ms-ornek-modal-kaplama" data-ms-urun-paylas-kapat></div>
             <section class="ms-ornek-modal-kutu ms-ornek-modal-kutu-uyari ms-urun-paylas-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-urun-paylas-baslik">
-                <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-paylas-kapat aria-label="Paylaşım kartını kapat">×</button>
-                <h2 id="ms-urun-paylas-baslik" class="ms-ornek-modal-baslik">Ürünü Paylaş</h2>
+                <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-paylas-kapat aria-label="Paylaşım kartını kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+                <h2 id="ms-urun-paylas-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>Ürünü Paylaş</h2>
                 <div class="ms-urun-paylas-icerik">
                     <div class="ms-urun-paylas-urun">
                         @if (s.Gorseller.Count > 0)
@@ -94,25 +94,25 @@
                         </button>
                         <a class="ms-urun-paylas-secenek" href="https://wa.me/" target="_blank" rel="noopener" data-ms-urun-paylas-whatsapp>
                             <span class="ms-urun-paylas-ikon ms-urun-paylas-ikon-gorsel" aria-hidden="true">
-                                <img src="/images/whatsapp.png" alt="">
+                                <img src="/images/whatsapp.png" alt="" width="1254" height="1254" loading="lazy">
                             </span>
                             <span>WhatsApp</span>
                         </a>
                         <a class="ms-urun-paylas-secenek" href="https://www.facebook.com/sharer/sharer.php" target="_blank" rel="noopener" data-ms-urun-paylas-facebook>
                             <span class="ms-urun-paylas-ikon ms-urun-paylas-ikon-gorsel" aria-hidden="true">
-                                <img src="/images/facebook.png" alt="">
+                                <img src="/images/facebook.png" alt="" width="1254" height="1254" loading="lazy">
                             </span>
                             <span>Facebook</span>
                         </a>
                         <a class="ms-urun-paylas-secenek" href="https://www.pinterest.com/pin/create/button/" target="_blank" rel="noopener" data-ms-urun-paylas-pinterest>
                             <span class="ms-urun-paylas-ikon ms-urun-paylas-ikon-gorsel" aria-hidden="true">
-                                <img src="/images/pinterest.png" alt="">
+                                <img src="/images/pinterest.png" alt="" width="1254" height="1254" loading="lazy">
                             </span>
                             <span>Pinterest</span>
                         </a>
                         <a class="ms-urun-paylas-secenek" href="https://x.com/intent/tweet" target="_blank" rel="noopener" data-ms-urun-paylas-x>
                             <span class="ms-urun-paylas-ikon ms-urun-paylas-ikon-gorsel" aria-hidden="true">
-                                <img src="/images/x.png" alt="">
+                                <img src="/images/x.png" alt="" width="1254" height="1254" loading="lazy">
                             </span>
                             <span>X</span>
                         </a>
@@ -124,8 +124,8 @@
         <div class="ms-ornek-modal ms-urun-beden-modal" data-ms-urun-detay-beden-modal aria-hidden="true">
             <div class="ms-ornek-modal-kaplama" data-ms-urun-detay-beden-modal-kapat></div>
             <section class="ms-ornek-modal-kutu ms-ornek-modal-kutu-uyari ms-urun-beden-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-urun-beden-modal-baslik">
-                <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-detay-beden-modal-kapat aria-label="Beden seçimini kapat">×</button>
-                <h2 id="ms-urun-beden-modal-baslik" class="ms-ornek-modal-baslik">Beden Seçiniz</h2>
+                <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-detay-beden-modal-kapat aria-label="Beden seçimini kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+                <h2 id="ms-urun-beden-modal-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>Beden Seçiniz</h2>
                 <p class="ms-ornek-modal-aciklama">Sepete eklemek için uygun bedeni seçin.</p>
                 <div class="ms-urun-beden-modal-listesi" data-ms-urun-detay-beden-modal-listesi></div>
             </section>
@@ -148,6 +148,28 @@
 
     @* Bu script: Ürün detay sayfasında üst menü davranışı, görsel galeri ve renk seçimi etkileşimlerini başlatır. *@
     <script>
+        (() => {
+            const breadcrumb = document.querySelector(".ms-urun-detay-breadcrumb");
+            const mobilMedya = window.matchMedia("(max-width: 767px)");
+
+            if (!breadcrumb) {
+                return;
+            }
+
+            const breadcrumbSagUcaKaydir = () => {
+                if (!mobilMedya.matches) {
+                    return;
+                }
+
+                breadcrumb.scrollLeft = breadcrumb.scrollWidth;
+            };
+
+            window.requestAnimationFrame(breadcrumbSagUcaKaydir);
+            window.setTimeout(breadcrumbSagUcaKaydir, 120);
+            window.addEventListener("resize", breadcrumbSagUcaKaydir);
+            mobilMedya.addEventListener?.("change", breadcrumbSagUcaKaydir);
+        })();
+
         (() => {
             document.querySelectorAll(".ms-urun-detay-renk-alani").forEach((renkAlani) => {
                 const renkBasligi = renkAlani.querySelector(".ms-urun-detay-renk-baslik strong");
@@ -1261,7 +1283,7 @@
                 }, { passive: true });
 
                 modalViewport?.addEventListener("pointerdown", (event) => {
-                    if (!modal?.classList.contains("ms-ornek-modal-acik") || !anaPointerBaslatilabilir(event) || event.target.closest("video") || modalGecisYapiliyor || modalPinchAktif) {
+                    if (!modal?.classList.contains("ms-ornek-modal-acik") || !anaPointerBaslatilabilir(event) || modalGecisYapiliyor || modalPinchAktif) {
                         return;
                     }
 
@@ -1449,7 +1471,7 @@
                 anaKapsayici.addEventListener("pointerleave", zoomKapat);
 
                 anaKapsayici.addEventListener("pointerdown", (event) => {
-                    if (event.pointerType === "touch" || suruklemeTakipEdiliyor || !anaPointerBaslatilabilir(event) || event.target.closest("video") || event.target.closest("[data-ms-urun-video]") || event.target.closest("[data-ms-urun-detay-resim-yon]") || gecisYapiliyor) {
+                    if (event.pointerType === "touch" || suruklemeTakipEdiliyor || !anaPointerBaslatilabilir(event) || event.target.closest("[data-ms-urun-video]") || event.target.closest("[data-ms-urun-detay-resim-yon]") || gecisYapiliyor) {
                         return;
                     }
 
@@ -1560,7 +1582,7 @@
                 };
 
                 anaKapsayici.addEventListener("touchstart", (event) => {
-                    if (suruklemeTakipEdiliyor || event.touches.length !== 1 || event.target.closest("video") || event.target.closest("[data-ms-urun-video]") || event.target.closest("[data-ms-urun-detay-resim-yon]") || gecisYapiliyor) {
+                    if (suruklemeTakipEdiliyor || event.touches.length !== 1 || event.target.closest("[data-ms-urun-video]") || event.target.closest("[data-ms-urun-detay-resim-yon]") || gecisYapiliyor) {
                         return;
                     }
 
@@ -1653,14 +1675,14 @@
                 anaKapsayici.addEventListener("pointercancel", pointerSuruklemeyiBitir);
                 anaKapsayici.addEventListener("lostpointercapture", pointerSuruklemeyiBitir);
                 anaKapsayici.addEventListener("click", (event) => {
-                    if (event.target.closest("video") || event.target.closest("[data-ms-urun-video]") || event.target.closest("[data-ms-urun-detay-resim-yon]")) {
-                        return;
-                    }
-
                     if (tiklamaEngellenecek) {
                         event.preventDefault();
                         event.stopPropagation();
                         tiklamaEngellenecek = false;
+                        return;
+                    }
+
+                    if (event.target.closest("video") || event.target.closest("[data-ms-urun-video]") || event.target.closest("[data-ms-urun-detay-resim-yon]")) {
                         return;
                     }
 
@@ -1770,6 +1792,29 @@
                 });
             });
 
+            const urunDetayKoleksiyonBilgisiOlustur = () => {
+                const baslik = document.querySelector(".ms-urun-detay-baslik")?.textContent?.trim() || "Ürün";
+                const kod = document.querySelector(".ms-urun-detay-kod strong")?.textContent?.trim() || baslik;
+                const gorsel = document.querySelector(".ms-urun-detay-resim-ana-gorunur, .ms-urun-detay-resim-ana");
+                const gorselYolu = gorsel?.currentSrc
+                    || gorsel?.getAttribute("src")
+                    || gorsel?.getAttribute("data-ms-lazy-src")
+                    || "/images/ornek-resim.jpg";
+                const fiyat = document.querySelector(".ms-urun-detay-tutar")?.textContent?.trim();
+                const id = `urun-detay-${kod}`
+                    .toLocaleLowerCase("tr-TR")
+                    .replace(/[^a-z0-9ğüşöçıİĞÜŞÖÇ]+/gi, "-")
+                    .replace(/^-+|-+$/g, "")
+                    .slice(0, 90);
+
+                return {
+                    id,
+                    ad: baslik,
+                    gorsel: gorselYolu,
+                    meta: fiyat ? `Ürün detay - ${fiyat}` : "Ürün detay"
+                };
+            };
+
             document.querySelectorAll("[data-ms-urun-detay-koleksiyon]").forEach((buton) => {
                 if (buton.dataset.msUrunDetayKoleksiyonHazir === "true") {
                     return;
@@ -1784,6 +1829,20 @@
                         koleksiyonButonu.setAttribute("aria-pressed", aktif ? "true" : "false");
                         koleksiyonButonu.setAttribute("aria-label", aktif ? "Koleksiyondan çıkar" : "Koleksiyona ekle");
                     });
+
+                    const urunBilgisi = urunDetayKoleksiyonBilgisiOlustur();
+
+                    if (typeof window.msKoleksiyonAkisBaslat === "function") {
+                        window.msKoleksiyonAkisBaslat(urunBilgisi);
+                        return;
+                    }
+
+                    if (typeof window.msKoleksiyonModallariBaslat === "function") {
+                        window.msKoleksiyonModallariBaslat(document);
+                    }
+                    if (typeof window.msKoleksiyonModalAc === "function") {
+                        window.msKoleksiyonModalAc(urunBilgisi);
+                    }
                 });
             });
         })();
