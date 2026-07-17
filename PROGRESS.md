@@ -370,6 +370,12 @@ komutlarına >50 kr kod için anlaşılır hata guard'ı (500 yerine). NOT: eski
 koleksiyonlarda slug'lı bozuk ürün kodları kalmış olabilir (koda çözülemez — düzenle
 modalında kod+no-image görünür; gerekirse temizlik sorgusu atılır).
 
+EK-19 (2026-07-17 — ⚠️ RESTART BEKLİYOR): KURAL (hafızaya yazıldı:
+feedback_filter_groups_closed_accordion): filtre grupları (kategori+özellik+fiyat)
+başlangıçta HEP KAPALI — "ilk grup / seçili grup açık gelir" istisnaları kaldırıldı;
+akordeon (EK-12) + görünür alana kaydırma (EK-11) geçerli. Doğrulama: filtresiz ve
+seçili+fiyatlı sayfada açık grup 0.
+
 EK-18 (2026-07-17 — ⚠️ RESTART BEKLİYOR): listelenen ürünlerin TÜM özellikleri filtrede.
 Facet'ler artık ürün SEVİYESİ product_attributes'ı da toplar (kumaş türü, kalıp, desen,
 cinsiyet, marka, fermuar, astar… — önceden yalnız varyant özellikleri beden/filtre_rengi
