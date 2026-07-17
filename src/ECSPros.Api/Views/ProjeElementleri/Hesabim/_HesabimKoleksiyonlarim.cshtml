@@ -56,7 +56,22 @@
                                 <p>@k.Ad</p>
                             </div>
                         </div>
+                        @if (!k.KaydedilenlerMi)
+                        {
+                        @* 2026-07-17: üç nokta menüsü — Düzenle (ortak modal güncelleme modunda)
+                           + Sil (onay metinli modal). Kaydedilenler hızlı koleksiyonunda menü yok. *@
+                        <div class="ms-hesabim-koleksiyon-menu-alani" data-ms-koleksiyon-menu-alani>
+                            <button class="ms-hesabim-koleksiyon-ikon-buton" type="button" aria-label="Koleksiyon seçenekleri" aria-haspopup="menu" aria-expanded="false" data-ms-koleksiyon-menu-ac><i class="fa-solid fa-ellipsis-vertical ms-fa-ikon " aria-hidden="true"></i></button>
+                            <div class="ms-hesabim-koleksiyon-menu" role="menu" data-ms-koleksiyon-menu hidden>
+                                <button type="button" role="menuitem" data-ms-koleksiyon-duzenle="@k.Id"><i class="fa-solid fa-pen-to-square ms-fa-ikon" aria-hidden="true"></i> Düzenle</button>
+                                <button class="ms-hesabim-koleksiyon-menu-tehlike" type="button" role="menuitem" data-ms-koleksiyon-sil="@k.Id" data-koleksiyon-ad="@k.Ad"><i class="fa-solid fa-trash ms-fa-ikon" aria-hidden="true"></i> Sil</button>
+                            </div>
+                        </div>
+                        }
+                        else
+                        {
                         <button class="ms-hesabim-koleksiyon-ikon-buton" type="button" aria-label="Koleksiyon seçenekleri"><i class="fa-solid fa-ellipsis-vertical ms-fa-ikon " aria-hidden="true"></i></button>
+                        }
                     </div>
 
                     <div class="ms-hesabim-koleksiyon-kapak">
@@ -206,6 +221,28 @@
         </section>
     </div>
 
+    @* 2026-07-17: koleksiyon silme onay modalı — "Silmeyi onaylıyorum" yazılmadan
+       Koleksiyonu Sil düğmesi aktifleşmez. *@
+    <div class="ms-ornek-modal ms-koleksiyon-sil-modal" data-ms-koleksiyon-sil-modal aria-hidden="true">
+        <div class="ms-ornek-modal-kaplama" data-ms-koleksiyon-sil-modal-kapat></div>
+        <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-m" role="dialog" aria-modal="true" aria-labelledby="ms-koleksiyon-sil-baslik">
+            <button class="ms-ornek-modal-kapat" type="button" aria-label="Silme modalını kapat" data-ms-koleksiyon-sil-modal-kapat>&times;</button>
+            <div>
+                <h3 class="ms-ornek-modal-baslik" id="ms-koleksiyon-sil-baslik">Koleksiyonu Sil</h3>
+                <p class="ms-ornek-modal-aciklama">"<strong data-ms-koleksiyon-sil-ad></strong>" koleksiyonu silinecek ve bu işlem geri alınamaz. Onaylamak için aşağıdaki alana <strong>Silmeyi onaylıyorum</strong> yazın.</p>
+            </div>
+            <label class="ms-form-alani">
+                <span class="ms-form-etiket">Onay metni</span>
+                <input class="ms-form-girdi" type="text" data-ms-koleksiyon-sil-onay-girdi placeholder="Silmeyi onaylıyorum" autocomplete="off" />
+            </label>
+            <div class="ms-ornek-modal-aksiyonlar">
+                <div class="ms-uyari ms-uyari-hata" data-ms-koleksiyon-sil-hata hidden></div>
+                <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-koleksiyon-sil-modal-kapat>Vazgeç</button>
+                <button class="ms-buton ms-buton-m ms-buton-tehlikeli" type="button" data-ms-koleksiyon-sil-onayla disabled>Koleksiyonu Sil</button>
+            </div>
+        </section>
+    </div>
+
     @* E6: site.js'in ms:koleksiyon-olustur event'i API'ye bağlanır (demo kart-render
        script'inin yerine) — başarıda sayfa yenilenir (SSR kart gerçek veriyle gelir).
        Paylaş: paylaşılabilir link panoya kopyalanır (public sayfa Faz G). *@
@@ -218,9 +255,41 @@
             const modal = kok.querySelector("[data-ms-koleksiyon-modal]");
             const platformId = document.querySelector("[data-ms-arama]")?.dataset.msAramaPlatform || "";
             const hataAlani = modal?.querySelector("[data-ms-koleksiyon-hata]");
+            const modalBaslik = modal?.querySelector("#ms-koleksiyon-modal-baslik");
+            const olusturButonu = modal?.querySelector("[data-ms-koleksiyon-olustur]");
+            const yetkiBasliklari = () => ({
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + localStorage.getItem("ecspros_member_token")
+            });
+
+            // 2026-07-17: aynı modal iki modda — oluştur (varsayılan) / düzenle
+            // (data-ms-duzenlenen-koleksiyon dolu; başlık ve buton metni değişir).
+            const modalYeniModaAl = () => {
+                if (!modal) { return; }
+                delete modal.dataset.msDuzenlenenKoleksiyon;
+                if (modalBaslik) { modalBaslik.textContent = "Koleksiyon Oluştur"; }
+                if (olusturButonu) { olusturButonu.textContent = "Koleksiyon Oluştur"; }
+                const adInput = modal.querySelector("[data-ms-koleksiyon-ad]");
+                const aciklamaInput = modal.querySelector("[data-ms-koleksiyon-aciklama]");
+                if (adInput) { adInput.value = ""; }
+                if (aciklamaInput) { aciklamaInput.value = ""; }
+            };
+
+            // "Yeni Koleksiyon" butonları: düzenleme modundan kalma başlık/alanlar sıfırlanır
+            // (bu dinleyici site.js'inkinden ÖNCE kayıtlı olduğundan önce çalışır).
+            kok.querySelectorAll("[data-ms-koleksiyon-modal-ac]").forEach((buton) => {
+                buton.addEventListener("click", () => {
+                    if (modal?.dataset.msDuzenlenenKoleksiyon) {
+                        modalYeniModaAl();
+                        modal.msKoleksiyonModalAc?.([], true); // seçimleri de temizle
+                    }
+                });
+            });
 
             modal?.addEventListener("ms:koleksiyon-olustur", async (olay) => {
                 const detay = olay.detail || {};
+                const duzenlenenId = modal.dataset.msDuzenlenenKoleksiyon || "";
+                const hataMetni = duzenlenenId ? "Koleksiyon güncellenemedi." : "Koleksiyon oluşturulamadı.";
                 if (hataAlani) { hataAlani.hidden = true; }
                 if (!(detay.ad || "").trim()) {
                     if (hataAlani) { hataAlani.textContent = "Koleksiyon adı gereklidir."; hataAlani.hidden = false; }
@@ -228,12 +297,9 @@
                     return;
                 }
                 try {
-                    const cevap = await fetch("/api/store/collections", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            Authorization: "Bearer " + localStorage.getItem("ecspros_member_token")
-                        },
+                    const cevap = await fetch(duzenlenenId ? "/api/store/collections/" + duzenlenenId : "/api/store/collections", {
+                        method: duzenlenenId ? "PUT" : "POST",
+                        headers: yetkiBasliklari(),
                         body: JSON.stringify({
                             firmPlatformId: platformId,
                             name: detay.ad,
@@ -245,9 +311,130 @@
                     });
                     const veri = await cevap.json().catch(() => null);
                     if (veri?.success) { location.reload(); return; }
-                    if (hataAlani) { hataAlani.textContent = veri?.error || "Koleksiyon oluşturulamadı."; hataAlani.hidden = false; }
+                    if (hataAlani) { hataAlani.textContent = veri?.error || hataMetni; hataAlani.hidden = false; }
                 } catch {
-                    if (hataAlani) { hataAlani.textContent = "Koleksiyon oluşturulamadı. Lütfen tekrar deneyin."; hataAlani.hidden = false; }
+                    if (hataAlani) { hataAlani.textContent = hataMetni + " Lütfen tekrar deneyin."; hataAlani.hidden = false; }
+                }
+            });
+
+            // ── Üç nokta menüsü ──
+            const menuleriKapat = () => {
+                kok.querySelectorAll("[data-ms-koleksiyon-menu]").forEach((menu) => { menu.hidden = true; });
+                kok.querySelectorAll("[data-ms-koleksiyon-menu-ac]").forEach((buton) => buton.setAttribute("aria-expanded", "false"));
+            };
+
+            kok.querySelectorAll("[data-ms-koleksiyon-menu-ac]").forEach((buton) => {
+                buton.addEventListener("click", (olay) => {
+                    olay.stopPropagation();
+                    const menu = buton.closest("[data-ms-koleksiyon-menu-alani]")?.querySelector("[data-ms-koleksiyon-menu]");
+                    if (!menu) { return; }
+                    const acikti = !menu.hidden;
+                    menuleriKapat();
+                    menu.hidden = acikti;
+                    buton.setAttribute("aria-expanded", (!acikti).toString());
+                });
+            });
+
+            document.addEventListener("click", menuleriKapat);
+
+            // ── Düzenle: koleksiyon verisi API'den, ürün kartı bilgisi modal panellerinden ──
+            kok.querySelectorAll("[data-ms-koleksiyon-duzenle]").forEach((buton) => {
+                buton.addEventListener("click", async () => {
+                    menuleriKapat();
+                    const id = buton.dataset.msKoleksiyonDuzenle;
+                    if (!modal || !id) { return; }
+                    try {
+                        const cevap = await fetch("/api/store/collections?firmPlatformId=" + platformId, {
+                            headers: { Authorization: "Bearer " + localStorage.getItem("ecspros_member_token") }
+                        });
+                        const veri = await cevap.json().catch(() => null);
+                        const k = (veri?.data || []).find((x) => x.id === id);
+                        if (!k) { return; }
+
+                        const urunler = (k.itemCodes || []).map((kod) => {
+                            const panelUrun = modal.querySelector(`[data-ms-koleksiyon-urun][data-urun-id="${CSS.escape(kod)}"]`);
+                            return {
+                                id: kod,
+                                ad: panelUrun?.dataset.urunAd || kod,
+                                gorsel: panelUrun?.dataset.urunGorsel || "/images/no-image.svg",
+                                meta: panelUrun?.dataset.urunMeta || "Koleksiyon"
+                            };
+                        });
+
+                        modal.dataset.msDuzenlenenKoleksiyon = id;
+                        if (modalBaslik) { modalBaslik.textContent = "Koleksiyon Düzenle"; }
+                        if (olusturButonu) { olusturButonu.textContent = "Koleksiyon Güncelle"; }
+                        const adInput = modal.querySelector("[data-ms-koleksiyon-ad]");
+                        const aciklamaInput = modal.querySelector("[data-ms-koleksiyon-aciklama]");
+                        const herkeseAcikInput = modal.querySelector("[data-ms-koleksiyon-herkese-acik]");
+                        const paylasilabilirInput = modal.querySelector("[data-ms-koleksiyon-paylasilabilir]");
+                        if (adInput) { adInput.value = k.name || ""; }
+                        if (aciklamaInput) { aciklamaInput.value = k.description || ""; }
+                        if (herkeseAcikInput) { herkeseAcikInput.checked = !!k.isPublic; }
+                        if (paylasilabilirInput) { paylasilabilirInput.checked = !!k.isShareable; }
+
+                        modal.msKoleksiyonModalAc?.(urunler, true);
+                    } catch { /* koleksiyon verisi alınamadı — modal açılmaz */ }
+                });
+            });
+
+            // ── Sil: onay metni yazılmadan düğme aktifleşmez ──
+            const silModal = kok.querySelector("[data-ms-koleksiyon-sil-modal]");
+            const silAdAlani = silModal?.querySelector("[data-ms-koleksiyon-sil-ad]");
+            const silGirdi = silModal?.querySelector("[data-ms-koleksiyon-sil-onay-girdi]");
+            const silOnayla = silModal?.querySelector("[data-ms-koleksiyon-sil-onayla]");
+            const silHata = silModal?.querySelector("[data-ms-koleksiyon-sil-hata]");
+            const SIL_ONAY_METNI = "silmeyi onaylıyorum";
+
+            const silModalKapat = () => {
+                silModal?.classList.remove("ms-ornek-modal-acik");
+                silModal?.setAttribute("aria-hidden", "true");
+                if (!document.querySelector(".ms-ornek-modal.ms-ornek-modal-acik, .ms-giris-modal.ms-giris-modal-acik")) {
+                    document.body.style.overflow = "";
+                }
+            };
+
+            silModal?.querySelectorAll("[data-ms-koleksiyon-sil-modal-kapat]").forEach((buton) => {
+                buton.addEventListener("click", silModalKapat);
+            });
+
+            silGirdi?.addEventListener("input", () => {
+                if (silOnayla) { silOnayla.disabled = silGirdi.value.trim().toLocaleLowerCase("tr-TR") !== SIL_ONAY_METNI; }
+            });
+
+            kok.querySelectorAll("[data-ms-koleksiyon-sil]").forEach((buton) => {
+                buton.addEventListener("click", () => {
+                    menuleriKapat();
+                    if (!silModal) { return; }
+                    silModal.dataset.msSilinenKoleksiyon = buton.dataset.msKoleksiyonSil || "";
+                    if (silAdAlani) { silAdAlani.textContent = buton.dataset.koleksiyonAd || "Koleksiyon"; }
+                    if (silGirdi) { silGirdi.value = ""; }
+                    if (silOnayla) { silOnayla.disabled = true; }
+                    if (silHata) { silHata.hidden = true; }
+                    silModal.classList.add("ms-ornek-modal-acik");
+                    silModal.setAttribute("aria-hidden", "false");
+                    document.body.style.overflow = "hidden";
+                    window.setTimeout(() => silGirdi?.focus(), 40);
+                });
+            });
+
+            silOnayla?.addEventListener("click", async () => {
+                const id = silModal?.dataset.msSilinenKoleksiyon;
+                if (!id) { return; }
+                if (silHata) { silHata.hidden = true; }
+                silOnayla.disabled = true;
+                try {
+                    const cevap = await fetch("/api/store/collections/" + id + "?firmPlatformId=" + platformId, {
+                        method: "DELETE",
+                        headers: { Authorization: "Bearer " + localStorage.getItem("ecspros_member_token") }
+                    });
+                    const veri = await cevap.json().catch(() => null);
+                    if (veri?.success) { location.reload(); return; }
+                    if (silHata) { silHata.textContent = veri?.error || "Koleksiyon silinemedi."; silHata.hidden = false; }
+                    silOnayla.disabled = false;
+                } catch {
+                    if (silHata) { silHata.textContent = "Koleksiyon silinemedi. Lütfen tekrar deneyin."; silHata.hidden = false; }
+                    silOnayla.disabled = false;
                 }
             });
 

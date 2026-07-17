@@ -346,6 +346,20 @@ testi yeşil. ⚠️ DİKKAT: staging'de "çalışan sürecin altından rm -rf p
 tuzağı yine yaşandı (eski süreç 5051'i tutuyordu, test yanlış sürece gitti) — staging'de
 de önce süreci öldür, sonra rm.
 
+EK-3 (2026-07-17, hesabım turu — ⚠️ RESTART BEKLİYOR; girişli akışlar KULLANICI TESTİ):
+1) /koleksiyonlarim: kart üç nokta menüsü (Düzenle/Sil; Kaydedilenler'de yok). Düzenle =
+AYNI oluşturma modalı düzenleme modunda (başlık "Koleksiyon Düzenle", buton "Koleksiyon
+Güncelle"; ad/açıklama/görünürlük + ürünler API'den önyüklenir, ürün kart bilgisi modal
+panellerinden eşlenir). Sil = onay metinli modal ("Silmeyi onaylıyorum" yazılmadan düğme
+pasif). Backend: UpdateCollectionCommand (ürün listesi eşitleme — unique index soft-delete'i
+kapsadığından geri eklenen kod undelete; düzenleme sonrası Status yeniden pending) +
+DeleteCollectionCommand (soft delete; IsQuickSave korumalı) + PUT/DELETE /api/store/
+collections/{id}. AYRICA: POST {id}/items route'u hiç yokmuş (köprünün "Var olana ekle"
+akışı sessizce 404'lüyordu) → eklendi. 2) /favori-aramalarim boş durum ikonu FA
+(fa-magnifying-glass), ms-ikon-siyah kalktı. 3) /uyelik-bilgilerim: aktif cihaz kartları
+arası gap-3; giriş geçmişi max-h-72 + scroll + 10 kayıt (5'ti). Rotalar 401 (kayıtlı)
+doğrulandı; staging duman testi yeşil, canlıya kopyalandı.
+
 ### (önceki) SESSION ÖZETİ (2026-07-16, 5. oturum) — TASARIM FARK TURU: İP-1..4,6 CANLIDA + İP-5 TAMAM (⚠️ RESTART BEKLİYOR)
 İP-1..4,6 restart edildi ve canlıda doğrulandı (duman testi yeşil). Ardından İP-5
 (kullanıcı kurgu onayıyla) TAMAMLANDI: `product_review_photos` tablosu + `Topic` kolonu
