@@ -5901,7 +5901,8 @@
   }
 
   .ms-hesap-menu {
-    @apply grid gap-1 p-4 lg:p-5;
+    /* 2026-07-17: gap 2px (kullanıcı isteği) */
+    @apply grid gap-0.5 p-4 lg:p-5;
   }
 
   /* 2026-07-17: hesap paneli grup başlıkları (Üyeliğim / Bana Özel) */
@@ -5910,7 +5911,8 @@
   }
 
   .ms-hesap-menu a {
-    @apply flex h-10 items-center gap-3 rounded-xl px-1 text-[12px] font-normal text-slate-800 transition hover:bg-orange-50 hover:text-[var(--ms-renk-primary)] lg:h-11;
+    /* 2026-07-17: satır yüksekliği 32px (kullanıcı isteği; lg:h-11 kaldırıldı) */
+    @apply flex h-8 items-center gap-3 rounded-xl px-1 text-[12px] font-normal text-slate-800 transition hover:bg-orange-50 hover:text-[var(--ms-renk-primary)];
   }
 
   .ms-hesap-menu-ikon {

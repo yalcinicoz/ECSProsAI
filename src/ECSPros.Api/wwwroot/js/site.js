@@ -727,7 +727,16 @@
                 return;
             }
 
-            kart.querySelector("[data-ms-kart-link]")?.click();
+            const link = kart.querySelector("[data-ms-kart-link]");
+            if (!link) {
+                return;
+            }
+            // Sentetik link.click() modifier tasimaz — Ctrl/Cmd+tik yeni sekmede acilir (2026-07-17)
+            if (event.ctrlKey || event.metaKey) {
+                window.open(link.href, "_blank", "noopener");
+                return;
+            }
+            link.click();
         });
     };
 
@@ -2208,6 +2217,11 @@
                         return;
                     }
 
+                    // Sentetik link.click() modifier tasimaz — Ctrl/Cmd+tik yeni sekmede acilir (2026-07-17)
+                    if (event.ctrlKey || event.metaKey) {
+                        window.open(link.href, "_blank", "noopener");
+                        return;
+                    }
                     link.click();
                 });
             });
@@ -2973,7 +2987,16 @@
                                 return;
                             }
 
-                            kart.querySelector("[data-ms-kart-link]")?.click();
+                            const link = kart.querySelector("[data-ms-kart-link]");
+                            if (!link) {
+                                return;
+                            }
+                            // Sentetik link.click() modifier tasimaz — Ctrl/Cmd+tik yeni sekmede acilir (2026-07-17)
+                            if (event.ctrlKey || event.metaKey) {
+                                window.open(link.href, "_blank", "noopener");
+                                return;
+                            }
+                            link.click();
                         });
                     };
 
