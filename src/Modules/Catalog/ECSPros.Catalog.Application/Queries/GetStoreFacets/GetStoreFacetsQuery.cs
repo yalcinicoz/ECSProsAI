@@ -13,7 +13,13 @@ public record GetStoreFacetsQuery(
     string? Search = null,
     // Stok görünürlüğü — arama listesiyle facet sayıları tutarlı kalsın (2026-07-14).
     bool ShowOutOfStock = false,
-    DateTime? OutOfStockSince = null) : IRequest<Result<StoreFacetsDto>>;
+    DateTime? OutOfStockSince = null,
+    // 2026-07-17: seçim-duyarlı facet — seçili değerler + fiyat aralığı verilirse her
+    // filtre grubu "diğer grupların seçimleri uygulanmış" ürün kümesinden hesaplanır
+    // (grup kendi seçimini dışlar → son kullanılan grubun seçenekleri korunur).
+    List<Guid>? SelectedValueIds = null,
+    decimal? PriceMin = null,
+    decimal? PriceMax = null) : IRequest<Result<StoreFacetsDto>>;
 
 public record StoreFacetsDto(
     decimal PriceMin,
@@ -76,6 +82,16 @@ public class GetStoreFacetsQueryHandler(
                           || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(s));
         }
 
+        // 2026-07-17: seçim/fiyat filtresi varsa seçim-duyarlı hesap (cache'lenmez);
+        // arama listesi ürün seviyesinde eşleştiğinden sameVariant=false.
+        if (request.SelectedValueIds is { Count: > 0 } || request.PriceMin.HasValue || request.PriceMax.HasValue)
+        {
+            var baseIds = await q.Select(p => p.Id).ToListAsync(ct);
+            return await BuildFacetsWithSelections(
+                db, baseIds, request.SelectedValueIds, request.PriceMin, request.PriceMax,
+                sameVariant: false, ct);
+        }
+
         // Ürün id'leri belleğe çekilmez — alt sorgu olarak aggregation'a gömülür
         // (tüm katalogda ~90K id materialize etmek hem yavaş hem gereksizdi).
         var result = await BuildFacets(db, q.Select(p => p.Id), ct);
@@ -84,6 +100,133 @@ public class GetStoreFacetsQueryHandler(
             memoryCache.Set(allKey, result.Value, CacheTtl);
 
         return result;
+    }
+
+    /// <summary>2026-07-17: seçim-duyarlı facet — klasik çok-seçimli facet kuralı: her
+    /// filtre grubunun seçenekleri, DİĞER grupların seçimleri + fiyat aralığı uygulanmış
+    /// ürün kümesinden türetilir (grup kendi seçimini dışlar; böylece son kullanılan grubun
+    /// seçenekleri korunur ve sunulan her seçenek en az 1 ürünle sonuçlanır). sameVariant:
+    /// kategori listesi grupları AYNI varyantta arar, arama listesi ürün seviyesinde.</summary>
+    public static async Task<Result<StoreFacetsDto>> BuildFacetsWithSelections(
+        ICatalogDbContext db,
+        List<Guid> baseProductIds,
+        List<Guid>? selectedValueIds,
+        decimal? priceMin,
+        decimal? priceMax,
+        bool sameVariant,
+        CancellationToken ct)
+    {
+        var secili = (selectedValueIds ?? []).Distinct().ToList();
+        if (secili.Count == 0 && !priceMin.HasValue && !priceMax.HasValue)
+            return await BuildFacets(db, baseProductIds, ct);
+
+        if (baseProductIds.Count == 0)
+            return Result.Success(new StoreFacetsDto(0, 0, new()));
+
+        // Seçili değerler tip (grup) bazında
+        var tipGruplari = (await db.AttributeValues.AsNoTracking()
+                .Where(v => secili.Contains(v.Id))
+                .Select(v => new { v.Id, v.AttributeTypeId })
+                .ToListAsync(ct))
+            .GroupBy(v => v.AttributeTypeId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Id).ToHashSet());
+
+        // Seçili değerlerin ürün/varyant eşleşmeleri tek sorguda belleğe alınır —
+        // grup-hariç alt kümeler bellekten türetilir (grup sayısı kadar DB taraması yerine).
+        var urunVaryantDegerleri = new Dictionary<Guid, Dictionary<Guid, HashSet<Guid>>>();
+        if (tipGruplari.Count > 0)
+        {
+            var satirlar = await db.ProductVariantAttributes.AsNoTracking()
+                .Where(va => secili.Contains(va.AttributeValueId)
+                          && baseProductIds.Contains(va.Variant.ProductId)
+                          && va.Variant.IsActive)
+                .Select(va => new { va.Variant.ProductId, va.VariantId, va.AttributeValueId })
+                .ToListAsync(ct);
+            foreach (var satir in satirlar)
+            {
+                if (!urunVaryantDegerleri.TryGetValue(satir.ProductId, out var varyantlar))
+                    urunVaryantDegerleri[satir.ProductId] = varyantlar = new();
+                if (!varyantlar.TryGetValue(satir.VariantId, out var degerler))
+                    varyantlar[satir.VariantId] = degerler = new();
+                degerler.Add(satir.AttributeValueId);
+            }
+        }
+
+        bool UrunGruplariSaglarMi(Guid productId, List<HashSet<Guid>> gruplar)
+        {
+            if (gruplar.Count == 0) return true;
+            if (!urunVaryantDegerleri.TryGetValue(productId, out var varyantlar)) return false;
+            if (sameVariant)
+                return varyantlar.Values.Any(sahip => gruplar.All(sahip.Overlaps));
+            var tumu = varyantlar.Values.SelectMany(s => s).ToHashSet();
+            return gruplar.All(tumu.Overlaps);
+        }
+
+        async Task<List<Guid>> FiyatUygula(List<Guid> ids)
+        {
+            if ((!priceMin.HasValue && !priceMax.HasValue) || ids.Count == 0) return ids;
+            var min = priceMin ?? 0;
+            var max = priceMax ?? decimal.MaxValue;
+            return await db.Products.AsNoTracking()
+                .Where(p => ids.Contains(p.Id)
+                    && (p.Variants.Any(v => v.IsActive && v.BasePrice > 0 && v.BasePrice >= min && v.BasePrice <= max)
+                        || (p.BasePrice >= min && p.BasePrice <= max
+                            && !p.Variants.Any(v => v.IsActive && v.BasePrice > 0))))
+                .Select(p => p.Id)
+                .ToListAsync(ct);
+        }
+
+        var tumGruplar = tipGruplari.Values.ToList();
+        var hepsiUygulanmis = baseProductIds.Where(id => UrunGruplariSaglarMi(id, tumGruplar)).ToList();
+
+        // Fiyat aralığı sınırları: fiyat filtresi HARİÇ, tüm grup seçimleri uygulanmış küme
+        var fiyatAgg = hepsiUygulanmis.Count == 0 ? null : await db.Products.AsNoTracking()
+            .Where(p => hepsiUygulanmis.Contains(p.Id) && p.BasePrice > 0)
+            .GroupBy(_ => 1)
+            .Select(g => new { Min = g.Min(p => p.BasePrice), Max = g.Max(p => p.BasePrice) })
+            .FirstOrDefaultAsync(ct);
+
+        // Seçimsiz gruplar: tüm seçimler + fiyat uygulanmış kümeden
+        var tamKume = await FiyatUygula(hepsiUygulanmis);
+        var tamSonuc = await BuildFacets(db, tamKume, ct);
+        if (tamSonuc.IsFailure)
+            return tamSonuc;
+
+        var girdilerByCode = tamSonuc.Value!.Attributes.ToDictionary(a => a.TypeCode);
+
+        // Seçimli gruplar: kendi grubu HARİÇ diğer seçimler + fiyat uygulanmış kümeden
+        if (tipGruplari.Count > 0)
+        {
+            var tipMeta = await db.AttributeTypes.AsNoTracking()
+                .Where(t => tipGruplari.Keys.Contains(t.Id))
+                .Select(t => new { t.Id, t.Code })
+                .ToListAsync(ct);
+            foreach (var tip in tipMeta)
+            {
+                var digerleri = tipGruplari.Where(g => g.Key != tip.Id).Select(g => g.Value).ToList();
+                var grupKumesi = await FiyatUygula(
+                    baseProductIds.Where(id => UrunGruplariSaglarMi(id, digerleri)).ToList());
+                var grupSonucu = await BuildFacets(db, grupKumesi, ct);
+                if (grupSonucu.IsSuccess)
+                {
+                    var girdi = grupSonucu.Value!.Attributes.FirstOrDefault(a => a.TypeCode == tip.Code);
+                    if (girdi is not null) { girdilerByCode[tip.Code] = girdi; }
+                }
+            }
+        }
+
+        // Tip sırasına göre birleştir
+        var kodlar = girdilerByCode.Keys.ToList();
+        var sira = await db.AttributeTypes.AsNoTracking()
+            .Where(t => kodlar.Contains(t.Code))
+            .Select(t => new { t.Code, t.SortOrder })
+            .ToListAsync(ct);
+        var siraByCode = sira.GroupBy(s => s.Code).ToDictionary(g => g.Key, g => g.Min(s => s.SortOrder));
+        var birlesik = girdilerByCode.Values
+            .OrderBy(a => siraByCode.GetValueOrDefault(a.TypeCode, int.MaxValue))
+            .ToList();
+
+        return Result.Success(new StoreFacetsDto(fiyatAgg?.Min ?? 0, fiyatAgg?.Max ?? 0, birlesik));
     }
 
     public static Task<Result<StoreFacetsDto>> BuildFacets(

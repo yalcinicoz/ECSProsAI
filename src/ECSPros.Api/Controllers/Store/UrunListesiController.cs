@@ -77,7 +77,9 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             return NotFound();
 
         var facets = await mediator.Send(new GetChannelCategoryFacetsQuery(
-            kategori.Id, platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih), ct);
+            kategori.Id, platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih,
+            // 2026-07-17: seçim-duyarlı facet — aktif filtre/fiyat/arama bağlamı
+            filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax, arama), ct);
 
         var devamUrl = $"/api/store/catalog/channel-categories/{kategori.Id}/products?pageSize={SayfaBoyu}"
                        + (arama is null ? "" : "&search=" + Uri.EscapeDataString(arama))
@@ -116,7 +118,9 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             return NotFound();
 
         var facets = await mediator.Send(new GetStoreFacetsQuery(
-            platform.Id, arama, platform.StokBitenGoster, platform.StokBitenGosterTarih), ct);
+            platform.Id, arama, platform.StokBitenGoster, platform.StokBitenGosterTarih,
+            // 2026-07-17: seçim-duyarlı facet — aktif filtre/fiyat bağlamı
+            filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax), ct);
 
         var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
         var devamUrl = $"/api/store/catalog/products?firmPlatformId={platform.Id}&pageSize={SayfaBoyu}"
