@@ -307,6 +307,8 @@
 
     // 2026-07-17: seçili filtre kaldırma — attrs parametresinden id düşürülüp sayfa
     // yeniden yüklenir (Filtrele akışıyla aynı navigasyon modeli; facet'ler yeniden hesaplanır).
+    // CAPTURE şart: üst filtre modülü panel tıklamalarında stopPropagation çağırır,
+    // bubble'daki document dinleyicisine tıklama hiç ulaşmaz.
     document.addEventListener("click", (event) => {
         const buton = event.target instanceof Element
             ? event.target.closest("[data-ms-secili-filtre-kaldir]")
@@ -322,6 +324,6 @@
         if (kalanlar.length > 0) { url.searchParams.set("attrs", kalanlar.join(",")); }
         else { url.searchParams.delete("attrs"); }
         window.location.href = url.toString();
-    });
+    }, true);
 })();
 </script>
