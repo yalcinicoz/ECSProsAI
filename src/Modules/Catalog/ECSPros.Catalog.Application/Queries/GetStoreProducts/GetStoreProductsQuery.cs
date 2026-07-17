@@ -129,9 +129,14 @@ public class GetStoreProductsQueryHandler(
             foreach (var grup in degerTipleri.GroupBy(v => v.AttributeTypeId))
             {
                 var grupDegerleri = grup.Select(g => g.Id).ToList();
+                // 2026-07-17: ürün SEVİYESİ özellik değerleri de eşleşir (kumaş türü, kalıp…
+                // product_attributes'ta yaşar) — grup varyantta VEYA üründe sağlanabilir.
                 q = q.Where(p => p.Variants.Any(v => v.IsActive
-                    && db.ProductVariantAttributes.Any(va =>
-                        va.VariantId == v.Id && grupDegerleri.Contains(va.AttributeValueId))));
+                        && db.ProductVariantAttributes.Any(va =>
+                            va.VariantId == v.Id && grupDegerleri.Contains(va.AttributeValueId)))
+                    || db.ProductAttributes.Any(pa =>
+                        pa.ProductId == p.Id && pa.AttributeValueId != null
+                        && grupDegerleri.Contains(pa.AttributeValueId.Value)));
             }
         }
 

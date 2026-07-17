@@ -48,8 +48,9 @@ public class GetStoreFacetsQueryHandler(
     // bkz. PROGRESS.md 2026-07-06 Redis notu). Arama filtreli istekler cache'lenmez.
     // Cache anahtarı stok görünürlük paramlarını + platformu içerir (kanal seçimi/durdurma
     // deny-set'i platform bazlı — M2/M3).
+    // v5: ürün seviyesi özellikler facet'e dahil oldu (2026-07-17)
     private static string AllKey(Guid platformId, bool showOos, DateTime? since) =>
-        $"store:facets:all:v4:{platformId}:{showOos}:{since:yyyyMMdd}";
+        $"store:facets:all:v5:{platformId}:{showOos}:{since:yyyyMMdd}";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(15);
 
     public async Task<Result<StoreFacetsDto>> Handle(GetStoreFacetsQuery request, CancellationToken ct)
@@ -134,6 +135,8 @@ public class GetStoreFacetsQueryHandler(
         // Seçili değerlerin ürün/varyant eşleşmeleri tek sorguda belleğe alınır —
         // grup-hariç alt kümeler bellekten türetilir (grup sayısı kadar DB taraması yerine).
         var urunVaryantDegerleri = new Dictionary<Guid, Dictionary<Guid, HashSet<Guid>>>();
+        // 2026-07-17: ürün SEVİYESİ değerler (product_attributes) — ürün geneline sayılır
+        var urunSeviyesiDegerleri = new Dictionary<Guid, HashSet<Guid>>();
         if (tipGruplari.Count > 0)
         {
             var satirlar = await db.ProductVariantAttributes.AsNoTracking()
@@ -150,16 +153,36 @@ public class GetStoreFacetsQueryHandler(
                     varyantlar[satir.VariantId] = degerler = new();
                 degerler.Add(satir.AttributeValueId);
             }
+
+            var urunSatirlari = await db.ProductAttributes.AsNoTracking()
+                .Where(pa => pa.AttributeValueId != null
+                          && secili.Contains(pa.AttributeValueId.Value)
+                          && baseProductIds.Contains(pa.ProductId))
+                .Select(pa => new { pa.ProductId, AttributeValueId = pa.AttributeValueId!.Value })
+                .ToListAsync(ct);
+            foreach (var satir in urunSatirlari)
+            {
+                if (!urunSeviyesiDegerleri.TryGetValue(satir.ProductId, out var degerler))
+                    urunSeviyesiDegerleri[satir.ProductId] = degerler = new();
+                degerler.Add(satir.AttributeValueId);
+            }
         }
 
         bool UrunGruplariSaglarMi(Guid productId, List<HashSet<Guid>> gruplar)
         {
             if (gruplar.Count == 0) return true;
-            if (!urunVaryantDegerleri.TryGetValue(productId, out var varyantlar)) return false;
+            urunVaryantDegerleri.TryGetValue(productId, out var varyantlar);
+            urunSeviyesiDegerleri.TryGetValue(productId, out var urunSahip);
+            if (varyantlar is null && urunSahip is null) return false;
+            bool UrunSeviyesindeVar(HashSet<Guid> grup) => urunSahip is not null && urunSahip.Overlaps(grup);
             if (sameVariant)
-                return varyantlar.Values.Any(sahip => gruplar.All(sahip.Overlaps));
-            var tumu = varyantlar.Values.SelectMany(s => s).ToHashSet();
-            return gruplar.All(tumu.Overlaps);
+            {
+                if (varyantlar is null) return gruplar.All(UrunSeviyesindeVar);
+                return varyantlar.Values.Any(sahip => gruplar.All(g => sahip.Overlaps(g) || UrunSeviyesindeVar(g)))
+                       || gruplar.All(UrunSeviyesindeVar);
+            }
+            var tumu = varyantlar is null ? new HashSet<Guid>() : varyantlar.Values.SelectMany(s => s).ToHashSet();
+            return gruplar.All(g => tumu.Overlaps(g) || UrunSeviyesindeVar(g));
         }
 
         async Task<List<Guid>> FiyatUygula(List<Guid> ids)
@@ -272,6 +295,31 @@ public class GetStoreFacetsQueryHandler(
             .GroupBy(x => new { x.AttributeTypeId, x.AttributeValueId })
             .Select(g => new { g.Key.AttributeTypeId, g.Key.AttributeValueId, ProductCount = g.Count() })
             .ToListAsync(ct);
+
+        // 2026-07-17: ürün SEVİYESİ özellikler de filtreye dahil (kumaş türü, kalıp, desen,
+        // cinsiyet, marka… product_attributes'ta yaşar — önceden yalnız varyant özellikleri
+        // [beden/filtre_rengi] facet'e giriyordu). CustomValue-only satırlar (değersiz) atlanır.
+        var urunSeviyesiSayilar = await db.ProductAttributes
+            .AsNoTracking()
+            .Where(pa => pa.AttributeValueId != null
+                && pa.AttributeType.Code != "renk"
+                && productIds.Contains(pa.ProductId))
+            .Select(pa => new { pa.AttributeTypeId, AttributeValueId = pa.AttributeValueId!.Value, pa.ProductId })
+            .Distinct()
+            .GroupBy(x => new { x.AttributeTypeId, x.AttributeValueId })
+            .Select(g => new { g.Key.AttributeTypeId, g.Key.AttributeValueId, ProductCount = g.Count() })
+            .ToListAsync(ct);
+
+        if (urunSeviyesiSayilar.Count > 0)
+        {
+            // Aynı tip pratikte tek seviyede yaşar; nadir çakışmada sayılar toplanır.
+            var birlesik = counts
+                .Concat(urunSeviyesiSayilar)
+                .GroupBy(c => new { c.AttributeTypeId, c.AttributeValueId })
+                .Select(g => new { g.Key.AttributeTypeId, g.Key.AttributeValueId, ProductCount = g.Sum(x => x.ProductCount) })
+                .ToList();
+            counts = birlesik;
+        }
 
         if (counts.Count == 0)
             return Result.Success(new StoreFacetsDto(priceMin, priceMax, new()));

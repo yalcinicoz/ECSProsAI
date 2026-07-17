@@ -42,7 +42,8 @@ public class GetChannelCategoryFacetsQueryHandler(
         var secimliMi = request.SelectedValueIds is { Count: > 0 }
             || request.PriceMin.HasValue || request.PriceMax.HasValue
             || !string.IsNullOrWhiteSpace(request.Search);
-        var cacheKey = $"channelcat:facets:v5:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
+        // v6: ürün seviyesi özellikler facet'e dahil oldu (2026-07-17)
+        var cacheKey = $"channelcat:facets:v6:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
         StoreFacetsDto? cached = null;
         if (!secimliMi)
         {

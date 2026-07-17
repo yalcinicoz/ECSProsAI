@@ -431,10 +431,27 @@ public class GetChannelCategoryProductsQueryHandler(
                 .GroupBy(r => r.VariantId)
                 .ToDictionary(g => g.Key, g => g.Select(x => x.AttributeValueId).ToHashSet());
 
+            // 2026-07-17: ürün SEVİYESİ özellik değerleri (kumaş türü, kalıp, desen…) —
+            // ürün geneline sayılır; grup varyantta VEYA üründe sağlanabilir (varyant
+            // grupları için aynı-varyant kuralı renk kartının kendi varyantlarıyla sürer).
+            var urunSeviyesiDegerler = (await catDb.ProductAttributes.AsNoTracking()
+                .Where(pa => pa.AttributeValueId != null
+                          && seciliDegerler.Contains(pa.AttributeValueId.Value)
+                          && adayProductIds.Contains(pa.ProductId))
+                .Select(pa => new { pa.ProductId, AttributeValueId = pa.AttributeValueId!.Value })
+                .ToListAsync(ct))
+                .GroupBy(r => r.ProductId)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.AttributeValueId).ToHashSet());
+
             visiblePairs = visiblePairs
-                .Where(pair => pair.VariantIds.Any(vid =>
-                    degerlerByVariant.TryGetValue(vid, out var sahip)
-                    && tipGruplari.All(sahip.Overlaps)))
+                .Where(pair =>
+                {
+                    urunSeviyesiDegerler.TryGetValue(pair.ProductId, out var urunSahip);
+                    return tipGruplari.All(grup =>
+                        (urunSahip is not null && urunSahip.Overlaps(grup))
+                        || pair.VariantIds.Any(vid =>
+                            degerlerByVariant.TryGetValue(vid, out var sahip) && sahip.Overlaps(grup)));
+                })
                 .ToList();
         }
 
