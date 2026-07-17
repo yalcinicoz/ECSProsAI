@@ -318,8 +318,11 @@ Canlı publish kopyalandı (rm'siz) — `sudo systemctl restart ecspros` kullan�
 
 EK (aynı gün): ikon banner ikonları (Yeni Gelenler/İndirimli/Fırsat) görünmüyordu — kök
 neden fontawesome-subset.mjs: (1) yalnız Views+site.js tarar, vitrin ikonları DB'de
-(page_block_items.BadgeLabel) → script'e `dbIkonlari` listesi eklendi (admin vitrine yeni
-FA ikonu eklerse listeye ekleyip `npm run fontawesome-subset` ŞART); (2) `rotate-.+`
+(page_block_items.BadgeLabel) → KALICI ÇÖZÜM: script artık DB'yi de tarar (psql ile
+page_block_items.BadgeLabel + aktif published_snapshots; bağlantı appsettings(.Production)
+.json DefaultConnection'dan; DB erişilemezse sessiz düşürme yerine hata fırlatır — negatif
+test edildi). Admin vitrine yeni FA ikonu ekleyince tek adım: `npm run fontawesome-subset`
++ ikonall.min.css'i publish'e kopyala; (2) `rotate-.+`
 yardımcı-sınıf filtresi GERÇEK fa-rotate-left ikonunu (footer "Kolay iade") eliyordu →
 desen `rotate-(90|180|270|by)`a daraltıldı. ikonall.min.css yeniden üretildi (70 ikon;
 gem/circle-down/circle-left/lightbulb/rotate-left eklendi, mevcutlar korundu), publish'e

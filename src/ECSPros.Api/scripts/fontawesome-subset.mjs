@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 const projeKoku = process.cwd();
 const kaynakCssYolu = path.join(projeKoku, "wwwroot", "fontawesome-free-7.2.0-web", "css", "all.min.css");
@@ -30,19 +31,58 @@ const yardimciSinifDesenleri = [
   /^fa-(fw|width-.+|ul|li|border|pull-.+|beat|bounce|fade|beat-fade|flip|shake|spin|spin-reverse|pulse|spin-pulse|rotate-(90|180|270|by)|flip-(horizontal|vertical|both)|stack|stack-.+|inverse)$/
 ];
 
-// Kaynak dosyalarda GEÇMEYEN ikonlar: vitrin blok öğeleri (storefront.page_block_items
-// BadgeLabel — bilgi-banner/ikon-banner FA class'ı DB'de tutar) buradan beslenir.
-// Admin vitrine yeni bir FA ikonu eklerse bu listeye de eklenip subset yeniden üretilmeli.
-const dbIkonlari = [
-  "fa-gem",
-  "fa-circle-down",
-  "fa-circle-left",
-  "fa-lightbulb",
-  "fa-clock",
-  "fa-credit-card",
-  "fa-star",
-  "fa-user"
-];
+// Kaynak dosyalarda GEÇMEYEN ikonlar DB'den taranır: vitrin blok öğeleri FA class'ı
+// DB'de tutar (storefront.page_block_items.BadgeLabel — bilgi-banner/ikon-banner) ve
+// yayın anındaki kopya aktif snapshot'tadır (site oradan render eder). psql ile sorgulanır;
+// bağlantı appsettings(.Production).json ConnectionStrings:DefaultConnection'dan okunur.
+const dbSorgusu = `SELECT "BadgeLabel" FROM storefront.page_block_items WHERE "BadgeLabel" LIKE '%fa-%'
+UNION ALL SELECT "JsonData"::text FROM storefront.published_snapshots WHERE "IsActive" = true`;
+
+function baglantiAyarlariniOku() {
+  for (const dosyaAdi of ["appsettings.Production.json", "appsettings.json"]) {
+    const dosyaYolu = path.join(projeKoku, dosyaAdi);
+    if (!fs.existsSync(dosyaYolu)) {
+      continue;
+    }
+    const baglanti = JSON.parse(fs.readFileSync(dosyaYolu, "utf8"))?.ConnectionStrings?.DefaultConnection;
+    if (!baglanti) {
+      continue;
+    }
+    const alanlar = Object.fromEntries(baglanti.split(";")
+      .map((parca) => parca.split(/=(.*)/s))
+      .filter(([anahtar, deger]) => anahtar && deger !== undefined)
+      .map(([anahtar, deger]) => [anahtar.trim().toLowerCase(), deger.trim()]));
+    if (alanlar.host && alanlar.database && alanlar.username) {
+      return alanlar;
+    }
+  }
+  throw new Error("DefaultConnection bulunamadi — appsettings(.Production).json kontrol et.");
+}
+
+function dbIkonlariniBul() {
+  const ayarlar = baglantiAyarlariniOku();
+  const sonuc = spawnSync("psql", [
+    "-h", ayarlar.host,
+    "-p", ayarlar.port ?? "5432",
+    "-U", ayarlar.username,
+    "-d", ayarlar.database,
+    "-t", "-A", "-c", dbSorgusu
+  ], { env: { ...process.env, PGPASSWORD: ayarlar.password ?? "" }, encoding: "utf8" });
+
+  if (sonuc.error || sonuc.status !== 0) {
+    // Sessizce boş dönmek yeni üretimde DB ikonlarını DÜŞÜRÜR (ikonlar canlıda kırılır) —
+    // o yüzden hata net şekilde patlatılır.
+    throw new Error(`Vitrin ikonlari icin DB taramasi basarisiz (psql): ${sonuc.error?.message ?? sonuc.stderr}`);
+  }
+
+  const ikonlar = new Set();
+  for (const eslesme of sonuc.stdout.matchAll(/\bfa(?:-[a-z0-9]+)+\b/g)) {
+    if (ikonSinifiMi(eslesme[0])) {
+      ikonlar.add(eslesme[0]);
+    }
+  }
+  return ikonlar;
+}
 
 function dosyalariGez(kok) {
   if (!fs.existsSync(kok)) {
@@ -99,6 +139,7 @@ function ikonKurallariniSec(allCss, ikonlar) {
 
 const allCss = fs.readFileSync(kaynakCssYolu, "utf8");
 const ikonlar = kullanilanIkonlariBul();
+const dbIkonlari = dbIkonlariniBul();
 for (const ikon of dbIkonlari) {
   ikonlar.add(ikon);
 }
@@ -125,4 +166,4 @@ const temelCss = [
 
 fs.writeFileSync(hedefCssYolu, `${temelCss.concat(ikonKurallari).join("")}\n`);
 
-console.log(`ikonall.min.css guncellendi: ${ikonlar.size} ikon, ${ikonKurallari.length} kural`);
+console.log(`ikonall.min.css guncellendi: ${ikonlar.size} ikon (${dbIkonlari.size} DB'den), ${ikonKurallari.length} kural`);
