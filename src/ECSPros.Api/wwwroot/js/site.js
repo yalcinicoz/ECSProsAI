@@ -2280,7 +2280,7 @@
 
                 const modalAc = (ayarlar = {}) => {
                     const tip = ayarlar.tip === "red" ? "red" : "onay";
-                    const sure = Number(ayarlar.sure || ayarlar.sureMs || 2000);
+                    const sure = Number(ayarlar.sure || ayarlar.sureMs || 1000); // 2026-07-17: varsayilan yariya indi (2000→1000)
                     sonOdaklananEleman = document.activeElement;
                     window.clearTimeout(otomatikKapatTimer);
                     modal.classList.remove("ms-onay-red-modal-zamanli");
@@ -7787,7 +7787,7 @@
                 baslik: "Giriş Başarılı",
                 altBaslik: "Giriş Yapıldı",
                 metin: "Hesabınıza başarıyla giriş yaptınız.",
-                sure: 3000
+                sure: 1500
             });
         }, 40);
     });
