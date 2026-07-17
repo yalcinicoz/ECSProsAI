@@ -450,6 +450,14 @@ filtre DIŞI. DatabaseSeeder kanonik listesi + filtre_rengi seed'i + Demo/Test s
 aynı değerlerle güncellendi. Admin: Özellik Tipleri listesine "Filtrede" kolonu, oluşturma
 modalı + detay ayarlarına checkbox (npm run build yapıldı, admin/dist canlıda). İzole 5077
 duman testi: /api/store/catalog/products/facets 26 grup, yeni sırada, renk yok.
+EK (aynı iş, 2. tur): TEK SEÇENEKLİ filtre grubu da panele konmaz (kullanıcı kuralı) —
+`TekSecenekliGruplariAyikla` (GetStoreFacetsQueryHandler'da static): Values.Count<2 grup
+düşer; İSTİSNA: kullanıcının seçili değerini içeren grup tek seçeneğe düşse bile kalır
+(seçimi kaldırma yolu kaybolmasın). Uygulama noktaları: genel facet düz yol + seçimli
+birleşim + kanal kategori düz yol (BuildFacets'in kendisi DEĞİL — seçim-duyarlı hesap
+grup-hariç ara sonuçları ondan alıyor). Cache v7/v8'e bump. Duman 5077: genel 26→23
+(marka/balen/malzeme düştü), kadin-etek 11 grup (tek değerli cinsiyet de düştü),
+cinsiyet=Kadın seçili sayfada grup listesi doğru.
 
 EK-9 (2026-07-17 — ⚠️ RESTART BEKLİYOR): kategori filtre seçenekleri yalnız listelenen
 ürünlerden. Kök neden: GetChannelCategoryFacets filter/mixed dolumda "tüm satışa açık ilk

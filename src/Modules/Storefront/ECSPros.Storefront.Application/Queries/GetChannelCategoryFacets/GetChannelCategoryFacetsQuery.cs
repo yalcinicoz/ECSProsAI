@@ -44,7 +44,8 @@ public class GetChannelCategoryFacetsQueryHandler(
             || !string.IsNullOrWhiteSpace(request.Search);
         // v6: ürün seviyesi özellikler facet'e dahil oldu (2026-07-17)
         // v7: facet'e girecek tipler AttributeType.UseInFilter bayrağından seçilir (2026-07-17)
-        var cacheKey = $"channelcat:facets:v7:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
+        // v8: tek seçenekli filtre grupları panelden düşürülür (2026-07-17)
+        var cacheKey = $"channelcat:facets:v8:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
         StoreFacetsDto? cached = null;
         if (!secimliMi)
         {
@@ -150,6 +151,8 @@ public class GetChannelCategoryFacetsQueryHandler(
             var sonuc = await GetStoreFacetsQueryHandler.BuildFacets(catDb, productIds, ct);
             if (sonuc.IsSuccess)
             {
+                // Tek seçenekli grup panele konmaz (2026-07-17 kuralı; seçim yok → istisnasız)
+                sonuc = Result.Success(GetStoreFacetsQueryHandler.TekSecenekliGruplariAyikla(sonuc.Value!));
                 try { await cache.SetAsync(cacheKey, sonuc.Value, TimeSpan.FromMinutes(10), ct); } catch { /* best-effort */ }
             }
             return sonuc;
