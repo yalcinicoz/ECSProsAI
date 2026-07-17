@@ -370,6 +370,10 @@ komutlarına >50 kr kod için anlaşılır hata guard'ı (500 yerine). NOT: eski
 koleksiyonlarda slug'lı bozuk ürün kodları kalmış olabilir (koda çözülemez — düzenle
 modalında kod+no-image görünür; gerekirse temizlik sorgusu atılır).
 
+EK-7 (2026-07-17, CANLIDA — restart gerekmedi, statik dosya): hesap paneli menüsü gap
+2px + satır 32px (.ms-hesap-menu/.ms-hesap-menu a); ürün kartlarında Ctrl/Cmd+tık yeni
+sekmede açar (3 kart handler'ı sentetik link.click() yerine modifier'da window.open).
+
 EK-6 (2026-07-17 — ⚠️ RESTART BEKLİYOR): "Önceden Eklediklerim" ÜYEYE BAĞLI KALICI oldu.
 Yeni storefront.cart_removed_items tablosu (üye+platform+varyant unique — soft-delete'i
 kapsar, kayıtta undelete; üye başına son 12, budama soft-delete; migration
