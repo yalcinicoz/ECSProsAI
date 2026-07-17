@@ -4282,7 +4282,30 @@
       0.625rem 0.625rem 0 currentColor;
   }
 
+  /* 2026-07-17: sayfa başına dön float butonu — sağ alt köşe, kaydırınca görünür */
+  .ms-sayfa-basi-buton {
+    @apply fixed bottom-5 right-4 z-[110] inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white/95 text-ms-siyah shadow-lg shadow-slate-950/20 backdrop-blur transition hover:border-[var(--ms-renk-primary)] hover:text-[var(--ms-renk-primary)] focus:outline-none focus-visible:outline-none sm:bottom-6 sm:right-6;
+  }
+
+  /* display:flex, UA'nın [hidden] display:none'ını ezer — açık kural şart */
+  .ms-sayfa-basi-buton[hidden] {
+    display: none;
+  }
+
+  .ms-sayfa-basi-buton .ms-fa-ikon {
+    @apply h-5 w-5;
+  }
+
   @media (max-width: 1023px) {
+    /* Mobilde sabit alt bar / sepet aksiyon çubuğunun üstünde dursun */
+    body:has(.ms-mobil-alt-bar) .ms-sayfa-basi-buton {
+      bottom: 4.75rem;
+    }
+
+    body:has(.ms-sepet-mobil-sabit-aksiyon) .ms-sayfa-basi-buton {
+      bottom: 6.75rem;
+    }
+
     .ms-mobil-alt-bar {
       @apply grid;
     }
