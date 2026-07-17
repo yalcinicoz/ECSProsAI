@@ -370,6 +370,15 @@ komutlarına >50 kr kod için anlaşılır hata guard'ı (500 yerine). NOT: eski
 koleksiyonlarda slug'lı bozuk ürün kodları kalmış olabilir (koda çözülemez — düzenle
 modalında kod+no-image görünür; gerekirse temizlik sorgusu atılır).
 
+EK-6 (2026-07-17 — ⚠️ RESTART BEKLİYOR): "Önceden Eklediklerim" ÜYEYE BAĞLI KALICI oldu.
+Yeni storefront.cart_removed_items tablosu (üye+platform+varyant unique — soft-delete'i
+kapsar, kayıtta undelete; üye başına son 12, budama soft-delete; migration
+20260717114242_AddCartRemovedItems CANLI DB'YE UYGULANDI, additive). API (MemberOnly):
+GET/POST /api/store/cart/removed + DELETE /{variantId} (Record/Delete komut + Get sorgusu).
+Sepet script'i üye-duyarlı: üye → sunucu (cihazlar arası ortak), misafir → localStorage;
+üye girişinde misafirken biriken yerel kayıtlar bir kez sunucuya taşınır (taşınamayan
+yerelde kalır). Rotalar 401 doğrulandı; cart DELETE rotası etkilenmedi (400).
+
 EK-5 (2026-07-17 — ⚠️ RESTART BEKLİYOR): 1) Hesap paneli (ms-ana-navigasyon-hesap-panel)
 menüsü yan menüyle aynı GRUPLU yapıya geçti (Üyeliğim: üyelik+adresler; Bana Özel: 9 link;
 eski /Hesabim/* rotaları küçük-harf rotalarla değişti; .ms-hesap-menu-grup-baslik CSS).

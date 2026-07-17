@@ -25,6 +25,7 @@ public class StorefrontDbContext : DbContext, IStorefrontDbContext
     public DbSet<ProductReviewPhoto> ProductReviewPhotos => Set<ProductReviewPhoto>();
     public DbSet<SavedSearch> SavedSearches => Set<SavedSearch>();
     public DbSet<ViewedProduct> ViewedProducts => Set<ViewedProduct>();
+    public DbSet<CartRemovedItem> CartRemovedItems => Set<CartRemovedItem>();
     public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
     public DbSet<NewsletterSubscription> NewsletterSubscriptions => Set<NewsletterSubscription>();
     public DbSet<PageBlock> PageBlocks => Set<PageBlock>();
