@@ -527,12 +527,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const kalemBilgileri = new Map(); // kalemId → kalem (silme anında "önceden" kaydı için)
 
     // ── 2026-07-17: "Önceden Eklediklerim" (tasarımın ms-sepet-onceden bölümü) ──
-    // Sepetten çıkarılan ürünler localStorage'da tutulur (varyant başına tek, en yeni 8);
+    // Üye girişinde kaynak SUNUCU (api/store/cart/removed — üyeye bağlı kalıcı geçmiş,
+    // cihazlar arası ortak); misafirde localStorage (varyant başına tek, en yeni 8).
+    // Üye girişiyle sayfaya gelindiğinde misafirken biriken yerel kayıtlar sunucuya taşınır.
     // Sepete Ekle kayıtlı varyant+fiyatla gerçek sepet API'sine gider, başarıda listeden düşer.
     const ONCEDEN_ANAHTARI = "ms-sepet-onceden";
     const oncedenAlan = document.querySelector("[data-ms-sepet-onceden]");
     const oncedenGrid = document.querySelector("[data-ms-sepet-onceden-grid]");
     const oncedenSablon = document.querySelector("[data-ms-sepet-onceden-sablon]");
+    const uyeTokeni = () => localStorage.getItem("ecspros_member_token");
 
     const oncedenOku = () => {
         try { return JSON.parse(localStorage.getItem(ONCEDEN_ANAHTARI)) || []; }
@@ -543,9 +546,57 @@ document.addEventListener("DOMContentLoaded", () => {
         catch { /* dolu/kapalı storage */ }
     };
 
-    const oncedenCiz = () => {
+    const oncedenSunucuyaYaz = async (kayit) => {
+        const cevap = await fetch("/api/store/cart/removed", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + uyeTokeni() },
+            body: JSON.stringify({
+                firmPlatformId: platformId,
+                variantId: kayit.varyant,
+                productCode: kayit.kod || "",
+                name: kayit.ad || "",
+                imageUrl: kayit.gorsel || null,
+                price: kayit.fiyat || 0,
+                currencyCode: kayit.para || "TRY"
+            })
+        });
+        const veri = await cevap.json().catch(() => null);
+        if (!veri?.success) { throw new Error(veri?.error || "kayıt yazılamadı"); }
+    };
+
+    const oncedenSunucudanGetir = async () => {
+        const cevap = await fetch(`/api/store/cart/removed?firmPlatformId=${platformId}`, {
+            headers: { Authorization: "Bearer " + uyeTokeni() }
+        });
+        const veri = await cevap.json().catch(() => null);
+        if (!veri?.success) { return []; }
+        return (veri.data || []).map((k) => ({
+            kod: k.productCode, varyant: k.variantId, ad: k.name,
+            gorsel: k.imageUrl, fiyat: k.price, para: k.currencyCode
+        }));
+    };
+
+    const oncedenKayitDusur = async (varyant) => {
+        if (uyeTokeni()) {
+            try {
+                await fetch(`/api/store/cart/removed/${varyant}?firmPlatformId=${platformId}`, {
+                    method: "DELETE",
+                    headers: { Authorization: "Bearer " + uyeTokeni() }
+                });
+            } catch { /* sonraki çizimde gerçek durum gelir */ }
+        } else {
+            oncedenYaz(oncedenOku().filter((k) => k.varyant !== varyant));
+        }
+    };
+
+    const oncedenCiz = async () => {
         if (!oncedenAlan || !oncedenGrid || !oncedenSablon) { return; }
-        const kayitlar = oncedenOku();
+        let kayitlar;
+        if (uyeTokeni()) {
+            try { kayitlar = await oncedenSunucudanGetir(); } catch { kayitlar = []; }
+        } else {
+            kayitlar = oncedenOku();
+        }
         oncedenAlan.hidden = kayitlar.length === 0;
         oncedenGrid.innerHTML = "";
         kayitlar.forEach((kayit) => {
@@ -564,8 +615,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (favoriButonu && kayit.kod && window.msFavoriKodlar?.has(window.msFavoriAnahtar ? window.msFavoriAnahtar(kayit.kod, null) : kayit.kod)) {
                 window.msSepetFavoriIsaretle?.(favoriButonu, true);
             }
-            kart.querySelector("[data-ms-sepet-onceden-kaldir]").addEventListener("click", () => {
-                oncedenYaz(oncedenOku().filter((k) => k.varyant !== kayit.varyant));
+            kart.querySelector("[data-ms-sepet-onceden-kaldir]").addEventListener("click", async () => {
+                await oncedenKayitDusur(kayit.varyant);
                 oncedenCiz();
             });
             kart.querySelector("[data-ms-sepet-onceden-ekle]").addEventListener("click", async (event) => {
@@ -587,7 +638,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const veri = await cevap.json().catch(() => null);
                     if (veri?.success) {
                         if (veri.data?.cartId) { localStorage.setItem("ecspros_cart", veri.data.cartId); }
-                        oncedenYaz(oncedenOku().filter((k) => k.varyant !== kayit.varyant));
+                        await oncedenKayitDusur(kayit.varyant);
                         oncedenCiz();
                         window.msMiniSepetYenile?.();
                         yenile();
@@ -600,7 +651,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
-    const oncedenKaydet = (kalem) => {
+    const oncedenKaydet = async (kalem) => {
         if (!kalem?.variantId) { return; }
         const kayit = {
             kod: kalem.productCode || "",
@@ -610,11 +661,30 @@ document.addEventListener("DOMContentLoaded", () => {
             fiyat: kalem.addedPrice || 0,
             para: kalem.currencyCode || "TRY"
         };
-        oncedenYaz([kayit, ...oncedenOku().filter((k) => k.varyant !== kayit.varyant)]);
+        if (uyeTokeni()) {
+            try { await oncedenSunucuyaYaz(kayit); }
+            catch { /* geçmiş kaydı düşmezse sepet silmesi yine de sürer */ }
+        } else {
+            oncedenYaz([kayit, ...oncedenOku().filter((k) => k.varyant !== kayit.varyant)]);
+        }
         oncedenCiz();
     };
 
-    oncedenCiz();
+    // Misafirken biriken yerel kayıtlar üye girişinde bir kez sunucuya taşınır
+    // (herhangi bir kayıt taşınamazsa yerel liste korunur, sonraki ziyarette denenir).
+    const oncedenYereldenTasi = async () => {
+        if (!uyeTokeni()) { return; }
+        const yereller = oncedenOku();
+        if (yereller.length === 0) { return; }
+        try {
+            for (const kayit of yereller) {
+                if (kayit?.varyant) { await oncedenSunucuyaYaz(kayit); }
+            }
+            localStorage.removeItem(ONCEDEN_ANAHTARI);
+        } catch { /* taşınamayanlar yerelde kalır */ }
+    };
+
+    oncedenYereldenTasi().then(oncedenCiz);
 
     const toplamlariGuncelle = () => {
         let toplam = 0;

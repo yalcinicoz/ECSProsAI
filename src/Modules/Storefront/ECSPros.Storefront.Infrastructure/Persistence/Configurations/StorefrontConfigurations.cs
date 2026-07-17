@@ -287,6 +287,24 @@ public class ViewedProductConfiguration : IEntityTypeConfiguration<ViewedProduct
     }
 }
 
+public class CartRemovedItemConfiguration : IEntityTypeConfiguration<CartRemovedItem>
+{
+    public void Configure(EntityTypeBuilder<CartRemovedItem> builder)
+    {
+        builder.ToTable("cart_removed_items");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.ProductCode).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Name).HasMaxLength(300).IsRequired();
+        builder.Property(x => x.ImageUrl).HasMaxLength(500);
+        builder.Property(x => x.CurrencyCode).HasMaxLength(8).IsRequired();
+        // Üye+platform+varyant başına tek kayıt (yeniden silmede tarih tazelenir)
+        builder.HasIndex(x => new { x.FirmPlatformId, x.MemberId, x.VariantId }).IsUnique();
+        // Üyenin son çıkardıkları sorgusu + budama
+        builder.HasIndex(x => new { x.MemberId, x.CreatedAt });
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
 public class ContactMessageConfiguration : IEntityTypeConfiguration<ContactMessage>
 {
     public void Configure(EntityTypeBuilder<ContactMessage> builder)

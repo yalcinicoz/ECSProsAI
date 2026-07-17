@@ -21,6 +21,7 @@ public interface IStorefrontDbContext
     DbSet<ProductReviewPhoto> ProductReviewPhotos { get; }
     DbSet<SavedSearch> SavedSearches { get; }
     DbSet<ViewedProduct> ViewedProducts { get; }
+    DbSet<CartRemovedItem> CartRemovedItems { get; }
     DbSet<ContactMessage> ContactMessages { get; }
     DbSet<NewsletterSubscription> NewsletterSubscriptions { get; }
     DbSet<PageBlock> PageBlocks { get; }
