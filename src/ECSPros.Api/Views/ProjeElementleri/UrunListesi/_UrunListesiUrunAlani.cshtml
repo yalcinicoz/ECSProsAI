@@ -31,10 +31,15 @@
             sayfaBoyu: @vm.SayfaBoyu,
             toplam: @vm.ToplamUrun,
             ssrAdet: @vm.IlkSayfa.Count,
+            // 2026-07-17: ?page=N ile gelindiğinde SSR N. sayfadan başlar — iç sayfa
+            // numaraları (1=ilk SSR bloğu) API'ye bu ofsetle çevrilir, URL de öyle yazılır.
+            sayfaOfset: @(vm.BaslangicSayfa - 1),
             devamUrl: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(vm.DevamApiUrl)),
             tampon: {},              // globalIndex -> normalize edilmiş ürün
             istenenSayfalar: new Set()
         };
+        // Ofsetli başlangıçta kalan ürün sayısı (önceki sayfalar listelenmez)
+        durum.kalanToplam = Math.max(0, durum.toplam - durum.sayfaOfset * durum.sayfaBoyu);
 
         const kacir = (metin) => String(metin ?? "").replace(/[&<>"']/g, (k) =>
             ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[k]);
@@ -76,7 +81,7 @@
 
             durum.istenenSayfalar.add(sayfaNo);
             const ayirici = durum.devamUrl.includes("?") ? "&" : "?";
-            fetch(`${durum.devamUrl}${ayirici}page=${sayfaNo}`)
+            fetch(`${durum.devamUrl}${ayirici}page=${sayfaNo + durum.sayfaOfset}`)
                 .then((cevap) => cevap.ok ? cevap.json() : null)
                 .then((veri) => {
                     const kayitlar = veri?.data?.items || [];
@@ -265,6 +270,7 @@
                 .filter((girdi) => girdi.checked)
                 .map((girdi) => girdi.dataset.msFiltreDeger))];
             seciliDegerler.length ? p.set("attrs", seciliDegerler.join(",")) : p.delete("attrs");
+            p.delete("page"); // filtre/sıralama değişince sayfa numarası sıfırlanır
 
             if ("fiyatMin" in degisiklik) {
                 degisiklik.fiyatMin === null ? p.delete("priceMin") : p.set("priceMin", String(degisiklik.fiyatMin));
@@ -360,7 +366,7 @@
         window.msInfiniteConfigs["urun-listesi"] = {
             ilk: 0, // ilk sayfa sunucudan render edildi (plan 3.3) — modül devam kartlarını üretir
             adet: durum.sayfaBoyu,
-            toplam: Math.max(0, durum.toplam - durum.ssrAdet),
+            toplam: Math.max(0, durum.kalanToplam - durum.ssrAdet),
             esik: 0.8,
             sadeceIlkYukle: true,
             stateKey: "ms-infinite-scroll:" + window.location.pathname + window.location.search,
@@ -378,10 +384,44 @@
 
         // İlk devam sayfasını önden getir + kısa içerikte scroll tetiklenemiyorsa modülü dürt
         document.addEventListener("DOMContentLoaded", () => {
-            if (durum.ssrAdet < durum.toplam) {
+            if (durum.ssrAdet < durum.kalanToplam) {
                 sayfaGetir(2);
                 window.setTimeout(() => window.dispatchEvent(new Event("resize")), 300);
             }
         });
+
+        // ── 2026-07-17: görünür sayfa numarası URL'e yazılır (?page=N, replaceState) —
+        // ziyaretçi izleme + sayfayı paylaşma; paylaşılan URL SSR'da o sayfadan başlar.
+        (() => {
+            const alanEl = document.querySelector("[data-ms-infinite-config='urun-listesi']");
+            if (!alanEl) { return; }
+            let sonYazilanSayfa = durum.sayfaOfset + 1;
+            let bekliyor = false;
+
+            const gorunenSayfayiYaz = () => {
+                bekliyor = false;
+                const kartlar = alanEl.querySelectorAll(".ms-urun-karti");
+                if (kartlar.length === 0) { return; }
+                const esikY = window.innerHeight * 0.6;
+                let gorunenIndex = 0;
+                for (let i = 0; i < kartlar.length; i++) {
+                    if (kartlar[i].getBoundingClientRect().top <= esikY) { gorunenIndex = i; }
+                    else { break; }
+                }
+                const sayfa = Math.floor(gorunenIndex / durum.sayfaBoyu) + 1 + durum.sayfaOfset;
+                if (sayfa === sonYazilanSayfa) { return; }
+                sonYazilanSayfa = sayfa;
+                const url = new URL(window.location.href);
+                if (sayfa > 1) { url.searchParams.set("page", String(sayfa)); }
+                else { url.searchParams.delete("page"); }
+                window.history.replaceState(window.history.state, "", url);
+            };
+
+            window.addEventListener("scroll", () => {
+                if (bekliyor) { return; }
+                bekliyor = true;
+                window.requestAnimationFrame(gorunenSayfayiYaz);
+            }, { passive: true });
+        })();
     })();
 </script>

@@ -42,13 +42,16 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         }
     }
 
+    // 2026-07-17: ?page=N — paylaşılan/izlenen sayfa numarası; SSR o sayfadan başlar.
+    private static int SayfaNo(int? page) => Math.Clamp(page ?? 1, 1, 10000);
+
     [HttpGet("/urun-listesi")]
-    public Task<IActionResult> Index([FromQuery] ListeFiltre filtre, CancellationToken ct)
-        => GenelListeAsync(null, filtre, ct);
+    public Task<IActionResult> Index([FromQuery] ListeFiltre filtre, [FromQuery] int? page, CancellationToken ct)
+        => GenelListeAsync(null, filtre, SayfaNo(page), ct);
 
     [HttpGet("/urunler")]
-    public Task<IActionResult> Arama([FromQuery] string? search, [FromQuery] ListeFiltre filtre, CancellationToken ct)
-        => GenelListeAsync(string.IsNullOrWhiteSpace(search) ? null : search.Trim(), filtre, ct);
+    public Task<IActionResult> Arama([FromQuery] string? search, [FromQuery] ListeFiltre filtre, [FromQuery] int? page, CancellationToken ct)
+        => GenelListeAsync(string.IsNullOrWhiteSpace(search) ? null : search.Trim(), filtre, SayfaNo(page), ct);
 
     // Tek segmentli kategori sayfası. Literal route'lar (/urunler, /sepet...) ASP.NET
     // route önceliğiyle her zaman bundan önce eşleşir; slug kategori değilse 404.
@@ -57,8 +60,9 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
     // UseRouting pipeline'ın başında koşar).
     [HttpGet("/{slug:regex(^[[a-z0-9-]]+$)}")]
     public async Task<IActionResult> Kategori(
-        string slug, [FromQuery] string? search, [FromQuery] ListeFiltre filtre, CancellationToken ct)
+        string slug, [FromQuery] string? search, [FromQuery] ListeFiltre filtre, [FromQuery] int? page, CancellationToken ct)
     {
+        var sayfa = SayfaNo(page);
         var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
         var kategori = KategoriBul(nav.Kokler, slug);
         if (kategori is null)
@@ -70,7 +74,7 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         var platform = await storeContext.GetPlatformAsync(ct);
         var arama = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
         var urunler = await mediator.Send(new GetChannelCategoryProductsQuery(
-            kategori.Id, 1, SayfaBoyu,
+            kategori.Id, sayfa, SayfaBoyu,
             arama, filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax, filtre.Sort,
             platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih), ct);
         if (urunler.IsFailure)
@@ -99,19 +103,20 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             SeciliFiyatMin: filtre.PriceMin,
             SeciliFiyatMax: filtre.PriceMax,
             SeciliSiralama: filtre.Sort,
-            KategorideArama: arama);
+            KategorideArama: arama,
+            BaslangicSayfa: sayfa);
 
         return ListeGoster(vm);
     }
 
-    private async Task<IActionResult> GenelListeAsync(string? arama, ListeFiltre filtre, CancellationToken ct)
+    private async Task<IActionResult> GenelListeAsync(string? arama, ListeFiltre filtre, int sayfa, CancellationToken ct)
     {
         var platform = await storeContext.GetPlatformAsync(ct);
         if (platform is null)
             return NotFound();
 
         var urunler = await mediator.Send(new GetStoreProductsQuery(
-            platform.Id, arama, 1, SayfaBoyu,
+            platform.Id, arama, sayfa, SayfaBoyu,
             filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax, filtre.Sort,
             ApplyStockFilter: true, ShowOutOfStock: platform.StokBitenGoster, OutOfStockSince: platform.StokBitenGosterTarih), ct);
         if (urunler.IsFailure)
@@ -140,7 +145,8 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             SeciliDegerler: filtre.DegerIdler,
             SeciliFiyatMin: filtre.PriceMin,
             SeciliFiyatMax: filtre.PriceMax,
-            SeciliSiralama: filtre.Sort);
+            SeciliSiralama: filtre.Sort,
+            BaslangicSayfa: sayfa);
 
         return ListeGoster(vm);
     }
