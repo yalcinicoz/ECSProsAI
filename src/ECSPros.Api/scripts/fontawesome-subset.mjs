@@ -25,7 +25,23 @@ const stilSiniflari = new Set([
 const yardimciSinifDesenleri = [
   /^fa-\d+x$/,
   /^fa-(2xs|xs|sm|lg|xl|2xl)$/,
-  /^fa-(fw|width-.+|ul|li|border|pull-.+|beat|bounce|fade|beat-fade|flip|shake|spin|spin-reverse|pulse|spin-pulse|rotate-.+|flip-.+|stack|stack-.+|inverse)$/
+  // rotate/flip yardımcıları sayısal/yön varyantlarıyla sınırlı: fa-rotate-left ve
+  // fa-rotate-right GERÇEK ikonlardır, genel "rotate-.+" deseni onları da eliyordu.
+  /^fa-(fw|width-.+|ul|li|border|pull-.+|beat|bounce|fade|beat-fade|flip|shake|spin|spin-reverse|pulse|spin-pulse|rotate-(90|180|270|by)|flip-(horizontal|vertical|both)|stack|stack-.+|inverse)$/
+];
+
+// Kaynak dosyalarda GEÇMEYEN ikonlar: vitrin blok öğeleri (storefront.page_block_items
+// BadgeLabel — bilgi-banner/ikon-banner FA class'ı DB'de tutar) buradan beslenir.
+// Admin vitrine yeni bir FA ikonu eklerse bu listeye de eklenip subset yeniden üretilmeli.
+const dbIkonlari = [
+  "fa-gem",
+  "fa-circle-down",
+  "fa-circle-left",
+  "fa-lightbulb",
+  "fa-clock",
+  "fa-credit-card",
+  "fa-star",
+  "fa-user"
 ];
 
 function dosyalariGez(kok) {
@@ -83,6 +99,9 @@ function ikonKurallariniSec(allCss, ikonlar) {
 
 const allCss = fs.readFileSync(kaynakCssYolu, "utf8");
 const ikonlar = kullanilanIkonlariBul();
+for (const ikon of dbIkonlari) {
+  ikonlar.add(ikon);
+}
 const ikonKurallari = ikonKurallariniSec(allCss, ikonlar);
 const eksikIkonlar = Array.from(ikonlar).filter((ikon) => !ikonKurallari.some((kural) => kural.includes(`.${ikon}`)));
 
