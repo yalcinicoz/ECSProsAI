@@ -6295,6 +6295,15 @@
     @apply relative;
   }
 
+  /* 2026-07-17: ödeme yöntemine özel bilgi mesajı (Ödeme Bilgileri başlığının üstü) */
+  .ms-odeme-yontem-bilgi {
+    @apply grid gap-1 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] leading-5 text-amber-900;
+  }
+
+  .ms-odeme-yontem-bilgi p {
+    @apply m-0;
+  }
+
   /* 2026-07-17: iki yönlü infinite scroll — yukarı eklemede kaydırma çapası script'te
      elle yönetilir; tarayıcının otomatik çapası çift düzeltme yapmasın */
   .ms-urun-listesi-urun-alani {

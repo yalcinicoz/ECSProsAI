@@ -5,6 +5,9 @@
     <section class="ms-siparis-asama-paneli" data-ms-siparis-asama-panel="odeme" hidden>
         <div class="ms-siparis-asama-sayfasi">
             <section class="ms-siparis-asama-ana" aria-labelledby="ms-odeme-baslik">
+                @* 2026-07-17: seçili ödeme yöntemine özel bilgi mesajları (hizmet bedeli /
+                   kupon geçerliliği) — "Ödeme Bilgileri" başlığının üstünde, canlı script doldurur. *@
+                <div class="ms-odeme-yontem-bilgi" data-ms-odeme-yontem-bilgi role="status" hidden></div>
                 <div class="ms-sepet-ust">
                     <div>
                         <h3 id="ms-odeme-baslik" class="ms-sepet-bolum-basligi">Ödeme Bilgileri</h3>
@@ -284,12 +287,9 @@
             const kuponOzetSatiri = asamaSayfasi?.querySelector("[data-ms-odeme-kupon-satiri]");
             const kuponOzetKodu = asamaSayfasi?.querySelector("[data-ms-odeme-kupon-ozet-kod]");
             const kuponOzetIndirimi = asamaSayfasi?.querySelector("[data-ms-odeme-kupon-ozet-indirim]");
-            const varsayilanKuponDurumu = {
-                kod: "KART25",
-                odemeTipi: "kart",
-                indirim: "-25,00 TL",
-                aciklama: "Kredi kartı veya banka kartı ile ödemede geçerli kupon"
-            };
+            // 2026-07-17: demo KART25 kaldırıldı — kupon yalnız sepette gerçekten
+            // uygulanmışsa gösterilir (gerçek durum sessionStorage sözleşmesinden gelir).
+            const varsayilanKuponDurumu = null;
 
             const kayitliKuponDurumuAl = () => {
                 try {
@@ -306,6 +306,17 @@
                 : typeof kayitliKuponDurumu !== "undefined"
                     ? kayitliKuponDurumu
                     : varsayilanKuponDurumu;
+
+            // 2026-07-17: gerçek kupon durumu {kod, tutar, kosul} şeklinde gelir — tasarım
+            // kartının beklediği görüntü alanları (indirim metni / açıklama) türetilir.
+            if (aktifKupon?.kod && !aktifKupon.indirim && typeof aktifKupon.tutar === "number") {
+                aktifKupon = {
+                    ...aktifKupon,
+                    indirim: "-" + new Intl.NumberFormat("tr-TR",
+                        { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(aktifKupon.tutar) + " TL",
+                    aciklama: aktifKupon.aciklama || aktifKupon.kosul || "Sepette uygulanan kupon"
+                };
+            }
 
             const odemeTipiEtiketleri = {
                 kart: "Kart ile Öde",
@@ -706,6 +717,50 @@ document.addEventListener("DOMContentLoaded", () => {
         odenecekler.forEach((alan) => { alan.textContent = paraYaz(Math.max(0, toplam - indirim)); });
         return { toplam, indirim };
     };
+
+    // ── 2026-07-17: ödeme yöntemine özel bilgi mesajı + kupon geçerlilik kuralı ──
+    // Kural: kupon indirimleri yalnız KART ile ödemede geçerlidir. Kapıda ödeme
+    // seçilince uygulanmış kupon sepetten kaldırılır (toplamlar + sipariş gövdesi
+    // kuponsuz), bilgi mesajı "Ödeme Bilgileri" başlığının üstündeki alanda gösterilir.
+    const yontemBilgi = document.querySelector("[data-ms-odeme-yontem-bilgi]");
+    const bilgiKacir = (metin) => String(metin ?? "").replace(/[&<>"']/g, (k) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[k]);
+
+    const kuponGorselleriniGizle = () => {
+        document.querySelectorAll("[data-ms-odeme-kupon-durumu], [data-ms-odeme-kupon-satiri], [data-ms-odeme-kupon-uyari]")
+            .forEach((oge) => { oge.hidden = true; });
+        document.querySelectorAll("[data-ms-odeme-yontemi-kupon-etiketi]")
+            .forEach((oge) => { oge.hidden = true; });
+    };
+
+    const yontemBilgisiniGuncelle = () => {
+        if (!yontemBilgi) { return; }
+        const secili = document.querySelector("[data-ms-odeme-yontemi]:checked")?.value || "kart";
+        const kapida = secili === "kapida-nakit" || secili === "kapida-kart";
+        const mesajlar = [];
+
+        if (kapida) {
+            mesajlar.push("Kapıda ödemede +50 TL hizmet bedeli uygulanır; 3.000 TL ve üzeri siparişlerde kapıda ödeme kabul edilmez.");
+            if (kupon?.kod) {
+                mesajlar.push(`${bilgiKacir(kupon.kod)} kuponu yalnızca kart ile ödemede geçerli olduğundan sepetinizden kaldırıldı. Kart ile ödemeye dönerseniz kuponu sepette yeniden uygulayabilirsiniz.`);
+                kupon = null;
+                window.msSepetKuponDurumu = null;
+                try { sessionStorage.removeItem("msSepetKuponDurumu"); } catch { /* depolama kapalı */ }
+                kuponGorselleriniGizle();
+                toplamlar();
+            }
+        } else if (kupon?.kod) {
+            mesajlar.push(`${bilgiKacir(kupon.kod)} kuponu bu ödeme yönteminde geçerli — ${paraYaz(kupon.tutar)} indirim uygulanıyor.`);
+        }
+
+        yontemBilgi.innerHTML = mesajlar.map((m) => `<p>${m}</p>`).join("");
+        yontemBilgi.hidden = mesajlar.length === 0;
+    };
+
+    document.querySelectorAll("[data-ms-odeme-yontemi]").forEach((yontem) => {
+        yontem.addEventListener("change", yontemBilgisiniGuncelle);
+    });
+    yontemBilgisiniGuncelle();
 
     const sepetiYukle = async () => {
         const sid = localStorage.getItem("ecspros_sid");
