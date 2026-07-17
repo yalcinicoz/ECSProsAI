@@ -7279,8 +7279,14 @@
     @apply text-[12px] text-slate-500;
   }
 
+  /* 2026-07-17: aktif cihaz kartları arası boşluk (kartlar bitişik geliyordu) */
+  [data-ms-profil-cihazlar] {
+    @apply grid gap-3;
+  }
+
+  /* 2026-07-17: giriş geçmişi — uzun listede alan büyümesin, kendi içinde kaydırılsın */
   .ms-hesabim-giris-listesi {
-    @apply grid gap-2;
+    @apply grid max-h-72 gap-2 overflow-y-auto pr-1;
   }
 
   .ms-hesabim-giris-kaydi {
@@ -9105,6 +9111,31 @@
   .ms-hesabim-koleksiyon-ikon-buton i,
   .ms-hesabim-koleksiyon-ikon-buton img {
     @apply h-5 w-5;
+  }
+
+  /* 2026-07-17: kart üç nokta menüsü (Düzenle/Sil) */
+  .ms-hesabim-koleksiyon-menu-alani {
+    @apply relative shrink-0;
+  }
+
+  .ms-hesabim-koleksiyon-menu {
+    @apply absolute right-0 top-full z-30 mt-1 grid min-w-[150px] gap-0.5 rounded-xl border border-slate-200 bg-white p-1 shadow-lg;
+  }
+
+  .ms-hesabim-koleksiyon-menu button {
+    @apply flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-[12px] font-medium text-slate-700 transition hover:bg-slate-50 focus:outline-none focus-visible:outline-none;
+  }
+
+  .ms-hesabim-koleksiyon-menu button .ms-fa-ikon {
+    @apply h-3.5 w-3.5 text-slate-400;
+  }
+
+  .ms-hesabim-koleksiyon-menu button.ms-hesabim-koleksiyon-menu-tehlike {
+    @apply text-red-600 hover:bg-red-50;
+  }
+
+  .ms-hesabim-koleksiyon-menu button.ms-hesabim-koleksiyon-menu-tehlike .ms-fa-ikon {
+    @apply text-red-500;
   }
 
   .ms-hesabim-koleksiyon-kapak {

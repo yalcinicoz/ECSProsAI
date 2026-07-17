@@ -327,7 +327,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const girisAlani = el("[data-ms-profil-girisler]");
             const girisSablon = el("[data-ms-profil-giris-sablon]");
-            oturumlar.slice(0, 5).forEach((o) => {
+            oturumlar.slice(0, 10).forEach((o) => {
                 const kayit = girisSablon.content.cloneNode(true);
                 const bilgi = uaCozumle(o.userAgent);
                 kayit.querySelector('[data-alan="cihaz"]').textContent =
