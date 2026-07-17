@@ -1,3 +1,4 @@
+using ECSPros.Catalog.Application.Helpers;
 using ECSPros.Catalog.Application.Queries.GetStoreFacets;
 using ECSPros.Catalog.Application.Services;
 using ECSPros.Shared.Contracts;
@@ -12,7 +13,13 @@ public record GetChannelCategoryFacetsQuery(
     Guid ChannelCategoryId,
     // Stok görünürlüğü — kategori listesiyle facet sayıları tutarlı (2026-07-14).
     bool ShowOutOfStock = false,
-    DateTime? OutOfStockSince = null) : IRequest<Result<StoreFacetsDto>>;
+    DateTime? OutOfStockSince = null,
+    // 2026-07-17: seçim-duyarlı facet — aktif filtre/fiyat/arama listeyi daraltırken
+    // her grubun seçenekleri "diğer grupların seçimleri uygulanmış" kümeden hesaplanır.
+    List<Guid>? SelectedValueIds = null,
+    decimal? PriceMin = null,
+    decimal? PriceMax = null,
+    string? Search = null) : IRequest<Result<StoreFacetsDto>>;
 
 public class GetChannelCategoryFacetsQueryHandler(
     IStorefrontDbContext sfDb,
@@ -31,9 +38,16 @@ public class GetChannelCategoryFacetsQueryHandler(
         // v5: filter/mixed/manual facet kümesi listeyle AYNI çözümleyiciden (önceden filter/
         //     mixed "tüm satışa açık ilk 2000 ürün"dü — filtrede kategoride olmayan
         //     beden/renk seçenekleri görünüyordu).
+        // Seçim/fiyat/arama bağlamlı istekler cache'lenmez (kombinasyon uzayı geniş).
+        var secimliMi = request.SelectedValueIds is { Count: > 0 }
+            || request.PriceMin.HasValue || request.PriceMax.HasValue
+            || !string.IsNullOrWhiteSpace(request.Search);
         var cacheKey = $"channelcat:facets:v5:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
         StoreFacetsDto? cached = null;
-        try { cached = await cache.GetAsync<StoreFacetsDto>(cacheKey, ct); } catch { /* Redis erişilemezse taze hesapla */ }
+        if (!secimliMi)
+        {
+            try { cached = await cache.GetAsync<StoreFacetsDto>(cacheKey, ct); } catch { /* Redis erişilemezse taze hesapla */ }
+        }
         if (cached is not null)
             return Result.Success(cached);
 
@@ -56,12 +70,7 @@ public class GetChannelCategoryFacetsQueryHandler(
                     sfDb, catDb, stockService, pricingService, inStock,
                     cat, request.ChannelCategoryId, request.ShowOutOfStock, request.OutOfStockSince, ct);
 
-            var sonuc = await GetStoreFacetsQueryHandler.BuildFacets(catDb, productIds, ct);
-            if (sonuc.IsSuccess)
-            {
-                try { await cache.SetAsync(cacheKey, sonuc.Value, TimeSpan.FromMinutes(10), ct); } catch { /* best-effort */ }
-            }
-            return sonuc;
+            return await SecimliFacetleriKurVeCachele(productIds, request, secimliMi, cacheKey, ct);
         }
 
         {
@@ -125,11 +134,39 @@ public class GetChannelCategoryFacetsQueryHandler(
                 productIds = productIds.Where(id => !kanalDisi.Contains(id)).ToList();
         }
 
-        var result = await GetStoreFacetsQueryHandler.BuildFacets(catDb, productIds, ct);
-        if (result.IsSuccess)
+        return await SecimliFacetleriKurVeCachele(productIds, request, secimliMi, cacheKey, ct);
+    }
+
+    /// <summary>Seçim yoksa düz facet (10 dk cache); seçim/fiyat/arama varsa "kategoride ara"
+    /// daraltması + seçim-duyarlı hesap (kategori listesi grupları AYNI varyantta arar).</summary>
+    private async Task<Result<StoreFacetsDto>> SecimliFacetleriKurVeCachele(
+        List<Guid> productIds, GetChannelCategoryFacetsQuery request, bool secimliMi,
+        string cacheKey, CancellationToken ct)
+    {
+        if (!secimliMi)
         {
-            try { await cache.SetAsync(cacheKey, result.Value, TimeSpan.FromMinutes(10), ct); } catch { /* best-effort */ }
+            var sonuc = await GetStoreFacetsQueryHandler.BuildFacets(catDb, productIds, ct);
+            if (sonuc.IsSuccess)
+            {
+                try { await cache.SetAsync(cacheKey, sonuc.Value, TimeSpan.FromMinutes(10), ct); } catch { /* best-effort */ }
+            }
+            return sonuc;
         }
-        return result;
+
+        // "Kategoride ara" — liste sorgusuyla aynı eşleşme (kod veya Türkçe ad)
+        if (!string.IsNullOrWhiteSpace(request.Search) && productIds.Count > 0)
+        {
+            var arama = request.Search.Trim().ToLower();
+            productIds = await catDb.Products.AsNoTracking()
+                .Where(p => productIds.Contains(p.Id)
+                         && (p.Code.ToLower().Contains(arama)
+                          || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(arama)))
+                .Select(p => p.Id)
+                .ToListAsync(ct);
+        }
+
+        return await GetStoreFacetsQueryHandler.BuildFacetsWithSelections(
+            catDb, productIds, request.SelectedValueIds, request.PriceMin, request.PriceMax,
+            sameVariant: true, ct);
     }
 }

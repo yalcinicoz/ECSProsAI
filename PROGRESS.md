@@ -370,6 +370,15 @@ komutlarına >50 kr kod için anlaşılır hata guard'ı (500 yerine). NOT: eski
 koleksiyonlarda slug'lı bozuk ürün kodları kalmış olabilir (koda çözülemez — düzenle
 modalında kod+no-image görünür; gerekirse temizlik sorgusu atılır).
 
+EK-10 (2026-07-17 — ⚠️ RESTART BEKLİYOR): seçim-duyarlı facet (eski projedeki kurgu).
+BuildFacetsWithSelections (GetStoreFacets): klasik çok-seçimli facet — her grubun
+seçenekleri DİĞER grupların seçimleri+fiyat uygulanmış kümeden (grup kendi seçimini
+dışlar → son kullanılan grup korunur, sunulan her seçenek ≥1 ürün). sameVariant paramı:
+kategori listesi grupları AYNI varyantta arar (liste semantiğiyle birebir), arama sayfası
+ürün seviyesinde. Kategori facets + store facets + iki controller çağrısı seçim/fiyat/arama
+bağlamını taşır; seçimli istekler cache'lenmez. Doğrulama (kadin-etek): filtresiz 16+16;
+Mor→7 ürün, renk 16 KORUNDU, beden 11'e daraldı; Mor+S→1 ürün, beden 11 KORUNDU, renk 11.
+
 EK-9 (2026-07-17 — ⚠️ RESTART BEKLİYOR): kategori filtre seçenekleri yalnız listelenen
 ürünlerden. Kök neden: GetChannelCategoryFacets filter/mixed dolumda "tüm satışa açık ilk
 2000 ürün"den facet üretiyordu (bedenlere tüm katalog geliyordu). Çözüm:
