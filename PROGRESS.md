@@ -316,6 +316,15 @@ dropdown veri durumu: ürün önerileri+kategoriler+popüler ürünler GERÇEK A
 Staging 5051 duman testi yeşil (14 elment, başlıklar tasarımdaki 3'e indi, sayfa tam render).
 Canlı publish kopyalandı (rm'siz) — `sudo systemctl restart ecspros` kullanıcıda.
 
+EK (aynı gün): ikon banner ikonları (Yeni Gelenler/İndirimli/Fırsat) görünmüyordu — kök
+neden fontawesome-subset.mjs: (1) yalnız Views+site.js tarar, vitrin ikonları DB'de
+(page_block_items.BadgeLabel) → script'e `dbIkonlari` listesi eklendi (admin vitrine yeni
+FA ikonu eklerse listeye ekleyip `npm run fontawesome-subset` ŞART); (2) `rotate-.+`
+yardımcı-sınıf filtresi GERÇEK fa-rotate-left ikonunu (footer "Kolay iade") eliyordu →
+desen `rotate-(90|180|270|by)`a daraltıldı. ikonall.min.css yeniden üretildi (70 ikon;
+gem/circle-down/circle-left/lightbulb/rotate-left eklendi, mevcutlar korundu), publish'e
+kopyalandı — statik dosya restart'sız canlıda, ?v= hash'i otomatik yenilendi.
+
 ### (önceki) SESSION ÖZETİ (2026-07-16, 5. oturum) — TASARIM FARK TURU: İP-1..4,6 CANLIDA + İP-5 TAMAM (⚠️ RESTART BEKLİYOR)
 İP-1..4,6 restart edildi ve canlıda doğrulandı (duman testi yeşil). Ardından İP-5
 (kullanıcı kurgu onayıyla) TAMAMLANDI: `product_review_photos` tablosu + `Topic` kolonu
