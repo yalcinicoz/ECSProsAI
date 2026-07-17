@@ -2628,7 +2628,8 @@
                     const fiyat = sepetSatiri.querySelector(".ms-urun-fiyat, [data-ms-sepet-satir-tutar]")?.textContent?.trim();
 
                     return {
-                        id: sepetSatiri.dataset.msSepetSatir || `sepet-${Date.now()}`,
+                        // 2026-07-17: gercek urun kodu oncelikli (API productCodes'a gider)
+                        id: sepetSatiri.dataset.msUrunKod || sepetSatiri.dataset.msSepetSatir || `sepet-${Date.now()}`,
                         ad: baslik || "Sepet urunu",
                         gorsel: gorselYolu,
                         meta: fiyat ? `Sepet - ${fiyat}` : "Sepet urunu"
@@ -2656,7 +2657,8 @@
                         const fiyat = satir.querySelector(".ms-urun-fiyat, [data-ms-sepet-satir-tutar]")?.textContent?.trim();
 
                         return {
-                            id: satir.dataset.msSepetSatir || `sepet-${index}-${Date.now()}`,
+                            // 2026-07-17: gercek urun kodu oncelikli (API productCodes'a gider)
+                            id: satir.dataset.msUrunKod || satir.dataset.msSepetSatir || `sepet-${index}-${Date.now()}`,
                             ad: baslik || "Sepet urunu",
                             gorsel: gorselYolu,
                             meta: fiyat ? `Sepet - ${fiyat}` : "Sepet urunu"
@@ -4661,12 +4663,17 @@
                 || gorsel?.getAttribute("data-ms-lazy-src")
                 || "/images/ornek-resim.jpg";
             const fiyat = kart?.querySelector(".ms-urun-fiyat, .ms-fiyat")?.textContent?.trim();
+            // 2026-07-17: id = GERCEK urun kodu (API productCodes'a gider; slug turetimi
+            // varchar(50) sinirini asiyordu ve koda cozulemiyordu). Slug yalniz kodsuz
+            // demo kartlarin son caresi.
             const idKaynak = `${baslik || "urun"}-${gorselYolu}`;
-            const id = idKaynak
-                .toLocaleLowerCase("tr-TR")
-                .replace(/[^a-z0-9ğüşöçıİĞÜŞÖÇ]+/gi, "-")
-                .replace(/^-+|-+$/g, "")
-                .slice(0, 80) || `urun-${Date.now()}`;
+            const id = kart?.dataset.msUrunKod
+                || idKaynak
+                    .toLocaleLowerCase("tr-TR")
+                    .replace(/[^a-z0-9ğüşöçıİĞÜŞÖÇ]+/gi, "-")
+                    .replace(/^-+|-+$/g, "")
+                    .slice(0, 50)
+                || `urun-${Date.now()}`;
 
             return {
                 id,

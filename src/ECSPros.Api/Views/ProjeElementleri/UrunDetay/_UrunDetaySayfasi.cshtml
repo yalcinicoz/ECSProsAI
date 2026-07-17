@@ -1801,11 +1801,13 @@
                     || gorsel?.getAttribute("data-ms-lazy-src")
                     || "/images/ornek-resim.jpg";
                 const fiyat = document.querySelector(".ms-urun-detay-tutar")?.textContent?.trim();
-                const id = `urun-detay-${kod}`
+                // 2026-07-17: id = GERÇEK ürün kodu — koleksiyon API'si productCodes olarak
+                // saklar; eski "urun-detay-…" slug'ı varchar(50)'yi aşıyordu (22001) ve koda
+                // çözülemiyordu. Slug yalnız kod bulunamazsa son çare.
+                const id = (kod || `urun-detay-${baslik}`
                     .toLocaleLowerCase("tr-TR")
                     .replace(/[^a-z0-9ğüşöçıİĞÜŞÖÇ]+/gi, "-")
-                    .replace(/^-+|-+$/g, "")
-                    .slice(0, 90);
+                    .replace(/^-+|-+$/g, "")).slice(0, 50);
 
                 return {
                     id,

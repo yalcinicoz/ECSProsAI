@@ -28,6 +28,9 @@ public class AddCollectionItemsCommandHandler(IStorefrontDbContext db)
             .ToList();
         if (kodlar.Count == 0)
             return Result.Failure<int>("Eklenecek ürün bulunamadı.");
+        // 2026-07-17: ProductCode varchar(50) — uzun/uydurma kod 500 yerine anlaşılır hata
+        if (kodlar.Any(k => k.Length > 50))
+            return Result.Failure<int>("Geçersiz ürün kodu (en fazla 50 karakter).");
 
         var koleksiyon = await db.Collections.FirstOrDefaultAsync(
             k => k.Id == request.CollectionId
