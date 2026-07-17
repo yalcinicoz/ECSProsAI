@@ -49,8 +49,9 @@ public class GetStoreFacetsQueryHandler(
     // Cache anahtarı stok görünürlük paramlarını + platformu içerir (kanal seçimi/durdurma
     // deny-set'i platform bazlı — M2/M3).
     // v6: facet'e girecek tipler AttributeType.UseInFilter bayrağından seçilir (2026-07-17)
+    // v7: tek seçenekli filtre grupları panelden düşürülür (2026-07-17)
     private static string AllKey(Guid platformId, bool showOos, DateTime? since) =>
-        $"store:facets:all:v6:{platformId}:{showOos}:{since:yyyyMMdd}";
+        $"store:facets:all:v7:{platformId}:{showOos}:{since:yyyyMMdd}";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(15);
 
     public async Task<Result<StoreFacetsDto>> Handle(GetStoreFacetsQuery request, CancellationToken ct)
@@ -96,11 +97,29 @@ public class GetStoreFacetsQueryHandler(
         // Ürün id'leri belleğe çekilmez — alt sorgu olarak aggregation'a gömülür
         // (tüm katalogda ~90K id materialize etmek hem yavaş hem gereksizdi).
         var result = await BuildFacets(db, q.Select(p => p.Id), ct);
+        if (result.IsSuccess)
+            result = Result.Success(TekSecenekliGruplariAyikla(result.Value!));
 
         if (!hasSearch && result.IsSuccess)
             memoryCache.Set(allKey, result.Value, CacheTtl);
 
         return result;
+    }
+
+    /// <summary>Tek seçeneği kalan filtre grubunu panelden düşürür (2026-07-17 kullanıcı
+    /// kuralı: hiç değer içermeyen grup gibi tek seçenekli grup da filtre alanına konmaz —
+    /// tek seçenek ayırt ediciliği olmayan gereksiz kalabalıktır). İstisna: kullanıcının
+    /// SEÇİLİ değerini içeren grup tek seçeneğe düşse bile korunur; yoksa seçimi panelden
+    /// kaldırma yolu kaybolur.</summary>
+    public static StoreFacetsDto TekSecenekliGruplariAyikla(
+        StoreFacetsDto dto, ICollection<Guid>? seciliDegerIds = null)
+    {
+        var secili = seciliDegerIds is { Count: > 0 } ? seciliDegerIds.ToHashSet() : null;
+        var kalan = dto.Attributes
+            .Where(a => a.Values.Count >= 2
+                     || (secili is not null && a.Values.Any(v => secili.Contains(v.ValueId))))
+            .ToList();
+        return kalan.Count == dto.Attributes.Count ? dto : dto with { Attributes = kalan };
     }
 
     /// <summary>2026-07-17: seçim-duyarlı facet — klasik çok-seçimli facet kuralı: her
@@ -119,7 +138,10 @@ public class GetStoreFacetsQueryHandler(
     {
         var secili = (selectedValueIds ?? []).Distinct().ToList();
         if (secili.Count == 0 && !priceMin.HasValue && !priceMax.HasValue)
-            return await BuildFacets(db, baseProductIds, ct);
+        {
+            var duz = await BuildFacets(db, baseProductIds, ct);
+            return duz.IsSuccess ? Result.Success(TekSecenekliGruplariAyikla(duz.Value!)) : duz;
+        }
 
         if (baseProductIds.Count == 0)
             return Result.Success(new StoreFacetsDto(0, 0, new()));
@@ -249,7 +271,8 @@ public class GetStoreFacetsQueryHandler(
             .OrderBy(a => siraByCode.GetValueOrDefault(a.TypeCode, int.MaxValue))
             .ToList();
 
-        return Result.Success(new StoreFacetsDto(fiyatAgg?.Min ?? 0, fiyatAgg?.Max ?? 0, birlesik));
+        return Result.Success(TekSecenekliGruplariAyikla(
+            new StoreFacetsDto(fiyatAgg?.Min ?? 0, fiyatAgg?.Max ?? 0, birlesik), secili));
     }
 
     public static Task<Result<StoreFacetsDto>> BuildFacets(
