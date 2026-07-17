@@ -19,6 +19,14 @@
     var aktifSiralama = string.IsNullOrEmpty(vm.SeciliSiralama) ? "default" : vm.SeciliSiralama;
     var aktifSiralamaAd = siralamalar.FirstOrDefault(s => s.Kod == aktifSiralama, siralamalar[0]).Ad;
     var invUst = System.Globalization.CultureInfo.InvariantCulture;
+
+    // 2026-07-17: seçili filtreler — Fiyat Aralığı'nın sağında grup başına bir select;
+    // panelde o grubun seçimleri listelenir, tıklanan seçim filtreden düşürülür.
+    var seciliIdKumesi = (vm.SeciliDegerler ?? []).ToHashSet();
+    var seciliFiltreGruplari = vm.FiltreGruplari
+        .Select(g => (Grup: g, Secili: g.Degerler.Where(d => seciliIdKumesi.Contains(d.ValueId)).ToList()))
+        .Where(x => x.Secili.Count > 0)
+        .ToList();
 }
 <div class="ms-urun-listesi-ust-filtre-baslik" aria-label="Ürün listesi üst filtre ve sıralama alanı">
     <div class="ms-urun-listesi-kategori-ozet">
@@ -79,6 +87,27 @@
                     <button class="ms-filtre-uygula-buton" type="button" data-ms-urun-listesi-filtre-kapat>Filtrele</button>
                 </div>
             </div>
+            @foreach (var (seciliGrup, seciliDegerler) in seciliFiltreGruplari)
+            {
+            @* 2026-07-17: seçili filtre grubu — panelde seçimler; tıklanan seçim kaldırılır *@
+            <div class="ms-urun-listesi-filtre-secim-grup" data-ms-urun-listesi-filtre-grup>
+                <button class="ms-urun-listesi-filtre-secim ms-urun-listesi-filtre-secim-dolu" type="button" aria-expanded="false" data-ms-urun-listesi-filtre-secim>
+                    <span>@seciliGrup.Ad (@seciliDegerler.Count)</span>
+                    <i class="fa-solid fa-chevron-down ms-fa-ikon " aria-hidden="true"></i>
+                </button>
+                <div class="ms-urun-listesi-filtre-secim-panel" data-ms-urun-listesi-filtre-panel hidden>
+                    <div class="ms-urun-listesi-secili-listesi" aria-label="@seciliGrup.Ad seçimleri">
+                        @foreach (var deger in seciliDegerler)
+                        {
+                        <button class="ms-urun-listesi-secili-deger" type="button" data-ms-secili-filtre-kaldir="@deger.ValueId" aria-label="@deger.Ad seçimini kaldır">
+                            <span>@deger.Ad</span>
+                            <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
+                        </button>
+                        }
+                    </div>
+                </div>
+            </div>
+            }
             @if (cinsiyet is not null)
             {
             <div class="ms-urun-listesi-filtre-secim-grup" data-ms-urun-listesi-filtre-grup>
@@ -275,5 +304,24 @@
 
     window.msUrunListesiUstFiltreBaslat = urunListesiUstFiltreBaslat;
     urunListesiUstFiltreBaslat();
+
+    // 2026-07-17: seçili filtre kaldırma — attrs parametresinden id düşürülüp sayfa
+    // yeniden yüklenir (Filtrele akışıyla aynı navigasyon modeli; facet'ler yeniden hesaplanır).
+    document.addEventListener("click", (event) => {
+        const buton = event.target instanceof Element
+            ? event.target.closest("[data-ms-secili-filtre-kaldir]")
+            : null;
+        if (!buton) { return; }
+        event.preventDefault();
+        const kaldirilan = (buton.dataset.msSeciliFiltreKaldir || "").toLowerCase();
+        const url = new URL(window.location.href);
+        const kalanlar = (url.searchParams.get("attrs") || "")
+            .split(",")
+            .map((parca) => parca.trim())
+            .filter((parca) => parca && parca.toLowerCase() !== kaldirilan);
+        if (kalanlar.length > 0) { url.searchParams.set("attrs", kalanlar.join(",")); }
+        else { url.searchParams.delete("attrs"); }
+        window.location.href = url.toString();
+    });
 })();
 </script>

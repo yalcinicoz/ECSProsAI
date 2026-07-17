@@ -370,6 +370,13 @@ komutlarına >50 kr kod için anlaşılır hata guard'ı (500 yerine). NOT: eski
 koleksiyonlarda slug'lı bozuk ürün kodları kalmış olabilir (koda çözülemez — düzenle
 modalında kod+no-image görünür; gerekirse temizlik sorgusu atılır).
 
+EK-12 (2026-07-17 — ⚠️ RESTART BEKLİYOR): 1) Yan filtrede akordeon — bir grup açılınca
+aynı kapsayıcıdaki diğer data-filter-block grupları kapanır (site.js, mobil panel dahil).
+2) Üst barda seçili filtre selectleri — Fiyat Aralığı'nın sağında seçim yapılmış her grup
+için "Grup Adı (n)" selecti (_UrunListesiSagUstFiltre SSR); panelde o grubun seçimleri,
+tıklanan seçim attrs parametresinden düşürülüp navigasyonla kaldırılır (facet'ler yeniden
+hesaplanır). CSS: ms-urun-listesi-filtre-secim-dolu + secili-deger satırları.
+
 EK-11 (2026-07-17, CANLIDA — restart gerekmedi, statik dosya): filtre grubu başlığı
 tıklanıp grup açıldığında blok görünür alana kaydırılır (site.js filtre toggle →
 scrollIntoView nearest/smooth; masaüstü sticky kenar çubuğu ve mobil filtre paneli aynı
