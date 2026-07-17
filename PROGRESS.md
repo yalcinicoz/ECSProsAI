@@ -294,7 +294,29 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
-### ⭐ SESSION ÖZETİ (2026-07-16, 5. oturum) — TASARIM FARK TURU: İP-1..4,6 CANLIDA + İP-5 TAMAM (⚠️ RESTART BEKLİYOR)
+### ⭐ SESSION ÖZETİ (2026-07-17) — ANA SAYFA ELMENT YAPISI + ARAMA GRID DÜZELTMESİ (⚠️ RESTART BEKLİYOR)
+Kullanıcı 4 maddelik düzeltme istedi. 1) Ana sayfa tasarım AnaSayfa kalıbına geçirildi:
+Index kökü `ms-ana-sayfa lazy-infinite-on` (ms-ana-yerlesim kaldırıldı — site.js null-safe),
+_VitrinBloklar'da her blok `ms-ana-sayfa-elment` sarmalayıcıda; düz `ms-gorunum-demo`
+kutuları ve blok başlıkları (Öne Çıkan Kategoriler/Üçlü Banner/Markalar + banner/infinity/
+tabs/collection/categories/brands/instagram başlık satırları) KALDIRILDI. Carousel'lerdeki
+`ms-gorunum-demo ms-gorunum-carousel-demo` bileşimi tasarımdaki gibi KORUNDU (tema/zemin
+CSS'i o class'a bağlı; Özel Fiyatlar/reklam vitrin/görselli yorumlar başlıkları tasarımda da
+var, kaldırılmadı). announcement sarmalanmaz. 2) Arama dropdown tek ürün sorunu:
+`.ms-ana-navigasyon-arama-sonuc-listesi` grid `auto-fit`→`auto-fill` (tailwind.css +
+store-css:build) — az sonuçta kart kolon genişliğinde kalır. 3) Video tespiti (kod değişmedi):
+`catalog.product_videos` 0 satır — eski MySQL `apurunvideolari`nda 871 URL'li video var,
+MigrationTool'da video fazı YOK (aktarım işi açık); ayrıca `VideoServer.CdnBaseUrl` ayarı
+tanımsız (dosya-tabanlı kayıtlar için gerekli; settings'te PublicBaseUrl var, farklı anahtar)
+ve kategori sayfası kartlarında (ChannelCategoryProducts → KartaCevir) VideoUrl hiç maplenmiyor
+— videolar aktarılsa bile kategori listelerinde rozet çıkmaz, yalnız /urunler+detay. 4) Arama
+dropdown veri durumu: ürün önerileri+kategoriler+popüler ürünler GERÇEK API verisi (popüler
+ürünler "ilk 8 ürün" geçici kaynak, E11 popülerlik verisi bekliyor); "Popüler Aramalar"
+çipleri (elbise/tunik/şal...) GÖMÜLÜ statik liste (_AnaNavigasyonSearch.cshtml).
+Staging 5051 duman testi yeşil (14 elment, başlıklar tasarımdaki 3'e indi, sayfa tam render).
+Canlı publish kopyalandı (rm'siz) — `sudo systemctl restart ecspros` kullanıcıda.
+
+### (önceki) SESSION ÖZETİ (2026-07-16, 5. oturum) — TASARIM FARK TURU: İP-1..4,6 CANLIDA + İP-5 TAMAM (⚠️ RESTART BEKLİYOR)
 İP-1..4,6 restart edildi ve canlıda doğrulandı (duman testi yeşil). Ardından İP-5
 (kullanıcı kurgu onayıyla) TAMAMLANDI: `product_review_photos` tablosu + `Topic` kolonu
 (migration canlı DB'ye uygulandı, additive) + foto upload endpoint'i + admin moderasyonda

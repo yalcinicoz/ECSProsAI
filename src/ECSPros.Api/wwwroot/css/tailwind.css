@@ -5156,7 +5156,9 @@
   }
 
   .ms-ana-navigasyon-arama-sonuc-listesi {
-    grid-template-columns: repeat(auto-fit, minmax(6.35rem, 1fr));
+    /* auto-fill (auto-fit değil): az sonuçta boş kolonlar korunur — tek ürün
+       dropdown'ı kaplamaz, kart tasarlanan kolon genişliğinde kalır. */
+    grid-template-columns: repeat(auto-fill, minmax(6.35rem, 1fr));
     @apply grid gap-2 pr-1;
   }
 

@@ -7,6 +7,11 @@
     // tema seçici — taşınmadı). Görünmeyen/boş blok PageComposer'da elendi; burada
     // her blok basılır. site.js modülleri (slider, story, carousel kontrol,
     // içerik tabs, reklam vitrin, lazy) markup'taki data-ms-* kancalarıyla çalışır.
+    // 2026-07-17: tasarım AnaSayfa kalıbı — her blok ms-ana-sayfa-elment sarmalayıcıda
+    // (bölüm aralıkları + content-visibility bu class'tan); düz ms-gorunum-demo kutuları
+    // ve blok başlıkları kaldırıldı (kullanıcı kararı: ana sayfa bölümlerinde başlık yok;
+    // carousel'lerdeki ms-gorunum-demo bileşimi tasarımdaki gibi korunur — tema/zemin
+    // CSS'i o class'a bağlı). announcement bloğu sarmalanmaz (görsel bölüm değil).
     var tr = new System.Globalization.CultureInfo("tr-TR");
     string Fiyat(decimal f) => f.ToString("N2", tr) + " TL";
     var msVitrinPlatformId = (ViewData["MsPlatform"] as ECSPros.Api.Services.StorePlatformBilgisi)?.Id.ToString() ?? "";
@@ -20,6 +25,7 @@
             @* Tasarım nihai (2026-07-16): tek <img> kaynağı; ilk slide eager/high, sonrakiler
                data-ms-lazy-src; intrinsic 1200x525; mobil oran class'ı config.gorunum'dan
                (mobil-dikey → ms-mobil-dikey, varsayılan ms-mobil-yatay — ana sayfa kalıbı). *@
+            <div class="ms-ana-sayfa-elment">
             <section class="ms-slider @(blok.Gorunum == "mobil-dikey" ? "ms-mobil-dikey" : "ms-mobil-yatay")" data-ms-slider data-ms-page-module="slider" aria-label="@(blok.Baslik.Length > 0 ? blok.Baslik : "Kampanya slider")">
                 <div class="ms-slider-gorsel-alani" data-ms-slider-gorsel-alani>
                     @for (var i = 0; i < blok.Ogeler.Count; i++)
@@ -52,11 +58,13 @@
                     }
                 </div>
             </section>
+            </div>
             break;
 
         case "story":
         {
             var storyAnahtarlari = StoryAnahtarlari(blok);
+            <div class="ms-ana-sayfa-elment">
             <section class="ms-story" data-ms-story aria-label="Story alanı">
                 <div class="ms-story-listesi no-lazy">
                     @foreach (var story in blok.Ogeler)
@@ -110,10 +118,12 @@
                     </div>
                 </div>
             </section>
+            </div>
             break;
         }
 
         case "banner" when blok.Sablon == "reklam":
+            <div class="ms-ana-sayfa-elment">
             <div class="ms-gorunum-reklam-vitrin lazy-infinite-on" data-ms-gorunum-reklam-vitrin>
                 @if (blok.Ogeler.FirstOrDefault() is { } reklamBanner)
                 {
@@ -146,16 +156,11 @@
                     </div>
                 </div>
             </div>
+            </div>
             break;
 
         case "banner":
-            <div class="ms-gorunum-demo">
-                @if (blok.Baslik.Length > 0)
-                {
-                    <div class="ms-gorunum-baslik-satiri">
-                        <h3>@blok.Baslik</h3>
-                    </div>
-                }
+            <div class="ms-ana-sayfa-elment">
                 <div class="ms-gorunum-banner-grid ms-gorunum-banner-grid-@(blok.Sablon ?? "tekli") @(blok.MobilCarousel ? "ms-gorunum-banner-mobil-carousel" : "")">
                     @foreach (var banner in blok.Ogeler)
                     {
@@ -182,6 +187,7 @@
                 "flash" => " ms-gorunum-carousel-urun-genis",
                 _ => "",
             };
+            <div class="ms-ana-sayfa-elment">
             <div class="ms-gorunum-demo ms-gorunum-carousel-demo @demoSinifi ms-gorunum-carousel-demo-market lazy-infinite-on" data-ms-gorunum-carousel>
                 <div class="ms-gorunum-baslik-satiri">
                     <div>
@@ -240,19 +246,12 @@
                     </button>
                 </div>
             </div>
+            </div>
             break;
         }
 
         case "infinity":
-            <div class="ms-gorunum-demo" data-ms-vitrin-infinity data-ms-vitrin-blok-id="@blok.Id" data-ms-vitrin-platform="@msVitrinPlatformId" data-ms-vitrin-sayfa="1">
-                <div class="ms-gorunum-baslik-satiri">
-                    <h3>@blok.Baslik</h3>
-                    @if (blok.TumunuGorUrl is not null)
-                    {
-                        <a class="ms-gorunum-link" href="@blok.TumunuGorUrl">Tümünü Gör</a>
-                    }
-                </div>
-
+            <div class="ms-ana-sayfa-elment" data-ms-vitrin-infinity data-ms-vitrin-blok-id="@blok.Id" data-ms-vitrin-platform="@msVitrinPlatformId" data-ms-vitrin-sayfa="1">
                 <div class="ms-gorunum-grid ms-gorunum-grid-anasayfa" data-ms-vitrin-infinity-liste>
                     @foreach (var urun in blok.Urunler)
                     {
@@ -273,19 +272,7 @@
             break;
 
         case "tabs":
-            <div class="ms-gorunum-demo" data-ms-gorunum-icerik-tabs>
-                @if (blok.Baslik.Length > 0)
-                {
-                    <div class="ms-gorunum-baslik-satiri">
-                        <div>
-                            <h3>@blok.Baslik</h3>
-                            @if (blok.AltBaslik is not null)
-                            {
-                                <p>@blok.AltBaslik</p>
-                            }
-                        </div>
-                    </div>
-                }
+            <div class="ms-ana-sayfa-elment" data-ms-gorunum-icerik-tabs>
                 <div class="ms-gorunum-sekme-seridi" role="tablist" aria-label="Vitrin sekmeleri">
                     @for (var i = 0; i < blok.Ogeler.Count; i++)
                     {
@@ -315,19 +302,7 @@
             break;
 
         case "collection":
-            <div class="ms-gorunum-demo">
-                @if (blok.Baslik.Length > 0)
-                {
-                    <div class="ms-gorunum-baslik-satiri">
-                        <div>
-                            <h3>@blok.Baslik</h3>
-                            @if (blok.AltBaslik is not null)
-                            {
-                                <p>@blok.AltBaslik</p>
-                            }
-                        </div>
-                    </div>
-                }
+            <div class="ms-ana-sayfa-elment">
                 <div class="ms-hesabim-koleksiyon-grid @(blok.MobilCarousel ? "ms-gorunum-banner-mobil-carousel" : "")">
                     @foreach (var koleksiyon in blok.Koleksiyonlar)
                     {
@@ -375,10 +350,7 @@
             break;
 
         case "categories" when blok.Gorunum == "vitrin":
-            <div class="ms-gorunum-demo">
-                <div class="ms-gorunum-baslik-satiri">
-                    <h3>@blok.Baslik</h3>
-                </div>
+            <div class="ms-ana-sayfa-elment">
                 <div class="ms-gorunum-kategori-vitrin-grid">
                     @foreach (var kategori in blok.Ogeler)
                     {
@@ -395,10 +367,7 @@
             break;
 
         case "categories":
-            <div class="ms-gorunum-demo">
-                <div class="ms-gorunum-baslik-satiri">
-                    <h3>@blok.Baslik</h3>
-                </div>
+            <div class="ms-ana-sayfa-elment">
                 <div class="ms-gorunum-kategori-kapsul-listesi @(blok.MobilCarousel ? "ms-gorunum-banner-mobil-carousel" : "")" aria-label="@blok.Baslik">
                     @foreach (var kategori in blok.Ogeler)
                     {
@@ -412,13 +381,7 @@
             break;
 
         case "brands":
-            <div class="ms-gorunum-demo">
-                @if (blok.Baslik.Length > 0)
-                {
-                    <div class="ms-gorunum-baslik-satiri">
-                        <h3>@blok.Baslik</h3>
-                    </div>
-                }
+            <div class="ms-ana-sayfa-elment">
                 <div class="ms-gorunum-marka-grid @(blok.MobilCarousel ? "ms-gorunum-banner-mobil-carousel" : "")">
                     @foreach (var marka in blok.Ogeler)
                     {
@@ -450,13 +413,7 @@
             break;
 
         case "instagram":
-            <div class="ms-gorunum-demo">
-                @if (blok.Baslik.Length > 0)
-                {
-                    <div class="ms-gorunum-baslik-satiri">
-                        <h3>@blok.Baslik</h3>
-                    </div>
-                }
+            <div class="ms-ana-sayfa-elment">
                 <div class="ms-gorunum-instagram-grid @(blok.MobilCarousel ? "ms-gorunum-banner-mobil-carousel" : "")">
                     @foreach (var hesap in blok.Ogeler)
                     {
@@ -496,6 +453,7 @@
 
         case "coklu-banner":
             @* Faz 6: tasarımın _CokluBanner markup'ı — öğeler admin'den (görsel+ad+link) *@
+            <div class="ms-ana-sayfa-elment">
             <section class="ms-gorunum-carousel-kapsayici ms-gorunum-coklu-banner" data-ms-gorunum-carousel data-ms-gorunum-carousel-serbest aria-label="@(blok.Baslik.Length > 0 ? blok.Baslik : "Çoklu banner")">
                 <button class="ms-gorunum-carousel-kontrol ms-slider-kontrol ms-slider-kontrol-sol" type="button" data-ms-gorunum-carousel-kontrol="sol" aria-label="Önceki çoklu bannerları göster">
                     <i class="fa-solid fa-chevron-left ms-fa-ikon" aria-hidden="true"></i>
@@ -512,12 +470,14 @@
                     <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
                 </button>
             </section>
+            </div>
             break;
 
         case "gorselli-yorumlar":
             @* Faz 6: tasarımın _GorselliYorumlarCarousel markup'ı. Öğe eşlemesi:
                GorselUrl=yorum fotoğrafı, MobilGorselUrl=ürün küçük görseli,
                AltBaslik=yorum metni, Baslik=ürün adı, Rozet=marka (opsiyonel). *@
+            <div class="ms-ana-sayfa-elment">
             <section class="ms-gorunum-gorselli-yorumlar lazy-infinite-on" data-ms-gorunum-carousel aria-labelledby="ms-gorselli-yorumlar-baslik-@blok.Id">
                 <header class="ms-gorunum-gorselli-yorumlar-ust">
                     <h2 id="ms-gorselli-yorumlar-baslik-@blok.Id">@(blok.Baslik.Length > 0 ? blok.Baslik : "Popüler Görselli Yorumlar")</h2>
@@ -555,11 +515,13 @@
                     </button>
                 </div>
             </section>
+            </div>
             break;
 
         case "kategori-cok-satanlar":
             @* Faz 6: tasarımın _KategoriCokSatanlar markup'ı — ürünler kaynak motorundan
                (config.productSource, ilk 4), "Kategoriye Git" config.seeAllUrl'den. *@
+            <div class="ms-ana-sayfa-elment">
             <section class="ms-gorunum-kategori-cok-satanlar" aria-labelledby="ms-kategori-cok-satanlar-baslik-@blok.Id">
                 <header class="ms-gorunum-kategori-cok-satanlar-ust">
                     <h2 id="ms-kategori-cok-satanlar-baslik-@blok.Id">@(blok.Baslik.Length > 0 ? blok.Baslik : "Kategorinin Çok Satanları")</h2>
@@ -581,11 +543,13 @@
                     }
                 </div>
             </section>
+            </div>
             break;
 
         case "bilgi-banner":
             @* Faz 7: tasarım ana sayfası bilgi bandı — öğe: Rozet=FA ikon class'ı,
                Baslik=kalın metin, AltBaslik=küçük metin. *@
+            <div class="ms-ana-sayfa-elment">
             <section class="ms-gorunum-bilgi-banner" aria-label="@(blok.Baslik.Length > 0 ? blok.Baslik : "Alışveriş bilgilendirmeleri")">
                 @foreach (var oge in blok.Ogeler)
                 {
@@ -595,10 +559,12 @@
                     </div>
                 }
             </section>
+            </div>
             break;
 
         case "ikon-banner":
             @* Faz 7: hızlı bağlantı ikon bandı — öğe: Rozet=FA ikon class'ı, Baslik, LinkUrl. *@
+            <div class="ms-ana-sayfa-elment">
             <nav class="ms-gorunum-ikon-banner" aria-label="@(blok.Baslik.Length > 0 ? blok.Baslik : "Hızlı ürün bağlantıları")">
                 @foreach (var oge in blok.Ogeler)
                 {
@@ -608,11 +574,13 @@
                     </a>
                 }
             </nav>
+            </div>
             break;
 
         case "cercevesiz-carousel":
             @* Faz 7: tasarımın çerçevesiz carousel'i — öğe: görsel+başlık+alt başlık+link;
                noktalar data-ms-gorunum-carousel-nokta sözleşmesiyle site.js'e bağlı. *@
+            <div class="ms-ana-sayfa-elment">
             <div class="ms-gorunum-demo ms-gorunum-carousel-demo ms-gorunum-carousel-demo-cercevesiz lazy-infinite-on" data-ms-gorunum-carousel>
                 <div class="ms-gorunum-carousel-kapsayici">
                     <button class="ms-gorunum-carousel-kontrol ms-slider-kontrol ms-slider-kontrol-sol" type="button" data-ms-gorunum-carousel-kontrol="sol" aria-label="Önceki çerçevesiz görselleri göster">
@@ -640,6 +608,7 @@
                         }
                     </div>
                 </div>
+            </div>
             </div>
             break;
     }

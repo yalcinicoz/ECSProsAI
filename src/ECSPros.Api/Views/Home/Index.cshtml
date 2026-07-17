@@ -8,13 +8,11 @@
     var vitrinBloklar = ViewData["MsVitrinBloklar"] as IReadOnlyList<VitrinBlokVm> ?? [];
 }
 
-<div class="ms-ana-sayfa">
-    <div class="ms-ana-yerlesim">
-        @if (vitrinBloklar.Count > 0)
-        {
-            @await Html.PartialAsync("~/Views/Shared/Store/_VitrinBloklar.cshtml", vitrinBloklar)
-        }
-    </div>
+<div class="ms-ana-sayfa lazy-infinite-on">
+    @if (vitrinBloklar.Count > 0)
+    {
+        @await Html.PartialAsync("~/Views/Shared/Store/_VitrinBloklar.cshtml", vitrinBloklar)
+    }
 </div>
 
 @* Faz 5: tasarımın sayfa-seviyesi ortak renk modalı — yalnız data-ms-urun-renk-ortak
