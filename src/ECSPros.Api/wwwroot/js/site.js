@@ -3236,6 +3236,17 @@
 
                 buton.addEventListener("click", () => {
                     const acik = buton.getAttribute("aria-expanded") === "true";
+                    if (!acik) {
+                        // 2026-07-17: akordeon — ayni kapsayicidaki diger filtre gruplari kapanir
+                        (filtre.parentElement || document).querySelectorAll("[data-filter-block]").forEach((diger) => {
+                            if (diger === filtre) { return; }
+                            const digerButon = diger.querySelector("[data-filter-toggle]");
+                            if (digerButon?.getAttribute("aria-expanded") !== "true") { return; }
+                            digerButon.setAttribute("aria-expanded", "false");
+                            diger.querySelector("[data-filter-content]")?.classList.add("ms-gizli");
+                            diger.querySelector(".ms-filtre-ok")?.classList.remove("ms-filtre-ok-acik");
+                        });
+                    }
                     buton.setAttribute("aria-expanded", (!acik).toString());
                     icerik.classList.toggle("ms-gizli", acik);
                     ok.classList.toggle("ms-filtre-ok-acik", !acik);

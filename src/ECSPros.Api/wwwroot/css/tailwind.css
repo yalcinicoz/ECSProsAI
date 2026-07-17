@@ -6272,6 +6272,27 @@
     @apply relative;
   }
 
+  /* 2026-07-17: seçili filtre grubu selectleri (Fiyat Aralığı'nın sağı) */
+  .ms-urun-listesi-filtre-secim-dolu {
+    @apply border-[var(--ms-renk-primary)]/40 text-[var(--ms-renk-primary)];
+  }
+
+  .ms-urun-listesi-secili-listesi {
+    @apply grid gap-1 p-1;
+  }
+
+  .ms-urun-listesi-secili-deger {
+    @apply flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus-visible:outline-none;
+  }
+
+  .ms-urun-listesi-secili-deger .ms-fa-ikon {
+    @apply h-3 w-3 shrink-0 text-slate-400;
+  }
+
+  .ms-urun-listesi-secili-deger:hover .ms-fa-ikon {
+    @apply text-red-500;
+  }
+
   .ms-urun-listesi-filtre-secim {
     @apply inline-flex min-h-9 cursor-pointer items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-semibold text-ms-siyah shadow-sm transition hover:border-[var(--ms-renk-primary)] hover:text-[var(--ms-renk-primary)] focus:outline-none focus:ring-0 focus-visible:outline-none;
   }
