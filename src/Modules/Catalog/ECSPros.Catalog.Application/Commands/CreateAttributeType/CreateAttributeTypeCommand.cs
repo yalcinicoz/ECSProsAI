@@ -10,7 +10,8 @@ namespace ECSPros.Catalog.Application.Commands.CreateAttributeType;
 public record CreateAttributeTypeCommand(
     Dictionary<string, string> NameI18n,
     string DataType,
-    int SortOrder
+    int SortOrder,
+    bool UseInFilter = false
 ) : IRequest<Result<Guid>>;
 
 public class CreateAttributeTypeCommandHandler : IRequestHandler<CreateAttributeTypeCommand, Result<Guid>>
@@ -38,6 +39,7 @@ public class CreateAttributeTypeCommandHandler : IRequestHandler<CreateAttribute
             NameI18n = request.NameI18n,
             DataType = request.DataType,
             SortOrder = request.SortOrder,
+            UseInFilter = request.UseInFilter,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };

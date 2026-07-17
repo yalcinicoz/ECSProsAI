@@ -440,6 +440,17 @@ kategori listesi grupları AYNI varyantta arar (liste semantiğiyle birebir), ar
 bağlamını taşır; seçimli istekler cache'lenmez. Doğrulama (kadin-etek): filtresiz 16+16;
 Mor→7 ürün, renk 16 KORUNDU, beden 11'e daraldı; Mor+S→1 ürün, beden 11 KORUNDU, renk 11.
 
+EK-10 (2026-07-17 — ⚠️ RESTART BEKLİYOR): özellik tipine "Filtrede kullanılsın" bayrağı
+(`definition.attribute_types.UseInFilter`, migration AddUseInFilterToAttributeTypes —
+DB'ye uygulandı). Facet sorguları (GetStoreFacets + kanal kategori) artık sabit `renk`
+dışlaması yerine UseInFilter=true tipleri listeler; sıralama mevcut SortOrder'dan (cache
+v6/v7'ye bump). 47 mevcut tip önem sırasına göre 10'ar adım numaralandı (cinsiyet 10 >
+marka 20 > beden 30 > filtre_rengi 40 > kumaş türü 50 …); renk(900) + manken(910)
+filtre DIŞI. DatabaseSeeder kanonik listesi + filtre_rengi seed'i + Demo/Test seeder'ları
+aynı değerlerle güncellendi. Admin: Özellik Tipleri listesine "Filtrede" kolonu, oluşturma
+modalı + detay ayarlarına checkbox (npm run build yapıldı, admin/dist canlıda). İzole 5077
+duman testi: /api/store/catalog/products/facets 26 grup, yeni sırada, renk yok.
+
 EK-9 (2026-07-17 — ⚠️ RESTART BEKLİYOR): kategori filtre seçenekleri yalnız listelenen
 ürünlerden. Kök neden: GetChannelCategoryFacets filter/mixed dolumda "tüm satışa açık ilk
 2000 ürün"den facet üretiyordu (bedenlere tüm katalog geliyordu). Çözüm:

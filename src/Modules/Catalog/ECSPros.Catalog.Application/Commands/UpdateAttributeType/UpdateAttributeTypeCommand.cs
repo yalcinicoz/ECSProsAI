@@ -10,7 +10,8 @@ public record UpdateAttributeTypeCommand(
     Dictionary<string, string> NameI18n,
     string DataType,
     int SortOrder,
-    bool IsActive
+    bool IsActive,
+    bool UseInFilter = false
 ) : IRequest<Result<bool>>;
 
 public class UpdateAttributeTypeCommandHandler : IRequestHandler<UpdateAttributeTypeCommand, Result<bool>>
@@ -29,6 +30,7 @@ public class UpdateAttributeTypeCommandHandler : IRequestHandler<UpdateAttribute
         attrType.DataType = request.DataType;
         attrType.SortOrder = request.SortOrder;
         attrType.IsActive = request.IsActive;
+        attrType.UseInFilter = request.UseInFilter;
         attrType.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);

@@ -212,6 +212,7 @@ public static class DemoDataSeeder
                 DataType  = dataType,
                 IsActive  = true,
                 SortOrder = sort,
+                UseInFilter = true,
             };
             typesList.Add(t);
             return t;

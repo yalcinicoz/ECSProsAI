@@ -286,7 +286,7 @@ public class CatalogController : ControllerBase
     [RequirePermission(Permissions.CatalogPlatformManage)]
     public async Task<IActionResult> CreateAttributeType([FromBody] CreateAttributeTypeRequest request, CancellationToken ct)
     {
-        var result = await _mediator.Send(new CreateAttributeTypeCommand(request.NameI18n, request.DataType, request.SortOrder), ct);
+        var result = await _mediator.Send(new CreateAttributeTypeCommand(request.NameI18n, request.DataType, request.SortOrder, request.UseInFilter), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Created("/api/catalog/attribute-types", new { success = true, data = new { id = result.Value } });
@@ -297,7 +297,7 @@ public class CatalogController : ControllerBase
     [RequirePermission(Permissions.CatalogPlatformManage)]
     public async Task<IActionResult> UpdateAttributeType(Guid id, [FromBody] UpdateAttributeTypeRequest request, CancellationToken ct)
     {
-        var result = await _mediator.Send(new UpdateAttributeTypeCommand(id, request.NameI18n, request.DataType, request.SortOrder, request.IsActive), ct);
+        var result = await _mediator.Send(new UpdateAttributeTypeCommand(id, request.NameI18n, request.DataType, request.SortOrder, request.IsActive, request.UseInFilter), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -549,13 +549,15 @@ public record AddVariantImageRequest(string ImageUrl, bool IsMain, int SortOrder
 public record CreateAttributeTypeRequest(
     Dictionary<string, string> NameI18n,
     string DataType,
-    int SortOrder = 0);
+    int SortOrder = 0,
+    bool UseInFilter = false);
 
 public record UpdateAttributeTypeRequest(
     Dictionary<string, string> NameI18n,
     string DataType = "select",
     int SortOrder = 0,
-    bool IsActive = true);
+    bool IsActive = true,
+    bool UseInFilter = false);
 
 public record AddAttributeValueRequest(
     Dictionary<string, string> ValueI18n,

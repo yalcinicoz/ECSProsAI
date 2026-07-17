@@ -44,6 +44,7 @@ interface AttributeType {
   dataType: string
   isActive: boolean
   sortOrder: number
+  useInFilter: boolean
   values: AttributeValue[]
 }
 
@@ -63,7 +64,8 @@ export function AttributeTypeDetailPage() {
     dataType: string
     sortOrder: number
     isActive: boolean
-  }>({ nameI18n: {}, dataType: 'select', sortOrder: 0, isActive: true })
+    useInFilter: boolean
+  }>({ nameI18n: {}, dataType: 'select', sortOrder: 0, isActive: true, useInFilter: false })
   const [settingsDirty, setSettingsDirty] = useState(false)
   const [settingsSaved, setSettingsSaved] = useState(false)
 
@@ -146,6 +148,7 @@ export function AttributeTypeDetailPage() {
         dataType: settingsForm.dataType,
         sortOrder: settingsForm.sortOrder,
         isActive: settingsForm.isActive,
+        useInFilter: settingsForm.useInFilter,
       })
     },
     onSuccess: () => {
@@ -206,6 +209,7 @@ export function AttributeTypeDetailPage() {
         dataType: attrType.dataType,
         sortOrder: attrType.sortOrder,
         isActive: attrType.isActive,
+        useInFilter: attrType.useInFilter,
       })
       setSettingsDirty(false)
     }
@@ -315,8 +319,8 @@ export function AttributeTypeDetailPage() {
         </div>
 
         <div className="p-5 space-y-5">
-          {/* Veri Tipi + Sıra + Durum */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Veri Tipi + Sıra + Filtre + Durum */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="flbl">Veri Tipi</label>
               {canEdit ? (
@@ -344,6 +348,26 @@ export function AttributeTypeDetailPage() {
                 />
               ) : (
                 <p className="mt-1 text-sm" style={{ color: 'var(--text)' }}>{settingsForm.sortOrder}</p>
+              )}
+            </div>
+            <div>
+              <label className="flbl">Filtre</label>
+              {canEdit ? (
+                <label className="flex items-center gap-2 mt-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded accent-[var(--brand)]"
+                    checked={settingsForm.useInFilter}
+                    onChange={e => { setSettingsForm(f => ({ ...f, useInFilter: e.target.checked })); markDirty() }}
+                  />
+                  <span className="text-sm" style={{ color: 'var(--text-m)' }}>Filtrede kullanılsın</span>
+                </label>
+              ) : (
+                <div className="mt-1">
+                  <Badge variant={settingsForm.useInFilter ? 'success' : 'neutral'}>
+                    {settingsForm.useInFilter ? 'Filtrede' : 'Filtre dışı'}
+                  </Badge>
+                </div>
               )}
             </div>
             <div>

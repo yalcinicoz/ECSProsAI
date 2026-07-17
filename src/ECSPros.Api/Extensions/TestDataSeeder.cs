@@ -197,6 +197,7 @@ public static class TestDataSeeder
                 DataType  = dataType,
                 IsActive  = true,
                 SortOrder = order,
+                UseInFilter = true,
             };
 
         AttributeValue MakeVal(AttributeType type, string tr, string en, int order) =>
