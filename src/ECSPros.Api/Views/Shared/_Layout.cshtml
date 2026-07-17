@@ -91,6 +91,30 @@
             gorsel.src = "/images/no-image.svg";
         }, true);
     </script>
+    @* 2026-07-17: sayfa başına dön float butonu — 600px kaydırma sonrası görünür,
+       mobilde alt bar/sepet sabit aksiyonunun üstünde konumlanır (CSS). *@
+    <button class="ms-sayfa-basi-buton" type="button" data-ms-sayfa-basi aria-label="Sayfa başına dön" hidden>
+        <i class="fa-solid fa-chevron-up ms-fa-ikon" aria-hidden="true"></i>
+    </button>
+    <script>
+        (() => {
+            const buton = document.querySelector("[data-ms-sayfa-basi]");
+            if (!buton) { return; }
+            const esik = 600;
+            let gorunur = false;
+            const guncelle = () => {
+                const gerekli = window.scrollY > esik;
+                if (gerekli === gorunur) { return; }
+                gorunur = gerekli;
+                buton.hidden = !gerekli;
+            };
+            window.addEventListener("scroll", guncelle, { passive: true });
+            guncelle();
+            buton.addEventListener("click", () => {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            });
+        })();
+    </script>
     <partial name="~/Views/ProjeElementleri/Urun/_FavoriDavranis.cshtml" />
     <partial name="~/Views/Shared/Store/_SehirSecim.cshtml" />
     @await RenderSectionAsync("Scripts", required: false)

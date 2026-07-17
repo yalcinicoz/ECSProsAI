@@ -370,6 +370,11 @@ komutlarına >50 kr kod için anlaşılır hata guard'ı (500 yerine). NOT: eski
 koleksiyonlarda slug'lı bozuk ürün kodları kalmış olabilir (koda çözülemez — düzenle
 modalında kod+no-image görünür; gerekirse temizlik sorgusu atılır).
 
+EK-14 (2026-07-17 — ⚠️ RESTART BEKLİYOR): sayfa başına dön float butonu (_Layout, tüm
+sayfalar): 600px kaydırma sonrası sağ altta görünür, smooth scroll; mobilde alt bar
+(bottom 4.75rem) / sepet sabit aksiyonu (6.75rem) üstünde konumlanır; [hidden] display
+kuralı açık yazıldı (flex ezmesin).
+
 EK-13 (2026-07-17 — ⚠️ RESTART BEKLİYOR): seçili filtre ✕ kaldırma çalışmıyordu — üst
 filtre modülü panel tıklamasında stopPropagation çağırıyor, bubble'daki document dinleyicisi
 tıklamayı hiç görmüyordu → kaldırma dinleyicisi capture fazına alındı (_UrunListesiSagUstFiltre).
