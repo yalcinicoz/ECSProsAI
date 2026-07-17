@@ -370,6 +370,12 @@ komutlarına >50 kr kod için anlaşılır hata guard'ı (500 yerine). NOT: eski
 koleksiyonlarda slug'lı bozuk ürün kodları kalmış olabilir (koda çözülemez — düzenle
 modalında kod+no-image görünür; gerekirse temizlik sorgusu atılır).
 
+EK-15 (2026-07-17 — ⚠️ RESTART BEKLİYOR): infinite scroll sayfa numarası URL'de.
+Kaydırırken görünür sayfa ?page=N olarak replaceState ile yazılır (viewport %60 eşiği,
+rAF throttle); ?page=N ile gelen ziyaretçi SSR'da o sayfadan başlar (controller page →
+ürün sorguları; devam istekleri sayfaOfset'le çevrilir, kalanToplam ona göre); filtre/
+sıralama değişince page sıfırlanır. Kategori+/urunler+/urun-listesi üç rotada da.
+
 EK-14 (2026-07-17 — ⚠️ RESTART BEKLİYOR): sayfa başına dön float butonu (_Layout, tüm
 sayfalar): 600px kaydırma sonrası sağ altta görünür, smooth scroll; mobilde alt bar
 (bottom 4.75rem) / sepet sabit aksiyonu (6.75rem) üstünde konumlanır; [hidden] display

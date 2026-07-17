@@ -66,7 +66,10 @@ public sealed record UrunListesiVm(
     decimal? SeciliFiyatMin = null,
     decimal? SeciliFiyatMax = null,
     string? SeciliSiralama = null,
-    string? KategorideArama = null)           // yalnız kategori sayfasında dolu olabilir
+    string? KategorideArama = null,           // yalnız kategori sayfasında dolu olabilir
+    // 2026-07-17: paylaşılan ?page=N ile gelindiğinde SSR bu sayfadan başlar; infinite
+    // scroll devamı bu ofsetle ister, URL kaydırmayla replaceState ile güncellenir.
+    int BaslangicSayfa = 1)
 {
     /// <summary>SSR sonrası infinite scroll'un üreteceği kalan kart sayısı.</summary>
     public int KalanKart => Math.Max(0, ToplamUrun - IlkSayfa.Count);
