@@ -131,6 +131,11 @@
             if (gorsel && v.gorsel) {
                 gorsel.dataset.msLazySrc = v.gorsel;
                 gorsel.alt = v.ad;
+            } else if (gorsel) {
+                // Görselsiz ürün: no-image placeholder (site geneli kuralı, 2026-07-17)
+                gorsel.src = "/images/no-image.svg";
+                gorsel.alt = v.ad;
+                gorsel.dataset.msNoImage = "true";
             }
 
             if (v.galeri.length > 1 && !kart.querySelector(".ms-urun-slider-noktalari")) {

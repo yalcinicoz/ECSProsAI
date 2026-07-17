@@ -77,6 +77,20 @@
     <environment exclude="Development">
         <script src="~/js/site.min.js" asp-append-version="true"></script>
     </environment>
+    @* Ürün görseli yüklenemezse (kırık/eksik URL) no-image placeholder'ına düşülür —
+       yalnız ürün bağlamındaki görseller; site geneli kuralı (2026-07-17). Boş URL hiç
+       error üretmediğinden null-görsel dalları ayrıca no-image.svg basar. *@
+    <script>
+        document.addEventListener("error", (olay) => {
+            const gorsel = olay.target;
+            if (!(gorsel instanceof HTMLImageElement)) { return; }
+            if (gorsel.dataset.msNoImage === "true") { return; }
+            if (!gorsel.closest(".ms-urun-karti, .ms-search-urun-karti, .ms-ana-navigasyon-urun-karti, .ms-gorunum-kart, .ms-gorunum-reklam-vitrin-urun, .ms-gorunum-kategori-cok-satanlar-kart, .ms-urun-detay-resim-alani, .ms-urun-renk-tooltip-gorsel, .ms-hesabim-koleksiyon-kapak, .ms-sepet-urun-gorsel, .ms-urun-renk-modal-liste")) { return; }
+            gorsel.dataset.msNoImage = "true";
+            gorsel.removeAttribute("srcset");
+            gorsel.src = "/images/no-image.svg";
+        }, true);
+    </script>
     <partial name="~/Views/ProjeElementleri/Urun/_FavoriDavranis.cshtml" />
     <partial name="~/Views/Shared/Store/_SehirSecim.cshtml" />
     @await RenderSectionAsync("Scripts", required: false)

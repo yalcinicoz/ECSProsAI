@@ -180,9 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const urunKartiHtml = (urun) => {
             const ad = (urun.nameI18n && (urun.nameI18n.tr || Object.values(urun.nameI18n)[0])) || urun.code;
-            const gorsel = urun.mainImageUrl
-                ? `<img class="ms-search-urun-gorsel" src="${kacir(urun.mainImageUrl)}" alt="${kacir(ad)}" loading="lazy">`
-                : "";
+            const gorsel = `<img class="ms-search-urun-gorsel" src="${kacir(urun.mainImageUrl || "/images/no-image.svg")}" alt="${kacir(ad)}" loading="lazy">`;
             return `<a class="ms-search-urun-karti" href="/urun/${encodeURIComponent(urun.code)}" aria-label="${kacir(ad)}">
                 <span class="ms-search-urun-gorsel-alani">${gorsel}</span>
                 <span class="ms-search-urun-icerik">
@@ -366,9 +364,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             urunListesi.innerHTML = urunler.map((urun) => {
                 const ad = (urun.nameI18n && (urun.nameI18n.tr || Object.values(urun.nameI18n)[0])) || urun.code;
-                const gorsel = urun.mainImageUrl
-                    ? `<img class="ms-ana-navigasyon-urun-gorsel" src="${kacir(urun.mainImageUrl)}" alt="${kacir(ad)}" loading="lazy">`
-                    : "";
+                const gorsel = `<img class="ms-ana-navigasyon-urun-gorsel" src="${kacir(urun.mainImageUrl || "/images/no-image.svg")}" alt="${kacir(ad)}" loading="lazy">`;
                 return `<a class="ms-ana-navigasyon-urun-karti" href="/urun/${encodeURIComponent(urun.code)}">
                     ${gorsel}
                     <span class="ms-ana-navigasyon-urun-icerik">
