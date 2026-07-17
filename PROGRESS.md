@@ -370,6 +370,14 @@ komutlarına >50 kr kod için anlaşılır hata guard'ı (500 yerine). NOT: eski
 koleksiyonlarda slug'lı bozuk ürün kodları kalmış olabilir (koda çözülemez — düzenle
 modalında kod+no-image görünür; gerekirse temizlik sorgusu atılır).
 
+EK-9 (2026-07-17 — ⚠️ RESTART BEKLİYOR): kategori filtre seçenekleri yalnız listelenen
+ürünlerden. Kök neden: GetChannelCategoryFacets filter/mixed dolumda "tüm satışa açık ilk
+2000 ürün"den facet üretiyordu (bedenlere tüm katalog geliyordu). Çözüm:
+ResolveCategoryProductIds public static yapıldı (liste+facet TEK çözümleyici — dolum tipi
++ satış anahtarı + kanal M2/M3 + stok görünürlüğü geçitleri dahil); facets handler model
+modu dışında ona bağlandı; cache anahtarı v5. Doğrulama: kadin-etek sayfası, ürünler aynı
+(30 kart), filtre checkbox 172→103.
+
 EK-8 (2026-07-17 — ⚠️ RESTART BEKLİYOR, view değişti): süreli bildirim (onay/red modal)
 süreleri yarıya indi — varsayılan 2000→1000 ms (site.js), giriş başarılı 3000→1500
 (site.js + _AnaNavigasyon), koleksiyon sonuç 1500→750 (_KoleksiyonAkisKoprusu).
