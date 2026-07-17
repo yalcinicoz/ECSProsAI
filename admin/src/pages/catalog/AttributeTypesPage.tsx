@@ -35,6 +35,7 @@ interface AttributeType {
   dataType: string
   isActive: boolean
   sortOrder: number
+  useInFilter: boolean
   values: AttributeValue[]
 }
 
@@ -73,7 +74,8 @@ export function AttributeTypesPage() {
     nameI18n: Record<string, string>
     dataType: string
     sortOrder: number
-  }>({ nameI18n: {}, dataType: 'select', sortOrder: 0 })
+    useInFilter: boolean
+  }>({ nameI18n: {}, dataType: 'select', sortOrder: 0, useInFilter: false })
 
   const { data: attrTypes = [], isLoading } = useQuery<AttributeType[]>({
     queryKey: ['attribute-types', activeOnly],
@@ -89,6 +91,7 @@ export function AttributeTypesPage() {
         nameI18n: form.nameI18n,
         dataType: form.dataType,
         sortOrder: form.sortOrder,
+        useInFilter: form.useInFilter,
       })
       return data.data.id as string
     },
@@ -114,7 +117,7 @@ export function AttributeTypesPage() {
   }
 
   function openCreate() {
-    setForm({ nameI18n: {}, dataType: 'select', sortOrder: 0 })
+    setForm({ nameI18n: {}, dataType: 'select', sortOrder: 0, useInFilter: false })
     setCreateOpen(true)
   }
 
@@ -182,6 +185,7 @@ export function AttributeTypesPage() {
               <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Veri Tipi</th>
               <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Değer Sayısı</th>
               <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Sıra</th>
+              <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Filtrede</th>
               <th className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Durum</th>
               <th className="w-8 px-4 py-3" />
             </tr>
@@ -189,7 +193,7 @@ export function AttributeTypesPage() {
           <tbody>
             {attrTypes.length === 0 && (
               <tr>
-                <td colSpan={7} className="text-center py-12 text-sm" style={{ color: 'var(--text-s)' }}>
+                <td colSpan={8} className="text-center py-12 text-sm" style={{ color: 'var(--text-s)' }}>
                   Özellik tipi bulunamadı
                 </td>
               </tr>
@@ -220,6 +224,11 @@ export function AttributeTypesPage() {
                 </td>
                 <td className="px-4 py-3 text-center">
                   <span className="text-sm" style={{ color: 'var(--text-s)' }}>{at.sortOrder}</span>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <Badge variant={at.useInFilter ? 'success' : 'neutral'}>
+                    {at.useInFilter ? 'Evet' : 'Hayır'}
+                  </Badge>
                 </td>
                 <td className="px-4 py-3 text-center">
                   <Badge variant={at.isActive ? 'success' : 'neutral'}>
@@ -271,6 +280,24 @@ export function AttributeTypesPage() {
               value={form.sortOrder}
               onChange={(v) => setForm((f) => ({ ...f, sortOrder: v ?? 0 }))}
             />
+            <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+              Filtre alanındaki gösterim sırası (küçük değer üstte).
+            </p>
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded accent-[var(--brand)]"
+                checked={form.useInFilter}
+                onChange={(e) => setForm((f) => ({ ...f, useInFilter: e.target.checked }))}
+              />
+              <span className="text-sm" style={{ color: 'var(--text-m)' }}>Filtrede kullanılsın</span>
+            </label>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+              İşaretliyse bu özellik mağaza ürün listesi filtrelerinde gösterilir.
+            </p>
           </div>
 
           {languages.length > 0 && (

@@ -9,6 +9,8 @@ public class AttributeType : BaseEntity
     public string DataType { get; set; } = "select"; // select, multi_select, text, number, boolean, json
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; } = 0;
+    // Storefront filtre (facet) alanında bu tip gösterilsin mi? Sıralama SortOrder'a göre.
+    public bool UseInFilter { get; set; } = false;
 
     public ICollection<AttributeValue> Values { get; set; } = new List<AttributeValue>();
     public ICollection<ProductGroupAttribute> ProductGroupAttributes { get; set; } = new List<ProductGroupAttribute>();

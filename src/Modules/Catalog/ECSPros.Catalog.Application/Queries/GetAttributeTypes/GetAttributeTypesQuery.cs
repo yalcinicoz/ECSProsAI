@@ -14,6 +14,7 @@ public record AttributeTypeDto(
     string DataType,
     bool IsActive,
     int SortOrder,
+    bool UseInFilter,
     List<AttributeValueDto> Values,
     List<AxisSubAttributeSchemaDto> AxisSubAttributeSchema
 );
@@ -93,7 +94,7 @@ public class GetAttributeTypesQueryHandler : IRequestHandler<GetAttributeTypesQu
 
         // Eksen alt özellik şeması: aynı SubAttributeTypeId birden fazla gruptan gelebilir, distinct al
         var dto = list.Select(a => new AttributeTypeDto(
-            a.Id, a.Code, a.NameI18n, a.DataType, a.IsActive, a.SortOrder,
+            a.Id, a.Code, a.NameI18n, a.DataType, a.IsActive, a.SortOrder, a.UseInFilter,
             a.Values
                 .OrderBy(v => v.SortOrder)
                 .Select(v => new AttributeValueDto(

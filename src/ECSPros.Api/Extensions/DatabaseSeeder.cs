@@ -1006,72 +1006,76 @@ public static class DatabaseSeeder
 
     private static async Task SeedAttributeTypesAsync(CatalogDbContext db)
     {
-        // filtre_rengi SeedFilterRengiAttributeTypeAsync tarafından ayrıca ekleniyor
-        // (code, name_tr, dataType) — NameI18n sadece "tr" içerir, İngilizce çeviri tutulmuyor
-        var canonical = new (string Code, string Tr, string DataType)[]
+        // filtre_rengi SeedFilterRengiAttributeTypeAsync tarafından ayrıca ekleniyor (Sort=40)
+        // (code, name_tr, dataType, sort, useInFilter) — NameI18n sadece "tr" içerir.
+        // Sort = storefront filtre alanındaki gösterim sırası (önem sırası, 10'ar adım);
+        // UseInFilter=false olanlar (renk: serbest metin — filtresi filtre_rengi'nden verilir;
+        // manken: bilgilendirici json) filtre alanına hiç girmez.
+        var canonical = new (string Code, string Tr, string DataType, int Sort, bool UseInFilter)[]
         {
-            // Temel varyant eksenleri
-            ("renk",         "Renk",              "select"),
-            ("beden",        "Beden",             "select"),
-            // Demografik
-            ("cinsiyet",     "Cinsiyet",          "select"),
-            ("yas_grubu",    "Yaş Grubu",         "select"),
-            ("boy",          "Boy",               "select"),
+            // En önemliler — demografi + marka + temel varyant eksenleri
+            ("cinsiyet",     "Cinsiyet",          "select",  10, true),
+            ("marka",        "Marka",             "select",  20, true),
+            ("beden",        "Beden",             "select",  30, true),
+            // filtre_rengi = 40 (ayrı seed)
             // Genel ürün özellikleri
-            ("season",       "Sezon",             "select"),
-            ("yil",          "Yıl",               "select"),
-            ("malzeme",      "Malzeme",           "select"),
-            ("kumas_turu",   "Kumaş Türü",        "select"),
-            ("marka",        "Marka",             "select"),
-            ("desen",        "Desen",             "select"),
+            ("kumas_turu",   "Kumaş Türü",        "select",  50, true),
+            ("kalip",        "Kalıp",             "select",  60, true),
+            ("desen",        "Desen",             "select",  70, true),
+            ("season",       "Sezon",             "select",  80, true),
+            ("yil",          "Yıl",               "select",  90, true),
+            ("yas_grubu",    "Yaş Grubu",         "select", 100, true),
             // Kesim / silüet
-            ("kalip",        "Kalıp",             "select"),
-            ("kol_tipi",     "Kol Tipi",          "select"),
-            ("yaka_tipi",    "Yaka Tipi",         "select"),
-            ("etek_tipi",    "Etek Tipi",         "select"),
-            // Alt giyim
-            ("paca_tipi",    "Paça Tipi",         "select"),
-            ("bel_tipi",     "Bel Tipi",          "select"),
-            ("bel",          "Bel Ölçüsü",        "select"),
-            ("ic_uzunluk",   "İç Uzunluk",        "select"),
-            ("gogus",           "Göğüs Ölçüsü",   "select"),
-            ("basen",           "Basen Ölçüsü",   "select"),
-            ("kol_boyu",        "Kol Boyu",       "select"),
-            ("omuz_genisligi",  "Omuz Genişliği", "select"),
-            ("urun_boyu",       "Ürün Boyu",      "select"),
-            // Dış giyim
-            ("astar_durumu", "Astar Durumu",      "select"),
-            ("kapatma_tipi", "Kapatma Tipi",      "select"),
-            ("kalinlik",     "Kalınlık",          "select"),
-            ("fermuar",      "Fermuar",           "select"),
-            ("esneklik",     "Esneklik",          "select"),
-            ("balen",        "Balen / Tel",       "select"),
-            ("dolgu",        "Dolgu",             "select"),
-            ("ic_cep",       "İç Cep",            "select"),
+            ("yaka_tipi",    "Yaka Tipi",         "select", 110, true),
+            ("kol_tipi",     "Kol Tipi",          "select", 120, true),
+            ("kol_boyu",     "Kol Boyu",          "select", 130, true),
+            ("boy",          "Boy",               "select", 140, true),
+            ("urun_boyu",    "Ürün Boyu",         "select", 150, true),
+            // Alt giyim / ölçüler
+            ("bel",          "Bel Ölçüsü",        "select", 160, true),
+            ("bel_tipi",     "Bel Tipi",          "select", 170, true),
+            ("basen",        "Basen Ölçüsü",      "select", 180, true),
+            ("gogus",        "Göğüs Ölçüsü",      "select", 190, true),
+            ("omuz_genisligi", "Omuz Genişliği",  "select", 200, true),
+            ("ic_uzunluk",   "İç Uzunluk",        "select", 210, true),
+            ("paca_tipi",    "Paça Tipi",         "select", 220, true),
+            ("etek_tipi",    "Etek Tipi",         "select", 230, true),
+            // Detaylar
+            ("cep_tipi",     "Cep Tipi",          "select", 240, true),
+            ("cep_sayisi",   "Cep Sayısı",        "select", 250, true),
+            ("ic_cep",       "İç Cep",            "select", 260, true),
+            ("kapatma_tipi", "Kapatma Tipi",      "select", 270, true),
+            ("fermuar",      "Fermuar",           "select", 280, true),
+            ("astar_durumu", "Astar Durumu",      "select", 290, true),
+            ("kalinlik",     "Kalınlık",          "select", 300, true),
+            ("dolgu",        "Dolgu",             "select", 310, true),
+            ("balen",        "Balen / Tel",       "select", 320, true),
+            ("esneklik",     "Esneklik",          "select", 330, true),
+            ("aski_tipi",    "Askı Tipi",         "select", 340, true),
+            ("aski_boyu",    "Askı Boyu",         "select", 350, true),
+            // Malzeme
+            ("malzeme",      "Malzeme",           "select", 360, true),
+            ("dis_materyal", "Dış Materyal",      "select", 370, true),
+            ("ic_yuzey",     "İç Yüzey",          "select", 380, true),
             // Ayakkabı
-            ("topuk_tipi",   "Topuk Tipi",        "select"),
-            ("topuk_boyu",   "Topuk Boyu",        "select"),
-            ("ortam",        "Ortam",             "select"),
-            ("taban_ozelligi",   "Taban Özelliği",     "select"),
-            ("taban_yuksekligi", "Taban Yüksekliği",   "select"),
-            ("dis_materyal",     "Dış Materyal",       "select"),
-            ("ic_yuzey",         "İç Yüzey",           "select"),
+            ("taban_ozelligi",   "Taban Özelliği",   "select", 390, true),
+            ("taban_yuksekligi", "Taban Yüksekliği", "select", 400, true),
+            ("topuk_boyu",   "Topuk Boyu",        "select", 410, true),
+            ("topuk_tipi",   "Topuk Tipi",        "select", 420, true),
+            ("ortam",        "Ortam",             "select", 430, true),
             // Çanta
-            ("canta_agzi",   "Çanta Ağzı",        "select"),
-            ("aski_tipi",    "Askı Tipi",         "select"),
-            ("aski_boyu",    "Askı Boyu",         "select"),
+            ("canta_agzi",   "Çanta Ağzı",        "select", 440, true),
+            // Filtre dışı tipler
+            ("renk",         "Renk",              "select", 900, false),
             // Manken (bkz. docs/manken-ozelligi-spec.md) — varyant üretmez, bilgilendirici;
             // değeri ProductAttribute.CustomValue JSONB alanında tutulur, AttributeValue havuzu kullanılmaz
-            ("manken",       "Manken",            "json"),
-            // Diğer
-            ("cep_tipi",     "Cep Tipi",          "select"),
-            ("cep_sayisi",   "Cep Sayısı",        "select"),
+            ("manken",       "Manken",            "json",   910, false),
         };
 
         var existingCodes = new HashSet<string>(await db.AttributeTypes.Select(a => a.Code).ToListAsync());
         int added = 0, updated = 0;
 
-        foreach (var (code, tr, dt) in canonical)
+        foreach (var (code, tr, dt, sort, useInFilter) in canonical)
         {
             if (!existingCodes.Contains(code))
             {
@@ -1079,7 +1083,9 @@ public static class DatabaseSeeder
                 {
                     Id = Guid.NewGuid(), Code = code,
                     NameI18n = new Dictionary<string, string> { ["tr"] = tr },
-                    DataType = dt, IsActive = true, CreatedAt = DateTime.UtcNow
+                    DataType = dt, IsActive = true,
+                    SortOrder = sort, UseInFilter = useInFilter,
+                    CreatedAt = DateTime.UtcNow
                 });
                 added++;
             }
@@ -1531,7 +1537,9 @@ public static class DatabaseSeeder
                 NameI18n  = new Dictionary<string, string> { ["tr"] = "Filtre Rengi", ["en"] = "Filter Color" },
                 DataType  = "select",
                 IsActive  = true,
-                SortOrder = 0,
+                // Filtre alanı sırası: cinsiyet(10) > marka(20) > beden(30) > filtre_rengi(40)
+                SortOrder = 40,
+                UseInFilter = true,
                 CreatedAt = DateTime.UtcNow,
             };
             context.AttributeTypes.Add(attrType);

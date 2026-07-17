@@ -48,9 +48,9 @@ public class GetStoreFacetsQueryHandler(
     // bkz. PROGRESS.md 2026-07-06 Redis notu). Arama filtreli istekler cache'lenmez.
     // Cache anahtarı stok görünürlük paramlarını + platformu içerir (kanal seçimi/durdurma
     // deny-set'i platform bazlı — M2/M3).
-    // v5: ürün seviyesi özellikler facet'e dahil oldu (2026-07-17)
+    // v6: facet'e girecek tipler AttributeType.UseInFilter bayrağından seçilir (2026-07-17)
     private static string AllKey(Guid platformId, bool showOos, DateTime? since) =>
-        $"store:facets:all:v5:{platformId}:{showOos}:{since:yyyyMMdd}";
+        $"store:facets:all:v6:{platformId}:{showOos}:{since:yyyyMMdd}";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(15);
 
     public async Task<Result<StoreFacetsDto>> Handle(GetStoreFacetsQuery request, CancellationToken ct)
@@ -282,13 +282,13 @@ public class GetStoreFacetsQueryHandler(
         // Facet sayıları DB'de toplanır: (tip, değer, ürün) tekilleştirilip gruplanır.
         // Eski sürüm tüm varyant-attribute satırlarını (3.7M+) belleğe çekiyordu — filtre_rengi
         // eşlemesinden sonra bu ~10 sn'ye çıkmıştı.
-        // "renk" (ürüne özel serbest metin renk adı, binlerce farklı değer) listeleme filtresi
-        // olarak sunulmaz — renk filtresi "filtre_rengi" (kürasyonlu ~25 renk grubu, hex kodlu)
-        // üzerinden verilir; "renk" ürün kartı/detayında ayrı bir alan olarak kalır.
+        // Filtreye girecek tipler AttributeType.UseInFilter bayrağıyla seçilir (2026-07-17) —
+        // örn. "renk" (serbest metin, binlerce değer) bayrağı kapalıdır, renk filtresi
+        // "filtre_rengi" (kürasyonlu ~25 renk grubu, hex kodlu) üzerinden verilir.
         var counts = await db.ProductVariantAttributes
             .AsNoTracking()
             .Where(va => va.Variant.IsActive
-                && va.AttributeType.Code != "renk"
+                && va.AttributeType.UseInFilter
                 && productIds.Contains(va.Variant.ProductId))
             .Select(va => new { va.AttributeTypeId, va.AttributeValueId, va.Variant.ProductId })
             .Distinct()
@@ -302,7 +302,7 @@ public class GetStoreFacetsQueryHandler(
         var urunSeviyesiSayilar = await db.ProductAttributes
             .AsNoTracking()
             .Where(pa => pa.AttributeValueId != null
-                && pa.AttributeType.Code != "renk"
+                && pa.AttributeType.UseInFilter
                 && productIds.Contains(pa.ProductId))
             .Select(pa => new { pa.AttributeTypeId, AttributeValueId = pa.AttributeValueId!.Value, pa.ProductId })
             .Distinct()
