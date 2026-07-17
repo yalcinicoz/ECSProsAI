@@ -5904,6 +5904,11 @@
     @apply grid gap-1 p-4 lg:p-5;
   }
 
+  /* 2026-07-17: hesap paneli grup başlıkları (Üyeliğim / Bana Özel) */
+  .ms-hesap-menu-grup-baslik {
+    @apply mt-2 px-1 text-[11px] font-bold uppercase tracking-wide text-slate-400 first:mt-0;
+  }
+
   .ms-hesap-menu a {
     @apply flex h-10 items-center gap-3 rounded-xl px-1 text-[12px] font-normal text-slate-800 transition hover:bg-orange-50 hover:text-[var(--ms-renk-primary)] lg:h-11;
   }
@@ -5913,7 +5918,8 @@
   }
 
   .ms-hesap-cikis {
-    @apply mx-4 mb-4 flex h-11 w-[calc(100%-2rem)] cursor-pointer items-center gap-3 border-t border-slate-100 pt-4 text-left text-[12px] font-bold text-red-600 transition hover:text-red-700 focus:outline-none focus:ring-0 focus-visible:outline-none lg:mx-5 lg:mb-5 lg:w-[calc(100%-2.5rem)];
+    /* 2026-07-17: buton yüksekliği küçültüldü (h-11+pt-4 → h-8+pt-2, kullanıcı isteği) */
+    @apply mx-4 mb-3 flex h-8 w-[calc(100%-2rem)] cursor-pointer items-center gap-3 border-t border-slate-100 pt-2 text-left text-[12px] font-bold text-red-600 transition hover:text-red-700 focus:outline-none focus:ring-0 focus-visible:outline-none lg:mx-5 lg:mb-4 lg:w-[calc(100%-2.5rem)];
   }
 
   .ms-hesap-cikis .ms-hesap-menu-ikon {

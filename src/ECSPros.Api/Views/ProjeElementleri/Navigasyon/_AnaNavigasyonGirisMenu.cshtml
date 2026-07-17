@@ -60,12 +60,22 @@
                     </div>
                     }
 
+                    @* 2026-07-17: hesap paneli menüsü yan menüyle (_HesabimYanMenu) aynı
+                       gruplu yapıda — Üyeliğim / Bana Özel başlıkları ve aynı rotalar. *@
                     <nav class="ms-hesap-menu" aria-label="Hesabım">
-                        <a href="/Hesabim/Siparislerim"><i class="fa-solid fa-box-open ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>Tüm Siparişlerim</a>
-                        <a href="/Hesabim/Adreslerim"><i class="fa-solid fa-location-dot ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>Adreslerim</a>
-                        <a href="/Hesabim/Yorumlarim"><i class="fa-solid fa-star-half-stroke ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>Değerlendirmelerim</a>
-                        <a href="/Hesabim/IndirimKuponlarim"><i class="fa-solid fa-ticket ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>İndirim Kuponlarım</a>
-                        <a href="/Hesabim/UyelikBilgilerim"><i class="fa-solid fa-user-gear ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>Kullanıcı Bilgilerim</a>
+                        <strong class="ms-hesap-menu-grup-baslik">Üyeliğim</strong>
+                        <a href="/uyelik-bilgilerim"><i class="fa-solid fa-user ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>Üyelik Bilgilerim</a>
+                        <a href="/adreslerim"><i class="fa-solid fa-location-dot ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>Adreslerim</a>
+                        <strong class="ms-hesap-menu-grup-baslik">Bana Özel</strong>
+                        <a href="/siparislerim"><i class="fa-solid fa-box ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>Siparişlerim</a>
+                        <a href="/tekrar-satin-al"><i class="fa-solid fa-arrow-rotate-right ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>Tekrar Satın Al</a>
+                        <a href="/onceden-gezdiklerim"><i class="fa-solid fa-clock-rotate-left ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>Önceden Gezdiklerim</a>
+                        <a href="/iadelerim"><i class="fa-solid fa-arrow-rotate-left ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>İadelerim</a>
+                        <a href="/yorumlarim"><i class="fa-solid fa-comment ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>Yorumlarım</a>
+                        <a href="/favorilerim"><img class="ms-hesap-menu-ikon" src="/ikons/favorilerim-sade-icon.svg" alt="" aria-hidden="true" width="20" height="20" loading="lazy">Favorilerim</a>
+                        <a href="/koleksiyonlarim"><i class="fa-solid fa-layer-group ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>Koleksiyonlarım</a>
+                        <a href="/indirim-kuponlarim"><i class="fa-solid fa-ticket ms-fa-ikon ms-hesap-menu-ikon" aria-hidden="true"></i>İndirim Kuponlarım</a>
+                        <a href="/favori-aramalarim"><img class="ms-hesap-menu-ikon ms-ikon-siyah" src="/ikons/favori-aramalarim-sade-icon.svg" alt="" aria-hidden="true" width="20" height="20" loading="lazy">Favori Aramalarım</a>
                     </nav>
 
                     <button class="ms-hesap-cikis" type="button" data-ms-hesap-cikis>

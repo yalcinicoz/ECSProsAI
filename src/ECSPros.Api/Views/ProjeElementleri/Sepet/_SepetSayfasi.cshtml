@@ -305,6 +305,37 @@
             <p class="ms-siparis-guvenli-odeme">Güvenli ödeme altyapısı ile bilgileriniz korunur.</p>
         </aside>
     </div>
+
+    @* 2026-07-17: tasarımın ms-sepet-onceden bölümü — sepetten çıkarılan ürünler
+       (localStorage "ms-sepet-onceden", silme onayında kaydedilir). Kayıt yokken bölüm
+       gizli. Rozet/popülerlik satırları veri kaynağı gelene dek basılmaz (demo metin
+       taşınmadı); Sepete Ekle kayıtlı varyant+fiyatla gerçek sepet API'sine gider. *@
+    <section class="ms-sepet-onceden" aria-labelledby="ms-sepet-onceden-baslik" data-ms-sepet-onceden hidden>
+        <div class="ms-sepet-onceden-baslik-alani">
+            <h3 id="ms-sepet-onceden-baslik">Önceden Eklediklerim</h3>
+        </div>
+        <div class="ms-sepet-onceden-grid" data-ms-sepet-onceden-grid></div>
+        <template data-ms-sepet-onceden-sablon>
+            <article class="ms-sepet-onceden-kart">
+                <a class="ms-sepet-onceden-gorsel" href="#" data-alan="gorsel-link">
+                    <img src="" alt="" width="240" height="320" loading="lazy" data-alan="gorsel">
+                </a>
+                <div class="ms-sepet-onceden-bilgi">
+                    <a class="ms-sepet-onceden-urun" href="#" data-alan="urun-link"></a>
+                    <p class="ms-sepet-onceden-fiyat ms-urun-fiyat-satiri"><strong data-alan="fiyat"></strong></p>
+                </div>
+                <div class="ms-sepet-onceden-aksiyonlar">
+                    <button class="ms-sepet-ikon-buton" type="button" aria-label="Favorilere ekle" aria-pressed="false" data-ms-sepet-favori>
+                        <img class="ms-ikon-siyah" src="/ikons/favorite.svg" alt="" aria-hidden="true" width="20" height="20" loading="lazy">
+                    </button>
+                    <button class="ms-sepet-ikon-buton" type="button" aria-label="Listeden kaldır" data-ms-sepet-onceden-kaldir>
+                        <i class="fa-solid fa-trash-can ms-fa-ikon " aria-hidden="true"></i>
+                    </button>
+                    <button class="ms-sepet-onceden-buton" type="button" data-ms-sepet-onceden-ekle>Sepete Ekle</button>
+                </div>
+            </article>
+        </template>
+    </section>
     </section>
 
 
@@ -493,6 +524,97 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let sepetId = null;
     let silinecekKalemId = null;
+    const kalemBilgileri = new Map(); // kalemId → kalem (silme anında "önceden" kaydı için)
+
+    // ── 2026-07-17: "Önceden Eklediklerim" (tasarımın ms-sepet-onceden bölümü) ──
+    // Sepetten çıkarılan ürünler localStorage'da tutulur (varyant başına tek, en yeni 8);
+    // Sepete Ekle kayıtlı varyant+fiyatla gerçek sepet API'sine gider, başarıda listeden düşer.
+    const ONCEDEN_ANAHTARI = "ms-sepet-onceden";
+    const oncedenAlan = document.querySelector("[data-ms-sepet-onceden]");
+    const oncedenGrid = document.querySelector("[data-ms-sepet-onceden-grid]");
+    const oncedenSablon = document.querySelector("[data-ms-sepet-onceden-sablon]");
+
+    const oncedenOku = () => {
+        try { return JSON.parse(localStorage.getItem(ONCEDEN_ANAHTARI)) || []; }
+        catch { return []; }
+    };
+    const oncedenYaz = (kayitlar) => {
+        try { localStorage.setItem(ONCEDEN_ANAHTARI, JSON.stringify(kayitlar.slice(0, 8))); }
+        catch { /* dolu/kapalı storage */ }
+    };
+
+    const oncedenCiz = () => {
+        if (!oncedenAlan || !oncedenGrid || !oncedenSablon) { return; }
+        const kayitlar = oncedenOku();
+        oncedenAlan.hidden = kayitlar.length === 0;
+        oncedenGrid.innerHTML = "";
+        kayitlar.forEach((kayit) => {
+            const kart = oncedenSablon.content.firstElementChild.cloneNode(true);
+            kart.dataset.msUrunKod = kayit.kod || ""; // favori butonu kodu buradan çözer
+            const url = kayit.kod ? "/urun/" + encodeURIComponent(kayit.kod) : "#";
+            const gorsel = kart.querySelector('[data-alan="gorsel"]');
+            const urunLink = kart.querySelector('[data-alan="urun-link"]');
+            kart.querySelector('[data-alan="gorsel-link"]').href = url;
+            urunLink.href = url;
+            urunLink.textContent = kayit.ad || kayit.kod || "Ürün";
+            gorsel.src = kayit.gorsel || "/images/no-image.svg";
+            gorsel.alt = kayit.ad || "";
+            kart.querySelector('[data-alan="fiyat"]').textContent = paraYaz(kayit.fiyat);
+            const favoriButonu = kart.querySelector("[data-ms-sepet-favori]");
+            if (favoriButonu && kayit.kod && window.msFavoriKodlar?.has(window.msFavoriAnahtar ? window.msFavoriAnahtar(kayit.kod, null) : kayit.kod)) {
+                window.msSepetFavoriIsaretle?.(favoriButonu, true);
+            }
+            kart.querySelector("[data-ms-sepet-onceden-kaldir]").addEventListener("click", () => {
+                oncedenYaz(oncedenOku().filter((k) => k.varyant !== kayit.varyant));
+                oncedenCiz();
+            });
+            kart.querySelector("[data-ms-sepet-onceden-ekle]").addEventListener("click", async (event) => {
+                const buton = event.currentTarget;
+                buton.disabled = true;
+                try {
+                    const cevap = await fetch("/api/store/cart/items", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            firmPlatformId: platformId,
+                            variantId: kayit.varyant,
+                            quantity: 1,
+                            price: kayit.fiyat || 0,
+                            currencyCode: kayit.para || "TRY",
+                            sessionId: localStorage.getItem("ecspros_sid")
+                        })
+                    });
+                    const veri = await cevap.json().catch(() => null);
+                    if (veri?.success) {
+                        if (veri.data?.cartId) { localStorage.setItem("ecspros_cart", veri.data.cartId); }
+                        oncedenYaz(oncedenOku().filter((k) => k.varyant !== kayit.varyant));
+                        oncedenCiz();
+                        window.msMiniSepetYenile?.();
+                        yenile();
+                        return;
+                    }
+                    buton.disabled = false;
+                } catch { buton.disabled = false; }
+            });
+            oncedenGrid.appendChild(kart);
+        });
+    };
+
+    const oncedenKaydet = (kalem) => {
+        if (!kalem?.variantId) { return; }
+        const kayit = {
+            kod: kalem.productCode || "",
+            varyant: kalem.variantId,
+            ad: trAd(kalem.productNameI18n) || kalem.productCode || "Ürün",
+            gorsel: kalem.imageUrl || "",
+            fiyat: kalem.addedPrice || 0,
+            para: kalem.currencyCode || "TRY"
+        };
+        oncedenYaz([kayit, ...oncedenOku().filter((k) => k.varyant !== kayit.varyant)]);
+        oncedenCiz();
+    };
+
+    oncedenCiz();
 
     const toplamlariGuncelle = () => {
         let toplam = 0;
@@ -666,6 +788,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!silinecekKalemId || !sepetId) { return; }
         const kalemId = silinecekKalemId;
         silinecekKalemId = null;
+        oncedenKaydet(kalemBilgileri.get(kalemId)); // "Önceden Eklediklerim" bölümüne düşer
         try {
             await fetch(`/api/store/cart/${sepetId}/items/${kalemId}`, { method: "DELETE" });
         } catch { /* yenile gerçek durumu getirir */ }
@@ -828,7 +951,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const kalemler = sepet?.items || [];
         sepetId = sepet?.id || null;
         konteyner.innerHTML = "";
-        kalemler.forEach((kalem) => konteyner.appendChild(satirKur(kalem)));
+        kalemler.forEach((kalem) => {
+            kalemBilgileri.set(kalem.id, kalem); // silme anında "önceden" kaydı buradan
+            konteyner.appendChild(satirKur(kalem));
+        });
         if (bosMesaj) { bosMesaj.hidden = kalemler.length > 0; }
         if (ozetAciklama) {
             ozetAciklama.textContent = kalemler.length > 0

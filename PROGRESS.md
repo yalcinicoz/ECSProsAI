@@ -370,6 +370,16 @@ komutlarına >50 kr kod için anlaşılır hata guard'ı (500 yerine). NOT: eski
 koleksiyonlarda slug'lı bozuk ürün kodları kalmış olabilir (koda çözülemez — düzenle
 modalında kod+no-image görünür; gerekirse temizlik sorgusu atılır).
 
+EK-5 (2026-07-17 — ⚠️ RESTART BEKLİYOR): 1) Hesap paneli (ms-ana-navigasyon-hesap-panel)
+menüsü yan menüyle aynı GRUPLU yapıya geçti (Üyeliğim: üyelik+adresler; Bana Özel: 9 link;
+eski /Hesabim/* rotaları küçük-harf rotalarla değişti; .ms-hesap-menu-grup-baslik CSS).
+2) Çıkış Yap butonu küçüldü (h-11+pt-4 → h-8+pt-2). 3) /sepet altına tasarımın
+ms-sepet-onceden bölümü ("Önceden Eklediklerim"): sepetten çıkarılan ürünler silme onayında
+localStorage'a (ms-sepet-onceden, varyant başına tek, son 8) kaydedilir; bölüm kayıt yokken
+gizli; Sepete Ekle kayıtlı varyant+fiyatla gerçek cart API'sine gider, başarıda listeden
+düşer; favori butonu _FavoriDavranis'a data-ms-urun-kod ile bağlı; rozet/popülerlik demo
+satırları veri kaynağı gelene dek taşınmadı.
+
 ### (önceki) SESSION ÖZETİ (2026-07-16, 5. oturum) — TASARIM FARK TURU: İP-1..4,6 CANLIDA + İP-5 TAMAM (⚠️ RESTART BEKLİYOR)
 İP-1..4,6 restart edildi ve canlıda doğrulandı (duman testi yeşil). Ardından İP-5
 (kullanıcı kurgu onayıyla) TAMAMLANDI: `product_review_photos` tablosu + `Topic` kolonu
