@@ -370,6 +370,16 @@ komutlarına >50 kr kod için anlaşılır hata guard'ı (500 yerine). NOT: eski
 koleksiyonlarda slug'lı bozuk ürün kodları kalmış olabilir (koda çözülemez — düzenle
 modalında kod+no-image görünür; gerekirse temizlik sorgusu atılır).
 
+EK-17 (2026-07-17 — ⚠️ RESTART BEKLİYOR): /odeme kupon×ödeme-yöntemi kuralı + yöntem
+bilgi mesajı. Kural: kupon yalnız KART ile ödemede geçerli — kapıda (nakit/kart) seçilince
+uygulanmış kupon sepetten SİLİNİR (sessionStorage msSepetKuponDurumu temizlenir, toplam +
+sipariş gövdesi kuponsuz, kupon görselleri gizlenir). "Ödeme Bilgileri" başlığının üstünde
+data-ms-odeme-yontem-bilgi banner'ı: kapıda→hizmet bedeli+3000 sınırı+kupon kaldırıldı
+notu; kart→kupon geçerli+indirim tutarı. Tasarımın demo KART25 varsayılan kuponu kaldırıldı
+(gerçek kupon yokken sahte kart görünüyordu); gerçek kupon {kod,tutar} görüntü alanlarına
+türetilir. Headless E2E: kart→banner+indirimli toplam; kapıda→kupon silindi, toplam
+indirimsiz, storage null.
+
 EK-16 (2026-07-17 — ⚠️ RESTART BEKLİYOR, kullanıcı onaylı kurgu): İKİ YÖNLÜ infinite
 scroll. ?page=N ile gelen ziyaretçi N. sayfadan başlar; liste başına yaklaşınca (600px)
 önceki sayfa API'den çekilip ÜSTE eklenir (kaydırma çapası elle — overflow-anchor:none;
