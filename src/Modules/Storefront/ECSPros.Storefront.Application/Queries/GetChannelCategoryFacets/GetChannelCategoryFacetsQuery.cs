@@ -17,6 +17,8 @@ public record GetChannelCategoryFacetsQuery(
 public class GetChannelCategoryFacetsQueryHandler(
     IStorefrontDbContext sfDb,
     ICatalogDbContext catDb,
+    IStockService stockService,
+    IChannelPricingService pricingService,
     IInStockProductProvider inStock,
     ICacheService cache)
     : IRequestHandler<GetChannelCategoryFacetsQuery, Result<StoreFacetsDto>>
@@ -26,7 +28,10 @@ public class GetChannelCategoryFacetsQueryHandler(
     {
         // v2 + stok paramları: stok filtresi eklendiğinden eski/ayar-farklı girdiler ayrışsın.
         // v3: kanal seçimi/durdurma (M2/M3) geçidi eklendi.
-        var cacheKey = $"channelcat:facets:v4:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
+        // v5: filter/mixed/manual facet kümesi listeyle AYNI çözümleyiciden (önceden filter/
+        //     mixed "tüm satışa açık ilk 2000 ürün"dü — filtrede kategoride olmayan
+        //     beden/renk seçenekleri görünüyordu).
+        var cacheKey = $"channelcat:facets:v5:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
         StoreFacetsDto? cached = null;
         try { cached = await cache.GetAsync<StoreFacetsDto>(cacheKey, ct); } catch { /* Redis erişilemezse taze hesapla */ }
         if (cached is not null)
@@ -41,7 +46,24 @@ public class GetChannelCategoryFacetsQueryHandler(
 
         List<Guid> productIds;
 
-        if (cat.ListingMode == "model")
+        if (cat.ListingMode != "model")
+        {
+            // 2026-07-17: listeyle birebir aynı ürün kümesi — dolum tipi (manual/filter/
+            // mixed) + satış anahtarı + kanal seçimi/durdurma + stok görünürlüğü geçitleri
+            // ortak çözümleyicide. Filtre seçenekleri yalnız listelenen ürünlerden oluşur.
+            productIds = await Queries.GetChannelCategoryProducts.GetChannelCategoryProductsQueryHandler
+                .ResolveCategoryProductIds(
+                    sfDb, catDb, stockService, pricingService, inStock,
+                    cat, request.ChannelCategoryId, request.ShowOutOfStock, request.OutOfStockSince, ct);
+
+            var sonuc = await GetStoreFacetsQueryHandler.BuildFacets(catDb, productIds, ct);
+            if (sonuc.IsSuccess)
+            {
+                try { await cache.SetAsync(cacheKey, sonuc.Value, TimeSpan.FromMinutes(10), ct); } catch { /* best-effort */ }
+            }
+            return sonuc;
+        }
+
         {
             // Model modunda: vitrin ürünleri + fallback ilk ürünler
             var groups = await sfDb.ChannelCategoryGroups
@@ -73,23 +95,6 @@ public class GetChannelCategoryFacetsQueryHandler(
                 : new List<Guid>();
 
             productIds = showcaseIds.Concat(fallbackIds).Distinct().ToList();
-        }
-        else if (cat.FillType == "manual")
-        {
-            productIds = await sfDb.ChannelCategoryProducts
-                .Where(p => p.ChannelCategoryId == request.ChannelCategoryId && !p.IsExcluded)
-                .Select(p => p.ProductId)
-                .ToListAsync(ct);
-        }
-        else
-        {
-            // filter / mixed — tüm satışa açık ürünler (yeterli)
-            productIds = await catDb.Products
-                .AsNoTracking()
-                .Where(p => p.IsSaleOpen && catDb.ProductImages.Any(img => img.ProductId == p.Id))
-                .Select(p => p.Id)
-                .Take(2000)
-                .ToListAsync(ct);
         }
 
         // Stok görünürlüğü: stoğu biteni (kanal açık VE CreatedAt>=eşik değilse) facet'ten çıkar.

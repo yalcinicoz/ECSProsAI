@@ -661,7 +661,17 @@ public class GetChannelCategoryProductsQueryHandler(
     }
 
     // Kategorideki tüm ürün ID'lerini dolum tipine göre çözer
-    private async Task<List<Guid>> ResolveCategoryProductIds(
+    private Task<List<Guid>> ResolveCategoryProductIds(
+        ChannelCategory cat, Guid channelCategoryId, bool showOutOfStock, DateTime? outOfStockSince, CancellationToken ct)
+        => ResolveCategoryProductIds(sfDb, catDb, stockService, pricingService, inStock,
+            cat, channelCategoryId, showOutOfStock, outOfStockSince, ct);
+
+    /// <summary>2026-07-17: liste ile facet'lerin AYNI ürün kümesini kullanması için dışa
+    /// açıldı (GetChannelCategoryFacets buradan beslenir) — dolum tipi çözümü + satış
+    /// anahtarı + kanal seçimi/durdurma + stok görünürlüğü geçitlerinin tek kaynağı.</summary>
+    public static async Task<List<Guid>> ResolveCategoryProductIds(
+        IStorefrontDbContext sfDb, ICatalogDbContext catDb, IStockService stockService,
+        IChannelPricingService pricingService, IInStockProductProvider inStock,
         ChannelCategory cat, Guid channelCategoryId, bool showOutOfStock, DateTime? outOfStockSince, CancellationToken ct)
     {
         List<Guid> ids;
