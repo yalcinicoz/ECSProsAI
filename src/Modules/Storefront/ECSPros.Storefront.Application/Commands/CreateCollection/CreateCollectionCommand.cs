@@ -23,6 +23,9 @@ public class CreateCollectionCommandHandler(IStorefrontDbContext db)
     {
         if (string.IsNullOrWhiteSpace(request.Name))
             return Result.Failure<Guid>("Koleksiyon adı gereklidir.");
+        // 2026-07-17: ProductCode varchar(50) — uzun/uydurma kod 500 yerine anlaşılır hata
+        if ((request.ProductCodes ?? []).Any(k => (k?.Trim().Length ?? 0) > 50))
+            return Result.Failure<Guid>("Geçersiz ürün kodu (en fazla 50 karakter).");
 
         var koleksiyon = new Collection
         {

@@ -360,6 +360,16 @@ akışı sessizce 404'lüyordu) → eklendi. 2) /favori-aramalarim boş durum ik
 arası gap-3; giriş geçmişi max-h-72 + scroll + 10 kayıt (5'ti). Rotalar 401 (kayıtlı)
 doğrulandı; staging duman testi yeşil, canlıya kopyalandı.
 
+EK-4 (2026-07-17, hata düzeltme — ⚠️ RESTART BEKLİYOR): Ortak "Yeni Koleksiyon" akışı
+"İşlem Başarısız" veriyordu. Canlı log: POST /api/store/collections 500 — 22001 value too
+long for varchar(50). Kök neden: istemci üreticileri productCodes'a GERÇEK ürün kodu değil
+türetilmiş slug gönderiyordu (kart: başlık+görsel-yolu 80 kr; detay: urun-detay-… 90 kr;
+sepet: boş msSepetSatir→sepet-timestamp). Düzeltme: kart/sepet üreticileri data-ms-urun-kod
+(site.js, build-js), detay üreticisi gerçek kod (\_UrunDetaySayfasi); Create/Update/AddItems
+komutlarına >50 kr kod için anlaşılır hata guard'ı (500 yerine). NOT: eski akışla oluşmuş
+koleksiyonlarda slug'lı bozuk ürün kodları kalmış olabilir (koda çözülemez — düzenle
+modalında kod+no-image görünür; gerekirse temizlik sorgusu atılır).
+
 ### (önceki) SESSION ÖZETİ (2026-07-16, 5. oturum) — TASARIM FARK TURU: İP-1..4,6 CANLIDA + İP-5 TAMAM (⚠️ RESTART BEKLİYOR)
 İP-1..4,6 restart edildi ve canlıda doğrulandı (duman testi yeşil). Ardından İP-5
 (kullanıcı kurgu onayıyla) TAMAMLANDI: `product_review_photos` tablosu + `Topic` kolonu
