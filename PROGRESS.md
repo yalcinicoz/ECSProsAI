@@ -370,6 +370,11 @@ komutlarına >50 kr kod için anlaşılır hata guard'ı (500 yerine). NOT: eski
 koleksiyonlarda slug'lı bozuk ürün kodları kalmış olabilir (koda çözülemez — düzenle
 modalında kod+no-image görünür; gerekirse temizlik sorgusu atılır).
 
+EK-11 (2026-07-17, CANLIDA — restart gerekmedi, statik dosya): filtre grubu başlığı
+tıklanıp grup açıldığında blok görünür alana kaydırılır (site.js filtre toggle →
+scrollIntoView nearest/smooth; masaüstü sticky kenar çubuğu ve mobil filtre paneli aynı
+handler'ı kullanır).
+
 EK-10 (2026-07-17 — ⚠️ RESTART BEKLİYOR): seçim-duyarlı facet (eski projedeki kurgu).
 BuildFacetsWithSelections (GetStoreFacets): klasik çok-seçimli facet — her grubun
 seçenekleri DİĞER grupların seçimleri+fiyat uygulanmış kümeden (grup kendi seçimini

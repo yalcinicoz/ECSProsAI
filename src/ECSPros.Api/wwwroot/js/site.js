@@ -3239,6 +3239,13 @@
                     buton.setAttribute("aria-expanded", (!acik).toString());
                     icerik.classList.toggle("ms-gizli", acik);
                     ok.classList.toggle("ms-filtre-ok-acik", !acik);
+                    if (!acik) {
+                        // 2026-07-17: acilan grup gorunur alana kaydirilir — uzun filtre
+                        // listesinde acilan seceneklerin ekran disinda kalmamasi icin.
+                        window.requestAnimationFrame(() => {
+                            filtre.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                        });
+                    }
                 });
 
                 if (arama) {
