@@ -370,6 +370,15 @@ komutlarına >50 kr kod için anlaşılır hata guard'ı (500 yerine). NOT: eski
 koleksiyonlarda slug'lı bozuk ürün kodları kalmış olabilir (koda çözülemez — düzenle
 modalında kod+no-image görünür; gerekirse temizlik sorgusu atılır).
 
+EK-16 (2026-07-17 — ⚠️ RESTART BEKLİYOR, kullanıcı onaylı kurgu): İKİ YÖNLÜ infinite
+scroll. ?page=N ile gelen ziyaretçi N. sayfadan başlar; liste başına yaklaşınca (600px)
+önceki sayfa API'den çekilip ÜSTE eklenir (kaydırma çapası elle — overflow-anchor:none;
+ekran zıplamaz), 1. sayfaya kadar sürer; açılışta bir üst sayfa önden hazırlanır. URL
+senkronu iki yönde (ustSayfa + görünür indeks). (b) kararı: sayfa-başı float butonu liste
+1'den başlamıyorsa ?page'i silip 1. sayfaya döner (document capture), 1'e ulaşılmışsa
+normal smooth scroll. Headless Playwright E2E: p3→yukarı→p1 dikişsiz (ilk kart gerçek
+sayfa-1 ürünü, URL adım adım), buton p8→/kadin. Kartlar şablondan kartDoldur ile üretilir.
+
 EK-15 (2026-07-17 — ⚠️ RESTART BEKLİYOR): infinite scroll sayfa numarası URL'de.
 Kaydırırken görünür sayfa ?page=N olarak replaceState ile yazılır (viewport %60 eşiği,
 rAF throttle); ?page=N ile gelen ziyaretçi SSR'da o sayfadan başlar (controller page →

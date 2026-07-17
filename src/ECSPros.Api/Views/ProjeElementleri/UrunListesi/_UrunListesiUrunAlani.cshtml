@@ -390,17 +390,66 @@
             }
         });
 
-        // ── 2026-07-17: görünür sayfa numarası URL'e yazılır (?page=N, replaceState) —
-        // ziyaretçi izleme + sayfayı paylaşma; paylaşılan URL SSR'da o sayfadan başlar.
+        // ── 2026-07-17: görünür sayfa URL'e yazılır (?page=N, replaceState) + İKİ YÖNLÜ
+        // yükleme — paylaşılan ?page=N sayfasından yukarı kaydırınca önceki sayfalar
+        // listenin üstüne otomatik eklenir (kaydırma konumu korunur, ekran zıplamaz).
         (() => {
             const alanEl = document.querySelector("[data-ms-infinite-config='urun-listesi']");
-            if (!alanEl) { return; }
-            let sonYazilanSayfa = durum.sayfaOfset + 1;
+            const liste = alanEl?.querySelector("[data-ms-infinite-liste]");
+            const sablon = alanEl?.querySelector("[data-ms-infinite-template]");
+            if (!alanEl || !liste) { return; }
+
+            // İlk DOM kartının GERÇEK sayfa numarası — yukarı yükleme yaptıkça azalır
+            const ustDurum = { ustSayfa: durum.sayfaOfset + 1, yukluyor: false };
+            let sonYazilanSayfa = ustDurum.ustSayfa;
             let bekliyor = false;
+
+            const oncekiSayfayiYukle = async () => {
+                if (ustDurum.yukluyor || ustDurum.ustSayfa <= 1 || !sablon) { return; }
+                ustDurum.yukluyor = true;
+                const hedefSayfa = ustDurum.ustSayfa - 1;
+                try {
+                    const ayirici = durum.devamUrl.includes("?") ? "&" : "?";
+                    const cevap = await fetch(`${durum.devamUrl}${ayirici}page=${hedefSayfa}`);
+                    const veri = cevap.ok ? await cevap.json() : null;
+                    const kayitlar = veri?.data?.items || [];
+                    if (kayitlar.length === 0) { ustDurum.ustSayfa = 1; return; } // güvenlik ağı
+
+                    const parca = document.createDocumentFragment();
+                    kayitlar.forEach((kayit) => {
+                        const kartParcasi = sablon.content.cloneNode(true);
+                        const kart = kartParcasi.querySelector("[data-ms-kart-link-alani]");
+                        if (!kart) { return; }
+                        kartDoldur(kart, normallestir(kayit));
+                        parca.appendChild(kartParcasi);
+                    });
+
+                    // Kaydırma çapası: mevcut ilk kartın ekran konumu korunur (CSS
+                    // overflow-anchor:none — tarayıcının kendi çapasıyla çakışmasın)
+                    const referans = liste.firstElementChild;
+                    const oncekiTop = referans?.getBoundingClientRect().top ?? 0;
+                    liste.insertBefore(parca, liste.firstElementChild);
+                    ustDurum.ustSayfa = hedefSayfa;
+                    const yeniTop = referans?.getBoundingClientRect().top ?? 0;
+                    if (referans && yeniTop !== oncekiTop) {
+                        window.scrollBy(0, yeniTop - oncekiTop);
+                    }
+                    window.msLazyLoadYenile?.(liste);
+                    window.msUrunKartDavranislariYenile?.(liste);
+                } catch { /* sonraki kaydırma denemesinde tekrar */ }
+                finally { ustDurum.yukluyor = false; }
+            };
+
+            const yukariYuklemeGerekliMi = () =>
+                ustDurum.ustSayfa > 1
+                && !ustDurum.yukluyor
+                && liste.getBoundingClientRect().top > -600; // liste başı yaklaşıyor
 
             const gorunenSayfayiYaz = () => {
                 bekliyor = false;
-                const kartlar = alanEl.querySelectorAll(".ms-urun-karti");
+                if (yukariYuklemeGerekliMi()) { oncekiSayfayiYukle(); }
+
+                const kartlar = liste.querySelectorAll(".ms-urun-karti");
                 if (kartlar.length === 0) { return; }
                 const esikY = window.innerHeight * 0.6;
                 let gorunenIndex = 0;
@@ -408,7 +457,7 @@
                     if (kartlar[i].getBoundingClientRect().top <= esikY) { gorunenIndex = i; }
                     else { break; }
                 }
-                const sayfa = Math.floor(gorunenIndex / durum.sayfaBoyu) + 1 + durum.sayfaOfset;
+                const sayfa = ustDurum.ustSayfa + Math.floor(gorunenIndex / durum.sayfaBoyu);
                 if (sayfa === sonYazilanSayfa) { return; }
                 sonYazilanSayfa = sayfa;
                 const url = new URL(window.location.href);
@@ -422,6 +471,27 @@
                 bekliyor = true;
                 window.requestAnimationFrame(gorunenSayfayiYaz);
             }, { passive: true });
+
+            // Paylaşılan sayfadan gelişte bir üst sayfa önden hazırlanır — ilk yukarı
+            // kaydırma beklemesiz olsun.
+            if (durum.sayfaOfset > 0) {
+                document.addEventListener("DOMContentLoaded", () => { oncekiSayfayiYukle(); });
+            }
+
+            // (b) kararı: "sayfa başına dön" butonu, liste henüz 1. sayfadan başlamıyorsa
+            // ?page'i temizleyip 1. sayfaya döner (document CAPTURE — layout'un smooth
+            // scroll dinleyicisinden önce çalışır); liste 1'e ulaşmışsa normal kaydırma.
+            document.addEventListener("click", (event) => {
+                const buton = event.target instanceof Element
+                    ? event.target.closest("[data-ms-sayfa-basi]")
+                    : null;
+                if (!buton || ustDurum.ustSayfa <= 1) { return; }
+                event.preventDefault();
+                event.stopPropagation();
+                const url = new URL(window.location.href);
+                url.searchParams.delete("page");
+                window.location.href = url.toString();
+            }, true);
         })();
     })();
 </script>

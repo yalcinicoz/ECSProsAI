@@ -6295,6 +6295,12 @@
     @apply relative;
   }
 
+  /* 2026-07-17: iki yönlü infinite scroll — yukarı eklemede kaydırma çapası script'te
+     elle yönetilir; tarayıcının otomatik çapası çift düzeltme yapmasın */
+  .ms-urun-listesi-urun-alani {
+    overflow-anchor: none;
+  }
+
   /* 2026-07-17: seçili filtre grubu selectleri (Fiyat Aralığı'nın sağı) */
   .ms-urun-listesi-filtre-secim-dolu {
     @apply border-[var(--ms-renk-primary)]/40 text-[var(--ms-renk-primary)];
