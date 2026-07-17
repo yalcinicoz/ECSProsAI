@@ -370,6 +370,15 @@ komutlarına >50 kr kod için anlaşılır hata guard'ı (500 yerine). NOT: eski
 koleksiyonlarda slug'lı bozuk ürün kodları kalmış olabilir (koda çözülemez — düzenle
 modalında kod+no-image görünür; gerekirse temizlik sorgusu atılır).
 
+EK-18 (2026-07-17 — ⚠️ RESTART BEKLİYOR): listelenen ürünlerin TÜM özellikleri filtrede.
+Facet'ler artık ürün SEVİYESİ product_attributes'ı da toplar (kumaş türü, kalıp, desen,
+cinsiyet, marka, fermuar, astar… — önceden yalnız varyant özellikleri beden/filtre_rengi
+vardı; "renk" hâlâ hariç, filtre_rengi esas). Eşleşme üç yerde: GetStoreProducts (grup
+varyantta VEYA üründe), kategori HandleColorMode (ürün-geneli set + renk kartı varyantları),
+BuildFacetsWithSelections (sameVariant'ta ürün-seviyesi değer tüm varyantlara sayılır).
+Cache v5/v6 bump. Doğrulama (kadin-etek): filtre grubu 2→13, seçenek 32→80; kumaş türü
+seçimi toplamı 354→335 daralttı.
+
 EK-17 (2026-07-17 — ⚠️ RESTART BEKLİYOR): /odeme kupon×ödeme-yöntemi kuralı + yöntem
 bilgi mesajı. Kural: kupon yalnız KART ile ödemede geçerli — kapıda (nakit/kart) seçilince
 uygulanmış kupon sepetten SİLİNİR (sessionStorage msSepetKuponDurumu temizlenir, toplam +
