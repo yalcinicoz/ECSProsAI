@@ -19,7 +19,7 @@
     };
 
     document.addEventListener("click", (event) => {
-        if (event.target.closest("[data-ms-urun-koleksiyon], [data-ms-koleksiyon-modal-ac]")) {
+        if (event.target.closest("[data-ms-urun-koleksiyon], [data-ms-koleksiyon-modal-ac], [data-ms-urun-detay-koleksiyon]")) {
             koleksiyonModallariniHazirla();
         }
     }, true);
@@ -97,8 +97,10 @@
 // Mobil modallarda ust alandan asagi surukleyerek kapatma davranisi.
 (() => {
     const mobilEslesmesi = window.matchMedia("(max-width: 639px)");
-    const modalSecici = ".ms-giris-modal, .ms-ornek-modal, .ms-story-modal, [data-ms-giris-modal], [data-ms-kayit-modal], [data-ms-ornek-modal], [data-ms-tckn-modal], [data-ms-story-modal]";
-    const kutuSecici = ".ms-giris-modal-kutu, .ms-ornek-modal-kutu, .ms-story-cerceve, .ms-urun-detay-resim-modal-kutu";
+    // Story modali cek-kapat disinda (kullanici karari 2026-07-17): tutamac seridi story
+    // cercevesinde siyah bant olusturuyor ve kapat butonunu yerinden tasiyordu.
+    const modalSecici = ".ms-giris-modal, .ms-ornek-modal, [data-ms-giris-modal], [data-ms-kayit-modal], [data-ms-ornek-modal], [data-ms-tckn-modal]";
+    const kutuSecici = ".ms-giris-modal-kutu, .ms-ornek-modal-kutu, .ms-urun-detay-resim-modal-kutu";
     const kapaticiSecici = "[data-ms-giris-modal-kapat], [data-ms-kayit-modal-kapat], [data-ms-ornek-modal-kapat], [data-ms-belge-modal-kapat], [data-ms-tckn-modal-kapat], [data-ms-siparis-detay-kapat], [data-ms-kargo-takip-kapat], [data-ms-hazirlik-durumu-kapat], [data-ms-iade-sayfasi-modal-kapat], [data-ms-iade-kodu-kapat], [data-ms-story-kapat], [data-ms-urun-detay-resim-modal-kapat], [data-ms-urun-paylas-kapat], [data-ms-gorsel-arama-kapat], [data-ms-koleksiyon-modal-kapat], [data-ms-koleksiyon-secim-modal-kapat], [data-ms-koleksiyon-varolan-modal-kapat], [data-ms-koleksiyon-yeni-ozet-modal-kapat], [data-ms-onay-red-modal-kapat], [data-ms-fatura-modal-kapat], [data-ms-iade-sms-kapat], [data-ms-iade-hata-kapat], [data-ms-adres-modal-kapat], [data-ms-kupon-modal-kapat], [data-ms-sozlesme-modal-kapat], [data-ms-sepet-sil-modal-kapat], [data-ms-yorum-kriter-kapat], [data-ms-yorum-yap-kapat], .ms-giris-modal-kapat, .ms-ornek-modal-kapat";
     const suruklemeAlaniSecici = [
         "[data-ms-modal-surukleme-alani]",

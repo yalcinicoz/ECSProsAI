@@ -7,6 +7,8 @@
     // görsel eager/fetchpriority=high, görsellerde intrinsic ölçüler.
     var vmResim = ViewData["MsUrunDetay"] as UrunDetayVm;
     var resimler = vmResim?.Gorseller ?? [];
+    // Görselsiz ürün: no-image placeholder tek slayt olarak basılır (site geneli kuralı, 2026-07-17)
+    if (resimler.Count == 0) { resimler = ["/images/no-image.svg"]; }
     var resimAd = vmResim?.Ad ?? "Ürün görseli";
     var videolar = vmResim?.Videolar ?? [];
     var videoPoster = resimler.Count > 0 ? resimler[0] : null;

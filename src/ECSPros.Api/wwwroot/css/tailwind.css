@@ -8797,6 +8797,12 @@
     @apply bg-white text-[var(--ms-renk-primary)];
   }
 
+  /* .ms-gizli tek-class display:none'ı bu display:grid'den ÖNCE geldiği için yenilirdi —
+     sekme geçişinde paneller alt alta birikiyordu (diğer panellerdeki bileşik kural kalıbı). */
+  .ms-hesabim-yorum-paneli.ms-gizli {
+    @apply hidden;
+  }
+
   .ms-hesabim-yorum-paneli {
     @apply grid gap-4;
   }

@@ -38,7 +38,10 @@
             }
             else
             {
-            <div class="ms-hesabim-favori-urun-listesi">
+            @* lazy-infinite-on: _UrunKarti görselleri data-ms-lazy-src ile gelir; site.js lazy
+               modülü yalnız bu kapsamları tarar — kapsam yokken görsel ancak hover galerisiyle
+               yükleniyordu (2026-07-17). *@
+            <div class="ms-hesabim-favori-urun-listesi lazy-infinite-on">
                 @foreach (var kart in msFavoriKartlar)
                 {
                     <partial name="~/Views/ProjeElementleri/Urun/_UrunKarti.cshtml" model="kart" />

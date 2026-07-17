@@ -86,7 +86,9 @@
                     <div class="ms-story-cerceve" role="dialog" aria-modal="true" aria-label="Story görüntüleyici">
                         <div class="ms-story-progress-listesi" data-ms-story-progress-listesi></div>
 
-                        <div class="ms-story-modal-ust" data-ms-modal-surukleme-alani>
+                        @* 2026-07-17: data-ms-modal-surukleme-alani kaldırıldı — story modalı
+                           çek-kapat akışının dışında (kullanıcı kararı; site.js seçicileri de daraltıldı). *@
+                        <div class="ms-story-modal-ust">
                             <span class="ms-story-modal-avatar">
                                 <img data-ms-story-avatar alt="" width="40" height="40" loading="lazy" decoding="async">
                             </span>
@@ -256,7 +258,7 @@
                     @foreach (var urun in blok.Urunler)
                     {
                         <a class="ms-gorunum-kart" href="@urun.Url">
-                            <img src="@urun.GorselUrl" alt="@urun.Ad">
+                            <img src="@(urun.GorselUrl ?? "/images/no-image.svg")" alt="@urun.Ad">
                             <div class="ms-gorunum-kart-icerik">
                                 <strong>@urun.Ad</strong>
                                 <span class="ms-gorunum-fiyat">@Fiyat(urun.Fiyat)</span>
@@ -288,7 +290,7 @@
                             @foreach (var urun in sekme.Urunler)
                             {
                                 <a class="ms-gorunum-kart" href="@urun.Url">
-                                    <img src="@urun.GorselUrl" alt="@urun.Ad">
+                                    <img src="@(urun.GorselUrl ?? "/images/no-image.svg")" alt="@urun.Ad">
                                     <div class="ms-gorunum-kart-icerik">
                                         <strong>@urun.Ad</strong>
                                         <span class="ms-gorunum-fiyat">@Fiyat(urun.Fiyat)</span>
@@ -719,7 +721,7 @@
                         kart.className = "ms-gorunum-kart";
                         kart.href = "/urun/" + urun.code;
                         const gorsel = document.createElement("img");
-                        gorsel.src = urun.mainImageUrl || "";
+                        gorsel.src = urun.mainImageUrl || "/images/no-image.svg";
                         gorsel.alt = urun.nameI18n?.tr || urun.code;
                         const icerik = document.createElement("div");
                         icerik.className = "ms-gorunum-kart-icerik";

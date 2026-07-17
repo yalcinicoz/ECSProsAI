@@ -24,6 +24,11 @@
         {
             <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-src="@u.GorselUrl" data-ms-lazy-skeleton="true" alt="@u.Ad" loading="lazy" decoding="async" width="240" height="320">
         }
+        else if (u is not null)
+        {
+            @* Görselsiz ürün: no-image placeholder (site geneli kuralı, 2026-07-17) *@
+            <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-no-image="true" src="/images/no-image.svg" alt="@u.Ad" loading="lazy" decoding="async" width="240" height="320">
+        }
         else
         {
             <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-skeleton="true" alt="" loading="lazy" decoding="async" width="240" height="320">

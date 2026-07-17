@@ -328,6 +328,24 @@ desen `rotate-(90|180|270|by)`a daraltıldı. ikonall.min.css yeniden üretildi 
 gem/circle-down/circle-left/lightbulb/rotate-left eklendi, mevcutlar korundu), publish'e
 kopyalandı — statik dosya restart'sız canlıda, ?v= hash'i otomatik yenilendi.
 
+EK-2 (2026-07-17, 5 maddelik düzeltme turu — ⚠️ RESTART BEKLİYOR):
+1) Story modalı çek-kapat DIŞI (kullanıcı kararı): site.js modalSecici/kutuSecici'den story
+çıkarıldı + markup'tan data-ms-modal-surukleme-alani kalktı — tutamaç şeridi (siyah bant)
+ve kapat butonunun sola taşınması bitti; kapat butonu tasarımdaki yerinde (üst bar sağı).
+2) Ürün detay "Koleksiyona ekle" modal açmıyordu: koleksiyon modalları <template>'te,
+DOM'a alan tıklama seçicisi [data-ms-urun-detay-koleksiyon]'u kapsamıyordu → eklendi.
+3) /yorumlarim sekmeleri alt alta birikiyordu: .ms-hesabim-yorum-paneli{display:grid}
+.ms-gizli'yi eziyordu → .ms-hesabim-yorum-paneli.ms-gizli{hidden} bileşik kuralı eklendi.
+4) /favorilerim görselleri hover'a kadar boştu: liste lazy kapsamı dışındaydı →
+ms-hesabim-favori-urun-listesi'ne lazy-infinite-on eklendi.
+5) Site geneli no-image: /images/no-image.svg oluşturuldu; null-görsel dalları
+(_UrunKarti, arama dropdown 2 şablon, vitrin infinity/tabs SSR+JS, kartDoldur, ürün detay
+galeri) placeholder basar + _Layout'ta kırık-URL onarımı (capture error → no-image, yalnız
+ürün bağlamı seçicileri). site.min.js + site.css yeniden derlendi; staging 5051 duman
+testi yeşil. ⚠️ DİKKAT: staging'de "çalışan sürecin altından rm -rf publish-staging"
+tuzağı yine yaşandı (eski süreç 5051'i tutuyordu, test yanlış sürece gitti) — staging'de
+de önce süreci öldür, sonra rm.
+
 ### (önceki) SESSION ÖZETİ (2026-07-16, 5. oturum) — TASARIM FARK TURU: İP-1..4,6 CANLIDA + İP-5 TAMAM (⚠️ RESTART BEKLİYOR)
 İP-1..4,6 restart edildi ve canlıda doğrulandı (duman testi yeşil). Ardından İP-5
 (kullanıcı kurgu onayıyla) TAMAMLANDI: `product_review_photos` tablosu + `Topic` kolonu
