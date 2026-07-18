@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { AuthGuard } from '@/components/layout/AuthGuard'
 import { LoginPage } from '@/pages/auth/LoginPage'
@@ -19,7 +19,6 @@ import { FirmsPage } from '@/pages/settings/FirmsPage'
 import { FirmDetailPage } from '@/pages/settings/FirmDetailPage'
 import { CatalogSettingsPage } from '@/pages/catalog/CatalogSettingsPage'
 import { BulkImageUploadPage } from '@/pages/catalog/BulkImageUploadPage'
-import { MenusPage } from '@/pages/cms/MenusPage'
 import { ChannelCategoriesPage } from '@/pages/storefront/ChannelCategoriesPage'
 import { ChannelProductsPage } from '@/pages/storefront/ChannelProductsPage'
 import { ChannelCategoryDetailPage } from '@/pages/storefront/ChannelCategoryDetailPage'
@@ -30,7 +29,6 @@ import { PageBlockDetailPage } from '@/pages/storefront/PageBlockDetailPage'
 import { ContactMessagesPage } from '@/pages/storefront/ContactMessagesPage'
 import { NotificationsMonitorPage } from '@/pages/storefront/NotificationsMonitorPage'
 import { NewsletterSubscribersPage } from '@/pages/storefront/NewsletterSubscribersPage'
-import { MenuDetailPage } from '@/pages/cms/MenuDetailPage'
 import { WarehousesPage } from '@/pages/inventory/WarehousesPage'
 import { WarehouseDetailPage } from '@/pages/inventory/WarehouseDetailPage'
 import { StocksPage } from '@/pages/inventory/StocksPage'
@@ -131,8 +129,9 @@ export const router = createBrowserRouter(
             // CMS
             { path: 'cms/pages',                element: <CmsPagesPage /> },
             { path: 'cms/pages/:id',            element: <CmsPageDetailPage /> },
-            { path: 'navigation/menus',         element: <MenusPage /> },
-            { path: 'navigation/menus/:id',     element: <MenuDetailPage /> },
+            // nav_menus sistemi emekli — site menüsü Kanal Kategorileri'nden yönetilir (B-07)
+            { path: 'navigation/menus',         element: <Navigate to="/storefront/channel-categories" replace /> },
+            { path: 'navigation/menus/:id',     element: <Navigate to="/storefront/channel-categories" replace /> },
 
             // Entegrasyon
             { path: 'integrations/logs', element: <PlaceholderPage title="Entegrasyon Logları" /> },

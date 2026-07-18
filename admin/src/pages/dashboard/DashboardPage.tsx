@@ -15,16 +15,21 @@ export function DashboardPage() {
   const { data, isLoading } = useQuery<Stats>({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const [orders, pos] = await Promise.allSettled([
+      const cnt = (r: PromiseSettledResult<{ data: { data?: { totalCount?: number } } }>) =>
+        r.status === 'fulfilled' ? r.value.data.data?.totalCount ?? 0 : 0
+      const [orders, pending, products, members, pos] = await Promise.allSettled([
         api.get('/orders?pageSize=1'),
+        api.get('/orders?status=pending&pageSize=1'),
+        api.get('/catalog/products?pageSize=1'),
+        api.get('/crm/members?pageSize=1'),
         api.get('/pos/sales?pageSize=1'),
       ])
       return {
-        totalOrders: orders.status === 'fulfilled' ? orders.value.data.data?.totalCount ?? 0 : 0,
-        pendingOrders: 0,
-        totalProducts: 0,
-        totalMembers: 0,
-        posSalesToday: pos.status === 'fulfilled' ? pos.value.data.data?.totalCount ?? 0 : 0,
+        totalOrders: cnt(orders),
+        pendingOrders: cnt(pending),
+        totalProducts: cnt(products),
+        totalMembers: cnt(members),
+        posSalesToday: cnt(pos),
       }
     },
   })

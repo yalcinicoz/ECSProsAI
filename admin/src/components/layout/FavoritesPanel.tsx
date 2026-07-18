@@ -1,13 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { X, Star, Clock, Plus } from 'lucide-react'
 import { useUIStore } from '@/store/ui'
-
-const FAVE_PAGES = [
-  { label: 'Bekleyen Siparişler', to: '/orders',    badge: '14', badgeColor: 'bg-amber-100 text-amber-700' },
-  { label: 'Stok Uyarıları',      to: '/inventory/stocks', badge: '47', badgeColor: 'bg-red-100 text-red-600' },
-  { label: 'Yeni Sipariş',        to: '/orders',    badge: null, badgeColor: '' },
-]
+import api from '@/api/client'
 
 const RECENT_PAGES = [
   { label: 'Özellik Tipleri',  to: '/catalog/attribute-types' },
@@ -18,6 +14,25 @@ export function FavoritesPanel() {
   const { favsPanelOpen, setFavsPanelOpen } = useUIStore()
   const navigate = useNavigate()
   const panelRef = useRef<HTMLDivElement>(null)
+
+  // Rozetler canlı sayılardan (eskiden koda gömülü sahte 14/47 idi)
+  const { data: pendingOrderCount } = useQuery<number>({
+    queryKey: ['fav-pending-orders'],
+    queryFn: async () => (await api.get('/orders?status=pending&pageSize=1')).data.data?.totalCount ?? 0,
+    refetchInterval: 60000,
+    retry: false,
+  })
+  const { data: stockAlertCount } = useQuery<number>({
+    queryKey: ['fav-stock-alerts'],
+    queryFn: async () => (await api.get('/store-notifications/stock-alerts?status=active&pageSize=1')).data.data?.totalCount ?? 0,
+    refetchInterval: 60000,
+    retry: false,
+  })
+  const FAVE_PAGES = [
+    { label: 'Bekleyen Siparişler', to: '/orders', badge: pendingOrderCount ? String(pendingOrderCount) : null, badgeColor: 'bg-amber-100 text-amber-700' },
+    { label: 'Stok Uyarıları', to: '/storefront/notifications', badge: stockAlertCount ? String(stockAlertCount) : null, badgeColor: 'bg-red-100 text-red-600' },
+    { label: 'Yeni Sipariş', to: '/orders', badge: null, badgeColor: '' },
+  ]
 
   // Close on outside click
   useEffect(() => {

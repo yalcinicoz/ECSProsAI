@@ -294,6 +294,33 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION ÖZETİ (2026-07-18/4) — B-09 GRUP DÜZELTMESİ UYGULANDI (restart GEREKMEZ — veri işi)
+Kullanıcı onayıyla MigrationTool **Faz 21** eklendi ve çalıştırıldı: `grup_eslesme.md` koddan
+okunan TAM harita (`LoadGroupMergeMapFromDoc`), `EnsureProductGroupMap` birleştirilmiş grupları
+da çözer, **Faz 5'teki sessiz fallback kaldırıldı** (eşlenemeyen grup → raporla-DUR).
+**10.482 ürünün grubu düzeltildi** (Pantolon 13.572→3.090; 155/155 eski grup çözüldü), ANALYZE
+yapıldı. Yedek: ~/yedekler/urun-grup-atamalari-oncesi-2026-07-18.csv. Canlı doğrulama: stiletto
+P-037263 → Topuklu Ayakkabı; ürün detay breadcrumb'ları anında düzeldi ("Kadın > Pantolon" yanlışı
+bitti — breadcrumb dinamik, GetProductChannelCategoryChainQuery). Site listeleme/facet cache'leri
+≤15 dk'da tazelenir. MigrationTool değişikliği commit BEKLİYOR.
+
+### ⭐ SESSION ÖZETİ (2026-07-18/3) — PANEL TEST BULGULARI TOPLU DÜZELTME (⚠️ RESTART BEKLİYOR)
+B-01 ürün araması ad+kod (JsonText tr, case-insensitive; "kaban"=80 sonuç). B-02 dashboard
+sayaçları gerçek sorgulardan + FavoritesPanel'deki SAHTE 14/47 rozetleri canlı sayılara bağlandı.
+B-04 varyant modalı "yükleniyor" durumu. B-05 mükerrer depolar KALICI SİLİNDİ (DEPO-01+merkez,
+0 stok/referans doğrulandı; MERKEZ kaldı). B-06 Kısım/Birim TAM YÖNETİM: yeni endpoint'ler
+(GET/POST warehouses/{id}/sections, PUT sections/{id} satışa-açık toggle, POST sections/{id}/bins,
+PUT bins/{id}) + WarehouseDetailPage komple yeniden (eski Lokasyonlar UI kalktı). B-07 Menüler
+sidebar'dan kalktı, rota Kanal Kategorileri'ne redirect (site menüsünün gerçek kaynağı
+GetChannelCategoriesQuery — nav_menus emekli). B-08 satışa açma modalında 0-varyant/0-fiyat
+uyarıları. B-10 attribute-types kullanım sayımı IMemoryCache 10dk (16s→1.4s). B-11 login 401
+interceptor'ı login isteğinde reload yapmıyor (hata mesajı artık görünür). B-12 Fiyat Geçmişi
+ESC ile kapanıyor. **B-09 BÜYÜK BULGU: kataloğun %37'si (10.482 ürün, 110 eski grup) MigrationTool
+default-fallback hatasıyla Pantolon'a düşmüş — analiz raporu `docs/urun-grup-eslesme-analizi-2026-07-18.md`,
+düzeltme kararı kullanıcıda (önerilen: MigrationTool'a kalıcı grup-düzeltme fazı).**
+publish/ + admin/dist güncel — restart kullanıcıda. Kalan bulgular: B-13 çeviriler (içerik işi),
+B-14 migration ekranı sayaçları (düşük).
+
 ### ⭐ SESSION ÖZETİ (2026-07-18/2) — CARİ ÇATI B0-B4+B6 UYGULANDI (⚠️ RESTART BEKLİYOR)
 Panel testi B-03 bulgusunun (üye Cüzdan/Puan 404) kalıcı çözümü: parasal kavramlar Accounts
 çatısına taşındı (plan: `docs/cari-cati-gecis-plani.md`, fazlar işaretli). Yapılan: (B1)

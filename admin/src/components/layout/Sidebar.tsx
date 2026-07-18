@@ -99,7 +99,6 @@ const NAV_SECTIONS: NavSection[] = [
     { label: 'Bülten Aboneleri', to: '/storefront/newsletter',    icon: 'mail' },
   ]},
   { label: 'İçerik', items: [
-    { label: 'Menüler',   to: '/navigation/menus', icon: 'sitemap' },
     { label: 'Sayfalar',  to: '/cms/pages', icon: 'filetext' },
   ]},
   { label: 'Sistem', items: [

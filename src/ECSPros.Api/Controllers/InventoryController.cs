@@ -83,6 +83,61 @@ public class InventoryController : ControllerBase
         return Ok(new { success = true });
     }
 
+    // ─── Kısım / Birim (üçlü depo yapısı — B-06) ────────────────────────────────
+
+    /// <summary>Deponun kısımları + birimleri, stok özetleriyle.</summary>
+    [HttpGet("warehouses/{id:guid}/sections")]
+    public async Task<IActionResult> GetWarehouseSections(Guid id, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new ECSPros.Inventory.Application.Queries.GetWarehouseSections.GetWarehouseSectionsQuery(id), ct);
+        return Ok(new { success = true, data = r.Value });
+    }
+
+    /// <summary>Depoya kısım ekler.</summary>
+    [HttpPost("warehouses/{id:guid}/sections")]
+    public async Task<IActionResult> CreateWarehouseSection(Guid id, [FromBody] CreateSectionRequest req, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new ECSPros.Inventory.Application.Commands.ManageWarehouseSections.CreateWarehouseSectionCommand(
+            id, req.Code, req.Name, req.IsSellableOnline, req.PickingOrder), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Created("", new { success = true, data = new { id = r.Value } });
+    }
+
+    /// <summary>Kısım günceller (satışa açıklık dahil).</summary>
+    [HttpPut("sections/{id:guid}")]
+    public async Task<IActionResult> UpdateWarehouseSection(Guid id, [FromBody] UpdateSectionRequest req, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new ECSPros.Inventory.Application.Commands.ManageWarehouseSections.UpdateWarehouseSectionCommand(
+            id, req.Name, req.IsSellableOnline, req.IsActive, req.PickingOrder), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Kısma birim/raf ekler.</summary>
+    [HttpPost("sections/{id:guid}/bins")]
+    public async Task<IActionResult> CreateWarehouseBin(Guid id, [FromBody] CreateBinRequest req, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new ECSPros.Inventory.Application.Commands.ManageWarehouseSections.CreateWarehouseBinCommand(
+            id, req.Code, req.Barcode, req.Name), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Created("", new { success = true, data = new { id = r.Value } });
+    }
+
+    /// <summary>Birim/raf günceller.</summary>
+    [HttpPut("bins/{id:guid}")]
+    public async Task<IActionResult> UpdateWarehouseBin(Guid id, [FromBody] UpdateBinRequest req, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new ECSPros.Inventory.Application.Commands.ManageWarehouseSections.UpdateWarehouseBinCommand(
+            id, req.Name, req.Barcode, req.IsActive), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Ok(new { success = true });
+    }
+
+    public record CreateSectionRequest(string Code, string Name, bool IsSellableOnline = true, int PickingOrder = 0);
+    public record UpdateSectionRequest(string Name, bool IsSellableOnline, bool IsActive, int PickingOrder);
+    public record CreateBinRequest(string Code, string Barcode, string? Name);
+    public record UpdateBinRequest(string? Name, string Barcode, bool IsActive);
+
     /// <summary>Stok bilgilerini listeler.</summary>
     [HttpGet("stocks")]
     public async Task<IActionResult> GetStocks(
