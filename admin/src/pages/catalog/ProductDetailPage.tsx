@@ -1137,7 +1137,7 @@ export function ProductDetailPage() {
   // includeCounts=false: bu sekme "kaç üründe kullanılıyor" bilgisini hiç göstermiyor, sadece
   // dropdown seçenekleri lazım — sayım hesaplaması AttributeTypeDetailPage'e özel, burada gereksiz
   // yavaşlığa yol açıyordu (bkz. project_group_schema_completion_2026-07-02).
-  const { data: attrTypes = [] } = useQuery<{
+  const { data: attrTypes = [], isLoading: attrTypesLoading } = useQuery<{
     id: string; code: string; nameI18n: Record<string, string>; dataType: string
     values: { id: string; nameI18n: Record<string, string> }[]
   }[]>({
@@ -1151,6 +1151,14 @@ export function ProductDetailPage() {
 
   // ── Fetch price history (lazy — only when modal open) ──
   const [historyOpen, setHistoryOpen] = useState(false)
+
+  // ESC ile kapanma — diğer overlay'lerle (varyant modalı) tutarlı davranış
+  useEffect(() => {
+    if (!historyOpen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setHistoryOpen(false) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [historyOpen])
   const { data: priceHistory = [], isLoading: historyLoading } = useQuery<{
     id: string; source: string; priceField: string
     firmPlatformCode: string | null; variantSku: string | null
@@ -1953,6 +1961,16 @@ export function ProductDetailPage() {
         <p className="text-sm" style={{ color: 'var(--text)' }}>
           <strong>{productName}</strong> ürünü {confirmStatusChange ? 'satışa açılacak (tüm kanallarda)' : 'satışa kapatılacak — tüm satış kanallarında satışı durur'}. Emin misiniz?
         </p>
+        {confirmStatusChange && (product?.variants.length ?? 0) === 0 && (
+          <p className="text-sm mt-2 px-3 py-2 rounded-lg" style={{ background: '#f59e0b18', color: '#b45309', border: '1px solid #f59e0b40' }}>
+            ⚠️ Bu ürünün hiç varyantı yok — satılabilir birim varyant olduğu için sitede satın alınamaz. Önce varyant eklemeniz önerilir.
+          </p>
+        )}
+        {confirmStatusChange && (product?.basePrice ?? 0) <= 0 && (
+          <p className="text-sm mt-2 px-3 py-2 rounded-lg" style={{ background: '#f59e0b18', color: '#b45309', border: '1px solid #f59e0b40' }}>
+            ⚠️ Satış fiyatı 0 — fiyatsız ürün satışa açılıyor, kontrol edin.
+          </p>
+        )}
       </Modal>
 
       {/* ═══════ TAB: ÖZELLİKLER ═══════ */}
@@ -2319,7 +2337,9 @@ export function ProductDetailPage() {
                         )
                       })}
                       {values.length === 0 && (
-                        <p className="text-xs" style={{ color: 'var(--text-s)' }}>Bu özellik tipinde değer tanımlı değil.</p>
+                        <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+                          {attrTypesLoading ? 'Değerler yükleniyor…' : 'Bu özellik tipinde değer tanımlı değil.'}
+                        </p>
                       )}
                     </div>
                   </div>

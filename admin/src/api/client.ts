@@ -17,6 +17,11 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config
+    // Login denemesinin kendi 401'i yönlendirme/yenileme tetiklemesin — sayfa hatayı göstersin
+    if (error.response?.status === 401 &&
+        (original?.url?.includes('/auth/login') || window.location.pathname.endsWith('/login'))) {
+      return Promise.reject(error)
+    }
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true
       const refreshToken = localStorage.getItem('refresh_token')

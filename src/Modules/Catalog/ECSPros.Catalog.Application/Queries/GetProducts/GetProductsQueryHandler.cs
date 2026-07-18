@@ -25,7 +25,11 @@ public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, Result<
             query = query.Where(x => x.ProductGroupId == request.ProductGroupId);
 
         if (!string.IsNullOrWhiteSpace(request.Search))
-            query = query.Where(x => x.Code.Contains(request.Search));
+        {
+            var s = request.Search.Trim().ToLower();
+            query = query.Where(x => x.Code.ToLower().Contains(s)
+                || Helpers.PgJsonFunctions.JsonText(x.NameI18n, "tr")!.ToLower().Contains(s));
+        }
 
         var totalCount = await query.CountAsync(cancellationToken);
 
