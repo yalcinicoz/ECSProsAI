@@ -12,10 +12,30 @@ public class CurrentAccountLedgerConfiguration : IEntityTypeConfiguration<Curren
         b.Property(l => l.Currency).HasMaxLength(3).IsRequired();
         b.Property(l => l.Description).HasMaxLength(200);
         b.Property(l => l.Balance).HasColumnType("numeric(18,2)");
+        b.Property(l => l.ConceptCode).HasMaxLength(30).IsRequired().HasDefaultValue("cari");
         b.HasOne(l => l.CurrentAccount).WithMany()
             .HasForeignKey(l => l.CurrentAccountId).OnDelete(DeleteBehavior.Cascade);
-        b.HasIndex(l => new { l.CurrentAccountId, l.Currency }).IsUnique()
+        b.HasIndex(l => new { l.CurrentAccountId, l.ConceptCode, l.Currency }).IsUnique()
             .HasFilter("\"IsDeleted\" = false");
+    }
+}
+
+public class CurrentAccountTransactionConfiguration : IEntityTypeConfiguration<CurrentAccountTransaction>
+{
+    public void Configure(EntityTypeBuilder<CurrentAccountTransaction> b)
+    {
+        b.ToTable("current_account_transactions");
+        b.HasKey(t => t.Id);
+        b.Property(t => t.TransactionType).HasMaxLength(40).IsRequired();
+        b.Property(t => t.Debit).HasColumnType("numeric(18,2)");
+        b.Property(t => t.Credit).HasColumnType("numeric(18,2)");
+        b.Property(t => t.BalanceAfter).HasColumnType("numeric(18,2)");
+        b.Property(t => t.ReferenceType).HasMaxLength(50);
+        b.Property(t => t.Description).HasMaxLength(500);
+        b.HasOne(t => t.Ledger).WithMany()
+            .HasForeignKey(t => t.LedgerId).OnDelete(DeleteBehavior.Restrict);
+        b.HasIndex(t => new { t.LedgerId, t.CreatedAt });
+        b.HasIndex(t => new { t.ReferenceType, t.ReferenceId });
     }
 }
 
@@ -46,6 +66,9 @@ public class CurrentAccountConfiguration : IEntityTypeConfiguration<CurrentAccou
         b.HasIndex(a => a.Code).IsUnique();
         b.Property(a => a.Title).HasMaxLength(300).IsRequired();
         b.Property(a => a.AccountType).HasMaxLength(20).IsRequired();
+        b.Property(a => a.OwnerType).HasMaxLength(20).IsRequired().HasDefaultValue("external");
+        b.HasIndex(a => new { a.OwnerType, a.OwnerId }).IsUnique()
+            .HasFilter("\"OwnerId\" IS NOT NULL AND \"IsDeleted\" = false");
         b.Property(a => a.TaxNumber).HasMaxLength(20);
         b.Property(a => a.TaxOffice).HasMaxLength(100);
         b.Property(a => a.ContactName).HasMaxLength(200);

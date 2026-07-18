@@ -5,6 +5,8 @@ public class CurrentAccount : BaseEntity
     public string Code { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string AccountType { get; set; } = "customer"; // supplier, customer, both
+    public string OwnerType { get; set; } = "external"; // external | member | firm
+    public Guid? OwnerId { get; set; }
     public Guid? GroupId { get; set; }
     public string? TaxNumber { get; set; }
     public string? TaxOffice { get; set; }

@@ -140,6 +140,20 @@ public class CrmController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>Manuel cüzdan düzeltmesi (panel) — credit bakiye artırır, debit azaltır.</summary>
+    [HttpPost("members/{id:guid}/wallet/adjust")]
+    public async Task<IActionResult> AdjustMemberWallet(Guid id, [FromBody] AdjustWalletRequest req, CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new ECSPros.Crm.Application.Commands.AdjustMemberWallet.AdjustMemberWalletCommand(
+                id, req.Direction, req.Amount, req.Description), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    public record AdjustWalletRequest(string Direction, decimal Amount, string Description);
+
     // ─── Loyalty ───────────────────────────────────────────────────────────────
 
     /// <summary>Üye sadakat hesabı ve son işlemleri.</summary>

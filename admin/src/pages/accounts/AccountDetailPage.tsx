@@ -123,6 +123,17 @@ export function AccountDetailPage() {
   const [ledgerForm, setLedgerForm] = useState({ currency: 'USD', description: '' })
   const [ledgerError, setLedgerError] = useState('')
 
+  const [txPage, setTxPage] = useState(1)
+  const { data: txData } = useQuery<{
+    ledgers: { id: string; conceptCode: string; currency: string; balance: number; isDefault: boolean }[]
+    items: { id: string; transactionType: string; debit: number; credit: number; balanceAfter: number; referenceType?: string; description?: string; createdAt: string }[]
+    totalCount: number; page: number; pageSize: number
+  }>({
+    queryKey: ['account-transactions', id, txPage],
+    queryFn: async () => (await api.get(`/accounts/${id}/transactions?page=${txPage}&pageSize=25`)).data.data,
+    enabled: !!id,
+  })
+
   const { data: account, isLoading } = useQuery<AccountDetail>({
     queryKey: ['account', id],
     queryFn: async () => (await api.get(`/accounts/${id}`)).data.data,
@@ -275,6 +286,57 @@ export function AccountDetailPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Hareket Dökümü (cari çatı — accounts.current_account_transactions) */}
+      <div className="card overflow-hidden mt-4">
+        <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>
+            Hareketler ({txData?.totalCount ?? 0})
+          </h2>
+          <div className="flex gap-1.5">
+            {(txData?.ledgers ?? []).map(l => (
+              <span key={l.id} className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>
+                {l.conceptCode} · {l.balance.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} {l.currency}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                {['Tarih', 'Tip', 'Açıklama', 'Borç', 'Alacak', 'Bakiye'].map(h => (
+                  <th key={h} className="px-4 py-2 text-left text-xs font-semibold uppercase" style={{ color: 'var(--text-s)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {(txData?.items ?? []).map(t => (
+                <tr key={t.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td className="px-4 py-2 text-xs whitespace-nowrap" style={{ color: 'var(--text-s)' }}>{new Date(t.createdAt).toLocaleString('tr-TR')}</td>
+                  <td className="px-4 py-2 text-xs" style={{ color: 'var(--text-m)' }}>
+                    {t.transactionType === 'manual_adjustment' ? 'Manuel düzeltme' : t.transactionType === 'return_refund' ? 'İade' : t.transactionType === 'storno' ? 'Ters kayıt' : t.transactionType}
+                  </td>
+                  <td className="px-4 py-2 text-xs max-w-64 truncate" style={{ color: 'var(--text-s)' }}>{t.description ?? '—'}</td>
+                  <td className="px-4 py-2 text-sm font-mono" style={{ color: t.debit > 0 ? '#ef4444' : 'var(--text-s)' }}>{t.debit > 0 ? t.debit.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) : '—'}</td>
+                  <td className="px-4 py-2 text-sm font-mono" style={{ color: t.credit > 0 ? '#10b981' : 'var(--text-s)' }}>{t.credit > 0 ? t.credit.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) : '—'}</td>
+                  <td className="px-4 py-2 text-sm font-mono" style={{ color: 'var(--text)' }}>{t.balanceAfter.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
+                </tr>
+              ))}
+              {(txData?.items ?? []).length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-sm" style={{ color: 'var(--text-s)' }}>Henüz hareket yok.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        {(txData?.totalCount ?? 0) > 25 && (
+          <div className="flex items-center justify-end gap-2 px-4 py-2" style={{ borderTop: '1px solid var(--border)' }}>
+            <button disabled={txPage <= 1} onClick={() => setTxPage(p => p - 1)} className="text-xs px-2 py-1 rounded disabled:opacity-40" style={{ border: '1px solid var(--border)', color: 'var(--text-m)' }}>← Önceki</button>
+            <span className="text-xs" style={{ color: 'var(--text-s)' }}>Sayfa {txPage}</span>
+            <button disabled={txPage * 25 >= (txData?.totalCount ?? 0)} onClick={() => setTxPage(p => p + 1)} className="text-xs px-2 py-1 rounded disabled:opacity-40" style={{ border: '1px solid var(--border)', color: 'var(--text-m)' }}>Sonraki →</button>
+          </div>
+        )}
       </div>
 
       {/* Add Ledger Modal */}

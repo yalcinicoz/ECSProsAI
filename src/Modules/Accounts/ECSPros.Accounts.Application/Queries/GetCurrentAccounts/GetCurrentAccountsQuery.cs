@@ -6,14 +6,14 @@ namespace ECSPros.Accounts.Application.Queries.GetCurrentAccounts;
 
 public record GetCurrentAccountsQuery(
     string? AccountType, Guid? GroupId, bool? IsActive, string? Search,
-    int Page = 1, int PageSize = 30) : IRequest<Result<PagedResult<CurrentAccountDto>>>;
+    int Page = 1, int PageSize = 30, string? OwnerType = null) : IRequest<Result<PagedResult<CurrentAccountDto>>>;
 
 public record CurrentAccountDto(
     Guid Id, string Code, string Title, string AccountType,
     Guid? GroupId, string? GroupName,
     string? TaxNumber, string? ContactName, string? Phone, string? Email,
     string? City, string? Country, decimal CreditLimit, string Currency,
-    bool IsActive, DateTime CreatedAt);
+    bool IsActive, DateTime CreatedAt, string OwnerType, Guid? OwnerId);
 
 public class GetCurrentAccountsQueryHandler : IRequestHandler<GetCurrentAccountsQuery, Result<PagedResult<CurrentAccountDto>>>
 {
@@ -23,6 +23,7 @@ public class GetCurrentAccountsQueryHandler : IRequestHandler<GetCurrentAccounts
     {
         var query = _db.CurrentAccounts.Include(a => a.Group).AsQueryable();
         if (!string.IsNullOrWhiteSpace(request.AccountType)) query = query.Where(a => a.AccountType == request.AccountType);
+        if (!string.IsNullOrWhiteSpace(request.OwnerType)) query = query.Where(a => a.OwnerType == request.OwnerType);
         if (request.GroupId.HasValue) query = query.Where(a => a.GroupId == request.GroupId);
         if (request.IsActive.HasValue) query = query.Where(a => a.IsActive == request.IsActive.Value);
         if (!string.IsNullOrWhiteSpace(request.Search))
@@ -38,7 +39,7 @@ public class GetCurrentAccountsQueryHandler : IRequestHandler<GetCurrentAccounts
             .Select(a => new CurrentAccountDto(a.Id, a.Code, a.Title, a.AccountType,
                 a.GroupId, a.Group != null ? a.Group.Name : null,
                 a.TaxNumber, a.ContactName, a.Phone, a.Email,
-                a.City, a.Country, a.CreditLimit, a.Currency, a.IsActive, a.CreatedAt))
+                a.City, a.Country, a.CreditLimit, a.Currency, a.IsActive, a.CreatedAt, a.OwnerType, a.OwnerId))
             .ToListAsync(ct);
         return Result.Success(new PagedResult<CurrentAccountDto>(items, total, request.Page, request.PageSize));
     }

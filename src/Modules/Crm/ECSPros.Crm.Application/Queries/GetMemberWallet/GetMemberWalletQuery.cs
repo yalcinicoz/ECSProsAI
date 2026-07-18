@@ -1,3 +1,4 @@
+using ECSPros.Accounts.Application.Queries.GetOwnerLedger;
 using ECSPros.Crm.Application.Services;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
@@ -23,26 +24,38 @@ public record WalletTransactionDto(
     string? Description,
     DateTime CreatedAt);
 
+/// <summary>
+/// Cüzdan, Accounts modülündeki cari çatıdan okunur (OwnerType=member, ConceptCode=wallet).
+/// Hesap henüz açılmamışsa (ilk harekete kadar açılmaz — lazy) 0 bakiyeli DTO döner.
+/// Eski crm_wallets/crm_wallet_transactions tabloları DEPRECATED — hiç veri yazılmadı, okunmuyor.
+/// </summary>
 public class GetMemberWalletQueryHandler : IRequestHandler<GetMemberWalletQuery, Result<WalletDto>>
 {
     private readonly ICrmDbContext _db;
+    private readonly ISender _sender;
 
-    public GetMemberWalletQueryHandler(ICrmDbContext db) => _db = db;
+    public GetMemberWalletQueryHandler(ICrmDbContext db, ISender sender)
+    {
+        _db = db;
+        _sender = sender;
+    }
 
     public async Task<Result<WalletDto>> Handle(GetMemberWalletQuery request, CancellationToken ct)
     {
-        var wallet = await _db.Wallets
-            .Include(w => w.Transactions.OrderByDescending(t => t.CreatedAt).Take(20))
-            .FirstOrDefaultAsync(w => w.MemberId == request.MemberId, ct);
+        var memberExists = await _db.Members.AnyAsync(m => m.Id == request.MemberId, ct);
+        if (!memberExists)
+            return Result.Failure<WalletDto>("Üye bulunamadı.");
 
-        if (wallet is null)
-            return Result.Failure<WalletDto>("Cüzdan bulunamadı.");
+        var ledger = await _sender.Send(
+            new GetOwnerLedgerQuery("member", request.MemberId, "wallet"), ct);
 
-        var dto = new WalletDto(
-            wallet.Id, wallet.MemberId, wallet.Balance, wallet.CurrencyCode,
-            wallet.Transactions.Select(t => new WalletTransactionDto(
-                t.Id, t.TransactionType, t.Debit, t.Credit, t.BalanceAfter, t.Description, t.CreatedAt)).ToList());
+        if (ledger.IsFailure)
+            return Result.Success(new WalletDto(Guid.Empty, request.MemberId, 0, "TRY", new()));
 
-        return Result.Success(dto);
+        var v = ledger.Value!;
+        return Result.Success(new WalletDto(
+            v.LedgerId, request.MemberId, v.Balance, v.Currency,
+            v.RecentTransactions.Select(t => new WalletTransactionDto(
+                t.Id, t.TransactionType, t.Debit, t.Credit, t.BalanceAfter, t.Description, t.CreatedAt)).ToList()));
     }
 }

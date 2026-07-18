@@ -9,6 +9,7 @@ public class AccountsDbContext : DbContext, IAccountsDbContext
     public DbSet<CurrentAccountGroup> AccountGroups => Set<CurrentAccountGroup>();
     public DbSet<CurrentAccount> CurrentAccounts => Set<CurrentAccount>();
     public DbSet<CurrentAccountLedger> AccountLedgers => Set<CurrentAccountLedger>();
+    public DbSet<CurrentAccountTransaction> AccountTransactions => Set<CurrentAccountTransaction>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("accounts");
@@ -16,5 +17,6 @@ public class AccountsDbContext : DbContext, IAccountsDbContext
         modelBuilder.Entity<CurrentAccountGroup>().HasQueryFilter(g => !g.IsDeleted);
         modelBuilder.Entity<CurrentAccount>().HasQueryFilter(a => !a.IsDeleted);
         modelBuilder.Entity<CurrentAccountLedger>().HasQueryFilter(l => !l.IsDeleted);
+        modelBuilder.Entity<CurrentAccountTransaction>().HasQueryFilter(t => !t.IsDeleted);
     }
 }
