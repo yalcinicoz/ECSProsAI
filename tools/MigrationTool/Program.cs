@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using MySql.Data.MySqlClient;
 using Npgsql;
 
@@ -69,6 +70,7 @@ static class Migration
         if (phase == 18) Phase18_ChannelVariantUrls();
         if (phase == 19) Phase19_FiltreRengi();
         if (phase == 20) await RunCatalogReload();
+        if (phase == 21) await Phase21_FixProductGroups();
 
         Log("=== Migration tamamlandı! ===");
         Log($"  image_sets                  : {PgCount($"{DEF}.image_sets")}");
@@ -332,7 +334,28 @@ static class Migration
         PgExec($"DELETE FROM {CAT}.product_attributes WHERE TRUE");
         PgExec($"DELETE FROM {CAT}.products WHERE TRUE");
 
-        Guid defaultGroupId = PgScalar<Guid>($"SELECT \"Id\" FROM {DEF}.product_groups LIMIT 1");
+        // B-09 guard (2026-07-18): eşlenemeyen eski grup varsa aktarım BAŞLAMADAN durur.
+        // Eski davranış (rastgele ilk gruba sessiz fallback) 110 grubun / kataloğun %37'sinin
+        // Pantolon'a düşmesine yol açmıştı — bkz. docs/urun-grup-eslesme-analizi-2026-07-18.md
+        var eksikGruplar = new List<(int id, string ad, int urun)>();
+        using (var rg = MysqlQuery(@"SELECT COALESCE(p.urunGrupId,0), COALESCE(g.aciklama,''), COUNT(*)
+                FROM apurunler p LEFT JOIN dfurungruplari g ON p.urunGrupId = g.Id
+                WHERE p.urunKodu IS NOT NULL AND p.urunKodu != ''
+                AND p.urunKodu IN (SELECT urunkodu FROM yeniurunkodlari)
+                GROUP BY 1, 2"))
+            while (rg.Read())
+            {
+                int gid = Convert.ToInt32(rg.GetValue(0));
+                if (!productGroupMap.ContainsKey(gid))
+                    eksikGruplar.Add((gid, rg.IsDBNull(1) ? "" : rg.GetString(1), Convert.ToInt32(rg.GetValue(2))));
+            }
+        if (eksikGruplar.Count > 0)
+        {
+            Log("  ✗ EŞLENEMEYEN ESKİ GRUPLAR — docs/grup_eslesme.md'ye satır ekleyin:");
+            foreach (var (gid, ad, urun) in eksikGruplar.OrderByDescending(x => x.urun))
+                Log($"    grupId={gid} '{ad}' — {urun} ürün");
+            throw new Exception($"FAZ 5 DURDURULDU: {eksikGruplar.Count} eski grup eşlenemedi (sessiz varsayılan kaldırıldı).");
+        }
 
         using var r = MysqlQuery(@"SELECT Id, urunKodu, urunAdi, urunInternetAdi, markaId, urunGrupId,
             alisFiyati, satisFiyati, kdvOrani, tedarikciUrunKodu,
@@ -364,7 +387,7 @@ static class Migration
             var newId = NewId();
             productMap[oldId] = newId;
 
-            var groupId = productGroupMap.TryGetValue(grupId, out var g) ? g : defaultGroupId;
+            var groupId = productGroupMap[grupId]; // guard: tüm gruplar çözüldü, fallback yok (B-09)
             bool isActive = interneteAcik && satisaAcik;
             DateTime created = createdAt.HasValue ? DateTime.SpecifyKind(createdAt.Value, DateTimeKind.Utc) : Now;
             DateTime? updated = updatedAt.HasValue ? DateTime.SpecifyKind(updatedAt.Value, DateTimeKind.Utc) : null;
@@ -977,13 +1000,45 @@ static class Migration
     {
         if (productGroupMap.Count > 0) return;
         // Code formatı: "grp_{mysqlId}" — doğrudan parse edebiliriz
-        using var pgr = new NpgsqlCommand($"SELECT \"Id\", \"Code\" FROM {DEF}.product_groups", pg).ExecuteReader();
-        while (pgr.Read())
+        var codeToId = new Dictionary<string, Guid>();
+        using (var pgr = new NpgsqlCommand($"SELECT \"Id\", \"Code\" FROM {DEF}.product_groups", pg).ExecuteReader())
+            while (pgr.Read())
+            {
+                string code = pgr.GetString(1); // "grp_123" | "kaban" | "spor_ayakkabi" ...
+                codeToId[code] = pgr.GetGuid(0);
+                if (code.StartsWith("grp_") && int.TryParse(code[4..], out int mid))
+                    productGroupMap[mid] = pgr.GetGuid(0);
+            }
+
+        // B-09 (2026-07-18): birleştirilen/silinen eski grupların hedefi docs/grup_eslesme.md'den
+        // çözülür — "Bustiyer (grp_9)" / "Kaban (kaban)" parantezli kod, "Elbise" = grp_{MySQLID}.
+        foreach (var (legacyId, targetCode) in LoadGroupMergeMapFromDoc())
+            if (!productGroupMap.ContainsKey(legacyId) && targetCode is not null
+                && codeToId.TryGetValue(targetCode, out var gid))
+                productGroupMap[legacyId] = gid;
+    }
+
+    /// <summary>docs/grup_eslesme.md tablosunu okur: eski grupId → yeni grup Code (null = grup kaldırıldı).</summary>
+    static Dictionary<int, string?> LoadGroupMergeMapFromDoc()
+    {
+        string[] adaylar = { "../../docs/grup_eslesme.md", "docs/grup_eslesme.md", "/opt/ECSProsAI/docs/grup_eslesme.md" };
+        var path = adaylar.FirstOrDefault(File.Exists)
+            ?? throw new Exception("docs/grup_eslesme.md bulunamadı — grup eşleme haritası kurulamıyor.");
+        var map = new Dictionary<int, string?>();
+        var satirRx = new Regex(@"^\|\s*(\d+)\s*\|[^|]*\|[^|]*\|([^|]*)\|");
+        var kodRx = new Regex(@"\(([a-z0-9_]+)\)");
+        foreach (var line in File.ReadLines(path))
         {
-            string code = pgr.GetString(1); // "grp_123"
-            if (code.StartsWith("grp_") && int.TryParse(code[4..], out int mid))
-                productGroupMap[mid] = pgr.GetGuid(0);
+            var m = satirRx.Match(line);
+            if (!m.Success) continue;
+            int lid = int.Parse(m.Groups[1].Value);
+            string hedef = m.Groups[2].Value.Trim();
+            var km = kodRx.Match(hedef);
+            map[lid] = km.Success ? km.Groups[1].Value
+                     : hedef.StartsWith("—") ? null
+                     : $"grp_{lid}";
         }
+        return map;
     }
 
     static void EnsureProductMap()
@@ -1055,6 +1110,74 @@ static class Migration
     // (Phase14 upsert). Fazlar haritalarını mevcut DB'den (Ensure*) kurduğundan tek process'te
     // sıralı koşabilirler. Phase14 artık gerçek platformların eski channel verisini de siler.
     // Stok aktarımı BUNA DAHİL DEĞİL — reload doğrulandıktan sonra ayrı adımda koşulur.
+    // ─── FAZ 21: ÜRÜN GRUP DÜZELTME (B-09) — mevcut veri, yalnız UPDATE ────────
+    // Eski sistemdeki gruba göre ProductGroupId'yi onarır. Tekrar çalıştırılabilir;
+    // eşlenemeyen grup varsa HİÇBİR ürün güncellenmeden raporlayıp durur.
+    static Task Phase21_FixProductGroups()
+    {
+        Log("FAZ 21: Ürün grup düzeltme (B-09)...");
+        EnsureProductGroupMap();
+
+        var legacyByCode = new Dictionary<string, int>();
+        using (var r = MysqlQuery(@"SELECT urunKodu, COALESCE(urunGrupId, 0) FROM apurunler
+                WHERE urunKodu IS NOT NULL AND urunKodu != ''
+                AND urunKodu IN (SELECT urunkodu FROM yeniurunkodlari)"))
+            while (r.Read()) legacyByCode[r.GetString(0)] = Convert.ToInt32(r.GetValue(1));
+        Log($"  eski sistemden {legacyByCode.Count} ürün-grup ataması okundu");
+
+        var eksik = legacyByCode.Values.Distinct().Where(gid => !productGroupMap.ContainsKey(gid)).ToList();
+        if (eksik.Count > 0)
+        {
+            foreach (var gid in eksik.OrderByDescending(g => legacyByCode.Count(kv => kv.Value == g)))
+                Log($"  ✗ eşlenemeyen eski grup: {gid} ({legacyByCode.Count(kv => kv.Value == gid)} ürün)");
+            throw new Exception($"FAZ 21 DURDURULDU: {eksik.Count} eski grup eşlenemedi — docs/grup_eslesme.md'yi tamamlayın.");
+        }
+
+        var grupAdi = new Dictionary<Guid, string>();
+        using (var pgr = new NpgsqlCommand($"SELECT \"Id\", \"Code\", \"NameI18n\"->>'tr' FROM {DEF}.product_groups", pg).ExecuteReader())
+            while (pgr.Read()) grupAdi[pgr.GetGuid(0)] = pgr.IsDBNull(2) ? pgr.GetString(1) : pgr.GetString(2);
+
+        var codes = new List<string>();
+        var hedefler = new List<Guid>();
+        int dogru = 0, mysqlYok = 0;
+        var dagilim = new Dictionary<string, int>();
+        using (var pgr = new NpgsqlCommand($"SELECT \"Code\", \"ProductGroupId\" FROM {CAT}.products", pg).ExecuteReader())
+            while (pgr.Read())
+            {
+                string kod = pgr.GetString(0);
+                Guid mevcut = pgr.GetGuid(1);
+                if (!legacyByCode.TryGetValue(kod, out var gid)) { mysqlYok++; continue; }
+                var hedef = productGroupMap[gid];
+                if (hedef == mevcut) { dogru++; continue; }
+                codes.Add(kod);
+                hedefler.Add(hedef);
+                var key = $"{grupAdi.GetValueOrDefault(mevcut, "?")} → {grupAdi.GetValueOrDefault(hedef, "?")}";
+                dagilim[key] = dagilim.GetValueOrDefault(key) + 1;
+            }
+
+        Log($"  zaten doğru: {dogru} · eski sistemde bulunamayan: {mysqlYok} · düzeltilecek: {codes.Count}");
+        foreach (var kv in dagilim.OrderByDescending(k => k.Value).Take(25))
+            Log($"    {kv.Value,6}  {kv.Key}");
+
+        if (codes.Count > 0)
+        {
+            using var cmd = new NpgsqlCommand($@"
+                UPDATE {CAT}.products AS p
+                SET ""ProductGroupId"" = m.gid, ""UpdatedAt"" = now()
+                FROM (SELECT unnest(@codes) AS code, unnest(@gids) AS gid) m
+                WHERE p.""Code"" = m.code", pg);
+            cmd.Parameters.AddWithValue("codes", codes.ToArray());
+            cmd.Parameters.AddWithValue("gids", hedefler.ToArray());
+            cmd.CommandTimeout = 600;
+            int n = cmd.ExecuteNonQuery();
+            Log($"  ✓ {n} ürünün grubu düzeltildi");
+            PgExec($"ANALYZE {CAT}.products");
+            Log("  ✓ ANALYZE catalog.products");
+        }
+        else Log("  ✓ düzeltilecek ürün yok");
+        return Task.CompletedTask;
+    }
+
     static async Task RunCatalogReload()
     {
         Log("╔══ FAZ 20: GÜVENLİ KATALOG RELOAD ══╗");
