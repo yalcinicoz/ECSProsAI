@@ -27,6 +27,7 @@ interface CurrentAccount {
   code: string
   title: string
   accountType: string
+  ownerType: string
   groupId: string | null
   groupName: string | null
   taxNumber: string | null
@@ -51,6 +52,7 @@ interface PagedResult<T> {
 export function AccountsPage() {
   const navigate = useNavigate()
   const [accountType, setAccountType] = useState('')
+  const [ownerType, setOwnerType] = useState('')
   const [groupId, setGroupId] = useState('')
   const [isActive, setIsActive] = useState<string>('')
   const [search, setSearch] = useState('')
@@ -67,10 +69,11 @@ export function AccountsPage() {
   })
 
   const { data, isLoading } = useQuery<PagedResult<CurrentAccount>>({
-    queryKey: ['accounts', accountType, groupId, isActive, search, page],
+    queryKey: ['accounts', accountType, ownerType, groupId, isActive, search, page],
     queryFn: async () => {
       const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) })
       if (accountType) params.set('accountType', accountType)
+      if (ownerType) params.set('ownerType', ownerType)
       if (groupId) params.set('groupId', groupId)
       if (isActive !== '') params.set('isActive', isActive)
       if (search) params.set('search', search)
@@ -89,7 +92,7 @@ export function AccountsPage() {
   }
 
   function resetFilters() {
-    setAccountType(''); setGroupId(''); setIsActive('')
+    setAccountType(''); setOwnerType(''); setGroupId(''); setIsActive('')
     setSearch(''); setSearchInput(''); setPage(1)
   }
 
@@ -129,6 +132,15 @@ export function AccountsPage() {
               {ACCOUNT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
+          {/* Owner */}
+          <div style={{ minWidth: 130 }}>
+            <label className="flbl">Sahip</label>
+            <select className="inp" value={ownerType} onChange={e => { setOwnerType(e.target.value); setPage(1) }}>
+              <option value="">Tümü</option>
+              <option value="external">Harici Cari</option>
+              <option value="member">Üye (cüzdan)</option>
+            </select>
+          </div>
           {/* Group */}
           <div style={{ minWidth: 160 }}>
             <label className="flbl">Grup</label>
@@ -146,7 +158,7 @@ export function AccountsPage() {
               <option value="false">Pasif</option>
             </select>
           </div>
-          {(accountType || groupId || isActive || search) && (
+          {(accountType || ownerType || groupId || isActive || search) && (
             <button onClick={resetFilters} className="text-xs px-3 py-2 rounded-xl" style={{ color: 'var(--text-s)', border: '1px solid var(--border)' }}>
               Sıfırla
             </button>
@@ -184,6 +196,9 @@ export function AccountsPage() {
                   <td className="px-4 py-3">
                     <div>
                       <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{a.title}</span>
+                      {a.ownerType === 'member' && (
+                        <span className="text-xs font-medium px-1.5 py-0.5 rounded-full ml-1.5" style={{ color: 'var(--brand)', background: 'var(--brand)18' }}>Üye</span>
+                      )}
                       {a.contactName && <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>{a.contactName}</p>}
                     </div>
                   </td>

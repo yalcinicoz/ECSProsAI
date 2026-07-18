@@ -294,6 +294,34 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION ÖZETİ (2026-07-18/2) — CARİ ÇATI B0-B4+B6 UYGULANDI (⚠️ RESTART BEKLİYOR)
+Panel testi B-03 bulgusunun (üye Cüzdan/Puan 404) kalıcı çözümü: parasal kavramlar Accounts
+çatısına taşındı (plan: `docs/cari-cati-gecis-plani.md`, fazlar işaretli). Yapılan: (B1)
+`current_accounts`+OwnerType/OwnerId, ledger+ConceptCode, YENİ `accounts.current_account_transactions`
+— migration `AddOwnerConceptAndTransactions` CANLI DB'YE UYGULANDI (additive). (B2)
+`PostAccountTransactionCommand` tek atomik hareket kapısı (pg_advisory_xact_lock; lazy hesap
+açılışı, M-{6 hane} kod üretimi; negatif bakiye reddi; storno) + GetOwnerLedger/GetAccountTransactions.
+(B3) CRM `GetMemberWalletQuery` Accounts'tan okur, DTO aynı, hesap yoksa 0-bakiye (404 bitti).
+(B4) İade complete-refund `wallet` dalı cüzdana alacak yazar (başarısızsa storno telafi);
+`POST /api/crm/members/{id}/wallet/adjust`. (B6) MemberDetail cüzdan kartı (bakiye+hareket+ekleme),
+Cari Kartlar OwnerType filtresi+Üye rozeti, cari detay hareket dökümü + `GET /api/accounts/{id}/transactions`;
+admin build ALINDI. İzole 5051 doğrulaması: 0-bakiye/kredi/yetersiz bakiye/açıklama zorunlu/
+10 paralel yazım kayıpsız (61→70). Test verisi: M-000001 hesabı (Test Zayifsifre üyesi, 70₺, 13 hareket).
+`publish/` güncellendi — **`sudo systemctl restart ecspros` kullanıcıda**. B5 (finance birleşmesi) ertelendi.
+
+### SESSION ÖZETİ (2026-07-18) — ADMİN PANEL TAM TARAMA TESTİ (kod değişikliği YOK)
+Canlı panel headless Chromium ile insan-benzeri test edildi (157 adım, 118 ekran görüntüsü).
+Sonuçlar: `docs/PanelTests/2026-07-18_0950_tam-tarama/` (report.html + findings.json +
+screenshots + tekrar çalıştırılabilir scriptler). Dashboard: `docs/PanelTests/index.html`,
+tarayıcı erişimi: **http://51.178.208.59:8090** (python3 http.server, nohup PID dosyasız —
+yeniden başlatma: `cd /opt/ECSProsAI/docs/PanelTests && nohup python3 -m http.server 8090
+--bind 0.0.0.0 &`). 7 kritik bulgu: ürün adıyla arama bozuk (yalnız P-kod), dashboard
+sayaçları 0, CRM /wallet+/loyalty 404, Varyant Ekle eksen değerleri boş, 3× mükerrer
+"Merkez Depo", depo detayı DEPRECATED lokasyon modelinde (kısım/birim UI yok), nav menüler
+boş (site menüsü panelden yönetilemiyor). Bırakılan test verisi: TEST-PANEL-001 ürünü
+(Satışta, 0 varyant), AKTİF "TEST Serisi" (TST) fatura serisi, ORD-20260717-1E458694
+onaylandı + TST2026000000001 e-Arşiv faturası. Projede kod değişikliği yapılmadı.
+
 ### ⭐ SESSION ÖZETİ (2026-07-17) — ANA SAYFA ELMENT YAPISI + ARAMA GRID DÜZELTMESİ (⚠️ RESTART BEKLİYOR)
 Kullanıcı 4 maddelik düzeltme istedi. 1) Ana sayfa tasarım AnaSayfa kalıbına geçirildi:
 Index kökü `ms-ana-sayfa lazy-infinite-on` (ms-ana-yerlesim kaldırıldı — site.js null-safe),

@@ -50,10 +50,21 @@ public class AccountsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAccounts(
         [FromQuery] string? accountType, [FromQuery] Guid? groupId,
-        [FromQuery] bool? isActive, [FromQuery] string? search,
+        [FromQuery] bool? isActive, [FromQuery] string? search, [FromQuery] string? ownerType,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 30, CancellationToken ct = default)
     {
-        var r = await _mediator.Send(new GetCurrentAccountsQuery(accountType, groupId, isActive, search, page, pageSize), ct);
+        var r = await _mediator.Send(new GetCurrentAccountsQuery(accountType, groupId, isActive, search, page, pageSize, ownerType), ct);
+        return Ok(new { success = true, data = r.Value });
+    }
+
+    /// <summary>Cari hesabın defterleri + sayfalı hareket dökümü.</summary>
+    [HttpGet("{id:guid}/transactions")]
+    public async Task<IActionResult> GetAccountTransactions(
+        Guid id, [FromQuery] Guid? ledgerId,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
+    {
+        var r = await _mediator.Send(new ECSPros.Accounts.Application.Queries.GetAccountTransactions.GetAccountTransactionsQuery(id, ledgerId, page, pageSize), ct);
+        if (r.IsFailure) return NotFound(new { success = false, error = r.Error });
         return Ok(new { success = true, data = r.Value });
     }
 

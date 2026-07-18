@@ -106,7 +106,10 @@ export function MemberDetailPage() {
     enabled: !!id,
     retry: false,
   })
-  const { data: wallet } = useQuery<{ balance: number; currencyCode: string }>({
+  const { data: wallet } = useQuery<{
+    balance: number; currencyCode: string;
+    recentTransactions: { id: string; transactionType: string; debit: number; credit: number; balanceAfter: number; description?: string; createdAt: string }[]
+  }>({
     queryKey: ['member-wallet', id],
     queryFn: async () => (await api.get(`/crm/members/${id}/wallet`)).data.data,
     enabled: !!id,
@@ -128,6 +131,28 @@ export function MemberDetailPage() {
   const [isActive, setIsActive] = useState(true)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+
+  // Cüzdan manuel düzeltme formu
+  const [wDirection, setWDirection] = useState<'credit' | 'debit'>('credit')
+  const [wAmount, setWAmount] = useState('')
+  const [wDesc, setWDesc] = useState('')
+  const [wError, setWError] = useState('')
+  const walletAdjust = useMutation({
+    mutationFn: async () => {
+      setWError('')
+      await api.post(`/crm/members/${id}/wallet/adjust`, {
+        direction: wDirection, amount: Number(wAmount), description: wDesc,
+      })
+    },
+    onSuccess: () => {
+      setWAmount(''); setWDesc('')
+      queryClient.invalidateQueries({ queryKey: ['member-wallet', id] })
+    },
+    onError: (e: unknown) => {
+      const err = e as { response?: { data?: { error?: string } } }
+      setWError(err.response?.data?.error ?? 'Hareket kaydedilemedi.')
+    },
+  })
 
   useEffect(() => {
     if (!member) return
@@ -229,6 +254,46 @@ export function MemberDetailPage() {
               <Button size="sm" onClick={() => save.mutate()} loading={save.isPending}>Kaydet</Button>
             </div>
           </div>
+        </Section>
+
+        <Section title={`Cüzdan (${(wallet?.balance ?? 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺)`}>
+          <div className="space-y-2 max-h-48 overflow-y-auto mb-3">
+            {(wallet?.recentTransactions ?? []).length === 0 && (
+              <p className="text-sm" style={{ color: 'var(--text-s)' }}>Henüz cüzdan hareketi yok.</p>
+            )}
+            {(wallet?.recentTransactions ?? []).map(t => (
+              <div key={t.id} className="flex items-center gap-2 text-xs p-1.5 rounded" style={{ background: 'var(--surface2)' }}>
+                <span className="font-medium" style={{ color: t.credit > 0 ? 'var(--brand)' : '#ef4444' }}>
+                  {t.credit > 0 ? '+' : '−'}{(t.credit > 0 ? t.credit : t.debit).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                </span>
+                <span style={{ color: 'var(--text-m)' }}>{t.transactionType === 'manual_adjustment' ? 'Manuel düzeltme' : t.transactionType === 'return_refund' ? 'İade' : t.transactionType}</span>
+                <span className="truncate" style={{ color: 'var(--text-s)' }}>{t.description}</span>
+                <span className="ml-auto whitespace-nowrap" style={{ color: 'var(--text-s)' }}>
+                  {new Date(t.createdAt).toLocaleDateString('tr-TR')} · bakiye {t.balanceAfter.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <div>
+              <label className="flbl">Yön</label>
+              <select className="inp" value={wDirection} onChange={e => setWDirection(e.target.value as 'credit' | 'debit')}>
+                <option value="credit">Bakiye ekle (+)</option>
+                <option value="debit">Bakiye düş (−)</option>
+              </select>
+            </div>
+            <div className="w-28">
+              <label className="flbl">Tutar (₺)</label>
+              <input className="inp" type="number" min="0.01" step="0.01" value={wAmount} onChange={e => setWAmount(e.target.value)} />
+            </div>
+            <div className="flex-1 min-w-40">
+              <label className="flbl">Açıklama *</label>
+              <input className="inp" value={wDesc} onChange={e => setWDesc(e.target.value)} placeholder="Neden? (zorunlu)" />
+            </div>
+            <Button size="sm" onClick={() => walletAdjust.mutate()} loading={walletAdjust.isPending}
+              disabled={!wAmount || Number(wAmount) <= 0 || !wDesc.trim()}>Hareket Ekle</Button>
+          </div>
+          {wError && <p className="text-sm text-red-500 mt-2">{wError}</p>}
         </Section>
 
         <Section title={`Adresler (${addresses.length})`}>
