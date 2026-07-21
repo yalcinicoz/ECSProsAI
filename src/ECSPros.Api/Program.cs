@@ -311,8 +311,15 @@ var app = builder.Build();
 // ─── Middleware Pipeline ────────────────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-app.UseSwagger();
-app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "ECSPros API v1"));
+// İç API swagger'ı YALNIZ Development'ta açık. Bu yüzey (admin panel + storefront'un
+// kullandığı ince taneli iç uçlar) dışarıya hiç açılmamalı; prod'da /swagger 404 döner.
+// Dışa dönük partner API için ayrı, sadece partner uçlarını listeleyen bir swagger dokümanı
+// gelecekte (F2) eklenecek — o prod'da da açık olacak.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "ECSPros API v1"));
+}
 
 // Faz 8 (misharix tasarım sözleşmesi): sürüm sorgulu (?v=) CSS/JS, performans görselleri
 // ve Font Awesome dosyalarına 1 yıl immutable cache; HTML'e no-cache (tarayıcı bayat
