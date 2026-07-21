@@ -17,8 +17,7 @@ public class ApproveProductSubmissionCommandHandler
 
     public async Task<Result<ApproveProductSubmissionResult>> Handle(ApproveProductSubmissionCommand request, CancellationToken ct)
     {
-        var submission = await _db.ProductSubmissions
-            .FirstOrDefaultAsync(s => s.Id == request.SubmissionId, ct);
+        var submission = await _db.ProductSubmissions.FirstOrDefaultAsync(s => s.Id == request.SubmissionId, ct);
         if (submission is null)
             return Result.Failure<ApproveProductSubmissionResult>("Gönderim bulunamadı.");
         if (submission.Status != "pending")
@@ -31,12 +30,13 @@ public class ApproveProductSubmissionCommandHandler
         if (body is null || body.Variants is null || body.Variants.Count == 0)
             return Result.Failure<ApproveProductSubmissionResult>("Gönderim gövdesi geçersiz.");
 
-        // Aynı tedarikçi + kod için canlı ürün varsa: revizyon (bu dilimde değil).
-        var liveExists = await _db.Products.AnyAsync(p =>
-            p.SupplierId == submission.SupplierId && p.SupplierProductCode == submission.SupplierProductCode, ct);
-        if (liveExists)
-            return Result.Failure<ApproveProductSubmissionResult>(
-                "Bu tedarikçi ve kod için zaten canlı bir ürün var (revizyon onayı henüz desteklenmiyor).");
+        // Mevcut canlı ürün? Varsa REVİZYON (güncelle), yoksa YENİ (oluştur).
+        var product = await _db.Products
+            .Include(p => p.Variants.Where(v => !v.IsDeleted)).ThenInclude(v => v.VariantAttributes.Where(a => !a.IsDeleted))
+            .Include(p => p.Attributes.Where(a => !a.IsDeleted))
+            .FirstOrDefaultAsync(p => p.SupplierId == submission.SupplierId
+                && p.SupplierProductCode == submission.SupplierProductCode, ct);
+        var isRevision = product is not null;
 
         var group = await _db.ProductGroups
             .Include(g => g.Attributes.Where(a => !a.IsDeleted)).ThenInclude(a => a.AttributeType)
@@ -47,8 +47,7 @@ public class ApproveProductSubmissionCommandHandler
         // Değer çözümleyici: (attributeTypeId, küçük-harf tr ad) → AttributeValue.Id
         var typeIds = group.Attributes.Select(a => a.AttributeTypeId).Distinct().ToList();
         var poolValues = await _db.AttributeValues
-            .Where(v => typeIds.Contains(v.AttributeTypeId) && v.IsActive)
-            .ToListAsync(ct);
+            .Where(v => typeIds.Contains(v.AttributeTypeId) && v.IsActive).ToListAsync(ct);
         var resolver = new Dictionary<(Guid, string), Guid>();
         foreach (var v in poolValues)
         {
@@ -61,26 +60,8 @@ public class ApproveProductSubmissionCommandHandler
         var axisType = group.Attributes.Where(a => a.IsVariant).ToDictionary(a => a.AttributeType.Code, a => a.AttributeTypeId);
         var prodType = group.Attributes.Where(a => !a.IsVariant).ToDictionary(a => a.AttributeType.Code, a => a.AttributeTypeId);
 
-        // Benzersiz ürün kodu
-        string code;
-        do { code = $"PRD-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}"; }
-        while (await _db.Products.AnyAsync(p => p.Code == code, ct));
-
-        var product = new Product
-        {
-            ProductGroupId = group.Id,
-            Code = code,
-            NameI18n = body.Name ?? new(),
-            ShortDescriptionI18n = body.ShortDescription,
-            DescriptionI18n = body.Description,
-            SupplierId = submission.SupplierId,
-            SupplierProductCode = submission.SupplierProductCode,
-            BasePrice = 0,
-            TaxRate = 18,
-            IsSaleOpen = false   // onay = katalogda oluştur; satışa açma mevcut panel akışıyla
-        };
-
-        // Ürün-seviyesi özellikler (havuz değeri → Id)
+        // ── Önce TÜMÜNÜ çöz (havuz hatası varsa hiç mutasyon yapmadan dön) ──
+        var resolvedAttrs = new List<(Guid TypeId, Guid ValueId)>();
         foreach (var (attrCode, el) in body.Attributes ?? new())
         {
             if (!prodType.TryGetValue(attrCode, out var typeId)) continue; // Kapı 1 elemişti; savunmacı
@@ -89,55 +70,119 @@ public class ApproveProductSubmissionCommandHandler
                 var vid = Resolve(typeId, valName);
                 if (vid is null)
                     return Result.Failure<ApproveProductSubmissionResult>($"'{valName}' değeri artık havuzda yok ({attrCode}).");
-                product.Attributes.Add(new ProductAttribute { AttributeTypeId = typeId, AttributeValueId = vid });
+                resolvedAttrs.Add((typeId, vid.Value));
             }
         }
 
-        // Varyantlar + eksen değerleri + görseller
-        decimal? firstPrice = null;
+        var resolvedVariants = new List<ResolvedVariant>();
         foreach (var vb in body.Variants)
         {
-            var price = vb.Price?.Amount ?? 0m;
-            firstPrice ??= price;
-            var variant = new ProductVariant
-            {
-                Sku = vb.Sku ?? code,
-                Barcode = string.IsNullOrWhiteSpace(vb.Barcode) ? null : vb.Barcode,
-                BasePrice = price,
-                IsActive = true
-            };
-
+            var axis = new List<(Guid, Guid)>();
             foreach (var (axisCode, valName) in vb.AxisValues ?? new())
             {
                 if (!axisType.TryGetValue(axisCode, out var typeId)) continue;
                 var vid = Resolve(typeId, valName);
                 if (vid is null)
                     return Result.Failure<ApproveProductSubmissionResult>($"'{valName}' eksen değeri artık havuzda yok ({axisCode}).");
-                variant.VariantAttributes.Add(new ProductVariantAttribute { AttributeTypeId = typeId, AttributeValueId = vid.Value });
+                axis.Add((typeId, vid.Value));
             }
+            var imgs = (body.Images ?? new())
+                .Where(i => i.VariantRef == vb.Sku && !string.IsNullOrWhiteSpace(i.Url))
+                .Select(i => (Url: i.Url!, Main: i.Main == true)).ToList();
+            resolvedVariants.Add(new ResolvedVariant(
+                vb.Sku ?? "", string.IsNullOrWhiteSpace(vb.Barcode) ? null : vb.Barcode,
+                vb.Price?.Amount ?? 0m, axis, imgs));
+        }
+        var firstPrice = resolvedVariants.Count > 0 ? resolvedVariants[0].Price : 0m;
 
-            // Tedarikçinin gönderdiği görseller (varyanta bağlı) — URL bazlı; onay sonrası panelden zenginleştirilir.
-            var imgs = (body.Images ?? new()).Where(i => i.VariantRef == vb.Sku && !string.IsNullOrWhiteSpace(i.Url)).ToList();
-            for (int i = 0; i < imgs.Count; i++)
-                variant.Images.Add(new ProductVariantImage { ImageUrl = imgs[i].Url!, IsMain = imgs[i].Main == true, SortOrder = i });
+        if (!isRevision)
+        {
+            // ── YENİ ürün — tüm grafik yeni (koleksiyon-ekle güvenli) ──
+            string code;
+            do { code = $"PRD-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}"; }
+            while (await _db.Products.AnyAsync(p => p.Code == code, ct));
 
-            product.Variants.Add(variant);
+            product = new Product
+            {
+                ProductGroupId = group.Id, Code = code,
+                NameI18n = body.Name ?? new(), ShortDescriptionI18n = body.ShortDescription, DescriptionI18n = body.Description,
+                SupplierId = submission.SupplierId, SupplierProductCode = submission.SupplierProductCode,
+                BasePrice = firstPrice, TaxRate = 18, IsSaleOpen = false
+            };
+            foreach (var (tid, vid) in resolvedAttrs)
+                product.Attributes.Add(new ProductAttribute { AttributeTypeId = tid, AttributeValueId = vid });
+            foreach (var rv in resolvedVariants)
+                product.Variants.Add(BuildVariant(rv));
+            _db.Products.Add(product);
+        }
+        else
+        {
+            // ── REVİZYON — canlı ürünü güncelle (tracked parent → çocukları DbSet.Add ile) ──
+            var payloadSkus = resolvedVariants.Select(r => r.Sku).ToList();
+            var conflict = await _db.ProductVariants
+                .Where(v => payloadSkus.Contains(v.Sku) && v.ProductId != product!.Id)
+                .Select(v => v.Sku).FirstOrDefaultAsync(ct);
+            if (conflict is not null)
+                return Result.Failure<ApproveProductSubmissionResult>($"SKU başka bir üründe kullanımda: {conflict}");
+
+            product!.NameI18n = body.Name ?? product.NameI18n;
+            product.ShortDescriptionI18n = body.ShortDescription;
+            product.DescriptionI18n = body.Description;
+            product.BasePrice = firstPrice;
+
+            // Ürün özellikleri: hard-delete + yeniden ekle (unique index soft-delete'i kapsıyor)
+            _db.ProductAttributes.RemoveRange(product.Attributes);
+            foreach (var (tid, vid) in resolvedAttrs)
+                _db.ProductAttributes.Add(new ProductAttribute { ProductId = product.Id, AttributeTypeId = tid, AttributeValueId = vid });
+
+            // Varyant senkronu (sku ile): mevcut güncelle · yeni ekle · eksik pasifleştir (silme — sipariş referansı)
+            var existingBySku = product.Variants.ToDictionary(v => v.Sku);
+            var seen = new HashSet<string>();
+            foreach (var rv in resolvedVariants)
+            {
+                seen.Add(rv.Sku);
+                if (existingBySku.TryGetValue(rv.Sku, out var ev))
+                {
+                    ev.BasePrice = rv.Price; ev.Barcode = rv.Barcode; ev.IsActive = true;
+                    _db.ProductVariantAttributes.RemoveRange(ev.VariantAttributes);
+                    foreach (var (tid, vid) in rv.Axis)
+                        _db.ProductVariantAttributes.Add(new ProductVariantAttribute { VariantId = ev.Id, AttributeTypeId = tid, AttributeValueId = vid });
+                }
+                else
+                {
+                    var nv = BuildVariant(rv);
+                    nv.ProductId = product.Id;
+                    _db.ProductVariants.Add(nv);
+                }
+            }
+            foreach (var ev in product.Variants.Where(v => !seen.Contains(v.Sku)))
+                ev.IsActive = false;
         }
 
-        product.BasePrice = firstPrice ?? 0m;
-
-        _db.Products.Add(product);
-
         submission.Status = "approved";
-        submission.ProductId = product.Id;
+        submission.ProductId = product!.Id;
         submission.ProductCode = product.Code;
         submission.ReviewedAt = DateTime.UtcNow;
         submission.ReviewedBy = request.ReviewedBy;
 
         await _db.SaveChangesAsync(ct);
-
         return Result.Success(new ApproveProductSubmissionResult(product.Id, product.Code));
     }
+
+    // Yeni (untracked) varyant grafiği — koleksiyon-ekle güvenli çünkü parent henüz tracked değil.
+    private static ProductVariant BuildVariant(ResolvedVariant rv)
+    {
+        var variant = new ProductVariant { Sku = rv.Sku, Barcode = rv.Barcode, BasePrice = rv.Price, IsActive = true };
+        foreach (var (tid, vid) in rv.Axis)
+            variant.VariantAttributes.Add(new ProductVariantAttribute { AttributeTypeId = tid, AttributeValueId = vid });
+        for (int i = 0; i < rv.Images.Count; i++)
+            variant.Images.Add(new ProductVariantImage { ImageUrl = rv.Images[i].Url, IsMain = rv.Images[i].Main, SortOrder = i });
+        return variant;
+    }
+
+    private sealed record ResolvedVariant(
+        string Sku, string? Barcode, decimal Price,
+        List<(Guid TypeId, Guid ValueId)> Axis, List<(string Url, bool Main)> Images);
 
     private static List<string> ExtractValues(JsonElement el)
     {
