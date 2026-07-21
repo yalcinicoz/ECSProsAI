@@ -250,7 +250,8 @@ hesapları burada görülür, eklenir, yetkisi değiştirilir, iptal edilir.
 | **F0** ✅ | Varsayılan `AdminOnly` politikası (`type != member && type != api_client`) | **TAMAM (2026-07-21, commit 590ffe1) — üye/api_client iç uçları geçemez** |
 | **Fx** ✅ | İç swagger prod'da kapatıldı (yalnız Development) | **TAMAM (2026-07-21, commit d2846f7) — iç yüzey artık listelenmiyor** |
 | **F1** ✅ | `definition.api_client_types` kataloğu — 4 tip seed (§3) + `ApiClient` entity (`FulfillmentMode` dahil) + migration + `/api/auth/token` | **TAMAM (2026-07-21, commit db76a63) — tip=kilitli scope; catalog.write≠pricing.write** |
-| **F2** | `RequireScopeAttribute` + tipten (+bayraktan) scope çözümü + owner filtresi + **partner façade uçları (§3.5)** + **ayrı partner swagger doc** | **Asıl iş burada — yeni kaba taneli yüzey** |
+| **F2a** ✅ | `RequireScopeAttribute` + `ApiClientOnly` policy + **partner swagger doc** (prod'da açık, iç doküman dev-only) + `PartnerController` (`GET /me`, `GET /groups` keşif) | **TAMAM (2026-07-21, commit 5fd112a) — façade iskeleti + ilk keşif ucu** |
+| **F2b** | Partner **ürün ingestion** uçları (§3.5/§3.6): `POST /products` (submission/staging + onay), `PUT /products/{code}/stock`, `POST /orders`, shipment vb. + owner filtresi + ürün→tedarikçi sahiplik modeli | **Asıl iş — gövde sözleşmesi + sahiplik modeli netleşecek** |
 | F3 | Internal hesap (loopback kısıtı) + mobil first_party hesabı | |
 | F4 | Panel ekranları (liste, detay, cari sekmesi) | Ekran kurgusu §6 onayından sonra |
 | F5 | Rate limit + audit + kullanım ekranı | Rate limit bugün hiç yok |
