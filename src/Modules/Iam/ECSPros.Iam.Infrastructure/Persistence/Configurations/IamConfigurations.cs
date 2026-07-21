@@ -131,6 +131,46 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
     }
 }
 
+public class ApiClientTypeConfiguration : IEntityTypeConfiguration<ApiClientType>
+{
+    public void Configure(EntityTypeBuilder<ApiClientType> builder)
+    {
+        // definition şeması — platformca (superadmin) doldurulan tip kataloğu; altın kural:
+        // veri aktarımları/eşlemeler bu tabloya kayıt EKLEYEMEZ (bkz. CLAUDE.md).
+        builder.ToTable("api_client_types", "definition");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Code).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.NameI18n).HasColumnType("jsonb").IsRequired();
+        builder.Property(x => x.DefaultClientType).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.RequiredOwnerType).HasMaxLength(30);
+        builder.Property(x => x.BaseScopes).HasColumnType("jsonb").IsRequired();
+        builder.HasIndex(x => x.Code).IsUnique();
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
+public class ApiClientConfiguration : IEntityTypeConfiguration<ApiClient>
+{
+    public void Configure(EntityTypeBuilder<ApiClient> builder)
+    {
+        builder.ToTable("api_clients"); // varsayılan şema: iam
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.ClientId).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.SecretHash).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.SecretHint).HasMaxLength(50);
+        builder.Property(x => x.ClientType).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.ApiClientTypeCode).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.OwnerType).HasMaxLength(30);
+        builder.Property(x => x.FulfillmentMode).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.IpAllowList).HasColumnType("jsonb").IsRequired();
+        builder.Property(x => x.LastUsedIp).HasMaxLength(50);
+        builder.HasIndex(x => x.ClientId).IsUnique();
+        builder.HasIndex(x => new { x.OwnerType, x.OwnerId });
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
 public class AdminMenuConfiguration : IEntityTypeConfiguration<AdminMenu>
 {
     public void Configure(EntityTypeBuilder<AdminMenu> builder)

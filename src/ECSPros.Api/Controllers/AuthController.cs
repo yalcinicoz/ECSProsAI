@@ -1,4 +1,5 @@
 using ECSPros.Iam.Application.Commands.ChangePassword;
+using ECSPros.Iam.Application.Commands.GenerateApiToken;
 using ECSPros.Iam.Application.Commands.Login;
 using ECSPros.Iam.Application.Commands.RefreshToken;
 using ECSPros.Shared.Kernel.Common;
@@ -26,6 +27,20 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new LoginCommand(request.Username, request.Password), ct);
+        if (result.IsFailure)
+            return Unauthorized(new { success = false, error = result.Error });
+
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>API hesabı (makine kimliği) — OAuth2 client_credentials ile access token alır.
+    /// Yalnız RequireScope ile korunan partner uçlarına erişir; iç uçları geçemez (type=api_client).</summary>
+    [HttpPost("token")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Token([FromBody] ApiTokenRequest request, CancellationToken ct)
+    {
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var result = await _mediator.Send(new GenerateApiTokenCommand(request.ClientId, request.ClientSecret, ip), ct);
         if (result.IsFailure)
             return Unauthorized(new { success = false, error = result.Error });
 
@@ -75,6 +90,7 @@ public class AuthController : ControllerBase
     }
 }
 
+public record ApiTokenRequest(string ClientId, string ClientSecret);
 public record LoginRequest(string Username, string Password);
 public record RefreshRequest(string RefreshToken);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
