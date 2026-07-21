@@ -327,7 +327,8 @@ hesapları burada görülür, eklenir, yetkisi değiştirilir, iptal edilir.
 | **F2a** ✅ | `RequireScopeAttribute` + `ApiClientOnly` policy + **partner swagger doc** (prod'da açık, iç doküman dev-only) + `PartnerController` (`GET /me`, `GET /groups` keşif) | **TAMAM (2026-07-21, commit 5fd112a) — façade iskeleti + ilk keşif ucu** |
 | **F2b-1** ✅ | `ProductSubmission` staging + migration + Product sahiplik index'leri + `GET /groups/{code}` değer keşif + `POST /products` (Kapı 1 doğrulama→pending) + owner-scoped `GET /products` | **TAMAM (2026-07-21, commit 7a42a51)** |
 | **F2b-2a** ✅ | Onay orkestrasyonu (Kapı 2): kabul→canlı Product grafiği (varyant/eksen-değeri/özellik/görsel/SupplierId, değer adı→havuz Id) / gerekçeli red; iç uçlar `/api/catalog/product-submissions` (list/detail/approve/reject, RequirePermission) | **TAMAM (2026-07-21, commit 7a021c1) — YENİ ürün; revizyon sonraki** |
-| **F2b-2b** | `PUT /products/{code}/stock` (direkt, Inventory) + `POST /orders` + shipment + revizyon onayı | Cross-module (Inventory/Order) |
+| **F2b-2b** ✅ | `PUT /products/{code}/stock` — tedarikçiye özel KISIM (`WarehouseSection.SupplierId`); mutlak stok, online mevcudiyete otomatik sayılır | **TAMAM (2026-07-21, commit 84b48ce)** |
+| **F2b-2c** | `POST /orders` (dropship) + shipment (fulfillment.write) + revizyon onayı + sipariş rezervasyonunun tedarikçi-deposundan yönlendirilmesi | Cross-module (Order/Fulfillment) |
 | **F2b-3** ✅ | Panel "Tedarikçi Gönderimleri" (liste durum-sekmeli + inceleme detayı, onayla/reddet-gerekçeli); Katalog grubu, `catalog.products.manage` | **TAMAM (2026-07-21, commit 82d9c69) — aksiyon: onayla/reddet, zenginleştirme mevcut ürün sayfası** |
 | F3 | Internal hesap (loopback kısıtı) + mobil first_party hesabı | |
 | F4 | Panel ekranları (liste, detay, cari sekmesi) | Ekran kurgusu §6 onayından sonra |
