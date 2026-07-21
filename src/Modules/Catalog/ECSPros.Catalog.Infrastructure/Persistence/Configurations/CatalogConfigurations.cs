@@ -163,6 +163,11 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.MetaKeywordsI18n).HasColumnType("jsonb");
         builder.HasIndex(x => x.Code).IsUnique();
         builder.HasIndex(x => x.Slug).IsUnique().HasFilter("\"Slug\" IS NOT NULL AND \"Slug\" <> ''");
+        // Partner API sahiplik (§3.7): owner-scoped sorgular için + tedarikçi başına kod tekilliği.
+        builder.HasIndex(x => x.SupplierId);
+        builder.HasIndex(x => new { x.SupplierId, x.SupplierProductCode })
+            .IsUnique()
+            .HasFilter("\"SupplierId\" IS NOT NULL AND \"SupplierProductCode\" IS NOT NULL AND NOT \"IsDeleted\"");
         builder.HasQueryFilter(x => !x.IsDeleted);
 
         builder.HasOne(x => x.ProductGroup)
@@ -173,6 +178,27 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .WithOne(x => x.Product)
             .HasForeignKey(x => x.ProductId)
             .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class ProductSubmissionConfiguration : IEntityTypeConfiguration<ProductSubmission>
+{
+    public void Configure(EntityTypeBuilder<ProductSubmission> builder)
+    {
+        builder.ToTable("product_submissions", "catalog");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.SupplierProductCode).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.GroupCode).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Name).HasColumnType("jsonb").IsRequired();
+        builder.Property(x => x.PayloadJson).HasColumnType("jsonb").IsRequired();
+        builder.Property(x => x.Status).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.ProductCode).HasMaxLength(100);
+        builder.HasIndex(x => new { x.SupplierId, x.Status });
+        // Tedarikçi başına aynı kod için tek AÇIK (pending) gönderim.
+        builder.HasIndex(x => new { x.SupplierId, x.SupplierProductCode })
+            .IsUnique()
+            .HasFilter("\"Status\" = 'pending' AND NOT \"IsDeleted\"");
+        builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }
 
