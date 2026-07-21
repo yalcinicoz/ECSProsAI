@@ -1,8 +1,9 @@
 # API Hesapları (ApiClient) — Tasarım
 
 **Tarih:** 2026-07-20 (güncel: 2026-07-21)
-**Durum:** F0 UYGULANDI (commit 590ffe1). İç swagger prod'da kapatıldı (commit d2846f7).
-Tip/scope modeli + iki-yüzey mimarisi onaylandı (2026-07-21). Sırada F1.
+**Durum:** F0 (590ffe1) + iç swagger kapatma (d2846f7) + F1 (db76a63) UYGULANDI.
+Tip/scope modeli + iki-yüzey mimarisi + ürün ingestion modeli onaylandı (2026-07-21).
+Sırada F2 (RequireScope + partner façade uçları + partner swagger).
 
 ## Amaç
 
@@ -248,7 +249,7 @@ hesapları burada görülür, eklenir, yetkisi değiştirilir, iptal edilir.
 |-----|-----|-----|
 | **F0** ✅ | Varsayılan `AdminOnly` politikası (`type != member && type != api_client`) | **TAMAM (2026-07-21, commit 590ffe1) — üye/api_client iç uçları geçemez** |
 | **Fx** ✅ | İç swagger prod'da kapatıldı (yalnız Development) | **TAMAM (2026-07-21, commit d2846f7) — iç yüzey artık listelenmiyor** |
-| F1 | `definition.api_client_types` kataloğu — 4 tip seed (§3) + `ApiClient` entity (`FulfillmentMode` dahil) + migration + `/api/auth/token` | Tip = kilitli scope paketi; catalog.write≠pricing.write |
+| **F1** ✅ | `definition.api_client_types` kataloğu — 4 tip seed (§3) + `ApiClient` entity (`FulfillmentMode` dahil) + migration + `/api/auth/token` | **TAMAM (2026-07-21, commit db76a63) — tip=kilitli scope; catalog.write≠pricing.write** |
 | **F2** | `RequireScopeAttribute` + tipten (+bayraktan) scope çözümü + owner filtresi + **partner façade uçları (§3.5)** + **ayrı partner swagger doc** | **Asıl iş burada — yeni kaba taneli yüzey** |
 | F3 | Internal hesap (loopback kısıtı) + mobil first_party hesabı | |
 | F4 | Panel ekranları (liste, detay, cari sekmesi) | Ekran kurgusu §6 onayından sonra |
