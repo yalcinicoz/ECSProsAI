@@ -266,6 +266,10 @@ builder.Services.AddAuthorization(options =>
               .RequireAssertion(ctx => !ctx.User.HasClaim(c =>
                   c.Type == "type" && (c.Value == "member" || c.Value == "api_client"))));
 
+    // Partner API "whoami" gibi scope gerektirmeyen ama YALNIZ API hesabına açık uçlar için.
+    options.AddPolicy("ApiClientOnly", policy =>
+        policy.RequireClaim("type", "api_client"));
+
     // Politika belirtilmeyen tüm [Authorize] uçları için varsayılan = AdminOnly.
     // [AllowAnonymous] ve attribute'suz (anonim gezinme) uçlar etkilenmez;
     // [Authorize(Policy="MemberOnly")] ve RequirePermission kendi kurallarını korur.
@@ -287,7 +291,19 @@ builder.Services.AddCors(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "ECSPros API", Version = "v1" });
+    // Partner API dokümanı — yalnız /api/partner/* uçları; prod'da da açık (dış entegratörler için).
+    c.SwaggerDoc("partner", new OpenApiInfo { Title = "ECSPros Partner API", Version = "v1" });
+    // İç API dokümanı — yalnız Development'ta ÜRETİLİR (prod'da /swagger/v1 = 404, iç yüzey gizli).
+    if (builder.Environment.IsDevelopment())
+        c.SwaggerDoc("v1", new OpenApiInfo { Title = "ECSPros API (iç)", Version = "v1" });
+
+    // Uçları doğru dokümana ayır: partner dokümanı yalnız api/partner/*, iç doküman gerisi.
+    c.DocInclusionPredicate((docName, api) =>
+    {
+        var isPartner = api.RelativePath?.StartsWith("api/partner", StringComparison.OrdinalIgnoreCase) == true;
+        return docName == "partner" ? isPartner : !isPartner;
+    });
+
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -311,15 +327,16 @@ var app = builder.Build();
 // ─── Middleware Pipeline ────────────────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-// İç API swagger'ı YALNIZ Development'ta açık. Bu yüzey (admin panel + storefront'un
-// kullandığı ince taneli iç uçlar) dışarıya hiç açılmamalı; prod'da /swagger 404 döner.
-// Dışa dönük partner API için ayrı, sadece partner uçlarını listeleyen bir swagger dokümanı
-// gelecekte (F2) eklenecek — o prod'da da açık olacak.
-if (app.Environment.IsDevelopment())
+// İki swagger dokümanı: "partner" (dış, prod'da da açık — yalnız /api/partner/*) ve "v1" (iç,
+// yalnız Development'ta ÜRETİLİR). Prod'da /swagger/v1/swagger.json = 404 (iç yüzey gizli kalır);
+// /swagger/partner/swagger.json partner uçlarını listeler. UI'de iç doküman yalnız dev'de görünür.
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "ECSPros API v1"));
-}
+    c.SwaggerEndpoint("/swagger/partner/swagger.json", "ECSPros Partner API");
+    if (app.Environment.IsDevelopment())
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ECSPros API (iç)");
+});
 
 // Faz 8 (misharix tasarım sözleşmesi): sürüm sorgulu (?v=) CSS/JS, performans görselleri
 // ve Font Awesome dosyalarına 1 yıl immutable cache; HTML'e no-cache (tarayıcı bayat
