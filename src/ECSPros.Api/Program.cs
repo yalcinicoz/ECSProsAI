@@ -255,6 +255,21 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("MemberOnly", policy =>
         policy.RequireClaim("type", "member"));
+
+    // F0 — Kimlik sınırı: makine/üye kimlikleri düz [Authorize] yönetim uçlarını GEÇEMEZ.
+    // Üye token'ı (type=member) ve API hesabı token'ı (type=api_client), admin token'ıyla aynı
+    // Jwt:Secret ile imzalandığından yalnız "type" claim'i ayrımı güvenlik sınırıdır.
+    // Personel/admin token'ında "type" claim'i YOKTUR → politikayı geçer.
+    // API hesapları yalnız kendi RequireScope uçlarına erişir (varsayılanı da geçemez).
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireAuthenticatedUser()
+              .RequireAssertion(ctx => !ctx.User.HasClaim(c =>
+                  c.Type == "type" && (c.Value == "member" || c.Value == "api_client"))));
+
+    // Politika belirtilmeyen tüm [Authorize] uçları için varsayılan = AdminOnly.
+    // [AllowAnonymous] ve attribute'suz (anonim gezinme) uçlar etkilenmez;
+    // [Authorize(Policy="MemberOnly")] ve RequirePermission kendi kurallarını korur.
+    options.DefaultPolicy = options.GetPolicy("AdminOnly")!;
 });
 
 // ─── CORS ──────────────────────────────────────────────────────────
