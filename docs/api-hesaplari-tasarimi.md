@@ -162,8 +162,39 @@ Her uç `RequireScope` ile korunur; owner filtresi (tedarikçi cari) veriyi otom
 | `GET /api/partner/v1/account/statement` | Cari ekstre / bakiye | account.read |
 
 ~10-12 uç. Her biri içeride mevcut iç servis/handler'ları orkestrasyonla çağırır; dışarıya
-kararlı, sürümlü bir sözleşme sunar. **"Tek pakette ürün kartı" istek gövdesi** ayrı konuşulacak
-(varyant, özellik, görsel, kategori eşlemesi, tip-bazlı fiyat kuralı dahil).
+kararlı, sürümlü bir sözleşme sunar.
+
+## 3.6. Ürün kartı ingestion modeli (kararlar 2026-07-21)
+
+Façade **canlı katalogu doğrudan yazmaz** → bir **staging/submission** alanı yazar; onay
+sonrası yayınlanır. Böylece dış gönderim ile canlı katalog ayrışır.
+
+**1) Onaya DÜŞEN: yalnız ürün KARTI içeriği** (ad, açıklama, grup, özellikler, varyant yapısı,
+görseller). Kullanıcı kararı: *her ürün onaya düşer* (her iki tip).
+- Yeni ürün → `pending` submission.
+- Canlı ürünün içerik düzenlemesi → **pending revizyon**; canlı sürüm onaya kadar AYNEN yayında kalır.
+- Panel: **"Tedarikçi Gönderimleri"** ekranı (incele → canlıyla karşılaştır → onayla/reddet). K16 gereği bu ekran F2/F4 kapsamında.
+
+**2) Onaya DÜŞMEYEN (direkt): stok + (Tip 2) fiyat.** Operasyonel/sık değişen veri; zaten onaylı
+kendi ürününün kalemine anında yazılır (`PUT /products/{externalCode}/stock`). İlk stok submission
+içinde gelir; sonraki güncellemeler direkt.
+
+**3) Grup bazlı doğrulama:** `group` kodu geçerli varyant eksenlerini + izinli özellikleri belirler.
+Keşif uçları `GET /groups`, `GET /groups/{code}` (catalog.read) tedarikçiye geçerli kodları verir.
+Kategori/grup **bizim kod listemizden** seçilir (kullanıcı kararı); storefront kategori yerleşimi
+onay anında bizce teyit edilir.
+
+**4) Tip'e göre fiyat:** Tip 1 (Yönetilen) → `price` yok sayılır (biz koyarız). Tip 2 (Pazaryeri)
+→ `price` zorunlu. `catalog.write` içerik, `pricing.write` fiyattır (§3).
+
+**5) Upsert & idempotency:** `externalCode` (tedarikçinin kendi kodu) anahtardır; aynı kodla tekrar
+POST → mevcut submission/ürünü günceller. Owner filtresi: submission + ürünler tedarikçinin
+`OwnerId`'sine bağlı, başka tedarikçinin kodunu göremez/ezemez.
+
+**Yanıt:** `{ submissionId, externalCode, status: "pending|approved|rejected", productCode: null|"P-..." }`
+
+İstek gövdesinin **tam alan sözleşmesi** (varyant/özellik/görsel şemasının kesin biçimi) ayrıca
+netleştirilecek.
 
 ## 4. Token akışı — OAuth2 client_credentials
 
