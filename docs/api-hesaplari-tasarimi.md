@@ -197,6 +197,27 @@ POST → mevcut submission/ürünü günceller. Owner filtresi: submission + ür
 İstek gövdesinin **tam alan sözleşmesi** (varyant/özellik/görsel şemasının kesin biçimi) ayrıca
 netleştirilecek.
 
+## 3.7. Sahiplik modeli (owner) — kullanıcı kararı 2026-07-21
+
+**Yeni alan/tablo YOK.** Sahiplik zaten mevcut `Product.SupplierId` (Guid?) + `SupplierProductCode`
+alanlarında; bunlar canlıda sipariş→paket bölme akışında kullanılıyor (OrderItem.SupplierId'ye
+snapshot'lanır, paketler tedarikçiye bölünür). Model:
+
+- **`Product.SupplierId` = sahip** → `accounts.current_accounts.Id` (AccountType=supplier). Bu
+  `ApiClient.OwnerId` ile **aynı** şeyi işaret eder; owner-scope filtresi doğrudan
+  `WHERE Product.SupplierId = token.owner_id`.
+- **Granülerlik: ürün seviyesi, TEK sahip (1 ürün : 1 tedarikçi).** Aynı fiziksel ürünü iki
+  tedarikçi verirse iki ayrı Product kaydı olur (kendi fiyat/stok). Paylaşılan katalog / çoklu
+  teklif (offer katmanı) YOK.
+- **externalCode = `SupplierProductCode`.** Upsert/idempotency anahtarı = **(SupplierId,
+  SupplierProductCode)** unique. Bir tedarikçi başka tedarikçinin kodunu göremez/ezemez.
+- **Mevcut ~28.6K ürün `SupplierId=null`** = bizim/platform; partner token'ları (owner-scoped)
+  **asla görmez** (migrasyon gerekmez).
+- **FK yok** (modüler monolit — Catalog→Accounts gevşek Guid); F2b'de yalnız index eklenir:
+  `SupplierId` index + `(SupplierId, SupplierProductCode)` filtered unique.
+- Her iki tedarikçi tipinde de SupplierId = o tedarikçi (yönetilen tedarikçide fiyat/kural bizde
+  ama ürün yine onun; owner-scope onu kendi ürünlerine sınırlar).
+
 ## 4. Token akışı — OAuth2 client_credentials
 
 ```
