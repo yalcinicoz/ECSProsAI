@@ -4,6 +4,8 @@ using ECSPros.Catalog.Application.Commands.SubmitPartnerProduct;
 using ECSPros.Catalog.Application.Queries.GetPartnerGroupSchema;
 using ECSPros.Catalog.Application.Queries.GetPartnerSubmissions;
 using ECSPros.Catalog.Application.Queries.GetProductGroups;
+using ECSPros.Catalog.Application.Queries.GetSupplierProductVariants;
+using ECSPros.Inventory.Application.Commands.UpsertSupplierStock;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -123,6 +125,48 @@ public class PartnerController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>Onaylı ürünün stoğunu MUTLAK olarak bildir (§3.6 — onaya düşmez, direkt uygulanır).
+    /// Stok "Tedarikçi Stokları" deposunda bu tedarikçinin kısmına yazılır; online mevcudiyete sayılır.</summary>
+    [HttpPut("products/{code}/stock")]
+    [RequireScope("stock.write")]
+    public async Task<IActionResult> UpdateStock(string code, [FromBody] StockUpdateRequest request, CancellationToken ct)
+    {
+        if (!TryGetOwnerId(out var supplierId))
+            return StatusCode(StatusCodes.Status403Forbidden,
+                new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
+
+        if (request.Items is null || request.Items.Count == 0)
+            return UnprocessableEntity(new { success = false, errors = new[] { new { field = "items", code = "required", message = "En az bir stok kalemi gereklidir." } } });
+
+        // 1) Ürünü + varyantlarını çöz (owner-scoped, canlı olmalı)
+        var resolve = await _mediator.Send(new GetSupplierProductVariantsQuery(supplierId, code), ct);
+        if (resolve.IsFailure)
+            return NotFound(new { success = false, error = resolve.Error });
+
+        var bySku = resolve.Value.Variants.ToDictionary(v => v.Sku, v => v.VariantId);
+
+        // 2) İstek sku'larını variantId'ye eşle; bilinmeyen sku → 422
+        var errors = new List<object>();
+        var items = new List<SupplierStockItem>();
+        foreach (var it in request.Items)
+        {
+            if (string.IsNullOrWhiteSpace(it.Sku) || !bySku.TryGetValue(it.Sku, out var vid))
+            { errors.Add(new { field = $"items.{it.Sku}", code = "unknown_sku", message = $"'{it.Sku}' bu ürüne ait bir SKU değil." }); continue; }
+            if (it.Quantity < 0)
+            { errors.Add(new { field = $"items.{it.Sku}", code = "invalid_quantity", message = "Miktar negatif olamaz." }); continue; }
+            items.Add(new SupplierStockItem(vid, it.Quantity));
+        }
+        if (errors.Count > 0)
+            return UnprocessableEntity(new { success = false, errors });
+
+        // 3) Inventory'ye yaz (tedarikçi kısmı)
+        var upsert = await _mediator.Send(new UpsertSupplierStockCommand(supplierId, items), ct);
+        if (upsert.IsFailure)
+            return BadRequest(new { success = false, error = upsert.Error });
+
+        return Ok(new { success = true, data = new { productCode = resolve.Value.ProductCode, updated = upsert.Value } });
+    }
+
     private bool TryGetOwnerId(out Guid ownerId)
         => Guid.TryParse(User.FindFirst("owner_id")?.Value, out ownerId);
 
@@ -132,3 +176,6 @@ public class PartnerController : ControllerBase
     private bool HasScope(string scope)
         => User.FindAll("scope").Any(c => c.Value == scope);
 }
+
+public record StockUpdateRequest(List<StockUpdateItem> Items);
+public record StockUpdateItem(string Sku, int Quantity);

@@ -32,6 +32,7 @@ public class WarehouseSectionConfiguration : IEntityTypeConfiguration<WarehouseS
         builder.Property(x => x.Code).HasMaxLength(50).IsRequired();
         builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
         builder.HasIndex(x => new { x.WarehouseId, x.Code }).IsUnique();
+        builder.HasIndex(x => x.SupplierId).HasFilter("\"SupplierId\" IS NOT NULL");
         builder.HasQueryFilter(x => !x.IsDeleted);
 
         builder.HasMany(x => x.Bins).WithOne(x => x.Section).HasForeignKey(x => x.SectionId);
