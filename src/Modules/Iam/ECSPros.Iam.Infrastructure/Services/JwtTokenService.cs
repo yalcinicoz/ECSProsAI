@@ -54,6 +54,38 @@ public class JwtTokenService : IJwtTokenService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    public string GenerateApiClientToken(ApiClient client, IEnumerable<string> scopes)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secret));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, client.Id.ToString()),
+            new("type", "api_client"),          // kimlik sınırı — DefaultPolicy (AdminOnly) bunu iç uçlardan reddeder
+            new("client_id", client.ClientId),
+            new("name", client.Name),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+
+        if (!string.IsNullOrEmpty(client.OwnerType))
+            claims.Add(new Claim("owner_type", client.OwnerType));
+        if (client.OwnerId.HasValue)
+            claims.Add(new Claim("owner_id", client.OwnerId.Value.ToString()));
+
+        foreach (var scope in scopes)
+            claims.Add(new Claim("scope", scope));   // RequireScope (F2) bu claim'e bakar
+
+        var token = new JwtSecurityToken(
+            issuer: _issuer,
+            audience: _audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(15),
+            signingCredentials: creds);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
     public string GenerateRefreshToken()
     {
         var bytes = new byte[64];

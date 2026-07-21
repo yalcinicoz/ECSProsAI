@@ -673,6 +673,68 @@ public static class DatabaseSeeder
     {
         await SeedPermissionsAndRolesAsync(sp);
         await SeedAdminUserAsync(sp);
+        await SeedApiClientTypesAsync(sp);
+    }
+
+    /// <summary>
+    /// definition.api_client_types — 4 API kullanıcı tipi kataloğu (§3). Platformca tanımlı,
+    /// kilitli taban scope paketleri. İdempotent: yalnız eksik kodları ekler.
+    /// </summary>
+    private static async Task SeedApiClientTypesAsync(IServiceProvider sp)
+    {
+        var context = sp.GetRequiredService<IamDbContext>();
+
+        var tipler = new List<ApiClientType>
+        {
+            new()
+            {
+                Code = "supplier_managed",
+                NameI18n = new() { ["tr"] = "Yönetilen tedarikçi", ["en"] = "Managed supplier" },
+                DefaultClientType = "partner",
+                RequiredOwnerType = "current_account",
+                BaseScopes = new()
+                {
+                    ApiScopes.CatalogRead, ApiScopes.CatalogWrite, ApiScopes.StockRead,
+                    ApiScopes.StockWrite, ApiScopes.InvoiceRead, ApiScopes.AccountRead
+                }
+            },
+            new()
+            {
+                Code = "supplier_merchant",
+                NameI18n = new() { ["tr"] = "Pazaryeri tedarikçisi", ["en"] = "Marketplace supplier" },
+                DefaultClientType = "partner",
+                RequiredOwnerType = "current_account",
+                BaseScopes = new()
+                {
+                    ApiScopes.CatalogRead, ApiScopes.CatalogWrite, ApiScopes.PricingWrite,
+                    ApiScopes.StockRead, ApiScopes.StockWrite, ApiScopes.InvoiceRead, ApiScopes.AccountRead
+                }
+            },
+            new()
+            {
+                Code = "first_party",
+                NameI18n = new() { ["tr"] = "Mobil / birinci taraf", ["en"] = "Mobile / first party" },
+                DefaultClientType = "first_party",
+                RequiredOwnerType = null,
+                BaseScopes = new() { ApiScopes.CatalogRead, ApiScopes.StockRead, ApiScopes.OrderRead }
+            },
+            new()
+            {
+                Code = "internal",
+                NameI18n = new() { ["tr"] = "İç servis", ["en"] = "Internal service" },
+                DefaultClientType = "internal",
+                RequiredOwnerType = null,
+                BaseScopes = ApiScopes.All.ToList()
+            }
+        };
+
+        var mevcutKodlar = await context.ApiClientTypes.Select(t => t.Code).ToListAsync();
+        var yeniler = tipler.Where(t => !mevcutKodlar.Contains(t.Code)).ToList();
+        if (yeniler.Count == 0) return;
+
+        context.ApiClientTypes.AddRange(yeniler);
+        await context.SaveChangesAsync();
+        Console.WriteLine($"✓ Seed: {yeniler.Count} API kullanıcı tipi eklendi ({string.Join("/", yeniler.Select(y => y.Code))}).");
     }
 
     /// <summary>
@@ -722,6 +784,7 @@ public static class DatabaseSeeder
             (Code: Permissions.CatalogImagesManage,     Name: "Görsel Yönetimi",             Module: "catalog"),
             (Code: Permissions.CatalogSettingsManage,   Name: "Katalog Ayarları",            Module: "catalog"),
             (Code: Permissions.InventoryManage,         Name: "Envanter Yönetimi",           Module: "inventory"),
+            (Code: Permissions.OrderPackagesMerge,      Name: "Paket Birleştirme (İstisna)", Module: "order"),
         };
 
         var existingCodes = await context.Permissions.Select(p => p.Code).ToListAsync();

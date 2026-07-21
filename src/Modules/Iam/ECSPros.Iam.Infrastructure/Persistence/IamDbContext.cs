@@ -18,6 +18,8 @@ public class IamDbContext : DbContext, IIamDbContext
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<AdminMenu> AdminMenus => Set<AdminMenu>();
+    public DbSet<ApiClient> ApiClients => Set<ApiClient>();
+    public DbSet<ApiClientType> ApiClientTypes => Set<ApiClientType>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
