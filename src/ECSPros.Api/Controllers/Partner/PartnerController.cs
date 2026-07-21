@@ -93,7 +93,8 @@ public class PartnerController : ControllerBase
                 new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
 
         var canSetPrice = HasScope("pricing.write");
-        var rawJson = JsonSerializer.Serialize(body);
+        // API geneli camelCase — saklanan gövde de camelCase (panel/detay ucu tutarlı tüketsin).
+        var rawJson = JsonSerializer.Serialize(body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         var result = await _mediator.Send(
             new SubmitPartnerProductCommand(supplierId, GetApiClientId(), canSetPrice, body, rawJson), ct);
 
