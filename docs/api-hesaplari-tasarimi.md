@@ -325,7 +325,9 @@ hesapları burada görülür, eklenir, yetkisi değiştirilir, iptal edilir.
 | **Fx** ✅ | İç swagger prod'da kapatıldı (yalnız Development) | **TAMAM (2026-07-21, commit d2846f7) — iç yüzey artık listelenmiyor** |
 | **F1** ✅ | `definition.api_client_types` kataloğu — 4 tip seed (§3) + `ApiClient` entity (`FulfillmentMode` dahil) + migration + `/api/auth/token` | **TAMAM (2026-07-21, commit db76a63) — tip=kilitli scope; catalog.write≠pricing.write** |
 | **F2a** ✅ | `RequireScopeAttribute` + `ApiClientOnly` policy + **partner swagger doc** (prod'da açık, iç doküman dev-only) + `PartnerController` (`GET /me`, `GET /groups` keşif) | **TAMAM (2026-07-21, commit 5fd112a) — façade iskeleti + ilk keşif ucu** |
-| **F2b** | Partner **ürün ingestion** uçları (§3.5/§3.6): `POST /products` (submission/staging + onay), `PUT /products/{code}/stock`, `POST /orders`, shipment vb. + owner filtresi + ürün→tedarikçi sahiplik modeli | **Asıl iş — gövde sözleşmesi + sahiplik modeli netleşecek** |
+| **F2b-1** ✅ | `ProductSubmission` staging + migration + Product sahiplik index'leri + `GET /groups/{code}` değer keşif + `POST /products` (Kapı 1 doğrulama→pending) + owner-scoped `GET /products` | **TAMAM (2026-07-21, commit 7a42a51)** |
+| **F2b-2** | Onay: kabul/red (Kapı 2) → canlı Product orkestrasyonu (mevcut iç command'lar); `PUT /products/{code}/stock` (direkt, Inventory) + `POST /orders` + shipment | Cross-module (Inventory/Order) |
+| **F2b-3** | Panel "Tedarikçi Gönderimleri" ekranı (incele→onayla/reddet) | K16 — önce ekran kurgusu |
 | F3 | Internal hesap (loopback kısıtı) + mobil first_party hesabı | |
 | F4 | Panel ekranları (liste, detay, cari sekmesi) | Ekran kurgusu §6 onayından sonra |
 | F5 | Rate limit + audit + kullanım ekranı | Rate limit bugün hiç yok |
