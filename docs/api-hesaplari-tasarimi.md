@@ -1,12 +1,39 @@
 # API Hesapları (ApiClient) — Tasarım
 
-**Tarih:** 2026-07-20
-**Durum:** Tasarım onayı bekliyor (ekran kurgusu konuşulacak — K16)
+**Tarih:** 2026-07-20 (güncel: 2026-07-21)
+**Durum:** F0 UYGULANDI (commit 590ffe1). İç swagger prod'da kapatıldı (commit d2846f7).
+Tip/scope modeli + iki-yüzey mimarisi onaylandı (2026-07-21). Sırada F1.
 
 ## Amaç
 
 API kullanıcısı; site üyesinden (CRM `Member`) ve personelden (IAM `User`) **bağımsız** üçüncü
 bir kimlik türü olacak. Makine kimliği insan kimliğiyle aynı havuzda tutulmayacak.
+
+## 0. İki API yüzeyi — iç vs partner façade (TEMEL MİMARİ)
+
+En kritik karar (2026-07-21): dışa açılan API, **mevcut uçların scope'lanması değildir.**
+İki **ayrı** yüzey vardır:
+
+| | **İç API** (mevcut ~200 uç) | **Partner API façade** (YENİ, henüz yok) |
+|--|------------------------------|-------------------------------------------|
+| Kim kullanır | Admin panel (React) + storefront SSR | Tedarikçi / dropshipper / mobil / iç servis |
+| Tane boyutu | İnce taneli, "gevezе" — bir stok kartı onlarca çağrı | **Kaba taneli, görev odaklı** — tek çağrı = tam bir iş |
+| Rota | `/api/...` | `/api/partner/v1/...` |
+| Auth | `[Authorize]` (=AdminOnly) / `RequirePermission` | `RequireScope` |
+| Swagger | Yalnız Development (prod'da 404 — d2846f7) | Ayrı doküman, prod'da da açık (F2) |
+| Dışarıya | **HİÇ açılmaz** | Tek dış temas noktası |
+
+**Neden façade:** Tedarikçinin beklentisi "ürün kartı için gerekli TÜM bilgiyi tek pakette tek
+servise gönder" — panelin 30 çağrılık iş akışını taklit etmek değil. Bu uçlar projenin iç
+işleyişinde OLMAYAN, yalnız dışarısı için yazılan orkestrasyon uçlarıdır; içeride mevcut
+iç servisleri kendileri çağırır.
+
+**Sınır zaten yarı-hazır (F0 sayesinde):** api_client token'ı `[Authorize]`/`RequirePermission`
+iç uçlarının HİÇBİRİNE giremez (member gibi); yalnız `RequireScope` işaretli partner uçlarına
+girer. Yani "iç API'yi dışarı açma" derdi yoktur — iç uçlar tanımı gereği api_client'a kapalıdır.
+Kalan iş: partner façade'ı *inşa etmek* (F2) + iç swagger'ı gizlemek (✅ d2846f7).
+
+Partner façade uçlarının taslak listesi §3.5'te; tam istek/yanıt sözleşmesi ayrıca konuşulacak.
 
 ## 1. Üç kimlik türü
 
@@ -31,11 +58,15 @@ public class ApiClient : BaseEntity
     public string SecretHint { get; set; }         // "••••4f2c" — panelde gösterim için
 
     public string ClientType { get; set; }         // GÜVEN ekseni: internal | first_party | partner
-    public string ApiClientTypeCode { get; set; }  // ROL ekseni: supplier | dropshipping | marketplace … (bkz. §3)
+    public string ApiClientTypeCode { get; set; }  // ROL ekseni: supplier_managed | supplier_merchant | first_party | internal (bkz. §3)
     public string? OwnerType { get; set; }         // current_account  (CurrentAccount kalıbı)
     public Guid? OwnerId { get; set; }             // accounts.current_accounts.Id
 
-    // Scope'lar hesapta TUTULMAZ — ApiClientTypeCode'dan token üretiminde çözülür (§3).
+    // Gönderim modeli (yalnız tedarikçi tiplerinde anlamlı): platform | supplier.
+    // supplier ise etkin scope'a order.read + fulfillment.write EKLENİR (§3, Yol B bayrağı).
+    public string FulfillmentMode { get; set; } = "platform";
+
+    // Scope'lar hesapta TUTULMAZ — ApiClientTypeCode (+ FulfillmentMode) token üretiminde çözülür (§3).
     public List<string> IpAllowList { get; set; }  // jsonb — boşsa kısıt yok
     public int RateLimitPerMinute { get; set; }
 
@@ -58,37 +89,81 @@ ve tipten türetilir (**tamamen kilitli** — hesapta düzenlenemez, kullanıcı
 
 **İki dik eksen:**
 - `ClientType` (§2) = **güven/köken**: istek nereden geliyor, ne kadar güvenilir (internal/first_party/partner).
-- `ApiClientTypeCode` = **iş rolü**: tedarikçi, dropshipping, pazaryeri… → yetki paketini belirler.
+- `ApiClientTypeCode` = **iş rolü**: yönetilen tedarikçi / pazaryeri tedarikçisi / mobil / iç servis → yetki paketini belirler.
 
-### Scope kataloğu
+### Scope kataloğu (10 scope)
 Panel `Permissions` kataloğundan **bağımsız** bir scope listesi. Gerekçe: yeni bir panel
 yetkisi eklemek dışarıya açılan API'nin kapsamını yanlışlıkla genişletmemeli.
 
 ```
-catalog.read      stock.read      order.read      invoice.read
-catalog.write     stock.write     order.write     invoice.write
+catalog.read       ürün/kategori okuma
+catalog.write      ürün İÇERİĞİ yazma (ad, açıklama, özellik, görsel, kategori) — fiyat HARİÇ
+pricing.write      fiyat + satış kuralları (kanal fiyatı, vergi, satışa aç/kapa, kampanya uygunluğu)
+stock.read         stok okuma
+stock.write        stok bildirme/güncelleme
+order.read         sipariş okuma
+order.write        sipariş oluşturma/değiştirme
+fulfillment.write  "kargoladım" + takip no bildirme (siparişi değiştirmeden)
+invoice.read       fatura okuma
+account.read       cari ekstre / bakiye okuma
 ```
+
+**catalog.write ≠ pricing.write** kritik ayrımdır: iki tedarikçi tipini ayıran tek eksen budur.
+Yönetilen tedarikçi ürün *içeriğini* yazar ama fiyat/satış kuralı BİZDEDİR; pazaryeri tedarikçisi
+fiyat dahil her şeyi kendisi belirler.
 
 ### Tip kataloğu — `definition.api_client_types`
 Platformca (geliştirici firma) doldurulur; veri aktarımı/eşleme kayıt EKLEYEMEZ
-(**definition şeması altın kuralı** — `integration_services` ile aynı). Her tip: kod,
-ad, sabit scope seti, zorunlu `OwnerType`.
+(**definition şeması altın kuralı** — `integration_services` ile aynı). Her tip: kod, ad,
+güven ekseni, zorunlu `OwnerType`, sabit **taban** scope seti.
 
-| Kod | Ad | Zorunlu sahip | Scope paketi (sabit) |
-|-----|-----|--------------|----------------------|
-| `supplier` | Tedarikçi | current_account (supplier) | catalog.read, stock.read, stock.write, order.read |
-| `dropshipping` | Dropshipping | current_account (supplier) | catalog.read, stock.read, order.read, order.write, invoice.read |
-| `marketplace` | Pazaryeri entegratörü | — / current_account | catalog.read, catalog.write, order.read, stock.read |
-| `first_party` | Mobil / birinci taraf | — | catalog.read, order.read, order.write, stock.read |
+| Kod | Ad | Güven | Zorunlu sahip | Taban scope paketi (sabit) |
+|-----|-----|-------|--------------|----------------------------|
+| `supplier_managed` | Yönetilen tedarikçi (gelir paylaşımlı) | partner | current_account (supplier) | catalog.read, catalog.write, stock.read, stock.write, invoice.read, account.read |
+| `supplier_merchant` | Pazaryeri tedarikçisi (fiyatı o belirler) | partner | current_account (supplier) | + **pricing.write** (yukarıdaki tabana) |
+| `first_party` | Mobil / birinci taraf | first_party | — | catalog.read, stock.read, order.read |
+| `internal` | İç servis / entegrasyon | internal | — | tüm scope'lar; yalnız loopback (§5) |
 
+**Gönderim bayrağı (Yol B — kullanıcı kararı 2026-07-21):** Tedarikçi tiplerinde "kargoyu kim
+gönderiyor" anlaşmaya göre değiştiğinden, bunu tipe değil hesaptaki `FulfillmentMode` alanına
+bağladık. `FulfillmentMode=supplier` ise etkin scope = taban paket **+ `order.read` +
+`fulfillment.write`**. Bu, "keyfi scope seçme" DEĞİLDİR: kimse tek tek scope işaretlemez;
+yalnız tek bir iş gerçeği (Biz/Tedarikçi gönderiyor) işaretlenir, scope sonucu deterministiktir.
+Ticari kimlik tipte, lojistik gerçeği bayrakta.
+
+- Etkin scope = `type.BaseScopes` ∪ (`FulfillmentMode==supplier` ? {order.read, fulfillment.write} : {}).
 - Yeni bir **scope** eklendiğinde hangi tiplere gireceği tek yerde (tip tanımı) kararlaştırılır.
-- Token üretiminde `scope` claim'i hesabın tipinden çözülür; tip güncellenince tüm o tipteki
+- Token üretiminde `scope` claim'i tipten (+ bayraktan) çözülür; tip güncellenince tüm o tipteki
   hesaplar yeni token'da yeni sete kavuşur (mevcut 15 dk'lık token'lar doğal olarak biter).
 - `RequireScopeAttribute` — `RequirePermissionAttribute` ile aynı kalıp, `scope` claim'ine bakar.
 - **Scope "ne yapabilir", owner "hangi veri" demektir.** İkisi ayrı kontrol: `OwnerType=current_account`
   olan bir token'da sorgular otomatik `OwnerId` ile filtrelenir. `stock.write` scope'u olan bir
   tedarikçi yalnız kendi kalemlerini günceller. Tip zaten `OwnerType`'ı zorladığından, tedarikçi
   tipli bir hesap sahipsiz açılamaz.
+
+> **Kapsam notu (2026-07-21):** Dış/partner tarafında şimdilik yalnız bu 2 tedarikçi tipi var;
+> **dış pazaryeri entegratörü tipi YOK** (Trendyol/Hepsiburada'ya *biz* push ederiz — bu bir
+> `internal` iş, partner değil). `first_party` (mobil) ve `internal` bizim kendi istemcilerimiz.
+
+## 3.5. Partner façade uçları (taslak — sözleşme ayrıca konuşulacak)
+
+`/api/partner/v1/...` altında, ayrı swagger dokümanıyla. Kaba taneli, görev odaklı, versiyonlu.
+Her uç `RequireScope` ile korunur; owner filtresi (tedarikçi cari) veriyi otomatik daraltır.
+
+| Uç | İş | Scope |
+|----|-----|-------|
+| `POST /api/partner/v1/products` | Ürün kartını **tek pakette** oluştur/güncelle (içerik+varyant+stok, ops. fiyat) | catalog.write (+pricing.write) |
+| `GET /api/partner/v1/products[/{code}]` | Ürün bilgisi sorgula | catalog.read |
+| `PUT /api/partner/v1/products/{code}/stock` | Stok bildir/güncelle | stock.write |
+| `POST /api/partner/v1/orders` | Sipariş **tek servisle** ilet (dropship) | order.write |
+| `GET /api/partner/v1/orders[/{id}]` | Sipariş/durum sorgula | order.read |
+| `POST /api/partner/v1/orders/{id}/shipment` | "Kargoladım + takip no" bildir | fulfillment.write |
+| `GET /api/partner/v1/invoices` | Fatura listesi | invoice.read |
+| `GET /api/partner/v1/account/statement` | Cari ekstre / bakiye | account.read |
+
+~10-12 uç. Her biri içeride mevcut iç servis/handler'ları orkestrasyonla çağırır; dışarıya
+kararlı, sürümlü bir sözleşme sunar. **"Tek pakette ürün kartı" istek gövdesi** ayrı konuşulacak
+(varyant, özellik, görsel, kategori eşlemesi, tip-bazlı fiyat kuralı dahil).
 
 ## 4. Token akışı — OAuth2 client_credentials
 
@@ -122,8 +197,10 @@ Sütunlar: Ad · Tip · Sahip (cari adı) · Scope sayısı · Son kullanım · 
 Satır tıklanabilir → detay (liste satırı kuralı).
 
 **b) API Hesabı Detayı** — sekmeler:
-- *Genel*: ad, **API tipi** (dropdown — kataloğdan), sahip cari, durum, geçerlilik
-- *Yetkiler*: seçilen tipin scope seti **salt-görüntü** (kilitli — düzenlenemez; değişiklik tip tanımından)
+- *Genel*: ad, **API tipi** (dropdown — kataloğdan), sahip cari, **Gönderen** (Biz/Tedarikçi —
+  yalnız tedarikçi tiplerinde görünür, `FulfillmentMode`), durum, geçerlilik
+- *Yetkiler*: tip taban scope'ları + (gönderim bayrağından gelen order.read/fulfillment.write)
+  **salt-görüntü** (kilitli — düzenlenemez; değişiklik tip tanımından veya Gönderen alanından)
 - *Güvenlik*: IP allowlist, dakikalık limit, secret yenile
 - *Kullanım*: son istekler, hata sayısı, audit kayıtları
 
@@ -138,16 +215,19 @@ hesapları burada görülür, eklenir, yetkisi değiştirilir, iptal edilir.
 
 | Faz | İş | Not |
 |-----|-----|-----|
-| **F0** | Varsayılan `AdminOnly` politikası (`type != member && type != api_client`) | **Mevcut açığı kapatır — diğerlerinden bağımsız, önce yapılabilir** |
-| F1 | `definition.api_client_types` kataloğu (seed) + `ApiClient` entity + migration + `/api/auth/token` | Tip = kilitli scope paketi (§3) |
-| F2 | `RequireScopeAttribute` + tipten scope çözümü + owner bazlı sorgu filtresi | |
+| **F0** ✅ | Varsayılan `AdminOnly` politikası (`type != member && type != api_client`) | **TAMAM (2026-07-21, commit 590ffe1) — üye/api_client iç uçları geçemez** |
+| **Fx** ✅ | İç swagger prod'da kapatıldı (yalnız Development) | **TAMAM (2026-07-21, commit d2846f7) — iç yüzey artık listelenmiyor** |
+| F1 | `definition.api_client_types` kataloğu — 4 tip seed (§3) + `ApiClient` entity (`FulfillmentMode` dahil) + migration + `/api/auth/token` | Tip = kilitli scope paketi; catalog.write≠pricing.write |
+| **F2** | `RequireScopeAttribute` + tipten (+bayraktan) scope çözümü + owner filtresi + **partner façade uçları (§3.5)** + **ayrı partner swagger doc** | **Asıl iş burada — yeni kaba taneli yüzey** |
 | F3 | Internal hesap (loopback kısıtı) + mobil first_party hesabı | |
 | F4 | Panel ekranları (liste, detay, cari sekmesi) | Ekran kurgusu §6 onayından sonra |
 | F5 | Rate limit + audit + kullanım ekranı | Rate limit bugün hiç yok |
 
 ## 8. Açık noktalar
 
-- Partner hesaplarına ayrı bir dış dokümantasyon (public Swagger) gerekecek mi? Bugünkü Swagger
-  production'da korumasız ve tüm iç uçları listeliyor — F4'ten önce kapatılmalı.
+- **Partner swagger dokümanı** (F2): `/api/partner/v1/*` uçlarını listeleyen, prod'da açık, ayrı
+  bir Swagger doc. İç yüzey Development dışında gizli kalır (d2846f7).
 - Tedarikçi self-servis portalı düşünülüyor mu? Düşünülüyorsa API hesabı ile portal girişi
   ayrı kalmalı (biri makine, diğeri insan kimliği).
+- **nginx `location /swagger`** proxy'si duruyor; app 404 verdiği için maruziyet kapalı ama
+  istenirse `deny all` ile ağ katmanında da kapatılabilir (ekstra sertleştirme).
