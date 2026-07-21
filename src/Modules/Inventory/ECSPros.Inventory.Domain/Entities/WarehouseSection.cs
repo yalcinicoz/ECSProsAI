@@ -14,6 +14,10 @@ public class WarehouseSection : BaseEntity
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>Dolu ise bu kısım bir tedarikçinin (accounts.current_accounts.Id) stok alanıdır —
+    /// Partner API `PUT /stock` buraya yazar; owner-scope bu alanla (§3.7 / F2b-2b). Null → normal kısım.</summary>
+    public Guid? SupplierId { get; set; }
+
     /// <summary>Bu kısımdaki serbest stok siteye "stokta var" sayılır mı — yönetim noktası.</summary>
     public bool IsSellableOnline { get; set; } = true;
 
