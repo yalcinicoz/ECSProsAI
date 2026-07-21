@@ -218,6 +218,59 @@ snapshot'lanır, paketler tedarikçiye bölünür). Model:
 - Her iki tedarikçi tipinde de SupplierId = o tedarikçi (yönetilen tedarikçide fiyat/kural bizde
   ama ürün yine onun; owner-scope onu kendi ürünlerine sınırlar).
 
+## 3.8. `POST /api/partner/v1/products` tam sözleşme (kararlar 2026-07-21)
+
+Façade canlıyı değil bir `ProductSubmission` (staging) yazar. **İki kapı:** Kapı 1 otomatik
+doğrulama (senkron, patlarsa gerekçeyle reddet), Kapı 2 insan onayı (Kapı 1'i geçen `pending`
+kayıtlar → kabul/red).
+
+### İstek gövdesi
+```jsonc
+{
+  "supplierProductCode": "ACME-1234",     // zorunlu — upsert anahtarı (SupplierId ile)
+  "group": "grp_262",                       // zorunlu — GET /groups kodu (eksen+izinli özellik)
+  "name": { "tr": "Kırmızı Elbise", "en": "Red Dress" },   // tr zorunlu
+  "shortDescription": { "tr": "..." },      // opsiyonel
+  "description": { "tr": "..." },           // opsiyonel
+  "attributes": {                            // ürün-seviyesi; değer(ler) HAVUZDAN (ada göre)
+    "malzeme": ["Pamuk", "Elastan"],         // ÇOKLU DEĞER = dizi (tek değer de olabilir)
+    "season": "yaz"
+  },
+  "variants": [                              // ≥1 zorunlu
+    { "axisValues": { "renk": "Kırmızı", "beden": "M" },  // grubun eksenleriyle TAM eşleşmeli, havuzdan
+      "sku": "ACME-1234-KR-M",               // zorunlu
+      "barcode": "8690000000001",            // opsiyonel
+      "stock": 25,                            // ilk stok
+      "price": { "amount": 499.90, "currency": "TRY" } }  // Tip 2 zorunlu · Tip 1 YOK SAYILIR
+  ],
+  "images": [ { "url": "https://...", "variantRef": "ACME-1234-KR-M", "main": true } ]  // opsiyonel
+}
+```
+
+### Kapı 1 — otomatik doğrulama (patlarsa `{success:false, errors:[{field,code,message}]}`)
+- **Yapısal:** supplierProductCode var; group var+aktif; variants ≥1; her varyantın eksenleri
+  grubunkiyle TAM eşleşir; sku var.
+- **Havuz değerleri:** her `attributes` değeri ve her `axisValues` değeri havuzda (AttributeValue
+  `NameI18n` ile, büyük-küçük harf duyarsız) VAR olmalı → yoksa reddet. **Façade havuza ASLA yeni
+  değer eklemez** (entegratör önce değer listelerini çeker, oradan gönderir). Çoklu değer: dizideki
+  her eleman havuzda olmalı.
+- **İçerik kuralları (serbest metin):** (1) **uzunluk** — ad tr 3–150, shortDescription ≤300,
+  description ≤5000 (başlangıç değerleri, yapılandırılabilir); (2) **zorunlu dil** — en az `tr` ad;
+  (3) **yasaklı içerik** — HTML/script, URL/iletişim bilgisi (telefon/e-posta), küfür, rakip marka
+  (listeler yapılandırılabilir, sonradan genişler).
+- **Tip/fiyat:** Tip 2 (pricing.write) → her varyantta `price` zorunlu; Tip 1 → `price` yok sayılır.
+- **Owner:** supplierProductCode token'ın owner'ına (SupplierId) kapsanır; başka tedarikçinin
+  kodunu ezemez.
+
+### Kapı 1 geçerse → `{success:true, data:{ submissionId, supplierProductCode, status:"pending", productCode:null }}`
+### Kapı 2 — insan onayı
+Panel "Tedarikçi Gönderimleri": personel değerlendirir → **kabul** (canlı Product yayınlanır,
+`productCode` atanır) veya **red** (gerekçeyle). Onaya düşmüş ürün de değerlendirme sonrası
+kabul VEYA reddedilir.
+
+Not: Görsel + (Tip 1) fiyat + storefront kategori yerleşimi onay adımında bizce tamamlanır/teyit
+edilir. Stok ve (Tip 2) fiyat sonraki güncellemelerde direkt (onaya düşmez — §3.6).
+
 ## 4. Token akışı — OAuth2 client_credentials
 
 ```
