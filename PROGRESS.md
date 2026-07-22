@@ -15,7 +15,7 @@
 
 | # | Alan | Kod tabanı | Durum | SIRADAKİ İŞ | Plan dokümanı |
 |---|------|-----------|-------|-------------|---------------|
-| 1 | 🌐 **Web sitesi** (Razor storefront) | `src/ECSPros.Api` Views + `/opt/misharix` tasarım | **FAZ H TAMAM** (H-M1..M5 + H7 QA 13/13; tek açık: GeoLite2 mmdb kullanıcıda) ⚠️ H10-3/4 restart bekliyor | İ (eski SPA emekli — 8080 bloğu + compose portu kalkar) | `docs/misharix-razor-tasima-plani.md` |
+| 1 | 🌐 **Web sitesi** (Razor storefront) | `src/ECSPros.Api` Views + `/opt/misharix` tasarım | **FAZ H TAMAM** + **FAZ İ UYGULANDI** (eski SPA emekli — ⚠️ restart + `docker compose up -d nginx` bekliyor; GeoLite2 mmdb kullanıcıda) | Talep bazlı — taşıma planı KAPANDI | `docs/misharix-razor-tasima-plani.md` |
 | 2 | 🛠 **Admin panel** (React) | `admin/` | Faz 9 tamam; test bulguları kapalı (B-13 çeviri, B-14 sayaç düşük öncelik) | Talep bazlı — bekleyen büyük iş yok (FAZ R ERP ertelendi) | `docs/misharix-tasarim-projesi-inceleme.md` (envanter) |
 | 3 | 🔌 **Dış API** (Partner entegrasyon) | `/api/partner/v1` + `Controllers/Partner/` | F0→F2b tamam: ürün ingestion uçtan uca canlıda | F2b-2d sipariş/dropship (⚠️ `order.write` tip kararı BLOKE) → F4 ApiClient yönetim paneli → F5 rate limit/HSTS | `docs/api-hesaplari-tasarimi.md` |
 | 4 | 🏪 **Satıcı paneli** | `satici/` + `/api/supplier/*` | S0-S2 canlıda; S3a-1 (Ürünlerim liste+detay) uygulandı ⚠️ restart bekliyor | S3a-2 kart açma formu (ÖNCE kurgu konuş, K16) → S3b Stok&Fiyat → S3c-S3f | `docs/satici-paneli-tasarimi.md` |
@@ -416,7 +416,12 @@ H-M5/H10'un ilk maddesi uygulandı — **public koleksiyon sayfası (E6 ShareCod
 - **H7 QA ✅ (aynı gün) → H-M5 ve FAZ H KAPANDI** (GeoLite2 hariç — mmdb kullanıcıda):
   envanter 8.9 gerçekle eşitlendi (10 satır); KALICI kapanış suite'i `tools/misharix-sync/
   h7-regression.mjs` (eski /tmp suite'leri kaybolmuştu) — 13/13 TEMİZ; drift TEMİZ; görüntüler
-  shots/h7-*. SIRADAKİ (Web sitesi): Faz İ — eski SPA emekliliği (8080 bloğu + compose portu).
+  shots/h7-*. 
+- **FAZ İ ✅ (aynı gün, kullanıcı onayı):** eski SPA emekli — nginx 8080 server bloğu + compose
+  "8080:8080" portu + `./store` volume'u kaldırıldı; `store/` git'ten çıkarıldı (git geçmişinde
+  duruyor + yedek ~/yedekler/eski-spa-store-2026-07-22.tar.gz). ⚠️ `sudo docker compose up -d nginx`
+  (port/volume değişikliği — restart yetmez). **MİSHARIX RAZOR TAŞIMA PLANI KAPANDI** (GeoLite2
+  mmdb + H5 video içeriği veri bekleyen açık kalemler).
 
 ### SESSION ÖZETİ (2026-07-22/4) — 🌐 WEB SİTESİ: MOBİL RENK PANELİ MÜKERRER DÜZELTMESİ (✅ CANLIDA, restart gerekmedi)
 Mobil ürün listesinde renk rozetine basınca alttan açılan panelde ilk 4 renk İKİ KEZ görünüyordu.
