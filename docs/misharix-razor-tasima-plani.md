@@ -39,7 +39,7 @@
 | E | Hesabım kümesi (12 sayfa + yeni backend özellikleri) | ✅ TAMAM (2026-07-10) — E1–E14 bitti: çerçeve, üyelik, adres, sipariş, favori, koleksiyon, yorum, iade, kupon, tekrar satın al, favori arama, gezilenler, özet sayfası; QA 186 adım yeşil. Ertelenenler hedef fazlı: fatura PDF H1, kargo firması H2, statü bloğu/koleksiyon public/değerlendirme sayfası G-ileri |
 | F | Kurumsal sayfalar + Footer | ✅ TAMAM (2026-07-11) — F1–F5 bitti: 7 kurumsal route + corporate/faq CMS + contact_messages + footer/bülten; QA 36 adım + f5-* görüntüleri |
 | G | Vitrin & Kişiselleştirme Sistemi (G-M1: bloklar+yayınla · G-M2: kural motoru) | ✅ TAMAM (2026-07-11) — G1–G14 bitti (+G9c mobil şehir girişi 2026-07-12); envanter 8.8 tam; toplu regresyon 141+79 adım; canlıda |
-| H | Özel yetenekler (fatura PDF, kargo takip, bildirimler, görsel arama, alt bar, videolar + devredenler) | 🟡 SÜRÜYOR — H-M1+M2+M3 TAMAM (2026-07-12); H-M4 (H3 görsel arama) ✅ 2026-07-22; kalan: H-M5 (H10 devredenler + H7 QA); H6 ödeme ertelendi (K2) |
+| H | Özel yetenekler (fatura PDF, kargo takip, bildirimler, görsel arama, alt bar, videolar + devredenler) | 🟡 SÜRÜYOR — H-M1+M2+M3 TAMAM (2026-07-12); H-M4 ✅; H-M5 ✅ 2026-07-22 (H10 4/5 + H7 QA 13/13; GeoLite2 mmdb kullanıcıda — gelince bağlanır); H6 ödeme ertelendi (K2) |
 | P | **Panel Senkronizasyonu** — sitede canlı işlevlerin admin panel karşılıkları (K16 kuralı) | 🟡 SÜRÜYOR — **P-M1 TAMAM (2026-07-13): P0 + P1a-d** (sipariş listesi/detayı/aksiyonlar + iadeler + faturalar + iade nedenleri + fatura serileri; K19 kurgusu); sıradaki P-M2 (P2 CMS — BÜYÜK, başlamadan kullanıcıyla konuşulacak) |
 | R | ERP panel ekranları (sitede karşılığı olmayan placeholder'lar: IAM/POS/fulfillment/finans...) | ⬜ Planlandı (2026-07-13, K17) — sıra P sonrası; başlamadan kapsam kullanıcıyla gözden geçirilir |
 | İ | SPA emekliliği + son QA + kural devri | ⬜ Başlamadı |
@@ -293,7 +293,7 @@ src/ECSPros.Api/
 
 **H-M5 — Devredenler + kapanış:**
 - [~] H10. **Faz G devredenleri**: ✅koleksiyon public sayfası (2026-07-22: /koleksiyon/{shareCode} anonim SSR — GetCollectionByShareCode approved+IsShareable+ViewCount; hesabım 'Koleksiyonu Aç' açıldı, vitrin kartına Aç/Paylaş eklendi) · ✅vitrin kaynak filtreleri (2026-07-22: productSource'a inStockOnly/tags/discountedOnly — GetStoreProducts Tags[jsonb_exists_any]+DiscountedOnly[IDiscountedProductProvider, InStock kalıbı]; category kaynağında bilinçli yok) · ✅son gezilenler/favoriler vitrin kaynakları (2026-07-22: `recently-viewed`/`favorites` kaynak tipleri — üye bağlamlı bloklar paket cache'ine ÜRÜNSÜZ yazılır, her istekte üye kimliğiyle doldurulur [UyeBloklariniDoldurAsync]; misafir/verisiz üyede blok basılmaz; infinity devamı cache bypass; önizlemede dürüst 'üye bağlamlı' gerekçesi; tabs sekmelerinde bilinçli desteklenmez) · ✅YanMenu statü bloğu (2026-07-22 SADE SÜRÜM — kullanıcı kararı: statü=üye grubu adı ['Standart' fallback], Aylık=son 30 gün sipariş toplamı [iptal hariç]; eşik/kazanç/progress DETAYI GİZLİ — tam statü modeli E13 tanımlanınca açılır; GetMemberStatusQuery+GetMemberMonthlySpendQuery, üye başına 5dk IMemoryCache, OnActionExecutionAsync'te) · GeoLite2 IP halkası — **mmdb edinimi kullanıcı aksiyonu** (MaxMind lisansı); mmdb gelince VisitorSegmentResolver'daki yuva bağlanır, gelmezse bilinçli açık kalır.
-- [ ] H7. **QA**: Bölüm 8.9 envanteri + 8.2/8.4/8.5/8.6'daki H işaretli satırlar (teslimat mesajları, fatura/kargo, stok bildirimi) + faz kapanış toplu regresyonu (h-suite'ler + çekirdek) + drift + görüntüler.
+- [x] H7. **QA** ✅ (2026-07-22): Envanter 8.9 gerçekle eşitlendi (10 satır: H9 değerlendirmeler ✅, H4 alt bar ✅, A5 element ailesi ✅; H5 video satırları veri yokken dürüstçe 🕐). Eski faz suite'leri /tmp'de kaybolduğundan KALICI kapanış suite'i yazıldı: `tools/misharix-sync/h7-regression.mjs` (BASE/CHROME parametreli) — 13/13 TEMİZ: çekirdek (ana sayfa/liste/detay), H3 görsel arama, H9 değerlendirmeler, H10 koleksiyon+404, H10-4 statü bloğu, no-store+çıkış davranışı, H4 mobil alt bar, mobil renk paneli mükerrersiz. Drift TEMİZ ✓ (izinli liste tam). Görüntüler `tools/misharix-sync/shots/h7-*`. GeoLite2 H10'da tek açık (mmdb kullanıcıda).
 
 - [~] H6. ~~Ödeme sağlayıcı gerçek entegrasyonu~~ **ERTELENDİ (2026-07-12, K2):** sağlayıcı seçilmedi; ödeme K2 mock modunda sürer. Sağlayıcı seçilince ayrı iş olarak planlanır (taksit/BIN, 3DS).
 
@@ -730,16 +730,16 @@ Mevcut olup **bağlanacaklar**: store auth, cart, checkout, adresler, siparişle
 ### 8.9 Diğer sayfalar + ortak elementler
 | İşlev | Backend | Faz | Durum |
 |---|---|---|---|
-| Ürün Değerlendirmeleri sayfası: sekmeler, çoklu-seçim filtreler, liste+sayfalama, yorum formu, kriter modalı | API VAR (reviews/product) | E7/H | 🕐 backend E7'de hazır; 595 satırlık sayfa tasarımı taşınmadı (ileri iş) |
-| Mobil Alt Bar | — (UI) | H4 | ⬜ |
-| Özel select ailesi (arama/çoklu/checkbox/temizle/uygula) | — (site.js) | A5 | ⬜ |
-| Telefon ülke-kodlu input | — (site.js) | A5 | ⬜ |
-| OTP kod giriş kutuları | — (site.js) | A5 | ⬜ |
-| Modal ailesi (standart/başarı/hata/uyarı, boyutlar) | — | A5 | ⬜ |
-| Bildirimler, rozetler, statüler | — | A5 | ⬜ |
-| Slider elementi | — | A5 | ⬜ |
-| Lazy load + Infinite scroll motorları (opt-in `lazy-infinite-on`) | — | A5 | ⬜ |
-| ProjeElementleri scroll-restore, SSS akordiyon, favori animasyonu | — | A5 | ⬜ |
+| Ürün Değerlendirmeleri sayfası: sekmeler, çoklu-seçim filtreler, liste+sayfalama, yorum formu, kriter modalı | API VAR (reviews/product) | E7/H9 | ✅ H9 (2026-07-12) — /urun-degerlendirmeleri/{code} çekirdek port (K14); üye sekmeleri/AI özeti verisizken gizli |
+| Mobil Alt Bar | — (UI) | H4 | ✅ H4 (2026-07-12) — _MobilAltBarNav, rota-duyarlı; detay+sepette bilinçli yok |
+| Özel select ailesi (arama/çoklu/checkbox/temizle/uygula) | — (site.js) | A5 | ✅ A5 — site.js birebir; H9 notu: kapsam başlatıcı 2x koşarsa sayfa kendi mekaniğini taşır |
+| Telefon ülke-kodlu input | — (site.js) | A5 | ✅ A5 (D4 telefon girişleri canlı) |
+| OTP kod giriş kutuları | — (site.js) | A5 | ✅ A5 (D4 OTP akışı canlı — GES SMS) |
+| Modal ailesi (standart/başarı/hata/uyarı, boyutlar) | — | A5 | ✅ A5 — tüm fazlarca kullanılıyor |
+| Bildirimler, rozetler, statüler | — | A5 | ✅ A5; H10-4: hesabım statü bloğu sade sürümle canlı |
+| Slider elementi | — | A5 | ✅ A5 (ana sayfa vitrin sliderı canlı) |
+| Lazy load + Infinite scroll motorları (opt-in `lazy-infinite-on`) | — | A5 | ✅ A5 — liste/vitrin/favoriler/koleksiyon kapsamları |
+| ProjeElementleri scroll-restore, SSS akordiyon, favori animasyonu | — | A5 | ✅ A5 |
 
 ---
 
