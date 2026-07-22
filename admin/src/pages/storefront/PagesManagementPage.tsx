@@ -42,6 +42,21 @@ interface PreviewResult {
   blocks: PreviewBlock[]
 }
 interface MemberGroup { id: string; nameI18n?: Record<string, string>; code?: string }
+// 2026-07-22: canlı önizlemeli editör — taslak bloklar gerçek içerikleriyle
+interface DraftItem {
+  id: string; titleI18n: Record<string, string>; subtitleI18n: Record<string, string> | null
+  imageUrl: string | null; mobileImageUrl: string | null; videoUrl: string | null
+  linkUrl: string | null; badgeLabel: string | null; isActive: boolean
+}
+interface DraftUrun { code: string; ad: string | null; gorsel: string | null; fiyat: number }
+interface DraftKoleksiyon { name: string; itemCount: number; viewCount: number }
+interface DraftBlock {
+  id: string; blockType: string; template: string | null
+  titleI18n: Record<string, string>; subtitleI18n: Record<string, string> | null
+  sortOrder: number; isActive: boolean; startAt: string | null; endAt: string | null
+  uyeBaglamli: boolean; kaynakTipi: string | null
+  items: DraftItem[]; urunler: DraftUrun[] | null; koleksiyonlar: DraftKoleksiyon[] | null
+}
 // G13: değişiklik geçmişi (vitrin audit kayıtları — iam.audit_logs)
 interface AuditRow {
   id: string; action: string; entityType: string; entityId: string
@@ -98,6 +113,8 @@ export function PagesManagementPage() {
   const [prevMember, setPrevMember] = useState<string | null>('guest')
   const [prevGroup, setPrevGroup] = useState<string | null>(null)
   const [previewResult, setPreviewResult] = useState<PreviewResult | null>(null)
+  // Canlı önizleme editörü: masaüstü/mobil çerçevesi
+  const [cihaz, setCihaz] = useState<'desktop' | 'mobile'>('desktop')
 
   const { data: firms = [] } = useQuery<Firm[]>({
     queryKey: ['firms'],
@@ -128,6 +145,14 @@ export function PagesManagementPage() {
     enabled: !!platformId,
   })
 
+  // Canlı önizleme verisi — taslak bloklar gerçek içerikle (öğe görselleri + ürün kartları)
+  const { data: draftBlocks = [], isLoading: draftLoading } = useQuery<DraftBlock[]>({
+    queryKey: ['draft-compose', platformId, placement],
+    queryFn: async () =>
+      (await api.get('/pages/draft-compose', { params: { firmPlatformId: platformId, placement } })).data.data ?? [],
+    enabled: !!platformId,
+  })
+
   const { data: snapshots = [] } = useQuery<SnapshotRow[]>({
     queryKey: ['page-snapshots', platformId],
     queryFn: async () => (await api.get('/pages/snapshots', { params: { firmPlatformId: platformId } })).data.data ?? [],
@@ -146,6 +171,7 @@ export function PagesManagementPage() {
 
   const yenile = () => {
     queryClient.invalidateQueries({ queryKey: ['page-blocks', platformId] })
+    queryClient.invalidateQueries({ queryKey: ['draft-compose', platformId] })
     queryClient.invalidateQueries({ queryKey: ['page-snapshots', platformId] })
     queryClient.invalidateQueries({ queryKey: ['publish-logs', platformId] })
     queryClient.invalidateQueries({ queryKey: ['page-audit-logs', platformId] })
@@ -171,6 +197,19 @@ export function PagesManagementPage() {
   const reorder = useMutation({
     mutationFn: async (orderedIds: string[]) =>
       api.put('/pages/blocks/order', { firmPlatformId: platformId, placement, orderedIds }),
+    onSuccess: yenile,
+  })
+  const toggleActive = useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.get(`/pages/blocks/${id}`, { params: { firmPlatformId: platformId } })
+      const b = data.data
+      await api.put(`/pages/blocks/${id}`, {
+        firmPlatformId: platformId, placement: b.placement, blockType: b.blockType,
+        template: b.template, titleI18n: b.titleI18n, subtitleI18n: b.subtitleI18n,
+        sortOrder: b.sortOrder, isActive: !b.isActive, startAt: b.startAt, endAt: b.endAt,
+        priority: b.priority, ruleJson: b.ruleJson, configJson: b.configJson,
+      })
+    },
     onSuccess: yenile,
   })
   const remove = useMutation({
@@ -284,56 +323,164 @@ export function PagesManagementPage() {
             </div>
           )}
 
-          {isLoading ? (
+          {/* 2026-07-22: canlı önizlemeli blok editörü — bloklar gerçek içerikleriyle
+              sayfa sırasında dikey önizlenir; her bloğun üstünde yönetim çubuğu. */}
+          <div className="flex items-center justify-end gap-1">
+            <button
+              className={`rounded-lg px-3 py-1.5 text-sm ${cihaz === 'desktop' ? 'bg-[var(--brand)] text-white' : 'bg-[var(--surface2)] text-[var(--text-m)]'}`}
+              onClick={() => setCihaz('desktop')}
+            >🖥 Masaüstü</button>
+            <button
+              className={`rounded-lg px-3 py-1.5 text-sm ${cihaz === 'mobile' ? 'bg-[var(--brand)] text-white' : 'bg-[var(--surface2)] text-[var(--text-m)]'}`}
+              onClick={() => setCihaz('mobile')}
+            >📱 Mobil</button>
+          </div>
+
+          {(isLoading || draftLoading) ? (
             <PageSpinner />
           ) : (
-            <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--border)] text-left text-[var(--text-s)]">
-                    <th className="px-4 py-3 w-20">Sıra</th>
-                    <th className="px-4 py-3">Başlık</th>
-                    <th className="px-4 py-3">Tip</th>
-                    <th className="px-4 py-3">Şablon</th>
-                    <th className="px-4 py-3">Öğe</th>
-                    <th className="px-4 py-3">Durum</th>
-                    <th className="px-4 py-3 text-right">İşlem</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {blocks.map((b, i) => (
-                    <tr
-                      key={b.id}
-                      className="cursor-pointer border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface2)]"
-                      onClick={() => navigate(`/storefront/pages/${b.id}?platformId=${platformId}`)}
-                    >
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface2)] p-4">
+              <div className={`mx-auto space-y-3 transition-all ${cihaz === 'mobile' ? 'max-w-[400px]' : 'max-w-[1080px]'}`}>
+                {draftBlocks.map((b, i) => {
+                  const baslik = b.titleI18n?.tr ?? Object.values(b.titleI18n ?? {})[0] ?? '—'
+                  const tip = typeDef(b.blockType)?.displayName ?? b.blockType
+                  const gorsel = (it: DraftItem) => (cihaz === 'mobile' ? it.mobileImageUrl || it.imageUrl : it.imageUrl || it.mobileImageUrl)
+                  const aktifItems = b.items.filter((it) => it.isActive)
+                  const bosGorsel = 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2280%22 height=%2260%22><rect width=%2280%22 height=%2260%22 fill=%22%23e2e8f0%22/></svg>'
+                  return (
+                    <div key={b.id} className={`overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] ${!b.isActive ? 'opacity-50' : ''}`}>
+                      {/* Yönetim çubuğu */}
+                      <div className="flex items-center gap-2 border-b border-[var(--border)] bg-[var(--surface2)] px-3 py-2 text-sm">
                         <div className="flex items-center gap-1">
-                          <button className="rounded px-1 text-[var(--text-m)] hover:text-[var(--text)]" onClick={() => tasima(i, -1)} aria-label="Yukarı">↑</button>
-                          <span>{b.sortOrder}</span>
-                          <button className="rounded px-1 text-[var(--text-m)] hover:text-[var(--text)]" onClick={() => tasima(i, 1)} aria-label="Aşağı">↓</button>
+                          <button className="rounded px-1.5 py-0.5 text-[var(--text-m)] hover:bg-[var(--surface)] hover:text-[var(--text)] disabled:opacity-30" disabled={i === 0} onClick={() => tasima(i, -1)} aria-label="Yukarı taşı">↑</button>
+                          <button className="rounded px-1.5 py-0.5 text-[var(--text-m)] hover:bg-[var(--surface)] hover:text-[var(--text)] disabled:opacity-30" disabled={i === draftBlocks.length - 1} onClick={() => tasima(i, 1)} aria-label="Aşağı taşı">↓</button>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 font-medium">{b.titleI18n?.tr ?? Object.values(b.titleI18n ?? {})[0] ?? '—'}</td>
-                      <td className="px-4 py-3">{typeDef(b.blockType)?.displayName ?? b.blockType}</td>
-                      <td className="px-4 py-3 text-[var(--text-m)]">{b.template ?? '—'}</td>
-                      <td className="px-4 py-3">{typeDef(b.blockType)?.supportsItems ? b.itemCount : (b.hasProductSource ? 'kaynak' : '—')}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant={b.isActive ? 'success' : 'neutral'}>{b.isActive ? 'Aktif' : 'Pasif'}</Badge>
-                        {(b.startAt || b.endAt) && <span className="ml-2 text-xs text-[var(--text-s)]">tarihli</span>}
-                      </td>
-                      <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                        <Button size="sm" variant="danger" onClick={() => { if (confirm('Blok silinsin mi? (Canlı yayın bir sonraki Yayınla\'ya kadar etkilenmez)')) remove.mutate(b.id) }}>
-                          Sil
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                  {blocks.length === 0 && (
-                    <tr><td colSpan={7} className="px-4 py-10 text-center text-[var(--text-m)]">Bu yerleşimde taslak blok yok.</td></tr>
-                  )}
-                </tbody>
-              </table>
+                        <span className="font-medium">{baslik}</span>
+                        <Badge variant="neutral">{tip}</Badge>
+                        {b.template && <span className="text-xs text-[var(--text-s)]">{b.template}</span>}
+                        {(b.startAt || b.endAt) && <span className="text-xs text-[var(--text-s)]">tarihli</span>}
+                        {b.uyeBaglamli && <Badge variant="warning">üye bağlamlı</Badge>}
+                        <div className="ml-auto flex items-center gap-2">
+                          <Badge variant={b.isActive ? 'success' : 'neutral'}>{b.isActive ? 'Aktif' : 'Pasif'}</Badge>
+                          <Button size="sm" variant="secondary" onClick={() => toggleActive.mutate(b.id)} disabled={toggleActive.isPending}>
+                            {b.isActive ? 'Pasifleştir' : 'Aktifleştir'}
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={() => navigate(`/storefront/pages/${b.id}?platformId=${platformId}`)}>Düzenle</Button>
+                          <Button size="sm" variant="danger" onClick={() => { if (confirm('Blok silinsin mi? (Canlı yayın bir sonraki Yayınla\'ya kadar etkilenmez)')) remove.mutate(b.id) }}>Sil</Button>
+                        </div>
+                      </div>
+
+                      {/* Gerçek içerik önizlemesi — türe göre */}
+                      <div className="p-3">
+                        {b.blockType === 'story' && (
+                          <div className="flex gap-3 overflow-x-auto pb-1">
+                            {aktifItems.map((it) => (
+                              <div key={it.id} className="flex w-16 shrink-0 flex-col items-center gap-1">
+                                <img src={gorsel(it) ?? bosGorsel} alt="" className="h-14 w-14 rounded-full border-2 border-[var(--brand)] object-cover" />
+                                <span className="w-full truncate text-center text-[10px] text-[var(--text-m)]">{it.titleI18n?.tr ?? ''}</span>
+                              </div>
+                            ))}
+                            {aktifItems.length === 0 && <p className="text-xs text-[var(--text-s)]">Öğe yok</p>}
+                          </div>
+                        )}
+
+                        {b.blockType === 'categories' && (
+                          <div className={`grid gap-2 ${cihaz === 'mobile' ? 'grid-cols-3' : 'grid-cols-6'}`}>
+                            {aktifItems.map((it) => (
+                              <div key={it.id} className="flex flex-col items-center gap-1">
+                                <img src={gorsel(it) ?? bosGorsel} alt="" className="h-16 w-16 rounded-xl object-cover" />
+                                <span className="w-full truncate text-center text-[11px] text-[var(--text-m)]">{it.titleI18n?.tr ?? ''}</span>
+                              </div>
+                            ))}
+                            {aktifItems.length === 0 && <p className="text-xs text-[var(--text-s)]">Öğe yok</p>}
+                          </div>
+                        )}
+
+                        {(b.blockType === 'banner' || b.blockType === 'coklu-banner' || b.blockType === 'slider' || b.blockType === 'bilgi-banner') && (
+                          <div className={`grid gap-2 ${b.blockType === 'slider' ? 'grid-cols-1' : cihaz === 'mobile' ? 'grid-cols-2' : 'grid-cols-4'}`}>
+                            {(b.blockType === 'slider' ? aktifItems.slice(0, 1) : aktifItems).map((it) => (
+                              <div key={it.id} className="relative overflow-hidden rounded-lg">
+                                <img src={gorsel(it) ?? bosGorsel} alt="" className={`w-full object-cover ${b.blockType === 'slider' ? (cihaz === 'mobile' ? 'aspect-[4/5]' : 'aspect-[16/6]') : 'aspect-[16/9]'}`} />
+                                {(it.titleI18n?.tr || it.badgeLabel) && (
+                                  <span className="absolute bottom-1 left-1 rounded bg-black/55 px-1.5 py-0.5 text-[10px] text-white">
+                                    {it.badgeLabel || it.titleI18n?.tr}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                            {b.blockType === 'slider' && aktifItems.length > 1 && (
+                              <div className="flex gap-1.5 overflow-x-auto">
+                                {aktifItems.slice(1).map((it) => (
+                                  <img key={it.id} src={gorsel(it) ?? bosGorsel} alt="" className="h-12 w-20 shrink-0 rounded object-cover opacity-70" />
+                                ))}
+                              </div>
+                            )}
+                            {aktifItems.length === 0 && <p className="text-xs text-[var(--text-s)]">Öğe yok</p>}
+                          </div>
+                        )}
+
+                        {b.blockType === 'announcement' && (
+                          <div className="rounded-lg bg-slate-900 px-3 py-2 text-center text-xs text-white">
+                            {aktifItems.map((it) => it.titleI18n?.tr).filter(Boolean).join('  ·  ') || 'Duyuru öğesi yok'}
+                          </div>
+                        )}
+
+                        {b.koleksiyonlar && (
+                          <div className={`grid gap-2 ${cihaz === 'mobile' ? 'grid-cols-1' : 'grid-cols-3'}`}>
+                            {b.koleksiyonlar.map((k) => (
+                              <div key={k.name} className="rounded-lg border border-[var(--border)] p-3 text-sm">
+                                <div className="font-medium">{k.name}</div>
+                                <div className="text-xs text-[var(--text-m)]">{k.itemCount} ürün · {k.viewCount} görüntülenme</div>
+                              </div>
+                            ))}
+                            {b.koleksiyonlar.length === 0 && <p className="text-xs text-[var(--text-s)]">Uygun koleksiyon yok</p>}
+                          </div>
+                        )}
+
+                        {b.urunler && (
+                          <div className={`grid gap-2 ${cihaz === 'mobile' ? 'grid-cols-2' : 'grid-cols-6'}`}>
+                            {b.urunler.map((u) => (
+                              <div key={u.code} className="overflow-hidden rounded-lg border border-[var(--border)]">
+                                <img src={u.gorsel ?? bosGorsel} alt="" className="aspect-[3/4] w-full object-cover" />
+                                <div className="p-1.5">
+                                  <div className="truncate text-[11px]">{u.ad ?? u.code}</div>
+                                  <div className="text-[11px] font-semibold text-[var(--brand)]">
+                                    {u.fiyat.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                            {b.urunler.length === 0 && <p className="col-span-full text-xs text-[var(--text-s)]">Kaynak ürün döndürmedi</p>}
+                          </div>
+                        )}
+
+                        {b.uyeBaglamli && (
+                          <p className="text-xs text-[var(--text-s)]">Üye bağlamlı kaynak ({b.kaynakTipi}) — içerik ziyaretçinin kendi verisiyle dolar; önizlenemez.</p>
+                        )}
+
+                        {b.blockType === 'tabs' && (
+                          <div className="flex gap-2 text-xs text-[var(--text-m)]">
+                            {aktifItems.map((it) => (
+                              <span key={it.id} className="rounded-full border border-[var(--border)] px-2 py-1">{it.titleI18n?.tr ?? 'Sekme'}</span>
+                            ))}
+                            <span className="self-center text-[var(--text-s)]">— sekme ürünleri detay ekranında</span>
+                          </div>
+                        )}
+
+                        {!b.urunler && !b.koleksiyonlar && !b.uyeBaglamli
+                          && !['story', 'categories', 'banner', 'coklu-banner', 'slider', 'bilgi-banner', 'announcement', 'tabs'].includes(b.blockType) && (
+                          <p className="text-xs text-[var(--text-s)]">{tip} — bu tür için özel önizleme yok ({b.items.length} öğe).</p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+                {draftBlocks.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface)] p-10 text-center text-[var(--text-m)]">
+                    Bu yerleşimde taslak blok yok — "Yeni Blok" ile başlayın.
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

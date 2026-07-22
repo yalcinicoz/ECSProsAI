@@ -361,6 +361,25 @@ alan için yapılıyorsa o alanın oturumunda, o alanın fazı olarak yürütül
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION ÖZETİ (2026-07-22/9) — 🛠 ADMİN: VİTRİN CANLI ÖNİZLEMELİ BLOK EDİTÖRÜ (⚠️ RESTART BEKLİYOR)
+Kullanıcı isteği: tablo yerine gerçek içerikli dikey blok editörü (tam sayfa tasarım aracı DEĞİL;
+mevcut ekleme/düzenleme/yayınlama altyapısı AYNEN korundu).
+- **Backend:** `GET /api/pages/draft-compose` — yerleşimin TASLAK blokları gerçek içerikle:
+  `GetDraftBlocksWithItemsQuery` (bloklar+öğeler tek sorgu) + resolver ile ürün kartları (ilk 8;
+  üye bağlamlı kaynaklar önizlenemez notuyla) + koleksiyon özetleri. Salt okuma, cache'e dokunmaz.
+- **Frontend (PagesManagementPage):** tablo kaldırıldı → sayfa sırasında dikey blok kartları;
+  her blokta yönetim çubuğu (↑↓ taşı, ad+tür+şablon, Aktif rozet, Pasifleştir/Aktifleştir
+  [GET detay→isActive flip→PUT], Düzenle→detay sayfası, Sil) + türe göre GERÇEK önizleme:
+  story yatay daireler, categories görsel+ad grid, banner/çoklu-banner görsel grid, slider ana
+  görsel+thumb şeridi, announcement şerit, ürün kaynaklı bloklarda ürün kartları (görsel/ad/fiyat),
+  koleksiyon özet kartları, tabs sekme çipleri. 🖥/📱 cihaz toggle (1080px ↔ 400px çerçeve,
+  gridler daralır; öğe görseli mobilde MobileImageUrl önceliği). Yayınla/rollback/önizleme/audit
+  bölümleri aynen.
+- Test (5051+5050 vite): endpoint 15 blok gerçek içerik ✓; ekran 15 yönetim çubuklu blok,
+  masaüstü+mobil ss ✓ (dev proxy'de görseller kırık — canlıda aynı origin, sorun değil).
+- admin/dist CANLIDA (volume) — ⚠️ restart'a kadar draft-compose 404 → ekran 'taslak blok yok'
+  gösterir; **restart sonrası tam çalışır**. publish/ güncel. Drift etkilenmez (storefront dışı).
+
 ### ⭐ SESSION ÖZETİ (2026-07-22/8) — 🌐 KABUL TESTİ 3. TUR (⚠️ RESTART BEKLİYOR)
 - **"Kırmızı elbise"de karışık renk kartları:** arama kelimesi GERÇEK renk evreniyle (pair
   renkleri) kesişiyorsa RENK kelimesidir; kartlar o renklere daraltılır (ad koruması: renk
