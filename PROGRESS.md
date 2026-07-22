@@ -405,6 +405,14 @@ H-M5/H10'un ilk maddesi uygulandı — **public koleksiyon sayfası (E6 ShareCod
   HesabimController.OnActionExecutionAsync'te üye başına 5dk IMemoryCache. Test (5051):
   h10test üyesi 'Standart Üye / 0,00 ₺' render ✓, toggle/detay markup'ı yok ✓; SQL çapraz
   kontrol: harcamalı üyeler doğru toplam (yalcinicoz 30g=4.774,97₺ — canlı testte görülür).
+- **Oturum değişimi düzeltmesi ✅ (kullanıcı bulgusu):** üye-özel sayfada çıkış → sayfa kalıyordu;
+  başka hesapla giriş → eski üyenin SSR içeriği görünmeye devam ediyordu. Düzeltme: (a) hesabım
+  sayfalarına `Cache-Control: no-store` (bfcache/geri tuşu koruması), (b) `Sayfa.cshtml`'e
+  `window.msUyeOzelSayfa` bayrağı, (c) giriş modalı script'i: çıkışta logout yanıtı sonrası ana
+  sayfaya yönlendirme; girişte (e-posta/telefon/kayıt/OTP köprüsü) sepet birleştirme bittikten
+  sonra sayfa yenileme. E2E: çıkış→köke ✓, çıkış sonrası doğrudan URL→köke ✓, A'nın sayfası
+  açıkken B girişi→reload+B verisi ✓. Drift: 2 eski koleksiyon-modal farkı izinli listeye eklendi;
+  kullanıcı misharix tailwind cp'sini çalıştırmış (tailwind drift temiz).
 - **KALAN H10:** (5) GeoLite2 (mmdb KULLANICIDA, gelmezse bilinçli açık). Sonra H7 QA.
 
 ### SESSION ÖZETİ (2026-07-22/4) — 🌐 WEB SİTESİ: MOBİL RENK PANELİ MÜKERRER DÜZELTMESİ (✅ CANLIDA, restart gerekmedi)

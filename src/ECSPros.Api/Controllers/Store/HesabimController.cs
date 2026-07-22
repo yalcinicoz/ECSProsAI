@@ -38,6 +38,9 @@ public class HesabimController(
         }
 
         _memberId = uye.MemberId;
+        // Üye-özel SSR sayfaları tarayıcı/bfcache'te kalmasın — çıkış sonrası "geri" ile
+        // eski üyenin verisi görünmemeli (H10 düzeltmesi, 2026-07-22 kullanıcı bulgusu)
+        context.HttpContext.Response.Headers.CacheControl = "no-store";
         // H10 sade statü bloğu — tüm hesabım sayfaları yan menüde gösterir (async, cache'li)
         ViewData["MsHesapStatu"] = await HesapStatuAsync();
         await base.OnActionExecutionAsync(context, next);

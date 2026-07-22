@@ -327,3 +327,8 @@ Views/UrunDegerlendirmeleri/Index.cshtml
 # Bayrak artık yalnız görsel gerçekten kurulunca basılır. Kaynak şablon yazma-korumalı olduğu
 # için aynı düzeltme oraya uygulanamadı; kaynak güncellenince bu kayıt kaldırılabilir.
 wwwroot/js/site.js
+
+# E6: koleksiyon modallarındaki demo "Onaylandı/Reddedildi" simülasyon butonları canlıda
+# kaldırıldı — gerçek moderasyon admin panelindedir (tasarımda demo akışı olarak durur).
+Views/ProjeElementleri/Ortak/_KoleksiyonModal.cshtml
+Views/ProjeElementleri/Ortak/_KoleksiyonYeniOzetModal.cshtml
