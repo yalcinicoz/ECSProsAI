@@ -43,4 +43,5 @@ public record StoreVariantAttributeDto(
     Guid AttributeValueId,
     Dictionary<string, string> AttributeValueNameI18n,
     bool IsColor = false,
-    string? HexCode = null);
+    string? HexCode = null,
+    int ValueSortOrder = 0);   // 2026-07-22: beden sıralaması — değer havuzundaki SortOrder

@@ -122,7 +122,8 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
                 a.AttributeType.Code, a.AttributeType.NameI18n,
                 a.AttributeValue.Id, a.AttributeValue.NameI18n,
                 IsColor: a.AttributeType.Code == "filtre_rengi",
-                HexCode: hexByValueId.GetValueOrDefault(a.AttributeValue.Id))).ToList();
+                HexCode: hexByValueId.GetValueOrDefault(a.AttributeValue.Id),
+                ValueSortOrder: a.AttributeValue.SortOrder)).ToList();
 
             // Öncelik: renk grubu görselleri (filtre_rengi/renk) → varyantın kendi görselleri
             // (VariantId doğrudan eşleşen) → ürün düzeyinde ortak görseller (VariantId=null).
