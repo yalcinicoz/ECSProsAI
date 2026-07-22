@@ -361,6 +361,25 @@ alan için yapılıyorsa o alanın oturumunda, o alanın fazı olarak yürütül
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION ÖZETİ (2026-07-22/7) — 🌐 KABUL TESTİ TAKİP BULGULARI (⚠️ RESTART BEKLİYOR)
+Kullanıcının restart sonrası testlerinden 5 yeni bulgu; 4'ü kapandı, 1'i sıradaki tura kaldı.
+- **"Kadın içinde ara" görünmüyor:** canlıda desktop+mobil DOĞRULANDI — buton çıkıyor ve çalışıyor
+  (restart öncesi test edilmiş olmalı; ss: scratchpad 50/51). Enter varsayılanı bilinçli: kapsam
+  çipi seçilmedikçe genel arama.
+- **Çok kelimeli arama ("sarı gömlek" 0 sonuç):** her kelime AYRI aranır (AND) — kod/ad/aktif
+  varyant ÖZELLİK DEĞERİ adı (renk dahil). Hem genel (GetStoreProducts) hem kanal kategori
+  aramasına uygulandı. Test: 'sarı gömlek' 26 ürün; 'gömlek' 339 (regresyon ✓); 'mor traktör' 0 ✓.
+- **Misafir kalbi → login → favori kaybolyordu:** niyet sessionStorage'a yazılır
+  ('ms-bekleyen-favori'); giriş modalı başarıda `ms:uye-giris` event'i yayar; _FavoriDavranis
+  dinleyip niyeti uygular + işaretleri tazeler (login sonrası kalpler artık sayfa yenilemeden dolu).
+- **Detay koleksiyon ikonu yenileyince sönüyordu:** açılış işaretlemesi eklendi — üyenin herhangi
+  bir koleksiyonundaki ürünse detay ikonu aktif başlar.
+- E2E (5051): gerçek modal girişiyle niyet uygulandı + kalp dolu + favoride ✓; detay ikon aktif ✓.
+- **KALAN (sıradaki tur): koleksiyonda RENK** — CollectionItem ProductCode bazlı, ColorValueId yok:
+  pembe eklenip beyaz görünüyor. Migration (additive ColorValueId) + akışta renk taşıma
+  (detay config.seciliRenk→köprü→API) + koleksiyon görünümlerinde renk görseli (favori kalıbı).
+- Drift TEMİZ. publish/ güncel. **KULLANICIDA: `sudo systemctl restart ecspros`.**
+
 ### ⭐ SESSION ÖZETİ (2026-07-22/6) — 🌐 KABUL TESTİ YÜKSEK BULGULARI KAPANDI (⚠️ RESTART BEKLİYOR)
 Kaynak: docs/KabulTestKiti kosumlar/ecspros/2026-07-22_10-18-46 (19 bulgu; 10 YÜKSEK → 6 benzersiz).
 - **B-005/010+B-006/011 fiyat sıralaması:** genel liste varyant BasePrice ile sıralayıp kanal

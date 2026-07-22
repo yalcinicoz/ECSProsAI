@@ -301,13 +301,20 @@ public class GetChannelCategoryProductsQueryHandler(
         // (GetStoreProducts aramasıyla aynı semantik). Fallback moduna da daralmış liste gider.
         if (!string.IsNullOrWhiteSpace(request.Search) && allProductIds.Count > 0)
         {
-            var arama = request.Search.Trim().ToLower();
-            allProductIds = await catDb.Products.AsNoTracking()
-                .Where(p => allProductIds.Contains(p.Id)
-                         && (p.Code.ToLower().Contains(arama)
-                          || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(arama)))
-                .Select(p => p.Id)
-                .ToListAsync(ct);
+            // Kabul testi 2026-07-22: çok kelimeli arama — genel aramayla aynı semantik
+            // (her kelime AND; kod/ad/varyant özellik değeri adı — "sarı gömlek" çalışır)
+            var aramaQ = catDb.Products.AsNoTracking().Where(p => allProductIds.Contains(p.Id));
+            foreach (var kelime in request.Search.Trim().ToLower()
+                         .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var k = kelime;
+                aramaQ = aramaQ.Where(p => p.Code.ToLower().Contains(k)
+                              || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(k)
+                              || p.Variants.Any(v => v.IsActive && v.VariantAttributes.Any(va =>
+                                     PgJsonFunctions.JsonText(va.AttributeValue.NameI18n, "tr")!
+                                         .ToLower().Contains(k))));
+            }
+            allProductIds = await aramaQ.Select(p => p.Id).ToListAsync(ct);
         }
 
         if (allProductIds.Count == 0)
