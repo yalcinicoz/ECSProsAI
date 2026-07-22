@@ -361,6 +361,19 @@ alan için yapılıyorsa o alanın oturumunda, o alanın fazı olarak yürütül
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### SESSION ÖZETİ (2026-07-22/4) — 🌐 WEB SİTESİ: MOBİL RENK PANELİ MÜKERRER DÜZELTMESİ (✅ CANLIDA, restart gerekmedi)
+Mobil ürün listesinde renk rozetine basınca alttan açılan panelde ilk 4 renk İKİ KEZ görünüyordu.
+Kök neden: kart markup'ı tek (mobil/desktop ayrı yordam YOK) — ilk-4 (desktop) + `-mobil` sınıflı tam
+liste birlikte basılır, ayrım CSS'te; desktop `-mobil`i gizler ama MOBİLDE ilk-4'ü gizleyen kural hiç
+yazılmamış (tasarım kaynağında da aynı eksik). Düzeltme: `tailwind.css`'e ≤639px'te
+`.ms-urun-renk-tooltip .ms-urun-renk-tooltip-gorsel:not(-mobil){hidden}` (ortak renk modalı kapsam dışı
+— aynı sınıfı kullanıyor, bilinçli daraltıldı). `npm run store-css:build` (ECSPros kendi hattı) →
+site.css publish'e kopyalandı (statik dosya, restart GEREKMEDİ). Kanıt: canlı eski CSS mobilde 8/8,
+düzeltilmiş 4/8; canlıda doğrulandı {rozet:4, görünen:4}. Desktop regresyonu temiz (ilk-4).
+⚠️ `/opt/misharix` (tasarım kaynağı) root'a ait — aynı patch oraya uygulanamadı; kullanıcı
+`sudo cp src/ECSPros.Api/wwwroot/css/tailwind.css /opt/misharix/wwwroot/css/tailwind.css` çalıştırana
+dek drift check tailwind.css'te fark gösterir.
+
 ### ⭐ SESSION ÖZETİ (2026-07-22/3) — 🌐 WEB SİTESİ: H3 GÖRSEL ARAMA TAMAM (⚠️ RESTART BEKLİYOR)
 Alan: Web sitesi (K19 panosu). H3'ün dış bağımlılığı çözülmüştü (visual_search entegrasyonu DB'de,
 Mishar platformuna özel, apiKey şifreli). Yapılanlar:
