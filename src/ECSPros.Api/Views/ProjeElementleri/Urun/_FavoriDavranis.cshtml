@@ -210,6 +210,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Kabul testi 2026-07-22: girişten sonra işaretler tazelenir + misafirken saklanan
     // favori niyeti otomatik uygulanır (kalp dolu gelir, ürün Favorilerim'e düşer).
+    // Kabul testi 2026-07-22: koleksiyona ekleme başarısında ikonlar ANINDA işaretlenir —
+    // MutationObserver kartIsaretle'yi kayitliKodlar'dan koştuğu için set güncellenmeden
+    // yapılan görsel toggle'ı geri alıyordu ("tıklıyorum, siyah kalıyor").
+    document.addEventListener("ms:koleksiyon-eklendi", (olay) => {
+        (olay.detail?.kodlar || []).forEach((kod) => kayitliKodlar.add(kod));
+        kartIsaretle(document);
+        detayIsaretle();
+    });
+
     document.addEventListener("ms:uye-giris", async () => {
         if (!token()) { return; }
         let bekleyen = null;

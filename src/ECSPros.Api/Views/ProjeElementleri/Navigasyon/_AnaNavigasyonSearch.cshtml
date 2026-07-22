@@ -156,7 +156,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const kategoriId = aramaAlani.dataset.msAramaKategoriId || "";
         const kategoriSlug = aramaAlani.dataset.msAramaKategoriSlug || "";
         const kategoriAd = aramaAlani.dataset.msAramaKategoriAd || "";
-        let kategorideAra = false;
+        // Kabul testi 2026-07-22 (revizyon): kategori sayfasında arama VARSAYILAN olarak
+        // kategori kapsamındadır — çip aktif başlar; tıklama kapsamı tüm mağazaya genişletir.
+        let kategorideAra = kategoriId !== "";
         const kategorideMi = () => kategorideAra && kategoriId !== "";
         const tumSonucUrl = (terim) => kategorideMi()
             ? `/${encodeURIComponent(kategoriSlug)}?search=${encodeURIComponent(terim)}`
@@ -234,22 +236,18 @@ document.addEventListener("DOMContentLoaded", () => {
             kategorideAraButonlari.forEach((buton) => {
                 buton.hidden = false;
                 buton.textContent = kategoriAd ? `${kategoriAd} içinde ara` : "Kategoride ara";
+                // Varsayılan kapsam kategori — çip aktif başlar (aria + görsel durum)
+                buton.setAttribute("aria-pressed", "true");
+                buton.classList.add("ms-ana-navigasyon-kategoride-ara-aktif");
                 buton.addEventListener("click", () => {
+                    // Toggle: aktifken tıklamak kapsamı TÜM MAĞAZAYA genişletir (öneri +
+                    // Enter genel arar); tekrar tıklamak kategoriye döner. Sonuca gitme
+                    // Enter/Tümünü Gör ile — kapsam hangisiyse oraya gider.
                     kategorideAra = !kategorideAra;
                     kategorideAraButonlari.forEach((b) => {
                         b.setAttribute("aria-pressed", kategorideAra ? "true" : "false");
                         b.classList.toggle("ms-ana-navigasyon-kategoride-ara-aktif", kategorideAra);
                     });
-                    // B-008 (kabul testi 2026-07-22): kapsam AÇILDIĞINDA yazılı terim varsa
-                    // doğrudan kategori arama sonucuna git — buton salt toggle iken kullanıcı
-                    // "sonuca götürmesini" bekliyordu (adres değişmiyordu). Kapatma tıklaması
-                    // (kapsamı geri genişletme) panelde kalır, yalnız öneriyi tazeler.
-                    const terim = (input.value || panelInput?.value || "").trim();
-                    if (kategorideAra && terim.length >= 2) {
-                        sonAramaKaydet(terim);
-                        window.location.href = tumSonucUrl(terim);
-                        return;
-                    }
                     canliAra(input.value || panelInput?.value || "");
                 });
             });
