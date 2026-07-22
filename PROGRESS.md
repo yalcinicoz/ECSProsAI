@@ -361,6 +361,26 @@ alan için yapılıyorsa o alanın oturumunda, o alanın fazı olarak yürütül
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION ÖZETİ (2026-07-22/5) — 🌐 WEB SİTESİ: H-M5 BAŞLADI — H10-1 KOLEKSİYON PUBLIC SAYFASI (⚠️ RESTART BEKLİYOR)
+H3+S3a-1 restart'ı yapıldı, canlıda doğrulandı (görsel arama 16 sonuç exact; satıcı login 200).
+H-M5/H10'un ilk maddesi uygulandı — **public koleksiyon sayfası (E6 ShareCode kapanışı):**
+- `GetCollectionByShareCodeQuery` (Storefront): yalnız approved+IsShareable; ViewCount atomik
+  ExecuteUpdate (+Relational paketi eklendi); pending/rejected/paylaşıma kapalı → 404.
+- `KoleksiyonController` `GET /koleksiyon/{shareCode}` (anonim SSR) + `Views/Koleksiyon/Index.cshtml`
+  — kartlar liste/favorilerle tek kaynak (_UrunKarti + UrunKartMap; GetStoreProducts ProductCodes),
+  koleksiyon ekleme sırası korunur; boş durum bloğu; Paylaş=panoya kopyala.
+- Hesabım kartındaki `@if(false)` "Koleksiyonu Aç" AÇILDI (koşul: Paylasilabilir && approved —
+  sayfanın 404 kapısıyla aynı kural); vitrin collection kartına Aç/Paylaş aksiyonları eklendi
+  (tasarım _Collection.cshtml markup'ı + panoya kopyalama script'i).
+- Test (izole 5051): onaylı koleksiyon 200 + 4 kart + başlık/rozetler ✓; pending 404 ✓; olmayan
+  kod 404 ✓; ViewCount 0→1 ✓; tarayıcı desktop+mobil render ✓, Paylaş "Kopyalandı ✓" ✓.
+  Test verisi dev DB'de: 'H10 Test Koleksiyonu' ShareCode=b804133807 (approved, 4 ürün).
+- **publish/ güncel — KULLANICIDA: `sudo systemctl restart ecspros`.** Ayrıca ⚠️ misharix tailwind
+  cp hâlâ bekliyor (mobil renk düzeltmesi drift'i).
+- **KALAN H10:** (2) vitrin kaynak filtreleri stok/etiket/indirim → (3) son gezilenler/favoriler
+  vitrin kaynakları (üye bazlı cache dikkat) → (4) YanMenu statü bloğu → (5) GeoLite2 (mmdb
+  KULLANICIDA, gelmezse bilinçli açık). Sonra H7 QA.
+
 ### SESSION ÖZETİ (2026-07-22/4) — 🌐 WEB SİTESİ: MOBİL RENK PANELİ MÜKERRER DÜZELTMESİ (✅ CANLIDA, restart gerekmedi)
 Mobil ürün listesinde renk rozetine basınca alttan açılan panelde ilk 4 renk İKİ KEZ görünüyordu.
 Kök neden: kart markup'ı tek (mobil/desktop ayrı yordam YOK) — ilk-4 (desktop) + `-mobil` sınıflı tam

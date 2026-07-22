@@ -343,11 +343,32 @@
                                     <span>Herkese açık</span>
                                     <span>@koleksiyon.Goruntulenme Görüntülenme</span>
                                 </div>
-                                @* Koleksiyonu Aç / Paylaş aksiyonları public koleksiyon sayfasıyla birlikte açılacak (Faz G ileri iş) *@
+                                @* H10: public koleksiyon sayfası açıldı — tasarım _Collection.cshtml aksiyonları *@
+                                <div class="ms-hesabim-koleksiyon-aksiyonlar">
+                                    <a class="ms-buton ms-buton-s ms-buton-sade" href="/koleksiyon/@koleksiyon.ShareCode">Koleksiyonu Aç</a>
+                                    <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-koleksiyon-paylas="@koleksiyon.ShareCode">Paylaş</button>
+                                </div>
                             </div>
                         </article>
                     }
                 </div>
+                <script>
+                    (() => {
+                        // H10: vitrin koleksiyon kartı Paylaş — hesabım davranışıyla aynı (panoya kopyala)
+                        document.currentScript.previousElementSibling
+                            .querySelectorAll("[data-ms-koleksiyon-paylas]").forEach((buton) => {
+                                buton.addEventListener("click", async () => {
+                                    const link = location.origin + "/koleksiyon/" + buton.dataset.msKoleksiyonPaylas;
+                                    try {
+                                        await navigator.clipboard.writeText(link);
+                                        const eski = buton.textContent;
+                                        buton.textContent = "Kopyalandı ✓";
+                                        window.setTimeout(() => { buton.textContent = eski; }, 1600);
+                                    } catch { window.prompt("Koleksiyon bağlantısı:", link); }
+                                });
+                            });
+                    })();
+                </script>
             </div>
             break;
 

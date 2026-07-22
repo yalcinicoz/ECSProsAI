@@ -115,10 +115,11 @@
                             <span class="ms-hesabim-koleksiyon-rozet">Son güncelleme @k.SonGuncellemeMetni</span>
                         </div>
                         <div class="ms-hesabim-koleksiyon-aksiyonlar">
-                            @if (false)
+                            @if (k.Paylasilabilir && k.Status == "approved")
                             {
-                            @* Faz G: public koleksiyon sayfası koleksiyon bloğuyla gelir *@
-                            <a class="ms-buton ms-buton-s ms-buton-sade" href="/#">Koleksiyonu Aç</a>
+                            @* H10: public koleksiyon sayfası — yalnız onaylı+paylaşılabilir koleksiyonda
+                               (link kuralı sayfanın 404 kapısıyla aynı; pending/rejected'da buton çıkmaz) *@
+                            <a class="ms-buton ms-buton-s ms-buton-sade" href="/koleksiyon/@k.ShareCode">Koleksiyonu Aç</a>
                             }
                             @if (k.Paylasilabilir)
                             {
