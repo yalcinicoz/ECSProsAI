@@ -160,6 +160,71 @@ public class PagesController(
         string? Device, bool IsMember, Guid? MemberGroupId);
 
     /// <summary>
+    /// Canlı-önizlemeli blok editörü (2026-07-22): yerleşimin TASLAK blokları GERÇEK
+    /// içerikleriyle — öğe görselleri + ürün kaynaklı bloklarda çözülmüş ürün kartları
+    /// (ilk 8) + koleksiyon özetleri. Salt okuma; canlı yayına/cache'e dokunmaz.
+    /// </summary>
+    [HttpGet("draft-compose")]
+    public async Task<IActionResult> DraftCompose(
+        [FromQuery] Guid firmPlatformId, [FromQuery] string placement,
+        [FromServices] ECSPros.Api.Services.Store.IPageBlockSourceResolver resolver,
+        CancellationToken ct)
+    {
+        if (!PageBlockCatalog.IsValidPlacement(placement))
+            return BadRequest(new { success = false, error = "Geçersiz yerleşim." });
+        if (firmPlatformId == Guid.Empty)
+            return BadRequest(new { success = false, error = "firmPlatformId zorunlu." });
+
+        var sonuc = await mediator.Send(
+            new ECSPros.Storefront.Application.Queries.GetDraftBlocksWithItems
+                .GetDraftBlocksWithItemsQuery(firmPlatformId, placement), ct);
+        if (sonuc.IsFailure) return BadRequest(new { success = false, error = sonuc.Error });
+
+        var bloklar = new List<object>();
+        foreach (var b in sonuc.Value!)
+        {
+            // Ürün kaynağı: önizleme için ilk 8 kart yeter (editör performansı)
+            object? urunler = null;
+            var kaynak = resolver.ParseProductSource(b.ConfigJson);
+            if (kaynak is not null && !ECSPros.Api.Services.Store.PageBlockSourceResolver.UyeBaglamli(kaynak.Source))
+            {
+                var kartlar = await resolver.ResolveProductsAsync(
+                    firmPlatformId, kaynak with { Limit = Math.Min(kaynak.Limit, 8) }, 1, ct: ct);
+                urunler = kartlar.Select(k => new
+                {
+                    k.Code,
+                    Ad = k.NameI18n.GetValueOrDefault("tr") ?? k.NameI18n.Values.FirstOrDefault(),
+                    Gorsel = k.MainImageUrl,
+                    Fiyat = k.MinPrice,
+                }).ToList();
+            }
+
+            object? koleksiyonlar = null;
+            var kKaynak = resolver.ParseCollectionSource(b.ConfigJson);
+            if (kKaynak is not null)
+            {
+                var liste = await resolver.ResolveCollectionsAsync(
+                    firmPlatformId, kKaynak with { Limit = Math.Min(kKaynak.Limit, 6) }, ct);
+                koleksiyonlar = liste.Select(k => new { k.Name, k.ItemCount, k.ViewCount }).ToList();
+            }
+
+            bloklar.Add(new
+            {
+                b.Id, b.BlockType, b.Template, b.TitleI18n, b.SubtitleI18n,
+                b.SortOrder, b.IsActive, b.StartAt, b.EndAt,
+                UyeBaglamli = kaynak is not null
+                    && ECSPros.Api.Services.Store.PageBlockSourceResolver.UyeBaglamli(kaynak.Source),
+                KaynakTipi = kaynak?.Source,
+                Items = b.Items,
+                Urunler = urunler,
+                Koleksiyonlar = koleksiyonlar,
+            });
+        }
+
+        return Ok(new { success = true, data = bloklar });
+    }
+
+    /// <summary>
     /// G12: önizleme — TASLAK veri + kurgu segment üzerinde kural motorunu çalıştırır,
     /// blokları görünür/gizli + nedeniyle listeler (spec: canlı siteyi etkilemez, cache'e
     /// yazmaz; yayınlanmamış değişiklikler burada görünür).
