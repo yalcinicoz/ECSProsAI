@@ -1762,6 +1762,15 @@
     }
   }
 
+  /* Mobil panel yalnız tam listeyi (-mobil) gösterir; desktop'a ait ilk-4 seti gizlenir —
+     yoksa ilk 4 renk mükerrer görünür. Kapsam tooltip'le sınırlı: ortak renk modalının
+     (.ms-urun-renk-modal-liste) öğeleri aynı sınıfı taşır, onlara dokunulmaz. */
+  @media (max-width: 639px) {
+    .ms-urun-renk-tooltip .ms-urun-renk-tooltip-gorsel:not(.ms-urun-renk-tooltip-gorsel-mobil) {
+      @apply hidden;
+    }
+  }
+
   .ms-urun-slider-noktalari {
     @apply absolute bottom-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-full bg-black/35 px-1.5 py-1;
   }
