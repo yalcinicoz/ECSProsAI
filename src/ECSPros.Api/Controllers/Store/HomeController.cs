@@ -25,7 +25,9 @@ public class HomeController(
         {
             // G10: kompozisyon ziyaretçi segmentine göre (taban her sayfada çözer)
             var segment = ViewData["MsSegment"] as VisitorSegment ?? VisitorSegment.Misafir;
-            var (_, bloklar) = await composer.ComposeAsync(platform.Id, "homepage", segment, ct);
+            // H10: üye bağlamlı bloklar (son gezilenler/favoriler) için üye kimliği
+            var uye = ViewData["MsUye"] as StoreUyeKimlik;
+            var (_, bloklar) = await composer.ComposeAsync(platform.Id, "homepage", segment, uye?.MemberId, ct);
             if (bloklar.Count > 0)
                 ViewData["MsVitrinBloklar"] = await vitrinBuilder.KurAsync(platform.Id, bloklar, ct);
         }

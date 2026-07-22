@@ -89,8 +89,13 @@ public class PagePreviewService(IStorefrontDbContext db, IPageBlockSourceResolve
         var kaynak = resolver.ParseProductSource(blok.ConfigJson);
         if (kaynak is not null || def.RequiresProductSource)
         {
+            // H10: üye bağlamlı kaynak önizlemede çözülemez (admin oturumu üye değil) —
+            // dürüst gerekçeyle "üyeye göre" işaretlenir, gizli sayılmaz.
+            if (kaynak is not null && PageBlockSourceResolver.UyeBaglamli(kaynak.Source))
+                return Satir(true, $"Üye bağlamlı kaynak ({kaynak.Source}) — içerik ziyaretçinin kendi verisiyle dolar; misafirde/verisiz üyede blok basılmaz.", gorunenler.Count, null);
+
             urunSayisi = kaynak is null ? 0
-                : (await resolver.ResolveProductsAsync(firmPlatformId, kaynak, 1, ct)).Count;
+                : (await resolver.ResolveProductsAsync(firmPlatformId, kaynak, 1, ct: ct)).Count;
             if (def.RequiresProductSource && urunSayisi == 0)
                 return Satir(false, "Ürün kaynağı boş — ürünsüz ürün bloğu basılmaz.", gorunenler.Count, 0);
         }

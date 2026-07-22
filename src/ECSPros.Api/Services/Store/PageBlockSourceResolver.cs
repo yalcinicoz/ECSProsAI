@@ -16,7 +16,7 @@ namespace ECSPros.Api.Services.Store;
 /// ConfigJson örneği: { "productSource": { "source": "best-sellers", "limit": 12 } }
 /// </summary>
 public record BlockProductSource(
-    string Source,                       // new-arrivals | best-sellers | campaign | category | brand | manual
+    string Source,                       // new-arrivals | best-sellers | campaign | category | brand | manual | recently-viewed | favorites
     Guid? CategoryId = null,             // category: ChannelCategoryId (admin seçiminden)
     Guid? BrandValueId = null,           // brand: definition attribute value id (marka)
     List<string>? ProductCodes = null,   // manual: sıra korunur
@@ -39,9 +39,10 @@ public record BlockCollectionSource(
 
 public interface IPageBlockSourceResolver
 {
-    /// <summary>Kaynak konfigürasyonundan ürün kartları. page yalnız infinity devam yüklemesinde &gt; 1.</summary>
+    /// <summary>Kaynak konfigürasyonundan ürün kartları. page yalnız infinity devam yüklemesinde &gt; 1.
+    /// memberId: üye bağlamlı kaynaklar (recently-viewed/favorites) için — misafirde boş döner.</summary>
     Task<List<StoreProductDto>> ResolveProductsAsync(
-        Guid firmPlatformId, BlockProductSource source, int page = 1, CancellationToken ct = default);
+        Guid firmPlatformId, BlockProductSource source, int page = 1, Guid? memberId = null, CancellationToken ct = default);
 
     Task<List<ShowcaseCollectionDto>> ResolveCollectionsAsync(
         Guid firmPlatformId, BlockCollectionSource source, CancellationToken ct = default);
@@ -63,14 +64,45 @@ public class PageBlockSourceResolver(IMediator mediator, IProductService product
 {
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
 
+    /// <summary>H10: üye bağlamlı kaynak mı — PageComposer bu blokları paket cache'ine
+    /// ürünsüz yazar, her istekte üyeye göre taze doldurur (segment hash'i üyeyi ayırmaz).</summary>
+    public static bool UyeBaglamli(string source) => source is "recently-viewed" or "favorites";
+
     public async Task<List<StoreProductDto>> ResolveProductsAsync(
-        Guid firmPlatformId, BlockProductSource source, int page = 1, CancellationToken ct = default)
+        Guid firmPlatformId, BlockProductSource source, int page = 1, Guid? memberId = null, CancellationToken ct = default)
     {
         var limit = Math.Clamp(source.Limit, 1, 48);
         page = Math.Max(1, page);
 
         switch (source.Source)
         {
+            // H10: üye bağlamlı kaynaklar — misafirde boş (blok basılmaz; misafir
+            // localStorage geçmişi client-side ileri iş). Sıra: en yeni etkileşim önce.
+            case "recently-viewed":
+            case "favorites":
+            {
+                if (memberId is not { } uye) return [];
+                List<string> kodSirasi;
+                if (source.Source == "favorites")
+                {
+                    var fav = await mediator.Send(new ECSPros.Storefront.Application.Queries
+                        .GetMemberFavorites.GetMemberFavoritesQuery(firmPlatformId, uye), ct);
+                    if (fav.IsFailure) return [];
+                    kodSirasi = fav.Value!.Select(f => f.ProductCode).Distinct().ToList();
+                }
+                else
+                {
+                    var gezilen = await mediator.Send(new ECSPros.Storefront.Application.Queries
+                        .GetMemberViewedProducts.GetMemberViewedProductsQuery(firmPlatformId, uye), ct);
+                    if (gezilen.IsFailure) return [];
+                    kodSirasi = gezilen.Value!.Select(g => g.ProductCode).ToList();
+                }
+                var sayfaKodlari = kodSirasi.Skip((page - 1) * limit).Take(limit).ToList();
+                if (sayfaKodlari.Count == 0) return [];
+                var kartlar = await KartlariGetirAsync(firmPlatformId, source, 1, limit,
+                    productCodes: sayfaKodlari, ct: ct);
+                return kartlar.OrderBy(k => sayfaKodlari.IndexOf(k.Code)).ToList();
+            }
             case "new-arrivals":
                 return await KartlariGetirAsync(firmPlatformId, source with { Sort = source.Sort ?? "newest" },
                     page, limit, ct: ct);

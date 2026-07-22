@@ -43,12 +43,12 @@ public interface IPageComposer
     /// çözer (yayın yoksa boş). Segment zorunludur — misafir için VisitorSegment.Misafir;
     /// G12 admin önizlemesi kurgu segment geçer.</summary>
     Task<(int Version, List<ResolvedBlockDto> Blocks)> ComposeAsync(
-        Guid firmPlatformId, string placement, VisitorSegment segment, CancellationToken ct = default);
+        Guid firmPlatformId, string placement, VisitorSegment segment, Guid? memberId = null, CancellationToken ct = default);
 
     /// <summary>Infinity devam yüklemesi: snapshot'taki ürün bloğunun N. sayfası
     /// (blok bu segmente kuraldan görünmüyorsa null — içerik sızmaz).</summary>
     Task<List<StoreProductDto>?> ResolveBlockProductsAsync(
-        Guid firmPlatformId, Guid blockId, int page, VisitorSegment segment, CancellationToken ct = default);
+        Guid firmPlatformId, Guid blockId, int page, VisitorSegment segment, Guid? memberId = null, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -72,7 +72,7 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver,
     private sealed record UrunPaketi(List<StoreProductDto> Items);
 
     public async Task<(int Version, List<ResolvedBlockDto> Blocks)> ComposeAsync(
-        Guid firmPlatformId, string placement, VisitorSegment segment, CancellationToken ct = default)
+        Guid firmPlatformId, string placement, VisitorSegment segment, Guid? memberId = null, CancellationToken ct = default)
     {
         var aktif = await AktifVersiyonAsync(firmPlatformId, ct);
         if (aktif.Version == 0) return (0, []);
@@ -80,9 +80,12 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver,
         // G10/G11: anahtar segment hash'i içerir (spec) — aynı yayında farklı segmentler
         // farklı kompozisyon görebilir; kuralsız yayında hash misafir/üye başına aynı
         // içeriği tekrarlar (kabul: TTL 5 dk, paket küçük).
+        // H10: üye bağlamlı kaynaklı bloklar (recently-viewed/favorites) pakete ÜRÜNSÜZ
+        // yazılır — anahtar üyeyi ayırmaz; ürünleri her istekte UyeBloklariniDoldurAsync doldurur.
         var anahtar = $"page:{placement}:{firmPlatformId}:v{aktif.Version}:{aktif.SnapshotId:N}:seg:{segment.CacheHash()}";
         var hazir = await cache.GetAsync<BlokPaketi>(anahtar, ct);
-        if (hazir is not null) return (aktif.Version, hazir.Blocks);
+        if (hazir is not null)
+            return (aktif.Version, await UyeBloklariniDoldurAsync(firmPlatformId, hazir.Blocks, memberId, ct));
 
         var snapshot = await AktifSnapshotAsync(firmPlatformId, ct);
         if (snapshot is null) return (0, []);
@@ -114,8 +117,17 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver,
             var urunKaynagi = resolver.ParseProductSource(blok.Config);
             if (urunKaynagi is not null || def.RequiresProductSource)
             {
-                urunler = urunKaynagi is null ? [] : await resolver.ResolveProductsAsync(firmPlatformId, urunKaynagi, 1, ct);
-                if (def.RequiresProductSource && urunler.Count == 0) continue; // ürünsüz ürün bloğu basılmaz
+                // H10: üye bağlamlı kaynak pakete boş yazılır (görünürlük kararı istek anında —
+                // UyeBloklariniDoldurAsync misafir/verisiz üyede bloğu düşürür)
+                if (urunKaynagi is not null && PageBlockSourceResolver.UyeBaglamli(urunKaynagi.Source))
+                {
+                    urunler = [];
+                }
+                else
+                {
+                    urunler = urunKaynagi is null ? [] : await resolver.ResolveProductsAsync(firmPlatformId, urunKaynagi, 1, ct: ct);
+                    if (def.RequiresProductSource && urunler.Count == 0) continue; // ürünsüz ürün bloğu basılmaz
+                }
             }
 
             List<ShowcaseCollectionDto>? koleksiyonlar = null;
@@ -135,8 +147,9 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver,
                 if (blok.BlockType == "tabs")
                 {
                     var tabKaynak = resolver.ParseProductSource(oge.Config);
-                    if (tabKaynak is not null)
-                        ogeUrunleri = await resolver.ResolveProductsAsync(firmPlatformId, tabKaynak, 1, ct);
+                    // H10: tabs sekmelerinde üye bağlamlı kaynak desteklenmez (paket cache'i) — boş kalır
+                    if (tabKaynak is not null && !PageBlockSourceResolver.UyeBaglamli(tabKaynak.Source))
+                        ogeUrunleri = await resolver.ResolveProductsAsync(firmPlatformId, tabKaynak, 1, ct: ct);
                 }
                 cozulmusOgeler.Add(new ResolvedItemDto(
                     oge.Id, oge.Title, oge.Subtitle, oge.ImageUrl, oge.MobileImageUrl, oge.VideoUrl,
@@ -149,11 +162,35 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver,
         }
 
         await cache.SetAsync(anahtar, new BlokPaketi(sonuc), CacheTtl, ct);
-        return (snapshot.Version, sonuc);
+        return (snapshot.Version, await UyeBloklariniDoldurAsync(firmPlatformId, sonuc, memberId, ct));
+    }
+
+    /// <summary>H10: üye bağlamlı kaynaklı blokların ürünlerini İSTEK ANINDA doldurur —
+    /// cache'lenen paket bu blokları ürünsüz taşır (bir üyenin listesi başkasına sızmaz).
+    /// Misafirde ya da verisiz üyede blok listeden düşer (ürünsüz blok basılmaz kuralı).
+    /// Not: tabs SEKMELERİNDE üye bağlamlı kaynak desteklenmez (sekme ürünleri pakete
+    /// cache'lendiğinden boş kalır) — bilinçli sınır.</summary>
+    private async Task<List<ResolvedBlockDto>> UyeBloklariniDoldurAsync(
+        Guid firmPlatformId, List<ResolvedBlockDto> bloklar, Guid? memberId, CancellationToken ct)
+    {
+        List<ResolvedBlockDto>? yeni = null; // üye bağlamlı blok yoksa liste aynen döner
+        for (var i = 0; i < bloklar.Count; i++)
+        {
+            var blok = bloklar[i];
+            var kaynak = resolver.ParseProductSource(blok.Config);
+            if (kaynak is null || !PageBlockSourceResolver.UyeBaglamli(kaynak.Source)) continue;
+
+            yeni ??= new List<ResolvedBlockDto>(bloklar);
+            var urunler = memberId is null
+                ? []
+                : await resolver.ResolveProductsAsync(firmPlatformId, kaynak, 1, memberId, ct);
+            yeni[i] = urunler.Count == 0 ? null! : blok with { Products = urunler };
+        }
+        return yeni is null ? bloklar : yeni.Where(b => b is not null).ToList();
     }
 
     public async Task<List<StoreProductDto>?> ResolveBlockProductsAsync(
-        Guid firmPlatformId, Guid blockId, int page, VisitorSegment segment, CancellationToken ct = default)
+        Guid firmPlatformId, Guid blockId, int page, VisitorSegment segment, Guid? memberId = null, CancellationToken ct = default)
     {
         page = Math.Max(1, page);
         var aktif = await AktifVersiyonAsync(firmPlatformId, ct);
@@ -163,6 +200,8 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver,
         // ama blok görünürlüğü değil: cache miss'te kural denetlenir, hit o segment için
         // zaten doğrulanmış sonuçtur (gizli bloğun ürünleri bu segmente hiç yazılmaz).
         var anahtar = $"page-products:v{aktif.Version}:{aktif.SnapshotId:N}:{blockId}:seg:{segment.CacheHash()}:page:{page}";
+        // H10 notu: üye bağlamlı bloklar bu anahtara HİÇ yazılmaz (aşağıda bypass) —
+        // hit her zaman üye-bağımsız bir bloğa aittir, snapshot yüklemeden dönmek güvenli.
         var hazir = await cache.GetAsync<UrunPaketi>(anahtar, ct);
         if (hazir is not null) return hazir.Items;
 
@@ -174,7 +213,12 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver,
 
         var kaynak = resolver.ParseProductSource(blok.Config);
         if (kaynak is null) return null;
-        var urunler = await resolver.ResolveProductsAsync(firmPlatformId, kaynak, page, ct);
+
+        // H10: üye bağlamlı kaynak CACHE'E GİRMEZ — her istekte üyeye göre taze (sızma olmaz)
+        if (PageBlockSourceResolver.UyeBaglamli(kaynak.Source))
+            return await resolver.ResolveProductsAsync(firmPlatformId, kaynak, page, memberId, ct);
+
+        var urunler = await resolver.ResolveProductsAsync(firmPlatformId, kaynak, page, ct: ct);
         await cache.SetAsync(anahtar, new UrunPaketi(urunler), CacheTtl, ct);
         return urunler;
     }
