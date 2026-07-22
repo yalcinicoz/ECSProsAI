@@ -63,7 +63,8 @@ public record StoreProductDto(
     bool IsFeatured = false,             // B11: öne çıkar penceresi içinde — kartta "Sponsorlu" rozeti
     double Rating = 0,                   // E7: onaylı yorum ortalaması (0 = yorum yok)
     int ReviewCount = 0,                 // E7: onaylı yorum sayısı
-    string? VideoUrl = null);            // H5: ilk aktif videonun efektif URL'i — null ise kartta rozet yok
+    string? VideoUrl = null,             // H5: ilk aktif videonun efektif URL'i — null ise kartta rozet yok
+    Guid? MatchedColorValueId = null);   // Kabul testi 2026-07-22: aramadaki renk kelimesiyle eşleşen renk — kart o renkle gösterilir
 
 public class GetStoreProductsQueryHandler(
     ICatalogDbContext db,
@@ -110,6 +111,7 @@ public class GetStoreProductsQueryHandler(
         if (request.ProductIds is { Count: > 0 } idler)
             q = q.Where(p => idler.Contains(p.Id));
 
+        var aramaRenkIdleri = new HashSet<Guid>();
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             // Kabul testi 2026-07-22: "sarı gömlek" gibi ÇOK KELİMELİ aramalar tek parça
@@ -125,6 +127,12 @@ public class GetStoreProductsQueryHandler(
                               || p.Variants.Any(v => v.IsActive && v.VariantAttributes.Any(va =>
                                      PgJsonFunctions.JsonText(va.AttributeValue.NameI18n, "tr")!
                                          .ToLower().Contains(k))));
+                // Renk daraltması için: kelimeyle eşleşen özellik değeri id'leri
+                var eslesenDegerler = await db.AttributeValues.AsNoTracking()
+                    .Where(av => PgJsonFunctions.JsonText(av.NameI18n, "tr")!.ToLower().Contains(k))
+                    .Select(av => av.Id)
+                    .ToListAsync(ct);
+                foreach (var id in eslesenDegerler) aramaRenkIdleri.Add(id);
             }
         }
 
@@ -359,14 +367,18 @@ public class GetStoreProductsQueryHandler(
                 galleryUrls = galeriImgs.Take(4).Select(fn2 => cdnBase + fn2).ToList();
             }
 
+            var renkler = colorsByProduct.GetValueOrDefault(p.Id) ?? new();
             return new StoreProductDto(
                 p.Id, p.Code, p.NameI18n, p.ShortDescriptionI18n,
                 mainImage, minPrice, null, p.IsSaleOpen,
-                colorsByProduct.GetValueOrDefault(p.Id) ?? new(),
+                renkler,
                 attrsByProduct.GetValueOrDefault(p.Id) ?? new(),
                 galleryUrls,
                 IsFeatured: oneCikanlar.Contains(p.Id),
-                VideoUrl: videolar.GetValueOrDefault(p.Id));
+                VideoUrl: videolar.GetValueOrDefault(p.Id),
+                MatchedColorValueId: aramaRenkIdleri.Count > 0
+                    ? renkler.FirstOrDefault(c => aramaRenkIdleri.Contains(c.ValueId))?.ValueId
+                    : null);
         }).ToList();
 
         // E7: kart puanları onaylı yorum ortalamasından (additive alanlar)

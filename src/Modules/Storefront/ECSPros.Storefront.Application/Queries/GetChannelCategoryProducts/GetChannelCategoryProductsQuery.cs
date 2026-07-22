@@ -299,6 +299,8 @@ public class GetChannelCategoryProductsQueryHandler(
 
         // B10: "kategoride ara" — kategori kapsamı içinde kod veya Türkçe ad eşleşmesi
         // (GetStoreProducts aramasıyla aynı semantik). Fallback moduna da daralmış liste gider.
+        // kelime → eşleşen özellik değeri id'leri (renk mi değil mi pair evreniyle netleşir)
+        var aramaKelimeDegerleri = new Dictionary<string, List<Guid>>();
         if (!string.IsNullOrWhiteSpace(request.Search) && allProductIds.Count > 0)
         {
             // Kabul testi 2026-07-22: çok kelimeli arama — genel aramayla aynı semantik
@@ -315,6 +317,19 @@ public class GetChannelCategoryProductsQueryHandler(
                                          .ToLower().Contains(k))));
             }
             allProductIds = await aramaQ.Select(p => p.Id).ToListAsync(ct);
+
+            // Kabul testi 2026-07-22 (revizyon): arama kelimesi bir RENK adıysa kartlar o
+            // renge daraltılır — "kırmızı elbise"de kırmızı olmayan renk kartları gelmez.
+            foreach (var kelime in request.Search.Trim().ToLower()
+                         .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var k = kelime;
+                var eslesen = await catDb.AttributeValues.AsNoTracking()
+                    .Where(av => PgJsonFunctions.JsonText(av.NameI18n, "tr")!.ToLower().Contains(k))
+                    .Select(av => av.Id)
+                    .ToListAsync(ct);
+                if (eslesen.Count > 0) aramaKelimeDegerleri[k] = eslesen;
+            }
         }
 
         if (allProductIds.Count == 0)
@@ -401,6 +416,45 @@ public class GetChannelCategoryProductsQueryHandler(
         var visiblePairs = colorPairs
             .Where(p => p.VariantIds.Any(vid => variantIdsWithImage.Contains(vid)))
             .ToList();
+
+        // Arama renk daraltması (kabul testi 2026-07-22 revizyonu): kelimenin eşleştiği
+        // değerler GERÇEK renk evreniyle (pair renkleri) kesişiyorsa o kelime RENK kelimesidir
+        // ("elbise" başka tipte eşleşse bile renk sayılmaz). Renk kelimeleri varsa yalnız o
+        // renklerin kartları kalır; istisna: renk kelimesi ürünün ADINDA geçiyorsa
+        // ("Kırmızı Desenli Elbise") o ürünün kartları korunur.
+        if (aramaKelimeDegerleri.Count > 0)
+        {
+            var renkEvreni = visiblePairs.Select(pr => pr.ColorValueId).ToHashSet();
+            var aramaRenkIdleri = new HashSet<Guid>();
+            var renkKelimeleri = new List<string>();
+            foreach (var (kelime, idler) in aramaKelimeDegerleri)
+            {
+                var renkOlanlar = idler.Where(renkEvreni.Contains).ToList();
+                if (renkOlanlar.Count == 0) continue;
+                renkKelimeleri.Add(kelime);
+                foreach (var id in renkOlanlar) aramaRenkIdleri.Add(id);
+            }
+
+            if (aramaRenkIdleri.Count > 0)
+            {
+                var adayIdler = visiblePairs.Select(pr => pr.ProductId).Distinct().ToList();
+                var aramaAdKorumali = new HashSet<Guid>();
+                foreach (var kelime in renkKelimeleri)
+                {
+                    var k = kelime;
+                    var adEslesen = await catDb.Products.AsNoTracking()
+                        .Where(pr => adayIdler.Contains(pr.Id)
+                                  && PgJsonFunctions.JsonText(pr.NameI18n, "tr")!.ToLower().Contains(k))
+                        .Select(pr => pr.Id)
+                        .ToListAsync(ct);
+                    foreach (var id in adEslesen) aramaAdKorumali.Add(id);
+                }
+                visiblePairs = visiblePairs
+                    .Where(pr => aramaRenkIdleri.Contains(pr.ColorValueId)
+                              || aramaAdKorumali.Contains(pr.ProductId))
+                    .ToList();
+            }
+        }
 
         // Görseli olan renk yoksa ürün düzeyindeki fallback ile devam et
         if (visiblePairs.Count == 0)

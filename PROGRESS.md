@@ -361,6 +361,23 @@ alan için yapılıyorsa o alanın oturumunda, o alanın fazı olarak yürütül
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION ÖZETİ (2026-07-22/8) — 🌐 KABUL TESTİ 3. TUR (⚠️ RESTART BEKLİYOR)
+- **"Kırmızı elbise"de karışık renk kartları:** arama kelimesi GERÇEK renk evreniyle (pair
+  renkleri) kesişiyorsa RENK kelimesidir; kartlar o renklere daraltılır (ad koruması: renk
+  kelimesi ürün ADINDA geçenler kalır). Genel listede kart eşleşen renk görseli/slug'ıyla döner
+  (StoreProductDto additive MatchedColorValueId + UrunKartMap). Test: 'kırmızı elbise' 33/33
+  Kırmızı; 'sarı gömlek' 12/12 Sarı; renksiz 'gömlek' karışık (regresyon ✓). NOT: kanal sorgu
+  cache'i canlı ile ortak — testte bayat cache tuzağına dikkat (taze anahtarla doğrulandı).
+- **Koleksiyon ikonu anında işaretlenmiyor:** MutationObserver kartIsaretle'yi kayitliKodlar'dan
+  koşup görsel toggle'ı GERİ ALIYORDU. Köprü başarıda `ms:koleksiyon-eklendi` yayar; davranış
+  script'i seti güncelleyip kart+detay ikonlarını anında işaretler.
+- **Kategori sayfasında arama kapsamı:** kullanıcı kararıyla VARSAYILAN kategori kapsamı — çip
+  aktif başlar (öneri+Enter kategoride arar); çipe basmak kapsamı tüm mağazaya genişletir
+  (önceki tıkla-git davranışı kaldırıldı — Enter/Tümünü Gör zaten kapsama göre gider).
+- E2E (5051): çip aktif + Enter /kadin?search ✓; ekleme sonrası ikon anında aktif ✓.
+- Drift TEMİZ. publish/ güncel. **KULLANICIDA: `sudo systemctl restart ecspros`.**
+- KALAN: koleksiyonda RENK saklama (ColorValueId migration) — önceki turdan; ORTA/DÜŞÜK rapor bulguları.
+
 ### ⭐ SESSION ÖZETİ (2026-07-22/7) — 🌐 KABUL TESTİ TAKİP BULGULARI (⚠️ RESTART BEKLİYOR)
 Kullanıcının restart sonrası testlerinden 5 yeni bulgu; 4'ü kapandı, 1'i sıradaki tura kaldı.
 - **"Kadın içinde ara" görünmüyor:** canlıda desktop+mobil DOĞRULANDI — buton çıkıyor ve çalışıyor

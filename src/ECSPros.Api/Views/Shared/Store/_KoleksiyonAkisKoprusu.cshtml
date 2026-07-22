@@ -89,6 +89,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const veri = await cevap.json().catch(() => null);
             if (veri?.success) {
                 sonucGoster(true, "Koleksiyon Onaylandı", `"${d.ad || "Yeni Koleksiyon"}" koleksiyonu oluşturuldu.`);
+                document.dispatchEvent(new CustomEvent("ms:koleksiyon-eklendi",
+                    { detail: { kodlar: (d.urunler || []).map((u) => (u.id || "").split(" / ")[0]).filter(Boolean) } }));
             } else {
                 sonucGoster(false, "Koleksiyon Reddedildi", veri?.error || "Koleksiyon oluşturulamadı.");
             }
@@ -139,6 +141,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             sonucGoster(true, "Koleksiyon Onaylandı",
                 `Ürün ${hedefler.map((k) => `"${k.name}"`).join(", ")} koleksiyonuna eklendi.`);
+            // Kabul testi 2026-07-22: ikon anında işaretlensin — davranış script'i dinler
+            document.dispatchEvent(new CustomEvent("ms:koleksiyon-eklendi", { detail: { kodlar: [urunKodu] } }));
         } catch {
             sonucGoster(false, "Koleksiyon Reddedildi", "Ürün koleksiyona eklenemedi. Lütfen tekrar deneyin.");
         }
