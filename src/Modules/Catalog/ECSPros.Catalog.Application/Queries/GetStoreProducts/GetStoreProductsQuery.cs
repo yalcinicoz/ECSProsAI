@@ -43,7 +43,10 @@ public record GetStoreProductsQuery(
     // Stok görünürlüğü (2026-07-14): yalnız arama/liste çağrılarında true — vitrin/bildirim etkilenmez.
     bool ApplyStockFilter = false,
     bool ShowOutOfStock = false,
-    DateTime? OutOfStockSince = null) : IRequest<Result<PagedResult<StoreProductDto>>>;
+    DateTime? OutOfStockSince = null,
+    // H10 vitrin kaynak bayrakları (additive): etiket eşleşmesi (en az biri) + yalnız indirimli
+    List<string>? Tags = null,
+    bool DiscountedOnly = false) : IRequest<Result<PagedResult<StoreProductDto>>>;
 
 public record StoreProductDto(
     Guid Id,
@@ -67,6 +70,7 @@ public class GetStoreProductsQueryHandler(
     IChannelPricingService pricingService,
     IChannelProductFlagService flagService,
     IInStockProductProvider inStock,
+    IDiscountedProductProvider discounted,
     IProductReviewStatsService reviewStats)
     : IRequestHandler<GetStoreProductsQuery, Result<PagedResult<StoreProductDto>>>
 {
@@ -116,6 +120,20 @@ public class GetStoreProductsQueryHandler(
 
         if (request.CreatedSince.HasValue)
             q = q.Where(p => p.CreatedAt >= request.CreatedSince.Value);
+
+        // H10: etiket bayrağı — en az bir etiket eşleşmeli (jsonb ?| — jsonb_exists_any)
+        if (request.Tags is { Count: > 0 } etiketler)
+        {
+            var etiketDizisi = etiketler.ToArray();
+            q = q.Where(p => PgJsonFunctions.JsonExistsAny(p.Tags, etiketDizisi));
+        }
+
+        // H10: indirim bayrağı — kanalda CompareAtPrice > Price olan ürünler (küme cache'li)
+        if (request.DiscountedOnly)
+        {
+            var indirimliIds = await discounted.GetDiscountedProductIdsAsync(request.FirmPlatformId, ct);
+            q = q.Where(p => indirimliIds.Contains(p.Id));
+        }
 
         // B10: özellik filtresi — seçili değerler tipine göre gruplanır; grup içi OR
         // (herhangi bir aktif varyantta değer), gruplar arası AND (ürün seviyesinde).

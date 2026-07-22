@@ -25,7 +25,12 @@ public record BlockProductSource(
     decimal? PriceMax = null,
     int Limit = 12,
     string? Sort = null,                 // GetStoreProducts sözleşmesi: price_asc | price_desc | newest
-    int? Days = null);                   // best-sellers penceresi (varsayılan 90)
+    int? Days = null,                    // best-sellers penceresi (varsayılan 90)
+    // H10 (G3 ertelenenleri) — category kaynağında desteklenmez (bilinçli sınır; kanal
+    // sorgusu kendi stok kuralını zaten uygular, etiket/indirim ihtiyacı olursa genişletilir):
+    bool InStockOnly = false,            // yalnız online stoğu olanlar
+    List<string>? Tags = null,           // Product.Tags — en az biri eşleşmeli
+    bool DiscountedOnly = false);        // yalnız kanalda indirimli (CompareAtPrice > Price)
 
 public record BlockCollectionSource(
     int Limit = 10,
@@ -169,7 +174,10 @@ public class PageBlockSourceResolver(IMediator mediator, IProductService product
             firmPlatformId, null, page, limit,
             attributeValueIds ?? source.AttributeValueIds,
             source.PriceMin, source.PriceMax, source.Sort,
-            productCodes, productIds), ct);
+            productCodes, productIds,
+            // H10 vitrin bayrakları: stok filtresi yalnız istenince (vitrin varsayılanı serbest)
+            ApplyStockFilter: source.InStockOnly, ShowOutOfStock: false,
+            Tags: source.Tags, DiscountedOnly: source.DiscountedOnly), ct);
         return sonuc.IsSuccess ? sonuc.Value!.Items.ToList() : [];
     }
 

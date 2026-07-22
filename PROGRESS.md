@@ -377,9 +377,18 @@ H-M5/H10'un ilk maddesi uygulandı — **public koleksiyon sayfası (E6 ShareCod
   Test verisi dev DB'de: 'H10 Test Koleksiyonu' ShareCode=b804133807 (approved, 4 ürün).
 - **publish/ güncel — KULLANICIDA: `sudo systemctl restart ecspros`.** Ayrıca ⚠️ misharix tailwind
   cp hâlâ bekliyor (mobil renk düzeltmesi drift'i).
-- **KALAN H10:** (2) vitrin kaynak filtreleri stok/etiket/indirim → (3) son gezilenler/favoriler
-  vitrin kaynakları (üye bazlı cache dikkat) → (4) YanMenu statü bloğu → (5) GeoLite2 (mmdb
-  KULLANICIDA, gelmezse bilinçli açık). Sonra H7 QA.
+- **H10-2 vitrin kaynak filtreleri ✅ (aynı gün):** `productSource`'a `inStockOnly`/`tags`/
+  `discountedOnly` (category kaynağında bilinçli yok — kanal sorgusu kendi stok kuralını uygular).
+  GetStoreProducts additive Tags (jsonb `?|`/jsonb_exists_any — PgJsonFunctions.JsonExistsAny yeni
+  DbFunction; LINQ Any çevirisi jsonb'de patlıyordu) + DiscountedOnly (`IDiscountedProductProvider`
+  — InStockProductProvider kalıbı: raw SQL channel_variants×product_variants, platform bazlı 2dk
+  cache). Resolver bayrakları geçirir; admin blok formu örnek/placeholder/açıklama güncellendi
+  (dist canlıda). Test (5051, taslak blok + preview ucu): etiket 4 ✓, etiket+indirim 2 ✓,
+  etiket+stok 2 ✓, olmayan etiket 0 + "ürünsüz blok basılmaz" ✓. Taslak bloklar silindi.
+  Dev DB'de kaldı: 8 üründe 'h10-test' etiketi + P-00010802/P-00015113'te suni mishar indirimi
+  (CompareAtPrice=1.25×; detay sayfasında eski fiyat görünür — veri geçici).
+- **KALAN H10:** (3) son gezilenler/favoriler vitrin kaynakları (üye bazlı cache dikkat) →
+  (4) YanMenu statü bloğu → (5) GeoLite2 (mmdb KULLANICIDA, gelmezse bilinçli açık). Sonra H7 QA.
 
 ### SESSION ÖZETİ (2026-07-22/4) — 🌐 WEB SİTESİ: MOBİL RENK PANELİ MÜKERRER DÜZELTMESİ (✅ CANLIDA, restart gerekmedi)
 Mobil ürün listesinde renk rozetine basınca alttan açılan panelde ilk 4 renk İKİ KEZ görünüyordu.
