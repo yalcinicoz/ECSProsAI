@@ -332,3 +332,23 @@ wwwroot/js/site.js
 # kaldırıldı — gerçek moderasyon admin panelindedir (tasarımda demo akışı olarak durur).
 Views/ProjeElementleri/Ortak/_KoleksiyonModal.cshtml
 Views/ProjeElementleri/Ortak/_KoleksiyonYeniOzetModal.cshtml
+Views/ProjeElementleri/Ortak/_KoleksiyonVarolanModal.cshtml
+
+# 2026-07-18 kabul testi KRİTİK bulgusu: mobil sabit alt bardaki "Siparişi Tamamla"
+# düğmesi de /teslimat'a bağlandı (tasarım seçicisi yalnız masaüstü panelini hedefliyordu).
+Views/Sepet/Index.cshtml
+
+# H10: üye-özel sayfa bayrağı (window.msUyeOzelSayfa) — çıkış/yeniden girişte SSR tazeleme
+# için giriş modalı script'ine sinyal (tasarımda oturum kavramı yok).
+Views/Hesabim/Sayfa.cshtml
+
+# H3: görsel arama modalındaki DEMO gönderim gerçek fetch("/gorsel-arama") ile değiştirildi
+# (legacy misharixWebSites davranışı; tasarım paketi demo sonuç basıyordu).
+Views/Shared/_GorselAramaModalKutu.cshtml
+
+# H10: public koleksiyon sayfası — tasarımda karşılığı olmayan İZİNLİ YENİ sayfa
+# (mevcut _UrunKarti + hesabım liste kalıplarından kompoze edildi).
+Views/Koleksiyon/Index.cshtml
+
+# E6: koleksiyon akışının API köprüsü (İZİNLİ YENİ — tasarımda backend yok).
+Views/Shared/Store/_KoleksiyonAkisKoprusu.cshtml
