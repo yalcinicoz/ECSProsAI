@@ -280,6 +280,49 @@
 
 ---
 
+## Faz S — Pazaryeri Satıcı Paneli 🟡 TASARIM ONAYLANDI
+
+> Tasarım: `docs/satici-paneli-tasarimi.md` (onaylı, 2026-07-21). `api-hesaplari-tasarimi.md`
+> F4'ün genişletilmiş hâli. Bir alt-faz bitmeden sonrakine geçme; migration'lar additive.
+
+### S0 — Temizlik + tip ayrımı (bağımsız) ✅ (⚠️ RESTART BEKLİYOR)
+- [x] Finans > Tedarikçiler sayfası kaldırıldı (SuppliersPage silindi); Sidebar "Finans" →
+      `/finance/supplier-invoices`; eski `/finance/suppliers` → `/accounts?accountType=supplier` redirect
+- [x] `current_accounts.SupplierKind` (`normal`|`marketplace`) + migration `AddSupplierKind`
+      (additive, DB default `normal`, dev DB'ye UYGULANDI); Create/Update command+DTO+controller
+- [x] Cari Detay'da "Satıcı Tipi" seçimi (yalnız supplier/both'ta görünür) + info-bar/liste "Pazaryeri" rozeti
+- İzole test 5058 (7 kontrol geçti): mevcut tedarikçi=normal, marketplace oluştur→detay marketplace,
+  normal'e güncelle, omitted→default normal, liste supplierKind döner. Test carileri dev DB'den temizlendi.
+- publish/ + admin/dist güncel — **`sudo systemctl restart ecspros` KULLANICIDA**. SIRADA: S1 (SupplierUser kimliği).
+
+### S1 — SupplierUser kimliği ✅ (⚠️ RESTART BEKLİYOR)
+- [x] `iam.SupplierUser` + `iam.SupplierUserSession` entity (CurrentAccountId'ye bağlı, cross-schema FK yok);
+      migration `AddSupplierUsers` (additive, 2 yeni tablo, unique email index, dev DB'ye UYGULANDI)
+- [x] `POST /api/supplier/auth/login|refresh|logout` + `GET me` (SupplierAuthController); BCrypt (IAM
+      IPasswordHasher); JWT `type=supplier_user` + `owner_id`=cari kart + 60dk access + 30gün refresh (SHA256 rotate)
+- [x] `SupplierOnly` policy + AdminOnly assertion'a `supplier_user` bloğu eklendi (satıcı token'ı iç uçları GEÇEMEZ)
+- [x] Provisioning: `POST/GET /api/accounts/{id}/supplier-users` — marketplace kontrolü controller
+      orkestrasyonu (Accounts sorgusu→IAM komutu); yalnız `SupplierKind=marketplace`+aktif cariye kullanıcı açılır
+- İzole test 5059 (9 kontrol geçti): marketplace kullanıcı oluştur→201, normal tedarikçi→400,
+  login type=supplier_user+owner_id doğru, /me 200, **satıcı→admin ucu 403**, **admin→/me 403**,
+  refresh yeni token, yanlış şifre generic 400, anonim 401. Test verileri (ZZS1-*) dev DB'den temizlendi.
+- publish/ güncel (frontend YOK — satici/ app S2'de) — **`sudo systemctl restart ecspros` KULLANICIDA**. SIRADA: S2 (satici/ iskelet).
+
+### S2 — satici/ uygulama iskeleti ⬜
+- [ ] `satici/` Vite+React iskelet (admin kalıbı) + login + boş layout
+- [ ] `GET /api/supplier/me` (owner-scoped introspection)
+- [ ] nginx `/satici` statik sunum
+
+### S3 — Panel ekranları ⬜ (ekran kurgusu her biri için önce konuşulur — K16)
+- [ ] S3a Ürünlerim (kart aç/düzenle + API yüklenenler; ProductSubmission owner-scope)
+- [ ] S3b Stok & Fiyat (mutlak stok; marketplace ise fiyat)
+- [ ] S3c Siparişlerim (owner-scope sipariş kalemleri; önce salt-izleme)
+- [ ] S3d Cari Hesabım (ekstre, salt-okunur)
+- [ ] S3e API Hesabım (kendi ApiClient'ı; secret yenile)
+- [ ] S3f Profil / Kullanıcılar (çoklu kullanıcı, rolsüz)
+
+---
+
 ## Teknik Borçlar (Her Faz Öncesi Değerlendir)
 
 - [ ] API URL versiyonlaması: `/api/...` → `/api/v1/...` (breaking change, dikkatli planlanmalı)
@@ -293,6 +336,107 @@
 ## Aktif Session Notları
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
+
+### ⭐ SESSION ÖZETİ (2026-07-22) — S2 UYGULANDI: satici/ İSKELET + /api/supplier/me (⚠️ RESTART + NGINX RECREATE BEKLİYOR)
+S0+S1 restart'ı yapıldı, canlıda doğrulandı (supplier auth uçları yanıt veriyor, Redis AKTİF).
+Ardından **S2 uygulandı**:
+- **Backend:** `SupplierController` (`GET /api/supplier/me`, SupplierOnly + owner-scope) —
+  kullanıcı + bağlı cari kart özeti (GetSupplierUserQuery + GetCurrentAccountDetailQuery
+  kompozisyonu; token owner_id ↔ kullanıcının carisi eşleşme güvencesi).
+- **Frontend:** YENİ `satici/` uygulaması (Vite+React+TS, admin kalıbı — aynı tasarım tokenları):
+  login (`/satici/login`) + AuthGuard + MainLayout (sidebar: tek madde "Panel Özeti") +
+  DashboardPage (firma kartı /api/supplier/me'den; Ürünlerim/Siparişlerim/Cari "Yakında"
+  yer tutucuları). Token'lar `supplier_access_token`/`supplier_refresh_token`; 401→refresh→
+  `/satici/login`. `npm run build` alındı → `satici/dist`.
+- **nginx:** `locations.inc`'e `/satici/` bloğu; `docker-compose.yml`'e
+  `./satici/dist:/usr/share/nginx/html/satici:ro` volume. **Volume değişikliği restart'la
+  UYGULANMAZ → `sudo docker compose up -d nginx` (recreate) GEREKİR.**
+- **Test (izole 5051 + vite 3001 + headless chromium, süreçler kapatıldı):** marketplace cari
+  C-TEST-MP + kullanıcı `satici@test.local` / `SaticiTest123!` oluşturuldu (dev DB'de BIRAKILDI —
+  kullanıcı canlı testi için). Geçen senaryolar: supplier me ✓; admin token→/api/supplier/me 403 ✓;
+  supplier token→/api/iam/users 403 ✓; yanlış şifre 400+ekran hatası ✓; token'sız 401 ✓;
+  tarayıcıda login→dashboard→çıkış→guard ✓.
+- **publish/ güncel (test edilen DLL ile birebir doğrulandı).** KULLANICIDA: `sudo systemctl
+  restart ecspros` + `sudo docker compose up -d nginx`. Sonra panel: `https://<host>/satici/`.
+- **SIRADAKİ: S3** — panel ekranları; K16 gereği ÖNCE ekran kurgusu konuşulacak (§4 envanter:
+  Ürünlerim, Stok&Fiyat, Siparişlerim, Cari Hesabım, API Hesabım, Profil).
+
+### ⭐ SESSION ÖZETİ (2026-07-21/2) — PAZARYERİ SATICI PANELİ TASARIMI ONAYLANDI (kod YOK)
+Tetik: "Finans vs Cari çift tedarikçi sayfası neden var?" + "pazaryeri tedarikçilerine panel
+verilmeli". Tespit: iki admin sayfası (`finance/SuppliersPage` + `accounts/AccountsPage`) AYNI
+veriyi (`GET /api/accounts?accountType=supplier`) gösteriyor — Finans sayfası cari çatı geçişinden
+kalma kopya. Pazaryeri satıcısının bugün yalnız MAKİNE teması var (Partner API + admin onayı);
+insan-yüzlü panel YOK. **Onaylanan kararlar (doküman `docs/satici-paneli-tasarimi.md`):**
+- K1 Panel = AYRI frontend uygulaması `satici/` (admin'den tam izole); K2 giriş = YENİ 4. kimlik
+  `SupplierUser` (cari karta bağlı insan kimliği, `type=supplier_user`); K3 panel kendi ince-taneli
+  `/api/supplier/*` yüzeyini konuşur (Partner API kaba-taneli/makine, sabit kalır); K4 tedarikçi tipi
+  cari kartta ayrışır: `current_accounts.SupplierKind` (`normal`|`marketplace`), yalnız marketplace
+  panel/API alır; K5 tedarikçi başına çoklu kullanıcı, başta rolsüz; K6 çift sayfa temizlenir
+  (Finans>Tedarikçiler kalkar, tek kaynak Cari Kartlar).
+- `ApiClient` (makine) + `SupplierUser` (insan) AYNI cari karta bağlı → owner_id aynı → aynı veri
+  havuzu; sahiplik `Product.SupplierId=owner_id` değişmeden çalışır. `SupplierOnly` policy = F0
+  AdminOnly / MemberOnly kardeşi, owner-scope.
+- **Fazlar (bkz. Faz S bölümü):** ✅S0 (çift sayfa temizliği + SupplierKind) UYGULANDI; ✅S1 (SupplierUser
+  kimliği + `/api/supplier/auth/*` + SupplierOnly + provisioning) UYGULANDI; S2 `satici/` iskelet +
+  `/api/supplier/me`; S3 panel ekranları — `api-hesaplari-tasarimi.md` F4'ün büyütülmüşü.
+- **⚠️ S0+S1 RESTART BEKLİYOR** (backend publish/ güncel, migration'lar dev DB'ye uygulandı). Yeni tablolar
+  `iam.supplier_users`+`iam.supplier_user_sessions`; yeni uçlar `/api/supplier/auth/*` + `/api/accounts/{id}/supplier-users`.
+- **SIRADAKİ:** S2 (satici/ React iskelet + login + `/api/supplier/me`). S3 ekranlarına geçmeden kurgu konuşulur (K16).
+
+### ⭐ SESSION ÖZETİ (2026-07-21) — API HESAPLARI (PARTNER API) UÇTAN UCA: F0→F2b-2c (⚠️ RESTART BEKLİYOR)
+Plan/tasarım: `docs/api-hesaplari-tasarimi.md`. Büyük oturum; hepsi commit'li, her parça izole test
+edildi (5051-5059), test verileri temizlendi. Hafıza: `project_api_hesaplari_ve_yetki_siniri_2026-07-20.md`.
+- **F0 (kimlik sınırı, 590ffe1):** üye/api_client token'ı düz `[Authorize]` iç uçları GEÇEMEZ
+  (Program.cs AdminOnly=DefaultPolicy). Canlı doğrulama: gerçek üye token'ı /api/iam/users→403.
+- **İç swagger prod'da kapatıldı (d2846f7→sonra F2a'da partner-açık'a döndü):** prod /swagger/v1=404,
+  /swagger/partner açık (yalnız /api/partner/* uçları).
+- **İKİ-YÜZEY MİMARİSİ:** iç API (~200 uç, panel/storefront, dışa HİÇ açılmaz) vs partner façade
+  (`/api/partner/v1`, kaba taneli, RequireScope, ayrı swagger). 4 tip (supplier_managed/supplier_merchant/
+  first_party/internal), KİLİTLİ scope; catalog.write(içerik)≠pricing.write(fiyat); FulfillmentMode
+  bayrağı. Sahiplik: mevcut `Product.SupplierId`(=ApiClient.OwnerId), 1 ürün:1 tedarikçi.
+- **F1 (db76a63):** `iam.api_clients`+`definition.api_client_types` (migration+4 tip seed)+`POST /api/auth/token`.
+- **F2a (5fd112a):** RequireScopeAttribute+ApiClientOnly+partner swagger+PartnerController (GET /me, /groups keşif).
+- **F2b-1 (7a42a51):** `ProductSubmission` staging+migration+Product sahiplik index'leri; `GET /groups/{code}`
+  değer keşif; `POST /products` Kapı1 doğrulama (havuz-katı+içerik kuralları)→pending; owner-scoped `GET /products`.
+- **F2b-2a (7a021c1):** onay orkestrasyonu — pending→canlı Product grafiği (değer adı→havuz Id);
+  iç uçlar `/api/catalog/product-submissions` (list/detail/approve/reject, RequirePermission).
+- **F2b-3 (82d9c69):** panel "Tedarikçi Gönderimleri" (liste+inceleme, onayla/reddet). ⚠️ Sidebar/router
+  wiring bu 2 dosyanın oturum-öncesi pile'ı yüzünden commit'e KATILMADI (dist canlı; kullanıcı commit'ler).
+- **F2b-2b (84b48ce):** `PUT /products/{code}/stock` — tedarikçiye özel KISIM (`WarehouseSection.SupplierId`
+  +migration); mutlak stok, IsSellableOnline→online mevcudiyete otomatik sayılır (doğrulandı).
+- **F2b-2c revizyon (5f97f5d):** onay canlı ürünü GÜNCELLER (varyant senkron:güncelle/ekle/pasifleştir;
+  özellik replace); "revizyon yok" sınırı kaldırıldı.
+- **PARTNER ÜRÜN INGESTION UÇTAN UCA:** gönder→doğrula→onayla/GÜNCELLE→canlı ürün→panel→stok bildirimi.
+- Migration'lar (Iam×1, Catalog×1, Inventory×1) dev DB'ye ADDITIVE uygulandı. publish/ + admin/dist güncel.
+  **`sudo systemctl restart ecspros` KULLANICIDA (her parça sonrası restart edildi; F2b-2c için bekliyor).**
+- **KALDI (kullanıcı B dedi=dur): F2b-2d** = `POST /orders`(dropship)+shipment+rezervasyon yönlendirme.
+  ⚠️ BLOKE: `order.write` hiçbir partner tipinde YOK → önce tip/scope kararı (hangi tip sipariş iletir?).
+  Ayrıca: gerçek ApiClient oluşturma/yönetme paneli **F4**; rate limit/HSTS **F5**; SeedAsync yalnız Dev
+  (prod ayrı DB olursa api_client_types production-safe seed gerekir; şu an shared DB'de mevcut).
+
+### ⭐ SESSION ÖZETİ (2026-07-19) — SİPARİŞ/PAKET/KARGO KOD SİSTEMİ F1–F5 TAMAM (⚠️ RESTART BEKLİYOR)
+Plan: `docs/siparis-paket-kargo-kod-plani.md` (onaylı kararlarla uygulandı).
+- **F1**: Kanala özel sipariş no serisi (`order.ord_order_number_series`, atomik UPDATE...RETURNING);
+  3 handler tek servise bağlandı; `(FirmPlatformId, OrderNumber)` unique; `ExternalOrderNumber`/
+  `OrderNumberSource` alanları (pazaryeri numarası aynen yazılır, mükerrer dostane reddedilir).
+- **F2**: `OrderItem.SupplierId` snapshot; paket no BAĞIMSIZ seri (`ful_package_number_series`);
+  `ful_packages`e FirmPlatformId + string PackageNumber + SupplierId + CargoIntegrationCode;
+  `ful_package_items`; tedarikçiye göre bölme (`POST /api/fulfillment/packages/split`);
+  korumalı birleştirme (`order.packages.merge` izni + zorunlu gerekçe); Shipment/Invoice.PackageId.
+- **F3**: Kargo kod motoru — strateji taşıyıcıda (free/pattern/range/external,
+  `definition.integration_services`); PTT tarzı aralık havuzu `core_cargo_barcode_ranges`
+  (atomik tahsis, çakışma engeli, tükenince AÇIK hata, doluluk göstergesi);
+  `POST /api/fulfillment/packages/{id}/cargo-code`.
+- **F4**: Renumber (gerekçeli, eski no geçmişe, kargo kodu temizlenir), paket güncelleme,
+  `ful_package_code_history` + `GET .../code-history`; kargoya verilmiş/etiketli paket kilitli.
+- **F5**: Panel — `/orders/number-series` (sipariş+paket serileri inline edit + kargo barkod
+  aralıkları doluluk çubuğuyla); Servis Kataloğu formunda kargo strateji alanları;
+  sipariş detayında Paketler bölümü (böl/birleştir/yeni no/kargo kodu/geçmiş). Admin build ALINDI
+  (dist canlıda; API restart'a kadar yeni uçlar 404 verir).
+- Migration'lar (Order×2, Fulfillment×1, Core×1) dev DB'ye UYGULANDI. Publish alındı →
+  `sudo systemctl restart ecspros` KULLANICIDA. Testler izole 5051 instance'ında yapıldı
+  (seri artışı, paralel 10 istek, tüm olumsuz senaryolar geçti). Dev DB'de test siparişleri
+  (MIS000000x, TOZ00000xx) ve 4 test kargo entegrasyonu + tükenmiş PTT aralığı bırakıldı (veri geçici).
 
 ### ⭐ SESSION ÖZETİ (2026-07-18/4) — B-09 GRUP DÜZELTMESİ UYGULANDI (restart GEREKMEZ — veri işi)
 Kullanıcı onayıyla MigrationTool **Faz 21** eklendi ve çalıştırıldı: `grup_eslesme.md` koddan

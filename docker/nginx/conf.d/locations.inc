@@ -42,6 +42,26 @@
         return 301 /admin/;
     }
 
+    # Satıcı Paneli (React SPA) — pazaryeri tedarikçileri (S2)
+    location /satici/ {
+        alias /usr/share/nginx/html/satici/;
+        index index.html;
+        try_files $uri $uri/ /satici/index.html;
+
+        location ~* \.html$ {
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+            add_header Pragma "no-cache";
+            expires 0;
+        }
+        location ~* \.(js|css)$ {
+            add_header Cache-Control "public, max-age=31536000, immutable";
+        }
+    }
+
+    location = /satici {
+        return 301 /satici/;
+    }
+
     # Eski /store/ URL'leri için geriye dönük uyumluluk
     location ^~ /store {
         return 301 /;
