@@ -15,7 +15,7 @@
 
 | # | Alan | Kod tabanı | Durum | SIRADAKİ İŞ | Plan dokümanı |
 |---|------|-----------|-------|-------------|---------------|
-| 1 | 🌐 **Web sitesi** (Razor storefront) | `src/ECSPros.Api` Views + `/opt/misharix` tasarım | A→G+P kapalı; H-M1..M4 tamam (H3 görsel arama 2026-07-22 ⚠️ restart bekliyor) | H-M5 (H10 devredenler + H7 QA) → İ (eski SPA emekli) | `docs/misharix-razor-tasima-plani.md` |
+| 1 | 🌐 **Web sitesi** (Razor storefront) | `src/ECSPros.Api` Views + `/opt/misharix` tasarım | **FAZ H TAMAM** (H-M1..M5 + H7 QA 13/13; tek açık: GeoLite2 mmdb kullanıcıda) ⚠️ H10-3/4 restart bekliyor | İ (eski SPA emekli — 8080 bloğu + compose portu kalkar) | `docs/misharix-razor-tasima-plani.md` |
 | 2 | 🛠 **Admin panel** (React) | `admin/` | Faz 9 tamam; test bulguları kapalı (B-13 çeviri, B-14 sayaç düşük öncelik) | Talep bazlı — bekleyen büyük iş yok (FAZ R ERP ertelendi) | `docs/misharix-tasarim-projesi-inceleme.md` (envanter) |
 | 3 | 🔌 **Dış API** (Partner entegrasyon) | `/api/partner/v1` + `Controllers/Partner/` | F0→F2b tamam: ürün ingestion uçtan uca canlıda | F2b-2d sipariş/dropship (⚠️ `order.write` tip kararı BLOKE) → F4 ApiClient yönetim paneli → F5 rate limit/HSTS | `docs/api-hesaplari-tasarimi.md` |
 | 4 | 🏪 **Satıcı paneli** | `satici/` + `/api/supplier/*` | S0-S2 canlıda; S3a-1 (Ürünlerim liste+detay) uygulandı ⚠️ restart bekliyor | S3a-2 kart açma formu (ÖNCE kurgu konuş, K16) → S3b Stok&Fiyat → S3c-S3f | `docs/satici-paneli-tasarimi.md` |
@@ -413,7 +413,10 @@ H-M5/H10'un ilk maddesi uygulandı — **public koleksiyon sayfası (E6 ShareCod
   sonra sayfa yenileme. E2E: çıkış→köke ✓, çıkış sonrası doğrudan URL→köke ✓, A'nın sayfası
   açıkken B girişi→reload+B verisi ✓. Drift: 2 eski koleksiyon-modal farkı izinli listeye eklendi;
   kullanıcı misharix tailwind cp'sini çalıştırmış (tailwind drift temiz).
-- **KALAN H10:** (5) GeoLite2 (mmdb KULLANICIDA, gelmezse bilinçli açık). Sonra H7 QA.
+- **H7 QA ✅ (aynı gün) → H-M5 ve FAZ H KAPANDI** (GeoLite2 hariç — mmdb kullanıcıda):
+  envanter 8.9 gerçekle eşitlendi (10 satır); KALICI kapanış suite'i `tools/misharix-sync/
+  h7-regression.mjs` (eski /tmp suite'leri kaybolmuştu) — 13/13 TEMİZ; drift TEMİZ; görüntüler
+  shots/h7-*. SIRADAKİ (Web sitesi): Faz İ — eski SPA emekliliği (8080 bloğu + compose portu).
 
 ### SESSION ÖZETİ (2026-07-22/4) — 🌐 WEB SİTESİ: MOBİL RENK PANELİ MÜKERRER DÜZELTMESİ (✅ CANLIDA, restart gerekmedi)
 Mobil ürün listesinde renk rozetine basınca alttan açılan panelde ilk 4 renk İKİ KEZ görünüyordu.
