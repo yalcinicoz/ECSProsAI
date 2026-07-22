@@ -2,7 +2,30 @@
 
 > **Kural:** Her session bu dosyadan başla, bu dosyayla bitir.
 > Bir faz tamamlanmadan bir sonrakine geçme.
-> Son güncelleme: 2026-03-10
+> Son güncelleme: 2026-07-22
+
+---
+
+## 🧭 ÇALIŞMA ALANLARI PANOSU (session başında ÖNCE buraya bak)
+
+> **Kural (2026-07-22, kullanıcı kararı):** Geliştirme 4 ayrı alanda yürür ve alanlar birbirine
+> karıştırılmaz. Oturum başında hangi alanda çalışılacağı NETLEŞTİRİLİR — kullanıcı alan
+> belirtmediyse SORULUR, varsayılmaz. Bir oturumda tek alanda ilerlenir (zorunlu ortak-çekirdek
+> dokunuşları hariç); alan içi faz sırası bozulmaz. Her alan kapanışında bu pano güncellenir.
+
+| # | Alan | Kod tabanı | Durum | SIRADAKİ İŞ | Plan dokümanı |
+|---|------|-----------|-------|-------------|---------------|
+| 1 | 🌐 **Web sitesi** (Razor storefront) | `src/ECSPros.Api` Views + `/opt/misharix` tasarım | A→G+P kapalı; H-M1..M3 tamam; canlıda | H3 görsel arama → H-M5 (H10+H7) → İ (eski SPA emekli) | `docs/misharix-razor-tasima-plani.md` |
+| 2 | 🛠 **Admin panel** (React) | `admin/` | Faz 9 tamam; test bulguları kapalı (B-13 çeviri, B-14 sayaç düşük öncelik) | Talep bazlı — bekleyen büyük iş yok (FAZ R ERP ertelendi) | `docs/misharix-tasarim-projesi-inceleme.md` (envanter) |
+| 3 | 🔌 **Dış API** (Partner entegrasyon) | `/api/partner/v1` + `Controllers/Partner/` | F0→F2b tamam: ürün ingestion uçtan uca canlıda | F2b-2d sipariş/dropship (⚠️ `order.write` tip kararı BLOKE) → F4 ApiClient yönetim paneli → F5 rate limit/HSTS | `docs/api-hesaplari-tasarimi.md` |
+| 4 | 🏪 **Satıcı paneli** | `satici/` + `/api/supplier/*` | S0-S2 canlıda; S3a-1 (Ürünlerim liste+detay) uygulandı ⚠️ restart bekliyor | S3a-2 kart açma formu (ÖNCE kurgu konuş, K16) → S3b Stok&Fiyat → S3c-S3f | `docs/satici-paneli-tasarimi.md` |
+
+**Ortak çekirdek** (tüm alanları etkiler, kendi başına alan değildir): modüler backend (Catalog/Order/
+Inventory…), cari çatı (B5 finance birleşmesi ertelendi), stok üçlü yapı (M2/M3 + değer aktarımı
+kalan), sipariş/paket/kargo kod sistemi (canlıda), MigrationTool. Ortak çekirdek değişikliği hangi
+alan için yapılıyorsa o alanın oturumunda, o alanın fazı olarak yürütülür.
+
+**Bekleyen deploy:** S3a-1 → `sudo systemctl restart ecspros` (yalnız API).
 
 ---
 
@@ -280,12 +303,12 @@
 
 ---
 
-## Faz S — Pazaryeri Satıcı Paneli 🟡 TASARIM ONAYLANDI
+## Faz S — Pazaryeri Satıcı Paneli 🟡 S0-S2 CANLIDA, S3 DEVAM EDİYOR
 
 > Tasarım: `docs/satici-paneli-tasarimi.md` (onaylı, 2026-07-21). `api-hesaplari-tasarimi.md`
 > F4'ün genişletilmiş hâli. Bir alt-faz bitmeden sonrakine geçme; migration'lar additive.
 
-### S0 — Temizlik + tip ayrımı (bağımsız) ✅ (⚠️ RESTART BEKLİYOR)
+### S0 — Temizlik + tip ayrımı (bağımsız) ✅ CANLIDA
 - [x] Finans > Tedarikçiler sayfası kaldırıldı (SuppliersPage silindi); Sidebar "Finans" →
       `/finance/supplier-invoices`; eski `/finance/suppliers` → `/accounts?accountType=supplier` redirect
 - [x] `current_accounts.SupplierKind` (`normal`|`marketplace`) + migration `AddSupplierKind`
@@ -295,7 +318,7 @@
   normal'e güncelle, omitted→default normal, liste supplierKind döner. Test carileri dev DB'den temizlendi.
 - publish/ + admin/dist güncel — **`sudo systemctl restart ecspros` KULLANICIDA**. SIRADA: S1 (SupplierUser kimliği).
 
-### S1 — SupplierUser kimliği ✅ (⚠️ RESTART BEKLİYOR)
+### S1 — SupplierUser kimliği ✅ CANLIDA
 - [x] `iam.SupplierUser` + `iam.SupplierUserSession` entity (CurrentAccountId'ye bağlı, cross-schema FK yok);
       migration `AddSupplierUsers` (additive, 2 yeni tablo, unique email index, dev DB'ye UYGULANDI)
 - [x] `POST /api/supplier/auth/login|refresh|logout` + `GET me` (SupplierAuthController); BCrypt (IAM
@@ -308,13 +331,14 @@
   refresh yeni token, yanlış şifre generic 400, anonim 401. Test verileri (ZZS1-*) dev DB'den temizlendi.
 - publish/ güncel (frontend YOK — satici/ app S2'de) — **`sudo systemctl restart ecspros` KULLANICIDA**. SIRADA: S2 (satici/ iskelet).
 
-### S2 — satici/ uygulama iskeleti ⬜
-- [ ] `satici/` Vite+React iskelet (admin kalıbı) + login + boş layout
-- [ ] `GET /api/supplier/me` (owner-scoped introspection)
-- [ ] nginx `/satici` statik sunum
+### S2 — satici/ uygulama iskeleti ✅ CANLIDA (2026-07-22, commit 90b0257)
+- [x] `satici/` Vite+React iskelet (admin kalıbı) + login + boş layout
+- [x] `GET /api/supplier/me` (owner-scoped introspection)
+- [x] nginx `/satici` statik sunum (compose volume + locations.inc; canlıda doğrulandı)
 
-### S3 — Panel ekranları ⬜ (ekran kurgusu her biri için önce konuşulur — K16)
-- [ ] S3a Ürünlerim (kart aç/düzenle + API yüklenenler; ProductSubmission owner-scope)
+### S3 — Panel ekranları 🟡 (ekran kurgusu her biri için önce konuşulur — K16)
+- [x] S3a-1 Ürünlerim liste+detay salt okuma (birleşik liste, red notu; 2026-07-22, commit f8ffb3f, ⚠️ restart bekliyor)
+- [ ] S3a-2 Ürünlerim kart aç/düzenle formu (grup şemasından form, Kapı 1, aynı staging)
 - [ ] S3b Stok & Fiyat (mutlak stok; marketplace ise fiyat)
 - [ ] S3c Siparişlerim (owner-scope sipariş kalemleri; önce salt-izleme)
 - [ ] S3d Cari Hesabım (ekstre, salt-okunur)
