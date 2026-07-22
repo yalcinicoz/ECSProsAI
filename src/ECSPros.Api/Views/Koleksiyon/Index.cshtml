@@ -1,0 +1,65 @@
+@* H10: public koleksiyon sayfası — /koleksiyon/{shareCode} (anonim). Hesabım "Paylaş"
+   linkinin hedefi; vitrin collection kartındaki "Koleksiyonu Aç" da buraya gelir.
+   Kartlar liste/favoriler sayfasıyla tek kaynak: _UrunKarti partial'ı. *@
+@{
+    var vm = ViewData["MsKoleksiyonVm"] as ECSPros.Api.Controllers.Store.PublicKoleksiyonVm;
+}
+
+@if (vm is not null)
+{
+<section class="ms-icerik-govde" aria-labelledby="ms-koleksiyon-baslik">
+    <div class="ms-hesabim-liste-sayfa">
+        <div class="ms-hesabim-liste-ust">
+            <div>
+                <h1 id="ms-koleksiyon-baslik">@vm.Ad</h1>
+                @if (!string.IsNullOrWhiteSpace(vm.Aciklama))
+                {
+                <p>@vm.Aciklama</p>
+                }
+                <div class="ms-hesabim-koleksiyon-rozetler" aria-label="Koleksiyon bilgileri">
+                    <span>@vm.UrunSayisi Ürün</span>
+                    <span>@vm.Goruntulenme Görüntülenme</span>
+                </div>
+            </div>
+            <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-koleksiyon-paylas="@vm.ShareCode">Paylaş</button>
+        </div>
+
+        @if (vm.Kartlar.Count == 0)
+        {
+        <section class="ms-hesabim-bos-durum" aria-labelledby="ms-koleksiyon-bos-baslik">
+            <div>
+                <h3 id="ms-koleksiyon-bos-baslik">Bu koleksiyonda görüntülenecek ürün yok</h3>
+                <p>Koleksiyondaki ürünler şu anda satışta olmayabilir.</p>
+            </div>
+            <a class="ms-buton ms-buton-m ms-buton-satin-al" href="/">Alışverişe Devam Et</a>
+        </section>
+        }
+        else
+        {
+        <div class="ms-hesabim-favori-urun-listesi lazy-infinite-on">
+            @foreach (var kart in vm.Kartlar)
+            {
+                <partial name="~/Views/ProjeElementleri/Urun/_UrunKarti.cshtml" model="kart" />
+            }
+        </div>
+        }
+    </div>
+</section>
+
+<script>
+    (() => {
+        // Hesabım paylaş davranışıyla aynı: linki panoya kopyala (H10)
+        document.querySelectorAll("[data-ms-koleksiyon-paylas]").forEach((buton) => {
+            buton.addEventListener("click", async () => {
+                const link = location.origin + "/koleksiyon/" + buton.dataset.msKoleksiyonPaylas;
+                try {
+                    await navigator.clipboard.writeText(link);
+                    const eski = buton.textContent;
+                    buton.textContent = "Kopyalandı ✓";
+                    window.setTimeout(() => { buton.textContent = eski; }, 1600);
+                } catch { window.prompt("Koleksiyon bağlantısı:", link); }
+            });
+        });
+    })();
+</script>
+}
