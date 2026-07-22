@@ -30,6 +30,19 @@ file static class PlatformPriceFilter
 // Sort: "price_asc" | "price_desc" | "newest" | null. Search: kod veya Türkçe ad.
 // Filtreli istekler Redis cache'ini atlar (anahtar kombinasyonu patlaması olmasın diye
 // yalnız parametresiz varsayılan sayfalar cache'lenir).
+/// <summary>B-009 (kabul testi 2026-07-22): liste TotalCount'u ürün×renk KARTI sayar;
+/// öneri paneli "N ürün" der — iki birim karışınca kategori sayısı mağaza genelini aşıyordu.
+/// ProductTotalCount additive olarak BENZERSİZ ürün adedini taşır (ana kart yolunda dolu).</summary>
+public class ChannelCategoryProductsPagedResult : PagedResult<ChannelCategoryProductItemDto>
+{
+    public ChannelCategoryProductsPagedResult(
+        IEnumerable<ChannelCategoryProductItemDto> items, int totalCount, int page, int pageSize,
+        int productTotalCount)
+        : base(items, totalCount, page, pageSize) => ProductTotalCount = productTotalCount;
+
+    public int ProductTotalCount { get; }
+}
+
 public record GetChannelCategoryProductsQuery(
     Guid ChannelCategoryId,
     int Page = 1,
@@ -640,8 +653,11 @@ public class GetChannelCategoryProductsQueryHandler(
             })
             .ToList();
 
-        return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
-            items, total, request.Page, request.PageSize));
+        // B-009: benzersiz ürün adedi — öneri paneli sayacı kart değil ürün konuşur
+        var benzersizUrun = visiblePairs.Select(pr => pr.ProductId).Distinct().Count();
+        return Result.Success<PagedResult<ChannelCategoryProductItemDto>>(
+            new ChannelCategoryProductsPagedResult(
+                items, total, request.Page, request.PageSize, benzersizUrun));
     }
 
     // Renk tanımlaması olmayan ürünler için basit ürün listesi

@@ -102,16 +102,28 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!token()) { document.querySelector("[data-ms-giris-modal-ac]")?.click(); return; }
 
         const d = olay.detail || {};
-        const urunKodu = d.urun?.id;
-        const adlar = d.koleksiyonlar || [];
-        if (!urunKodu || adlar.length === 0) {
+        // B-015: eski kart kaynakları id'yi "KOD / Renk" basabiliyor — koda indir
+        const urunKodu = (d.urun?.id || "").split(" / ")[0].trim();
+        // B-015 (kabul testi 2026-07-22): site.js event'e seçenek ADI taşır ama kendi eski
+        // seçenek kopyasından okuyabiliyor (köprünün doldurduğu gerçek adlarla ayrışıyor).
+        // GÜVENİLİR KAYNAK: modal DOM'undaki aktif seçeneklerin data-ms-koleksiyon-id'si
+        // (doldurma script'i koyar); ad eşleşmesi yalnız yedek (normalize'lı).
+        const adNormalize = (a) => (a || "").replace(/\s+/g, " ").trim();
+        const modalKok = d.modal || document.querySelector("[data-ms-koleksiyon-varolan-modal]");
+        const seciliIdler = [...(modalKok?.querySelectorAll(
+            ".ms-ozel-select-secenek-aktif[data-ms-koleksiyon-id]") || [])]
+            .map((sec) => sec.dataset.msKoleksiyonId).filter(Boolean);
+        const adlar = (d.koleksiyonlar || []).map(adNormalize).filter(Boolean);
+        if (!urunKodu || (seciliIdler.length === 0 && adlar.length === 0)) {
             sonucGoster(false, "Koleksiyon Reddedildi", "Eklemek için en az bir koleksiyon seçin.");
             return;
         }
 
         try {
             const koleksiyonlar = await koleksiyonlariGetir();
-            const hedefler = koleksiyonlar.filter((k) => adlar.includes(k.name));
+            const hedefler = seciliIdler.length > 0
+                ? koleksiyonlar.filter((k) => seciliIdler.includes(k.id))
+                : koleksiyonlar.filter((k) => adlar.includes(adNormalize(k.name)));
             if (hedefler.length === 0) {
                 sonucGoster(false, "Koleksiyon Reddedildi", "Seçilen koleksiyon bulunamadı.");
                 return;
