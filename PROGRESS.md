@@ -361,6 +361,20 @@ alan için yapılıyorsa o alanın oturumunda, o alanın fazı olarak yürütül
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION ÖZETİ (2026-07-22/10) — 🛠 ADMİN: BLOK CONFIG'İ YAPILANDIRILMIŞ FORM (dist CANLIDA)
+Kullanıcı isteği: blok detayındaki ham JSON config yerine kontrollü form.
+- PageBlockDetailPage "Config (JSON)" kartı → **"Blok Ayarları"**: Ürün Kaynağı (kaynak select
+  TR etiketli [8 kaynak], limit/sıralama, kaynak-koşullu alanlar: kanal kategori SELECT'İ
+  [/navigation/channel-categories], manuel ürün kodları, best-sellers gün penceresi, marka guid;
+  min/max fiyat, etiketler, stok/indirim checkbox'ları — category'de disable+not; üye bağlamlı
+  kaynak notu) + Koleksiyon Kaynağı (limit/sıralama/shareCodes) + Görünüm (tema [carousel
+  temaları], seeAllUrl, flash bitişi [yalnız flash şablonda], categories görünüm tipi,
+  mobileCarousel) + **Gelişmiş (ham JSON)** akordeonu — form↔JSON tek doğruluk kaynağı
+  configJson, iki yönlü senkron; bozuk JSON'da form kilitlenir, uyarı Gelişmiş'i gösterir.
+- Backend değişikliği YOK (aynı configJson sözleşmesi). E2E: ürün kaynaklı blokta tüm alanlar
+  mevcut config'ten doldu; limit değişikliği ham JSON'a anında yansıdı ✓; kaynaksız tipte
+  (bilgi-banner) Ürün Kaynağı bölümü gizli ✓. admin/dist canlıda — restart GEREKMEZ (bu iş için).
+
 ### ⭐ SESSION ÖZETİ (2026-07-22/9) — 🛠 ADMİN: VİTRİN CANLI ÖNİZLEMELİ BLOK EDİTÖRÜ (⚠️ RESTART BEKLİYOR)
 Kullanıcı isteği: tablo yerine gerçek içerikli dikey blok editörü (tam sayfa tasarım aracı DEĞİL;
 mevcut ekleme/düzenleme/yayınlama altyapısı AYNEN korundu).
