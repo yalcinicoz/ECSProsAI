@@ -57,6 +57,16 @@ const ORNEK_CONFIG: Record<string, object> = {
   'kategori-cok-satanlar': { productSource: { source: 'category', categoryId: '00000000-0000-0000-0000-000000000000', limit: 4, sort: 'best-sellers' }, seeAllUrl: '/urun-listesi' },
 }
 const KAYNAKLAR = ['new-arrivals', 'best-sellers', 'campaign', 'category', 'brand', 'manual', 'recently-viewed', 'favorites']
+// 2026-07-22: config artık yapılandırılmış formla düzenlenir (ham JSON "Gelişmiş"te)
+const KAYNAK_ETIKET: Record<string, string> = {
+  'new-arrivals': 'Yeni Gelenler', 'best-sellers': 'Çok Satanlar', campaign: 'Kampanyalı Ürünler',
+  category: 'Kategori', brand: 'Marka', manual: 'Manuel Ürün Listesi',
+  'recently-viewed': 'Son Gezilenler (üyeye özel)', favorites: 'Favoriler (üyeye özel)',
+}
+const SIRALAMA_ETIKET: Record<string, string> = {
+  '': 'Varsayılan', newest: 'En Yeni', price_asc: 'Fiyat Artan', price_desc: 'Fiyat Azalan',
+}
+interface KanalKategori { id: string; nameI18n: Record<string, string>; slug: string }
 
 const bosOge = (sira: number): ItemDto => ({
   titleI18n: { tr: '' }, subtitleI18n: null, imageUrl: null, mobileImageUrl: null,
@@ -70,6 +80,13 @@ export function PageBlockDetailPage() {
   const platformId = search.get('platformId') ?? ''
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+
+  const { data: kanalKategorileri = [] } = useQuery<KanalKategori[]>({
+    queryKey: ['channel-categories', platformId],
+    queryFn: async () =>
+      (await api.get('/navigation/channel-categories', { params: { firmPlatformId: platformId, activeOnly: true } })).data.data ?? [],
+    enabled: !!platformId,
+  })
 
   const { data: catalog } = useQuery<CatalogData>({
     queryKey: ['pages-catalog'],
@@ -123,6 +140,34 @@ export function PageBlockDetailPage() {
     const ornek = ORNEK_CONFIG[form.blockType]
     if (ornek) alan('configJson', JSON.stringify(ornek, null, 2))
   }
+
+  // 2026-07-22: yapılandırılmış config formu — tek doğruluk kaynağı configJson metni;
+  // kontroller onu okur/yamalar (Gelişmiş'teki ham JSON ile hep senkron).
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const cfg: any = (() => { try { return JSON.parse(form.configJson || '{}') } catch { return null } })()
+  const cfgGecerli = cfg !== null
+  const cfgYaz = (next: any) =>
+    alan('configJson', Object.keys(next).length ? JSON.stringify(next, null, 2) : null)
+  const bosMu = (v: any) =>
+    v === undefined || v === null || v === '' || v === false || (Array.isArray(v) && v.length === 0)
+  const cfgAlan = (k: string, v: any) => {
+    const next = { ...(cfg ?? {}) }
+    if (bosMu(v)) delete next[k]; else next[k] = v
+    cfgYaz(next)
+  }
+  const kaynakAlan = (kok: 'productSource' | 'collectionSource', k: string, v: any) => {
+    const next = { ...(cfg ?? {}) }
+    const kaynak = { ...(next[kok] ?? {}) }
+    if (bosMu(v)) delete kaynak[k]; else kaynak[k] = v
+    next[kok] = kaynak
+    cfgYaz(next)
+  }
+  const ps: any = cfg?.productSource ?? null
+  const cs: any = cfg?.collectionSource ?? null
+  const listeMetni = (dizi: any) => (Array.isArray(dizi) ? dizi.join(', ') : '')
+  const metindenListe = (metin: string) =>
+    metin.split(/[\n,]/).map((x) => x.trim()).filter(Boolean)
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   const ogeKaydet = () => {
     if (!ogeModal) return
@@ -210,28 +255,195 @@ export function PageBlockDetailPage() {
           </label>
         </div>
 
-        <div className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Config (JSON)</h2>
-            {ORNEK_CONFIG[form.blockType] && (
-              <Button size="sm" variant="secondary" onClick={ornekYukle}>Örnek iskelet yükle</Button>
-            )}
-          </div>
-          <Textarea
-            rows={10}
-            value={form.configJson ?? ''}
-            onChange={(e) => alan('configJson', e.target.value || null)}
-            placeholder={tipDef?.requiresProductSource
-              ? `{"productSource":{"source":"new-arrivals","limit":12,"inStockOnly":true,"tags":["yaz"],"discountedOnly":true}} — kaynaklar: ${KAYNAKLAR.join(', ')}`
-              : tipDef?.requiresCollectionSource
-                ? '{"collectionSource":{"limit":10,"sort":"popular"}}'
-                : 'Tipe özgü ayarlar: tema, seeAllUrl, endsAt (flash), mobileCarousel, gorunum...'}
-          />
-          <p className="text-xs text-[var(--text-s)]">
-            {tipDef?.requiresProductSource && 'Bu tipte productSource zorunludur (Yayınla denetler). Filtre bayrakları: inStockOnly (yalnız stokta), tags (etiket eşleşmesi), discountedOnly (yalnız indirimli) — category kaynağında desteklenmez. Üye bağlamlı kaynaklar: recently-viewed (son gezilenler), favorites (favoriler) — içerik ziyaretçinin kendi verisiyle dolar; misafirde blok görünmez. '}
-            {tipDef?.requiresCollectionSource && 'Bu tipte collectionSource zorunludur; yalnız onaylı+herkese açık koleksiyonlar listelenir. '}
-            Kural seviyesi: {tipDef?.ruleLevel === 'Block' ? 'blok' : tipDef?.ruleLevel === 'Item' ? 'öğe' : 'blok + öğe'} (kurallar G-M2'de canlıya bağlanır).
-          </p>
+        <div className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+          <h2 className="text-sm font-semibold">Blok Ayarları</h2>
+          {!cfgGecerli && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Config JSON'ı geçersiz — aşağıdaki "Gelişmiş (ham JSON)" bölümünden düzeltin; form o zaman aktifleşir.
+            </div>
+          )}
+
+          {cfgGecerli && (tipDef?.requiresProductSource || ps) && (
+            <div className="space-y-3 rounded-lg border border-[var(--border)] p-3">
+              <h3 className="text-sm font-semibold">Ürün Kaynağı {tipDef?.requiresProductSource && <span className="text-xs font-normal text-[var(--text-s)]">(bu tipte zorunlu)</span>}</h3>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-m)]">Kaynak</label>
+                  <SearchableSelect
+                    value={ps?.source ?? null}
+                    onChange={(v) => kaynakAlan('productSource', 'source', v)}
+                    options={KAYNAKLAR.map((k) => ({ value: k, label: KAYNAK_ETIKET[k] ?? k }))}
+                    placeholder="Kaynak seç"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-m)]">Ürün adedi (limit)</label>
+                  <Input type="number" min={1} max={48} value={ps?.limit ?? ''} onChange={(e) => kaynakAlan('productSource', 'limit', e.target.value ? Number(e.target.value) : null)} placeholder="12" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-m)]">Sıralama</label>
+                  <SearchableSelect
+                    value={ps?.sort ?? ''}
+                    onChange={(v) => kaynakAlan('productSource', 'sort', v || null)}
+                    options={Object.entries(SIRALAMA_ETIKET).map(([v, l]) => ({ value: v, label: l }))}
+                    placeholder="Varsayılan"
+                  />
+                </div>
+              </div>
+
+              {ps?.source === 'category' && (
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-m)]">Kanal Kategorisi</label>
+                  <SearchableSelect
+                    value={ps?.categoryId ?? null}
+                    onChange={(v) => kaynakAlan('productSource', 'categoryId', v)}
+                    options={kanalKategorileri.map((k) => ({ value: k.id, label: `${k.nameI18n?.tr ?? k.slug} (/${k.slug})` }))}
+                    placeholder="Kategori seç"
+                  />
+                </div>
+              )}
+              {ps?.source === 'best-sellers' && (
+                <div className="md:w-56">
+                  <label className="mb-1 block text-sm text-[var(--text-m)]">Satış penceresi (gün)</label>
+                  <Input type="number" min={1} value={ps?.days ?? ''} onChange={(e) => kaynakAlan('productSource', 'days', e.target.value ? Number(e.target.value) : null)} placeholder="90" />
+                </div>
+              )}
+              {ps?.source === 'manual' && (
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-m)]">Ürün kodları (virgül ya da satırla ayır — sıra korunur)</label>
+                  <Textarea rows={2} value={listeMetni(ps?.productCodes)} onChange={(e) => kaynakAlan('productSource', 'productCodes', metindenListe(e.target.value))} placeholder="P-000123, P-000456" />
+                </div>
+              )}
+              {ps?.source === 'brand' && (
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-m)]">Marka değer Id (guid)</label>
+                  <Input value={ps?.brandValueId ?? ''} onChange={(e) => kaynakAlan('productSource', 'brandValueId', e.target.value || null)} placeholder="marka attribute value id" />
+                </div>
+              )}
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-m)]">Min fiyat</label>
+                  <Input type="number" value={ps?.priceMin ?? ''} onChange={(e) => kaynakAlan('productSource', 'priceMin', e.target.value ? Number(e.target.value) : null)} placeholder="—" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-m)]">Max fiyat</label>
+                  <Input type="number" value={ps?.priceMax ?? ''} onChange={(e) => kaynakAlan('productSource', 'priceMax', e.target.value ? Number(e.target.value) : null)} placeholder="—" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-m)]">Etiketler (en az biri eşleşir)</label>
+                  <Input value={listeMetni(ps?.tags)} onChange={(e) => kaynakAlan('productSource', 'tags', metindenListe(e.target.value))} placeholder="yaz, indirim" disabled={ps?.source === 'category'} />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-5 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={!!ps?.inStockOnly} disabled={ps?.source === 'category'} onChange={(e) => kaynakAlan('productSource', 'inStockOnly', e.target.checked)} />
+                  Yalnız stokta olanlar
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={!!ps?.discountedOnly} disabled={ps?.source === 'category'} onChange={(e) => kaynakAlan('productSource', 'discountedOnly', e.target.checked)} />
+                  Yalnız indirimliler
+                </label>
+              </div>
+              {ps?.source === 'category' && (
+                <p className="text-xs text-[var(--text-s)]">Kategori kaynağında etiket/stok/indirim bayrakları desteklenmez — kanal sorgusu kendi stok kuralını uygular.</p>
+              )}
+              {(ps?.source === 'recently-viewed' || ps?.source === 'favorites') && (
+                <p className="text-xs text-[var(--text-s)]">Üyeye özel kaynak: içerik ziyaretçinin kendi verisiyle dolar; misafirde blok görünmez.</p>
+              )}
+            </div>
+          )}
+
+          {cfgGecerli && (tipDef?.requiresCollectionSource || cs) && (
+            <div className="space-y-3 rounded-lg border border-[var(--border)] p-3">
+              <h3 className="text-sm font-semibold">Koleksiyon Kaynağı</h3>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-m)]">Adet (limit)</label>
+                  <Input type="number" min={1} max={50} value={cs?.limit ?? ''} onChange={(e) => kaynakAlan('collectionSource', 'limit', e.target.value ? Number(e.target.value) : null)} placeholder="10" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-m)]">Sıralama</label>
+                  <SearchableSelect
+                    value={cs?.sort ?? ''}
+                    onChange={(v) => kaynakAlan('collectionSource', 'sort', v || null)}
+                    options={[{ value: '', label: 'En Yeni' }, { value: 'popular', label: 'Popüler (görüntülenme)' }]}
+                    placeholder="En Yeni"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-m)]">Manuel seçim (ShareCode, virgüllü)</label>
+                  <Input value={listeMetni(cs?.shareCodes)} onChange={(e) => kaynakAlan('collectionSource', 'shareCodes', metindenListe(e.target.value))} placeholder="boş = otomatik" />
+                </div>
+              </div>
+              <p className="text-xs text-[var(--text-s)]">Yalnız onaylı + herkese açık koleksiyonlar listelenir.</p>
+            </div>
+          )}
+
+          {cfgGecerli && (
+            <div className="space-y-3 rounded-lg border border-[var(--border)] p-3">
+              <h3 className="text-sm font-semibold">Görünüm</h3>
+              <div className="grid gap-3 md:grid-cols-3">
+                {(catalog?.carouselThemes?.length ?? 0) > 0 && form.blockType.includes('carousel') && (
+                  <div>
+                    <label className="mb-1 block text-sm text-[var(--text-m)]">Tema</label>
+                    <SearchableSelect
+                      value={cfg?.tema ?? null}
+                      onChange={(v) => cfgAlan('tema', v)}
+                      options={(catalog?.carouselThemes ?? []).map((t) => ({ value: t, label: t }))}
+                      placeholder="varsayilan"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-m)]">"Tümünü Gör" linki</label>
+                  <Input value={cfg?.seeAllUrl ?? ''} onChange={(e) => cfgAlan('seeAllUrl', e.target.value || null)} placeholder="/urun-listesi" />
+                </div>
+                {form.template === 'flash' && (
+                  <div>
+                    <label className="mb-1 block text-sm text-[var(--text-m)]">Flash bitişi</label>
+                    <Input type="datetime-local" value={(cfg?.endsAt ?? '').slice(0, 16)} onChange={(e) => cfgAlan('endsAt', e.target.value ? e.target.value + ':00Z' : null)} />
+                  </div>
+                )}
+                {form.blockType === 'categories' && (
+                  <div>
+                    <label className="mb-1 block text-sm text-[var(--text-m)]">Görünüm tipi</label>
+                    <SearchableSelect
+                      value={cfg?.gorunum ?? null}
+                      onChange={(v) => cfgAlan('gorunum', v)}
+                      options={[{ value: 'kapsul', label: 'Kapsül' }, { value: 'kare', label: 'Kare' }]}
+                      placeholder="kapsul"
+                    />
+                  </div>
+                )}
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={!!cfg?.mobileCarousel} onChange={(e) => cfgAlan('mobileCarousel', e.target.checked)} />
+                Mobilde yatay kaydırma (carousel)
+              </label>
+            </div>
+          )}
+
+          <details className="rounded-lg border border-[var(--border)] p-3">
+            <summary className="cursor-pointer text-sm font-semibold text-[var(--text-m)]">Gelişmiş (ham JSON)</summary>
+            <div className="mt-3 space-y-2">
+              {ORNEK_CONFIG[form.blockType] && (
+                <Button size="sm" variant="secondary" onClick={ornekYukle}>Örnek iskelet yükle</Button>
+              )}
+              <Textarea
+                rows={8}
+                value={form.configJson ?? ''}
+                onChange={(e) => alan('configJson', e.target.value || null)}
+                placeholder='{"productSource":{"source":"new-arrivals","limit":12}}'
+              />
+              <p className="text-xs text-[var(--text-s)]">
+                Formla ham JSON aynı veriyi düzenler — hangisinden değiştirirseniz diğeri güncellenir.
+                Kural seviyesi: {tipDef?.ruleLevel === 'Block' ? 'blok' : tipDef?.ruleLevel === 'Item' ? 'öğe' : 'blok + öğe'}.
+              </p>
+            </div>
+          </details>
+
           {tipDef && tipDef.ruleLevel !== 'Item' && (
             <>
               <h3 className="text-sm font-semibold">Blok Kuralı (JSON — G-M2)</h3>
