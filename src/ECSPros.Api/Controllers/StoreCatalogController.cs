@@ -92,7 +92,9 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
             id, page, pageSize, search, ParseGuids(attrs), priceMin, priceMax, sort,
             platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = result.Value });
+        // B-009: object cast — STJ bildirilen tipten yazar; ChannelCategoryProductsPagedResult'ın
+        // additive productTotalCount alanı ancak runtime tipiyle serileşir.
+        return Ok(new { success = true, data = (object)result.Value! });
     }
 
     /// <summary>Virgüllü guid listesini çözer; geçersiz girdiler sessizce atlanır.</summary>

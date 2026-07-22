@@ -71,6 +71,7 @@ public class GetStoreProductsQueryHandler(
     IChannelProductFlagService flagService,
     IInStockProductProvider inStock,
     IDiscountedProductProvider discounted,
+    IEffectivePriceProvider effectivePrices,
     IProductReviewStatsService reviewStats)
     : IRequestHandler<GetStoreProductsQuery, Result<PagedResult<StoreProductDto>>>
 {
@@ -166,30 +167,47 @@ public class GetStoreProductsQueryHandler(
         else if (request.PriceMax.HasValue)
             q = q.Where(p => p.Variants.Any(v => v.IsActive && v.BasePrice > 0 && v.BasePrice <= request.PriceMax.Value));
 
-        // B10: sıralama — fiyat için ürünün en düşük fiyatlı (0 olmayan) aktif varyantı esas.
+        // B10 revizyonu (B-005/B-006, kabul testi 2026-07-22): fiyat sıralaması GÖSTERİLEN
+        // (efektif) fiyattan yapılır — kanal override'ı varken BasePrice ile sıralamak kartta
+        // görünen fiyatla çelişen sıra üretiyordu (kategori sayfası zaten kanal fiyatından
+        // sıralıyor; genel liste onunla eşitlendi). Efektif fiyat kümesi cache'li provider'dan;
+        // sıralama+sayfalama id listesi üzerinde, sayfa ürünleri ikinci sorguyla yüklenir.
         // B11: varsayılan sırada öne çıkanlar önce (kullanıcının açık tercihi bozulmaz).
         var oneCikanListe = oneCikanlar.ToList();
-        q = request.Sort switch
+        int total;
+        List<Product> products;
+        if (request.Sort is "price_asc" or "price_desc")
         {
-            "price_asc" => q.OrderBy(p => p.Variants
-                                .Where(v => v.IsActive && v.BasePrice > 0)
-                                .Min(v => (decimal?)v.BasePrice) ?? p.BasePrice)
-                            .ThenBy(p => p.Id),
-            "price_desc" => q.OrderByDescending(p => p.Variants
-                                .Where(v => v.IsActive && v.BasePrice > 0)
-                                .Min(v => (decimal?)v.BasePrice) ?? p.BasePrice)
-                            .ThenBy(p => p.Id),
-            "newest" => q.OrderByDescending(p => p.CreatedAt).ThenBy(p => p.Id),
-            _ when oneCikanListe.Count > 0 =>
-                q.OrderByDescending(p => oneCikanListe.Contains(p.Id)).ThenBy(p => p.Id),
-            _ => q.OrderBy(p => p.Id)
-        };
+            var fiyatlar = await effectivePrices.GetMinEffectivePricesAsync(request.FirmPlatformId, ct);
+            var adaylar = await q.Select(p => new { p.Id, p.BasePrice }).ToListAsync(ct);
+            var sirali = request.Sort == "price_asc"
+                ? adaylar.OrderBy(a => fiyatlar.GetValueOrDefault(a.Id, a.BasePrice)).ThenBy(a => a.Id)
+                : adaylar.OrderByDescending(a => fiyatlar.GetValueOrDefault(a.Id, a.BasePrice)).ThenBy(a => a.Id);
+            total = adaylar.Count;
+            var sayfaIdleri = sirali
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(a => a.Id)
+                .ToList();
+            products = await q.Where(p => sayfaIdleri.Contains(p.Id)).ToListAsync(ct);
+            products = products.OrderBy(p => sayfaIdleri.IndexOf(p.Id)).ToList();
+        }
+        else
+        {
+            q = request.Sort switch
+            {
+                "newest" => q.OrderByDescending(p => p.CreatedAt).ThenBy(p => p.Id),
+                _ when oneCikanListe.Count > 0 =>
+                    q.OrderByDescending(p => oneCikanListe.Contains(p.Id)).ThenBy(p => p.Id),
+                _ => q.OrderBy(p => p.Id)
+            };
 
-        var total = await q.CountAsync(ct);
-        var products = await q
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
-            .ToListAsync(ct);
+            total = await q.CountAsync(ct);
+            products = await q
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToListAsync(ct);
+        }
 
         var productIds = products.Select(p => p.Id).ToList();
 

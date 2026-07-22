@@ -202,6 +202,8 @@ builder.Services.AddScoped<ECSPros.Api.Services.StoreUrunDetayBuilder>(); // ür
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IInStockProductProvider, ECSPros.Api.Services.InStockProductProvider>();
 // H10: vitrin "indirimli ürünler" kaynak bayrağı — kanalda CompareAtPrice > Price olan ürün kümesi
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IDiscountedProductProvider, ECSPros.Api.Services.DiscountedProductProvider>();
+// B-005/006: genel liste fiyat sıralaması gösterilen (efektif) fiyattan — kanal override → BasePrice
+builder.Services.AddScoped<ECSPros.Shared.Contracts.IEffectivePriceProvider, ECSPros.Api.Services.EffectivePriceProvider>();
 builder.Services.AddSingleton<ECSPros.Api.Services.IStoreMemberSession, ECSPros.Api.Services.StoreMemberSession>(); // D1: SSR üye kimliği (HttpOnly cookie)
 builder.Services.AddTransient<ECSPros.Crm.Application.Services.ISmsSender, ECSPros.Api.Services.CrmSmsSenderAdapter>(); // D4: OTP SMS köprüsü
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IPageBlockSourceResolver, ECSPros.Api.Services.Store.PageBlockSourceResolver>(); // G3: vitrin ürün/koleksiyon kaynağı motoru

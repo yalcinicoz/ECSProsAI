@@ -24,8 +24,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const link = buton.closest("[data-ms-kart-link-alani]")?.querySelector("[data-ms-kart-link]");
         const eslesme = link?.getAttribute("href")?.match(/\/urun\/([^/?#]+)/);
         if (eslesme) { return decodeURIComponent(eslesme[1]); }
+        return detayKod();
+    };
+
+    // B-014 (kabul testi 2026-07-22): detay sayfaları slug URL'inde render edilir (2b) —
+    // /urun/{kod} regex'i orada TUTMAZ; detay ürün kodu config'teki urunKod'dan çözülür.
+    const detayKod = () => {
         const detay = location.pathname.match(/^\/urun\/([^/?#]+)/);
-        return detay ? decodeURIComponent(detay[1]) : null;
+        if (detay) { return decodeURIComponent(detay[1]); }
+        return detayConfig()?.urunKod || null;
     };
 
     const detayConfig = () => {
@@ -65,10 +72,10 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const detayIsaretle = () => {
-        const detay = location.pathname.match(/^\/urun\/([^/?#]+)/);
-        if (!detay) { return; }
+        const kod = detayKod();
+        if (!kod) { return; }
         const detayRenk = detayConfig()?.seciliRenk || null;
-        if (!favoriKodlar.has(favoriAnahtar(decodeURIComponent(detay[1]), detayRenk))) { return; }
+        if (!favoriKodlar.has(favoriAnahtar(kod, detayRenk))) { return; }
         document.querySelectorAll(".ms-urun-detay-favori").forEach((buton) => {
             buton.setAttribute("aria-pressed", "true");
             buton.setAttribute("aria-label", "Favorilerden çıkar");

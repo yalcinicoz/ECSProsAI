@@ -108,6 +108,18 @@ public class StoreAccountController(IMediator mediator, IConfiguration configura
         return Ok(new { success = true });
     }
 
+    /// <summary>B-019: üyenin KENDİ hesabını kapatması — soft delete + tüm oturumlar iptal;
+    /// SSR cookie'si de silinir. Sonrasında aynı bilgilerle giriş yapılamaz.</summary>
+    [HttpDelete("")]
+    public async Task<IActionResult> DeleteAccount(CancellationToken ct)
+    {
+        var result = await mediator.Send(
+            new ECSPros.Crm.Application.Commands.DeleteMemberAccount.DeleteMemberAccountCommand(GetMemberId()), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        Response.Cookies.Delete(ECSPros.Api.Services.StoreMemberSession.CookieAdi);
+        return Ok(new { success = true });
+    }
+
     // C7 (K9): TCKN kaydı — format + kontrol basamağı algoritması sunucuda doğrulanır
     [HttpPost("identity")]
     public async Task<IActionResult> SetIdentity([FromBody] SetIdentityRequest req, CancellationToken ct)

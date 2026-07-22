@@ -197,7 +197,7 @@
                             <span>Hesabı Sil</span>
                         </h4>
                         <p>Hesabınızı kalıcı olarak silmek istiyorsanız, bu işlem geri alınamaz. Tüm verileriniz silinecektir.</p>
-                        <button class="ms-buton ms-buton-m ms-buton-tehlikeli ms-buton-tam" type="button">
+                        <button class="ms-buton ms-buton-m ms-buton-tehlikeli ms-buton-tam" type="button" data-ms-hesap-sil>
                             <i class="fa-solid fa-trash ms-fa-ikon " aria-hidden="true"></i>
                             <span>Hesabı Kalıcı Olarak Sil</span>
                         </button>
@@ -404,5 +404,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
     profilYukle().then(sehirleriYukle);
     oturumlariYukle();
+});
+</script>
+
+@* B-019 (kabul testi 2026-07-22): hesap silme akışı — onay iste, DELETE at, oturumu
+   temizleyip ana sayfaya dön. Komut soft delete + tüm oturum iptali yapar. *@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const buton = document.querySelector("[data-ms-hesap-sil]");
+    if (!buton) { return; }
+    buton.addEventListener("click", async () => {
+        const onay = window.confirm(
+            "Hesabınız kalıcı olarak silinecek ve bu işlem geri alınamaz.\n" +
+            "Tüm oturumlarınız kapatılacak ve aynı bilgilerle tekrar giriş yapamayacaksınız.\n\n" +
+            "Devam etmek istiyor musunuz?");
+        if (!onay) { return; }
+
+        buton.disabled = true;
+        try {
+            const cevap = await fetch("/api/store/account", {
+                method: "DELETE",
+                headers: { Authorization: "Bearer " + (localStorage.getItem("ecspros_member_token") || "") }
+            });
+            const veri = await cevap.json().catch(() => null);
+            if (!veri?.success) {
+                window.msOnayRedModalAc?.({ tip: "red", baslik: "Hesap Silinemedi",
+                    altBaslik: "İşlem Başarısız", metin: veri?.error || "Lütfen tekrar deneyin.", sure: 1500 });
+                buton.disabled = false;
+                return;
+            }
+            localStorage.removeItem("ecspros_member_token");
+            localStorage.removeItem("ecspros_member_refresh");
+            window.location.href = "/";
+        } catch {
+            window.msOnayRedModalAc?.({ tip: "red", baslik: "Hesap Silinemedi",
+                altBaslik: "İşlem Başarısız", metin: "Sunucuya ulaşılamadı. Lütfen tekrar deneyin.", sure: 1500 });
+            buton.disabled = false;
+        }
+    });
 });
 </script>

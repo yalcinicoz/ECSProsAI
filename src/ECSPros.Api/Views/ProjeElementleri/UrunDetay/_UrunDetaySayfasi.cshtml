@@ -1794,7 +1794,13 @@
 
             const urunDetayKoleksiyonBilgisiOlustur = () => {
                 const baslik = document.querySelector(".ms-urun-detay-baslik")?.textContent?.trim() || "Ürün";
-                const kod = document.querySelector(".ms-urun-detay-kod strong")?.textContent?.trim() || baslik;
+                // B-015 (kabul testi 2026-07-22): kod DOM metninden değil config'ten — DOM'daki
+                // ".ms-urun-detay-kod strong" renkli üründe "KOD / Renk" basar; koleksiyon
+                // API'sine yanlış productCode gidiyordu. Config'teki urunKod gerçek koddur.
+                let kod = null;
+                try { kod = JSON.parse(document.getElementById("ms-urun-detay-config")?.textContent || "null")?.urunKod || null; } catch { }
+                kod = kod
+                    || (document.querySelector(".ms-urun-detay-kod strong")?.textContent?.trim() || baslik).split(" / ")[0];
                 const gorsel = document.querySelector(".ms-urun-detay-resim-ana-gorunur, .ms-urun-detay-resim-ana");
                 const gorselYolu = gorsel?.currentSrc
                     || gorsel?.getAttribute("src")

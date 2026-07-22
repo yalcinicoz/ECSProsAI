@@ -240,6 +240,16 @@ document.addEventListener("DOMContentLoaded", () => {
                         b.setAttribute("aria-pressed", kategorideAra ? "true" : "false");
                         b.classList.toggle("ms-ana-navigasyon-kategoride-ara-aktif", kategorideAra);
                     });
+                    // B-008 (kabul testi 2026-07-22): kapsam AÇILDIĞINDA yazılı terim varsa
+                    // doğrudan kategori arama sonucuna git — buton salt toggle iken kullanıcı
+                    // "sonuca götürmesini" bekliyordu (adres değişmiyordu). Kapatma tıklaması
+                    // (kapsamı geri genişletme) panelde kalır, yalnız öneriyi tazeler.
+                    const terim = (input.value || panelInput?.value || "").trim();
+                    if (kategorideAra && terim.length >= 2) {
+                        sonAramaKaydet(terim);
+                        window.location.href = tumSonucUrl(terim);
+                        return;
+                    }
                     canliAra(input.value || panelInput?.value || "");
                 });
             });
@@ -272,7 +282,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (buIstek !== istekSirasi) { return; } // eski cevap — yenisi yolda
 
                     const urunler = veri?.data?.items || [];
-                    const toplam = veri?.data?.totalCount || 0;
+                    // B-009: kategori sorgusu TotalCount'u ürün×renk KARTI sayar — sayaç
+                    // ürün konuşmalı (mağaza geneliyle aynı birim); yeni additive alan
+                    const toplam = veri?.data?.productTotalCount ?? veri?.data?.totalCount ?? 0;
                     const terimKucuk = terim.toLocaleLowerCase("tr");
                     const kategoriler = kategoriKaynagi
                         .filter((k) => k.ad.toLocaleLowerCase("tr").includes(terimKucuk))

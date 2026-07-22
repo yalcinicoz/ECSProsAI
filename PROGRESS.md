@@ -361,6 +361,33 @@ alan için yapılıyorsa o alanın oturumunda, o alanın fazı olarak yürütül
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION ÖZETİ (2026-07-22/6) — 🌐 KABUL TESTİ YÜKSEK BULGULARI KAPANDI (⚠️ RESTART BEKLİYOR)
+Kaynak: docs/KabulTestKiti kosumlar/ecspros/2026-07-22_10-18-46 (19 bulgu; 10 YÜKSEK → 6 benzersiz).
+- **B-005/010+B-006/011 fiyat sıralaması:** genel liste varyant BasePrice ile sıralayıp kanal
+  fiyatı gösteriyordu (bilinen B10 borcu). `IEffectivePriceProvider` (InStock kalıbı: raw SQL
+  kanal override→BasePrice min, platform bazlı 2dk cache) + GetStoreProducts fiyat sıralarında
+  iki fazlı sayfalama (id listesi sırala→sayfa ürünlerini yükle). asc/desc + sayfa2 doğrulandı.
+- **B-008/012 "Kadın içinde ara" gitmiyor:** buton salt kapsam toggle'ıydı; artık kapsam açılırken
+  yazılı terim (≥2) varsa doğrudan /{slug}?search= sonucuna gider (kapama tıklaması panelde kalır).
+- **B-009 kategori sayacı > mağaza:** kanal sorgusu TotalCount'u ürün×renk KARTI sayar; öneri
+  paneli "N ürün" diyordu. Additive `ChannelCategoryProductsPagedResult.ProductTotalCount`
+  (benzersiz ürün) + panel kategori dalında onu okur + endpoint'te (object) cast (STJ bildirilen
+  tipten yazıp türetilmiş alanı düşürüyordu). elbise: kart 929 / ürün 396 (≤410 ✓).
+- **B-014 detay kalbi kaydetmiyor:** _FavoriDavranis ürün kodunu /urun/{kod} regex'inden çözüyordu —
+  detay artık SLUG URL'inde (2b) render ediliyor, kod null kalıp istek atılmıyordu. detayKod():
+  regex→config.urunKod fallback (tıklama + açılış işaretlemesi). POST + kayıt doğrulandı.
+- **B-015 detaydan koleksiyona eklenmiyor (3 katman!):** (a) builder DOM'dan "KOD / Renk" metnini
+  id sanıyordu → config.urunKod'dan; (b) site.js event'e SEÇİLEN değil kendi eski kopyasındaki
+  seçenek ADINI taşıyor → köprü artık modal DOM'undaki aktif seçeneklerin data-ms-koleksiyon-id'sine
+  dayanır (ad eşleşmesi normalize'lı yedek); (c) ad eşleşmesi boşluk/satır-sonu kırılganlığı.
+  E2E: POST /items + ürün koleksiyonda + onay modalı ✓.
+- **B-019 hesap silme çalışmıyor:** akış HİÇ yoktu. `DeleteMemberAccountCommand` (soft delete +
+  tüm oturum iptali; sipariş/fatura kayıtları yaşar) + `DELETE /api/store/account` (cookie de
+  silinir) + üyelik sayfasında onay pencereli akış (iptalde istek yok; başarıda ana sayfa).
+  E2E: onay/iptal/silme/silinen-hesapla-giriş-400 ✓.
+- Drift TEMİZ ✓. publish/ güncel (test DLL birebir). **KULLANICIDA: `sudo systemctl restart ecspros`.**
+- KALAN: rapor ORTA (5) + DÜŞÜK (4) bulgular — talep edilince.
+
 ### ⭐ SESSION ÖZETİ (2026-07-22/5) — 🌐 WEB SİTESİ: H-M5 BAŞLADI — H10-1 KOLEKSİYON PUBLIC SAYFASI (⚠️ RESTART BEKLİYOR)
 H3+S3a-1 restart'ı yapıldı, canlıda doğrulandı (görsel arama 16 sonuç exact; satıcı login 200).
 H-M5/H10'un ilk maddesi uygulandı — **public koleksiyon sayfası (E6 ShareCode kapanışı):**
