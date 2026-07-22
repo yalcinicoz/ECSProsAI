@@ -10,4 +10,10 @@ public static class PgJsonFunctions
 {
     public static string? JsonText(Dictionary<string, string> jsonb, string key)
         => jsonb.TryGetValue(key, out var value) ? value : null;
+
+    /// <summary>H10: jsonb string dizisinde verilen anahtarlardan EN AZ BİRİ var mı —
+    /// PostgreSQL <c>jsonb_exists_any</c> (?| operatörünün fonksiyon hâli). Product.Tags
+    /// jsonb olduğundan text[] çevirili LINQ (Any/Contains) çevrilemiyor.</summary>
+    public static bool JsonExistsAny(List<string> jsonb, string[] keys)
+        => jsonb.Any(keys.Contains);
 }

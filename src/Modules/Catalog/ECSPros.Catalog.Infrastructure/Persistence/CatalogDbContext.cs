@@ -45,6 +45,13 @@ public class CatalogDbContext : DbContext, ICatalogDbContext
             .HasName("jsonb_extract_path_text")
             .IsBuiltIn();
 
+        // H10: etiket bayrağı — jsonb dizide herhangi bir anahtar var mı (?| operatörü)
+        modelBuilder
+            .HasDbFunction(typeof(Application.Helpers.PgJsonFunctions)
+                .GetMethod(nameof(Application.Helpers.PgJsonFunctions.JsonExistsAny))!)
+            .HasName("jsonb_exists_any")
+            .IsBuiltIn();
+
         base.OnModelCreating(modelBuilder);
     }
 

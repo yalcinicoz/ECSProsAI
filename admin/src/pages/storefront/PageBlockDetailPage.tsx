@@ -49,7 +49,7 @@ interface BlockDetail {
 }
 
 const ORNEK_CONFIG: Record<string, object> = {
-  carousel: { productSource: { source: 'new-arrivals', limit: 12, sort: 'newest' }, tema: 'varsayilan', seeAllUrl: '/urun-listesi' },
+  carousel: { productSource: { source: 'new-arrivals', limit: 12, sort: 'newest', inStockOnly: true, discountedOnly: false, tags: [] }, tema: 'varsayilan', seeAllUrl: '/urun-listesi' },
   infinity: { productSource: { source: 'category', categoryId: '00000000-0000-0000-0000-000000000000', limit: 24 }, seeAllUrl: '/urun-listesi' },
   collection: { collectionSource: { limit: 10, sort: 'popular' } },
   banner: { mobileCarousel: true },
@@ -222,13 +222,13 @@ export function PageBlockDetailPage() {
             value={form.configJson ?? ''}
             onChange={(e) => alan('configJson', e.target.value || null)}
             placeholder={tipDef?.requiresProductSource
-              ? `{"productSource":{"source":"new-arrivals","limit":12}} — kaynaklar: ${KAYNAKLAR.join(', ')}`
+              ? `{"productSource":{"source":"new-arrivals","limit":12,"inStockOnly":true,"tags":["yaz"],"discountedOnly":true}} — kaynaklar: ${KAYNAKLAR.join(', ')}`
               : tipDef?.requiresCollectionSource
                 ? '{"collectionSource":{"limit":10,"sort":"popular"}}'
                 : 'Tipe özgü ayarlar: tema, seeAllUrl, endsAt (flash), mobileCarousel, gorunum...'}
           />
           <p className="text-xs text-[var(--text-s)]">
-            {tipDef?.requiresProductSource && 'Bu tipte productSource zorunludur (Yayınla denetler). '}
+            {tipDef?.requiresProductSource && 'Bu tipte productSource zorunludur (Yayınla denetler). Filtre bayrakları: inStockOnly (yalnız stokta), tags (etiket eşleşmesi), discountedOnly (yalnız indirimli) — category kaynağında desteklenmez. '}
             {tipDef?.requiresCollectionSource && 'Bu tipte collectionSource zorunludur; yalnız onaylı+herkese açık koleksiyonlar listelenir. '}
             Kural seviyesi: {tipDef?.ruleLevel === 'Block' ? 'blok' : tipDef?.ruleLevel === 'Item' ? 'öğe' : 'blok + öğe'} (kurallar G-M2'de canlıya bağlanır).
           </p>
