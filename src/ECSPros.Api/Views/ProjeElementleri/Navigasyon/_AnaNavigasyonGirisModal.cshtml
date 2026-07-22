@@ -173,6 +173,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // üyeye ait kalmasın. Giriş: sayfayı yenile (yeni cookie ile yeni üyenin verisi);
     // çıkış: ana sayfaya dön (sayfa üye ister, reload zaten yönlendirirdi — direkt git).
     const uyeOzelSayfayiTazele = () => {
+        // Kabul testi 2026-07-22: girişte sayfadaki davranış köprüleri (favori işaretleri,
+        // bekleyen favori niyeti...) tazelensin — reload olmayan sayfalar bunu dinler.
+        document.dispatchEvent(new CustomEvent("ms:uye-giris"));
         if (window.msUyeOzelSayfa) window.location.reload();
     };
 

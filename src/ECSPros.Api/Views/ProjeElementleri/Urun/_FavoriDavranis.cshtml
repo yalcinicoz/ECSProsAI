@@ -74,6 +74,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const detayIsaretle = () => {
         const kod = detayKod();
         if (!kod) { return; }
+        // Kabul testi 2026-07-22: detay koleksiyon butonu açılışta işaretlenmiyordu —
+        // ekleme başarılı olsa da yenileyince ikon pasif görünüyordu.
+        if (kayitliKodlar.has(kod)) {
+            document.querySelectorAll(".ms-urun-detay-koleksiyon, [data-ms-urun-detay-koleksiyon]").forEach((buton) => {
+                buton.classList.add("ms-urun-detay-koleksiyon-aktif");
+                buton.setAttribute("aria-pressed", "true");
+                buton.setAttribute("aria-label", "Koleksiyondan çıkar");
+            });
+        }
         const detayRenk = detayConfig()?.seciliRenk || null;
         if (!favoriKodlar.has(favoriAnahtar(kod, detayRenk))) { return; }
         document.querySelectorAll(".ms-urun-detay-favori").forEach((buton) => {
@@ -168,6 +177,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!token()) {
             olay.preventDefault();
             olay.stopPropagation();
+            // Kabul testi 2026-07-22: misafirin favori niyeti saklanır — girişten sonra
+            // otomatik uygulanır (kullanıcı tekrar tıklamak zorunda kalmıyordu ama kalp
+            // boş kalınca "eklenmedi" sanıyordu). Koleksiyon akışı modal gerektirdiğinden
+            // niyet yalnız favori için taşınır.
+            const bekleyenKod = kodBul(buton);
+            if (bekleyenKod && !buton.matches("[data-ms-urun-koleksiyon], .ms-urun-detay-koleksiyon")) {
+                try { sessionStorage.setItem("ms-bekleyen-favori",
+                    JSON.stringify({ kod: bekleyenKod, renk: renkBul(buton) })); } catch { }
+            }
             document.querySelector("[data-ms-giris-modal-ac]")?.click();
             return;
         }
@@ -189,6 +207,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Sonradan eklenen kartlar (infinite scroll şablon kartları)
     new MutationObserver(() => kartIsaretle(document)).observe(document.body, { childList: true, subtree: true });
+
+    // Kabul testi 2026-07-22: girişten sonra işaretler tazelenir + misafirken saklanan
+    // favori niyeti otomatik uygulanır (kalp dolu gelir, ürün Favorilerim'e düşer).
+    document.addEventListener("ms:uye-giris", async () => {
+        if (!token()) { return; }
+        let bekleyen = null;
+        try { bekleyen = JSON.parse(sessionStorage.getItem("ms-bekleyen-favori") || "null"); } catch { }
+        sessionStorage.removeItem("ms-bekleyen-favori");
+        if (bekleyen?.kod) { await kaydet(bekleyen.kod, bekleyen.renk || null, true); }
+        await yukle();
+    });
 
     yukle();
 });

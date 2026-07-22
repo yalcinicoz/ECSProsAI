@@ -112,11 +112,20 @@ public class GetStoreProductsQueryHandler(
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            // Kod VEYA Türkçe ad eşleşmesi (NameI18n->>'tr') — B2 canlı arama önerileri
-            // metinle arar; salt kod araması müşteri için sonuç üretmiyordu.
-            var search = request.Search.Trim().ToLower();
-            q = q.Where(p => p.Code.ToLower().Contains(search)
-                          || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(search));
+            // Kabul testi 2026-07-22: "sarı gömlek" gibi ÇOK KELİMELİ aramalar tek parça
+            // contains ile hiç sonuç vermiyordu (renk ad alanında değil, varyant özelliğinde).
+            // Her kelime AYRI aranır (AND): kod VEYA Türkçe ad VEYA aktif varyantın
+            // özellik değeri adı (renk/beden...) içinde geçmeli.
+            foreach (var kelime in request.Search.Trim().ToLower()
+                         .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var k = kelime;
+                q = q.Where(p => p.Code.ToLower().Contains(k)
+                              || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(k)
+                              || p.Variants.Any(v => v.IsActive && v.VariantAttributes.Any(va =>
+                                     PgJsonFunctions.JsonText(va.AttributeValue.NameI18n, "tr")!
+                                         .ToLower().Contains(k))));
+            }
         }
 
         if (request.CreatedSince.HasValue)
