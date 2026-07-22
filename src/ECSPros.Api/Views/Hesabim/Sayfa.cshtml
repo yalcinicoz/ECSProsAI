@@ -2,6 +2,10 @@
     var partial = ViewData["MsHesabimPartial"] as string;
 }
 
+@* H10 düzeltmesi: üye-özel sayfa bayrağı — giriş modalı script'i çıkışta ana sayfaya
+   yönlendirir, farklı hesapla girişte sayfayı yeniler (eski üyenin SSR içeriği kalmasın) *@
+<script>window.msUyeOzelSayfa = true;</script>
+
 <div class="ms-hesabim-sayfa-kapsayici">
     <h1 class="sr-only">@ViewData["Title"]</h1>
     @if (!string.IsNullOrWhiteSpace(partial))

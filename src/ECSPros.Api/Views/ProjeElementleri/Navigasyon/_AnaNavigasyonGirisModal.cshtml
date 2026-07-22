@@ -169,6 +169,13 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch { /* yok say */ }
     };
 
+    // H10 düzeltmesi: üye-özel (hesabım) sayfada oturum değişti — SSR içerik eski
+    // üyeye ait kalmasın. Giriş: sayfayı yenile (yeni cookie ile yeni üyenin verisi);
+    // çıkış: ana sayfaya dön (sayfa üye ister, reload zaten yönlendirirdi — direkt git).
+    const uyeOzelSayfayiTazele = () => {
+        if (window.msUyeOzelSayfa) window.location.reload();
+    };
+
     const sepetiBirlestir = async () => {
         const token = localStorage.getItem(TOKEN_ANAHTARI);
         const sid = localStorage.getItem("ecspros_sid");
@@ -245,7 +252,8 @@ document.addEventListener("DOMContentLoaded", () => {
             tokenlariSakla(veri.data);
             girisiUygula(veri.data.fullName || eposta, veri.data.email || eposta);
             girisModal.querySelector("[data-ms-giris-modal-kapat]")?.click();
-            sepetiBirlestir();
+            // sepet birleştirme tamamlanmadan reload isteği kesmesin
+            sepetiBirlestir().finally(uyeOzelSayfayiTazele);
         } catch {
             hataGoster(girisHata, "Giriş yapılamadı. Lütfen tekrar deneyin.");
         } finally {
@@ -277,7 +285,8 @@ document.addEventListener("DOMContentLoaded", () => {
             tokenlariSakla(veri.data);
             girisiUygula(veri.data.fullName || "", veri.data.email || "");
             girisModal.querySelector("[data-ms-giris-modal-kapat]")?.click();
-            sepetiBirlestir();
+            // sepet birleştirme tamamlanmadan reload isteği kesmesin
+            sepetiBirlestir().finally(uyeOzelSayfayiTazele);
         } catch {
             hataGoster(telefonHata, "Giriş yapılamadı. Lütfen tekrar deneyin.");
         } finally {
@@ -332,7 +341,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (girisVeri?.success) {
                 tokenlariSakla(girisVeri.data);
                 girisiUygula(girisVeri.data.fullName || `${ad} ${soyad}`, girisVeri.data.email || eposta);
-                sepetiBirlestir();
+                // sepet birleştirme tamamlanmadan reload isteği kesmesin
+            sepetiBirlestir().finally(uyeOzelSayfayiTazele);
             }
             kayitModal.querySelector("[data-ms-kayit-modal-kapat]")?.click();
         } catch {
@@ -351,7 +361,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ refreshToken: refresh || null })
-            }).catch(() => { /* ağ hatası — cookie süresiyle düşer, tokenlar yine silinir */ });
+            }).catch(() => { /* ağ hatası — cookie süresiyle düşer, tokenlar yine silinir */ })
+              .finally(() => {
+                  // H10 düzeltmesi: üye-özel sayfada çıkış → eski üyenin SSR içeriği
+                  // ekranda kalmasın; cookie sunucuda silindikten sonra ana sayfaya dön
+                  if (window.msUyeOzelSayfa) window.location.href = "/";
+              });
             tokenlariTemizle();
             window.msMiniSepetYenile?.();
         });
@@ -362,7 +377,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.msGirisBasarili = (veri) => {
         tokenlariSakla(veri);
         girisiUygula(veri.fullName || "", veri.email || "");
-        sepetiBirlestir();
+        sepetiBirlestir().finally(uyeOzelSayfayiTazele);
     };
 
     // D1: SSR kimlik varsa oturum UI'ı /me yanıtı beklenmeden boyanır (yalnız JS oturumu
