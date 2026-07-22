@@ -9,6 +9,7 @@ using ECSPros.Shared.Contracts;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ECSPros.Api.Controllers.Store;
 
@@ -37,6 +38,8 @@ public class HesabimController(
         }
 
         _memberId = uye.MemberId;
+        // H10 sade statü bloğu — tüm hesabım sayfaları yan menüde gösterir (async, cache'li)
+        ViewData["MsHesapStatu"] = await HesapStatuAsync();
         await base.OnActionExecutionAsync(context, next);
     }
 
@@ -810,4 +813,31 @@ public class HesabimController(
         ViewData["MsHesabimPartial"] = partial;
         return View("~/Views/Hesabim/Sayfa.cshtml");
     }
+
+    /// <summary>H10 sade statü: grup adı + son 30 gün harcama (üye başına 5 dk IMemoryCache —
+    /// her hesabım sayfası iki sorgu atmasın). Tam statü modeli (E13) gelince genişler.</summary>
+    private async Task<HesapStatuVm?> HesapStatuAsync()
+    {
+        if (_memberId == Guid.Empty) return null;
+        var cache = HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
+        return await cache.GetOrCreateAsync($"hesap-statu-{_memberId}", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            var grup = await mediator.Send(
+                new ECSPros.Crm.Application.Queries.GetMemberStatus.GetMemberStatusQuery(_memberId));
+            var harcama = await mediator.Send(
+                new ECSPros.Order.Application.Queries.GetMemberMonthlySpend.GetMemberMonthlySpendQuery(
+                    _memberId, DateTime.UtcNow.AddDays(-30)));
+            var grupAdi = grup.IsSuccess
+                ? grup.Value!.GroupNameI18n?.GetValueOrDefault("tr")
+                  ?? grup.Value!.GroupNameI18n?.Values.FirstOrDefault()
+                : null;
+            return new HesapStatuVm(
+                string.IsNullOrWhiteSpace(grupAdi) ? "Standart" : grupAdi,
+                harcama.IsSuccess ? harcama.Value : 0m);
+        });
+    }
 }
+
+/// <summary>H10: hesabım yan menü sade statü bloğu (grup adı + 30 günlük harcama).</summary>
+public sealed record HesapStatuVm(string StatuAdi, decimal AylikHarcama);

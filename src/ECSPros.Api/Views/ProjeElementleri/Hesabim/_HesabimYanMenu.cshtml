@@ -18,35 +18,23 @@
         <button type="button" data-ms-hesabim-menu-kapat aria-label="Hesabım menüsünü kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
     </div>
 
-    @* E1: statü/harcama bloğu puan-statü verisi gelene kadar gizli (B4'teki hover panel
-       kararıyla aynı gerekçe). E13 kararı: statü adı/aylık harcama eşikleri tanımsız —
-       Faz G segmentasyonuyla (üye grubu/statü modeli) birlikte açılır. *@
-    @if (false)
+    @* H10 SADE SÜRÜM (2026-07-22 kullanıcı kararı): statü adı = üye grubu (grupsuz 'Standart'),
+       Aylık = son 30 gün sipariş toplamı. Eşik/kazanç/progress DETAYI GİZLİ KALIR — tam statü
+       modeli (E13: eşik+kazanç kataloğu) tanımlanınca toggle+detay bölümü açılır. *@
+    @{ var msHesapStatu = ViewData["MsHesapStatu"] as ECSPros.Api.Controllers.Store.HesapStatuVm; }
+    @if (msHesapStatu is not null)
     {
-    <section class="ms-hesap-statu ms-hesap-statu-premium ms-hesabim-menu-statu ms-hesap-statu-katlanabilir">
+    <section class="ms-hesap-statu ms-hesap-statu-premium ms-hesabim-menu-statu">
         <div class="ms-hesap-statu-ust">
             <span class="ms-hesap-statu-ikon" aria-hidden="true"><i class="fa-solid fa-crown ms-fa-ikon " aria-hidden="true"></i></span>
             <span class="ms-hesap-statu-bilgi">
                 <small>Statünüz</small>
-                <strong>Premium</strong>
+                <strong>@msHesapStatu.StatuAdi</strong>
             </span>
             <span class="ms-hesap-harcama">
                 <small>Aylık</small>
-                <strong>48.000 ₺</strong>
+                <strong>@msHesapStatu.AylikHarcama.ToString("N2", new System.Globalization.CultureInfo("tr-TR")) ₺</strong>
             </span>
-            <button class="ms-hesap-statu-toggle" type="button" aria-expanded="false" aria-label="Premium statü detayını aç" data-ms-hesap-statu-toggle>
-                <i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i>
-            </button>
-        </div>
-        <div class="ms-hesap-statu-detay" data-ms-hesap-statu-detay hidden>
-            <div class="ms-hesap-statu-metrikler">
-                <span><small>Aralık</small>35.000 ₺ +</span>
-                <span><small>Kazanç</small>%6 puan</span>
-            </div>
-            <div class="ms-hesap-statu-progress" aria-label="Premium statü ilerleme yüzde 100">
-                <span style="width: 100%"></span>
-            </div>
-            <p>Premium avantajlarınız aktif.</p>
         </div>
     </section>
     }

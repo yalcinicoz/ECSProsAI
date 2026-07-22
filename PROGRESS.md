@@ -398,8 +398,14 @@ H-M5/H10'un ilk maddesi uygulandı — **public koleksiyon sayfası (E6 ShareCod
   canlı mishar etkilenmedi; test v3 ile temizlendi): üye A kendi 1+1 ürününü gördü (soğuk+cache hit),
   misafirde blok yok ✓, verisiz üye B'de blok yok ✓ (A'nın verisi SIZMADI ✓). Test üyeleri dev DB'de:
   h10test@test.local / h10test-b@test.local (H10Test123!), tozlu'da 2 favori+3 gezilen.
-- **KALAN H10:** (4) YanMenu statü bloğu → (5) GeoLite2 (mmdb KULLANICIDA, gelmezse bilinçli açık).
-  Sonra H7 QA.
+- **H10-4 YanMenu statü bloğu ✅ (aynı gün, SADE SÜRÜM — kullanıcı kararı):** statü adı = üye
+  grubu ('Standart' fallback), Aylık = son 30 gün sipariş toplamı (iptal hariç). Eşik/kazanç/
+  progress detayı GİZLİ (E13 statü modeli tanımlanınca toggle+detay açılır — partial'da not).
+  `GetMemberStatusQuery` (Crm) + `GetMemberMonthlySpendQuery` (Order, DB-side SUM);
+  HesabimController.OnActionExecutionAsync'te üye başına 5dk IMemoryCache. Test (5051):
+  h10test üyesi 'Standart Üye / 0,00 ₺' render ✓, toggle/detay markup'ı yok ✓; SQL çapraz
+  kontrol: harcamalı üyeler doğru toplam (yalcinicoz 30g=4.774,97₺ — canlı testte görülür).
+- **KALAN H10:** (5) GeoLite2 (mmdb KULLANICIDA, gelmezse bilinçli açık). Sonra H7 QA.
 
 ### SESSION ÖZETİ (2026-07-22/4) — 🌐 WEB SİTESİ: MOBİL RENK PANELİ MÜKERRER DÜZELTMESİ (✅ CANLIDA, restart gerekmedi)
 Mobil ürün listesinde renk rozetine basınca alttan açılan panelde ilk 4 renk İKİ KEZ görünüyordu.
