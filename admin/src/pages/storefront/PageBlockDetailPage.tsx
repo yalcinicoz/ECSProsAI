@@ -48,14 +48,6 @@ interface BlockDetail {
   priority: number; ruleJson: string | null; configJson: string | null; items: ItemDto[]
 }
 
-const ORNEK_CONFIG: Record<string, object> = {
-  carousel: { productSource: { source: 'new-arrivals', limit: 12, sort: 'newest', inStockOnly: true, discountedOnly: false, tags: [] }, tema: 'varsayilan', seeAllUrl: '/urun-listesi' },
-  infinity: { productSource: { source: 'category', categoryId: '00000000-0000-0000-0000-000000000000', limit: 24 }, seeAllUrl: '/urun-listesi' },
-  collection: { collectionSource: { limit: 10, sort: 'popular' } },
-  banner: { mobileCarousel: true },
-  categories: { gorunum: 'kapsul', mobileCarousel: true },
-  'kategori-cok-satanlar': { productSource: { source: 'category', categoryId: '00000000-0000-0000-0000-000000000000', limit: 4, sort: 'best-sellers' }, seeAllUrl: '/urun-listesi' },
-}
 const KAYNAKLAR = ['new-arrivals', 'best-sellers', 'campaign', 'category', 'brand', 'manual', 'recently-viewed', 'favorites']
 // 2026-07-22: config artık yapılandırılmış formla düzenlenir (ham JSON "Gelişmiş"te)
 const KAYNAK_ETIKET: Record<string, string> = {
@@ -67,6 +59,217 @@ const SIRALAMA_ETIKET: Record<string, string> = {
   '': 'Varsayılan', newest: 'En Yeni', price_asc: 'Fiyat Artan', price_desc: 'Fiyat Azalan',
 }
 interface KanalKategori { id: string; nameI18n: Record<string, string>; slug: string }
+
+const BOLGELER = ['Marmara', 'Ege', 'Akdeniz', 'İç Anadolu', 'Karadeniz', 'Doğu Anadolu', 'Güneydoğu Anadolu']
+const ILLER: [string, string][] = [
+  ['01','Adana'],['02','Adıyaman'],['03','Afyonkarahisar'],['04','Ağrı'],['05','Amasya'],['06','Ankara'],
+  ['07','Antalya'],['08','Artvin'],['09','Aydın'],['10','Balıkesir'],['11','Bilecik'],['12','Bingöl'],
+  ['13','Bitlis'],['14','Bolu'],['15','Burdur'],['16','Bursa'],['17','Çanakkale'],['18','Çankırı'],
+  ['19','Çorum'],['20','Denizli'],['21','Diyarbakır'],['22','Edirne'],['23','Elazığ'],['24','Erzincan'],
+  ['25','Erzurum'],['26','Eskişehir'],['27','Gaziantep'],['28','Giresun'],['29','Gümüşhane'],['30','Hakkari'],
+  ['31','Hatay'],['32','Isparta'],['33','Mersin'],['34','İstanbul'],['35','İzmir'],['36','Kars'],
+  ['37','Kastamonu'],['38','Kayseri'],['39','Kırklareli'],['40','Kırşehir'],['41','Kocaeli'],['42','Konya'],
+  ['43','Kütahya'],['44','Malatya'],['45','Manisa'],['46','Kahramanmaraş'],['47','Mardin'],['48','Muğla'],
+  ['49','Muş'],['50','Nevşehir'],['51','Niğde'],['52','Ordu'],['53','Rize'],['54','Sakarya'],['55','Samsun'],
+  ['56','Siirt'],['57','Sinop'],['58','Sivas'],['59','Tekirdağ'],['60','Tokat'],['61','Trabzon'],
+  ['62','Tunceli'],['63','Şanlıurfa'],['64','Uşak'],['65','Van'],['66','Yozgat'],['67','Zonguldak'],
+  ['68','Aksaray'],['69','Bayburt'],['70','Karaman'],['71','Kırıkkale'],['72','Batman'],['73','Şırnak'],
+  ['74','Bartın'],['75','Ardahan'],['76','Iğdır'],['77','Yalova'],['78','Karabük'],['79','Kilis'],
+  ['80','Osmaniye'],['81','Düzce'],
+]
+
+// Çoklu seçim: seçilenler çip, ekleme SearchableSelect'ten (JSON'suz kural/kaynak editörleri için)
+function MultiPick({ deger, secenekler, degistir, placeholder }: {
+  deger: string[]; secenekler: { value: string; label: string }[]
+  degistir: (v: string[]) => void; placeholder: string
+}) {
+  return (
+    <div className="space-y-1.5">
+      {deger.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {deger.map((v) => (
+            <span key={v} className="inline-flex items-center gap-1 rounded-full bg-[var(--surface2)] px-2 py-0.5 text-xs">
+              {secenekler.find((o) => o.value === v)?.label ?? v}
+              <button className="text-[var(--text-s)] hover:text-red-500" onClick={() => degistir(deger.filter((x) => x !== v))}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <SearchableSelect
+        value={null}
+        onChange={(v) => { if (v && !deger.includes(v)) degistir([...deger, v]) }}
+        options={secenekler.filter((o) => !deger.includes(o.value))}
+        placeholder={placeholder}
+      />
+    </div>
+  )
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Hedefleme (kural) — RuleJson'ın görsel karşılığı: alan içi OR, alanlar arası AND;
+// hiçbir seçim yoksa kural yok (herkese gösterilir).
+function HedeflemeFormu({ ruleJson, degistir, memberGroups }: {
+  ruleJson: string | null; degistir: (v: string | null) => void
+  memberGroups: { id: string; ad: string }[]
+}) {
+  const kural: any = (() => { try { return JSON.parse(ruleJson || '{}') } catch { return {} } })()
+  const yaz = (alanAdi: string, v: string[]) => {
+    const next = { ...kural }
+    if (v.length === 0) delete next[alanAdi]; else next[alanAdi] = v
+    degistir(Object.keys(next).length ? JSON.stringify(next) : null)
+  }
+  const cip = (alanAdi: string, v: string, etiket: string) => {
+    const secili: string[] = kural[alanAdi] ?? []
+    const acik = secili.includes(v)
+    return (
+      <button
+        key={v}
+        type="button"
+        className={`rounded-full border px-2.5 py-1 text-xs ${acik ? 'border-[var(--brand)] bg-[var(--brand-bg)] text-[var(--brand)]' : 'border-[var(--border)] text-[var(--text-m)]'}`}
+        onClick={() => yaz(alanAdi, acik ? secili.filter((x: string) => x !== v) : [...secili, v])}
+      >{etiket}</button>
+    )
+  }
+  const bosMu = Object.keys(kural).length === 0
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-[var(--text-s)]">
+        {bosMu ? 'Hedefleme yok — herkese gösterilir.' : 'Seçili koşulların TÜMÜ sağlanan ziyaretçiye gösterilir (alan içindeki seçenekler "veya"dır).'}
+      </p>
+      <div className="grid gap-3 md:grid-cols-3">
+        <div>
+          <span className="mb-1 block text-sm text-[var(--text-m)]">Cinsiyet</span>
+          <div className="flex gap-1.5">{cip('gender', 'female', 'Kadın')}{cip('gender', 'male', 'Erkek')}</div>
+        </div>
+        <div>
+          <span className="mb-1 block text-sm text-[var(--text-m)]">Cihaz</span>
+          <div className="flex gap-1.5">{cip('device', 'mobile', 'Mobil')}{cip('device', 'desktop', 'Masaüstü')}</div>
+        </div>
+        <div>
+          <span className="mb-1 block text-sm text-[var(--text-m)]">Üyelik</span>
+          <div className="flex gap-1.5">{cip('membership', 'guest', 'Misafir')}{cip('membership', 'member', 'Üye')}</div>
+        </div>
+      </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        <div>
+          <span className="mb-1 block text-sm text-[var(--text-m)]">Şehirler</span>
+          <MultiPick deger={kural.city ?? []} degistir={(v) => yaz('city', v)} placeholder="Şehir ekle"
+            secenekler={ILLER.map(([kod, ad]) => ({ value: kod, label: ad }))} />
+        </div>
+        <div>
+          <span className="mb-1 block text-sm text-[var(--text-m)]">Bölgeler</span>
+          <MultiPick deger={kural.region ?? []} degistir={(v) => yaz('region', v)} placeholder="Bölge ekle"
+            secenekler={BOLGELER.map((b) => ({ value: b, label: b }))} />
+        </div>
+        <div>
+          <span className="mb-1 block text-sm text-[var(--text-m)]">Üye Grupları</span>
+          <MultiPick deger={kural.memberGroup ?? []} degistir={(v) => yaz('memberGroup', v)} placeholder="Grup ekle"
+            secenekler={memberGroups.map((g) => ({ value: g.id, label: g.ad }))} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Ürün kaynağı alanları — blok config'i ve tabs sekme config'i aynı bileşeni kullanır
+function UrunKaynagiAlanlari({ ps, degistir, kanalKategorileri }: {
+  ps: any; degistir: (k: string, v: any) => void
+  kanalKategorileri: KanalKategori[]
+}) {
+  const listeMetni = (dizi: any) => (Array.isArray(dizi) ? dizi.join(', ') : '')
+  const metindenListe = (metin: string) => metin.split(/[\n,]/).map((x) => x.trim()).filter(Boolean)
+  return (
+    <>
+      <div className="grid gap-3 md:grid-cols-3">
+        <div>
+          <label className="mb-1 block text-sm text-[var(--text-m)]">Kaynak</label>
+          <SearchableSelect
+            value={ps?.source ?? null}
+            onChange={(v) => degistir('source', v)}
+            options={KAYNAKLAR.map((k) => ({ value: k, label: KAYNAK_ETIKET[k] ?? k }))}
+            placeholder="Kaynak seç"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm text-[var(--text-m)]">Ürün adedi (limit)</label>
+          <Input type="number" min={1} max={48} value={ps?.limit ?? ''} onChange={(e) => degistir('limit', e.target.value ? Number(e.target.value) : null)} placeholder="12" />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm text-[var(--text-m)]">Sıralama</label>
+          <SearchableSelect
+            value={ps?.sort ?? ''}
+            onChange={(v) => degistir('sort', v || null)}
+            options={Object.entries(SIRALAMA_ETIKET).map(([v, l]) => ({ value: v, label: l }))}
+            placeholder="Varsayılan"
+          />
+        </div>
+      </div>
+
+      {ps?.source === 'category' && (
+        <div>
+          <label className="mb-1 block text-sm text-[var(--text-m)]">Kanal Kategorisi</label>
+          <SearchableSelect
+            value={ps?.categoryId ?? null}
+            onChange={(v) => degistir('categoryId', v)}
+            options={kanalKategorileri.map((k) => ({ value: k.id, label: `${k.nameI18n?.tr ?? k.slug} (/${k.slug})` }))}
+            placeholder="Kategori seç"
+          />
+        </div>
+      )}
+      {ps?.source === 'best-sellers' && (
+        <div className="md:w-56">
+          <label className="mb-1 block text-sm text-[var(--text-m)]">Satış penceresi (gün)</label>
+          <Input type="number" min={1} value={ps?.days ?? ''} onChange={(e) => degistir('days', e.target.value ? Number(e.target.value) : null)} placeholder="90" />
+        </div>
+      )}
+      {ps?.source === 'manual' && (
+        <div>
+          <label className="mb-1 block text-sm text-[var(--text-m)]">Ürün kodları (virgül ya da satırla ayır — sıra korunur)</label>
+          <Textarea rows={2} value={listeMetni(ps?.productCodes)} onChange={(e) => degistir('productCodes', metindenListe(e.target.value))} placeholder="P-000123, P-000456" />
+        </div>
+      )}
+      {ps?.source === 'brand' && (
+        <div>
+          <label className="mb-1 block text-sm text-[var(--text-m)]">Marka değer Id (guid)</label>
+          <Input value={ps?.brandValueId ?? ''} onChange={(e) => degistir('brandValueId', e.target.value || null)} placeholder="marka attribute value id" />
+        </div>
+      )}
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <div>
+          <label className="mb-1 block text-sm text-[var(--text-m)]">Min fiyat</label>
+          <Input type="number" value={ps?.priceMin ?? ''} onChange={(e) => degistir('priceMin', e.target.value ? Number(e.target.value) : null)} placeholder="—" />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm text-[var(--text-m)]">Max fiyat</label>
+          <Input type="number" value={ps?.priceMax ?? ''} onChange={(e) => degistir('priceMax', e.target.value ? Number(e.target.value) : null)} placeholder="—" />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm text-[var(--text-m)]">Etiketler (en az biri eşleşir)</label>
+          <Input value={listeMetni(ps?.tags)} onChange={(e) => degistir('tags', metindenListe(e.target.value))} placeholder="yaz, indirim" disabled={ps?.source === 'category'} />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-5 text-sm">
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={!!ps?.inStockOnly} disabled={ps?.source === 'category'} onChange={(e) => degistir('inStockOnly', e.target.checked)} />
+          Yalnız stokta olanlar
+        </label>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={!!ps?.discountedOnly} disabled={ps?.source === 'category'} onChange={(e) => degistir('discountedOnly', e.target.checked)} />
+          Yalnız indirimliler
+        </label>
+      </div>
+      {ps?.source === 'category' && (
+        <p className="text-xs text-[var(--text-s)]">Kategori kaynağında etiket/stok/indirim bayrakları desteklenmez — kanal sorgusu kendi stok kuralını uygular.</p>
+      )}
+      {(ps?.source === 'recently-viewed' || ps?.source === 'favorites') && (
+        <p className="text-xs text-[var(--text-s)]">Üyeye özel kaynak: içerik ziyaretçinin kendi verisiyle dolar; misafirde blok görünmez.</p>
+      )}
+    </>
+  )
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 const bosOge = (sira: number): ItemDto => ({
   titleI18n: { tr: '' }, subtitleI18n: null, imageUrl: null, mobileImageUrl: null,
@@ -86,6 +289,11 @@ export function PageBlockDetailPage() {
     queryFn: async () =>
       (await api.get('/navigation/channel-categories', { params: { firmPlatformId: platformId, activeOnly: true } })).data.data ?? [],
     enabled: !!platformId,
+  })
+
+  const { data: memberGroups = [] } = useQuery<{ id: string; nameI18n?: Record<string, string>; code?: string }[]>({
+    queryKey: ['member-groups'],
+    queryFn: async () => (await api.get('/crm/member-groups')).data.data ?? [],
   })
 
   const { data: catalog } = useQuery<CatalogData>({
@@ -136,10 +344,6 @@ export function PageBlockDetailPage() {
   if (isLoading || !form) return <PageSpinner />
 
   const alan = <K extends keyof BlockDetail>(k: K, v: BlockDetail[K]) => setForm({ ...form, [k]: v })
-  const ornekYukle = () => {
-    const ornek = ORNEK_CONFIG[form.blockType]
-    if (ornek) alan('configJson', JSON.stringify(ornek, null, 2))
-  }
 
   // 2026-07-22: yapılandırılmış config formu — tek doğruluk kaynağı configJson metni;
   // kontroller onu okur/yamalar (Gelişmiş'teki ham JSON ile hep senkron).
@@ -258,100 +462,27 @@ export function PageBlockDetailPage() {
         <div className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
           <h2 className="text-sm font-semibold">Blok Ayarları</h2>
           {!cfgGecerli && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              Config JSON'ı geçersiz — aşağıdaki "Gelişmiş (ham JSON)" bölümünden düzeltin; form o zaman aktifleşir.
+            <div className="flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Bu bloğun kayıtlı config'i çözümlenemedi — "Ayarları sıfırla" ile temiz başlayabilirsiniz.
+              <Button size="sm" variant="secondary" onClick={() => alan('configJson', null)}>Ayarları sıfırla</Button>
             </div>
+          )}
+
+          {cfgGecerli && !tipDef?.requiresProductSource && !ps && (
+            <Button size="sm" variant="secondary" onClick={() => kaynakAlan('productSource', 'source', 'new-arrivals')}>
+              + Ürün şeridi ekle (opsiyonel)
+            </Button>
+          )}
+          {cfgGecerli && !tipDef?.requiresProductSource && ps && (
+            <Button size="sm" variant="secondary" onClick={() => { const n = { ...(cfg ?? {}) }; delete n.productSource; cfgYaz(n) }}>
+              Ürün şeridini kaldır
+            </Button>
           )}
 
           {cfgGecerli && (tipDef?.requiresProductSource || ps) && (
             <div className="space-y-3 rounded-lg border border-[var(--border)] p-3">
               <h3 className="text-sm font-semibold">Ürün Kaynağı {tipDef?.requiresProductSource && <span className="text-xs font-normal text-[var(--text-s)]">(bu tipte zorunlu)</span>}</h3>
-              <div className="grid gap-3 md:grid-cols-3">
-                <div>
-                  <label className="mb-1 block text-sm text-[var(--text-m)]">Kaynak</label>
-                  <SearchableSelect
-                    value={ps?.source ?? null}
-                    onChange={(v) => kaynakAlan('productSource', 'source', v)}
-                    options={KAYNAKLAR.map((k) => ({ value: k, label: KAYNAK_ETIKET[k] ?? k }))}
-                    placeholder="Kaynak seç"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm text-[var(--text-m)]">Ürün adedi (limit)</label>
-                  <Input type="number" min={1} max={48} value={ps?.limit ?? ''} onChange={(e) => kaynakAlan('productSource', 'limit', e.target.value ? Number(e.target.value) : null)} placeholder="12" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm text-[var(--text-m)]">Sıralama</label>
-                  <SearchableSelect
-                    value={ps?.sort ?? ''}
-                    onChange={(v) => kaynakAlan('productSource', 'sort', v || null)}
-                    options={Object.entries(SIRALAMA_ETIKET).map(([v, l]) => ({ value: v, label: l }))}
-                    placeholder="Varsayılan"
-                  />
-                </div>
-              </div>
-
-              {ps?.source === 'category' && (
-                <div>
-                  <label className="mb-1 block text-sm text-[var(--text-m)]">Kanal Kategorisi</label>
-                  <SearchableSelect
-                    value={ps?.categoryId ?? null}
-                    onChange={(v) => kaynakAlan('productSource', 'categoryId', v)}
-                    options={kanalKategorileri.map((k) => ({ value: k.id, label: `${k.nameI18n?.tr ?? k.slug} (/${k.slug})` }))}
-                    placeholder="Kategori seç"
-                  />
-                </div>
-              )}
-              {ps?.source === 'best-sellers' && (
-                <div className="md:w-56">
-                  <label className="mb-1 block text-sm text-[var(--text-m)]">Satış penceresi (gün)</label>
-                  <Input type="number" min={1} value={ps?.days ?? ''} onChange={(e) => kaynakAlan('productSource', 'days', e.target.value ? Number(e.target.value) : null)} placeholder="90" />
-                </div>
-              )}
-              {ps?.source === 'manual' && (
-                <div>
-                  <label className="mb-1 block text-sm text-[var(--text-m)]">Ürün kodları (virgül ya da satırla ayır — sıra korunur)</label>
-                  <Textarea rows={2} value={listeMetni(ps?.productCodes)} onChange={(e) => kaynakAlan('productSource', 'productCodes', metindenListe(e.target.value))} placeholder="P-000123, P-000456" />
-                </div>
-              )}
-              {ps?.source === 'brand' && (
-                <div>
-                  <label className="mb-1 block text-sm text-[var(--text-m)]">Marka değer Id (guid)</label>
-                  <Input value={ps?.brandValueId ?? ''} onChange={(e) => kaynakAlan('productSource', 'brandValueId', e.target.value || null)} placeholder="marka attribute value id" />
-                </div>
-              )}
-
-              <div className="grid gap-3 md:grid-cols-3">
-                <div>
-                  <label className="mb-1 block text-sm text-[var(--text-m)]">Min fiyat</label>
-                  <Input type="number" value={ps?.priceMin ?? ''} onChange={(e) => kaynakAlan('productSource', 'priceMin', e.target.value ? Number(e.target.value) : null)} placeholder="—" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm text-[var(--text-m)]">Max fiyat</label>
-                  <Input type="number" value={ps?.priceMax ?? ''} onChange={(e) => kaynakAlan('productSource', 'priceMax', e.target.value ? Number(e.target.value) : null)} placeholder="—" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm text-[var(--text-m)]">Etiketler (en az biri eşleşir)</label>
-                  <Input value={listeMetni(ps?.tags)} onChange={(e) => kaynakAlan('productSource', 'tags', metindenListe(e.target.value))} placeholder="yaz, indirim" disabled={ps?.source === 'category'} />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-5 text-sm">
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={!!ps?.inStockOnly} disabled={ps?.source === 'category'} onChange={(e) => kaynakAlan('productSource', 'inStockOnly', e.target.checked)} />
-                  Yalnız stokta olanlar
-                </label>
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={!!ps?.discountedOnly} disabled={ps?.source === 'category'} onChange={(e) => kaynakAlan('productSource', 'discountedOnly', e.target.checked)} />
-                  Yalnız indirimliler
-                </label>
-              </div>
-              {ps?.source === 'category' && (
-                <p className="text-xs text-[var(--text-s)]">Kategori kaynağında etiket/stok/indirim bayrakları desteklenmez — kanal sorgusu kendi stok kuralını uygular.</p>
-              )}
-              {(ps?.source === 'recently-viewed' || ps?.source === 'favorites') && (
-                <p className="text-xs text-[var(--text-s)]">Üyeye özel kaynak: içerik ziyaretçinin kendi verisiyle dolar; misafirde blok görünmez.</p>
-              )}
+              <UrunKaynagiAlanlari ps={ps} degistir={(k, v) => kaynakAlan('productSource', k, v)} kanalKategorileri={kanalKategorileri} />
             </div>
           )}
 
@@ -425,30 +556,15 @@ export function PageBlockDetailPage() {
             </div>
           )}
 
-          <details className="rounded-lg border border-[var(--border)] p-3">
-            <summary className="cursor-pointer text-sm font-semibold text-[var(--text-m)]">Gelişmiş (ham JSON)</summary>
-            <div className="mt-3 space-y-2">
-              {ORNEK_CONFIG[form.blockType] && (
-                <Button size="sm" variant="secondary" onClick={ornekYukle}>Örnek iskelet yükle</Button>
-              )}
-              <Textarea
-                rows={8}
-                value={form.configJson ?? ''}
-                onChange={(e) => alan('configJson', e.target.value || null)}
-                placeholder='{"productSource":{"source":"new-arrivals","limit":12}}'
-              />
-              <p className="text-xs text-[var(--text-s)]">
-                Formla ham JSON aynı veriyi düzenler — hangisinden değiştirirseniz diğeri güncellenir.
-                Kural seviyesi: {tipDef?.ruleLevel === 'Block' ? 'blok' : tipDef?.ruleLevel === 'Item' ? 'öğe' : 'blok + öğe'}.
-              </p>
-            </div>
-          </details>
 
           {tipDef && tipDef.ruleLevel !== 'Item' && (
             <>
-              <h3 className="text-sm font-semibold">Blok Kuralı (JSON — G-M2)</h3>
-              <Textarea rows={3} value={form.ruleJson ?? ''} onChange={(e) => alan('ruleJson', e.target.value || null)}
-                placeholder='{"city":["ankara","izmir"],"device":["mobile"]}' />
+              <h3 className="text-sm font-semibold">Hedefleme (kimlere gösterilsin)</h3>
+              <HedeflemeFormu
+                ruleJson={form.ruleJson}
+                degistir={(v) => alan('ruleJson', v)}
+                memberGroups={memberGroups.map((g) => ({ id: g.id, ad: g.nameI18n?.tr ?? g.code ?? g.id }))}
+              />
             </>
           )}
         </div>
@@ -535,18 +651,34 @@ export function PageBlockDetailPage() {
                 Yeni sekmede aç
               </label>
             </div>
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm text-[var(--text-m)]">Öğe config (JSON — tab ürün kaynağı, story frames, marka görselleri...)</label>
-              <Textarea rows={3} value={ogeModal.oge.configJson ?? ''}
-                onChange={(e) => setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, configJson: e.target.value || null } })}
-                placeholder='{"productSource":{"source":"manual","productCodes":["P-000001"]}} / {"frames":[...]} / {"images":[...],"productCount":"42"}' />
-            </div>
+            {form.blockType === 'tabs' && (() => {
+              /* eslint-disable @typescript-eslint/no-explicit-any */
+              const ogeCfg: any = (() => { try { return JSON.parse(ogeModal.oge.configJson || '{}') } catch { return {} } })()
+              const ogePs: any = ogeCfg.productSource ?? null
+              const ogeKaynakYaz = (k: string, v: any) => {
+                const next = { ...ogeCfg }
+                const kaynak = { ...(next.productSource ?? {}) }
+                if (v === undefined || v === null || v === '' || v === false || (Array.isArray(v) && v.length === 0)) delete kaynak[k]
+                else kaynak[k] = v
+                next.productSource = kaynak
+                setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, configJson: JSON.stringify(next, null, 2) } })
+              }
+              /* eslint-enable @typescript-eslint/no-explicit-any */
+              return (
+                <div className="space-y-3 sm:col-span-2 rounded-lg border border-[var(--border)] p-3">
+                  <h4 className="text-sm font-semibold">Sekmenin Ürün Kaynağı</h4>
+                  <UrunKaynagiAlanlari ps={ogePs} degistir={ogeKaynakYaz} kanalKategorileri={kanalKategorileri} />
+                </div>
+              )
+            })()}
             {tipDef && tipDef.ruleLevel !== 'Block' && (
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-sm text-[var(--text-m)]">Öğe kuralı (JSON — G-M2)</label>
-                <Textarea rows={2} value={ogeModal.oge.ruleJson ?? ''}
-                  onChange={(e) => setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, ruleJson: e.target.value || null } })}
-                  placeholder='{"city":["ankara"]}' />
+              <div className="sm:col-span-2 rounded-lg border border-[var(--border)] p-3">
+                <h4 className="mb-2 text-sm font-semibold">Öğe Hedeflemesi (kimlere gösterilsin)</h4>
+                <HedeflemeFormu
+                  ruleJson={ogeModal.oge.ruleJson}
+                  degistir={(v) => setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, ruleJson: v } })}
+                  memberGroups={memberGroups.map((g) => ({ id: g.id, ad: g.nameI18n?.tr ?? g.code ?? g.id }))}
+                />
               </div>
             )}
           </div>
