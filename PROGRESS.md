@@ -361,6 +361,21 @@ alan için yapılıyorsa o alanın oturumunda, o alanın fazı olarak yürütül
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION ÖZETİ (2026-07-22/11) — 🛠 ADMİN: BLOK DETAYINDA SIFIR JSON (dist CANLIDA)
+Kullanıcı revizyonu: "hiç JSON kalmasın". PageBlockDetailPage'te kalan tüm JSON alanları kaldırıldı:
+- "Gelişmiş (ham JSON)" akordeonu + "örnek iskelet" düğmesi SİLİNDİ; bozuk kayıtlı config için
+  "Ayarları sıfırla" düğmesi; zorunlu olmayan tiplerde "+ Ürün şeridi ekle / kaldır".
+- **Hedefleme formu** (Blok Kuralı JSON'unun görsel karşılığı — PageRuleEvaluator şemasıyla birebir):
+  Cinsiyet/Cihaz/Üyelik çipleri + Şehirler (81 il, plaka değerli MultiPick) + Bölgeler (7 coğrafi
+  bölge — crm_cities.Region değerleri) + Üye Grupları (crm/member-groups). Boş=herkese; açıklama
+  metni AND/OR semantiğini anlatır. Blok VE öğe kuralında aynı bileşen (ruleLevel'a göre görünür).
+- **Öğe modalı:** tabs sekmelerinde "Sekmenin Ürün Kaynağı" formu (ortak UrunKaynagiAlanlari
+  bileşeni — blok config'iyle aynı kontroller); diğer tiplerde öğe config alanı GİZLİ (nadir
+  frames/images yapıları — kayıtlı değer korunur, UI'dan düzenlenmez; ihtiyaçta tip-özel form).
+- Ortak bileşenler: MultiPick (çip+arama), HedeflemeFormu, UrunKaynagiAlanlari. Backend değişmedi.
+- E2E: carousel blokta Hedefleme çip/çoklu seçim çalıştı (Kadın+İstanbul → ruleJson üretildi);
+  sayfada textarea=0, "JSON" metni=0 ✓. admin/dist canlıda — restart gerekmez.
+
 ### ⭐ SESSION ÖZETİ (2026-07-22/10) — 🛠 ADMİN: BLOK CONFIG'İ YAPILANDIRILMIŞ FORM (dist CANLIDA)
 Kullanıcı isteği: blok detayındaki ham JSON config yerine kontrollü form.
 - PageBlockDetailPage "Config (JSON)" kartı → **"Blok Ayarları"**: Ürün Kaynağı (kaynak select
