@@ -337,7 +337,33 @@
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
-### ⭐ SESSION ÖZETİ (2026-07-22) — S2 UYGULANDI: satici/ İSKELET + /api/supplier/me (⚠️ RESTART + NGINX RECREATE BEKLİYOR)
+### ⭐ SESSION ÖZETİ (2026-07-22/2) — S3a-1 UYGULANDI: ÜRÜNLERİM LİSTE+DETAY (⚠️ RESTART BEKLİYOR)
+S2 canlıda doğrulandı (nginx recreate edildi, canlı chromium testi geçti). Kurgu soruları kullanıcıyla
+kararlaştırıldı: **S3a ikiye bölündü** (S3a-1 salt okuma; S3a-2 kart açma/düzenleme formu SONRA),
+**tek birleşik liste** (canlı+gönderim, durum rozetli), alt faz sırası doküman gibi
+(Ürünlerim→Stok&Fiyat→Siparişlerim→Cari→API→Profil). **S3a-1 yapılanlar:**
+- **Backend (Catalog):** `GetSupplierPanelProductsQuery` — owner-scoped BİRLEŞİK liste (Product +
+  ProductSubmission, SupplierProductCode ile birleşir; durum live|pending|rejected + PendingRevision
+  bayrağı; status/search filtre; bellek-içi birleştirme — panel ölçeği). `GetSupplierPanelProductDetailQuery`
+  — canlı ürün (varyant + eksen değerleri Include zinciri) + gönderim geçmişi (ReviewNote, source api|panel).
+  `SupplierController`: `GET /api/supplier/products` (+filtreler) ve `GET /api/supplier/products/{code}`.
+- **Frontend (satici/):** sidebar TAM menü (Ürünlerim aktif; Stok&Fiyat/Siparişlerim/Cari/API/Profil
+  "Yakında" pasif), `ProductsPage` (durum filtresi+arama+sayfalama, satır→detay), `ProductDetailPage`
+  (canlı ürün kartı, varyant tablosu, gönderim geçmişi; red nedeni kırmızı kutuda önde). Dashboard
+  Ürünlerim kısayolu aktif. Build alındı → dist canlıda (volume, nginx işlemi GEREKMEZ).
+- **Test (izole 5051 + chromium, süreçler kapatıldı):** gerçek akışla veri üretildi — test ApiClient
+  `ecs_test_satici` (secret=SaticiTest123!, supplier_merchant, C-TEST-MP'ye bağlı; DB'ye elle eklendi,
+  F4 henüz yok) → partner API'den 3 gönderim → PANEL-001 onaylandı (canlı PRD-E657D084) + revizyon
+  gönderildi (pendingRevision), PANEL-002 pending, PANEL-003 red ("Görseller eksik"). Geçen: birleşik
+  liste 3 satır doğru durumlar ✓, 4 durum filtresi ✓, arama ✓, detaylar ✓, olmayan kod 400 ✓,
+  admin token 403 ✓, başka sahibin kodu 400 ✓; tarayıcı: liste/rozetler/filtre/arama/detay/red-notu/
+  olmayan-URL hepsi ✓. Test verileri dev DB'de BIRAKILDI (kullanıcı testi + veri geçici).
+- **publish/ güncel (test DLL ile birebir). KULLANICIDA: `sudo systemctl restart ecspros`** (yalnız API;
+  nginx'e dokunma gerekmez).
+- **SIRADAKİ: S3a-2** — panelden kart açma/düzenleme formu (grup şemasından üretilen form, Kapı 1
+  doğrulama, aynı staging). Öncesinde form kurgusu konuşulur (K16).
+
+### ⭐ SESSION ÖZETİ (2026-07-22) — S2 UYGULANDI: satici/ İSKELET + /api/supplier/me (✅ CANLIDA)
 S0+S1 restart'ı yapıldı, canlıda doğrulandı (supplier auth uçları yanıt veriyor, Redis AKTİF).
 Ardından **S2 uygulandı**:
 - **Backend:** `SupplierController` (`GET /api/supplier/me`, SupplierOnly + owner-scope) —

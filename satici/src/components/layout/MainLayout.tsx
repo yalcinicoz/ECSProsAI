@@ -1,9 +1,21 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Home, LogOut, Menu, Store } from 'lucide-react'
+import {
+  Home, LogOut, Menu, Store, Package, Boxes, ShoppingCart, Wallet, KeyRound, Building2,
+} from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 
-/** S2 iskeleti — tek menü maddesi (Panel Özeti). S3 ekranları geldikçe menü büyür. */
+/** S3 menüsü — alt fazlar geldikçe maddeler aktifleşir; gelmeyenler "Yakında". */
+const NAV_ITEMS = [
+  { to: '/', icon: Home, label: 'Panel Özeti', end: true },
+  { to: '/products', icon: Package, label: 'Ürünlerim' },
+  { to: '/stock', icon: Boxes, label: 'Stok & Fiyat', soon: true },
+  { to: '/orders', icon: ShoppingCart, label: 'Siparişlerim', soon: true },
+  { to: '/account', icon: Wallet, label: 'Cari Hesabım', soon: true },
+  { to: '/api-account', icon: KeyRound, label: 'API Hesabım', soon: true },
+  { to: '/profile', icon: Building2, label: 'Firma & Kullanıcılar', soon: true },
+]
+
 function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
   const account = useAuthStore((s) => s.account)
   return (
@@ -26,15 +38,28 @@ function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {
 
       {/* Nav */}
       <nav className="flex-1 px-2.5 py-2 space-y-0.5 overflow-y-auto">
-        <NavLink
-          to="/"
-          end
-          className={({ isActive }) => `nav-lnk${isActive ? ' active' : ''}`}
-          onClick={onMobileClose}
-        >
-          <Home size={15} />
-          Panel Özeti
-        </NavLink>
+        {NAV_ITEMS.map((item) =>
+          item.soon ? (
+            <span key={item.to} className="nav-lnk opacity-40 cursor-default">
+              <item.icon size={15} />
+              {item.label}
+              <span className="ml-auto text-[9px] font-bold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,.3)' }}>
+                Yakında
+              </span>
+            </span>
+          ) : (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) => `nav-lnk${isActive ? ' active' : ''}`}
+              onClick={onMobileClose}
+            >
+              <item.icon size={15} />
+              {item.label}
+            </NavLink>
+          ),
+        )}
       </nav>
 
       {/* Cari kodu */}

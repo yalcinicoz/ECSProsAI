@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/auth'
 
 /**
@@ -6,6 +7,7 @@ import { useAuthStore } from '@/store/auth'
  * S3'te gerçek özet kartları gelir (bekleyen onay, sipariş, düşük stok, cari bakiye).
  */
 export function DashboardPage() {
+  const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const account = useAuthStore((s) => s.account)
   const fetchMe = useAuthStore((s) => s.fetchMe)
@@ -47,8 +49,15 @@ export function DashboardPage() {
             )}
           </div>
 
-          {/* S3 yer tutucuları */}
-          {['Ürünlerim', 'Siparişlerim', 'Cari Hesabım'].map((t) => (
+          {/* Ekran kısayolları — alt fazlar geldikçe aktifleşir */}
+          <button
+            className="stat text-left cursor-pointer transition-shadow hover:shadow-md"
+            onClick={() => navigate('/products')}
+          >
+            <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Ürünlerim</div>
+            <div className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>Ürün ve gönderim listesi →</div>
+          </button>
+          {['Siparişlerim', 'Cari Hesabım'].map((t) => (
             <div key={t} className="stat opacity-60">
               <div className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{t}</div>
               <div className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>Yakında</div>
