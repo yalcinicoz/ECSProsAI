@@ -40,7 +40,7 @@ public abstract class StorePageController : Controller
         ViewData["MsSegment"] = segment;
         ViewData["MsNavigasyon"] = platform is null
             ? NavigasyonVm.Bos
-            : await NavigasyonuGetirAsync(services, platform.Id, context.HttpContext.RequestAborted);
+            : await NavigasyonuGetirAsync(services, platform, context.HttpContext.RequestAborted);
 
         // C8/D3: CMS legal sayfaları — sepet/ödeme sözleşme modalları + nav'daki kayıt
         // belge modalı (üyelik/KVKK) bunlardan beslenir; nav her sayfada olduğundan
@@ -68,7 +68,8 @@ public abstract class StorePageController : Controller
         ECSPros.Api.Services.Store.VisitorSegment segment, CancellationToken ct)
     {
         var composer = services.GetRequiredService<ECSPros.Api.Services.Store.IPageComposer>();
-        var (_, bloklar) = await composer.ComposeAsync(platformId, "global-top", segment, ct);
+        // global-top duyuru barı üye bağlamlı ürün kaynağı taşımaz — memberId gerekmez
+        var (_, bloklar) = await composer.ComposeAsync(platformId, "global-top", segment, null, ct);
         var metinler = bloklar
             .Where(b => b.BlockType == "announcement")
             .SelectMany(b => b.Items)
@@ -109,8 +110,9 @@ public abstract class StorePageController : Controller
     }
 
     private static async Task<NavigasyonVm> NavigasyonuGetirAsync(
-        IServiceProvider services, Guid platformId, CancellationToken ct)
+        IServiceProvider services, StorePlatformBilgisi platform, CancellationToken ct)
     {
+        var platformId = platform.Id;
         var cache = services.GetRequiredService<IMemoryCache>();
 
         var vm = await cache.GetOrCreateAsync($"store-nav:{platformId}", async entry =>
@@ -121,6 +123,12 @@ public abstract class StorePageController : Controller
             var sonuc = await mediator.Send(new GetChannelCategoriesQuery(platformId, ActiveOnly: true), ct);
             if (sonuc.IsFailure)
                 return NavigasyonVm.Bos;
+
+            // Kategori başına "müşteri gerçekten ürün görecek mi" seti. Hesap liste
+            // sayfasıyla aynı geçit zincirini koştuğundan ucuz değildir: ayrı anahtarla
+            // 15 dk cache'lenir ve YOKSA ARKA PLANDA hesaplanır — istek hiç bekletilmez,
+            // set hazır olana kadar menü budanmadan gösterilir (güvenli varsayılan).
+            var doluIdler = PresenceGetirVeyaBaslat(services, platform);
 
             var kategoriler = sonuc.Value!;
             List<NavKategori> Dallar(Guid? parentId) =>
@@ -133,12 +141,73 @@ public abstract class StorePageController : Controller
                         k.Slug,
                         k.DisplayImageUrl,
                         k.BadgeLabel,
-                        Dallar(k.Id)))
+                        Dallar(k.Id),
+                        UrunVar: doluIdler is null || doluIdler.Contains(k.Id)))
                     .ToList();
 
-            return new NavigasyonVm(Dallar(null));
+            // Tamamı boş dallar (kendisinde ve altlarında hiç ürün yok) menülerde
+            // gösterilmez; tam ağaç doğrudan URL erişimi için TumKokler'de saklanır.
+            static List<NavKategori> BosDallariBuda(IReadOnlyList<NavKategori> dallar) =>
+                dallar
+                    .Where(d => d.DalindaUrunVar)
+                    .Select(d => d with { Cocuklar = BosDallariBuda(d.Cocuklar) })
+                    .ToList();
+
+            var tumu = Dallar(null);
+            return new NavigasyonVm(BosDallariBuda(tumu), tumu);
         });
 
         return vm ?? NavigasyonVm.Bos;
+    }
+
+    private static readonly TimeSpan PresenceCacheSuresi = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// Boş-olmayan kategori Id setini cache'ten verir; yoksa null döner ve hesabı
+    /// arka planda başlatır (tekilleştirilmiş). Hesap bitince nav cache'i düşürülür ki
+    /// bir sonraki istek menüyü budanmış kursun.
+    /// </summary>
+    private static HashSet<Guid>? PresenceGetirVeyaBaslat(IServiceProvider services, StorePlatformBilgisi platform)
+    {
+        var cache = services.GetRequiredService<IMemoryCache>();
+        var anahtar = $"store-nav-presence:{platform.Id}";
+        if (cache.TryGetValue(anahtar, out HashSet<Guid>? hazir))
+            return hazir;
+
+        var calisiyorAnahtar = anahtar + ":calisiyor";
+        if (cache.TryGetValue(calisiyorAnahtar, out bool _))
+            return null; // hesap zaten yolda
+        cache.Set(calisiyorAnahtar, true, TimeSpan.FromMinutes(2));
+
+        var scopeFactory = services.GetRequiredService<IServiceScopeFactory>();
+        var platformId = platform.Id;
+        var stokGoster = platform.StokBitenGoster;
+        var stokTarih = platform.StokBitenGosterTarih;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = scopeFactory.CreateScope();
+                var med = scope.ServiceProvider.GetRequiredService<IMediator>();
+                var r = await med.Send(
+                    new ECSPros.Storefront.Application.Queries.GetChannelCategoryProductPresence
+                        .GetChannelCategoryProductPresenceQuery(platformId, stokGoster, stokTarih),
+                    CancellationToken.None);
+                if (r.IsSuccess)
+                {
+                    cache.Set(anahtar, r.Value!, PresenceCacheSuresi);
+                    cache.Remove($"store-nav:{platformId}"); // menü bir sonraki istekte budansın
+                }
+            }
+            catch
+            {
+                // sessiz: presence hesaplanamazsa menü budanmadan gösterilmeye devam eder
+            }
+            finally
+            {
+                cache.Remove(calisiyorAnahtar);
+            }
+        });
+        return null;
     }
 }

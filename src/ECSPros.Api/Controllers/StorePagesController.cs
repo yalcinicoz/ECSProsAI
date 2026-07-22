@@ -31,7 +31,8 @@ public class StorePagesController(IPageComposer composer, IVisitorSegmentResolve
 
         var segment = await segmentResolver.ResolveAsync(
             HttpContext, VisitorSegmentResolver.MemberIdFromClaims(User), ct);
-        var (version, blocks) = await composer.ComposeAsync(firmPlatformId, placement, segment, ct);
+        var (version, blocks) = await composer.ComposeAsync(
+            firmPlatformId, placement, segment, VisitorSegmentResolver.MemberIdFromClaims(User), ct);
         return Ok(new { success = true, data = new { version, blocks } });
     }
 
@@ -46,7 +47,8 @@ public class StorePagesController(IPageComposer composer, IVisitorSegmentResolve
 
         var segment = await segmentResolver.ResolveAsync(
             HttpContext, VisitorSegmentResolver.MemberIdFromClaims(User), ct);
-        var urunler = await composer.ResolveBlockProductsAsync(firmPlatformId, blockId, page, segment, ct);
+        var urunler = await composer.ResolveBlockProductsAsync(
+            firmPlatformId, blockId, page, segment, VisitorSegmentResolver.MemberIdFromClaims(User), ct);
         if (urunler is null)
             return NotFound(new { success = false, error = "Blok aktif yayında bulunamadı." });
         return Ok(new { success = true, data = new { items = urunler, page } });

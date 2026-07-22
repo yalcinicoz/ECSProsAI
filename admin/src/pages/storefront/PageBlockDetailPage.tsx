@@ -56,7 +56,7 @@ const ORNEK_CONFIG: Record<string, object> = {
   categories: { gorunum: 'kapsul', mobileCarousel: true },
   'kategori-cok-satanlar': { productSource: { source: 'category', categoryId: '00000000-0000-0000-0000-000000000000', limit: 4, sort: 'best-sellers' }, seeAllUrl: '/urun-listesi' },
 }
-const KAYNAKLAR = ['new-arrivals', 'best-sellers', 'campaign', 'category', 'brand', 'manual']
+const KAYNAKLAR = ['new-arrivals', 'best-sellers', 'campaign', 'category', 'brand', 'manual', 'recently-viewed', 'favorites']
 
 const bosOge = (sira: number): ItemDto => ({
   titleI18n: { tr: '' }, subtitleI18n: null, imageUrl: null, mobileImageUrl: null,
@@ -228,7 +228,7 @@ export function PageBlockDetailPage() {
                 : 'Tipe özgü ayarlar: tema, seeAllUrl, endsAt (flash), mobileCarousel, gorunum...'}
           />
           <p className="text-xs text-[var(--text-s)]">
-            {tipDef?.requiresProductSource && 'Bu tipte productSource zorunludur (Yayınla denetler). Filtre bayrakları: inStockOnly (yalnız stokta), tags (etiket eşleşmesi), discountedOnly (yalnız indirimli) — category kaynağında desteklenmez. '}
+            {tipDef?.requiresProductSource && 'Bu tipte productSource zorunludur (Yayınla denetler). Filtre bayrakları: inStockOnly (yalnız stokta), tags (etiket eşleşmesi), discountedOnly (yalnız indirimli) — category kaynağında desteklenmez. Üye bağlamlı kaynaklar: recently-viewed (son gezilenler), favorites (favoriler) — içerik ziyaretçinin kendi verisiyle dolar; misafirde blok görünmez. '}
             {tipDef?.requiresCollectionSource && 'Bu tipte collectionSource zorunludur; yalnız onaylı+herkese açık koleksiyonlar listelenir. '}
             Kural seviyesi: {tipDef?.ruleLevel === 'Block' ? 'blok' : tipDef?.ruleLevel === 'Item' ? 'öğe' : 'blok + öğe'} (kurallar G-M2'de canlıya bağlanır).
           </p>

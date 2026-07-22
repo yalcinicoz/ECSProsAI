@@ -387,8 +387,19 @@ H-M5/H10'un ilk maddesi uygulandı — **public koleksiyon sayfası (E6 ShareCod
   etiket+stok 2 ✓, olmayan etiket 0 + "ürünsüz blok basılmaz" ✓. Taslak bloklar silindi.
   Dev DB'de kaldı: 8 üründe 'h10-test' etiketi + P-00010802/P-00015113'te suni mishar indirimi
   (CompareAtPrice=1.25×; detay sayfasında eski fiyat görünür — veri geçici).
-- **KALAN H10:** (3) son gezilenler/favoriler vitrin kaynakları (üye bazlı cache dikkat) →
-  (4) YanMenu statü bloğu → (5) GeoLite2 (mmdb KULLANICIDA, gelmezse bilinçli açık). Sonra H7 QA.
+- **H10-3 son gezilenler/favoriler vitrin kaynakları ✅ (aynı gün):** `recently-viewed`/`favorites`
+  kaynak tipleri (E12 ViewedProduct + E5 Favorites verisi hazırdı). SIZMA GÜVENLİĞİ: üye bağlamlı
+  bloklar segment-hash'li paket cache'ine ÜRÜNSÜZ yazılır; `UyeBloklariniDoldurAsync` her istekte
+  üye kimliğiyle doldurur (misafir/verisiz üye → blok düşer); infinity devamında bu kaynaklar cache'e
+  hiç girmez. ComposeAsync/ResolveBlockProductsAsync imzalarına `Guid? memberId` eklendi (Home SSR:
+  ViewData MsUye; store API: bearer claims; global-top: null). Önizleme dürüst gerekçe verir
+  ("üye bağlamlı — ziyaretçinin verisiyle dolar"). Tabs sekmelerinde bilinçli desteklenmez.
+  Admin KAYNAKLAR + açıklama güncellendi (dist canlıda). Test (5051, TOZLU platformunda yayın —
+  canlı mishar etkilenmedi; test v3 ile temizlendi): üye A kendi 1+1 ürününü gördü (soğuk+cache hit),
+  misafirde blok yok ✓, verisiz üye B'de blok yok ✓ (A'nın verisi SIZMADI ✓). Test üyeleri dev DB'de:
+  h10test@test.local / h10test-b@test.local (H10Test123!), tozlu'da 2 favori+3 gezilen.
+- **KALAN H10:** (4) YanMenu statü bloğu → (5) GeoLite2 (mmdb KULLANICIDA, gelmezse bilinçli açık).
+  Sonra H7 QA.
 
 ### SESSION ÖZETİ (2026-07-22/4) — 🌐 WEB SİTESİ: MOBİL RENK PANELİ MÜKERRER DÜZELTMESİ (✅ CANLIDA, restart gerekmedi)
 Mobil ürün listesinde renk rozetine basınca alttan açılan panelde ilk 4 renk İKİ KEZ görünüyordu.
