@@ -361,6 +361,20 @@ alan için yapılıyorsa o alanın oturumunda, o alanın fazı olarak yürütül
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
 
+### ⭐ SESSION ÖZETİ (2026-07-22/12) — 🌐 BEDEN SIRALAMASI (⚠️ RESTART BEKLİYOR; VERİ UYGULANDI)
+Kullanıcı isteği: bedenler gerçek-hayat sırasıyla gelsin; 8/9/10'da 10 başa gelmesin.
+- **Veri:** 403 beden değerine (definition.attribute_values, tip=beden) 1..N SortOrder atandı:
+  harfliler gerçek sırada önce (XXS..7XL; SM/LX/XL-2XL aralıkları dahil), sonra sayısallar
+  sayı değerine göre (AY/12→yaş çevrimiyle 8 ay < 1.5 yaş doğru; YENİ DOĞAN sayısal başı;
+  8<9<10 ✓), ST/STD en sona. Betik KALICI+idempotent: `tools/veri-bakim/beden-siralama.py`
+  (go-live veri aktarımı sonrası yeniden koşulmalı — MigrationTool tekrarlanabilirlik kuralı).
+- **Backend:** StoreVariantAttributeDto additive `ValueSortOrder` (detail handler doldurur);
+  StoreUrunDetayBuilder beden sıralaması artık havuz SortOrder'ından (0 kalan eski kayıt için
+  BedenSirasi sezgiseli yedek). Facet'ler zaten value SortOrder kullanıyordu → filtre paneli
+  kendiliğinden düzeldi (⚠️ facet cache ≤15 dk gecikebilir).
+- Test (5051): sayısal ürün 4,6,8,10,12 ✓; harfli ürün S,M,L,XL ✓.
+- publish/ güncel — **KULLANICIDA: `sudo systemctl restart ecspros`.**
+
 ### ⭐ SESSION ÖZETİ (2026-07-22/11) — 🛠 ADMİN: BLOK DETAYINDA SIFIR JSON (dist CANLIDA)
 Kullanıcı revizyonu: "hiç JSON kalmasın". PageBlockDetailPage'te kalan tüm JSON alanları kaldırıldı:
 - "Gelişmiş (ham JSON)" akordeonu + "örnek iskelet" düğmesi SİLİNDİ; bozuk kayıtlı config için

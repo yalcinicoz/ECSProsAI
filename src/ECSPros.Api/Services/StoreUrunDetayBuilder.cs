@@ -120,13 +120,18 @@ public class StoreUrunDetayBuilder(
                     .FirstOrDefault(a => a.AttributeTypeCode == bedenTip.AttributeTypeCode)))
                 .Where(x => x.Beden is not null)
                 .DistinctBy(x => x.Beden!.AttributeValueId)
-                .Select(x => new BedenSecenekVm(
+                .Select(x => (Vm: new BedenSecenekVm(
                     TrAd(x.Beden!.AttributeValueNameI18n),
                     x.Varyant.Id,
                     VaryantFiyati(x.Varyant.PlatformPrice, x.Varyant.BasePrice),
-                    Satilabilir(x.Varyant.Id)))
-                .OrderBy(x => BedenSirasi(x.Ad))
-                .ThenBy(x => x.Ad, StringComparer.Create(new System.Globalization.CultureInfo("tr-TR"), true))
+                    Satilabilir(x.Varyant.Id)), x.Beden!.ValueSortOrder))
+                // 2026-07-22: beden sırası artık DEĞER HAVUZUNDAKİ SortOrder'dan (tüm 403 beden
+                // gerçek-hayat sırasıyla numaralandı); 0 kalan eski kayıt için sezgisel yedek.
+                .OrderBy(x => x.ValueSortOrder > 0 ? 0 : 1)
+                .ThenBy(x => x.ValueSortOrder)
+                .ThenBy(x => BedenSirasi(x.Vm.Ad))
+                .ThenBy(x => x.Vm.Ad, StringComparer.Create(new System.Globalization.CultureInfo("tr-TR"), true))
+                .Select(x => x.Vm)
                 .ToList();
         }
 
