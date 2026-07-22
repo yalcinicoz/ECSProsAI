@@ -431,43 +431,9 @@
             });
         };
 
-        const demoGorselAramaSonuclari = [
-            {
-                id: 1001,
-                productName: "Gomlek Yaka Dugmeli Triko Kazak",
-                color: "Kahverengi",
-                imageUrl: "/testimage/urun-detay/1.webp",
-                price: 799.90,
-                listPrice: 999.90,
-                discountRate: 20,
-                productUrl: "/urun-detay",
-                modelCode: "MSX-TRK-1001"
-            },
-            {
-                id: 1002,
-                productName: "Kendinden Desenli Triko Bluz",
-                color: "Siyah",
-                imageUrl: "/testimage/rastgele-urun-resim/kendinden-desenli-triko-bluz-1f2c1-173f471_2032.webp",
-                price: 649.90,
-                listPrice: 749.90,
-                discountRate: 13,
-                productUrl: "/urun-detay",
-                modelCode: "MSX-BLZ-1002"
-            },
-            {
-                id: 1003,
-                productName: "Bel Kusakli Desenli Viskon Elbise",
-                color: "Yesil",
-                imageUrl: "/testimage/rastgele-urun-resim/bel-kusakli-desenli-viskon-elbise-1afca-175c871_3200.webp",
-                price: 899.90,
-                listPrice: 1099.90,
-                discountRate: 18,
-                productUrl: "/urun-detay",
-                modelCode: "MSX-ELB-1003"
-            }
-        ];
-
-        const dosyaGonder = async () => {
+        const dosyaGonder = async (dosya) => {
+            const formData = new FormData();
+            formData.append("file", dosya);
             gonderButonu.disabled = true;
             gonderButonu.textContent = "Aranıyor";
             taraButonu.disabled = true;
@@ -478,24 +444,47 @@
             sonucYaz("");
 
             try {
-                await new Promise((resolve) => window.setTimeout(resolve, 450));
-                const sonucSeciliBolge = seciliBolge?.baslik || "";
+                const cevap = await fetch("/gorsel-arama", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const cevapMetni = await cevap.text();
+                let sonucJson = null;
+
+                try {
+                    sonucJson = JSON.parse(cevapMetni);
+                } catch {
+                    sonucJson = null;
+                }
+
+                if (!cevap.ok || !sonucJson || !Array.isArray(sonucJson.results)) {
+                    sonucYaz("Görsel arama tamamlanamadı. Lütfen daha net bir ürün görseli deneyin.", "hata");
+                    if (secimEkraniDurum) {
+                        secimEkraniDurum.textContent = "Arama tamamlanamadı";
+                    }
+
+                    if (secimEkraniMetin) {
+                        secimEkraniMetin.textContent = "Lütfen daha net bir ürün görseli deneyin.";
+                    }
+                    return;
+                }
+
                 modalKapat();
                 document.dispatchEvent(new CustomEvent("ms:gorsel-arama-sonuc", {
                     detail: {
-                        count: demoGorselAramaSonuclari.length,
-                        results: demoGorselAramaSonuclari,
-                        seciliBolge: sonucSeciliBolge
+                        ...sonucJson,
+                        seciliBolge: seciliBolge?.baslik || ""
                     }
                 }));
             } catch {
-                sonucYaz("Demo görsel arama sonuçları hazırlanamadı. Lütfen tekrar deneyin.", "hata");
+                sonucYaz("Görsel arama servisine ulaşılamadı. Lütfen tekrar deneyin.", "hata");
                 if (secimEkraniDurum) {
-                    secimEkraniDurum.textContent = "Sonuç hazırlanamadı";
+                    secimEkraniDurum.textContent = "Bağlantı kurulamadı";
                 }
 
                 if (secimEkraniMetin) {
-                    secimEkraniMetin.textContent = "Demo sonuçları hazırlanamadı. Lütfen tekrar deneyin.";
+                    secimEkraniMetin.textContent = "Görsel arama servisine ulaşılamadı. Lütfen tekrar deneyin.";
                 }
             } finally {
                 gonderButonu.disabled = !aktifDosya;

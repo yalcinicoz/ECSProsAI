@@ -15,7 +15,7 @@
 
 | # | Alan | Kod tabanı | Durum | SIRADAKİ İŞ | Plan dokümanı |
 |---|------|-----------|-------|-------------|---------------|
-| 1 | 🌐 **Web sitesi** (Razor storefront) | `src/ECSPros.Api` Views + `/opt/misharix` tasarım | A→G+P kapalı; H-M1..M3 tamam; canlıda | H3 görsel arama → H-M5 (H10+H7) → İ (eski SPA emekli) | `docs/misharix-razor-tasima-plani.md` |
+| 1 | 🌐 **Web sitesi** (Razor storefront) | `src/ECSPros.Api` Views + `/opt/misharix` tasarım | A→G+P kapalı; H-M1..M4 tamam (H3 görsel arama 2026-07-22 ⚠️ restart bekliyor) | H-M5 (H10 devredenler + H7 QA) → İ (eski SPA emekli) | `docs/misharix-razor-tasima-plani.md` |
 | 2 | 🛠 **Admin panel** (React) | `admin/` | Faz 9 tamam; test bulguları kapalı (B-13 çeviri, B-14 sayaç düşük öncelik) | Talep bazlı — bekleyen büyük iş yok (FAZ R ERP ertelendi) | `docs/misharix-tasarim-projesi-inceleme.md` (envanter) |
 | 3 | 🔌 **Dış API** (Partner entegrasyon) | `/api/partner/v1` + `Controllers/Partner/` | F0→F2b tamam: ürün ingestion uçtan uca canlıda | F2b-2d sipariş/dropship (⚠️ `order.write` tip kararı BLOKE) → F4 ApiClient yönetim paneli → F5 rate limit/HSTS | `docs/api-hesaplari-tasarimi.md` |
 | 4 | 🏪 **Satıcı paneli** | `satici/` + `/api/supplier/*` | S0-S2 canlıda; S3a-1 (Ürünlerim liste+detay) uygulandı ⚠️ restart bekliyor | S3a-2 kart açma formu (ÖNCE kurgu konuş, K16) → S3b Stok&Fiyat → S3c-S3f | `docs/satici-paneli-tasarimi.md` |
@@ -25,7 +25,7 @@ Inventory…), cari çatı (B5 finance birleşmesi ertelendi), stok üçlü yap�
 kalan), sipariş/paket/kargo kod sistemi (canlıda), MigrationTool. Ortak çekirdek değişikliği hangi
 alan için yapılıyorsa o alanın oturumunda, o alanın fazı olarak yürütülür.
 
-**Bekleyen deploy:** S3a-1 → `sudo systemctl restart ecspros` (yalnız API).
+**Bekleyen deploy:** S3a-1 + H3 → `sudo systemctl restart ecspros` (tek restart ikisini de canlıya alır; nginx işlemi gerekmez).
 
 ---
 
@@ -360,6 +360,30 @@ alan için yapılıyorsa o alanın oturumunda, o alanın fazı olarak yürütül
 ## Aktif Session Notları
 
 > Bu bölümü her session başında güncelle, session sonunda temizle.
+
+### ⭐ SESSION ÖZETİ (2026-07-22/3) — 🌐 WEB SİTESİ: H3 GÖRSEL ARAMA TAMAM (⚠️ RESTART BEKLİYOR)
+Alan: Web sitesi (K19 panosu). H3'ün dış bağımlılığı çözülmüştü (visual_search entegrasyonu DB'de,
+Mishar platformuna özel, apiKey şifreli). Yapılanlar:
+- **Smoke test (K5):** servis sağlıklı (413ms/18 sonuç; indeksli örnek exact 0.9982 ile 1. sırada;
+  isabet çok iyi — bot sorgusu→hep bot/çizme). ⚠️ **İndeks kapsamı KISMİ**: bir katalog örneği
+  (P-00000118) indekste yok — servis tarafı tazeleme KULLANICIDA.
+- **KRİTİK KEŞİF:** `erp_variant_data.VariantId` BAYAT (varyantlar yeniden kurulmuş, 0 eşleşme);
+  barkod+modelCode %100 (327.821/327.821) → eşleme urunId→erpProductId→modelCode→katalog.
+- **Backend:** `ResolveErpProductRefsQuery` (Integration; raw SQL, `IIntegrationDbContext.Database`
+  facade Accounts kalıbıyla eklendi) + migration `AddErpProductIdIndex` (ifade index'i, dev DB'ye
+  UYGULANDI, 0.1ms) + `GetVisualSearchCardsQuery` (Catalog; fiyat önceliği liste sayfasıyla aynı:
+  kanal→varyant min→base; yalnız satışa açık) + `DbVisualSearchSettingsProvider` (DbSmtp deseni,
+  platforma özel tercih, 2dk cache, VisualSearch:* config yedeği) + `GorselAramaController`
+  (POST /gorsel-arama; 10MB sınır; 502/503 dostane hatalar).
+- **Frontend:** `_GorselAramaModalKutu.cshtml` DEMO gönderimi gerçek `fetch("/gorsel-arama")` ile
+  değiştirildi (legacy davranış; dosya seçince otomatik arama). Kamera butonu+modal Faz A'dan hazırdı.
+- **Test (izole 5051, süreçler kapatıldı):** endpoint 16 zengin sonuç (görsel/ad/fiyat/URL) ✓;
+  dosyasız 400 ✓; metin dosyası 502+modal hatası ✓; 12MB 400 ✓; tarayıcı E2E: kamera→modal→dosya→
+  otomatik arama→16 kart→kart tıkla→ürün detay slug'ı ✓.
+- Program.cs commit'ine S1'in commit'lenmemiş SupplierOnly policy satırları da girdi (canlıda zaten).
+- **publish/ güncel (test DLL ile birebir). KULLANICIDA: `sudo systemctl restart ecspros`**
+  (S3a-1 ile birlikte tek restart).
+- **SIRADAKİ (Web sitesi):** H-M5 — H10 devredenler + H7 QA.
 
 ### ⭐ SESSION ÖZETİ (2026-07-22/2) — S3a-1 UYGULANDI: ÜRÜNLERİM LİSTE+DETAY (⚠️ RESTART BEKLİYOR)
 S2 canlıda doğrulandı (nginx recreate edildi, canlı chromium testi geçti). Kurgu soruları kullanıcıyla

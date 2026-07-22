@@ -168,6 +168,9 @@ builder.Services.AddScoped<ECSPros.Shared.Infrastructure.Messaging.ISmtpSettings
 // SMS ayarları DB'deki platform servis tanımından (yoksa log yedeği — GES Telekom)
 builder.Services.AddScoped<ECSPros.Shared.Infrastructure.Messaging.ISmsSettingsProvider,
     ECSPros.Api.Services.DbSmsSettingsProvider>();
+// H3: Görsel arama ayarları DB'deki visual_search entegrasyonundan (yoksa VisualSearch:* config)
+builder.Services.AddScoped<ECSPros.Api.Services.IVisualSearchSettingsProvider,
+    ECSPros.Api.Services.DbVisualSearchSettingsProvider>();
 
 // ─── Infrastructure Modules ────────────────────────────────────────
 builder.Services.AddIamInfrastructure(npgsqlDataSource, builder.Configuration);
@@ -256,6 +259,10 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("MemberOnly", policy =>
         policy.RequireClaim("type", "member"));
 
+    // Pazaryeri satıcı paneli (satici/) — yalnız SupplierUser (type=supplier_user) geçer.
+    options.AddPolicy("SupplierOnly", policy =>
+        policy.RequireClaim("type", "supplier_user"));
+
     // F0 — Kimlik sınırı: makine/üye kimlikleri düz [Authorize] yönetim uçlarını GEÇEMEZ.
     // Üye token'ı (type=member) ve API hesabı token'ı (type=api_client), admin token'ıyla aynı
     // Jwt:Secret ile imzalandığından yalnız "type" claim'i ayrımı güvenlik sınırıdır.
@@ -264,7 +271,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", policy =>
         policy.RequireAuthenticatedUser()
               .RequireAssertion(ctx => !ctx.User.HasClaim(c =>
-                  c.Type == "type" && (c.Value == "member" || c.Value == "api_client"))));
+                  c.Type == "type" && (c.Value == "member" || c.Value == "api_client" || c.Value == "supplier_user"))));
 
     // Partner API "whoami" gibi scope gerektirmeyen ama YALNIZ API hesabına açık uçlar için.
     options.AddPolicy("ApiClientOnly", policy =>
