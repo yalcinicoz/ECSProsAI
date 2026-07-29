@@ -33,6 +33,11 @@ public class Member : BaseEntity
     public DateTime? LastLoginAt { get; set; }
     public DateTime? AnonymizedAt { get; set; }
 
+    // Eski sistem (juludedb.webmembers.Id) üye sicil no'su — go-live aktarımında (2026-07-23)
+    // doldurulur. Hem tekrar-çalıştırma tekilliği (unique) hem sipariş geri-yazmada
+    // yeni üye ↔ eski üye eşlemesi için. Yeni kayıtlarda null.
+    public int? LegacyMemberId { get; set; }
+
     public MemberGroup MemberGroup { get; set; } = null!;
     public ICollection<Address> Addresses { get; set; } = new List<Address>();
     public ICollection<Cart> Carts { get; set; } = new List<Cart>();
