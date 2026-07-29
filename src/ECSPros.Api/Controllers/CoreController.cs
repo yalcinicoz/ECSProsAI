@@ -6,6 +6,7 @@ using ECSPros.Core.Application.Commands.CreateExpenseType;
 using ECSPros.Core.Application.Commands.CreateFirm;
 using ECSPros.Core.Application.Commands.CreateFirmPlatformIntegration;
 using ECSPros.Core.Application.Commands.CreateIntegrationService;
+using ECSPros.Core.Application.Commands.ManageCargoBarcodeRange;
 using ECSPros.Core.Application.Commands.UpdateIntegrationService;
 using ECSPros.Core.Application.Commands.CreateFirmPlatform;
 using ECSPros.Core.Application.Commands.CreatePlatformType;
@@ -115,7 +116,9 @@ public class CoreController : ControllerBase
     {
         var result = await _mediator.Send(
             new CreateIntegrationServiceCommand(request.Code, request.NameI18n, request.ServiceType,
-                request.IsAvailable, request.LogoUrl, request.TrackingUrlTemplate, request.SettingsSchema), ct);
+                request.IsAvailable, request.LogoUrl, request.TrackingUrlTemplate, request.SettingsSchema,
+                request.CargoCodeStrategy, request.CargoCodeMinLength,
+                request.CargoCodeMaxLength, request.CargoCodeCharset), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Created(string.Empty, new { success = true, data = new { id = result.Value } });
@@ -128,7 +131,44 @@ public class CoreController : ControllerBase
     {
         var result = await _mediator.Send(
             new UpdateIntegrationServiceCommand(id, request.NameI18n, request.IsAvailable,
-                request.LogoUrl, request.TrackingUrlTemplate, request.SettingsSchema), ct);
+                request.LogoUrl, request.TrackingUrlTemplate, request.SettingsSchema,
+                request.CargoCodeStrategy, request.CargoCodeMinLength,
+                request.CargoCodeMaxLength, request.CargoCodeCharset), ct);
+        if (result.IsFailure)
+            return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    // ── Kargo Barkod Aralıkları (F3 — range stratejisi, örn. PTT) ──────────────
+
+    /// <summary>Kargo barkod aralıklarını listeler (doluluk bilgisiyle).</summary>
+    [HttpGet("cargo-barcode-ranges")]
+    public async Task<IActionResult> GetCargoBarcodeRanges(
+        [FromQuery] Guid? firmPlatformIntegrationId = null, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetCargoBarcodeRangesQuery(firmPlatformIntegrationId), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kargo entegrasyonuna tahsisli barkod aralığı tanımlar.</summary>
+    [HttpPost("cargo-barcode-ranges")]
+    public async Task<IActionResult> CreateCargoBarcodeRange(
+        [FromBody] CreateCargoBarcodeRangeRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new CreateCargoBarcodeRangeCommand(
+            request.FirmPlatformIntegrationId, request.RangeStart, request.RangeEnd), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Created(string.Empty, new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>Aralığı aktif/pasif yapar — sınırlar ve sayaç değiştirilemez
+    /// (tahsis edilen barkod havuza geri dönmez).</summary>
+    [HttpPut("cargo-barcode-ranges/{id:guid}/active")]
+    public async Task<IActionResult> SetCargoBarcodeRangeActive(
+        Guid id, [FromBody] SetCargoBarcodeRangeActiveRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new SetCargoBarcodeRangeActiveCommand(id, request.IsActive), ct);
         if (result.IsFailure)
             return NotFound(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -281,6 +321,20 @@ public class CoreController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>Mahalle-kargo atama ekranı (2026-07-22): bir kapsamın (firma geneli
+    /// "default" / tek mahalle "neighborhood") kural listesini komple değiştirir.</summary>
+    [HttpPut("firms/{firmId:guid}/cargo-rules")]
+    public async Task<IActionResult> UpsertCargoRules(Guid firmId, [FromBody] UpsertCargoRulesRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Core.Application.Commands.UpsertCargoRules.UpsertCargoRulesCommand(
+            firmId, request.RuleType, request.NeighborhoodId,
+            (request.Items ?? []).Select(i => new ECSPros.Core.Application.Commands.UpsertCargoRules.UpsertCargoRuleItem(
+                i.FirmPlatformIntegrationId, i.Priority)).ToList()), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { count = result.Value } });
+    }
+
     /// <summary>Firmaya yeni kargo kuralı ekler.</summary>
     [HttpPost("firms/{firmId:guid}/cargo-rules")]
     public async Task<IActionResult> CreateCargoRule(Guid firmId, [FromBody] CreateCargoRuleRequest request, CancellationToken ct)
@@ -395,7 +449,11 @@ public record CreateIntegrationServiceRequest(
     bool IsAvailable = true,
     string? LogoUrl = null,
     string? TrackingUrlTemplate = null,
-    List<PlatformSchemaField>? SettingsSchema = null
+    List<PlatformSchemaField>? SettingsSchema = null,
+    string? CargoCodeStrategy = null,
+    int? CargoCodeMinLength = null,
+    int? CargoCodeMaxLength = null,
+    string? CargoCodeCharset = null
 );
 
 public record UpdateIntegrationServiceRequest(
@@ -403,8 +461,19 @@ public record UpdateIntegrationServiceRequest(
     bool IsAvailable,
     string? LogoUrl = null,
     string? TrackingUrlTemplate = null,
-    List<PlatformSchemaField>? SettingsSchema = null
+    List<PlatformSchemaField>? SettingsSchema = null,
+    string? CargoCodeStrategy = null,
+    int? CargoCodeMinLength = null,
+    int? CargoCodeMaxLength = null,
+    string? CargoCodeCharset = null
 );
+
+public record CreateCargoBarcodeRangeRequest(
+    Guid FirmPlatformIntegrationId,
+    long RangeStart,
+    long RangeEnd);
+
+public record SetCargoBarcodeRangeActiveRequest(bool IsActive);
 
 public record CreateCargoRuleRequest(
     Guid FirmPlatformIntegrationId,
@@ -414,6 +483,14 @@ public record CreateCargoRuleRequest(
     Guid? CityId,
     int Priority
 );
+
+public record UpsertCargoRulesRequest(
+    string RuleType,               // default | neighborhood
+    Guid? NeighborhoodId,
+    List<UpsertCargoRuleItemRequest>? Items
+);
+
+public record UpsertCargoRuleItemRequest(Guid FirmPlatformIntegrationId, int Priority);
 
 public record CreatePlatformTypeRequest(
     string Code,

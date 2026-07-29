@@ -162,7 +162,8 @@ public static class PageBlockCatalog
                         "city" => deger.Length == 2 && deger.All(char.IsAsciiDigit),
                         "region" => deger.All(ch => ch is >= 'a' and <= 'z' or >= '0' and <= '9' or '-'),
                         "gender" => deger is "male" or "female",
-                        "device" => deger is "mobile" or "tablet" or "desktop",
+                        // 2026-07-22: ios|android = mobil uygulamalar (X-Client-Platform başlığı)
+                        "device" => deger is "mobile" or "tablet" or "desktop" or "ios" or "android",
                         "membership" => deger is "member" or "guest",
                         "memberGroup" => Guid.TryParse(deger, out _),
                         _ => true,

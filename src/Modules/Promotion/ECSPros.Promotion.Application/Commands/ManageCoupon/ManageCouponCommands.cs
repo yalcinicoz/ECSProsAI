@@ -36,6 +36,8 @@ public record UpdateCouponCommand(
     bool IsActive,
     Guid UpdatedBy) : IRequest<Result<bool>>;
 
+public record DeleteCouponCommand(Guid Id, Guid DeletedBy) : IRequest<Result<bool>>;
+
 public class CreateCouponCommandHandler(IPromotionDbContext db)
     : IRequestHandler<CreateCouponCommand, Result<Guid>>
 {
@@ -105,6 +107,29 @@ public class UpdateCouponCommandHandler(IPromotionDbContext db)
         coupon.UpdatedAt = DateTime.UtcNow;
         coupon.UpdatedBy = request.UpdatedBy;
 
+        await db.SaveChangesAsync(ct);
+        return Result.Success(true);
+    }
+}
+
+public class DeleteCouponCommandHandler(IPromotionDbContext db)
+    : IRequestHandler<DeleteCouponCommand, Result<bool>>
+{
+    public async Task<Result<bool>> Handle(DeleteCouponCommand request, CancellationToken ct)
+    {
+        var coupon = await db.Coupons.FirstOrDefaultAsync(c => c.Id == request.Id, ct);
+        if (coupon is null)
+            return Result.Failure<bool>("Kupon bulunamadı.");
+
+        // Yalnız hiç kullanılmamış kupon silinebilir (kullanım geçmişi korunur)
+        var kullanilmis = coupon.UsageCount > 0
+            || await db.CouponUsages.AnyAsync(u => u.CouponId == request.Id, ct);
+        if (kullanilmis)
+            return Result.Failure<bool>("Bu kupon siparişlerde kullanılmış; silinemez. Kuponu pasife alabilirsiniz.");
+
+        coupon.IsDeleted = true;
+        coupon.DeletedAt = DateTime.UtcNow;
+        coupon.DeletedBy = request.DeletedBy;
         await db.SaveChangesAsync(ct);
         return Result.Success(true);
     }

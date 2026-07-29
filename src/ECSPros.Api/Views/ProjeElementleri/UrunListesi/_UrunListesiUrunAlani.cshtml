@@ -16,6 +16,20 @@
             @await Html.PartialAsync("~/Views/ProjeElementleri/Urun/_UrunKarti.cshtml", urun)
         }
     </div>
+    @if (vm.IlkSayfa.Count == 0 && vm.BosDurumMesaji is { Length: > 0 })
+    {
+        @* Bos liste aciklamasi: bos kategori / sonucsuz arama / sonucsuz filtre. *@
+        <div class="ms-urun-listesi-bos" data-ms-liste-bos>
+            <i class="fa-solid fa-box-open ms-fa-ikon ms-urun-listesi-bos-ikon" aria-hidden="true"></i>
+            <p class="ms-urun-listesi-bos-metin">@vm.BosDurumMesaji</p>
+            <a class="ms-buton ms-buton-m ms-buton-koyu" href="/urun-listesi">Tüm ürünlere göz atın</a>
+        </div>
+        <style>
+            .ms-urun-listesi-bos { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 56px 16px; text-align: center; }
+            .ms-urun-listesi-bos-ikon { font-size: 40px; color: #c4c4c4; }
+            .ms-urun-listesi-bos-metin { margin: 0; font-size: 16px; color: #4a4a4a; }
+        </style>
+    }
     <template data-ms-infinite-template>
         @await Html.PartialAsync("~/Views/ProjeElementleri/Urun/_UrunKarti.cshtml", null)
     </template>

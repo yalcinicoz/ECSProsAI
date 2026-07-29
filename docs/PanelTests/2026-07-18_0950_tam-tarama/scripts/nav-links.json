@@ -1,0 +1,166 @@
+[
+  {
+    "href": "/admin",
+    "text": ""
+  },
+  {
+    "href": "/admin/catalog/products",
+    "text": ""
+  },
+  {
+    "href": "/admin/catalog/bulk-images",
+    "text": ""
+  },
+  {
+    "href": "/admin/catalog/attribute-types",
+    "text": ""
+  },
+  {
+    "href": "/admin/catalog/product-groups",
+    "text": ""
+  },
+  {
+    "href": "/admin/storefront/channel-categories",
+    "text": ""
+  },
+  {
+    "href": "/admin/storefront/channel-products",
+    "text": ""
+  },
+  {
+    "href": "/admin/storefront/collections",
+    "text": ""
+  },
+  {
+    "href": "/admin/storefront/reviews",
+    "text": ""
+  },
+  {
+    "href": "/admin/storefront/pages",
+    "text": ""
+  },
+  {
+    "href": "/admin/catalog/settings",
+    "text": ""
+  },
+  {
+    "href": "/admin/orders",
+    "text": ""
+  },
+  {
+    "href": "/admin/orders/returns",
+    "text": ""
+  },
+  {
+    "href": "/admin/orders/invoices",
+    "text": ""
+  },
+  {
+    "href": "/admin/orders/quotes",
+    "text": ""
+  },
+  {
+    "href": "/admin/accounts",
+    "text": ""
+  },
+  {
+    "href": "/admin/accounts/groups",
+    "text": ""
+  },
+  {
+    "href": "/admin/crm/members",
+    "text": ""
+  },
+  {
+    "href": "/admin/crm/member-groups",
+    "text": ""
+  },
+  {
+    "href": "/admin/storefront/contact-messages",
+    "text": ""
+  },
+  {
+    "href": "/admin/inventory/warehouses",
+    "text": ""
+  },
+  {
+    "href": "/admin/inventory/stocks",
+    "text": ""
+  },
+  {
+    "href": "/admin/inventory/transfers",
+    "text": ""
+  },
+  {
+    "href": "/admin/promotion/campaigns",
+    "text": ""
+  },
+  {
+    "href": "/admin/promotion/coupons",
+    "text": ""
+  },
+  {
+    "href": "/admin/orders/gift-cards",
+    "text": ""
+  },
+  {
+    "href": "/admin/storefront/notifications",
+    "text": ""
+  },
+  {
+    "href": "/admin/storefront/newsletter",
+    "text": ""
+  },
+  {
+    "href": "/admin/navigation/menus",
+    "text": ""
+  },
+  {
+    "href": "/admin/cms/pages",
+    "text": ""
+  },
+  {
+    "href": "/admin/pos/sales",
+    "text": ""
+  },
+  {
+    "href": "/admin/integrations/logs",
+    "text": ""
+  },
+  {
+    "href": "/admin/finance/suppliers",
+    "text": ""
+  },
+  {
+    "href": "/admin/fulfillment/picking-plans",
+    "text": ""
+  },
+  {
+    "href": "/admin/settings/firms",
+    "text": ""
+  },
+  {
+    "href": "/admin/settings/platform-types",
+    "text": ""
+  },
+  {
+    "href": "/admin/settings/integration-services",
+    "text": ""
+  },
+  {
+    "href": "/admin/settings/channels",
+    "text": ""
+  },
+  {
+    "href": "/admin/settings/translations",
+    "text": ""
+  },
+  {
+    "href": "/admin/settings/migration",
+    "text": ""
+  },
+  {
+    "href": "/admin/settings/users",
+    "text": ""
+  }
+]

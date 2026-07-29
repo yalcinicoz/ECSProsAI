@@ -1,0 +1,33 @@
+{
+  "run": "2026-07-18_1350_b03-regresyon",
+  "tarih": "2026-07-18 13:50",
+  "ortam": "Canlı panel — restart sonrası (cari çatı B1-B4+B6 deploy'u), headless Chromium",
+  "kapsam": "B-03 regresyonu: üye cüzdan kartı, manuel düzeltme (UI), yetersiz bakiye reddi, cari Sahip filtresi, cari hareket dökümü (5 adım)",
+  "bulgular": [
+    {
+      "id": "R-01", "onem": "bilgi", "modul": "CRM",
+      "baslik": "B-03 KAPANDI — cüzdan 404 yerine bakiye gösteriyor",
+      "detay": "Üye detayında Cüzdan kartı bakiye + hareket listesiyle geliyor (wallet çağrısında 404 yok). UI üzerinden 70₺ düşüldü (bakiye 0,00), ardından 10₺ düşme denemesi 'Yetersiz bakiye' hatasıyla reddedildi. Cari Kartlar'da Sahip=Üye filtresiyle M-000001 'Üye' rozetiyle listelendi; detayında 13 hareketlik döküm ve 'wallet · 0,00 TRY' defter rozeti doğrulandı.",
+      "kanit": "02-bakiye-sifirlandi.png"
+    },
+    {
+      "id": "R-02", "onem": "bilgi", "modul": "CRM",
+      "baslik": "Puan (/loyalty) hâlâ 404 — bilinçli kapsam dışı",
+      "detay": "Loyalty/puan cari çatı geçişine dahil edilmedi (vade+birim farklı, plan kararı). Üye detayında Puan '—' görünmeye devam ediyor; loyalty akışı gündeme gelince ayrı ele alınacak.",
+      "kanit": "01-uye-cuzdan-karti.png"
+    }
+  ],
+  "iyi_calisanlar": [
+    "Cüzdan kartı: bakiye başlıkta + hareket listesi (yön renkleri, koşan bakiye) + manuel düzeltme formu",
+    "Form doğrulaması: tutar/açıklama boşken buton kilitli; yetersiz bakiye API tarafında reddediliyor",
+    "Cari Kartlar 'Sahip' filtresi ve Üye rozeti; cari detayında defter rozetleri + borç/alacak/bakiye dökümü",
+    "Restart sonrası Redis AKTİF ✓; hiçbir sayfada 500 görülmedi"
+  ],
+  "db_notlari": [
+    "accounts.current_account_transactions canlıda ilk gerçek verisini aldı (13 hareket, M-000001)",
+    "crm_wallets/crm_wallet_transactions boş ve DEPRECATED — ileride temizlik migration'ı ile drop edilebilir"
+  ],
+  "test_verileri": [
+    "M-000001 (Test Zayifsifre) cüzdanı 0,00 ₺'ye sıfırlandı; 13 test hareketi dökümde duruyor (izlenebilirlik için bırakıldı)"
+  ]
+}

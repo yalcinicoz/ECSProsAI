@@ -19,7 +19,7 @@ export function LoginPage() {
       await login(email, password)
       navigate('/', { replace: true })
     } catch {
-      setError('E-posta veya şifre hatalı.')
+      setError('Kullanıcı adı veya şifre hatalı.')
     } finally {
       setLoading(false)
     }

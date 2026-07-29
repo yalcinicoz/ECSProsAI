@@ -167,13 +167,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const yenile = async () => {
         const sid = localStorage.getItem("ecspros_sid");
         const cartId = localStorage.getItem("ecspros_cart");
-        if (!sid && !cartId) { ciz(null); return; }
+        // 2026-07-22: üyeyken token da gönderilir — cartId/sid yokken de üye sepeti bulunur
+        const uyeToken = localStorage.getItem("ecspros_member_token");
+        if (!sid && !cartId && !uyeToken) { ciz(null); return; }
 
         try {
             const p = new URLSearchParams({ firmPlatformId: platformId });
             if (cartId) { p.set("cartId", cartId); }
             if (sid) { p.set("sessionId", sid); }
-            const cevap = await fetch("/api/store/cart?" + p.toString());
+            const cevap = await fetch("/api/store/cart?" + p.toString(),
+                uyeToken ? { headers: { Authorization: "Bearer " + uyeToken } } : undefined);
             const veri = await cevap.json().catch(() => null);
             ciz(veri?.success ? veri.data : null);
         } catch { ciz(null); }

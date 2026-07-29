@@ -8,25 +8,11 @@
     var a = vmAlt!;
     var altGorsel = a.Gorseller.Count > 0 ? a.Gorseller[0] : null;
     var altAciklama = string.IsNullOrWhiteSpace(a.Aciklama) ? a.KisaAciklama : a.Aciklama;
-    var altTr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
-    var altTamYildiz = (int)Math.Round(a.Puan, MidpointRounding.AwayFromZero);
 }
+@* 2026-07-18: "Ürün Değerlendirmeleri" özeti buradan kaldırıldı — puan, ürün başlığının
+   altında ve yorumların tamamı üst bloktaki bölümde zaten var; sayfada aynı bölümün
+   ikinci kez görünmesi hata kabul edildi (kabul testi bulgusu). *@
 <section class="ms-urun-detay-alt-bilgi" id="urun-tum-ozellikleri" aria-labelledby="urun-tum-ozellikleri-baslik">
-            <section class="ms-urun-detay-alt-degerlendirme" aria-labelledby="urun-alt-degerlendirme-baslik">
-                <h2 id="urun-alt-degerlendirme-baslik" class="ms-urun-detay-alt-baslik">Ürün Değerlendirmeleri</h2>
-                <div class="ms-urun-detay-alt-puan">
-                    <strong>@a.Puan.ToString("0.0", altTr)</strong>
-                    <span class="ms-urun-yildizlar@(a.PuanSayisi == 0 ? " ms-urun-yildizlar-pasif" : "")" aria-label="@a.Puan.ToString("0.0", altTr) yıldız">
-                        @for (var y = 1; y <= 5; y++)
-                        {
-                        <i class="fa-solid fa-star ms-fa-ikon@(a.PuanSayisi > 0 && y > altTamYildiz ? " ms-urun-yildizlar-pasif" : "")" aria-hidden="true"></i>
-                        }
-                    </span>
-                    <span class="ms-urun-detay-alt-ayrac">•</span>
-                    <a class="ms-urun-detay-degerlendirme-link" href="/urun-degerlendirmeleri/@a.Kod">@a.PuanSayisi Değerlendirme</a>
-                </div>
-            </section>
-
             <section class="ms-urun-detay-alt-urun-bilgileri" aria-labelledby="urun-tum-ozellikleri-baslik">
                 <h2 id="urun-tum-ozellikleri-baslik" class="ms-urun-detay-alt-baslik">Ürün Bilgileri</h2>
                 <div class="ms-urun-detay-alt-kart">
@@ -69,10 +55,13 @@
                         </button>
                     </div>
 
-                    @if (a.Ozellikler.Count > 0)
+                    @* 2026-07-18: üst blok ilk 6 özelliği "Öne Çıkan Özellikler" olarak
+                       gösteriyor; burası yalnız 6'dan fazla özellik varsa TÜM listeyi basar
+                       (aynı içeriğin iki kez görünmesi hata kabul edildi). *@
+                    @if (a.Ozellikler.Count > 6)
                     {
                     <section class="ms-urun-detay-alt-ozellikler" aria-labelledby="urun-alt-one-cikan-baslik">
-                        <h3 id="urun-alt-one-cikan-baslik">Öne Çıkan Özellikler:</h3>
+                        <h3 id="urun-alt-one-cikan-baslik">Tüm Özellikler:</h3>
                         <div class="ms-urun-detay-alt-ozellik-grid">
                             @foreach (var ozellik in a.Ozellikler)
                             {

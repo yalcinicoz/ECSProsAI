@@ -69,7 +69,10 @@ public sealed record UrunListesiVm(
     string? KategorideArama = null,           // yalnız kategori sayfasında dolu olabilir
     // 2026-07-17: paylaşılan ?page=N ile gelindiğinde SSR bu sayfadan başlar; infinite
     // scroll devamı bu ofsetle ister, URL kaydırmayla replaceState ile güncellenir.
-    int BaslangicSayfa = 1)
+    int BaslangicSayfa = 1,
+    // 2026-07-18: liste boşken gösterilecek açıklama (boş kategori / sonuçsuz arama /
+    // sonuçsuz filtre) — null ise liste doludur, blok hiç basılmaz.
+    string? BosDurumMesaji = null)
 {
     /// <summary>SSR sonrası infinite scroll'un üreteceği kalan kart sayısı.</summary>
     public int KalanKart => Math.Max(0, ToplamUrun - IlkSayfa.Count);

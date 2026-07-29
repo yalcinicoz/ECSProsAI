@@ -130,6 +130,16 @@ public class PromotionController : ControllerBase
         return Ok(new { success = true });
     }
 
+    /// <summary>Kuponu siler — yalnız hiç kullanılmamış kuponlar silinebilir (P3).</summary>
+    [HttpDelete("coupons/{id:guid}")]
+    public async Task<IActionResult> DeleteCoupon(Guid id, CancellationToken ct)
+    {
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId)) return Unauthorized();
+        var result = await _mediator.Send(new DeleteCouponCommand(id, userId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
     /// <summary>Kuponun kullanım kayıtları (P3).</summary>
     [HttpGet("coupons/{id:guid}/usages")]
     public async Task<IActionResult> GetCouponUsages(

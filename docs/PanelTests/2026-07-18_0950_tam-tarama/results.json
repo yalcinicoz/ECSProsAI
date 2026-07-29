@@ -1,0 +1,1258 @@
+[
+ {
+  "ts": "2026-07-18T10:02:20.453Z",
+  "suite": "giris",
+  "step": "Login sayfası yükleniyor",
+  "status": "PASS",
+  "note": "URL: https://51.178.208.59/admin/login",
+  "shot": "01-login-sayfasi.png"
+ },
+ {
+  "ts": "2026-07-18T10:02:23.145Z",
+  "suite": "giris",
+  "step": "Yanlış şifreyle giriş reddi",
+  "status": "PASS",
+  "note": "Login sayfasında kaldı. DİKKAT: kullanıcıya hata mesajı görünmüyor olabilir.",
+  "shot": "02-login-yanlis-sifre.png"
+ },
+ {
+  "ts": "2026-07-18T10:02:24.437Z",
+  "suite": "giris",
+  "step": "Doğru bilgilerle giriş",
+  "status": "PASS",
+  "note": "Giriş sonrası URL: https://51.178.208.59/admin",
+  "shot": "03-login-basarili-ilk-ekran.png"
+ },
+ {
+  "ts": "2026-07-18T10:02:24.448Z",
+  "suite": "giris",
+  "step": "Sidebar link envanteri",
+  "status": "PASS",
+  "note": "41 benzersiz link bulundu (nav-links.json)",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:02:24.448Z",
+  "suite": "giris",
+  "step": "Konsol/HTTP hataları",
+  "status": "WARN",
+  "note": "[{\"kind\":\"http\",\"status\":401,\"url\":\"https://51.178.208.59/api/auth/login\",\"page\":\"https://51.178.208.59/admin/login\"},{\"kind\":\"console\",\"text\":\"Failed to load resource: the server responded with a status of 401 (Unauthorized)\",\"url\":\"https://51.178.208.59/admin/login\"}]",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:03:01.089Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin",
+  "status": "PASS",
+  "note": "1071ms | başlık:\"Dashboard\" | tablo:0 satır:0 form-alanı:0",
+  "shot": "sweep-00-dashboard.png"
+ },
+ {
+  "ts": "2026-07-18T10:03:18.002Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/catalog/products",
+  "status": "PASS",
+  "note": "16815ms | başlık:\"Ürünler\" | tablo:1 satır:20 form-alanı:1",
+  "shot": "sweep-01-catalog-products.png"
+ },
+ {
+  "ts": "2026-07-18T10:03:19.102Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/catalog/bulk-images",
+  "status": "PASS",
+  "note": "1017ms | başlık:\"Toplu Resim Yükleme\" | tablo:0 satır:0 form-alanı:1",
+  "shot": "sweep-02-catalog-bulk-images.png"
+ },
+ {
+  "ts": "2026-07-18T10:03:40.908Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/catalog/attribute-types",
+  "status": "PASS",
+  "note": "21711ms | başlık:\"Özellik Tipleri\" | tablo:1 satır:47 form-alanı:0",
+  "shot": "sweep-03-catalog-attribute-types.png"
+ },
+ {
+  "ts": "2026-07-18T10:03:57.764Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/catalog/product-groups",
+  "status": "PASS",
+  "note": "16761ms | başlık:\"Ürün Grupları\" | tablo:1 satır:71 form-alanı:0",
+  "shot": "sweep-04-catalog-product-groups.png"
+ },
+ {
+  "ts": "2026-07-18T10:04:13.917Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/storefront/channel-categories",
+  "status": "PASS",
+  "note": "16068ms | başlık:\"Kanal Kategorileri\" | tablo:0 satır:0 form-alanı:0",
+  "shot": "sweep-05-storefront-channel-categories.png"
+ },
+ {
+  "ts": "2026-07-18T10:04:15.027Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/storefront/channel-products",
+  "status": "PASS",
+  "note": "1033ms | başlık:\"Kanal Ürünleri\" | tablo:0 satır:0 form-alanı:0",
+  "shot": "sweep-06-storefront-channel-products.png"
+ },
+ {
+  "ts": "2026-07-18T10:04:31.124Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/storefront/collections",
+  "status": "PASS",
+  "note": "16018ms | başlık:\"Koleksiyon Moderasyonu\" | tablo:1 satır:3 form-alanı:0",
+  "shot": "sweep-07-storefront-collections.png"
+ },
+ {
+  "ts": "2026-07-18T10:04:32.194Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/storefront/reviews",
+  "status": "PASS",
+  "note": "1000ms | başlık:\"Yorum Moderasyonu\" | tablo:1 satır:1 form-alanı:0",
+  "shot": "sweep-08-storefront-reviews.png"
+ },
+ {
+  "ts": "2026-07-18T10:04:33.253Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/storefront/pages",
+  "status": "PASS",
+  "note": "1002ms | başlık:\"Vitrin Yönetimi\" | tablo:0 satır:0 form-alanı:0",
+  "shot": "sweep-09-storefront-pages.png"
+ },
+ {
+  "ts": "2026-07-18T10:04:49.320Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/catalog/settings",
+  "status": "PASS",
+  "note": "15984ms | başlık:\"Katalog Ayarları\" | tablo:0 satır:0 form-alanı:19",
+  "shot": "sweep-10-catalog-settings.png"
+ },
+ {
+  "ts": "2026-07-18T10:04:50.452Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/orders",
+  "status": "PASS",
+  "note": "1021ms | başlık:\"Siparişler\" | tablo:1 satır:5 form-alanı:3",
+  "shot": "sweep-11-orders.png"
+ },
+ {
+  "ts": "2026-07-18T10:05:06.519Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/orders/returns",
+  "status": "PASS",
+  "note": "15996ms | başlık:\"İadeler\" | tablo:1 satır:1 form-alanı:0",
+  "shot": "sweep-12-orders-returns.png"
+ },
+ {
+  "ts": "2026-07-18T10:05:22.610Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/orders/invoices",
+  "status": "PASS",
+  "note": "16008ms | başlık:\"Faturalar\" | tablo:1 satır:1 form-alanı:0",
+  "shot": "sweep-13-orders-invoices.png"
+ },
+ {
+  "ts": "2026-07-18T10:05:23.634Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/orders/quotes",
+  "status": "PASS",
+  "note": "948ms | başlık:\"Teklifler\" | tablo:0 satır:0 form-alanı:0",
+  "shot": "sweep-14-orders-quotes.png"
+ },
+ {
+  "ts": "2026-07-18T10:05:39.760Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/accounts",
+  "status": "PASS",
+  "note": "16045ms | başlık:\"Cari Kartlar\" | tablo:1 satır:1 form-alanı:4",
+  "shot": "sweep-15-accounts.png"
+ },
+ {
+  "ts": "2026-07-18T10:05:55.797Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/accounts/groups",
+  "status": "PASS",
+  "note": "15973ms | başlık:\"Cari Grupları\" | tablo:1 satır:1 form-alanı:0",
+  "shot": "sweep-16-accounts-groups.png"
+ },
+ {
+  "ts": "2026-07-18T10:05:56.905Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/crm/members",
+  "status": "PASS",
+  "note": "1013ms | başlık:\"Üyeler\" | tablo:1 satır:5 form-alanı:1",
+  "shot": "sweep-17-crm-members.png"
+ },
+ {
+  "ts": "2026-07-18T10:06:12.954Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/crm/member-groups",
+  "status": "PASS",
+  "note": "15992ms | başlık:\"Üye Grupları\" | tablo:1 satır:1 form-alanı:0",
+  "shot": "sweep-18-crm-member-groups.png"
+ },
+ {
+  "ts": "2026-07-18T10:06:14.046Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/storefront/contact-messages",
+  "status": "PASS",
+  "note": "1020ms | başlık:\"İletişim Mesajları\" | tablo:1 satır:2 form-alanı:2",
+  "shot": "sweep-19-storefront-contact-messages.png"
+ },
+ {
+  "ts": "2026-07-18T10:06:30.126Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/inventory/warehouses",
+  "status": "PASS",
+  "note": "16004ms | başlık:\"Depolar\" | tablo:1 satır:5 form-alanı:0",
+  "shot": "sweep-20-inventory-warehouses.png"
+ },
+ {
+  "ts": "2026-07-18T10:06:46.192Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/inventory/stocks",
+  "status": "PASS",
+  "note": "15984ms | başlık:\"Stok\" | tablo:1 satır:1 form-alanı:2",
+  "shot": "sweep-21-inventory-stocks.png"
+ },
+ {
+  "ts": "2026-07-18T10:07:02.250Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/inventory/transfers",
+  "status": "PASS",
+  "note": "16002ms | başlık:\"Transferler\" | tablo:1 satır:1 form-alanı:1",
+  "shot": "sweep-22-inventory-transfers.png"
+ },
+ {
+  "ts": "2026-07-18T10:07:18.333Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/promotion/campaigns",
+  "status": "PASS",
+  "note": "15992ms | başlık:\"Kampanyalar\" | tablo:1 satır:1 form-alanı:0",
+  "shot": "sweep-23-promotion-campaigns.png"
+ },
+ {
+  "ts": "2026-07-18T10:07:34.430Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/promotion/coupons",
+  "status": "PASS",
+  "note": "16009ms | başlık:\"Kuponlar\" | tablo:1 satır:1 form-alanı:1",
+  "shot": "sweep-24-promotion-coupons.png"
+ },
+ {
+  "ts": "2026-07-18T10:07:35.454Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/orders/gift-cards",
+  "status": "PASS",
+  "note": "956ms | başlık:\"Hediye Kartları\" | tablo:0 satır:0 form-alanı:0",
+  "shot": "sweep-25-orders-gift-cards.png"
+ },
+ {
+  "ts": "2026-07-18T10:07:51.591Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/storefront/notifications",
+  "status": "PASS",
+  "note": "16041ms | başlık:\"Bildirimler\" | tablo:1 satır:4 form-alanı:3",
+  "shot": "sweep-26-storefront-notifications.png"
+ },
+ {
+  "ts": "2026-07-18T10:07:52.690Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/storefront/newsletter",
+  "status": "PASS",
+  "note": "1026ms | başlık:\"Bülten Aboneleri\" | tablo:1 satır:2 form-alanı:2",
+  "shot": "sweep-27-storefront-newsletter.png"
+ },
+ {
+  "ts": "2026-07-18T10:08:08.755Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/navigation/menus",
+  "status": "PASS",
+  "note": "15995ms | başlık:\"Menüler\" | tablo:1 satır:1 form-alanı:0",
+  "shot": "sweep-28-navigation-menus.png"
+ },
+ {
+  "ts": "2026-07-18T10:08:09.886Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/cms/pages",
+  "status": "PASS",
+  "note": "1046ms | başlık:\"İçerik Sayfaları\" | tablo:1 satır:21 form-alanı:1",
+  "shot": "sweep-29-cms-pages.png"
+ },
+ {
+  "ts": "2026-07-18T10:08:10.884Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/pos/sales",
+  "status": "PASS",
+  "note": "939ms | başlık:\"POS Satışları\" | tablo:0 satır:0 form-alanı:0",
+  "shot": "sweep-30-pos-sales.png"
+ },
+ {
+  "ts": "2026-07-18T10:08:11.893Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/integrations/logs",
+  "status": "PASS",
+  "note": "937ms | başlık:\"Entegrasyon Logları\" | tablo:0 satır:0 form-alanı:0",
+  "shot": "sweep-31-integrations-logs.png"
+ },
+ {
+  "ts": "2026-07-18T10:08:12.908Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/finance/suppliers",
+  "status": "PASS",
+  "note": "940ms | başlık:\"Tedarikçiler\" | tablo:0 satır:0 form-alanı:0",
+  "shot": "sweep-32-finance-suppliers.png"
+ },
+ {
+  "ts": "2026-07-18T10:08:13.921Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/fulfillment/picking-plans",
+  "status": "PASS",
+  "note": "939ms | başlık:\"Picking Planları\" | tablo:0 satır:0 form-alanı:0",
+  "shot": "sweep-33-fulfillment-picking-plans.png"
+ },
+ {
+  "ts": "2026-07-18T10:08:29.984Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/settings/firms",
+  "status": "PASS",
+  "note": "15985ms | başlık:\"Firmalar\" | tablo:1 satır:2 form-alanı:0",
+  "shot": "sweep-34-settings-firms.png"
+ },
+ {
+  "ts": "2026-07-18T10:08:46.065Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/settings/platform-types",
+  "status": "PASS",
+  "note": "16001ms | başlık:\"Platform Tipleri\" | tablo:1 satır:9 form-alanı:0",
+  "shot": "sweep-35-settings-platform-types.png"
+ },
+ {
+  "ts": "2026-07-18T10:09:02.152Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/settings/integration-services",
+  "status": "PASS",
+  "note": "16004ms | başlık:\"Servis Kataloğu\" | tablo:1 satır:12 form-alanı:1",
+  "shot": "sweep-36-settings-integration-services.png"
+ },
+ {
+  "ts": "2026-07-18T10:09:18.225Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/settings/channels",
+  "status": "PASS",
+  "note": "16000ms | başlık:\"Satış Kanalları\" | tablo:0 satır:0 form-alanı:0",
+  "shot": "sweep-37-settings-channels.png"
+ },
+ {
+  "ts": "2026-07-18T10:09:34.307Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/settings/translations",
+  "status": "PASS",
+  "note": "16000ms | başlık:\"Arayüz Çevirileri\" | tablo:1 satır:1 form-alanı:1",
+  "shot": "sweep-38-settings-translations.png"
+ },
+ {
+  "ts": "2026-07-18T10:09:50.551Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/settings/migration",
+  "status": "PASS",
+  "note": "16163ms | başlık:\"Eski Veritabanı Migration\" | tablo:0 satır:0 form-alanı:10",
+  "shot": "sweep-39-settings-migration.png"
+ },
+ {
+  "ts": "2026-07-18T10:09:51.537Z",
+  "suite": "sayfa-taramasi",
+  "step": "/admin/settings/users",
+  "status": "PASS",
+  "note": "934ms | başlık:\"Kullanıcılar\" | tablo:0 satır:0 form-alanı:0",
+  "shot": "sweep-40-settings-users.png"
+ },
+ {
+  "ts": "2026-07-18T10:10:45.426Z",
+  "suite": "siniflandirma",
+  "step": "/admin/storefront/channel-products",
+  "status": "INFO",
+  "note": "E SA Kanal Ürünleri Ara… Ctrl K Favorilere Ekle Kanal Ürünleri Ürünlerin bu kanalda satılıp satılmayacağını (kanala al / çıkar) ve satışın anlık ya da tarih penceresiyle durdurulmasını toplu yönetin. Satış Kanalı Kanal seçin… Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni Sipariş SON ZIYARET Özelli",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:10:47.959Z",
+  "suite": "siniflandirma",
+  "step": "/admin/orders/quotes",
+  "status": "PLACEHOLDER",
+  "note": "E SA Teklifler Ara… Ctrl K Favorilere Ekle Teklifler Bu sayfa henüz geliştirilme aşamasında. Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni Sipariş SON ZIYARET Özellik Tipleri Ürün Grupları Kısayol Ekle",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:10:50.486Z",
+  "suite": "siniflandirma",
+  "step": "/admin/orders/gift-cards",
+  "status": "PLACEHOLDER",
+  "note": "E SA Hediye Kartları Ara… Ctrl K Favorilere Ekle Hediye Kartları Bu sayfa henüz geliştirilme aşamasında. Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni Sipariş SON ZIYARET Özellik Tipleri Ürün Grupları Kısayol Ekle",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:10:53.014Z",
+  "suite": "siniflandirma",
+  "step": "/admin/pos/sales",
+  "status": "PLACEHOLDER",
+  "note": "E SA POS Satışları Ara… Ctrl K Favorilere Ekle POS Satışları Bu sayfa henüz geliştirilme aşamasında. Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni Sipariş SON ZIYARET Özellik Tipleri Ürün Grupları Kısayol Ekle",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:10:55.545Z",
+  "suite": "siniflandirma",
+  "step": "/admin/integrations/logs",
+  "status": "PLACEHOLDER",
+  "note": "E SA Entegrasyon Logları Ara… Ctrl K Favorilere Ekle Entegrasyon Logları Bu sayfa henüz geliştirilme aşamasında. Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni Sipariş SON ZIYARET Özellik Tipleri Ürün Grupları Kısayol Ekle",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:10:58.074Z",
+  "suite": "siniflandirma",
+  "step": "/admin/finance/suppliers",
+  "status": "PLACEHOLDER",
+  "note": "E SA Tedarikçiler Ara… Ctrl K Favorilere Ekle Tedarikçiler Bu sayfa henüz geliştirilme aşamasında. Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni Sipariş SON ZIYARET Özellik Tipleri Ürün Grupları Kısayol Ekle",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:11:00.604Z",
+  "suite": "siniflandirma",
+  "step": "/admin/fulfillment/picking-plans",
+  "status": "PLACEHOLDER",
+  "note": "E SA Picking Planları Ara… Ctrl K Favorilere Ekle Picking Planları Bu sayfa henüz geliştirilme aşamasında. Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni Sipariş SON ZIYARET Özellik Tipleri Ürün Grupları Kısayol Ekle",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:11:03.132Z",
+  "suite": "siniflandirma",
+  "step": "/admin/settings/users",
+  "status": "PLACEHOLDER",
+  "note": "E SA Kullanıcılar Ara… Ctrl K Favorilere Ekle Kullanıcılar Bu sayfa henüz geliştirilme aşamasında. Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni Sipariş SON ZIYARET Özellik Tipleri Ürün Grupları Kısayol Ekle",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:11:05.662Z",
+  "suite": "siniflandirma",
+  "step": "/admin/settings/channels",
+  "status": "INFO",
+  "note": "E SA Ara… Ctrl K Favorilere Ekle Satış Kanalları Mağaza, pazaryeri ve özel kanal tanımları — API kimlik bilgileri ve sözleşme ayarları Yeni Kanal Tümü 3 ELDİ TEKSTİL SAN. VE TİC A.Ş. 1 MİŞAROĞLU TEKSTİL PAZ. DAĞITIM SAN. ve TİC. LTD. ŞTİ. 2 Julude Web Sitesi Aktif Kod julude ELDİ TEKSTİL SAN. VE TİC A.Ş. Mishar Web Sitesi Aktif Kod mishar MİŞAROĞLU",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:11:08.193Z",
+  "suite": "siniflandirma",
+  "step": "/admin/storefront/channel-categories",
+  "status": "INFO",
+  "note": "E SA Ara… Ctrl K Favorilere Ekle Kanal Kategorileri Kanala özgü ürün listeleme kategorileri — filtre, menü ve banner için Yeni Kategori Satış Kanalı Kanal seçin… Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni Sipariş SON ZIYARET Özellik Tipleri Ürün Grupları Kısayol Ekle",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:11:46.521Z",
+  "suite": "katalog",
+  "step": "Ürün arama (\"kaban\")",
+  "status": "PASS",
+  "note": "1 satır, ilk satır: \"kaban\" için ürün bulunamadı",
+  "shot": "katalog-01-urun-arama-kaban.png"
+ },
+ {
+  "ts": "2026-07-18T10:11:49.128Z",
+  "suite": "katalog",
+  "step": "Liste satırı tıklama → detay",
+  "status": "FAIL",
+  "note": "URL: https://51.178.208.59/admin/catalog/products",
+  "shot": "katalog-02-urun-detay-acilis.png"
+ },
+ {
+  "ts": "2026-07-18T10:11:49.131Z",
+  "suite": "katalog",
+  "step": "Detay sekme/butonları",
+  "status": "INFO",
+  "note": "Ara…CtrlK | Favorilere Ekle | Tümü | Satışta | Yeni Ürün | Bekleyen Siparişler14 | Stok Uyarıları47 | Yeni Sipariş | Özellik Tipleri | Ürün Grupları | Kısayol Ekle",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:11:51.865Z",
+  "suite": "katalog",
+  "step": "Yeni Ürün formu açılışı",
+  "status": "INFO",
+  "note": "URL: https://51.178.208.59/admin/catalog/products/new",
+  "shot": "katalog-03-yeni-urun-formu.png"
+ },
+ {
+  "ts": "2026-07-18T10:12:20.460Z",
+  "suite": "katalog",
+  "step": "Arama \"Kaban\"",
+  "status": "FAIL",
+  "note": "0 sonuç | ilk: \"Kaban\" için ürün bulunamadı",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:12:23.307Z",
+  "suite": "katalog",
+  "step": "Arama \"kaşe\"",
+  "status": "FAIL",
+  "note": "0 sonuç | ilk: \"kaşe\" için ürün bulunamadı",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:12:26.147Z",
+  "suite": "katalog",
+  "step": "Arama \"Ful-7492\"",
+  "status": "FAIL",
+  "note": "0 sonuç | ilk: \"Ful-7492\" için ürün bulunamadı",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:12:28.997Z",
+  "suite": "katalog",
+  "step": "Arama \"P-00000084\"",
+  "status": "PASS",
+  "note": "1 sonuç | ilk: Ful-7492 Kadın Kuşaklı Düz Kaşe Kaban P-00000084 Pantolon 20 Satışta ",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:12:31.828Z",
+  "suite": "katalog",
+  "step": "Arama \"bluz\"",
+  "status": "FAIL",
+  "note": "0 sonuç | ilk: \"bluz\" için ürün bulunamadı",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:12:37.046Z",
+  "suite": "katalog",
+  "step": "Satır tıklama → ürün detayı",
+  "status": "PASS",
+  "note": "URL: https://51.178.208.59/admin/catalog/products/P-00000084",
+  "shot": "katalog-05-urun-detay.png"
+ },
+ {
+  "ts": "2026-07-18T10:12:37.049Z",
+  "suite": "katalog",
+  "step": "Ürün detay sekmeleri",
+  "status": "PASS",
+  "note": "Genel | Özellikler | Varyantlar (20) | Alt Özellikler | Stok | Satış Kanalları | Görseller | Etiketler | SEO",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:12:38.962Z",
+  "suite": "katalog",
+  "step": "Sekme \"Genel\"",
+  "status": "PASS",
+  "note": "9 form alanı",
+  "shot": "katalog-06-sekme-0-Genel.png"
+ },
+ {
+  "ts": "2026-07-18T10:12:40.874Z",
+  "suite": "katalog",
+  "step": "Sekme \"Özellikler\"",
+  "status": "PASS",
+  "note": "15 form alanı",
+  "shot": "katalog-06-sekme-1-_zellikler.png"
+ },
+ {
+  "ts": "2026-07-18T10:12:42.822Z",
+  "suite": "katalog",
+  "step": "Sekme \"Varyantlar (20)\"",
+  "status": "PASS",
+  "note": "10 form alanı",
+  "shot": "katalog-06-sekme-2-Varyantlar__20_.png"
+ },
+ {
+  "ts": "2026-07-18T10:12:44.745Z",
+  "suite": "katalog",
+  "step": "Sekme \"Alt Özellikler\"",
+  "status": "PASS",
+  "note": "20 form alanı",
+  "shot": "katalog-06-sekme-3-Alt__zellikler.png"
+ },
+ {
+  "ts": "2026-07-18T10:12:46.655Z",
+  "suite": "katalog",
+  "step": "Sekme \"Stok\"",
+  "status": "PASS",
+  "note": "0 form alanı",
+  "shot": "katalog-06-sekme-4-Stok.png"
+ },
+ {
+  "ts": "2026-07-18T10:12:48.579Z",
+  "suite": "katalog",
+  "step": "Sekme \"Satış Kanalları\"",
+  "status": "PASS",
+  "note": "68 form alanı",
+  "shot": "katalog-06-sekme-5-Sat___Kanallar_.png"
+ },
+ {
+  "ts": "2026-07-18T10:12:50.508Z",
+  "suite": "katalog",
+  "step": "Sekme \"Görseller\"",
+  "status": "PASS",
+  "note": "2 form alanı",
+  "shot": "katalog-06-sekme-6-G_rseller.png"
+ },
+ {
+  "ts": "2026-07-18T10:12:52.437Z",
+  "suite": "katalog",
+  "step": "Sekme \"Etiketler\"",
+  "status": "PASS",
+  "note": "1 form alanı",
+  "shot": "katalog-06-sekme-7-Etiketler.png"
+ },
+ {
+  "ts": "2026-07-18T10:12:54.401Z",
+  "suite": "katalog",
+  "step": "Sekme \"SEO\"",
+  "status": "PASS",
+  "note": "4 form alanı",
+  "shot": "katalog-06-sekme-8-SEO.png"
+ },
+ {
+  "ts": "2026-07-18T10:14:21.924Z",
+  "suite": "katalog-urun-crud",
+  "step": "NEGATİF: boş formda gönderim engeli",
+  "status": "PASS",
+  "note": "Buton disabled — boş kayıt mümkün değil (iyi UX)",
+  "shot": "katalog-10-yeni-urun-bos-form.png"
+ },
+ {
+  "ts": "2026-07-18T10:14:27.158Z",
+  "suite": "katalog-urun-crud",
+  "step": "TEST ürünü oluşturma (TEST-PANEL-001, grup: Bluz)",
+  "status": "PASS",
+  "note": "URL: https://51.178.208.59/admin/catalog/products/TEST-PANEL-001",
+  "shot": "katalog-12-urun-olusturuldu.png"
+ },
+ {
+  "ts": "2026-07-18T10:14:27.185Z",
+  "suite": "katalog-urun-crud",
+  "step": "Fiyat/açıklama alanları dolduruldu",
+  "status": "PASS",
+  "note": "alış:true satış:true kısaAçıklama:true",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:14:30.311Z",
+  "suite": "katalog-urun-crud",
+  "step": "Kaydet + geri bildirim",
+  "status": "WARN",
+  "note": "Başarı bildirimi tespit edilemedi",
+  "shot": "katalog-13-urun-kaydet.png"
+ },
+ {
+  "ts": "2026-07-18T10:14:33.415Z",
+  "suite": "katalog-urun-crud",
+  "step": "Yenileme sonrası kalıcılık (fiyatlar)",
+  "status": "FAIL",
+  "note": "Dolu alanlar: [\"TEST-PANEL-001\",\"Bluz\",\"199.9\",\"0\",\"Panel testi için oluşturulmuş üründür.\"]",
+  "shot": "katalog-14-urun-kalicilik.png"
+ },
+ {
+  "ts": "2026-07-18T10:15:59.776Z",
+  "suite": "katalog-urun-crud",
+  "step": "Alan doldurma",
+  "status": "INFO",
+  "note": "alış:true satış:true ad:true",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:16:02.927Z",
+  "suite": "katalog-urun-crud",
+  "step": "Ürün güncelleme (ad + fiyatlar)",
+  "status": "INFO",
+  "note": "Kaydet tıklandı",
+  "shot": "katalog-15-urun-guncelle.png"
+ },
+ {
+  "ts": "2026-07-18T10:16:04.606Z",
+  "suite": "katalog-urun-crud",
+  "step": "Güncelleme kalıcılığı",
+  "status": "PASS",
+  "note": "alış=100 satış=199.9 ad=\"TEST Panel Testi Ürünü 2026-07-18\"",
+  "shot": "katalog-16-urun-guncelleme-dogrulama.png"
+ },
+ {
+  "ts": "2026-07-18T10:16:06.250Z",
+  "suite": "katalog-urun-crud",
+  "step": "Fiyat geçmişi modalı",
+  "status": "PASS",
+  "note": "Modal açıldı",
+  "shot": "katalog-17-fiyat-gecmisi.png"
+ },
+ {
+  "ts": "2026-07-18T10:17:07.594Z",
+  "suite": "katalog-urun-crud",
+  "step": "UX: Fiyat geçmişi ESC ile kapanma",
+  "status": "WARN",
+  "note": "ESC kapatmıyor — X/backdrop gerekiyor",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:17:08.432Z",
+  "suite": "katalog-urun-crud",
+  "step": "Fiyat geçmişi kapatma (X/backdrop)",
+  "status": "PASS",
+  "note": "Kapandı",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:17:11.182Z",
+  "suite": "katalog-urun-crud",
+  "step": "\"Satışa Aç\" işlemi",
+  "status": "WARN",
+  "note": "Durum değişmedi",
+  "shot": "katalog-18-satisa-ac.png"
+ },
+ {
+  "ts": "2026-07-18T10:18:00.804Z",
+  "suite": "katalog-urun-crud",
+  "step": "\"Satışa Aç\" (0 varyantlı ürün!)",
+  "status": "PASS",
+  "note": "Durum \"Satışta\" — 0 varyant/0 stokta uyarı YOK (bulgu)",
+  "shot": "katalog-20-satisa-ac-onay-sonrasi.png"
+ },
+ {
+  "ts": "2026-07-18T10:18:02.406Z",
+  "suite": "katalog-urun-crud",
+  "step": "Varyant sekmesi (0 varyant)",
+  "status": "INFO",
+  "note": "Varyantlar (0) Alt Özellikler Stok Satış Kanalları Görseller Etiketler SEO Varyantlar Henüz varyant eklenmedi + Varyant Ekle Bu ürün henüz varyant içermiyor. Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni Sipa",
+  "shot": "katalog-19-test-urun-varyantlar.png"
+ },
+ {
+  "ts": "2026-07-18T10:18:04.021Z",
+  "suite": "katalog-urun-crud",
+  "step": "Özellikler sekmesi görünümü",
+  "status": "INFO",
+  "note": "",
+  "shot": "katalog-21-test-urun-ozellikler.png"
+ },
+ {
+  "ts": "2026-07-18T10:18:48.569Z",
+  "suite": "katalog-varyant",
+  "step": "Varyant Ekle modalı",
+  "status": "PASS",
+  "note": "Varyant Ekle Renk(0 seçili) Bu özellik tipinde değer tanımlı değil. Beden(0 seçili) Bu özellik tipinde değer tanımlı değil. İptal Kombinasyon Seçin",
+  "shot": "katalog-22-varyant-ekle-modal.png"
+ },
+ {
+  "ts": "2026-07-18T10:18:48.576Z",
+  "suite": "katalog-varyant",
+  "step": "Varyant modal alanları",
+  "status": "INFO",
+  "note": "select:0 input:0",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:18:49.090Z",
+  "suite": "katalog-varyant",
+  "step": "UX: varyant modal ESC",
+  "status": "PASS",
+  "note": "ESC kapatıyor",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:18:57.078Z",
+  "suite": "katalog-ozellik-tipleri",
+  "step": "Satır tıklama → detay",
+  "status": "PASS",
+  "note": "İlk satır: cinsiyet Cinsiyet Seçim Listesi 10 10 Evet Aktif  → https://51.178.208.59/admin/catalog/attribute-types/3a227460-0861-43bd-be4e-0a5cbee5dc15",
+  "shot": "katalog-23-ozellik-tipi-detay.png"
+ },
+ {
+  "ts": "2026-07-18T10:19:00.547Z",
+  "suite": "katalog-urun-gruplari",
+  "step": "Grup detayı (Bluz)",
+  "status": "PASS",
+  "note": "https://51.178.208.59/admin/catalog/product-groups/e9076c4f-cb73-440f-b3e7-8ea7ec66ae68",
+  "shot": "katalog-24-urun-grubu-detay.png"
+ },
+ {
+  "ts": "2026-07-18T10:19:00.550Z",
+  "suite": "katalog-urun-gruplari",
+  "step": "Grup şeması içeriği",
+  "status": "WARN",
+  "note": "Özellik Tipleri Ürün Grupları Kısayol Ekle",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:19:03.454Z",
+  "suite": "katalog-kanal-kategorileri",
+  "step": "Kanal seçimi (dropdown)",
+  "status": "PASS",
+  "note": "Mishar seçildi",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:19:06.019Z",
+  "suite": "katalog-kanal-kategorileri",
+  "step": "Kategori ağacı görünümü",
+  "status": "INFO",
+  "note": ", menü ve banner için Yeni Kategori Satış Kanalı Mishar (MİŞAROĞLU TEKSTİL PAZ. DAĞITIM SAN. ve TİC. LTD. ŞTİ.) 47 yayındaki kategori henüz hiçbir ürün grubundan sorumlu değil. KATEGORI DOLUM GRUPLAR ",
+  "shot": "katalog-25-kanal-kategorileri.png"
+ },
+ {
+  "ts": "2026-07-18T10:19:08.632Z",
+  "suite": "katalog-ayarlar",
+  "step": "Katalog ayarları sayfası",
+  "status": "INFO",
+  "note": "cusu ve resim seti yönetimi Resim Sunucusu Resim Setleri Resim yükleme için FTP sunucu bilgileri. Değişiklikler anında geçerli olur. CDN AYARLARI CDN Temel URL CDN Kalite (%) Thumbnail Yüksekliği Liste/Detay Yüksekliği Zoom Yüksekliği YEREL DEPOLAMA / FTP Yerel Kayıt Dizini Yerel Sunucu UR",
+  "shot": "katalog-26-katalog-ayarlari.png"
+ },
+ {
+  "ts": "2026-07-18T10:20:01.962Z",
+  "suite": "siparisler",
+  "step": "Sipariş listesi",
+  "status": "PASS",
+  "note": "5 satır | SİPARİŞ NO MÜŞTERİ TUTAR ÖDEME DURUM TARİH ORD-20260717-1E458694 Deniz Yılmaz 799,98 ₺ unpaid Bekleyen 17.07.2026 18:29 Detay → ORD-20260717-9895BBD4 Deniz Yılmaz 799,98 ₺ unpaid Bekleyen 17.07.2026 18:26 Detay → ORD-20260717-CBEF323A Halis YORGANCI ",
+  "shot": "siparis-01-liste.png"
+ },
+ {
+  "ts": "2026-07-18T10:20:04.574Z",
+  "suite": "siparisler",
+  "step": "Sipariş detayı",
+  "status": "PASS",
+  "note": "https://51.178.208.59/admin/orders/e0e561e1-b997-43af-80b8-b7ac62d06d70",
+  "shot": "siparis-02-detay.png"
+ },
+ {
+  "ts": "2026-07-18T10:20:04.579Z",
+  "suite": "siparisler",
+  "step": "Detay içerik + aksiyonlar",
+  "status": "PASS",
+  "note": "bulunan: Kalem/Toplam/Durum | butonlar: Ara…CtrlK | Favorilere Ekle | ← | Onayla | İptal Et | + Fatura Oluştur | Bekleyen Siparişler14 | Stok Uyarıları47 | Yeni Sipariş | Özellik Tipleri | Ürün Grupları | Kısayol Ekle",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:20:08.058Z",
+  "suite": "iadeler",
+  "step": "/admin/orders/returns satır tıklama",
+  "status": "PASS",
+  "note": "ilk satır: İade bulunamadı. → https://51.178.208.59/admin/orders/returns",
+  "shot": "siparis-03-iadeler.png"
+ },
+ {
+  "ts": "2026-07-18T10:20:11.502Z",
+  "suite": "faturalar",
+  "step": "/admin/orders/invoices satır tıklama",
+  "status": "PASS",
+  "note": "ilk satır: Fatura bulunamadı. Fatura, sipariş detayındaki \"Fatura Oluştur\" ile kesilir. → https://51.178.208.59/admin/orders/invoices",
+  "shot": "siparis-04-faturalar.png"
+ },
+ {
+  "ts": "2026-07-18T10:20:13.587Z",
+  "suite": "crm",
+  "step": "Üye arama (\"test\")",
+  "status": "INFO",
+  "note": "5 satır | ilk: Test Zayifsifre yalcinicoz+mishartest_weak@gmail.com — Kayıtlı Aktif 17.07.2026 Detay →",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:20:17.735Z",
+  "suite": "crm",
+  "step": "Üye detayı",
+  "status": "PASS",
+  "note": "https://51.178.208.59/admin/crm/members/611252ec-7501-4dce-8d05-0a9b396813fc",
+  "shot": "crm-01-uye-detay.png"
+ },
+ {
+  "ts": "2026-07-18T10:20:17.741Z",
+  "suite": "crm",
+  "step": "Üye detay içeriği",
+  "status": "INFO",
+  "note": "eak@gmail.com · — · Kayıt: 17.07.2026 · Son giriş: 17.07.2026 17:34:24 0 Sipariş 0 Favori 0 Koleksiyon 0 Yorum 0 Kayıtlı Arama 0 Stok Alarmı — Cüzdan — Puan Üyelik Yönetimi Üye Grubu Standart Üye Aktif (pasif üye giriş yapamaz) Kaydet Adresler (0) Kayıtlı adres yok. Son Siparişler (0) Sipariş yok. Oturumlar (son 10) Aç",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:20:21.298Z",
+  "suite": "crm",
+  "step": "/admin/crm/member-groups satır tıklama",
+  "status": "PASS",
+  "note": "ilk satır: standart Standart ÜyeVarsayılan 5 — Aktif Düzenle → → https://51.178.208.59/admin/crm/member-groups",
+  "shot": "crm-02-uye-gruplari.png"
+ },
+ {
+  "ts": "2026-07-18T10:20:24.922Z",
+  "suite": "iletisim",
+  "step": "/admin/storefront/contact-messages satır tıklama",
+  "status": "PASS",
+  "note": "ilk satır: 17.07.2026 18:43:39 Kabul testi deneme mesajı yalcinicoz+iletisim@gmail.com Kabul testi deneme mesaj → https://51.178.208.59/admin/storefront/contact-messages",
+  "shot": "iletisim-01-mesajlar.png"
+ },
+ {
+  "ts": "2026-07-18T10:20:27.009Z",
+  "suite": "iletisim",
+  "step": "Bülten aboneleri",
+  "status": "PASS",
+  "note": "",
+  "shot": "iletisim-02-bulten.png"
+ },
+ {
+  "ts": "2026-07-18T10:20:29.619Z",
+  "suite": "iletisim",
+  "step": "Bildirim izleme",
+  "status": "INFO",
+  "note": "k alarmı ve kayıtlı arama bildirimlerinin izlemesi — gönderimler otomatik koşar Şimdi Tara Tüm platformlar Julude Mishar Tozlu Stok Alarmları Kayıtlı Aramalar Bekleyenler Bildirilenler İptal Edilenler Tümü Ara 4 kayıt TARİH ÜRÜN KODU VARYANT E-POSTA DURUM BİLDİRİM ZAMANI 17.07.2026 11:59:3",
+  "shot": "iletisim-03-bildirimler.png"
+ },
+ {
+  "ts": "2026-07-18T10:20:29.619Z",
+  "suite": "siparisler",
+  "step": "HTTP/konsol hataları (tur)",
+  "status": "WARN",
+  "note": "[{\"kind\":\"http\",\"status\":404,\"url\":\"https://51.178.208.59/api/crm/members/611252ec-7501-4dce-8d05-0a9b396813fc/loyalty\",\"page\":\"https://51.178.208.59/admin/crm/members/611252ec-7501-4dce-8d05-0a9b396813fc\"},{\"kind\":\"console\",\"text\":\"Failed to load resource: the server responded with a status of 404 (Not Found)\",\"url\":\"https://51.178.208.59/admin/crm/members/611252ec-7501-4dce-8d05-0a9b396813fc\"},{\"kind\":\"http\",\"status\":404,\"url\":\"https://51.178.208.59/api/crm/members/611252ec-7501-4dce-8d05-0a9b396813fc/wallet\",\"page\":\"https://51.178.208.59/admin/crm/members/611252ec-7501-4dce-8d05-0a9b396813fc\"},{\"kind\":\"console\",\"text\":\"Failed to load resource: the server responded with a status of 404 (Not Found)\",\"url\":\"https://51.178.208.59/admin/crm/members/611252ec-7501-4dce-8d05-0a9b396813fc\"}]",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:21:28.194Z",
+  "suite": "siparis-aksiyonlari",
+  "step": "Sipariş onaylama",
+  "status": "WARN",
+  "note": "Durum metni doğrulanamadı: 07.2026 18:29:04 · Ödeme: unpaid · Platform: Mishar Kalemler (1) ÜRÜN ADET BİRİM İND. TUTAR Les-528 Erkek Şerit Desenli Uzun Kol Gömlek P-00022310 · Beden: 38, ",
+  "shot": "siparis-06-onaylandi.png"
+ },
+ {
+  "ts": "2026-07-18T10:21:43.201Z",
+  "suite": "siparis-aksiyonlari",
+  "step": "Sipariş aksiyonları",
+  "status": "ERROR",
+  "note": "locator.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button:has-text(\"Fatura Oluştur\")').first()\u001b[22m\n\u001b[2m    - locator res",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:21:43.332Z",
+  "suite": "kampanyalar",
+  "step": "Kampanya listesi",
+  "status": "PASS",
+  "note": "ilk: Kampanya yok. \"+ Yeni Kampanya\" ile tanımlayın.",
+  "shot": "promo-01-kampanyalar.png"
+ },
+ {
+  "ts": "2026-07-18T10:21:45.569Z",
+  "suite": "kampanyalar",
+  "step": "Yeni kampanya formu",
+  "status": "INFO",
+  "note": "Kampanya Tipi * | Kod * | Ad * | Başlangıç | Bitiş (boş = süresiz) | Öncelik",
+  "shot": "promo-02-yeni-kampanya-formu.png"
+ },
+ {
+  "ts": "2026-07-18T10:21:45.742Z",
+  "suite": "kuponlar",
+  "step": "Kupon listesi",
+  "status": "PASS",
+  "note": "ilk: Kupon yok. \"+ Yeni Kupon\" ile tanımlayın; müşteriler sepette kodu girerek kullanır.",
+  "shot": "promo-03-kuponlar.png"
+ },
+ {
+  "ts": "2026-07-18T10:21:48.473Z",
+  "suite": "cms",
+  "step": "CMS sayfa listesi (1) + satır tıklama",
+  "status": "PASS",
+  "note": "https://51.178.208.59/admin/cms/pages/170e578e-c983-487b-94c8-afb533b82fe5",
+  "shot": "cms-01-sayfa-detay.png"
+ },
+ {
+  "ts": "2026-07-18T10:21:48.476Z",
+  "suite": "cms",
+  "step": "CMS sayfa formu alanları",
+  "status": "INFO",
+  "note": "Ad (TR) * | Slug (TR) * | Meta Başlık | Meta Açıklama | Aktif (sitede yayında) | Yayın Başlangıcı | Yayın Bitişi",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:22:24.014Z",
+  "suite": "siparis-aksiyonlari",
+  "step": "Onay modalı depo seçenekleri",
+  "status": "INFO",
+  "note": "Depo seçin, Merkez Depo, Merkez Depo, Merkez Depo, Mağaza, Ayakkabı",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:22:28.159Z",
+  "suite": "siparis-aksiyonlari",
+  "step": "Sipariş onaylama (ORD-20260717-1E458694)",
+  "status": "PASS",
+  "note": "ORD-20260717-1E458694 Onaylı | butonlar: İşleme Al,İptal",
+  "shot": "siparis-09-onaylandi.png"
+ },
+ {
+  "ts": "2026-07-18T10:22:29.923Z",
+  "suite": "siparis-aksiyonlari",
+  "step": "Fatura modalı",
+  "status": "INFO",
+  "note": "Fatura Oluştur Fatura Serisi * Seri seçin Aktif seri yok — Faturalar sayfasındaki \"Fatura Serileri\"nden tanımlanır. Tip e-Arşiv e-Fatura İhracat Fatura Tarihi Alıcı Adı * Firma Adı Adres * Vergi Daire",
+  "shot": "siparis-10-fatura-modal.png"
+ },
+ {
+  "ts": "2026-07-18T10:22:30.138Z",
+  "suite": "siparis-aksiyonlari",
+  "step": "Fatura oluşturma",
+  "status": "WARN",
+  "note": "Faturalar (0) Bu sipariş için fatura kesilmedi. + Fatura Oluştur Notlar ve Sözleşmeler KABUL EDİLEN SÖZLEŞMEL",
+  "shot": "siparis-11-fatura-sonrasi.png"
+ },
+ {
+  "ts": "2026-07-18T10:23:26.506Z",
+  "suite": "faturalar",
+  "step": "Fatura Serileri ekranı",
+  "status": "PASS",
+  "note": "Serileri Oluşturulan İptal Edilen Tümü FATURA NO TİP ALICI TUTAR PDF DURUM TARİH Fatura bulunamadı. Fatura, sipariş detayındaki \"Fatura Oluştur\" ile kesil",
+  "shot": "fatura-01-seriler.png"
+ },
+ {
+  "ts": "2026-07-18T10:23:26.510Z",
+  "suite": "faturalar",
+  "step": "Seri formu alan sayısı",
+  "status": "INFO",
+  "note": "4",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:23:26.588Z",
+  "suite": "faturalar",
+  "step": "TEST fatura serisi ekleme",
+  "status": "WARN",
+  "note": "Kaydet butonu pasif/bulunamadı",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:23:47.553Z",
+  "suite": "vitrin",
+  "step": "Platform seçimi + blok listesi",
+  "status": "PASS",
+  "note": "nır. Platform seç Blokları yönetmek için platform seçin. Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni Sipariş SON ZIYARET Özellik Tipleri Ürün Grupları Kısayol Ekle",
+  "shot": "vitrin-01-bloklar.png"
+ },
+ {
+  "ts": "2026-07-18T10:23:47.559Z",
+  "suite": "vitrin",
+  "step": "Vitrin aksiyon butonları",
+  "status": "INFO",
+  "note": "Ara…CtrlK | Favorilere Ekle | Platform seç | Bekleyen Siparişler14 | Stok Uyarıları47 | Yeni Sipariş | Özellik Tipleri | Ürün Grupları | Kısayol Ekle",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:23:50.787Z",
+  "suite": "menuler",
+  "step": "Menü detay (ağaç editörü)",
+  "status": "WARN",
+  "note": "M Henüz menü eklenmemiş Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni Sipariş SON ZIYARET Özellik Tipleri Ürün Grupları Kısayol Ekle",
+  "shot": "menu-01-agac-editoru.png"
+ },
+ {
+  "ts": "2026-07-18T10:23:50.962Z",
+  "suite": "moderasyon",
+  "step": "Yorum moderasyonu listesi",
+  "status": "PASS",
+  "note": "Ürün / Üye Puan Yorum Tarih Durum İşlem Bu durumda yorum yok.",
+  "shot": "moderasyon-01-yorumlar.png"
+ },
+ {
+  "ts": "2026-07-18T10:23:51.126Z",
+  "suite": "moderasyon",
+  "step": "Koleksiyon moderasyonu listesi",
+  "status": "PASS",
+  "note": "Koleksiyon Görünürlük Ürün Oluşturulma Durum İşlem Kaydedilenler(otomatik — Kaydedilenler) Gizli 1 16.07.2026 Onay Bekliyor OnaylaReddet Yeni Koleksiyon Yeni seçilen ürünlerle oluşturulan alışveriş ko",
+  "shot": "moderasyon-02-koleksiyonlar.png"
+ },
+ {
+  "ts": "2026-07-18T10:24:56.627Z",
+  "suite": "faturalar",
+  "step": "TEST fatura serisi ekleme",
+  "status": "PASS",
+  "note": "firmalar: Firma seçin/ELDİ TEKSTİL SAN. VE TİC A.Ş./MİŞAROĞLU TEKSTİL PAZ. DAĞITIM SAN. ve TİC. LTD. ŞTİ. | Fatura Serileri Fatura numarası seriden türetilir (ör. MSH2026000000001). Fatura oluşturabilmek için en az bir aktif seri gerekir. TEST Serisi e-Arşiv: TST · e-Fatura: TST · İhracat: TST YENİ SERİ Fir",
+  "shot": "fatura-03-seri-ekleme.png"
+ },
+ {
+  "ts": "2026-07-18T10:25:05.354Z",
+  "suite": "faturalar",
+  "step": "Fatura oluşturma (seri sonrası)",
+  "status": "PASS",
+  "note": "Faturalar (1) TST2026000000001 e-Arşiv 799,98 ₺ Oluşturuldu Faturalarda aç → + Fatura Olu",
+  "shot": "fatura-05-fatura-kesildi.png"
+ },
+ {
+  "ts": "2026-07-18T10:25:08.533Z",
+  "suite": "vitrin",
+  "step": "Platform dropdown seçenekleri",
+  "status": "WARN",
+  "note": "",
+  "shot": "vitrin-02-platform-dropdown.png"
+ },
+ {
+  "ts": "2026-07-18T10:25:13.535Z",
+  "suite": "vitrin",
+  "step": "Vitrin platform seçimi",
+  "status": "ERROR",
+  "note": "locator.click: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button, li, [role=\"option\"]').filter({ hasText: /Mishar/i }).last()\u001b[22",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:25:16.159Z",
+  "suite": "menuler",
+  "step": "Menü sayfası durumu",
+  "status": "INFO",
+  "note": "select:0 | butonlar: Ara…CtrlK | Favorilere Ekle | Yeni Menü | Bekleyen Siparişler14 | Stok Uyarıları47 | Yeni Sipariş | Özellik Tipleri | Ürün Grupları | Kısayol Ekle | metin: NÜ TIP STIL ÖĞE DURUM Henüz menü eklenmemiş Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni Sipariş SON ZIYARET Özellik Tipleri Ürün Grupları Kısayol Ekle",
+  "shot": "menu-02-liste-inceleme.png"
+ },
+ {
+  "ts": "2026-07-18T10:25:55.157Z",
+  "suite": "vitrin",
+  "step": "Dropdown tıklama sonrası platform öğeleri",
+  "status": "PASS",
+  "note": "[\"julude (ELDİ TEKSTİL SAN. VE TİC A.Ş.)\",\"mishar (MİŞAROĞLU TEKSTİL PAZ. DAĞITIM SAN. ve TİC. LTD. ŞTİ.)\",\"tozlu (MİŞAROĞLU TEKSTİL PAZ. DAĞITIM SAN. ve TİC. LTD. ŞTİ.)\"]",
+  "shot": "vitrin-04-dropdown-tiklama.png"
+ },
+ {
+  "ts": "2026-07-18T10:25:58.788Z",
+  "suite": "vitrin",
+  "step": "Mishar seçimi sonrası bloklar",
+  "status": "PASS",
+  "note": "nır. mishar (MİŞAROĞLU TEKSTİL PAZ. DAĞITIM SAN. ve TİC. LTD. ŞTİ.) Ana Sayfa Global Üst Alan (Duyuru) Ürün Listesi Üst Ürün Listesi Alt Ürün Detay Alt Sepet Teslimat Ödeme Yeni Blok Önizleme Yayınla Sıra Başlık Tip Şablon Öğe Durum İşlem ↑ 1 ↓ Alışveriş Bilgilendirmeleri Bilgi Bandı — 4 Aktif Sil ↑ 2 ↓ Story Story — 6 Aktif Sil ↑ 3 ↓ Çoklu Banner Çoklu Banner — 15 Aktif Sil ↑ 4 ↓ Kampanya Slider Slider — 3 Aktif Sil ↑ 5 ↓ Hızlı Ürün Bağlantıları",
+  "shot": "vitrin-05-mishar-secili.png"
+ },
+ {
+  "ts": "2026-07-18T10:25:58.790Z",
+  "suite": "vitrin",
+  "step": "Blok aksiyonları",
+  "status": "INFO",
+  "note": "Ara…CtrlK | Favorilere Ekle | Ana Sayfa | Global Üst Alan (Duyuru) | Ürün Listesi Üst | Ürün Listesi Alt | Ürün Detay Alt | Sepet | Teslimat | Ödeme | Yeni Blok | Önizleme | Yayınla | ↑ | ↓ | Sil | ↑ | ↓ | Sil | ↑ | ↓ | Sil | ↑ | ↓ | Sil | ↑ | ↓ | Sil | ↑ | ↓ | Sil | ↑ | ↓ | Sil | ↑ | ↓ | Sil | ↑ | ↓ | Sil | ↑ | ↓ | Sil | ↑ | ↓ | Sil | ↑ | ↓ | Sil | ↑ | ↓ | Sil | ↑ | ↓ | Sil | Bu versiyona dön | B",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:26:47.285Z",
+  "suite": "vitrin",
+  "step": "Önizleme modalı",
+  "status": "PASS",
+  "note": "E SA Ara… Ctrl K Favorilere Ekle Vitrin Yönetimi Taslak bloklar canlıyı etkilemez — değişiklikler \"Yayınla\" ile versiyonlu snapshot olarak canlıya alınır. mishar (MİŞAROĞLU TEKSTİL PAZ. DAĞITIM SAN. ve TİC. LTD. ŞTİ.) Ana Sayfa Global Üst Alan (Duyur",
+  "shot": "vitrin-06-onizleme.png"
+ },
+ {
+  "ts": "2026-07-18T10:26:47.522Z",
+  "suite": "stok",
+  "step": "Depo listesi (5 satır)",
+  "status": "PASS",
+  "note": "AD KOD TİP ONLİNE DURUM ADRES Merkez Depo MERKEZ depo ✓ Aktif — Düzenle Merkez Depo DEPO-01 Fiziksel ✓ Aktif Merkez Depo Düzenle Merkez Depo merkez main ✓ Aktif Sanayi Mah. Depo Cad. No:1, İstanbul Düzenle Mağaza MAGAZA magaza ✓ Aktif — Düzenle Ayakkabı AYAKKABI magaza ✓ Aktif — Düzenle",
+  "shot": "stok-01-depolar.png"
+ },
+ {
+  "ts": "2026-07-18T10:26:50.145Z",
+  "suite": "stok",
+  "step": "Depo detayı (kısım/birim görünümü?)",
+  "status": "INFO",
+  "note": "https://51.178.208.59/admin/inventory/warehouses/8aad1b46-4e83-41f6-b5ca-45b778d99709 | Aktif depo ✓ Online satışa açık Lokasyonlar 0 kayıt Aktif Tümü Toplu Sil Yeni Lokasyon KOD BARKOD TİP AD DURUM SIRALAMA Lokasyon bulunamadı. Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni Sipariş SON ZIYARET Özellik Tipleri Ürün Grupları K",
+  "shot": "stok-02-depo-detay.png"
+ },
+ {
+  "ts": "2026-07-18T10:26:55.322Z",
+  "suite": "stok",
+  "step": "Stok arama (P-00000084)",
+  "status": "WARN",
+  "note": "evcut Tüm Depolar Merkez Depo Merkez Depo Merkez Depo Mağaza Ayakkabı + Stok Hareketi ÜRÜN DEPO KISIM RAF STOK REZ. MEVCUT Ürün kodu/adı/barkod arayın veya bir depo seçin — sonuçlar burada listelenir. Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni S",
+  "shot": "stok-03-stok-arama.png"
+ },
+ {
+  "ts": "2026-07-18T10:26:57.447Z",
+  "suite": "stok",
+  "step": "Transferler sayfası",
+  "status": "INFO",
+  "note": "r 0 kayıt Tüm Durumlar Taslak Bekliyor Toplama Toplandı Yolda Teslim Tamamlandı İptal + Yeni Transfer KOD KAYNAK HEDEF TİP KALEM DURUM TARİH Transfer bulunamadı. Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Sto",
+  "shot": "stok-04-transferler.png"
+ },
+ {
+  "ts": "2026-07-18T10:27:14.978Z",
+  "suite": "ayarlar",
+  "step": "Kanallar",
+  "status": "ERROR",
+  "note": "locator.click: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('text=Mishar Web Sitesi').first()\u001b[22m\n",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:27:17.726Z",
+  "suite": "ayarlar",
+  "step": "Firma detayı",
+  "status": "PASS",
+  "note": " TİC. LTD. ŞTİ. MİŞAROĞLU TEKSTİL PAZ. DAĞITIM SAN. ve TİC. LTD. ŞTİ. Aktif misaroglu ← Geri Vergi Dairesi Gaziler VD Vergi No 6221822519 Telefon — E-posta — Adres Ulugazi Mah. İstiklal Cad. No: 2, Samsun Satış Kanalları(2) Kanal Ekle KOD AD PLATFORM FİYATLAMA DURUM mishar Mishar Web Sitesi Belirtilmemiş Aktif Düzenle ",
+  "shot": "ayarlar-02-firma-detay.png"
+ },
+ {
+  "ts": "2026-07-18T10:27:17.919Z",
+  "suite": "ayarlar",
+  "step": "Servis kataloğu",
+  "status": "PASS",
+  "note": "KOD AD TİP ŞEMA ALANLARI DURUM aras Aras Kargo Kargo — Kullanılabilir Düzenle hepsijet HepsiJet Kargo — Kullanılabilir Düzenle kolaygelsin Kolay Gelsin Kargo — Kullanılabilir Düzenle mng MNG Kargo Kargo — Kullanılabilir Düzenle ptt PTT Kargo Kargo — ",
+  "shot": "ayarlar-03-servis-katalogu.png"
+ },
+ {
+  "ts": "2026-07-18T10:27:20.564Z",
+  "suite": "ayarlar",
+  "step": "Arayüz çevirileri",
+  "status": "INFO",
+  "note": "örünen statik metinleri dil bazında yönetin Anahtar Ekle Kaydet GRUP GenelKatalogSiparişlerStokMüşterilerPOSFinansFulfillmentPazarlamaCMSKimlik 0 anahtar · 3 dil ANAHTAR TR TÜRKÇE EN ENGLISH AR العربية Genel grubunda hen",
+  "shot": "ayarlar-04-ceviriler.png"
+ },
+ {
+  "ts": "2026-07-18T10:27:22.678Z",
+  "suite": "ayarlar",
+  "step": "Migration ekranı (yalnız görüntüleme)",
+  "status": "INFO",
+  "note": "igration MySQL juludedb → PostgreSQL ecommerce_db (catalog şeması) Bekleniyor Henüz migration çalıştırılmadı. Mevcut Tablo Durumu Toplam: 1.785.742 kayıt Image Sets 0 Attribute Types 0 Attribute Values 0 Product Groups 0 Products 0 Product ",
+  "shot": "ayarlar-05-migration.png"
+ },
+ {
+  "ts": "2026-07-18T10:27:22.834Z",
+  "suite": "cari",
+  "step": "Cari kartlar listesi",
+  "status": "PASS",
+  "note": "KOD ÜNVAN TİP GRUP VERGİ NO ŞEHİR DURUM C-0001 Deneme Cari Tedarikçi — — — Aktif ",
+  "shot": "cari-01-liste.png"
+ },
+ {
+  "ts": "2026-07-18T10:27:58.465Z",
+  "suite": "ayarlar",
+  "step": "Kanal düzenleme",
+  "status": "WARN",
+  "note": "Düzenle butonu bulunamadı",
+  "shot": "ayarlar-06-kanallar-liste.png"
+ },
+ {
+  "ts": "2026-07-18T10:28:00.584Z",
+  "suite": "katalog",
+  "step": "Toplu resim yükleme ekranı",
+  "status": "INFO",
+  "note": "ükleme Toplu Resim Yükleme Set: Varsayılan Resim Seti Julude Mevcut resimleri arşivle Klasör seç veya sürükle-bırak Dosya formatı: barkod_1.jpg, barkod_2.jpg, ... Yüklenen resimler klasör içinde yuklenenler/ alt klasörüne taşınır Sık Kullan",
+  "shot": "katalog-27-toplu-resim.png"
+ },
+ {
+  "ts": "2026-07-18T10:28:23.007Z",
+  "suite": "ayarlar",
+  "step": "Kanal düzenleme formu (firma yolu)",
+  "status": "PASS",
+  "note": "Kanal Adı * | Fiyat Tipi | Stoğu biten ürünleri listede göster | Aktif",
+  "shot": "ayarlar-08-kanal-duzenle-firma-yolu.png"
+ },
+ {
+  "ts": "2026-07-18T10:28:23.009Z",
+  "suite": "ayarlar",
+  "step": "Stok görünürlük ayarı var mı",
+  "status": "PASS",
+  "note": "E SA Ara… Ctrl K Favorilere Ekle Firmalar MİŞAROĞLU TEKSTİL PAZ. DAĞITIM SAN. ve TİC. LTD. ŞTİ. MİŞAROĞLU TEKSTİL PAZ. DAĞITIM SAN. ve TİC. LTD. ŞTİ. Aktif misaroglu ← Geri Vergi Dairesi Gaziler VD Vergi No 6221822519 Telefon — E-posta — Adres Ulugazi Mah. İstiklal Cad. No: 2, Samsun Satış Kanalları(2) Kanal Ekle KOD AD PLATFORM FİYATLAMA DURUM mishar Mishar Web Sitesi Belirtilmemiş Aktif Düzenle tozlu Tozlu Web Sitesi Belirtilmemiş Aktif Düzenle Entegrasyonlar(2) Entegrasyon Ekle SERVİS İSİM PLATFORM DÖNEM SÖZLEŞME DURUMU AKTİF GES Telekom SMSsms — Tüm platformlar — Taslak Aktif Düzenle Görsel Aramavisual_search Görsel Arama Servisi Mishar — Aktif Aktif Düzenle Sık Kullanılanlar Hızlı erişim kısayolları SAYFALAR Bekleyen Siparişler 14 Stok Uyarıları 47 Yeni Sipariş SON ZIYARET Özellik Tipleri Ürün Grupları Kısayol Ekle Kanal Düzenle — Mishar Kanal Adı * Fiyat Tipi — Yok — Manuel Çarpan Bu platform tipi için alan şeması tanımlı değil. Platform Tipleri sayfasından şema ekleyebilirsiniz. Stok Görünürlüğü Stoğu biten ürünleri listede göster Aktif İptal Kaydet",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:29:05.287Z",
+  "suite": "performans",
+  "step": "Özellik Tipleri ilk tablo render",
+  "status": "WARN",
+  "note": "5435ms",
+  "shot": ""
+ },
+ {
+  "ts": "2026-07-18T10:29:05.290Z",
+  "suite": "performans",
+  "step": "API istek zaman çizelgesi (ilk 20 sn)",
+  "status": "INFO",
+  "note": "+0.1s /api/core/languages || +0.1s /api/catalog/attribute-types?activeOnly=false",
+  "shot": ""
+ }
+]

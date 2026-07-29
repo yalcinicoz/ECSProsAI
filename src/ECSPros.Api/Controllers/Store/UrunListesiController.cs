@@ -68,7 +68,9 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
     {
         var sayfa = SayfaNo(page);
         var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
-        var kategori = KategoriBul(nav.Kokler, slug);
+        // TumKokler: bos kategoriler menuden gizlense de dogrudan URL ile gelen
+        // ziyaretci 404 degil "henuz urun yuklenmedi" sayfasi gormeli.
+        var kategori = KategoriBul(nav.TumKokler, slug);
         if (kategori is null)
             return await UrunSlugDeneVeyaNotFound(slug, ct);
 
@@ -108,7 +110,13 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             SeciliFiyatMax: filtre.PriceMax,
             SeciliSiralama: filtre.Sort,
             KategorideArama: arama,
-            BaslangicSayfa: sayfa);
+            BaslangicSayfa: sayfa,
+            BosDurumMesaji: urunler.Value.TotalCount > 0 ? null
+                : arama is not null
+                    ? $"Bu kategoride \"{arama}\" aramasıyla eşleşen ürün bulunamadı."
+                    : (filtre.DegerIdler is not null || filtre.PriceMin.HasValue || filtre.PriceMax.HasValue)
+                        ? "Seçtiğiniz filtrelerle eşleşen ürün bulunamadı."
+                        : "Bu kategoriye henüz ürün yüklenmedi.");
 
         return ListeGoster(vm);
     }
@@ -150,7 +158,11 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             SeciliFiyatMin: filtre.PriceMin,
             SeciliFiyatMax: filtre.PriceMax,
             SeciliSiralama: filtre.Sort,
-            BaslangicSayfa: sayfa);
+            BaslangicSayfa: sayfa,
+            BosDurumMesaji: urunler.Value.TotalCount > 0 ? null
+                : arama is not null
+                    ? $"\"{arama}\" aramasıyla eşleşen ürün bulunamadı."
+                    : "Gösterilecek ürün bulunamadı.");
 
         return ListeGoster(vm);
     }

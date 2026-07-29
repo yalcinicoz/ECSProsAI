@@ -105,6 +105,102 @@ function MultiPick({ deger, secenekler, degistir, placeholder }: {
   )
 }
 
+// 2026-07-22: öğe görseli — URL elle girilmez; dosya seçilir, POST /pages/media
+// sunucuya (media/vitrin/yyyyMM) yükler, burada görselin kendisi gösterilir.
+function GorselAlani({ etiket, deger, degistir }: {
+  etiket: string; deger: string | null; degistir: (v: string | null) => void
+}) {
+  const [yukleniyor, setYukleniyor] = useState(false)
+  const [hata, setHata] = useState<string | null>(null)
+  const yukle = async (dosya: File | undefined) => {
+    if (!dosya) return
+    setYukleniyor(true); setHata(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', dosya)
+      const { data } = await api.post('/pages/media', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      degistir(data.data.url)
+    } catch (e) {
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+      setHata((e as any).response?.data?.error ?? 'Yükleme başarısız.')
+    } finally { setYukleniyor(false) }
+  }
+  return (
+    <div>
+      <label className="mb-1 block text-sm text-[var(--text-m)]">{etiket}</label>
+      <div className="flex items-center gap-3">
+        {deger
+          ? <img src={deger} alt="" className="h-16 w-16 rounded-lg border border-[var(--border)] object-cover" />
+          : <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-[var(--border)] text-xs text-[var(--text-s)]">yok</div>}
+        <div className="space-y-1">
+          <label className="inline-block cursor-pointer rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs text-[var(--text-m)] hover:bg-[var(--surface2)]">
+            {yukleniyor ? 'Yükleniyor…' : deger ? 'Değiştir' : 'Görsel Yükle'}
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" className="hidden"
+              disabled={yukleniyor} onChange={(e) => { yukle(e.target.files?.[0]); e.target.value = '' }} />
+          </label>
+          {deger && (
+            <button type="button" className="block text-xs text-red-600 hover:underline" onClick={() => degistir(null)}>Kaldır</button>
+          )}
+          {hata && <p className="text-xs text-red-600">{hata}</p>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// 2026-07-22: proje ikon seti — storefront'un FA subset'i (ikonall.min.css, admin'e bağlı).
+// İkon class yerine ikonun kendisi gösterilir; listeden seçilir.
+const IKONLAR = [
+  'fa-truck', 'fa-truck-fast', 'fa-box', 'fa-box-open', 'fa-boxes-stacked', 'fa-shopping-cart',
+  'fa-credit-card-alt', 'fa-money-bill', 'fa-money-bill-wave', 'fa-coins', 'fa-receipt', 'fa-file-invoice',
+  'fa-tag', 'fa-ticket', 'fa-gem', 'fa-crown', 'fa-medal', 'fa-star', 'fa-star-half-stroke', 'fa-heart',
+  'fa-shield-halved', 'fa-check', 'fa-circle-check', 'fa-undo', 'fa-undo-alt', 'fa-redo', 'fa-right-left',
+  'fa-history', 'fa-clock-four', 'fa-bell', 'fa-bolt-lightning', 'fa-lightbulb', 'fa-info-circle',
+  'fa-warning', 'fa-comment', 'fa-commenting', 'fa-camera-alt', 'fa-play', 'fa-map', 'fa-map-marker-alt',
+  'fa-location-crosshairs', 'fa-mobile-screen-button', 'fa-user-large', 'fa-user-gear', 'fa-search',
+  'fa-share-nodes', 'fa-bookmark', 'fa-copy', 'fa-pen-to-square', 'fa-trash-can', 'fa-plus', 'fa-xmark',
+  'fa-xmark-circle', 'fa-chevron-up', 'fa-chevron-down', 'fa-chevron-left', 'fa-chevron-right',
+  'fa-arrow-up', 'fa-circle-down', 'fa-circle-left', 'fa-layer-group', 'fa-grip-horizontal', 'fa-th',
+  'fa-list-squares', 'fa-navicon', 'fa-sliders-h', 'fa-ellipsis-vertical', 'fa-file-text', 'fa-sign-out-alt',
+]
+function IkonSecici({ deger, degistir }: { deger: string | null; degistir: (v: string | null) => void }) {
+  const [acik, setAcik] = useState(false)
+  const faMi = !!deger?.includes('fa-')
+  return (
+    <div>
+      <label className="mb-1 block text-sm text-[var(--text-m)]">İkon</label>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={() => setAcik(!acik)}
+          className="flex h-9 min-w-[44px] items-center justify-center gap-2 rounded-lg border border-[var(--border)] px-2.5 text-sm hover:bg-[var(--surface2)]">
+          {faMi
+            ? <i className={`fa-solid ${deger!.replace(/^fa-solid\s+/, '')} text-base text-[var(--brand)]`} aria-hidden />
+            : <span className="text-xs text-[var(--text-m)]">{deger || 'İkon seç'}</span>}
+          <span className="text-xs text-[var(--text-s)]">▾</span>
+        </button>
+        {deger && (
+          <button type="button" className="text-xs text-red-600 hover:underline" onClick={() => { degistir(null); setAcik(false) }}>Kaldır</button>
+        )}
+      </div>
+      {acik && (
+        <div className="mt-2 max-h-44 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2">
+          <div className="grid grid-cols-8 gap-1">
+            {IKONLAR.map((ik) => (
+              <button key={ik} type="button" title={ik}
+                className={`flex h-9 items-center justify-center rounded-lg text-base hover:bg-[var(--surface2)] ${deger?.includes(ik) ? 'bg-[var(--brand-bg)] text-[var(--brand)]' : 'text-[var(--text-m)]'}`}
+                onClick={() => { degistir(`fa-solid ${ik}`); setAcik(false) }}>
+                <i className={`fa-solid ${ik}`} aria-hidden />
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-[10px] text-[var(--text-s)]">Banner rozet metni gerekiyorsa aşağıya serbest metin yazılabilir:</p>
+          <Input value={faMi ? '' : (deger ?? '')} placeholder="Serbest metin (ör. %50 İndirim)"
+            onChange={(e) => degistir(e.target.value || null)} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Hedefleme (kural) — RuleJson'ın görsel karşılığı: alan içi OR, alanlar arası AND;
 // hiçbir seçim yoksa kural yok (herkese gösterilir).
@@ -143,7 +239,11 @@ function HedeflemeFormu({ ruleJson, degistir, memberGroups }: {
         </div>
         <div>
           <span className="mb-1 block text-sm text-[var(--text-m)]">Cihaz</span>
-          <div className="flex gap-1.5">{cip('device', 'mobile', 'Mobil')}{cip('device', 'desktop', 'Masaüstü')}</div>
+          {/* 2026-07-22: ios|android = mobil uygulamalar (X-Client-Platform başlığıyla ayrışır) */}
+          <div className="flex flex-wrap gap-1.5">
+            {cip('device', 'mobile', 'Mobil')}{cip('device', 'desktop', 'Masaüstü')}
+            {cip('device', 'ios', 'iOS Uygulama')}{cip('device', 'android', 'Android Uygulama')}
+          </div>
         </div>
         <div>
           <span className="mb-1 block text-sm text-[var(--text-m)]">Üyelik</span>
@@ -593,7 +693,13 @@ export function PageBlockDetailPage() {
                     onClick={() => setOgeModal({ index: i, oge: { ...oge } })}>
                   <td className="px-3 py-2">{oge.sortOrder}</td>
                   <td className="px-3 py-2 font-medium">{oge.titleI18n?.tr || '—'}</td>
-                  <td className="px-3 py-2 text-[var(--text-m)]">{oge.imageUrl ? '✓' : '—'}</td>
+                  <td className="px-3 py-2 text-[var(--text-m)]">
+                    {oge.imageUrl
+                      ? <img src={oge.imageUrl} alt="" className="h-9 w-9 rounded-lg border border-[var(--border)] object-cover" />
+                      : oge.badgeLabel?.includes('fa-')
+                        ? <i className={`${oge.badgeLabel.includes('fa-solid') ? oge.badgeLabel : `fa-solid ${oge.badgeLabel}`} text-base text-[var(--brand)]`} aria-hidden />
+                        : '—'}
+                  </td>
                   <td className="px-3 py-2 text-[var(--text-m)]">{oge.linkUrl ?? '—'}</td>
                   <td className="px-3 py-2"><Badge variant={oge.isActive ? 'success' : 'neutral'}>{oge.isActive ? 'Aktif' : 'Pasif'}</Badge></td>
                   <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
@@ -622,18 +728,22 @@ export function PageBlockDetailPage() {
             {([
               ['Başlık (TR)', ogeModal.oge.titleI18n?.tr ?? '', (v: string) => ({ titleI18n: { ...ogeModal.oge.titleI18n, tr: v } })],
               ['Alt başlık (TR)', ogeModal.oge.subtitleI18n?.tr ?? '', (v: string) => ({ subtitleI18n: v ? { tr: v } : null })],
-              ['Görsel URL', ogeModal.oge.imageUrl ?? '', (v: string) => ({ imageUrl: v || null })],
-              ['Mobil görsel URL', ogeModal.oge.mobileImageUrl ?? '', (v: string) => ({ mobileImageUrl: v || null })],
               ['Video URL (story)', ogeModal.oge.videoUrl ?? '', (v: string) => ({ videoUrl: v || null })],
               ['Link', ogeModal.oge.linkUrl ?? '', (v: string) => ({ linkUrl: v || null })],
               ['Buton metni (TR)', ogeModal.oge.buttonTextI18n?.tr ?? '', (v: string) => ({ buttonTextI18n: v ? { tr: v } : null })],
-              ['Rozet', ogeModal.oge.badgeLabel ?? '', (v: string) => ({ badgeLabel: v || null })],
             ] as [string, string, (v: string) => Partial<ItemDto>][]).map(([etiket, deger, degistir]) => (
               <div key={etiket}>
                 <label className="mb-1 block text-sm text-[var(--text-m)]">{etiket}</label>
                 <Input value={deger} onChange={(e) => setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, ...degistir(e.target.value) } })} />
               </div>
             ))}
+            {/* 2026-07-22: görseller dosyadan yüklenir (URL elle girilmez); rozet → ikon seçici */}
+            <GorselAlani etiket="Görsel" deger={ogeModal.oge.imageUrl}
+              degistir={(v) => setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, imageUrl: v } })} />
+            <GorselAlani etiket="Mobil görsel" deger={ogeModal.oge.mobileImageUrl}
+              degistir={(v) => setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, mobileImageUrl: v } })} />
+            <IkonSecici deger={ogeModal.oge.badgeLabel}
+              degistir={(v) => setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, badgeLabel: v } })} />
             <div>
               <label className="mb-1 block text-sm text-[var(--text-m)]">Sıra</label>
               <Input type="number" value={ogeModal.oge.sortOrder}

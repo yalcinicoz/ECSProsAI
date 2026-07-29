@@ -1,0 +1,42 @@
+[
+ {
+  "ts": "2026-07-18T13:45:01.054Z",
+  "suite": "cuzdan",
+  "step": "Üye detayında cüzdan kartı (70,00 ₺)",
+  "status": "PASS",
+  "note": "Kart bakiyeyle görünüyor. wallet 404: YOK",
+  "shot": "01-uye-cuzdan-karti.png"
+ },
+ {
+  "ts": "2026-07-18T13:45:04.249Z",
+  "suite": "cuzdan",
+  "step": "UI ile 70₺ düşme → bakiye 0,00",
+  "status": "PASS",
+  "note": "Bakiye 0,00 ₺, hareket listede",
+  "shot": "02-bakiye-sifirlandi.png"
+ },
+ {
+  "ts": "2026-07-18T13:45:06.915Z",
+  "suite": "cuzdan",
+  "step": "NEGATİF: 0 bakiyeden 10₺ düşme reddi",
+  "status": "PASS",
+  "note": "Hata mesajı görünüyor",
+  "shot": "03-yetersiz-bakiye-hatasi.png"
+ },
+ {
+  "ts": "2026-07-18T13:45:12.051Z",
+  "suite": "cari",
+  "step": "Cari listede Sahip=Üye filtresi → M-000001",
+  "status": "PASS",
+  "note": "M-000001 \"Üye\" rozetiyle listede",
+  "shot": "04-cari-uye-filtresi.png"
+ },
+ {
+  "ts": "2026-07-18T13:45:15.187Z",
+  "suite": "cari",
+  "step": "Cari detayında hareket dökümü + wallet defter rozeti",
+  "status": "PASS",
+  "note": "Hareketler (13) | wallet · 0,00 TRY",
+  "shot": "05-cari-detay-hareketler.png"
+ }
+]

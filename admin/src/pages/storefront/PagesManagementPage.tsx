@@ -29,8 +29,6 @@ interface BlockRow {
   priority: number; startAt: string | null; endAt: string | null
   itemCount: number; hasProductSource: boolean
 }
-interface SnapshotRow { id: string; version: number; publishedAt: string; isActive: boolean; status: string; note: string | null }
-interface PublishLogRow { id: string; version: number; previousVersion: number | null; publishedAt: string; status: string; errorMessage: string | null; note: string | null }
 // G12: önizleme sonucu — taslak blokların seçilen segmentteki görünürlüğü + nedeni
 interface PreviewBlock {
   id: string; blockType: string; template: string | null; title: Record<string, string>
@@ -57,17 +55,7 @@ interface DraftBlock {
   uyeBaglamli: boolean; kaynakTipi: string | null
   items: DraftItem[]; urunler: DraftUrun[] | null; koleksiyonlar: DraftKoleksiyon[] | null
 }
-// G13: değişiklik geçmişi (vitrin audit kayıtları — iam.audit_logs)
-interface AuditRow {
-  id: string; action: string; entityType: string; entityId: string
-  createdAt: string; userName: string | null; title: string | null
-}
 
-const AUDIT_ACTION_TR: Record<string, string> = {
-  Created: 'Oluşturuldu', Updated: 'Güncellendi', Deleted: 'Silindi',
-  Activated: 'Aktifleştirildi', Deactivated: 'Pasifleştirildi',
-  Published: 'Yayınlandı', Rollback: 'Geri Dönüş', Previewed: 'Önizlendi',
-}
 
 // 81 il (plaka + ad) — önizleme segment seçicisi; storefront şehir çipiyle aynı referans veri.
 const IL_LISTESI: [string, string][] = [
@@ -153,21 +141,6 @@ export function PagesManagementPage() {
     enabled: !!platformId,
   })
 
-  const { data: snapshots = [] } = useQuery<SnapshotRow[]>({
-    queryKey: ['page-snapshots', platformId],
-    queryFn: async () => (await api.get('/pages/snapshots', { params: { firmPlatformId: platformId } })).data.data ?? [],
-    enabled: !!platformId,
-  })
-  const { data: publishLogs = [] } = useQuery<PublishLogRow[]>({
-    queryKey: ['publish-logs', platformId],
-    queryFn: async () => (await api.get('/pages/publish-logs', { params: { firmPlatformId: platformId } })).data.data ?? [],
-    enabled: !!platformId,
-  })
-  const { data: auditLogs = [] } = useQuery<AuditRow[]>({
-    queryKey: ['page-audit-logs', platformId],
-    queryFn: async () => (await api.get('/pages/audit-logs', { params: { firmPlatformId: platformId } })).data.data ?? [],
-    enabled: !!platformId,
-  })
 
   const yenile = () => {
     queryClient.invalidateQueries({ queryKey: ['page-blocks', platformId] })
@@ -223,11 +196,6 @@ export function PagesManagementPage() {
       const err = e as { response?: { data?: { error?: string } } }
       setPublishError(err.response?.data?.error ?? 'Yayınlama başarısız.')
     },
-  })
-  const rollback = useMutation({
-    mutationFn: async (targetVersion: number) =>
-      api.post('/pages/rollback', { firmPlatformId: platformId, targetVersion }),
-    onSuccess: yenile,
   })
 
   // G12: önizleme — taslak veri + kurgu segment; canlıyı etkilemez (spec)
@@ -301,8 +269,11 @@ export function PagesManagementPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Button size="sm" onClick={() => setCreateOpen(true)}>Yeni Blok</Button>
-              <Button size="sm" variant="secondary" onClick={() => { setPreviewResult(null); setPreviewOpen(true) }}>
-                Önizleme
+              <Button size="sm" variant="secondary" onClick={() => { setPreviewResult(null); setPreviewOpen(!previewOpen) }}>
+                {previewOpen ? 'Segment Önizlemeyi Kapat' : 'Segment Önizleme'}
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => navigate(`/storefront/pages/history?platformId=${platformId}`)}>
+                Geçmiş & Versiyonlar →
               </Button>
             </div>
             <div className="flex items-center gap-2">
@@ -320,6 +291,114 @@ export function PagesManagementPage() {
           {publishError && (
             <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
               {publishError}
+            </div>
+          )}
+
+          {previewOpen && (
+            <div className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold">Segment Önizlemesi</h2>
+                <Button size="sm" onClick={() => preview.mutate()} disabled={preview.isPending}>Önizle</Button>
+              </div>
+              <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-sm text-[var(--text-m)]">Şehir</label>
+              <SearchableSelect
+                value={prevCity}
+                onChange={setPrevCity}
+                options={IL_LISTESI.map(([kod, ad]) => ({ value: kod, label: `${ad} (${kod})` }))}
+                placeholder="Konumsuz"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-[var(--text-m)]">Cinsiyet</label>
+              <SearchableSelect
+                value={prevGender}
+                onChange={setPrevGender}
+                options={[{ value: 'female', label: 'Kadın' }, { value: 'male', label: 'Erkek' }]}
+                placeholder="Bilinmiyor"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-[var(--text-m)]">Cihaz</label>
+              <SearchableSelect
+                value={prevDevice}
+                onChange={setPrevDevice}
+                options={[
+                  { value: 'desktop', label: 'Masaüstü' },
+                  { value: 'mobile', label: 'Mobil' },
+                  { value: 'tablet', label: 'Tablet' },
+                  { value: 'ios', label: 'iOS Uygulama' },
+                  { value: 'android', label: 'Android Uygulama' },
+                ]}
+                placeholder="Masaüstü"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-[var(--text-m)]">Üyelik</label>
+              <SearchableSelect
+                value={prevMember}
+                onChange={(v) => { setPrevMember(v); if (v !== 'member') setPrevGroup(null) }}
+                options={[{ value: 'guest', label: 'Misafir' }, { value: 'member', label: 'Üye' }]}
+                placeholder="Misafir"
+              />
+            </div>
+            {prevMember === 'member' && (
+              <div>
+                <label className="mb-1 block text-sm text-[var(--text-m)]">Üye Grubu</label>
+                <SearchableSelect
+                  value={prevGroup}
+                  onChange={setPrevGroup}
+                  options={memberGroups.map((g) => ({
+                    value: g.id,
+                    label: g.nameI18n?.tr ?? Object.values(g.nameI18n ?? {})[0] ?? g.code ?? g.id,
+                  }))}
+                  placeholder="Grupsuz"
+                />
+              </div>
+            )}
+          </div>
+
+          {previewResult && (
+            <>
+              <div className="rounded-lg bg-[var(--surface2)] px-3 py-2 text-xs text-[var(--text-m)]">
+                Çözülen segment: {previewResult.segment.cityName ?? 'konumsuz'}
+                {previewResult.segment.region ? ` / ${previewResult.segment.region}` : ''} ·{' '}
+                {previewResult.segment.gender} · {previewResult.segment.device} · {previewResult.segment.membership}
+                {' '}— yerleşim: {(catalog?.placements ?? []).find((p) => p.code === placement)?.displayName ?? placement}
+              </div>
+              <div className="space-y-2">
+                {previewResult.blocks.map((b) => (
+                  <div key={b.id} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">
+                        {b.sortOrder}. {b.title?.tr ?? Object.values(b.title ?? {})[0] ?? '—'}
+                        <span className="ml-2 text-xs text-[var(--text-m)]">
+                          {typeDef(b.blockType)?.displayName ?? b.blockType}{b.template ? ` / ${b.template}` : ''}
+                        </span>
+                      </span>
+                      <Badge variant={b.visible ? 'success' : 'neutral'}>{b.visible ? 'Görünür' : 'Gizli'}</Badge>
+                    </div>
+                    <div className={`mt-1 text-xs ${b.visible ? 'text-[var(--text-m)]' : 'text-amber-700'}`}>
+                      {b.reason}
+                      {b.itemTotal > 0 && ` · öğe: ${b.itemVisible}/${b.itemTotal}`}
+                      {b.productCount != null && ` · ürün: ${b.productCount}`}
+                    </div>
+                  </div>
+                ))}
+                {previewResult.blocks.length === 0 && (
+                  <p className="text-sm text-[var(--text-m)]">Bu yerleşimde taslak blok yok.</p>
+                )}
+              </div>
+            </>
+          )}
+          {!previewResult && !preview.isPending && (
+            <p className="text-xs text-[var(--text-s)]">
+              Önizleme TASLAK veriler üzerinde çalışır — yayınlanmamış değişiklikler de değerlendirilir; canlı yayını etkilemez.
+            </p>
+          )}
+              </div>
             </div>
           )}
 
@@ -396,7 +475,67 @@ export function PagesManagementPage() {
                           </div>
                         )}
 
-                        {(b.blockType === 'banner' || b.blockType === 'coklu-banner' || b.blockType === 'slider' || b.blockType === 'bilgi-banner') && (
+                        {/* 2026-07-22: markalar — sitedeki gibi yatay logo şeridi */}
+                        {b.blockType === 'brands' && (
+                          <div className="flex items-center gap-6 overflow-x-auto px-2 py-3">
+                            {aktifItems.map((it) => (
+                              <div key={it.id} className="flex shrink-0 flex-col items-center gap-1">
+                                <img src={gorsel(it) ?? bosGorsel} alt="" className="h-10 max-w-[110px] object-contain opacity-80" />
+                                {!gorsel(it) && <span className="text-xs text-[var(--text-m)]">{it.titleI18n?.tr ?? ''}</span>}
+                              </div>
+                            ))}
+                            {aktifItems.length === 0 && <p className="text-xs text-[var(--text-s)]">Öğe yok</p>}
+                          </div>
+                        )}
+
+                        {/* 2026-07-22: görselli yorumlar — sitedeki gibi görsel + yorum kartları */}
+                        {b.blockType === 'gorselli-yorumlar' && (
+                          <div className="flex gap-3 overflow-x-auto pb-1">
+                            {aktifItems.map((it) => (
+                              <div key={it.id} className={`shrink-0 overflow-hidden rounded-xl border border-[var(--border)] ${cihaz === 'mobile' ? 'w-36' : 'w-44'}`}>
+                                <img src={gorsel(it) ?? bosGorsel} alt="" className="aspect-[3/4] w-full object-cover" />
+                                <div className="p-2">
+                                  <div className="text-[10px] text-amber-500">★★★★★</div>
+                                  <div className="truncate text-[11px] font-medium">{it.titleI18n?.tr ?? ''}</div>
+                                  {it.subtitleI18n?.tr && <div className="line-clamp-2 text-[10px] text-[var(--text-m)]">{it.subtitleI18n.tr}</div>}
+                                </div>
+                              </div>
+                            ))}
+                            {aktifItems.length === 0 && <p className="text-xs text-[var(--text-s)]">Öğe yok</p>}
+                          </div>
+                        )}
+
+                        {/* 2026-07-22: ikon banner / bilgi bandı — FA ikon + metin (ikonall.min.css admin'e bağlı) */}
+                        {(b.blockType === 'ikon-banner' || b.blockType === 'bilgi-banner') && (
+                          <div className={`grid gap-2 ${cihaz === 'mobile' ? 'grid-cols-2' : 'grid-cols-4'}`}>
+                            {aktifItems.map((it) => (
+                              <div key={it.id} className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface2)] px-3 py-2.5">
+                                {it.badgeLabel?.includes('fa-')
+                                  ? <i className={`${it.badgeLabel.includes('fa-solid') ? it.badgeLabel : `fa-solid ${it.badgeLabel}`} text-lg text-[var(--brand)]`} aria-hidden />
+                                  : gorsel(it)
+                                    ? <img src={gorsel(it)!} alt="" className="h-6 w-6 object-contain" />
+                                    : <span className="text-lg">•</span>}
+                                <div className="min-w-0">
+                                  <div className="truncate text-[11px] font-medium">{it.titleI18n?.tr ?? ''}</div>
+                                  {it.subtitleI18n?.tr && <div className="truncate text-[10px] text-[var(--text-m)]">{it.subtitleI18n.tr}</div>}
+                                </div>
+                              </div>
+                            ))}
+                            {aktifItems.length === 0 && <p className="text-xs text-[var(--text-s)]">Öğe yok</p>}
+                          </div>
+                        )}
+
+                        {/* 2026-07-22: instagram — kare görsel ızgarası (sitedeki görünüm) */}
+                        {b.blockType === 'instagram' && (
+                          <div className={`grid gap-1.5 ${cihaz === 'mobile' ? 'grid-cols-3' : 'grid-cols-6'}`}>
+                            {aktifItems.map((it) => (
+                              <img key={it.id} src={gorsel(it) ?? bosGorsel} alt="" className="aspect-square w-full rounded-lg object-cover" />
+                            ))}
+                            {aktifItems.length === 0 && <p className="text-xs text-[var(--text-s)]">Öğe yok</p>}
+                          </div>
+                        )}
+
+                        {(b.blockType === 'banner' || b.blockType === 'coklu-banner' || b.blockType === 'slider' || b.blockType === 'cercevesiz-carousel') && (
                           <div className={`grid gap-2 ${b.blockType === 'slider' ? 'grid-cols-1' : cihaz === 'mobile' ? 'grid-cols-2' : 'grid-cols-4'}`}>
                             {(b.blockType === 'slider' ? aktifItems.slice(0, 1) : aktifItems).map((it) => (
                               <div key={it.id} className="relative overflow-hidden rounded-lg">
@@ -468,7 +607,8 @@ export function PagesManagementPage() {
                         )}
 
                         {!b.urunler && !b.koleksiyonlar && !b.uyeBaglamli
-                          && !['story', 'categories', 'banner', 'coklu-banner', 'slider', 'bilgi-banner', 'announcement', 'tabs'].includes(b.blockType) && (
+                          && !['story', 'categories', 'banner', 'coklu-banner', 'slider', 'bilgi-banner', 'announcement', 'tabs',
+                            'brands', 'gorselli-yorumlar', 'ikon-banner', 'instagram', 'cercevesiz-carousel'].includes(b.blockType) && (
                           <p className="text-xs text-[var(--text-s)]">{tip} — bu tür için özel önizleme yok ({b.items.length} öğe).</p>
                         )}
                       </div>
@@ -484,182 +624,11 @@ export function PagesManagementPage() {
             </div>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-              <h2 className="mb-3 text-sm font-semibold">Yayın Versiyonları</h2>
-              <div className="space-y-2">
-                {snapshots.map((s) => (
-                  <div key={s.id} className="flex items-center justify-between rounded-lg bg-[var(--surface2)] px-3 py-2 text-sm">
-                    <div>
-                      <span className="font-medium">v{s.version}</span>
-                      <span className="ml-2 text-[var(--text-m)]">{new Date(s.publishedAt).toLocaleString('tr-TR')}</span>
-                      {s.note && <span className="ml-2 text-xs text-[var(--text-s)]">{s.note}</span>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {s.isActive
-                        ? <Badge variant="success">Aktif Yayın</Badge>
-                        : <Button size="sm" onClick={() => rollback.mutate(s.version)} disabled={rollback.isPending}>Bu versiyona dön</Button>}
-                    </div>
-                  </div>
-                ))}
-                {snapshots.length === 0 && <p className="text-sm text-[var(--text-m)]">Henüz yayın yapılmadı.</p>}
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-              <h2 className="mb-3 text-sm font-semibold">Yayın Geçmişi</h2>
-              <div className="max-h-72 space-y-2 overflow-y-auto">
-                {publishLogs.map((l) => (
-                  <div key={l.id} className="rounded-lg bg-[var(--surface2)] px-3 py-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span>
-                        v{l.version}
-                        {l.previousVersion != null && <span className="text-[var(--text-m)]"> (önceki v{l.previousVersion})</span>}
-                      </span>
-                      <Badge variant={l.status === 'success' ? 'success' : l.status === 'rollback' ? 'warning' : 'danger'}>
-                        {l.status === 'success' ? 'Yayınlandı' : l.status === 'rollback' ? 'Geri Dönüş' : 'Başarısız'}
-                      </Badge>
-                    </div>
-                    <div className="text-xs text-[var(--text-m)]">{new Date(l.publishedAt).toLocaleString('tr-TR')}{l.note ? ` · ${l.note}` : ''}</div>
-                    {l.errorMessage && <div className="mt-1 text-xs text-red-600">{l.errorMessage}</div>}
-                  </div>
-                ))}
-                {publishLogs.length === 0 && <p className="text-sm text-[var(--text-m)]">Kayıt yok.</p>}
-              </div>
-            </div>
-          </div>
-
-          {/* G13: değişiklik geçmişi — kim, neyi, ne zaman (spec audit ekranı) */}
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-            <h2 className="mb-3 text-sm font-semibold">Değişiklik Geçmişi</h2>
-            <div className="max-h-80 space-y-1 overflow-y-auto">
-              {auditLogs.map((l) => (
-                <div key={l.id} className="flex items-center justify-between rounded-lg bg-[var(--surface2)] px-3 py-1.5 text-sm">
-                  <div className="min-w-0 truncate">
-                    <Badge variant={l.action === 'Deleted' || l.action === 'Deactivated' ? 'danger' : l.action === 'Created' || l.action === 'Published' ? 'success' : 'neutral'}>
-                      {AUDIT_ACTION_TR[l.action] ?? l.action}
-                    </Badge>
-                    <span className="ml-2 font-medium">{l.title ?? '—'}</span>
-                    <span className="ml-2 text-xs text-[var(--text-m)]">{l.entityType}</span>
-                  </div>
-                  <div className="ml-3 shrink-0 text-xs text-[var(--text-m)]">
-                    {l.userName || 'bilinmeyen'} · {new Date(l.createdAt).toLocaleString('tr-TR')}
-                  </div>
-                </div>
-              ))}
-              {auditLogs.length === 0 && <p className="text-sm text-[var(--text-m)]">Henüz kayıt yok.</p>}
-            </div>
-          </div>
         </>
       )}
 
       {/* G12: önizleme — seçilen segmentle kural motoru taslak üzerinde çalışır;
           bloklar görünür/gizli + nedenle listelenir. Canlı yayına dokunmaz. */}
-      <Modal open={previewOpen} onClose={() => setPreviewOpen(false)} title="Segment Önizlemesi" size="lg"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setPreviewOpen(false)}>Kapat</Button>
-            <Button onClick={() => preview.mutate()} disabled={preview.isPending}>Önizle</Button>
-          </>
-        }>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-            <div>
-              <label className="mb-1 block text-sm text-[var(--text-m)]">Şehir</label>
-              <SearchableSelect
-                value={prevCity}
-                onChange={setPrevCity}
-                options={IL_LISTESI.map(([kod, ad]) => ({ value: kod, label: `${ad} (${kod})` }))}
-                placeholder="Konumsuz"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm text-[var(--text-m)]">Cinsiyet</label>
-              <SearchableSelect
-                value={prevGender}
-                onChange={setPrevGender}
-                options={[{ value: 'female', label: 'Kadın' }, { value: 'male', label: 'Erkek' }]}
-                placeholder="Bilinmiyor"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm text-[var(--text-m)]">Cihaz</label>
-              <SearchableSelect
-                value={prevDevice}
-                onChange={setPrevDevice}
-                options={[
-                  { value: 'desktop', label: 'Masaüstü' },
-                  { value: 'mobile', label: 'Mobil' },
-                  { value: 'tablet', label: 'Tablet' },
-                ]}
-                placeholder="Masaüstü"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm text-[var(--text-m)]">Üyelik</label>
-              <SearchableSelect
-                value={prevMember}
-                onChange={(v) => { setPrevMember(v); if (v !== 'member') setPrevGroup(null) }}
-                options={[{ value: 'guest', label: 'Misafir' }, { value: 'member', label: 'Üye' }]}
-                placeholder="Misafir"
-              />
-            </div>
-            {prevMember === 'member' && (
-              <div>
-                <label className="mb-1 block text-sm text-[var(--text-m)]">Üye Grubu</label>
-                <SearchableSelect
-                  value={prevGroup}
-                  onChange={setPrevGroup}
-                  options={memberGroups.map((g) => ({
-                    value: g.id,
-                    label: g.nameI18n?.tr ?? Object.values(g.nameI18n ?? {})[0] ?? g.code ?? g.id,
-                  }))}
-                  placeholder="Grupsuz"
-                />
-              </div>
-            )}
-          </div>
-
-          {previewResult && (
-            <>
-              <div className="rounded-lg bg-[var(--surface2)] px-3 py-2 text-xs text-[var(--text-m)]">
-                Çözülen segment: {previewResult.segment.cityName ?? 'konumsuz'}
-                {previewResult.segment.region ? ` / ${previewResult.segment.region}` : ''} ·{' '}
-                {previewResult.segment.gender} · {previewResult.segment.device} · {previewResult.segment.membership}
-                {' '}— yerleşim: {(catalog?.placements ?? []).find((p) => p.code === placement)?.displayName ?? placement}
-              </div>
-              <div className="space-y-2">
-                {previewResult.blocks.map((b) => (
-                  <div key={b.id} className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">
-                        {b.sortOrder}. {b.title?.tr ?? Object.values(b.title ?? {})[0] ?? '—'}
-                        <span className="ml-2 text-xs text-[var(--text-m)]">
-                          {typeDef(b.blockType)?.displayName ?? b.blockType}{b.template ? ` / ${b.template}` : ''}
-                        </span>
-                      </span>
-                      <Badge variant={b.visible ? 'success' : 'neutral'}>{b.visible ? 'Görünür' : 'Gizli'}</Badge>
-                    </div>
-                    <div className={`mt-1 text-xs ${b.visible ? 'text-[var(--text-m)]' : 'text-amber-700'}`}>
-                      {b.reason}
-                      {b.itemTotal > 0 && ` · öğe: ${b.itemVisible}/${b.itemTotal}`}
-                      {b.productCount != null && ` · ürün: ${b.productCount}`}
-                    </div>
-                  </div>
-                ))}
-                {previewResult.blocks.length === 0 && (
-                  <p className="text-sm text-[var(--text-m)]">Bu yerleşimde taslak blok yok.</p>
-                )}
-              </div>
-            </>
-          )}
-          {!previewResult && !preview.isPending && (
-            <p className="text-xs text-[var(--text-s)]">
-              Önizleme TASLAK veriler üzerinde çalışır — yayınlanmamış değişiklikler de değerlendirilir; canlı yayını etkilemez.
-            </p>
-          )}
-        </div>
-      </Modal>
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Yeni Blok" size="md"
         footer={

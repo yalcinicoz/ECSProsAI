@@ -100,6 +100,20 @@ public class UsersController : ControllerBase
         return Ok(new { success = true });
     }
 
+    // ─── Audit Logs ────────────────────────────────────────────────────────────
+
+    /// <summary>Denetim loglarını sayfalı listeler (panel).</summary>
+    [HttpGet("audit-logs")]
+    public async Task<IActionResult> GetAuditLogs(
+        [FromQuery] Guid? userId, [FromQuery] string? entityType, [FromQuery] string? action,
+        [FromQuery] DateTime? from, [FromQuery] DateTime? to,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetAuditLogsQuery(
+            userId, entityType, null, action, from, to, page, pageSize), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
     // ─── Roles ─────────────────────────────────────────────────────────────────
 
     /// <summary>Rolleri listeler.</summary>
