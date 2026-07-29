@@ -126,7 +126,7 @@
         var listeyiKur = function () {
             if (listeHazir) { return; }
             listeHazir = true;
-            var seciliKod = cipler[0].getAttribute("data-ms-sehir-kod") || "";
+            var seciliKod = cookieOku() || "";
             MS_ILLER.slice()
                 .sort(function (a, b) { return a[1].localeCompare(b[1], "tr"); })
                 .forEach(function (il) {

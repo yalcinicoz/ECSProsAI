@@ -49,10 +49,11 @@ public interface IVisitorSegmentResolver
 /// Konum zinciri (plan G9 kararı, sırayla): 1) üyenin varsayılan teslimat adresi şehri →
 /// 2) üye profil şehri → 3) manuel seçim cookie'si `ms_sehir` (plaka kodu; nav şehir çipi
 /// ve "Konumumu kullan" tarayıcı konumu bunu yazar — sayfa açılışında izin pop-up'ı YOK) →
-/// 4) IP tahmini yuvası (GeoLite2 mmdb dosyası edinilince bağlanır — ileri iş) →
+/// 4) IP tahmini (GeoLite2 yerel mmdb — GeoIpCityResolver; dosya yoksa halka sessizce atlanır) →
 /// 5) bilinmiyor. IP tahmini kesin doğru sayılmaz; cinsiyet YALNIZ profilden, tahmin yok (spec).
 /// </summary>
-public class VisitorSegmentResolver(IMemberService memberService, ICrmDbContext crm, IMemoryCache cache)
+public class VisitorSegmentResolver(
+    IMemberService memberService, ICrmDbContext crm, IMemoryCache cache, IGeoIpCityResolver geoIp)
     : IVisitorSegmentResolver
 {
     public const string SehirCookie = "ms_sehir";
@@ -70,7 +71,12 @@ public class VisitorSegmentResolver(IMemberService memberService, ICrmDbContext 
     public async Task<VisitorSegment> ResolveAsync(HttpContext http, Guid? memberId, CancellationToken ct = default)
     {
         var iller = await IlleriGetirAsync(ct);
-        var device = CihazBul(http.Request.Headers.UserAgent.ToString());
+        // 2026-07-22: mobil uygulamalar kimliğini X-Client-Platform başlığıyla bildirir
+        // (ios|android) — hedefleme kuralları bu değerlerle eşleşir; başlık yoksa UA'dan.
+        var istemciPlatform = http.Request.Headers["X-Client-Platform"].ToString().ToLowerInvariant();
+        var device = istemciPlatform is "ios" or "android"
+            ? istemciPlatform
+            : CihazBul(http.Request.Headers.UserAgent.ToString());
 
         MemberInfo? uye = null;
         if (memberId is { } id)
@@ -85,7 +91,9 @@ public class VisitorSegmentResolver(IMemberService memberService, ICrmDbContext 
         else if (http.Request.Cookies.TryGetValue(SehirCookie, out var manuel)
                  && manuel is { Length: 2 } && iller.ByCode.ContainsKey(manuel))
             cityCode = manuel;
-        // 4) IP tahmini yuvası: GeoLite2 mmdb edinilince buraya bağlanır (ileri iş)
+        // 4) IP tahmini: GeoLite2 mmdb'den plaka (dosya yoksa/çözülemezse null → bilinmiyor)
+        else if (geoIp.PlakaBul(http) is { } ipPlaka && iller.ByCode.ContainsKey(ipPlaka))
+            cityCode = ipPlaka;
 
         string? region = null, cityName = null;
         if (cityCode is not null && iller.ByCode.TryGetValue(cityCode, out var il))
@@ -113,7 +121,8 @@ public class VisitorSegmentResolver(IMemberService memberService, ICrmDbContext 
                 (kod, ad, bolge) = (cityCode, il.Name, il.Region);
         }
         var cinsiyet = gender?.ToLowerInvariant() is "male" or "female" ? gender!.ToLowerInvariant() : "unknown";
-        var cihaz = device?.ToLowerInvariant() is "mobile" or "tablet" ? device!.ToLowerInvariant() : "desktop";
+        var cihaz = device?.ToLowerInvariant() is "mobile" or "tablet" or "ios" or "android"
+            ? device!.ToLowerInvariant() : "desktop";
         return new VisitorSegment(kod, ad, bolge, cinsiyet, cihaz, isMember, isMember ? memberGroupId : null);
     }
 
