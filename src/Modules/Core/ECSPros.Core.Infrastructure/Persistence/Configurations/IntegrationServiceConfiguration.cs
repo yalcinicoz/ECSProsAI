@@ -18,6 +18,8 @@ public class IntegrationServiceConfiguration : IEntityTypeConfiguration<Integrat
         builder.Property(x => x.ServiceType).HasMaxLength(50).IsRequired();
         // Kolon adı DB'de SettingsSchema kalır — Json soneki CLR tarafının detayı.
         builder.Property(x => x.SettingsSchemaJson).HasColumnType("jsonb").HasColumnName("SettingsSchema");
+        builder.Property(x => x.CargoCodeStrategy).HasMaxLength(10);
+        builder.Property(x => x.CargoCodeCharset).HasMaxLength(10);
         builder.HasIndex(x => x.Code).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

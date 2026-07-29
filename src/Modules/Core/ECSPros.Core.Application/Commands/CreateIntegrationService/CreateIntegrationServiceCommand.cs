@@ -18,7 +18,12 @@ public record CreateIntegrationServiceCommand(
     bool IsAvailable = true,
     string? LogoUrl = null,
     string? TrackingUrlTemplate = null,
-    List<PlatformSchemaField>? SettingsSchema = null
+    List<PlatformSchemaField>? SettingsSchema = null,
+    // F3: kargo kod stratejisi (yalnız ServiceType=cargo için anlamlı)
+    string? CargoCodeStrategy = null,
+    int? CargoCodeMinLength = null,
+    int? CargoCodeMaxLength = null,
+    string? CargoCodeCharset = null
 ) : IRequest<Result<Guid>>;
 
 public class CreateIntegrationServiceCommandHandler
@@ -50,6 +55,10 @@ public class CreateIntegrationServiceCommandHandler
             IsAvailable = request.IsAvailable,
             LogoUrl = request.LogoUrl,
             TrackingUrlTemplate = request.TrackingUrlTemplate,
+            CargoCodeStrategy = request.CargoCodeStrategy?.Trim().ToLowerInvariant(),
+            CargoCodeMinLength = request.CargoCodeMinLength,
+            CargoCodeMaxLength = request.CargoCodeMaxLength,
+            CargoCodeCharset = request.CargoCodeCharset?.Trim().ToLowerInvariant(),
             SettingsSchemaJson = request.SettingsSchema is { Count: > 0 }
                 ? JsonSerializer.Serialize(request.SettingsSchema, _json)
                 : null,

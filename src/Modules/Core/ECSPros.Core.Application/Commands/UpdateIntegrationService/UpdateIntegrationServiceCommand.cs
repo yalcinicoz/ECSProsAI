@@ -18,7 +18,12 @@ public record UpdateIntegrationServiceCommand(
     bool IsAvailable,
     string? LogoUrl,
     string? TrackingUrlTemplate,
-    List<PlatformSchemaField>? SettingsSchema
+    List<PlatformSchemaField>? SettingsSchema,
+    // F3: kargo kod stratejisi (yalnız ServiceType=cargo için anlamlı)
+    string? CargoCodeStrategy = null,
+    int? CargoCodeMinLength = null,
+    int? CargoCodeMaxLength = null,
+    string? CargoCodeCharset = null
 ) : IRequest<Result<bool>>;
 
 public class UpdateIntegrationServiceCommandHandler
@@ -35,10 +40,18 @@ public class UpdateIntegrationServiceCommandHandler
         if (service is null)
             return Result.Failure<bool>("Entegrasyon servisi bulunamadı.");
 
+        if (request.CargoCodeStrategy is not null &&
+            !new[] { "free", "pattern", "range", "external" }.Contains(request.CargoCodeStrategy.Trim().ToLowerInvariant()))
+            return Result.Failure<bool>("Geçersiz kargo kod stratejisi (free, pattern, range veya external olmalı).");
+
         service.NameI18n = request.NameI18n;
         service.IsAvailable = request.IsAvailable;
         service.LogoUrl = request.LogoUrl;
         service.TrackingUrlTemplate = request.TrackingUrlTemplate;
+        service.CargoCodeStrategy = request.CargoCodeStrategy?.Trim().ToLowerInvariant();
+        service.CargoCodeMinLength = request.CargoCodeMinLength;
+        service.CargoCodeMaxLength = request.CargoCodeMaxLength;
+        service.CargoCodeCharset = request.CargoCodeCharset?.Trim().ToLowerInvariant();
         service.SettingsSchemaJson = request.SettingsSchema is { Count: > 0 }
             ? JsonSerializer.Serialize(request.SettingsSchema, _json)
             : null;
