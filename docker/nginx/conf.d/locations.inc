@@ -70,7 +70,23 @@
     # API - Backend
     client_max_body_size 50m;
 
+    # Kimlik uçları — brute-force freni (bkz. 00-ratelimit.conf; IP başına 60/dk + 20 patlama).
+    # En-uzun-önek eşleşmesiyle /api/'den önce yakalanır.
+    location /api/store/auth/ {
+        limit_req zone=ecs_auth burst=20 nodelay;
+        proxy_pass http://host.docker.internal:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection keep-alive;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
     location /api/ {
+        limit_req zone=ecs_api burst=100 nodelay;
         proxy_pass http://host.docker.internal:5000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;

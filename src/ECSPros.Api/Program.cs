@@ -21,6 +21,7 @@ using ECSPros.Crm.Application.Queries.GetMembers;
 using ECSPros.Inventory.Application.Queries.GetWarehouses;
 using ECSPros.Order.Application.Queries.GetOrders;
 using ECSPros.Cms.Infrastructure;
+using ECSPros.Requests.Infrastructure;
 using ECSPros.Core.Application.Queries.GetLanguages;
 using ECSPros.Core.Infrastructure;
 using ECSPros.Crm.Infrastructure;
@@ -149,6 +150,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(GetIntegrationLogsQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetCurrentAccountsQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetNavigationMenusQuery).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(ECSPros.Requests.Application.Queries.GetRequests.GetRequestsQuery).Assembly);
     // API katmanındaki SignalR event handler'ları
     cfg.RegisterServicesFromAssembly(typeof(OrderConfirmedSignalRHandler).Assembly);
 
@@ -183,6 +185,7 @@ builder.Services.AddFulfillmentInfrastructure(npgsqlDataSource);
 builder.Services.AddFinanceInfrastructure(npgsqlDataSource);
 builder.Services.AddPromotionInfrastructure(npgsqlDataSource);
 builder.Services.AddCmsInfrastructure(npgsqlDataSource);
+builder.Services.AddRequestsInfrastructure(npgsqlDataSource);
 builder.Services.AddPosInfrastructure(npgsqlDataSource);
 builder.Services.AddIntegrationInfrastructure(npgsqlDataSource);
 builder.Services.AddAccountsInfrastructure(npgsqlDataSource);
@@ -204,15 +207,51 @@ builder.Services.AddScoped<ECSPros.Shared.Contracts.IInStockProductProvider, ECS
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IDiscountedProductProvider, ECSPros.Api.Services.DiscountedProductProvider>();
 // B-005/006: genel liste fiyat sıralaması gösterilen (efektif) fiyattan — kanal override → BasePrice
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IEffectivePriceProvider, ECSPros.Api.Services.EffectivePriceProvider>();
+builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.MarketplaceAdminService>(); // Pazaryeri yönetim ekranları — cross-schema okuma katmanı
+
+// Pazaryeri referans verisi (marketplace_ref ayrı DB): kategori/özellik/değer senkronu.
+// Hata-güvenli: DB yapılandırılmamışsa/erişilemiyorsa yalnız referans uçları anlaşılır hata döner.
+builder.Services.AddSingleton<ECSPros.Api.Services.Marketplace.Reference.MarketplaceRefDb>();
+builder.Services.AddSingleton<ECSPros.Api.Services.Marketplace.Reference.IMarketplaceReferenceDownloader,
+    ECSPros.Api.Services.Marketplace.Reference.TrendyolReferenceDownloader>();
+builder.Services.AddSingleton<ECSPros.Api.Services.Marketplace.Reference.MarketplaceReferenceSyncService>();
+
+// Pazaryeri eşleme katmanı (F2): grup→kategori, özellik, değer eşlemeleri + sağlık job'ı.
+builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Mapping.MarketplaceMappingService>();
+builder.Services.AddSingleton<ECSPros.Api.Services.Marketplace.Mapping.MappingHealthService>();
+
+// Pazaryeri hazırlık denetimi + tamamlama (F3): readiness motoru + eksik bilgi tamamlama.
+builder.Services.AddSingleton<ECSPros.Api.Services.Marketplace.Mapping.MarketplaceReadinessService>();
+builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Mapping.MarketplaceCompletionService>();
+
+// Gerçek pazaryeri gönderimi + batch takibi (F4): Trendyol istemcisi, gönderim servisi,
+// hata sınıflandırıcı ve sonuç sorgulama worker'ı (worker hem hosted hem controller'dan
+// elle tetiklenebilir — tek örnek).
+builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Send.TrendyolSellerClient>();
+builder.Services.AddSingleton<ECSPros.Api.Services.Marketplace.Send.MarketplaceErrorClassifier>();
+builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Send.MarketplaceSendService>();
+builder.Services.AddSingleton<ECSPros.Api.Services.Marketplace.Send.MarketplaceBatchWorker>();
+builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Send.MarketplaceIssueService>();
+builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Send.MarketplaceReconciliationService>();
+builder.Services.AddHostedService(sp =>
+    sp.GetRequiredService<ECSPros.Api.Services.Marketplace.Send.MarketplaceBatchWorker>());
 builder.Services.AddSingleton<ECSPros.Api.Services.IStoreMemberSession, ECSPros.Api.Services.StoreMemberSession>(); // D1: SSR üye kimliği (HttpOnly cookie)
 builder.Services.AddTransient<ECSPros.Crm.Application.Services.ISmsSender, ECSPros.Api.Services.CrmSmsSenderAdapter>(); // D4: OTP SMS köprüsü
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IPageBlockSourceResolver, ECSPros.Api.Services.Store.PageBlockSourceResolver>(); // G3: vitrin ürün/koleksiyon kaynağı motoru
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IPageComposer, ECSPros.Api.Services.Store.PageComposer>(); // G4: yerleşim kompozisyonu (store API + Razor ortak)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IVitrinVmBuilder, ECSPros.Api.Services.Store.VitrinVmBuilder>(); // G5: blok → Razor VM (koleksiyon kartı zenginleştirme dahil)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IVisitorSegmentResolver, ECSPros.Api.Services.Store.VisitorSegmentResolver>(); // G9: ziyaretçi segmenti (kural motoru + segment cache girdisi)
+builder.Services.AddSingleton<ECSPros.Api.Services.Store.IGeoIpCityResolver, ECSPros.Api.Services.Store.GeoIpCityResolver>(); // H10: GeoLite2 IP→il halkası (mmdb yoksa devre dışı, hata-güvenli)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IPagePreviewService, ECSPros.Api.Services.Store.PagePreviewService>(); // G12: admin önizleme (taslak + kurgu segment)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IVitrinAuditLogger, ECSPros.Api.Services.Store.VitrinAuditLogger>(); // G13: vitrin değişiklik geçmişi (iam.audit_logs)
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IFaturaPdfProxy, ECSPros.Api.Services.Store.FaturaPdfProxy>(); // H1: entegratör fatura PDF proxy'si (allowlist config'ten)
+// Mobil cihaz doğrulama (2026-07-23): Play Integrity / App Attest → kısa ömürlü device token
+builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceTokenService, ECSPros.Api.Services.Store.DeviceTokenService>();
+// Part B: eski sistem (juludedb) köprüsü — hata-güvenli, connection string boşsa no-op
+builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.ILegacyGateway, ECSPros.Api.Services.Legacy.LegacyGateway>();
+builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.PlayIntegrityVerifier>();
+builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.AppAttestVerifier>();
+builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.DevBypassVerifier>();
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IStoreLinkBuilder, ECSPros.Api.Services.Store.StoreLinkBuilder>(); // H8: e-postalardaki mutlak site linki (Store:Hosts tersinden)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.ISavedSearchNotifier, ECSPros.Api.Services.Store.SavedSearchNotifier>(); // H8: favori arama bildirimi taraması
 builder.Services.AddHostedService<ECSPros.Api.Services.Store.SavedSearchNotifyWorker>(); // H8: periyodik tarama (günde-1 sınırı LastNotifiedAt'ta)
@@ -298,21 +337,87 @@ builder.Services.AddCors(options =>
               .AllowCredentials());
 });
 
+// ─── Rate Limiting (2026-07-23) ────────────────────────────────────
+// Anonim uçlara brute-force/istismar freni. Yalnız [EnableRateLimiting] konan uçlarda
+// çalışır (global limit YOK — SSR sayfaları ve diğer uçlar etkilenmez). IP bazlı hacim
+// freninin asıl katmanı nginx'tedir (00-ratelimit.conf); buradaki politika, nginx'i
+// atlayıp 5000 portuna doğrudan gelen istekleri de yakalayan ikinci savunma hattıdır.
+static string IstemciIpAnahtari(HttpContext ctx)
+{
+    // Cloudflare → nginx → app zincirinde gerçek istemci IP'si CF-Connecting-IP'dedir;
+    // yoksa nginx'in yazdığı X-Forwarded-For'un ilk halkası; o da yoksa soket adresi.
+    var cf = ctx.Request.Headers["CF-Connecting-IP"].FirstOrDefault();
+    if (!string.IsNullOrWhiteSpace(cf)) return cf.Trim();
+    var xff = ctx.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+    if (!string.IsNullOrWhiteSpace(xff)) return xff.Split(',')[0].Trim();
+    return ctx.Connection.RemoteIpAddress?.ToString() ?? "bilinmeyen";
+}
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (ctx, ct) =>
+    {
+        ctx.HttpContext.Response.ContentType = "application/json; charset=utf-8";
+        await ctx.HttpContext.Response.WriteAsync(
+            """{"success":false,"error":"Çok fazla istek gönderildi. Lütfen biraz bekleyip tekrar deneyin."}""", ct);
+    };
+    // Kimlik uçları (login/register/otp/refresh): IP başına dakikada 60 —
+    // CGNAT arkasındaki meşru kalabalığa pay bırakır, brute-force'u anlamsızlaştırır.
+    options.AddPolicy("store-auth", ctx =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            IstemciIpAnahtari(ctx),
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+    // Hassas anonim uçlar (kupon doğrulama = kod taraması, görsel arama = ücretli dış servis):
+    options.AddPolicy("store-sensitive", ctx =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            IstemciIpAnahtari(ctx),
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+});
+
 // ─── Swagger ───────────────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     // Partner API dokümanı — yalnız /api/partner/* uçları; prod'da da açık (dış entegratörler için).
     c.SwaggerDoc("partner", new OpenApiInfo { Title = "ECSPros Partner API", Version = "v1" });
+    // Mobil API dokümanı — kendi satış kanalımız: web sitesinin kullandığı /api/store/* yüzeyinin
+    // tamamı + görsel arama. Partner'dan ayrı doküman, prod'da da açık (mobil ekip için).
+    // Bu uçlar zaten sitenin JS'inden herkese açık çağrılıyor — doküman gizli yüzey sızdırmaz.
+    c.SwaggerDoc("mobile", new OpenApiInfo
+    {
+        Title = "ECSPros Mobil API (Store)",
+        Version = "v1",
+        Description = "Mobil uygulamanın kullandığı vitrin servisleri — web sitesiyle birebir aynı yüzey. Rehber: docs/mobil-api-referansi.md",
+    });
     // İç API dokümanı — yalnız Development'ta ÜRETİLİR (prod'da /swagger/v1 = 404, iç yüzey gizli).
     if (builder.Environment.IsDevelopment())
         c.SwaggerDoc("v1", new OpenApiInfo { Title = "ECSPros API (iç)", Version = "v1" });
 
-    // Uçları doğru dokümana ayır: partner dokümanı yalnız api/partner/*, iç doküman gerisi.
+    // Uçları doğru dokümana ayır: partner yalnız api/partner/*, mobile yalnız store yüzeyi
+    // (api/store/* + gorsel-arama; api/store-notifications iç uçtur, bilerek dışarıda),
+    // iç doküman partner dışındaki her şey.
     c.DocInclusionPredicate((docName, api) =>
     {
         var isPartner = api.RelativePath?.StartsWith("api/partner", StringComparison.OrdinalIgnoreCase) == true;
-        return docName == "partner" ? isPartner : !isPartner;
+        var isStore = api.RelativePath?.StartsWith("api/store/", StringComparison.OrdinalIgnoreCase) == true
+                      || api.RelativePath?.StartsWith("gorsel-arama", StringComparison.OrdinalIgnoreCase) == true;
+        return docName switch
+        {
+            "partner" => isPartner,
+            "mobile" => isStore,
+            _ => !isPartner,
+        };
     });
 
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -338,16 +443,32 @@ var app = builder.Build();
 // ─── Middleware Pipeline ────────────────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-// İki swagger dokümanı: "partner" (dış, prod'da da açık — yalnız /api/partner/*) ve "v1" (iç,
-// yalnız Development'ta ÜRETİLİR). Prod'da /swagger/v1/swagger.json = 404 (iç yüzey gizli kalır);
-// /swagger/partner/swagger.json partner uçlarını listeler. UI'de iç doküman yalnız dev'de görünür.
+// Üç swagger dokümanı, her biri BAĞIMSIZ adreste (arayüzde doküman seçici yok):
+//   /swagger-partner → "partner" (dış entegratörler, yalnız /api/partner/*; prod'da açık)
+//   /swagger-mobile  → "mobile" (kendi mobil kanalımız, yalnız /api/store/* + gorsel-arama; prod'da açık)
+//   /swagger         → "v1" (iç) — yalnız Development'ta ÜRETİLİR ve servis edilir;
+//                      prod'da /swagger ve /swagger/v1/swagger.json = 404 (iç yüzey gizli kalır).
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
+    c.RoutePrefix = "swagger-partner";
     c.SwaggerEndpoint("/swagger/partner/swagger.json", "ECSPros Partner API");
-    if (app.Environment.IsDevelopment())
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ECSPros API (iç)");
+    c.DocumentTitle = "ECSPros Partner API";
 });
+app.UseSwaggerUI(c =>
+{
+    c.RoutePrefix = "swagger-mobile";
+    c.SwaggerEndpoint("/swagger/mobile/swagger.json", "ECSPros Mobil API (Store)");
+    c.DocumentTitle = "ECSPros Mobil API (Store)";
+});
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ECSPros API (iç)");
+        c.DocumentTitle = "ECSPros API (iç)";
+    });
+}
 
 // Faz 8 (misharix tasarım sözleşmesi): sürüm sorgulu (?v=) CSS/JS, performans görselleri
 // ve Font Awesome dosyalarına 1 yıl immutable cache; HTML'e no-cache (tarayıcı bayat
@@ -391,7 +512,10 @@ if (!app.Environment.IsDevelopment())
 app.UseStaticFiles();
 
 app.UseCors();
+app.UseRateLimiter();
 app.UseAuthentication();
+// Device token imza/replay denetimi + (config ile) vitrin kapısı — kimlik çözüldükten sonra
+app.UseMiddleware<ECSPros.Api.Middleware.DeviceRequestGuardMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 
@@ -410,6 +534,10 @@ await DatabaseSeeder.SeedAsync(app.Services);
 // Demo veri seed'i — sadece Development ortamında çalışır (production'da crash'e neden olur)
 if (app.Environment.IsDevelopment())
     await DemoDataSeeder.SeedAsync(app.Services);
+
+// GeoIP durum satırı — singleton'ı açılışta bir kez kurup AKTİF/KAPALI log'unu bastırır
+// (Redis drift detektörü kalıbı; dosya yoksa yalnız uyarı loglanır, açılış etkilenmez).
+app.Services.GetRequiredService<ECSPros.Api.Services.Store.IGeoIpCityResolver>();
 
 // ─── Redis cache durum kontrolü (drift detektörü) ──────────────────
 // Her açılışta Redis'e bir yaz-oku denemesi yapıp sonucu loglar. Böylece şifre/ayar
@@ -439,6 +567,30 @@ _ = Task.Run(async () =>
     catch (Exception ex)
     {
         app.Logger.LogWarning(ex, "Redis cache durum kontrolü tamamlanamadı.");
+    }
+});
+
+// ─── Pazaryeri referans DB durum kontrolü (Redis kalıbı) ───────────
+// marketplace_ref ayrı DB'dir; erişim durumu deploy anında tek satır log olarak görünsün.
+_ = Task.Run(async () =>
+{
+    try
+    {
+        var refDb = app.Services.GetRequiredService<ECSPros.Api.Services.Marketplace.Reference.MarketplaceRefDb>();
+        if (!refDb.IsConfigured)
+        {
+            app.Logger.LogWarning("Pazaryeri referans DB: YAPILANDIRILMAMIŞ (ConnectionStrings:MarketplaceRef yok) — referans senkron uçları kapalı.");
+            return;
+        }
+        var ds = await refDb.GetAsync();
+        if (ds is not null)
+            app.Logger.LogInformation("Pazaryeri referans DB: AKTİF ✓ (marketplace_ref şema hazır)");
+        else
+            app.Logger.LogWarning("Pazaryeri referans DB: ERİŞİLEMİYOR — referans senkron uçları hata dönecek.");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogWarning(ex, "Pazaryeri referans DB durum kontrolü tamamlanamadı.");
     }
 });
 
