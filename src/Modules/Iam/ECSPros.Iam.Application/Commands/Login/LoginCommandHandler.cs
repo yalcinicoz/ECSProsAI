@@ -23,8 +23,10 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginRes
 
     public async Task<Result<LoginResponse>> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
+        // Kullanıcı adı / e-posta büyük-küçük harf duyarsız karşılaştırılır
+        var kimlik = request.Username.Trim().ToLowerInvariant();
         var user = await _context.Users
-            .FirstOrDefaultAsync(u => (u.Username == request.Username || u.Email == request.Username) && !u.IsDeleted, cancellationToken);
+            .FirstOrDefaultAsync(u => (u.Username.ToLower() == kimlik || u.Email.ToLower() == kimlik) && !u.IsDeleted, cancellationToken);
 
         if (user is null || !user.IsActive)
             return Result.Failure<LoginResponse>("Kullanıcı adı veya şifre hatalı.");

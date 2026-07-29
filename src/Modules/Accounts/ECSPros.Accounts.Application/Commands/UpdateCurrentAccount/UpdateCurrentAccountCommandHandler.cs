@@ -12,6 +12,7 @@ public class UpdateCurrentAccountCommandHandler : IRequestHandler<UpdateCurrentA
         var a = await _db.CurrentAccounts.FirstOrDefaultAsync(x => x.Id == request.Id, ct);
         if (a is null) return Result.Failure("Cari bulunamadı.");
         a.Title = request.Title; a.AccountType = request.AccountType; a.GroupId = request.GroupId;
+        a.SupplierKind = request.SupplierKind == "marketplace" ? "marketplace" : "normal";
         a.TaxNumber = request.TaxNumber; a.TaxOffice = request.TaxOffice; a.ContactName = request.ContactName;
         a.Phone = request.Phone; a.Email = request.Email; a.Address = request.Address;
         a.City = request.City; a.Country = request.Country; a.CreditLimit = request.CreditLimit;

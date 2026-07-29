@@ -6,6 +6,8 @@ using ECSPros.Accounts.Application.Commands.UpdateCurrentAccount;
 using ECSPros.Accounts.Application.Queries.GetAccountGroups;
 using ECSPros.Accounts.Application.Queries.GetCurrentAccountDetail;
 using ECSPros.Accounts.Application.Queries.GetCurrentAccounts;
+using ECSPros.Iam.Application.Commands.CreateSupplierUser;
+using ECSPros.Iam.Application.Queries.GetSupplierUsers;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -83,7 +85,7 @@ public class AccountsController : ControllerBase
             req.Code, req.Title, req.AccountType, req.GroupId,
             req.TaxNumber, req.TaxOffice, req.ContactName,
             req.Phone, req.Email, req.Address, req.City, req.Country,
-            req.CreditLimit, req.Currency ?? "TRY", req.Notes), ct);
+            req.CreditLimit, req.Currency ?? "TRY", req.Notes, req.SupplierKind ?? "normal"), ct);
         if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
         return Created("", new { success = true, data = new { id = r.Value } });
     }
@@ -103,12 +105,41 @@ public class AccountsController : ControllerBase
             id, req.Title, req.AccountType, req.GroupId,
             req.TaxNumber, req.TaxOffice, req.ContactName,
             req.Phone, req.Email, req.Address, req.City, req.Country,
-            req.CreditLimit, req.Currency ?? "TRY", req.Notes, req.IsActive), ct);
+            req.CreditLimit, req.Currency ?? "TRY", req.Notes, req.IsActive, req.SupplierKind ?? "normal"), ct);
         if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
         return Ok(new { success = true });
     }
+
+    // ── Satıcı panel kullanıcıları (pazaryeri tedarikçisi) ─────────────────────
+    // SupplierUser IAM modülünde; cari kartın marketplace olduğu doğrulaması burada
+    // (Accounts sorgusu → IAM komutu orkestrasyonu) yapılır ki modüller ayrık kalsın.
+
+    [HttpGet("{id:guid}/supplier-users")]
+    public async Task<IActionResult> GetSupplierUsers(Guid id, CancellationToken ct)
+    {
+        var r = await _mediator.Send(new GetSupplierUsersQuery(id), ct);
+        return Ok(new { success = true, data = r.Value });
+    }
+
+    [HttpPost("{id:guid}/supplier-users")]
+    public async Task<IActionResult> CreateSupplierUser(Guid id, [FromBody] CreateSupplierUserRequest req, CancellationToken ct)
+    {
+        var acc = await _mediator.Send(new GetCurrentAccountDetailQuery(id), ct);
+        if (acc.IsFailure) return NotFound(new { success = false, error = acc.Error });
+        var a = acc.Value!;
+        var isSupplier = a.AccountType is "supplier" or "both";
+        if (!isSupplier || a.SupplierKind != "marketplace")
+            return BadRequest(new { success = false, error = "Panel kullanıcısı yalnız pazaryeri satıcısı (marketplace tedarikçi) cari kartına açılabilir." });
+        if (!a.IsActive)
+            return BadRequest(new { success = false, error = "Pasif cari karta kullanıcı açılamaz." });
+
+        var r = await _mediator.Send(new CreateSupplierUserCommand(id, req.Email, req.Password, req.FullName), ct);
+        if (r.IsFailure) return BadRequest(new { success = false, error = r.Error });
+        return Created("", new { success = true, data = new { id = r.Value } });
+    }
 }
 
+public record CreateSupplierUserRequest(string Email, string Password, string FullName);
 public record AddLedgerRequest(string Currency, string? Description);
 public record CreateAccountGroupRequest(string Code, string Name, string GroupType, string? Description, int SortOrder);
 public record UpdateAccountGroupRequest(string Name, string GroupType, string? Description, int SortOrder, bool IsActive);
@@ -116,9 +147,9 @@ public record CreateCurrentAccountRequest(
     string Code, string Title, string AccountType, Guid? GroupId,
     string? TaxNumber, string? TaxOffice, string? ContactName,
     string? Phone, string? Email, string? Address, string? City, string? Country,
-    decimal CreditLimit, string? Currency, string? Notes);
+    decimal CreditLimit, string? Currency, string? Notes, string? SupplierKind);
 public record UpdateCurrentAccountRequest(
     string Title, string AccountType, Guid? GroupId,
     string? TaxNumber, string? TaxOffice, string? ContactName,
     string? Phone, string? Email, string? Address, string? City, string? Country,
-    decimal CreditLimit, string? Currency, string? Notes, bool IsActive);
+    decimal CreditLimit, string? Currency, string? Notes, bool IsActive, string? SupplierKind);

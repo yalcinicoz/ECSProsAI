@@ -16,5 +16,7 @@ public interface IIamDbContext
     DbSet<AdminMenu> AdminMenus { get; }
     DbSet<ApiClient> ApiClients { get; }
     DbSet<ApiClientType> ApiClientTypes { get; }
+    DbSet<SupplierUser> SupplierUsers { get; }
+    DbSet<SupplierUserSession> SupplierUserSessions { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

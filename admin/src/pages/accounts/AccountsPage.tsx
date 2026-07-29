@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Search, ChevronRight } from 'lucide-react'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
@@ -27,6 +27,7 @@ interface CurrentAccount {
   code: string
   title: string
   accountType: string
+  supplierKind: string
   ownerType: string
   groupId: string | null
   groupName: string | null
@@ -51,7 +52,8 @@ interface PagedResult<T> {
 
 export function AccountsPage() {
   const navigate = useNavigate()
-  const [accountType, setAccountType] = useState('')
+  const [searchParams] = useSearchParams()
+  const [accountType, setAccountType] = useState(searchParams.get('accountType') ?? '')
   const [ownerType, setOwnerType] = useState('')
   const [groupId, setGroupId] = useState('')
   const [isActive, setIsActive] = useState<string>('')
@@ -207,6 +209,9 @@ export function AccountsPage() {
                       style={{ color: typeInfo?.color ?? 'var(--text-m)', background: `${typeInfo?.color ?? '#888'}18` }}>
                       {typeInfo?.label ?? a.accountType}
                     </span>
+                    {a.supplierKind === 'marketplace' && (
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full ml-1.5" style={{ color: '#0ea5e9', background: '#0ea5e918' }}>Pazaryeri</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-sm" style={{ color: 'var(--text-s)' }}>{a.groupName ?? '—'}</span>

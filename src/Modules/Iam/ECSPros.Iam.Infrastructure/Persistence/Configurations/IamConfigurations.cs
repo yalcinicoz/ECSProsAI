@@ -171,6 +171,35 @@ public class ApiClientConfiguration : IEntityTypeConfiguration<ApiClient>
     }
 }
 
+public class SupplierUserConfiguration : IEntityTypeConfiguration<SupplierUser>
+{
+    public void Configure(EntityTypeBuilder<SupplierUser> builder)
+    {
+        builder.ToTable("supplier_users"); // varsayılan şema: iam
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Email).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.PasswordHash).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.FullName).HasMaxLength(200).IsRequired();
+        builder.HasIndex(x => x.Email).IsUnique();
+        builder.HasIndex(x => x.CurrentAccountId);
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
+public class SupplierUserSessionConfiguration : IEntityTypeConfiguration<SupplierUserSession>
+{
+    public void Configure(EntityTypeBuilder<SupplierUserSession> builder)
+    {
+        builder.ToTable("supplier_user_sessions");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.RefreshTokenHash).HasMaxLength(128).IsRequired();
+        builder.Property(x => x.IpAddress).HasMaxLength(50);
+        builder.Property(x => x.UserAgent).HasMaxLength(500);
+        builder.HasQueryFilter(x => !x.IsDeleted);
+        builder.HasOne(x => x.SupplierUser).WithMany().HasForeignKey(x => x.SupplierUserId);
+    }
+}
+
 public class AdminMenuConfiguration : IEntityTypeConfiguration<AdminMenu>
 {
     public void Configure(EntityTypeBuilder<AdminMenu> builder)

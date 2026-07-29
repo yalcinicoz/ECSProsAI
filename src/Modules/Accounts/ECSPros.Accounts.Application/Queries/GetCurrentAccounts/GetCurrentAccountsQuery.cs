@@ -9,7 +9,7 @@ public record GetCurrentAccountsQuery(
     int Page = 1, int PageSize = 30, string? OwnerType = null) : IRequest<Result<PagedResult<CurrentAccountDto>>>;
 
 public record CurrentAccountDto(
-    Guid Id, string Code, string Title, string AccountType,
+    Guid Id, string Code, string Title, string AccountType, string SupplierKind,
     Guid? GroupId, string? GroupName,
     string? TaxNumber, string? ContactName, string? Phone, string? Email,
     string? City, string? Country, decimal CreditLimit, string Currency,
@@ -36,7 +36,7 @@ public class GetCurrentAccountsQueryHandler : IRequestHandler<GetCurrentAccounts
         var total = await query.CountAsync(ct);
         var items = await query.OrderBy(a => a.Title)
             .Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
-            .Select(a => new CurrentAccountDto(a.Id, a.Code, a.Title, a.AccountType,
+            .Select(a => new CurrentAccountDto(a.Id, a.Code, a.Title, a.AccountType, a.SupplierKind,
                 a.GroupId, a.Group != null ? a.Group.Name : null,
                 a.TaxNumber, a.ContactName, a.Phone, a.Email,
                 a.City, a.Country, a.CreditLimit, a.Currency, a.IsActive, a.CreatedAt, a.OwnerType, a.OwnerId))

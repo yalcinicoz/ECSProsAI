@@ -5,4 +5,5 @@ public record CreateCurrentAccountCommand(
     string Code, string Title, string AccountType, Guid? GroupId,
     string? TaxNumber, string? TaxOffice, string? ContactName,
     string? Phone, string? Email, string? Address, string? City, string? Country,
-    decimal CreditLimit, string Currency, string? Notes) : IRequest<Result<Guid>>;
+    decimal CreditLimit, string Currency, string? Notes,
+    string SupplierKind = "normal") : IRequest<Result<Guid>>;

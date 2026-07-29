@@ -5,6 +5,9 @@ public class CurrentAccount : BaseEntity
     public string Code { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string AccountType { get; set; } = "customer"; // supplier, customer, both
+    // Yalnız tedarikçi (supplier/both) carilerde anlamlı: normal = ürün temin ettiğimiz tedarikçi;
+    // marketplace = kendi ürününü sitemizde satan pazaryeri satıcısı (panel + API erişimi alır).
+    public string SupplierKind { get; set; } = "normal"; // normal | marketplace
     public string OwnerType { get; set; } = "external"; // external | member | firm
     public Guid? OwnerId { get; set; }
     public Guid? GroupId { get; set; }

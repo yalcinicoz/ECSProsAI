@@ -5,4 +5,5 @@ public record UpdateCurrentAccountCommand(
     Guid Id, string Title, string AccountType, Guid? GroupId,
     string? TaxNumber, string? TaxOffice, string? ContactName,
     string? Phone, string? Email, string? Address, string? City, string? Country,
-    decimal CreditLimit, string Currency, string? Notes, bool IsActive) : IRequest<Result>;
+    decimal CreditLimit, string Currency, string? Notes, bool IsActive,
+    string SupplierKind = "normal") : IRequest<Result>;

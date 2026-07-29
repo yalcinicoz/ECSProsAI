@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<IIamDbContext>(sp => sp.GetRequiredService<IamDbContext>());
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<ISupplierUserTokenService, SupplierUserTokenService>();
 
         return services;
     }
