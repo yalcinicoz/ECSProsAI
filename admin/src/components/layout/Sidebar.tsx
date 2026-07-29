@@ -24,10 +24,12 @@ interface NavSection {
 const ICON: Record<string, React.ReactNode> = {
   gauge:         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 12 8.5 8.5"/><circle cx="12" cy="12" r="1"/><path d="M16.51 17.35a8 8 0 0 0 1.49-8.35"/></svg>,
   box:           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>,
+  inbox:         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>,
   sliders:       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/></svg>,
   layers:        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>,
   sitemap:       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><rect width="6" height="4" x="9" y="14" rx="1"/><rect width="6" height="4" x="2" y="14" rx="1"/><rect width="6" height="4" x="16" y="14" rx="1"/><rect width="6" height="4" x="9" y="6" rx="1"/><path d="M5 10v4"/><path d="M12 10v4"/><path d="M19 10v4"/><path d="M5 10H19"/></svg>,
   shoppingbag:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" x2="21" y1="6" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
+  truck:         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35a1 1 0 0 0-.78-.38H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>,
   rotateccw:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
   filetext:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><line x1="10" x2="16" y1="9" y2="9"/><line x1="10" x2="16" y1="13" y2="13"/><line x1="10" x2="14" y1="17" y2="17"/></svg>,
   handshake:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>,
@@ -53,14 +55,17 @@ const ICON: Record<string, React.ReactNode> = {
   layout:        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>,
   mail:          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>,
   bell:          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>,
+  store:         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[15px] h-[15px]"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"/></svg>,
 }
 
 const NAV_SECTIONS: NavSection[] = [
   { label: 'Genel', items: [
     { label: 'Dashboard', to: '/', icon: 'gauge' },
+    { label: 'Proje Talepleri', to: '/requests', icon: 'inbox' },
   ]},
   { label: 'Katalog', items: [
     { label: 'Ürün Kartları',      to: '/catalog/products',        icon: 'box' },
+    { label: 'Tedarikçi Gönderimleri', to: '/catalog/product-submissions', icon: 'inbox', permission: 'catalog.products.manage' },
     { label: 'Toplu Resim Yükleme',to: '/catalog/bulk-images',     icon: 'images' },
     { label: 'Özellik Tipleri',    to: '/catalog/attribute-types', icon: 'sliders' },
     { label: 'Ürün Grupları',      to: '/catalog/product-groups',        icon: 'layers' },
@@ -74,9 +79,12 @@ const NAV_SECTIONS: NavSection[] = [
   ]},
   { label: 'Satış', items: [
     { label: 'Siparişler', to: '/orders',           icon: 'shoppingbag' },
+    { label: 'Pazaryerleri', to: '/marketplaces',   icon: 'store' },
     { label: 'İadeler',    to: '/orders/returns',   icon: 'rotateccw' },
     { label: 'Faturalar',  to: '/orders/invoices',  icon: 'filetext' },
     { label: 'Teklifler',  to: '/orders/quotes',    icon: 'handshake' },
+    { label: 'Numara Serileri', to: '/orders/number-series', icon: 'sliders' },
+    { label: 'Kargo Bölgeleri', to: '/orders/cargo-zones', icon: 'truck' },
   ]},
   { label: 'Cari', items: [
     { label: 'Cari Kartlar', to: '/accounts',        icon: 'users' },
@@ -105,7 +113,7 @@ const NAV_SECTIONS: NavSection[] = [
   { label: 'Sistem', items: [
     { label: 'POS',           to: '/pos/sales',             icon: 'creditcard' },
     { label: 'Entegrasyonlar',to: '/integrations/logs',     icon: 'plug' },
-    { label: 'Finans',        to: '/finance/suppliers',     icon: 'clipboard' },
+    { label: 'Finans',        to: '/finance/supplier-invoices', icon: 'clipboard' },
     { label: 'Fulfillment',   to: '/fulfillment/picking-plans', icon: 'boxes' },
     { label: 'Firmalar',        to: '/settings/firms',          icon: 'building2' },
     { label: 'Platform Tipleri',to: '/settings/platform-types', icon: 'globe' },
@@ -124,7 +132,10 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onMobileClose }: SidebarProps) {
-  const { sidebarCollapsed, toggleSidebar } = useUIStore()
+  const { sidebarCollapsed: masaustuDaraltilmis, toggleSidebar } = useUIStore()
+  // Mobil overlay (onMobileClose dolu) HER ZAMAN geniş çizilir: masaüstünde daraltılmış
+  // bırakılan menü, telefonda 248px'lik overlay içinde 60px ikon rayı olarak görünüyordu.
+  const sidebarCollapsed = onMobileClose ? false : masaustuDaraltilmis
   const { user, logout } = useAuthStore()
   const hasPermission = useAuthStore((s) => s.hasPermission)
   const [search, setSearch] = useState('')

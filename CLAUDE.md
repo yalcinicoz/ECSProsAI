@@ -162,6 +162,7 @@ public static IServiceCollection AddXxxInfrastructure(
 | POST | `/api/iam/users/{id}/reset-password` | Şifre sıfırla (admin) |
 | POST | `/api/iam/users/{id}/roles` | Rol ata |
 | GET | `/api/iam/roles` | Rol listesi |
+| GET | `/api/iam/audit-logs` | Denetim logları (sayfalı, 2026-07-19) |
 
 ### Core
 | Method | Endpoint | Açıklama |
@@ -236,6 +237,7 @@ public static IServiceCollection AddXxxInfrastructure(
 **Hediye Kartları:**
 | Method | Endpoint | Açıklama |
 |--------|----------|---------|
+| GET | `/api/orders/gift-cards` | Hediye kartı listesi (sayfalı, 2026-07-19) |
 | GET | `/api/orders/gift-cards/{code}` | Hediye kartı bakiye sorgula |
 | POST | `/api/orders/gift-cards` | Hediye kartı oluştur |
 | POST | `/api/orders/gift-cards/use` | Hediye kartı kullan |
@@ -243,9 +245,9 @@ public static IServiceCollection AddXxxInfrastructure(
 ### Finance
 | Method | Endpoint | Açıklama |
 |--------|----------|---------|
-| GET | `/api/finance/suppliers` | Tedarikçi listesi |
-| GET | `/api/finance/suppliers/{id}` | Tedarikçi detayı |
-| POST | `/api/finance/suppliers` | Tedarikçi oluştur |
+| GET | `/api/accounts?accountType=supplier` | Tedarikçi listesi (tedarikçiler Accounts modülünde cari hesaptır; ayrı `/api/finance/suppliers` ucu YOKTUR) |
+| GET | `/api/finance/supplier-invoices` | Tedarikçi faturaları (sayfalı) |
+| POST | `/api/finance/supplier-invoices` | Tedarikçi faturası oluştur |
 
 ### Promotion
 | Method | Endpoint | Açıklama |
@@ -256,6 +258,7 @@ public static IServiceCollection AddXxxInfrastructure(
 | POST | `/api/promotion/calculate` | Sepet için kampanya indirimlerini hesapla |
 | POST | `/api/promotion/coupon/validate` | Kupon kodu doğrula + indirim hesapla |
 | POST | `/api/promotion/coupon/use` | Kupon kullanımını kaydet |
+| DELETE | `/api/promotion/coupons/{id}` | Kupon sil — yalnız hiç kullanılmamış kupon (2026-07-19) |
 
 ### CMS
 | Method | Endpoint | Açıklama |
@@ -339,7 +342,10 @@ public static IServiceCollection AddXxxInfrastructure(
   alanları şifreli Credentials'a, settings alanları Settings jsonb'sine yazılır.
 - **GitHub push**: SSH 22 portu engellidir. `ssh.github.com:443` veya HTTPS kullanılmalı.
 - **API portu**: Production'da `http://0.0.0.0:5000`, Development'ta `http://localhost:5050`
-- **Swagger**: `http://localhost:5050/swagger` (Development) / `http://51.178.208.59/swagger` (Production)
+- **Swagger** (bağımsız adresler, arayüzde doküman seçici yok):
+  - `/swagger-mobile` → Mobil API (Store) — yalnız `api/store/*` + `gorsel-arama`; prod'da da açık
+  - `/swagger-partner` → Partner API — yalnız `api/partner/*`; prod'da da açık
+  - `/swagger` → iç doküman, YALNIZ Development (`http://localhost:5050/swagger`); prod'da 404
 
 ---
 
