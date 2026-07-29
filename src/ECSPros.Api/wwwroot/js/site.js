@@ -3885,6 +3885,7 @@
             let baslangicZamani = 0;
             let surukleniyor = false;
             let suruklemeBaslangicX = 0;
+            let suruklemeBaslangicZamani = 0;
             let suruklemeFarki = 0;
             let tiklamaEngellenecek = false;
             let gecisYapiliyor = false;
@@ -4045,6 +4046,28 @@
 
             gorselAlani.addEventListener("dragstart", (event) => event.preventDefault());
 
+            // iOS Safari: touch-action pan-y'ye rağmen yatay sürüklemede tarayıcı kaydırmayı
+            // üstlenip pointercancel gönderebiliyor (slider hiç kaymıyordu). Yatay niyet
+            // netleşince touchmove engellenir ki pointer akışı slider'da kalsın.
+            let dokunmaBaslangic = null;
+            gorselAlani.addEventListener("touchstart", (event) => {
+                const dokunus = event.touches[0];
+                dokunmaBaslangic = dokunus ? { x: dokunus.clientX, y: dokunus.clientY } : null;
+            }, { passive: true });
+            gorselAlani.addEventListener("touchmove", (event) => {
+                if (!dokunmaBaslangic || event.touches.length !== 1 || !event.cancelable) {
+                    return;
+                }
+
+                const dokunus = event.touches[0];
+                const yatay = Math.abs(dokunus.clientX - dokunmaBaslangic.x);
+                const dikey = Math.abs(dokunus.clientY - dokunmaBaslangic.y);
+
+                if (yatay > dikey && yatay > 6) {
+                    event.preventDefault();
+                }
+            }, { passive: false });
+
             gorselAlani.addEventListener("pointerdown", (event) => {
                 if (gecisYapiliyor || (event.button !== undefined && event.button !== 0)) {
                     return;
@@ -4053,6 +4076,7 @@
                 surukleniyor = true;
                 tiklamaEngellenecek = false;
                 suruklemeBaslangicX = event.clientX;
+                suruklemeBaslangicZamani = Date.now();
                 suruklemeFarki = 0;
                 gorselAlani.classList.add("ms-slider-gorsel-alani-surukleniyor");
                 gorselAlani.setPointerCapture?.(event.pointerId);
@@ -4084,7 +4108,9 @@
                     return;
                 }
 
-                const esik = Math.max(60, gorselAlani.clientWidth * 0.12);
+                // Küçük parmak hareketi yetsin: ~%7 (en az 28px); 260ms altı fırlatmalarda 18px.
+                const hizliFirlatma = Date.now() - suruklemeBaslangicZamani < 260;
+                const esik = hizliFirlatma ? 18 : Math.max(28, gorselAlani.clientWidth * 0.07);
                 surukleniyor = false;
                 gorselAlani.classList.remove("ms-slider-gorsel-alani-surukleniyor");
 
