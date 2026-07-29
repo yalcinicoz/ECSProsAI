@@ -9,7 +9,8 @@ namespace ECSPros.Integration.Application.Commands.SyncMarketplaceProduct;
 public record SyncMarketplaceProductCommand(
     Guid FirmIntegrationId,
     string ServiceCode,
-    MarketplaceProductPayload Payload) : IRequest<Result<SyncMarketplaceProductResult>>;
+    MarketplaceProductPayload Payload,
+    Guid? FirmPlatformId = null) : IRequest<Result<SyncMarketplaceProductResult>>;
 
 public record SyncMarketplaceProductResult(Guid MarketplaceProductId, string ExternalId, string SyncStatus);
 
@@ -54,6 +55,7 @@ public class SyncMarketplaceProductCommandHandler(
             existing = new MarketplaceProduct
             {
                 FirmIntegrationId = request.FirmIntegrationId,
+                FirmPlatformId = request.FirmPlatformId,
                 VariantId = request.Payload.VariantId,
                 ExternalId = syncResult.ExternalId!,
                 ExternalBarcode = request.Payload.Barcode,
@@ -67,6 +69,7 @@ public class SyncMarketplaceProductCommandHandler(
         else
         {
             existing.ExternalId = syncResult.ExternalId!;
+            existing.FirmPlatformId ??= request.FirmPlatformId;
             existing.SyncStatus = "synced";
             existing.LastSyncedAt = DateTime.UtcNow;
             existing.MarketplacePrice = request.Payload.Price;

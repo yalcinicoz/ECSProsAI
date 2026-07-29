@@ -13,7 +13,8 @@ public record GetIntegrationLogsQuery(
     DateTime? From = null,
     DateTime? To = null,
     int Page = 1,
-    int PageSize = 50) : IRequest<Result<PagedResult<IntegrationLogDto>>>;
+    int PageSize = 50,
+    List<Guid>? FirmIntegrationIds = null) : IRequest<Result<PagedResult<IntegrationLogDto>>>;
 
 public record IntegrationLogDto(
     Guid Id,
@@ -37,6 +38,8 @@ public class GetIntegrationLogsQueryHandler(IIntegrationDbContext db)
 
         if (request.FirmIntegrationId.HasValue)
             q = q.Where(x => x.FirmIntegrationId == request.FirmIntegrationId.Value);
+        if (request.FirmIntegrationIds is { Count: > 0 })
+            q = q.Where(x => request.FirmIntegrationIds.Contains(x.FirmIntegrationId));
         if (!string.IsNullOrWhiteSpace(request.ServiceType))
             q = q.Where(x => x.ServiceType == request.ServiceType);
         if (!string.IsNullOrWhiteSpace(request.OperationType))
