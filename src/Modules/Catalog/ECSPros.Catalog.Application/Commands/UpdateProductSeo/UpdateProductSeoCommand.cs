@@ -23,7 +23,16 @@ public class UpdateProductSeoCommandHandler : IRequestHandler<UpdateProductSeoCo
         var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == request.ProductId, ct);
         if (product is null) return Result.Failure<bool>("Ürün bulunamadı.");
 
+        // Değişmeyen slug'a dokunulmaz (eski sistemden taşınan noktalı/virgüllü URL'ler
+        // yalnız meta güncellemesinde bozulmasın); yeni/değişen slug normalize edilir —
+        // nokta/virgül gibi karakterler yeni URL'lerde yasak.
         var slug = request.Slug?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(slug) && slug != product.Slug)
+        {
+            slug = Helpers.SlugHelper.ToUrlSlug(slug);
+            if (slug.Length == 0)
+                return Result.Failure<bool>("Geçerli bir URL üretilemedi — slug harf/rakam içermeli.");
+        }
         if (!string.IsNullOrEmpty(slug))
         {
             var conflict = await _db.Products
