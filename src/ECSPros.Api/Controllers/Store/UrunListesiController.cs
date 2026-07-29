@@ -58,7 +58,11 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
     // Regex kısıtı şart: kısıtsız {slug}, /favicon.ico gibi kök statik dosyaları da
     // endpoint olarak eşleştirir ve StaticFileMiddleware devre dışı kalır (örtük
     // UseRouting pipeline'ın başında koşar).
-    [HttpGet("/{slug:regex(^[[a-z0-9-]]+$)}")]
+    // İkinci alternatif: eski sistemden birebir taşınan ürün URL'leri nokta/virgül/
+    // ünlem/iki nokta içerir ama İSTİSNASIZ "-rakam" ile biter — dosya adları
+    // (favicon.ico, *.js) bu kalıba uymadığından statikler korunur.
+    // \u002C=virgül (route parser'ın kısıt argümanını virgülde bölmemesi için escape).
+    [HttpGet("/{slug:regex(^[[a-z0-9-]]+$|^[[a-z0-9.!:\\u002C-]]+-[[0-9]]+$)}")]
     public async Task<IActionResult> Kategori(
         string slug, [FromQuery] string? search, [FromQuery] ListeFiltre filtre, [FromQuery] int? page, CancellationToken ct)
     {
