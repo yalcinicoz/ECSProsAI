@@ -20,6 +20,8 @@ public class IamDbContext : DbContext, IIamDbContext
     public DbSet<AdminMenu> AdminMenus => Set<AdminMenu>();
     public DbSet<ApiClient> ApiClients => Set<ApiClient>();
     public DbSet<ApiClientType> ApiClientTypes => Set<ApiClientType>();
+    public DbSet<SupplierUser> SupplierUsers => Set<SupplierUser>();
+    public DbSet<SupplierUserSession> SupplierUserSessions => Set<SupplierUserSession>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

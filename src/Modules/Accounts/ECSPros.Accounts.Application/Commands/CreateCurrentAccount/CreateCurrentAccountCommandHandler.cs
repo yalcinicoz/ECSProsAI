@@ -15,6 +15,7 @@ public class CreateCurrentAccountCommandHandler : IRequestHandler<CreateCurrentA
         var account = new CurrentAccount
         {
             Code = request.Code, Title = request.Title, AccountType = request.AccountType,
+            SupplierKind = request.SupplierKind == "marketplace" ? "marketplace" : "normal",
             GroupId = request.GroupId, TaxNumber = request.TaxNumber, TaxOffice = request.TaxOffice,
             ContactName = request.ContactName, Phone = request.Phone, Email = request.Email,
             Address = request.Address, City = request.City, Country = request.Country ?? "TR",

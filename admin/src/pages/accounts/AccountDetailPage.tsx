@@ -15,6 +15,13 @@ const ACCOUNT_TYPES = [
   { value: 'both',     label: 'Her İkisi' },
 ]
 
+// Yalnız tedarikçi (supplier/both) carilerde anlamlı
+const SUPPLIER_KINDS = [
+  { value: 'normal',      label: 'Normal tedarikçi (ürün temini)' },
+  { value: 'marketplace', label: 'Pazaryeri satıcısı (panel + API)' },
+]
+const isSupplier = (t: string) => t === 'supplier' || t === 'both'
+
 const TYPE_BADGE: Record<string, { label: string; color: string }> = {
   customer: { label: 'Müşteri',    color: 'var(--brand)' },
   supplier: { label: 'Tedarikçi', color: '#f59e0b' },
@@ -27,7 +34,7 @@ interface LedgerDto {
 }
 
 interface AccountDetail {
-  id: string; code: string; title: string; accountType: string
+  id: string; code: string; title: string; accountType: string; supplierKind: string
   groupId: string | null; groupName: string | null; groupCode: string | null
   taxNumber: string | null; taxOffice: string | null; contactName: string | null
   phone: string | null; email: string | null; address: string | null
@@ -38,7 +45,7 @@ interface AccountDetail {
 }
 
 type FormState = {
-  title: string; accountType: string; groupId: string
+  title: string; accountType: string; supplierKind: string; groupId: string
   taxNumber: string; taxOffice: string; contactName: string
   phone: string; email: string; address: string; city: string; country: string
   creditLimit: number; currency: string; notes: string; isActive: boolean
@@ -49,7 +56,7 @@ type FormState = {
 type CreateFormState = FormState & { code: string }
 
 const emptyCreateForm = (): CreateFormState => ({
-  code: '', title: '', accountType: 'customer', groupId: '',
+  code: '', title: '', accountType: 'customer', supplierKind: 'normal', groupId: '',
   taxNumber: '', taxOffice: '', contactName: '',
   phone: '', email: '', address: '', city: '', country: 'TR',
   creditLimit: 0, currency: 'TRY', notes: '', isActive: true,
@@ -70,6 +77,7 @@ export function AccountCreatePage() {
     mutationFn: async () => {
       const { data } = await api.post('/accounts', {
         code: form.code, title: form.title, accountType: form.accountType,
+        supplierKind: isSupplier(form.accountType) ? form.supplierKind : 'normal',
         groupId: form.groupId || null, taxNumber: form.taxNumber || null,
         taxOffice: form.taxOffice || null, contactName: form.contactName || null,
         phone: form.phone || null, email: form.email || null, address: form.address || null,
@@ -149,7 +157,9 @@ export function AccountDetailPage() {
     mutationFn: async () => {
       if (!form || !id) return
       await api.put(`/accounts/${id}`, {
-        title: form.title, accountType: form.accountType, groupId: form.groupId || null,
+        title: form.title, accountType: form.accountType,
+        supplierKind: isSupplier(form.accountType) ? form.supplierKind : 'normal',
+        groupId: form.groupId || null,
         taxNumber: form.taxNumber || null, taxOffice: form.taxOffice || null,
         contactName: form.contactName || null, phone: form.phone || null,
         email: form.email || null, address: form.address || null,
@@ -186,7 +196,8 @@ export function AccountDetailPage() {
   function startEdit() {
     if (!account) return
     setForm({
-      title: account.title, accountType: account.accountType, groupId: account.groupId ?? '',
+      title: account.title, accountType: account.accountType,
+      supplierKind: account.supplierKind ?? 'normal', groupId: account.groupId ?? '',
       taxNumber: account.taxNumber ?? '', taxOffice: account.taxOffice ?? '',
       contactName: account.contactName ?? '', phone: account.phone ?? '',
       email: account.email ?? '', address: account.address ?? '',
@@ -216,6 +227,9 @@ export function AccountDetailPage() {
             <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: typeInfo?.color ?? 'var(--text-m)', background: `${typeInfo?.color ?? '#888'}18` }}>
               {typeInfo?.label ?? account.accountType}
             </span>
+            {isSupplier(account.accountType) && account.supplierKind === 'marketplace' && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ color: '#0ea5e9', background: '#0ea5e918' }}>Pazaryeri</span>
+            )}
             <Badge variant={account.isActive ? 'success' : 'neutral'}>{account.isActive ? 'Aktif' : 'Pasif'}</Badge>
           </div>
           {account.groupName && <p className="text-sm" style={{ color: 'var(--text-s)' }}>Grup: {account.groupName}</p>}
@@ -403,6 +417,17 @@ function AccountFormFields({ form, setForm, groups, isCreate = false }: {
             {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
         </div>
+        {isSupplier(F.accountType) && (
+          <div className="col-span-2">
+            <label className="flbl">Satıcı Tipi</label>
+            <select className="inp" value={F.supplierKind} onChange={e => setForm((f: any) => ({ ...f, supplierKind: e.target.value }))}>
+              {SUPPLIER_KINDS.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}
+            </select>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+              Pazaryeri satıcısı kendi ürününü sitede satar; satıcı paneli ve API erişimi alır.
+            </p>
+          </div>
+        )}
       </div>
 
       <fieldset className="space-y-3">
@@ -484,6 +509,9 @@ function AccountFormFields({ form, setForm, groups, isCreate = false }: {
 
 function ReadOnlyFields({ account }: { account: AccountDetail }) {
   const fields: [string, string | null | undefined][] = [
+    ...(isSupplier(account.accountType)
+      ? [['Satıcı Tipi', account.supplierKind === 'marketplace' ? 'Pazaryeri satıcısı' : 'Normal tedarikçi'] as [string, string]]
+      : []),
     ['İletişim Kişisi', account.contactName],
     ['Telefon', account.phone],
     ['E-posta', account.email],

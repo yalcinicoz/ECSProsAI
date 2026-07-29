@@ -27,6 +27,11 @@ public static class Permissions
     /// <summary>Depo, stok ve transfer yönetimi.</summary>
     public const string InventoryManage = "inventory.manage";
 
+    /// <summary>Paket birleştirme / tek fatura istisna akışı — normal akış paket
+    /// başına faturadır; bu izin bilinçli istisna işlemi içindir (karar 2026-07-19).
+    /// firm_admin'e varsayılan verilmez.</summary>
+    public const string OrderPackagesMerge = "order.packages.merge";
+
     /// <summary>Layer 2 — firm_admin rolüne atanan permission kodları.</summary>
     public static readonly IReadOnlyList<string> FirmAdminPermissions =
     [
@@ -47,5 +52,6 @@ public static class Permissions
         CatalogImagesManage,
         CatalogSettingsManage,
         InventoryManage,
+        OrderPackagesMerge,
     ];
 }

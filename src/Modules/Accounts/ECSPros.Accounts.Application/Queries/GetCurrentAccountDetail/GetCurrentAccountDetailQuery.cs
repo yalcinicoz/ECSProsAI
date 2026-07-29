@@ -9,7 +9,7 @@ public record GetCurrentAccountDetailQuery(Guid Id) : IRequest<Result<CurrentAcc
 public record LedgerDto(Guid Id, string Currency, string? Description, bool IsDefault, decimal Balance, DateTime CreatedAt);
 
 public record CurrentAccountDetailDto(
-    Guid Id, string Code, string Title, string AccountType,
+    Guid Id, string Code, string Title, string AccountType, string SupplierKind,
     Guid? GroupId, string? GroupName, string? GroupCode,
     string? TaxNumber, string? TaxOffice, string? ContactName,
     string? Phone, string? Email, string? Address, string? City, string? Country,
@@ -34,7 +34,7 @@ public class GetCurrentAccountDetailQueryHandler : IRequestHandler<GetCurrentAcc
             .ToListAsync(ct);
 
         return Result.Success(new CurrentAccountDetailDto(
-            a.Id, a.Code, a.Title, a.AccountType,
+            a.Id, a.Code, a.Title, a.AccountType, a.SupplierKind,
             a.GroupId, a.Group?.Name, a.Group?.Code,
             a.TaxNumber, a.TaxOffice, a.ContactName,
             a.Phone, a.Email, a.Address, a.City, a.Country,
