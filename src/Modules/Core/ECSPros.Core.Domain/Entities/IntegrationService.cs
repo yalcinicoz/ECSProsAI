@@ -18,5 +18,13 @@ public class IntegrationService : BaseEntity
     public string? LogoUrl { get; set; }
     public string? TrackingUrlTemplate { get; set; } // {trackingNumber} yer tutucusu
 
+    // F3 (2026-07-19): kargo entegrasyon kodu üretim stratejisi — taşıyıcıya özel kural.
+    // free: serbest (paket no + opsiyonel önek) · pattern: free + uzunluk/karakter kuralı
+    // range: firmaya tahsisli barkod aralığından (PTT) · external: kod dışarıdan gelir
+    public string? CargoCodeStrategy { get; set; }
+    public int? CargoCodeMinLength { get; set; }
+    public int? CargoCodeMaxLength { get; set; }
+    public string? CargoCodeCharset { get; set; } // numeric | alnum
+
     public ICollection<FirmPlatformIntegration> PlatformIntegrations { get; set; } = new List<FirmPlatformIntegration>();
 }

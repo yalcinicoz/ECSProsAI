@@ -26,7 +26,19 @@ export interface IntegrationServiceRow {
   logoUrl: string | null
   trackingUrlTemplate: string | null
   settingsSchema: SchemaField[] | null
+  cargoCodeStrategy: string | null
+  cargoCodeMinLength: number | null
+  cargoCodeMaxLength: number | null
+  cargoCodeCharset: string | null
 }
+
+const CARGO_STRATEGIES = [
+  { value: '', label: '— (varsayılan: serbest)' },
+  { value: 'free', label: 'Serbest — paket no + önek' },
+  { value: 'pattern', label: 'Kurallı — uzunluk/karakter kontrolü' },
+  { value: 'range', label: 'Tahsisli aralık (PTT tarzı)' },
+  { value: 'external', label: 'Dış kod — taşıyıcı/pazaryeri verir' },
+]
 
 const SERVICE_TYPES = [
   { value: 'cargo', label: 'Kargo' },
@@ -49,11 +61,16 @@ type FormState = {
   logoUrl: string
   trackingUrlTemplate: string
   schema: SchemaField[]
+  cargoCodeStrategy: string
+  cargoCodeMinLength: string
+  cargoCodeMaxLength: string
+  cargoCodeCharset: string
 }
 
 const emptyForm = (): FormState => ({
   nameI18n: {}, serviceType: 'cargo', isAvailable: true,
   logoUrl: '', trackingUrlTemplate: '', schema: [],
+  cargoCodeStrategy: '', cargoCodeMinLength: '', cargoCodeMaxLength: '', cargoCodeCharset: '',
 })
 
 function getName(s: Pick<IntegrationServiceRow, 'nameI18n' | 'code'>) {
@@ -100,6 +117,10 @@ export function IntegrationServicesPage() {
         logoUrl: form.logoUrl || null,
         trackingUrlTemplate: form.trackingUrlTemplate || null,
         settingsSchema: form.schema.length > 0 ? form.schema : null,
+        cargoCodeStrategy: form.cargoCodeStrategy || null,
+        cargoCodeMinLength: form.cargoCodeMinLength ? Number(form.cargoCodeMinLength) : null,
+        cargoCodeMaxLength: form.cargoCodeMaxLength ? Number(form.cargoCodeMaxLength) : null,
+        cargoCodeCharset: form.cargoCodeCharset || null,
       })
     },
     onSuccess: () => {
@@ -117,6 +138,10 @@ export function IntegrationServicesPage() {
         logoUrl: form.logoUrl || null,
         trackingUrlTemplate: form.trackingUrlTemplate || null,
         settingsSchema: form.schema.length > 0 ? form.schema : null,
+        cargoCodeStrategy: form.cargoCodeStrategy || null,
+        cargoCodeMinLength: form.cargoCodeMinLength ? Number(form.cargoCodeMinLength) : null,
+        cargoCodeMaxLength: form.cargoCodeMaxLength ? Number(form.cargoCodeMaxLength) : null,
+        cargoCodeCharset: form.cargoCodeCharset || null,
       })
     },
     onSuccess: () => {
@@ -143,6 +168,10 @@ export function IntegrationServicesPage() {
       logoUrl: s.logoUrl ?? '',
       trackingUrlTemplate: s.trackingUrlTemplate ?? '',
       schema: s.settingsSchema ? s.settingsSchema.map(f => ({ ...f, labelI18n: { ...f.labelI18n } })) : [],
+      cargoCodeStrategy: s.cargoCodeStrategy ?? '',
+      cargoCodeMinLength: s.cargoCodeMinLength != null ? String(s.cargoCodeMinLength) : '',
+      cargoCodeMaxLength: s.cargoCodeMaxLength != null ? String(s.cargoCodeMaxLength) : '',
+      cargoCodeCharset: s.cargoCodeCharset ?? '',
     })
   }
 
@@ -216,6 +245,47 @@ export function IntegrationServicesPage() {
           <input className="inp" value={form.trackingUrlTemplate} placeholder="https://…?code={trackingNumber}"
             onChange={e => setForm(f => ({ ...f, trackingUrlTemplate: e.target.value }))} />
         </div>
+      </div>
+
+      {/* Dış div hep render edilir — koşullu düğüm sabit kardeşin önüne eklenmesin */}
+      <div>
+        {form.serviceType === 'cargo' && (
+          <div className="rounded-xl p-4 space-y-3"
+            style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+            <div>
+              <label className="flbl">Kargo Kodu Stratejisi</label>
+              <select className="sel" value={form.cargoCodeStrategy}
+                onChange={e => setForm(f => ({ ...f, cargoCodeStrategy: e.target.value }))}>
+                {CARGO_STRATEGIES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+                Tahsisli aralıkta kodlar firma entegrasyonuna tanımlı barkod aralığından atanır;
+                aralık tükenince kod üretimi açık hata verir.
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="flbl">En Az Uzunluk</label>
+                <input className="inp" type="number" min={1} value={form.cargoCodeMinLength}
+                  onChange={e => setForm(f => ({ ...f, cargoCodeMinLength: e.target.value }))} />
+              </div>
+              <div>
+                <label className="flbl">En Çok Uzunluk</label>
+                <input className="inp" type="number" min={1} value={form.cargoCodeMaxLength}
+                  onChange={e => setForm(f => ({ ...f, cargoCodeMaxLength: e.target.value }))} />
+              </div>
+              <div>
+                <label className="flbl">Karakter Kümesi</label>
+                <select className="sel" value={form.cargoCodeCharset}
+                  onChange={e => setForm(f => ({ ...f, cargoCodeCharset: e.target.value }))}>
+                  <option value="">— serbest</option>
+                  <option value="numeric">Yalnız rakam</option>
+                  <option value="alnum">Harf + rakam</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div>

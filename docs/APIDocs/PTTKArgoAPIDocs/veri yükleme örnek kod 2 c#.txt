@@ -1,0 +1,58 @@
+public int PTTBilgiGonder(string ReferansNo, 
+string MusteriAdres, string MusteriAdSoyad, 
+string MusteriCepTelefonu, 
+string BarkodNumarasi, 
+int KoliAgirlik, int KoliEn, 
+int KoliBoy,
+int KoliYukseklik, 
+double KoliDesi, 
+bool KapidaOdeme, 
+double SiparisTutari )
+{
+            tr.gov.ptt.pttws.Input2 inp = new tr.gov.ptt.pttws.Input2();
+            tr.gov.ptt.pttws.Output2 output = new tr.gov.ptt.pttws.Output2();
+            inp.gonderiTip = "NORMAL";
+            inp.gonderiTur = "KARGO";
+            inp.kullanici = "PttWs";
+            inp.musteriIdSpecified = true;
+            inp.musteriId = ; //ptt tarafýndan verilen müþteri numarasý
+            inp.sifre = ""; //ptt tarafýndan verilen müþteri þifresi
+            inp.dosyaAdi = ReferansNo + "_" + DateTime.Now;
+            
+            List<tr.gov.ptt.pttws.InputDongu2> inpodonguList = new List<tr.gov.ptt.pttws.InputDongu2>();
+            tr.gov.ptt.pttws.InputDongu2 inpdongu = new tr.gov.ptt.pttws.InputDongu2();
+            inpdongu.aAdres = MusteriAdres;
+            inpdongu.aliciAdi = MusteriAdSoyad;
+            inpdongu.aliciTel = MusteriCepTelefonu;
+            inpdongu.barkodNo = BarkodNumarasi;
+            inpdongu.agirlik = KoliAgirlik;
+            inpdongu.agirlikSpecified = true;
+            inpdongu.en = KoliEn;
+            inpdongu.enSpecified = true;
+            inpdongu.boy = KoliBoy;
+            inpdongu.boySpecified = true;
+            inpdongu.yukseklik = KoliYukseklik;
+            inpdongu.yukseklikSpecified = true;
+            inpdongu.desi = KoliDesi;
+            inpdongu.desiSpecified = true;
+            inpdongu.musteriReferansNo = ReferansNo;
+            if (KapidaOdeme)
+            {
+                inpdongu.odeme_sart_ucreti = SiparisTutari;
+                inpdongu.odeme_sart_ucretiSpecified = true;
+                inpdongu.ekhizmet = "OS";
+            }
+            inpdongu.rezerve1 = "x";
+            inpodonguList.Add(inpdongu);
+            tr.gov.ptt.pttws.InputDongu2[] inpdng = new tr.gov.ptt.pttws.InputDongu2[inpodonguList.Count];
+            int i = 0;
+            foreach (tr.gov.ptt.pttws.InputDongu2 dng in inpodonguList)
+            {
+                inpdng[i] = dng;
+                i++;
+            }
+            inp.dongu = inpdng;
+            tr.gov.ptt.pttws.Sorgu sorgu = new tr.gov.ptt.pttws.Sorgu();
+            output = sorgu.kabulEkle2(inp);
+            return 1;
+}

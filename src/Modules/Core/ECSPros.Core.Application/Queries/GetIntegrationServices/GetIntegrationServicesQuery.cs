@@ -17,7 +17,12 @@ public record IntegrationServiceDto(
     bool IsAvailable,
     string? LogoUrl = null,             // H2 additive: kargo servislerinde logo
     string? TrackingUrlTemplate = null, // H2 additive: {trackingNumber} yer tutuculu takip linki
-    List<PlatformSchemaField>? SettingsSchema = null // admin form alanları (credentials/settings ayrımı)
+    List<PlatformSchemaField>? SettingsSchema = null, // admin form alanları (credentials/settings ayrımı)
+    // F3 additive: kargo kod stratejisi alanları (yalnız ServiceType=cargo dolu olur)
+    string? CargoCodeStrategy = null,
+    int? CargoCodeMinLength = null,
+    int? CargoCodeMaxLength = null,
+    string? CargoCodeCharset = null
 );
 
 public class GetIntegrationServicesQueryHandler : IRequestHandler<GetIntegrationServicesQuery, Result<List<IntegrationServiceDto>>>
@@ -38,13 +43,15 @@ public class GetIntegrationServicesQueryHandler : IRequestHandler<GetIntegration
             .Select(s => new
             {
                 s.Id, s.Code, s.NameI18n, s.ServiceType, s.IsAvailable,
-                s.LogoUrl, s.TrackingUrlTemplate, s.SettingsSchemaJson
+                s.LogoUrl, s.TrackingUrlTemplate, s.SettingsSchemaJson,
+                s.CargoCodeStrategy, s.CargoCodeMinLength, s.CargoCodeMaxLength, s.CargoCodeCharset
             })
             .ToListAsync(ct);
 
         var list = kayitlar.Select(s => new IntegrationServiceDto(
             s.Id, s.Code, s.NameI18n, s.ServiceType, s.IsAvailable, s.LogoUrl, s.TrackingUrlTemplate,
-            DeserializeSchema(s.SettingsSchemaJson))).ToList();
+            DeserializeSchema(s.SettingsSchemaJson),
+            s.CargoCodeStrategy, s.CargoCodeMinLength, s.CargoCodeMaxLength, s.CargoCodeCharset)).ToList();
 
         return Result.Success<List<IntegrationServiceDto>>(list);
     }

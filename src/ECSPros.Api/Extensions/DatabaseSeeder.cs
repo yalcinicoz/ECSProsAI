@@ -79,21 +79,22 @@ public static class DatabaseSeeder
     /// section=credentials → şifreli Credentials'a, settings → Settings jsonb'sine).
     /// Kod bazlı idempotent — var olana dokunmaz (admin'in şema düzenlemesi ezilmez).
     /// </summary>
+    private static readonly System.Text.Json.JsonSerializerOptions SemaJsonAyar = new()
+    {
+        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+    };
+
+    private static PlatformSchemaField Alan(string key, string etiket, string tip, string bolum, bool zorunlu = false, string? yardim = null) =>
+        new()
+        {
+            Key = key, LabelI18n = new() { ["tr"] = etiket }, Type = tip, Section = bolum, Required = zorunlu,
+            HelpI18n = yardim is null ? null : new() { ["tr"] = yardim }
+        };
+
     private static async Task SeedPlatformServiceCatalogAsync(IServiceProvider sp)
     {
         var context = sp.GetRequiredService<CoreDbContext>();
-        var json = new System.Text.Json.JsonSerializerOptions
-        {
-            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-        };
-
-        static PlatformSchemaField Alan(string key, string etiket, string tip, string bolum, bool zorunlu = false, string? yardim = null) =>
-            new()
-            {
-                Key = key, LabelI18n = new() { ["tr"] = etiket }, Type = tip, Section = bolum, Required = zorunlu,
-                HelpI18n = yardim is null ? null : new() { ["tr"] = yardim }
-            };
 
         var servisler = new (string Kod, string Ad, string Tip, List<PlatformSchemaField> Sema)[]
         {
@@ -126,6 +127,45 @@ public static class DatabaseSeeder
                             "Gönderimde 'Kullanici adi/parola yanlis' hatası alınıyorsa bu alan yanlış/eksik demektir."),
                 Alan("origin",       "Mesaj Başlığı (Originator)",             "text",     "settings",    zorunlu: true,
                     yardim: "GES Telekom tarafında ONAYLI mesaj başlığınız. Onaysız başlıkla gönderim API tarafından reddedilir.")
+            }),
+            // Pazaryeri servisleri — Code, adapter ServiceCode'uyla birebir aynı olmalı
+            // (AdapterResolver eşleşmesi). Mağaza senkronu bu servise bağlı aktif
+            // FirmPlatformIntegration (sözleşme) ister; kimlikler orada şifreli tutulur.
+            ("trendyol", "Trendyol", "marketplace", new List<PlatformSchemaField>
+            {
+                Alan("supplierId",     "Satıcı ID (Supplier ID)",   "text",     "settings",    zorunlu: true),
+                Alan("apiKey",         "API Key",                   "password", "credentials", zorunlu: true),
+                Alan("apiSecret",      "API Secret",                "password", "credentials", zorunlu: true),
+                // F4 ürün gönderiminde Trendyol'un zorunlu payload alanları
+                Alan("brandId",        "Marka ID (Trendyol marka kataloğundan)", "text", "settings", zorunlu: true),
+                Alan("cargoCompanyId", "Kargo Firma ID (Trendyol kargo listesi)", "text", "settings", zorunlu: true)
+            }),
+            ("hepsiburada", "Hepsiburada", "marketplace", new List<PlatformSchemaField>
+            {
+                Alan("merchantId", "Merchant ID",         "text",     "settings",    zorunlu: true),
+                Alan("username",   "API Kullanıcı Adı",   "text",     "credentials", zorunlu: true),
+                Alan("password",   "API Şifresi",         "password", "credentials", zorunlu: true)
+            }),
+            ("n11", "n11", "marketplace", new List<PlatformSchemaField>
+            {
+                Alan("appKey",    "App Key",    "password", "credentials", zorunlu: true),
+                Alan("appSecret", "App Secret", "password", "credentials", zorunlu: true)
+            }),
+            ("amazon", "Amazon", "marketplace", new List<PlatformSchemaField>
+            {
+                Alan("sellerId",     "Seller ID",     "text",     "settings",    zorunlu: true),
+                Alan("accessKey",    "Access Key",    "password", "credentials", zorunlu: true),
+                Alan("secretKey",    "Secret Key",    "password", "credentials", zorunlu: true),
+                Alan("refreshToken", "Refresh Token", "password", "credentials")
+            }),
+            ("ciceksepeti", "Çiçeksepeti", "marketplace", new List<PlatformSchemaField>
+            {
+                Alan("apiKey", "API Anahtarı", "password", "credentials", zorunlu: true)
+            }),
+            ("pazarama", "Pazarama", "marketplace", new List<PlatformSchemaField>
+            {
+                Alan("apiKey",    "API Key",    "password", "credentials", zorunlu: true),
+                Alan("apiSecret", "API Secret", "password", "credentials", zorunlu: true)
             })
         };
 
@@ -143,7 +183,7 @@ public static class DatabaseSeeder
                 NameI18n = new() { { "tr", s.Ad }, { "en", s.Ad } },
                 ServiceType = s.Tip,
                 IsAvailable = true,
-                SettingsSchemaJson = System.Text.Json.JsonSerializer.Serialize(s.Sema, json)
+                SettingsSchemaJson = System.Text.Json.JsonSerializer.Serialize(s.Sema, SemaJsonAyar)
             })
             .ToList();
 
@@ -164,42 +204,113 @@ public static class DatabaseSeeder
     {
         var context = sp.GetRequiredService<CoreDbContext>();
 
-        var firmalar = new (string Kod, string Ad, string SablonUrl)[]
+        // Şemalar taşıyıcıların bilinen API gereksinimlerine göredir; adapter'lar gerçek
+        // API'ye bağlandıkça alan adları buradaki anahtarlarla birebir okunmalı.
+        // apiUrl her taşıyıcıya ortak eklenir (test/üretim adresi ayrımı için).
+        var firmalar = new (string Kod, string Ad, string SablonUrl, List<PlatformSchemaField> Sema)[]
         {
-            ("aras", "Aras Kargo", "https://kargotakip.araskargo.com.tr/mainpage.aspx?code={trackingNumber}"),
-            ("yurtici", "Yurtiçi Kargo", "https://www.yurticikargo.com/tr/online-servisler/gonderi-sorgula?code={trackingNumber}"),
-            ("mng", "MNG Kargo", "https://kargotakip.mngkargo.com.tr/?takipNo={trackingNumber}"),
-            ("ptt", "PTT Kargo", "https://gonderitakip.ptt.gov.tr/Track/Verify?q={trackingNumber}"),
-            ("surat", "Sürat Kargo", "https://www.suratkargo.com.tr/KargoTakip/?kargotakipno={trackingNumber}"),
-            ("hepsijet", "HepsiJet", "https://www.hepsijet.com/gonderi-takibi/{trackingNumber}"),
-            ("kolaygelsin", "Kolay Gelsin", "https://esube.kolaygelsin.com/shipments?trackingId={trackingNumber}"),
-            ("ups", "UPS", "https://www.ups.com/track?loc=tr_TR&tracknum={trackingNumber}")
+            ("aras", "Aras Kargo", "https://kargotakip.araskargo.com.tr/mainpage.aspx?code={trackingNumber}", new()
+            {
+                Alan("username",     "API Kullanıcı Adı", "text",     "credentials", zorunlu: true),
+                Alan("password",     "API Şifresi",       "password", "credentials", zorunlu: true),
+                Alan("customerCode", "Müşteri Kodu",      "text",     "settings",    zorunlu: true,
+                    yardim: "Aras Kargo tarafından verilen müşteri numaranız.")
+            }),
+            ("yurtici", "Yurtiçi Kargo", "https://www.yurticikargo.com/tr/online-servisler/gonderi-sorgula?code={trackingNumber}", new()
+            {
+                Alan("username", "API Kullanıcı Adı (wsUserName)", "text",     "credentials", zorunlu: true),
+                Alan("password", "API Şifresi (wsPassword)",       "password", "credentials", zorunlu: true)
+            }),
+            // Kullanıcı kararı 2026-07-29: MNG artık DHL — marka adı DHL, API MNG APIZone,
+            // servis kodu `mng` sabit (mevcut sözleşme/kural kayıtları kırılmasın).
+            ("mng", "DHL Kargo (MNG)", "https://kargotakip.mngkargo.com.tr/?takipNo={trackingNumber}", new()
+            {
+                Alan("clientId",       "Client ID",             "password", "credentials", zorunlu: true,
+                    yardim: "MNG API portalından alınan X-IBM-Client-Id."),
+                Alan("clientSecret",   "Client Secret",         "password", "credentials", zorunlu: true),
+                Alan("username",       "Müşteri Kullanıcı Adı", "text",     "credentials", zorunlu: true),
+                Alan("password",       "Müşteri Şifresi",       "password", "credentials", zorunlu: true),
+                Alan("customerNumber", "Müşteri Numarası",      "text",     "settings",    zorunlu: true)
+            }),
+            ("ptt", "PTT Kargo", "https://gonderitakip.ptt.gov.tr/Track/Verify?q={trackingNumber}", new()
+            {
+                Alan("customerNumber", "Müşteri Numarası", "text",     "settings",    zorunlu: true,
+                    yardim: "PTT müşteri numaranız. Barkod aralığı tahsisi ayrıca kargo kod ayarlarından (range) yönetilir."),
+                Alan("username",       "Kullanıcı Adı",    "text",     "credentials", zorunlu: true),
+                Alan("password",       "Şifre",            "password", "credentials", zorunlu: true)
+            }),
+            // Alanlar resmi WSDL'den (docs/APIDocs/SuratWSDL.xml, 2026-07-29):
+            // GonderiyiKargoyaGonderYeni/GonderiGeriCek → KullaniciAdi+Sifre;
+            // GonderiSil/KargoBarkoduSiparisGuncelle/KargoTakipHareketDetayi → CariKodu+WebPassword.
+            ("surat", "Sürat Kargo", "https://www.suratkargo.com.tr/KargoTakip/?kargotakipno={trackingNumber}", new()
+            {
+                Alan("username",    "API Kullanıcı Adı (KullaniciAdi)", "text",     "credentials", zorunlu: true),
+                Alan("password",    "API Şifresi (Sifre)",              "password", "credentials", zorunlu: true),
+                Alan("cariKodu",    "Cari Kodu",                        "text",     "settings",    zorunlu: true,
+                    yardim: "Sürat Kargo cari hesap kodunuz — silme/güncelleme/takip uçları bu kodla çalışır."),
+                Alan("webPassword", "Web Şifresi (WebPassword)",        "password", "credentials",
+                    yardim: "Silme/güncelleme uçlarının istediği ayrı web şifresi; boş bırakılırsa API şifresi kullanılır.")
+            }),
+            ("hepsijet", "HepsiJet", "https://www.hepsijet.com/gonderi-takibi/{trackingNumber}", new()
+            {
+                Alan("username", "API Kullanıcı Adı", "text",     "credentials", zorunlu: true),
+                Alan("password", "API Şifresi",       "password", "credentials", zorunlu: true)
+            }),
+            ("kolaygelsin", "Kolay Gelsin", "https://esube.kolaygelsin.com/shipments?trackingId={trackingNumber}", new()
+            {
+                Alan("apiKey",    "API Key",    "password", "credentials", zorunlu: true),
+                Alan("apiSecret", "API Secret", "password", "credentials", zorunlu: true)
+            }),
+            ("ups", "UPS", "https://www.ups.com/track?loc=tr_TR&tracknum={trackingNumber}", new()
+            {
+                Alan("accountNumber", "Hesap/Müşteri Numarası",      "text",     "settings",    zorunlu: true),
+                Alan("username",      "API Kullanıcı Adı",           "text",     "credentials", zorunlu: true),
+                Alan("password",      "API Şifresi",                 "password", "credentials", zorunlu: true),
+                Alan("apiKey",        "Erişim Anahtarı (Access Key)", "password", "credentials")
+            })
         };
 
-        var mevcutKodlar = await context.IntegrationServices
+        static string SemaYaz(List<PlatformSchemaField> sema) =>
+            System.Text.Json.JsonSerializer.Serialize(
+                sema.Append(Alan("apiUrl", "API Adresi (opsiyonel)", "text", "settings",
+                    yardim: "Boş bırakılırsa taşıyıcının üretim adresi kullanılır; test ortamı adresi girilebilir.")).ToList(),
+                SemaJsonAyar);
+
+        var mevcutlar = await context.IntegrationServices
             .Where(s => s.ServiceType == "cargo")
-            .Select(s => s.Code)
             .ToListAsync();
 
         var yeniler = firmalar
-            .Where(f => !mevcutKodlar.Contains(f.Kod))
+            .Where(f => mevcutlar.All(m => m.Code != f.Kod))
             .Select(f => new IntegrationService
             {
                 Code = f.Kod,
                 NameI18n = new() { { "tr", f.Ad }, { "en", f.Ad } },
                 ServiceType = "cargo",
                 IsAvailable = true,
-                TrackingUrlTemplate = f.SablonUrl
+                TrackingUrlTemplate = f.SablonUrl,
+                SettingsSchemaJson = SemaYaz(f.Sema)
                 // LogoUrl bilinçli null — logo görselleri edinildikçe admin/SQL ile dolar,
                 // storefront logo yoksa yalnız adı basar.
             })
             .ToList();
 
-        if (yeniler.Count == 0) return;
+        // Backfill: şeması hiç doldurulmamış mevcut kargo servisine şablonu yaz —
+        // admin'in elle girdiği/düzenlediği şemalar (dolu SettingsSchema) ezilmez.
+        var doldurulan = 0;
+        foreach (var f in firmalar)
+        {
+            var mevcut = mevcutlar.FirstOrDefault(m => m.Code == f.Kod);
+            if (mevcut is null || !string.IsNullOrEmpty(mevcut.SettingsSchemaJson)) continue;
+            mevcut.SettingsSchemaJson = SemaYaz(f.Sema);
+            doldurulan++;
+        }
+
+        if (yeniler.Count == 0 && doldurulan == 0) return;
 
         context.IntegrationServices.AddRange(yeniler);
         await context.SaveChangesAsync();
-        Console.WriteLine($"✓ Seed: {yeniler.Count} kargo firması eklendi (cargo IntegrationService).");
+        Console.WriteLine($"✓ Seed: kargo firması — {yeniler.Count} yeni, {doldurulan} şema backfill (cargo IntegrationService).");
     }
 
     /// <summary>

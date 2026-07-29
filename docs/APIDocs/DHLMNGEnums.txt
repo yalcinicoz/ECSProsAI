@@ -1,0 +1,44 @@
+DHL / MNG Kargo'nun güncel REST/JSON API entegrasyonunda sipariş (order) oluşturma servislerinde kullanılan `smsPreference`, `deliveryType` ve `paymentType` alanlarının yaygın enum (veya integer/string karşılığı) değerleri aşağıdadır:
+
+---
+
+### 1. `smsPreference` (SMS Bilgilendirme Tercihi)
+
+Gönderinin durumuyla ilgili alıcıya SMS bilgilendirmesi yapılıp yapılmayacağını belirler.
+
+| Değer | Açıklama |
+| --- | --- |
+| **`0`** (veya `None` / `False`) | SMS bilgilendirmesi gönderilmez. |
+| **`1`** (veya `Receiver` / `True`) | SMS bilgilendirmesi **Alıcıya** gönderilir. |
+| **`2`** (veya `Sender`) | SMS bilgilendirmesi **Göndericiye** gönderilir. |
+| **`3`** (veya `Both`) | SMS bilgilendirmesi **Hem Alıcıya Hem Göndericiye** gönderilir. |
+
+> *Not: Servis versiyonuna göre boolean (`true`/`false`) veya tam sayı (`0`, `1`) kabul edebilir. Genellikle alıcıya SMS gitsin isteniyorsa `1` gönderilir.*
+
+---
+
+### 2. `deliveryType` (Teslimat Tipi)
+
+Kargonun adresine mi teslim edileceğini yoksa şubeden mi teslim alınacağını tanımlar.
+
+| Değer | Açıklama |
+| --- | --- |
+| **`1`** (veya `Standard` / `Address`) | **Adrese Teslim:** Kargo alıcının adresine götürülür. |
+| **`2`** (veya `Branch` / `Pickup`) | **Şube Teslim:** Alıcı kargoyu MNG/DHL şubesinden kendisi teslim alır. |
+
+---
+
+### 3. `paymentType` (Ödeme Tipi)
+
+Kargo taşıma ücretinin kimin tarafından ödeneceğini belirler.
+
+| Değer | Açıklama |
+| --- | --- |
+| **`1`** (veya `Sender` / `Gönderici Ödemeli`) | Taşıma ücreti **Gönderici** (Cari/Sözleşmeli hesap) tarafından ödenir. |
+| **`2`** (veya `Receiver` / `Alıcı Ödemeli`) | Taşıma ücreti **Alıcı** tarafından teslimat anında ödenir. |
+| **`3`** (veya `Platform` / `Ortak Ödemeli`) | Pazaryeri / Kampanya anlaşmalı özel ödeme tipleri için kullanılır. |
+
+---
+
+> 💡 **Kapıda Ödeme (Cod / Cash On Delivery) Notu:**
+> Eğer kargo bedeli değil de **ürün bedelinin kapıda tahsilatı** söz konusuysa, bu işlem `paymentType` alanından ziyade sipariş detaylarındaki `codAmount` (veya `isCod`) gibi kapıda tahsilat parametreleri üzerinden yönetilir.
