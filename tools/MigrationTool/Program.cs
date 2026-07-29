@@ -71,6 +71,9 @@ static class Migration
         if (phase == 19) Phase19_FiltreRengi();
         if (phase == 20) await RunCatalogReload();
         if (phase == 21) await Phase21_FixProductGroups();
+        if (phase == 22) await Phase22_MembersAndAddresses();
+        if (phase == 23) await Phase23_Orders();
+        if (phase == 24) await Phase24_Favorites();
 
         Log("=== Migration tamamlandı! ===");
         Log($"  image_sets                  : {PgCount($"{DEF}.image_sets")}");
@@ -2576,5 +2579,329 @@ static class Migration
             ""SaleStoppedUntil""=EXCLUDED.""SaleStoppedUntil"", ""UpdatedAt""=EXCLUDED.""CreatedAt""");
         cmd.CommandText = sb.ToString();
         cmd.ExecuteNonQuery();
+    }
+
+    // ============================================================================
+    // FAZ 22-24: MISHAR go-live aktarımı (2026-07-23) — üye/adres/sipariş/favori.
+    // Yalnız legacy platformId=41 (Mishar). Tekrar çalıştırılabilir (LegacyMemberId/
+    // LegacyOrderId upsert; adres/favori önce sil-sonra-ekle). Modüller arası FK yok →
+    // eşleşmeyen varyant/geo Guid.Empty + snapshot alanlarıyla korunur.
+    // ============================================================================
+    const int MISHAR_PLATFORM = 41;
+    static readonly System.Globalization.CultureInfo TR = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+    static readonly Dictionary<int, Guid> memberMap = new(); // legacy webmembers.Id -> crm_members.Id
+    static Guid geoCountryId = Guid.Empty;
+    static readonly Dictionary<string, Guid> cityByKey = new();
+    static readonly Dictionary<string, Guid> districtByKey = new(); // "cityGuid|TRKEY(ad)"
+
+    static string Sm(MySqlDataReader r, int i) => r.IsDBNull(i) ? "" : r.GetValue(i).ToString()!.Trim();
+    static bool Bit(MySqlDataReader r, int i)
+    {
+        if (r.IsDBNull(i)) return false;
+        var v = r.GetValue(i);
+        return v is bool b ? b : Convert.ToInt64(v) != 0;
+    }
+    static DateTime? Dt(MySqlDataReader r, int i) => r.IsDBNull(i) ? null : r.GetDateTime(i);
+    static string TrKey(string? s) => (s ?? "").Trim().ToUpper(TR);
+
+    static Guid MisharFp() => PgScalar<Guid>("SELECT \"Id\" FROM core.core_firm_platforms WHERE \"Code\"='mishar'");
+
+    static void EnsureGeoMaps()
+    {
+        if (cityByKey.Count > 0) return;
+        geoCountryId = (Guid?)PgScalarNullable("SELECT \"Id\" FROM crm.crm_countries ORDER BY \"CreatedAt\" LIMIT 1") ?? Guid.Empty;
+        using (var r = new NpgsqlCommand("SELECT \"Id\", \"NameI18n\"->>'tr' FROM crm.crm_cities", pg).ExecuteReader())
+            while (r.Read()) if (!r.IsDBNull(1)) cityByKey[TrKey(r.GetString(1))] = r.GetGuid(0);
+        using (var r = new NpgsqlCommand("SELECT \"CityId\", \"Id\", \"NameI18n\"->>'tr' FROM crm.crm_districts", pg).ExecuteReader())
+            while (r.Read()) if (!r.IsDBNull(2)) districtByKey[r.GetGuid(0) + "|" + TrKey(r.GetString(2))] = r.GetGuid(1);
+        Log($"  [geo: {cityByKey.Count} il, {districtByKey.Count} ilçe, ülke={(geoCountryId==Guid.Empty?"YOK":"var")}]");
+    }
+    static Guid? CityIdOrNull(string? name) => !string.IsNullOrWhiteSpace(name) && cityByKey.TryGetValue(TrKey(name), out var g) ? g : null;
+    static Guid DistrictIdOrEmpty(Guid cityId, string? name) => cityId != Guid.Empty && !string.IsNullOrWhiteSpace(name) && districtByKey.TryGetValue(cityId + "|" + TrKey(name), out var g) ? g : Guid.Empty;
+
+    static void EnsureMemberMap()
+    {
+        if (memberMap.Count > 0) return;
+        using var r = new NpgsqlCommand("SELECT \"LegacyMemberId\", \"Id\" FROM crm.crm_members WHERE \"LegacyMemberId\" IS NOT NULL", pg).ExecuteReader();
+        while (r.Read()) memberMap[r.GetInt32(0)] = r.GetGuid(1);
+    }
+
+    static async Task Phase22_MembersAndAddresses()
+    {
+        Log("=== FAZ 22: Mishar üye + adres aktarımı ===");
+        await Task.CompletedTask;
+        EnsureGeoMaps();
+        var defaultGroup = PgScalar<Guid>("SELECT \"Id\" FROM crm.crm_member_groups WHERE \"IsDefault\"=true AND \"IsDeleted\"=false LIMIT 1");
+
+        // 1) Üyeler (tek reader → önce List'e)
+        var rows = new List<object[]>();
+        using (var r = MysqlQuery(
+            "SELECT Id, tcKimlikNo, firstName, lastName, phone, email, password, birthDate, gender, cityName, " +
+            "isActive, epostaOnayli, telefonOnayli, emailSubscribed, smsSubscribed, createdDate " +
+            "FROM webmembers WHERE platformId=" + MISHAR_PLATFORM))
+        {
+            while (r.Read())
+                rows.Add(new object[] {
+                    r.GetInt32(0), Sm(r,1), Sm(r,2), Sm(r,3), Sm(r,4), Sm(r,5), Sm(r,6),
+                    Dt(r,7)!, Sm(r,8), Sm(r,9), Bit(r,10), Bit(r,11), Bit(r,12), Bit(r,13), Bit(r,14), Dt(r,15)!
+                });
+        }
+        Log($"  {rows.Count} üye okundu.");
+
+        int ins = 0, upd = 0;
+        foreach (var row in rows)
+        {
+            int legacyId = (int)row[0];
+            string tc = (string)row[1], fn = (string)row[2], ln = (string)row[3], phoneRaw = (string)row[4], emailRaw = (string)row[5], pwdRaw = (string)row[6];
+            var birth = (DateTime?)row[7];
+            string genderRaw = (string)row[8], city = (string)row[9];
+            bool active = (bool)row[10], emailOk = (bool)row[11], phoneOk = (bool)row[12], emailSub = (bool)row[13], smsSub = (bool)row[14];
+            var created = (DateTime?)row[15];
+
+            // email/phone tekil kısıt — boş veya başka üyede kullanılıyorsa null
+            string? email = emailRaw.ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(email)) email = null;
+            else if (PgScalarNullable("SELECT 1 FROM crm.crm_members WHERE \"Email\"=@e AND \"LegacyMemberId\" IS DISTINCT FROM @lid", ("e", email), ("lid", legacyId)) != null) email = null;
+            string? phone = string.IsNullOrWhiteSpace(phoneRaw) ? null : phoneRaw;
+            if (phone != null && PgScalarNullable("SELECT 1 FROM crm.crm_members WHERE \"Phone\"=@p AND \"LegacyMemberId\" IS DISTINCT FROM @lid", ("p", phone), ("lid", legacyId)) != null) phone = null;
+
+            string? pwd = (pwdRaw.Length == 32 && pwdRaw.All(Uri.IsHexDigit)) ? pwdRaw.ToUpperInvariant() : null; // MD5; junk/placeholder → null
+            string? gender = TrKey(genderRaw) switch { "ERKEK" => "male", "KADIN" => "female", "KADİN" => "female", _ => (string?)null };
+            object cityId = (object?)CityIdOrNull(city) ?? DBNull.Value;
+            string? identity = string.IsNullOrWhiteSpace(tc) ? null : tc;
+            string consents = JsonSerializer.Serialize(new Dictionary<string, object> { ["legacyMarketing"] = new Dictionary<string, bool> { ["email"] = emailSub, ["sms"] = smsSub } }, JsonOpts);
+            var createdAt = created ?? Now;
+
+            var existing = PgScalarNullable("SELECT \"Id\" FROM crm.crm_members WHERE \"LegacyMemberId\"=@lid", ("lid", legacyId));
+            if (existing is Guid gid)
+            {
+                PgExec(@"UPDATE crm.crm_members SET ""Email""=@email,""Phone""=@phone,""PasswordHash""=@pwd,""FirstName""=@fn,""LastName""=@ln,
+                    ""Gender""=@g,""BirthDate""=@bd,""CityId""=@city,""IdentityNumber""=@id,""Consents""=@cons::jsonb,
+                    ""IsRegistered""=TRUE,""IsEmailVerified""=@eok,""IsPhoneVerified""=@pok,""IsActive""=@act,""UpdatedAt""=@now WHERE ""Id""=@mid",
+                    ("email", (object?)email ?? DBNull.Value), ("phone", (object?)phone ?? DBNull.Value), ("pwd", (object?)pwd ?? DBNull.Value),
+                    ("fn", fn), ("ln", ln), ("g", (object?)gender ?? DBNull.Value), ("bd", birth.HasValue ? DateOnly.FromDateTime(birth.Value) : (object)DBNull.Value),
+                    ("city", cityId), ("id", (object?)identity ?? DBNull.Value), ("cons", consents), ("eok", emailOk), ("pok", phoneOk), ("act", active), ("now", Now), ("mid", gid));
+                memberMap[legacyId] = gid; upd++;
+            }
+            else
+            {
+                var mid = NewId();
+                PgExec(@"INSERT INTO crm.crm_members (""Id"",""MemberGroupId"",""LegacyMemberId"",""Email"",""Phone"",""PasswordHash"",""FirstName"",""LastName"",
+                    ""Gender"",""BirthDate"",""CityId"",""IdentityNumber"",""Consents"",""IsRegistered"",""IsEmailVerified"",""IsPhoneVerified"",""IsActive"",""CreatedAt"",""IsDeleted"")
+                    VALUES (@mid,@grp,@lid,@email,@phone,@pwd,@fn,@ln,@g,@bd,@city,@id,@cons::jsonb,TRUE,@eok,@pok,@act,@created,FALSE)",
+                    ("mid", mid), ("grp", defaultGroup), ("lid", legacyId), ("email", (object?)email ?? DBNull.Value), ("phone", (object?)phone ?? DBNull.Value),
+                    ("pwd", (object?)pwd ?? DBNull.Value), ("fn", fn), ("ln", ln), ("g", (object?)gender ?? DBNull.Value),
+                    ("bd", birth.HasValue ? DateOnly.FromDateTime(birth.Value) : (object)DBNull.Value), ("city", cityId), ("id", (object?)identity ?? DBNull.Value),
+                    ("cons", consents), ("eok", emailOk), ("pok", phoneOk), ("act", active), ("created", createdAt));
+                memberMap[legacyId] = mid; ins++;
+            }
+        }
+        Log($"  Üye: {ins} eklendi, {upd} güncellendi.");
+
+        // 2) Adresler — aktarılan üyelerin adreslerini sil-sonra-ekle (idempotent)
+        var addrRows = new List<object[]>();
+        using (var r = MysqlQuery(
+            "SELECT memberId, addressTitle, addressDetail, postalCode, neighborhoodName, districtName, cityName, countryName, contactFirstName, contactLastName, contactPhone " +
+            "FROM webmemberaddresses WHERE platformId=" + MISHAR_PLATFORM))
+        {
+            while (r.Read())
+                addrRows.Add(new object[] { r.GetInt32(0), Sm(r,1), Sm(r,2), Sm(r,3), Sm(r,4), Sm(r,5), Sm(r,6), Sm(r,7), Sm(r,8), Sm(r,9), Sm(r,10) });
+        }
+        foreach (var mid in memberMap.Values)
+            PgExec("DELETE FROM crm.crm_addresses WHERE \"MemberId\"=@m", ("m", mid));
+
+        var defaultDone = new HashSet<Guid>();
+        int addrIns = 0;
+        foreach (var a in addrRows)
+        {
+            int legacyMemberId = (int)a[0];
+            if (!memberMap.TryGetValue(legacyMemberId, out var mid)) continue;
+            string title = (string)a[1], detail = (string)a[2], postal = (string)a[3], mah = (string)a[4], ilce = (string)a[5], il = (string)a[6], ulke = (string)a[7], cfn = (string)a[8], cln = (string)a[9], phone = (string)a[10];
+            var cityId = CityIdOrNull(il);
+            var distId = cityId.HasValue ? DistrictIdOrEmpty(cityId.Value, ilce) : Guid.Empty;
+            bool isDefault = defaultDone.Add(mid);
+            PgExec(@"INSERT INTO crm.crm_addresses (""Id"",""MemberId"",""Title"",""CountryId"",""CountryName"",""CityId"",""CityName"",""DistrictId"",""DistrictName"",
+                ""NeighborhoodName"",""AddressLine"",""PostalCode"",""RecipientName"",""RecipientPhone"",""IsDefault"",""IsValidated"",""CreatedAt"",""IsDeleted"")
+                VALUES (@id,@mid,@title,@cid,@cname,@city,@cityn,@dist,@distn,@mah,@line,@postal,@rname,@rphone,@def,FALSE,@now,FALSE)",
+                ("id", NewId()), ("mid", mid), ("title", string.IsNullOrWhiteSpace(title) ? "Adres" : title),
+                ("cid", geoCountryId == Guid.Empty ? (object)DBNull.Value : geoCountryId), ("cname", string.IsNullOrWhiteSpace(ulke) ? "Türkiye" : ulke),
+                ("city", (object?)cityId ?? DBNull.Value), ("cityn", il), ("dist", distId == Guid.Empty ? (object)DBNull.Value : distId), ("distn", ilce),
+                ("mah", string.IsNullOrWhiteSpace(mah) ? (object)DBNull.Value : mah), ("line", detail), ("postal", string.IsNullOrWhiteSpace(postal) ? (object)DBNull.Value : postal),
+                ("rname", ($"{cfn} {cln}").Trim()), ("rphone", phone), ("def", isDefault), ("now", Now));
+            addrIns++;
+        }
+        Log($"  Adres: {addrIns} eklendi (aktarılan üyelere).");
+    }
+
+    static string MapOrderStatus(string legacy) => TrKey(legacy) switch
+    {
+        "İPTAL EDİLDİ" => "cancelled",
+        "TESLİM EDİLDİ" => "delivered",
+        "KARGOYA VERİLDİ" => "shipped",
+        "TESLİM EDİLEMEDEN İADE GELDİ" => "cancelled",
+        "FATURASI KESİLDİ" => "processing",
+        "HAZIRLANIYOR" => "processing",
+        _ => "confirmed",
+    };
+
+    static async Task Phase23_Orders()
+    {
+        Log("=== FAZ 23: Mishar sipariş aktarımı ===");
+        await Task.CompletedTask;
+        EnsureGeoMaps();
+        EnsureMemberMap();
+        EnsureVariantMap();
+        var fp = MisharFp();
+
+        // Teslimat adresi haritası (shippingAddressId -> adres)
+        var addrMap = new Dictionary<int, string[]>();
+        using (var r = MysqlQuery("SELECT Id, cityName, districtName, neighborhoodName, addressDetail, postalCode, contactFirstName, contactLastName, contactPhone FROM webmemberaddresses WHERE platformId=" + MISHAR_PLATFORM))
+            while (r.Read()) addrMap[r.GetInt32(0)] = new[] { Sm(r,1), Sm(r,2), Sm(r,3), Sm(r,4), Sm(r,5), Sm(r,6), Sm(r,7), Sm(r,8) };
+
+        // Siparişler
+        var orders = new List<object[]>();
+        using (var r = MysqlQuery(
+            "SELECT Id, orderNumber, sourcePlatformOrderNumber, kaynakSiparisId, siparisKaynagi, orderStatus, orderDate, memberId, shippingAddressId, " +
+            "memberFirstName, memberLastName, memberPhone, currency, exchangeRate, subTotal, discountTotal, expenseTotal, taxTotal, orderTotal, customerNote " +
+            "FROM oporders WHERE platformId=" + MISHAR_PLATFORM))
+        {
+            while (r.Read())
+                orders.Add(new object[] {
+                    r.GetInt32(0), Sm(r,1), Sm(r,2), Sm(r,3), Sm(r,4), Sm(r,5), Dt(r,6)!, r.IsDBNull(7)?0:r.GetInt32(7), r.IsDBNull(8)?0:r.GetInt32(8),
+                    Sm(r,9), Sm(r,10), Sm(r,11), Sm(r,12), r.IsDBNull(13)?0d:Convert.ToDouble(r.GetValue(13)),
+                    r.IsDBNull(14)?0d:Convert.ToDouble(r.GetValue(14)), r.IsDBNull(15)?0d:Convert.ToDouble(r.GetValue(15)), r.IsDBNull(16)?0d:Convert.ToDouble(r.GetValue(16)),
+                    r.IsDBNull(17)?0d:Convert.ToDouble(r.GetValue(17)), r.IsDBNull(18)?0d:Convert.ToDouble(r.GetValue(18)), Sm(r,19)
+                });
+        }
+        Log($"  {orders.Count} sipariş okundu.");
+
+        // Kalemler (tüm mishar sipariş kalemleri — orderId'ye göre grupla)
+        var orderIds = orders.Select(o => (int)o[0]).ToHashSet();
+        var linesByOrder = new Dictionary<int, List<object[]>>();
+        using (var r = MysqlQuery(
+            "SELECT ol.orderId, ol.productVariantId, ol.barcode, ol.productCode, ol.productName, ol.color, ol.variantValue, ol.sellingPrice, ol.quantity, ol.discountAmount " +
+            "FROM oporderlines ol JOIN oporders o ON o.Id=ol.orderId WHERE o.platformId=" + MISHAR_PLATFORM))
+        {
+            while (r.Read())
+            {
+                int oid = r.GetInt32(0);
+                if (!linesByOrder.TryGetValue(oid, out var list)) linesByOrder[oid] = list = new();
+                list.Add(new object[] { r.IsDBNull(1)?0:r.GetInt32(1), Sm(r,2), Sm(r,3), Sm(r,4), Sm(r,5), Sm(r,6),
+                    r.IsDBNull(7)?0d:Convert.ToDouble(r.GetValue(7)), r.IsDBNull(8)?0:r.GetInt32(8), r.IsDBNull(9)?0d:Convert.ToDouble(r.GetValue(9)) });
+            }
+        }
+
+        int ins = 0, upd = 0, lineCount = 0, unresolvedVar = 0;
+        foreach (var o in orders)
+        {
+            int legacyId = (int)o[0];
+            string orderNo = (string)o[1], srcNo = (string)o[2], kaynakNo = (string)o[3], kaynak = (string)o[4], statusRaw = (string)o[5];
+            var orderDate = (DateTime?)o[6];
+            int legacyMemberId = (int)o[7], shipAddrId = (int)o[8];
+            string mFn = (string)o[9], mLn = (string)o[10], mPhone = (string)o[11], currency = (string)o[12];
+            double exRate = (double)o[13], sub = (double)o[14], disc = (double)o[15], exp = (double)o[16], tax = (double)o[17], total = (double)o[18];
+            string custNote = (string)o[19];
+
+            string status = MapOrderStatus(statusRaw);
+            string paymentStatus = status == "cancelled" ? "cancelled" : "paid";
+            object memberId = memberMap.TryGetValue(legacyMemberId, out var mg) ? mg : (object)DBNull.Value;
+            string extNo = !string.IsNullOrWhiteSpace(kaynakNo) ? kaynakNo : (!string.IsNullOrWhiteSpace(srcNo) ? srcNo : orderNo);
+
+            // teslimat adresi
+            string il = "", ilce = "", mah = "", detay = "", postal = "", rName = ($"{mFn} {mLn}").Trim(), rPhone = mPhone;
+            if (addrMap.TryGetValue(shipAddrId, out var ad))
+            {
+                il = ad[0]; ilce = ad[1]; mah = ad[2]; detay = ad[3]; postal = ad[4];
+                var an = ($"{ad[5]} {ad[6]}").Trim(); if (an != "") rName = an;
+                if (!string.IsNullOrWhiteSpace(ad[7])) rPhone = ad[7];
+            }
+            var cityId = CityIdOrNull(il) ?? Guid.Empty;
+            var distId = DistrictIdOrEmpty(cityId, ilce);
+            // Geo Guid çözülemese de metin kaybolmasın: adres satırına il/ilçe/mahalle önekle
+            string addrLine = string.Join(" / ", new[] { il, ilce, mah, detay }.Where(x => !string.IsNullOrWhiteSpace(x)));
+            string internalNote = $"[Aktarım] Kaynak: {(string.IsNullOrWhiteSpace(kaynak) ? "?" : kaynak)} | Eski No: {orderNo}" + (string.IsNullOrWhiteSpace(custNote) ? "" : $" | Müşteri notu: {custNote}");
+
+            var existing = PgScalarNullable("SELECT \"Id\" FROM \"order\".ord_orders WHERE \"LegacyOrderId\"=@lid", ("lid", legacyId));
+            Guid oid;
+            if (existing is Guid g) { oid = g; PgExec("DELETE FROM \"order\".ord_order_items WHERE \"OrderId\"=@o", ("o", oid)); upd++; }
+            else { oid = NewId(); ins++; }
+
+            var pars = new (string, object?)[] {
+                ("id", oid), ("lid", legacyId), ("no", orderNo), ("ext", extNo), ("fp", fp), ("mid", memberId),
+                ("st", status), ("ps", paymentStatus), ("cur", string.IsNullOrWhiteSpace(currency) ? "TRY" : currency),
+                ("ex", (decimal)(exRate <= 0 ? 1 : exRate)), ("rn", rName), ("rp", rPhone),
+                ("cc", geoCountryId == Guid.Empty ? Guid.Empty : geoCountryId), ("ci", cityId), ("di", distId),
+                ("al", addrLine == "" ? "-" : addrLine), ("sub", (decimal)sub), ("disc", (decimal)disc), ("exp", (decimal)exp),
+                ("tax", (decimal)tax), ("gt", (decimal)total), ("inote", internalNote), ("created", (object?)orderDate ?? Now)
+            };
+            if (existing is Guid)
+                PgExec(@"UPDATE ""order"".ord_orders SET ""OrderNumber""=@no,""OrderNumberSource""='external',""ExternalOrderNumber""=@ext,""FirmPlatformId""=@fp,""MemberId""=@mid,
+                    ""Status""=@st,""PaymentStatus""=@ps,""OrderType""='retail',""CurrencyCode""=@cur,""InvoiceCurrencyCode""=@cur,""ExchangeRate""=@ex,
+                    ""ShippingRecipientName""=@rn,""ShippingRecipientPhone""=@rp,""ShippingCountryId""=@cc,""ShippingCityId""=@ci,""ShippingDistrictId""=@di,""ShippingAddressLine""=@al,
+                    ""BillingSameAsShipping""=TRUE,""Subtotal""=@sub,""TotalDiscount""=@disc,""TotalExpense""=@exp,""TotalTax""=@tax,""GrandTotal""=@gt,
+                    ""InternalNotes""=@inote,""RequiresApproval""=FALSE,""ConfirmationRequired""=FALSE,""UpdatedAt""=@created WHERE ""Id""=@id", pars);
+            else
+                PgExec(@"INSERT INTO ""order"".ord_orders (""Id"",""LegacyOrderId"",""OrderNumber"",""OrderNumberSource"",""ExternalOrderNumber"",""FirmPlatformId"",""MemberId"",
+                    ""Status"",""PaymentStatus"",""OrderType"",""CurrencyCode"",""InvoiceCurrencyCode"",""ExchangeRate"",
+                    ""ShippingRecipientName"",""ShippingRecipientPhone"",""ShippingCountryId"",""ShippingCityId"",""ShippingDistrictId"",""ShippingAddressLine"",
+                    ""BillingSameAsShipping"",""Subtotal"",""TotalDiscount"",""TotalExpense"",""TotalTax"",""GrandTotal"",""InternalNotes"",""RequiresApproval"",""ConfirmationRequired"",""CreatedAt"",""IsDeleted"")
+                    VALUES (@id,@lid,@no,'external',@ext,@fp,@mid,@st,@ps,'retail',@cur,@cur,@ex,@rn,@rp,@cc,@ci,@di,@al,TRUE,@sub,@disc,@exp,@tax,@gt,@inote,FALSE,FALSE,@created,FALSE)", pars);
+
+            // kalemler
+            if (linesByOrder.TryGetValue(legacyId, out var lines))
+                foreach (var l in lines)
+                {
+                    int legacyVarId = (int)l[0];
+                    string barcode = (string)l[1], code = (string)l[2], pName = (string)l[3], color = (string)l[4], vval = (string)l[5];
+                    double price = (double)l[6]; int qty = (int)l[7]; double ldisc = (double)l[8];
+                    var variantId = variantMap.TryGetValue(legacyVarId, out var vg) ? vg : Guid.Empty;
+                    if (variantId == Guid.Empty) unresolvedVar++;
+                    decimal lineSub = (decimal)(price * qty);
+                    PgExec(@"INSERT INTO ""order"".ord_order_items (""Id"",""OrderId"",""VariantId"",""Sku"",""ProductName"",""VariantInfo"",""Quantity"",""UnitPrice"",
+                        ""Subtotal"",""DiscountAmount"",""TaxAmount"",""Total"",""Status"",""SortingBinQuantity"",""FinalSortQuantity"",""FinalScanQuantity"",""CreatedAt"",""IsDeleted"")
+                        VALUES (@id,@oid,@vid,@sku,@pn,@vi,@q,@up,@sub,@disc,0,@tot,@st,0,0,0,@now,FALSE)",
+                        ("id", NewId()), ("oid", oid), ("vid", variantId), ("sku", string.IsNullOrWhiteSpace(code) ? barcode : code),
+                        ("pn", pName), ("vi", ($"{color} {vval}").Trim()), ("q", qty), ("up", (decimal)price),
+                        ("sub", lineSub), ("disc", (decimal)ldisc), ("tot", lineSub - (decimal)ldisc), ("st", "confirmed"), ("now", Now));
+                    lineCount++;
+                }
+        }
+        Log($"  Sipariş: {ins} eklendi, {upd} güncellendi; {lineCount} kalem ({unresolvedVar} varyant eşleşmedi → snapshot).");
+    }
+
+    static async Task Phase24_Favorites()
+    {
+        Log("=== FAZ 24: Mishar favori aktarımı ===");
+        await Task.CompletedTask;
+        EnsureMemberMap();
+        var fp = MisharFp();
+
+        var favs = new List<(int uyeId, int varId)>();
+        using (var r = MysqlQuery("SELECT f.uyeId, f.urunAnaVaryantId FROM webuyefavorileri f JOIN webmembers m ON m.Id=f.uyeId WHERE m.platformId=" + MISHAR_PLATFORM))
+            while (r.Read()) favs.Add((r.GetInt32(0), r.IsDBNull(1) ? 0 : r.GetInt32(1)));
+        Log($"  {favs.Count} favori okundu.");
+
+        // varyant Id -> ürün kodu (apurunvaryantlari -> apurunler.urunKodu)
+        var varIds = favs.Select(f => f.varId).Where(v => v > 0).Distinct().ToList();
+        var codeByVar = new Dictionary<int, string>();
+        if (varIds.Count > 0)
+            using (var r = MysqlQuery($"SELECT v.Id, p.urunKodu FROM apurunvaryantlari v JOIN apurunler p ON p.Id=v.urunId WHERE v.Id IN ({string.Join(",", varIds)})"))
+                while (r.Read()) if (!r.IsDBNull(1)) codeByVar[r.GetInt32(0)] = r.GetString(1);
+
+        // idempotent: aktarılan üyelerin mishar favorilerini sil-sonra-ekle
+        foreach (var mid in memberMap.Values)
+            PgExec("DELETE FROM storefront.favorites WHERE \"FirmPlatformId\"=@fp AND \"MemberId\"=@m", ("fp", fp), ("m", mid));
+
+        int ins = 0, skip = 0;
+        var seen = new HashSet<string>();
+        foreach (var f in favs)
+        {
+            if (!memberMap.TryGetValue(f.uyeId, out var mid) || !codeByVar.TryGetValue(f.varId, out var code)) { skip++; continue; }
+            if (!seen.Add(mid + "|" + code)) continue; // aynı üye+ürün tekrarı (renk yok sayıldı)
+            PgExec(@"INSERT INTO storefront.favorites (""Id"",""FirmPlatformId"",""MemberId"",""ProductCode"",""CreatedAt"",""IsDeleted"") VALUES (@id,@fp,@m,@c,@now,FALSE)",
+                ("id", NewId()), ("fp", fp), ("m", mid), ("c", code), ("now", Now));
+            ins++;
+        }
+        Log($"  Favori: {ins} eklendi, {skip} atlandı (üye/ürün eşleşmedi).");
     }
 }
