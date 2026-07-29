@@ -21,6 +21,7 @@ public interface IOrderDbContext
     DbSet<ReturnItem> ReturnItems { get; }
     DbSet<ReturnRefund> ReturnRefunds { get; }
     DbSet<InvoiceSeries> InvoiceSeries { get; }
+    DbSet<OrderNumberSeries> OrderNumberSeries { get; }
     DbSet<Quote> Quotes { get; }
     DbSet<QuoteItem> QuoteItems { get; }
     DbSet<GiftCard> GiftCards { get; }

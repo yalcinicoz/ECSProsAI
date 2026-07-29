@@ -65,6 +65,7 @@ public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand,
         var invoice = new Invoice
         {
             OrderId = request.OrderId,
+            PackageId = request.PackageId,
             InvoiceSeriesId = request.InvoiceSeriesId,
             InvoiceType = request.InvoiceType,
             InvoiceSerial = serial,

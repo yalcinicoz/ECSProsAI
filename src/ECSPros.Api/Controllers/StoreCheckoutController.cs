@@ -3,6 +3,7 @@ using ECSPros.Promotion.Application.Queries.ValidateCoupon;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ECSPros.Api.Controllers;
 
@@ -15,6 +16,7 @@ public class StoreCheckoutController(IMediator mediator, IConfiguration configur
     /// koşulları MemberId üzerinden değerlendirilir); kullanım kaydı checkout'ta (C10).</summary>
     [HttpPost("coupon/validate")]
     [AllowAnonymous]
+    [EnableRateLimiting("store-sensitive")] // kupon kodu taramasına fren (2026-07-23)
     public async Task<IActionResult> ValidateCoupon([FromBody] StoreCouponValidateRequest req, CancellationToken ct)
     {
         Guid? memberId = null;
@@ -27,17 +29,26 @@ public class StoreCheckoutController(IMediator mediator, IConfiguration configur
     }
 
     [HttpPost]
+    [AllowAnonymous] // 2026-07-22: misafir checkout — üye claim'i varsa bağlanır, yoksa misafir siparişi
     public async Task<IActionResult> Checkout([FromBody] StoreCheckoutRequest req, CancellationToken ct)
     {
-        var memberId = Guid.Parse(User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+        Guid? memberId = null;
+        if (User.FindFirst("type")?.Value == "member")
+        {
+            var sub = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (sub != null && Guid.TryParse(sub, out var mid)) memberId = mid;
+        }
 
         // C7 (K9): eşik üzeri siparişte algoritma-doğrulanmış TCKN zorunlu (asıl güvence
         // burada — sayfa tarafı yalnız kullanıcıyı modala yönlendirir). Eşik config'ten.
+        // Misafirin TCKN doğrulaması yoktur — eşik üzeri misafir siparişi üyelik ister.
         var tcknEsik = configuration.GetValue<decimal>("Store:TcknThreshold", 13000m);
         var araToplam = req.Items.Sum(i => i.Quantity * i.UnitPrice);
         if (araToplam >= tcknEsik)
         {
-            var uye = await mediator.Send(new ECSPros.Crm.Application.Queries.GetMemberDetail.GetMemberDetailQuery(memberId), ct);
+            if (memberId is null)
+                return BadRequest(new { success = false, error = $"{tcknEsik.ToString("N0", new System.Globalization.CultureInfo("tr-TR"))} TL ve üzeri siparişler için üye girişi ve TCKN doğrulaması gereklidir.", tcknRequired = true });
+            var uye = await mediator.Send(new ECSPros.Crm.Application.Queries.GetMemberDetail.GetMemberDetailQuery(memberId.Value), ct);
             if (uye.IsFailure || !uye.Value!.IdentityVerified)
                 return BadRequest(new { success = false, error = $"{tcknEsik.ToString("N0", new System.Globalization.CultureInfo("tr-TR"))} TL ve üzeri siparişlerde TCKN doğrulaması zorunludur. Lütfen kimlik doğrulamasını tamamlayın.", tcknRequired = true });
         }
@@ -65,14 +76,17 @@ public class StoreCheckoutController(IMediator mediator, IConfiguration configur
             req.BillingTaxOffice, req.BillingTaxNumber, req.BillingCompanyName,
             req.BillingCountryId, req.BillingCityId, req.BillingDistrictId, req.BillingAddressLine,
             req.Items.Select(i => new CheckoutItem(i.VariantId, i.Sku, i.ProductName, i.VariantInfo ?? "", i.Quantity, i.UnitPrice)).ToList(),
-            req.CustomerNotes, req.CartId, kabulKayitlari), ct);
+            req.CustomerNotes, req.CartId, kabulKayitlari,
+            req.RequestedCargoIntegrationId, req.RequestedCargoName), ct);
 
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
 
-        // C10: kupon kullanım kaydı (C3'te yalnız doğrulanmıştı) — sipariş oluştuktan sonra
-        if (req.CouponId is { } kuponId && req.CouponDiscount is { } indirim)
+        // C10: kupon kullanım kaydı (C3'te yalnız doğrulanmıştı) — sipariş oluştuktan sonra.
+        // Misafirde kayıt atlanır: CouponUsage.MemberId zorunlu (üye kuponları misafire
+        // zaten doğrulanmaz; genel kuponun misafir kullanımı sayaca yazılmaz — bilinen sınır).
+        if (memberId is { } uyeKimlik && req.CouponId is { } kuponId && req.CouponDiscount is { } indirim)
             await mediator.Send(new ECSPros.Promotion.Application.Commands.UseCoupon.UseCouponCommand(
-                kuponId, memberId, result.Value, indirim), ct);
+                kuponId, uyeKimlik, result.Value, indirim), ct);
 
         return Ok(new { success = true, data = new { orderId = result.Value } });
     }
@@ -103,7 +117,9 @@ public record StoreCheckoutRequest(
     Guid? CartId = null,
     Guid? CouponId = null,           // C10: uygulanan kuponun kullanım kaydı için
     decimal? CouponDiscount = null,
-    List<string>? AcceptedContracts = null); // C8: onaylanan sözleşme kodları (kayıt sunucuda çözülür)
+    List<string>? AcceptedContracts = null, // C8: onaylanan sözleşme kodları (kayıt sunucuda çözülür)
+    Guid? RequestedCargoIntegrationId = null, // 2026-07-22: müşterinin kargo tercihi
+    string? RequestedCargoName = null);
 
 public record StoreCheckoutItemRequest(
     Guid VariantId,

@@ -24,6 +24,58 @@ namespace ECSPros.Core.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ECSPros.Core.Domain.Entities.CargoBarcodeRange", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ExhaustedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FirmPlatformIntegrationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("NextValue")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RangeEnd")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RangeStart")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FirmPlatformIntegrationId");
+
+                    b.ToTable("core_cargo_barcode_ranges", "core");
+                });
+
             modelBuilder.Entity("ECSPros.Core.Domain.Entities.CargoRule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -492,6 +544,20 @@ namespace ECSPros.Core.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("CargoCodeCharset")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<int?>("CargoCodeMaxLength")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CargoCodeMinLength")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CargoCodeStrategy")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
 
                     b.Property<string>("Code")
                         .IsRequired()
@@ -1159,6 +1225,17 @@ namespace ECSPros.Core.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("core_ui_translations", "core");
+                });
+
+            modelBuilder.Entity("ECSPros.Core.Domain.Entities.CargoBarcodeRange", b =>
+                {
+                    b.HasOne("ECSPros.Core.Domain.Entities.FirmPlatformIntegration", "FirmPlatformIntegration")
+                        .WithMany()
+                        .HasForeignKey("FirmPlatformIntegrationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FirmPlatformIntegration");
                 });
 
             modelBuilder.Entity("ECSPros.Core.Domain.Entities.CargoRule", b =>

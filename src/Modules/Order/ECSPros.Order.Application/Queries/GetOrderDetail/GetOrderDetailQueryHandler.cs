@@ -63,6 +63,8 @@ public class GetOrderDetailQueryHandler : IRequestHandler<GetOrderDetailQuery, R
             order.BillingAddressLine,
             order.BillingCityId,
             order.BillingDistrictId,
-            order.CustomerNotes));
+            order.CustomerNotes,
+            order.RequestedCargoIntegrationId,
+            order.RequestedCargoName));
     }
 }

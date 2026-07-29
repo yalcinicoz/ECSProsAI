@@ -13,6 +13,9 @@ public class FulfillmentDbContext : DbContext, IFulfillmentDbContext
     public DbSet<SortingBin> SortingBins => Set<SortingBin>();
     public DbSet<PackingStation> PackingStations => Set<PackingStation>();
     public DbSet<Package> Packages => Set<Package>();
+    public DbSet<PackageItem> PackageItems => Set<PackageItem>();
+    public DbSet<PackageNumberSeries> PackageNumberSeries => Set<PackageNumberSeries>();
+    public DbSet<PackageCodeHistory> PackageCodeHistories => Set<PackageCodeHistory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

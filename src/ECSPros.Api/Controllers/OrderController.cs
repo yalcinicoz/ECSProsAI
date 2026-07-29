@@ -7,6 +7,7 @@ using ECSPros.Order.Application.Commands.ConfirmOrder;
 using ECSPros.Order.Application.Commands.ConvertQuoteToOrder;
 using ECSPros.Order.Application.Commands.CreateGiftCard;
 using ECSPros.Order.Application.Commands.CreateInvoice;
+using ECSPros.Order.Application.Commands.ManageOrderNumberSeries;
 using ECSPros.Order.Application.Commands.CreateOrder;
 using ECSPros.Order.Application.Commands.CreateQuote;
 using ECSPros.Order.Application.Commands.CreateReturn;
@@ -19,6 +20,7 @@ using ECSPros.Order.Application.Commands.SendQuote;
 using ECSPros.Order.Application.Commands.StartProcessing;
 using ECSPros.Order.Application.Commands.UseGiftCard;
 using ECSPros.Order.Application.Queries.GetGiftCardBalance;
+using ECSPros.Order.Application.Queries.GetGiftCards;
 using ECSPros.Order.Application.Queries.GetInvoices;
 using ECSPros.Order.Application.Queries.GetOrderDetail;
 using ECSPros.Order.Application.Queries.GetOrderPayments;
@@ -57,6 +59,7 @@ public class OrderController : ControllerBase
     public async Task<IActionResult> GetOrders(
         [FromQuery] string? status, [FromQuery] string? statuses, [FromQuery] Guid? memberId,
         [FromQuery] string? search, [FromQuery] DateTime? from, [FromQuery] DateTime? to,
+        [FromQuery] Guid? firmPlatformId = null,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
         var statusList = string.IsNullOrWhiteSpace(statuses)
@@ -64,7 +67,7 @@ public class OrderController : ControllerBase
             : statuses.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
         var result = await _mediator.Send(new GetOrdersQuery(
             status, memberId, search, page, pageSize,
-            statusList, AsUtc(from), AsUtc(to)), ct);
+            statusList, AsUtc(from), AsUtc(to), firmPlatformId), ct);
         return Ok(new { success = true, data = result.Value });
     }
 
@@ -101,7 +104,8 @@ public class OrderController : ControllerBase
             request.FirmPlatformId, request.MemberId, request.OrderType, request.PaymentMethod,
             request.CurrencyCode, request.ShippingRecipientName, request.ShippingRecipientPhone,
             request.ShippingCountryId, request.ShippingCityId, request.ShippingDistrictId,
-            request.ShippingAddressLine, request.ShippingPostalCode, items, request.CustomerNotes), ct);
+            request.ShippingAddressLine, request.ShippingPostalCode, items, request.CustomerNotes,
+            request.ExternalOrderNumber), ct);
 
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Created($"/api/orders/{result.Value}", new { success = true, data = new { orderNumber = result.Value } });
@@ -267,10 +271,33 @@ public class OrderController : ControllerBase
         var result = await _mediator.Send(new CreateInvoiceCommand(
             orderId, request.InvoiceSeriesId, request.InvoiceType, request.InvoiceDate,
             request.RecipientName, request.RecipientAddress,
-            request.RecipientTaxOffice, request.RecipientTaxNumber, request.RecipientCompanyName, uid), ct);
+            request.RecipientTaxOffice, request.RecipientTaxNumber, request.RecipientCompanyName, uid,
+            request.PackageId), ct);
 
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Created($"/api/orders/invoices/{result.Value}", new { success = true, data = new { invoiceId = result.Value } });
+    }
+
+    // ── Sipariş Numarası Serileri (F5 — kanal başına seri tanımı) ──────────────
+
+    /// <summary>Kanal başına sipariş numarası serilerini listeler (serisiz kanallar da görünür).</summary>
+    [HttpGet("number-series")]
+    public async Task<IActionResult> GetOrderNumberSeries(CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetOrderNumberSeriesQuery(), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kanalın sipariş numarası serisini tanımlar/günceller —
+    /// sayaç (NextValue) elle değiştirilemez, numaralar havuza geri dönmez.</summary>
+    [HttpPut("number-series/{firmPlatformId:guid}")]
+    public async Task<IActionResult> UpsertOrderNumberSeries(
+        Guid firmPlatformId, [FromBody] UpsertNumberSeriesRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new UpsertOrderNumberSeriesCommand(
+            firmPlatformId, request.Prefix, request.PadLength, request.IsActive), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
     }
 
     /// <summary>Fatura serileri (P1d — fatura oluşturma formunun seri seçicisi).</summary>
@@ -420,6 +447,16 @@ public class OrderController : ControllerBase
 
     // ─── Gift Cards ───────────────────────────────────────────────────────────
 
+    /// <summary>Hediye kartlarını sayfalı listeler (panel).</summary>
+    [HttpGet("gift-cards")]
+    public async Task<IActionResult> GetGiftCards(
+        [FromQuery] string? status, [FromQuery] string? search,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetGiftCardsQuery(status, search, page, pageSize), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
     /// <summary>Hediye kartı bakiyesi sorgular.</summary>
     [HttpGet("gift-cards/{code}")]
     public async Task<IActionResult> GetGiftCardBalance(string code, CancellationToken ct)
@@ -465,7 +502,8 @@ public record CreateOrderRequest(
     string CurrencyCode, string ShippingRecipientName, string ShippingRecipientPhone,
     Guid ShippingCountryId, Guid ShippingCityId, Guid ShippingDistrictId,
     string ShippingAddressLine, string? ShippingPostalCode,
-    List<OrderItemRequest> Items, string? CustomerNotes = null);
+    List<OrderItemRequest> Items, string? CustomerNotes = null,
+    string? ExternalOrderNumber = null);
 
 public record OrderItemRequest(Guid VariantId, int Quantity, decimal UnitPrice, string? UnitType = null);
 public record ConfirmOrderRequest(Guid WarehouseId);
@@ -482,6 +520,8 @@ public record CreateReturnRequest(
 
 public record ReceiveReturnRequest(Guid WarehouseId, string? InspectionNotes);
 
+public record UpsertNumberSeriesRequest(string Prefix, int PadLength, bool IsActive = true);
+
 public record CreateInvoiceSeriesRequest(
     Guid FirmId, string? Name, string EArchiveSerial,
     string? EInvoiceSerial = null, string? ExportSerial = null);
@@ -494,7 +534,8 @@ public record CompleteRefundRequest(
 public record CreateInvoiceRequest(
     Guid InvoiceSeriesId, string InvoiceType, DateTime InvoiceDate,
     string RecipientName, string RecipientAddress,
-    string? RecipientTaxOffice, string? RecipientTaxNumber, string? RecipientCompanyName);
+    string? RecipientTaxOffice, string? RecipientTaxNumber, string? RecipientCompanyName,
+    Guid? PackageId = null);
 
 public record QuoteItemHttpRequest(
     Guid VariantId, string Sku, string ProductName, string VariantInfo,

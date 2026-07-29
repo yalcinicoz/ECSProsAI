@@ -27,6 +27,9 @@ public class GetOrdersQueryHandler : IRequestHandler<GetOrdersQuery, Result<Page
         if (request.MemberId.HasValue)
             query = query.Where(o => o.MemberId == request.MemberId);
 
+        if (request.FirmPlatformId.HasValue)
+            query = query.Where(o => o.FirmPlatformId == request.FirmPlatformId.Value);
+
         if (request.CreatedFrom.HasValue)
             query = query.Where(o => o.CreatedAt >= request.CreatedFrom.Value);
 

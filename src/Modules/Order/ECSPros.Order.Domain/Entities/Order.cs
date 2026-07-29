@@ -6,9 +6,21 @@ namespace ECSPros.Order.Domain.Entities;
 public class Order : AggregateRoot
 {
     public string OrderNumber { get; set; } = string.Empty;
+    /// <summary>internal: numara kanal serisinden üretildi; external: pazaryerinin
+    /// verdiği numara aynen kullanıldı (OrderNumber = dış numara).</summary>
+    public string OrderNumberSource { get; set; } = "internal";
+    /// <summary>Dış kanalın (pazaryeri) ham sipariş numarası — kaynak izi için
+    /// OrderNumber'dan ayrıca saklanır.</summary>
+    public string? ExternalOrderNumber { get; set; }
     public Guid FirmPlatformId { get; set; }
-    public Guid MemberId { get; set; }
+    /// <summary>Misafir siparişinde null (2026-07-22 misafir checkout) — kimlik
+    /// ShippingRecipientName/Phone alanlarındadır; üye listeleri null'ı doğal dışlar.</summary>
+    public Guid? MemberId { get; set; }
     public Guid? CartId { get; set; }
+    /// <summary>Eski sistem (juludedb.oporders.Id) sipariş no'su — go-live aktarımında
+    /// (2026-07-23) doldurulur; tekrar-çalıştırma tekilliği + geri-yazma çift-yazım koruması.
+    /// Yeni sitede oluşan siparişlerde null (geri-yazma bu satırı eski Id ile doldurur).</summary>
+    public int? LegacyOrderId { get; set; }
     public string Status { get; set; } = string.Empty;
     public string PaymentStatus { get; set; } = string.Empty;
 
@@ -38,6 +50,11 @@ public class Order : AggregateRoot
     public string ShippingAddressLine { get; set; } = string.Empty;
     public string? ShippingPostalCode { get; set; }
     public string? ShippingDeliveryNotes { get; set; }
+    /// <summary>2026-07-22: müşterinin teslimat adımında seçtiği kargo (mahalle bazlı
+    /// seçeneklerden) — kargoya veriş bu tercihi VARSAYILAN alır ama bağlayıcı değildir.
+    /// Ad, entegrasyon silinse de okunabilsin diye snapshot olarak ayrıca tutulur.</summary>
+    public Guid? RequestedCargoIntegrationId { get; set; }
+    public string? RequestedCargoName { get; set; }
 
     // Billing Address
     public bool BillingSameAsShipping { get; set; } = true;

@@ -6,6 +6,13 @@ using ECSPros.Fulfillment.Application.Commands.PrintPackageLabel;
 using ECSPros.Fulfillment.Application.Commands.UpdateBinStatus;
 using ECSPros.Fulfillment.Application.Queries.GetPickingPlanDetail;
 using ECSPros.Fulfillment.Application.Commands.CreatePackage;
+using ECSPros.Fulfillment.Application.Commands.AssignCargoCode;
+using ECSPros.Fulfillment.Application.Commands.ManagePackageNumberSeries;
+using ECSPros.Fulfillment.Application.Commands.MergePackages;
+using ECSPros.Fulfillment.Application.Commands.RenumberPackage;
+using ECSPros.Fulfillment.Application.Commands.SplitOrderIntoPackages;
+using ECSPros.Fulfillment.Application.Commands.UpdatePackage;
+using ECSPros.Fulfillment.Application.Queries.GetPackageCodeHistory;
 using ECSPros.Fulfillment.Application.Commands.CreatePackingStation;
 using ECSPros.Fulfillment.Application.Commands.CreatePickingPlan;
 using ECSPros.Fulfillment.Application.Commands.StartPickingPlan;
@@ -13,6 +20,8 @@ using ECSPros.Fulfillment.Application.Commands.UpdatePackingStation;
 using ECSPros.Fulfillment.Application.Queries.GetPackages;
 using ECSPros.Fulfillment.Application.Queries.GetPackingStations;
 using ECSPros.Fulfillment.Application.Queries.GetPickingPlans;
+using ECSPros.Api.Authorization;
+using ECSPros.Shared.Kernel.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -208,19 +217,129 @@ public class FulfillmentController : ControllerBase
         var result = await _mediator.Send(new CreatePackageCommand(
             request.OrderId,
             request.ShipmentId,
-            request.PackageNumber,
             request.Barcode,
             request.Weight,
             request.Width,
             request.Height,
             request.Length,
             request.Desi,
-            uid), ct);
+            uid,
+            request.SupplierId,
+            request.Items?.Select(i => new CreatePackageItem(i.OrderItemId, i.VariantId, i.Quantity)).ToList()), ct);
 
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
 
         return Created($"/api/fulfillment/packages", new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>Siparişi tedarikçiye göre paketlere böler (F2 — karar 2026-07-19).</summary>
+    [HttpPost("packages/split")]
+    public async Task<IActionResult> SplitOrderIntoPackages([FromBody] SplitOrderPackagesRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid))
+            return Unauthorized(new { success = false, error = "Geçersiz token." });
+
+        var result = await _mediator.Send(new SplitOrderIntoPackagesCommand(request.OrderId, uid), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Created($"/api/fulfillment/packages", new { success = true, data = new { packageIds = result.Value } });
+    }
+
+    // ── Paket Numarası Serileri (F5 — kanal başına, siparişten bağımsız) ───────
+
+    /// <summary>Kanal başına paket numarası serilerini listeler.</summary>
+    [HttpGet("package-number-series")]
+    public async Task<IActionResult> GetPackageNumberSeries(CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetPackageNumberSeriesQuery(), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kanalın paket numarası serisini tanımlar/günceller — sayaç elle
+    /// değiştirilemez, numaralar havuza geri dönmez.</summary>
+    [HttpPut("package-number-series/{firmPlatformId:guid}")]
+    public async Task<IActionResult> UpsertPackageNumberSeries(
+        Guid firmPlatformId, [FromBody] UpsertPackageSeriesRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new UpsertPackageNumberSeriesCommand(
+            firmPlatformId, request.Prefix, request.PadLength, request.IsActive), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Paketin fiziksel bilgilerini günceller (F4) — kimlik alanları
+    /// (paket no / kargo kodu) renumber ve cargo-code akışlarından geçer.</summary>
+    [HttpPut("packages/{packageId:guid}")]
+    public async Task<IActionResult> UpdatePackage(Guid packageId, [FromBody] UpdatePackageRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid))
+            return Unauthorized(new { success = false, error = "Geçersiz token." });
+
+        var result = await _mediator.Send(new UpdatePackageCommand(
+            packageId, request.Weight, request.Width, request.Height, request.Length,
+            request.Desi, request.Barcode, uid), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Pakete seriden yeni numara verir (F4): gerekçe zorunlu, eski numara
+    /// geçmişe yazılır ve havuza geri dönmez; bağlı kargo kodu temizlenir.</summary>
+    [HttpPost("packages/{packageId:guid}/renumber")]
+    public async Task<IActionResult> RenumberPackage(Guid packageId, [FromBody] RenumberPackageRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid))
+            return Unauthorized(new { success = false, error = "Geçersiz token." });
+
+        var result = await _mediator.Send(new RenumberPackageCommand(packageId, request.Reason, uid), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { packageNumber = result.Value } });
+    }
+
+    /// <summary>Paketin kod değişiklik izini listeler (F4).</summary>
+    [HttpGet("packages/{packageId:guid}/code-history")]
+    public async Task<IActionResult> GetPackageCodeHistory(Guid packageId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetPackageCodeHistoryQuery(packageId), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Pakete kargo entegrasyon kodu atar (F3): externalCode verilirse aynen
+    /// yazılır; verilmezse seçilen kargo entegrasyonunun stratejisine göre üretilir.</summary>
+    [HttpPost("packages/{packageId:guid}/cargo-code")]
+    public async Task<IActionResult> AssignCargoCode(Guid packageId, [FromBody] AssignCargoCodeRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid))
+            return Unauthorized(new { success = false, error = "Geçersiz token." });
+
+        var result = await _mediator.Send(new AssignCargoCodeCommand(
+            packageId, request.FirmPlatformIntegrationId, request.ExternalCode, uid, request.Reason), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { cargoIntegrationCode = result.Value } });
+    }
+
+    /// <summary>Paket birleştirme — İSTİSNA akışı: ayrı izin + zorunlu gerekçe
+    /// (normal akış paket başına fatura/kargodur, karar 2026-07-19).</summary>
+    [HttpPost("packages/merge")]
+    [RequirePermission(Permissions.OrderPackagesMerge)]
+    public async Task<IActionResult> MergePackages([FromBody] MergePackagesRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid))
+            return Unauthorized(new { success = false, error = "Geçersiz token." });
+
+        var result = await _mediator.Send(new MergePackagesCommand(request.PackageIds, request.Reason, uid), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { packageId = result.Value } });
     }
 
     // ─── Scan Operations ───────────────────────────────────────────────────────
@@ -290,10 +409,34 @@ public record CreatePackingStationRequest(
 public record CreatePackageRequest(
     Guid OrderId,
     Guid? ShipmentId,
-    int PackageNumber,
-    string Barcode,
+    string? Barcode,
     decimal? Weight,
     decimal? Width,
     decimal? Height,
     decimal? Length,
-    decimal? Desi);
+    decimal? Desi,
+    Guid? SupplierId = null,
+    List<CreatePackageItemRequest>? Items = null);
+
+public record CreatePackageItemRequest(Guid OrderItemId, Guid VariantId, int Quantity);
+
+public record SplitOrderPackagesRequest(Guid OrderId);
+
+public record MergePackagesRequest(List<Guid> PackageIds, string Reason);
+
+public record AssignCargoCodeRequest(
+    Guid? FirmPlatformIntegrationId = null,
+    string? ExternalCode = null,
+    string? Reason = null);
+
+public record UpdatePackageRequest(
+    decimal? Weight = null,
+    decimal? Width = null,
+    decimal? Height = null,
+    decimal? Length = null,
+    decimal? Desi = null,
+    string? Barcode = null);
+
+public record RenumberPackageRequest(string Reason);
+
+public record UpsertPackageSeriesRequest(string Prefix, int PadLength, bool IsActive = true);

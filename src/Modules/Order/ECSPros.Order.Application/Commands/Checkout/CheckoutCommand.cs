@@ -8,7 +8,7 @@ namespace ECSPros.Order.Application.Commands.Checkout;
 
 public record CheckoutCommand(
     Guid FirmPlatformId,
-    Guid MemberId,
+    Guid? MemberId, // 2026-07-22: misafir checkout'ta null
     string CurrencyCode,
     // Shipping
     string ShippingRecipientName,
@@ -34,7 +34,10 @@ public record CheckoutCommand(
     // Optional
     string? CustomerNotes = null,
     Guid? CartId = null,
-    List<AcceptedContract>? AcceptedContracts = null) : IRequest<Result<Guid>>;
+    List<AcceptedContract>? AcceptedContracts = null,
+    // 2026-07-22: müşterinin teslimat adımında seçtiği kargo (mahalle bazlı seçenekler)
+    Guid? RequestedCargoIntegrationId = null,
+    string? RequestedCargoName = null) : IRequest<Result<Guid>>;
 
 public record CheckoutItem(
     Guid VariantId,
@@ -56,6 +59,7 @@ public record AcceptedContract(
 
 public class CheckoutCommandHandler(
     IOrderDbContext db,
+    IOrderNumberService orderNumbers,
     ECSPros.Shared.Contracts.IProductService productService,
     ECSPros.Shared.Contracts.IChannelProductFlagService flagService)
     : IRequestHandler<CheckoutCommand, Result<Guid>>
@@ -71,6 +75,7 @@ public class CheckoutCommandHandler(
         // Katman 1 (global satış anahtarı): satışa kapalı ürün SATILAMAZ — kanal ayarları ne
         // olursa olsun. ProductInfo.IsActive = varyant aktif VE ürün IsSaleOpen. Kapalı ürün
         // sepette kalmışsa (kapatılmadan önce eklenmiş) sipariş oluşturulmaz.
+        var tedarikciByVariant = new Dictionary<Guid, Guid?>();
         foreach (var item in request.Items)
         {
             var bilgi = await productService.GetVariantAsync(item.VariantId, ct);
@@ -78,9 +83,10 @@ public class CheckoutCommandHandler(
                 return Result.Failure<Guid>($"'{item.ProductName}' şu an satışa kapalı; siparişi tamamlamak için sepetten çıkarın.");
             if (kanalDisi.Contains(bilgi.ProductId))
                 return Result.Failure<Guid>($"'{item.ProductName}' şu an bu kanalda satışa kapalı; siparişi tamamlamak için sepetten çıkarın.");
+            tedarikciByVariant[item.VariantId] = bilgi.SupplierId;
         }
 
-        var orderNumber = $"ORD-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+        var orderNumber = await orderNumbers.GenerateAsync(request.FirmPlatformId, ct);
 
         var subtotal = request.Items.Sum(i => i.Quantity * i.UnitPrice);
 
@@ -104,6 +110,8 @@ public class CheckoutCommandHandler(
             ShippingAddressLine = request.ShippingAddressLine,
             ShippingPostalCode = request.ShippingPostalCode,
             ShippingDeliveryNotes = request.ShippingDeliveryNotes,
+            RequestedCargoIntegrationId = request.RequestedCargoIntegrationId,
+            RequestedCargoName = request.RequestedCargoName,
             BillingSameAsShipping = request.BillingSameAsShipping,
             BillingRecipientName = request.BillingRecipientName,
             BillingTaxOffice = request.BillingTaxOffice,
@@ -137,6 +145,7 @@ public class CheckoutCommandHandler(
             {
                 OrderId = order.Id,
                 VariantId = item.VariantId,
+                SupplierId = tedarikciByVariant.GetValueOrDefault(item.VariantId),
                 Sku = item.Sku,
                 ProductName = item.ProductName,
                 VariantInfo = item.VariantInfo,

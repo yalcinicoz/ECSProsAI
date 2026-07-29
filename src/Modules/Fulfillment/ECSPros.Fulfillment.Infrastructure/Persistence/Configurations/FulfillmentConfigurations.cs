@@ -50,13 +50,59 @@ public class PackageConfiguration : IEntityTypeConfiguration<Package>
     {
         builder.ToTable("ful_packages");
         builder.HasKey(x => x.Id);
+        builder.Property(x => x.PackageNumber).HasMaxLength(30).IsRequired();
         builder.Property(x => x.Barcode).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.CargoIntegrationCode).HasMaxLength(100);
+        builder.Property(x => x.CargoIntegrationCodeSource).HasMaxLength(10);
         builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
         builder.Property(x => x.Weight).HasPrecision(10, 3);
         builder.Property(x => x.Width).HasPrecision(10, 3);
         builder.Property(x => x.Height).HasPrecision(10, 3);
         builder.Property(x => x.Length).HasPrecision(10, 3);
         builder.Property(x => x.Desi).HasPrecision(10, 3);
+        // Paket kimliği kanal bazında unique (karar 2026-07-19)
+        builder.HasIndex(x => new { x.FirmPlatformId, x.PackageNumber }).IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
+        builder.HasIndex(x => x.OrderId);
+        builder.HasQueryFilter(x => !x.IsDeleted);
+        builder.HasMany(x => x.Items).WithOne(x => x.Package).HasForeignKey(x => x.PackageId);
+    }
+}
+
+public class PackageItemConfiguration : IEntityTypeConfiguration<PackageItem>
+{
+    public void Configure(EntityTypeBuilder<PackageItem> builder)
+    {
+        builder.ToTable("ful_package_items");
+        builder.HasKey(x => x.Id);
+        builder.HasIndex(x => x.OrderItemId);
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
+public class PackageNumberSeriesConfiguration : IEntityTypeConfiguration<PackageNumberSeries>
+{
+    public void Configure(EntityTypeBuilder<PackageNumberSeries> builder)
+    {
+        builder.ToTable("ful_package_number_series");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Prefix).HasMaxLength(10).IsRequired();
+        builder.HasIndex(x => x.FirmPlatformId).IsUnique().HasFilter("\"IsDeleted\" = false");
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
+public class PackageCodeHistoryConfiguration : IEntityTypeConfiguration<PackageCodeHistory>
+{
+    public void Configure(EntityTypeBuilder<PackageCodeHistory> builder)
+    {
+        builder.ToTable("ful_package_code_history");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.OldPackageNumber).HasMaxLength(30);
+        builder.Property(x => x.OldCargoIntegrationCode).HasMaxLength(100);
+        builder.Property(x => x.ChangeType).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.Reason).HasMaxLength(500).IsRequired();
+        builder.HasIndex(x => x.PackageId);
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

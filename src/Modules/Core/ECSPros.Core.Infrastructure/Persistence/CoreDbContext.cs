@@ -26,6 +26,7 @@ public class CoreDbContext : DbContext, ICoreDbContext
     public DbSet<FirmPlatformIntegration> FirmPlatformIntegrations => Set<FirmPlatformIntegration>();
     public DbSet<ExpenseType> ExpenseTypes => Set<ExpenseType>();
     public DbSet<CargoRule> CargoRules => Set<CargoRule>();
+    public DbSet<CargoBarcodeRange> CargoBarcodeRanges => Set<CargoBarcodeRange>();
     public DbSet<OrderStatus> OrderStatuses => Set<OrderStatus>();
     public DbSet<OrderItemStatus> OrderItemStatuses => Set<OrderItemStatus>();
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();

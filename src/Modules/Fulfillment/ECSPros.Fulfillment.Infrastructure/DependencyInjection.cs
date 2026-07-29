@@ -15,6 +15,8 @@ public static class DependencyInjection
                 o => o.MigrationsHistoryTable("__ef_migrations_fulfillment", "fulfillment")));
 
         services.AddScoped<IFulfillmentDbContext>(sp => sp.GetRequiredService<FulfillmentDbContext>());
+        services.AddScoped<IPackageNumberService, Services.PackageNumberService>();
+        services.AddScoped<IOrderPackagingReader, Services.OrderPackagingReader>();
 
         return services;
     }

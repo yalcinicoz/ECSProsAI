@@ -18,6 +18,21 @@ public class ExpenseTypeConfiguration : IEntityTypeConfiguration<ExpenseType>
     }
 }
 
+public class CargoBarcodeRangeConfiguration : IEntityTypeConfiguration<CargoBarcodeRange>
+{
+    public void Configure(EntityTypeBuilder<CargoBarcodeRange> builder)
+    {
+        builder.ToTable("core_cargo_barcode_ranges");
+        builder.HasKey(x => x.Id);
+        builder.HasIndex(x => x.FirmPlatformIntegrationId);
+        builder.HasQueryFilter(x => !x.IsDeleted);
+
+        builder.HasOne(x => x.FirmPlatformIntegration)
+            .WithMany()
+            .HasForeignKey(x => x.FirmPlatformIntegrationId);
+    }
+}
+
 public class CargoRuleConfiguration : IEntityTypeConfiguration<CargoRule>
 {
     public void Configure(EntityTypeBuilder<CargoRule> builder)

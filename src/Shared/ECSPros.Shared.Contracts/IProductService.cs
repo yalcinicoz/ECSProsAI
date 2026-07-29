@@ -20,7 +20,8 @@ public record ProductInfo(
     string ProductName,
     decimal BasePrice,
     bool IsActive,
-    Guid ProductId = default);   // M2/M3: kanal seçimi/durdurma geçidi için (checkout)
+    Guid ProductId = default,    // M2/M3: kanal seçimi/durdurma geçidi için (checkout)
+    Guid? SupplierId = null);    // F2: sipariş kalemine tedarikçi snapshot'ı için
 
 public record VariantDisplayInfo(
     Guid VariantId,

@@ -9,6 +9,9 @@ public interface IFulfillmentDbContext
     DbSet<SortingBin> SortingBins { get; }
     DbSet<PackingStation> PackingStations { get; }
     DbSet<Package> Packages { get; }
+    DbSet<PackageItem> PackageItems { get; }
+    DbSet<PackageNumberSeries> PackageNumberSeries { get; }
+    DbSet<PackageCodeHistory> PackageCodeHistories { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -13,4 +13,7 @@ public record CreateInvoiceCommand(
     string? RecipientTaxOffice,
     string? RecipientTaxNumber,
     string? RecipientCompanyName,
-    Guid CreatedBy) : IRequest<Result<Guid>>;
+    Guid CreatedBy,
+    // Paket başına fatura normal akıştır (karar 2026-07-19); null = sipariş geneli
+    // fatura (istisna/eski akış)
+    Guid? PackageId = null) : IRequest<Result<Guid>>;

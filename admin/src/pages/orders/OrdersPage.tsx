@@ -49,7 +49,7 @@ const TABS: OrderTab[] = [
 export interface OrderSummary {
   id: string
   orderNumber: string
-  memberId: string
+  memberId: string | null
   status: string
   paymentStatus: string
   grandTotal: number

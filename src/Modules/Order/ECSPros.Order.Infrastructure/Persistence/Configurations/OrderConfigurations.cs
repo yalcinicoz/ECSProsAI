@@ -11,6 +11,8 @@ public class OrderConfiguration : IEntityTypeConfiguration<Domain.Entities.Order
         builder.ToTable("ord_orders");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.OrderNumber).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.OrderNumberSource).HasMaxLength(10).IsRequired().HasDefaultValue("internal");
+        builder.Property(x => x.ExternalOrderNumber).HasMaxLength(100);
         builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
         builder.Property(x => x.PaymentStatus).HasMaxLength(50).IsRequired();
         builder.Property(x => x.OrderType).HasMaxLength(30).IsRequired();
@@ -31,11 +33,14 @@ public class OrderConfiguration : IEntityTypeConfiguration<Domain.Entities.Order
         builder.Property(x => x.GrandTotal).HasPrecision(18, 2);
         builder.Property(x => x.PackingStationCode).HasMaxLength(50);
         builder.Property(x => x.CustomerNotes).HasColumnType("jsonb");
-        builder.HasIndex(x => x.OrderNumber).IsUnique();
+        // Sipariş no kanala özeldir: unique kimlik (Kanal + Sipariş No) — plan 2026-07-19
+        builder.HasIndex(x => new { x.FirmPlatformId, x.OrderNumber }).IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
         // Admin sipariş listesi (P1a): durum sekmeleri + tarih aralığı milyonlarca satırda
         // da anlık dönsün — soft-delete filtreli kısmi indeksler
         builder.HasIndex(x => new { x.Status, x.CreatedAt }).HasFilter("\"IsDeleted\" = false");
         builder.HasIndex(x => x.CreatedAt).HasFilter("\"IsDeleted\" = false");
+        builder.HasIndex(x => x.LegacyOrderId).IsUnique().HasFilter("\"LegacyOrderId\" IS NOT NULL");
         builder.HasQueryFilter(x => !x.IsDeleted);
         builder.Ignore(x => x.DomainEvents);
         builder.HasMany(x => x.Items).WithOne(x => x.Order).HasForeignKey(x => x.OrderId);
@@ -122,6 +127,18 @@ public class OrderPaymentConfiguration : IEntityTypeConfiguration<OrderPayment>
     }
 }
 
+public class OrderNumberSeriesConfiguration : IEntityTypeConfiguration<OrderNumberSeries>
+{
+    public void Configure(EntityTypeBuilder<OrderNumberSeries> builder)
+    {
+        builder.ToTable("ord_order_number_series");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Prefix).HasMaxLength(10).IsRequired();
+        builder.HasIndex(x => x.FirmPlatformId).IsUnique().HasFilter("\"IsDeleted\" = false");
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
 public class InvoiceSeriesConfiguration : IEntityTypeConfiguration<InvoiceSeries>
 {
     public void Configure(EntityTypeBuilder<InvoiceSeries> builder)
@@ -162,6 +179,7 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.Property(x => x.ErpReference).HasMaxLength(100);
         builder.Property(x => x.Status).HasMaxLength(30).IsRequired();
         builder.HasIndex(x => new { x.InvoiceSerial, x.InvoiceYear, x.InvoiceSequence }).IsUnique();
+        builder.HasIndex(x => x.PackageId);
         builder.HasQueryFilter(x => !x.IsDeleted);
         builder.HasMany(x => x.Items).WithOne(x => x.Invoice).HasForeignKey(x => x.InvoiceId);
     }
@@ -202,6 +220,7 @@ public class ShipmentConfiguration : IEntityTypeConfiguration<Shipment>
         builder.Property(x => x.TotalWeight).HasPrecision(10, 3);
         builder.Property(x => x.TotalDesi).HasPrecision(10, 3);
         builder.HasIndex(x => x.ShipmentNumber).IsUnique();
+        builder.HasIndex(x => x.PackageId);
         builder.HasQueryFilter(x => !x.IsDeleted);
         builder.HasMany(x => x.Items).WithOne(x => x.Shipment).HasForeignKey(x => x.ShipmentId);
         builder.HasMany(x => x.Events).WithOne(x => x.Shipment).HasForeignKey(x => x.ShipmentId);

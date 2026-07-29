@@ -5,6 +5,9 @@ namespace ECSPros.Order.Domain.Entities;
 public class Shipment : BaseEntity
 {
     public Guid OrderId { get; set; }
+    /// <summary>Gönderinin bağlı olduğu paket (fulfillment.ful_packages) — normal akış
+    /// paket başına ayrı kargodur; null yalnız eski kayıtlar/istisna akışı içindir (F2).</summary>
+    public Guid? PackageId { get; set; }
     public Guid FirmIntegrationId { get; set; }
     public string ShipmentNumber { get; set; } = string.Empty;
     public string? TrackingNumber { get; set; }
