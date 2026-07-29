@@ -2,7 +2,7 @@
 
 > **Kural:** Her session bu dosyadan başla, bu dosyayla bitir.
 > Bir faz tamamlanmadan bir sonrakine geçme.
-> Son güncelleme: 2026-07-22
+> Son güncelleme: 2026-07-29
 
 ---
 
@@ -15,17 +15,227 @@
 
 | # | Alan | Kod tabanı | Durum | SIRADAKİ İŞ | Plan dokümanı |
 |---|------|-----------|-------|-------------|---------------|
-| 1 | 🌐 **Web sitesi** (Razor storefront) | `src/ECSPros.Api` Views + `/opt/misharix` tasarım | **FAZ H TAMAM** + **FAZ İ UYGULANDI** (eski SPA emekli — ⚠️ restart + `docker compose up -d nginx` bekliyor; GeoLite2 mmdb kullanıcıda) | Talep bazlı — taşıma planı KAPANDI | `docs/misharix-razor-tasima-plani.md` |
-| 2 | 🛠 **Admin panel** (React) | `admin/` | Faz 9 tamam; test bulguları kapalı (B-13 çeviri, B-14 sayaç düşük öncelik) | Talep bazlı — bekleyen büyük iş yok (FAZ R ERP ertelendi) | `docs/misharix-tasarim-projesi-inceleme.md` (envanter) |
+| 1 | 🌐 **Web sitesi** (Razor storefront) | `src/ECSPros.Api` Views + `/opt/misharix` tasarım | **FAZ H+İ TAMAM**; **2026-07-29: misharitalia.com menüsü birebir taşındı ve CANLIDA** (kullanıcı doğruladı; MigrationTool Faz 25: 200 kanal kategorisi + nav_menus 'header' 288 düğüm; SSR nav artık header menüsünden) | Menü yerleşimi panel ekranı (nav_nodes editörü — ÖNCE kurgu, K16) | `docs/misharix-razor-tasima-plani.md` |
+| 2 | 🛠 **Admin panel** (React) | `admin/` | Faz 9 tamam; Pazaryerleri veri yönetimi **F1-F5 CANLIDA** (2026-07-29 restart ile) — **PLAN TAMAMLANDI**; 2026-07-29: 8 kargo servisine SettingsSchema şablonu + Kargo Bölgeleri firma uyarısı CANLIDA (kullanıcı doğruladı) | Gerçek Trendyol anahtarlarıyla uçtan uca canlı deneme → F6+ diğer pazaryerleri (talep gelince) + zamanlanmış senkron kadansları | `docs/pazaryeri-entegrasyon-veri-yonetimi.md` |
 | 3 | 🔌 **Dış API** (Partner entegrasyon) | `/api/partner/v1` + `Controllers/Partner/` | F0→F2b tamam: ürün ingestion uçtan uca canlıda | F2b-2d sipariş/dropship (⚠️ `order.write` tip kararı BLOKE) → F4 ApiClient yönetim paneli → F5 rate limit/HSTS | `docs/api-hesaplari-tasarimi.md` |
 | 4 | 🏪 **Satıcı paneli** | `satici/` + `/api/supplier/*` | S0-S2 canlıda; S3a-1 (Ürünlerim liste+detay) uygulandı ⚠️ restart bekliyor | S3a-2 kart açma formu (ÖNCE kurgu konuş, K16) → S3b Stok&Fiyat → S3c-S3f | `docs/satici-paneli-tasarimi.md` |
+| 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging instance hazır** (5055, DevBypass) ⚠️ systemd kurulumu kullanıcıda | Kullanıcı: staging systemd kur + 5055 aç; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
+| 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
 **Ortak çekirdek** (tüm alanları etkiler, kendi başına alan değildir): modüler backend (Catalog/Order/
 Inventory…), cari çatı (B5 finance birleşmesi ertelendi), stok üçlü yapı (M2/M3 + değer aktarımı
 kalan), sipariş/paket/kargo kod sistemi (canlıda), MigrationTool. Ortak çekirdek değişikliği hangi
 alan için yapılıyorsa o alanın oturumunda, o alanın fazı olarak yürütülür.
 
-**Bekleyen deploy:** S3a-1 + H3 → `sudo systemctl restart ecspros` (tek restart ikisini de canlıya alır; nginx işlemi gerekmez).
+**2026-07-29 Misharitalia menü aktarımı (web sitesi):** Eski sitenin (misharitalia.com, MySQL
+`plmenuyeni` platform 41) 288 düğümlü menüsü birebir taşındı. MigrationTool **Faz 25**
+(tekrarlanabilir): menüdeki 200 benzersiz url için kanal kategorisi (SEO + görsel + doldurma:
+eski filtre SQL'i dinamikse FilterDef'e çevrilir [dışlamalar include listesine], altgrup/keyword/
+LIKE/kod-listesi statikse MySQL'den ürün kodları materyalize edilir → channel_category_products
+~49.5K satır; sırayla filtre → dftumkategoriler hiyerarşisi → webkategoriurunleri cache fallback)
++ `nav_menus` 'header' + 288 `nav_nodes` yerleşimi (çapraz yerleşim düğüm tekrarıyla korunur,
+menü etiketi NameOverride'da, 178 menü görseli misharitalia.com'dan `/opt/ECSProsAI/media/menu/`e
+indirildi). SSR nav (`StorePageController`) header menüsü doluysa oradan kurulur, yoksa eski
+kategori-ağacı davranışı. Backend düzeltmesi: `ProductFilterHelper` görsel tarih filtreleri
+`UpdatedAt ?? CreatedAt` (tüm görsellerde UpdatedAt NULL → yeni-gelenler hep boş çıkıyordu).
+İzole 5051 doğrulaması: kök sırası birebir, 279/288 düğüm (eksik 11'i stok-0/tarih-penceresi
+gereği boş dallar — presence buduyor, ürün/stok gelince kendiliğinden görünür), kategori sayfaları
+dolu. Eski 47 kategorilik deneme ağacı silindi (yedek `~/yedekler/mishar-menu-oncesi-2026-07-29.dump`).
+✅ CANLIDA (restart yapıldı, kullanıcı menüyü doğruladı).
+
+**2026-07-29 Menü Yerleşimi ekranı (admin panel):** nav_nodes editörü eklendi —
+`/storefront/menu-placement` (sidebar Katalog → Menü Yerleşimi; eski `/navigation/menus`
+rotası buraya yönlenir). Solda sürükle-bırak menü ağacı (satır üstü/altı=kardeş, ortası=alt
+öğe; yukarı/aşağı okları, alt öğe ekle/düzenle/sil, daralt/genişlet, pasif öğe soluk),
+sağda aranabilir kategori havuzu (sürükle veya + ile ekle; "menüde ×N" kullanım rozeti).
+Düğüm modalı: tip (kategori/link/başlık), kategori seçimi, etiket override, görsel URL,
+rozet, aktif. Kaydet = `PUT /api/navigation/menus/{id}/nodes` tam ağaç değişimi;
+header menüsü olmayan kanal için "Üst Menü Oluştur". Değişiklik sitede ≤5 dk (nav cache);
+yeni eklenen boş kategorinin budama durumu presence cache'iyle ≤15 dk'da oturur.
+Backend değişikliği YOK (mevcut NavigationController + SaveNavNodesCommand kullanıldı);
+admin build canlıda.
+
+**2026-07-29 Legacy ürün URL 404 düzeltmesi (web sitesi):** Eski sistemden birebir taşınan
+2.591 ürün URL'i (nokta/virgül/ünlem/iki-nokta içeren, örn. `...-farkli-gelebilir.-1436757`)
+kök `/{slug}` rotasının `[a-z0-9-]` regex kısıtına takılıp 404 veriyordu. Kısıt iki
+alternatifli genişletildi: temiz slug VEYA özel karakterli + istisnasız "-rakam" sonlu
+(DB doğrulaması: kural-dışı 2.591 slug'ın tamamı -rakam ile bitiyor) — favicon.ico/*.js
+dosya adları kalıba uymadığından statik dosyalar korunur. Route template tuzakları:
+virgül `,` escape'i şart; ` ` (NBSP) route kısıtında çalışmıyor → NBSP'li tek
+slug DB'de normalize edildi. İzole 5052 doğrulaması: noktalı/virgüllü ürünler 200 + başlık
+doğru, kategori/favicon çalışıyor, olmayan dosya/kategori 404. ✅ CANLIDA (restart yapıldı, kullanıcı doğruladı).
+
+**2026-07-29 Kargo servis şemaları + Kargo Bölgeleri uyarısı (admin panel):** 8 kargo
+IntegrationService'ine (aras/yurtici/mng/ptt/surat/hepsijet/kolaygelsin/ups) taşıyıcıya özel
+`SettingsSchema` tanımlandı — firma entegrasyon formu artık serbest anahtar/değer yerine hazır
+alanlar üretir (kimlikler şifreli Credentials'a, diğerleri Settings'e; ortak `apiUrl` test/üretim
+ayrımı için). Seeder'a şema + boş-şema backfill eklendi (dolu şema ezilmez); canlı DB'ye SQL ile
+uygulandı, kullanıcı MNG formunu doğruladı. Kargo Bölgeleri sayfasına "bu firmada aktif kargo
+entegrasyonu yok" uyarısı eklendi (firma detayına link; her zaman mount + display-gizleme,
+insertBefore tuzağı). ⚠️ Kargo adapter'ları hâlâ stub (yalnız Yurtiçi var, sahte veri) — gerçek
+taşıyıcı API entegrasyonu ayrı faz; şema anahtarları adapter yazılırken birebir okunmalı.
+`nebim` (ERP) şeması hâlâ boş. 2026-07-29 restart'ıyla bekleyen API değişiklikleri
+(F4/F5 pazaryeri, seeder backfill dahil) canlıya bindi.
+
+**2026-07-25 Pazaryerleri yönetim modülü (admin panel):** Pazaryeri mağazaları için yönetim
+arayüzü — sidebar Satış → Pazaryerleri. `/marketplaces`: pazaryeri tipine göre gruplu mağaza
+kartları (aktif önce; sağlık şeridi yeşil/sarı/kırmızı/gri; Yüklü/Yüklenecek/Hatalı-Açık sipariş
+metrikleri; kart Senkron dropdown'ı), üstte özet şeridi + firma filtresi; `/marketplaces/:id`:
+Genel Bakış / Ürünler (Yüklü·Yüklenecek·Bekleyen·Hatalı·Pasif çipleri, toplu "Seçilenleri
+Gönder") / Siparişler (FirmPlatformId filtreli) / Senkron Geçmişi / Ayarlar (ChannelForm gömülü +
+sözleşme linki). Backend: `MarketplacesController` (`/api/marketplaces/overview|{id}/products|
+{id}/logs|{id}/sync-products|{id}/update-stocks|{id}/fetch-orders`) + `MarketplaceAdminService`
+(cross-schema raw SQL, EffectivePriceProvider kalıbı). Model: `marketplace_products.FirmPlatformId`
+eklendi (migration canlıda, sözleşmeden geri dolduruldu); "yüklenecek" = kanalda açık ChannelProduct
+− gönderilmiş varyantı olan ürünler; sipariş listesine `firmPlatformId` filtresi; senkron mağazanın
+aktif pazaryeri sözleşmesinden yürür (yoksa anlaşılır hata). 6 pazaryeri IntegrationService kataloğa
+eklendi (seeder + canlı DB idempotent: trendyol/hepsiburada/n11/amazon/ciceksepeti/pazarama, şemalı).
+İzole 5051 testinde uçtan uca doğrulandı (mağaza+sözleşme aç → stub gönderim → listing/log → temizlik).
+⚠️ Adapter'lar stub — gerçek Trendyol/HB API bağlantısı ayrı faz. ⚠️ API restart bekliyor; admin build canlıda.
+
+**2026-07-26 Pazaryeri veri yönetimi F5 — mutabakat + fiyat-stok + sorun kuyruğu (admin panel):**
+PLAN KAPANDI (F1-F5 tamam). `marketplace_issues` tablosu + batch item'lara SentPrice/SentStock
+(migration `20260726190028` CANLI DB'DE). **Fiyat-stok hızlı kanalı:** update-stocks stub'ı emekli —
+`SubmitPriceStockAsync` yalnız synced listing'leri diff'leyip (bilinen PY fiyat/stokla aynıysa
+atlar) Trendyol price-and-inventory'ye ≤500'lük paketlerle gönderir; başarıda SentPrice/SentStock
+listing'e işlenir, hata SyncStatus'u bozmaz. **Mutabakat** (`POST {id}/reconcile` + kart Senkron
+dropdown'ında): pazaryeri listing'i sayfalı çekilir; stok farkı + eşik-altı fiyat farkı otomatik
+düzeltme paketine (bizim veri kazanır), eşik-üstü fiyat (`Marketplace:PriceDriftPercent` vars. %10)
+issue'ya (kampanya olabilir — körlemesine ezilmez), bizde-synced-pazaryerinde-yok issue + hash
+sıfırlama (yeniden gönderime açılır), fiili kategori farklıysa Source=remote istisna (personel/red
+istisnasının üzerine YAZILMAZ), zaman aşımı unknown item'ları listing gerçeğiyle çözülür; koşu
+integration_logs'a 'reconcile' olarak yazılır. **Sorun kuyruğu:** ConditionKey ile açıkta duplicate
+önlenir, taramada görülmeyen koşulların açık kayıtları OTOMATİK resolved (kuyruk çöplüğe dönmez),
+Yoksay→koşul sürerse yeniden açılır; worker zaman aşımında batch_timed_out issue açar. Panel:
+mağaza detayına **Sorunlar** sekmesi (sayaçlı), kart sağlık şeridi açık sorun sayısını gösterir,
+Senkron dropdown'a "Mutabakat Çalıştır" eklendi. Mock testi: 8 üründe 1 kayıp + 1 %99 fiyat sapması
++ 7 stok sapması senaryosu → 2 issue + 7 otomatik düzeltme (fiyat-stok paketi completed, listing
+değerleri işlendi) → kayıp geri gelince issue OTOMATİK kapandı → Yoksay çalıştı. ⚠️ API restart
+bekliyor; admin build canlıda. SIRADA: gerçek Trendyol anahtarlarıyla canlı deneme; F6+ diğer
+pazaryerleri talep gelince; zamanlanmış kadanslar (mutabakat/stok) açık konu.
+
+**2026-07-26 Pazaryeri veri yönetimi F4 — gerçek gönderim + batch takibi (admin panel):** Stub
+Trendyol adapter'ı ürün gönderiminde emekli — `MarketplacesController.SyncProducts` batch-destekli
+serviste (trendyol) `MarketplaceSendService`'e gider. 3 yeni tablo + marketplace_products'a 3 kolon
+(migration `20260726142024_AddMarketplaceBatches` CANLI DB'DE). Gönderim: yalnız readiness-HAZIR
+ürünler (eksikler anlaşılır hatayla reddedilir), payload K6 öncelik zinciriyle kurulur (ürün-özel >
+değer eşlemesi > sabit > serbest; varyant ekseni varyant verisinden; görseller zoom CDN; kategori =
+readiness'in çözdüğü [istisna > kural > birebir]), ≤100'lük paketler, diff-hash (değişmemiş synced
+varyant gönderilmez). `TrendyolSellerClient`: gerçek apigw uçları, Basic auth, base URL
+`Trendyol:SellerBaseUrl` config (izole testte mock sunucuya yönlendirildi — makine gerçek HTTP
+üzerinden uçtan uca doğrulandı). `MarketplaceBatchWorker` (hosted, 60 sn): kısmi cevap item-bazlı
+çözülür, backoff 1→2→5→10→30 dk, 24 saat → timed_out + kalan unknown (KÖRLEMESİNE yeniden gönderme
+yok — F5 mutabakatı doğrular); `POST /api/marketplaces/batches/poll-now` elle tetikleme.
+`MarketplaceErrorClassifier`: DB kalıpları (`marketplace_error_patterns`) + yerleşik regex'ler;
+"Beklenen kategori: X" yakalanıp referans DB'de kimliğe çözülür → marketplace_products'a
+LastErrorCode + SuggestedCategoryExternalId. Panel: Senkron Geçmişi'nde **Gönderim Paketleri** bloğu
+(canlı 5 sn yenileme + Şimdi Sorgula), Hatalı üründe **"X kategorisine istisna yaz + yeniden gönder"**
+butonu (K4 akışı: completion source=rejection + resend). Testte yakalanan bulgu: tamamlama ekranı
+bayat readiness okuyordu → modal açılışında ürün denetimi HER ZAMAN tazelenir. Mock testinde tam
+döngü: 8 varyant gönder → kısmi cevap (1/8) → tam cevap (7 category_conflict, öneri=Yürüyüş
+Ayakkabısı/429) → istisna + yeni kategori özellik senkronu + tamamlama → yeniden gönder → 8/8 yüklü.
+⚠️ API restart bekliyor; admin build canlıda. **Gerçek Trendyol anahtarları girilmedi** — test
+mağazasının sözleşmesinde mock kimlikler duruyor (kullanıcı gerçek supplierId/apiKey/apiSecret +
+brandId/cargoCompanyId girecek); test kalıntısı: mock-1/mock-2 batch kayıtları + P-022125 "synced"
+görünümü (gerçekte Trendyol'da yok — go-live'da temizlenir). SIRADA: F5.
+
+**2026-07-26 Pazaryeri veri yönetimi F3 — readiness + tamamlama (admin panel):** Kurgu kullanıcı
+onaylı (mağaza detayı Ürünler sekmesi; toplu tamamlama v1'de). 3 yeni tablo `integration` şemasında
+(migration `20260726135444_AddMarketplaceProductReadiness` CANLI DB'DE): `marketplace_product_readiness`
+(ürün×pazaryeri, firma geneli; Status ready|missing_info + kodlu ReasonsJson + çözülen kategori),
+`marketplace_product_category_overrides` (K4 istisna: manual/rejection/pool_assignment/remote),
+`marketplace_product_attribute_values` (K6 ürün-özel değerler — kendi kataloğa yazılmaz; kategori
+kapsamlı çünkü TY değer kimlikleri kategori başına farklı). `MarketplaceReadinessService`: bellek-içi
+toplu hesap (28.653 ürün 1,5 sn), kategori çözümü istisna>kural>birebir (havuz→pool_assignment_pending),
+zorunlu varyant-dışı özellik denetimi (ürün-özel > eşleme stratejileri), **özellikleri indirilmemiş
+kategori `attrs_not_synced`** (körlemesine hazır denmez — test sırasında yakalanan boşluk), yalnız
+değişen satıra yazım (UPDATE-sonra-INSERT; filtered unique + null FirmPlatformId'de ON CONFLICT
+çalışmaz). `MarketplaceCompletionService`: tekil+toplu tamamlama (kategori→istisna, değerler→ürün-özel,
+boş kategori reddi — testte yakalanan doğrulama açığı kapatıldı), kayıt sonrası anında yeniden denetim.
+Uçlar: `POST mapping/readiness/recompute`, `GET/PUT mapping/completion`, `GET {id}/readiness-counts`;
+ürünler ucunda `to_upload_ready|to_upload_missing` + neden etiketleri. UI: Ürünler sekmesi çipleri
+Hazır/Eksik'e ayrıldı, Denetle butonu, satırda neden rozetleri + Tamamla, seçimde Toplu Tamamla;
+`CompletionModal` (havuz radio + öneri çipleri + kategori arama + liste/serbest özellik formu).
+İzole 5051 testi: tam denetim, tekil tamamlama (5 değer → ready), toplu kategori ataması (2 ürün),
+negatifler (ürünsüz/boş kategori/eşlemesiz değer paneli). ⚠️ API restart bekliyor; admin build canlıda.
+Test kalıntısı (bilinçli): Trendyol mağazasına 2 kanal ürünü açıldı (P-022125 Hazır — 5 ürün-özel
+değerle tamamlandı; P-013522 Eksik), P1/P2 Pantolon ürünlerinde manuel kategori istisnası.
+SIRADA: F4 gerçek Trendyol gönderimi + batch takibi.
+
+**2026-07-26 Pazaryeri veri yönetimi F2 — eşleme katmanı (admin panel):** Ekran kurgusu
+kullanıcıyla netleşti (ayrı sayfa + sol liste/sağ editör + onaylı toplu öneri). **Kritik model
+kararı: "bizim kategori" = ProductGroup** (definition.product_groups düz liste, 71 grup; katalogda
+hiyerarşik kategori yok, channel_categories dinamik olduğundan yükleme taksonomisi olamaz).
+Uygulanan: 3 eşleme tablosu `integration` şemasında (migration `20260726105854_AddMarketplaceMappings`
+CANLI DB'YE UYGULANDI, additive): kategori eşleme **direct/rules/pool** kipli (RulesJson: sıralı
+özellik=değer→hedef kuralları + varsayılan; PoolJson: aday listesi; hedef snapshot'lı), özellik
+eşleme (map_values/pass_literal/fixed_value, mp kategori kapsamlı), değer eşleme (üç hedef kimliği,
+ValueMode'a göre gönderilir). `MarketplaceMappingController` (`/api/marketplaces/mapping/
+overview|mp-categories|suggest-categories|category|mapped-targets|attributes|values|review|
+health/process`). Öneri katmanı `TextSimilarity`: TR normalize + önek toleransı (ayakkabı↔ayakkabısı)
++ path-segment skoru ("Spor Ayakkabı" grubu → o dalın yaprakları %85). Sağlık job'ı
+`MappingHealthService`: change log olaylarını işler (kategori kaldırıldı→broken, ad değişti→
+needs_review, serbest→liste→pass_literal needs_review, değer kalktı→broken, geri geldi→otomatik
+düzelir), her referans senkronu sonunda otomatik. Panel: `/marketplaces/eslestirme` (Pazaryerleri
+başlığından "Eşleştirme" butonu; pazaryeri çipleri referans verisi olanlar aktif; 3 sekme).
+İzole 5051 testi: overview 71 grup, öneri isabetli, direct kaydetme + doğrulamalar, Cinsiyet
+eşleme + 3 değer toplu kayıt (3/10 ilerleme), sağlık simülasyonu (kategori+değer kaldırma →
+2 broken → review listesi → onayla → temiz). ⚠️ API restart bekliyor; admin build canlıda.
+Test kalıntısı olarak faydalı gerçek eşlemeler bırakıldı: Spor Ayakkabı→Sneaker (direct),
+Cinsiyet→cinsiyet (3 değer eşli). SIRADA: F3 readiness + tamamlama ekranı.
+
+**2026-07-26 Pazaryeri veri yönetimi F1 (admin panel):** Tasarım onaylandı
+(`docs/pazaryeri-entegrasyon-veri-yonetimi.md`, K1-K8 kararları) ve F1 uygulandı: **ayrı
+`marketplace_ref` DB** (aynı instance, yedek dışı; açılışta otomatik DB+şema oluşturma —
+`mp_categories/mp_category_attributes/mp_attribute_values/mp_sync_runs/mp_change_log`),
+hash-diff senkron çekirdeği (değişmeyen satıra UPDATE yok, hard-delete yok → removed_at,
+değişiklikler change log'a; değer olayları kategori-kapsam özeti), Trendyol referans indirici
+(kategori+özellik uçları kimliksiz, base URL config'li), `POST /api/marketplaces/reference-sync`
++ `runs` + `summary` uçları (arka plan koşusu, heartbeat, eşzamanlı koşu reddi, stale tespiti),
+panelde Pazaryerleri → "Referans Verisi" modalı (özet sayılar + başlatma + canlı koşu izleme).
+İzole 5051 testi: 3.857 kategori indi (path doğru: "Ayakkabı > Spor Ayakkabı > Sneaker"),
+idempotent (2. koşu 0 değişim), değişiklik/silme simülasyonu change log'a düştü, 2 kategori
+özellik senkronu 1.906 kayıt (Beden=required+variant axis), eşzamanlı koşu reddedildi.
+Açılış logu: "Pazaryeri referans DB: AKTİF ✓". ⚠️ API restart bekliyor; admin build canlıda.
+appsettings.Production.json'a `ConnectionStrings:MarketplaceRef` eklendi. SIRADA: F2 eşleme
+katmanı (önce ekran kurgusu, K16).
+
+**Bekleyen deploy (2026-07-25):** GeoLite2 IP halkası (publish alındı) → kullanıcı: (1) `sudo tar -xzf /opt/ECSProsAI/data/geoip/GeoLite2-City_20260724.tar.gz -C /opt/ECSProsAI/data/geoip --strip-components=1` (2) `sudo systemctl restart ecspros` (3) doğrulama `journalctl -u ecspros | grep GeoIP` → "AKTİF ✓". Ayrıca **nginx recreate hâlâ bekliyor** (8080 hâlâ dinlemede): `sudo docker exec ecommerce-nginx nginx -t && sudo docker compose up -d nginx` (Faz İ compose + rate-limit config'i). Önceki bekleyenler (S3a-1, H3, 2026-07-22 web/admin, mobil bootstrap, brute-force, Requests modülü) 2026-07-23 20:27 restart'ıyla CANLIDA.
+
+**2026-07-23 Go-live veri aktarımı (Part A TAMAM) + eski sistem entegrasyonu (Part B SIRADA):**
+Kullanıcı yeni projeye (panel+web+mobil API) geçiyor; eski `juludedb`'den Mishar üye/sipariş/favori
+aktarımı + geçici çift yönlü entegrasyon istedi. Keşif: MigrationTool eski MySQL'e (`juludedb`
+@51.178.208.50) bağlanır, Mishar=platformId 41. **PART A UYGULANDI + CANLI DB'YE AKTARILDI**
+(MigrationTool Faz 22/23/24, Mishar-özel, tekrar-çalıştırılabilir): 70 üye (35 MD5 şifreli, 31
+e-postalı), 69 adres, 49 sipariş+115 kalem (varyant %100 eşleşti), 20 favori. Kararlar: **MD5
+doğrulama+yükseltme** (MemberPasswordHasher'a 32-hane MD5 branch'i eklendi, girişte BCrypt'e
+yükselir); **LegacyMemberId** (Member) + **LegacyOrderId** (Order) nullable+unique kolonları
+(migration canlıda; sicil=eski üye Id + idempotency + geri-yazma eşlemesi); sipariş kaynağı
+InternalNotes'ta korunur; şehir NameI18n-tr eşlemesi (49/49). ⚠️ restart bekliyor (hasher+kolonlar).
+**PART B — B4 UYGULANDI (2026-07-23, dry-run varsayılan) + foundation:** Çalışan API'ye eski MySQL
+köprüsü `ILegacyGateway` (`Api/Services/Legacy/LegacyGateway.cs`, MySql.Data eklendi) — hata-güvenli
+(conn boşsa no-op). B4: `OrderConfirmedLegacyWriteBackHandler` (Api/EventHandlers, otomatik keşif) →
+Mishar siparişi ONAYLANINCA eski `juludedb`'ye webmembers(+eski üye yoksa açar)+webmemberaddresses+
+oporders+oporderlines yazar; idempotent (order.LegacyOrderId), fail-safe (onayı bozmaz), her deneme
+integration_logs'a. **ÜÇ kademeli güvenlik: MySqlConnection + WriteBack:Enabled + DryRun=false.**
+Varsayılan: bağlantı boş + Enabled=false + DryRun=true. Geri-yazma INSERT'leri canlı juludedb'de
+transaction+ROLLBACK ile doğrulandı (4/4 şemaya uygun). ⚠️ restart bekliyor. **KARARLAR (gerçek yazımı
+açmadan önce kullanıcı onayı):** (a) orderNumber şeması — şu an yeni sistem no'su aynen (M/T legacy
+serisiyle çakışmaz); (b) legacy orderStatus (varsayılan "Onay Bekliyor"). **B1-B3 (SIRADA):** canlı
+API worker+MySQL (fiyat/stok sık, ürün/görsel seyrek) — katalog mutasyonu, ayrı dikkatli dilimler.
+Detay: [[project-golive-migration-2026-07-23]].
+
+**2026-07-23 Mobil cihaz doğrulama altyapısı (kullanıcı kararı — sabit token YOK):** challenge → attestation (Android: Play Integrity gerçek implementasyon, GCP servis hesabı + paket adı config'i bekliyor; iOS App Attest FAZ 2) → 15 dk anonim device JWT + oturuma özel `signingSecret`. Device token'lı her istek `X-Timestamp+X-Nonce+X-Signature` (HMAC, gövde hash'li) taşır; nonce tek kullanımlık — replay 401 (`DeviceRequestGuardMiddleware`). `MobileGate:EnforceStoreTokens` **AÇILDI (aynı gün cutover, kullanıcı kararı)**: SSR her sayfaya 15 dk web token'ı gömer (`meta[ms-api-token]`), `_Layout.cshtml`'deki global fetch yaması `/api/*` çağrılarına otomatik ekler (26 view'a dokunulmadı); 10 dk'da bir sessiz yenileme, zincir sınırı 8 (bot HTML'den token çekip sonsuz yenileyemez). ⚠️ Sonuçlar: Postman/curl/Swagger'dan store uçları artık 401; h7-regression suite token'sız çağrı yaptığı için kırılacak (güncellenmeli); mobil ekip prod testi için Play Integrity config'i ya da izole ortam gerekli. `MobileAttestation:DevBypassSecret` yalnız test ortamında env var ile (prod'a ASLA yazılmaz). 12 senaryoluk izole test geçti (kapı 401, sahte attestation, challenge/nonce tekrarı, bozuk imza, device-token'la üye ucu 403, imzalı üye girişi). SIRADA (uygulama yayın kimliği gelince): GCP servis hesabı + PackageName config, App Attest sunucu doğrulaması, kapı cutover'ı.
+
+**2026-07-23 Proje Talepleri modülü (yeni modül: Requests):** personel istekleri admin panelden girilir/izlenir/güncellenir. Backend: `requests` şeması (`project_requests` + `project_request_activities` — yorum ve süreç kayıtları tek zaman akışı), tam durum akışı new→evaluation→planned→in_progress→testing→done (+rejected/cancelled; geçiş haritası sunucuda doğrulanır), atama, termin, ek dosya (`/media/talepler/`), kod serisi TLP-yyyy-0001. API: `/api/requests` CRUD+status+assign+comments+media (düz [Authorize] = yalnız panel personeli; v1'de granüler izin yok). Panel: `/requests` liste (durum sekmeleri+sayaçlar, kategori/öncelik/benim-bana filtreleri, geciken termin vurgusu) + `/requests/:id` detay (zaman akışı, yorum+ek, durum butonları, atama). Kategoriler v1'de sabit set (core lookup value'da Code kolonu yok — lookup bağlanamadı, ihtiyaçta ayrı iş). Migration canlı DB'ye uygulandı (additive). Sidebar: Genel → Proje Talepleri.
+
+**2026-07-23 oturumu (mobil uygulama API):** Vitrin API envanteri çıkarıldı — sitenin tüm canlı verisi zaten JSON `/api/store/*` uçlarından geliyor, mobil bunları aynen kullanır (ayrı katman açılmadı). Tek boşluk kanal kimliğiydi: `GET /api/store/bootstrap[?code=]` eklendi (firmPlatformId/code/nameI18n döner, hassas alan sızdırmaz; 5051 izole testte olumlu+olumsuz senaryo doğrulandı). Mobil ekip referansı: `docs/mobil-api-referansi.md` (auth akışı, `X-Client-Platform` başlığı, misafir sepet `sessionId`, tüm uçlar alan alan). **Ek (aynı gün):** prod Swagger'da yalnız partner dokümanı göründüğünden üçüncü doküman eklendi — "ECSPros Mobil API (Store)": yalnız `api/store/*` + `gorsel-arama` (76 uç); partner ayrı, iç doküman prod'da 404 kalmaya devam. **Ek-2 (kullanıcı kararı):** Swagger UI adresleri BAĞIMSIZ, doküman seçici yok — `/swagger-mobile`, `/swagger-partner`, `/swagger` (iç, yalnız dev; prod'da 404). **Ek-3 (brute-force koruması):** katmanlı fren uygulandı — nginx `00-ratelimit.conf` (CF-Connecting-IP bazlı: auth 60/dk+burst20, genel API 30/sn+burst100; ⚠️ nginx restart bekliyor) + app RateLimiter (`store-auth` 60/dk, `store-sensitive` 30/dk: kupon doğrulama + görsel arama; global limit yok) + üye login hesap kilidi (5 hata → 15 dk, IMemoryCache, OTP deseni; kilitliyken sayaç uzamaz). Test hesabı: mobil.test@ecspros.com / MobilTest2026!
+
+**2026-07-22 oturum sonu (web sitesi + admin karışık talepler):**
+- Sepet-oturum: çıkışta sepet temizlenir (cart+sid anahtarları düşer), girişte rozet/sepet reload'suz tazelenir; sepete ekleme/okuma artık üye token'ı taşır (kalemler üye sepetine yazılır).
+- Sipariş kapısı: sepette "Siparişi Tamamla" → üye değilse giriş modalı; giriş VEYA "Misafir Olarak Devam Et" olmadan /teslimat'a geçilmez. **Misafir checkout uçtan uca gerçek**: `Order.MemberId` nullable (migration uygulandı), checkout API anonim kabul eder (eşik üzeri misafir bloklanır, misafir kupon kullanımı sayaca yazılmaz), misafir adresi sessionStorage'da.
+- Mahalle bazlı kargo (CargoRule altyapısı kullanıldı): teslimat adımında adresin mahallesine atanan kargolar öncelikle listelenir (atama yoksa tüm aktifler genel öncelikle); seçim siparişe yazılır (`RequestedCargoIntegrationId/Name`, migration uygulandı); admin `/orders/cargo-zones` "Kargo Bölgeleri" ekranı (genel öncelik + il→ilçe→mahalle atama); "Kargoya Ver" modalı müşteri tercihini varsayılan alır.
+- Vitrin editörü: önizleme inline panel, geçmiş ayrı sayfa (`/storefront/pages/history`), markalar/yorumlar/ikon-banner/instagram gerçek görünümlü önizleme, öğe görseli dosya yükleme (`POST /api/pages/media` → `/media/vitrin/`), Rozet→İkon (70 FA ikon seçici), hedeflemede 4 cihaz (mobil/masaüstü/iOS/Android; `X-Client-Platform` başlığı).
 
 ---
 
