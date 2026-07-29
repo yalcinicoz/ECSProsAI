@@ -3,6 +3,8 @@ using ECSPros.Crm.Domain.Entities;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace ECSPros.Crm.Application.Commands.LoginMember;
 
@@ -21,22 +23,50 @@ public record MemberLoginResponse(
     string Email);
 
 public class LoginMemberCommandHandler(
-    ICrmDbContext db, IMemberTokenService tokenService, IMemberPasswordHasher passwordHasher)
+    ICrmDbContext db, IMemberTokenService tokenService, IMemberPasswordHasher passwordHasher,
+    IMemoryCache cache, ILogger<LoginMemberCommandHandler> logger)
     : IRequestHandler<LoginMemberCommand, Result<MemberLoginResponse>>
 {
+    // Brute-force freni (2026-07-23): hesap bazlı hatalı deneme sayacı — OTP tarafındaki
+    // deneme sınırı deseninin şifreli giriş karşılığı. Süreç içi IMemoryCache yeterli
+    // (tek host; IP bazlı hacim freni nginx'te). Kilitliyken denemeler sayacı UZATMAZ —
+    // hesabın sahibi saldırı altındayken kalıcı kilitlenmesin diye.
+    private const int DenemeSiniri = 5;
+    private static readonly TimeSpan KilitSuresi = TimeSpan.FromMinutes(15);
+
     public async Task<Result<MemberLoginResponse>> Handle(LoginMemberCommand request, CancellationToken ct)
     {
         var telefonla = !string.IsNullOrWhiteSpace(request.Phone);
+        var kimlik = telefonla ? request.Phone!.Trim() : request.Email.Trim().ToLowerInvariant();
+        var kilitAnahtari = $"uye-giris-hata:{kimlik}";
+        var hataMesaji = telefonla ? "Telefon veya şifre hatalı." : "E-posta veya şifre hatalı.";
+
+        if (cache.TryGetValue<int>(kilitAnahtari, out var mevcutHata) && mevcutHata >= DenemeSiniri)
+            return Result.Failure<MemberLoginResponse>(
+                "Çok fazla hatalı deneme yapıldı. Lütfen 15 dakika sonra tekrar deneyin.");
+
+        Result<MemberLoginResponse> HataliDeneme()
+        {
+            var sayi = (cache.TryGetValue<int>(kilitAnahtari, out var s) ? s : 0) + 1;
+            cache.Set(kilitAnahtari, sayi, KilitSuresi);
+            if (sayi >= DenemeSiniri)
+                logger.LogWarning(
+                    "Üye girişi kilitlendi: {Kimlik} — {Sayi} hatalı deneme (IP: {Ip})",
+                    kimlik, sayi, request.IpAddress);
+            return Result.Failure<MemberLoginResponse>(hataMesaji);
+        }
+
         var member = telefonla
             ? await db.Members.FirstOrDefaultAsync(m => m.Phone == request.Phone && m.IsActive, ct)
             : await db.Members.FirstOrDefaultAsync(m => m.Email == request.Email.ToLowerInvariant() && m.IsActive, ct);
-        var hataMesaji = telefonla ? "Telefon veya şifre hatalı." : "E-posta veya şifre hatalı.";
 
         if (member is null || string.IsNullOrEmpty(member.PasswordHash))
-            return Result.Failure<MemberLoginResponse>(hataMesaji);
+            return HataliDeneme();
 
         if (!passwordHasher.Verify(request.Password, member.PasswordHash))
-            return Result.Failure<MemberLoginResponse>(hataMesaji);
+            return HataliDeneme();
+
+        cache.Remove(kilitAnahtari);
 
         // D5: eski SHA256 hash başarılı girişte BCrypt'e yükseltilir (aşağıdaki
         // SaveChanges ile kalıcılaşır) — toplu migration gerekmez.

@@ -18,6 +18,15 @@ public class MemberPasswordHasher : IMemberPasswordHasher
         if (storedHash.StartsWith("$2"))
             return BCrypt.Net.BCrypt.Verify(password, storedHash);
 
+        // Legacy MD5 — juludedb webmembers.password (32 hane hex, büyük harf). Aktarılan
+        // Mishar üyeleri (2026-07-23): eski şifreyle giriş → başarıda BCrypt'e yükseltilir
+        // (NeedsRehash $2 dışını true döner). Düz MD5(UTF8(password)) varsayımı.
+        if (storedHash.Length == 32)
+        {
+            var md5 = MD5.HashData(Encoding.UTF8.GetBytes(password));
+            return string.Equals(storedHash, Convert.ToHexString(md5), StringComparison.OrdinalIgnoreCase);
+        }
+
         // Legacy SHA256 — hex (eski register/login) veya Base64 (eski admin CreateMember)
         var sha = SHA256.HashData(Encoding.UTF8.GetBytes(password));
         if (storedHash.Length == 64)
