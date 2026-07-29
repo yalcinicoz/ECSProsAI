@@ -38,6 +38,11 @@ public abstract class StorePageController : Controller
             .GetRequiredService<ECSPros.Api.Services.Store.IVisitorSegmentResolver>()
             .ResolveAsync(context.HttpContext, uye?.MemberId);
         ViewData["MsSegment"] = segment;
+        // 2026-07-23 mobil kapı cutover'ı: SSR her sayfaya kısa ömürlü web API token'ı gömer
+        // (layout meta + global fetch yaması) — /api/store/* artık kimliksiz isteklere kapalı.
+        ViewData["MsApiToken"] = services
+            .GetRequiredService<ECSPros.Api.Services.Store.IDeviceTokenService>()
+            .WebTokenUret().Token;
         ViewData["MsNavigasyon"] = platform is null
             ? NavigasyonVm.Bos
             : await NavigasyonuGetirAsync(services, platform, context.HttpContext.RequestAborted);

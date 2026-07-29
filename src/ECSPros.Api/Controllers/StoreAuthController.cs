@@ -9,11 +9,13 @@ using ECSPros.Crm.Application.Queries.GetMemberDetail;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ECSPros.Api.Controllers;
 
 [ApiController]
 [Route("api/store/auth")]
+[EnableRateLimiting("store-auth")] // brute-force freni — IP başına dk'da 60 istek (2026-07-23)
 public class StoreAuthController(IMediator mediator) : ControllerBase
 {
     /// <summary>D1: access token'ı SSR kimliği için HttpOnly cookie'ye de yazar.

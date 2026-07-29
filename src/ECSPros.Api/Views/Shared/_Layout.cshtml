@@ -19,6 +19,60 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    @* 2026-07-23 API kapısı: SSR'ın gömdüğü kısa ömürlü web token'ı. Aşağıdaki fetch
+       yaması /api/* çağrılarına otomatik ekler — view'lardaki fetch'ler değişmeden çalışır. *@
+    <meta name="ms-api-token" content="@(ViewData["MsApiToken"] as string)" />
+    <script>
+        (function () {
+            var esasFetch = window.fetch;
+            function msToken() {
+                var m = document.querySelector('meta[name="ms-api-token"]');
+                return m ? m.content : '';
+            }
+            function apiMi(url) {
+                return typeof url === 'string' &&
+                    (url.indexOf('/api/') === 0 || url.indexOf(location.origin + '/api/') === 0);
+            }
+            window.fetch = function (girdi, ayarlar) {
+                var url = typeof girdi === 'string' ? girdi : (girdi && girdi.url) || '';
+                if (!apiMi(url)) return esasFetch.call(this, girdi, ayarlar);
+                ayarlar = ayarlar || {};
+                var basliklar = new Headers(ayarlar.headers ||
+                    (girdi instanceof Request ? girdi.headers : undefined) || {});
+                var bizEkledik = false;
+                if (!basliklar.has('Authorization') && msToken()) {
+                    basliklar.set('Authorization', 'Bearer ' + msToken());
+                    bizEkledik = true;
+                }
+                ayarlar.headers = basliklar;
+                var kendisi = this;
+                return esasFetch.call(kendisi, girdi, ayarlar).then(function (yanit) {
+                    // Web token'ı süresi dolmuşsa (uzun açık kalan sekme): bir kez yenile + tekrarla
+                    if (yanit.status !== 401 || !bizEkledik) return yanit;
+                    return esasFetch('/api/store/web-token/renew', {
+                        method: 'POST',
+                        headers: { Authorization: 'Bearer ' + msToken() }
+                    }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+                        if (!d || !d.success) return yanit;
+                        document.querySelector('meta[name="ms-api-token"]').content = d.data.token;
+                        basliklar.set('Authorization', 'Bearer ' + d.data.token);
+                        ayarlar.headers = basliklar;
+                        return esasFetch.call(kendisi, girdi, ayarlar);
+                    });
+                });
+            };
+            // Sekme açık kaldıkça 10 dk'da bir sessiz yenileme (token ömrü 15 dk)
+            setInterval(function () {
+                esasFetch('/api/store/web-token/renew', {
+                    method: 'POST',
+                    headers: { Authorization: 'Bearer ' + msToken() }
+                }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+                    if (d && d.success)
+                        document.querySelector('meta[name="ms-api-token"]').content = d.data.token;
+                }).catch(function () { });
+            }, 10 * 60 * 1000);
+        })();
+    </script>
     <title>@sayfaBasligi | @markaAdi</title>
     <meta name="description" content="@metaDescription" />
     <meta name="robots" content="@robots" />
