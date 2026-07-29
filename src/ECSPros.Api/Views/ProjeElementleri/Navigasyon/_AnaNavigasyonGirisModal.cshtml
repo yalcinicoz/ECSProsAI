@@ -173,6 +173,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // üyeye ait kalmasın. Giriş: sayfayı yenile (yeni cookie ile yeni üyenin verisi);
     // çıkış: ana sayfaya dön (sayfa üye ister, reload zaten yönlendirirdi — direkt git).
     const uyeOzelSayfayiTazele = () => {
+        // 2026-07-22: girişle misafir sipariş bayrağı düşer — akış artık üye akışıdır
+        try { sessionStorage.removeItem("msMisafirSiparis"); } catch { /* yok say */ }
         // Kabul testi 2026-07-22: girişte sayfadaki davranış köprüleri (favori işaretleri,
         // bekleyen favori niyeti...) tazelensin — reload olmayan sayfalar bunu dinler.
         document.dispatchEvent(new CustomEvent("ms:uye-giris"));
@@ -182,19 +184,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const sepetiBirlestir = async () => {
         const token = localStorage.getItem(TOKEN_ANAHTARI);
         const sid = localStorage.getItem("ecspros_sid");
-        if (!token || !sid || !platformId) { return; }
-        try {
-            const cevap = await fetch("/api/store/cart/merge", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-                body: JSON.stringify({ guestSessionId: sid, firmPlatformId: platformId })
-            });
-            const veri = await cevap.json().catch(() => null);
-            if (veri?.success && veri.data?.cartId) {
-                localStorage.setItem("ecspros_cart", veri.data.cartId);
-            }
-            window.msMiniSepetYenile?.();
-        } catch { /* birleşmezse misafir sepeti sonraki girişte birleşir */ }
+        if (token && sid && platformId) {
+            try {
+                const cevap = await fetch("/api/store/cart/merge", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                    body: JSON.stringify({ guestSessionId: sid, firmPlatformId: platformId })
+                });
+                const veri = await cevap.json().catch(() => null);
+                if (veri?.success && veri.data?.cartId) {
+                    localStorage.setItem("ecspros_cart", veri.data.cartId);
+                }
+            } catch { /* birleşmezse misafir sepeti sonraki girişte birleşir */ }
+        }
+        // 2026-07-22: merge olsun olmasın girişte rozet tazelenir — sid çıkışta silindiği
+        // için erken dönüş rozeti güncellemeden bırakıyordu; GET artık token'la üye
+        // sepetini bulduğundan koşulsuz yenilemek doğru sonucu verir.
+        window.msMiniSepetYenile?.();
     };
 
     const girisiUygula = (ad, iletisim) => {
@@ -371,7 +377,24 @@ document.addEventListener("DOMContentLoaded", () => {
                   if (window.msUyeOzelSayfa) window.location.href = "/";
               });
             tokenlariTemizle();
+            // 2026-07-22: çıkışta sepet de temizlenir — ecspros_cart üyenin sepetini
+            // gösterir; sid de sıfırlanır (oturum boyu eklenen kalemler sid sepetinde
+            // olabilir — eski davranış artığı — ve GET sid'le onu bulmaya devam ederdi).
+            // Yeni sid gerektiğinde üretilir; üyenin sepeti hesabında saklı kalır.
+            try {
+                localStorage.removeItem("ecspros_cart");
+                localStorage.removeItem("ecspros_sid");
+                // Çıkışta sipariş akışı kalıntıları da düşer (üyenin seçili adresi vb.)
+                sessionStorage.removeItem("msTeslimatDurumu");
+                sessionStorage.removeItem("msMisafirSiparis");
+                sessionStorage.removeItem("msBekleyenSiparis");
+            } catch { /* yok say */ }
             window.msMiniSepetYenile?.();
+            // Sepet/ödeme sayfasında çizili kalemler ekranda kalmasın — yeniden yükle
+            if (!window.msUyeOzelSayfa
+                && (location.pathname.startsWith("/sepet") || location.pathname.startsWith("/odeme"))) {
+                window.location.reload();
+            }
         });
     });
 

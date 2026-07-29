@@ -47,3 +47,4 @@ tools/**/obj/
 node_modules/
 tools/misharix-sync/shots/
 publish-staging/
+docs/KabulTestKiti/

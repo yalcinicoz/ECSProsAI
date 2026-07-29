@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel Testi Raporu</title>
+<!--
+  KALICI RAPOR ŞABLONU — veriye dayalıdır, koşuya özel içerik BARINDIRMAZ.
+  Yeni koşu: bu dosyayı koşu klasörüne report.html olarak kopyala; yanına
+  findings.json + results.json + shots.txt + screenshots/ koy. Bölümler,
+  modül sınıflandırması ve görseller otomatik oluşur.
+  Modül eşlemesi: findings.json'daki "modul" alanı + aşağıdaki SUITE_MAP /
+  SHOT_MAP önekleri. Yeni suite/önek eklersen haritalara satır ekle.
+-->
+<style>
+:root{
+  color-scheme: light;
+  --surface:#fcfcfb; --plane:#f9f9f7; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --border:rgba(11,11,11,.10);
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --accent:#2a78d6; --good-text:#006300;
+}
+@media (prefers-color-scheme: dark){
+  :root{ color-scheme: dark;
+    --surface:#1a1a19; --plane:#0d0d0d; --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --border:rgba(255,255,255,.10); --accent:#3987e5; --good-text:#0ca30c; }
+}
+*{box-sizing:border-box;margin:0}
+body{font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--plane);color:var(--ink);padding:24px 16px 80px 252px}
+.wrap{max-width:1150px;margin:0 auto}
+/* Sol sabit modül navigasyonu — her zaman görünür */
+.sidenav{position:fixed;left:0;top:0;bottom:0;width:236px;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);padding:14px 10px 20px;z-index:5}
+.sidenav .brand{display:block;font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;padding:6px 10px 10px}
+.sidenav .shead{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:10px 10px 4px}
+.sidenav a.mlink{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--ink2);text-decoration:none;padding:6px 10px;border-radius:9px;margin:1px 0}
+.sidenav a.mlink:hover{background:color-mix(in srgb, var(--accent) 8%, transparent)}
+.sidenav a.mlink.active{background:color-mix(in srgb, var(--accent) 14%, transparent);color:var(--ink)}
+.sidenav a.mlink .cnt{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--critical)}
+@media(max-width:900px){
+  body{padding-left:16px}
+  .sidenav{position:sticky;top:0;bottom:auto;width:auto;margin:-24px -16px 14px;display:flex;overflow-x:auto;overflow-y:hidden;border-right:none;border-bottom:1px solid var(--border);padding:8px 10px;gap:2px}
+  .sidenav .brand,.sidenav .shead{display:none}
+  .sidenav a.mlink{white-space:nowrap;flex:0 0 auto}
+}
+a{color:var(--accent)}
+h1{font-size:26px;margin-bottom:4px}
+.sub{color:var(--ink2);font-size:14px}
+.top{font-size:13px;margin-bottom:18px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px;margin:22px 0}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 15px}
+.kpi b{display:block;font-size:25px;font-weight:650}
+.kpi span{font-size:12.5px;color:var(--ink2)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px;border:1px solid var(--border);white-space:nowrap}
+.b-kritik{color:var(--critical)} .b-orta{color:var(--serious)} .b-dusuk{color:var(--warning)} .b-bilgi{color:var(--accent)}
+.b-PASS{color:var(--good-text)} .b-FAIL{color:var(--critical)} .b-WARN{color:var(--serious)}
+.b-ERROR{color:var(--critical)} .b-INFO{color:var(--accent)} .b-PLACEHOLDER{color:var(--muted)}
+.notice{border-left:3px solid var(--warning);padding:10px 14px;background:var(--surface);border-radius:0 10px 10px 0;font-size:14px;color:var(--ink2);margin:14px 0}
+section.mod{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin:18px 0}
+section.mod > h2{font-size:19px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+section.mod > .modsum{font-size:13px;color:var(--muted);margin-bottom:12px}
+.fcard{display:grid;grid-template-columns:1fr 390px;gap:16px;border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin:10px 0;background:var(--plane)}
+.fcard.noimg{grid-template-columns:1fr}
+@media(max-width:860px){.fcard{grid-template-columns:1fr}}
+.fcard h3{font-size:15.5px;margin-bottom:5px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fcard p{color:var(--ink2);font-size:14px}
+.fimg{display:block;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--grid);align-self:start}
+.fimg img{width:100%;max-height:300px;object-fit:contain;display:block;background:#fff}
+.fimg span{display:block;font-size:11.5px;color:var(--muted);padding:5px 9px;border-top:1px solid var(--border)}
+details{margin-top:10px}
+details summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--ink2);padding:6px 0}
+.tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 10px;border-top:1px solid var(--grid);vertical-align:top}
+th{border-top:none;color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em}
+td.note{color:var(--ink2);max-width:520px;word-break:break-word}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-top:8px}
+.gal a{display:block;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;text-decoration:none}
+.gal img{width:100%;height:118px;object-fit:cover;object-position:top;display:block;background:var(--grid)}
+.gal span{display:block;font-size:11px;color:var(--ink2);padding:5px 8px;word-break:break-all}
+h2.plain{font-size:19px;margin:34px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--grid)}
+ul.plain{padding-left:20px;color:var(--ink2);font-size:14px}
+ul.plain li{margin-bottom:5px}
+.empty{color:var(--muted);font-size:13.5px;font-style:italic}
+</style>
+</head>
+<body>
+<nav class="sidenav" id="modnav"></nav>
+<div class="wrap">
+<h1 id="title">Admin Panel Testi</h1>
+<p class="sub" id="meta"></p>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="notice"><b>Not:</b> Adım tablolarındaki bazı FAIL/ERROR satırları test otomasyonunun kendi ara denemeleridir. Panele dair <b>doğrulanmış</b> bulgular her modülün üstündeki bulgu kartlarıdır.</div>
+
+<div id="modules"></div>
+
+<h2 class="plain" id="sec-iyi">İyi Çalışanlar</h2>
+<ul class="plain" id="good"></ul>
+
+<h2 class="plain" id="sec-db">Veritabanı / Eksik Yapı Notları</h2>
+<ul class="plain" id="db"></ul>
+
+<h2 class="plain" id="sec-veri">Bırakılan Test Verileri</h2>
+<ul class="plain" id="testdata"></ul>
+</div>
+
+<script>
+/* ---- Modül eşlemeleri — yeni suite/görsel öneki eklenirse buraya satır ekle ---- */
+const SUITE_MAP = {
+  'giris':'Giriş', 'sayfa-taramasi':'Genel Tarama', 'siniflandirma':'Genel Tarama',
+  'katalog':'Katalog', 'katalog-urun-crud':'Katalog', 'katalog-varyant':'Katalog',
+  'katalog-ozellik-tipleri':'Katalog', 'katalog-urun-gruplari':'Katalog',
+  'katalog-kanal-kategorileri':'Katalog', 'katalog-ayarlar':'Katalog',
+  'siparisler':'Sipariş', 'siparis-aksiyonlari':'Sipariş', 'iadeler':'Sipariş', 'faturalar':'Sipariş',
+  'crm':'CRM', 'iletisim':'İletişim', 'kampanyalar':'Kampanya', 'kuponlar':'Kampanya',
+  'cms':'CMS', 'vitrin':'Vitrin', 'menuler':'Menü', 'moderasyon':'Moderasyon',
+  'stok':'Stok', 'cari':'Cari', 'ayarlar':'Ayarlar', 'performans':'Performans'
+};
+const SHOT_MAP = [
+  [/^0\d-/, 'Giriş'], [/^sweep-00-dashboard/, 'Dashboard'], [/^sweep-/, 'Genel Tarama'],
+  [/^katalog-/, 'Katalog'], [/^(siparis|fatura)-/, 'Sipariş'], [/^crm-/, 'CRM'],
+  [/^iletisim-/, 'İletişim'], [/^promo-/, 'Kampanya'], [/^cms-/, 'CMS'],
+  [/^vitrin-/, 'Vitrin'], [/^menu-/, 'Menü'], [/^moderasyon-/, 'Moderasyon'],
+  [/^stok-/, 'Stok'], [/^cari-/, 'Cari'], [/^ayarlar-/, 'Ayarlar']
+];
+const MODULE_ORDER = ['Giriş','Dashboard','Genel Tarama','Katalog','Sipariş','CRM','İletişim',
+  'Kampanya','CMS','Vitrin','Menü','Moderasyon','Stok','Cari','Ayarlar','Performans','UI/UX','Genel'];
+const MOD_ICON = {'Giriş':'🔐','Dashboard':'📊','Genel Tarama':'🗺️','Katalog':'📦','Sipariş':'🧾',
+  'CRM':'👥','İletişim':'✉️','Kampanya':'🏷️','CMS':'📄','Vitrin':'🖼️','Menü':'🧭','Moderasyon':'🛡️',
+  'Stok':'🏬','Cari':'💼','Ayarlar':'⚙️','Performans':'⏱️','UI/UX':'🎨','Genel':'📋'};
+const ICON = {kritik:'⛔', orta:'⚠️', dusuk:'🔹', bilgi:'ℹ️', PASS:'✓', FAIL:'✗', WARN:'!', ERROR:'✗', INFO:'i', PLACEHOLDER:'…'};
+const ONEM = {kritik:'KRİTİK', orta:'ORTA', dusuk:'DÜŞÜK', bilgi:'BİLGİ'};
+const SEV_RANK = {kritik:0, orta:1, dusuk:2, bilgi:3};
+const esc = s => (s||'').replace(/</g,'&lt;');
+
+function findingModule(b){
+  const m = b.modul || 'Genel';
+  return MODULE_ORDER.includes(m) ? m : m; // bilinmeyen modül adı da kendi bölümünü açar
+}
+function shotModule(name){
+  for (const [re, m] of SHOT_MAP) if (re.test(name)) return m;
+  return 'Genel Tarama';
+}
+
+async function main(){
+  const [F, R, shotsTxt] = await Promise.all([
+    fetch('findings.json').then(r=>r.json()),
+    fetch('results.json').then(r=>r.json()),
+    fetch('shots.txt').then(r=>r.text()).catch(()=> '')
+  ]);
+  const shots = shotsTxt.trim() ? shotsTxt.trim().split('\n') : [];
+
+  document.getElementById('title').textContent = 'Admin Panel Testi — ' + (F.run || '');
+  document.title = 'Panel Testi — ' + (F.run || '');
+  document.getElementById('meta').textContent = [F.tarih, F.ortam, F.kapsam].filter(Boolean).join(' · ');
+
+  // KPI'lar
+  const counts = {}; R.forEach(r => counts[r.status]=(counts[r.status]||0)+1);
+  const sev = {kritik:0,orta:0,dusuk:0,bilgi:0}; F.bulgular.forEach(b=>sev[b.onem]++);
+  document.getElementById('kpis').innerHTML = [
+    [R.length,'test adımı'], [counts.PASS||0,'PASS'], [(counts.FAIL||0)+(counts.ERROR||0),'FAIL/ERROR'],
+    [counts.WARN||0,'WARN'], [sev.kritik,'kritik bulgu'], [sev.orta,'orta bulgu'],
+    [shots.length,'ekran görüntüsü']
+  ].map(([v,l])=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('');
+
+  // Modül gruplama
+  const modules = {};
+  const M = name => modules[name] ||= {findings:[], steps:[], shots:[]};
+  F.bulgular.forEach(b => M(findingModule(b)).findings.push(b));
+  R.forEach(r => M(SUITE_MAP[r.suite] || 'Genel Tarama').steps.push(r));
+  shots.forEach(s => M(shotModule(s)).shots.push(s));
+
+  const names = Object.keys(modules).sort((a,b)=>{
+    const ia = MODULE_ORDER.indexOf(a), ib = MODULE_ORDER.indexOf(b);
+    return (ia<0?99:ia)-(ib<0?99:ib);
+  });
+
+  // Sol sabit modül navigasyonu
+  const secId = n => 'mod-' + n.replace(/[^a-z0-9ğüşöçıİ]/gi,'');
+  document.getElementById('modnav').innerHTML =
+    `<a class="brand" href="../index.html">← Test Merkezi</a>
+     <div class="shead">Modüller</div>` +
+    names.map(n=>{
+      const m = modules[n], kritik = m.findings.filter(b=>b.onem==='kritik').length;
+      return `<a class="mlink" href="#${secId(n)}" data-sec="${secId(n)}">${MOD_ICON[n]||''} ${n}${kritik?`<span class="cnt">⛔${kritik}</span>`:''}</a>`;
+    }).join('') +
+    `<div class="shead">Diğer</div>
+     <a class="mlink" href="#sec-iyi" data-sec="sec-iyi">✅ İyi Çalışanlar</a>
+     <a class="mlink" href="#sec-db" data-sec="sec-db">🗄️ Veritabanı Notları</a>
+     <a class="mlink" href="#sec-veri" data-sec="sec-veri">🧪 Test Verileri</a>`;
+
+  // Scroll spy — görünürdeki bölümün linkini vurgula.
+  // Hedefler her çalışmada taze çözülür: bölümler bu koddan sonra render edilebilir.
+  const links = [...document.querySelectorAll('#modnav a.mlink[data-sec]')];
+  function spy(){
+    const targets = links.map(a=>document.getElementById(a.dataset.sec)).filter(Boolean);
+    if (!targets.length) return;
+    let cur = targets[0];
+    for (const t of targets) if (t.getBoundingClientRect().top <= 120) cur = t;
+    links.forEach(a=>a.classList.toggle('active', a.dataset.sec === (cur&&cur.id)));
+  }
+  document.addEventListener('scroll', spy, {passive:true});
+  addEventListener('hashchange', spy);
+  setInterval(spy, 600); // lazy görsel yüklemeleri düzeni kaydırabilir — vurguyu taze tut
+  spy();
+
+  // Modül bölümleri
+  document.getElementById('modules').innerHTML = names.map(n=>{
+    const m = modules[n];
+    const sc = {}; m.steps.forEach(r=>sc[r.status]=(sc[r.status]||0)+1);
+    const sumBadges = ['PASS','WARN','FAIL','ERROR','INFO','PLACEHOLDER'].filter(s=>sc[s])
+      .map(s=>`<span class="badge b-${s}">${ICON[s]} ${s} ${sc[s]}</span>`).join(' ');
+    const fBadge = m.findings.length ? `<span class="badge b-kritik">${m.findings.length} bulgu</span>` : '';
+
+    m.findings.sort((a,b)=>SEV_RANK[a.onem]-SEV_RANK[b.onem]);
+    const fcards = m.findings.map(b=>`
+      <div class="fcard ${b.kanit?'':'noimg'}">
+        <div>
+          <h3><span class="badge b-${b.onem}">${ICON[b.onem]} ${ONEM[b.onem]}</span> ${b.id} — ${esc(b.baslik)}</h3>
+          <p>${esc(b.detay)}</p>
+        </div>
+        ${b.kanit?`<a class="fimg" href="screenshots/${b.kanit}" target="_blank" title="Tam boyut için tıklayın">
+          <img loading="lazy" src="screenshots/${b.kanit}" alt="${esc(b.baslik)}"><span>📷 ${b.kanit}</span></a>`:''}
+      </div>`).join('') || '<p class="empty">Bu modülde doğrulanmış bulgu yok.</p>';
+
+    const rows = m.steps.map(r=>`
+      <tr><td style="white-space:nowrap">${r.suite}</td><td>${esc(r.step)}</td>
+      <td><span class="badge b-${r.status}">${ICON[r.status]||''} ${r.status}</span></td>
+      <td class="note">${esc(r.note)}</td>
+      <td>${r.shot?`<a href="screenshots/${r.shot}" target="_blank">📷</a>`:''}</td></tr>`).join('');
+    const stepsBlock = m.steps.length ? `
+      <details><summary>Adım sonuçları (${m.steps.length})</summary>
+        <div class="tablewrap"><table><thead><tr><th>Suite</th><th>Adım</th><th>Durum</th><th>Not</th><th>📷</th></tr></thead>
+        <tbody>${rows}</tbody></table></div></details>` : '';
+    const galBlock = m.shots.length ? `
+      <details><summary>Ekran görüntüleri (${m.shots.length})</summary>
+        <div class="gal">${m.shots.map(s=>`<a href="screenshots/${s}" target="_blank">
+          <img loading="lazy" src="screenshots/${s}" alt=""><span>${s}</span></a>`).join('')}</div></details>` : '';
+
+    return `<section class="mod" id="mod-${n.replace(/[^a-z0-9ğüşöçıİ]/gi,'')}">
+      <h2>${MOD_ICON[n]||''} ${n} ${fBadge}</h2>
+      <div class="modsum">${sumBadges||'&nbsp;'}</div>
+      ${fcards}${stepsBlock}${galBlock}
+    </section>`;
+  }).join('');
+
+  document.getElementById('good').innerHTML = (F.iyi_calisanlar||[]).map(t=>`<li>${esc(t)}</li>`).join('') || '<li class="empty">—</li>';
+  document.getElementById('db').innerHTML = (F.db_notlari||[]).map(t=>`<li>${esc(t)}</li>`).join('') || '<li class="empty">—</li>';
+  document.getElementById('testdata').innerHTML = (F.test_verileri||[]).map(t=>`<li>${esc(t)}</li>`).join('') || '<li class="empty">—</li>';
+}
+main().catch(e => document.body.insertAdjacentHTML('afterbegin',
+  `<p style="color:var(--critical)">Veri yüklenemedi: ${e.message} — bu sayfayı http://51.178.208.59:8090/ üzerinden açın.</p>`));
+</script>
+</body>
+</html>

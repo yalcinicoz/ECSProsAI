@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ECSPros Panel Test Merkezi</title>
+<style>
+:root{
+  color-scheme: light;
+  --surface:#fcfcfb; --plane:#f9f9f7; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,.10);
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --accent:#2a78d6; --good-text:#006300; --info:#2a78d6; --ph:#898781;
+}
+@media (prefers-color-scheme: dark){
+  :root{ color-scheme: dark;
+    --surface:#1a1a19; --plane:#0d0d0d; --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,.10);
+    --accent:#3987e5; --good-text:#0ca30c; --info:#3987e5; }
+}
+*{box-sizing:border-box;margin:0}
+body{font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--plane);color:var(--ink);padding:26px 16px 80px}
+.wrap{max-width:1150px;margin:0 auto}
+header h1{font-size:27px}
+header p{color:var(--ink2);font-size:14px;margin-top:2px}
+h2{font-size:17px;margin:30px 0 10px;color:var(--ink)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:20px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.kpi b{display:block;font-size:28px;font-weight:650}
+.kpi span{font-size:12.5px;color:var(--ink2)}
+.kpi .delta{font-size:12px;font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:840px){.grid2{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;overflow-x:auto}
+.panel h3{font-size:14px;color:var(--ink2);font-weight:600;margin-bottom:12px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin-bottom:10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:9px 10px;border-top:1px solid var(--grid);vertical-align:top}
+th{border-top:none;color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+tr.run{cursor:pointer}
+tr.run:hover{background:color-mix(in srgb, var(--accent) 6%, transparent)}
+a{color:var(--accent)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px;border:1px solid var(--border);white-space:nowrap}
+.tip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px;color:var(--ink);box-shadow:0 4px 14px rgba(0,0,0,.15);display:none;z-index:10}
+svg text{font:12px system-ui;fill:var(--ink2)}
+svg .val{font-weight:600;fill:var(--ink)}
+.note{margin-top:26px;font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>🧪 ECSPros Panel Test Merkezi</h1>
+  <p>Admin panel test koşularının merkezi görünümü — her koşu tarih damgalı klasörde, ayrıntılı rapor ve ekran görüntüleriyle. <span id="upd"></span></p>
+</header>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="grid2" style="margin-top:14px">
+  <div class="panel">
+    <h3>Son koşu — adım sonuç dağılımı</h3>
+    <div class="legend" id="legDonut"></div>
+    <svg id="donut" width="100%" height="200" viewBox="0 0 420 200" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+  <div class="panel">
+    <h3>Son koşu — bulgu önem dağılımı</h3>
+    <svg id="sevbar" width="100%" height="200" viewBox="0 0 420 200" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:14px">
+  <h3>Son koşu — test alanı (suite) bazında sonuçlar</h3>
+  <div class="legend" id="legSuite"></div>
+  <svg id="suites" width="100%" height="10" preserveAspectRatio="xMidYMid meet"></svg>
+</div>
+
+<h2>Test Koşuları</h2>
+<div class="panel">
+<table id="runs"><thead><tr>
+<th>Tarih</th><th>Koşu</th><th>Ortam</th><th>Adım</th><th>Sonuçlar</th><th>Bulgular</th><th>Rapor</th>
+</tr></thead><tbody></tbody></table>
+</div>
+
+<p class="note">Yeni bir test koşusu eklemek için: koşu klasörünü bu dizine koyun ve <code>manifest.json</code> → <code>runs</code> listesine kaydını ekleyin; bu ekran otomatik günceller.</p>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const C = s => getComputedStyle(document.documentElement).getPropertyValue(s).trim();
+const STATUS_META = {
+  PASS:{c:'--good', t:'--good-text', i:'✓', l:'PASS'},
+  WARN:{c:'--serious', t:'--serious', i:'!', l:'WARN'},
+  FAIL:{c:'--critical', t:'--critical', i:'✗', l:'FAIL'},
+  ERROR:{c:'--critical', t:'--critical', i:'✗', l:'ERROR'},
+  INFO:{c:'--info', t:'--info', i:'i', l:'INFO'},
+  PLACEHOLDER:{c:'--ph', t:'--ph', i:'…', l:'PLACEHOLDER'}
+};
+const SEV_META = {kritik:{c:'--critical',l:'⛔ Kritik'}, orta:{c:'--serious',l:'⚠️ Orta'}, dusuk:{c:'--warning',l:'🔹 Düşük'}, bilgi:{c:'--info',l:'ℹ️ Bilgi'}};
+const tip = document.getElementById('tip');
+function showTip(e, html){ tip.innerHTML = html; tip.style.display='block'; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+10)+'px'; }
+function hideTip(){ tip.style.display='none'; }
+
+async function main(){
+  const M = await (await fetch('manifest.json')).json();
+  document.getElementById('upd').textContent = 'Son güncelleme: ' + M.guncelleme + '.';
+  const runs = M.runs.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  const last = runs[0];
+
+  // KPI'lar (tüm koşular toplamı + son koşu)
+  const tot = {steps:0, pass:0, judged:0, kritik:0};
+  runs.forEach(r=>{ tot.steps+=r.steps; tot.pass+=r.counts.PASS||0;
+    tot.judged+=(r.counts.PASS||0)+(r.counts.WARN||0)+(r.counts.FAIL||0)+(r.counts.ERROR||0);
+    tot.kritik+=r.findings.kritik||0; });
+  const passPct = Math.round(100*tot.pass/Math.max(1,tot.judged));
+  document.getElementById('kpis').innerHTML = [
+    [runs.length,'toplam koşu'], [tot.steps,'toplam adım'],
+    [passPct+'%','PASS oranı'], [last.findings.kritik,'kritik bulgu (son koşu)'],
+    [last.findings.orta,'orta bulgu (son koşu)'], [last.screenshots,'ekran görüntüsü (son koşu)']
+  ].map(([v,l])=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('');
+
+  // Donut — son koşu durum dağılımı
+  const order = ['PASS','WARN','FAIL','ERROR','INFO','PLACEHOLDER'];
+  const entries = order.filter(s=>last.counts[s]).map(s=>[s,last.counts[s]]);
+  const total = entries.reduce((a,[,v])=>a+v,0);
+  let angle = -Math.PI/2; const cx=105, cy=100, R=78, r=48;
+  let dsvg = '';
+  entries.forEach(([s,v])=>{
+    const a2 = angle + 2*Math.PI*v/total;
+    const x1=cx+R*Math.cos(angle), y1=cy+R*Math.sin(angle), x2=cx+R*Math.cos(a2), y2=cy+R*Math.sin(a2);
+    const xi2=cx+r*Math.cos(a2), yi2=cy+r*Math.sin(a2), xi1=cx+r*Math.cos(angle), yi1=cy+r*Math.sin(angle);
+    const big = (a2-angle) > Math.PI ? 1 : 0;
+    dsvg += `<path d="M${x1} ${y1} A${R} ${R} 0 ${big} 1 ${x2} ${y2} L${xi2} ${yi2} A${r} ${r} 0 ${big} 0 ${xi1} ${yi1} Z"
+      fill="${C(STATUS_META[s].c)}" stroke="${C('--surface')}" stroke-width="2"
+      data-tip="${STATUS_META[s].i} ${s}: <b>${v}</b> adım (${Math.round(100*v/total)}%)"></path>`;
+    angle = a2;
+  });
+  dsvg += `<text x="${cx}" y="${cy-4}" text-anchor="middle" class="val" style="font-size:22px">${total}</text>
+           <text x="${cx}" y="${cy+16}" text-anchor="middle">adım</text>`;
+  // sağda durum listesi
+  entries.forEach(([s,v],i)=>{
+    dsvg += `<rect x="225" y="${28+i*26-9}" width="10" height="10" rx="3" fill="${C(STATUS_META[s].c)}"></rect>
+      <text x="242" y="${28+i*26}">${STATUS_META[s].i} ${s}</text>
+      <text x="400" y="${28+i*26}" text-anchor="end" class="val">${v}</text>`;
+  });
+  document.getElementById('donut').innerHTML = dsvg;
+  document.getElementById('legDonut').innerHTML = '';
+
+  // Bulgu önem bar'ı
+  const sevs = Object.entries(last.findings).filter(([,v])=>v>0);
+  const maxSev = Math.max(...sevs.map(([,v])=>v));
+  let ssvg = '';
+  sevs.forEach(([k,v],i)=>{
+    const y = 24+i*44, w = 40 + (v/maxSev)*260;
+    ssvg += `<text x="0" y="${y+14}" style="font-weight:600;fill:${C(SEV_META[k].c)}">${SEV_META[k].l}</text>
+      <rect x="110" y="${y}" width="${w}" height="20" rx="4" fill="${C(SEV_META[k].c)}"
+        data-tip="${SEV_META[k].l}: <b>${v}</b> bulgu"></rect>
+      <text x="${116+w}" y="${y+15}" class="val">${v}</text>`;
+  });
+  document.getElementById('sevbar').innerHTML = ssvg;
+
+  // Suite bazlı yatay stacked bar — son koşunun results.json'ından
+  try{
+    const R2 = await (await fetch(last.results)).json();
+    const bySuite = {};
+    R2.forEach(r=>{ (bySuite[r.suite] ||= {}); bySuite[r.suite][r.status]=(bySuite[r.suite][r.status]||0)+1; });
+    const suites = Object.entries(bySuite).map(([k,v])=>({k, v, n:Object.values(v).reduce((a,b)=>a+b,0)}))
+      .sort((a,b)=>b.n-a.n);
+    const bw = 640, x0 = 190, rowH = 26;
+    const maxN = Math.max(...suites.map(s=>s.n));
+    const svgEl = document.getElementById('suites');
+    svgEl.setAttribute('viewBox', `0 0 900 ${suites.length*rowH+20}`);
+    svgEl.setAttribute('height', suites.length*rowH+20);
+    let out = '';
+    suites.forEach((s,i)=>{
+      const y = 10+i*rowH;
+      out += `<text x="${x0-8}" y="${y+13}" text-anchor="end">${s.k}</text>`;
+      let x = x0;
+      order.filter(st=>s.v[st]).forEach(st=>{
+        const w = (s.v[st]/maxN)*bw;
+        out += `<rect x="${x}" y="${y}" width="${Math.max(w-2,1.5)}" height="17" rx="3" fill="${C(STATUS_META[st].c)}"
+          data-tip="${s.k} · ${st}: <b>${s.v[st]}</b>"></rect>`;
+        x += w;
+      });
+      out += `<text x="${x+6}" y="${y+13}" class="val">${s.n}</text>`;
+    });
+    out += `<line x1="${x0-2}" y1="6" x2="${x0-2}" y2="${suites.length*rowH+12}" stroke="${C('--baseline')}" stroke-width="1"></line>`;
+    svgEl.innerHTML = out;
+    document.getElementById('legSuite').innerHTML = order.map(s=>
+      `<span><i style="background:${C(STATUS_META[s].c)}"></i>${STATUS_META[s].i} ${s}</span>`).join('');
+  }catch(e){ document.getElementById('suites').outerHTML = '<p class="note">Suite detayı yüklenemedi: '+e.message+'</p>'; }
+
+  // Koşu tablosu
+  document.querySelector('#runs tbody').innerHTML = runs.map(r=>`
+    <tr class="run" onclick="location.href='${r.report}'">
+      <td style="white-space:nowrap">${r.date}</td>
+      <td><b>${r.title}</b><br><span style="color:var(--muted);font-size:12.5px">${r.ozet||''}</span></td>
+      <td>${r.ortam||''}</td><td>${r.steps}</td>
+      <td style="white-space:nowrap">
+        <span class="badge" style="color:${C('--good-text')}">✓ ${r.counts.PASS||0}</span>
+        <span class="badge" style="color:${C('--serious')}">! ${r.counts.WARN||0}</span>
+        <span class="badge" style="color:${C('--critical')}">✗ ${(r.counts.FAIL||0)+(r.counts.ERROR||0)}</span>
+      </td>
+      <td style="white-space:nowrap">
+        ${r.findings.kritik?`<span class="badge" style="color:${C('--critical')}">⛔ ${r.findings.kritik}</span>`:''}
+        ${r.findings.orta?`<span class="badge" style="color:${C('--serious')}">⚠️ ${r.findings.orta}</span>`:''}
+        ${r.findings.dusuk?`<span class="badge" style="color:${C('--warning')}">🔹 ${r.findings.dusuk}</span>`:''}
+      </td>
+      <td><a href="${r.report}" onclick="event.stopPropagation()">Raporu aç →</a></td>
+    </tr>`).join('');
+
+  // tooltip bağla
+  document.querySelectorAll('[data-tip]').forEach(el=>{
+    el.addEventListener('mousemove', e=>showTip(e, el.dataset.tip));
+    el.addEventListener('mouseleave', hideTip);
+  });
+}
+main().catch(e => document.body.insertAdjacentHTML('afterbegin',
+  `<p style="color:var(--critical);max-width:700px;margin:0 auto 20px">manifest.json yüklenemedi (${e.message}). Bu sayfayı http://51.178.208.59:8090/ üzerinden açın — file:// ile fetch çalışmaz.</p>`));
+</script>
+</body>
+</html>

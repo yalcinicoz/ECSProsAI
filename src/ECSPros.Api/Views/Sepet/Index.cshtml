@@ -10,7 +10,54 @@
 </div>
 
 <script>
-    document.querySelector(".ms-siparis-ozeti .ms-buton-tam")?.addEventListener("click", () => {
-        window.location.href = "/teslimat";
+    // 2026-07-18: mobil sabit alt bardaki "Siparişi Tamamla" da bağlandı — önceki
+    // seçici yalnız masaüstü özet panelini hedefliyordu ve mobilde düğme tepkisizdi
+    // (kabul testi KRİTİK bulgusu).
+    // 2026-07-22: giriş kapısı — üye değilse önce giriş modalı açılır; ya giriş yapılır
+    // ya "Misafir Olarak Devam Et" seçilir; ikisinden biri olmadan /teslimat'a geçilmez.
+    document.querySelectorAll(".ms-siparis-ozeti .ms-buton-tam, .ms-sepet-mobil-sabit-aksiyon .ms-buton-tam")
+        .forEach((buton) => buton.addEventListener("click", () => {
+            if (localStorage.getItem("ecspros_member_token")) {
+                try { sessionStorage.removeItem("msMisafirSiparis"); } catch { }
+                window.location.href = "/teslimat";
+                return;
+            }
+            try { sessionStorage.setItem("msBekleyenSiparis", "1"); } catch { }
+            document.querySelector("[data-ms-giris-modal-ac]")?.click();
+        }));
+
+    // Giriş tamamlanınca (merge sonrası tetiklenir) bekleyen sipariş niyeti sürdürülür
+    document.addEventListener("ms:uye-giris", () => {
+        if (sessionStorage.getItem("msBekleyenSiparis") === "1") {
+            sessionStorage.removeItem("msBekleyenSiparis");
+            window.location.href = "/teslimat";
+        }
+    });
+
+    // Modal elemanları layout'ta sayfa içeriğinden sonra basılabilir — parse sırasına
+    // güvenme, DOM hazır olunca bağla.
+    document.addEventListener("DOMContentLoaded", () => {
+        // "Misafir Olarak Devam Et" (giriş modalındaki tasarım butonu) → misafir akışı bayrağı + adres adımı
+        document.querySelectorAll(".ms-giris-buton-misafir").forEach((buton) => {
+            buton.addEventListener("click", () => {
+                if (sessionStorage.getItem("msBekleyenSiparis") !== "1") { return; }
+                sessionStorage.removeItem("msBekleyenSiparis");
+                try { sessionStorage.setItem("msMisafirSiparis", "1"); } catch { }
+                window.location.href = "/teslimat";
+            });
+        });
+
+        // Modal seçim yapılmadan kapatılırsa (X / kaplama) niyet düşer — sonraki alakasız
+        // bir giriş kullanıcıyı durduk yere teslimata götürmesin. DİKKAT: başarılı giriş
+        // de modalı kapat butonuna programatik click ile kapatır (tokenlar o anda yazılmış
+        // olur) — token varsa bu kapanış vazgeçme değildir, niyet korunur ve ms:uye-giris
+        // teslimata taşır.
+        document.querySelectorAll("[data-ms-giris-modal-kapat]").forEach((eleman) => {
+            if (eleman.classList.contains("ms-giris-buton-misafir")) { return; }
+            eleman.addEventListener("click", () => {
+                if (localStorage.getItem("ecspros_member_token")) { return; }
+                try { sessionStorage.removeItem("msBekleyenSiparis"); } catch { }
+            });
+        });
     });
 </script>

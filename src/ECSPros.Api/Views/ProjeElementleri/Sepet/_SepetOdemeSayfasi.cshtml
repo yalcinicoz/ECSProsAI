@@ -765,11 +765,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const sepetiYukle = async () => {
         const sid = localStorage.getItem("ecspros_sid");
         const cartId = localStorage.getItem("ecspros_cart");
+        // 2026-07-22: üyeyken token da gönderilir — cartId/sid yokken de üye sepeti bulunur
+        const uyeToken = localStorage.getItem("ecspros_member_token");
         const parametreler = new URLSearchParams({ firmPlatformId: platformId });
         if (cartId) { parametreler.set("cartId", cartId); }
         if (sid) { parametreler.set("sessionId", sid); }
         try {
-            const cevap = await fetch("/api/store/cart?" + parametreler.toString());
+            const cevap = await fetch("/api/store/cart?" + parametreler.toString(),
+                uyeToken ? { headers: { Authorization: "Bearer " + uyeToken } } : undefined);
             const veri = await cevap.json().catch(() => null);
             sepet = veri?.success ? veri.data : null;
         } catch { sepet = null; }
@@ -793,7 +796,12 @@ document.addEventListener("DOMContentLoaded", () => {
     let gonderiliyor = false;
     const siparisOlustur = async () => {
         if (gonderiliyor) { return; }
-        if (!token()) { document.querySelector("[data-ms-giris-modal-ac]")?.click(); return; }
+        // 2026-07-22: misafir sipariş — sepetteki kapıda misafir seçildiyse token'sız
+        // devam edilir (checkout API misafiri kabul eder); değilse giriş istenir.
+        if (!token() && sessionStorage.getItem("msMisafirSiparis") !== "1") {
+            document.querySelector("[data-ms-giris-modal-ac]")?.click();
+            return;
+        }
         if (!teslimat.countryId || !teslimat.cityId || !teslimat.districtId) {
             hataGoster(["Adres kaydınızda il/ilçe bilgisi eksik — lütfen teslimat adımından yeni bir adres oluşturun."]);
             return;
@@ -811,7 +819,10 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const cevap = await fetch("/api/store/checkout", {
                 method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token() },
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token() ? { Authorization: "Bearer " + token() } : {})
+                },
                 body: JSON.stringify({
                     firmPlatformId: platformId,
                     currencyCode: sepet.currencyCode || "TRY",
@@ -834,6 +845,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     })),
                     customerNotes: document.querySelector(".ms-siparis-asama-kart textarea, .ms-form-metin-alani")?.value?.trim() || null,
                     cartId: sepet.id,
+                    // 2026-07-22: teslimat adımındaki kargo tercihi (mahalle bazlı seçim)
+                    requestedCargoIntegrationId: teslimat.kargo?.id || null,
+                    requestedCargoName: teslimat.kargo?.ad || null,
                     couponId: kupon?.couponId || null,
                     couponDiscount: kupon?.tutar || null,
                     // C8: onaylanan sözleşme kodları — SSR modalın belgeler kabından okunur,
@@ -875,6 +889,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 }));
                 sessionStorage.removeItem("msSepetKuponDurumu");
                 sessionStorage.removeItem("msTeslimatDurumu");
+                // 2026-07-22: misafir akışı kalıntıları — sipariş tamamlandı, bayrak/adres düşer
+                sessionStorage.removeItem("msMisafirSiparis");
+                sessionStorage.removeItem("msMisafirAdres");
             } catch { /* depolama kapalı — onay sayfası sipariş no'suz açılır */ }
 
             try { await fetch("/api/store/cart/" + sepet.id, { method: "DELETE" }); } catch { }
@@ -896,5 +913,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     sepetiYukle();
+    // 2026-07-22: ödeme sayfasındayken giriş yapılırsa toplamlar reload'suz tazelenir
+    document.addEventListener("ms:uye-giris", () => { sepetiYukle(); });
 });
 </script>

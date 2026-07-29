@@ -159,6 +159,35 @@ public class PagesController(
         Guid FirmPlatformId, string Placement, string? City, string? Gender,
         string? Device, bool IsMember, Guid? MemberGroupId);
 
+    /// <summary>Vitrin öğe görseli yükleme (2026-07-22): URL elle girilmez — dosya
+    /// media/vitrin altına kaydedilir, dönen /media yolu öğeye yazılır (E8 iade deseni).</summary>
+    [HttpPost("media")]
+    [RequestSizeLimit(6_000_000)]
+    public async Task<IActionResult> UploadMedia(
+        IFormFile? file, [FromServices] IConfiguration configuration, CancellationToken ct)
+    {
+        var uzantilar = new Dictionary<string, string>
+        {
+            ["image/jpeg"] = ".jpg", ["image/png"] = ".png",
+            ["image/webp"] = ".webp", ["image/gif"] = ".gif", ["image/svg+xml"] = ".svg",
+        };
+        if (file is null || file.Length == 0)
+            return BadRequest(new { success = false, error = "Görsel dosyası gönderilmedi." });
+        if (file.Length > 5_000_000)
+            return BadRequest(new { success = false, error = "Görsel en fazla 5 MB olabilir." });
+        if (!uzantilar.TryGetValue(file.ContentType, out var uzanti))
+            return BadRequest(new { success = false, error = "Yalnızca JPEG, PNG, WebP, GIF veya SVG yükleyebilirsiniz." });
+
+        var kok = configuration["Store:MediaRootPath"] ?? "/opt/ECSProsAI/media";
+        var altDizin = Path.Combine("vitrin", DateTime.UtcNow.ToString("yyyyMM"));
+        Directory.CreateDirectory(Path.Combine(kok, altDizin));
+        var ad = $"{Guid.NewGuid():N}{uzanti}";
+        await using (var hedef = System.IO.File.Create(Path.Combine(kok, altDizin, ad)))
+            await file.CopyToAsync(hedef, ct);
+
+        return Ok(new { success = true, data = new { url = $"/media/{altDizin.Replace(Path.DirectorySeparatorChar, '/')}/{ad}" } });
+    }
+
     /// <summary>
     /// Canlı-önizlemeli blok editörü (2026-07-22): yerleşimin TASLAK blokları GERÇEK
     /// içerikleriyle — öğe görselleri + ürün kaynaklı bloklarda çözülmüş ürün kartları

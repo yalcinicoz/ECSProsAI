@@ -1,0 +1,55 @@
+{
+  "guncelleme": "2026-07-18",
+  "runs": [
+    {
+      "id": "2026-07-18_1350_b03-regresyon",
+      "title": "B-03 Regresyonu (cüzdan / cari çatı)",
+      "date": "2026-07-18 13:50",
+      "ortam": "Canlı panel (restart sonrası)",
+      "steps": 5,
+      "screenshots": 5,
+      "counts": {
+        "PASS": 5,
+        "WARN": 0,
+        "INFO": 0,
+        "PLACEHOLDER": 0,
+        "FAIL": 0,
+        "ERROR": 0
+      },
+      "findings": {
+        "kritik": 0,
+        "orta": 0,
+        "dusuk": 0,
+        "bilgi": 2
+      },
+      "report": "2026-07-18_1350_b03-regresyon/report.html",
+      "results": "2026-07-18_1350_b03-regresyon/results.json",
+      "ozet": "B-03 KAPANDI: cüzdan kartı bakiyeli geliyor (404 yok); UI'dan düzeltme + yetersiz bakiye reddi + cari Sahip filtresi + hareket dökümü — 5/5 PASS."
+    },
+    {
+      "id": "2026-07-18_0950_tam-tarama",
+      "title": "Tam Tarama (41 sayfa + derin CRUD)",
+      "date": "2026-07-18 09:50",
+      "ortam": "Canlı panel (51.178.208.59/admin)",
+      "steps": 157,
+      "screenshots": 118,
+      "counts": {
+        "PASS": 98,
+        "WARN": 14,
+        "INFO": 29,
+        "PLACEHOLDER": 7,
+        "FAIL": 6,
+        "ERROR": 3
+      },
+      "findings": {
+        "kritik": 7,
+        "orta": 4,
+        "dusuk": 3,
+        "bilgi": 3
+      },
+      "report": "2026-07-18_0950_tam-tarama/report.html",
+      "results": "2026-07-18_0950_tam-tarama/results.json",
+      "ozet": "Tüm sayfalar açılıyor; 7 kritik bulgu: ad ile ürün arama bozuk, dashboard sayaçları 0, CRM wallet/loyalty 404, varyant ekleme kilitli, mükerrer merkez depo, kısım/birim UI eksik, menü yönetimi boş."
+    }
+  ]
+}

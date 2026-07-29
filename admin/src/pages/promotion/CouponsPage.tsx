@@ -69,6 +69,18 @@ function CouponModal({ coupon, onClose }: { coupon: Coupon | 'new'; onClose: () 
   const [isActive, setIsActive] = useState(c?.isActive ?? true)
   const [error, setError] = useState('')
 
+  const remove = useMutation({
+    mutationFn: async () => {
+      setError('')
+      await api.delete(`/promotion/coupons/${c!.id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['coupons'] })
+      onClose()
+    },
+    onError: (e: unknown) => setError(errText(e)),
+  })
+
   const save = useMutation({
     mutationFn: async () => {
       setError('')
@@ -167,7 +179,23 @@ function CouponModal({ coupon, onClose }: { coupon: Coupon | 'new'; onClose: () 
         </div>
         {error && <p className="text-sm text-red-500">{error}</p>}
       </div>
-      <div className="flex justify-end gap-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+      <div className="flex items-center gap-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+        {!isNew && c!.usageCount === 0 && (
+          <button
+            className="text-sm text-red-600 hover:underline disabled:opacity-50"
+            disabled={remove.isPending}
+            onClick={() => {
+              if (window.confirm(`'${c!.code}' kuponu silinsin mi? Bu işlem geri alınamaz.`)) remove.mutate()
+            }}>
+            Sil
+          </button>
+        )}
+        {!isNew && c!.usageCount > 0 && (
+          <span className="text-xs" style={{ color: 'var(--text-s)' }}>
+            Kullanılmış kupon silinemez; pasife alabilirsiniz.
+          </span>
+        )}
+        <div className="flex-1" />
         <Button variant="secondary" onClick={onClose}>Vazgeç</Button>
         <Button onClick={() => save.mutate()} loading={save.isPending} disabled={!valid}>Kaydet</Button>
       </div>

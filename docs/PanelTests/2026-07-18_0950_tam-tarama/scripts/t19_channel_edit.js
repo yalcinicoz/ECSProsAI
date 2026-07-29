@@ -1,0 +1,21 @@
+const { launch, record, shot, login } = require('./lib');
+const BASE = 'https://51.178.208.59';
+const S = 'ayarlar';
+(async () => {
+  const { browser, page, errors } = await launch();
+  await login(page);
+  await page.goto(BASE + '/admin/settings/firms', { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('table tbody tr', { timeout: 25000 });
+  await page.locator('table tbody tr').filter({ hasText: /MİŞAROĞLU/i }).first().click();
+  await page.waitForTimeout(2500);
+  await page.locator('button:has-text("Düzenle"), a:has-text("Düzenle")').first().click();
+  await page.waitForTimeout(2500);
+  const f = await shot(page, 'ayarlar-08-kanal-duzenle-firma-yolu');
+  const kTxt = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
+  const labels = await page.evaluate(() => [...document.querySelectorAll('label')].map(l => l.textContent.trim()).filter(t => t).slice(0, 40));
+  record(S, 'Kanal düzenleme formu (firma yolu)', labels.length ? 'PASS' : 'INFO', labels.join(' | ').slice(0, 500), f);
+  const outStock = /stoğu bitince|tükenen|stok/i.test(kTxt);
+  record(S, 'Stok görünürlük ayarı var mı', outStock ? 'PASS' : 'WARN', (kTxt.match(/[^|]*[Ss]to[kğ][^|]{0,120}/) || ['bulunamadı'])[0]);
+  if (errors.length) record(S, 'HTTP/konsol hataları', 'WARN', JSON.stringify(errors.slice(0, 6)));
+  await browser.close();
+})().catch(e => { console.error('FATAL:', e); process.exit(1); });

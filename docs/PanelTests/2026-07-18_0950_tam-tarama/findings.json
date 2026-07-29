@@ -1,0 +1,143 @@
+{
+  "run": "2026-07-18_0950_tam-tarama",
+  "tarih": "2026-07-18 09:50–11:30",
+  "ortam": "Canlı panel — https://51.178.208.59/admin (admin hesabı, headless Chromium 1440×900, insan-benzeri akışlar)",
+  "kapsam": "Tam tarama: 41 sayfa envanteri + katalog/sipariş/CRM/kampanya/CMS/vitrin/stok/ayarlar derin testleri (157 adım, 118 ekran görüntüsü)",
+  "bulgular": [
+    {
+      "id": "B-01", "onem": "kritik", "modul": "Katalog",
+      "baslik": "Ürün araması ürün adıyla çalışmıyor",
+      "detay": "Arama kutusu yalnızca P-kodu ile sonuç veriyor (P-00000084 ✓). 'Kaban', 'bluz', hatta adın parçası olan 'Ful-7492' için '...bulunamadı' dönüyor. Oysa placeholder 'Ürün adı, kod...' vaat ediyor. 28.651 ürünlü katalogda kod ezberi olmadan ürün bulmak imkânsız.",
+      "kanit": "katalog-04-arama-sonuclari.png"
+    },
+    {
+      "id": "B-02", "onem": "kritik", "modul": "Dashboard",
+      "baslik": "Dashboard sayaçları hatalı (Ürün: 0, Üye: 0, Bekleyen: 0)",
+      "detay": "Ana ekran 'Toplam Ürün 0' ve 'Toplam Üye 0' gösteriyor; gerçekte 28.651 ürün ve üyeler mevcut. 'Bekleyen Sipariş 0' derken sağdaki kısayol paneli 'Bekleyen Siparişler 14' diyor, sipariş listesinde de 'Bekleyen' kayıtlar var — iki bileşen farklı kaynaktan besleniyor.",
+      "kanit": "sweep-00-dashboard.png"
+    },
+    {
+      "id": "B-03", "onem": "kritik", "modul": "CRM",
+      "baslik": "Üye detayında /loyalty ve /wallet endpoint'leri 404",
+      "detay": "Üye detayında Cüzdan/Puan '—' kalıyor; /wallet ve /loyalty 404 dönüyor. DÜZELTME (2026-07-18 incelemesi): endpoint'ler ve tablolar (crm_wallets, crm_wallet_transactions, crm_loyalty_accounts, crm_loyalty_transactions, crm_member_credits) ASLINDA MEVCUT. Kök neden: hiçbir kod üye için hesap satırı açmıyor (Wallets.Add/LoyaltyAccounts.Add çağrısı yok) ve handler 'bulunamadı' → controller 404 dönüyor. Eksik olan yazma/hesap açma akışı; boş durumda 404 yerine 0-bakiye dönmesi de değerlendirilebilir.",
+      "kanit": "crm-01-uye-detay.png"
+    },
+    {
+      "id": "B-04", "onem": "kritik", "modul": "Katalog",
+      "baslik": "Varyant Ekle modalında eksen değerleri boş — varyant eklenemiyor",
+      "detay": "Bluz grubundaki üründe 'Varyant Ekle' açıldığında Renk ve Beden eksenleri 'Bu özellik tipinde değer tanımlı değil' diyor; kombinasyon seçilemiyor, dolayısıyla panelden yeni varyant eklemek fiilen imkânsız. Mevcut ürünlerde renk/beden değerleri dolu olduğuna göre grup şeması seçim listeleri (ProductGroupAttribute değer havuzu) modala gelmiyor.",
+      "kanit": "katalog-22-varyant-ekle-modal.png"
+    },
+    {
+      "id": "B-05", "onem": "kritik", "modul": "Stok",
+      "baslik": "Mükerrer 'Merkez Depo' kayıtları (3 adet)",
+      "detay": "Depo listesinde MERKEZ, DEPO-01 ve merkez kodlu üç ayrı 'Merkez Depo' var. Sipariş onay modalındaki depo seçiminde aynı isim 3 kez, ayırt edici bilgi olmadan listeleniyor — operatör yanlış depoya rezervasyon açabilir. inv_warehouses tablosunda eski seed/aktarım kalıntıları temizlenmeli.",
+      "kanit": "stok-01-depolar.png"
+    },
+    {
+      "id": "B-06", "onem": "kritik", "modul": "Stok",
+      "baslik": "Depo detayı eski 'Lokasyon' modelini yönetiyor; Kısım/Birim UI'ı yok",
+      "detay": "Depo detay ekranı DEPRECATED inv_warehouse_locations üzerinden 'Lokasyonlar (0 kayıt)' gösteriyor. Canlıdaki üçlü yapının (Depo→Kısım→Birim; satışa açıklık KISIM'da) panelde yönetim ekranı yok — İade/Defo/Bağış kısımlarının satışa kapalılığı yalnız DB'den yönetilebiliyor. Stok listesinde KISIM kolonu var ama kısım tanımlama/düzenleme ekranı yok (K16 senkron kuralı ihlali).",
+      "kanit": "stok-02-depo-detay.png"
+    },
+    {
+      "id": "B-07", "onem": "kritik", "modul": "Menü",
+      "baslik": "Menüler listesi boş — sitedeki menü panelden yönetilemiyor",
+      "detay": "/admin/navigation/menus 'Henüz menü eklenmemiş' gösteriyor; platform filtresi de yok. Sitede header menüsü çalıştığına göre menü içeriği başka kaynaktan (kanal kategorileri/başka tablo) besleniyor ya da admin sayfası yanlış sorgu atıyor. Sitede canlı olan bir işlevin panel karşılığı yok (K16).",
+      "kanit": "menu-02-liste-inceleme.png"
+    },
+    {
+      "id": "B-08", "onem": "orta", "modul": "Katalog",
+      "baslik": "0 varyantlı / 0 fiyatlı ürün uyarısız satışa açılabiliyor",
+      "detay": "TEST ürünü 0 varyant ve satış fiyatı 0 iken 'Satışa Aç' onay modalı hiçbir uyarı vermeden ürünü 'Satışta' yaptı. Satılabilir birim varyant olduğuna göre 0 varyantlı ürünün satışa açılması sitede boş/satın alınamaz detay sayfası riski taşır; modal 'bu ürünün hiç varyantı ve fiyatı yok' uyarısı vermeli.",
+      "kanit": "katalog-20-satisa-ac-onay-sonrasi.png"
+    },
+    {
+      "id": "B-09", "onem": "orta", "modul": "Katalog",
+      "baslik": "Ürün-grup eşleşmelerinde veri tutarsızlığı şüphesi",
+      "detay": "Listede 'Kadın Kuşaklı Düz Kaşe Kaban', 'Deri Trençmont', 'Deri Ceket' gibi ürünler 'Pantolon' grubunda görünüyor. Grup ataması yanlışsa grup şeması (beden seti, özellik listesi) da yanlış uygulanır; aktarım eşlemeleri gözden geçirilmeli.",
+      "kanit": "sweep-01-catalog-products.png"
+    },
+    {
+      "id": "B-10", "onem": "orta", "modul": "Performans",
+      "baslik": "Liste API'leri yavaş (5–16 sn)",
+      "detay": "GET /api/catalog/attribute-types?activeOnly=false ilk tablo render'ı 5,4 sn; sayfa taramasında özellik tipleri 21,7 sn, ürün grupları/kanal kategorileri/depolar 16 sn bandında network-quiet oldu. Polling yok — gecikme doğrudan API yanıt süresi. (Not: bu uç daha önce ~1 sn'ye optimize edilmişti; regresyon olabilir, ANALYZE/istatistik bayatlaması da tipik şüpheli.)",
+      "kanit": ""
+    },
+    {
+      "id": "B-11", "onem": "orta", "modul": "Giriş",
+      "baslik": "Yanlış şifrede görünür hata mesajı yok",
+      "detay": "Hatalı şifreyle girişte form sessizce sıfırlanıyor (2,5 sn sonra ekranda hata metni yok — ya hiç gösterilmiyor ya da çok kısa süreli toast). Kullanıcı ne olduğunu anlamıyor; kalıcı bir 'Kullanıcı adı veya şifre hatalı' mesajı gösterilmeli.",
+      "kanit": "02-login-yanlis-sifre.png"
+    },
+    {
+      "id": "B-12", "onem": "dusuk", "modul": "UI/UX",
+      "baslik": "Modal/çekmece davranışı tutarsız: Fiyat Geçmişi ESC ile kapanmıyor",
+      "detay": "Varyant Ekle modalı ESC ile kapanırken Fiyat Geçmişi çekmecesi kapanmıyor (yalnız X/backdrop). Klavye davranışı tüm overlay'lerde aynı olmalı.",
+      "kanit": "katalog-17-fiyat-gecmisi.png"
+    },
+    {
+      "id": "B-13", "onem": "dusuk", "modul": "Ayarlar",
+      "baslik": "Arayüz çevirileri tamamen boş (0 anahtar · 3 dil)",
+      "detay": "Çeviri altyapısı çalışıyor ama tek anahtar bile girilmemiş. Panel çok dilliliği fiilen kullanılmıyor; ya doldurulmalı ya da sayfa beklenti yaratmamalı.",
+      "kanit": "ayarlar-04-ceviriler.png"
+    },
+    {
+      "id": "B-14", "onem": "dusuk", "modul": "Ayarlar",
+      "baslik": "Migration ekranı tablo sayaçları 0 gösteriyor",
+      "detay": "Kaynak toplamı 1.785.742 kayıt görünürken 'Mevcut Tablo Durumu' altındaki tüm hedef sayaçlar (Products, Attribute Types...) 0. Katalogda 28.651 ürün olduğuna göre sayaçlar yanlış kaynağa bakıyor.",
+      "kanit": "ayarlar-05-migration.png"
+    },
+    {
+      "id": "B-15", "onem": "bilgi", "modul": "Sipariş",
+      "baslik": "Fatura kesimi ancak seri tanımıyla mümkün (kurulum eksikti — test sırasında tamamlandı)",
+      "detay": "Fatura modalı 'Aktif seri yok' diyerek engelledi (doğrulama doğru çalışıyor). Test sırasında MİŞAROĞLU firmasına 'TEST Serisi' (e-Arşiv: TST) tanımlandı ve TST2026000000001 numaralı e-Arşiv faturası başarıyla kesildi. DİKKAT: Bu AKTİF seri canlıda kaldı — gerçek kullanım öncesi silinmeli/pasifleştirilmeli.",
+      "kanit": "fatura-05-fatura-kesildi.png"
+    },
+    {
+      "id": "B-16", "onem": "bilgi", "modul": "Genel",
+      "baslik": "7 sayfa bilinçli placeholder (Faz R ertelemesi)",
+      "detay": "Teklifler, Hediye Kartları, POS Satışları, Entegrasyon Logları, Tedarikçiler, Picking Planları, Kullanıcılar sayfaları 'Bu sayfa henüz geliştirilme aşamasında' gösteriyor. Backend uçları hazır; ekranlar kullanım talebiyle açılacak (bilinen karar).",
+      "kanit": "sweep-40-settings-users.png"
+    },
+    {
+      "id": "B-17", "onem": "bilgi", "modul": "Kampanya",
+      "baslik": "Kampanya ve kupon listeleri boş",
+      "detay": "Fonksiyonlar çalışıyor (Yeni Kampanya formu: Tip/Kod/Ad/Başlangıç/Bitiş/Öncelik), ancak canlıda tek kampanya/kupon tanımı yok. Site tarafında kupon akışı kullanılacaksa tanımlar panelden girilmeli.",
+      "kanit": "promo-02-yeni-kampanya-formu.png"
+    }
+  ],
+  "iyi_calisanlar": [
+    "Giriş/çıkış ve JWT oturumu; yanlış şifre reddi (mesaj eksikliği hariç)",
+    "41 sayfanın tamamı hatasız yükleniyor (500/çökme yok)",
+    "Ürün oluşturma: boş formda buton kilitli; kod opsiyonel (otomatik); oluşan ürün doğrudan detaya düşüyor",
+    "Ürün güncelleme + kalıcılık: fiyat/ad/açıklama kaydediliyor, yenileme sonrası duruyor; yeni ürün 'Satış Kapalı' başlıyor (M1 kuralına uygun)",
+    "Tehlikeli işlemler (Satışa Aç/Kapat, Ürünü Sil) onay modallı",
+    "Sipariş akışı: liste→detay→Onayla (depo seçimi zorunlu, buton depo seçilene dek kilitli)→'Onaylı'→İşleme Al butonu",
+    "Fatura: seri tanımı + e-Arşiv fatura kesimi uçtan uca çalışıyor (TST2026000000001)",
+    "İade/Fatura boş durum mesajları yol gösterici ('Fatura, sipariş detayındaki...')",
+    "CRM üye detayı zengin: sipariş/favori/koleksiyon/yorum/stok alarmı sayaçları, adresler, oturumlar, üye grubu + aktiflik yönetimi",
+    "Vitrin Yönetimi: platform seçimi, 8 bölüm, blok sıralama/silme, Önizleme, Yayınla, versiyon geri dönüşü",
+    "Kanal düzenleme: fiyat tipi, 'Stoğu biten ürünleri listede göster' (showOutOfStock), aktiflik",
+    "Firma detayı: vergi bilgileri, satış kanalları, entegrasyonlar (GES SMS, Görsel Arama) tek ekranda",
+    "Moderasyon ekranları (yorum/koleksiyon) Onayla/Reddet aksiyonlarıyla hazır",
+    "İletişim mesajları, bülten aboneleri, bildirim izleme (stok alarmı 4 kayıt) dolu ve çalışıyor",
+    "Transferler ekranı durum akışıyla (Taslak→Bekliyor→Toplama→...→Tamamlandı) hazır",
+    "Cari kartlar listesi çalışıyor"
+  ],
+  "db_notlari": [
+    "crm: cüzdan/puan tabloları ve GET endpoint'leri VAR (crm_wallets/crm_loyalty_accounts + transaction tabloları); eksik olan hesap açma/hareket yazma akışı — tablolar hep boş kaldığı için 404 (B-03, düzeltilmiş tespit)",
+    "inventory: inv_warehouses'ta 3 mükerrer merkez depo kaydı; eski inv_warehouse_locations hâlâ UI'da, yeni inv_warehouse_sections/inv_warehouse_bins için yönetim ekranı yok (B-05, B-06)",
+    "storefront: nav_menus boş — site menüsünün kaynağı ile panel menü yönetimi bağlantısız (B-07)",
+    "catalog: ürün→grup atamalarında şüpheli eşleşmeler (kaban/trençkot 'Pantolon' grubunda) — aktarım eşlemesi gözden geçirilmeli (B-09)",
+    "core/çeviri: arayüz çeviri tablosu boş (0 anahtar) (B-13)",
+    "promotion: kampanya/kupon tabloları boş — site kupon akışı için tanım gerekiyor (B-17)",
+    "order: fatura serisi tablosuna test kaydı eklendi (TEST Serisi/TST — AKTİF; canlı kullanım öncesi kaldırılmalı) (B-15)"
+  ],
+  "test_verileri": [
+    "Ürün TEST-PANEL-001 ('TEST Panel Testi Ürünü 2026-07-18', Bluz grubu, alış 100 / satış 199,90, KDV %18) — SATIŞTA bırakıldı (0 varyant olduğu için sitede listelenmez ama isterseniz 'Satışı Kapat' yapın)",
+    "Fatura serisi 'TEST Serisi' (MİŞAROĞLU, e-Arşiv: TST) — AKTİF",
+    "ORD-20260717-1E458694 siparişi ONAYLANDI (Merkez Depo rezervasyonu) ve TST2026000000001 e-Arşiv faturası kesildi (799,98 ₺)",
+    "Üye/kupon/kampanya/CMS kayıtlarında değişiklik yapılmadı; vitrin yayınlanmadı (yalnız önizleme)"
+  ]
+}
