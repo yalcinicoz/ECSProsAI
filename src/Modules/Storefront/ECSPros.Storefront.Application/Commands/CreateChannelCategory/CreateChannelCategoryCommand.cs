@@ -22,9 +22,13 @@ public class CreateChannelCategoryCommandHandler(IStorefrontDbContext db)
 {
     public async Task<Result<Guid>> Handle(CreateChannelCategoryCommand request, CancellationToken ct)
     {
-        var slug = string.IsNullOrWhiteSpace(request.Slug)
-            ? Slugify(request.NameI18n.GetValueOrDefault("tr") ?? request.NameI18n.Values.FirstOrDefault() ?? "kategori")
-            : request.Slug.Trim().ToLowerInvariant();
+        // Elle girilen slug da normalize edilir — nokta/virgül gibi karakterler yeni
+        // URL'lerde yasak (rota yalnız eski sistemden taşınanlar için tolere eder).
+        var slug = Helpers.UrlSlug.Normalize(string.IsNullOrWhiteSpace(request.Slug)
+            ? request.NameI18n.GetValueOrDefault("tr") ?? request.NameI18n.Values.FirstOrDefault() ?? "kategori"
+            : request.Slug);
+        if (slug.Length == 0)
+            return Result.Failure<Guid>("Geçerli bir URL üretilemedi — ad veya slug harf/rakam içermeli.");
 
         var slugExists = await db.ChannelCategories
             .AnyAsync(c => c.FirmPlatformId == request.FirmPlatformId && c.Slug == slug, ct);
@@ -50,20 +54,4 @@ public class CreateChannelCategoryCommandHandler(IStorefrontDbContext db)
         return Result.Success(cat.Id);
     }
 
-    private static string Slugify(string input)
-    {
-        var map = new Dictionary<char, string>
-        {
-            ['ğ']="g", ['Ğ']="g", ['ü']="u", ['Ü']="u", ['ş']="s", ['Ş']="s",
-            ['ı']="i", ['İ']="i", ['ö']="o", ['Ö']="o", ['ç']="c", ['Ç']="c",
-        };
-        var sb = new System.Text.StringBuilder();
-        foreach (var c in input)
-            sb.Append(map.TryGetValue(c, out var r) ? r : c.ToString());
-
-        return System.Text.RegularExpressions.Regex.Replace(
-            sb.ToString().ToLowerInvariant(),
-            @"[^a-z0-9]+", "-")
-            .Trim('-');
-    }
 }

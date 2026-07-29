@@ -33,6 +33,22 @@ public static class SlugHelper
     }
 
     /// <summary>
+    /// URL slug normalizasyonu: [a-z0-9-] dışındaki her şey (nokta, virgül, boşluk...) tireye
+    /// çevrilir. Eski sistemden taşınan kirli URL'ler rota tarafında tolere edilir ama YENİ
+    /// slug'larda bu karakterlere izin verilmez (kullanıcı kararı 2026-07-29).
+    /// </summary>
+    public static string ToUrlSlug(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+
+        var sb = new StringBuilder(input.Length);
+        foreach (var c in input)
+            sb.Append(TurkishMap.TryGetValue(c, out var mapped) ? mapped : c);
+
+        return Regex.Replace(sb.ToString().ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+    }
+
+    /// <summary>
     /// nameI18n içinden Türkçe adı ("tr") ya da ilk mevcut dili alarak snake_case kod üretir.
     /// </summary>
     public static string FromNameI18n(Dictionary<string, string> nameI18n)

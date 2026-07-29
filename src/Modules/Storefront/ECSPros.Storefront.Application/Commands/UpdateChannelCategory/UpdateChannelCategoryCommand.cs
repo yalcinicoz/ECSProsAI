@@ -32,16 +32,22 @@ public class UpdateChannelCategoryCommandHandler(IStorefrontDbContext db)
 
         if (cat is null) return Result.Failure<bool>("Kanal kategorisi bulunamadı.");
 
+        // Yeni/değişen slug normalize edilir — nokta/virgül gibi karakterler yeni URL'lerde
+        // yasak (rota yalnız eski sistemden taşınan ürün URL'leri için tolere eder).
+        var slug = Helpers.UrlSlug.Normalize(request.Slug);
+        if (slug.Length == 0)
+            return Result.Failure<bool>("Geçerli bir URL üretilemedi — slug harf/rakam içermeli.");
+
         var slugConflict = await db.ChannelCategories
             .AnyAsync(c => c.FirmPlatformId == cat.FirmPlatformId
-                        && c.Slug == request.Slug
+                        && c.Slug == slug
                         && c.Id != request.Id, ct);
         if (slugConflict)
-            return Result.Failure<bool>($"'{request.Slug}' URL'i bu kanalda zaten kullanımda.");
+            return Result.Failure<bool>($"'{slug}' URL'i bu kanalda zaten kullanımda.");
 
         cat.ParentId           = request.ParentId;
         cat.NameI18n           = request.NameI18n;
-        cat.Slug               = request.Slug;
+        cat.Slug               = slug;
         cat.Status             = request.Status;
         cat.FillType           = request.FillType;
         cat.ListingMode        = request.ListingMode;
