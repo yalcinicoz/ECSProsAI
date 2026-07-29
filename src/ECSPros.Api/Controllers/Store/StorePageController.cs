@@ -129,36 +129,81 @@ public abstract class StorePageController : Controller
             // 15 dk cache'lenir ve YOKSA ARKA PLANDA hesaplanır — istek hiç bekletilmez,
             // set hazır olana kadar menü budanmadan gösterilir (güvenli varsayılan).
             var doluIdler = PresenceGetirVeyaBaslat(services, platform);
-
             var kategoriler = sonuc.Value!;
-            List<NavKategori> Dallar(Guid? parentId) =>
-                kategoriler
-                    .Where(k => k.ParentId == parentId)
-                    .OrderBy(k => k.SortOrder)
-                    .Select(k => new NavKategori(
-                        k.Id,
-                        k.NameI18n.TryGetValue("tr", out var ad) ? ad : k.NameI18n.Values.FirstOrDefault() ?? k.Slug,
-                        k.Slug,
-                        k.DisplayImageUrl,
-                        k.BadgeLabel,
-                        Dallar(k.Id),
-                        UrunVar: doluIdler is null || doluIdler.Contains(k.Id)))
-                    .ToList();
 
-            // Tamamı boş dallar (kendisinde ve altlarında hiç ürün yok) menülerde
-            // gösterilmez; tam ağaç doğrudan URL erişimi için TumKokler'de saklanır.
-            static List<NavKategori> BosDallariBuda(IReadOnlyList<NavKategori> dallar) =>
-                dallar
-                    .Where(d => d.DalindaUrunVar)
-                    .Select(d => d with { Cocuklar = BosDallariBuda(d.Cocuklar) })
-                    .ToList();
+            // Menü yerleşimi: 'header' kodlu nav menüsü doluysa ağaç oradan kurulur —
+            // aynı kategori birden çok üst bölümde görünebilir (çapraz yerleşim; eski
+            // sitenin mega menü kurgusu, MigrationTool Faz 25 aktarımı). Menü yoksa
+            // eski davranış: yayınlanmış kategori ağacının kendisi.
+            var menu = await mediator.Send(
+                new ECSPros.Storefront.Application.Queries.GetStoreNavigationMenu
+                    .GetStoreNavigationMenuQuery("header", platformId), ct);
+            var tumu = menu.IsSuccess && menu.Value!.Nodes.Count > 0
+                ? MenudenKur(menu.Value!.Nodes, kategoriler, doluIdler)
+                : KategorilerdenKur(kategoriler, null, doluIdler);
 
-            var tumu = Dallar(null);
             return new NavigasyonVm(BosDallariBuda(tumu), tumu);
         });
 
         return vm ?? NavigasyonVm.Bos;
     }
+
+    private static List<NavKategori> KategorilerdenKur(
+        List<ChannelCategoryListItemDto> kategoriler, Guid? parentId, HashSet<Guid>? doluIdler) =>
+        kategoriler
+            .Where(k => k.ParentId == parentId)
+            .OrderBy(k => k.SortOrder)
+            .Select(k => new NavKategori(
+                k.Id,
+                k.NameI18n.TryGetValue("tr", out var ad) ? ad : k.NameI18n.Values.FirstOrDefault() ?? k.Slug,
+                k.Slug,
+                k.DisplayImageUrl,
+                k.BadgeLabel,
+                KategorilerdenKur(kategoriler, k.Id, doluIdler),
+                UrunVar: doluIdler is null || doluIdler.Contains(k.Id)))
+            .ToList();
+
+    private static List<NavKategori> MenudenKur(
+        List<ECSPros.Storefront.Application.Queries.GetNavigationMenuDetail.NavNodeDto> dugumler,
+        List<ChannelCategoryListItemDto> kategoriler, HashSet<Guid>? doluIdler)
+    {
+        var katById = kategoriler.ToDictionary(k => k.Id);
+        List<NavKategori> Kur(List<ECSPros.Storefront.Application.Queries.GetNavigationMenuDetail.NavNodeDto> ns) =>
+            ns.OrderBy(n => n.SortOrder)
+              // Kategori düğümü yayında olmayan/silinmiş kategoriye işaret ediyorsa menüde yer almaz
+              .Where(n => n.NodeType != "category"
+                  || (n.ChannelCategoryId is Guid cid && katById.ContainsKey(cid)))
+              .Select(n =>
+              {
+                  var kat = n.ChannelCategoryId is Guid cid && katById.TryGetValue(cid, out var k) ? k : null;
+                  string ad = n.NameOverrideI18n?.GetValueOrDefault("tr")
+                      ?? (kat is not null
+                          ? kat.NameI18n.TryGetValue("tr", out var tr) ? tr : kat.NameI18n.Values.FirstOrDefault()
+                          : null)
+                      ?? n.Slug ?? "";
+                  string slug = kat?.Slug
+                      ?? (n.NodeType == "link" ? (n.CustomUrl ?? "#").TrimStart('/') : n.Slug ?? "");
+                  // label kendi ürününü taşımaz (dal, çocuklarına göre budanır); link hep kalır
+                  bool urunVar = n.NodeType == "category"
+                      ? doluIdler is null || (kat is not null && doluIdler.Contains(kat.Id))
+                      : n.NodeType == "link";
+                  return new NavKategori(
+                      kat?.Id ?? n.Id, ad, slug,
+                      n.ImageUrl ?? kat?.DisplayImageUrl,
+                      n.BadgeLabel ?? kat?.BadgeLabel,
+                      Kur(n.Children), urunVar);
+              })
+              .ToList();
+        return Kur(dugumler);
+    }
+
+    // Tamamı boş dallar (kendisinde ve altlarında hiç ürün yok) menülerde
+    // gösterilmez; tam ağaç doğrudan URL erişimi için TumKokler'de saklanır.
+    private static List<NavKategori> BosDallariBuda(IReadOnlyList<NavKategori> dallar) =>
+        dallar
+            .Where(d => d.DalindaUrunVar)
+            .Select(d => d with { Cocuklar = BosDallariBuda(d.Cocuklar) })
+            .ToList();
 
     private static readonly TimeSpan PresenceCacheSuresi = TimeSpan.FromMinutes(15);
 

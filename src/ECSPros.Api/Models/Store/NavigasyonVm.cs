@@ -11,15 +11,24 @@ public sealed record NavKategori(
     string Slug,
     string? GorselUrl,
     string? Rozet,
-    IReadOnlyList<NavKategori> Cocuklar)
+    IReadOnlyList<NavKategori> Cocuklar,
+    bool UrunVar = true)
 {
     public string Url => "/" + Slug;
 
     /// <summary>Torun kategori var mı? (mega/mobil menüde bölüm-başına-grid kurgusunu belirler)</summary>
     public bool UcuncuSeviyeVar => Cocuklar.Any(c => c.Cocuklar.Count > 0);
+
+    /// <summary>Kendisinde veya herhangi bir alt dalında ürün var mı? (false = dalın tamamı boş)</summary>
+    public bool DalindaUrunVar => UrunVar || Cocuklar.Any(c => c.DalindaUrunVar);
 }
 
-public sealed record NavigasyonVm(IReadOnlyList<NavKategori> Kokler)
+/// <param name="Kokler">Menülerde gösterilen ağaç — tamamı boş dallar budanmıştır.</param>
+/// <param name="TumKokler">Budanmamış tam ağaç — doğrudan URL ile gelen boş kategori
+/// sayfasının 404 yerine "henüz ürün yüklenmedi" mesajıyla açılabilmesi için.</param>
+public sealed record NavigasyonVm(
+    IReadOnlyList<NavKategori> Kokler,
+    IReadOnlyList<NavKategori> TumKokler)
 {
-    public static readonly NavigasyonVm Bos = new([]);
+    public static readonly NavigasyonVm Bos = new([], []);
 }
