@@ -27,6 +27,14 @@ Inventory…), cari çatı (B5 finance birleşmesi ertelendi), stok üçlü yap�
 kalan), sipariş/paket/kargo kod sistemi (canlıda), MigrationTool. Ortak çekirdek değişikliği hangi
 alan için yapılıyorsa o alanın oturumunda, o alanın fazı olarak yürütülür.
 
+**2026-07-29 mishar kanalı eldi firmasına taşındı:** `core_firm_platforms.FirmId`
+misaroglu → eldi (kullanıcı onayı; kanal aslında Eldi'ninmiş). FirmPlatformId değişmediği
+için tüm kanal verisi aynen kaldı; mishar'a özel visual_search entegrasyonu kanalla taşındı;
+misaroglu'nun entegrasyonları (tozlu için) yerinde. ⚠️ AÇIK: eldi'ye kargo entegrasyonları +
+bölge kuralları, SMS (gestelekom) ve fatura serisi ELDEN girilecek (kullanıcı kararı —
+kopyalanmadı); o ana kadar mishar'da kargo seçenekleri boş, SMS ayarsız, yeni fatura hata
+verir. Yedek: `~/yedekler/mishar-firma-tasima-oncesi-2026-07-29.dump`.
+
 **2026-07-29 Misharitalia menü aktarımı (web sitesi):** Eski sitenin (misharitalia.com, MySQL
 `plmenuyeni` platform 41) 288 düğümlü menüsü birebir taşındı. MigrationTool **Faz 25**
 (tekrarlanabilir): menüdeki 200 benzersiz url için kanal kategorisi (SEO + görsel + doldurma:
