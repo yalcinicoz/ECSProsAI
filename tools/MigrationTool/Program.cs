@@ -74,6 +74,7 @@ static class Migration
         if (phase == 22) await Phase22_MembersAndAddresses();
         if (phase == 23) await Phase23_Orders();
         if (phase == 24) await Phase24_Favorites();
+        if (phase == 25) await Phase25_MisharMenu();
 
         Log("=== Migration tamamlandı! ===");
         Log($"  image_sets                  : {PgCount($"{DEF}.image_sets")}");
@@ -2903,5 +2904,414 @@ static class Migration
             ins++;
         }
         Log($"  Favori: {ins} eklendi, {skip} atlandı (üye/ürün eşleşmedi).");
+    }
+
+    // ─── FAZ 25: MİSHAR MENÜ AKTARIMI ────────────────────────────────────────
+    // misharitalia.com menüsünü (plmenuyeni, platform 41) birebir taşır:
+    //   1) Menüde görünen her benzersiz url için bir storefront.channel_categories kaydı.
+    //      Doldurma önceliği: plfiltreler SQL'i → dinamikse FilterDef, statik parça
+    //      (altgrup/keyword/LIKE/kod listesi) içeriyorsa MySQL'den ürün kodları materyalize
+    //      edilip channel_category_products'a yazılır; filtre yoksa dftumkategoriler
+    //      hiyerarşisi; o da yoksa webkategoriurunleri cache'i.
+    //   2) 'header' kodlu nav_menus + nav_nodes yerleşimi — aynı kategorinin birden çok
+    //      üst bölümde görünmesi (çapraz yerleşim) düğüm tekrarıyla korunur.
+    // Tekrarlanabilir: her koşuda header menü + platformun tüm kanal kategorileri silinip
+    // yeniden kurulur (footer menüsüne dokunulmaz; nav_nodes.ChannelCategoryId SET NULL).
+    static async Task Phase25_MisharMenu()
+    {
+        Log("=== FAZ 25: Mishar menü aktarımı ===");
+        await Task.CompletedTask;
+        var fp = MisharFp();
+
+        // ── MySQL kaynakları ──
+        var menuRows = new List<(int Id, int ParentId, string Ad, string Url, int Sira, bool Tik, bool Gost, string UrlTipi, string ListTipi, string? Resim, string? KatBaslik)>();
+        using (var r = MysqlQuery("SELECT Id, parentId, menuAdi, COALESCE(url,''), siraNo, tiklanabilir+0, menudeGoster+0, " +
+                "COALESCE(urlTipi,'URUN'), COALESCE(urunListelemeTipi,'RENK'), resimUrl, kategoriBasligi " +
+                $"FROM plmenuyeni WHERE platformId={MISHAR_PLATFORM} ORDER BY parentId, siraNo, Id"))
+            while (r.Read())
+                menuRows.Add((r.GetInt32(0), r.GetInt32(1), r.GetString(2), r.GetString(3), r.GetInt32(4),
+                    r.GetInt64(5) != 0, r.GetInt64(6) != 0, r.GetString(7), r.GetString(8),
+                    r.IsDBNull(9) ? null : r.GetString(9), r.IsDBNull(10) ? null : r.GetString(10)));
+
+        var urlInfo = new Dictionary<string, (int KurlId, int FiltreId, string? MetaTitle, string? MetaDesc, string? KatBaslik, string ListTipi)>();
+        using (var r = MysqlQuery("SELECT url, Id, COALESCE(filtreId,0), metatitle, metadescription, kategoriBasligi, COALESCE(urunListelemeTipi,'RENK') " +
+                $"FROM plkategoriurl WHERE platformId={MISHAR_PLATFORM}"))
+            while (r.Read())
+            {
+                string u = r.GetString(0);
+                if (!urlInfo.ContainsKey(u))
+                    urlInfo[u] = (r.GetInt32(1), r.GetInt32(2), r.IsDBNull(3) ? null : r.GetString(3),
+                        r.IsDBNull(4) ? null : r.GetString(4), r.IsDBNull(5) ? null : r.GetString(5), r.GetString(6));
+            }
+
+        // Filtre platform kısıtsız yüklenir: bazı kategoriler başka platformda tanımlanmış
+        // ortak filtreyi işaret eder (örn. kiz-cocuk-plaj-urunleri).
+        var filtreSqlById = new Dictionary<int, string>();
+        using (var r = MysqlQuery("SELECT Id, filtreSql FROM plfiltreler WHERE filtreSql IS NOT NULL"))
+            while (r.Read()) filtreSqlById[r.GetInt32(0)] = r.GetString(1);
+
+        var tumkat = new Dictionary<string, (string Tablo, int TabloId)>();
+        using (var r = MysqlQuery("SELECT url, tabloAdi, tabloId FROM dftumkategoriler WHERE url IS NOT NULL AND tabloAdi IS NOT NULL AND tabloId IS NOT NULL"))
+            while (r.Read()) tumkat[r.GetString(0)] = (r.GetString(1), r.GetInt32(2));
+
+        var sinifCinsiyet = new Dictionary<int, int>();   // sınıf → cinsiyet
+        using (var r = MysqlQuery("SELECT Id, COALESCE(cinsiyetId,0) FROM dfurunsiniflari"))
+            while (r.Read()) sinifCinsiyet[r.GetInt32(0)] = r.GetInt32(1);
+        var grupSinif = new Dictionary<int, int>();       // grup → sınıf
+        using (var r = MysqlQuery("SELECT Id, COALESCE(urunSinifId,0) FROM dfurungruplari"))
+            while (r.Read()) grupSinif[r.GetInt32(0)] = r.GetInt32(1);
+
+        // ── Yeni taraf eşlemeleri ──
+        var grpGuid = new Dictionary<int, Guid>();        // legacy grup id → product_groups.Id (Code=grp_N)
+        using (var r = new NpgsqlCommand("SELECT \"Id\", \"Code\" FROM definition.product_groups WHERE \"IsDeleted\"=FALSE AND \"Code\" LIKE 'grp_%'", pg).ExecuteReader())
+            while (r.Read())
+                if (int.TryParse(r.GetString(1)[4..], out int lid)) grpGuid[lid] = r.GetGuid(0);
+
+        var productIdByCode = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        var groupIdByCode = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase); // ürün kodu → yeni ProductGroupId
+        using (var r = new NpgsqlCommand("SELECT \"Id\", \"Code\", \"ProductGroupId\" FROM catalog.products WHERE \"IsDeleted\"=FALSE", pg).ExecuteReader())
+            while (r.Read()) { productIdByCode[r.GetString(1)] = r.GetGuid(0); groupIdByCode[r.GetString(1)] = r.GetGuid(2); }
+
+        // Faz 9'da birleştirilip kodu silinen legacy gruplar için yönlendirme: legacy grubun
+        // ürünlerinin yeni katalogda EN ÇOK düştüğü ProductGroupId esas alınır (baskın grup).
+        var legacyGrupByCode = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        using (var r = MysqlQuery("SELECT urunKodu, COALESCE(urunGrupId,0) FROM apurunler " +
+                "WHERE urunKodu IS NOT NULL AND urunKodu != '' AND urunKodu IN (SELECT urunkodu FROM yeniurunkodlari)"))
+            while (r.Read()) legacyGrupByCode[r.GetString(0)] = r.GetInt32(1);
+        var dominantGrpGuid = legacyGrupByCode
+            .Where(kv => kv.Value > 0 && groupIdByCode.ContainsKey(kv.Key))
+            .GroupBy(kv => kv.Value)
+            .ToDictionary(g => g.Key, g => g
+                .GroupBy(kv => groupIdByCode[kv.Key])
+                .OrderByDescending(x => x.Count())
+                .First().Key);
+        foreach (var (lid, guid) in dominantGrpGuid)
+            if (!grpGuid.ContainsKey(lid)) grpGuid[lid] = guid;
+        Log($"  Grup eşlemesi: {grpGuid.Count} legacy grup ({dominantGrpGuid.Count(kv => grpGuid[kv.Key] == kv.Value)} baskın-ürün yönlendirmesi dahil).");
+
+        Guid cinsiyetTypeId = AttrTypeId("cinsiyet");
+        var cinsiyetAdlari = new Dictionary<int, string>
+        {
+            [1] = "Kadın", [2] = "Erkek", [3] = "Kız çocuk", [4] = "Erkek çocuk", [5] = "Çocuk",
+            [6] = "Bebek", [7] = "Unisex", [8] = "Cinsiyetsiz", [9] = "Kız Bebek", [10] = "Erkek Bebek"
+        };
+        var cinsiyetGuid = new Dictionary<int, Guid>();
+        foreach (var (cid, ad) in cinsiyetAdlari)
+            try { cinsiyetGuid[cid] = AttrValueId("cinsiyet", ad); }
+            catch { Log($"  ! cinsiyet değeri yeni DB'de yok: {ad} (legacy {cid})"); }
+
+        // ── Görünür menü ağacı (parent zinciri boyunca menudeGoster=1) ──
+        var byParent = menuRows.GroupBy(m => m.ParentId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(x => x.Sira).ThenBy(x => x.Id).ToList());
+        var tree = new List<(int RowIdx, int? ParentTreeIdx)>();
+        void Walk(int parentRowId, int? parentTreeIdx)
+        {
+            if (!byParent.TryGetValue(parentRowId, out var cocuklar)) return;
+            foreach (var m in cocuklar)
+            {
+                if (!m.Gost || string.IsNullOrWhiteSpace(m.Url)) continue;
+                int idx = tree.Count;
+                tree.Add((menuRows.IndexOf(m), parentTreeIdx));
+                Walk(m.Id, idx);
+            }
+        }
+        Walk(0, null);
+        Log($"  Menü: {menuRows.Count} satır, görünür ağaç {tree.Count} düğüm.");
+
+        // ── Temizlik (tekrarlanabilirlik) ──
+        PgExec("DELETE FROM storefront.nav_menus WHERE \"FirmPlatformId\"=@fp AND \"Code\"='header'", ("fp", fp));
+        PgExec("UPDATE storefront.channel_categories SET \"ParentId\"=NULL WHERE \"FirmPlatformId\"=@fp", ("fp", fp));
+        PgExec("DELETE FROM storefront.channel_categories WHERE \"FirmPlatformId\"=@fp", ("fp", fp));
+
+        // ── Filtre SQL çözümleme ──
+        (bool Statik, List<int> Cins, List<int> SinifInc, List<int> SinifExc, List<int> GrupInc, List<int> GrupExc,
+         List<int> AltGrup, List<string> Kodlar, int? ImageDays, (int TipId, string Deger)? Keyword, string? Like)
+            ParseFiltre(string sql)
+        {
+            List<int> Nums(string pattern, int grp = 1) =>
+                Regex.Matches(sql, pattern).Select(m => int.Parse(m.Groups[grp].Value)).Distinct().ToList();
+            List<int> InList(string pattern) =>
+                Regex.Matches(sql, pattern)
+                    .SelectMany(m => m.Groups[1].Value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+                    .Select(int.Parse).Distinct().ToList();
+
+            var cins = Nums(@"u\.cinsiyetId\s*=\s*(\d+)").Concat(InList(@"u\.cinsiyetId\s+IN\s*\(([\d,\s]+)\)")).Distinct().ToList();
+            var sinifExc = InList(@"u\.urunSinifId\s+NOT\s+IN\s*\(([\d,\s]+)\)");
+            var sinifInc = Nums(@"u\.urunSinifId\s*=\s*(\d+)").Concat(InList(@"u\.urunSinifId\s+IN\s*\(([\d,\s]+)\)")).Except(sinifExc).Distinct().ToList();
+            var grupExc = Nums(@"u\.urunGrupId\s*!=\s*(\d+)").Concat(InList(@"u\.urunGrupId\s+NOT\s+IN\s*\(([\d,\s]+)\)")).Distinct().ToList();
+            var grupInc = Nums(@"u\.urunGrupId\s*=\s*(\d+)").Concat(InList(@"u\.urunGrupId\s+IN\s*\(([\d,\s]+)\)")).Except(grupExc).Distinct().ToList();
+            var altGrup = Nums(@"u\.urunAltGrupId\s*=\s*(\d+)").Concat(InList(@"u\.urunAltGrupId\s+IN\s*\(([\d,\s]+)\)")).Distinct().ToList();
+            var kodlar = Regex.Matches(sql, @"u\.urunKodu\s+IN\s*\(([^)]*)\)")
+                .SelectMany(m => Regex.Matches(m.Groups[1].Value, @"'([^']+)'").Select(k => k.Groups[1].Value))
+                .Distinct().ToList();
+            int? imageDays = Regex.Match(sql, @"INTERVAL\s*-(\d+)\s*DAY") is { Success: true } im ? int.Parse(im.Groups[1].Value) : null;
+            (int, string)? keyword = Regex.Match(sql, @"varyantTipId\s*=\s*(\d+)\s+AND\s+varyantDegeri\s*=\s*'([^']*)'") is { Success: true } kw
+                ? (int.Parse(kw.Groups[1].Value), kw.Groups[2].Value) : null;
+            string? like = Regex.Match(sql, @"u\.urunAdi\s+LIKE\s+'([^']*)'") is { Success: true } lk ? lk.Groups[1].Value : null;
+
+            bool statik = altGrup.Count > 0 || kodlar.Count > 0 || keyword is not null || like is not null;
+            return (statik, cins, sinifInc, sinifExc, grupInc, grupExc, altGrup, kodlar, imageDays, keyword, like);
+        }
+
+        List<string> MaterializeCodes(
+            List<int> cins, List<int> sinifInc, List<int> sinifExc, List<int> grupInc, List<int> grupExc,
+            List<int> altGrup, List<string> kodlar, int? imageDays, (int TipId, string Deger)? keyword, string? like)
+        {
+            // Yalnız kod listesi varsa liste sırası korunur (merchandising sırası)
+            if (kodlar.Count > 0 && cins.Count == 0 && sinifInc.Count == 0 && grupInc.Count == 0 && altGrup.Count == 0 && keyword is null && like is null)
+                return kodlar;
+
+            var sb = new StringBuilder("SELECT DISTINCT u.urunKodu FROM apurunler u WHERE u.urunKodu IN (SELECT urunkodu FROM yeniurunkodlari)");
+            if (cins.Count > 0) sb.Append($" AND u.cinsiyetId IN ({string.Join(",", cins)})");
+            if (sinifInc.Count > 0) sb.Append($" AND u.urunSinifId IN ({string.Join(",", sinifInc)})");
+            if (sinifExc.Count > 0) sb.Append($" AND u.urunSinifId NOT IN ({string.Join(",", sinifExc)})");
+            if (grupInc.Count > 0) sb.Append($" AND u.urunGrupId IN ({string.Join(",", grupInc)})");
+            if (grupExc.Count > 0) sb.Append($" AND u.urunGrupId NOT IN ({string.Join(",", grupExc)})");
+            if (altGrup.Count > 0) sb.Append($" AND u.urunAltGrupId IN ({string.Join(",", altGrup)})");
+            if (kodlar.Count > 0) sb.Append($" AND u.urunKodu IN ({string.Join(",", kodlar.Select(k => $"'{k.Replace("'", "''")}'"))})");
+            if (like is not null) sb.Append($" AND u.urunAdi LIKE '{like.Replace("'", "''")}'");
+            if (keyword is { } k)
+                sb.Append($" AND EXISTS (SELECT 1 FROM apurunvaryanttipdegerleri v WHERE v.urunId=u.Id AND v.varyantTipId={k.TipId} AND v.varyantDegeri='{k.Deger.Replace("'", "''")}')");
+            if (imageDays is { } d)
+                sb.Append($" AND EXISTS (SELECT 1 FROM apurunresimleri ar WHERE ar.urunId=u.Id AND ar.olusturmaTarihi>=DATE_ADD(NOW(), INTERVAL -{d} DAY))");
+            sb.Append(" ORDER BY u.Id DESC");
+
+            var sonuc = new List<string>();
+            using var r = MysqlQuery(sb.ToString());
+            while (r.Read()) if (!r.IsDBNull(0)) sonuc.Add(r.GetString(0));
+            return sonuc;
+        }
+
+        // Dinamik FilterDef'in kaba ürün karşılığı (stok/kanal geçitleri HARİÇ): 0 ise bu
+        // kategorinin yeni katalogda hiç ürünü yok demektir (örn. keep-listesi dışı) —
+        // dinamik bırakmak kalıcı boş dal üretir, cache listesine düşmek daha doğru.
+        // Stok-yok durumları burada >0 döner ve dinamik kalır (stok gelince kendiliğinden görünür).
+        long KabaUrunSayisi(Guid[] grupGuidler, Guid[] cinsGuidler)
+        {
+            var sql = new StringBuilder("SELECT COUNT(*) FROM catalog.products p WHERE p.\"IsDeleted\"=FALSE");
+            if (grupGuidler.Length > 0)
+                sql.Append(" AND p.\"ProductGroupId\" = ANY(@grp)");
+            if (cinsGuidler.Length > 0)
+                sql.Append(" AND EXISTS (SELECT 1 FROM catalog.product_attributes a WHERE a.\"ProductId\"=p.\"Id\" AND a.\"IsDeleted\"=FALSE AND a.\"AttributeValueId\" = ANY(@cins))");
+            using var cmd = new NpgsqlCommand(sql.ToString(), pg);
+            if (grupGuidler.Length > 0) cmd.Parameters.AddWithValue("grp", grupGuidler);
+            if (cinsGuidler.Length > 0) cmd.Parameters.AddWithValue("cins", cinsGuidler);
+            return (long)cmd.ExecuteScalar()!;
+        }
+
+        int grpEksik = 0;
+        (string? Json, Guid[] GrupGuidler, Guid[] CinsGuidler) BuildFilterDef(List<int> cins, List<int> sinifInc, List<int> sinifExc, List<int> grupInc, List<int> grupExc, int? imageDays)
+        {
+            IEnumerable<int> SinifUyeleri(IEnumerable<int> siniflar) =>
+                grupSinif.Where(kv => siniflar.Contains(kv.Value)).Select(kv => kv.Key);
+
+            var grupIds = new HashSet<int>();
+            if (grupInc.Count > 0) grupIds.UnionWith(grupInc);
+            else if (sinifInc.Count > 0) grupIds.UnionWith(SinifUyeleri(sinifInc));
+            else if (sinifExc.Count > 0 || grupExc.Count > 0)
+            {
+                // Dışlama listesi include listesine çevrilir (FilterDef dışlama desteklemez):
+                // evren = (cinsiyet verilmişse o cinsiyetin sınıflarındaki) tüm gruplar
+                var evren = grupSinif.Where(kv =>
+                        cins.Count == 0 ||
+                        (sinifCinsiyet.TryGetValue(kv.Value, out int c) && cins.Contains(c)))
+                    .Select(kv => kv.Key);
+                grupIds.UnionWith(evren);
+                grupIds.ExceptWith(SinifUyeleri(sinifExc));
+            }
+            grupIds.ExceptWith(grupExc);
+            grupIds.ExceptWith(SinifUyeleri(sinifExc));
+
+            var grupGuidler = grupIds.Select(id =>
+            {
+                if (grpGuid.TryGetValue(id, out var g)) return (Guid?)g;
+                grpEksik++; return null;
+            }).Where(g => g.HasValue).Select(g => g!.Value).Distinct().ToArray();
+
+            var def = new Dictionary<string, object>();
+            if (grupGuidler.Length > 0) def["productGroupIds"] = grupGuidler;
+            var cinsGuidler = cins.Where(cinsiyetGuid.ContainsKey).Select(c => cinsiyetGuid[c]).ToArray();
+            if (cinsGuidler.Length > 0)
+                def["attributeFilters"] = new object[]
+                {
+                    new Dictionary<string, object> { ["attributeTypeId"] = cinsiyetTypeId, ["valueIds"] = cinsGuidler }
+                };
+            if (imageDays is { } d) def["imageUpdatedAfterDays"] = d;
+            return (def.Count > 0 ? JsonSerializer.Serialize(def, JsonOpts) : null, grupGuidler, cinsGuidler);
+        }
+
+        // Eski sitenin gerçekte gösterdiği materyalize liste (webkategoriurunleri cache'i) —
+        // filtre SQL'i bugünkü veriyle 0 dönse bile eski site bu cache'ten ürün basar
+        // (örn. tesettur-bluz). Materyalize sonucu boş kalan her kategori buna düşer.
+        List<string> CacheKodlari(int kurlId)
+        {
+            var codes = new List<string>();
+            if (kurlId <= 0) return codes;
+            using var r = MysqlQuery("SELECT DISTINCT p.urunKodu FROM webkategoriurunleri w " +
+                "JOIN apurunanavaryantlari av ON av.Id=w.urunAnaVaryantId JOIN apurunler p ON p.Id=av.urunId " +
+                $"WHERE w.kategoriUrlId={kurlId} AND p.urunKodu IN (SELECT urunkodu FROM yeniurunkodlari) ORDER BY p.urunKodu");
+            while (r.Read()) if (!r.IsDBNull(0)) codes.Add(r.GetString(0));
+            return codes;
+        }
+
+        var kaynaksiz = new List<string>();
+        (string Fill, string? Json, List<string>? Codes) ResolveFill(string url)
+        {
+            var info = urlInfo.TryGetValue(url, out var i) ? i : default;
+            string? sql = info.FiltreId > 0 ? filtreSqlById.GetValueOrDefault(info.FiltreId) : null;
+            if (sql is not null)
+            {
+                var f = ParseFiltre(sql);
+                if (f.Statik)
+                {
+                    var codes = MaterializeCodes(f.Cins, f.SinifInc, f.SinifExc, f.GrupInc, f.GrupExc, f.AltGrup, f.Kodlar, f.ImageDays, f.Keyword, f.Like);
+                    if (codes.Count == 0) codes = CacheKodlari(info.KurlId);
+                    if (codes.Count > 0) return ("manual", null, codes);
+                    // filtre bugünkü veriyle boş — eski site bu durumda hiyerarşi
+                    // çözümlemesine (dftumkategoriler) düşer; biz de aynısını yapalım
+                }
+                else
+                {
+                    var (json, grpG, cinsG) = BuildFilterDef(f.Cins, f.SinifInc, f.SinifExc, f.GrupInc, f.GrupExc, f.ImageDays);
+                    if (json is not null)
+                    {
+                        if (KabaUrunSayisi(grpG, cinsG) > 0) return ("filter", json, null);
+                        var cache = CacheKodlari(info.KurlId);
+                        if (cache.Count > 0) return ("manual", null, cache);
+                        return ("filter", json, null); // cache de boş — dinamik kalsın
+                    }
+                }
+            }
+            if (tumkat.TryGetValue(url, out var t))
+            {
+                switch (t.Tablo)
+                {
+                    case "dfcinsiyetler":
+                    case "dfurunsiniflari":
+                    case "dfurungruplari":
+                    {
+                        var (json, grpG, cinsG) = t.Tablo switch
+                        {
+                            "dfcinsiyetler" => BuildFilterDef(new List<int> { t.TabloId }, new(), new(), new(), new(), null),
+                            "dfurunsiniflari" => BuildFilterDef(
+                                sinifCinsiyet.TryGetValue(t.TabloId, out int sc) && sc > 0 ? new List<int> { sc } : new List<int>(),
+                                new List<int> { t.TabloId }, new(), new(), new(), null),
+                            _ => BuildFilterDef(
+                                grupSinif.TryGetValue(t.TabloId, out int gs) && sinifCinsiyet.TryGetValue(gs, out int gc) && gc > 0
+                                    ? new List<int> { gc } : new List<int>(),
+                                new(), new(), new List<int> { t.TabloId }, new(), null),
+                        };
+                        if (json is not null && KabaUrunSayisi(grpG, cinsG) == 0)
+                        {
+                            var cache = CacheKodlari(info.KurlId);
+                            if (cache.Count > 0) return ("manual", null, cache);
+                        }
+                        return ("filter", json ?? "{}", null);
+                    }
+                    case "dfurunaltgruplari":
+                    {
+                        var codes = MaterializeCodes(new(), new(), new(), new(), new(), new List<int> { t.TabloId }, new(), null, null, null);
+                        if (codes.Count == 0) codes = CacheKodlari(info.KurlId);
+                        return ("manual", null, codes);
+                    }
+                }
+            }
+            {
+                // Son çare: eski sitenin materyalize cache'i (webkategoriurunleri)
+                var codes = CacheKodlari(info.KurlId);
+                if (codes.Count > 0) return ("manual", null, codes);
+            }
+            kaynaksiz.Add(url);
+            return ("manual", null, new List<string>());
+        }
+
+        // ── Kategoriler (benzersiz url başına bir kayıt; ilk görünüm ana yerleşim) ──
+        var catByUrl = new Dictionary<string, Guid>();
+        int katSayisi = 0, manuelKat = 0, filtreKat = 0, urunSatiri = 0, kodEslesmedi = 0;
+        foreach (var (rowIdx, parentTreeIdx) in tree)
+        {
+            var m = menuRows[rowIdx];
+            if (catByUrl.ContainsKey(m.Url)) continue;
+
+            Guid? parentCat = parentTreeIdx is int pi ? catByUrl[menuRows[tree[pi].RowIdx].Url] : null;
+            var info = urlInfo.TryGetValue(m.Url, out var inf) ? inf : default;
+            string ad = info.KatBaslik ?? m.KatBaslik ?? m.Ad;
+            string listingMode = (info.ListTipi ?? m.ListTipi) == "MODEL" ? "model" : "color";
+            var (fill, json, codes) = ResolveFill(m.Url);
+
+            var id = NewId();
+            PgExec(@"INSERT INTO storefront.channel_categories
+                    (""Id"",""FirmPlatformId"",""ParentId"",""NameI18n"",""Slug"",""Status"",""FillType"",""FilterDef"",
+                     ""SortOrder"",""MetaTitleI18n"",""MetaDescriptionI18n"",""ListingMode"",""CreatedAt"",""IsDeleted"")
+                    VALUES (@id,@fp,@pid,@name::jsonb,@slug,'published',@fill,@fdef::jsonb,@sort,@mt::jsonb,@md::jsonb,@lm,@now,FALSE)",
+                ("id", id), ("fp", fp), ("pid", (object?)parentCat ?? DBNull.Value), ("name", I18n(ad)),
+                ("slug", m.Url), ("fill", fill), ("fdef", (object?)json ?? DBNull.Value), ("sort", katSayisi),
+                ("mt", string.IsNullOrWhiteSpace(info.MetaTitle) ? DBNull.Value : I18n(info.MetaTitle)),
+                ("md", string.IsNullOrWhiteSpace(info.MetaDesc) ? DBNull.Value : I18n(info.MetaDesc)),
+                ("lm", listingMode), ("now", Now));
+            catByUrl[m.Url] = id;
+            katSayisi++;
+
+            if (codes is not null)
+            {
+                manuelKat++;
+                int sira = 0;
+                foreach (var kod in codes)
+                {
+                    if (!productIdByCode.TryGetValue(kod, out var pidGuid)) { kodEslesmedi++; continue; }
+                    PgExec(@"INSERT INTO storefront.channel_category_products (""Id"",""ChannelCategoryId"",""ProductId"",""SortOrder"",""IsExcluded"")
+                            VALUES (@id,@cid,@pid,@s,FALSE) ON CONFLICT (""ChannelCategoryId"",""ProductId"") DO NOTHING",
+                        ("id", NewId()), ("cid", id), ("pid", pidGuid), ("s", sira++));
+                    urunSatiri++;
+                }
+            }
+            else filtreKat++;
+        }
+        Log($"  Kategori: {katSayisi} oluşturuldu ({filtreKat} dinamik filtre, {manuelKat} materyalize liste; {urunSatiri} ürün satırı, {kodEslesmedi} kod eşleşmedi, {grpEksik} grup kodu yeni DB'de yok).");
+        if (kaynaksiz.Count > 0) Log($"  ! Kaynaksız (boş) kategoriler: {string.Join(", ", kaynaksiz)}");
+
+        // ── Nav menü + düğümler ──
+        var menuId = NewId();
+        PgExec(@"INSERT INTO storefront.nav_menus (""Id"",""FirmPlatformId"",""Code"",""NameI18n"",""MenuType"",""IsActive"",""SortOrder"",""CreatedAt"",""IsDeleted"")
+                VALUES (@id,@fp,'header',@name::jsonb,'header',TRUE,0,@now,FALSE)",
+            ("id", menuId), ("fp", fp), ("name", I18n("Ana Menü")), ("now", Now));
+
+        var nodeIds = new Guid[tree.Count];
+        var siblingSira = new Dictionary<int, int>(); // parentTreeIdx(-1=kök) → sıradaki SortOrder
+        int resimliDugum = 0;
+        foreach (var (i, (rowIdx, parentTreeIdx)) in tree.Select((t, i) => (i, t)))
+        {
+            var m = menuRows[rowIdx];
+            int siraKey = parentTreeIdx ?? -1;
+            int sort = siblingSira.TryGetValue(siraKey, out int s) ? s : 0;
+            siblingSira[siraKey] = sort + 1;
+
+            string nodeType = m.UrlTipi == "SAYFA" ? "link" : (!m.Tik ? "label" : "category");
+            Guid? catId = nodeType == "category" ? catByUrl[m.Url] : null;
+
+            string? imageUrl = null;
+            if (!string.IsNullOrWhiteSpace(m.Resim))
+            {
+                string dosya = Path.GetFileName(m.Resim);
+                if (File.Exists($"/opt/ECSProsAI/media/menu/{dosya}")) { imageUrl = $"/media/menu/{dosya}"; resimliDugum++; }
+            }
+
+            nodeIds[i] = NewId();
+            PgExec(@"INSERT INTO storefront.nav_nodes
+                    (""Id"",""NavigationMenuId"",""ParentNavNodeId"",""ChannelCategoryId"",""NameOverrideI18n"",""Slug"",
+                     ""ImageUrl"",""OpenInNewTab"",""NodeType"",""CustomUrl"",""IsActive"",""SortOrder"",""CreatedAt"",""IsDeleted"")
+                    VALUES (@id,@mid,@pid,@cid,@name::jsonb,@slug,@img,FALSE,@nt,@curl,TRUE,@sort,@now,FALSE)",
+                ("id", nodeIds[i]), ("mid", menuId),
+                ("pid", parentTreeIdx is int p2 ? nodeIds[p2] : DBNull.Value),
+                ("cid", (object?)catId ?? DBNull.Value), ("name", I18n(m.Ad)), ("slug", m.Url),
+                ("img", (object?)imageUrl ?? DBNull.Value), ("nt", nodeType),
+                ("curl", nodeType == "link" ? "/" + m.Url : DBNull.Value), ("sort", sort), ("now", Now));
+        }
+        Log($"  Nav: 'header' menüsü + {tree.Count} düğüm ({resimliDugum} görselli).");
+
+        PgExec("ANALYZE storefront.channel_categories");
+        PgExec("ANALYZE storefront.channel_category_products");
+        PgExec("ANALYZE storefront.nav_nodes");
+        Log("FAZ 25 tamamlandı.");
     }
 }

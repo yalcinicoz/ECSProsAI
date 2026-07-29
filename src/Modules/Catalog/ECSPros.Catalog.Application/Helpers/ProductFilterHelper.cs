@@ -56,17 +56,18 @@ public static class ProductFilterHelper
             if (rules.CreatedBefore.HasValue) q = q.Where(p => p.CreatedAt <= rules.CreatedBefore.Value);
         }
 
+        // Görsel hiç güncellenmemişse UpdatedAt NULL kalır — yükleme tarihi (CreatedAt) esas alınır.
         if (rules.ImageUpdatedAfterDays.HasValue)
         {
             var threshold = DateTime.UtcNow.AddDays(-rules.ImageUpdatedAfterDays.Value);
-            q = q.Where(p => db.ProductImages.Any(img => img.ProductId == p.Id && img.UpdatedAt >= threshold));
+            q = q.Where(p => db.ProductImages.Any(img => img.ProductId == p.Id && (img.UpdatedAt ?? img.CreatedAt) >= threshold));
         }
         else
         {
             if (rules.ImageUpdatedAfter.HasValue)
-                q = q.Where(p => db.ProductImages.Any(img => img.ProductId == p.Id && img.UpdatedAt >= rules.ImageUpdatedAfter.Value));
+                q = q.Where(p => db.ProductImages.Any(img => img.ProductId == p.Id && (img.UpdatedAt ?? img.CreatedAt) >= rules.ImageUpdatedAfter.Value));
             if (rules.ImageUpdatedBefore.HasValue)
-                q = q.Where(p => db.ProductImages.Any(img => img.ProductId == p.Id && img.UpdatedAt <= rules.ImageUpdatedBefore.Value));
+                q = q.Where(p => db.ProductImages.Any(img => img.ProductId == p.Id && (img.UpdatedAt ?? img.CreatedAt) <= rules.ImageUpdatedBefore.Value));
         }
 
         if (rules.Tags is { Count: > 0 })
