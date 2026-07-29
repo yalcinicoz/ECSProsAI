@@ -20,6 +20,7 @@ import { FirmDetailPage } from '@/pages/settings/FirmDetailPage'
 import { CatalogSettingsPage } from '@/pages/catalog/CatalogSettingsPage'
 import { BulkImageUploadPage } from '@/pages/catalog/BulkImageUploadPage'
 import { ChannelCategoriesPage } from '@/pages/storefront/ChannelCategoriesPage'
+import { MenuPlacementPage } from '@/pages/storefront/MenuPlacementPage'
 import { ChannelProductsPage } from '@/pages/storefront/ChannelProductsPage'
 import { ChannelCategoryDetailPage } from '@/pages/storefront/ChannelCategoryDetailPage'
 import { CollectionsModerationPage } from '@/pages/storefront/CollectionsModerationPage'
@@ -73,6 +74,7 @@ export const router = createBrowserRouter(
             { path: 'catalog/settings',          element: <CatalogSettingsPage /> },
             { path: 'catalog/bulk-images',       element: <BulkImageUploadPage /> },
             { path: 'storefront/channel-categories',      element: <ChannelCategoriesPage /> },
+            { path: 'storefront/menu-placement',          element: <MenuPlacementPage /> },
             { path: 'storefront/channel-categories/:id',  element: <ChannelCategoryDetailPage /> },
             { path: 'storefront/channel-products',         element: <ChannelProductsPage /> },
             { path: 'storefront/collections',              element: <CollectionsModerationPage /> },
@@ -130,8 +132,8 @@ export const router = createBrowserRouter(
             { path: 'cms/pages',                element: <CmsPagesPage /> },
             { path: 'cms/pages/:id',            element: <CmsPageDetailPage /> },
             // nav_menus sistemi emekli — site menüsü Kanal Kategorileri'nden yönetilir (B-07)
-            { path: 'navigation/menus',         element: <Navigate to="/storefront/channel-categories" replace /> },
-            { path: 'navigation/menus/:id',     element: <Navigate to="/storefront/channel-categories" replace /> },
+            { path: 'navigation/menus',         element: <Navigate to="/storefront/menu-placement" replace /> },
+            { path: 'navigation/menus/:id',     element: <Navigate to="/storefront/menu-placement" replace /> },
 
             // Entegrasyon
             { path: 'integrations/logs', element: <PlaceholderPage title="Entegrasyon Logları" /> },
