@@ -3,11 +3,13 @@
   <ItemGroup>
     <ProjectReference Include="..\ECSPros.Fulfillment.Domain\ECSPros.Fulfillment.Domain.csproj" />
     <ProjectReference Include="..\..\..\Shared\ECSPros.Shared.Kernel\ECSPros.Shared.Kernel.csproj" />
+    <ProjectReference Include="..\..\..\Shared\ECSPros.Shared.Contracts\ECSPros.Shared.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="MediatR" Version="14.1.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.14" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.14" />
   </ItemGroup>
 
   <PropertyGroup>

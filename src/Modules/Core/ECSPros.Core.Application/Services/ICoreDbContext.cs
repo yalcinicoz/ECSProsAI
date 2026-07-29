@@ -14,6 +14,7 @@ public interface ICoreDbContext
     DbSet<ReturnReason> ReturnReasons { get; }
     DbSet<ExpenseType> ExpenseTypes { get; }
     DbSet<CargoRule> CargoRules { get; }
+    DbSet<CargoBarcodeRange> CargoBarcodeRanges { get; }
     DbSet<PlatformType> PlatformTypes { get; }
     DbSet<Firm> Firms { get; }
     DbSet<FirmPlatform> FirmPlatforms { get; }

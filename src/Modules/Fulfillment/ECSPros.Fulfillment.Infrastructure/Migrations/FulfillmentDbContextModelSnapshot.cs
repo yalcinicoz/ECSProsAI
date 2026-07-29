@@ -34,6 +34,14 @@ namespace ECSPros.Fulfillment.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("CargoIntegrationCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CargoIntegrationCodeSource")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -49,6 +57,9 @@ namespace ECSPros.Fulfillment.Infrastructure.Migrations
                     b.Property<decimal?>("Desi")
                         .HasPrecision(10, 3)
                         .HasColumnType("numeric(10,3)");
+
+                    b.Property<Guid>("FirmPlatformId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal?>("Height")
                         .HasPrecision(10, 3)
@@ -67,14 +78,19 @@ namespace ECSPros.Fulfillment.Infrastructure.Migrations
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("PackageNumber")
-                        .HasColumnType("integer");
+                    b.Property<string>("PackageNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<DateTime?>("PackedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("PackedBy")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("SequenceInOrder")
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("ShipmentId")
                         .HasColumnType("uuid");
@@ -83,6 +99,9 @@ namespace ECSPros.Fulfillment.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<Guid?>("SupplierId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -100,7 +119,169 @@ namespace ECSPros.Fulfillment.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("FirmPlatformId", "PackageNumber")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
+
                     b.ToTable("ful_packages", "fulfillment");
+                });
+
+            modelBuilder.Entity("ECSPros.Fulfillment.Domain.Entities.PackageCodeHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ChangeType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("OldCargoIntegrationCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("OldPackageNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PackageId");
+
+                    b.ToTable("ful_package_code_history", "fulfillment");
+                });
+
+            modelBuilder.Entity("ECSPros.Fulfillment.Domain.Entities.PackageItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OrderItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderItemId");
+
+                    b.HasIndex("PackageId");
+
+                    b.ToTable("ful_package_items", "fulfillment");
+                });
+
+            modelBuilder.Entity("ECSPros.Fulfillment.Domain.Entities.PackageNumberSeries", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FirmPlatformId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("NextValue")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("PadLength")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Prefix")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FirmPlatformId")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("ful_package_number_series", "fulfillment");
                 });
 
             modelBuilder.Entity("ECSPros.Fulfillment.Domain.Entities.PackingStation", b =>
@@ -276,6 +457,17 @@ namespace ECSPros.Fulfillment.Infrastructure.Migrations
                     b.ToTable("ful_sorting_bins", "fulfillment");
                 });
 
+            modelBuilder.Entity("ECSPros.Fulfillment.Domain.Entities.PackageItem", b =>
+                {
+                    b.HasOne("ECSPros.Fulfillment.Domain.Entities.Package", "Package")
+                        .WithMany("Items")
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+                });
+
             modelBuilder.Entity("ECSPros.Fulfillment.Domain.Entities.SortingBin", b =>
                 {
                     b.HasOne("ECSPros.Fulfillment.Domain.Entities.PickingPlan", "PickingPlan")
@@ -285,6 +477,11 @@ namespace ECSPros.Fulfillment.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("PickingPlan");
+                });
+
+            modelBuilder.Entity("ECSPros.Fulfillment.Domain.Entities.Package", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("ECSPros.Fulfillment.Domain.Entities.PickingPlan", b =>

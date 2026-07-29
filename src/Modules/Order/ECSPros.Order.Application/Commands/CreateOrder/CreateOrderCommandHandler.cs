@@ -2,16 +2,24 @@ using ECSPros.Order.Application.Services;
 using ECSPros.Order.Domain.Entities;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Order.Application.Commands.CreateOrder;
 
 public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Result<string>>
 {
     private readonly IOrderDbContext _context;
+    private readonly IOrderNumberService _orderNumbers;
+    private readonly ECSPros.Shared.Contracts.IProductService _products;
 
-    public CreateOrderCommandHandler(IOrderDbContext context)
+    public CreateOrderCommandHandler(
+        IOrderDbContext context,
+        IOrderNumberService orderNumbers,
+        ECSPros.Shared.Contracts.IProductService products)
     {
         _context = context;
+        _orderNumbers = orderNumbers;
+        _products = products;
     }
 
     public async Task<Result<string>> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
@@ -19,13 +27,24 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
         if (request.Items.Count == 0)
             return Result.Failure<string>("Sipariş en az bir ürün içermelidir.");
 
-        var orderNumber = $"ORD-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..6].ToUpper()}";
+        var isExternal = !string.IsNullOrWhiteSpace(request.ExternalOrderNumber);
+        var orderNumber = isExternal
+            ? request.ExternalOrderNumber!.Trim()
+            : await _orderNumbers.GenerateAsync(request.FirmPlatformId, cancellationToken);
+
+        // Dış numarada çakışma ön kontrolü (yarış durumunda unique index son emniyettir)
+        if (isExternal && await _context.Orders.AnyAsync(
+                o => o.FirmPlatformId == request.FirmPlatformId && o.OrderNumber == orderNumber,
+                cancellationToken))
+            return Result.Failure<string>($"Bu kanalda '{orderNumber}' numaralı sipariş zaten kayıtlı.");
 
         var subtotal = request.Items.Sum(i => i.UnitPrice * i.Quantity);
 
         var order = new Domain.Entities.Order
         {
             OrderNumber = orderNumber,
+            OrderNumberSource = isExternal ? "external" : "internal",
+            ExternalOrderNumber = isExternal ? orderNumber : null,
             FirmPlatformId = request.FirmPlatformId,
             MemberId = request.MemberId,
             OrderType = request.OrderType,
@@ -50,11 +69,13 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Res
 
         foreach (var item in request.Items)
         {
+            var bilgi = await _products.GetVariantAsync(item.VariantId, cancellationToken);
             order.Items.Add(new OrderItem
             {
                 VariantId = item.VariantId,
-                Sku = string.Empty, // Catalog entegrasyonu ile doldurulacak
-                ProductName = string.Empty,
+                SupplierId = bilgi?.SupplierId,
+                Sku = bilgi?.Sku ?? string.Empty,
+                ProductName = bilgi?.ProductName ?? string.Empty,
                 VariantInfo = string.Empty,
                 Quantity = item.Quantity,
                 UnitPrice = item.UnitPrice,

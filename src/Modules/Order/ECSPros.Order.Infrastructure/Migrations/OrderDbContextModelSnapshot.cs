@@ -246,6 +246,9 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("PackageId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("RecipientAddress")
                         .IsRequired()
                         .HasColumnType("text");
@@ -295,6 +298,8 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.HasIndex("InvoiceSeriesId");
 
                     b.HasIndex("OrderId");
+
+                    b.HasIndex("PackageId");
 
                     b.HasIndex("InvoiceSerial", "InvoiceYear", "InvoiceSequence")
                         .IsUnique();
@@ -510,6 +515,10 @@ namespace ECSPros.Order.Infrastructure.Migrations
                         .HasPrecision(18, 6)
                         .HasColumnType("numeric(18,6)");
 
+                    b.Property<string>("ExternalOrderNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<Guid>("FirmPlatformId")
                         .HasColumnType("uuid");
 
@@ -528,13 +537,23 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("MemberId")
+                    b.Property<int?>("LegacyOrderId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("MemberId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("OrderNumber")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<string>("OrderNumberSource")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("internal");
 
                     b.Property<string>("OrderType")
                         .IsRequired()
@@ -564,6 +583,12 @@ namespace ECSPros.Order.Infrastructure.Migrations
 
                     b.Property<Guid?>("QuoteId")
                         .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RequestedCargoIntegrationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestedCargoName")
+                        .HasColumnType("text");
 
                     b.Property<bool>("RequiresApproval")
                         .HasColumnType("boolean");
@@ -636,8 +661,13 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.HasIndex("CreatedAt")
                         .HasFilter("\"IsDeleted\" = false");
 
-                    b.HasIndex("OrderNumber")
-                        .IsUnique();
+                    b.HasIndex("LegacyOrderId")
+                        .IsUnique()
+                        .HasFilter("\"LegacyOrderId\" IS NOT NULL");
+
+                    b.HasIndex("FirmPlatformId", "OrderNumber")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.HasIndex("Status", "CreatedAt")
                         .HasFilter("\"IsDeleted\" = false");
@@ -904,6 +934,9 @@ namespace ECSPros.Order.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<Guid?>("SupplierId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("TaxAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -1024,6 +1057,59 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.HasIndex("OrderId");
 
                     b.ToTable("ord_order_notifications", "order");
+                });
+
+            modelBuilder.Entity("ECSPros.Order.Domain.Entities.OrderNumberSeries", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FirmPlatformId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("NextValue")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("PadLength")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Prefix")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FirmPlatformId")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("ord_order_number_series", "order");
                 });
 
             modelBuilder.Entity("ECSPros.Order.Domain.Entities.OrderPayment", b =>
@@ -1623,6 +1709,9 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.Property<int>("PackageCount")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("PackageId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ShipmentNumber")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1658,6 +1747,8 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrderId");
+
+                    b.HasIndex("PackageId");
 
                     b.HasIndex("ShipmentNumber")
                         .IsUnique();

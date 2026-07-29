@@ -19,7 +19,10 @@ public record CreateOrderCommand(
     string? ShippingPostalCode,
     // Items
     List<OrderItemDto> Items,
-    string? CustomerNotes = null) : IRequest<Result<string>>;
+    string? CustomerNotes = null,
+    // Pazaryeri siparişi: dış kanal numarası verilirse seri kullanılmaz,
+    // OrderNumber = dış numara (OrderNumberSource = external)
+    string? ExternalOrderNumber = null) : IRequest<Result<string>>;
 
 public record OrderItemDto(
     Guid VariantId,

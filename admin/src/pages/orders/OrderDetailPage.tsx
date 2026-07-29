@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom'
 import { ORDER_STATUS_MAP, PAYMENT_STATUS_MAP } from './OrdersPage'
 import { RETURN_STATUS_MAP, type ReturnSummary } from './ReturnsPage'
 import { INVOICE_STATUS_MAP, INVOICE_TYPE_MAP, type InvoiceSummary, type InvoiceSeries } from './InvoicesPage'
+import { OrderPackagesSection } from './OrderPackagesSection'
 
 interface OrderItem {
   id: string
@@ -43,7 +44,7 @@ interface AcceptedContract {
 interface OrderDetail {
   id: string
   orderNumber: string
-  memberId: string
+  memberId: string | null
   status: string
   paymentStatus: string
   orderType: string
@@ -77,6 +78,8 @@ interface OrderDetail {
   billingCityId?: string
   billingDistrictId?: string
   customerNotes?: { note?: string; acceptedContracts?: AcceptedContract[] }
+  requestedCargoIntegrationId?: string | null
+  requestedCargoName?: string | null
 }
 
 interface ShipmentEvent {
@@ -385,7 +388,12 @@ export function OrderDetailPage() {
             <Button size="sm" onClick={() => { setActionError(''); setProcessOpen(true) }}>İşleme Al</Button>
           )}
           {order.status === 'processing' && (
-            <Button size="sm" onClick={() => { setActionError(''); setShipOpen(true) }}>Kargoya Ver</Button>
+            <Button size="sm" onClick={() => {
+              setActionError('')
+              // Müşterinin teslimat adımındaki kargo tercihi varsayılan gelir (bağlayıcı değil)
+              if (!shipIntegrationId && order?.requestedCargoIntegrationId) setShipIntegrationId(order.requestedCargoIntegrationId)
+              setShipOpen(true)
+            }}>Kargoya Ver</Button>
           )}
           {order.status === 'shipped' && (
             <Button size="sm" onClick={() => { setActionError(''); setDeliverOpen(true) }}>Teslim Edildi</Button>
@@ -484,6 +492,12 @@ export function OrderDetailPage() {
               </div>
             </div>
           </Section>
+
+          <OrderPackagesSection
+            orderId={order.id}
+            orderStatus={order.status}
+            cargoIntegrations={cargoIntegrations}
+          />
 
           <Section title="Kargo">
             {shipments.length === 0 && (
@@ -629,7 +643,10 @@ export function OrderDetailPage() {
           </Section>
           <Section title="Müşteri">
             <InfoRow label="Alıcı" value={order.shippingRecipientName} />
-            <InfoRow label="Üye Id" value={<code className="text-xs">{order.memberId}</code>} />
+            <InfoRow label="Üye Id" value={order.memberId
+              ? <code className="text-xs">{order.memberId}</code>
+              : <Badge variant="neutral">Misafir</Badge>} />
+            <InfoRow label="Kargo Tercihi" value={order.requestedCargoName} />
           </Section>
         </div>
       </div>

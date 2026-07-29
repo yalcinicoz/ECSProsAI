@@ -16,6 +16,7 @@ public class OrderDbContext : DbContext, IOrderDbContext
     public DbSet<OrderTax> OrderTaxes => Set<OrderTax>();
     public DbSet<OrderPayment> OrderPayments => Set<OrderPayment>();
     public DbSet<InvoiceSeries> InvoiceSeries => Set<InvoiceSeries>();
+    public DbSet<OrderNumberSeries> OrderNumberSeries => Set<OrderNumberSeries>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
     public DbSet<Shipment> Shipments => Set<Shipment>();

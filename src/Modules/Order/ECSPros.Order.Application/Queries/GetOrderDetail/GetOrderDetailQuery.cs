@@ -8,7 +8,7 @@ public record GetOrderDetailQuery(Guid OrderId) : IRequest<Result<OrderDetailDto
 public record OrderDetailDto(
     Guid Id,
     string OrderNumber,
-    Guid MemberId,
+    Guid? MemberId,
     string Status,
     string PaymentStatus,
     string OrderType,
@@ -42,7 +42,10 @@ public record OrderDetailDto(
     string? BillingAddressLine = null,
     Guid? BillingCityId = null,
     Guid? BillingDistrictId = null,
-    Dictionary<string, object>? CustomerNotes = null);
+    Dictionary<string, object>? CustomerNotes = null,
+    // 2026-07-22: müşterinin teslimat adımındaki kargo tercihi (mahalle bazlı seçenekler)
+    Guid? RequestedCargoIntegrationId = null,
+    string? RequestedCargoName = null);
 
 public record OrderDetailItemDto(
     Guid Id,

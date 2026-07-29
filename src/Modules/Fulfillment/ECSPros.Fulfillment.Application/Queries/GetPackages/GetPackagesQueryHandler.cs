@@ -22,16 +22,24 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, Result<
             query = query.Where(p => p.OrderId == request.OrderId);
 
         var items = await query
+            .OrderBy(p => p.SequenceInOrder)
             .Select(p => new PackageDto(
                 p.Id,
                 p.OrderId,
+                p.FirmPlatformId,
                 p.ShipmentId,
                 p.PackageNumber,
+                p.SequenceInOrder,
+                p.SupplierId,
                 p.Barcode,
+                p.CargoIntegrationCode,
+                p.CargoIntegrationCodeSource,
                 p.Weight,
                 p.Desi,
                 p.Status,
-                p.PackedAt))
+                p.PackedAt,
+                p.LabelPrintedAt,
+                p.Items.Select(i => new PackageItemDto(i.Id, i.OrderItemId, i.VariantId, i.Quantity)).ToList()))
             .ToListAsync(cancellationToken);
 
         return Result.Success(items);

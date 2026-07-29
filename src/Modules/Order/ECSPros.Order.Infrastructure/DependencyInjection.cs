@@ -15,6 +15,7 @@ public static class DependencyInjection
                 o => o.MigrationsHistoryTable("__ef_migrations_order", "order")));
 
         services.AddScoped<IOrderDbContext>(sp => sp.GetRequiredService<OrderDbContext>());
+        services.AddScoped<IOrderNumberService, Services.OrderNumberService>();
 
         return services;
     }

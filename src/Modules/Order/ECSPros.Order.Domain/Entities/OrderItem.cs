@@ -6,6 +6,10 @@ public class OrderItem : BaseEntity
 {
     public Guid OrderId { get; set; }
     public Guid VariantId { get; set; }
+    /// <summary>Sipariş anında üründen kopyalanan tedarikçi (snapshot) — paket
+    /// bölme tedarikçiye göre yapılır; ürünün tedarikçisi sonradan değişse de
+    /// sipariş etkilenmez (F2, 2026-07-19).</summary>
+    public Guid? SupplierId { get; set; }
     public string Sku { get; set; } = string.Empty;
     public string ProductName { get; set; } = string.Empty;
     public string VariantInfo { get; set; } = string.Empty;

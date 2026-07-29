@@ -15,6 +15,7 @@ public static class DependencyInjection
                 o => o.MigrationsHistoryTable("__ef_migrations_core", "core")));
 
         services.AddScoped<ICoreDbContext>(sp => sp.GetRequiredService<CoreDbContext>());
+        services.AddScoped<ECSPros.Shared.Contracts.ICargoCodeService, Services.CargoCodeService>();
 
         return services;
     }

@@ -9,10 +9,17 @@ namespace ECSPros.Order.Application.Commands.ConvertQuoteToOrder;
 public class ConvertQuoteToOrderCommandHandler : IRequestHandler<ConvertQuoteToOrderCommand, Result<Guid>>
 {
     private readonly IOrderDbContext _context;
+    private readonly IOrderNumberService _orderNumbers;
+    private readonly ECSPros.Shared.Contracts.IProductService _products;
 
-    public ConvertQuoteToOrderCommandHandler(IOrderDbContext context)
+    public ConvertQuoteToOrderCommandHandler(
+        IOrderDbContext context,
+        IOrderNumberService orderNumbers,
+        ECSPros.Shared.Contracts.IProductService products)
     {
         _context = context;
+        _orderNumbers = orderNumbers;
+        _products = products;
     }
 
     public async Task<Result<Guid>> Handle(ConvertQuoteToOrderCommand request, CancellationToken cancellationToken)
@@ -30,8 +37,7 @@ public class ConvertQuoteToOrderCommandHandler : IRequestHandler<ConvertQuoteToO
         if (quote.ConvertedOrderId.HasValue)
             return Result.Failure<Guid>("Bu teklif zaten siparişe dönüştürülmüş.");
 
-        var suffix = Guid.NewGuid().ToString("N")[..6].ToUpper();
-        var orderNumber = $"ORD-{DateTime.UtcNow:yyyyMMdd}-{suffix}";
+        var orderNumber = await _orderNumbers.GenerateAsync(quote.FirmPlatformId, cancellationToken);
 
         var order = new Domain.Entities.Order
         {
@@ -60,9 +66,11 @@ public class ConvertQuoteToOrderCommandHandler : IRequestHandler<ConvertQuoteToO
 
         foreach (var qi in quote.Items)
         {
+            var bilgi = await _products.GetVariantAsync(qi.VariantId, cancellationToken);
             order.Items.Add(new OrderItem
             {
                 VariantId = qi.VariantId,
+                SupplierId = bilgi?.SupplierId,
                 Sku = qi.Sku,
                 ProductName = qi.ProductName,
                 VariantInfo = qi.VariantInfo,
