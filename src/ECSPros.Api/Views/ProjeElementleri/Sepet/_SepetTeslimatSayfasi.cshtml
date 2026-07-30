@@ -69,12 +69,20 @@
                 </section>
             </section>
 
+            @* 2026-07-30 (kullanıcı kararı): başlık 'Sepet Özeti' — panel gerçek sepet
+               tutarlarını da gösterir (yalnız adres/kargo satırları tutarsız kalıyordu;
+               mobil bardaki 1.257,95 TL tasarım demosundan kalma SAHTE değerdi). *@
             <aside class="ms-siparis-ozeti" aria-labelledby="ms-teslimat-ozet-baslik">
-                <h3 id="ms-teslimat-ozet-baslik" class="ms-siparis-basligi">Teslimat Özeti</h3>
+                <h3 id="ms-teslimat-ozet-baslik" class="ms-siparis-basligi">Sepet Özeti</h3>
                 <div class="ms-siparis-satirlari">
+                    <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Ürün Toplamı</span><span class="ms-siparis-deger" data-ms-teslimat-ozet-toplam>—</span></div>
                     <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Adres</span><span class="ms-siparis-deger" data-ms-teslimat-ozet-adres>Seçilmedi</span></div>
                     <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Kargo</span><span class="ms-siparis-deger ms-siparis-ucretsiz" data-ms-teslimat-ozet-kargo>Ücretsiz</span></div>
                     <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Tahmini Teslimat</span><span class="ms-siparis-deger">2-4 iş günü</span></div>
+                </div>
+                <div class="ms-siparis-toplam">
+                    <span class="ms-siparis-toplam-etiket">Ödenecek Tutar</span>
+                    <span class="ms-siparis-toplam-deger ms-urun-fiyat" data-ms-teslimat-odenecek>—</span>
                 </div>
                 <button class="ms-buton ms-buton-l ms-buton-satin-al ms-buton-tam" type="button" data-ms-siparis-asama-git="odeme">Ödemeye Geç</button>
             </aside>
@@ -82,7 +90,7 @@
         <div class="ms-sepet-mobil-sabit-aksiyon" aria-label="Mobil teslimat aksiyonları">
             <div class="ms-sepet-mobil-sabit-tutar">
                 <span>Ödenecek Tutar</span>
-                <strong class="ms-urun-fiyat">1.257,95 TL</strong>
+                <strong class="ms-urun-fiyat" data-ms-teslimat-odenecek>—</strong>
             </div>
             <button class="ms-buton ms-buton-l ms-buton-satin-al ms-buton-tam" type="button" data-ms-siparis-asama-git="odeme">Ödemeye Geç</button>
         </div>
@@ -546,5 +554,42 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     yenile();
+});
+</script>
+
+@* 2026-07-30: Sepet Özeti tutarları — gerçek sepetten (ödeme sayfasıyla aynı çözümleme:
+   hızlı modda yalnız hızlı sepet kimlikleri + token'sız; normalde sid/cart/üye token).
+   Kupon indirimi normal akışta sepette uygulanmışsa ödenecek tutara yansıtılır. *@
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+    const platformId = document.querySelector("[data-ms-arama]")?.dataset.msAramaPlatform || "";
+    const alanlar = [...document.querySelectorAll("[data-ms-teslimat-odenecek]")];
+    const toplamAlani = document.querySelector("[data-ms-teslimat-ozet-toplam]");
+    if (!platformId || (!alanlar.length && !toplamAlani)) { return; }
+
+    const hizliMod = new URLSearchParams(window.location.search).get("hizli") === "1";
+    const sid = hizliMod ? sessionStorage.getItem("ecspros_hizli_sid") : localStorage.getItem("ecspros_sid");
+    const cartId = hizliMod ? sessionStorage.getItem("ecspros_hizli_cart") : localStorage.getItem("ecspros_cart");
+    const uyeToken = hizliMod ? null : localStorage.getItem("ecspros_member_token");
+
+    const p = new URLSearchParams({ firmPlatformId: platformId });
+    if (cartId) { p.set("cartId", cartId); }
+    if (sid) { p.set("sessionId", sid); }
+    let sepet = null;
+    try {
+        const cevap = await fetch("/api/store/cart?" + p.toString(),
+            uyeToken ? { headers: { Authorization: "Bearer " + uyeToken } } : undefined);
+        sepet = (await cevap.json().catch(() => null))?.data || null;
+    } catch { /* tutar alanları — kalır */ }
+
+    const toplam = (sepet?.items || []).reduce((t, k) => t + (k.lineTotal || 0), 0);
+    let indirim = 0;
+    if (!hizliMod) {
+        try { indirim = JSON.parse(sessionStorage.getItem("msSepetKuponDurumu") || "null")?.tutar || 0; } catch { }
+    }
+    const paraYaz = (d) => new Intl.NumberFormat("tr-TR",
+        { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(d || 0) + " TL";
+    if (toplamAlani) { toplamAlani.textContent = paraYaz(toplam); }
+    alanlar.forEach((alan) => { alan.textContent = paraYaz(Math.max(0, toplam - indirim)); });
 });
 </script>
