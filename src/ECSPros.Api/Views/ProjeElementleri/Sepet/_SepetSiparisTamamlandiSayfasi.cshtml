@@ -117,8 +117,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch { /* no'suz devam */ }
     }
 
-    // 2026-07-30: PayTR başarılı kart ödemesi dönüşü — merchant_ok_url'de ?odeme=basarili
-    var kartOdemesiAlindi = new URLSearchParams(window.location.search).get("odeme") === "basarili";
+    // 2026-07-30: PayTR başarılı kart ödemesi dönüşü. merchant_ok_url'in query'si (?odeme=basarili)
+    // PayTR yönlendirmesinde DÜŞÜYOR — güvenilir sinyal ödeme sayfasının koyduğu sessionStorage
+    // bayrağıdır. Bu sayfaya YALNIZ başarıda (merchant_ok_url) gelinir; başarısızlık
+    // /odeme-sonuc/basarisiz'a gider (orada bayrak temizlenir). Bayrağı bir kez okuyup sil.
+    var kartBekliyor = null;
+    try { kartBekliyor = sessionStorage.getItem("msKartOdemeBekliyor"); } catch { }
+    var kartOdemesiAlindi = !!kartBekliyor
+        || new URLSearchParams(window.location.search).get("odeme") === "basarili";
+    try { sessionStorage.removeItem("msKartOdemeBekliyor"); } catch { }
     if (kartOdemesiAlindi) {
         const bilgi = document.querySelector("[data-ms-onay-odeme-alindi]");
         if (bilgi) { bilgi.style.display = "inline-flex"; }
