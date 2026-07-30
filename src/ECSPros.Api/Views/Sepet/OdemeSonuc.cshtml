@@ -35,3 +35,10 @@
     }
     <p class="mt-6 text-xs text-slate-400">Test modu — gerçek tahsilat yapılmaz.</p>
 </div>
+
+@if (!Model)
+{
+    @* Başarısız ödeme: kart-ödeme-bekliyor bayrağı temizlenir — kullanıcı sonradan
+       sipariş özetine giderse yanlışlıkla "ödeme alındı" görmesin (2026-07-30). *@
+    <script>try { sessionStorage.removeItem("msKartOdemeBekliyor"); } catch { }</script>
+}

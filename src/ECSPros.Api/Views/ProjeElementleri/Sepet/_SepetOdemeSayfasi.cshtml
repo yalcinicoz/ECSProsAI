@@ -991,6 +991,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     initVeri = await initCevap.json().catch(() => null);
                 } catch { /* ağ hatası — aşağıda ele alınır */ }
                 if (initVeri?.success && initVeri.html) {
+                    // Kart ödeme niyeti bayrağı (2026-07-30): PayTR başarı dönüşünde merchant_ok_url'in
+                    // query'si (?odeme=basarili) düşüyor — güvenilir sinyal bu sessionStorage bayrağı.
+                    // Başarıda PayTR /siparis-tamamlandi'ya (merchant_ok_url), başarısızda
+                    // /odeme-sonuc/basarisiz'a döner; özet sayfası bayrağı görürse "ödeme alındı"dır.
+                    try { sessionStorage.setItem("msKartOdemeBekliyor", veri.data.orderId); } catch { }
                     // PayTR 3D içeriğini tam sayfaya bas → banka 3D sayfasına yönlenir
                     document.open(); document.write(initVeri.html); document.close();
                     return;
