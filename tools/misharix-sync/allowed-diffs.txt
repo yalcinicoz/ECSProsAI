@@ -366,3 +366,7 @@ Views/Shared/MsHata.cshtml
 # 2026-07-30: hızlı satın alma (Şimdi Al) — ödeme adımına geçerken ?hizli=1 bağlamı
 # taşınır (tasarımın sabit /odeme yönlendirmesine tek koşul eklendi).
 Views/Sepet/Teslimat.cshtml
+
+# 2026-07-30: PayTR 3D ödeme dönüş sayfası (İZİNLİ YENİ — tasarımda karşılığı yok;
+# ms-buton + tipografi sınıflarıyla site kabuğunda basit gövde).
+Views/Sepet/OdemeSonuc.cshtml

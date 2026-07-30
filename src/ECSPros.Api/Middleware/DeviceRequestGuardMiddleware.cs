@@ -36,6 +36,9 @@ public class DeviceRequestGuardMiddleware(
         var yol = context.Request.Path.Value ?? string.Empty;
         var storeYuzeyi = yol.StartsWith("/api/store/", StringComparison.OrdinalIgnoreCase);
         var deviceUcu = yol.StartsWith("/api/store/device/", StringComparison.OrdinalIgnoreCase);
+        // PayTR callback'i sunucu-sunucudur, token TAŞIMAZ — vitrin kapısından muaf.
+        // Güvencesi token değil HASH doğrulamasıdır (PaymentController.Callback, 2026-07-30).
+        var odemeCallback = yol.StartsWith("/api/store/payment/paytr/callback", StringComparison.OrdinalIgnoreCase);
 
         var tip = context.User.FindFirstValue("type");
 
@@ -51,7 +54,7 @@ public class DeviceRequestGuardMiddleware(
         }
 
         // 2) Vitrin kapısı (bilinçli varsayılan: kapalı — web cutover'ı bekliyor)
-        if (storeYuzeyi && !deviceUcu
+        if (storeYuzeyi && !deviceUcu && !odemeCallback
             && config.GetValue("MobileGate:EnforceStoreTokens", false)
             && tip is not ("device" or "member") && context.User.Identity?.IsAuthenticated != true)
         {

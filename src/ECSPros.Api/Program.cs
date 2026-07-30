@@ -176,6 +176,11 @@ builder.Services.AddScoped<ECSPros.Shared.Infrastructure.Messaging.ISmsSettingsP
 // H3: Görsel arama ayarları DB'deki visual_search entegrasyonundan (yoksa VisualSearch:* config)
 builder.Services.AddScoped<ECSPros.Api.Services.IVisualSearchSettingsProvider,
     ECSPros.Api.Services.DbVisualSearchSettingsProvider>();
+// PayTR ödeme ayarları DB'deki payment entegrasyonundan (2026-07-30, yalnız test modu)
+builder.Services.AddScoped<ECSPros.Api.Services.Store.IPaymentSettingsProvider,
+    ECSPros.Api.Services.Store.DbPaymentSettingsProvider>();
+builder.Services.AddScoped<ECSPros.Api.Services.Store.PayTrDirectService>();
+builder.Services.AddHttpClient("paytr"); // PayTR /odeme çağrıları için ayrı named client
 
 // ─── Infrastructure Modules ────────────────────────────────────────
 builder.Services.AddIamInfrastructure(npgsqlDataSource, builder.Configuration);

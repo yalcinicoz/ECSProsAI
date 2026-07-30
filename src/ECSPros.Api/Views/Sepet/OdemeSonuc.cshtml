@@ -1,0 +1,37 @@
+@model bool
+@{
+    // PayTR 3D dönüş sayfası (2026-07-30) — İZİNLİ YENİ. Sonucun kesin doğrusu callback'te
+    // belirlenir (sipariş PaymentStatus'u orada güncellenir); bu sayfa yalnız bilgilendirir.
+    var basarili = Model;
+    ViewData["Title"] = basarili ? "Ödeme Alındı" : "Ödeme Tamamlanamadı";
+    ViewData["Robots"] = "noindex, nofollow";
+}
+
+<div class="mx-auto max-w-xl px-4 py-16 text-center sm:py-24">
+    @if (basarili)
+    {
+        <i class="fa-solid fa-circle-check ms-fa-ikon" style="font-size:56px;color:#16a34a" aria-hidden="true"></i>
+        <h1 class="mt-4 text-xl font-semibold text-ms-siyah sm:text-2xl">Ödemeniz alındı</h1>
+        <p class="mt-3 text-sm leading-relaxed text-slate-500 sm:text-base">
+            Siparişiniz onaylandı. Sipariş özetinize ve numaranıza sipariş sayfanızdan ulaşabilirsiniz.
+        </p>
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <a class="ms-buton" href="/siparis-tamamlandi">Sipariş Özetim</a>
+            <a class="ms-buton ms-buton-sade" href="/">Alışverişe Devam Et</a>
+        </div>
+    }
+    else
+    {
+        <i class="fa-solid fa-circle-xmark ms-fa-ikon" style="font-size:56px;color:#dc2626" aria-hidden="true"></i>
+        <h1 class="mt-4 text-xl font-semibold text-ms-siyah sm:text-2xl">Ödeme tamamlanamadı</h1>
+        <p class="mt-3 text-sm leading-relaxed text-slate-500 sm:text-base">
+            Kart ödemeniz onaylanmadı. Siparişiniz iptal olmadı; ödeme adımına dönüp
+            yeniden deneyebilir ya da farklı bir kart/ödeme yöntemi seçebilirsiniz.
+        </p>
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <a class="ms-buton" href="/odeme">Ödemeye Dön</a>
+            <a class="ms-buton ms-buton-sade" href="/sepet">Sepetim</a>
+        </div>
+    }
+    <p class="mt-6 text-xs text-slate-400">Test modu — gerçek tahsilat yapılmaz.</p>
+</div>
