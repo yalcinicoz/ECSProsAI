@@ -2,7 +2,7 @@
 
 > **Kural:** Her session bu dosyadan başla, bu dosyayla bitir.
 > Bir faz tamamlanmadan bir sonrakine geçme.
-> Son güncelleme: 2026-07-29
+> Son güncelleme: 2026-07-30
 
 ---
 
@@ -15,7 +15,7 @@
 
 | # | Alan | Kod tabanı | Durum | SIRADAKİ İŞ | Plan dokümanı |
 |---|------|-----------|-------|-------------|---------------|
-| 1 | 🌐 **Web sitesi** (Razor storefront) | `src/ECSPros.Api` Views + `/opt/misharix` tasarım | **FAZ H+İ TAMAM**; **2026-07-29: misharitalia.com menüsü birebir taşındı ve CANLIDA** (kullanıcı doğruladı; MigrationTool Faz 25: 200 kanal kategorisi + nav_menus 'header' 288 düğüm; SSR nav artık header menüsünden) | Menü yerleşimi panel ekranı (nav_nodes editörü — ÖNCE kurgu, K16) | `docs/misharix-razor-tasima-plani.md` |
+| 1 | 🌐 **Web sitesi** (Razor storefront) | `src/ECSPros.Api` Views + `/opt/misharix` tasarım | **FAZ H+İ TAMAM**; menü taşıma CANLIDA (2026-07-29); **2026-07-30 performans turu:** brotli SmallestSize→Fastest (~1.2sn TTFB düzeldi, CANLIDA) + statik cache başlıkları + HTTP/2 + **PageSpeed D+B+A uygulandı ⚠️ restart bekliyor** (hero preload; panel görsel yükleme uyarıları; Magick.NET upload varyantları + srcset — mevcut 62 görsele 93 varyant üretildi, `tools/vitrin-varyant`) | Restart sonrası PageSpeed yeniden ölç (hedef mobil 85+); menü yerleşimi panel ekranı zaten CANLIDA (2026-07-29) | `docs/misharix-razor-tasima-plani.md` |
 | 2 | 🛠 **Admin panel** (React) | `admin/` | Faz 9 tamam; Pazaryerleri veri yönetimi **F1-F5 CANLIDA** (2026-07-29 restart ile) — **PLAN TAMAMLANDI**; 2026-07-29: 8 kargo servisine SettingsSchema şablonu + Kargo Bölgeleri firma uyarısı CANLIDA (kullanıcı doğruladı) | Gerçek Trendyol anahtarlarıyla uçtan uca canlı deneme → F6+ diğer pazaryerleri (talep gelince) + zamanlanmış senkron kadansları | `docs/pazaryeri-entegrasyon-veri-yonetimi.md` |
 | 3 | 🔌 **Dış API** (Partner entegrasyon) | `/api/partner/v1` + `Controllers/Partner/` | F0→F2b tamam: ürün ingestion uçtan uca canlıda | F2b-2d sipariş/dropship (⚠️ `order.write` tip kararı BLOKE) → F4 ApiClient yönetim paneli → F5 rate limit/HSTS | `docs/api-hesaplari-tasarimi.md` |
 | 4 | 🏪 **Satıcı paneli** | `satici/` + `/api/supplier/*` | S0-S2 canlıda; S3a-1 (Ürünlerim liste+detay) uygulandı ⚠️ restart bekliyor | S3a-2 kart açma formu (ÖNCE kurgu konuş, K16) → S3b Stok&Fiyat → S3c-S3f | `docs/satici-paneli-tasarimi.md` |
