@@ -2,6 +2,24 @@
    C8'de fark edilen çift include kaldırıldı (modallar DOM'da iki kez render oluyordu). *@
 @await Html.PartialAsync("~/Views/ProjeElementleri/Sepet/_SepetModallari.cshtml")
 
+<script>
+    // Hızlı satın alma (?hizli=1, 2026-07-30): ana sepette uygulanmış kupon durumu bu
+    // siparişe TAŞINMAZ — indirim tutarı ana sepet toplamına göre hesaplanmıştı, tek
+    // ürünlük hızlı sepete yanlış tutar uygular. Tasarım script'i storage'ı okumadan
+    // ÖNCE durum ASKIYA alınır (silinmez — /sepet'e dönüşte geri yüklenir); hızlı
+    // akışın kendi kupon girişi ayrıca vardır.
+    if (new URLSearchParams(window.location.search).get("hizli") === "1") {
+        try {
+            const mevcutKupon = sessionStorage.getItem("msSepetKuponDurumu");
+            if (mevcutKupon !== null) {
+                sessionStorage.setItem("msSepetKuponDurumuAskida", mevcutKupon);
+                sessionStorage.removeItem("msSepetKuponDurumu");
+            }
+        } catch { }
+        delete window.msSepetKuponDurumu;
+    }
+</script>
+
     <section class="ms-siparis-asama-paneli" data-ms-siparis-asama-panel="odeme" hidden>
         <div class="ms-siparis-asama-sayfasi">
             <section class="ms-siparis-asama-ana" aria-labelledby="ms-odeme-baslik">
@@ -19,6 +37,14 @@
                 <section class="ms-odeme-yontemleri" aria-labelledby="ms-odeme-yontemi-baslik" data-ms-odeme-yontemleri>
                     <h4 id="ms-odeme-yontemi-baslik" class="ms-siparis-alt-baslik">Ödeme Yöntemi</h4>
 
+                    @* Hızlı satın almada (?hizli=1) kupon girişi burada — normal akışta kupon
+                       /sepet adımında girilir, bu satır gizli kalır (2026-07-30). Markup
+                       tasarımın sepetteki ms-siparis-kupon-satiri kalıbıdır. *@
+                    <div class="ms-siparis-kupon-satiri" data-ms-hizli-kupon-alani hidden>
+                        <input name="kupon_kodu" type="text" placeholder="Kupon kodunuzu girin" data-ms-hizli-kupon-kodu>
+                        <button class="ms-buton ms-buton-s ms-buton-satin-al" type="button" data-ms-hizli-kupon-uygula>Uygula</button>
+                    </div>
+                    <p class="ms-odeme-kupon-uyari" data-ms-hizli-kupon-mesaj hidden></p>
                     <div class="ms-odeme-kupon-durumu" data-ms-odeme-kupon-durumu hidden>
                         <span class="ms-odeme-kupon-ikon" aria-hidden="true"><i class="fa-solid fa-ticket ms-fa-ikon"></i></span>
                         <div class="ms-odeme-kupon-metin">
@@ -702,13 +728,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const trAd = (i18n) => (i18n && (i18n.tr || Object.values(i18n)[0])) || "";
     const token = () => localStorage.getItem("ecspros_member_token");
 
+    // Hızlı satın alma bağlamı (A seçeneği, 2026-07-30): sepet ana sid yerine
+    // sessionStorage'daki tek ürünlük hızlı sepetten okunur; kupon bu sayfada girilir.
+    const hizliMod = new URLSearchParams(window.location.search).get("hizli") === "1";
+
     let sepet = null;
     let teslimat = null;
     try { teslimat = JSON.parse(sessionStorage.getItem("msTeslimatDurumu") || "null"); } catch { }
     let kupon = null;
-    try { kupon = JSON.parse(sessionStorage.getItem("msSepetKuponDurumu") || "null"); } catch { }
+    if (!hizliMod) {
+        try { kupon = JSON.parse(sessionStorage.getItem("msSepetKuponDurumu") || "null"); } catch { }
+    }
 
-    if (!teslimat) { window.location.href = "/teslimat"; return; }
+    if (!teslimat) { window.location.href = hizliMod ? "/teslimat?hizli=1" : "/teslimat"; return; }
 
     const toplamlar = () => {
         const toplam = (sepet?.items || []).reduce((t, k) => t + (k.lineTotal || 0), 0);
@@ -763,10 +795,13 @@ document.addEventListener("DOMContentLoaded", () => {
     yontemBilgisiniGuncelle();
 
     const sepetiYukle = async () => {
-        const sid = localStorage.getItem("ecspros_sid");
-        const cartId = localStorage.getItem("ecspros_cart");
+        // Hızlı modda YALNIZ hızlı sepet kimlikleri kullanılır; üye token'ı BİLEREK
+        // gönderilmez (token gitse sunucu üye ana sepetini çözer, yanlış kalemler
+        // siparişe girerdi). Normal modda davranış aynen eski.
+        const sid = hizliMod ? sessionStorage.getItem("ecspros_hizli_sid") : localStorage.getItem("ecspros_sid");
+        const cartId = hizliMod ? sessionStorage.getItem("ecspros_hizli_cart") : localStorage.getItem("ecspros_cart");
         // 2026-07-22: üyeyken token da gönderilir — cartId/sid yokken de üye sepeti bulunur
-        const uyeToken = localStorage.getItem("ecspros_member_token");
+        const uyeToken = hizliMod ? null : localStorage.getItem("ecspros_member_token");
         const parametreler = new URLSearchParams({ firmPlatformId: platformId });
         if (cartId) { parametreler.set("cartId", cartId); }
         if (sid) { parametreler.set("sessionId", sid); }
@@ -776,7 +811,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const veri = await cevap.json().catch(() => null);
             sepet = veri?.success ? veri.data : null;
         } catch { sepet = null; }
-        if (!sepet?.items?.length) { window.location.href = "/sepet"; return; }
+        // Hızlı sepet yok/boşsa (ör. süresi doldu) ana sayfaya; ana akışta sepete dönülür
+        if (!sepet?.items?.length) { window.location.href = hizliMod ? "/" : "/sepet"; return; }
         toplamlar();
     };
 
@@ -895,8 +931,15 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch { /* depolama kapalı — onay sayfası sipariş no'suz açılır */ }
 
             try { await fetch("/api/store/cart/" + sepet.id, { method: "DELETE" }); } catch { }
-            localStorage.removeItem("ecspros_cart");
-            window.msMiniSepetYenile?.();
+            if (hizliMod) {
+                // Hızlı akış: yalnız geçici hızlı sepet düşer — ana sepet ve mini sepet
+                // rozeti aynen kalır (A seçeneğinin özü: biriktirilen sepet bozulmaz)
+                sessionStorage.removeItem("ecspros_hizli_sid");
+                sessionStorage.removeItem("ecspros_hizli_cart");
+            } else {
+                localStorage.removeItem("ecspros_cart");
+                window.msMiniSepetYenile?.();
+            }
             window.location.href = "/siparis-tamamlandi";
         } catch {
             hataGoster(["Sipariş oluşturulamadı. Lütfen tekrar deneyin."]);
@@ -913,6 +956,59 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     sepetiYukle();
+
+    // ── Hızlı satın alma kupon girişi (2026-07-30): normal akışta kupon /sepet'te
+    // girilir; hızlı akış o adımı atladığından giriş burada. Doğrulama sepetle aynı
+    // endpoint'ten (checkout/coupon/validate); sonuç ortak `kupon` durumuna yazılır —
+    // kapıda-ödeme kuralı ve sipariş gövdesi (couponId/couponDiscount) aynen işler.
+    if (hizliMod) {
+        const kuponAlani = document.querySelector("[data-ms-hizli-kupon-alani]");
+        const kuponGirdisi = document.querySelector("[data-ms-hizli-kupon-kodu]");
+        const kuponMesaji = document.querySelector("[data-ms-hizli-kupon-mesaj]");
+        if (kuponAlani) { kuponAlani.hidden = false; }
+        const kuponBildir = (metin) => {
+            if (!kuponMesaji) { return; }
+            kuponMesaji.textContent = metin;
+            kuponMesaji.hidden = !metin;
+        };
+        const hizliKuponUygula = async () => {
+            const kod = (kuponGirdisi?.value || "").trim().toLocaleUpperCase("tr-TR");
+            if (!kod || !sepet) { return; }
+            try {
+                const { toplam } = toplamlar();
+                const cevap = await fetch("/api/store/checkout/coupon/validate", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        ...(token() ? { Authorization: "Bearer " + token() } : {})
+                    },
+                    body: JSON.stringify({ code: kod, cartTotal: toplam })
+                });
+                const veri = await cevap.json().catch(() => null);
+                if (!veri?.success) { kuponBildir(veri?.error || "Kupon kodu kullanılamıyor."); return; }
+                kupon = {
+                    couponId: veri.data.couponId,
+                    kod,
+                    odemeTipi: "tum",
+                    tutar: veri.data.discountAmount || 0,
+                    aciklama: veri.data.discountDescription || ""
+                };
+                // Tasarımın kupon kartı görünümü mevcut event sözleşmesiyle güncellenir
+                window.dispatchEvent(new CustomEvent("ms:sepet-kupon-degisti", {
+                    detail: { ...kupon, indirim: "-" + paraYaz(kupon.tutar) }
+                }));
+                kuponBildir("");
+                if (kuponGirdisi) { kuponGirdisi.value = ""; }
+                toplamlar();
+                yontemBilgisiniGuncelle();
+            } catch { kuponBildir("Kupon doğrulanamadı. Lütfen tekrar deneyin."); }
+        };
+        document.querySelector("[data-ms-hizli-kupon-uygula]")?.addEventListener("click", hizliKuponUygula);
+        kuponGirdisi?.addEventListener("keydown", (olay) => {
+            if (olay.key === "Enter") { olay.preventDefault(); hizliKuponUygula(); }
+        });
+    }
+
     // 2026-07-22: ödeme sayfasındayken giriş yapılırsa toplamlar reload'suz tazelenir
     document.addEventListener("ms:uye-giris", () => { sepetiYukle(); });
 });
