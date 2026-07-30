@@ -158,7 +158,10 @@ function KeyValueEditor({
 
 /** Şemadaki helpI18n metni — info ikonuna tıklanınca açılan açıklama balonu.
  * Balon, ikon ekranın sağ yarısındaysa sola, solundaysa sağa doğru açılır
- * (sabit right-0 sol kenardan taşıyordu — docs/otp-bilgilendirme-format-sorunu.png). */
+ * (sabit right-0 sol kenardan taşıyordu — docs/otp-bilgilendirme-format-sorunu.png).
+ * DİKKAT: Bu bileşen bir <label> İÇİNE konmamalı — button etiketlenebilir eleman
+ * olduğundan label, backdrop dahil her tıklamayı butona iletir ve balon yeniden
+ * açılır (kapanmaz, ekran kilitlenir). Backdrop'taki preventDefault ek sigortadır. */
 function FieldHelp({ text }: { text: string }) {
   const [open, setOpen] = useState(false)
   const [solaAcilir, setSolaAcilir] = useState(false)
@@ -175,7 +178,7 @@ function FieldHelp({ text }: { text: string }) {
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-40" onClick={e => { e.preventDefault(); setOpen(false) }} />
           <div role="tooltip"
             className={`absolute ${solaAcilir ? 'right-0' : 'left-0'} top-full mt-1.5 z-50 w-64 rounded-lg p-3 text-xs font-normal normal-case leading-relaxed shadow-lg whitespace-normal text-left`}
             style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-m)' }}>
@@ -195,22 +198,24 @@ function schemaFieldInput(
   const help = getFieldHelp(f)
   if (f.type === 'boolean') {
     return (
-      <label className="flex items-center gap-2 cursor-pointer py-2">
-        <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
-          checked={value === 'true'}
-          onChange={e => onChange(e.target.checked ? 'true' : 'false')} />
-        <span className="text-sm" style={{ color: 'var(--text)' }}>{getFieldLabel(f)}</span>
+      <div className="flex items-center gap-2 py-2">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
+            checked={value === 'true'}
+            onChange={e => onChange(e.target.checked ? 'true' : 'false')} />
+          <span className="text-sm" style={{ color: 'var(--text)' }}>{getFieldLabel(f)}</span>
+        </label>
         {help && <FieldHelp text={help} />}
-      </label>
+      </div>
     )
   }
   const inputType = f.type === 'password' ? 'password' : f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'
   return (
     <div>
-      <label className="flbl">
+      <div className="flbl">
         {getFieldLabel(f)} {f.required && <span style={{ color: '#ef4444' }}>*</span>}
         {help && <FieldHelp text={help} />}
-      </label>
+      </div>
       <input className="inp" type={inputType} value={value} onChange={e => onChange(e.target.value)} />
     </div>
   )
