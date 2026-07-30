@@ -49,7 +49,11 @@ public class SepetController(IConfiguration configuration) : StorePageController
     /// <summary>C10+H2: sipariş tamamlandı — içerik sessionStorage msSiparisSonucu'ndan;
     /// Kargo Bilgisi bölümü H2'de açıldı (firma adı platformun aktif kargo anlaşmasından
     /// SSR — gönderi henüz yokken durum "Hazırlanıyor"; anlaşma yoksa firma satırı gizli).</summary>
+    // PayTR başarı dönüşü bu sayfaya POST ile gelir (merchant_ok_url) — GET+POST kabul,
+    // antiforgery muaf (2026-07-30). Normal akış GET; içerik sessionStorage'dan render edilir.
     [HttpGet("/siparis-tamamlandi")]
+    [HttpPost("/siparis-tamamlandi")]
+    [IgnoreAntiforgeryToken]
     public async Task<IActionResult> SiparisTamamlandi(
         [FromServices] IMediator mediator, [FromServices] IStoreContext storeContext, CancellationToken ct)
     {

@@ -6,6 +6,15 @@
                     <div>
                         <h3 id="ms-onay-baslik" class="ms-sepet-bolum-basligi">Siparişiniz Alınmıştır!</h3>
                         <p class="ms-sepet-bolum-aciklama">Sipariş bilgilerinizi Hesabım › Siparişlerim sayfasından takip edebilirsiniz.</p>
+                        @* 2026-07-30: PayTR başarılı ödeme dönüşünde (?odeme=basarili) görünür bilgi.
+                           Yeni ECSPros öğesi (tasarım kaynağında yok) — sade satır-içi stil.
+                           display:none ile başlar, JS 'inline-flex' yapar (hidden özniteliği inline
+                           display ile çakışırdı). *@
+                        <p data-ms-onay-odeme-alindi
+                           style="display:none;align-items:center;gap:6px;margin-top:8px;padding:6px 12px;border-radius:9999px;background:#dcfce7;color:#15803d;font-size:13px;font-weight:600">
+                            <i class="fa-solid fa-circle-check ms-fa-ikon" aria-hidden="true"></i>
+                            Ödemeniz başarıyla alındı.
+                        </p>
                         <span class="ms-siparis-tamamlandi-uyari" data-ms-onay-mesaj></span>
                     </div>
                 </div>
@@ -108,17 +117,35 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch { /* no'suz devam */ }
     }
 
-    yaz("[data-ms-onay-mesaj]", `Sayın ${sonuc.aliciAd}, ${sonuc.odemeTipi} ile yapmış olduğunuz${siparisNo ? " " + siparisNo + " nolu" : ""} siparişiniz oluşturulmuştur.`);
+    // 2026-07-30: PayTR başarılı kart ödemesi dönüşü — merchant_ok_url'de ?odeme=basarili
+    var kartOdemesiAlindi = new URLSearchParams(window.location.search).get("odeme") === "basarili";
+    if (kartOdemesiAlindi) {
+        const bilgi = document.querySelector("[data-ms-onay-odeme-alindi]");
+        if (bilgi) { bilgi.style.display = "inline-flex"; }
+        // Kart akışında sepet 3D öncesi silinmiyordu (başarısızlıkta korunsun diye) —
+        // ödeme başarılıysa burada temizlenir; mini sepet rozeti sıfırlanır.
+        try {
+            const cartId = localStorage.getItem("ecspros_cart");
+            if (cartId) { await fetch("/api/store/cart/" + cartId, { method: "DELETE" }); }
+        } catch { /* temizlik başarısızsa sipariş yine de tamam */ }
+        localStorage.removeItem("ecspros_cart");
+        sessionStorage.removeItem("ecspros_hizli_sid");
+        sessionStorage.removeItem("ecspros_hizli_cart");
+        window.msMiniSepetYenile?.();
+    }
+
+    yaz("[data-ms-onay-mesaj]", `Sayın ${sonuc.aliciAd}, ${sonuc.odemeTipi} ile yapmış olduğunuz${siparisNo ? " " + siparisNo + " nolu" : ""} siparişiniz${kartOdemesiAlindi ? " oluşturulmuş ve ödemesi alınmıştır." : " oluşturulmuştur."}`);
     // GUID asla gösterilmez — numara çözülemezse alan "—" kalır (insan okunur sözleşmesi)
     yaz("[data-ms-onay-no]", siparisNo || "—");
     yaz("[data-ms-onay-odeme-tipi]", sonuc.odemeTipi);
     yaz("[data-ms-onay-tutar]", paraYaz(sonuc.tutar));
-    // K2 test modu: tahsilat mock — kapıda ödeme mantığıyla "ödenen 0, ödeyeceğiniz = nihai"
-    yaz("[data-ms-onay-odenen]", paraYaz(0));
-    yaz("[data-ms-onay-kalan]", paraYaz(sonuc.odenecek));
+    // Kart ödemesi başarılıysa tutar TAHSİL EDİLDİ: ödenen = nihai, kalan = 0.
+    // Aksi halde (kapıda vb. — K2 mock) "ödenen 0, ödeyeceğiniz = nihai".
+    yaz("[data-ms-onay-odenen]", paraYaz(kartOdemesiAlindi ? sonuc.odenecek : 0));
+    yaz("[data-ms-onay-kalan]", paraYaz(kartOdemesiAlindi ? 0 : sonuc.odenecek));
     yaz("[data-ms-onay-urun-toplami]", paraYaz(sonuc.tutar));
     yaz("[data-ms-onay-nihai]", paraYaz(sonuc.odenecek));
-    yaz("[data-ms-onay-odenen2]", paraYaz(0));
+    yaz("[data-ms-onay-odenen2]", paraYaz(kartOdemesiAlindi ? sonuc.odenecek : 0));
     yaz("[data-ms-onay-kalan2]", paraYaz(sonuc.odenecek));
 
     const kuponSatiri = document.querySelector("[data-ms-onay-kupon-satiri]");

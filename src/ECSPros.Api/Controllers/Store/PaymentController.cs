@@ -85,7 +85,9 @@ public class PaymentController(
             ["expiry_month"] = (req.ExpiryMonth ?? "").PadLeft(2, '0'),
             ["expiry_year"] = req.ExpiryYear ?? "",
             ["cvv"] = req.Cvv ?? "",
-            ["merchant_ok_url"] = $"{kok}/odeme-sonuc/basarili",
+            // Başarıda doğrudan sipariş özetine (ara sayfa yok); ?odeme=basarili özet
+            // sayfasına "ödeme alındı" bilgisini bastırır (2026-07-30 kullanıcı kararı).
+            ["merchant_ok_url"] = $"{kok}/siparis-tamamlandi?odeme=basarili",
             ["merchant_fail_url"] = $"{kok}/odeme-sonuc/basarisiz",
             ["user_name"] = siparis.AliciAd,
             ["user_address"] = "-",
