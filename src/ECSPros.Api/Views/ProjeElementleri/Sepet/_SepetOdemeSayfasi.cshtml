@@ -965,10 +965,13 @@ document.addEventListener("DOMContentLoaded", () => {
             // 3D'yi tamamlayıp /odeme-sonuc/basarili'ya döner. Ödeme çözülene dek sepet SİLİNMEZ
             // (başarısızlıkta kullanıcı yeniden deneyebilsin). Kapıda ödeme PayTR'a GİTMEZ.
             if (seciliOdemeYontemi() === "kart") {
-                const kartNo = odemeAlani.querySelector('[data-ms-kart-alan="numara"]')?.value || "";
-                const kartSahibi = odemeAlani.querySelector('[data-ms-kart-alan="isim"]')?.value || "";
-                const sonKul = (odemeAlani.querySelector('[data-ms-kart-alan="son-kullanma"]')?.value || "").replace(/\s/g, "");
-                const kartCvv = odemeAlani.querySelector('[data-ms-kart-alan="cvv"]')?.value || "";
+                // NOT: kart alanları document'tan okunur — 'odemeAlani' başka script bloğunun
+                // kapsamındaydı, bu blokta tanımsız olduğundan ReferenceError atıp "Sipariş
+                // oluşturulamadı" hatası veriyordu (2026-07-30 düzeltmesi). Alanlar sayfada tekil.
+                const kartNo = document.querySelector('[data-ms-kart-alan="numara"]')?.value || "";
+                const kartSahibi = document.querySelector('[data-ms-kart-alan="isim"]')?.value || "";
+                const sonKul = (document.querySelector('[data-ms-kart-alan="son-kullanma"]')?.value || "").replace(/\s/g, "");
+                const kartCvv = document.querySelector('[data-ms-kart-alan="cvv"]')?.value || "";
                 const [ay, yil] = sonKul.split("/");
                 let initVeri = null;
                 try {
