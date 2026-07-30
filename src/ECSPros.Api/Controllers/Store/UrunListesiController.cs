@@ -72,7 +72,27 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         // ziyaretci 404 degil "henuz urun yuklenmedi" sayfasi gormeli.
         var kategori = KategoriBul(nav.TumKokler, slug);
         if (kategori is null)
-            return await UrunSlugDeneVeyaNotFound(slug, ct);
+        {
+            // Nav ağacında yok — menüye bağlı olmayan yayınlı kategori olabilir. Doğrudan
+            // slug'dan çöz (2026-07-30 düzeltmesi: yayınlı her kategori URL'iyle açılmalı;
+            // önceden yalnız menüdeki kategoriler açılıyordu, diğerleri 404 veriyordu).
+            var platformNav = await storeContext.GetPlatformAsync(ct);
+            if (platformNav is not null)
+            {
+                var slugKategori = await mediator.Send(
+                    new ECSPros.Storefront.Application.Queries.GetChannelCategoryBySlug
+                        .GetChannelCategoryBySlugQuery(platformNav.Id, slug), ct);
+                if (slugKategori.IsSuccess && slugKategori.Value is { } sk)
+                {
+                    var ad = sk.NameI18n.TryGetValue("tr", out var trAd) ? trAd
+                        : sk.NameI18n.Values.FirstOrDefault() ?? sk.Slug;
+                    kategori = new NavKategori(sk.Id, ad, sk.Slug,
+                        sk.DisplayImageUrl, sk.BadgeLabel, [], UrunVar: true);
+                }
+            }
+            if (kategori is null)
+                return await UrunSlugDeneVeyaNotFound(slug, ct);
+        }
 
         // B10: nav arama paneli "kategoride ara" kapsam butonunu bu bağlamla gösterir
         ViewData["MsAktifKategori"] = kategori;
