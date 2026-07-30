@@ -44,19 +44,49 @@ public class CatalogProductService(ICatalogDbContext db) : IProductService
 
         var productIds = varyantlar.Select(v => v.ProductId).Distinct().ToList();
 
-        // Görsel: önce varyantın (rengin) kendi görseli, yoksa ürünün ilk görseli
-        var varyantGorselleri = await db.ProductImages.AsNoTracking()
-            .Where(img => img.VariantId != null && ids.Contains(img.VariantId.Value)
+        // Görsel çözümü (2026-07-30): görseller renk başına TEMSİLCİ varyanta bağlanır; sepetteki
+        // beden varyantının kendi görseli olmayabilir. Önce varyantın KENDİ görseli → yoksa varyantın
+        // RENGİNE ait görsel (aynı ürün + aynı 'renk' değeri, görselli kardeş varyant) → yoksa ürünün
+        // ilk görseli. (Eskiden ikinci adım yoktu → Siyah varyant ürünün ilk (Krem) görseline düşüyordu.)
+        var tumVaryantGorselleri = await db.ProductImages.AsNoTracking()
+            .Where(img => img.VariantId != null && productIds.Contains(img.ProductId)
                        && img.Status == ProductImageStatus.Active)
-            .GroupBy(img => img.VariantId!.Value)
-            .Select(g => new { VariantId = g.Key, Fn = g.OrderBy(i => i.SortOrder).First().FileName })
-            .ToDictionaryAsync(x => x.VariantId, x => x.Fn, ct);
+            .Select(img => new { VariantId = img.VariantId!.Value, img.ProductId, img.FileName, img.SortOrder })
+            .ToListAsync(ct);
+
+        // İlgili ürünlerin tüm varyantlarının 'renk' değeri (hem sepet varyantı hem görselli temsilci için).
+        var renkByVariant = (await db.ProductVariantAttributes.AsNoTracking()
+            .Where(va => productIds.Contains(va.Variant.ProductId) && va.AttributeType.Code == "renk")
+            .Select(va => new { va.VariantId, va.AttributeValueId })
+            .ToListAsync(ct))
+            .GroupBy(x => x.VariantId)
+            .ToDictionary(g => g.Key, g => g.First().AttributeValueId);
+
+        // Varyantın kendi görseli (sortOrder'a göre kapak)
+        var varyantGorselleri = tumVaryantGorselleri
+            .GroupBy(g => g.VariantId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(x => x.SortOrder).First().FileName);
+
+        // (ProductId, renkDeğeri) → o rengin ilk görseli (görselli kardeş varyanttan)
+        var renkGorselleri = tumVaryantGorselleri
+            .Where(g => renkByVariant.ContainsKey(g.VariantId))
+            .GroupBy(g => (g.ProductId, RenkId: renkByVariant[g.VariantId]))
+            .ToDictionary(grp => grp.Key, grp => grp.OrderBy(x => x.SortOrder).First().FileName);
 
         var urunGorselleri = await db.ProductImages.AsNoTracking()
-            .Where(img => productIds.Contains(img.ProductId))
+            .Where(img => productIds.Contains(img.ProductId) && img.Status == ProductImageStatus.Active)
             .GroupBy(img => img.ProductId)
             .Select(g => new { g.Key, Fn = g.OrderBy(i => i.SortOrder).First().FileName })
             .ToDictionaryAsync(x => x.Key, x => x.Fn, ct);
+
+        string? GorselCoz(Guid variantId, Guid productId)
+        {
+            if (varyantGorselleri.TryGetValue(variantId, out var vg)) return cdnBase + vg;
+            if (renkByVariant.TryGetValue(variantId, out var renkId)
+                && renkGorselleri.TryGetValue((productId, renkId), out var rg)) return cdnBase + rg;
+            if (urunGorselleri.TryGetValue(productId, out var ug)) return cdnBase + ug;
+            return null;
+        }
 
         // Seçenek özeti: varyant eksen değerleri ("Beden: M, Renk: Beyaz") —
         // filtre_rengi iç facet tipidir, müşteri özetine girmez.
@@ -90,8 +120,7 @@ public class CatalogProductService(ICatalogDbContext db) : IProductService
                 v.Id,
                 v.ProductCode,
                 v.NameI18n,
-                varyantGorselleri.TryGetValue(v.Id, out var vg) ? cdnBase + vg
-                    : urunGorselleri.TryGetValue(v.ProductId, out var ug) ? cdnBase + ug : null,
+                GorselCoz(v.Id, v.ProductId),
                 ozetByVariant.TryGetValue(v.Id, out var ozet) && ozet.Length > 0 ? ozet : null));
     }
 }
