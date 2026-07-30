@@ -78,8 +78,11 @@ static class Migration
         // Faz 26: eski DB'den fiyat/görsel/stok HEDEFLİ güncelleme (ID koruyan yerinde UPDATE —
         // tam-reload Faz 5/6/7'nin aksine). args[1]=="dry" → yalnız rapor, yazma yok.
         if (phase == 26) await Phase26_TargetedUpdate(args.Length > 1 && args[1] == "dry");
+        // Faz 27: KANAL fiyatı (channel_variants: Price/CompareAt/IsActive) plurunler'den
+        // tazele — storefront filtresi/gösterilen fiyat bunu kullanır (BasePrice değil).
+        if (phase == 27) Phase27_ChannelPriceRefresh(args.Length > 1 && args[1] == "dry");
 
-        if (phase == 26) { Log("=== Faz 26 bitti ==="); return; }
+        if (phase == 26 || phase == 27) { Log($"=== Faz {phase} bitti ==="); return; }
         Log("=== Migration tamamlandı! ===");
         Log($"  image_sets                  : {PgCount($"{DEF}.image_sets")}");
         Log($"  attribute_types              : {PgCount($"{DEF}.attribute_types")}");
@@ -1530,6 +1533,78 @@ static class Migration
     {
         var cmd = new MySqlCommand(sql, mysql) { CommandTimeout = 600 };
         return cmd.ExecuteReader();
+    }
+
+    // ─── FAZ 27: KANAL FİYATI TAZELEME (plurunler → channel_variants) ────────
+    // Storefront filtre-kategorileri (ör. hersey-99-tl, platformPriceMax) ve gösterilen
+    // fiyat KANAL fiyatını (channel_variants.Price) kullanır — BasePrice'ı değil. Faz 26
+    // BasePrice'ı (apurunler) güncelledi; bu faz KANAL fiyatını (plurunler, platforma özel/
+    // kampanya) tazeler. Barkod ile eşle (ID korunur); channel_variants'a FK yok. Yalnız
+    // mishar platformu (misharitalia.com = legacy plurunler.platformId 41). args="dry"→rapor.
+    static void Phase27_ChannelPriceRefresh(bool dryRun)
+    {
+        const int legacyPlatformId = 41; // mishar (misharitalia.com)
+        Log($"FAZ 27: Kanal fiyatı tazeleme (plurunler platform {legacyPlatformId} → channel_variants){(dryRun ? " — KURU ÇALIŞMA" : "")}...");
+
+        var fp = PgScalar<Guid>("SELECT \"Id\" FROM core.core_firm_platforms WHERE \"Code\"='mishar'");
+        Log($"  Platform: mishar = {fp}");
+
+        var barcodeToVariant = new Dictionary<string, Guid>(StringComparer.Ordinal);
+        foreach (var row in PgReadRows($"SELECT \"Barcode\", \"Id\" FROM {CAT}.product_variants WHERE \"IsDeleted\"=false AND \"Barcode\" IS NOT NULL AND \"Barcode\"<>''"))
+            barcodeToVariant[(string)row[0]] = (Guid)row[1];
+        var legacyVariantBarcode = new Dictionary<int, string>();
+        using (var r = MysqlQuery("SELECT Id, barkod FROM apurunvaryantlari WHERE barkod IS NOT NULL AND barkod<>''"))
+            while (r.Read()) legacyVariantBarcode[r.GetInt32(0)] = r.GetString(1);
+        Log($"  Eşleme: {barcodeToVariant.Count} varyant (Barcode), {legacyVariantBarcode.Count} eski varyant.");
+
+        // plurunler → temp (variant_id, price, compare_at, is_active). Kural
+        // MigrateChannelDataForPlatform ile birebir: satisFiyati>0 ? satisFiyati : null;
+        // compareAt = listeFiyati>0 && != satisFiyati ? listeFiyati : null; is_active = satista.
+        PgExec("DROP TABLE IF EXISTS _f27_cv");
+        PgExec("CREATE TEMP TABLE _f27_cv(variant_id uuid PRIMARY KEY, price numeric, compare_at numeric, is_active boolean)");
+        var batch = new List<object?[]>();
+        var eklendi = new HashSet<Guid>();
+        int okunan = 0, atlanan = 0;
+        using (var r = MysqlQuery($"SELECT urunAnaVaryantId, satisFiyati, listeFiyati, satista FROM plurunler WHERE platformId={legacyPlatformId}"))
+            while (r.Read())
+            {
+                int lvid = r.GetInt32(0);
+                if (!legacyVariantBarcode.TryGetValue(lvid, out var bc) || !barcodeToVariant.TryGetValue(bc, out var vg)) { atlanan++; continue; }
+                if (!eklendi.Add(vg)) continue; // aynı varyant iki kez gelmesin (ilk kayıt)
+                decimal satis = r.IsDBNull(1) ? 0 : (decimal)r.GetDouble(1);
+                decimal liste = r.IsDBNull(2) ? 0 : (decimal)r.GetDouble(2);
+                bool satista = !r.IsDBNull(3) && Convert.ToBoolean(r.GetValue(3));
+                decimal? price = satis > 0 ? satis : null;
+                decimal? cmp = liste > 0 && liste != satis ? liste : null;
+                batch.Add(new object?[] { vg, price, cmp, satista });
+                okunan++;
+                if (batch.Count >= 1000) { PgBatchInsert("_f27_cv", new[] { "variant_id", "price", "compare_at", "is_active" }, new string?[4], batch); batch.Clear(); }
+            }
+        PgBatchInsert("_f27_cv", new[] { "variant_id", "price", "compare_at", "is_active" }, new string?[4], batch);
+
+        long degisecek = PgScalar<long>($@"SELECT COUNT(*) FROM storefront.channel_variants cv JOIN _f27_cv t ON cv.""VariantId""=t.variant_id
+            WHERE cv.""FirmPlatformId""='{fp}' AND cv.""IsDeleted""=false
+            AND (cv.""Price"" IS DISTINCT FROM t.price OR cv.""CompareAtPrice"" IS DISTINCT FROM t.compare_at OR cv.""IsActive"" IS DISTINCT FROM t.is_active)");
+        long yeni = PgScalar<long>($@"SELECT COUNT(*) FROM _f27_cv t WHERE NOT EXISTS (
+            SELECT 1 FROM storefront.channel_variants cv WHERE cv.""FirmPlatformId""='{fp}' AND cv.""VariantId""=t.variant_id AND cv.""IsDeleted""=false)");
+        // Etki: hersey-99-tl için kanal fiyatı ≤99.99 olacak varyant sayısı (önce/sonra)
+        long oncePrice99 = PgScalar<long>($@"SELECT COUNT(*) FROM storefront.channel_variants cv WHERE cv.""FirmPlatformId""='{fp}' AND cv.""IsDeleted""=false AND cv.""Price""<=99.99");
+        long sonraPrice99 = PgScalar<long>($@"SELECT COUNT(*) FROM _f27_cv t WHERE t.price<=99.99");
+        Log($"    plurunler eşleşen: {okunan} varyant (atlanan={atlanan}).");
+        Log($"    DEĞİŞECEK kanal varyantı: {degisecek}; YENİ: {yeni}.");
+        Log($"    Kanal fiyatı ≤99.99 varyant — ÖNCE: {oncePrice99} → SONRA (yeni sette): {sonraPrice99}.");
+
+        if (!dryRun)
+        {
+            PgExec($@"UPDATE storefront.channel_variants cv SET ""Price""=t.price, ""CompareAtPrice""=t.compare_at,
+                ""IsActive""=t.is_active, ""PriceType""=CASE WHEN t.price IS NOT NULL THEN 'manual' ELSE NULL END, ""UpdatedAt""=now()
+                FROM _f27_cv t WHERE cv.""VariantId""=t.variant_id AND cv.""FirmPlatformId""='{fp}' AND cv.""IsDeleted""=false
+                AND (cv.""Price"" IS DISTINCT FROM t.price OR cv.""CompareAtPrice"" IS DISTINCT FROM t.compare_at OR cv.""IsActive"" IS DISTINCT FROM t.is_active)");
+            PgExec($@"INSERT INTO storefront.channel_variants (""Id"",""FirmPlatformId"",""VariantId"",""PriceType"",""Price"",""CompareAtPrice"",""IsActive"",""CreatedAt"",""IsDeleted"")
+                SELECT gen_random_uuid(), '{fp}', t.variant_id, CASE WHEN t.price IS NOT NULL THEN 'manual' ELSE NULL END, t.price, t.compare_at, t.is_active, now(), false
+                FROM _f27_cv t WHERE NOT EXISTS (SELECT 1 FROM storefront.channel_variants cv WHERE cv.""FirmPlatformId""='{fp}' AND cv.""VariantId""=t.variant_id AND cv.""IsDeleted""=false)");
+            Log($"    ✓ Kanal fiyatı güncellendi ({degisecek} değişen + {yeni} yeni). ANALYZE + Redis önbelleği önerilir.");
+        }
     }
 
     // PG'den çok satır okuyup her satırı object[] verir (map kurmak için).
