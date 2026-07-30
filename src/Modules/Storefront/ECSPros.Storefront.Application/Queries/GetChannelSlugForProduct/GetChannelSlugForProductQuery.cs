@@ -1,4 +1,5 @@
 using ECSPros.Catalog.Application.Services;
+using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
 using ECSPros.Storefront.Application.Services;
 using MediatR;
@@ -9,14 +10,14 @@ namespace ECSPros.Storefront.Application.Queries.GetChannelSlugForProduct;
 /// <summary>
 /// Ürün URL aktarımı Aşama 2: /urun/{code}?color= isteğini kanonik slug'a (301) yönlendirmek için
 /// ürünün (o platformdaki) slug'ını çözer. colorValueId verilirse o rengin slug'lı temsilci
-/// varyantı tercih edilir; yoksa/eşleşmezse ürünün ilk slug'lı varyantı. Slug yoksa null
-/// (çağıran /urun/{code}'u normal render eder — güvenlik ağı).
+/// varyantı tercih edilir; yoksa/eşleşmezse STOKTA olan ilk slug'lı varyant, o da yoksa ürünün
+/// ilk slug'lı varyantı. Slug yoksa null (çağıran /urun/{code}'u normal render eder — güvenlik ağı).
 /// NOT: catDb ve sfDb ayrı DbContext — tek sorguda karıştırılamaz (EF çeviremez); ayrı adımlar.
 /// </summary>
 public record GetChannelSlugForProductQuery(Guid FirmPlatformId, string ProductCode, Guid? ColorValueId)
     : IRequest<Result<string?>>;
 
-public class GetChannelSlugForProductQueryHandler(IStorefrontDbContext sfDb, ICatalogDbContext catDb)
+public class GetChannelSlugForProductQueryHandler(IStorefrontDbContext sfDb, ICatalogDbContext catDb, IStockService stockService)
     : IRequestHandler<GetChannelSlugForProductQuery, Result<string?>>
 {
     public async Task<Result<string?>> Handle(GetChannelSlugForProductQuery request, CancellationToken ct)
@@ -38,7 +39,12 @@ public class GetChannelSlugForProductQueryHandler(IStorefrontDbContext sfDb, ICa
         if (sluglar.Count == 0)
             return Result.Success<string?>(null);
 
-        // 3) Renk verildiyse o rengi taşıyan slug'lı varyantı tercih et (catDb).
+        // Stok haritası: slug'lı her varyant için available adet (renk seçimi stok-farkındalı olsun).
+        var stok = new Dictionary<Guid, int>();
+        foreach (var s in sluglar)
+            stok[s.VariantId] = await stockService.GetAvailableStockAsync(s.VariantId, null, ct);
+
+        // 3) Renk verildiyse o rengi taşıyan slug'lı varyantı tercih et (önce stokta olanı) (catDb).
         if (request.ColorValueId is { } renk)
         {
             var sluggedIds = sluglar.Select(x => x.VariantId).ToList();
@@ -46,11 +52,15 @@ public class GetChannelSlugForProductQueryHandler(IStorefrontDbContext sfDb, ICa
                 .Where(va => va.AttributeValueId == renk && sluggedIds.Contains(va.VariantId))
                 .Select(va => va.VariantId)
                 .ToListAsync(ct);
-            var renkEslesen = sluglar.FirstOrDefault(x => renkVaryantIds.Contains(x.VariantId));
+            var renkAdaylar = sluglar.Where(x => renkVaryantIds.Contains(x.VariantId)).ToList();
+            var renkEslesen = renkAdaylar.FirstOrDefault(x => stok.GetValueOrDefault(x.VariantId) > 0)
+                              ?? renkAdaylar.FirstOrDefault();
             if (renkEslesen is not null)
                 return Result.Success<string?>(renkEslesen.Slug);
         }
 
-        return Result.Success<string?>(sluglar[0].Slug);
+        // 4) Renk yok/eşleşmedi: STOKTA olan ilk slug'lı varyant, o da yoksa ilk slug.
+        var stokluIlk = sluglar.FirstOrDefault(x => stok.GetValueOrDefault(x.VariantId) > 0);
+        return Result.Success<string?>((stokluIlk ?? sluglar[0]).Slug);
     }
 }
