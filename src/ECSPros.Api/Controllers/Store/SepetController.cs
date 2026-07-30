@@ -33,6 +33,19 @@ public class SepetController(IConfiguration configuration) : StorePageController
     [HttpGet("/odeme")]
     public IActionResult Odeme() => View("~/Views/Sepet/Odeme.cshtml");
 
+    /// <summary>PayTR 3D dönüş sayfaları (2026-07-30). Sonucun DOĞRUSU callback'te belirlenir;
+    /// bu sayfalar yalnız kullanıcıya bilgi verir (başarıda /siparis-tamamlandi'ya köprüler,
+    /// başarısızda /odeme'ye döndürür). PayTR bu URL'lere POST ile döner.</summary>
+    [HttpGet("/odeme-sonuc/basarili")]
+    [HttpPost("/odeme-sonuc/basarili")]
+    [IgnoreAntiforgeryToken]
+    public IActionResult OdemeSonucBasarili() => View("~/Views/Sepet/OdemeSonuc.cshtml", true);
+
+    [HttpGet("/odeme-sonuc/basarisiz")]
+    [HttpPost("/odeme-sonuc/basarisiz")]
+    [IgnoreAntiforgeryToken]
+    public IActionResult OdemeSonucBasarisiz() => View("~/Views/Sepet/OdemeSonuc.cshtml", false);
+
     /// <summary>C10+H2: sipariş tamamlandı — içerik sessionStorage msSiparisSonucu'ndan;
     /// Kargo Bilgisi bölümü H2'de açıldı (firma adı platformun aktif kargo anlaşmasından
     /// SSR — gönderi henüz yokken durum "Hazırlanıyor"; anlaşma yoksa firma satırı gizli).</summary>

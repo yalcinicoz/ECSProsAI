@@ -958,6 +958,44 @@ document.addEventListener("DOMContentLoaded", () => {
                 sessionStorage.removeItem("msMisafirAdres");
             } catch { /* depolama kapalı — onay sayfası sipariş no'suz açılır */ }
 
+            // ── PayTR kart ödemesi (2026-07-30, YALNIZ TEST MODU) ──
+            // Kart yöntemi seçiliyse sipariş oluştu (pending); şimdi PayTR Direct API'ye
+            // gidilir. Kart alanları YALNIZ burada okunur, init'e iletilir, sonra bırakılır —
+            // hiçbir yerde saklanmaz/loglanmaz. Başarıda callback siparişi paid yapar; kullanıcı
+            // 3D'yi tamamlayıp /odeme-sonuc/basarili'ya döner. Ödeme çözülene dek sepet SİLİNMEZ
+            // (başarısızlıkta kullanıcı yeniden deneyebilsin). Kapıda ödeme PayTR'a GİTMEZ.
+            if (seciliOdemeYontemi() === "kart") {
+                const kartNo = odemeAlani.querySelector('[data-ms-kart-alan="numara"]')?.value || "";
+                const kartSahibi = odemeAlani.querySelector('[data-ms-kart-alan="isim"]')?.value || "";
+                const sonKul = (odemeAlani.querySelector('[data-ms-kart-alan="son-kullanma"]')?.value || "").replace(/\s/g, "");
+                const kartCvv = odemeAlani.querySelector('[data-ms-kart-alan="cvv"]')?.value || "";
+                const [ay, yil] = sonKul.split("/");
+                let initVeri = null;
+                try {
+                    const initCevap = await fetch("/api/store/payment/paytr/init", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", ...(token() ? { Authorization: "Bearer " + token() } : {}) },
+                        body: JSON.stringify({
+                            orderId: veri.data.orderId,
+                            email: null,
+                            cardOwner: kartSahibi,
+                            cardNumber: kartNo,
+                            expiryMonth: ay || "",
+                            expiryYear: yil ? ("20" + yil).slice(-4) : "",
+                            cvv: kartCvv
+                        })
+                    });
+                    initVeri = await initCevap.json().catch(() => null);
+                } catch { /* ağ hatası — aşağıda ele alınır */ }
+                if (initVeri?.success && initVeri.html) {
+                    // PayTR 3D içeriğini tam sayfaya bas → banka 3D sayfasına yönlenir
+                    document.open(); document.write(initVeri.html); document.close();
+                    return;
+                }
+                hataGoster([initVeri?.error || "Kart ödemesi başlatılamadı. Lütfen tekrar deneyin."]);
+                return; // sipariş oluştu ama ödeme başlamadı — sepet korunur
+            }
+
             try { await fetch("/api/store/cart/" + sepet.id, { method: "DELETE" }); } catch { }
             if (hizliMod) {
                 // Hızlı akış: yalnız geçici hızlı sepet düşer — ana sepet ve mini sepet

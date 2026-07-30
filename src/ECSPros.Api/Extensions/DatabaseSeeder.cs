@@ -166,6 +166,19 @@ public static class DatabaseSeeder
             {
                 Alan("apiKey",    "API Key",    "password", "credentials", zorunlu: true),
                 Alan("apiSecret", "API Secret", "password", "credentials", zorunlu: true)
+            }),
+            // PayTR Direct API (2026-07-30) — ödeme aracısı. Alan adları DbPaymentSettingsProvider'ın
+            // okuduğu anahtarlarla birebir aynı olmalı. testMode ŞU AN ZORUNLU AÇIK (PCI-DSS uyumu +
+            // PayTR Direct API onayı tamamlanana dek canlıya alınmaz). merchant* bilgileri
+            // PayTR Mağaza Paneli > Entegrasyon Bilgileri'nden.
+            ("paytr", "PayTR (Direct API)", "payment", new List<PlatformSchemaField>
+            {
+                Alan("merchantId",   "Mağaza No (merchant_id)", "text",     "credentials", zorunlu: true),
+                Alan("merchantKey",  "Mağaza Key",              "password", "credentials", zorunlu: true),
+                Alan("merchantSalt", "Mağaza Salt",             "password", "credentials", zorunlu: true),
+                Alan("testMode",     "Test Modu (zorunlu açık — canlı için PCI-DSS onayı gerekir)", "boolean", "settings",
+                    yardim: "Şu an yalnız test modu desteklenir. Canlı ödeme için işletmenizin PCI-DSS SAQ D " +
+                            "uyumu ve PayTR Direct API onayı gereklidir; o tamamlanana dek bu alan açık kalmalıdır.")
             })
         };
 
