@@ -50,6 +50,31 @@ public class VitrinSrcsetSaglayici(IConfiguration configuration, IMemoryCache ca
 {
     private string MediaKok => configuration["Store:MediaRootPath"] ?? "/opt/ECSProsAI/media";
 
+    /// <summary>Görselin gerçek piksel boyutları (dosya başlığından, cache'li) — img
+    /// width/height öznitelikleri GERÇEK oranla basılırsa tarayıcının ayırdığı alan
+    /// yükleme sonrası değişmez → CLS sıfırlanır. Sabit şablon oranı (110x165 vb.)
+    /// personelin yüklediği gerçek oranla eşleşmeyince kayma üretiyordu (2026-07-30 A/B).</summary>
+    public (int Genislik, int Yukseklik)? Boyut(string? gorselUrl)
+    {
+        if (string.IsNullOrEmpty(gorselUrl) || !gorselUrl.StartsWith("/media/", StringComparison.Ordinal))
+            return null;
+        return cache.GetOrCreate("vitrin-boyut:" + gorselUrl, girdi =>
+        {
+            girdi.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
+            try
+            {
+                var tamYol = Path.Combine(MediaKok,
+                    gorselUrl["/media/".Length..].Replace('/', Path.DirectorySeparatorChar));
+                if (!File.Exists(tamYol)) return ((int, int)?)null;
+                var bilgi = new MagickImageInfo(tamYol); // yalnız başlık okur, piksel verisi yüklemez
+                return bilgi.Width > 0 && bilgi.Height > 0
+                    ? ((int)bilgi.Width, (int)bilgi.Height)
+                    : ((int, int)?)null;
+            }
+            catch { return ((int, int)?)null; } // SVG/bozuk dosya → şablon sabitine düşülür
+        });
+    }
+
     /// <summary>Varyantlar varsa "url_w480.webp 480w, ..." dizesi; yoksa null.</summary>
     public string? Srcset(string? gorselUrl)
     {

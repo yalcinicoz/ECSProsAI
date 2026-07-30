@@ -13386,8 +13386,11 @@
   }
 
   .ms-gorunum-banner-karti img {
+    /* aspect-ratio: auto BURAYA YAZILMAZ — tarayıcının width/height özniteliklerinden
+       türettiği alan rezervasyonunu iptal edip lazy görsellerde CLS 1.0+ üretiyordu
+       (PageSpeed ana sayfa bulgusu, 2026-07-30). UA varsayılanı doğru davranır:
+       yüklenmeden öznitelik oranı kadar yer ayrılır, yüklenince gerçek oran geçerlidir. */
     @apply block h-auto w-full object-contain object-top;
-    aspect-ratio: auto;
   }
 
   .ms-gorunum-carousel.ms-gorunum-banner-grid {

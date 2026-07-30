@@ -353,7 +353,8 @@ Views/Koleksiyon/Index.cshtml
 # E6: koleksiyon akışının API köprüsü (İZİNLİ YENİ — tasarımda backend yok).
 Views/Shared/Store/_KoleksiyonAkisKoprusu.cshtml
 
-# 2026-07-29 (271b133): mobil slider okları görünür + iOS dokunma düzeltmesi —
-# kullanıcı geri bildirimiyle ECSPros tarafında yapılan bilinçli fark (kaynak
-# /opt/misharix güncellenince bu satır kaldırılabilir).
+# 2026-07-29 (271b133): mobil slider okları görünür + iOS dokunma düzeltmesi;
+# 2026-07-30: .ms-gorunum-banner-karti img'den aspect-ratio:auto kaldırıldı (CLS 1.1
+# üretiyordu — PageSpeed düzeltmesi). Kaynak /opt/misharix root'a ait ve yazılamaz
+# olduğundan farklar ECSPros tarafında; kaynak güncellenince bu satır kaldırılabilir.
 wwwroot/css/tailwind.css
