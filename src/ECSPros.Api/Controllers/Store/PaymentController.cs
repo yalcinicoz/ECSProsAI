@@ -49,7 +49,9 @@ public class PaymentController(
             ? $"guest+{siparis.OrderNumber}@misharitalia.com"
             : req.Email!.Trim();
         const string paymentType = "card";
-        const string installment = "0";
+        // Taksit sayısı: 2..12 seçildiyse o; aksi halde "0" (tek çekim). PayTR baz payment_amount'a
+        // banka faizini uygular; tahsil edilecek toplam bankada artar, biz baz tutarı alırız.
+        var installment = req.Installment is >= 2 and <= 12 ? req.Installment.Value.ToString() : "0";
         var currency = siparis.CurrencyCode == "TRY" ? "TL" : siparis.CurrencyCode;
         // test_mode panel ayarından (DbPaymentSettingsProvider). Canlı=0 (gerçek kart), test=1.
         // Token hash'i test_mode'u içerir → hash ve form AYNI değeri kullanmalı.
@@ -117,9 +119,11 @@ public class PaymentController(
         return Ok(new { success = true, html = sonuc.Icerik });
     }
 
-    /// <summary>Taksit seçenekleri (Adım 1 — 2026-07-30): kartın ilk 6 hanesi (BIN) + sipariş tutarına
-    /// göre PayTR taksit-oranları + bin-detay çağrılır. ŞU AN ham yanıtı loglar (gerçek format Adım 2'de
-    /// parse/hesap için); yalnız tek çekim döner. Kart verisi TAŞIMAZ (yalnız BIN — ilk 6 hane).</summary>
+    /// <summary>Taksit seçenekleri (2026-07-30): kartın ilk 6 hanesi (BIN) + sipariş/sepet tutarına göre
+    /// PayTR taksit-oranları + bin-detay çağrılır ve taksit seçenekleri hesaplanır (tek çekim + kredi
+    /// kartında marka oranlarıyla 2..N taksit). Kart verisi TAŞIMAZ (yalnız BIN — ilk 6 hane).
+    /// Baz tutar: sipariş varsa sunucu-yetkili, yoksa GÖSTERİM için client tutarı (tahsilat init'te
+    /// sipariş tutarını kullanır — client tutarı ödemeyi etkilemez).</summary>
     [HttpPost("taksit")]
     [AllowAnonymous]
     public async Task<IActionResult> Taksit([FromBody] PayTrTaksitRequest req, CancellationToken ct)
@@ -131,28 +135,24 @@ public class PaymentController(
         if (bin.Length < 6) return Ok(new { success = true, taksitler = Array.Empty<object>() });
         bin = bin[..6];
 
-        // Baz tutar: sipariş varsa sunucu-yetkili tutar, yoksa (kart girişi sırasında sipariş henüz
-        // oluşmamışsa) yalnız GÖSTERİM için client sepet tutarı. Gerçek tahsilat init'te sipariş
-        // tutarını kullanır (client tutarı ödemeyi etkilemez).
         decimal bazTutar = req.Tutar is > 0 ? req.Tutar.Value : 0m;
         if (req.OrderId is { } oid)
         {
             var s = await mediator.Send(new GetOrderForPaymentQuery(oid), ct);
             if (s.IsSuccess) bazTutar = s.Value!.TutarKurus / 100m;
         }
+        if (bazTutar <= 0) return Ok(new { success = true, taksitler = Array.Empty<object>() });
 
         var reqId = Guid.NewGuid().ToString("N");
         var oranlar = await paytr.TaksitOranlariAsync(ayar.MerchantId, ayar.MerchantKey, ayar.MerchantSalt, reqId, ct);
         var binDetay = await paytr.BinDetayAsync(ayar.MerchantId, ayar.MerchantKey, ayar.MerchantSalt, bin, ct);
 
-        // TANILAMA (kart-DIŞI, güvenli — yalnız BIN + oranlar; kart no/CVV yok): gerçek PayTR yanıt
-        // formatını yakalamak için ham içerik loglanır. Adım 2'de parse/hesap buna göre yazılacak.
-        logger.LogInformation(
-            "PayTR taksit tanılama: bin={Bin} bazTutar={Tutar} oranlarHTTP={O} binHTTP={B} | ORANLAR_YANIT={OranJson} | BIN_YANIT={BinJson}",
-            bin, bazTutar, oranlar.DurumKodu, binDetay.DurumKodu, oranlar.Icerik, binDetay.Icerik);
-
-        // Adım 1: henüz gerçek taksit tutarı hesaplanmıyor → yalnız tek çekim.
-        return Ok(new { success = true, taksitler = new[] { new { adet = 1, birim = bazTutar, toplam = bazTutar } } });
+        var secenekler = PayTrDirectService.TaksitleriHesapla(oranlar.Icerik, binDetay.Icerik, bazTutar);
+        return Ok(new
+        {
+            success = true,
+            taksitler = secenekler.Select(t => new { adet = t.Adet, birim = t.Birim, toplam = t.Toplam })
+        });
     }
 
     /// <summary>Adım 2: PayTR sunucu-sunucu bildirimi. Hash doğrulanır, sipariş sonucu
@@ -201,7 +201,8 @@ public class PaymentController(
 /// <summary>Taksit sorgu gövdesi — yalnız BIN (ilk 6 hane) + sipariş/tutar. Kart no/CVV TAŞIMAZ.</summary>
 public record PayTrTaksitRequest(string? Bin, Guid? OrderId, decimal? Tutar);
 
-/// <summary>Init gövdesi. Kart alanları YALNIZ PayTR'a iletmek için — hiçbir yerde saklanmaz.</summary>
+/// <summary>Init gövdesi. Kart alanları YALNIZ PayTR'a iletmek için — hiçbir yerde saklanmaz.
+/// Installment: seçilen taksit sayısı (1/null = tek çekim; 2..12 = taksit).</summary>
 public record PayTrInitRequest(
     Guid OrderId,
     string? Email,
@@ -209,7 +210,8 @@ public record PayTrInitRequest(
     string? CardNumber,
     string? ExpiryMonth,
     string? ExpiryYear,
-    string? Cvv);
+    string? Cvv,
+    int? Installment = null);
 
 public record PayTrCallbackForm
 {

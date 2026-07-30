@@ -1008,7 +1008,9 @@ document.addEventListener("DOMContentLoaded", () => {
                             cardNumber: kartNo,
                             expiryMonth: ay || "",
                             expiryYear: yil ? ("20" + yil).slice(-4) : "",
-                            cvv: kartCvv
+                            cvv: kartCvv,
+                            // Seçili taksit (1/yok = tek çekim; 2..12 = taksit) — PayTR installment_count
+                            installment: parseInt(document.querySelector('input[name="siparis-taksit"]:checked')?.value || "1", 10) || 1
                         })
                     });
                     initVeri = await initCevap.json().catch(() => null);

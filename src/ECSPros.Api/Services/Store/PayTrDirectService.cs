@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 namespace ECSPros.Api.Services.Store;
 
@@ -98,6 +100,50 @@ public class PayTrDirectService(
         return await PostAsync("https://www.paytr.com/odeme/api/bin-detail", form, ct);
     }
 
+    /// <summary>PayTR taksit-oranları + bin-detay yanıtlarından, verilen baz tutar için taksit
+    /// seçeneklerini hesaplar. Tek çekim (adet=1) HER ZAMAN döner. Taksit yalnız KREDİ kartında ve
+    /// markası oran tablosunda olan kartlarda üretilir (debit/none → yalnız tek çekim).
+    /// oran = yüzde (7.48 = %7.48); toplam = baz×(1+oran/100), birim = toplam/adet.
+    /// Beklenmedik/eksik yanıtta güvenli tarafa düşer (yalnız tek çekim).</summary>
+    public static List<TaksitSecenegi> TaksitleriHesapla(string? oranlarJson, string? binJson, decimal baz)
+    {
+        var sonuc = new List<TaksitSecenegi> { new(1, baz, baz) };   // tek çekim hep var
+        if (baz <= 0 || string.IsNullOrWhiteSpace(oranlarJson) || string.IsNullOrWhiteSpace(binJson))
+            return sonuc;
+        try
+        {
+            using var binDoc = JsonDocument.Parse(binJson);
+            var binKok = binDoc.RootElement;
+            var cardType = binKok.TryGetProperty("cardType", out var ctEl) ? ctEl.GetString() : null;
+            var marka = binKok.TryGetProperty("brand", out var bEl) ? bEl.GetString() : null;
+            if (!string.Equals(cardType, "credit", StringComparison.OrdinalIgnoreCase)) return sonuc; // debit → tek çekim
+            if (string.IsNullOrWhiteSpace(marka) || marka.Equals("none", StringComparison.OrdinalIgnoreCase)) return sonuc;
+
+            using var oranDoc = JsonDocument.Parse(oranlarJson);
+            var oranKok = oranDoc.RootElement;
+            if (oranKok.TryGetProperty("status", out var st) && st.GetString() != "success") return sonuc;
+            if (!oranKok.TryGetProperty("oranlar", out var oranlar) || oranlar.ValueKind != JsonValueKind.Object) return sonuc;
+            if (!oranlar.TryGetProperty(marka, out var markaOran) || markaOran.ValueKind != JsonValueKind.Object) return sonuc;
+
+            foreach (var alan in markaOran.EnumerateObject())
+            {
+                if (!alan.Name.StartsWith("taksit_", StringComparison.Ordinal)) continue;
+                if (!int.TryParse(alan.Name.AsSpan("taksit_".Length), out var adet) || adet < 2 || adet > 12) continue;
+                decimal oran;
+                if (alan.Value.ValueKind == JsonValueKind.Number) oran = alan.Value.GetDecimal();
+                else if (alan.Value.ValueKind == JsonValueKind.String
+                         && decimal.TryParse(alan.Value.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var op)) oran = op;
+                else continue;
+                if (oran < 0) continue;
+                var toplam = Math.Round(baz * (1 + oran / 100m), 2, MidpointRounding.AwayFromZero);
+                var birim = Math.Round(toplam / adet, 2, MidpointRounding.AwayFromZero);
+                sonuc.Add(new TaksitSecenegi(adet, birim, toplam));
+            }
+        }
+        catch { /* beklenmedik format → yalnız tek çekim (güvenli) */ }
+        return sonuc.OrderBy(x => x.Adet).ToList();
+    }
+
     private async Task<PayTrOdemeSonucu> PostAsync(
         string url, IReadOnlyDictionary<string, string> form, CancellationToken ct)
     {
@@ -158,3 +204,6 @@ public class PayTrDirectService(
 }
 
 public record PayTrOdemeSonucu(bool Basarili, int DurumKodu, string? Icerik);
+
+/// <summary>Bir taksit seçeneği: adet (1=tek çekim), taksit başına tutar, toplam (faiz dahil).</summary>
+public record TaksitSecenegi(int Adet, decimal Birim, decimal Toplam);
