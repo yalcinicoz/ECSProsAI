@@ -259,8 +259,14 @@
                 </div>
                 <div class="ms-odeme-eksik-listesi" data-ms-odeme-eksikler hidden></div>
                 <div class="ms-siparis-sozlesme-onay">
-                    <input name="sozlesme_onay_input" class="ms-onay-input" type="checkbox" data-ms-sozlesme-onay-input aria-label="Mesafeli satış sözleşmesini ve ön bilgilendirme formunu onayla">
-                    <span class="ms-onay-kutu" aria-hidden="true"></span>
+                    @* 2026-07-30: kutu label ile input'a bağlandı — görünen kutuya tıklama da
+                       (metin linki gibi) sözleşme modalını açar; input'un mevcut click köprüsü
+                       onaysız işaretlemeyi zaten modala yönlendiriyor. Metindeki buton label
+                       DIŞINDA (label içinde buton = örtük kontrol tuzağı, bkz. 2026-07-30 sabahı). *@
+                    <label class="ms-siparis-sozlesme-tik">
+                        <input name="sozlesme_onay_input" class="ms-onay-input" type="checkbox" data-ms-sozlesme-onay-input aria-label="Mesafeli satış sözleşmesini ve ön bilgilendirme formunu onayla">
+                        <span class="ms-onay-kutu" aria-hidden="true"></span>
+                    </label>
                     <p>
                         <button class="ms-siparis-sozlesme-link" type="button" data-ms-sozlesme-modal-ac>Mesafeli Satış Sözleşmesi ve Ön Bilgilendirme Formu</button>
                         metinlerini okudum, anladım ve elektronik ortamda onaylıyorum.

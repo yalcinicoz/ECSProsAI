@@ -294,8 +294,12 @@
                 <span class="ms-siparis-toplam-deger ms-urun-fiyat" data-ms-sepet-odenecek>0,00 TL</span>
             </div>
             <div class="ms-siparis-sozlesme-onay">
-                <input name="sozlesme_onay_input" class="ms-onay-input" type="checkbox" data-ms-sozlesme-onay-input aria-label="Mesafeli satış sözleşmesini ve ön bilgilendirme formunu onayla">
-                <span class="ms-onay-kutu" aria-hidden="true"></span>
+                @* 2026-07-30: kutu label ile input'a bağlandı — ödeme adımındaki blokla aynı
+                   düzeltme (görünen kutuya tıklama sözleşme modalını açar). *@
+                <label class="ms-siparis-sozlesme-tik">
+                    <input name="sozlesme_onay_input" class="ms-onay-input" type="checkbox" data-ms-sozlesme-onay-input aria-label="Mesafeli satış sözleşmesini ve ön bilgilendirme formunu onayla">
+                    <span class="ms-onay-kutu" aria-hidden="true"></span>
+                </label>
                 <p>
                     <button class="ms-siparis-sozlesme-link" type="button" data-ms-sozlesme-modal-ac>Mesafeli Satış Sözleşmesi ve Ön Bilgilendirme Formu</button>
                     metinlerini okudum, anladım ve elektronik ortamda onaylıyorum.
