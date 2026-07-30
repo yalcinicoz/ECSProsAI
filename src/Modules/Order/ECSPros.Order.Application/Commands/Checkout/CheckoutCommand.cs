@@ -37,7 +37,12 @@ public record CheckoutCommand(
     List<AcceptedContract>? AcceptedContracts = null,
     // 2026-07-22: müşterinin teslimat adımında seçtiği kargo (mahalle bazlı seçenekler)
     Guid? RequestedCargoIntegrationId = null,
-    string? RequestedCargoName = null) : IRequest<Result<Guid>>;
+    string? RequestedCargoName = null) : IRequest<Result<CheckoutSonucu>>;
+
+/// <summary>Checkout dönüşü (2026-07-30): OrderNumber da döner — onay ekranı insan
+/// okunur numarayı (kanal bazlı seri, F1-F5 kod sistemi) GUID'e düşmeden gösterir
+/// (misafir siparişte üye-listesi geri araması yapılamıyordu).</summary>
+public record CheckoutSonucu(Guid OrderId, string OrderNumber);
 
 public record CheckoutItem(
     Guid VariantId,
@@ -62,12 +67,12 @@ public class CheckoutCommandHandler(
     IOrderNumberService orderNumbers,
     ECSPros.Shared.Contracts.IProductService productService,
     ECSPros.Shared.Contracts.IChannelProductFlagService flagService)
-    : IRequestHandler<CheckoutCommand, Result<Guid>>
+    : IRequestHandler<CheckoutCommand, Result<CheckoutSonucu>>
 {
-    public async Task<Result<Guid>> Handle(CheckoutCommand request, CancellationToken ct)
+    public async Task<Result<CheckoutSonucu>> Handle(CheckoutCommand request, CancellationToken ct)
     {
         if (!request.Items.Any())
-            return Result.Failure<Guid>("Sepet boş.");
+            return Result.Failure<CheckoutSonucu>("Sepet boş.");
 
         // Kanal seçimi/durdurma (M2/M3): bu kanalda çıkarılan/durdurulan ürün siparişe geçemez.
         var kanalDisi = await flagService.GetChannelExcludedProductIdsAsync(request.FirmPlatformId, ct);
@@ -80,9 +85,9 @@ public class CheckoutCommandHandler(
         {
             var bilgi = await productService.GetVariantAsync(item.VariantId, ct);
             if (bilgi is null || !bilgi.IsActive)
-                return Result.Failure<Guid>($"'{item.ProductName}' şu an satışa kapalı; siparişi tamamlamak için sepetten çıkarın.");
+                return Result.Failure<CheckoutSonucu>($"'{item.ProductName}' şu an satışa kapalı; siparişi tamamlamak için sepetten çıkarın.");
             if (kanalDisi.Contains(bilgi.ProductId))
-                return Result.Failure<Guid>($"'{item.ProductName}' şu an bu kanalda satışa kapalı; siparişi tamamlamak için sepetten çıkarın.");
+                return Result.Failure<CheckoutSonucu>($"'{item.ProductName}' şu an bu kanalda satışa kapalı; siparişi tamamlamak için sepetten çıkarın.");
             tedarikciByVariant[item.VariantId] = bilgi.SupplierId;
         }
 
@@ -160,6 +165,6 @@ public class CheckoutCommandHandler(
         }
 
         await db.SaveChangesAsync(ct);
-        return Result.Success(order.Id);
+        return Result.Success(new CheckoutSonucu(order.Id, orderNumber));
     }
 }

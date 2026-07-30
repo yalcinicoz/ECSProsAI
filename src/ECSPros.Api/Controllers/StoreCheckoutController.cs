@@ -86,9 +86,11 @@ public class StoreCheckoutController(IMediator mediator, IConfiguration configur
         // zaten doğrulanmaz; genel kuponun misafir kullanımı sayaca yazılmaz — bilinen sınır).
         if (memberId is { } uyeKimlik && req.CouponId is { } kuponId && req.CouponDiscount is { } indirim)
             await mediator.Send(new ECSPros.Promotion.Application.Commands.UseCoupon.UseCouponCommand(
-                kuponId, uyeKimlik, result.Value, indirim), ct);
+                kuponId, uyeKimlik, result.Value!.OrderId, indirim), ct);
 
-        return Ok(new { success = true, data = new { orderId = result.Value } });
+        // 2026-07-30: orderNumber da döner — onay ekranı insan okunur numarayı doğrudan
+        // gösterir (misafirde üye-listesi geri araması yoktu, GUID görünüyordu).
+        return Ok(new { success = true, data = new { orderId = result.Value!.OrderId, orderNumber = result.Value.OrderNumber } });
     }
 }
 

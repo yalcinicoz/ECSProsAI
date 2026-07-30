@@ -94,10 +94,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(deger || 0) + " TL";
     const yaz = (secici, metin) => { const alan = document.querySelector(secici); if (alan) { alan.textContent = metin; } };
 
-    // Sipariş numarası: üyenin en yeni siparişi (checkout yanıtı yalnız orderId döner)
-    let siparisNo = "";
+    // Sipariş numarası: checkout yanıtı artık orderNumber döner (2026-07-30 — misafirde
+    // GUID görünüyordu); eski oturum kayıtları için üye-listesi geri araması yedek kalır.
+    let siparisNo = sonuc.orderNumber || "";
     const token = localStorage.getItem("ecspros_member_token");
-    if (token) {
+    if (!siparisNo && token) {
         try {
             const cevap = await fetch("/api/store/account/orders?page=1", { headers: { Authorization: "Bearer " + token } });
             const veri = await cevap.json().catch(() => null);
@@ -108,7 +109,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     yaz("[data-ms-onay-mesaj]", `Sayın ${sonuc.aliciAd}, ${sonuc.odemeTipi} ile yapmış olduğunuz${siparisNo ? " " + siparisNo + " nolu" : ""} siparişiniz oluşturulmuştur.`);
-    yaz("[data-ms-onay-no]", siparisNo || sonuc.orderId);
+    // GUID asla gösterilmez — numara çözülemezse alan "—" kalır (insan okunur sözleşmesi)
+    yaz("[data-ms-onay-no]", siparisNo || "—");
     yaz("[data-ms-onay-odeme-tipi]", sonuc.odemeTipi);
     yaz("[data-ms-onay-tutar]", paraYaz(sonuc.tutar));
     // K2 test modu: tahsilat mock — kapıda ödeme mantığıyla "ödenen 0, ödeyeceğiniz = nihai"

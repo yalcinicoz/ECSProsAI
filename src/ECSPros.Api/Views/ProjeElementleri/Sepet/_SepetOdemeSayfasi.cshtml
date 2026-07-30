@@ -912,6 +912,7 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 sessionStorage.setItem("msSiparisSonucu", JSON.stringify({
                     orderId: veri.data.orderId,
+                    orderNumber: veri.data.orderNumber || null,
                     odemeTipi: odemeTipiEtiketi(),
                     tutar: toplam,
                     indirim,
