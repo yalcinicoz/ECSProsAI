@@ -172,6 +172,10 @@ export function ChannelCategoryDetailPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['channel-category', id] })
+      // Listeleme tipi (color/model) değişince ürün listesi de tazelenmeli — aksi halde
+      // model modunun boş sonucu ekranda kalıp renk moduna dönünce "ürünler geri gelmiyor".
+      queryClient.invalidateQueries({ queryKey: ['channel-category-products', id] })
+      setProdPage(1)
       setFormInited(false)
     },
   })
@@ -661,7 +665,7 @@ export function ChannelCategoryDetailPage() {
 
           {syncMutation.isSuccess && (
             <div className="px-3 py-2 rounded-xl text-sm" style={{ background: '#dcfce7', color: '#16a34a' }}>
-              Sync tamamlandı — {syncMutation.data} yeni ürün eklendi.
+              Sync tamamlandı — kategoride {prodData?.totalCount ?? 0} {isModelMode ? 'model' : 'ürün'} listelenecek.
             </div>
           )}
 
