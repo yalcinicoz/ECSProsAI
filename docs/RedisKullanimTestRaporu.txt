@@ -1,0 +1,121 @@
+Bir ASP.NET Core ve Docker tabanlı e-ticaret projesinde Redis’in gerçekten kullanılıp kullanılmadığını teknik olarak analiz et ve bulguları kanıta dayalı bir rapor halinde açıkla.
+
+Proje ve altyapı bilgileri:
+
+- Redis, Docker içerisinde `ecscommerce-redis-1` adıyla çalışıyor.
+- Docker Compose yapılandırmasında Redis servisi bulunuyor.
+- API container’ına `ConnectionStrings__Redis=redis:6379` benzeri bir environment variable aktarılıyor.
+- Ancak kaynak kod taramasında aşağıdaki Redis entegrasyonlarına rastlanmadı:
+  - `RedisCacheService`
+  - `IDistributedCache`
+  - `ConnectionMultiplexer`
+  - `StackExchange.Redis`
+  - `AddStackExchangeRedisCache`
+  - Redis NuGet paketi
+  - Redis cache read/write çağrıları
+  - Cache key ve TTL tanımları
+  - Redis circuit breaker entegrasyonu
+
+Kaynak kodda Redis yalnızca şu amaçlarla geçiyor:
+
+1. Docker Compose içerisinde Redis container tanımı
+2. API container’ına verilen Redis connection string
+3. Proje ilerleme dokümanındaki Redis/cache hedefi
+
+Docker Compose içinde Redis servisinin tanımlanması veya connection string verilmesi, uygulamanın Redis’e bağlandığını tek başına kanıtlamaz. Bunun için uygulama kodunun connection string’i okuyarak bir Redis client oluşturması ve `GET`, `SET`, `MGET`, `EXPIRE` gibi komutlar göndermesi gerekir.
+
+Canlı sunucuda yapılan kontroller:
+
+İlk olarak Redis istatistikleri kontrol edildi:
+
+docker exec ecscommerce-redis-1 redis-cli INFO stats \
+  | grep -E 'keyspace_hits|keyspace_misses|total_commands_processed'
+
+Arka arkaya alınan sonuçlar:
+
+total_commands_processed:10
+keyspace_hits:0
+keyspace_misses:0
+
+total_commands_processed:11
+keyspace_hits:0
+keyspace_misses:0
+
+total_commands_processed:12
+keyspace_hits:0
+keyspace_misses:0
+
+Buradaki `total_commands_processed` değerinin her kontrolde yalnızca bir artmasının nedeni, çalıştırılan `INFO stats` komutunun kendisinin de Redis tarafından işlenen bir komut olmasıdır. Arada uygulamadan ek Redis trafiği gelmiş olsaydı sayaç birden fazla artardı.
+
+`keyspace_hits=0` ve `keyspace_misses=0` olması, Redis üzerinde cache okuması yapılmadığını gösteriyor.
+
+Daha sonra aşağıdaki kontroller yapıldı:
+
+docker exec ecscommerce-redis-1 redis-cli DBSIZE
+docker exec ecscommerce-redis-1 redis-cli INFO commandstats
+docker exec ecscommerce-redis-1 redis-cli CLIENT LIST
+
+Sonuç:
+
+DBSIZE:
+0
+
+Commandstats:
+
+cmdstat_info:calls=6
+cmdstat_pubsub|channels:calls=1
+cmdstat_monitor:calls=1
+cmdstat_ping:calls=4
+cmdstat_client|list:calls=1
+cmdstat_cluster|nodes:calls=1
+cmdstat_dbsize:calls=1
+cmdstat_config|get:calls=1
+
+Client listesinde yalnızca şu bağlantı görüldü:
+
+addr=127.0.0.1
+cmd=client|list
+user=default
+
+Bu sonuçları şu şekilde değerlendir:
+
+1. `DBSIZE=0`, Redis’in seçili veritabanında kayıtlı herhangi bir key olmadığını gösterir.
+2. `commandstats` içerisinde `GET`, `SET`, `MGET`, `HGET`, `HSET`, `DEL` veya `EXPIRE` gibi cache komutları bulunmuyor.
+3. Görünen komutların tamamı manuel teşhis sırasında çalıştırılan `INFO`, `PING`, `MONITOR`, `DBSIZE`, `CLIENT LIST` ve yapılandırma kontrol komutlarıdır.
+4. `CLIENT LIST` içerisinde API container’ına ait aktif bir bağlantı görülmüyor. Yalnızca container içinden açılan geçici `redis-cli` bağlantısı mevcut.
+5. Redis container’ı çalışıyor olsa da API’nin bu Redis instance’ına bağlandığına veya cache kullandığına dair kanıt bulunmuyor.
+6. Docker Compose içinde `depends_on: redis` bulunması yalnızca container başlatma sırasını etkiler; API ile Redis arasında otomatik bağlantı oluşturmaz.
+7. Connection string’in environment variable olarak tanımlanması da yeterli değildir. Uygulama kodunun bu ayarı okuyup kullanması gerekir.
+
+Bu kanıtlara dayanarak aşağıdaki sonucu açıkça belirt:
+
+“`ecscommerce-redis-1` container’ı çalışıyor ancak incelenen süre içerisinde site/API tarafından kullanılmıyor. Redis içerisinde cache key bulunmuyor, cache okuma/yazma komutu işlenmemiş ve API’ye ait aktif Redis bağlantısı görülmüyor.”
+
+Ancak raporda şu olasılıkları da ayrıca belirt:
+
+- Production API farklı bir Redis instance’ına bağlı olabilir.
+- Harici/managed Redis servisi kullanılıyor olabilir.
+- Uygulama Redis yerine Next.js, CDN, Nginx veya in-memory cache kullanıyor olabilir.
+- Redis kullanan kod farklı bir branch, commit veya publish artifact’ında bulunabilir.
+- Cache entegrasyonu yalnızca belirli endpoint veya koşullarda devreye giriyor olabilir ve test sırasında o akış tetiklenmemiş olabilir.
+
+Kesin son doğrulama için şu yöntemi öner:
+
+1. Redis istatistiklerini `CONFIG RESETSTAT` ile sıfırla.
+2. `redis-cli MONITOR` komutunu kısa süreli çalıştır.
+3. Sitede ürün listeleme, ürün detayı, giriş, sepet ve dashboard endpointlerini tetikle.
+4. `INFO commandstats`, `INFO stats`, `DBSIZE` ve `CLIENT LIST` sonuçlarını yeniden al.
+5. API container’ındaki Redis connection ayarının varlığını, parola veya connection string değerini açığa çıkarmadan doğrula.
+6. Çalışan API artifact’ının hangi Git commitinden üretildiğini kaynak kodla karşılaştır.
+
+Raporu şu başlıklarla hazırla:
+
+1. İncelenen yapı
+2. Kaynak kod bulguları
+3. Canlı Redis kontrolleri
+4. Kanıtların teknik yorumu
+5. Sonuç
+6. İstisnalar ve alternatif ihtimaller
+7. Önerilen kesin doğrulama adımları
+
+Kesin olarak kanıtlanmayan bir durumu gerçekmiş gibi sunma. “Redis kurulu ve çalışıyor” ile “uygulama Redis kullanıyor” ifadelerinin farklı anlamlara geldiğini özellikle açıkla.

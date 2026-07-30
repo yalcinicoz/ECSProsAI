@@ -85,6 +85,15 @@
     <meta property="og:url" content="@canonicalUrl" />
     <meta property="og:image" content="@openGraphImageUrl" />
     <meta name="twitter:card" content="summary_large_image" />
+    @if (ViewData["MsPreloadHero"] is string msPreloadHero)
+    {
+        @* LCP görseli erken indirilsin — ana sayfa ilk slider görseli (D fazı, 2026-07-30).
+           imagesrcset: preload, <img srcset>'in seçeceği varyantla aynı dosyayı indirsin
+           (yoksa çift indirme olur); varyantsız eski görselde düz href'e düşer (A fazı). *@
+        var msHeroSrcset = Context.RequestServices
+            .GetService<ECSPros.Api.Services.Store.VitrinSrcsetSaglayici>()?.Srcset(msPreloadHero);
+        <link rel="preload" as="image" href="@msPreloadHero" imagesrcset="@msHeroSrcset" imagesizes="@(msHeroSrcset is null ? null : "100vw")" fetchpriority="high" />
+    }
     <link rel="stylesheet" href="~/fontawesome-free-7.2.0-web/css/ikonall.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <partial name="~/Views/Shared/_MsTemaTokenlari.cshtml" />

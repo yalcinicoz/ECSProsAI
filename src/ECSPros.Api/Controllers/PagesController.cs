@@ -182,8 +182,25 @@ public class PagesController(
         var altDizin = Path.Combine("vitrin", DateTime.UtcNow.ToString("yyyyMM"));
         Directory.CreateDirectory(Path.Combine(kok, altDizin));
         var ad = $"{Guid.NewGuid():N}{uzanti}";
-        await using (var hedef = System.IO.File.Create(Path.Combine(kok, altDizin, ad)))
+        var dosyaYolu = Path.Combine(kok, altDizin, ad);
+        await using (var hedef = System.IO.File.Create(dosyaYolu))
             await file.CopyToAsync(hedef, ct);
+
+        // A fazı (2026-07-30): responsive varyantlar (_w480/_w800/_w1200/_w1920.webp) —
+        // storefront srcset bunlardan beslenir. Üretim hatası yüklemeyi düşürmez
+        // (varyantsız görsel bugünkü gibi tek kaynak servis edilir).
+        if (ECSPros.Api.Services.Store.VitrinGorselVaryantlari.Desteklenir(file.ContentType))
+        {
+            try
+            {
+                await ECSPros.Api.Services.Store.VitrinGorselVaryantlari.UretAsync(dosyaYolu, ct);
+            }
+            catch (Exception ex)
+            {
+                HttpContext.RequestServices.GetRequiredService<ILogger<PagesController>>()
+                    .LogWarning(ex, "Vitrin görsel varyantları üretilemedi: {Dosya}", dosyaYolu);
+            }
+        }
 
         return Ok(new { success = true, data = new { url = $"/media/{altDizin.Replace(Path.DirectorySeparatorChar, '/')}/{ad}" } });
     }

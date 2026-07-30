@@ -1,5 +1,6 @@
 @using ECSPros.Api.Models.Store
 @using System.Text.Json
+@inject ECSPros.Api.Services.Store.VitrinSrcsetSaglayici MsSrcset
 @model IReadOnlyList<ECSPros.Api.Models.Store.VitrinBlokVm>
 @{
     // G5: vitrin blokları — her tipin markup'ı tasarımın GorunumTipleri/Ortak
@@ -32,13 +33,17 @@
                     {
                         var slide = blok.Ogeler[i];
                         <a class="ms-slider-slide @(i == 0 ? "ms-slider-slide-gorunur ms-slider-slide-aktif" : "")" href="@(slide.LinkUrl ?? "#")" target="@(slide.YeniSekme ? "_blank" : null)" aria-label="@slide.Baslik kampanyasına git">
+                            @{
+                                // A fazı (2026-07-30): varyantı olan görsele srcset — cihaz gereken genişliği indirir
+                                var slideSrcset = MsSrcset.Srcset(slide.GorselUrl ?? slide.MobilGorselUrl);
+                            }
                             @if (i == 0)
                             {
-                            <img class="no-lazy" src="@(slide.GorselUrl ?? slide.MobilGorselUrl)" alt="@slide.Baslik" width="1200" height="525" loading="eager" fetchpriority="high" decoding="async" data-ms-lazy="false">
+                            <img class="no-lazy" src="@(slide.GorselUrl ?? slide.MobilGorselUrl)" srcset="@slideSrcset" sizes="@(slideSrcset is null ? null : "100vw")" alt="@slide.Baslik" width="1200" height="525" loading="eager" fetchpriority="high" decoding="async" data-ms-lazy="false">
                             }
                             else
                             {
-                            <img data-ms-lazy-src="@(slide.GorselUrl ?? slide.MobilGorselUrl)" alt="@slide.Baslik" width="1200" height="525" loading="lazy">
+                            <img data-ms-lazy-src="@(slide.GorselUrl ?? slide.MobilGorselUrl)" data-ms-lazy-srcset="@slideSrcset" data-ms-lazy-sizes="@(slideSrcset is null ? null : "100vw")" alt="@slide.Baslik" width="1200" height="525" loading="lazy">
                             }
                         </a>
                     }
@@ -129,8 +134,9 @@
             <div class="ms-gorunum-reklam-vitrin lazy-infinite-on" data-ms-gorunum-reklam-vitrin>
                 @if (blok.Ogeler.FirstOrDefault() is { } reklamBanner)
                 {
+                    var reklamSrcset = MsSrcset.Srcset(reklamBanner.GorselUrl);
                     <a class="ms-gorunum-reklam-vitrin-banner" href="@(reklamBanner.LinkUrl ?? "#")" aria-label="@reklamBanner.Baslik">
-                        <img data-ms-lazy-src="@reklamBanner.GorselUrl" alt="@reklamBanner.Baslik" width="1200" height="525" loading="lazy" decoding="async">
+                        <img data-ms-lazy-src="@reklamBanner.GorselUrl" data-ms-lazy-srcset="@reklamSrcset" data-ms-lazy-sizes="@(reklamSrcset is null ? null : "(max-width: 768px) 100vw, 50vw")" alt="@reklamBanner.Baslik" width="1200" height="525" loading="lazy" decoding="async">
                     </a>
                 }
 
@@ -166,8 +172,9 @@
                 <div class="ms-gorunum-banner-grid ms-gorunum-banner-grid-@(blok.Sablon ?? "tekli") @(blok.MobilCarousel ? "ms-gorunum-banner-mobil-carousel" : "")">
                     @foreach (var banner in blok.Ogeler)
                     {
+                        var bannerSrcset = MsSrcset.Srcset(banner.GorselUrl);
                         <a class="ms-gorunum-banner-karti" href="@(banner.LinkUrl ?? "#")" target="@(banner.YeniSekme ? "_blank" : null)">
-                            <img data-ms-lazy-src="@banner.GorselUrl" alt="@banner.Baslik" width="400" height="164" loading="lazy" decoding="async">
+                            <img data-ms-lazy-src="@banner.GorselUrl" data-ms-lazy-srcset="@bannerSrcset" data-ms-lazy-sizes="@(bannerSrcset is null ? null : "(max-width: 768px) 100vw, 403px")" alt="@banner.Baslik" width="400" height="164" loading="lazy" decoding="async">
                         </a>
                     }
                 </div>
@@ -484,8 +491,9 @@
                 <div class="ms-gorunum-carousel ms-gorunum-banner-grid ms-gorunum-banner-mobil-carousel ms-gorunum-banner-desktop-carousel ms-gorunum-coklu-banner-carousel" data-ms-gorunum-carousel-liste aria-label="Çoklu bannerlar">
                     @foreach (var oge in blok.Ogeler)
                     {
+                        var cokluSrcset = MsSrcset.Srcset(oge.GorselUrl);
                         <a class="ms-gorunum-banner-karti" href="@(oge.LinkUrl ?? "#")" target="@(oge.YeniSekme ? "_blank" : null)" aria-label="@oge.Baslik bannerını incele">
-                            <img data-ms-lazy-src="@oge.GorselUrl" alt="@oge.Baslik banner görseli" width="110" height="165" loading="lazy">
+                            <img data-ms-lazy-src="@oge.GorselUrl" data-ms-lazy-srcset="@cokluSrcset" data-ms-lazy-sizes="@(cokluSrcset is null ? null : "(max-width: 768px) 45vw, 110px")" alt="@oge.Baslik banner görseli" width="110" height="165" loading="lazy">
                         </a>
                     }
                 </div>
@@ -512,9 +520,10 @@
                     <div class="ms-gorunum-carousel ms-gorunum-gorselli-yorumlar-liste" data-ms-gorunum-carousel-liste aria-label="@(blok.Baslik.Length > 0 ? blok.Baslik : "Popüler görselli yorumlar")">
                         @foreach (var oge in blok.Ogeler)
                         {
+                            var yorumSrcset = MsSrcset.Srcset(oge.GorselUrl);
                             <a class="ms-gorunum-gorselli-yorum-kart" href="@(oge.LinkUrl ?? "#")">
                                 <span class="ms-gorunum-gorselli-yorum-gorsel">
-                                    <img data-ms-lazy-src="@oge.GorselUrl" alt="@oge.Baslik görselli yorum fotoğrafı" width="214" height="268" loading="lazy" decoding="async">
+                                    <img data-ms-lazy-src="@oge.GorselUrl" data-ms-lazy-srcset="@yorumSrcset" data-ms-lazy-sizes="@(yorumSrcset is null ? null : "(max-width: 768px) 60vw, 214px")" alt="@oge.Baslik görselli yorum fotoğrafı" width="214" height="268" loading="lazy" decoding="async">
                                     <strong>@oge.AltBaslik</strong>
                                 </span>
                                 <span class="ms-gorunum-gorselli-yorum-urun">
@@ -612,8 +621,9 @@
                     <div class="ms-gorunum-carousel ms-gorunum-carousel-cercevesiz-liste" data-ms-gorunum-carousel-liste aria-label="Çerçevesiz carousel görselleri">
                         @foreach (var oge in blok.Ogeler)
                         {
+                            var cercevesizSrcset = MsSrcset.Srcset(oge.GorselUrl);
                             <a class="ms-gorunum-carousel-cercevesiz-kart" href="@(oge.LinkUrl ?? "#")" target="@(oge.YeniSekme ? "_blank" : null)">
-                                <img data-ms-lazy-src="@oge.GorselUrl" alt="@oge.Baslik çerçevesiz carousel görseli" width="400" height="489" loading="lazy">
+                                <img data-ms-lazy-src="@oge.GorselUrl" data-ms-lazy-srcset="@cercevesizSrcset" data-ms-lazy-sizes="@(cercevesizSrcset is null ? null : "(max-width: 768px) 90vw, 400px")" alt="@oge.Baslik çerçevesiz carousel görseli" width="400" height="489" loading="lazy">
                                 <span class="ms-gorunum-carousel-cercevesiz-yazi">
                                     <strong>@oge.Baslik</strong>
                                     <small>@oge.AltBaslik</small>
