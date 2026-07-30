@@ -107,6 +107,12 @@ public class PaymentController(
     /// uygulanır, düz "OK" dönülür (PayTR sözleşmesi). Kimlik doğrulaması YOK (PayTR'dan gelir),
     /// güvence hash'tir. Form-encoded gelir.</summary>
     [HttpPost("callback")]
+    // 2026-07-30: mevcut canlı sitenin PayTR panelinde tanımlı bildirim URL'i korunuyor —
+    // kullanıcı paneli değiştirmek istemiyor. PayTR bu absolut yola POST eder; aynı handler.
+    // Bu yol /api/store/ altında OLMADIĞINDAN vitrin kapısına zaten takılmaz. Tek template
+    // yeterli — ASP.NET Core trailing slash'ı ('.../PayTrBildirim/') otomatik eşler (iki
+    // varyant yazmak AmbiguousMatchException üretiyordu).
+    [HttpPost("/CheckoutPayment/PayTrBildirim")]
     [AllowAnonymous]
     [Consumes("application/x-www-form-urlencoded")]
     public async Task<IActionResult> Callback([FromForm] PayTrCallbackForm form, CancellationToken ct)
