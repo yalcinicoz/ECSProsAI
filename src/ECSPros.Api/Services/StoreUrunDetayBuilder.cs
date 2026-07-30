@@ -65,6 +65,16 @@ public class StoreUrunDetayBuilder(
             .Select(v => slugMap.GetValueOrDefault(v.Id))
             .FirstOrDefault(s => s != null);
 
+        // 2026-07-30: tüm varyant stoğu bir kez hesaplanır — varsayılan renk seçiminde STOKLU
+        // rengi öncelemek + beden listesi için (aşağıda). Arama/kategori kartı /urun/{code}'a
+        // RENKSİZ link verince eskiden ilk görünür renk (ör. stoksuz Siyah) açılıyordu; oysa
+        // yalnız Koyu Gri stoktaydı. Artık renk belirtilmemişse ilk STOKLU görünür renk seçilir.
+        var tumStoklar = new Dictionary<Guid, int>();
+        foreach (var v in varyantlar)
+            tumStoklar[v.Id] = await stockService.GetAvailableStockAsync(v.Id, null, ct);
+        bool RenkStoklu(Guid colorValueId) => renkTipKodu is not null && varyantlar
+            .Any(v => VaryantRenktenMi(v, renkTipKodu, colorValueId) && tumStoklar.GetValueOrDefault(v.Id) > 0);
+
         Guid? seciliRenk = null;
         if (Guid.TryParse(color, out var istenen))
         {
@@ -77,7 +87,11 @@ public class StoreUrunDetayBuilder(
                     .Select(a => (Guid?)a.AttributeValueId)
                     .FirstOrDefault(id => gorunurRenkler.Any(r => r.AttributeValueId == id));
         }
-        seciliRenk ??= gorunurRenkler.Count > 0 ? gorunurRenkler[0].AttributeValueId : null;
+        // Renk belirtilmemişse: ilk STOKLU görünür renk; hiç stoklu renk yoksa ilk görünür renk.
+        seciliRenk ??= gorunurRenkler
+            .Select(r => (Guid?)r.AttributeValueId)
+            .FirstOrDefault(id => RenkStoklu(id!.Value))
+            ?? (gorunurRenkler.Count > 0 ? gorunurRenkler[0].AttributeValueId : null);
 
         var havuz = seciliRenk is { } renk
             ? varyantlar.Where(v => VaryantRenktenMi(v, renkTipKodu!, renk)).ToList()
@@ -95,10 +109,8 @@ public class StoreUrunDetayBuilder(
                                  && a.AttributeTypeCode != renkTipKodu
                                  && a.AttributeTypeCode is not ("renk" or "filtre_rengi"));
 
-        var stoklar = new Dictionary<Guid, int>();
-        foreach (var v in havuz)
-            stoklar[v.Id] = await stockService.GetAvailableStockAsync(v.Id, null, ct);
-        bool Satilabilir(Guid variantId) => stoklar.GetValueOrDefault(variantId) > 0;
+        // Stok yukarıda tüm varyantlar için hesaplandı (tumStoklar) — havuz için tekrar sorma.
+        bool Satilabilir(Guid variantId) => tumStoklar.GetValueOrDefault(variantId) > 0;
 
         // Fiyat sıfır düzeltmesi (2026-07-16): kanal kaydı olmayan / kanal fiyatı 0 olan
         // varyantlarda PlatformPrice ?? BasePrice 0 dönebiliyordu ve sepete 0 TL gidiyordu.
