@@ -544,6 +544,11 @@ app.UseStaticFiles(new StaticFileOptions
     }
 });
 
+// UseRouting AÇIKÇA burada: aksi halde WebApplication örtük UseRouting'i pipeline'ın EN
+// BAŞINA koyar ve yukarıdaki 404 ReExecute'u çalışamaz — ReExecute path'i /hata/{0}'a
+// çevirip endpoint'i sıfırlar ama rota seçimi upstream'de kaldığından ikinci geçişte
+// endpoint seçilemez, sayfa yine boş 404 döner (2026-07-30'da canlıda yaşandı).
+app.UseRouting();
 app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
