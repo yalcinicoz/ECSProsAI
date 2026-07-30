@@ -37,7 +37,9 @@ public record CheckoutCommand(
     List<AcceptedContract>? AcceptedContracts = null,
     // 2026-07-22: müşterinin teslimat adımında seçtiği kargo (mahalle bazlı seçenekler)
     Guid? RequestedCargoIntegrationId = null,
-    string? RequestedCargoName = null) : IRequest<Result<CheckoutSonucu>>;
+    string? RequestedCargoName = null,
+    string? PaymentMethod = null,      // kart | kapida-nakit | kapida-kart (2026-07-30)
+    decimal? CouponDiscount = null) : IRequest<Result<CheckoutSonucu>>;
 
 /// <summary>Checkout dönüşü (2026-07-30): OrderNumber da döner — onay ekranı insan
 /// okunur numarayı (kanal bazlı seri, F1-F5 kod sistemi) GUID'e düşmeden gösterir
@@ -91,9 +93,21 @@ public class CheckoutCommandHandler(
             tedarikciByVariant[item.VariantId] = bilgi.SupplierId;
         }
 
-        var orderNumber = await orderNumbers.GenerateAsync(request.FirmPlatformId, ct);
-
         var subtotal = request.Items.Sum(i => i.Quantity * i.UnitPrice);
+
+        // 2026-07-30: kapıda ödeme hizmet bedeli SUNUCUDA hesaplanır (istemciden tutar
+        // alınmaz — ödeme sayfasındaki +50 TL bilgisi bu sabitin görüntüsüdür) ve sipariş
+        // toplamına yazılır; 3.000 TL üstü kapıda ödeme sunucuda da reddedilir. Kupon
+        // indirimi de artık sipariş toplamına yansır (önceden yalnız kullanım kaydıydı).
+        const decimal kapidaOdemeBedeli = 50m;
+        const decimal kapidaOdemeUstSinir = 3000m;
+        var kapidaOdeme = request.PaymentMethod is "kapida-nakit" or "kapida-kart";
+        var indirim = Math.Clamp(request.CouponDiscount ?? 0m, 0m, subtotal);
+        var masraf = kapidaOdeme ? kapidaOdemeBedeli : 0m;
+        if (kapidaOdeme && subtotal - indirim >= kapidaOdemeUstSinir)
+            return Result.Failure<CheckoutSonucu>("3.000 TL ve üzeri siparişlerde kapıda ödeme kabul edilmez; lütfen kart ile ödemeyi seçin.");
+
+        var orderNumber = await orderNumbers.GenerateAsync(request.FirmPlatformId, ct);
 
         var order = new OrderEntity
         {
@@ -127,10 +141,10 @@ public class CheckoutCommandHandler(
             BillingDistrictId = request.BillingDistrictId,
             BillingAddressLine = request.BillingAddressLine,
             Subtotal = subtotal,
-            TotalDiscount = 0,
-            TotalExpense = 0,
+            TotalDiscount = indirim,
+            TotalExpense = masraf,
             TotalTax = 0,
-            GrandTotal = subtotal
+            GrandTotal = subtotal - indirim + masraf
         };
 
         // C8: müşteri notu (daha önce sessizce düşüyordu) + sözleşme kabul kaydı tek jsonb'de.
@@ -139,6 +153,8 @@ public class CheckoutCommandHandler(
             notlar["note"] = request.CustomerNotes!;
         if (request.AcceptedContracts is { Count: > 0 })
             notlar["acceptedContracts"] = request.AcceptedContracts;
+        if (!string.IsNullOrWhiteSpace(request.PaymentMethod))
+            notlar["paymentMethod"] = request.PaymentMethod!; // şemasız kayıt (jsonb) — kolon açmadan yöntem izi
         if (notlar.Count > 0)
             order.CustomerNotes = notlar;
 

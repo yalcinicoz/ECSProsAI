@@ -77,7 +77,8 @@ public class StoreCheckoutController(IMediator mediator, IConfiguration configur
             req.BillingCountryId, req.BillingCityId, req.BillingDistrictId, req.BillingAddressLine,
             req.Items.Select(i => new CheckoutItem(i.VariantId, i.Sku, i.ProductName, i.VariantInfo ?? "", i.Quantity, i.UnitPrice)).ToList(),
             req.CustomerNotes, req.CartId, kabulKayitlari,
-            req.RequestedCargoIntegrationId, req.RequestedCargoName), ct);
+            req.RequestedCargoIntegrationId, req.RequestedCargoName,
+            req.PaymentMethod, req.CouponDiscount), ct);
 
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
 
@@ -121,7 +122,8 @@ public record StoreCheckoutRequest(
     decimal? CouponDiscount = null,
     List<string>? AcceptedContracts = null, // C8: onaylanan sözleşme kodları (kayıt sunucuda çözülür)
     Guid? RequestedCargoIntegrationId = null, // 2026-07-22: müşterinin kargo tercihi
-    string? RequestedCargoName = null);
+    string? RequestedCargoName = null,
+    string? PaymentMethod = null);   // 2026-07-30: kart|kapida-nakit|kapida-kart — kapıda bedeli sunucuda eklenir
 
 public record StoreCheckoutItemRequest(
     Guid VariantId,
