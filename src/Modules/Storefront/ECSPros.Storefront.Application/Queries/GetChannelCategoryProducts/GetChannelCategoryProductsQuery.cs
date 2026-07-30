@@ -102,8 +102,11 @@ public class GetChannelCategoryProductsQueryHandler(
     // v4: renk düzeyi stok görünürlüğü (stoğu biten renk kartı elenir) — eski v3 listeleri
     // stoksuz renkleri içerdiğinden sürüm artırıldı.
     // v5: kanal seçimi/durdurma (M2/M3) geçidi — kanaldan çıkarılan/durdurulan ürün elenir.
+    // v7: (a) kategori fiyat kuralı RENK düzeyinde uygulanır (fiyat kuralını sağlamayan renk kartı
+    // elenir); (b) kart fiyatı artık KANAL (satış) fiyatı, BasePrice değil — eski listeler hem
+    // kuralı sağlamayan renkleri içerdiğinden hem base fiyat gösterdiğinden sürüm artırıldı.
     private static string CacheKey(Guid categoryId, int page, int pageSize) =>
-        $"channelcat:products:v5:{categoryId}:{page}:{pageSize}";
+        $"channelcat:products:v7:{categoryId}:{page}:{pageSize}";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
 
     private async Task<PagedResult<ChannelCategoryProductItemDto>?> TryGetCacheAsync(string key, CancellationToken ct)
@@ -361,6 +364,18 @@ public class GetChannelCategoryProductsQueryHandler(
         var variantToProduct = allVariants.ToDictionary(v => v.Id, v => v.ProductId);
         var variantPrice = allVariants.ToDictionary(v => v.Id, v => v.BasePrice);
 
+        // Kanal (satış) fiyatı: kartta GÖSTERİLEN ve filtre/sıralamada kullanılan fiyat kanal
+        // fiyatıdır, BasePrice değil (legacy plurunler.satisFiyati → channel_variants.Price;
+        // renk başına temsilci varyantta tutulur, kampanyada BasePrice'ın altında olabilir).
+        // Kategorinin platformPrice kuralı da bu fiyatı kullanır — gösterim ile üyelik tutarlı.
+        var variantChannelPrice = variantIds.Count > 0
+            ? await sfDb.ChannelVariants.AsNoTracking()
+                .Where(cv => cv.FirmPlatformId == cat.FirmPlatformId && cv.IsActive
+                          && cv.Price != null && cv.Price > 0 && variantIds.Contains(cv.VariantId))
+                .Select(cv => new { cv.VariantId, Price = cv.Price!.Value })
+                .ToDictionaryAsync(cv => cv.VariantId, cv => cv.Price, ct)
+            : new Dictionary<Guid, decimal>();
+
         // 5. Tüm varyant attribute değerleri (primary axis tespiti için)
         // Sadece PRIMARY AXIS tipindeki satırlar çekiliyor (ör. "beden" atlanıyor) — büyük
         // kategorilerde (10K+ ürün) her varyantın TÜM attribute'larını (Name/Hex join'i dahil)
@@ -384,14 +399,25 @@ public class GetChannelCategoryProductsQueryHandler(
                 return primaryAxisByGroup.TryGetValue(gid, out var axisTypeId) && a.AttributeTypeId == axisTypeId;
             })
             .GroupBy(a => (ProductId: variantToProduct[a.VariantId], a.AttributeValueId))
-            .Select(g => new
+            .Select(g =>
             {
-                g.Key.ProductId,
-                ColorValueId  = g.Key.AttributeValueId,
-                VariantIds    = g.Select(x => x.VariantId).Distinct().ToList(),
-                // Rengin en düşük varyant fiyatı (fiyatlanmamış varyantlar 0 döner, onları atla)
-                Price = g.Select(x => variantPrice.GetValueOrDefault(x.VariantId))
-                         .Where(p => p > 0).DefaultIfEmpty(0).Min()
+                var vids = g.Select(x => x.VariantId).Distinct().ToList();
+                // Rengin kanal (satış) fiyatı: temsilci varyantta; fiyatlanmamışlar 0, atlanır.
+                var kanal = vids.Select(v => variantChannelPrice.GetValueOrDefault(v))
+                                .Where(p => p > 0).DefaultIfEmpty(0).Min();
+                // Kanal fiyatı yoksa BasePrice'a düş (kart yine bir fiyat gösterebilsin).
+                var baz = vids.Select(v => variantPrice.GetValueOrDefault(v))
+                              .Where(p => p > 0).DefaultIfEmpty(0).Min();
+                return new
+                {
+                    g.Key.ProductId,
+                    ColorValueId = g.Key.AttributeValueId,
+                    VariantIds   = vids,
+                    // Gösterilen/filtre/sıralama fiyatı = kanal (satış) fiyatı; yoksa base
+                    Price = kanal > 0 ? kanal : baz,
+                    // Kategori platformPrice kuralı YALNIZ gerçek kanal fiyatına uygulanır (0 = kanal yok)
+                    ChannelPrice = kanal
+                };
             })
             .OrderBy(x => x.ProductId).ThenBy(x => x.ColorValueId)
             .ToList();
@@ -474,6 +500,36 @@ public class GetChannelCategoryProductsQueryHandler(
                 if (request.OutOfStockSince is null) return true;
                 return productInfo.TryGetValue(pair.ProductId, out var pi)
                     && pi.CreatedAt >= request.OutOfStockSince.Value;
+            }).ToList();
+
+            if (visiblePairs.Count == 0)
+                return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
+                    [], 0, request.Page, request.PageSize));
+        }
+
+        // ── Kategori kendi fiyat kuralı RENK düzeyinde (2026-07-30): ürün-seviyesi filtre
+        // (ResolveCategoryProductIds) ürünü "HERHANGİ bir rengin kanal fiyatı aralıkta" ise alır;
+        // ama renk-bazlı listede kuralı SAĞLAMAYAN renk kartı gösterilmemeli. Örn. hersey-99-tl'de
+        // Siyah kanal fiyatı 99.99 (aralıkta) ama stoksuz → ürün kategoriye girer; Koyu Gri 699.99
+        // (aralık dışı) stoklu diye kart olmasın. Kanal fiyatı renk başına ayrı olduğundan her renk
+        // KENDİ min kanal fiyatıyla kurala tabi tutulur; kanal fiyatı olmayan renk fiyat-kurallı
+        // kategoride görünmez. Manuel (küratörlü) ürünler kuraldan muaf.
+        var katRules = (cat.FillType is "filter" or "mixed")
+            ? CategoryFilterRules.From(cat.FilterDef) : null;
+        if (katRules is not null && (katRules.PlatformPriceMin.HasValue || katRules.PlatformPriceMax.HasValue))
+        {
+            var pinnedProductIds = cat.FillType == "mixed"
+                ? (await sfDb.ChannelCategoryProducts.AsNoTracking()
+                    .Where(p => p.ChannelCategoryId == request.ChannelCategoryId && !p.IsExcluded)
+                    .Select(p => p.ProductId).ToListAsync(ct)).ToHashSet()
+                : new HashSet<Guid>();
+
+            visiblePairs = visiblePairs.Where(pair =>
+            {
+                if (pinnedProductIds.Contains(pair.ProductId)) return true;   // küratörlü renk muaf
+                if (pair.ChannelPrice <= 0) return false;   // kanal fiyatı olmayan renk fiyat-kurallı kategoride görünmez
+                return (!katRules.PlatformPriceMin.HasValue || pair.ChannelPrice >= katRules.PlatformPriceMin.Value)
+                    && (!katRules.PlatformPriceMax.HasValue || pair.ChannelPrice <= katRules.PlatformPriceMax.Value);
             }).ToList();
 
             if (visiblePairs.Count == 0)
