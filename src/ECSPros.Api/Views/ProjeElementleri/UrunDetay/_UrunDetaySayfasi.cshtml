@@ -2086,8 +2086,12 @@
             const hizliSatinAl = async () => {
                 const varyant = seciliVaryant();
                 if (!varyant || hizliGonderiliyor) { return; }
-                if (!localStorage.getItem("ecspros_member_token")) {
-                    // Teslimat adımı üye adres API'siyle çalışır — hızlı akış v1 üye-girişli
+                if (!localStorage.getItem("ecspros_member_token")
+                    && sessionStorage.getItem("msMisafirSiparis") !== "1") {
+                    // Misafir kapısı (2026-07-30, sepet Index.cshtml kalıbı): giriş modalı
+                    // açılır; ya giriş yapılır (ms:uye-giris köprüsü) ya "Misafir Olarak
+                    // Devam Et" seçilir — ikisi de bekleyen hızlı niyeti sürdürür.
+                    try { sessionStorage.setItem("msBekleyenHizliSiparis", "1"); } catch { }
                     document.querySelector("[data-ms-giris-modal-ac]")?.click();
                     return;
                 }
@@ -2154,6 +2158,46 @@
                     }
                 });
             });
+
+            // Misafir kapısı köprüleri (2026-07-30, sepet Index.cshtml deseni — kendi
+            // niyet bayrağıyla; sepetin dinleyicileriyle çakışmaz):
+            // 1) Girişle devam: merge sonrası tetiklenen ms:uye-giris bekleyen hızlı akışı sürdürür.
+            document.addEventListener("ms:uye-giris", () => {
+                if (sessionStorage.getItem("msBekleyenHizliSiparis") === "1") {
+                    sessionStorage.removeItem("msBekleyenHizliSiparis");
+                    hizliSatinAl();
+                }
+            });
+            // 2+3) Modal butonları sayfa içeriğinden sonra basılabilir — parse sırasına
+            //      güvenme, DOM hazır olunca bağla (sepet Index.cshtml ile aynı sigorta).
+            const misafirKapisiniBagla = () => {
+                // 2) Misafirle devam: modaldaki tasarım butonu — misafir bayrağı yazılır,
+                //    hızlı akış token'sız sürer (teslimat misafir adres formunu gösterir,
+                //    ödeme misafir dalı checkout'u token'sız kabul eder).
+                document.querySelectorAll(".ms-giris-buton-misafir").forEach((buton) => {
+                    buton.addEventListener("click", () => {
+                        if (sessionStorage.getItem("msBekleyenHizliSiparis") !== "1") { return; }
+                        sessionStorage.removeItem("msBekleyenHizliSiparis");
+                        try { sessionStorage.setItem("msMisafirSiparis", "1"); } catch { }
+                        hizliSatinAl();
+                    });
+                });
+                // 3) Seçimsiz kapanış: niyet düşer — sonraki alakasız bir giriş kullanıcıyı
+                //    durduk yere siparişe götürmesin. Başarılı giriş modalı programatik
+                //    kapatır (token o anda yazılmıştır) — o kapanış vazgeçme sayılmaz.
+                document.querySelectorAll("[data-ms-giris-modal-kapat]").forEach((eleman) => {
+                    if (eleman.classList.contains("ms-giris-buton-misafir")) { return; }
+                    eleman.addEventListener("click", () => {
+                        if (localStorage.getItem("ecspros_member_token")) { return; }
+                        try { sessionStorage.removeItem("msBekleyenHizliSiparis"); } catch { }
+                    });
+                });
+            };
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", misafirKapisiniBagla, { once: true });
+            } else {
+                misafirKapisiniBagla();
+            }
 
             // Beden modalından seçim: misharix radio'yu işaretleyip modalı kapatır;
             // ardından bekleyen ekleme burada gerçekleşir (Şimdi Al beklemedeyse hızlı akış).
