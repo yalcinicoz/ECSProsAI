@@ -10,19 +10,34 @@ namespace ECSPros.Api.Services;
 public class DashboardMetricsWorker(
     IServiceScopeFactory scopeFactory,
     IHubContext<DashboardHub> dashboardHub,
+    DashboardPresenceTracker presence,
     ILogger<DashboardMetricsWorker> logger) : BackgroundService
 {
+    // Bağlı istemci varken metrikler bu aralıkla toplanır; istemci yokken hiç sorgu atılmaz
+    // (docs/SiteYavaslikDegerlendirme.txt — worker kimse dinlemezken 3 DbContext'te 6 sorgu çalıştırıyordu).
+    private static readonly TimeSpan YayinAraligi = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan BostaKontrolAraligi = TimeSpan.FromSeconds(5);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation("DashboardMetricsWorker başlatıldı.");
 
+        var sonYayin = DateTime.MinValue;
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
+                if (presence.Count == 0 || DateTime.UtcNow - sonYayin < YayinAraligi)
+                {
+                    // Boşta: kısa aralıkla yalnız sayaç kontrolü — yeni bağlanan istemci
+                    // en geç 5 sn içinde ilk metrik tablosunu alır
+                    await Task.Delay(BostaKontrolAraligi, stoppingToken);
+                    continue;
+                }
+
                 var metrics = await CollectMetricsAsync(stoppingToken);
                 await dashboardHub.Clients.All.SendAsync("MetricsUpdated", metrics, stoppingToken);
-                await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+                sonYayin = DateTime.UtcNow;
             }
             catch (OperationCanceledException)
             {
