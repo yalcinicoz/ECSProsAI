@@ -81,8 +81,10 @@ static class Migration
         // Faz 27: KANAL fiyatı (channel_variants: Price/CompareAt/IsActive) plurunler'den
         // tazele — storefront filtresi/gösterilen fiyat bunu kullanır (BasePrice değil).
         if (phase == 27) Phase27_ChannelPriceRefresh(args.Length > 1 && args[1] == "dry");
+        // Faz 28: YALNIZ stok tazeleme (Faz 26'nın stok parçası; görsel/fiyat'a dokunmaz).
+        if (phase == 28) Phase28_StockOnly(args.Length > 1 && args[1] == "dry");
 
-        if (phase == 26 || phase == 27) { Log($"=== Faz {phase} bitti ==="); return; }
+        if (phase is 26 or 27 or 28) { Log($"=== Faz {phase} bitti ==="); return; }
         Log("=== Migration tamamlandı! ===");
         Log($"  image_sets                  : {PgCount($"{DEF}.image_sets")}");
         Log($"  attribute_types              : {PgCount($"{DEF}.attribute_types")}");
@@ -1535,6 +1537,19 @@ static class Migration
         return cmd.ExecuteReader();
     }
 
+    // ─── FAZ 28: YALNIZ STOK TAZELEME (Faz 26 stok parçası, izole) ───────────
+    static void Phase28_StockOnly(bool dryRun)
+    {
+        Log($"FAZ 28: Yalnız stok tazeleme{(dryRun ? " — KURU ÇALIŞMA" : "")}...");
+        var barcodeToVariant = new Dictionary<string, Guid>(StringComparer.Ordinal);
+        foreach (var row in PgReadRows($"SELECT \"Barcode\", \"Id\" FROM {CAT}.product_variants WHERE \"IsDeleted\"=false AND \"Barcode\" IS NOT NULL AND \"Barcode\"<>''"))
+            barcodeToVariant[(string)row[0]] = (Guid)row[1];
+        var legacyVariantBarcode = new Dictionary<int, string>();
+        using (var r = MysqlQuery("SELECT Id, barkod FROM apurunvaryantlari WHERE barkod IS NOT NULL AND barkod<>''"))
+            while (r.Read()) legacyVariantBarcode[r.GetInt32(0)] = r.GetString(1);
+        Phase26_Stock(dryRun, barcodeToVariant, legacyVariantBarcode);
+    }
+
     // ─── FAZ 27: KANAL FİYATI TAZELEME (plurunler → channel_variants) ────────
     // Storefront filtre-kategorileri (ör. hersey-99-tl, platformPriceMax) ve gösterilen
     // fiyat KANAL fiyatını (channel_variants.Price) kullanır — BasePrice'ı değil. Faz 26
@@ -1804,7 +1819,11 @@ static class Migration
         var batch = new List<object?[]>();
         var eklendi = new HashSet<(Guid, Guid)>();
         int okunan = 0, atlanan = 0;
-        using (var r = MysqlQuery("SELECT productVariantId, storageUnitId, COUNT(*) AS adet FROM opproductlocations GROUP BY productVariantId, storageUnitId"))
+        // 2026-07-30 DÜZELTME: yalnız REZERVSİZ (transactionDetailId IS NULL) adetler sayılır.
+        // transactionDetailId dolu = bir işleme TAHSİS edilmiş (satılmış/transfer/rezerve) →
+        // available DEĞİL. Legacy fninternetstokbyvaryantid de böyle sayar. İlk sürüm COUNT(*)
+        // ile toplam (rezerveler dahil) sayıyordu → tahsisli stok available görünüyordu (P-00021044).
+        using (var r = MysqlQuery("SELECT productVariantId, storageUnitId, SUM(CASE WHEN transactionDetailId IS NULL THEN 1 ELSE 0 END) AS adet FROM opproductlocations GROUP BY productVariantId, storageUnitId"))
             while (r.Read())
             {
                 int lvid = r.GetInt32(0), luid = r.GetInt32(1);
