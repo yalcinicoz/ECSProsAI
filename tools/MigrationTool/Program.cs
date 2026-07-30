@@ -75,7 +75,11 @@ static class Migration
         if (phase == 23) await Phase23_Orders();
         if (phase == 24) await Phase24_Favorites();
         if (phase == 25) await Phase25_MisharMenu();
+        // Faz 26: eski DB'den fiyat/görsel/stok HEDEFLİ güncelleme (ID koruyan yerinde UPDATE —
+        // tam-reload Faz 5/6/7'nin aksine). args[1]=="dry" → yalnız rapor, yazma yok.
+        if (phase == 26) await Phase26_TargetedUpdate(args.Length > 1 && args[1] == "dry");
 
+        if (phase == 26) { Log("=== Faz 26 bitti ==="); return; }
         Log("=== Migration tamamlandı! ===");
         Log($"  image_sets                  : {PgCount($"{DEF}.image_sets")}");
         Log($"  attribute_types              : {PgCount($"{DEF}.attribute_types")}");
@@ -1527,6 +1531,248 @@ static class Migration
         var cmd = new MySqlCommand(sql, mysql) { CommandTimeout = 600 };
         return cmd.ExecuteReader();
     }
+
+    // PG'den çok satır okuyup her satırı object[] verir (map kurmak için).
+    static List<object[]> PgReadRows(string sql)
+    {
+        var rows = new List<object[]>();
+        using var cmd = new NpgsqlCommand(sql, pg) { CommandTimeout = 300 };
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+        {
+            var row = new object[r.FieldCount];
+            for (int i = 0; i < r.FieldCount; i++) row[i] = r.IsDBNull(i) ? null! : r.GetValue(i);
+            rows.Add(row);
+        }
+        return rows;
+    }
+
+    // ─── FAZ 26: HEDEFLİ GÜNCELLEME (fiyat/görsel/stok) ──────────────────────
+    // Tam-reload Faz 5/6/7'den FARKI: ürün/varyant ID'leri KORUNUR (Code/Barkod ile
+    // eşlenir), yalnız fiyat/görsel/stok güncellenir → kanal kategorileri, siparişler,
+    // favoriler, rezervasyonlar bozulmaz. args[1]=="dry" → yalnız RAPOR (yazma yok).
+    static async Task Phase26_TargetedUpdate(bool dryRun)
+    {
+        Log($"FAZ 26: Hedefli güncelleme (fiyat/görsel/stok){(dryRun ? " — KURU ÇALIŞMA (yazma yok)" : "")}...");
+
+        // ── Bizim DB'den ID-koruyan eşlemeler ──
+        var codeToProduct = new Dictionary<string, Guid>(StringComparer.Ordinal);
+        foreach (var row in PgReadRows($"SELECT \"Code\", \"Id\" FROM {CAT}.products WHERE \"IsDeleted\"=false"))
+            codeToProduct[(string)row[0]] = (Guid)row[1];
+        var barcodeToVariant = new Dictionary<string, Guid>(StringComparer.Ordinal);
+        foreach (var row in PgReadRows($"SELECT \"Barcode\", \"Id\" FROM {CAT}.product_variants WHERE \"IsDeleted\"=false AND \"Barcode\" IS NOT NULL AND \"Barcode\"<>''"))
+            barcodeToVariant[(string)row[0]] = (Guid)row[1];
+        Log($"  Eşleme: {codeToProduct.Count} ürün (Code), {barcodeToVariant.Count} varyant (Barcode).");
+
+        // Eski Id → iş anahtarı (görsel/stok eski tablolarda Id ile gelir)
+        var legacyProductCode = new Dictionary<int, string>();
+        using (var r = MysqlQuery("SELECT Id, urunKodu FROM apurunler WHERE urunKodu IS NOT NULL AND urunKodu<>'' AND urunKodu IN (SELECT urunkodu FROM yeniurunkodlari)"))
+            while (r.Read()) legacyProductCode[r.GetInt32(0)] = r.GetString(1);
+        var legacyVariantBarcode = new Dictionary<int, string>();
+        using (var r = MysqlQuery("SELECT Id, barkod FROM apurunvaryantlari WHERE barkod IS NOT NULL AND barkod<>''"))
+            while (r.Read()) legacyVariantBarcode[r.GetInt32(0)] = r.GetString(1);
+        Log($"  Eski: {legacyProductCode.Count} ürün, {legacyVariantBarcode.Count} varyant (barkodlu).");
+
+        await Phase26_Price(dryRun, codeToProduct);
+        Phase26_Images(dryRun, codeToProduct, barcodeToVariant, legacyProductCode, legacyVariantBarcode);
+        Phase26_Stock(dryRun, barcodeToVariant, legacyVariantBarcode);
+
+        Log(dryRun
+            ? "  KURU ÇALIŞMA bitti — hiçbir şey YAZILMADI. Onaylarsanız 'dry' olmadan çalıştırın."
+            : "  Faz 26 yazma tamamlandı. ANALYZE önerilir (products, product_images, inv_stocks).");
+    }
+
+    // ── FAZ 26a: FİYAT (temp tablo + tek toplu UPDATE, Code ile) ──
+    static Task Phase26_Price(bool dryRun, Dictionary<string, Guid> codeToProduct)
+    {
+        Log("  [FİYAT] apurunler.satisFiyati/alisFiyati/kdvOrani → products...");
+        PgExec("DROP TABLE IF EXISTS _f26_price");
+        PgExec("CREATE TEMP TABLE _f26_price(code text PRIMARY KEY, price numeric, cost numeric, tax int)");
+        var batch = new List<object?[]>();
+        int okunan = 0;
+        using (var r = MysqlQuery(@"SELECT urunKodu, satisFiyati, alisFiyati, kdvOrani FROM apurunler
+            WHERE urunKodu IS NOT NULL AND urunKodu<>'' AND urunKodu IN (SELECT urunkodu FROM yeniurunkodlari)"))
+            while (r.Read())
+            {
+                string kod = r.GetString(0);
+                decimal price = r.IsDBNull(1) ? 0 : (decimal)r.GetDouble(1);
+                decimal? cost = r.IsDBNull(2) ? null : (decimal)r.GetDouble(2);
+                int tax = r.IsDBNull(3) ? 20 : r.GetInt32(3);
+                batch.Add(new object?[] { kod, price, cost == 0m ? null : cost, tax });
+                okunan++;
+                if (batch.Count >= 1000) { PgBatchInsert("_f26_price", new[] { "code", "price", "cost", "tax" }, new string?[4], batch); batch.Clear(); }
+            }
+        PgBatchInsert("_f26_price", new[] { "code", "price", "cost", "tax" }, new string?[4], batch);
+
+        long degisecek = (long)PgScalar<long>($@"SELECT COUNT(*) FROM {CAT}.products p JOIN _f26_price t ON p.""Code""=t.code
+            WHERE p.""IsDeleted""=false AND (p.""BasePrice"" IS DISTINCT FROM t.price
+                OR p.""BaseCost"" IS DISTINCT FROM t.cost OR p.""TaxRate"" IS DISTINCT FROM t.tax)");
+        Log($"    Eski listede {okunan} ürün fiyatı; DEĞİŞECEK ürün: {degisecek}.");
+        if (!dryRun)
+        {
+            PgExec($@"UPDATE {CAT}.products p SET ""BasePrice""=t.price, ""BaseCost""=t.cost, ""TaxRate""=t.tax,
+                ""UpdatedAt""=now() FROM _f26_price t WHERE p.""Code""=t.code AND p.""IsDeleted""=false
+                AND (p.""BasePrice"" IS DISTINCT FROM t.price OR p.""BaseCost"" IS DISTINCT FROM t.cost OR p.""TaxRate"" IS DISTINCT FROM t.tax)");
+            Log($"    ✓ {degisecek} ürün fiyatı güncellendi.");
+        }
+        return Task.CompletedTask;
+    }
+
+    // ── FAZ 26b: GÖRSELLER (Code/Barkod ile eşleyip product_images'ı yeniden kur) ──
+    // product_images'a gelen FK YOK → ürün başına silip yeniden yazmak güvenli. Değişen
+    // dosya adları (resimDosyaAdi) böyle tazelenir. Phase7'nin set-seçimi + dedup mantığı.
+    static void Phase26_Images(bool dryRun, Dictionary<string, Guid> codeToProduct,
+        Dictionary<string, Guid> barcodeToVariant,
+        Dictionary<int, string> legacyProductCode, Dictionary<int, string> legacyVariantBarcode)
+    {
+        Log("  [GÖRSEL] apurunresimleri.resimDosyaAdi → product_images (yeniden kur)...");
+        EnsureImageSetMap();
+        // varyant başına tek set (Phase7 ile aynı): en çok resimli set, eşitlikte küçük setId
+        var chosenSet = new Dictionary<(int, int?), (int setId, int cnt)>();
+        using (var rs = MysqlQuery(@"SELECT urunId, urunAnaVaryantId, IFNULL(resimSetId,1) AS setId, COUNT(*) AS c
+            FROM apurunresimleri WHERE isSilindi=0 AND resimDosyaAdi IS NOT NULL AND resimDosyaAdi<>''
+            GROUP BY urunId, urunAnaVaryantId, IFNULL(resimSetId,1)"))
+            while (rs.Read())
+            {
+                var key = (rs.GetInt32(0), rs.IsDBNull(1) ? (int?)null : rs.GetInt32(1));
+                int setId = rs.GetInt32(2), c = Convert.ToInt32(rs.GetValue(3));
+                if (!chosenSet.TryGetValue(key, out var cur) || c > cur.cnt || (c == cur.cnt && setId < cur.setId))
+                    chosenSet[key] = (setId, c);
+            }
+
+        // Yeni görsel setini temp tabloya kur (product_id, variant_id, set_id, file_name, sort, is_variant_cover)
+        PgExec("DROP TABLE IF EXISTS _f26_img");
+        PgExec("CREATE TEMP TABLE _f26_img(product_id uuid, variant_id uuid, set_id uuid, file_name text, sort_order int, is_variant_cover boolean)");
+        Guid defaultSetId = imageSetMap.Values.First();
+        var seen = new HashSet<(Guid, Guid?, string)>();
+        var variantFirst = new HashSet<int>();
+        var batch = new List<object?[]>();
+        int yeniSatir = 0, atlanan = 0;
+        using (var r = MysqlQuery(@"SELECT resimSetId, urunId, urunAnaVaryantId, resimDosyaAdi, siraNo
+            FROM apurunresimleri WHERE isSilindi=0 AND resimDosyaAdi IS NOT NULL AND resimDosyaAdi<>''
+            ORDER BY urunId, urunAnaVaryantId, siraNo"))
+            while (r.Read())
+            {
+                int oldSetId = r.IsDBNull(0) ? 1 : r.GetInt32(0);
+                int urunId = r.GetInt32(1);
+                int? variantOldId = r.IsDBNull(2) ? null : r.GetInt32(2);
+                string fileName = r.GetString(3);
+                int siraNo = r.IsDBNull(4) ? 0 : r.GetInt32(4);
+
+                // Eski urunId → Code → bizim ProductId (ID korunur)
+                if (!legacyProductCode.TryGetValue(urunId, out var kod) || !codeToProduct.TryGetValue(kod, out var productGuid)) { atlanan++; continue; }
+                if (chosenSet.TryGetValue((urunId, variantOldId), out var cs) && cs.setId != oldSetId) continue;
+
+                Guid? variantGuid = null;
+                if (variantOldId.HasValue && legacyVariantBarcode.TryGetValue(variantOldId.Value, out var vbc)
+                    && barcodeToVariant.TryGetValue(vbc, out var vg)) variantGuid = vg;
+
+                var setId = imageSetMap.TryGetValue(oldSetId, out var sid) ? sid : defaultSetId;
+                if (!seen.Add((productGuid, variantGuid, fileName))) continue;
+                bool isVariantCover = variantOldId.HasValue && variantFirst.Add(variantOldId.Value);
+
+                batch.Add(new object?[] { productGuid, variantGuid, setId, fileName, siraNo, isVariantCover });
+                yeniSatir++;
+                if (batch.Count >= 1000) { PgBatchInsert("_f26_img", new[] { "product_id", "variant_id", "set_id", "file_name", "sort_order", "is_variant_cover" }, new string?[6], batch); batch.Clear(); }
+            }
+        PgBatchInsert("_f26_img", new[] { "product_id", "variant_id", "set_id", "file_name", "sort_order", "is_variant_cover" }, new string?[6], batch);
+
+        long mevcut = PgCount($"{CAT}.product_images");
+        // Değişen dosya adları: yeni'de olup mevcutta olmayan (eklenecek/tazelenecek)
+        long yeniDosya = PgScalar<long>($@"SELECT COUNT(*) FROM _f26_img n WHERE NOT EXISTS (
+            SELECT 1 FROM {CAT}.product_images o WHERE o.""ProductId""=n.product_id AND o.""FileName""=n.file_name AND o.""IsDeleted""=false)");
+        // Bayat dosya adları: mevcutta olup yeni'de olmayan (KIRIK — kaldırılacak)
+        long bayatDosya = PgScalar<long>($@"SELECT COUNT(*) FROM {CAT}.product_images o WHERE o.""IsDeleted""=false AND NOT EXISTS (
+            SELECT 1 FROM _f26_img n WHERE n.product_id=o.""ProductId"" AND n.file_name=o.""FileName"")");
+        long etkilenenUrun = PgScalar<long>($@"SELECT COUNT(DISTINCT k) FROM (
+            SELECT n.product_id AS k FROM _f26_img n WHERE NOT EXISTS (SELECT 1 FROM {CAT}.product_images o WHERE o.""ProductId""=n.product_id AND o.""FileName""=n.file_name AND o.""IsDeleted""=false)
+            UNION SELECT o.""ProductId"" FROM {CAT}.product_images o WHERE o.""IsDeleted""=false AND NOT EXISTS (SELECT 1 FROM _f26_img n WHERE n.product_id=o.""ProductId"" AND n.file_name=o.""FileName"")) z");
+        Log($"    Mevcut görsel: {mevcut}; yeni set: {yeniSatir} (atlanan eşleşmeyen: {atlanan}).");
+        Log($"    TAZELENECEK dosya adı (yeni): {yeniDosya}; KALDIRILACAK bayat/kırık: {bayatDosya}; etkilenen ÜRÜN: {etkilenenUrun}.");
+
+        if (!dryRun)
+        {
+            // Tek transaction: tümünü sil + temp'ten yeniden yaz (FK yok, güvenli; hata → rollback)
+            using var tx = pg.BeginTransaction();
+            try
+            {
+                new NpgsqlCommand($"DELETE FROM {CAT}.product_images", pg, tx) { CommandTimeout = 300 }.ExecuteNonQuery();
+                var batchId = NewId();
+                new NpgsqlCommand($@"INSERT INTO {CAT}.product_images
+                    (""Id"",""ProductId"",""VariantId"",""ImageSetId"",""FileName"",""SortOrder"",""IsProductCover"",""IsVariantCover"",""Status"",""BatchId"",""CreatedAt"",""IsDeleted"")
+                    SELECT gen_random_uuid(), product_id, variant_id, set_id, file_name, sort_order, false, COALESCE(is_variant_cover,false), 'Active', '{batchId}', now(), false FROM _f26_img",
+                    pg, tx) { CommandTimeout = 600 }.ExecuteNonQuery();
+                tx.Commit();
+                Log($"    ✓ product_images yeniden kuruldu ({yeniSatir} satır).");
+            }
+            catch (Exception ex) { tx.Rollback(); Log($"    ✗ GÖRSEL yazma HATA, geri alındı: {ex.Message}"); throw; }
+        }
+    }
+
+    // ── FAZ 26c: STOK (yerinde UPDATE, rezervasyon KORUNUR) ──
+    // inv_stock_reservations FK'si + canlı rezervler var → SİLİNMEZ. Yalnız Quantity
+    // güncellenir; ReservedQuantity ve rezervasyon satırlarına DOKUNULMAZ.
+    static void Phase26_Stock(bool dryRun, Dictionary<string, Guid> barcodeToVariant, Dictionary<int, string> legacyVariantBarcode)
+    {
+        Log("  [STOK] opproductlocations → inv_stocks.Quantity (rezervasyon korunur)...");
+        // Eski raf birimi (storageUnitId) → bizim BinId (bin.Barcode = storageUnit barkodu, Phase16)
+        var binByBarcode = new Dictionary<string, Guid>(StringComparer.Ordinal);
+        foreach (var row in PgReadRows("SELECT \"Barcode\", \"Id\" FROM inventory.inv_warehouse_bins WHERE \"Barcode\" IS NOT NULL AND \"Barcode\"<>''"))
+            binByBarcode[(string)row[0]] = (Guid)row[1];
+        var unitBarcode = new Dictionary<int, string>();
+        using (var r = MysqlQuery("SELECT Id, barcode FROM dfstorageunits WHERE barcode IS NOT NULL AND barcode<>''"))
+            while (r.Read()) unitBarcode[r.GetInt32(0)] = r.GetString(1);
+
+        // Yeni miktar: (variant, bin) → adet
+        PgExec("DROP TABLE IF EXISTS _f26_stock");
+        PgExec("CREATE TEMP TABLE _f26_stock(variant_id uuid, bin_id uuid, qty int, PRIMARY KEY(variant_id, bin_id))");
+        var batch = new List<object?[]>();
+        var eklendi = new HashSet<(Guid, Guid)>();
+        int okunan = 0, atlanan = 0;
+        using (var r = MysqlQuery("SELECT productVariantId, storageUnitId, COUNT(*) AS adet FROM opproductlocations GROUP BY productVariantId, storageUnitId"))
+            while (r.Read())
+            {
+                int lvid = r.GetInt32(0), luid = r.GetInt32(1);
+                int adet = Convert.ToInt32(r.GetValue(2));
+                if (!legacyVariantBarcode.TryGetValue(lvid, out var vbc) || !barcodeToVariant.TryGetValue(vbc, out var vg)
+                    || !unitBarcode.TryGetValue(luid, out var ubc) || !binByBarcode.TryGetValue(ubc, out var bg)) { atlanan += adet; continue; }
+                if (!eklendi.Add((vg, bg))) continue; // aynı (varyant,bin) iki kez gelmesin
+                batch.Add(new object?[] { vg, bg, adet });
+                okunan++;
+                if (batch.Count >= 1000) { PgBatchInsert("_f26_stock", new[] { "variant_id", "bin_id", "qty" }, new string?[3], batch); batch.Clear(); }
+            }
+        PgBatchInsert("_f26_stock", new[] { "variant_id", "bin_id", "qty" }, new string?[3], batch);
+
+        long guncellenecek = PgScalar<long>(@"SELECT COUNT(*) FROM inventory.inv_stocks s JOIN _f26_stock t ON s.""VariantId""=t.variant_id AND s.""BinId""=t.bin_id
+            WHERE s.""IsDeleted""=false AND s.""Quantity"" IS DISTINCT FROM GREATEST(t.qty, s.""ReservedQuantity"")");
+        long yeniKombin = PgScalar<long>(@"SELECT COUNT(*) FROM _f26_stock t WHERE NOT EXISTS (
+            SELECT 1 FROM inventory.inv_stocks s WHERE s.""VariantId""=t.variant_id AND s.""BinId""=t.bin_id AND s.""IsDeleted""=false)");
+        long sifirlanacak = PgScalar<long>(@"SELECT COUNT(*) FROM inventory.inv_stocks s WHERE s.""IsDeleted""=false AND s.""Quantity"">s.""ReservedQuantity""
+            AND NOT EXISTS (SELECT 1 FROM _f26_stock t WHERE t.variant_id=s.""VariantId"" AND t.bin_id=s.""BinId"")");
+        long rezervCakisma = PgScalar<long>(@"SELECT COUNT(*) FROM inventory.inv_stocks s JOIN _f26_stock t ON s.""VariantId""=t.variant_id AND s.""BinId""=t.bin_id
+            WHERE s.""IsDeleted""=false AND t.qty < s.""ReservedQuantity""");
+        Log($"    Eski stok kombinasyonu: {okunan} (atlanan adet={atlanan}).");
+        Log($"    GÜNCELLENECEK satır: {guncellenecek}; YENİ (varyant,bin): {yeniKombin}; sıfırlanacak (eski stok bitmiş): {sifirlanacak}; rezerv çakışması (adet<rezerv, rezerv korunur): {rezervCakisma}.");
+
+        if (!dryRun)
+        {
+            // 1) Mevcut satırlar: Quantity = MAX(yeni adet, rezerv) — asla rezervin altına düşme
+            PgExec(@"UPDATE inventory.inv_stocks s SET ""Quantity""=GREATEST(t.qty, s.""ReservedQuantity""), ""UpdatedAt""=now()
+                FROM _f26_stock t WHERE s.""VariantId""=t.variant_id AND s.""BinId""=t.bin_id AND s.""IsDeleted""=false
+                AND s.""Quantity"" IS DISTINCT FROM GREATEST(t.qty, s.""ReservedQuantity"")");
+            // 2) Yeni (varyant,bin) kombinasyonları: bin'in section/warehouse'undan türet
+            PgExec(@"INSERT INTO inventory.inv_stocks (""Id"",""VariantId"",""WarehouseId"",""LocationId"",""SectionId"",""BinId"",""StockType"",""Quantity"",""ReservedQuantity"",""CreatedAt"",""IsDeleted"")
+                SELECT gen_random_uuid(), t.variant_id, sec.""WarehouseId"", NULL, b.""SectionId"", t.bin_id, 'physical', t.qty, 0, now(), false
+                FROM _f26_stock t JOIN inventory.inv_warehouse_bins b ON b.""Id""=t.bin_id JOIN inventory.inv_warehouse_sections sec ON sec.""Id""=b.""SectionId""
+                WHERE NOT EXISTS (SELECT 1 FROM inventory.inv_stocks s WHERE s.""VariantId""=t.variant_id AND s.""BinId""=t.bin_id AND s.""IsDeleted""=false)");
+            // 3) Eski stok bitmiş: Quantity = ReservedQuantity (available 0; rezerv korunur)
+            PgExec(@"UPDATE inventory.inv_stocks s SET ""Quantity""=s.""ReservedQuantity"", ""UpdatedAt""=now()
+                WHERE s.""IsDeleted""=false AND s.""Quantity"">s.""ReservedQuantity""
+                AND NOT EXISTS (SELECT 1 FROM _f26_stock t WHERE t.variant_id=s.""VariantId"" AND t.bin_id=s.""BinId"")");
+            Log($"    ✓ Stok güncellendi ({guncellenecek} satır + {yeniKombin} yeni + {sifirlanacak} sıfırlandı; rezervasyonlara dokunulmadı).");
+        }
+    }
+
 
     static void PgExec(string sql, params (string name, object? value)[] parameters)
     {
