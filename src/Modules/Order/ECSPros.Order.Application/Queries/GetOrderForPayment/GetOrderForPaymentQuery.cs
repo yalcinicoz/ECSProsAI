@@ -6,7 +6,9 @@ using Microsoft.EntityFrameworkCore;
 namespace ECSPros.Order.Application.Queries.GetOrderForPayment;
 
 /// <summary>PayTR ödeme başlatma için gereken sipariş alanları (2026-07-30).
-/// Tutar kuruş cinsinden döner (PayTR payment_amount = TL*100 tam sayı).</summary>
+/// Tutar KURUŞ cinsinden (long) döner — dahili kanonik tam sayı. NOT: PayTR Direct API
+/// (/odeme) payment_amount'ı TL ONDALIK ister ("24.99"); dönüşüm PaymentController'da
+/// (TutarKurus/100). (Kuruş integer yalnız iFrame API içindir.)</summary>
 public record GetOrderForPaymentQuery(Guid OrderId) : IRequest<Result<OrderPaymentInfo>>;
 
 public record OrderPaymentInfo(

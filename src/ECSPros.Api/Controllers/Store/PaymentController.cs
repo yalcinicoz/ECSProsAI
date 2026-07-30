@@ -55,7 +55,12 @@ public class PaymentController(
         // Token hash'i test_mode'u içerir → hash ve form AYNI değeri kullanmalı.
         var testMode = ayar.TestMode ? "1" : "0";
         const string non3d = "0";      // 3D Secure akışı
-        var amount = siparis.TutarKurus.ToString();
+        // PayTR Direct API (/odeme) payment_amount = TL ONDALIK (nokta, 2 hane) — örn "24.99".
+        // (iFrame API kuruş/integer ister; Direct API DEĞİL — resmi postman koleksiyonuyla doğrulandı
+        // 2026-07-30. Kuruş göndermek PayTR'de 100× yüksek tutar gösterip tahsil ediyordu.)
+        // Token hash de bu ondalık değeri kullanır; basket zaten aynı TL tutarında.
+        var amount = (siparis.TutarKurus / 100m)
+            .ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
 
         var token = PayTrDirectService.Adim1Token(
             ayar.MerchantId, ip, siparis.OrderNumber, email, amount,
@@ -134,6 +139,11 @@ public class PaymentController(
             logger.LogWarning("PayTR callback: hash doğrulanamadı (oid gövdede).");
             return Content("PAYTR notification failed: bad hash");
         }
+
+        // TANILAMA (kart-dışı, güvenli): PayTR'nin işlediği total_amount (kuruş) — tutar sorununu
+        // izole etmek için. Sorun çözülünce kaldırılır.
+        logger.LogInformation("PayTR callback tanılama: oid={Oid} status={Status} total_amount(kuruş)={Total}",
+            form.merchant_oid, form.status, form.total_amount);
 
         var basarili = form.status == "success";
         await mediator.Send(new PayTrCallbackUygulaCommand(
