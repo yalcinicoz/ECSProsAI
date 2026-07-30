@@ -8,8 +8,10 @@ using Microsoft.AspNetCore.Mvc;
 namespace ECSPros.Api.Controllers.Store;
 
 /// <summary>
-/// PayTR Direct API ödeme uçları (2026-07-30). YALNIZ TEST MODU — canlı için PCI-DSS SAQ D
-/// + PayTR Direct API onayı gerekir (docs/paytr-entegrasyon-plani.md).
+/// PayTR Direct API ödeme uçları (2026-07-30). test_mode panel ayarından gelir
+/// (Settings "testMode"; eksikse güvenli varsayılan test=açık). CANLI (test_mode=0) Direct API
+/// ile gerçek kart bu sunucudan geçer → PCI-DSS SAQ D + PayTR Direct API onayı MÜŞTERİ
+/// SORUMLULUĞUNDADIR (docs/paytr-entegrasyon-plani.md).
 ///
 /// ★ KART VERİSİ: init gövdesindeki tam kart no/CVV YALNIZ PayTR'a iletmek için kullanılır;
 ///   loglanmaz, DB'ye/diske yazılmaz. Siparişe yalnız MASKELİ PAN geçer. CVV hiçbir yere yazılmaz.
@@ -39,7 +41,7 @@ public class PaymentController(
 
         // Maskeli PAN'ı çıkar ve HEMEN siparişe yaz (tam PAN/CVV asla saklanmaz)
         var maskeli = PayTrDirectService.MaskePan(req.CardNumber ?? "");
-        await mediator.Send(new PayTrPaymentBaslatCommand(siparis.OrderId, maskeli, TestMode: true), ct);
+        await mediator.Send(new PayTrPaymentBaslatCommand(siparis.OrderId, maskeli, TestMode: ayar.TestMode), ct);
 
         var ip = IstemciIp();
         // PayTR e-posta: üye e-postası yoksa test için türetilir (Direct API zorunlu alan)
@@ -49,7 +51,9 @@ public class PaymentController(
         const string paymentType = "card";
         const string installment = "0";
         var currency = siparis.CurrencyCode == "TRY" ? "TL" : siparis.CurrencyCode;
-        const string testMode = "1";   // ZORUNLU test modu
+        // test_mode panel ayarından (DbPaymentSettingsProvider). Canlı=0 (gerçek kart), test=1.
+        // Token hash'i test_mode'u içerir → hash ve form AYNI değeri kullanmalı.
+        var testMode = ayar.TestMode ? "1" : "0";
         const string non3d = "0";      // 3D Secure akışı
         var amount = siparis.TutarKurus.ToString();
 
@@ -93,7 +97,7 @@ public class PaymentController(
             ["user_address"] = "-",
             ["user_phone"] = siparis.AliciTelefon,
             ["user_basket"] = sepet,
-            ["debug_on"] = "1",
+            ["debug_on"] = testMode,   // yalnız test modunda ayrıntılı PayTR hata mesajı
         };
 
         var sonuc = await paytr.OdemeBaslatAsync(form, ct);
