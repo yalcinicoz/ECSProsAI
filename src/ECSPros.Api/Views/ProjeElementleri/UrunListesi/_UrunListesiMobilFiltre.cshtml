@@ -365,7 +365,17 @@
                     return seciliDegerler;
                 };
 
-                const grupSeciliAdediAl = (grup) => grupSeciliDegerleriAl(grup).size;
+                // Fiyat grubu checkbox tabanlı sayıma girmez: uygulanan aralık SSR'da
+                // number girdilerine yazılır (radyo işaretlenmez) — girdiler doluysa
+                // grup "1 seçim" sayılır ("işaret konmuyor" şikâyetinin kökü, 2026-07-30).
+                const fiyatGirdisiDoluMu = () => Array.from(
+                    sayfa.querySelectorAll('[data-ms-urun-mobil-filtre-detay="fiyat"] input[type="number"]'))
+                    .some((girdi) => girdi.value.trim() !== "");
+
+                const grupSeciliAdediAl = (grup) => {
+                    const adet = grupSeciliDegerleriAl(grup).size;
+                    return grup === "fiyat" && adet === 0 && fiyatGirdisiDoluMu() ? 1 : adet;
+                };
 
                 const grupSeciliMi = (grup) => grupSeciliAdediAl(grup) > 0;
 
@@ -865,6 +875,11 @@
                         });
                     });
                 });
+
+                // Fiyat girdileri yazıldıkça sayaç/işaret canlı güncellensin (checkbox'ların
+                // change akışına benzer; girdiler mobilFiltreSecimleri koleksiyonunda yok)
+                sayfa.querySelectorAll('[data-ms-urun-mobil-filtre-detay="fiyat"] input[type="number"]')
+                    .forEach((girdi) => girdi.addEventListener("input", seciliFiltreleriGuncelle));
 
                 seciliFiltreleriGuncelle();
             });

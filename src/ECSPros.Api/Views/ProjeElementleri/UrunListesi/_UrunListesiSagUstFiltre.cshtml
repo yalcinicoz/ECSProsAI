@@ -67,9 +67,13 @@
 
     <div class="ms-urun-listesi-filtre-satiri">
         <div class="ms-urun-listesi-filtre-secimler" aria-label="Liste filtreleri">
+            @{
+                // 2026-07-30: uygulanmış fiyat filtresi de diğer dolu gruplar gibi işaretlenir
+                var fiyatSecili = vm.SeciliFiyatMin.HasValue || vm.SeciliFiyatMax.HasValue;
+            }
             <div class="ms-urun-listesi-filtre-secim-grup" data-ms-urun-listesi-filtre-grup>
-                <button class="ms-urun-listesi-filtre-secim" type="button" aria-expanded="false" data-ms-urun-listesi-filtre-secim>
-                    <span>Fiyat Aralığı</span>
+                <button class="ms-urun-listesi-filtre-secim@(fiyatSecili ? " ms-urun-listesi-filtre-secim-dolu" : "")" type="button" aria-expanded="false" data-ms-urun-listesi-filtre-secim>
+                    <span>Fiyat Aralığı@(fiyatSecili ? " (1)" : "")</span>
                     <i class="fa-solid fa-chevron-down ms-fa-ikon " aria-hidden="true"></i>
                 </button>
                 <div class="ms-urun-listesi-filtre-secim-panel" data-ms-urun-listesi-filtre-panel hidden>
