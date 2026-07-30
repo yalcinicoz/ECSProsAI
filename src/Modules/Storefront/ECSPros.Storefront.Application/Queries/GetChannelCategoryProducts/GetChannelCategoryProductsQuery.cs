@@ -105,8 +105,11 @@ public class GetChannelCategoryProductsQueryHandler(
     // v7: (a) kategori fiyat kuralı RENK düzeyinde uygulanır (fiyat kuralını sağlamayan renk kartı
     // elenir); (b) kart fiyatı artık KANAL (satış) fiyatı, BasePrice değil — eski listeler hem
     // kuralı sağlamayan renkleri içerdiğinden hem base fiyat gösterdiğinden sürüm artırıldı.
-    private static string CacheKey(Guid categoryId, int page, int pageSize) =>
-        $"channelcat:products:v7:{categoryId}:{page}:{pageSize}";
+    // v8: cache anahtarına listingMode + showOutOfStock eklendi. Önceki anahtar bunları içermediğinden
+    // model/renk (ve admin/vitrin stok-görünürlüğü) AYNI anahtarı paylaşıyordu → model'in boş sonucu
+    // renk moduna sızıp "ürünler geri gelmiyor"a yol açıyordu.
+    private static string CacheKey(Guid categoryId, string listingMode, bool showOutOfStock, int page, int pageSize) =>
+        $"channelcat:products:v8:{categoryId}:{listingMode}:{(showOutOfStock ? "oos" : "std")}:{page}:{pageSize}";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
 
     private async Task<PagedResult<ChannelCategoryProductItemDto>?> TryGetCacheAsync(string key, CancellationToken ct)
@@ -152,20 +155,22 @@ public class GetChannelCategoryProductsQueryHandler(
     private async Task<Result<PagedResult<ChannelCategoryProductItemDto>>> HandleCore(
         GetChannelCategoryProductsQuery request, CancellationToken ct)
     {
-        var cacheKey = CacheKey(request.ChannelCategoryId, request.Page, request.PageSize);
-        if (!request.FiltreliMi)
-        {
-            var cached = await TryGetCacheAsync(cacheKey, ct);
-            if (cached is not null)
-                return Result.Success(cached);
-        }
-
+        // Kategori önce yüklenir (cache anahtarı listingMode'a bağlı; tek satır, ucuz).
         var cat = await sfDb.ChannelCategories
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == request.ChannelCategoryId, ct);
 
         if (cat is null)
             return Result.Failure<PagedResult<ChannelCategoryProductItemDto>>("Kanal kategorisi bulunamadı.");
+
+        var cacheKey = CacheKey(request.ChannelCategoryId, cat.ListingMode ?? "color",
+            request.ShowOutOfStock, request.Page, request.PageSize);
+        if (!request.FiltreliMi)
+        {
+            var cached = await TryGetCacheAsync(cacheKey, ct);
+            if (cached is not null)
+                return Result.Success(cached);
+        }
 
         var cdnBase = await CdnHelper.BuildListUrlAsync(catDb, ct);
 
