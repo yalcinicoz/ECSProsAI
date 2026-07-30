@@ -4079,7 +4079,10 @@
                 suruklemeBaslangicZamani = Date.now();
                 suruklemeFarki = 0;
                 gorselAlani.classList.add("ms-slider-gorsel-alani-surukleniyor");
-                gorselAlani.setPointerCapture?.(event.pointerId);
+                // 2026-07-30: setPointerCapture pointerdown'dan pointermove'a taşındı — masaüstünde
+                // pointerdown'da capture, temiz tıklamada click'i child <a> yerine kapsayıcıya
+                // düşürüp navigasyonu engelliyordu (dokunmada sorun yoktu). Capture artık yalnız
+                // gerçek sürükleme başlayınca alınır; tek tıklama slide linkine normal ulaşır.
                 otomatikDurdur();
             });
 
@@ -4091,8 +4094,11 @@
                 suruklemeFarki = event.clientX - suruklemeBaslangicX;
                 const yon = suruklemeFarki < 0 ? -1 : 1;
 
-                if (Math.abs(suruklemeFarki) > 6) {
+                if (Math.abs(suruklemeFarki) > 6 && !tiklamaEngellenecek) {
+                    // Gerçek sürükleme başladı: şimdi capture al (böylece kaydırma boyunca
+                    // pointer olayları kapsayıcıda kalır); temiz tıklamada buraya hiç girilmez.
                     tiklamaEngellenecek = true;
+                    gorselAlani.setPointerCapture?.(event.pointerId);
                 }
 
                 if (tiklamaEngellenecek) {
