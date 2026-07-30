@@ -49,6 +49,23 @@ panelden girmesi + PayTR panelinde callback URL tanımlaması ile yapılır.
 4. PayTR'dan Direct API erişimi onayı iste (Direct API onay gerektirir).
 5. Test kartıyla uçtan uca dene; sipariş PaymentStatus'unun paid olduğunu panelde gör.
 
+## ⚠️ Callback (bildirim) durumu — 2026-07-30 (ERTELENDİ)
+- **Sorun:** PayTR'a girilen bilgiler **canlı misharitalia.com mağaza hesabıdır**;
+  PayTR bildirim URL'i hesap-global tek ayardır ve `https://misharitalia.com/CheckoutPayment/
+  PayTrBildirim/`'e bakar. Test sitesi new.ecspros.com aynı hesabı kullandığından test
+  ödemelerinin callback'i de misharitalia.com'a (eski/canlı site) gider — new.ecspros.com'a
+  ULAŞMAZ. Bu yüzden test siparişleri `pending` kalıyor (init + maskeli PAN çalışıyor;
+  eksik olan yalnız callback → paid geçişi).
+- **Teşhis kesinleşti:** callback ucumuz (`/CheckoutPayment/PayTrBildirim/`) canlıda ÇALIŞIYOR
+  ve Cloudflare üzerinden dışarıdan erişilebilir (dış POST testi 200 döndü); sorun bizde değil,
+  PayTR'ın callback'i başka domaine göndermesinde.
+- **Karar (kullanıcı, 2026-07-30):** şimdilik bir şey YAPMA. **misharitalia.com domaini yeni
+  siteye (bu sunucu) yönlendirilince** PayTR callback'i doğrudan bizim `/CheckoutPayment/
+  PayTrBildirim/` rotamıza düşecek (rota hazır) → sorun kendiliğinden çözülür. Cutover'da
+  callback'in geldiğini nginx log'undan doğrula.
+- Cutover'a kadar test isteniyorsa seçenekler (o gün gündeme gelirse): (A) misharitalia.com'da
+  Cloudflare Worker rölesi test_mode=1'i new.ecspros.com'a yönlendirir, (B) ayrı PayTR test hesabı.
+
 ## Bilinen sınırlar / TODO (canlı öncesi)
 - Yalnız test modu; canlı için PCI-DSS SAQ D + PayTR onayı + `test_mode=0`'a geçiş kararı.
 - Taksit (installment_count=0 sabit), sepet tek kalem olarak gönderiliyor (basit); gerekirse
