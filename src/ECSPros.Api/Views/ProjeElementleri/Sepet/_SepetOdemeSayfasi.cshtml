@@ -252,6 +252,9 @@
                     <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Sepet İndirimi</span><span class="ms-siparis-deger ms-urun-fiyat-indirimli">-85,00 TL</span></div>
                     }
                     <div class="ms-siparis-satiri" data-ms-odeme-kupon-satiri hidden><span class="ms-siparis-etiket">Kupon İndirimi <small class="ms-siparis-kupon-ozet-kodu" data-ms-odeme-kupon-ozet-kod>KART25</small></span><span class="ms-siparis-deger ms-urun-fiyat-indirimli" data-ms-odeme-kupon-ozet-indirim>-25,00 TL</span></div>
+                    @* 2026-07-30: kapıda ödeme seçiliyken hizmet bedeli özet satırı — tutar
+                       canlı script'ten yazılır, sunucu aynı bedeli sipariş toplamına ekler. *@
+                    <div class="ms-siparis-satiri" data-ms-odeme-kapida-satiri hidden><span class="ms-siparis-etiket">Kapıda Ödeme Hizmet Bedeli</span><span class="ms-siparis-deger" data-ms-odeme-kapida-tutar>+50,00 TL</span></div>
                 </div>
                 <div class="ms-siparis-toplam">
                     <span class="ms-siparis-toplam-etiket">Ödenecek Tutar</span>
@@ -748,12 +751,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!teslimat) { window.location.href = hizliMod ? "/teslimat?hizli=1" : "/teslimat"; return; }
 
+    // 2026-07-30: kapıda ödeme hizmet bedeli — sunucudaki sabitin görüntüsü (checkout
+    // aynı bedeli TotalExpense/GrandTotal'a yazar; buradaki değer yalnız gösterimdir).
+    const KAPIDA_BEDELI = 50;
+    const seciliOdemeYontemi = () => document.querySelector("[data-ms-odeme-yontemi]:checked")?.value || "kart";
+    const kapidaBedeli = () => {
+        const yontem = seciliOdemeYontemi();
+        return yontem === "kapida-nakit" || yontem === "kapida-kart" ? KAPIDA_BEDELI : 0;
+    };
+
     const toplamlar = () => {
         const toplam = (sepet?.items || []).reduce((t, k) => t + (k.lineTotal || 0), 0);
         const indirim = kupon?.tutar || 0;
+        const masraf = kapidaBedeli();
         urunToplami.textContent = paraYaz(toplam);
-        odenecekler.forEach((alan) => { alan.textContent = paraYaz(Math.max(0, toplam - indirim)); });
-        return { toplam, indirim };
+        const kapidaSatiri = document.querySelector("[data-ms-odeme-kapida-satiri]");
+        if (kapidaSatiri) { kapidaSatiri.hidden = masraf === 0; }
+        const kapidaTutar = document.querySelector("[data-ms-odeme-kapida-tutar]");
+        if (kapidaTutar) { kapidaTutar.textContent = "+" + paraYaz(masraf); }
+        odenecekler.forEach((alan) => { alan.textContent = paraYaz(Math.max(0, toplam - indirim) + masraf); });
+        return { toplam, indirim, masraf };
     };
 
     // ── 2026-07-17: ödeme yöntemine özel bilgi mesajı + kupon geçerlilik kuralı ──
@@ -793,6 +810,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         yontemBilgi.innerHTML = mesajlar.map((m) => `<p>${m}</p>`).join("");
         yontemBilgi.hidden = mesajlar.length === 0;
+        toplamlar(); // 2026-07-30: yöntem değişince kapıda bedeli satırı + ödenecek tazelenir
     };
 
     document.querySelectorAll("[data-ms-odeme-yontemi]").forEach((yontem) => {
@@ -848,7 +866,7 @@ document.addEventListener("DOMContentLoaded", () => {
             hataGoster(["Adres kaydınızda il/ilçe bilgisi eksik — lütfen teslimat adımından yeni bir adres oluşturun."]);
             return;
         }
-        const { toplam, indirim } = toplamlar();
+        const { toplam, indirim, masraf } = toplamlar();
 
         // C7: eşik üzeri + TCKN doğrulanmamış → modal (sunucu guard'ı da 400 döner)
         const tcknEsik = Number(document.querySelector("[data-ms-odeme-urun-toplami]")?.dataset.msTcknEsik || 13000);
@@ -892,6 +910,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     requestedCargoName: teslimat.kargo?.ad || null,
                     couponId: kupon?.couponId || null,
                     couponDiscount: kupon?.tutar || null,
+                    // 2026-07-30: kapıda ödeme bedeli sunucuda bu yönteme göre hesaplanıp
+                    // sipariş toplamına yazılır (tutar istemciden gönderilmez)
+                    paymentMethod: seciliOdemeYontemi(),
                     // C8: onaylanan sözleşme kodları — SSR modalın belgeler kabından okunur,
                     // kabul kaydını (başlık + metin sürümü) sunucu CMS'ten çözerek siparişe yazar.
                     // (Onay input'u misharix script'inin scope'unda — buradan DOM'dan okunur.)
@@ -916,7 +937,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     odemeTipi: odemeTipiEtiketi(),
                     tutar: toplam,
                     indirim,
-                    odenecek: Math.max(0, toplam - indirim),
+                    odenecek: Math.max(0, toplam - indirim) + masraf, // kapıda bedeli dahil (2026-07-30)
                     adresBaslik: teslimat.title,
                     adresYer: [teslimat.districtName, teslimat.cityName].filter(Boolean).join(", "),
                     aliciAd: teslimat.recipientName,
