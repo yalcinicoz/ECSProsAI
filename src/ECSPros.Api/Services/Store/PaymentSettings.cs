@@ -1,7 +1,8 @@
 namespace ECSPros.Api.Services.Store;
 
 /// <summary>PayTR Direct API çözülmüş ayarları (kimlikler DB'de şifreli tutulur, burada
-/// düz metin — bellekte, asla loglanmaz/serialize edilmez). testMode ŞU AN ZORUNLU AÇIK.</summary>
+/// düz metin — bellekte, asla loglanmaz/serialize edilmez). TestMode panel ayarından gelir
+/// (eksikse güvenli varsayılan = true/test).</summary>
 public record PaymentSettings(
     string MerchantId,
     string MerchantKey,

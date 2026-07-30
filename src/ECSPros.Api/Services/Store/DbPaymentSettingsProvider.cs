@@ -56,9 +56,11 @@ public class DbPaymentSettingsProvider : IPaymentSettingsProvider
                     && !string.IsNullOrWhiteSpace(merchantKey)
                     && !string.IsNullOrWhiteSpace(merchantSalt))
                 {
-                    // testMode ŞU AN her koşulda AÇIK — canlı ödeme için PCI-DSS + PayTR onayı
-                    // gerektiğinden, ayar "false" gelse bile true'ya zorlanır (güvenlik ağı).
-                    settings = new PaymentSettings(merchantId!, merchantKey!, merchantSalt!, TestMode: true);
+                    // testMode panel ayarından gelir (Settings jsonb "testMode"). Ayar YOKSA
+                    // güvenli varsayılan = true (test): eksik/bozuk konfigürasyonda yanlışlıkla
+                    // gerçek kart çekilmesin. Canlı için panelde "Test Modu" kapatılır (false).
+                    var testMode = GetBool(degerler, "testMode", defaultValue: true);
+                    settings = new PaymentSettings(merchantId!, merchantKey!, merchantSalt!, TestMode: testMode);
                 }
             }
         }
@@ -86,5 +88,26 @@ public class DbPaymentSettingsProvider : IPaymentSettingsProvider
             },
             _ => v.ToString()
         };
+    }
+
+    // JSONB'den bool okur (bool / JsonElement True-False / "true"-"1" / sayı). Belirsizse defaultValue.
+    private static bool GetBool(Dictionary<string, object> values, string key, bool defaultValue)
+    {
+        if (!values.TryGetValue(key, out var v) || v is null) return defaultValue;
+        switch (v)
+        {
+            case bool b: return b;
+            case JsonElement je:
+                return je.ValueKind switch
+                {
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    JsonValueKind.String => bool.TryParse(je.GetString(), out var pb) ? pb : je.GetString() == "1",
+                    JsonValueKind.Number => je.TryGetInt32(out var n) && n != 0,
+                    _ => defaultValue
+                };
+            case string s: return bool.TryParse(s, out var sb) ? sb : s == "1";
+            default: return defaultValue;
+        }
     }
 }
