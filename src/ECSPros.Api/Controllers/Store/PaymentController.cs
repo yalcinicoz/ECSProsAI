@@ -67,8 +67,11 @@ public class PaymentController(
             paymentType, installment, currency, testMode, non3d,
             ayar.MerchantKey, ayar.MerchantSalt);
 
-        // Kök URL: callback/sonuç PayTR panelinde de bu host'la tanımlı olmalı
-        var kok = $"{Request.Scheme}://{Request.Host}";
+        // Kök URL: merchant_ok/fail_url'e PayTR form POST'lar → HTTP olursa tarayıcı "not secure"
+        // uyarısı verir (Cloudflare Flexible'da origin'e HTTP gelir, Request.Scheme=http). Genel
+        // site her zaman HTTPS sunulduğundan localhost dışı host'larda https'e zorlanır.
+        var scheme = Request.Host.Host is "localhost" or "127.0.0.1" ? Request.Scheme : "https";
+        var kok = $"{scheme}://{Request.Host}";
         var sepet = PayTrDirectService.SepetBase64(new[]
         {
             ($"Siparis {siparis.OrderNumber}", siparis.TutarKurus / 100m, 1)
