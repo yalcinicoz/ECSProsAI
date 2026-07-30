@@ -197,6 +197,7 @@ builder.Services.AddSignalR(options =>
     options.EnableDetailedErrors = builder.Environment.IsDevelopment();
 });
 builder.Services.AddScoped<IRealtimeNotificationService, SignalRNotificationService>();
+builder.Services.AddSingleton<ECSPros.Api.Hubs.DashboardPresenceTracker>(); // dashboard'a bağlı istemci sayacı — worker kimse yokken sorgu atmaz
 
 // ─── Storefront (Razor) servisleri ─────────────────────────────────
 builder.Services.AddHttpContextAccessor();
