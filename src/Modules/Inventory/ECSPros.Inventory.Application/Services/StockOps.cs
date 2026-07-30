@@ -86,6 +86,59 @@ public static class StockOps
         }
     }
 
+    // ── REZERVE (online sipariş, DEPO-BAĞIMSIZ): satılabilir-online rafların TÜMÜNDEN (tüm aktif
+    // depolar) greedy tahsis. Online available (AvailableOnlineAsync) da depolar arası toplandığı
+    // için sipariş kalemleri farklı depolarda olabilir (giyim=Merkez, ayakkabı=Ayakkabı); tek depoya
+    // rezerve etmek yanlış depoda hayalet rezervasyon yaratırdı. Her rezervasyon rafın GERÇEK deposuna
+    // bağlanır; ship/cancel handler'ları rezervasyonu ReferenceId(=OrderId)+StockId ile bulduğundan
+    // depo fark etmez. warehouseId=Guid.Empty ile gelen OrderConfirmedEvent bu yolu kullanır.
+    public static async Task ReserveOnlineAsync(
+        IInventoryDbContext db, Guid variantId, int qty,
+        string referenceType, Guid referenceId, CancellationToken ct)
+    {
+        if (qty <= 0) return;
+        var rows = await (from s in db.Stocks
+                          where s.VariantId == variantId && s.BinId != null
+                          join sec in db.WarehouseSections on s.SectionId equals sec.Id
+                          join b in db.WarehouseBins on s.BinId equals b.Id
+                          join w in db.Warehouses on s.WarehouseId equals w.Id
+                          where sec.IsSellableOnline && w.IsActive
+                          orderby w.ReservePriority, sec.PickingOrder, b.PickingOrder, b.Id
+                          select s).ToListAsync(ct);
+        int remaining = qty;
+        foreach (var st in rows)
+        {
+            if (remaining <= 0) break;
+            int free = st.Quantity - st.ReservedQuantity;
+            if (free <= 0) continue;
+            int take = Math.Min(remaining, free);
+            st.ReservedQuantity += take;
+            db.StockReservations.Add(NewReservation(st, variantId, st.WarehouseId, take, referenceType, referenceId));
+            remaining -= take;
+        }
+        if (remaining > 0)
+        {
+            // Yetersiz online serbest stok — kalanı ilk online rafa (yoksa merkez/ilk aktif deponun
+            // satılabilir rafına) fazladan rezerve et ki toplam = qty olsun (stok kontrolü kapalıyken
+            // over-reserve kabul; açılınca checkout zaten yeterli stoğu doğrular).
+            var target = rows.FirstOrDefault();
+            if (target is null)
+            {
+                var whId = await (from w in db.Warehouses
+                                  where w.IsActive
+                                  orderby w.IsCentral descending, w.ReservePriority
+                                  select w.Id).FirstOrDefaultAsync(ct);
+                if (whId != Guid.Empty)
+                    target = await EnsureReceivingStockAsync(db, variantId, whId, false, ct);
+            }
+            if (target is not null)
+            {
+                target.ReservedQuantity += remaining;
+                db.StockReservations.Add(NewReservation(target, variantId, target.WarehouseId, remaining, referenceType, referenceId));
+            }
+        }
+    }
+
     // ── TÜKET (POS satışı): deponun raflarından greedy düş (negatife düşürmeden).
     public static async Task ConsumeAsync(
         IInventoryDbContext db, Guid variantId, Guid warehouseId, int qty, CancellationToken ct)
