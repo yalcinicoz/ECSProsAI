@@ -170,12 +170,14 @@ export function ChannelCategoryDetailPage() {
         ogTitleI18n:      cat?.ogTitleI18n ?? null,
       })
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['channel-category', id] })
+    onSuccess: async () => {
       // Listeleme tipi (color/model) değişince ürün listesi de tazelenmeli — aksi halde
       // model modunun boş sonucu ekranda kalıp renk moduna dönünce "ürünler geri gelmiyor".
       queryClient.invalidateQueries({ queryKey: ['channel-category-products', id] })
       setProdPage(1)
+      // ÖNCE cat refetch'ini BEKLE, SONRA formu sıfırla. Aksi halde form bayat cat ile
+      // yeniden başlar (kaydedilen listingMode görünmez; F5'e kadar eski değer kalır).
+      await queryClient.invalidateQueries({ queryKey: ['channel-category', id] })
       setFormInited(false)
     },
   })
