@@ -65,6 +65,58 @@ public class PayTrDirectService(
         return Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(veri)));
     }
 
+    /// <summary>Taksit oranları sorgulama (Direct API 4.2): POST /odeme/taksit-oranlari.
+    /// token = base64(HMAC-SHA256(merchant_id + request_id + merchant_salt, merchant_key)).
+    /// Mağazada tanımlı taksit oran tablosunu (kart markasına göre) JSON döner. Ham içerik verilir
+    /// (kart verisi taşımaz — yalnız oranlar). Amount/BIN taşımaz; oran tablosu geneldir.</summary>
+    public async Task<PayTrOdemeSonucu> TaksitOranlariAsync(
+        string merchantId, string merchantKey, string merchantSalt, string requestId, CancellationToken ct)
+    {
+        var token = HmacBase64(merchantId + requestId + merchantSalt, merchantKey);
+        var form = new Dictionary<string, string>
+        {
+            ["merchant_id"] = merchantId,
+            ["request_id"] = requestId,
+            ["paytr_token"] = token,
+        };
+        return await PostAsync("https://www.paytr.com/odeme/taksit-oranlari", form, ct);
+    }
+
+    /// <summary>BIN sorgulama (Direct API 4.3): POST /odeme/api/bin-detail.
+    /// token = base64(HMAC-SHA256(bin_number + merchant_id + merchant_salt, merchant_key)).
+    /// Kartın ilk 6 hanesine göre marka/banka/kredi-kartı bilgisini JSON döner.</summary>
+    public async Task<PayTrOdemeSonucu> BinDetayAsync(
+        string merchantId, string merchantKey, string merchantSalt, string bin, CancellationToken ct)
+    {
+        var token = HmacBase64(bin + merchantId + merchantSalt, merchantKey);
+        var form = new Dictionary<string, string>
+        {
+            ["merchant_id"] = merchantId,
+            ["bin_number"] = bin,
+            ["paytr_token"] = token,
+        };
+        return await PostAsync("https://www.paytr.com/odeme/api/bin-detail", form, ct);
+    }
+
+    private async Task<PayTrOdemeSonucu> PostAsync(
+        string url, IReadOnlyDictionary<string, string> form, CancellationToken ct)
+    {
+        var client = httpClientFactory.CreateClient("paytr");
+        client.Timeout = TimeSpan.FromSeconds(15);
+        try
+        {
+            using var icerik = new FormUrlEncodedContent(form);
+            using var yanit = await client.PostAsync(url, icerik, ct);
+            var govde = await yanit.Content.ReadAsStringAsync(ct);
+            return new PayTrOdemeSonucu(yanit.IsSuccessStatusCode, (int)yanit.StatusCode, govde);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "PayTR yardımcı çağrı başarısız: {Url}", url);
+            return new PayTrOdemeSonucu(false, 0, null);
+        }
+    }
+
     /// <summary>PayTR sepet formatı: [["ürün adı","birim fiyat (TL string)",adet], ...]
     /// base64(JSON). Fiyatlar TL cinsinden string (PayTR örneği böyle).</summary>
     public static string SepetBase64(IEnumerable<(string Ad, decimal BirimFiyat, int Adet)> kalemler)

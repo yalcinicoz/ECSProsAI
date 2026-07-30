@@ -131,32 +131,9 @@
                                 <aside class="ms-odeme-taksit-kutusu" data-ms-taksit-kutusu>
                                     <h5>Taksit Seçenekleri</h5>
                                     <p data-ms-taksit-bos>Kart numaranızın ilk 6 hanesini girin</p>
-                                    <div class="ms-odeme-taksit-listesi" data-ms-taksit-listesi hidden>
-                                        <label class="ms-odeme-taksit-secenegi">
-                                            <input class="ms-onay-input" type="radio" name="siparis-taksit" checked>
-                                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
-                                            <span>Tek Çekim</span>
-                                            <strong class="ms-fiyat-standart">1.399,98 ₺ <small class="ms-fiyat-standart">Toplam: 1.399,98 ₺</small></strong>
-                                        </label>
-                                        <label class="ms-odeme-taksit-secenegi">
-                                            <input class="ms-onay-input" type="radio" name="siparis-taksit">
-                                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
-                                            <span>2 Taksit</span>
-                                            <strong class="ms-fiyat-standart">699,99 ₺ <small class="ms-fiyat-standart">Toplam: 1.399,98 ₺</small></strong>
-                                        </label>
-                                        <label class="ms-odeme-taksit-secenegi">
-                                            <input class="ms-onay-input" type="radio" name="siparis-taksit">
-                                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
-                                            <span>3 Taksit</span>
-                                            <strong class="ms-fiyat-standart">503,57 ₺ <small class="ms-fiyat-standart">Toplam: 1.510,72 ₺</small></strong>
-                                        </label>
-                                        <label class="ms-odeme-taksit-secenegi">
-                                            <input class="ms-onay-input" type="radio" name="siparis-taksit">
-                                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
-                                            <span>4 Taksit</span>
-                                            <strong class="ms-fiyat-standart">384,22 ₺ <small class="ms-fiyat-standart">Toplam: 1.536,90 ₺</small></strong>
-                                        </label>
-                                    </div>
+                                    @* Taksit satırları kart BIN'ine göre PayTR'den DİNAMİK doldurulur
+                                       (sahte sabit değerler kaldırıldı 2026-07-30). JS: data-ms-taksit-listesi. *@
+                                    <div class="ms-odeme-taksit-listesi" data-ms-taksit-listesi hidden></div>
                                 </aside>
                             </div>
                         </div>
@@ -307,6 +284,41 @@
             const cvv = odemeAlani.querySelector('[data-ms-kart-alan="cvv"]');
             const taksitBos = odemeAlani.querySelector("[data-ms-taksit-bos]");
             const taksitListesi = odemeAlani.querySelector("[data-ms-taksit-listesi]");
+            let taksitSonBin = "";
+
+            // Ödenecek tutarı özet DOM'undan oku ("24,99 TL" → 24.99) — taksit gösterimi için.
+            const odenecekTutarOku = () => {
+                const el = document.querySelector("[data-ms-odeme-odenecek]");
+                if (!el) return 0;
+                const s = (el.textContent || "").replace(/[^0-9,.]/g, "").replace(/\./g, "").replace(",", ".");
+                const n = parseFloat(s);
+                return isFinite(n) ? n : 0;
+            };
+
+            // Kart BIN'ine (ilk 6 hane) göre PayTR taksit seçeneklerini yükle. Sunucu ham PayTR
+            // yanıtını loglar (Adım 1: format yakalama); şimdilik tek çekim döner. Yalnız BIN gönderilir.
+            const taksitleriYukle = async (bin) => {
+                if (!taksitListesi) return;
+                try {
+                    const r = await fetch("/api/store/payment/paytr/taksit", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ bin: bin, tutar: odenecekTutarOku() })
+                    });
+                    const v = await r.json();
+                    const opts = (v && v.taksitler) || [];
+                    const nf = new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    taksitListesi.innerHTML = opts.map((o, i) => {
+                        const etiket = (o.adet || 1) <= 1 ? "Tek Çekim" : (o.adet + " Taksit");
+                        return `<label class="ms-odeme-taksit-secenegi">
+                            <input class="ms-onay-input" type="radio" name="siparis-taksit" value="${o.adet || 1}" ${i === 0 ? "checked" : ""}>
+                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
+                            <span>${etiket}</span>
+                            <strong class="ms-fiyat-standart">${nf.format(o.birim || 0)} ₺ <small class="ms-fiyat-standart">Toplam: ${nf.format(o.toplam || 0)} ₺</small></strong>
+                        </label>`;
+                    }).join("");
+                } catch { /* sessiz — taksit gösterimi kritik değil */ }
+            };
             const kartOnizleme = odemeAlani.querySelector("[data-ms-kart-onizleme]");
             const kartTurYazilari = Array.from(odemeAlani.querySelectorAll("[data-ms-kart-tur-yazi], [data-ms-kart-tur-yazi-arka]"));
             const kartOnizlemeNumara = odemeAlani.querySelector("[data-ms-kart-onizleme-numara]");
@@ -504,14 +516,25 @@
                 const rakamlar = sadeceRakam(kartNumarasi.value).slice(0, 16);
                 kartNumarasi.value = rakamlar.replace(/(.{4})/g, "$1 ").trim();
 
-                const taksitGoster = rakamlar.length > 0;
+                // Taksit listesi kart BIN'i (ilk 6 hane) tamamlanınca PayTR'den yüklenir.
+                const taksitGoster = rakamlar.length >= 6;
 
                 if (taksitBos) {
                     taksitBos.hidden = taksitGoster;
                 }
-
                 if (taksitListesi) {
                     taksitListesi.hidden = !taksitGoster;
+                }
+
+                if (rakamlar.length >= 6) {
+                    const bin = rakamlar.slice(0, 6);
+                    if (bin !== taksitSonBin) {
+                        taksitSonBin = bin;
+                        taksitleriYukle(bin);
+                    }
+                } else {
+                    taksitSonBin = "";
+                    if (taksitListesi) { taksitListesi.innerHTML = ""; }
                 }
 
                 kartOnizlemeGuncelle();
