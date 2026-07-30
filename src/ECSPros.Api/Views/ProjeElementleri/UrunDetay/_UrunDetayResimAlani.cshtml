@@ -12,6 +12,12 @@
     var resimAd = vmResim?.Ad ?? "Ürün görseli";
     var videolar = vmResim?.Videolar ?? [];
     var videoPoster = resimler.Count > 0 ? resimler[0] : null;
+    // 2026-07-30: ürün detay görselleri srcset — CDN anında ölçekler (640 sabit yerine
+    // ana görselde 480-1440, thumb'da 120-360 merdiveni). Kalıp dışı URL'de null → tek kaynak.
+    string? DetaySrcset(string url) => ECSPros.Api.Services.Store.UrunGorselSrcset.Detay(url);
+    string? ThumbSrcset(string url) => ECSPros.Api.Services.Store.UrunGorselSrcset.Thumb(url);
+    const string detaySizes = "(max-width: 768px) 100vw, 520px";
+    const string thumbSizes = "72px";
 }
 <section class="ms-urun-detay-resim-alani" data-ms-urun-detay-resim-alani aria-label="Ürün görselleri">
                 <div class="ms-urun-detay-resim-galeri">
@@ -19,7 +25,7 @@
                         @for (var i = 0; i < resimler.Count; i++)
                         {
                         <button class="ms-urun-detay-resim-thumb@(i == 0 ? " ms-urun-detay-resim-thumb-aktif" : "")" type="button" data-ms-urun-detay-resim-thumb="@i" aria-label="@(i + 1). ürün görseli" aria-pressed="@(i == 0 ? "true" : "false")">
-                            <img src="@resimler[i]" alt="@resimAd @(i + 1). görsel" width="214" height="268" loading="lazy">
+                            <img src="@resimler[i]" srcset="@ThumbSrcset(resimler[i])" sizes="@(ThumbSrcset(resimler[i]) is null ? null : thumbSizes)" alt="@resimAd @(i + 1). görsel" width="214" height="268" loading="lazy">
                         </button>
                         }
                         @for (var v = 0; v < videolar.Count; v++)
@@ -40,11 +46,11 @@
                                 {
                                 if (r == 0)
                                 {
-                                <img class="ms-urun-detay-resim-ana" data-ms-urun-detay-resim-slide src="@resimler[r]" alt="@resimAd" width="214" height="268" fetchpriority="high" loading="eager">
+                                <img class="ms-urun-detay-resim-ana" data-ms-urun-detay-resim-slide src="@resimler[r]" srcset="@DetaySrcset(resimler[r])" sizes="@(DetaySrcset(resimler[r]) is null ? null : detaySizes)" alt="@resimAd" width="214" height="268" fetchpriority="high" loading="eager">
                                 }
                                 else
                                 {
-                                <img class="ms-urun-detay-resim-ana" data-ms-urun-detay-resim-slide src="@resimler[r]" alt="@resimAd" width="214" height="268" loading="lazy">
+                                <img class="ms-urun-detay-resim-ana" data-ms-urun-detay-resim-slide src="@resimler[r]" srcset="@DetaySrcset(resimler[r])" sizes="@(DetaySrcset(resimler[r]) is null ? null : detaySizes)" alt="@resimAd" width="214" height="268" loading="lazy">
                                 }
                                 }
                                 @foreach (var video in videolar)
@@ -104,7 +110,7 @@
                             <div class="ms-urun-detay-resim-modal-track" data-ms-urun-detay-resim-modal-track>
                                 @foreach (var resim in resimler)
                                 {
-                                <img class="ms-urun-detay-resim-modal-gorsel" data-ms-urun-detay-resim-modal-slide src="@resim" alt="@resimAd" width="214" height="268" loading="lazy">
+                                <img class="ms-urun-detay-resim-modal-gorsel" data-ms-urun-detay-resim-modal-slide src="@resim" srcset="@DetaySrcset(resim)" sizes="@(DetaySrcset(resim) is null ? null : "100vw")" alt="@resimAd" width="214" height="268" loading="lazy">
                                 }
                                 @foreach (var video in videolar)
                                 {
@@ -127,7 +133,7 @@
                             @for (var i = 0; i < resimler.Count; i++)
                             {
                             <button class="ms-urun-detay-resim-modal-thumb@(i == 0 ? " ms-urun-detay-resim-modal-thumb-aktif" : "")" type="button" data-ms-urun-detay-resim-modal-thumb="@i" aria-label="@(i + 1). büyük ürün görseli" aria-pressed="@(i == 0 ? "true" : "false")">
-                                <img src="@resimler[i]" alt="@resimAd @(i + 1). görsel" width="214" height="268" loading="lazy">
+                                <img src="@resimler[i]" srcset="@ThumbSrcset(resimler[i])" sizes="@(ThumbSrcset(resimler[i]) is null ? null : thumbSizes)" alt="@resimAd @(i + 1). görsel" width="214" height="268" loading="lazy">
                             </button>
                             }
                             @for (var v = 0; v < videolar.Count; v++)

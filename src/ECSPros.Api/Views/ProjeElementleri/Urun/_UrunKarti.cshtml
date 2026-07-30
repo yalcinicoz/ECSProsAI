@@ -10,6 +10,10 @@
     var adParcalari = (u?.Ad ?? "").Split(' ', 2);
     var adIlk = adParcalari.Length > 0 ? adParcalari[0] : "";
     var adKalan = adParcalari.Length > 1 ? adParcalari[1] : "";
+    // 2026-07-30: ürün görseli srcset — CDN anında ölçekler, cihaz gereken genişliği indirir
+    // (kart ekranda ~180-240px; 640 sabit yerine 240-640 merdiveni). Kalıp dışı URL'de null.
+    var kartSrcset = ECSPros.Api.Services.Store.UrunGorselSrcset.Kart(u?.GorselUrl);
+    const string kartSizes = "(max-width: 768px) 45vw, 240px";
 }
 <div class="ms-urun-karti" data-ms-kart-link-alani
      data-ms-urun-id="@(u?.Kod ?? "")"
@@ -22,7 +26,7 @@
     <div class="ms-urun-gorsel-alani" data-ms-urun-galeri data-ms-urun-galeri-resimler="@(u?.GaleriResimleri ?? "")">
         @if (u?.GorselUrl is not null)
         {
-            <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-src="@u.GorselUrl" data-ms-lazy-skeleton="true" alt="@u.Ad" loading="lazy" decoding="async" width="240" height="320">
+            <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-src="@u.GorselUrl" data-ms-lazy-srcset="@kartSrcset" data-ms-lazy-sizes="@(kartSrcset is null ? null : kartSizes)" data-ms-lazy-skeleton="true" alt="@u.Ad" loading="lazy" decoding="async" width="240" height="320">
         }
         else if (u is not null)
         {
