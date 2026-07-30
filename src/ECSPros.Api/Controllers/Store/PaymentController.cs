@@ -140,11 +140,6 @@ public class PaymentController(
             return Content("PAYTR notification failed: bad hash");
         }
 
-        // TANILAMA (kart-dışı, güvenli): PayTR'nin işlediği total_amount (kuruş) — tutar sorununu
-        // izole etmek için. Sorun çözülünce kaldırılır.
-        logger.LogInformation("PayTR callback tanılama: oid={Oid} status={Status} total_amount(kuruş)={Total}",
-            form.merchant_oid, form.status, form.total_amount);
-
         var basarili = form.status == "success";
         await mediator.Send(new PayTrCallbackUygulaCommand(
             form.merchant_oid ?? "", basarili, form.failed_reason_msg), ct);
