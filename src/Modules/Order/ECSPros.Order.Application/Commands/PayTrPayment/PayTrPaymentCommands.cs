@@ -2,6 +2,7 @@ using ECSPros.Order.Application.Services;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace ECSPros.Order.Application.Commands.PayTrPayment;
 
@@ -42,12 +43,16 @@ public class PayTrPaymentBaslatCommandHandler(IOrderDbContext db)
     }
 }
 
-public class PayTrCallbackUygulaCommandHandler(IOrderDbContext db)
+public class PayTrCallbackUygulaCommandHandler(
+    IOrderDbContext db, IPublisher publisher, ILogger<PayTrCallbackUygulaCommandHandler> logger)
     : IRequestHandler<PayTrCallbackUygulaCommand, Result<Guid>>
 {
     public async Task<Result<Guid>> Handle(PayTrCallbackUygulaCommand request, CancellationToken ct)
     {
-        var order = await db.Orders.FirstOrDefaultAsync(o => o.OrderNumber == request.MerchantOid, ct);
+        // Onay adımında rezervasyon için kalemler gerekir (Order.Confirm Items üzerinden event kurar).
+        var order = await db.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.OrderNumber == request.MerchantOid, ct);
         if (order is null) return Result.Failure<Guid>("Sipariş bulunamadı.");
 
         // Idempotent: zaten paid ise tekrar işleme (PayTR callback'i birden çok gelebilir).
@@ -66,6 +71,28 @@ public class PayTrCallbackUygulaCommandHandler(IOrderDbContext db)
         order.CustomerNotes = mevcut;
         order.PaymentStatus = request.Basarili ? "paid" : "failed";
         await db.SaveChangesAsync(ct);
+
+        // Ödeme başarılıysa siparişi OTOMATİK ONAYLA (pending → confirmed). Onay, OrderConfirmedEvent
+        // ile online stok rezervasyonunu tetikler (WarehouseId=Guid.Empty → depo-bağımsız). Onay hatası
+        // ödeme kaydını BLOKLAMAZ (ödeme zaten yazıldı); log'a düşer, personel elle onaylayabilir.
+        if (request.Basarili)
+        {
+            try
+            {
+                order.Confirm(Guid.Empty, Guid.Empty);   // warehouseId=Empty → online cross-warehouse reserve
+                await db.SaveChangesAsync(ct);
+                foreach (var domainEvent in order.DomainEvents)
+                    await publisher.Publish(domainEvent, ct);
+                order.ClearDomainEvents();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "PayTR callback: ödeme alındı (paid) ama sipariş otomatik onaylanamadı (OrderNumber={Oid}).",
+                    request.MerchantOid);
+            }
+        }
+
         return Result.Success(order.Id);
     }
 }
