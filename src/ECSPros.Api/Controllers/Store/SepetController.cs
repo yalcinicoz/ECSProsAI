@@ -1,4 +1,5 @@
 using ECSPros.Api.Services;
+using ECSPros.Api.Services.Store;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,7 +10,8 @@ namespace ECSPros.Api.Controllers.Store;
 /// satırlar sayfa içi script'le GET /api/store/cart'tan render edilir (B5 mini sepet deseni);
 /// SSR yalnız kabuğu verir. Teslimat/ödeme sayfaları C4-C5'te gelecek.
 /// </summary>
-public class SepetController(IConfiguration configuration) : StorePageController
+public class SepetController(
+    IConfiguration configuration, IPaymentSettingsProvider paymentSettings) : StorePageController
 {
     // C7: TCKN eşiği — sayfa script'leri banner/guard için okur (asıl güvence checkout'ta).
     // Sözleşmeler (ViewData["MsSozlesmeler"]) D3'ten beri tabanda yüklenir (nav belge modalı
@@ -39,12 +41,23 @@ public class SepetController(IConfiguration configuration) : StorePageController
     [HttpGet("/odeme-sonuc/basarili")]
     [HttpPost("/odeme-sonuc/basarili")]
     [IgnoreAntiforgeryToken]
-    public IActionResult OdemeSonucBasarili() => View("~/Views/Sepet/OdemeSonuc.cshtml", true);
+    public async Task<IActionResult> OdemeSonucBasarili(CancellationToken ct)
+        => await OdemeSonucGoster(true, ct);
 
     [HttpGet("/odeme-sonuc/basarisiz")]
     [HttpPost("/odeme-sonuc/basarisiz")]
     [IgnoreAntiforgeryToken]
-    public IActionResult OdemeSonucBasarisiz() => View("~/Views/Sepet/OdemeSonuc.cshtml", false);
+    public async Task<IActionResult> OdemeSonucBasarisiz(CancellationToken ct)
+        => await OdemeSonucGoster(false, ct);
+
+    // "Test modu — gerçek tahsilat yapılmaz." ibaresi YALNIZ gerçek test modunda gösterilsin
+    // (canlıda yanıltıcıydı) — PayTR ayarındaki TestMode'a bağlı.
+    private async Task<IActionResult> OdemeSonucGoster(bool basarili, CancellationToken ct)
+    {
+        var ayar = await paymentSettings.GetAsync(ct);
+        ViewData["MsPayTrTestModu"] = ayar?.TestMode == true;
+        return View("~/Views/Sepet/OdemeSonuc.cshtml", basarili);
+    }
 
     /// <summary>C10+H2: sipariş tamamlandı — içerik sessionStorage msSiparisSonucu'ndan;
     /// Kargo Bilgisi bölümü H2'de açıldı (firma adı platformun aktif kargo anlaşmasından

@@ -33,7 +33,10 @@
             <a class="ms-buton ms-buton-sade" href="/sepet">Sepetim</a>
         </div>
     }
-    <p class="mt-6 text-xs text-slate-400">Test modu — gerçek tahsilat yapılmaz.</p>
+    @if ((bool?)ViewData["MsPayTrTestModu"] == true)
+    {
+        <p class="mt-6 text-xs text-slate-400">Test modu — gerçek tahsilat yapılmaz.</p>
+    }
 </div>
 
 @if (!Model)
