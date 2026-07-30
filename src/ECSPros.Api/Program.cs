@@ -94,13 +94,16 @@ builder.Services.AddResponseCompression(options =>
         "image/svg+xml"
     });
 });
+// SmallestSize (brotli q11) 700KB'lik SSR HTML'de istek başına ~1.2 sn CPU yakıyordu —
+// her menü tıklamasında ziyaretçinin gördüğü ilk tepki gecikmesi buydu (2026-07-30 ölçümü:
+// br TTFB 1.24s → Fastest 0.07s; boyut 57KB → 75KB, fark önemsiz). SmallestSize'a geri dönme.
 builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
 {
-    options.Level = CompressionLevel.SmallestSize;
+    options.Level = CompressionLevel.Fastest;
 });
 builder.Services.Configure<GzipCompressionProviderOptions>(options =>
 {
-    options.Level = CompressionLevel.SmallestSize;
+    options.Level = CompressionLevel.Fastest;
 });
 
 var mvcBuilder = builder.Services.AddControllersWithViews()
@@ -510,7 +513,24 @@ if (!app.Environment.IsDevelopment())
 
 // Storefront statik varlıkları (wwwroot: css/js/ikons/images/video/fontawesome —
 // misharix ile aynı kök yollar, partial'lardaki /ikons/... referansları değişmeden çalışır)
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    // Layout'taki css/js referansları asp-append-version'lı (?v=hash) — içerik değişince
+    // URL değişir, uzun önbellek güvenlidir. Önceden hiç Cache-Control gönderilmiyordu;
+    // her sayfa geçişinde tarayıcı tüm asset'leri yeniden doğruluyordu (yavaş ilk tepki).
+    OnPrepareResponse = ctx =>
+    {
+        var uzanti = Path.GetExtension(ctx.File.Name).ToLowerInvariant();
+        var versiyonlu = ctx.Context.Request.Query.ContainsKey("v");
+        ctx.Context.Response.Headers.CacheControl = uzanti switch
+        {
+            ".css" or ".js" when versiyonlu => "public, max-age=31536000, immutable",
+            ".woff2" or ".woff" or ".ttf" => "public, max-age=2592000",           // fontlar — 30 gün
+            ".css" or ".js" => "public, max-age=86400",                            // sürümsüz referanslar — 1 gün
+            _ => "public, max-age=604800",                                         // görsel/ikon vb. — 7 gün
+        };
+    }
+});
 
 app.UseCors();
 app.UseRateLimiter();
