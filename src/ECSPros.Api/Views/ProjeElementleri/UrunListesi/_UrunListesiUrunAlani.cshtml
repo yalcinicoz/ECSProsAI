@@ -360,6 +360,10 @@
             }
         });
 
+        // CAPTURE şart (2026-07-30): üst filtre modülü panel tıklamalarında stopPropagation
+        // çağırır — bubble'daki document dinleyicisine üst paneldeki "Filtrele" tıklaması
+        // hiç ulaşmıyordu (üst Fiyat Aralığı/Cinsiyet uygulanmıyordu; sol panel bubble'la
+        // çalışmaya devam ediyordu). Seçili-filtre kaldırma dinleyicisiyle aynı desen.
         document.addEventListener("click", (olay) => {
             const uygula = olay.target.closest?.(".ms-filtre-uygula-buton, [data-ms-mobil-chip-panel-kapat], [data-ms-urun-mobil-filtre-detay-kapat]");
             if (uygula) {
@@ -375,7 +379,7 @@
             if (siralamaSecenegi) {
                 parametrelerleGit({ sirala: siralamaSecenegi.dataset.msSiralamaKod });
             }
-        });
+        }, true);
 
         window.msInfiniteConfigs["urun-listesi"] = {
             ilk: 0, // ilk sayfa sunucudan render edildi (plan 3.3) — modül devam kartlarını üretir
