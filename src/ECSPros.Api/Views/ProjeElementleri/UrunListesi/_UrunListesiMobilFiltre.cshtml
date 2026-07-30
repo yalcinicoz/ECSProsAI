@@ -143,9 +143,9 @@
         }
         <button type="button" data-ms-urun-mobil-filtre-detay-ac="fiyat"><span class="ms-urun-listesi-mobil-filtre-menu-metin">Fiyat</span><span class="ms-urun-listesi-mobil-filtre-menu-sag"><em data-ms-urun-mobil-filtre-sayac hidden>0</em><span class="ms-urun-listesi-mobil-filtre-menu-ok" aria-hidden="true"><i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i></span></span></button>
     </nav>
-    <div class="ms-urun-listesi-mobil-alt">
-        <button type="button" data-ms-urun-mobil-filtre-kapat>Tüm Sonuçları Listele</button>
-    </div>
+    @* "Tüm Sonuçları Listele" kaldırıldı (kullanıcı kararı 2026-07-30): buton yalnız
+       paneli kapatıyordu (başlıktaki X ile aynı işlev) — seçimler detay panellerindeki
+       Filtrele akışıyla zaten uygulandığından kafa karıştırıyordu. *@
 </section>
 
 @foreach (var grup in vm.FiltreGruplari)
