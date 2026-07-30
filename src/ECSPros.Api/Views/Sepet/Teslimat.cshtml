@@ -17,7 +17,10 @@
 
     document.querySelectorAll("[data-ms-siparis-asama-git='odeme']").forEach((buton) => {
         buton.addEventListener("click", () => {
-            window.location.href = "/odeme";
+            // Hızlı satın alma bağlamı (?hizli=1) ödeme adımına taşınır — ödeme sayfası
+            // sepeti ana sepetten değil tek ürünlük hızlı sepetten okur (A seçeneği).
+            const hizli = new URLSearchParams(window.location.search).get("hizli") === "1";
+            window.location.href = hizli ? "/odeme?hizli=1" : "/odeme";
         });
     });
 </script>

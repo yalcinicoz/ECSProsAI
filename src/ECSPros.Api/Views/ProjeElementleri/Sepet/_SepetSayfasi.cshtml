@@ -1060,6 +1060,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     yenile().then(() => {
         try {
+            // Hızlı satın alma askısı (2026-07-30): hızlı akış ödeme sayfası ana sepetin
+            // kupon durumunu askıya alır — sepete dönüldüğünde geri yüklenir.
+            const askida = sessionStorage.getItem("msSepetKuponDurumuAskida");
+            if (askida !== null) {
+                if (sessionStorage.getItem("msSepetKuponDurumu") === null) {
+                    sessionStorage.setItem("msSepetKuponDurumu", askida);
+                }
+                sessionStorage.removeItem("msSepetKuponDurumuAskida");
+            }
             const kayitli = JSON.parse(sessionStorage.getItem("msSepetKuponDurumu") || "null");
             if (kayitli?.kod) { kuponUygula(kayitli.kod, true); }
         } catch { /* bozuk kayıt yok sayılır */ }

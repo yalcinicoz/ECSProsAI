@@ -2077,8 +2077,57 @@
                 }
             };
 
-            document.querySelectorAll("[data-ms-urun-detay-sepete-ekle], .ms-buton-simdi-al").forEach((buton) => {
+            // ── Hızlı satın alma (A seçeneği, 2026-07-30): "Şimdi Al" ana sepete DOKUNMAZ.
+            // Taze bir oturum kimliğiyle tek ürünlük ayrı sepet açılır (sessionStorage
+            // ecspros_hizli_sid/cart) ve doğrudan /teslimat?hizli=1'e gidilir; sipariş
+            // bitince ana sepet aynen durur. Kalem BİLEREK üye token'sız eklenir — token
+            // gitse kalem üye ana sepetine yazılırdı. Varyant zorunlu; misafirse önce giriş.
+            let hizliGonderiliyor = false;
+            const hizliSatinAl = async () => {
+                const varyant = seciliVaryant();
+                if (!varyant || hizliGonderiliyor) { return; }
+                if (!localStorage.getItem("ecspros_member_token")) {
+                    // Teslimat adımı üye adres API'siyle çalışır — hızlı akış v1 üye-girişli
+                    document.querySelector("[data-ms-giris-modal-ac]")?.click();
+                    return;
+                }
+                hizliGonderiliyor = true;
+                try {
+                    const hizliSid = "sess_hizli_" + crypto.getRandomValues(new Uint32Array(2)).join("");
+                    const cevap = await fetch("/api/store/cart/items", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            firmPlatformId: cfg.firmPlatformId,
+                            variantId: varyant.id,
+                            quantity: 1,
+                            price: varyant.fiyat,
+                            currencyCode: cfg.paraBirimi,
+                            sessionId: hizliSid
+                        })
+                    });
+                    const veri = await cevap.json().catch(() => null);
+                    if (veri?.success && veri.data?.cartId) {
+                        sessionStorage.setItem("ecspros_hizli_sid", hizliSid);
+                        sessionStorage.setItem("ecspros_hizli_cart", veri.data.cartId);
+                        window.location.href = "/teslimat?hizli=1";
+                        return; // sayfa değişiyor — buton kilidi bilerek açılmaz
+                    }
+                    console.error("Hızlı satın alma başlatılamadı:", veri?.error || cevap.status);
+                    hizliGonderiliyor = false;
+                } catch (hata) {
+                    console.error("Hızlı satın alma hatası:", hata);
+                    hizliGonderiliyor = false;
+                }
+            };
+
+            // Beden seçilmeden tıklanırsa misharix beden modalını açar; seçim sonrası
+            // hangi akışın devam edeceğini bu bayrak belirler (Şimdi Al ↔ Sepete Ekle).
+            let bekleyenHizli = false;
+
+            document.querySelectorAll("[data-ms-urun-detay-sepete-ekle]").forEach((buton) => {
                 buton.addEventListener("click", () => {
+                    bekleyenHizli = false;
                     if (seciliVaryant()) {
                         sepeteEkle();
 
@@ -2095,11 +2144,26 @@
                 });
             });
 
+            document.querySelectorAll(".ms-buton-simdi-al").forEach((buton) => {
+                buton.addEventListener("click", () => {
+                    if (seciliVaryant()) {
+                        bekleyenHizli = false;
+                        hizliSatinAl();
+                    } else {
+                        bekleyenHizli = true; // beden modalından seçim gelince hızlı akış sürer
+                    }
+                });
+            });
+
             // Beden modalından seçim: misharix radio'yu işaretleyip modalı kapatır;
-            // ardından bekleyen sepete ekleme burada gerçekleşir.
+            // ardından bekleyen ekleme burada gerçekleşir (Şimdi Al beklemedeyse hızlı akış).
             document.querySelector("[data-ms-urun-detay-beden-modal-listesi]")?.addEventListener("click", (event) => {
                 if (event.target.closest(".ms-urun-beden-modal-secim")) {
-                    window.setTimeout(sepeteEkle, 0);
+                    window.setTimeout(() => {
+                        const devam = bekleyenHizli ? hizliSatinAl : sepeteEkle;
+                        bekleyenHizli = false;
+                        devam();
+                    }, 0);
                 }
             });
         })();

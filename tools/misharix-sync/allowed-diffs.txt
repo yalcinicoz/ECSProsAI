@@ -362,3 +362,7 @@ wwwroot/css/tailwind.css
 # 2026-07-30: storefront hata sayfası (İZİNLİ YENİ — tasarım paketinde 404/hata
 # şablonu yok; mevcut ms-buton + tipografi sınıflarıyla site kabuğunda basit gövde).
 Views/Shared/MsHata.cshtml
+
+# 2026-07-30: hızlı satın alma (Şimdi Al) — ödeme adımına geçerken ?hizli=1 bağlamı
+# taşınır (tasarımın sabit /odeme yönlendirmesine tek koşul eklendi).
+Views/Sepet/Teslimat.cshtml
