@@ -11424,7 +11424,15 @@
   }
 
   .ms-siparis-sozlesme-onay .ms-onay-kutu {
-    @apply mt-0.5;
+    /* rounded-md: temel .ms-onay-kutu rounded-xl'i 20px kutuda daireye çeviriyor,
+       radyo sanılıyordu — sözleşme onayı checkbox olarak algılanmalı (2026-07-30). */
+    @apply mt-0.5 cursor-pointer rounded-md;
+  }
+
+  .ms-siparis-sozlesme-tik {
+    /* Kutu + gizli input'u saran label: görünen kutuya tıklama input'a iletilir,
+       input'un click köprüsü sözleşme modalını açar (2026-07-30). */
+    @apply inline-flex cursor-pointer;
   }
 
   .ms-siparis-sozlesme-onay p {
