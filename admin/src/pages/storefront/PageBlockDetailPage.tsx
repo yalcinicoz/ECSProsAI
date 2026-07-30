@@ -136,6 +136,48 @@ function gorselSorunlari(spec: GorselSpec, w: number, h: number, kb: number): st
   return sorunlar
 }
 
+// 2026-07-30: öğe linki elle girilmiyor — kanal kategorilerinden (slug) seçilir;
+// dış kampanya linki gibi istisnalar için "Özel URL" seçeneği elle girişe açılır
+// (yalnız / veya http(s):// ile başlayan değer kabul edilir — yazım hatası engeli).
+const OZEL_URL = '__ozel__'
+function LinkSecici({ deger, degistir, kategoriler }: {
+  deger: string | null; degistir: (v: string | null) => void; kategoriler: KanalKategori[]
+}) {
+  const secenekler = [
+    { value: '/', label: 'Ana Sayfa (/)' },
+    { value: '/urun-listesi', label: 'Tüm Ürünler (/urun-listesi)' },
+    ...kategoriler.map((k) => ({ value: `/${k.slug}`, label: `${k.nameI18n?.tr ?? k.slug} (/${k.slug})` })),
+  ]
+  const listede = !deger || secenekler.some((o) => o.value === deger)
+  const [ozelMod, setOzelMod] = useState(() => !!deger && !listede)
+  const ozelGecerli = !deger || /^(\/|https?:\/\/)/.test(deger)
+  return (
+    <div>
+      <label className="mb-1 block text-sm text-[var(--text-m)]">Link</label>
+      <SearchableSelect
+        value={ozelMod ? OZEL_URL : (deger || null)}
+        onChange={(v) => {
+          if (v === OZEL_URL) { setOzelMod(true); return }
+          setOzelMod(false); degistir(v)
+        }}
+        options={[...secenekler, { value: OZEL_URL, label: 'Özel URL (elle gir)…' }]}
+        placeholder="— Sayfa seçin —"
+        clearable
+        hasValue={!!deger}
+      />
+      {ozelMod && (
+        <>
+          <Input className="mt-2" value={deger ?? ''} placeholder="/ozel-yol veya https://..."
+            onChange={(e) => degistir(e.target.value || null)} />
+          {!ozelGecerli && (
+            <p className="mt-1 text-xs text-red-600">Link "/" veya "https://" ile başlamalı — göreli/hatalı yol sitede 404 açar.</p>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 // 2026-07-22: öğe görseli — URL elle girilmez; dosya seçilir, POST /pages/media
 // sunucuya (media/vitrin/yyyyMM) yükler, burada görselin kendisi gösterilir.
 function GorselAlani({ etiket, deger, degistir, spec }: {
@@ -792,7 +834,6 @@ export function PageBlockDetailPage() {
               ['Başlık (TR)', ogeModal.oge.titleI18n?.tr ?? '', (v: string) => ({ titleI18n: { ...ogeModal.oge.titleI18n, tr: v } })],
               ['Alt başlık (TR)', ogeModal.oge.subtitleI18n?.tr ?? '', (v: string) => ({ subtitleI18n: v ? { tr: v } : null })],
               ['Video URL (story)', ogeModal.oge.videoUrl ?? '', (v: string) => ({ videoUrl: v || null })],
-              ['Link', ogeModal.oge.linkUrl ?? '', (v: string) => ({ linkUrl: v || null })],
               ['Buton metni (TR)', ogeModal.oge.buttonTextI18n?.tr ?? '', (v: string) => ({ buttonTextI18n: v ? { tr: v } : null })],
             ] as [string, string, (v: string) => Partial<ItemDto>][]).map(([etiket, deger, degistir]) => (
               <div key={etiket}>
@@ -800,6 +841,9 @@ export function PageBlockDetailPage() {
                 <Input value={deger} onChange={(e) => setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, ...degistir(e.target.value) } })} />
               </div>
             ))}
+            {/* 2026-07-30: link kanal kategorilerinden seçilir (hatalı elle giriş engeli) */}
+            <LinkSecici deger={ogeModal.oge.linkUrl} kategoriler={kanalKategorileri}
+              degistir={(v) => setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, linkUrl: v } })} />
             {/* 2026-07-22: görseller dosyadan yüklenir (URL elle girilmez); rozet → ikon seçici.
                 2026-07-30 (B fazı): blok tipine göre boyut/oran/KB önerisi + yükleme öncesi uyarı */}
             <GorselAlani etiket="Görsel" deger={ogeModal.oge.imageUrl}

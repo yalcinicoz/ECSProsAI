@@ -512,6 +512,17 @@ if (!app.Environment.IsDevelopment())
     app.UseResponseCompression();
 }
 
+// Bilinmeyen storefront URL'leri tarayıcının boş 404'ü yerine sitenin kendi 404
+// sayfasına gider (2026-07-30). YALNIZ gövdesiz durum kodlarında devreye girer;
+// API/hub/swagger yolları ve dosya uzantılı istekler (statikler) kapsam dışı —
+// JSON istemcileri HTML almaz. ReExecute orijinal durum kodunu korur (SEO: 404 kalır).
+app.UseWhen(
+    ctx => !ctx.Request.Path.StartsWithSegments("/api")
+        && !ctx.Request.Path.StartsWithSegments("/hubs")
+        && !ctx.Request.Path.StartsWithSegments("/swagger")
+        && !Path.HasExtension(ctx.Request.Path.Value ?? ""),
+    dal => dal.UseStatusCodePagesWithReExecute("/hata/{0}"));
+
 // Storefront statik varlıkları (wwwroot: css/js/ikons/images/video/fontawesome —
 // misharix ile aynı kök yollar, partial'lardaki /ikons/... referansları değişmeden çalışır)
 app.UseStaticFiles(new StaticFileOptions
