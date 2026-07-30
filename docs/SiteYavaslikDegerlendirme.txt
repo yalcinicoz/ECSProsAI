@@ -1,0 +1,44 @@
+1. Değiştirilen dosyalar
+Dosya değiştirmedim; bu turda yalnızca teşhis yaptım.
+2. Redis bulguları
+Redis geçen yerlerin tamamı:
+Redis container tanımı: [docker-compose.yml (line 15)](D:/NewProje/ECSCommercePlatform/docker-compose.yml:15)
+API’nin Redis’e bağımlı gösterilmesi: [docker-compose.yml (line 37)](D:/NewProje/ECSCommercePlatform/docker-compose.yml:37)
+Kullanılmayan Redis connection string: [docker-compose.yml (line 42)](D:/NewProje/ECSCommercePlatform/docker-compose.yml:42)
+Redis’in planlandığını belirten doküman: [PROGRESS.md (line 257)](D:/NewProje/ECSCommercePlatform/PROGRESS.md:257)
+Eksik olanlar:
+StackExchange.Redis veya Redis cache NuGet paketi yok.
+AddStackExchangeRedisCache, IDistributedCache veya IConnectionMultiplexer kaydı yok.
+Redis key, TTL, invalidation veya serialization kodu yok.
+Local appsettings.json içinde Redis bağlantısı yok.
+Redis için healthcheck, authentication, persistence, maxmemory ve eviction policy ayarı yok.
+depends_on, Redis’in hazır olmasını beklemiyor; yalnızca container başlatma sırasını belirliyor.
+6379 doğrudan host’a açılmış.
+Yani API, ConnectionStrings__Redis değerini alıyor ama hiçbir yerde kullanmıyor.
+3. Yavaşlığın güçlü adayları
+En belirgin problem dashboard worker:
+Her 30 saniyede koşuyor: [DashboardMetricsWorker.cs (line 8)](D:/NewProje/ECSCommercePlatform/src/ECSCommerce.Api/Realtime/DashboardMetricsWorker.cs:8)
+Bağlı dashboard kullanıcısı olmasa bile iki rapor sorgusu çalıştırıyor.
+Sorgular ardışık çalışıyor.
+Satış raporu son 24 saatin siparişlerini komple belleğe çekip toplamayı C# içinde yapıyor: [SalesSummaryQuery.cs (line 20)](D:/NewProje/ECSCommercePlatform/src/Modules/Reporting/ECSCommerce.Reporting.Application/Queries/SalesSummaryQuery.cs:20)
+Bunun SQL tarafında COUNT/SUM olarak hesaplanması gerekiyor.
+Orders.CreatedAt/Status için uygun birleşik indeks görünmüyor.
+Diğer noktalar:
+Ürün listelemede her istekte COUNT ve liste olmak üzere en az iki SQL sorgusu var: [GetProductsQuery.cs (line 53)](D:/NewProje/ECSCommercePlatform/src/Modules/Catalog/ECSCommerce.Catalog.Application/Products/Queries/GetProductsQuery.cs:53)
+Products.CategoryId/CreatedAt için uygun indeks görünmüyor.
+Kategori ağacı her çağrıda tüm kategorileri yüklüyor: [GetCategoryTreeQuery.cs (line 37)](D:/NewProje/ECSCommercePlatform/src/Modules/Catalog/ECSCommerce.Catalog.Application/Categories/Queries/GetCategoryTreeQuery.cs:37)
+Marketplace worker uygulama açılır açılmaz çalışıyor ve hesapları sırayla işliyor: [MarketplaceOrderFetchWorker.cs (line 17)](D:/NewProje/ECSCommercePlatform/src/Modules/Marketplace/ECSCommerce.Marketplace.Infrastructure/Workers/MarketplaceOrderFetchWorker.cs:17)
+Uygulama başlamadan önce migration/seed bekleniyor; ilk açılış yavaşlığı buradan gelebilir: [Program.cs (line 121)](D:/NewProje/ECSCommercePlatform/src/ECSCommerce.Api/Program.cs:121)
+4. Test ve notlar
+dotnet test ECSCommercePlatform.slnx --no-restore --verbosity minimal başarılı, exit code 0.
+Repoda test projesi bulunmadığı için gerçek davranış testi yapılmadı.
+Docker bu ortamda kurulu/değil veya PATH’te değil.
+5432, 6379, 5000 ve 9200 portlarında çalışan servis bulunmadığından canlı latency ölçümü yapılamadı.
+Production build çalıştırılmadı.
+5. Önerilen sonraki adım
+Öncelik sırası şu olmalı:
+SalesSummaryQuery sorgusunu SQL aggregation’a çevirmek.
+Dashboard worker’ı yalnızca ihtiyaç olduğunda çalıştırmak veya sonucunu cache’lemek.
+Orders.CreatedAt/Status, Products.CategoryId/CreatedAt indekslerini eklemek.
+Ardından Redis’i gerçekten register edip kategori, ürün listesi ve dashboard özetleri için kontrollü TTL/invalidation eklemek.
+Redis’i doğrudan eklemek tek başına problemi çözmez; önce her 30 saniyede yapılan pahalı sorguyu düzeltmek en yüksek getiriyi sağlar.

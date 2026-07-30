@@ -206,6 +206,7 @@ builder.Services.AddSingleton<ECSPros.Api.Hubs.DashboardPresenceTracker>(); // d
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IStoreContext, StoreContext>();
 builder.Services.AddScoped<ECSPros.Api.Services.StoreUrunDetayBuilder>(); // ürün detay VM (hem /urun/{code} hem gerçek slug URL'i kullanır)
+builder.Services.AddSingleton<ECSPros.Api.Services.Store.VitrinSrcsetSaglayici>(); // vitrin görsel srcset üretimi (A fazı — varyant varsa basılır)
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IInStockProductProvider, ECSPros.Api.Services.InStockProductProvider>();
 // H10: vitrin "indirimli ürünler" kaynak bayrağı — kanalda CompareAtPrice > Price olan ürün kümesi
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IDiscountedProductProvider, ECSPros.Api.Services.DiscountedProductProvider>();

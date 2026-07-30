@@ -352,3 +352,8 @@ Views/Koleksiyon/Index.cshtml
 
 # E6: koleksiyon akışının API köprüsü (İZİNLİ YENİ — tasarımda backend yok).
 Views/Shared/Store/_KoleksiyonAkisKoprusu.cshtml
+
+# 2026-07-29 (271b133): mobil slider okları görünür + iOS dokunma düzeltmesi —
+# kullanıcı geri bildirimiyle ECSPros tarafında yapılan bilinçli fark (kaynak
+# /opt/misharix güncellenince bu satır kaldırılabilir).
+wwwroot/css/tailwind.css

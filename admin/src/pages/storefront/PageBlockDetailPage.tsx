@@ -105,16 +105,48 @@ function MultiPick({ deger, secenekler, degistir, placeholder }: {
   )
 }
 
+// 2026-07-30 (PageSpeed B fazı): blok tipine göre görsel beklentileri — yükleme öncesi
+// boyut/oran/ağırlık kontrolü. Değerler sitedeki gerçek slot ölçümlerinden (desktop CSS
+// genişliği × mobil DPR ~2.6). Uyarı ENGELLEMEZ: personel "Yine de Yükle" diyebilir.
+interface GorselSpec { minW?: number; oran?: number; oranTol?: number; maxKB?: number; oneri: string }
+const GORSEL_SPEKLERI: Record<string, { gorsel?: GorselSpec; mobil?: GorselSpec }> = {
+  slider: {
+    gorsel: { minW: 1600, oran: 1200 / 525, oranTol: 0.2, maxKB: 350, oneri: 'Önerilen: 1920×840 (oran ~2.3), ≤350 KB' },
+    mobil: { minW: 800, maxKB: 250, oneri: 'Önerilen genişlik: ≥800 px, ≤250 KB' },
+  },
+  banner: { gorsel: { minW: 1100, oran: 801 / 328, oranTol: 0.2, maxKB: 200, oneri: 'Önerilen: 1200×490 (oran ~2.4), ≤200 KB' } },
+  'coklu-banner': { gorsel: { minW: 330, oran: 110 / 165, oranTol: 0.2, maxKB: 120, oneri: 'Önerilen: 330×495 (dikey 2:3), ≤120 KB' } },
+  'cercevesiz-carousel': { gorsel: { minW: 800, oran: 400 / 489, oranTol: 0.2, maxKB: 250, oneri: 'Önerilen: 800×978, ≤250 KB' } },
+  'gorselli-yorumlar': { gorsel: { minW: 480, oran: 214 / 268, oranTol: 0.25, maxKB: 150, oneri: 'Önerilen: 480×600, ≤150 KB' } },
+  story: { gorsel: { minW: 128, maxKB: 100, oneri: 'Kapak: ≥128×128 kare, ≤100 KB' } },
+  categories: { gorsel: { minW: 128, maxKB: 100, oneri: 'Önerilen: ≥128×128, ≤100 KB' } },
+}
+
+function gorselSorunlari(spec: GorselSpec, w: number, h: number, kb: number): string[] {
+  const sorunlar: string[] = []
+  if (spec.minW && w > 0 && w < spec.minW)
+    sorunlar.push(`Görsel dar: ${w}px — bu alan için en az ${spec.minW}px önerilir; telefon ekranlarında bulanık görünür.`)
+  if (spec.oran && w > 0 && h > 0) {
+    const oran = w / h
+    if (Math.abs(oran - spec.oran) / spec.oran > (spec.oranTol ?? 0.2))
+      sorunlar.push(`En-boy oranı uyumsuz: ${oran.toFixed(2)} (beklenen ~${spec.oran.toFixed(2)}) — görsel kırpılarak/ezilerek gösterilebilir.`)
+  }
+  if (spec.maxKB && kb > spec.maxKB)
+    sorunlar.push(`Dosya büyük: ${Math.round(kb)} KB — sayfa hızını düşürür; ≤${spec.maxKB} KB hedefleyin (WebP kaydedin).`)
+  return sorunlar
+}
+
 // 2026-07-22: öğe görseli — URL elle girilmez; dosya seçilir, POST /pages/media
 // sunucuya (media/vitrin/yyyyMM) yükler, burada görselin kendisi gösterilir.
-function GorselAlani({ etiket, deger, degistir }: {
-  etiket: string; deger: string | null; degistir: (v: string | null) => void
+function GorselAlani({ etiket, deger, degistir, spec }: {
+  etiket: string; deger: string | null; degistir: (v: string | null) => void; spec?: GorselSpec
 }) {
   const [yukleniyor, setYukleniyor] = useState(false)
   const [hata, setHata] = useState<string | null>(null)
+  const [bekleyen, setBekleyen] = useState<{ dosya: File; sorunlar: string[] } | null>(null)
   const yukle = async (dosya: File | undefined) => {
     if (!dosya) return
-    setYukleniyor(true); setHata(null)
+    setYukleniyor(true); setHata(null); setBekleyen(null)
     try {
       const fd = new FormData()
       fd.append('file', dosya)
@@ -124,6 +156,22 @@ function GorselAlani({ etiket, deger, degistir }: {
       /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
       setHata((e as any).response?.data?.error ?? 'Yükleme başarısız.')
     } finally { setYukleniyor(false) }
+  }
+  // B fazı: önce boyut/oran/KB kontrolü — sorun varsa yüklemeden önce uyarı göster
+  const kontrolEtVeYukle = async (dosya: File | undefined) => {
+    if (!dosya) return
+    // SVG/GIF piksel kontrolüne girmez (vektör/animasyon); spec yoksa doğrudan yükle
+    if (!spec || dosya.type === 'image/svg+xml' || dosya.type === 'image/gif') { yukle(dosya); return }
+    const boyut = await new Promise<{ w: number; h: number }>((resolve) => {
+      const url = URL.createObjectURL(dosya)
+      const img = new Image()
+      img.onload = () => { resolve({ w: img.naturalWidth, h: img.naturalHeight }); URL.revokeObjectURL(url) }
+      img.onerror = () => { resolve({ w: 0, h: 0 }); URL.revokeObjectURL(url) }
+      img.src = url
+    })
+    const sorunlar = gorselSorunlari(spec, boyut.w, boyut.h, dosya.size / 1024)
+    if (sorunlar.length === 0) { yukle(dosya); return }
+    setBekleyen({ dosya, sorunlar })
   }
   return (
     <div>
@@ -136,14 +184,29 @@ function GorselAlani({ etiket, deger, degistir }: {
           <label className="inline-block cursor-pointer rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs text-[var(--text-m)] hover:bg-[var(--surface2)]">
             {yukleniyor ? 'Yükleniyor…' : deger ? 'Değiştir' : 'Görsel Yükle'}
             <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" className="hidden"
-              disabled={yukleniyor} onChange={(e) => { yukle(e.target.files?.[0]); e.target.value = '' }} />
+              disabled={yukleniyor} onChange={(e) => { kontrolEtVeYukle(e.target.files?.[0]); e.target.value = '' }} />
           </label>
           {deger && (
             <button type="button" className="block text-xs text-red-600 hover:underline" onClick={() => degistir(null)}>Kaldır</button>
           )}
+          {spec && !bekleyen && <p className="text-xs text-[var(--text-s)]">{spec.oneri}</p>}
           {hata && <p className="text-xs text-red-600">{hata}</p>}
         </div>
       </div>
+      {bekleyen && (
+        <div className="mt-2 rounded-lg border border-amber-400 bg-amber-50 p-2.5 dark:bg-amber-950/30">
+          <p className="mb-1 text-xs font-semibold text-amber-700 dark:text-amber-400">Görsel önerilere uymuyor:</p>
+          <ul className="mb-2 list-disc pl-4 text-xs text-amber-700 dark:text-amber-400">
+            {bekleyen.sorunlar.map((s) => <li key={s}>{s}</li>)}
+          </ul>
+          <div className="flex gap-2">
+            <button type="button" className="rounded-lg border border-amber-500 px-2.5 py-1 text-xs text-amber-700 hover:bg-amber-100 dark:text-amber-400"
+              onClick={() => yukle(bekleyen.dosya)}>Yine de Yükle</button>
+            <button type="button" className="rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs text-[var(--text-m)] hover:bg-[var(--surface2)]"
+              onClick={() => setBekleyen(null)}>Vazgeç</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -737,10 +800,13 @@ export function PageBlockDetailPage() {
                 <Input value={deger} onChange={(e) => setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, ...degistir(e.target.value) } })} />
               </div>
             ))}
-            {/* 2026-07-22: görseller dosyadan yüklenir (URL elle girilmez); rozet → ikon seçici */}
+            {/* 2026-07-22: görseller dosyadan yüklenir (URL elle girilmez); rozet → ikon seçici.
+                2026-07-30 (B fazı): blok tipine göre boyut/oran/KB önerisi + yükleme öncesi uyarı */}
             <GorselAlani etiket="Görsel" deger={ogeModal.oge.imageUrl}
+              spec={GORSEL_SPEKLERI[form.blockType]?.gorsel}
               degistir={(v) => setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, imageUrl: v } })} />
             <GorselAlani etiket="Mobil görsel" deger={ogeModal.oge.mobileImageUrl}
+              spec={GORSEL_SPEKLERI[form.blockType]?.mobil ?? GORSEL_SPEKLERI[form.blockType]?.gorsel}
               degistir={(v) => setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, mobileImageUrl: v } })} />
             <IkonSecici deger={ogeModal.oge.badgeLabel}
               degistir={(v) => setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, badgeLabel: v } })} />
