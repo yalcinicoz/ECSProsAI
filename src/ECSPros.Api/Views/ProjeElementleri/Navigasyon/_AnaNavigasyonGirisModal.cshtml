@@ -129,13 +129,16 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // Misharix'in oturumDurumuAyarla'sı IIFE içinde — aynı class/yazı kuralı burada uygulanır.
-    const oturumUiAyarla = (acik) => {
+    const oturumUiAyarla = (acik, ad = "") => {
+        // Desktop: "Hesabım" yerine üyenin ADI (ilk ad). Mobilde yazı zaten gizli (text-[0px]),
+        // giriş göstergesi turuncu person ikonu (CSS: .ms-ana-navigasyon-giris-oturum-acik).
+        const ilkAd = (ad || "").trim().split(/\s+/)[0] || "";
         document.querySelectorAll("[data-ms-giris-menu]").forEach((menu) => {
             menu.classList.toggle("ms-ana-navigasyon-giris-oturum-acik", acik);
             menu.classList.remove("ms-ana-navigasyon-giris-acik");
             menu.querySelector("[data-ms-giris-menu-tetikleyici]")?.setAttribute("aria-expanded", "false");
             const yazi = menu.querySelector("[data-ms-giris-menu-yazi]");
-            if (yazi) { yazi.textContent = acik ? "Hesabım" : "Giriş Yap"; }
+            if (yazi) { yazi.textContent = acik ? (ilkAd || "Hesabım") : "Giriş Yap"; }
         });
     };
 
@@ -205,7 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const girisiUygula = (ad, iletisim) => {
         hesapPaneliDoldur(ad, iletisim);
-        oturumUiAyarla(true);
+        oturumUiAyarla(true, ad);
     };
 
     // ── Oturum kalıcılığı: token varsa /me ile doğrula (401'de bir kez refresh dene) ──

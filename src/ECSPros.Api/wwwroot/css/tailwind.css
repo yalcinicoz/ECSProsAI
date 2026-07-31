@@ -9955,6 +9955,13 @@
     @apply opacity-100;
   }
 
+  /* Üye girişliyken (2026-07-31) MOBİLDE hesap (person) ikonu turuncu: aktif (turuncu #f27a1a)
+     ikon gösterilir. Desktop'ta (lg+) yazı üyenin adını gösterir, ikon nötr kalır. */
+  @media (width < 64rem) {
+    .ms-ana-navigasyon-giris-oturum-acik .ms-ana-navigasyon-aksiyon-ikon-normal { opacity: 0; }
+    .ms-ana-navigasyon-giris-oturum-acik .ms-ana-navigasyon-aksiyon-ikon-aktif { opacity: 1; }
+  }
+
   .ms-ana-navigasyon-sepet-ikon-alani {
     @apply relative inline-flex;
   }
