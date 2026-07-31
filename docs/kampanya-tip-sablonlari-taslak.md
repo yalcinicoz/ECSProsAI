@@ -84,11 +84,23 @@ Eski tip 1 "Sepet 500₺ üstüne %10": `{ "applyTo": "cart", "conditionType": "
 
 ### 2.2 `buy_x_get_y` — Al X, Y bedava/indirimli
 Kapsar: 3, 6, 9, 12, 13, 14. ("3 al 2 öde", "1 alana 1 bedava", "ikincisi %50", "x adet y lira".)
+**En çok kullanılan tip.** Motor "set" mantığı: her `X + Y` adetlik grupta `Y` adet indirimli/bedava.
+
+Yaygın kampanya → parametre karşılığı:
+| Kampanya | X (tam fiyat) | Y (indirimli) | getBenefitType |
+|---|---|---|---|
+| 1 alana 1 bedava (=2 al 1 öde) | 1 | 1 | free |
+| 3 al 2 öde | 2 | 1 | free |
+| İkincisi %50 | 1 | 1 | percent (50) |
+
+> **Not:** mevcut `CampaignEngine.ApplyBuyXGetY` şu an yalnız `free` (%100) hesaplıyor;
+> `getBenefitType=percent/amount` ("ikincisi %50" vb.) için motor F2'de genişletilecek.
 
 ```jsonc
 [
   { "key": "buyQuantity",  "type": "integer", "required": true, "min": 1, "unit": "adet",
-    "labelI18n": { "tr": "Alınacak adet (X)" } },
+    "labelI18n": { "tr": "Tam fiyat ödenecek adet (X)" },
+    "helpI18n": { "tr": "Örn. 3 al 2 öde → X=2, Y=1. 1 alana 1 bedava → X=1, Y=1." } },
   { "key": "getQuantity",  "type": "integer", "required": true, "min": 1, "unit": "adet",
     "labelI18n": { "tr": "İndirimli/bedava adet (Y)" } },
   { "key": "getBenefitType", "type": "select", "required": true, "default": "free",
@@ -229,11 +241,22 @@ ertelenebilir (bkz. plan §5).
 
 ---
 
-## 4. Açık noktalar (gözden geçirmede karar)
-1. `discount`'ta `applyTo=cart` + koşul kombinasyonları (eski 4/5 "sepet x adedine") gerçekten
-   isteniyor mu, yoksa yalnız tutar-eşiği mi? (Adet-eşiği nadir kullanılmış.)
-2. `cross_group_gift` ve `bundle` ilk sürüme girsin mi, yoksa `discount`+`buy_x_get_y`+`free_shipping`
-   ile mi başlayalım? (Kullanım: cross/bundle çok düşük.)
-3. `review_reward` ilk sürümde ertelensin mi? (Tetik farklı; §5.)
-4. Alan tipleri `percent`/`money` ayrı mı yoksa `number`+`unit` mi? (Form doğrulaması için ayrı
-   öneririm.)
+## 4. Açık noktalar (gözden geçirme kararları)
+
+**Karara bağlanan (2026-07-31):**
+- ✅ **`buy_x_get_y` desteklenir** (1 alana 1 bedava = 2 al 1 öde, 3 al 2 öde, ikincisi %50 →
+  §2.2 tablo). "İkincisi %50" için motor F2'de `getBenefitType` percent/amount ile genişletilecek
+  (şu an yalnız bedava).
+- ✅ **`percent` ve `money` alan tipleri İKİSİ DE bulunur** (money az kullanılsa da), ayrı tipler
+  olarak (form doğrulaması net).
+
+**Hâlâ karar bekleyen:**
+1. Faz kapsamı — ilk sürüme hangi tipler girsin?
+   - **(A)** En çok kullanılanlarla başla: `discount` + `buy_x_get_y` + `free_shipping`;
+     `cross_group_gift` / `bundle` / `review_reward` sonraki faz. **(Öneri — eski kullanım:
+     cross 1, bundle 0 aktif, review 3.)**
+   - **(B)** Hepsi ilk sürümde.
+   > Tip tanımları (definition) esnek olduğundan, (A) seçilse bile ileride tip eklemek yalnız
+   > definition satırı + handler ister (§2.5.5).
+2. `discount`'ta adet-eşiği (`cartQty`/`scopeQty`) gerçekten gerekli mi, yoksa yalnız tutar-eşiği
+   (`cartAmount`/`scopeAmount`) mi? (Eski veride adet-eşiği nadir.)
