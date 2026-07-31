@@ -228,7 +228,7 @@ public class PageBlockSourceResolver(IMediator mediator, IProductService product
     /// <summary>Kanal kategori kart DTO'sunu ortak kart sözleşmesine indirger.</summary>
     private static StoreProductDto KanalKartinaCevir(ChannelCategoryProductItemDto p) => new(
         p.ProductId, p.Code, p.NameI18n, null,
-        p.MainImageUrl, p.BasePrice, null, p.IsActive,
+        p.MainImageUrl, p.BasePrice, p.CompareAtPrice, p.IsActive,
         p.Colors ?? [], p.Attrs ?? [], p.GalleryUrls,
         p.IsFeatured, p.Rating, p.ReviewCount);
 }

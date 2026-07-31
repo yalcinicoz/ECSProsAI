@@ -84,7 +84,8 @@
                 sponsorlu: p.isFeatured === true,
                 puan: p.rating || 0,          // E7: onaylı yorum ortalaması
                 puanSayisi: p.reviewCount || 0,
-                videoUrl: p.videoUrl || null  // H5: Videolu Ürün rozeti
+                videoUrl: p.videoUrl || null, // H5: Videolu Ürün rozeti
+                eskiFiyat: p.compareAtPrice || null  // 2026-07-31: indirim öncesi çizili fiyat
             };
         };
 
@@ -176,6 +177,21 @@
             const fiyat = kart.querySelector(".ms-urun-fiyat");
             if (fiyat) {
                 fiyat.textContent = v.fiyat.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " TL";
+            }
+
+            // İndirim satırı: eski (çizili) fiyat + indirim yüzdesi (eskiFiyat > satış fiyatı ise)
+            const indirimSatiri = kart.querySelector("[data-ms-kart-indirim-satiri]");
+            if (indirimSatiri) {
+                if (v.eskiFiyat && v.eskiFiyat > v.fiyat) {
+                    const yuzde = Math.round((v.eskiFiyat - v.fiyat) / v.eskiFiyat * 100);
+                    const rozet = indirimSatiri.querySelector("[data-ms-kart-indirim-rozet]");
+                    const eski = indirimSatiri.querySelector("[data-ms-kart-eski-fiyat]");
+                    if (rozet) { rozet.textContent = "-%" + yuzde; }
+                    if (eski) { eski.textContent = v.eskiFiyat.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " TL"; }
+                    indirimSatiri.hidden = false;
+                } else {
+                    indirimSatiri.hidden = true;
+                }
             }
 
             // B8 renk tooltip'i — SSR markup'ının birebir aynısı; rozetten ÖNCE eklenmeli
