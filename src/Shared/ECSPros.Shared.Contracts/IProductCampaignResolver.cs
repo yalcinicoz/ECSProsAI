@@ -19,11 +19,32 @@ public record ProductCampaignInfo(
 /// F2: kampanya çözümleme — tek kural seti (platform + kapsam FillType/materyalize + dışlama +
 /// öncelik). Hem vitrin fiyatı görünümü (F3 kart/detay) hem sepet/sipariş (F4) bu servisten beslenir.
 /// </summary>
+/// <summary>Checkout sepet kalemi — kampanya çözümlemesi için (varyant + ürün + adet + kanal birim fiyatı).</summary>
+public record CartCampaignItem(Guid VariantId, Guid ProductId, int Quantity, decimal UnitPrice);
+
+/// <summary>Uygulanan kampanya özeti (sepet/ödeme özeti + operasyon için).</summary>
+public record AppliedCampaign(string Code, string Name, decimal Amount, string Kind);
+
+/// <summary>
+/// Checkout sonucu: ürün-bazlı kampanyalı birim fiyatlar (varyant → fiyat) + sepet-seviyesi
+/// kampanya indirimi (buy_x_get_y/min_cart…) + uygulanan kampanya özeti. Çift sayım yok: her ürünün
+/// TEK etkin kampanyası vardır — ürün-bazlıysa fiyata yansır, cart_only ise indirime.
+/// </summary>
+public record CartCampaignResult(
+    Dictionary<Guid, decimal> ItemUnitPrices,
+    decimal CartDiscount,
+    List<AppliedCampaign> Applied);
+
 public interface IProductCampaignResolver
 {
     /// <summary>Verilen ürünler için ürün başına etkin kampanya (yoksa anahtar yok).</summary>
     Task<Dictionary<Guid, ProductCampaignInfo>> ResolveForProductsAsync(
         Guid firmPlatformId, IReadOnlyCollection<Guid> productIds, CancellationToken ct = default);
+
+    /// <summary>F4 checkout: sepet için kampanyaları uygular — ürün-bazlı fiyat (fiyata) +
+    /// sepet-seviyesi indirim (toplama). Sunucu-taraflı; istemci fiyatına güvenilmez.</summary>
+    Task<CartCampaignResult> ResolveCartAsync(
+        Guid firmPlatformId, IReadOnlyList<CartCampaignItem> items, CancellationToken ct = default);
 }
 
 /// <summary>Kampanyalı birim fiyat hesabı — F3 (vitrin) ve F4 (checkout) AYNI mantığı kullanır.</summary>
