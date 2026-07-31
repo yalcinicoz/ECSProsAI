@@ -1,12 +1,13 @@
 using ECSPros.Promotion.Application.Services;
+using ECSPros.Promotion.Domain.Entities;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Promotion.Application.Queries.GetCampaignTypes;
 
-// P3: kampanya oluşturma formunun tip seçicisi — tipler CampaignEngine'deki
-// işleyicilerle eşleşir (percentage_discount/fixed_discount/buy_x_get_y/min_cart_discount)
+// P3: kampanya oluşturma formunun tip seçicisi. SettingsSchema (parametre şablonu) döner —
+// platform kampanya formu bu şablondan üretilir (Faz 0, docs/kampanya-tip-sablonlari-taslak.md).
 public record GetCampaignTypesQuery(bool ActiveOnly = true) : IRequest<Result<List<CampaignTypeDto>>>;
 
 public record CampaignTypeDto(
@@ -14,10 +15,13 @@ public record CampaignTypeDto(
     string Code,
     Dictionary<string, string> NameI18n,
     Dictionary<string, string>? DescriptionI18n,
+    string Scope,
     bool RequiresProducts,
+    bool ProductPriceDisplay,
     bool IsStackable,
     bool IsActive,
-    int SortOrder);
+    int SortOrder,
+    List<CampaignSchemaField>? SettingsSchema);
 
 public class GetCampaignTypesQueryHandler(IPromotionDbContext db)
     : IRequestHandler<GetCampaignTypesQuery, Result<List<CampaignTypeDto>>>
@@ -31,7 +35,8 @@ public class GetCampaignTypesQueryHandler(IPromotionDbContext db)
             .OrderBy(t => t.SortOrder)
             .Select(t => new CampaignTypeDto(
                 t.Id, t.Code, t.NameI18n, t.DescriptionI18n,
-                t.RequiresProducts, t.IsStackable, t.IsActive, t.SortOrder))
+                t.Scope, t.RequiresProducts, t.ProductPriceDisplay,
+                t.IsStackable, t.IsActive, t.SortOrder, t.SettingsSchema))
             .ToListAsync(ct));
     }
 }

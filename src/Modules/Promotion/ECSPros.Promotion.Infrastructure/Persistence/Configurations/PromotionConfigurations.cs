@@ -8,13 +8,15 @@ public class CampaignTypeConfiguration : IEntityTypeConfiguration<CampaignType>
 {
     public void Configure(EntityTypeBuilder<CampaignType> builder)
     {
-        builder.ToTable("prm_campaign_types");
+        // Tip = definition katmanı (platformdan bağımsız). definition şemasına konur.
+        builder.ToTable("campaign_types", "definition");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Code).HasMaxLength(100).IsRequired();
         builder.Property(x => x.NameI18n).HasColumnType("jsonb").IsRequired();
         builder.Property(x => x.DescriptionI18n).HasColumnType("jsonb");
         builder.Property(x => x.HandlerClass).HasMaxLength(500).IsRequired();
         builder.Property(x => x.SettingsSchema).HasColumnType("jsonb");
+        builder.Property(x => x.Scope).HasMaxLength(20).IsRequired();
         builder.HasIndex(x => x.Code).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
         builder.HasMany(x => x.Campaigns).WithOne(x => x.CampaignType).HasForeignKey(x => x.CampaignTypeId);
