@@ -764,6 +764,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // sessionStorage'daki tek ürünlük hızlı sepetten okunur; kupon bu sayfada girilir.
     const hizliMod = new URLSearchParams(window.location.search).get("hizli") === "1";
 
+    // Sepet sayfasında seçilmeyen kalemlerin variantId kümesi (checkout dışı) — 2026-07-31.
+    const secimDisiKume = () => {
+        try { return new Set(JSON.parse(sessionStorage.getItem("msSepetSecimDisi") || "[]")); }
+        catch { return new Set(); }
+    };
+
     let sepet = null;
     let teslimat = null;
     try { teslimat = JSON.parse(sessionStorage.getItem("msTeslimatDurumu") || "null"); } catch { }
@@ -858,7 +864,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const veri = await cevap.json().catch(() => null);
             sepet = veri?.success ? veri.data : null;
         } catch { sepet = null; }
-        // Hızlı sepet yok/boşsa (ör. süresi doldu) ana sayfaya; ana akışta sepete dönülür
+        // Sepet sayfasında seçilmeyen kalemleri sipariş+özet dışı bırak (2026-07-31). Hızlı akış
+        // (Şimdi Al) ayrı tek-ürün sepeti kullandığından seçime tabi değildir.
+        if (!hizliMod && sepet?.items && secimDisiKume().size) {
+            sepet.items = sepet.items.filter((k) => !secimDisiKume().has(k.variantId));
+        }
+        // Hızlı sepet yok/boşsa (ör. süresi doldu) ana sayfaya; ana akışta sepete dönülür.
+        // Ana akışta tüm kalemler seçim dışıysa da sepete geri döndür.
         if (!sepet?.items?.length) { window.location.href = hizliMod ? "/" : "/sepet"; return; }
         toplamlar();
     };
@@ -1029,15 +1041,27 @@ document.addEventListener("DOMContentLoaded", () => {
                 return; // sipariş oluştu ama ödeme başlamadı — sepet korunur
             }
 
-            try { await fetch("/api/store/cart/" + sepet.id, { method: "DELETE" }); } catch { }
-            if (hizliMod) {
-                // Hızlı akış: yalnız geçici hızlı sepet düşer — ana sepet ve mini sepet
-                // rozeti aynen kalır (A seçeneğinin özü: biriktirilen sepet bozulmaz)
-                sessionStorage.removeItem("ecspros_hizli_sid");
-                sessionStorage.removeItem("ecspros_hizli_cart");
-            } else {
-                localStorage.removeItem("ecspros_cart");
+            const kismiSecim = !hizliMod && secimDisiKume().size > 0;
+            if (kismiSecim) {
+                // Kısmi seçim: yalnız sipariş edilen (seçili) kalemler sepetten düşer; seçilmeyenler
+                // sepette kalır (sepet + ecspros_cart korunur). sepet.items zaten seçili olanlardır.
+                for (const k of sepet.items) {
+                    try { await fetch(`/api/store/cart/${sepet.id}/items/${k.id}`, { method: "DELETE" }); } catch { }
+                }
+                sessionStorage.removeItem("msSepetSecimDisi");
                 window.msMiniSepetYenile?.();
+            } else {
+                try { await fetch("/api/store/cart/" + sepet.id, { method: "DELETE" }); } catch { }
+                if (hizliMod) {
+                    // Hızlı akış: yalnız geçici hızlı sepet düşer — ana sepet ve mini sepet
+                    // rozeti aynen kalır (A seçeneğinin özü: biriktirilen sepet bozulmaz)
+                    sessionStorage.removeItem("ecspros_hizli_sid");
+                    sessionStorage.removeItem("ecspros_hizli_cart");
+                } else {
+                    localStorage.removeItem("ecspros_cart");
+                    sessionStorage.removeItem("msSepetSecimDisi");
+                    window.msMiniSepetYenile?.();
+                }
             }
             window.location.href = "/siparis-tamamlandi";
         } catch {

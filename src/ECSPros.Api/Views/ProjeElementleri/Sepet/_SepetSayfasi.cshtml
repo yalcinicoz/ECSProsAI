@@ -518,6 +518,23 @@ document.addEventListener("DOMContentLoaded", () => {
         { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(deger || 0) + " TL";
     const trAd = (i18n) => (i18n && (i18n.tr || Object.values(i18n)[0])) || "";
 
+    // Sepet seçimi (checkout'a girecek kalemler): seçili OLMAYAN variantId'ler sessionStorage'da
+    // tutulur; teslimat/ödeme adımları bunu okuyup özeti + siparişi buna göre kurar (2026-07-31).
+    const SECIM_ANAHTARI = "msSepetSecimDisi";
+    const secimDisiOku = () => {
+        try { return new Set(JSON.parse(sessionStorage.getItem(SECIM_ANAHTARI) || "[]")); }
+        catch { return new Set(); }
+    };
+    const secimiKaydet = () => {
+        const disi = [];
+        konteyner.querySelectorAll("[data-ms-sepet-satir]").forEach((satir) => {
+            const kutu = satir.querySelector("[data-ms-sepet-urun-checkbox]");
+            const vid = satir.dataset.msVariant;
+            if (vid && kutu && !kutu.checked) { disi.push(vid); }
+        });
+        try { sessionStorage.setItem(SECIM_ANAHTARI, JSON.stringify(disi)); } catch { /* dolu/kapalı */ }
+    };
+
     let sepetId = null;
     let silinecekKalemId = null;
     const kalemBilgileri = new Map(); // kalemId → kalem (silme anında "önceden" kaydı için)
@@ -703,6 +720,7 @@ document.addEventListener("DOMContentLoaded", () => {
         odenecekler.forEach((alan) => { alan.textContent = paraYaz(odenecek); });
         kuponuTazele(toplam);
         tcknBanner(odenecek);
+        secimiKaydet();   // her seçim/adet değişiminde seçim durumunu kalıcılaştır
     };
 
     // C7: eşik üzeri + TCKN doğrulanmamış → uyarı banner'ı (asıl güvence checkout guard'ında)
@@ -753,6 +771,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const satir = sablon.content.firstElementChild.cloneNode(true);
         satir.dataset.msBirimFiyat = String(kalem.addedPrice || 0);
         satir.dataset.msKalemId = kalem.id;
+        satir.dataset.msVariant = kalem.variantId || "";
+        // Önceki seçim durumunu geri yükle (sayfa yenilense de seçim korunur)
+        if (kalem.variantId && secimDisiOku().has(kalem.variantId)) {
+            const sk = satir.querySelector("[data-ms-sepet-urun-checkbox]");
+            if (sk) { sk.checked = false; }
+        }
         // E5: favori butonu satırın ürün kodunu buradan okur (_FavoriDavranis capture
         // dinleyicisi API'yi + görsel toggle'ı yönetir); mevcut favori işaretlenir.
         satir.dataset.msUrunKod = kalem.productCode || "";
