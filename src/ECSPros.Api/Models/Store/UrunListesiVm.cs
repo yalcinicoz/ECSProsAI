@@ -27,12 +27,19 @@ public sealed record UrunKartVm(
     int PuanSayisi = 0,                  // E7: onaylı yorum sayısı
     string? VideoUrl = null,             // H5: Videolu Ürün rozeti + hover tooltip videosu
     string? Slug = null,                 // URL aktarımı 2b: kartın (seçili renk) gerçek URL slug'ı
-    decimal? EskiFiyat = null)           // 2026-07-31: indirim öncesi (çizili) fiyat — CompareAtPrice > Fiyat ise
+    decimal? EskiFiyat = null,           // 2026-07-31: indirim öncesi (çizili) fiyat — CompareAtPrice > Fiyat ise
+    string? KampanyaAdi = null,          // F3: kampanya adı/rozeti (varsa gösterilir)
+    decimal? KampanyaFiyat = null)       // F3: ürün-bazlı kampanyalı fiyat (null = sepette/yok)
 {
     // İndirim yüzdesi (CompareAtPrice > Fiyat ise) — tam sayı, rozet için ("-%23").
     public int? IndirimYuzdesi => EskiFiyat is { } e && e > Fiyat && e > 0
         ? (int)System.Math.Round((e - Fiyat) / e * 100m, System.MidpointRounding.AwayFromZero)
         : null;
+
+    // F3: kampanyalı fiyat gerçekten satış fiyatının altında mı (gösterilecek mi).
+    public bool KampanyaFiyatVar => KampanyaFiyat is { } kf && kf > 0 && kf < Fiyat;
+    // F3: kampanya var ama ürün-bazlı fiyat yok = sepette geçerli tip.
+    public bool KampanyaSepette => KampanyaAdi is { Length: > 0 } && !KampanyaFiyatVar;
 
     // 2b: slug varsa doğrudan gerçek URL (301 hop'u yok); yoksa /urun/{kod}?color= (güvenlik ağı).
     public string Url => Slug is { Length: > 0 } s

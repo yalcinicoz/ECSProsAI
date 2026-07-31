@@ -21,6 +21,8 @@
      data-ms-secili-renk="@(u?.SeciliRenkId?.ToString() ?? "")"
      data-ms-fiyat="@(u?.Fiyat.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
      data-ms-eski-fiyat="@(u?.EskiFiyat?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
+     data-ms-kampanya-ad="@(u?.KampanyaAdi ?? "")"
+     data-ms-kampanya-fiyat="@(u is not null && u.KampanyaFiyatVar ? u.KampanyaFiyat!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "")"
      data-ms-degerler="@(u is null ? "" : string.Join(",", u.DegerIdler))"
      data-ms-dolu="@(u is null ? "" : "true")">
     <a class="ms-urun-kart-baglanti" href="@(u?.Url ?? "#")" data-ms-kart-link aria-label="@(u?.Ad ?? "Ürün") ürün detayına git"></a>
@@ -90,10 +92,14 @@
             </span>
         }
     </div>
-    @if (false)
+    @* F3: kampanya bandı — ürün için etkin kampanya adı/rozeti (varsa). *@
+    @if (u is null)
     {
-        @* Faz G: kampanya bandı *@
-        <div class="ms-urun-kampanya-bandi"></div>
+        <div class="ms-urun-kampanya-bandi" data-ms-kart-kampanya-bandi hidden></div>
+    }
+    else if (u.KampanyaAdi is { Length: > 0 } kmpAd)
+    {
+        <div class="ms-urun-kampanya-bandi">@kmpAd</div>
     }
     @if (u is not null && u.RenkSecenekleri.Count >= 2)
     {
@@ -166,6 +172,19 @@
                 <p class="ms-urun-fiyat-satiri">
                     <span class="ms-urun-indirim-rozeti">-%@yuzde</span>
                     <span class="ms-urun-fiyat-eski">@u.EskiFiyat!.Value.ToString("N2", tr) TL</span>
+                </p>
+            }
+            @* F3: kampanyalı fiyat (ürün-bazlı) — satış fiyatının altındaysa "İndirimli/Kampanyalı" satırı. *@
+            @if (u is null)
+            {
+                <p class="ms-urun-fiyat-satiri ms-urun-fiyat-indirimli" data-ms-kart-kampanya-fiyat-satiri hidden>
+                    <span data-ms-kart-kampanya-fiyat></span>
+                </p>
+            }
+            else if (u.KampanyaFiyatVar)
+            {
+                <p class="ms-urun-fiyat-satiri ms-urun-fiyat-indirimli">
+                    <span>@u.KampanyaFiyat!.Value.ToString("N2", tr) TL</span>
                 </p>
             }
         </div>

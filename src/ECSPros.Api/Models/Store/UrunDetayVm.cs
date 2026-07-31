@@ -43,12 +43,18 @@ public sealed record UrunDetayVm(
     int PuanSayisi = 0,                       // E7: onaylı yorum sayısı
     IReadOnlyList<YorumVm>? Yorumlar = null,  // E7: yayında ilk 10 yorum (SSR)
     IReadOnlyList<UrunVideoVm>? Videolar = null, // H5: galeri video slaytları (efektif URL)
-    IReadOnlyDictionary<int, int>? PuanDagilimi = null) // İP-2.1: yıldız tooltip'i (5→adet ... 1→adet)
+    IReadOnlyDictionary<int, int>? PuanDagilimi = null, // İP-2.1: yıldız tooltip'i (5→adet ... 1→adet)
+    string? KampanyaAdi = null,               // F3: ürün için etkin kampanya adı/rozeti (varsa)
+    decimal? KampanyaFiyat = null)            // F3: ürün-bazlı kampanyalı fiyat (null = sepette/yok)
 {
     public int IndirimYuzdesi =>
         EskiFiyat is { } eski && Fiyat is { } yeni && eski > yeni
             ? (int)Math.Round((1 - yeni / eski) * 100)
             : 0;
+
+    // F3: kampanyalı fiyat gerçekten satış fiyatının altında mı (detayda gösterilecek mi).
+    public bool KampanyaFiyatVar => KampanyaFiyat is { } kf && Fiyat is { } f && kf > 0 && kf < f;
+    public bool KampanyaSepette => KampanyaAdi is { Length: > 0 } && !KampanyaFiyatVar;
 
     private static readonly System.Globalization.CultureInfo Tr = new("tr-TR");
 
