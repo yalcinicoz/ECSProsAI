@@ -83,8 +83,10 @@ static class Migration
         if (phase == 27) Phase27_ChannelPriceRefresh(args.Length > 1 && args[1] == "dry");
         // Faz 28: YALNIZ stok tazeleme (Faz 26'nın stok parçası; görsel/fiyat'a dokunmaz).
         if (phase == 28) Phase28_StockOnly(args.Length > 1 && args[1] == "dry");
+        // Faz 29: ürün videosu + yorum/puan aktarımı (mishar). args[1]=="dry" → yalnız rapor.
+        if (phase == 29) await Phase29_VideosAndReviews(args.Length > 1 && args[1] == "dry");
 
-        if (phase is 26 or 27 or 28) { Log($"=== Faz {phase} bitti ==="); return; }
+        if (phase is 26 or 27 or 28 or 29) { Log($"=== Faz {phase} bitti ==="); return; }
         Log("=== Migration tamamlandı! ===");
         Log($"  image_sets                  : {PgCount($"{DEF}.image_sets")}");
         Log($"  attribute_types              : {PgCount($"{DEF}.attribute_types")}");
@@ -3244,6 +3246,122 @@ static class Migration
             ins++;
         }
         Log($"  Favori: {ins} eklendi, {skip} atlandı (üye/ürün eşleşmedi).");
+    }
+
+    // ─── FAZ 29: ÜRÜN VİDEOSU + YORUM/PUAN AKTARIMI ──────────────────────────
+    // Eski sistemden (apurunvideolari + opyorumlar) mishar kanalına aktarır. Tekrarlanabilir:
+    //   • Video: apurunvideolari.videoUrl'i olduğu gibi (hotlink) product_videos.VideoUrl'e yazar;
+    //     ürün kodu videoUrl'in dosya adından çözülür (P-00001666.mov → P-00001666). Sabit
+    //     IMPORT_BATCH ile idempotent (yeniden koşuda o batch silinip yeniden yazılır; FTP/panel
+    //     yüklemesi videolara DOKUNMAZ). ImageSetId = ürün görsellerinin kullandığı 'julude' seti.
+    //   • Yorum: opyorumlar TÜM platformlardan (misharitalia'nın kendi yorumu yok; aynı ürünlerin
+    //     yorumları ürün bazında getirilir). onay=1 → Status='approved' (sitede görünür + kart puanı),
+    //     onay=0 → 'pending' (moderasyon havuzu, görünmez). MemberId = sentinel (Guid.Empty), görünüm
+    //     MemberName kullanır. CreatedBy = IMPORT_MARKER → yeniden koşuda yalnız içe-aktarılanlar
+    //     silinir, kullanıcının sonradan yazdığı yorumlar korunur. Tekrar eden legacy satırlar elenir.
+    //   • Yorum fotoğrafı (opyorumresimler) bu fazda AKTARILMAZ — kaynak barındırma adresi çözülemedi;
+    //     bulununca /media/reviews'e kopyalanıp product_review_photos'a eklenecek (ayrı geçiş).
+    // args[1]=="dry" → yalnız rapor, yazma yok.
+    static async Task Phase29_VideosAndReviews(bool dryRun)
+    {
+        Log($"=== FAZ 29: Video + yorum aktarımı{(dryRun ? " (DRY RUN — yazma yok)" : "")} ===");
+        await Task.CompletedTask;
+        var fp = MisharFp();
+        var setId = Guid.Parse("a2b8502b-d947-48d8-9b06-1127c3c4c909");     // julude image set (ürün görselleri onda)
+        var importBatch = Guid.Parse("29000000-0000-0000-0000-000000000001"); // sabit video batch (idempotent)
+        var importMarker = Guid.Parse("29000000-0000-0000-0000-000000000002"); // yorum CreatedBy işareti (idempotent)
+        var sentinelMember = Guid.Empty;                                     // içe-aktarılan yorumcu (üye eşlemesi yok)
+
+        // katalog: kod → productId (büyük/küçük harf duyarsız)
+        var productIdByCode = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        using (var r = new NpgsqlCommand("SELECT \"Id\",\"Code\" FROM catalog.products WHERE \"IsDeleted\"=FALSE", pg).ExecuteReader())
+            while (r.Read()) productIdByCode[r.GetString(1)] = r.GetGuid(0);
+        Log($"  Katalog ürün: {productIdByCode.Count}");
+
+        // ── VİDEOLAR ──
+        var videos = new List<(string code, string url, int sira)>();
+        using (var r = MysqlQuery("SELECT videoUrl, COALESCE(siraNo,1) FROM apurunvideolari WHERE videoUrl IS NOT NULL AND videoUrl<>''"))
+            while (r.Read())
+            {
+                var url = r.GetString(0);
+                var baseName = url.Split('/').Last();                        // P-00001666.mov
+                var dot = baseName.LastIndexOf('.');
+                var code = dot > 0 ? baseName[..dot] : baseName;
+                videos.Add((code, url, r.GetInt32(1)));
+            }
+        var videoEsel = videos.Where(v => productIdByCode.ContainsKey(v.code)).ToList();
+        Log($"  Video: {videos.Count} okundu, {videoEsel.Count} kataloğumuzda eşleşti.");
+
+        if (!dryRun)
+        {
+            PgExec("DELETE FROM catalog.product_videos WHERE \"BatchId\"=@b", ("b", importBatch));
+            int vi = 0;
+            foreach (var v in videoEsel)
+            {
+                PgExec(@"INSERT INTO catalog.product_videos
+                    (""Id"",""ProductId"",""ImageSetId"",""FileName"",""SortOrder"",""Status"",""BatchId"",""VideoUrl"",""CreatedAt"",""CreatedBy"",""IsDeleted"")
+                    VALUES (@id,@pid,@set,'',@sira,'Active',@b,@url,@now,@by,FALSE)",
+                    ("id", NewId()), ("pid", productIdByCode[v.code]), ("set", setId),
+                    ("sira", v.sira), ("b", importBatch), ("url", v.url), ("now", Now), ("by", importMarker));
+                vi++;
+            }
+            Log($"  Video: {vi} kayıt yazıldı.");
+        }
+
+        // ── YORUMLAR ── (opyorumlar, tüm platformlar; ürün bazında)
+        var reviews = new List<(string code, int puan, string yorum, string ad, DateTime created, bool onay, DateTime? onayTar)>();
+        using (var r = MysqlQuery(
+            "SELECT a.urunKodu, COALESCE(o.puan,0), o.yorum, COALESCE(o.memberName,''), o.createdDate, o.onay+0, o.onayTarihi " +
+            "FROM opyorumlar o JOIN apurunler a ON a.Id=o.urunId WHERE a.urunKodu IS NOT NULL AND o.yorum IS NOT NULL"))
+            while (r.Read())
+            {
+                var puan = r.GetInt32(1);
+                if (puan < 1 || puan > 5) continue;                          // geçersiz/0 puan atlanır
+                var created = r.IsDBNull(4) ? Now : r.GetDateTime(4);
+                reviews.Add((r.GetString(0), puan, r.GetString(2), r.GetString(3), created,
+                    r.GetInt64(5) != 0, r.IsDBNull(6) ? (DateTime?)null : r.GetDateTime(6)));
+            }
+        Log($"  Yorum: {reviews.Count} okundu (geçerli puanlı).");
+
+        int onayli = 0, bekleyen = 0, atlanan = 0;
+        var seen = new HashSet<string>();
+        var yazilacak = new List<(string code, int puan, string text, string ad, DateTime created, string status, DateTime? modAt)>();
+        foreach (var rv in reviews)
+        {
+            if (!productIdByCode.ContainsKey(rv.code)) { atlanan++; continue; } // kataloğumuzda yok
+            var textFull = rv.yorum.Trim();
+            var text = textFull.Length > 2000 ? textFull[..2000] : textFull;
+            var ad = string.IsNullOrWhiteSpace(rv.ad) ? "Müşteri" : rv.ad.Trim();
+            if (ad.Length > 100) ad = ad[..100];
+            // legacy'deki birebir tekrar satırları ele (aynı ürün+ad+puan+metin+tarih)
+            var key = rv.code + "|" + ad + "|" + rv.puan + "|" + text + "|" + rv.created.Ticks;
+            if (!seen.Add(key)) { atlanan++; continue; }
+            var status = rv.onay ? "approved" : "pending";
+            if (rv.onay) onayli++; else bekleyen++;
+            yazilacak.Add((rv.code, rv.puan, string.IsNullOrEmpty(text) ? null! : text, ad, rv.created, status,
+                rv.onay ? (rv.onayTar ?? rv.created) : null));
+        }
+        Log($"  Yorum eşleşen: {yazilacak.Count} (onaylı {onayli}, bekleyen {bekleyen}), atlanan {atlanan} (katalogda yok/tekrar).");
+
+        if (!dryRun)
+        {
+            PgExec("DELETE FROM storefront.product_reviews WHERE \"FirmPlatformId\"=@fp AND \"CreatedBy\"=@m", ("fp", fp), ("m", importMarker));
+            int ri = 0;
+            foreach (var y in yazilacak)
+            {
+                PgExec(@"INSERT INTO storefront.product_reviews
+                    (""Id"",""FirmPlatformId"",""MemberId"",""ProductCode"",""Rating"",""Text"",""Status"",""MemberName"",""ModeratedAt"",""CreatedAt"",""CreatedBy"",""IsDeleted"")
+                    VALUES (@id,@fp,@mem,@code,@rating,@text,@status,@name,@modat,@created,@by,FALSE)",
+                    ("id", NewId()), ("fp", fp), ("mem", sentinelMember), ("code", y.code),
+                    ("rating", y.puan), ("text", (object?)y.text ?? DBNull.Value), ("status", y.status),
+                    ("name", y.ad), ("modat", (object?)y.modAt ?? DBNull.Value),
+                    ("created", y.created), ("by", importMarker));
+                ri++;
+            }
+            Log($"  Yorum: {ri} kayıt yazıldı.");
+            Log("  Not: toplu yazımdan sonra ANALYZE önerilir (catalog.product_videos, storefront.product_reviews).");
+        }
+        Log("  Yorum fotoğrafları (opyorumresimler, 319) bu fazda atlandı — kaynak adres çözülünce ayrı geçişte.");
     }
 
     // ─── FAZ 25: MİSHAR MENÜ AKTARIMI ────────────────────────────────────────

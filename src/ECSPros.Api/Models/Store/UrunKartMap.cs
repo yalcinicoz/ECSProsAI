@@ -28,6 +28,7 @@ public static class UrunKartMap
             renkler.Where(c => c.HexCode is not null).Select(c => c.HexCode!).Take(2).ToList(),
             secenekler.Count > 0 ? secenekler.Count : renkler.Count, degerIdler,
             p.GalleryUrls ?? [], secenekler, p.SelectedColorValueId, p.IsFeatured, p.Rating, p.ReviewCount,
+            p.VideoUrl,      // H5: kart video rozeti (varsa)
             Slug: p.Slug,   // 2b: kartın seçili renk slug'ı
             EskiFiyat: p.CompareAtPrice);   // indirim öncesi çizili fiyat (varsa)
     }

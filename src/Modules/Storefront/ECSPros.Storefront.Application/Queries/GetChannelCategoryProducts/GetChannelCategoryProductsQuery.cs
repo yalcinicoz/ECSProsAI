@@ -83,7 +83,8 @@ public record ChannelCategoryProductItemDto(
     double Rating = 0,                               // E7: onaylı yorum ortalaması (0 = yorum yok)
     int ReviewCount = 0,                             // E7: onaylı yorum sayısı
     string? Slug = null,                             // URL aktarımı 2b: kartın (seçili renk) gerçek URL slug'ı
-    decimal? CompareAtPrice = null);                 // 2026-07-31: indirim öncesi (çizili) fiyat — CompareAt > satış fiyatı ise
+    decimal? CompareAtPrice = null,                  // 2026-07-31: indirim öncesi (çizili) fiyat — CompareAt > satış fiyatı ise
+    string? VideoUrl = null);                        // H5: ilk aktif videonun URL'i — kart video rozeti (null ise rozet yok)
 
 public class GetChannelCategoryProductsQueryHandler(
     IStorefrontDbContext sfDb,
@@ -146,11 +147,37 @@ public class GetChannelCategoryProductsQueryHandler(
             .GroupBy(r => r.ProductCode)
             .Select(g => new { Kod = g.Key, Ortalama = g.Average(r => r.Rating), Sayi = g.Count() })
             .ToDictionaryAsync(g => g.Kod, ct);
-        if (puanlar.Count == 0) return sonuc;
+
+        // H5: kart video rozeti — ürün başına ilk aktif videonun URL'i. Puanlar gibi cache DIŞINDA
+        // (aktarım/yeni video eklendiğinde TTL beklemeden görünür). Kod → ProductId üzerinden.
+        var videoBase = await CdnHelper.BuildVideoBaseAsync(catDb, ct);
+        var idKod = await catDb.Products.AsNoTracking()
+            .Where(p => kodlar.Contains(p.Code))
+            .Select(p => new { p.Id, p.Code })
+            .ToListAsync(ct);
+        var kodById = idKod.ToDictionary(x => x.Id, x => x.Code);
+        var pidler = idKod.Select(x => x.Id).ToList();
+        var videolar = (await catDb.ProductVideos.AsNoTracking()
+                .Where(v => pidler.Contains(v.ProductId) && v.Status == Catalog.Domain.Entities.ProductImageStatus.Active)
+                .OrderBy(v => v.SortOrder)
+                .Select(v => new { v.ProductId, v.VideoUrl, v.FileName })
+                .ToListAsync(ct))
+            .Select(v => new { v.ProductId, Url = v.VideoUrl ?? (videoBase != null && v.FileName != "" ? videoBase + "/" + v.FileName : null) })
+            .Where(v => v.Url != null && kodById.ContainsKey(v.ProductId))
+            .GroupBy(v => kodById[v.ProductId])
+            .ToDictionary(g => g.Key, g => g.First().Url!);
+
+        if (puanlar.Count == 0 && videolar.Count == 0) return sonuc;
 
         for (var i = 0; i < items.Count; i++)
-            if (puanlar.TryGetValue(items[i].Code, out var p))
-                items[i] = items[i] with { Rating = Math.Round(p.Ortalama, 1), ReviewCount = p.Sayi };
+        {
+            var yeni = items[i];
+            if (puanlar.TryGetValue(yeni.Code, out var p))
+                yeni = yeni with { Rating = Math.Round(p.Ortalama, 1), ReviewCount = p.Sayi };
+            if (videolar.TryGetValue(yeni.Code, out var vurl))
+                yeni = yeni with { VideoUrl = vurl };
+            items[i] = yeni;
+        }
         return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
             items, sonuc.Value.TotalCount, sonuc.Value.Page, sonuc.Value.PageSize));
     }
