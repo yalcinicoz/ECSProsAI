@@ -1,5 +1,6 @@
 using ECSPros.Promotion.Application.Services;
 using ECSPros.Promotion.Infrastructure.Persistence;
+using ECSPros.Shared.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -15,6 +16,9 @@ public static class DependencyInjection
                 o => o.MigrationsHistoryTable("__ef_migrations_promotion", "promotion")));
 
         services.AddScoped<IPromotionDbContext>(sp => sp.GetRequiredService<PromotionDbContext>());
+
+        // F2: kampanya çözümleme servisi (F3 kart/detay + F4 checkout ortak çekirdek).
+        services.AddScoped<IProductCampaignResolver, ProductCampaignResolver>();
 
         return services;
     }
