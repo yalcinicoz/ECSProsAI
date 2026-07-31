@@ -183,7 +183,7 @@ public class PaymentController(
 
         var basarili = form.status == "success";
         await mediator.Send(new PayTrCallbackUygulaCommand(
-            form.merchant_oid ?? "", basarili, form.failed_reason_msg), ct);
+            form.merchant_oid ?? "", basarili, form.failed_reason_msg, form.total_amount), ct);
         // Sonuç ne olursa olsun PayTR'a "OK" — aksi halde PayTR tekrar dener (idempotent handler)
         return Content("OK");
     }
