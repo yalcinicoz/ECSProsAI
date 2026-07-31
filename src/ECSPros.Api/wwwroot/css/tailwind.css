@@ -10429,7 +10429,7 @@
 
   .ms-sepet-secim input,
   .ms-sepet-urun-secim input {
-    @apply h-4 w-4 rounded-xl border-slate-300;
+    @apply h-4 w-4 rounded border-slate-300;
   }
 
   .ms-sepet-kargo-bilgi {
