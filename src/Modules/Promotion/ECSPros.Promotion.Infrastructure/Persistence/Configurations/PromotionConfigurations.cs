@@ -32,10 +32,12 @@ public class CampaignConfiguration : IEntityTypeConfiguration<Campaign>
         builder.Property(x => x.Code).HasMaxLength(100).IsRequired();
         builder.Property(x => x.NameI18n).HasColumnType("jsonb").IsRequired();
         builder.Property(x => x.DescriptionI18n).HasColumnType("jsonb");
+        builder.Property(x => x.BadgeLabel).HasMaxLength(60);
         builder.Property(x => x.Settings).HasColumnType("jsonb").IsRequired();
-        builder.Property(x => x.ProductSelectionType).HasMaxLength(50).IsRequired();
-        builder.Property(x => x.ProductFilter).HasColumnType("jsonb");
+        builder.Property(x => x.FillType).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.FilterDef).HasColumnType("jsonb");
         builder.HasIndex(x => x.Code).IsUnique();
+        builder.HasIndex(x => new { x.FirmPlatformId, x.IsActive });
         builder.HasQueryFilter(x => !x.IsDeleted);
         builder.HasMany(x => x.Products).WithOne(x => x.Campaign).HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
         builder.HasMany(x => x.Exclusions).WithOne(x => x.Campaign).HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
