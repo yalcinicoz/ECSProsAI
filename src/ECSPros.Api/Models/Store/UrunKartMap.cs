@@ -45,11 +45,16 @@ public static class UrunKartMap
         // renkle gösterilir ("kırmızı elbise" kartında kırmızı görsel/detay linki).
         var eslesenRenk = p.MatchedColorValueId is { } mid
             ? p.Colors.FirstOrDefault(c => c.ValueId == mid) : null;
+        // 2026-07-31: kartın detay linki GÖSTERDİĞİ renge gitsin — aramada eşleşen renk yoksa
+        // ana görselin rengi (MainColorValueId). Böylece "son baktıklarım"/carousel kartında
+        // görülen renk (ör. bej) tıklanınca detayda da o renk açılır (renksiz link stoklu-varsayılana
+        // düşüyordu → liste ≠ detay). SeciliRenkId → UrunKartVm.Url'de ?color= olarak taşınır.
+        var kartRenkId = eslesenRenk?.ValueId ?? p.MainColorValueId;
         return new UrunKartVm(
             p.Code, TrAd(p.NameI18n), eslesenRenk?.ImageUrl ?? p.MainImageUrl, p.MinPrice,
             p.Colors.Where(c => c.HexCode is not null).Select(c => c.HexCode!).Take(2).ToList(),
             secenekler.Count > 0 ? secenekler.Count : p.Colors.Count, degerIdler,
-            p.GalleryUrls ?? [], secenekler, eslesenRenk?.ValueId, p.IsFeatured, p.Rating, p.ReviewCount,
+            p.GalleryUrls ?? [], secenekler, kartRenkId, p.IsFeatured, p.Rating, p.ReviewCount,
             p.VideoUrl,
             Slug: eslesenRenk?.Slug); // eşleşen rengin gerçek slug'ı (varsa)
     }

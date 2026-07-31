@@ -64,7 +64,8 @@ public record StoreProductDto(
     double Rating = 0,                   // E7: onaylı yorum ortalaması (0 = yorum yok)
     int ReviewCount = 0,                 // E7: onaylı yorum sayısı
     string? VideoUrl = null,             // H5: ilk aktif videonun efektif URL'i — null ise kartta rozet yok
-    Guid? MatchedColorValueId = null);   // Kabul testi 2026-07-22: aramadaki renk kelimesiyle eşleşen renk — kart o renkle gösterilir
+    Guid? MatchedColorValueId = null,    // Kabul testi 2026-07-22: aramadaki renk kelimesiyle eşleşen renk — kart o renkle gösterilir
+    Guid? MainColorValueId = null);      // 2026-07-31: kartta GÖSTERİLEN ana görselin rengi (filtre_rengi) — detay linki bu renge (?color=) gitsin
 
 public class GetStoreProductsQueryHandler(
     ICatalogDbContext db,
@@ -356,13 +357,18 @@ public class GetStoreProductsQueryHandler(
             firstImages.TryGetValue(p.Id, out var ilkGorsel);
             var mainImage = ilkGorsel is null ? null : cdnBase + ilkGorsel.FileName;
 
+            // Ana görselin ait olduğu renk (filtre_rengi) — hem hover galerisi hem kartın detay
+            // linkinin rengi (?color=) için. Kart bu rengi gösterir; link de bu renge gitmeli ki
+            // listede görülen renk detayda da açılsın (2026-07-31 "son baktıklarım" tutarlılığı).
+            Guid? anaRenkId = ilkGorsel?.VariantId is { } anaVaryantId
+                && variantColorOf.TryGetValue(anaVaryantId, out var arid) ? arid : null;
+
             // B8 hover galerisi: ana görselin ait olduğu rengin görselleri (≤4). Renk
             // çözülemiyorsa galeri verilmez — farklı renklerin karışık havuzu "tekrarlı
             // galeri" üretir (detay handler'ındaki dersle aynı).
             List<string>? galleryUrls = null;
-            if (ilkGorsel?.VariantId is { } anaVaryantId
-                && variantColorOf.TryGetValue(anaVaryantId, out var anaRenkId)
-                && imagesByProductColor.TryGetValue((p.Id, anaRenkId), out var galeriImgs))
+            if (anaRenkId is { } anaRenk
+                && imagesByProductColor.TryGetValue((p.Id, anaRenk), out var galeriImgs))
             {
                 galleryUrls = galeriImgs.Take(4).Select(fn2 => cdnBase + fn2).ToList();
             }
@@ -378,7 +384,8 @@ public class GetStoreProductsQueryHandler(
                 VideoUrl: videolar.GetValueOrDefault(p.Id),
                 MatchedColorValueId: aramaRenkIdleri.Count > 0
                     ? renkler.FirstOrDefault(c => aramaRenkIdleri.Contains(c.ValueId))?.ValueId
-                    : null);
+                    : null,
+                MainColorValueId: anaRenkId);
         }).ToList();
 
         // E7: kart puanları onaylı yorum ortalamasından (additive alanlar)
