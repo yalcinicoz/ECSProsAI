@@ -54,6 +54,7 @@ import { InvoicesPage } from '@/pages/orders/InvoicesPage'
 import { CmsPagesPage } from '@/pages/cms/CmsPagesPage'
 import { CmsPageDetailPage } from '@/pages/cms/CmsPageDetailPage'
 import { CampaignsPage } from '@/pages/promotion/CampaignsPage'
+import { CampaignTypesPage } from '@/pages/promotion/CampaignTypesPage'
 import { CouponsPage } from '@/pages/promotion/CouponsPage'
 import { MembersPage } from '@/pages/crm/MembersPage'
 import { MemberDetailPage } from '@/pages/crm/MemberDetailPage'
@@ -156,6 +157,7 @@ export const router = createBrowserRouter(
 
             // Promosyon
             { path: 'promotion/campaigns', element: <CampaignsPage /> },
+            { path: 'promotion/campaign-types', element: <CampaignTypesPage /> },
             { path: 'promotion/coupons',   element: <CouponsPage /> },
 
             // Fulfillment
