@@ -84,7 +84,9 @@ public record ChannelCategoryProductItemDto(
     int ReviewCount = 0,                             // E7: onaylı yorum sayısı
     string? Slug = null,                             // URL aktarımı 2b: kartın (seçili renk) gerçek URL slug'ı
     decimal? CompareAtPrice = null,                  // 2026-07-31: indirim öncesi (çizili) fiyat — CompareAt > satış fiyatı ise
-    string? VideoUrl = null);                        // H5: ilk aktif videonun URL'i — kart video rozeti (null ise rozet yok)
+    string? VideoUrl = null,                         // H5: ilk aktif videonun URL'i — kart video rozeti (null ise rozet yok)
+    string? CampaignName = null,                     // F3: kartta gösterilecek kampanya adı/rozeti (varsa)
+    decimal? CampaignPrice = null);                  // F3: ürün-bazlı kampanyalı fiyat (null = yok/sepette)
 
 public class GetChannelCategoryProductsQueryHandler(
     IStorefrontDbContext sfDb,
@@ -92,6 +94,7 @@ public class GetChannelCategoryProductsQueryHandler(
     IStockService stockService,
     IChannelPricingService pricingService,
     IInStockProductProvider inStock,
+    IProductCampaignResolver campaignResolver,
     ICacheService cache)
     : IRequestHandler<GetChannelCategoryProductsQuery, Result<PagedResult<ChannelCategoryProductItemDto>>>
 {
@@ -167,7 +170,14 @@ public class GetChannelCategoryProductsQueryHandler(
             .GroupBy(v => kodById[v.ProductId])
             .ToDictionary(g => g.Key, g => g.First().Url!);
 
-        if (puanlar.Count == 0 && videolar.Count == 0) return sonuc;
+        // F3: kart kampanyası — ürün başına etkin kampanya (F2 resolver). Puan/video gibi cache DIŞINDA
+        // (kampanya açılınca/kapanınca TTL beklemeden yansır). Kod bazlı eşlenir.
+        var kampanyalar = await campaignResolver.ResolveForProductsAsync(platformId, pidler, ct);
+        var kampanyaByKod = kampanyalar
+            .Where(kv => kodById.ContainsKey(kv.Key))
+            .ToDictionary(kv => kodById[kv.Key], kv => kv.Value);
+
+        if (puanlar.Count == 0 && videolar.Count == 0 && kampanyaByKod.Count == 0) return sonuc;
 
         for (var i = 0; i < items.Count; i++)
         {
@@ -176,6 +186,12 @@ public class GetChannelCategoryProductsQueryHandler(
                 yeni = yeni with { Rating = Math.Round(p.Ortalama, 1), ReviewCount = p.Sayi };
             if (videolar.TryGetValue(yeni.Code, out var vurl))
                 yeni = yeni with { VideoUrl = vurl };
+            if (kampanyaByKod.TryGetValue(yeni.Code, out var kmp))
+                yeni = yeni with
+                {
+                    CampaignName = kmp.BadgeLabel ?? kmp.Name,
+                    CampaignPrice = CampaignPricing.EffectivePrice(kmp, yeni.BasePrice)
+                };
             items[i] = yeni;
         }
         return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(

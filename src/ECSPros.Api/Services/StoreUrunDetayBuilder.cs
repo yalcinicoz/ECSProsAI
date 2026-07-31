@@ -15,7 +15,8 @@ namespace ECSPros.Api.Services;
 public class StoreUrunDetayBuilder(
     IMediator mediator,
     ECSPros.Shared.Contracts.IStockService stockService,
-    ECSPros.Shared.Contracts.IProductReviewStatsService reviewStats)
+    ECSPros.Shared.Contracts.IProductReviewStatsService reviewStats,
+    ECSPros.Shared.Contracts.IProductCampaignResolver campaignResolver)
 {
     public async Task<UrunDetayVm?> BuildAsync(
         string code, string? color, Guid platformId, StoreUyeKimlik? uye, CancellationToken ct)
@@ -155,6 +156,12 @@ public class StoreUrunDetayBuilder(
         if (fiyat <= 0) fiyat = enDusukPozitif;
         var eskiFiyat = fiyatliVaryant.CompareAtPrice is { } eski && eski > fiyat ? eski : (decimal?)null;
 
+        // F3: ürün detayı kampanyası — F2 resolver. Ürün-bazlı fiyat satış fiyatı üzerinden.
+        var kmp = (await campaignResolver.ResolveForProductsAsync(platformId, new[] { urun.Id }, ct))
+            .GetValueOrDefault(urun.Id);
+        var kampanyaAdi = kmp?.BadgeLabel ?? kmp?.Name;
+        var kampanyaFiyat = kmp is null ? null : ECSPros.Shared.Contracts.CampaignPricing.EffectivePrice(kmp, fiyat);
+
         var zincir = await mediator.Send(
             new GetProductChannelCategoryChainQuery(platformId, urun.Id), ct);
         var breadcrumb = zincir.IsSuccess
@@ -228,7 +235,9 @@ public class StoreUrunDetayBuilder(
             PuanSayisi: puanIstatistik?.Count ?? 0,
             Yorumlar: yorumlarVm,
             Videolar: urun.Videos?.Select(v => new UrunVideoVm(v.VideoUrl, v.ThumbnailUrl)).ToList(),
-            PuanDagilimi: puanDagilimi);
+            PuanDagilimi: puanDagilimi,
+            KampanyaAdi: kampanyaAdi,
+            KampanyaFiyat: kampanyaFiyat);
 
         // E12: üyenin gezme kaydı — render'ı aksatmaz.
         if (uye is not null)

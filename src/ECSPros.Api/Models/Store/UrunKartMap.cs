@@ -30,7 +30,8 @@ public static class UrunKartMap
             p.GalleryUrls ?? [], secenekler, p.SelectedColorValueId, p.IsFeatured, p.Rating, p.ReviewCount,
             p.VideoUrl,      // H5: kart video rozeti (varsa)
             Slug: p.Slug,   // 2b: kartın seçili renk slug'ı
-            EskiFiyat: p.CompareAtPrice);   // indirim öncesi çizili fiyat (varsa)
+            EskiFiyat: p.CompareAtPrice,   // indirim öncesi çizili fiyat (varsa)
+            KampanyaAdi: p.CampaignName, KampanyaFiyat: p.CampaignPrice);   // F3 kampanya
     }
 
     public static UrunKartVm KartaCevir(StoreProductDto p)
@@ -59,7 +60,8 @@ public static class UrunKartMap
             p.GalleryUrls ?? [], secenekler, kartRenkId, p.IsFeatured, p.Rating, p.ReviewCount,
             p.VideoUrl,
             Slug: eslesenRenk?.Slug, // eşleşen rengin gerçek slug'ı (varsa)
-            EskiFiyat: p.CompareAtPrice);   // indirim öncesi çizili fiyat (varsa)
+            EskiFiyat: p.CompareAtPrice,   // indirim öncesi çizili fiyat (varsa)
+            KampanyaAdi: p.CampaignName, KampanyaFiyat: p.CampaignPrice);   // F3 kampanya
     }
 
     public static string TrAd(Dictionary<string, string> nameI18n) =>

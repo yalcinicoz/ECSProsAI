@@ -84,7 +84,7 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver,
         // yazılır — anahtar üyeyi ayırmaz; ürünleri her istekte UyeBloklariniDoldurAsync doldurur.
         // c2: StoreProductDto'ya CompareAtPrice (çizili fiyat) eklendi — eski serileştirilmiş
         // paketler bu alanı içermediğinden kod-şema sürüm işareti eklendi (eski kayıtlar atlanır).
-        var anahtar = $"page:c2:{placement}:{firmPlatformId}:v{aktif.Version}:{aktif.SnapshotId:N}:seg:{segment.CacheHash()}";
+        var anahtar = $"page:c3:{placement}:{firmPlatformId}:v{aktif.Version}:{aktif.SnapshotId:N}:seg:{segment.CacheHash()}";
         var hazir = await cache.GetAsync<BlokPaketi>(anahtar, ct);
         if (hazir is not null)
             return (aktif.Version, await UyeBloklariniDoldurAsync(firmPlatformId, hazir.Blocks, memberId, ct));
@@ -201,7 +201,7 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver,
         // G11: spec anahtarı — segment hash'li. Ürün içeriği M2'de segmentten bağımsız,
         // ama blok görünürlüğü değil: cache miss'te kural denetlenir, hit o segment için
         // zaten doğrulanmış sonuçtur (gizli bloğun ürünleri bu segmente hiç yazılmaz).
-        var anahtar = $"page-products:c2:v{aktif.Version}:{aktif.SnapshotId:N}:{blockId}:seg:{segment.CacheHash()}:page:{page}";
+        var anahtar = $"page-products:c3:v{aktif.Version}:{aktif.SnapshotId:N}:{blockId}:seg:{segment.CacheHash()}:page:{page}";
         // H10 notu: üye bağlamlı bloklar bu anahtara HİÇ yazılmaz (aşağıda bypass) —
         // hit her zaman üye-bağımsız bir bloğa aittir, snapshot yüklemeden dönmek güvenli.
         var hazir = await cache.GetAsync<UrunPaketi>(anahtar, ct);

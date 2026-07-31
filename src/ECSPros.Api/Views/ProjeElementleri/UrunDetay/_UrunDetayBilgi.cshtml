@@ -81,6 +81,23 @@
                     {
                     <p class="ms-urun-fiyat ms-urun-detay-tutar">@UrunDetayVm.FiyatMetni(b.Fiyat)</p>
                     }
+                    @* F3: kampanya — ürün-bazlı kampanyalı fiyat (varsa) veya sepette-geçerli rozeti. *@
+                    @if (b.KampanyaFiyatVar)
+                    {
+                    <p class="ms-urun-fiyat-satiri">
+                        @if (b.KampanyaAdi is { Length: > 0 } kad)
+                        {
+                            <span class="ms-urun-indirim-rozeti">@kad</span>
+                        }
+                        <span class="ms-urun-fiyat-indirimli ms-urun-detay-tutar">@UrunDetayVm.FiyatMetni(b.KampanyaFiyat)</span>
+                    </p>
+                    }
+                    else if (b.KampanyaSepette)
+                    {
+                    <p class="ms-urun-fiyat-satiri ms-urun-fiyat-sepette">
+                        <span class="text-[11px]">Sepette</span><span>@b.KampanyaAdi</span>
+                    </p>
+                    }
                     <div class="mt-2 flex items-center gap-3 rounded-xl border border-orange-200 bg-white px-4 py-3">
                         <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ff8a00]">
                             <i class="fa-solid fa-truck ms-fa-ikon h-6 w-6 ms-ikon-beyaz" aria-hidden="true"></i>

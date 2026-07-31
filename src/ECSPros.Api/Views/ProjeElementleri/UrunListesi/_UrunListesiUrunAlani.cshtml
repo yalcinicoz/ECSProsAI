@@ -85,7 +85,9 @@
                 puan: p.rating || 0,          // E7: onaylı yorum ortalaması
                 puanSayisi: p.reviewCount || 0,
                 videoUrl: p.videoUrl || null, // H5: Videolu Ürün rozeti
-                eskiFiyat: p.compareAtPrice || null  // 2026-07-31: indirim öncesi çizili fiyat
+                eskiFiyat: p.compareAtPrice || null,  // 2026-07-31: indirim öncesi çizili fiyat
+                kampanyaAd: p.campaignName || null,   // F3: kampanya adı/rozeti
+                kampanyaFiyat: p.campaignPrice || null // F3: ürün-bazlı kampanyalı fiyat
             };
         };
 
@@ -191,6 +193,23 @@
                     indirimSatiri.hidden = false;
                 } else {
                     indirimSatiri.hidden = true;
+                }
+            }
+
+            // F3: kampanya bandı + ürün-bazlı kampanyalı fiyat
+            const kmpBant = kart.querySelector("[data-ms-kart-kampanya-bandi]");
+            if (kmpBant) {
+                if (v.kampanyaAd) { kmpBant.textContent = v.kampanyaAd; kmpBant.hidden = false; }
+                else { kmpBant.hidden = true; }
+            }
+            const kmpSatiri = kart.querySelector("[data-ms-kart-kampanya-fiyat-satiri]");
+            if (kmpSatiri) {
+                if (v.kampanyaFiyat && v.kampanyaFiyat < v.fiyat) {
+                    const kf = kmpSatiri.querySelector("[data-ms-kart-kampanya-fiyat]");
+                    if (kf) { kf.textContent = v.kampanyaFiyat.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " TL"; }
+                    kmpSatiri.hidden = false;
+                } else {
+                    kmpSatiri.hidden = true;
                 }
             }
 
