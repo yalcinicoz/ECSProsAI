@@ -2,7 +2,7 @@
 
 > **Kural:** Her session bu dosyadan başla, bu dosyayla bitir.
 > Bir faz tamamlanmadan bir sonrakine geçme.
-> Son güncelleme: 2026-07-30
+> Son güncelleme: 2026-07-31
 
 ---
 
@@ -22,7 +22,26 @@
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging instance hazır** (5055, DevBypass) ⚠️ systemd kurulumu kullanıcıda | Kullanıcı: staging systemd kur + 5055 aç; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
-**PayTR ödeme entegrasyonu (2026-07-30):** Direct API, YALNIZ TEST MODU kod tamam+commit (⚠️ restart bekliyor; canlı için PCI-DSS SAQ D + PayTR onayı, kullanıcıda). Kimlik bilgileri panelden girilecek + PayTR panelinde callback URL tanımlanacak; yalnız maskeli PAN saklanır (CVV/tam kart no asla). Plan: docs/paytr-entegrasyon-plani.md
+**PayTR ödeme entegrasyonu (2026-07-30/31) — ✅ CANLI + ÇALIŞIYOR:** Direct API. Uçtan uca
+kullanıcı doğruladı (iptal/başarısız akışı; başarılı tam ödeme testi kullanıcıya kalan tek adım).
+Bu turda çözülenler: (1) callback nginx www'siz→www 301'e takılıyordu → callback path'i redirect'ten
+muaf (test siparişi paid oldu); (2) ödeme başarısında sipariş OTOMATİK confirm + online stok
+rezervasyonu (depo-bağımsız `ReserveOnlineAsync`); (3) `test_mode` artık panel ayarından (canlı=0,
+gerçek kart) — **iFrame önerildi, kullanıcı Direct API canlıyı seçti; PCI-DSS SAQ D + PayTR onayı
+MÜŞTERİ SORUMLULUĞUNDA**; (4) tutar formatı Direct API'de TL ONDALIK ("24.99"), kuruş değil (kuruş
+100× yüksek gösteriyordu); (5) 3D iptalinde HTTPS return URL (Chrome "not secure" ekranı gitti) +
+"Test modu" ibaresi yalnız gerçek test modunda; (6) **taksit gerçek** — PayTR taksit-oranları+bin-detay
+ile karta göre (kredi+markalı) faizli taksitler, seçilen `installment_count` ödemeye. Kart verisi
+kuralı korunur (yalnız maskeli PAN). ⚠️ KALAN GÖZLEM: callback `ord_order_payments` defterine satır
+YAZMIYOR (yalnız order-seviyesi paid+not). Plan: docs/paytr-entegrasyon-plani.md;
+bkz. `memory/project_paytr_odeme_entegrasyonu_2026-07-30.md`
+
+**2026-07-30/31 web sitesi + admin turu (CANLIDA/restart doğrulandı):**
+- **Ürün detay** renksiz `/urun/{code}` artık STOKTA olan renge yönlenir (eskiden DB-sıralı ilk renge → stoksuz Siyah açılıyordu).
+- **Kategori filtresi renk düzeyinde:** filtre-kategoride (hersey-99-tl) kuralı sağlamayan renk kartı elenir; kart fiyatı artık KANAL (satış) fiyatı, BasePrice değil (100×/yanlış fiyat düzeldi).
+- **Sepet görseli:** varyantın kendi görseli yoksa RENGİNE ait görsele düşer (Siyah eklenince Krem görseli çıkması düzeldi) — 3 kademeli çözüm; görseller renk-temsilci varyantta (tasarım gereği, tekrar yok).
+- **Sepet kısmi seçim:** ürün checkbox'ı teslimat/ödeme/siparişe taşınır; kısmi siparişte seçilmeyenler sepette kalır (kullanıcı doğruladı).
+- **Admin kanal kategori:** Model/Renk listeleme tipi geçişinde ürünler kaybolmuyor (cache anahtarına listingMode+oos eklendi, v8) + kaydetten sonra doğru görünür (race düzeltmesi) + Sync mesajı "kategoride N ürün listelenecek" (liste sayacıyla tutarlı).
 
 **Ortak çekirdek** (tüm alanları etkiler, kendi başına alan değildir): modüler backend (Catalog/Order/
 Inventory…), cari çatı (B5 finance birleşmesi ertelendi), stok üçlü yapı (M2/M3 + değer aktarımı
