@@ -355,8 +355,10 @@ Views/Shared/Store/_KoleksiyonAkisKoprusu.cshtml
 
 # 2026-07-29 (271b133): mobil slider okları görünür + iOS dokunma düzeltmesi;
 # 2026-07-30: .ms-gorunum-banner-karti img'den aspect-ratio:auto kaldırıldı (CLS 1.1
-# üretiyordu — PageSpeed düzeltmesi). Kaynak /opt/misharix root'a ait ve yazılamaz
-# olduğundan farklar ECSPros tarafında; kaynak güncellenince bu satır kaldırılabilir.
+# üretiyordu — PageSpeed düzeltmesi);
+# 2026-07-31: sepet seçim kutuları .ms-sepet-secim/.ms-sepet-urun-secim input rounded-xl→rounded
+# (kullanıcı isteği: radyo değil kare checkbox görünümü). Kaynak /opt/misharix root'a ait ve
+# yazılamaz olduğundan farklar ECSPros tarafında; kaynak güncellenince bu satır kaldırılabilir.
 wwwroot/css/tailwind.css
 
 # 2026-07-30: storefront hata sayfası (İZİNLİ YENİ — tasarım paketinde 404/hata
