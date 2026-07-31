@@ -69,7 +69,8 @@ public class CheckoutCommandHandler(
     IOrderNumberService orderNumbers,
     ECSPros.Shared.Contracts.IProductService productService,
     ECSPros.Shared.Contracts.IChannelProductFlagService flagService,
-    ECSPros.Shared.Contracts.IChannelPricingService pricingService)
+    ECSPros.Shared.Contracts.IChannelPricingService pricingService,
+    ECSPros.Shared.Contracts.IProductCampaignResolver campaignResolver)
     : IRequestHandler<CheckoutCommand, Result<CheckoutSonucu>>
 {
     public async Task<Result<CheckoutSonucu>> Handle(CheckoutCommand request, CancellationToken ct)
@@ -90,6 +91,7 @@ public class CheckoutCommandHandler(
 
         var tedarikciByVariant = new Dictionary<Guid, Guid?>();
         var sunucuFiyatByVariant = new Dictionary<Guid, decimal>();
+        var urunIdByVariant = new Dictionary<Guid, Guid>();
         foreach (var item in request.Items)
         {
             var bilgi = await productService.GetVariantAsync(item.VariantId, ct);
@@ -98,6 +100,7 @@ public class CheckoutCommandHandler(
             if (kanalDisi.Contains(bilgi.ProductId))
                 return Result.Failure<CheckoutSonucu>($"'{item.ProductName}' şu an bu kanalda satışa kapalı; siparişi tamamlamak için sepetten çıkarın.");
             tedarikciByVariant[item.VariantId] = bilgi.SupplierId;
+            urunIdByVariant[item.VariantId] = bilgi.ProductId;
 
             var sunucuFiyat = kanalFiyatlar.TryGetValue(item.VariantId, out var cp) && cp.Price is > 0
                 ? cp.Price.Value
@@ -107,8 +110,20 @@ public class CheckoutCommandHandler(
             sunucuFiyatByVariant[item.VariantId] = sunucuFiyat;
         }
 
-        // Toplam SUNUCU fiyatından (istemci UnitPrice yok sayılır).
-        var subtotal = request.Items.Sum(i => i.Quantity * sunucuFiyatByVariant[i.VariantId]);
+        // ★ F4 (2026-07-31): kampanya SUNUCUDA uygulanır (istemci fiyatına güvenilmez; F3 kartıyla AYNI
+        // hesap). Ürün-bazlı kampanya birim fiyata yansır; buy_x_get_y/min_cart gibi sepet-seviyesi
+        // kampanyalar sipariş indirimine eklenir. Her ürünün TEK etkin kampanyası → çift sayım yok.
+        var kampanyaSepet = request.Items
+            .Select(i => new ECSPros.Shared.Contracts.CartCampaignItem(
+                i.VariantId, urunIdByVariant[i.VariantId], i.Quantity, sunucuFiyatByVariant[i.VariantId]))
+            .ToList();
+        var kampanyaSonuc = await campaignResolver.ResolveCartAsync(request.FirmPlatformId, kampanyaSepet, ct);
+        // Etkin birim fiyat = kampanyalı (varsa) yoksa kanal fiyatı.
+        decimal EtkinFiyat(Guid vid) => kampanyaSonuc.ItemUnitPrices.GetValueOrDefault(vid, sunucuFiyatByVariant[vid]);
+
+        // Toplam SUNUCU fiyatından (istemci UnitPrice yok sayılır); ürün-bazlı kampanya fiyata dahildir.
+        var subtotal = request.Items.Sum(i => i.Quantity * EtkinFiyat(i.VariantId));
+        var kampanyaSepetIndirim = Math.Min(kampanyaSonuc.CartDiscount, subtotal);
 
         // 2026-07-30: kapıda ödeme hizmet bedeli SUNUCUDA hesaplanır (istemciden tutar
         // alınmaz — ödeme sayfasındaki +50 TL bilgisi bu sabitin görüntüsüdür) ve sipariş
@@ -117,7 +132,7 @@ public class CheckoutCommandHandler(
         const decimal kapidaOdemeBedeli = 50m;
         const decimal kapidaOdemeUstSinir = 3000m;
         var kapidaOdeme = request.PaymentMethod is "kapida-nakit" or "kapida-kart";
-        var indirim = Math.Clamp(request.CouponDiscount ?? 0m, 0m, subtotal);
+        var indirim = Math.Clamp((request.CouponDiscount ?? 0m) + kampanyaSepetIndirim, 0m, subtotal);
         var masraf = kapidaOdeme ? kapidaOdemeBedeli : 0m;
         if (kapidaOdeme && subtotal - indirim >= kapidaOdemeUstSinir)
             return Result.Failure<CheckoutSonucu>("3.000 TL ve üzeri siparişlerde kapıda ödeme kabul edilmez; lütfen kart ile ödemeyi seçin.");
@@ -170,6 +185,9 @@ public class CheckoutCommandHandler(
             notlar["acceptedContracts"] = request.AcceptedContracts;
         if (!string.IsNullOrWhiteSpace(request.PaymentMethod))
             notlar["paymentMethod"] = request.PaymentMethod!; // şemasız kayıt (jsonb) — kolon açmadan yöntem izi
+        if (kampanyaSonuc.Applied.Count > 0)
+            notlar["campaigns"] = string.Join("; ", kampanyaSonuc.Applied
+                .Select(a => $"{a.Name} [{a.Code}] {a.Kind} -{a.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture)}"));
         if (notlar.Count > 0)
             order.CustomerNotes = notlar;
 
@@ -177,7 +195,7 @@ public class CheckoutCommandHandler(
 
         foreach (var item in request.Items)
         {
-            var birimFiyat = sunucuFiyatByVariant[item.VariantId];   // SUNUCU fiyatı (istemci UnitPrice değil)
+            var birimFiyat = EtkinFiyat(item.VariantId);   // SUNUCU fiyatı + ürün-bazlı kampanya (istemci UnitPrice değil)
             db.OrderItems.Add(new OrderItemEntity
             {
                 OrderId = order.Id,
