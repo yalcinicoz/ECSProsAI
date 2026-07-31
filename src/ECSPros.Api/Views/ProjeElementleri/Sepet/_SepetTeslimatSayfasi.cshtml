@@ -582,6 +582,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         sepet = (await cevap.json().catch(() => null))?.data || null;
     } catch { /* tutar alanları — kalır */ }
 
+    // Sepet sayfasında seçilmeyen (checkbox kaldırılan) kalemleri özet dışı bırak (2026-07-31).
+    // Hızlı akış (Şimdi Al) ayrı tek-ürün sepeti kullandığından seçime tabi değildir.
+    if (!hizliMod && sepet?.items) {
+        let disi = new Set();
+        try { disi = new Set(JSON.parse(sessionStorage.getItem("msSepetSecimDisi") || "[]")); } catch { }
+        if (disi.size) { sepet.items = sepet.items.filter((k) => !disi.has(k.variantId)); }
+    }
+
     const toplam = (sepet?.items || []).reduce((t, k) => t + (k.lineTotal || 0), 0);
     let indirim = 0;
     if (!hizliMod) {
