@@ -102,6 +102,7 @@ const NAV_SECTIONS: NavSection[] = [
   ]},
   { label: 'Pazarlama', items: [
     { label: 'Kampanyalar',  to: '/promotion/campaigns',  icon: 'percent' },
+    { label: 'Kampanya Tipleri', to: '/promotion/campaign-types', icon: 'layers' },
     { label: 'Kuponlar',     to: '/promotion/coupons',    icon: 'ticket' },
     { label: 'Hediye Kartı', to: '/orders/gift-cards',    icon: 'gift' },
     { label: 'Bildirimler',      to: '/storefront/notifications', icon: 'bell' },
