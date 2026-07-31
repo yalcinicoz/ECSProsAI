@@ -354,6 +354,12 @@ public class GetStoreProductsQueryHandler(
 
             var variantMin = activeVariants.Any() ? activeVariants.Min(v => v.BasePrice) : 0;
             var minPrice   = platformPrices.Any() ? platformPrices.Min() : variantMin > 0 ? variantMin : p.BasePrice;
+            // İndirim öncesi (çizili) fiyat: kanal CompareAtPrice'ların en yükseği (yalnız satış fiyatı üstündeyse).
+            var eskiFiyatlar = activeVariants
+                .Where(v => channelPrices.ContainsKey(v.Id))
+                .Select(v => channelPrices[v.Id].CompareAtPrice ?? 0m)
+                .Where(c => c > 0).ToList();
+            decimal? eskiFiyat = eskiFiyatlar.Any() && eskiFiyatlar.Max() > minPrice ? eskiFiyatlar.Max() : null;
             firstImages.TryGetValue(p.Id, out var ilkGorsel);
             var mainImage = ilkGorsel is null ? null : cdnBase + ilkGorsel.FileName;
 
@@ -376,7 +382,7 @@ public class GetStoreProductsQueryHandler(
             var renkler = colorsByProduct.GetValueOrDefault(p.Id) ?? new();
             return new StoreProductDto(
                 p.Id, p.Code, p.NameI18n, p.ShortDescriptionI18n,
-                mainImage, minPrice, null, p.IsSaleOpen,
+                mainImage, minPrice, eskiFiyat, p.IsSaleOpen,
                 renkler,
                 attrsByProduct.GetValueOrDefault(p.Id) ?? new(),
                 galleryUrls,

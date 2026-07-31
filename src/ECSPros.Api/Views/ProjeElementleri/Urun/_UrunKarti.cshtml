@@ -20,6 +20,7 @@
      data-ms-urun-kod="@(u?.Kod ?? "")"
      data-ms-secili-renk="@(u?.SeciliRenkId?.ToString() ?? "")"
      data-ms-fiyat="@(u?.Fiyat.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
+     data-ms-eski-fiyat="@(u?.EskiFiyat?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
      data-ms-degerler="@(u is null ? "" : string.Join(",", u.DegerIdler))"
      data-ms-dolu="@(u is null ? "" : "true")">
     <a class="ms-urun-kart-baglanti" href="@(u?.Url ?? "#")" data-ms-kart-link aria-label="@(u?.Ad ?? "Ürün") ürün detayına git"></a>
@@ -148,6 +149,25 @@
                 <span>(@u.PuanSayisi)</span>
             </div>
         }
-        <p class="ms-urun-fiyat">@(u is null ? "" : u.Fiyat.ToString("N2", tr) + " TL")</p>
+        @* Fiyat senaryoları (tasarım _UrunKartiOrnegi): güncel fiyat + varsa indirim rozeti ve
+           üstü çizili eski fiyat (CompareAtPrice > Fiyat). Diğer senaryolar (Sepette/Plus/kampanya)
+           veri kaynağı geldiğinde eklenir — "varsa yazdırılır" kuralı. *@
+        <div class="ms-urun-fiyat-senaryolari">
+            <p class="ms-urun-fiyat" data-ms-kart-fiyat>@(u is null ? "" : u.Fiyat.ToString("N2", tr) + " TL")</p>
+            @if (u is null)
+            {
+                <p class="ms-urun-fiyat-satiri" data-ms-kart-indirim-satiri hidden>
+                    <span class="ms-urun-indirim-rozeti" data-ms-kart-indirim-rozet></span>
+                    <span class="ms-urun-fiyat-eski" data-ms-kart-eski-fiyat></span>
+                </p>
+            }
+            else if (u.IndirimYuzdesi is { } yuzde)
+            {
+                <p class="ms-urun-fiyat-satiri">
+                    <span class="ms-urun-indirim-rozeti">-%@yuzde</span>
+                    <span class="ms-urun-fiyat-eski">@u.EskiFiyat!.Value.ToString("N2", tr) TL</span>
+                </p>
+            }
+        </div>
     </div>
 </div>

@@ -28,7 +28,8 @@ public static class UrunKartMap
             renkler.Where(c => c.HexCode is not null).Select(c => c.HexCode!).Take(2).ToList(),
             secenekler.Count > 0 ? secenekler.Count : renkler.Count, degerIdler,
             p.GalleryUrls ?? [], secenekler, p.SelectedColorValueId, p.IsFeatured, p.Rating, p.ReviewCount,
-            Slug: p.Slug);   // 2b: kartın seçili renk slug'ı
+            Slug: p.Slug,   // 2b: kartın seçili renk slug'ı
+            EskiFiyat: p.CompareAtPrice);   // indirim öncesi çizili fiyat (varsa)
     }
 
     public static UrunKartVm KartaCevir(StoreProductDto p)
@@ -56,7 +57,8 @@ public static class UrunKartMap
             secenekler.Count > 0 ? secenekler.Count : p.Colors.Count, degerIdler,
             p.GalleryUrls ?? [], secenekler, kartRenkId, p.IsFeatured, p.Rating, p.ReviewCount,
             p.VideoUrl,
-            Slug: eslesenRenk?.Slug); // eşleşen rengin gerçek slug'ı (varsa)
+            Slug: eslesenRenk?.Slug, // eşleşen rengin gerçek slug'ı (varsa)
+            EskiFiyat: p.CompareAtPrice);   // indirim öncesi çizili fiyat (varsa)
     }
 
     public static string TrAd(Dictionary<string, string> nameI18n) =>

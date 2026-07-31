@@ -82,7 +82,8 @@ public record ChannelCategoryProductItemDto(
     bool IsFeatured = false,                         // B11: öne çıkar penceresi içinde — kartta "Sponsorlu" rozeti
     double Rating = 0,                               // E7: onaylı yorum ortalaması (0 = yorum yok)
     int ReviewCount = 0,                             // E7: onaylı yorum sayısı
-    string? Slug = null);                            // URL aktarımı 2b: kartın (seçili renk) gerçek URL slug'ı
+    string? Slug = null,                             // URL aktarımı 2b: kartın (seçili renk) gerçek URL slug'ı
+    decimal? CompareAtPrice = null);                 // 2026-07-31: indirim öncesi (çizili) fiyat — CompareAt > satış fiyatı ise
 
 public class GetChannelCategoryProductsQueryHandler(
     IStorefrontDbContext sfDb,
@@ -108,8 +109,10 @@ public class GetChannelCategoryProductsQueryHandler(
     // v8: cache anahtarına listingMode + showOutOfStock eklendi. Önceki anahtar bunları içermediğinden
     // model/renk (ve admin/vitrin stok-görünürlüğü) AYNI anahtarı paylaşıyordu → model'in boş sonucu
     // renk moduna sızıp "ürünler geri gelmiyor"a yol açıyordu.
+    // v9: DTO'ya CompareAtPrice (çizili eski fiyat) eklendi — eski v8 kayıtları bu alanı içermediğinden
+    // deserialize'da null döner ve indirim satırı görünmezdi; sürüm artırıldı.
     private static string CacheKey(Guid categoryId, string listingMode, bool showOutOfStock, int page, int pageSize) =>
-        $"channelcat:products:v8:{categoryId}:{listingMode}:{(showOutOfStock ? "oos" : "std")}:{page}:{pageSize}";
+        $"channelcat:products:v9:{categoryId}:{listingMode}:{(showOutOfStock ? "oos" : "std")}:{page}:{pageSize}";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
 
     private async Task<PagedResult<ChannelCategoryProductItemDto>?> TryGetCacheAsync(string key, CancellationToken ct)
@@ -381,6 +384,16 @@ public class GetChannelCategoryProductsQueryHandler(
                 .ToDictionaryAsync(cv => cv.VariantId, cv => cv.Price, ct)
             : new Dictionary<Guid, decimal>();
 
+        // İndirim öncesi (çizili) fiyat: channel_variants.CompareAtPrice — renk temsilcisinde;
+        // kartta CompareAt > satış fiyatı ise "-%X + üstü çizili eski fiyat" gösterilir (2026-07-31).
+        var variantCompareAt = variantIds.Count > 0
+            ? await sfDb.ChannelVariants.AsNoTracking()
+                .Where(cv => cv.FirmPlatformId == cat.FirmPlatformId && cv.IsActive
+                          && cv.CompareAtPrice != null && cv.CompareAtPrice > 0 && variantIds.Contains(cv.VariantId))
+                .Select(cv => new { cv.VariantId, Ca = cv.CompareAtPrice!.Value })
+                .ToDictionaryAsync(cv => cv.VariantId, cv => cv.Ca, ct)
+            : new Dictionary<Guid, decimal>();
+
         // 5. Tüm varyant attribute değerleri (primary axis tespiti için)
         // Sadece PRIMARY AXIS tipindeki satırlar çekiliyor (ör. "beden" atlanıyor) — büyük
         // kategorilerde (10K+ ürün) her varyantın TÜM attribute'larını (Name/Hex join'i dahil)
@@ -413,6 +426,9 @@ public class GetChannelCategoryProductsQueryHandler(
                 // Kanal fiyatı yoksa BasePrice'a düş (kart yine bir fiyat gösterebilsin).
                 var baz = vids.Select(v => variantPrice.GetValueOrDefault(v))
                               .Where(p => p > 0).DefaultIfEmpty(0).Min();
+                // İndirim öncesi fiyat: rengin varyantları arasındaki en yüksek pozitif CompareAt.
+                var eskiFiyat = vids.Select(v => variantCompareAt.GetValueOrDefault(v))
+                                    .Where(c => c > 0).DefaultIfEmpty(0).Max();
                 return new
                 {
                     g.Key.ProductId,
@@ -421,7 +437,8 @@ public class GetChannelCategoryProductsQueryHandler(
                     // Gösterilen/filtre/sıralama fiyatı = kanal (satış) fiyatı; yoksa base
                     Price = kanal > 0 ? kanal : baz,
                     // Kategori platformPrice kuralı YALNIZ gerçek kanal fiyatına uygulanır (0 = kanal yok)
-                    ChannelPrice = kanal
+                    ChannelPrice = kanal,
+                    EskiFiyat = eskiFiyat   // 0 ise indirim yok
                 };
             })
             .OrderBy(x => x.ProductId).ThenBy(x => x.ColorValueId)
@@ -771,7 +788,8 @@ public class GetChannelCategoryProductsQueryHandler(
                     GalleryUrls: galleryUrls,
                     AxisColors: axisColorsByProduct.GetValueOrDefault(pair.ProductId),
                     IsFeatured: oneCikanlar.Contains(pair.ProductId),
-                    Slug: PairSlug(pair.VariantIds));   // 2b: kartın seçili renk slug'ı
+                    Slug: PairSlug(pair.VariantIds),   // 2b: kartın seçili renk slug'ı
+                    CompareAtPrice: pair.EskiFiyat > price ? pair.EskiFiyat : null);   // indirim öncesi (yalnız > satış fiyatı)
             })
             .ToList();
 
