@@ -68,7 +68,8 @@ public class CheckoutCommandHandler(
     IOrderDbContext db,
     IOrderNumberService orderNumbers,
     ECSPros.Shared.Contracts.IProductService productService,
-    ECSPros.Shared.Contracts.IChannelProductFlagService flagService)
+    ECSPros.Shared.Contracts.IChannelProductFlagService flagService,
+    ECSPros.Shared.Contracts.IChannelPricingService pricingService)
     : IRequestHandler<CheckoutCommand, Result<CheckoutSonucu>>
 {
     public async Task<Result<CheckoutSonucu>> Handle(CheckoutCommand request, CancellationToken ct)
@@ -82,7 +83,13 @@ public class CheckoutCommandHandler(
         // Katman 1 (global satış anahtarı): satışa kapalı ürün SATILAMAZ — kanal ayarları ne
         // olursa olsun. ProductInfo.IsActive = varyant aktif VE ürün IsSaleOpen. Kapalı ürün
         // sepette kalmışsa (kapatılmadan önce eklenmiş) sipariş oluşturulmaz.
+        // ★ GÜVENLİK (2026-07-31): kalem fiyatı İSTEMCİDEN alınmaz — SUNUCUDA yeniden hesaplanır
+        // (kanal fiyatı > varyant BasePrice; storefront gösterimiyle aynı). Böylece istemci sahte
+        // düşük fiyat gönderip "az öde, çok ürün al" yapamaz; PayTR tam gerçek tutarı çeker.
+        var kanalFiyatlar = await pricingService.GetActiveVariantPricesAsync(request.FirmPlatformId, ct);
+
         var tedarikciByVariant = new Dictionary<Guid, Guid?>();
+        var sunucuFiyatByVariant = new Dictionary<Guid, decimal>();
         foreach (var item in request.Items)
         {
             var bilgi = await productService.GetVariantAsync(item.VariantId, ct);
@@ -91,9 +98,17 @@ public class CheckoutCommandHandler(
             if (kanalDisi.Contains(bilgi.ProductId))
                 return Result.Failure<CheckoutSonucu>($"'{item.ProductName}' şu an bu kanalda satışa kapalı; siparişi tamamlamak için sepetten çıkarın.");
             tedarikciByVariant[item.VariantId] = bilgi.SupplierId;
+
+            var sunucuFiyat = kanalFiyatlar.TryGetValue(item.VariantId, out var cp) && cp.Price is > 0
+                ? cp.Price.Value
+                : bilgi.BasePrice;
+            if (sunucuFiyat <= 0)
+                return Result.Failure<CheckoutSonucu>($"'{item.ProductName}' için geçerli fiyat bulunamadı; siparişi tamamlamak için sepetten çıkarın.");
+            sunucuFiyatByVariant[item.VariantId] = sunucuFiyat;
         }
 
-        var subtotal = request.Items.Sum(i => i.Quantity * i.UnitPrice);
+        // Toplam SUNUCU fiyatından (istemci UnitPrice yok sayılır).
+        var subtotal = request.Items.Sum(i => i.Quantity * sunucuFiyatByVariant[i.VariantId]);
 
         // 2026-07-30: kapıda ödeme hizmet bedeli SUNUCUDA hesaplanır (istemciden tutar
         // alınmaz — ödeme sayfasındaki +50 TL bilgisi bu sabitin görüntüsüdür) ve sipariş
@@ -162,6 +177,7 @@ public class CheckoutCommandHandler(
 
         foreach (var item in request.Items)
         {
+            var birimFiyat = sunucuFiyatByVariant[item.VariantId];   // SUNUCU fiyatı (istemci UnitPrice değil)
             db.OrderItems.Add(new OrderItemEntity
             {
                 OrderId = order.Id,
@@ -171,11 +187,11 @@ public class CheckoutCommandHandler(
                 ProductName = item.ProductName,
                 VariantInfo = item.VariantInfo,
                 Quantity = item.Quantity,
-                UnitPrice = item.UnitPrice,
-                Subtotal = item.Quantity * item.UnitPrice,
+                UnitPrice = birimFiyat,
+                Subtotal = item.Quantity * birimFiyat,
                 DiscountAmount = 0,
                 TaxAmount = 0,
-                Total = item.Quantity * item.UnitPrice,
+                Total = item.Quantity * birimFiyat,
                 Status = "pending"
             });
         }
