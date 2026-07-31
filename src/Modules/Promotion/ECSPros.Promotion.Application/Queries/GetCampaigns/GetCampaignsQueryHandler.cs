@@ -28,8 +28,8 @@ public class GetCampaignsQueryHandler : IRequestHandler<GetCampaignsQuery, Resul
             .OrderByDescending(c => c.Priority)
             .Select(c => new CampaignDto(
                 c.Id, c.Code, c.NameI18n, c.StartsAt, c.EndsAt, c.IsActive, c.Priority,
-                c.ProductSelectionType,
-                c.CampaignTypeId, c.CampaignType.Code, c.DescriptionI18n, c.Settings))
+                c.FillType,
+                c.CampaignTypeId, c.CampaignType.Code, c.DescriptionI18n, c.Settings, c.FirmPlatformId))
             .ToListAsync(cancellationToken);
 
         return Result.Success(items);

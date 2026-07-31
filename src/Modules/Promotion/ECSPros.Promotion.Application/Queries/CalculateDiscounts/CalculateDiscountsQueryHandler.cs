@@ -72,15 +72,16 @@ public class CalculateDiscountsQueryHandler : IRequestHandler<CalculateDiscounts
         ECSPros.Promotion.Domain.Entities.Campaign campaign,
         List<CartLineItem> cartItems)
     {
-        return campaign.ProductSelectionType switch
+        // F1: FillType all/manual/filter/mixed. Kapsam ProductId bazında materyalize edilir;
+        // TODO(F2): ürün→varyant çözümü + platform/dışlama kuralları IProductCampaignResolver'a taşınacak.
+        return campaign.FillType switch
         {
             "all" => new HashSet<Guid>(), // boş = hepsi
-            "specific" => campaign.Products
+            _ => campaign.Products
                 .Where(p => p.VariantId.HasValue
                          && cartItems.Any(ci => ci.VariantId == p.VariantId.Value))
                 .Select(p => p.VariantId!.Value)
-                .ToHashSet(),
-            _ => new HashSet<Guid>()
+                .ToHashSet()
         };
     }
 }

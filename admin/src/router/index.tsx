@@ -55,6 +55,7 @@ import { CmsPagesPage } from '@/pages/cms/CmsPagesPage'
 import { CmsPageDetailPage } from '@/pages/cms/CmsPageDetailPage'
 import { CampaignsPage } from '@/pages/promotion/CampaignsPage'
 import { CampaignTypesPage } from '@/pages/promotion/CampaignTypesPage'
+import { CampaignDetailPage } from '@/pages/promotion/CampaignDetailPage'
 import { CouponsPage } from '@/pages/promotion/CouponsPage'
 import { MembersPage } from '@/pages/crm/MembersPage'
 import { MemberDetailPage } from '@/pages/crm/MemberDetailPage'
@@ -157,6 +158,7 @@ export const router = createBrowserRouter(
 
             // Promosyon
             { path: 'promotion/campaigns', element: <CampaignsPage /> },
+            { path: 'promotion/campaigns/:id', element: <CampaignDetailPage /> },
             { path: 'promotion/campaign-types', element: <CampaignTypesPage /> },
             { path: 'promotion/coupons',   element: <CouponsPage /> },
 

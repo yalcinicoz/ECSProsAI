@@ -3,6 +3,11 @@
   <ItemGroup>
     <ProjectReference Include="..\ECSPros.Promotion.Domain\ECSPros.Promotion.Domain.csproj" />
     <ProjectReference Include="..\..\..\Shared\ECSPros.Shared.Kernel\ECSPros.Shared.Kernel.csproj" />
+    <!-- F1: kampanya ürün ilişkilendirme kategori mekanizmasını kullanır (ProductFilterHelper/
+         CategoryFilterRules/ICatalogDbContext) + kanal fiyat filtresi (IChannelPricingService). -->
+    <ProjectReference Include="..\..\Catalog\ECSPros.Catalog.Application\ECSPros.Catalog.Application.csproj" />
+    <ProjectReference Include="..\..\Catalog\ECSPros.Catalog.Domain\ECSPros.Catalog.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Shared\ECSPros.Shared.Contracts\ECSPros.Shared.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

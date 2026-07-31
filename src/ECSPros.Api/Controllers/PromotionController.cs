@@ -1,6 +1,8 @@
+using ECSPros.Promotion.Application.Commands.CopyCampaign;
 using ECSPros.Promotion.Application.Commands.CreateCampaign;
 using ECSPros.Promotion.Application.Commands.ManageCoupon;
 using ECSPros.Promotion.Application.Commands.UpdateCampaign;
+using ECSPros.Promotion.Application.Queries.GetCampaignDetail;
 using ECSPros.Promotion.Application.Commands.UseCoupon;
 using ECSPros.Promotion.Application.Queries.CalculateDiscounts;
 using ECSPros.Promotion.Application.Queries.GetCampaigns;
@@ -38,19 +40,37 @@ public class PromotionController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>Kampanya detayı (düzenleme formu için — ürün kapsamı dahil).</summary>
+    [HttpGet("campaigns/{id:guid}")]
+    public async Task<IActionResult> GetCampaignDetail(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetCampaignDetailQuery(id), ct);
+        if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
     /// <summary>Yeni kampanya oluşturur.</summary>
     [HttpPost("campaigns")]
     public async Task<IActionResult> CreateCampaign([FromBody] CreateCampaignRequest request, CancellationToken ct)
     {
+        Guid.TryParse(User.FindFirst("sub")?.Value, out var userId);
         var result = await _mediator.Send(new CreateCampaignCommand(
+            request.FirmPlatformId,
             request.CampaignTypeId,
             request.Code,
             request.NameI18n,
+            request.DescriptionI18n,
+            request.BadgeLabel,
             request.StartsAt,
             request.EndsAt,
             request.Priority,
-            request.ProductSelectionType,
-            request.Settings ?? new Dictionary<string, object>()), ct);
+            request.IsActive,
+            request.Settings ?? new Dictionary<string, object>(),
+            request.FillType,
+            request.FilterDef,
+            request.ManualProductIds,
+            request.ExcludedProductIds,
+            userId == Guid.Empty ? null : userId), ct);
 
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
@@ -62,25 +82,40 @@ public class PromotionController : ControllerBase
     [HttpPut("campaigns/{id:guid}")]
     public async Task<IActionResult> UpdateCampaign(Guid id, [FromBody] UpdateCampaignRequest request, CancellationToken ct)
     {
-        var userIdClaim = User.FindFirst("sub")?.Value;
-        if (!Guid.TryParse(userIdClaim, out var userId))
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var userId))
             return Unauthorized();
 
         var result = await _mediator.Send(new UpdateCampaignCommand(
             id,
             request.NameI18n,
             request.DescriptionI18n,
+            request.BadgeLabel,
             request.StartsAt,
             request.EndsAt,
             request.IsActive,
             request.Priority,
-            userId,
-            request.Settings), ct);
+            request.Settings ?? new Dictionary<string, object>(),
+            request.FillType,
+            request.FilterDef,
+            request.ManualProductIds,
+            request.ExcludedProductIds,
+            userId), ct);
 
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
 
         return Ok(new { success = true });
+    }
+
+    /// <summary>Kampanyayı kopyalar (yeni kod, opsiyonel başka platform; kopya pasif başlar).</summary>
+    [HttpPost("campaigns/{id:guid}/copy")]
+    public async Task<IActionResult> CopyCampaign(Guid id, [FromBody] CopyCampaignRequest request, CancellationToken ct)
+    {
+        Guid.TryParse(User.FindFirst("sub")?.Value, out var userId);
+        var result = await _mediator.Send(new CopyCampaignCommand(
+            id, request.NewCode, request.TargetFirmPlatformId, userId == Guid.Empty ? null : userId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { id = result.Value } });
     }
 
     /// <summary>Kampanya tipleri (P3 — oluşturma formunun tip seçicisi).</summary>
@@ -211,23 +246,37 @@ public class PromotionController : ControllerBase
 // ─── Request records ────────────────────────────────────────────────────────
 
 public record CreateCampaignRequest(
+    Guid FirmPlatformId,
     Guid CampaignTypeId,
     string Code,
     Dictionary<string, string> NameI18n,
+    Dictionary<string, string>? DescriptionI18n,
+    string? BadgeLabel,
     DateTime StartsAt,
     DateTime? EndsAt,
     int Priority,
-    string ProductSelectionType,
-    Dictionary<string, object>? Settings);
+    bool IsActive,
+    Dictionary<string, object>? Settings,
+    string FillType,
+    Dictionary<string, object>? FilterDef,
+    List<Guid>? ManualProductIds,
+    List<Guid>? ExcludedProductIds);
 
 public record UpdateCampaignRequest(
     Dictionary<string, string> NameI18n,
     Dictionary<string, string>? DescriptionI18n,
+    string? BadgeLabel,
     DateTime StartsAt,
     DateTime? EndsAt,
     bool IsActive,
     int Priority,
-    Dictionary<string, object>? Settings = null);
+    Dictionary<string, object>? Settings,
+    string FillType,
+    Dictionary<string, object>? FilterDef,
+    List<Guid>? ManualProductIds,
+    List<Guid>? ExcludedProductIds);
+
+public record CopyCampaignRequest(string NewCode, Guid? TargetFirmPlatformId);
 
 public record CouponRequest(
     string Code,
