@@ -250,13 +250,12 @@ ertelenebilir (bkz. plan §5).
 - ✅ **`percent` ve `money` alan tipleri İKİSİ DE bulunur** (money az kullanılsa da), ayrı tipler
   olarak (form doğrulaması net).
 
-**Hâlâ karar bekleyen:**
-1. Faz kapsamı — ilk sürüme hangi tipler girsin?
-   - **(A)** En çok kullanılanlarla başla: `discount` + `buy_x_get_y` + `free_shipping`;
-     `cross_group_gift` / `bundle` / `review_reward` sonraki faz. **(Öneri — eski kullanım:
-     cross 1, bundle 0 aktif, review 3.)**
-   - **(B)** Hepsi ilk sürümde.
-   > Tip tanımları (definition) esnek olduğundan, (A) seçilse bile ileride tip eklemek yalnız
-   > definition satırı + handler ister (§2.5.5).
-2. `discount`'ta adet-eşiği (`cartQty`/`scopeQty`) gerçekten gerekli mi, yoksa yalnız tutar-eşiği
-   (`cartAmount`/`scopeAmount`) mi? (Eski veride adet-eşiği nadir.)
+**Karara bağlanan (devam):**
+- ✅ **İlk sürüm = 6 tipin TÜMÜ** (`discount`, `buy_x_get_y`, `cross_group_gift`, `bundle`,
+  `free_shipping`, `review_reward`). Faz 0 seed'i altısını da tanımlar. (cross_group_gift +
+  bundle ikinci ürün kümesi ister; review_reward tetiği satın alma değil — F2/F3'te handler'ları
+  buna göre.)
+- ✅ **`discount`'ta adet-eşiği DE bulunur** (`conditionType`: none | cartAmount | cartQty |
+  scopeAmount | scopeQty) — §2.1 şablonu zaten kapsıyor; eski tip 4/5/10/11 birebir karşılanır.
+
+**Tüm açık noktalar kapandı — Faz 0 seed'i kesinleşti.**
