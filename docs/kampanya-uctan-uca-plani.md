@@ -63,6 +63,86 @@ ve fazlı uygulama planını tanımlar.
 
 ---
 
+---
+
+## 2.5 Mimari İlkeler (kullanıcı yönü, 2026-07-31) ⭐
+
+Bu ilkeler şema ve akış tasarımını belirler:
+
+1. **Kampanya TİPİ = platformdan bağımsız yetenek (definition katmanı).** Tip/yapı/şema
+   tanımları global; yalnız geliştirici firma (platform yönetimi) tanımlar. → `CampaignType`
+   `definition` şemasına taşınır; `definition.*` altın kuralı geçerli (veri aktarımı/platform
+   bu tabloya kayıt EKLEYEMEZ). Bkz. `feedback_definition_schema`.
+2. **Kampanyayı PLATFORMLAR uygular.** Minimum sepet tutarı, indirim oranı, hangi ürünler, geçerlilik
+   zaman aralığı → hepsini platform (kiracı) belirler. → `Campaign` platform örneğidir
+   (FirmPlatformId/`CampaignPlatform`), tip şablonunu doldurur.
+3. **Kampanya–ürün ilişkilendirme = kategori–ürün ilişkilendirme ile BİREBİR AYNI.** Kategori
+   mekanizması: `FillType` ∈ **manual | filter | mixed**, `FilterDef` jsonb (CategoryFilterRules),
+   manuel liste materyalize (`channel_category_products`). Kampanya da aynısını kullanır:
+   `Campaign.FillType` + `Campaign.FilterDef` + `campaign_products` (materyalize). **Aynı
+   `ProductFilterHelper`/filtre motoru paylaşılır** — ikinci bir filtre dili yazılmaz.
+4. **Tip tanımı yapıldığı an parametre giriş ŞABLONU üretilir; platform tipi aktifleştirince
+   şablonu doldurur.** → `CampaignType.SettingsSchema` (JSON alan tanımı) admin formunu üretir;
+   platform `Campaign.Settings` (jsonb) ile doldurur. **Bu, projede zaten var olan
+   `SettingsSchemaJson`/`PlatformSchemaField` deseninin aynısıdır** (entegrasyon servisleri
+   firma formu böyle üretiliyor — CLAUDE.md). Aynı desen kampanyaya uygulanır.
+5. **Yatay genişlemeyen (vertical) yapı.** Eski `plkampanyalar` her parametre için ayrı kolon
+   tutuyordu (`indirimOrani`, `indirimTutari`, `alinacakUrunSayisi`, …) → yeni tip eklenince
+   yetersiz. Yeni yapıda parametreler **tip şablonunda (SettingsSchema) + örnekte (Settings)
+   JSON** olarak durur. Yeni tip = yeni definition satırı + yeni handler; **şema migration'ı
+   gerekmez.**
+
+---
+
+## 2.6 Eski Sistem Kampanya Tipleri (envanter) ve Birleştirme
+
+Eski MySQL'de `dfindirimtipleri` (25 tip tanımı) + `plkampanyalar` (parametreler, yatay kolonlar).
+Canlı kullanım (plkampanyalar, en çok kullanılan): **17** Seçili Ürünler % (60), **3** Sepet→indirimli
+ürün (17), **20** Tüm ürünler % (15), **1** Sepet %/tutar (14), **7** Seçili sepette % (5),
+**13** al-x-öde-y (4), **24** Kargo (4), **22** Resimli yorum (3), **19** Üye grubu (1), **23** (1),
+**25** Kredi kartı kargo (1). Filtre 57/131 kampanyada, üye-tipi 129/131'de kullanılmış.
+
+**Birleştirme (25 eski tip → ~6 parametrik yeni tip + 3 kesişen boyut):**
+
+| Yeni tip (definition) | Kapsadığı eski tipler | SettingsSchema parametreleri (özet) |
+|---|---|---|
+| **`discount`** (kapsam+koşul+fayda) | 1,4,5,7,8,10,11,17,20 | `scope`(cart\|products), `condition`{type: none\|cart_amount\|cart_qty\|scope_qty\|scope_amount, value}, `benefit`{type: percent\|amount, value, maxAmount?} |
+| **`buy_x_get_y`** (al X, Y bedava/indirimli) | 3,6,9,12,13,14 | `buyQty`, `getQty`, `getBenefit`{percent(100=bedava)\|amount}, `sameProduct`, `giftScope` |
+| **`cross_group_gift`** (grup al → grup hediye) | 15,23 | `buyGroups`, `buyThreshold`, `giftGroups`, `giftQty/amount`, `giftBenefit` |
+| **`bundle`** (kombin) | 16 | `bundleGroups[]`, `bundlePrice` \| `bundleDiscount` |
+| **`free_shipping`** (kargo) | 24,25 | `threshold`(cart_amount), `paymentMethods[]?`(kredi kartı), `regions?` |
+| **`review_reward`** (resimli yorum) | 22 | `trigger`=photo_review, `benefit` |
+
+**Kesişen boyutlar (TİP DEĞİL — her kampanyaya uygulanabilen niteleyiciler):**
+- **Hedef kitle / üye grubu** (eski `uyeTipId`, tip 19): üye grubu hedefleme kampanya seviyesinde
+  bir **audience** ayarıdır, ayrı tip değil (eski tip 19 → `discount` + audience=üye-grubu).
+- **Kupon kapısı** (eski 18,21): kupon akışı yeni projede zaten ayrı; kampanya opsiyonel kupon
+  koşulu taşıyabilir.
+- **Ürün seçimi** (manual/filter/mixed): ürün-kapsamlı tiplere uygulanır (§2.5.3).
+
+> Mevcut 4 seed tip (`percentage_discount`/`fixed_discount`/`buy_x_get_y`/`min_cart_discount`)
+> yukarıdaki `discount`+`buy_x_get_y` altında birleşir — seed ve motor buna göre yenilenir.
+
+---
+
+## 2.7 Hedef Şema (özet)
+
+- **`definition.campaign_types`** (global, platformdan bağımsız): `Code`, `NameI18n`,
+  `DescriptionI18n`, `SettingsSchema` jsonb (parametre şablonu — form üretir), `HandlerClass`,
+  `Scope`(cart/product/shipping…), `SupportsProductSelection` bool, `IsStackable`, `IsActive`,
+  `SortOrder`. Yalnız `definition.manage` yetkisi yazar.
+- **`promotion.campaigns`** (platform örneği): `CampaignTypeId`, **`FirmPlatformId`** (platform
+  uygular), `Code`, `NameI18n`, `StartsAt`/`EndsAt`, `IsActive`, `Priority`, `Settings` jsonb
+  (şablon değerleri), **`FillType`**(manual/filter/mixed), **`FilterDef`** jsonb, `Audience` jsonb
+  (üye grubu vb.), `Badge`/etiket alanları. (Mevcut `ProductSelectionType`/`ProductFilter`
+  bunlara göre yeniden adlandırılır.)
+- **`promotion.campaign_products`** (manuel/materyalize seçim — kategoriyle aynı): `CampaignId`,
+  `ProductId`/`VariantId`, `AddedType`.
+- Platform kapsamı: `campaign.FirmPlatformId` (tekil) veya çok-platform gerekiyorsa
+  `campaign_platforms`; dışlama `campaign_exclusions` (motor bunları UYGULAMALI — bugün etmiyor).
+
+---
+
 ## 3. Açık Tasarım Kararları (kodlamadan önce netleşmeli)
 
 ### 3.1 Kampanya fiyatının gösterim yeri ⭐ (en kritik karar)
@@ -109,21 +189,32 @@ kapsam, dışlama, öncelik, stackable) tek serviste toplanır; hem **vitrin fiy
 (ürün-bazlı, F3) hem **sepet/sipariş görünümü** (F4) bu servisten beslenir. Böylece kart, detay,
 sepet ve sipariş aynı sonucu verir.
 
-### FAZ 1 — Ürün ilişkilendirme (backend + admin UI)
-- `CreateCampaign`/`UpdateCampaign` komutlarına ürün/varyant listesi + `ProductSelectionType` +
-  (opsiyonel) `ProductFilter`; komut `CampaignProduct` satırlarını yazsın (idempotent update).
-- `CampaignPlatform` (hangi kanallar) + `CampaignExclusion` (istisna ürünler) yazımı.
-- Admin `CampaignsPage`: tip/ayar formuna ek olarak **kapsam sekmesi** — "tüm ürünler / seçili
-  ürünler / filtre"; ürün arama-ekle listesi, platform seçimi, dışlama listesi.
-- **K16:** önce ekran kurgusunu konuşalım (kapsam sekmesi mockup'ı).
+### FAZ 0 — Tip tanım altyapısı (definition) + tip konsolidasyonu
+- `CampaignType`'ı `definition.campaign_types`'a taşı; `SettingsSchema` (parametre şablonu) +
+  `Scope`/`SupportsProductSelection` alanları. Seed'i §2.6 birleştirilmiş tip setiyle yenile
+  (`discount`, `buy_x_get_y`, `cross_group_gift`, `bundle`, `free_shipping`, `review_reward`).
+- Admin tip yönetimi `definition.manage` yetkisiyle (super_admin/platform_admin); şablon (JSON)
+  editörü. Okuma herkese açık (platform kampanya formu dropdown'ı buradan beslenir).
+
+### FAZ 1 — Kampanya oluşturma + ürün ilişkilendirme (platform tarafı)
+- `Campaign` platform örneği: `FirmPlatformId`, tip seçimi, **SettingsSchema'dan üretilen form**
+  (şablonu doldur → `Settings` jsonb), tarih aralığı, öncelik, etiket/badge.
+- **Ürün ilişkilendirme = kategori mekanizmasının aynısı:** `FillType`(manual/filter/mixed) +
+  `FilterDef` jsonb + `campaign_products` materyalize. **`ProductFilterHelper` tekrar kullanılır.**
+- `CreateCampaign`/`UpdateCampaign` komutları bunları yazsın (idempotent); dışlama + platform +
+  audience(üye grubu) dahil.
+- Admin `CampaignsPage`: tip formu (şablondan) + **kapsam sekmesi kategori ekranıyla aynı UX**
+  (manuel arama-ekle / filtre kuralları / ikisi). **K16:** önce ekran kurgusunu konuşalım.
 
 ### FAZ 2 — Kampanya çözümleme servisi (ortak çekirdek)
 - Yeni servis `IProductCampaignResolver` (Promotion.Application):
   girdi = (FirmPlatformId, ürün/varyant kümesi) → çıktı = varyant/ürün başına **etkin kampanya**
   (kampanya id/kod/ad/tip + hesaplanan **kampanyalı birim fiyat** *veya* "sepette geçerli" bayrağı).
-- Aktiflik + tarih + **platform** + **kapsam(specific/all/filter)** + **dışlama** + **öncelik/
-  stackable** kurallarını burada topla (mevcut `CalculateDiscountsQuery`'deki eksikleri gider).
-- Sepet motoru (`CampaignEngine`) bu servisle aynı kuralları paylaşsın (kod tekrarı olmadan).
+- Aktiflik + tarih + **platform (FirmPlatformId)** + **kapsam (FillType/FilterDef → aynı filtre
+  motoru)** + **dışlama** + **audience(üye grubu)** + **öncelik/stackable** kurallarını burada
+  topla (mevcut `CalculateDiscountsQuery`'deki eksikleri gider).
+- Sepet motoru (`CampaignEngine`) bu servisle **aynı kuralları paylaşsın** (tek kural seti).
+- Tipe göre handler (`HandlerClass`) — yeni tip eklenince yalnız handler + definition satırı.
 
 ### FAZ 3 — Storefront gösterim (kart + detay)
 - Kart DTO'larına kampanya alanları: `ChannelCategoryProductItemDto` + `StoreProductDto` →
