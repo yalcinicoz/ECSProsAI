@@ -37,38 +37,153 @@ public static class DatabaseSeeder
     /// P3: Kampanya tipleri — CampaignEngine'deki işleyicilerle birebir eşleşir
     /// (kod eklemek yeni tip yaratmaz; engine'de karşılığı olmalı). Kod bazlı idempotent.
     /// </summary>
+    // Kampanya tipi ŞABLONU alan yardımcıları (docs/kampanya-tip-sablonlari-taslak.md).
+    private static ECSPros.Promotion.Domain.Entities.CampaignSchemaFieldOption Opt(string value, string tr) =>
+        new() { Value = value, LabelI18n = new() { ["tr"] = tr } };
+
+    private static ECSPros.Promotion.Domain.Entities.CampaignSchemaField SFld(
+        string key, string trLabel, string type, bool required = false, string? unit = null,
+        List<ECSPros.Promotion.Domain.Entities.CampaignSchemaFieldOption>? options = null,
+        ECSPros.Promotion.Domain.Entities.CampaignSchemaFieldCondition? visibleWhen = null,
+        decimal? min = null, decimal? max = null, object? def = null, string? help = null) =>
+        new()
+        {
+            Key = key, LabelI18n = new() { ["tr"] = trLabel }, Type = type, Required = required,
+            Unit = unit, Options = options, VisibleWhen = visibleWhen, Min = min, Max = max, Default = def,
+            HelpI18n = help is null ? null : new() { ["tr"] = help }
+        };
+
+    private static ECSPros.Promotion.Domain.Entities.CampaignSchemaFieldCondition WhenNot(string field, string val) =>
+        new() { Field = field, NotEqualsValue = val };
+    private static ECSPros.Promotion.Domain.Entities.CampaignSchemaFieldCondition WhenEq(string field, string val) =>
+        new() { Field = field, EqualsValue = val };
+
+    /// <summary>Kampanya tipleri = definition katmanı (platformdan bağımsız). 6 birleştirilmiş
+    /// parametrik tip, SettingsSchema şablonlarıyla (admin kampanya formu bundan üretilir).
+    /// Idempotent: mevcut tip güncellenir, eksik eklenir, eski (birleştirilen) tipler pasifleştirilir.</summary>
     private static async Task SeedCampaignTypesAsync(IServiceProvider sp)
     {
         var context = sp.GetRequiredService<ECSPros.Promotion.Infrastructure.Persistence.PromotionDbContext>();
+        var O = new Func<string, string, ECSPros.Promotion.Domain.Entities.CampaignSchemaFieldOption>(Opt);
 
-        var tipler = new (string Kod, string Ad, string Aciklama, bool UrunIster, bool Birlesir, int Sira)[]
+        var tipler = new (string Kod, string Ad, string Aciklama, string Scope, bool UrunIster,
+            bool FiyatGoster, bool Birlesir, int Sira, List<ECSPros.Promotion.Domain.Entities.CampaignSchemaField> Sema)[]
         {
-            ("percentage_discount", "Yüzde İndirim", "Kapsama giren ürünlerde yüzde indirim (discountRate, maxDiscountAmount)", false, false, 1),
-            ("fixed_discount", "Tutar İndirim", "Sabit tutar indirim (discountAmount, minCartTotal)", false, false, 2),
-            ("buy_x_get_y", "Çok Al Az Öde", "X adet alana Y adet bedava (buyQuantity, getQuantity)", false, false, 3),
-            ("min_cart_discount", "Sepet Tutarı İndirimi", "Sepet eşiğini aşınca yüzde indirim (minCartTotal, discountRate)", false, true, 4)
+            ("discount", "İndirim (Kapsam+Koşul+Fayda)",
+             "Sepet ya da kapsamdaki ürünlere yüzde/tutar indirim; opsiyonel eşik koşuluyla.",
+             "product", true, true, false, 1, new()
+             {
+                 SFld("applyTo", "İndirim nereye", "select", true, def: "selected", options: new() {
+                     O("cart", "Sepet toplamına"), O("selected", "Kapsamdaki ürünlere") },
+                     help: "Kapsam = kampanyaya ilişkili ürünler (tümü/filtre/manuel)."),
+                 SFld("conditionType", "Koşul (eşik)", "select", true, def: "none", options: new() {
+                     O("none", "Koşulsuz"), O("cartAmount", "Sepet tutarı ≥"), O("cartQty", "Sepet adedi ≥"),
+                     O("scopeAmount", "Kapsam tutarı ≥"), O("scopeQty", "Kapsam adedi ≥") }),
+                 SFld("conditionValue", "Eşik değeri", "number", true, min: 0, visibleWhen: WhenNot("conditionType", "none")),
+                 SFld("benefitType", "İndirim şekli", "select", true, def: "percent", options: new() {
+                     O("percent", "Yüzde (%)"), O("amount", "Tutar (₺)") }),
+                 SFld("benefitValue", "İndirim değeri", "number", true, min: 0),
+                 SFld("maxDiscountAmount", "En çok indirim (₺)", "money", false, min: 0,
+                     visibleWhen: WhenEq("benefitType", "percent"), help: "Yüzde indirimde tavan tutar (opsiyonel)."),
+             }),
+
+            ("buy_x_get_y", "Al X, Y Bedava/İndirimli",
+             "Her X+Y adetlik grupta Y adet bedava/indirimli (1 alana 1 bedava, 3 al 2 öde, ikincisi %50).",
+             "product", true, false, false, 2, new()
+             {
+                 SFld("buyQuantity", "Tam fiyat ödenecek adet (X)", "integer", true, "adet", min: 1,
+                     help: "Örn. 3 al 2 öde → X=2, Y=1. 1 alana 1 bedava → X=1, Y=1."),
+                 SFld("getQuantity", "İndirimli/bedava adet (Y)", "integer", true, "adet", min: 1),
+                 SFld("getBenefitType", "Y ürünlerine uygulanan", "select", true, def: "free", options: new() {
+                     O("free", "Bedava (%100)"), O("percent", "Yüzde indirim"), O("amount", "Sabit fiyat/tutar") }),
+                 SFld("getBenefitValue", "Y indirim değeri", "number", true, min: 0, visibleWhen: WhenNot("getBenefitType", "free")),
+                 SFld("sameProduct", "Aynı üründen olmalı", "boolean", def: true),
+                 SFld("cheapestGetsBenefit", "En ucuz olan indirimli", "boolean", def: true),
+             }),
+
+            ("cross_group_gift", "Grup Al → Grup Hediye/İndirimli",
+             "A grubundan alım koşulu sağlanınca B (hediye) grubundan ürün bedava/indirimli.",
+             "product", true, false, false, 3, new()
+             {
+                 SFld("buyThresholdType", "Alım koşulu", "select", true, def: "qty", options: new() {
+                     O("qty", "Adet ≥"), O("amount", "Tutar ≥") }),
+                 SFld("buyThresholdValue", "Alım eşiği", "number", true, min: 1),
+                 SFld("giftQuantity", "Hediye/indirimli adet", "integer", true, "adet", min: 1),
+                 SFld("giftBenefitType", "Hediye grubuna uygulanan", "select", true, def: "free", options: new() {
+                     O("free", "Bedava"), O("percent", "Yüzde"), O("amount", "Tutar") }),
+                 SFld("giftBenefitValue", "Hediye indirim değeri", "number", false, min: 0, visibleWhen: WhenNot("giftBenefitType", "free")),
+             }),
+
+            ("bundle", "Kombin İndirimi",
+             "Belirli ürünler birlikte (kombin/takım) alınınca özel paket fiyatı.",
+             "product", true, false, false, 4, new()
+             {
+                 SFld("minBundleItems", "Kombin minimum ürün", "integer", true, "adet", min: 2),
+                 SFld("bundleBenefitType", "Kombin fiyatı", "select", true, def: "percent", options: new() {
+                     O("fixedPrice", "Sabit paket fiyatı"), O("percent", "Yüzde indirim"), O("amount", "Tutar indirim") }),
+                 SFld("bundleBenefitValue", "Kombin değeri", "number", true, min: 0),
+             }),
+
+            ("free_shipping", "Kargo Kampanyası",
+             "Sepet eşiği/ödeme yöntemine göre ücretsiz veya indirimli kargo.",
+             "shipping", false, false, true, 5, new()
+             {
+                 SFld("thresholdType", "Koşul", "select", true, def: "none", options: new() {
+                     O("none", "Koşulsuz"), O("cartAmount", "Sepet tutarı ≥") }),
+                 SFld("thresholdValue", "Sepet eşiği (₺)", "money", true, min: 0, visibleWhen: WhenEq("thresholdType", "cartAmount")),
+                 SFld("paymentMethods", "Ödeme yöntemi kısıtı", "select", false, def: "all", options: new() {
+                     O("all", "Tümü"), O("credit_card", "Kredi kartı") }),
+                 SFld("coverage", "Kargo indirimi", "select", true, def: "full", options: new() {
+                     O("full", "Ücretsiz"), O("percent", "Yüzde"), O("amount", "Tutar") }),
+                 SFld("coverageValue", "İndirim değeri", "number", false, min: 0, visibleWhen: WhenNot("coverage", "full")),
+             }),
+
+            ("review_reward", "Resimli Yorum Kampanyası",
+             "Fotoğraflı yorum yapan üyeye ödül (kupon/indirim). Tetiği satın alma değildir.",
+             "member", false, false, true, 6, new()
+             {
+                 SFld("benefitType", "Ödül", "select", true, def: "coupon", options: new() {
+                     O("coupon", "Kupon kodu"), O("percent", "Sonraki alışverişe %"), O("amount", "Sonraki alışverişe ₺") }),
+                 SFld("benefitValue", "Ödül değeri", "number", true, min: 0),
+             }),
         };
 
-        var mevcutKodlar = await context.CampaignTypes.Select(t => t.Code).ToListAsync();
-        var yeniler = tipler
-            .Where(t => !mevcutKodlar.Contains(t.Kod))
-            .Select(t => new ECSPros.Promotion.Domain.Entities.CampaignType
+        var mevcut = await context.CampaignTypes.IgnoreQueryFilters().ToListAsync();
+        int eklenen = 0, guncellenen = 0;
+        foreach (var t in tipler)
+        {
+            var e = mevcut.FirstOrDefault(x => x.Code == t.Kod);
+            if (e is null)
             {
-                Code = t.Kod,
-                NameI18n = new() { { "tr", t.Ad } },
-                DescriptionI18n = new() { { "tr", t.Aciklama } },
-                HandlerClass = $"CampaignEngine.{t.Kod}",
-                RequiresProducts = t.UrunIster,
-                IsStackable = t.Birlesir,
-                IsActive = true,
-                SortOrder = t.Sira
-            })
-            .ToList();
+                context.CampaignTypes.Add(new ECSPros.Promotion.Domain.Entities.CampaignType
+                {
+                    Code = t.Kod, NameI18n = new() { ["tr"] = t.Ad }, DescriptionI18n = new() { ["tr"] = t.Aciklama },
+                    HandlerClass = $"CampaignEngine.{t.Kod}", Scope = t.Scope, RequiresProducts = t.UrunIster,
+                    ProductPriceDisplay = t.FiyatGoster, IsStackable = t.Birlesir, IsActive = true,
+                    SortOrder = t.Sira, SettingsSchema = t.Sema
+                });
+                eklenen++;
+            }
+            else
+            {
+                e.NameI18n = new() { ["tr"] = t.Ad }; e.DescriptionI18n = new() { ["tr"] = t.Aciklama };
+                e.HandlerClass = $"CampaignEngine.{t.Kod}"; e.Scope = t.Scope; e.RequiresProducts = t.UrunIster;
+                e.ProductPriceDisplay = t.FiyatGoster; e.IsStackable = t.Birlesir; e.IsActive = true;
+                e.SortOrder = t.Sira; e.SettingsSchema = t.Sema; e.IsDeleted = false;
+                guncellenen++;
+            }
+        }
 
-        if (yeniler.Count == 0) return;
-        context.CampaignTypes.AddRange(yeniler);
+        // Birleştirilen eski tipler (discount altında toplandı) — pasifleştir (0 kampanya, veri kaybı yok).
+        var eskiKodlar = new[] { "percentage_discount", "fixed_discount", "min_cart_discount" };
+        int pasif = 0;
+        foreach (var e in mevcut.Where(x => eskiKodlar.Contains(x.Code) && x.IsActive))
+        {
+            e.IsActive = false; pasif++;
+        }
+
         await context.SaveChangesAsync();
-        Console.WriteLine($"✓ Seed: {yeniler.Count} kampanya tipi eklendi (CampaignEngine eşleşmeli).");
+        Console.WriteLine($"✓ Seed: kampanya tipleri — {eklenen} eklendi, {guncellenen} güncellendi, {pasif} eski tip pasifleştirildi.");
     }
 
     /// <summary>
