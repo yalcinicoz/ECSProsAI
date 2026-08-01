@@ -399,11 +399,14 @@ public sealed class LegacySyncService(
                 {
                     var pid = Guid.NewGuid();
                     productMap[a.oldId] = pid;
+                    // Ürün düzeyinde IsActive kolonu YOK (satış görünürlüğü M1'de kaldırıldı;
+                    // MigrationTool Faz 5 listesi bayat) — ürünün açıklığı IsSaleOpen +
+                    // kanal satırı IsActive'iyle yönetilir.
                     bool isActive = a.netAcik && a.satAcik;
                     await PgExecAsync(pg, $@"INSERT INTO {CAT}.products
-                        (""Id"",""ProductGroupId"",""Code"",""NameI18n"",""BasePrice"",""BaseCost"",""TaxRate"",""IsActive"",""IsSaleOpen"",
+                        (""Id"",""ProductGroupId"",""Code"",""NameI18n"",""BasePrice"",""BaseCost"",""TaxRate"",""IsSaleOpen"",
                          ""SupplierProductCode"",""Slug"",""Tags"",""CreatedAt"",""IsDeleted"")
-                        VALUES (@id,@gid,@code,@name::jsonb,@price,@cost,@tax,@act,@act,@ted,NULL,'[]'::jsonb,@created,false)", ct, tx,
+                        VALUES (@id,@gid,@code,@name::jsonb,@price,@cost,@tax,@act,@ted,NULL,'[]'::jsonb,@created,false)", ct, tx,
                         ("id", pid), ("gid", productGroupMap[a.grupId]), ("code", a.kod), ("name", I18n(a.ad)),
                         ("price", a.satis), ("cost", a.alis == 0m ? DBNull.Value : a.alis), ("tax", a.kdv), ("act", isActive),
                         ("ted", (object?)a.tedKod ?? DBNull.Value),
