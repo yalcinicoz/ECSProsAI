@@ -258,8 +258,17 @@ integration_logs'a. **ÜÇ kademeli güvenlik: MySqlConnection + WriteBack:Enabl
 Varsayılan: bağlantı boş + Enabled=false + DryRun=true. Geri-yazma INSERT'leri canlı juludedb'de
 transaction+ROLLBACK ile doğrulandı (4/4 şemaya uygun). ⚠️ restart bekliyor. **KARARLAR (gerçek yazımı
 açmadan önce kullanıcı onayı):** (a) orderNumber şeması — şu an yeni sistem no'su aynen (M/T legacy
-serisiyle çakışmaz); (b) legacy orderStatus (varsayılan "Onay Bekliyor"). **B1-B3 (SIRADA):** canlı
-API worker+MySQL (fiyat/stok sık, ürün/görsel seyrek) — katalog mutasyonu, ayrı dikkatli dilimler.
+serisiyle çakışmaz); (b) legacy orderStatus (varsayılan "Onay Bekliyor").
+**B1-B3 UYGULANDI (2026-08-01, dry-run varsayılan) ⚠️ restart bekliyor:** `LegacySyncService` +
+`LegacySyncWorker` (Api/Services/Legacy/) — eski DB'den periyodik senkron: B2 fiyat+kanal fiyatı+stok
+(Faz 26a/27/26c portu, varsayılan 10 dk), B3 görsel (Faz 26b portu + %90 emniyet freni, katalog
+turunda), B1 YENİ ürün kartları (keep-listesi kesimi 2026-07-09 SONRASI açılan + katalogda olmayan;
+ürün+varyant+özellik+görsel+mishar kanal satırları; grubu eşlenemeyen ATLANIR ve raporlanır, B-09).
+Üç kademe: `Legacy:MySqlConnection` + `Legacy:Sync:Enabled=true` + `DryRun=false` → gerçek yazım;
+anlamlı koşular integration_logs'a (sync_products/sync_images/sync_pricestock). İzole DRY-RUN canlı
+verilerle doğrulandı: B1 241 yeni ürün buldu (P-00022775 dahil, 0 grup-eşleme sorunu), görsel drift
+54+17, stok 995 güncelleme+2320 yeni+3280 sıfırlama. Vitrine yansıma cache TTL'iyle (≤10 dk;
+RemoveByPattern no-op). erp_variant_data yeni ürünlere yazılmaz (bilinen sınır).
 Detay: [[project-golive-migration-2026-07-23]].
 
 **2026-07-23 Mobil cihaz doğrulama altyapısı (kullanıcı kararı — sabit token YOK):** challenge → attestation (Android: Play Integrity gerçek implementasyon, GCP servis hesabı + paket adı config'i bekliyor; iOS App Attest FAZ 2) → 15 dk anonim device JWT + oturuma özel `signingSecret`. Device token'lı her istek `X-Timestamp+X-Nonce+X-Signature` (HMAC, gövde hash'li) taşır; nonce tek kullanımlık — replay 401 (`DeviceRequestGuardMiddleware`). `MobileGate:EnforceStoreTokens` **AÇILDI (aynı gün cutover, kullanıcı kararı)**: SSR her sayfaya 15 dk web token'ı gömer (`meta[ms-api-token]`), `_Layout.cshtml`'deki global fetch yaması `/api/*` çağrılarına otomatik ekler (26 view'a dokunulmadı); 10 dk'da bir sessiz yenileme, zincir sınırı 8 (bot HTML'den token çekip sonsuz yenileyemez). ⚠️ Sonuçlar: Postman/curl/Swagger'dan store uçları artık 401; h7-regression suite token'sız çağrı yaptığı için kırılacak (güncellenmeli); mobil ekip prod testi için Play Integrity config'i ya da izole ortam gerekli. `MobileAttestation:DevBypassSecret` yalnız test ortamında env var ile (prod'a ASLA yazılmaz). 12 senaryoluk izole test geçti (kapı 401, sahte attestation, challenge/nonce tekrarı, bozuk imza, device-token'la üye ucu 403, imzalı üye girişi). SIRADA (uygulama yayın kimliği gelince): GCP servis hesabı + PackageName config, App Attest sunucu doğrulaması, kapı cutover'ı.

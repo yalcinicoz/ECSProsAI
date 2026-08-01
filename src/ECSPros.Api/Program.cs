@@ -259,6 +259,10 @@ builder.Services.AddSingleton<ECSPros.Api.Services.Store.IFaturaPdfProxy, ECSPro
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceTokenService, ECSPros.Api.Services.Store.DeviceTokenService>();
 // Part B: eski sistem (juludedb) köprüsü — hata-güvenli, connection string boşsa no-op
 builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.ILegacyGateway, ECSPros.Api.Services.Legacy.LegacyGateway>();
+// Part B / B1-B3 (2026-08-01): eski sistemden fiyat/stok/görsel/yeni-ürün periyodik senkronu
+// (varsayılan KAPALI + DryRun; Legacy:Sync:Enabled + DryRun=false ile gerçek yazım)
+builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacySyncService>();
+builder.Services.AddHostedService<ECSPros.Api.Services.Legacy.LegacySyncWorker>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.PlayIntegrityVerifier>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.AppAttestVerifier>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.DevBypassVerifier>();
