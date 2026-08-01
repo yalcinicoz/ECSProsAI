@@ -259,7 +259,10 @@ Varsayılan: bağlantı boş + Enabled=false + DryRun=true. Geri-yazma INSERT'le
 transaction+ROLLBACK ile doğrulandı (4/4 şemaya uygun). ⚠️ restart bekliyor. **KARARLAR (gerçek yazımı
 açmadan önce kullanıcı onayı):** (a) orderNumber şeması — şu an yeni sistem no'su aynen (M/T legacy
 serisiyle çakışmaz); (b) legacy orderStatus (varsayılan "Onay Bekliyor").
-**B1-B3 UYGULANDI (2026-08-01, dry-run varsayılan) ⚠️ restart bekliyor:** `LegacySyncService` +
+**B1-B3 ✅ CANLIDA ÇALIŞIYOR (2026-08-01 akşam; restart yapıldı, 241 yeni ürün + stok drifti
+işlendi, fiyat/stok 10 dk kadansında; ilk koşuda yakalanan products.IsActive bayat-kolon hatası
+commit 82d832d ile düzeltildi — MigrationTool Faz 5 de aynı sebeple bayat, rerun öncesi düzeltilmeli):**
+`LegacySyncService` +
 `LegacySyncWorker` (Api/Services/Legacy/) — eski DB'den periyodik senkron: B2 fiyat+kanal fiyatı+stok
 (Faz 26a/27/26c portu, varsayılan 10 dk), B3 görsel (Faz 26b portu + %90 emniyet freni, katalog
 turunda), B1 YENİ ürün kartları (keep-listesi kesimi 2026-07-09 SONRASI açılan + katalogda olmayan;
