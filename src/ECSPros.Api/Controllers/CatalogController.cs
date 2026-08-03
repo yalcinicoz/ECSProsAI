@@ -38,6 +38,7 @@ using ECSPros.Catalog.Application.Queries.GetProductsByAttributeValue;
 using ECSPros.Catalog.Application.Queries.GetProductGroups;
 using ECSPros.Catalog.Application.Queries.GetProducts;
 using ECSPros.Catalog.Application.Queries.GetProductTags;
+using ECSPros.Catalog.Application.Queries.LookupProducts;
 using ECSPros.Api.Authorization;
 using ECSPros.Shared.Kernel.Authorization;
 using MediatR;
@@ -518,7 +519,20 @@ public class CatalogController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>Kod ve/veya Id listesinden ürünleri toplu çözer (kampanya manuel kapsam vb.).</summary>
+    [HttpPost("products/lookup")]
+    public async Task<IActionResult> LookupProducts([FromBody] LookupProductsRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new LookupProductsQuery(request.Codes, request.Ids), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+
+        return Ok(new { success = true, data = result.Value });
+    }
+
 }
+
+public record LookupProductsRequest(List<string>? Codes, List<Guid>? Ids);
 
 public record CreateProductRequest(
     Guid ProductGroupId,
