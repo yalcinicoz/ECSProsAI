@@ -82,8 +82,15 @@ public static class CampaignEngine
     }
 
     // ─── buy_x_get_y ─────────────────────────────────────────────────
-    // Settings: { "buyQuantity": 2, "getQuantity": 1 }
-    // Her ürün kendi içinde değerlendiriliyor (ucuzdan pahalıya ücretsiz)
+    // Settings: { "buyQuantity": X, "getQuantity": Y, "sameProduct": bool (vars. true),
+    //             "cheapestGetsBenefit": bool (vars. true),
+    //             "getBenefitType": "free"|"percent"|"amount", "getBenefitValue": n }
+    // sameProduct=true  → her kalem kendi içinde X+Y'lik setler kurar (eski davranış).
+    // sameProduct=false → kapsamdaki TÜM birimler tek havuzda toplanır; farklı ürünler
+    //                     birlikte set oluşturur (örn. 2 farklı üründen 1'er adet = 1 set).
+    // Y birimleri cheapestGetsBenefit'e göre en ucuzdan (true) ya da en pahalıdan (false)
+    // seçilir; free=%100, percent=birim fiyatın yüzdesi, amount=birim başına sabit tutar
+    // (birim fiyatı aşamaz).
     private static DiscountLine? ApplyBuyXGetY(
         Campaign campaign, string name,
         IReadOnlyList<CartLineItem> cartItems,
@@ -94,28 +101,58 @@ public static class CampaignEngine
         var getQty = (int)GetDecimal(settings, "getQuantity");
         if (buyQty <= 0 || getQty <= 0) return null;
 
+        var sameProduct = GetBool(settings, "sameProduct", defaultValue: true);
+        var cheapestFirst = GetBool(settings, "cheapestGetsBenefit", defaultValue: true);
+        var benefitType = GetString(settings, "getBenefitType") ?? "free";
+        var benefitValue = GetDecimal(settings, "getBenefitValue");
+        if (benefitType is "percent" or "amount" && benefitValue <= 0) return null;
+
         var affectedItems = applicableVariantIds.Count == 0
             ? cartItems.ToList()
             : cartItems.Where(i => applicableVariantIds.Contains(i.VariantId)).ToList();
+        if (affectedItems.Count == 0) return null;
+
+        // Havuzlar: sameProduct=true'da kalem başına, false'ta tek ortak havuz
+        IEnumerable<List<CartLineItem>> pools = sameProduct
+            ? affectedItems.Select(i => new List<CartLineItem> { i })
+            : new[] { affectedItems };
 
         decimal totalDiscount = 0;
         var affectedVariants = new List<Guid>();
 
-        foreach (var item in affectedItems)
+        foreach (var pool in pools)
         {
-            var totalQty = (int)item.Quantity;
-            var sets = totalQty / (buyQty + getQty);
+            // Birim listesi (adet kadar birim fiyat) — Y seçim sırası fiyat esaslı
+            var units = pool
+                .SelectMany(i => Enumerable.Repeat((i.VariantId, i.UnitPrice), (int)i.Quantity))
+                .ToList();
+            var sets = units.Count / (buyQty + getQty);
             if (sets <= 0) continue;
 
-            var freeQty = sets * getQty;
-            totalDiscount += Math.Round(freeQty * item.UnitPrice, 2);
-            affectedVariants.Add(item.VariantId);
+            var benefitUnits = (cheapestFirst
+                    ? units.OrderBy(u => u.UnitPrice)
+                    : units.OrderByDescending(u => u.UnitPrice))
+                .Take(sets * getQty)
+                .ToList();
+
+            foreach (var (variantId, unitPrice) in benefitUnits)
+            {
+                var indirim = benefitType switch
+                {
+                    "percent" => Math.Round(unitPrice * benefitValue / 100, 2),
+                    "amount" => Math.Min(benefitValue, unitPrice),
+                    _ => unitPrice // free
+                };
+                if (indirim <= 0) continue;
+                totalDiscount += indirim;
+                if (!affectedVariants.Contains(variantId)) affectedVariants.Add(variantId);
+            }
         }
 
         if (totalDiscount <= 0) return null;
 
         return new DiscountLine(campaign.Id, campaign.Code, name, "buy_x_get_y",
-            totalDiscount, affectedVariants);
+            Math.Round(totalDiscount, 2), affectedVariants);
     }
 
     // ─── min_cart_discount ───────────────────────────────────────────
@@ -139,6 +176,35 @@ public static class CampaignEngine
     }
 
     // ─── Yardımcı ────────────────────────────────────────────────────
+    private static bool GetBool(Dictionary<string, object> settings, string key, bool defaultValue)
+    {
+        if (!settings.TryGetValue(key, out var val) || val is null) return defaultValue;
+        return val switch
+        {
+            bool b => b,
+            string s => bool.TryParse(s, out var p) ? p : defaultValue,
+            System.Text.Json.JsonElement je => je.ValueKind switch
+            {
+                System.Text.Json.JsonValueKind.True => true,
+                System.Text.Json.JsonValueKind.False => false,
+                _ => defaultValue
+            },
+            _ => defaultValue
+        };
+    }
+
+    private static string? GetString(Dictionary<string, object> settings, string key)
+    {
+        if (!settings.TryGetValue(key, out var val) || val is null) return null;
+        return val switch
+        {
+            string s => s,
+            System.Text.Json.JsonElement je => je.ValueKind == System.Text.Json.JsonValueKind.String
+                            ? je.GetString() : je.ToString(),
+            _ => val.ToString()
+        };
+    }
+
     private static decimal GetDecimal(Dictionary<string, object> settings, string key)
     {
         if (!settings.TryGetValue(key, out var val)) return 0;

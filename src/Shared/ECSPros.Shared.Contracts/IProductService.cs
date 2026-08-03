@@ -28,4 +28,5 @@ public record VariantDisplayInfo(
     string ProductCode,
     Dictionary<string, string> ProductNameI18n,
     string? ImageUrl,
-    string? OptionsText);   // ör. "Beden: M, Renk: Beyaz"
+    string? OptionsText,            // ör. "Beden: M, Renk: Beyaz"
+    Guid ProductId = default);      // kampanya çözümlemesi ürün bazlı (sepet GET)

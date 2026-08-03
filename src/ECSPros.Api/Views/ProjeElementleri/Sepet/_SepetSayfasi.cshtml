@@ -250,6 +250,8 @@
             <div class="ms-siparis-satirlari">
                 <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Ürün Toplamı</span><span class="ms-siparis-deger ms-fiyat-standart" data-ms-sepet-urun-toplami>0,00 TL</span></div>
                 <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Kargo</span><span class="ms-siparis-deger ms-siparis-ucretsiz">Ücretsiz</span></div>
+                @* 2026-08-03: sepet-seviyesi kampanya indirimi (GET cart campaignDiscount) *@
+                <div class="ms-siparis-satiri" data-ms-sepet-kampanya-satiri hidden><span class="ms-siparis-etiket">Kampanya İndirimi <small class="ms-siparis-kupon-ozet-kodu" data-ms-sepet-kampanya-ad></small></span><span class="ms-siparis-deger ms-urun-fiyat-indirimli" data-ms-sepet-kampanya-tutar>-0,00 TL</span></div>
                 @* C3: kupon uygulanınca görünür *@
                 <div class="ms-siparis-satiri" data-ms-sepet-indirim-satiri hidden><span class="ms-siparis-etiket">Sepet İndirimi</span><span class="ms-siparis-deger ms-urun-fiyat-indirimli" data-ms-sepet-indirim>-0,00 TL</span></div>
             </div>
@@ -714,9 +716,18 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         if (urunToplami) { urunToplami.textContent = paraYaz(toplam); }
         const indirim = kuponDurum?.tutar || 0;
-        const odenecek = Math.max(0, toplam - indirim);
+        const kampanyaIndirim = kampanyaDurum?.tutar || 0;
+        const odenecek = Math.max(0, toplam - indirim - kampanyaIndirim);
         if (indirimAlani) { indirimAlani.textContent = "-" + paraYaz(indirim); }
         if (indirimSatiri) { indirimSatiri.hidden = !kuponDurum; }
+        const kampanyaSatiri = document.querySelector("[data-ms-sepet-kampanya-satiri]");
+        if (kampanyaSatiri) {
+            kampanyaSatiri.hidden = !kampanyaDurum;
+            const adAlani = kampanyaSatiri.querySelector("[data-ms-sepet-kampanya-ad]");
+            const tutarAlani = kampanyaSatiri.querySelector("[data-ms-sepet-kampanya-tutar]");
+            if (adAlani) { adAlani.textContent = kampanyaDurum?.ad || ""; }
+            if (tutarAlani) { tutarAlani.textContent = "-" + paraYaz(kampanyaIndirim); }
+        }
         odenecekler.forEach((alan) => { alan.textContent = paraYaz(odenecek); });
         kuponuTazele(toplam);
         tcknBanner(odenecek);
@@ -901,6 +912,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // Tasarımın sayfalar-arası kupon durumu sözleşmesi korunur: window.msSepetKuponDurumu +
     // sessionStorage msSepetKuponDurumu + "ms:sepet-kupon-degisti" event'i (ödeme sayfası okur).
     let kuponDurum = null;
+    // 2026-08-03: sepet-seviyesi kampanya (buy_x_get_y/min_cart) — sunucu hesaplar (GET cart),
+    // burada yalnız gösterilir ve ödenecek tutardan düşülür.
+    let kampanyaDurum = null;
     let kuponTazeleZamanlayici = null;
 
     const kuponDurumunuYayinla = () => {
@@ -1045,6 +1059,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const ciz = (sepet) => {
         const kalemler = sepet?.items || [];
         sepetId = sepet?.id || null;
+        kampanyaDurum = (sepet?.campaignDiscount || 0) > 0
+            ? { tutar: sepet.campaignDiscount,
+                ad: (sepet.campaigns || []).map((k) => k.name).filter(Boolean).join(", ") }
+            : null;
         konteyner.innerHTML = "";
         kalemler.forEach((kalem) => {
             kalemBilgileri.set(kalem.id, kalem); // silme anında "önceden" kaydı buradan

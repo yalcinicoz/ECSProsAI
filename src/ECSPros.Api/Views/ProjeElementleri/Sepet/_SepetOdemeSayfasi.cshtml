@@ -223,11 +223,9 @@
                 <div class="ms-siparis-satirlari">
                     <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Ürün Toplamı</span><span class="ms-siparis-deger ms-fiyat-standart" data-ms-odeme-urun-toplami data-ms-tckn-esik="@(ViewData["MsTcknEsik"] ?? 13000)">0,00 TL</span></div>
                     <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Kargo</span><span class="ms-siparis-deger ms-siparis-ucretsiz">Ücretsiz</span></div>
-                    @if (false)
-                    {
-                    @* Faz G: kampanya kaynaklı sepet indirimi *@
-                    <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Sepet İndirimi</span><span class="ms-siparis-deger ms-urun-fiyat-indirimli">-85,00 TL</span></div>
-                    }
+                    @* 2026-08-03: kampanya kaynaklı sepet indirimi — GET cart campaignDiscount'tan
+                       canlı yazılır (eski Faz G yer tutucusu gerçek veriye bağlandı). *@
+                    <div class="ms-siparis-satiri" data-ms-odeme-kampanya-satiri hidden><span class="ms-siparis-etiket">Kampanya İndirimi <small class="ms-siparis-kupon-ozet-kodu" data-ms-odeme-kampanya-ad></small></span><span class="ms-siparis-deger ms-urun-fiyat-indirimli" data-ms-odeme-kampanya-tutar>-0,00 TL</span></div>
                     <div class="ms-siparis-satiri" data-ms-odeme-kupon-satiri hidden><span class="ms-siparis-etiket">Kupon İndirimi <small class="ms-siparis-kupon-ozet-kodu" data-ms-odeme-kupon-ozet-kod>KART25</small></span><span class="ms-siparis-deger ms-urun-fiyat-indirimli" data-ms-odeme-kupon-ozet-indirim>-25,00 TL</span></div>
                     @* 2026-07-30: kapıda ödeme seçiliyken hizmet bedeli özet satırı — tutar
                        canlı script'ten yazılır, sunucu aynı bedeli sipariş toplamına ekler. *@
@@ -792,13 +790,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const toplamlar = () => {
         const toplam = (sepet?.items || []).reduce((t, k) => t + (k.lineTotal || 0), 0);
         const indirim = kupon?.tutar || 0;
+        // 2026-08-03: sepet-seviyesi kampanya indirimi — sunucu hesaplar (GET cart);
+        // checkout aynı serviyle (F4) aynı indirimi sipariş toplamına yazar.
+        const kampanyaIndirim = sepet?.campaignDiscount || 0;
         const masraf = kapidaBedeli();
         urunToplami.textContent = paraYaz(toplam);
+        const kampanyaSatiri = document.querySelector("[data-ms-odeme-kampanya-satiri]");
+        if (kampanyaSatiri) {
+            kampanyaSatiri.hidden = !(kampanyaIndirim > 0);
+            const adAlani = kampanyaSatiri.querySelector("[data-ms-odeme-kampanya-ad]");
+            const tutarAlani = kampanyaSatiri.querySelector("[data-ms-odeme-kampanya-tutar]");
+            if (adAlani) { adAlani.textContent = (sepet?.campaigns || []).map((k) => k.name).filter(Boolean).join(", "); }
+            if (tutarAlani) { tutarAlani.textContent = "-" + paraYaz(kampanyaIndirim); }
+        }
         const kapidaSatiri = document.querySelector("[data-ms-odeme-kapida-satiri]");
         if (kapidaSatiri) { kapidaSatiri.hidden = masraf === 0; }
         const kapidaTutar = document.querySelector("[data-ms-odeme-kapida-tutar]");
         if (kapidaTutar) { kapidaTutar.textContent = "+" + paraYaz(masraf); }
-        odenecekler.forEach((alan) => { alan.textContent = paraYaz(Math.max(0, toplam - indirim) + masraf); });
+        odenecekler.forEach((alan) => { alan.textContent = paraYaz(Math.max(0, toplam - indirim - kampanyaIndirim) + masraf); });
         return { toplam, indirim, masraf };
     };
 
