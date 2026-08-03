@@ -48,6 +48,12 @@ public interface IProductCampaignResolver
     Task<Dictionary<Guid, ProductCampaignInfo>> ResolveForProductsAsync(
         Guid firmPlatformId, IReadOnlyCollection<Guid> productIds, CancellationToken ct = default);
 
+    /// <summary>2026-08-03: ürün başına kapsam+dışlamadan geçen TÜM aktif kampanyalar
+    /// (öncelik azalan; ilk eleman = etkin/kazanan). Kart bandında birden çok kampanyanın
+    /// dönüşümlü gösterimi için — fiyat hesabı yine yalnız kazanandan yapılır.</summary>
+    Task<Dictionary<Guid, List<ProductCampaignInfo>>> ResolveAllForProductsAsync(
+        Guid firmPlatformId, IReadOnlyCollection<Guid> productIds, CancellationToken ct = default);
+
     /// <summary>F4 checkout: sepet için kampanyaları uygular — ürün-bazlı fiyat (fiyata) +
     /// sepet-seviyesi indirim (toplama). Sunucu-taraflı; istemci fiyatına güvenilmez.</summary>
     Task<CartCampaignResult> ResolveCartAsync(

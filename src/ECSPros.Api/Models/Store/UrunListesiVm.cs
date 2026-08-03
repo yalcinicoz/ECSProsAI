@@ -29,8 +29,14 @@ public sealed record UrunKartVm(
     string? Slug = null,                 // URL aktarımı 2b: kartın (seçili renk) gerçek URL slug'ı
     decimal? EskiFiyat = null,           // 2026-07-31: indirim öncesi (çizili) fiyat — CompareAtPrice > Fiyat ise
     string? KampanyaAdi = null,          // F3: kampanya adı/rozeti (varsa gösterilir)
-    decimal? KampanyaFiyat = null)       // F3: ürün-bazlı kampanyalı fiyat (null = sepette/yok)
+    decimal? KampanyaFiyat = null,       // F3: ürün-bazlı kampanyalı fiyat (null = sepette/yok)
+    IReadOnlyList<string>? KampanyaAdlari = null) // 2026-08-03: ürünü kapsayan TÜM kampanyalar — bantta dönüşümlü
 {
+    // Bantta gösterilecek kampanya listesi (çoklu yoksa tekile düşer).
+    public IReadOnlyList<string> KampanyaBantListesi => KampanyaAdlari is { Count: > 0 } liste
+        ? liste
+        : (KampanyaAdi is { Length: > 0 } tek ? new[] { tek } : System.Array.Empty<string>());
+
     // İndirim yüzdesi (CompareAtPrice > Fiyat ise) — tam sayı, rozet için ("-%23").
     public int? IndirimYuzdesi => EskiFiyat is { } e && e > Fiyat && e > 0
         ? (int)System.Math.Round((e - Fiyat) / e * 100m, System.MidpointRounding.AwayFromZero)
