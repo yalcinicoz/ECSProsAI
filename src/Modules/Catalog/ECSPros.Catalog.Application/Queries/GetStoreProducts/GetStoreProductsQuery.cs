@@ -67,7 +67,8 @@ public record StoreProductDto(
     Guid? MatchedColorValueId = null,    // Kabul testi 2026-07-22: aramadaki renk kelimesiyle eşleşen renk — kart o renkle gösterilir
     Guid? MainColorValueId = null,       // 2026-07-31: kartta GÖSTERİLEN ana görselin rengi (filtre_rengi) — detay linki bu renge (?color=) gitsin
     string? CampaignName = null,         // F3: kartta gösterilecek kampanya adı/rozeti (varsa)
-    decimal? CampaignPrice = null);      // F3: ürün-bazlı kampanyalı fiyat (null = yok/sepette)
+    decimal? CampaignPrice = null,       // F3: ürün-bazlı kampanyalı fiyat (null = yok/sepette)
+    List<string>? CampaignNames = null); // 2026-08-03: ürünü kapsayan TÜM kampanyalar — bantta dönüşümlü
 
 public class GetStoreProductsQueryHandler(
     ICatalogDbContext db,
@@ -404,15 +405,17 @@ public class GetStoreProductsQueryHandler(
             if (puanlar.TryGetValue(items[i].Code, out var p))
                 items[i] = items[i] with { Rating = p.Average, ReviewCount = p.Count };
 
-        // F3: kart kampanyası — ürün başına etkin kampanya (F2 resolver); kampanyalı fiyat MinPrice üzerinden.
-        var kampanyalar = await campaignResolver.ResolveForProductsAsync(
+        // F3: kart kampanyası — ürün başına kampanyalar (F2 resolver); kampanyalı fiyat MinPrice üzerinden.
+        // 2026-08-03: tüm eşleşen kampanyalar döner (bantta dönüşümlü); fiyat yalnız kazanandan (ilk).
+        var kampanyalar = await campaignResolver.ResolveAllForProductsAsync(
             request.FirmPlatformId, items.Select(i => i.Id).ToList(), ct);
         for (var i = 0; i < items.Count; i++)
-            if (kampanyalar.TryGetValue(items[i].Id, out var kmp))
+            if (kampanyalar.TryGetValue(items[i].Id, out var kmpListe) && kmpListe.Count > 0)
                 items[i] = items[i] with
                 {
-                    CampaignName = kmp.BadgeLabel ?? kmp.Name,
-                    CampaignPrice = CampaignPricing.EffectivePrice(kmp, items[i].MinPrice)
+                    CampaignName = kmpListe[0].BadgeLabel ?? kmpListe[0].Name,
+                    CampaignPrice = CampaignPricing.EffectivePrice(kmpListe[0], items[i].MinPrice),
+                    CampaignNames = kmpListe.Select(k => k.BadgeLabel ?? k.Name).ToList()
                 };
 
         return Result.Success(new PagedResult<StoreProductDto>(items, total, request.Page, request.PageSize));

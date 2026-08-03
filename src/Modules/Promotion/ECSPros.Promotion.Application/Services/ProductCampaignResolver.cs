@@ -28,25 +28,28 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
             .ToListAsync(ct);
     }
 
-    /// <summary>Her ürün için en yüksek öncelikli, kapsam+dışlama denetiminden geçen kampanya.</summary>
-    private static Dictionary<Guid, Campaign> EtkinKampanya(List<Campaign> campaigns, IEnumerable<Guid> productIds)
+    /// <summary>Her ürün için kapsam+dışlama denetiminden geçen TÜM kampanyalar (öncelik azalan).</summary>
+    private static Dictionary<Guid, List<Campaign>> UygunKampanyalar(List<Campaign> campaigns, IEnumerable<Guid> productIds)
     {
         var scope = campaigns.ToDictionary(c => c.Id,
             c => c.Products.Where(p => p.ProductId.HasValue).Select(p => p.ProductId!.Value).ToHashSet());
         var excl = campaigns.ToDictionary(c => c.Id,
             c => c.Exclusions.Where(e => e.ProductId.HasValue).Select(e => e.ProductId!.Value).ToHashSet());
 
-        var result = new Dictionary<Guid, Campaign>();
+        var result = new Dictionary<Guid, List<Campaign>>();
         foreach (var pid in productIds.Distinct())
             foreach (var c in campaigns) // öncelik azalan
             {
                 if (!(c.FillType == "all" || scope[c.Id].Contains(pid))) continue;
                 if (excl[c.Id].Contains(pid)) continue;
-                result[pid] = c;
-                break;
+                (result.TryGetValue(pid, out var liste) ? liste : result[pid] = new()).Add(c);
             }
         return result;
     }
+
+    /// <summary>Her ürün için en yüksek öncelikli, kapsam+dışlama denetiminden geçen kampanya.</summary>
+    private static Dictionary<Guid, Campaign> EtkinKampanya(List<Campaign> campaigns, IEnumerable<Guid> productIds)
+        => UygunKampanyalar(campaigns, productIds).ToDictionary(kv => kv.Key, kv => kv.Value[0]);
 
     public async Task<Dictionary<Guid, ProductCampaignInfo>> ResolveForProductsAsync(
         Guid firmPlatformId, IReadOnlyCollection<Guid> productIds, CancellationToken ct = default)
@@ -59,6 +62,20 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
 
         foreach (var (pid, c) in EtkinKampanya(campaigns, productIds))
             result[pid] = BuildInfo(c);
+        return result;
+    }
+
+    public async Task<Dictionary<Guid, List<ProductCampaignInfo>>> ResolveAllForProductsAsync(
+        Guid firmPlatformId, IReadOnlyCollection<Guid> productIds, CancellationToken ct = default)
+    {
+        var result = new Dictionary<Guid, List<ProductCampaignInfo>>();
+        if (productIds.Count == 0 || firmPlatformId == Guid.Empty) return result;
+
+        var campaigns = await AktifKampanyalarAsync(firmPlatformId, ct);
+        if (campaigns.Count == 0) return result;
+
+        foreach (var (pid, liste) in UygunKampanyalar(campaigns, productIds))
+            result[pid] = liste.Select(BuildInfo).ToList();
         return result;
     }
 

@@ -154,6 +154,23 @@
             gorsel.src = "/images/no-image.svg";
         }, true);
     </script>
+    @* 2026-08-03: kart kampanya bandı rotasyonu — bir ürünü birden çok kampanya kapsıyorsa
+       adlar data-ms-kampanya-adlar'da "|" ile taşınır ve 3 sn'de bir dönüşümlü gösterilir.
+       Her turda DOM taranır: continuation ile sonradan eklenen kartlar da kapsanır. *@
+    <script>
+        (() => {
+            let tur = 0;
+            window.setInterval(() => {
+                const bantlar = document.querySelectorAll("[data-ms-kampanya-adlar]");
+                if (!bantlar.length) { return; }
+                tur++;
+                bantlar.forEach((bant) => {
+                    const adlar = (bant.dataset.msKampanyaAdlar || "").split("|").filter(Boolean);
+                    if (adlar.length > 1) { bant.textContent = adlar[tur % adlar.length]; }
+                });
+            }, 3000);
+        })();
+    </script>
     @* 2026-07-17: sayfa başına dön float butonu — 600px kaydırma sonrası görünür,
        mobilde alt bar/sepet sabit aksiyonunun üstünde konumlanır (CSS). *@
     <button class="ms-sayfa-basi-buton" type="button" data-ms-sayfa-basi aria-label="Sayfa başına dön" hidden>

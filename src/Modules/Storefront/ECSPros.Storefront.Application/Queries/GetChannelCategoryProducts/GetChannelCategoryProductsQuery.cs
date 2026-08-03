@@ -86,7 +86,8 @@ public record ChannelCategoryProductItemDto(
     decimal? CompareAtPrice = null,                  // 2026-07-31: indirim öncesi (çizili) fiyat — CompareAt > satış fiyatı ise
     string? VideoUrl = null,                         // H5: ilk aktif videonun URL'i — kart video rozeti (null ise rozet yok)
     string? CampaignName = null,                     // F3: kartta gösterilecek kampanya adı/rozeti (varsa)
-    decimal? CampaignPrice = null);                  // F3: ürün-bazlı kampanyalı fiyat (null = yok/sepette)
+    decimal? CampaignPrice = null,                   // F3: ürün-bazlı kampanyalı fiyat (null = yok/sepette)
+    List<string>? CampaignNames = null);             // 2026-08-03: ürünü kapsayan TÜM kampanyalar — bantta dönüşümlü
 
 public class GetChannelCategoryProductsQueryHandler(
     IStorefrontDbContext sfDb,
@@ -170,9 +171,10 @@ public class GetChannelCategoryProductsQueryHandler(
             .GroupBy(v => kodById[v.ProductId])
             .ToDictionary(g => g.Key, g => g.First().Url!);
 
-        // F3: kart kampanyası — ürün başına etkin kampanya (F2 resolver). Puan/video gibi cache DIŞINDA
+        // F3: kart kampanyası — ürün başına kampanyalar (F2 resolver). Puan/video gibi cache DIŞINDA
         // (kampanya açılınca/kapanınca TTL beklemeden yansır). Kod bazlı eşlenir.
-        var kampanyalar = await campaignResolver.ResolveForProductsAsync(platformId, pidler, ct);
+        // 2026-08-03: tüm eşleşen kampanyalar döner (bantta dönüşümlü); fiyat yalnız kazanandan (ilk).
+        var kampanyalar = await campaignResolver.ResolveAllForProductsAsync(platformId, pidler, ct);
         var kampanyaByKod = kampanyalar
             .Where(kv => kodById.ContainsKey(kv.Key))
             .ToDictionary(kv => kodById[kv.Key], kv => kv.Value);
@@ -186,12 +188,16 @@ public class GetChannelCategoryProductsQueryHandler(
                 yeni = yeni with { Rating = Math.Round(p.Ortalama, 1), ReviewCount = p.Sayi };
             if (videolar.TryGetValue(yeni.Code, out var vurl))
                 yeni = yeni with { VideoUrl = vurl };
-            if (kampanyaByKod.TryGetValue(yeni.Code, out var kmp))
+            if (kampanyaByKod.TryGetValue(yeni.Code, out var kmpListe) && kmpListe.Count > 0)
+            {
+                var kazanan = kmpListe[0];
                 yeni = yeni with
                 {
-                    CampaignName = kmp.BadgeLabel ?? kmp.Name,
-                    CampaignPrice = CampaignPricing.EffectivePrice(kmp, yeni.BasePrice)
+                    CampaignName = kazanan.BadgeLabel ?? kazanan.Name,
+                    CampaignPrice = CampaignPricing.EffectivePrice(kazanan, yeni.BasePrice),
+                    CampaignNames = kmpListe.Select(k => k.BadgeLabel ?? k.Name).ToList()
                 };
+            }
             items[i] = yeni;
         }
         return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
