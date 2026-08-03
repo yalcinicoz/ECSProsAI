@@ -54,6 +54,11 @@
                     <div class="ms-ana-navigasyon-sepet-urun-listesi" data-ms-sepet-urun-listesi>
                         <p class="ms-ana-navigasyon-sepet-bos" data-ms-sepet-bos>Sepetiniz henüz boş.</p>
                     </div>
+                    @* 2026-08-03: sepet-seviyesi kampanya indirimi (GET cart campaignDiscount) *@
+                    <div class="ms-ana-navigasyon-sepet-ozet" data-ms-sepet-kampanya-satiri hidden>
+                        <span data-ms-sepet-kampanya-ad>Kampanya İndirimi</span>
+                        <strong class="ms-urun-fiyat-indirimli" data-ms-sepet-kampanya-tutar>-0,00 TL</strong>
+                    </div>
                     <div class="ms-ana-navigasyon-sepet-ozet">
                         <span>Sepet Toplamı</span>
                         <strong class="ms-urun-fiyat" data-ms-sepet-toplam>0,00 TL</strong>
@@ -157,6 +162,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (adetAlani) { adetAlani.textContent = `${adet} ürün`; }
         if (toplamAlani) { toplamAlani.textContent = fiyatYaz(sepet?.subtotal || 0); }
+        // Sepet-seviyesi kampanya indirimi (2026-08-03) — varsa satır açılır, kampanya adı yazılır
+        const kampanyaSatiri = sepetAlani.querySelector("[data-ms-sepet-kampanya-satiri]");
+        if (kampanyaSatiri) {
+            const kampanyaIndirim = sepet?.campaignDiscount || 0;
+            kampanyaSatiri.hidden = !(kampanyaIndirim > 0);
+            if (kampanyaIndirim > 0) {
+                const adAlaniK = kampanyaSatiri.querySelector("[data-ms-sepet-kampanya-ad]");
+                const tutarAlaniK = kampanyaSatiri.querySelector("[data-ms-sepet-kampanya-tutar]");
+                const adlar = (sepet?.campaigns || []).map((k) => k.name).filter(Boolean).join(", ");
+                if (adAlaniK) { adAlaniK.textContent = adlar || "Kampanya İndirimi"; }
+                if (tutarAlaniK) { tutarAlaniK.textContent = "-" + fiyatYaz(kampanyaIndirim); }
+            }
+        }
         if (liste) {
             liste.innerHTML = kalemler.length
                 ? kalemler.map(satirHtml).join("")

@@ -121,6 +121,7 @@ public class CatalogProductService(ICatalogDbContext db) : IProductService
                 v.ProductCode,
                 v.NameI18n,
                 GorselCoz(v.Id, v.ProductId),
-                ozetByVariant.TryGetValue(v.Id, out var ozet) && ozet.Length > 0 ? ozet : null));
+                ozetByVariant.TryGetValue(v.Id, out var ozet) && ozet.Length > 0 ? ozet : null,
+                v.ProductId));
     }
 }
