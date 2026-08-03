@@ -23,4 +23,52 @@
             window.location.href = hizli ? "/odeme?hizli=1" : "/odeme";
         });
     });
+
+    // 2026-08-03: teslimat kapısı — sayfaya HANGİ yoldan gelinirse gelinsin (mini sepetteki
+    // "Siparişi Tamamla" düz /teslimat linkidir, doğrudan URL, geri tuşu) üye değilse ve
+    // misafir tercihi yoksa giriş modalı açılır. Önceden kapı yalnız /sepet'in düğmesindeydi;
+    // buraya kapısız gelen kullanıcı "Misafir Olarak Devam Et"e bassa da bayrak yazılmıyor
+    // ve giriş modalı döngüye giriyordu.
+    document.addEventListener("DOMContentLoaded", () => {
+        const girisli = () => !!localStorage.getItem("ecspros_member_token");
+        const misafir = () => sessionStorage.getItem("msMisafirSiparis") === "1";
+
+        if (!girisli() && !misafir()) {
+            try { sessionStorage.setItem("msBekleyenTeslimat", "1"); } catch { }
+            document.querySelector("[data-ms-giris-modal-ac]")?.click();
+        }
+
+        // Girişle devam: merge sonrası tetiklenen ms:uye-giris — adres listesi üye
+        // verisiyle gelsin diye sayfa yeniden yüklenir (?hizli=1 URL'de korunur).
+        document.addEventListener("ms:uye-giris", () => {
+            try { sessionStorage.removeItem("msBekleyenTeslimat"); } catch { }
+            window.location.reload();
+        });
+
+        // Misafirle devam: bu sayfada modal nereden açılmış olursa olsun (kapı, "giriş
+        // yapın" linki, "Yeni Adres Ekle") misafir seçimi misafir akışı demektir —
+        // bayrak yazılır, sayfa misafir görünümüyle (adres formu açık) yeniden yüklenir.
+        document.querySelectorAll(".ms-giris-buton-misafir").forEach((buton) => {
+            buton.addEventListener("click", () => {
+                try {
+                    sessionStorage.removeItem("msBekleyenTeslimat");
+                    sessionStorage.setItem("msMisafirSiparis", "1");
+                } catch { }
+                window.location.reload();
+            });
+        });
+
+        // Seçimsiz kapanış (X / kaplama): kapı bekliyorken vazgeçildi → sepete dön;
+        // teslimatta giriş/misafir seçimi olmadan kalınmaz. Başarılı giriş modalı
+        // programatik kapatır (token o anda yazılmıştır) — o kapanış vazgeçme sayılmaz.
+        document.querySelectorAll("[data-ms-giris-modal-kapat]").forEach((eleman) => {
+            if (eleman.classList.contains("ms-giris-buton-misafir")) { return; }
+            eleman.addEventListener("click", () => {
+                if (girisli()) { return; }
+                if (sessionStorage.getItem("msBekleyenTeslimat") !== "1") { return; }
+                try { sessionStorage.removeItem("msBekleyenTeslimat"); } catch { }
+                window.location.href = "/sepet";
+            });
+        });
+    });
 </script>
