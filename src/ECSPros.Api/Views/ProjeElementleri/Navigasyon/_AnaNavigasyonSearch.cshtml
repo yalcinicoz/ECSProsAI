@@ -326,10 +326,47 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 300);
         };
 
+        // ── Görsel arama köprüsü (2026-08-03) ──
+        // site.js sonuçları dropdown'a basar (parse-anı dinleyicisi bizden önce çalışır);
+        // burada sonuç KODLARINDAN /urunler?codes= URL'i kurulur: "Arama Sonuçları" başlık
+        // satırına (dropdown'ın EN ÜSTÜ — alttaki link scroll'suz görünmüyordu) Tümünü Gör
+        // eklenir ve Enter aynı sayfaya götürür. Kullanıcı yazmaya dönünce köprü düşer.
+        let gorselAramaUrl = "";
+        const gorselKopruyuKaldir = () => {
+            gorselAramaUrl = "";
+            aramaAlani.querySelector("[data-ms-gorsel-tumunu-gor]")?.remove();
+        };
+        document.addEventListener("ms:gorsel-arama-sonuc", (olay) => {
+            gorselKopruyuKaldir();
+            const kodlar = [...new Set((olay.detail?.results || [])
+                .map((r) => r.modelCode).filter(Boolean))];
+            if (!kodlar.length) { return; }
+            gorselAramaUrl = "/urunler?codes=" + encodeURIComponent(kodlar.join(","));
+            const ustSatir = aramaAlani.querySelector("[data-ms-arama-sonuc] .ms-ana-navigasyon-urunler-ust");
+            if (!ustSatir) { return; }
+            const link = document.createElement("a");
+            link.className = "ms-ana-navigasyon-tumunu-gor";
+            link.setAttribute("data-ms-gorsel-tumunu-gor", "");
+            link.href = gorselAramaUrl;
+            link.innerHTML = `Tümünü Gör
+                <svg class="ms-ana-navigasyon-tumunu-gor-ikon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                </svg>`;
+            ustSatir.appendChild(link);
+        });
+
         [input, panelInput].filter(Boolean).forEach((aramaInput) => {
-            aramaInput.addEventListener("input", () => canliAra(aramaInput.value));
+            aramaInput.addEventListener("input", () => {
+                gorselKopruyuKaldir(); // kullanıcı yazmaya döndü — görsel arama bağlamı düşer
+                canliAra(aramaInput.value);
+            });
             aramaInput.addEventListener("keydown", (olay) => {
-                if (olay.key === "Enter" && aramaInput.value.trim().length >= 2) {
+                if (olay.key !== "Enter") { return; }
+                if (gorselAramaUrl) { window.location.href = gorselAramaUrl; return; }
+                // Görsel arama modunda kod listesi boşsa Enter metin aramasına düşmesin
+                // (input'ta site.js'in yazdığı "Görsel arama" yer tutucusu durur)
+                if (aramaInput.value.trim() === "Görsel arama") { return; }
+                if (aramaInput.value.trim().length >= 2) {
                     sonAramaKaydet(aramaInput.value);
                     window.location.href = tumSonucUrl(aramaInput.value.trim());
                 }
