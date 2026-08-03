@@ -193,15 +193,44 @@ public class CheckoutCommandHandler(
 
         db.Orders.Add(order);
 
-        foreach (var item in request.Items)
+        // 2026-08-03: kampanya VE kupon indirimi kalemlere AĞIRLIKLI dağıtılarak yazılır —
+        // iade tutarı (Total/Quantity) müşterinin gerçekte ödediği fiyattan hesaplanır;
+        // etiket fiyatından iade edilmez. TotalDiscount aynı toplamları zaten içeriyor.
+        // Kampanya payı resolver'dan (kapsam kalemleri), kupon payı TÜM kalemlere kampanya
+        // sonrası satır tutarı oranında; kuruş artığı son kaleme, pay satır tutarını aşamaz.
+        var kalemSayisi = request.Items.Count;
+        var kalemBrut = new decimal[kalemSayisi];
+        var kalemPay = new decimal[kalemSayisi];
+        for (var i = 0; i < kalemSayisi; i++)
         {
-            var birimFiyat = EtkinFiyat(item.VariantId);   // SUNUCU fiyatı + ürün-bazlı kampanya (istemci UnitPrice değil)
-            // 2026-08-03: sepet-seviyesi kampanya indirimi kaleme AĞIRLIKLI dağıtılmış payıyla
-            // yazılır — iade tutarı (Total/Quantity) müşterinin gerçekte ödediği fiyattan hesaplanır;
-            // etiket fiyatından iade edilmez. TotalDiscount aynı toplamı zaten içeriyor.
-            var kalemIndirim = Math.Clamp(
+            var item = request.Items[i];
+            kalemBrut[i] = item.Quantity * EtkinFiyat(item.VariantId);
+            kalemPay[i] = Math.Clamp(
                 kampanyaSonuc.ItemDiscounts?.GetValueOrDefault(item.VariantId) ?? 0m,
-                0m, item.Quantity * birimFiyat);
+                0m, kalemBrut[i]);
+        }
+
+        var kuponToplam = Math.Clamp(request.CouponDiscount ?? 0m, 0m,
+            kalemBrut.Sum() - kalemPay.Sum());
+        var kuponBazToplam = kalemBrut.Select((b, i) => b - kalemPay[i]).Sum();
+        if (kuponToplam > 0 && kuponBazToplam > 0)
+        {
+            decimal dagitilan = 0;
+            for (var i = 0; i < kalemSayisi; i++)
+            {
+                var baz = kalemBrut[i] - kalemPay[i];
+                var pay = i == kalemSayisi - 1
+                    ? kuponToplam - dagitilan
+                    : Math.Round(kuponToplam * baz / kuponBazToplam, 2);
+                pay = Math.Clamp(pay, 0, baz);
+                dagitilan += pay;
+                kalemPay[i] += pay;
+            }
+        }
+
+        for (var i = 0; i < kalemSayisi; i++)
+        {
+            var item = request.Items[i];
             db.OrderItems.Add(new OrderItemEntity
             {
                 OrderId = order.Id,
@@ -211,11 +240,11 @@ public class CheckoutCommandHandler(
                 ProductName = item.ProductName,
                 VariantInfo = item.VariantInfo,
                 Quantity = item.Quantity,
-                UnitPrice = birimFiyat,
-                Subtotal = item.Quantity * birimFiyat,
-                DiscountAmount = kalemIndirim,
+                UnitPrice = EtkinFiyat(item.VariantId),
+                Subtotal = kalemBrut[i],
+                DiscountAmount = kalemPay[i],
                 TaxAmount = 0,
-                Total = item.Quantity * birimFiyat - kalemIndirim,
+                Total = kalemBrut[i] - kalemPay[i],
                 Status = "pending"
             });
         }

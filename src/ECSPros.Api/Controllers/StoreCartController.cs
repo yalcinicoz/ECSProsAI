@@ -35,6 +35,7 @@ public class StoreCartController(IMediator mediator, ICoreDbContext coreDb, IMem
         [FromQuery] Guid? cartId,
         [FromQuery] Guid? firmPlatformId,
         [FromQuery] string? sessionId,
+        [FromQuery] string? excludedVariantIds,
         CancellationToken ct)
     {
         Guid? memberId = null;
@@ -44,7 +45,16 @@ public class StoreCartController(IMediator mediator, ICoreDbContext coreDb, IMem
             if (sub != null && Guid.TryParse(sub, out var mid)) memberId = mid;
         }
 
-        var result = await mediator.Send(new GetCartQuery(cartId, memberId, sessionId, firmPlatformId), ct);
+        // 2026-08-03: sepet sayfasındaki checkbox seçimi — dışlanan varyantlar kampanya
+        // hesabına girmez (kalem listesi değişmez); virgülle ayrılmış Guid listesi.
+        List<Guid>? dislananlar = null;
+        if (!string.IsNullOrWhiteSpace(excludedVariantIds))
+            dislananlar = excludedVariantIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => Guid.TryParse(s, out var g) ? g : Guid.Empty)
+                .Where(g => g != Guid.Empty)
+                .ToList();
+
+        var result = await mediator.Send(new GetCartQuery(cartId, memberId, sessionId, firmPlatformId, dislananlar), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }

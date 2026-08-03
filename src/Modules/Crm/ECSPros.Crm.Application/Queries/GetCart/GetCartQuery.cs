@@ -11,7 +11,10 @@ public record GetCartQuery(
     Guid? CartId = null,
     Guid? MemberId = null,
     string? SessionId = null,
-    Guid? FirmPlatformId = null) : IRequest<Result<CartDto?>>;
+    Guid? FirmPlatformId = null,
+    List<Guid>? ExcludedVariantIds = null) : IRequest<Result<CartDto?>>;
+    // ExcludedVariantIds (2026-08-03): sepet sayfasında checkbox'ı KALDIRILAN varyantlar —
+    // kalem listesinde kalırlar ama kampanya hesabına girmezler (seçim anında yeniden hesap).
 
 // Kampanya alanları (2026-08-03, additive): CampaignDiscount sepet-seviyesi indirim
 // (buy_x_get_y/min_cart — ödenecek tutardan düşülür), Campaigns uygulanan kampanya özetleri.
@@ -73,8 +76,11 @@ public class GetCartQueryHandler(
         var kampanya = new CartCampaignResult(new Dictionary<Guid, decimal>(), 0m, []);
         try
         {
+            var dislananlar = request.ExcludedVariantIds is { Count: > 0 }
+                ? request.ExcludedVariantIds.ToHashSet() : null;
             var kalemler = cart.Items
-                .Where(i => gosterim.TryGetValue(i.VariantId, out var g) && g.ProductId != Guid.Empty)
+                .Where(i => (dislananlar is null || !dislananlar.Contains(i.VariantId))
+                         && gosterim.TryGetValue(i.VariantId, out var g) && g.ProductId != Guid.Empty)
                 .Select(i => new CartCampaignItem(
                     i.VariantId, gosterim[i.VariantId].ProductId, i.Quantity, i.AddedPrice))
                 .ToList();

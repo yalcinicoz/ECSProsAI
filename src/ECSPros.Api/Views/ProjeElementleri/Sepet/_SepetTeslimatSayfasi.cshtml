@@ -577,6 +577,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const p = new URLSearchParams({ firmPlatformId: platformId });
     if (cartId) { p.set("cartId", cartId); }
     if (sid) { p.set("sessionId", sid); }
+    // 2026-08-03: sepetteki seçim dışı kalemler kampanya hesabına da girmesin —
+    // sunucu campaignDiscount'u seçili kalemler üzerinden hesaplar.
+    if (!hizliMod) {
+        try {
+            const disiListe = JSON.parse(sessionStorage.getItem("msSepetSecimDisi") || "[]");
+            if (disiListe.length) { p.set("excludedVariantIds", disiListe.join(",")); }
+        } catch { }
+    }
     let sepet = null;
     try {
         const cevap = await fetch("/api/store/cart?" + p.toString(),

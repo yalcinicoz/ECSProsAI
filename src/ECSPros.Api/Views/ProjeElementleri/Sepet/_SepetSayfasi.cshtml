@@ -915,8 +915,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         satir.querySelector("[data-ms-sepet-urun-checkbox]").addEventListener("change", () => {
-            toplamlariGuncelle();
+            toplamlariGuncelle();     // seçimi kalıcılaştırır (secimiKaydet) + yerel toplamlar
             tumunuSecDurumu();
+            // 2026-08-03: seçim kampanya hesabını değiştirir (set bozulur/kurulur) —
+            // sunucudan seçili kalemlerle anında yeniden hesapla.
+            yenile();
         });
 
         satir.querySelector("[data-ms-sepet-sil]").addEventListener("click", () => {
@@ -1099,6 +1102,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         tumunuSec.indeterminate = false;
         toplamlariGuncelle();
+        yenile(); // 2026-08-03: toplu seçim de kampanya hesabını anında tazeler
     });
 
     const ciz = (sepet) => {
@@ -1124,22 +1128,30 @@ document.addEventListener("DOMContentLoaded", () => {
         tumunuSecDurumu();
     };
 
+    // 2026-08-03: seçim (checkbox) kampanya hesabına anında yansır — dışlanan varyantlar
+    // sunucuya geçilir, kampanya yalnız seçili kalemler üzerinden hesaplanır. Yarış koruması:
+    // hızlı tıklamalarda yalnız en son isteğin cevabı çizilir.
+    let yenileIstekNo = 0;
     const yenile = async () => {
         const sid = localStorage.getItem("ecspros_sid");
         const cartId = localStorage.getItem("ecspros_cart");
         // 2026-07-22: üyeyken token da gönderilir — cartId/sid yokken de üye sepeti bulunur
         const uyeToken = localStorage.getItem("ecspros_member_token");
         if (!sid && !cartId && !uyeToken) { ciz(null); return; }
+        const istek = ++yenileIstekNo;
         try {
             const parametreler = new URLSearchParams({ firmPlatformId: platformId });
             if (cartId) { parametreler.set("cartId", cartId); }
             if (sid) { parametreler.set("sessionId", sid); }
+            const disi = [...secimDisiOku()];
+            if (disi.length) { parametreler.set("excludedVariantIds", disi.join(",")); }
             const cevap = await fetch("/api/store/cart?" + parametreler.toString(),
                 uyeToken ? { headers: { Authorization: "Bearer " + uyeToken } } : undefined);
             const veri = await cevap.json().catch(() => null);
+            if (istek !== yenileIstekNo) { return; } // daha yeni bir istek başladı
             ciz(veri?.success ? veri.data : null);
             stokHaberDurumunuIsaretle(); // C9: tükendi satırlarındaki mevcut kayıtları işaretle
-        } catch { ciz(null); }
+        } catch { if (istek === yenileIstekNo) { ciz(null); } }
     };
 
     yenile().then(() => {
