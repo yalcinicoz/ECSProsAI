@@ -32,10 +32,15 @@ public record AppliedCampaign(string Code, string Name, decimal Amount, string K
 /// kampanya indirimi (buy_x_get_y/min_cart…) + uygulanan kampanya özeti. Çift sayım yok: her ürünün
 /// TEK etkin kampanyası vardır — ürün-bazlıysa fiyata yansır, cart_only ise indirime.
 /// </summary>
+/// <summary>ItemDiscounts (2026-08-03, additive): sepet-seviyesi indirimin kalemlere
+/// AĞIRLIKLI dağılımı (varyant → satır indirimi; satır tutarına oranla, kuruş artığı son
+/// kaleme). buy_x_get_y'de "en ucuz bedava" TUTARI belirler; müşteriye tek kalemde değil
+/// sete katılan tüm kalemlere yansıtılır — iade tutarı kalem bazında doğru olur.</summary>
 public record CartCampaignResult(
     Dictionary<Guid, decimal> ItemUnitPrices,
     decimal CartDiscount,
-    List<AppliedCampaign> Applied);
+    List<AppliedCampaign> Applied,
+    Dictionary<Guid, decimal>? ItemDiscounts = null);
 
 public interface IProductCampaignResolver
 {

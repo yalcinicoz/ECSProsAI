@@ -89,6 +89,10 @@
                                 <button class="ms-adet-buton" type="button" aria-label="Adedi artır" data-ms-sepet-adet-artir>+</button>
                             </div>
                             <div class="ms-sepet-fiyat-alani">
+                                @* 2026-08-03: kampanyalı kalemde tasarımın çizik fiyat kalıbı
+                                   (ms-urun-fiyat-eski + "Kampanya sonrası") gerçek veriyle *@
+                                <span class="ms-urun-fiyat-eski" data-ms-sepet-satir-eski hidden></span>
+                                <span class="ms-sepet-kampanya-sonrasi" data-ms-sepet-satir-kampanya-sonrasi hidden>Kampanya sonrası</span>
                                 <strong class="ms-urun-fiyat" data-ms-sepet-satir-tutar></strong>
                             </div>
                         </div>
@@ -780,6 +784,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ quantity: adet })
             });
             window.msMiniSepetYenile?.();
+            // 2026-08-03: kampanyalı sepette adet değişimi kampanya tutarını/dağılımını
+            // değiştirebilir (set sayısı, ağırlıklı paylar) — sunucudan yeniden çiz.
+            if (sepetKampanyalari.length) { yenile(); }
         } catch { yenile(); }
     };
 
@@ -838,9 +845,23 @@ document.addEventListener("DOMContentLoaded", () => {
         const satirTutar = satir.querySelector("[data-ms-sepet-satir-tutar]");
         const birim = kalem.addedPrice || 0;
 
+        // 2026-08-03: satırın kampanya indirimi (sunucu, ağırlıklı dağıtım) — çizik eski
+        // tutar + "Kampanya sonrası" + indirimli tutar. Adet değişince sunucudan tazelenir.
+        const satirIndirim = kalem.campaignLineDiscount || 0;
+        const eskiTutarAlani = satir.querySelector("[data-ms-sepet-satir-eski]");
+        const kampanyaSonrasiAlani = satir.querySelector("[data-ms-sepet-satir-kampanya-sonrasi]");
+
         const adetYaz = (adet) => {
             adetDeger.textContent = String(adet);
-            satirTutar.textContent = paraYaz(birim * adet);
+            const brut = birim * adet;
+            if (satirIndirim > 0 && eskiTutarAlani && kampanyaSonrasiAlani) {
+                eskiTutarAlani.hidden = false;
+                kampanyaSonrasiAlani.hidden = false;
+                eskiTutarAlani.textContent = paraYaz(brut);
+                satirTutar.textContent = paraYaz(Math.max(0, brut - satirIndirim));
+            } else {
+                satirTutar.textContent = paraYaz(brut);
+            }
             azalt.disabled = adet <= 1;
             artir.disabled = adet >= 10;
         };

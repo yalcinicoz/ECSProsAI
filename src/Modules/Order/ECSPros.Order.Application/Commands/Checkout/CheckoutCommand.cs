@@ -196,6 +196,12 @@ public class CheckoutCommandHandler(
         foreach (var item in request.Items)
         {
             var birimFiyat = EtkinFiyat(item.VariantId);   // SUNUCU fiyatı + ürün-bazlı kampanya (istemci UnitPrice değil)
+            // 2026-08-03: sepet-seviyesi kampanya indirimi kaleme AĞIRLIKLI dağıtılmış payıyla
+            // yazılır — iade tutarı (Total/Quantity) müşterinin gerçekte ödediği fiyattan hesaplanır;
+            // etiket fiyatından iade edilmez. TotalDiscount aynı toplamı zaten içeriyor.
+            var kalemIndirim = Math.Clamp(
+                kampanyaSonuc.ItemDiscounts?.GetValueOrDefault(item.VariantId) ?? 0m,
+                0m, item.Quantity * birimFiyat);
             db.OrderItems.Add(new OrderItemEntity
             {
                 OrderId = order.Id,
@@ -207,9 +213,9 @@ public class CheckoutCommandHandler(
                 Quantity = item.Quantity,
                 UnitPrice = birimFiyat,
                 Subtotal = item.Quantity * birimFiyat,
-                DiscountAmount = 0,
+                DiscountAmount = kalemIndirim,
                 TaxAmount = 0,
-                Total = item.Quantity * birimFiyat,
+                Total = item.Quantity * birimFiyat - kalemIndirim,
                 Status = "pending"
             });
         }

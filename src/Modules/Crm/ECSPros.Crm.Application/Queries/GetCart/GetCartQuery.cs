@@ -41,7 +41,8 @@ public record CartItemDto(
     Dictionary<string, string>? ProductNameI18n = null,
     string? ImageUrl = null,
     string? OptionsText = null,
-    decimal? CampaignUnitPrice = null);
+    decimal? CampaignUnitPrice = null,
+    decimal CampaignLineDiscount = 0m);   // satırın toplam kampanya indirimi (ürün-bazlı + ağırlıklı sepet payı)
 
 public class GetCartQueryHandler(
     ICrmDbContext db,
@@ -87,11 +88,15 @@ public class GetCartQueryHandler(
             gosterim.TryGetValue(i.VariantId, out var g);
             var kampanyaFiyat = kampanya.ItemUnitPrices.TryGetValue(i.VariantId, out var kf)
                 ? (decimal?)kf : null;
+            // Satırın kampanya indirimi: ürün-bazlı fiyat farkı + sepet-seviyesi ağırlıklı pay.
+            // (Çakışmaz: ürünün TEK etkin kampanyası vardır — ya fiyata ya sepet payına yansır.)
+            var satirIndirim = (kampanyaFiyat is { } f ? (i.AddedPrice - f) * i.Quantity : 0m)
+                + (kampanya.ItemDiscounts?.GetValueOrDefault(i.VariantId) ?? 0m);
             return new CartItemDto(
                 i.Id, i.VariantId, i.Quantity, i.AddedPrice, i.Quantity * i.AddedPrice,
                 i.IsAvailable, i.AvailableQuantity,
                 g?.ProductCode, g?.ProductNameI18n, g?.ImageUrl, g?.OptionsText,
-                kampanyaFiyat);
+                kampanyaFiyat, Math.Max(0m, Math.Round(satirIndirim, 2)));
         }).ToList();
 
         var dto = new CartDto(
