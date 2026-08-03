@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
@@ -73,6 +73,59 @@ export function CampaignDetailPage() {
   const [manualIds, setManualIds] = useState<string[]>([])
   const [loaded, setLoaded] = useState(false)
 
+  // Manuel ürün kapsamı: kod girişi / dosyadan yükleme (Id→ad gösterimi manualInfo'da)
+  const [manualInfo, setManualInfo] = useState<Record<string, { code: string; name: string }>>({})
+  const [codesInput, setCodesInput] = useState('')
+  const [notFoundCodes, setNotFoundCodes] = useState<string[]>([])
+  const [lookupBusy, setLookupBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const applyLookup = (items: ProductSimple[]) => {
+    setManualInfo(m => {
+      const next = { ...m }
+      for (const it of items) next[it.id] = { code: it.code, name: tr(it.nameI18n) }
+      return next
+    })
+  }
+
+  const addByCodes = async (raw: string[]) => {
+    const codes = [...new Set(raw.map(c => c.trim()).filter(Boolean))]
+    if (!codes.length) return
+    setLookupBusy(true); setErr('')
+    try {
+      const { data } = await api.post('/catalog/products/lookup', { codes })
+      const items: ProductSimple[] = data.data?.items ?? []
+      applyLookup(items)
+      setManualIds(ids => [...new Set([...ids, ...items.map(it => it.id)])])
+      setNotFoundCodes(data.data?.notFoundCodes ?? [])
+      setCodesInput('')
+    } catch (e) { setErr(errText(e)) } finally { setLookupBusy(false) }
+  }
+
+  const resolveIds = async (ids: string[]) => {
+    if (!ids.length) return
+    try {
+      const { data } = await api.post('/catalog/products/lookup', { ids })
+      applyLookup(data.data?.items ?? [])
+    } catch { /* adlar çözülemezse satırda Id gösterilir */ }
+  }
+
+  const onFileSelected = async (f: File) => {
+    setErr('')
+    try {
+      let raw: string[]
+      if (/\.xlsx?$/i.test(f.name)) {
+        const XLSX = await import('xlsx')
+        const wb = XLSX.read(await f.arrayBuffer())
+        const rows = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[wb.SheetNames[0]], { header: 1 })
+        raw = rows.map(r => String(r?.[0] ?? '').trim())
+      } else {
+        raw = (await f.text()).split(/[\s,;]+/)
+      }
+      await addByCodes(raw)
+    } catch { setErr('Dosya okunamadı. Kod listesi için .txt/.csv ya da .xlsx yükleyin.') }
+  }
+
   // Tipler
   const { data: types = [] } = useQuery<CampaignType[]>({
     queryKey: ['campaign-types', 'all'],
@@ -108,22 +161,13 @@ export function CampaignDetailPage() {
       setStarts((c.startsAt ?? '').slice(0, 10)); setEnds(c.endsAt ? c.endsAt.slice(0, 10) : '')
       setPriority(c.priority); setIsActive(c.isActive); setSettings(c.settings ?? {})
       setFillType(c.fillType ?? 'all'); setFilterDef((c.filterDef ?? {}) as FilterDef)
-      setManualIds(c.manualProductIds ?? []); setLoaded(true)
+      const mids: string[] = c.manualProductIds ?? []
+      setManualIds(mids); void resolveIds(mids); setLoaded(true)
       return c
     },
   })
 
-  // Ürün havuzu (manuel ekleme)
   const showProductScope = selType?.requiresProducts ?? false
-  const { data: allProducts = [] } = useQuery<ProductSimple[]>({
-    queryKey: ['products-simple'],
-    queryFn: async () => (await api.get('/catalog/products?activeOnly=false&pageSize=500')).data.data?.items ?? [],
-    enabled: tab === 'Ürün Kapsamı' && (fillType === 'manual' || fillType === 'mixed'),
-  })
-  const [addProdId, setAddProdId] = useState('')
-  const manualProducts = useMemo(
-    () => manualIds.map(pid => allProducts.find(p => p.id === pid)).filter(Boolean) as ProductSimple[],
-    [manualIds, allProducts])
 
   const save = useMutation({
     mutationFn: async () => {
@@ -273,21 +317,32 @@ export function CampaignDetailPage() {
           {(fillType === 'manual' || fillType === 'mixed') && (
             <div>
               <div className="text-xs font-semibold mb-2" style={{ color: 'var(--text-s)' }}>MANUEL ÜRÜNLER ({manualIds.length})</div>
-              <div className="flex gap-2 mb-2">
-                <select className="inp" value={addProdId} onChange={e => setAddProdId(e.target.value)}>
-                  <option value="">Ürün seç…</option>
-                  {allProducts.filter(p => !manualIds.includes(p.id)).map(p => (
-                    <option key={p.id} value={p.id}>{tr(p.nameI18n)} ({p.code})</option>
-                  ))}
-                </select>
-                <Button size="sm" variant="secondary" onClick={() => { if (addProdId) { setManualIds(ids => [...ids, addProdId]); setAddProdId('') } }}>Ekle</Button>
+              <div className="flex gap-2 mb-1">
+                <input className="inp flex-1" placeholder="Ürün kodları — virgülle ayırın (örn. ABC001, ABC002)"
+                  value={codesInput} onChange={e => setCodesInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void addByCodes(codesInput.split(/[\s,;]+/)) } }} />
+                <Button size="sm" variant="secondary" disabled={lookupBusy}
+                  onClick={() => void addByCodes(codesInput.split(/[\s,;]+/))}>
+                  {lookupBusy ? 'Ekleniyor…' : 'Ekle'}
+                </Button>
+                <Button size="sm" variant="secondary" disabled={lookupBusy} onClick={() => fileRef.current?.click()}>Dosyadan Yükle</Button>
+                <input ref={fileRef} type="file" accept=".txt,.csv,.xls,.xlsx" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void onFileSelected(f) }} />
               </div>
+              <p className="text-xs mb-2" style={{ color: 'var(--text-s)' }}>
+                Dosya: .txt/.csv — kodlar virgül, boşluk ya da satır sonuyla ayrılır; Excel (.xlsx) — kodlar ilk sütundan okunur.
+              </p>
+              {notFoundCodes.length > 0 && (
+                <div className="text-xs mb-2" style={{ color: '#b91c1c' }}>
+                  Bulunamayan kodlar ({notFoundCodes.length}): {notFoundCodes.join(', ')}
+                </div>
+              )}
               <div className="space-y-1">
-                {manualProducts.map(p => (
-                  <div key={p.id} className="flex items-center justify-between px-3 py-1.5 rounded text-sm"
+                {manualIds.map(pid => (
+                  <div key={pid} className="flex items-center justify-between px-3 py-1.5 rounded text-sm"
                     style={{ background: 'var(--surface2)', color: 'var(--text)' }}>
-                    <span>{tr(p.nameI18n)} <code className="text-xs" style={{ color: 'var(--text-s)' }}>{p.code}</code></span>
-                    <button className="text-xs" style={{ color: '#b91c1c' }} onClick={() => setManualIds(ids => ids.filter(x => x !== p.id))}>Kaldır</button>
+                    <span>{manualInfo[pid]?.name ?? 'Bilinmeyen ürün'} <code className="text-xs" style={{ color: 'var(--text-s)' }}>{manualInfo[pid]?.code ?? pid}</code></span>
+                    <button className="text-xs" style={{ color: '#b91c1c' }} onClick={() => setManualIds(ids => ids.filter(x => x !== pid))}>Kaldır</button>
                   </div>
                 ))}
               </div>
