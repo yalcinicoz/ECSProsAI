@@ -34,6 +34,7 @@ public class CopyCampaignCommandHandler(IPromotionDbContext db)
             NameI18n = new Dictionary<string, string>(src.NameI18n),
             DescriptionI18n = src.DescriptionI18n is null ? null : new Dictionary<string, string>(src.DescriptionI18n),
             BadgeLabel = src.BadgeLabel,
+            BadgeColor = src.BadgeColor,
             StartsAt = src.StartsAt,
             EndsAt = src.EndsAt,
             Priority = src.Priority,

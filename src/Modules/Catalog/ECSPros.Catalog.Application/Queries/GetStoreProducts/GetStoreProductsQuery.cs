@@ -68,7 +68,7 @@ public record StoreProductDto(
     Guid? MainColorValueId = null,       // 2026-07-31: kartta GÖSTERİLEN ana görselin rengi (filtre_rengi) — detay linki bu renge (?color=) gitsin
     string? CampaignName = null,         // F3: kartta gösterilecek kampanya adı/rozeti (varsa)
     decimal? CampaignPrice = null,       // F3: ürün-bazlı kampanyalı fiyat (null = yok/sepette)
-    List<string>? CampaignNames = null); // 2026-08-03: ürünü kapsayan TÜM kampanyalar — bantta dönüşümlü
+    List<CampaignBadge>? CampaignBadges = null); // 2026-08-03: ürünü kapsayan TÜM kampanyalar (ad+renk) — bantta dönüşümlü
 
 public class GetStoreProductsQueryHandler(
     ICatalogDbContext db,
@@ -415,7 +415,8 @@ public class GetStoreProductsQueryHandler(
                 {
                     CampaignName = kmpListe[0].BadgeLabel ?? kmpListe[0].Name,
                     CampaignPrice = CampaignPricing.EffectivePrice(kmpListe[0], items[i].MinPrice),
-                    CampaignNames = kmpListe.Select(k => k.BadgeLabel ?? k.Name).ToList()
+                    CampaignBadges = kmpListe.Select(k => new CampaignBadge(
+                        k.BadgeLabel ?? k.Name, CampaignBadgePalette.Resolve(k.BadgeColor))).ToList()
                 };
 
         return Result.Success(new PagedResult<StoreProductDto>(items, total, request.Page, request.PageSize));

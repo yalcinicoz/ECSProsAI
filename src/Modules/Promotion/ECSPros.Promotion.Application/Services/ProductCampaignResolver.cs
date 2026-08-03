@@ -197,10 +197,10 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
                 && (benefitType is "percent" or "amount")
                 && val > 0)
                 return new ProductCampaignInfo(c.Id, c.Code, name, c.BadgeLabel, typeCode,
-                    benefitType, val, DecN(c.Settings, "maxDiscountAmount"));
+                    benefitType, val, DecN(c.Settings, "maxDiscountAmount"), c.BadgeColor);
         }
 
-        return new ProductCampaignInfo(c.Id, c.Code, name, c.BadgeLabel, typeCode, "cart_only", 0m, null);
+        return new ProductCampaignInfo(c.Id, c.Code, name, c.BadgeLabel, typeCode, "cart_only", 0m, null, c.BadgeColor);
     }
 
     // ── jsonb (JsonElement) duyarlı değer çıkarıcılar ──

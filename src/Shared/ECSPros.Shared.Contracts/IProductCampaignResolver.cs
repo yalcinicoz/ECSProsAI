@@ -13,7 +13,32 @@ public record ProductCampaignInfo(
     string TypeCode,
     string BenefitKind,
     decimal BenefitValue,
-    decimal? MaxDiscount);
+    decimal? MaxDiscount,
+    string? BadgeColor = null);   // 2026-08-03: bant renk anahtarı (CampaignBadgePalette)
+
+/// <summary>Kart bandı için kampanya rozeti: ad + çözülmüş renk (hex; null = varsayılan marka rengi).</summary>
+public record CampaignBadge(string Name, string? Color);
+
+/// <summary>Kampanya bant renk paleti — panel seçenekleri ve hex çözümü TEK yerden.
+/// Anahtarlar admin formundaki seçeneklerle birebir; bilinmeyen anahtar varsayılana düşer.</summary>
+public static class CampaignBadgePalette
+{
+    public static readonly IReadOnlyDictionary<string, string> Renkler = new Dictionary<string, string>
+    {
+        ["kirmizi"] = "#DC2626",   // indirim / fiyat vurgusu
+        ["turuncu"] = "#EA580C",   // fırsat / kampanya
+        ["amber"] = "#D97706",     // sınırlı süre / aciliyet
+        ["yesil"] = "#16A34A",     // kargo / kazanç
+        ["mavi"] = "#2563EB",      // bilgi / sepet kampanyası
+        ["mor"] = "#7C3AED",       // özel / ayrıcalık
+        ["pembe"] = "#DB2777",     // sezon / moda
+        ["siyah"] = "#111827"      // premium / kapsül
+    };
+
+    /// <summary>Anahtar → hex; null/boş/bilinmeyen → null (istemci varsayılan marka rengini kullanır).</summary>
+    public static string? Resolve(string? key) =>
+        key is { Length: > 0 } && Renkler.TryGetValue(key, out var hex) ? hex : null;
+}
 
 /// <summary>
 /// F2: kampanya çözümleme — tek kural seti (platform + kapsam FillType/materyalize + dışlama +

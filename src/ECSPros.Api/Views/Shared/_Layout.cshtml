@@ -155,18 +155,50 @@
         }, true);
     </script>
     @* 2026-08-03: kart kampanya bandı rotasyonu — bir ürünü birden çok kampanya kapsıyorsa
-       adlar data-ms-kampanya-adlar'da "|" ile taşınır ve 3 sn'de bir dönüşümlü gösterilir.
-       Her turda DOM taranır: continuation ile sonradan eklenen kartlar da kapsanır. *@
+       rozetler (ad + palet rengi) data-ms-kampanya-rotasyon'da JSON taşınır ve 3 sn'de bir
+       animasyonlu (yukarı kayarak) dönüşümlü gösterilir; kampanyanın rengi bandın arka
+       planına uygulanır (renk yoksa CSS'teki marka rengi kalır). prefers-reduced-motion'da
+       animasyonsuz düz geçiş. Her turda DOM taranır: continuation kartları da kapsanır. *@
     <script>
         (() => {
+            const hareketAzalt = window.matchMedia?.("(prefers-reduced-motion: reduce)");
             let tur = 0;
             window.setInterval(() => {
-                const bantlar = document.querySelectorAll("[data-ms-kampanya-adlar]");
+                const bantlar = document.querySelectorAll("[data-ms-kampanya-rotasyon]");
                 if (!bantlar.length) { return; }
                 tur++;
                 bantlar.forEach((bant) => {
-                    const adlar = (bant.dataset.msKampanyaAdlar || "").split("|").filter(Boolean);
-                    if (adlar.length > 1) { bant.textContent = adlar[tur % adlar.length]; }
+                    let rozetler = [];
+                    try { rozetler = JSON.parse(bant.dataset.msKampanyaRotasyon || "[]"); } catch { }
+                    if (rozetler.length < 2) { return; }
+                    const rozet = rozetler[tur % rozetler.length];
+                    // Metin, bandın İÇİNDEKİ span'da kayar (bant sabit, arka plan yalnız renk
+                    // geçişi yapar) — ilk turda span sarılır, bant overflow'u kapatılır.
+                    let metin = bant.querySelector("[data-ms-kampanya-metin]");
+                    if (!metin) {
+                        metin = document.createElement("span");
+                        metin.setAttribute("data-ms-kampanya-metin", "");
+                        metin.textContent = bant.textContent;
+                        bant.textContent = "";
+                        bant.appendChild(metin);
+                        bant.style.overflow = "hidden";
+                        bant.style.transition = "background-color 300ms ease";
+                    }
+                    const uygula = () => {
+                        metin.textContent = rozet.ad;
+                        bant.style.backgroundColor = rozet.renk || "";
+                    };
+                    if (hareketAzalt?.matches || typeof metin.animate !== "function") { uygula(); return; }
+                    // Yukarı kayarak çıkış → içerik+renk değişimi → alttan kayarak giriş
+                    const cikis = metin.animate(
+                        [{ transform: "translateY(0)", opacity: 1 }, { transform: "translateY(-100%)", opacity: 0 }],
+                        { duration: 220, easing: "ease-in", fill: "forwards" });
+                    cikis.onfinish = () => {
+                        uygula();
+                        metin.animate(
+                            [{ transform: "translateY(100%)", opacity: 0 }, { transform: "translateY(0)", opacity: 1 }],
+                            { duration: 220, easing: "ease-out", fill: "forwards" });
+                    };
                 });
             }, 3000);
         })();

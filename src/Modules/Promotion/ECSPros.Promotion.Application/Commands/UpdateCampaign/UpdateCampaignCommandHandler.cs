@@ -29,6 +29,7 @@ public class UpdateCampaignCommandHandler(
         campaign.NameI18n = request.NameI18n;
         campaign.DescriptionI18n = request.DescriptionI18n;
         campaign.BadgeLabel = request.BadgeLabel;
+        campaign.BadgeColor = request.BadgeColor;
         campaign.StartsAt = ToUtc(request.StartsAt);
         campaign.EndsAt = request.EndsAt is { } e ? ToUtc(e) : null;
         campaign.IsActive = request.IsActive;

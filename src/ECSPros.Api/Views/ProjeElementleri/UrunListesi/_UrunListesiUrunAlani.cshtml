@@ -88,7 +88,7 @@
                 eskiFiyat: p.compareAtPrice || null,  // 2026-07-31: indirim öncesi çizili fiyat
                 kampanyaAd: p.campaignName || null,   // F3: kampanya adı/rozeti
                 kampanyaFiyat: p.campaignPrice || null, // F3: ürün-bazlı kampanyalı fiyat
-                kampanyaAdlar: p.campaignNames || []  // 2026-08-03: bantta dönüşümlü çoklu kampanya
+                kampanyaRozetler: (p.campaignBadges || []).map((b) => ({ ad: b.name, renk: b.color || null })) // 2026-08-03: bantta dönüşümlü (ad+renk)
             };
         };
 
@@ -197,20 +197,22 @@
                 }
             }
 
-            // F3: kampanya bandı + ürün-bazlı kampanyalı fiyat. 2026-08-03: birden çok
-            // kampanya data-ms-kampanya-adlar'a yazılır — rotasyon script'i (_Layout) döndürür.
+            // F3: kampanya bandı + ürün-bazlı kampanyalı fiyat. 2026-08-03: rozetler (ad+renk)
+            // data-ms-kampanya-rotasyon'a JSON yazılır — rotasyon script'i (_Layout) döndürür.
             const kmpBant = kart.querySelector("[data-ms-kart-kampanya-bandi]");
             if (kmpBant) {
-                const adlar = (v.kampanyaAdlar && v.kampanyaAdlar.length)
-                    ? v.kampanyaAdlar
-                    : (v.kampanyaAd ? [v.kampanyaAd] : []);
-                if (adlar.length) {
-                    kmpBant.textContent = adlar[0];
-                    kmpBant.dataset.msKampanyaAdlar = adlar.join("|");
+                const rozetler = (v.kampanyaRozetler && v.kampanyaRozetler.length)
+                    ? v.kampanyaRozetler
+                    : (v.kampanyaAd ? [{ ad: v.kampanyaAd, renk: null }] : []);
+                if (rozetler.length) {
+                    kmpBant.textContent = rozetler[0].ad;
+                    kmpBant.style.backgroundColor = rozetler[0].renk || "";
+                    kmpBant.dataset.msKampanyaRotasyon = JSON.stringify(rozetler);
                     kmpBant.hidden = false;
                 } else {
                     kmpBant.hidden = true;
-                    delete kmpBant.dataset.msKampanyaAdlar;
+                    kmpBant.style.backgroundColor = "";
+                    delete kmpBant.dataset.msKampanyaRotasyon;
                 }
             }
             const kmpSatiri = kart.querySelector("[data-ms-kart-kampanya-fiyat-satiri]");

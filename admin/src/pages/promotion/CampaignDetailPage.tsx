@@ -34,6 +34,20 @@ const FILL_OPTS = [
   { value: 'mixed', label: 'Karma — filtre + manuel' },
 ]
 
+// Bant/rozet renk paleti — backend CampaignBadgePalette ile birebir (anahtar + hex).
+// '' = varsayılan marka rengi (sitede --ms-renk-primary).
+const BADGE_COLORS = [
+  { key: '', hex: '#9d7856', label: 'Varsayılan (marka)' },
+  { key: 'kirmizi', hex: '#DC2626', label: 'Kırmızı — indirim' },
+  { key: 'turuncu', hex: '#EA580C', label: 'Turuncu — fırsat' },
+  { key: 'amber', hex: '#D97706', label: 'Amber — sınırlı süre' },
+  { key: 'yesil', hex: '#16A34A', label: 'Yeşil — kargo' },
+  { key: 'mavi', hex: '#2563EB', label: 'Mavi — sepet/bilgi' },
+  { key: 'mor', hex: '#7C3AED', label: 'Mor — özel' },
+  { key: 'pembe', hex: '#DB2777', label: 'Pembe — sezon' },
+  { key: 'siyah', hex: '#111827', label: 'Siyah — premium' },
+]
+
 function errText(e: unknown) {
   return (e as { response?: { data?: { error?: string } } }).response?.data?.error ?? 'İşlem başarısız oldu.'
 }
@@ -63,6 +77,7 @@ export function CampaignDetailPage() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [badge, setBadge] = useState('')
+  const [badgeColor, setBadgeColor] = useState('')
   const [starts, setStarts] = useState(new Date().toISOString().slice(0, 10))
   const [ends, setEnds] = useState('')
   const [priority, setPriority] = useState(0)
@@ -158,6 +173,7 @@ export function CampaignDetailPage() {
       const c = data.data
       setFirmPlatformId(c.firmPlatformId); setTypeId(c.campaignTypeId); setCode(c.code)
       setName(tr(c.nameI18n)); setDescription(tr(c.descriptionI18n)); setBadge(c.badgeLabel ?? '')
+      setBadgeColor(c.badgeColor ?? '')
       setStarts((c.startsAt ?? '').slice(0, 10)); setEnds(c.endsAt ? c.endsAt.slice(0, 10) : '')
       setPriority(c.priority); setIsActive(c.isActive); setSettings(c.settings ?? {})
       setFillType(c.fillType ?? 'all'); setFilterDef((c.filterDef ?? {}) as FilterDef)
@@ -174,7 +190,7 @@ export function CampaignDetailPage() {
       const body = {
         firmPlatformId, campaignTypeId: typeId, code,
         nameI18n: { tr: name }, descriptionI18n: description ? { tr: description } : null,
-        badgeLabel: badge || null, startsAt: starts, endsAt: ends || null,
+        badgeLabel: badge || null, badgeColor: badgeColor || null, startsAt: starts, endsAt: ends || null,
         priority, isActive, settings,
         fillType: showProductScope ? fillType : 'all',
         filterDef: (fillType === 'filter' || fillType === 'mixed') ? filterDef : null,
@@ -258,6 +274,26 @@ export function CampaignDetailPage() {
               <input className="inp" value={badge} onChange={e => setBadge(e.target.value)} placeholder="ör. Süper Fırsat" /></div>
             <div><label className="flbl">Öncelik</label>
               <input className="inp" type="number" value={priority} onChange={e => setPriority(Number(e.target.value))} /></div>
+          </div>
+          <div>
+            <label className="flbl">Bant Rengi</label>
+            <div className="flex flex-wrap gap-2">
+              {BADGE_COLORS.map(r => (
+                <button key={r.key} type="button" title={r.label}
+                  onClick={() => setBadgeColor(r.key)}
+                  className="flex items-center gap-1.5 rounded px-2 py-1 text-xs"
+                  style={{
+                    border: badgeColor === r.key ? '2px solid var(--brand)' : '1px solid var(--border)',
+                    background: 'var(--surface2)', color: 'var(--text)',
+                  }}>
+                  <span className="inline-block h-4 w-4 rounded" style={{ background: r.hex }} />
+                  {r.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+              Sitedeki kampanya bandının/rozetinin arka plan rengi. Varsayılan, sitenin marka rengidir.
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="flbl">Başlangıç</label>
