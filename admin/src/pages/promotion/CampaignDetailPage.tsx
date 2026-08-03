@@ -117,7 +117,7 @@ export function CampaignDetailPage() {
   const showProductScope = selType?.requiresProducts ?? false
   const { data: allProducts = [] } = useQuery<ProductSimple[]>({
     queryKey: ['products-simple'],
-    queryFn: async () => (await api.get('/catalog/products?activeOnly=false&pageSize=500')).data.data,
+    queryFn: async () => (await api.get('/catalog/products?activeOnly=false&pageSize=500')).data.data?.items ?? [],
     enabled: tab === 'Ürün Kapsamı' && (fillType === 'manual' || fillType === 'mixed'),
   })
   const [addProdId, setAddProdId] = useState('')
