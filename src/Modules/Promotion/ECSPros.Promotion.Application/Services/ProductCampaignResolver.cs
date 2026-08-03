@@ -107,6 +107,7 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
                 applied.Add(new AppliedCampaign(v.C.Code, NameOf(v.C), Math.Round(v.Tutar, 2), "product", v.Varyantlar));
 
         // Sepet-seviyesi (cart_only) — CampaignEngine (buy_x_get_y / min_cart …)
+        var itemDiscounts = new Dictionary<Guid, decimal>();
         if (cartOnly.Count > 0)
         {
             var cartLines = items
@@ -122,11 +123,41 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
                     // set kuran her üründe görünsün — yalnız bedava düşen birimde değil).
                     applied.Add(new AppliedCampaign(c.Code, NameOf(c), line.DiscountAmount, "cart",
                         applicable[cid].ToList()));
+                    // İndirimi kapsam kalemlerine satır tutarıyla AĞIRLIKLI dağıt (iade
+                    // tutarı kalem bazında doğru olsun — "en ucuz bedava" yalnız tutarı belirler).
+                    IndirimiDagit(itemDiscounts, cartLines, applicable[cid], line.DiscountAmount);
                 }
             }
         }
 
-        return new CartCampaignResult(itemPrices, Math.Round(cartDiscount, 2), applied);
+        return new CartCampaignResult(itemPrices, Math.Round(cartDiscount, 2), applied,
+            itemDiscounts.Count > 0 ? itemDiscounts : null);
+    }
+
+    /// <summary>Sepet-seviyesi indirimi kapsam kalemlerine satır tutarı oranında dağıtır.
+    /// Kuruş yuvarlama artığı son kaleme yazılır; pay hiçbir satırın tutarını aşamaz.</summary>
+    private static void IndirimiDagit(
+        Dictionary<Guid, decimal> hedef,
+        List<CartLineItem> cartLines,
+        HashSet<Guid> kapsam,
+        decimal tutar)
+    {
+        var satirlar = cartLines.Where(s => kapsam.Contains(s.VariantId) && s.LineTotal > 0).ToList();
+        var kapsamToplam = satirlar.Sum(s => s.LineTotal);
+        if (kapsamToplam <= 0 || tutar <= 0) return;
+
+        decimal dagitilan = 0;
+        for (var i = 0; i < satirlar.Count; i++)
+        {
+            var s = satirlar[i];
+            var pay = i == satirlar.Count - 1
+                ? tutar - dagitilan
+                : Math.Round(tutar * s.LineTotal / kapsamToplam, 2);
+            pay = Math.Clamp(pay, 0, s.LineTotal);
+            if (pay <= 0) continue;
+            dagitilan += pay;
+            hedef[s.VariantId] = hedef.GetValueOrDefault(s.VariantId) + pay;
+        }
     }
 
     private static string NameOf(Campaign c) =>

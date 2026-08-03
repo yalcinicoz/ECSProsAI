@@ -127,6 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const trAd = (i18n) => (i18n && (i18n.tr || Object.values(i18n)[0])) || "";
 
     let sepetId = null;
+    let sepetKampanyalari = []; // 2026-08-03: satır bazlı kampanya bilgisi (variantIds ile)
 
     const satirHtml = (kalem) => {
         const ad = trAd(kalem.productNameI18n) || kalem.productCode || "Ürün";
@@ -135,14 +136,29 @@ document.addEventListener("DOMContentLoaded", () => {
             : `<img class="ms-ana-navigasyon-sepet-urun-gorsel" alt="">`;
         const linkBas = kalem.productCode ? `<a href="/urun/${encodeURIComponent(kalem.productCode)}">` : "";
         const linkSon = kalem.productCode ? "</a>" : "";
+        // 2026-08-03: kalemin kampanya indirimi (sunucudan, ağırlıklı dağıtım) — kampanya adı
+        // + satır indirimi ayrı satırda; tutar çizik eski + indirimli olarak gösterilir.
+        const satirIndirim = kalem.campaignLineDiscount || 0;
+        const brut = kalem.lineTotal || 0;
+        const kampanyaAdlari = sepetKampanyalari
+            .filter((k) => (k.variantIds || []).includes(kalem.variantId))
+            .map((k) => k.name)
+            .filter(Boolean);
+        const kampanyaSatiri = satirIndirim > 0
+            ? `<p><span class="ms-urun-fiyat-indirimli">${kacir(kampanyaAdlari.join(", ") || "Kampanya")}: -${fiyatYaz(satirIndirim)}</span></p>`
+            : "";
+        const fiyatHtml = satirIndirim > 0
+            ? `<span class="ms-urun-fiyat-eski">${fiyatYaz(brut)}</span> <strong class="ms-fiyat-standart">${fiyatYaz(Math.max(0, brut - satirIndirim))}</strong>`
+            : `<strong class="ms-fiyat-standart">${fiyatYaz(brut)}</strong>`;
         return `<div class="ms-ana-navigasyon-sepet-urun" data-ms-sepet-kalem="${kacir(kalem.id)}">
             ${linkBas}${gorsel}${linkSon}
             <div class="ms-ana-navigasyon-sepet-urun-bilgi">
                 <strong class="ms-ana-navigasyon-sepet-urun-baslik">${kacir(ad)}</strong>
                 <p>${kacir(kalem.optionsText || "")}</p>
+                ${kampanyaSatiri}
                 <div class="ms-ana-navigasyon-sepet-urun-alt">
                     <span>${kalem.quantity} adet</span>
-                    <strong class="ms-fiyat-standart">${fiyatYaz(kalem.lineTotal)}</strong>
+                    ${fiyatHtml}
                 </div>
             </div>
             <button class="ms-ana-navigasyon-sepet-sil" type="button" data-ms-sepet-kalem-sil="${kacir(kalem.id)}" aria-label="${kacir(ad)} ürününü sepetten sil">
@@ -155,6 +171,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const kalemler = sepet?.items || [];
         const adet = kalemler.reduce((t, k) => t + (k.quantity || 0), 0);
         sepetId = sepet?.id || null;
+        sepetKampanyalari = sepet?.campaigns || []; // satirHtml kampanya adlarını buradan okur
 
         if (rozet) {
             rozet.textContent = String(adet);
