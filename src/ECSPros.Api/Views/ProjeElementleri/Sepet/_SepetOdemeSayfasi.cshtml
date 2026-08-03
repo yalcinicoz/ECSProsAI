@@ -867,6 +867,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const parametreler = new URLSearchParams({ firmPlatformId: platformId });
         if (cartId) { parametreler.set("cartId", cartId); }
         if (sid) { parametreler.set("sessionId", sid); }
+        // 2026-08-03: seçim dışı kalemler kampanya hesabına da girmesin (sunucu tarafı)
+        if (!hizliMod) {
+            const disiListe = [...secimDisiKume()];
+            if (disiListe.length) { parametreler.set("excludedVariantIds", disiListe.join(",")); }
+        }
         try {
             const cevap = await fetch("/api/store/cart?" + parametreler.toString(),
                 uyeToken ? { headers: { Authorization: "Bearer " + uyeToken } } : undefined);
