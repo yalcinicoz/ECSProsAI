@@ -50,8 +50,57 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         => GenelListeAsync(null, filtre, SayfaNo(page), ct);
 
     [HttpGet("/urunler")]
-    public Task<IActionResult> Arama([FromQuery] string? search, [FromQuery] ListeFiltre filtre, [FromQuery] int? page, CancellationToken ct)
-        => GenelListeAsync(string.IsNullOrWhiteSpace(search) ? null : search.Trim(), filtre, SayfaNo(page), ct);
+    public Task<IActionResult> Arama([FromQuery] string? search, [FromQuery] string? codes, [FromQuery] ListeFiltre filtre, [FromQuery] int? page, CancellationToken ct)
+        => !string.IsNullOrWhiteSpace(codes)
+            ? GorselAramaSonucListesiAsync(codes, ct)
+            : GenelListeAsync(string.IsNullOrWhiteSpace(search) ? null : search.Trim(), filtre, SayfaNo(page), ct);
+
+    /// <summary>2026-08-03: görsel arama sonuç sayfası — dropdown'daki "Tümünü Gör"/Enter,
+    /// eşleşen ürün KODLARINI ?codes= ile taşır; standart liste sayfası o kodlarla, görsel
+    /// aramanın benzerlik sırası korunarak render edilir. Facet/filtre yok (kapsam sabit liste).</summary>
+    private async Task<IActionResult> GorselAramaSonucListesiAsync(string codes, CancellationToken ct)
+    {
+        var platform = await storeContext.GetPlatformAsync(ct);
+        if (platform is null)
+            return NotFound();
+
+        var kodListesi = codes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(100)
+            .ToList();
+        if (kodListesi.Count == 0)
+            return NotFound();
+
+        var urunler = await mediator.Send(new GetStoreProductsQuery(
+            platform.Id, null, 1, Math.Max(SayfaBoyu, kodListesi.Count),
+            ProductCodes: kodListesi), ct);
+        if (urunler.IsFailure)
+            return NotFound();
+
+        // Görsel aramanın benzerlik sırası korunur (sorgu kod sırasına göre dönmez)
+        var sira = kodListesi.Select((k, i) => (k, i))
+            .ToDictionary(x => x.k, x => x.i, StringComparer.OrdinalIgnoreCase);
+        var kartlar = urunler.Value!.Items
+            .OrderBy(u => sira.GetValueOrDefault(u.Code, int.MaxValue))
+            .Select(KartaCevir)
+            .ToList();
+
+        var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
+        var vm = new UrunListesiVm(
+            Baslik: "Görsel Arama Sonuçları",
+            ToplamUrun: kartlar.Count,
+            SayfaBoyu: Math.Max(SayfaBoyu, kodListesi.Count),
+            IlkSayfa: kartlar,
+            DevamApiUrl: $"/api/store/catalog/products?firmPlatformId={platform.Id}&pageSize={SayfaBoyu}",
+            FiltreGruplari: [],
+            FiyatMin: 0,
+            FiyatMax: 0,
+            KategoriSecenekleri: nav.Kokler,
+            BosDurumMesaji: kartlar.Count > 0 ? null
+                : "Görsel aramayla eşleşen ürün bulunamadı.");
+
+        return ListeGoster(vm);
+    }
 
     // Tek segmentli kategori sayfası. Literal route'lar (/urunler, /sepet...) ASP.NET
     // route önceliğiyle her zaman bundan önce eşleşir; slug kategori değilse 404.
