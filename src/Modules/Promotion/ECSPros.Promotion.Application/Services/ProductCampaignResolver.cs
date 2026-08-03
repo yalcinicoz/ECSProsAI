@@ -79,7 +79,7 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
         // Ürün-bazlı fiyatlar + cart_only kampanyalar için uygulanabilir varyant kümesi
         var cartOnly = new Dictionary<Guid, Campaign>();
         var applicable = new Dictionary<Guid, HashSet<Guid>>();
-        var urunBazliTutar = new Dictionary<Guid, (Campaign C, decimal Tutar)>();
+        var urunBazliTutar = new Dictionary<Guid, (Campaign C, decimal Tutar, List<Guid> Varyantlar)>();
 
         foreach (var it in items)
         {
@@ -90,8 +90,9 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
             {
                 itemPrices[it.VariantId] = kf;
                 var kazanc = (it.UnitPrice - kf) * it.Quantity;
-                var mevcut = urunBazliTutar.GetValueOrDefault(c.Id);
-                urunBazliTutar[c.Id] = (c, mevcut.Tutar + kazanc);
+                var mevcut = urunBazliTutar.TryGetValue(c.Id, out var m) ? m : (c, 0m, new List<Guid>());
+                mevcut.Item3.Add(it.VariantId);
+                urunBazliTutar[c.Id] = (c, mevcut.Item2 + kazanc, mevcut.Item3);
             }
             else // cart_only
             {
@@ -103,7 +104,7 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
         // Ürün-bazlı kampanya özetleri (fiyata yansıdı; toplam kazanç bilgi amaçlı)
         foreach (var (_, v) in urunBazliTutar)
             if (v.Tutar > 0)
-                applied.Add(new AppliedCampaign(v.C.Code, NameOf(v.C), Math.Round(v.Tutar, 2), "product"));
+                applied.Add(new AppliedCampaign(v.C.Code, NameOf(v.C), Math.Round(v.Tutar, 2), "product", v.Varyantlar));
 
         // Sepet-seviyesi (cart_only) — CampaignEngine (buy_x_get_y / min_cart …)
         if (cartOnly.Count > 0)
@@ -117,7 +118,10 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
                 if (line is { DiscountAmount: > 0 })
                 {
                     cartDiscount += line.DiscountAmount;
-                    applied.Add(new AppliedCampaign(c.Code, NameOf(c), line.DiscountAmount, "cart"));
+                    // VariantIds: kampanya kapsamına giren TÜM sepet kalemleri (satır rozeti
+                    // set kuran her üründe görünsün — yalnız bedava düşen birimde değil).
+                    applied.Add(new AppliedCampaign(c.Code, NameOf(c), line.DiscountAmount, "cart",
+                        applicable[cid].ToList()));
                 }
             }
         }

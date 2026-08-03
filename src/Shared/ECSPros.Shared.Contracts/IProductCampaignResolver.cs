@@ -22,8 +22,10 @@ public record ProductCampaignInfo(
 /// <summary>Checkout sepet kalemi — kampanya çözümlemesi için (varyant + ürün + adet + kanal birim fiyatı).</summary>
 public record CartCampaignItem(Guid VariantId, Guid ProductId, int Quantity, decimal UnitPrice);
 
-/// <summary>Uygulanan kampanya özeti (sepet/ödeme özeti + operasyon için).</summary>
-public record AppliedCampaign(string Code, string Name, decimal Amount, string Kind);
+/// <summary>Uygulanan kampanya özeti (sepet/ödeme özeti + operasyon için).
+/// VariantIds: indirime konu kalemler (satır rozetleri için, 2026-08-03 additive).</summary>
+public record AppliedCampaign(string Code, string Name, decimal Amount, string Kind,
+    List<Guid>? VariantIds = null);
 
 /// <summary>
 /// Checkout sonucu: ürün-bazlı kampanyalı birim fiyatlar (varyant → fiyat) + sepet-seviyesi
