@@ -12,6 +12,7 @@ public record CreateCampaignCommand(
     Dictionary<string, string> NameI18n,
     Dictionary<string, string>? DescriptionI18n,
     string? BadgeLabel,
+    string? BadgeColor,
     DateTime StartsAt,
     DateTime? EndsAt,
     int Priority,

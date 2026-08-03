@@ -87,7 +87,9 @@
                     <p class="ms-urun-fiyat-satiri">
                         @if (b.KampanyaAdi is { Length: > 0 } kad)
                         {
-                            <span class="ms-urun-indirim-rozeti">@kad</span>
+                            @* 2026-08-03: rozet, kampanyanın panelden seçilen palet rengini kullanır *@
+                            <span class="ms-urun-indirim-rozeti"
+                                  style="@(b.KampanyaRenk is { Length: > 0 } ? $"background-color:{b.KampanyaRenk}" : "")">@kad</span>
                         }
                         <span class="ms-urun-fiyat-indirimli ms-urun-detay-tutar">@UrunDetayVm.FiyatMetni(b.KampanyaFiyat)</span>
                     </p>

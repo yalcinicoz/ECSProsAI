@@ -10,6 +10,7 @@ public record UpdateCampaignCommand(
     Dictionary<string, string> NameI18n,
     Dictionary<string, string>? DescriptionI18n,
     string? BadgeLabel,
+    string? BadgeColor,
     DateTime StartsAt,
     DateTime? EndsAt,
     bool IsActive,

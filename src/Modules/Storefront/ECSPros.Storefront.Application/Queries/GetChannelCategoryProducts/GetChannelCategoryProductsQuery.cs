@@ -87,7 +87,7 @@ public record ChannelCategoryProductItemDto(
     string? VideoUrl = null,                         // H5: ilk aktif videonun URL'i — kart video rozeti (null ise rozet yok)
     string? CampaignName = null,                     // F3: kartta gösterilecek kampanya adı/rozeti (varsa)
     decimal? CampaignPrice = null,                   // F3: ürün-bazlı kampanyalı fiyat (null = yok/sepette)
-    List<string>? CampaignNames = null);             // 2026-08-03: ürünü kapsayan TÜM kampanyalar — bantta dönüşümlü
+    List<CampaignBadge>? CampaignBadges = null);     // 2026-08-03: ürünü kapsayan TÜM kampanyalar (ad+renk) — bantta dönüşümlü
 
 public class GetChannelCategoryProductsQueryHandler(
     IStorefrontDbContext sfDb,
@@ -195,7 +195,8 @@ public class GetChannelCategoryProductsQueryHandler(
                 {
                     CampaignName = kazanan.BadgeLabel ?? kazanan.Name,
                     CampaignPrice = CampaignPricing.EffectivePrice(kazanan, yeni.BasePrice),
-                    CampaignNames = kmpListe.Select(k => k.BadgeLabel ?? k.Name).ToList()
+                    CampaignBadges = kmpListe.Select(k => new CampaignBadge(
+                        k.BadgeLabel ?? k.Name, CampaignBadgePalette.Resolve(k.BadgeColor))).ToList()
                 };
             }
             items[i] = yeni;

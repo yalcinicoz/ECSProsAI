@@ -22,6 +22,9 @@ public class Campaign : BaseEntity
     /// <summary>Kartta/listede gösterilecek kısa kampanya etiketi/rozeti (ör. "Süper Fırsat").</summary>
     public string? BadgeLabel { get; set; }
 
+    /// <summary>Bant/rozet renk anahtarı (CampaignBadgePalette: kirmizi/turuncu/…); null = varsayılan marka rengi.</summary>
+    public string? BadgeColor { get; set; }
+
     public DateTime StartsAt { get; set; }
     public DateTime? EndsAt { get; set; }
     public bool IsActive { get; set; } = true;

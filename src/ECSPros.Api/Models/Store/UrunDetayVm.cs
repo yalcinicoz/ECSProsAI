@@ -45,7 +45,8 @@ public sealed record UrunDetayVm(
     IReadOnlyList<UrunVideoVm>? Videolar = null, // H5: galeri video slaytları (efektif URL)
     IReadOnlyDictionary<int, int>? PuanDagilimi = null, // İP-2.1: yıldız tooltip'i (5→adet ... 1→adet)
     string? KampanyaAdi = null,               // F3: ürün için etkin kampanya adı/rozeti (varsa)
-    decimal? KampanyaFiyat = null)            // F3: ürün-bazlı kampanyalı fiyat (null = sepette/yok)
+    decimal? KampanyaFiyat = null,            // F3: ürün-bazlı kampanyalı fiyat (null = sepette/yok)
+    string? KampanyaRenk = null)              // 2026-08-03: kazanan kampanyanın palet rengi (hex; null = varsayılan)
 {
     public int IndirimYuzdesi =>
         EskiFiyat is { } eski && Fiyat is { } yeni && eski > yeni

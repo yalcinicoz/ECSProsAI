@@ -17,6 +17,7 @@ public record CampaignDetailDto(
     Dictionary<string, string> NameI18n,
     Dictionary<string, string>? DescriptionI18n,
     string? BadgeLabel,
+    string? BadgeColor,
     DateTime StartsAt,
     DateTime? EndsAt,
     bool IsActive,
@@ -43,7 +44,7 @@ public class GetCampaignDetailQueryHandler(IPromotionDbContext db)
 
         return Result.Success(new CampaignDetailDto(
             c.Id, c.FirmPlatformId, c.CampaignTypeId, c.CampaignType.Code, c.Code,
-            c.NameI18n, c.DescriptionI18n, c.BadgeLabel, c.StartsAt, c.EndsAt,
+            c.NameI18n, c.DescriptionI18n, c.BadgeLabel, c.BadgeColor, c.StartsAt, c.EndsAt,
             c.IsActive, c.Priority, c.Settings, c.FillType, c.FilterDef, manualIds));
     }
 }

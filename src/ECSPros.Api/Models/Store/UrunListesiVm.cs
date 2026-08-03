@@ -1,3 +1,5 @@
+using ECSPros.Shared.Contracts;
+
 namespace ECSPros.Api.Models.Store;
 
 /// <summary>
@@ -30,12 +32,14 @@ public sealed record UrunKartVm(
     decimal? EskiFiyat = null,           // 2026-07-31: indirim öncesi (çizili) fiyat — CompareAtPrice > Fiyat ise
     string? KampanyaAdi = null,          // F3: kampanya adı/rozeti (varsa gösterilir)
     decimal? KampanyaFiyat = null,       // F3: ürün-bazlı kampanyalı fiyat (null = sepette/yok)
-    IReadOnlyList<string>? KampanyaAdlari = null) // 2026-08-03: ürünü kapsayan TÜM kampanyalar — bantta dönüşümlü
+    IReadOnlyList<CampaignBadge>? KampanyaRozetleri = null) // 2026-08-03: ürünü kapsayan TÜM kampanyalar (ad+renk) — bantta dönüşümlü
 {
-    // Bantta gösterilecek kampanya listesi (çoklu yoksa tekile düşer).
-    public IReadOnlyList<string> KampanyaBantListesi => KampanyaAdlari is { Count: > 0 } liste
+    // Bantta gösterilecek rozet listesi (çoklu yoksa tekile düşer; renk null = marka rengi).
+    public IReadOnlyList<CampaignBadge> KampanyaBantListesi => KampanyaRozetleri is { Count: > 0 } liste
         ? liste
-        : (KampanyaAdi is { Length: > 0 } tek ? new[] { tek } : System.Array.Empty<string>());
+        : (KampanyaAdi is { Length: > 0 } tek
+            ? new[] { new CampaignBadge(tek, null) }
+            : System.Array.Empty<CampaignBadge>());
 
     // İndirim yüzdesi (CompareAtPrice > Fiyat ise) — tam sayı, rozet için ("-%23").
     public int? IndirimYuzdesi => EskiFiyat is { } e && e > Fiyat && e > 0

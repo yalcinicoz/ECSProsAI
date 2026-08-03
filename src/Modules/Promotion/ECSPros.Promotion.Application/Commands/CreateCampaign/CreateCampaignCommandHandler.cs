@@ -39,6 +39,7 @@ public class CreateCampaignCommandHandler(
             NameI18n = request.NameI18n,
             DescriptionI18n = request.DescriptionI18n,
             BadgeLabel = request.BadgeLabel,
+            BadgeColor = request.BadgeColor,
             StartsAt = ToUtc(request.StartsAt),
             EndsAt = request.EndsAt is { } e ? ToUtc(e) : null,
             Priority = request.Priority,

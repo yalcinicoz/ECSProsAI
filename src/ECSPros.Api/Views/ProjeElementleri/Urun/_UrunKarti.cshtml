@@ -92,17 +92,20 @@
             </span>
         }
     </div>
-    @* F3: kampanya bandı — ürünü kapsayan kampanya(lar). 2026-08-03: birden çok kampanya
-       varsa adlar data-ms-kampanya-adlar'da "|" ile taşınır ve bant dönüşümlü gösterir
-       (rotasyon script'i _Layout'ta; tek kampanyada davranış değişmez). *@
+    @* F3: kampanya bandı — ürünü kapsayan kampanya(lar). 2026-08-03: rozetler (ad+renk)
+       data-ms-kampanya-rotasyon'da JSON taşınır; birden çoksa _Layout'taki script animasyonlu
+       döndürür. Renk kampanyanın panelden seçilen palet rengi (null = marka rengi —
+       CSS'teki --ms-renk-primary arka planı aynen kalır). *@
     @if (u is null)
     {
         <div class="ms-urun-kampanya-bandi" data-ms-kart-kampanya-bandi hidden></div>
     }
     else if (u.KampanyaBantListesi.Count > 0)
     {
+        var ilkRozet = u.KampanyaBantListesi[0];
         <div class="ms-urun-kampanya-bandi"
-             data-ms-kampanya-adlar="@string.Join("|", u.KampanyaBantListesi)">@u.KampanyaBantListesi[0]</div>
+             data-ms-kampanya-rotasyon="@System.Text.Json.JsonSerializer.Serialize(u.KampanyaBantListesi.Select(b => new { ad = b.Name, renk = b.Color }))"
+             style="@(ilkRozet.Color is { Length: > 0 } ? $"background-color:{ilkRozet.Color}" : "")">@ilkRozet.Name</div>
     }
     @if (u is not null && u.RenkSecenekleri.Count >= 2)
     {

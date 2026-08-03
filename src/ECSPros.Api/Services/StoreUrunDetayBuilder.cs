@@ -161,6 +161,8 @@ public class StoreUrunDetayBuilder(
             .GetValueOrDefault(urun.Id);
         var kampanyaAdi = kmp?.BadgeLabel ?? kmp?.Name;
         var kampanyaFiyat = kmp is null ? null : ECSPros.Shared.Contracts.CampaignPricing.EffectivePrice(kmp, fiyat);
+        // 2026-08-03: kazanan kampanyanın palet rengi (rozet arka planı; null = tasarım varsayılanı)
+        var kampanyaRenk = ECSPros.Shared.Contracts.CampaignBadgePalette.Resolve(kmp?.BadgeColor);
 
         var zincir = await mediator.Send(
             new GetProductChannelCategoryChainQuery(platformId, urun.Id), ct);
@@ -237,7 +239,8 @@ public class StoreUrunDetayBuilder(
             Videolar: urun.Videos?.Select(v => new UrunVideoVm(v.VideoUrl, v.ThumbnailUrl)).ToList(),
             PuanDagilimi: puanDagilimi,
             KampanyaAdi: kampanyaAdi,
-            KampanyaFiyat: kampanyaFiyat);
+            KampanyaFiyat: kampanyaFiyat,
+            KampanyaRenk: kampanyaRenk);
 
         // E12: üyenin gezme kaydı — render'ı aksatmaz.
         if (uye is not null)
