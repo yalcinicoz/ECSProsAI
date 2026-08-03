@@ -58,17 +58,29 @@
             });
         });
 
-        // Seçimsiz kapanış (X / kaplama): kapı bekliyorken vazgeçildi → sepete dön;
-        // teslimatta giriş/misafir seçimi olmadan kalınmaz. Başarılı giriş modalı
-        // programatik kapatır (token o anda yazılmıştır) — o kapanış vazgeçme sayılmaz.
-        document.querySelectorAll("[data-ms-giris-modal-kapat]").forEach((eleman) => {
-            if (eleman.classList.contains("ms-giris-buton-misafir")) { return; }
-            eleman.addEventListener("click", () => {
+        // Seçimsiz kapanış (X / kaplama / ESC): kapı bekliyorken vazgeçildi → sepete dön;
+        // teslimatta giriş/misafir seçimi olmadan kalınmaz. ESC site.js'te kapat düğmesi
+        // tıklanmadan doğrudan modalKapat() çağırır — bu yüzden tıklama değil, modalın
+        // "açık" sınıfının düşmesi gözlenir (tüm kapanış yolları tek yerden yakalanır).
+        // Başarılı giriş/misafir seçimi vazgeçme sayılmaz: girişte token kapanıştan önce
+        // yazılır, misafirde bayrak kapanıştan önce temizlenir. "Kayıt Ol" geçişinde giriş
+        // modalı kapanıp kayıt modalı açılır — biri açıkken yönlendirme yapılmaz; kayıt
+        // modalı da seçimsiz kapanırsa sepete dönülür.
+        const girisModali = document.querySelector("[data-ms-giris-modal]");
+        const kayitModali = document.querySelector("[data-ms-kayit-modal]");
+        if (girisModali) {
+            const gozlemci = new MutationObserver(() => {
                 if (girisli()) { return; }
                 if (sessionStorage.getItem("msBekleyenTeslimat") !== "1") { return; }
+                if (girisModali.classList.contains("ms-giris-modal-acik")
+                    || kayitModali?.classList.contains("ms-giris-modal-acik")) { return; }
                 try { sessionStorage.removeItem("msBekleyenTeslimat"); } catch { }
                 window.location.href = "/sepet";
             });
-        });
+            gozlemci.observe(girisModali, { attributes: true, attributeFilter: ["class"] });
+            if (kayitModali) {
+                gozlemci.observe(kayitModali, { attributes: true, attributeFilter: ["class"] });
+            }
+        }
     });
 </script>
