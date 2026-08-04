@@ -667,6 +667,10 @@ public sealed class LegacyOrderSyncService(
         Ekle("member.tcKimlikNo", Kes(v.MemberIdentityNumber ?? "", 11));
         Ekle("member.sourcePlatformMemberId",
             v.MemberId is { } mid ? $"ECS-{mid:N}" : $"ECS-GUEST-{v.OrderNumber}");
+        // Eski CreateMemberFromModel üyenin il/ilçesini member.address'ten okur (Trendyol
+        // kalıbı invoiceAddress'i bağlar) — bağlanmazsa NRE (F4 ilk gönderimde yakalandı).
+        Ekle("member.address.cityName", Kes(v.CityName, 20));
+        Ekle("member.address.districtName", Kes(string.IsNullOrWhiteSpace(v.DistrictName) ? v.CityName : v.DistrictName, 20));
 
         // Adresler (teslimat = fatura; ayrı fatura adresi F1 kapsamı dışı — arşiv fatura)
         foreach (var on in new[] { "shippingAddress", "invoiceAddress" })
