@@ -45,7 +45,8 @@ public record OrderDetailDto(
     Dictionary<string, object>? CustomerNotes = null,
     // 2026-07-22: müşterinin teslimat adımındaki kargo tercihi (mahalle bazlı seçenekler)
     Guid? RequestedCargoIntegrationId = null,
-    string? RequestedCargoName = null);
+    string? RequestedCargoName = null,
+    string? PaymentMethod = null);   // 2026-08-04: kart | kapida-nakit | kapida-kart | null
 
 public record OrderDetailItemDto(
     Guid Id,

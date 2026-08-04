@@ -147,6 +147,7 @@ public class CheckoutCommandHandler(
             CartId = request.CartId,
             Status = "pending",
             PaymentStatus = "unpaid",
+            PaymentMethod = string.IsNullOrWhiteSpace(request.PaymentMethod) ? null : request.PaymentMethod,
             OrderType = "retail",
             CurrencyCode = request.CurrencyCode,
             InvoiceCurrencyCode = request.CurrencyCode,

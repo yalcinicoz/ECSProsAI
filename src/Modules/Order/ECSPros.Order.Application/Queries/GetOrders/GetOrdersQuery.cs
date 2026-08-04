@@ -12,7 +12,9 @@ public record GetOrdersQuery(
     List<string>? Statuses = null,
     DateTime? CreatedFrom = null,
     DateTime? CreatedTo = null,
-    Guid? FirmPlatformId = null) : IRequest<Result<PagedOrderResult>>;
+    Guid? FirmPlatformId = null,
+    string? PaymentMethod = null) : IRequest<Result<PagedOrderResult>>;
+    // PaymentMethod (2026-08-04): kart | kapida-nakit | kapida-kart | none (= yöntemi olmayan eski kayıtlar)
 
 public record PagedOrderResult(List<OrderListDto> Items, int TotalCount, int Page, int PageSize)
 {
@@ -28,4 +30,5 @@ public record OrderListDto(
     decimal GrandTotal,
     string CurrencyCode,
     DateTime CreatedAt,
-    string? RecipientName = null);
+    string? RecipientName = null,
+    string? PaymentMethod = null);   // 2026-08-04: kart | kapida-nakit | kapida-kart | null
