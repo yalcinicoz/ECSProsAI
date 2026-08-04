@@ -265,6 +265,9 @@ builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceTokenService, EC
 // F1 (2026-08-04): eski B4 doğrudan-INSERT gateway'i kaldırıldı — sipariş senkronu artık
 // outbox kuyruğu + LegacySyncWorker dilimi + eski SiparisOlusturFromModel servisi üzerinden.
 builder.Services.AddScoped<ECSPros.Api.Services.Legacy.ILegacyOrderQueue, ECSPros.Api.Services.Legacy.LegacyOrderQueue>();
+// O2 (2026-08-04): sipariş onay akışı — SMS/e-posta onay linki, token, politika
+builder.Services.AddScoped<ECSPros.Api.Services.Store.IOrderConfirmationService,
+    ECSPros.Api.Services.Store.OrderConfirmationService>();
 // Part B / B1-B3 (2026-08-01): eski sistemden fiyat/stok/görsel/yeni-ürün periyodik senkronu
 // (varsayılan KAPALI + DryRun; Legacy:Sync:Enabled + DryRun=false ile gerçek yazım)
 builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacySyncService>();

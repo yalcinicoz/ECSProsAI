@@ -397,3 +397,17 @@ public class QuoteItemConfiguration : IEntityTypeConfiguration<QuoteItem>
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }
+
+public class OrderConfirmationConfiguration : IEntityTypeConfiguration<OrderConfirmation>
+{
+    public void Configure(EntityTypeBuilder<OrderConfirmation> b)
+    {
+        b.ToTable("ord_order_confirmations");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.TokenHash).HasMaxLength(64);
+        b.Property(x => x.ConfirmedVia).HasMaxLength(20);
+        b.HasIndex(x => x.TokenHash);
+        b.HasIndex(x => x.OrderId);
+        b.HasQueryFilter(x => !x.IsDeleted);
+    }
+}

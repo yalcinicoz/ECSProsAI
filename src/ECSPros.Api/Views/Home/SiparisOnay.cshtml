@@ -1,0 +1,35 @@
+@{
+    // O3 (2026-08-04): SMS/e-posta onay linki sonu sayfası — durumlar servis sözlüğünden.
+    var msDurum = ViewData["MsOnayDurum"] as string ?? "bulunamadi";
+    var msSiparisNo = ViewData["MsOnaySiparisNo"] as string;
+    var msToken = ViewData["MsOnayToken"] as string;
+    var (baslik, metin, ikon) = msDurum switch
+    {
+        "onaylandi" => ("Siparişiniz Onaylandı", $"{msSiparisNo} numaralı siparişiniz onaylandı ve hazırlanmak üzere sıraya alındı. Teşekkür ederiz!", "fa-circle-check"),
+        "zaten-onayli" => ("Sipariş Zaten Onaylı", $"{msSiparisNo} numaralı siparişiniz daha önce onaylanmış. Ayrıca bir işlem yapmanız gerekmiyor.", "fa-circle-check"),
+        "suresi-doldu" => ("Bağlantının Süresi Dolmuş", "Bu onay bağlantısının süresi dolmuş. Aşağıdaki düğmeyle yeni bir onay bağlantısı isteyebilirsiniz.", "fa-clock"),
+        "yeniden-gonderildi" => ("Yeni Bağlantı Gönderildi", "Yeni onay bağlantınız telefonunuza (ve varsa e-posta adresinize) gönderildi.", "fa-paper-plane"),
+        "yenileme-basarisiz" => ("Bağlantı Yenilenemedi", "Yeni bağlantı gönderilemedi. Sipariş zaten onaylanmış ya da iptal edilmiş olabilir; gerekirse müşteri hizmetlerimizle iletişime geçin.", "fa-circle-exclamation"),
+        "durum-uygun-degil" => ("Sipariş Onaylanamadı", $"{msSiparisNo} numaralı sipariş onaya uygun durumda değil (iptal edilmiş olabilir). Gerekirse müşteri hizmetlerimizle iletişime geçin.", "fa-circle-exclamation"),
+        _ => ("Bağlantı Bulunamadı", "Onay bağlantısı geçersiz görünüyor. Bağlantıyı mesajınızdan eksiksiz kopyaladığınızdan emin olun.", "fa-circle-exclamation")
+    };
+}
+
+<section class="ms-siparis-sayfa" style="max-width: 560px; margin: 48px auto; text-align: center;">
+    <div class="ms-siparis-asama-kart" style="padding: 40px 32px;">
+        <i class="fa-solid @ikon ms-fa-ikon" aria-hidden="true" style="font-size: 44px; margin-bottom: 16px;"></i>
+        <h1 class="ms-sepet-bolum-basligi" style="margin-bottom: 10px;">@baslik</h1>
+        <p class="ms-sepet-bolum-aciklama" style="margin-bottom: 24px;">@metin</p>
+
+        @if (msDurum == "suresi-doldu" && msToken is not null)
+        {
+        <form method="post" action="/o/@msToken/yenile">
+            <button class="ms-buton ms-buton-m ms-buton-satin-al" type="submit">Yeni Onay Bağlantısı Gönder</button>
+        </form>
+        }
+        else
+        {
+        <a class="ms-buton ms-buton-m ms-buton-devam" href="/">Alışverişe Devam Et</a>
+        }
+    </div>
+</section>
