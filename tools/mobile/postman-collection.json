@@ -5,11 +5,11 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://51.178.208.59:5055" },
-    { "key": "bypassSecret", "value": "" },
-    { "key": "challenge", "value": "" },
-    { "key": "deviceToken", "value": "" },
-    { "key": "signingSecret", "value": "" }
+    { "key": "msBaseUrl", "value": "http://51.178.208.59:5055" },
+    { "key": "msBypassSecret", "value": "" },
+    { "key": "msChallenge", "value": "" },
+    { "key": "msDeviceToken", "value": "" },
+    { "key": "msSigningSecret", "value": "" }
   ],
   "item": [
     {
@@ -21,7 +21,7 @@
             "type": "text/javascript",
             "exec": [
               "const d = pm.response.json().data;",
-              "pm.collectionVariables.set('challenge', d.challenge);",
+              "pm.collectionVariables.set('msChallenge', d.challenge);",
               "pm.test('challenge alındı', () => pm.expect(d.challenge).to.be.a('string'));"
             ]
           }
@@ -29,7 +29,7 @@
       ],
       "request": {
         "method": "GET",
-        "url": "{{baseUrl}}/api/store/device/challenge",
+        "url": "{{msBaseUrl}}/api/store/device/challenge",
         "description": "Tek kullanımlık, 10 dk geçerli. Her attest öncesi taze alınmalı."
       }
     },
@@ -42,8 +42,8 @@
             "type": "text/javascript",
             "exec": [
               "const d = pm.response.json().data;",
-              "pm.collectionVariables.set('deviceToken', d.deviceToken);",
-              "pm.collectionVariables.set('signingSecret', d.signingSecret);",
+              "pm.collectionVariables.set('msDeviceToken', d.deviceToken);",
+              "pm.collectionVariables.set('msSigningSecret', d.signingSecret);",
               "pm.test('device token alındı', () => pm.expect(d.deviceToken).to.be.a('string'));",
               "console.log('Token bitiş:', d.expiresAt);"
             ]
@@ -55,9 +55,9 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"platform\": \"android\",\n  \"attestation\": \"{{bypassSecret}}\",\n  \"challenge\": \"{{challenge}}\"\n}"
+          "raw": "{\n  \"platform\": \"android\",\n  \"attestation\": \"{{msBypassSecret}}\",\n  \"challenge\": \"{{msChallenge}}\"\n}"
         },
-        "url": "{{baseUrl}}/api/store/device/attest",
+        "url": "{{msBaseUrl}}/api/store/device/attest",
         "description": "Staging'de attestation alanı = DevBypass secret. Prod'da buraya gerçek Play Integrity token'ı gelir. Dönen signingSecret imza anahtarıdır (15 dk)."
       }
     },
@@ -79,9 +79,9 @@
               "const body = pm.request.body && pm.request.body.raw ? pm.variables.replaceIn(pm.request.body.raw) : '';",
               "const bodyHash = CryptoJS.SHA256(body).toString(CryptoJS.enc.Hex);",
               "const veri = [pm.request.method.toUpperCase(), pathQuery, ts, nonce, bodyHash].join('\\n');",
-              "const anahtar = CryptoJS.enc.Base64.parse(pm.collectionVariables.get('signingSecret'));",
+              "const anahtar = CryptoJS.enc.Base64.parse(pm.collectionVariables.get('msSigningSecret'));",
               "const imza = CryptoJS.HmacSHA256(veri, anahtar).toString(CryptoJS.enc.Hex);",
-              "pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + pm.collectionVariables.get('deviceToken') });",
+              "pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + pm.collectionVariables.get('msDeviceToken') });",
               "pm.request.headers.upsert({ key: 'X-Client-Platform', value: 'android' });",
               "pm.request.headers.upsert({ key: 'X-Timestamp', value: ts });",
               "pm.request.headers.upsert({ key: 'X-Nonce', value: nonce });",
@@ -102,7 +102,7 @@
       ],
       "request": {
         "method": "GET",
-        "url": "{{baseUrl}}/api/store/bootstrap",
+        "url": "{{msBaseUrl}}/api/store/bootstrap",
         "description": "İmza pre-request script'te üretilir. Aynı script başka /api/store/* isteklerine kopyalanır; nonce tek kullanımlık, timestamp ±300 sn. 401 alırsanız token dolmuştur → istek 1-2'yi tekrar koşun."
       }
     }
