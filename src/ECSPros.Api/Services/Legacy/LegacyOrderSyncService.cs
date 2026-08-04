@@ -549,8 +549,13 @@ public sealed class LegacyOrderSyncService(
             new List<Kalem>());
         await r.CloseAsync();
 
+        // DİKKAT (dry-run doğrulaması 2026-08-04): ord_order_items.Sku ÜRÜN KODU taşıyor
+        // (checkout istemcisi öyle gönderiyor) — legacy eşleşme anahtarı VARYANTIN barkodu
+        // (B1 kuralı: yeni varyantlarda Sku=barkod; Barcode kolonu öncelikli, Sku yedek).
         const string itemSql = """
-            SELECT i."Id", i."Sku", i."ProductName", i."VariantInfo", i."Quantity",
+            SELECT i."Id",
+                   COALESCE(NULLIF(v."Barcode",''), NULLIF(v."Sku",''), i."Sku") AS barkod,
+                   i."ProductName", i."VariantInfo", i."Quantity",
                    i."UnitPrice", i."DiscountAmount", COALESCE(p."TaxRate", 10)
             FROM "order".ord_order_items i
             LEFT JOIN catalog.product_variants v ON v."Id" = i."VariantId"
