@@ -70,7 +70,8 @@ public class CheckoutCommandHandler(
     ECSPros.Shared.Contracts.IProductService productService,
     ECSPros.Shared.Contracts.IChannelProductFlagService flagService,
     ECSPros.Shared.Contracts.IChannelPricingService pricingService,
-    ECSPros.Shared.Contracts.IProductCampaignResolver campaignResolver)
+    ECSPros.Shared.Contracts.IProductCampaignResolver campaignResolver,
+    ECSPros.Shared.Contracts.IPaymentOptionsProvider paymentOptions)
     : IRequestHandler<CheckoutCommand, Result<CheckoutSonucu>>
 {
     public async Task<Result<CheckoutSonucu>> Handle(CheckoutCommand request, CancellationToken ct)
@@ -126,16 +127,22 @@ public class CheckoutCommandHandler(
         var kampanyaSepetIndirim = Math.Min(kampanyaSonuc.CartDiscount, subtotal);
 
         // 2026-07-30: kapıda ödeme hizmet bedeli SUNUCUDA hesaplanır (istemciden tutar
-        // alınmaz — ödeme sayfasındaki +50 TL bilgisi bu sabitin görüntüsüdür) ve sipariş
-        // toplamına yazılır; 3.000 TL üstü kapıda ödeme sunucuda da reddedilir. Kupon
-        // indirimi de artık sipariş toplamına yansır (önceden yalnız kullanım kaydıydı).
-        const decimal kapidaOdemeBedeli = 50m;
-        const decimal kapidaOdemeUstSinir = 3000m;
+        // alınmaz — ödeme sayfasındaki bilgi bu değerin görüntüsüdür) ve sipariş toplamına
+        // yazılır; üst sınır üstü kapıda ödeme sunucuda da reddedilir. Kupon indirimi de
+        // sipariş toplamına yansır. 2026-08-04: yöntem/bedel/limit artık panel ayarından
+        // (IPaymentOptionsProvider) — kapalı yöntemle gelen istek istemciyi atlasa da reddedilir.
+        var odemeSecenekleri = await paymentOptions.GetAsync(request.FirmPlatformId, ct);
+        if (!string.IsNullOrWhiteSpace(request.PaymentMethod)
+            && !odemeSecenekleri.YontemAcik(request.PaymentMethod!))
+            return Result.Failure<CheckoutSonucu>("Seçilen ödeme yöntemi bu mağazada şu an kullanılamıyor; lütfen başka bir yöntem seçin.");
+
         var kapidaOdeme = request.PaymentMethod is "kapida-nakit" or "kapida-kart";
         var indirim = Math.Clamp((request.CouponDiscount ?? 0m) + kampanyaSepetIndirim, 0m, subtotal);
-        var masraf = kapidaOdeme ? kapidaOdemeBedeli : 0m;
-        if (kapidaOdeme && subtotal - indirim >= kapidaOdemeUstSinir)
-            return Result.Failure<CheckoutSonucu>("3.000 TL ve üzeri siparişlerde kapıda ödeme kabul edilmez; lütfen kart ile ödemeyi seçin.");
+        var masraf = kapidaOdeme ? odemeSecenekleri.CodServiceFee : 0m;
+        if (kapidaOdeme && odemeSecenekleri.CodMaxOrderTotal > 0
+            && subtotal - indirim >= odemeSecenekleri.CodMaxOrderTotal)
+            return Result.Failure<CheckoutSonucu>(
+                $"{odemeSecenekleri.CodMaxOrderTotal:N0} TL ve üzeri siparişlerde kapıda ödeme kabul edilmez; lütfen kart ile ödemeyi seçin.");
 
         var orderNumber = await orderNumbers.GenerateAsync(request.FirmPlatformId, ct);
 

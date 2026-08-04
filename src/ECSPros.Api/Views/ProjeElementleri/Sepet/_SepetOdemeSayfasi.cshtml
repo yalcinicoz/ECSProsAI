@@ -1,5 +1,15 @@
 @* C5: sözleşme/TCKN modalları bu sayfada da gerekli (kaynakta _SepetSiparis kompoziti sağlıyordu);
    C8'de fark edilen çift include kaldırıldı (modallar DOM'da iki kez render oluyordu). *@
+@inject ECSPros.Shared.Contracts.IPaymentOptionsProvider MsOdemeSecenekleriServisi
+@{
+    // 2026-08-04: sunulacak ödeme yöntemleri + kapıda bedel/limit panel ayarından
+    // (FirmPlatform.Settings — Kanallar ekranı). Kapalı yöntemin kartı hiç basılmaz;
+    // ilk açık yöntem seçili başlar. Checkout aynı ayarı sunucuda ayrıca doğrular.
+    var msOdemePlatformBilgi = ViewData["MsPlatform"] as ECSPros.Api.Services.StorePlatformBilgisi;
+    var msOdemeSecenekleri = await MsOdemeSecenekleriServisi.GetAsync(msOdemePlatformBilgi?.Id ?? Guid.Empty);
+    var msIlkOdemeYontemi = msOdemeSecenekleri.EnabledMethods.FirstOrDefault() ?? "kart";
+    string MsPara(decimal d) => d.ToString("N0", new System.Globalization.CultureInfo("tr-TR"));
+}
 @await Html.PartialAsync("~/Views/ProjeElementleri/Sepet/_SepetModallari.cshtml")
 
 <script>
@@ -58,8 +68,10 @@
                         <span data-ms-odeme-kupon-uyari-metin>Bu kupon seçili ödeme yöntemi ile kullanılamaz.</span>
                     </div>
 
-                    <label class="ms-odeme-yontemi ms-odeme-yontemi-aktif">
-                        <input class="ms-onay-input" type="radio" name="siparis-odeme-tipi" value="kart" checked data-ms-odeme-yontemi>
+                    @if (msOdemeSecenekleri.YontemAcik("kart"))
+                    {
+                    <label class="ms-odeme-yontemi @(msIlkOdemeYontemi == "kart" ? "ms-odeme-yontemi-aktif" : "")">
+                        <input class="ms-onay-input" type="radio" name="siparis-odeme-tipi" value="kart" checked="@(msIlkOdemeYontemi == "kart")" data-ms-odeme-yontemi>
                         <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
                         <span class="ms-odeme-yontemi-ikon" aria-hidden="true"><i class="fa-solid fa-credit-card ms-fa-ikon " aria-hidden="true"></i></span>
                         <span class="ms-odeme-yontemi-metin">
@@ -69,7 +81,7 @@
                         <span class="ms-odeme-yontemi-kupon-etiketi" data-ms-odeme-yontemi-kupon-etiketi hidden>Kupon Geçerli</span>
                     </label>
 
-                    <div class="ms-odeme-yontemi-panel ms-odeme-yontemi-panel-aktif" data-ms-odeme-panel="kart">
+                    <div class="ms-odeme-yontemi-panel @(msIlkOdemeYontemi == "kart" ? "ms-odeme-yontemi-panel-aktif" : "")" data-ms-odeme-panel="kart">
                         <div class="ms-odeme-kart-icerik">
                             <section class="ms-odeme-kart-formu" aria-labelledby="ms-odeme-kart-baslik">
                                 <h5 id="ms-odeme-kart-baslik">Kart Bilgileri</h5>
@@ -139,8 +151,12 @@
                         </div>
                     </div>
 
-                    <label class="ms-odeme-yontemi">
-                        <input class="ms-onay-input" type="radio" name="siparis-odeme-tipi" value="kapida-nakit" data-ms-odeme-yontemi>
+                    }
+
+                    @if (msOdemeSecenekleri.YontemAcik("kapida-nakit"))
+                    {
+                    <label class="ms-odeme-yontemi @(msIlkOdemeYontemi == "kapida-nakit" ? "ms-odeme-yontemi-aktif" : "")">
+                        <input class="ms-onay-input" type="radio" name="siparis-odeme-tipi" value="kapida-nakit" checked="@(msIlkOdemeYontemi == "kapida-nakit")" data-ms-odeme-yontemi>
                         <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
                         <span class="ms-odeme-yontemi-ikon" aria-hidden="true"><i class="fa-solid fa-money-bill ms-fa-ikon " aria-hidden="true"></i></span>
                         <span class="ms-odeme-yontemi-metin">
@@ -150,18 +166,27 @@
                         <span class="ms-odeme-yontemi-kupon-etiketi" data-ms-odeme-yontemi-kupon-etiketi hidden>Kupon Geçerli</span>
                     </label>
 
-                    <div class="ms-odeme-yontemi-panel" data-ms-odeme-panel="kapida-nakit" hidden>
+                    <div class="ms-odeme-yontemi-panel @(msIlkOdemeYontemi == "kapida-nakit" ? "ms-odeme-yontemi-panel-aktif" : "")" data-ms-odeme-panel="kapida-nakit" hidden="@(msIlkOdemeYontemi != "kapida-nakit")">
                         <section class="ms-odeme-kosul-kutusu">
                             <h5>Kapıda Nakit Ödeme</h5>
                             <p>Ürün teslim edilirken nakit olarak ödeme yapacaksınız.</p>
                             <p>Lütfen tam para hazır bulundurun.</p>
-                            <p>Kapıda ödeme için ek 50 TL hizmet bedeli uygulanır.</p>
-                            <p>3000 TL ve üzeri siparişlerde kapıda ödeme kabul edilmez.</p>
+                            @if (msOdemeSecenekleri.CodServiceFee > 0)
+                            {
+                            <p>Kapıda ödeme için ek @MsPara(msOdemeSecenekleri.CodServiceFee) TL hizmet bedeli uygulanır.</p>
+                            }
+                            @if (msOdemeSecenekleri.CodMaxOrderTotal > 0)
+                            {
+                            <p>@MsPara(msOdemeSecenekleri.CodMaxOrderTotal) TL ve üzeri siparişlerde kapıda ödeme kabul edilmez.</p>
+                            }
                         </section>
                     </div>
+                    }
 
-                    <label class="ms-odeme-yontemi">
-                        <input class="ms-onay-input" type="radio" name="siparis-odeme-tipi" value="kapida-kart" data-ms-odeme-yontemi>
+                    @if (msOdemeSecenekleri.YontemAcik("kapida-kart"))
+                    {
+                    <label class="ms-odeme-yontemi @(msIlkOdemeYontemi == "kapida-kart" ? "ms-odeme-yontemi-aktif" : "")">
+                        <input class="ms-onay-input" type="radio" name="siparis-odeme-tipi" value="kapida-kart" checked="@(msIlkOdemeYontemi == "kapida-kart")" data-ms-odeme-yontemi>
                         <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
                         <span class="ms-odeme-yontemi-ikon" aria-hidden="true"><i class="fa-solid fa-credit-card ms-fa-ikon " aria-hidden="true"></i></span>
                         <span class="ms-odeme-yontemi-metin">
@@ -171,15 +196,19 @@
                         <span class="ms-odeme-yontemi-kupon-etiketi" data-ms-odeme-yontemi-kupon-etiketi hidden>Kupon Geçerli</span>
                     </label>
 
-                    <div class="ms-odeme-yontemi-panel" data-ms-odeme-panel="kapida-kart" hidden>
+                    <div class="ms-odeme-yontemi-panel @(msIlkOdemeYontemi == "kapida-kart" ? "ms-odeme-yontemi-panel-aktif" : "")" data-ms-odeme-panel="kapida-kart" hidden="@(msIlkOdemeYontemi != "kapida-kart")">
                         <section class="ms-odeme-kosul-kutusu">
                             <h5>Kapıda Kart ile Ödeme</h5>
                             <p>Ürün teslim edilirken mobil POS cihazı ile ödeme yapacaksınız.</p>
                             <p>Kredi kartı ve banka kartı kabul edilir.</p>
                             <p>Temassız ödeme desteklenir.</p>
-                            <p>Kapıda ödeme için ek 50 TL hizmet bedeli uygulanır.</p>
+                            @if (msOdemeSecenekleri.CodServiceFee > 0)
+                            {
+                            <p>Kapıda ödeme için ek @MsPara(msOdemeSecenekleri.CodServiceFee) TL hizmet bedeli uygulanır.</p>
+                            }
                         </section>
                     </div>
+                    }
                 </section>
 
                 <section class="ms-siparis-asama-kart">
@@ -778,10 +807,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!teslimat) { window.location.href = hizliMod ? "/teslimat?hizli=1" : "/teslimat"; return; }
 
-    // 2026-07-30: kapıda ödeme hizmet bedeli — sunucudaki sabitin görüntüsü (checkout
-    // aynı bedeli TotalExpense/GrandTotal'a yazar; buradaki değer yalnız gösterimdir).
-    const KAPIDA_BEDELI = 50;
-    const seciliOdemeYontemi = () => document.querySelector("[data-ms-odeme-yontemi]:checked")?.value || "kart";
+    // 2026-07-30: kapıda ödeme hizmet bedeli — sunucu ayarının görüntüsü (checkout aynı
+    // bedeli TotalExpense/GrandTotal'a yazar; buradaki değer yalnız gösterimdir).
+    // 2026-08-04: bedel/limit/varsayılan yöntem panel ayarından (IPaymentOptionsProvider).
+    const KAPIDA_BEDELI = @msOdemeSecenekleri.CodServiceFee.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    const KAPIDA_UST_SINIR = @msOdemeSecenekleri.CodMaxOrderTotal.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    const VARSAYILAN_ODEME_YONTEMI = "@msIlkOdemeYontemi";
+    const seciliOdemeYontemi = () => document.querySelector("[data-ms-odeme-yontemi]:checked")?.value || VARSAYILAN_ODEME_YONTEMI;
     const kapidaBedeli = () => {
         const yontem = seciliOdemeYontemi();
         return yontem === "kapida-nakit" || yontem === "kapida-kart" ? KAPIDA_BEDELI : 0;
@@ -833,7 +865,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const mesajlar = [];
 
         if (kapida) {
-            mesajlar.push("Kapıda ödemede +50 TL hizmet bedeli uygulanır; 3.000 TL ve üzeri siparişlerde kapıda ödeme kabul edilmez.");
+            const paraYazKisa = (d) => new Intl.NumberFormat("tr-TR").format(d) + " TL";
+            const parcalar = [];
+            if (KAPIDA_BEDELI > 0) { parcalar.push(`Kapıda ödemede +${paraYazKisa(KAPIDA_BEDELI)} hizmet bedeli uygulanır`); }
+            if (KAPIDA_UST_SINIR > 0) { parcalar.push(`${parcalar.length ? "" : "Kapıda ödemede "}${paraYazKisa(KAPIDA_UST_SINIR)} ve üzeri siparişlerde kapıda ödeme kabul edilmez`); }
+            if (parcalar.length) { mesajlar.push(parcalar.join("; ") + "."); }
             if (kupon?.kod) {
                 mesajlar.push(`${bilgiKacir(kupon.kod)} kuponu yalnızca kart ile ödemede geçerli olduğundan sepetinizden kaldırıldı. Kart ile ödemeye dönerseniz kuponu sepette yeniden uygulayabilirsiniz.`);
                 kupon = null;

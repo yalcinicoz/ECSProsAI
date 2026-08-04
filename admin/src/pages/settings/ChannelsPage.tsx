@@ -166,6 +166,23 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
     typeof target?.settings?.['outOfStockVisibleSince'] === 'string'
       ? String(target.settings['outOfStockVisibleSince']).slice(0, 10) : ''
   )
+  // Ödeme yöntemleri (2026-08-04, şema-dışı kanal ayarı): sitede sunulan yöntemler +
+  // kapıda ödeme bedel/limit. Ayar yoksa üç yöntem de açık, 50 TL / 3000 TL varsayılır.
+  const TUM_ODEME_YONTEMLERI = [
+    { key: 'kart', label: 'Kart ile Öde (Online)' },
+    { key: 'kapida-nakit', label: 'Kapıda Nakit Ödeme' },
+    { key: 'kapida-kart', label: 'Kapıda Kart ile Ödeme' },
+  ]
+  const [paymentMethods, setPaymentMethods] = useState<string[]>(() => {
+    const kayitli = target?.settings?.['paymentMethods']
+    return Array.isArray(kayitli) && kayitli.length
+      ? kayitli.filter((y): y is string => typeof y === 'string')
+      : TUM_ODEME_YONTEMLERI.map(y => y.key)
+  })
+  const [codFee, setCodFee] = useState(
+    target?.settings?.['codServiceFee'] != null ? String(target.settings['codServiceFee']) : '50')
+  const [codMax, setCodMax] = useState(
+    target?.settings?.['codMaxOrderTotal'] != null ? String(target.settings['codMaxOrderTotal']) : '3000')
   const [fieldValues, setFieldValues] = useState<Record<string, string>>(() => {
     const merged: Record<string, string> = {}
     if (target) {
@@ -188,12 +205,13 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
 
   const mutation = useMutation({
     mutationFn: async () => {
+      if (paymentMethods.length === 0) { throw new Error('En az bir ödeme yöntemi seçili olmalı.') }
       const credentials: Record<string, unknown> = {}
       const settings: Record<string, unknown> = {}
       // Şema dışı mevcut anahtarlar korunur (stockControlEnabled, tema/domain vb. —
       // backend Settings/Credentials'ı olduğu gibi değiştirir, merge etmez)
       // Stok görünürlüğü anahtarları burada özel ele alınıyor — genel korumadan hariç tut.
-      const ozelSettings = new Set(['showOutOfStock', 'outOfStockVisibleSince'])
+      const ozelSettings = new Set(['showOutOfStock', 'outOfStockVisibleSince', 'paymentMethods', 'codServiceFee', 'codMaxOrderTotal'])
       if (target) {
         const schemaKeys = new Set(schema.map(f => f.key))
         for (const [k, v] of Object.entries(target.credentials ?? {})) if (v != null && !schemaKeys.has(k)) credentials[k] = v
@@ -201,6 +219,9 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
       }
       settings['showOutOfStock'] = showOutOfStock
       if (showOutOfStock && oosSince) settings['outOfStockVisibleSince'] = oosSince
+      settings['paymentMethods'] = paymentMethods
+      settings['codServiceFee'] = parseFloat(codFee) >= 0 ? parseFloat(codFee) : 50
+      settings['codMaxOrderTotal'] = parseFloat(codMax) >= 0 ? parseFloat(codMax) : 3000
       for (const f of schema) {
         const v = fieldValues[f.key] ?? ''
         if (v) {
@@ -359,6 +380,37 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
             </p>
           </div>
         )}
+      </div>
+
+      {/* Ödeme yöntemleri (kanal ayarı, 2026-08-04) */}
+      <div className="space-y-3 p-4 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Ödeme Yöntemleri</p>
+        {TUM_ODEME_YONTEMLERI.map(y => (
+          <label key={y.key} className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
+              checked={paymentMethods.includes(y.key)}
+              onChange={e => setPaymentMethods(m => e.target.checked ? [...m, y.key] : m.filter(x => x !== y.key))} />
+            <span className="text-sm" style={{ color: 'var(--text)' }}>{y.label}</span>
+          </label>
+        ))}
+        {paymentMethods.length === 0 && (
+          <p className="text-xs" style={{ color: '#ef4444' }}>En az bir ödeme yöntemi seçili olmalı.</p>
+        )}
+        {(paymentMethods.includes('kapida-nakit') || paymentMethods.includes('kapida-kart')) && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="flbl">Kapıda ödeme hizmet bedeli (TL)</label>
+              <input type="number" min="0" step="0.01" className="inp" value={codFee} onChange={e => setCodFee(e.target.value)} />
+            </div>
+            <div>
+              <label className="flbl">Kapıda ödeme üst sınırı (TL, 0 = sınırsız)</label>
+              <input type="number" min="0" step="1" className="inp" value={codMax} onChange={e => setCodMax(e.target.value)} />
+            </div>
+          </div>
+        )}
+        <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+          Kapalı yöntem sitede hiç gösterilmez; sunucu da bu yöntemle siparişi reddeder. Değişiklik ~1 dk içinde siteye yansır.
+        </p>
       </div>
 
       {/* Active toggle (edit only) */}
