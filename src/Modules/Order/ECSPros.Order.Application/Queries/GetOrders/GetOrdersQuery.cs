@@ -13,8 +13,10 @@ public record GetOrdersQuery(
     DateTime? CreatedFrom = null,
     DateTime? CreatedTo = null,
     Guid? FirmPlatformId = null,
-    string? PaymentMethod = null) : IRequest<Result<PagedOrderResult>>;
+    string? PaymentMethod = null,
+    bool? PaymentCollected = null) : IRequest<Result<PagedOrderResult>>;
     // PaymentMethod (2026-08-04): kart | kapida-nakit | kapida-kart | none (= yöntemi olmayan eski kayıtlar)
+    // PaymentCollected (2026-08-04): true = ödemesi alınan (paid), false = alınmayan (paid dışı)
 
 public record PagedOrderResult(List<OrderListDto> Items, int TotalCount, int Page, int PageSize)
 {

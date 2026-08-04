@@ -42,6 +42,13 @@ public class GetOrdersQueryHandler : IRequestHandler<GetOrdersQuery, Result<Page
                 ? query.Where(o => o.PaymentMethod == null)
                 : query.Where(o => o.PaymentMethod == request.PaymentMethod);
 
+        // 2026-08-04: ödemesi alınan/alınmayan — alınan = paid; alınmayan = paid dışı her durum
+        // (unpaid/pending/failed/partial). Panel filtresi bunu kullanır.
+        if (request.PaymentCollected.HasValue)
+            query = request.PaymentCollected.Value
+                ? query.Where(o => o.PaymentStatus == "paid")
+                : query.Where(o => o.PaymentStatus != "paid");
+
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var term = request.Search.Trim().ToLower();

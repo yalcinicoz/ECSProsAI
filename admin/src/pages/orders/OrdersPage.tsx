@@ -31,12 +31,12 @@ export const PAYMENT_METHOD_MAP: Record<string, string> = {
   'kapida-kart':  'Kapıda Kart',
 }
 
-const PAYMENT_METHOD_FILTER = [
-  { value: '', label: 'Ödeme tipi: Tümü' },
-  { value: 'kart', label: 'Kart (Online)' },
-  { value: 'kapida-nakit', label: 'Kapıda Nakit' },
-  { value: 'kapida-kart', label: 'Kapıda Kart' },
-  { value: 'none', label: 'Yöntem kaydı yok' },
+// 2026-08-04 (kullanıcı kararı): filtre yöntem değil tahsilat durumu —
+// alınan = paid; alınmayan = paid dışı her durum (unpaid/pending/failed/partial)
+const PAYMENT_COLLECTED_FILTER = [
+  { value: '', label: 'Ödeme: Tümü' },
+  { value: 'true', label: 'Ödemesi Alınan' },
+  { value: 'false', label: 'Ödemesi Alınmayan' },
 ]
 
 // Aktif küme küçük kalır (partial index) — sayaç yalnız bunlarda; Teslim/İptal/Tümü
@@ -94,7 +94,7 @@ export function OrdersPage() {
   const [tabKey, setTabKey] = useState('active')
   const [search, setSearch] = useState('')          // input değeri
   const [appliedSearch, setAppliedSearch] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState('')
+  const [paymentCollected, setPaymentCollected] = useState('')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [page, setPage] = useState(1)
@@ -116,12 +116,12 @@ export function OrdersPage() {
     : undefined
 
   const { data: ordersData, isLoading } = useQuery<PagedResult<OrderSummary>>({
-    queryKey: ['orders', tabKey, appliedSearch, fromDate, toDate, paymentMethod, page],
+    queryKey: ['orders', tabKey, appliedSearch, fromDate, toDate, paymentCollected, page],
     queryFn: async () => {
       const params = new URLSearchParams({ page: String(page), pageSize: '20' })
       if (tab.statuses) params.set('statuses', tab.statuses)
       if (appliedSearch) params.set('search', appliedSearch)
-      if (paymentMethod) params.set('paymentMethod', paymentMethod)
+      if (paymentCollected) params.set('paymentCollected', paymentCollected)
       if (fromDate) params.set('from', new Date(`${fromDate}T00:00:00`).toISOString())
       if (toDate) {
         const end = new Date(`${toDate}T00:00:00`)
@@ -188,9 +188,9 @@ export function OrdersPage() {
         <button onClick={applySearch}
           className="px-3 py-1.5 rounded-lg text-sm"
           style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Ara</button>
-        <select className="inp text-sm py-1.5 px-2 h-auto w-auto" value={paymentMethod}
-          onChange={e => { setPaymentMethod(e.target.value); setPage(1) }}>
-          {PAYMENT_METHOD_FILTER.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        <select className="inp text-sm py-1.5 px-2 h-auto w-auto" value={paymentCollected}
+          onChange={e => { setPaymentCollected(e.target.value); setPage(1) }}>
+          {PAYMENT_COLLECTED_FILTER.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         <div className="flex items-center gap-1 ml-2">
           <input type="date" className="inp text-sm py-1.5 px-2 h-auto" value={fromDate}
