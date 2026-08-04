@@ -33,7 +33,9 @@ public sealed class LegacyOrderSyncService(
     ILogger<LegacyOrderSyncService> logger)
 {
     private string MySqlConn => config["Legacy:MySqlConnection"] ?? "";
-    private bool DryRun => config.GetValue("Legacy:Sync:DryRun", true);
+    // DİKKAT: B dilimlerinin Legacy:Sync:DryRun bayrağından BAĞIMSIZ — canlıda katalog
+    // senkronu gerçek modda çalışırken sipariş yazımı ayrıca ve bilinçli açılır (F4).
+    private bool DryRun => config.GetValue("Legacy:Sync:OrderDryRun", true);
     private string ServiceUrl => (config["Legacy:OrderService:Url"] ?? "https://services.misharitalia.com").TrimEnd('/');
     private string ServiceUser => config["Legacy:OrderService:User"] ?? "";
     private string ServicePass => config["Legacy:OrderService:Password"] ?? "";
