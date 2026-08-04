@@ -30,7 +30,11 @@ order_sync kaydına) services.misharitalia.com SiparisOlusturFromModel'e gönder
 LegacyOrderId geri yazılır. Kanal eşlemesi panel Kanallar → legacyPlatformId (mishar=41
 GİRİLMELİ). Gerçek gönderim için: Legacy:Sync:OrderDryRun=false + OrderService:User/Password
 (BasicAuth) — kullanıcıdan bekleniyor. Eski B4 doğrudan-INSERT yolu kaldırıldı.
-SIRADA: dry-run model doğrulaması → F2 durum+kargo geri senkronu → F3 iptal → F4 canlı.
+F2+F3 de UYGULANDI (aynı restart): durum+kargo geri senkronu (stok yan etkisiz,
+ord_shipments takip satırı, rezervasyon bırakma) + müşteri iptali (Siparişlerim
+'Siparişi İptal Et' + store cancel ucu + eskiye UyeSiparisIptal push'u).
+SIRADA: restart → dry-run model doğrulaması → F4 canlı (BasicAuth kimlik + kaynak +
+CodExpenseTypeId kullanıcıdan).
 
 **PayTR ödeme entegrasyonu (2026-07-30/31) — ✅ CANLI + ÇALIŞIYOR:** Direct API. Uçtan uca
 kullanıcı doğruladı (iptal/başarısız akışı; başarılı tam ödeme testi kullanıcıya kalan tek adım).
