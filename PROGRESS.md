@@ -22,6 +22,16 @@
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging instance hazır** (5055, DevBypass) ⚠️ systemd kurulumu kullanıcıda | Kullanıcı: staging systemd kur + 5055 aç; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
+**Eski sistem sipariş senkronu (2026-08-04) — F1 UYGULANDI ⚠️ restart bekliyor (dry-run):**
+plan `docs/eski-sistem-siparis-senkron-plani.md`. Outbox kuyruğu (integration.legacy_order_outbox) +
+LegacySyncWorker sipariş dilimi (2 dk): kapıda sipariş checkout anında, kart siparişi ödeme
+başarısında kuyruğa düşer; ECSGYE Order FORM modeli kurulup (dry-run'da integration_logs
+order_sync kaydına) services.misharitalia.com SiparisOlusturFromModel'e gönderilir,
+LegacyOrderId geri yazılır. Kanal eşlemesi panel Kanallar → legacyPlatformId (mishar=41
+GİRİLMELİ). Gerçek gönderim için: Legacy:Sync:OrderDryRun=false + OrderService:User/Password
+(BasicAuth) — kullanıcıdan bekleniyor. Eski B4 doğrudan-INSERT yolu kaldırıldı.
+SIRADA: dry-run model doğrulaması → F2 durum+kargo geri senkronu → F3 iptal → F4 canlı.
+
 **PayTR ödeme entegrasyonu (2026-07-30/31) — ✅ CANLI + ÇALIŞIYOR:** Direct API. Uçtan uca
 kullanıcı doğruladı (iptal/başarısız akışı; başarılı tam ödeme testi kullanıcıya kalan tek adım).
 Bu turda çözülenler: (1) callback nginx www'siz→www 301'e takılıyordu → callback path'i redirect'ten
