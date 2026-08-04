@@ -1,0 +1,15 @@
+[Unit]
+Description=ECSPros Mobil Test Staging (5055, DevBypass)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/ECSProsAI/publish-staging
+ExecStart=/usr/bin/dotnet /opt/ECSProsAI/publish-staging/ECSPros.Api.dll
+Restart=always
+RestartSec=10
+User=yalcin
+EnvironmentFile=/etc/ecspros-staging.env
+
+[Install]
+WantedBy=multi-user.target
