@@ -38,13 +38,15 @@ eşleşme anahtarı kalem Sku'su değil VARYANT BARKODU. Kalan gözlem: ilk ger�
 siparişte expense satırı (ID=2) doğrulanacak; durum/kargo geri senkronu (F2) ilk
 operasyon ilerleyişinde izlenecek.
 
-**Sipariş onay akışı O0-O3 (2026-08-04) — UYGULANDI ⚠️ restart bekliyor:** onay YENİ
+**Sipariş onay akışı O0-O3 (2026-08-04) — CANLIDA ⚠️ kullanıcı testi bekliyor:** onay YENİ
 sitede (SMS/e-posta onay linki, token 24h ayarlanabilir, /o/{token} SSR sayfası +
 Siparişlerim 'Siparişi Onayla'); eskiye yalnız ONAYLI sipariş 'Hazırlanıyor' gider.
 Politika kanal bazlı (kapıda always, kart first_order vars.) + şablonlar panel
 Ayarlar → Bildirim Şablonları'ndan. Kart PayTR: politika onay istiyorsa auto-confirm
-YAPILMAZ (paid+pending, link gönderilir). Test: restart sonrası kapıda sipariş →
-SMS linki → onay → eskiye Hazırlanıyor.
+YAPILMAZ (paid+pending, link gönderilir). Test: kapıda sipariş →
+SMS linki → onay → eskiye Hazırlanıyor. **Ek (2026-08-04, canlıda, test bekliyor):
+PayTR bildirimi yeni DB'de olmayan siparişte eski sitenin PayTrBildirim ucuna
+iletilir** (Legacy:PayTrForwardUrl; iletim başarısızsa PayTR yeniden dener).
 
 **PayTR ödeme entegrasyonu (2026-07-30/31) — ✅ CANLI + ÇALIŞIYOR:** Direct API. Uçtan uca
 kullanıcı doğruladı (iptal/başarısız akışı; başarılı tam ödeme testi kullanıcıya kalan tek adım).
