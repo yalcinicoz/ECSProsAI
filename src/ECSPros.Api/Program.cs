@@ -181,6 +181,10 @@ builder.Services.AddScoped<ECSPros.Api.Services.Store.IPaymentSettingsProvider,
     ECSPros.Api.Services.Store.DbPaymentSettingsProvider>();
 builder.Services.AddScoped<ECSPros.Api.Services.Store.PayTrDirectService>();
 builder.Services.AddHttpClient("paytr"); // PayTR /odeme çağrıları için ayrı named client
+// 2026-08-04: platformun sitede sunduğu ödeme yöntemleri + kapıda ödeme bedel/limit
+// (FirmPlatform.Settings, panel Kanallar ekranı) — SSR ödeme sayfası + checkout doğrulaması
+builder.Services.AddScoped<ECSPros.Shared.Contracts.IPaymentOptionsProvider,
+    ECSPros.Api.Services.Store.PaymentOptionsProvider>();
 
 // ─── Infrastructure Modules ────────────────────────────────────────
 builder.Services.AddIamInfrastructure(npgsqlDataSource, builder.Configuration);
