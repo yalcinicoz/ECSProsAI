@@ -12,7 +12,10 @@ Play Integrity canlanınca bu instance kapatılıp secret imha edilir.
 ## İlk kurulum (bir kez, sudo gerekir)
 
 ```bash
-# 1) Ortam dosyası ve unit (Claude bunları scratchpad'e hazırladı)
+# 1) Ortam dosyası ve unit — şablonlar artık repoda (tools/mobile/):
+#    ecspros-staging.service (Type=simple — notify KULLANMA: dotnet hazır sinyali
+#    göndermez, systemd 90 sn'de timeout'la öldürüp döngüye sokar; 2026-08-04 dersi)
+#    ecspros-staging.env.example (secret'ı doldurup kopyalayın)
 sudo cp <scratchpad>/ecspros-staging.env     /etc/ecspros-staging.env
 sudo cp <scratchpad>/ecspros-staging.service /etc/systemd/system/ecspros-staging.service
 sudo chmod 600 /etc/ecspros-staging.env      # secret'ı koru
