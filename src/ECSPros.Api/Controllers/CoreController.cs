@@ -373,7 +373,48 @@ public class CoreController : ControllerBase
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = new { changed = result.Value } });
     }
+
+    // ── O1 (2026-08-04): Bildirim şablonları + sipariş onay politikası ──────
+
+    /// <summary>Tip koduna göre bildirim şablonları (panel Bildirim Şablonları ekranı).</summary>
+    [HttpGet("notification-templates")]
+    public async Task<IActionResult> GetNotificationTemplates([FromQuery] string typeCode = "siparis_onay", CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(
+            new ECSPros.Core.Application.Queries.GetNotificationTemplates.GetNotificationTemplatesQuery(typeCode), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Bildirim şablonu ekle/güncelle — (tip, kanal, dil) başına tek kayıt.</summary>
+    [HttpPut("notification-templates")]
+    public async Task<IActionResult> UpsertNotificationTemplate([FromBody] UpsertNotificationTemplateRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new ECSPros.Core.Application.Commands.UpsertNotificationTemplate.UpsertNotificationTemplateCommand(
+                request.TypeCode, request.Channel, request.LanguageCode ?? "tr",
+                request.Subject, request.Body, request.IsActive), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>Sipariş onay politikası — platform Settings'e yalnız ilgili anahtarlar merge edilir.</summary>
+    [HttpPut("firm-platforms/{id:guid}/order-confirm-settings")]
+    public async Task<IActionResult> UpdateOrderConfirmSettings(Guid id, [FromBody] OrderConfirmSettingsRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new ECSPros.Core.Application.Commands.UpdateOrderConfirmSettings.UpdateOrderConfirmSettingsCommand(
+                id, request.Cod, request.Card, request.LinkHours), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
 }
+
+public record UpsertNotificationTemplateRequest(
+    string TypeCode, string Channel, string? LanguageCode, string? Subject, string Body, bool IsActive = true);
+
+public record OrderConfirmSettingsRequest(string Cod, string Card, int LinkHours);
 
 // ── Request Modelleri ──────────────────────────────────────────────────────────
 

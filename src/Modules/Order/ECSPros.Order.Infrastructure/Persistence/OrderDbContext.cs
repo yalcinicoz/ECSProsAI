@@ -20,6 +20,7 @@ public class OrderDbContext : DbContext, IOrderDbContext
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
     public DbSet<Shipment> Shipments => Set<Shipment>();
+    public DbSet<OrderConfirmation> OrderConfirmations => Set<OrderConfirmation>();
     public DbSet<ShipmentItem> ShipmentItems => Set<ShipmentItem>();
     public DbSet<ShipmentEvent> ShipmentEvents => Set<ShipmentEvent>();
     public DbSet<OrderNotification> OrderNotifications => Set<OrderNotification>();

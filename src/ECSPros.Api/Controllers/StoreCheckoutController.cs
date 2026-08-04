@@ -13,7 +13,7 @@ namespace ECSPros.Api.Controllers;
 public class StoreCheckoutController(
     IMediator mediator,
     IConfiguration configuration,
-    ECSPros.Api.Services.Legacy.ILegacyOrderQueue legacyOrderQueue) : ControllerBase
+    ECSPros.Api.Services.Store.IOrderConfirmationService orderConfirmations) : ControllerBase
 {
     /// <summary>C3: sepette kupon kodu doğrulama — misafir de deneyebilir (üye kuponu
     /// koşulları MemberId üzerinden değerlendirilir); kullanım kaydı checkout'ta (C10).</summary>
@@ -92,11 +92,11 @@ public class StoreCheckoutController(
             await mediator.Send(new ECSPros.Promotion.Application.Commands.UseCoupon.UseCouponCommand(
                 kuponId, uyeKimlik, result.Value!.OrderId, indirim), ct);
 
-        // F1 (2026-08-04): KAPIDA ödemeli sipariş oluştuğu anda eski sistem kuyruğuna düşer
-        // (eski taraf "Onay Bekliyor" başlatır, onay/SMS orada). Kart siparişi ödeme başarılı
-        // olup onaylanınca kuyruğa girer (OrderConfirmedLegacyQueueHandler). Hata-güvenli.
+        // O2 (2026-08-04, akış değişti): onay YENİ SİTEDE alınır — kapıda siparişte
+        // (politika gerektiriyorsa) onay SMS/e-postası gönderilir; sipariş onaylanınca
+        // OrderConfirmedEvent eskiye "Hazırlanıyor" olarak taşır. Gönderim hata-güvenli.
         if (req.PaymentMethod is "kapida-nakit" or "kapida-kart")
-            await legacyOrderQueue.EnqueueAsync(result.Value!.OrderId, req.FirmPlatformId, "create", ct);
+            await orderConfirmations.SiparisSonrasiBaslatAsync(result.Value!.OrderId, ct);
 
         // 2026-07-30: orderNumber da döner — onay ekranı insan okunur numarayı doğrudan
         // gösterir (misafirde üye-listesi geri araması yoktu, GUID görünüyordu).

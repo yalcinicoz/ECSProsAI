@@ -2,6 +2,7 @@ using ECSPros.Api.Services.Store;
 using ECSPros.Order.Application.Commands.PayTrPayment;
 using ECSPros.Order.Application.Queries.GetOrderForPayment;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,6 +23,8 @@ public class PaymentController(
     IMediator mediator,
     IPaymentSettingsProvider settingsProvider,
     PayTrDirectService paytr,
+    ECSPros.Order.Application.Services.IOrderDbContext orderDb,
+    IOrderConfirmationService orderConfirmations,
     ILogger<PaymentController> logger) : ControllerBase
 {
     /// <summary>Adım 1: sipariş + kart → PayTR /odeme → 3D HTML. Kart alanları burada bırakılır.</summary>
@@ -182,8 +185,27 @@ public class PaymentController(
         }
 
         var basarili = form.status == "success";
-        await mediator.Send(new PayTrCallbackUygulaCommand(
-            form.merchant_oid ?? "", basarili, form.failed_reason_msg, form.total_amount), ct);
+        // O2 (2026-08-04): kart onay politikası — gerekliyse otomatik onay YAPILMAZ,
+        // ödeme paid işlenir ve müşteriye onay linki gönderilir (politika: panel
+        // Bildirim Şablonları ekranı; varsayılan first_order). Hata-güvenli.
+        var onayGerekli = false;
+        Guid? siparisId = null;
+        if (basarili)
+        {
+            siparisId = await orderDb.Orders.AsNoTracking()
+                .Where(o => o.OrderNumber == (form.merchant_oid ?? ""))
+                .Select(o => (Guid?)o.Id)
+                .FirstOrDefaultAsync(ct);
+            if (siparisId is { } sid0)
+                onayGerekli = await orderConfirmations.KartOnayGerekliMiAsync(sid0, ct);
+        }
+
+        var sonuc = await mediator.Send(new PayTrCallbackUygulaCommand(
+            form.merchant_oid ?? "", basarili, form.failed_reason_msg, form.total_amount,
+            AutoConfirm: !onayGerekli), ct);
+
+        if (basarili && onayGerekli && sonuc.IsSuccess && siparisId is { } sid)
+            await orderConfirmations.SiparisSonrasiBaslatAsync(sid, ct);
         // Sonuç ne olursa olsun PayTR'a "OK" — aksi halde PayTR tekrar dener (idempotent handler)
         return Content("OK");
     }

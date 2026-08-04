@@ -638,7 +638,9 @@ public sealed class LegacyOrderSyncService(
         Ekle("orderNumber", v.OrderNumber);
         Ekle("platformId", v.LegacyPlatformId!.Value.ToString());
         Ekle("sourcePlatformOrderNumber", v.OrderNumber);
-        Ekle("orderStatus", "Onay Bekliyor"); // eski kural: her yeni sipariş böyle başlar
+        // 2026-08-04 (kullanıcı kararı): onay YENİ SİTEDE alınır (SMS/e-posta linki /
+        // Siparişlerim / PayTR ödemesi); eskiye yalnız ONAYLI sipariş gider → "Hazırlanıyor".
+        Ekle("orderStatus", "Hazırlanıyor");
         Ekle("kaynak", Kaynak);
         Ekle("paymentTypeId", odemeTipi.ToString());
         Ekle("orderDate", Tarih(v.CreatedAt));

@@ -16,8 +16,9 @@ public record PayTrPaymentBaslatCommand(Guid OrderId, string MaskeliPan, bool Te
 /// başarısızda failed. merchant_oid = OrderNumber. Idempotent (tekrar gelen callback
 /// mevcut sonucu bozmaz). Bu komut YALNIZ hash doğrulanmış callback'ten çağrılır.</summary>
 public record PayTrCallbackUygulaCommand(
-    string MerchantOid, bool Basarili, string? BasarisizlikNedeni, string? TotalAmount = null)
-    : IRequest<Result<Guid>>;
+    string MerchantOid, bool Basarili, string? BasarisizlikNedeni, string? TotalAmount = null,
+    bool AutoConfirm = true)   // O2 (2026-08-04): kart onay politikası gerektiriyorsa false —
+    : IRequest<Result<Guid>>;  // sipariş paid+pending kalır, müşteri onayı beklenir
 
 public class PayTrPaymentBaslatCommandHandler(IOrderDbContext db)
     : IRequestHandler<PayTrPaymentBaslatCommand, Result>
@@ -101,7 +102,7 @@ public class PayTrCallbackUygulaCommandHandler(
         // OrderConfirmedEvent ile online stok rezervasyonunu tetikler (WarehouseId=Guid.Empty →
         // depo-bağımsız). Onay hatası ödeme kaydını BLOKLAMAZ; log'a düşer, personel elle onaylayabilir.
         // EKSİK ödeme onaylanmaz (Status pending kalır) — kasıtlı: tutar uyuşmazlığı operasyona girmesin.
-        if (request.Basarili && !eksikOdeme)
+        if (request.Basarili && !eksikOdeme && request.AutoConfirm)
         {
             try
             {

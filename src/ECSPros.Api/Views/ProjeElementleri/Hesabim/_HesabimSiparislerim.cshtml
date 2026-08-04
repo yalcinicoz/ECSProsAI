@@ -162,6 +162,13 @@
                             @* İP-3.2: tasarımın İade Durumu aksiyonu — İadelerim'deki kayda götürür. *@
                             <a class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-amber ms-buton-x" href="/Hesabim/Iadelerim">İade Durumu</a>
                             }
+                            @if (s.Status == "pending")
+                            {
+                            @* O3 (2026-08-04): bekleyen siparişi müşteri buradan da onaylayabilir
+                               (SMS linkine alternatif) — onay eskiye 'Hazırlanıyor' taşınır. *@
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-x" type="button"
+                                    data-ms-siparis-onayla="@s.Id" data-ms-siparis-onayla-no="@s.OrderNumber">Siparişi Onayla</button>
+                            }
                             @if (s.Status is "pending" or "confirmed")
                             {
                             @* F3 (2026-08-04): müşteri iptali — pending/confirmed'de durum makinesi
@@ -1110,6 +1117,29 @@ document.addEventListener("DOMContentLoaded", () => {
    İptal eski sisteme outbox'la yansır; başarısızlıkta sunucu hatası kullanıcıya gösterilir. *@
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+    // O3: bekleyen siparişi onayla (SMS linkine alternatif)
+    document.querySelectorAll("[data-ms-siparis-onayla]").forEach((buton) => {
+        buton.addEventListener("click", async () => {
+            const no = buton.dataset.msSiparisOnaylaNo || "";
+            if (!window.confirm(`${no} numaralı siparişinizi onaylıyor musunuz?`)) { return; }
+            buton.disabled = true;
+            buton.textContent = "Onaylanıyor…";
+            try {
+                const cevap = await fetch(`/api/store/account/orders/${buton.dataset.msSiparisOnayla}/confirm`, {
+                    method: "POST",
+                    headers: { Authorization: "Bearer " + (localStorage.getItem("ecspros_member_token") || "") }
+                });
+                const veri = await cevap.json().catch(() => null);
+                if (veri?.success) { window.location.reload(); return; }
+                window.alert(veri?.error || "Sipariş onaylanamadı. Lütfen tekrar deneyin.");
+            } catch {
+                window.alert("Sipariş onaylanamadı. Lütfen tekrar deneyin.");
+            }
+            buton.disabled = false;
+            buton.textContent = "Siparişi Onayla";
+        });
+    });
+
     document.querySelectorAll("[data-ms-siparis-iptal]").forEach((buton) => {
         buton.addEventListener("click", async () => {
             const no = buton.dataset.msSiparisIptalNo || "";

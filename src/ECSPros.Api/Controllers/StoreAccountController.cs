@@ -21,7 +21,8 @@ namespace ECSPros.Api.Controllers;
 public class StoreAccountController(
     IMediator mediator,
     IConfiguration configuration,
-    ECSPros.Api.Services.Legacy.ILegacyOrderQueue legacyOrderQueue) : ControllerBase
+    ECSPros.Api.Services.Legacy.ILegacyOrderQueue legacyOrderQueue,
+    ECSPros.Api.Services.Store.IOrderConfirmationService orderConfirmations) : ControllerBase
 {
     private Guid GetMemberId() =>
         Guid.Parse(User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
@@ -150,6 +151,21 @@ public class StoreAccountController(
         if (result.Value!.MemberId != GetMemberId()) // E8: sahiplik denetimi — başkasının siparişi sızmaz
             return NotFound(new { success = false, error = "Sipariş bulunamadı." });
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>O3 (2026-08-04): üye kendi bekleyen siparişini Siparişlerim'den onaylar —
+    /// onay eskiye 'Hazırlanıyor' olarak taşınır (OrderConfirmedEvent → legacy kuyruk).</summary>
+    [HttpPost("orders/{orderId}/confirm")]
+    public async Task<IActionResult> ConfirmOrder(Guid orderId, CancellationToken ct)
+    {
+        var detay = await mediator.Send(new GetOrderDetailQuery(orderId), ct);
+        if (detay.IsFailure || detay.Value!.MemberId != GetMemberId())
+            return NotFound(new { success = false, error = "Sipariş bulunamadı." });
+
+        var sonuc = await orderConfirmations.SiteOnaylaAsync(orderId, ct);
+        if (sonuc.Durum != "onaylandi" && sonuc.Durum != "zaten-onayli")
+            return BadRequest(new { success = false, error = "Sipariş onaylanamadı (durumu uygun değil)." });
+        return Ok(new { success = true, data = sonuc.Durum });
     }
 
     /// <summary>F3 (2026-08-04): müşteri sipariş iptali — yalnız kendi siparişi ve
