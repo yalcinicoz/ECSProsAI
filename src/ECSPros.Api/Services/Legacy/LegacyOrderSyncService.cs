@@ -521,9 +521,9 @@ public sealed class LegacyOrderSyncService(
         if (!await r.ReadAsync(ct)) return null;
 
         int? legacyPlatform = null;
-        if (!r.IsDBNull(27))
+        if (!r.IsDBNull(26))
         {
-            var settings = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(r.GetString(27));
+            var settings = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(r.GetString(26));
             if (settings is not null && settings.TryGetValue("legacyPlatformId", out var lp)
                 && lp.ValueKind == JsonValueKind.Number)
                 legacyPlatform = lp.GetInt32();
