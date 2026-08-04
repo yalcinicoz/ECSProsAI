@@ -18,7 +18,10 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/store/account")]
 [Authorize(Policy = "MemberOnly")]
-public class StoreAccountController(IMediator mediator, IConfiguration configuration) : ControllerBase
+public class StoreAccountController(
+    IMediator mediator,
+    IConfiguration configuration,
+    ECSPros.Api.Services.Legacy.ILegacyOrderQueue legacyOrderQueue) : ControllerBase
 {
     private Guid GetMemberId() =>
         Guid.Parse(User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
@@ -147,6 +150,25 @@ public class StoreAccountController(IMediator mediator, IConfiguration configura
         if (result.Value!.MemberId != GetMemberId()) // E8: sahiplik denetimi — başkasının siparişi sızmaz
             return NotFound(new { success = false, error = "Sipariş bulunamadı." });
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>F3 (2026-08-04): müşteri sipariş iptali — yalnız kendi siparişi ve
+    /// pending/confirmed durumda (durum makinesi Cancel kuralı). İptal eski sisteme
+    /// outbox 'cancel' işiyle yansıtılır (kanal eskiye bağlıysa); rezervasyonlar
+    /// OrderCancelledEvent ile serbest kalır.</summary>
+    [HttpPost("orders/{orderId}/cancel")]
+    public async Task<IActionResult> CancelOrder(Guid orderId, CancellationToken ct)
+    {
+        var detay = await mediator.Send(new GetOrderDetailQuery(orderId), ct);
+        if (detay.IsFailure || detay.Value!.MemberId != GetMemberId())
+            return NotFound(new { success = false, error = "Sipariş bulunamadı." });
+
+        var sonuc = await mediator.Send(new ECSPros.Order.Application.Commands.CancelOrder.CancelOrderCommand(
+            orderId, GetMemberId(), "Müşteri iptali (site)"), ct);
+        if (sonuc.IsFailure) return BadRequest(new { success = false, error = sonuc.Error });
+
+        await legacyOrderQueue.EnqueueAsync(orderId, detay.Value.FirmPlatformId, "cancel", ct);
+        return Ok(new { success = true, data = true });
     }
 
     /// <summary>H1: Siparişin faturaları — entegratör URL'i sızmaz, yalnız hasIntegratorPdf

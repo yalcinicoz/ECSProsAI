@@ -162,6 +162,13 @@
                             @* İP-3.2: tasarımın İade Durumu aksiyonu — İadelerim'deki kayda götürür. *@
                             <a class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-amber ms-buton-x" href="/Hesabim/Iadelerim">İade Durumu</a>
                             }
+                            @if (s.Status is "pending" or "confirmed")
+                            {
+                            @* F3 (2026-08-04): müşteri iptali — pending/confirmed'de durum makinesi
+                               izin verir; iptal eski sisteme de outbox'la yansıtılır. *@
+                            <button class="ms-buton ms-buton-ornek ms-buton-simdi-al ms-buton-simdi-al-kirmizi ms-buton-x" type="button"
+                                    data-ms-siparis-iptal="@s.Id" data-ms-siparis-iptal-no="@s.OrderNumber">Siparişi İptal Et</button>
+                            }
                             @if (false)
                             {
                             @* Tasarımın Hazırlık Durumu butonu — modal timeline'ı statik demo;
@@ -1093,6 +1100,35 @@ document.addEventListener("DOMContentLoaded", () => {
                 satir.querySelector('[data-alan="fiyat"]').textContent = tl(u.fiyat);
                 kap.appendChild(satir);
             });
+        });
+    });
+});
+</script>
+
+@* F3 (2026-08-04): müşteri sipariş iptali — onay diyaloğu sonrası üye token'ıyla
+   POST /api/store/account/orders/{id}/cancel; başarıda sayfa yenilenir (SSR liste taze).
+   İptal eski sisteme outbox'la yansır; başarısızlıkta sunucu hatası kullanıcıya gösterilir. *@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll("[data-ms-siparis-iptal]").forEach((buton) => {
+        buton.addEventListener("click", async () => {
+            const no = buton.dataset.msSiparisIptalNo || "";
+            if (!window.confirm(`${no} numaralı siparişiniz iptal edilecek. Emin misiniz?`)) { return; }
+            buton.disabled = true;
+            buton.textContent = "İptal ediliyor…";
+            try {
+                const cevap = await fetch(`/api/store/account/orders/${buton.dataset.msSiparisIptal}/cancel`, {
+                    method: "POST",
+                    headers: { Authorization: "Bearer " + (localStorage.getItem("ecspros_member_token") || "") }
+                });
+                const veri = await cevap.json().catch(() => null);
+                if (veri?.success) { window.location.reload(); return; }
+                window.alert(veri?.error || "Sipariş iptal edilemedi. Lütfen tekrar deneyin.");
+            } catch {
+                window.alert("Sipariş iptal edilemedi. Lütfen tekrar deneyin.");
+            }
+            buton.disabled = false;
+            buton.textContent = "Siparişi İptal Et";
         });
     });
 });

@@ -75,6 +75,9 @@ public sealed class LegacySyncWorker(
                     {
                         sonSiparis = DateTime.UtcNow;
                         await RaporlaAsync(await orderSync.SyncOrderOutboxAsync(stoppingToken), stoppingToken);
+                        // F2: eskiye bağlanmış açık siparişlerin durum + kargo bilgisi geri çekilir
+                        // (aynı kadans; LegacyOrderId'li sipariş yokken maliyeti tek SELECT).
+                        await RaporlaAsync(await orderSync.SyncOrderStatusAsync(stoppingToken), stoppingToken);
                     }
                 }
             }
