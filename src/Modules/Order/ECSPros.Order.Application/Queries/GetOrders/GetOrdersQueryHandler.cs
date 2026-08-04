@@ -36,6 +36,12 @@ public class GetOrdersQueryHandler : IRequestHandler<GetOrdersQuery, Result<Page
         if (request.CreatedTo.HasValue)
             query = query.Where(o => o.CreatedAt < request.CreatedTo.Value); // exclusive üst sınır
 
+        // 2026-08-04: ödeme yöntemi filtresi — "none" = yöntemi kayıtlı olmayan (eski/başka kanal)
+        if (!string.IsNullOrWhiteSpace(request.PaymentMethod))
+            query = request.PaymentMethod == "none"
+                ? query.Where(o => o.PaymentMethod == null)
+                : query.Where(o => o.PaymentMethod == request.PaymentMethod);
+
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var term = request.Search.Trim().ToLower();
@@ -59,7 +65,8 @@ public class GetOrdersQueryHandler : IRequestHandler<GetOrdersQuery, Result<Page
                 o.GrandTotal,
                 o.CurrencyCode,
                 o.CreatedAt,
-                o.ShippingRecipientName))
+                o.ShippingRecipientName,
+                o.PaymentMethod))
             .ToListAsync(cancellationToken);
 
         return Result.Success(new PagedOrderResult(items, totalCount, request.Page, request.PageSize));

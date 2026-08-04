@@ -17,11 +17,27 @@ export const ORDER_STATUS_MAP: Record<string, { label: string; variant: 'success
 
 export const PAYMENT_STATUS_MAP: Record<string, string> = {
   pending:  'Bekliyor',
+  unpaid:   'Ödenmedi',
   paid:     'Ödendi',
   partial:  'Kısmi',
   refunded: 'İade Edildi',
   failed:   'Başarısız',
 }
+
+// 2026-08-04: ödeme yöntemi (checkout PaymentMethod kolonu) — null = eski kayıt/başka kanal
+export const PAYMENT_METHOD_MAP: Record<string, string> = {
+  'kart':         'Kart (Online)',
+  'kapida-nakit': 'Kapıda Nakit',
+  'kapida-kart':  'Kapıda Kart',
+}
+
+const PAYMENT_METHOD_FILTER = [
+  { value: '', label: 'Ödeme tipi: Tümü' },
+  { value: 'kart', label: 'Kart (Online)' },
+  { value: 'kapida-nakit', label: 'Kapıda Nakit' },
+  { value: 'kapida-kart', label: 'Kapıda Kart' },
+  { value: 'none', label: 'Yöntem kaydı yok' },
+]
 
 // Aktif küme küçük kalır (partial index) — sayaç yalnız bunlarda; Teslim/İptal/Tümü
 // milyonlara ulaşacağından sayaçsız + son-30-gün varsayılanıyla açılır (P1a kararı, K19)
@@ -56,6 +72,7 @@ export interface OrderSummary {
   currencyCode: string
   createdAt: string
   recipientName?: string
+  paymentMethod?: string | null
 }
 
 interface PagedResult<T> {
@@ -77,6 +94,7 @@ export function OrdersPage() {
   const [tabKey, setTabKey] = useState('active')
   const [search, setSearch] = useState('')          // input değeri
   const [appliedSearch, setAppliedSearch] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [page, setPage] = useState(1)
@@ -98,11 +116,12 @@ export function OrdersPage() {
     : undefined
 
   const { data: ordersData, isLoading } = useQuery<PagedResult<OrderSummary>>({
-    queryKey: ['orders', tabKey, appliedSearch, fromDate, toDate, page],
+    queryKey: ['orders', tabKey, appliedSearch, fromDate, toDate, paymentMethod, page],
     queryFn: async () => {
       const params = new URLSearchParams({ page: String(page), pageSize: '20' })
       if (tab.statuses) params.set('statuses', tab.statuses)
       if (appliedSearch) params.set('search', appliedSearch)
+      if (paymentMethod) params.set('paymentMethod', paymentMethod)
       if (fromDate) params.set('from', new Date(`${fromDate}T00:00:00`).toISOString())
       if (toDate) {
         const end = new Date(`${toDate}T00:00:00`)
@@ -169,6 +188,10 @@ export function OrdersPage() {
         <button onClick={applySearch}
           className="px-3 py-1.5 rounded-lg text-sm"
           style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Ara</button>
+        <select className="inp text-sm py-1.5 px-2 h-auto w-auto" value={paymentMethod}
+          onChange={e => { setPaymentMethod(e.target.value); setPage(1) }}>
+          {PAYMENT_METHOD_FILTER.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
         <div className="flex items-center gap-1 ml-2">
           <input type="date" className="inp text-sm py-1.5 px-2 h-auto" value={fromDate}
             onChange={e => { setFromDate(e.target.value); setPage(1) }} />
@@ -224,9 +247,12 @@ export function OrdersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-xs" style={{ color: 'var(--text-s)' }}>
-                      {PAYMENT_STATUS_MAP[o.paymentStatus] ?? o.paymentStatus}
+                    <span className="text-sm" style={{ color: 'var(--text)' }}>
+                      {o.paymentMethod ? (PAYMENT_METHOD_MAP[o.paymentMethod] ?? o.paymentMethod) : '—'}
                     </span>
+                    <div className="text-xs" style={{ color: 'var(--text-s)' }}>
+                      {PAYMENT_STATUS_MAP[o.paymentStatus] ?? o.paymentStatus}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant={st.variant}>{st.label}</Badge>

@@ -24,6 +24,11 @@ public class Order : AggregateRoot
     public string Status { get; set; } = string.Empty;
     public string PaymentStatus { get; set; } = string.Empty;
 
+    /// <summary>Ödeme yöntemi: kart | kapida-nakit | kapida-kart (2026-08-04 — önceden yalnız
+    /// CustomerNotes jsonb'sindeydi; liste filtresi/raporlama için kolona alındı). Null = eski
+    /// kayıt/başka kanal.</summary>
+    public string? PaymentMethod { get; set; }
+
     // B2B
     public string OrderType { get; set; } = "retail";
     public bool RequiresApproval { get; set; } = false;

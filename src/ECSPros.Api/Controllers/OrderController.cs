@@ -60,6 +60,7 @@ public class OrderController : ControllerBase
         [FromQuery] string? status, [FromQuery] string? statuses, [FromQuery] Guid? memberId,
         [FromQuery] string? search, [FromQuery] DateTime? from, [FromQuery] DateTime? to,
         [FromQuery] Guid? firmPlatformId = null,
+        [FromQuery] string? paymentMethod = null,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
         var statusList = string.IsNullOrWhiteSpace(statuses)
@@ -67,7 +68,7 @@ public class OrderController : ControllerBase
             : statuses.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
         var result = await _mediator.Send(new GetOrdersQuery(
             status, memberId, search, page, pageSize,
-            statusList, AsUtc(from), AsUtc(to), firmPlatformId), ct);
+            statusList, AsUtc(from), AsUtc(to), firmPlatformId, paymentMethod), ct);
         return Ok(new { success = true, data = result.Value });
     }
 
