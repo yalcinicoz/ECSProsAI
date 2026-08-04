@@ -1,0 +1,110 @@
+{
+  "info": {
+    "name": "ECSPros Mobil API — Staging Test",
+    "description": "Sıra: 1) Challenge Al → 2) Attest (DevBypass) → 3) İmzalı istek. `bypassSecret` değişkenini /etc/ecspros-staging.env içindeki değerle doldurun (koleksiyona kaydetmeyin, 'Current value' alanını kullanın). Token 15 dk'da dolar → 1-2'yi tekrarlayın. İmza mantığı 3. isteğin Pre-request Script'indedir; herhangi bir /api/store/* isteğine kopyalanabilir.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://51.178.208.59:5055" },
+    { "key": "bypassSecret", "value": "" },
+    { "key": "challenge", "value": "" },
+    { "key": "deviceToken", "value": "" },
+    { "key": "signingSecret", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1 — Challenge Al",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const d = pm.response.json().data;",
+              "pm.collectionVariables.set('challenge', d.challenge);",
+              "pm.test('challenge alındı', () => pm.expect(d.challenge).to.be.a('string'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/store/device/challenge",
+        "description": "Tek kullanımlık, 10 dk geçerli. Her attest öncesi taze alınmalı."
+      }
+    },
+    {
+      "name": "2 — Attest (DevBypass → device token)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const d = pm.response.json().data;",
+              "pm.collectionVariables.set('deviceToken', d.deviceToken);",
+              "pm.collectionVariables.set('signingSecret', d.signingSecret);",
+              "pm.test('device token alındı', () => pm.expect(d.deviceToken).to.be.a('string'));",
+              "console.log('Token bitiş:', d.expiresAt);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"platform\": \"android\",\n  \"attestation\": \"{{bypassSecret}}\",\n  \"challenge\": \"{{challenge}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/store/device/attest",
+        "description": "Staging'de attestation alanı = DevBypass secret. Prod'da buraya gerçek Play Integrity token'ı gelir. Dönen signingSecret imza anahtarıdır (15 dk)."
+      }
+    },
+    {
+      "name": "3 — İmzalı istek örneği (bootstrap)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// İMZA: hex(HMACSHA256(base64decode(signingSecret), 'METOD\\npath?query\\nts\\nnonce\\nsha256hex(body)'))",
+              "// Bu script'i imzalı çağrılacak HER isteğe kopyalayabilirsiniz.",
+              "const ts = Math.floor(Date.now() / 1000).toString();",
+              "const nonce = pm.variables.replaceIn('{{$randomUUID}}').replace(/-/g, '');",
+              "const cozulmus = pm.variables.replaceIn(pm.request.url.toString());",
+              "const url = new URL(cozulmus);",
+              "const pathQuery = url.pathname + url.search;",
+              "const body = pm.request.body && pm.request.body.raw ? pm.variables.replaceIn(pm.request.body.raw) : '';",
+              "const bodyHash = CryptoJS.SHA256(body).toString(CryptoJS.enc.Hex);",
+              "const veri = [pm.request.method.toUpperCase(), pathQuery, ts, nonce, bodyHash].join('\\n');",
+              "const anahtar = CryptoJS.enc.Base64.parse(pm.collectionVariables.get('signingSecret'));",
+              "const imza = CryptoJS.HmacSHA256(veri, anahtar).toString(CryptoJS.enc.Hex);",
+              "pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + pm.collectionVariables.get('deviceToken') });",
+              "pm.request.headers.upsert({ key: 'X-Client-Platform', value: 'android' });",
+              "pm.request.headers.upsert({ key: 'X-Timestamp', value: ts });",
+              "pm.request.headers.upsert({ key: 'X-Nonce', value: nonce });",
+              "pm.request.headers.upsert({ key: 'X-Signature', value: imza });"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 döndü', () => pm.response.to.have.status(200));",
+              "console.log('Kanal:', JSON.stringify(pm.response.json().data));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/store/bootstrap",
+        "description": "İmza pre-request script'te üretilir. Aynı script başka /api/store/* isteklerine kopyalanır; nonce tek kullanımlık, timestamp ±300 sn. 401 alırsanız token dolmuştur → istek 1-2'yi tekrar koşun."
+      }
+    }
+  ]
+}
