@@ -41,7 +41,7 @@ public sealed class LegacyOrderSyncService(
     private string ServicePass => config["Legacy:OrderService:Password"] ?? "";
     private string Kaynak => config["Legacy:OrderService:Kaynak"] ?? "website";
     private int CodExpenseTypeId => config.GetValue("Legacy:OrderService:CodExpenseTypeId", 2);
-    private bool DecimalComma => config.GetValue("Legacy:OrderService:DecimalComma", false);
+    private bool DecimalComma => config.GetValue("Legacy:OrderService:DecimalComma", true);
     private const int MaxAttempt = 5;
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(MySqlConn);
