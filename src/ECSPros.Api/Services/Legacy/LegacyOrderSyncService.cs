@@ -56,11 +56,11 @@ public sealed class LegacyOrderSyncService(
             await using var pg = await dataSource.OpenConnectionAsync(ct);
 
             // İşlenecekler: pending her zaman; dry_run yalnız gerçek mod açıldıysa; error tekrar denenir
-            var isler = new List<(Guid id, Guid orderId, string status, int attempt)>();
+            var isler = new List<(Guid id, Guid orderId, string jobType, int attempt)>();
             await using (var cmd = new NpgsqlCommand($"""
-                SELECT "Id", "OrderId", "Status", "AttemptCount"
+                SELECT "Id", "OrderId", "JobType", "AttemptCount"
                 FROM integration.legacy_order_outbox
-                WHERE "IsDeleted" = false AND "JobType" = 'create'
+                WHERE "IsDeleted" = false
                   AND ("Status" = 'pending'
                        OR ("Status" = 'error' AND "AttemptCount" < {MaxAttempt})
                        OR ("Status" = 'dry_run' AND {(DryRun ? "false" : "true")}))
@@ -79,7 +79,9 @@ public sealed class LegacyOrderSyncService(
                 ct.ThrowIfCancellationRequested();
                 try
                 {
-                    var sonuc = await IsleAsync(pg, job.orderId, log, ct);
+                    var sonuc = job.jobType == "cancel"
+                        ? await IptalIsleAsync(pg, job.orderId, log, ct)
+                        : await IsleAsync(pg, job.orderId, log, ct);
                     await OutboxGuncelleAsync(pg, job.id, sonuc.durum, job.attempt + 1, sonuc.hata, ct);
                     if (sonuc.durum is "done" or "dry_run") islenen++;
                 }
@@ -107,6 +109,11 @@ public sealed class LegacyOrderSyncService(
         if (veri.LegacyOrderId is not null)
         {
             log.AppendLine($"= {veri.OrderNumber}: zaten eskide (Id={veri.LegacyOrderId}).");
+            return ("done", null);
+        }
+        if (veri.Status == "cancelled")
+        {
+            log.AppendLine($"= {veri.OrderNumber}: yazılmadan iptal edildi — eskiye gönderilmiyor.");
             return ("done", null);
         }
         if (veri.LegacyPlatformId is null)
@@ -173,12 +180,315 @@ public sealed class LegacyOrderSyncService(
         return ("done", null);
     }
 
+    // ─── F3: müşteri iptalini eskiye taşı ────────────────────────────────
+    private async Task<(string durum, string? hata)> IptalIsleAsync(
+        NpgsqlConnection pg, Guid orderId, StringBuilder log, CancellationToken ct)
+    {
+        var veri = await SiparisOkuAsync(pg, orderId, ct);
+        if (veri is null) return ("error", "Sipariş bulunamadı.");
+        if (veri.LegacyOrderId is null)
+        {
+            log.AppendLine($"= {veri.OrderNumber}: eskiye hiç yazılmamış — iptal işi kapatıldı.");
+            return ("done", null);
+        }
+        if (veri.LegacyPlatformId is null)
+            return ("error", "Kanalın legacyPlatformId ayarı yok.");
+
+        if (DryRun)
+        {
+            await LogYazAsync(pg, orderId, "dry_run",
+                $"{{\"job\":\"cancel\",\"orderNumber\":\"{veri.OrderNumber}\",\"legacyOrderId\":{veri.LegacyOrderId}}}", null, ct);
+            log.AppendLine($"~ {veri.OrderNumber}: DRY-RUN iptal planlandı (legacyId={veri.LegacyOrderId}).");
+            return ("dry_run", null);
+        }
+        if (string.IsNullOrWhiteSpace(ServiceUser))
+            return ("error", "Legacy:OrderService:User/Password yapılandırılmadı.");
+
+        await using var my = new MySqlConnection(MySqlConn);
+        await my.OpenAsync(ct);
+
+        int legacyMemberId; string eskiDurum;
+        await using (var cmd = new MySqlCommand(
+            "SELECT memberId, orderStatus FROM oporders WHERE Id=@id LIMIT 1", my))
+        {
+            cmd.Parameters.AddWithValue("@id", veri.LegacyOrderId.Value);
+            await using var r = await cmd.ExecuteReaderAsync(ct);
+            if (!await r.ReadAsync(ct)) return ("error", "Eski sipariş kaydı bulunamadı.");
+            legacyMemberId = r.GetInt32(0);
+            eskiDurum = r.IsDBNull(1) ? "" : r.GetString(1);
+        }
+        if (eskiDurum == "İptal Edildi")
+        {
+            log.AppendLine($"= {veri.OrderNumber}: eskide zaten iptal.");
+            return ("done", null);
+        }
+
+        var client = httpClientFactory.CreateClient("legacy-order");
+        using var istek = new HttpRequestMessage(HttpMethod.Post, $"{ServiceUrl}/Services/UyeSiparisIptal")
+        {
+            Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["orderNumber"] = veri.OrderNumber,
+                ["memberId"] = legacyMemberId.ToString(),
+                ["platformId"] = veri.LegacyPlatformId.Value.ToString()
+            })
+        };
+        istek.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{ServiceUser}:{ServicePass}")));
+        using var cevap = await client.SendAsync(istek, ct);
+        var cevapMetni = await cevap.Content.ReadAsStringAsync(ct);
+        if (!cevap.IsSuccessStatusCode)
+        {
+            await LogYazAsync(pg, orderId, "failure", "cancel", $"HTTP {(int)cevap.StatusCode}: {Kes(cevapMetni, 500)}", ct);
+            return ("error", $"Eski iptal servisi HTTP {(int)cevap.StatusCode} döndü.");
+        }
+
+        // Doğrulama: eski durum gerçekten İptal Edildi mi? ("Hazırlanıyor" sonrası eski kural
+        // iptali reddedebilir — o zaman iş error'da kalır, operasyon eski panelde çözer.)
+        await using (var kontrol = new MySqlCommand(
+            "SELECT orderStatus FROM oporders WHERE Id=@id LIMIT 1", my))
+        {
+            kontrol.Parameters.AddWithValue("@id", veri.LegacyOrderId.Value);
+            var v = await kontrol.ExecuteScalarAsync(ct);
+            if (v?.ToString() != "İptal Edildi")
+            {
+                await LogYazAsync(pg, orderId, "failure", "cancel", Kes($"Eski taraf iptali uygulamadı: {cevapMetni}", 900), ct);
+                return ("error", $"Eski taraf iptali uygulamadı (durum: {v}).");
+            }
+        }
+
+        await LogYazAsync(pg, orderId, "success", $"cancel legacyId={veri.LegacyOrderId}", null, ct);
+        log.AppendLine($"+ {veri.OrderNumber}: eskide iptal edildi (Id={veri.LegacyOrderId}).");
+        return ("done", null);
+    }
+
+    // ─── F2: Durum + kargo geri senkronu (eski → yeni) ───────────────────
+    // Eski paneldeki operasyon ilerledikçe LegacyOrderId'li açık siparişlerin durumu
+    // buraya taşınır. STOK YAN ETKİSİZ: durum raw UPDATE ile yazılır (domain event yok —
+    // stok otoritesi eski sistemde; kargo/iptal/iade geçişinde rezervasyon 'released'
+    // yapılır ve Stock.ReservedQuantity düşülür ama Quantity'ye ASLA dokunulmaz).
+    // Yalnız İLERİ yön uygulanır; eski panelde geri alma görülürse log'a düşer.
+    private static readonly Dictionary<string, (string yeni, int sira)> DurumEslemesi = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Onay Bekliyor"] = ("pending", 0),
+        ["Beklemede"] = ("pending", 0),
+        ["Hazırlanıyor"] = ("processing", 2),
+        ["Faturası Kesildi"] = ("processing", 2),
+        ["Kargoya Verildi"] = ("shipped", 3),
+        ["Teslim Edildi"] = ("delivered", 4),
+        ["İptal Edildi"] = ("cancelled", 9),
+    };
+    private static readonly Dictionary<string, int> YeniDurumSirasi = new()
+    { ["pending"] = 0, ["confirmed"] = 1, ["processing"] = 2, ["shipped"] = 3, ["delivered"] = 4 };
+
+    public async Task<LegacySyncService.Report> SyncOrderStatusAsync(CancellationToken ct)
+    {
+        var t0 = DateTime.UtcNow;
+        var log = new StringBuilder();
+        var degisen = 0;
+        try
+        {
+            await using var pg = await dataSource.OpenConnectionAsync(ct);
+
+            var acikler = new List<(Guid id, int legacyId, string durum, string no)>();
+            await using (var cmd = new NpgsqlCommand("""
+                SELECT "Id", "LegacyOrderId", "Status", "OrderNumber"
+                FROM "order".ord_orders
+                WHERE "LegacyOrderId" IS NOT NULL
+                  AND "Status" NOT IN ('delivered','cancelled','returned')
+                LIMIT 500
+                """, pg))
+            await using (var r = await cmd.ExecuteReaderAsync(ct))
+                while (await r.ReadAsync(ct))
+                    acikler.Add((r.GetGuid(0), r.GetInt32(1), r.GetString(2), r.GetString(3)));
+
+            if (acikler.Count == 0)
+                return new(true, false, "order-status", 0, "Açık eski-bağlı sipariş yok.", null, Ms(t0));
+
+            // Eski durumlar tek sorguda
+            var eski = new Dictionary<int, (string durum, string? kargoAd, string? takipNo, string? faturaNo, DateTime? teslim)>();
+            await using (var my = new MySqlConnection(MySqlConn))
+            {
+                await my.OpenAsync(ct);
+                var idler = string.Join(",", acikler.Select(a => a.legacyId));
+                await using var cmd = new MySqlCommand($"""
+                    SELECT Id, orderStatus, courierName,
+                           COALESCE(NULLIF(courierTrackingNumber,''), shippingBarcode) takipNo,
+                           invoiceNumber, deliveryDate
+                    FROM oporders WHERE Id IN ({idler})
+                    """, my);
+                await using var r = await cmd.ExecuteReaderAsync(ct);
+                while (await r.ReadAsync(ct))
+                    eski[r.GetInt32(0)] = (
+                        r.IsDBNull(1) ? "" : r.GetString(1),
+                        r.IsDBNull(2) ? null : r.GetString(2),
+                        r.IsDBNull(3) ? null : r.GetString(3),
+                        r.IsDBNull(4) ? null : r.GetString(4),
+                        r.IsDBNull(5) ? null : r.GetDateTime(5));
+            }
+
+            foreach (var o in acikler)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (!eski.TryGetValue(o.legacyId, out var e)) continue;
+
+                (string yeni, int sira) hedef;
+                if (e.durum.Contains("İade", StringComparison.OrdinalIgnoreCase))
+                    hedef = ("returned", 9); // "Teslim Edilmeden/Edilemeden İade (Geldi)" varyantları
+                else if (!DurumEslemesi.TryGetValue(e.durum.Trim(), out hedef))
+                {
+                    log.AppendLine($"? {o.no}: bilinmeyen eski durum '{e.durum}' — atlandı.");
+                    continue;
+                }
+
+                if (hedef.yeni == o.durum) continue;
+                var mevcutSira = YeniDurumSirasi.GetValueOrDefault(o.durum, 0);
+                if (hedef.sira != 9 && hedef.sira <= mevcutSira)
+                {
+                    log.AppendLine($"< {o.no}: geri yönlü geçiş ({o.durum} → {hedef.yeni}) uygulanmadı.");
+                    continue;
+                }
+
+                await DurumUygulaAsync(pg, o.id, o.no, hedef.yeni, e, ct);
+                log.AppendLine($"+ {o.no}: {o.durum} → {hedef.yeni}" +
+                    (e.takipNo is { Length: > 0 } ? $" (takip: {e.takipNo})" : ""));
+                degisen++;
+            }
+
+            return new(true, false, "order-status", degisen, log.ToString(), null, Ms(t0));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Legacy durum senkron dilimi hatası");
+            return new(false, false, "order-status", degisen, log.ToString(), ex.Message, Ms(t0));
+        }
+    }
+
+    private static async Task DurumUygulaAsync(
+        NpgsqlConnection pg, Guid orderId, string orderNumber, string yeniDurum,
+        (string durum, string? kargoAd, string? takipNo, string? faturaNo, DateTime? teslim) e, CancellationToken ct)
+    {
+        await using var tx = await pg.BeginTransactionAsync(ct);
+
+        // Durum + iz alanları (ham eski durum ve fatura no CustomerNotes jsonb'sine —
+        // "Faturası Kesildi" müşteriye "Hazırlanıyor" görünür, iç iz burada durur)
+        await using (var cmd = new NpgsqlCommand("""
+            UPDATE "order".ord_orders SET
+                "Status" = @s,
+                "ConfirmedAt" = CASE WHEN @s IN ('processing','shipped','delivered') THEN COALESCE("ConfirmedAt", now()) ELSE "ConfirmedAt" END,
+                "CustomerNotes" = COALESCE("CustomerNotes", '{}'::jsonb)
+                    || jsonb_build_object('legacyStatus', @raw::text)
+                    || CASE WHEN @inv::text IS NULL THEN '{}'::jsonb ELSE jsonb_build_object('legacyInvoiceNumber', @inv::text) END,
+                "UpdatedAt" = now()
+            WHERE "Id" = @id
+            """, pg, tx))
+        {
+            cmd.Parameters.AddWithValue("s", yeniDurum);
+            cmd.Parameters.AddWithValue("raw", e.durum);
+            cmd.Parameters.AddWithValue("inv", (object?)e.faturaNo ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("id", orderId);
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+
+        // Kargoya verildi/teslim: müşteri takip modalı ord_shipments'tan okur — eski kargo
+        // bilgisiyle tek shipment satırı (yoksa) + durum olayı eklenir.
+        if (yeniDurum is "shipped" or "delivered")
+        {
+            Guid shipmentId;
+            await using (var bul = new NpgsqlCommand(
+                """SELECT "Id" FROM "order".ord_shipments WHERE "OrderId" = @oid LIMIT 1""", pg, tx))
+            {
+                bul.Parameters.AddWithValue("oid", orderId);
+                var v = await bul.ExecuteScalarAsync(ct);
+                shipmentId = v is Guid g ? g : Guid.Empty;
+            }
+            if (shipmentId == Guid.Empty)
+            {
+                shipmentId = Guid.NewGuid();
+                await using var ins = new NpgsqlCommand("""
+                    INSERT INTO "order".ord_shipments
+                        ("Id","OrderId","FirmIntegrationId","ShipmentNumber","TrackingNumber","Status",
+                         "ApiStatus","DeliveredAt","DeliveryNotes","PackageCount","CreatedAt","IsDeleted")
+                    VALUES (@id,@oid,'00000000-0000-0000-0000-000000000000',@no,@takip,@st,
+                            'legacy',@teslim,@not,1,now(),false)
+                    """, pg, tx);
+                ins.Parameters.AddWithValue("id", shipmentId);
+                ins.Parameters.AddWithValue("oid", orderId);
+                ins.Parameters.AddWithValue("no", $"LEG-{orderNumber}");
+                ins.Parameters.AddWithValue("takip", (object?)e.takipNo ?? DBNull.Value);
+                ins.Parameters.AddWithValue("st", yeniDurum);
+                ins.Parameters.AddWithValue("teslim", yeniDurum == "delivered" ? (object)(e.teslim ?? DateTime.UtcNow) : DBNull.Value);
+                ins.Parameters.AddWithValue("not", (object?)e.kargoAd ?? DBNull.Value);
+                await ins.ExecuteNonQueryAsync(ct);
+            }
+            else
+            {
+                await using var upd = new NpgsqlCommand("""
+                    UPDATE "order".ord_shipments SET
+                        "TrackingNumber" = COALESCE(@takip, "TrackingNumber"),
+                        "Status" = @st,
+                        "DeliveredAt" = CASE WHEN @st = 'delivered' THEN COALESCE("DeliveredAt", @teslim) ELSE "DeliveredAt" END,
+                        "UpdatedAt" = now()
+                    WHERE "Id" = @id
+                    """, pg, tx);
+                upd.Parameters.AddWithValue("takip", (object?)e.takipNo ?? DBNull.Value);
+                upd.Parameters.AddWithValue("st", yeniDurum);
+                upd.Parameters.AddWithValue("teslim", e.teslim ?? DateTime.UtcNow);
+                upd.Parameters.AddWithValue("id", shipmentId);
+                await upd.ExecuteNonQueryAsync(ct);
+            }
+
+            // Zaman çizelgesine olay satırı (modal Events listesi)
+            await using (var ev = new NpgsqlCommand("""
+                INSERT INTO "order".ord_shipment_events
+                    ("Id","ShipmentId","EventCode","EventDescription","EventDate","CreatedAt")
+                VALUES (gen_random_uuid(), @sid, @kod, @aciklama, now(), now())
+                """, pg, tx))
+            {
+                ev.Parameters.AddWithValue("sid", shipmentId);
+                ev.Parameters.AddWithValue("kod", yeniDurum == "delivered" ? "delivered" : "shipped");
+                ev.Parameters.AddWithValue("aciklama", yeniDurum == "delivered"
+                    ? "Paket teslim edildi (eski sistem)."
+                    : $"Paket kargoya verildi{(e.kargoAd is { Length: > 0 } ? $" — {e.kargoAd}" : "")}.");
+                await ev.ExecuteNonQueryAsync(ct);
+            }
+        }
+
+        // Kargo/iptal/iade: bekleyen rezervasyonlar bırakılır (ReservedQuantity düşer,
+        // Quantity'ye dokunulmaz — gerçek stok B2 dilimiyle eski sistemden gelir)
+        if (yeniDurum is "shipped" or "cancelled" or "returned")
+        {
+            await using (var stok = new NpgsqlCommand("""
+                UPDATE inventory.inv_stocks s
+                SET "ReservedQuantity" = GREATEST(0, s."ReservedQuantity" - r."Quantity"), "UpdatedAt" = now()
+                FROM inventory.inv_stock_reservations r
+                WHERE r."StockId" = s."Id" AND r."ReferenceType" = 'order'
+                  AND r."ReferenceId" = @oid AND r."Status" = 'reserved'
+                """, pg, tx))
+            {
+                stok.Parameters.AddWithValue("oid", orderId);
+                await stok.ExecuteNonQueryAsync(ct);
+            }
+            await using (var rez = new NpgsqlCommand("""
+                UPDATE inventory.inv_stock_reservations
+                SET "Status" = 'released', "UpdatedAt" = now()
+                WHERE "ReferenceType" = 'order' AND "ReferenceId" = @oid AND "Status" = 'reserved'
+                """, pg, tx))
+            {
+                rez.Parameters.AddWithValue("oid", orderId);
+                await rez.ExecuteNonQueryAsync(ct);
+            }
+        }
+
+        await tx.CommitAsync(ct);
+    }
+
     // ─── Sipariş verisi (PG) ─────────────────────────────────────────────
     private sealed record Kalem(Guid Id, string Sku, string ProductName, string VariantInfo,
         int Quantity, decimal UnitPrice, decimal DiscountAmount, decimal TaxRate);
 
     private sealed record SiparisVerisi(
-        string OrderNumber, Guid FirmPlatformId, int? LegacyPlatformId, int? LegacyOrderId,
+        string OrderNumber, string Status, Guid FirmPlatformId, int? LegacyPlatformId, int? LegacyOrderId,
         string? PaymentMethod, string Currency, decimal Subtotal, decimal TotalDiscount,
         decimal TotalExpense, decimal GrandTotal, DateTime CreatedAt,
         string RecipientName, string RecipientPhone, string AddressLine, string? PostalCode,
@@ -190,7 +500,7 @@ public sealed class LegacyOrderSyncService(
     private async Task<SiparisVerisi?> SiparisOkuAsync(NpgsqlConnection pg, Guid orderId, CancellationToken ct)
     {
         const string sql = """
-            SELECT o."OrderNumber", o."FirmPlatformId", o."LegacyOrderId", o."PaymentMethod",
+            SELECT o."OrderNumber", o."Status", o."FirmPlatformId", o."LegacyOrderId", o."PaymentMethod",
                    o."CurrencyCode", o."Subtotal", o."TotalDiscount", o."TotalExpense", o."GrandTotal",
                    o."CreatedAt", o."ShippingRecipientName", o."ShippingRecipientPhone",
                    o."ShippingAddressLine", o."ShippingPostalCode",
@@ -211,31 +521,31 @@ public sealed class LegacyOrderSyncService(
         if (!await r.ReadAsync(ct)) return null;
 
         int? legacyPlatform = null;
-        if (!r.IsDBNull(26))
+        if (!r.IsDBNull(27))
         {
-            var settings = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(r.GetString(26));
+            var settings = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(r.GetString(27));
             if (settings is not null && settings.TryGetValue("legacyPlatformId", out var lp)
                 && lp.ValueKind == JsonValueKind.Number)
                 legacyPlatform = lp.GetInt32();
         }
 
         var veri = new SiparisVerisi(
-            r.GetString(0), r.GetGuid(1), legacyPlatform,
-            r.IsDBNull(2) ? null : r.GetInt32(2),
-            r.IsDBNull(3) ? null : r.GetString(3),
-            r.GetString(4), r.GetDecimal(5), r.GetDecimal(6), r.GetDecimal(7), r.GetDecimal(8),
-            r.GetDateTime(9), r.GetString(10), r.GetString(11), r.GetString(12),
-            r.IsDBNull(13) ? null : r.GetString(13),
-            r.GetString(14), r.GetString(15),
-            r.IsDBNull(16) ? null : r.GetString(16),
+            r.GetString(0), r.GetString(1), r.GetGuid(2), legacyPlatform,
+            r.IsDBNull(3) ? null : r.GetInt32(3),
+            r.IsDBNull(4) ? null : r.GetString(4),
+            r.GetString(5), r.GetDecimal(6), r.GetDecimal(7), r.GetDecimal(8), r.GetDecimal(9),
+            r.GetDateTime(10), r.GetString(11), r.GetString(12), r.GetString(13),
+            r.IsDBNull(14) ? null : r.GetString(14),
+            r.GetString(15), r.GetString(16),
             r.IsDBNull(17) ? null : r.GetString(17),
             r.IsDBNull(18) ? null : r.GetString(18),
             r.IsDBNull(19) ? null : r.GetString(19),
             r.IsDBNull(20) ? null : r.GetString(20),
             r.IsDBNull(21) ? null : r.GetString(21),
-            r.IsDBNull(22) ? null : r.GetInt32(22),
-            r.IsDBNull(23) ? null : r.GetGuid(23),
-            r.IsDBNull(24) ? null : r.GetString(24),
+            r.IsDBNull(22) ? null : r.GetString(22),
+            r.IsDBNull(23) ? null : r.GetInt32(23),
+            r.IsDBNull(24) ? null : r.GetGuid(24),
+            r.IsDBNull(25) ? null : r.GetString(25),
             new List<Kalem>());
         await r.CloseAsync();
 
