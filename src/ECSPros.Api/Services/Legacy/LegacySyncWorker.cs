@@ -17,6 +17,7 @@ namespace ECSPros.Api.Services.Legacy;
 /// </summary>
 public sealed class LegacySyncWorker(
     LegacySyncService sync,
+    LegacyOrderSyncService orderSync,
     IServiceScopeFactory scopeFactory,
     IConfiguration config,
     ILogger<LegacySyncWorker> logger) : BackgroundService
@@ -33,6 +34,7 @@ public sealed class LegacySyncWorker(
             config.GetValue("Legacy:Sync:Enabled", false), config.GetValue("Legacy:Sync:DryRun", true));
 
         DateTime sonFiyatStok = DateTime.MinValue, sonKatalog = DateTime.MinValue;
+        DateTime sonSiparis = DateTime.MinValue;
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -64,6 +66,15 @@ public sealed class LegacySyncWorker(
                     {
                         sonFiyatStok = DateTime.UtcNow;
                         await RaporlaAsync(await sync.SyncPriceAndStockAsync(stoppingToken), stoppingToken);
+                    }
+
+                    // F1 (2026-08-04): sipariş outbox dilimi — sık (varsayılan 2 dk); kuyruk
+                    // boşken maliyeti tek SELECT. Rapor yalnız iş varken loglanır (RaporlaAsync).
+                    var siparisAralik = TimeSpan.FromMinutes(Math.Max(1, config.GetValue("Legacy:Sync:OrderMinutes", 2)));
+                    if (config.GetValue("Legacy:Sync:Orders", true) && DateTime.UtcNow - sonSiparis >= siparisAralik)
+                    {
+                        sonSiparis = DateTime.UtcNow;
+                        await RaporlaAsync(await orderSync.SyncOrderOutboxAsync(stoppingToken), stoppingToken);
                     }
                 }
             }

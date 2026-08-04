@@ -9,6 +9,7 @@ public interface IIntegrationDbContext
     DbSet<IntegrationLog> IntegrationLogs { get; }
     DbSet<MarketplaceProduct> MarketplaceProducts { get; }
     DbSet<ErpVariantData> ErpVariantData { get; }
+    DbSet<LegacyOrderOutbox> LegacyOrderOutbox { get; }
     DbSet<MarketplaceCategoryMapping> MarketplaceCategoryMappings { get; }
     DbSet<MarketplaceAttributeMapping> MarketplaceAttributeMappings { get; }
     DbSet<MarketplaceValueMapping> MarketplaceValueMappings { get; }

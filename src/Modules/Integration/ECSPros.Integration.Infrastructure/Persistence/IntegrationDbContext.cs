@@ -10,6 +10,7 @@ public class IntegrationDbContext(DbContextOptions<IntegrationDbContext> options
     public DbSet<IntegrationLog> IntegrationLogs => Set<IntegrationLog>();
     public DbSet<MarketplaceProduct> MarketplaceProducts => Set<MarketplaceProduct>();
     public DbSet<ErpVariantData> ErpVariantData => Set<ErpVariantData>();
+    public DbSet<LegacyOrderOutbox> LegacyOrderOutbox => Set<LegacyOrderOutbox>();
     public DbSet<MarketplaceCategoryMapping> MarketplaceCategoryMappings => Set<MarketplaceCategoryMapping>();
     public DbSet<MarketplaceAttributeMapping> MarketplaceAttributeMappings => Set<MarketplaceAttributeMapping>();
     public DbSet<MarketplaceValueMapping> MarketplaceValueMappings => Set<MarketplaceValueMapping>();

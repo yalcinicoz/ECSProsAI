@@ -262,10 +262,14 @@ builder.Services.AddSingleton<ECSPros.Api.Services.Store.IFaturaPdfProxy, ECSPro
 // Mobil cihaz doğrulama (2026-07-23): Play Integrity / App Attest → kısa ömürlü device token
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceTokenService, ECSPros.Api.Services.Store.DeviceTokenService>();
 // Part B: eski sistem (juludedb) köprüsü — hata-güvenli, connection string boşsa no-op
-builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.ILegacyGateway, ECSPros.Api.Services.Legacy.LegacyGateway>();
+// F1 (2026-08-04): eski B4 doğrudan-INSERT gateway'i kaldırıldı — sipariş senkronu artık
+// outbox kuyruğu + LegacySyncWorker dilimi + eski SiparisOlusturFromModel servisi üzerinden.
+builder.Services.AddScoped<ECSPros.Api.Services.Legacy.ILegacyOrderQueue, ECSPros.Api.Services.Legacy.LegacyOrderQueue>();
 // Part B / B1-B3 (2026-08-01): eski sistemden fiyat/stok/görsel/yeni-ürün periyodik senkronu
 // (varsayılan KAPALI + DryRun; Legacy:Sync:Enabled + DryRun=false ile gerçek yazım)
 builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacySyncService>();
+builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacyOrderSyncService>();
+builder.Services.AddHttpClient("legacy-order", c => c.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddHostedService<ECSPros.Api.Services.Legacy.LegacySyncWorker>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.PlayIntegrityVerifier>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.AppAttestVerifier>();

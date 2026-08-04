@@ -183,6 +183,10 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
     target?.settings?.['codServiceFee'] != null ? String(target.settings['codServiceFee']) : '50')
   const [codMax, setCodMax] = useState(
     target?.settings?.['codMaxOrderTotal'] != null ? String(target.settings['codMaxOrderTotal']) : '3000')
+  // Eski sistem (ECSGYE) platform eşlemesi (2026-08-04, GEÇİCİ — sipariş senkronu için):
+  // tozlu=1, julude=2, olurbutik=12, mishar=41. Boş = bu kanal eskiye senkronlanmaz.
+  const [legacyPlatformId, setLegacyPlatformId] = useState(
+    target?.settings?.['legacyPlatformId'] != null ? String(target.settings['legacyPlatformId']) : '')
   const [fieldValues, setFieldValues] = useState<Record<string, string>>(() => {
     const merged: Record<string, string> = {}
     if (target) {
@@ -211,7 +215,7 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
       // Şema dışı mevcut anahtarlar korunur (stockControlEnabled, tema/domain vb. —
       // backend Settings/Credentials'ı olduğu gibi değiştirir, merge etmez)
       // Stok görünürlüğü anahtarları burada özel ele alınıyor — genel korumadan hariç tut.
-      const ozelSettings = new Set(['showOutOfStock', 'outOfStockVisibleSince', 'paymentMethods', 'codServiceFee', 'codMaxOrderTotal'])
+      const ozelSettings = new Set(['showOutOfStock', 'outOfStockVisibleSince', 'paymentMethods', 'codServiceFee', 'codMaxOrderTotal', 'legacyPlatformId'])
       if (target) {
         const schemaKeys = new Set(schema.map(f => f.key))
         for (const [k, v] of Object.entries(target.credentials ?? {})) if (v != null && !schemaKeys.has(k)) credentials[k] = v
@@ -222,6 +226,7 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
       settings['paymentMethods'] = paymentMethods
       settings['codServiceFee'] = parseFloat(codFee) >= 0 ? parseFloat(codFee) : 50
       settings['codMaxOrderTotal'] = parseFloat(codMax) >= 0 ? parseFloat(codMax) : 3000
+      if (legacyPlatformId && parseInt(legacyPlatformId) > 0) settings['legacyPlatformId'] = parseInt(legacyPlatformId)
       for (const f of schema) {
         const v = fieldValues[f.key] ?? ''
         if (v) {
@@ -411,6 +416,19 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
         <p className="text-xs" style={{ color: 'var(--text-s)' }}>
           Kapalı yöntem sitede hiç gösterilmez; sunucu da bu yöntemle siparişi reddeder. Değişiklik ~1 dk içinde siteye yansır.
         </p>
+      </div>
+
+      {/* Eski sistem eşlemesi (geçici, 2026-08-04) */}
+      <div className="space-y-2 p-4 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Eski Sistem (ECSGYE) Eşlemesi</p>
+        <div>
+          <label className="flbl">Eski platform Id (boş = sipariş senkronu kapalı)</label>
+          <input type="number" min="0" className="inp" value={legacyPlatformId}
+            onChange={e => setLegacyPlatformId(e.target.value)} placeholder="ör. mishar=41" />
+          <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+            tozlu=1 · julude=2 · olurbutik=12 · mishar=41. Bu kanalın siparişleri eski sisteme bu platform Id ile yazılır (geçici köprü).
+          </p>
+        </div>
       </div>
 
       {/* Active toggle (edit only) */}

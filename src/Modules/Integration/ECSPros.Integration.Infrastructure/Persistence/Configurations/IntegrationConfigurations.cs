@@ -113,6 +113,22 @@ public class MarketplaceErrorPatternConfiguration : IEntityTypeConfiguration<Mar
     }
 }
 
+public class LegacyOrderOutboxConfiguration : IEntityTypeConfiguration<LegacyOrderOutbox>
+{
+    public void Configure(EntityTypeBuilder<LegacyOrderOutbox> b)
+    {
+        b.ToTable("legacy_order_outbox");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.JobType).HasMaxLength(20);
+        b.Property(x => x.Status).HasMaxLength(20);
+        b.Property(x => x.LastError).HasMaxLength(2000);
+        // Aynı siparişe aynı iş tipinden TEK kayıt (idempotent kuyruk)
+        b.HasIndex(x => new { x.OrderId, x.JobType }).IsUnique();
+        b.HasIndex(x => x.Status);
+        b.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
 public class ErpVariantDataConfiguration : IEntityTypeConfiguration<ErpVariantData>
 {
     public void Configure(EntityTypeBuilder<ErpVariantData> b)
