@@ -10,7 +10,10 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/store/checkout")]
 [Authorize(Policy = "MemberOnly")]
-public class StoreCheckoutController(IMediator mediator, IConfiguration configuration) : ControllerBase
+public class StoreCheckoutController(
+    IMediator mediator,
+    IConfiguration configuration,
+    ECSPros.Api.Services.Legacy.ILegacyOrderQueue legacyOrderQueue) : ControllerBase
 {
     /// <summary>C3: sepette kupon kodu doğrulama — misafir de deneyebilir (üye kuponu
     /// koşulları MemberId üzerinden değerlendirilir); kullanım kaydı checkout'ta (C10).</summary>
@@ -88,6 +91,12 @@ public class StoreCheckoutController(IMediator mediator, IConfiguration configur
         if (memberId is { } uyeKimlik && req.CouponId is { } kuponId && req.CouponDiscount is { } indirim)
             await mediator.Send(new ECSPros.Promotion.Application.Commands.UseCoupon.UseCouponCommand(
                 kuponId, uyeKimlik, result.Value!.OrderId, indirim), ct);
+
+        // F1 (2026-08-04): KAPIDA ödemeli sipariş oluştuğu anda eski sistem kuyruğuna düşer
+        // (eski taraf "Onay Bekliyor" başlatır, onay/SMS orada). Kart siparişi ödeme başarılı
+        // olup onaylanınca kuyruğa girer (OrderConfirmedLegacyQueueHandler). Hata-güvenli.
+        if (req.PaymentMethod is "kapida-nakit" or "kapida-kart")
+            await legacyOrderQueue.EnqueueAsync(result.Value!.OrderId, req.FirmPlatformId, "create", ct);
 
         // 2026-07-30: orderNumber da döner — onay ekranı insan okunur numarayı doğrudan
         // gösterir (misafirde üye-listesi geri araması yoktu, GUID görünüyordu).
