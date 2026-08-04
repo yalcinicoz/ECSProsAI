@@ -25,6 +25,8 @@ public class PaymentController(
     PayTrDirectService paytr,
     ECSPros.Order.Application.Services.IOrderDbContext orderDb,
     IOrderConfirmationService orderConfirmations,
+    IHttpClientFactory httpClientFactory,
+    IConfiguration configuration,
     ILogger<PaymentController> logger) : ControllerBase
 {
     /// <summary>Adım 1: sipariş + kart → PayTR /odeme → 3D HTML. Kart alanları burada bırakılır.</summary>
@@ -185,20 +187,46 @@ public class PaymentController(
         }
 
         var basarili = form.status == "success";
+        var siparisId = await orderDb.Orders.AsNoTracking()
+            .Where(o => o.OrderNumber == (form.merchant_oid ?? ""))
+            .Select(o => (Guid?)o.Id)
+            .FirstOrDefaultAsync(ct);
+
+        // 2026-08-04 (kullanıcı kararı): bildirim YENİ veritabanındaki bir siparişe ait
+        // değilse ESKİ sitenin PayTR bildirim ucuna aynen iletilir — PayTR panelindeki tek
+        // bildirim URL'i yeni siteyi gösterir; eski sitenin siparişleri böylece ödeme
+        // bildirimini kaybetmez. TÜM ham form alanları taşınır; eski ucun cevabı PayTR'a
+        // aynen döner. İletim başarısızsa OK DÖNÜLMEZ → PayTR sonra yeniden dener.
+        if (siparisId is null)
+        {
+            var forwardUrl = configuration["Legacy:PayTrForwardUrl"]
+                ?? "https://www.misharitalia.com/CheckoutPayment/PayTrBildirim";
+            try
+            {
+                var alanlar = Request.HasFormContentType
+                    ? Request.Form.Select(kv => new KeyValuePair<string, string>(kv.Key, kv.Value.ToString())).ToList()
+                    : new List<KeyValuePair<string, string>>();
+                var istemci = httpClientFactory.CreateClient("legacy-order");
+                using var yanit = await istemci.PostAsync(forwardUrl, new FormUrlEncodedContent(alanlar), ct);
+                var govde = await yanit.Content.ReadAsStringAsync(ct);
+                logger.LogInformation(
+                    "PayTR bildirimi eski siteye iletildi (oid={Oid}, http={Http}, cevap={Cevap})",
+                    form.merchant_oid, (int)yanit.StatusCode, govde.Length > 100 ? govde[..100] : govde);
+                return Content(yanit.IsSuccessStatusCode ? govde : "PAYTR notification forward failed");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "PayTR bildirimi eski siteye iletilemedi (oid={Oid}).", form.merchant_oid);
+                return Content("PAYTR notification forward failed"); // OK değil → PayTR yeniden dener
+            }
+        }
+
         // O2 (2026-08-04): kart onay politikası — gerekliyse otomatik onay YAPILMAZ,
         // ödeme paid işlenir ve müşteriye onay linki gönderilir (politika: panel
         // Bildirim Şablonları ekranı; varsayılan first_order). Hata-güvenli.
         var onayGerekli = false;
-        Guid? siparisId = null;
-        if (basarili)
-        {
-            siparisId = await orderDb.Orders.AsNoTracking()
-                .Where(o => o.OrderNumber == (form.merchant_oid ?? ""))
-                .Select(o => (Guid?)o.Id)
-                .FirstOrDefaultAsync(ct);
-            if (siparisId is { } sid0)
-                onayGerekli = await orderConfirmations.KartOnayGerekliMiAsync(sid0, ct);
-        }
+        if (basarili && siparisId is { } sid0)
+            onayGerekli = await orderConfirmations.KartOnayGerekliMiAsync(sid0, ct);
 
         var sonuc = await mediator.Send(new PayTrCallbackUygulaCommand(
             form.merchant_oid ?? "", basarili, form.failed_reason_msg, form.total_amount,
