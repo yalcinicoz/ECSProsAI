@@ -653,7 +653,22 @@ public sealed class LegacyOrderSyncService(
         Ekle("createdDate", Tarih(DateTime.Now));
         Ekle("createdIP", "");
         Ekle("createdPersonnel.Id", "1");
-        Ekle("customerNote", v.CustomerNote);
+        Ekle("customerNote", v.CustomerNote ?? "");
+        // Eski SiparisAnaKaydiOlustur bu alanları NULL korumasız DataRow'a yazar —
+        // bağlanmayan string null kalır ve 'Cannot set Column ... to be null' fırlatır
+        // (F4 gerçek gönderiminde courierId ile yakalandı). Hepsi açıkça gönderilir.
+        Ekle("packageNumber", "");
+        Ekle("kaynakPlatformDurum", "");
+        Ekle("giftpackageMessage", "");
+        Ekle("invoiceNumber", "");
+        Ekle("courierName", "");
+        Ekle("courierId", "0");
+        Ekle("shippingBarcode", "");
+        Ekle("courierTrackingNumber", "");
+        Ekle("updatedIP", "");
+        Ekle("sepetHediye", "");
+        Ekle("countryId", "1");
+        Ekle("member.phoneCode", "90");
 
         // Üye: LegacyMemberId varsa doğrudan; yoksa eski taraf sourcePlatformMemberId ile
         // tekilleştirir/oluşturur (misafirde sipariş no bazlı — her misafir siparişi tek kayıt)
