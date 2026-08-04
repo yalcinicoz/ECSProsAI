@@ -39,8 +39,8 @@ public sealed class LegacyOrderSyncService(
     private string ServiceUrl => (config["Legacy:OrderService:Url"] ?? "https://services.misharitalia.com").TrimEnd('/');
     private string ServiceUser => config["Legacy:OrderService:User"] ?? "";
     private string ServicePass => config["Legacy:OrderService:Password"] ?? "";
-    private string Kaynak => config["Legacy:OrderService:Kaynak"] ?? "YeniSite";
-    private int CodExpenseTypeId => config.GetValue("Legacy:OrderService:CodExpenseTypeId", 0);
+    private string Kaynak => config["Legacy:OrderService:Kaynak"] ?? "website";
+    private int CodExpenseTypeId => config.GetValue("Legacy:OrderService:CodExpenseTypeId", 2);
     private bool DecimalComma => config.GetValue("Legacy:OrderService:DecimalComma", false);
     private const int MaxAttempt = 5;
 
