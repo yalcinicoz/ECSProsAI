@@ -5,11 +5,26 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "msBaseUrl", "value": "http://51.178.208.59:5055" },
-    { "key": "msBypassSecret", "value": "" },
-    { "key": "msChallenge", "value": "" },
-    { "key": "msDeviceToken", "value": "" },
-    { "key": "msSigningSecret", "value": "" }
+    {
+      "key": "msBaseUrl",
+      "value": "http://51.178.208.59:5055"
+    },
+    {
+      "key": "msBypassSecret",
+      "value": ""
+    },
+    {
+      "key": "msChallenge",
+      "value": ""
+    },
+    {
+      "key": "msDeviceToken",
+      "value": ""
+    },
+    {
+      "key": "msSigningSecret",
+      "value": ""
+    }
   ],
   "item": [
     {
@@ -52,7 +67,12 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"platform\": \"android\",\n  \"attestation\": \"{{msBypassSecret}}\",\n  \"challenge\": \"{{msChallenge}}\"\n}"
@@ -104,6 +124,52 @@
         "method": "GET",
         "url": "{{msBaseUrl}}/api/store/bootstrap",
         "description": "İmza pre-request script'te üretilir. Aynı script başka /api/store/* isteklerine kopyalanır; nonce tek kullanımlık, timestamp ±300 sn. 401 alırsanız token dolmuştur → istek 1-2'yi tekrar koşun."
+      }
+    },
+    {
+      "name": "4 — Kategori ağacı (channel-categories)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// İMZA: hex(HMACSHA256(base64decode(signingSecret), 'METOD\\npath?query\\nts\\nnonce\\nsha256hex(body)'))",
+              "// Bu script'i imzalı çağrılacak HER isteğe kopyalayabilirsiniz.",
+              "const ts = Math.floor(Date.now() / 1000).toString();",
+              "const nonce = pm.variables.replaceIn('{{$randomUUID}}').replace(/-/g, '');",
+              "const cozulmus = pm.variables.replaceIn(pm.request.url.toString());",
+              "const url = new URL(cozulmus);",
+              "const pathQuery = url.pathname + url.search;",
+              "const body = pm.request.body && pm.request.body.raw ? pm.variables.replaceIn(pm.request.body.raw) : '';",
+              "const bodyHash = CryptoJS.SHA256(body).toString(CryptoJS.enc.Hex);",
+              "const veri = [pm.request.method.toUpperCase(), pathQuery, ts, nonce, bodyHash].join('\\n');",
+              "const anahtar = CryptoJS.enc.Base64.parse(pm.collectionVariables.get('msSigningSecret'));",
+              "const imza = CryptoJS.HmacSHA256(veri, anahtar).toString(CryptoJS.enc.Hex);",
+              "pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + pm.collectionVariables.get('msDeviceToken') });",
+              "pm.request.headers.upsert({ key: 'X-Client-Platform', value: 'android' });",
+              "pm.request.headers.upsert({ key: 'X-Timestamp', value: ts });",
+              "pm.request.headers.upsert({ key: 'X-Nonce', value: nonce });",
+              "pm.request.headers.upsert({ key: 'X-Signature', value: imza });"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 döndü', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json().data;",
+              "console.log('Kategori sayısı (kök):', Array.isArray(d) ? d.length : 'bkz. cevap');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{msBaseUrl}}/api/store/catalog/channel-categories?firmPlatformId=c900c659-8d0f-4754-9658-aa157ea3072e",
+        "description": "Kanal kategori ağacı (mobil menü/nav kaynağı). firmPlatformId = mishar (bootstrap'tan dönen değer). İmza 3. istekle aynı pre-request script'iyle üretilir — yeni imzalı uçlar hep bu kalıpla eklenir: isteği çoğalt, URL'i değiştir."
       }
     }
   ]
