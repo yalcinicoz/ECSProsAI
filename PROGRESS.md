@@ -38,6 +38,14 @@ eşleşme anahtarı kalem Sku'su değil VARYANT BARKODU. Kalan gözlem: ilk ger�
 siparişte expense satırı (ID=2) doğrulanacak; durum/kargo geri senkronu (F2) ilk
 operasyon ilerleyişinde izlenecek.
 
+**Sipariş onay akışı O0-O3 (2026-08-04) — UYGULANDI ⚠️ restart bekliyor:** onay YENİ
+sitede (SMS/e-posta onay linki, token 24h ayarlanabilir, /o/{token} SSR sayfası +
+Siparişlerim 'Siparişi Onayla'); eskiye yalnız ONAYLI sipariş 'Hazırlanıyor' gider.
+Politika kanal bazlı (kapıda always, kart first_order vars.) + şablonlar panel
+Ayarlar → Bildirim Şablonları'ndan. Kart PayTR: politika onay istiyorsa auto-confirm
+YAPILMAZ (paid+pending, link gönderilir). Test: restart sonrası kapıda sipariş →
+SMS linki → onay → eskiye Hazırlanıyor.
+
 **PayTR ödeme entegrasyonu (2026-07-30/31) — ✅ CANLI + ÇALIŞIYOR:** Direct API. Uçtan uca
 kullanıcı doğruladı (iptal/başarısız akışı; başarılı tam ödeme testi kullanıcıya kalan tek adım).
 Bu turda çözülenler: (1) callback nginx www'siz→www 301'e takılıyordu → callback path'i redirect'ten
