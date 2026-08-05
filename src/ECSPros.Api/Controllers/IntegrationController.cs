@@ -8,6 +8,7 @@ using ECSPros.Integration.Application.Commands.UpdateMarketplaceStock;
 using ECSPros.Integration.Application.Queries.GetIntegrationLogs;
 using ECSPros.Integration.Application.Queries.GetMarketplaceProducts;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,7 +17,10 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/integrations")]
 [Authorize]
-public class IntegrationController(IMediator mediator) : ControllerBase
+public class IntegrationController(
+    IMediator mediator,
+    ECSPros.Order.Application.Services.IOrderDbContext orderDb,
+    ECSPros.Core.Application.Services.ICoreDbContext coreDb) : ControllerBase
 {
     // ─── Logs ───────────────────────────────────────────────────────────
     [HttpGet("logs")]
@@ -99,6 +103,26 @@ public class IntegrationController(IMediator mediator) : ControllerBase
         [FromBody] CreateShipmentRequest request,
         CancellationToken ct = default)
     {
+        // 2026-08-05: kanal kargo gönderim bayrağı (FirmPlatform.Settings
+        // "cargoDispatchEnabled") — pazaryeri kanallarında kargoyu pazaryeri yönetir,
+        // bizim gönderi oluşturmamız çift kayıt/yanlış barkod üretir. Ayar yoksa AÇIK
+        // (kendi kanalımız varsayımı). Sipariş bulunamazsa akış eskisi gibi sürer.
+        var kanalId = await orderDb.Orders.AsNoTracking()
+            .Where(o => o.Id == request.OrderId)
+            .Select(o => (Guid?)o.FirmPlatformId)
+            .FirstOrDefaultAsync(ct);
+        if (kanalId is { } kid)
+        {
+            var settings = await coreDb.FirmPlatforms.AsNoTracking()
+                .Where(p => p.Id == kid)
+                .Select(p => p.Settings)
+                .FirstOrDefaultAsync(ct);
+            if (settings is not null
+                && settings.TryGetValue("cargoDispatchEnabled", out var cd)
+                && cd is System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.False })
+                return BadRequest(new { success = false, error = "Bu satış kanalında kargo gönderimi kapalı (kargo bilgisini pazaryeri iletir)." });
+        }
+
         var shipmentRequest = new CargoShipmentRequest(
             request.OrderId,
             request.RecipientName,

@@ -488,7 +488,7 @@ public sealed class LegacyOrderSyncService(
         int Quantity, decimal UnitPrice, decimal DiscountAmount, decimal TaxRate);
 
     private sealed record SiparisVerisi(
-        string OrderNumber, string Status, Guid FirmPlatformId, int? LegacyPlatformId, int? LegacyOrderId,
+        string OrderNumber, string Status, Guid FirmPlatformId, int? LegacyPlatformId, bool CargoDispatch, int? LegacyOrderId,
         string? PaymentMethod, string Currency, decimal Subtotal, decimal TotalDiscount,
         decimal TotalExpense, decimal GrandTotal, DateTime CreatedAt,
         string RecipientName, string RecipientPhone, string AddressLine, string? PostalCode,
@@ -521,16 +521,24 @@ public sealed class LegacyOrderSyncService(
         if (!await r.ReadAsync(ct)) return null;
 
         int? legacyPlatform = null;
+        // 2026-08-05: kanal kargo gönderim bayrağı (FirmPlatform.Settings "cargoDispatchEnabled").
+        // Kendi satış kanallarımızda true → paket bilgisi kargo şirketine gider; pazaryerlerinde
+        // false (kargoyu pazaryeri yönetir). Ayar yoksa TRUE (kendi kanalımız varsayımı) —
+        // eski sistemin ECSGYE.ClassLibrary.Order varsayılanıyla aynı.
+        var cargoDispatch = true;
         if (!r.IsDBNull(26))
         {
             var settings = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(r.GetString(26));
             if (settings is not null && settings.TryGetValue("legacyPlatformId", out var lp)
                 && lp.ValueKind == JsonValueKind.Number)
                 legacyPlatform = lp.GetInt32();
+            if (settings is not null && settings.TryGetValue("cargoDispatchEnabled", out var cd)
+                && cd.ValueKind is JsonValueKind.False or JsonValueKind.True)
+                cargoDispatch = cd.GetBoolean();
         }
 
         var veri = new SiparisVerisi(
-            r.GetString(0), r.GetString(1), r.GetGuid(2), legacyPlatform,
+            r.GetString(0), r.GetString(1), r.GetGuid(2), legacyPlatform, cargoDispatch,
             r.IsDBNull(3) ? null : r.GetInt32(3),
             r.IsDBNull(4) ? null : r.GetString(4),
             r.GetString(5), r.GetDecimal(6), r.GetDecimal(7), r.GetDecimal(8), r.GetDecimal(9),
@@ -648,7 +656,10 @@ public sealed class LegacyOrderSyncService(
         Ekle("currency", "TL");
         Ekle("exchangeRate", "1");
         Ekle("invoiceType", "arsiv");
-        Ekle("kargoGonder", "false");
+        // ★ 2026-08-05 (üretim hatası düzeltmesi): sabit "false" gidiyordu — eski tarafta
+        // paket bilgisi kargo şirketine HİÇ gönderilmiyordu (opinvoices.kargoGonder=0 →
+        // InvoiceOperations kargo kuyruğu bu siparişi hiç görmüyor). Artık kanal ayarından.
+        Ekle("kargoGonder", v.CargoDispatch ? "true" : "false");
         Ekle("topluFaturaKes", "false");
         Ekle("useGiftPackage", "false");
         Ekle("estimatedDueDate", Tarih(DateTime.Now.AddDays(3)));

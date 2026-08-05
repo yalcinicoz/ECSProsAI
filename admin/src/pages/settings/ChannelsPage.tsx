@@ -187,6 +187,10 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
   // tozlu=1, julude=2, olurbutik=12, mishar=41. Boş = bu kanal eskiye senkronlanmaz.
   const [legacyPlatformId, setLegacyPlatformId] = useState(
     target?.settings?.['legacyPlatformId'] != null ? String(target.settings['legacyPlatformId']) : '')
+  // Kargo gönderimi (2026-08-05): kanalın paket bilgisi kargo şirketine gönderilsin mi?
+  // Kendi satış kanallarımızda AÇIK; pazaryerlerinde KAPALI (kargoyu pazaryeri yönetir).
+  // Ayar yoksa açık kabul edilir (eski sistemdeki kargoGonder varsayılanıyla aynı).
+  const [cargoDispatch, setCargoDispatch] = useState(target?.settings?.['cargoDispatchEnabled'] !== false)
   const [fieldValues, setFieldValues] = useState<Record<string, string>>(() => {
     const merged: Record<string, string> = {}
     if (target) {
@@ -215,7 +219,7 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
       // Şema dışı mevcut anahtarlar korunur (stockControlEnabled, tema/domain vb. —
       // backend Settings/Credentials'ı olduğu gibi değiştirir, merge etmez)
       // Stok görünürlüğü anahtarları burada özel ele alınıyor — genel korumadan hariç tut.
-      const ozelSettings = new Set(['showOutOfStock', 'outOfStockVisibleSince', 'paymentMethods', 'codServiceFee', 'codMaxOrderTotal', 'legacyPlatformId'])
+      const ozelSettings = new Set(['showOutOfStock', 'outOfStockVisibleSince', 'paymentMethods', 'codServiceFee', 'codMaxOrderTotal', 'legacyPlatformId', 'cargoDispatchEnabled'])
       if (target) {
         const schemaKeys = new Set(schema.map(f => f.key))
         for (const [k, v] of Object.entries(target.credentials ?? {})) if (v != null && !schemaKeys.has(k)) credentials[k] = v
@@ -227,6 +231,7 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
       settings['codServiceFee'] = parseFloat(codFee) >= 0 ? parseFloat(codFee) : 50
       settings['codMaxOrderTotal'] = parseFloat(codMax) >= 0 ? parseFloat(codMax) : 3000
       if (legacyPlatformId && parseInt(legacyPlatformId) > 0) settings['legacyPlatformId'] = parseInt(legacyPlatformId)
+      settings['cargoDispatchEnabled'] = cargoDispatch
       for (const f of schema) {
         const v = fieldValues[f.key] ?? ''
         if (v) {
@@ -415,6 +420,21 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
         )}
         <p className="text-xs" style={{ color: 'var(--text-s)' }}>
           Kapalı yöntem sitede hiç gösterilmez; sunucu da bu yöntemle siparişi reddeder. Değişiklik ~1 dk içinde siteye yansır.
+        </p>
+      </div>
+
+      {/* Kargo gönderimi (kanal ayarı, 2026-08-05) */}
+      <div className="space-y-2 p-4 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Kargo Gönderimi</p>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
+            checked={cargoDispatch} onChange={e => setCargoDispatch(e.target.checked)} />
+          <span className="text-sm" style={{ color: 'var(--text)' }}>Paket bilgileri kargo şirketine gönderilsin</span>
+        </label>
+        <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+          Kendi satış kanallarımızda AÇIK olmalı — paket hazırlandığında kargo şirketine bildirilir.
+          Pazaryerlerinde KAPALI: kargo bilgisini pazaryeri kendisi iletir. Kapalıyken bu kanalın
+          siparişlerinde kargo gönderisi oluşturulmaz.
         </p>
       </div>
 
