@@ -171,7 +171,17 @@ public sealed class LegacySyncService(
         var batch = new List<object?[]>();
         var eklendi = new HashSet<(Guid, Guid)>();
         int okunan = 0, atlananAdet = 0;
-        await using (var r = await MyQueryAsync(my, "SELECT productVariantId, storageUnitId, SUM(CASE WHEN transactionDetailId IS NULL THEN 1 ELSE 0 END) AS adet FROM opproductlocations GROUP BY productVariantId, storageUnitId", ct))
+        // 2026-08-07 (kullanıcı kararı): stok kaynağı YALNIZ dfstoragetypes Id=1 "İnternete Açık"
+        // depolar. Filtresiz sayım Mağaza Reyonu/İade/Defo/Bağış (tip=2) adetlerini de Merkez
+        // Depo'nun online stoğuna karıştırıyordu (~26 bin adet).
+        await using (var r = await MyQueryAsync(my, @"SELECT pl.productVariantId, pl.storageUnitId,
+                SUM(CASE WHEN pl.transactionDetailId IS NULL THEN 1 ELSE 0 END) AS adet
+            FROM opproductlocations pl
+            JOIN dfstorageunits su ON su.Id=pl.storageUnitId
+            JOIN dfstorages st ON st.Id=su.storageId
+            WHERE st.type=@stype AND st.status=1
+            GROUP BY pl.productVariantId, pl.storageUnitId", ct,
+            ("@stype", config.GetValue("Legacy:Sync:StockStorageType", 1))))
             while (await r.ReadAsync(ct))
             {
                 int lvid = r.GetInt32(0), luid = r.GetInt32(1);
@@ -233,17 +243,21 @@ public sealed class LegacySyncService(
             if (imageSetMap.Count == 0)
                 return new(false, dry, "images", 0, log.ToString(), "image_sets eşlemesi boş — senkron atlandı.", DurMs(t0));
 
-            // Varyant başına tek set: en çok resimli, eşitlikte küçük setId (Faz 7/26b kuralı)
-            var chosenSet = new Dictionary<(int, int?), (int setId, int cnt)>();
-            await using (var rs = await MyQueryAsync(my, @"SELECT urunId, urunAnaVaryantId, IFNULL(resimSetId,1) AS setId, COUNT(*) AS c
+            // Varyant başına tek set: platformun resim seti (dfplatforms.resimSetId) öncelikli;
+            // yoksa en yeni yüklenen set, eşitlikte çok resimli, sonra küçük setId.
+            int preferredSet = await LoadPreferredImageSetAsync(my, ct);
+            var chosenSet = new Dictionary<(int, int?), (int setId, int cnt, DateTime maxT)>();
+            // maxT string olarak çekilir: legacy'de '0000-00-00' sıfır-tarihler var, GetDateTime patlar.
+            await using (var rs = await MyQueryAsync(my, @"SELECT urunId, urunAnaVaryantId, IFNULL(resimSetId,1) AS setId, COUNT(*) AS c,
+                    DATE_FORMAT(MAX(IFNULL(olusturmaTarihi,'1900-01-01')),'%Y-%m-%d %H:%i:%s') AS maxT
                 FROM apurunresimleri WHERE isSilindi=0 AND resimDosyaAdi IS NOT NULL AND resimDosyaAdi<>''
                 GROUP BY urunId, urunAnaVaryantId, IFNULL(resimSetId,1)", ct))
                 while (await rs.ReadAsync(ct))
                 {
                     var key = (rs.GetInt32(0), rs.IsDBNull(1) ? (int?)null : rs.GetInt32(1));
                     int setId = rs.GetInt32(2), c = Convert.ToInt32(rs.GetValue(3));
-                    if (!chosenSet.TryGetValue(key, out var cur) || c > cur.cnt || (c == cur.cnt && setId < cur.setId))
-                        chosenSet[key] = (setId, c);
+                    var maxT = !rs.IsDBNull(4) && DateTime.TryParse(rs.GetString(4), out var d) ? d : DateTime.MinValue;
+                    SetSecimBirlestir(chosenSet, key, setId, c, maxT, preferredSet);
                 }
 
             await PgExecAsync(pg, "DROP TABLE IF EXISTS _ls_img", ct);
@@ -281,7 +295,10 @@ public sealed class LegacySyncService(
                 }
             await PgBatchInsertAsync(pg, "_ls_img", new[] { "product_id", "variant_id", "set_id", "file_name", "sort_order", "is_variant_cover" }, new string?[6], batch, ct);
 
-            long mevcut = await PgScalarAsync<long>(pg, $"SELECT COUNT(*) FROM {CAT}.product_images", ct);
+            // Tekil sayım: eşzamanlı çift kurulum kazasında (2026-08-05) ham COUNT ikiye katlanıp
+            // %90 emniyetini kalıcı kilitledi — kıyas her zaman tekil dosya üzerinden.
+            long mevcut = await PgScalarAsync<long>(pg, $@"SELECT COUNT(*) FROM (
+                SELECT DISTINCT ""ProductId"",""VariantId"",""FileName"" FROM {CAT}.product_images) d", ct);
             long yeniDosya = await PgScalarAsync<long>(pg, $@"SELECT COUNT(*) FROM _ls_img n WHERE NOT EXISTS (
                 SELECT 1 FROM {CAT}.product_images o WHERE o.""ProductId""=n.product_id AND o.""FileName""=n.file_name AND o.""IsDeleted""=false)", ct);
             long bayatDosya = await PgScalarAsync<long>(pg, $@"SELECT COUNT(*) FROM {CAT}.product_images o WHERE o.""IsDeleted""=false AND NOT EXISTS (
@@ -302,6 +319,16 @@ public sealed class LegacySyncService(
                 await using var tx = await pg.BeginTransactionAsync(ct);
                 try
                 {
+                    // Tek kurucu: ikinci bir instance (ör. staging) aynı anda koşarsa tablo çift
+                    // kurulur — kilidi alamayan vazgeçer.
+                    bool kilit = await PgScalarAsync<bool>(pg,
+                        "SELECT pg_try_advisory_xact_lock(hashtext('legacy_sync_images'))", ct, tx);
+                    if (!kilit)
+                    {
+                        await tx.RollbackAsync(ct);
+                        return new(false, dry, "images", 0, log.ToString(),
+                            "Başka bir instance görsel setini kuruyor — bu koşu atlandı.", DurMs(t0));
+                    }
                     await PgExecAsync(pg, $"DELETE FROM {CAT}.product_images", ct, tx, timeoutSec: 300);
                     await PgExecAsync(pg, $@"INSERT INTO {CAT}.product_images
                         (""Id"",""ProductId"",""VariantId"",""ImageSetId"",""FileName"",""SortOrder"",""IsProductCover"",""IsVariantCover"",""Status"",""BatchId"",""CreatedAt"",""IsDeleted"")
@@ -472,21 +499,24 @@ public sealed class LegacySyncService(
                     }
                 }
 
-                // 3) Görseller (yalnız bu ürünler; Faz 7 set-seçimi + dedup)
+                // 3) Görseller (yalnız bu ürünler; set seçimi SyncImagesAsync ile aynı kural:
+                // platform seti öncelikli, yoksa en yeni set)
                 int gorselSayisi = 0;
                 if (imageSetMap.Count > 0)
                 {
                     Guid defaultSetId = imageSetMap.Values.First();
-                    var chosenSet = new Dictionary<(int, int?), (int setId, int cnt)>();
-                    await using (var rs = await MyQueryAsync(my, $@"SELECT urunId, urunAnaVaryantId, IFNULL(resimSetId,1), COUNT(*)
+                    int preferredSet = await LoadPreferredImageSetAsync(my, ct);
+                    var chosenSet = new Dictionary<(int, int?), (int setId, int cnt, DateTime maxT)>();
+                    await using (var rs = await MyQueryAsync(my, $@"SELECT urunId, urunAnaVaryantId, IFNULL(resimSetId,1), COUNT(*),
+                            DATE_FORMAT(MAX(IFNULL(olusturmaTarihi,'1900-01-01')),'%Y-%m-%d %H:%i:%s')
                         FROM apurunresimleri WHERE isSilindi=0 AND resimDosyaAdi IS NOT NULL AND resimDosyaAdi<>'' AND urunId IN ({urunIdList})
                         GROUP BY urunId, urunAnaVaryantId, IFNULL(resimSetId,1)", ct))
                         while (await rs.ReadAsync(ct))
                         {
                             var key = (rs.GetInt32(0), rs.IsDBNull(1) ? (int?)null : rs.GetInt32(1));
                             int setId = rs.GetInt32(2), c = Convert.ToInt32(rs.GetValue(3));
-                            if (!chosenSet.TryGetValue(key, out var cur) || c > cur.cnt || (c == cur.cnt && setId < cur.setId))
-                                chosenSet[key] = (setId, c);
+                            var maxT = !rs.IsDBNull(4) && DateTime.TryParse(rs.GetString(4), out var d) ? d : DateTime.MinValue;
+                            SetSecimBirlestir(chosenSet, key, setId, c, maxT, preferredSet);
                         }
 
                     var seen = new HashSet<(Guid, Guid?, string)>();
@@ -672,6 +702,34 @@ public sealed class LegacySyncService(
     }
 
     // ─── DB YARDIMCILARI ─────────────────────────────────────────────────────
+    // Set seçimi (2026-08-07): eski "en çok resimli set" kuralı, dosyaları fiziken silinmiş
+    // 2023 Julude setini (daha kalabalık) seçip 404 üretiyordu. Platformun kendi seti
+    // (dfplatforms.resimSetId — eski sitenin gösterdiği set) her zaman kazanır; o set
+    // varyantta hiç yoksa en yeni yüklenen set, eşitlikte çok resimli, sonra küçük setId.
+    private async Task<int> LoadPreferredImageSetAsync(MySqlConnection my, CancellationToken ct)
+    {
+        try
+        {
+            await using var cmd = new MySqlCommand(
+                $"SELECT resimSetId FROM dfplatforms WHERE Id={LegacyPlatformId}", my);
+            var v = await cmd.ExecuteScalarAsync(ct);
+            return v is null or DBNull ? 1 : Convert.ToInt32(v);
+        }
+        catch { return 1; }
+    }
+
+    private static void SetSecimBirlestir(Dictionary<(int, int?), (int setId, int cnt, DateTime maxT)> map,
+        (int, int?) key, int setId, int cnt, DateTime maxT, int preferredSetId)
+    {
+        if (!map.TryGetValue(key, out var cur)) { map[key] = (setId, cnt, maxT); return; }
+        bool curPref = cur.setId == preferredSetId, yeniPref = setId == preferredSetId;
+        bool better = yeniPref != curPref ? yeniPref
+            : maxT != cur.maxT ? maxT > cur.maxT
+            : cnt != cur.cnt ? cnt > cur.cnt
+            : setId < cur.setId;
+        if (better) map[key] = (setId, cnt, maxT);
+    }
+
     private static async Task<Dictionary<string, Guid>> PgMapAsync(NpgsqlConnection pg, string sql, CancellationToken ct)
     {
         var map = new Dictionary<string, Guid>(StringComparer.Ordinal);
@@ -715,9 +773,10 @@ public sealed class LegacySyncService(
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
-    private static async Task<T> PgScalarAsync<T>(NpgsqlConnection pg, string sql, CancellationToken ct)
+    private static async Task<T> PgScalarAsync<T>(NpgsqlConnection pg, string sql, CancellationToken ct,
+        NpgsqlTransaction? tx = null)
     {
-        await using var cmd = new NpgsqlCommand(sql, pg) { CommandTimeout = 300 };
+        await using var cmd = new NpgsqlCommand(sql, pg, tx) { CommandTimeout = 300 };
         return (T)(await cmd.ExecuteScalarAsync(ct))!;
     }
 
