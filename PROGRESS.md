@@ -38,7 +38,7 @@ eşleşme anahtarı kalem Sku'su değil VARYANT BARKODU. Kalan gözlem: ilk ger�
 siparişte expense satırı (ID=2) doğrulanacak; durum/kargo geri senkronu (F2) ilk
 operasyon ilerleyişinde izlenecek.
 
-**Görsel senkron 404 + stok kaynağı düzeltmesi (2026-08-07) — UYGULANDI ⚠️ restart bekliyor:**
+**Görsel senkron 404 + stok kaynağı düzeltmesi (2026-08-07) — ✅ CANLIDA (restart yapıldı, kullanıcı P-00004947 tüm renklerin görsellerini doğruladı; stok dilimi tip=1 filtreyle temiz koşuyor):**
 İki sorun tek turda: (1) B3 görsel senkronu 2026-08-05'ten beri DONMUŞTU — staging worker'ı
 (publish-staging, aynı canlı DB) prod ile aynı anda koşup product_images'ı çift kurdu, %90
 emniyet eşiği tüm koşuları reddetti (çift batch silindi, staging'de Legacy:Sync artık KAPALI,
