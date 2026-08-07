@@ -38,6 +38,18 @@ eşleşme anahtarı kalem Sku'su değil VARYANT BARKODU. Kalan gözlem: ilk ger�
 siparişte expense satırı (ID=2) doğrulanacak; durum/kargo geri senkronu (F2) ilk
 operasyon ilerleyişinde izlenecek.
 
+**Görsel senkron 404 + stok kaynağı düzeltmesi (2026-08-07) — UYGULANDI ⚠️ restart bekliyor:**
+İki sorun tek turda: (1) B3 görsel senkronu 2026-08-05'ten beri DONMUŞTU — staging worker'ı
+(publish-staging, aynı canlı DB) prod ile aynı anda koşup product_images'ı çift kurdu, %90
+emniyet eşiği tüm koşuları reddetti (çift batch silindi, staging'de Legacy:Sync artık KAPALI,
+rebuild advisory lock'lu, eşik tekil sayımla). (2) Set seçim kuralı "en çok resimli" →
+dosyaları CDN'den silinmiş 2023 Julude setini (kesik `..webp` adlar, placeholder) seçiyordu;
+artık dfplatforms.resimSetId (mishar→set 1) öncelikli, yoksa en yeni set (~377 varyant grubu
+düzelir, örn. P-00004947 yeşil). (3) B2 stok kaynağı kullanıcı kararıyla YALNIZ dfstoragetypes
+Id=1 "İnternete Açık" depolar — Mağaza Reyonu/İade/Defo/Bağış (~26 bin adet) online stoktan
+çıkar (`Legacy:Sync:StockStorageType`). Commit d658459; restart sonrası ~2,5 dk'da görseller,
+~10 dk'da stok kendiliğinden düzelir. Detay: memory/project_gorsel_senkron_ve_stok_kaynagi_fix_2026-08-07.md
+
 **Sipariş onay akışı O0-O3 (2026-08-04) — CANLIDA ⚠️ kullanıcı testi bekliyor:** onay YENİ
 sitede (SMS/e-posta onay linki, token 24h ayarlanabilir, /o/{token} SSR sayfası +
 Siparişlerim 'Siparişi Onayla'); eskiye yalnız ONAYLI sipariş 'Hazırlanıyor' gider.
