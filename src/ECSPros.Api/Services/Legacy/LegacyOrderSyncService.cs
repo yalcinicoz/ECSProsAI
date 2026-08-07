@@ -653,7 +653,9 @@ public sealed class LegacyOrderSyncService(
         Ekle("paymentTypeId", odemeTipi.ToString());
         Ekle("orderDate", Tarih(v.CreatedAt));
         Ekle("orderTime", v.CreatedAt.ToString("HH:mm"));
-        Ekle("currency", "TL");
+        // 2026-08-07 (kullanıcı kararı): eski DB para birimi "TRY" — sipariş kaydındaki
+        // kod gönderilir (yeni DB'de tüm siparişler TRY), sabit "TL" yazılmaz.
+        Ekle("currency", string.IsNullOrWhiteSpace(v.Currency) ? "TRY" : v.Currency);
         Ekle("exchangeRate", "1");
         Ekle("invoiceType", "arsiv");
         // ★ 2026-08-05 (üretim hatası düzeltmesi): sabit "false" gidiyordu — eski tarafta
