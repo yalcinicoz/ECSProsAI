@@ -186,3 +186,19 @@ public class PackingDeskConfiguration : IEntityTypeConfiguration<PackingDesk>
         builder.HasQueryFilter(d => !d.IsDeleted);
     }
 }
+
+public class CargoNotifyOutboxConfiguration : IEntityTypeConfiguration<CargoNotifyOutbox>
+{
+    public void Configure(EntityTypeBuilder<CargoNotifyOutbox> builder)
+    {
+        builder.ToTable("ful_cargo_notify_outbox");
+        builder.HasKey(o => o.Id);
+        builder.Property(o => o.Status).HasMaxLength(20).IsRequired();
+        builder.Property(o => o.CargoName).HasMaxLength(100);
+        builder.Property(o => o.LastError).HasMaxLength(2000);
+        // Worker pending'leri çeker; yönlendirme ekranı taşıyıcı bazlı gruplar
+        builder.HasIndex(o => new { o.Status, o.NextAttemptAt });
+        builder.HasIndex(o => o.PackageId).IsUnique();
+        builder.HasQueryFilter(o => !o.IsDeleted);
+    }
+}

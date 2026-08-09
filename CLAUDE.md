@@ -33,7 +33,7 @@ E-ticaret odaklı **.NET 8 Modular Monolith** API projesi. Her modül kendi Doma
 │   ├── Inventory/                  # Depo, stok, stok hareketi
 │   ├── Crm/                        # Üye, üye grubu
 │   ├── Order/                      # Sipariş, sipariş kalemi
-│   ├── Fulfillment/                # Kargo, teslimat (Application katmanı YOK — eksik)
+│   ├── Fulfillment/                # Toplama/paketleme/kargo operasyonu (OP1-OP5 tam, 2026-08-09)
 │   ├── Finance/                    # Tedarikçi, fatura
 │   ├── Promotion/                  # Kampanya, kupon
 │   ├── Cms/                        # Sayfa, şablon, menü

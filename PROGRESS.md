@@ -52,8 +52,13 @@ canlıda. **OP4 de UYGULANDI (2026-08-09, ⚠️ restart bekliyor) — ÇOK ÜR�
 (/fulfillment/desk/{id}: slot atama + seslendirme + PAKETLE → son kontrol → paket + otomatik
 fatura + iframe yazdırma), koli kapatma ("koliye ürün gelebilir" sistem kontrolü + force ile
 OBM transferi), masa izleme /fulfillment/desks, koli duvarına "Masa Aç"; migration
-AddPackingDesks canlıda. SIRADA: OP5 (kargo zinciri — outbox+worker, Shipment bağlama,
-yönlendirme, MarkShipped otomasyonu; KG1 gerçek adapter'larla birleşir) + OP6 (toptan, raporlar).
+AddPackingDesks canlıda. **OP5 de UYGULANDI (2026-08-09, ⚠️ restart bekliyor) — OPERASYON
+ÇEKİRDEĞİ OP1-OP5 TAMAM:** paket kapanış zinciri (paket başına Shipment + `ful_cargo_notify_outbox`
++ tüm kalemler paketlenince sipariş otomatik shipped), `CargoNotifyWorker` **varsayılan KAPALI**
+(CargoNotify:Enabled=false — adapter'lar stub, kuyruk birikir, KG1 gerçek taşıyıcılarla açılır),
+kargo yönlendirme /fulfillment/cargo-reroute (taşıyıcı gruplu, yalnız gönderilmemişler; sent
+iptal+yeniden KG1'de); migration AddCargoNotifyOutbox canlıda. KALAN (talep gelince): OP6+
+toptan profili + raporlar + profil yönetim ekranı + OBM ekranı + order_created kargo politikası.
 
 **Ürün Kartı yönetimi F2 (2026-08-09) — UYGULANDI ⚠️ restart bekliyor (F1 restart'ı yapıldı,
 kullanıcı F1'in "değişken alan içerik yönetimi eksik" geri bildirimi üzerine F2 aynı gün geçildi):**

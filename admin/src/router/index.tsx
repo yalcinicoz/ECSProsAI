@@ -79,6 +79,7 @@ import { SortingScanPage } from '@/pages/fulfillment/SortingScanPage'
 import { SortingWallPage } from '@/pages/fulfillment/SortingWallPage'
 import { DeskPage } from '@/pages/fulfillment/DeskPage'
 import { DesksMonitorPage } from '@/pages/fulfillment/DesksMonitorPage'
+import { CargoReroutePage } from '@/pages/fulfillment/CargoReroutePage'
 import { IntegrationLogsPage } from '@/pages/integrations/IntegrationLogsPage'
 import { UsersPage } from '@/pages/settings/UsersPage'
 import { RolesPage } from '@/pages/settings/RolesPage'
@@ -184,6 +185,7 @@ export const router = createBrowserRouter(
             { path: 'fulfillment/sorting-wall/:planId', element: <SortingWallPage /> },
             { path: 'fulfillment/desk/:deskId',      element: <DeskPage /> },
             { path: 'fulfillment/desks',             element: <DesksMonitorPage /> },
+            { path: 'fulfillment/cargo-reroute',     element: <CargoReroutePage /> },
 
             // CMS
             { path: 'cms/pages',                element: <CmsPagesPage /> },

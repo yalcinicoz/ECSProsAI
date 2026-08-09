@@ -274,6 +274,7 @@ builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacySyncService>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacyOrderSyncService>();
 builder.Services.AddHttpClient("legacy-order", c => c.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddHostedService<ECSPros.Api.Services.Legacy.LegacySyncWorker>();
+builder.Services.AddHostedService<ECSPros.Api.Services.Fulfillment.CargoNotifyWorker>(); // OP5: kargo bildirim outbox'ı (varsayılan KAPALI — KG1'de açılır)
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.PlayIntegrityVerifier>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.AppAttestVerifier>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.DevBypassVerifier>();

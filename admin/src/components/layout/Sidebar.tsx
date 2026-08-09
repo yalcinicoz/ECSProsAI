@@ -120,6 +120,7 @@ const NAV_SECTIONS: NavSection[] = [
     { label: 'Fulfillment',   to: '/fulfillment/picking-plans', icon: 'boxes' },
     { label: 'Ürün Toplama',  to: '/fulfillment/my-picking',    icon: 'scan' },
     { label: 'Masa İzleme',   to: '/fulfillment/desks',         icon: 'monitor' },
+    { label: 'Kargo Yönlendirme', to: '/fulfillment/cargo-reroute', icon: 'truck' },
     { label: 'Firmalar',        to: '/settings/firms',          icon: 'building2' },
     { label: 'Platform Tipleri',to: '/settings/platform-types', icon: 'globe' },
     { label: 'Bildirim Şablonları', to: '/settings/notification-templates', icon: 'bell' },

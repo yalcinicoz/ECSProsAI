@@ -21,6 +21,7 @@ public class FulfillmentDbContext : DbContext, IFulfillmentDbContext
     public DbSet<OperationLog> OperationLogs => Set<OperationLog>();
     public DbSet<SortingBox> SortingBoxes => Set<SortingBox>();
     public DbSet<PackingDesk> PackingDesks => Set<PackingDesk>();
+    public DbSet<CargoNotifyOutbox> CargoNotifyOutbox => Set<CargoNotifyOutbox>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

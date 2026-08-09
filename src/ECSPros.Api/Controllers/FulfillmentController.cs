@@ -143,6 +143,9 @@ public class FulfillmentController : ControllerBase
             return BadRequest(new { success = false, error = scan.Error });
         var s = scan.Value!;
 
+        // OP5: kargo zinciri (Shipment + outbox + shipped otomasyonu)
+        await PaketKapanisZinciriAsync(s.OrderId, s.PackageId, s.PackageNumber, s.FirmPlatformId, ct);
+
         // K-11: fatura paket kapanışında otomatik kesilir; seri yoksa paket durur, hata görünür
         var fatura = await _mediator.Send(new ECSPros.Order.Application.Commands.CreatePackageInvoiceAuto
             .CreatePackageInvoiceAutoCommand(s.OrderId, s.PackageId, AktifKullanici()), ct);
@@ -247,6 +250,10 @@ public class FulfillmentController : ControllerBase
         if (!s.Tamam)
             return Ok(new { success = true, data = new { s.Kalan, tamam = false } });
 
+        // OP5: kargo zinciri (Shipment + outbox + shipped otomasyonu)
+        await PaketKapanisZinciriAsync(request.OrderId, s.PackageId!.Value, s.PackageNumber!,
+            s.FirmPlatformId!.Value, ct);
+
         var fatura = await _mediator.Send(new ECSPros.Order.Application.Commands.CreatePackageInvoiceAuto
             .CreatePackageInvoiceAutoCommand(request.OrderId, s.PackageId!.Value, AktifKullanici()), ct);
         return Ok(new
@@ -284,6 +291,50 @@ public class FulfillmentController : ControllerBase
         var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Queries.GetPackingDesks
             .GetPackingDesksQuery(planId, deskId), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    // ── OP5 (2026-08-09): kargo zinciri — outbox + yönlendirme ──
+
+    /// <summary>Paket kapanışı sonrası kargo zinciri: Shipment bağla + outbox'a düş +
+    /// sipariş tamamsa shipped'e al. Fast-lane ve masa final-scan sonrasında çağrılır.</summary>
+    private async Task PaketKapanisZinciriAsync(Guid orderId, Guid packageId, string packageNumber,
+        Guid firmPlatformId, CancellationToken ct)
+    {
+        var aktör = AktifKullanici();
+        var shipment = await _mediator.Send(new ECSPros.Order.Application.Commands.CreatePackageShipment
+            .CreatePackageShipmentCommand(orderId, packageId, packageNumber, aktör), ct);
+        await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.QueueCargoNotify
+            .QueueCargoNotifyCommand(packageId, orderId, firmPlatformId,
+                shipment.IsSuccess ? shipment.Value!.ShipmentId : null,
+                shipment.IsSuccess ? shipment.Value!.CargoIntegrationId : null,
+                shipment.IsSuccess ? shipment.Value!.CargoName : null, aktör), ct);
+        await _mediator.Send(new ECSPros.Order.Application.Commands.TryMarkOrderShipped
+            .TryMarkOrderShippedCommand(orderId, aktör), ct);
+    }
+
+    /// <summary>Kargo bildirim kuyruğu (yönlendirme/izleme).</summary>
+    [HttpGet("cargo-outbox")]
+    public async Task<IActionResult> GetCargoOutbox([FromQuery] string? status, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Queries.GetCargoOutbox
+            .GetCargoOutboxQuery(status), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kargo yönlendirme — gönderilmemiş bildirimler hedef taşıyıcıya taşınır (K-9).</summary>
+    [HttpPost("cargo-outbox/reroute")]
+    public async Task<IActionResult> RerouteCargo([FromBody] RerouteCargoRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.RerouteCargoOutbox
+            .RerouteCargoOutboxCommand(request.OutboxIds ?? [], request.TargetIntegrationId,
+                request.TargetName ?? "", AktifKullanici()), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        if (request.OrderIds is { Count: > 0 })
+            await _mediator.Send(new ECSPros.Order.Application.Commands.UpdateOrderCargo
+                .UpdateOrderCargoCommand(request.OrderIds, request.TargetIntegrationId,
+                    request.TargetName ?? "", AktifKullanici()), ct);
+        return Ok(new { success = true, data = new { rerouted = result.Value } });
     }
 
     /// <summary>Toplama planlarını listeler.</summary>
@@ -704,3 +755,6 @@ public record AssignLinesRequest(List<Guid>? LineIds, Guid AssignTo);
 public record PickScanRequest(string? Barcode, string? BinBarcode = null);
 
 public record FinalScanRequest(Guid OrderId, string? Barcode);
+
+public record RerouteCargoRequest(
+    List<Guid>? OutboxIds, Guid TargetIntegrationId, string? TargetName, List<Guid>? OrderIds);
