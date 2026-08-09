@@ -111,6 +111,12 @@
                 .catch(() => durum.istenenSayfalar.delete(sayfaNo));
         };
 
+        // F1 (2026-08-09): JS'in enjekte ettiği elementler kanal kart ayarına uyar
+        // (_MsKartAyarlari partial'ı window.msKartAyarlari'nı basar; yoksa hepsi açık).
+        // SSR placeholder'ları (puan/bant/indirim/kampanya fiyatı) kapalıyken şablonda hiç
+        // olmadığından aşağıdaki querySelector'lar null döner ve bloklar kendiliğinden atlanır.
+        const kartAyar = window.msKartAyarlari || {};
+
         const kartDoldur = (kart, v) => {
             kart.dataset.msFiyat = String(v.fiyat);
             kart.dataset.msDegerler = v.degerler.join(",");
@@ -161,7 +167,7 @@
                 gorsel.dataset.msNoImage = "true";
             }
 
-            if (v.galeri.length > 1 && !kart.querySelector(".ms-urun-slider-noktalari")) {
+            if (kartAyar.galeriNoktalari !== false && v.galeri.length > 1 && !kart.querySelector(".ms-urun-slider-noktalari")) {
                 const noktalar = document.createElement("span");
                 noktalar.className = "ms-urun-slider-noktalari";
                 noktalar.setAttribute("aria-hidden", "true");
@@ -228,7 +234,7 @@
 
             // B8 renk tooltip'i — SSR markup'ının birebir aynısı; rozetten ÖNCE eklenmeli
             // (site.js rozeti bağlarken tooltip alanını arar, bulamazsa bir daha bağlamaz)
-            if (v.renkSecenekleri.length >= 2 && !kart.querySelector(".ms-urun-renk-tooltip-alani")) {
+            if (kartAyar.renkRozeti !== false && v.renkSecenekleri.length >= 2 && !kart.querySelector(".ms-urun-renk-tooltip-alani")) {
                 const secenekHtml = (renk, ekSinif) => `
                     <a class="ms-urun-renk-tooltip-gorsel${ekSinif}" href="${renk.slug ? "/" + renk.slug : "/urun/" + encodeURIComponent(v.kod) + "?color=" + encodeURIComponent(renk.id)}">
                         <img data-ms-lazy-src="${kacir(renk.gorsel || v.gorsel)}" alt="${kacir(renk.ad)} renk seçeneği" width="90" height="134" loading="lazy" decoding="async"><span>${kacir(renk.ad)}</span></a>`;
@@ -256,7 +262,7 @@
 
             // H5: Videolu Ürün rozeti — SSR kartlarındaki markup'ın birebir aynısı enjekte
             // edilir (hover tooltip videosu site.js data-ms-urun-video davranışıyla).
-            if (v.videoUrl && !kart.querySelector("[data-ms-urun-video]")) {
+            if (kartAyar.videoRozeti !== false && v.videoUrl && !kart.querySelector("[data-ms-urun-video]")) {
                 const etiketAlani = document.createElement("span");
                 etiketAlani.className = "ms-urun-gorsel-etiketleri";
                 etiketAlani.innerHTML = `<span class="ms-urun-video-alani" data-ms-urun-video>
@@ -273,7 +279,7 @@
             }
 
             // B11: Sponsorlu rozeti — SSR markup'la birebir (öne çıkar penceresi içindekiler)
-            if (v.sponsorlu && !kart.querySelector(".ms-urun-sponsor")) {
+            if (kartAyar.sponsorRozeti !== false && v.sponsorlu && !kart.querySelector(".ms-urun-sponsor")) {
                 const sponsor = document.createElement("span");
                 sponsor.className = "ms-urun-sponsor";
                 sponsor.textContent = "Sponsorlu";
@@ -282,7 +288,7 @@
 
             // Renk rozeti — tasarım kaynağı markup'ı BİREBİR (iki sabit dekoratif nokta + sayı).
             // Çok renkli her üründe (SSR ile aynı koşul: renkSecenekleri >= 2). Yorum/inline style yok.
-            if (v.renkSecenekleri.length >= 2 && !kart.querySelector(".ms-urun-renk-rozet")) {
+            if (kartAyar.renkRozeti !== false && v.renkSecenekleri.length >= 2 && !kart.querySelector(".ms-urun-renk-rozet")) {
                 const rozet = document.createElement("button");
                 rozet.type = "button";
                 rozet.className = "ms-urun-renk-rozet";

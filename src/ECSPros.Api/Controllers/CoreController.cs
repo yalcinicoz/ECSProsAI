@@ -398,6 +398,20 @@ public class CoreController : ControllerBase
         return Ok(new { success = true, data = new { id = result.Value } });
     }
 
+    /// <summary>Ürün kartı görünüm ayarları — platform Settings'e yalnız "productCard" anahtarı merge edilir.</summary>
+    [HttpPut("firm-platforms/{id:guid}/product-card-settings")]
+    public async Task<IActionResult> UpdateProductCardSettings(Guid id, [FromBody] ProductCardSettingsRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new ECSPros.Core.Application.Commands.UpdateProductCardSettings.UpdateProductCardSettingsCommand(
+                id, request.VideoBadge, request.SponsorBadge, request.ColorBadge, request.GalleryDots,
+                request.FavoriteButton, request.CollectionButton, request.Rating,
+                request.DiscountRow, request.CampaignPriceRow, request.CampaignBand, request.CampaignBandSlot), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
     /// <summary>Sipariş onay politikası — platform Settings'e yalnız ilgili anahtarlar merge edilir.</summary>
     [HttpPut("firm-platforms/{id:guid}/order-confirm-settings")]
     public async Task<IActionResult> UpdateOrderConfirmSettings(Guid id, [FromBody] OrderConfirmSettingsRequest request, CancellationToken ct)
@@ -415,6 +429,19 @@ public record UpsertNotificationTemplateRequest(
     string TypeCode, string Channel, string? LanguageCode, string? Subject, string Body, bool IsActive = true);
 
 public record OrderConfirmSettingsRequest(string Cod, string Card, int LinkHours);
+
+public record ProductCardSettingsRequest(
+    bool VideoBadge = true,
+    bool SponsorBadge = true,
+    bool ColorBadge = true,
+    bool GalleryDots = true,
+    bool FavoriteButton = true,
+    bool CollectionButton = true,
+    bool Rating = true,
+    bool DiscountRow = true,
+    bool CampaignPriceRow = true,
+    bool CampaignBand = true,
+    int CampaignBandSlot = 1);
 
 // ── Request Modelleri ──────────────────────────────────────────────────────────
 

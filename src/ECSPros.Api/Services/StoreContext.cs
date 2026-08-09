@@ -28,7 +28,55 @@ public sealed record StorePlatformBilgisi(
     //   StokBitenGosterTarih (Settings."outOfStockVisibleSince") — yalnız bu tarihten SONRA
     //   açılmış stok kartlarının (Product.CreatedAt) stoğu bitenleri gösterilir (null = kısıt yok).
     bool StokBitenGoster = false,
-    DateTime? StokBitenGosterTarih = null);
+    DateTime? StokBitenGosterTarih = null,
+    // Ürün Kartı F1 (2026-08-09): kart elementleri aç/kapat (Settings."productCard") —
+    // panel Storefront → Ürün Kartı ekranından yönetilir; yoksa hepsi açık.
+    StoreKartAyarlari? KartAyarlari = null);
+
+/// <summary>
+/// Kanal bazlı ürün kartı görünüm ayarları (Settings."productCard"). Eksik anahtar = açık
+/// (geri uyum: ayar hiç yazılmamış kanalda kart bugünkü haliyle kalır). KampanyaBandiSlot:
+/// 1 = görsel altı bant, 2 = ürün adı altı, 3 = puan satırı altı.
+/// </summary>
+public sealed record StoreKartAyarlari(
+    bool VideoRozeti = true,
+    bool SponsorRozeti = true,
+    bool RenkRozeti = true,
+    bool GaleriNoktalari = true,
+    bool FavoriButonu = true,
+    bool KoleksiyonButonu = true,
+    bool Puan = true,
+    bool IndirimSatiri = true,
+    bool KampanyaFiyatSatiri = true,
+    bool KampanyaBandi = true,
+    int KampanyaBandiSlot = 1)
+{
+    public static readonly StoreKartAyarlari Varsayilan = new();
+
+    /// <summary>Panel/Settings JSON'undan (camelCase anahtarlar) ayarları okur —
+    /// hem Settings."productCard" hem önizleme query'si aynı biçimi kullanır.</summary>
+    public static StoreKartAyarlari FromJson(System.Text.Json.JsonElement e)
+    {
+        bool B(string ad) => !e.TryGetProperty(ad, out var v)
+            || v.ValueKind != System.Text.Json.JsonValueKind.False;
+        var slot = e.TryGetProperty("campaignBandSlot", out var s)
+                   && s.ValueKind == System.Text.Json.JsonValueKind.Number
+                   && s.TryGetInt32(out var si) && si is >= 1 and <= 3
+            ? si : 1;
+        return new StoreKartAyarlari(
+            VideoRozeti: B("videoBadge"),
+            SponsorRozeti: B("sponsorBadge"),
+            RenkRozeti: B("colorBadge"),
+            GaleriNoktalari: B("galleryDots"),
+            FavoriButonu: B("favoriteButton"),
+            KoleksiyonButonu: B("collectionButton"),
+            Puan: B("rating"),
+            IndirimSatiri: B("discountRow"),
+            KampanyaFiyatSatiri: B("campaignPriceRow"),
+            KampanyaBandi: B("campaignBand"),
+            KampanyaBandiSlot: slot);
+    }
+}
 
 public sealed class StoreContext(
     ICoreDbContext coreDb,
@@ -88,7 +136,12 @@ public sealed class StoreContext(
                     System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var td))
                 stokBitenTarih = td;
 
-            return new StorePlatformBilgisi(platform.Id, platform.Code, tema!, tokenlar, stokBitenGoster, stokBitenTarih);
+            var kartAyarlari = platform.Settings.TryGetValue("productCard", out var pcObj)
+                && pcObj is System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.Object } pc
+                ? StoreKartAyarlari.FromJson(pc)
+                : StoreKartAyarlari.Varsayilan;
+
+            return new StorePlatformBilgisi(platform.Id, platform.Code, tema!, tokenlar, stokBitenGoster, stokBitenTarih, kartAyarlari);
         });
     }
 }

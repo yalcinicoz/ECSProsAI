@@ -26,6 +26,7 @@ import { CatalogSettingsPage } from '@/pages/catalog/CatalogSettingsPage'
 import { BulkImageUploadPage } from '@/pages/catalog/BulkImageUploadPage'
 import { ChannelCategoriesPage } from '@/pages/storefront/ChannelCategoriesPage'
 import { MenuPlacementPage } from '@/pages/storefront/MenuPlacementPage'
+import { ProductCardPage } from '@/pages/storefront/ProductCardPage'
 import { ChannelProductsPage } from '@/pages/storefront/ChannelProductsPage'
 import { ChannelCategoryDetailPage } from '@/pages/storefront/ChannelCategoryDetailPage'
 import { CollectionsModerationPage } from '@/pages/storefront/CollectionsModerationPage'
@@ -102,6 +103,7 @@ export const router = createBrowserRouter(
             { path: 'catalog/bulk-images',       element: <BulkImageUploadPage /> },
             { path: 'storefront/channel-categories',      element: <ChannelCategoriesPage /> },
             { path: 'storefront/menu-placement',          element: <MenuPlacementPage /> },
+            { path: 'storefront/product-card',            element: <ProductCardPage /> },
             { path: 'storefront/channel-categories/:id',  element: <ChannelCategoryDetailPage /> },
             { path: 'storefront/channel-products',         element: <ChannelProductsPage /> },
             { path: 'storefront/collections',              element: <CollectionsModerationPage /> },

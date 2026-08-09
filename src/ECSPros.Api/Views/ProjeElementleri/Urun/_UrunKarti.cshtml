@@ -1,10 +1,16 @@
 @model ECSPros.Api.Models.Store.UrunKartVm
+@inject ECSPros.Api.Services.IStoreContext MsStoreContext
 @{
     // Canlı ürün kartı — misharix _UrunKartiOrnegi component'inin veriye bağlı karşılığı.
     // B7'de _UrunListesiUrunAlani içinde local function'dı; B6'da ana sayfa carousel'leri de
     // aynı kartı kullandığı için paylaşılan partial'a alındı (tek kaynak). Model null ise
     // infinite-scroll <template> iskelet kartı üretilir (boş data-ms-* alanları JS doldurur).
     // Veri karşılığı olmayan demo blokları @if(false) ile gizli — B8/B11/Faz G'de bağlanacak.
+    // Ürün Kartı F1 (2026-08-09): elementler kanal ayarına bağlı (Settings."productCard",
+    // panel Storefront → Ürün Kartı). Önizleme ucu kaydedilmemiş ayarı ViewData ile geçer.
+    var kartAyar = ViewData["MsKartAyarlari"] as ECSPros.Api.Services.StoreKartAyarlari
+        ?? (await MsStoreContext.GetPlatformAsync())?.KartAyarlari
+        ?? ECSPros.Api.Services.StoreKartAyarlari.Varsayilan;
     var u = Model;
     var tr = new System.Globalization.CultureInfo("tr-TR");
     var adParcalari = (u?.Ad ?? "").Split(' ', 2);
@@ -14,6 +20,23 @@
     // (kart ekranda ~180-240px; 640 sabit yerine 240-640 merdiveni). Kalıp dışı URL'de null.
     var kartSrcset = ECSPros.Api.Services.Store.UrunGorselSrcset.Kart(u?.GorselUrl);
     const string kartSizes = "(max-width: 768px) 45vw, 240px";
+
+    // F1: kampanya bandı slot'a göre basılır (1 = görsel altı, 2 = ad altı, 3 = puan altı).
+    // Şablon kartında (u null) placeholder aynı slotta üretilir — kartDoldur JS'i elementi
+    // querySelector ile bulur, konum bilmesine gerek kalmaz.
+    void KampanyaBandiBas()
+    {
+        if (u is null)
+        {
+            <div class="ms-urun-kampanya-bandi" data-ms-kart-kampanya-bandi hidden></div>
+            return;
+        }
+        if (u.KampanyaBantListesi.Count == 0) { return; }
+        var ilkRozet = u.KampanyaBantListesi[0];
+        <div class="ms-urun-kampanya-bandi"
+             data-ms-kampanya-rotasyon="@System.Text.Json.JsonSerializer.Serialize(u.KampanyaBantListesi.Select(b => new { ad = b.Name, renk = b.Color }))"
+             style="@(ilkRozet.Color is { Length: > 0 } ? $"background-color:{ilkRozet.Color}" : "")">@ilkRozet.Name</div>
+    }
 }
 <div class="ms-urun-karti" data-ms-kart-link-alani
      data-ms-urun-id="@(u?.Kod ?? "")"
@@ -40,7 +63,7 @@
         {
             <img class="ms-urun-gorsel" data-ms-urun-galeri-gorsel data-ms-lazy-skeleton="true" alt="" loading="lazy" decoding="async" width="240" height="320">
         }
-        @if (u?.VideoUrl is not null)
+        @if (kartAyar.VideoRozeti && u?.VideoUrl is not null)
         {
             @* H5: Videolu Ürün rozeti — markup tasarımın kart örneğinden (hover tooltip
                videosu site.js data-ms-urun-video davranışıyla). Kampanya etiketi veri
@@ -57,21 +80,27 @@
                 </span>
             </span>
         }
-        @if (u?.Sponsorlu == true)
+        @if (kartAyar.SponsorRozeti && u?.Sponsorlu == true)
         {
             @* B11: öne çıkar penceresi içindeki ürün (ChannelProduct.FeaturedFrom/Until) *@
             <span class="ms-urun-sponsor">Sponsorlu</span>
         }
+        @if (kartAyar.FavoriButonu)
+        {
         <button class="ms-urun-favori" type="button" aria-label="Favorilere ekle" aria-pressed="false">
             <img class="ms-urun-favori-ikon" src="/ikons/favorite.svg" alt="" aria-hidden="true" width="20" height="20" loading="lazy">
         </button>
+        }
+        @if (kartAyar.KoleksiyonButonu)
+        {
         <button class="ms-urun-koleksiyon" type="button" aria-label="Koleksiyona ekle" aria-pressed="false" data-ms-urun-koleksiyon>
             <i class="fa-solid fa-bookmark ms-fa-ikon" aria-hidden="true"></i>
         </button>
+        }
         @* "Diğer renkler" rozeti — tasarım kaynağı (_UrunKartiOrnegi.cshtml) markup'ı BİREBİR:
            iki sabit dekoratif nokta + renk sayısı. Çok renkli her üründe gösterilir
            (tooltip ile aynı koşul: RenkSecenekleri >= 2). Yoruma/inline style'a girilmez. *@
-        @if (u is not null && u.RenkSecenekleri.Count >= 2)
+        @if (kartAyar.RenkRozeti && u is not null && u.RenkSecenekleri.Count >= 2)
         {
             <button class="ms-urun-renk-rozet" type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="@u.RenkSayisi diğer renk seçeneğini göster">
                 <span class="ms-urun-renkler" aria-hidden="true">
@@ -81,7 +110,7 @@
                 @u.RenkSayisi
             </button>
         }
-        @if (u is not null && u.GaleriUrller.Count > 1)
+        @if (kartAyar.GaleriNoktalari && u is not null && u.GaleriUrller.Count > 1)
         {
             @* B8: hover galeri nokta göstergeleri (site.js data-ms-urun-galeri modülü) *@
             <span class="ms-urun-slider-noktalari" aria-hidden="true">
@@ -95,19 +124,12 @@
     @* F3: kampanya bandı — ürünü kapsayan kampanya(lar). 2026-08-03: rozetler (ad+renk)
        data-ms-kampanya-rotasyon'da JSON taşınır; birden çoksa _Layout'taki script animasyonlu
        döndürür. Renk kampanyanın panelden seçilen palet rengi (null = marka rengi —
-       CSS'teki --ms-renk-primary arka planı aynen kalır). *@
-    @if (u is null)
+       CSS'teki --ms-renk-primary arka planı aynen kalır). F1: konum kanal ayarından. *@
+    @if (kartAyar.KampanyaBandi && kartAyar.KampanyaBandiSlot == 1)
     {
-        <div class="ms-urun-kampanya-bandi" data-ms-kart-kampanya-bandi hidden></div>
+        KampanyaBandiBas();
     }
-    else if (u.KampanyaBantListesi.Count > 0)
-    {
-        var ilkRozet = u.KampanyaBantListesi[0];
-        <div class="ms-urun-kampanya-bandi"
-             data-ms-kampanya-rotasyon="@System.Text.Json.JsonSerializer.Serialize(u.KampanyaBantListesi.Select(b => new { ad = b.Name, renk = b.Color }))"
-             style="@(ilkRozet.Color is { Length: > 0 } ? $"background-color:{ilkRozet.Color}" : "")">@ilkRozet.Name</div>
-    }
-    @if (u is not null && u.RenkSecenekleri.Count >= 2)
+    @if (kartAyar.RenkRozeti && u is not null && u.RenkSecenekleri.Count >= 2)
     {
         @* B8: farklı renk seçenekleri tooltip'i — eksen renkleri kendi görselleri ve
            ?color= linkleriyle (ilk 4 desktop; tam liste mobil panel sınıfıyla) *@
@@ -136,19 +158,25 @@
     }
     <div class="ms-urun-icerik">
         <h3 class="ms-urun-basligi"><strong>@adIlk</strong> @adKalan</h3>
+        @if (kartAyar.KampanyaBandi && kartAyar.KampanyaBandiSlot == 2)
+        {
+            KampanyaBandiBas();
+        }
         @if (false)
         {
-            @* B8: teslimat/favori mesajları ve kargo mesajları — model alanları gelince *@
+            @* B8: teslimat/favori mesajları ve kargo mesajları — model alanları gelince
+               (F2 duyuru kural motoru bu slotları dolduracak) *@
             <p class="ms-urun-teslimat"></p>
             <p class="ms-urun-kargo"></p>
         }
         @* E7: puan onaylı yorum ortalamasından (yorumsuz üründe bölüm yok — sıfır durumu);
-           şablon kartında (u null) alan JS ile dolar. Kamera ikonu fotolu yorumla gelecek. *@
-        @if (u is null)
+           şablon kartında (u null) alan JS ile dolar. Kamera ikonu fotolu yorumla gelecek.
+           F1: kapalıysa placeholder da basılmaz — kartDoldur elementi bulamayınca atlar. *@
+        @if (kartAyar.Puan && u is null)
         {
             <div class="ms-urun-puan" data-ms-kart-puan hidden></div>
         }
-        else if (u.PuanSayisi > 0)
+        else if (kartAyar.Puan && u is not null && u.PuanSayisi > 0)
         {
             <div class="ms-urun-puan">
                 <span>@u.Puan.ToString("0.0", tr)</span>
@@ -161,19 +189,23 @@
                 <span>(@u.PuanSayisi)</span>
             </div>
         }
+        @if (kartAyar.KampanyaBandi && kartAyar.KampanyaBandiSlot == 3)
+        {
+            KampanyaBandiBas();
+        }
         @* Fiyat senaryoları (tasarım _UrunKartiOrnegi): güncel fiyat + varsa indirim rozeti ve
            üstü çizili eski fiyat (CompareAtPrice > Fiyat). Diğer senaryolar (Sepette/Plus/kampanya)
            veri kaynağı geldiğinde eklenir — "varsa yazdırılır" kuralı. *@
         <div class="ms-urun-fiyat-senaryolari">
             <p class="ms-urun-fiyat" data-ms-kart-fiyat>@(u is null ? "" : u.Fiyat.ToString("N2", tr) + " TL")</p>
-            @if (u is null)
+            @if (kartAyar.IndirimSatiri && u is null)
             {
                 <p class="ms-urun-fiyat-satiri" data-ms-kart-indirim-satiri hidden>
                     <span class="ms-urun-indirim-rozeti" data-ms-kart-indirim-rozet></span>
                     <span class="ms-urun-fiyat-eski" data-ms-kart-eski-fiyat></span>
                 </p>
             }
-            else if (u.IndirimYuzdesi is { } yuzde)
+            else if (kartAyar.IndirimSatiri && u?.IndirimYuzdesi is { } yuzde)
             {
                 <p class="ms-urun-fiyat-satiri">
                     <span class="ms-urun-indirim-rozeti">-%@yuzde</span>
@@ -181,13 +213,13 @@
                 </p>
             }
             @* F3: kampanyalı fiyat (ürün-bazlı) — satış fiyatının altındaysa "İndirimli/Kampanyalı" satırı. *@
-            @if (u is null)
+            @if (kartAyar.KampanyaFiyatSatiri && u is null)
             {
                 <p class="ms-urun-fiyat-satiri ms-urun-fiyat-indirimli" data-ms-kart-kampanya-fiyat-satiri hidden>
                     <span data-ms-kart-kampanya-fiyat></span>
                 </p>
             }
-            else if (u.KampanyaFiyatVar)
+            else if (kartAyar.KampanyaFiyatSatiri && u?.KampanyaFiyatVar == true)
             {
                 <p class="ms-urun-fiyat-satiri ms-urun-fiyat-indirimli">
                     <span>@u.KampanyaFiyat!.Value.ToString("N2", tr) TL</span>

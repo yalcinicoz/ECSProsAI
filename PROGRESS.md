@@ -22,6 +22,17 @@
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!) | Mobil geliştirici teste başlar; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
+**Ürün Kartı yönetimi F1 (2026-08-09) — UYGULANDI ⚠️ restart bekliyor (site+panel, K16 birlikte):**
+Kullanıcı onayı: iki katmanlı kurgu (A: aç/kapat+slot, B: duyuru kural motoru), Süper Fırsat
+kampanya-tabanlı, sıralama yok, F1 önce. Uygulanan: panel **/storefront/product-card**
+(kanal bazlı element aç/kapat + kampanya bandı slot 1/2/3 + gerçek SSR iframe önizleme
+`/onizleme/urun-karti?ayar=`), scoped `PUT /api/core/firm-platforms/{id}/product-card-settings`
+(Settings."productCard" merge — diğer anahtarlar korunur), site tarafı `StoreKartAyarlari`
+(StoreContext 5 dk cache → panel değişikliği ≤5 dk sitede; DTO değişmedi, Redis bump gerekmez);
+`_UrunKarti.cshtml` SSR + `kartDoldur` JS aynı ayara uyar. Teslimat/kargo satırı F2'ye kilitli.
+İzole 5051 testi ✓ (aç/kapat, slot konumu, bozuk JSON, endpoint 401). Admin dist volume'la yayında;
+API restart kullanıcıda. **SIRADA: F2 duyuru kural motoru** (yeni tablo + kart satır 2/3 + rotasyon).
+
 **Eski sistem sipariş senkronu (2026-08-04) — F1 UYGULANDI ⚠️ restart bekliyor (dry-run):**
 plan `docs/eski-sistem-siparis-senkron-plani.md`. Outbox kuyruğu (integration.legacy_order_outbox) +
 LegacySyncWorker sipariş dilimi (2 dk): kapıda sipariş checkout anında, kart siparişi ödeme

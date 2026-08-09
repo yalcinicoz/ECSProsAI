@@ -30,6 +30,11 @@ export default defineConfig({
         target: 'http://localhost:5050',
         changeOrigin: true,
       },
+      // Ürün Kartı sayfasının SSR önizleme iframe'i (prod'da nginx "/" proxy'si karşılar)
+      '/onizleme': {
+        target: 'http://localhost:5050',
+        changeOrigin: true,
+      },
       '/hubs': {
         target: 'ws://localhost:5050',
         ws: true,

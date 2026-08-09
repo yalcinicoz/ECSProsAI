@@ -1,0 +1,33 @@
+@model ECSPros.Api.Models.Store.UrunKartVm
+@{
+    Layout = null; // bağımsız önizleme sayfası — site header/footer yok
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Ürün Kartı Önizleme</title>
+    <link rel="stylesheet" href="~/fontawesome-free-7.2.0-web/css/ikonall.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <partial name="~/Views/Shared/_MsTemaTokenlari.cshtml" />
+    <style>
+        body { margin: 0; padding: 20px; background: #fff; display: flex; justify-content: center; }
+        .ms-onizleme-kart { width: 240px; }
+        /* Kampanya bandı canlıda rotasyon script'iyle görünür olur — önizleme statik */
+        .ms-onizleme-kart .ms-urun-kampanya-bandi { visibility: visible; }
+    </style>
+</head>
+<body>
+    <div class="ms-onizleme-kart">
+        @await Html.PartialAsync("~/Views/ProjeElementleri/Urun/_UrunKarti.cshtml", Model)
+    </div>
+    <script>
+        // Önizleme lazy-load motorunu yüklemez — görselleri doğrudan bağla
+        document.querySelectorAll("[data-ms-lazy-src]").forEach((g) => {
+            if (g.dataset.msLazySrc) { g.src = g.dataset.msLazySrc; }
+        });
+    </script>
+</body>
+</html>

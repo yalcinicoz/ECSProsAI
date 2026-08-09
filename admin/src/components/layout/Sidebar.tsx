@@ -71,6 +71,7 @@ const NAV_SECTIONS: NavSection[] = [
     { label: 'Ürün Grupları',      to: '/catalog/product-groups',        icon: 'layers' },
     { label: 'Kanal Kategorileri', to: '/storefront/channel-categories', icon: 'layout' },
     { label: 'Menü Yerleşimi', to: '/storefront/menu-placement', icon: 'layout' },
+    { label: 'Ürün Kartı', to: '/storefront/product-card', icon: 'layout' },
     { label: 'Kanal Ürünleri', to: '/storefront/channel-products', icon: 'layout' },
     { label: 'Koleksiyon Moderasyonu', to: '/storefront/collections', icon: 'layout' },
     { label: 'Yorum Moderasyonu', to: '/storefront/reviews', icon: 'layout' },

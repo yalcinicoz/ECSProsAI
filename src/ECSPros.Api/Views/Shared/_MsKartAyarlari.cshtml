@@ -1,0 +1,16 @@
+@* Ürün Kartı F1 (2026-08-09): kanalın kart ayarlarından JS'in enjekte ettiği elementlerin
+   bayrakları (video/sponsor/renk rozeti, galeri noktaları) window.msKartAyarlari'na basılır —
+   _UrunListesiUrunAlani kartDoldur aynı ayara uyar. SSR-basılan placeholder'lar (puan, bant,
+   indirim, kampanya fiyatı) kapalıyken şablona hiç girmediği için JS bayrağına gerek yok. *@
+@inject ECSPros.Api.Services.IStoreContext MsStoreContext
+@{
+    var msKart = (await MsStoreContext.GetPlatformAsync())?.KartAyarlari
+        ?? ECSPros.Api.Services.StoreKartAyarlari.Varsayilan;
+}
+<script>window.msKartAyarlari=@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new
+{
+    videoRozeti = msKart.VideoRozeti,
+    sponsorRozeti = msKart.SponsorRozeti,
+    renkRozeti = msKart.RenkRozeti,
+    galeriNoktalari = msKart.GaleriNoktalari
+}));</script>
