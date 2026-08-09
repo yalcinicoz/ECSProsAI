@@ -18,6 +18,10 @@ public class OrderPackagingReader : IOrderPackagingReader
         public Guid FirmPlatformId { get; set; }
         public string OrderNumber { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+        public string? ShippingRecipientName { get; set; }
+        public string? ShippingRecipientPhone { get; set; }
+        public string? ShippingAddressLine { get; set; }
+        public string? RequestedCargoName { get; set; }
     }
 
     private sealed class ItemRow
@@ -31,7 +35,8 @@ public class OrderPackagingReader : IOrderPackagingReader
     public async Task<OrderPackagingInfo?> GetOrderAsync(Guid orderId, CancellationToken ct = default)
     {
         var order = (await _db.Database.SqlQuery<OrderRow>($"""
-            SELECT "Id", "FirmPlatformId", "OrderNumber", "Status"
+            SELECT "Id", "FirmPlatformId", "OrderNumber", "Status",
+                   "ShippingRecipientName", "ShippingRecipientPhone", "ShippingAddressLine", "RequestedCargoName"
             FROM "order".ord_orders
             WHERE "Id" = {orderId} AND "IsDeleted" = false
             """).ToListAsync(ct)).SingleOrDefault();
@@ -47,6 +52,8 @@ public class OrderPackagingReader : IOrderPackagingReader
 
         return new OrderPackagingInfo(
             order.Id, order.FirmPlatformId, order.OrderNumber, order.Status,
-            items.Select(i => new OrderPackagingItem(i.Id, i.VariantId, i.SupplierId, i.Quantity)).ToList());
+            items.Select(i => new OrderPackagingItem(i.Id, i.VariantId, i.SupplierId, i.Quantity)).ToList(),
+            order.ShippingRecipientName, order.ShippingRecipientPhone,
+            order.ShippingAddressLine, order.RequestedCargoName);
     }
 }

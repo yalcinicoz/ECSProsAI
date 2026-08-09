@@ -1,0 +1,75 @@
+@model ECSPros.Order.Application.Queries.GetInvoicePrint.InvoicePrintDto
+@{
+    Layout = null;
+    var tr = new System.Globalization.CultureInfo("tr-TR");
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Fatura @Model.InvoiceNumber</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; margin: 24px; color: #111; }
+        h1 { font-size: 16px; margin: 0 0 2px; }
+        .ust { display: flex; justify-content: space-between; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th, td { border: 1px solid #999; padding: 4px 6px; text-align: left; }
+        th { background: #eee; }
+        td.s, th.s { text-align: right; }
+        .toplamlar { margin-top: 8px; margin-left: auto; width: 240px; }
+        .toplamlar td { border: none; padding: 2px 6px; }
+        @@media print { body { margin: 8mm; } }
+    </style>
+</head>
+<body>
+    <div class="ust">
+        <div>
+            <h1>FATURA</h1>
+            <div>No: <strong>@Model.InvoiceNumber</strong></div>
+            <div>Tarih: @Model.InvoiceDate.ToString("dd.MM.yyyy", tr)</div>
+            <div>Sipariş: @Model.OrderNumber</div>
+        </div>
+        <div>
+            <strong>Alıcı</strong><br>
+            @(Model.RecipientCompanyName is { Length: > 0 } f ? f : Model.RecipientName)<br>
+            @Model.RecipientAddress<br>
+            @if (Model.RecipientTaxNumber is { Length: > 0 })
+            {
+                <span>VD: @Model.RecipientTaxOffice — VKN: @Model.RecipientTaxNumber</span>
+            }
+        </div>
+    </div>
+    <table>
+        <thead>
+            <tr><th>SKU</th><th>Ürün</th><th class="s">Adet</th><th class="s">Birim</th><th class="s">İndirim</th><th class="s">KDV</th><th class="s">Tutar</th></tr>
+        </thead>
+        <tbody>
+        @foreach (var k in Model.Items)
+        {
+            <tr>
+                <td>@k.Sku</td>
+                <td>@k.ProductName @k.VariantInfo</td>
+                <td class="s">@k.Quantity</td>
+                <td class="s">@k.UnitPrice.ToString("N2", tr)</td>
+                <td class="s">@k.DiscountAmount.ToString("N2", tr)</td>
+                <td class="s">@k.TaxAmount.ToString("N2", tr)</td>
+                <td class="s">@k.Total.ToString("N2", tr)</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    <table class="toplamlar">
+        <tr><td>Ara Toplam</td><td class="s">@Model.Subtotal.ToString("N2", tr) TL</td></tr>
+        <tr><td>İndirim</td><td class="s">@Model.TotalDiscount.ToString("N2", tr) TL</td></tr>
+        <tr><td>KDV</td><td class="s">@Model.TotalTax.ToString("N2", tr) TL</td></tr>
+        <tr><td><strong>Genel Toplam</strong></td><td class="s"><strong>@Model.GrandTotal.ToString("N2", tr) TL</strong></td></tr>
+    </table>
+    <script>
+        // Masa akışı: sayfa iframe'de açılır açılmaz basılır (kiosk-printing'de diyalogsuz)
+        if (new URLSearchParams(window.location.search).get("oto") === "1") {
+            window.addEventListener("load", () => window.print());
+        }
+    </script>
+</body>
+</html>

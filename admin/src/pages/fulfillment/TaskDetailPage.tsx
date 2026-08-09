@@ -173,6 +173,11 @@ export function TaskDetailPage() {
         <Badge variant={durumVariant}>{durumLabel}</Badge>
         <Badge variant={dagitim.variant}>{dagitim.label}</Badge>
         <div className="ml-auto flex gap-2">
+          {plan.planType === 'single_item' && ['pending', 'picking'].includes(plan.status) && (
+            <Button size="sm" variant="secondary" onClick={() => navigate(`/fulfillment/fast-lane/${plan.id}`)}>
+              Hızlı Hat Ekranı
+            </Button>
+          )}
           {plan.status === 'pending' && (
             <Button size="sm" onClick={() => aksiyon.mutate('start')} loading={aksiyon.isPending}>Başlat</Button>
           )}

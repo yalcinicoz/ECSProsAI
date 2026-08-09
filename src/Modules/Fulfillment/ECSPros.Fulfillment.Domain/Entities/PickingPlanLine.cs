@@ -20,6 +20,8 @@ public class PickingPlanLine : BaseEntity
 
     // Ekranlar için denormalize — modüller arası join gerektirmez
     public string OrderNumber { get; set; } = string.Empty;
+    /// <summary>OP2: "en eski sipariş önce" kuralı (K-7/K-12) — sipariş tarihi denormalize.</summary>
+    public DateTime OrderCreatedAt { get; set; }
     public string DisplayName { get; set; } = string.Empty; // ProductName + VariantInfo
     public string Sku { get; set; } = string.Empty;
 

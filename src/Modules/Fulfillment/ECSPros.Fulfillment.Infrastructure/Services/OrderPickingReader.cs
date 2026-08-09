@@ -120,10 +120,31 @@ public class OrderPickingReader(FulfillmentDbContext db) : IOrderPickingReader
               AND r."IsDeleted" = false AND r."ReferenceId" = ANY({ids})
             """).ToListAsync(ct);
 
-        return new PickingLineSource(
+        return await MapAsync(items, rezervler);
+    }
+
+    public async Task<BinInfo?> GetBinByBarcodeAsync(string barcode, CancellationToken ct = default)
+    {
+        var raflar = await db.Database.SqlQuery<BinRow>($"""
+            SELECT b."Id", b."Code" FROM inventory.inv_warehouse_bins b
+            WHERE (b."Barcode" = {barcode} OR b."Code" = {barcode}) AND b."IsActive" AND b."IsDeleted" = false
+            LIMIT 1
+            """).ToListAsync(ct);
+        return raflar.Count == 0 ? null : new BinInfo(raflar[0].Id, raflar[0].Code);
+    }
+
+    private sealed class BinRow
+    {
+        public Guid Id { get; set; }
+        public string Code { get; set; } = string.Empty;
+    }
+
+    private static Task<PickingLineSource> MapAsync(List<ItemRow> items, List<ReservationRow> rezervler)
+    {
+        return Task.FromResult(new PickingLineSource(
             items.Select(i => new PickingItemRow(i.Id, i.OrderId, i.VariantId, i.Quantity, i.Barcode,
                 i.Sku, i.ProductName, i.VariantInfo)).ToList(),
             rezervler.Select(r => new PickingReservationRow(
-                r.OrderId, r.VariantId, r.Quantity, r.BinId, r.BinCode, r.SectionOrder, r.BinOrder)).ToList());
+                r.OrderId, r.VariantId, r.Quantity, r.BinId, r.BinCode, r.SectionOrder, r.BinOrder)).ToList()));
     }
 }

@@ -18,4 +18,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\Fulfillment\ECSPros.Fulfillment.Domain\ECSPros.Fulfillment.Domain.csproj" />
+  </ItemGroup>
 </Project>

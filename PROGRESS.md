@@ -32,7 +32,16 @@ event'le), operasyon günlüğü, GetPickingPlans dağıtım istatistikleri, K-1
 (OrderShipped/OrderCancelled/StockOps). ⚠️ Bilinen sınır: aday siparişler 'confirmed' durum +
 'order' tipli rezervasyon ister (legacy_* rezervasyonlu geçiş siparişleri kapsam dışı).
 Panel ekranları: görev oluşturma + liste rozetleri + dağıtım + sipariş operasyon geçmişi.
-SIRADA: OP2 (mobil toplama + tek ürünlü hat + ses + yazıcı push).
+**OP2 de UYGULANDI (2026-08-09, ⚠️ restart bekliyor):** personel mobil toplama ekranı
+(/fulfillment/my-picking — HID okuyucu, raf-rota sıralı, "farklı raftan aldım" raf barkodu,
+bulunamadı akışı, WebAudio sesler) + tek ürünlü hızlı hat (/fulfillment/fast-lane/{planId} —
+okut → en eski onaylı siparişe ver (K-7) → paket + OTOMATİK fatura (CreatePackageInvoiceAuto:
+seri kanal firmasından; seri yoksa anlaşılır hata) → SSR yazdırma sayfaları /yazdir/fatura/{id}
++ /yazdir/paket-etiket/{id} (?oto=1 otomatik print; Chrome --kiosk-printing ile diyalogsuz,
+JsBarcode yerel) gizli iframe kuyruğuyla otomatik basılır). Stok senkronu:
+PickingLinePickedEvent → Inventory fiili raftan düşer (K-15) + StockMovement izi + K-14 silme +
+rezervasyon picked; Order tarafı OrderItem.PickedBy/FinalScan* senkron. Migration
+AddLineOrderCreatedAt canlıda. SIRADA: OP3 (ara ayrıştırma motoru + koli duvarı).
 
 **Ürün Kartı yönetimi F2 (2026-08-09) — UYGULANDI ⚠️ restart bekliyor (F1 restart'ı yapıldı,
 kullanıcı F1'in "değişken alan içerik yönetimi eksik" geri bildirimi üzerine F2 aynı gün geçildi):**

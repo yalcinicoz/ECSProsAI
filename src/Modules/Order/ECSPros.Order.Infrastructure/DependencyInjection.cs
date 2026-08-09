@@ -16,6 +16,7 @@ public static class DependencyInjection
 
         services.AddScoped<IOrderDbContext>(sp => sp.GetRequiredService<OrderDbContext>());
         services.AddScoped<IOrderNumberService, Services.OrderNumberService>();
+        services.AddScoped<IFirmResolver, Services.FirmResolver>(); // OP2: otomatik fatura serisi
 
         return services;
     }

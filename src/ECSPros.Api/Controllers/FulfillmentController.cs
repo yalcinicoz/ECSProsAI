@@ -108,6 +108,73 @@ public class FulfillmentController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
+    // ── OP2 (2026-08-09): toplama okutması + tek ürünlü hızlı hat ──
+
+    /// <summary>Personel toplama okutması — kendisine atanan satıra +1 (BinBarcode = fiili raf).</summary>
+    [HttpPost("picking/{planId:guid}/scan")]
+    public async Task<IActionResult> PickScan(Guid planId, [FromBody] PickScanRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.PickLineScan
+            .PickLineScanCommand(planId, request.Barcode ?? "", AktifKullanici(), request.BinBarcode), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Satırı "bulunamadı" işaretler.</summary>
+    [HttpPost("picking-lines/{lineId:guid}/short")]
+    public async Task<IActionResult> MarkLineShort(Guid lineId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.MarkLineShort
+            .MarkLineShortCommand(lineId, AktifKullanici()), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Tek ürünlü hızlı hat: okut → en eski onaylı siparişe ver → paket + OTOMATİK
+    /// fatura → yazdırma URL'leri. Eşleşme yoksa 400 (panel hata sesi çalar, ürün iadeye).</summary>
+    [HttpPost("fast-lane/{planId:guid}/scan")]
+    public async Task<IActionResult> FastLaneScan(Guid planId, [FromBody] PickScanRequest request, CancellationToken ct)
+    {
+        var scan = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.SingleItemScan
+            .SingleItemScanCommand(planId, request.Barcode ?? "", AktifKullanici()), ct);
+        if (scan.IsFailure)
+            return BadRequest(new { success = false, error = scan.Error });
+        var s = scan.Value!;
+
+        // K-11: fatura paket kapanışında otomatik kesilir; seri yoksa paket durur, hata görünür
+        var fatura = await _mediator.Send(new ECSPros.Order.Application.Commands.CreatePackageInvoiceAuto
+            .CreatePackageInvoiceAutoCommand(s.OrderId, s.PackageId, AktifKullanici()), ct);
+        if (fatura.IsFailure)
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    s.OrderId, s.OrderNumber, s.PackageId, s.PackageNumber,
+                    invoiceError = fatura.Error,
+                    printUrls = new[] { $"/yazdir/paket-etiket/{s.PackageId}" }
+                }
+            });
+
+        return Ok(new
+        {
+            success = true,
+            data = new
+            {
+                s.OrderId, s.OrderNumber, s.PackageId, s.PackageNumber,
+                invoiceId = fatura.Value!.InvoiceId,
+                invoiceNumber = fatura.Value.InvoiceNumber,
+                printUrls = new[]
+                {
+                    $"/yazdir/fatura/{fatura.Value.InvoiceId}",
+                    $"/yazdir/paket-etiket/{s.PackageId}"
+                }
+            }
+        });
+    }
+
     /// <summary>Toplama planlarını listeler.</summary>
     [HttpGet("picking-plans")]
     public async Task<IActionResult> GetPickingPlans(
@@ -522,3 +589,5 @@ public record CreateTasksRequest(
     bool CreateMultiItemTask = true);
 
 public record AssignLinesRequest(List<Guid>? LineIds, Guid AssignTo);
+
+public record PickScanRequest(string? Barcode, string? BinBarcode = null);

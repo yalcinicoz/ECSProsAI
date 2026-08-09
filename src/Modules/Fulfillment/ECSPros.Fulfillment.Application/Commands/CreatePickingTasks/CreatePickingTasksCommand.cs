@@ -109,6 +109,7 @@ public class CreatePickingTasksCommandHandler(
                         VariantId = item.VariantId,
                         VariantBarcode = item.Barcode ?? "",
                         OrderNumber = order.OrderNumber,
+                        OrderCreatedAt = order.CreatedAt,
                         DisplayName = string.Join(" ", new[] { item.ProductName, item.VariantInfo }
                             .Where(s => !string.IsNullOrWhiteSpace(s))),
                         Sku = item.Sku ?? "",

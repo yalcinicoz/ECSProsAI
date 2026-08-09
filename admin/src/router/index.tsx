@@ -73,6 +73,8 @@ import { PickingPlansPage } from '@/pages/fulfillment/PickingPlansPage'
 import { PackingStationsPage } from '@/pages/fulfillment/PackingStationsPage'
 import { TaskCreatePage } from '@/pages/fulfillment/TaskCreatePage'
 import { TaskDetailPage } from '@/pages/fulfillment/TaskDetailPage'
+import { MyPickingPage } from '@/pages/fulfillment/MyPickingPage'
+import { FastLanePage } from '@/pages/fulfillment/FastLanePage'
 import { IntegrationLogsPage } from '@/pages/integrations/IntegrationLogsPage'
 import { UsersPage } from '@/pages/settings/UsersPage'
 import { RolesPage } from '@/pages/settings/RolesPage'
@@ -172,6 +174,8 @@ export const router = createBrowserRouter(
             { path: 'fulfillment/tasks/new',        element: <TaskCreatePage /> },
             { path: 'fulfillment/tasks/:id',        element: <TaskDetailPage /> },
             { path: 'fulfillment/packing-stations', element: <PackingStationsPage /> },
+            { path: 'fulfillment/my-picking',       element: <MyPickingPage /> },
+            { path: 'fulfillment/fast-lane/:planId', element: <FastLanePage /> },
 
             // CMS
             { path: 'cms/pages',                element: <CmsPagesPage /> },

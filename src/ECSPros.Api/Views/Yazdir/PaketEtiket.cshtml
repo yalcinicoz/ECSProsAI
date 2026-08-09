@@ -1,0 +1,45 @@
+@model ECSPros.Fulfillment.Domain.Entities.Package
+@{
+    Layout = null;
+    var siparis = ViewData["Siparis"] as ECSPros.Fulfillment.Application.Services.OrderPackagingInfo;
+    var barkod = Model.CargoIntegrationCode is { Length: > 0 } k ? k : Model.PackageNumber;
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Etiket @Model.PackageNumber</title>
+    <style>
+        /* 10x15 kargo etiketi oranı */
+        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; width: 100mm; color: #111; }
+        .kutu { border: 2px solid #111; padding: 8px; }
+        .kargo { font-size: 18px; font-weight: bold; border-bottom: 1px solid #111; padding-bottom: 4px; }
+        .alici { font-size: 13px; margin-top: 6px; }
+        .alici strong { font-size: 15px; }
+        .no { font-size: 12px; margin-top: 6px; }
+        svg { width: 100%; height: 70px; margin-top: 6px; }
+        @@media print { body { padding: 0; } }
+    </style>
+    <script src="~/js/jsbarcode.min.js"></script>
+</head>
+<body>
+    <div class="kutu">
+        <div class="kargo">@(siparis?.CargoName ?? "KARGO")</div>
+        <div class="alici">
+            <strong>@(siparis?.RecipientName ?? "")</strong><br>
+            @(siparis?.AddressLine ?? "")<br>
+            Tel: @(siparis?.RecipientPhone ?? "")
+        </div>
+        <div class="no">Sipariş: @(siparis?.OrderNumber ?? "") — Paket: @Model.PackageNumber (@Model.SequenceInOrder)</div>
+        <svg id="barkod"></svg>
+    </div>
+    <script>
+        try { JsBarcode("#barkod", "@barkod", { format: "CODE128", displayValue: true, fontSize: 14, height: 50 }); }
+        catch { document.getElementById("barkod").outerHTML = "<div style='font-size:20px;font-weight:bold'>@barkod</div>"; }
+        if (new URLSearchParams(window.location.search).get("oto") === "1") {
+            window.addEventListener("load", () => window.print());
+        }
+    </script>
+</body>
+</html>

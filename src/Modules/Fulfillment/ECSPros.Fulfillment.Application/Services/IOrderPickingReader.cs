@@ -11,7 +11,12 @@ public interface IOrderPickingReader
 
     /// <summary>Seçili siparişlerin kalemleri (varyant barkoduyla) + rezervasyon rafları.</summary>
     Task<PickingLineSource> GetLineSourcesAsync(List<Guid> orderIds, CancellationToken ct = default);
+
+    /// <summary>OP2 (K-15): raf barkodundan raf çözümü — personel farklı raftan aldıysa okutur.</summary>
+    Task<BinInfo?> GetBinByBarcodeAsync(string barcode, CancellationToken ct = default);
 }
+
+public record BinInfo(Guid BinId, string Code);
 
 public record PickingTaskFilter(
     List<Guid>? FirmPlatformIds = null,
