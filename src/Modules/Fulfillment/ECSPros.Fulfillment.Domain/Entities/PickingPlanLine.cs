@@ -28,6 +28,9 @@ public class PickingPlanLine : BaseEntity
     public int Quantity { get; set; }
     public int PickedQuantity { get; set; }
 
+    /// <summary>OP3: ara ayrıştırmada koliye okutulan miktar (OrderItem.SortingBinQuantity senkron).</summary>
+    public int SortedQuantity { get; set; }
+
     /// <summary>Önerilen kaynak raf (rezervasyondan; rota = Section.PickingOrder, Bin.PickingOrder).</summary>
     public Guid? SourceBinId { get; set; }
     public string? SourceBinCode { get; set; }

@@ -175,6 +175,40 @@ public class FulfillmentController : ControllerBase
         });
     }
 
+    // ── OP3 (2026-08-09): ara ayrıştırma — okutma + koli duvarı + zimmet ──
+
+    /// <summary>Ara ayrıştırma okutması — 5 koşullu sipariş seçimi, koli numarası döner
+    /// (panel numarayı seslendirir). Eşleşme yoksa 400 (hata sesi + depo iadesi).</summary>
+    [HttpPost("sorting/{planId:guid}/scan")]
+    public async Task<IActionResult> SortingScan(Guid planId, [FromBody] PickScanRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.SortingScan
+            .SortingScanCommand(planId, request.Barcode ?? "", AktifKullanici()), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Koli duvarı — aktif koli kartları (renk/ilerleme/zimmet).</summary>
+    [HttpGet("sorting/{planId:guid}/wall")]
+    public async Task<IActionResult> SortingWall(Guid planId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Queries.GetSortingWall
+            .GetSortingWallQuery(planId), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Koliyi zimmete al (paketleme personeli) — süreç bitene dek onda kalır.</summary>
+    [HttpPost("sorting-boxes/{boxId:guid}/take")]
+    public async Task<IActionResult> TakeSortingBox(Guid boxId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.TakeSortingBox
+            .TakeSortingBoxCommand(boxId, AktifKullanici()), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
     /// <summary>Toplama planlarını listeler.</summary>
     [HttpGet("picking-plans")]
     public async Task<IActionResult> GetPickingPlans(

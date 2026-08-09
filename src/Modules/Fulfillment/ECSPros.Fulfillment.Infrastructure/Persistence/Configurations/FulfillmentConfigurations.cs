@@ -159,3 +159,16 @@ public class OperationLogConfiguration : IEntityTypeConfiguration<OperationLog>
         builder.HasQueryFilter(l => !l.IsDeleted);
     }
 }
+
+public class SortingBoxConfiguration : IEntityTypeConfiguration<SortingBox>
+{
+    public void Configure(EntityTypeBuilder<SortingBox> builder)
+    {
+        builder.ToTable("ful_sorting_boxes");
+        builder.HasKey(b => b.Id);
+        builder.Property(b => b.Status).HasMaxLength(20).IsRequired();
+        // Koli duvarı görev bazlı listeler; numara+jenerasyon oturumu tekilleştirir
+        builder.HasIndex(b => new { b.PickingPlanId, b.BoxNumber, b.Generation }).IsUnique();
+        builder.HasQueryFilter(b => !b.IsDeleted);
+    }
+}

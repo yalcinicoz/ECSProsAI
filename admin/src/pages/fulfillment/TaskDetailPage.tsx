@@ -178,6 +178,16 @@ export function TaskDetailPage() {
               Hızlı Hat Ekranı
             </Button>
           )}
+          {plan.planType === 'bulk' && ['pending', 'picking'].includes(plan.status) && (
+            <>
+              <Button size="sm" variant="secondary" onClick={() => navigate(`/fulfillment/sorting/${plan.id}`)}>
+                Ara Ayrıştırma
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => navigate(`/fulfillment/sorting-wall/${plan.id}`)}>
+                Koli Duvarı
+              </Button>
+            </>
+          )}
           {plan.status === 'pending' && (
             <Button size="sm" onClick={() => aksiyon.mutate('start')} loading={aksiyon.isPending}>Başlat</Button>
           )}

@@ -15,6 +15,7 @@ public interface IFulfillmentDbContext
     DbSet<PickingPlanLine> PickingPlanLines { get; }
     DbSet<OperationProfile> OperationProfiles { get; }
     DbSet<OperationLog> OperationLogs { get; }
+    DbSet<SortingBox> SortingBoxes { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

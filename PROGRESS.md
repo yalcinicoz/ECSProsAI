@@ -41,7 +41,14 @@ seri kanal firmasından; seri yoksa anlaşılır hata) → SSR yazdırma sayfala
 JsBarcode yerel) gizli iframe kuyruğuyla otomatik basılır). Stok senkronu:
 PickingLinePickedEvent → Inventory fiili raftan düşer (K-15) + StockMovement izi + K-14 silme +
 rezervasyon picked; Order tarafı OrderItem.PickedBy/FinalScan* senkron. Migration
-AddLineOrderCreatedAt canlıda. SIRADA: OP3 (ara ayrıştırma motoru + koli duvarı).
+AddLineOrderCreatedAt canlıda. **OP3 de UYGULANDI (2026-08-09, ⚠️ restart bekliyor):**
+ara ayrıştırma motoru — `ful_sorting_boxes` koli oturumları (numara sanal, Gen+1 yeniden
+kullanım; taken koli dolmaya devam eder), 5 koşullu sipariş seçimi + eşitlikte en eski +
+düşük-ihtimal eşiği + MaxOrdersPerBox (profil); okutma ekranı /fulfillment/sorting/{planId}
+(dev koli numarası + sesli), koli duvarı /fulfillment/sorting-wall/{planId} (renkli kartlar,
+zimmet), OrderItem.SortingBinQuantity/Order.SortingBinId senkron; migration AddSortingBoxes
+canlıda. SIRADA: OP4 (masa son ayrıştırma + "Paketle" + son kontrol + çok ürünlü paket
+kapanışı + OBM + koli kapatma + masa izleme).
 
 **Ürün Kartı yönetimi F2 (2026-08-09) — UYGULANDI ⚠️ restart bekliyor (F1 restart'ı yapıldı,
 kullanıcı F1'in "değişken alan içerik yönetimi eksik" geri bildirimi üzerine F2 aynı gün geçildi):**
