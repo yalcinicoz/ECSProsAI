@@ -153,6 +153,9 @@ public static class StockOps
             if (take <= 0) continue;
             st.Quantity -= take;
             remaining -= take;
+            // K-14 (2026-08-09): rafta ürün bitince 0'lı kayıt bırakılmaz
+            if (st.Quantity == 0 && st.ReservedQuantity == 0)
+                db.Stocks.Remove(st);
         }
         // remaining > 0 ise depoda yeterli fiziksel stok yoktu — POS anlık satışta bu kabul edilir
         // (eski handler de Math.Max(0,...) ile yutuyordu); satır oluşturmuyoruz.

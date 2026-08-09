@@ -41,6 +41,73 @@ public class FulfillmentController : ControllerBase
         _mediator = mediator;
     }
 
+    private Guid AktifKullanici() =>
+        Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("sub")?.Value, out var id) ? id : Guid.Empty;
+
+    // ── OP1 (2026-08-09): filtreli görev oluşturma + dağıtım + operasyon günlüğü ──
+
+    /// <summary>Görev oluşturma önizlemesi — filtreye uyan sipariş adayları + özet.</summary>
+    [HttpGet("task-candidates")]
+    public async Task<IActionResult> GetTaskCandidates(
+        [FromQuery] List<Guid>? firmPlatformIds, [FromQuery] Guid? warehouseId,
+        [FromQuery] int? minItems, [FromQuery] int? maxItems,
+        [FromQuery] Guid? cargoIntegrationId, [FromQuery] Guid? shippingCityId,
+        [FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Queries.GetPickingTaskCandidates
+            .GetPickingTaskCandidatesQuery(firmPlatformIds, warehouseId, minItems, maxItems,
+                cargoIntegrationId, shippingCityId, from, to), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Filtreli toplama görev(ler)i oluşturur (tek/çok ürünlü otomatik ayrım).</summary>
+    [HttpPost("tasks")]
+    public async Task<IActionResult> CreateTasks([FromBody] CreateTasksRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.CreatePickingTasks
+            .CreatePickingTasksCommand(request.FirmPlatformIds, request.WarehouseId,
+                request.MinItems, request.MaxItems, request.CargoIntegrationId, request.ShippingCityId,
+                request.From, request.To, request.CreateSingleItemTask, request.CreateMultiItemTask,
+                AktifKullanici()), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Görev satırlarını personele dağıtır.</summary>
+    [HttpPost("picking-plans/{id:guid}/assign-lines")]
+    public async Task<IActionResult> AssignLines(Guid id, [FromBody] AssignLinesRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.AssignPickingLines
+            .AssignPickingLinesCommand(id, request.LineIds ?? [], request.AssignTo, AktifKullanici()), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { assigned = result.Value } });
+    }
+
+    /// <summary>Görev satırları (rota sıralı; assignedTo ile personelin kendi listesi).</summary>
+    [HttpGet("picking-plans/{id:guid}/lines")]
+    public async Task<IActionResult> GetPlanLines(Guid id, [FromQuery] Guid? assignedTo, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Queries.GetPickingPlanLines
+            .GetPickingPlanLinesQuery(id, assignedTo), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Operasyon günlüğü — sipariş geçmişi (orderId) veya görev izleme (planId).</summary>
+    [HttpGet("operation-logs")]
+    public async Task<IActionResult> GetOperationLogs(
+        [FromQuery] Guid? orderId, [FromQuery] Guid? planId,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Queries.GetOperationLogs
+            .GetOperationLogsQuery(orderId, planId, page, pageSize), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
     /// <summary>Toplama planlarını listeler.</summary>
     [HttpGet("picking-plans")]
     public async Task<IActionResult> GetPickingPlans(
@@ -440,3 +507,18 @@ public record UpdatePackageRequest(
 public record RenumberPackageRequest(string Reason);
 
 public record UpsertPackageSeriesRequest(string Prefix, int PadLength, bool IsActive = true);
+
+// ── OP1 request modelleri ──────────────────────────────────────────────────────
+public record CreateTasksRequest(
+    List<Guid>? FirmPlatformIds,
+    Guid? WarehouseId,
+    int? MinItems,
+    int? MaxItems,
+    Guid? CargoIntegrationId,
+    Guid? ShippingCityId,
+    DateTime? From,
+    DateTime? To,
+    bool CreateSingleItemTask = true,
+    bool CreateMultiItemTask = true);
+
+public record AssignLinesRequest(List<Guid>? LineIds, Guid AssignTo);

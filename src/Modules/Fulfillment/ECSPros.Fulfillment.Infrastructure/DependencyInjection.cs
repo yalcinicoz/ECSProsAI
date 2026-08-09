@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<IFulfillmentDbContext>(sp => sp.GetRequiredService<FulfillmentDbContext>());
         services.AddScoped<IPackageNumberService, Services.PackageNumberService>();
         services.AddScoped<IOrderPackagingReader, Services.OrderPackagingReader>();
+        services.AddScoped<IOrderPickingReader, Services.OrderPickingReader>(); // OP1: görev adayları
 
         return services;
     }

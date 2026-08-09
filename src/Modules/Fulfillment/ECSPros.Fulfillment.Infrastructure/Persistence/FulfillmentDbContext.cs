@@ -16,6 +16,9 @@ public class FulfillmentDbContext : DbContext, IFulfillmentDbContext
     public DbSet<PackageItem> PackageItems => Set<PackageItem>();
     public DbSet<PackageNumberSeries> PackageNumberSeries => Set<PackageNumberSeries>();
     public DbSet<PackageCodeHistory> PackageCodeHistories => Set<PackageCodeHistory>();
+    public DbSet<PickingPlanLine> PickingPlanLines => Set<PickingPlanLine>();
+    public DbSet<OperationProfile> OperationProfiles => Set<OperationProfile>();
+    public DbSet<OperationLog> OperationLogs => Set<OperationLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

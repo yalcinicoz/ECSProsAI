@@ -22,6 +22,18 @@
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!) | Mobil geliştirici teste başlar; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
+**Sipariş operasyonu OP1 (2026-08-09) — UYGULANIYOR (plan onaylı: `docs/siparis-operasyon-plani.md`):**
+Kurgu K-1..K-17 kararlarıyla onaylandı (toplama görevleri → ara ayrıştırma → masa son ayrıştırma →
+paket+fatura+kargo; operasyon profili; kargo bildirimi paket kapanışında varsayılan; fatura paketle).
+OP1 backend TAMAM: `ful_picking_plan_lines` + `ful_operation_profiles` + `ful_operation_logs`
+(migration canlıda), IOrderPickingReader (raw SQL adaylar+rezervasyon rafları), filtreli görev
+oluşturma (tek/çok otomatik ayrım, rota sıralı satırlar), satır dağıtımı (OrderItem senkron
+event'le), operasyon günlüğü, GetPickingPlans dağıtım istatistikleri, K-14 stok-0 silme
+(OrderShipped/OrderCancelled/StockOps). ⚠️ Bilinen sınır: aday siparişler 'confirmed' durum +
+'order' tipli rezervasyon ister (legacy_* rezervasyonlu geçiş siparişleri kapsam dışı).
+Panel ekranları: görev oluşturma + liste rozetleri + dağıtım + sipariş operasyon geçmişi.
+SIRADA: OP2 (mobil toplama + tek ürünlü hat + ses + yazıcı push).
+
 **Ürün Kartı yönetimi F2 (2026-08-09) — UYGULANDI ⚠️ restart bekliyor (F1 restart'ı yapıldı,
 kullanıcı F1'in "değişken alan içerik yönetimi eksik" geri bildirimi üzerine F2 aynı gün geçildi):**
 Kullanıcı onayı: iki sekme kurgusu, kampanyalar her üç alana atanabilir, öncelik panelden,

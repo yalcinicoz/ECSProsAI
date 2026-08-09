@@ -33,6 +33,9 @@ public class OrderShippedEventHandler : INotificationHandler<OrderShippedEvent>
                 // Rezervasyonu serbest bırak ve stoktan gerçekten düş
                 stock.ReservedQuantity = Math.Max(0, stock.ReservedQuantity - reservation.Quantity);
                 stock.Quantity = Math.Max(0, stock.Quantity - reservation.Quantity);
+                // K-14 (2026-08-09): rafta ürün bitince 0'lı kayıt bırakılmaz
+                if (stock.Quantity == 0 && stock.ReservedQuantity == 0)
+                    _context.Stocks.Remove(stock);
             }
 
             reservation.Status = "picked";

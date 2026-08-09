@@ -106,3 +106,56 @@ public class PackageCodeHistoryConfiguration : IEntityTypeConfiguration<PackageC
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }
+
+public class PickingPlanLineConfiguration : IEntityTypeConfiguration<PickingPlanLine>
+{
+    public void Configure(EntityTypeBuilder<PickingPlanLine> builder)
+    {
+        builder.ToTable("ful_picking_plan_lines");
+        builder.HasKey(l => l.Id);
+        builder.Property(l => l.VariantBarcode).HasMaxLength(60);
+        builder.Property(l => l.OrderNumber).HasMaxLength(30);
+        builder.Property(l => l.DisplayName).HasMaxLength(300);
+        builder.Property(l => l.Sku).HasMaxLength(60);
+        builder.Property(l => l.SourceBinCode).HasMaxLength(60);
+        builder.Property(l => l.PickedBinCode).HasMaxLength(60);
+        builder.Property(l => l.Status).HasMaxLength(20).IsRequired();
+        // Görev detayı rota sıralı okur; personel kendi satırlarını çeker
+        builder.HasIndex(l => new { l.PickingPlanId, l.RouteOrder });
+        builder.HasIndex(l => new { l.PickingPlanId, l.AssignedTo });
+        builder.HasIndex(l => l.OrderId);
+        builder.HasQueryFilter(l => !l.IsDeleted);
+
+        builder.HasOne(l => l.PickingPlan)
+            .WithMany()
+            .HasForeignKey(l => l.PickingPlanId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class OperationProfileConfiguration : IEntityTypeConfiguration<OperationProfile>
+{
+    public void Configure(EntityTypeBuilder<OperationProfile> builder)
+    {
+        builder.ToTable("ful_operation_profiles");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.CargoNotifyAt).HasMaxLength(20).IsRequired();
+        builder.HasIndex(p => p.FirmId).IsUnique();
+        builder.HasQueryFilter(p => !p.IsDeleted);
+    }
+}
+
+public class OperationLogConfiguration : IEntityTypeConfiguration<OperationLog>
+{
+    public void Configure(EntityTypeBuilder<OperationLog> builder)
+    {
+        builder.ToTable("ful_operation_logs");
+        builder.HasKey(l => l.Id);
+        builder.Property(l => l.Action).HasMaxLength(40).IsRequired();
+        builder.Property(l => l.Detail).HasColumnType("jsonb");
+        // Sipariş geçmişi ve görev izleme sorguları
+        builder.HasIndex(l => new { l.OrderId, l.CreatedAt });
+        builder.HasIndex(l => new { l.PickingPlanId, l.CreatedAt });
+        builder.HasQueryFilter(l => !l.IsDeleted);
+    }
+}

@@ -29,6 +29,9 @@ public class OrderCancelledEventHandler : INotificationHandler<OrderCancelledEve
 
             if (stock != null)
                 stock.ReservedQuantity = Math.Max(0, stock.ReservedQuantity - reservation.Quantity);
+                // K-14 (2026-08-09): 0'lı kayıt bırakılmaz (miktar da 0'sa satır silinir)
+                if (stock.Quantity == 0 && stock.ReservedQuantity == 0)
+                    _context.Stocks.Remove(stock);
 
             reservation.Status = "cancelled";
         }

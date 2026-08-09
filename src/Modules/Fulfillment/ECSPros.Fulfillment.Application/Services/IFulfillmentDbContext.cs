@@ -12,6 +12,9 @@ public interface IFulfillmentDbContext
     DbSet<PackageItem> PackageItems { get; }
     DbSet<PackageNumberSeries> PackageNumberSeries { get; }
     DbSet<PackageCodeHistory> PackageCodeHistories { get; }
+    DbSet<PickingPlanLine> PickingPlanLines { get; }
+    DbSet<OperationProfile> OperationProfiles { get; }
+    DbSet<OperationLog> OperationLogs { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

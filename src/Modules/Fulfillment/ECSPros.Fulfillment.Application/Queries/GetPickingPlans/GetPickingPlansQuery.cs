@@ -18,4 +18,9 @@ public record PickingPlanDto(
     Guid PlannedBy,
     DateTime PlannedAt,
     DateTime? StartedAt,
-    DateTime? CompletedAt);
+    DateTime? CompletedAt,
+    // OP1: dağıtım/ilerleme rozetleri — görev listesinde dikkat çekici gösterim
+    int OrderCount = 0,
+    int TotalLines = 0,
+    int AssignedLines = 0,
+    int PickedLines = 0);

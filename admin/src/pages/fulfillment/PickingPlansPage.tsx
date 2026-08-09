@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import api from '@/api/client'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { DataTable, Pager, errText, tarihSaat } from '@/components/ui/DataTable'
 import { cn } from '@/lib/utils'
 
@@ -14,21 +16,58 @@ interface PickingPlan {
   plannedAt: string
   startedAt?: string
   completedAt?: string
+  orderCount: number
+  totalLines: number
+  assignedLines: number
+  pickedLines: number
 }
 
 interface PagedResult<T> { items: T[]; totalCount: number; page: number; pageSize: number }
 
-const DURUM: Record<string, [string, BadgeVariant]> = {
+export const PLAN_DURUM: Record<string, [string, BadgeVariant]> = {
   pending:   ['Bekliyor', 'warning'],
   picking:   ['Toplanıyor', 'info'],
   completed: ['Tamamlandı', 'success'],
   cancelled: ['İptal', 'danger'],
 }
 
-const TIP: Record<string, string> = { single: 'Tekli', batch: 'Toplu', wave: 'Dalga' }
+export const PLAN_TIP: Record<string, string> = {
+  single_item: 'Tek ürünlü',
+  bulk: 'Çok ürünlü',
+  single: 'Tekli',
+  batch: 'Toplu',
+  wave: 'Dalga',
+}
+
+/** OP1: dağıtım rozeti — atama durumunu bir bakışta gösterir. */
+export function dagitimDurum(assigned: number, total: number): { label: string; variant: BadgeVariant } {
+  if (total === 0) return { label: 'Satır yok', variant: 'neutral' }
+  if (assigned === 0) return { label: 'Dağıtım yapılmadı', variant: 'danger' }
+  if (assigned < total) return { label: `Dağıtım eksik (${assigned}/${total})`, variant: 'warning' }
+  return { label: 'Dağıtım tamam', variant: 'success' }
+}
+
+/** Toplanma ilerlemesi — picked/total + yüzde çubuğu. */
+export function ToplanmaIlerleme({ picked, total }: { picked: number; total: number }) {
+  if (total === 0) return <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span>
+  const pct = Math.round((picked / total) * 100)
+  return (
+    <div className="min-w-[110px]">
+      <div className="flex justify-between text-xs mb-0.5" style={{ color: 'var(--text-s)' }}>
+        <span>{picked}/{total}</span>
+        <span>%{pct}</span>
+      </div>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface2)' }}>
+        <div className="h-full rounded-full transition-all"
+          style={{ width: `${pct}%`, background: pct === 100 ? '#16a34a' : 'var(--brand)' }} />
+      </div>
+    </div>
+  )
+}
 
 export function PickingPlansPage() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [tab, setTab] = useState('')
   const [page, setPage] = useState(1)
   const [error, setError] = useState('')
@@ -56,9 +95,12 @@ export function PickingPlansPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-4">
-        <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Picking Planları</h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{data?.totalCount ?? 0} kayıt</p>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Toplama Görevleri</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{data?.totalCount ?? 0} kayıt</p>
+        </div>
+        <Button size="sm" onClick={() => navigate('/fulfillment/tasks/new')}>+ Yeni Görev</Button>
       </div>
 
       <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -73,11 +115,23 @@ export function PickingPlansPage() {
       <DataTable<PickingPlan>
         columns={[
           { header: 'PLAN NO', cell: p => <code className="text-xs font-mono">{p.planNumber}</code> },
-          { header: 'TİP', cell: p => TIP[p.planType] ?? p.planType },
+          {
+            header: 'TİP', cell: p => (
+              <Badge variant={p.planType === 'single_item' ? 'info' : 'neutral'}>
+                {PLAN_TIP[p.planType] ?? p.planType}
+              </Badge>
+            ),
+          },
+          { header: 'SİPARİŞ', cell: p => <span style={{ color: 'var(--text-m)' }}>{p.orderCount || '—'}</span> },
+          {
+            header: 'DAĞITIM', cell: p => {
+              const d = dagitimDurum(p.assignedLines, p.totalLines)
+              return <Badge variant={d.variant}>{d.label}</Badge>
+            },
+          },
+          { header: 'TOPLANMA', cell: p => <ToplanmaIlerleme picked={p.pickedLines} total={p.totalLines} /> },
           { header: 'PLANLAMA', cell: p => tarihSaat(p.plannedAt) },
-          { header: 'BAŞLAMA', cell: p => tarihSaat(p.startedAt) },
-          { header: 'BİTİŞ', cell: p => tarihSaat(p.completedAt) },
-          { header: 'DURUM', cell: p => { const [l, v] = DURUM[p.status] ?? [p.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
+          { header: 'DURUM', cell: p => { const [l, v] = PLAN_DURUM[p.status] ?? [p.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
           {
             header: '', className: 'text-right', cell: p => (
               <span className="whitespace-nowrap">
@@ -99,7 +153,8 @@ export function PickingPlansPage() {
         ]}
         rows={plans}
         loading={isLoading}
-        empty="Picking planı yok. Planlar sipariş işleme akışından oluşturulur."
+        empty="Toplama görevi yok. 'Yeni Görev' ile filtreli görev oluşturabilirsiniz."
+        onRowClick={p => navigate(`/fulfillment/tasks/${p.id}`)}
       />
 
       <Pager page={page} totalPages={totalPages} onChange={setPage} />

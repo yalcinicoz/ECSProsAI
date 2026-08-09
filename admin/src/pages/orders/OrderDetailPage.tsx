@@ -125,6 +125,48 @@ interface Warehouse {
   nameI18n?: Record<string, string>
 }
 
+// OP1: fulfillment operasyon günlüğü (toplama görevi / dağıtım / toplama olayları)
+interface OperationLog {
+  id: string
+  orderId?: string | null
+  orderItemId?: string | null
+  pickingPlanId?: string | null
+  packageId?: string | null
+  action: string
+  actorId: string
+  at: string
+  detail?: Record<string, unknown> | null
+}
+
+/** action → Türkçe cümle; detail'daki plan no / sku / raf bilgisi cümleye katılır. */
+function opCumle(l: OperationLog, adCoz: (uid?: string | null) => string | null): string {
+  const d = l.detail ?? {}
+  const s = (k: string) => (typeof d[k] === 'string' && d[k] ? String(d[k]) : null)
+  const sku = s('sku')
+  const bin = s('bin') ?? s('binCode')
+  const ek = [sku ? ` — ${sku}` : '', bin ? ` (raf ${bin})` : ''].join('')
+  switch (l.action) {
+    case 'task_created':
+      return `Toplama görevine eklendi${s('planNumber') ? ` (${s('planNumber')})` : ''}`
+    case 'line_assigned': {
+      const kime = adCoz(s('assignedTo'))
+      return `Kalem toplama için atandı${kime ? ` → ${kime}` : ''}${ek}`
+    }
+    case 'line_picked':
+      return `Kalem toplandı${ek}`
+    case 'line_short':
+      return `Kalem eksik işaretlendi${ek}`
+    case 'line_returned':
+      return `Kalem rafa iade edildi${ek}`
+    case 'plan_started':
+      return 'Toplama görevi başlatıldı'
+    case 'plan_completed':
+      return 'Toplama görevi tamamlandı'
+    default:
+      return l.action
+  }
+}
+
 function money(v: number | undefined, cur: string) {
   if (v === undefined) return '—'
   return `${v.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ${cur === 'TRY' ? '₺' : cur}`
@@ -265,6 +307,26 @@ export function OrderDetailPage() {
     enabled: geoIds.length > 0,
     retry: false, // restart öncesi eski binary'de endpoint yok — adres id'siz gösterilir
   })
+
+  // OP1: operasyon geçmişi (toplama görevi olayları) — eski binary'de endpoint yoksa sessiz geç
+  const { data: opLogs = [] } = useQuery<OperationLog[]>({
+    queryKey: ['order-operation-logs', id],
+    queryFn: async () =>
+      (await api.get(`/fulfillment/operation-logs?orderId=${id}&pageSize=100`)).data.data.items,
+    enabled: !!id,
+    retry: false,
+  })
+  const { data: opUsers = [] } = useQuery<{ id: string; username: string; firstName: string; lastName: string }[]>({
+    queryKey: ['iam-users-select-mini'],
+    queryFn: async () => (await api.get('/iam/users?page=1&pageSize=200')).data.data.items,
+    enabled: opLogs.length > 0,
+    retry: false,
+  })
+  const opAd = (uid?: string | null) => {
+    if (!uid) return null
+    const u = opUsers.find(x => x.id === uid)
+    return u ? (`${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.username) : null
+  }
 
   function actionMutation(path: string, body?: object) {
     return async () => {
@@ -629,6 +691,28 @@ export function OrderDetailPage() {
                 </li>
               ))}
             </ul>
+          </Section>
+
+          <Section title="Operasyon Geçmişi">
+            {opLogs.length === 0 ? (
+              <p className="text-sm" style={{ color: 'var(--text-s)' }}>Operasyon kaydı yok.</p>
+            ) : (
+              <ul className="space-y-1">
+                {opLogs.map(l => (
+                  <li key={l.id} className="text-sm flex gap-2">
+                    <span className="text-xs w-32 shrink-0" style={{ color: 'var(--text-s)' }}>
+                      {new Date(l.at).toLocaleString('tr-TR')}
+                    </span>
+                    <span style={{ color: 'var(--text)' }}>
+                      {opCumle(l, opAd)}
+                      {opAd(l.actorId) && (
+                        <span className="text-xs ml-1.5" style={{ color: 'var(--text-s)' }}>· {opAd(l.actorId)}</span>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Section>
         </div>
 

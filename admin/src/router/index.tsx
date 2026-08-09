@@ -71,6 +71,8 @@ import { RegistersPage } from '@/pages/pos/RegistersPage'
 import { SupplierInvoicesPage } from '@/pages/finance/SupplierInvoicesPage'
 import { PickingPlansPage } from '@/pages/fulfillment/PickingPlansPage'
 import { PackingStationsPage } from '@/pages/fulfillment/PackingStationsPage'
+import { TaskCreatePage } from '@/pages/fulfillment/TaskCreatePage'
+import { TaskDetailPage } from '@/pages/fulfillment/TaskDetailPage'
 import { IntegrationLogsPage } from '@/pages/integrations/IntegrationLogsPage'
 import { UsersPage } from '@/pages/settings/UsersPage'
 import { RolesPage } from '@/pages/settings/RolesPage'
@@ -167,6 +169,8 @@ export const router = createBrowserRouter(
 
             // Fulfillment
             { path: 'fulfillment/picking-plans',    element: <PickingPlansPage /> },
+            { path: 'fulfillment/tasks/new',        element: <TaskCreatePage /> },
+            { path: 'fulfillment/tasks/:id',        element: <TaskDetailPage /> },
             { path: 'fulfillment/packing-stations', element: <PackingStationsPage /> },
 
             // CMS
