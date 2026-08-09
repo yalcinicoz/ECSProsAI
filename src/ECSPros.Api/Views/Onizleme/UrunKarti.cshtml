@@ -17,6 +17,8 @@
         .ms-onizleme-kart { width: 240px; }
         /* Kampanya bandı canlıda rotasyon script'iyle görünür olur — önizleme statik */
         .ms-onizleme-kart .ms-urun-kampanya-bandi { visibility: visible; }
+        /* F2: JS-rotasyonlu tek mesaj satırı (bkz. _MsKartAyarlari) — önizlemede de aynı override */
+        [data-ms-mesaj-rotasyon] .ms-urun-mesaj-satiri { opacity: 1; position: static; animation: none; }
     </style>
 </head>
 <body>
@@ -28,6 +30,34 @@
         document.querySelectorAll("[data-ms-lazy-src]").forEach((g) => {
             if (g.dataset.msLazySrc) { g.src = g.dataset.msLazySrc; }
         });
+
+        // F2: alan rotasyonları — _Layout'taki bant + mesaj satırı script'lerinin kısaltılmışı
+        // (önizleme Layout kullanmaz); panel iframe'inde mesajlar canlıdaki gibi döner.
+        (() => {
+            let tur = 0;
+            window.setInterval(() => {
+                tur++;
+                document.querySelectorAll("[data-ms-kampanya-rotasyon]").forEach((bant) => {
+                    let rozetler = [];
+                    try { rozetler = JSON.parse(bant.dataset.msKampanyaRotasyon || "[]"); } catch { }
+                    if (rozetler.length < 2) { return; }
+                    const rozet = rozetler[tur % rozetler.length];
+                    bant.textContent = rozet.ad;
+                    bant.style.backgroundColor = rozet.renk || "";
+                });
+                document.querySelectorAll("[data-ms-mesaj-rotasyon]").forEach((alan) => {
+                    let ogeler = [];
+                    try { ogeler = JSON.parse(alan.dataset.msMesajRotasyon || "[]"); } catch { }
+                    if (ogeler.length < 2) { return; }
+                    const oge = ogeler[tur % ogeler.length];
+                    const satir = alan.querySelector(".ms-urun-mesaj-satiri");
+                    if (!satir) { return; }
+                    satir.innerHTML = `<i class="fa-solid ${(oge.ikon || "fa-circle-info").replace(/[^a-z0-9-]/g, "")} ms-fa-ikon ms-urun-mini-ikon" aria-hidden="true"></i>`
+                        + `<span${oge.sinif ? ` class="${oge.sinif}"` : ""}${oge.renk ? ` style="color:${oge.renk}"` : ""}></span>`;
+                    satir.lastElementChild.textContent = oge.metin || "";
+                });
+            }, 2500);
+        })();
     </script>
 </body>
 </html>

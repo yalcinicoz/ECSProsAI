@@ -32,6 +32,7 @@ public class StorefrontDbContext : DbContext, IStorefrontDbContext
     public DbSet<PageBlockItem> PageBlockItems => Set<PageBlockItem>();
     public DbSet<PublishedSnapshot> PublishedSnapshots => Set<PublishedSnapshot>();
     public DbSet<PublishLog> PublishLogs => Set<PublishLog>();
+    public DbSet<CardMessage> CardMessages => Set<CardMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

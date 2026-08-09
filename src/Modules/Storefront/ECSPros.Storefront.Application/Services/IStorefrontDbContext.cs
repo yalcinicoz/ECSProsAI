@@ -28,6 +28,7 @@ public interface IStorefrontDbContext
     DbSet<PageBlockItem> PageBlockItems { get; }
     DbSet<PublishedSnapshot> PublishedSnapshots { get; }
     DbSet<PublishLog> PublishLogs { get; }
+    DbSet<CardMessage> CardMessages { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

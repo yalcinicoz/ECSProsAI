@@ -204,6 +204,45 @@
             }, 3000);
         })();
     </script>
+    @* Ürün Kartı F2 (2026-08-09): alan 2/3 mesaj satırı rotasyonu — data-ms-mesaj-rotasyon
+       JSON'undaki öğeler ({metin, ikon, sinif, renk}) bant script'iyle aynı kalıpla 3.5 sn'de
+       bir döner (yukarı kayarak çıkış, alttan giriş; prefers-reduced-motion'da düz geçiş).
+       Tek satır swap edildiğinden CSS'in sabit 3'lü/5'li keyframe'lerine bağlı değildir;
+       her turda DOM taranır — continuation kartları da kapsanır. *@
+    <script>
+        (() => {
+            const hareketAzalt = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+            let tur = 0;
+            window.setInterval(() => {
+                const alanlar = document.querySelectorAll("[data-ms-mesaj-rotasyon]");
+                if (!alanlar.length) { return; }
+                tur++;
+                alanlar.forEach((alan) => {
+                    let ogeler = [];
+                    try { ogeler = JSON.parse(alan.dataset.msMesajRotasyon || "[]"); } catch { }
+                    if (ogeler.length < 2) { return; }
+                    const oge = ogeler[tur % ogeler.length];
+                    const satir = alan.querySelector(".ms-urun-mesaj-satiri");
+                    if (!satir) { return; }
+                    const uygula = () => {
+                        satir.innerHTML = `<i class="fa-solid ${oge.ikon || "fa-circle-info"} ms-fa-ikon ms-urun-mini-ikon" aria-hidden="true"></i>`
+                            + `<span${oge.sinif ? ` class="${oge.sinif}"` : ""}${oge.renk ? ` style="color:${oge.renk}"` : ""}></span>`;
+                        satir.lastElementChild.textContent = oge.metin || "";
+                    };
+                    if (hareketAzalt?.matches || typeof satir.animate !== "function") { uygula(); return; }
+                    const cikis = satir.animate(
+                        [{ transform: "translateY(0)", opacity: 1 }, { transform: "translateY(-100%)", opacity: 0 }],
+                        { duration: 220, easing: "ease-in", fill: "forwards" });
+                    cikis.onfinish = () => {
+                        uygula();
+                        satir.animate(
+                            [{ transform: "translateY(100%)", opacity: 0 }, { transform: "translateY(0)", opacity: 1 }],
+                            { duration: 220, easing: "ease-out", fill: "forwards" });
+                    };
+                });
+            }, 3500);
+        })();
+    </script>
     @* 2026-07-17: sayfa başına dön float butonu — 600px kaydırma sonrası görünür,
        mobilde alt bar/sepet sabit aksiyonunun üstünde konumlanır (CSS). *@
     <button class="ms-sayfa-basi-buton" type="button" data-ms-sayfa-basi aria-label="Sayfa başına dön" hidden>

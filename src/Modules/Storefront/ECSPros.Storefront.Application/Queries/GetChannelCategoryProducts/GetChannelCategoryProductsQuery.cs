@@ -87,7 +87,8 @@ public record ChannelCategoryProductItemDto(
     string? VideoUrl = null,                         // H5: ilk aktif videonun URL'i — kart video rozeti (null ise rozet yok)
     string? CampaignName = null,                     // F3: kartta gösterilecek kampanya adı/rozeti (varsa)
     decimal? CampaignPrice = null,                   // F3: ürün-bazlı kampanyalı fiyat (null = yok/sepette)
-    List<CampaignBadge>? CampaignBadges = null);     // 2026-08-03: ürünü kapsayan TÜM kampanyalar (ad+renk) — bantta dönüşümlü
+    List<CampaignBadge>? CampaignBadges = null,      // 2026-08-03: ürünü kapsayan TÜM kampanyalar (ad+renk) — bantta dönüşümlü
+    List<CardMessageItem>? CardMessages = null);     // Ürün Kartı F2: elle kart mesajları (slot 1/2/3) — cache DIŞI eklenir
 
 public class GetChannelCategoryProductsQueryHandler(
     IStorefrontDbContext sfDb,
@@ -96,6 +97,7 @@ public class GetChannelCategoryProductsQueryHandler(
     IChannelPricingService pricingService,
     IInStockProductProvider inStock,
     IProductCampaignResolver campaignResolver,
+    ICardMessageResolver cardMessageResolver,
     ICacheService cache)
     : IRequestHandler<GetChannelCategoryProductsQuery, Result<PagedResult<ChannelCategoryProductItemDto>>>
 {
@@ -179,7 +181,14 @@ public class GetChannelCategoryProductsQueryHandler(
             .Where(kv => kodById.ContainsKey(kv.Key))
             .ToDictionary(kv => kodById[kv.Key], kv => kv.Value);
 
-        if (puanlar.Count == 0 && videolar.Count == 0 && kampanyaByKod.Count == 0) return sonuc;
+        // Ürün Kartı F2: elle kart mesajları — puan/kampanya gibi cache DIŞI (mesaj CRUD'u TTL beklemez)
+        var mesajlar = await cardMessageResolver.ResolveForProductsAsync(
+            platformId, idKod.ToDictionary(x => x.Id, x => x.Code), ct);
+        var mesajByKod = mesajlar
+            .Where(kv => kodById.ContainsKey(kv.Key))
+            .ToDictionary(kv => kodById[kv.Key], kv => kv.Value);
+
+        if (puanlar.Count == 0 && videolar.Count == 0 && kampanyaByKod.Count == 0 && mesajByKod.Count == 0) return sonuc;
 
         for (var i = 0; i < items.Count; i++)
         {
@@ -199,6 +208,8 @@ public class GetChannelCategoryProductsQueryHandler(
                         k.BadgeLabel ?? k.Name, CampaignBadgePalette.Resolve(k.BadgeColor))).ToList()
                 };
             }
+            if (mesajByKod.TryGetValue(yeni.Code, out var mesajListe))
+                yeni = yeni with { CardMessages = mesajListe };
             items[i] = yeni;
         }
         return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(

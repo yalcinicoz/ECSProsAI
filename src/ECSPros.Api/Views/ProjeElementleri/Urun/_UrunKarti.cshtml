@@ -21,21 +21,67 @@
     var kartSrcset = ECSPros.Api.Services.Store.UrunGorselSrcset.Kart(u?.GorselUrl);
     const string kartSizes = "(max-width: 768px) 45vw, 240px";
 
-    // F1: kampanya bandı slot'a göre basılır (1 = görsel altı, 2 = ad altı, 3 = puan altı).
-    // Şablon kartında (u null) placeholder aynı slotta üretilir — kartDoldur JS'i elementi
-    // querySelector ile bulur, konum bilmesine gerek kalmaz.
-    void KampanyaBandiBas()
+    // F2: üç değişken alan (1 = görsel altı bant, 2 = ad altı satır, 3 = puan altı satır).
+    // Her alanın içeriği = elle kart mesajları + (alana yönlendirilmişse) kampanya rozetleri;
+    // sıra kanal ayarındaki önceliğe göre. Şablon kartında (u null) placeholder basılır,
+    // kartDoldur JS'i doldurur; rotasyonu _Layout'taki script'ler döndürür.
+    List<(string Ad, string? Renk)> Alan1Ogeleri()
+    {
+        var a = kartAyar.Alan(1);
+        var liste = new List<(string Ad, string? Renk)>();
+        if (!a.Acik || u is null) { return liste; }
+        var mesajlar = a.Mesajlar
+            ? u.AlanMesajlari(1).Select(m => (m.Text, ECSPros.Api.Services.StoreKartAyarlari.PaletHex(m.Color))).ToList()
+            : new List<(string, string?)>();
+        var kampanyalar = a.Kampanyalar
+            ? u.KampanyaBantListesi.Select(b => (b.Name, b.Color)).ToList()
+            : new List<(string, string?)>();
+        liste.AddRange(a.MesajlarOnce ? mesajlar.Concat(kampanyalar) : kampanyalar.Concat(mesajlar));
+        return liste;
+    }
+
+    List<(string Metin, string Ikon, string? Sinif, string? Renk)> AlanSatirOgeleri(int slot)
+    {
+        var a = kartAyar.Alan(slot);
+        var liste = new List<(string Metin, string Ikon, string? Sinif, string? Renk)>();
+        if (!a.Acik || u is null) { return liste; }
+        var mesajlar = a.Mesajlar
+            ? u.AlanMesajlari(slot).Select(m => (m.Text, m.Icon is { Length: > 0 } ? m.Icon : "fa-circle-info",
+                m.Color is { Length: > 0 } ? $"ms-metin-{m.Color}" : null, (string?)null)).ToList()
+            : new List<(string, string, string?, string?)>();
+        var kampanyalar = a.Kampanyalar
+            ? u.KampanyaBantListesi.Select(b => (b.Name, "fa-tags", (string?)null, b.Color)).ToList()
+            : new List<(string, string, string?, string?)>();
+        liste.AddRange(a.MesajlarOnce ? mesajlar.Concat(kampanyalar) : kampanyalar.Concat(mesajlar));
+        return liste;
+    }
+
+    // Alan 2/3 satırı — tasarım markup'ı (ms-urun-teslimat / ms-urun-kargo); tek satır SSR,
+    // kalan öğeler data-ms-mesaj-rotasyon JSON'unda (JS her adette döndürür — CSS'in sabit
+    // 3'lü/5'li keyframe'lerine bağlı değil).
+    void AlanSatirBas(int slot, string pSinif, string gecisSinif)
     {
         if (u is null)
         {
-            <div class="ms-urun-kampanya-bandi" data-ms-kart-kampanya-bandi hidden></div>
+            if (kartAyar.Alan(slot).Acik)
+            {
+                <p class="@pSinif" data-ms-kart-alan="@slot" hidden><span class="ms-urun-mesaj-gecis @gecisSinif" data-ms-mesaj-rotasyon=""></span></p>
+            }
             return;
         }
-        if (u.KampanyaBantListesi.Count == 0) { return; }
-        var ilkRozet = u.KampanyaBantListesi[0];
-        <div class="ms-urun-kampanya-bandi"
-             data-ms-kampanya-rotasyon="@System.Text.Json.JsonSerializer.Serialize(u.KampanyaBantListesi.Select(b => new { ad = b.Name, renk = b.Color }))"
-             style="@(ilkRozet.Color is { Length: > 0 } ? $"background-color:{ilkRozet.Color}" : "")">@ilkRozet.Name</div>
+        var ogeler = AlanSatirOgeleri(slot);
+        if (ogeler.Count == 0) { return; }
+        var ilk = ogeler[0];
+        <p class="@pSinif" data-ms-kart-alan="@slot">
+            <span class="ms-urun-mesaj-gecis @gecisSinif"
+                  data-ms-mesaj-rotasyon="@System.Text.Json.JsonSerializer.Serialize(ogeler.Select(o => new { metin = o.Metin, ikon = o.Ikon, sinif = o.Sinif, renk = o.Renk }))"
+                  aria-label="@string.Join(", ", ogeler.Select(o => o.Metin))">
+                <span class="ms-urun-mesaj-satiri">
+                    <i class="fa-solid @ilk.Ikon ms-fa-ikon ms-urun-mini-ikon" aria-hidden="true"></i>
+                    <span class="@ilk.Sinif" style="@(ilk.Renk is { Length: > 0 } ? $"color:{ilk.Renk}" : "")">@ilk.Metin</span>
+                </span>
+            </span>
+        </p>
     }
 }
 <div class="ms-urun-karti" data-ms-kart-link-alani
@@ -121,13 +167,26 @@
             </span>
         }
     </div>
-    @* F3: kampanya bandı — ürünü kapsayan kampanya(lar). 2026-08-03: rozetler (ad+renk)
-       data-ms-kampanya-rotasyon'da JSON taşınır; birden çoksa _Layout'taki script animasyonlu
-       döndürür. Renk kampanyanın panelden seçilen palet rengi (null = marka rengi —
-       CSS'teki --ms-renk-primary arka planı aynen kalır). F1: konum kanal ayarından. *@
-    @if (kartAyar.KampanyaBandi && kartAyar.KampanyaBandiSlot == 1)
+    @* F2 Alan 1: görsel altı bant — elle mesajlar + kampanya rozetleri (kanal ayarındaki
+       öncelikle). Rozetler (ad+renk) data-ms-kampanya-rotasyon'da JSON taşınır; birden
+       çoksa _Layout'taki script animasyonlu döndürür (renk = bant arka planı). *@
+    @if (u is null)
     {
-        KampanyaBandiBas();
+        if (kartAyar.Alan(1).Acik)
+        {
+            <div class="ms-urun-kampanya-bandi" data-ms-kart-kampanya-bandi hidden></div>
+        }
+    }
+    else
+    {
+        var bantOgeleri = Alan1Ogeleri();
+        if (bantOgeleri.Count > 0)
+        {
+            var ilkOge = bantOgeleri[0];
+            <div class="ms-urun-kampanya-bandi"
+                 data-ms-kampanya-rotasyon="@System.Text.Json.JsonSerializer.Serialize(bantOgeleri.Select(b => new { ad = b.Ad, renk = b.Renk }))"
+                 style="@(ilkOge.Renk is { Length: > 0 } ? $"background-color:{ilkOge.Renk}" : "")">@ilkOge.Ad</div>
+        }
     }
     @if (kartAyar.RenkRozeti && u is not null && u.RenkSecenekleri.Count >= 2)
     {
@@ -158,17 +217,8 @@
     }
     <div class="ms-urun-icerik">
         <h3 class="ms-urun-basligi"><strong>@adIlk</strong> @adKalan</h3>
-        @if (kartAyar.KampanyaBandi && kartAyar.KampanyaBandiSlot == 2)
-        {
-            KampanyaBandiBas();
-        }
-        @if (false)
-        {
-            @* B8: teslimat/favori mesajları ve kargo mesajları — model alanları gelince
-               (F2 duyuru kural motoru bu slotları dolduracak) *@
-            <p class="ms-urun-teslimat"></p>
-            <p class="ms-urun-kargo"></p>
-        }
+        @* F2 Alan 2: ürün adı altı satır (tasarım ms-urun-teslimat markup'ı) *@
+        @{ AlanSatirBas(2, "ms-urun-teslimat", "ms-urun-teslimat-gecis"); }
         @* E7: puan onaylı yorum ortalamasından (yorumsuz üründe bölüm yok — sıfır durumu);
            şablon kartında (u null) alan JS ile dolar. Kamera ikonu fotolu yorumla gelecek.
            F1: kapalıysa placeholder da basılmaz — kartDoldur elementi bulamayınca atlar. *@
@@ -189,10 +239,8 @@
                 <span>(@u.PuanSayisi)</span>
             </div>
         }
-        @if (kartAyar.KampanyaBandi && kartAyar.KampanyaBandiSlot == 3)
-        {
-            KampanyaBandiBas();
-        }
+        @* F2 Alan 3: puan altı satır (tasarım ms-urun-kargo markup'ı) *@
+        @{ AlanSatirBas(3, "ms-urun-kargo", "ms-urun-kargo-gecis"); }
         @* Fiyat senaryoları (tasarım _UrunKartiOrnegi): güncel fiyat + varsa indirim rozeti ve
            üstü çizili eski fiyat (CompareAtPrice > Fiyat). Diğer senaryolar (Sepette/Plus/kampanya)
            veri kaynağı geldiğinde eklenir — "varsa yazdırılır" kuralı. *@

@@ -1,16 +1,30 @@
-@* Ürün Kartı F1 (2026-08-09): kanalın kart ayarlarından JS'in enjekte ettiği elementlerin
-   bayrakları (video/sponsor/renk rozeti, galeri noktaları) window.msKartAyarlari'na basılır —
-   _UrunListesiUrunAlani kartDoldur aynı ayara uyar. SSR-basılan placeholder'lar (puan, bant,
-   indirim, kampanya fiyatı) kapalıyken şablona hiç girmediği için JS bayrağına gerek yok. *@
+@* Ürün Kartı F1/F2 (2026-08-09): kanalın kart ayarları window.msKartAyarlari'na basılır —
+   _UrunListesiUrunAlani kartDoldur JS'i enjekte ettiği elementlerde (video/sponsor/renk
+   rozeti, galeri noktaları) ve değişken alan (1/2/3) doldurmada aynı ayara uyar.
+   SSR-basılan placeholder'lar kapalıyken şablona hiç girmediği için ek bayrak gerekmez. *@
 @inject ECSPros.Api.Services.IStoreContext MsStoreContext
 @{
     var msKart = (await MsStoreContext.GetPlatformAsync())?.KartAyarlari
         ?? ECSPros.Api.Services.StoreKartAyarlari.Varsayilan;
+    object AlanJson(int slot)
+    {
+        var a = msKart.Alan(slot);
+        return new { acik = a.Acik, kampanyalar = a.Kampanyalar, mesajlar = a.Mesajlar, mesajlarOnce = a.MesajlarOnce };
+    }
 }
 <script>window.msKartAyarlari=@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new
 {
     videoRozeti = msKart.VideoRozeti,
     sponsorRozeti = msKart.SponsorRozeti,
     renkRozeti = msKart.RenkRozeti,
-    galeriNoktalari = msKart.GaleriNoktalari
+    galeriNoktalari = msKart.GaleriNoktalari,
+    alan1 = AlanJson(1),
+    alan2 = AlanJson(2),
+    alan3 = AlanJson(3)
 }));</script>
+@* F2: JS-rotasyonlu tek mesaj satırı — tasarım CSS'i satırları sabit 3'lü/5'li keyframe'lerle
+   gösterir (opacity:0 + absolute); data-ms-mesaj-rotasyon kapsamı JS ile döndüğünden satır
+   statik görünür kılınır. Tasarım demo sayfalarını etkilemez (o markup bu attribute'u taşımaz). *@
+<style>
+    [data-ms-mesaj-rotasyon] .ms-urun-mesaj-satiri { opacity: 1; position: static; animation: none; }
+</style>

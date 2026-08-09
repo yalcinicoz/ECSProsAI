@@ -68,7 +68,8 @@ public record StoreProductDto(
     Guid? MainColorValueId = null,       // 2026-07-31: kartta GÖSTERİLEN ana görselin rengi (filtre_rengi) — detay linki bu renge (?color=) gitsin
     string? CampaignName = null,         // F3: kartta gösterilecek kampanya adı/rozeti (varsa)
     decimal? CampaignPrice = null,       // F3: ürün-bazlı kampanyalı fiyat (null = yok/sepette)
-    List<CampaignBadge>? CampaignBadges = null); // 2026-08-03: ürünü kapsayan TÜM kampanyalar (ad+renk) — bantta dönüşümlü
+    List<CampaignBadge>? CampaignBadges = null,  // 2026-08-03: ürünü kapsayan TÜM kampanyalar (ad+renk) — bantta dönüşümlü
+    List<CardMessageItem>? CardMessages = null); // Ürün Kartı F2: elle kart mesajları (slot 1/2/3)
 
 public class GetStoreProductsQueryHandler(
     ICatalogDbContext db,
@@ -78,7 +79,8 @@ public class GetStoreProductsQueryHandler(
     IDiscountedProductProvider discounted,
     IEffectivePriceProvider effectivePrices,
     IProductReviewStatsService reviewStats,
-    IProductCampaignResolver campaignResolver)
+    IProductCampaignResolver campaignResolver,
+    ICardMessageResolver cardMessageResolver)
     : IRequestHandler<GetStoreProductsQuery, Result<PagedResult<StoreProductDto>>>
 {
     public async Task<Result<PagedResult<StoreProductDto>>> Handle(GetStoreProductsQuery request, CancellationToken ct)
@@ -418,6 +420,13 @@ public class GetStoreProductsQueryHandler(
                     CampaignBadges = kmpListe.Select(k => new CampaignBadge(
                         k.BadgeLabel ?? k.Name, CampaignBadgePalette.Resolve(k.BadgeColor))).ToList()
                 };
+
+        // Ürün Kartı F2: elle kart mesajları (kapsam: tümü/kategori/ürün kodu) — additive alan
+        var mesajlar = await cardMessageResolver.ResolveForProductsAsync(
+            request.FirmPlatformId, items.ToDictionary(i => i.Id, i => i.Code), ct);
+        for (var i = 0; i < items.Count; i++)
+            if (mesajlar.TryGetValue(items[i].Id, out var mesajListe))
+                items[i] = items[i] with { CardMessages = mesajListe };
 
         return Result.Success(new PagedResult<StoreProductDto>(items, total, request.Page, request.PageSize));
     }

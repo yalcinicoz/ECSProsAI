@@ -34,9 +34,19 @@ public sealed record StorePlatformBilgisi(
     StoreKartAyarlari? KartAyarlari = null);
 
 /// <summary>
+/// Ürün Kartı F2: bir değişken alanın ayarı — Acik + hangi kaynaklar (kampanya rozetleri /
+/// kart mesajları) + rotasyon önceliği (MesajlarOnce). Alanlar: 1 = görsel altı bant,
+/// 2 = ürün adı altı satır, 3 = puan altı satır.
+/// </summary>
+public sealed record KartAlanAyari(
+    bool Acik = true,
+    bool Kampanyalar = false,
+    bool Mesajlar = true,
+    bool MesajlarOnce = true);
+
+/// <summary>
 /// Kanal bazlı ürün kartı görünüm ayarları (Settings."productCard"). Eksik anahtar = açık
-/// (geri uyum: ayar hiç yazılmamış kanalda kart bugünkü haliyle kalır). KampanyaBandiSlot:
-/// 1 = görsel altı bant, 2 = ürün adı altı, 3 = puan satırı altı.
+/// (geri uyum: ayar hiç yazılmamış kanalda kart bugünkü haliyle kalır — kampanyalar Alan 1'de).
 /// </summary>
 public sealed record StoreKartAyarlari(
     bool VideoRozeti = true,
@@ -48,21 +58,58 @@ public sealed record StoreKartAyarlari(
     bool Puan = true,
     bool IndirimSatiri = true,
     bool KampanyaFiyatSatiri = true,
-    bool KampanyaBandi = true,
-    int KampanyaBandiSlot = 1)
+    KartAlanAyari? Alan1 = null,
+    KartAlanAyari? Alan2 = null,
+    KartAlanAyari? Alan3 = null)
 {
     public static readonly StoreKartAyarlari Varsayilan = new();
 
-    /// <summary>Panel/Settings JSON'undan (camelCase anahtarlar) ayarları okur —
-    /// hem Settings."productCard" hem önizleme query'si aynı biçimi kullanır.</summary>
+    public KartAlanAyari Alan(int slot) => slot switch
+    {
+        2 => Alan2 ?? new KartAlanAyari(),
+        3 => Alan3 ?? new KartAlanAyari(),
+        _ => Alan1 ?? new KartAlanAyari(Kampanyalar: true),
+    };
+
+    /// <summary>Panel/Settings JSON'undan (camelCase) okur — Settings."productCard" ve önizleme
+    /// query'si aynı biçim. "areas" yoksa F1 anahtarlarından (campaignBand/campaignBandSlot)
+    /// geriye uyumlu türetilir.</summary>
     public static StoreKartAyarlari FromJson(System.Text.Json.JsonElement e)
     {
         bool B(string ad) => !e.TryGetProperty(ad, out var v)
             || v.ValueKind != System.Text.Json.JsonValueKind.False;
-        var slot = e.TryGetProperty("campaignBandSlot", out var s)
-                   && s.ValueKind == System.Text.Json.JsonValueKind.Number
-                   && s.TryGetInt32(out var si) && si is >= 1 and <= 3
-            ? si : 1;
+
+        KartAlanAyari? A1 = null, A2 = null, A3 = null;
+        if (e.TryGetProperty("areas", out var areas)
+            && areas.ValueKind == System.Text.Json.JsonValueKind.Object)
+        {
+            KartAlanAyari? Oku(string ad)
+            {
+                if (!areas.TryGetProperty(ad, out var a)
+                    || a.ValueKind != System.Text.Json.JsonValueKind.Object) return null;
+                bool AB(string alan, bool vars) => a.TryGetProperty(alan, out var v)
+                    ? v.ValueKind == System.Text.Json.JsonValueKind.True : vars;
+                return new KartAlanAyari(
+                    Acik: AB("enabled", true),
+                    Kampanyalar: AB("campaigns", false),
+                    Mesajlar: AB("messages", true),
+                    MesajlarOnce: AB("messagesFirst", true));
+            }
+            A1 = Oku("1"); A2 = Oku("2"); A3 = Oku("3");
+        }
+        else
+        {
+            // F1 geriye uyumu: campaignBand + campaignBandSlot → kampanyalar o alanda
+            var bandAcik = B("campaignBand");
+            var slot = e.TryGetProperty("campaignBandSlot", out var s)
+                       && s.ValueKind == System.Text.Json.JsonValueKind.Number
+                       && s.TryGetInt32(out var si) && si is >= 1 and <= 3
+                ? si : 1;
+            A1 = new KartAlanAyari(Kampanyalar: bandAcik && slot == 1);
+            A2 = new KartAlanAyari(Kampanyalar: bandAcik && slot == 2);
+            A3 = new KartAlanAyari(Kampanyalar: bandAcik && slot == 3);
+        }
+
         return new StoreKartAyarlari(
             VideoRozeti: B("videoBadge"),
             SponsorRozeti: B("sponsorBadge"),
@@ -73,9 +120,19 @@ public sealed record StoreKartAyarlari(
             Puan: B("rating"),
             IndirimSatiri: B("discountRow"),
             KampanyaFiyatSatiri: B("campaignPriceRow"),
-            KampanyaBandi: B("campaignBand"),
-            KampanyaBandiSlot: slot);
+            Alan1: A1, Alan2: A2, Alan3: A3);
     }
+
+    /// <summary>Kart mesajı palet anahtarı → renk (alan 1 bant arka planı ve kampanya
+    /// rotasyon JSON'u için hex; alan 2/3 metinleri ms-metin-{anahtar} sınıfını kullanır).</summary>
+    public static string? PaletHex(string? anahtar) => anahtar switch
+    {
+        "yesil" => "#16a34a",
+        "turuncu" => "#ea580c",
+        "bordo" => "#9f1239",
+        "pembe" => "#db2777",
+        _ => null,
+    };
 }
 
 public sealed class StoreContext(

@@ -11,6 +11,13 @@ namespace ECSPros.Core.Application.Commands.UpdateProductCardSettings;
 /// (diğer ayarlar korunur; ChannelsPage'in tam-replace davranışından etkilenmez,
 /// o sayfa şema-dışı anahtarları geri yazar). Panel Storefront → Ürün Kartı ekranından yazılır.
 /// </summary>
+/// <summary>F2: değişken alan ayarı (1/2/3) — kaynaklar + rotasyon önceliği.</summary>
+public record ProductCardAreaSetting(
+    bool Enabled = true,
+    bool Campaigns = false,
+    bool Messages = true,
+    bool MessagesFirst = true);
+
 public record UpdateProductCardSettingsCommand(
     Guid FirmPlatformId,
     bool VideoBadge,
@@ -22,16 +29,16 @@ public record UpdateProductCardSettingsCommand(
     bool Rating,
     bool DiscountRow,
     bool CampaignPriceRow,
-    bool CampaignBand,
-    int CampaignBandSlot) : IRequest<Result<bool>>;
+    Dictionary<string, ProductCardAreaSetting>? Areas) : IRequest<Result<bool>>;
 
 public class UpdateProductCardSettingsCommandHandler(ICoreDbContext db)
     : IRequestHandler<UpdateProductCardSettingsCommand, Result<bool>>
 {
     public async Task<Result<bool>> Handle(UpdateProductCardSettingsCommand request, CancellationToken ct)
     {
-        if (request.CampaignBandSlot is < 1 or > 3)
-            return Result.Failure<bool>("Kampanya bandı slotu 1-3 aralığında olmalı.");
+        var alanlar = request.Areas ?? new Dictionary<string, ProductCardAreaSetting>();
+        if (alanlar.Keys.Any(k => k is not ("1" or "2" or "3")))
+            return Result.Failure<bool>("Alan anahtarları 1/2/3 olmalı.");
 
         var platform = await db.FirmPlatforms.FirstOrDefaultAsync(p => p.Id == request.FirmPlatformId, ct);
         if (platform is null) return Result.Failure<bool>("Platform bulunamadı.");
@@ -50,8 +57,14 @@ public class UpdateProductCardSettingsCommandHandler(ICoreDbContext db)
             ["rating"] = request.Rating,
             ["discountRow"] = request.DiscountRow,
             ["campaignPriceRow"] = request.CampaignPriceRow,
-            ["campaignBand"] = request.CampaignBand,
-            ["campaignBandSlot"] = request.CampaignBandSlot
+            // F2: üç değişken alanın kaynak/öncelik ayarı — eksik alan varsayılanla yazılır
+            // (1: kampanyalar açık; 2/3: yalnız mesajlar) ki site tarafı tutarlı okusun.
+            ["areas"] = new Dictionary<string, object>
+            {
+                ["1"] = AlanJson(alanlar.GetValueOrDefault("1") ?? new ProductCardAreaSetting(Campaigns: true)),
+                ["2"] = AlanJson(alanlar.GetValueOrDefault("2") ?? new ProductCardAreaSetting()),
+                ["3"] = AlanJson(alanlar.GetValueOrDefault("3") ?? new ProductCardAreaSetting())
+            }
         };
         platform.Settings = settings;
         platform.UpdatedAt = DateTime.UtcNow;
@@ -59,4 +72,12 @@ public class UpdateProductCardSettingsCommandHandler(ICoreDbContext db)
         await db.SaveChangesAsync(ct);
         return Result.Success(true);
     }
+
+    private static Dictionary<string, object> AlanJson(ProductCardAreaSetting a) => new()
+    {
+        ["enabled"] = a.Enabled,
+        ["campaigns"] = a.Campaigns,
+        ["messages"] = a.Messages,
+        ["messagesFirst"] = a.MessagesFirst
+    };
 }

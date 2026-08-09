@@ -32,8 +32,13 @@ public sealed record UrunKartVm(
     decimal? EskiFiyat = null,           // 2026-07-31: indirim öncesi (çizili) fiyat — CompareAtPrice > Fiyat ise
     string? KampanyaAdi = null,          // F3: kampanya adı/rozeti (varsa gösterilir)
     decimal? KampanyaFiyat = null,       // F3: ürün-bazlı kampanyalı fiyat (null = sepette/yok)
-    IReadOnlyList<CampaignBadge>? KampanyaRozetleri = null) // 2026-08-03: ürünü kapsayan TÜM kampanyalar (ad+renk) — bantta dönüşümlü
+    IReadOnlyList<CampaignBadge>? KampanyaRozetleri = null, // 2026-08-03: ürünü kapsayan TÜM kampanyalar (ad+renk) — bantta dönüşümlü
+    IReadOnlyList<CardMessageItem>? KartMesajlari = null)   // Ürün Kartı F2: elle kart mesajları (slot 1/2/3)
 {
+    /// <summary>F2: verilen alandaki (1/2/3) elle mesajlar — sıra korunur.</summary>
+    public IEnumerable<CardMessageItem> AlanMesajlari(int slot) =>
+        KartMesajlari?.Where(m => m.Slot == slot) ?? Enumerable.Empty<CardMessageItem>();
+
     // Bantta gösterilecek rozet listesi (çoklu yoksa tekile düşer; renk null = marka rengi).
     public IReadOnlyList<CampaignBadge> KampanyaBantListesi => KampanyaRozetleri is { Count: > 0 } liste
         ? liste

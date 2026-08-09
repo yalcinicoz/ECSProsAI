@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<IChannelPricingService, StorefrontChannelPricingService>();
         services.AddScoped<IChannelProductFlagService, StorefrontChannelProductFlagService>();
         services.AddScoped<IProductReviewStatsService, StorefrontProductReviewStatsService>(); // E7: kart/detay puanları
+        services.AddScoped<ICardMessageResolver, Application.Services.CardMessageResolver>(); // Ürün Kartı F2: kart mesajları
 
         return services;
     }

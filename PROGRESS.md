@@ -22,6 +22,21 @@
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!) | Mobil geliştirici teste başlar; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
+**Ürün Kartı yönetimi F2 (2026-08-09) — UYGULANDI ⚠️ restart bekliyor (F1 restart'ı yapıldı,
+kullanıcı F1'in "değişken alan içerik yönetimi eksik" geri bildirimi üzerine F2 aynı gün geçildi):**
+Kullanıcı onayı: iki sekme kurgusu, kampanyalar her üç alana atanabilir, öncelik panelden,
+kapsam üçlüsü yeterli. Uygulanan: **yeni `storefront.card_messages` tablosu (migration canlı
+DB'ye uygulandı, additive)** + `/api/storefront/card-messages` CRUD; `ICardMessageResolver`
+(Shared.Contracts, Storefront impl.) iki liste query'sine puan/kampanya gibi **cache SONRASI**
+eklenir (Redis sürüm artışı GEREKMEDİ); ayar modeli `areas` (alan 1/2/3 × enabled/campaigns/
+messages/messagesFirst; F1 campaignBand anahtarlarından geriye uyumlu); site: alan 1 bant +
+alan 2 (`ms-urun-teslimat`) + alan 3 (`ms-urun-kargo`) tasarım markup'ıyla SSR + kartDoldur JS,
+rotasyon JS-tabanlı (sabit 3'lü/5'li CSS keyframe bağımlılığı yok, `[data-ms-mesaj-rotasyon]`
+satırı için scoped görünürlük override'ı); panel iki sekme (Yerleşim + Kart Mesajları CRUD:
+çok dilli mesaj, ikon+renk paleti, kapsam tümü/kategori/ürün kodları, tarih penceresi);
+önizleme gerçek mesajlarla döner. İkon girdisi regex-doğrulamalı (XSS). İzole 5051 testi ✓.
+**SIRADA (F3+):** otomatik sinyaller (en düşük fiyat, sosyal kanıt, Sepette/Plus) — ayrı veri işleri.
+
 **Ürün Kartı yönetimi F1 (2026-08-09) — UYGULANDI ⚠️ restart bekliyor (site+panel, K16 birlikte):**
 Kullanıcı onayı: iki katmanlı kurgu (A: aç/kapat+slot, B: duyuru kural motoru), Süper Fırsat
 kampanya-tabanlı, sıralama yok, F1 önce. Uygulanan: panel **/storefront/product-card**

@@ -412,3 +412,21 @@ public class PublishLogConfiguration : IEntityTypeConfiguration<PublishLog>
         builder.HasQueryFilter(l => !l.IsDeleted);
     }
 }
+
+public class CardMessageConfiguration : IEntityTypeConfiguration<CardMessage>
+{
+    public void Configure(EntityTypeBuilder<CardMessage> builder)
+    {
+        builder.ToTable("card_messages");
+        builder.HasKey(m => m.Id);
+        builder.Property(m => m.MessageI18n).HasColumnType("jsonb").IsRequired();
+        builder.Property(m => m.ScopeCategoryIds).HasColumnType("jsonb");
+        builder.Property(m => m.ScopeProductCodes).HasColumnType("jsonb");
+        builder.Property(m => m.Icon).HasMaxLength(60);
+        builder.Property(m => m.Color).HasMaxLength(20);
+        builder.Property(m => m.ScopeType).HasMaxLength(20).IsRequired();
+        // Site çözümlemesinin tek sorgusu: kanalın aktif mesajları
+        builder.HasIndex(m => new { m.FirmPlatformId, m.IsActive });
+        builder.HasQueryFilter(m => !m.IsDeleted);
+    }
+}
