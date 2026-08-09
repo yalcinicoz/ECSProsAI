@@ -24,6 +24,10 @@
 | K-11 | **Fatura paket kapanırken kesilir**, paketle birlikte çıkar. Toptan (B2B) profili için "dönemsel faturalama" ileriki faz seçeneği. |
 | K-12 | Ayrıştırma koşullarında eşitlik bozulamazsa **en eski sipariş** kazanır. "Düşük ihtimalli sipariş büyük koli numarasına" davranışının eşiği **profil parametresi**. |
 | K-13 | Firma farklılıkları **Operasyon Profili** ile: ara ayrıştırma var/yok, koli başına maks sipariş (örn. 26), renk eşikleri, toptan eklentileri. |
+| K-14 | Rafta ürün bitince (Quantity=0 VE ReservedQuantity=0) **Stock satırı silinir** — 0 adetli kayıt tabloda kalmaz. |
+| K-15 | Sipariş ürünlerinin **fiilen hangi raftan toplandığı** saklanır (önerilen raf ≠ fiili raf olabilir; personel farklı raftan aldıysa raf barkodu okutur). |
+| K-16 | **Her personel işlemi loglanır**: SiparişId, kalem Id, işlem, personel Id, zaman (+detay). Sipariş geçmişinde tüm operasyon adımları açıkça görünür. |
+| K-17 | **Tek sipariş → çoklu paket / çoklu fatura / çoklu kargo** birinci sınıf desteklenir; paket kalemleri rezervasyon tüketimiyle miktar-muhasebeli bağlanır (bir kalemin paketlere dağılan toplamı sipariş miktarını aşamaz, kalan miktar rezervde kalır). |
 
 ---
 
@@ -75,6 +79,7 @@ Firma (veya kanal) başına tek aktif profil; yoksa varsayılanlar.
 | `SourceBinId?`, `SourceBinCode` | önerilen kaynak raf (rezervasyondan; rota = `Section.PickingOrder, Bin.PickingOrder`) |
 | `AssignedTo?`, `AssignedAt?` | personel dağıtımı (satır bazında) |
 | `PickedBy?`, `PickedAt?` | fiilen toplayan |
+| `PickedBinId?`, `PickedBinCode?` | **fiilen toplanan raf** (K-15) — varsayılan önerilen raf; personel farklı raftan aldıysa raf barkodu okutup değiştirir |
 | `Status` | pending / assigned / picked / short (bulunamadı) / returned |
 
 - Plan üretilirken siparişin **rezervasyon rafları** satırlara yazılır → personel listesi raf koduna göre sıralı gelir (rota).
@@ -122,10 +127,23 @@ Paket kapanış tek transaction'da:
 4. **Stok fiili raftan düşer**: satırın `PickedBy` yazıldığı anda rezervasyon `picked` + `StockMovement` izi; paket kapanışında kalan mutabakat tamamlanır. (`OrderShippedEvent` handler'ı "rezervasyon rafından düş" yerine "picked rezervasyonları kapat" olarak düzeltilir.)
 5. Sipariş tüm paketleri kapanınca `shipped`'e geçer (mevcut manuel `POST /ship` korunur ama operasyonda otomatik tetiklenir).
 
+**Stok 0 kuralı (K-14):** stok düşümü yapan her yol (`StockOps` merkezinden) sonrası `Quantity==0 && ReservedQuantity==0` olan `Stock` satırı **silinir** — raf bazında 0'lı kayıt kalmaz.
+
+**Çoklu paket / fatura / kargo (K-17):** paket başına fatura + paket başına `Shipment` (çoklu kargo kaydı) esastır. `PackageItem(OrderItemId, Quantity)` eklenirken kalem-miktar muhasebesi doğrulanır: kalemin tüm paketlerdeki toplamı sipariş miktarını aşamaz; kalemin `picked` rezervasyonlarından paket miktarı kadar tüketilir, paketlenmemiş kalan miktar rezervde bekler. Kısmi gönderimde sipariş, kalan paketler kapanana dek `processing`'de kalır; paket listesi durumu gösterir.
+
 ### 2.8 Kargo yönlendirme (K-9)
 Ekran: taşıyıcı bazlı bekleyen paket/sipariş listesi → hedef taşıyıcı seç → toplu veya tekil yönlendir. Paket bilgisi gönderilmişse: eski adapter'da `CancelShipmentAsync` (destekliyorsa) → kargo kodu yeniden üretilir (`PackageCodeHistory` izi mevcut) → yeni taşıyıcıya outbox kaydı. Sipariş henüz paketlenmemişse yalnız `RequestedCargoIntegrationId` güncellenir.
 
-### 2.9 Donanım entegrasyonu
+### 2.9 Operasyon günlüğü — `fulfillment.ful_operation_logs` (YENİ, K-16)
+Her personel işlemi tek tabloda: `OrderId?`, `OrderItemId?`, `PickingPlanId?`, `PackageId?`,
+`Action` (task_created / line_assigned / line_picked / line_short / item_returned /
+sorting_scanned / box_taken / station_opened / slot_assigned / final_scanned /
+package_packed / invoice_issued / label_printed / cargo_notified / obm_transferred /
+cargo_rerouted ...), `ActorId`, `At`, `Detail` (jsonb: raf/koli/masa/slot/miktar/barkod).
+- Sipariş detayına **"Operasyon Geçmişi"** bölümü: bu loglar zaman sırasında, insan-okur cümlelerle.
+- Görev/koli/masa izleme ekranları da aynı kaynaktan beslenir.
+
+### 2.10 Donanım entegrasyonu
 - **Barkod okuyucu**: HID (klavye) modu — ekranlarda global "okutma kutusu" odağı; okuma `Enter` ile biter. Ekstra sürücü yok.
 - **Yazıcı**: masa kaydına yazıcı adresi (ağ IP/kuyruk) tanımlanır; **sunucu, PDF'i doğrudan ağ yazıcısına (IPP/RAW 9100) push eder** — tarayıcı diyaloğu yok, otomatik baskı garantisi. (Alternatif QZ Tray istemcisi; ilk sürümde sunucu-push önerilir.)
 - **Ses**: 0-999 numara + "hata" + "paketle" önceden üretilmiş ses dosyaları (TTS ile bir kere üretilir, `wwwroot/audio/`); tarayıcı Web Audio ile anında çalar (canlı TTS gecikmesi/uyumsuzluğu yok).
