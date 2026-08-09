@@ -225,10 +225,16 @@ public class PageBlockSourceResolver(IMediator mediator, IProductService product
         return kodlar;
     }
 
-    /// <summary>Kanal kategori kart DTO'sunu ortak kart sözleşmesine indirger.</summary>
+    /// <summary>Kanal kategori kart DTO'sunu ortak kart sözleşmesine indirger.
+    /// DİKKAT: alan eklemeyi unutma tuzağı — F1'de CompareAtPrice, F2'de kampanya/mesaj
+    /// alanları burada düşürülünce kategori-kaynaklı vitrin kartları eksik kalıyordu.</summary>
     private static StoreProductDto KanalKartinaCevir(ChannelCategoryProductItemDto p) => new(
         p.ProductId, p.Code, p.NameI18n, null,
         p.MainImageUrl, p.BasePrice, p.CompareAtPrice, p.IsActive,
         p.Colors ?? [], p.Attrs ?? [], p.GalleryUrls,
-        p.IsFeatured, p.Rating, p.ReviewCount);
+        p.IsFeatured, p.Rating, p.ReviewCount,
+        CampaignName: p.CampaignName,
+        CampaignPrice: p.CampaignPrice,
+        CampaignBadges: p.CampaignBadges,
+        CardMessages: p.CardMessages);
 }
