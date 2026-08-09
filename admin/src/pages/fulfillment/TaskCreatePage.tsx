@@ -54,8 +54,6 @@ export function TaskCreatePage() {
   const [to, setTo] = useState('')
 
   // ── Görev tipleri ──
-  const [tekli, setTekli] = useState(true)
-  const [coklu, setCoklu] = useState(true)
 
   const [error, setError] = useState('')
   const [created, setCreated] = useState<CreatedTask[] | null>(null)
@@ -154,8 +152,10 @@ export function TaskCreatePage() {
         shippingCityId: sehirId || null,
         from: from || null,
         to: to ? `${to}T23:59:59` : null,
-        createSingleItemTask: tekli,
-        createMultiItemTask: coklu,
+        // Görev tipleri "Ürün sayısı" filtresinden türetilir (kullanıcı kararı 2026-08-09):
+        // Tümü → iki görev birden (otomatik ayrım), Tek → yalnız tek ürünlü, Çok → yalnız çok ürünlü
+        createSingleItemTask: adetMode !== 'multi',
+        createMultiItemTask: adetMode !== 'single',
       }
       return (await api.post('/fulfillment/tasks', body)).data.data as { tasks: CreatedTask[] }
     },
@@ -289,18 +289,15 @@ export function TaskCreatePage() {
             )}
           </p>
           <div className="flex flex-wrap items-center gap-4 ml-auto">
-            <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--text)' }}>
-              <input type="checkbox" checked={tekli} onChange={e => setTekli(e.target.checked)} />
-              Tek ürünlü görev oluştur
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--text)' }}>
-              <input type="checkbox" checked={coklu} onChange={e => setCoklu(e.target.checked)} />
-              Çok ürünlü görev oluştur
-            </label>
+            <span className="text-sm" style={{ color: 'var(--text-s)' }}>
+              {adetMode === 'single' ? 'Tek ürünlü görev oluşturulacak'
+                : adetMode === 'multi' ? 'Çok ürünlü görev oluşturulacak'
+                : 'Tek + çok ürünlü görevler ayrı ayrı oluşturulacak'}
+            </span>
             <Button
               onClick={() => olustur.mutate()}
               loading={olustur.isPending}
-              disabled={(!tekli && !coklu) || (aday?.toplamSiparis ?? 0) === 0}>
+              disabled={(aday?.toplamSiparis ?? 0) === 0}>
               Görev(ler)i Oluştur
             </Button>
           </div>
