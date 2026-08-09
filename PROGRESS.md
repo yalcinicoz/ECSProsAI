@@ -47,8 +47,13 @@ kullanım; taken koli dolmaya devam eder), 5 koşullu sipariş seçimi + eşitli
 düşük-ihtimal eşiği + MaxOrdersPerBox (profil); okutma ekranı /fulfillment/sorting/{planId}
 (dev koli numarası + sesli), koli duvarı /fulfillment/sorting-wall/{planId} (renkli kartlar,
 zimmet), OrderItem.SortingBinQuantity/Order.SortingBinId senkron; migration AddSortingBoxes
-canlıda. SIRADA: OP4 (masa son ayrıştırma + "Paketle" + son kontrol + çok ürünlü paket
-kapanışı + OBM + koli kapatma + masa izleme).
+canlıda. **OP4 de UYGULANDI (2026-08-09, ⚠️ restart bekliyor) — ÇOK ÜRÜNLÜ AKIŞ UÇTAN UCA TAMAM:**
+`ful_packing_desks` sanal masa oturumları (en küçük boş numara), masa ekranı iki modlu
+(/fulfillment/desk/{id}: slot atama + seslendirme + PAKETLE → son kontrol → paket + otomatik
+fatura + iframe yazdırma), koli kapatma ("koliye ürün gelebilir" sistem kontrolü + force ile
+OBM transferi), masa izleme /fulfillment/desks, koli duvarına "Masa Aç"; migration
+AddPackingDesks canlıda. SIRADA: OP5 (kargo zinciri — outbox+worker, Shipment bağlama,
+yönlendirme, MarkShipped otomasyonu; KG1 gerçek adapter'larla birleşir) + OP6 (toptan, raporlar).
 
 **Ürün Kartı yönetimi F2 (2026-08-09) — UYGULANDI ⚠️ restart bekliyor (F1 restart'ı yapıldı,
 kullanıcı F1'in "değişken alan içerik yönetimi eksik" geri bildirimi üzerine F2 aynı gün geçildi):**

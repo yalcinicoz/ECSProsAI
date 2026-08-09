@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { errText } from '@/components/ui/DataTable'
+import { useAuthStore } from '@/store/auth'
 
 /**
  * OP3 — Koli Duvarı (sorting wall).
@@ -54,6 +55,7 @@ export function SortingWallPage() {
   const { planId } = useParams<{ planId: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const me = useAuthStore((s) => s.user)
   const [alinacak, setAlinacak] = useState<KoliKart | null>(null)
   const [hata, setHata] = useState('')
 
@@ -91,6 +93,22 @@ export function SortingWallPage() {
     },
     onError: (e: unknown) => {
       setAlinacak(null)
+      setHata(errText(e))
+      queryClient.invalidateQueries({ queryKey: ['sorting-wall', planId] })
+    },
+  })
+
+  // OP4: zimmetli koli için masa aç (zaten açıksa mevcut masa döner) → masa ekranına git
+  const masaAc = useMutation({
+    mutationFn: async (boxId: string) => {
+      setHata('')
+      return (await api.post<{ data: { deskId: string; deskNumber: number; boxNumber: number } }>(
+        `/fulfillment/sorting-boxes/${boxId}/open-desk`, {})).data.data
+    },
+    onSuccess: (d) => {
+      navigate(`/fulfillment/desk/${d.deskId}?planId=${planId}`)
+    },
+    onError: (e: unknown) => {
       setHata(errText(e))
       queryClient.invalidateQueries({ queryKey: ['sorting-wall', planId] })
     },
@@ -196,6 +214,16 @@ export function SortingWallPage() {
                 <div className="p-3 pt-0">
                   <Button className="w-full !py-3 !text-lg" onClick={() => { setHata(''); setAlinacak(k) }}>
                     Zimmete Al
+                  </Button>
+                </div>
+              )}
+
+              {/* OP4: kendi zimmetindeki koli için masa aç */}
+              {k.status === 'taken' && !!me && k.takenBy === me.id && (
+                <div className="p-3 pt-0">
+                  <Button className="w-full !py-3 !text-lg" loading={masaAc.isPending}
+                    onClick={() => masaAc.mutate(k.boxId)}>
+                    Masa Aç
                   </Button>
                 </div>
               )}

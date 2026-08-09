@@ -209,6 +209,83 @@ public class FulfillmentController : ControllerBase
         return Ok(new { success = true });
     }
 
+    // ── OP4 (2026-08-09): masa son ayrıştırma + paket kapanışı + OBM ──
+
+    /// <summary>Zimmetli koli için masa açar (en küçük boş numara).</summary>
+    [HttpPost("sorting-boxes/{boxId:guid}/open-desk")]
+    public async Task<IActionResult> OpenDesk(Guid boxId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.OpenPackingDesk
+            .OpenPackingDeskCommand(boxId, AktifKullanici()), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Masa son ayrıştırma okutması — slot numarası döner (seslendirilir);
+    /// sipariş tamamlanırsa paketle=true (son kontrol modu başlar).</summary>
+    [HttpPost("desks/{deskId:guid}/sort-scan")]
+    public async Task<IActionResult> DeskSortScan(Guid deskId, [FromBody] PickScanRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.DeskSortScan
+            .DeskSortScanCommand(deskId, request.Barcode ?? "", AktifKullanici()), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Son kontrol okutması — sipariş tamamlanınca paket + OTOMATİK fatura +
+    /// yazdırma URL'leri (fast-lane kalıbı).</summary>
+    [HttpPost("desks/{deskId:guid}/final-scan")]
+    public async Task<IActionResult> DeskFinalScan(Guid deskId, [FromBody] FinalScanRequest request, CancellationToken ct)
+    {
+        var scan = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.DeskFinalCheckScan
+            .DeskFinalCheckScanCommand(deskId, request.OrderId, request.Barcode ?? "", AktifKullanici()), ct);
+        if (scan.IsFailure)
+            return BadRequest(new { success = false, error = scan.Error });
+        var s = scan.Value!;
+        if (!s.Tamam)
+            return Ok(new { success = true, data = new { s.Kalan, tamam = false } });
+
+        var fatura = await _mediator.Send(new ECSPros.Order.Application.Commands.CreatePackageInvoiceAuto
+            .CreatePackageInvoiceAutoCommand(request.OrderId, s.PackageId!.Value, AktifKullanici()), ct);
+        return Ok(new
+        {
+            success = true,
+            data = new
+            {
+                s.Kalan, tamam = true, s.PackageId, s.PackageNumber, s.OrderNumber,
+                invoiceId = fatura.IsSuccess ? fatura.Value!.InvoiceId : (Guid?)null,
+                invoiceNumber = fatura.IsSuccess ? fatura.Value!.InvoiceNumber : null,
+                invoiceError = fatura.IsFailure ? fatura.Error : null,
+                printUrls = fatura.IsSuccess
+                    ? new[] { $"/yazdir/fatura/{fatura.Value!.InvoiceId}", $"/yazdir/paket-etiket/{s.PackageId}" }
+                    : new[] { $"/yazdir/paket-etiket/{s.PackageId}" }
+            }
+        });
+    }
+
+    /// <summary>Koli + masa kapanışı — paketlenmemişler OBM'ye; force=false'ta sistem
+    /// "koliye ürün gelebilir" kontrolü yapar.</summary>
+    [HttpPost("sorting-boxes/{boxId:guid}/close")]
+    public async Task<IActionResult> CloseBox(Guid boxId, [FromQuery] bool force = false, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Commands.CloseSortingBox
+            .CloseSortingBoxCommand(boxId, AktifKullanici(), force), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Masa izleme / masa ekranı durumu.</summary>
+    [HttpGet("desks")]
+    public async Task<IActionResult> GetDesks([FromQuery] Guid? planId, [FromQuery] Guid? deskId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Fulfillment.Application.Queries.GetPackingDesks
+            .GetPackingDesksQuery(planId, deskId), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
     /// <summary>Toplama planlarını listeler.</summary>
     [HttpGet("picking-plans")]
     public async Task<IActionResult> GetPickingPlans(
@@ -625,3 +702,5 @@ public record CreateTasksRequest(
 public record AssignLinesRequest(List<Guid>? LineIds, Guid AssignTo);
 
 public record PickScanRequest(string? Barcode, string? BinBarcode = null);
+
+public record FinalScanRequest(Guid OrderId, string? Barcode);

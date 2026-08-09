@@ -77,6 +77,8 @@ import { MyPickingPage } from '@/pages/fulfillment/MyPickingPage'
 import { FastLanePage } from '@/pages/fulfillment/FastLanePage'
 import { SortingScanPage } from '@/pages/fulfillment/SortingScanPage'
 import { SortingWallPage } from '@/pages/fulfillment/SortingWallPage'
+import { DeskPage } from '@/pages/fulfillment/DeskPage'
+import { DesksMonitorPage } from '@/pages/fulfillment/DesksMonitorPage'
 import { IntegrationLogsPage } from '@/pages/integrations/IntegrationLogsPage'
 import { UsersPage } from '@/pages/settings/UsersPage'
 import { RolesPage } from '@/pages/settings/RolesPage'
@@ -180,6 +182,8 @@ export const router = createBrowserRouter(
             { path: 'fulfillment/fast-lane/:planId', element: <FastLanePage /> },
             { path: 'fulfillment/sorting/:planId',   element: <SortingScanPage /> },
             { path: 'fulfillment/sorting-wall/:planId', element: <SortingWallPage /> },
+            { path: 'fulfillment/desk/:deskId',      element: <DeskPage /> },
+            { path: 'fulfillment/desks',             element: <DesksMonitorPage /> },
 
             // CMS
             { path: 'cms/pages',                element: <CmsPagesPage /> },

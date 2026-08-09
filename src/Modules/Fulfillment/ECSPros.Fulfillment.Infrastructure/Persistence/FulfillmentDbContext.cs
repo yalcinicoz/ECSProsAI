@@ -20,6 +20,7 @@ public class FulfillmentDbContext : DbContext, IFulfillmentDbContext
     public DbSet<OperationProfile> OperationProfiles => Set<OperationProfile>();
     public DbSet<OperationLog> OperationLogs => Set<OperationLog>();
     public DbSet<SortingBox> SortingBoxes => Set<SortingBox>();
+    public DbSet<PackingDesk> PackingDesks => Set<PackingDesk>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

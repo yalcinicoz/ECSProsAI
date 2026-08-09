@@ -172,3 +172,17 @@ public class SortingBoxConfiguration : IEntityTypeConfiguration<SortingBox>
         builder.HasQueryFilter(b => !b.IsDeleted);
     }
 }
+
+public class PackingDeskConfiguration : IEntityTypeConfiguration<PackingDesk>
+{
+    public void Configure(EntityTypeBuilder<PackingDesk> builder)
+    {
+        builder.ToTable("ful_packing_desks");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Status).HasMaxLength(20).IsRequired();
+        // Açık masalar arasında numara tekil (en küçük boş numara ataması)
+        builder.HasIndex(d => new { d.PickingPlanId, d.DeskNumber, d.Status });
+        builder.HasIndex(d => d.SortingBoxId);
+        builder.HasQueryFilter(d => !d.IsDeleted);
+    }
+}

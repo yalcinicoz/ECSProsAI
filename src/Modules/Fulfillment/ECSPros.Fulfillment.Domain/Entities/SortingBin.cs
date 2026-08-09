@@ -13,5 +13,12 @@ public class SortingBin : BaseEntity
     /// BinNumber artık koli numarası olarak da kullanılır (SortingBox.BoxNumber ile senkron).</summary>
     public Guid? SortingBoxId { get; set; }
 
+    /// <summary>OP4: masadaki son-ayrıştırma slot (raf gözü) numarası — paket kapanınca
+    /// boşaltılır (null), göz başka sipariş için yeniden kullanılır.</summary>
+    public int? DeskSlotNumber { get; set; }
+
+    /// <summary>OP4: OBM'ye transfer edildi (K-6 — çözüm personel insiyatifinde).</summary>
+    public bool ObmTransferred { get; set; }
+
     public PickingPlan PickingPlan { get; set; } = null!;
 }
