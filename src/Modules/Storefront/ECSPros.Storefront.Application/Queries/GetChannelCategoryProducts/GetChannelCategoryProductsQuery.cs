@@ -88,7 +88,9 @@ public record ChannelCategoryProductItemDto(
     string? CampaignName = null,                     // F3: kartta gösterilecek kampanya adı/rozeti (varsa)
     decimal? CampaignPrice = null,                   // F3: ürün-bazlı kampanyalı fiyat (null = yok/sepette)
     List<CampaignBadge>? CampaignBadges = null,      // 2026-08-03: ürünü kapsayan TÜM kampanyalar (ad+renk) — bantta dönüşümlü
-    List<CardMessageItem>? CardMessages = null);     // Ürün Kartı F2: elle kart mesajları (slot 1/2/3) — cache DIŞI eklenir
+    List<CardMessageItem>? CardMessages = null,      // Ürün Kartı F2: elle kart mesajları (slot 1/2/3) — cache DIŞI eklenir
+    int CartCount = 0,                               // Sosyal kanıt (2026-08-10): son 30 günde kaç farklı sepette — cache DIŞI eklenir
+    int FavoriteCount = 0);                          // Sosyal kanıt: kaç farklı üyenin favorisi — cache DIŞI eklenir
 
 public class GetChannelCategoryProductsQueryHandler(
     IStorefrontDbContext sfDb,
@@ -98,6 +100,7 @@ public class GetChannelCategoryProductsQueryHandler(
     IInStockProductProvider inStock,
     IProductCampaignResolver campaignResolver,
     ICardMessageResolver cardMessageResolver,
+    ISocialProofResolver socialProofResolver,
     ICacheService cache)
     : IRequestHandler<GetChannelCategoryProductsQuery, Result<PagedResult<ChannelCategoryProductItemDto>>>
 {
@@ -188,7 +191,15 @@ public class GetChannelCategoryProductsQueryHandler(
             .Where(kv => kodById.ContainsKey(kv.Key))
             .ToDictionary(kv => kodById[kv.Key], kv => kv.Value);
 
-        if (puanlar.Count == 0 && videolar.Count == 0 && kampanyaByKod.Count == 0 && mesajByKod.Count == 0) return sonuc;
+        // Sosyal kanıt: sepet/favori sayaçları — puan/kampanya/mesaj gibi cache DIŞI (canlı sayı)
+        var sosyal = await socialProofResolver.ResolveForProductsAsync(
+            platformId, idKod.ToDictionary(x => x.Id, x => x.Code), ct);
+        var sosyalByKod = sosyal
+            .Where(kv => kodById.ContainsKey(kv.Key))
+            .ToDictionary(kv => kodById[kv.Key], kv => kv.Value);
+
+        if (puanlar.Count == 0 && videolar.Count == 0 && kampanyaByKod.Count == 0
+            && mesajByKod.Count == 0 && sosyalByKod.Count == 0) return sonuc;
 
         for (var i = 0; i < items.Count; i++)
         {
@@ -210,6 +221,8 @@ public class GetChannelCategoryProductsQueryHandler(
             }
             if (mesajByKod.TryGetValue(yeni.Code, out var mesajListe))
                 yeni = yeni with { CardMessages = mesajListe };
+            if (sosyalByKod.TryGetValue(yeni.Code, out var sk))
+                yeni = yeni with { CartCount = sk.CartCount, FavoriteCount = sk.FavoriteCount };
             items[i] = yeni;
         }
         return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(

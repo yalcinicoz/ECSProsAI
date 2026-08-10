@@ -42,7 +42,11 @@ public sealed record KartAlanAyari(
     bool Acik = true,
     bool Kampanyalar = false,
     bool Mesajlar = true,
-    bool MesajlarOnce = true);
+    bool MesajlarOnce = true,
+    // Sosyal kanıt (2026-08-10, yalnız Alan 3'te anlamlı): "X kişinin sepetinde" /
+    // "X kişinin favorisi" satırları — varsayılan KAPALI (mevcut kanallar etkilenmez).
+    bool SepetSayisi = false,
+    bool FavoriSayisi = false);
 
 /// <summary>
 /// Kanal bazlı ürün kartı görünüm ayarları (Settings."productCard"). Eksik anahtar = açık
@@ -93,7 +97,9 @@ public sealed record StoreKartAyarlari(
                     Acik: AB("enabled", true),
                     Kampanyalar: AB("campaigns", false),
                     Mesajlar: AB("messages", true),
-                    MesajlarOnce: AB("messagesFirst", true));
+                    MesajlarOnce: AB("messagesFirst", true),
+                    SepetSayisi: AB("showCartCount", false),
+                    FavoriSayisi: AB("showFavoriteCount", false));
             }
             A1 = Oku("1"); A2 = Oku("2"); A3 = Oku("3");
         }

@@ -221,6 +221,8 @@ builder.Services.AddScoped<ECSPros.Shared.Contracts.IInStockProductProvider, ECS
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IDiscountedProductProvider, ECSPros.Api.Services.DiscountedProductProvider>();
 // B-005/006: genel liste fiyat sıralaması gösterilen (efektif) fiyattan — kanal override → BasePrice
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IEffectivePriceProvider, ECSPros.Api.Services.EffectivePriceProvider>();
+// Ürün kartı sosyal kanıt sayaçları (sepet CRM + favori Storefront + varyant Catalog → host'ta)
+builder.Services.AddScoped<ECSPros.Shared.Contracts.ISocialProofResolver, ECSPros.Api.Services.Store.SosyalKanitResolver>();
 builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.MarketplaceAdminService>(); // Pazaryeri yönetim ekranları — cross-schema okuma katmanı
 
 // Pazaryeri referans verisi (marketplace_ref ayrı DB): kategori/özellik/değer senkronu.

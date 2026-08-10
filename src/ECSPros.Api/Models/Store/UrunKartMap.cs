@@ -33,7 +33,8 @@ public static class UrunKartMap
             EskiFiyat: p.CompareAtPrice,   // indirim öncesi çizili fiyat (varsa)
             KampanyaAdi: p.CampaignName, KampanyaFiyat: p.CampaignPrice,   // F3 kampanya
             KampanyaRozetleri: p.CampaignBadges,   // 2026-08-03: bantta dönüşümlü çoklu kampanya (ad+renk)
-            KartMesajlari: p.CardMessages);     // Ürün Kartı F2: elle kart mesajları
+            KartMesajlari: p.CardMessages,      // Ürün Kartı F2: elle kart mesajları
+            SepetteSayisi: p.CartCount, FavoriSayisi: p.FavoriteCount);   // sosyal kanıt sayaçları
     }
 
     public static UrunKartVm KartaCevir(StoreProductDto p)
@@ -65,7 +66,8 @@ public static class UrunKartMap
             EskiFiyat: p.CompareAtPrice,   // indirim öncesi çizili fiyat (varsa)
             KampanyaAdi: p.CampaignName, KampanyaFiyat: p.CampaignPrice,   // F3 kampanya
             KampanyaRozetleri: p.CampaignBadges,   // 2026-08-03: bantta dönüşümlü çoklu kampanya (ad+renk)
-            KartMesajlari: p.CardMessages);     // Ürün Kartı F2: elle kart mesajları
+            KartMesajlari: p.CardMessages,      // Ürün Kartı F2: elle kart mesajları
+            SepetteSayisi: p.CartCount, FavoriSayisi: p.FavoriteCount);   // sosyal kanıt sayaçları
     }
 
     public static string TrAd(Dictionary<string, string> nameI18n) =>

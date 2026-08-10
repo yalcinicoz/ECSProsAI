@@ -33,7 +33,9 @@ public sealed record UrunKartVm(
     string? KampanyaAdi = null,          // F3: kampanya adı/rozeti (varsa gösterilir)
     decimal? KampanyaFiyat = null,       // F3: ürün-bazlı kampanyalı fiyat (null = sepette/yok)
     IReadOnlyList<CampaignBadge>? KampanyaRozetleri = null, // 2026-08-03: ürünü kapsayan TÜM kampanyalar (ad+renk) — bantta dönüşümlü
-    IReadOnlyList<CardMessageItem>? KartMesajlari = null)   // Ürün Kartı F2: elle kart mesajları (slot 1/2/3)
+    IReadOnlyList<CardMessageItem>? KartMesajlari = null,   // Ürün Kartı F2: elle kart mesajları (slot 1/2/3)
+    int SepetteSayisi = 0,               // Sosyal kanıt: son 30 günde kaç farklı sepette (Alan 3 satırı)
+    int FavoriSayisi = 0)                // Sosyal kanıt: kaç farklı üyenin favorisi (Alan 3 satırı)
 {
     /// <summary>F2: verilen alandaki (1/2/3) elle mesajlar — sıra korunur.</summary>
     public IEnumerable<CardMessageItem> AlanMesajlari(int slot) =>

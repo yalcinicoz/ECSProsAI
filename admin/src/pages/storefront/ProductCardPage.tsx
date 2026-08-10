@@ -31,6 +31,9 @@ interface AreaConfig {
   campaigns: boolean
   messages: boolean
   messagesFirst: boolean
+  // Sosyal kanıt (yalnız Alan 3'te sunulur): canlı sepet/favori sayaç satırları
+  showCartCount: boolean
+  showFavoriteCount: boolean
 }
 
 interface CardConfig {
@@ -89,7 +92,7 @@ const COLOR_OPTIONS: { value: string; label: string; dot: string }[] = [
 const ICON_CHIPS = ['fa-truck', 'fa-truck-fast', 'fa-percent', 'fa-tags', 'fa-ticket', 'fa-clock', 'fa-fire', 'fa-gift']
 
 function defaultArea(key: AreaKey): AreaConfig {
-  return { enabled: true, campaigns: key === '1', messages: true, messagesFirst: true }
+  return { enabled: true, campaigns: key === '1', messages: true, messagesFirst: true, showCartCount: false, showFavoriteCount: false }
 }
 
 const DEFAULT_CONFIG: CardConfig = {
@@ -118,6 +121,8 @@ function areaFromRaw(raw: unknown, key: AreaKey): AreaConfig {
     campaigns: key === '1' ? o.campaigns !== false : o.campaigns === true,
     messages: o.messages !== false,
     messagesFirst: o.messagesFirst !== false,
+    showCartCount: o.showCartCount === true,
+    showFavoriteCount: o.showFavoriteCount === true,
   }
 }
 
@@ -145,6 +150,8 @@ function configFromSettings(settings: Record<string, unknown> | undefined): Card
       campaigns: band && Number(key) === slot,
       messages: true,
       messagesFirst: true,
+      showCartCount: false,
+      showFavoriteCount: false,
     })
     areas = { '1': mk('1'), '2': mk('2'), '3': mk('3') }
   }
@@ -550,6 +557,22 @@ export function ProductCardPage() {
                                 checked={area.messages} onChange={e => setArea(key, { messages: e.target.checked })} />
                               <span className="text-sm" style={{ color: 'var(--text)' }}>Kart mesajları</span>
                             </label>
+                            {key === '3' && (
+                              <>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" className="w-3.5 h-3.5 rounded accent-[var(--brand)] shrink-0"
+                                    checked={area.showCartCount} onChange={e => setArea(key, { showCartCount: e.target.checked })} />
+                                  <span className="text-sm" style={{ color: 'var(--text)' }}>Kaç kişinin sepetinde</span>
+                                  <span className="text-xs" style={{ color: 'var(--text-s)' }}>— canlı sayaç, 0 olan üründe gizli</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" className="w-3.5 h-3.5 rounded accent-[var(--brand)] shrink-0"
+                                    checked={area.showFavoriteCount} onChange={e => setArea(key, { showFavoriteCount: e.target.checked })} />
+                                  <span className="text-sm" style={{ color: 'var(--text)' }}>Kaç kişinin favorisi</span>
+                                  <span className="text-xs" style={{ color: 'var(--text-s)' }}>— canlı sayaç, 0 olan üründe gizli</span>
+                                </label>
+                              </>
+                            )}
                             {area.campaigns && area.messages && (
                               <div className="pt-1">
                                 <label className="flbl">Öncelik</label>

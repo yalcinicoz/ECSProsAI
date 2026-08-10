@@ -89,7 +89,9 @@
                 kampanyaAd: p.campaignName || null,   // F3: kampanya adı/rozeti
                 kampanyaFiyat: p.campaignPrice || null, // F3: ürün-bazlı kampanyalı fiyat
                 kampanyaRozetler: (p.campaignBadges || []).map((b) => ({ ad: b.name, renk: b.color || null })), // 2026-08-03: bantta dönüşümlü (ad+renk)
-                kartMesajlar: (p.cardMessages || []).map((m) => ({ slot: m.slot, metin: m.text, ikon: m.icon || null, renk: m.color || null })) // F2: elle kart mesajları
+                kartMesajlar: (p.cardMessages || []).map((m) => ({ slot: m.slot, metin: m.text, ikon: m.icon || null, renk: m.color || null })), // F2: elle kart mesajları
+                sepetteSayisi: p.cartCount || 0,  // sosyal kanıt: son 30 günde kaç farklı sepette
+                favoriSayisi: p.favoriteCount || 0 // sosyal kanıt: kaç farklı üyenin favorisi
             };
         };
 
@@ -251,6 +253,16 @@
                     : [];
                 const ogeler = cfg.mesajlarOnce !== false
                     ? mesajlar.concat(kampanyalar) : kampanyalar.concat(mesajlar);
+                // Sosyal kanıt (yalnız alan 3): canlı sepet/favori sayaçları rotasyona sondan
+                // eklenir; sayaç 0 ise satır hiç oluşmaz (SSR kartıyla aynı kural).
+                if (slot === 3) {
+                    if (cfg.sepetSayisi && v.sepetteSayisi > 0) {
+                        ogeler.push({ metin: v.sepetteSayisi.toLocaleString("tr-TR") + " kişinin sepetinde", ikon: "fa-cart-shopping", sinif: "ms-metin-turuncu", renk: null });
+                    }
+                    if (cfg.favoriSayisi && v.favoriSayisi > 0) {
+                        ogeler.push({ metin: v.favoriSayisi.toLocaleString("tr-TR") + " kişinin favorisi", ikon: "fa-heart", sinif: "ms-metin-turuncu", renk: null });
+                    }
+                }
                 const gecis = alanEl.querySelector("[data-ms-mesaj-rotasyon]");
                 if (!ogeler.length || !gecis) { alanEl.hidden = true; return; }
                 const ilk = ogeler[0];

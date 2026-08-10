@@ -69,7 +69,9 @@ public record StoreProductDto(
     string? CampaignName = null,         // F3: kartta gösterilecek kampanya adı/rozeti (varsa)
     decimal? CampaignPrice = null,       // F3: ürün-bazlı kampanyalı fiyat (null = yok/sepette)
     List<CampaignBadge>? CampaignBadges = null,  // 2026-08-03: ürünü kapsayan TÜM kampanyalar (ad+renk) — bantta dönüşümlü
-    List<CardMessageItem>? CardMessages = null); // Ürün Kartı F2: elle kart mesajları (slot 1/2/3)
+    List<CardMessageItem>? CardMessages = null,  // Ürün Kartı F2: elle kart mesajları (slot 1/2/3)
+    int CartCount = 0,                           // Sosyal kanıt (2026-08-10): son 30 günde kaç farklı sepette — cache DIŞI eklenir
+    int FavoriteCount = 0);                      // Sosyal kanıt: kaç farklı üyenin favorisi — cache DIŞI eklenir
 
 public class GetStoreProductsQueryHandler(
     ICatalogDbContext db,
@@ -80,7 +82,8 @@ public class GetStoreProductsQueryHandler(
     IEffectivePriceProvider effectivePrices,
     IProductReviewStatsService reviewStats,
     IProductCampaignResolver campaignResolver,
-    ICardMessageResolver cardMessageResolver)
+    ICardMessageResolver cardMessageResolver,
+    ISocialProofResolver socialProofResolver)
     : IRequestHandler<GetStoreProductsQuery, Result<PagedResult<StoreProductDto>>>
 {
     public async Task<Result<PagedResult<StoreProductDto>>> Handle(GetStoreProductsQuery request, CancellationToken ct)
@@ -427,6 +430,13 @@ public class GetStoreProductsQueryHandler(
         for (var i = 0; i < items.Count; i++)
             if (mesajlar.TryGetValue(items[i].Id, out var mesajListe))
                 items[i] = items[i] with { CardMessages = mesajListe };
+
+        // Sosyal kanıt: sepet/favori sayaçları — puan/kampanya/mesaj gibi cache DIŞI (canlı sayı)
+        var sosyal = await socialProofResolver.ResolveForProductsAsync(
+            request.FirmPlatformId, items.ToDictionary(i => i.Id, i => i.Code), ct);
+        for (var i = 0; i < items.Count; i++)
+            if (sosyal.TryGetValue(items[i].Id, out var sk))
+                items[i] = items[i] with { CartCount = sk.CartCount, FavoriteCount = sk.FavoriteCount };
 
         return Result.Success(new PagedResult<StoreProductDto>(items, total, request.Page, request.PageSize));
     }

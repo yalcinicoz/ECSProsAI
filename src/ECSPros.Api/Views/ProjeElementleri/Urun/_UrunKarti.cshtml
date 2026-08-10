@@ -53,6 +53,15 @@
             ? u.KampanyaBantListesi.Select(b => (b.Name, "fa-tags", (string?)null, b.Color)).ToList()
             : new List<(string, string, string?, string?)>();
         liste.AddRange(a.MesajlarOnce ? mesajlar.Concat(kampanyalar) : kampanyalar.Concat(mesajlar));
+        // Sosyal kanıt (2026-08-10, yalnız Alan 3): canlı sepet/favori sayaçları rotasyona
+        // sondan eklenir; sayacı 0 olan satır hiç basılmaz (tasarımdaki turuncu vurgu kalıbı).
+        if (slot == 3)
+        {
+            if (a.SepetSayisi && u.SepetteSayisi > 0)
+                liste.Add(($"{u.SepetteSayisi.ToString("N0", tr)} kişinin sepetinde", "fa-cart-shopping", "ms-metin-turuncu", null));
+            if (a.FavoriSayisi && u.FavoriSayisi > 0)
+                liste.Add(($"{u.FavoriSayisi.ToString("N0", tr)} kişinin favorisi", "fa-heart", "ms-metin-turuncu", null));
+        }
         return liste;
     }
 

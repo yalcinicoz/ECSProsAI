@@ -90,7 +90,9 @@ public sealed class OnizlemeController : Controller
             [
                 new CampaignBadge("Kampanya: 2. Ürün %50", "#7c3aed")
             ],
-            KartMesajlari: mesajlar);
+            KartMesajlari: mesajlar,
+            // Sosyal kanıt demo sayaçları — Alan 3 anahtarları açıksa satırlar görünür
+            SepetteSayisi: 12, FavoriSayisi: 47);
 
         return View("~/Views/Onizleme/UrunKarti.cshtml", demo);
     }

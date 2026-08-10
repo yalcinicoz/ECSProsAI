@@ -9,7 +9,8 @@
     object AlanJson(int slot)
     {
         var a = msKart.Alan(slot);
-        return new { acik = a.Acik, kampanyalar = a.Kampanyalar, mesajlar = a.Mesajlar, mesajlarOnce = a.MesajlarOnce };
+        return new { acik = a.Acik, kampanyalar = a.Kampanyalar, mesajlar = a.Mesajlar, mesajlarOnce = a.MesajlarOnce,
+                     sepetSayisi = a.SepetSayisi, favoriSayisi = a.FavoriSayisi };
     }
 }
 <script>window.msKartAyarlari=@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new
