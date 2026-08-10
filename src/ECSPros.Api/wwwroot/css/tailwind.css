@@ -6706,12 +6706,16 @@
       @apply sr-only;
     }
 
+    /* 2026-08-10: mobil chip panelindeki renk listesi de aynı max-height kesmesine açıktı —
+       detay paneliyle aynı düzeltme (sınırsız yükseklik + içerik boyu satır). */
     .ms-urun-listesi-mobil-chip-secenekler.ms-filtre-renk-listesi {
+      max-height: none;
+      grid-auto-rows: max-content;
       @apply grid-cols-3 gap-x-2 gap-y-4 px-4;
     }
 
     .ms-urun-listesi-mobil-chip-secenekler.ms-filtre-renk-listesi label {
-      @apply min-h-0 justify-items-center p-0;
+      @apply min-h-0 h-auto overflow-visible justify-items-center p-0;
     }
 
     .ms-urun-listesi-mobil-chip-panel-alt {
@@ -6878,12 +6882,17 @@
       @apply h-5 w-5;
     }
 
+    /* 2026-08-10: max-height sınırı masaüstü yan filtrenin 4-satır kaydırma kutusu içindir —
+       mobil tam ekran detayda ızgarayı 236px'e sıkıştırıp yuvarlakları kesiyor ve renk adı
+       satırını 0px'e düşürüyordu (docs/RenkFiltre.jpeg). Mobilde sınır yok, satırlar içerik boyunda. */
     .ms-urun-listesi-mobil-secenek-listesi.ms-filtre-renk-listesi {
+      max-height: none;
+      grid-auto-rows: max-content;
       @apply grid grid-cols-3 content-start gap-x-2 gap-y-4 bg-white p-4;
     }
 
     .ms-urun-listesi-mobil-secenek-listesi.ms-filtre-renk-listesi label {
-      @apply min-h-0 border-0 bg-transparent p-0;
+      @apply min-h-0 h-auto overflow-visible border-0 bg-transparent p-0;
     }
 
     .ms-urun-listesi-mobil-alt {
