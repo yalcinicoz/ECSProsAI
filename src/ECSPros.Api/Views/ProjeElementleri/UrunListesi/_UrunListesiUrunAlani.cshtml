@@ -91,7 +91,8 @@
                 kampanyaRozetler: (p.campaignBadges || []).map((b) => ({ ad: b.name, renk: b.color || null })), // 2026-08-03: bantta dönüşümlü (ad+renk)
                 kartMesajlar: (p.cardMessages || []).map((m) => ({ slot: m.slot, metin: m.text, ikon: m.icon || null, renk: m.color || null })), // F2: elle kart mesajları
                 sepetteSayisi: p.cartCount || 0,  // sosyal kanıt: son 30 günde kaç farklı sepette
-                favoriSayisi: p.favoriteCount || 0 // sosyal kanıt: kaç farklı üyenin favorisi
+                favoriSayisi: p.favoriteCount || 0, // sosyal kanıt: kaç farklı üyenin favorisi
+                bakanSayisi: p.viewCount || 0     // sosyal kanıt: kaç farklı üye baktı
             };
         };
 
@@ -261,6 +262,9 @@
                     }
                     if (cfg.favoriSayisi && v.favoriSayisi > 0) {
                         ogeler.push({ metin: v.favoriSayisi.toLocaleString("tr-TR") + " kişinin favorisi", ikon: "fa-heart", sinif: "ms-metin-turuncu", renk: null });
+                    }
+                    if (cfg.bakanSayisi && v.bakanSayisi > 0) {
+                        ogeler.push({ metin: v.bakanSayisi.toLocaleString("tr-TR") + " kişi baktı", ikon: "fa-eye", sinif: "ms-metin-turuncu", renk: null });
                     }
                 }
                 const gecis = alanEl.querySelector("[data-ms-mesaj-rotasyon]");

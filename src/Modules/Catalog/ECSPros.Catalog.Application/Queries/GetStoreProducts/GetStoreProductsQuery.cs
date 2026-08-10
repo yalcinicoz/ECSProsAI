@@ -71,7 +71,8 @@ public record StoreProductDto(
     List<CampaignBadge>? CampaignBadges = null,  // 2026-08-03: ürünü kapsayan TÜM kampanyalar (ad+renk) — bantta dönüşümlü
     List<CardMessageItem>? CardMessages = null,  // Ürün Kartı F2: elle kart mesajları (slot 1/2/3)
     int CartCount = 0,                           // Sosyal kanıt (2026-08-10): son 30 günde kaç farklı sepette — cache DIŞI eklenir
-    int FavoriteCount = 0);                      // Sosyal kanıt: kaç farklı üyenin favorisi — cache DIŞI eklenir
+    int FavoriteCount = 0,                       // Sosyal kanıt: kaç farklı üyenin favorisi — cache DIŞI eklenir
+    int ViewCount = 0);                          // Sosyal kanıt: kaç farklı üye baktı — cache DIŞI eklenir
 
 public class GetStoreProductsQueryHandler(
     ICatalogDbContext db,
@@ -469,7 +470,7 @@ public class GetStoreProductsQueryHandler(
             request.FirmPlatformId, items.ToDictionary(i => i.Id, i => i.Code), ct);
         for (var i = 0; i < items.Count; i++)
             if (sosyal.TryGetValue(items[i].Id, out var sk))
-                items[i] = items[i] with { CartCount = sk.CartCount, FavoriteCount = sk.FavoriteCount };
+                items[i] = items[i] with { CartCount = sk.CartCount, FavoriteCount = sk.FavoriteCount, ViewCount = sk.ViewCount };
 
         return Result.Success(new PagedResult<StoreProductDto>(items, total, request.Page, request.PageSize));
     }

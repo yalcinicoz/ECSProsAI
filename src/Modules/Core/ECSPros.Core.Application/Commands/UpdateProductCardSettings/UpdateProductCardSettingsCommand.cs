@@ -17,9 +17,10 @@ public record ProductCardAreaSetting(
     bool Campaigns = false,
     bool Messages = true,
     bool MessagesFirst = true,
-    // Sosyal kanıt (2026-08-10, yalnız Alan 3'te anlamlı): sepet/favori sayaç satırları
+    // Sosyal kanıt (2026-08-10, yalnız Alan 3'te anlamlı): sepet/favori/görüntülenme sayaç satırları
     bool ShowCartCount = false,
-    bool ShowFavoriteCount = false);
+    bool ShowFavoriteCount = false,
+    bool ShowViewCount = false);
 
 public record UpdateProductCardSettingsCommand(
     Guid FirmPlatformId,
@@ -83,6 +84,7 @@ public class UpdateProductCardSettingsCommandHandler(ICoreDbContext db)
         ["messages"] = a.Messages,
         ["messagesFirst"] = a.MessagesFirst,
         ["showCartCount"] = a.ShowCartCount,
-        ["showFavoriteCount"] = a.ShowFavoriteCount
+        ["showFavoriteCount"] = a.ShowFavoriteCount,
+        ["showViewCount"] = a.ShowViewCount
     };
 }

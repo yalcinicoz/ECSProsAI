@@ -36,7 +36,7 @@ public sealed class SosyalKanitResolver(
         {
             if (cache.TryGetValue<SocialProofCounts>(Anahtar(firmPlatformId, pid), out var c) && c is not null)
             {
-                if (c.CartCount > 0 || c.FavoriteCount > 0) sonuc[pid] = c;
+                if (c.CartCount > 0 || c.FavoriteCount > 0 || c.ViewCount > 0) sonuc[pid] = c;
             }
             else
             {
@@ -52,6 +52,13 @@ public sealed class SosyalKanitResolver(
             .Where(f => f.FirmPlatformId == firmPlatformId && kodlar.Contains(f.ProductCode))
             .GroupBy(f => f.ProductCode)
             .Select(g => new { Kod = g.Key, Sayi = g.Select(x => x.MemberId).Distinct().Count() })
+            .ToDictionaryAsync(g => g.Kod, g => g.Sayi, ct);
+
+        // Görüntülenme: ürünü gezen farklı üye (viewed_products üye başına tek satır → satır sayısı)
+        var bakanByKod = await sfDb.ViewedProducts.AsNoTracking()
+            .Where(v => v.FirmPlatformId == firmPlatformId && kodlar.Contains(v.ProductCode))
+            .GroupBy(v => v.ProductCode)
+            .Select(g => new { Kod = g.Key, Sayi = g.Count() })
             .ToDictionaryAsync(g => g.Kod, g => g.Sayi, ct);
 
         // Sepetler: ürünün varyantlarını içeren farklı sepet sayısı (son 30 gün)
@@ -85,9 +92,10 @@ public sealed class SosyalKanitResolver(
         {
             var sayilar = new SocialProofCounts(
                 CartCount: sepetByPid.TryGetValue(pid, out var sepetler) ? sepetler.Count : 0,
-                FavoriteCount: favoriByKod.GetValueOrDefault(kodByPid[pid]));
+                FavoriteCount: favoriByKod.GetValueOrDefault(kodByPid[pid]),
+                ViewCount: bakanByKod.GetValueOrDefault(kodByPid[pid]));
             cache.Set(Anahtar(firmPlatformId, pid), sayilar, CacheSuresi);
-            if (sayilar.CartCount > 0 || sayilar.FavoriteCount > 0) sonuc[pid] = sayilar;
+            if (sayilar.CartCount > 0 || sayilar.FavoriteCount > 0 || sayilar.ViewCount > 0) sonuc[pid] = sayilar;
         }
         return sonuc;
     }

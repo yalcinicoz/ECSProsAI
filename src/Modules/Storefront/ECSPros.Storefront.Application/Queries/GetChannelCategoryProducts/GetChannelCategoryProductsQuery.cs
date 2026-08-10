@@ -90,7 +90,8 @@ public record ChannelCategoryProductItemDto(
     List<CampaignBadge>? CampaignBadges = null,      // 2026-08-03: ürünü kapsayan TÜM kampanyalar (ad+renk) — bantta dönüşümlü
     List<CardMessageItem>? CardMessages = null,      // Ürün Kartı F2: elle kart mesajları (slot 1/2/3) — cache DIŞI eklenir
     int CartCount = 0,                               // Sosyal kanıt (2026-08-10): son 30 günde kaç farklı sepette — cache DIŞI eklenir
-    int FavoriteCount = 0);                          // Sosyal kanıt: kaç farklı üyenin favorisi — cache DIŞI eklenir
+    int FavoriteCount = 0,                           // Sosyal kanıt: kaç farklı üyenin favorisi — cache DIŞI eklenir
+    int ViewCount = 0);                              // Sosyal kanıt: kaç farklı üye baktı — cache DIŞI eklenir
 
 public class GetChannelCategoryProductsQueryHandler(
     IStorefrontDbContext sfDb,
@@ -223,7 +224,7 @@ public class GetChannelCategoryProductsQueryHandler(
             if (mesajByKod.TryGetValue(yeni.Code, out var mesajListe))
                 yeni = yeni with { CardMessages = mesajListe };
             if (sosyalByKod.TryGetValue(yeni.Code, out var sk))
-                yeni = yeni with { CartCount = sk.CartCount, FavoriteCount = sk.FavoriteCount };
+                yeni = yeni with { CartCount = sk.CartCount, FavoriteCount = sk.FavoriteCount, ViewCount = sk.ViewCount };
             items[i] = yeni;
         }
         return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(

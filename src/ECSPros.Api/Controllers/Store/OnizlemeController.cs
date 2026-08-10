@@ -92,7 +92,7 @@ public sealed class OnizlemeController : Controller
             ],
             KartMesajlari: mesajlar,
             // Sosyal kanıt demo sayaçları — Alan 3 anahtarları açıksa satırlar görünür
-            SepetteSayisi: 12, FavoriSayisi: 47);
+            SepetteSayisi: 12, FavoriSayisi: 47, BakanSayisi: 308);
 
         return View("~/Views/Onizleme/UrunKarti.cshtml", demo);
     }

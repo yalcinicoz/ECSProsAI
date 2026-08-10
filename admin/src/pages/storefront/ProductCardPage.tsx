@@ -31,9 +31,10 @@ interface AreaConfig {
   campaigns: boolean
   messages: boolean
   messagesFirst: boolean
-  // Sosyal kanıt (yalnız Alan 3'te sunulur): canlı sepet/favori sayaç satırları
+  // Sosyal kanıt (yalnız Alan 3'te sunulur): canlı sepet/favori/görüntülenme sayaç satırları
   showCartCount: boolean
   showFavoriteCount: boolean
+  showViewCount: boolean
 }
 
 interface CardConfig {
@@ -116,7 +117,7 @@ function sortOptionsFromSettings(settings: Record<string, unknown> | undefined):
 }
 
 function defaultArea(key: AreaKey): AreaConfig {
-  return { enabled: true, campaigns: key === '1', messages: true, messagesFirst: true, showCartCount: false, showFavoriteCount: false }
+  return { enabled: true, campaigns: key === '1', messages: true, messagesFirst: true, showCartCount: false, showFavoriteCount: false, showViewCount: false }
 }
 
 const DEFAULT_CONFIG: CardConfig = {
@@ -147,6 +148,7 @@ function areaFromRaw(raw: unknown, key: AreaKey): AreaConfig {
     messagesFirst: o.messagesFirst !== false,
     showCartCount: o.showCartCount === true,
     showFavoriteCount: o.showFavoriteCount === true,
+    showViewCount: o.showViewCount === true,
   }
 }
 
@@ -176,6 +178,7 @@ function configFromSettings(settings: Record<string, unknown> | undefined): Card
       messagesFirst: true,
       showCartCount: false,
       showFavoriteCount: false,
+      showViewCount: false,
     })
     areas = { '1': mk('1'), '2': mk('2'), '3': mk('3') }
   }
@@ -598,6 +601,12 @@ export function ProductCardPage() {
                                   <input type="checkbox" className="w-3.5 h-3.5 rounded accent-[var(--brand)] shrink-0"
                                     checked={area.showFavoriteCount} onChange={e => setArea(key, { showFavoriteCount: e.target.checked })} />
                                   <span className="text-sm" style={{ color: 'var(--text)' }}>Kaç kişinin favorisi</span>
+                                  <span className="text-xs" style={{ color: 'var(--text-s)' }}>— canlı sayaç, 0 olan üründe gizli</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" className="w-3.5 h-3.5 rounded accent-[var(--brand)] shrink-0"
+                                    checked={area.showViewCount} onChange={e => setArea(key, { showViewCount: e.target.checked })} />
+                                  <span className="text-sm" style={{ color: 'var(--text)' }}>Kaç kişi baktı</span>
                                   <span className="text-xs" style={{ color: 'var(--text-s)' }}>— canlı sayaç, 0 olan üründe gizli</span>
                                 </label>
                               </>
