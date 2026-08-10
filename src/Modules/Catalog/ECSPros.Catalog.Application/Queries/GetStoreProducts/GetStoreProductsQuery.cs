@@ -83,7 +83,8 @@ public class GetStoreProductsQueryHandler(
     IProductReviewStatsService reviewStats,
     IProductCampaignResolver campaignResolver,
     ICardMessageResolver cardMessageResolver,
-    ISocialProofResolver socialProofResolver)
+    ISocialProofResolver socialProofResolver,
+    IProductMetricsProvider productMetrics)
     : IRequestHandler<GetStoreProductsQuery, Result<PagedResult<StoreProductDto>>>
 {
     public async Task<Result<PagedResult<StoreProductDto>>> Handle(GetStoreProductsQuery request, CancellationToken ct)
@@ -210,6 +211,38 @@ public class GetStoreProductsQueryHandler(
             var sirali = request.Sort == "price_asc"
                 ? adaylar.OrderBy(a => fiyatlar.GetValueOrDefault(a.Id, a.BasePrice)).ThenBy(a => a.Id)
                 : adaylar.OrderByDescending(a => fiyatlar.GetValueOrDefault(a.Id, a.BasePrice)).ThenBy(a => a.Id);
+            total = adaylar.Count;
+            var sayfaIdleri = sirali
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(a => a.Id)
+                .ToList();
+            products = await q.Where(p => sayfaIdleri.Contains(p.Id)).ToListAsync(ct);
+            products = products.OrderBy(p => sayfaIdleri.IndexOf(p.Id)).ToList();
+        }
+        else if (ProductSortCatalog.MetrikMi(request.Sort))
+        {
+            // 2026-08-10: metrik sıralamaları — fiyat sıralaması kalıbı: aday id'ler çekilir,
+            // host'taki sayaç sözlüğüyle (10 dk cache) bellek içinde sıralanıp sayfalanır.
+            var metrikler = await productMetrics.GetAsync(request.FirmPlatformId, ct);
+            (double Ana, double Ikincil) Deger(Guid pid)
+            {
+                var m = metrikler.GetValueOrDefault(pid) ?? ProductMetrics.Sifir;
+                return request.Sort switch
+                {
+                    "rating_desc" => (m.Rating, m.ReviewCount),
+                    "reviews_desc" => (m.ReviewCount, 0),
+                    "favorites_desc" => (m.FavoriteCount, 0),
+                    "cart_desc" => (m.CartCount, 0),
+                    "views_desc" => (m.ViewCount, 0),
+                    _ => (m.SalesCount, 0)
+                };
+            }
+            var adaylar = await q.Select(p => new { p.Id }).ToListAsync(ct);
+            var sirali = adaylar
+                .OrderByDescending(a => Deger(a.Id).Ana)
+                .ThenByDescending(a => Deger(a.Id).Ikincil)
+                .ThenBy(a => a.Id);
             total = adaylar.Count;
             var sayfaIdleri = sirali
                 .Skip((request.Page - 1) * request.PageSize)

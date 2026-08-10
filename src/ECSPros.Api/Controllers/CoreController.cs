@@ -412,6 +412,18 @@ public class CoreController : ControllerBase
         return Ok(new { success = true });
     }
 
+    /// <summary>Ürün listesi sıralama seçenekleri — platform Settings'e yalnız "productList" anahtarı merge edilir.</summary>
+    [HttpPut("firm-platforms/{id:guid}/product-list-settings")]
+    public async Task<IActionResult> UpdateProductListSettings(Guid id, [FromBody] ProductListSettingsRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new ECSPros.Core.Application.Commands.UpdateProductListSettings.UpdateProductListSettingsCommand(
+                id, request.SortOptions ?? new()), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
     /// <summary>Sipariş onay politikası — platform Settings'e yalnız ilgili anahtarlar merge edilir.</summary>
     [HttpPut("firm-platforms/{id:guid}/order-confirm-settings")]
     public async Task<IActionResult> UpdateOrderConfirmSettings(Guid id, [FromBody] OrderConfirmSettingsRequest request, CancellationToken ct)
@@ -429,6 +441,8 @@ public record UpsertNotificationTemplateRequest(
     string TypeCode, string Channel, string? LanguageCode, string? Subject, string Body, bool IsActive = true);
 
 public record OrderConfirmSettingsRequest(string Cod, string Card, int LinkHours);
+
+public record ProductListSettingsRequest(Dictionary<string, bool>? SortOptions);
 
 public record ProductCardSettingsRequest(
     bool VideoBadge = true,

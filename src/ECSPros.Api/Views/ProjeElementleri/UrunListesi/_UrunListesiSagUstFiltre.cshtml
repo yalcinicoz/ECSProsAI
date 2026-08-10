@@ -1,21 +1,18 @@
 @using ECSPros.Api.Models.Store
+@inject ECSPros.Api.Services.IStoreContext MsStoreContext
 @{
     // B7: Üst filtre başlığı canlı veriye bağlandı — h1/ürün sayısı gerçek; hızlı filtre
-    // chip'leri (Fiyatı Düşenler/Flash/Yeni) veri kaynağı olmadığı için gizli (Faz G);
-    // sıralama seçeneklerinden veri karşılığı olmayanlar gizli (B10'da genişler).
+    // chip'leri (Fiyatı Düşenler/Flash/Yeni) veri kaynağı olmadığı için gizli (Faz G).
     // Davranış script'i misharix'ten değişmeden alındı.
     var vm = ViewData["MsUrunListesi"] as UrunListesiVm
              ?? new UrunListesiVm("Ürünler", 0, 24, [], "", [], 0, 0, []);
     var cinsiyet = vm.FiltreGruplari.FirstOrDefault(g => g.TipKodu == "cinsiyet");
 
     // B10: sıralama sunucu tarafında — aktif seçenek URL'deki sort parametresinden gelir.
-    var siralamalar = new (string Kod, string Ad)[]
-    {
-        ("default", "Önerilen Sıralama"),
-        ("price_asc", "En Düşük Fiyat"),
-        ("price_desc", "En Yüksek Fiyat"),
-        ("newest", "En Yeniler")
-    };
+    // 2026-08-10: seçenek listesi kanal ayarından (Settings."productList"."sortOptions",
+    // panel Storefront → Ürün Kartı → Sıralama sekmesi); metrik seçenekler dahil.
+    var siralamalar = (await MsStoreContext.GetPlatformAsync())?.SiralamaListesi
+        ?? ECSPros.Shared.Contracts.ProductSortCatalog.Tumu;
     var aktifSiralama = string.IsNullOrEmpty(vm.SeciliSiralama) ? "default" : vm.SeciliSiralama;
     var aktifSiralamaAd = siralamalar.FirstOrDefault(s => s.Kod == aktifSiralama, siralamalar[0]).Ad;
     var invUst = System.Globalization.CultureInfo.InvariantCulture;
@@ -145,10 +142,6 @@
                     {
                         var aktif = secenek.Kod == aktifSiralama;
                         <button class="ms-siralama-select-secenek@(aktif ? " ms-siralama-select-secenek-aktif" : "")" type="button" role="option" aria-selected="@(aktif ? "true" : "false")" data-ms-siralama-secenek data-ms-siralama-kod="@secenek.Kod">@secenek.Ad</button>
-                    }
-                    @if (false)
-                    {
-                        @* En çok Favorilenen / En Çok Satan / En Çok Değerlendirilen — veri kaynağı gelince (E7/B11) *@
                     }
                 </div>
             </div>
@@ -303,6 +296,30 @@
 
                 filtreGruplari.forEach(filtreGrubuKapat);
             });
+
+            // 2026-08-10: desktop'ta bar sticky (CSS) — yapışınca başlık (h1+ürün sayısı)
+            // daraltılır ki üstte yalnız filtre+sıralama satırı kalsın. Yapışma tespiti:
+            // sticky top değerine (nav yüksekliği - 1px) inmiş olmak.
+            let daraltmaPlanlandi = false;
+            const daraltmayiGuncelle = () => {
+                daraltmaPlanlandi = false;
+                if (!window.matchMedia("(min-width: 1024px)").matches) {
+                    alan.classList.remove("ms-urun-listesi-ust-daraltilmis");
+                    return;
+                }
+                const navYuksekligi = parseFloat(getComputedStyle(document.documentElement)
+                    .getPropertyValue("--ms-ana-navigasyon-aktif-yukseklik")) || 76;
+                const yapisti = alan.getBoundingClientRect().top <= navYuksekligi + 1;
+                alan.classList.toggle("ms-urun-listesi-ust-daraltilmis", yapisti);
+            };
+            const daraltmayiIzle = () => {
+                if (daraltmaPlanlandi) { return; }
+                daraltmaPlanlandi = true;
+                window.requestAnimationFrame(daraltmayiGuncelle);
+            };
+            window.addEventListener("scroll", daraltmayiIzle, { passive: true });
+            window.addEventListener("resize", daraltmayiIzle);
+            daraltmayiGuncelle();
         });
     };
 

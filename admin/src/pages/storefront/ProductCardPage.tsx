@@ -91,6 +91,30 @@ const COLOR_OPTIONS: { value: string; label: string; dot: string }[] = [
 
 const ICON_CHIPS = ['fa-truck', 'fa-truck-fast', 'fa-percent', 'fa-tags', 'fa-ticket', 'fa-clock', 'fa-fire', 'fa-gift']
 
+// Sıralama seçenekleri (2026-08-10) — kodlar backend ProductSortCatalog ile birebir;
+// "default" kapatılamaz (sıralama seçilmediğinde düşülen seçenek).
+const SORT_OPTIONS: { code: string; label: string; locked?: boolean }[] = [
+  { code: 'default', label: 'Önerilen Sıralama', locked: true },
+  { code: 'price_asc', label: 'En Düşük Fiyat' },
+  { code: 'price_desc', label: 'En Yüksek Fiyat' },
+  { code: 'newest', label: 'En Yeniler' },
+  { code: 'rating_desc', label: 'En Yüksek Puanlı Ürünler' },
+  { code: 'reviews_desc', label: 'En Fazla Yorum Alan Ürünler' },
+  { code: 'favorites_desc', label: 'Favoriye En Çok Eklenen Ürünler' },
+  { code: 'cart_desc', label: 'Sepete En Çok Atılan Ürünler' },
+  { code: 'views_desc', label: 'En Çok Bakılan Ürünler' },
+  { code: 'sales_desc', label: 'En Çok Satılan Ürünler' },
+]
+
+function sortOptionsFromSettings(settings: Record<string, unknown> | undefined): Record<string, boolean> {
+  const sonuc: Record<string, boolean> = {}
+  const pl = settings?.['productList']
+  const so = pl && typeof pl === 'object' ? (pl as Record<string, unknown>)['sortOptions'] : undefined
+  const kayit = so && typeof so === 'object' ? (so as Record<string, unknown>) : {}
+  for (const opt of SORT_OPTIONS) sonuc[opt.code] = opt.locked ? true : kayit[opt.code] !== false
+  return sonuc
+}
+
 function defaultArea(key: AreaKey): AreaConfig {
   return { enabled: true, campaigns: key === '1', messages: true, messagesFirst: true, showCartCount: false, showFavoriteCount: false }
 }
@@ -295,7 +319,7 @@ export function ProductCardPage() {
   const { data: languages = [] } = useLanguages()
   const sourceLang = languages.find(l => l.isDefault)?.code ?? 'tr'
 
-  const [activeTab, setActiveTab] = useState<'layout' | 'messages'>('layout')
+  const [activeTab, setActiveTab] = useState<'layout' | 'messages' | 'sorting'>('layout')
 
   const [selectedChannelId, setSelectedChannelId] = useState<string>(
     () => sessionStorage.getItem('productCard.channelId')
@@ -331,12 +355,14 @@ export function ProductCardPage() {
 
   // ── Yerleşim ayarı durumu ──
   const [config, setConfig] = useState<CardConfig>(() => structuredClone(DEFAULT_CONFIG))
+  const [sortOptions, setSortOptions] = useState<Record<string, boolean>>(() => sortOptionsFromSettings(undefined))
   const [dirty, setDirty] = useState(false)
   const loadedChannelId = useRef<string | null>(null)
   useEffect(() => {
     if (!selectedChannel) return
     if (loadedChannelId.current === selectedChannel.id && dirty) return // kaydedilmemiş değişikliği ezme
     setConfig(configFromSettings(selectedChannel.settings))
+    setSortOptions(sortOptionsFromSettings(selectedChannel.settings))
     setDirty(false)
     loadedChannelId.current = selectedChannel.id
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -357,6 +383,7 @@ export function ProductCardPage() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       await api.put(`/core/firm-platforms/${selectedChannelId}/product-card-settings`, config)
+      await api.put(`/core/firm-platforms/${selectedChannelId}/product-list-settings`, { sortOptions })
     },
     onSuccess: () => {
       setDirty(false)
@@ -515,6 +542,8 @@ export function ProductCardPage() {
               onClick={() => setActiveTab('layout')}>Yerleşim</button>
             <button className={cn('stab', activeTab === 'messages' && 'active')}
               onClick={() => setActiveTab('messages')}>Kart Mesajları</button>
+            <button className={cn('stab', activeTab === 'sorting' && 'active')}
+              onClick={() => setActiveTab('sorting')}>Sıralama</button>
           </div>
 
           <div className="flex gap-6 items-start flex-wrap">
@@ -608,7 +637,7 @@ export function ProductCardPage() {
                 <ToggleRow label="Görsel, ürün adı, fiyat, kart linki" locked checked
                   desc="Kartın temelidir — kapatılamaz" />
               </div>
-            ) : (
+            ) : activeTab === 'messages' ? (
               /* ── Sekme 2: Kart Mesajları ── */
               <div className="card flex-1 min-w-[320px] overflow-hidden">
                 <div className="flex items-center justify-between mb-3">
@@ -686,6 +715,23 @@ export function ProductCardPage() {
                     </table>
                   </div>
                 )}
+              </div>
+            ) : (
+              /* ── Sekme 3: Sıralama seçenekleri ── */
+              <div className="card flex-1 min-w-[320px]">
+                <GroupTitle>Sitede Görünecek Sıralama Seçenekleri</GroupTitle>
+                <p className="text-xs mb-2" style={{ color: 'var(--text-s)' }}>
+                  Kapatılan seçenek sitedeki sıralama menüsünde listelenmez. Sayaç tabanlı seçenekler
+                  (puan, yorum, favori, sepet, görüntülenme, satış) yaklaşık 10 dakikada bir tazelenen
+                  canlı verilerle sıralar.
+                </p>
+                {SORT_OPTIONS.map(opt => (
+                  <ToggleRow key={opt.code} label={opt.label}
+                    desc={opt.locked ? 'Varsayılan seçenek — kapatılamaz' : undefined}
+                    locked={opt.locked}
+                    checked={sortOptions[opt.code] !== false}
+                    onChange={v => { setSortOptions(prev => ({ ...prev, [opt.code]: v })); setDirty(true) }} />
+                ))}
               </div>
             )}
 

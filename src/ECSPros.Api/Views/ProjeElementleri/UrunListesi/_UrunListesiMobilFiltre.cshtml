@@ -1,4 +1,5 @@
 @using ECSPros.Api.Models.Store
+@inject ECSPros.Api.Services.IStoreContext MsStoreContext
 @{
     // B7: Mobil filtre canlı facet'lere bağlandı — panel/chip/detay markup'ları misharix'in
     // beden/renk/fiyat panellerinin birebir kopyası, gruplar @foreach ile gerçek facet'lerden
@@ -10,6 +11,11 @@
     var anaFiltreAdlari = vm.FiltreGruplari.ToDictionary(g => g.TipKodu, g => g.Ad);
     anaFiltreAdlari["fiyat"] = "Fiyat";
     var anaFiltreAdlariJson = System.Text.Json.JsonSerializer.Serialize(anaFiltreAdlari);
+    // 2026-08-10: sıralama seçenekleri kanal ayarından (desktop dropdown'la aynı liste)
+    var msSiralamalar = (await MsStoreContext.GetPlatformAsync())?.SiralamaListesi
+        ?? ECSPros.Shared.Contracts.ProductSortCatalog.Tumu;
+    var msAktifSiralamaAd = msSiralamalar
+        .FirstOrDefault(s => s.Kod == (string.IsNullOrEmpty(vm.SeciliSiralama) ? "default" : vm.SeciliSiralama), msSiralamalar[0]).Ad;
 }
 <div class="ms-urun-listesi-mobil-sabit">
 <div class="ms-urun-listesi-mobil-ust" aria-label="Mobil ürün listesi başlığı">
@@ -26,7 +32,7 @@
     <div class="ms-urun-listesi-mobil-araclar" aria-label="Mobil filtre ve sıralama">
         <button class="ms-urun-listesi-mobil-arac" type="button" data-ms-urun-mobil-siralama-ac>
             <i class="fa-solid fa-right-left ms-fa-ikon ms-urun-listesi-mobil-siralama-ikon" aria-hidden="true"></i>
-            <span data-ms-urun-mobil-siralama-deger>Önerilen Sıralama</span>
+            <span data-ms-urun-mobil-siralama-deger>@msAktifSiralamaAd</span>
         </button>
         <button class="ms-urun-listesi-mobil-arac" type="button" data-ms-urun-mobil-filtre-ac>
             <i class="fa-solid fa-sliders ms-fa-ikon ms-urun-listesi-mobil-filtre-ikon" aria-hidden="true"></i>
@@ -112,20 +118,10 @@
         <button class="ms-ornek-modal-kapat" type="button" data-ms-urun-mobil-siralama-kapat aria-label="Sıralamayı kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
         <h3 id="ms-urun-listesi-mobil-siralama-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>Sıralama</h3>
         <div class="ms-urun-listesi-mobil-secenek-listesi">
-            @foreach (var secenek in new (string Kod, string Ad)[]
-            {
-                ("default", "Önerilen Sıralama"),
-                ("price_asc", "En Düşük Fiyat"),
-                ("price_desc", "En Yüksek Fiyat"),
-                ("newest", "En Yeniler")
-            })
+            @foreach (var secenek in msSiralamalar)
             {
                 var aktifSecenek = secenek.Kod == (string.IsNullOrEmpty(vm.SeciliSiralama) ? "default" : vm.SeciliSiralama);
                 <button class="ms-urun-listesi-mobil-siralama-secenek@(aktifSecenek ? " ms-urun-listesi-mobil-siralama-secenek-aktif" : "")" type="button" data-ms-urun-mobil-siralama-secenek data-ms-siralama-kod="@secenek.Kod">@secenek.Ad</button>
-            }
-            @if (false)
-            {
-                @* En Çok Satan / En Favoriler — veri kaynağı gelince (E7/B11) *@
             }
         </div>
     </section>

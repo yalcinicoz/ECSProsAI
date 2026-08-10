@@ -31,7 +31,15 @@ public sealed record StorePlatformBilgisi(
     DateTime? StokBitenGosterTarih = null,
     // Ürün Kartı F1 (2026-08-09): kart elementleri aç/kapat (Settings."productCard") —
     // panel Storefront → Ürün Kartı ekranından yönetilir; yoksa hepsi açık.
-    StoreKartAyarlari? KartAyarlari = null);
+    StoreKartAyarlari? KartAyarlari = null,
+    // Liste sıralaması (2026-08-10): sitede gösterilecek sıralama seçenekleri —
+    // ProductSortCatalog.Tumu'nun Settings."productList"."sortOptions" ile filtrelenmiş hali
+    // ("default" her zaman kalır; eksik anahtar = AÇIK). null gelmez, kurucu doldurur.
+    IReadOnlyList<(string Kod, string Ad)>? SiralamaSecenekleri = null)
+{
+    public IReadOnlyList<(string Kod, string Ad)> SiralamaListesi =>
+        SiralamaSecenekleri ?? ECSPros.Shared.Contracts.ProductSortCatalog.Tumu;
+}
 
 /// <summary>
 /// Ürün Kartı F2: bir değişken alanın ayarı — Acik + hangi kaynaklar (kampanya rozetleri /
@@ -204,7 +212,22 @@ public sealed class StoreContext(
                 ? StoreKartAyarlari.FromJson(pc)
                 : StoreKartAyarlari.Varsayilan;
 
-            return new StorePlatformBilgisi(platform.Id, platform.Code, tema!, tokenlar, stokBitenGoster, stokBitenTarih, kartAyarlari);
+            // Liste sıralama görünürlüğü (Settings."productList"."sortOptions": {kod: false} → gizle);
+            // "default" kapatılamaz — sıralama seçilmediğinde düşülen seçenek her zaman listede.
+            IReadOnlyList<(string Kod, string Ad)>? siralamalar = null;
+            if (platform.Settings.TryGetValue("productList", out var plObj)
+                && plObj is System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.Object } pl
+                && pl.TryGetProperty("sortOptions", out var so)
+                && so.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                siralamalar = ECSPros.Shared.Contracts.ProductSortCatalog.Tumu
+                    .Where(s => s.Kod == "default"
+                        || !so.TryGetProperty(s.Kod, out var v)
+                        || v.ValueKind != System.Text.Json.JsonValueKind.False)
+                    .ToList();
+            }
+
+            return new StorePlatformBilgisi(platform.Id, platform.Code, tema!, tokenlar, stokBitenGoster, stokBitenTarih, kartAyarlari, siralamalar);
         });
     }
 }

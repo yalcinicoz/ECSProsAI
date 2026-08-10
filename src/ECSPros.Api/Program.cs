@@ -223,6 +223,8 @@ builder.Services.AddScoped<ECSPros.Shared.Contracts.IDiscountedProductProvider, 
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IEffectivePriceProvider, ECSPros.Api.Services.EffectivePriceProvider>();
 // Ürün kartı sosyal kanıt sayaçları (sepet CRM + favori Storefront + varyant Catalog → host'ta)
 builder.Services.AddScoped<ECSPros.Shared.Contracts.ISocialProofResolver, ECSPros.Api.Services.Store.SosyalKanitResolver>();
+// Liste sıralama metrikleri (puan/yorum/favori/sepet/görüntülenme/satış — 4 şema, ham SQL + 10 dk cache)
+builder.Services.AddScoped<ECSPros.Shared.Contracts.IProductMetricsProvider, ECSPros.Api.Services.Store.UrunMetrikSaglayici>();
 builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.MarketplaceAdminService>(); // Pazaryeri yönetim ekranları — cross-schema okuma katmanı
 
 // Pazaryeri referans verisi (marketplace_ref ayrı DB): kategori/özellik/değer senkronu.

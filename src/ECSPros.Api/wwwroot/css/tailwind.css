@@ -6220,6 +6220,28 @@
     @apply relative z-[60] mb-4 grid gap-3 bg-transparent;
   }
 
+  /* 2026-08-10: desktop'ta filtre+sıralama satırı kaydırmada navigasyonun altında sabit
+     kalır; başlık (h1 + ürün sayısı) daraltılır. ms-urun-listesi-ust-daraltilmis sınıfını
+     _UrunListesiSagUstFiltre'deki scroll dinleyicisi basar (yalnız lg ve üstünde). */
+  @media (min-width: 1024px) {
+    .ms-urun-listesi-ust-filtre-baslik {
+      top: calc(var(--ms-ana-navigasyon-aktif-yukseklik, 76px) - 1px);
+      @apply sticky z-[100] bg-white pb-2;
+    }
+
+    .ms-urun-listesi-kategori-ozet {
+      @apply max-h-10 overflow-hidden transition-all duration-200;
+    }
+
+    .ms-urun-listesi-ust-daraltilmis {
+      @apply gap-0;
+    }
+
+    .ms-urun-listesi-ust-daraltilmis .ms-urun-listesi-kategori-ozet {
+      @apply max-h-0 opacity-0;
+    }
+  }
+
   .ms-urun-listesi-kategori-ozet {
     @apply flex min-w-0 flex-wrap items-baseline gap-2;
   }
@@ -6602,8 +6624,15 @@
       scroll-snap-align: start;
     }
 
-    .ms-urun-listesi-mobil-araclar-gizli .ms-urun-listesi-mobil-araclar-kapsayici {
-      @apply max-h-0 opacity-0;
+    /* 2026-08-10: kaydırmada BAŞLIK (kategori adı + ürün sayısı) kapanır, filtre/sıralama
+       araçları görünür kalır — önceki davranışın tersi (kullanıcı isteği); JS'in bastığı
+       ms-urun-listesi-mobil-araclar-gizli sınıfı ve eşikleri değişmedi. */
+    .ms-urun-listesi-mobil-ust {
+      @apply max-h-16 overflow-hidden transition-all duration-200;
+    }
+
+    .ms-urun-listesi-mobil-araclar-gizli .ms-urun-listesi-mobil-ust {
+      @apply max-h-0 min-h-0 border-b-0 opacity-0;
     }
 
     .ms-urun-listesi-mobil-hizli-filtreler::-webkit-scrollbar {

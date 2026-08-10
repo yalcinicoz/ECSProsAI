@@ -101,6 +101,7 @@ public class GetChannelCategoryProductsQueryHandler(
     IProductCampaignResolver campaignResolver,
     ICardMessageResolver cardMessageResolver,
     ISocialProofResolver socialProofResolver,
+    IProductMetricsProvider productMetrics,
     ICacheService cache)
     : IRequestHandler<GetChannelCategoryProductsQuery, Result<PagedResult<ChannelCategoryProductItemDto>>>
 {
@@ -694,6 +695,13 @@ public class GetChannelCategoryProductsQueryHandler(
         }
 
         // ── B10: sıralama — varsayılan mevcut sıra (ProductId, ColorValueId)
+        // 2026-08-10: metrik sıralamaları (puan/yorum/favori/sepet/görüntülenme/satış) —
+        // sayaçlar host'taki IProductMetricsProvider'dan (10 dk cache'li), yalnız gerektiğinde çekilir.
+        IReadOnlyDictionary<Guid, ProductMetrics>? metrikler = null;
+        if (ProductSortCatalog.MetrikMi(request.Sort))
+            metrikler = await productMetrics.GetAsync(cat.FirmPlatformId, ct);
+        ProductMetrics M(Guid pid) => metrikler!.GetValueOrDefault(pid) ?? ProductMetrics.Sifir;
+
         visiblePairs = request.Sort switch
         {
             "price_asc" => visiblePairs
@@ -708,6 +716,15 @@ public class GetChannelCategoryProductsQueryHandler(
                 .OrderByDescending(pair => productInfo.TryGetValue(pair.ProductId, out var pi)
                     ? pi.CreatedAt : default)
                 .ToList(),
+            "rating_desc" => visiblePairs
+                .OrderByDescending(pair => M(pair.ProductId).Rating)
+                .ThenByDescending(pair => M(pair.ProductId).ReviewCount)
+                .ToList(),
+            "reviews_desc" => visiblePairs.OrderByDescending(pair => M(pair.ProductId).ReviewCount).ToList(),
+            "favorites_desc" => visiblePairs.OrderByDescending(pair => M(pair.ProductId).FavoriteCount).ToList(),
+            "cart_desc" => visiblePairs.OrderByDescending(pair => M(pair.ProductId).CartCount).ToList(),
+            "views_desc" => visiblePairs.OrderByDescending(pair => M(pair.ProductId).ViewCount).ToList(),
+            "sales_desc" => visiblePairs.OrderByDescending(pair => M(pair.ProductId).SalesCount).ToList(),
             _ => visiblePairs
         };
 

@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ECSPros.Core.Domain\ECSPros.Core.Domain.csproj" />
     <ProjectReference Include="..\..\..\Shared\ECSPros.Shared.Kernel\ECSPros.Shared.Kernel.csproj" />
+    <ProjectReference Include="..\..\..\Shared\ECSPros.Shared.Contracts\ECSPros.Shared.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
