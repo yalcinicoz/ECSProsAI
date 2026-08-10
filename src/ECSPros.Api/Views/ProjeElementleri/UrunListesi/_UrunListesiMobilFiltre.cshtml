@@ -38,10 +38,15 @@
             <i class="fa-solid fa-sliders ms-fa-ikon ms-urun-listesi-mobil-filtre-ikon" aria-hidden="true"></i>
             Filtrele <strong></strong>
         </button>
+        @* 2026-08-10: Filtreleri Temizle chip şeridinden araçlar satırına taşındı (üçü tek
+           satırda — mobil dikey alan kazanımı); site.js bağlaması öznitelik-bazlı, aynı kaldı. *@
+        <button class="ms-urun-listesi-mobil-arac" type="button" data-ms-filtre-tumunu-temizle>
+            <i class="fa-solid fa-xmark ms-fa-ikon ms-urun-listesi-mobil-temizle-ikon" aria-hidden="true"></i>
+            Temizle
+        </button>
     </div>
 
     <div class="ms-urun-listesi-mobil-hizli-filtreler" data-ms-mobil-secili-filtre-seridi aria-label="Seçili ve hızlı filtreler">
-        <button class="ms-urun-listesi-mobil-chip" type="button" data-ms-filtre-tumunu-temizle>Filtreleri Temizle</button>
         @foreach (var grup in vm.FiltreGruplari)
         {
         <button class="ms-urun-listesi-mobil-chip ms-urun-listesi-mobil-chip-secili" type="button" data-ms-mobil-ana-filtre-chip="@grup.TipKodu" data-ms-mobil-chip-panel-ac="@grup.TipKodu" hidden>@grup.Ad <i class="fa-solid fa-chevron-down ms-fa-ikon" aria-hidden="true"></i></button>
