@@ -78,7 +78,7 @@
             <input name="checkbox_1" type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
             <span class="ms-filtre-kutu" aria-hidden="true"></span>
             <span class="ms-filtre-renk" style="--ms-renk:@(deger.Hex ?? "#E2E8F0")" aria-hidden="true"></span>
-            <span class="ms-filtre-renk-bilgi"><strong>@deger.Ad</strong></span>
+            <span class="ms-filtre-renk-bilgi"><strong>@deger.Ad</strong><span class="ms-filtre-secim-adet">(@deger.UrunSayisi)</span></span>
         </label>
         }
     </div>
@@ -88,7 +88,7 @@
     <div class="ms-urun-listesi-mobil-chip-secenekler">
         @foreach (var deger in grup.Degerler)
         {
-        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>@deger.Ad</span></label>
+        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>@deger.Ad <span class="ms-filtre-secim-adet">(@deger.UrunSayisi)</span></span></label>
         }
     </div>
     }
@@ -136,6 +136,7 @@
     <header class="ms-urun-listesi-mobil-panel-baslik">
         <button class="ms-urun-listesi-mobil-kapat" type="button" data-ms-urun-mobil-filtre-kapat aria-label="Filtreyi kapat"></button>
         <strong>Filtrele</strong>
+        <button class="ms-urun-listesi-mobil-temizle" type="button" data-ms-mobil-filtre-taslak-temizle>Temizle</button>
     </header>
     <nav class="ms-urun-listesi-mobil-filtre-menu" aria-label="Mobil filtre başlıkları">
         @foreach (var grup in vm.FiltreGruplari)
@@ -144,9 +145,13 @@
         }
         <button type="button" data-ms-urun-mobil-filtre-detay-ac="fiyat"><span class="ms-urun-listesi-mobil-filtre-menu-metin">Fiyat</span><span class="ms-urun-listesi-mobil-filtre-menu-sag"><em data-ms-urun-mobil-filtre-sayac hidden>0</em><span class="ms-urun-listesi-mobil-filtre-menu-ok" aria-hidden="true"><i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i></span></span></button>
     </nav>
-    @* "Tüm Sonuçları Listele" kaldırıldı (kullanıcı kararı 2026-07-30): buton yalnız
-       paneli kapatıyordu (başlıktaki X ile aynı işlev) — seçimler detay panellerindeki
-       Filtrele akışıyla zaten uygulandığından kafa karıştırıyordu. *@
+    @* Trendyol akışı (2026-08-10, 2026-07-30 kararının yerine): seçimler TASLAK kalır —
+       detay panellerindeki Uygula/geri yalnız bu listeye döner; filtreler ANCAK bu alt
+       butonla uygulanır. Butondaki sayı seçim değiştikçe canlı çekilir (devam API,
+       pageSize=1). SSR başlangıcı mevcut toplamdır. *@
+    <div class="ms-urun-listesi-mobil-alt">
+        <button type="button" data-ms-mobil-filtre-uygula>@vm.ToplamUrunMetni Ürün Listele</button>
+    </div>
 </section>
 
 @foreach (var grup in vm.FiltreGruplari)
@@ -170,7 +175,7 @@
             <input name="checkbox_1" type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
             <span class="ms-filtre-kutu" aria-hidden="true"></span>
             <span class="ms-filtre-renk" style="--ms-renk:@(deger.Hex ?? "#E2E8F0")" aria-hidden="true"></span>
-            <span class="ms-filtre-renk-bilgi"><strong>@deger.Ad</strong></span>
+            <span class="ms-filtre-renk-bilgi"><strong>@deger.Ad</strong><span class="ms-filtre-secim-adet">(@deger.UrunSayisi)</span></span>
         </label>
         }
     </div>
@@ -180,7 +185,7 @@
     <div class="ms-urun-listesi-mobil-secenek-listesi">
         @foreach (var deger in grup.Degerler)
         {
-        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>@deger.Ad</span></label>
+        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>@deger.Ad <span class="ms-filtre-secim-adet">(@deger.UrunSayisi)</span></span></label>
         }
     </div>
     }
@@ -608,6 +613,84 @@
                     buton.addEventListener("click", () => {
                         panelSecimleriniTemizle(buton.closest("[data-ms-urun-mobil-filtre-detay]"));
                     });
+                });
+
+                // ── Trendyol akışı (2026-08-10): taslak seçim + canlı sonuç sayısı ──
+                // Seçimler taslakta kalır; "X Ürün Listele" (data-ms-mobil-filtre-uygula)
+                // basılana dek sayfa yenilenmez. Sayı, devam API'sinden pageSize=1 ile çekilir
+                // (window.msUrunListesiDevamUrl — mevcut uygulanmış filtreleri içerir, taslak
+                // değerlerle ezilir); yarış koşulu istek numarasıyla önlenir.
+                const mobilUygulaButonu = sayfa.querySelector("[data-ms-mobil-filtre-uygula]");
+                const taslakTemizleButonu = sayfa.querySelector("[data-ms-mobil-filtre-taslak-temizle]");
+                let sayiZamanlayici = null;
+                let sonSayiIstek = 0;
+
+                const taslakFiyatOku = () => {
+                    const fiyatPanel = sayfa.querySelector('[data-ms-urun-mobil-filtre-detay="fiyat"]');
+                    if (!fiyatPanel) { return { min: null, max: null }; }
+                    const aralik = fiyatPanel.querySelector("input[type='radio']:checked")
+                        ?.closest("label")?.dataset.msFiyatAralik;
+                    if (aralik) {
+                        const [min, max] = aralik.split("-").map(Number);
+                        return { min: Number.isFinite(min) ? min : null, max: Number.isFinite(max) ? max : null };
+                    }
+                    const [enAz, enCok] = fiyatPanel.querySelectorAll("input[type='number']");
+                    const min = parseFloat(enAz?.value ?? "");
+                    const max = parseFloat(enCok?.value ?? "");
+                    return { min: Number.isFinite(min) ? min : null, max: Number.isFinite(max) ? max : null };
+                };
+
+                const canliSayiyiGuncelle = () => {
+                    if (!mobilUygulaButonu || !window.msUrunListesiDevamUrl) { return; }
+                    const url = new URL(window.msUrunListesiDevamUrl, window.location.origin);
+                    const secili = [...new Set([...document.querySelectorAll("[data-ms-filtre-deger]")]
+                        .filter((girdi) => girdi.checked)
+                        .map((girdi) => girdi.dataset.msFiltreDeger))];
+                    secili.length ? url.searchParams.set("attrs", secili.join(",")) : url.searchParams.delete("attrs");
+                    const fiyat = taslakFiyatOku();
+                    fiyat.min === null ? url.searchParams.delete("priceMin") : url.searchParams.set("priceMin", String(fiyat.min));
+                    fiyat.max === null ? url.searchParams.delete("priceMax") : url.searchParams.set("priceMax", String(fiyat.max));
+                    url.searchParams.set("pageSize", "1");
+                    url.searchParams.delete("page");
+                    const istekNo = ++sonSayiIstek;
+                    fetch(url.pathname + url.search)
+                        .then((cevap) => cevap.ok ? cevap.json() : null)
+                        .then((veri) => {
+                            const toplam = veri?.data?.totalCount;
+                            if (istekNo !== sonSayiIstek || typeof toplam !== "number") { return; }
+                            mobilUygulaButonu.textContent = `${toplam.toLocaleString("tr-TR")} Ürün Listele`;
+                        })
+                        .catch(() => { /* sayı güncellenemezse buton mevcut metniyle kalır */ });
+                };
+
+                const canliSayiyiPlanla = () => {
+                    clearTimeout(sayiZamanlayici);
+                    sayiZamanlayici = setTimeout(canliSayiyiGuncelle, 350);
+                };
+
+                // Mobil panellerdeki her seçim/fiyat değişikliği sayıyı tazeler
+                sayfa.addEventListener("change", (olay) => {
+                    if (olay.target.closest?.("[data-ms-urun-mobil-filtre-detay], [data-ms-mobil-chip-panel], [data-ms-urun-mobil-filtre-panel]")) {
+                        canliSayiyiPlanla();
+                    }
+                });
+                sayfa.querySelectorAll('[data-ms-urun-mobil-filtre-detay="fiyat"] input[type="number"]').forEach((girdi) => {
+                    girdi.addEventListener("input", canliSayiyiPlanla);
+                });
+
+                // Ana paneldeki Temizle: TASLAĞI sıfırlar (sayfayı yenilemez — uygulama alt butonda).
+                // data-ms-filtre-deger tüm kopyaları (sol filtre dahil) kapsar; fiyat/arama girdileri boşalır.
+                taslakTemizleButonu?.addEventListener("click", () => {
+                    document.querySelectorAll("[data-ms-filtre-deger]").forEach((girdi) => { girdi.checked = false; });
+                    sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-detay] input[type='radio'], [data-ms-mobil-chip-panel] input[type='radio']")
+                        .forEach((girdi) => { girdi.checked = false; });
+                    sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-detay] input[type='number'], [data-ms-urun-mobil-filtre-detay] input[type='search'], [data-ms-mobil-chip-panel] input[type='number'], [data-ms-mobil-chip-panel] input[type='search']")
+                        .forEach((girdi) => {
+                            girdi.value = "";
+                            girdi.dispatchEvent(new Event("input", { bubbles: true }));
+                        });
+                    seciliFiltreleriGuncelle();
+                    canliSayiyiPlanla();
                 });
 
                 chipPanelAcButonlari.forEach((buton) => {

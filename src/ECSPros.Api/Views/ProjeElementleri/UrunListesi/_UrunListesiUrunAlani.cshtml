@@ -54,6 +54,9 @@
         };
         // Ofsetli başlangıçta kalan ürün sayısı (önceki sayfalar listelenmez)
         durum.kalanToplam = Math.max(0, durum.toplam - durum.sayfaOfset * durum.sayfaBoyu);
+        // Trendyol akışı (2026-08-10): mobil filtre panelinin canlı "X Ürün Listele" sayısı
+        // aynı devam API'sinden pageSize=1 ile çekilir — URL'i paylaşıma açıyoruz.
+        window.msUrunListesiDevamUrl = durum.devamUrl;
 
         const kacir = (metin) => String(metin ?? "").replace(/[&<>"']/g, (k) =>
             ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[k]);
@@ -476,9 +479,20 @@
         // hiç ulaşmıyordu (üst Fiyat Aralığı/Cinsiyet uygulanmıyordu; sol panel bubble'la
         // çalışmaya devam ediyordu). Seçili-filtre kaldırma dinleyicisiyle aynı desen.
         document.addEventListener("click", (olay) => {
-            const uygula = olay.target.closest?.(".ms-filtre-uygula-buton, [data-ms-mobil-chip-panel-kapat], [data-ms-urun-mobil-filtre-detay-kapat]");
+            // Trendyol akışı (2026-08-10): mobil detay panellerinin Uygula/geri butonları
+            // ([data-ms-urun-mobil-filtre-detay-kapat]) artık NAVİGASYON YAPMAZ — seçim
+            // taslakta kalır, uygulama ana filtre panelindeki "X Ürün Listele" butonundadır.
+            const mobilUygula = olay.target.closest?.("[data-ms-mobil-filtre-uygula]");
+            if (mobilUygula) {
+                // Fiyat taslağı mobil fiyat detayından okunur (buton kendi panelinde girdi taşımaz)
+                const fiyatPanel = document.querySelector('[data-ms-urun-mobil-filtre-detay="fiyat"]');
+                parametrelerleGit(fiyatPanel ? panelFiyatOku(fiyatPanel) : {});
+                return;
+            }
+
+            const uygula = olay.target.closest?.(".ms-filtre-uygula-buton, [data-ms-mobil-chip-panel-kapat]");
             if (uygula) {
-                const panel = uygula.closest("[data-filter-content], [data-ms-urun-listesi-filtre-panel], [data-ms-mobil-chip-panel], [data-ms-urun-mobil-filtre-detay]");
+                const panel = uygula.closest("[data-filter-content], [data-ms-urun-listesi-filtre-panel], [data-ms-mobil-chip-panel]");
                 const degisiklik = panel?.querySelector("input[type='number']")
                     ? panelFiyatOku(panel)
                     : {};

@@ -6759,8 +6759,15 @@
       min-width: 0;
     }
 
+    /* 2026-08-10 Trendyol akışı: ana filtre paneli 3 satır — başlık / kaydırılabilir grup
+       listesi / yapışkan "X Ürün Listele" butonu. */
     .ms-urun-listesi-mobil-filtre-panel[data-ms-acik="true"] {
-      @apply grid grid-rows-[auto_auto_minmax(0,1fr)_auto];
+      @apply grid grid-rows-[auto_minmax(0,1fr)_auto];
+    }
+
+    /* Seçenek satırındaki ürün adedi — "(123)" soluk küçük metin (Trendyol kalıbı) */
+    .ms-filtre-secim-adet {
+      @apply text-[11px] font-normal text-slate-400;
     }
 
     .ms-urun-listesi-mobil-detay-panel[data-ms-acik="true"] {
