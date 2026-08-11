@@ -75,6 +75,7 @@ export function CommissionPage() {
 
   // ── Sekme 1: Varsayılan oranlar ──
   const [defaults, setDefaults] = useState<Record<string, string>>({})
+  const [groupSearch, setGroupSearch] = useState('')
   const defaultsLoaded = useRef(false)
   const { data: groupRates = [] } = useQuery<{ productGroupId: string; ratePercent: number }[]>({
     queryKey: ['commission-group-rates'],
@@ -102,6 +103,7 @@ export function CommissionPage() {
   const [productCodeInput, setProductCodeInput] = useState('')
   const [productRateInput, setProductRateInput] = useState('')
   const [productError, setProductError] = useState('')
+  const [contractGroupSearch, setContractGroupSearch] = useState('')
   const { data: loadedContract, isFetched: contractFetched } = useQuery<ContractDto | null>({
     queryKey: ['supplier-contract', supplierId],
     queryFn: async () => (await api.get(`/commission/suppliers/${supplierId}/contract`)).data.data,
@@ -213,25 +215,33 @@ export function CommissionPage() {
       </div>
 
       {tab === 'defaults' && (
-        <div className="card max-w-2xl">
-          <p className="text-xs mb-3" style={{ color: 'var(--text-s)' }}>
-            Ürün grubu bazlı platform varsayılanları (katman 5) — satıcıya özel oran yoksa bu uygulanır.
-            Boş bırakılan grup için oran tanımlanmaz (o grupta satış "Tanımsız" katmanıyla kesintisiz yazılır).
-          </p>
-          <div className="grid gap-2">
-            {groups.map(g => (
-              <div key={g.id} className="flex items-center gap-3">
-                <span className="text-sm flex-1 truncate" style={{ color: 'var(--text)' }}>{getName(g.nameI18n) || g.code}</span>
-                <div className="flex items-center gap-1">
-                  <input className="inp w-24 text-right" type="number" step="0.1" min="0" max="100"
-                    value={defaults[g.id] ?? ''} placeholder="—"
-                    onChange={e => setDefaults(prev => ({ ...prev, [g.id]: e.target.value }))} />
-                  <span className="text-sm" style={{ color: 'var(--text-s)' }}>%</span>
-                </div>
-              </div>
-            ))}
+        <div className="card p-5 max-w-4xl">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <p className="text-xs max-w-xl" style={{ color: 'var(--text-s)' }}>
+              Ürün grubu bazlı platform varsayılanları (katman 5) — satıcıya özel oran yoksa bu uygulanır.
+              Boş bırakılan grupta oran tanımsız kalır (satış kesintisiz yazılır).
+            </p>
+            <input className="inp !w-56" placeholder="Grup ara…" value={groupSearch}
+              onChange={e => setGroupSearch(e.target.value)} />
           </div>
-          <div className="mt-4 flex items-center gap-3">
+          <div className="grid gap-x-10 sm:grid-cols-2">
+            {groups
+              .filter(g => !groupSearch.trim()
+                || (getName(g.nameI18n) || g.code).toLocaleLowerCase('tr').includes(groupSearch.toLocaleLowerCase('tr')))
+              .map(g => (
+                <div key={g.id} className="flex items-center justify-between gap-4 py-1.5"
+                  style={{ borderBottom: '1px solid var(--border)' }}>
+                  <span className="text-sm truncate" style={{ color: 'var(--text)' }}>{getName(g.nameI18n) || g.code}</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <input className="inp !w-20 text-right" type="number" step="0.1" min="0" max="100"
+                      value={defaults[g.id] ?? ''} placeholder="—"
+                      onChange={e => setDefaults(prev => ({ ...prev, [g.id]: e.target.value }))} />
+                    <span className="text-sm w-3" style={{ color: 'var(--text-s)' }}>%</span>
+                  </div>
+                </div>
+              ))}
+          </div>
+          <div className="mt-5 flex items-center gap-3">
             <Button onClick={() => saveDefaults.mutate()} loading={saveDefaults.isPending}>Kaydet</Button>
             {saveDefaults.isSuccess && <span className="text-xs" style={{ color: '#16a34a' }}>Kaydedildi</span>}
             {saveDefaults.isError && <span className="text-xs" style={{ color: '#dc2626' }}>Kaydedilemedi</span>}
@@ -240,8 +250,8 @@ export function CommissionPage() {
       )}
 
       {tab === 'contracts' && (
-        <div className="grid gap-4 max-w-3xl">
-          <div className="card">
+        <div className="grid gap-4 max-w-4xl">
+          <div className="card p-5">
             <label className="flbl">Satıcı (cari hesap)</label>
             <select className="sel w-full" value={supplierId} onChange={e => setSupplierId(e.target.value)}>
               <option value="">Satıcı seçin…</option>
@@ -250,7 +260,7 @@ export function CommissionPage() {
           </div>
           {supplierId && (
             <>
-              <div className="card grid gap-3 sm:grid-cols-2">
+              <div className="card p-5 grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="flbl">Hakediş gecikmesi (teslim + X gün)</label>
                   <input className="inp w-full" type="number" min="0" max="365" value={contract.settlementDelayDays}
@@ -293,17 +303,27 @@ export function CommissionPage() {
                 </div>
               </div>
 
-              <div className="card">
-                <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-s)' }}>
-                  Gruba özel oranlar (katman 3)
+              <div className="card p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                  <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>
+                    Gruba özel oranlar (katman 3) — boş bırakılan grup varsayılanı kullanır
+                  </div>
+                  <input className="inp !w-56" placeholder="Grup ara…" value={contractGroupSearch}
+                    onChange={e => setContractGroupSearch(e.target.value)} />
                 </div>
-                {groups.map(g => {
+                <div className="grid gap-x-10 sm:grid-cols-2">
+                {groups
+                  .filter(g => !contractGroupSearch.trim()
+                    || (getName(g.nameI18n) || g.code).toLocaleLowerCase('tr').includes(contractGroupSearch.toLocaleLowerCase('tr')))
+                  .map(g => {
                   const mevcut = contract.groupRates.find(r => r.productGroupId === g.id)
                   return (
-                    <div key={g.id} className="flex items-center gap-3 py-1">
-                      <span className="text-sm flex-1 truncate" style={{ color: 'var(--text)' }}>{getName(g.nameI18n) || g.code}</span>
-                      <input className="inp w-24 text-right" type="number" step="0.1" min="0" max="100"
-                        value={mevcut ? String(mevcut.ratePercent) : ''} placeholder="varsayılan"
+                    <div key={g.id} className="flex items-center justify-between gap-4 py-1.5"
+                      style={{ borderBottom: '1px solid var(--border)' }}>
+                      <span className="text-sm truncate" style={{ color: 'var(--text)' }}>{getName(g.nameI18n) || g.code}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                      <input className="inp !w-20 text-right" type="number" step="0.1" min="0" max="100"
+                        value={mevcut ? String(mevcut.ratePercent) : ''} placeholder="—"
                         onChange={e => {
                           const v = e.target.value
                           setContract(p => ({
@@ -314,14 +334,16 @@ export function CommissionPage() {
                                  { productGroupId: g.id, ratePercent: parseFloat(v) || 0 }],
                           }))
                         }} />
-                      <span className="text-sm" style={{ color: 'var(--text-s)' }}>%</span>
+                      <span className="text-sm w-3" style={{ color: 'var(--text-s)' }}>%</span>
+                      </div>
                     </div>
                   )
                 })}
+                </div>
               </div>
 
-              <div className="card">
-                <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-s)' }}>
+              <div className="card p-5">
+                <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-s)' }}>
                   Ürüne özel oranlar (katman 1 — her şeyi ezer)
                 </div>
                 {contract.productRates.map(r => (
@@ -337,24 +359,24 @@ export function CommissionPage() {
                 <div className="flex items-center gap-2 mt-2">
                   <input className="inp flex-1" placeholder="Ürün kodu (PRD-…)" value={productCodeInput}
                     onChange={e => setProductCodeInput(e.target.value)} />
-                  <input className="inp w-24 text-right" type="number" step="0.1" placeholder="%" value={productRateInput}
+                  <input className="inp !w-24 text-right" type="number" step="0.1" placeholder="%" value={productRateInput}
                     onChange={e => setProductRateInput(e.target.value)} />
                   <Button size="sm" variant="secondary" onClick={urunEkle}>Ekle</Button>
                 </div>
                 {productError && <p className="text-xs mt-1" style={{ color: '#dc2626' }}>{productError}</p>}
               </div>
 
-              <div className="card">
-                <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-s)' }}>
+              <div className="card p-5">
+                <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-s)' }}>
                   Ciro basamakları (katman 4 — grup oranına puan ayarı; negatif = indirim)
                 </div>
                 {contract.turnoverTiers.map((t, i) => (
                   <div key={i} className="flex items-center gap-2 py-1">
                     <span className="text-xs" style={{ color: 'var(--text-s)' }}>Ciro ≥</span>
-                    <input className="inp w-32 text-right" type="number" value={t.minTurnover}
+                    <input className="inp !w-32 text-right" type="number" value={t.minTurnover}
                       onChange={e => setContract(p => ({ ...p, turnoverTiers: p.turnoverTiers.map((x, j) => j === i ? { ...x, minTurnover: parseFloat(e.target.value) || 0 } : x) }))} />
                     <span className="text-xs" style={{ color: 'var(--text-s)' }}>TL → oran</span>
-                    <input className="inp w-24 text-right" type="number" step="0.1" value={t.rateAdjustmentPercent}
+                    <input className="inp !w-24 text-right" type="number" step="0.1" value={t.rateAdjustmentPercent}
                       onChange={e => setContract(p => ({ ...p, turnoverTiers: p.turnoverTiers.map((x, j) => j === i ? { ...x, rateAdjustmentPercent: parseFloat(e.target.value) || 0 } : x) }))} />
                     <span className="text-xs" style={{ color: 'var(--text-s)' }}>puan</span>
                     <button className="text-xs ml-2" style={{ color: '#dc2626' }}
@@ -384,7 +406,7 @@ export function CommissionPage() {
       )}
 
       {tab === 'campaigns' && (
-        <div className="card overflow-x-auto">
+        <div className="card p-5 overflow-x-auto">
           <p className="text-xs mb-3" style={{ color: 'var(--text-s)' }}>
             Kampanya penceresi komisyon oranı (katman 2), indirim yükünün satıcı payı ve satıcı katılım (opt-in) şartı.
           </p>
@@ -410,11 +432,11 @@ export function CommissionPage() {
                       <div className="text-xs" style={{ color: 'var(--text-s)' }}>{c.code}</div>
                     </td>
                     <td className="py-2 pr-3">
-                      <input className="inp w-20 text-right" type="number" step="0.1" placeholder="—" value={e.rate}
+                      <input className="inp !w-20 text-right" type="number" step="0.1" placeholder="—" value={e.rate}
                         onChange={ev => setCampaignEdits(p => ({ ...p, [c.id]: { ...e, rate: ev.target.value } }))} />
                     </td>
                     <td className="py-2 pr-3">
-                      <input className="inp w-20 text-right" type="number" step="1" value={e.share}
+                      <input className="inp !w-20 text-right" type="number" step="1" value={e.share}
                         onChange={ev => setCampaignEdits(p => ({ ...p, [c.id]: { ...e, share: ev.target.value } }))} />
                     </td>
                     <td className="py-2 pr-3">
@@ -438,7 +460,7 @@ export function CommissionPage() {
 
       {tab === 'settlements' && (
         <div className="grid gap-4">
-          <div className="card flex flex-wrap items-end gap-3">
+          <div className="card p-5 flex flex-wrap items-end gap-3">
             <div className="min-w-[260px]">
               <label className="flbl">Satıcı</label>
               <select className="sel w-full" value={setSupplier} onChange={e => setSetSupplier(e.target.value)}>
@@ -477,7 +499,7 @@ export function CommissionPage() {
             </div>
           )}
           {setSupplier && (
-            <div className="card overflow-x-auto">
+            <div className="card p-5 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wider" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>
