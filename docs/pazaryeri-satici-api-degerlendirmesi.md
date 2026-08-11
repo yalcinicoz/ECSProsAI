@@ -112,7 +112,17 @@ sözleşmesinde override; uygulamada netleştirilecek.
 ### K6 Push modeli ✅ KARAR: öneri uygun
 v1 polling (`GET /orders?since=`), v2 imzalı+retry'lı webhook.
 
-## 4. Önerilen fazlama (K1-K6 kararları sonrası güncellendi, 2026-08-11)
+## 4. Fazlama — DURUM (2026-08-11)
+
+✅ **P1 CANLIDA** (a685760) · ✅ **P2 CANLIDA** (9b74425) · ✅ **P3a UYGULANDI** (2f1d83b,
+restart bekliyor): komisyon veri modeli + 5-katmanlı çözücü + teslim tetikli hakediş satırları
+(OrderDeliveredEvent YENİ) + 30 dk uygunlaşma worker'ı ('hakedis' defteri, PostAccountTransaction
+AccountId hedefli) + iade tersi + kampanya maliyet paylaşımı & opt-in + partner
+settlements/statement/campaigns uçları + admin /api/commission/* + panel /commission (4 sekme).
+KALAN: P3b relay e-posta, P4 rate limit/sandbox/webhook, satıcı opt-in'inin SİTE kampanya
+kapsamına uygulanması (şu an yalnız hakedişte etkili) ve K3 mod 3 (KG fazlarına bağlı).
+
+## 4-eski. Önerilen fazlama (K1-K6 kararları sonrası güncellendi, 2026-08-11)
 
 1. **P1 — Fiyat + Sipariş okuma:** `PUT products/{code}/prices`, `GET orders` (paket bazlı,
    since/status filtreli; K2 alan kısıtları relay e-posta HARİÇ uygulanır — relay P3b'de gelene
