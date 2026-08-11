@@ -41,34 +41,79 @@ revizyon dahil), `GET products` (owner-scoped), `PUT products/{code}/stock`
 | Rate limit / kullanım | ❌ YOK | Plandaki F5; dışa açılmadan önce şart |
 | Sandbox/test hesabı | ❌ YOK | Satıcı entegrasyonu test edecek güvenli ortam kurgusu yok |
 
-## 3. Uygulamadan önce verilmesi gereken kararlar
+## 3. Kararlar — KULLANICI YANITLARI İŞLENDİ (2026-08-11)
 
-- **K1 Komisyon modeli:** oran nerede tanımlanır (satıcı sözleşmesi cari kartta mı, ayrı
-  `definition` kataloğu mu), eksenler (satıcı × ürün grubu/kategori × belki kampanya), KDV'nin
-  komisyona etkisi. Kodda hiç karşılığı yok — sıfırdan tasarlanacak.
-- **K2 Sipariş görünürlük birimi:** önerim PAKET (bölme zaten SupplierId bazlı; satıcı başka
-  satıcının kalemini/müşteri toplamını görmemeli — KVKK: müşteri adres bilgisinin ne kadarı
-  satıcıya açılır, FulfillmentMode=supplier ise zorunlu, değilse gizli).
-- **K3 Kargo sahipliği:** satıcı kendi anlaşmasıyla mı gönderir (takip no bildirir — external
-  kod tipi hazır) yoksa bizim anlaşmalı kargo etiketimizle mi (KG fazları bloke). v1 = takip no bildirme.
-- **K4 Hakediş dönemi:** ödeme periyodu, iade karantinası (teslimden X gün sonra hakedişe düşme),
-  negatif bakiye durumu.
-- **K5 Onay kapısı sınırı:** merchant tipinde fiyat/stok ONAYSIZ (tasarım kararı zaten böyle),
-  içerik onaylı — teyit edilmeli.
-- **K6 Push modeli:** v1 polling (GET /orders?since=), v2 webhook (imzalı, retry'lı) — webhook
-  ayrı altyapı işi.
+### K1 Komisyon modeli ✅ KARAR: esnek, katmanlı, ama anlaşılır
+Kullanıcı kararı: ürün grubu bazında VARSAYILAN oranlar (dokümanlarda yayınlanır); satıcı
+sözleşmesine ÖZEL oranlar olabilir (yine ürün grubu bazında değerlendirilir); satıcı CİROSUNA
+göre OTOMATİK ayarlanabilir; KAMPANYAYA özel oranlar olabilir; gerekirse ÜRÜN bazlı oran.
 
-## 4. Önerilen fazlama (kaba, onay sonrası detaylanır)
+**Tasarım sonucu — beş katman + tek "etkin oran" çözücüsü (öneri, onaya tabi):**
+1. Ürün-bazlı özel oran (satıcı × ürün) — en özel, her şeyi ezer
+2. Kampanya oranı — kampanya penceresi aktifken (kampanya × grup [× satıcı?])
+3. Satıcı sözleşme oranı (satıcı × ürün grubu)
+4. Ciro basamağı otomatik ayarı — 3'ü/5'i modifiye eder (basamak tablosu: dönem cirosu aralığı → oran)
+5. Platform varsayılanı (ürün grubu bazlı) — dokümante edilen taban
+
+- "Kolay anlaşılır" şartının karşılığı: her hakediş kaydına **hangi katmanın uygulandığı yazılır**
+  (kural kodu + oran); satıcı panelinde "bu satışta oran neden %X" tek bakışta görünür.
+- Çözücü tek serviste yaşar (etkin oran = f(satıcı, ürün, grup, tarih, kampanya, dönem cirosu));
+  oran tabloları platform yönetimindedir (definition şeması kuralına uygun: satıcılar/aktarımlar yazamaz).
+- **Yeni alt-sorular:** ciro basamağı dönemi (aylık? yıllık? kayan 12 ay?) ve basamak değişiminin
+  yürürlüğü (anında mı sonraki dönem mi); kampanya oranının kampanya maliyet paylaşımı anlamına
+  gelip gelmediği (indirimi kim finanse ediyor).
+
+### K2 Sipariş görünürlüğü ✅ KARAR: paket bazlı + kısıtlı müşteri verisi + relay e-posta
+Kullanıcı kararı: ad, soyad, adres PAYLAŞILIR; telefon, e-posta, cinsiyet, doğum yeri/tarihi
+PAYLAŞILMAZ. Trendyol modeli benimsenir: müşteri başına ÜRETİLMİŞ benzersiz (relay) e-posta
+adresi satıcıya verilir; satıcının fatura entegratörü faturayı bu adrese gönderir → biz yakalayıp
+(a) müşterinin Hesabım/faturalar sayfasına düşürür, (b) istenirse gerçek e-postasına iletiriz.
+
+**Tasarım sonucu:** relay e-posta ayrı bir alt-sistemdir — kendi domainimizde inbound mail alma
+(catch-all), gelen faturayı relay adresten üyeye eşleme, ek/doğrulama işleme. API sözleşmesinde
+paket detayında müşteri alanları: `ad, soyad, adres satırları, il/ilçe, relayEmail` — başka alan yok.
+- **Yeni alt-sorular:** relay adres benzersizliği müşteri bazlı mı müşteri×satıcı bazlı mı;
+  relay domain seçimi (örn. musteri.misharitalia.com) ve inbound mail altyapısı (kendi SMTP mi
+  servis mi); fatura dışı mailler için relay'in davranışı (yalnız fatura mı kabul edilir).
+
+### K3 Kargo sahipliği ✅ KARAR: satıcı hesabında seçime bağlı ÜÇ mod
+1. `platform_contract` — tüm kargolar bizim sözleşmemiz üzerinden (biz göndeririz)
+2. `seller_ships` — satıcı paketlerini kendi sözleşmesiyle KENDİSİ gönderir (API'den takip no bildirir)
+3. `seller_contract_we_ship` — satıcı kendi kargo sözleşme bilgilerini hesabından girer,
+   gönderimi BİZ yaparız (bizim operasyon, onun anlaşma kodları/ücretlendirmesi)
+
+**Tasarım sonucu:** mevcut `FulfillmentMode` (Yol B) ikiliden üçlüye genişler; yalnız
+`seller_ships` modunda etkin scope'a `fulfillment.write` eklenir (1 ve 3'te gönderim bizde).
+Mod 3, taşıyıcı entegrasyonlarının satıcı-bazlı credential ile çalışmasını gerektirir —
+kargo servis şemaları (SettingsSchema) hazır, ama credential saklama bugün platform bazlı
+(`core_firm_platform_integrations`); satıcı bazlı şifreli saklama YENİ iş. Mod 3 ayrıca KG
+fazlarına (gerçek taşıyıcı API'leri — kullanıcıda bloke) bağımlı; mod 1-2 bağımsız başlayabilir.
+
+### K4 Hakediş dönemi ✅ KARAR: teslimden X gün sonra
+Teslim + X gün modeli onaylandı. **Açık:** X değeri (iade penceresiyle uyumlu seçilmeli) ve
+ödeme çıkış periyodu (hakediş uygunlaşınca anında mı, haftalık toplu mu).
+
+### K5 Onay kapısı ✅ KARAR: mevcut çözüm uygun
+İçerik onay kapılı; fiyat/stok merchant tipinde onaysız — teyit edildi.
+
+### K6 Push modeli ✅ KARAR: öneri uygun
+v1 polling (`GET /orders?since=`), v2 imzalı+retry'lı webhook.
+
+## 4. Önerilen fazlama (K1-K6 kararları sonrası güncellendi, 2026-08-11)
 
 1. **P1 — Fiyat + Sipariş okuma:** `PUT products/{code}/prices`, `GET orders` (paket bazlı,
-   since/status filtreli), `GET orders/{packageNo}`. Mevcut altyapıyla en hızlı kazanım.
-2. **P2 — Kargo bildirimi:** `POST orders/{packageNo}/shipment` (taşıyıcı+takip no →
-   Shipment zinciri + durum geri beslemesi), paket durum makinesi eşlemesi.
-3. **P3 — Gelir paylaşımı:** komisyon tanımı (K1) + satış/iade anında `ConceptCode='hakedis'`
-   defterine kayıt + `GET account/statement`, `GET settlements` uçları + panel mutabakat ekranı.
-4. **P4 — Sertleştirme:** rate limit, kullanım/audit ekranı, sandbox hesap tipi, webhook.
-5. **P5 — Panel karşılıkları (K16):** satıcı sözleşme/komisyon yönetimi, hakediş raporları,
-   paket operasyon ekranlarında satıcı ayrımı.
+   since/status filtreli; K2 alan kısıtları relay e-posta HARİÇ uygulanır — relay P3b'de gelene
+   dek e-posta alanı hiç dönmez), `GET orders/{packageNo}`. Mevcut altyapıyla en hızlı kazanım.
+2. **P2 — Kargo:** K3 mod 1-2 (mod 2: `POST orders/{packageNo}/shipment` taşıyıcı+takip no →
+   Shipment zinciri; mod 1: paket zaten bizim operasyonda). Mod 3 KG fazlarına bağımlı — ayrı iş.
+3. **P3a — Gelir paylaşımı çekirdeği:** K1 beş-katmanlı oran tabloları + etkin-oran çözücüsü +
+   satış/iade anında `ConceptCode='hakedis'` defterine kayıt (uygulanmış katman izli) + teslim+X
+   uygunlaşma + `GET account/statement`, `GET settlements` uçları + panel mutabakat ekranı.
+4. **P3b — Relay e-posta alt-sistemi (K2):** inbound mail + üye eşleme + Hesabım fatura görünümü
+   + gerçek adrese iletim; paket detayına `relayEmail` alanı bu fazda eklenir.
+5. **P4 — Sertleştirme:** rate limit, kullanım/audit ekranı, sandbox hesap tipi, webhook (K6 v2).
+6. **P5 — Panel karşılıkları (K16):** satıcı sözleşme/komisyon/ciro basamağı yönetimi, hakediş
+   raporları, satıcı kargo modu + (mod 3) sözleşme bilgisi ekranı, paket operasyonunda satıcı ayrımı.
 
 ## 5. Riskler / notlar
 
