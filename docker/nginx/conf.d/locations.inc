@@ -42,12 +42,12 @@
         return 301 /admin/;
     }
 
-    # Satıcı Paneli — 2026-08-11: subdomain'e taşındı (satici.misharitalia.com), eski path yönlendirilir
+    # Satıcı Paneli — 2026-08-11: subdomain'e taşındı (partner.misharitalia.com), eski path yönlendirilir
     location /satici/ {
-        return 301 https://satici.misharitalia.com/;
+        return 301 https://partner.misharitalia.com/;
     }
     location = /satici {
-        return 301 https://satici.misharitalia.com/;
+        return 301 https://partner.misharitalia.com/;
     }
 
     # Eski /store/ URL'leri için geriye dönük uyumluluk
