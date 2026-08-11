@@ -1,14 +1,19 @@
 using System.Text.Json;
 using ECSPros.Api.Authorization;
 using ECSPros.Catalog.Application.Commands.SubmitPartnerProduct;
+using ECSPros.Catalog.Application.Commands.UpdateSupplierProductPrices;
 using ECSPros.Catalog.Application.Queries.GetPartnerGroupSchema;
 using ECSPros.Catalog.Application.Queries.GetPartnerSubmissions;
 using ECSPros.Catalog.Application.Queries.GetProductGroups;
 using ECSPros.Catalog.Application.Queries.GetSupplierProductVariants;
+using ECSPros.Crm.Application.Services;
+using ECSPros.Fulfillment.Application.Queries.GetSupplierPackages;
 using ECSPros.Inventory.Application.Commands.UpsertSupplierStock;
+using ECSPros.Order.Application.Queries.GetSupplierOrders;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Api.Controllers.Partner;
 
@@ -22,10 +27,12 @@ namespace ECSPros.Api.Controllers.Partner;
 public class PartnerController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly ICrmDbContext _crmDb;
 
-    public PartnerController(IMediator mediator)
+    public PartnerController(IMediator mediator, ICrmDbContext crmDb)
     {
         _mediator = mediator;
+        _crmDb = crmDb;
     }
 
     /// <summary>Token introspection — çağıran API hesabının kimliği ve etkin scope'ları.
@@ -167,6 +174,112 @@ public class PartnerController : ControllerBase
         return Ok(new { success = true, data = new { productCode = resolve.Value.ProductCode, updated = upsert.Value } });
     }
 
+    /// <summary>P1a (2026-08-11): fiyat güncelleme — pricing.write (yalnız supplier_merchant
+    /// tipinde vardır), onay KAPISIZ. Kalemler SKU ile; tümü-ya-da-hiçbiri uygulanır.
+    /// Listelerde ~10 dk önbellek TTL'i vardır — fiyat siteye en geç o sürede yansır.</summary>
+    [HttpPut("products/{code}/prices")]
+    [RequireScope("pricing.write")]
+    public async Task<IActionResult> UpdatePrices(string code, [FromBody] PriceUpdateRequest request, CancellationToken ct)
+    {
+        if (!TryGetOwnerId(out var supplierId))
+            return StatusCode(StatusCodes.Status403Forbidden,
+                new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
+
+        if (request.Items is null || request.Items.Count == 0)
+            return UnprocessableEntity(new { success = false, errors = new[] { new { field = "items", code = "required", message = "En az bir fiyat kalemi gereklidir." } } });
+
+        var result = await _mediator.Send(new UpdateSupplierProductPricesCommand(
+            supplierId, code,
+            request.Items.Select(i => new SupplierPriceItem(i.Sku, i.Price)).ToList()), ct);
+
+        if (result.IsFailure)
+            return NotFound(new { success = false, error = result.Error });
+
+        if (result.Value.HasErrors)
+            return UnprocessableEntity(new { success = false, errors = result.Value.Errors.Select(e => new { field = e.Field, code = e.Code, message = e.Message }) });
+
+        return Ok(new { success = true, data = new { productCode = result.Value.ProductCode, updated = result.Value.Updated } });
+    }
+
+    /// <summary>P1b (2026-08-11): satıcıya düşen siparişler — sayfalı; `since` (ISO-8601, UTC)
+    /// son değişiklik zamanına göre artımlı çekim (K6 v1 polling), `status` sipariş durumu
+    /// (confirmed/processing/shipped/delivered/cancelled). Müşteriden yalnız ad-soyad + teslimat
+    /// adresi paylaşılır; kalemler yalnız çağıran satıcınındır. Paketler operasyonda oluşur —
+    /// henüz paketlenmemiş siparişte `packages` boş döner.</summary>
+    [HttpGet("orders")]
+    [RequireScope("order.read")]
+    public async Task<IActionResult> MyOrders([FromQuery] DateTime? since, [FromQuery] string? status,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    {
+        if (!TryGetOwnerId(out var supplierId))
+            return StatusCode(StatusCodes.Status403Forbidden,
+                new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
+
+        var result = await _mediator.Send(new GetSupplierOrdersQuery(
+            supplierId, since?.ToUniversalTime(), status, page, pageSize), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+
+        var sayfa = result.Value;
+        var zengin = await SiparisleriZenginlestir(supplierId, sayfa.Items.ToList(), ct);
+        return Ok(new { success = true, data = new { items = zengin, totalCount = sayfa.TotalCount, page = sayfa.Page, pageSize = sayfa.PageSize } });
+    }
+
+    /// <summary>P1b: tek siparişin satıcı görünümü — sipariş numarasıyla.</summary>
+    [HttpGet("orders/{orderNumber}")]
+    [RequireScope("order.read")]
+    public async Task<IActionResult> MyOrder(string orderNumber, CancellationToken ct)
+    {
+        if (!TryGetOwnerId(out var supplierId))
+            return StatusCode(StatusCodes.Status403Forbidden,
+                new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
+
+        var result = await _mediator.Send(new GetSupplierOrderDetailQuery(supplierId, orderNumber), ct);
+        if (result.IsFailure)
+            return NotFound(new { success = false, error = result.Error });
+
+        var zengin = await SiparisleriZenginlestir(supplierId, [result.Value], ct);
+        return Ok(new { success = true, data = zengin[0] });
+    }
+
+    /// <summary>Kompozisyon: şehir/ilçe adları (CRM geo) + satıcının paketleri (Fulfillment)
+    /// sipariş görünümüne iliştirilir — modüller arası birleştirme host'ta yapılır.</summary>
+    private async Task<List<object>> SiparisleriZenginlestir(Guid supplierId, List<SupplierOrderDto> siparisler, CancellationToken ct)
+    {
+        if (siparisler.Count == 0) return [];
+
+        var sehirIdler = siparisler.Select(s => s.Shipping.CityId)
+            .Concat(siparisler.Select(s => s.Shipping.DistrictId)).Distinct().ToList();
+        var sehirler = await _crmDb.Cities.AsNoTracking()
+            .Where(c => sehirIdler.Contains(c.Id)).Select(c => new { c.Id, c.NameI18n }).ToListAsync(ct);
+        var ilceler = await _crmDb.Districts.AsNoTracking()
+            .Where(d => sehirIdler.Contains(d.Id)).Select(d => new { d.Id, d.NameI18n }).ToListAsync(ct);
+        static string? Ad(Dictionary<string, string>? i18n) =>
+            i18n is null ? null : (i18n.TryGetValue("tr", out var tr) ? tr : i18n.Values.FirstOrDefault());
+        var sehirAd = sehirler.ToDictionary(x => x.Id, x => Ad(x.NameI18n));
+        var ilceAd = ilceler.ToDictionary(x => x.Id, x => Ad(x.NameI18n));
+
+        var paketSonuc = await _mediator.Send(new GetSupplierPackagesQuery(
+            supplierId, siparisler.Select(s => s.OrderId).Distinct().ToList()), ct);
+        var paketByOrder = (paketSonuc.IsSuccess ? paketSonuc.Value : [])
+            .GroupBy(p => p.OrderId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        return siparisler.Select(s =>
+        {
+            s.Shipping.CityName = sehirAd.GetValueOrDefault(s.Shipping.CityId);
+            s.Shipping.DistrictName = ilceAd.GetValueOrDefault(s.Shipping.DistrictId);
+            var paketler = paketByOrder.GetValueOrDefault(s.OrderId) ?? [];
+            return (object)new
+            {
+                s.OrderNumber, s.Status, s.PaymentStatus, s.CurrencyCode, s.CreatedAt, s.UpdatedAt,
+                shipping = s.Shipping,
+                items = s.Items,
+                packages = paketler.Select(p => new { p.PackageNumber, p.Status, p.PackedAt, items = p.Items })
+            };
+        }).ToList();
+    }
+
     private bool TryGetOwnerId(out Guid ownerId)
         => Guid.TryParse(User.FindFirst("owner_id")?.Value, out ownerId);
 
@@ -179,3 +292,5 @@ public class PartnerController : ControllerBase
 
 public record StockUpdateRequest(List<StockUpdateItem> Items);
 public record StockUpdateItem(string Sku, int Quantity);
+public record PriceUpdateRequest(List<PriceUpdateItem> Items);
+public record PriceUpdateItem(string Sku, decimal Price);

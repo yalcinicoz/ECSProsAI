@@ -931,10 +931,12 @@ public static class DatabaseSeeder
                 NameI18n = new() { ["tr"] = "Yönetilen tedarikçi", ["en"] = "Managed supplier" },
                 DefaultClientType = "partner",
                 RequiredOwnerType = "current_account",
+                // P1 (2026-08-11, K3 kararı): order.read TABAN pakete alındı — üç kargo modunun
+                // hepsinde satıcı kendi satışını görür; fulfillment.write bayrağa bağlı kalır.
                 BaseScopes = new()
                 {
                     ApiScopes.CatalogRead, ApiScopes.CatalogWrite, ApiScopes.StockRead,
-                    ApiScopes.StockWrite, ApiScopes.InvoiceRead, ApiScopes.AccountRead
+                    ApiScopes.StockWrite, ApiScopes.OrderRead, ApiScopes.InvoiceRead, ApiScopes.AccountRead
                 }
             },
             new()
@@ -946,7 +948,8 @@ public static class DatabaseSeeder
                 BaseScopes = new()
                 {
                     ApiScopes.CatalogRead, ApiScopes.CatalogWrite, ApiScopes.PricingWrite,
-                    ApiScopes.StockRead, ApiScopes.StockWrite, ApiScopes.InvoiceRead, ApiScopes.AccountRead
+                    ApiScopes.StockRead, ApiScopes.StockWrite, ApiScopes.OrderRead,
+                    ApiScopes.InvoiceRead, ApiScopes.AccountRead
                 }
             },
             new()
