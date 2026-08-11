@@ -27,6 +27,10 @@ public class Package : BaseEntity
     public decimal? Height { get; set; }
     public decimal? Length { get; set; }
     public decimal? Desi { get; set; }
+    /// <summary>Satıcı paneli (2026-08-11): satıcının kendi kestiği faturanın numarası/linki —
+    /// paket başına fatura kuralıyla uyumlu; relay e-posta (P3b) gelene dek görüntü linki serbest.</summary>
+    public string? SupplierInvoiceNumber { get; set; }
+    public string? SupplierInvoiceUrl { get; set; }
     public string Status { get; set; } = string.Empty;
     public DateTime? PackedAt { get; set; }
     public Guid? PackedBy { get; set; }

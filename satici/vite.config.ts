@@ -13,7 +13,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  base: '/satici',
+  base: '/',  // 2026-08-11: satici.* subdomain kökünden servis edilir
   server: {
     port: 3001,
     proxy: {

@@ -42,24 +42,12 @@
         return 301 /admin/;
     }
 
-    # Satıcı Paneli (React SPA) — pazaryeri tedarikçileri (S2)
+    # Satıcı Paneli — 2026-08-11: subdomain'e taşındı (satici.misharitalia.com), eski path yönlendirilir
     location /satici/ {
-        alias /usr/share/nginx/html/satici/;
-        index index.html;
-        try_files $uri $uri/ /satici/index.html;
-
-        location ~* \.html$ {
-            add_header Cache-Control "no-cache, no-store, must-revalidate";
-            add_header Pragma "no-cache";
-            expires 0;
-        }
-        location ~* \.(js|css)$ {
-            add_header Cache-Control "public, max-age=31536000, immutable";
-        }
+        return 301 https://satici.misharitalia.com/;
     }
-
     location = /satici {
-        return 301 /satici/;
+        return 301 https://satici.misharitalia.com/;
     }
 
     # Eski /store/ URL'leri için geriye dönük uyumluluk

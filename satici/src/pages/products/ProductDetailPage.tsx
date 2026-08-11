@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import api from '@/api/client'
 import { pickName, formatDate } from '@/lib/i18n'
@@ -102,7 +103,11 @@ export function ProductDetailPage() {
           <div className="card p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--text-s)' }}>Canlı Ürün</h2>
-              <span className={`badge ${p.isSaleOpen ? 'bg' : 'bx'}`}>{p.isSaleOpen ? 'Satışa Açık' : 'Satışa Kapalı'}</span>
+              <div className="flex items-center gap-2">
+                <button className="px-3 py-1.5 rounded-lg border text-xs font-semibold" style={{ borderColor: 'var(--border)' }}
+                  onClick={() => navigate(`/products/${encodeURIComponent(code!)}/edit`)}>İçeriği Düzenle (onaylı)</button>
+                <span className={`badge ${p.isSaleOpen ? 'bg' : 'bx'}`}>{p.isSaleOpen ? 'Satışa Açık' : 'Satışa Kapalı'}</span>
+              </div>
             </div>
             <div className="grid gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-3 text-sm" style={{ color: 'var(--text-m)' }}>
               <div>Katalog Kodu: <span className="font-medium" style={{ color: 'var(--text)' }}>{p.code}</span></div>
@@ -152,6 +157,9 @@ export function ProductDetailPage() {
           </div>
         )}
 
+        {/* Fiyat & stok hızlı güncelleme — onay KAPISIZ (API PUT prices/stock ile aynı komutlar) */}
+        {p && <FiyatStokKarti code={code!} variants={p.variants} />}
+
         {/* Gönderim geçmişi */}
         {data && data.submissions.length > 0 && (
           <div className="card p-5">
@@ -187,5 +195,94 @@ export function ProductDetailPage() {
         )}
       </div>
     </>
+  )
+}
+
+/* Fiyat & stok hızlı güncelleme (2026-08-11): onay beklemeden uygulanır — partner API
+ * PUT products/{code}/prices ve /stock ile AYNI komutlar (panel/API çelişmezliği). */
+function FiyatStokKarti({ code, variants }: { code: string; variants: Variant[] }) {
+  const queryClient = useQueryClient()
+  const [fiyatlar, setFiyatlar] = useState<Record<string, string>>({})
+  const [stoklar, setStoklar] = useState<Record<string, string>>({})
+  const [mesaj, setMesaj] = useState('')
+  const [hata, setHata] = useState('')
+
+  const kaydet = useMutation({
+    mutationFn: async () => {
+      const fiyatKalemleri = Object.entries(fiyatlar)
+        .filter(([, v]) => v.trim() !== '' && !isNaN(parseFloat(v)))
+        .map(([sku, v]) => ({ sku, price: parseFloat(v) }))
+      const stokKalemleri = Object.entries(stoklar)
+        .filter(([, v]) => v.trim() !== '' && !isNaN(parseInt(v)))
+        .map(([sku, v]) => ({ sku, quantity: parseInt(v) }))
+      if (fiyatKalemleri.length === 0 && stokKalemleri.length === 0)
+        throw new Error('Değişiklik girilmedi.')
+      if (fiyatKalemleri.length > 0)
+        await api.put(`/supplier/products/${encodeURIComponent(code)}/prices`, { items: fiyatKalemleri })
+      if (stokKalemleri.length > 0)
+        await api.put(`/supplier/products/${encodeURIComponent(code)}/stock`, { items: stokKalemleri })
+      return { fiyat: fiyatKalemleri.length, stok: stokKalemleri.length }
+    },
+    onSuccess: (r) => {
+      setMesaj(`Güncellendi: ${r.fiyat} fiyat, ${r.stok} stok kalemi.`)
+      setHata('')
+      setFiyatlar({}); setStoklar({})
+      queryClient.invalidateQueries({ queryKey: ['supplier-product', code] })
+    },
+    onError: (e: unknown) => {
+      setMesaj('')
+      const d = (e as { response?: { data?: { error?: string; errors?: { message: string }[] } }; message?: string })
+      setHata(d.response?.data?.error ?? d.response?.data?.errors?.map(x => x.message).join(' ') ?? d.message ?? 'Güncellenemedi.')
+    },
+  })
+
+  return (
+    <div className="card p-5">
+      <h2 className="text-sm font-bold uppercase tracking-wide mb-1" style={{ color: 'var(--text-s)' }}>
+        Fiyat &amp; Stok Güncelle
+      </h2>
+      <p className="text-xs mb-3" style={{ color: 'var(--text-s)' }}>
+        Onay beklemez, anında uygulanır. Yalnız doldurduğunuz alanlar güncellenir; stok MUTLAK değerdir.
+      </p>
+      <div className="tbl-wrap overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs uppercase tracking-wide" style={{ color: 'var(--text-s)' }}>
+              <th className="py-1.5 pr-3">SKU</th>
+              <th className="py-1.5 pr-3 text-right">Mevcut Fiyat</th>
+              <th className="py-1.5 pr-3">Yeni Fiyat (TL)</th>
+              <th className="py-1.5 pr-3">Yeni Stok (adet)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {variants.map(v => (
+              <tr key={v.sku} className="border-t" style={{ borderColor: 'var(--border)' }}>
+                <td className="py-1.5 pr-3 font-medium" style={{ color: 'var(--text)' }}>{v.sku}</td>
+                <td className="py-1.5 pr-3 text-right" style={{ color: 'var(--text-m)' }}>
+                  {v.basePrice.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                </td>
+                <td className="py-1.5 pr-3">
+                  <input className="inp !w-28 text-right" type="number" step="0.01" min="0" placeholder="—"
+                    value={fiyatlar[v.sku] ?? ''} onChange={e => setFiyatlar(p => ({ ...p, [v.sku]: e.target.value }))} />
+                </td>
+                <td className="py-1.5 pr-3">
+                  <input className="inp !w-24 text-right" type="number" min="0" placeholder="—"
+                    value={stoklar[v.sku] ?? ''} onChange={e => setStoklar(p => ({ ...p, [v.sku]: e.target.value }))} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex items-center gap-3 mt-3">
+        <button className="px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
+          style={{ background: 'var(--brand, #16a34a)' }}
+          disabled={kaydet.isPending} onClick={() => kaydet.mutate()}>
+          {kaydet.isPending ? 'Güncelleniyor…' : 'Güncelle'}
+        </button>
+        {mesaj && <span className="text-xs text-green-600">{mesaj}</span>}
+        {hata && <span className="text-xs text-red-600">{hata}</span>}
+      </div>
+    </div>
   )
 }

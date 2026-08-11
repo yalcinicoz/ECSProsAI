@@ -1,19 +1,18 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
-  Home, LogOut, Menu, Store, Package, Boxes, ShoppingCart, Wallet, KeyRound, Building2,
+  Home, LogOut, Menu, Store, Package, Boxes, ShoppingCart, Wallet, Building2,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 
 /** S3 menüsü — alt fazlar geldikçe maddeler aktifleşir; gelmeyenler "Yakında". */
 const NAV_ITEMS = [
-  { to: '/', icon: Home, label: 'Panel Özeti', end: true },
+  { to: '/', icon: Home, label: 'Panel Özeti', end: true, soon: false },
   { to: '/products', icon: Package, label: 'Ürünlerim' },
-  { to: '/stock', icon: Boxes, label: 'Stok & Fiyat', soon: true },
-  { to: '/orders', icon: ShoppingCart, label: 'Siparişlerim', soon: true },
-  { to: '/account', icon: Wallet, label: 'Cari Hesabım', soon: true },
-  { to: '/api-account', icon: KeyRound, label: 'API Hesabım', soon: true },
-  { to: '/profile', icon: Building2, label: 'Firma & Kullanıcılar', soon: true },
+  { to: '/orders', icon: ShoppingCart, label: 'Siparişlerim' },
+  { to: '/finance', icon: Wallet, label: 'Mali Durum' },
+  { to: '/campaigns', icon: Boxes, label: 'Kampanyalar' },
+  { to: '/account', icon: Building2, label: 'Hesabım' },
 ]
 
 function Sidebar({ onMobileClose }: { onMobileClose?: () => void }) {

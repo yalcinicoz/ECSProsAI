@@ -33,12 +33,12 @@ namespace ECSPros.Api.Controllers.Partner;
 public class PartnerController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly ICrmDbContext _crmDb;
+    private readonly ECSPros.Api.Services.Marketplace.SaticiIslemleri _saticiIslemleri;
 
-    public PartnerController(IMediator mediator, ICrmDbContext crmDb)
+    public PartnerController(IMediator mediator, ECSPros.Api.Services.Marketplace.SaticiIslemleri saticiIslemleri)
     {
         _mediator = mediator;
-        _crmDb = crmDb;
+        _saticiIslemleri = saticiIslemleri;
     }
 
     /// <summary>Token introspection — çağıran API hesabının kimliği ve etkin scope'ları.
@@ -227,7 +227,7 @@ public class PartnerController : ControllerBase
             return BadRequest(new { success = false, error = result.Error });
 
         var sayfa = result.Value;
-        var zengin = await SiparisleriZenginlestir(supplierId, sayfa.Items.ToList(), ct);
+        var zengin = await _saticiIslemleri.SiparisleriZenginlestirAsync(supplierId, sayfa.Items.ToList(), ct);
         return Ok(new { success = true, data = new { items = zengin, totalCount = sayfa.TotalCount, page = sayfa.Page, pageSize = sayfa.PageSize } });
     }
 
@@ -244,7 +244,7 @@ public class PartnerController : ControllerBase
         if (result.IsFailure)
             return NotFound(new { success = false, error = result.Error });
 
-        var zengin = await SiparisleriZenginlestir(supplierId, [result.Value], ct);
+        var zengin = await _saticiIslemleri.SiparisleriZenginlestirAsync(supplierId, [result.Value], ct);
         return Ok(new { success = true, data = zengin[0] });
     }
 
@@ -270,153 +270,25 @@ public class PartnerController : ControllerBase
         if (errors.Count > 0)
             return UnprocessableEntity(new { success = false, errors });
 
-        // 1) Sahiplik + durum: satıcının siparişi mi (OrderId'yi de buradan alırız)
-        var siparis = await _mediator.Send(new GetSupplierOrderDetailQuery(supplierId, orderNumber), ct);
-        if (siparis.IsFailure)
-            return NotFound(new { success = false, error = siparis.Error });
-
-        // 2) Paket garanti (idempotent — kanal serisinden numara)
-        var paket = await _mediator.Send(new EnsureSupplierPackageCommand(
-            siparis.Value.OrderId, supplierId, GetApiClientId() ?? Guid.Empty), ct);
-        if (paket.IsFailure)
-            return BadRequest(new { success = false, error = paket.Error });
-
-        // 3) Shipment kaydı (paket başına tek bildirim; durum/sahiplik yeniden doğrulanır)
-        var gonderi = await _mediator.Send(new CreateSupplierShipmentCommand(
-            supplierId, siparis.Value.OrderId, paket.Value.PackageId, paket.Value.PackageNumber,
-            request.CarrierName.Trim(), request.TrackingNumber.Trim(), request.TrackingUrl,
-            GetApiClientId() ?? Guid.Empty), ct);
-        if (gonderi.IsFailure)
-            return Conflict(new { success = false, error = gonderi.Error });
-
-        // 4) Paket ↔ shipment bağı + dış kargo kodu
-        await _mediator.Send(new SetPackageShipmentCommand(
-            paket.Value.PackageId, gonderi.Value.ShipmentId, request.TrackingNumber.Trim()), ct);
-
-        // 5) Siparişin tamamı kargolandıysa 'shipped' (stok düşümü OrderShippedEvent'te)
-        var tamami = await _mediator.Send(new TryMarkOrderShippedCommand(
-            siparis.Value.OrderId, GetApiClientId() ?? Guid.Empty), ct);
+        var sonucKargo = await _saticiIslemleri.KargoBildirAsync(
+            supplierId, orderNumber,
+            new ECSPros.Api.Services.Marketplace.SaticiIslemleri.KargoBildirimi(
+                request.CarrierName, request.TrackingNumber, request.TrackingUrl),
+            GetApiClientId() ?? Guid.Empty, ct);
+        if (sonucKargo.IsFailure)
+            return Conflict(new { success = false, error = sonucKargo.Error });
 
         return Ok(new
         {
             success = true,
             data = new
             {
-                packageNumber = gonderi.Value.PackageNumber,
-                shipmentNumber = gonderi.Value.ShipmentNumber,
-                trackingNumber = gonderi.Value.TrackingNumber,
-                orderFullyShipped = tamami.IsSuccess && tamami.Value
+                packageNumber = sonucKargo.Value.PackageNumber,
+                shipmentNumber = sonucKargo.Value.ShipmentNumber,
+                trackingNumber = sonucKargo.Value.TrackingNumber,
+                orderFullyShipped = sonucKargo.Value.OrderFullyShipped
             }
         });
-    }
-
-    /// <summary>Kompozisyon: şehir/ilçe adları (CRM geo) + satıcının paketleri (Fulfillment)
-    /// sipariş görünümüne iliştirilir — modüller arası birleştirme host'ta yapılır.</summary>
-    private async Task<List<object>> SiparisleriZenginlestir(Guid supplierId, List<SupplierOrderDto> siparisler, CancellationToken ct)
-    {
-        if (siparisler.Count == 0) return [];
-
-        var sehirIdler = siparisler.Select(s => s.Shipping.CityId)
-            .Concat(siparisler.Select(s => s.Shipping.DistrictId)).Distinct().ToList();
-        var sehirler = await _crmDb.Cities.AsNoTracking()
-            .Where(c => sehirIdler.Contains(c.Id)).Select(c => new { c.Id, c.NameI18n }).ToListAsync(ct);
-        var ilceler = await _crmDb.Districts.AsNoTracking()
-            .Where(d => sehirIdler.Contains(d.Id)).Select(d => new { d.Id, d.NameI18n }).ToListAsync(ct);
-        static string? Ad(Dictionary<string, string>? i18n) =>
-            i18n is null ? null : (i18n.TryGetValue("tr", out var tr) ? tr : i18n.Values.FirstOrDefault());
-        var sehirAd = sehirler.ToDictionary(x => x.Id, x => Ad(x.NameI18n));
-        var ilceAd = ilceler.ToDictionary(x => x.Id, x => Ad(x.NameI18n));
-
-        var paketSonuc = await _mediator.Send(new GetSupplierPackagesQuery(
-            supplierId, siparisler.Select(s => s.OrderId).Distinct().ToList()), ct);
-        var paketByOrder = (paketSonuc.IsSuccess ? paketSonuc.Value : [])
-            .GroupBy(p => p.OrderId)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        return siparisler.Select(s =>
-        {
-            s.Shipping.CityName = sehirAd.GetValueOrDefault(s.Shipping.CityId);
-            s.Shipping.DistrictName = ilceAd.GetValueOrDefault(s.Shipping.DistrictId);
-            var paketler = paketByOrder.GetValueOrDefault(s.OrderId) ?? [];
-            return (object)new
-            {
-                s.OrderNumber, s.Status, s.PaymentStatus, s.CurrencyCode, s.CreatedAt, s.UpdatedAt,
-                shipping = s.Shipping,
-                items = s.Items,
-                packages = paketler.Select(p => new { p.PackageNumber, p.Status, p.PackedAt, items = p.Items })
-            };
-        }).ToList();
-    }
-
-    /// <summary>P3a: satıcıya açık (opt-in) kampanyalar + katılım durumunuz. Komisyon oranı ve
-    /// indirim yükü paylaşımı tanımda açıkça görünür — katılım bilerek yapılır.</summary>
-    [HttpGet("campaigns")]
-    [RequireScope("catalog.read")]
-    public async Task<IActionResult> OpenCampaigns(CancellationToken ct)
-    {
-        if (!TryGetOwnerId(out var supplierId))
-            return StatusCode(StatusCodes.Status403Forbidden,
-                new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
-        var result = await _mediator.Send(new GetSupplierCampaignsQuery(supplierId), ct);
-        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = result.Value });
-    }
-
-    /// <summary>P3a: kampanyaya katıl (opt-in). Gövdede productIds verilirse yalnız o ürünlerle,
-    /// boş/verilmezse kapsama giren TÜM ürünlerinizle katılırsınız. Tekrar çağrı listeyi günceller.</summary>
-    [HttpPost("campaigns/{id:guid}/join")]
-    [RequireScope("pricing.write")]
-    public async Task<IActionResult> JoinCampaign(Guid id, [FromBody] CampaignJoinRequest? request, CancellationToken ct)
-    {
-        if (!TryGetOwnerId(out var supplierId))
-            return StatusCode(StatusCodes.Status403Forbidden,
-                new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
-        var result = await _mediator.Send(new JoinCampaignCommand(supplierId, id, request?.ProductIds), ct);
-        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true });
-    }
-
-    /// <summary>P3a: kampanya katılımını geri çek — sonraki teslimlerde kampanya oranı/paylaşımı uygulanmaz.</summary>
-    [HttpDelete("campaigns/{id:guid}/join")]
-    [RequireScope("pricing.write")]
-    public async Task<IActionResult> LeaveCampaign(Guid id, CancellationToken ct)
-    {
-        if (!TryGetOwnerId(out var supplierId))
-            return StatusCode(StatusCodes.Status403Forbidden,
-                new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
-        var result = await _mediator.Send(new LeaveCampaignCommand(supplierId, id), ct);
-        if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
-        return Ok(new { success = true });
-    }
-
-    /// <summary>P3a: hakediş satırlarınız — kalem başına brüt/komisyon/net + uygulanan oran KATMANI
-    /// (product | campaign | contract_group | group_default, +turnover eki) + kampanya indirim payı.
-    /// status: pending (teslim edildi, beklemede) | available (bakiyeye geçti) | paid | reversed.</summary>
-    [HttpGet("settlements")]
-    [RequireScope("account.read")]
-    public async Task<IActionResult> MySettlements([FromQuery] string? status, [FromQuery] DateTime? since,
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
-    {
-        if (!TryGetOwnerId(out var supplierId))
-            return StatusCode(StatusCodes.Status403Forbidden,
-                new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
-        var result = await _mediator.Send(new GetSupplierSettlementsQuery(
-            supplierId, status, since?.ToUniversalTime(), page, pageSize), ct);
-        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = result.Value });
-    }
-
-    /// <summary>P3a: hakediş hesap ekstresi — güncel bakiye + defter hareketleri.</summary>
-    [HttpGet("account/statement")]
-    [RequireScope("account.read")]
-    public async Task<IActionResult> MyStatement([FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
-    {
-        if (!TryGetOwnerId(out var supplierId))
-            return StatusCode(StatusCodes.Status403Forbidden,
-                new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
-        var result = await _mediator.Send(new GetSupplierStatementQuery(supplierId, page, pageSize), ct);
-        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = result.Value });
     }
 
     private bool TryGetOwnerId(out Guid ownerId)

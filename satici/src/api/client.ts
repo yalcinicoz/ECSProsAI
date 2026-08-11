@@ -27,7 +27,7 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('supplier_refresh_token')
       if (!refreshToken) {
         localStorage.clear()
-        window.location.href = '/satici/login'
+        window.location.href = '/login'
         return Promise.reject(error)
       }
       try {
@@ -39,7 +39,7 @@ api.interceptors.response.use(
         return api(original)
       } catch {
         localStorage.clear()
-        window.location.href = '/satici/login'
+        window.location.href = '/login'
         return Promise.reject(error)
       }
     }

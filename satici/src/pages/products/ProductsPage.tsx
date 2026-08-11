@@ -81,6 +81,9 @@ export function ProductsPage() {
               Canlı ürünleriniz ve onay sürecindeki gönderimleriniz
             </p>
           </div>
+          <button className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
+            style={{ background: 'var(--brand, #16a34a)' }}
+            onClick={() => navigate('/products/new')}>+ Yeni Ürün</button>
           <select
             className="inp !w-auto"
             value={status}

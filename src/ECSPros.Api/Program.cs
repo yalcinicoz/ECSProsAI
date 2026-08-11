@@ -225,6 +225,8 @@ builder.Services.AddScoped<ECSPros.Shared.Contracts.IEffectivePriceProvider, ECS
 builder.Services.AddScoped<ECSPros.Shared.Contracts.ISocialProofResolver, ECSPros.Api.Services.Store.SosyalKanitResolver>();
 // Liste sıralama metrikleri (puan/yorum/favori/sepet/görüntülenme/satış — 4 şema, ham SQL + 10 dk cache)
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IProductMetricsProvider, ECSPros.Api.Services.Store.UrunMetrikSaglayici>();
+// Satıcı sipariş/kargo ortak kompozisyonu — partner API + satıcı paneli aynı zinciri kullanır
+builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.SaticiIslemleri>();
 // P3a: satıcı komisyon çözücüsü + hakediş uygunlaşma worker'ı (Accounts/Catalog/Promotion → host'ta)
 builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Commission.KomisyonCozucu>();
 builder.Services.AddHostedService<ECSPros.Api.Services.Marketplace.Commission.SettlementEligibilityWorker>();

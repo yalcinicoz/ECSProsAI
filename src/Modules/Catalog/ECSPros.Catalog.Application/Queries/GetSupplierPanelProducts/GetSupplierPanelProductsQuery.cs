@@ -19,6 +19,7 @@ public record GetSupplierPanelProductsQuery(
 public record SupplierPanelProductRowDto(
     string SupplierProductCode,
     string? ProductCode,               // canlıysa iç katalog kodu
+    Guid? ProductId,                   // canlıysa iç katalog Id'si (kampanya katılımı ürün seçimi için)
     Dictionary<string, string> Name,
     string GroupCode,
     Dictionary<string, string>? GroupName,
@@ -47,6 +48,7 @@ public class GetSupplierPanelProductsQueryHandler
             .Where(p => p.SupplierId == request.SupplierId)
             .Select(p => new
             {
+                p.Id,
                 p.Code,
                 p.SupplierProductCode,
                 p.NameI18n,
@@ -90,7 +92,7 @@ public class GetSupplierPanelProductsQueryHandler
             var reviewNote = latest?.Status is "rejected" or "approved" ? latest.ReviewNote : null;
             var lastAt = latest is not null && latest.CreatedAt > p.LastAt ? latest.CreatedAt : p.LastAt;
             rows.Add(new SupplierPanelProductRowDto(
-                key, p.Code, p.NameI18n, p.GroupCode, p.GroupName, p.VariantCount,
+                key, p.Code, p.Id, p.NameI18n, p.GroupCode, p.GroupName, p.VariantCount,
                 "live", pendingRevision, reviewNote, p.IsSaleOpen, lastAt));
         }
 
@@ -101,7 +103,7 @@ public class GetSupplierPanelProductsQueryHandler
             if (liveCodes.Contains(code)) continue;
             if (s.Status == "approved") continue; // onaylı ama ürün silinmiş — canlı listede yeri yok
             rows.Add(new SupplierPanelProductRowDto(
-                code, null, s.Name, s.GroupCode, null, s.VariantCount,
+                code, null, null, s.Name, s.GroupCode, null, s.VariantCount,
                 s.Status, false, s.ReviewNote, false, s.CreatedAt));
         }
 
