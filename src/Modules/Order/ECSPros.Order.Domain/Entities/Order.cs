@@ -171,5 +171,7 @@ public class Order : AggregateRoot
             throw new InvalidOperationException($"'{Status}' durumundaki sipariş teslim edildi olarak işaretlenemez.");
 
         Status = "delivered";
+        // P3a: satıcı hakediş satırları bu olaydan üretilir (teslim ŞART kararı)
+        AddDomainEvent(new OrderDeliveredEvent(Id, updatedBy));
     }
 }

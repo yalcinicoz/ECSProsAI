@@ -8,10 +8,12 @@ namespace ECSPros.Order.Application.Commands.MarkDelivered;
 public class MarkDeliveredCommandHandler : IRequestHandler<MarkDeliveredCommand, Result<bool>>
 {
     private readonly IOrderDbContext _context;
+    private readonly IPublisher _publisher;
 
-    public MarkDeliveredCommandHandler(IOrderDbContext context)
+    public MarkDeliveredCommandHandler(IOrderDbContext context, IPublisher publisher)
     {
         _context = context;
+        _publisher = publisher;
     }
 
     public async Task<Result<bool>> Handle(MarkDeliveredCommand request, CancellationToken cancellationToken)
@@ -44,6 +46,12 @@ public class MarkDeliveredCommandHandler : IRequestHandler<MarkDeliveredCommand,
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        // P3a: OrderDeliveredEvent — satıcı hakediş satırları host'taki handler'da üretilir
+        foreach (var domainEvent in order.DomainEvents)
+            await _publisher.Publish(domainEvent, cancellationToken);
+        order.ClearDomainEvents();
+
         return Result.Success(true);
     }
 }

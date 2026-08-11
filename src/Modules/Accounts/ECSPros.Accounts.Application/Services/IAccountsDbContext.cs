@@ -8,6 +8,12 @@ public interface IAccountsDbContext
     DbSet<CurrentAccount> CurrentAccounts { get; }
     DbSet<CurrentAccountLedger> AccountLedgers { get; }
     DbSet<CurrentAccountTransaction> AccountTransactions { get; }
+    DbSet<SupplierContract> SupplierContracts { get; }
+    DbSet<SupplierGroupRate> SupplierGroupRates { get; }
+    DbSet<SupplierProductRate> SupplierProductRates { get; }
+    DbSet<SupplierTurnoverTier> SupplierTurnoverTiers { get; }
+    DbSet<CommissionGroupRate> CommissionGroupRates { get; }
+    DbSet<SettlementLine> SettlementLines { get; }
     DatabaseFacade Database { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

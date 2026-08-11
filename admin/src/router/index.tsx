@@ -4,6 +4,7 @@ import { AuthGuard } from '@/components/layout/AuthGuard'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { MarketplacesPage } from '@/pages/marketplaces/MarketplacesPage'
+import { CommissionPage } from '@/pages/finance/CommissionPage'
 import { MarketplaceStoreDetailPage } from '@/pages/marketplaces/MarketplaceStoreDetailPage'
 import { MappingPage } from '@/pages/marketplaces/MappingPage'
 import { AttributeTypesPage } from '@/pages/catalog/AttributeTypesPage'
@@ -135,6 +136,7 @@ export const router = createBrowserRouter(
 
             // Pazaryerleri
             { path: 'marketplaces',            element: <MarketplacesPage /> },
+            { path: 'commission',              element: <CommissionPage /> },
             { path: 'marketplaces/eslestirme', element: <MappingPage /> },
             { path: 'marketplaces/:id',        element: <MarketplaceStoreDetailPage /> },
 

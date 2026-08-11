@@ -57,6 +57,22 @@ public class CampaignProductConfiguration : IEntityTypeConfiguration<CampaignPro
     }
 }
 
+// P3a (2026-08-11): kampanya × satıcı katılımı (opt-in + ürün seçimi)
+public class CampaignSupplierParticipationConfiguration : IEntityTypeConfiguration<CampaignSupplierParticipation>
+{
+    public void Configure(EntityTypeBuilder<CampaignSupplierParticipation> builder)
+    {
+        builder.ToTable("prm_campaign_supplier_participations");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.ProductIds).HasColumnType("jsonb");
+        builder.HasOne(x => x.Campaign).WithMany()
+            .HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(x => new { x.CampaignId, x.SupplierAccountId }).IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
 public class CampaignExclusionConfiguration : IEntityTypeConfiguration<CampaignExclusion>
 {
     public void Configure(EntityTypeBuilder<CampaignExclusion> builder)

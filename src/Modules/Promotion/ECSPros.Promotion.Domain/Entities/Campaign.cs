@@ -39,6 +39,17 @@ public class Campaign : BaseEntity
     /// <summary>CategoryFilterRules ile uyumlu JSONB filtre tanımı (FillType=filter/mixed).</summary>
     public Dictionary<string, object>? FilterDef { get; set; }
 
+    // ── P3a satıcı komisyonu (2026-08-11, K1 alt-kararı) ──
+    /// <summary>Kampanya penceresinde geçerli satıcı komisyon oranı (katman 2) — null: kampanya
+    /// oranı yok, sözleşme/grup katmanları geçerli.</summary>
+    public decimal? SupplierCommissionRate { get; set; }
+    /// <summary>Kampanya indirim yükünün SATICI payı (%0-100; 0=indirimi pazaryeri üstlenir).
+    /// Hakediş satırında kalem indirimi × bu yüzde kesilir.</summary>
+    public decimal SupplierDiscountSharePercent { get; set; }
+    /// <summary>true: satıcı ürünleri kampanyaya ancak satıcı KATILIRSA girer (opt-in);
+    /// katılım ve ürün seçimi CampaignSupplierParticipation'dadır.</summary>
+    public bool RequiresSupplierOptIn { get; set; }
+
     public CampaignType CampaignType { get; set; } = null!;
     public ICollection<CampaignProduct> Products { get; set; } = new List<CampaignProduct>();
     public ICollection<CampaignExclusion> Exclusions { get; set; } = new List<CampaignExclusion>();

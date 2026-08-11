@@ -11,6 +11,7 @@ public interface IPromotionDbContext
     DbSet<CampaignPlatform> CampaignPlatforms { get; }
     DbSet<Coupon> Coupons { get; }
     DbSet<CouponUsage> CouponUsages { get; }
+    DbSet<CampaignSupplierParticipation> CampaignSupplierParticipations { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

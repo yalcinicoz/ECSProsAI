@@ -11,7 +11,9 @@ using ECSPros.Fulfillment.Application.Commands.EnsureSupplierPackage;
 using ECSPros.Fulfillment.Application.Commands.SetPackageShipment;
 using ECSPros.Fulfillment.Application.Queries.GetSupplierPackages;
 using ECSPros.Inventory.Application.Commands.UpsertSupplierStock;
+using ECSPros.Accounts.Application.Queries.GetSupplierSettlements;
 using ECSPros.Order.Application.Commands.CreateSupplierShipment;
+using ECSPros.Promotion.Application.Commands.SupplierCampaignParticipation;
 using ECSPros.Order.Application.Commands.TryMarkOrderShipped;
 using ECSPros.Order.Application.Queries.GetSupplierOrders;
 using MediatR;
@@ -346,6 +348,77 @@ public class PartnerController : ControllerBase
         }).ToList();
     }
 
+    /// <summary>P3a: satıcıya açık (opt-in) kampanyalar + katılım durumunuz. Komisyon oranı ve
+    /// indirim yükü paylaşımı tanımda açıkça görünür — katılım bilerek yapılır.</summary>
+    [HttpGet("campaigns")]
+    [RequireScope("catalog.read")]
+    public async Task<IActionResult> OpenCampaigns(CancellationToken ct)
+    {
+        if (!TryGetOwnerId(out var supplierId))
+            return StatusCode(StatusCodes.Status403Forbidden,
+                new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
+        var result = await _mediator.Send(new GetSupplierCampaignsQuery(supplierId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>P3a: kampanyaya katıl (opt-in). Gövdede productIds verilirse yalnız o ürünlerle,
+    /// boş/verilmezse kapsama giren TÜM ürünlerinizle katılırsınız. Tekrar çağrı listeyi günceller.</summary>
+    [HttpPost("campaigns/{id:guid}/join")]
+    [RequireScope("pricing.write")]
+    public async Task<IActionResult> JoinCampaign(Guid id, [FromBody] CampaignJoinRequest? request, CancellationToken ct)
+    {
+        if (!TryGetOwnerId(out var supplierId))
+            return StatusCode(StatusCodes.Status403Forbidden,
+                new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
+        var result = await _mediator.Send(new JoinCampaignCommand(supplierId, id, request?.ProductIds), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>P3a: kampanya katılımını geri çek — sonraki teslimlerde kampanya oranı/paylaşımı uygulanmaz.</summary>
+    [HttpDelete("campaigns/{id:guid}/join")]
+    [RequireScope("pricing.write")]
+    public async Task<IActionResult> LeaveCampaign(Guid id, CancellationToken ct)
+    {
+        if (!TryGetOwnerId(out var supplierId))
+            return StatusCode(StatusCodes.Status403Forbidden,
+                new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
+        var result = await _mediator.Send(new LeaveCampaignCommand(supplierId, id), ct);
+        if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>P3a: hakediş satırlarınız — kalem başına brüt/komisyon/net + uygulanan oran KATMANI
+    /// (product | campaign | contract_group | group_default, +turnover eki) + kampanya indirim payı.
+    /// status: pending (teslim edildi, beklemede) | available (bakiyeye geçti) | paid | reversed.</summary>
+    [HttpGet("settlements")]
+    [RequireScope("account.read")]
+    public async Task<IActionResult> MySettlements([FromQuery] string? status, [FromQuery] DateTime? since,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
+    {
+        if (!TryGetOwnerId(out var supplierId))
+            return StatusCode(StatusCodes.Status403Forbidden,
+                new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
+        var result = await _mediator.Send(new GetSupplierSettlementsQuery(
+            supplierId, status, since?.ToUniversalTime(), page, pageSize), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>P3a: hakediş hesap ekstresi — güncel bakiye + defter hareketleri.</summary>
+    [HttpGet("account/statement")]
+    [RequireScope("account.read")]
+    public async Task<IActionResult> MyStatement([FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
+    {
+        if (!TryGetOwnerId(out var supplierId))
+            return StatusCode(StatusCodes.Status403Forbidden,
+                new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
+        var result = await _mediator.Send(new GetSupplierStatementQuery(supplierId, page, pageSize), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
     private bool TryGetOwnerId(out Guid ownerId)
         => Guid.TryParse(User.FindFirst("owner_id")?.Value, out ownerId);
 
@@ -361,3 +434,4 @@ public record StockUpdateItem(string Sku, int Quantity);
 public record PriceUpdateRequest(List<PriceUpdateItem> Items);
 public record PriceUpdateItem(string Sku, decimal Price);
 public record ShipmentReportRequest(string CarrierName, string TrackingNumber, string? TrackingUrl);
+public record CampaignJoinRequest(List<Guid>? ProductIds);

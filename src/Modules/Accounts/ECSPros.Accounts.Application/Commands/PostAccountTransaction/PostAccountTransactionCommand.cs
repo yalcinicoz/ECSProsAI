@@ -23,7 +23,10 @@ public record PostAccountTransactionCommand(
     string? Description = null,
     string? OwnerTitle = null,      // hesap ilk açılışta kullanılacak ünvan
     bool AllowNegativeBalance = false,
-    string Currency = "TRY") : IRequest<Result<PostedTransactionDto>>;
+    string Currency = "TRY",
+    // P3a (2026-08-11): mevcut hesabı DOĞRUDAN hedefle (satıcı carileri OwnerId taşımaz —
+    // owner çiftiyle bulunamaz). Dolu ise OwnerType/OwnerId yok sayılır ve lazy hesap AÇILMAZ.
+    Guid? AccountId = null) : IRequest<Result<PostedTransactionDto>>;
 
 public record PostedTransactionDto(Guid TransactionId, Guid LedgerId, Guid AccountId, decimal BalanceAfter);
 
@@ -41,19 +44,26 @@ public class PostAccountTransactionCommandHandler
             return Result.Failure<PostedTransactionDto>("Borç/alacak tutarı negatif olamaz.");
         if ((r.Debit > 0) == (r.Credit > 0))
             return Result.Failure<PostedTransactionDto>("Borç veya alacaktan yalnız biri sıfırdan büyük olmalıdır.");
-        if (r.OwnerId == Guid.Empty)
+        if (r.AccountId is null && r.OwnerId == Guid.Empty)
             return Result.Failure<PostedTransactionDto>("Hesap sahibi (OwnerId) zorunludur.");
 
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
         try
         {
             // Aynı sahibin aynı kavram defterine eşzamanlı yazımları serileştir
-            var lockKey = $"{r.OwnerType}:{r.OwnerId}:{r.ConceptCode}:{r.Currency}";
+            var lockKey = r.AccountId is { } hedefId
+                ? $"acc:{hedefId}:{r.ConceptCode}:{r.Currency}"
+                : $"{r.OwnerType}:{r.OwnerId}:{r.ConceptCode}:{r.Currency}";
             await _db.Database.ExecuteSqlInterpolatedAsync(
                 $"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 42))", ct);
 
-            var account = await _db.CurrentAccounts
-                .FirstOrDefaultAsync(a => a.OwnerType == r.OwnerType && a.OwnerId == r.OwnerId, ct);
+            var account = r.AccountId is { } accountId
+                ? await _db.CurrentAccounts.FirstOrDefaultAsync(a => a.Id == accountId, ct)
+                : await _db.CurrentAccounts
+                    .FirstOrDefaultAsync(a => a.OwnerType == r.OwnerType && a.OwnerId == r.OwnerId, ct);
+
+            if (account is null && r.AccountId is not null)
+                return Result.Failure<PostedTransactionDto>("Hedeflenen cari hesap bulunamadı.");
 
             if (account is null)
             {
