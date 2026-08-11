@@ -59,9 +59,20 @@ göre OTOMATİK ayarlanabilir; KAMPANYAYA özel oranlar olabilir; gerekirse ÜR�
   (kural kodu + oran); satıcı panelinde "bu satışta oran neden %X" tek bakışta görünür.
 - Çözücü tek serviste yaşar (etkin oran = f(satıcı, ürün, grup, tarih, kampanya, dönem cirosu));
   oran tabloları platform yönetimindedir (definition şeması kuralına uygun: satıcılar/aktarımlar yazamaz).
-- **Yeni alt-sorular:** ciro basamağı dönemi (aylık? yıllık? kayan 12 ay?) ve basamak değişiminin
-  yürürlüğü (anında mı sonraki dönem mi); kampanya oranının kampanya maliyet paylaşımı anlamına
-  gelip gelmediği (indirimi kim finanse ediyor).
+
+**Alt-karar (2026-08-11) — ciro basamağı:** dönem tipi TANIMDA SEÇİLİR — üç seçenek de
+kullanılabilir: aylık / yıllık / kayan 12 ay (basamak tablosu tanımına dönem tipi alanı girer).
+Basamak değişiminin yürürlüğü için önerilen varsayılan: **sonraki dönem başı** (öngörülebilirlik;
+"anında" istenirse tanım bazında seçilebilir yapılır) — uygulamada netleştirilecek küçük detay.
+
+**Alt-karar (2026-08-11) — kampanya oranı = maliyet paylaşımı + satıcı katılımı:**
+- Kampanya tanımında indirim yükünün paylaşımı AÇIKÇA belirtilir: yalnız pazaryeri / kısmen
+  satıcı / tamamen satıcı (oran veya yüzde paylaşımı alanı).
+- Pazaryeri bir kampanya tanımladığında satıcılar KATILIM kararı verir (opt-in) ve HANGİ
+  ürünlerle katılacaklarını seçebilir → Promotion modülüne "kampanya × satıcı katılımı"
+  (katılım durumu + satıcının ürün listesi) kavramı eklenmeli; hakediş kaydına kampanya
+  paylaşım kuralı da yazılır. Bu, satıcı paneli/API'ye "açık kampanyalar / katıl / ürün seç"
+  uçlarını da getirir (P3a kapsamına, panel karşılığı P5'e).
 
 ### K2 Sipariş görünürlüğü ✅ KARAR: paket bazlı + kısıtlı müşteri verisi + relay e-posta
 Kullanıcı kararı: ad, soyad, adres PAYLAŞILIR; telefon, e-posta, cinsiyet, doğum yeri/tarihi
@@ -72,9 +83,9 @@ adresi satıcıya verilir; satıcının fatura entegratörü faturayı bu adrese
 **Tasarım sonucu:** relay e-posta ayrı bir alt-sistemdir — kendi domainimizde inbound mail alma
 (catch-all), gelen faturayı relay adresten üyeye eşleme, ek/doğrulama işleme. API sözleşmesinde
 paket detayında müşteri alanları: `ad, soyad, adres satırları, il/ilçe, relayEmail` — başka alan yok.
-- **Yeni alt-sorular:** relay adres benzersizliği müşteri bazlı mı müşteri×satıcı bazlı mı;
-  relay domain seçimi (örn. musteri.misharitalia.com) ve inbound mail altyapısı (kendi SMTP mi
-  servis mi); fatura dışı mailler için relay'in davranışı (yalnız fatura mı kabul edilir).
+- **Alt-karar (2026-08-11):** relay adres MÜŞTERİ BAZLI (satıcı ayrımı yok — müşteriden
+  hareketle gereken her bilgiye zaten erişiliyor). Kalan teknik seçimler (relay alt alan adı,
+  inbound mail altyapısı, fatura dışı posta davranışı) P3b uygulama detayı.
 
 ### K3 Kargo sahipliği ✅ KARAR: satıcı hesabında seçime bağlı ÜÇ mod
 1. `platform_contract` — tüm kargolar bizim sözleşmemiz üzerinden (biz göndeririz)
@@ -89,9 +100,11 @@ kargo servis şemaları (SettingsSchema) hazır, ama credential saklama bugün p
 (`core_firm_platform_integrations`); satıcı bazlı şifreli saklama YENİ iş. Mod 3 ayrıca KG
 fazlarına (gerçek taşıyıcı API'leri — kullanıcıda bloke) bağımlı; mod 1-2 bağımsız başlayabilir.
 
-### K4 Hakediş dönemi ✅ KARAR: teslimden X gün sonra
-Teslim + X gün modeli onaylandı. **Açık:** X değeri (iade penceresiyle uyumlu seçilmeli) ve
-ödeme çıkış periyodu (hakediş uygunlaşınca anında mı, haftalık toplu mu).
+### K4 Hakediş dönemi ✅ KARAR: teslimden X gün sonra — X SATICI BAZLI
+Teslim + X gün modeli onaylandı; **X satıcı bazında belirlenebilir** (alt-karar 2026-08-11 —
+satıcı sözleşmesinde alan; platform varsayılanı + satıcıya özel override). Ödeme çıkış
+periyodu için öneri: aynı esneklik kalıbı — platform varsayılanı (örn. haftalık) + satıcı
+sözleşmesinde override; uygulamada netleştirilecek.
 
 ### K5 Onay kapısı ✅ KARAR: mevcut çözüm uygun
 İçerik onay kapılı; fiyat/stok merchant tipinde onaysız — teyit edildi.
