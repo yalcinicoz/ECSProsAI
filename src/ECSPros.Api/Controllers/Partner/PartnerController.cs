@@ -7,8 +7,12 @@ using ECSPros.Catalog.Application.Queries.GetPartnerSubmissions;
 using ECSPros.Catalog.Application.Queries.GetProductGroups;
 using ECSPros.Catalog.Application.Queries.GetSupplierProductVariants;
 using ECSPros.Crm.Application.Services;
+using ECSPros.Fulfillment.Application.Commands.EnsureSupplierPackage;
+using ECSPros.Fulfillment.Application.Commands.SetPackageShipment;
 using ECSPros.Fulfillment.Application.Queries.GetSupplierPackages;
 using ECSPros.Inventory.Application.Commands.UpsertSupplierStock;
+using ECSPros.Order.Application.Commands.CreateSupplierShipment;
+using ECSPros.Order.Application.Commands.TryMarkOrderShipped;
 using ECSPros.Order.Application.Queries.GetSupplierOrders;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -242,6 +246,68 @@ public class PartnerController : ControllerBase
         return Ok(new { success = true, data = zengin[0] });
     }
 
+    /// <summary>P2 (2026-08-11): "kargoladım" bildirimi — satıcı KENDİ taşıyıcısıyla gönderdi
+    /// (K3 mod 2; fulfillment.write yalnız FulfillmentMode=supplier hesaplarda vardır).
+    /// Satıcının kalemleri için paket yoksa kanal serisinden oluşturulur; takip no 'external'
+    /// kaynaklı kargo kodu olarak pakete yazılır; Shipment kaydı açılır (taşıyıcıya bizden
+    /// istek GİTMEZ). Sipariş, tüm kalemleri kargolandığında 'shipped' olur (karma siparişte
+    /// bizim kalemler beklenir). Paket başına TEK bildirim kabul edilir.</summary>
+    [HttpPost("orders/{orderNumber}/shipment")]
+    [RequireScope("fulfillment.write")]
+    public async Task<IActionResult> ReportShipment(string orderNumber, [FromBody] ShipmentReportRequest request, CancellationToken ct)
+    {
+        if (!TryGetOwnerId(out var supplierId))
+            return StatusCode(StatusCodes.Status403Forbidden,
+                new { success = false, error = "Bu API hesabı bir tedarikçiye bağlı değil (owner yok)." });
+
+        var errors = new List<object>();
+        if (string.IsNullOrWhiteSpace(request.CarrierName))
+            errors.Add(new { field = "carrierName", code = "required", message = "Taşıyıcı adı gereklidir." });
+        if (string.IsNullOrWhiteSpace(request.TrackingNumber))
+            errors.Add(new { field = "trackingNumber", code = "required", message = "Takip numarası gereklidir." });
+        if (errors.Count > 0)
+            return UnprocessableEntity(new { success = false, errors });
+
+        // 1) Sahiplik + durum: satıcının siparişi mi (OrderId'yi de buradan alırız)
+        var siparis = await _mediator.Send(new GetSupplierOrderDetailQuery(supplierId, orderNumber), ct);
+        if (siparis.IsFailure)
+            return NotFound(new { success = false, error = siparis.Error });
+
+        // 2) Paket garanti (idempotent — kanal serisinden numara)
+        var paket = await _mediator.Send(new EnsureSupplierPackageCommand(
+            siparis.Value.OrderId, supplierId, GetApiClientId() ?? Guid.Empty), ct);
+        if (paket.IsFailure)
+            return BadRequest(new { success = false, error = paket.Error });
+
+        // 3) Shipment kaydı (paket başına tek bildirim; durum/sahiplik yeniden doğrulanır)
+        var gonderi = await _mediator.Send(new CreateSupplierShipmentCommand(
+            supplierId, siparis.Value.OrderId, paket.Value.PackageId, paket.Value.PackageNumber,
+            request.CarrierName.Trim(), request.TrackingNumber.Trim(), request.TrackingUrl,
+            GetApiClientId() ?? Guid.Empty), ct);
+        if (gonderi.IsFailure)
+            return Conflict(new { success = false, error = gonderi.Error });
+
+        // 4) Paket ↔ shipment bağı + dış kargo kodu
+        await _mediator.Send(new SetPackageShipmentCommand(
+            paket.Value.PackageId, gonderi.Value.ShipmentId, request.TrackingNumber.Trim()), ct);
+
+        // 5) Siparişin tamamı kargolandıysa 'shipped' (stok düşümü OrderShippedEvent'te)
+        var tamami = await _mediator.Send(new TryMarkOrderShippedCommand(
+            siparis.Value.OrderId, GetApiClientId() ?? Guid.Empty), ct);
+
+        return Ok(new
+        {
+            success = true,
+            data = new
+            {
+                packageNumber = gonderi.Value.PackageNumber,
+                shipmentNumber = gonderi.Value.ShipmentNumber,
+                trackingNumber = gonderi.Value.TrackingNumber,
+                orderFullyShipped = tamami.IsSuccess && tamami.Value
+            }
+        });
+    }
+
     /// <summary>Kompozisyon: şehir/ilçe adları (CRM geo) + satıcının paketleri (Fulfillment)
     /// sipariş görünümüne iliştirilir — modüller arası birleştirme host'ta yapılır.</summary>
     private async Task<List<object>> SiparisleriZenginlestir(Guid supplierId, List<SupplierOrderDto> siparisler, CancellationToken ct)
@@ -294,3 +360,4 @@ public record StockUpdateRequest(List<StockUpdateItem> Items);
 public record StockUpdateItem(string Sku, int Quantity);
 public record PriceUpdateRequest(List<PriceUpdateItem> Items);
 public record PriceUpdateItem(string Sku, decimal Price);
+public record ShipmentReportRequest(string CarrierName, string TrackingNumber, string? TrackingUrl);

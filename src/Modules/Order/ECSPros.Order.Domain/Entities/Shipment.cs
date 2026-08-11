@@ -9,6 +9,9 @@ public class Shipment : BaseEntity
     /// paket başına ayrı kargodur; null yalnız eski kayıtlar/istisna akışı içindir (F2).</summary>
     public Guid? PackageId { get; set; }
     public Guid FirmIntegrationId { get; set; }
+    /// <summary>Satıcı gönderimi (P2, 2026-08-11): taşıyıcı bizim entegrasyon kataloğumuzda
+    /// değilse serbest metin taşıyıcı adı (FirmIntegrationId=Guid.Empty ile birlikte).</summary>
+    public string? CarrierName { get; set; }
     public string ShipmentNumber { get; set; } = string.Empty;
     public string? TrackingNumber { get; set; }
     public string? TrackingUrl { get; set; }
