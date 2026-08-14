@@ -41,24 +41,26 @@ document.addEventListener("DOMContentLoaded", () => {
             + `${tekTukendi ? " disabled" : ""}>${tekTukendi ? "Tükendi" : "Sepete Ekle"}</button>`;
     };
 
-    // ── Desktop hover paneli: ilk hover'da kurulur, gösterim CSS (:hover) ile ──
+    // ── Desktop beden paneli: sepet ikonuna tıklayınca kurulup açılır (hover DEĞİL —
+    // hover paneli kartın alt köşesindeki renk rozetini işlevsiz bırakıyordu, 2026-08-14) ──
     const desktopMu = window.matchMedia("(min-width: 1024px)");
     const panelKur = (kart) => {
-        if (kart.querySelector(".ms-urun-sepet-panel")) { return; }
+        const mevcut = kart.querySelector(".ms-urun-sepet-panel");
+        if (mevcut) { return mevcut; }
         const bedenler = bedenleriOku(kart);
-        if (!bedenler.length) { return; }
+        if (!bedenler.length) { return null; }
         const gorselAlani = kart.querySelector(".ms-urun-gorsel-alani");
-        if (!gorselAlani) { return; }
+        if (!gorselAlani) { return null; }
         const panel = document.createElement("div");
         panel.className = "ms-urun-sepet-panel";
         panel.innerHTML = icerikHtml(bedenler);
         gorselAlani.appendChild(panel);
+        return panel;
     };
-    document.addEventListener("mouseover", (olay) => {
-        if (!desktopMu.matches) { return; }
-        const kart = olay.target.closest?.(".ms-urun-karti");
-        if (kart && kart.dataset.msDolu === "true") { panelKur(kart); }
-    }, { passive: true });
+    const panelKapatHepsi = () => {
+        document.querySelectorAll(".ms-urun-sepet-panel-acik")
+            .forEach((p) => p.classList.remove("ms-urun-sepet-panel-acik"));
+    };
 
     // ── Mobil alt sayfa (bottom sheet) ──
     const sheetKapat = () => {
@@ -153,6 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
             buton.textContent = eski;
             buton.classList.remove("ms-urun-sepet-ekle-basari");
             if (ok && buton.closest(".ms-sepet-sheet")) { sheetKapat(); }
+            if (ok && buton.closest(".ms-urun-sepet-panel")) { panelKapatHepsi(); }
         }, 1200);
     };
 
@@ -167,7 +170,19 @@ document.addEventListener("DOMContentLoaded", () => {
             olay.preventDefault();
             olay.stopPropagation();
             const kart = sepetIkonu.closest(".ms-urun-karti");
-            if (kart) { sheetAc(kart); }
+            if (!kart) { return; }
+            if (!desktopMu.matches) { sheetAc(kart); return; }
+            // Desktop: paneli aç/kapa — diğer kartların açık paneli kapanır
+            const panel = panelKur(kart);
+            if (!panel) {
+                // Beden verisi olmayan kart (ör. model modu) — detaya götür
+                const href = kart.querySelector("[data-ms-kart-link]")?.getAttribute("href");
+                if (href && href !== "#") { window.location.href = href; }
+                return;
+            }
+            const acikti = panel.classList.contains("ms-urun-sepet-panel-acik");
+            panelKapatHepsi();
+            if (!acikti) { panel.classList.add("ms-urun-sepet-panel-acik"); }
             return;
         }
 
@@ -207,7 +222,11 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             if (!varyantId || !(fiyat > 0)) { butonDurum(ekle, false); return; }
             sepeteEkle(varyantId, fiyat, (ok) => butonDurum(ekle, ok));
+            return;
         }
+
+        // Panel dışına tıklama: açık desktop panelleri kapat (sheet kendi örtüsüyle kapanır)
+        if (!hedef.closest(".ms-urun-sepet-panel")) { panelKapatHepsi(); }
     }, true);
 });
 </script>

@@ -1501,10 +1501,11 @@
     @apply bg-[var(--ms-renk-primary)] text-white hover:text-white;
   }
 
-  /* Kartta sepete ekle (2026-08-14): mobil/tablet sepet ikonu — koleksiyon butonunun
-     hemen altında; desktop'ta (lg+) ikon gizli, hover beden paneli kullanılır. */
+  /* Kartta sepete ekle (2026-08-14): sepet ikonu — koleksiyon butonunun hemen altında,
+     TÜM ekranlarda görünür. Desktop'ta tıklama beden panelini açar (hover değil — hover
+     paneli alt köşedeki renk rozetini işlevsiz bırakıyordu), mobilde alt sayfayı açar. */
   .ms-urun-sepet {
-    @apply absolute right-2 top-[5.5rem] z-50 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white text-ms-siyah shadow-md transition hover:text-[var(--ms-renk-primary)] focus:outline-none focus:ring-0 focus-visible:outline-none sm:right-3 sm:top-[7.25rem] sm:h-11 sm:w-11 lg:hidden;
+    @apply absolute right-2 top-[5.5rem] z-50 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white text-ms-siyah shadow-md transition hover:text-[var(--ms-renk-primary)] focus:outline-none focus:ring-0 focus-visible:outline-none sm:right-3 sm:top-[7.25rem] sm:h-11 sm:w-11;
   }
 
   .ms-urun-sepet .ms-fa-ikon,
@@ -1512,13 +1513,13 @@
     @apply h-4 w-4 text-[16px] sm:h-5 sm:w-5 sm:text-[20px];
   }
 
-  /* Desktop hover beden paneli — kart hover'ında görselin altından yukarı kayar (yalnız lg+). */
+  /* Desktop beden paneli — sepet ikonuna tıklayınca görselin altından yukarı kayar
+     (yalnız lg+; hover ile DEĞİL — renk rozeti erişilebilir kalsın, 2026-08-14). */
   .ms-urun-sepet-panel {
-    @apply pointer-events-none absolute inset-x-0 bottom-0 z-50 hidden translate-y-full flex-col gap-1.5 bg-white/95 p-2 opacity-0 shadow-[0_-6px_16px_rgba(0,0,0,0.12)] transition-all duration-200 ease-out lg:flex;
+    @apply pointer-events-none absolute inset-x-0 bottom-0 z-[60] hidden translate-y-full flex-col gap-1.5 bg-white/95 p-2 opacity-0 shadow-[0_-6px_16px_rgba(0,0,0,0.12)] transition-all duration-200 ease-out lg:flex;
   }
 
-  .ms-urun-karti:hover .ms-urun-sepet-panel,
-  .ms-urun-sepet-panel:focus-within {
+  .ms-urun-sepet-panel-acik {
     @apply pointer-events-auto translate-y-0 opacity-100;
   }
 
