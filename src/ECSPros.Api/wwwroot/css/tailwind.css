@@ -1486,7 +1486,8 @@
   }
 
   .ms-urun-favori {
-    @apply absolute right-2 top-2 z-50 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white text-ms-siyah shadow-md transition hover:text-[var(--ms-renk-primary)] focus:outline-none focus:ring-0 focus-visible:outline-none sm:right-3 sm:top-3 sm:h-11 sm:w-11;
+    /* 2026-08-14: sm+ boyutu 44→36px (kullanıcı isteği: kart aksiyon ikonları biraz küçük) */
+    @apply absolute right-2 top-2 z-50 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white text-ms-siyah shadow-md transition hover:text-[var(--ms-renk-primary)] focus:outline-none focus:ring-0 focus-visible:outline-none sm:right-3 sm:top-3 sm:h-9 sm:w-9;
   }
 
   .ms-urun-favori-aktif {
@@ -1494,16 +1495,17 @@
   }
 
   .ms-urun-favori-ikon {
-    @apply h-5 w-5 object-contain sm:h-7 sm:w-7;
+    @apply h-5 w-5 object-contain sm:h-6 sm:w-6;
   }
 
   .ms-urun-koleksiyon {
-    @apply absolute right-2 top-12 z-50 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white text-ms-siyah shadow-md transition hover:text-[var(--ms-renk-primary)] focus:outline-none focus:ring-0 focus-visible:outline-none sm:right-3 sm:top-16 sm:h-11 sm:w-11;
+    /* sm+ 44→36px; üst hiza favorinin yeni boyutuna göre (12+36+8=56px) */
+    @apply absolute right-2 top-12 z-50 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white text-ms-siyah shadow-md transition hover:text-[var(--ms-renk-primary)] focus:outline-none focus:ring-0 focus-visible:outline-none sm:right-3 sm:top-14 sm:h-9 sm:w-9;
   }
 
   .ms-urun-koleksiyon .ms-fa-ikon,
   .ms-urun-koleksiyon i {
-    @apply h-4 w-4 text-[16px] sm:h-5 sm:w-5 sm:text-[20px];
+    @apply h-4 w-4 text-[16px] sm:h-[18px] sm:w-[18px] sm:text-[17px];
   }
 
   .ms-urun-koleksiyon-aktif {
@@ -1514,12 +1516,13 @@
      TÜM ekranlarda görünür. Desktop'ta tıklama beden panelini açar (hover değil — hover
      paneli alt köşedeki renk rozetini işlevsiz bırakıyordu), mobilde alt sayfayı açar. */
   .ms-urun-sepet {
-    @apply absolute right-2 top-[5.5rem] z-50 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white text-ms-siyah shadow-md transition hover:text-[var(--ms-renk-primary)] focus:outline-none focus:ring-0 focus-visible:outline-none sm:right-3 sm:top-[7.25rem] sm:h-11 sm:w-11;
+    /* sm+ 44→36px; üst hiza koleksiyonun yeni konumuna göre (56+36+8=100px) */
+    @apply absolute right-2 top-[5.5rem] z-50 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white text-ms-siyah shadow-md transition hover:text-[var(--ms-renk-primary)] focus:outline-none focus:ring-0 focus-visible:outline-none sm:right-3 sm:top-[6.25rem] sm:h-9 sm:w-9;
   }
 
   .ms-urun-sepet .ms-fa-ikon,
   .ms-urun-sepet i {
-    @apply h-4 w-4 text-[16px] sm:h-5 sm:w-5 sm:text-[20px];
+    @apply h-4 w-4 text-[16px] sm:h-[18px] sm:w-[18px] sm:text-[17px];
   }
 
   /* Desktop beden paneli — sepet ikonuna tıklayınca görselin altından yukarı kayar
@@ -1629,7 +1632,7 @@
   }
 
   .ms-urun-favori-kucuk-kalp {
-    @apply pointer-events-none absolute right-6 top-6 z-30 sm:right-[34px] sm:top-[34px];
+    @apply pointer-events-none absolute right-6 top-6 z-30 sm:right-[30px] sm:top-[30px];
     width: clamp(13px, 4vw, 21px) !important;
     height: clamp(13px, 4vw, 21px) !important;
     animation: ms-urun-favori-kucuk-kalp 720ms ease-out forwards;
