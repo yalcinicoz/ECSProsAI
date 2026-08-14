@@ -1473,7 +1473,16 @@
   }
 
   .ms-urun-gorsel-degisiyor {
-    @apply opacity-0 scale-[1.015];
+    /* 2026-08-14: scale-[1.015] kaldırıldı — galeri geçişindeki ölçek büyümesi
+       "yakınlaştırma + resim değişimi" olarak çirkin görünüyordu; geçiş artık salt fade. */
+    @apply opacity-0;
+  }
+
+  /* Görsel hover efekti (2026-08-14, panel Ürün Kartı → Yerleşim): "zoom" seçiliyken
+     kart görseli hover'da hafifçe büyür; galeri gezinmesi JS'te kapatılır (ya biri ya diğeri,
+     varsayılan resim geçişi). body sınıfı _Layout'tan gelir. */
+  .ms-kart-hover-zoom .ms-urun-karti:hover .ms-urun-gorsel {
+    scale: 1.05;
   }
 
   .ms-urun-favori {

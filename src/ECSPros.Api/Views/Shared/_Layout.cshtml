@@ -1,3 +1,4 @@
+@inject ECSPros.Api.Services.IStoreContext MsLayoutStoreContext
 @{
     const string markaAdi = "Misharitalia";
     const string canonicalKok = "https://www.misharitalia.com";
@@ -103,7 +104,9 @@
         <script type="application/ld+json">@Html.Raw(jsonLd)</script>
     }
 </head>
-<body class="min-h-screen bg-white text-ms-siyah">
+@* Görsel hover efekti (2026-08-14): "zoom" seçiliyken kart görseli hover'da büyür,
+   galeri gezinmesi kapalıdır (site.js msKartAyarlari.hoverEfekti'ne bakar). *@
+<body class="min-h-screen bg-white text-ms-siyah @((await MsLayoutStoreContext.GetPlatformAsync())?.KartAyarlari?.YakinlastirmaEfekti == true ? "ms-kart-hover-zoom" : "")">
     @* H4: mobil alt bar _AnaNavigasyon'dan ÖNCE — misafir Favorilerim/Hesabım linklerinin
        data-ms-giris-modal-ac dinleyicileri nav script'inde parse anında bağlanır. *@
     @* Mobil alt bar yalnız ana sayfa ve ürün listesi/kategori sayfalarında (kullanıcı

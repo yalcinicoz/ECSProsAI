@@ -49,6 +49,9 @@ interface CardConfig {
   campaignPriceRow: boolean
   // Kartta sepete ekle (2026-08-14): desktop hover beden paneli + mobil sepet ikonu/alt sayfa
   cartButton: boolean
+  // Görsel hover efekti (2026-08-14): 'gallery' = yatay harekette diğer görseller (varsayılan);
+  // 'zoom' = görsel hover'da büyür, galeri gezinmesi kapalı — ikisi bir arada olmaz
+  hoverEffect: 'gallery' | 'zoom'
   areas: { '1': AreaConfig; '2': AreaConfig; '3': AreaConfig }
 }
 
@@ -133,6 +136,7 @@ const DEFAULT_CONFIG: CardConfig = {
   discountRow: true,
   campaignPriceRow: true,
   cartButton: true,
+  hoverEffect: 'gallery',
   areas: { '1': defaultArea('1'), '2': defaultArea('2'), '3': defaultArea('3') },
 }
 
@@ -197,6 +201,7 @@ function configFromSettings(settings: Record<string, unknown> | undefined): Card
     discountRow: o.discountRow !== false,
     campaignPriceRow: o.campaignPriceRow !== false,
     cartButton: o.cartButton !== false,
+    hoverEffect: o.hoverEffect === 'zoom' ? 'zoom' : 'gallery',
     areas,
   }
 }
@@ -566,6 +571,19 @@ export function ProductCardPage() {
                   checked={config.colorBadge} onChange={v => set({ colorBadge: v })} />
                 <ToggleRow label="Galeri noktaları" desc="Hover galerisinin nokta göstergeleri"
                   checked={config.galleryDots} onChange={v => set({ galleryDots: v })} />
+
+                <GroupTitle>Görsel hover efekti</GroupTitle>
+                <div className="py-2">
+                  <label className="flbl">Görsel üzerine gelindiğinde</label>
+                  <select className="sel text-sm" value={config.hoverEffect}
+                    onChange={e => set({ hoverEffect: e.target.value === 'zoom' ? 'zoom' : 'gallery' })}>
+                    <option value="gallery">Resim geçişi — yatay harekette diğer görseller (varsayılan)</option>
+                    <option value="zoom">Yakınlaştırma — görsel hafifçe büyür (resim geçişi kapalı)</option>
+                  </select>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+                    İki efekt bir arada kullanılmaz; mobildeki kaydırmalı galeri bu seçimden etkilenmez.
+                  </p>
+                </div>
 
                 <GroupTitle>Değişken satırlar</GroupTitle>
                 {AREA_KEYS.map(key => {

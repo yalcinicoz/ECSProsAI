@@ -77,6 +77,10 @@ public sealed record StoreKartAyarlari(
     // Kartta sepete ekle (2026-08-14): desktop hover beden paneli + mobil sepet ikonu/alt sayfa —
     // varsayılan AÇIK (kullanıcı kararı: "Sepete Ekle Olsun").
     bool SepetButonu = true,
+    // Görsel hover efekti (2026-08-14): true = yakınlaştırma (kartta görsel büyür, galeri
+    // gezinmesi kapalı); false = resim geçişi (yatay harekette diğer görseller) — VARSAYILAN.
+    // İkisi birlikte olmaz (kullanıcı kararı). JSON: "hoverEffect" = "zoom" | "gallery".
+    bool YakinlastirmaEfekti = false,
     KartAlanAyari? Alan1 = null,
     KartAlanAyari? Alan2 = null,
     KartAlanAyari? Alan3 = null)
@@ -143,6 +147,9 @@ public sealed record StoreKartAyarlari(
             IndirimSatiri: B("discountRow"),
             KampanyaFiyatSatiri: B("campaignPriceRow"),
             SepetButonu: B("cartButton"),
+            YakinlastirmaEfekti: e.TryGetProperty("hoverEffect", out var he)
+                && he.ValueKind == System.Text.Json.JsonValueKind.String
+                && he.GetString() == "zoom",
             Alan1: A1, Alan2: A2, Alan3: A3);
     }
 

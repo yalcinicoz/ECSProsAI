@@ -406,7 +406,8 @@ public class CoreController : ControllerBase
             new ECSPros.Core.Application.Commands.UpdateProductCardSettings.UpdateProductCardSettingsCommand(
                 id, request.VideoBadge, request.SponsorBadge, request.ColorBadge, request.GalleryDots,
                 request.FavoriteButton, request.CollectionButton, request.Rating,
-                request.DiscountRow, request.CampaignPriceRow, request.Areas, request.CartButton), ct);
+                request.DiscountRow, request.CampaignPriceRow, request.Areas, request.CartButton,
+                request.HoverEffect), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -469,7 +470,8 @@ public record ProductCardSettingsRequest(
     bool DiscountRow = true,
     bool CampaignPriceRow = true,
     Dictionary<string, ECSPros.Core.Application.Commands.UpdateProductCardSettings.ProductCardAreaSetting>? Areas = null,
-    bool CartButton = true);
+    bool CartButton = true,
+    string? HoverEffect = null);
 
 // ── Request Modelleri ──────────────────────────────────────────────────────────
 

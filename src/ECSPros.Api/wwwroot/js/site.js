@@ -4567,6 +4567,12 @@
                 };
 
                 galeri.addEventListener("mousemove", (event) => {
+                    // Görsel hover efekti "zoom" seçiliyse galeri gezinmesi kapalı — kartta
+                    // yakınlaştırma CSS'i çalışır, ikisi bir arada olmaz (2026-08-14).
+                    if ((window.msKartAyarlari || {}).hoverEfekti === "zoom") {
+                        return;
+                    }
+
                     if (etkilesimliGaleriHedefiMi(event.target)) {
                         return;
                     }
@@ -5146,6 +5152,11 @@
             };
 
             galeri.addEventListener("mousemove", (event) => {
+                // Görsel hover efekti "zoom" seçiliyse galeri gezinmesi kapalı (üstteki modülle aynı kural)
+                if ((window.msKartAyarlari || {}).hoverEfekti === "zoom") {
+                    return;
+                }
+
                 if (etkilesimliGaleriHedefiMi(event.target)) {
                     return;
                 }
