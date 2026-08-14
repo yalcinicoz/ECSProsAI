@@ -4960,6 +4960,19 @@
     @apply h-6 w-6;
   }
 
+  /* URL ile arama + yapıştırma ipucu (2026-08-14) */
+  .ms-gorsel-arama-url-alani {
+    @apply mt-1 flex flex-wrap items-stretch gap-2;
+  }
+
+  .ms-gorsel-arama-url-input {
+    @apply h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-[13px] text-ms-siyah shadow-sm transition placeholder:text-slate-400 focus:border-[var(--ms-renk-primary)] focus:outline-none focus:ring-0;
+  }
+
+  .ms-gorsel-arama-yapistir-ipucu {
+    @apply m-0 text-[12px] leading-5 text-slate-500;
+  }
+
   .ms-gorsel-arama-editor {
     @apply grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px];
   }

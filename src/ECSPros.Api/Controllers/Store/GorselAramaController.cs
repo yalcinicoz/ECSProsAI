@@ -31,11 +31,53 @@ public class GorselAramaController(
     [HttpPost("gorsel-arama")]
     [EnableRateLimiting("store-sensitive")] // ücretli dış servise gider — maliyet istismarına fren (2026-07-23)
     [RequestSizeLimit(MaxDosyaBoyutu + 1024)]
-    public async Task<IActionResult> Ara(IFormFile? file, CancellationToken ct)
+    public async Task<IActionResult> Ara(IFormFile? file, [FromForm] string? url, CancellationToken ct)
     {
-        if (file is null || file.Length == 0)
+        // 2026-08-14: URL ile arama — istemci dış görseli CORS nedeniyle indiremez;
+        // bağlantı sunucuda indirilip aynı akışla dış servise iletilir.
+        byte[]? urlBaytlari = null;
+        string? urlDosyaAdi = null;
+        string? urlIcerikTipi = null;
+        if ((file is null || file.Length == 0) && !string.IsNullOrWhiteSpace(url))
+        {
+            if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var gorselUri)
+                || (gorselUri.Scheme != Uri.UriSchemeHttp && gorselUri.Scheme != Uri.UriSchemeHttps))
+                return BadRequest(new { error = "Geçerli bir görsel bağlantısı (http/https) girin." });
+
+            try
+            {
+                var indirmeClient = httpClientFactory.CreateClient("visual-search");
+                using var indirme = await indirmeClient.GetAsync(gorselUri,
+                    HttpCompletionOption.ResponseHeadersRead, ct);
+                if (!indirme.IsSuccessStatusCode)
+                    return BadRequest(new { error = "Bağlantıdaki görsel indirilemedi." });
+                if (indirme.Content.Headers.ContentLength is > MaxDosyaBoyutu)
+                    return BadRequest(new { error = "Görsel 10 MB'den büyük olamaz." });
+
+                urlBaytlari = await indirme.Content.ReadAsByteArrayAsync(ct);
+                if (urlBaytlari.Length == 0)
+                    return BadRequest(new { error = "Bağlantıdaki görsel indirilemedi." });
+                if (urlBaytlari.Length > MaxDosyaBoyutu)
+                    return BadRequest(new { error = "Görsel 10 MB'den büyük olamaz." });
+
+                urlIcerikTipi = indirme.Content.Headers.ContentType?.MediaType;
+                if (urlIcerikTipi is { Length: > 0 } && !urlIcerikTipi.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+                    && urlIcerikTipi != "application/octet-stream")
+                    return BadRequest(new { error = "Bağlantı bir görsele işaret etmiyor." });
+
+                urlDosyaAdi = Path.GetFileName(gorselUri.AbsolutePath);
+                if (string.IsNullOrWhiteSpace(urlDosyaAdi)) urlDosyaAdi = "url-gorseli.jpg";
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogWarning(ex, "Görsel arama URL indirmesi başarısız: {Url}", url);
+                return BadRequest(new { error = "Bağlantıdaki görsel indirilemedi." });
+            }
+        }
+
+        if ((file is null || file.Length == 0) && urlBaytlari is null)
             return BadRequest(new { error = "Görsel dosyası gönderilmedi." });
-        if (file.Length > MaxDosyaBoyutu)
+        if (file is { Length: > MaxDosyaBoyutu })
             return BadRequest(new { error = "Görsel 10 MB'den büyük olamaz." });
 
         var platform = await storeContext.GetPlatformAsync(ct);
@@ -45,16 +87,19 @@ public class GorselAramaController(
             return StatusCode(StatusCodes.Status503ServiceUnavailable,
                 new { error = "Görsel arama servisi yapılandırılmamış." });
 
-        // 1) Görseli dış servise ilet
+        // 1) Görseli dış servise ilet (dosya veya URL'den indirilen baytlar)
         GorselAramaServisSonucu? servisSonucu;
         try
         {
-            await using var dosyaAkisi = file.OpenReadStream();
+            await using var dosyaAkisi = urlBaytlari is null
+                ? file!.OpenReadStream()
+                : new MemoryStream(urlBaytlari);
             using var form = new MultipartFormDataContent();
             using var dosyaIcerigi = new StreamContent(dosyaAkisi);
-            if (!string.IsNullOrWhiteSpace(file.ContentType))
-                dosyaIcerigi.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
-            form.Add(dosyaIcerigi, "file", file.FileName);
+            var icerikTipi = urlBaytlari is null ? file!.ContentType : urlIcerikTipi;
+            if (!string.IsNullOrWhiteSpace(icerikTipi) && icerikTipi != "application/octet-stream")
+                dosyaIcerigi.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(icerikTipi);
+            form.Add(dosyaIcerigi, "file", urlBaytlari is null ? file!.FileName : urlDosyaAdi!);
 
             using var istek = new HttpRequestMessage(HttpMethod.Post, ayarlar.ApiUrl) { Content = form };
             istek.Headers.Add("X-API-Key", ayarlar.ApiKey);

@@ -5,7 +5,7 @@
             <i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i>
         </button>
         <p id="ms-gorsel-arama-baslik" class="ms-ornek-modal-baslik" data-ms-modal-surukleme-alani>Görsel ile Ara</p>
-        <p class="ms-ornek-modal-aciklama">Fotoğraf yükleyin ya da kamerayla çekin; görselin tamamıyla benzer ürünleri arayın.</p>
+        <p class="ms-ornek-modal-aciklama">Fotoğraf yükleyin, kamerayla çekin, görsel bağlantısı girin ya da kopyaladığınız görseli yapıştırın (Ctrl+V); benzer ürünleri arayın.</p>
 
         <form class="ms-gorsel-arama-form" data-ms-gorsel-arama-form>
             <div class="ms-gorsel-arama-kaynaklar">
@@ -25,6 +25,17 @@
                     Kamerayı aç
                 </button>
             </div>
+
+            @* 2026-08-14: URL ile arama + kopyala-yapıştır — bağlantı sunucuda indirilir
+               (CORS), yapıştırılan görsel dosya akışına verilir. *@
+            <div class="ms-gorsel-arama-url-alani">
+                <input class="ms-gorsel-arama-url-input" type="url" inputmode="url" autocomplete="off"
+                       placeholder="Görsel bağlantısı yapıştırın (https://…)" data-ms-gorsel-arama-url>
+                <button class="ms-buton ms-buton-m ms-buton-koyu" type="button" data-ms-gorsel-arama-url-ara>URL ile Ara</button>
+            </div>
+            <p class="ms-gorsel-arama-yapistir-ipucu">
+                İpucu: kopyaladığınız bir görseli bu pencere açıkken <strong>Ctrl+V</strong> ile yapıştırarak da aratabilirsiniz.
+            </p>
 
             <div class="ms-gorsel-arama-editor" data-ms-gorsel-arama-editor hidden>
                 <div class="ms-gorsel-arama-gorsel-alani" data-ms-gorsel-arama-gorsel-alani>
@@ -138,6 +149,9 @@
         const kameraOdak = kamera?.querySelector("[data-ms-gorsel-arama-kamera-odak]");
         const kameraDondur = kamera?.querySelector("[data-ms-gorsel-arama-kamera-dondur]");
         const kameraIsleniyor = kamera?.querySelector("[data-ms-gorsel-arama-kamera-isleniyor]");
+        const urlGirdisi = modal?.querySelector("[data-ms-gorsel-arama-url]");
+        const urlAraButonu = modal?.querySelector("[data-ms-gorsel-arama-url-ara]");
+        let aktifUrl = "";
         let onizlemeUrl = "";
         let oncekiBodyOverflow = "";
         let kameraAkisi = null;
@@ -201,14 +215,15 @@
         };
 
         const secimMetniGuncelle = () => {
-            durum.textContent = aktifDosya ? "Görsel hazır" : "Görsel bekleniyor";
-            seciliBaslik.textContent = aktifDosya ? "Görselin tamamı aranacak" : "Görsel seçin";
-            seciliMetin.textContent = aktifDosya
+            const kaynakVar = Boolean(aktifDosya || aktifUrl);
+            durum.textContent = kaynakVar ? "Görsel hazır" : "Görsel bekleniyor";
+            seciliBaslik.textContent = kaynakVar ? "Görselin tamamı aranacak" : "Görsel seçin";
+            seciliMetin.textContent = kaynakVar
                 ? "Seçtiğiniz görsel doğrudan görsel aramaya gönderilecek."
                 : "JPG, PNG veya WEBP biçiminde bir görsel seçin.";
 
             if (gonderButonu) {
-                gonderButonu.disabled = !aktifDosya;
+                gonderButonu.disabled = !kaynakVar;
             }
         };
 
@@ -351,6 +366,8 @@
 
         const dosyaSecildi = (dosya, ayarlar = {}) => {
             aktifDosya = dosya;
+            aktifUrl = "";
+            if (urlGirdisi && dosya) { urlGirdisi.value = ""; }
             seciliBolge = null;
             aktifBolgeler = [];
             bolgeKatmani.replaceChildren();
@@ -433,7 +450,12 @@
 
         const dosyaGonder = async (dosya) => {
             const formData = new FormData();
-            formData.append("file", dosya);
+            if (dosya) {
+                formData.append("file", dosya);
+            } else if (aktifUrl) {
+                // URL ile arama (2026-08-14): bağlantı sunucuda indirilir (istemci CORS'a takılır)
+                formData.append("url", aktifUrl);
+            }
             gonderButonu.disabled = true;
             gonderButonu.textContent = "Aranıyor";
             taraButonu.disabled = true;
@@ -487,12 +509,49 @@
                     secimEkraniMetin.textContent = "Görsel arama servisine ulaşılamadı. Lütfen tekrar deneyin.";
                 }
             } finally {
-                gonderButonu.disabled = !aktifDosya;
+                gonderButonu.disabled = !(aktifDosya || aktifUrl);
                 gonderButonu.textContent = "Görseli ara";
                 if (secimEkraniAraButonu) {
                     secimEkraniAraButonu.disabled = !aktifDosya;
                     secimEkraniAraButonu.textContent = "Görseli ara";
                 }
+            }
+        };
+
+        // ── URL ile arama (2026-08-14) ──
+        const urlSecildi = (deger, otomatikGonder = true) => {
+            const url = (deger || "").trim();
+            if (!/^https?:\/\/\S+/i.test(url)) {
+                sonucYaz("Geçerli bir görsel bağlantısı (https://…) girin.", "hata");
+                return;
+            }
+
+            aktifDosya = null;
+            input.value = "";
+            seciliBolge = null;
+            aktifBolgeler = [];
+            bolgeKatmani.replaceChildren();
+            secimEkraniBolgeKatmani?.replaceChildren();
+            etiketListesi?.replaceChildren();
+            secimEkraniEtiketListesi?.replaceChildren();
+            sonucYaz("");
+            secimEkraniKapat();
+
+            if (onizlemeUrl) {
+                URL.revokeObjectURL(onizlemeUrl);
+                onizlemeUrl = "";
+            }
+
+            aktifUrl = url;
+            if (urlGirdisi) { urlGirdisi.value = url; }
+            dosyaMetni.textContent = "Bağlantıdaki görsel aranacak";
+            // Önizleme doğrudan bağlantıdan — hotlink korumalıysa görünmeyebilir, arama yine sunucudan yapılır
+            onizlemeGorsel.src = url;
+            editor.hidden = false;
+            secimMetniGuncelle();
+
+            if (otomatikGonder) {
+                aramaBaslat();
             }
         };
 
@@ -610,7 +669,7 @@
         };
 
         const aramaBaslat = async () => {
-            if (!aktifDosya) {
+            if (!aktifDosya && !aktifUrl) {
                 sonucYaz("Lütfen önce bir görsel seçin.", "hata");
                 return;
             }
@@ -633,6 +692,8 @@
                 onizlemeUrl = "";
             }
             aktifDosya = null;
+            aktifUrl = "";
+            if (urlGirdisi) { urlGirdisi.value = ""; }
             aktifBolgeler = [];
             seciliBolge = null;
             input.value = "";
@@ -667,6 +728,49 @@
 
         input.addEventListener("change", () => {
             dosyaSecildi(input.files?.[0] || null, { otomatikGonder: true });
+        });
+
+        // ── URL ile arama tetikleyicileri (2026-08-14) ──
+        urlAraButonu?.addEventListener("click", () => urlSecildi(urlGirdisi?.value || ""));
+        urlGirdisi?.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                urlSecildi(urlGirdisi.value);
+            }
+        });
+
+        // ── Kopyala-yapıştır (2026-08-14): modal açıkken görsel yapıştırılırsa doğrudan
+        // aranır; panoda http(s) bağlantısı varsa URL akışına verilir. URL girdisine yapılan
+        // yapıştırmada önce tarayıcı girdiyi doldurur, ardından arama tetiklenir. ──
+        document.addEventListener("paste", (event) => {
+            if (!modal.classList.contains("ms-ornek-modal-acik")) {
+                return;
+            }
+
+            const ogeler = event.clipboardData?.items || [];
+            for (const oge of ogeler) {
+                if (oge.type && oge.type.startsWith("image/")) {
+                    const dosya = oge.getAsFile();
+                    if (dosya) {
+                        event.preventDefault();
+                        dosyayiInputaYaz(dosya);
+                        dosyaSecildi(dosya, { otomatikGonder: true });
+                        return;
+                    }
+                }
+            }
+
+            const metin = (event.clipboardData?.getData("text/plain") || "").trim();
+            if (!/^https?:\/\/\S+$/i.test(metin)) {
+                return;
+            }
+
+            if (document.activeElement === urlGirdisi) {
+                window.setTimeout(() => urlSecildi(urlGirdisi.value), 0);
+            } else {
+                event.preventDefault();
+                urlSecildi(metin);
+            }
         });
 
         secimEkraniKapatButonlari.forEach((buton) => {
