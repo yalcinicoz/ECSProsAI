@@ -56,7 +56,10 @@ public static class UrunKartMap
         // ana görselin rengi (MainColorValueId). Böylece "son baktıklarım"/carousel kartında
         // görülen renk (ör. bej) tıklanınca detayda da o renk açılır (renksiz link stoklu-varsayılana
         // düşüyordu → liste ≠ detay). SeciliRenkId → UrunKartVm.Url'de ?color= olarak taşınır.
-        var kartRenkId = eslesenRenk?.ValueId ?? p.MainColorValueId;
+        // 2026-08-14: eşleşen renk filtre_rengi listesinde yoksa (renk ekseni eşleşmesi,
+        // filtre_rengi eşlemesiz ürünler) ham MatchedColorValueId de link'e taşınır —
+        // detay ?color= eksen değerini çözer; görseli handler zaten eşleşen varyanttan basar.
+        var kartRenkId = eslesenRenk?.ValueId ?? p.MatchedColorValueId ?? p.MainColorValueId;
         return new UrunKartVm(
             p.Code, TrAd(p.NameI18n), eslesenRenk?.ImageUrl ?? p.MainImageUrl, p.MinPrice,
             p.Colors.Where(c => c.HexCode is not null).Select(c => c.HexCode!).Take(2).ToList(),

@@ -264,6 +264,52 @@ public class GetStoreProductsQueryHandler(
             products = await q.Where(p => sayfaIdleri.Contains(p.Id)).ToListAsync(ct);
             products = products.OrderBy(p => sayfaIdleri.IndexOf(p.Id)).ToList();
         }
+        else if (!string.IsNullOrWhiteSpace(request.Search) && string.IsNullOrEmpty(request.Sort))
+        {
+            // Arama alaka sıralaması (2026-08-14): "sarı elbise" gibi aramalarda RENGİ eşleşen
+            // ve/veya ADINDA tüm kelimeler geçen ürünler öne alınır — renk yalnız varyant
+            // özelliğinde eşleşen ürünler Id sırasıyla karışık geliyordu ("aranana en yakın
+            // sonuçlar önce" kullanıcı isteği). Fiyat/metrik sıralaması kalıbı: aday id'ler
+            // çekilir, bellek içinde puanlanıp sayfalanır. Açık sıralama tercihi bozulmaz.
+            var kelimeler = request.Search.Trim().ToLower()
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var adaylar = await q
+                .Select(p => new { p.Id, AdTr = PgJsonFunctions.JsonText(p.NameI18n, "tr") })
+                .ToListAsync(ct);
+
+            // Renk eşleşmesi: aramadaki kelimelerle adı eşleşen özellik değerlerinden (renk/
+            // filtre_rengi dahil her tip) birini taşıyan aktif varyantı olan ürünler.
+            var renkEslesenler = new HashSet<Guid>();
+            if (aramaRenkIdleri.Count > 0 && adaylar.Count > 0)
+            {
+                var adayIdler = adaylar.Select(a => a.Id).ToList();
+                renkEslesenler = (await db.ProductVariantAttributes.AsNoTracking()
+                    .Where(va => aramaRenkIdleri.Contains(va.AttributeValueId)
+                              && va.Variant.IsActive && adayIdler.Contains(va.Variant.ProductId))
+                    .Select(va => va.Variant.ProductId)
+                    .ToListAsync(ct)).ToHashSet();
+            }
+
+            int Puan(Guid id, string? adTr)
+            {
+                var ad = (adTr ?? "").ToLower();
+                var adTam = kelimeler.All(k => ad.Contains(k));
+                return (renkEslesenler.Contains(id) ? 2 : 0) + (adTam ? 1 : 0);
+            }
+
+            var sirali = adaylar
+                .OrderByDescending(a => Puan(a.Id, a.AdTr))
+                .ThenByDescending(a => oneCikanListe.Contains(a.Id))
+                .ThenBy(a => a.Id);
+            total = adaylar.Count;
+            var sayfaIdleri = sirali
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(a => a.Id)
+                .ToList();
+            products = await q.Where(p => sayfaIdleri.Contains(p.Id)).ToListAsync(ct);
+            products = products.OrderBy(p => sayfaIdleri.IndexOf(p.Id)).ToList();
+        }
         else
         {
             q = request.Sort switch
@@ -371,6 +417,28 @@ public class GetStoreProductsQueryHandler(
                       .GroupBy(i => i.FileName).Select(x => x.First().FileName)
                       .ToList());
 
+        // Arama renk eşleşmesi yedeği (2026-08-14): kelime filtre_rengi'nde değil de başka
+        // tipte ("renk": "Sarı" gibi — filtre_rengi eşlemesi olmayan ürünler dahil) eşleştiyse
+        // eşleşen VARYANT üzerinden çözülür: varsa varyantın filtre_rengi kartı, yoksa ham
+        // eksen değeri (detay ?color= eksen değerini çözer) + o varyantın ilk görseli —
+        // kart aranan renge en yakın renk ve görselle gösterilir ("sarı elbise" düzeltmesi).
+        var aramaVaryantEslesmeleri = aramaRenkIdleri.Count > 0
+            ? otherAttrs
+                .Where(oa => aramaRenkIdleri.Contains(oa.AttributeValueId)
+                          && variantToProduct.ContainsKey(oa.VariantId))
+                .GroupBy(oa => variantToProduct[oa.VariantId])
+                .ToDictionary(g => g.Key, g =>
+                {
+                    var ilk = g.First();
+                    return (RenkId: variantColorOf.TryGetValue(ilk.VariantId, out var filtreRengi)
+                                ? filtreRengi : ilk.AttributeValueId,
+                            VariantId: ilk.VariantId);
+                })
+            : new Dictionary<Guid, (Guid RenkId, Guid VariantId)>();
+        var ilkGorselByVariant = variantImages
+            .GroupBy(i => i.VariantId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(i => i.SortOrder).First().FileName);
+
         // Kartta sepete ekle + stoksuz renk (2026-08-14): varyant düzeyi stok kümesi —
         // hem beden seçeneklerinin hem renk tooltip'inin stok işaretinde kullanılır.
         var inStockVariantIds = await inStock.GetInStockVariantIdsAsync(ct);
@@ -450,10 +518,19 @@ public class GetStoreProductsQueryHandler(
             }
 
             var renkler = colorsByProduct.GetValueOrDefault(p.Id) ?? new();
-            // Kart aramadaki renk kelimesiyle eşleşen renkle gösteriliyorsa bedenler de o renkten
+            // Kart aramadaki renk kelimesiyle eşleşen renkle gösteriliyorsa bedenler de o renkten;
+            // filtre_rengi'nde doğrudan eşleşme yoksa eşleşen varyant üzerinden (rengi + görseli) düşülür.
             var eslesenRenkId = aramaRenkIdleri.Count > 0
                 ? renkler.FirstOrDefault(c => aramaRenkIdleri.Contains(c.ValueId))?.ValueId
                 : null;
+            if (eslesenRenkId is null && aramaRenkIdleri.Count > 0
+                && aramaVaryantEslesmeleri.TryGetValue(p.Id, out var varyantEslesme))
+            {
+                eslesenRenkId = varyantEslesme.RenkId;
+                // Eşleşen varyantın ilk görseli kart görseli olur — "sarı" ararken sarı görülsün
+                if (ilkGorselByVariant.TryGetValue(varyantEslesme.VariantId, out var eslesenDosya))
+                    mainImage = cdnBase + eslesenDosya;
+            }
 
             // Kartta sepete ekle: kartta gösterilen rengin varyant havuzu → beden seçenekleri.
             // Fiyat çözümü detay sayfasıyla aynı sıra: kanal fiyatı → varyant fiyatı → kart fiyatı.
