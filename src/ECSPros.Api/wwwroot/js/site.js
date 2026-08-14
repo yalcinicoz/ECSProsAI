@@ -4547,6 +4547,13 @@
                     gorsel.classList.add("ms-urun-gorsel-degisiyor");
 
                     window.setTimeout(() => {
+                        // 2026-08-14: srcset dururken tarayıcı src'yi YOK SAYAR — responsive kart
+                        // srcset'i canlıya çıkınca galeri "değişiyor gibi yapıp" hep ilk görseli
+                        // gösteriyordu. Görsel değişiminde srcset/sizes düşürülür (src kazanır).
+                        gorsel.removeAttribute("srcset");
+                        gorsel.removeAttribute("sizes");
+                        gorsel.removeAttribute("data-ms-lazy-srcset");
+                        gorsel.removeAttribute("data-ms-lazy-sizes");
                         gorsel.src = resimler[hedefIndex];
                         gorsel.removeAttribute("data-ms-lazy-src");
                         window.requestAnimationFrame(() => {
@@ -5121,6 +5128,12 @@
                 gorsel.classList.add("ms-urun-gorsel-degisiyor");
 
                 window.setTimeout(() => {
+                    // 2026-08-14: srcset dururken tarayıcı src'yi yok sayar (üstteki galeri
+                    // modülüyle aynı düzeltme) — değişimde srcset/sizes düşürülür.
+                    gorsel.removeAttribute("srcset");
+                    gorsel.removeAttribute("sizes");
+                    gorsel.removeAttribute("data-ms-lazy-srcset");
+                    gorsel.removeAttribute("data-ms-lazy-sizes");
                     gorsel.src = resimler[hedefIndex];
                     window.requestAnimationFrame(() => {
                         gorsel.classList.remove("ms-urun-gorsel-degisiyor");
