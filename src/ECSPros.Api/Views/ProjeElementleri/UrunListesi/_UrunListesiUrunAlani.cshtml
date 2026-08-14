@@ -69,10 +69,14 @@
             const secenekler = ((p.axisColors && p.axisColors.length > 0 ? p.axisColors : p.colors) || [])
                 .filter((c) => c.imageUrl)
                 .map((c) => ({ id: c.valueId, ad: trAd(c.nameI18n), gorsel: c.imageUrl, slug: c.slug || null, stok: c.inStock !== false })); // 2b: renk slug'ı + stok
+            // Eşleşen arama rengi (2026-08-14): devam (infinite) kartları da SSR gibi eşleşen
+            // rengin görseli ve linkiyle gelir — sayfa 2+ kartlar varsayılan renge düşüyordu
+            const eslesenRenk = p.matchedColorValueId
+                ? secenekler.find((c) => c.id === p.matchedColorValueId) : null;
             return {
                 kod: p.code,
                 ad: trAd(p.nameI18n),
-                gorsel: p.mainImageUrl || "",
+                gorsel: (eslesenRenk && eslesenRenk.gorsel) || p.mainImageUrl || "",
                 fiyat: p.basePrice ?? p.minPrice ?? 0,
                 renkler: (p.colors || []).filter((c) => c.hexCode).map((c) => c.hexCode),
                 renkSayisi: secenekler.length > 0 ? secenekler.length : (p.colors || []).length,
@@ -82,7 +86,7 @@
                     ? p.galleryUrls
                     : (p.mainImageUrl ? [p.mainImageUrl] : []),
                 renkSecenekleri: secenekler,
-                seciliRenk: p.selectedColorValueId || null,
+                seciliRenk: p.selectedColorValueId || p.matchedColorValueId || p.mainColorValueId || null,
                 slug: p.slug || null,         // 2b: kartın gerçek URL slug'ı (varsa doğrudan link)
                 sponsorlu: p.isFeatured === true,
                 puan: p.rating || 0,          // E7: onaylı yorum ortalaması
