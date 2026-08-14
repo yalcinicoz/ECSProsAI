@@ -21,7 +21,7 @@ public static class UrunKartMap
         // linklenirse ilk görünür renge düşer ve kullanıcı yanılır.
         var secenekler = (p.AxisColors is { Count: > 0 } eksen ? eksen : renkler)
             .Where(c => c.ImageUrl is not null)
-            .Select(c => new KartRenkVm(c.ValueId, TrAd(c.NameI18n), c.ImageUrl, c.Slug))  // 2b: renk slug'ı
+            .Select(c => new KartRenkVm(c.ValueId, TrAd(c.NameI18n), c.ImageUrl, c.Slug, c.InStock))  // 2b: renk slug'ı + stok
             .ToList();
         return new UrunKartVm(
             p.Code, TrAd(p.NameI18n), p.MainImageUrl, p.BasePrice,
@@ -46,7 +46,7 @@ public static class UrunKartMap
         // Görselsiz renkler tooltip'te listelenmez (B9 kuralı — yukarıdaki nota bak)
         var secenekler = p.Colors
             .Where(c => c.ImageUrl is not null)
-            .Select(c => new KartRenkVm(c.ValueId, TrAd(c.NameI18n), c.ImageUrl))
+            .Select(c => new KartRenkVm(c.ValueId, TrAd(c.NameI18n), c.ImageUrl, Stokta: c.InStock))
             .ToList();
         // Kabul testi 2026-07-22: aramadaki renk kelimesiyle eşleşen renk varsa kart o
         // renkle gösterilir ("kırmızı elbise" kartında kırmızı görsel/detay linki).

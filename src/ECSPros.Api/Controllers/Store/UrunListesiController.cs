@@ -1,7 +1,10 @@
 using ECSPros.Api.Models.Store;
 using ECSPros.Api.Services;
+using ECSPros.Catalog.Application.Queries.FilterSimilarProducts;
 using ECSPros.Catalog.Application.Queries.GetStoreFacets;
 using ECSPros.Catalog.Application.Queries.GetStoreProducts;
+using ECSPros.Integration.Application.Queries.ResolveErpProductRefs;
+using Microsoft.AspNetCore.RateLimiting;
 using ECSPros.Storefront.Application.Queries.GetChannelCategoryFacets;
 using ECSPros.Storefront.Application.Queries.GetChannelCategoryProducts;
 using ECSPros.Storefront.Application.Queries.GetProductByChannelSlug;
@@ -98,6 +101,137 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             KategoriSecenekleri: nav.Kokler,
             BosDurumMesaji: kartlar.Count > 0 ? null
                 : "Görsel aramayla eşleşen ürün bulunamadı.");
+
+        return ListeGoster(vm);
+    }
+
+    /// <summary>Benzer ürünler (2026-08-14): kart ikonundan gelinir. Kaynak ürünün İLK
+    /// görseli CDN'den okunup görsel arama servisine gönderilir; dönen adaylar AYNI ürün
+    /// grubu + AYNI cinsiyet kuralıyla süzülür ve görsel arama sonuç sayfası kalıbıyla
+    /// benzerlik sırasında listelenir. Servis ücretli — gorsel-arama ile aynı IP limiti.</summary>
+    [HttpGet("/benzer/{kod}")]
+    [EnableRateLimiting("store-sensitive")]
+    public async Task<IActionResult> BenzerUrunler(
+        string kod,
+        [FromServices] IVisualSearchSettingsProvider gorselAramaAyarlari,
+        [FromServices] IHttpClientFactory httpClientFactory,
+        [FromServices] ILogger<UrunListesiController> logger,
+        CancellationToken ct)
+    {
+        var platform = await storeContext.GetPlatformAsync(ct);
+        if (platform is null)
+            return NotFound();
+
+        // Kaynak ürünün kartı — ilk görsel URL'i buradan (kartta gösterilen ana görsel)
+        var kaynakSonuc = await mediator.Send(new GetStoreProductsQuery(
+            platform.Id, null, 1, 1, ProductCodes: [kod]), ct);
+        var kaynakUrun = kaynakSonuc.IsSuccess ? kaynakSonuc.Value!.Items.FirstOrDefault() : null;
+        if (kaynakUrun?.MainImageUrl is not { Length: > 0 } gorselUrl)
+            return NotFound();
+
+        var kodListesi = new List<string>();
+        var ayarlar = await gorselAramaAyarlari.GetAsync(platform.Id, ct);
+        if (ayarlar is not null)
+        {
+            try
+            {
+                var http = httpClientFactory.CreateClient("visual-search");
+
+                // 1) İlk görseli CDN'den oku, 2) görsel arama servisine ilet (gorsel-arama sözleşmesi)
+                using var gorselCevap = await http.GetAsync(gorselUrl, ct);
+                gorselCevap.EnsureSuccessStatusCode();
+                var gorselBaytlar = await gorselCevap.Content.ReadAsByteArrayAsync(ct);
+
+                using var form = new MultipartFormDataContent();
+                using var dosyaIcerigi = new ByteArrayContent(gorselBaytlar);
+                dosyaIcerigi.Headers.ContentType = gorselCevap.Content.Headers.ContentType
+                    ?? new System.Net.Http.Headers.MediaTypeHeaderValue("image/webp");
+                form.Add(dosyaIcerigi, "file", "benzer" + Path.GetExtension(new Uri(gorselUrl).AbsolutePath));
+
+                using var istek = new HttpRequestMessage(HttpMethod.Post, ayarlar.ApiUrl) { Content = form };
+                istek.Headers.Add("X-API-Key", ayarlar.ApiKey);
+                using var cevap = await http.SendAsync(istek, ct);
+                var cevapMetni = await cevap.Content.ReadAsStringAsync(ct);
+                if (!cevap.IsSuccessStatusCode)
+                    throw new InvalidOperationException($"Görsel arama servisi {(int)cevap.StatusCode} döndü.");
+
+                // 3) results[].urunId (legacy ERP id) → modelCode (erp_variant_data)
+                using var belge = System.Text.Json.JsonDocument.Parse(cevapMetni);
+                var erpIdler = new List<int>();
+                if (belge.RootElement.TryGetProperty("results", out var sonuclar)
+                    && sonuclar.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    foreach (var s in sonuclar.EnumerateArray())
+                    {
+                        if (s.TryGetProperty("urunId", out var uid) && uid.TryGetInt32(out var id)
+                            && id > 0 && !erpIdler.Contains(id))
+                            erpIdler.Add(id);
+                    }
+                }
+
+                if (erpIdler.Count > 0)
+                {
+                    var refSonuc = await mediator.Send(new ResolveErpProductRefsQuery(erpIdler), ct);
+                    if (refSonuc.IsSuccess)
+                    {
+                        var kodByErpId = refSonuc.Value!
+                            .GroupBy(r => r.ErpProductId)
+                            .ToDictionary(g => g.Key, g => g.First().ModelCode);
+                        kodListesi = erpIdler
+                            .Select(id => kodByErpId.GetValueOrDefault(id))
+                            .Where(k => !string.IsNullOrWhiteSpace(k))
+                            .Select(k => k!)
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .Take(100)
+                            .ToList();
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Servis hatası sayfayı düşürmez — "benzer ürün bulunamadı" boş durumu gösterilir
+                logger.LogWarning(ex, "Benzer ürünler görsel araması başarısız (kod: {Kod}).", kod);
+            }
+        }
+
+        // 4) Aynı ürün grubu + aynı cinsiyet süzgeci (kaynak ürün elenmiş, sıra korunmuş döner)
+        if (kodListesi.Count > 0)
+        {
+            var filtreli = await mediator.Send(new FilterSimilarProductCodesQuery(kod, kodListesi), ct);
+            if (filtreli.IsSuccess)
+                kodListesi = filtreli.Value!;
+        }
+
+        // 5) Görsel arama sonuç sayfası kalıbıyla listele (benzerlik sırası korunur)
+        var kartlar = new List<UrunKartVm>();
+        if (kodListesi.Count > 0)
+        {
+            var urunler = await mediator.Send(new GetStoreProductsQuery(
+                platform.Id, null, 1, Math.Max(SayfaBoyu, kodListesi.Count),
+                ProductCodes: kodListesi), ct);
+            if (urunler.IsSuccess)
+            {
+                var sira = kodListesi.Select((k, i) => (k, i))
+                    .ToDictionary(x => x.k, x => x.i, StringComparer.OrdinalIgnoreCase);
+                kartlar = urunler.Value!.Items
+                    .OrderBy(u => sira.GetValueOrDefault(u.Code, int.MaxValue))
+                    .Select(KartaCevir)
+                    .ToList();
+            }
+        }
+
+        var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
+        var vm = new UrunListesiVm(
+            Baslik: "Benzer Ürünler",
+            ToplamUrun: kartlar.Count,
+            SayfaBoyu: Math.Max(SayfaBoyu, Math.Max(1, kartlar.Count)),
+            IlkSayfa: kartlar,
+            DevamApiUrl: $"/api/store/catalog/products?firmPlatformId={platform.Id}&pageSize={SayfaBoyu}",
+            FiltreGruplari: [],
+            FiyatMin: 0,
+            FiyatMax: 0,
+            KategoriSecenekleri: nav.Kokler,
+            BosDurumMesaji: kartlar.Count > 0 ? null : "Bu ürüne benzer ürün bulunamadı.");
 
         return ListeGoster(vm);
     }

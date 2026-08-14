@@ -37,7 +37,9 @@ public record UpdateProductCardSettingsCommand(
     // Kartta sepete ekle (2026-08-14): desktop hover beden paneli + mobil sepet ikonu — varsayılan açık
     bool CartButton = true,
     // Görsel hover efekti (2026-08-14): "gallery" (varsayılan, yatay gezinme) | "zoom" (yakınlaştırma)
-    string? HoverEffect = null) : IRequest<Result<bool>>;
+    string? HoverEffect = null,
+    // Benzer ürünler ikonu (2026-08-14): görsel arama sonuç sayfasına gider — varsayılan açık
+    bool SimilarButton = true) : IRequest<Result<bool>>;
 
 public class UpdateProductCardSettingsCommandHandler(ICoreDbContext db)
     : IRequestHandler<UpdateProductCardSettingsCommand, Result<bool>>
@@ -66,6 +68,7 @@ public class UpdateProductCardSettingsCommandHandler(ICoreDbContext db)
             ["discountRow"] = request.DiscountRow,
             ["campaignPriceRow"] = request.CampaignPriceRow,
             ["cartButton"] = request.CartButton,
+            ["similarButton"] = request.SimilarButton,
             ["hoverEffect"] = request.HoverEffect == "zoom" ? "zoom" : "gallery",
             // F2: üç değişken alanın kaynak/öncelik ayarı — eksik alan varsayılanla yazılır
             // (1: kampanyalar açık; 2/3: yalnız mesajlar) ki site tarafı tutarlı okusun.

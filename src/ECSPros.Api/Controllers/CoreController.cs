@@ -407,7 +407,7 @@ public class CoreController : ControllerBase
                 id, request.VideoBadge, request.SponsorBadge, request.ColorBadge, request.GalleryDots,
                 request.FavoriteButton, request.CollectionButton, request.Rating,
                 request.DiscountRow, request.CampaignPriceRow, request.Areas, request.CartButton,
-                request.HoverEffect), ct);
+                request.HoverEffect, request.SimilarButton), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -471,7 +471,8 @@ public record ProductCardSettingsRequest(
     bool CampaignPriceRow = true,
     Dictionary<string, ECSPros.Core.Application.Commands.UpdateProductCardSettings.ProductCardAreaSetting>? Areas = null,
     bool CartButton = true,
-    string? HoverEffect = null);
+    string? HoverEffect = null,
+    bool SimilarButton = true);
 
 // ── Request Modelleri ──────────────────────────────────────────────────────────
 

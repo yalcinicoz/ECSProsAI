@@ -11,7 +11,7 @@ namespace ECSPros.Api.Models.Store;
 /// <summary>B8: renk tooltip satırı — eksen renginin kendi görseli ve detay linki.</summary>
 // Slug: rengin gerçek (legacy) URL slug'ı — varsa detay linki doğrudan /{slug}, yoksa
 // /urun/{kod}?color= (301 güvenlik ağı). URL aktarımı 2b.
-public sealed record KartRenkVm(Guid ValueId, string Ad, string? GorselUrl, string? Slug = null);
+public sealed record KartRenkVm(Guid ValueId, string Ad, string? GorselUrl, string? Slug = null, bool Stokta = true);
 
 /// <summary>Kartta sepete ekle (2026-08-14): kartın beden seçeneği — beden ekseni olmayan
 /// üründe tek kayıt Ad="" gelir (yalnız "Sepete Ekle" butonu gösterilir).</summary>

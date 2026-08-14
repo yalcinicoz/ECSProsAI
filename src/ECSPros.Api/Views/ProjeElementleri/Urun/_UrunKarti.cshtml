@@ -155,11 +155,19 @@
             <i class="fa-solid fa-bookmark ms-fa-ikon" aria-hidden="true"></i>
         </button>
         }
+        @if (kartAyar.BenzerButonu)
+        {
+        @* Benzer ürünler (2026-08-14): ürünün ilk görseliyle görsel arama — aynı cinsiyet +
+           ürün grubu filtresiyle sonuç listesi açılır. Şablon kartında href'i kartDoldur yazar. *@
+        <a class="ms-urun-benzer" data-ms-urun-benzer aria-label="Benzer ürünleri göster"
+           href="@(u is null ? "#" : "/benzer/" + u.Kod + (u.SeciliRenkId is { } benzerRenk ? "?renk=" + benzerRenk : ""))">
+            <i class="fa-solid fa-layer-group ms-fa-ikon" aria-hidden="true"></i>
+        </a>
+        }
         @if (kartAyar.SepetButonu)
         {
-        @* Kartta sepete ekle (2026-08-14): mobil/tablet ikon — tıklanınca alt sayfa (bottom
-           sheet) beden listesiyle açılır; desktop'ta (lg+) ikon gizli, hover beden paneli
-           çalışır. Davranış: _KartSepetDavranis.cshtml. *@
+        @* Kartta sepete ekle (2026-08-14): tıklanınca desktop'ta beden paneli, mobilde alt
+           sayfa (bottom sheet) açılır. Davranış: _KartSepetDavranis.cshtml. *@
         <button class="ms-urun-sepet" type="button" aria-label="Sepete ekle" data-ms-urun-sepet>
             <i class="fa-solid fa-cart-shopping ms-fa-ikon" aria-hidden="true"></i>
         </button>
@@ -226,11 +234,11 @@
                 <span class="ms-urun-renk-tooltip-liste">
                     @foreach (var renk in u.RenkSecenekleri.Take(4))
                     {
-                        <a class="ms-urun-renk-tooltip-gorsel" href="@u.UrlRenkli(renk.ValueId)"><img data-ms-lazy-src="@(renk.GorselUrl ?? u.GorselUrl)" alt="@renk.Ad renk seçeneği" width="90" height="134" loading="lazy" decoding="async"><span>@renk.Ad</span></a>
+                        <a class="ms-urun-renk-tooltip-gorsel @(renk.Stokta ? "" : "ms-urun-renk-tooltip-tukendi")" href="@u.UrlRenkli(renk.ValueId)"><img data-ms-lazy-src="@(renk.GorselUrl ?? u.GorselUrl)" alt="@renk.Ad renk seçeneği" width="90" height="134" loading="lazy" decoding="async"><span>@renk.Ad</span></a>
                     }
                     @foreach (var renk in u.RenkSecenekleri)
                     {
-                        <a class="ms-urun-renk-tooltip-gorsel ms-urun-renk-tooltip-gorsel-mobil" href="@u.UrlRenkli(renk.ValueId)"><img data-ms-lazy-src="@(renk.GorselUrl ?? u.GorselUrl)" alt="@renk.Ad renk seçeneği" width="90" height="134" loading="lazy" decoding="async"><span>@renk.Ad</span></a>
+                        <a class="ms-urun-renk-tooltip-gorsel ms-urun-renk-tooltip-gorsel-mobil @(renk.Stokta ? "" : "ms-urun-renk-tooltip-tukendi")" href="@u.UrlRenkli(renk.ValueId)"><img data-ms-lazy-src="@(renk.GorselUrl ?? u.GorselUrl)" alt="@renk.Ad renk seçeneği" width="90" height="134" loading="lazy" decoding="async"><span>@renk.Ad</span></a>
                     }
                 </span>
             </span>

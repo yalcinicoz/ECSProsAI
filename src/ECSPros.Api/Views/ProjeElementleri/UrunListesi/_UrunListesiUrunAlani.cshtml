@@ -68,7 +68,7 @@
         const normallestir = (p) => {
             const secenekler = ((p.axisColors && p.axisColors.length > 0 ? p.axisColors : p.colors) || [])
                 .filter((c) => c.imageUrl)
-                .map((c) => ({ id: c.valueId, ad: trAd(c.nameI18n), gorsel: c.imageUrl, slug: c.slug || null })); // 2b: renk slug'ı
+                .map((c) => ({ id: c.valueId, ad: trAd(c.nameI18n), gorsel: c.imageUrl, slug: c.slug || null, stok: c.inStock !== false })); // 2b: renk slug'ı + stok
             return {
                 kod: p.code,
                 ad: trAd(p.nameI18n),
@@ -157,6 +157,13 @@
             if (link) {
                 link.href = detayUrl;
                 link.setAttribute("aria-label", v.ad + " ürün detayına git");
+            }
+
+            // Benzer ürünler ikonu (2026-08-14): dinamik kartta href burada yazılır
+            const benzer = kart.querySelector("[data-ms-urun-benzer]");
+            if (benzer) {
+                benzer.href = "/benzer/" + encodeURIComponent(v.kod)
+                    + (v.seciliRenk ? "?renk=" + encodeURIComponent(v.seciliRenk) : "");
             }
 
             // B8 hover galerisi: görsel listesi + nokta göstergeleri. Modül skeleton'da boş
@@ -300,7 +307,7 @@
             // (site.js rozeti bağlarken tooltip alanını arar, bulamazsa bir daha bağlamaz)
             if (kartAyar.renkRozeti !== false && v.renkSecenekleri.length >= 2 && !kart.querySelector(".ms-urun-renk-tooltip-alani")) {
                 const secenekHtml = (renk, ekSinif) => `
-                    <a class="ms-urun-renk-tooltip-gorsel${ekSinif}" href="${renk.slug ? "/" + renk.slug : "/urun/" + encodeURIComponent(v.kod) + "?color=" + encodeURIComponent(renk.id)}">
+                    <a class="ms-urun-renk-tooltip-gorsel${ekSinif}${renk.stok === false ? " ms-urun-renk-tooltip-tukendi" : ""}" href="${renk.slug ? "/" + renk.slug : "/urun/" + encodeURIComponent(v.kod) + "?color=" + encodeURIComponent(renk.id)}">
                         <img data-ms-lazy-src="${kacir(renk.gorsel || v.gorsel)}" alt="${kacir(renk.ad)} renk seçeneği" width="90" height="134" loading="lazy" decoding="async"><span>${kacir(renk.ad)}</span></a>`;
                 const alan = document.createElement("div");
                 alan.className = "ms-urun-renk-tooltip-alani";

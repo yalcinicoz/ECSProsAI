@@ -126,8 +126,10 @@ public class GetChannelCategoryProductsQueryHandler(
     // deserialize'da null döner ve indirim satırı görünmezdi; sürüm artırıldı.
     // v10: DTO'ya Sizes (kartta sepete ekle beden seçenekleri) eklendi — eski v9 kayıtlarında
     // alan null kalır ve kartta sepete ekle görünmezdi; sürüm artırıldı (2026-08-14).
+    // v11: AxisColors'a InStock (stoksuz renk tooltip'te soluk) eklendi — eski v10 kayıtları
+    // varsayılan true okunup solgunluk hiç görünmeyecekti; sürüm artırıldı (2026-08-14).
     private static string CacheKey(Guid categoryId, string listingMode, bool showOutOfStock, int page, int pageSize) =>
-        $"channelcat:products:v10:{categoryId}:{listingMode}:{(showOutOfStock ? "oos" : "std")}:{page}:{pageSize}";
+        $"channelcat:products:v11:{categoryId}:{listingMode}:{(showOutOfStock ? "oos" : "std")}:{page}:{pageSize}";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
 
     private async Task<PagedResult<ChannelCategoryProductItemDto>?> TryGetCacheAsync(string key, CancellationToken ct)
@@ -869,7 +871,8 @@ public class GetChannelCategoryProductsQueryHandler(
                         colorValueNameMap.TryGetValue(pair.ColorValueId, out var hexAd) ? hexAd.Item2 : null,
                         imagesByPair.TryGetValue((pair.ProductId, pair.ColorValueId), out var imgs)
                         && imgs.Count > 0 ? cdnBase + imgs[0] : null,
-                        PairSlug(pair.VariantIds)))   // 2b: rengin gerçek URL slug'ı
+                        PairSlug(pair.VariantIds),   // 2b: rengin gerçek URL slug'ı
+                        InStock: pair.VariantIds.Any(inStockVariants.Contains)))   // stoksuz renk tooltip'te soluk
                     .ToList());
 
         // 11. DTO oluştur

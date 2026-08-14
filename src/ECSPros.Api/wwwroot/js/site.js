@@ -4500,6 +4500,73 @@
         });
     })();
 
+// Renk önizleme (2026-08-14): renk tooltip'inde bir rengin üzerinde gezinirken kartın
+// büyük görseli o rengin görseline döner; renkten/tooltip'ten çıkınca eski görsel gelir.
+// SSR + dinamik kartlar için delege dinleyici; srcset düşürülür (src kazanır).
+(() => {
+    let onizlenenKart = null;
+    let eskiSrc = "";
+
+    const anaGorsel = (kart) => kart?.querySelector("[data-ms-urun-galeri-gorsel]");
+
+    document.addEventListener("mouseover", (event) => {
+        const secenek = event.target instanceof Element
+            ? event.target.closest(".ms-urun-renk-tooltip-gorsel")
+            : null;
+        if (!secenek) {
+            return;
+        }
+
+        const kart = secenek.closest(".ms-urun-karti");
+        const gorsel = anaGorsel(kart);
+        const renkImg = secenek.querySelector("img");
+        // srcset'li küçük varyant değil, orijinal (liste boyu) URL: src attribute'u
+        const url = renkImg?.getAttribute("src") || renkImg?.dataset.msLazySrc || "";
+        if (!gorsel || !url) {
+            return;
+        }
+
+        if (onizlenenKart !== kart) {
+            onizlenenKart = kart;
+            eskiSrc = gorsel.getAttribute("src") || "";
+        }
+
+        gorsel.removeAttribute("srcset");
+        gorsel.removeAttribute("sizes");
+        gorsel.removeAttribute("data-ms-lazy-srcset");
+        gorsel.removeAttribute("data-ms-lazy-sizes");
+        gorsel.src = url;
+    });
+
+    document.addEventListener("mouseout", (event) => {
+        if (!onizlenenKart) {
+            return;
+        }
+
+        const secenek = event.target instanceof Element
+            ? event.target.closest(".ms-urun-renk-tooltip-gorsel")
+            : null;
+        if (!secenek) {
+            return;
+        }
+
+        // Başka bir renk seçeneğine geçiliyorsa geri alma — yeni mouseover devralır
+        const hedef = event.relatedTarget instanceof Element
+            ? event.relatedTarget.closest(".ms-urun-renk-tooltip-gorsel")
+            : null;
+        if (hedef) {
+            return;
+        }
+
+        const gorsel = anaGorsel(onizlenenKart);
+        if (gorsel && eskiSrc) {
+            gorsel.src = eskiSrc;
+        }
+        onizlenenKart = null;
+        eskiSrc = "";
+    });
+})();
+
 // Dinamik eklenen urun kartlari icin galeri, video, favori ve renk tooltip davranislari.
 (() => {
         const favoriIkonuOlustur = (src, siyah = true) => {

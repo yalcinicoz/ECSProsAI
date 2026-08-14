@@ -14,7 +14,8 @@ public record ProductListingColorDto(
     Dictionary<string, string> NameI18n,
     string? HexCode,
     string? ImageUrl = null,   // B8: renk tooltip görseli (rengin ilk varyant görseli)
-    string? Slug = null);      // URL aktarımı 2b: rengin gerçek (legacy) URL slug'ı (o platform)
+    string? Slug = null,       // URL aktarımı 2b: rengin gerçek (legacy) URL slug'ı (o platform)
+    bool InStock = true);      // 2026-08-14: rengin herhangi bir varyantında stok var mı — tooltip'te stoksuz renk soluk
 
 public record ProductListingAttrDto(
     string TypeCode,
@@ -370,6 +371,15 @@ public class GetStoreProductsQueryHandler(
                       .GroupBy(i => i.FileName).Select(x => x.First().FileName)
                       .ToList());
 
+        // Kartta sepete ekle + stoksuz renk (2026-08-14): varyant düzeyi stok kümesi —
+        // hem beden seçeneklerinin hem renk tooltip'inin stok işaretinde kullanılır.
+        var inStockVariantIds = await inStock.GetInStockVariantIdsAsync(ct);
+        // Renkte stok: o rengin HERHANGİ bir varyantı stoklu ise renk stokludur
+        var stokluRenkler = colorAttrs
+            .Where(ca => inStockVariantIds.Contains(ca.VariantId) && variantToProduct.ContainsKey(ca.VariantId))
+            .Select(ca => (Pid: variantToProduct[ca.VariantId], ca.AttributeValueId))
+            .ToHashSet();
+
         // Group by product
         var colorsByProduct = new Dictionary<Guid, List<ProductListingColorDto>>();
         var attrsByProduct  = new Dictionary<Guid, List<ProductListingAttrDto>>();
@@ -383,7 +393,8 @@ public class GetStoreProductsQueryHandler(
                 list.Add(new(ca.AttributeValueId, ca.NameI18n, ca.HexCode,
                     imagesByProductColor.TryGetValue((pid, ca.AttributeValueId), out var renkImgs)
                         ? cdnBase + renkImgs[0]
-                        : null));
+                        : null,
+                    InStock: stokluRenkler.Contains((pid, ca.AttributeValueId))));
         }
 
         foreach (var oa in otherAttrs)
@@ -395,9 +406,8 @@ public class GetStoreProductsQueryHandler(
                 list.Add(new(oa.TypeCode, oa.TypeNameI18n, oa.AttributeValueId, oa.ValueNameI18n, oa.SortOrder));
         }
 
-        // Kartta sepete ekle (2026-08-14): varyant düzeyi stok kümesi + varyantların renk-dışı
-        // eksen satırları (beden) — kartta gösterilen rengin bedenleri DTO'ya yazılır.
-        var inStockVariantIds = await inStock.GetInStockVariantIdsAsync(ct);
+        // Kartta sepete ekle (2026-08-14): varyantların renk-dışı eksen satırları (beden) —
+        // kartta gösterilen rengin bedenleri DTO'ya yazılır (stok kümesi yukarıda çekildi).
         var bedenRows = otherAttrs.Where(oa => oa.TypeCode != "renk").ToLookup(oa => oa.VariantId);
         static string BedenAd(Dictionary<string, string> d) =>
             d.TryGetValue("tr", out var ad) ? ad : d.Values.FirstOrDefault() ?? "";

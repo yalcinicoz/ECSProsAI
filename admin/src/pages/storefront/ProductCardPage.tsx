@@ -49,6 +49,8 @@ interface CardConfig {
   campaignPriceRow: boolean
   // Kartta sepete ekle (2026-08-14): desktop hover beden paneli + mobil sepet ikonu/alt sayfa
   cartButton: boolean
+  // Benzer ürünler ikonu (2026-08-14): ilk görselle görsel arama sonuç sayfasına gider
+  similarButton: boolean
   // Görsel hover efekti (2026-08-14): 'gallery' = yatay harekette diğer görseller (varsayılan);
   // 'zoom' = görsel hover'da büyür, galeri gezinmesi kapalı — ikisi bir arada olmaz
   hoverEffect: 'gallery' | 'zoom'
@@ -136,6 +138,7 @@ const DEFAULT_CONFIG: CardConfig = {
   discountRow: true,
   campaignPriceRow: true,
   cartButton: true,
+  similarButton: true,
   hoverEffect: 'gallery',
   areas: { '1': defaultArea('1'), '2': defaultArea('2'), '3': defaultArea('3') },
 }
@@ -201,6 +204,7 @@ function configFromSettings(settings: Record<string, unknown> | undefined): Card
     discountRow: o.discountRow !== false,
     campaignPriceRow: o.campaignPriceRow !== false,
     cartButton: o.cartButton !== false,
+    similarButton: o.similarButton !== false,
     hoverEffect: o.hoverEffect === 'zoom' ? 'zoom' : 'gallery',
     areas,
   }
@@ -664,8 +668,11 @@ export function ProductCardPage() {
                 <ToggleRow label="Koleksiyon butonu" checked={config.collectionButton}
                   onChange={v => set({ collectionButton: v })} />
                 <ToggleRow label="Sepete Ekle"
-                  desc="Desktop'ta kart üzerine gelince beden paneli, mobilde sepet ikonu + alttan açılan beden listesi"
+                  desc="Sepet ikonuna tıklanınca desktop'ta beden paneli, mobilde alttan açılan beden listesi"
                   checked={config.cartButton} onChange={v => set({ cartButton: v })} />
+                <ToggleRow label="Benzer ürünler"
+                  desc="Koleksiyon altındaki ikon — ürünün ilk görseliyle görsel arama (aynı cinsiyet + ürün grubu) sonuç sayfası"
+                  checked={config.similarButton} onChange={v => set({ similarButton: v })} />
 
                 <GroupTitle>Sabit çekirdek</GroupTitle>
                 <ToggleRow label="Görsel, ürün adı, fiyat, kart linki" locked checked
