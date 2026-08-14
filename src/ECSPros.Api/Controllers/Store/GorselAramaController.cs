@@ -147,8 +147,20 @@ public class GorselAramaController(
 
                 if (modelKodlari.Count > 0 && platform is not null)
                 {
+                    // Eşleşen renk (2026-08-15): dış servisin bulduğu VARYANTIN barkodu —
+                    // kart o rengin görseli ve ?color= linkiyle döner (siyahla arandıysa siyah).
+                    var eslesenBarkodlar = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var s in servisUrunleri)
+                    {
+                        var satir = refSonuc.Value!.FirstOrDefault(r =>
+                            r.ErpProductId == s.UrunId && r.ErpVariantId == s.UrunAnaVaryantId);
+                        if (satir?.Barcode is { Length: > 0 } barkod
+                            && modelKodlari.TryGetValue(s.UrunId, out var modelKodu))
+                            eslesenBarkodlar[modelKodu] = barkod;
+                    }
+
                     var kartSonuc = await mediator.Send(new GetVisualSearchCardsQuery(
-                        platform.Id, modelKodlari.Values.Distinct().ToList()), ct);
+                        platform.Id, modelKodlari.Values.Distinct().ToList(), eslesenBarkodlar), ct);
                     if (kartSonuc.IsSuccess)
                         kartlar = kartSonuc.Value!.ToDictionary(k => k.ModelCode);
                 }

@@ -202,6 +202,11 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
                 kodListesi = filtreli.Value!;
         }
 
+        // Kaynak ürün listenin BAŞINDA gösterilir (2026-08-15 kullanıcı kararı — önceki
+        // "kaynak hariç" kurgusu revize edildi: ürünün kendisi/diğer renkleri de görünsün)
+        kodListesi = kodListesi.Where(k => !k.Equals(kod, StringComparison.OrdinalIgnoreCase)).ToList();
+        kodListesi.Insert(0, kod);
+
         // 5) Görsel arama sonuç sayfası kalıbıyla listele (benzerlik sırası korunur)
         var kartlar = new List<UrunKartVm>();
         if (kodListesi.Count > 0)
