@@ -716,6 +716,9 @@
         };
     };
 
+    // 2026-08-14: dışa açık — liste sayfasının YUKARI yönlü (önceki sayfa) yükleyicisi de
+    // klonladığı kartlara tıklama davranışını bağlamak zorunda; bağlanmayınca ?page=N ile
+    // gelinen sayfada üste eklenen kartlar tıklanamıyordu.
     const kartTiklamasiniHazirla = (kart) => {
         if (!kart || kart.dataset.msKartLinkHazir === "true") {
             return;
@@ -739,6 +742,7 @@
             link.click();
         });
     };
+    window.msKartTiklamasiniHazirla = kartTiklamasiniHazirla;
 
     const templateKartOlustur = (template, sira, config) => {
         const parca = template.content.cloneNode(true);
