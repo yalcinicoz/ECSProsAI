@@ -633,6 +633,13 @@
         video.addEventListener("waiting", toparla);
         video.addEventListener("stalled", toparla);
         video.addEventListener("suspend", toparla);
+        // 2026-08-14: kaynak yüklenemiyorsa (ör. video CDN'i erişilemez/DNS yok) hover'da
+        // BOŞ KUTU göstermek yerine tooltip kapatılır ve rozet tamamen gizlenir.
+        video.addEventListener("error", () => {
+            videoAlaniniKapat(videoAlani, true);
+            const etiketAlani = videoAlani.closest(".ms-urun-gorsel-etiketleri") || videoAlani;
+            etiketAlani.hidden = true;
+        });
         tetikleyici.addEventListener("click", (event) => {
             event.preventDefault();
             event.stopPropagation();
