@@ -132,8 +132,9 @@ public class GorselAramaController(
             .Select(g => g.First())
             .ToList() ?? [];
 
-        // 2) Legacy Id → modelCode (erp_variant_data), 3) modelCode → katalog kartı
-        var kartlar = new Dictionary<string, VisualSearchCardDto>();
+        // 2) Legacy Id → modelCode (erp_variant_data), 3) modelCode → katalog kartları
+        // (2026-08-15: model başına TÜM renk kartları döner — eşleşen renk ilk sırada)
+        var kartlar = Enumerable.Empty<VisualSearchCardDto>().ToLookup(k => k.ModelCode);
         var modelKodlari = new Dictionary<int, string>();
         if (servisUrunleri.Count > 0)
         {
@@ -162,29 +163,29 @@ public class GorselAramaController(
                     var kartSonuc = await mediator.Send(new GetVisualSearchCardsQuery(
                         platform.Id, modelKodlari.Values.Distinct().ToList(), eslesenBarkodlar), ct);
                     if (kartSonuc.IsSuccess)
-                        kartlar = kartSonuc.Value!.ToDictionary(k => k.ModelCode);
+                        kartlar = kartSonuc.Value!.ToLookup(k => k.ModelCode);
                 }
             }
         }
 
         var sonucListe = servisUrunleri
-            .Select(s =>
+            .SelectMany(s =>
             {
-                var kart = modelKodlari.TryGetValue(s.UrunId, out var kod)
-                    ? kartlar.GetValueOrDefault(kod) : null;
-                return new
+                var kartListesi = modelKodlari.TryGetValue(s.UrunId, out var kod)
+                    ? kartlar[kod] : Enumerable.Empty<VisualSearchCardDto>();
+                // Model başına tüm renk kartları — benzerlik sırası korunur, renkler art arda
+                return kartListesi.Select(kart => new
                 {
                     urunId = s.UrunId,
                     urunAnaVaryantId = s.UrunAnaVaryantId,
                     score = s.Score,
                     match = s.Match,
-                    imageUrl = kart?.ImageUrl,
-                    productName = kart is null ? null
-                        : kart.Name.GetValueOrDefault("tr") ?? kart.Name.Values.FirstOrDefault(),
-                    modelCode = kart?.ModelCode,
-                    price = kart?.Price,
-                    productUrl = kart?.Url
-                };
+                    imageUrl = kart.ImageUrl,
+                    productName = kart.Name.GetValueOrDefault("tr") ?? kart.Name.Values.FirstOrDefault(),
+                    modelCode = kart.ModelCode,
+                    price = (decimal?)kart.Price,
+                    productUrl = kart.Url
+                });
             })
             // Katalogda karşılığı olmayan (ör. satışa kapalı) sonuçlar liste dışı — legacy davranışı
             .Where(s => !string.IsNullOrWhiteSpace(s.imageUrl))
