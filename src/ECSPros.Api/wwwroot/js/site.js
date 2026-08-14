@@ -7214,13 +7214,14 @@
                     return;
                 }
 
-                event.preventDefault();
+                // 2026-08-14: preventDefault + setPointerCapture BURADA YAPILMAZ — pointerdown
+                // anında yakalamak tarayıcının click olayını linke değil bu konteynere
+                // hedeflemesine yol açıyor ve menü linkinin navigasyonu hiç çalışmıyordu.
+                // Sürükleme ancak eşik (5px) aşılınca yakalanır; basit tıklama linke ulaşır.
                 menuSurukleniyor = true;
                 menuBaslangicX = event.clientX;
                 menuBaslangicScroll = menuKaydirma.scrollLeft;
                 menuKaydirmaTiklamayiEngelle = false;
-                menuKaydirma.classList.add("ms-magaza-menu-kaydirma-surukleniyor");
-                menuKaydirma.setPointerCapture?.(event.pointerId);
             });
 
             menuKaydirma.addEventListener("pointermove", (event) => {
@@ -7230,8 +7231,14 @@
 
                 const fark = event.clientX - menuBaslangicX;
 
-                if (Math.abs(fark) > 5) {
+                if (Math.abs(fark) > 5 && !menuKaydirmaTiklamayiEngelle) {
                     menuKaydirmaTiklamayiEngelle = true;
+                    menuKaydirma.classList.add("ms-magaza-menu-kaydirma-surukleniyor");
+                    menuKaydirma.setPointerCapture?.(event.pointerId);
+                }
+
+                if (!menuKaydirmaTiklamayiEngelle) {
+                    return;
                 }
 
                 menuKaydirma.scrollLeft = menuBaslangicScroll - fark;
@@ -7286,12 +7293,13 @@
                     return;
                 }
 
+                // 2026-08-14: yakalama eşik aşılınca — pointerdown'da capture, click'i
+                // konteynere retarget edip kampanya linklerinin navigasyonunu öldürüyordu
+                // (menü kaydırma şeridiyle aynı düzeltme).
                 surukleniyor = true;
                 baslangicX = event.clientX;
                 baslangicScroll = kampanyaListesi.scrollLeft;
                 suruklemeTiklamayiEngelle = false;
-                kampanyaListesi.classList.add("ms-magaza-mega-kampanya-listesi-surukleniyor");
-                kampanyaListesi.setPointerCapture(event.pointerId);
             });
 
             kampanyaListesi.addEventListener("pointermove", (event) => {
@@ -7300,8 +7308,14 @@
                 }
 
                 const fark = event.clientX - baslangicX;
-                if (Math.abs(fark) > 5) {
+                if (Math.abs(fark) > 5 && !suruklemeTiklamayiEngelle) {
                     suruklemeTiklamayiEngelle = true;
+                    kampanyaListesi.classList.add("ms-magaza-mega-kampanya-listesi-surukleniyor");
+                    kampanyaListesi.setPointerCapture(event.pointerId);
+                }
+
+                if (!suruklemeTiklamayiEngelle) {
+                    return;
                 }
 
                 kampanyaListesi.scrollLeft = baslangicScroll - fark;

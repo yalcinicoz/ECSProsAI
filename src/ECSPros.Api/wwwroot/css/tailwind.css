@@ -1514,7 +1514,7 @@
 
   /* Desktop hover beden paneli — kart hover'ında görselin altından yukarı kayar (yalnız lg+). */
   .ms-urun-sepet-panel {
-    @apply pointer-events-none absolute inset-x-0 bottom-0 z-50 hidden translate-y-full flex-col gap-2 bg-white/95 p-2.5 opacity-0 shadow-[0_-6px_16px_rgba(0,0,0,0.12)] transition-all duration-200 ease-out lg:flex;
+    @apply pointer-events-none absolute inset-x-0 bottom-0 z-50 hidden translate-y-full flex-col gap-1.5 bg-white/95 p-2 opacity-0 shadow-[0_-6px_16px_rgba(0,0,0,0.12)] transition-all duration-200 ease-out lg:flex;
   }
 
   .ms-urun-karti:hover .ms-urun-sepet-panel,
@@ -1527,7 +1527,7 @@
   }
 
   .ms-urun-sepet-beden {
-    @apply inline-flex h-8 min-w-9 cursor-pointer items-center justify-center rounded border border-slate-300 bg-white px-2 text-[12px] font-semibold text-ms-siyah transition hover:border-[var(--ms-renk-primary)];
+    @apply inline-flex h-7 min-w-8 cursor-pointer items-center justify-center rounded border border-slate-300 bg-white px-1.5 text-[11px] font-semibold text-ms-siyah transition hover:border-[var(--ms-renk-primary)];
   }
 
   .ms-urun-sepet-beden-secili {
@@ -1539,7 +1539,7 @@
   }
 
   .ms-urun-sepet-ekle-buton {
-    @apply inline-flex h-10 w-full cursor-pointer items-center justify-center rounded bg-[var(--ms-renk-primary)] text-[13px] font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300;
+    @apply inline-flex h-8 w-full cursor-pointer items-center justify-center rounded bg-[var(--ms-renk-primary)] text-[12px] font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300;
   }
 
   .ms-urun-sepet-ekle-basari {
@@ -1597,6 +1597,11 @@
 
   .ms-sepet-sheet .ms-urun-sepet-beden {
     @apply h-10 min-w-12 text-[13px];
+  }
+
+  /* Alt sayfada buton mobil dokunma boyutunda kalır (desktop paneli küçültüldü, 2026-08-14) */
+  .ms-sepet-sheet .ms-urun-sepet-ekle-buton {
+    @apply h-10 text-[13px];
   }
 
   .ms-urun-favori-merkez-kalp {
