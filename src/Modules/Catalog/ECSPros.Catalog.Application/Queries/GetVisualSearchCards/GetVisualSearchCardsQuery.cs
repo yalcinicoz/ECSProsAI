@@ -62,33 +62,9 @@ public class GetVisualSearchCardsQueryHandler(
             .Select(g => new { ProductId = g.Key, FileName = g.OrderBy(i => i.SortOrder).First().FileName })
             .ToDictionaryAsync(x => x.ProductId, x => x.FileName, ct);
 
-        // Tüm renk kartları (2026-08-15, kullanıcı isteği): her model RENK başına ayrı kartla
-        // döner (kategori renk-kartı kuralı gibi; görselsiz renk listelenmez, renk ekseni
-        // olmayan ürün tek kart). MatchedBarcodes verilmişse eşleşen renk İLK sırada.
-        var tumVaryantIdler = products.SelectMany(p => p.Variants).Select(v => v.Id).ToList();
-        var renkSatirlari = tumVaryantIdler.Count > 0
-            ? await db.ProductVariantAttributes.AsNoTracking()
-                .Where(va => tumVaryantIdler.Contains(va.VariantId)
-                          && (va.AttributeType.Code == "filtre_rengi" || va.AttributeType.Code == "renk"))
-                .Select(va => new { va.VariantId, TipKodu = va.AttributeType.Code, va.AttributeValueId })
-                .ToListAsync(ct)
-            : [];
-        // varyant → renk değeri (filtre_rengi öncelikli, yoksa renk ekseni — detay ?color= ikisini de çözer)
-        var renkByVariant = renkSatirlari
-            .GroupBy(x => x.VariantId)
-            .ToDictionary(g => g.Key,
-                g => (g.FirstOrDefault(x => x.TipKodu == "filtre_rengi") ?? g.First()).AttributeValueId);
-        var varyantIlkGorseller = tumVaryantIdler.Count > 0
-            ? await db.ProductImages.AsNoTracking()
-                .Where(i => i.VariantId != null && tumVaryantIdler.Contains(i.VariantId.Value)
-                         && i.Status == Domain.Entities.ProductImageStatus.Active)
-                .GroupBy(i => i.VariantId!.Value)
-                .Select(g => new { VariantId = g.Key, Fn = g.OrderBy(i => i.SortOrder).First().FileName })
-                .ToDictionaryAsync(x => x.VariantId, x => x.Fn, ct)
-            : new Dictionary<Guid, string>();
-
-        // Eşleşen renk: barkodla verilen varyantın rengi — model içinde ilk sıraya alınır
-        var eslesenRenkByProduct = new Dictionary<Guid, Guid>();
+        // Eşleşen renk: barkodla verilen varyantın ilk görseli + renk değeri (filtre_rengi
+        // öncelikli, yoksa renk ekseni — detay ?color= ikisini de çözer)
+        var eslesenVaryantlar = new Dictionary<Guid, Guid>(); // ProductId → VariantId
         if (request.MatchedBarcodes is { Count: > 0 } barkodlar)
         {
             foreach (var p in products)
@@ -96,13 +72,31 @@ public class GetVisualSearchCardsQueryHandler(
                 if (barkodlar.TryGetValue(p.Code, out var barkod) && barkod is { Length: > 0 })
                 {
                     var varyant = p.Variants.FirstOrDefault(v => v.Barcode == barkod);
-                    if (varyant is not null && renkByVariant.TryGetValue(varyant.Id, out var renkId))
-                        eslesenRenkByProduct[p.Id] = renkId;
+                    if (varyant is not null) eslesenVaryantlar[p.Id] = varyant.Id;
                 }
             }
         }
+        var eslesenVaryantIdler = eslesenVaryantlar.Values.ToList();
+        var eslesenGorseller = eslesenVaryantIdler.Count > 0
+            ? await db.ProductImages.AsNoTracking()
+                .Where(i => i.VariantId != null && eslesenVaryantIdler.Contains(i.VariantId.Value)
+                         && i.Status == Domain.Entities.ProductImageStatus.Active)
+                .GroupBy(i => i.VariantId!.Value)
+                .Select(g => new { VariantId = g.Key, Fn = g.OrderBy(i => i.SortOrder).First().FileName })
+                .ToDictionaryAsync(x => x.VariantId, x => x.Fn, ct)
+            : new Dictionary<Guid, string>();
+        var eslesenRenkler = eslesenVaryantIdler.Count > 0
+            ? (await db.ProductVariantAttributes.AsNoTracking()
+                .Where(va => eslesenVaryantIdler.Contains(va.VariantId)
+                          && (va.AttributeType.Code == "filtre_rengi" || va.AttributeType.Code == "renk"))
+                .Select(va => new { va.VariantId, TipKodu = va.AttributeType.Code, va.AttributeValueId })
+                .ToListAsync(ct))
+                .GroupBy(x => x.VariantId)
+                .ToDictionary(g => g.Key,
+                    g => (g.FirstOrDefault(x => x.TipKodu == "filtre_rengi") ?? g.First()).AttributeValueId)
+            : new Dictionary<Guid, Guid>();
 
-        var cards = products.SelectMany(p =>
+        var cards = products.Select(p =>
         {
             var activeVariants = p.Variants.ToList();
             var platformPrices = activeVariants
@@ -113,37 +107,18 @@ public class GetVisualSearchCardsQueryHandler(
             var variantMin = activeVariants.Count > 0 ? activeVariants.Min(v => v.BasePrice) : 0;
             var price = platformPrices.Count > 0 ? platformPrices.Min() : variantMin > 0 ? variantMin : p.BasePrice;
 
-            // Renk kartları: rengin ilk görselli varyantından görsel; görselsiz renk atlanır
-            var renkKartlari = new List<(Guid RenkId, string Gorsel)>();
-            foreach (var v in p.Variants)
-            {
-                if (!renkByVariant.TryGetValue(v.Id, out var renkId)) continue;
-                if (renkKartlari.Any(r => r.RenkId == renkId)) continue;
-                var renkGorseli = p.Variants
-                    .Where(v2 => renkByVariant.TryGetValue(v2.Id, out var r2) && r2 == renkId)
-                    .Select(v2 => varyantIlkGorseller.GetValueOrDefault(v2.Id))
-                    .FirstOrDefault(f => f is not null);
-                if (renkGorseli is null) continue;
-                renkKartlari.Add((renkId, cdnBase + renkGorseli));
-            }
+            var image = firstImages.TryGetValue(p.Id, out var fn) ? cdnBase + fn : null;
 
             // Slug çözümü kanal-özel (Storefront); güvenlik ağı /urun/{code} in-place render eder.
-            if (renkKartlari.Count == 0)
+            var url = "/urun/" + p.Code;
+            if (eslesenVaryantlar.TryGetValue(p.Id, out var eslesenVaryantId))
             {
-                // Renk ekseni/renk görseli yok: bugünkü tek kart davranışı
-                var image = firstImages.TryGetValue(p.Id, out var fn) ? cdnBase + fn : null;
-                return new List<VisualSearchCardDto>
-                    { new(p.Code, p.NameI18n, image, price, "/urun/" + p.Code) };
+                if (eslesenGorseller.TryGetValue(eslesenVaryantId, out var eslesenFn))
+                    image = cdnBase + eslesenFn;
+                if (eslesenRenkler.TryGetValue(eslesenVaryantId, out var renkId))
+                    url += "?color=" + renkId;
             }
-
-            // Eşleşen renk (aranan görseldeki renk) ilk sırada
-            if (eslesenRenkByProduct.TryGetValue(p.Id, out var eslesenRenk))
-                renkKartlari = renkKartlari
-                    .OrderByDescending(r => r.RenkId == eslesenRenk)
-                    .ToList();
-
-            return renkKartlari.Select(r => new VisualSearchCardDto(
-                p.Code, p.NameI18n, r.Gorsel, price, "/urun/" + p.Code + "?color=" + r.RenkId)).ToList();
+            return new VisualSearchCardDto(p.Code, p.NameI18n, image, price, url);
         }).ToList();
 
         return Result.Success(cards);
