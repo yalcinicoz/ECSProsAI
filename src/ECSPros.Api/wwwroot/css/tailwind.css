@@ -1574,6 +1574,27 @@
     @apply m-0 text-center text-[11px] font-semibold text-red-600;
   }
 
+  /* İkon işlev balonu (2026-08-14): kart aksiyon ikonları üzerinde beklenince işlev adı
+     (aria-label — durumla değişir: "Favorilere ekle"/"Favorilerden çıkar") ikonun solunda
+     görünür. Yalnız hover'lı cihazlar; ~0,4 sn bekleme gecikmesi. */
+  @media (hover: hover) {
+    .ms-urun-favori::after,
+    .ms-urun-koleksiyon::after,
+    .ms-urun-benzer::after,
+    .ms-urun-sepet::after {
+      content: attr(aria-label);
+      @apply pointer-events-none absolute right-full top-1/2 mr-2 -translate-y-1/2 whitespace-nowrap rounded bg-black/80 px-2 py-1 text-[11px] font-semibold normal-case text-white opacity-0 transition-opacity duration-150;
+    }
+
+    .ms-urun-favori:hover::after,
+    .ms-urun-koleksiyon:hover::after,
+    .ms-urun-benzer:hover::after,
+    .ms-urun-sepet:hover::after {
+      @apply opacity-100;
+      transition-delay: 400ms;
+    }
+  }
+
   /* Stoksuz renk (2026-08-14): renk tooltip'inde stoğu sıfır olan renk soluk görünür. */
   .ms-urun-renk-tooltip-tukendi {
     @apply opacity-45 grayscale-[50%];
