@@ -1501,6 +1501,104 @@
     @apply bg-[var(--ms-renk-primary)] text-white hover:text-white;
   }
 
+  /* Kartta sepete ekle (2026-08-14): mobil/tablet sepet ikonu — koleksiyon butonunun
+     hemen altında; desktop'ta (lg+) ikon gizli, hover beden paneli kullanılır. */
+  .ms-urun-sepet {
+    @apply absolute right-2 top-[5.5rem] z-50 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white text-ms-siyah shadow-md transition hover:text-[var(--ms-renk-primary)] focus:outline-none focus:ring-0 focus-visible:outline-none sm:right-3 sm:top-[7.25rem] sm:h-11 sm:w-11 lg:hidden;
+  }
+
+  .ms-urun-sepet .ms-fa-ikon,
+  .ms-urun-sepet i {
+    @apply h-4 w-4 text-[16px] sm:h-5 sm:w-5 sm:text-[20px];
+  }
+
+  /* Desktop hover beden paneli — kart hover'ında görselin altından yukarı kayar (yalnız lg+). */
+  .ms-urun-sepet-panel {
+    @apply pointer-events-none absolute inset-x-0 bottom-0 z-50 hidden translate-y-full flex-col gap-2 bg-white/95 p-2.5 opacity-0 shadow-[0_-6px_16px_rgba(0,0,0,0.12)] transition-all duration-200 ease-out lg:flex;
+  }
+
+  .ms-urun-karti:hover .ms-urun-sepet-panel,
+  .ms-urun-sepet-panel:focus-within {
+    @apply pointer-events-auto translate-y-0 opacity-100;
+  }
+
+  .ms-urun-sepet-bedenler {
+    @apply flex max-h-24 flex-wrap justify-center gap-1.5 overflow-y-auto;
+  }
+
+  .ms-urun-sepet-beden {
+    @apply inline-flex h-8 min-w-9 cursor-pointer items-center justify-center rounded border border-slate-300 bg-white px-2 text-[12px] font-semibold text-ms-siyah transition hover:border-[var(--ms-renk-primary)];
+  }
+
+  .ms-urun-sepet-beden-secili {
+    @apply border-[var(--ms-renk-primary)] bg-[var(--ms-renk-primary)] text-white;
+  }
+
+  .ms-urun-sepet-beden-tukendi {
+    @apply cursor-not-allowed border-slate-200 text-slate-300 line-through;
+  }
+
+  .ms-urun-sepet-ekle-buton {
+    @apply inline-flex h-10 w-full cursor-pointer items-center justify-center rounded bg-[var(--ms-renk-primary)] text-[13px] font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300;
+  }
+
+  .ms-urun-sepet-ekle-basari {
+    @apply bg-emerald-600;
+  }
+
+  .ms-urun-sepet-uyari {
+    @apply m-0 text-center text-[11px] font-semibold text-red-600;
+  }
+
+  /* Kartta sepete ekle: mobil alt sayfa (bottom sheet) — ekranın altından yukarı açılır. */
+  .ms-sepet-sheet {
+    @apply pointer-events-none fixed inset-0 z-[10050];
+  }
+
+  .ms-sepet-sheet-ortu {
+    @apply absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-200;
+  }
+
+  .ms-sepet-sheet-panel {
+    @apply absolute inset-x-0 bottom-0 flex max-h-[70vh] translate-y-full flex-col gap-3 rounded-t-2xl bg-white p-4 pb-6 shadow-2xl transition-transform duration-200 ease-out;
+  }
+
+  .ms-sepet-sheet-acik {
+    @apply pointer-events-auto;
+  }
+
+  .ms-sepet-sheet-acik .ms-sepet-sheet-ortu {
+    @apply opacity-100;
+  }
+
+  .ms-sepet-sheet-acik .ms-sepet-sheet-panel {
+    @apply translate-y-0;
+  }
+
+  .ms-sepet-sheet-baslik {
+    @apply flex items-center justify-between gap-3;
+  }
+
+  .ms-sepet-sheet-ad {
+    @apply text-[14px] font-bold text-ms-siyah;
+  }
+
+  .ms-sepet-sheet-kapat {
+    @apply inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-slate-100 text-ms-siyah;
+  }
+
+  .ms-sepet-sheet-icerik {
+    @apply flex flex-col gap-3 overflow-y-auto;
+  }
+
+  .ms-sepet-sheet .ms-urun-sepet-bedenler {
+    @apply max-h-56 justify-start;
+  }
+
+  .ms-sepet-sheet .ms-urun-sepet-beden {
+    @apply h-10 min-w-12 text-[13px];
+  }
+
   .ms-urun-favori-merkez-kalp {
     @apply pointer-events-none absolute left-1/2 top-1/2 z-30;
     width: clamp(42px, 16vw, 88px) !important;

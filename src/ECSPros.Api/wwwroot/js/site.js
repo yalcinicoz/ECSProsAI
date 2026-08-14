@@ -7126,24 +7126,38 @@
             ustLinkler.forEach((link) => link.classList.remove("ms-magaza-menu-link-aktif"));
         };
 
-        anaMenuLink.addEventListener("mouseenter", menuAc);
-        anaMenuLink.addEventListener("focus", menuAc);
+        // Mega menü hover ayarı (2026-08-14, data-ms-mega-hover panel Menü Yerleşimi'nden):
+        // kapalıyken (varsayılan) üzerine gelmek mega menüyü AÇMAZ; mega menü yalnız
+        // "Kategoriler" tıklamasıyla açılır/kapanır. Menü linkleri her iki modda da
+        // tıklamada gerçek navigasyon yapar (ürün listesi sayfası açılır).
+        const hoverIleAcilir = menu.dataset.msMegaHover === "1";
+
+        if (hoverIleAcilir) {
+            anaMenuLink.addEventListener("mouseenter", menuAc);
+            anaMenuLink.addEventListener("focus", menuAc);
+        }
         anaMenuLink.addEventListener("click", (event) => {
             event.preventDefault();
-            menuAc();
+            if (megaMenu.classList.contains("ms-magaza-mega-menu-acik")) {
+                kategoriKapat();
+            } else {
+                menuAc();
+            }
         });
 
         ustLinkler.forEach((link) => {
             const kategori = link.dataset.msMagazaMenuLink;
 
-            link.addEventListener("mouseenter", () => {
-                menuAc();
-                kategoriAc(kategori, true);
-            });
-            link.addEventListener("focus", () => {
-                menuAc();
-                kategoriAc(kategori, true);
-            });
+            if (hoverIleAcilir) {
+                link.addEventListener("mouseenter", () => {
+                    menuAc();
+                    kategoriAc(kategori, true);
+                });
+                link.addEventListener("focus", () => {
+                    menuAc();
+                    kategoriAc(kategori, true);
+                });
+            }
             link.addEventListener("click", (event) => {
                 if (menuKaydirmaTiklamayiEngelle) {
                     event.preventDefault();
@@ -7151,10 +7165,7 @@
                     menuKaydirmaTiklamayiEngelle = false;
                     return;
                 }
-
-                event.preventDefault();
-                menuAc();
-                kategoriAc(kategori, true);
+                // tıklama = navigasyon (href kategorinin ürün listesi) — mega menü açmaz
             });
         });
 
@@ -7165,11 +7176,7 @@
                 menuAc();
                 kategoriAc(kategori);
             });
-            link.addEventListener("click", (event) => {
-                event.preventDefault();
-                menuAc();
-                kategoriAc(kategori);
-            });
+            // tıklama = navigasyon (href kategorinin ürün listesi) — preventDefault kaldırıldı
         });
 
         menu.addEventListener("mouseleave", kategoriKapat);

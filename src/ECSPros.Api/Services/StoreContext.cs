@@ -35,7 +35,10 @@ public sealed record StorePlatformBilgisi(
     // Liste sıralaması (2026-08-10): sitede gösterilecek sıralama seçenekleri —
     // ProductSortCatalog.Tumu'nun Settings."productList"."sortOptions" ile filtrelenmiş hali
     // ("default" her zaman kalır; eksik anahtar = AÇIK). null gelmez, kurucu doldurur.
-    IReadOnlyList<(string Kod, string Ad)>? SiralamaSecenekleri = null)
+    IReadOnlyList<(string Kod, string Ad)>? SiralamaSecenekleri = null,
+    // Mega menü (2026-08-14): üst menü linklerinin üzerine gelince mega menü açılsın mı —
+    // Settings."navigation"."megaMenuHover"; varsayılan KAPALI (kullanıcı kararı: "Açılmayacak").
+    bool MegaMenuHover = false)
 {
     public IReadOnlyList<(string Kod, string Ad)> SiralamaListesi =>
         SiralamaSecenekleri ?? ECSPros.Shared.Contracts.ProductSortCatalog.Tumu;
@@ -71,6 +74,9 @@ public sealed record StoreKartAyarlari(
     bool Puan = true,
     bool IndirimSatiri = true,
     bool KampanyaFiyatSatiri = true,
+    // Kartta sepete ekle (2026-08-14): desktop hover beden paneli + mobil sepet ikonu/alt sayfa —
+    // varsayılan AÇIK (kullanıcı kararı: "Sepete Ekle Olsun").
+    bool SepetButonu = true,
     KartAlanAyari? Alan1 = null,
     KartAlanAyari? Alan2 = null,
     KartAlanAyari? Alan3 = null)
@@ -136,6 +142,7 @@ public sealed record StoreKartAyarlari(
             Puan: B("rating"),
             IndirimSatiri: B("discountRow"),
             KampanyaFiyatSatiri: B("campaignPriceRow"),
+            SepetButonu: B("cartButton"),
             Alan1: A1, Alan2: A2, Alan3: A3);
     }
 
@@ -229,7 +236,13 @@ public sealed class StoreContext(
                     .ToList();
             }
 
-            return new StorePlatformBilgisi(platform.Id, platform.Code, tema!, tokenlar, stokBitenGoster, stokBitenTarih, kartAyarlari, siralamalar);
+            // Mega menü hover ayarı (Settings."navigation"."megaMenuHover") — varsayılan kapalı
+            var megaMenuHover = platform.Settings.TryGetValue("navigation", out var navObj)
+                && navObj is System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.Object } nav
+                && nav.TryGetProperty("megaMenuHover", out var mmh)
+                && mmh.ValueKind == System.Text.Json.JsonValueKind.True;
+
+            return new StorePlatformBilgisi(platform.Id, platform.Code, tema!, tokenlar, stokBitenGoster, stokBitenTarih, kartAyarlari, siralamalar, megaMenuHover);
         });
     }
 }

@@ -95,7 +95,8 @@
                 kartMesajlar: (p.cardMessages || []).map((m) => ({ slot: m.slot, metin: m.text, ikon: m.icon || null, renk: m.color || null })), // F2: elle kart mesajları
                 sepetteSayisi: p.cartCount || 0,  // sosyal kanıt: son 30 günde kaç farklı sepette
                 favoriSayisi: p.favoriteCount || 0, // sosyal kanıt: kaç farklı üyenin favorisi
-                bakanSayisi: p.viewCount || 0     // sosyal kanıt: kaç farklı üye baktı
+                bakanSayisi: p.viewCount || 0,    // sosyal kanıt: kaç farklı üye baktı
+                bedenler: (p.sizes || []).map((b) => ({ ad: b.name || "", id: b.variantId, fiyat: b.price || 0, stok: b.inStock !== false })) // kartta sepete ekle
             };
         };
 
@@ -127,6 +128,9 @@
         const kartDoldur = (kart, v) => {
             kart.dataset.msFiyat = String(v.fiyat);
             kart.dataset.msDegerler = v.degerler.join(",");
+            // Kartta sepete ekle: beden JSON'u SSR kartıyla aynı biçimde data'ya yazılır
+            // (davranış _KartSepetDavranis'ta; paneli hover/tıklamada oradan kurulur)
+            kart.dataset.msBedenler = v.bedenler.length ? JSON.stringify(v.bedenler) : "";
             kart.dataset.msUrunKod = v.kod; // E5 favori/bookmark kod çözümü
             kart.dataset.msUrunId = v.kod;  // tasarım sözleşmesi: ortak renk modalı ürün kimliği
             kart.dataset.msSeciliRenk = v.seciliRenk || ""; // favori anahtarı ürün+renk

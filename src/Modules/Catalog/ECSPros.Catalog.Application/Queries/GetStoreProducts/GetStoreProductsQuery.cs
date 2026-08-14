@@ -23,6 +23,15 @@ public record ProductListingAttrDto(
     Dictionary<string, string> ValueNameI18n,
     int SortOrder = 0);
 
+// Kartta sepete ekle (2026-08-14): kartın beden seçenekleri — kartta gösterilen rengin
+// varyantları. Beden ekseni olmayan üründe tek temsilci varyant Name="" ile döner
+// (site yalnız "Sepete Ekle" butonu gösterir). Price sepete yazılacak satış fiyatıdır.
+public record CardSizeDto(
+    string Name,
+    Guid VariantId,
+    decimal Price,
+    bool InStock);
+
 // B10: filtre/sıralama parametreleri additive — mobil/SPA eski çağrıları etkilenmez.
 // AttributeValueIds tip bazında gruplanır: aynı tipin değerleri OR, tipler arası AND.
 // Sort: "price_asc" | "price_desc" | "newest" | null (varsayılan sıra).
@@ -72,7 +81,8 @@ public record StoreProductDto(
     List<CardMessageItem>? CardMessages = null,  // Ürün Kartı F2: elle kart mesajları (slot 1/2/3)
     int CartCount = 0,                           // Sosyal kanıt (2026-08-10): son 30 günde kaç farklı sepette — cache DIŞI eklenir
     int FavoriteCount = 0,                       // Sosyal kanıt: kaç farklı üyenin favorisi — cache DIŞI eklenir
-    int ViewCount = 0);                          // Sosyal kanıt: kaç farklı üye baktı — cache DIŞI eklenir
+    int ViewCount = 0,                           // Sosyal kanıt: kaç farklı üye baktı — cache DIŞI eklenir
+    List<CardSizeDto>? Sizes = null);            // Kartta sepete ekle (2026-08-14): ana rengin beden seçenekleri
 
 public class GetStoreProductsQueryHandler(
     ICatalogDbContext db,
@@ -385,6 +395,13 @@ public class GetStoreProductsQueryHandler(
                 list.Add(new(oa.TypeCode, oa.TypeNameI18n, oa.AttributeValueId, oa.ValueNameI18n, oa.SortOrder));
         }
 
+        // Kartta sepete ekle (2026-08-14): varyant düzeyi stok kümesi + varyantların renk-dışı
+        // eksen satırları (beden) — kartta gösterilen rengin bedenleri DTO'ya yazılır.
+        var inStockVariantIds = await inStock.GetInStockVariantIdsAsync(ct);
+        var bedenRows = otherAttrs.Where(oa => oa.TypeCode != "renk").ToLookup(oa => oa.VariantId);
+        static string BedenAd(Dictionary<string, string> d) =>
+            d.TryGetValue("tr", out var ad) ? ad : d.Values.FirstOrDefault() ?? "";
+
         // Build DTOs
         var items = products.Select(p =>
         {
@@ -423,6 +440,43 @@ public class GetStoreProductsQueryHandler(
             }
 
             var renkler = colorsByProduct.GetValueOrDefault(p.Id) ?? new();
+            // Kart aramadaki renk kelimesiyle eşleşen renkle gösteriliyorsa bedenler de o renkten
+            var eslesenRenkId = aramaRenkIdleri.Count > 0
+                ? renkler.FirstOrDefault(c => aramaRenkIdleri.Contains(c.ValueId))?.ValueId
+                : null;
+
+            // Kartta sepete ekle: kartta gösterilen rengin varyant havuzu → beden seçenekleri.
+            // Fiyat çözümü detay sayfasıyla aynı sıra: kanal fiyatı → varyant fiyatı → kart fiyatı.
+            var havuz = (eslesenRenkId ?? anaRenkId) is { } seciliRenk
+                ? activeVariants.Where(v => variantColorOf.TryGetValue(v.Id, out var vr) && vr == seciliRenk).ToList()
+                : activeVariants;
+            if (havuz.Count == 0) havuz = activeVariants;
+            decimal VaryantFiyati(ProductVariant v)
+            {
+                var kanal = channelPrices.TryGetValue(v.Id, out var kf) ? kf.Price ?? 0 : 0;
+                return kanal > 0 ? kanal : v.BasePrice > 0 ? v.BasePrice : minPrice;
+            }
+            List<CardSizeDto>? bedenler = null;
+            var bedenTipKodu = havuz.SelectMany(v => bedenRows[v.Id]).FirstOrDefault()?.TypeCode;
+            if (bedenTipKodu is not null)
+            {
+                bedenler = havuz
+                    .Select(v => (Varyant: v, Beden: bedenRows[v.Id].FirstOrDefault(r => r.TypeCode == bedenTipKodu)))
+                    .Where(x => x.Beden is not null)
+                    .GroupBy(x => x.Beden!.AttributeValueId).Select(g => g.First())
+                    .OrderBy(x => x.Beden!.SortOrder > 0 ? 0 : 1)
+                    .ThenBy(x => x.Beden!.SortOrder)
+                    .Select(x => new CardSizeDto(BedenAd(x.Beden!.ValueNameI18n), x.Varyant.Id,
+                        VaryantFiyati(x.Varyant), inStockVariantIds.Contains(x.Varyant.Id)))
+                    .ToList();
+            }
+            else if (havuz.Count > 0)
+            {
+                // Beden ekseni yok: tek temsilci varyant (stoklu tercih) — site yalnız buton gösterir
+                var temsilci = havuz.FirstOrDefault(v => inStockVariantIds.Contains(v.Id)) ?? havuz[0];
+                bedenler = [new CardSizeDto("", temsilci.Id, VaryantFiyati(temsilci), inStockVariantIds.Contains(temsilci.Id))];
+            }
+
             return new StoreProductDto(
                 p.Id, p.Code, p.NameI18n, p.ShortDescriptionI18n,
                 mainImage, minPrice, eskiFiyat, p.IsSaleOpen,
@@ -431,10 +485,9 @@ public class GetStoreProductsQueryHandler(
                 galleryUrls,
                 IsFeatured: oneCikanlar.Contains(p.Id),
                 VideoUrl: videolar.GetValueOrDefault(p.Id),
-                MatchedColorValueId: aramaRenkIdleri.Count > 0
-                    ? renkler.FirstOrDefault(c => aramaRenkIdleri.Contains(c.ValueId))?.ValueId
-                    : null,
-                MainColorValueId: anaRenkId);
+                MatchedColorValueId: eslesenRenkId,
+                MainColorValueId: anaRenkId,
+                Sizes: bedenler);
         }).ToList();
 
         // E7: kart puanları onaylı yorum ortalamasından (additive alanlar)

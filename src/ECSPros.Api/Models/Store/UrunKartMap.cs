@@ -34,7 +34,8 @@ public static class UrunKartMap
             KampanyaAdi: p.CampaignName, KampanyaFiyat: p.CampaignPrice,   // F3 kampanya
             KampanyaRozetleri: p.CampaignBadges,   // 2026-08-03: bantta dönüşümlü çoklu kampanya (ad+renk)
             KartMesajlari: p.CardMessages,      // Ürün Kartı F2: elle kart mesajları
-            SepetteSayisi: p.CartCount, FavoriSayisi: p.FavoriteCount, BakanSayisi: p.ViewCount);   // sosyal kanıt sayaçları
+            SepetteSayisi: p.CartCount, FavoriSayisi: p.FavoriteCount, BakanSayisi: p.ViewCount,   // sosyal kanıt sayaçları
+            Bedenler: BedenleriCevir(p.Sizes));   // kartta sepete ekle beden seçenekleri
     }
 
     public static UrunKartVm KartaCevir(StoreProductDto p)
@@ -67,8 +68,14 @@ public static class UrunKartMap
             KampanyaAdi: p.CampaignName, KampanyaFiyat: p.CampaignPrice,   // F3 kampanya
             KampanyaRozetleri: p.CampaignBadges,   // 2026-08-03: bantta dönüşümlü çoklu kampanya (ad+renk)
             KartMesajlari: p.CardMessages,      // Ürün Kartı F2: elle kart mesajları
-            SepetteSayisi: p.CartCount, FavoriSayisi: p.FavoriteCount, BakanSayisi: p.ViewCount);   // sosyal kanıt sayaçları
+            SepetteSayisi: p.CartCount, FavoriSayisi: p.FavoriteCount, BakanSayisi: p.ViewCount,   // sosyal kanıt sayaçları
+            Bedenler: BedenleriCevir(p.Sizes));   // kartta sepete ekle beden seçenekleri
     }
+
+    private static IReadOnlyList<KartBedenVm>? BedenleriCevir(List<CardSizeDto>? sizes) =>
+        sizes is { Count: > 0 }
+            ? sizes.Select(b => new KartBedenVm(b.Name, b.VariantId, b.Price, b.InStock)).ToList()
+            : null;
 
     public static string TrAd(Dictionary<string, string> nameI18n) =>
         nameI18n.TryGetValue("tr", out var ad) ? ad : nameI18n.Values.FirstOrDefault() ?? "";

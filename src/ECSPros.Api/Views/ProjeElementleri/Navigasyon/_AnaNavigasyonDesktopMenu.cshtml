@@ -1,14 +1,18 @@
 @using ECSPros.Api.Models.Store
+@inject ECSPros.Api.Services.IStoreContext MsStoreContext
 @{
     // B1: Mega menü kanal kategorilerinden beslenir (nav_menus boş olduğu sürece).
     // Markup misharix nihai tasarımıyla birebir — yalnızca statik örnek içerik veriye bağlandı.
     // Kampanya şeridi Faz G'ye kadar STATİK kalır (plan B1/K7).
     var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
+    // Mega menü hover ayarı (2026-08-14, panel Menü Yerleşimi): "1" = üzerine gelince açılır;
+    // boş = yalnız "Kategoriler" tıklamasıyla açılır (varsayılan) — site.js bu bayrağa bakar.
+    var megaHover = (await MsStoreContext.GetPlatformAsync())?.MegaMenuHover == true ? "1" : "";
 
     static string BasHarfler(string ad) =>
         string.Concat(ad.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(p => char.ToUpperInvariant(p[0])));
 }
-<div class="ms-magaza-desktop-menu-kapsayici d-none d-lg-block ms-magaza-desktop-menu" data-ms-magaza-menu>
+<div class="ms-magaza-desktop-menu-kapsayici d-none d-lg-block ms-magaza-desktop-menu" data-ms-magaza-menu data-ms-mega-hover="@megaHover">
         <div class="ms-magaza-menu-ic">
             <div class="ms-magaza-menu-kaydirma-grubu">
             <div class="ms-magaza-menu-ogesi ms-magaza-menu-tum">

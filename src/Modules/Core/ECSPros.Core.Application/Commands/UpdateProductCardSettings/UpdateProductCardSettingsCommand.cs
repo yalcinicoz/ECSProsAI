@@ -33,7 +33,9 @@ public record UpdateProductCardSettingsCommand(
     bool Rating,
     bool DiscountRow,
     bool CampaignPriceRow,
-    Dictionary<string, ProductCardAreaSetting>? Areas) : IRequest<Result<bool>>;
+    Dictionary<string, ProductCardAreaSetting>? Areas,
+    // Kartta sepete ekle (2026-08-14): desktop hover beden paneli + mobil sepet ikonu — varsayılan açık
+    bool CartButton = true) : IRequest<Result<bool>>;
 
 public class UpdateProductCardSettingsCommandHandler(ICoreDbContext db)
     : IRequestHandler<UpdateProductCardSettingsCommand, Result<bool>>
@@ -61,6 +63,7 @@ public class UpdateProductCardSettingsCommandHandler(ICoreDbContext db)
             ["rating"] = request.Rating,
             ["discountRow"] = request.DiscountRow,
             ["campaignPriceRow"] = request.CampaignPriceRow,
+            ["cartButton"] = request.CartButton,
             // F2: üç değişken alanın kaynak/öncelik ayarı — eksik alan varsayılanla yazılır
             // (1: kampanyalar açık; 2/3: yalnız mesajlar) ki site tarafı tutarlı okusun.
             ["areas"] = new Dictionary<string, object>

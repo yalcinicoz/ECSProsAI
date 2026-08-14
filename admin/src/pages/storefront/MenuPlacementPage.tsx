@@ -19,6 +19,7 @@ import { PageSpinner } from '@/components/ui/Spinner'
 interface Firm { id: string; nameI18n: Record<string, string> }
 interface Channel {
   id: string; nameI18n: Record<string, string>; code: string; firmId: string; firmName: string
+  settings?: Record<string, unknown>
 }
 interface CategoryItem {
   id: string; parentId: string | null; nameI18n: Record<string, string>
@@ -192,6 +193,22 @@ export function MenuPlacementPage() {
   })
   const channels: Channel[] = platformQueries.flatMap(q => q.data ?? [])
   const chLoading = firmsLoading || platformQueries.some(q => q.isLoading)
+  const selectedChannel = channels.find(ch => ch.id === selectedChannelId)
+
+  // ── Mega menü hover ayarı (2026-08-14): Settings."navigation"."megaMenuHover" —
+  // varsayılan KAPALI (üzerine gelince açılmaz); değişiklik anında kaydedilir.
+  const megaHoverSaved = (() => {
+    const nav = selectedChannel?.settings?.['navigation']
+    return !!(nav && typeof nav === 'object' && (nav as Record<string, unknown>)['megaMenuHover'] === true)
+  })()
+  const megaMutation = useMutation({
+    mutationFn: async (v: boolean) => {
+      await api.put(`/core/firm-platforms/${selectedChannelId}/navigation-settings`, { megaMenuHover: v })
+    },
+    onSuccess: () => {
+      if (selectedChannel) queryClient.invalidateQueries({ queryKey: ['firm-platforms', selectedChannel.firmId] })
+    },
+  })
 
   // ── Header menüsü + düğümler + kategoriler ──
   const { data: menus = [], isLoading: menusLoading } = useQuery<MenuSummary[]>({
@@ -459,6 +476,34 @@ export function MenuPlacementPage() {
           hasValue={!!selectedChannelId}
         />
       </div>
+
+      {selectedChannelId && (
+        <div className="card mb-6">
+          <label className="flbl mb-2">Mega Menü Davranışı</label>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)] shrink-0"
+              checked={megaMutation.isPending ? megaMutation.variables === true : megaHoverSaved}
+              disabled={megaMutation.isPending || !selectedChannel}
+              onChange={e => megaMutation.mutate(e.target.checked)} />
+            <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+              Menünün üzerine gelindiğinde mega menü açılsın
+            </span>
+            {megaMutation.isPending && (
+              <span className="text-xs" style={{ color: 'var(--text-s)' }}>Kaydediliyor…</span>
+            )}
+          </label>
+          <p className="text-xs mt-1.5" style={{ color: 'var(--text-s)' }}>
+            Kapalıyken (varsayılan) mega menü yalnız "Kategoriler" düğmesine tıklanınca açılır.
+            Menüdeki bir öğeye tıklamak her iki durumda da o kategorinin ürün listesini açar.
+            Değişiklik sitede en geç 5 dakika içinde görünür.
+          </p>
+          {megaMutation.isError && (
+            <p className="text-xs mt-1.5" style={{ color: '#991b1b' }}>
+              Ayar kaydedilemedi: {(megaMutation.error as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'bilinmeyen hata'}
+            </p>
+          )}
+        </div>
+      )}
 
       {saveMutation.isError && (
         <div className="px-4 py-3 rounded-xl mb-4 text-sm"

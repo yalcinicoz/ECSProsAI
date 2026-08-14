@@ -13,6 +13,10 @@ namespace ECSPros.Api.Models.Store;
 // /urun/{kod}?color= (301 güvenlik ağı). URL aktarımı 2b.
 public sealed record KartRenkVm(Guid ValueId, string Ad, string? GorselUrl, string? Slug = null);
 
+/// <summary>Kartta sepete ekle (2026-08-14): kartın beden seçeneği — beden ekseni olmayan
+/// üründe tek kayıt Ad="" gelir (yalnız "Sepete Ekle" butonu gösterilir).</summary>
+public sealed record KartBedenVm(string Ad, Guid VariantId, decimal Fiyat, bool Stokta);
+
 public sealed record UrunKartVm(
     string Kod,
     string Ad,
@@ -36,8 +40,14 @@ public sealed record UrunKartVm(
     IReadOnlyList<CardMessageItem>? KartMesajlari = null,   // Ürün Kartı F2: elle kart mesajları (slot 1/2/3)
     int SepetteSayisi = 0,               // Sosyal kanıt: son 30 günde kaç farklı sepette (Alan 3 satırı)
     int FavoriSayisi = 0,                // Sosyal kanıt: kaç farklı üyenin favorisi (Alan 3 satırı)
-    int BakanSayisi = 0)                 // Sosyal kanıt: kaç farklı üye baktı (Alan 3 satırı)
+    int BakanSayisi = 0,                 // Sosyal kanıt: kaç farklı üye baktı (Alan 3 satırı)
+    IReadOnlyList<KartBedenVm>? Bedenler = null) // Kartta sepete ekle: beden seçenekleri (null = veri yok, panel çıkmaz)
 {
+    /// <summary>Kart sepet paneli/alt sayfası için data-ms-bedenler JSON'u (boş = veri yok).</summary>
+    public string BedenlerJson => Bedenler is { Count: > 0 }
+        ? System.Text.Json.JsonSerializer.Serialize(Bedenler.Select(b => new
+            { ad = b.Ad, id = b.VariantId, fiyat = b.Fiyat, stok = b.Stokta }))
+        : "";
     /// <summary>F2: verilen alandaki (1/2/3) elle mesajlar — sıra korunur.</summary>
     public IEnumerable<CardMessageItem> AlanMesajlari(int slot) =>
         KartMesajlari?.Where(m => m.Slot == slot) ?? Enumerable.Empty<CardMessageItem>();

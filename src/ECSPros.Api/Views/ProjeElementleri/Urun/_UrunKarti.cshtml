@@ -104,6 +104,7 @@
      data-ms-kampanya-ad="@(u?.KampanyaAdi ?? "")"
      data-ms-kampanya-fiyat="@(u is not null && u.KampanyaFiyatVar ? u.KampanyaFiyat!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "")"
      data-ms-degerler="@(u is null ? "" : string.Join(",", u.DegerIdler))"
+     data-ms-bedenler="@(u?.BedenlerJson ?? "")"
      data-ms-dolu="@(u is null ? "" : "true")">
     <a class="ms-urun-kart-baglanti" href="@(u?.Url ?? "#")" data-ms-kart-link aria-label="@(u?.Ad ?? "Ürün") ürün detayına git"></a>
     <div class="ms-urun-gorsel-alani" data-ms-urun-galeri data-ms-urun-galeri-resimler="@(u?.GaleriResimleri ?? "")">
@@ -152,6 +153,15 @@
         {
         <button class="ms-urun-koleksiyon" type="button" aria-label="Koleksiyona ekle" aria-pressed="false" data-ms-urun-koleksiyon>
             <i class="fa-solid fa-bookmark ms-fa-ikon" aria-hidden="true"></i>
+        </button>
+        }
+        @if (kartAyar.SepetButonu)
+        {
+        @* Kartta sepete ekle (2026-08-14): mobil/tablet ikon — tıklanınca alt sayfa (bottom
+           sheet) beden listesiyle açılır; desktop'ta (lg+) ikon gizli, hover beden paneli
+           çalışır. Davranış: _KartSepetDavranis.cshtml. *@
+        <button class="ms-urun-sepet" type="button" aria-label="Sepete ekle" data-ms-urun-sepet>
+            <i class="fa-solid fa-cart-shopping ms-fa-ikon" aria-hidden="true"></i>
         </button>
         }
         @* "Diğer renkler" rozeti — tasarım kaynağı (_UrunKartiOrnegi.cshtml) markup'ı BİREBİR:

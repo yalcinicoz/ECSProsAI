@@ -406,7 +406,7 @@ public class CoreController : ControllerBase
             new ECSPros.Core.Application.Commands.UpdateProductCardSettings.UpdateProductCardSettingsCommand(
                 id, request.VideoBadge, request.SponsorBadge, request.ColorBadge, request.GalleryDots,
                 request.FavoriteButton, request.CollectionButton, request.Rating,
-                request.DiscountRow, request.CampaignPriceRow, request.Areas), ct);
+                request.DiscountRow, request.CampaignPriceRow, request.Areas, request.CartButton), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -419,6 +419,18 @@ public class CoreController : ControllerBase
         var result = await _mediator.Send(
             new ECSPros.Core.Application.Commands.UpdateProductListSettings.UpdateProductListSettingsCommand(
                 id, request.SortOptions ?? new()), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Site navigasyon ayarları (mega menü hover) — platform Settings'e yalnız "navigation" anahtarı merge edilir.</summary>
+    [HttpPut("firm-platforms/{id:guid}/navigation-settings")]
+    public async Task<IActionResult> UpdateNavigationSettings(Guid id, [FromBody] NavigationSettingsRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new ECSPros.Core.Application.Commands.UpdateNavigationSettings.UpdateNavigationSettingsCommand(
+                id, request.MegaMenuHover), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -444,6 +456,8 @@ public record OrderConfirmSettingsRequest(string Cod, string Card, int LinkHours
 
 public record ProductListSettingsRequest(Dictionary<string, bool>? SortOptions);
 
+public record NavigationSettingsRequest(bool MegaMenuHover = false);
+
 public record ProductCardSettingsRequest(
     bool VideoBadge = true,
     bool SponsorBadge = true,
@@ -454,7 +468,8 @@ public record ProductCardSettingsRequest(
     bool Rating = true,
     bool DiscountRow = true,
     bool CampaignPriceRow = true,
-    Dictionary<string, ECSPros.Core.Application.Commands.UpdateProductCardSettings.ProductCardAreaSetting>? Areas = null);
+    Dictionary<string, ECSPros.Core.Application.Commands.UpdateProductCardSettings.ProductCardAreaSetting>? Areas = null,
+    bool CartButton = true);
 
 // ── Request Modelleri ──────────────────────────────────────────────────────────
 

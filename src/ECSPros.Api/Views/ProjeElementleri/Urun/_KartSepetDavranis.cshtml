@@ -1,0 +1,213 @@
+@* Kartta sepete ekle (2026-08-14, İZİNLİ YENİ — kaynakta karşılığı yok): ürün kartından
+   beden seçip sepete ekleme. Desktop (lg+): kart hover'ında görselin altından yukarı beden
+   paneli kayar; mobil/tablet: karttaki sepet ikonu ([data-ms-urun-sepet]) alt sayfayı
+   (bottom sheet) açar. Veri kaynağı kartın data-ms-bedenler JSON'u (SSR + kartDoldur aynı
+   biçim); API çağrısı ürün detayındaki sepete ekleme ile birebir (ecspros_sid/ecspros_cart,
+   üye token'ı varsa üye sepeti, mini sepet yenilenir). Kanal ayarı kapalıysa
+   (msKartAyarlari.sepetButonu === false) hiçbir davranış bağlanmaz. *@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    if ((window.msKartAyarlari || {}).sepetButonu === false) { return; }
+    const platformId = document.querySelector("[data-ms-arama]")?.dataset.msAramaPlatform || "";
+    if (!platformId) { return; }
+    const PARA_BIRIMI = "TRY"; // ürün detay config'iyle aynı sabit (UrunDetayBuilder: "TRY")
+
+    if (!localStorage.getItem("ecspros_sid")) {
+        localStorage.setItem("ecspros_sid", "sess_" + crypto.getRandomValues(new Uint32Array(2)).join(""));
+    }
+
+    const kacir = (metin) => String(metin ?? "").replace(/[&<>"']/g, (k) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[k]);
+
+    const bedenleriOku = (kart) => {
+        try { return JSON.parse(kart.dataset.msBedenler || "[]"); } catch { return []; }
+    };
+
+    // Panel/alt sayfa iç markup'ı: adlı bedenler chip listesi + Sepete Ekle butonu.
+    // Beden ekseni olmayan üründe (tek kayıt, ad boş) buton varyantı doğrudan taşır.
+    const icerikHtml = (bedenler) => {
+        const adli = bedenler.filter((b) => b.ad);
+        const chipler = adli.length
+            ? '<div class="ms-urun-sepet-bedenler">' + adli.map((b) =>
+                `<button type="button" class="ms-urun-sepet-beden${b.stok ? "" : " ms-urun-sepet-beden-tukendi"}"`
+                + ` data-ms-sepet-beden data-ms-varyant="${kacir(b.id)}" data-ms-fiyat="${b.fiyat}"`
+                + `${b.stok ? "" : " disabled"}>${kacir(b.ad)}</button>`).join("") + "</div>"
+            : "";
+        const tek = adli.length ? null : bedenler[0];
+        const tekTukendi = tek && !tek.stok;
+        return chipler
+            + `<button type="button" class="ms-urun-sepet-ekle-buton" data-ms-sepet-ekle`
+            + `${tek ? ` data-ms-varyant="${kacir(tek.id)}" data-ms-fiyat="${tek.fiyat}"` : ""}`
+            + `${tekTukendi ? " disabled" : ""}>${tekTukendi ? "Tükendi" : "Sepete Ekle"}</button>`;
+    };
+
+    // ── Desktop hover paneli: ilk hover'da kurulur, gösterim CSS (:hover) ile ──
+    const desktopMu = window.matchMedia("(min-width: 1024px)");
+    const panelKur = (kart) => {
+        if (kart.querySelector(".ms-urun-sepet-panel")) { return; }
+        const bedenler = bedenleriOku(kart);
+        if (!bedenler.length) { return; }
+        const gorselAlani = kart.querySelector(".ms-urun-gorsel-alani");
+        if (!gorselAlani) { return; }
+        const panel = document.createElement("div");
+        panel.className = "ms-urun-sepet-panel";
+        panel.innerHTML = icerikHtml(bedenler);
+        gorselAlani.appendChild(panel);
+    };
+    document.addEventListener("mouseover", (olay) => {
+        if (!desktopMu.matches) { return; }
+        const kart = olay.target.closest?.(".ms-urun-karti");
+        if (kart && kart.dataset.msDolu === "true") { panelKur(kart); }
+    }, { passive: true });
+
+    // ── Mobil alt sayfa (bottom sheet) ──
+    const sheetKapat = () => {
+        const sheet = document.querySelector(".ms-sepet-sheet");
+        if (!sheet) { return; }
+        sheet.classList.remove("ms-sepet-sheet-acik");
+        document.body.style.overflow = "";
+    };
+    const sheetAc = (kart) => {
+        const bedenler = bedenleriOku(kart);
+        if (!bedenler.length) {
+            // Beden verisi olmayan kart (ör. model modu) — ayıp etmeyelim, detaya götür
+            const href = kart.querySelector("[data-ms-kart-link]")?.getAttribute("href");
+            if (href && href !== "#") { window.location.href = href; }
+            return;
+        }
+        let sheet = document.querySelector(".ms-sepet-sheet");
+        if (!sheet) {
+            sheet = document.createElement("div");
+            sheet.className = "ms-sepet-sheet";
+            sheet.innerHTML = `
+                <div class="ms-sepet-sheet-ortu" data-ms-sepet-sheet-kapat></div>
+                <div class="ms-sepet-sheet-panel" role="dialog" aria-label="Beden seçip sepete ekle">
+                    <div class="ms-sepet-sheet-baslik">
+                        <span class="ms-sepet-sheet-ad" data-ms-sepet-sheet-ad></span>
+                        <button type="button" class="ms-sepet-sheet-kapat" data-ms-sepet-sheet-kapat aria-label="Kapat"><i class="fa-solid fa-xmark ms-fa-ikon" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="ms-sepet-sheet-icerik" data-ms-sepet-sheet-icerik></div>
+                </div>`;
+            document.body.appendChild(sheet);
+        }
+        sheet.querySelector("[data-ms-sepet-sheet-ad]").textContent =
+            kart.querySelector(".ms-urun-basligi")?.textContent?.trim() || "Beden Seçin";
+        sheet.querySelector("[data-ms-sepet-sheet-icerik]").innerHTML = icerikHtml(bedenler);
+        requestAnimationFrame(() => sheet.classList.add("ms-sepet-sheet-acik"));
+        document.body.style.overflow = "hidden";
+    };
+
+    // ── Sepete ekleme (detay sayfası akışıyla birebir: üye token'ı varsa üye sepeti) ──
+    let gonderiliyor = false;
+    const sepeteEkle = async (varyantId, fiyat, bitti) => {
+        if (gonderiliyor) { return; }
+        gonderiliyor = true;
+        try {
+            const uyeToken = localStorage.getItem("ecspros_member_token");
+            const cevap = await fetch("/api/store/cart/items", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(uyeToken ? { Authorization: "Bearer " + uyeToken } : {})
+                },
+                body: JSON.stringify({
+                    firmPlatformId: platformId,
+                    variantId: varyantId,
+                    quantity: 1,
+                    price: fiyat,
+                    currencyCode: PARA_BIRIMI,
+                    sessionId: localStorage.getItem("ecspros_sid")
+                })
+            });
+            const veri = await cevap.json().catch(() => null);
+            if (veri?.success && veri.data?.cartId) {
+                localStorage.setItem("ecspros_cart", veri.data.cartId);
+                window.msMiniSepetYenile?.();
+                bitti(true);
+            } else {
+                console.error("Kart sepete ekleme başarısız:", veri?.error || cevap.status);
+                bitti(false);
+            }
+        } catch (hata) {
+            console.error("Kart sepete ekleme hatası:", hata);
+            bitti(false);
+        } finally {
+            gonderiliyor = false;
+        }
+    };
+
+    const uyariGoster = (kap) => {
+        if (!kap || kap.querySelector("[data-ms-sepet-uyari]")) { return; }
+        const uyari = document.createElement("p");
+        uyari.className = "ms-urun-sepet-uyari";
+        uyari.setAttribute("data-ms-sepet-uyari", "");
+        uyari.textContent = "Lütfen beden seçin";
+        kap.querySelector("[data-ms-sepet-ekle]")?.before(uyari);
+    };
+
+    const butonDurum = (buton, ok) => {
+        const eski = buton.textContent;
+        buton.textContent = ok ? "Sepete Eklendi ✓" : "Eklenemedi";
+        buton.classList.toggle("ms-urun-sepet-ekle-basari", ok);
+        window.setTimeout(() => {
+            buton.textContent = eski;
+            buton.classList.remove("ms-urun-sepet-ekle-basari");
+            if (ok && buton.closest(".ms-sepet-sheet")) { sheetKapat(); }
+        }, 1200);
+    };
+
+    // Tıklamalar CAPTURE'da: kartın link/galeri davranışlarından önce yakalanır,
+    // panel içi tıklama detaya navigasyon tetiklemez.
+    document.addEventListener("click", (olay) => {
+        const hedef = olay.target instanceof Element ? olay.target : null;
+        if (!hedef) { return; }
+
+        const sepetIkonu = hedef.closest("[data-ms-urun-sepet]");
+        if (sepetIkonu) {
+            olay.preventDefault();
+            olay.stopPropagation();
+            const kart = sepetIkonu.closest(".ms-urun-karti");
+            if (kart) { sheetAc(kart); }
+            return;
+        }
+
+        if (hedef.closest("[data-ms-sepet-sheet-kapat]")) {
+            olay.preventDefault();
+            olay.stopPropagation();
+            sheetKapat();
+            return;
+        }
+
+        const beden = hedef.closest("[data-ms-sepet-beden]");
+        if (beden) {
+            olay.preventDefault();
+            olay.stopPropagation();
+            if (beden.disabled) { return; }
+            const kap = beden.closest(".ms-urun-sepet-panel, .ms-sepet-sheet-icerik");
+            kap?.querySelectorAll("[data-ms-sepet-beden]").forEach((b) =>
+                b.classList.remove("ms-urun-sepet-beden-secili"));
+            beden.classList.add("ms-urun-sepet-beden-secili");
+            kap?.querySelector("[data-ms-sepet-uyari]")?.remove();
+            return;
+        }
+
+        const ekle = hedef.closest("[data-ms-sepet-ekle]");
+        if (ekle) {
+            olay.preventDefault();
+            olay.stopPropagation();
+            if (ekle.disabled) { return; }
+            const kap = ekle.closest(".ms-urun-sepet-panel, .ms-sepet-sheet-icerik");
+            let varyantId = ekle.dataset.msVaryant || "";
+            let fiyat = parseFloat(ekle.dataset.msFiyat || "0");
+            if (!varyantId) {
+                const secili = kap?.querySelector(".ms-urun-sepet-beden-secili");
+                if (!secili) { uyariGoster(kap); return; }
+                varyantId = secili.dataset.msVaryant || "";
+                fiyat = parseFloat(secili.dataset.msFiyat || "0");
+            }
+            if (!varyantId || !(fiyat > 0)) { butonDurum(ekle, false); return; }
+            sepeteEkle(varyantId, fiyat, (ok) => butonDurum(ekle, ok));
+        }
+    }, true);
+});
+</script>

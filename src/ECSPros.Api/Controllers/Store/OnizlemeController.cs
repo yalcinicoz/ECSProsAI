@@ -92,7 +92,14 @@ public sealed class OnizlemeController : Controller
             ],
             KartMesajlari: mesajlar,
             // Sosyal kanıt demo sayaçları — Alan 3 anahtarları açıksa satırlar görünür
-            SepetteSayisi: 12, FavoriSayisi: 47, BakanSayisi: 308);
+            SepetteSayisi: 12, FavoriSayisi: 47, BakanSayisi: 308,
+            // Kartta sepete ekle demo bedenleri — hover panel/ikon önizlemede görünsün
+            Bedenler:
+            [
+                new KartBedenVm("S", Guid.NewGuid(), 1299.90m, true),
+                new KartBedenVm("M", Guid.NewGuid(), 1299.90m, true),
+                new KartBedenVm("L", Guid.NewGuid(), 1299.90m, false)
+            ]);
 
         return View("~/Views/Onizleme/UrunKarti.cshtml", demo);
     }

@@ -47,6 +47,8 @@ interface CardConfig {
   rating: boolean
   discountRow: boolean
   campaignPriceRow: boolean
+  // Kartta sepete ekle (2026-08-14): desktop hover beden paneli + mobil sepet ikonu/alt sayfa
+  cartButton: boolean
   areas: { '1': AreaConfig; '2': AreaConfig; '3': AreaConfig }
 }
 
@@ -130,6 +132,7 @@ const DEFAULT_CONFIG: CardConfig = {
   rating: true,
   discountRow: true,
   campaignPriceRow: true,
+  cartButton: true,
   areas: { '1': defaultArea('1'), '2': defaultArea('2'), '3': defaultArea('3') },
 }
 
@@ -193,6 +196,7 @@ function configFromSettings(settings: Record<string, unknown> | undefined): Card
     rating: o.rating !== false,
     discountRow: o.discountRow !== false,
     campaignPriceRow: o.campaignPriceRow !== false,
+    cartButton: o.cartButton !== false,
     areas,
   }
 }
@@ -641,6 +645,9 @@ export function ProductCardPage() {
                   onChange={v => set({ favoriteButton: v })} />
                 <ToggleRow label="Koleksiyon butonu" checked={config.collectionButton}
                   onChange={v => set({ collectionButton: v })} />
+                <ToggleRow label="Sepete Ekle"
+                  desc="Desktop'ta kart üzerine gelince beden paneli, mobilde sepet ikonu + alttan açılan beden listesi"
+                  checked={config.cartButton} onChange={v => set({ cartButton: v })} />
 
                 <GroupTitle>Sabit çekirdek</GroupTitle>
                 <ToggleRow label="Görsel, ürün adı, fiyat, kart linki" locked checked
