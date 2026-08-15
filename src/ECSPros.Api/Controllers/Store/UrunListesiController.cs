@@ -5,6 +5,7 @@ using ECSPros.Catalog.Application.Queries.GetStoreFacets;
 using ECSPros.Catalog.Application.Queries.GetStoreProducts;
 using ECSPros.Integration.Application.Queries.ResolveErpProductRefs;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Caching.Memory;
 using ECSPros.Storefront.Application.Queries.GetChannelCategoryFacets;
 using ECSPros.Storefront.Application.Queries.GetChannelCategoryProducts;
 using ECSPros.Storefront.Application.Queries.GetProductByChannelSlug;
@@ -116,11 +117,19 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         [FromServices] IVisualSearchSettingsProvider gorselAramaAyarlari,
         [FromServices] IHttpClientFactory httpClientFactory,
         [FromServices] ILogger<UrunListesiController> logger,
+        [FromServices] IMemoryCache cache,
         CancellationToken ct)
     {
         var platform = await storeContext.GetPlatformAsync(ct);
         if (platform is null)
             return NotFound();
+
+        // Arama motoru/sosyal tarayıcılar için sayfa indekslenmez ve linkleri izlenmez.
+        // (2026-08-15: Meta crawler bir gecede ~8.700 /benzer isteğiyle ücretli servisi
+        // yordu → servis 500 döndü, sayfa yalnız kaynak ürünle kaldı.)
+        Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
+        var userAgent = Request.Headers.UserAgent.ToString();
+        var tarayiciBot = BotUserAgentMi(userAgent);
 
         // Kaynak ürünün kartı — ilk görsel URL'i buradan (kartta gösterilen ana görsel)
         var kaynakSonuc = await mediator.Send(new GetStoreProductsQuery(
@@ -129,7 +138,21 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         if (kaynakUrun?.MainImageUrl is not { Length: > 0 } gorselUrl)
             return NotFound();
 
+        // Bot: ücretli servis çağrılmaz, yalnız kaynak ürün render edilir (sayfa yine 200).
+        if (tarayiciBot)
+            return ListeGoster(BenzerVm([KartaCevir(kaynakUrun)], null));
+
+        // Sonuç kod listesi platform+ürün başına 12 saat önbellekte — aynı ürüne art arda
+        // gelen tıklamalar (ve tarayıcı yenilemeleri) servisi tekrar ücretlendirmez.
+        var cacheAnahtari = $"benzer:{platform.Id}:{kod.ToUpperInvariant()}";
         var kodListesi = new List<string>();
+        var servisHatasi = false;
+        if (cache.TryGetValue(cacheAnahtari, out List<string>? onbellek) && onbellek is not null)
+        {
+            kodListesi = onbellek;
+        }
+        else
+        {
         var ayarlar = await gorselAramaAyarlari.GetAsync(platform.Id, ct);
         if (ayarlar is not null)
         {
@@ -189,7 +212,8 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // Servis hatası sayfayı düşürmez — "benzer ürün bulunamadı" boş durumu gösterilir
+                // Servis hatası sayfayı düşürmez — "şu anda getirilemiyor" boş durumu gösterilir
+                servisHatasi = true;
                 logger.LogWarning(ex, "Benzer ürünler görsel araması başarısız (kod: {Kod}).", kod);
             }
         }
@@ -201,6 +225,16 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             if (filtreli.IsSuccess)
                 kodListesi = filtreli.Value!;
         }
+
+        // Yalnız BAŞARILI servis sonucu önbelleğe alınır (hata/boş sonuç tekrar denenir)
+        if (!servisHatasi && kodListesi.Count > 0)
+            cache.Set(cacheAnahtari, kodListesi, TimeSpan.FromHours(12));
+        }
+
+        // Servis hatası: kaynak ürünü tek başına gösterip "benzerler bunlar" izlenimi
+        // vermek yerine dürüst boş durum
+        if (servisHatasi)
+            return ListeGoster(BenzerVm([], "Benzer ürünler şu anda getirilemiyor, lütfen biraz sonra tekrar deneyin."));
 
         // Kaynak ürün listenin BAŞINDA gösterilir (2026-08-15 kullanıcı kararı — önceki
         // "kaynak hariç" kurgusu revize edildi: ürünün kendisi/diğer renkleri de görünsün)
@@ -225,21 +259,41 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             }
         }
 
-        var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
-        var vm = new UrunListesiVm(
-            Baslik: "Benzer Ürünler",
-            ToplamUrun: kartlar.Count,
-            SayfaBoyu: Math.Max(SayfaBoyu, Math.Max(1, kartlar.Count)),
-            IlkSayfa: kartlar,
-            DevamApiUrl: $"/api/store/catalog/products?firmPlatformId={platform.Id}&pageSize={SayfaBoyu}",
-            FiltreGruplari: [],
-            FiyatMin: 0,
-            FiyatMax: 0,
-            KategoriSecenekleri: nav.Kokler,
-            BosDurumMesaji: kartlar.Count > 0 ? null : "Bu ürüne benzer ürün bulunamadı.");
+        return ListeGoster(BenzerVm(kartlar, kartlar.Count > 0 ? null : "Bu ürüne benzer ürün bulunamadı."));
 
-        return ListeGoster(vm);
+        UrunListesiVm BenzerVm(List<UrunKartVm> kartListesi, string? bosMesaj)
+        {
+            var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
+            return new UrunListesiVm(
+                Baslik: "Benzer Ürünler",
+                ToplamUrun: kartListesi.Count,
+                SayfaBoyu: Math.Max(SayfaBoyu, Math.Max(1, kartListesi.Count)),
+                IlkSayfa: kartListesi,
+                DevamApiUrl: $"/api/store/catalog/products?firmPlatformId={platform.Id}&pageSize={SayfaBoyu}",
+                FiltreGruplari: [],
+                FiyatMin: 0,
+                FiyatMax: 0,
+                KategoriSecenekleri: nav.Kokler,
+                BosDurumMesaji: bosMesaj);
+        }
     }
+
+    // Bilinen tarayıcı/bot UA imzaları — ücretli dış servis (görsel arama) botlara çalıştırılmaz.
+    private static bool BotUserAgentMi(string ua)
+    {
+        if (string.IsNullOrEmpty(ua)) return true; // UA'sız istemci: gerçek tarayıcı değil
+        foreach (var imza in BotImzalari)
+            if (ua.Contains(imza, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
+    private static readonly string[] BotImzalari =
+    [
+        "bot", "crawler", "spider", "crawl", "slurp", "externalagent", "facebookexternalhit",
+        "meta-external", "python-requests", "curl/", "wget/", "go-http-client", "okhttp",
+        "headless", "preview", "fetcher", "scrapy", "ahrefs", "semrush", "mj12", "yandex",
+        "bingpreview", "petalbot", "bytespider", "gptbot", "claudebot", "ccbot", "applebot",
+    ];
 
     // Tek segmentli kategori sayfası. Literal route'lar (/urunler, /sepet...) ASP.NET
     // route önceliğiyle her zaman bundan önce eşleşir; slug kategori değilse 404.

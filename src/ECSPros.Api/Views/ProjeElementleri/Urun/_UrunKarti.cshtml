@@ -159,7 +159,7 @@
         {
         @* Benzer ürünler (2026-08-14): ürünün ilk görseliyle görsel arama — aynı cinsiyet +
            ürün grubu filtresiyle sonuç listesi açılır. Şablon kartında href'i kartDoldur yazar. *@
-        <a class="ms-urun-benzer" data-ms-urun-benzer aria-label="Benzer ürünleri göster"
+        <a class="ms-urun-benzer" data-ms-urun-benzer aria-label="Benzer ürünleri göster" rel="nofollow"
            href="@(u is null ? "#" : "/benzer/" + u.Kod + (u.SeciliRenkId is { } benzerRenk ? "?renk=" + benzerRenk : ""))">
             <i class="fa-solid fa-layer-group ms-fa-ikon" aria-hidden="true"></i>
         </a>

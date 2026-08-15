@@ -11,4 +11,5 @@ Disallow: /uyelik-bilgilerim
 Disallow: /adreslerim
 Disallow: /siparislerim
 Disallow: /favorilerim
-
+Disallow: /benzer
+Disallow: /gorsel-arama
