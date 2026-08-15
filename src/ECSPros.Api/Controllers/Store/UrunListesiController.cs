@@ -56,13 +56,14 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
     [HttpGet("/urunler")]
     public Task<IActionResult> Arama([FromQuery] string? search, [FromQuery] string? codes, [FromQuery] ListeFiltre filtre, [FromQuery] int? page, CancellationToken ct)
         => !string.IsNullOrWhiteSpace(codes)
-            ? GorselAramaSonucListesiAsync(codes, ct)
+            ? GorselAramaSonucListesiAsync(codes, filtre, ct)
             : GenelListeAsync(string.IsNullOrWhiteSpace(search) ? null : search.Trim(), filtre, SayfaNo(page), ct);
 
     /// <summary>2026-08-03: görsel arama sonuç sayfası — dropdown'daki "Tümünü Gör"/Enter,
     /// eşleşen ürün KODLARINI ?codes= ile taşır; standart liste sayfası o kodlarla, görsel
-    /// aramanın benzerlik sırası korunarak render edilir. Facet/filtre yok (kapsam sabit liste).</summary>
-    private async Task<IActionResult> GorselAramaSonucListesiAsync(string codes, CancellationToken ct)
+    /// aramanın benzerlik sırası korunarak render edilir. 2026-08-15: filtre/facet'ler bu
+    /// kod kümesinden üretilir (attrs/priceMin/priceMax/sort — SSR yeniden yükleme).</summary>
+    private async Task<IActionResult> GorselAramaSonucListesiAsync(string codes, ListeFiltre filtre, CancellationToken ct)
     {
         var platform = await storeContext.GetPlatformAsync(ct);
         if (platform is null)
@@ -75,35 +76,62 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         if (kodListesi.Count == 0)
             return NotFound();
 
-        var urunler = await mediator.Send(new GetStoreProductsQuery(
-            platform.Id, null, 1, Math.Max(SayfaBoyu, kodListesi.Count),
-            ProductCodes: kodListesi), ct);
-        if (urunler.IsFailure)
-            return NotFound();
+        var vm = await KodListesiVmAsync(platform, kodListesi, filtre,
+            "Görsel Arama Sonuçları", "Görsel aramayla eşleşen ürün bulunamadı.", ct);
+        return vm is null ? NotFound() : ListeGoster(vm);
+    }
 
-        // Görsel aramanın benzerlik sırası korunur (sorgu kod sırasına göre dönmez)
-        var sira = kodListesi.Select((k, i) => (k, i))
-            .ToDictionary(x => x.k, x => x.i, StringComparer.OrdinalIgnoreCase);
-        var kartlar = urunler.Value!.Items
-            .OrderBy(u => sira.GetValueOrDefault(u.Code, int.MaxValue))
-            .Select(KartaCevir)
-            .ToList();
+    /// <summary>Sabit kod listesiyle liste sayfası (görsel arama sonucu + benzer ürünler):
+    /// kartlar kod sırasında (benzerlik sırası) — sıralama seçildiyse sorgu sırası; filtre
+    /// grupları + fiyat aralığı yalnız bu kod kümesinden hesaplanır (seçim-duyarlı).</summary>
+    private async Task<UrunListesiVm?> KodListesiVmAsync(
+        StorePlatformBilgisi platform, List<string> kodListesi, ListeFiltre filtre,
+        string baslik, string bosMesaj, CancellationToken ct)
+    {
+        var kartlar = new List<UrunKartVm>();
+        StoreFacetsDto? facetDto = null;
+        if (kodListesi.Count > 0)
+        {
+            var urunler = await mediator.Send(new GetStoreProductsQuery(
+                platform.Id, null, 1, Math.Max(SayfaBoyu, kodListesi.Count),
+                filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax, filtre.Sort,
+                ProductCodes: kodListesi), ct);
+            if (urunler.IsFailure)
+                return null;
+
+            var kartSirasi = urunler.Value!.Items.AsEnumerable();
+            if (string.IsNullOrEmpty(filtre.Sort))
+            {
+                // Benzerlik sırası korunur (sorgu kod sırasına göre dönmez)
+                var sira = kodListesi.Select((k, i) => (k, i))
+                    .ToDictionary(x => x.k, x => x.i, StringComparer.OrdinalIgnoreCase);
+                kartSirasi = kartSirasi.OrderBy(u => sira.GetValueOrDefault(u.Code, int.MaxValue));
+            }
+            kartlar = kartSirasi.Select(KartaCevir).ToList();
+
+            var facets = await mediator.Send(new GetStoreFacetsQuery(
+                platform.Id, null, platform.StokBitenGoster, platform.StokBitenGosterTarih,
+                filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax,
+                ProductCodes: kodListesi), ct);
+            if (facets.IsSuccess) facetDto = facets.Value;
+        }
 
         var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
-        var vm = new UrunListesiVm(
-            Baslik: "Görsel Arama Sonuçları",
+        return new UrunListesiVm(
+            Baslik: baslik,
             ToplamUrun: kartlar.Count,
-            SayfaBoyu: Math.Max(SayfaBoyu, kodListesi.Count),
+            SayfaBoyu: Math.Max(SayfaBoyu, Math.Max(1, kartlar.Count)),
             IlkSayfa: kartlar,
             DevamApiUrl: $"/api/store/catalog/products?firmPlatformId={platform.Id}&pageSize={SayfaBoyu}",
-            FiltreGruplari: [],
-            FiyatMin: 0,
-            FiyatMax: 0,
+            FiltreGruplari: FacetleriCevir(facetDto),
+            FiyatMin: facetDto?.PriceMin ?? 0,
+            FiyatMax: facetDto?.PriceMax ?? 0,
             KategoriSecenekleri: nav.Kokler,
-            BosDurumMesaji: kartlar.Count > 0 ? null
-                : "Görsel aramayla eşleşen ürün bulunamadı.");
-
-        return ListeGoster(vm);
+            SeciliDegerler: filtre.DegerIdler,
+            SeciliFiyatMin: filtre.PriceMin,
+            SeciliFiyatMax: filtre.PriceMax,
+            SeciliSiralama: filtre.Sort,
+            BosDurumMesaji: kartlar.Count > 0 ? null : bosMesaj);
     }
 
     /// <summary>Benzer ürünler (2026-08-14): kart ikonundan gelinir. Kaynak ürünün İLK
@@ -118,6 +146,7 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         [FromServices] IHttpClientFactory httpClientFactory,
         [FromServices] ILogger<UrunListesiController> logger,
         [FromServices] IMemoryCache cache,
+        [FromQuery] ListeFiltre filtre,
         CancellationToken ct)
     {
         var platform = await storeContext.GetPlatformAsync(ct);
@@ -140,7 +169,8 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
 
         // Bot: görsel arama servisi çağrılmaz, yalnız kaynak ürün render edilir (sayfa yine 200).
         if (tarayiciBot)
-            return ListeGoster(BenzerVm([KartaCevir(kaynakUrun)], null));
+            return ListeGoster(await KodListesiVmAsync(platform, [kod], filtre, "Benzer Ürünler", "Bu ürüne benzer ürün bulunamadı.", ct)
+                ?? BenzerVm([], null));
 
         // Sonuç kod listesi platform+ürün başına 12 saat önbellekte — aynı ürüne art arda
         // gelen tıklamalar (ve tarayıcı yenilemeleri) servisi tekrar ücretlendirmez.
@@ -241,25 +271,10 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         kodListesi = kodListesi.Where(k => !k.Equals(kod, StringComparison.OrdinalIgnoreCase)).ToList();
         kodListesi.Insert(0, kod);
 
-        // 5) Görsel arama sonuç sayfası kalıbıyla listele (benzerlik sırası korunur)
-        var kartlar = new List<UrunKartVm>();
-        if (kodListesi.Count > 0)
-        {
-            var urunler = await mediator.Send(new GetStoreProductsQuery(
-                platform.Id, null, 1, Math.Max(SayfaBoyu, kodListesi.Count),
-                ProductCodes: kodListesi), ct);
-            if (urunler.IsSuccess)
-            {
-                var sira = kodListesi.Select((k, i) => (k, i))
-                    .ToDictionary(x => x.k, x => x.i, StringComparer.OrdinalIgnoreCase);
-                kartlar = urunler.Value!.Items
-                    .OrderBy(u => sira.GetValueOrDefault(u.Code, int.MaxValue))
-                    .Select(KartaCevir)
-                    .ToList();
-            }
-        }
-
-        return ListeGoster(BenzerVm(kartlar, kartlar.Count > 0 ? null : "Bu ürüne benzer ürün bulunamadı."));
+        // 5) Görsel arama sonuç sayfası kalıbıyla listele (benzerlik sırası + kod kümesi facet'leri)
+        var vm = await KodListesiVmAsync(platform, kodListesi, filtre,
+            "Benzer Ürünler", "Bu ürüne benzer ürün bulunamadı.", ct);
+        return ListeGoster(vm ?? BenzerVm([], "Bu ürüne benzer ürün bulunamadı."));
 
         UrunListesiVm BenzerVm(List<UrunKartVm> kartListesi, string? bosMesaj)
         {

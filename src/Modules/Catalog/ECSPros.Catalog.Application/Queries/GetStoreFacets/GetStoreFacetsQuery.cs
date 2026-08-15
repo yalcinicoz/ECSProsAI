@@ -19,7 +19,10 @@ public record GetStoreFacetsQuery(
     // (grup kendi seçimini dışlar → son kullanılan grubun seçenekleri korunur).
     List<Guid>? SelectedValueIds = null,
     decimal? PriceMin = null,
-    decimal? PriceMax = null) : IRequest<Result<StoreFacetsDto>>;
+    decimal? PriceMax = null,
+    // 2026-08-15: sabit kod listesi (görsel arama sonucu / benzer ürünler) — facet'ler
+    // yalnız bu ürünlerden hesaplanır (cache'lenmez; Search ile birlikte kullanılmaz).
+    List<string>? ProductCodes = null) : IRequest<Result<StoreFacetsDto>>;
 
 public record StoreFacetsDto(
     decimal PriceMin,
@@ -56,7 +59,8 @@ public class GetStoreFacetsQueryHandler(
 
     public async Task<Result<StoreFacetsDto>> Handle(GetStoreFacetsQuery request, CancellationToken ct)
     {
-        var hasSearch = !string.IsNullOrWhiteSpace(request.Search);
+        var hasCodes = request.ProductCodes is { Count: > 0 };
+        var hasSearch = !string.IsNullOrWhiteSpace(request.Search) || hasCodes; // kod listesi de cache dışı
         var allKey = AllKey(request.FirmPlatformId, request.ShowOutOfStock, request.OutOfStockSince);
 
         if (!hasSearch && memoryCache.TryGetValue(allKey, out StoreFacetsDto? cached) && cached is not null)
@@ -75,7 +79,12 @@ public class GetStoreFacetsQueryHandler(
                      && !kanalDisi.Contains(p.Id))
             .Where(p => inStockIds.Contains(p.Id) || (showOos && (oosSince == null || p.CreatedAt >= oosSince)));
 
-        if (hasSearch)
+        if (hasCodes)
+        {
+            var kodlar = request.ProductCodes!.Select(k => k.ToUpperInvariant()).Distinct().ToList();
+            q = q.Where(p => kodlar.Contains(p.Code.ToUpper()));
+        }
+        else if (!string.IsNullOrWhiteSpace(request.Search))
         {
             // GetStoreProducts ile aynı eşleşme kuralı (kod VEYA Türkçe ad) — arama sonuç
             // sayfasının facet'leri grid'le tutarlı kalsın.
