@@ -109,7 +109,7 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
     /// <summary>Benzer ürünler (2026-08-14): kart ikonundan gelinir. Kaynak ürünün İLK
     /// görseli CDN'den okunup görsel arama servisine gönderilir; dönen adaylar AYNI ürün
     /// grubu + AYNI cinsiyet kuralıyla süzülür ve görsel arama sonuç sayfası kalıbıyla
-    /// benzerlik sırasında listelenir. Servis ücretli — gorsel-arama ile aynı IP limiti.</summary>
+    /// benzerlik sırasında listelenir. Görsel arama servisi kendi sunucumuz (search.misharitalia.com) — gorsel-arama ile aynı IP limiti (yük freni).</summary>
     [HttpGet("/benzer/{kod}")]
     [EnableRateLimiting("store-sensitive")]
     public async Task<IActionResult> BenzerUrunler(
@@ -125,7 +125,7 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             return NotFound();
 
         // Arama motoru/sosyal tarayıcılar için sayfa indekslenmez ve linkleri izlenmez.
-        // (2026-08-15: Meta crawler bir gecede ~8.700 /benzer isteğiyle ücretli servisi
+        // (2026-08-15: Meta crawler bir gecede ~8.700 /benzer isteğiyle kendi görsel arama sunucumuzu
         // yordu → servis 500 döndü, sayfa yalnız kaynak ürünle kaldı.)
         Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
         var userAgent = Request.Headers.UserAgent.ToString();
@@ -138,7 +138,7 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         if (kaynakUrun?.MainImageUrl is not { Length: > 0 } gorselUrl)
             return NotFound();
 
-        // Bot: ücretli servis çağrılmaz, yalnız kaynak ürün render edilir (sayfa yine 200).
+        // Bot: görsel arama servisi çağrılmaz, yalnız kaynak ürün render edilir (sayfa yine 200).
         if (tarayiciBot)
             return ListeGoster(BenzerVm([KartaCevir(kaynakUrun)], null));
 
@@ -278,7 +278,7 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         }
     }
 
-    // Bilinen tarayıcı/bot UA imzaları — ücretli dış servis (görsel arama) botlara çalıştırılmaz.
+    // Bilinen tarayıcı/bot UA imzaları — görsel arama servisi (kendi sunucumuz, ağır iş) botlara çalıştırılmaz.
     private static bool BotUserAgentMi(string ua)
     {
         if (string.IsNullOrEmpty(ua)) return true; // UA'sız istemci: gerçek tarayıcı değil

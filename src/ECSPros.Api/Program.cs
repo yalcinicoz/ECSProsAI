@@ -408,7 +408,7 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
             }));
-    // Hassas anonim uçlar (kupon doğrulama = kod taraması, görsel arama = ücretli dış servis):
+    // Hassas anonim uçlar (kupon doğrulama = kod taraması, görsel arama = kendi görsel arama sunucumuz, yük freni):
     options.AddPolicy("store-sensitive", ctx =>
         System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
             IstemciIpAnahtari(ctx),

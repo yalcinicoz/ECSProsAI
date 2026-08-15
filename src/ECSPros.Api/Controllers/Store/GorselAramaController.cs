@@ -29,7 +29,7 @@ public class GorselAramaController(
     private const int MaxDosyaBoyutu = 10 * 1024 * 1024; // 10 MB
 
     [HttpPost("gorsel-arama")]
-    [EnableRateLimiting("store-sensitive")] // ücretli dış servise gider — maliyet istismarına fren (2026-07-23)
+    [EnableRateLimiting("store-sensitive")] // kendi görsel arama sunucumuza (search.misharitalia.com) gider — saldırı/istismar freni (2026-07-23)
     [RequestSizeLimit(MaxDosyaBoyutu + 1024)]
     public async Task<IActionResult> Ara(IFormFile? file, [FromForm] string? url, CancellationToken ct)
     {
