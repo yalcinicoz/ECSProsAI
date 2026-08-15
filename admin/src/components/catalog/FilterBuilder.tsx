@@ -331,7 +331,7 @@ export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <div className="relative w-32">
-              <input type="number" className="inp pr-8" placeholder="Gün sayısı" min={1}
+              <input type="number" className="inp !pr-8" placeholder="Gün sayısı" min={1}
                 value={def.createdAfterDays != null ? String(def.createdAfterDays) : ''}
                 onChange={e => update({
                   createdAfterDays: e.target.value !== '' ? +e.target.value : null,
@@ -360,7 +360,7 @@ export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <div className="relative w-32">
-              <input type="number" className="inp pr-8" placeholder="Gün sayısı" min={1}
+              <input type="number" className="inp !pr-8" placeholder="Gün sayısı" min={1}
                 value={def.imageUpdatedAfterDays != null ? String(def.imageUpdatedAfterDays) : ''}
                 onChange={e => update({
                   imageUpdatedAfterDays: e.target.value !== '' ? +e.target.value : null,
@@ -578,13 +578,13 @@ function RangeRow({ minVal, maxVal, unit, placeholder, onMin, onMax, onClear }: 
   return (
     <div className="flex items-center gap-2">
       <div className="relative flex-1">
-        <input type="number" className="inp pr-8" placeholder={placeholder?.split('/')[0] ?? 'Min'}
+        <input type="number" className="inp !pr-8" placeholder={placeholder?.split('/')[0] ?? 'Min'}
           value={minVal} onChange={e => onMin(e.target.value)} min={0} />
         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs pointer-events-none" style={{ color: 'var(--text-s)' }}>{unit}</span>
       </div>
       <span className="text-sm" style={{ color: 'var(--text-s)' }}>—</span>
       <div className="relative flex-1">
-        <input type="number" className="inp pr-8" placeholder={placeholder?.split('/')[1] ?? 'Maks'}
+        <input type="number" className="inp !pr-8" placeholder={placeholder?.split('/')[1] ?? 'Maks'}
           value={maxVal} onChange={e => onMax(e.target.value)} min={0} />
         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs pointer-events-none" style={{ color: 'var(--text-s)' }}>{unit}</span>
       </div>
@@ -613,7 +613,7 @@ function DateRange({ after, before, onAfter, onBefore, onClear }: {
 function NumInput({ value, unit, placeholder, onChange }: { value: string; unit: string; placeholder?: string; onChange: (v: string) => void }) {
   return (
     <div className="relative w-28">
-      <input type="number" className="inp pr-6" placeholder={placeholder ?? '0'} value={value} onChange={e => onChange(e.target.value)} min={0} />
+      <input type="number" className="inp !pr-6" placeholder={placeholder ?? '0'} value={value} onChange={e => onChange(e.target.value)} min={0} />
       <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs pointer-events-none" style={{ color: 'var(--text-s)' }}>{unit}</span>
     </div>
   )

@@ -320,7 +320,7 @@ export function TranslationsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Anahtar veya değer ara…"
-                className="inp pl-8 w-full"
+                className="inp !pl-8 w-full"
                 style={{ fontSize: '13px' }}
               />
             </div>

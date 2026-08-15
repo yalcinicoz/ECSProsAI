@@ -157,7 +157,7 @@ export function ProductsPage() {
               value={search}
               onChange={(e) => handleSearch(e.target.value)}
               placeholder="Ürün adı, kod…"
-              className="inp pl-8"
+              className="inp !pl-8"
               style={{ fontSize: '13px' }}
             />
           </div>

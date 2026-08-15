@@ -157,7 +157,7 @@ export function SearchableSelect({
                 onChange={(e) => { setQuery(e.target.value); setHighlighted(0) }}
                 onKeyDown={handleKeyDown}
                 placeholder="Ara…"
-                className="inp pl-7 py-1.5 text-xs"
+                className="inp !pl-7 py-1.5 text-xs"
               />
             </div>
           </div>

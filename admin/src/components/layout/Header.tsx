@@ -30,7 +30,7 @@ const BREADCRUMB: Record<string, string> = {
   '/integrations/logs':            'Entegrasyon Logları',
   '/cms/pages':                    'CMS Sayfaları',
   '/finance/suppliers':            'Tedarikçiler',
-  '/fulfillment/picking-plans':    'Picking Planları',
+  '/fulfillment/picking-plans':    'Toplama Planlama',
   '/fulfillment/cargo-reroute':    'Kargo Yönlendirme',
   '/settings/users':               'Kullanıcılar',
   '/settings/roles':               'Roller',
