@@ -12,7 +12,7 @@ namespace ECSPros.Api.Controllers;
 
 [ApiController]
 [Route("api/store/catalog")]
-public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.IStoreContext storeContext) : ControllerBase
+public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.IStoreContext storeContext, ECSPros.Api.Services.UrunKategoriHaritasi kategoriHaritasi) : ControllerBase
 {
     /// <summary>Ürün grubu ürünlerini listeler (alt gruplar dahil).</summary>
     [HttpGet("product-groups/{id:guid}/products")]
@@ -45,9 +45,14 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
         CancellationToken ct = default)
     {
         var platform = await storeContext.GetPlatformAsync(ct);
+        // 2026-08-15: attrs içinde yaprak KATEGORİ id'si de gelebilir (liste sayfası Kategori
+        // filtresi) — haritayla ayrılır, kategori seçimi ürün-id kısıtına çevrilir (additive).
+        var harita = await kategoriHaritasi.GetAsync(firmPlatformId, ct);
+        var (kategoriler, ozellikler) = harita?.Ayir(ParseGuids(attrs)) ?? ([], ParseGuids(attrs));
         var result = await mediator.Send(new GetStoreProductsQuery(
             firmPlatformId, search, page, pageSize,
-            ParseGuids(attrs), priceMin, priceMax, sort,
+            ozellikler, priceMin, priceMax, sort,
+            ProductIds: harita?.UrunIdleri(kategoriler),
             ApplyStockFilter: true, ShowOutOfStock: platform?.StokBitenGoster ?? false, OutOfStockSince: platform?.StokBitenGosterTarih), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
@@ -88,9 +93,13 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
         CancellationToken ct = default)
     {
         var platform = await storeContext.GetPlatformAsync(ct);
+        // 2026-08-15: attrs içindeki yaprak kategori id'leri → ürün-id kısıtı (bkz. GetProducts)
+        var harita = platform is null ? null : await kategoriHaritasi.GetAsync(platform.Id, ct);
+        var (kategoriler, ozellikler) = harita?.Ayir(ParseGuids(attrs)) ?? ([], ParseGuids(attrs));
         var result = await mediator.Send(new GetChannelCategoryProductsQuery(
-            id, page, pageSize, search, ParseGuids(attrs), priceMin, priceMax, sort,
-            platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih), ct);
+            id, page, pageSize, search, ozellikler, priceMin, priceMax, sort,
+            platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih,
+            RestrictProductIds: harita?.UrunIdleri(kategoriler)), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         // B-009: object cast — STJ bildirilen tipten yazar; ChannelCategoryProductsPagedResult'ın
         // additive productTotalCount alanı ancak runtime tipiyle serileşir.

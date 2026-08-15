@@ -20,7 +20,7 @@ namespace ECSPros.Api.Controllers.Store;
 /// tüm ürünler (/urun-listesi). İlk sayfa + facet'ler sunucudan (MediatR süreç içi,
 /// plan 3.4); devam sayfaları partial config script'i üzerinden api/store/* JSON.
 /// </summary>
-public class UrunListesiController(IMediator mediator, IStoreContext storeContext, StoreUrunDetayBuilder detayBuilder) : StorePageController
+public class UrunListesiController(IMediator mediator, IStoreContext storeContext, StoreUrunDetayBuilder detayBuilder, UrunKategoriHaritasi kategoriHaritasi) : StorePageController
 {
     private const int SayfaBoyu = 24;
 
@@ -85,62 +85,27 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
     /// <summary>Sabit kod listesiyle liste sayfası (görsel arama sonucu + benzer ürünler):
     /// kartlar kod sırasında (benzerlik sırası) — sıralama seçildiyse sorgu sırası; filtre
     /// grupları + fiyat aralığı yalnız bu kod kümesinden hesaplanır (seçim-duyarlı).
-    /// 2026-08-15: "Kategori" da sayfadaki ürünlerin YAPRAK kanal kategorilerinden üretilir
-    /// (menü kökleri değil) ve normal filtre grubu gibi davranır — seçim listeyi daraltır
-    /// (attrs= içinde kategori id'si taşınır; sunucu id'yi kategori/özellik diye ayırır).</summary>
+    /// Kategori grubu: ürün→yaprak kategori haritasıyla (bkz. KategoriGrubu) — tüm liste
+    /// sayfalarıyla aynı mekanizma (2026-08-15).</summary>
     private async Task<UrunListesiVm?> KodListesiVmAsync(
         StorePlatformBilgisi platform, List<string> kodListesi, ListeFiltre filtre,
         string baslik, string bosMesaj, CancellationToken ct)
     {
         var kartlar = new List<UrunKartVm>();
         StoreFacetsDto? facetDto = null;
-        FiltreGrupVm? kategoriGrubu = null;
+        var harita = await kategoriHaritasi.GetAsync(platform.Id, ct);
+        var (seciliKategoriler, seciliOzellikler) = harita?.Ayir(filtre.DegerIdler) ?? ([], filtre.DegerIdler);
         if (kodListesi.Count > 0)
         {
             var sayfaBoyu = Math.Max(SayfaBoyu, kodListesi.Count);
-            // 1) Filtresiz taban küme → ürünlerin yaprak kanal kategorileri
-            var taban = await mediator.Send(new GetStoreProductsQuery(
-                platform.Id, null, 1, sayfaBoyu, ProductCodes: kodListesi), ct);
-            if (taban.IsFailure)
+            var urunler = await mediator.Send(new GetStoreProductsQuery(
+                platform.Id, null, 1, sayfaBoyu,
+                seciliOzellikler, filtre.PriceMin, filtre.PriceMax, filtre.Sort,
+                ProductCodes: kodListesi, ProductIds: harita?.UrunIdleri(seciliKategoriler)), ct);
+            if (urunler.IsFailure)
                 return null;
-            var tabanUrunler = taban.Value!.Items.ToList();
-            var yapraklar = await mediator.Send(new GetProductsLeafChannelCategoriesQuery(
-                platform.Id, tabanUrunler.Select(u => u.Id).ToList()), ct);
-            var yaprakByUrun = (yapraklar.IsSuccess ? yapraklar.Value! : [])
-                .GroupBy(y => y.ProductId).ToDictionary(g => g.Key, g => g.First());
-            var kategoriIdler = yaprakByUrun.Values.Select(y => y.CategoryId).ToHashSet();
 
-            // 2) attrs= içindeki id'leri kategori / özellik diye ayır
-            var seciliKategoriler = (filtre.DegerIdler ?? []).Where(kategoriIdler.Contains).ToList();
-            var seciliOzellikler = (filtre.DegerIdler ?? []).Where(id => !kategoriIdler.Contains(id)).ToList();
-            var ozellikFiltresiVar = seciliOzellikler.Count > 0 || filtre.PriceMin.HasValue || filtre.PriceMax.HasValue;
-
-            // 3) Kategori seçimi kod kümesini daraltır (yaprak kategorisi seçili olan ürünler)
-            var kodByUrun = tabanUrunler.ToDictionary(u => u.Id, u => u.Code);
-            var listeKodlari = seciliKategoriler.Count == 0
-                ? kodListesi
-                : tabanUrunler
-                    .Where(u => yaprakByUrun.TryGetValue(u.Id, out var y) && seciliKategoriler.Contains(y.CategoryId))
-                    .Select(u => u.Code).ToList();
-
-            // 4) Liste: kategori + özellik + fiyat + sıralama
-            List<StoreProductDto> listelenen;
-            if (seciliKategoriler.Count == 0 && !ozellikFiltresiVar && string.IsNullOrEmpty(filtre.Sort))
-                listelenen = tabanUrunler;
-            else if (listeKodlari.Count == 0)
-                listelenen = [];
-            else
-            {
-                var urunler = await mediator.Send(new GetStoreProductsQuery(
-                    platform.Id, null, 1, sayfaBoyu,
-                    seciliOzellikler.Count > 0 ? seciliOzellikler : null, filtre.PriceMin, filtre.PriceMax, filtre.Sort,
-                    ProductCodes: listeKodlari), ct);
-                if (urunler.IsFailure)
-                    return null;
-                listelenen = urunler.Value!.Items.ToList();
-            }
-
-            var kartSirasi = listelenen.AsEnumerable();
+            var kartSirasi = urunler.Value!.Items.AsEnumerable();
             if (string.IsNullOrEmpty(filtre.Sort))
             {
                 // Benzerlik sırası korunur (sorgu kod sırasına göre dönmez)
@@ -150,48 +115,13 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             }
             kartlar = kartSirasi.Select(KartaCevir).ToList();
 
-            // 5) Özellik facet'leri: kategori seçimi uygulanmış küme, seçim-duyarlı
-            if (listeKodlari.Count > 0)
-            {
-                var facets = await mediator.Send(new GetStoreFacetsQuery(
-                    platform.Id, null, platform.StokBitenGoster, platform.StokBitenGosterTarih,
-                    seciliOzellikler.Count > 0 ? seciliOzellikler : null, filtre.PriceMin, filtre.PriceMax,
-                    ProductCodes: listeKodlari), ct);
-                if (facets.IsSuccess) facetDto = facets.Value;
-            }
-
-            // 6) Kategori facet'i: özellik/fiyat seçimi uygulanmış ama kategori seçimi
-            //    uygulanMAMIŞ küme (klasik facet kuralı — grup kendi seçimini dışlar)
-            IEnumerable<StoreProductDto> kategoriKumesi;
-            if (!ozellikFiltresiVar) kategoriKumesi = tabanUrunler;
-            else if (seciliKategoriler.Count == 0) kategoriKumesi = listelenen;
-            else
-            {
-                var k = await mediator.Send(new GetStoreProductsQuery(
-                    platform.Id, null, 1, sayfaBoyu,
-                    seciliOzellikler.Count > 0 ? seciliOzellikler : null, filtre.PriceMin, filtre.PriceMax,
-                    ProductCodes: kodListesi), ct);
-                kategoriKumesi = k.IsSuccess ? k.Value!.Items : [];
-            }
-            var kategoriDegerleri = kategoriKumesi
-                .Select(u => yaprakByUrun.GetValueOrDefault(u.Id))
-                .Where(y => y is not null)
-                .GroupBy(y => y!.CategoryId)
-                .Select(g => new FiltreDegerVm(
-                    g.Key,
-                    g.First()!.NameI18n.GetValueOrDefault("tr") ?? g.First()!.NameI18n.Values.FirstOrDefault() ?? g.First()!.Slug,
-                    null,
-                    g.Count()))
-                .OrderByDescending(v => v.UrunSayisi).ThenBy(v => v.Ad)
-                .ToList();
-            // Tek seçenekli grup kuralı (2026-07-17): ≥2 seçenek ya da seçili değer içeriyorsa göster
-            if (kategoriDegerleri.Count >= 2 || kategoriDegerleri.Any(v => seciliKategoriler.Contains(v.ValueId)))
-                kategoriGrubu = new FiltreGrupVm("kategori", "Kategori", false, kategoriDegerleri);
+            var facets = await mediator.Send(new GetStoreFacetsQuery(
+                platform.Id, null, platform.StokBitenGoster, platform.StokBitenGosterTarih,
+                seciliOzellikler, filtre.PriceMin, filtre.PriceMax,
+                ProductCodes: kodListesi,
+                ProductCategoryMap: harita?.UrunKategori, SelectedCategoryIds: seciliKategoriler), ct);
+            if (facets.IsSuccess) facetDto = facets.Value;
         }
-
-        var gruplar = FacetleriCevir(facetDto);
-        if (kategoriGrubu is not null)
-            gruplar = [kategoriGrubu, .. gruplar];
 
         return new UrunListesiVm(
             Baslik: baslik,
@@ -199,15 +129,39 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             SayfaBoyu: Math.Max(SayfaBoyu, Math.Max(1, kartlar.Count)),
             IlkSayfa: kartlar,
             DevamApiUrl: $"/api/store/catalog/products?firmPlatformId={platform.Id}&pageSize={SayfaBoyu}",
-            FiltreGruplari: gruplar,
+            FiltreGruplari: FiltreGruplariKur(facetDto, harita, seciliKategoriler),
             FiyatMin: facetDto?.PriceMin ?? 0,
             FiyatMax: facetDto?.PriceMax ?? 0,
-            KategoriSecenekleri: [],   // menü kökleri değil — kategori sayfadaki ürünlerden (yukarıda)
+            KategoriSecenekleri: [],
             SeciliDegerler: filtre.DegerIdler,
             SeciliFiyatMin: filtre.PriceMin,
             SeciliFiyatMax: filtre.PriceMax,
             SeciliSiralama: filtre.Sort,
             BosDurumMesaji: kartlar.Count > 0 ? null : bosMesaj);
+    }
+
+    /// <summary>Filtre grupları = [Kategori sanal grubu] + özellik facet'leri (2026-08-15).
+    /// Kategori grubu ürün→yaprak kategori haritasından, facet'in CategoryCounts sayımıyla;
+    /// tek seçenekli grup kuralı: ≥2 seçenek ya da seçili değer içeriyorsa gösterilir.
+    /// Menü kökü/çocuk kategorileri artık filtre bloğuna girmez (KategoriSecenekleri boş).</summary>
+    private static List<FiltreGrupVm> FiltreGruplariKur(
+        StoreFacetsDto? facets, UrunKategoriHaritasi.Harita? harita, IReadOnlyCollection<Guid> seciliKategoriler)
+    {
+        var gruplar = FacetleriCevir(facets);
+        if (harita is null || facets?.CategoryCounts is not { } sayim)
+            return gruplar;
+        var degerler = sayim
+            .Where(kv => kv.Value > 0 && harita.Kategoriler.ContainsKey(kv.Key))
+            .Select(kv => new FiltreDegerVm(kv.Key, harita.Kategoriler[kv.Key].Ad, null, kv.Value))
+            .OrderByDescending(v => v.UrunSayisi).ThenBy(v => v.Ad, StringComparer.Create(new System.Globalization.CultureInfo("tr-TR"), true))
+            .ToList();
+        // Seçili ama (diğer filtrelerle) sayımı 0'a düşen kategori panelde kalsın (kaldırılabilsin)
+        foreach (var sk in seciliKategoriler)
+            if (degerler.All(v => v.ValueId != sk) && harita.Kategoriler.TryGetValue(sk, out var kb))
+                degerler.Add(new FiltreDegerVm(sk, kb.Ad, null, 0));
+        if (degerler.Count >= 2 || degerler.Any(v => seciliKategoriler.Contains(v.ValueId)))
+            gruplar.Insert(0, new FiltreGrupVm("kategori", "Kategori", false, degerler));
+        return gruplar;
     }
 
     /// <summary>Benzer ürünler (2026-08-14): kart ikonundan gelinir. Kaynak ürünün İLK
@@ -432,17 +386,22 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
 
         var platform = await storeContext.GetPlatformAsync(ct);
         var arama = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+        // 2026-08-15: Kategori filtresi = sayfadaki ürünlerin yaprak kategorileri (attrs içinde id)
+        var harita = platform is null ? null : await kategoriHaritasi.GetAsync(platform.Id, ct);
+        var (seciliKategoriler, seciliOzellikler) = harita?.Ayir(filtre.DegerIdler) ?? ([], filtre.DegerIdler);
         var urunler = await mediator.Send(new GetChannelCategoryProductsQuery(
             kategori.Id, sayfa, SayfaBoyu,
-            arama, filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax, filtre.Sort,
-            platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih), ct);
+            arama, seciliOzellikler, filtre.PriceMin, filtre.PriceMax, filtre.Sort,
+            platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih,
+            RestrictProductIds: harita?.UrunIdleri(seciliKategoriler)), ct);
         if (urunler.IsFailure)
             return NotFound();
 
         var facets = await mediator.Send(new GetChannelCategoryFacetsQuery(
             kategori.Id, platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih,
             // 2026-07-17: seçim-duyarlı facet — aktif filtre/fiyat/arama bağlamı
-            filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax, arama), ct);
+            seciliOzellikler, filtre.PriceMin, filtre.PriceMax, arama,
+            ProductCategoryMap: harita?.UrunKategori, SelectedCategoryIds: seciliKategoriler), ct);
 
         var devamUrl = $"/api/store/catalog/channel-categories/{kategori.Id}/products?pageSize={SayfaBoyu}"
                        + (arama is null ? "" : "&search=" + Uri.EscapeDataString(arama))
@@ -454,10 +413,10 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             SayfaBoyu: SayfaBoyu,
             IlkSayfa: urunler.Value.Items.Select(KartaCevir).ToList(),
             DevamApiUrl: devamUrl,
-            FiltreGruplari: FacetleriCevir(facets.IsSuccess ? facets.Value : null),
+            FiltreGruplari: FiltreGruplariKur(facets.IsSuccess ? facets.Value : null, harita, seciliKategoriler),
             FiyatMin: facets.IsSuccess ? facets.Value!.PriceMin : 0,
             FiyatMax: facets.IsSuccess ? facets.Value!.PriceMax : 0,
-            KategoriSecenekleri: kategori.Cocuklar,
+            KategoriSecenekleri: [],   // 2026-08-15: menü çocukları değil — Kategori grubu FiltreGruplari'nda
             SeciliDegerler: filtre.DegerIdler,
             SeciliFiyatMin: filtre.PriceMin,
             SeciliFiyatMax: filtre.PriceMax,
@@ -480,9 +439,13 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         if (platform is null)
             return NotFound();
 
+        // 2026-08-15: Kategori filtresi = sonuçtaki ürünlerin yaprak kategorileri (attrs içinde id)
+        var harita = await kategoriHaritasi.GetAsync(platform.Id, ct);
+        var (seciliKategoriler, seciliOzellikler) = harita?.Ayir(filtre.DegerIdler) ?? ([], filtre.DegerIdler);
         var urunler = await mediator.Send(new GetStoreProductsQuery(
             platform.Id, arama, sayfa, SayfaBoyu,
-            filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax, filtre.Sort,
+            seciliOzellikler, filtre.PriceMin, filtre.PriceMax, filtre.Sort,
+            ProductIds: harita?.UrunIdleri(seciliKategoriler),
             ApplyStockFilter: true, ShowOutOfStock: platform.StokBitenGoster, OutOfStockSince: platform.StokBitenGosterTarih), ct);
         if (urunler.IsFailure)
             return NotFound();
@@ -490,7 +453,8 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         var facets = await mediator.Send(new GetStoreFacetsQuery(
             platform.Id, arama, platform.StokBitenGoster, platform.StokBitenGosterTarih,
             // 2026-07-17: seçim-duyarlı facet — aktif filtre/fiyat bağlamı
-            filtre.DegerIdler, filtre.PriceMin, filtre.PriceMax), ct);
+            seciliOzellikler, filtre.PriceMin, filtre.PriceMax,
+            ProductCategoryMap: harita?.UrunKategori, SelectedCategoryIds: seciliKategoriler), ct);
 
         var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
         var devamUrl = $"/api/store/catalog/products?firmPlatformId={platform.Id}&pageSize={SayfaBoyu}"
@@ -503,10 +467,10 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             SayfaBoyu: SayfaBoyu,
             IlkSayfa: urunler.Value.Items.Select(KartaCevir).ToList(),
             DevamApiUrl: devamUrl,
-            FiltreGruplari: FacetleriCevir(facets.IsSuccess ? facets.Value : null),
+            FiltreGruplari: FiltreGruplariKur(facets.IsSuccess ? facets.Value : null, harita, seciliKategoriler),
             FiyatMin: facets.IsSuccess ? facets.Value!.PriceMin : 0,
             FiyatMax: facets.IsSuccess ? facets.Value!.PriceMax : 0,
-            KategoriSecenekleri: nav.Kokler,
+            KategoriSecenekleri: [],   // 2026-08-15: menü kökleri değil — Kategori grubu FiltreGruplari'nda
             SeciliDegerler: filtre.DegerIdler,
             SeciliFiyatMin: filtre.PriceMin,
             SeciliFiyatMax: filtre.PriceMax,

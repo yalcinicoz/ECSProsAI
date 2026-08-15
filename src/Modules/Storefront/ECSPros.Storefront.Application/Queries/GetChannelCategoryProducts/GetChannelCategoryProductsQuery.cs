@@ -54,11 +54,15 @@ public record GetChannelCategoryProductsQuery(
     string? Sort = null,
     // Kanal ayarı: stoğu biten ürünleri listede göster mi + hangi tarihten sonra açılanlar.
     bool ShowOutOfStock = false,
-    DateTime? OutOfStockSince = null) : IRequest<Result<PagedResult<ChannelCategoryProductItemDto>>>
+    DateTime? OutOfStockSince = null,
+    // 2026-08-15: kategori sanal filtresi — liste yalnız bu ürün id'leriyle kesişir
+    // (Api, seçili yaprak kategorilerin ürünlerini haritadan verir). Renk modunda uygulanır.
+    List<Guid>? RestrictProductIds = null) : IRequest<Result<PagedResult<ChannelCategoryProductItemDto>>>
 {
     public bool FiltreliMi =>
         !string.IsNullOrWhiteSpace(Search)
         || AttributeValueIds is { Count: > 0 }
+        || RestrictProductIds is { Count: > 0 }
         || PriceMin.HasValue || PriceMax.HasValue
         || !string.IsNullOrEmpty(Sort);
 }
@@ -388,6 +392,12 @@ public class GetChannelCategoryProductsQueryHandler(
         // 1. Kategorideki tüm ürün ID'leri
         var allProductIds = await ResolveCategoryProductIds(cat, request.ChannelCategoryId,
             request.ShowOutOfStock, request.OutOfStockSince, ct);
+        // 2026-08-15: kategori sanal filtresi (seçili yaprak kategorilerin ürünleri)
+        if (request.RestrictProductIds is { Count: > 0 } kisit)
+        {
+            var kisitKumesi = kisit.ToHashSet();
+            allProductIds = allProductIds.Where(kisitKumesi.Contains).ToList();
+        }
 
         // B10: "kategoride ara" — kategori kapsamı içinde kod veya Türkçe ad eşleşmesi
         // (GetStoreProducts aramasıyla aynı semantik). Fallback moduna da daralmış liste gider.

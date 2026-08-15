@@ -214,6 +214,7 @@ builder.Services.AddSingleton<ECSPros.Api.Hubs.DashboardPresenceTracker>(); // d
 // ─── Storefront (Razor) servisleri ─────────────────────────────────
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IStoreContext, StoreContext>();
+builder.Services.AddSingleton<ECSPros.Api.Services.UrunKategoriHaritasi>(); // liste sayfası Kategori filtresi (ürün→yaprak kategori, 15 dk)
 builder.Services.AddScoped<ECSPros.Api.Services.StoreUrunDetayBuilder>(); // ürün detay VM (hem /urun/{code} hem gerçek slug URL'i kullanır)
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.VitrinSrcsetSaglayici>(); // vitrin görsel srcset üretimi (A fazı — varyant varsa basılır)
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IInStockProductProvider, ECSPros.Api.Services.InStockProductProvider>();

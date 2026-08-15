@@ -18,7 +18,8 @@ namespace ECSPros.Storefront.Application.Queries.GetProductsLeafChannelCategorie
 /// </summary>
 public record GetProductsLeafChannelCategoriesQuery(
     Guid FirmPlatformId,
-    List<Guid> ProductIds) : IRequest<Result<List<ProductLeafCategoryDto>>>;
+    // null → platformun TÜM satışa açık ürünleri (Api'deki ürün→kategori haritası bununla kurulur)
+    List<Guid>? ProductIds) : IRequest<Result<List<ProductLeafCategoryDto>>>;
 
 public record ProductLeafCategoryDto(Guid ProductId, Guid CategoryId, string Slug, Dictionary<string, string> NameI18n);
 
@@ -35,9 +36,12 @@ public class GetProductsLeafChannelCategoriesQueryHandler(
         GetProductsLeafChannelCategoriesQuery request, CancellationToken ct)
     {
         var sonuc = new List<ProductLeafCategoryDto>();
-        var urunIdler = request.ProductIds.Distinct().ToList();
+        var urunIdler = request.ProductIds is null
+            ? await catDb.Products.AsNoTracking().Where(p => p.IsSaleOpen).Select(p => p.Id).ToListAsync(ct)
+            : request.ProductIds.Distinct().ToList();
         if (urunIdler.Count == 0)
             return Result.Success(sonuc);
+        var tumu = request.ProductIds is null;
 
         var kategoriler = await sfDb.ChannelCategories.AsNoTracking()
             .Where(c => c.FirmPlatformId == request.FirmPlatformId && c.Status == "published")
@@ -48,12 +52,12 @@ public class GetProductsLeafChannelCategoriesQueryHandler(
             return Result.Success(sonuc);
 
         var grupByUrun = await catDb.Products.AsNoTracking()
-            .Where(p => urunIdler.Contains(p.Id))
+            .Where(p => tumu ? p.IsSaleOpen : urunIdler.Contains(p.Id))
             .Select(p => new { p.Id, p.ProductGroupId })
             .ToDictionaryAsync(x => x.Id, x => x.ProductGroupId, ct);
 
         var degerSatirlari = await catDb.ProductAttributes.AsNoTracking()
-            .Where(a => urunIdler.Contains(a.ProductId) && a.AttributeValueId != null)
+            .Where(a => a.AttributeValueId != null && (tumu ? a.Product.IsSaleOpen : urunIdler.Contains(a.ProductId)))
             .Select(a => new { a.ProductId, a.AttributeTypeId, ValueId = a.AttributeValueId!.Value })
             .ToListAsync(ct);
         var degerlerByUrun = degerSatirlari
@@ -63,7 +67,7 @@ public class GetProductsLeafChannelCategoriesQueryHandler(
                 .ToDictionary(t => t.Key, t => t.Select(x => x.ValueId).ToHashSet()));
 
         var manuelSatirlar = await sfDb.ChannelCategoryProducts.AsNoTracking()
-            .Where(cp => urunIdler.Contains(cp.ProductId))
+            .Where(cp => tumu || urunIdler.Contains(cp.ProductId))
             .Select(cp => new { cp.ProductId, cp.ChannelCategoryId, cp.IsExcluded })
             .ToListAsync(ct);
         var dahilByUrun = manuelSatirlar.Where(r => !r.IsExcluded)

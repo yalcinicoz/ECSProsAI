@@ -19,7 +19,10 @@ public record GetChannelCategoryFacetsQuery(
     List<Guid>? SelectedValueIds = null,
     decimal? PriceMin = null,
     decimal? PriceMax = null,
-    string? Search = null) : IRequest<Result<StoreFacetsDto>>;
+    string? Search = null,
+    // 2026-08-15: kategori sanal facet grubu (bkz. GetStoreFacetsQuery.ProductCategoryMap)
+    IReadOnlyDictionary<Guid, Guid>? ProductCategoryMap = null,
+    List<Guid>? SelectedCategoryIds = null) : IRequest<Result<StoreFacetsDto>>;
 
 public class GetChannelCategoryFacetsQueryHandler(
     IStorefrontDbContext sfDb,
@@ -41,11 +44,14 @@ public class GetChannelCategoryFacetsQueryHandler(
         // Seçim/fiyat/arama bağlamlı istekler cache'lenmez (kombinasyon uzayı geniş).
         var secimliMi = request.SelectedValueIds is { Count: > 0 }
             || request.PriceMin.HasValue || request.PriceMax.HasValue
-            || !string.IsNullOrWhiteSpace(request.Search);
+            || !string.IsNullOrWhiteSpace(request.Search)
+            || request.SelectedCategoryIds is { Count: > 0 };
         // v6: ürün seviyesi özellikler facet'e dahil oldu (2026-07-17)
         // v7: facet'e girecek tipler AttributeType.UseInFilter bayrağından seçilir (2026-07-17)
         // v8: tek seçenekli filtre grupları panelden düşürülür (2026-07-17)
-        var cacheKey = $"channelcat:facets:v8:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
+        // v9: kategori sanal grubu sayımı (CategoryCounts) DTO'ya girdi (2026-08-15) — harita
+        //     yokken cache'lenmez ki sayımsız girdi 10 dk kalmasın.
+        var cacheKey = $"channelcat:facets:v9:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
         StoreFacetsDto? cached = null;
         if (!secimliMi)
         {
@@ -152,8 +158,13 @@ public class GetChannelCategoryFacetsQueryHandler(
             if (sonuc.IsSuccess)
             {
                 // Tek seçenekli grup panele konmaz (2026-07-17 kuralı; seçim yok → istisnasız)
-                sonuc = Result.Success(GetStoreFacetsQueryHandler.TekSecenekliGruplariAyikla(sonuc.Value!));
-                try { await cache.SetAsync(cacheKey, sonuc.Value, TimeSpan.FromMinutes(10), ct); } catch { /* best-effort */ }
+                var dto = GetStoreFacetsQueryHandler.TekSecenekliGruplariAyikla(sonuc.Value!);
+                if (request.ProductCategoryMap is not null)
+                {
+                    dto = dto with { CategoryCounts = GetStoreFacetsQueryHandler.KategoriSayimi(productIds, request.ProductCategoryMap) };
+                    try { await cache.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(10), ct); } catch { /* best-effort */ }
+                }
+                sonuc = Result.Success(dto);
             }
             return sonuc;
         }
@@ -172,6 +183,6 @@ public class GetChannelCategoryFacetsQueryHandler(
 
         return await GetStoreFacetsQueryHandler.BuildFacetsWithSelections(
             catDb, productIds, request.SelectedValueIds, request.PriceMin, request.PriceMax,
-            sameVariant: true, ct);
+            sameVariant: true, ct, request.ProductCategoryMap, request.SelectedCategoryIds);
     }
 }

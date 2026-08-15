@@ -22,12 +22,20 @@ public record GetStoreFacetsQuery(
     decimal? PriceMax = null,
     // 2026-08-15: sabit kod listesi (görsel arama sonucu / benzer ürünler) — facet'ler
     // yalnız bu ürünlerden hesaplanır (cache'lenmez; Search ile birlikte kullanılmaz).
-    List<string>? ProductCodes = null) : IRequest<Result<StoreFacetsDto>>;
+    List<string>? ProductCodes = null,
+    // 2026-08-15: KATEGORİ sanal facet grubu — ürün→yaprak kanal kategorisi haritası (Api'de
+    // platform başına 15 dk cache'li) verilirse CategoryCounts döner; SelectedCategoryIds
+    // seçili kategori(ler)dir: diğer gruplar bu kategorilere kısıtlı kümeden, kategori
+    // grubunun kendisi ise kategori kısıtı OLMADAN (klasik facet kuralı) hesaplanır.
+    IReadOnlyDictionary<Guid, Guid>? ProductCategoryMap = null,
+    List<Guid>? SelectedCategoryIds = null) : IRequest<Result<StoreFacetsDto>>;
 
 public record StoreFacetsDto(
     decimal PriceMin,
     decimal PriceMax,
-    List<AttributeFacetDto> Attributes);
+    List<AttributeFacetDto> Attributes,
+    // 2026-08-15: kategori sanal grubu — yaprak kategori id → ürün sayısı (harita verildiyse)
+    Dictionary<Guid, int>? CategoryCounts = null);
 
 public record AttributeFacetDto(
     string TypeCode,
@@ -61,10 +69,21 @@ public class GetStoreFacetsQueryHandler(
     {
         var hasCodes = request.ProductCodes is { Count: > 0 };
         var hasSearch = !string.IsNullOrWhiteSpace(request.Search) || hasCodes; // kod listesi de cache dışı
+        var harita = request.ProductCategoryMap;
+        var seciliKategoriler = request.SelectedCategoryIds is { Count: > 0 } sk ? sk.Distinct().ToList() : [];
+        var secimVar = request.SelectedValueIds is { Count: > 0 } || request.PriceMin.HasValue
+                       || request.PriceMax.HasValue || seciliKategoriler.Count > 0;
         var allKey = AllKey(request.FirmPlatformId, request.ShowOutOfStock, request.OutOfStockSince);
+        var allIdsKey = allKey + ":ids";
 
-        if (!hasSearch && memoryCache.TryGetValue(allKey, out StoreFacetsDto? cached) && cached is not null)
-            return Result.Success(cached);
+        if (!hasSearch && !secimVar
+            && memoryCache.TryGetValue(allKey, out StoreFacetsDto? cached) && cached is not null)
+        {
+            if (harita is null) return Result.Success(cached);
+            // Kategori sayımı: taban id'ler ayrı cache'te (materialize ucuz, harita 15 dk'lık)
+            if (memoryCache.TryGetValue(allIdsKey, out List<Guid>? cachedIds) && cachedIds is not null)
+                return Result.Success(cached with { CategoryCounts = KategoriSayimi(cachedIds, harita) });
+        }
 
         // Stok görünürlüğü: arama grid'iyle aynı kural (stoğu biten, kanal açık VE CreatedAt>=eşik
         // değilse facet'lerden de çıkar).
@@ -95,12 +114,13 @@ public class GetStoreFacetsQueryHandler(
 
         // 2026-07-17: seçim/fiyat filtresi varsa seçim-duyarlı hesap (cache'lenmez);
         // arama listesi ürün seviyesinde eşleştiğinden sameVariant=false.
-        if (request.SelectedValueIds is { Count: > 0 } || request.PriceMin.HasValue || request.PriceMax.HasValue)
+        // 2026-08-15: arama/kod listesi de (kategori sayımı için) materialize edilir.
+        if (secimVar || hasSearch)
         {
             var baseIds = await q.Select(p => p.Id).ToListAsync(ct);
             return await BuildFacetsWithSelections(
                 db, baseIds, request.SelectedValueIds, request.PriceMin, request.PriceMax,
-                sameVariant: false, ct);
+                sameVariant: false, ct, harita, seciliKategoriler);
         }
 
         // Ürün id'leri belleğe çekilmez — alt sorgu olarak aggregation'a gömülür
@@ -109,10 +129,30 @@ public class GetStoreFacetsQueryHandler(
         if (result.IsSuccess)
             result = Result.Success(TekSecenekliGruplariAyikla(result.Value!));
 
-        if (!hasSearch && result.IsSuccess)
+        if (result.IsSuccess)
+        {
             memoryCache.Set(allKey, result.Value, CacheTtl);
+            if (harita is not null)
+            {
+                // Kategori sayımı için taban id'ler (yalnız id kolonu; ~30K guid, ucuz) — 15 dk
+                var ids = await q.Select(p => p.Id).ToListAsync(ct);
+                memoryCache.Set(allIdsKey, ids, CacheTtl);
+                result = Result.Success(result.Value! with { CategoryCounts = KategoriSayimi(ids, harita) });
+            }
+        }
 
         return result;
+    }
+
+    /// <summary>Kategori sanal grubu sayımı: verilen ürün kümesindeki ürünlerin yaprak
+    /// kategorilerine göre ürün sayısı (haritada olmayan ürün sayılmaz).</summary>
+    public static Dictionary<Guid, int> KategoriSayimi(IEnumerable<Guid> productIds, IReadOnlyDictionary<Guid, Guid> harita)
+    {
+        var sayim = new Dictionary<Guid, int>();
+        foreach (var id in productIds)
+            if (harita.TryGetValue(id, out var kat))
+                sayim[kat] = sayim.GetValueOrDefault(kat) + 1;
+        return sayim;
     }
 
     /// <summary>Tek seçeneği kalan filtre grubunu panelden düşürür (2026-07-17 kullanıcı
@@ -143,17 +183,34 @@ public class GetStoreFacetsQueryHandler(
         decimal? priceMin,
         decimal? priceMax,
         bool sameVariant,
-        CancellationToken ct)
+        CancellationToken ct,
+        // 2026-08-15: kategori sanal grubu (bkz. GetStoreFacetsQuery.ProductCategoryMap)
+        IReadOnlyDictionary<Guid, Guid>? productCategoryMap = null,
+        List<Guid>? selectedCategoryIds = null)
     {
         var secili = (selectedValueIds ?? []).Distinct().ToList();
+        var seciliKategoriler = selectedCategoryIds is { Count: > 0 } && productCategoryMap is not null
+            ? selectedCategoryIds.ToHashSet() : null;
+        // Kategori kısıtı: seçili kategori varsa diğer gruplar/fiyat/liste bu kümeden hesaplanır
+        var tumTaban = baseProductIds; // kategori kısıtı UYGULANMAMIŞ (kategori grubunun kendi sayımı için)
+        if (seciliKategoriler is not null)
+            baseProductIds = baseProductIds
+                .Where(id => productCategoryMap!.TryGetValue(id, out var k) && seciliKategoriler.Contains(k))
+                .ToList();
+
         if (secili.Count == 0 && !priceMin.HasValue && !priceMax.HasValue)
         {
             var duz = await BuildFacets(db, baseProductIds, ct);
-            return duz.IsSuccess ? Result.Success(TekSecenekliGruplariAyikla(duz.Value!)) : duz;
+            if (duz.IsFailure) return duz;
+            var duzDto = TekSecenekliGruplariAyikla(duz.Value!);
+            if (productCategoryMap is not null)
+                duzDto = duzDto with { CategoryCounts = KategoriSayimi(tumTaban, productCategoryMap) };
+            return Result.Success(duzDto);
         }
 
         if (baseProductIds.Count == 0)
-            return Result.Success(new StoreFacetsDto(0, 0, new()));
+            return Result.Success(new StoreFacetsDto(0, 0, new(),
+                productCategoryMap is null ? null : new Dictionary<Guid, int>()));
 
         // Seçili değerler tip (grup) bazında
         var tipGruplari = (await db.AttributeValues.AsNoTracking()
@@ -246,6 +303,51 @@ public class GetStoreFacetsQueryHandler(
         if (tamSonuc.IsFailure)
             return tamSonuc;
 
+        // Kategori sanal grubu: özellik seçimleri + fiyat uygulanmış, kategori kısıtı
+        // UYGULANMAMIŞ küme (grup kendi seçimini dışlar). Not: UrunGruplariSaglarMi'nin
+        // veri kümesi kategori-kısıtlı tabandan yüklendi; kısıt dışı ürünler için ek yükleme.
+        Dictionary<Guid, int>? kategoriSayimi = null;
+        if (productCategoryMap is not null)
+        {
+            var kategoriKumesi = tumTaban;
+            if (tumGruplar.Count > 0)
+            {
+                if (seciliKategoriler is not null)
+                {
+                    // kısıt dışı ürünlerin seçili değer eşleşmelerini de yükle
+                    var disari = tumTaban.Where(id => !urunVaryantDegerleri.ContainsKey(id) && !urunSeviyesiDegerleri.ContainsKey(id)).ToList();
+                    if (disari.Count > 0)
+                    {
+                        var ekSatirlar = await db.ProductVariantAttributes.AsNoTracking()
+                            .Where(va => secili.Contains(va.AttributeValueId) && disari.Contains(va.Variant.ProductId) && va.Variant.IsActive)
+                            .Select(va => new { va.Variant.ProductId, va.VariantId, va.AttributeValueId })
+                            .ToListAsync(ct);
+                        foreach (var satir in ekSatirlar)
+                        {
+                            if (!urunVaryantDegerleri.TryGetValue(satir.ProductId, out var varyantlar))
+                                urunVaryantDegerleri[satir.ProductId] = varyantlar = new();
+                            if (!varyantlar.TryGetValue(satir.VariantId, out var degerler))
+                                varyantlar[satir.VariantId] = degerler = new();
+                            degerler.Add(satir.AttributeValueId);
+                        }
+                        var ekUrunSatirlari = await db.ProductAttributes.AsNoTracking()
+                            .Where(pa => pa.AttributeValueId != null && secili.Contains(pa.AttributeValueId.Value) && disari.Contains(pa.ProductId))
+                            .Select(pa => new { pa.ProductId, AttributeValueId = pa.AttributeValueId!.Value })
+                            .ToListAsync(ct);
+                        foreach (var satir in ekUrunSatirlari)
+                        {
+                            if (!urunSeviyesiDegerleri.TryGetValue(satir.ProductId, out var degerler))
+                                urunSeviyesiDegerleri[satir.ProductId] = degerler = new();
+                            degerler.Add(satir.AttributeValueId);
+                        }
+                    }
+                }
+                kategoriKumesi = tumTaban.Where(id => UrunGruplariSaglarMi(id, tumGruplar)).ToList();
+            }
+            kategoriKumesi = await FiyatUygula(kategoriKumesi);
+            kategoriSayimi = KategoriSayimi(kategoriKumesi, productCategoryMap);
+        }
+
         var girdilerByCode = tamSonuc.Value!.Attributes.ToDictionary(a => a.TypeCode);
 
         // Seçimli gruplar: kendi grubu HARİÇ diğer seçimler + fiyat uygulanmış kümeden
@@ -281,7 +383,7 @@ public class GetStoreFacetsQueryHandler(
             .ToList();
 
         return Result.Success(TekSecenekliGruplariAyikla(
-            new StoreFacetsDto(fiyatAgg?.Min ?? 0, fiyatAgg?.Max ?? 0, birlesik), secili));
+            new StoreFacetsDto(fiyatAgg?.Min ?? 0, fiyatAgg?.Max ?? 0, birlesik, kategoriSayimi), secili));
     }
 
     public static Task<Result<StoreFacetsDto>> BuildFacets(
