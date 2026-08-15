@@ -33,11 +33,11 @@
     </a>
     @if (msAltBarUye)
     {
-    <a class="ms-mobil-alt-bar-link@(msFavAktif ? " ms-mobil-alt-bar-link-aktif" : "")" href="/Favorilerim"@(msFavAktif ? Html.Raw(" aria-current=\"page\"") : null)>
+    <a rel="nofollow" class="ms-mobil-alt-bar-link@(msFavAktif ? " ms-mobil-alt-bar-link-aktif" : "")" href="/Favorilerim"@(msFavAktif ? Html.Raw(" aria-current=\"page\"") : null)>
         <span class="ms-mobil-alt-bar-ikon ms-mobil-alt-bar-ikon-mask ms-mobil-alt-bar-ikon-favori" aria-hidden="true"></span>
         <span>Favorilerim</span>
     </a>
-    <a class="ms-mobil-alt-bar-link@(msHesapAktif ? " ms-mobil-alt-bar-link-aktif" : "")" href="/Hesabim"@(msHesapAktif ? Html.Raw(" aria-current=\"page\"") : null)>
+    <a rel="nofollow" class="ms-mobil-alt-bar-link@(msHesapAktif ? " ms-mobil-alt-bar-link-aktif" : "")" href="/Hesabim"@(msHesapAktif ? Html.Raw(" aria-current=\"page\"") : null)>
         <span class="ms-mobil-alt-bar-ikon ms-mobil-alt-bar-ikon-mask ms-mobil-alt-bar-ikon-hesap" aria-hidden="true"></span>
         <span>Hesabım</span>
     </a>

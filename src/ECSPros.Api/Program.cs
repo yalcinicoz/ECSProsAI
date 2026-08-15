@@ -555,6 +555,8 @@ app.UseWhen(
 
 // Storefront statik varlıkları (wwwroot: css/js/ikons/images/video/fontawesome —
 // misharix ile aynı kök yollar, partial'lardaki /ikons/... referansları değişmeden çalışır)
+// Bot-dışı yollar (sepet/ödeme/hesabım/benzer/api…): X-Robots-Tag başlığı — statiklerden ÖNCE
+app.UseMiddleware<ECSPros.Api.Services.XRobotsTagMiddleware>();
 app.UseStaticFiles(new StaticFileOptions
 {
     // Layout'taki css/js referansları asp-append-version'lı (?v=hash) — içerik değişince
@@ -586,6 +588,8 @@ app.UseAuthentication();
 app.UseMiddleware<ECSPros.Api.Middleware.DeviceRequestGuardMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
+// robots.txt tek kaynaktan üretilir (BotDisiRotalar) — wwwroot'ta statik dosya YOK
+app.MapGet("/robots.txt", () => Results.Text(ECSPros.Api.Services.BotDisiRotalar.RobotsTxt(), "text/plain; charset=utf-8"));
 
 // ─── SignalR Hubs ───────────────────────────────────────────────────
 app.MapHub<FulfillmentHub>("/hubs/fulfillment");
