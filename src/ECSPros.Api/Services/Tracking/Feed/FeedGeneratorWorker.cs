@@ -78,8 +78,9 @@ public sealed class FeedGeneratorWorker(
                 if (tetik is { } pid) await KanalUretAsync(pid, st);
                 else
                 {
-                    await TumKanallariUretAsync(st);
-                    sonrakiZamanli = DateTime.UtcNow.Add(interval);
+                    // 10 dk'da bir tarama: hiç üretilmemiş (yeni eklenen Merchant kaydı) ya da aralığı dolmuş kanallar
+                    await TumKanallariUretAsync(interval, st);
+                    sonrakiZamanli = DateTime.UtcNow.AddMinutes(10);
                 }
             }
             catch (Exception e) when (e is not OperationCanceledException)
@@ -90,14 +91,23 @@ public sealed class FeedGeneratorWorker(
         }
     }
 
-    private async Task TumKanallariUretAsync(CancellationToken ct)
+    private async Task TumKanallariUretAsync(TimeSpan interval, CancellationToken ct)
     {
-        using var scope = scopeFactory.CreateScope();
-        var coreDb = scope.ServiceProvider.GetRequiredService<ICoreDbContext>();
-        var kanallar = await coreDb.FirmPlatformIntegrations.AsNoTracking()
-            .Where(fi => fi.IsActive && fi.FirmPlatformId != null && fi.IntegrationService.Code == "google_merchant")
-            .Select(fi => fi.FirmPlatformId!.Value).Distinct().ToListAsync(ct);
-        foreach (var pid in kanallar) await KanalUretAsync(pid, ct);
+        List<Guid> kanallar;
+        using (var scope = scopeFactory.CreateScope())
+        {
+            var coreDb = scope.ServiceProvider.GetRequiredService<ICoreDbContext>();
+            kanallar = await coreDb.FirmPlatformIntegrations.AsNoTracking()
+                .Where(fi => fi.IsActive && fi.FirmPlatformId != null && fi.IntegrationService.Code == "google_merchant")
+                .Select(fi => fi.FirmPlatformId!.Value).Distinct().ToListAsync(ct);
+        }
+        foreach (var pid in kanallar)
+        {
+            var st = statusStore.Get(pid);
+            var gerekli = st is null || st.LastRunAt is null || (DateTime.UtcNow - st.LastRunAt.Value) >= interval
+                          || (st.Error is not null && (DateTime.UtcNow - (st.LastRunAt ?? DateTime.MinValue)) >= TimeSpan.FromMinutes(30));
+            if (gerekli) await KanalUretAsync(pid, ct);
+        }
     }
 
     public async Task KanalUretAsync(Guid platformId, CancellationToken ct)

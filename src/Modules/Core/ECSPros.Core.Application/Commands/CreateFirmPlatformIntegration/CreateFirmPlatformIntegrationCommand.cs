@@ -36,9 +36,14 @@ public class CreateFirmPlatformIntegrationCommandHandler
         if (!firmExists)
             return Result.Failure<Guid>("Firma bulunamadı.");
 
-        var serviceExists = await _db.IntegrationServices.AnyAsync(s => s.Id == request.IntegrationServiceId, ct);
-        if (!serviceExists)
+        var servis = await _db.IntegrationServices.AsNoTracking()
+            .Where(s => s.Id == request.IntegrationServiceId)
+            .Select(s => new { s.SettingsSchemaJson }).FirstOrDefaultAsync(ct);
+        if (servis is null)
             return Result.Failure<Guid>("Entegrasyon servisi bulunamadı.");
+        var eksik = IntegrationSchemaValidator.EksikZorunlular(servis.SettingsSchemaJson, request.Credentials, request.Settings);
+        if (eksik.Count > 0)
+            return Result.Failure<Guid>("Zorunlu alan(lar) boş: " + string.Join(", ", eksik));
 
         if (request.FirmPlatformId.HasValue)
         {

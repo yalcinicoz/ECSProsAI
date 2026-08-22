@@ -328,6 +328,11 @@ function IntegrationForm({ firmId, platforms, integrationServices, target, onClo
         const raw = schemaValues[f.key]
         if (raw !== undefined && raw !== '') settings[f.key] = schemaValueToBody(f, raw)
       }
+      // Zorunlu şema alanları (2026-08-22): boş bırakılan * alan kaydı engeller (sunucu da doğrular)
+      const eksik = schema.filter(f => f.required && f.type !== 'boolean')
+        .filter(f => { const raw = schemaValues[f.key]; return raw === undefined || String(raw).trim() === '' })
+        .map(f => getFieldLabel(f))
+      if (eksik.length) throw new Error('Zorunlu alan(lar) boş: ' + eksik.join(', '))
       const body = {
         integrationServiceId: isEdit ? undefined : integrationServiceId,
         firmPlatformId: firmPlatformId || null,
@@ -458,7 +463,7 @@ function IntegrationForm({ firmId, platforms, integrationServices, target, onClo
 
       {mutation.isError && (
         <p className="text-sm" style={{ color: '#ef4444' }}>
-          {(mutation.error as any)?.response?.data?.error ?? 'Hata oluştu. Lütfen tekrar deneyin.'}
+          {(mutation.error as any)?.response?.data?.error ?? (mutation.error as Error)?.message ?? 'Hata oluştu. Lütfen tekrar deneyin.'}
         </p>
       )}
 

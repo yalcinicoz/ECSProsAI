@@ -45,7 +45,13 @@ public class UpdateFirmPlatformIntegrationCommandHandler
         }
 
         integration.Name = request.Name;
-        integration.Credentials = CredentialsMasking.MergeMasked(request.Credentials, integration.Credentials);
+        var birlesikCredentials = CredentialsMasking.MergeMasked(request.Credentials, integration.Credentials);
+        var semaJson = await _db.IntegrationServices.AsNoTracking()
+            .Where(s => s.Id == integration.IntegrationServiceId).Select(s => s.SettingsSchemaJson).FirstOrDefaultAsync(ct);
+        var eksik = IntegrationSchemaValidator.EksikZorunlular(semaJson, birlesikCredentials, request.Settings);
+        if (eksik.Count > 0)
+            return Result.Failure<bool>("Zorunlu alan(lar) boş: " + string.Join(", ", eksik));
+        integration.Credentials = birlesikCredentials;
         integration.Settings = request.Settings;
         integration.IsActive = request.IsActive;
         integration.FirmPlatformId = request.FirmPlatformId;
