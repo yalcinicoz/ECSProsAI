@@ -114,6 +114,7 @@ const NAV_SECTIONS: NavSection[] = [
     { label: 'Hediye Kartı', to: '/orders/gift-cards',    icon: 'gift' },
     { label: 'Bildirimler',      to: '/storefront/notifications', icon: 'bell' },
     { label: 'Bülten Aboneleri', to: '/storefront/newsletter',    icon: 'mail' },
+    { label: 'Takip & Reklam',   to: '/marketing/tracking',       icon: 'plug' },
   ]},
   { label: 'İçerik', items: [
     { label: 'Sayfalar',  to: '/cms/pages', icon: 'filetext' },

@@ -4,6 +4,7 @@ import { AuthGuard } from '@/components/layout/AuthGuard'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { MarketplacesPage } from '@/pages/marketplaces/MarketplacesPage'
+import { TrackingPage } from '@/pages/marketing/TrackingPage'
 import { CommissionPage } from '@/pages/finance/CommissionPage'
 import { MarketplaceStoreDetailPage } from '@/pages/marketplaces/MarketplaceStoreDetailPage'
 import { MappingPage } from '@/pages/marketplaces/MappingPage'
@@ -113,6 +114,7 @@ export const router = createBrowserRouter(
             { path: 'catalog/bulk-images',       element: <BulkImageUploadPage /> },
             { path: 'storefront/channel-categories',      element: <ChannelCategoriesPage /> },
             { path: 'storefront/menu-placement',          element: <MenuPlacementPage /> },
+            { path: 'marketing/tracking',                 element: <TrackingPage /> },
             { path: 'storefront/product-card',            element: <ProductCardPage /> },
             { path: 'storefront/channel-categories/:id',  element: <ChannelCategoryDetailPage /> },
             { path: 'storefront/channel-products',         element: <ChannelProductsPage /> },

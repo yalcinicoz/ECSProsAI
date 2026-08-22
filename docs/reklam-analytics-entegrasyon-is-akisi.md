@@ -480,6 +480,21 @@ tek `dataLayer` sözleşmesi; PageSpeed korunur.
 
 ### Faz D — Server-side dönüşüm (Meta CAPI, TikTok Events API, GA4 MP) + durum ekranı — **İE-4**
 
+> **DURUM: UYGULANDI 2026-08-22 (⚠️ canlı restart bekliyor; admin build alındı — sayfa restart'a dek 404 API görür).**
+> Adapter'lar `Services/Tracking/Adapters/`: `MetaConversionsAdapter` (graph v20.0 /{pixelId}/events, event_id=DedupId,
+> user_data em/ph/external_id hash + fbp/fbc + IP/UA, `test_event_code`; test event yalnız testEventCode doluyken),
+> `TikTokEventsAdapter` (v1.3 event/track, Access-Token, ttclid), `Ga4MeasurementProtocolAdapter` (mp/collect
+> api_secret, yalnız purchase/refund + sendServerSide; test event → /debug/mp/collect); `TrackingAdapterBase`
+> (5 sn HttpClient "tracking", §4.3 ad eşlemeleri). `TrackingAdminController` `api/tracking`: GET status
+> (kanal kartları: mod client/server/gtm, son başarı/hata, 24s sayıları, outbox özeti, enabled/dryRun), GET outbox
+> (sayfalı, durum filtresi), POST outbox/{id}/retry, POST test-event (order_completed, consent GRANT, Extra.test).
+> Panel `admin/src/pages/marketing/TrackingPage.tsx` → `/marketing/tracking`, Sidebar Pazarlama → "Takip & Reklam"
+> (kanal seçici, 15 sn yenileme, test event, yeniden dene, Firma→Entegrasyonlar linki). Worker: tüm hedefler
+> consent'le atlanırsa satır `skipped`. İzole 5051 DRY-RUN ✓: meta CAPI açık + consent ads → `dry_run` hedef +
+> IntegrationLog (token/PII yok); consent yok → skipped; eşlemesi olmayan event → skipped; admin uçları 401.
+> Pinterest Conversions adapter'ı ikinci dalga. Gerçek platform doğrulaması (Meta Test Events / GA4 Realtime)
+> kullanıcıda — gerçek token girildikten sonra.
+
 **Hedef:** `order_completed` (ve seçilenler) backend'ten doğrulanmış gönderilsin; engelleyicilerden
 etkilenmesin; panelden durum izlensin.
 

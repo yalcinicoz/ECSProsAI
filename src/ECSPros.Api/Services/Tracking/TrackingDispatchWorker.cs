@@ -135,7 +135,10 @@ public sealed class TrackingDispatchWorker(
             }
 
             satir.TargetsJson = JsonSerializer.Serialize(sonuclar, OutboxCommerceEventPublisher.JsonAyar);
-            if (!hata)
+            var hicGonderilmedi = sonuclar.Count > 0 && sonuclar.All(x => x.GetType().GetProperty("status")?.GetValue(x)?.ToString() == "skipped");
+            if (hicGonderilmedi)
+                Bitir(satir, "skipped", "tüm hedefler atlandı (consent yok)", null);
+            else if (!hata)
                 Bitir(satir, "done", null, null);
             else
             {
