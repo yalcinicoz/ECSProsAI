@@ -55,6 +55,19 @@ public class StoreNewsletterController(IMediator mediator) : ControllerBase
             new ECSPros.Storefront.Application.Commands.SubscribeNewsletter.SubscribeNewsletterCommand(
                 req.FirmPlatformId, req.Email, memberId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        // İE-2 Faz B: newsletter_subscribed (outbox; hata-güvenli)
+        try
+        {
+            var publisher = HttpContext.RequestServices.GetRequiredService<ECSPros.Shared.Contracts.Tracking.ICommerceEventPublisher>();
+            await publisher.PublishAsync(new ECSPros.Shared.Contracts.Tracking.CommerceEvent(
+                ECSPros.Shared.Contracts.Tracking.CommerceEventNames.NewsletterSubscribed, DateTime.UtcNow, req.FirmPlatformId,
+                Guid.NewGuid().ToString("D"), "web", memberId, "TRY", null, null,
+                Array.Empty<ECSPros.Shared.Contracts.Tracking.CommerceItem>(),
+                ECSPros.Api.Services.Tracking.TrackingHttpContextReader.ReadClient(HttpContext, req.Email, null, memberId),
+                ECSPros.Api.Services.Tracking.TrackingHttpContextReader.ReadConsent(HttpContext),
+                new Dictionary<string, string>()), ct);
+        }
+        catch { /* tracking bülten kaydını asla bozmaz */ }
         return Ok(new { success = true });
     }
 }

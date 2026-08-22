@@ -437,6 +437,20 @@ public class CoreController : ControllerBase
         return Ok(new { success = true });
     }
 
+    /// <summary>Takip/çerez kanal ayarları (İE-1, 2026-08-22) — platform Settings'e yalnız "tracking"
+    /// anahtarı merge edilir. purchaseAt: confirmed|created. Consent banner/varsayılan sabittir
+    /// (EU kararı: banner açık, default deny) — istekte alınmaz.</summary>
+    [HttpPut("firm-platforms/{id:guid}/tracking-settings")]
+    public async Task<IActionResult> UpdateTrackingSettings(Guid id, [FromBody] TrackingSettingsRequest request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new ECSPros.Core.Application.Commands.UpdateTrackingSettings.UpdateTrackingSettingsCommand(
+                id, request.PurchaseAt ?? "confirmed"), ct);
+        if (result.IsFailure)
+            return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
     /// <summary>Sipariş onay politikası — platform Settings'e yalnız ilgili anahtarlar merge edilir.</summary>
     [HttpPut("firm-platforms/{id:guid}/order-confirm-settings")]
     public async Task<IActionResult> UpdateOrderConfirmSettings(Guid id, [FromBody] OrderConfirmSettingsRequest request, CancellationToken ct)
@@ -458,6 +472,7 @@ public record OrderConfirmSettingsRequest(string Cod, string Card, int LinkHours
 public record ProductListSettingsRequest(Dictionary<string, bool>? SortOptions);
 
 public record NavigationSettingsRequest(bool MegaMenuHover = false);
+public record TrackingSettingsRequest(string? PurchaseAt = "confirmed");
 
 public record ProductCardSettingsRequest(
     bool VideoBadge = true,

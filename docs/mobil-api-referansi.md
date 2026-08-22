@@ -187,6 +187,27 @@ TCKN eşiği (`Store:TcknThreshold`) üstü tutarlarda kimlik no zorunluluğu su
 
 ---
 
+## 9. Commerce event (takip) — `POST /api/store/events` (anonim; 2026-08-22, İE-2)
+
+Mobil uygulamada tarayıcı pixel'i olmadığından davranış event'leri sunucuya bildirilir; sunucu
+kanal/üye/IP/UA'yı ekleyip kalıcı kuyruğa yazar, aktif takip entegrasyonlarına (Meta CAPI,
+TikTok Events API, GA4 Measurement Protocol — Faz D) kanal + consent kuralıyla dağıtır. Plan:
+`docs/reklam-analytics-entegrasyon-is-akisi.md`.
+
+- Gövde: `{ "name": "added_to_cart", "firmPlatformId": "...", "source": "mobile", "dedupId": "<uuid>",
+  "currency": "TRY", "value": 1299.90, "items": [{ "itemId": "<varyant SKU>", "itemGroupId": "<ürün kodu>",
+  "name": "...", "variant": "Renk: Siyah, Beden: M", "price": 1299.90, "quantity": 1, "discount": 0 }],
+  "extra": { "list_id": "kadin-elbise" }, "client": { "gaClientId": null, "fbp": null, "fbc": null,
+  "ttclid": null, "gclid": null }, "consent": { "analytics": true, "ads": false, "personalization": false } }`
+- `name` izinli adlar: `product_viewed, product_list_viewed, search, added_to_cart, removed_from_cart,
+  cart_viewed, checkout_started, shipping_info_added, payment_info_added, sign_up, login,
+  wishlist_added, newsletter_subscribed` — `order_completed`/`refund` **istemciden kabul edilmez**
+  (sunucu sipariş onayında üretir). Geçersiz ad → 400 (`allowed` listesiyle).
+- `consent` mobilde ZORUNLU sayılır (uygulama içi izin ekranı); gönderilmezse çerez aranır, yoksa
+  tüm kategoriler DENY → event hiçbir platforma gitmez (EU/KVKK kararı).
+- `dedupId` istemci üretir (uuid); aynı event'i tekrar gönderirse sunucu yok sayar.
+- Yanıt her zaman `{ success: true }` (takip kapalıyken de); rate limit `store-sensitive`.
+
 ## Bilinen eksikler / notlar
 
 1. **Kargo takip**: gerçek servis yok — sitedeki `/uyeliksiz-kargo-takip` demo HTML'dir.

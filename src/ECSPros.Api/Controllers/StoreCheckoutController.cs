@@ -100,7 +100,34 @@ public class StoreCheckoutController(
 
         // 2026-07-30: orderNumber da döner — onay ekranı insan okunur numarayı doğrudan
         // gösterir (misafirde üye-listesi geri araması yoktu, GUID görünüyordu).
+        // İE-2 Faz B-3: tarayıcı bağlamı + consent siparişe bağlanır (sonradan onaylanınca
+        // server-side purchase bu bağlamla gider); purchaseAt=created ise event hemen yazılır.
+        // Hata-güvenli — checkout yanıtını asla etkilemez.
+        await TakipKaydetAsync(result.Value!.OrderId, req.FirmPlatformId, memberId, req, ct);
+
         return Ok(new { success = true, data = new { orderId = result.Value!.OrderId, orderNumber = result.Value.OrderNumber } });
+    }
+
+    private async Task TakipKaydetAsync(Guid orderId, Guid firmPlatformId, Guid? memberId, StoreCheckoutRequest req, CancellationToken ct)
+    {
+        try
+        {
+            var recorder = HttpContext.RequestServices.GetRequiredService<ECSPros.Api.Services.Tracking.ITrackingOrderContextRecorder>();
+            await recorder.RecordAsync(orderId, firmPlatformId, HttpContext, memberId, null, req.ShippingRecipientPhone, ct);
+
+            var builder = HttpContext.RequestServices.GetRequiredService<ECSPros.Api.Services.Tracking.IOrderTrackingEventBuilder>();
+            if (await builder.PurchaseAtAsync(firmPlatformId, ct) == "created")
+            {
+                var ev = await builder.BuildOrderCompletedAsync(orderId, ct);
+                if (ev is not null)
+                    await HttpContext.RequestServices.GetRequiredService<ECSPros.Shared.Contracts.Tracking.ICommerceEventPublisher>().PublishAsync(ev, ct);
+            }
+        }
+        catch (Exception ex)
+        {
+            HttpContext.RequestServices.GetRequiredService<ILogger<StoreCheckoutController>>()
+                .LogWarning(ex, "Checkout takip kaydı başarısız (orderId={OrderId})", orderId);
+        }
     }
 }
 

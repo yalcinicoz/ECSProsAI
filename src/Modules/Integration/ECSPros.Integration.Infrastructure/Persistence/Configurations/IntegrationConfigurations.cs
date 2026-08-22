@@ -129,6 +129,41 @@ public class LegacyOrderOutboxConfiguration : IEntityTypeConfiguration<LegacyOrd
     }
 }
 
+/// <summary>İE-2 Faz B (2026-08-22): commerce event outbox'ı — şema adı tablo önekinde tekrar edilmez.</summary>
+public class TrackingEventOutboxConfiguration : IEntityTypeConfiguration<TrackingEventOutbox>
+{
+    public void Configure(EntityTypeBuilder<TrackingEventOutbox> b)
+    {
+        b.ToTable("tracking_event_outbox");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.EventName).HasMaxLength(50);
+        b.Property(x => x.DedupId).HasMaxLength(100);
+        b.Property(x => x.Source).HasMaxLength(20);
+        b.Property(x => x.Status).HasMaxLength(20);
+        b.Property(x => x.LastError).HasMaxLength(2000);
+        b.Property(x => x.PayloadJson).HasColumnType("jsonb");
+        b.Property(x => x.TargetsJson).HasColumnType("jsonb");
+        // Aynı kanal + event + dedup için TEK satır (purchase: OrderId)
+        b.HasIndex(x => new { x.FirmPlatformId, x.EventName, x.DedupId }).IsUnique();
+        b.HasIndex(x => new { x.Status, x.NextAttemptAt });
+        b.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
+public class TrackingOrderContextConfiguration : IEntityTypeConfiguration<TrackingOrderContext>
+{
+    public void Configure(EntityTypeBuilder<TrackingOrderContext> b)
+    {
+        b.ToTable("tracking_order_context");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.ContextJson).HasColumnType("jsonb");
+        b.Property(x => x.ConsentJson).HasColumnType("jsonb");
+        b.HasIndex(x => x.OrderId).IsUnique();
+        b.HasIndex(x => x.CreatedAt);
+        b.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
 public class ErpVariantDataConfiguration : IEntityTypeConfiguration<ErpVariantData>
 {
     public void Configure(EntityTypeBuilder<ErpVariantData> b)

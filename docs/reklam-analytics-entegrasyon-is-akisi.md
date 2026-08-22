@@ -283,6 +283,23 @@ ID → `Settings`.
 
 ### Faz B — Merkezi commerce event katmanı (normalize + outbox + dispatch) — **İE-2**
 
+> **DURUM: UYGULANDI 2026-08-22 (⚠️ canlı restart bekliyor; migration `AddTrackingEventOutbox`
+> CANLI DB'ye UYGULANDI — additive).** Sözleşme `Shared.Contracts/Tracking/CommerceEvent.cs`
+> (`CommerceEvent/CommerceItem/ClientContext/ConsentState/CommerceEventNames/ICommerceEventPublisher`);
+> outbox `integration.tracking_event_outbox` + `tracking_order_context` (Integration.Domain);
+> Api `Services/Tracking/`: `OutboxCommerceEventPublisher` (hata-güvenli, Tracking:Enabled kapısı,
+> dedup), `TrackingOrderContextRecorder` (checkout'ta çerez/UA/IP + ms_consent → siparişe bağlı),
+> `TrackingHttpContextReader` (_fbp/_fbc/_ga/ttclid/gclid + SHA256 PII), `OrderTrackingEventBuilder`
+> (order_completed/refund; kaynak filtresi Legacy/External; CRM e-posta hash), `TrackingDispatchWorker`
+> (5 sn, 50'lik dilim, consent kategorisi, IntegrationLog, backoff 1/5/30/120/360 dk, 90 gün temizlik,
+> DryRun), `ITrackingAdapter`; `EventHandlers/OrderTrackingEventHandlers` (Confirmed→purchase,
+> Cancelled→refund tam, ReturnReceived→refund kısmi); `StoreAuthController` sign_up/login,
+> `StoreNewsletterController` newsletter_subscribed, `StoreCheckoutController` bağlam + purchaseAt=created;
+> `POST /api/store/events` (`StoreEventsController`, mobil referans §9). Config `Tracking:Enabled/DryRun`
+> (base true/false; Development+Demo false/true). İzole 5051 DRY-RUN testi ✓: 3 event outbox'a yazıldı,
+> dedup ✓, geçersiz ad/istemci order_completed 400 ✓, consent/çerez ayrıştırma ✓, worker `skipped` (adapter yok).
+> Bilinen: order_completed üretimi gerçek siparişle (kapıda ödeme + onay) kullanıcı testinde doğrulanacak.
+
 **Hedef:** İç olayları tek sözleşmeye indirge; kalıcı kuyruğa yaz; kanal/consent/kaynak filtresiyle
 adapter'lara dağıt. Bu fazda adapter yok (Faz D); **dispatcher + outbox + üreticiler** var.
 
