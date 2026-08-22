@@ -93,6 +93,7 @@ public class ChannelCategoryConfiguration : IEntityTypeConfiguration<ChannelCate
 {
     public void Configure(EntityTypeBuilder<ChannelCategory> builder)
     {
+        builder.Property(x => x.GoogleCategoryId).HasMaxLength(200);
         builder.ToTable("channel_categories");
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Slug).HasMaxLength(200).IsRequired();
@@ -192,6 +193,36 @@ public class ProductReviewPhotoConfiguration : IEntityTypeConfiguration<ProductR
         builder.Property(p => p.PhotoUrl).HasMaxLength(500).IsRequired();
         builder.HasIndex(p => p.ReviewId);
         builder.HasQueryFilter(p => !p.IsDeleted);
+    }
+}
+
+public class ProductRatingSourceConfiguration : IEntityTypeConfiguration<ProductRatingSource>
+{
+    public void Configure(EntityTypeBuilder<ProductRatingSource> builder)
+    {
+        builder.ToTable("product_rating_sources");
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.ProductCode).HasMaxLength(50).IsRequired();
+        builder.Property(r => r.Channel).HasMaxLength(20).IsRequired();
+        builder.Property(r => r.ExternalProductId).HasMaxLength(100);
+        builder.Property(r => r.ExternalUrl).HasMaxLength(500);
+        builder.Property(r => r.AverageRating).HasPrecision(5, 2);
+        // Bir ürünün bir kanaldan tek özeti olur (senkron upsert anahtarı)
+        builder.HasIndex(r => new { r.FirmPlatformId, r.ProductCode, r.Channel }).IsUnique();
+        builder.HasIndex(r => new { r.FirmPlatformId, r.Channel });
+        builder.HasQueryFilter(r => !r.IsDeleted);
+    }
+}
+
+public class ProductReviewDisplaySettingsConfiguration : IEntityTypeConfiguration<ProductReviewDisplaySettings>
+{
+    public void Configure(EntityTypeBuilder<ProductReviewDisplaySettings> builder)
+    {
+        builder.ToTable("product_review_display_settings");
+        builder.HasKey(s => s.Id);
+        // Platform başına tek görünüm ayarı
+        builder.HasIndex(s => s.FirmPlatformId).IsUnique();
+        builder.HasQueryFilter(s => !s.IsDeleted);
     }
 }
 

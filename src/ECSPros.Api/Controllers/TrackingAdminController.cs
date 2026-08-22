@@ -93,6 +93,53 @@ public class TrackingAdminController(
         });
     }
 
+    /// <summary>İE-5: feed durumu — google_merchant varsa URL'ler (feedKey ile), son üretim, sayılar, hata.</summary>
+    [HttpGet("feed-status")]
+    public async Task<IActionResult> FeedStatus([FromQuery] Guid firmPlatformId,
+        [FromServices] ECSPros.Api.Services.Tracking.Feed.IFeedStatusStore feedStatus,
+        [FromServices] ECSPros.Core.Application.Services.ICoreDbContext coreDb,
+        [FromServices] IHostEnvironment env, CancellationToken ct)
+    {
+        if (firmPlatformId == Guid.Empty) return BadRequest(new { success = false, error = "firmPlatformId gerekli." });
+        var s = await settings.GetAsync(firmPlatformId, ct);
+        var merchant = s.Servis("google_merchant");
+        var platform = await coreDb.FirmPlatforms.AsNoTracking().Where(p => p.Id == firmPlatformId)
+            .Select(p => new { p.Code, p.Settings }).FirstOrDefaultAsync(ct);
+        var kok = platform?.Settings.TryGetValue("canonicalDomain", out var cd) == true && cd?.ToString() is { Length: > 0 } cds ? cds.TrimEnd('/') : "";
+        var key = merchant?.Get("feedKey");
+        var st = feedStatus.Get(firmPlatformId);
+        return Ok(new
+        {
+            success = true,
+            data = new
+            {
+                enabled = merchant is not null,
+                intervalHours = config.GetValue("Feeds:IntervalHours", 6),
+                feedsEnabled = config.GetValue("Feeds:Enabled", true),
+                xmlUrl = merchant is null || platform is null || key is null ? null : $"{kok}/feeds/{platform.Code}/google-shopping.xml?key={key}",
+                csvUrl = merchant is null || platform is null || key is null ? null : $"{kok}/feeds/{platform.Code}/meta-catalog.csv?key={key}",
+                keyPending = merchant is not null && key is null,
+                status = st
+            }
+        });
+    }
+
+    /// <summary>İE-5: feed'i şimdi üret (worker kuyruğu — saniyeler/dakikalar içinde biter, feed-status ile izlenir).</summary>
+    [HttpPost("feed/generate")]
+    public async Task<IActionResult> FeedGenerate([FromBody] TrackingTestEventRequest req,
+        [FromServices] ECSPros.Api.Services.Tracking.Feed.IFeedTrigger trigger, CancellationToken ct)
+    {
+        if (req.FirmPlatformId == Guid.Empty) return BadRequest(new { success = false, error = "firmPlatformId gerekli." });
+        settings.Invalidate(req.FirmPlatformId);
+        var s = await settings.GetAsync(req.FirmPlatformId, ct);
+        if (s.Servis("google_merchant") is null)
+            return BadRequest(new { success = false, error = "Bu kanalda aktif Google Merchant entegrasyonu yok." });
+        if (!config.GetValue("Feeds:Enabled", true))
+            return BadRequest(new { success = false, error = "Feeds:Enabled=false — bu ortamda feed üretimi kapalı." });
+        trigger.Trigger(req.FirmPlatformId);
+        return Ok(new { success = true });
+    }
+
     /// <summary>İE-6: son 30 günün consent tercih dağılımı (banner ispat günlüğünden).</summary>
     [HttpGet("consent-stats")]
     public async Task<IActionResult> ConsentStats([FromQuery] Guid firmPlatformId, CancellationToken ct)

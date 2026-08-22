@@ -32,6 +32,10 @@ interface OutboxRow {
   nextAttemptAt?: string | null; lastError?: string | null; targetsJson?: string | null; createdAt: string; processedAt?: string | null
 }
 interface Paged<T> { items: T[]; totalCount: number; page: number; pageSize: number }
+interface FeedStatusDto {
+  enabled: boolean; intervalHours: number; feedsEnabled: boolean; xmlUrl?: string | null; csvUrl?: string | null; keyPending: boolean
+  status?: { lastRunAt?: string | null; durationMs: number; productCount: number; itemCount: number; inStockCount: number; xmlBytes: number; csvBytes: number; error?: string | null; running: boolean } | null
+}
 
 const getName = (i18n?: Record<string, string> | null) => i18n?.tr || i18n?.en || Object.values(i18n ?? {})[0] || ''
 const SERVIS_AD: Record<string, string> = {
@@ -77,6 +81,17 @@ export function TrackingPage() {
       return (await api.get(`/tracking/outbox?${p}`)).data.data
     },
     enabled: !!selectedChannelId, refetchInterval: 15000,
+  })
+  const { data: feed } = useQuery<FeedStatusDto>({
+    queryKey: ['tracking-feed', selectedChannelId],
+    queryFn: async () => (await api.get(`/tracking/feed-status?firmPlatformId=${selectedChannelId}`)).data.data,
+    enabled: !!selectedChannelId, refetchInterval: 10000,
+  })
+  const [feedMsg, setFeedMsg] = useState<string | null>(null)
+  const feedGen = useMutation({
+    mutationFn: async () => api.post('/tracking/feed/generate', { firmPlatformId: selectedChannelId }),
+    onSuccess: () => { setFeedMsg('Üretim kuyruğa alındı — durum 10 sn\'de bir yenilenir.'); setTimeout(() => qc.invalidateQueries({ queryKey: ['tracking-feed'] }), 3000) },
+    onError: (e: unknown) => setFeedMsg((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Üretim başlatılamadı.'),
   })
   const retry = useMutation({
     mutationFn: async (id: string) => api.post(`/tracking/outbox/${id}/retry`),
@@ -161,6 +176,41 @@ export function TrackingPage() {
               {s.lastError && <p className="mt-2 break-words text-xs text-red-600" title={s.lastError}>{s.lastError.slice(0, 160)}</p>}
             </div>
           ))}
+        </div>
+      )}
+
+      {feed && (
+        <div className="mb-6 rounded-xl border p-4" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <div className="font-semibold" style={{ color: 'var(--text)' }}>Ürün feed'i (Google Merchant Center / Meta katalog)</div>
+              <div className="mt-1 flex flex-wrap gap-1">
+                <Badge variant={feed.enabled ? 'success' : 'default'}>{feed.enabled ? 'Merchant entegrasyonu aktif' : 'Merchant entegrasyonu yok'}</Badge>
+                {feed.enabled && <Badge variant={feed.feedsEnabled ? 'info' : 'danger'}>{feed.feedsEnabled ? `her ${feed.intervalHours} saatte` : 'Feeds:Enabled=false'}</Badge>}
+                {feed.status?.running && <Badge variant="warning">üretiliyor…</Badge>}
+                {feed.status?.error && <Badge variant="danger">hata</Badge>}
+              </div>
+            </div>
+            <Button size="sm" onClick={() => { setFeedMsg(null); feedGen.mutate() }} disabled={!feed.enabled || !feed.feedsEnabled || feedGen.isPending || !!feed.status?.running}>
+              <RefreshCw className="w-4 h-4 mr-1" /> Şimdi üret
+            </Button>
+          </div>
+          {feed.enabled ? (
+            <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-1 text-xs md:grid-cols-2" style={{ color: 'var(--text-s)' }}>
+              <div className="flex justify-between gap-2"><dt>Son üretim</dt><dd>{tarihSaat(feed.status?.lastRunAt)} {feed.status?.durationMs ? `(${Math.round(feed.status.durationMs / 1000)} sn)` : ''}</dd></div>
+              <div className="flex justify-between gap-2"><dt>Ürün / kalem (stokta)</dt><dd>{feed.status ? `${feed.status.productCount} / ${feed.status.itemCount} (${feed.status.inStockCount})` : '—'}</dd></div>
+              <div className="flex justify-between gap-2"><dt>XML</dt><dd>{feed.status ? `${Math.round(feed.status.xmlBytes / 1024)} KB` : '—'}</dd></div>
+              <div className="flex justify-between gap-2"><dt>CSV</dt><dd>{feed.status ? `${Math.round(feed.status.csvBytes / 1024)} KB` : '—'}</dd></div>
+              <div className="md:col-span-2 flex items-center justify-between gap-2"><dt>Google Shopping XML</dt><dd className="truncate font-mono" title={feed.xmlUrl ?? ''}>{feed.keyPending ? 'anahtar ilk üretimde oluşur' : (feed.xmlUrl ?? '—')}</dd>
+                {feed.xmlUrl && <Button variant="secondary" size="sm" onClick={() => navigator.clipboard?.writeText(feed.xmlUrl!)}>Kopyala</Button>}</div>
+              <div className="md:col-span-2 flex items-center justify-between gap-2"><dt>Meta katalog CSV</dt><dd className="truncate font-mono" title={feed.csvUrl ?? ''}>{feed.keyPending ? 'anahtar ilk üretimde oluşur' : (feed.csvUrl ?? '—')}</dd>
+                {feed.csvUrl && <Button variant="secondary" size="sm" onClick={() => navigator.clipboard?.writeText(feed.csvUrl!)}>Kopyala</Button>}</div>
+              {feed.status?.error && <div className="md:col-span-2 text-red-600 break-words">{feed.status.error}</div>}
+              {feedMsg && <div className="md:col-span-2" style={{ color: 'var(--text)' }}>{feedMsg}</div>}
+            </dl>
+          ) : (
+            <p className="mt-2 text-xs" style={{ color: 'var(--text-s)' }}>Feed için <Link to="/settings/firms" className="underline">Firma → Entegrasyonlar</Link>'dan "Google Merchant Center" kaydı açın (merchantId, ülke TR, dil tr, para TRY, kargo bedeli). Kategori eşlemesi: Kanal Kategorileri → "Google ürün kategorisi".</p>
+          )}
         </div>
       )}
 

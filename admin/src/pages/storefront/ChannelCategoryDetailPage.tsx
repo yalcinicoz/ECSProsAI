@@ -44,6 +44,7 @@ interface CategoryDetail {
   metaDescriptionI18n: Record<string, string> | null
   ogImageUrl: string | null
   ogTitleI18n: Record<string, string> | null
+  googleCategoryId?: string | null
   groups: GroupWithShowcase[]
   coverage: CoverageDto
 }
@@ -132,6 +133,7 @@ export function ChannelCategoryDetailPage() {
     sortOrder: number
     displayImageUrl: string
     badgeLabel: string
+    googleCategoryId: string
   } | null>(null)
 
   const [formInited, setFormInited] = useState(false)
@@ -147,6 +149,7 @@ export function ChannelCategoryDetailPage() {
       sortOrder:      cat.sortOrder,
       displayImageUrl: cat.displayImageUrl ?? '',
       badgeLabel:     cat.badgeLabel ?? '',
+      googleCategoryId: cat.googleCategoryId ?? '',
     })
   }
 
@@ -164,6 +167,7 @@ export function ChannelCategoryDetailPage() {
         sortOrder:        form.sortOrder,
         displayImageUrl:  form.displayImageUrl || null,
         badgeLabel:       form.badgeLabel || null,
+        googleCategoryId: form.googleCategoryId || null,
         metaTitleI18n:    cat?.metaTitleI18n ?? null,
         metaDescriptionI18n: cat?.metaDescriptionI18n ?? null,
         ogImageUrl:       cat?.ogImageUrl ?? null,
@@ -374,6 +378,18 @@ export function ChannelCategoryDetailPage() {
                 }
               />
             </div>
+          </div>
+
+          {/* Google ürün kategorisi (İE-5 feed) */}
+          <div>
+            <label className="flbl mb-2">Google ürün kategorisi (Merchant Center feed)</label>
+            <input className="inp w-full" value={form.googleCategoryId}
+              onChange={e => setForm(f => f && ({ ...f, googleCategoryId: e.target.value }))}
+              placeholder="örn. 2271  veya  Apparel & Accessories > Clothing > Dresses" />
+            <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+              Google taksonomi kimliği ya da tam yolu; boşsa üst kategorininki kullanılır, hiçbiri yoksa feed'e yazılmaz
+              (Merchant otomatik sınıflandırır). Taksonomi: support.google.com/merchants/answer/6324436
+            </p>
           </div>
 
           {/* URL */}

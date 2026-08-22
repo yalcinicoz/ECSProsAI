@@ -20,7 +20,8 @@ public record UpdateChannelCategoryCommand(
     Dictionary<string, string>? MetaTitleI18n,
     Dictionary<string, string>? MetaDescriptionI18n,
     string? OgImageUrl,
-    Dictionary<string, string>? OgTitleI18n) : IRequest<Result<bool>>;
+    Dictionary<string, string>? OgTitleI18n,
+    string? GoogleCategoryId = null) : IRequest<Result<bool>>;
 
 public class UpdateChannelCategoryCommandHandler(IStorefrontDbContext db)
     : IRequestHandler<UpdateChannelCategoryCommand, Result<bool>>
@@ -59,6 +60,7 @@ public class UpdateChannelCategoryCommandHandler(IStorefrontDbContext db)
         cat.MetaDescriptionI18n = request.MetaDescriptionI18n;
         cat.OgImageUrl         = request.OgImageUrl;
         cat.OgTitleI18n        = request.OgTitleI18n;
+        cat.GoogleCategoryId   = string.IsNullOrWhiteSpace(request.GoogleCategoryId) ? null : request.GoogleCategoryId.Trim();
         cat.UpdatedAt          = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);

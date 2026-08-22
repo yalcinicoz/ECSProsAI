@@ -27,7 +27,8 @@ public record ChannelCategoryDetailDto(
     string? OgImageUrl,
     Dictionary<string, string>? OgTitleI18n,
     List<GroupWithShowcaseDto> Groups,
-    CoverageDto Coverage);
+    CoverageDto Coverage,
+    string? GoogleCategoryId = null);
 
 public record CoverageDto(int AssignedGroupCount, int CoveredGroupCount, List<Guid> UncoveredGroupIds);
 
@@ -69,6 +70,6 @@ public class GetChannelCategoryDetailQueryHandler(IStorefrontDbContext db)
             cat.Slug, cat.Status, cat.FillType, cat.ListingMode, cat.FilterDef,
             cat.SortOrder, cat.DisplayImageUrl, cat.BadgeLabel,
             cat.MetaTitleI18n, cat.MetaDescriptionI18n, cat.OgImageUrl, cat.OgTitleI18n,
-            groups, coverage));
+            groups, coverage, cat.GoogleCategoryId));
     }
 }

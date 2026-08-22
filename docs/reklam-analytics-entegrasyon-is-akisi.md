@@ -548,6 +548,24 @@ etkilenmesin; panelden durum izlensin.
 
 ### Faz E — Ürün feed (Merchant Center + Meta katalog) — **İE-5**
 
+> **DURUM: UYGULANDI 2026-08-22 (⚠️ canlı restart bekliyor; migration `AddChannelCategoryGoogleCategory` (Storefront)
+> CANLI DB'de; admin build alındı).** `Services/Tracking/Feed/`: `FeedProductReader` (RAW SQL: satışa açık ürün ∩
+> kanal ürünü, varyant, kanal fiyatı/compare/slug, renk/beden, marka/cinsiyet, sellable stok, aktif görseller
+> [varyant > aynı renk kardeş > ürün], yaprak kanal kategorisi + breadcrumb yolu + GoogleCategoryId miras),
+> `FeedGenerator` (RSS/g: XML + Meta CSV, tmp→atomik rename; id=varyant SKU, item_group_id=ürün kodu, title
+> "ad - renk - beden", price/sale_price KDV dahil, availability, gtin (8/12/13/14 hane barkod), mpn, color/size/
+> gender/age_group (cinsiyet değerinden), google_product_category, product_type, g:shipping ayardan [karar §7-7],
+> link kanal slug'ı (renk düzeyi, kardeş fallback) ya da /urun/{kod}?color=), `FeedGeneratorWorker` (Feeds:Enabled,
+> IntervalHours=6, FirstRunDelaySeconds=120, panel tetiği Channel, feedKey otomatik üretilip Settings'e yazılır,
+> status.json), `FeedController` `GET /feeds/{kanal}/google-shopping.xml|meta-catalog.csv?key=` (anahtar yanlış/yok →
+> 404; X-Robots-Tag noindex; dosyadan servis — DB sorgusu yok); `api/tracking/feed-status` + `POST feed/generate`;
+> panel Takip & Reklam feed kartı (URL kopyala, son üretim, sayılar, hata, Şimdi üret) + Kanal Kategorileri formunda
+> "Google ürün kategorisi" alanı. Seeder `google_merchant` şemasına shippingPrice/shippingService/feedKey eklendi.
+> İzole 5051 ✓: mishar 5.792 ürün / 37.162 stoklu kalem 11 sn, XML 52 MB well-formed, CSV 37.163 satır; endpoint
+> 200/404'ler ✓. ⚠️ Bilinen: stoksuz varyantlar varsayılan hariç (includeOutOfStock), görselsiz ürün atlanır;
+> `google_product_category` yalnız panelden girilince yazılır; Merchant Center'da feed doğrulaması (uyarılar) kullanıcıda;
+> Dev/Demo'da Feeds KAPALI. Çıktı `{ContentRoot}/App_Data/feeds/{kanal}/` (Feeds:OutputPath).
+
 **Hedef:** Google Shopping (ve Meta) için kanal-bazlı, zamanlı üretilen XML feed.
 
 **Yapılacaklar**

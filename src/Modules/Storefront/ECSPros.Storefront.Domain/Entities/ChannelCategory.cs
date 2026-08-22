@@ -35,6 +35,8 @@ public class ChannelCategory : BaseEntity
     public Dictionary<string, string>? MetaDescriptionI18n { get; set; }
     public string? OgImageUrl { get; set; }
     public Dictionary<string, string>? OgTitleI18n { get; set; }
+    /// <summary>İE-5 Faz E (2026-08-22): Google ürün taksonomisi kimliği/yolu (Merchant Center feed g:google_product_category) — null = feed'e yazılmaz.</summary>
+    public string? GoogleCategoryId { get; set; }
 
     public ChannelCategory? Parent { get; set; }
     public ICollection<ChannelCategory> Children { get; set; } = new List<ChannelCategory>();

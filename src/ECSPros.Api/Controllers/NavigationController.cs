@@ -125,7 +125,7 @@ public class NavigationController(IMediator mediator) : ControllerBase
             id, req.ParentId, req.NameI18n, req.Slug, req.Status, req.FillType,
             req.ListingMode ?? "product",
             req.FilterDef, req.SortOrder, req.DisplayImageUrl, req.BadgeLabel,
-            req.MetaTitleI18n, req.MetaDescriptionI18n, req.OgImageUrl, req.OgTitleI18n), ct);
+            req.MetaTitleI18n, req.MetaDescriptionI18n, req.OgImageUrl, req.OgTitleI18n, req.GoogleCategoryId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
     }
@@ -361,7 +361,8 @@ public record UpdateChannelCategoryRequest(
     Dictionary<string, string>? MetaTitleI18n,
     Dictionary<string, string>? MetaDescriptionI18n,
     string? OgImageUrl,
-    Dictionary<string, string>? OgTitleI18n);
+    Dictionary<string, string>? OgTitleI18n,
+    string? GoogleCategoryId = null);
 
 public record AddChannelCategoryProductRequest(
     Guid ProductId,
