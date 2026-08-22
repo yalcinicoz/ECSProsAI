@@ -93,6 +93,23 @@ public class TrackingAdminController(
         });
     }
 
+    /// <summary>İE-6: son 30 günün consent tercih dağılımı (banner ispat günlüğünden).</summary>
+    [HttpGet("consent-stats")]
+    public async Task<IActionResult> ConsentStats([FromQuery] Guid firmPlatformId, CancellationToken ct)
+    {
+        if (firmPlatformId == Guid.Empty) return BadRequest(new { success = false, error = "firmPlatformId gerekli." });
+        var since = DateTime.UtcNow.AddDays(-30);
+        var q = integrationDb.TrackingConsentLogs.AsNoTracking().Where(c => c.FirmPlatformId == firmPlatformId && c.CreatedAt >= since);
+        var total = await q.CountAsync(ct);
+        var tam = await q.CountAsync(c => c.Analytics && c.Ads && c.Personalization, ct);
+        var red = await q.CountAsync(c => !c.Analytics && !c.Ads && !c.Personalization, ct);
+        var uyeli = await q.CountAsync(c => c.MemberId != null, ct);
+        var analytics = await q.CountAsync(c => c.Analytics, ct);
+        var ads = await q.CountAsync(c => c.Ads, ct);
+        var son = await q.OrderByDescending(c => c.CreatedAt).Select(c => (DateTime?)c.CreatedAt).FirstOrDefaultAsync(ct);
+        return Ok(new { success = true, data = new { days = 30, total, fullAccept = tam, fullReject = red, partial = total - tam - red, withMember = uyeli, analytics, ads, lastAt = son } });
+    }
+
     [HttpGet("outbox")]
     public async Task<IActionResult> Outbox([FromQuery] Guid firmPlatformId, [FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
     {

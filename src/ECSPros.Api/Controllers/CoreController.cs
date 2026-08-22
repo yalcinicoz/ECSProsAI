@@ -445,7 +445,7 @@ public class CoreController : ControllerBase
     {
         var result = await _mediator.Send(
             new ECSPros.Core.Application.Commands.UpdateTrackingSettings.UpdateTrackingSettingsCommand(
-                id, request.PurchaseAt ?? "confirmed"), ct);
+                id, request.PurchaseAt ?? "confirmed", request.BannerTitle, request.BannerText, request.PolicyUrl, request.PolicyLabel), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -472,7 +472,7 @@ public record OrderConfirmSettingsRequest(string Cod, string Card, int LinkHours
 public record ProductListSettingsRequest(Dictionary<string, bool>? SortOptions);
 
 public record NavigationSettingsRequest(bool MegaMenuHover = false);
-public record TrackingSettingsRequest(string? PurchaseAt = "confirmed");
+public record TrackingSettingsRequest(string? PurchaseAt = "confirmed", string? BannerTitle = null, string? BannerText = null, string? PolicyUrl = null, string? PolicyLabel = null);
 
 public record ProductCardSettingsRequest(
     bool VideoBadge = true,

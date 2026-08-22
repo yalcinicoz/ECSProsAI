@@ -3,16 +3,25 @@
    "Kabul Et" → hepsi; "Reddet" → hepsi kapalı (zorunlu çerezler hariç); "Ayarlar" → kategori
    seçimi. Tercih 180 gün çerezde; üye-bazlı kayıt + zengin yönetim Faz F. Takip entegrasyonu
    olmayan kanalda (window.ecspros yok) band gösterilmez — gereksiz izin sorulmaz. *@
+@inject ECSPros.Api.Services.Store.ITrackingSettingsProvider MsCerezAyarSaglayici
+@inject ECSPros.Api.Services.IStoreContext MsCerezStoreContext
+@{
+    var msCerezPlatform = await MsCerezStoreContext.GetPlatformAsync();
+    var msCerezAyar = msCerezPlatform is null ? null : await MsCerezAyarSaglayici.GetAsync(msCerezPlatform.Id);
+    var msCerezBaslik = msCerezAyar?.BannerTitle ?? "Çerez tercihleriniz";
+    var msCerezMetin = msCerezAyar?.BannerText ?? ("Alışveriş deneyiminizi iyileştirmek, site trafiğini analiz etmek ve size uygun reklamlar " +
+        "göstermek için çerezler kullanıyoruz. Zorunlu çerezler her zaman açıktır; diğerleri yalnızca izninizle çalışır.");
+    var msCerezPolitikaUrl = msCerezAyar?.PolicyUrl ?? "/gizlilik-ve-guvenlik";
+    var msCerezPolitikaEtiket = msCerezAyar?.PolicyLabel ?? "Gizlilik ve Çerez Politikası";
+}
 <div class="ms-cerez-bandi fixed inset-x-3 bottom-3 z-[130] hidden md:inset-x-auto md:bottom-6 md:right-6 md:max-w-md" data-ms-cerez-bandi role="dialog" aria-live="polite" aria-label="Çerez tercihleri">
     <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl md:p-5">
         <div class="mb-3 flex items-start gap-3">
             <i class="fa-solid fa-cookie-bite mt-0.5 text-xl text-ms-siyah" aria-hidden="true"></i>
             <div>
-                <p class="text-[15px] font-semibold text-ms-siyah">Çerez tercihleriniz</p>
+                <p class="text-[15px] font-semibold text-ms-siyah">@msCerezBaslik</p>
                 <p class="mt-1 text-[13px] leading-5 text-gray-600">
-                    Alışveriş deneyiminizi iyileştirmek, site trafiğini analiz etmek ve size uygun reklamlar
-                    göstermek için çerezler kullanıyoruz. Zorunlu çerezler her zaman açıktır; diğerleri
-                    yalnızca izninizle çalışır. Ayrıntılar: <a href="/gizlilik-ve-guvenlik" class="underline">Gizlilik ve Çerez Politikası</a>.
+                    @msCerezMetin Ayrıntılar: <a href="@msCerezPolitikaUrl" class="underline">@msCerezPolitikaEtiket</a>.
                 </p>
             </div>
         </div>
@@ -34,15 +43,16 @@
 (function(){
     var band=document.querySelector("[data-ms-cerez-bandi]");if(!band)return;
     var E=window.ecspros;if(!E||!E.cfg||!E.cfg.consentBanner){return;} // takip entegrasyonu yok → band yok
-    if(E.consent){return;} // tercih var
-    band.classList.remove("hidden");
     var ayar=band.querySelector("[data-ms-cerez-ayarlar]"),kaydet=band.querySelector("[data-ms-cerez-kaydet]"),ac=band.querySelector("[data-ms-cerez-ayar-ac]");
+    // Dışarıdan (footer "Çerez Tercihleri" linki — [data-ms-cerez-tercih]) yeniden açma; tercih varken de çalışır
+    window.msCerezBandiAc=function(){band.classList.remove("hidden");ayar.classList.remove("hidden");kaydet.classList.remove("hidden");ac.classList.add("hidden");var c=E.consent||{};band.querySelectorAll("[data-ms-cerez-kat]").forEach(function(k){k.checked=!!c[k.dataset.msCerezKat];});};
+    document.addEventListener("click",function(ev){var t=ev.target&&ev.target.closest&&ev.target.closest("[data-ms-cerez-tercih]");if(t){ev.preventDefault();window.msCerezBandiAc();}});
+    if(E.consent){return;} // tercih var → band kapalı başlar
+    band.classList.remove("hidden");
     function kapat(c){E.setConsent(c);band.classList.add("hidden");}
     band.querySelector("[data-ms-cerez-kabul]").addEventListener("click",function(){kapat({analytics:true,ads:true,personalization:true});});
     band.querySelector("[data-ms-cerez-red]").addEventListener("click",function(){kapat({analytics:false,ads:false,personalization:false});});
     ac.addEventListener("click",function(){ayar.classList.remove("hidden");kaydet.classList.remove("hidden");ac.classList.add("hidden");});
-    kaydet.addEventListener("click",function(){var c={};band.querySelectorAll("[data-ms-cerez-kat]").forEach(function(k){c[k.dataset.msCerezKat]=k.checked;});kapat(c);});
-    // Dışarıdan (footer "Çerez Tercihleri" linki vb.) yeniden açma
-    window.msCerezBandiAc=function(){band.classList.remove("hidden");ayar.classList.remove("hidden");kaydet.classList.remove("hidden");ac.classList.add("hidden");var c=E.consent||{};band.querySelectorAll("[data-ms-cerez-kat]").forEach(function(k){k.checked=!!c[k.dataset.msCerezKat];});};
+    kaydet.addEventListener("click",function(){var c={};band.querySelectorAll("[data-ms-cerez-kat]").forEach(function(k){c[k.dataset.msCerezKat]=k.checked;});E.setConsent(c,{source:"settings"});band.classList.add("hidden");});
 })();
 </script>

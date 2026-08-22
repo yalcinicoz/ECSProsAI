@@ -12,6 +12,7 @@ public interface IIntegrationDbContext
     DbSet<LegacyOrderOutbox> LegacyOrderOutbox { get; }
     DbSet<TrackingEventOutbox> TrackingEventOutbox { get; }
     DbSet<TrackingOrderContext> TrackingOrderContexts { get; }
+    DbSet<TrackingConsentLog> TrackingConsentLogs { get; }
     DbSet<MarketplaceCategoryMapping> MarketplaceCategoryMappings { get; }
     DbSet<MarketplaceAttributeMapping> MarketplaceAttributeMappings { get; }
     DbSet<MarketplaceValueMapping> MarketplaceValueMappings { get; }

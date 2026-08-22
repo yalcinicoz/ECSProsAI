@@ -13,6 +13,7 @@ public class IntegrationDbContext(DbContextOptions<IntegrationDbContext> options
     public DbSet<LegacyOrderOutbox> LegacyOrderOutbox => Set<LegacyOrderOutbox>();
     public DbSet<TrackingEventOutbox> TrackingEventOutbox => Set<TrackingEventOutbox>();
     public DbSet<TrackingOrderContext> TrackingOrderContexts => Set<TrackingOrderContext>();
+    public DbSet<TrackingConsentLog> TrackingConsentLogs => Set<TrackingConsentLog>();
     public DbSet<MarketplaceCategoryMapping> MarketplaceCategoryMappings => Set<MarketplaceCategoryMapping>();
     public DbSet<MarketplaceAttributeMapping> MarketplaceAttributeMappings => Set<MarketplaceAttributeMapping>();
     public DbSet<MarketplaceValueMapping> MarketplaceValueMappings => Set<MarketplaceValueMapping>();

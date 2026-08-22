@@ -592,6 +592,20 @@ etkilenmesin; panelden durum izlensin.
 
 ### Faz F — Consent yönetimi (tam) — **İE-6**
 
+> **DURUM: UYGULANDI 2026-08-22 (⚠️ canlı restart bekliyor; migration `AddTrackingConsentLog` CANLI DB'de; admin build
+> alındı).** Consent ispat günlüğü `integration.tracking_consent_log` (ConsentId = ms_consent v2 `id`, MemberId?,
+> 3 kategori, Source banner|settings|member_sync|mobile, IP hash, UA; 12 ay — worker temizler);
+> `POST /api/store/consent` (anonim, rate limit; üye token'ı varsa MemberId) + `GET /api/store/consent/me` (üye);
+> **üye senkronu**: çerez yokken SSR üyenin son kaydını uygular (`TrackingScriptProvider` → cfg.consentSource=member,
+> tarayıcı çerezi sessizce yazar); head köprüsü `setConsent(c,{source,silent})` her tercihte günlüğe POST eder;
+> band metinleri kanal ayarından (`tracking.bannerTitle/bannerText/policyUrl/policyLabel` — `UpdateTrackingSettingsCommand`
+> genişledi); footer "Çerez Tercihleri" (`[data-ms-cerez-tercih]` → `window.msCerezBandiAc`); panel Vitrin →
+> **"Takip & Çerez"** (`/storefront/tracking-consent`: metinler, purchaseAt, son 30 gün izin dağılımı
+> `GET /api/tracking/consent-stats`, KVKK/GDPR ek madde şablonu — banner kapatılamaz, default deny sabit).
+> Headless E2E ✓ (varsayılan metin, Ayarlar→kaydet POST source=settings + consentId, çerez v2 id, yenilemede
+> tekrar POST yok); DB'de günlük satırı IP hash'li; consent-stats ve consent/me 401. Üye senkronu canlıda
+> (giriş) doğrulanacak. Mobil: uygulama izin ekranı `POST /api/store/consent {source:"mobile"}` + events'te `consent`.
+
 **Hedef:** Kategori-bazlı izin yönetimi, üye kaydı, yasal metinler ve panel.
 
 **Yapılacaklar**

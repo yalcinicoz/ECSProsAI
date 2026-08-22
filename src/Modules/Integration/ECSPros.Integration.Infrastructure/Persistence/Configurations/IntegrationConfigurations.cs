@@ -164,6 +164,24 @@ public class TrackingOrderContextConfiguration : IEntityTypeConfiguration<Tracki
     }
 }
 
+/// <summary>İE-6 Faz F (2026-08-22): consent tercih günlüğü — 12 ay saklanır.</summary>
+public class TrackingConsentLogConfiguration : IEntityTypeConfiguration<TrackingConsentLog>
+{
+    public void Configure(EntityTypeBuilder<TrackingConsentLog> b)
+    {
+        b.ToTable("tracking_consent_log");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.ConsentId).HasMaxLength(64);
+        b.Property(x => x.Source).HasMaxLength(20);
+        b.Property(x => x.IpHash).HasMaxLength(64);
+        b.Property(x => x.UserAgent).HasMaxLength(500);
+        b.HasIndex(x => new { x.MemberId, x.CreatedAt });
+        b.HasIndex(x => x.ConsentId);
+        b.HasIndex(x => new { x.FirmPlatformId, x.CreatedAt });
+        b.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
 public class ErpVariantDataConfiguration : IEntityTypeConfiguration<ErpVariantData>
 {
     public void Configure(EntityTypeBuilder<ErpVariantData> b)

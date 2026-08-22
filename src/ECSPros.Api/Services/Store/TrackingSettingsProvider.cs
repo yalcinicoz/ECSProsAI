@@ -26,7 +26,11 @@ public sealed record TrackingSettings(
     IReadOnlyDictionary<string, TrackingServiceSettings> Services,
     bool ConsentBanner,
     string ConsentDefault,          // deny | grant  (EU kararı: deny)
-    string PurchaseAt)              // confirmed | created
+    string PurchaseAt,              // confirmed | created
+    string? BannerTitle = null,     // İE-6: banner metinleri (null = partial varsayılanı)
+    string? BannerText = null,
+    string? PolicyUrl = null,
+    string? PolicyLabel = null)
 {
     public static readonly TrackingSettings Bos = new(Guid.Empty,
         new Dictionary<string, TrackingServiceSettings>(), true, "deny", "confirmed");
@@ -117,8 +121,11 @@ public class TrackingSettingsProvider(
                 .Select(p => p.Settings)
                 .FirstOrDefaultAsync(ct);
             var (banner, consentDefault, purchaseAt) = TrackingAyarlariOku(platformSettings);
+            var tr = TrackingSozlugu(platformSettings);
+            string? Metin(string k) => tr.TryGetValue(k, out var v) && !string.IsNullOrWhiteSpace(v) ? v : null;
 
-            sonuc = new TrackingSettings(firmPlatformId, servisler, banner, consentDefault, purchaseAt);
+            sonuc = new TrackingSettings(firmPlatformId, servisler, banner, consentDefault, purchaseAt,
+                Metin("bannerTitle"), Metin("bannerText"), Metin("policyUrl"), Metin("policyLabel"));
         }
         catch (Exception ex)
         {
@@ -168,18 +175,14 @@ public class TrackingSettingsProvider(
             cache.Remove(SecretKey(firmPlatformId, code));
     }
 
-    /// <summary>Settings."tracking" okuma — anahtar yoksa EU varsayılanları (banner açık, deny, confirmed).</summary>
-    internal static (bool Banner, string ConsentDefault, string PurchaseAt) TrackingAyarlariOku(
-        Dictionary<string, object>? platformSettings)
+    /// <summary>Settings."tracking" sözlüğü (string→string); yoksa boş.</summary>
+    internal static Dictionary<string, string> TrackingSozlugu(Dictionary<string, object>? platformSettings)
     {
-        bool banner = true; string consentDefault = "deny"; string purchaseAt = "confirmed";
         if (platformSettings is null || !platformSettings.TryGetValue("tracking", out var trObj) || trObj is null)
-            return (banner, consentDefault, purchaseAt);
-
-        Dictionary<string, string> tr;
+            return new Dictionary<string, string>();
         try
         {
-            tr = trObj switch
+            return trObj switch
             {
                 Dictionary<string, object> d => Duzlestir(d),
                 JsonElement je when je.ValueKind == JsonValueKind.Object =>
@@ -187,7 +190,16 @@ public class TrackingSettingsProvider(
                 _ => new Dictionary<string, string>()
             };
         }
-        catch { return (banner, consentDefault, purchaseAt); }
+        catch { return new Dictionary<string, string>(); }
+    }
+
+    /// <summary>Settings."tracking" okuma — anahtar yoksa EU varsayılanları (banner açık, deny, confirmed).</summary>
+    internal static (bool Banner, string ConsentDefault, string PurchaseAt) TrackingAyarlariOku(
+        Dictionary<string, object>? platformSettings)
+    {
+        bool banner = true; string consentDefault = "deny"; string purchaseAt = "confirmed";
+        var tr = TrackingSozlugu(platformSettings);
+        if (tr.Count == 0) return (banner, consentDefault, purchaseAt);
 
         // EU kararı: banner/deny panelden değiştirilemez — jsonb'de farklı yazılsa bile burada sabitlenir
         banner = true;

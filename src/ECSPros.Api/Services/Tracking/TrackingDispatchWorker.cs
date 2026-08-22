@@ -172,6 +172,8 @@ public sealed class TrackingDispatchWorker(
         var esik = DateTime.UtcNow.AddDays(-90);
         var n1 = await db.TrackingOrderContexts.Where(x => x.CreatedAt < esik).ExecuteDeleteAsync(ct);
         var n2 = await db.TrackingEventOutbox.Where(x => x.CreatedAt < esik && (x.Status == "done" || x.Status == "skipped")).ExecuteDeleteAsync(ct);
-        if (n1 + n2 > 0) logger.LogInformation("Tracking temizlik: {Ctx} bağlam + {Out} outbox satırı silindi (90 gün)", n1, n2);
+        var esikConsent = DateTime.UtcNow.AddDays(-365); // İE-6: consent ispat günlüğü 12 ay
+        var n3 = await db.TrackingConsentLogs.Where(x => x.CreatedAt < esikConsent).ExecuteDeleteAsync(ct);
+        if (n1 + n2 + n3 > 0) logger.LogInformation("Tracking temizlik: {Ctx} bağlam + {Out} outbox (90 gün) + {Cns} consent (365 gün) satırı silindi", n1, n2, n3);
     }
 }

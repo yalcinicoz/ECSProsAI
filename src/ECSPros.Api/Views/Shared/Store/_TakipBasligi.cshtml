@@ -17,8 +17,10 @@
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}window.gtag=window.gtag||gtag;
 var cfg=@Html.Raw(msTakip.ToCfgJson());
 var C="ms_consent";
-function cerezOku(){try{var m=document.cookie.match(new RegExp("(?:^|; )"+C+"=([^;]*)"));if(!m)return null;var o=JSON.parse(decodeURIComponent(m[1]));return{analytics:!!o.analytics,ads:!!o.ads,personalization:!!o.personalization};}catch(e){return null;}}
-var consent=cfg.consent||cerezOku();
+var cerezHam=null;
+function cerezOku(){try{var m=document.cookie.match(new RegExp("(?:^|; )"+C+"=([^;]*)"));if(!m)return null;var o=JSON.parse(decodeURIComponent(m[1]));cerezHam=o;return{analytics:!!o.analytics,ads:!!o.ads,personalization:!!o.personalization};}catch(e){return null;}}
+var consent=cerezOku()||cfg.consent;
+var consentId=(cerezHam&&cerezHam.id)||null;
 // Consent Mode v2 — EU/KVKK kararı: varsayılan DENY, güncelleme izin sonrası
 gtag("consent","default",{analytics_storage:consent&&consent.analytics?"granted":"denied",ad_storage:consent&&consent.ads?"granted":"denied",ad_user_data:consent&&consent.ads?"granted":"denied",ad_personalization:consent&&consent.personalization?"granted":"denied",functionality_storage:"granted",security_storage:"granted",wait_for_update:500});
 gtag("set","ads_data_redaction",!(consent&&consent.ads));
@@ -29,8 +31,9 @@ function sayi(v){v=parseFloat(v);return isNaN(v)?0:Math.round(v*100)/100;}
 function ga4Items(items){return (items||[]).map(function(i){var o={item_id:i.item_id||i.id||"",item_name:i.item_name||i.name||"",price:sayi(i.price),quantity:i.quantity||1,discount:sayi(i.discount)};if(i.item_group_id)o.item_group_id=i.item_group_id;if(i.item_brand)o.item_brand=i.item_brand;if(i.item_category)o.item_category=i.item_category;if(i.item_variant)o.item_variant=i.item_variant;if(i.item_list_id)o.item_list_id=i.item_list_id;if(i.index!=null)o.index=i.index;return o;});}
 var E={cfg:cfg,consent:consent,urunler:{},
  onConsent:function(fn){if(E.consent)fn(E.consent);else bekleyenler.push(fn);},
- setConsent:function(c){c={analytics:!!c.analytics,ads:!!c.ads,personalization:!!c.personalization};E.consent=c;var d=new Date();d.setDate(d.getDate()+180);document.cookie=C+"="+encodeURIComponent(JSON.stringify({v:1,analytics:c.analytics,ads:c.ads,personalization:c.personalization,ts:Date.now()}))+";path=/;expires="+d.toUTCString()+";SameSite=Lax"+(location.protocol==="https:"?";Secure":"");
+ setConsent:function(c,opt){opt=opt||{};c={analytics:!!c.analytics,ads:!!c.ads,personalization:!!c.personalization};E.consent=c;if(!consentId)consentId=uuid().replace(/-/g,"");var d=new Date();d.setDate(d.getDate()+180);document.cookie=C+"="+encodeURIComponent(JSON.stringify({v:2,id:consentId,analytics:c.analytics,ads:c.ads,personalization:c.personalization,ts:Date.now()}))+";path=/;expires="+d.toUTCString()+";SameSite=Lax"+(location.protocol==="https:"?";Secure":"");
   gtag("consent","update",{analytics_storage:c.analytics?"granted":"denied",ad_storage:c.ads?"granted":"denied",ad_user_data:c.ads?"granted":"denied",ad_personalization:c.personalization?"granted":"denied"});gtag("set","ads_data_redaction",!c.ads);
+  if(!opt.silent&&window.fetch){try{var h={"Content-Type":"application/json"};var mt=null;try{mt=localStorage.getItem("ecspros_member_token");}catch(e){}if(mt)h.Authorization="Bearer "+mt;fetch("/api/store/consent",{method:"POST",headers:h,keepalive:true,body:JSON.stringify({firmPlatformId:cfg.platform,consentId:consentId,analytics:c.analytics,ads:c.ads,personalization:c.personalization,source:opt.source||"banner"})}).catch(function(){});}catch(e){}}
   var b=bekleyenler;bekleyenler=[];b.forEach(function(f){try{f(c);}catch(e){}});document.dispatchEvent(new CustomEvent("ms:consent",{detail:c}));},
  track:function(name,p,opt){p=p||{};opt=opt||{};var m=MAP[name];if(!m)return;var eid=p.event_id||uuid();var items=ga4Items(p.items);var val=p.value!=null?sayi(p.value):(items.length?sayi(items.reduce(function(t,i){return t+i.price*i.quantity;},0)):undefined);var cur=p.currency||"TRY";
   var ec={currency:cur,value:val,items:items};if(p.transaction_id)ec.transaction_id=p.transaction_id;if(p.coupon)ec.coupon=p.coupon;if(p.shipping!=null)ec.shipping=sayi(p.shipping);if(p.tax!=null)ec.tax=sayi(p.tax);if(p.item_list_id)ec.item_list_id=p.item_list_id;if(p.item_list_name)ec.item_list_name=p.item_list_name;if(p.search_term)ec.search_term=p.search_term;if(p.method)ec.method=p.method;if(p.payment_type)ec.payment_type=p.payment_type;
@@ -48,6 +51,8 @@ var E={cfg:cfg,consent:consent,urunler:{},
  _yukle:function(src,id){if(yuklendi[src])return;yuklendi[src]=1;var s=document.createElement("script");s.async=true;s.src=src;if(id)s.id=id;document.head.appendChild(s);}
 };
 window.ecspros=Object.assign(window.ecspros||{},E);
+// İE-6: üyenin kayıtlı tercihi (çerez yokken) → çerez sessizce yazılır (günlüğe tekrar düşmez)
+if(consent&&!cerezHam&&cfg.consentSource==="member"){E.setConsent(consent,{silent:true});}
 // GTM (her zaman; consent mode içeride)
 if(cfg.gtm){dataLayer.push({"gtm.start":new Date().getTime(),event:"gtm.js"});E._yukle("https://www.googletagmanager.com/gtm.js?id="+cfg.gtm);}
 // gtag.js — GA4 + Google Ads (consent mode sinyalleriyle; izin yoksa çerezsiz ping)

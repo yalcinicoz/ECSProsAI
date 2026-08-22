@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using ECSPros.Api.Services.Tracking;
 using ECSPros.Shared.Contracts.Tracking;
 
@@ -20,8 +21,9 @@ public sealed record TrackingHeadModel(
     string? SearchConsoleMeta,
     bool ConsentBanner,
     string ConsentDefault,
-    ConsentState? Consent,       // ms_consent çerezinden; yoksa null (banner gösterilir)
-    string[] ServerEvents)       // tarayıcının /api/store/events'e de göndereceği event adları
+    ConsentState? Consent,       // ms_consent çerezinden; yoksa üyenin son kaydı (member); yoksa null (banner gösterilir)
+    string[] ServerEvents,       // tarayıcının /api/store/events'e de göndereceği event adları
+    string? ConsentSource = null) // cookie | member (İE-6: üye senkronu — tarayıcı çerezi sessizce yazar)
 {
     /// <summary>Baskıya değer bir şey var mı (en az bir ID)?</summary>
     public bool Any => Gtm is not null || Ga4 is not null || AdsId is not null || MetaPixel is not null
@@ -37,6 +39,7 @@ public sealed record TrackingHeadModel(
         consentBanner = ConsentBanner,
         consentDefault = ConsentDefault,
         consent = Consent is null ? null : new { analytics = Consent.Analytics, ads = Consent.Ads, personalization = Consent.Personalization },
+        consentSource = ConsentSource,
         serverEvents = ServerEvents
     }, OutboxCommerceEventPublisher.JsonAyar);
 }
@@ -56,6 +59,8 @@ public interface ITrackingScriptProvider
 public sealed class TrackingScriptProvider(
     ITrackingSettingsProvider settings,
     IStoreContext storeContext,
+    IStoreMemberSession memberSession,
+    ECSPros.Integration.Application.Services.IIntegrationDbContext integrationDb,
     ILogger<TrackingScriptProvider> logger) : ITrackingScriptProvider
 {
     // UrunListesiController.BotImzalari ile aynı küme (benzer ürünler crawler koruması, 2026-08-15)
@@ -101,8 +106,33 @@ public sealed class TrackingScriptProvider(
             var manageAds = gtmId is not null && gtm!.Bool("manageAds");
             var managePixels = gtmId is not null && gtm!.Bool("managePixels");
 
-            var consentRaw = http.Request.Cookies.ContainsKey(TrackingHttpContextReader.ConsentCookie)
-                ? TrackingHttpContextReader.ReadConsent(http) : null;
+            ConsentState? consentRaw = null; string? consentSource = null;
+            if (http.Request.Cookies.ContainsKey(TrackingHttpContextReader.ConsentCookie))
+            {
+                consentRaw = TrackingHttpContextReader.ReadConsent(http); consentSource = "cookie";
+            }
+            else
+            {
+                // İE-6 Faz F: çerez yok ama üye girişli → üyenin SON kaydı (cihazlar arası senkron)
+                try
+                {
+                    var uye = await memberSession.MevcutUyeAsync(http);
+                    if (uye is not null)
+                    {
+                        var son = await integrationDb.TrackingConsentLogs.AsNoTracking()
+                            .Where(c => c.MemberId == uye.MemberId)
+                            .OrderByDescending(c => c.CreatedAt)
+                            .Select(c => new { c.Analytics, c.Ads, c.Personalization })
+                            .FirstOrDefaultAsync(ct);
+                        if (son is not null)
+                        {
+                            consentRaw = new ConsentState(son.Analytics, son.Ads, son.Personalization);
+                            consentSource = "member";
+                        }
+                    }
+                }
+                catch (Exception ex) { logger.LogDebug(ex, "Üye consent senkronu okunamadı."); }
+            }
 
             var serverEvents = new List<string>();
             // Meta CAPI açıksa tarayıcı davranış event'lerini sunucuya da yollar (dedup event_id ile) — karar §7-2
@@ -122,7 +152,7 @@ public sealed class TrackingScriptProvider(
                 clarity?.Get("projectId"),
                 managePixels ? null : pin?.Get("tagId"),
                 gsc?.Get("verificationCode"),
-                s.ConsentBanner, s.ConsentDefault, consentRaw, serverEvents.ToArray());
+                s.ConsentBanner, s.ConsentDefault, consentRaw, serverEvents.ToArray(), consentSource);
             return model.Any ? model : null;
         }
         catch (Exception ex)

@@ -20,7 +20,11 @@ namespace ECSPros.Core.Application.Commands.UpdateTrackingSettings;
 /// </summary>
 public record UpdateTrackingSettingsCommand(
     Guid FirmPlatformId,
-    string PurchaseAt) : IRequest<Result<bool>>;
+    string PurchaseAt,
+    string? BannerTitle = null,      // İE-6 Faz F: banner başlığı (boş = varsayılan metin)
+    string? BannerText = null,       // banner açıklaması
+    string? PolicyUrl = null,        // çerez/gizlilik politikası linki (boş = /gizlilik-ve-guvenlik)
+    string? PolicyLabel = null) : IRequest<Result<bool>>;
 
 public class UpdateTrackingSettingsCommandHandler(ICoreDbContext db)
     : IRequestHandler<UpdateTrackingSettingsCommand, Result<bool>>
@@ -39,7 +43,12 @@ public class UpdateTrackingSettingsCommandHandler(ICoreDbContext db)
         var settings = platform.Settings is null
             ? new Dictionary<string, object>()
             : new Dictionary<string, object>(platform.Settings);
-        settings["tracking"] = Varsayilan(purchaseAt);
+        var tracking = Varsayilan(purchaseAt);
+        if (!string.IsNullOrWhiteSpace(request.BannerTitle)) tracking["bannerTitle"] = request.BannerTitle.Trim();
+        if (!string.IsNullOrWhiteSpace(request.BannerText)) tracking["bannerText"] = request.BannerText.Trim();
+        if (!string.IsNullOrWhiteSpace(request.PolicyUrl)) tracking["policyUrl"] = request.PolicyUrl.Trim();
+        if (!string.IsNullOrWhiteSpace(request.PolicyLabel)) tracking["policyLabel"] = request.PolicyLabel.Trim();
+        settings["tracking"] = tracking;
         platform.Settings = settings;
         platform.UpdatedAt = DateTime.UtcNow;
 
