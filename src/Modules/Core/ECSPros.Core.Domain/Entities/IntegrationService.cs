@@ -6,7 +6,10 @@ public class IntegrationService : BaseEntity
 {
     public string Code { get; set; } = string.Empty;
     public Dictionary<string, string> NameI18n { get; set; } = new();
-    public string ServiceType { get; set; } = string.Empty; // marketplace, cargo, invoice_integrator, payment, sms, email, visual_search, erp, other
+    /// <summary>marketplace, cargo, invoice_integrator, payment, sms, email, visual_search, social_login,
+    /// erp, other; takip (İE-1, 2026-08-22): analytics, tag_manager, ads, merchant, search_console,
+    /// meta, tiktok, pinterest, microsoft_ads, clarity</summary>
+    public string ServiceType { get; set; } = string.Empty;
     public bool IsAvailable { get; set; } = false;
     /// <summary>Admin form alan şeması — camelCase JSON, List&lt;PlatformSchemaField&gt;
     /// (PlatformType.SettingsSchemaJson kalıbı): section=credentials → şifreli

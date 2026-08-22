@@ -47,8 +47,20 @@ const SERVICE_TYPES = [
   { value: 'marketplace', label: 'Pazaryeri' },
   { value: 'invoice_integrator', label: 'e-Fatura Entegratörü' },
   { value: 'payment', label: 'Ödeme' },
+  { value: 'social_login', label: 'Sosyal Giriş (OAuth)' },
   { value: 'sms', label: 'SMS' },
   { value: 'erp', label: 'ERP' },
+  // Takip / reklam servisleri (İE-1, 2026-08-22 — docs/reklam-analytics-entegrasyon-is-akisi.md)
+  { value: 'analytics', label: 'Analytics (GA4)' },
+  { value: 'tag_manager', label: 'Tag Manager (GTM)' },
+  { value: 'ads', label: 'Reklam (Google Ads)' },
+  { value: 'merchant', label: 'Merchant Center (Feed)' },
+  { value: 'search_console', label: 'Search Console' },
+  { value: 'meta', label: 'Meta Pixel / CAPI' },
+  { value: 'tiktok', label: 'TikTok Pixel / Events API' },
+  { value: 'pinterest', label: 'Pinterest Tag / CAPI' },
+  { value: 'microsoft_ads', label: 'Microsoft Ads (UET)' },
+  { value: 'clarity', label: 'Microsoft Clarity' },
   { value: 'other', label: 'Diğer' },
 ]
 
