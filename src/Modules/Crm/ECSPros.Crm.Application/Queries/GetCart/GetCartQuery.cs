@@ -45,7 +45,8 @@ public record CartItemDto(
     string? ImageUrl = null,
     string? OptionsText = null,
     decimal? CampaignUnitPrice = null,
-    decimal CampaignLineDiscount = 0m);   // satırın toplam kampanya indirimi (ürün-bazlı + ağırlıklı sepet payı)
+    decimal CampaignLineDiscount = 0m,    // satırın toplam kampanya indirimi (ürün-bazlı + ağırlıklı sepet payı)
+    string? Sku = null);                   // İE-3 (2026-08-22): varyant SKU — takip item_id
 
 public class GetCartQueryHandler(
     ICrmDbContext db,
@@ -102,7 +103,7 @@ public class GetCartQueryHandler(
                 i.Id, i.VariantId, i.Quantity, i.AddedPrice, i.Quantity * i.AddedPrice,
                 i.IsAvailable, i.AvailableQuantity,
                 g?.ProductCode, g?.ProductNameI18n, g?.ImageUrl, g?.OptionsText,
-                kampanyaFiyat, Math.Max(0m, Math.Round(satirIndirim, 2)));
+                kampanyaFiyat, Math.Max(0m, Math.Round(satirIndirim, 2)), g?.Sku);
         }).ToList();
 
         var dto = new CartDto(

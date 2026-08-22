@@ -29,4 +29,5 @@ public record VariantDisplayInfo(
     Dictionary<string, string> ProductNameI18n,
     string? ImageUrl,
     string? OptionsText,            // ör. "Beden: M, Renk: Beyaz"
-    Guid ProductId = default);      // kampanya çözümlemesi ürün bazlı (sepet GET)
+    Guid ProductId = default,       // kampanya çözümlemesi ürün bazlı (sepet GET)
+    string? Sku = null);            // İE-3 (2026-08-22): takip item_id = varyant SKU (feed id ile aynı)

@@ -1990,6 +1990,19 @@
        (api/store/cart — SPA ile aynı localStorage anahtarları: ecspros_sid / ecspros_cart).
        Misharix'in beden/feedback script'ine dokunmaz; onun üstüne API çağrısını ekler. *@
     <script type="application/json" id="ms-urun-detay-config">@Html.Raw(sepetConfig)</script>
+    @* İE-3 (2026-08-22): takip için ürün verisi — site.js msTakip view_item + sepete ekleme kalemi buradan *@
+    <script type="application/json" id="ms-takip-urun">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new
+    {
+        kod = s.Kod,
+        ad = s.Ad,
+        fiyat = s.KampanyaFiyatVar ? s.KampanyaFiyat : s.Fiyat,
+        listeFiyat = s.Fiyat,
+        paraBirimi = s.ParaBirimi,
+        kategori = s.Breadcrumb.LastOrDefault()?.Ad,
+        renk = s.SeciliRenkAd,
+        bedenler = s.Bedenler.Select(b => new { id = b.VariantId, ad = b.Ad, fiyat = b.Fiyat, sku = (string?)null }),
+        tekVaryant = s.TekVaryantId
+    }))</script>
     <script>
         (() => {
             const configElemani = document.getElementById("ms-urun-detay-config");

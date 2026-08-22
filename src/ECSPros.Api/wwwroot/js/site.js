@@ -8051,3 +8051,128 @@
         }, { capture: true, once: false });
     });
 })();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// İE-3 Takip köprüsü (msTakip, 2026-08-22 — docs/reklam-analytics-entegrasyon-is-akisi.md Faz C)
+// window.ecspros (head partial _TakipBasligi.cshtml) varsa çalışır; yoksa (kanalda takip
+// entegrasyonu yok / bot) hiçbir şey yapmaz. Üreticiler:
+//  - sayfa JSON blokları: #ms-takip-urun (view_item + kalem kaydı), #ms-takip-liste (view_item_list/search)
+//  - merkezi fetch gözlemcisi: sepet ekle/çıkar, favori, bülten, giriş/kayıt, checkout POST
+//    (payment_info_added), /sepet|/teslimat|/odeme ilk sepet GET'i (cart_viewed/checkout_started/
+//    shipping_info_added) — view'lara dokunmadan, başarı yanıtı üzerinden
+//  - /siparis-tamamlandi: purchase (sessionStorage msSiparisSonucu, event_id = orderId, TEK SEFER)
+// ─────────────────────────────────────────────────────────────────────────────
+(function () {
+    const E = () => window.ecspros;
+    if (!E() || typeof E().track !== "function") { return; }
+    const reg = E().urunler || (E().urunler = {});
+    const trAd = (d) => (d && typeof d === "object") ? (d.tr || Object.values(d)[0] || null) : (d || null);
+    const item = (o, ek) => Object.assign({
+        item_id: o.sku || o.kod || o.id || "",
+        item_group_id: o.kod || null,
+        item_name: o.ad || o.kod || "",
+        item_category: o.kategori || null,
+        item_variant: o.varyant || null,
+        price: o.fiyat != null ? o.fiyat : 0,
+        quantity: o.adet || 1
+    }, ek || {});
+    const jsonOku = (id) => { try { const el = document.getElementById(id); return el ? JSON.parse(el.textContent) : null; } catch { return null; } };
+    let bekle = null, sonSepet = null;
+    const sepetKalemleri = (data) => ((data && data.items) || []).map((k) => item({
+        sku: k.sku, kod: k.productCode, ad: trAd(k.productNameI18n) || k.productCode,
+        fiyat: k.campaignUnitPrice != null ? k.campaignUnitPrice : k.addedPrice,
+        varyant: k.optionsText, adet: k.quantity
+    }, { discount: k.campaignLineDiscount || 0 }));
+
+    function satinAlma() {
+        let s = null;
+        try { s = JSON.parse(sessionStorage.getItem("msSiparisSonucu") || "null"); } catch { /* yok */ }
+        if (!s || !s.orderId) { return; }
+        const anahtar = "msPurchaseSent:" + s.orderId;
+        try { if (localStorage.getItem(anahtar)) { return; } } catch { /* depolama kapalı */ }
+        const items = (s.kalemler || []).map((x) => item({
+            sku: x.sku, kod: x.kod, ad: x.ad,
+            fiyat: x.birimFiyat != null ? x.birimFiyat : (x.adet ? x.tutar / x.adet : x.tutar),
+            varyant: x.secenek, adet: x.adet
+        }, { discount: x.indirim || 0 }));
+        E().track("order_completed", {
+            event_id: s.orderId, transaction_id: s.orderNumber || s.orderId,
+            value: s.odenecek, currency: "TRY", coupon: s.kuponKod || undefined,
+            shipping: s.masraf || 0, items
+        });
+        try { localStorage.setItem(anahtar, "1"); } catch { /* depolama kapalı */ }
+    }
+
+    function sayfaBasi() {
+        const u = jsonOku("ms-takip-urun");
+        if (u) {
+            const temel = { kod: u.kod, ad: u.ad, fiyat: u.fiyat, kategori: u.kategori, varyant: u.renk || null };
+            reg[u.kod] = temel;
+            (u.bedenler || []).forEach((b) => { reg[b.id] = Object.assign({}, temel, { fiyat: b.fiyat || u.fiyat, varyant: [u.renk, b.ad].filter(Boolean).join(", "), sku: b.sku || null }); });
+            if (u.tekVaryant) { reg[u.tekVaryant] = temel; }
+            E().track("product_viewed", { currency: u.paraBirimi || "TRY", value: u.fiyat, items: [item(temel)] });
+        }
+        const l = jsonOku("ms-takip-liste");
+        if (l) {
+            (l.urunler || []).forEach((p) => { reg[p.kod] = { kod: p.kod, ad: p.ad, fiyat: p.fiyat }; });
+            const items = (l.urunler || []).map((p, i) => item(p, { item_list_id: l.listeId, index: i }));
+            if (l.arama) { E().track("search", { search_term: l.arama, items: items.slice(0, 10) }); }
+            E().track("product_list_viewed", { item_list_id: l.listeId, item_list_name: l.baslik, items });
+        }
+        const yol = location.pathname.toLowerCase().replace(/\/+$/, "");
+        if (yol === "/siparis-tamamlandi") { satinAlma(); }
+        else if (yol === "/sepet") { bekle = "cart_viewed"; }
+        else if (yol === "/teslimat") { bekle = "checkout_started"; }
+        else if (yol === "/odeme") { bekle = "shipping_info_added"; }
+    }
+
+    const govde = (b) => { try { return typeof b === "string" ? JSON.parse(b) : null; } catch { return null; } };
+    function isle(url, metod, body, v) {
+        if (!v || v.success === false) { return; }
+        const yol = url.split("?")[0].replace(/^https?:\/\/[^/]+/, "");
+        if (metod === "GET" && /\/api\/store\/cart$/.test(yol)) {
+            sonSepet = v.data;
+            if (bekle) { const b = bekle; bekle = null; E().track(b, { items: sepetKalemleri(v.data) }); }
+            return;
+        }
+        if (metod === "POST" && /\/api\/store\/cart\/items$/.test(yol)) {
+            const g = govde(body) || {};
+            const r = reg[g.variantId] || { kod: "", ad: "", fiyat: g.price };
+            E().track("added_to_cart", { items: [item(Object.assign({}, r, { adet: g.quantity || 1, fiyat: g.price || r.fiyat }))] });
+            return;
+        }
+        if (metod === "DELETE" && /\/api\/store\/cart\/[^/]+\/items\/[^/]+$/.test(yol)) {
+            const id = yol.split("/").pop();
+            const k = sonSepet && sonSepet.items ? sonSepet.items.find((x) => x.id === id) : null;
+            E().track("removed_from_cart", { items: k ? sepetKalemleri({ items: [k] }) : [] });
+            return;
+        }
+        if (metod === "POST" && /\/api\/store\/favorites$/.test(yol)) {
+            const g = govde(body) || {};
+            const r = reg[g.productCode];
+            E().track("wishlist_added", { items: r ? [item(r)] : [{ item_id: g.productCode || "", item_name: g.productCode || "" }] });
+            return;
+        }
+        if (metod === "POST" && /\/api\/store\/newsletter$/.test(yol)) { E().track("newsletter_subscribed", {}); return; }
+        if (metod === "POST" && /\/api\/store\/auth\/(login|otp\/verify)$/.test(yol)) { E().track("login", { method: /otp/.test(yol) ? "phone" : "email" }); return; }
+        if (metod === "POST" && /\/api\/store\/auth\/register$/.test(yol)) { E().track("sign_up", { method: "email" }); return; }
+        if (metod === "POST" && /\/api\/store\/checkout$/.test(yol)) {
+            const g = govde(body) || {};
+            E().track("payment_info_added", { payment_type: g.paymentMethod || "", items: sepetKalemleri(sonSepet) });
+        }
+    }
+    // Fetch gözlemcisi — _Layout'taki token sarmalayıcının ÜSTÜNE (o /api/* token'ı ekler, biz yanıtı izleriz)
+    const esasFetch = window.fetch;
+    window.fetch = function (girdi, ayar) {
+        const url = typeof girdi === "string" ? girdi : (girdi && girdi.url) || "";
+        const metod = ((ayar && ayar.method) || (girdi && girdi.method) || "GET").toUpperCase();
+        const sonuc = esasFetch.apply(this, arguments);
+        if (url.indexOf("/api/store/") < 0 || url.indexOf("/api/store/events") >= 0) { return sonuc; }
+        sonuc.then((y) => {
+            if (!y || !y.ok) { return; }
+            y.clone().json().then((v) => { try { isle(url, metod, ayar && ayar.body, v); } catch { /* takip hatası sayfayı etkilemez */ } }).catch(() => { });
+        }).catch(() => { });
+        return sonuc;
+    };
+    if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", sayfaBasi); } else { sayfaBasi(); }
+})();

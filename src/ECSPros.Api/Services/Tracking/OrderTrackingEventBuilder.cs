@@ -142,7 +142,7 @@ public sealed class OrderTrackingEventBuilder(
                 ? tr : k.ProductName;
             var indirim = k.Quantity > 0 ? Math.Round(k.DiscountAmount * adet / k.Quantity, 2) : 0m;
             sonuc.Add(new CommerceItem(
-                ItemId: string.IsNullOrWhiteSpace(k.Sku) ? k.VariantId.ToString("D") : k.Sku,
+                ItemId: g?.Sku ?? (string.IsNullOrWhiteSpace(k.Sku) ? k.VariantId.ToString("D") : k.Sku), // varyant SKU (feed id) > sipariş kalemi Sku (ürün kodu)
                 ItemGroupId: g?.ProductCode ?? "",
                 Name: ad ?? k.ProductName,
                 Brand: null,

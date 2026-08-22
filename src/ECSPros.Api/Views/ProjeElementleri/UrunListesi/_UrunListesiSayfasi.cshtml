@@ -9,3 +9,20 @@
         </div>
     </div>
 </section>
+
+@* İE-3 (2026-08-22): takip için liste verisi — site.js msTakip view_item_list (+search) *@
+@{
+    var msTakipListe = ViewData["MsUrunListesi"] as ECSPros.Api.Models.Store.UrunListesiVm;
+    var msTakipArama = Context.Request.Query["search"].FirstOrDefault();
+}
+@if (msTakipListe is not null)
+{
+<script type="application/json" id="ms-takip-liste">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new
+{
+    listeId = Context.Request.Path.Value,
+    baslik = msTakipListe.Baslik,
+    arama = string.IsNullOrWhiteSpace(msTakipArama) ? null : msTakipArama,
+    toplam = msTakipListe.ToplamUrun,
+    urunler = msTakipListe.IlkSayfa.Take(20).Select(u => new { kod = u.Kod, ad = u.Ad, fiyat = u.Fiyat })
+}))</script>
+}

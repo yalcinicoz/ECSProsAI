@@ -392,6 +392,24 @@ adapter'lara dağıt. Bu fazda adapter yok (Faz D); **dispatcher + outbox + üre
 
 ### Faz C — Client-side tracking + consent temeli (head enjeksiyonu + dataLayer) — **İE-3**
 
+> **DURUM: UYGULANDI 2026-08-22 (⚠️ canlı restart bekliyor).** `Services/Store/TrackingScriptProvider`
+> (`ITrackingScriptProvider` → `TrackingHeadModel`, bot UA/entegrasyon yoksa null; GTM manageX çift sayım
+> koruması; `ms_consent` çerezi; Meta CAPI açıksa `serverEvents` = product_viewed/added_to_cart/checkout_started);
+> `Views/Shared/Store/_TakipBasligi.cshtml` (`</head>` öncesi: Consent Mode v2 default deny + `ads_data_redaction`,
+> `window.ecspros` köprüsü {cfg, consent, track, setConsent, onConsent, urunler}, GTM, gtag GA4+Ads(+enhanced),
+> izin-sonrası Pixel/TikTok/UET/Pinterest/Clarity yükleyicileri, Search Console meta);
+> `_TakipCerezBandi.cshtml` (Kabul/Reddet/Ayarlar 3 kategori, 180 gün çerez, `window.msCerezBandiAc`);
+> `site.js` `msTakip` modülü (merkezi fetch gözlemcisi: sepet ekle/çıkar, favori, bülten, giriş/kayıt, checkout
+> POST → payment_info_added; /sepet|/teslimat|/odeme ilk sepet GET'i → cart_viewed/checkout_started/
+> shipping_info_added; `#ms-takip-urun` → view_item + varyant kayıt defteri; `#ms-takip-liste` → view_item_list
+> + search; `/siparis-tamamlandi` → purchase `event_id=orderId` TEK SEFER (`localStorage msPurchaseSent:{id}`));
+> `VariantDisplayInfo.Sku` + `CartItemDto.Sku` (additive) → client/server item_id varyant SKU; ödeme sayfası
+> `msSiparisSonucu.kalemler` sku/varyantId/birimFiyat/indirim + `masraf`. Headless Chromium E2E 21/21 ✓
+> (consent default/update, fbq izin kapısı, view_item, add_to_cart kayıt defteri + Ads conversion label, search,
+> view_item_list, purchase tek sefer, reddet). ⚠️ Bilinen: inline head script ~10.8 KB (hedef ≤3 KB'ın üstünde —
+> pixel yükleyici snippet'leri; brotli ile ~3 KB; gerekirse yükleyiciler site.js'e taşınır); Lighthouse ölçümü
+> restart sonrası canlıda; üye-bazlı consent kaydı Faz F; GTM dataLayer event adı = GA4 adı (`ms_event` iç ad).
+
 **Hedef:** Kanal-bazlı, yalnız aktif entegrasyonlarda, consent'e bağlı script yükleme;
 tek `dataLayer` sözleşmesi; PageSpeed korunur.
 

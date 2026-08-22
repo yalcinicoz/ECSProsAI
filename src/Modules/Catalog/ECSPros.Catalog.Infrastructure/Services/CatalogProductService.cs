@@ -39,7 +39,7 @@ public class CatalogProductService(ICatalogDbContext db) : IProductService
 
         var varyantlar = await db.ProductVariants.AsNoTracking()
             .Where(v => ids.Contains(v.Id))
-            .Select(v => new { v.Id, v.ProductId, ProductCode = v.Product.Code, v.Product.NameI18n })
+            .Select(v => new { v.Id, v.ProductId, ProductCode = v.Product.Code, v.Product.NameI18n, v.Sku })
             .ToListAsync(ct);
 
         var productIds = varyantlar.Select(v => v.ProductId).Distinct().ToList();
@@ -122,6 +122,7 @@ public class CatalogProductService(ICatalogDbContext db) : IProductService
                 v.NameI18n,
                 GorselCoz(v.Id, v.ProductId),
                 ozetByVariant.TryGetValue(v.Id, out var ozet) && ozet.Length > 0 ? ozet : null,
-                v.ProductId));
+                v.ProductId,
+                string.IsNullOrWhiteSpace(v.Sku) ? null : v.Sku));
     }
 }

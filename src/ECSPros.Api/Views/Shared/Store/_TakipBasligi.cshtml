@@ -1,0 +1,65 @@
+@* İE-3 Faz C (2026-08-22): reklam/analytics head enjeksiyonu — plan docs/reklam-analytics-entegrasyon-is-akisi.md.
+   Yalnız kanalda AKTİF entegrasyon varsa ve istemci bot değilse basılır. Sıra: consent default (deny)
+   → window.ecspros köprüsü (track/consent) → GTM → gtag (GA4+Ads; GTM yönetiyorsa atlanır) →
+   pixel'ler (yalnız izin sonrası) → Search Console meta. SECRET ASLA BURAYA GİRMEZ (yalnız ID'ler). *@
+@inject ECSPros.Api.Services.Store.ITrackingScriptProvider MsTakipSaglayici
+@{
+    var msTakip = await MsTakipSaglayici.GetAsync(Context);
+}
+@if (msTakip is not null)
+{
+    if (!string.IsNullOrWhiteSpace(msTakip.SearchConsoleMeta))
+    {
+    <meta name="google-site-verification" content="@msTakip.SearchConsoleMeta" />
+    }
+    <script>
+(function(){
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}window.gtag=window.gtag||gtag;
+var cfg=@Html.Raw(msTakip.ToCfgJson());
+var C="ms_consent";
+function cerezOku(){try{var m=document.cookie.match(new RegExp("(?:^|; )"+C+"=([^;]*)"));if(!m)return null;var o=JSON.parse(decodeURIComponent(m[1]));return{analytics:!!o.analytics,ads:!!o.ads,personalization:!!o.personalization};}catch(e){return null;}}
+var consent=cfg.consent||cerezOku();
+// Consent Mode v2 — EU/KVKK kararı: varsayılan DENY, güncelleme izin sonrası
+gtag("consent","default",{analytics_storage:consent&&consent.analytics?"granted":"denied",ad_storage:consent&&consent.ads?"granted":"denied",ad_user_data:consent&&consent.ads?"granted":"denied",ad_personalization:consent&&consent.personalization?"granted":"denied",functionality_storage:"granted",security_storage:"granted",wait_for_update:500});
+gtag("set","ads_data_redaction",!(consent&&consent.ads));
+var bekleyenler=[],yuklendi={};
+var MAP={product_viewed:["view_item","ViewContent","ViewContent","pagevisit","view_item"],product_list_viewed:["view_item_list",null,null,null,null],search:["search","Search","Search","search","search"],added_to_cart:["add_to_cart","AddToCart","AddToCart","addtocart","add_to_cart"],removed_from_cart:["remove_from_cart",null,null,null,null],cart_viewed:["view_cart",null,null,null,null],checkout_started:["begin_checkout","InitiateCheckout","InitiateCheckout",null,"begin_checkout"],shipping_info_added:["add_shipping_info",null,null,null,null],payment_info_added:["add_payment_info","AddPaymentInfo","AddPaymentInfo",null,null],order_completed:["purchase","Purchase","CompletePayment","checkout","purchase"],refund:["refund",null,null,null,null],sign_up:["sign_up","CompleteRegistration","CompleteRegistration","signup",null],login:["login",null,null,null,null],wishlist_added:["add_to_wishlist","AddToWishlist","AddToWishlist",null,null],newsletter_subscribed:["generate_lead","Lead","SubmitForm","lead",null]};
+function uuid(){return (crypto.randomUUID?crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,function(c){var r=Math.random()*16|0;return(c==="x"?r:(r&3|8)).toString(16);}));}
+function sayi(v){v=parseFloat(v);return isNaN(v)?0:Math.round(v*100)/100;}
+function ga4Items(items){return (items||[]).map(function(i){var o={item_id:i.item_id||i.id||"",item_name:i.item_name||i.name||"",price:sayi(i.price),quantity:i.quantity||1,discount:sayi(i.discount)};if(i.item_group_id)o.item_group_id=i.item_group_id;if(i.item_brand)o.item_brand=i.item_brand;if(i.item_category)o.item_category=i.item_category;if(i.item_variant)o.item_variant=i.item_variant;if(i.item_list_id)o.item_list_id=i.item_list_id;if(i.index!=null)o.index=i.index;return o;});}
+var E={cfg:cfg,consent:consent,urunler:{},
+ onConsent:function(fn){if(E.consent)fn(E.consent);else bekleyenler.push(fn);},
+ setConsent:function(c){c={analytics:!!c.analytics,ads:!!c.ads,personalization:!!c.personalization};E.consent=c;var d=new Date();d.setDate(d.getDate()+180);document.cookie=C+"="+encodeURIComponent(JSON.stringify({v:1,analytics:c.analytics,ads:c.ads,personalization:c.personalization,ts:Date.now()}))+";path=/;expires="+d.toUTCString()+";SameSite=Lax"+(location.protocol==="https:"?";Secure":"");
+  gtag("consent","update",{analytics_storage:c.analytics?"granted":"denied",ad_storage:c.ads?"granted":"denied",ad_user_data:c.ads?"granted":"denied",ad_personalization:c.personalization?"granted":"denied"});gtag("set","ads_data_redaction",!c.ads);
+  var b=bekleyenler;bekleyenler=[];b.forEach(function(f){try{f(c);}catch(e){}});document.dispatchEvent(new CustomEvent("ms:consent",{detail:c}));},
+ track:function(name,p,opt){p=p||{};opt=opt||{};var m=MAP[name];if(!m)return;var eid=p.event_id||uuid();var items=ga4Items(p.items);var val=p.value!=null?sayi(p.value):(items.length?sayi(items.reduce(function(t,i){return t+i.price*i.quantity;},0)):undefined);var cur=p.currency||"TRY";
+  var ec={currency:cur,value:val,items:items};if(p.transaction_id)ec.transaction_id=p.transaction_id;if(p.coupon)ec.coupon=p.coupon;if(p.shipping!=null)ec.shipping=sayi(p.shipping);if(p.tax!=null)ec.tax=sayi(p.tax);if(p.item_list_id)ec.item_list_id=p.item_list_id;if(p.item_list_name)ec.item_list_name=p.item_list_name;if(p.search_term)ec.search_term=p.search_term;if(p.method)ec.method=p.method;if(p.payment_type)ec.payment_type=p.payment_type;
+  dataLayer.push({ecommerce:null});dataLayer.push({event:m[0],ms_event:name,event_id:eid,ecommerce:ec});
+  if(cfg.ga4&&!cfg.gtmManages.ga4){var g=Object.assign({},ec);if(!g.items.length)delete g.items;if(g.value==null)delete g.value;gtag("event",m[0],g);}
+  if(cfg.ads&&!cfg.gtmManages.ads){var lbl=name==="order_completed"?cfg.ads.purchase:name==="added_to_cart"?cfg.ads.addToCart:name==="checkout_started"?cfg.ads.beginCheckout:null;if(lbl){var cv={send_to:cfg.ads.id+"/"+lbl,value:val||0,currency:cur};if(p.transaction_id)cv.transaction_id=p.transaction_id;gtag("event","conversion",cv);}}
+  if(window.fbq&&m[1]&&E.consent&&E.consent.ads){var fd={currency:cur,value:val||0,content_type:"product",content_ids:items.map(function(i){return i.item_id;}),contents:items.map(function(i){return{id:i.item_id,quantity:i.quantity,item_price:i.price};})};if(p.search_term)fd.search_string=p.search_term;if(items.length&&!fd.content_name)fd.content_name=items[0].item_name;fbq("track",m[1],fd,{eventID:eid});}
+  if(window.ttq&&m[2]&&E.consent&&E.consent.ads){ttq.track(m[2],{currency:cur,value:val||0,content_type:"product",contents:items.map(function(i){return{content_id:i.item_id,content_name:i.item_name,quantity:i.quantity,price:i.price};}),query:p.search_term},{event_id:eid});}
+  if(window.pintrk&&m[3]&&E.consent&&E.consent.ads){pintrk("track",m[3],{event_id:eid,currency:cur,value:val||0,order_id:p.transaction_id,line_items:items.map(function(i){return{product_id:i.item_id,product_name:i.item_name,product_price:i.price,product_quantity:i.quantity};})});}
+  if(window.uetq&&m[4]&&E.consent&&E.consent.ads){window.uetq.push("event",m[4],{ecomm_prodid:items.map(function(i){return i.item_id;}),ecomm_pagetype:name==="product_viewed"?"product":name==="order_completed"?"purchase":"other",revenue_value:val||0,currency:cur,transaction_id:p.transaction_id});}
+  if((opt.server||(cfg.serverEvents||[]).indexOf(name)>=0)&&window.fetch){try{fetch("/api/store/events",{method:"POST",headers:{"Content-Type":"application/json"},keepalive:true,body:JSON.stringify({name:name,firmPlatformId:cfg.platform,dedupId:eid,source:"web",currency:cur,value:val,transactionId:p.transaction_id||null,items:items.map(function(i){return{itemId:i.item_id,itemGroupId:i.item_group_id||null,name:i.item_name,variant:i.item_variant,price:i.price,quantity:i.quantity,discount:i.discount};}),extra:p.extra||{},client:{gaClientId:E.gaClientId(),fbp:E.cerez("_fbp"),fbc:E.cerez("_fbc")}})}).catch(function(){});}catch(e){}}
+  return eid;},
+ cerez:function(a){var m=document.cookie.match(new RegExp("(?:^|; )"+a+"=([^;]*)"));return m?decodeURIComponent(m[1]):null;},
+ gaClientId:function(){var g=E.cerez("_ga");if(!g)return null;var p=g.split(".");return p.length>=4?p[p.length-2]+"."+p[p.length-1]:g;},
+ _yukle:function(src,id){if(yuklendi[src])return;yuklendi[src]=1;var s=document.createElement("script");s.async=true;s.src=src;if(id)s.id=id;document.head.appendChild(s);}
+};
+window.ecspros=Object.assign(window.ecspros||{},E);
+// GTM (her zaman; consent mode içeride)
+if(cfg.gtm){dataLayer.push({"gtm.start":new Date().getTime(),event:"gtm.js"});E._yukle("https://www.googletagmanager.com/gtm.js?id="+cfg.gtm);}
+// gtag.js — GA4 + Google Ads (consent mode sinyalleriyle; izin yoksa çerezsiz ping)
+if(cfg.ga4||cfg.ads){E._yukle("https://www.googletagmanager.com/gtag/js?id="+(cfg.ga4||cfg.ads.id));gtag("js",new Date());if(cfg.ga4)gtag("config",cfg.ga4,{send_page_view:true});if(cfg.ads){gtag("config",cfg.ads.id,cfg.ads.enhanced?{allow_enhanced_conversions:true}:{});}}
+// Pixel'ler — yalnız reklam izni sonrası; Clarity — analitik izni sonrası
+E.onConsent(function(c){
+ if(c.ads&&cfg.meta&&!window.fbq){!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version="2.0";n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,"script","https://connect.facebook.net/en_US/fbevents.js");fbq("init",cfg.meta);fbq("track","PageView");}
+ if(c.ads&&cfg.tiktok&&!window.ttq){!function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var o=document.createElement("script");o.type="text/javascript",o.async=!0,o.src=i+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};ttq.load(cfg.tiktok);ttq.page();}(window,document,"ttq");}
+ if(c.ads&&cfg.uet&&!window.uetq){window.uetq=window.uetq||[];E._yukle("https://bat.bing.com/bat.js");window.uetq.push("config",{ti:cfg.uet});}
+ if(c.ads&&cfg.pinterest&&!window.pintrk){!function(e){if(!window.pintrk){window.pintrk=function(){window.pintrk.queue.push(Array.prototype.slice.call(arguments))};var n=window.pintrk;n.queue=[],n.version="3.0";var t=document.createElement("script");t.async=!0,t.src=e;var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r)}}("https://s.pinimg.com/ct/core.js");pintrk("load",cfg.pinterest);pintrk("page");}
+ if(c.analytics&&cfg.clarity&&!window.clarity){!function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);}(window,document,"clarity","script",cfg.clarity);}
+});
+})();
+    </script>
+}
