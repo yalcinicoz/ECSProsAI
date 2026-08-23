@@ -1,6 +1,7 @@
 # Satış Kanalı Ortak Kurgusu — Kanal Ürünleri, Dropshipping (iki yön), Pazaryeri, Tedarik Kaynakları
 
-> Sürüm: **v1.1 — 2026-08-23** (v1 incelemesi sonrası: açık kararlar kapatıldı, kanal stok formülü eklendi, bayi fiyat politikası ayrı çalışmaya ayrıldı; uygulama başlamadı)
+> Sürüm: **v1.2 — 2026-08-23** (v1.1 + F0 uygulama durumu)
+> **Uygulama durumu:** F0 Yetenek modeli **UYGULANDI (2026-08-23) ⚠️ restart bekliyor** — `ChannelCapabilities` (Shared.Contracts/Channels) + `IChannelCapabilityResolver` (Core.Infrastructure, 2 dk IMemoryCache), `core_platform_types.capabilities` / `core_firm_platforms.capability_overrides` (jsonb, migration `AddChannelCapabilities` canlı DB'de uygulandı), seed: `dropship_partner` tipi + koda göre backfill (idempotent), `IsMarketplace` artık `pushListing`'den türetilir (kolon korunur), admin: Platform Tipleri yetenek editörü (3 şablon butonu), kanal formu ezme editörü (4 alan) + kart/tablo rozetleri, rehber sayfaları güncellendi. İzole 5051 testi ✓ (ezme yazma/sanitize/negatif/temizleme, tip güncelleme, türetme). **Sırada F1 Kapsam.**
 > Alan: 🛠 **Admin panel** (pano #2) + zorunlu çekirdek dokunuşları (Core/Storefront/Integration/Catalog) +
 > 🔌 Dış API (pano #3) ile kesişen noktalar işaretlidir.
 > İlgili dokümanlar: `docs/pazaryeri-entegrasyon-veri-yonetimi.md` (pazaryeri eşleme/yükleme, F1-F5 canlı),

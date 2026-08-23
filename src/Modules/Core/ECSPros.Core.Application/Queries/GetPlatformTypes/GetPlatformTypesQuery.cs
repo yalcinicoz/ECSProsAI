@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ECSPros.Core.Application.Services;
 using ECSPros.Core.Domain.Entities;
+using ECSPros.Shared.Contracts.Channels;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,8 @@ public record PlatformTypeDto(
     Dictionary<string, string> NameI18n,
     bool IsMarketplace,
     bool IsActive,
-    List<PlatformSchemaField>? SettingsSchema
+    List<PlatformSchemaField>? SettingsSchema,
+    ChannelCapabilities Capabilities
 );
 
 public class GetPlatformTypesQueryHandler : IRequestHandler<GetPlatformTypesQuery, Result<List<PlatformTypeDto>>>
@@ -37,7 +39,8 @@ public class GetPlatformTypesQueryHandler : IRequestHandler<GetPlatformTypesQuer
             p.Id, p.Code, p.NameI18n, p.IsMarketplace, p.IsActive,
             string.IsNullOrEmpty(p.SettingsSchemaJson)
                 ? null
-                : JsonSerializer.Deserialize<List<PlatformSchemaField>>(p.SettingsSchemaJson, _json)
+                : JsonSerializer.Deserialize<List<PlatformSchemaField>>(p.SettingsSchemaJson, _json),
+            ChannelCapabilities.Parse(p.CapabilitiesJson) ?? ChannelCapabilities.DefaultsFor(p.Code, p.IsMarketplace)
         )).ToList());
     }
 }

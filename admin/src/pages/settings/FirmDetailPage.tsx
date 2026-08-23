@@ -12,6 +12,7 @@ import { useQuery as usePlatformTypesQuery } from '@tanstack/react-query'
 import type { PlatformType } from './PlatformTypesPage'
 import { ChannelForm } from './ChannelsPage'
 import type { FirmPlatformWithFirm, Firm } from './ChannelsPage'
+import { CapabilityBadges } from '@/components/channels/ChannelCapabilities'
 import { getFieldHelp, getFieldLabel } from './PlatformTypesPage'
 import type { SchemaField } from './PlatformTypesPage'
 
@@ -693,9 +694,11 @@ export function FirmDetailPage() {
                         <span className="text-sm" style={{ color: 'var(--text-m)' }}>
                           {pt ? getI18nName(pt.nameI18n) : fp.platformTypeCode}
                         </span>
-                        {(pt?.isMarketplace ?? fp.platformTypeIsMarketplace) && (
-                          <Badge variant="info" className="ml-2">Pazaryeri</Badge>
-                        )}
+                        {fp.capabilities
+                          ? <span className="ml-2"><CapabilityBadges caps={fp.capabilities} compact /></span>
+                          : (pt?.isMarketplace ?? fp.platformTypeIsMarketplace) && (
+                            <Badge variant="info" className="ml-2">Pazaryeri</Badge>
+                          )}
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm" style={{ color: 'var(--text-m)' }}>

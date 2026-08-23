@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ECSPros.Core.Application.Services;
 using ECSPros.Core.Domain.Entities;
+using ECSPros.Shared.Contracts.Channels;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,8 @@ public record CreatePlatformTypeCommand(
     string Code,
     Dictionary<string, string> NameI18n,
     bool IsMarketplace,
-    List<PlatformSchemaField>? SettingsSchema = null
+    List<PlatformSchemaField>? SettingsSchema = null,
+    ChannelCapabilities? Capabilities = null
 ) : IRequest<Result<Guid>>;
 
 public class CreatePlatformTypeCommandHandler : IRequestHandler<CreatePlatformTypeCommand, Result<Guid>>
@@ -29,12 +31,15 @@ public class CreatePlatformTypeCommandHandler : IRequestHandler<CreatePlatformTy
         if (exists)
             return Result.Failure<Guid>("Bu kodda bir platform tipi zaten mevcut.");
 
+        // K1: yetenek seti verilmişse IsMarketplace türetilir (pushListing); verilmemişse eski bayraktan varsayılan üretilir.
+        var caps = request.Capabilities ?? ChannelCapabilities.DefaultsFor(code, request.IsMarketplace);
         var platformType = new PlatformType
         {
             Id                 = Guid.NewGuid(),
             Code               = code,
             NameI18n           = request.NameI18n,
-            IsMarketplace      = request.IsMarketplace,
+            IsMarketplace      = caps.PushListing,
+            CapabilitiesJson   = caps.ToJson(),
             SettingsSchemaJson = request.SettingsSchema is { Count: > 0 }
                                      ? JsonSerializer.Serialize(request.SettingsSchema, _json)
                                      : null,

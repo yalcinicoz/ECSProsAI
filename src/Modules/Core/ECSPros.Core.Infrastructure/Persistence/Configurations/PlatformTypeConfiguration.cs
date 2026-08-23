@@ -15,6 +15,9 @@ public class PlatformTypeConfiguration : IEntityTypeConfiguration<PlatformType>
         builder.Property(x => x.SettingsSchemaJson)
             .HasColumnName("settings_schema")
             .HasColumnType("text");
+        builder.Property(x => x.CapabilitiesJson)
+            .HasColumnName("capabilities")
+            .HasColumnType("jsonb");
         builder.HasIndex(x => x.Code).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
     }

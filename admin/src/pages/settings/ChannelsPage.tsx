@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { PageSpinner } from '@/components/ui/Spinner'
 import type { PlatformType, SchemaField } from './PlatformTypesPage'
+import { CapabilityBadges, CapabilityOverridesEditor, DEFAULT_CAPABILITIES, MARKETPLACE_CAPABILITIES, mergeCapabilities, type CapabilityOverrides, type ChannelCapabilities } from '@/components/channels/ChannelCapabilities'
 import { getFieldLabel } from './PlatformTypesPage'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -29,6 +30,8 @@ interface FirmPlatform {
   settings: Record<string, unknown>
   isActive: boolean
   createdAt: string
+  capabilities?: ChannelCapabilities          // etkin (tip + kanal ezmesi)
+  capabilityOverrides?: CapabilityOverrides | null
 }
 
 interface FirmPlatformWithFirm extends FirmPlatform {
@@ -191,6 +194,8 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
   // Kendi satış kanallarımızda AÇIK; pazaryerlerinde KAPALI (kargoyu pazaryeri yönetir).
   // Ayar yoksa açık kabul edilir (eski sistemdeki kargoGonder varsayılanıyla aynı).
   const [cargoDispatch, setCargoDispatch] = useState(target?.settings?.['cargoDispatchEnabled'] !== false)
+  // F0 (K1): kanal bazlı yetenek ezmeleri — yalnız ezilebilir anahtarlar; diğerleri tip varsayılanı.
+  const [capOverrides, setCapOverrides] = useState<CapabilityOverrides>(() => ({ ...(target?.capabilityOverrides ?? {}) }))
   const [fieldValues, setFieldValues] = useState<Record<string, string>>(() => {
     const merged: Record<string, string> = {}
     if (target) {
@@ -201,6 +206,8 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
   })
 
   const selectedPlatformType = platformTypes.find(pt => pt.id === platformTypeId)
+  const baseCaps: ChannelCapabilities = selectedPlatformType?.capabilities
+    ?? (selectedPlatformType?.isMarketplace ? MARKETPLACE_CAPABILITIES : DEFAULT_CAPABILITIES)
   const schema = selectedPlatformType?.settingsSchema ?? []
   const credFields = schema.filter(f => f.section === 'credentials')
   const settingsFields = schema.filter(f => f.section === 'settings')
@@ -249,6 +256,8 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
         credentials,
         settings,
         isActive,
+        capabilityOverrides: capOverrides,
+        updateCapabilityOverrides: isEdit,
       }
       if (isEdit) {
         await api.put(`/core/firm-platforms/${target!.id}`, body)
@@ -264,7 +273,7 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
 
   const ptOptions = platformTypes.filter(pt => pt.isActive).map(pt => ({
     value: pt.id,
-    label: `${pt.nameI18n['tr'] ?? pt.code} ${pt.isMarketplace ? '(Pazaryeri)' : '(Özel Kanal)'}`,
+    label: `${pt.nameI18n['tr'] ?? pt.code} ${pt.capabilities?.pushListing ?? pt.isMarketplace ? '(Pazaryeri)' : pt.capabilities?.pullsFromPartnerApi ? '(Dropship bayi)' : '(Kendi kanal)'}`,
   }))
 
   const firmOptions = firms.map(f => ({
@@ -391,6 +400,23 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
           </div>
         )}
       </div>
+
+      {/* Yetenekler (F0, K1): tip varsayılanı + kanal ezmesi */}
+      {platformTypeId && (
+        <div className="space-y-3 p-4 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Kanal Yetenekleri</p>
+            <CapabilityBadges caps={mergeCapabilities(baseCaps, capOverrides)} />
+          </div>
+          {isEdit ? (
+            <CapabilityOverridesEditor base={baseCaps} overrides={capOverrides} onChange={setCapOverrides} />
+          ) : (
+            <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+              Tip varsayılanları uygulanır; kanal bazlı ezmeler kayıt sonrası düzenlenebilir.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Ödeme yöntemleri (kanal ayarı, 2026-08-04) */}
       <div className="space-y-3 p-4 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
@@ -527,6 +553,7 @@ function ChannelCard({
             <p className="text-xs truncate" style={{ color: 'var(--text-s)' }}>
               {getPlatformTypeName(ch)}
             </p>
+            {ch.capabilities && <div className="mt-1"><CapabilityBadges caps={ch.capabilities} /></div>}
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0 ml-2">

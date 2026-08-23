@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ECSPros.Core.Application.Services;
 using ECSPros.Core.Domain.Entities;
+using ECSPros.Shared.Contracts.Channels;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,8 @@ public record UpdatePlatformTypeCommand(
     Dictionary<string, string> NameI18n,
     bool IsMarketplace,
     bool IsActive,
-    List<PlatformSchemaField>? SettingsSchema = null
+    List<PlatformSchemaField>? SettingsSchema = null,
+    ChannelCapabilities? Capabilities = null
 ) : IRequest<Result<Unit>>;
 
 public class UpdatePlatformTypeCommandHandler : IRequestHandler<UpdatePlatformTypeCommand, Result<Unit>>
@@ -30,7 +32,17 @@ public class UpdatePlatformTypeCommandHandler : IRequestHandler<UpdatePlatformTy
             return Result.Failure<Unit>("Platform tipi bulunamadı.");
 
         entity.NameI18n = new Dictionary<string, string>(request.NameI18n);
-        entity.IsMarketplace = request.IsMarketplace;
+        if (request.Capabilities is not null)
+        {
+            entity.CapabilitiesJson = request.Capabilities.ToJson();
+            entity.IsMarketplace = request.Capabilities.PushListing;   // K1: türetilmiş
+        }
+        else
+        {
+            entity.IsMarketplace = request.IsMarketplace;
+            if (string.IsNullOrEmpty(entity.CapabilitiesJson))
+                entity.CapabilitiesJson = ChannelCapabilities.DefaultsFor(entity.Code, request.IsMarketplace).ToJson();
+        }
         entity.IsActive = request.IsActive;
         entity.SettingsSchemaJson = request.SettingsSchema is { Count: > 0 }
             ? JsonSerializer.Serialize(request.SettingsSchema, _json)

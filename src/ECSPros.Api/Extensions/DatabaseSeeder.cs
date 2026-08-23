@@ -1347,7 +1347,11 @@ public static class DatabaseSeeder
             new PlatformType { Code = "pazarama",      NameI18n = new() { { "tr", "Pazarama" },     { "en", "Pazarama" } },         IsMarketplace = true,  IsActive = true },
             new PlatformType { Code = "mobile_app",    NameI18n = new() { { "tr", "Mobil Uygulama" },{ "en", "Mobile App" } },      IsMarketplace = false, IsActive = true },
             new PlatformType { Code = "pos",           NameI18n = new() { { "tr", "Mağaza / POS" }, { "en", "Store / POS" } },      IsMarketplace = false, IsActive = true },
+            // F0 (docs/satis-kanali-ortak-kurgu.md §5): dropship bayi kanalı tipi — bayi bizim Partner API'mizden çeker.
+            new PlatformType { Code = "dropship_partner", NameI18n = new() { { "tr", "Dropship Bayi" }, { "en", "Dropship Partner" } }, IsMarketplace = false, IsActive = true },
         };
+        foreach (var d in defaults)
+            d.CapabilitiesJson = ECSPros.Shared.Contracts.Channels.ChannelCapabilities.DefaultsFor(d.Code, d.IsMarketplace).ToJson();
 
         var toAdd = defaults.Where(p => !existingCodes.Contains(p.Code)).ToList();
         if (toAdd.Count > 0)
@@ -1355,6 +1359,19 @@ public static class DatabaseSeeder
             context.PlatformTypes.AddRange(toAdd);
             await context.SaveChangesAsync();
             Console.WriteLine($"✓ Seed: {toAdd.Count} platform tipi eklendi.");
+        }
+
+        // F0 backfill (idempotent): yetenek seti boş olan mevcut tiplere koda göre varsayılan yazılır
+        // (bilinmeyen kod → IsMarketplace bayrağından türetilir). Dolu olanlara DOKUNULMAZ.
+        var missingCaps = await context.PlatformTypes
+            .Where(p => p.CapabilitiesJson == null)   // jsonb kolon: "" literal geçersiz JSON → yalnız null
+            .ToListAsync();
+        if (missingCaps.Count > 0)
+        {
+            foreach (var p in missingCaps)
+                p.CapabilitiesJson = ECSPros.Shared.Contracts.Channels.ChannelCapabilities.DefaultsFor(p.Code, p.IsMarketplace).ToJson();
+            await context.SaveChangesAsync();
+            Console.WriteLine($"✓ Seed: {missingCaps.Count} platform tipine yetenek seti (capabilities) yazıldı.");
         }
     }
 

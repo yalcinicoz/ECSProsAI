@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ECSPros.Core.Application.Services;
 using ECSPros.Core.Domain.Entities;
+using ECSPros.Shared.Contracts.Channels;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +25,9 @@ public record FirmPlatformDto(
     Dictionary<string, object> Credentials,
     Dictionary<string, object> Settings,
     bool IsActive,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    ChannelCapabilities Capabilities,
+    Dictionary<string, object>? CapabilityOverrides
 );
 
 public class GetFirmPlatformsQueryHandler : IRequestHandler<GetFirmPlatformsQuery, Result<List<FirmPlatformDto>>>
@@ -50,7 +53,11 @@ public class GetFirmPlatformsQueryHandler : IRequestHandler<GetFirmPlatformsQuer
                 : JsonSerializer.Deserialize<List<PlatformSchemaField>>(fp.PlatformType.SettingsSchemaJson, _json),
             fp.Code, fp.NameI18n, fp.PriceType, fp.PriceMultiplier,
             fp.Credentials, fp.Settings,
-            fp.IsActive, fp.CreatedAt
+            fp.IsActive, fp.CreatedAt,
+            (ChannelCapabilities.Parse(fp.PlatformType.CapabilitiesJson) ?? ChannelCapabilities.DefaultsFor(fp.PlatformType.Code, fp.PlatformType.IsMarketplace))
+                .WithOverrides(fp.CapabilityOverridesJson),
+            string.IsNullOrEmpty(fp.CapabilityOverridesJson) ? null
+                : JsonSerializer.Deserialize<Dictionary<string, object>>(fp.CapabilityOverridesJson, _json)
         )).ToList());
     }
 }

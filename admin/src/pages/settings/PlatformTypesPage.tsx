@@ -10,6 +10,7 @@ import { I18nField } from '@/components/ui/I18nField'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { useLanguages } from '@/hooks/useLanguages'
 import { FL } from '@/lib/field-labels'
+import { CapabilitiesEditor, CapabilityBadges, DEFAULT_CAPABILITIES, MARKETPLACE_CAPABILITIES, type ChannelCapabilities } from '@/components/channels/ChannelCapabilities'
 import { buildI18nValues } from '@/lib/i18n-helper'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -31,6 +32,7 @@ export interface PlatformType {
   isMarketplace: boolean
   isActive: boolean
   settingsSchema: SchemaField[] | null
+  capabilities: ChannelCapabilities
 }
 
 type FormState = {
@@ -39,6 +41,7 @@ type FormState = {
   isMarketplace: boolean
   isActive: boolean
   schema: SchemaField[]
+  capabilities: ChannelCapabilities
 }
 
 const FIELD_TYPES = ['text', 'password', 'number', 'date', 'boolean'] as const
@@ -47,7 +50,7 @@ const SECTION_LABELS: Record<string, string> = { credentials: 'Kimlik Bilgileri'
 const TYPE_LABELS: Record<string, string> = { text: 'Metin', password: 'Şifre', number: 'Sayı', date: 'Tarih', boolean: 'Evet/Hayır' }
 
 const emptyField = (): SchemaField => ({ key: '', labelI18n: {}, type: 'text', section: 'credentials', required: false })
-const emptyForm = (): FormState => ({ code: '', nameI18n: {}, isMarketplace: false, isActive: true, schema: [] })
+const emptyForm = (): FormState => ({ code: '', nameI18n: {}, isMarketplace: false, isActive: true, schema: [], capabilities: { ...DEFAULT_CAPABILITIES } })
 
 function getName(p: Pick<PlatformType, 'nameI18n' | 'code'>) {
   return p.nameI18n?.['tr'] ?? p.nameI18n?.[Object.keys(p.nameI18n ?? {})[0]] ?? p.code
@@ -260,8 +263,9 @@ export function PlatformTypesPage() {
       await api.post('/core/platform-types', {
         code: autoCode,
         nameI18n: form.nameI18n,
-        isMarketplace: form.isMarketplace,
+        isMarketplace: form.capabilities.pushListing,   // K1: türetilmiş
         settingsSchema: form.schema.length > 0 ? form.schema : null,
+        capabilities: form.capabilities,
       })
     },
     onSuccess: () => {
@@ -275,9 +279,10 @@ export function PlatformTypesPage() {
       if (!editTarget) return
       await api.put(`/core/platform-types/${editTarget.id}`, {
         nameI18n: form.nameI18n,
-        isMarketplace: form.isMarketplace,
+        isMarketplace: form.capabilities.pushListing,   // K1: türetilmiş
         isActive: form.isActive,
         settingsSchema: form.schema.length > 0 ? form.schema : null,
+        capabilities: form.capabilities,
       })
     },
     onSuccess: () => {
@@ -305,6 +310,7 @@ export function PlatformTypesPage() {
       isMarketplace: p.isMarketplace,
       isActive: p.isActive,
       schema: p.settingsSchema ? p.settingsSchema.map(f => ({ ...f, labelI18n: { ...f.labelI18n } })) : [],
+      capabilities: { ...(p.isMarketplace ? MARKETPLACE_CAPABILITIES : DEFAULT_CAPABILITIES), ...(p.capabilities ?? {}) },
     })
   }
 
@@ -318,12 +324,6 @@ export function PlatformTypesPage() {
   const formBody = (isEdit: boolean) => (
     <div className="space-y-5">
       <div className="flex flex-wrap gap-4">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
-            checked={form.isMarketplace}
-            onChange={e => setForm(f => ({ ...f, isMarketplace: e.target.checked }))} />
-          <span className="text-sm" style={{ color: 'var(--text)' }}>Pazaryeri kanalı</span>
-        </label>
         {isEdit && (
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
@@ -352,6 +352,15 @@ export function PlatformTypesPage() {
           <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>Türkçe addan otomatik üretilir. Kayıt sonrası değiştirilemez.</p>
         </div>
       )}
+
+      <div className="rounded-xl p-4" style={{ border: '1px solid var(--border)', background: 'var(--surface2)' }}>
+        <label className="flbl mb-1 block">Yetenekler (kanal davranışı)</label>
+        <p className="text-xs mb-3" style={{ color: 'var(--text-s)' }}>
+          Bu tipteki kanalların varsayılanı. Ekranlar tipe değil bu bayraklara bakar; "Ürün dışarı gönderilir" açıksa tip Pazaryeri sayılır.
+          Satıcı ürünleri / dış kaynak / otomatik kanala al / stok eşiği kanal bazında ezilebilir.
+        </p>
+        <CapabilitiesEditor value={form.capabilities} onChange={capabilities => setForm(f => ({ ...f, capabilities }))} />
+      </div>
 
       <div>
         <label className="flbl mb-2 block">Kanal Alan Şeması</label>
@@ -424,9 +433,7 @@ export function PlatformTypesPage() {
                   <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{getName(p)}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <Badge variant={p.isMarketplace ? 'info' : 'neutral'}>
-                    {p.isMarketplace ? 'Pazaryeri' : 'Özel Kanal'}
-                  </Badge>
+                  <CapabilityBadges caps={p.capabilities ?? (p.isMarketplace ? MARKETPLACE_CAPABILITIES : DEFAULT_CAPABILITIES)} />
                 </td>
                 <td className="px-4 py-3">
                   {p.settingsSchema && p.settingsSchema.length > 0 ? (

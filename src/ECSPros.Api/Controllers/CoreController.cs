@@ -83,7 +83,7 @@ public class CoreController : ControllerBase
     public async Task<IActionResult> CreatePlatformType([FromBody] CreatePlatformTypeRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
-            new CreatePlatformTypeCommand(request.Code, request.NameI18n, request.IsMarketplace, request.SettingsSchema), ct);
+            new CreatePlatformTypeCommand(request.Code, request.NameI18n, request.IsMarketplace, request.SettingsSchema, request.Capabilities), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Created(string.Empty, new { success = true, data = new { id = result.Value } });
@@ -94,7 +94,7 @@ public class CoreController : ControllerBase
     public async Task<IActionResult> UpdatePlatformType(Guid id, [FromBody] UpdatePlatformTypeRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(
-            new UpdatePlatformTypeCommand(id, request.NameI18n, request.IsMarketplace, request.IsActive, request.SettingsSchema), ct);
+            new UpdatePlatformTypeCommand(id, request.NameI18n, request.IsMarketplace, request.IsActive, request.SettingsSchema, request.Capabilities), ct);
         if (result.IsFailure)
             return NotFound(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -267,7 +267,8 @@ public class CoreController : ControllerBase
     {
         var result = await _mediator.Send(
             new UpdateFirmPlatformCommand(id, request.NameI18n, request.PriceType, request.PriceMultiplier,
-                request.Credentials ?? new(), request.Settings ?? new(), request.IsActive), ct);
+                request.Credentials ?? new(), request.Settings ?? new(), request.IsActive,
+                request.CapabilityOverrides, request.UpdateCapabilityOverrides), ct);
         if (result.IsFailure)
             return NotFound(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -529,7 +530,9 @@ public record UpdateFirmPlatformRequest(
     decimal? PriceMultiplier,
     bool IsActive,
     Dictionary<string, object>? Credentials = null,
-    Dictionary<string, object>? Settings = null
+    Dictionary<string, object>? Settings = null,
+    Dictionary<string, object>? CapabilityOverrides = null,   // K1: yalnız ezilebilir anahtarlar; null = dokunma (UpdateCapabilityOverrides=false)
+    bool UpdateCapabilityOverrides = false
 );
 
 public record CreateFirmPlatformIntegrationRequest(
@@ -610,14 +613,16 @@ public record CreatePlatformTypeRequest(
     string Code,
     Dictionary<string, string> NameI18n,
     bool IsMarketplace,
-    List<PlatformSchemaField>? SettingsSchema = null
+    List<PlatformSchemaField>? SettingsSchema = null,
+    ECSPros.Shared.Contracts.Channels.ChannelCapabilities? Capabilities = null
 );
 
 public record UpdatePlatformTypeRequest(
     Dictionary<string, string> NameI18n,
     bool IsMarketplace,
     bool IsActive,
-    List<PlatformSchemaField>? SettingsSchema = null
+    List<PlatformSchemaField>? SettingsSchema = null,
+    ECSPros.Shared.Contracts.Channels.ChannelCapabilities? Capabilities = null
 );
 
 public record CreateExpenseTypeRequest(

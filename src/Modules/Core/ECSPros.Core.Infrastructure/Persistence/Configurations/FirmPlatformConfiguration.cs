@@ -16,6 +16,9 @@ public class FirmPlatformConfiguration : IEntityTypeConfiguration<FirmPlatform>
         builder.Property(x => x.Settings).HasColumnType("jsonb").IsRequired();
         builder.Property(x => x.PriceType).HasMaxLength(20);
         builder.Property(x => x.PriceMultiplier).HasPrecision(18, 6);
+        builder.Property(x => x.CapabilityOverridesJson)
+            .HasColumnName("capability_overrides")
+            .HasColumnType("jsonb");
         builder.HasIndex(x => x.Code).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
 

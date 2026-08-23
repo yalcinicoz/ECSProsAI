@@ -14,6 +14,8 @@ public class FirmPlatform : BaseEntity
     public decimal? PriceMultiplier { get; set; }
     public Guid? InvoiceSeriesId { get; set; }
     public bool IsActive { get; set; } = true;
+    /// <summary>Kanal bazlı yetenek ezmeleri JSON — yalnız ChannelCapabilities.OverridableKeys (K1).</summary>
+    public string? CapabilityOverridesJson { get; set; }
 
     public Firm Firm { get; set; } = null!;
     public PlatformType PlatformType { get; set; } = null!;

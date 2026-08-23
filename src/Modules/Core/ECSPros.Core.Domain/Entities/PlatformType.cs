@@ -10,6 +10,8 @@ public class PlatformType : BaseEntity
     public bool IsActive { get; set; } = true;
     /// <summary>JSON string — uygulama katmanında serialize/deserialize edilir.</summary>
     public string? SettingsSchemaJson { get; set; }
+    /// <summary>Yetenek seti JSON (ChannelCapabilities, camelCase). null → koda göre varsayılan (docs/satis-kanali-ortak-kurgu.md §2.1).</summary>
+    public string? CapabilitiesJson { get; set; }
 
     public ICollection<FirmPlatform> FirmPlatforms { get; set; } = new List<FirmPlatform>();
 }

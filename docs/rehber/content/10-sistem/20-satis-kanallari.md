@@ -55,8 +55,9 @@ Boş durum mesajları: "Henüz satış kanalı tanımlanmamış." (Tümü) / "Bu
 | Alan | Zorunlu | Açıklama / kurallar / örnek |
 |---|---|---|
 | Firma | Evet (yalnız yeni kanalda ve "Tümü" görünümünden açıldıysa) | Aranabilir liste; ana firma "(Ana Firma)" ekiyle görünür. Firma hapı seçiliyken ya da firma detayından açıldıysa sorulmaz. |
-| Platform Tipi | Evet (yalnız yeni kanalda) | Aktif platform tipleri; "(Pazaryeri)" ya da "(Özel Kanal)" ekiyle. Seçim, aşağıdaki Kimlik Bilgileri / Ayarlar alanlarını belirler. Düzenlemede değiştirilemez. |
+| Platform Tipi | Evet (yalnız yeni kanalda) | Aktif platform tipleri; "(Pazaryeri)", "(Dropship bayi)" ya da "(Kendi kanal)" ekiyle. Seçim, aşağıdaki Kimlik Bilgileri / Ayarlar alanlarını belirler. Düzenlemede değiştirilemez. |
 | Kanal Adı | Evet | Örn. `Trendyol Ana Mağaza`. |
+| Kanal Yetenekleri | Hayır | Platform tipi seçilince görünür: üstte etkin yetenek rozetleri; salt okunur tip yetenekleri (pazaryeri, eşleme, hazırlık, fiyat kaynağı, sipariş yönü…) haplar halinde; altında **yalnız düzenlemede** dört ezilebilir alan — `Üçüncü taraf satıcı ürünleri`, `Dış tedarik kaynağı ürünleri`, `Kapsama giren ürün otomatik kanalda`, `Stok eşiği`. Her biri `Tip varsayılanı (…)` ya da kanala özel değer alır. Yeni kanalda tip varsayılanları uygulanır. |
 | Kod | Otomatik | Yalnız yeni kanalda görünür; kanal adından küçük harf + alt çizgi ile üretilir (örn. `trendyol_ana_magaza`). Kayıt sonrası değiştirilemez. |
 | Fiyat Tipi | Hayır | `— Yok —`, `Manuel`, `Çarpan`. |
 | Çarpan | Fiyat tipi Çarpan ise | Sayı, örn. `1.10` (temel fiyatın çarpılacağı katsayı). |
@@ -100,7 +101,8 @@ Kural: **En az bir ödeme yöntemi seçili olmalı** (hiçbiri seçili değilse 
 
 ## Durumlar ve iş kuralları
 - Kanal durumu: `Aktif` / `Pasif`.
-- Platform tipi `Pazaryeri` ise kart ikonunda ve firma detay tablosunda `Pazaryeri` rozeti görünür; pazaryeri mağazalarının operasyonu ayrıca Pazaryerleri modülünden yönetilir.
+- Kanal kartında ve firma detay tablosunda **yetenek rozetleri** görünür (`Pazaryeri` / `Dropship bayi` / `Kendi kanal`, `Eşleme`, `Satıcı ürünleri`, `Dış kaynak`, `Stok eşiği N`, `Elle kanala al`). Ürün dışarı gönderilen (pazaryeri) kanalda çanta ikonu; pazaryeri mağazalarının operasyonu ayrıca Pazaryerleri modülünden yönetilir.
+- Stok eşiği ezmesi kanal stok formülünü değiştirir: kanala verilen adet = max(0, net stok − eşik + 1); net stok = satışa açık depo/kısım stoğu − rezerv.
 - Kanal kodu firma içinde benzersizdir; aynı koddan ikinci kanal açılmaya çalışılırsa "Bu kodda bir satış kanalı zaten mevcut." hatası gelir (kod addan üretildiği için aynı adlı ikinci kanal açılamaz).
 - Şema dışı mevcut ayarlar (tema, marka, onay politikası vb.) formda görünmese de kayıt sırasında korunur.
 - Stok görünürlüğü, ödeme yöntemleri ve kapıda ödeme bedel/limit ayarları siteye yaklaşık 1 dakika içinde yansır.

@@ -1,4 +1,6 @@
+using System.Text.Json;
 using ECSPros.Core.Application.Services;
+using ECSPros.Shared.Contracts.Channels;
 using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +14,9 @@ public record UpdateFirmPlatformCommand(
     decimal? PriceMultiplier,
     Dictionary<string, object> Credentials,
     Dictionary<string, object> Settings,
-    bool IsActive
+    bool IsActive,
+    Dictionary<string, object>? CapabilityOverrides = null,
+    bool UpdateCapabilityOverrides = false
 ) : IRequest<Result<bool>>;
 
 public class UpdateFirmPlatformCommandHandler : IRequestHandler<UpdateFirmPlatformCommand, Result<bool>>
@@ -33,6 +37,9 @@ public class UpdateFirmPlatformCommandHandler : IRequestHandler<UpdateFirmPlatfo
         platform.Credentials    = request.Credentials;
         platform.Settings       = request.Settings;
         platform.IsActive       = request.IsActive;
+        if (request.UpdateCapabilityOverrides)
+            platform.CapabilityOverridesJson = ChannelCapabilities.SanitizeOverrides(
+                request.CapabilityOverrides is null ? null : JsonSerializer.Serialize(request.CapabilityOverrides));
         platform.UpdatedAt      = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);

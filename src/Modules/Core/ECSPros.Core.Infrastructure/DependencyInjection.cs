@@ -16,6 +16,8 @@ public static class DependencyInjection
 
         services.AddScoped<ICoreDbContext>(sp => sp.GetRequiredService<CoreDbContext>());
         services.AddScoped<ECSPros.Shared.Contracts.ICargoCodeService, Services.CargoCodeService>();
+        services.AddMemoryCache();
+        services.AddScoped<ECSPros.Shared.Contracts.Channels.IChannelCapabilityResolver, Services.ChannelCapabilityResolver>();
 
         return services;
     }

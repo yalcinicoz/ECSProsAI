@@ -45,7 +45,7 @@
 </tr>
 <tr>
 <td>TİP</td>
-<td><code>Pazaryeri</code> ya da <code>Özel Kanal</code> rozeti.</td>
+<td>Yetenek rozetleri: <code>Pazaryeri</code> (ürün dışarı gönderilir) / <code>Dropship bayi</code> / <code>Kendi kanal</code>; ayrıca <code>Eşleme</code> (dış kategori eşlemesi gerekir), <code>Satıcı ürünleri</code>, <code>Dış kaynak</code>, <code>Stok eşiği N</code>, <code>Elle kanala al</code> görünebilir.</td>
 </tr>
 <tr>
 <td>ŞEMA ALANLARI</td>
@@ -130,9 +130,9 @@
 </tr>
 </thead>
 <tbody><tr>
-<td>Pazaryeri kanalı</td>
+<td>Yetenekler (kanal davranışı)</td>
 <td>Hayır</td>
-<td>İşaretliyse tip <code>Pazaryeri</code> sayılır (kanal kartlarında çanta ikonu ve rozet).</td>
+<td>Bu tipteki kanalların varsayılan davranışı. Üstteki <strong>Pazaryeri şablonu / Kendi kanal şablonu / Dropship bayi şablonu</strong> butonları tüm alanları tek seferde doldurur; sonra tek tek değiştirilebilir. Alanlar aşağıda.</td>
 </tr>
 <tr>
 <td>Aktif</td>
@@ -153,6 +153,63 @@
 <td>Kanal Alan Şeması</td>
 <td>Hayır</td>
 <td>Aşağıdaki şema editörü. Boşsa &quot;Henüz alan tanımlanmadı.&quot; yazar.</td>
+</tr>
+</tbody></table>
+<h3 id="yetenekler-alanlar">Yetenekler — alanlar<a class="anchor" href="#yetenekler-alanlar" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ürün dışarı gönderilir (pazaryeri)</td>
+<td>Açıksa ürünler batch/adaptörle karşı tarafa yüklenir ve tip <strong>Pazaryeri</strong> sayılır (Pazaryerleri modülünde mağaza olarak görünür, kanal kartında çanta ikonu).</td>
+</tr>
+<tr>
+<td>Dış kategori/özellik eşlemesi gerekir</td>
+<td>Ürün grubu → dış kategori, özellik/değer eşlemeleri bu kanal için zorunludur.</td>
+</tr>
+<tr>
+<td>Hazırlık denetimi</td>
+<td>Ürünün kanalda listelenebilmesi için ön kontrol seviyesi: <code>Hafif</code> (görsel, fiyat, satış açık), <code>Hafif + kanal fiyatı var</code>, <code>Tam</code> (eşleme + zorunlu özellik).</td>
+</tr>
+<tr>
+<td>Fiyat kaynağı</td>
+<td><code>Kanal fiyat tipi</code> / <code>Bayi fiyat listesi</code> / <code>Kanal fiyatı + pazaryeri geri okuma</code>.</td>
+</tr>
+<tr>
+<td>Satış durdurma penceresi</td>
+<td>Ürün satışı tarih aralığıyla geçici durdurulabilir.</td>
+</tr>
+<tr>
+<td>Listeden düşürme batch&#39;i</td>
+<td>Pazaryerinde yüklü ürün uzaktan pasife alınabilir.</td>
+</tr>
+<tr>
+<td>Üçüncü taraf satıcı ürünleri</td>
+<td>Satıcı panelinden gelen ürünler bu kanalın kapsamına girebilir (kanal bazında ezilebilir).</td>
+</tr>
+<tr>
+<td>Dış tedarik kaynağı ürünleri</td>
+<td>Dropship tedarik kaynaklarından gelen ürünler kapsama girebilir (kanal bazında ezilebilir).</td>
+</tr>
+<tr>
+<td>Sipariş yönü</td>
+<td><code>İçeride oluşur</code> (site/POS) / <code>Bayi Partner API ile gönderir</code> / <code>Pazaryerinden çekilir</code>.</td>
+</tr>
+<tr>
+<td>Stok eşiği (minStock)</td>
+<td>Kanala verilen adet = <strong>max(0, net stok − eşik + 1)</strong>. Eşik 3 iken net 3 adet → kanala 1 verilir, net 2 → 0 (satılamaz). Kanal bazında ezilebilir.</td>
+</tr>
+<tr>
+<td>Kapsama giren ürün otomatik kanalda</td>
+<td>Kapalıysa ürün kapsama girse de personel &quot;Kanala al&quot; demeden satışa açılmaz (kanal bazında ezilebilir).</td>
+</tr>
+<tr>
+<td>Karşı taraf bizim Partner API&#39;mizi kullanır</td>
+<td>Dropship bayi ürün/stok/fiyatı bizim API&#39;mizden çeker.</td>
 </tr>
 </tbody></table>
 <h3 id="sema-editoru-her-alan-icin">Şema editörü — her alan için<a class="anchor" href="#sema-editoru-her-alan-icin" aria-hidden="true">#</a></h3>
@@ -201,13 +258,14 @@
 <li>Durum: <code>Aktif</code> / <code>Pasif</code>. Pasif tip yeni kanal açarken seçilemez; mevcut kanallar etkilenmez.</li>
 <li>Kod benzersizdir: aynı addan ikinci tip oluşturulursa &quot;Bu kodda bir platform tipi zaten mevcut.&quot; hatası gelir.</li>
 <li>Şema, <strong>yalnız kanal formunu</strong> şekillendirir; Kimlik Bilgileri bölümündeki değerler kanal kaydında tutulur. (Firma entegrasyonlarının şeması ise ayrı bir ekranda, Servis Kataloğu&#39;nda tanımlanır.)</li>
-<li>Varsayılan tipler (Web Sitesi, Trendyol, Hepsiburada, n11, Amazon, Çiçeksepeti, Pazarama, Mobil Uygulama, Mağaza / POS) sistemle birlikte gelir.</li>
+<li>Varsayılan tipler (Web Sitesi, Trendyol, Hepsiburada, n11, Amazon, Çiçeksepeti, Pazarama, Mobil Uygulama, Mağaza / POS, <strong>Dropship Bayi</strong>) sistemle birlikte gelir; yetenekleri koda göre önceden doldurulmuştur.</li>
+<li>Ekranlar kanalın <strong>tipine değil yeteneklerine</strong> bakar: &quot;Pazaryeri&quot; ayrı bir tip değil, &quot;Ürün dışarı gönderilir&quot; yeteneğinin açık olmasıdır. Yalnız dört yetenek (satıcı ürünleri, dış kaynak, otomatik kanala al, stok eşiği) kanal bazında ezilebilir; diğerleri tipten gelir.</li>
 </ul>
 <h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
 <h3 id="yeni-pazaryeri-tipi-ekleme">Yeni pazaryeri tipi ekleme<a class="anchor" href="#yeni-pazaryeri-tipi-ekleme" aria-hidden="true">#</a></h3>
 <ol>
 <li>Sistem › <strong>Platform Tipleri</strong>&#39;nde <strong>Yeni Platform Tipi</strong>&#39;ne tıklayın.</li>
-<li><strong>Pazaryeri kanalı</strong> kutusunu işaretleyin; kaynak dilde <strong>Ad</strong> yazın (kod otomatik oluşur).</li>
+<li>Yetenekler bölümünde <strong>Pazaryeri şablonu</strong>&#39;na tıklayın (ürün dışarı gönderilir + eşleme + tam hazırlık + pazaryerinden sipariş çekme); kaynak dilde <strong>Ad</strong> yazın (kod otomatik oluşur).</li>
 <li><strong>Alan Ekle</strong> ile <code>api_key</code> (Şifre, Kimlik Bilgileri, zorunlu) gibi alanlar ekleyin; etiketlerini girin.</li>
 <li><strong>Oluştur</strong>&#39;a tıklayın. Artık Satış Kanalları&#39;nda bu tipte kanal açılabilir.</li>
 </ol>
