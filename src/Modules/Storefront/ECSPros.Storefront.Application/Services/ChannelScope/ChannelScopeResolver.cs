@@ -14,12 +14,31 @@ public sealed class ChannelScopeResolver(
     ICatalogDbContext catDb,
     IStockService stockService,
     IChannelPricingService pricingService,
-    IChannelStockCalculator stockCalculator)
+    IChannelStockCalculator stockCalculator,
+    IChannelCapabilityResolver capabilityResolver)
 {
+    /// <summary>F5 K6: kanalın yeteneklerine göre izinli ürün kaynakları (own her zaman izinli).</summary>
+    public static List<string> AllowedSourceTypes(ChannelCapabilities caps)
+    {
+        var allowed = new List<string> { "own" };
+        if (caps.ThirdPartySellerProducts) allowed.Add("seller");
+        if (caps.ExternalSupplyProducts) allowed.Add("supply");
+        return allowed;
+    }
+
     /// <summary>Filtreden geçen ürün Id'leri (görselli + silinmemiş katalog tabanı; IsSaleOpen kapsam şartı DEĞİLDİR — katman 3 sebebi).</summary>
     public async Task<List<Guid>> ResolveAsync(Guid firmPlatformId, CategoryFilterRules? rules, CancellationToken ct)
     {
         rules ??= new CategoryFilterRules();
+
+        // F5 K6: yetenek bazlı kaynak zorlaması — filtre kuralı ne derse desin, kanalın kapalı olduğu
+        // kaynak (seller/supply) kapsama giremez. rules.SourceTypes varsa kesişim alınır.
+        var caps = await capabilityResolver.GetAsync(firmPlatformId, ct);
+        var allowed = AllowedSourceTypes(caps);
+        rules.SourceTypes = rules.SourceTypes is { Count: > 0 }
+            ? rules.SourceTypes.Intersect(allowed, StringComparer.OrdinalIgnoreCase).ToList()
+            : allowed;
+        if (rules.SourceTypes.Count == 0) return new List<Guid>();
 
         HashSet<Guid>? stockRangeIds = null;
         if (rules.StockMin.HasValue || rules.StockMax.HasValue)

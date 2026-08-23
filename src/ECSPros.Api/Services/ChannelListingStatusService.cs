@@ -41,7 +41,10 @@ public sealed class ChannelListingStatusService(
         HashSet<Guid> InChannelStock,     // K17: stockQuantity >= 1 (kanal minStock)
         HashSet<Guid>? ChannelPriced,     // yalnız light_price: kanal fiyatı olan ürünler
         Dictionary<Guid, (string Status, List<string> Reasons)>? Readiness, // yalnız full
-        Dictionary<Guid, (int Pending, int Synced, int Failed, int Deactivated, string? ErrorCode)>? Push);
+        Dictionary<Guid, (int Pending, int Synced, int Failed, int Deactivated, string? ErrorCode)>? Push,
+        HashSet<Guid> SellerUpdatePending,    // F5: satıcı ürününde onay bekleyen revizyon (bilgi sebebi, durumu değiştirmez)
+        HashSet<Guid> WithImage,              // görseli olan ürünler (evren dışı hesap için no_image sebebi)
+        HashSet<Guid> InScopeAll);            // kapsam kümesi (görselden bağımsız; out_of_scope sebebi)
 
     public void Invalidate(Guid firmPlatformId) => cache.Remove(Key(firmPlatformId));
     private static string Key(Guid id) => $"listing-status:{id:N}";
@@ -90,9 +93,18 @@ public sealed class ChannelListingStatusService(
     // ── Durum çözümü (§3.2 sırası) ────────────────────────────────────────────
     private static ListingStatusDto Compute(Snapshot s, Guid id)
     {
+        var result = ComputeCore(s, id);
+        // F5: bilgi sebepleri — durumu ETKİLEMEZ, yalnız listelenir (satıcı revizyonu onay bekliyor).
+        if (s.SellerUpdatePending.Contains(id)) result.Reasons.Add("seller_update_pending");
+        return result;
+    }
+
+    private static ListingStatusDto ComputeCore(Snapshot s, Guid id)
+    {
         var reasons = new List<string>();
 
         // 1) Engelli (blocked): kanal kararı kapalı / durdurulmuş / satış kapalı / stok yok (K17)
+        if (!s.InScopeAll.Contains(id)) reasons.Add("out_of_scope");
         if (s.ChannelExcluded.Contains(id)) reasons.Add("channel_excluded");
         if (s.SaleStopped.Contains(id)) reasons.Add("sale_stopped");
         if (s.SaleClosed.Contains(id)) reasons.Add("sale_closed");
@@ -100,6 +112,7 @@ public sealed class ChannelListingStatusService(
         var blocked = reasons.Count > 0;
 
         // 2) Eksik bilgi sebepleri (hazırlık)
+        if (!s.WithImage.Contains(id)) reasons.Add("no_image");
         if (s.PriceZero.Contains(id)) reasons.Add("price_zero");
         if (s.ChannelPriced is not null && !s.ChannelPriced.Contains(id)) reasons.Add("no_channel_price");
 
@@ -152,37 +165,50 @@ public sealed class ChannelListingStatusService(
         var caps = await capabilityResolver.GetAsync(firmPlatformId, ct);
         await using var conn = await dataSource.OpenConnectionAsync(ct);
 
-        // Kapsam evreni: görselli ürünler; filter|mixed kanalda InScope && !IsExcluded satırları
+        // Kapsam evreni: TÜM silinmemiş (izinli kaynaklı) ürünler okunur; has_image ve in_scope bayrak olarak
+        // gelir. Base (yönetilen evren / özet) = has_image && in_scope — F2 sayıları değişmez. Evren dışı bir
+        // ürün için ComputeMany yine anlamlı sonuç verir: no_image / out_of_scope sebepleri (F5 satıcı kesiti).
         const string baseSql = @"
             SELECT p.""Id"",
                    NOT p.""IsSaleOpen"" AS sale_closed,
                    (p.""BasePrice"" IS NULL OR p.""BasePrice"" <= 0) AS price_zero,
                    (cp.""Id"" IS NOT NULL AND (NOT cp.""IsActive"" OR cp.""IsExcluded"")) AS ch_excluded,
                    (cp.""SaleStoppedFrom"" IS NOT NULL AND cp.""SaleStoppedFrom"" <= now()
-                    AND (cp.""SaleStoppedUntil"" IS NULL OR cp.""SaleStoppedUntil"" >= now())) AS stopped
+                    AND (cp.""SaleStoppedUntil"" IS NULL OR cp.""SaleStoppedUntil"" >= now())) AS stopped,
+                   EXISTS (SELECT 1 FROM catalog.product_images img WHERE img.""ProductId"" = p.""Id"" AND NOT img.""IsDeleted"") AS has_image,
+                   (CASE WHEN sc.""FillType"" IN ('filter','mixed')
+                         THEN cp.""Id"" IS NOT NULL AND cp.""InScope"" AND NOT cp.""IsExcluded""
+                         ELSE TRUE END) AS in_scope
             FROM catalog.products p
             LEFT JOIN storefront.channel_products cp
                    ON cp.""FirmPlatformId"" = @platform AND cp.""ProductId"" = p.""Id"" AND NOT cp.""IsDeleted""
             LEFT JOIN storefront.channel_scopes sc ON sc.""FirmPlatformId"" = @platform AND NOT sc.""IsDeleted""
             WHERE NOT p.""IsDeleted""
-              AND EXISTS (SELECT 1 FROM catalog.product_images img WHERE img.""ProductId"" = p.""Id"" AND NOT img.""IsDeleted"")
-              AND (CASE WHEN sc.""FillType"" IN ('filter','mixed')
-                        THEN cp.""Id"" IS NOT NULL AND cp.""InScope"" AND NOT cp.""IsExcluded""
-                        ELSE TRUE END)";
+              AND p.""SourceType"" = ANY(@sources)   -- F5 K6: kanalın izinli kaynakları";
 
         var baseSet = new HashSet<Guid>();
         var chExcluded = new HashSet<Guid>();
         var stopped = new HashSet<Guid>();
         var saleClosed = new HashSet<Guid>();
         var priceZero = new HashSet<Guid>();
+        var withImage = new HashSet<Guid>();
+        var inScopeAll = new HashSet<Guid>();
+        var allowedSources = new List<string> { "own" };
+        if (caps.ThirdPartySellerProducts) allowedSources.Add("seller");
+        if (caps.ExternalSupplyProducts) allowedSources.Add("supply");
         await using (var cmd = new NpgsqlCommand(baseSql, conn) { CommandTimeout = 60 })
         {
             cmd.Parameters.AddWithValue("platform", firmPlatformId);
+            cmd.Parameters.AddWithValue("sources", allowedSources.ToArray());
             await using var r = await cmd.ExecuteReaderAsync(ct);
             while (await r.ReadAsync(ct))
             {
                 var id = r.GetGuid(0);
-                baseSet.Add(id);
+                var hasImage = r.GetBoolean(5);
+                var inScope = r.GetBoolean(6);
+                if (hasImage) withImage.Add(id);
+                if (inScope) inScopeAll.Add(id);
+                if (hasImage && inScope) baseSet.Add(id);
                 if (r.GetBoolean(1)) saleClosed.Add(id);
                 if (r.GetBoolean(2)) priceZero.Add(id);
                 if (r.GetBoolean(3)) chExcluded.Add(id);
@@ -260,8 +286,24 @@ public sealed class ChannelListingStatusService(
             }
         }
 
+        // F5: satıcı ürününde onay bekleyen revizyon (bilgi sebebi)
+        var sellerPending = new HashSet<Guid>();
+        if (caps.ThirdPartySellerProducts)
+        {
+            const string spSql = @"
+                SELECT DISTINCT p.""Id""
+                FROM catalog.products p
+                JOIN catalog.product_submissions s
+                     ON s.""SupplierId"" = p.""SupplierId"" AND s.""SupplierProductCode"" = p.""SupplierProductCode""
+                WHERE p.""SourceType"" = 'seller' AND NOT p.""IsDeleted""
+                  AND s.""Status"" = 'pending' AND NOT s.""IsDeleted"" ";
+            await using var cmd = new NpgsqlCommand(spSql, conn) { CommandTimeout = 30 };
+            await using var r = await cmd.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct)) sellerPending.Add(r.GetGuid(0));
+        }
+
         return new Snapshot(caps, baseSet, chExcluded, stopped, saleClosed, priceZero, inStock,
-            channelPriced, readiness, push);
+            channelPriced, readiness, push, sellerPending, withImage, inScopeAll);
     }
 
     private static async Task<string?> GetMarketplaceCodeAsync(NpgsqlConnection conn, Guid firmPlatformId, CancellationToken ct)
@@ -320,12 +362,15 @@ public sealed class ChannelListingStatusService(
     public static string ReasonLabel(string code) => code switch
     {
         "channel_excluded" => "Kanaldan çıkarıldı",
+        "out_of_scope" => "Kanal kapsamı dışında",
+        "no_image" => "Ürün görseli yok",
         "sale_stopped" => "Satış durduruldu",
         "sale_closed" => "Ürün satışa kapalı",
         "out_of_stock" => "Kanal stoğu yok",
         "price_zero" => "Satış fiyatı 0",
         "no_channel_price" => "Bu kanalda fiyatı yok",
         "readiness_unknown" => "Hazırlık hesaplanmadı",
+        "seller_update_pending" => "Satıcı güncellemesi onay bekliyor",
         "push_pending" => "Yükleme bekliyor",
         "deactivated" => "Listeden düşürüldü",
         _ when code.StartsWith("push_failed") => "Yükleme hatası" + (code.Contains(':') ? $" ({code.Split(':', 2)[1]})" : ""),

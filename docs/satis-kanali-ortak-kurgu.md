@@ -20,6 +20,15 @@
 > tablosu, Gönder/Yeniden Dene = `sync-products`, ürün-bazlı Hazırlığı Hesapla = `readiness/recompute` body
 > productIds), toplu çubukta yetenek bazlı "Pazaryerine Gönder". "Listeden düşür" (deactivate batch) hâlâ YOK —
 > backend'i F6+ öncesi ayrı iş. CompletionModal çekmeceye gömülmedi; eşleme sebepleri Eşleme sayfasına link verir.
+> **F5 Satıcı kaynağı UYGULANDI (2026-08-23) ⚠️ restart bekliyor:** `Product.SourceType` (own|seller|supply,
+> migration `AddProductSourceType` canlı DB'de) — onayda damga (Approve yeni+revizyon) + idempotent seed backfill
+> (onaylı gönderimden doğan ürünler). Yetenek zorlaması (K6) dört okuma yolunda: kapsam çözücü (kural kesişimi),
+> storefront deny-set, listeleme hesaplayıcısı taban SQL, pazaryeri aday SQL (capabilities jsonb COALESCE).
+> Kural şemasına `SourceTypes`; FilterBuilder "Ürün Kaynağı". Sebepler: `seller_update_pending` (BİLGİ — durumu
+> değiştirmez), + hesaplayıcı artık evren dışını da açıklar: `no_image`, `out_of_scope`. Satıcı kesiti:
+> `POST /api/supplier/products/listing-status` (sahiplik + yalnız satıcıya açık kanallar) + satici "Ürünlerim"
+> Listelenme sütunu. Plan sapması: `seller_stock_zero/price_stale/shipping_profile_missing` AYRI kod olmadı —
+> satıcı fiyat/stok paylaşımlı katalog+envanterden aktığı için `price_zero`/`out_of_stock` zaten kapsıyor.
 > F0 Yetenek modeli **UYGULANDI (2026-08-23)** — `ChannelCapabilities` (Shared.Contracts/Channels) + `IChannelCapabilityResolver` (Core.Infrastructure, 2 dk IMemoryCache), `core_platform_types.capabilities` / `core_firm_platforms.capability_overrides` (jsonb, migration `AddChannelCapabilities` canlı DB'de uygulandı), seed: `dropship_partner` tipi + koda göre backfill (idempotent), `IsMarketplace` artık `pushListing`'den türetilir (kolon korunur), admin: Platform Tipleri yetenek editörü (3 şablon butonu), kanal formu ezme editörü (4 alan) + kart/tablo rozetleri, rehber sayfaları güncellendi. İzole 5051 testi ✓ (ezme yazma/sanitize/negatif/temizleme, tip güncelleme, türetme). **Sırada F1 Kapsam.**
 > Alan: 🛠 **Admin panel** (pano #2) + zorunlu çekirdek dokunuşları (Core/Storefront/Integration/Catalog) +
 > 🔌 Dış API (pano #3) ile kesişen noktalar işaretlidir.

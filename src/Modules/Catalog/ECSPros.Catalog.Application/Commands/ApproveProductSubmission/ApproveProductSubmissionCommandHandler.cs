@@ -37,6 +37,8 @@ public class ApproveProductSubmissionCommandHandler
             .FirstOrDefaultAsync(p => p.SupplierId == submission.SupplierId
                 && p.SupplierProductCode == submission.SupplierProductCode, ct);
         var isRevision = product is not null;
+        if (product is not null && product.SourceType != "seller")
+            product.SourceType = "seller";   // F5 K6: eski kayıtlar için idempotent damga
 
         var group = await _db.ProductGroups
             .Include(g => g.Attributes.Where(a => !a.IsDeleted)).ThenInclude(a => a.AttributeType)
@@ -106,7 +108,9 @@ public class ApproveProductSubmissionCommandHandler
             {
                 ProductGroupId = group.Id, Code = code,
                 NameI18n = body.Name ?? new(), ShortDescriptionI18n = body.ShortDescription, DescriptionI18n = body.Description,
-                SupplierId = submission.SupplierId, SupplierProductCode = submission.SupplierProductCode,
+                SupplierId = submission.SupplierId,
+                SourceType = "seller",   // F5 K6: satıcı kaynaklı ürün
+                SupplierProductCode = submission.SupplierProductCode,
                 BasePrice = firstPrice, TaxRate = 18, IsSaleOpen = false
             };
             foreach (var (tid, vid) in resolvedAttrs)

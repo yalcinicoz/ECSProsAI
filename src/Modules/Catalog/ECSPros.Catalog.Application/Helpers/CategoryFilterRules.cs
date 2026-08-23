@@ -54,6 +54,8 @@ public class CategoryFilterRules
     public List<string>? Tags { get; set; }
 
     // F1 kanal kapsamı kriterleri (docs/satis-kanali-ortak-kurgu.md §3.1) — çağıran taraf çözer:
+    /// <summary>F5 K6: ürün kaynağı süzgeci — own | seller | supply. Boş/null = kural yok.</summary>
+    public List<string>? SourceTypes { get; set; }
     /// <summary>true → yalnız bu kanalda fiyatı (ChannelVariant.Price &gt; 0) olan ürünler (K4/K11).</summary>
     public bool? HasChannelPrice { get; set; }
     /// <summary>K17: net stok ≥ MinStock olan en az bir varyantı bulunan ürünler (stockQuantity ≥ 1).</summary>

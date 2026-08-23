@@ -112,6 +112,73 @@ public class SupplierController(
         return Ok(new { success = true, data = result.Value });
     }
 
+    /// <summary>
+    /// F5: satıcının canlı ürünlerinin satış kanallarındaki LİSTELEME durumu (yalnız kendi ürünleri;
+    /// satıcı ürünlerine açık, aktif kanallar). Panel "Ürünlerim" listesindeki Listelenme sütununu besler.
+    /// </summary>
+    [HttpPost("products/listing-status")]
+    public async Task<IActionResult> ProductListingStatuses(
+        [FromBody] SupplierListingStatusRequest req,
+        [FromServices] ECSPros.Api.Services.ChannelListingStatusService listingSvc,
+        [FromServices] ECSPros.Shared.Contracts.Channels.IChannelCapabilityResolver capabilityResolver,
+        [FromServices] Npgsql.NpgsqlDataSource dataSource,
+        CancellationToken ct = default)
+    {
+        var ownerId = OwnerId();
+        if (ownerId is null) return Unauthorized(new { success = false, error = "Geçersiz token." });
+
+        var requested = (req.ProductIds ?? new()).Distinct().Take(100).ToList();
+        if (requested.Count == 0) return Ok(new { success = true, data = new { channels = Array.Empty<object>(), statuses = new Dictionary<Guid, object>() } });
+
+        // Sahiplik: yalnız bu satıcının ürünleri (diğer id'ler sessizce düşer)
+        var owned = new List<Guid>();
+        var channels = new List<(Guid Id, string Code, string Name)>();
+        await using (var conn = await dataSource.OpenConnectionAsync(ct))
+        {
+            await using (var cmd = new Npgsql.NpgsqlCommand(
+                @"SELECT ""Id"" FROM catalog.products WHERE ""SupplierId"" = @owner AND NOT ""IsDeleted"" AND ""Id"" = ANY(@ids)", conn))
+            {
+                cmd.Parameters.AddWithValue("owner", ownerId.Value);
+                cmd.Parameters.AddWithValue("ids", requested.ToArray());
+                await using var r = await cmd.ExecuteReaderAsync(ct);
+                while (await r.ReadAsync(ct)) owned.Add(r.GetGuid(0));
+            }
+            await using (var cmd = new Npgsql.NpgsqlCommand(
+                @"SELECT fp.""Id"", fp.""Code"", COALESCE(fp.""NameI18n""->>'tr', fp.""Code"")
+                  FROM core.core_firm_platforms fp WHERE fp.""IsActive"" AND NOT fp.""IsDeleted""", conn))
+            {
+                await using var r = await cmd.ExecuteReaderAsync(ct);
+                while (await r.ReadAsync(ct)) channels.Add((r.GetGuid(0), r.GetString(1), r.GetString(2)));
+            }
+        }
+
+        // Yalnız satıcı ürünlerine açık kanallar (yetenek: thirdPartySellerProducts)
+        var open = new List<(Guid Id, string Code, string Name)>();
+        foreach (var chn in channels)
+            if ((await capabilityResolver.GetAsync(chn.Id, ct)).ThirdPartySellerProducts) open.Add(chn);
+
+        var statuses = new Dictionary<Guid, Dictionary<Guid, object>>();
+        foreach (var chn in open)
+        {
+            var map = await listingSvc.ComputeManyAsync(chn.Id, owned, ct);
+            foreach (var (pid, st) in map)
+            {
+                if (!statuses.TryGetValue(pid, out var per)) statuses[pid] = per = new Dictionary<Guid, object>();
+                per[chn.Id] = new
+                {
+                    status = st.Status,
+                    reasons = st.Reasons.Select(c => new { code = c, label = ECSPros.Api.Services.ChannelListingStatusService.ReasonLabel(c) }).ToList(),
+                };
+            }
+        }
+
+        return Ok(new { success = true, data = new
+        {
+            channels = open.Select(c => new { id = c.Id, code = c.Code, name = c.Name }).ToList(),
+            statuses,
+        } });
+    }
+
     /// <summary>Ürün detayı — canlı ürün (varyantlarıyla) + gönderim geçmişi (red notları). S3a-1.</summary>
     [HttpGet("products/{supplierProductCode}")]
     public async Task<IActionResult> ProductDetail(string supplierProductCode, CancellationToken ct)
@@ -427,3 +494,4 @@ public record SupplierShipmentRequest(string CarrierName, string TrackingNumber,
 public record SupplierInvoiceRequest(string InvoiceNumber, string? InvoiceUrl);
 public record SupplierCampaignJoinRequest(List<Guid>? ProductIds);
 public record SupplierCargoModeRequest(string CargoMode);
+public record SupplierListingStatusRequest(List<Guid>? ProductIds);

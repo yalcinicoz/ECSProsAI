@@ -1,5 +1,7 @@
 using ECSPros.Catalog.Application.Helpers;
 using ECSPros.Catalog.Application.Services;
+using ECSPros.Shared.Contracts.Channels;
+using ECSPros.Storefront.Application.Services.ChannelScoping;
 using ECSPros.Shared.Kernel.Common;
 using ECSPros.Storefront.Application.Services;
 using MediatR;
@@ -18,7 +20,7 @@ public record GetChannelProductIdsAdminQuery(
     string? Status = null,
     IReadOnlyCollection<Guid>? RestrictToProductIds = null) : IRequest<Result<List<Guid>>>;
 
-public class GetChannelProductIdsAdminQueryHandler(IStorefrontDbContext sfDb, ICatalogDbContext catDb)
+public class GetChannelProductIdsAdminQueryHandler(IStorefrontDbContext sfDb, ICatalogDbContext catDb, IChannelCapabilityResolver capabilityResolver)
     : IRequestHandler<GetChannelProductIdsAdminQuery, Result<List<Guid>>>
 {
     public async Task<Result<List<Guid>>> Handle(GetChannelProductIdsAdminQuery request, CancellationToken ct)
@@ -27,6 +29,11 @@ public class GetChannelProductIdsAdminQueryHandler(IStorefrontDbContext sfDb, IC
 
         var baseQuery = catDb.Products.AsNoTracking()
             .Where(p => catDb.ProductImages.Any(img => img.ProductId == p.Id));
+
+        // F5 K6: kanalın kapalı olduğu kaynaklar (seller/supply) listede görünmez.
+        var allowedSources = ChannelScopeResolver.AllowedSourceTypes(await capabilityResolver.GetAsync(request.FirmPlatformId, ct));
+        if (allowedSources.Count < 3)
+            baseQuery = baseQuery.Where(p => allowedSources.Contains(p.SourceType));
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {

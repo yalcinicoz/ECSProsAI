@@ -1,4 +1,5 @@
 using ECSPros.Catalog.Application.Services;
+using ECSPros.Shared.Contracts.Channels;
 using ECSPros.Shared.Contracts;
 using ECSPros.Storefront.Application.Services.ChannelScoping;
 using ECSPros.Storefront.Infrastructure.Persistence;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Caching.Memory;
 namespace ECSPros.Storefront.Infrastructure.Services;
 
 /// <summary>B11: IChannelProductFlagService implementasyonu (storefront.channel_products).</summary>
-public class StorefrontChannelProductFlagService(StorefrontDbContext db, ICatalogDbContext catDb, IMemoryCache cache) : IChannelProductFlagService
+public class StorefrontChannelProductFlagService(StorefrontDbContext db, ICatalogDbContext catDb, IMemoryCache cache, IChannelCapabilityResolver capabilityResolver) : IChannelProductFlagService
 {
     public async Task<HashSet<Guid>> GetFeaturedProductIdsAsync(Guid firmPlatformId, CancellationToken ct = default)
     {
@@ -41,6 +42,17 @@ public class StorefrontChannelProductFlagService(StorefrontDbContext db, ICatalo
                               && (cp.SaleStoppedUntil == null || cp.SaleStoppedUntil >= simdi))))
             .Select(cp => cp.ProductId)
             .ToListAsync(ct)).ToHashSet();
+
+        // F5 K6: kanalın kapalı olduğu kaynaklar (seller/supply) görünmez — hangi kapsam tipinde olursa olsun.
+        var caps = await capabilityResolver.GetAsync(firmPlatformId, ct);
+        var allowedSources = ChannelScopeResolver.AllowedSourceTypes(caps);
+        if (allowedSources.Count < 3)
+        {
+            var disallowedIds = await catDb.Products.AsNoTracking()
+                .Where(p => p.SourceType != "own" && !allowedSources.Contains(p.SourceType))
+                .Select(p => p.Id).ToListAsync(ct);
+            foreach (var id in disallowedIds) deny.Add(id);
+        }
 
         var filterBased = await db.ChannelScopes.AsNoTracking()
             .AnyAsync(s => s.FirmPlatformId == firmPlatformId && (s.FillType == "filter" || s.FillType == "mixed"), ct);

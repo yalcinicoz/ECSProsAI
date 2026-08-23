@@ -7,6 +7,7 @@ import { pickName, formatDate } from '@/lib/i18n'
 
 interface ProductRow {
   supplierProductCode: string
+  productId: string | null
   productCode: string | null
   name: Record<string, string>
   groupCode: string
@@ -24,6 +25,23 @@ interface Paged<T> {
   totalCount: number
   page: number
   pageSize: number
+}
+
+// F5: kanal bazlı listeleme durumu (satis-kanali-ortak-kurgu §3.2 — satıcı kesiti)
+interface ListingReason { code: string; label: string }
+interface ListingPerChannel { status: string; reasons: ListingReason[] }
+interface ListingData {
+  channels: { id: string; code: string; name: string }[]
+  statuses: Record<string, Record<string, ListingPerChannel>>
+}
+const LISTING_TR: Record<string, { label: string; cls: string }> = {
+  published: { label: 'Yayında', cls: 'bg' },
+  ready: { label: 'Hazır', cls: 'bg' },
+  pending: { label: 'Bekliyor', cls: 'ba' },
+  missing_info: { label: 'Eksik bilgi', cls: 'ba' },
+  blocked: { label: 'Listelenmiyor', cls: 'br' },
+  failed: { label: 'Hatalı', cls: 'br' },
+  deactivated: { label: 'Düşürüldü', cls: 'br' },
 }
 
 const STATUS_OPTIONS = [
@@ -53,7 +71,7 @@ export function ProductsPage() {
   const [page, setPage] = useState(1)
   const pageSize = 20
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<Paged<ProductRow>>({
     queryKey: ['supplier-products', status, search, page],
     queryFn: async () => {
       const { data } = await api.get('/supplier/products', {
@@ -61,6 +79,15 @@ export function ProductsPage() {
       })
       return data.data as Paged<ProductRow>
     },
+  })
+
+  // F5: canlı ürünlerin kanallardaki listeleme durumu (satır rozetleri)
+  const liveIds = (data?.items ?? []).map(r => r.productId).filter((x): x is string => !!x)
+  const { data: listing } = useQuery<ListingData>({
+    queryKey: ['supplier-listing', liveIds.join(',')],
+    queryFn: async () => (await api.post('/supplier/products/listing-status', { productIds: liveIds })).data.data,
+    enabled: liveIds.length > 0,
+    staleTime: 60_000,
   })
 
   const totalPages = data ? Math.max(1, Math.ceil(data.totalCount / pageSize)) : 1
@@ -113,18 +140,19 @@ export function ProductsPage() {
                 <th className="px-4 py-3 font-semibold">Grup</th>
                 <th className="px-4 py-3 font-semibold text-center">Varyant</th>
                 <th className="px-4 py-3 font-semibold">Durum</th>
+                <th className="px-4 py-3 font-semibold">Listelenme</th>
                 <th className="px-4 py-3 font-semibold">Son İşlem</th>
               </tr>
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={6} className="px-4 py-10 text-center" style={{ color: 'var(--text-s)' }}>Yükleniyor…</td></tr>
+                <tr><td colSpan={7} className="px-4 py-10 text-center" style={{ color: 'var(--text-s)' }}>Yükleniyor…</td></tr>
               )}
               {!!error && (
-                <tr><td colSpan={6} className="px-4 py-10 text-center text-red-500">Liste yüklenemedi.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-10 text-center text-red-500">Liste yüklenemedi.</td></tr>
               )}
               {data && data.items.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-10 text-center" style={{ color: 'var(--text-s)' }}>
+                <tr><td colSpan={7} className="px-4 py-10 text-center" style={{ color: 'var(--text-s)' }}>
                   {search || status ? 'Filtreye uyan kayıt yok.' : 'Henüz ürününüz yok.'}
                 </td></tr>
               )}
@@ -145,6 +173,23 @@ export function ProductsPage() {
                   </td>
                   <td className="px-4 py-3 text-center" style={{ color: 'var(--text-m)' }}>{r.variantCount}</td>
                   <td className="px-4 py-3"><StatusBadges row={r} /></td>
+                  <td className="px-4 py-3">
+                    {!r.productId ? <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span> : (
+                      <span className="inline-flex gap-1.5 flex-wrap">
+                        {(listing?.channels ?? []).map(ch => {
+                          const st = listing?.statuses?.[r.productId!]?.[ch.id]
+                          if (!st) return null
+                          const m = LISTING_TR[st.status] ?? { label: st.status, cls: 'ba' }
+                          const sebep = st.reasons.map(x => x.label).join(' · ')
+                          return (
+                            <span key={ch.id} className={`badge ${m.cls}`} title={sebep ? `${ch.name}: ${sebep}` : ch.name}>
+                              {ch.name}: {m.label}
+                            </span>
+                          )
+                        })}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap" style={{ color: 'var(--text-s)' }}>{formatDate(r.lastActivityAt)}</td>
                 </tr>
               ))}

@@ -31,6 +31,8 @@ export interface FilterDef {
   // F1 kanal kapsamı kriterleri (yalnız channelScope modunda gösterilir)
   hasChannelPrice?: boolean | null
   minStock?: number | null
+  // F5 K6: ürün kaynağı (own | seller | supply) — boş = kanalın izin verdiği tüm kaynaklar
+  sourceTypes?: string[]
 }
 
 interface AttributeFilterItem { attributeTypeId: string; valueIds: string[] }
@@ -79,6 +81,7 @@ export function buildDescription(
   if (def.isActive === true) parts.push('Sadece aktif')
   if (def.isActive === false) parts.push('Sadece pasif')
 
+  if (def.sourceTypes?.length) parts.push('Kaynak: ' + def.sourceTypes.map(s => s === 'own' ? 'Bizim' : s === 'seller' ? 'Satıcı' : 'Dış kaynak').join(', '))
   if (def.hasChannelPrice) parts.push('Bu kanalda fiyatı olanlar')
   if (def.minStock != null && def.minStock > 0) parts.push(`Kanal stok eşiği ≥ ${def.minStock}`)
   if (def.stockMin != null && def.stockMax != null) parts.push(`Stok: ${def.stockMin}–${def.stockMax} adet`)
@@ -356,6 +359,26 @@ export function FilterBuilder({ value, onChange, channelScope = false }: FilterB
       {/* F1 Kanal kapsamı kriterleri */}
       {channelScope && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Section title="Ürün Kaynağı" hint="Boş = kanalın izin verdiği tüm kaynaklar; kanalın kapalı olduğu kaynak seçilse de kapsama girmez">
+            <div className="flex flex-wrap gap-3">
+              {[
+                { v: 'own', l: 'Bizim ürünlerimiz' },
+                { v: 'seller', l: 'Satıcı ürünleri' },
+                { v: 'supply', l: 'Dış tedarik kaynağı' },
+              ].map(o => (
+                <label key={o.v} className="flex items-center gap-1.5 cursor-pointer text-sm" style={{ color: 'var(--text)' }}>
+                  <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
+                    checked={(def.sourceTypes ?? []).includes(o.v)}
+                    onChange={e => {
+                      const cur = def.sourceTypes ?? []
+                      const next = e.target.checked ? [...cur, o.v] : cur.filter(x => x !== o.v)
+                      update({ sourceTypes: next.length ? next : undefined })
+                    }} />
+                  {o.l}
+                </label>
+              ))}
+            </div>
+          </Section>
           <Section title="Kanal Fiyatı" hint="Bu kanalda fiyatı (kanal fiyatı > 0) olan ürünler">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"

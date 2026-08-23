@@ -122,7 +122,10 @@ public sealed class MarketplaceAdminService(
               ELSE cp.""Id"" IS NULL OR NOT cp.""IsExcluded"" END)
         AND (cp.""Id"" IS NULL OR cp.""IsActive"")
         AND NOT (cp.""SaleStoppedFrom"" IS NOT NULL AND cp.""SaleStoppedFrom"" <= now()
-                 AND (cp.""SaleStoppedUntil"" IS NULL OR cp.""SaleStoppedUntil"" >= now()))";
+                 AND (cp.""SaleStoppedUntil"" IS NULL OR cp.""SaleStoppedUntil"" >= now()))
+        AND (p.""SourceType"" = 'own'
+             OR (p.""SourceType"" = 'seller' AND COALESCE((fp.""capability_overrides""->>'thirdPartySellerProducts')::boolean, (pt2.""capabilities""->>'thirdPartySellerProducts')::boolean, FALSE))
+             OR (p.""SourceType"" = 'supply' AND COALESCE((fp.""capability_overrides""->>'externalSupplyProducts')::boolean, (pt2.""capabilities""->>'externalSupplyProducts')::boolean, FALSE)))";
 
     // Listing'in mağazası: kayıttaki doğrudan bağ, yoksa sözleşmenin platformu.
     private const string ListingPlatformExpr =
@@ -208,6 +211,7 @@ public sealed class MarketplaceAdminService(
             CROSS JOIN catalog.products p
             LEFT JOIN storefront.channel_products cp ON cp.""FirmPlatformId"" = fp.""Id"" AND cp.""ProductId"" = p.""Id"" AND NOT cp.""IsDeleted""
             LEFT JOIN storefront.channel_scopes sc ON sc.""FirmPlatformId"" = fp.""Id"" AND NOT sc.""IsDeleted""
+            JOIN core.core_platform_types pt2 ON pt2.""Id"" = fp.""PlatformTypeId""
             WHERE fp.""Id"" = ANY(@ids) AND NOT p.""IsDeleted"" AND p.""IsSaleOpen""
               AND EXISTS (SELECT 1 FROM catalog.product_images img WHERE img.""ProductId"" = p.""Id"" AND NOT img.""IsDeleted"")
               AND " + ChannelVisibleWhere + @"
@@ -348,6 +352,8 @@ public sealed class MarketplaceAdminService(
                 FROM catalog.products p
                 LEFT JOIN storefront.channel_products cp ON cp.""FirmPlatformId"" = @platform AND cp.""ProductId"" = p.""Id"" AND NOT cp.""IsDeleted""
                 LEFT JOIN storefront.channel_scopes sc ON sc.""FirmPlatformId"" = @platform AND NOT sc.""IsDeleted""
+                JOIN core.core_firm_platforms fp ON fp.""Id"" = @platform
+                JOIN core.core_platform_types pt2 ON pt2.""Id"" = fp.""PlatformTypeId""
                 LEFT JOIN catalog.product_variants v ON v.""ProductId"" = p.""Id""
                 LEFT JOIN integration.marketplace_product_readiness rd
                        ON rd.""Marketplace"" = @mp AND rd.""ProductId"" = p.""Id""
@@ -692,6 +698,8 @@ public sealed class MarketplaceAdminService(
             FROM catalog.products p
             LEFT JOIN storefront.channel_products cp ON cp.""FirmPlatformId"" = @platform AND cp.""ProductId"" = p.""Id"" AND NOT cp.""IsDeleted""
             LEFT JOIN storefront.channel_scopes sc ON sc.""FirmPlatformId"" = @platform AND NOT sc.""IsDeleted""
+            JOIN core.core_firm_platforms fp ON fp.""Id"" = @platform
+            JOIN core.core_platform_types pt2 ON pt2.""Id"" = fp.""PlatformTypeId""
             LEFT JOIN integration.marketplace_product_readiness rd
                    ON rd.""Marketplace"" = @mp AND rd.""ProductId"" = p.""Id""
                   AND rd.""FirmPlatformId"" IS NULL AND NOT rd.""IsDeleted""

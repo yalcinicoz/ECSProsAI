@@ -17,6 +17,10 @@ public class Product : BaseEntity
     // yerini aldı (IsDeleted zaten varlık için yeterli). Yeni ürünlerde varsayılan KAPALI.
     public bool IsSaleOpen { get; set; } = false;
     public Guid? SupplierId { get; set; }
+    /// <summary>F5 (satis-kanali-ortak-kurgu K6): ürünün kaynağı — own (bizim) | seller (üçüncü taraf satıcı,
+    /// Kapı 2 onayıyla katalog'a girer) | supply (Y4 dış tedarik kaynağı, F6). Kanal kapsam/görünürlük
+    /// kuralları yetenek bayraklarıyla (thirdPartySellerProducts / externalSupplyProducts) bunu süzer.</summary>
+    public string SourceType { get; set; } = "own";
     public string? SupplierProductCode { get; set; }
     public List<string> Tags { get; set; } = new();
     public string? Slug { get; set; }

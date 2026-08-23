@@ -157,6 +157,8 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(x => x.BaseCost).HasPrecision(18, 4);
         builder.Property(x => x.SupplierProductCode).HasMaxLength(100);
         builder.Property(x => x.Tags).HasColumnType("jsonb").HasDefaultValueSql("'[]'::jsonb");
+        builder.Property(x => x.SourceType).HasMaxLength(20).IsRequired().HasDefaultValue("own");
+        builder.HasIndex(x => x.SourceType);
         builder.Property(x => x.Slug).HasMaxLength(300);
         builder.Property(x => x.MetaTitleI18n).HasColumnType("jsonb");
         builder.Property(x => x.MetaDescriptionI18n).HasColumnType("jsonb");

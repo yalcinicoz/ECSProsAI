@@ -51,6 +51,17 @@ hata tablosu, Gönder/Yeniden Dene=/marketplaces/{id}/sync-products, Hazırlığ
 "Listeden düşür" (deactivate) backend'i YOK — bilinçli eksik. Rehber Kanal Ürünleri güncellendi (çekmece+çipler).
 İzole 5051 ✓: listing=published 5792 / blocked 11309 liste sayıları özetle birebir, reason=sale_stopped 324,
 blocked∩stopped=324, trendyol çekmece detayı (push:true, mp:trendyol), bilinmeyen listing→0.
+**F5 SATICI KAYNAĞI UYGULANDI (2026-08-23) ⚠️ restart bekliyor; KALAN: F4 dropship bayi (Dış API alanı, unutma!) + F6-F8:**
+`Product.SourceType` own|seller|supply (migration `AddProductSourceType` canlı DB'de ✓) — Approve damgası (yeni+revizyon)
++ seed backfill (1 ürün seller işaretlendi ✓); K6 yetenek zorlaması 4 okuma yolunda (kapsam çözücü kesişim, storefront
+deny-set, listeleme taban SQL @sources, pazaryeri aday SQL capabilities jsonb); kural `SourceTypes` + FilterBuilder
+"Ürün Kaynağı"; hesaplayıcı evren dışını da açıklar (`no_image`, `out_of_scope`) + `seller_update_pending` BİLGİ sebebi
+(durumu değiştirmez); satıcı kesiti `POST /api/supplier/products/listing-status` (sahiplik filtresi, yalnız
+thirdPartySellerProducts=true kanallar) + satici/ "Ürünlerim" Listelenme sütunu (satici build ✓; panel hâlâ
+restart+nginx+DNS bekliyor). İzole 5051 ✓: trendyol'da seller görünmez, satıcıya açık kanallar mishar/julude/olutbutik/
+tozlu, sebepler [sale_closed,out_of_stock,no_image,seller_update_pending], yabancı id düşer, admin token→403,
+mishar F2 özeti DEĞİŞMEDİ (17101/5792). Plan sapması: seller_stock_zero/price_stale ayrı kod olmadı (paylaşımlı
+katalog/envanter → price_zero/out_of_stock kapsıyor).
 
 F0 (yetenek modeli): `Shared.Contracts/Channels/ChannelCapabilities.cs` (+`IChannelCapabilityResolver`, Core.Infrastructure impl.
 2 dk IMemoryCache), `core_platform_types.capabilities` + `core_firm_platforms.capability_overrides` jsonb (migration

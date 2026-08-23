@@ -32,6 +32,7 @@ Kanal kategorilerindeki kurallara ek olarak:
 |---|---|
 | Ürün Grupları | Yalnız seçilen gruplar. |
 | **Hariç Tutulan Ürün Grupları** | "Tümü, şu gruplar hariç" kurgusu: dahil listesini boş bırakın, hariçleri buraya ekleyin (örn. tüm gruplar satılacak ama iç çamaşırı hariç). Dahil listesiyle birlikte de çalışır (önce dahil, sonra hariçler düşülür). |
+| Ürün Kaynağı | Bizim ürünlerimiz / Satıcı ürünleri / Dış tedarik kaynağı. Boş = kanalın izin verdiği tüm kaynaklar. Kanalın kapalı olduğu kaynak (kanal yeteneği) seçilse bile kapsama girmez. |
 | Kanal Fiyatı | Yalnız bu kanalda fiyatı (kanal fiyatı > 0) olan ürünler. |
 | Kanal Stok Eşiği | Net stoğu eşiğin altındaki ürünler kapsam dışı; kanala verilen adet = net − eşik + 1. |
 

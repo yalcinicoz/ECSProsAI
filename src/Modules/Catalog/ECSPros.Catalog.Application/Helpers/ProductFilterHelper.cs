@@ -30,6 +30,9 @@ public static class ProductFilterHelper
         if (rules.ExcludedProductGroupIds is { Count: > 0 })
             q = q.Where(p => !rules.ExcludedProductGroupIds.Contains(p.ProductGroupId));
 
+        if (rules.SourceTypes is { Count: > 0 })
+            q = q.Where(p => rules.SourceTypes.Contains(p.SourceType));
+
         if (rules.PriceMin.HasValue) q = q.Where(p => p.BasePrice >= rules.PriceMin.Value);
         if (rules.PriceMax.HasValue) q = q.Where(p => p.BasePrice <= rules.PriceMax.Value);
 

@@ -21,6 +21,7 @@ public static class DatabaseSeeder
         await SeedCoreAsync(scope.ServiceProvider);
         await SeedCatalogAsync(scope.ServiceProvider);
         await SeedPlatformTypesAsync(services);
+        await SeedProductSourceTypeBackfillAsync(scope.ServiceProvider);
         await SeedStorefrontDefaultsAsync(scope.ServiceProvider);
         await SeedCrmDefaultsAsync(scope.ServiceProvider);
         await SeedGeoAsync(scope.ServiceProvider);
@@ -1323,6 +1324,22 @@ public static class DatabaseSeeder
         await context.SaveChangesAsync();
 
         Console.WriteLine("✓ Seed: Admin kullanıcısı oluşturuldu. (admin / Admin123!)");
+    }
+
+    /// <summary>
+    /// F5 K6 backfill (idempotent): onaylanmış satıcı gönderimlerinden doğan ürünler SourceType=seller olur.
+    /// Yeni onaylar ApproveProductSubmission'da damgalanır; bu yalnız eski kayıtları düzeltir.
+    /// </summary>
+    private static async Task SeedProductSourceTypeBackfillAsync(IServiceProvider sp)
+    {
+        var db = sp.GetRequiredService<ECSPros.Catalog.Infrastructure.Persistence.CatalogDbContext>();
+        var n = await db.Database.ExecuteSqlRawAsync("""
+            UPDATE catalog.products p SET "SourceType" = 'seller'
+            WHERE p."SourceType" = 'own' AND EXISTS (
+                SELECT 1 FROM catalog.product_submissions s
+                WHERE s."Status" = 'approved' AND s."ProductId" = p."Id" AND NOT s."IsDeleted")
+            """);
+        if (n > 0) Console.WriteLine($"✓ Seed: {n} ürün SourceType=seller olarak işaretlendi (backfill).");
     }
 
     /// <summary>
