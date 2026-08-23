@@ -90,6 +90,7 @@ değişince seçim sıfırlanır. Sonuç yoksa "Kayıt bulunamadı." yazar.
 > **Not:** Satış durdurulmuş ürünler kanalda kalır; "Durdurulan" filtresiyle listelenir ve sayaçta görünür.
 
 ## İlgili sayfalar
+- [Kanal Kapsamı](/rehber/vitrin/kanal-kapsami/) — bu kanalda hangi ürünlerin söz konusu olduğu (listeye gelmeyen ürün kapsam dışı olabilir)
 - [Kanal Kategorileri](/rehber/vitrin/kanal-kategorileri/)
 - [Ürün Kartları](/rehber/katalog/urun-kartlari/)
 - [Stok Takibi](/rehber/stok/stok-takibi/)

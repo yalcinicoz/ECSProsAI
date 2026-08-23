@@ -31,7 +31,10 @@ komutlarda invalidation; MarketplaceAdminService aday SQL'i storefront ile AYNI 
 `ChannelScopeSyncWorker` (03:xx gece + açılışta 24h eski); K17 `IChannelStockCalculator` (InStockProductProvider) ; admin Kanal
 Ürünleri → Ürünler|Kapsam sekmeleri (`ChannelScopeTab.tsx`), FilterBuilder `channelScope` kriterleri (npm build ✓).
 İzole 5051 ✓: 4 kanal × 4 durum manage sayıları canlıyla birebir; trendyol_alyena'da filtre→398 ürün, manuel ekle/hariç, sync
-korur, all'a dönüş 17101 (test kalıntıları silindi). Publish alındı. KALAN F1 işi: rehber sayfası (Kanal Ürünleri → Kapsam sekmesi).
+korur, all'a dönüş 17101 (test kalıntıları silindi). Publish alındı. **2026-08-23 devam:** kullanıcı kararıyla Kapsam AYRI SAYFAYA taşındı `/storefront/channel-scope`
+(sidebar "Kanal Kapsamı"; Kanal Ürünleri'nden sekme kaldırıldı — günlük operasyonla kapsam kararı ayrıştı) +
+filtreye **Hariç Tutulan Ürün Grupları** (ExcludedProductGroupIds — "tümü, iç çamaşırı hariç"; kategori/kampanya
+filtrelerinde de kullanılabilir) + rehber sayfası `vitrin/kanal-kapsami` (build ✓). İzole 5051: grup(398)+hariç(16703)=katalog(17101) ✓.
 
 F0 (yetenek modeli): `Shared.Contracts/Channels/ChannelCapabilities.cs` (+`IChannelCapabilityResolver`, Core.Infrastructure impl.
 2 dk IMemoryCache), `core_platform_types.capabilities` + `core_firm_platforms.capability_overrides` jsonb (migration

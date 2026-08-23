@@ -31,6 +31,7 @@ import { ChannelCategoriesPage } from '@/pages/storefront/ChannelCategoriesPage'
 import { MenuPlacementPage } from '@/pages/storefront/MenuPlacementPage'
 import { ProductCardPage } from '@/pages/storefront/ProductCardPage'
 import { ChannelProductsPage } from '@/pages/storefront/ChannelProductsPage'
+import { ChannelScopePage } from '@/pages/storefront/ChannelScopePage'
 import { ChannelCategoryDetailPage } from '@/pages/storefront/ChannelCategoryDetailPage'
 import { CollectionsModerationPage } from '@/pages/storefront/CollectionsModerationPage'
 import { ReviewsModerationPage } from '@/pages/storefront/ReviewsModerationPage'
@@ -120,6 +121,7 @@ export const router = createBrowserRouter(
             { path: 'storefront/product-card',            element: <ProductCardPage /> },
             { path: 'storefront/channel-categories/:id',  element: <ChannelCategoryDetailPage /> },
             { path: 'storefront/channel-products',         element: <ChannelProductsPage /> },
+            { path: 'storefront/channel-scope',            element: <ChannelScopePage /> },
             { path: 'storefront/collections',              element: <CollectionsModerationPage /> },
             { path: 'storefront/reviews',                  element: <ReviewsModerationPage /> },
             { path: 'storefront/pages',                    element: <PagesManagementPage /> },

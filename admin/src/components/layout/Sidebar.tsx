@@ -75,6 +75,7 @@ const NAV_SECTIONS: NavSection[] = [
     { label: 'Ürün Kartı', to: '/storefront/product-card', icon: 'layout' },
     { label: 'Takip & Çerez', to: '/storefront/tracking-consent', icon: 'layout' },
     { label: 'Kanal Ürünleri', to: '/storefront/channel-products', icon: 'layout' },
+    { label: 'Kanal Kapsamı', to: '/storefront/channel-scope', icon: 'filter' },
     { label: 'Koleksiyon Moderasyonu', to: '/storefront/collections', icon: 'layout' },
     { label: 'Yorum Moderasyonu', to: '/storefront/reviews', icon: 'layout' },
     { label: 'Vitrin Yönetimi', to: '/storefront/pages', icon: 'layout' },

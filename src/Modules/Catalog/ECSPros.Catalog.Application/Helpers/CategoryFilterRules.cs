@@ -6,6 +6,9 @@ public class CategoryFilterRules
 {
     // Ürün grubu
     public List<Guid>? ProductGroupIds { get; set; }
+    /// <summary>Hariç tutulan ürün grupları — "tümü, şu gruplar hariç" kurgusu (kanal kapsamı, 2026-08-23).
+    /// ProductGroupIds ile birlikte de çalışır (önce dahil kümesi, sonra hariçler düşülür).</summary>
+    public List<Guid>? ExcludedProductGroupIds { get; set; }
 
     // Temel fiyat aralığı
     public decimal? PriceMin { get; set; }

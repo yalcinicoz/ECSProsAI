@@ -8,6 +8,7 @@ import api from '@/api/client'
 
 export interface FilterDef {
   productGroupIds?: string[]
+  excludedProductGroupIds?: string[]
   priceMin?: number | null
   priceMax?: number | null
   platformPriceMin?: number | null
@@ -56,6 +57,8 @@ export function buildDescription(
 
   if (def.productGroupIds?.length)
     parts.push(def.productGroupIds.map(id => tr(refs.groups.find(g => g.id === id)?.nameI18n)).filter(Boolean).join(', ') + ' grubundan')
+  if (def.excludedProductGroupIds?.length)
+    parts.push(def.excludedProductGroupIds.map(id => tr(refs.groups.find(g => g.id === id)?.nameI18n)).filter(Boolean).join(', ') + ' grubu HARİÇ')
 
   if (def.supplierIds?.length)
     parts.push('Tedarikçi: ' + def.supplierIds.map(id => refs.suppliers.find(s => s.id === id)?.title ?? '?').join(', '))
@@ -149,6 +152,7 @@ export function FilterBuilder({ value, onChange, channelScope = false }: FilterB
 
   const [def, setDef] = useState<FilterDef>(() => value)
   const [groupOpen, setGroupOpen] = useState(false)
+  const [exGroupOpen, setExGroupOpen] = useState(false)
   const [suppOpen, setSuppOpen] = useState(false)
   const [tagInput, setTagInput] = useState('')
   const [tagFocused, setTagFocused] = useState(false)
@@ -179,7 +183,7 @@ export function FilterBuilder({ value, onChange, channelScope = false }: FilterB
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-  function toggleMultiId(key: 'productGroupIds' | 'supplierIds', id: string) {
+  function toggleMultiId(key: 'productGroupIds' | 'excludedProductGroupIds' | 'supplierIds', id: string) {
     const list = (def[key] ?? []) as string[]
     const next = list.includes(id) ? list.filter(x => x !== id) : [...list, id]
     update({ [key]: next.length ? next : undefined })
@@ -246,6 +250,22 @@ export function FilterBuilder({ value, onChange, channelScope = false }: FilterB
           {productGroups.map(g => (
             <DropItem key={g.id} selected={(def.productGroupIds ?? []).includes(g.id)}
               onClick={() => { toggleMultiId('productGroupIds', g.id); setGroupOpen(false) }}>
+              {tr(g.nameI18n, g.code)}
+            </DropItem>
+          ))}
+        </Dropdown>
+      </Section>
+
+      {/* Hariç Tutulan Ürün Grupları */}
+      <Section title="Hariç Tutulan Ürün Grupları" hint='"Tümü, şu gruplar hariç" için: dahil listesi boş bırakılır, hariçler buraya eklenir'>
+        <ChipList items={def.excludedProductGroupIds ?? []}
+          label={id => tr(productGroups.find(g => g.id === id)?.nameI18n) || '…'}
+          onRemove={id => toggleMultiId('excludedProductGroupIds', id)} />
+        <Dropdown label={def.excludedProductGroupIds?.length ? 'Başka grup hariç tut' : 'Hariç tutulacak grubu seç'}
+          open={exGroupOpen} onToggle={() => setExGroupOpen(o => !o)}>
+          {productGroups.map(g => (
+            <DropItem key={g.id} selected={(def.excludedProductGroupIds ?? []).includes(g.id)}
+              onClick={() => { toggleMultiId('excludedProductGroupIds', g.id); setExGroupOpen(false) }}>
               {tr(g.nameI18n, g.code)}
             </DropItem>
           ))}

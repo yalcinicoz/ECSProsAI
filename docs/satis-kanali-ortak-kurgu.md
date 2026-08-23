@@ -1,7 +1,14 @@
 # Satış Kanalı Ortak Kurgusu — Kanal Ürünleri, Dropshipping (iki yön), Pazaryeri, Tedarik Kaynakları
 
 > Sürüm: **v1.2 — 2026-08-23** (v1.1 + F0 uygulama durumu)
-> **Uygulama durumu:** F0 Yetenek modeli **UYGULANDI (2026-08-23) ⚠️ restart bekliyor** — `ChannelCapabilities` (Shared.Contracts/Channels) + `IChannelCapabilityResolver` (Core.Infrastructure, 2 dk IMemoryCache), `core_platform_types.capabilities` / `core_firm_platforms.capability_overrides` (jsonb, migration `AddChannelCapabilities` canlı DB'de uygulandı), seed: `dropship_partner` tipi + koda göre backfill (idempotent), `IsMarketplace` artık `pushListing`'den türetilir (kolon korunur), admin: Platform Tipleri yetenek editörü (3 şablon butonu), kanal formu ezme editörü (4 alan) + kart/tablo rozetleri, rehber sayfaları güncellendi. İzole 5051 testi ✓ (ezme yazma/sanitize/negatif/temizleme, tip güncelleme, türetme). **Sırada F1 Kapsam.**
+> **Uygulama durumu (2026-08-23):** **F0 CANLIDA; F1 Kapsam UYGULANDI ⚠️ restart bekliyor.** F1 uygulama kararları:
+> (1) kapsam tanımı `FirmPlatform` yerine **`storefront.channel_scopes`** tablosunda (kanal verisi Storefront'ta);
+> (2) **hibrit materyalizasyon** — `all` örtük (satır yoksa kanalda, eski davranış birebir), `filter|mixed` materyalize
+> `channel_products.InScope`; (3) kapsam yönetimi **ayrı sayfada** `/storefront/channel-scope` (kullanıcı kararı:
+> kapsam kararı sorumluların işi, günlük operasyon ekranına konmaz — K9'a ek); (4) kural şemasına
+> **ExcludedProductGroupIds** eklendi ("tümü, şu gruplar hariç"); (5) pazaryeri aday SQL'i storefront ile aynı
+> görünürlük anlamına geçti (K10 kapandı). İzole 5051 kabul testleri ✓ (kanal başına sayılar birebir).
+> F0 Yetenek modeli **UYGULANDI (2026-08-23)** — `ChannelCapabilities` (Shared.Contracts/Channels) + `IChannelCapabilityResolver` (Core.Infrastructure, 2 dk IMemoryCache), `core_platform_types.capabilities` / `core_firm_platforms.capability_overrides` (jsonb, migration `AddChannelCapabilities` canlı DB'de uygulandı), seed: `dropship_partner` tipi + koda göre backfill (idempotent), `IsMarketplace` artık `pushListing`'den türetilir (kolon korunur), admin: Platform Tipleri yetenek editörü (3 şablon butonu), kanal formu ezme editörü (4 alan) + kart/tablo rozetleri, rehber sayfaları güncellendi. İzole 5051 testi ✓ (ezme yazma/sanitize/negatif/temizleme, tip güncelleme, türetme). **Sırada F1 Kapsam.**
 > Alan: 🛠 **Admin panel** (pano #2) + zorunlu çekirdek dokunuşları (Core/Storefront/Integration/Catalog) +
 > 🔌 Dış API (pano #3) ile kesişen noktalar işaretlidir.
 > İlgili dokümanlar: `docs/pazaryeri-entegrasyon-veri-yonetimi.md` (pazaryeri eşleme/yükleme, F1-F5 canlı),
