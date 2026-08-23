@@ -1,0 +1,434 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Firmalar — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="">Toplama Planlama</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="active">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Sistem</span> › <b>Firmalar</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Sistem</div><h1>Firmalar</h1>
+<p class="ozet">Paneldeki firmaların (tüzel kişilik) listesi, firma bilgileri, firmaya bağlı satış kanalları ve dış servis entegrasyonlarının (kargo, SMS, e-posta, ödeme, takip servisleri vb.) yönetildiği ekran.</p><p class="rota">Panel adresi: <code>/admin/settings/firms</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#liste-ve-filtreler">Liste ve filtreler</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#form-alanlari">Form alanları</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Firma, panelde tüm yapının çatısıdır: satış kanalları (web sitesi, pazaryeri mağazası, mobil uygulama, mağaza/POS) ve dış servis sözleşmeleri (kargo, SMS, e-posta, ödeme, görsel arama, reklam/analitik takibi) bir firmaya bağlıdır. Bu ekranı sistem yöneticisi kullanır: yeni firma açmak, vergi/iletişim bilgilerini güncellemek, firmanın kanallarını görmek ve <strong>Entegrasyonlar</strong> bölümünden servis kimlik bilgilerini girmek için. Günlük operasyonda bir firmanın bir servisle yeni sözleşme yapması (örneğin yeni bir kargo firması) bu ekrandan başlar; kargo bölgeleri, kanal ödeme yöntemleri gibi diğer ekranlar burada tanımlı entegrasyonlara dayanır.</p>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/settings-firms.webp" class="buyut" data-alt="Firmalar listesi"><img src="/rehber/img/settings-firms.webp" alt="Firmalar listesi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Firmalar listesi</figcaption></figure></p>
+<ol>
+<li><strong>Başlık satırı</strong> — &quot;Firmalar&quot; başlığı, kayıt sayısı ve sağda <strong>Yeni Firma</strong> butonu.</li>
+<li><strong>Firma tablosu</strong> — her satır bir firma; satıra tıklayınca firma detay sayfası açılır. Satır sonunda <strong>Düzenle</strong> butonu ve sağa ok işareti vardır.</li>
+</ol>
+<p><figure class="ekran"><a href="/rehber/img/settings-firms-detay.webp" class="buyut" data-alt="Firma detay sayfası — firma bilgileri, satış kanalları ve entegrasyonlar"><img src="/rehber/img/settings-firms-detay.webp" alt="Firma detay sayfası — firma bilgileri, satış kanalları ve entegrasyonlar" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Firma detay sayfası — firma bilgileri, satış kanalları ve entegrasyonlar</figcaption></figure></p>
+<ol>
+<li><strong>Üst bağlantı yolu</strong> — &quot;Firmalar › Firma adı&quot;; &quot;Firmalar&quot; bağlantısı listeye döner. Sağ üstte <strong>← Geri</strong> bağlantısı.</li>
+<li><strong>Firma bilgileri kartı</strong> — ad, rozetler (<code>Ana Firma</code>, <code>Aktif</code>/<code>Pasif</code>), kod, vergi dairesi, vergi no, telefon, e-posta, adres (salt okunur; düzenleme liste sayfasındaki <strong>Düzenle</strong> ile yapılır).</li>
+<li><strong>Satış Kanalları</strong> bölümü — firmanın kanal tablosu ve <strong>Kanal Ekle</strong> butonu.</li>
+<li><strong>Entegrasyonlar</strong> bölümü — firmanın servis sözleşmeleri tablosu ve <strong>Entegrasyon Ekle</strong> butonu.</li>
+</ol>
+<h2 id="liste-ve-filtreler">Liste ve filtreler<a class="anchor" href="#liste-ve-filtreler" aria-hidden="true">#</a></h2>
+<p>Liste sayfasında arama/filtre kutusu yoktur; tüm firmalar (pasifler dahil) tek tabloda listelenir. Sayfalama yoktur.</p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>KOD</td>
+<td>Firmanın kısa kodu (küçük harf, boşluksuz). Oluşturulduktan sonra değiştirilemez.</td>
+</tr>
+<tr>
+<td>AD</td>
+<td>Firma adı (çok dilli; tabloda Türkçe ad, yoksa ilk dolu dil gösterilir).</td>
+</tr>
+<tr>
+<td>VERGİ NO</td>
+<td>Vergi numarası; boşsa <code>—</code>.</td>
+</tr>
+<tr>
+<td>TELEFON</td>
+<td>Telefon; boşsa <code>—</code>.</td>
+</tr>
+<tr>
+<td>ANA</td>
+<td>Firma &quot;ana firma&quot; olarak işaretliyse <code>Ana</code> rozeti.</td>
+</tr>
+<tr>
+<td>DURUM</td>
+<td><code>Aktif</code> / <code>Pasif</code> rozeti.</td>
+</tr>
+<tr>
+<td>(son sütun)</td>
+<td><strong>Düzenle</strong> butonu (satır tıklamasından bağımsız, düzenleme penceresini açar) ve detay oku.</td>
+</tr>
+</tbody></table>
+<p>Satıra tıklayınca firma detay sayfası (<code>/settings/firms/:id</code>) açılır.</p>
+<h3 id="detay-sayfasi-satis-kanallari-tablosu">Detay sayfası — Satış Kanalları tablosu<a class="anchor" href="#detay-sayfasi-satis-kanallari-tablosu" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>KOD</td>
+<td>Kanal kodu (oluşturulurken kanal adından otomatik üretilir).</td>
+</tr>
+<tr>
+<td>AD</td>
+<td>Kanal adı.</td>
+</tr>
+<tr>
+<td>PLATFORM</td>
+<td>Kanalın platform tipi (Web Sitesi, Trendyol, Mobil Uygulama vb.); pazaryeri tipiyse yanında <code>Pazaryeri</code> rozeti.</td>
+</tr>
+<tr>
+<td>FİYATLAMA</td>
+<td><code>Belirtilmemiş</code>, <code>Manuel</code> ya da <code>× çarpan</code> (örn. <code>× 1.1</code>).</td>
+</tr>
+<tr>
+<td>DURUM</td>
+<td><code>Aktif</code> / <code>Pasif</code>.</td>
+</tr>
+<tr>
+<td>(son sütun)</td>
+<td><strong>Düzenle</strong> — kanal formunu açar.</td>
+</tr>
+</tbody></table>
+<p>Boş durumda &quot;Henüz satış kanalı eklenmemiş.&quot; yazısı görünür. Kanal formunun alanları <a href="/rehber/sistem/satis-kanallari/">Satış Kanalları</a> sayfasında anlatılır; detaydan açılan form aynı formdur (firma seçimi önceden dolu gelir).</p>
+<h3 id="detay-sayfasi-entegrasyonlar-tablosu">Detay sayfası — Entegrasyonlar tablosu<a class="anchor" href="#detay-sayfasi-entegrasyonlar-tablosu" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SERVİS</td>
+<td>Servis kataloğundaki servis adı ve yanında servis tipi rozeti (örn. <code>cargo</code>, <code>sms</code>, <code>email</code>, <code>payment</code>).</td>
+</tr>
+<tr>
+<td>İSİM</td>
+<td>Sözleşmeye verdiğiniz serbest ad (örn. &quot;Yurtiçi Kargo — 2026 Sözleşmesi&quot;); boşsa <code>—</code>.</td>
+</tr>
+<tr>
+<td>PLATFORM</td>
+<td>Kaydın kapsamı: belirli bir kanal adı ya da <code>Tüm platformlar</code> (firma geneli).</td>
+</tr>
+<tr>
+<td>DÖNEM</td>
+<td>Başlangıç – bitiş tarihi (<code>GG.AA.YYYY – GG.AA.YYYY</code>); ikisi de boşsa <code>—</code>.</td>
+</tr>
+<tr>
+<td>SÖZLEŞME DURUMU</td>
+<td><code>Taslak</code> / <code>Aktif</code> / <code>Süresi Doldu</code> / <code>İptal Edildi</code> rozeti.</td>
+</tr>
+<tr>
+<td>AKTİF</td>
+<td>Kaydın kullanımda olup olmadığı: <code>Aktif</code> / <code>Pasif</code>.</td>
+</tr>
+<tr>
+<td>(son sütun)</td>
+<td><strong>Düzenle</strong> — entegrasyon formunu açar.</td>
+</tr>
+</tbody></table>
+<p>Boş durumda &quot;Henüz entegrasyon eklenmemiş.&quot; yazısı görünür.</p>
+<h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Yeni Firma</td>
+<td>Liste sayfası, sağ üst</td>
+<td>&quot;Yeni Firma&quot; penceresi açılır.</td>
+<td>Kod ve kaynak dildeki ad dolmadan <strong>Oluştur</strong> pasiftir.</td>
+</tr>
+<tr>
+<td>Düzenle</td>
+<td>Liste satırı sonu</td>
+<td>&quot;Firma Düzenle&quot; penceresi açılır (kod değiştirilemez; <strong>Aktif</strong> kutusu yalnız burada görünür).</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Satır tıklama</td>
+<td>Liste</td>
+<td>Firma detay sayfasına gider.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Oluştur / Kaydet</td>
+<td>Firma penceresi alt kısmı</td>
+<td>Firmayı kaydeder, pencere kapanır, liste yenilenir.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>İptal</td>
+<td>Pencere alt kısmı</td>
+<td>Değişiklikleri atar, pencereyi kapatır.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>← Geri / Firmalar</td>
+<td>Detay sayfası üstü</td>
+<td>Listeye döner.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Kanal Ekle</td>
+<td>Detay › Satış Kanalları</td>
+<td>&quot;Satış Kanalı Ekle&quot; penceresi açılır; firma seçili gelir.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Düzenle (kanal)</td>
+<td>Kanal satırı</td>
+<td>&quot;Kanal Düzenle — …&quot; penceresi açılır.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Entegrasyon Ekle</td>
+<td>Detay › Entegrasyonlar</td>
+<td>&quot;Entegrasyon Ekle&quot; penceresi açılır.</td>
+<td>Servis seçilmeden <strong>Oluştur</strong> pasiftir.</td>
+</tr>
+<tr>
+<td>Düzenle (entegrasyon)</td>
+<td>Entegrasyon satırı</td>
+<td>&quot;Entegrasyon Düzenle — …&quot; penceresi açılır; servis değiştirilemez.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>+ Satır Ekle</td>
+<td>Entegrasyon formu, serbest alan bölümleri</td>
+<td>İlgili bölüme boş bir anahtar/değer satırı ekler.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>✕ (satır sil)</td>
+<td>Serbest alan satırı sonu</td>
+<td>O satırı formdan kaldırır (kaydedince o anahtar silinir).</td>
+<td>—</td>
+</tr>
+<tr>
+<td>ⓘ bilgi ikonu</td>
+<td>Şema alanı etiketinin yanı</td>
+<td>Alanın açıklamasını (değer nereden bulunur vb.) balon olarak gösterir; dışarı tıklayınca kapanır.</td>
+<td>Yalnız açıklaması tanımlı alanlarda görünür.</td>
+</tr>
+</tbody></table>
+<blockquote class="callout not">
+<p><strong>Not:</strong> Firma ve entegrasyon kayıtları için silme butonu yoktur; kullanımdan kaldırmak için <strong>Aktif</strong> kutusunu kapatın.</p>
+</blockquote>
+<h2 id="form-alanlari">Form alanları<a class="anchor" href="#form-alanlari" aria-hidden="true">#</a></h2>
+<h3 id="firma-formu-yeni-firma-firma-duzenle">Firma formu (Yeni Firma / Firma Düzenle)<a class="anchor" href="#firma-formu-yeni-firma-firma-duzenle" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kod</td>
+<td>Evet (yalnız oluştururken)</td>
+<td>Küçük harf, boşluksuz; büyük harf yazsanız da küçültülür. Örn. <code>main</code>, <code>firma-a</code>. <strong>Sonradan değiştirilemez</strong>; düzenleme penceresinde görünmez.</td>
+</tr>
+<tr>
+<td>Vergi Dairesi</td>
+<td>Hayır</td>
+<td>Örn. &quot;Kadıköy VD&quot;.</td>
+</tr>
+<tr>
+<td>Vergi No</td>
+<td>Hayır</td>
+<td>Örn. <code>1234567890</code>.</td>
+</tr>
+<tr>
+<td>Telefon</td>
+<td>Hayır</td>
+<td>Örn. <code>+90 212 000 0000</code>.</td>
+</tr>
+<tr>
+<td>E-posta</td>
+<td>Hayır</td>
+<td>Örn. <code>info@firma.com</code>.</td>
+</tr>
+<tr>
+<td>Adres</td>
+<td>Hayır</td>
+<td>Tam adres (çok satırlı).</td>
+</tr>
+<tr>
+<td>Ana firma</td>
+<td>Hayır</td>
+<td>İşaretli firma listede <code>Ana</code> rozeti alır; kanal formlarında firma adının yanında &quot;(Ana Firma)&quot; yazar.</td>
+</tr>
+<tr>
+<td>Aktif</td>
+<td>Hayır (yalnız düzenlerken)</td>
+<td>Kapatılınca firma <code>Pasif</code> olur.</td>
+</tr>
+<tr>
+<td>Ad (çok dilli)</td>
+<td>Kaynak dilde evet</td>
+<td>Alt kısımdaki dil sekmeli alan; kaynak dil (varsayılan dil) zorunlu, diğer diller boş bırakılabilir.</td>
+</tr>
+</tbody></table>
+<h3 id="entegrasyon-formu-entegrasyon-ekle-duzenle">Entegrasyon formu (Entegrasyon Ekle / Düzenle)<a class="anchor" href="#entegrasyon-formu-entegrasyon-ekle-duzenle" aria-hidden="true">#</a></h3>
+<p><figure class="ekran"><a href="/rehber/img/settings-firms-detay--entegrasyonlar.webp" class="buyut" data-alt="Entegrasyon Ekle penceresi — servis seçimi, kapsam, şifreli kimlik bilgileri ve ayarlar"><img src="/rehber/img/settings-firms-detay--entegrasyonlar.webp" alt="Entegrasyon Ekle penceresi — servis seçimi, kapsam, şifreli kimlik bilgileri ve ayarlar" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Entegrasyon Ekle penceresi — servis seçimi, kapsam, şifreli kimlik bilgileri ve ayarlar</figcaption></figure></p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Servis</td>
+<td>Evet (yalnız eklerken)</td>
+<td>Aranabilir liste; Servis Kataloğu&#39;ndaki servisler &quot;Servis adı (tip)&quot; biçiminde listelenir. Seçilen servisin alan şeması formun Kimlik Bilgileri / Ayarlar bölümlerini belirler. Düzenlemede değiştirilemez.</td>
+</tr>
+<tr>
+<td>İsim</td>
+<td>Hayır</td>
+<td>Sözleşmeyi tanıyacağınız serbest ad. Örn. <code>Yurtiçi Kargo — 2026 Sözleşmesi</code>.</td>
+</tr>
+<tr>
+<td>Platform</td>
+<td>Hayır</td>
+<td><code>Tüm platformlar (firma geneli)</code> ya da firmanın bir kanalı. <strong>Kanala özel kayıt, firma geneline tercih edilir.</strong></td>
+</tr>
+<tr>
+<td>Durum</td>
+<td>Hayır</td>
+<td>Sözleşme durumu: Taslak (varsayılan), Aktif, Süresi Doldu, İptal Edildi.</td>
+</tr>
+<tr>
+<td>Başlangıç Tarihi / Bitiş Tarihi</td>
+<td>Hayır</td>
+<td>Sözleşme dönemi; tabloda DÖNEM sütununda görünür.</td>
+</tr>
+<tr>
+<td>Kimlik Bilgileri (API) — şema alanları</td>
+<td>Şemada <code>*</code> işaretliyse evet</td>
+<td>Sarı arka planlı bölüm. Servisin kataloğunda &quot;Kimlik Bilgileri&quot; bölümüne konmuş alanlar (API anahtarı, şifre, cari kodu vb.). <strong>Şifreli saklanır</strong>; kayıttan sonra değerler maskeli (<code>•••</code>) görünür. Değiştirmek için maskenin üzerine yeni değeri yazın; maskeli bırakılan alan aynen korunur.</td>
+</tr>
+<tr>
+<td>Şema Dışı Kimlik Bilgileri</td>
+<td>Hayır</td>
+<td>Yalnız bu kayıtta, şemada tanımlı olmayan eski anahtarlar varsa görünür; anahtar/değer satırlarıyla düzenlenir. Servisin şeması yoksa bölümün adı &quot;Kimlik Bilgileri (API)&quot; olur ve tüm bilgiler serbest satırlarla girilir.</td>
+</tr>
+<tr>
+<td>Ayarlar — şema alanları</td>
+<td>Şemada <code>*</code> işaretliyse evet</td>
+<td>Gri bölüm. Şifrelenmeyen ayarlar (ölçüm kimliği, kapsam seçenekleri, açık/kapalı anahtarlar vb.). Alan tipine göre metin, sayı, tarih, şifre kutusu ya da onay kutusu görünür.</td>
+</tr>
+<tr>
+<td>Şema Dışı Ayarlar</td>
+<td>Hayır</td>
+<td>Şemada olmayan mevcut anahtarlar; şemasız serviste bölümün adı &quot;Ayarlar&quot; olur.</td>
+</tr>
+<tr>
+<td>Sözleşme Şartları</td>
+<td>Hayır</td>
+<td>Serbest anahtar/değer satırları: komisyon %, desi fiyatı, mesaj birim ücreti gibi servis tipine göre değişen ticari şartlar.</td>
+</tr>
+<tr>
+<td>Aktif</td>
+<td>Hayır (yalnız düzenlerken)</td>
+<td>Kapalıysa kayıt kullanılmaz (örneğin kargo seçeneklerinde ve kargo bölgelerinde görünmez).</td>
+</tr>
+</tbody></table>
+<p>Doğrulama: zorunlu (<code>*</code>) şema alanlarından biri boşsa kayıt yapılmaz ve formun altında kırmızı <strong>&quot;Zorunlu alan(lar) boş: …&quot;</strong> mesajı alan adlarıyla birlikte görünür (aynı kontrol sunucuda da yapılır). Onay kutusu tipindeki alanlar zorunlu sayılmaz.</p>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<ul>
+<li><strong>Firma durumu:</strong> <code>Aktif</code> / <code>Pasif</code> (Ana firma rozeti ayrıca).</li>
+<li><strong>Sözleşme durumu</strong> bilgilendirme amaçlıdır: <code>Taslak</code> → <code>Aktif</code> → <code>Süresi Doldu</code> ya da <code>İptal Edildi</code>; geçişler elle yapılır, otomatik değişmez. Servisin kullanılıp kullanılmayacağını <strong>Aktif</strong> kutusu belirler.</li>
+<li><strong>Kapsam çözümleme:</strong> bir kanal için servis aranırken önce o kanala özel kayıt, yoksa firma geneli (<code>Tüm platformlar</code>) kayıt kullanılır. Örneğin SMS servisi firma geneli tanımlanır, belirli bir kanalın farklı kargo sözleşmesi kanala özel eklenir.</li>
+<li><strong>Aynı servise birden çok sözleşme</strong> açılabilir (örneğin aynı kargo firmasıyla tahsilatlı ve tahsilatsız iki ayrı cari); <strong>İsim</strong> alanı bunları ayırt etmek içindir.</li>
+<li><strong>Kimlik bilgileri</strong> veritabanında şifreli tutulur; ekranda hiçbir zaman açık görünmez. Maskeyi değiştirmeden kaydetmek saklı değeri korur.</li>
+<li><strong>Kargo bölgeleri bağı:</strong> firmada aktif kargo entegrasyonu yoksa Kargo Bölgeleri ekranı sarı uyarıyla &quot;önce firma entegrasyonları sayfasından bir kargo servisi ekleyin&quot; der ve buraya bağlantı verir.</li>
+<li><strong>Takip/reklam servisleri</strong> (GA4, Google Ads, Meta, TikTok vb.) de birer entegrasyon kaydıdır; Pazarlama › Takip &amp; Reklam ekranı kimlik bilgilerinin buradan girilmesini ister.</li>
+<li>Servis listesi <strong>Servis Kataloğu</strong>&#39;ndan gelir; kataloğa yalnız platform yönetimi servis ekleyebilir.</li>
+</ul>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<h3 id="yeni-firma-olusturma">Yeni firma oluşturma<a class="anchor" href="#yeni-firma-olusturma" aria-hidden="true">#</a></h3>
+<ol>
+<li>Sistem › <strong>Firmalar</strong> sayfasında <strong>Yeni Firma</strong>&#39;ya tıklayın.</li>
+<li><strong>Kod</strong> girin (küçük harf, boşluksuz), alt kısımda kaynak dilde <strong>Ad</strong> yazın.</li>
+<li>Gerekirse vergi/iletişim bilgilerini doldurun, &quot;Ana firma&quot; ise işaretleyin.</li>
+<li><strong>Oluştur</strong>&#39;a tıklayın. Firma listede görünür; satıra tıklayarak detayına geçin.</li>
+</ol>
+<h3 id="firmaya-kargo-ya-da-baska-bir-servis-entegrasyonu-ekleme">Firmaya kargo (ya da başka bir servis) entegrasyonu ekleme<a class="anchor" href="#firmaya-kargo-ya-da-baska-bir-servis-entegrasyonu-ekleme" aria-hidden="true">#</a></h3>
+<ol>
+<li>Firma satırına tıklayıp detay sayfasını açın; <strong>Entegrasyonlar</strong> bölümünde <strong>Entegrasyon Ekle</strong>&#39;ye tıklayın.</li>
+<li><strong>Servis</strong> listesinden servisi seçin (örn. &quot;Yurtiçi Kargo (cargo)&quot;). Form, servisin alanlarıyla yeniden çizilir.</li>
+<li><strong>İsim</strong> verin; <strong>Platform</strong>&#39;u seçin (firma geneli ya da tek kanal); <strong>Durum</strong> ve sözleşme tarihlerini girin.</li>
+<li>Sarı <strong>Kimlik Bilgileri (API)</strong> bölümündeki zorunlu alanları ve <strong>Ayarlar</strong> alanlarını doldurun; ⓘ ikonundan alan açıklamalarını okuyun.</li>
+<li>Gerekirse <strong>Sözleşme Şartları</strong>&#39;na komisyon/desi gibi satırlar ekleyin.</li>
+<li><strong>Oluştur</strong>&#39;a tıklayın. Hata mesajı gelirse eksik alanları tamamlayın.</li>
+<li>Kargo servisi eklediyseniz Sipariş Yönetimi › Kargo Bölgeleri ekranında öncelik sırasını düzenleyin.</li>
+</ol>
+<h3 id="kimlik-bilgisini-api-anahtari-sifre-degistirme">Kimlik bilgisini (API anahtarı/şifre) değiştirme<a class="anchor" href="#kimlik-bilgisini-api-anahtari-sifre-degistirme" aria-hidden="true">#</a></h3>
+<ol>
+<li>Entegrasyon satırında <strong>Düzenle</strong>&#39;ye tıklayın.</li>
+<li>Maskeli (<code>•••</code>) görünen alanın üzerine yeni değeri yazın; değiştirmeyeceğiniz alanlara dokunmayın.</li>
+<li><strong>Kaydet</strong>&#39;e tıklayın. Dokunulmayan maskeli alanlar eski değerini korur.</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Servis seçilince form sıfırdan çizilir; servisi yanlış seçtiyseniz <strong>Servis</strong> listesinden değiştirin — girilen şema değerleri yeni şemaya göre yeniden başlatılır.</p>
+</blockquote>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Platform alanında &quot;Tüm platformlar (firma geneli)&quot; seçmek çoğu servis için yeterlidir; yalnız kanala özel sözleşme/kimlik gerekiyorsa kanal seçin.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> &quot;Zorunlu alan(lar) boş: …&quot; mesajı alan etiketleriyle gelir; onay kutuları bu kontrole girmez. Mesaj sunucudan da gelebilir (aynı kural).</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Kimlik bilgileri şifreli saklandığı için unutulan bir anahtar ekrandan geri okunamaz; değeri servis sağlayıcıdan yeniden alıp üzerine yazmanız gerekir.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> &quot;Entegrasyon servisi bulunamadı.&quot; / &quot;Platform bulunamadı veya bu firmaya ait değil.&quot; hataları, seçilen servis kataloğundan kaldırılmışsa ya da seçilen kanal başka firmaya aitse görülür; sayfayı yenileyip yeniden deneyin.</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/sistem/satis-kanallari/">Satış Kanalları</a></li>
+<li><a href="/rehber/sistem/platform-tipleri/">Platform Tipleri</a></li>
+<li><a href="/rehber/sistem/servis-katalogu/">Servis Kataloğu</a></li>
+<li><a href="/rehber/sistem/bildirim-sablonlari/">Bildirim Şablonları</a></li>
+<li><a href="/rehber/siparis/kargo-bolgeleri/">Kargo Bölgeleri</a></li>
+<li><a href="/rehber/pazarlama/takip-ve-reklam/">Takip &amp; Reklam</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/icerik/sayfalar/">← İçerik Sayfaları</a><a class="sonraki" href="/rehber/sistem/satis-kanallari/">Satış Kanalları →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>

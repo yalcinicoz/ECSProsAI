@@ -1,0 +1,331 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Komisyon Yönetimi — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="">Toplama Planlama</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="active">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Cari</span> › <b>Komisyon Yönetimi</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Cari</div><h1>Komisyon Yönetimi</h1>
+<p class="ozet">Pazaryeri satıcılarınızdan kesilecek komisyonun katmanlı oran tanımları (varsayılan, sözleşme, kampanya, ciro basamağı, ürün-özel), kampanya katılım şartları ve satıcı hakedişlerinin mutabakatı ile ödeme çıkışı.</p><p class="rota">Panel adresi: <code>/admin/commission</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#sekmeler">Sekmeler</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Sitenizde kendi malını satan satıcıların (tedarikçi cari hesapları) her teslim edilen satıştan ne oranda komisyon ödeyeceğini, indirim yükünü ne ölçüde paylaşacağını ve hakedişlerinin ne zaman ödenebilir hale geleceğini bu ekrandan yönetirsiniz. Dört sekmesi sırasıyla oran tabanını, satıcıya özel sözleşmeyi, kampanya şartlarını ve satır satır hakediş mutabakatını kapsar. Muhasebe/finans sorumlusu kullanır; hakediş satırları sistem tarafından teslimatta otomatik üretilir, burada izlenir ve ödenir.</p>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/commission.webp" class="buyut" data-alt="Komisyon Yönetimi — sekmeler ve Varsayılan Oranlar"><img src="/rehber/img/commission.webp" alt="Komisyon Yönetimi — sekmeler ve Varsayılan Oranlar" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Komisyon Yönetimi — sekmeler ve Varsayılan Oranlar</figcaption></figure></p>
+<ol>
+<li><strong>Başlık</strong> — &quot;Komisyon Yönetimi&quot; ve kısa açıklama.</li>
+<li><strong>Sekmeler</strong> — <code>Varsayılan Oranlar</code> · <code>Satıcı Sözleşmeleri</code> · <code>Kampanyalar</code> · <code>Hakedişler</code>.</li>
+<li><strong>İçerik kartları</strong> — seçilen sekmenin formu ya da tablosu.</li>
+</ol>
+<p><em>(1) Başlık · (2) Sekmeler · (3) İçerik</em></p>
+<h2 id="sekmeler">Sekmeler<a class="anchor" href="#sekmeler" aria-hidden="true">#</a></h2>
+<h3 id="varsayilan-oranlar">Varsayılan Oranlar<a class="anchor" href="#varsayilan-oranlar" aria-hidden="true">#</a></h3>
+<p>Ürün grubu bazlı platform varsayılanları (katman 5). Satıcıya özel oran yoksa bu uygulanır; boş bırakılan grupta oran tanımsız kalır ve o gruptaki satışlar <strong>kesintisiz</strong> (komisyon %0, katman &quot;Tanımsız&quot;) yazılır.</p>
+<table>
+<thead>
+<tr>
+<th>Alan / öğe</th>
+<th>Zorunlu</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Grup ara…</td>
+<td>Hayır</td>
+<td>Grup listesini ada/koda göre daraltır.</td>
+</tr>
+<tr>
+<td>Grup satırı → oran kutusu <code>%</code></td>
+<td>Hayır</td>
+<td>Her ürün grubu için 0-100 arası yüzde (ondalık kabul eder, örn. <code>12.5</code>). Boş = tanımsız.</td>
+</tr>
+<tr>
+<td>Kaydet</td>
+<td>—</td>
+<td>Dolu oranları topluca kaydeder; yanında &quot;Kaydedildi&quot; / &quot;Kaydedilemedi&quot; çıkar. %0-100 dışı değer &quot;Oran %0-100 aralığında olmalıdır.&quot; hatası verir.</td>
+</tr>
+</tbody></table>
+<h3 id="satici-sozlesmeleri">Satıcı Sözleşmeleri<a class="anchor" href="#satici-sozlesmeleri" aria-hidden="true">#</a></h3>
+<p>Satıcı bazında hakediş şartları ve özel oranlar.</p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Satıcı (cari hesap)</td>
+<td>Evet</td>
+<td>Tedarikçi tipli cari hesaplar; &quot;kod — unvan&quot; biçiminde. Seçilince sözleşme yüklenir (yoksa varsayılanlarla boş form gelir).</td>
+</tr>
+<tr>
+<td>Hakediş gecikmesi (teslim + X gün)</td>
+<td>Evet</td>
+<td>Teslimden kaç gün sonra hakedişin ödenebilir (bakiyeye geçer) olacağı; 0-365. Varsayılan 14.</td>
+</tr>
+<tr>
+<td>Ödeme periyodu</td>
+<td>Evet</td>
+<td><code>Haftalık</code> · <code>Aylık</code> · <code>Uygunlaşınca</code>.</td>
+</tr>
+<tr>
+<td>Kargo modu (K3)</td>
+<td>Evet</td>
+<td><code>Bizim sözleşmemizle biz göndeririz</code> · <code>Satıcı kendi sözleşmesiyle gönderir</code> · <code>Satıcı sözleşmesiyle biz göndeririz</code>. &quot;Satıcı gönderir&quot; seçilirse satıcının API hesabına kargo bildirimi yetkisi açılır.</td>
+</tr>
+<tr>
+<td>Ciro basamağı dönemi</td>
+<td>Evet</td>
+<td>Ciro basamaklarının hesaplanacağı dönem: <code>Aylık</code> · <code>Yıllık</code> · <code>Kayan 12 ay</code>.</td>
+</tr>
+<tr>
+<td>Notlar</td>
+<td>Hayır</td>
+<td>Serbest not.</td>
+</tr>
+<tr>
+<td>Gruba özel oranlar (katman 3)</td>
+<td>Hayır</td>
+<td>Grup ara… + her ürün grubu için <code>%</code> kutusu. Boş bırakılan grup varsayılanı kullanır.</td>
+</tr>
+<tr>
+<td>Ürüne özel oranlar (katman 1 — her şeyi ezer)</td>
+<td>Hayır</td>
+<td>Mevcut satırlar &quot;ürün · %oran · Kaldır&quot;. Eklemek için <strong>Ürün kodu (PRD-…)</strong> + <code>%</code> girip <strong>Ekle</strong>; kod bulunamazsa &quot;Ürün bulunamadı.&quot;, alan boşsa &quot;Ürün kodu ve oran gerekli.&quot;</td>
+</tr>
+<tr>
+<td>Ciro basamakları (katman 4)</td>
+<td>Hayır</td>
+<td>Satır: <code>Ciro ≥ [tutar] TL → oran [puan] puan</code> + <strong>Kaldır</strong>; <strong>Basamak Ekle</strong> yeni satır açar. Puan ayarı grup oranına eklenir; negatif = indirim (örn. <code>-2</code> puan).</td>
+</tr>
+<tr>
+<td>Sözleşmeyi Kaydet</td>
+<td>—</td>
+<td>Tüm sözleşmeyi kaydeder; &quot;Kaydedildi&quot; ya da hata metni (örn. &quot;Geçersiz kargo modu.&quot;, &quot;Hakediş gecikmesi 0-365 gün aralığında olmalıdır.&quot;).</td>
+</tr>
+</tbody></table>
+<h3 id="kampanyalar">Kampanyalar<a class="anchor" href="#kampanyalar" aria-hidden="true">#</a></h3>
+<p>Aktif kampanyaların satıcı şartları: kampanya penceresinde geçerli komisyon oranı (katman 2), indirim yükünün satıcı payı ve katılım (opt-in) şartı.</p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kampanya</td>
+<td>Kampanya adı ve kodu.</td>
+</tr>
+<tr>
+<td>Komisyon %</td>
+<td>Kampanyalı kalemlerde uygulanacak oran. Boş = kampanya oranı yok, sıradaki katman uygulanır.</td>
+</tr>
+<tr>
+<td>İndirim payı %</td>
+<td>Kalemdeki kampanya indiriminin yüzde kaçının satıcıdan kesileceği (0 = indirim tamamen pazaryerinde).</td>
+</tr>
+<tr>
+<td>Opt-in</td>
+<td>İşaretliyse kampanya şartları yalnız <strong>katılan</strong> satıcıların (ve katılımda ürün seçtilerse yalnız o ürünlerin) satışlarına uygulanır.</td>
+</tr>
+<tr>
+<td>Katılım</td>
+<td>&quot;N satıcı&quot; — kampanyaya katılmış satıcı sayısı.</td>
+</tr>
+<tr>
+<td>Kaydet</td>
+<td>Satırdaki üç alanı kaydeder. Oranlar %0-100 dışıysa &quot;Oranlar %0-100 aralığında olmalıdır.&quot;</td>
+</tr>
+</tbody></table>
+<p>Boşsa &quot;Aktif kampanya yok.&quot;</p>
+<h3 id="hakedisler">Hakedişler<a class="anchor" href="#hakedisler" aria-hidden="true">#</a></h3>
+<p>Satıcı bazında hakediş satırları, bakiye ve ödeme çıkışı.</p>
+<table>
+<thead>
+<tr>
+<th>Filtre / öğe</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Satıcı</td>
+<td>Zorunlu; seçilmeden tablo gelmez.</td>
+</tr>
+<tr>
+<td>Durum</td>
+<td><code>Tümü</code> · <code>Beklemede</code> · <code>Bakiyede</code> · <code>Ödendi</code> · <code>Ters kayıt</code>.</td>
+</tr>
+<tr>
+<td>Hakediş bakiyesi</td>
+<td>Satıcının hakediş defterindeki güncel bakiye ve para birimi.</td>
+</tr>
+<tr>
+<td>Ödeme Çıkışı</td>
+<td><code>Bakiyede</code> durumundaki tüm satırların net toplamını ödeme olarak kaydeder ve satırları <code>Ödendi</code> yapar: &quot;Ödeme kaydedildi: N satır, net X TL&quot;. ⚠️ Geri alınamaz. Bakiyede satır yoksa &quot;Ödenecek &#39;available&#39; hakediş satırı yok.&quot;; net toplam pozitif değilse &quot;Ödenecek net tutar pozitif değil&quot;.</td>
+</tr>
+</tbody></table>
+<p>Tablo sütunları (en çok 100 satır):</p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Sipariş / SKU</td>
+<td>Sipariş numarası (&quot;(iade)&quot; eki ters kayıtlarda) ve altında SKU × adet.</td>
+</tr>
+<tr>
+<td>Brüt</td>
+<td>Kalemin ödenen tutarı (indirim düşülmüş).</td>
+</tr>
+<tr>
+<td>Oran (katman)</td>
+<td>Uygulanan yüzde ve hangi katmandan geldiği: <code>Ürün-özel</code> · <code>Kampanya</code> · <code>Sözleşme (grup)</code> · <code>Varsayılan (grup)</code> · <code>Tanımsız</code>; ciro ayarı uygulandıysa &quot;+ ciro ayarı&quot;.</td>
+</tr>
+<tr>
+<td>Komisyon</td>
+<td>Brüt × oran.</td>
+</tr>
+<tr>
+<td>İndirim payı</td>
+<td>Kampanya indiriminin satıcıya yansıtılan kısmı.</td>
+</tr>
+<tr>
+<td>Net</td>
+<td>Brüt − Komisyon − İndirim payı (satıcıya ödenecek).</td>
+</tr>
+<tr>
+<td>Durum</td>
+<td><code>Beklemede</code> (sarı) · <code>Bakiyede</code> (yeşil) · <code>Ödendi</code> (mavi) · <code>Ters kayıt</code> (kırmızı).</td>
+</tr>
+</tbody></table>
+<p>Boşsa &quot;Hakediş satırı yok.&quot;</p>
+<h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kaydet</td>
+<td>Varsayılan Oranlar</td>
+<td>Grup varsayılanlarını kaydeder.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Ekle</td>
+<td>Satıcı Sözleşmeleri → Ürüne özel oranlar</td>
+<td>Ürün kodunu doğrulayıp listeye ekler (aynı ürün varsa oranı günceller). Kaydetmek için Sözleşmeyi Kaydet gerekir.</td>
+<td>Satıcı seçili</td>
+</tr>
+<tr>
+<td>Kaldır</td>
+<td>Ürüne özel oranlar / Ciro basamakları</td>
+<td>Satırı listeden çıkarır (Sözleşmeyi Kaydet ile kalıcı).</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Basamak Ekle</td>
+<td>Ciro basamakları</td>
+<td>Boş basamak satırı ekler.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Sözleşmeyi Kaydet</td>
+<td>Satıcı Sözleşmeleri</td>
+<td>Sözleşmeyi kaydeder.</td>
+<td>Satıcı seçili, cari hesap mevcut</td>
+</tr>
+<tr>
+<td>Kaydet (satır)</td>
+<td>Kampanyalar</td>
+<td>Kampanyanın satıcı şartlarını kaydeder.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Ödeme Çıkışı</td>
+<td>Hakedişler</td>
+<td>Bakiyedeki satırları öder. ⚠️ Geri alınamaz.</td>
+<td>Satıcı seçili, bakiyede pozitif net</td>
+</tr>
+</tbody></table>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<ul>
+<li><strong>Hakediş satırı oluşumu:</strong> Satıcıya ait sipariş kalemleri sipariş <strong>teslim edildiğinde</strong> otomatik hakediş satırı olur (<code>Beklemede</code>). Brüt = kalemin indirim düşülmüş ödenen tutarı; aynı kalem için ikinci satır üretilmez.</li>
+<li><strong>Etkin oran (beş katman, ilk tutan uygulanır):</strong> 1) satıcı sözleşmesindeki <strong>ürün-özel</strong> oran → 2) kalem kampanyalıysa ve (opt-in gerekiyorsa) satıcı katılmışsa <strong>kampanya</strong> oranı → 3) sözleşmedeki <strong>grup</strong> oranı → 5) <strong>platform varsayılanı</strong> (grup). 4) <strong>Ciro basamağı</strong> puan ayarı yalnız 3 ve 5&#39;i değiştirir (oran sıfırın altına inmez). Hiçbiri yoksa oran %0, katman <code>Tanımsız</code>. Her satıra uygulanan katman yazılır — &quot;bu satışta neden %X&quot; tek bakışta görünür.</li>
+<li><strong>Ciro basamağı:</strong> dönem cirosu, seçilen dönem tipine göre (ay başı / yıl başı / 12 ay geriye) satıcının ters kayıt dışı hakediş satırlarının brüt toplamıdır; tutan en yüksek basamağın puanı uygulanır.</li>
+<li><strong>İndirim payı:</strong> kampanya geçerliyse kalem kampanya indiriminin &quot;İndirim payı %&quot; kadarı satıcıdan kesilir.</li>
+<li><strong>Durum akışı:</strong> <code>Beklemede</code> → (teslim + X gün dolunca, 30 dakikada bir çalışan kontrolle) <code>Bakiyede</code> — net tutar satıcının hakediş defterine işlenir → <strong>Ödeme Çıkışı</strong> ile <code>Ödendi</code>. İade teslim alındığında kalemin satırı için <strong>ters kayıt</strong> üretilir: orijinal henüz beklemedeyse ve iade tamsa ikisi de deftere girmeden <code>Ters kayıt</code> olur; aksi halde ters satır <code>Beklemede</code> doğar ve uygunlaşınca negatif olarak bakiyeden düşer.</li>
+<li>Hakediş bakiyesi yalnız bu defter hareketlerinden oluşur; ekrandan elle satır eklenmez/silinmez.</li>
+<li><strong>Kampanya opt-in</strong> şu an yalnız hakediş hesabında etkilidir; satıcının kampanyaya katılımı satıcı panelinden yapılır.</li>
+<li><strong>Yetki:</strong> Sayfa giriş yapmış panel kullanıcılarına açıktır; ayrı izin aranmaz.</li>
+</ul>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<p><strong>1. Oran tabanını kurma</strong></p>
+<ol>
+<li><strong>Varsayılan Oranlar</strong> → her ürün grubuna yüzde girin → <strong>Kaydet</strong>.</li>
+<li>Satıcıya özel şart varsa <strong>Satıcı Sözleşmeleri</strong> → satıcıyı seçin → hakediş gecikmesi, ödeme periyodu, kargo modu, ciro dönemi → gerekiyorsa gruba/ürüne özel oranlar ve ciro basamakları → <strong>Sözleşmeyi Kaydet</strong>.</li>
+</ol>
+<p><strong>2. Kampanya şartı tanımlama</strong></p>
+<ol>
+<li><strong>Kampanyalar</strong> → satırda Komisyon %, İndirim payı %, Opt-in → <strong>Kaydet</strong>.</li>
+<li>Opt-in işaretliyse satıcıların katılımını Katılım sütunundan izleyin.</li>
+</ol>
+<p><strong>3. Hakediş ödemesi</strong></p>
+<ol>
+<li><strong>Hakedişler</strong> → satıcıyı seçin → Durum <code>Bakiyede</code> ile satırları ve <strong>Hakediş bakiyesi</strong>ni kontrol edin.</li>
+<li>Ters kayıt (iade) satırlarının düşüldüğünden emin olun.</li>
+<li><strong>Ödeme Çıkışı</strong> → &quot;Ödeme kaydedildi: N satır, net X TL&quot;; satırlar <code>Ödendi</code> olur.</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Oran (katman) sütununda <code>Tanımsız</code> görüyorsanız o ürünün grubunda ne varsayılan ne sözleşme oranı var — satış %0 komisyonla yazılmıştır. Varsayılan Oranlar&#39;ı tamamlayın; geçmiş satırlar değişmez.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Ödeme Çıkışı bakiyedeki <strong>tüm</strong> satırları tek seferde öder; kısmi ödeme seçimi yoktur.</p>
+</blockquote>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Ürüne özel oranda ürün kodu tam yazılmalıdır (örn. <code>PRD-000123</code>); Ekle butonu kodu katalogdan doğrular.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> Satır henüz <code>Beklemede</code> iken bakiyede görünmez; teslim tarihinden sözleşmedeki X gün sonra otomatik bakiyeye geçer.</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/cari/cari-kartlar/">Cari Kartlar</a></li>
+<li><a href="/rehber/pazarlama/kampanyalar/">Kampanyalar</a></li>
+<li><a href="/rehber/siparis/pazaryerleri/">Pazaryerleri</a></li>
+<li><a href="/rehber/siparis/siparisler/">Siparişler</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/cari/cari-gruplari/">← Cari Grupları</a><a class="sonraki" href="/rehber/musteriler/uyeler/">Üyeler →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>

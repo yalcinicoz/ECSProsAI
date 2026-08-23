@@ -1,0 +1,1 @@
+{"name":"ecspros-rehber-tools","private":true,"type":"module","version":"1.0.0","scripts":{"build":"node build.js"},"dependencies":{"marked":"^15.0.0","playwright-core":"^1.62.1","sharp":"^0.35.3"}}

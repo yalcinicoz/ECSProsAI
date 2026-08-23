@@ -1,0 +1,410 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Toplama Planlama — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="active">Toplama Planlama</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Sipariş Yönetimi</span> › <b>Toplama Planlama</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Sipariş Yönetimi</div><h1>Toplama Planlama</h1>
+<p class="ozet">Onaylı siparişlerden toplama görevi oluşturma, görevleri listeleme, satırları depo personeline dağıtma ve toplanma ilerlemesini izleme.</p><p class="rota">Panel adresi: <code>/admin/fulfillment/picking-plans</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#liste-ve-filtreler">Liste ve filtreler</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#gorev-olusturma-ekrani">Görev oluşturma ekranı</a><a href="#gorev-detayi-ve-dagitim-ekrani">Görev detayı ve dağıtım ekranı</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Toplama Planlama, depo operasyonunun başlangıç noktasıdır. Onaylanmış ve stoğu rezerve edilmiş siparişler
+filtrelenir, bunlardan <strong>toplama görevleri</strong> oluşturulur; görevin satırları (hangi raftan, hangi ürün, kaç adet)
+depo personeline dağıtılır ve toplanma ilerlemesi buradan izlenir. Operasyon sorumlusu (idari personel) günde
+bir ya da birkaç kez görev açar; depo personeli kendi satırlarını <a href="/rehber/siparis/urun-toplama/">Ürün Toplama</a>
+ekranından okutarak toplar.</p>
+<p>Sistem görev oluştururken siparişleri otomatik olarak ikiye ayırır:</p>
+<ul>
+<li><strong>Tek ürünlü</strong> siparişler → tek ürünlü görev; ürünler doğrudan <a href="/rehber/siparis/hizli-hat/">Hızlı Hat</a> ekranında paketlenir.</li>
+<li><strong>Çok ürünlü</strong> siparişler → çok ürünlü görev; ürünler <a href="/rehber/siparis/ara-ayristirma/">Ara Ayrıştırma</a> ile kolilere,
+sonra <a href="/rehber/siparis/masa-ve-paketleme/">Masa</a> ekranında slotlara ayrılır ve paketlenir.</li>
+</ul>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/fulfillment-picking-plans.webp" class="buyut" data-alt="Toplama Görevleri listesi"><img src="/rehber/img/fulfillment-picking-plans.webp" alt="Toplama Görevleri listesi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Toplama Görevleri listesi</figcaption></figure></p>
+<ol>
+<li><strong>Başlık ve kayıt sayısı</strong> — &quot;Toplama Görevleri&quot; başlığı, toplam kayıt sayısı ve sağda <strong>+ Yeni Görev</strong> butonu.</li>
+<li><strong>Durum sekmeleri</strong> — Tümü / Bekleyen / Toplanan / Tamamlanan.</li>
+<li><strong>Görev tablosu</strong> — satıra tıklayınca görev detayı açılır; satır sonunda hızlı aksiyon bağlantıları (Başlat / Tamamla).</li>
+<li><strong>Sayfalama</strong> — sayfa başına 20 görev.</li>
+</ol>
+<p>Bu başlık altında üç ekran anlatılır: <strong>Görev listesi</strong> (<code>/fulfillment/picking-plans</code>), <strong>Görev oluşturma</strong>
+(<code>/fulfillment/tasks/new</code>) ve <strong>Görev detayı / dağıtım</strong> (<code>/fulfillment/tasks/:id</code>).</p>
+<h2 id="liste-ve-filtreler">Liste ve filtreler<a class="anchor" href="#liste-ve-filtreler" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>PLAN NO</td>
+<td>Görev numarası (örn. <code>PICK-20260809-A1B2C3</code>).</td>
+</tr>
+<tr>
+<td>TİP</td>
+<td><code>Tek ürünlü</code> (mavi rozet) veya <code>Çok ürünlü</code>. Eski akışla açılmış görevlerde <code>Tekli</code> / <code>Toplu</code> / <code>Dalga</code> görülebilir.</td>
+</tr>
+<tr>
+<td>SİPARİŞ</td>
+<td>Görevdeki sipariş sayısı.</td>
+</tr>
+<tr>
+<td>DAĞITIM</td>
+<td>Personel dağıtım rozeti: <code>Dağıtım yapılmadı</code> (kırmızı), <code>Dağıtım eksik (atanan/toplam)</code> (sarı), <code>Dağıtım tamam</code> (yeşil), <code>Satır yok</code>.</td>
+</tr>
+<tr>
+<td>TOPLANMA</td>
+<td>Toplanan satır / toplam satır ve yüzde çubuğu; %100 olunca çubuk yeşile döner.</td>
+</tr>
+<tr>
+<td>PLANLAMA</td>
+<td>Görevin oluşturulduğu tarih-saat.</td>
+</tr>
+<tr>
+<td>DURUM</td>
+<td><code>Bekliyor</code> / <code>Toplanıyor</code> / <code>Tamamlandı</code> / <code>İptal</code>.</td>
+</tr>
+<tr>
+<td>(son sütun)</td>
+<td>Durum <code>Bekliyor</code> ise <strong>Başlat</strong>, <code>Toplanıyor</code> ise <strong>Tamamla</strong> bağlantısı.</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Filtre</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tümü</td>
+<td>Tüm görevler.</td>
+</tr>
+<tr>
+<td>Bekleyen</td>
+<td>Durumu <code>pending</code> (Bekliyor) olanlar.</td>
+</tr>
+<tr>
+<td>Toplanan</td>
+<td>Durumu <code>picking</code> (Toplanıyor) olanlar.</td>
+</tr>
+<tr>
+<td>Tamamlanan</td>
+<td>Durumu <code>completed</code> olanlar.</td>
+</tr>
+</tbody></table>
+<p>Sıralama sunucu tarafındadır (en yeni üstte). Satıra tıklayınca görev detayı açılır.</p>
+<h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>+ Yeni Görev</td>
+<td>Liste üst sağ</td>
+<td>Görev oluşturma ekranı açılır.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Başlat</td>
+<td>Liste satırı sonu / detay başlığı</td>
+<td>Onay sorusu (&quot;… toplama başlatılsın mı?&quot;) sonrası görev <code>Toplanıyor</code> durumuna geçer.</td>
+<td>Görev <code>Bekliyor</code> olmalı; aksi halde &quot;&#39;…&#39; durumundaki plan başlatılamaz.&quot; hatası.</td>
+</tr>
+<tr>
+<td>Tamamla</td>
+<td>Liste satırı sonu / detay başlığı</td>
+<td>Onay sorusu sonrası görev <code>Tamamlandı</code> olur; tamamlanan görevde dağıtım yapılamaz.</td>
+<td>Görev <code>Toplanıyor</code> olmalı.</td>
+</tr>
+<tr>
+<td>Görev(ler)i Oluştur</td>
+<td>Görev oluşturma ekranı, özet şeridi</td>
+<td>Filtreye uyan siparişlerden görev(ler) açılır; başarı penceresi görev numaralarını listeler.</td>
+<td>Eşleşen sipariş sayısı 0 ise buton pasiftir.</td>
+</tr>
+<tr>
+<td>Göreve Git / Görev Listesine Git</td>
+<td>Başarı penceresi</td>
+<td>Tek görev oluştuysa doğrudan detayına, aksi halde listeye gider.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Hızlı Hat Ekranı</td>
+<td>Görev detayı başlığı</td>
+<td>Tek ürünlü görev için Hızlı Hat okutma ekranı açılır.</td>
+<td>Tip <code>Tek ürünlü</code>, durum Bekliyor/Toplanıyor.</td>
+</tr>
+<tr>
+<td>Ara Ayrıştırma / Koli Duvarı</td>
+<td>Görev detayı başlığı</td>
+<td>Çok ürünlü görev için ilgili operasyon ekranı açılır.</td>
+<td>Tip <code>Çok ürünlü</code>, durum Bekliyor/Toplanıyor.</td>
+</tr>
+<tr>
+<td>Seçilenleri Ata</td>
+<td>Görev detayı dağıtım çubuğu</td>
+<td>İşaretli satırlar seçilen personele atanır; satır durumu <code>Atandı</code> olur.</td>
+<td>En az 1 satır seçili + personel seçilmiş; görev Bekliyor/Toplanıyor. Toplanmış satır yeniden atanamaz (&quot;… satır toplanmış/kapanmış — yeniden atanamaz.&quot;).</td>
+</tr>
+<tr>
+<td>Atanmamışları Eşit Paylaştır (N)</td>
+<td>Görev detayı dağıtım çubuğu</td>
+<td>Pencere açılır; seçilen personellere atanmamış satırlar rota sırasıyla dönüşümlü dağıtılır.</td>
+<td>Atanmamış satır olmalı (N &gt; 0).</td>
+</tr>
+<tr>
+<td>Paylaştır / Vazgeç</td>
+<td>Eşit paylaştırma penceresi</td>
+<td>Dağıtımı uygular / pencereyi kapatır.</td>
+<td>En az bir personel işaretli.</td>
+</tr>
+</tbody></table>
+<h2 id="gorev-olusturma-ekrani">Görev oluşturma ekranı<a class="anchor" href="#gorev-olusturma-ekrani" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/fulfillment-tasks-new.webp" class="buyut" data-alt="Görev Oluşturma — filtreler, özet şeridi ve önizleme"><img src="/rehber/img/fulfillment-tasks-new.webp" alt="Görev Oluşturma — filtreler, özet şeridi ve önizleme" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Görev Oluşturma — filtreler, özet şeridi ve önizleme</figcaption></figure>
+<em>(1) Filtre kartı · (2) Özet şeridi + Görev(ler)i Oluştur · (3) Önizleme tablosu</em></p>
+<h3 id="form-alanlari-filtreler">Form alanları (filtreler)<a class="anchor" href="#form-alanlari-filtreler" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kanallar</td>
+<td>Hayır</td>
+<td>Onay kutulu çoklu seçim. Boş bırakılırsa tüm kanallar dahildir.</td>
+</tr>
+<tr>
+<td>Depo</td>
+<td>Hayır</td>
+<td>Tek depo seçimi. Seçilince yalnız <strong>tüm</strong> rezervasyonları o depoda olan siparişler listelenir; karma depolu siparişler hariç tutulur (özet şeridinde sayısı görünür).</td>
+</tr>
+<tr>
+<td>Kargo</td>
+<td>Hayır</td>
+<td>Siparişte istenen kargo şirketi. Seçenekler önizlemede görülen kargolardan oluşur.</td>
+</tr>
+<tr>
+<td>Teslimat Şehri</td>
+<td>Hayır</td>
+<td>Teslimat adresinin ili (il listesi yüklenemezse alan gizlenir).</td>
+</tr>
+<tr>
+<td>Ürün Sayısı</td>
+<td>Hayır</td>
+<td><code>Tümü</code> / <code>Tek ürünlü</code> / <code>Çok ürünlü</code>. Çok ürünlüde <strong>Min</strong> (en az 2) ve <strong>Maks</strong> (boş = sınırsız) adet kutuları açılır. Bu seçim aynı zamanda hangi görev tiplerinin açılacağını belirler.</td>
+</tr>
+<tr>
+<td>Sipariş Tarihi</td>
+<td>Hayır</td>
+<td>Başlangıç — bitiş tarihi (bitiş günü sonuna kadar dahil).</td>
+</tr>
+</tbody></table>
+<p>Filtre değiştikçe özet şeridi yeniden hesaplanır (&quot;Hesaplanıyor…&quot;):
+<code>Eşleşen: N sipariş (T tek / Ç çok) | Karma depolu (hariç): K</code> ve sağda oluşturulacak görev tipi bilgisi
+(&quot;Tek + çok ürünlü görevler ayrı ayrı oluşturulacak&quot; / &quot;Tek ürünlü görev oluşturulacak&quot; / &quot;Çok ürünlü görev oluşturulacak&quot;).</p>
+<h3 id="onizleme-tablosu">Önizleme tablosu<a class="anchor" href="#onizleme-tablosu" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SİPARİŞ NO</td>
+<td>Sipariş numarası; satıra tıklayınca sipariş detayı açılır.</td>
+</tr>
+<tr>
+<td>KANAL</td>
+<td>Siparişin satış kanalı.</td>
+</tr>
+<tr>
+<td>TARİH</td>
+<td>Sipariş tarihi.</td>
+</tr>
+<tr>
+<td>ADET</td>
+<td>Siparişteki toplam ürün adedi.</td>
+</tr>
+<tr>
+<td>KARGO</td>
+<td>İstenen kargo şirketi.</td>
+</tr>
+<tr>
+<td>(rozet)</td>
+<td><code>Karma depolu</code> — rezervasyonları birden fazla depoda olan sipariş.</td>
+</tr>
+</tbody></table>
+<p>Eşleşen sipariş sayısı önizlemeden fazlaysa başlıkta &quot;(ilk N / toplam)&quot; yazar.</p>
+<h2 id="gorev-detayi-ve-dagitim-ekrani">Görev detayı ve dağıtım ekranı<a class="anchor" href="#gorev-detayi-ve-dagitim-ekrani" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/fulfillment-tasks-detay.webp" class="buyut" data-alt="Görev detayı — başlık rozetleri, dağıtım çubuğu ve rota sıralı satır tablosu"><img src="/rehber/img/fulfillment-tasks-detay.webp" alt="Görev detayı — başlık rozetleri, dağıtım çubuğu ve rota sıralı satır tablosu" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Görev detayı — başlık rozetleri, dağıtım çubuğu ve rota sıralı satır tablosu</figcaption></figure>
+<em>(1) Başlık: plan no + tip/durum/dağıtım rozetleri + aksiyon butonları · (2) Özet satırı (planlama, başlama, bitiş, depo, toplanma) · (3) Dağıtım çubuğu · (4) Satır tablosu</em></p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>(onay kutusu)</td>
+<td>Satır seçimi; yalnız <code>Bekliyor</code> / <code>Atandı</code> satırlar seçilebilir. Başlıktaki kutu tümünü seçer.</td>
+</tr>
+<tr>
+<td>#</td>
+<td>Rota sırası — personelin depoda yürüyüş sırası (raf koduna göre; rafı olmayan satırlar sona).</td>
+</tr>
+<tr>
+<td>RAF</td>
+<td>Önerilen kaynak raf kodu (siparişin rezervasyon rafı).</td>
+</tr>
+<tr>
+<td>SKU</td>
+<td>Ürün/varyant kodu.</td>
+</tr>
+<tr>
+<td>ÜRÜN</td>
+<td>Ürün adı + varyant bilgisi.</td>
+</tr>
+<tr>
+<td>SİPARİŞ NO</td>
+<td>Satırın ait olduğu sipariş.</td>
+</tr>
+<tr>
+<td>ADET</td>
+<td>İstenen adet; toplama başladıysa <code>toplanan/istenen</code>.</td>
+</tr>
+<tr>
+<td>DURUM</td>
+<td><code>Bekliyor</code> / <code>Atandı</code> / <code>Toplandı</code> / <code>Eksik</code> (bulunamadı) / <code>İade</code>.</td>
+</tr>
+<tr>
+<td>ATANAN</td>
+<td>Satırın atandığı personel.</td>
+</tr>
+</tbody></table>
+<p>Dağıtım çubuğu yalnız görev <code>Bekliyor</code> veya <code>Toplanıyor</code> iken görünür: seçili satır sayısı, <strong>Personel seçin</strong>
+kutusu (aktif kullanıcılar), <strong>Seçilenleri Ata</strong> ve <strong>Atanmamışları Eşit Paylaştır (N)</strong>.</p>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Durum</th>
+<th>Anlamı / geçiş</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>pending</code> Bekliyor</td>
+<td>Görev oluşturuldu. <strong>Başlat</strong> ile <code>picking</code>&#39;e geçer. Dağıtım yapılabilir.</td>
+</tr>
+<tr>
+<td><code>picking</code> Toplanıyor</td>
+<td>Personel okutuyor. <strong>Tamamla</strong> ile <code>completed</code> olur. Dağıtım yapılabilir.</td>
+</tr>
+<tr>
+<td><code>completed</code> Tamamlandı</td>
+<td>Kapandı; dağıtım/atama yapılamaz.</td>
+</tr>
+<tr>
+<td><code>cancelled</code> İptal</td>
+<td>İptal edilmiş görev.</td>
+</tr>
+</tbody></table>
+<ul>
+<li><strong>Aday sipariş kuralı:</strong> Yalnız durumu <strong>onaylı</strong> (<code>confirmed</code>) olan, henüz bir göreve bağlanmamış ve
+stoğu <strong>rezerve edilmiş</strong> siparişler görev adayıdır. Rezervasyonu olmayan sipariş (örneğin eski sistemden
+aktarılmış geçiş siparişleri) listede çıkmaz.</li>
+<li><strong>Tek/çok otomatik ayrım:</strong> Toplam adedi 1 olan sipariş tek ürünlü, diğerleri çok ürünlü kabul edilir; her
+tip için ayrı görev açılır. Ürün Sayısı filtresi <code>Tek ürünlü</code> ise yalnız tek ürünlü, <code>Çok ürünlü</code> ise yalnız
+çok ürünlü görev oluşur.</li>
+<li><strong>Görev oluşunca sipariş <code>İşleniyor</code> (processing) durumuna geçer.</strong></li>
+<li><strong>Rota sırası:</strong> Satırlar önerilen raf koduna göre sıralanır; aynı raf için sipariş numarası ikincil anahtardır.
+Raf, siparişin rezervasyonundan gelir (kısım ve raf toplama sırası dikkate alınır).</li>
+<li><strong>Dağıtım rozeti</strong> görevin tamamını kapsar: hiç atama yoksa kırmızı, kısmen sarı, tamamı atandıysa yeşil.</li>
+<li><strong>Eşit paylaştırma</strong> atanmamış satırları seçilen personellere rota sırasıyla dönüşümlü (1→A, 2→B, 3→A…) verir;
+pencerede personel başına yaklaşık kaç satır düşeceği gösterilir.</li>
+<li><strong>Operasyon günlüğü:</strong> Görev oluşturma, satır atama, toplama, ayrıştırma, paketleme gibi her adım sipariş
+bazında kaydedilir ve sipariş detayındaki <strong>Operasyon Geçmişi</strong> bölümünde zaman sırasıyla görünür.</li>
+<li>Çoklu (çok ürünlü) görevlerde sipariş iptali süreci durdurmaz; iptal paketleme aşamasında yakalanır.</li>
+</ul>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<p><strong>Yeni görev oluşturma</strong></p>
+<ol>
+<li>Sol menüden <strong>Sipariş Yönetimi → Toplama Planlama</strong>&#39;ya gelin, <strong>+ Yeni Görev</strong>&#39;e tıklayın.</li>
+<li>Filtreleri seçin (kanal, depo, kargo, şehir, ürün sayısı, tarih). Özet şeridindeki eşleşen sipariş sayısını kontrol edin.</li>
+<li>Önizlemede siparişleri gözden geçirin; gerekirse bir satıra tıklayıp sipariş detayına bakın.</li>
+<li><strong>Görev(ler)i Oluştur</strong>&#39;a tıklayın. Başarı penceresinde oluşan görevleri (plan no, tip, sipariş ve satır sayısı) görün.</li>
+<li><strong>Göreve Git</strong> (tek görev) ya da <strong>Görev Listesine Git</strong> ile devam edin.</li>
+</ol>
+<p><strong>Satırları personele dağıtma</strong></p>
+<ol>
+<li>Listeden göreve tıklayın; detay açılır.</li>
+<li>Satırları onay kutularıyla seçin (başlıktaki kutu tümünü seçer), <strong>Personel seçin</strong> kutusundan kişiyi seçip <strong>Seçilenleri Ata</strong>&#39;ya tıklayın.</li>
+<li>Kalan satırlar için <strong>Atanmamışları Eşit Paylaştır (N)</strong> → personelleri işaretleyin → <strong>Paylaştır</strong>.</li>
+<li>Başlıktaki dağıtım rozetinin <code>Dağıtım tamam</code> olduğundan emin olun ve <strong>Başlat</strong>&#39;a tıklayın.</li>
+<li>Personel, <a href="/rehber/siparis/urun-toplama/">Ürün Toplama</a> ekranında görevi görür ve okutmaya başlar.</li>
+</ol>
+<p><strong>Görevi kapatma</strong></p>
+<ol>
+<li>TOPLANMA sütunu %100&#39;e ulaşınca (ya da kalan satırlar <code>Eksik</code> işaretlenince) <strong>Tamamla</strong>&#39;ya tıklayın ve onaylayın.</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Depo filtresi seçiliyken karma depolu siparişler listede çıkmaz; bunları unutmamak için filtreyi
+kaldırıp özet şeridindeki &quot;Karma depolu (hariç)&quot; sayısını kontrol edin.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Tamamlanmış görevde atama yapılamaz; &quot;&#39;completed&#39; durumundaki görevde dağıtım yapılamaz.&quot; hatası alırsınız.
+Toplanmış satır başka personele aktarılamaz.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> &quot;Filtreye uyan sipariş bulunamadı.&quot; / &quot;Seçilen görev tiplerine uyan sipariş yok.&quot; mesajları, filtreye
+uyan onaylı-rezervasyonlu siparişin bulunmadığını ya da seçilen tipte (tek/çok) sipariş olmadığını söyler.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> Görev detayında &quot;Bu görevde satır yok (eski akışla oluşturulmuş olabilir).&quot; görünüyorsa görev satır
+bazlı dağıtım öncesi açılmıştır; yeni görev oluşturun.</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/siparis/urun-toplama/">Ürün Toplama</a></li>
+<li><a href="/rehber/siparis/hizli-hat/">Hızlı Hat</a></li>
+<li><a href="/rehber/siparis/ara-ayristirma/">Ara Ayrıştırma ve Koli Duvarı</a></li>
+<li><a href="/rehber/siparis/masa-ve-paketleme/">Masa ve Paketleme</a></li>
+<li><a href="/rehber/siparis/siparisler/">Siparişler</a></li>
+<li><a href="/rehber/siparis/siparis-detay/">Sipariş Detayı — Operasyon Geçmişi</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/siparis/kargo-bolgeleri/">← Kargo Bölgeleri</a><a class="sonraki" href="/rehber/siparis/urun-toplama/">Ürün Toplama →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>

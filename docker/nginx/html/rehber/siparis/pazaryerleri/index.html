@@ -1,0 +1,785 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pazaryerleri — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="">Toplama Planlama</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="active">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Sipariş Yönetimi</span> › <b>Pazaryerleri</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Sipariş Yönetimi</div><h1>Pazaryerleri</h1>
+<p class="ozet">Pazaryeri mağazalarınızın (Trendyol, Hepsiburada, n11, Amazon, Çiçeksepeti, Pazarama) kart görünümü; mağaza detayında ürün hazırlık denetimi, ürün gönderimi, fiyat-stok güncelleme, sipariş çekme, senkron geçmişi, sorun kuyruğu ve mutabakat.</p><p class="rota">Panel adresi: <code>/admin/marketplaces</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#liste-ve-filtreler">Liste ve filtreler</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#form-alanlari">Form alanları</a><a href="#detay-sayfasi">Detay sayfası</a><a href="#sekmeler">Sekmeler</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Pazaryerleri sayfası, firmalarınızın pazaryeri mağazalarını tek ekranda toplar: hangi mağazanın bağlantısı sağlıklı, kaç ürün yüklü, kaç ürün gönderilmeyi bekliyor, kaç üründe hata var ve bugün kaç sipariş geldi. Mağaza kartına tıklayınca açılan <strong>mağaza detayı</strong> pazaryeri operasyonunun tamamını yürüttüğünüz yerdir: ürünleri hazırlık denetiminden geçirip gönderme, eksik bilgileri tamamlama, fiyat-stok güncelleme, sipariş çekme, gönderim paketlerini izleme, sorunları çözme ve mutabakat çalıştırma.</p>
+<p>Bu ekranı pazaryeri operasyonundan sorumlu personel günlük olarak kullanır. Ürün gönderimi için önce <a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/">Kategori ve Özellik Eşleştirme</a> sayfasında eşlemelerin yapılmış olması gerekir.</p>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/marketplaces.webp" class="buyut" data-alt="Pazaryerleri — mağaza kartları, firma filtresi ve özet şeridi"><img src="/rehber/img/marketplaces.webp" alt="Pazaryerleri — mağaza kartları, firma filtresi ve özet şeridi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Pazaryerleri — mağaza kartları, firma filtresi ve özet şeridi</figcaption></figure></p>
+<ol>
+<li><strong>Başlık çubuğu</strong> — sayfa adı ve sağda üç buton: <strong>Eşleştirme</strong>, <strong>Referans Verisi</strong>, <strong>Yeni Mağaza</strong>.</li>
+<li><strong>Firma filtresi + arama</strong> — <code>Tümü</code> çipi ve her firma için ad + mağaza sayısı çipi; sağda &quot;Mağaza ara…&quot; kutusu.</li>
+<li><strong>Özet şeridi</strong> — beş kutu: Mağaza, Yüklü Ürün, Yüklenecek Ürün, Senkron Hatası, Bugün Gelen Sipariş (görünen mağazaların toplamı).</li>
+<li><strong>Pazaryeri grupları</strong> — mağazalar pazaryeri tipine göre gruplanır; grup başlığında logo, pazaryeri adı ve &quot;N mağaza · N yüklü ürün&quot; özeti; altında mağaza kartları.</li>
+</ol>
+<p><em>(1) Başlık ve butonlar · (2) Firma filtresi ve arama · (3) Özet şeridi · (4) Gruplu mağaza kartları</em></p>
+<h2 id="liste-ve-filtreler">Liste ve filtreler<a class="anchor" href="#liste-ve-filtreler" aria-hidden="true">#</a></h2>
+<h3 id="filtreler">Filtreler<a class="anchor" href="#filtreler" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Filtre</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Tümü</code> / firma çipleri</td>
+<td>Kartları seçilen firmanın mağazalarıyla sınırlar. Çipteki sayı o firmanın mağaza adedidir. Bir firma seçiliyken <strong>Yeni Mağaza</strong> açılırsa firma alanı o firmayla dolu gelir.</td>
+</tr>
+<tr>
+<td>Mağaza ara…</td>
+<td>Yazdıkça mağaza adı, kodu veya pazaryeri adı üzerinde filtreler.</td>
+</tr>
+</tbody></table>
+<p>Sıralama: aktif mağazası olan pazaryeri grupları önce, sonra gruplar ada göre; grup içinde aktif mağazalar önce, sonra koda göre. Hiç mağaza yoksa &quot;Henüz pazaryeri mağazası tanımlanmamış.&quot; mesajı ve <strong>İlk Mağazayı Ekle</strong> butonu görünür; filtreye uyan yoksa &quot;Filtreye uyan mağaza yok.&quot; yazar.</p>
+<h3 id="ozet-seridi">Özet şeridi<a class="anchor" href="#ozet-seridi" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Kutu</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Mağaza</td>
+<td>Görünen mağaza sayısı; altında &quot;N aktif · N pasif&quot;.</td>
+</tr>
+<tr>
+<td>Yüklü Ürün</td>
+<td>Tüm mağazalarda pazaryerine yüklenmiş varyant toplamı.</td>
+</tr>
+<tr>
+<td>Yüklenecek Ürün</td>
+<td>Kanalda satışa açık olup henüz gönderilmemiş ürün toplamı (yalnız aktif mağazalar). Sıfırdan büyükse sarı.</td>
+</tr>
+<tr>
+<td>Senkron Hatası</td>
+<td>Gönderimi hatalı biten varyant toplamı; altında kaç mağazada olduğu. Sıfırdan büyükse kırmızı.</td>
+</tr>
+<tr>
+<td>Bugün Gelen Sipariş</td>
+<td>Bugün oluşan pazaryeri siparişleri toplamı.</td>
+</tr>
+</tbody></table>
+<h3 id="magaza-karti">Mağaza kartı<a class="anchor" href="#magaza-karti" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Kart öğesi</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Üst renk şeridi + sağlık noktası</td>
+<td>Mağaza sağlığı: yeşil (sağlıklı), sarı (uyarı), kırmızı (hata), gri (pasif).</td>
+</tr>
+<tr>
+<td>Logo, ad, kod</td>
+<td>Pazaryeri kısaltması (TY, HB, n11, AMZ, ÇS, PZ), mağazanın kanal adı ve kodu.</td>
+</tr>
+<tr>
+<td>Firma rozeti</td>
+<td>Birden fazla firma varsa mağazanın hangi firmaya ait olduğu.</td>
+</tr>
+<tr>
+<td><code>Aktif</code> / <code>Pasif</code> rozeti</td>
+<td>Kanalın aktiflik durumu. Pasif mağaza kartı soluk görünür ve senkron çalışmaz.</td>
+</tr>
+<tr>
+<td>Sağlık satırı</td>
+<td>Aşağıdaki tablodaki mesajlardan biri; kart üzerinden bir senkron işlemi çalıştırıldığında o işlemin sonucu burada gösterilir.</td>
+</tr>
+<tr>
+<td>YÜKLÜ</td>
+<td>Pazaryerine yüklü varyant sayısı.</td>
+</tr>
+<tr>
+<td>YÜKLENECEK</td>
+<td>Kanalda açık, henüz gönderilmemiş ürün sayısı (pasif mağazada <code>—</code>). Sıfırdan büyükse sarı.</td>
+</tr>
+<tr>
+<td>HATALI / AÇIK SİPARİŞ</td>
+<td>Hatalı varyant varsa kırmızı <strong>HATALI</strong> sayısı; yoksa <strong>AÇIK SİPARİŞ</strong> sayısı gösterilir.</td>
+</tr>
+<tr>
+<td>Ürünler · Siparişler · Senkron ▾ · ⚙</td>
+<td>Kartın alt butonları (bkz. Butonlar ve aksiyonlar).</td>
+</tr>
+</tbody></table>
+<p>Sağlık mesajları (öncelik sırasıyla değerlendirilir — ilk tutan kural gösterilir):</p>
+<table>
+<thead>
+<tr>
+<th>Renk</th>
+<th>Mesaj</th>
+<th>Anlamı / ne yapmalı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Gri</td>
+<td>Mağaza pasif — senkron durduruldu</td>
+<td>Kanal pasif. Ayarlar&#39;dan <strong>Aktif</strong> işaretleyin.</td>
+</tr>
+<tr>
+<td>Kırmızı</td>
+<td>N üründe senkron hatası</td>
+<td>Gönderimi hatalı biten ürün var → detay Ürünler → <strong>Hatalı</strong> filtresi.</td>
+</tr>
+<tr>
+<td>Sarı</td>
+<td>N açık sorun — Sorunlar sekmesine bakın</td>
+<td>Mutabakat/gönderim sonuçlarından açılmış sorun var → detay <strong>Sorunlar</strong> sekmesi.</td>
+</tr>
+<tr>
+<td>Sarı</td>
+<td>Bağlantı kurulmadı — pazaryeri sözleşmesi/API bilgisi eksik</td>
+<td>Mağazaya bağlı aktif pazaryeri sözleşmesi yok → Firma detayı → Entegrasyonlar.</td>
+</tr>
+<tr>
+<td>Yeşil</td>
+<td>Bağlantı hazır — henüz senkron yapılmadı</td>
+<td>Sözleşme bağlı, ilk senkron yapılmamış.</td>
+</tr>
+<tr>
+<td>Yeşil</td>
+<td>Bağlantı sağlıklı · son senkron X önce</td>
+<td>Her şey yolunda.</td>
+</tr>
+</tbody></table>
+<p>Kartın boş alanına tıklayınca mağaza detayı açılır.</p>
+<h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Eşleştirme</td>
+<td>Başlık sağ üst</td>
+<td><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/">Kategori ve Özellik Eşleştirme</a> sayfasına gider.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Referans Verisi</td>
+<td>Başlık sağ üst</td>
+<td><strong>Pazaryeri Referans Verisi</strong> penceresini açar (pazaryeri kategori/özellik/değer ağaçlarını indirir).</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Yeni Mağaza</td>
+<td>Başlık sağ üst</td>
+<td>&quot;Yeni Pazaryeri Mağazası&quot; penceresi — mağaza formu (aşağıda). Platform tipi listesinde yalnız pazaryeri tipleri çıkar.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>İlk Mağazayı Ekle</td>
+<td>Boş durum kartı</td>
+<td>Yeni Mağaza ile aynı.</td>
+<td>Hiç mağaza yokken</td>
+</tr>
+<tr>
+<td>Ürünler</td>
+<td>Kart altı</td>
+<td>Mağaza detayını <strong>Ürünler</strong> sekmesinde açar.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Siparişler</td>
+<td>Kart altı</td>
+<td>Mağaza detayını <strong>Siparişler</strong> sekmesinde açar.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Senkron ▾ → Ürünleri Gönder…</td>
+<td>Kart altı</td>
+<td>Detay Ürünler sekmesini <strong>Hazır</strong> filtresiyle açar; gönderimi oradan seçerek yaparsınız.</td>
+<td>Mağaza aktif</td>
+</tr>
+<tr>
+<td>Senkron ▾ → Stok-Fiyat Güncelle</td>
+<td>Kart altı</td>
+<td>Yüklü ürünlerin fiyat ve stoğunu pazaryerine iter; yalnız değişenler gönderilir. Sonuç kartta: &quot;Fiyat-stok gönderildi: N varyant (M değişmemiş atlandı)&quot;.</td>
+<td>Mağaza aktif + sözleşme bağlı</td>
+</tr>
+<tr>
+<td>Senkron ▾ → Siparişleri Çek</td>
+<td>Kart altı</td>
+<td>Pazaryerinden yeni siparişleri sorgular. Sonuç kartta: &quot;Sipariş çekildi: N yeni&quot;.</td>
+<td>Mağaza aktif + sözleşme bağlı</td>
+</tr>
+<tr>
+<td>Senkron ▾ → Mutabakat Çalıştır</td>
+<td>Kart altı</td>
+<td>Pazaryerindeki ürün listesini bizdeki kayıtlarla karşılaştırır (bkz. Durumlar ve iş kuralları). Sonuç kartta: &quot;Mutabakat: N karşılaştırıldı · N otomatik düzeltme · N sorun&quot;.</td>
+<td>Mağaza aktif + sözleşme bağlı; mutabakat desteği olan pazaryeri</td>
+</tr>
+<tr>
+<td>⚙ (Mağaza ayarları)</td>
+<td>Kart altı</td>
+<td>&quot;Mağaza Ayarları — Ad&quot; penceresinde mağaza formunu düzenleme modunda açar.</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<blockquote class="callout not">
+<p><strong>Not:</strong> Senkron menüsü pasif mağazada devre dışıdır. İşlem sürerken buton döner; hata olursa kartın sağlık satırında kırmızı mesaj görünür (ör. &quot;Bu mağaza için aktif pazaryeri bağlantısı (sözleşme) yok.&quot;).</p>
+</blockquote>
+<h3 id="referans-verisi-penceresi">Referans Verisi penceresi<a class="anchor" href="#referans-verisi-penceresi" aria-hidden="true">#</a></h3>
+<p>Pazaryerlerinin kategori / özellik / değer ağaçları ayrı bir referans veritabanında saklanır ve bu pencereden güncellenir. Eşleştirme ekranı ve hazırlık denetimi bu veriyi kullanır.</p>
+<table>
+<thead>
+<tr>
+<th>Öğe</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Özet tablosu: Pazaryeri · Kategori · Özellik · Değer · Son Senkron</td>
+<td>Pazaryeri başına indirilmiş kayıt sayıları. Kategori sütununda &quot;(+N kaldırılmış)&quot; pazaryerinin kaldırdığı kategorileri gösterir. Son Senkron&#39;da durum rozeti (<code>Sürüyor a/b</code>, <code>Tamamlandı</code>, <code>Başarısız</code>), kapsam ve zaman; hiç çalışmadıysa &quot;Henüz senkron yapılmadı&quot;.</td>
+</tr>
+<tr>
+<td>Pazaryeri (seçim)</td>
+<td>Senkronu başlatılacak pazaryeri. Listede yalnız referans indiricisi hazır pazaryerleri çıkar.</td>
+</tr>
+<tr>
+<td>Kapsam (seçim)</td>
+<td><code>Kategoriler</code> (kategori ağacı) veya <code>Özellikler + Değerler (tüm yaprak kategoriler)</code>.</td>
+</tr>
+<tr>
+<td>Senkronu Başlat</td>
+<td>Arka planda koşu başlatır: &quot;Senkron başlatıldı — ilerleme aşağıdaki listede.&quot; Pencereyi kapatabilirsiniz.</td>
+</tr>
+<tr>
+<td>SON KOŞULAR</td>
+<td>Son 10 koşu: pazaryeri + kapsam, durum rozeti, &quot;+N yeni · ~N değişen · −N kaldırılan&quot;, ne zaman; hata varsa kırmızı metin. Sürüyor durumunda 4 saniyede bir kendini yeniler.</td>
+</tr>
+</tbody></table>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Özellik senkronu kategori sayısına göre uzun sürebilir. Aynı anda ikinci koşu başlatılamaz. Pencerede &quot;Referans veritabanı yapılandırılmamış&quot; kırmızı kutusu görünüyorsa sunucu ayarı eksiktir — sistem yöneticinize iletin.</p>
+</blockquote>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Sıra: önce <code>Kategoriler</code>, sonra <code>Özellikler + Değerler</code>. Özellikleri indirilmemiş bir kategoriye eşlenen ürünler denetimde &quot;Kategori özellikleri henüz indirilmedi&quot; nedeniyle <strong>Eksik</strong> sayılır.</p>
+</blockquote>
+<h2 id="form-alanlari">Form alanları<a class="anchor" href="#form-alanlari" aria-hidden="true">#</a></h2>
+<p>Mağaza formu <strong>Yeni Mağaza</strong>, kart ⚙ ve detay <strong>Ayarlar</strong> sekmesinde aynıdır (kanal formuyla ortaktır).</p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Firma</td>
+<td>Evet</td>
+<td>Yalnız yeni kayıtta, birden fazla firma varken ve firma filtresi <code>Tümü</code> ise görünür; aksi halde seçili firma kullanılır.</td>
+</tr>
+<tr>
+<td>Platform Tipi</td>
+<td>Evet</td>
+<td>Yalnız yeni kayıtta. Liste &quot;(Pazaryeri)&quot; ekli tiplerle sınırlıdır (Trendyol, Hepsiburada, n11, Amazon, Çiçeksepeti, Pazarama). Düzenlemede değiştirilemez.</td>
+</tr>
+<tr>
+<td>Kanal Adı</td>
+<td>Evet</td>
+<td>Mağazanın panelde görünen adı. Örn. <code>Trendyol Ana Mağaza</code>.</td>
+</tr>
+<tr>
+<td>Kod</td>
+<td>Otomatik</td>
+<td>Yalnız yeni kayıtta, addan üretilir ve salt okunur gösterilir.</td>
+</tr>
+<tr>
+<td>Fiyat Tipi / Çarpan</td>
+<td>Hayır</td>
+<td><code>— Yok —</code>, <code>Manuel</code> veya <code>Çarpan</code>. Çarpan seçilirse çarpan değeri (örn. <code>1.10</code>).</td>
+</tr>
+<tr>
+<td>Kimlik Bilgileri (API)</td>
+<td>Şemaya göre</td>
+<td>Platform tipinin alan şemasında kimlik alanı tanımlıysa sarı kutuda görünür. Pazaryeri API anahtarları ise <strong>firma sözleşmesinde</strong> tutulur (bkz. Durumlar ve iş kuralları).</td>
+</tr>
+<tr>
+<td>Ayarlar</td>
+<td>Şemaya göre</td>
+<td>Platform tipinin şemasındaki ayar alanları. Şema yoksa &quot;Bu platform tipi için alan şeması tanımlı değil.&quot; uyarısı çıkar.</td>
+</tr>
+<tr>
+<td>Stoğu biten ürünleri listede göster</td>
+<td>Hayır</td>
+<td>Açılırsa &quot;Yalnız bu tarihten sonra açılanlar&quot; tarih alanı görünür (boş = tümü).</td>
+</tr>
+<tr>
+<td>Ödeme Yöntemleri</td>
+<td>En az biri</td>
+<td><code>Kart ile Öde (Online)</code>, <code>Kapıda Nakit Ödeme</code>, <code>Kapıda Kart ile Ödeme</code>. Kapıda ödeme seçiliyse hizmet bedeli ve üst sınır (0 = sınırsız) alanları açılır.</td>
+</tr>
+<tr>
+<td>Paket bilgileri kargo şirketine gönderilsin</td>
+<td>Hayır</td>
+<td>Pazaryeri mağazalarında <strong>kapalı</strong> bırakın — kargo bilgisini pazaryeri kendisi iletir.</td>
+</tr>
+<tr>
+<td>Eski platform Id</td>
+<td>Hayır</td>
+<td>Eski sistem köprüsü için; boş = sipariş senkronu kapalı.</td>
+</tr>
+<tr>
+<td>Aktif</td>
+<td>—</td>
+<td>Yalnız düzenlemede. Kapalıysa mağaza pasif olur, senkron durur.</td>
+</tr>
+<tr>
+<td>İptal / Kaydet</td>
+<td>—</td>
+<td>Kaydet zorunlu alanlar dolana kadar devre dışıdır.</td>
+</tr>
+</tbody></table>
+<h2 id="detay-sayfasi">Detay sayfası<a class="anchor" href="#detay-sayfasi" aria-hidden="true">#</a></h2>
+<p>Rota: <code>/marketplaces/:id</code>. Kart tıklamasıyla açılır; &quot;‹ Pazaryerleri&quot; bağlantısı listeye döner. Mağaza bulunamazsa &quot;Mağaza bulunamadı — silinmiş veya pazaryeri mağazası olmayan bir kanal olabilir.&quot; mesajı görünür.</p>
+<p><figure class="ekran"><a href="/rehber/img/marketplaces-detay.webp" class="buyut" data-alt="Mağaza detayı — başlık, sağlık satırı ve Genel Bakış sekmesi"><img src="/rehber/img/marketplaces-detay.webp" alt="Mağaza detayı — başlık, sağlık satırı ve Genel Bakış sekmesi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Mağaza detayı — başlık, sağlık satırı ve Genel Bakış sekmesi</figcaption></figure></p>
+<ol>
+<li><strong>Başlık</strong> — logo, mağaza adı, &quot;Pazaryeri · kod · firma&quot;, <code>Aktif</code>/<code>Pasif</code> rozeti; sağda <strong>Siparişler (N)</strong> ve <strong>Senkronize Et ▾</strong> (Ürünleri Gönder… / Stok-Fiyat Güncelle / Siparişleri Çek).</li>
+<li><strong>Sağlık satırı</strong> — listedeki sağlık mesajıyla aynı; senkron sonucu burada gösterilir.</li>
+<li><strong>Sekmeler</strong> — Genel Bakış · Ürünler (yüklü + yüklenecek sayısı) · Siparişler (açık sipariş sayısı) · Senkron Geçmişi · Sorunlar (açık sorun sayısı) · Ayarlar.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Siparişler (N)</td>
+<td>Başlık</td>
+<td>Siparişler sekmesine geçer.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Senkronize Et ▾ → Ürünleri Gönder…</td>
+<td>Başlık</td>
+<td>Ürünler sekmesini <strong>yüklenecek</strong> filtresiyle açar.</td>
+<td>Mağaza aktif</td>
+</tr>
+<tr>
+<td>Senkronize Et ▾ → Stok-Fiyat Güncelle</td>
+<td>Başlık</td>
+<td>Yüklü ürünlerin stok/fiyatını iter; sonuç sağlık satırında.</td>
+<td>Mağaza aktif + sözleşme</td>
+</tr>
+<tr>
+<td>Senkronize Et ▾ → Siparişleri Çek</td>
+<td>Başlık</td>
+<td>Yeni siparişleri sorgular; &quot;Sipariş çekme tamamlandı: N yeni sipariş&quot;.</td>
+<td>Mağaza aktif + sözleşme</td>
+</tr>
+</tbody></table>
+<h2 id="sekmeler">Sekmeler<a class="anchor" href="#sekmeler" aria-hidden="true">#</a></h2>
+<h3 id="genel-bakis">Genel Bakış<a class="anchor" href="#genel-bakis" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Öğe</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Yüklü · Yüklenecek · Bekleyen · Hatalı · Açık Sipariş · Bugün Gelen</td>
+<td>Altı sayaç kutusu; tıklayınca ilgili sekmeye (Ürünler / Siparişler) geçer. Yüklenecek sarı, Hatalı kırmızı vurgulanır.</td>
+</tr>
+<tr>
+<td>Bağlantı kartı</td>
+<td>&quot;<strong>Sözleşme bağlı</strong> — servis: <code>kod</code> · son senkron X önce&quot; ya da uyarı: &quot;Bu mağazaya bağlı aktif bir pazaryeri sözleşmesi yok. Senkron çalışmaz — firma detayından pazaryeri servisi için sözleşme ekleyin.&quot; Altında <strong>Firma sözleşmeleri ↗</strong> bağlantısı firma detayına gider.</td>
+</tr>
+<tr>
+<td>Son İşlemler</td>
+<td>Son 5 senkron kaydı: tarih-saat, işlem (Ürün gönderimi / Stok güncelleme / Sipariş çekme), <code>Başarılı</code> / <code>Hata</code>. <strong>Tümü →</strong> Senkron Geçmişi&#39;ne geçer. Boşsa &quot;Henüz senkron işlemi yapılmamış.&quot;</td>
+</tr>
+</tbody></table>
+<h3 id="urunler">Ürünler<a class="anchor" href="#urunler" aria-hidden="true">#</a></h3>
+<p><figure class="ekran"><a href="/rehber/img/marketplaces-detay--urun-gonderimi.webp" class="buyut" data-alt="Ürünler sekmesi — Hazır filtresi, seçim ve Seçilenleri Gönder"><img src="/rehber/img/marketplaces-detay--urun-gonderimi.webp" alt="Ürünler sekmesi — Hazır filtresi, seçim ve Seçilenleri Gönder" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Ürünler sekmesi — Hazır filtresi, seçim ve Seçilenleri Gönder</figcaption></figure></p>
+<p>Durum çipleri (her biri sayılıdır):</p>
+<table>
+<thead>
+<tr>
+<th>Çip</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Yüklü</td>
+<td>Pazaryerine gönderilmiş ve kabul edilmiş varyantlar.</td>
+</tr>
+<tr>
+<td>Hazır</td>
+<td>Kanalda açık, henüz gönderilmemiş ve hazırlık denetiminden <strong>sorunsuz</strong> geçmiş ürünler — gönderilebilir.</td>
+</tr>
+<tr>
+<td>Eksik</td>
+<td>Denetimde eksik bulunan <strong>veya henüz denetlenmemiş</strong> ürünler. Satırda neden rozetleri ve <strong>Tamamla</strong> bağlantısı vardır.</td>
+</tr>
+<tr>
+<td>Bekleyen</td>
+<td>Gönderilmiş, sonucu pazaryerinden henüz gelmemiş varyantlar.</td>
+</tr>
+<tr>
+<td>Hatalı</td>
+<td>Pazaryerinin reddettiği varyantlar; satırda hata metni kırmızı görünür. Sayı sıfırdan büyükse çip kırmızı.</td>
+</tr>
+<tr>
+<td>Pasif</td>
+<td>Pazaryerinde pasife alınmış varyantlar.</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Filtre / buton</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ürün / barkod ara…</td>
+<td>Enter ile uygular; ürün adı/kodu/barkod üzerinde arar.</td>
+</tr>
+<tr>
+<td>Denetle</td>
+<td>Yalnız Hazır/Eksik çiplerinde görünür. Pazaryeri için tüm adayların hazırlık denetimini yeniden çalıştırır: &quot;Denetim bitti: N hazır, M eksik (T ürün).&quot;</td>
+</tr>
+<tr>
+<td>Toplu Tamamla (N)</td>
+<td>Eksik çipinde ve seçim varken görünür; seçili ürünler için Tamamla penceresini toplu modda açar.</td>
+</tr>
+<tr>
+<td>Seçilenleri Gönder (N)</td>
+<td>Seçim varken görünür. Yüklü/Bekleyen/Hatalı/Pasif listelerinde seçilen <strong>varyantları</strong>, Hazır/Eksik listelerinde seçilen <strong>ürünleri</strong> (tüm varyantlarıyla) pazaryerine gönderir.</td>
+</tr>
+</tbody></table>
+<p>Tablo sütunları:</p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>☐</td>
+<td>Satır seçimi; başlıktaki kutu sayfadaki tümünü seçer.</td>
+</tr>
+<tr>
+<td>Ürün</td>
+<td>Ürün adı; altında kod · SKU · (adaylarda) varyant sayısı · <code>PY: dış kimlik</code>. Hatalı satırda kırmızı hata metni; pazaryeri &quot;beklenen kategori&quot;yi bildirdiyse <strong>→ &quot;X&quot; kategorisine istisna yaz + yeniden gönder</strong> bağlantısı; Eksik satırda en çok 4 neden rozeti (+N).</td>
+</tr>
+<tr>
+<td>Barkod</td>
+<td>Varyant barkodu (<code>—</code> yoksa).</td>
+</tr>
+<tr>
+<td>PY Fiyatı</td>
+<td>Pazaryerine en son gönderilen/okunan satış fiyatı.</td>
+</tr>
+<tr>
+<td>PY Stok</td>
+<td>Pazaryerindeki bilinen stok.</td>
+</tr>
+<tr>
+<td>Durum</td>
+<td>Yüklü listelerde <code>Senkron</code> / <code>Bekliyor</code> / <code>Hatalı</code> / <code>Pasif</code>; aday listelerde <code>Hazır</code> ya da <code>Eksik</code> + <strong>Tamamla</strong>.</td>
+</tr>
+<tr>
+<td>Son Senkron</td>
+<td>Son başarılı senkron zamanı.</td>
+</tr>
+</tbody></table>
+<p>Sayfa boyutu 25. Boş durum: adaylarda &quot;Yüklenecek ürün yok — kanalda açık tüm ürünler gönderilmiş.&quot;, diğerlerinde &quot;Kayıt bulunamadı.&quot;</p>
+<p>Gönderim sonucu mesajları:</p>
+<ul>
+<li>Paket takipli pazaryerinde: &quot;N varyant M pakette gönderildi — sonuç arka planda sorgulanıyor (Senkron Geçmişi). Atlanan: a eksik/denetimsiz, b değişmemiş, c barkodsuz.&quot;</li>
+<li>Anlık sonuç veren pazaryerinde: &quot;Gönderim bitti: x/y başarılı · z hata — ilk hata metni&quot;.</li>
+<li>İstisna bağlantısından: &quot;İstisna yazıldı ve ürün yeniden gönderildi (N varyant).&quot;</li>
+</ul>
+<p>Neden rozetleri ve çözümleri:</p>
+<table>
+<thead>
+<tr>
+<th>Rozet</th>
+<th>Çözüm</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kategori eşlemesi yok</td>
+<td>Eşleştirme → Kategori Eşleme&#39;de ürünün grubunu eşleyin.</td>
+</tr>
+<tr>
+<td>Kategori ataması bekliyor (havuz)</td>
+<td>Grup &quot;Havuz&quot; kipinde eşlenmiş; <strong>Tamamla</strong> ile aday kategorilerden birini ürüne atayın.</td>
+</tr>
+<tr>
+<td>Hiçbir kategori kuralı tutmadı</td>
+<td>&quot;Koşullu&quot; eşlemede varsayılan hedef verin ya da <strong>Tamamla</strong> ile kategori atayın.</td>
+</tr>
+<tr>
+<td>Kategori eşlemesi kırık</td>
+<td>Eşleştirme → Gözden Geçir&#39;den eşlemeyi düzeltin.</td>
+</tr>
+<tr>
+<td>Zorunlu özellik eksik: X</td>
+<td><strong>Tamamla</strong> ile değeri girin ya da Özellik &amp; Değer sekmesinde X özelliğini bir özelliğinize eşleyin.</td>
+</tr>
+<tr>
+<td>Değer eşlemesiz: X</td>
+<td>Özellik &amp; Değer sekmesinde X için değer eşlemesini tamamlayın ya da <strong>Tamamla</strong> ile ürün-özel değer seçin.</td>
+</tr>
+<tr>
+<td>Kategori özellikleri henüz indirilmedi (Referans Verisi → Özellikler senkronu)</td>
+<td>Referans Verisi penceresinden <code>Özellikler + Değerler</code> kapsamını çalıştırın, sonra <strong>Denetle</strong>.</td>
+</tr>
+</tbody></table>
+<h4 id="tamamla-penceresi">Tamamla penceresi<a class="anchor" href="#tamamla-penceresi" aria-hidden="true">#</a></h4>
+<p>Başlık &quot;Tamamla: ürün adı&quot; ya da toplu modda &quot;Toplu Tamamla — N ürün&quot;. Üstte ürün kodu, grup ve &quot;Çözülen kategori: yol&quot; (çözülemediyse <code>Kategori çözülemedi</code> rozeti); altında neden rozetleri ya da <code>Bu ürün hazır ✓</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1) KATEGORİ</td>
+<td>Kategori çözülmemişse zorunlu, toplu modda isteğe bağlı (&quot;mevcut çözümü istisnayla değiştirir&quot;). Havuz eşlemesinde aday kategoriler radyo düğmesi olarak; sistem önerileri &quot;Ad %skor&quot; çipi olarak listelenir; &quot;Veya farklı bir kategori ara…&quot; kutusu en az 2 harfle pazaryeri kategorilerinde arar.</td>
+</tr>
+<tr>
+<td>2) EKSİK ZORUNLU ÖZELLİKLER (kategori yolu)</td>
+<td>Eksik zorunlu özellik başına bir satır: liste tipi özellikte açılır kutu (<code>— seç —</code>), serbest özellikte metin kutusu. &quot;değer eşlemesiz — buradan ürün-özel seçilebilir&quot; notu, genel değer eşlemesi yokken ürüne özel değer girilebileceğini söyler.</td>
+</tr>
+<tr>
+<td>Kapat</td>
+<td>Pencereyi kapatır.</td>
+</tr>
+<tr>
+<td>Kaydet ve Yeniden Denetle</td>
+<td>Girilenleri kaydeder ve ürünü hemen yeniden denetler: &quot;Kaydedildi — N ürün hazır, M üründe hâlâ eksik var.&quot; Hiçbir şey girilmediyse devre dışıdır.</td>
+</tr>
+</tbody></table>
+<blockquote class="callout not">
+<p><strong>Not:</strong> Toplu modda form ilk seçili ürüne göre kurulur; girilenler seçili ürünlerin tümüne uygulanır — aynı gruptaki ürünler için tasarlanmıştır. Buraya girilen değerler kendi kataloğunuza <strong>yazılmaz</strong>, yalnız bu ürünlerin pazaryeri kaydında tutulur. Burada seçilen kategori de genel eşlemeye dokunmaz; yalnız bu ürün için istisna olur.</p>
+</blockquote>
+<h3 id="siparisler">Siparişler<a class="anchor" href="#siparisler" aria-hidden="true">#</a></h3>
+<p>Çipler: <code>Açık</code> (bekliyor/onaylandı/hazırlanıyor), <code>Tümü</code>, <code>Tamamlanan</code> (teslim edildi), <code>İptal/İade</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Sipariş No</td>
+<td>Sipariş numarası.</td>
+</tr>
+<tr>
+<td>Müşteri</td>
+<td>Alıcı adı (<code>—</code> yoksa).</td>
+</tr>
+<tr>
+<td>Durum</td>
+<td><code>Bekliyor</code> · <code>Onaylandı</code> · <code>Hazırlanıyor</code> · <code>Kargoda</code> · <code>Teslim Edildi</code> · <code>İptal</code> · <code>İade</code>.</td>
+</tr>
+<tr>
+<td>Tutar</td>
+<td>Genel toplam ve para birimi.</td>
+</tr>
+<tr>
+<td>Tarih</td>
+<td>Oluşturulma tarih-saati.</td>
+</tr>
+</tbody></table>
+<p>Satıra tıklayınca sipariş detayı açılır. Sayfa boyutu 20. Boşsa &quot;Bu mağazaya ait sipariş bulunamadı.&quot;</p>
+<h3 id="senkron-gecmisi">Senkron Geçmişi<a class="anchor" href="#senkron-gecmisi" aria-hidden="true">#</a></h3>
+<p><strong>Gönderim Paketleri</strong> bloğu (paket varsa en üstte): pazaryerine paket halinde gönderilen işlerin canlı takibi; açık paket varken 5 saniyede bir yenilenir ve <strong>Şimdi Sorgula</strong> butonu çıkar.</p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tarih</td>
+<td>Paketin gönderildiği an.</td>
+</tr>
+<tr>
+<td>Tip</td>
+<td><code>Ürün gönderimi</code> ya da <code>Stok-fiyat</code>; altında pazaryerinin paket numarası.</td>
+</tr>
+<tr>
+<td>Durum</td>
+<td><code>Gönderildi</code> → <code>Sonuç bekleniyor</code> → <code>Tamamlandı</code> / <code>Hatalarla bitti</code> / <code>Zaman aşımı</code> / <code>Başarısız</code>.</td>
+</tr>
+<tr>
+<td>Çözülen</td>
+<td>&quot;a/b çözüldü&quot; ve varsa &quot;· n hata&quot;.</td>
+</tr>
+<tr>
+<td>Ayrıntı</td>
+<td>Paket hatası; yoksa ilk hatalı barkod ve hatası &quot;(+N)&quot;; sonuç beklenirken &quot;sonraki sorgu X içinde&quot;.</td>
+</tr>
+</tbody></table>
+<p>İşlem kayıtları: üstte işlem filtresi (<code>Tüm işlemler</code> / <code>Ürün gönderimi</code> / <code>Stok güncelleme</code> / <code>Sipariş çekme</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Zaman</td>
+<td>Kayıt zamanı.</td>
+</tr>
+<tr>
+<td>İşlem</td>
+<td>İşlem türü (mutabakat koşuları <code>reconcile</code> adıyla listelenir).</td>
+</tr>
+<tr>
+<td>Sonuç</td>
+<td><code>Başarılı</code> / <code>Hata</code> ve hata mesajı.</td>
+</tr>
+<tr>
+<td>Süre</td>
+<td>İşlem süresi (ms / sn).</td>
+</tr>
+</tbody></table>
+<p>Sayfa boyutu 30. Boşsa &quot;Henüz senkron kaydı yok.&quot;</p>
+<h3 id="sorunlar">Sorunlar<a class="anchor" href="#sorunlar" aria-hidden="true">#</a></h3>
+<p>Mutabakat ve gönderim sonuçlarından <strong>otomatik açılan</strong>, koşul ortadan kalkınca <strong>kendiliğinden kapanan</strong> kuyruk.</p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tip rozeti</td>
+<td><code>Fiyat sapması</code> · <code>Stok sapması</code> · <code>Pazaryerinde yok</code> · <code>Paket zaman aşımı</code> · <code>Gönderim hatası</code> · <code>Bizde kayıtsız</code>.</td>
+</tr>
+<tr>
+<td>Başlık / ayrıntı / → önerilen aksiyon</td>
+<td>Ne olduğu, ayrıntısı ve yeşil renkte ne yapmanız gerektiği.</td>
+</tr>
+<tr>
+<td>Son görülme</td>
+<td>Koşulun en son ne zaman görüldüğü.</td>
+</tr>
+<tr>
+<td>Yoksay</td>
+<td>Sorunu kapatır. Koşul sürüyorsa sonraki taramada <strong>yeniden açılır</strong> (bilinçli).</td>
+</tr>
+</tbody></table>
+<p>Örnekler: &quot;Ürün pazaryerinde bulunamadı: barkod&quot; → &quot;Ürünü Hazır listesinden yeniden gönderin.&quot; · &quot;Fiyat sapması %X: barkod&quot; → &quot;Pazaryerindeki fark kampanya/elle müdahale olabilir — doğruysa yoksayın, değilse Stok-Fiyat Güncelle çalıştırın.&quot; · &quot;Gönderim paketi zaman aşımına uğradı (N satır)&quot; → &quot;Mutabakat çalıştırın: pazaryerindeki fiili durum item&#39;ları çözer.&quot; Boşsa &quot;Açık sorun yok — her şey yolunda.&quot;</p>
+<h3 id="ayarlar">Ayarlar<a class="anchor" href="#ayarlar" aria-hidden="true">#</a></h3>
+<p>Solda <strong>Mağaza Ayarları</strong> (yukarıdaki mağaza formu, düzenleme modu). Sağda <strong>Pazaryeri Sözleşmesi</strong> kartı: &quot;API kimlik bilgileri (şifreli) firma sözleşmesinde tutulur. Senkron işlemleri bu sözleşme üzerinden çalışır.&quot; Durum: <code>✓ Aktif sözleşme bağlı (servis kodu)</code> ya da <code>⚠ Aktif sözleşme yok — senkron devre dışı.</code> <strong>Firma sözleşmelerine git ↗</strong> firma detayının Entegrasyonlar bölümüne götürür.</p>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<ul>
+<li><strong>Bağlantı:</strong> Mağaza, aynı firmanın pazaryeri servisine bağlı <strong>aktif sözleşmesi</strong> (Firma detayı → Entegrasyonlar → Entegrasyon Ekle) üzerinden çalışır. Trendyol sözleşmesinde Satıcı ID, API Key, API Secret, Marka ID ve Kargo Firma ID zorunludur; Hepsiburada&#39;da Merchant ID + API kullanıcı adı/şifresi; n11&#39;de App Key/Secret; Amazon&#39;da Seller ID, Marketplace ID, Access/Secret Key (+ Refresh Token). Sözleşme yoksa tüm senkron işlemleri &quot;Bu mağaza için aktif pazaryeri bağlantısı (sözleşme) yok.&quot; hatasıyla döner.</li>
+<li><strong>Varyant akışı:</strong> <code>Hazır</code> → (gönderim) → <code>Bekliyor</code> → <code>Senkron</code> ya da <code>Hatalı</code>; pazaryerinde pasife alınan <code>Pasif</code>. Yüklenecek ürün = kanalda satışa açık olup gönderilmiş varyantı olmayan ürün.</li>
+<li><strong>Hazırlık denetimi:</strong> Ürün ancak kategori çözülmüş (istisna &gt; koşullu kural &gt; birebir eşleme) ve kategorinin zorunlu özellikleri (varyant ekseni olanlar hariç) doldurulmuşsa <strong>Hazır</strong> olur. Özellik değeri kaynağı öncelik sırası: ürün-özel pazaryeri değeri &gt; değer eşlemesi &gt; sabit değer &gt; serbest geçirme. Eşleme ya da tamamlama değişince ilgili ürünler yeniden denetlenir.</li>
+<li><strong>Ürün gönderimi (paket takipli pazaryeri — bugün Trendyol):</strong> yalnız <strong>Hazır</strong> ürünler gider; içeriği/fiyatı/stoğu değişmemiş yüklü varyant ve barkodsuz varyant atlanır; en çok 100&#39;lük paketler halinde gönderilir; sonuç arka planda 1 → 2 → 5 → 10 → 30 dk aralıklarla sorgulanır; 24 saatte sonuç alınamazsa paket <code>Zaman aşımı</code> olur ve &quot;Paket zaman aşımı&quot; sorunu açılır — bu satırlar körlemesine yeniden gönderilmez, mutabakat pazaryerindeki fiili durumu okuyarak çözer. Anlık sonuç veren pazaryerlerinde tek istekte en çok 200 varyant gönderilir.</li>
+<li><strong>Stok-Fiyat Güncelle:</strong> yalnız yüklü (<code>Senkron</code>) varyantlar; bilinen pazaryeri fiyat/stoğuyla aynı olanlar atlanır; paket takipli pazaryerinde 500&#39;lük paketlerle gider ve Senkron Geçmişi&#39;nde <code>Stok-fiyat</code> paketi olarak izlenir; anlık pazaryerlerinde tek istekte en çok 500 varyant.</li>
+<li><strong>Mutabakat:</strong> pazaryeri listesi sayfa sayfa çekilir. Stok farkı <strong>her zaman</strong> otomatik düzeltilir (bizim veri kazanır); fiyat farkı eşiğin (varsayılan %10) altındaysa otomatik düzeltilir, üstündeyse &quot;Fiyat sapması&quot; sorunu açılır (kampanya/elle müdahale olabilir — körlemesine ezilmez); bizde yüklü görünüp pazaryerinde olmayan ürün için &quot;Pazaryerinde yok&quot; sorunu açılır ve ürün yeniden gönderime açılır; pazaryerindeki fiili kategori farklıysa ürün için kategori istisnası olarak kaydedilir (personelin elle yazdığı istisnanın üzerine yazılmaz). Mutabakat desteği olmayan pazaryerinde &quot;… için mutabakat desteği henüz yok.&quot; hatası döner.</li>
+<li><strong>Sorun kuyruğu:</strong> aynı koşul için ikinci sorun açılmaz; koşul kalkınca otomatik kapanır; Yoksay geçicidir.</li>
+<li><strong>Zamanlama:</strong> Paket sonuçlarının sorgulanması otomatiktir. Mutabakat ve stok-fiyat senkronu için zamanlanmış otomatik çalışma yoktur — karttan/detaydan elle tetiklenir.</li>
+<li><strong>Yetki:</strong> Sayfa giriş yapmış panel kullanıcılarına açıktır; ayrı bir izin aranmaz.</li>
+</ul>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<p><strong>1. Yeni pazaryeri mağazası bağlama</strong></p>
+<ol>
+<li><strong>Yeni Mağaza</strong> → firma (gerekirse), platform tipi (örn. Trendyol), kanal adı girin → <strong>Kaydet</strong>.</li>
+<li>Mağaza kartına tıklayın → <strong>Ayarlar</strong> → <strong>Firma sözleşmelerine git ↗</strong> (ya da Genel Bakış → Firma sözleşmeleri).</li>
+<li>Firma detayında <strong>Entegrasyonlar → Entegrasyon Ekle</strong>: pazaryeri servisini seçip API kimliklerini ve zorunlu ayarları (Trendyol&#39;da Marka ID, Kargo Firma ID) girin, sözleşmeyi aktif bırakın.</li>
+<li>Pazaryerleri listesine dönün: kartın sağlık satırı &quot;Bağlantı hazır — henüz senkron yapılmadı&quot; olmalıdır.</li>
+</ol>
+<p><strong>2. İlk ürün gönderimi</strong></p>
+<ol>
+<li><strong>Referans Verisi</strong> → pazaryeri seçin → <code>Kategoriler</code> → <strong>Senkronu Başlat</strong>; bitince <code>Özellikler + Değerler</code> ile tekrarlayın.</li>
+<li><strong>Eşleştirme</strong> sayfasında ürün gruplarınızı ve özelliklerinizi eşleyin (bkz. <a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/">Kategori ve Özellik Eşleştirme</a>).</li>
+<li>Mağaza detayı → <strong>Ürünler</strong> → <strong>Hazır</strong> çipi → <strong>Denetle</strong>.</li>
+<li><strong>Eksik</strong> çipine geçin; satırdaki <strong>Tamamla</strong> (ya da birden çok seçip <strong>Toplu Tamamla</strong>) ile kategori/özellik eksiklerini kapatın → <strong>Kaydet ve Yeniden Denetle</strong>.</li>
+<li><strong>Hazır</strong> çipinde ürünleri seçin → <strong>Seçilenleri Gönder (N)</strong>.</li>
+<li><strong>Senkron Geçmişi</strong> → Gönderim Paketleri&#39;nde paketin <code>Tamamlandı</code> olmasını bekleyin; hatalı satırlar <strong>Hatalı</strong> çipine düşer.</li>
+</ol>
+<p><strong>3. Pazaryerinin kategori nedeniyle reddettiği ürünü düzeltme</strong></p>
+<ol>
+<li><strong>Ürünler → Hatalı</strong> çipinde ürünün kırmızı hata metnini okuyun.</li>
+<li>Hata pazaryerinin beklediği kategoriyi içeriyorsa altta çıkan <strong>→ &quot;X&quot; kategorisine istisna yaz + yeniden gönder</strong> bağlantısına tıklayın; ürün için istisna yazılır (genel eşleme değişmez) ve yeniden gönderilir.</li>
+<li>Yeni kategorinin zorunlu özellikleri eksikse ürün <strong>Eksik</strong>&#39;e düşer → <strong>Tamamla</strong> ile doldurup tekrar gönderin.</li>
+</ol>
+<p><strong>4. Mutabakat ve sorun çözme</strong></p>
+<ol>
+<li>Kartta <strong>Senkron ▾ → Mutabakat Çalıştır</strong> (ya da detay sağlık satırında sonucu izleyin).</li>
+<li>Detay → <strong>Sorunlar</strong>: her satırdaki &quot;→ önerilen aksiyon&quot;u uygulayın (yeniden gönder, Stok-Fiyat Güncelle, …).</li>
+<li>Bilinçli fark ise <strong>Yoksay</strong>.</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Kartta <strong>HATALI</strong> sayısı görünüyorsa Hatalı filtresine, sarı &quot;açık sorun&quot; mesajı görünüyorsa Sorunlar sekmesine gidin — ikisi farklı şeylerdir: hata tek bir gönderimin sonucu, sorun ise mutabakat/paket takibinin bulgusudur.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> &quot;Seçilenleri Gönder&quot; Eksik listesinde de görünür; ancak eksik/denetlenmemiş ürünler gönderime girmez ve sonuç mesajında &quot;Atlanan: N eksik/denetimsiz&quot; olarak raporlanır. Önce tamamlayıp denetleyin.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Mağazayı <strong>Aktif</strong> işaretini kaldırarak pasife alırsanız tüm senkron menüleri devre dışı kalır ve kart gri olur; yüklü ürünler pazaryerinde silinmez.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> &quot;Fiyat-stok gönderildi: 0 varyant (N değişmemiş atlandı)&quot; normaldir — pazaryerindeki bilinen değerler bizimkilerle aynıdır.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> &quot;Tek istekte en fazla 200 varyant gönderilebilir&quot; hatası anlık sonuç veren pazaryerlerinde çıkar; seçimi küçültüp parça parça gönderin.</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/">Kategori ve Özellik Eşleştirme</a></li>
+<li><a href="/rehber/cari/komisyon-yonetimi/">Komisyon Yönetimi</a></li>
+<li><a href="/rehber/siparis/siparisler/">Siparişler</a></li>
+<li><a href="/rehber/sistem/firmalar/">Firmalar ve Sözleşmeler</a></li>
+<li><a href="/rehber/sistem/satis-kanallari/">Kanallar</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/siparis/kargo-yonlendirme/">← Kargo Yönlendirme</a><a class="sonraki" href="/rehber/siparis/kategori-ve-ozellik-eslestirme/">Kategori ve Özellik Eşleştirme →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>

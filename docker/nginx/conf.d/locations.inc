@@ -22,6 +22,17 @@
         try_files $uri =404;
     }
 
+    # Admin Panel Kullanım Rehberi — tüm admin panelleri için ortak statik site (docs/rehber → build)
+    location /rehber/ {
+        alias /usr/share/nginx/html/rehber/;
+        index index.html;
+        try_files $uri $uri/ /rehber/index.html;
+        add_header X-Robots-Tag "noindex, nofollow" always;
+    }
+    location = /rehber {
+        return 301 /rehber/;
+    }
+
     # Admin Panel (React SPA)
     location /admin/ {
         alias /usr/share/nginx/html/admin/;

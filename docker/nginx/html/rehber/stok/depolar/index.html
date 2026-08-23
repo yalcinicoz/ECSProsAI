@@ -1,0 +1,406 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Depolar — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="">Toplama Planlama</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="active">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Stok</span> › <b>Depolar</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Stok</div><h1>Depolar</h1>
+<p class="ozet">Depoların listelendiği ve oluşturulduğu; depo detayında Kısım ve Birim/Raf yapısının, internete satışa açıklığın yönetildiği ekran.</p><p class="rota">Panel adresi: <code>/admin/inventory/warehouses</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#liste-ve-filtreler">Liste ve filtreler</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#form-alanlari">Form alanları</a><a href="#detay-sayfasi">Detay sayfası</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Depolar ekranı, stokların tutulduğu fiziksel ve sanal depoları tanımlar. Stok <strong>Depo → Kısım → Birim (raf)</strong> yapısında tutulur: her depo kısımlara (kat, reyon, İade, Defo…), her kısım raflara bölünür; stok satırları raf başına izlenir. Sitede &quot;stokta&quot; sayılacak miktar <strong>kısım</strong> seviyesindeki &quot;İnternete satışa açık&quot; işaretiyle belirlenir. Depo sorumluları bu ekranda depo açar, kısım/raf tanımlar ve raf barkodlarını yönetir.</p>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/inventory-warehouses.webp" class="buyut" data-alt="Depolar listesi"><img src="/rehber/img/inventory-warehouses.webp" alt="Depolar listesi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Depolar listesi</figcaption></figure></p>
+<ol>
+<li><strong>Başlık satırı</strong> — &quot;Depolar&quot; (yetkiniz yoksa yanında <strong>Salt Okunur</strong> rozeti), kayıt sayısı; sağda <strong>Tümü / Aktif</strong> anahtarı ve <strong>+ Yeni Depo</strong>.</li>
+<li><strong>Tablo</strong> — depolar; satıra tıklayınca depo detayı açılır; satır sonunda <strong>Düzenle</strong>.</li>
+<li><strong>Pencereler</strong> — &quot;Yeni Depo&quot; / &quot;Depo Düzenle&quot;.</li>
+</ol>
+<h2 id="liste-ve-filtreler">Liste ve filtreler<a class="anchor" href="#liste-ve-filtreler" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AD</td>
+<td>Depo adı (kaynak dilde).</td>
+</tr>
+<tr>
+<td>KOD</td>
+<td>Depo kodu.</td>
+</tr>
+<tr>
+<td>TİP</td>
+<td><code>Fiziksel</code> / <code>Sanal</code> / <code>Dropship</code> / <code>Konsinyasyon</code>.</td>
+</tr>
+<tr>
+<td>ONLİNE</td>
+<td>Depo düzeyindeki &quot;Online satışa açık&quot; işareti (✓ / —). Asıl satışa açıklık kısım seviyesinde yönetilir (aşağıya bakın).</td>
+</tr>
+<tr>
+<td>DURUM</td>
+<td><code>Aktif</code> / <code>Pasif</code>.</td>
+</tr>
+<tr>
+<td>ADRES</td>
+<td>Depo adresi (kısaltılmış; yoksa —).</td>
+</tr>
+<tr>
+<td>Düzenle ›</td>
+<td>Düzenleme penceresi (yetkiyle) ve detay oku.</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Filtre</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tümü / Aktif</td>
+<td>Aktif seçiliyken pasif depolar gizlenir.</td>
+</tr>
+</tbody></table>
+<p>Sayfalama yoktur. Kayıt yoksa &quot;Depo bulunamadı.&quot; yazar.</p>
+<h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>+ Yeni Depo</td>
+<td>Liste başlığı</td>
+<td>&quot;Yeni Depo&quot; penceresi açılır.</td>
+<td><code>inventory.manage</code></td>
+</tr>
+<tr>
+<td>Düzenle</td>
+<td>Satır sonu</td>
+<td>&quot;Depo Düzenle&quot; penceresi açılır (satırı tıklamadan).</td>
+<td><code>inventory.manage</code></td>
+</tr>
+<tr>
+<td>Satır tıklama</td>
+<td>Tablo</td>
+<td><code>/inventory/warehouses/:id</code> depo detayı açılır.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Oluştur / Kaydet / İptal</td>
+<td>Depo pencereleri</td>
+<td>Kaydeder / vazgeçer.</td>
+<td>Oluştur: Kod ve kaynak dilde Ad dolu</td>
+</tr>
+<tr>
+<td>‹</td>
+<td>Detay başlığı</td>
+<td>Listeye döner.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>+ Yeni Kısım</td>
+<td>Detay → Kısımlar başlığı</td>
+<td>&quot;Yeni Kısım&quot; penceresi açılır.</td>
+<td><code>inventory.manage</code></td>
+</tr>
+<tr>
+<td>✓ Satışa açık / ✗ Satışa kapalı</td>
+<td>Detay → kısım satırı</td>
+<td>Tek tıkla kısmın internete satışa açıklığı değişir.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>✎ (kalem)</td>
+<td>Kısım satırı sonu</td>
+<td>&quot;Kısım Düzenle — KOD&quot; penceresi açılır.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>▸ / ▾</td>
+<td>Kısım satırı başı</td>
+<td>Kısmın raflarını açar/kapatır.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>+ Yeni Birim</td>
+<td>Açılan kısım bloğu</td>
+<td>&quot;Yeni Birim/Raf&quot; penceresi açılır.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>✎ (kalem)</td>
+<td>Raf satırı sonu</td>
+<td>&quot;Birim Düzenle — KOD&quot; penceresi açılır.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Kaydet / İptal</td>
+<td>Kısım ve Birim pencereleri</td>
+<td>Kaydeder / vazgeçer.</td>
+<td>Ad (kısım) ya da Barkod (raf) dolu; oluştururken Kod dolu</td>
+</tr>
+</tbody></table>
+<p>Yetkisiz kullanıcıda yazma butonları görünmez, liste ve detay salt okunur gelir.</p>
+<h2 id="form-alanlari">Form alanları<a class="anchor" href="#form-alanlari" aria-hidden="true">#</a></h2>
+<h3 id="yeni-depo-depo-duzenle">Yeni Depo / Depo Düzenle<a class="anchor" href="#yeni-depo-depo-duzenle" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kod</td>
+<td>Evet (yalnız oluştururken)</td>
+<td>Büyük harfe çevrilir. Örn. <code>WH-001</code>. Benzersiz: &quot;&#39;WH-001&#39; depo kodu zaten mevcut.&quot;</td>
+</tr>
+<tr>
+<td>Tip</td>
+<td>Hayır (varsayılan Fiziksel)</td>
+<td>Fiziksel / Sanal / Dropship / Konsinyasyon.</td>
+</tr>
+<tr>
+<td>Adres</td>
+<td>Hayır</td>
+<td>Depo adresi.</td>
+</tr>
+<tr>
+<td>Sıra</td>
+<td>Hayır (0)</td>
+<td>Tam sayı.</td>
+</tr>
+<tr>
+<td>Rezervasyon Önceliği</td>
+<td>Hayır (0)</td>
+<td>Tam sayı; küçük değer önce. Sipariş rezervasyonu depo seçerken bu sırayı kullanır.</td>
+</tr>
+<tr>
+<td>Online satışa açık</td>
+<td>Hayır</td>
+<td>Depo düzeyi işaret; listede ONLİNE sütunu. Site stok görünürlüğü kısım düzeyindeki işarete göre hesaplanır.</td>
+</tr>
+<tr>
+<td>Aktif</td>
+<td>—</td>
+<td>Yalnız düzenlemede.</td>
+</tr>
+<tr>
+<td>Ad (çok dilli)</td>
+<td>Evet (kaynak dil)</td>
+<td>TR/EN sekmeli alan; kaynak dil zorunlu, diğerleri boş kalabilir.</td>
+</tr>
+</tbody></table>
+<h3 id="yeni-kisim-kisim-duzenle">Yeni Kısım / Kısım Düzenle<a class="anchor" href="#yeni-kisim-kisim-duzenle" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kod</td>
+<td>Evet (oluştururken)</td>
+<td>Büyük harf. Örn. <code>SATIS-KATI</code>, <code>IADE</code>. Aynı depoda benzersiz: &quot;&#39;IADE&#39; kodlu kısım bu depoda zaten var.&quot;</td>
+</tr>
+<tr>
+<td>Ad</td>
+<td>Evet</td>
+<td>Örn. <code>Satış Katı</code>.</td>
+</tr>
+<tr>
+<td>Toplama Sırası</td>
+<td>Hayır (0)</td>
+<td>Rezervasyon/tüketimde kısımların denenme sırası (küçük önce).</td>
+</tr>
+<tr>
+<td>İnternete satışa açık</td>
+<td>Hayır (varsayılan açık)</td>
+<td>Bu kısımdaki serbest stok sitede &quot;stokta&quot; sayılır.</td>
+</tr>
+<tr>
+<td>Aktif</td>
+<td>—</td>
+<td>Yalnız düzenlemede.</td>
+</tr>
+</tbody></table>
+<h3 id="yeni-birim-raf-birim-duzenle">Yeni Birim/Raf / Birim Düzenle<a class="anchor" href="#yeni-birim-raf-birim-duzenle" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kod</td>
+<td>Evet (oluştururken)</td>
+<td>Büyük harf. Örn. <code>A1-01</code>. Aynı kısımda benzersiz: &quot;&#39;A1-01&#39; kodlu birim bu kısımda zaten var.&quot;</td>
+</tr>
+<tr>
+<td>Barkod</td>
+<td>Evet</td>
+<td>Raf barkodu; tüm depolarda benzersiz: &quot;&#39;X&#39; barkodu başka bir birimde kayıtlı.&quot;</td>
+</tr>
+<tr>
+<td>Ad</td>
+<td>Hayır</td>
+<td>Serbest ad.</td>
+</tr>
+<tr>
+<td>Aktif</td>
+<td>—</td>
+<td>Yalnız düzenlemede.</td>
+</tr>
+</tbody></table>
+<h2 id="detay-sayfasi">Detay sayfası<a class="anchor" href="#detay-sayfasi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/inventory-warehouses-detay.webp" class="buyut" data-alt="Depo detayı — Kısımlar tablosu ve açılmış raf listesi"><img src="/rehber/img/inventory-warehouses-detay.webp" alt="Depo detayı — Kısımlar tablosu ve açılmış raf listesi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Depo detayı — Kısımlar tablosu ve açılmış raf listesi</figcaption></figure>
+<em>(1) Başlık: depo adı, kod, tip rozeti, Aktif/Pasif · (2) Açıklama satırı · (3) Kısımlar (N) tablosu · (4) Açılan kısmın Birimler / Raflar bloğu</em></p>
+<p><strong>Kısımlar</strong> tablosu:</p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>▸</td>
+<td>Rafları açar/kapatır.</td>
+</tr>
+<tr>
+<td>Kod / Ad</td>
+<td>Kısım kodu ve adı.</td>
+</tr>
+<tr>
+<td>İnternete Satış</td>
+<td><code>✓ Satışa açık</code> (yeşil) / <code>✗ Satışa kapalı</code> (kırmızı); tıklanınca değişir.</td>
+</tr>
+<tr>
+<td>Toplama Sırası</td>
+<td>Sayı.</td>
+</tr>
+<tr>
+<td>Birim</td>
+<td>Kısımdaki raf sayısı.</td>
+</tr>
+<tr>
+<td>Stok (satır / adet)</td>
+<td>Kısımdaki stok satırı sayısı / toplam adet.</td>
+</tr>
+<tr>
+<td>Durum</td>
+<td><code>Aktif</code> / <code>Pasif</code>.</td>
+</tr>
+<tr>
+<td>✎</td>
+<td>Düzenle.</td>
+</tr>
+</tbody></table>
+<p><strong>Birimler / Raflar (N)</strong> bloğu (kısım açılınca):</p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kod</td>
+<td>Raf kodu.</td>
+</tr>
+<tr>
+<td>Barkod</td>
+<td>Raf barkodu.</td>
+</tr>
+<tr>
+<td>Ad</td>
+<td>Raf adı (yoksa —).</td>
+</tr>
+<tr>
+<td>Stok (satır / adet)</td>
+<td>Raftaki stok satırı sayısı / toplam adet.</td>
+</tr>
+<tr>
+<td>Durum</td>
+<td><code>Aktif</code> / <code>Pasif</code>.</td>
+</tr>
+<tr>
+<td>✎</td>
+<td>Düzenle.</td>
+</tr>
+</tbody></table>
+<p>Kısım yoksa: &quot;Bu depoda kısım tanımlı değil. Reyon/mağaza depolarında tek kısım yeterlidir.&quot; Raf yoksa: &quot;Birim yok. Raf takibi yapılmayan kısımlarda tek &#39;dummy&#39; birim yeterlidir.&quot;</p>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<ul>
+<li><strong>Depo → Kısım → Birim:</strong> stok satırları raf başına tutulur; depo toplamı kısım ve raf toplamlarından oluşur.</li>
+<li><strong>İnternete satış kısım seviyesindedir.</strong> Satışa kapalı kısımlardaki (İade, Defo, Bağış vb.) stok sitede &quot;stokta&quot; sayılmaz; açık kısımlardaki serbest stok (stok − rezerve) online mevcut sayılır. Değişiklik anında etkilidir.</li>
+<li><strong>Giriş/çıkış raf seçimi otomatiktir:</strong> stok çıkışı/rezervasyonu satışa açık kısımlardan, toplama sırasına göre yapılır; iade girişleri satışa kapalı kısma tercih edilir; diğer girişlerde varyantın depodaki mevcut rafı, yoksa deponun uygun varsayılan rafı kullanılır.</li>
+<li>Depo, kısım ve raf <strong>silinmez</strong>; Aktif işaretini kaldırarak pasife alınır. Kodlar sonradan değiştirilemez.</li>
+<li>Raf barkodu tüm sistemde benzersizdir; barkod okuyucuyla raf tanımada kullanılır.</li>
+<li>Yazma işlemleri <code>inventory.manage</code> yetkisi ister; yetkisiz kullanıcı <strong>Salt Okunur</strong> görür.</li>
+</ul>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<p><strong>Yeni depo açma ve tek kısım/raf tanımlama</strong></p>
+<ol>
+<li>Stok &gt; Depolar&#39;da <strong>+ Yeni Depo</strong>&#39;ya tıklayın; <strong>Kod</strong> (örn. <code>MAGAZA-1</code>), <strong>Tip</strong>, kaynak dilde <strong>Ad</strong> girin; <strong>Oluştur</strong>.</li>
+<li>Listede depoya tıklayın; <strong>+ Yeni Kısım</strong> ile Kod <code>SATIS</code>, Ad &quot;Satış&quot; girin; <strong>İnternete satışa açık</strong> işaretli kalsın; <strong>Kaydet</strong>.</li>
+<li>Kısım satırındaki ▸ ile açın, <strong>+ Yeni Birim</strong>&#39;e tıklayın; Kod <code>GENEL</code>, Barkod (örn. <code>MAGAZA1-GENEL</code>) girin; <strong>Kaydet</strong>.</li>
+</ol>
+<p><strong>İade kısmını siteye kapatma</strong></p>
+<ol>
+<li>Depo detayında İade kısmının <strong>İnternete Satış</strong> rozetine tıklayın; <code>✗ Satışa kapalı</code> olur.</li>
+<li>Aynı işlemi ✎ ile açılan pencerede kutuyu kaldırarak da yapabilirsiniz.</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> &quot;Depo Düzenle&quot; penceresi açıldığında <strong>Rezervasyon Önceliği</strong> alanı 0 olarak gelir; kaydetmeden önce istediğiniz değeri yeniden girin, aksi halde 0 kaydedilir.</p>
+</blockquote>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Mağaza/reyon depolarında tek kısım ve tek raf yeterlidir; raf takibi yapmıyorsanız &quot;dummy&quot; bir raf açıp tüm stoğu orada tutun.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> &quot;&#39;X&#39; barkodu başka bir birimde kayıtlı.&quot; hatası başka depodaki bir raftan da kaynaklanabilir; barkodlar deponun değil tüm sistemin içinde benzersizdir.</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/stok/stok-takibi/">Stok Takibi</a></li>
+<li><a href="/rehber/stok/stok-hareketleri/">Stok Hareketleri</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/musteriler/uyelik-gruplari/">← Üye Grupları</a><a class="sonraki" href="/rehber/stok/stok-takibi/">Stok Takibi →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>

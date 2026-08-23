@@ -1,0 +1,388 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ürün Grupları — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="active">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="">Toplama Planlama</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Katalog</span> › <b>Ürün Grupları</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Katalog</div><h1>Ürün Grupları</h1>
+<p class="ozet">Ürün tiplerinin (Pantolon, Elbise, Ayakkabı…) ve her tipte hangi özelliklerin ürün özelliği ya da varyant ekseni olarak kullanılacağının tanımlandığı şablon ekranı.</p><p class="rota">Panel adresi: <code>/admin/catalog/product-groups</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#liste-ve-filtreler">Liste ve filtreler</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#form-alanlari">Form alanları</a><a href="#detay-sayfasi-ozellikler-tablosu">Detay sayfası — Özellikler tablosu</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Ürün grubu, bir ürünün &quot;ne olduğunu&quot; söyleyen şablondur: Pantolon, Gömlek, Topuklu Ayakkabı gibi. Her grup, özellik
+havuzundan seçilmiş bir özellik listesi taşır ve her özellik için şu kararlar verilir: bu özellik varyant ekseni mi
+(renk, beden gibi varyantları birbirinden ayırır), ana eksen mi (listeleme ve görsel gruplaması için temel eksen),
+zorunlu mu ve hangi sırada gösterilecek. Ürün kartı oluşturulurken grup seçilir; ürün formundaki özellik alanları ve
+varyant eksenleri bu şablondan gelir.</p>
+<p>Bu ekranı katalog yapısını kuran yöneticiler kullanır: yeni bir ürün tipi açarken, bir gruba özellik eklerken/çıkarırken,
+ana ekseni belirlerken ya da varyant eksenine bağlı ölçü bilgileri (alt özellikler) tanımlarken.</p>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Ürün grupları <strong>platform seviyesinde</strong> tanımdır. Ekleme/düzenleme için <code>catalog.platform.manage</code> yetkisi
+gerekir. Yetki yoksa sayfa başlığının yanında <strong>Salt Okunur</strong> rozeti görünür; ekran görüntülenir ama butonlar gösterilmez.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> Grup ile kategori farklıdır: grup ürünün ne olduğunu (Pantolon), kategori ürünün mağazada nerede listeleneceğini
+(Kadın › Pantolon, Sezon Sonu) tanımlar. Kategoriler menü/kanal tarafında yönetilir.</p>
+</blockquote>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/catalog-product-groups.webp" class="buyut" data-alt="Ürün Grupları listesi — Tümü/Aktif anahtarı, Yeni Grup butonu ve grup tablosu"><img src="/rehber/img/catalog-product-groups.webp" alt="Ürün Grupları listesi — Tümü/Aktif anahtarı, Yeni Grup butonu ve grup tablosu" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Ürün Grupları listesi — Tümü/Aktif anahtarı, Yeni Grup butonu ve grup tablosu</figcaption></figure></p>
+<ol>
+<li><strong>Başlık ve kayıt sayısı</strong> — &quot;Ürün Grupları&quot;, yanında (yetki yoksa) Salt Okunur rozeti, altında toplam kayıt sayısı.</li>
+<li><strong>Sağ üst araç çubuğu</strong> — <code>Tümü</code> / <code>Aktif</code> anahtarı ve <strong>Yeni Grup</strong> butonu.</li>
+<li><strong>Tablo</strong> — gruplar Sıra&#39;ya, eşitlikte ada göre sıralı; satıra tıklayınca detay açılır.</li>
+</ol>
+<p><figure class="ekran"><a href="/rehber/img/catalog-product-groups-detay.webp" class="buyut" data-alt="Ürün Grubu detayı — özet kartları, Ad (Çeviriler), Özellikler tablosu ve Varyant Ekseni Alt Özellikleri"><img src="/rehber/img/catalog-product-groups-detay.webp" alt="Ürün Grubu detayı — özet kartları, Ad (Çeviriler), Özellikler tablosu ve Varyant Ekseni Alt Özellikleri" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Ürün Grubu detayı — özet kartları, Ad (Çeviriler), Özellikler tablosu ve Varyant Ekseni Alt Özellikleri</figcaption></figure></p>
+<ol>
+<li><strong>Kırıntı ve başlık</strong> — <code>Ürün Grupları › &lt;ad&gt;</code>; altında kod rozeti ve Aktif/Pasif rozeti; sağda (ürün yoksa) <strong>Grubu Sil</strong>.</li>
+<li><strong>Özet kartları</strong> — Toplam Özellik, Varyant Ekseni (sayı), Sıra, Durum.</li>
+<li><strong>Ad (Çeviriler) kartı</strong> — çok dilli grup adı, sağ üstte <strong>Kaydet</strong>.</li>
+<li><strong>Özellikler kartı</strong> — gruba atanmış özellikler tablosu, <strong>Özellik Ekle</strong> butonu; ürün varsa &quot;Ürün mevcut — ana eksen kilitli&quot; rozeti.</li>
+<li><strong>Varyant Ekseni Alt Özellikleri kartı</strong> — yalnız en az bir varyant ekseni varsa görünür; eksen başına alt özellik etiketleri.</li>
+</ol>
+<h2 id="liste-ve-filtreler">Liste ve filtreler<a class="anchor" href="#liste-ve-filtreler" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ad</td>
+<td>Grubun Türkçe adı (klasör simgesiyle).</td>
+</tr>
+<tr>
+<td>Kod</td>
+<td>Sistem kodu (örn. <code>pantolon</code>); Türkçe addan otomatik üretilir, değişmez.</td>
+</tr>
+<tr>
+<td>Özellik</td>
+<td>Gruba atanmış toplam özellik sayısı.</td>
+</tr>
+<tr>
+<td>Varyant</td>
+<td>Varyant ekseni sayısı — <code>N eksen</code> rozeti; eksen yoksa <code>—</code>.</td>
+</tr>
+<tr>
+<td>Sıra</td>
+<td>Grubun sıra numarası.</td>
+</tr>
+<tr>
+<td>Durum</td>
+<td><code>Aktif</code> / <code>Pasif</code>.</td>
+</tr>
+<tr>
+<td>›</td>
+<td>Satırın detaya açıldığını gösteren ok.</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Filtre</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Tümü</code> / <code>Aktif</code> anahtarı</td>
+<td><code>Aktif</code> seçiliyken yalnız aktif gruplar listelenir. Varsayılan <code>Tümü</code>.</td>
+</tr>
+</tbody></table>
+<ul>
+<li>Arama kutusu ve sayfalama yoktur; tüm gruplar tek sayfada, <strong>Sıra</strong> (küçükten büyüğe) ve sonra ada göre sıralıdır.</li>
+<li><strong>Satıra tıklayınca</strong> grubun detay sayfası açılır (<code>/catalog/product-groups/&lt;id&gt;</code>).</li>
+<li>Kayıt yoksa &quot;Ürün grubu bulunamadı&quot; yazısı görünür.</li>
+</ul>
+<h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Yeni Grup</td>
+<td>Liste, sağ üst</td>
+<td>&quot;Yeni Ürün Grubu&quot; penceresi açılır; Kaydet sonrası yeni grubun detayına gidilir.</td>
+<td><code>catalog.platform.manage</code></td>
+</tr>
+<tr>
+<td>Grubu Sil</td>
+<td>Detay, başlığın sağı</td>
+<td>⚠️ &quot;Ürün Grubunu Sil&quot; onayı: <em>&quot;… grubu kalıcı olarak silinecek. Bu işlem geri alınamaz.&quot;</em> Onaylanınca grup silinir ve listeye dönülür.</td>
+<td><code>catalog.platform.manage</code>; <strong>gruba bağlı ürün olmamalı</strong> (ürün varsa buton hiç görünmez)</td>
+</tr>
+<tr>
+<td>Kaydet (Ad)</td>
+<td>Detay, Ad (Çeviriler) kartı</td>
+<td>Ad çevirileri kaydedilir; &quot;Kaydedildi&quot; yazısı görünür. Değişiklik yoksa pasiftir.</td>
+<td><code>catalog.platform.manage</code></td>
+</tr>
+<tr>
+<td>Özellik Ekle</td>
+<td>Detay, Özellikler kartı</td>
+<td>&quot;Özellik Ekle&quot; penceresi açılır. Havuzdaki tüm özellikler zaten ekliyse buton pasiftir.</td>
+<td><code>catalog.platform.manage</code></td>
+</tr>
+<tr>
+<td>Yıldız (Ana eksen yap)</td>
+<td>Özellikler tablosu, Ana Eksen sütunu</td>
+<td>Boş yıldıza tıklayınca o eksen <strong>ana eksen</strong> olur (dolu sarı yıldız); önceki ana eksenin işareti kalkar.</td>
+<td><code>catalog.platform.manage</code>; özellik varyant ekseni olmalı; <strong>grupta ürün yoksa</strong> (ürün varsa kilit simgesi görünür, tıklanamaz)</td>
+</tr>
+<tr>
+<td>Düzenle (kalem)</td>
+<td>Özellik satırı, sağ</td>
+<td>&quot;Özellik Düzenle — <ad>&quot; penceresi açılır (varyant ekseni, zorunlu, sıra).</td>
+<td><code>catalog.platform.manage</code></td>
+</tr>
+<tr>
+<td>Sil (çöp kutusu)</td>
+<td>Özellik satırı, sağ</td>
+<td>⚠️ &quot;Özelliği Sil&quot; onayı: <em>&quot;… özelliği bu gruptan kaldırılacak. Emin misiniz?&quot;</em> Onaylanınca özellik gruptan çıkarılır (özellik tipi havuzda kalır).</td>
+<td><code>catalog.platform.manage</code></td>
+</tr>
+<tr>
+<td>Alt Özellik Ekle</td>
+<td>Alt Özellikler kartı, sağ üst</td>
+<td>&quot;Eksen Alt Özelliği Ekle&quot; penceresi eksen seçimi boş açılır.</td>
+<td><code>catalog.platform.manage</code>; en az bir varyant ekseni</td>
+</tr>
+<tr>
+<td>+ Alt Özellik</td>
+<td>Her eksen başlığının sağı</td>
+<td>Aynı pencere, eksen önceden seçili açılır.</td>
+<td><code>catalog.platform.manage</code></td>
+</tr>
+<tr>
+<td>Düzenle (küçük kalem)</td>
+<td>Alt özellik etiketi</td>
+<td>&quot;Alt Özellik Düzenle — <ad>&quot; (zorunlu, sıra).</td>
+<td><code>catalog.platform.manage</code></td>
+</tr>
+<tr>
+<td>× (kaldır)</td>
+<td>Alt özellik etiketi</td>
+<td>⚠️ &quot;Alt Özelliği Sil&quot; onayı; onaylanınca alt özellik eksenden kaldırılır.</td>
+<td><code>catalog.platform.manage</code></td>
+</tr>
+<tr>
+<td>Geri Dön</td>
+<td>Detay (kayıt bulunamadığında)</td>
+<td>Listeye döner.</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<h2 id="form-alanlari">Form alanları<a class="anchor" href="#form-alanlari" aria-hidden="true">#</a></h2>
+<h3 id="yeni-urun-grubu-penceresi">Yeni Ürün Grubu penceresi<a class="anchor" href="#yeni-urun-grubu-penceresi" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Sıra</td>
+<td>Hayır</td>
+<td>Tam sayı; listedeki sıra. Varsayılan 0.</td>
+</tr>
+<tr>
+<td>Ad</td>
+<td>Evet (kaynak dil)</td>
+<td>Çok dilli (TR/EN…). Türkçe ad koddan üretim için de kullanılır.</td>
+</tr>
+<tr>
+<td>Otomatik Kod</td>
+<td>— (salt okunur)</td>
+<td>Türkçe addan canlı üretilir (örn. &quot;Topuklu Ayakkabı&quot; → <code>topuklu_ayakkabi</code>). Kayıt sonrası değiştirilemez.</td>
+</tr>
+</tbody></table>
+<p>Hata olursa pencerede &quot;Hata oluştu. Lütfen tekrar deneyin.&quot; görünür (örn. addan kod üretilemediğinde).</p>
+<h3 id="ozellik-ekle-ozellik-duzenle-pencereleri">Özellik Ekle / Özellik Düzenle pencereleri<a class="anchor" href="#ozellik-ekle-ozellik-duzenle-pencereleri" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Özellik Tipi</td>
+<td>Evet</td>
+<td>Yalnız eklemede. Aranabilir liste; bu gruba zaten ekli tipler listede çıkmaz. Ekle butonu seçim yapılana kadar pasiftir.</td>
+</tr>
+<tr>
+<td>Varyant Ekseni</td>
+<td>Hayır</td>
+<td>İşaretliyse bu özellik bu grupta varyantları ayıran eksen olur (örn. Renk, Beden). İşaretsizse tüm varyantlara ortak ürün özelliğidir (örn. Kumaş).</td>
+</tr>
+<tr>
+<td>Zorunlu</td>
+<td>Hayır</td>
+<td>İşaretliyse ürün kartında bu özellik boş bırakılamaz.</td>
+</tr>
+<tr>
+<td>Sıra</td>
+<td>Hayır</td>
+<td>Tam sayı; ürün formundaki ve tablodaki sıra. Eklemede (mevcut özellik sayısı × 10) önerilir.</td>
+</tr>
+</tbody></table>
+<p>Aynı özellik ikinci kez eklenmeye çalışılırsa sunucu &quot;Bu özellik zaten bu gruba ekli.&quot; hatası döner.</p>
+<h3 id="eksen-alt-ozelligi-ekle-alt-ozellik-duzenle-pencereleri">Eksen Alt Özelliği Ekle / Alt Özellik Düzenle pencereleri<a class="anchor" href="#eksen-alt-ozelligi-ekle-alt-ozellik-duzenle-pencereleri" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Varyant Ekseni</td>
+<td>Evet</td>
+<td>Yalnız eklemede; grubun varyant eksenlerinden biri (örn. Beden). Seçilmeden alt özellik listesi &quot;— Önce eksen seçin —&quot; gösterir.</td>
+</tr>
+<tr>
+<td>Alt Özellik Tipi</td>
+<td>Evet</td>
+<td>Özellik havuzundan, eksenin kendisi ve bu eksene zaten ekli olanlar hariç (örn. Paça Boyu, Bel Genişliği). Seçenek kalmadıysa &quot;Bu eksen için eklenebilecek özellik kalmadı.&quot; yazısı görünür.</td>
+</tr>
+<tr>
+<td>Zorunlu</td>
+<td>Hayır</td>
+<td>İşaretliyse etiket üzerinde turuncu <code>*</code> görünür; ürün kartında her eksen değeri için doldurulması beklenir.</td>
+</tr>
+<tr>
+<td>Sıra</td>
+<td>Hayır</td>
+<td>Tam sayı; etiket üzerinde <code>#N</code> olarak görünür.</td>
+</tr>
+</tbody></table>
+<p>Sunucu hataları pencerede gösterilir: &quot;Bu özellik bu grupta varyant ekseni olarak tanımlı değil.&quot;, &quot;Bu alt özellik zaten eklenmiş.&quot;, &quot;Bir özellik kendi ekseninin alt özelliği olamaz.&quot;</p>
+<h2 id="detay-sayfasi-ozellikler-tablosu">Detay sayfası — Özellikler tablosu<a class="anchor" href="#detay-sayfasi-ozellikler-tablosu" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Özellik Tipi</td>
+<td>Ad + kod rozeti. Katman simgesi = varyant ekseni, etiket simgesi = ürün özelliği.</td>
+</tr>
+<tr>
+<td>Varyant Ekseni</td>
+<td><code>Evet</code> rozeti ya da <code>—</code>.</td>
+</tr>
+<tr>
+<td>Ana Eksen</td>
+<td>Yalnız varyant eksenlerinde: dolu sarı yıldız = ana eksen; boş yıldız = tıklayıp ana eksen yapılabilir; kilit = grupta ürün olduğu için değiştirilemez.</td>
+</tr>
+<tr>
+<td>Zorunlu</td>
+<td><code>Zorunlu</code> (turuncu) rozeti ya da <code>—</code>.</td>
+</tr>
+<tr>
+<td>Sıra</td>
+<td>Sıra numarası; tablo bu sıraya göre dizilir.</td>
+</tr>
+<tr>
+<td>(işlemler)</td>
+<td>Düzenle / Sil — yalnız yetkili kullanıcıda.</td>
+</tr>
+</tbody></table>
+<p>Özellik yoksa &quot;Henüz özellik eklenmemiş&quot; yazısı görünür.</p>
+<h3 id="varyant-ekseni-alt-ozellikleri">Varyant Ekseni Alt Özellikleri<a class="anchor" href="#varyant-ekseni-alt-ozellikleri" aria-hidden="true">#</a></h3>
+<p>Her varyant ekseni (örn. <em>Beden ekseni</em>) bir bölüm olarak listelenir; altında o eksene bağlı alt özellikler etiket olarak
+dizilir: <code>ad</code> <code>*</code>(zorunluysa) <code>#sıra</code> + kalem + ×. Açıklama satırı: <em>&quot;Her varyant değerinin kendine özgü ölçülebilir
+özellikleri (örn. Beden 38 → Paça Boyu: 74 cm)&quot;</em>. Alt özelliği olmayan eksende &quot;Bu eksen için henüz alt özellik
+tanımlanmamış&quot; yazar. Ürün kartında her beden değeri için bu alt özelliklerin değerleri ayrı ayrı girilir (ölçü tablosu).</p>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<ul>
+<li><strong>Aktif / Pasif:</strong> Pasif grup <code>Aktif</code> filtresinde gizlenir. Bu ekranda grubun Sıra ve Durum değerleri özet kartında gösterilir; detaydan düzenlenen tek alan <strong>Ad (Çeviriler)</strong>&#39;dir.</li>
+<li><strong>Kod değişmez:</strong> Türkçe addan bir kez üretilir; ad sonradan değişse de kod aynı kalır.</li>
+<li><strong>Varyant ekseni:</strong> Gruptaki varyant eksenleri ürünün varyant matrisini belirler. Eksen yoksa ürün tek varyantlı (varsayılan varyant) oluşturulur; bir eksen tekil liste, birden fazla eksen kombinasyon (örn. Renk × Beden) üretir.</li>
+<li><strong>Ana eksen:</strong> Varyant eksenlerinden <strong>en fazla biri</strong> ana eksendir; mağaza listelemesi ve ürün görsellerinin gruplanması (örn. renk başına görsel) bu eksene göre yapılır. Ana eksen yalnız varyant ekseni olan özellikte seçilebilir; <strong>gruba bağlı ürün varsa değiştirilemez</strong> (&quot;Ürün mevcut — ana eksen kilitli&quot; rozeti, kilit simgesi; sunucu hatası: &quot;Bu gruba ait ürünler mevcut olduğundan ana eksen değiştirilemez.&quot;).</li>
+<li><strong>Grup silme:</strong> Yalnız hiç ürünü olmayan grup silinebilir; ürün varsa buton görünmez ve sunucu &quot;Bu gruba atanmış ürünler bulunduğu için silinemez.&quot; döner. Silme geri alınamaz ⚠️.</li>
+<li><strong>Özelliği gruptan çıkarma:</strong> Özellik yalnız bu grubun şablonundan kaldırılır; özellik tipi ve değer havuzu silinmez. Mevcut ürünlerde girilmiş değerler veri olarak kalır ancak formda bu grubun şablonunda görünmez.</li>
+<li><strong>Doğru grup önemlidir:</strong> Ürünün özellik alanları, zorunlu alanları, varyant eksenleri ve beden/ölçü şablonu gruptan gelir. Yanlış gruba atanmış ürünün özellik/beden şablonu da yanlış olur; mağazadaki grup temelli davranışlar (filtre dolumu, ölçü tablosu) bundan etkilenir.</li>
+<li><strong>Özellik tipi ile grup ayarı ayrımı:</strong> Veri tipi (seçim listesi, metin…) ve filtrede kullanım özellik tipinde; varyant ekseni / ana eksen / zorunlu / sıra ise grup–özellik bağında tutulur. Aynı özellik farklı gruplarda farklı rol alabilir.</li>
+</ul>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<h3 id="yeni-urun-grubu-olusturma-ve-sablonunu-kurma">Yeni ürün grubu oluşturma ve şablonunu kurma<a class="anchor" href="#yeni-urun-grubu-olusturma-ve-sablonunu-kurma" aria-hidden="true">#</a></h3>
+<ol>
+<li><strong>Katalog › Ürün Grupları</strong>&#39;na girin, <strong>Yeni Grup</strong>&#39;a tıklayın.</li>
+<li><strong>Ad</strong>&#39;ı (Türkçe ve varsa diğer diller) yazın, gerekirse <strong>Sıra</strong> verin; <strong>Otomatik Kod</strong>&#39;u kontrol edip <strong>Kaydet</strong>&#39;e tıklayın. Detay sayfası açılır.</li>
+<li><strong>Özellik Ekle</strong> ile ürün özelliklerini ekleyin (örn. Kumaş Türü, Desen) — <em>Varyant Ekseni</em> işaretsiz, gerekiyorsa <em>Zorunlu</em>.</li>
+<li>Varyant oluşturacak özellikleri (örn. Renk, Beden) <strong>Varyant Ekseni</strong> işaretli olarak ekleyin.</li>
+<li>Ana Eksen sütununda listelemeye temel olacak eksenin (genellikle Renk) yıldızına tıklayın.</li>
+<li>Gerekirse <strong>Alt Özellik Ekle</strong> ile eksene ölçü alt özellikleri bağlayın (Beden → Paça Boyu, Bel Genişliği…).</li>
+</ol>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Ana ekseni <strong>ilk ürünü oluşturmadan önce</strong> belirleyin; gruba ürün girildikten sonra kilitlenir.</p>
+</blockquote>
+<h3 id="mevcut-gruba-ozellik-ekleme-duzenleme">Mevcut gruba özellik ekleme / düzenleme<a class="anchor" href="#mevcut-gruba-ozellik-ekleme-duzenleme" aria-hidden="true">#</a></h3>
+<ol>
+<li>Listede gruba tıklayın.</li>
+<li><strong>Özellik Ekle</strong> → <strong>Özellik Tipi</strong>&#39;ni seçin, <em>Varyant Ekseni</em> / <em>Zorunlu</em> işaretlerini ve <em>Sıra</em>&#39;yı verin → <strong>Ekle</strong>.</li>
+<li>Var olan bir özelliği değiştirmek için satırın sağındaki kalem simgesine tıklayın, <strong>Kaydet</strong>&#39;e basın.</li>
+</ol>
+<h3 id="eksene-alt-ozellik-olcu-tanimlama">Eksene alt özellik (ölçü) tanımlama<a class="anchor" href="#eksene-alt-ozellik-olcu-tanimlama" aria-hidden="true">#</a></h3>
+<ol>
+<li>Detayda <strong>Varyant Ekseni Alt Özellikleri</strong> kartında ilgili eksenin yanındaki <strong>+ Alt Özellik</strong>&#39;e tıklayın.</li>
+<li><strong>Alt Özellik Tipi</strong>&#39;ni seçin (örn. Paça Boyu); gerekiyorsa <strong>Zorunlu</strong> işaretleyin ve <strong>Sıra</strong> verin → <strong>Ekle</strong>.</li>
+<li>Alt özellik havuzda yoksa önce <a href="/rehber/katalog/ozellik-tipleri/">Özellik Tipleri</a> sayfasında oluşturun.</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Özellik Ekle butonu pasifse havuzdaki tüm özellik tipleri bu gruba zaten eklidir; yeni bir özellik için önce Özellik Tipleri&#39;nde tip oluşturun.</p>
+</blockquote>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Sıra alanına 10&#39;ar aralık bırakın (0, 10, 20…); sonradan araya özellik eklemek kolaylaşır.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Ana Eksen sütununda kilit simgesi görüyorsanız grupta ürün vardır; ana eksen artık değiştirilemez. Yeni bir şablon gerekiyorsa yeni bir grup açıp ürünleri o gruba taşımanız gerekir.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> <strong>Grubu Sil</strong> butonu yoksa gruba bağlı ürünler vardır; önce ürünler başka gruba alınmalıdır.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> Alt özellik eklerken &quot;Bu eksen için eklenebilecek özellik kalmadı.&quot; mesajı, havuzdaki tüm tiplerin bu eksene zaten bağlı olduğu (ya da eksenin kendisi olduğu) anlamına gelir.</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/katalog/ozellik-tipleri/">Özellik Tipleri</a> — özellik havuzu ve seçim değerleri</li>
+<li><a href="/rehber/katalog/urun-kartlari/">Ürün Kartları</a> — grup seçimi, varyant ve ölçü girişi</li>
+<li><a href="/rehber/katalog/katalog-ayarlari/">Katalog Ayarları</a></li>
+<li><a href="/rehber/genel/panel-yapisi/">Giriş ve Panel Yapısı</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/katalog/ozellik-tipleri/">← Özellik Tipleri</a><a class="sonraki" href="/rehber/katalog/katalog-ayarlari/">Katalog Ayarları →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>

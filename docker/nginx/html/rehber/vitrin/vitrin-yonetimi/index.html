@@ -1,0 +1,659 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vitrin Yönetimi — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="active">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="">Toplama Planlama</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Vitrin</span> › <b>Vitrin Yönetimi</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Vitrin</div><h1>Vitrin Yönetimi</h1>
+<p class="ozet">Ana sayfa ve diğer yerleşimlerdeki vitrin bloklarının (slider, banner, ürün carousel'i, story, duyuru…) taslak olarak düzenlendiği, segment bazlı önizlendiği, versiyonlu yayınlandığı ve gerektiğinde eski versiyona dönüldüğü ekran grubu.</p><p class="rota">Panel adresi: <code>/admin/storefront/pages</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#liste-ve-filtreler">Liste ve filtreler</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#blok-detay-sayfasi">Blok detay sayfası</a><a href="#gecmis-ve-versiyonlar-sayfasi">Geçmiş &amp; Versiyonlar sayfası</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Sitenin ana sayfası ve diğer sabit alanları (duyuru şeridi, ürün listesi üst/alt, ürün detay altı, sepet,
+teslimat, ödeme) <strong>bloklardan</strong> oluşur. Bu ekranda blokları taslak olarak ekler, öğelerini (görsel/link/metin)
+ve ürün kaynaklarını düzenler, kimlere gösterileceğini belirler, <strong>Yayınla</strong> ile versiyonlu olarak canlıya
+alırsınız. Taslak değişiklikler canlıyı etkilemez; site yalnız yayındaki aktif versiyonu okur. Pazarlama/vitrin
+sorumlusu kampanya dönemlerinde, sezon geçişlerinde ve ana sayfa düzeni değiştiğinde kullanır. Üç sayfadan
+oluşur: <strong>Vitrin Yönetimi</strong> (blok listesi + yayın), <strong>Blok detayı</strong> (alanlar, ayarlar, öğeler) ve
+<strong>Geçmiş &amp; Versiyonlar</strong> (yayın versiyonları, geri dönüş, değişiklik geçmişi).</p>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/storefront-pages.webp" class="buyut" data-alt="Vitrin Yönetimi — yerleşim sekmeleri, araç çubuğu ve canlı önizlemeli blok listesi"><img src="/rehber/img/storefront-pages.webp" alt="Vitrin Yönetimi — yerleşim sekmeleri, araç çubuğu ve canlı önizlemeli blok listesi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Vitrin Yönetimi — yerleşim sekmeleri, araç çubuğu ve canlı önizlemeli blok listesi</figcaption></figure></p>
+<ol>
+<li><strong>Başlık şeridi</strong> — açıklama ve sağda <strong>Platform seç</strong> (kanal) listesi; seçim oturumda hatırlanır.</li>
+<li><strong>Yerleşim sekmeleri</strong> — Ana Sayfa · Global Üst Alan (Duyuru) · Ürün Listesi Üst · Ürün Listesi Alt ·
+Ürün Detay Alt · Sepet · Teslimat · Ödeme.</li>
+<li><strong>Araç çubuğu</strong> — solda <strong>Yeni Blok</strong>, <strong>Segment Önizleme</strong>, <strong>Geçmiş &amp; Versiyonlar →</strong>; sağda yayın notu
+kutusu ve <strong>Yayınla</strong>.</li>
+<li><strong>Segment Önizlemesi</strong> paneli (Segment Önizleme açıkken).</li>
+<li><strong>Cihaz çerçevesi</strong> — 🖥 Masaüstü / 📱 Mobil önizleme genişliği.</li>
+<li><strong>Blok listesi</strong> — her blok kendi yönetim çubuğu ve gerçek içerik önizlemesiyle sayfa sırasına göre alt alta.</li>
+</ol>
+<h2 id="liste-ve-filtreler">Liste ve filtreler<a class="anchor" href="#liste-ve-filtreler" aria-hidden="true">#</a></h2>
+<p>Blok listesinde her blok bir karttır. <strong>Yönetim çubuğu</strong> (soldan sağa):</p>
+<table>
+<thead>
+<tr>
+<th>Öğe</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>↑ / ↓</td>
+<td>Bloğu yerleşim içinde bir üst/alt sıraya taşır (anında kaydedilir).</td>
+</tr>
+<tr>
+<td>Başlık</td>
+<td>Blok başlığı.</td>
+</tr>
+<tr>
+<td>Tip rozeti</td>
+<td>Blok tipi (Banner, Slider, Carousel Ürün Listesi…); yanında varsa şablon adı.</td>
+</tr>
+<tr>
+<td><code>tarihli</code></td>
+<td>Bloğun başlangıç/bitiş tarihi tanımlı.</td>
+</tr>
+<tr>
+<td><code>üye bağlamlı</code> (sarı)</td>
+<td>Ürün kaynağı ziyaretçiye özel (Son Gezilenler / Favoriler); önizlenemez.</td>
+</tr>
+<tr>
+<td><code>Aktif</code> / <code>Pasif</code> rozeti</td>
+<td>Pasif blok yayına girmez; kart soluk gösterilir.</td>
+</tr>
+<tr>
+<td>Pasifleştir / Aktifleştir · Düzenle · Sil</td>
+<td>Blok aksiyonları (aşağıda).</td>
+</tr>
+</tbody></table>
+<p>Çubuğun altında bloğun <strong>gerçek içerik önizlemesi</strong> görünür: story kapakları, kategori kapsülleri, marka logoları,
+görselli yorum kartları, ikon/bilgi bandı kutuları, Instagram ızgarası, banner/slider görselleri, duyuru şeridi,
+ürün kaynağından gelen ilk ürün kartları (ad + fiyat), koleksiyonlar (ad · ürün · görüntülenme), tabs sekme
+adları. Kaynak boşsa &quot;Kaynak ürün döndürmedi&quot;, öğe yoksa &quot;Öğe yok&quot; yazar. Yerleşimde hiç blok yoksa
+&quot;Bu yerleşimde taslak blok yok — &#39;Yeni Blok&#39; ile başlayın.&quot; görünür.</p>
+<table>
+<thead>
+<tr>
+<th>Filtre</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Platform seç</td>
+<td>Zorunlu; seçilmeden &quot;Blokları yönetmek için platform seçin.&quot; uyarısı.</td>
+</tr>
+<tr>
+<td>Yerleşim sekmeleri</td>
+<td>Yalnız o yerleşimin bloklarını gösterir. Her yerleşim kendi sırasını taşır.</td>
+</tr>
+<tr>
+<td>Masaüstü / Mobil</td>
+<td>Önizleme çerçevesini daraltır; mobil görseller varsa onları kullanır. Canlıyı etkilemez.</td>
+</tr>
+</tbody></table>
+<h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Yeni Blok</td>
+<td>Araç çubuğu</td>
+<td>&quot;Yeni Blok&quot; penceresi: Blok tipi (liste), Şablon (tipte varsa), Başlık (TR). <strong>Oluştur</strong> → blok seçili yerleşimin sonuna aktif olarak eklenir ve detay sayfası açılır.</td>
+<td>Platform seçili; tip + başlık zorunlu.</td>
+</tr>
+<tr>
+<td>Segment Önizleme / Segment Önizlemeyi Kapat</td>
+<td>Araç çubuğu</td>
+<td>Segment Önizlemesi panelini açar/kapatır.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Önizle</td>
+<td>Segment paneli</td>
+<td>Seçilen ziyaretçi profiline göre taslak blokların <strong>Görünür/Gizli</strong> listesi ve nedeni (öğe N/M, ürün sayısı) hesaplanır. Taslak veriyle çalışır, canlıyı etkilemez.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Geçmiş &amp; Versiyonlar →</td>
+<td>Araç çubuğu</td>
+<td>Geçmiş sayfasına gider (aşağıda).</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Yayınla</td>
+<td>Araç çubuğu, sağ</td>
+<td>Platformun <strong>tüm yerleşimlerindeki aktif taslak bloklar</strong> doğrulanır ve yeni versiyon olarak canlıya alınır; yayın notu kaydedilir. Hata varsa kırmızı kutuda &quot;Yayınlanamadı: …&quot; ve yayın yapılmaz.</td>
+<td>Platform seçili.</td>
+</tr>
+<tr>
+<td>↑ / ↓</td>
+<td>Blok çubuğu</td>
+<td>Sırayı değiştirir; anında kaydedilir (taslak).</td>
+<td>İlk/son blokta pasif.</td>
+</tr>
+<tr>
+<td>Pasifleştir / Aktifleştir</td>
+<td>Blok çubuğu</td>
+<td>Bloğun Aktif bayrağını çevirir (taslak).</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Düzenle</td>
+<td>Blok çubuğu</td>
+<td>Blok detay sayfası.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Sil</td>
+<td>Blok çubuğu</td>
+<td>⚠️ &quot;Blok silinsin mi? (Canlı yayın bir sonraki Yayınla&#39;ya kadar etkilenmez)&quot; onayı; onayla taslak blok silinir.</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<h3 id="segment-onizlemesi-paneli">Segment Önizlemesi paneli<a class="anchor" href="#segment-onizlemesi-paneli" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Seçenekler</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Şehir</td>
+<td>81 il (plaka kodu); boş = Konumsuz.</td>
+</tr>
+<tr>
+<td>Cinsiyet</td>
+<td>Kadın / Erkek; boş = Bilinmiyor.</td>
+</tr>
+<tr>
+<td>Cihaz</td>
+<td>Masaüstü / Mobil / Tablet / iOS Uygulama / Android Uygulama.</td>
+</tr>
+<tr>
+<td>Üyelik</td>
+<td>Misafir / Üye; Üye seçilince <strong>Üye Grubu</strong> alanı açılır.</td>
+</tr>
+</tbody></table>
+<p>Sonuçta &quot;Çözülen segment: … — yerleşim: …&quot; satırı ve her blok için <code>Görünür</code>/<code>Gizli</code> rozeti + neden.</p>
+<h2 id="blok-detay-sayfasi">Blok detay sayfası<a class="anchor" href="#blok-detay-sayfasi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/storefront-pages-detay.webp" class="buyut" data-alt="Blok detayı — Blok Alanları, Blok Ayarları ve Öğeler"><img src="/rehber/img/storefront-pages-detay.webp" alt="Blok detayı — Blok Alanları, Blok Ayarları ve Öğeler" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Blok detayı — Blok Alanları, Blok Ayarları ve Öğeler</figcaption></figure></p>
+<ol>
+<li><strong>Başlık</strong> — ← Vitrin Yönetimi bağlantısı, blok başlığı + tip/şablon; sağda <code>Aktif</code>/<code>Pasif</code> rozeti ve <strong>Kaydet</strong>.</li>
+<li><strong>Blok Alanları</strong> kartı (sol).</li>
+<li><strong>Blok Ayarları</strong> kartı (sağ) — Ürün Kaynağı / Koleksiyon Kaynağı / Görünüm / Hedefleme.</li>
+<li><strong>Öğeler</strong> tablosu (alt; yalnız öğe destekleyen tiplerde) ve <strong>Öğe Ekle / Öğe Düzenle</strong> penceresi.</li>
+</ol>
+<p><strong>Kaydet</strong> blok alanlarını, ayarlarını ve (öğeli tipte) öğe listesinin tamamını birlikte yazar; hata kırmızı kutuda.</p>
+<h3 id="blok-alanlari">Blok Alanları<a class="anchor" href="#blok-alanlari" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Başlık (TR)</td>
+<td>Evet</td>
+<td>Blok başlığı; sitede tipine göre gösterilir.</td>
+</tr>
+<tr>
+<td>Alt başlık (TR)</td>
+<td>Hayır</td>
+<td>İkincil metin.</td>
+</tr>
+<tr>
+<td>Yerleşim</td>
+<td>Evet</td>
+<td>Bloğun bağlı olduğu alan; değiştirilirse blok o yerleşime taşınır.</td>
+</tr>
+<tr>
+<td>Şablon</td>
+<td>Tipte varsa</td>
+<td>Banner: <code>tekli</code>, <code>ikili</code>, <code>uclu</code>, <code>dortlu</code>, <code>besli</code>, <code>reklam</code>. Carousel: <code>standart</code>, <code>ozel-fiyat</code>, <code>flash</code>. Diğer tiplerde &quot;Bu tipte şablon seçilmez.&quot;</td>
+</tr>
+<tr>
+<td>Sıra</td>
+<td>Hayır</td>
+<td>Yerleşim içindeki sıra (listedeki oklarla da değişir).</td>
+</tr>
+<tr>
+<td>Öncelik</td>
+<td>Hayır</td>
+<td>Aynı sıradaki bloklar arasında ikincil sıralama.</td>
+</tr>
+<tr>
+<td>Başlangıç / Bitiş</td>
+<td>Hayır</td>
+<td>Tarih-saat penceresi; dışında blok gösterilmez (<code>tarihli</code> rozeti).</td>
+</tr>
+<tr>
+<td>Aktif</td>
+<td>—</td>
+<td>&quot;pasif blok hiçbir koşulda yayınlanmaz&quot;.</td>
+</tr>
+</tbody></table>
+<h3 id="blok-ayarlari">Blok Ayarları<a class="anchor" href="#blok-ayarlari" aria-hidden="true">#</a></h3>
+<p><strong>Ürün Kaynağı</strong> — Carousel/Infinity/Kategori Çok Satanları tiplerinde zorunlu (&quot;bu tipte zorunlu&quot;); diğer tiplerde
+<strong>+ Ürün şeridi ekle (opsiyonel)</strong> ile eklenir, <strong>Ürün şeridini kaldır</strong> ile kaldırılır. Tabs&#39;ta her sekme öğesinin
+kendi kaynağı vardır.</p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kaynak</td>
+<td><code>Yeni Gelenler</code>, <code>Çok Satanlar</code>, <code>Kampanyalı Ürünler</code>, <code>Kategori</code>, <code>Marka</code>, <code>Manuel Ürün Listesi</code>, <code>Son Gezilenler (üyeye özel)</code>, <code>Favoriler (üyeye özel)</code>.</td>
+</tr>
+<tr>
+<td>Ürün adedi (limit)</td>
+<td>1–48 (boş = varsayılan 12).</td>
+</tr>
+<tr>
+<td>Sıralama</td>
+<td><code>Varsayılan</code>, <code>En Yeni</code>, <code>Fiyat Artan</code>, <code>Fiyat Azalan</code>.</td>
+</tr>
+<tr>
+<td>Kanal Kategorisi</td>
+<td>Kaynak <code>Kategori</code> iken; kanalın yayındaki kategorileri.</td>
+</tr>
+<tr>
+<td>Satış penceresi (gün)</td>
+<td>Kaynak <code>Çok Satanlar</code> iken; boş = 90.</td>
+</tr>
+<tr>
+<td>Ürün kodları</td>
+<td>Kaynak <code>Manuel</code> iken; virgül/satırla ayrılmış kodlar, sıra korunur.</td>
+</tr>
+<tr>
+<td>Marka değer Id</td>
+<td>Kaynak <code>Marka</code> iken; marka özellik değerinin kimliği.</td>
+</tr>
+<tr>
+<td>Min fiyat / Max fiyat</td>
+<td>Fiyat aralığı.</td>
+</tr>
+<tr>
+<td>Etiketler</td>
+<td>En az biri eşleşen ürün etiketleri (Kategori kaynağında kapalı).</td>
+</tr>
+<tr>
+<td>Yalnız stokta olanlar / Yalnız indirimliler</td>
+<td>Onay kutuları (Kategori kaynağında kapalı — kategori kendi stok kuralını uygular).</td>
+</tr>
+</tbody></table>
+<p>Üyeye özel kaynaklarda not: içerik ziyaretçinin kendi verisiyle dolar; <strong>misafirde blok görünmez</strong>, panelde önizlenemez.</p>
+<p><strong>Koleksiyon Kaynağı</strong> — Koleksiyonlar tipinde zorunlu.</p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Adet (limit)</td>
+<td>1–50 (boş = 10).</td>
+</tr>
+<tr>
+<td>Sıralama</td>
+<td><code>En Yeni</code> / <code>Popüler (görüntülenme)</code>.</td>
+</tr>
+<tr>
+<td>Manuel seçim (ShareCode, virgüllü)</td>
+<td>Belirli koleksiyonların paylaşım kodları; boş = otomatik.</td>
+</tr>
+<tr>
+<td>Yalnız <strong>onaylı + herkese açık</strong> koleksiyonlar listelenir (bkz. Koleksiyon Moderasyonu).</td>
+<td></td>
+</tr>
+</tbody></table>
+<p><strong>Görünüm</strong></p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Görünme koşulu</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tema</td>
+<td>Carousel tipleri</td>
+<td>Arka plan teması: <code>varsayilan</code>, <code>sicak</code>, <code>mavi</code>, <code>yesil</code>, <code>lila</code>, <code>turuncu-kirmizi</code>, <code>mavi-mor</code>, <code>yesil-turkuaz</code>, <code>pembe-sari</code>, <code>lacivert-mavi</code>, <code>gun-batimi</code>, <code>deniz-uclu</code>, <code>orman-uclu</code>, <code>seker-uclu</code>, <code>premium-uclu</code>, <code>flash-urunler</code>.</td>
+</tr>
+<tr>
+<td>&quot;Tümünü Gör&quot; linki</td>
+<td>Her zaman</td>
+<td>Blok başlığındaki bağlantı (örn. <code>/urun-listesi</code>).</td>
+</tr>
+<tr>
+<td>Flash bitişi</td>
+<td>Şablon <code>flash</code></td>
+<td>Geri sayımın bittiği tarih-saat.</td>
+</tr>
+<tr>
+<td>Görünüm tipi</td>
+<td>Kategoriler bloğu</td>
+<td><code>Kapsül</code> / <code>Kare</code>.</td>
+</tr>
+<tr>
+<td>Mobilde yatay kaydırma (carousel)</td>
+<td>Her zaman</td>
+<td>Mobilde öğeler yatay kaydırılır.</td>
+</tr>
+</tbody></table>
+<p>Kayıtlı ayar okunamıyorsa sarı uyarı ve <strong>Ayarları sıfırla</strong> butonu görünür.</p>
+<p><strong>Hedefleme (kimlere gösterilsin)</strong> — Blok seviyesinde kural alan tiplerde (Banner, Carousel, Infinity, Tabs,
+Koleksiyonlar, Kategoriler, Markalar, Instagram, Kategori Çok Satanları). Seçim yoksa &quot;Hedefleme yok — herkese
+gösterilir.&quot; Seçili koşulların <strong>tümü</strong> sağlanan ziyaretçiye gösterilir; bir alan içindeki seçenekler &quot;veya&quot;dır.</p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Seçenekler</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Cinsiyet</td>
+<td>Kadın / Erkek</td>
+</tr>
+<tr>
+<td>Cihaz</td>
+<td>Mobil / Masaüstü / iOS Uygulama / Android Uygulama</td>
+</tr>
+<tr>
+<td>Üyelik</td>
+<td>Misafir / Üye</td>
+</tr>
+<tr>
+<td>Şehirler</td>
+<td>81 il (çoklu)</td>
+</tr>
+<tr>
+<td>Bölgeler</td>
+<td>Marmara, Ege, Akdeniz, İç Anadolu, Karadeniz, Doğu Anadolu, Güneydoğu Anadolu</td>
+</tr>
+<tr>
+<td>Üye Grupları</td>
+<td>Tanımlı üye grupları (çoklu)</td>
+</tr>
+</tbody></table>
+<h3 id="ogeler">Öğeler<a class="anchor" href="#ogeler" aria-hidden="true">#</a></h3>
+<p>Öğe destekleyen tiplerde (Banner, Slider, Story, Tabs, Kategoriler, Markalar, Instagram, Duyuru Şeridi, Çoklu
+Banner, Görselli Yorumlar, Bilgi Bandı, İkon Banner, Çerçevesiz Carousel) <strong>Öğeler (N)</strong> tablosu:</p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Sıra</td>
+<td>Öğe sırası.</td>
+</tr>
+<tr>
+<td>Başlık</td>
+<td>Öğe başlığı.</td>
+</tr>
+<tr>
+<td>Görsel</td>
+<td>Küçük resim; görsel yoksa seçili ikon.</td>
+</tr>
+<tr>
+<td>Link</td>
+<td>Öğenin hedefi.</td>
+</tr>
+<tr>
+<td>Durum</td>
+<td><code>Aktif</code> / <code>Pasif</code>.</td>
+</tr>
+<tr>
+<td>İşlem</td>
+<td><strong>Kaldır</strong> (listeden çıkarır; Kaydet ile kesinleşir).</td>
+</tr>
+</tbody></table>
+<p>Satıra tıklayınca <strong>Öğe Düzenle</strong>, <strong>Öğe Ekle</strong> ile yeni öğe penceresi açılır; <strong>Tamam</strong> değişikliği listeye
+işler, kalıcı kayıt için sayfadaki <strong>Kaydet</strong> gerekir. &quot;Öğe yok — öğesiz öğeli blok yayında gösterilmez.&quot;</p>
+<p><strong>Öğe Ekle / Öğe Düzenle penceresi</strong></p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Açıklama / kurallar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Başlık (TR) / Alt başlık (TR)</td>
+<td>Metinler (story/yorum/bilgi bandı kartlarında gösterilir).</td>
+</tr>
+<tr>
+<td>Video URL (story)</td>
+<td>Story tipinde oynatılacak video adresi.</td>
+</tr>
+<tr>
+<td>Buton metni (TR)</td>
+<td>Banner/slider butonu.</td>
+</tr>
+<tr>
+<td>Link</td>
+<td>Listeden seçilir: <code>Ana Sayfa (/)</code>, <code>Tüm Ürünler (/urun-listesi)</code>, kanalın kategorileri (<code>Ad (/url)</code>) ya da <code>Özel URL (elle gir)…</code> — özel değer <code>/</code> veya <code>https://</code> ile başlamalı, aksi halde kırmızı uyarı.</td>
+</tr>
+<tr>
+<td>Görsel / Mobil görsel</td>
+<td><strong>Görsel Yükle</strong> ile dosya seçilir (JPEG/PNG/WebP/GIF/SVG) ve sunucuya yüklenir; <strong>Değiştir</strong> / <strong>Kaldır</strong>. Tipine göre önerilen boyut altta yazar (aşağıdaki tablo). Öneriye uymayan dosyada sarı uyarı + <strong>Yine de Yükle</strong> / <strong>Vazgeç</strong>.</td>
+</tr>
+<tr>
+<td>İkon</td>
+<td>Açılır ızgaradan ikon seçilir (kamyon, yüzde, hediye, yıldız…); <strong>Kaldır</strong> temizler. Banner rozet metni için aynı alanda serbest metin (<code>%50 İndirim</code>) yazılabilir.</td>
+</tr>
+<tr>
+<td>Sıra</td>
+<td>Sayı.</td>
+</tr>
+<tr>
+<td>Aktif</td>
+<td>Pasif öğe yayına girmez.</td>
+</tr>
+<tr>
+<td>Yeni sekmede aç</td>
+<td>Link yeni sekmede açılır.</td>
+</tr>
+<tr>
+<td>Sekmenin Ürün Kaynağı</td>
+<td>Yalnız Tabs&#39;ta: sekmenin ürün kaynağı (Ürün Kaynağı alanlarıyla aynı).</td>
+</tr>
+<tr>
+<td>Öğe Hedeflemesi</td>
+<td>Öğe seviyesinde kural alan tiplerde (Slider, Story, Tabs, Duyuru Şeridi, Çoklu Banner, Görselli Yorumlar, Bilgi Bandı, İkon Banner, Çerçevesiz Carousel); Hedefleme formunun aynısı. Banner öğelerine kural verilemez.</td>
+</tr>
+</tbody></table>
+<p><strong>Görsel boyut önerileri</strong> (uyarı engellemez, &quot;Yine de Yükle&quot; mümkündür):</p>
+<table>
+<thead>
+<tr>
+<th>Blok tipi</th>
+<th>Görsel</th>
+<th>Mobil görsel</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Slider</td>
+<td>1920×840 (oran ~2.3), ≤350 KB, en az 1600 px genişlik</td>
+<td>≥800 px genişlik, ≤250 KB</td>
+</tr>
+<tr>
+<td>Banner</td>
+<td>1200×490 (oran ~2.4), ≤200 KB, en az 1100 px</td>
+<td>görsel ile aynı</td>
+</tr>
+<tr>
+<td>Çoklu Banner</td>
+<td>330×495 (dikey 2:3), ≤120 KB</td>
+<td>aynı</td>
+</tr>
+<tr>
+<td>Çerçevesiz Carousel</td>
+<td>800×978, ≤250 KB</td>
+<td>aynı</td>
+</tr>
+<tr>
+<td>Görselli Yorumlar</td>
+<td>480×600, ≤150 KB</td>
+<td>aynı</td>
+</tr>
+<tr>
+<td>Story</td>
+<td>kapak ≥128×128 kare, ≤100 KB</td>
+<td>aynı</td>
+</tr>
+<tr>
+<td>Kategoriler</td>
+<td>≥128×128, ≤100 KB</td>
+<td>aynı</td>
+</tr>
+<tr>
+<td>Uyarı türleri: &quot;Görsel dar&quot; (telefonda bulanık), &quot;En-boy oranı uyumsuz&quot; (kırpılır/ezilir), &quot;Dosya büyük&quot;</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(sayfa hızını düşürür; WebP önerilir). SVG/GIF piksel kontrolüne girmez.</td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table>
+<h2 id="gecmis-ve-versiyonlar-sayfasi">Geçmiş &amp; Versiyonlar sayfası<a class="anchor" href="#gecmis-ve-versiyonlar-sayfasi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/storefront-pages-history.webp" class="buyut" data-alt="Vitrin — Geçmiş & Versiyonlar"><img src="/rehber/img/storefront-pages-history.webp" alt="Vitrin — Geçmiş & Versiyonlar" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Vitrin — Geçmiş & Versiyonlar</figcaption></figure>
+Vitrin Yönetimi&#39;nden <strong>Geçmiş &amp; Versiyonlar →</strong> ile açılır (platform oradan gelir; doğrudan açılırsa &quot;Platform
+seçilmedi — vitrin yönetiminden gelin.&quot; ve geri butonu). Üç kart:</p>
+<table>
+<thead>
+<tr>
+<th>Kart</th>
+<th>İçerik</th>
+<th>Aksiyon</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Yayın Versiyonları</td>
+<td><code>vN</code>, yayın tarihi, not; aktif olanda <code>Aktif Yayın</code> rozeti.</td>
+<td>Diğer versiyonlarda <strong>Bu versiyona dön</strong> → o versiyon yeniden aktif olur (geri dönüş kaydı açılır; taslaklar değişmez).</td>
+</tr>
+<tr>
+<td>Yayın Geçmişi</td>
+<td>Her yayın denemesi: <code>vN (önceki vM)</code>, tarih, not, rozet <code>Yayınlandı</code> / <code>Geri Dönüş</code> / <code>Başarısız</code>; başarısızda hata metni.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Değişiklik Geçmişi</td>
+<td>Kim, neyi, ne zaman: <code>Oluşturuldu</code>, <code>Güncellendi</code>, <code>Silindi</code>, <code>Aktifleştirildi</code>, <code>Pasifleştirildi</code>, <code>Yayınlandı</code>, <code>Geri Dönüş</code>, <code>Önizlendi</code> rozetleri + kayıt adı + kullanıcı + tarih.</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>← Vitrin Yönetimi</strong> butonu listeye döner.</td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<ul>
+<li><strong>Taslak ≠ canlı:</strong> blok ekleme/düzenleme/silme/sıralama yalnız taslağı değiştirir; site yalnız <strong>aktif yayın
+versiyonunu</strong> okur. Canlıya almak için <strong>Yayınla</strong> şarttır.</li>
+<li>Yayınla, platformun <strong>tüm yerleşimlerindeki aktif</strong> blokları tek versiyonda toplar; pasif blok ve pasif öğeler
+yayına girmez. Tarih penceresi ve hedefleme canlıda ziyaretçi bazında değerlendirilir.</li>
+<li>Yayın engelleri (&quot;Yayınlanamadı: …&quot; ve geçmişte <code>Başarısız</code>): bilinmeyen tip/yerleşim, tipe uymayan şablon,
+zorunlu ürün/koleksiyon kaynağı tanımsız, kural verilemeyen tipte kural, bozuk kural içeriği. Hata düzeltilene
+kadar önceki versiyon yayında kalır.</li>
+<li>Öğeli blok öğesiz yayınlanırsa sitede gösterilmez; üyeye özel kaynaklı blok misafirde gösterilmez.</li>
+<li>Yeni yayın sitede kendiliğinden geçerli olur (önbellek versiyonla yenilenir); geri dönüş de aynı şekilde.</li>
+<li>Geri dönüş taslakları değiştirmez; taslaklar en son düzenlediğiniz hâlde kalır. Tekrar Yayınla taslaklardan
+yeni versiyon üretir.</li>
+<li>Blok tipleri ve kural seviyeleri: Banner (blok kuralı, öğeli, şablonlu), Slider/Story/Duyuru Şeridi/Çoklu Banner/
+Görselli Yorumlar/Bilgi Bandı/İkon Banner/Çerçevesiz Carousel (öğe kuralı, öğeli), Carousel Ürün Listesi
+(blok kuralı, ürün kaynağı zorunlu, şablonlu), Infinity Ürün Listesi ve Kategori Çok Satanları (blok kuralı,
+ürün kaynağı zorunlu), Tabs (blok+öğe kuralı, sekme öğeleri kendi kaynağıyla), Koleksiyonlar (blok kuralı,
+koleksiyon kaynağı zorunlu), Kategoriler/Markalar/Instagram (blok kuralı, öğeli).</li>
+</ul>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<p><strong>Ana sayfaya kampanya banner&#39;ı ekleyip yayınlama</strong></p>
+<ol>
+<li>Platformu seçin, <strong>Ana Sayfa</strong> sekmesinde <strong>Yeni Blok</strong> → tip <code>Banner</code>, şablon <code>ikili</code>, başlık girin, <strong>Oluştur</strong>.</li>
+<li>Detayda <strong>Öğe Ekle</strong> → Başlık, <strong>Görsel Yükle</strong> (öneri 1200×490), Link&#39;ten kampanya kategorisini seçin, <strong>Tamam</strong>;
+ikinci öğeyi de ekleyin. Gerekirse Başlangıç/Bitiş tarihi verin. <strong>Kaydet</strong>.</li>
+<li>← Vitrin Yönetimi&#39;ne dönün; oklarla sıraya koyun; <strong>Segment Önizleme → Önizle</strong> ile Görünür olduğunu doğrulayın.</li>
+<li>Yayın notu yazıp <strong>Yayınla</strong>. Hata kutusu çıkarsa mesajdaki bloğu düzeltip tekrar yayınlayın.</li>
+</ol>
+<p><strong>Yanlış yayını geri alma</strong></p>
+<ol>
+<li><strong>Geçmiş &amp; Versiyonlar →</strong> → Yayın Versiyonları&#39;nda önceki <code>vN</code> satırında <strong>Bu versiyona dön</strong>.</li>
+<li>Taslakta hatayı düzeltin ve yeniden <strong>Yayınla</strong>.</li>
+</ol>
+<p><strong>Belirli şehirlere özel slider görseli</strong></p>
+<ol>
+<li>Slider bloğunun detayında öğeyi açın; <strong>Öğe Hedeflemesi</strong>&#39;nde Şehirler&#39;e ilgili illeri ekleyin; <strong>Tamam</strong> → <strong>Kaydet</strong>.</li>
+<li>Segment Önizleme&#39;de Şehir&#39;i seçerek öğe sayacını (<code>öğe: N/M</code>) kontrol edin; <strong>Yayınla</strong>.</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Blok silme onay ister ama geri alınamaz; yayındaki kopya bir sonraki Yayınla&#39;ya kadar sitede kalır.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Detay sayfasında öğe eklemek/kaldırmak tek başına yetmez — pencere <strong>Tamam</strong>&#39;dan sonra sayfadaki
+<strong>Kaydet</strong>&#39;e basmazsanız öğe değişiklikleri kaybolur.</p>
+</blockquote>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Blok listesindeki önizleme gerçek taslak içeriği gösterir; &quot;Kaynak ürün döndürmedi&quot; görüyorsanız kaynak
+filtrelerini (fiyat, etiket, stok) gevşetin.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> &quot;Yayınlanamadı: … ürün kaynağı tanımsız&quot; mesajı Carousel/Infinity bloğunda Kaynak seçilmediğini gösterir;
+ya kaynak tanımlayın ya bloğu pasifleştirin.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> Segment Önizleme &quot;Gizli&quot; diyorsa nedeni satırda yazar (tarih penceresi dışı, hedefleme uyumsuz, öğe/ürün
+yok, üyeye özel kaynak + misafir).</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/vitrin/kanal-kategorileri/">Kanal Kategorileri</a></li>
+<li><a href="/rehber/vitrin/koleksiyon-moderasyonu/">Koleksiyon Moderasyonu</a></li>
+<li><a href="/rehber/vitrin/urun-karti/">Ürün Kartı</a></li>
+<li><a href="/rehber/pazarlama/kampanyalar/">Kampanyalar</a></li>
+<li><a href="/rehber/musteriler/uyelik-gruplari/">Gruplar (Üye Grupları)</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/vitrin/yorum-moderasyonu/">← Yorum Moderasyonu</a><a class="sonraki" href="/rehber/vitrin/iletisim-mesajlari/">İletişim Mesajları →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>

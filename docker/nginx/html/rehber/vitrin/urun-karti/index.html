@@ -1,0 +1,384 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ürün Kartı — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="active">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="">Toplama Planlama</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Vitrin</span> › <b>Ürün Kartı</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Vitrin</div><h1>Ürün Kartı</h1>
+<p class="ozet">Sitedeki ürün kartı öğelerinin kanal bazlı açılıp kapatıldığı, kart mesajlarının yönetildiği ve ürün listesi sıralama seçeneklerinin belirlendiği ekran; canlı önizlemelidir.</p><p class="rota">Panel adresi: <code>/admin/storefront/product-card</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#sekmeler">Sekmeler</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Sitede listelerde görünen <strong>ürün kartının</strong> hangi öğelerle çıkacağını kanal bazında belirler: rozetler, görsel
+hover davranışı, fiyat/puan satırları, eylem butonları ve üç &quot;değişken satır&quot;daki kampanya rozeti / kart mesajı
+kurgusu. İkinci sekmede kartlarda dönen kısa <strong>kart mesajları</strong> (örn. &quot;Kargo bedava&quot;, &quot;Aynı gün kargo&quot;) tanımlanır;
+üçüncü sekmede sitedeki <strong>sıralama menüsünde</strong> hangi seçeneklerin sunulacağı seçilir. Pazarlama/vitrin sorumlusu
+kampanya dönemlerinde ve tasarım değişikliklerinde kullanır. Sağdaki önizleme sitenin gerçek kart şablonuyla
+çalışır; kaydetmeden yapılan yerleşim değişiklikleri anında yansır.</p>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/storefront-product-card.webp" class="buyut" data-alt="Ürün Kartı — Yerleşim sekmesi ve canlı önizleme"><img src="/rehber/img/storefront-product-card.webp" alt="Ürün Kartı — Yerleşim sekmesi ve canlı önizleme" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Ürün Kartı — Yerleşim sekmesi ve canlı önizleme</figcaption></figure></p>
+<ol>
+<li><strong>Başlık şeridi</strong> — açıklama, <code>Kaydedilmemiş değişiklik</code> rozeti, <strong>Kaydet</strong>.</li>
+<li><strong>Satış Kanalı seçici</strong> — &quot;Firma — Kanal&quot; biçiminde; seçim oturumda hatırlanır.</li>
+<li><strong>Sekmeler</strong> — Yerleşim · Kart Mesajları · Sıralama.</li>
+<li><strong>Sekme içeriği</strong> (sol, geniş).</li>
+<li><strong>Canlı Önizleme</strong> (sağ, sabit genişlik) — sitenin gerçek kart şablonu, demo veriyle; yerleşim ayarları ve
+aktif kart mesajları anında görünür.</li>
+</ol>
+<h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kaydet</td>
+<td>Sağ üst</td>
+<td>Yerleşim ve Sıralama sekmelerindeki tüm değişiklikleri kanala yazar; sitede en geç 5 dakika içinde görünür.</td>
+<td>Kanal seçili ve değişiklik olmalı. Kart Mesajları kendi penceresinden kaydedilir.</td>
+</tr>
+<tr>
+<td>Yeni Mesaj</td>
+<td>Kart Mesajları sekmesi</td>
+<td>&quot;Yeni Kart Mesajı&quot; penceresi.</td>
+<td>Kanal seçili.</td>
+</tr>
+<tr>
+<td>Mesaj satırı tıklama</td>
+<td>Kart Mesajları tablosu</td>
+<td>&quot;Kart Mesajını Düzenle&quot; penceresi.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Sil (pencere, sol alt)</td>
+<td>Mesaj düzenleme</td>
+<td>⚠️ Mesajı siler (onay sorulmaz), pencere kapanır.</td>
+<td>Yalnız mevcut mesajda.</td>
+</tr>
+<tr>
+<td>Vazgeç / Kaydet (pencere)</td>
+<td>Mesaj penceresi</td>
+<td>Kapatır / mesajı oluşturur-günceller.</td>
+<td>Mesaj metni (kaynak dil) gerekir.</td>
+</tr>
+</tbody></table>
+<h2 id="sekmeler">Sekmeler<a class="anchor" href="#sekmeler" aria-hidden="true">#</a></h2>
+<h3 id="yerlesim">Yerleşim<a class="anchor" href="#yerlesim" aria-hidden="true">#</a></h3>
+<p>Her satır bir onay kutusudur; işaret kaldırılınca öğe sitedeki kartlardan kalkar. Öncelik ve alt seçenekler yalnız
+ilgili kutu açıkken görünür.</p>
+<p><strong>Rozetler (görsel üstü)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Anahtar</th>
+<th>Varsayılan</th>
+<th>Sitede etkisi</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Videolu Ürün rozeti</td>
+<td>Açık</td>
+<td>Videosu olan ürünlerde oynatma rozeti; üzerine gelince video oynar.</td>
+</tr>
+<tr>
+<td>Sponsorlu rozeti</td>
+<td>Açık</td>
+<td>Öne çıkarma penceresi içindeki ürünlerde &quot;Sponsorlu&quot; etiketi (öne çıkarma ürün kartı detayından tarih aralığıyla verilir).</td>
+</tr>
+<tr>
+<td>Diğer renkler rozeti</td>
+<td>Açık</td>
+<td>2+ renkli ürünlerde renk sayacı ve farklı renk seçeneklerinin balonu.</td>
+</tr>
+<tr>
+<td>Galeri noktaları</td>
+<td>Açık</td>
+<td>Görsel üzerinde gezinirken galeri nokta göstergeleri.</td>
+</tr>
+</tbody></table>
+<p><strong>Görsel hover efekti</strong></p>
+<table>
+<thead>
+<tr>
+<th>Seçenek</th>
+<th>Sitede etkisi</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Resim geçişi — yatay harekette diğer görseller (varsayılan)</td>
+<td>Fare görsel üzerinde yatay hareket ettikçe ürünün diğer görselleri gösterilir.</td>
+</tr>
+<tr>
+<td>Yakınlaştırma — görsel hafifçe büyür (resim geçişi kapalı)</td>
+<td>Görsel büyür; galeri gezinmesi kapanır. İki efekt birlikte kullanılmaz; mobildeki kaydırmalı galeri etkilenmez.</td>
+</tr>
+</tbody></table>
+<p><strong>Değişken satırlar</strong> — kartta üç esnek alan vardır; her biri ayrı açılıp kapatılır:</p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Konum</th>
+<th>Alt seçenekler</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Alan 1 — Görsel altı bant</td>
+<td>Ürün görselinin hemen altındaki bant</td>
+<td>Kampanya rozetleri (varsayılan açık), Kart mesajları, Öncelik.</td>
+</tr>
+<tr>
+<td>Alan 2 — Ürün adı altı satır</td>
+<td>Ürün adının altı</td>
+<td>Kampanya rozetleri, Kart mesajları, Öncelik.</td>
+</tr>
+<tr>
+<td>Alan 3 — Puan altı satır</td>
+<td>Puan/yorum satırının altı</td>
+<td>Kampanya rozetleri, Kart mesajları, <strong>Kaç kişinin sepetinde</strong>, <strong>Kaç kişinin favorisi</strong>, <strong>Kaç kişi baktı</strong> (canlı sayaçlar; 0 olan üründe gizli), Öncelik.</td>
+</tr>
+</tbody></table>
+<p><code>Öncelik</code> seçimi (yalnız hem kampanya hem mesaj açıkken): <code>Mesajlar önce</code> / <code>Kampanyalar önce</code> — alanda ikisi de
+varsa hangisinin önce gösterileceği.</p>
+<p><strong>Puan &amp; Fiyat</strong></p>
+<table>
+<thead>
+<tr>
+<th>Anahtar</th>
+<th>Sitede etkisi</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Puan + yorum sayısı</td>
+<td>Onaylı yorumların ortalaması ve yıldızlar.</td>
+</tr>
+<tr>
+<td>İndirim satırı</td>
+<td><code>-%X</code> rozeti + üstü çizili eski fiyat (eski fiyat satış fiyatından yüksekse).</td>
+</tr>
+<tr>
+<td>Kampanyalı fiyat satırı</td>
+<td>Ürün bazlı kampanya fiyatı (satış fiyatının altındaysa).</td>
+</tr>
+</tbody></table>
+<p><strong>Eylem butonları</strong></p>
+<table>
+<thead>
+<tr>
+<th>Anahtar</th>
+<th>Sitede etkisi</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Favori butonu</td>
+<td>Kalp ikonu.</td>
+</tr>
+<tr>
+<td>Koleksiyon butonu</td>
+<td>Koleksiyona ekle ikonu.</td>
+</tr>
+<tr>
+<td>Sepete Ekle</td>
+<td>Sepet ikonu: masaüstünde üzerine gelince beden paneli, mobilde alttan açılan beden listesi.</td>
+</tr>
+<tr>
+<td>Benzer ürünler</td>
+<td>Koleksiyon ikonunun altındaki ikon; ürünün ilk görseliyle görsel arama (aynı cinsiyet + ürün grubu) sonuç sayfasını açar.</td>
+</tr>
+</tbody></table>
+<p><strong>Sabit çekirdek</strong> — Görsel, ürün adı, fiyat ve kart linki kapatılamaz (kilitli satır).</p>
+<h3 id="kart-mesajlari">Kart Mesajları<a class="anchor" href="#kart-mesajlari" aria-hidden="true">#</a></h3>
+<p>Kanalın kart mesajları listesi; satıra tıklayınca düzenlenir.</p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Mesaj</td>
+<td>Kaynak dildeki metin.</td>
+</tr>
+<tr>
+<td>Alan</td>
+<td><code>Alan 1/2/3</code> — mesajın hangi değişken satırda döneceği.</td>
+</tr>
+<tr>
+<td>İkon</td>
+<td>Seçilen ikon kodu (ör. <code>fa-truck</code>) ya da <code>—</code>.</td>
+</tr>
+<tr>
+<td>Renk</td>
+<td><code>Yeşil</code>, <code>Turuncu</code>, <code>Bordo</code>, <code>Pembe</code> ya da <code>Varsayılan</code>.</td>
+</tr>
+<tr>
+<td>Kapsam</td>
+<td><code>Tüm ürünler</code> / <code>N kategori</code> / <code>N ürün</code>.</td>
+</tr>
+<tr>
+<td>Tarih</td>
+<td><code>Süresiz</code> ya da <code>başlangıç – bitiş</code>.</td>
+</tr>
+<tr>
+<td>Sıra</td>
+<td>Aynı alandaki mesajlar arasında sıra.</td>
+</tr>
+<tr>
+<td>Aktif</td>
+<td><code>Aktif</code> / <code>Pasif</code> rozeti.</td>
+</tr>
+</tbody></table>
+<p><strong>Yeni Kart Mesajı / Kart Mesajını Düzenle penceresi</strong></p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Mesaj</td>
+<td>Evet (kaynak dil)</td>
+<td>Çok dilli kısa metin (<code>TR</code>/<code>EN</code> sekmeleri). Örn. <code>Kargo bedava</code>.</td>
+</tr>
+<tr>
+<td>Alan</td>
+<td>Evet</td>
+<td><code>Alan 1 — görsel altı bant</code>, <code>Alan 2 — ürün adı altı</code>, <code>Alan 3 — puan altı</code>. İlgili alanın Yerleşim&#39;de &quot;Kart mesajları&quot; seçeneği açık olmalı.</td>
+</tr>
+<tr>
+<td>Renk</td>
+<td>Hayır</td>
+<td>Varsayılan / Yeşil / Turuncu / Bordo / Pembe.</td>
+</tr>
+<tr>
+<td>İkon (Font Awesome sınıfı)</td>
+<td>Hayır</td>
+<td><code>fa-truck</code> gibi ikon kodu; altındaki hızlı seçim çipleri (<code>fa-truck</code>, <code>fa-truck-fast</code>, <code>fa-percent</code>, <code>fa-tags</code>, <code>fa-ticket</code>, <code>fa-clock</code>, <code>fa-fire</code>, <code>fa-gift</code>).</td>
+</tr>
+<tr>
+<td>Kapsam</td>
+<td>Evet</td>
+<td><code>Tüm ürünler</code>; <code>Kanal kategorileri</code> (aranabilir listeden işaretleyin, altta &quot;N kategori seçili&quot;); <code>Ürün kodları</code> (satır/virgül/noktalı virgülle ayrılmış kodlar, altta sayaç).</td>
+</tr>
+<tr>
+<td>Başlangıç tarihi</td>
+<td>Hayır</td>
+<td>Boş = hemen başlar.</td>
+</tr>
+<tr>
+<td>Bitiş tarihi</td>
+<td>Hayır</td>
+<td>Boş = süresiz. Bitişi geçen mesaj kartlarda gösterilmez.</td>
+</tr>
+<tr>
+<td>Sıra</td>
+<td>Hayır</td>
+<td>Sayı; küçük olan önce.</td>
+</tr>
+<tr>
+<td>Aktif</td>
+<td>—</td>
+<td>Pasif mesaj hiçbir kartta gösterilmez.</td>
+</tr>
+</tbody></table>
+<h3 id="siralama">Sıralama<a class="anchor" href="#siralama" aria-hidden="true">#</a></h3>
+<p>Sitedeki ürün listesi sıralama menüsünde gösterilecek seçenekler. Kapatılan seçenek menüde listelenmez.</p>
+<table>
+<thead>
+<tr>
+<th>Seçenek</th>
+<th>Not</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Önerilen Sıralama</td>
+<td>Varsayılan — kapatılamaz (kilitli).</td>
+</tr>
+<tr>
+<td>En Düşük Fiyat · En Yüksek Fiyat · En Yeniler</td>
+<td>Anlık veriyle sıralar.</td>
+</tr>
+<tr>
+<td>En Yüksek Puanlı Ürünler · En Fazla Yorum Alan Ürünler · Favoriye En Çok Eklenen Ürünler · Sepete En Çok Atılan Ürünler · En Çok Bakılan Ürünler · En Çok Satılan Ürünler</td>
+<td>Sayaç tabanlı; yaklaşık 10 dakikada bir tazelenen verilerle sıralar.</td>
+</tr>
+</tbody></table>
+<p>Bu sekmedeki değişiklikler de sağ üstteki <strong>Kaydet</strong> ile yazılır.</p>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<ul>
+<li>Ayarlar <strong>kanal bazlıdır</strong>; her kanalın kendi yerleşimi, mesajları ve sıralama seçenekleri vardır.</li>
+<li>Yerleşim/Sıralama değişikliği Kaydet&#39;e kadar yalnız ekranda ve önizlemede görünür; kanal değiştirmek
+kaydedilmemiş değişiklikleri korumaz.</li>
+<li>Kart mesajları anında kaydedilir (pencere Kaydet); sitede gösterim için hem mesaj <strong>Aktif</strong> hem tarih penceresi
+geçerli hem de ilgili alanın &quot;Kart mesajları&quot; seçeneği Yerleşim&#39;de açık olmalıdır.</li>
+<li>Aynı alanda hem kampanya rozetleri hem mesajlar varsa sırayla dönerek gösterilir; &quot;Öncelik&quot; hangisinin önce
+geleceğini belirler.</li>
+<li>Sosyal kanıt sayaçları (sepet/favori/görüntülenme) değeri 0 olan üründe görünmez.</li>
+<li>Önizleme demo veriyle üretilir; gerçek ürünlerdeki kampanya/puan değerlerini göstermez.</li>
+</ul>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<p><strong>Kampanya dönemi için kart mesajı ekleme</strong></p>
+<ol>
+<li>Satış Kanalı&#39;nı seçin, <strong>Kart Mesajları</strong> sekmesine geçin, <strong>Yeni Mesaj</strong>.</li>
+<li>Mesajı yazın, Alan&#39;ı (örn. Alan 1) ve rengi seçin, ikon çipinden <code>fa-percent</code> seçin.</li>
+<li>Kapsam&#39;ı <code>Kanal kategorileri</code> yapıp ilgili kategorileri işaretleyin; başlangıç/bitiş tarihlerini girin; <strong>Kaydet</strong>.</li>
+<li><strong>Yerleşim</strong> sekmesinde Alan 1&#39;in &quot;Kart mesajları&quot; kutusunun açık olduğundan emin olun; gerekiyorsa <strong>Kaydet</strong>.</li>
+<li>Önizlemede mesajın döndüğünü kontrol edin.</li>
+</ol>
+<p><strong>Bir kart öğesini tüm sitede kapatma</strong></p>
+<ol>
+<li>Yerleşim sekmesinde ilgili kutunun (örn. &quot;Benzer ürünler&quot;) işaretini kaldırın.</li>
+<li>Önizlemede kontrol edip sağ üstten <strong>Kaydet</strong>&#39;e basın; 5 dakika içinde sitede kalkar.</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Önizleme kaydetmeden güncellenir; birkaç varyasyonu deneyip sonra kaydedebilirsiniz.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Mesaj penceresindeki <strong>Sil</strong> onay sormaz ve geri alınamaz.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Mesaj &quot;Aktif&quot; olduğu halde sitede görünmüyorsa bitiş tarihini ve Yerleşim&#39;de o alanın
+&quot;Kart mesajları&quot; kutusunu kontrol edin.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> &quot;Kaydedilemedi: …&quot; / &quot;İşlem başarısız: …&quot; kutuları sunucu hatasını gösterir; ikon alanına yalnız
+geçerli ikon kodu (<code>fa-…</code>) yazılabilir.</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/vitrin/kanal-kategorileri/">Kanal Kategorileri</a></li>
+<li><a href="/rehber/vitrin/menu-yerlesimi/">Menü Yerleşimi</a></li>
+<li><a href="/rehber/vitrin/yorum-moderasyonu/">Yorum Moderasyonu</a></li>
+<li><a href="/rehber/pazarlama/kampanyalar/">Kampanyalar</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/vitrin/menu-yerlesimi/">← Menü Yerleşimi</a><a class="sonraki" href="/rehber/vitrin/takip-ve-cerez/">Takip &amp; Çerez →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>

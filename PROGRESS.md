@@ -22,6 +22,18 @@
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!) | Mobil geliştirici teste başlar; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
+**Admin Paneli Kullanım Rehberi v2 (2026-08-23, Admin panel alanı) — İÇERİK TAMAM, ekran görüntüleri bekliyor:**
+eski tek sayfalık demo rehberi yerine tüm admin panelleri için ORTAK çok sayfalı statik site: kaynak `docs/rehber/content/**.md`
+(10 bölüm / 68 sayfa / ~8.000 satır — her sayfa: ne işe yarar, ekran yerleşimi, liste/filtreler, butonlar, form alanları,
+sekmeler, durumlar/iş kuralları, adım adım, ipuçları, ilgili sayfalar; kaynak React sayfaları + docs'tan), derleyici
+`docs/rehber/tools/build.js` (`npm run build` → `docker/nginx/html/rehber/`, arama indeksi, lightbox, kırık bağlantı uyarısı),
+yazım kılavuzu `docs/rehber/YAZIM-KILAVUZU.md`. nginx: `/rehber` ana `locations.inc`'e eklendi (⚠️ `docker compose restart nginx`
+bekliyor; demo host'ta zaten vardı → canlı), admin sol menüye "Kullanım Rehberi" linki (build alındı). Görseller: 106 yer tutucu
+(`img/<rota-slug>.webp`), `tools/screenshot.js` hazır (REHBER_USER/PASS ya da REHBER_TOKEN ile; detay sayfaları listeden ilk
+satır) — kullanıcı kararı bekleniyor. Ajan bulguları (panel hataları adayı): Dashboard "Bugün POS Satış" kartı tarih süzmüyor;
+Entegrasyon Logları "Hatalı" sekmesi status=error süzüyor ama komutlar failure yazıyor; Depo düzenle rezervasyon önceliği 0 açılıyor;
+admin şifre sıfırlama MustChangePassword=false yapıyor (diyalog metniyle çelişki).
+
 **Telemania demo filtreleri (2026-08-23, Web sitesi alanı) — UYGULANDI ⚠️ ecspros-demo + ecspros restart bekliyor:**
 (1) Regresyon düzeltmesi: 8d46a00 (08-15) sonrası Kategori sanal facet grubu özellik/fiyat seçimine göre daralıp tek
 seçenekte düşüyordu ("Hacim seçince seçenekler kayboluyor") → `GetStoreFacetsQuery.BuildFacetsWithSelections` kategori

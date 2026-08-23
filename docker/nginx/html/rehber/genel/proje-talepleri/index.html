@@ -1,0 +1,454 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Proje Talepleri — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="active">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="">Toplama Planlama</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Genel</span> › <b>Proje Talepleri</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Genel</div><h1>Proje Talepleri</h1>
+<p class="ozet">Personelin proje ile ilgili isteklerini (yeni özellik, hata, iyileştirme, veri işi) girdiği, atadığı, durumunu izlediği ve yorumla takip ettiği talep listesi + talep detayı.</p><p class="rota">Panel adresi: <code>/admin/requests</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#liste-ve-filtreler">Liste ve filtreler</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#form-alanlari">Form alanları</a><a href="#sekmeler">Sekmeler</a><a href="#detay-sayfasi">Detay sayfası</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Proje Talepleri, panel kullanan tüm personelin yazılım/proje ekibinden istediklerini tek yerde toplar: yeni bir özellik
+isteği, fark edilen bir hata, bir iyileştirme önerisi ya da bir veri işi. Talep açan kişi isteğini yazar, ek dosya
+(ekran görüntüsü, PDF) iliştirir; değerlendiren kişi talebi bir sorumluya atar, termin verir ve durumunu adım adım
+ilerletir. Her talep <code>TLP-2026-0001</code> biçiminde bir numara alır; yorumlar, atama ve durum değişiklikleri tek bir
+<strong>Süreç Akışı</strong> altında zaman sırasıyla görünür. Bu sürümde özel bir yetki aranmaz — panele girebilen herkes talep
+görür, açar, günceller ve durum değiştirebilir.</p>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/requests.webp" class="buyut" data-alt="Proje Talepleri listesi — durum sekmeleri, filtre şeridi ve tablo"><img src="/rehber/img/requests.webp" alt="Proje Talepleri listesi — durum sekmeleri, filtre şeridi ve tablo" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Proje Talepleri listesi — durum sekmeleri, filtre şeridi ve tablo</figcaption></figure>
+<em>(1) Başlık ve + Yeni Talep · (2) Durum sekmeleri (sayaçlı) · (3) Filtre şeridi · (4) Tablo · (5) Sayfalama</em></p>
+<ol>
+<li><strong>Başlık satırı</strong> — &quot;Proje Talepleri&quot; başlığı, altında &quot;Personelin proje ile ilgili istekleri — girin, izleyin,
+güncelleyin&quot; açıklaması; sağda <strong>+ Yeni Talep</strong> butonu.</li>
+<li><strong>Durum sekmeleri</strong> — <code>Tümü</code> ve sekiz durum sekmesi; her sekmenin yanında parantez içinde o durumdaki talep sayısı.
+Dar ekranda sekme şeridi yatay kaydırılır.</li>
+<li><strong>Filtre şeridi</strong> — Kategori açılır listesi, Öncelik açılır listesi, <strong>Herkes / Benim taleplerim / Bana atananlar</strong>
+üçlü düğmesi, arama kutusu ve <strong>Ara</strong> butonu.</li>
+<li><strong>Tablo</strong> — talepler, en yeni en üstte.</li>
+<li><strong>Sayfalama</strong> — tablo altında <code>← Önceki  1 / N  Sonraki →</code> (yalnız birden çok sayfa varsa görünür).</li>
+</ol>
+<p><figure class="ekran"><a href="/rehber/img/requests--yeni-talep-modal.webp" class="buyut" data-alt="Yeni Talep penceresi"><img src="/rehber/img/requests--yeni-talep-modal.webp" alt="Yeni Talep penceresi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Yeni Talep penceresi</figcaption></figure></p>
+<h2 id="liste-ve-filtreler">Liste ve filtreler<a class="anchor" href="#liste-ve-filtreler" aria-hidden="true">#</a></h2>
+<p><strong>Sütunlar</strong></p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>KOD</td>
+<td>Talep numarası (<code>TLP-yyyy-nnnn</code>), sabit genişlikli yazıyla.</td>
+</tr>
+<tr>
+<td>BAŞLIK</td>
+<td>Talebin kısa özeti. Yorum varsa yanında 💬 ve yorum sayısı görünür.</td>
+</tr>
+<tr>
+<td>KATEGORİ</td>
+<td>Yeni Özellik / Hata / İyileştirme / Veri İşi / Diğer.</td>
+</tr>
+<tr>
+<td>ÖNCELİK</td>
+<td>Rozet: <code>Düşük</code> (gri) · <code>Normal</code> (mavi) · <code>Yüksek</code> (turuncu) · <code>Kritik</code> (kırmızı).</td>
+</tr>
+<tr>
+<td>DURUM</td>
+<td>Durum rozeti (aşağıda &quot;Durumlar ve iş kuralları&quot;).</td>
+</tr>
+<tr>
+<td>TALEP EDEN</td>
+<td>Talebi açan kullanıcının adı (otomatik; girişteki hesabınızdan alınır).</td>
+</tr>
+<tr>
+<td>ATANAN</td>
+<td>Sorumlu kişi; atanmamışsa <code>—</code>.</td>
+</tr>
+<tr>
+<td>TERMİN</td>
+<td>Hedef tarih (gg.aa.yyyy); boşsa <code>—</code>. Tarih geçmişse ve talep kapanmamışsa <strong>kırmızı kalın</strong> ve yanında ⚠ görünür.</td>
+</tr>
+<tr>
+<td>TARİH</td>
+<td>Talebin oluşturulduğu gün.</td>
+</tr>
+</tbody></table>
+<p><strong>Durum sekmeleri</strong> (<code>Tümü</code> + sekiz durum): <code>Yeni</code>, <code>Değerlendirmede</code>, <code>Planlandı</code>, <code>Yapılıyor</code>, <code>Testte</code>, <code>Tamamlandı</code>,
+<code>Reddedildi</code>, <code>İptal</code>. Sekme sayaçları diğer filtrelerden bağımsızdır (tüm taleplerin durum dağılımını gösterir); <code>Tümü</code>
+sayacı sekizinin toplamıdır.</p>
+<p><strong>Filtreler</strong></p>
+<table>
+<thead>
+<tr>
+<th>Filtre</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Durum sekmesi</td>
+<td>Seçili durumdaki talepleri listeler; <code>Tümü</code> hepsi. Sekme değişince 1. sayfaya dönülür.</td>
+</tr>
+<tr>
+<td>Kategori (açılır liste)</td>
+<td><code>Tüm kategoriler</code> ya da tek kategori.</td>
+</tr>
+<tr>
+<td>Öncelik (açılır liste)</td>
+<td><code>Tüm öncelikler</code> ya da tek öncelik.</td>
+</tr>
+<tr>
+<td>Herkes / Benim taleplerim / Bana atananlar</td>
+<td><code>Herkes</code>: filtre yok. <code>Benim taleplerim</code>: talep eden sizsiniz. <code>Bana atananlar</code>: atanan sizsiniz. Tek seçim; seçili düğme marka renginde dolgulu görünür.</td>
+</tr>
+<tr>
+<td>Arama kutusu + <strong>Ara</strong></td>
+<td>&quot;Kod, başlık veya açıklama ara…&quot; — yazdıkça değil, <strong>Enter</strong> ya da <strong>Ara</strong> butonuyla uygulanır. Kod, başlık ve açıklama metninde büyük/küçük harf duyarsız &quot;içinde geçen&quot; araması yapar (ör. <code>0012</code>, <code>kargo</code>).</td>
+</tr>
+</tbody></table>
+<p>Sıralama sabittir: en yeni oluşturulan en üstte; sütun başlıklarına tıklayarak sıralama değiştirilemez. Sayfa boyutu 20.
+<strong>Satıra tıklayınca</strong> talebin detay sayfası (<code>/requests/{id}</code>) açılır. Liste boşsa &quot;Talep bulunamadı. Sağ üstten yeni
+talep girebilirsiniz.&quot; yazısı görünür.</p>
+<h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>+ Yeni Talep</strong></td>
+<td>Liste, sağ üst</td>
+<td>&quot;Yeni Talep&quot; penceresi açılır (alanlar aşağıda). Kaydedince pencere kapanır, liste tazelenir ve doğrudan yeni talebin detay sayfasına gidilir.</td>
+<td>Panele giriş yeterli</td>
+</tr>
+<tr>
+<td><strong>Talebi Oluştur</strong></td>
+<td>Yeni Talep penceresi</td>
+<td>Talep <code>Yeni</code> durumunda kaydedilir, numara verilir, Süreç Akışı&#39;na &quot;talebi oluşturdu&quot; kaydı düşer (ekler bu kayda bağlanır).</td>
+<td>Başlık dolu olmalı; boşken buton pasif</td>
+</tr>
+<tr>
+<td><strong>Vazgeç</strong></td>
+<td>Yeni Talep / Düzenle / Durum pencereleri</td>
+<td>Pencereyi kapatır, hiçbir şey kaydedilmez.</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>+ Dosya ekle (görsel/PDF)</strong></td>
+<td>Yeni Talep penceresi, Ekler alanı</td>
+<td>Dosya seçici açılır; seçilen dosya hemen yüklenir ve adı bağlantı olarak listelenir (tıklayınca yeni sekmede açılır). Birden çok dosya tek tek eklenir. Yükleme sürerken etiket &quot;Yükleniyor…&quot; olur.</td>
+<td>JPEG/PNG/WebP/GIF/PDF; en fazla 10 MB</td>
+</tr>
+<tr>
+<td><strong>Ara</strong></td>
+<td>Filtre şeridi</td>
+<td>Arama kutusundaki metni uygular, 1. sayfaya döner.</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>← Önceki / Sonraki →</strong></td>
+<td>Tablo altı</td>
+<td>Sayfa değiştirir; ilk/son sayfada ilgili buton pasiftir.</td>
+<td>Birden çok sayfa</td>
+</tr>
+<tr>
+<td><strong>Satır</strong></td>
+<td>Tablo</td>
+<td>Detay sayfasını açar.</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<p>Detay sayfasındaki butonlar için aşağıdaki <strong>Detay sayfası</strong> bölümüne bakın.</p>
+<h2 id="form-alanlari">Form alanları<a class="anchor" href="#form-alanlari" aria-hidden="true">#</a></h2>
+<p><strong>Yeni Talep penceresi</strong> (ve aynı alanlarla <strong>Düzenle</strong> penceresi)</p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Başlık</td>
+<td>Evet</td>
+<td>Talebin kısa özeti; pencere açılınca imleç buradadır. Boşsa <strong>Talebi Oluştur / Kaydet</strong> pasif kalır; yalnız boşluk girilirse sunucu &quot;Talep başlığı zorunludur.&quot; der. Örnek: <code>Sipariş listesine kargo firması sütunu</code></td>
+</tr>
+<tr>
+<td>Kategori</td>
+<td>Evet (varsayılan: Yeni Özellik)</td>
+<td><code>Yeni Özellik</code> · <code>Hata</code> · <code>İyileştirme</code> · <code>Veri İşi</code> · <code>Diğer</code>. Liste sabittir, panelden yeni kategori eklenemez.</td>
+</tr>
+<tr>
+<td>Öncelik</td>
+<td>Evet (varsayılan: Normal)</td>
+<td><code>Düşük</code> · <code>Normal</code> · <code>Yüksek</code> · <code>Kritik</code>.</td>
+</tr>
+<tr>
+<td>Termin (opsiyonel)</td>
+<td>Hayır</td>
+<td>Tarih seçici. Boş bırakılabilir; girilirse listede ve detayda gösterilir, geçince gecikme uyarısı çıkar.</td>
+</tr>
+<tr>
+<td>Açıklama</td>
+<td>Hayır</td>
+<td>Serbest metin; satır sonları korunur. Yer tutucu: &quot;Ne isteniyor, neden gerekli? Mümkünse örnek/senaryo ekleyin.&quot; Boş bırakılırsa detayda &quot;Açıklama girilmemiş.&quot; yazar.</td>
+</tr>
+<tr>
+<td>Ekler</td>
+<td>Hayır</td>
+<td>Yalnız Yeni Talep penceresinde vardır (Düzenle&#39;de ek alanı yoktur; sonradan ek, detaydaki yorum kutusundan gönderilir). Dosya türü/boyut sınırı yukarıdaki gibi; uygun olmayan dosyada &quot;Yalnızca JPEG, PNG, WebP, GIF veya PDF yükleyebilirsiniz.&quot; ya da &quot;Dosya en fazla 10 MB olabilir.&quot; mesajı görünür.</td>
+</tr>
+</tbody></table>
+<h2 id="sekmeler">Sekmeler<a class="anchor" href="#sekmeler" aria-hidden="true">#</a></h2>
+<p>Liste sayfasında yalnız durum sekmeleri vardır (yukarıda). Detay sayfasında sekme yoktur; bilgiler kartlara bölünmüştür.</p>
+<h2 id="detay-sayfasi">Detay sayfası<a class="anchor" href="#detay-sayfasi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/requests-detay.webp" class="buyut" data-alt="Talep detayı — sol: başlık/açıklama + Süreç Akışı, sağ: Durum İşlemleri + Bilgiler"><img src="/rehber/img/requests-detay.webp" alt="Talep detayı — sol: başlık/açıklama + Süreç Akışı, sağ: Durum İşlemleri + Bilgiler" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Talep detayı — sol: başlık/açıklama + Süreç Akışı, sağ: Durum İşlemleri + Bilgiler</figcaption></figure>
+<em>(1) Kırıntı (Proje Talepleri / TLP-…) · (2) Talep kartı · (3) Süreç Akışı ve yorum kutusu · (4) Durum İşlemleri · (5) Bilgiler</em></p>
+<ol>
+<li><strong>Kırıntı</strong> — &quot;Proje Talepleri&quot; bağlantısı (listeye döner) ve talep kodu.</li>
+<li><strong>Talep kartı</strong> — başlık; sağ üstte <strong>Düzenle</strong> (talep kapanmamışsa); altında üç rozet: durum, öncelik, kategori;
+en altta açıklama metni.</li>
+<li><strong>Süreç Akışı (N)</strong> — talebin tüm geçmişi: oluşturma, durum değişiklikleri, atamalar, güncellemeler ve yorumlar;
+parantezdeki sayı kayıt adedidir. Her satırda kullanıcının baş harfleri, adı, yapılan iş ve tarih-saat; yorum metni ve
+📎 ek bağlantıları gri kutuda gösterilir. Altında <strong>Yorum yazın…</strong> kutusu, <strong>+ Ek</strong> düğmesi ve <strong>Gönder</strong>.</li>
+<li><strong>Durum İşlemleri</strong> — bulunulan durumdan gidilebilecek durumların her biri için bir buton. Kapanmış talepte
+&quot;Talep kapandı — başka durum geçişi yok.&quot; yazar.</li>
+<li><strong>Bilgiler</strong> — Atanan (açılır liste), Talep Eden, Termin, Oluşturulma, Kapanış.</li>
+</ol>
+<p><figure class="ekran"><a href="/rehber/img/requests-detay--durum-modal.webp" class="buyut" data-alt="Durum değiştirme penceresi"><img src="/rehber/img/requests-detay--durum-modal.webp" alt="Durum değiştirme penceresi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Durum değiştirme penceresi</figcaption></figure></p>
+<p><strong>Süreç Akışı satır türleri</strong></p>
+<table>
+<thead>
+<tr>
+<th>Kayıt</th>
+<th>Nasıl görünür</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Oluşturma</td>
+<td>&quot;<strong>Ad Soyad</strong> talebi oluşturdu.&quot; — açılışta eklenen dosyalar bu satırın altında 📎 olarak listelenir.</td>
+</tr>
+<tr>
+<td>Durum değişikliği</td>
+<td>&quot;durumu <code>Eski</code> → <code>Yeni</code> olarak değiştirdi.&quot; — durum penceresinde not yazıldıysa altında gri kutuda.</td>
+</tr>
+<tr>
+<td>Atama</td>
+<td>&quot;talebi <strong>Ad</strong> kişisine atadı (önceki: …).&quot; ya da &quot;atamayı kaldırdı (önceki: …).&quot;</td>
+</tr>
+<tr>
+<td>Güncelleme</td>
+<td>&quot;talep bilgilerini güncelledi.&quot; (Düzenle penceresiyle kaydedilen her değişiklik; hangi alanın değiştiği yazılmaz).</td>
+</tr>
+<tr>
+<td>Yorum</td>
+<td>&quot;yorum yazdı:&quot; ve altında metin + varsa 📎 ekler.</td>
+</tr>
+</tbody></table>
+<p><strong>Detay sayfası butonları</strong></p>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Proje Talepleri</strong> (kırıntı)</td>
+<td>Sayfa üstü</td>
+<td>Listeye döner.</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Düzenle</strong></td>
+<td>Talep kartı, sağ üst</td>
+<td>&quot;<code>TLP-… — Düzenle</code>&quot; penceresi: Başlık, Kategori, Öncelik, Termin, Açıklama değiştirilir; <strong>Kaydet</strong> ile Süreç Akışı&#39;na &quot;güncelledi&quot; kaydı düşer.</td>
+<td>Talep kapanmamış olmalı (<code>Tamamlandı</code>/<code>Reddedildi</code>/<code>İptal</code> durumunda buton görünmez; sunucu da &quot;Kapanmış talep düzenlenemez.&quot; der)</td>
+</tr>
+<tr>
+<td><strong>Durum butonları</strong> (ör. <strong>Değerlendirmede</strong>, <strong>Reddedildi</strong>, <strong>İptal</strong>)</td>
+<td>Durum İşlemleri kartı</td>
+<td>Tıklanınca &quot;Durum: Eski → Yeni&quot; penceresi açılır; <strong>Not (opsiyonel)</strong> kutusu ve <strong>Onayla</strong>. Onaylanınca durum değişir, not Süreç Akışı&#39;na yazılır. İleri yönlü geçişler dolgulu (birincil), <code>Reddedildi</code>/<code>İptal</code> gri (ikincil) butondur. <code>Testte</code> iken görünen <strong>Yapılıyor (teste dönüş)</strong> butonu talebi geliştirmeye geri gönderir.</td>
+<td>Yalnız izinli geçişler buton olarak çıkar (bkz. durum makinesi)</td>
+</tr>
+<tr>
+<td><strong>Onayla</strong></td>
+<td>Durum penceresi</td>
+<td>Geçişi uygular. ⚠️ <code>Tamamlandı</code>, <code>Reddedildi</code> ve <code>İptal</code> <strong>geri alınamaz</strong> — bu durumlardan çıkış yoktur.</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Atanan</strong> (açılır liste)</td>
+<td>Bilgiler kartı</td>
+<td>Aktif panel kullanıcılarını listeler; seçim anında kaydedilir (ayrı kaydet butonu yok) ve Süreç Akışı&#39;na atama kaydı düşer. <code>— Atanmadı —</code> seçilirse atama kaldırılır.</td>
+<td>Talep kapanmamış olmalı (kapanmışsa liste pasif; sunucu &quot;Kapanmış talebe atama yapılamaz.&quot; der)</td>
+</tr>
+<tr>
+<td><strong>+ Ek</strong></td>
+<td>Yorum kutusu altı</td>
+<td>Dosya seçer ve yükler; yüklenen dosyalar 📎 olarak kutunun yanında birikir, <strong>Gönder</strong> ile yoruma bağlanır.</td>
+<td>JPEG/PNG/WebP/GIF/PDF; en fazla 10 MB</td>
+</tr>
+<tr>
+<td><strong>Gönder</strong></td>
+<td>Yorum kutusu altı</td>
+<td>Yorumu (ve eklenmiş dosyaları) Süreç Akışı&#39;na ekler; kutu temizlenir.</td>
+<td>Metin <strong>veya</strong> en az bir ek olmalı; ikisi de boşsa buton pasif. Kapanmış talebe de yorum yazılabilir.</td>
+</tr>
+</tbody></table>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<p><strong>Durum rozetleri ve geçişler</strong></p>
+<table>
+<thead>
+<tr>
+<th>Durum (rozet)</th>
+<th>Anlamı</th>
+<th>Buradan gidilebilecek durumlar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Yeni</code> (mavi)</td>
+<td>Talep yeni açıldı, henüz bakılmadı.</td>
+<td><code>Değerlendirmede</code>, <code>Reddedildi</code>, <code>İptal</code></td>
+</tr>
+<tr>
+<td><code>Değerlendirmede</code> (turuncu)</td>
+<td>İnceleniyor; yapılıp yapılmayacağına karar verilecek.</td>
+<td><code>Planlandı</code>, <code>Reddedildi</code>, <code>İptal</code></td>
+</tr>
+<tr>
+<td><code>Planlandı</code> (marka rengi)</td>
+<td>Yapılmasına karar verildi, sıraya alındı.</td>
+<td><code>Yapılıyor</code>, <code>İptal</code></td>
+</tr>
+<tr>
+<td><code>Yapılıyor</code> (turuncu)</td>
+<td>Üzerinde çalışılıyor.</td>
+<td><code>Testte</code>, <code>İptal</code></td>
+</tr>
+<tr>
+<td><code>Testte</code> (mavi)</td>
+<td>Geliştirme bitti, doğrulanıyor.</td>
+<td><code>Tamamlandı</code>, <code>Yapılıyor</code> (teste dönüş), <code>İptal</code></td>
+</tr>
+<tr>
+<td><code>Tamamlandı</code> (yeşil)</td>
+<td>Kapandı — iş bitti.</td>
+<td>— (son durum)</td>
+</tr>
+<tr>
+<td><code>Reddedildi</code> (kırmızı)</td>
+<td>Kapandı — yapılmayacak.</td>
+<td>— (son durum)</td>
+</tr>
+<tr>
+<td><code>İptal</code> (gri)</td>
+<td>Kapandı — talep geri çekildi/geçersiz.</td>
+<td>— (son durum)</td>
+</tr>
+</tbody></table>
+<p>Ana akış: <code>Yeni</code> → <code>Değerlendirmede</code> → <code>Planlandı</code> → <code>Yapılıyor</code> → <code>Testte</code> → <code>Tamamlandı</code>. Testten <code>Yapılıyor</code>&#39;a geri
+dönüş vardır; onun dışında geriye gidiş yoktur. <code>Reddedildi</code> yalnız <code>Yeni</code> ve <code>Değerlendirmede</code>den, <code>İptal</code> kapanmamış
+her durumdan seçilebilir. Geçiş kuralları sunucuda da doğrulanır; ekranda olmayan bir geçiş denenirse &quot;… durumundan …
+durumuna geçilemez.&quot; hatası alınır.</p>
+<p><strong>Diğer kurallar</strong></p>
+<ul>
+<li><strong>Numara serisi:</strong> her talep <code>TLP-&lt;yıl&gt;-&lt;sıra&gt;</code> kodu alır (ör. <code>TLP-2026-0001</code>); sıra yıl içinde 1&#39;den başlar, her yıl
+başında sıfırlanır, 4 hane doldurulur. Kod değiştirilemez ve aynı yıl içinde tekrar etmez.</li>
+<li><strong>Kapanış tarihi:</strong> talep <code>Tamamlandı</code>, <code>Reddedildi</code> veya <code>İptal</code> durumuna geçtiği anda <strong>Kapanış</strong> alanına o anın
+tarih-saati yazılır.</li>
+<li><strong>Kapanmış talep:</strong> düzenlenemez, atanamaz, durumu değişmez; yalnız yorum ve ek eklenebilir (okunur kayıt gibi davranır).</li>
+<li><strong>Gecikme:</strong> termin tarihi bugünden önceyse ve talep kapanmamışsa listede tarih kırmızı + ⚠, detayda &quot;⚠ Gecikti&quot;
+görünür. Kapanmış taleplerde gecikme uyarısı gösterilmez.</li>
+<li><strong>Talep Eden ve kullanıcı adları</strong> giriş yapan hesaptan otomatik alınır; elle seçilmez.</li>
+<li><strong>Ekler</strong> sunucuda ay bazlı klasörde saklanır ve bağlantıyla açılır; yüklenen dosya panelden silinemez.</li>
+<li><strong>Yetki:</strong> bu sürümde ayrı bir &quot;talep yönetimi&quot; izni yoktur; panele girebilen herkes tüm talepleri görür ve her işlemi
+yapabilir (başkasının talebini düzenlemek/atamak/kapatmak dahil).</li>
+</ul>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<p><strong>Yeni talep açma</strong></p>
+<ol>
+<li>Sol menüden <strong>Genel → Proje Talepleri</strong>&#39;ne gidin, sağ üstte <strong>+ Yeni Talep</strong>&#39;e tıklayın.</li>
+<li><strong>Başlık</strong> yazın; <strong>Kategori</strong> ve <strong>Öncelik</strong> seçin (gerekirse <strong>Termin</strong> verin).</li>
+<li><strong>Açıklama</strong>ya ne istendiğini, neden gerektiğini ve varsa örnek senaryoyu yazın.</li>
+<li>Ekran görüntüsü/PDF varsa <strong>+ Dosya ekle (görsel/PDF)</strong> ile yükleyin (her dosya için tekrar tıklayın).</li>
+<li><strong>Talebi Oluştur</strong>&#39;a tıklayın. Talep <code>Yeni</code> durumunda kaydedilir, numarasını alır ve detay sayfası açılır.</li>
+</ol>
+<p><strong>Talebi değerlendirip sorumluya atama</strong></p>
+<ol>
+<li>Listede <code>Yeni</code> sekmesini açın, ilgili satıra tıklayın.</li>
+<li>Sağdaki <strong>Durum İşlemleri</strong> kartında <strong>Değerlendirmede</strong>&#39;ye tıklayın; isterseniz not yazıp <strong>Onayla</strong>.</li>
+<li><strong>Bilgiler → Atanan</strong> listesinden sorumluyu seçin (anında kaydedilir).</li>
+<li>Karar verilince <strong>Planlandı</strong> (yapılacak) ya da <strong>Reddedildi</strong> (yapılmayacak — red gerekçesini nota yazmanız önerilir).</li>
+</ol>
+<p><strong>Talebi ilerletip kapatma</strong></p>
+<ol>
+<li>Sorumlu işe başlayınca <strong>Yapılıyor</strong>, bitirince <strong>Testte</strong>&#39;ye alın.</li>
+<li>Test olumluysa <strong>Tamamlandı</strong>; sorun çıkarsa <strong>Yapılıyor (teste dönüş)</strong> ile geri gönderin ve yorum kutusuna bulguyu
+yazın (gerekirse ekran görüntüsü ekleyin).</li>
+<li><code>Tamamlandı</code> sonrası talep kilitlenir; yalnız yorum eklenebilir.</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Kendi açtığınız talepleri izlemek için filtre şeridinde <strong>Benim taleplerim</strong>, üzerinize düşenler için
+<strong>Bana atananlar</strong> düğmesini kullanın; sekmelerle birleştirilebilir (ör. <code>Yapılıyor</code> + Bana atananlar).</p>
+</blockquote>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Arama kutusu yazdıkça değil <strong>Enter</strong>/<strong>Ara</strong> ile çalışır; sonuç gelmiyorsa Ara&#39;ya bastığınızdan emin olun.
+Açıklama içinde de arar — &quot;kargo&quot; yazınca başlığında geçmese bile açıklamasında geçen talepler gelir.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> <code>Tamamlandı</code>, <code>Reddedildi</code> ve <code>İptal</code> son durumlardır; onayladıktan sonra talep bir daha açılamaz. Yanlış
+kapatıldıysa yeni bir talep açıp açıklamasına eski talebin kodunu yazın.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Yorum kutusuna dosya yükledikten sonra <strong>Gönder</strong>&#39;e basmazsanız ek talebe bağlanmaz; sayfadan ayrılınca
+kaybolur.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> &quot;Kapanmış talep düzenlenemez.&quot; / &quot;Kapanmış talebe atama yapılamaz.&quot; mesajları talebin son durumda olduğunu
+gösterir; bu normaldir. &quot;Talep bulunamadı.&quot; mesajı geçersiz ya da silinmiş bir talep adresi açıldığında görünür;
+&quot;← Talep listesine dön&quot; bağlantısıyla listeye dönün.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> Kategori listesi sabittir; yeni kategori (ör. &quot;Eğitim&quot;) eklemek panelden mümkün değildir, ihtiyaç olursa
+<code>Diğer</code> kategorisini kullanın ve başlıkta belirtin.</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/genel/panel-yapisi/">Giriş ve Panel Yapısı</a></li>
+<li><a href="/rehber/genel/giris/">Giriş</a></li>
+<li><a href="/rehber/genel/dashboard/">Dashboard</a></li>
+<li><a href="/rehber/sistem/kullanicilar/">Kullanıcılar ve Roller</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/genel/dashboard/">← Dashboard</a><a class="sonraki" href="/rehber/katalog/urun-kartlari/">Ürün Kartları →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>

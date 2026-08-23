@@ -1,0 +1,532 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sipariş Detayı — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="active">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="">Toplama Planlama</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Sipariş Yönetimi</span> › <b>Sipariş Detayı</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Sipariş Yönetimi</div><h1>Sipariş Detayı</h1>
+<p class="ozet">Tek siparişin kalemleri, ödemeleri, adresleri, paketleri, kargo, fatura, iade ve geçmişinin görüldüğü; onaylama, iptal, işleme alma, kargoya verme, teslim ve fatura oluşturma işlemlerinin yapıldığı sayfa.</p><p class="rota">Panel adresi: <code>/admin/orders/:id</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#bolumler-ve-alanlar">Bölümler ve alanlar</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#form-alanlari">Form alanları</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Sipariş Detayı, bir siparişle ilgili her şeyin tek yerde toplandığı sayfadır. Operatör siparişi burada onaylar (stok rezerve eder),
+işleme alır, paketler, kargoya verir, teslim edildi işaretler ya da iptal eder; fatura keser, paketlerin numara/kargo kodlarını yönetir
+ve müşterinin notları, kabul ettiği sözleşmeler, ödeme kayıtları ile operasyon geçmişini görür. Siparişin iadeleri ve faturaları da
+ilgili sayfalara bağlantılarla burada listelenir.</p>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/orders-detay.webp" class="buyut" data-alt="Sipariş detayı — başlık/aksiyon butonları, sol sütunda kalemler ve bölümler, sağda özet"><img src="/rehber/img/orders-detay.webp" alt="Sipariş detayı — başlık/aksiyon butonları, sol sütunda kalemler ve bölümler, sağda özet" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Sipariş detayı — başlık/aksiyon butonları, sol sütunda kalemler ve bölümler, sağda özet</figcaption></figure></p>
+<ol>
+<li><strong>Başlık satırı</strong> — &quot;←&quot; geri oku, sipariş numarası, durum rozeti; sağda duruma göre aksiyon butonları (Onayla, İşleme Al, Kargoya Ver, Teslim Edildi, İptal Et).</li>
+<li><strong>Üst bilgi satırı</strong> — alıcı adı · oluşturulma tarihi · Ödeme: yöntem · durum · Platform: kanal adı · (perakende dışıysa) Tip.</li>
+<li><strong>Sol sütun (geniş)</strong> — sırasıyla Kalemler, Ödemeler, Adresler, Paketler, Kargo, Faturalar, İadeler (varsa), Notlar ve Sözleşmeler, Durum Geçmişi, Operasyon Geçmişi kartları.</li>
+<li><strong>Sağ sütun</strong> — Özet (tutarlar) ve Müşteri kartları.</li>
+<li><strong>Aksiyon pencereleri</strong> — butonlara basınca açılan onay diyalogları (aşağıda).</li>
+</ol>
+<p><figure class="ekran"><a href="/rehber/img/orders-detay--paketler.webp" class="buyut" data-alt="Sipariş detayı — Paketler bölümü: paket satırları, Kargo Kodu / Yeni No / Geçmiş düğmeleri ve birleştirme seçimi"><img src="/rehber/img/orders-detay--paketler.webp" alt="Sipariş detayı — Paketler bölümü: paket satırları, Kargo Kodu / Yeni No / Geçmiş düğmeleri ve birleştirme seçimi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Sipariş detayı — Paketler bölümü: paket satırları, Kargo Kodu / Yeni No / Geçmiş düğmeleri ve birleştirme seçimi</figcaption></figure></p>
+<h2 id="bolumler-ve-alanlar">Bölümler ve alanlar<a class="anchor" href="#bolumler-ve-alanlar" aria-hidden="true">#</a></h2>
+<h3 id="baslik-ve-ust-bilgi">Başlık ve üst bilgi<a class="anchor" href="#baslik-ve-ust-bilgi" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Sipariş numarası</td>
+<td>Kanal serisinden üretilen numara (pazaryerinde pazaryerinin numarası).</td>
+</tr>
+<tr>
+<td>Durum rozeti</td>
+<td>Bekleyen / Onaylı / İşlemde / Kargoda / Teslim / İptal / İade.</td>
+</tr>
+<tr>
+<td>Alıcı · tarih</td>
+<td>Teslimat alıcısı ve siparişin oluşturulma zamanı.</td>
+</tr>
+<tr>
+<td>Ödeme</td>
+<td>Yöntem (Kart (Online) / Kapıda Nakit / Kapıda Kart) ve durum (Bekliyor, Ödenmedi, Ödendi, Kısmi, İade Edildi, Başarısız).</td>
+</tr>
+<tr>
+<td>Platform</td>
+<td>Siparişin geldiği satış kanalı.</td>
+</tr>
+<tr>
+<td>Tip</td>
+<td>Yalnız perakende dışı siparişlerde görünür (ör. toptan).</td>
+</tr>
+</tbody></table>
+<h3 id="kalemler-n">Kalemler (N)<a class="anchor" href="#kalemler-n" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ÜRÜN</td>
+<td>Ürün adı; altında stok kodu · varyant bilgisi (renk/beden).</td>
+</tr>
+<tr>
+<td>ADET</td>
+<td>Sipariş miktarı.</td>
+</tr>
+<tr>
+<td>BİRİM</td>
+<td>Birim fiyat.</td>
+</tr>
+<tr>
+<td>İND.</td>
+<td>Kaleme düşen indirim (kampanya/kupon indirimi kalemlere dağıtılır); yoksa &quot;—&quot;.</td>
+</tr>
+<tr>
+<td>TUTAR</td>
+<td>Kalem toplamı (indirim düşülmüş).</td>
+</tr>
+</tbody></table>
+<h3 id="odemeler">Ödemeler<a class="anchor" href="#odemeler" aria-hidden="true">#</a></h3>
+<p>Her satır: ödeme yöntemi adı · tutar · ödeme durumu. Kayıt yoksa &quot;Ödeme kaydı yok.&quot; yazar.</p>
+<h3 id="adresler">Adresler<a class="anchor" href="#adresler" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Bölüm</th>
+<th>Alanlar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>TESLİMAT</td>
+<td>Alıcı, Telefon, Adres, Bölge (mahalle / ilçe / il), Posta Kodu, Teslimat Notu.</td>
+</tr>
+<tr>
+<td>FATURA</td>
+<td>Teslimatla aynıysa &quot;Teslimat adresiyle aynı.&quot;; değilse Ad, Firma, Vergi D., Vergi No, Adres, Bölge.</td>
+</tr>
+</tbody></table>
+<h3 id="paketler-n">Paketler (N)<a class="anchor" href="#paketler-n" aria-hidden="true">#</a></h3>
+<p>Sipariş tedarikçiye göre paketlere bölünür; <strong>normal akış paket başına ayrı fatura ve ayrı kargodur.</strong> Paket yoksa bu kural açıklaması görünür.</p>
+<table>
+<thead>
+<tr>
+<th>Alan / rozet</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Paket numarası + #sıra</td>
+<td>Kanala özel paket serisinden üretilen numara ve sipariş içi sıra.</td>
+</tr>
+<tr>
+<td>Durum rozeti</td>
+<td><code>Paketlendi</code> (mavi) · <code>Birleştirildi</code> (gri — kapatılmış paket, listede sayılmaz) · <code>Kargoda</code> (yeşil).</td>
+</tr>
+<tr>
+<td><code>Etiket basıldı</code> (sarı)</td>
+<td>Kargo etiketi basılmış; paket kilitlidir (kod değiştirilemez).</td>
+</tr>
+<tr>
+<td>Kargo kodu: … (üretildi / dış kod)</td>
+<td>Taşıyıcı entegrasyon kodu ve kaynağı.</td>
+</tr>
+<tr>
+<td>N kalem · kg · desi</td>
+<td>Paket içeriği özeti.</td>
+</tr>
+<tr>
+<td>Onay kutusu</td>
+<td>Yalnız <code>order.packages.merge</code> yetkisi olan kullanıcıda, kilitsiz Paketlendi durumundaki paketlerde görünür; birleştirme için seçim.</td>
+</tr>
+</tbody></table>
+<h3 id="kargo">Kargo<a class="anchor" href="#kargo" aria-hidden="true">#</a></h3>
+<p>Gönderi satırları: gönderi numarası · kargo anlaşması adı · takip numarası (takip adresi varsa tıklanabilir) · paket sayısı · tarih; altında
+taşıyıcı olayları (tarih — açıklama (yer)). Gönderi yoksa &quot;Henüz gönderi yok.&quot;</p>
+<h3 id="faturalar-n">Faturalar (N)<a class="anchor" href="#faturalar-n" aria-hidden="true">#</a></h3>
+<p>Fatura numarası · tip (e-Arşiv / e-Fatura / İhracat) · tutar · durum rozeti (Oluşturuldu / İptal) · &quot;PDF ✓&quot; (entegratör PDF&#39;i kayıtlıysa) · &quot;Faturalarda aç →&quot; bağlantısı.
+Altında <strong>+ Fatura Oluştur</strong> butonu. Fatura yoksa &quot;Bu sipariş için fatura kesilmedi.&quot;</p>
+<h3 id="i-adeler-n">İadeler (N)<a class="anchor" href="#i-adeler-n" aria-hidden="true">#</a></h3>
+<p>Yalnız iade varsa görünür: iade numarası · tutar · durum rozeti · &quot;Detay →&quot; (satır <a href="/rehber/siparis/iadeler/">İade Detayı</a> sayfasına gider).</p>
+<h3 id="notlar-ve-sozlesmeler">Notlar ve Sözleşmeler<a class="anchor" href="#notlar-ve-sozlesmeler" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Müşteri Notu</td>
+<td>Müşterinin ödeme adımında yazdığı not.</td>
+</tr>
+<tr>
+<td>İç Not</td>
+<td>Personel notu; iptal nedeni de &quot;[İptal] …&quot; biçiminde buraya eklenir.</td>
+</tr>
+<tr>
+<td>KABUL EDİLEN SÖZLEŞMELER</td>
+<td>Sözleşme adı — kabul zamanı (metin sürümü tarihi). Sözleşme metni kabulden sonra güncellendiyse &quot;⚠ metin bu kabulden sonra güncellendi&quot; rozeti çıkar.</td>
+</tr>
+</tbody></table>
+<h3 id="durum-gecmisi">Durum Geçmişi<a class="anchor" href="#durum-gecmisi" aria-hidden="true">#</a></h3>
+<p>Zaman damgalarından türetilen satırlar: Sipariş oluşturuldu · Onaylandı · Kargoya verildi (gönderi no) · Teslim edildi.</p>
+<h3 id="operasyon-gecmisi">Operasyon Geçmişi<a class="anchor" href="#operasyon-gecmisi" aria-hidden="true">#</a></h3>
+<p>Depo operasyonunun adımları (tarih · cümle · personel): Toplama görevine eklendi (plan no), Kalem toplama için atandı → kişi, Kalem toplandı — stok kodu (raf …),
+Kalem eksik işaretlendi, Kalem rafa iade edildi, Toplama görevi başlatıldı/tamamlandı. Kayıt yoksa &quot;Operasyon kaydı yok.&quot;</p>
+<h3 id="ozet-sag-sutun">Özet (sağ sütun)<a class="anchor" href="#ozet-sag-sutun" aria-hidden="true">#</a></h3>
+<p>Ara Toplam · İndirim (varsa, eksi) · Masraf (varsa, ör. kapıda ödeme bedeli) · Vergi (varsa) · <strong>TOPLAM</strong>.</p>
+<h3 id="musteri-sag-sutun">Müşteri (sağ sütun)<a class="anchor" href="#musteri-sag-sutun" aria-hidden="true">#</a></h3>
+<p>Alıcı · Üye Id (üye değilse <code>Misafir</code> rozeti) · Kargo Tercihi (müşterinin teslimat adımında seçtiği kargo).</p>
+<h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>←</td>
+<td>Başlık</td>
+<td>Siparişler listesine döner.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Onayla</td>
+<td>Başlık (sağ)</td>
+<td>&quot;Siparişi Onayla&quot; penceresi: <strong>Depo</strong> seçilir (zorunlu). Onay, seçilen depoda stok <strong>rezervasyonu</strong> oluşturur; durum <code>confirmed</code>.</td>
+<td>Durum <code>pending</code></td>
+</tr>
+<tr>
+<td>İşleme Al</td>
+<td>Başlık</td>
+<td>&quot;İşleme Al&quot; penceresi; sipariş <code>processing</code> olur, toplama/paketleme başlatılabilir.</td>
+<td>Durum <code>confirmed</code></td>
+</tr>
+<tr>
+<td>Kargoya Ver</td>
+<td>Başlık</td>
+<td>&quot;Kargoya Ver&quot; penceresi: Kargo Anlaşması (müşterinin tercihi varsayılan gelir, bağlayıcı değil), Takip Numarası, Paket Sayısı (en az 1). Gönderi kaydı oluşur; durum <code>shipped</code>; <strong>rezerve stok gerçekten düşer</strong>.</td>
+<td>Durum <code>processing</code></td>
+</tr>
+<tr>
+<td>Teslim Edildi</td>
+<td>Başlık</td>
+<td>Onay penceresi; durum <code>delivered</code>, açık gönderiler teslim edildi işaretlenir.</td>
+<td>Durum <code>shipped</code></td>
+</tr>
+<tr>
+<td>İptal Et ⚠️</td>
+<td>Başlık (kırmızı)</td>
+<td>&quot;Siparişi İptal Et&quot; penceresi: İptal Nedeni (isteğe bağlı). Rezervasyonlar serbest bırakılır, neden İç Not&#39;a yazılır. <strong>Geri alınamaz.</strong></td>
+<td>Durum <code>pending</code> veya <code>confirmed</code></td>
+</tr>
+<tr>
+<td>Tedarikçiye Göre Paketle</td>
+<td>Paketler kartı</td>
+<td>Kalemleri tedarikçi başına bir pakete böler (tedarikçisiz kalemler tek pakette). Her pakete seriden numara verilir.</td>
+<td>Paket yokken; durum <code>confirmed</code> veya <code>processing</code></td>
+</tr>
+<tr>
+<td>Geçmiş</td>
+<td>Paket satırı</td>
+<td>O paketin kod değişiklik geçmişini açar/kapatır (tarih — Birleştirme / Yeniden numaralandırma / Kargo kodu değişimi · eski no · eski kargo kodu · gerekçe).</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Kargo Kodu</td>
+<td>Paket satırı</td>
+<td>&quot;Kargo Kodu&quot; penceresi: Kargo Anlaşması seçilir → kod taşıyıcı kuralına göre üretilir (serbest / kurallı / tahsisli aralık) <strong>veya</strong> Dış Kod yazılır (pazaryeri/taşıyıcının verdiği kod aynen). Mevcut kod değişecekse Gerekçe alanı çıkar.</td>
+<td>Paket <code>Paketlendi</code>, kilitsiz (gönderiye bağlı değil, etiket basılmamış)</td>
+</tr>
+<tr>
+<td>Yeni No</td>
+<td>Paket satırı</td>
+<td>&quot;Yeni Numara&quot; penceresi: Gerekçe (zorunlu). Pakete seriden yeni numara verilir; eski numara geçmişe yazılır ve bir daha kullanılmaz; bağlı kargo kodu temizlenir.</td>
+<td>Paket <code>Paketlendi</code>, kilitsiz</td>
+</tr>
+<tr>
+<td>Seçilenleri Birleştir (N) ⚠️</td>
+<td>Paketler kartı başlığı</td>
+<td>&quot;Paketleri Birleştir — İstisna İşlemi&quot;: seçilen paketler kapatılır (<code>Birleştirildi</code>), kalemler yeni tek pakete taşınır, eski numaralar geçmişe yazılır ve geri kullanılmaz. Gerekçe zorunlu; kırmızı &quot;Birleştirmeyi Onayla&quot; ile tamamlanır.</td>
+<td>≥2 paket seçili, aynı sipariş; yetki <code>order.packages.merge</code></td>
+</tr>
+<tr>
+<td>+ Fatura Oluştur</td>
+<td>Faturalar kartı</td>
+<td>&quot;Fatura Oluştur&quot; penceresi (aşağıdaki form). Fatura numarası seriden otomatik üretilir; tutarlar siparişten alınır.</td>
+<td>En az bir aktif fatura serisi</td>
+</tr>
+<tr>
+<td>Faturalarda aç →</td>
+<td>Fatura satırı</td>
+<td>Faturalar sayfasına gider (PDF adresi girme / iptal orada).</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Detay →</td>
+<td>İade satırı</td>
+<td>İade detayına gider.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Takip numarası bağlantısı</td>
+<td>Kargo kartı</td>
+<td>Taşıyıcının takip sayfasını yeni sekmede açar.</td>
+<td>Takip adresi varsa</td>
+</tr>
+</tbody></table>
+<blockquote class="callout not">
+<p><strong>Not:</strong> İade talebi bu sayfadan açılmaz; iadeler müşteri tarafından siteden (Hesabım → İadelerim) başlatılır ve
+<a href="/rehber/siparis/iadeler/">İadeler</a> sayfasında yönetilir. İade yalnız kargoya verilmiş veya teslim edilmiş siparişler için açılabilir.</p>
+</blockquote>
+<h2 id="form-alanlari">Form alanları<a class="anchor" href="#form-alanlari" aria-hidden="true">#</a></h2>
+<h3 id="siparisi-onayla">Siparişi Onayla<a class="anchor" href="#siparisi-onayla" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Depo</td>
+<td>Evet</td>
+<td>Rezervasyonun yapılacağı depo. Seçilmeden Onayla butonu pasiftir.</td>
+</tr>
+</tbody></table>
+<h3 id="siparisi-i-ptal-et">Siparişi İptal Et<a class="anchor" href="#siparisi-i-ptal-et" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>İptal Nedeni</td>
+<td>Hayır</td>
+<td>İç Not&#39;a &quot;[İptal] …&quot; olarak yazılır.</td>
+</tr>
+</tbody></table>
+<h3 id="kargoya-ver">Kargoya Ver<a class="anchor" href="#kargoya-ver" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kargo Anlaşması</td>
+<td>Hayır</td>
+<td>Firmanın aktif kargo entegrasyonları; yoksa &quot;Ayarlar → Firmalar → Entegrasyonlar&#39;dan eklenebilir&quot; uyarısı. Müşteri tercihi varsayılan gelir.</td>
+</tr>
+<tr>
+<td>Takip Numarası</td>
+<td>Hayır</td>
+<td>Kargo firmasının takip numarası.</td>
+</tr>
+<tr>
+<td>Paket Sayısı</td>
+<td>Evet</td>
+<td>En az 1 (varsayılan 1).</td>
+</tr>
+</tbody></table>
+<h3 id="fatura-olustur">Fatura Oluştur<a class="anchor" href="#fatura-olustur" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Fatura Serisi</td>
+<td>Evet</td>
+<td>Aktif seriler; yoksa &quot;Faturalar sayfasındaki Fatura Serileri&#39;nden tanımlanır&quot; uyarısı.</td>
+</tr>
+<tr>
+<td>Tip</td>
+<td>Evet</td>
+<td>e-Arşiv (varsayılan) / e-Fatura / İhracat.</td>
+</tr>
+<tr>
+<td>Fatura Tarihi</td>
+<td>Evet</td>
+<td>Varsayılan bugün.</td>
+</tr>
+<tr>
+<td>Alıcı Adı</td>
+<td>Evet</td>
+<td>Ayrı fatura adresi varsa oradan, yoksa teslimat alıcısından dolu gelir.</td>
+</tr>
+<tr>
+<td>Firma Adı</td>
+<td>Hayır</td>
+<td>Fatura adresindeki firma.</td>
+</tr>
+<tr>
+<td>Adres</td>
+<td>Evet</td>
+<td>Fatura/teslimat adresinden dolu gelir.</td>
+</tr>
+<tr>
+<td>Vergi Dairesi</td>
+<td>Hayır</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Vergi/TC No</td>
+<td>Hayır</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<p>Fatura numarası: <code>seri kodu + yıl + 9 haneli sıra</code> (ör. <code>MSH2026000000001</code>). Tutar siparişin genel toplamıdır.</p>
+<h3 id="paket-pencereleri">Paket pencereleri<a class="anchor" href="#paket-pencereleri" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Pencere</th>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Yeni Numara</td>
+<td>Gerekçe</td>
+<td>Evet</td>
+<td>Ör. &quot;Paket içeriği değişti&quot;.</td>
+</tr>
+<tr>
+<td>Paketleri Birleştir</td>
+<td>Gerekçe</td>
+<td>Evet</td>
+<td>Ör. &quot;Müşteri tek kargo talep etti&quot;.</td>
+</tr>
+<tr>
+<td>Kargo Kodu</td>
+<td>Kargo Anlaşması <strong>veya</strong> Dış Kod</td>
+<td>Biri</td>
+<td>Dış kod yazılınca anlaşma seçimi kapanır.</td>
+</tr>
+<tr>
+<td>Kargo Kodu</td>
+<td>Gerekçe</td>
+<td>Mevcut kod varsa</td>
+<td>Kod değişimi geçmişe gerekçesiyle yazılır.</td>
+</tr>
+</tbody></table>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Geçiş</th>
+<th>Buton</th>
+<th>Otomatik etki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>pending</code> → <code>confirmed</code></td>
+<td>Onayla (depo seçimiyle) ya da müşterinin onay bağlantısı / kart ödemesinde otomatik onay</td>
+<td>Seçilen depoda <strong>stok rezervasyonu</strong> oluşur.</td>
+</tr>
+<tr>
+<td><code>confirmed</code> → <code>processing</code></td>
+<td>İşleme Al (toplama görevi oluşturulunca da otomatik)</td>
+<td>Toplama/paketleme başlar.</td>
+</tr>
+<tr>
+<td><code>processing</code> → <code>shipped</code></td>
+<td>Kargoya Ver</td>
+<td>Gönderi kaydı; rezervasyonlar &quot;toplandı&quot; olur, <strong>stok miktarı gerçekten düşer</strong>.</td>
+</tr>
+<tr>
+<td><code>shipped</code> → <code>delivered</code></td>
+<td>Teslim Edildi</td>
+<td>Gönderiler teslim; (pazaryeri satıcı hakedişleri bu adımdan üretilir).</td>
+</tr>
+<tr>
+<td><code>pending</code> / <code>confirmed</code> → <code>cancelled</code></td>
+<td>İptal Et</td>
+<td>Rezervasyonlar serbest bırakılır. Sonraki durumlarda iptal edilemez (&quot;&#39;…&#39; durumundaki sipariş iptal edilemez.&quot;).</td>
+</tr>
+</tbody></table>
+<p>Diğer kurallar:</p>
+<ul>
+<li>Yanlış durumda buton görünmez; yine de istek giderse sunucu &quot;&#39;İşlemde&#39; durumundaki sipariş onaylanamaz.&quot; gibi bir hata döner.</li>
+<li>Paketleme yalnız <code>confirmed</code>/<code>processing</code> siparişte ve paket yokken yapılır (&quot;Bu sipariş zaten paketlenmiş…&quot;).</li>
+<li>Sipariş no, paket no ve kargo kodu <strong>havuza geri dönmez</strong>: iptal/yenileme eski değeri yakar.</li>
+<li>Etiket basılmış ya da gönderiye bağlı paketin numarası/kargo kodu değiştirilemez, birleştirilemez.</li>
+<li>Kampanya/kupon indirimi kalemlere ağırlıklı dağıtılır; iade tutarı kalemin gerçek ödenen fiyatından hesaplanır.</li>
+<li>Onay politikası (kapıda/kart, link ömrü) kanal bazlıdır ve Ayarlar → Bildirim Şablonları&#39;ndan yönetilir; politika onay istiyorsa
+kartla ödenmiş sipariş bile <code>pending</code>de kalır, müşteriye onay bağlantısı gider.</li>
+</ul>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<p><strong>Standart sipariş akışı</strong></p>
+<ol>
+<li>Bekleyen siparişi açın, <strong>Onayla</strong>&#39;ya basın, depoyu seçin, <strong>Onayla</strong>. (Durum: Onaylı; stok rezerve.)</li>
+<li><strong>İşleme Al</strong> → <strong>İşleme Al</strong>. (Durum: İşlemde.)</li>
+<li>Paketler kartında <strong>Tedarikçiye Göre Paketle</strong>; gerekirse her pakete <strong>Kargo Kodu</strong> atayın.</li>
+<li>Faturalar kartında <strong>+ Fatura Oluştur</strong>; seri/tip/alıcı bilgilerini kontrol edip <strong>Fatura Oluştur</strong>.</li>
+<li><strong>Kargoya Ver</strong> → kargo anlaşması, takip no, paket sayısı → <strong>Kargoya Ver</strong>. (Durum: Kargoda; stok düşer.)</li>
+<li>Teslimat gerçekleşince <strong>Teslim Edildi</strong>.</li>
+</ol>
+<p><strong>Sipariş iptali</strong></p>
+<ol>
+<li>Durumun Bekleyen ya da Onaylı olduğunu doğrulayın.</li>
+<li><strong>İptal Et</strong> → nedeni yazın (isteğe bağlı) → kırmızı <strong>İptal Et</strong>.</li>
+<li>Durum İptal olur; neden İç Not&#39;ta görünür.</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> İptal ve paket birleştirme geri alınamaz. Birleştirme bilinçli bir istisnadır; normal akış paket başına fatura ve kargodur.</p>
+</blockquote>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Kargoya Ver penceresinde kargo listesi boşsa firmanın kargo entegrasyonu tanımlı değildir (Ayarlar → Firmalar → Entegrasyonlar).
+Fatura penceresinde seri listesi boşsa Faturalar sayfasından <strong>Fatura Serileri</strong> tanımlayın.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> &quot;Kargo Tercihi&quot; müşterinin teslimat adımında seçtiği kargodur; Kargoya Ver penceresinde varsayılan gelir ama değiştirilebilir.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> Bölge adları, operasyon geçmişi ve sözleşme sürüm uyarısı ilgili servisler sunucuda yoksa sessizce gizlenir; sayfa yine açılır.</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/siparis/siparisler/">Siparişler</a></li>
+<li><a href="/rehber/siparis/iadeler/">İadeler</a></li>
+<li><a href="/rehber/siparis/faturalar/">Faturalar</a></li>
+<li><a href="/rehber/siparis/numara-serileri/">Numara Serileri</a></li>
+<li><a href="/rehber/siparis/kargo-bolgeleri/">Kargo Bölgeleri</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/siparis/siparisler/">← Siparişler</a><a class="sonraki" href="/rehber/siparis/iadeler/">İadeler →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>

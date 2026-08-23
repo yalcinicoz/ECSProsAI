@@ -1,0 +1,422 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kanal Kategorileri — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="active">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="">Toplama Planlama</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Vitrin</span> › <b>Kanal Kategorileri</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Vitrin</div><h1>Kanal Kategorileri</h1>
+<p class="ozet">Satış kanalına özgü ürün listeleme kategorilerinin (menü, filtre ve banner hedefi) listelendiği, oluşturulduğu ve detayında doldurma/listeleme/grup ayarlarının yapıldığı ekran.</p><p class="rota">Panel adresi: <code>/admin/storefront/channel-categories</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#liste-ve-filtreler">Liste ve filtreler</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#detay-sayfasi">Detay sayfası</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Vitrin bölümündeki sayfalar sol menüde <strong>Katalog</strong> bölümünün altında yer alır; sitede müşterinin gördüğü yüzü
+(kategori sayfaları, menü, ürün kartı, ana sayfa blokları) yönetir. <strong>Kanal kategorisi</strong>, bir satış kanalında
+(örn. web siteniz) ürünlerin listelendiği sayfadır: menü öğesi, banner/link hedefi ve site içi filtre bu
+kategoriler üzerinden çalışır. Ürün gruplarından farklı olarak kanala özeldir; aynı ürün grubu farklı kanallarda
+farklı kategorilerde gösterilebilir. Katalog/pazarlama sorumlusu yeni bir listeleme sayfası açarken, kural tabanlı
+bir koleksiyon (&quot;Son 30 günde eklenenler&quot;) kurarken ya da menüde gösterilecek kategorileri hazırlarken kullanır.</p>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/storefront-channel-categories.webp" class="buyut" data-alt="Kanal Kategorileri listesi"><img src="/rehber/img/storefront-channel-categories.webp" alt="Kanal Kategorileri listesi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Kanal Kategorileri listesi</figcaption></figure></p>
+<ol>
+<li><strong>Başlık ve Yeni Kategori butonu</strong> — buton, kanal seçilmeden pasiftir.</li>
+<li><strong>Satış Kanalı seçici</strong> — aranabilir açılır liste (&quot;Kanal adı (Firma adı)&quot;). Seçim tarayıcı oturumunda
+hatırlanır ve Menü Yerleşimi / Ürün Kartı sayfalarına da taşınır.</li>
+<li><strong>Kapsam uyarısı</strong> (sarı şerit) — yayında olup hiçbir ürün grubundan sorumlu olmayan kategori sayısı.</li>
+<li><strong>Kategori tablosu</strong> — seçili kanalın kategorileri; satıra tıklayınca detay açılır.</li>
+</ol>
+<h2 id="liste-ve-filtreler">Liste ve filtreler<a class="anchor" href="#liste-ve-filtreler" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kategori</td>
+<td>Kategori adı; varsa rozet etiketi (ör. <code>Yeni</code>) adın yanında; altında URL (<code>/erkek-spor</code>).</td>
+</tr>
+<tr>
+<td>Dolum</td>
+<td>Doldurma türü: <code>Manuel</code> (ürünler elle eklenir), <code>Filtre</code> (kural tabanlı otomatik), <code>Karma</code> (filtre + elle eklenen sabitler).</td>
+</tr>
+<tr>
+<td>Gruplar</td>
+<td>Kategorinin sorumlu olduğu ürün grubu sayısı; hiç yoksa <code>⚠ Tanımsız</code>.</td>
+</tr>
+<tr>
+<td>Durum</td>
+<td><code>Yayında</code> (sitede görünür), <code>Taslak</code>, <code>Arşiv</code>. Sitede yalnız yayındaki kategoriler listelenir.</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Filtre</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Satış Kanalı</td>
+<td>Zorunlu; liste yalnız seçili kanalın kategorilerini gösterir. Kanal seçilmeden tablo görünmez.</td>
+</tr>
+</tbody></table>
+<ul>
+<li>Arama kutusu ve sayfalama yoktur; kanalın tüm kategorileri tek listede gelir.</li>
+<li>Liste düz gösterilir; üst/alt kategori ilişkisi bu tabloda gösterilmez.</li>
+<li>Kanalda kategori yoksa &quot;Bu kanalda henüz kategori yok&quot; yazısı görünür.</li>
+</ul>
+<h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Yeni Kategori</td>
+<td>Sağ üst</td>
+<td>&quot;Yeni Kanal Kategorisi&quot; penceresi açılır; <strong>Oluştur</strong> ile kategori <code>Taslak</code> durumda ve <code>Manuel</code> dolum tipiyle oluşturulur, doğrudan detay sayfasına geçilir.</td>
+<td>Kanal seçili olmalı; Ad zorunlu.</td>
+</tr>
+<tr>
+<td>İptal</td>
+<td>Pencere altı</td>
+<td>Pencereyi kapatır, girilenler silinir.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Satır tıklama</td>
+<td>Tablo</td>
+<td>Kategori detayı açılır.</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<h3 id="yeni-kanal-kategorisi-penceresi">Yeni Kanal Kategorisi penceresi<a class="anchor" href="#yeni-kanal-kategorisi-penceresi" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ad (TR)</td>
+<td>Evet</td>
+<td>Kategorinin adı; yazdıkça URL alanı otomatik üretilir (Türkçe karakterler sadeleştirilir: &quot;Erkek Spor&quot; → <code>erkek-spor</code>).</td>
+</tr>
+<tr>
+<td>URL</td>
+<td>Hayır</td>
+<td>Sitede <code>/</code> sonrası görünen adres. Yalnız küçük harf, rakam ve tire kabul edilir; elle değiştirdikten sonra addan otomatik üretim durur. Boş bırakılırsa isimden üretilir.</td>
+</tr>
+</tbody></table>
+<h2 id="detay-sayfasi">Detay sayfası<a class="anchor" href="#detay-sayfasi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/storefront-channel-categories-detay.webp" class="buyut" data-alt="Kanal kategorisi detayı — Genel sekmesi"><img src="/rehber/img/storefront-channel-categories-detay.webp" alt="Kanal kategorisi detayı — Genel sekmesi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Kanal kategorisi detayı — Genel sekmesi</figcaption></figure></p>
+<ol>
+<li><strong>Başlık şeridi</strong> — geri oku, kategori adı, URL, durum rozeti (<code>Yayında</code>/<code>Taslak</code>/<code>Arşiv</code>), listeleme rozeti
+(<code>Renk Bazlı</code>/<code>Model Bazlı</code>) ve sağda <strong>kapsam rozeti</strong> (<code>Kapsam tam</code> yeşil ya da <code>N grup kapsam dışı</code> sarı).</li>
+<li><strong>Sekmeler</strong> — Genel · Gruplar · Ürünler · SEO.</li>
+<li><strong>Sekme içeriği</strong> — form ya da tablo; her sekmenin kendi <strong>Kaydet</strong> butonu vardır.</li>
+</ol>
+<h3 id="genel-sekmesi">Genel sekmesi<a class="anchor" href="#genel-sekmesi" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ad</td>
+<td>Evet (kaynak dil)</td>
+<td>Çok dilli ad (<code>TR</code>/<code>EN</code> bayraklı sekmeler). Kaynak dil zorunlu, diğerleri boş bırakılabilir.</td>
+</tr>
+<tr>
+<td>Google ürün kategorisi (Merchant Center feed)</td>
+<td>Hayır</td>
+<td>Google taksonomi kimliği (<code>2271</code>) ya da tam yolu (<code>Apparel &amp; Accessories &gt; Clothing &gt; Dresses</code>). Boşsa üst kategorininki kullanılır; hiçbiri yoksa ürün akışına yazılmaz ve Google kendisi sınıflandırır.</td>
+</tr>
+<tr>
+<td>URL</td>
+<td>Evet</td>
+<td><code>/</code> sonrası adres; yalnız küçük harf, rakam ve tire.</td>
+</tr>
+<tr>
+<td>Dolum Tipi</td>
+<td>Evet</td>
+<td><code>Manuel — ürünler elle eklenir</code>, <code>Filtre — kural tabanlı otomatik</code>, <code>Karma — filtre + sabitler</code>. Filtre/Karma seçilince aşağıda <strong>Filtre Tanımı</strong> bölümü açılır.</td>
+</tr>
+<tr>
+<td>Durum</td>
+<td>Evet</td>
+<td><code>Taslak</code>, <code>Yayında</code>, <code>Arşiv</code>.</td>
+</tr>
+<tr>
+<td>Listeleme Tipi</td>
+<td>Evet</td>
+<td><code>Renk (Ana Varyant) Bazlı Liste</code>: her renk varyantı ayrı kart (moda/tekstil için varsayılan). <code>Model Bazlı Liste</code>: her ürün grubu tek kart; grubu temsil eden <strong>vitrin ürünü</strong> Gruplar sekmesinden seçilir, seçilmezse ilk aktif ürün kullanılır. Seçime göre yeşil/mavi açıklama kutusu görünür.</td>
+</tr>
+<tr>
+<td>Filtre Tanımı</td>
+<td>Filtre/Karma&#39;da</td>
+<td>Kural kurucu (aşağıda).</td>
+</tr>
+<tr>
+<td>Badge Etiketi</td>
+<td>Hayır</td>
+<td>Kategori adının yanında görünen kısa rozet: <code>Yeni</code>, <code>İndirim</code>…</td>
+</tr>
+<tr>
+<td>Sıra</td>
+<td>Hayır</td>
+<td>Sayısal sıra; kategori seçiminde eşit derinlikteki kategoriler arasında öncelik belirler.</td>
+</tr>
+<tr>
+<td>Görsel URL</td>
+<td>Hayır</td>
+<td>Kategori görseli (<code>https://…</code>); menü ve kategori kapsüllerinde kullanılır.</td>
+</tr>
+</tbody></table>
+<p><strong>Filtre Tanımı</strong> (Dolum Tipi Filtre veya Karma iken) — her bölüm boş bırakılırsa o koşul uygulanmaz; hiçbir koşul
+yoksa açıklama &quot;Tüm ürünler&quot; olur:</p>
+<table>
+<thead>
+<tr>
+<th>Bölüm</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ürün Grupları</td>
+<td>Bir ya da daha çok ürün grubu seçilir (çip olarak listelenir, × ile kaldırılır).</td>
+</tr>
+<tr>
+<td>Tedarikçi</td>
+<td>Tedarikçi cari hesapları.</td>
+</tr>
+<tr>
+<td>Temel Fiyat</td>
+<td>Min/maks temel satış fiyatı (₺).</td>
+</tr>
+<tr>
+<td>Platform Fiyatı</td>
+<td>Kanala özel satış fiyatı aralığı.</td>
+</tr>
+<tr>
+<td>Min. İndirim</td>
+<td>En az % indirim oranı.</td>
+</tr>
+<tr>
+<td>KDV Oranı</td>
+<td>Min/maks KDV (%).</td>
+</tr>
+<tr>
+<td>Ürün Durumu</td>
+<td><code>Tümü</code> / <code>Sadece Aktif</code> / <code>Sadece Pasif</code>.</td>
+</tr>
+<tr>
+<td>Stok Miktarı</td>
+<td>Tüm depolar toplamı (adet) aralığı.</td>
+</tr>
+<tr>
+<td>Oluşturma Tarihi</td>
+<td>&quot;Son N gün&quot; ya da tarih aralığı — yeni eklenen ürünler için.</td>
+</tr>
+<tr>
+<td>Resim Güncelleme Tarihi</td>
+<td>&quot;Son N gün&quot; ya da tarih aralığı — fotoğrafı güncellenen ürünler.</td>
+</tr>
+<tr>
+<td>Etiketler</td>
+<td>Ürün etiketleri; en az biri eşleşmeli. Yazarak ya da listeden seçerek eklenir.</td>
+</tr>
+<tr>
+<td>Özellik Filtreleri</td>
+<td>Özellik tipi + değerleri (renk, beden, cinsiyet vb.); birden çok özellik satırı eklenebilir.</td>
+</tr>
+</tbody></table>
+<p><strong>Kaydet</strong> (sekme altı) — tüm Genel alanlarını yazar. Listeleme Tipi değiştiyse Ürünler sekmesi de yeniden yüklenir.</p>
+<h3 id="gruplar-sekmesi">Gruplar sekmesi<a class="anchor" href="#gruplar-sekmesi" aria-hidden="true">#</a></h3>
+<p>Kategorinin ürünlerini göstermekten <strong>sorumlu olduğu ürün grupları</strong> burada atanır; kapsam hesabı buradan yapılır.</p>
+<table>
+<thead>
+<tr>
+<th>Alan / Buton</th>
+<th>Ne olur</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Sorumlu Ürün Grupları listesi</td>
+<td>Atanmış her grup bir satırdır; <strong>Kaldır</strong> ile listeden çıkarılır.</td>
+</tr>
+<tr>
+<td>Vitrin ürünü (yalnız Model Bazlı listelemede)</td>
+<td>Her grup satırının altında; grubu temsil edecek ürün seçilir (<code>Otomatik (ilk aktif ürün)</code> varsayılan). <strong>Temizle</strong> otomatiğe döndürür.</td>
+</tr>
+<tr>
+<td>Grup Ekle</td>
+<td>Aranabilir listeden grup seçilince satır eklenir (aynı grup ikinci kez eklenemez).</td>
+</tr>
+<tr>
+<td>Kaydet</td>
+<td>Yalnız değişiklik yapıldığında görünür; grup listesini ve vitrin ürünlerini yazar.</td>
+</tr>
+</tbody></table>
+<p><strong>Kanal Kapsam Özeti</strong> kartı: <code>Kanalda Aktif Grup</code> (kanala atanmış grup sayısı) · <code>Kapsanan</code> (en az bir yayındaki
+kategorinin sorumlu olduğu) · <code>Kapsam Dışı</code> (hiçbir yayındaki kategoriye bağlı olmayan — sarı). Kapsam dışı grup,
+ürünlerinin sitede hiçbir kategoride listelenmeyebileceği anlamına gelir.</p>
+<h3 id="urunler-sekmesi">Ürünler sekmesi<a class="anchor" href="#urunler-sekmesi" aria-hidden="true">#</a></h3>
+<p>Üstte sayaç (<code>N ürün</code> / Model Bazlı&#39;da <code>N model</code>) ve butonlar:</p>
+<table>
+<thead>
+<tr>
+<th>Buton</th>
+<th>Görünme koşulu</th>
+<th>Ne olur</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Sync</td>
+<td>Dolum tipi Filtre/Karma</td>
+<td>Filtre tanımı çalıştırılır; kategorideki otomatik ürün listesi baştan kurulur. Elle <strong>Hariç</strong> işaretlenen ürünler korunur, diğer eski kayıtlar silinip eşleşen ürünler sırayla yeniden eklenir. Bitince &quot;Sync tamamlandı — kategoride N ürün listelenecek&quot; mesajı gelir. Manuel kategoride çalışmaz.</td>
+</tr>
+<tr>
+<td>Ürün Ekle</td>
+<td>Renk Bazlı listeleme</td>
+<td>&quot;Ürün Ekle&quot; penceresi (aşağıda). Model Bazlı&#39;da buton yoktur; vitrin ürünleri Gruplar sekmesinden yönetilir.</td>
+</tr>
+<tr>
+<td>Çöp kutusu (satır)</td>
+<td>Renk Bazlı listeleme</td>
+<td>Ürünü kategoriden çıkarır (onay sorulmaz).</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ürün</td>
+<td>Küçük görsel, ad ve ürün kodu. Hariç tutulan satır soluk gösterilir.</td>
+</tr>
+<tr>
+<td>Sıra / Grup</td>
+<td>Renk Bazlı&#39;da sıra numarası; Model Bazlı&#39;da ürünün grubu.</td>
+</tr>
+<tr>
+<td>Tip</td>
+<td><code>Dahil</code> / <code>Hariç</code> (Renk Bazlı) ya da <code>Vitrin</code> (Model Bazlı).</td>
+</tr>
+</tbody></table>
+<p>Sayfalama: 20 satır; 20&#39;den fazla kayıt varsa altta <code>←</code> / <code>Sayfa N</code> / <code>→</code>.</p>
+<p><strong>Ürün Ekle penceresi</strong></p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ürün</td>
+<td>Evet</td>
+<td>Aranabilir ürün listesi (&quot;Ad (Kod)&quot;).</td>
+</tr>
+<tr>
+<td>Sıra</td>
+<td>Hayır</td>
+<td>Listeleme sırası (0 = en başa yakın).</td>
+</tr>
+<tr>
+<td>Hariç tut (filtre sonucundan çıkar)</td>
+<td>Hayır</td>
+<td>İşaretlenirse ürün filtre eşleşse bile kategoride gösterilmez; Sync bu kaydı korur. Karma kategorilerde otomatik sonuçtan tekil ürün düşürmek için kullanılır.</td>
+</tr>
+</tbody></table>
+<h3 id="seo-sekmesi">SEO sekmesi<a class="anchor" href="#seo-sekmesi" aria-hidden="true">#</a></h3>
+<p>Bu sürümde sekme yalnız &quot;SEO alanları yakında eklenecek.&quot; notunu gösterir; meta başlık/açıklama ve paylaşım
+görseli alanları henüz panelden düzenlenemez.</p>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<ul>
+<li>Durum rozetleri: <code>Taslak</code> → <code>Yayında</code> → <code>Arşiv</code> (istenen yöne elle değiştirilir). Sitede yalnız <code>Yayında</code>
+kategoriler listelenir, menüde görünür ve URL&#39;den açılır.</li>
+<li>Kapsam: kanala atanmış her ürün grubunun en az bir <strong>yayındaki</strong> kategorinin sorumluluğunda olması beklenir;
+aksi halde listede <code>⚠ Tanımsız</code>, detayda <code>N grup kapsam dışı</code> uyarısı görünür.</li>
+<li>Dolum: <code>Manuel</code> kategoride ürünler yalnız Ürün Ekle ile gelir; <code>Filtre</code>/<code>Karma</code> kategoride liste Sync ile
+kurulur; <code>Karma</code>da ayrıca elle eklenen/hariç tutulan kayıtlar korunur.</li>
+<li>Listeleme tipi değişimi ürün listesinin görünümünü değiştirir (renk kartları ↔ grup başına tek kart); kaydettikten
+sonra Ürünler sekmesi yeniden yüklenir.</li>
+<li>Filtre tanımında &quot;Ürün Durumu&quot; seçilmemişse Sync yalnız aktif ürünleri alır.</li>
+<li>Kanal kategorisi sayfalarının ürün listesi sitede önbelleklenir; değişiklikler birkaç dakika içinde yansır.</li>
+</ul>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<p><strong>Kural tabanlı yeni kategori açma</strong></p>
+<ol>
+<li>Satış Kanalı&#39;nı seçin, <strong>Yeni Kategori</strong>&#39;ye tıklayın; Ad girin, URL&#39;yi kontrol edin, <strong>Oluştur</strong>.</li>
+<li>Açılan detayda Genel sekmesinde Dolum Tipi&#39;ni <code>Filtre</code> yapın, Filtre Tanımı&#39;nda koşulları seçin
+(ör. Ürün Grupları + Son 30 günde eklenen), Listeleme Tipi&#39;ni belirleyin, <strong>Kaydet</strong>.</li>
+<li>Gruplar sekmesinde kategorinin sorumlu olduğu ürün gruplarını ekleyin, <strong>Kaydet</strong>.</li>
+<li>Ürünler sekmesinde <strong>Sync</strong>&#39;e basın; sayacı kontrol edin.</li>
+<li>Genel sekmesinde Durum&#39;u <code>Yayında</code> yapıp <strong>Kaydet</strong>; menüde göstermek için Menü Yerleşimi&#39;ne ekleyin.</li>
+</ol>
+<p><strong>Otomatik listeden tek ürün düşürme</strong></p>
+<ol>
+<li>Ürünler sekmesinde <strong>Ürün Ekle</strong> → ürünü seçin → <strong>Hariç tut</strong> kutusunu işaretleyin → <strong>Ekle</strong>.</li>
+<li>Sonraki Sync&#39;lerde bu ürün listeye geri gelmez.</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Seçili kanal tarayıcı oturumunda hatırlanır; Menü Yerleşimi ve Ürün Kartı sayfaları aynı kanalla açılır.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Sync mevcut otomatik listeyi tamamen yeniden kurar; elle eklediğiniz sıra numaraları (Hariç olmayan
+kayıtlar) sıfırlanır.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Ürün silme (çöp kutusu) onay sormaz; silinen ürün Filtre/Karma kategoride bir sonraki Sync ile geri
+gelebilir — kalıcı dışlamak için Hariç tut kullanın.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> &quot;Bu kanalda henüz kategori yok&quot; görüyorsanız kanal yeni olabilir; önce kategorileri açın, sonra Menü
+Yerleşimi&#39;nde üst menüyü oluşturun.</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/vitrin/menu-yerlesimi/">Menü Yerleşimi</a></li>
+<li><a href="/rehber/vitrin/kanal-urunleri/">Kanal Ürünleri</a></li>
+<li><a href="/rehber/vitrin/vitrin-yonetimi/">Vitrin Yönetimi</a></li>
+<li><a href="/rehber/katalog/urun-gruplari/">Ürün Grupları</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/katalog/katalog-ayarlari/">← Katalog Ayarları</a><a class="sonraki" href="/rehber/vitrin/menu-yerlesimi/">Menü Yerleşimi →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>

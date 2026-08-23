@@ -1,0 +1,311 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kategori ve Özellik Eşleştirme — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="">Toplama Planlama</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="active">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Sipariş Yönetimi</span> › <b>Kategori ve Özellik Eşleştirme</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Sipariş Yönetimi</div><h1>Kategori ve Özellik Eşleştirme</h1>
+<p class="ozet">Ürün gruplarınızı, özelliklerinizi ve özellik değerlerinizi pazaryeri kategori/özellik/değerleriyle eşlediğiniz ekran; kırılan veya değişen eşlemelerin gözden geçirilmesi.</p><p class="rota">Panel adresi: <code>/admin/marketplaces/eslestirme</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#liste-ve-filtreler">Liste ve filtreler</a><a href="#sekmeler">Sekmeler</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Pazaryerine ürün gönderebilmek için her ürünün pazaryerinde hangi kategoriye gideceği ve pazaryerinin zorunlu özelliklerinin bizdeki hangi özellik/değerden doldurulacağı bilinmelidir. Bu ekranda <strong>ürün gruplarınızı</strong> pazaryeri kategorilerine, pazaryeri kategorisinin <strong>özelliklerini</strong> kendi özelliklerinize ve <strong>değerlerini</strong> kendi değerlerinize eşlersiniz. Eşlemeler firma genelinde geçerlidir; pazaryeri kategoriyi kaldırdığında ya da bir özelliği zorunlu yaptığında etkilenen eşlemeler <strong>Gözden Geçir</strong> sekmesine düşer.</p>
+<p>Eşleme tamamlanmadan mağaza detayındaki hazırlık denetimi ürünleri <strong>Eksik</strong> sayar; ürün gönderimi yalnız <strong>Hazır</strong> ürünlerle çalışır (bkz. <a href="/rehber/siparis/pazaryerleri/">Pazaryerleri</a>).</p>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/marketplaces-eslestirme.webp" class="buyut" data-alt="Pazaryeri Eşleştirme — pazaryeri çipleri, sayaçlar ve Kategori Eşleme sekmesi"><img src="/rehber/img/marketplaces-eslestirme.webp" alt="Pazaryeri Eşleştirme — pazaryeri çipleri, sayaçlar ve Kategori Eşleme sekmesi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Pazaryeri Eşleştirme — pazaryeri çipleri, sayaçlar ve Kategori Eşleme sekmesi</figcaption></figure></p>
+<ol>
+<li><strong>Başlık</strong> — &quot;Pazaryeri Eşleştirme&quot;.</li>
+<li><strong>Pazaryeri çipleri</strong> — logo + ad; yalnız referans verisi indirilmiş pazaryerleri seçilebilir. Sağda sayaçlar: <strong>N eşli · N eşsiz · N gözden geçirilecek</strong>.</li>
+<li><strong>Sekmeler</strong> — <code>Kategori Eşleme</code> · <code>Özellik &amp; Değer</code> · <code>Gözden Geçir (N)</code>.</li>
+<li><strong>İçerik</strong> — Kategori sekmesinde solda ürün grubu listesi, sağda eşleme editörü; diğer sekmelerde tablo.</li>
+</ol>
+<p><em>(1) Başlık · (2) Pazaryeri çipleri ve sayaçlar · (3) Sekmeler · (4) Sol liste + sağ editör</em></p>
+<p>Sayfaya Pazaryerleri sayfasındaki <strong>Eşleştirme</strong> butonundan gelinir. Seçili pazaryeri ve sekme adres çubuğunda taşınır (<code>?mp=trendyol&amp;tab=kategoriler</code>).</p>
+<h2 id="liste-ve-filtreler">Liste ve filtreler<a class="anchor" href="#liste-ve-filtreler" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Filtre / öğe</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Pazaryeri çipi</td>
+<td>Hangi pazaryerinin eşlemeleri üzerinde çalışıldığını seçer. Referans verisi indirilmemiş pazaryeri soluk ve tıklanamaz; üzerine gelince &quot;Önce referans verisini indirin (Pazaryerleri → Referans Verisi)&quot; ipucu çıkar.</td>
+</tr>
+<tr>
+<td>N eşli / N eşsiz / N gözden geçirilecek</td>
+<td>Seçili pazaryeri için ürün grubu sayaçları. Eşsiz sıfırdan büyükse sarı, gözden geçirilecek sıfırdan büyükse kırmızı.</td>
+</tr>
+<tr>
+<td>Grup ara… (Kategori sekmesi, sol liste)</td>
+<td>Ürün grubu adı/kodu üzerinde yazdıkça filtreler.</td>
+</tr>
+<tr>
+<td>Yalnız eşsiz / gözden geçirilecekler (onay kutusu)</td>
+<td>Sol listeyi eşlemesi olmayan ya da durumu sağlıklı olmayan gruplarla sınırlar.</td>
+</tr>
+</tbody></table>
+<p>Sol listede her satır: durum simgesi (<code>—</code> eşleme yok · <code>✓</code> sağlıklı · <code>⚠</code> gözden geçirilmeli · <code>⛔</code> kırıldı), grup adı ve sağda ürün sayısı. Satıra tıklayınca sağda o grubun editörü açılır; hiçbir grup seçili değilse &quot;Soldan bir ürün grubu seçin.&quot; yazar.</p>
+<h2 id="sekmeler">Sekmeler<a class="anchor" href="#sekmeler" aria-hidden="true">#</a></h2>
+<h3 id="kategori-esleme">Kategori Eşleme<a class="anchor" href="#kategori-esleme" aria-hidden="true">#</a></h3>
+<p>Editör başlığında grup adı, kodu ve ürün sayısı. Eşleme sağlıklı değilse üstte renkli kutu: <code>⛔</code> kırmızı (kırıldı) ya da <code>⚠</code> sarı (gözden geçirilmeli) + açıklama + &quot;Düzeltip kaydedin — kayıt eşlemeyi onaylanmış sayar.&quot;</p>
+<p>Eşleme kipi (radyo): <strong>Birebir</strong> · <strong>Koşullu</strong> · <strong>Havuz</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Birebir → HEDEF KATEGORİ</td>
+<td>Evet</td>
+<td>Pazaryeri kategorisi arama kutusu (en az 2 harf; sonuç tam yol olarak listelenir, örn. <code>Ayakkabı &gt; Spor Ayakkabı &gt; Sneaker</code>). Altında sistem önerileri &quot;Ad %skor&quot; çipleri — tıklayınca hedef olur. Seçileni <code>×</code> ile temizlersiniz.</td>
+</tr>
+<tr>
+<td>Koşullu → KURALLAR</td>
+<td>En az bir kural önerilir</td>
+<td>&quot;İlk eşleşen kazanır&quot; sıralı kural listesi. Her kural: <strong>Özellik seç…</strong> (kendi özellik tipleriniz) <code>=</code> <strong>Değer seç…</strong> (o özelliğin değerleri) → <strong>Bu kuralın hedef kategorisi…</strong> (pazaryeri kategori arama). Sağda ↑ ↓ sıralama ve 🗑 kuralı sil. <strong>Kural Ekle</strong> yeni boş kural ekler. Örn. <code>cinsiyet = Kadın → Kadın Pantolon</code>.</td>
+</tr>
+<tr>
+<td>Koşullu → VARSAYILAN HEDEF</td>
+<td>Hayır</td>
+<td>Hiçbir kural tutmazsa kullanılacak kategori. Boş bırakılırsa kural tutmayan ürün denetimde &quot;Hiçbir kategori kuralı tutmadı&quot; nedeniyle <strong>Eksik</strong> listesine düşer. Öneri çipleri burada da çıkar.</td>
+</tr>
+<tr>
+<td>Havuz → ADAY KATEGORİLER</td>
+<td>En az bir aday</td>
+<td>Grubun ürünlerinin gidebileceği aday pazaryeri kategorileri listesi (<code>×</code> ile çıkarılır). <strong>Aday kategori ekle…</strong> arama kutusu ve öneri çipleriyle eklenir. Ürün bazında hangi adayın kullanılacağı mağaza detayı → Ürünler → <strong>Tamamla</strong> penceresinde seçilir; seçilmemiş ürünler &quot;Kategori ataması bekliyor (havuz)&quot; nedeniyle <strong>Eksik</strong> görünür.</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kaydet</td>
+<td>Editör sağ alt</td>
+<td>Eşlemeyi kaydeder (&quot;Eşleme kaydedildi.&quot;), sağlıksız eşlemeyi onaylanmış sayar, sayaçları tazeler.</td>
+<td>Kip için gerekli hedef(ler) seçili</td>
+</tr>
+<tr>
+<td>Eşlemeyi Kaldır</td>
+<td>Editör sol alt (kırmızı)</td>
+<td>Grubun eşlemesini siler (&quot;Eşleme kaldırıldı.&quot;). ⚠️ Grubun ürünleri hazırlık denetiminde &quot;Kategori eşlemesi yok&quot; nedeniyle Eksik&#39;e düşer.</td>
+<td>Kayıtlı eşleme var</td>
+</tr>
+<tr>
+<td>Öneri çipi (Ad %skor)</td>
+<td>Hedef alanlarının altında</td>
+<td>Çipteki pazaryeri kategorisini hedef/aday olarak seçer. Skor, grup adı ile kategori yolu arasındaki benzerliktir.</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<h3 id="ozellik-ve-deger">Özellik &amp; Değer<a class="anchor" href="#ozellik-ve-deger" aria-hidden="true">#</a></h3>
+<p>Pazaryeri özellikleri <strong>kategoriye bağlıdır</strong>; bu yüzden sekme, en az bir grup eşlendikten sonra çalışır. Hiç eşleme yoksa &quot;Önce Kategoriler sekmesinden en az bir grup eşleyin — özellikler hedef kategoriye göre listelenir.&quot; mesajı görünür.</p>
+<table>
+<thead>
+<tr>
+<th>Filtre</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>PAZARYERİ KATEGORİSİ (açılır liste)</td>
+<td>Eşlenmiş hedef kategoriler; her seçenek &quot;kategori yolu — (eşleyen grup adları)&quot; biçimindedir. Seçilen kategorinin özellikleri tabloya gelir.</td>
+</tr>
+</tbody></table>
+<p>Tablo sütunları:</p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Pazaryeri Özelliği</td>
+<td>Özellik adı ve rozetleri: <code>Zorunlu</code> (kırmızı — gönderimde doldurulması şart), <code>Varyant ekseni</code> (mavi — beden gibi; değeri varyanttan gelir), <code>Gözden geçir</code> (sarı — pazaryeri tarafında değişti). Altında sarı açıklama notu olabilir.</td>
+</tr>
+<tr>
+<td>Tip</td>
+<td><code>Liste (N)</code> (pazaryerinin N seçenekli değer listesi), <code>Serbest</code> (metin), <code>Liste (N) + serbest</code> (listeden seçilebilir ya da serbest yazılabilir).</td>
+</tr>
+<tr>
+<td>Bizim Karşılık</td>
+<td>Strateji açılır listesi + ikinci alan (aşağıda). Değişiklik <strong>anında kaydedilir</strong>; satır altında &quot;✓ kaydedildi&quot; ya da hata görünür.</td>
+</tr>
+<tr>
+<td>Değerler</td>
+<td><code>Değer eşle</code> stratejisinde ve özellik seçiliyken &quot;eşlenen/toplam&quot; (tamamı eşliyse yeşil, değilse sarı); diğer stratejilerde <code>—</code>.</td>
+</tr>
+<tr>
+<td>▾ / ▴</td>
+<td>Satırı açıp kapatır; açılınca altta <strong>Değer eşleme paneli</strong> gelir.</td>
+</tr>
+</tbody></table>
+<p>Strateji seçenekleri (Bizim Karşılık):</p>
+<table>
+<thead>
+<tr>
+<th>Strateji</th>
+<th>Ne yapar</th>
+<th>Ek alan</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Değer eşle</td>
+<td>Kendi özelliğinizin değerleri pazaryeri değerlerine tek tek eşlenir; gönderimde eşlenen değer gider.</td>
+<td><strong>— seç —</strong>: kendi özellik tipiniz</td>
+</tr>
+<tr>
+<td>Serbest geçir</td>
+<td>Kendi değerinizin metni aynen gönderilir. Yalnız <code>+ serbest</code> / <code>Serbest</code> tipli özelliklerde seçilebilir (aksi halde seçenek devre dışı).</td>
+<td>kendi özellik tipiniz</td>
+</tr>
+<tr>
+<td>Sabit değer</td>
+<td>Her üründe aynı sabit değer gönderilir.</td>
+<td><strong>Sabit değer…</strong> metin kutusu (kutudan çıkınca kaydedilir)</td>
+</tr>
+</tbody></table>
+<p>Satır açıldığında strateji <code>Değer eşle</code> değilse ya da özellik seçilmemişse panel yerine &quot;Değer eşlemek için stratejiyi &quot;Değer eşle&quot; yapıp bizim özellik tipini seçin.&quot; notu görünür.</p>
+<h4 id="deger-esleme-paneli">Değer eşleme paneli<a class="anchor" href="#deger-esleme-paneli" aria-hidden="true">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Öğe</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>N/M eşlendi</td>
+<td>Kendi değerlerinizden kaçının pazaryeri değeriyle eşli olduğu.</td>
+</tr>
+<tr>
+<td>Önerileri Uygula (N)</td>
+<td>%90 ve üzeri benzerlikteki önerileri taslağa doldurur; <strong>Kaydet</strong>&#39;e basana kadar yazılmaz. Uygulanacak öneri yoksa devre dışı.</td>
+</tr>
+<tr>
+<td>Değer satırı</td>
+<td>Kendi değeriniz → açılır liste (<code>— eşleme yok —</code> + pazaryeri değerleri). Sağda: <code>✓</code> eşli · &quot;öneri: X %skor&quot; · <code>değer kalktı</code> (kırmızı — pazaryeri değeri kaldırmış, yeni değer seçin).</td>
+</tr>
+<tr>
+<td>Kaydet</td>
+<td>Değişen satırları kaydeder: &quot;N değer kaydedildi.&quot; Değişiklik yoksa devre dışı.</td>
+</tr>
+</tbody></table>
+<h3 id="gozden-gecir">Gözden Geçir<a class="anchor" href="#gozden-gecir" aria-hidden="true">#</a></h3>
+<p>Pazaryeri referans verisi güncellendiğinde sağlığı bozulan eşlemeler burada listelenir. Boşsa &quot;Gözden geçirilecek eşleme yok — her şey sağlıklı.&quot;</p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Durum rozeti</td>
+<td><code>Kırıldı</code> (kırmızı — hedef kategori/değer pazaryerinden kaldırıldı) · <code>Gözden geçir</code> (sarı — ad değişti, serbest özellik listeye bağlandı vb.).</td>
+</tr>
+<tr>
+<td>Tür</td>
+<td><code>Kategori</code> · <code>Özellik</code> · <code>Değer</code>.</td>
+</tr>
+<tr>
+<td>Başlık / not</td>
+<td>Etkilenen eşleme ve ne değiştiği.</td>
+</tr>
+<tr>
+<td>Eşlemeye Git</td>
+<td>Yalnız kategori satırlarında; Kategori Eşleme sekmesinde ilgili grubu açar.</td>
+</tr>
+<tr>
+<td>Onayla</td>
+<td>Eşlemeyi olduğu gibi onaylar, listeden düşer.</td>
+</tr>
+</tbody></table>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<ul>
+<li><strong>Eşleme durumları:</strong> <code>active</code> (✓ sağlıklı) · <code>needs_review</code> (⚠ gözden geçirilmeli) · <code>broken</code> (⛔ kırıldı). Kırık ya da gözden geçirilecek eşleme sayaçta &quot;gözden geçirilecek&quot; olarak sayılır; kırık eşlemenin ürünleri denetimde &quot;Kategori eşlemesi kırık&quot; nedeniyle <strong>Eksik</strong> olur.</li>
+<li><strong>Sağlık güncellemesi</strong> her referans senkronundan sonra otomatik çalışır: kategori kaldırıldı → eşleme <code>broken</code>; kategori/özellik adı değişti → <code>needs_review</code>; serbest girişli özellik listeye bağlandı → o özelliği &quot;Serbest geçir&quot; gönderen eşleme <code>needs_review</code>; değer kaldırıldı → değer eşlemesi <code>broken</code>; kaldırılan kayıt geri gelirse durum kendiliğinden düzelir. Editörde <strong>Kaydet</strong> ya da Gözden Geçir&#39;de <strong>Onayla</strong> eşlemeyi yeniden <code>active</code> yapar.</li>
+<li><strong>Gönderimde kategori önceliği:</strong> ürün istisnası (Tamamla penceresi / pazaryeri reddi / havuz ataması) &gt; koşullu kural sonucu &gt; birebir eşleme. Ürün istisnaları buradaki genel eşlemeyi değiştirmez.</li>
+<li><strong>Gönderimde özellik değeri önceliği:</strong> ürün-özel pazaryeri değeri (Tamamla penceresinden) &gt; değer eşlemesi &gt; sabit değer &gt; serbest geçirme. Varyant ekseni özelliklerin (beden vb.) değeri varyant verisinden gelir, burada eşlenmez ve denetimde sayılmaz.</li>
+<li><strong>Bizim kategori = ürün grubu:</strong> eşleme birimi katalogdaki ürün grubudur; her ürünün tam bir grubu vardır. Site menü kategorileri eşlemede kullanılmaz.</li>
+<li>Eşlemeler <strong>firma genelidir</strong>; mağaza bazlı ayrı eşleme ekranı yoktur.</li>
+<li><strong>Yetki:</strong> Sayfa giriş yapmış panel kullanıcılarına açıktır; ayrı izin aranmaz.</li>
+</ul>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<p><strong>1. Bir ürün grubunu birebir eşleme</strong></p>
+<ol>
+<li>Pazaryeri çipini seçin → <strong>Kategori Eşleme</strong> sekmesi.</li>
+<li>Solda grubu bulun (Grup ara… ya da &quot;Yalnız eşsiz / gözden geçirilecekler&quot;).</li>
+<li>Kip <strong>Birebir</strong> → öneri çiplerinden uygun olana tıklayın ya da HEDEF KATEGORİ kutusuna en az 2 harf yazıp tam yolu seçin.</li>
+<li><strong>Kaydet</strong> → &quot;Eşleme kaydedildi.&quot; Sayaçlarda eşli sayısı artar.</li>
+</ol>
+<p><strong>2. Zorunlu özellikleri eşleme</strong></p>
+<ol>
+<li><strong>Özellik &amp; Değer</strong> sekmesi → PAZARYERİ KATEGORİSİ listesinden eşlediğiniz kategoriyi seçin.</li>
+<li><code>Zorunlu</code> rozetli satırlarda Bizim Karşılık: strateji <strong>Değer eşle</strong> + kendi özellik tipinizi seçin (örn. Cinsiyet → cinsiyet). Bizde karşılığı olmayan zorunlu özellik için <strong>Sabit değer</strong> girin ya da ürün bazında Tamamla penceresinden doldurulmasını bekleyin.</li>
+<li>Satırı açın → <strong>Önerileri Uygula (N)</strong> → kalanları açılır listeden seçin → <strong>Kaydet</strong>.</li>
+<li>Değerler sütununda &quot;M/M&quot; yeşil olunca özellik tamamdır.</li>
+</ol>
+<p><strong>3. Gözden geçirilecekleri temizleme</strong></p>
+<ol>
+<li><strong>Gözden Geçir (N)</strong> sekmesini açın.</li>
+<li><code>Kırıldı</code> kategori satırında <strong>Eşlemeye Git</strong> → editörde yeni hedef seçip <strong>Kaydet</strong>.</li>
+<li>Yalnız ad değişimi gibi zararsız durumlarda <strong>Onayla</strong>.</li>
+<li>Mağaza detayı → Ürünler → <strong>Denetle</strong> ile etkilenen ürünleri yeniden denetleyin.</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> &quot;Koşullu&quot; kip, bizde tek grup olan ama pazaryerinde cinsiyete/yaşa göre ayrılan kategoriler için (Pantolon → Kadın Pantolon / Erkek Pantolon); &quot;Havuz&quot; kip, kategori seçiminin ürüne bakmadan yapılamadığı durumlar için (Bot → Bağcıklı Bot / Outdoor Bot / Günlük Bot).</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Havuz kipinde kaydetmek ürünleri hazır yapmaz; her ürün için aday seçimi mağaza detayındaki <strong>Tamamla</strong> / <strong>Toplu Tamamla</strong> penceresinden yapılır.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Bir özellikte <strong>Serbest geçir</strong> seçeneği soluksa pazaryeri o özellik için serbest metin kabul etmiyordur — Değer eşle ya da Sabit değer kullanın.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> Özellik senkronu yapılmamış bir kategoriye eşleme yapabilirsiniz, ancak Özellik &amp; Değer sekmesinde özellik listesi boş gelir ve ürünler denetimde &quot;Kategori özellikleri henüz indirilmedi&quot; nedeniyle Eksik kalır. Pazaryerleri → <strong>Referans Verisi</strong> → <code>Özellikler + Değerler</code> kapsamını çalıştırın.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> Pazaryeri çipleri soluksa önce Pazaryerleri sayfasından <strong>Referans Verisi</strong> ile kategori ağacını indirin.</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/siparis/pazaryerleri/">Pazaryerleri</a></li>
+<li><a href="/rehber/katalog/urun-gruplari/">Ürün Grupları</a></li>
+<li><a href="/rehber/katalog/ozellik-tipleri/">Özellik Tipleri</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/siparis/pazaryerleri/">← Pazaryerleri</a><a class="sonraki" href="/rehber/cari/cari-kartlar/">Cari Kartlar →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>

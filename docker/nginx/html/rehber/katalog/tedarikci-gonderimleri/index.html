@@ -1,0 +1,252 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tedarikçi Gönderimleri — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="active">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="">Toplama Planlama</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Katalog</span> › <b>Tedarikçi Gönderimleri</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Katalog</div><h1>Tedarikçi Gönderimleri</h1>
+<p class="ozet">Tedarikçilerin dış bağlantı (Partner API) üzerinden gönderdiği ürün kartı tekliflerini inceleme, onaylama veya gerekçeyle reddetme ekranı.</p><p class="rota">Panel adresi: <code>/admin/catalog/product-submissions</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#liste-ve-filtreler">Liste ve filtreler</a><a href="#butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar</a><a href="#detay-sayfasi-inceleme">Detay sayfası (inceleme)</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Tedarikçileriniz, kendilerine tanımlanan dış bağlantı hesabıyla ürün kartı gönderebilir. Bu gönderimler doğrudan
+kataloğa girmez; önce burada <strong>bekleyen</strong> olarak listelenir. Katalog sorumlusu gönderimi inceler, <strong>Onayla</strong> derse
+sistem canlı ürün kartını oluşturur (ya da aynı tedarikçi + tedarikçi ürün kodlu mevcut ürünü günceller), <strong>Reddet</strong>
+derse gerekçe tedarikçiye iletilir. Bu sayfa yalnızca ürün yönetimi yetkisi (<code>catalog.products.manage</code>) olan
+kullanıcılara açıktır; yetkisi olmayanlar sol menüde görmez.</p>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/catalog-product-submissions.webp" class="buyut" data-alt="Tedarikçi Gönderimleri listesi — durum sekmeleri ve gönderim tablosu"><img src="/rehber/img/catalog-product-submissions.webp" alt="Tedarikçi Gönderimleri listesi — durum sekmeleri ve gönderim tablosu" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Tedarikçi Gönderimleri listesi — durum sekmeleri ve gönderim tablosu</figcaption></figure></p>
+<ol>
+<li><strong>Başlık</strong> — &quot;Tedarikçi Gönderimleri&quot; ve &quot;N kayıt · Partner API&#39;den gelen ürün kartı gönderimleri&quot;.</li>
+<li><strong>Durum sekmeleri</strong> — <code>Bekleyen</code> (varsayılan) · <code>Onaylı</code> · <code>Reddedilen</code> · <code>Tümü</code>.</li>
+<li><strong>Tablo</strong> — gönderim satırları; satıra tıklayınca inceleme sayfası açılır.</li>
+<li><strong>Sayfalama</strong> — altta <code>Önceki</code> / <code>Sonraki</code> ve &quot;X / Y&quot; (birden fazla sayfa varsa).</li>
+</ol>
+<h2 id="liste-ve-filtreler">Liste ve filtreler<a class="anchor" href="#liste-ve-filtreler" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ÜRÜN KODU</td>
+<td>Tedarikçinin kendi ürün kodu (gönderimi tanımlayan anahtar).</td>
+</tr>
+<tr>
+<td>AD</td>
+<td>Gönderilen ürün adı (Türkçe; yoksa ilk dil).</td>
+</tr>
+<tr>
+<td>GRUP</td>
+<td>Hedef ürün grubu kodu (tedarikçi grubu kodla seçer).</td>
+</tr>
+<tr>
+<td>VARYANT</td>
+<td>Gönderimdeki varyant sayısı.</td>
+</tr>
+<tr>
+<td>DURUM</td>
+<td><code>Bekliyor</code> (sarı) · <code>Onaylandı</code> (yeşil) · <code>Reddedildi</code> (kırmızı).</td>
+</tr>
+<tr>
+<td>GÖNDERİM</td>
+<td>Gönderim tarihi ve saati.</td>
+</tr>
+<tr>
+<td>ÜRÜN</td>
+<td>Onaylandıysa oluşturulan/güncellenen canlı ürünün kodu; değilse <code>—</code>.</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Filtre</th>
+<th>Ne yapar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Durum sekmeleri</td>
+<td>Listeyi tek duruma indirger; <code>Tümü</code> hepsini gösterir. Sekme değişince sayfa 1&#39;e döner.</td>
+</tr>
+</tbody></table>
+<ul>
+<li>Sayfa başına 20 kayıt. Ayrıca arama/tedarikçi filtresi yoktur.</li>
+<li>Seçili durumda kayıt yoksa &quot;Bu durumda gönderim yok.&quot; yazar.</li>
+<li><strong>Satır tıklama:</strong> inceleme sayfası (<code>/catalog/product-submissions/&lt;id&gt;</code>) açılır.</li>
+</ul>
+<h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Durum sekmeleri</td>
+<td>Tablo üstü</td>
+<td>Listeyi süzer.</td>
+<td><code>catalog.products.manage</code></td>
+</tr>
+<tr>
+<td>Satıra tıklama</td>
+<td>Tablo</td>
+<td>Gönderim inceleme sayfası açılır.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Önceki / Sonraki</td>
+<td>Tablo altı</td>
+<td>Sayfa değiştirir.</td>
+<td>Birden fazla sayfa.</td>
+</tr>
+</tbody></table>
+<h2 id="detay-sayfasi-inceleme">Detay sayfası (inceleme)<a class="anchor" href="#detay-sayfasi-inceleme" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/catalog-product-submissions-detay.webp" class="buyut" data-alt="Gönderim inceleme — başlıkta durum rozeti, Reddet/Onayla butonları, Genel/Özellikler/Varyantlar/Görseller kartları"><img src="/rehber/img/catalog-product-submissions-detay.webp" alt="Gönderim inceleme — başlıkta durum rozeti, Reddet/Onayla butonları, Genel/Özellikler/Varyantlar/Görseller kartları" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Gönderim inceleme — başlıkta durum rozeti, Reddet/Onayla butonları, Genel/Özellikler/Varyantlar/Görseller kartları</figcaption></figure></p>
+<ol>
+<li><strong>Geri bağlantısı</strong> — &quot;‹ Gönderimler&quot; listeye döner.</li>
+<li><strong>Başlık</strong> — tedarikçi ürün kodu + durum rozeti; sağda (yalnız <code>Bekliyor</code> durumunda) <strong>Reddet</strong> ve <strong>Onayla</strong>.</li>
+<li><strong>Sonuç şeridi</strong> — onaylı gönderimde &quot;Canlı ürün oluşturuldu: <kod> — eksik alanlar (fiyat/kategori/görsel) ürün
+kartından tamamlanır.&quot; (kod tıklanabilir, ürün detayını açar); reddedilmişte &quot;<strong>Red gerekçesi:</strong> …&quot;.</li>
+<li><strong>GENEL kartı</strong> — Ad (dil koduyla, örn. &quot;Kırmızı Elbise (tr) · Red Dress (en)&quot;), Grup, varsa Kısa açıklama ve Açıklama.</li>
+<li><strong>ÖZELLİKLER kartı</strong> — gönderilen ürün özellikleri (özellik kodu → değer; çoklu değerler virgülle). Yoksa kart görünmez.</li>
+<li><strong>VARYANTLAR (N) kartı</strong> — tablo: <code>Eksen</code> (örn. &quot;renk: Kırmızı / beden: M&quot;), <code>SKU</code>, <code>Barkod</code>, <code>Stok</code>, <code>Fiyat</code>.</li>
+<li><strong>GÖRSELLER kartı</strong> — gönderilen görsel adresleri küçük resim olarak (yoksa kart görünmez; bozuk adreste yer tutucu).</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Onayla</td>
+<td>Başlık sağı</td>
+<td>Gönderim <code>Onaylandı</code> olur. Aynı tedarikçi + tedarikçi ürün kodu ile canlı ürün <strong>yoksa</strong> yeni ürün kartı oluşturulur (kod <code>PRD-XXXXXXXX</code>, satışa <strong>kapalı</strong>, KDV %18, satış fiyatı = ilk varyantın fiyatı, tedarikçi ve tedarikçi ürün kodu dolu, özellikler/eksen değerleri/varyantlar/görsel adresleri aktarılır). <strong>Varsa</strong> mevcut ürün güncellenir: ad/açıklama/fiyat yenilenir, özellikler yeniden yazılır, varyantlar SKU&#39;ya göre eşlenir (mevcut güncellenir, yeni eklenir, gönderimde olmayan <strong>pasife</strong> alınır — silinmez).</td>
+<td>Durum <code>Bekliyor</code>; <code>catalog.products.manage</code>.</td>
+</tr>
+<tr>
+<td>Reddet</td>
+<td>Başlık sağı</td>
+<td>&quot;Gönderimi Reddet&quot; penceresi açılır; <strong>Red gerekçesi (zorunlu)</strong> metin kutusu (örn. &quot;Görseller yetersiz, ürün adı kurallara uymuyor…&quot;). <strong>Reddet</strong> butonu gerekçe yazılmadan pasiftir; <strong>Vazgeç</strong> pencereyi kapatır. Onaylanınca durum <code>Reddedildi</code>, gerekçe kaydedilir ve tedarikçiye kendi panelinde gösterilir.</td>
+<td>Durum <code>Bekliyor</code>.</td>
+</tr>
+<tr>
+<td>Canlı ürün kodu bağlantısı</td>
+<td>Sonuç şeridi</td>
+<td>Ürün detayını açar.</td>
+<td>Onaylı gönderim.</td>
+</tr>
+</tbody></table>
+<p><figure class="ekran"><a href="/rehber/img/catalog-product-submissions-detay--red-modal.webp" class="buyut" data-alt="Gönderimi Reddet penceresi — zorunlu red gerekçesi"><img src="/rehber/img/catalog-product-submissions-detay--red-modal.webp" alt="Gönderimi Reddet penceresi — zorunlu red gerekçesi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Gönderimi Reddet penceresi — zorunlu red gerekçesi</figcaption></figure></p>
+<p><strong>Hata mesajları (kırmızı şerit):</strong></p>
+<ul>
+<li><code>Gönderim &#39;&lt;durum&gt;&#39; durumunda; yalnız pending onaylanır.</code> / <code>… yalnız pending reddedilir.</code> — gönderim zaten sonuçlanmış.</li>
+<li><code>Grup bulunamadı: &lt;kod&gt;</code> — hedef ürün grubu silinmiş/pasif.</li>
+<li><code>&#39;&lt;değer&gt;&#39; değeri artık havuzda yok (&lt;özellik&gt;)</code> ya da <code>&#39;&lt;değer&gt;&#39; eksen değeri artık havuzda yok (&lt;eksen&gt;)</code> — tedarikçinin
+gönderdiği özellik/eksen değeri sonradan değer havuzundan kaldırılmış; değeri Özellik Tipleri&#39;nden geri ekleyip tekrar onaylayın.</li>
+<li><code>SKU başka bir üründe kullanımda: &lt;sku&gt;</code> — revizyonda SKU çakışması.</li>
+<li><code>Onay başarısız.</code> / <code>Red başarısız.</code> — genel hata.</li>
+</ul>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Durum</th>
+<th>Anlamı / geçiş</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Bekliyor</code> (<code>pending</code>)</td>
+<td>Tedarikçi gönderdi, insan onayı bekliyor. Gönderim bu aşamada tedarikçi tarafından içerik kurallarına göre otomatik doğrulanmıştır (geçersiz gönderimler buraya hiç düşmez). → <code>Onaylandı</code> ya da <code>Reddedildi</code>.</td>
+</tr>
+<tr>
+<td><code>Onaylandı</code> (<code>approved</code>)</td>
+<td>Canlı ürün oluşturuldu/güncellendi; ÜRÜN sütununda kodu yazar. Geri alınamaz; düzeltmeler ürün kartından yapılır.</td>
+</tr>
+<tr>
+<td><code>Reddedildi</code> (<code>rejected</code>)</td>
+<td>Gerekçeyle reddedildi; tedarikçi düzeltip <strong>yeni</strong> gönderim yapabilir.</td>
+</tr>
+</tbody></table>
+<ul>
+<li>Onayla, ürünü <strong>satışa açmaz</strong>; fiyat kontrolü, kanal fiyatları, kategori/menü yerleşimi ve görsellerin kendi
+sunucunuza yüklenmesi ürün kartından tamamlanır, sonra Genel sekmesinden satışa açılır.</li>
+<li>Eşleşme anahtarı <strong>tedarikçi + tedarikçi ürün kodu</strong>dur: aynı tedarikçi aynı kodla tekrar gönderirse onay, mevcut
+ürünü günceller (revizyon). Bu yüzden ürün kartındaki &quot;Tedarikçi Ürün Kodu&quot; alanını elle değiştirmeyin.</li>
+<li>Gönderimdeki stok değeri ürün kartına yazılmaz; tedarikçi stokları ayrı bir stok bildirimiyle, tedarikçiye ait depo
+kısmına işlenir.</li>
+<li>Tedarikçinin gönderim yapabilmesi için Cari modülünde tedarikçi hesabı ve ona bağlı bir dış bağlantı (API) hesabı
+tanımlı olmalıdır; tedarikçi kendi satıcı panelinden gönderimlerinin durumunu ve red gerekçesini görür.</li>
+</ul>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<p><strong>Bekleyen gönderimi onaylama</strong></p>
+<ol>
+<li><strong>Katalog → Tedarikçi Gönderimleri</strong>&#39;ni açın; <code>Bekleyen</code> sekmesi seçilidir.</li>
+<li>Satıra tıklayın; Genel, Özellikler, Varyantlar ve Görseller kartlarını kontrol edin (ad kurallara uygun mu, eksen
+değerleri doğru mu, görseller yeterli mi).</li>
+<li><strong>Onayla</strong>&#39;ya basın. Şeritte &quot;Canlı ürün oluşturuldu: PRD-…&quot; görünür; koda tıklayıp ürün kartına geçin.</li>
+<li>Ürün kartında KDV/fiyat/kanal fiyatı/görselleri tamamlayıp satışa açın.</li>
+</ol>
+<p><strong>Gönderimi reddetme</strong></p>
+<ol>
+<li>İnceleme sayfasında <strong>Reddet</strong>&#39;e basın.</li>
+<li>Açılan pencerede gerekçeyi açık ve uygulanabilir yazın (tedarikçi bunu okuyacak), <strong>Reddet</strong>&#39;i onaylayın.</li>
+<li>Durum <code>Reddedildi</code> olur; tedarikçi düzelttiğinde yeni gönderim <code>Bekleyen</code> sekmesine düşer.</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Onaydan önce gönderimdeki varyant fiyatlarını kendi fiyat politikanızla karşılaştırın; onay sonrası
+ürün satış fiyatı ilk varyantın fiyatı olur ve kanal fiyatları girilmemiş halde gelir.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Onay geri alınamaz. Şüphe varsa önce reddedip düzeltilmiş gönderim isteyin; ya da onaylayıp ürün
+kartında düzeltin (ürün zaten satışa kapalı gelir, müşteri görmez).</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> <code>&#39;… değeri artık havuzda yok&#39;</code> hatası, gönderimle onay arasında özellik değerinin silindiğini gösterir.
+Değeri Özellik Tipleri&#39;nden yeniden ekleyin, sonra tekrar Onayla&#39;ya basın; gönderim <code>Bekliyor</code> durumunda kalmıştır.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> Sol menüde bu sayfayı görmüyorsanız kullanıcınızda ürün yönetimi yetkisi yoktur; yöneticinizden rol/yetki
+isteyin.</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/katalog/urun-kartlari/">Ürün Kartları</a></li>
+<li><a href="/rehber/katalog/urun-detay/">Ürün Detayı</a></li>
+<li><a href="/rehber/katalog/ozellik-tipleri/">Özellik Tipleri</a></li>
+<li><a href="/rehber/katalog/urun-gruplari/">Ürün Grupları</a></li>
+<li><a href="/rehber/cari/cari-kartlar/">Cari Hesaplar</a></li>
+<li><a href="/rehber/sistem/kullanicilar/">API Hesapları</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/katalog/urun-detay/">← Ürün Detayı</a><a class="sonraki" href="/rehber/katalog/toplu-resim-yukleme/">Toplu Resim Yükleme →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>

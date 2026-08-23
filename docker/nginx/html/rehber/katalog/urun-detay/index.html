@@ -1,0 +1,844 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ürün Detayı — ECSPros Admin Paneli Kullanım Rehberi</title><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/rehber/site.css"></head><body><div class="layout">
+<aside><h1><a href="/rehber/">ECSPros Admin Paneli</a></h1><p class="sub">Kullanım Rehberi</p>
+<div class="arama"><input type="search" id="arama" placeholder="Rehberde ara… (sayfa, buton, alan)" autocomplete="off"><div id="arama-sonuc" class="arama-sonuc" hidden></div></div>
+<nav><div class="group">Genel</div><a href="/rehber/genel/panel-yapisi/" class="">Giriş ve Panel Yapısı</a><a href="/rehber/genel/giris/" class="">Giriş</a><a href="/rehber/genel/dashboard/" class="">Dashboard</a><a href="/rehber/genel/proje-talepleri/" class="">Proje Talepleri</a><div class="group">Katalog</div><a href="/rehber/katalog/urun-kartlari/" class="">Ürün Kartları</a><a href="/rehber/katalog/urun-olusturma/" class="">Yeni Ürün Kartı</a><a href="/rehber/katalog/urun-detay/" class="active">Ürün Detayı</a><a href="/rehber/katalog/tedarikci-gonderimleri/" class="">Tedarikçi Gönderimleri</a><a href="/rehber/katalog/toplu-resim-yukleme/" class="">Toplu Resim Yükleme</a><a href="/rehber/katalog/ozellik-tipleri/" class="">Özellik Tipleri</a><a href="/rehber/katalog/urun-gruplari/" class="">Ürün Grupları</a><a href="/rehber/katalog/katalog-ayarlari/" class="">Katalog Ayarları</a><div class="group">Vitrin</div><a href="/rehber/vitrin/kanal-kategorileri/" class="">Kanal Kategorileri</a><a href="/rehber/vitrin/menu-yerlesimi/" class="">Menü Yerleşimi</a><a href="/rehber/vitrin/urun-karti/" class="">Ürün Kartı</a><a href="/rehber/vitrin/takip-ve-cerez/" class="">Takip &amp; Çerez</a><a href="/rehber/vitrin/kanal-urunleri/" class="">Kanal Ürünleri</a><a href="/rehber/vitrin/koleksiyon-moderasyonu/" class="">Koleksiyon Moderasyonu</a><a href="/rehber/vitrin/yorum-moderasyonu/" class="">Yorum Moderasyonu</a><a href="/rehber/vitrin/vitrin-yonetimi/" class="">Vitrin Yönetimi</a><a href="/rehber/vitrin/iletisim-mesajlari/" class="">İletişim Mesajları</a><div class="group">Sipariş Yönetimi</div><a href="/rehber/siparis/siparisler/" class="">Siparişler</a><a href="/rehber/siparis/siparis-detay/" class="">Sipariş Detayı</a><a href="/rehber/siparis/iadeler/" class="">İadeler</a><a href="/rehber/siparis/faturalar/" class="">Faturalar</a><a href="/rehber/siparis/teklifler/" class="">Teklifler</a><a href="/rehber/siparis/numara-serileri/" class="">Numara Serileri</a><a href="/rehber/siparis/kargo-bolgeleri/" class="">Kargo Bölgeleri</a><a href="/rehber/siparis/toplama-planlama/" class="">Toplama Planlama</a><a href="/rehber/siparis/urun-toplama/" class="">Ürün Toplama</a><a href="/rehber/siparis/hizli-hat/" class="">Hızlı Hat (Tek Ürünlü)</a><a href="/rehber/siparis/ara-ayristirma/" class="">Ara Ayrıştırma ve Koli Duvarı</a><a href="/rehber/siparis/masa-ve-paketleme/" class="">Masa ve Paketleme</a><a href="/rehber/siparis/paketleme-istasyonlari/" class="">Paketleme İstasyonları</a><a href="/rehber/siparis/kargo-yonlendirme/" class="">Kargo Yönlendirme</a><a href="/rehber/siparis/pazaryerleri/" class="">Pazaryerleri</a><a href="/rehber/siparis/kategori-ve-ozellik-eslestirme/" class="">Kategori ve Özellik Eşleştirme</a><div class="group">Cari</div><a href="/rehber/cari/cari-kartlar/" class="">Cari Kartlar</a><a href="/rehber/cari/cari-gruplari/" class="">Cari Grupları</a><a href="/rehber/cari/komisyon-yonetimi/" class="">Komisyon Yönetimi</a><div class="group">Müşteriler</div><a href="/rehber/musteriler/uyeler/" class="">Üyeler</a><a href="/rehber/musteriler/uyelik-gruplari/" class="">Üye Grupları</a><div class="group">Stok</div><a href="/rehber/stok/depolar/" class="">Depolar</a><a href="/rehber/stok/stok-takibi/" class="">Stok Takibi</a><a href="/rehber/stok/stok-hareketleri/" class="">Stok Hareketleri (Transferler)</a><div class="group">Pazarlama</div><a href="/rehber/pazarlama/kampanyalar/" class="">Kampanyalar</a><a href="/rehber/pazarlama/kampanya-tipleri/" class="">Kampanya Tipleri</a><a href="/rehber/pazarlama/kuponlar/" class="">Kuponlar</a><a href="/rehber/pazarlama/hediye-karti/" class="">Hediye Kartı</a><a href="/rehber/pazarlama/bildirimler/" class="">Bildirimler</a><a href="/rehber/pazarlama/bulten-aboneleri/" class="">Bülten Aboneleri</a><a href="/rehber/pazarlama/takip-ve-reklam/" class="">Takip &amp; Reklam</a><div class="group">İçerik</div><a href="/rehber/icerik/sayfalar/" class="">İçerik Sayfaları</a><div class="group">Sistem</div><a href="/rehber/sistem/firmalar/" class="">Firmalar</a><a href="/rehber/sistem/satis-kanallari/" class="">Satış Kanalları</a><a href="/rehber/sistem/platform-tipleri/" class="">Platform Tipleri</a><a href="/rehber/sistem/servis-katalogu/" class="">Servis Kataloğu</a><a href="/rehber/sistem/bildirim-sablonlari/" class="">Bildirim Şablonları</a><a href="/rehber/sistem/ceviriler/" class="">Çeviriler</a><a href="/rehber/sistem/diller/" class="">Diller</a><a href="/rehber/sistem/lookup-tipleri/" class="">Lookup Tipleri</a><a href="/rehber/sistem/migration/" class="">Migration</a><a href="/rehber/sistem/kullanicilar/" class="">Kullanıcılar</a><a href="/rehber/sistem/roller-ve-yetkiler/" class="">Roller ve Yetkiler</a><a href="/rehber/sistem/denetim-loglari/" class="">Denetim Logları</a><a href="/rehber/sistem/pos/" class="">POS Satışları ve Kasalar</a><a href="/rehber/sistem/entegrasyon-loglari/" class="">Entegrasyon Logları</a><a href="/rehber/sistem/finans-tedarikci-faturalari/" class="">Tedarikçi Faturaları</a></nav></aside>
+<main><div class="crumbs"><a href="/rehber/">Rehber</a> › <span>Katalog</span> › <b>Ürün Detayı</b></div><article><header class="sayfa-baslik"><div class="grup-etiketi">Katalog</div><h1>Ürün Detayı</h1>
+<p class="ozet">Bir ürün kartının tüm sekmeleri — genel bilgiler ve fiyat, özellikler, varyantlar ve barkod, alt özellikler, stok, satış kanalı fiyatları, görseller/videolar, etiketler ve SEO.</p><p class="rota">Panel adresi: <code>/admin/catalog/products/:code</code></p></header>
+<div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#butonlar-ve-aksiyonlar-ust-baslik">Butonlar ve aksiyonlar (üst başlık)</a><a href="#sekmeler">Sekmeler</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
+<p>Ürün Detayı, tek bir ürün kartının yönetildiği ana ekrandır. Katalog sorumlusu ürünün adını/açıklamasını, fiyatını,
+KDV&#39;sini, özelliklerini, varyantlarını (renk/beden), barkodlarını, görsellerini, kanal bazlı fiyatlarını, etiketlerini
+ve SEO bilgilerini burada tamamlar; ürünü satışa açar ya da kapatır. Yeni açılan her ürün kartı sizi doğrudan bu
+sayfaya getirir. Stok miktarı burada yalnızca <strong>izlenir</strong>; stok girişi Stok modülünden yapılır.</p>
+<h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
+<p><figure class="ekran"><a href="/rehber/img/catalog-products-detay.webp" class="buyut" data-alt="Ürün detayı — üst başlık (görsel, ad, satış rozeti, Kaydet) ve sekme şeridi; Genel sekmesi açık"><img src="/rehber/img/catalog-products-detay.webp" alt="Ürün detayı — üst başlık (görsel, ad, satış rozeti, Kaydet) ve sekme şeridi; Genel sekmesi açık" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Ürün detayı — üst başlık (görsel, ad, satış rozeti, Kaydet) ve sekme şeridi; Genel sekmesi açık</figcaption></figure></p>
+<ol>
+<li><strong>Üst başlık</strong> — solda ürünün kapak görseli (yoksa &quot;IMG&quot;), &quot;Ürünler › <kod>&quot; yol bağlantısı, ürün adı ve <code>Satışta</code> /
+<code>Satış Kapalı</code> rozeti, altında &quot;kod · grup adı · N varyant&quot; satırı. Sağda <strong>Kaydet</strong> butonu ve kayıt sonucu
+(<code>Kaydedildi</code> yeşil / <code>Hata!</code> kırmızı).</li>
+<li><strong>Sekme şeridi</strong> — Genel · Özellikler · Varyantlar (N) · Alt Özellikler · Stok · Satış Kanalları · Görseller ·
+Etiketler · SEO. <strong>Alt Özellikler</strong> sekmesi yalnızca ürün grubunda eksen alt özelliği (örn. bedene bağlı ölçü)
+tanımlıysa görünür.</li>
+<li><strong>İçerik alanı</strong> — seçili sekmenin formu/tablosu. Genel sekmesinde sağda ek bir yan panel vardır.</li>
+</ol>
+<h2 id="butonlar-ve-aksiyonlar-ust-baslik">Butonlar ve aksiyonlar (üst başlık)<a class="anchor" href="#butonlar-ve-aksiyonlar-ust-baslik" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kaydet</td>
+<td>Sağ üst</td>
+<td><strong>Genel</strong> sekmesindeki alanları (adlar, açıklamalar, alış/satış fiyatı, KDV, tedarikçi, tedarikçi ürün kodu) kaydeder. Diğer sekmelerin kendi Kaydet butonları vardır.</td>
+<td>Panele giriş yeterli.</td>
+</tr>
+<tr>
+<td>Ürünler (yol bağlantısı)</td>
+<td>Sol üst</td>
+<td>Ürün Kartları listesine döner.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Sekme başlıkları</td>
+<td>Şerit</td>
+<td>Sekmeyi değiştirir; kaydedilmemiş Genel değişiklikleri sekme değişince kaybolmaz, ancak sayfadan çıkınca kaybolur.</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<h2 id="sekmeler">Sekmeler<a class="anchor" href="#sekmeler" aria-hidden="true">#</a></h2>
+<h3 id="genel">Genel<a class="anchor" href="#genel" aria-hidden="true">#</a></h3>
+<p><figure class="ekran"><a href="/rehber/img/catalog-products-detay.webp" class="buyut" data-alt="Genel sekmesi — Temel Bilgiler, Çok Dilli İçerik ve sağda Satış Durumu / Kayıt Bilgisi / Tehlikeli Alan"><img src="/rehber/img/catalog-products-detay.webp" alt="Genel sekmesi — Temel Bilgiler, Çok Dilli İçerik ve sağda Satış Durumu / Kayıt Bilgisi / Tehlikeli Alan" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Genel sekmesi — Temel Bilgiler, Çok Dilli İçerik ve sağda Satış Durumu / Kayıt Bilgisi / Tehlikeli Alan</figcaption></figure></p>
+<p><strong>Temel Bilgiler kartı</strong></p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ürün Kodu</td>
+<td>—</td>
+<td>Salt okunur; oluşturma sırasında belirlenir, değiştirilemez.</td>
+</tr>
+<tr>
+<td>Ürün Grubu</td>
+<td>—</td>
+<td>Salt okunur; ürünün grubu. Grup değiştirilemez.</td>
+</tr>
+<tr>
+<td>Alış Fiyatı (₺)</td>
+<td>Hayır</td>
+<td>Maliyet. Boş bırakılabilir. Değişiklikler fiyat geçmişine yazılır.</td>
+</tr>
+<tr>
+<td>Satış Fiyatı (₺)</td>
+<td>Evet</td>
+<td>Ürünün ana (baz) satış fiyatı. Altında &quot;Tüm varyantlara baz fiyat olarak yansır&quot; notu: yeni eklenen varyantlar bu fiyatla açılır; kanal fiyatlarında varyantın kendi fiyatı yoksa bu fiyat esas alınır. Tek varsayılan varyantlı üründe (varyant ekseni olmayan grup) fiyat değişince varyanta da otomatik yazılır. Çok varyantlı üründe mevcut varyant fiyatları <strong>değişmez</strong>; onlar Varyantlar sekmesinden düzenlenir.</td>
+</tr>
+<tr>
+<td>KDV (%)</td>
+<td>Evet</td>
+<td>Açılır liste: <code>%0</code>, <code>%1</code>, <code>%8</code>, <code>%10</code>, <code>%18</code>, <code>%20</code>. Varsayılan <code>%18</code>.</td>
+</tr>
+<tr>
+<td>Tedarikçi</td>
+<td>Hayır</td>
+<td>Aranabilir liste; yalnız <strong>aktif, tedarikçi tipli cari hesaplar</strong> &quot;Ünvan (kod)&quot; biçiminde listelenir. Tedarikçi yoksa önce Cari modülünde cari hesap açılmalıdır.</td>
+</tr>
+<tr>
+<td>Tedarikçi Ürün Kodu</td>
+<td>Hayır</td>
+<td>Tedarikçinin kendi ürün kodu; tedarikçi gönderimlerinde eşleşme anahtarıdır.</td>
+</tr>
+</tbody></table>
+<ul>
+<li>Kartın sağ üstündeki <strong>Fiyat Geçmişi</strong> butonu sağdan kayan bir panel açar: <code>TARİH / KİŞİ</code>, <code>KAYNAK</code> (mavi
+<code>Satış Fiyatı</code> / <code>Alış Fiyatı</code> rozeti ya da sarı <strong>kanal kodu</strong> + varyant SKU&#39;su), <code>ESKİ</code>, <code>YENİ</code>, <code>DEĞİŞİM</code>
+(tutar ve yüzde; artış kırmızı, düşüş yeşil). Panel <code>Esc</code> ile, karartılmış alana tıklayarak ya da sağ üstteki
+simgeyle kapanır. Kayıt yoksa &quot;Henüz fiyat değişikliği kaydı bulunmuyor.&quot; yazar.</li>
+</ul>
+<p><strong>Çok Dilli İçerik kartı</strong></p>
+<ul>
+<li>Kart başlığının sağında her dil için bir rozet vardır: o dilde ürün adı girildiyse <code>✓ TR</code> (yeşil), girilmediyse gri <code>EN</code>.</li>
+<li>Altında dil sekmeleri (Türkçe, English …). <strong>Kaynak dil</strong> (varsayılan dil) sekmesinde üç alan alt alta gelir;
+diğer dillerde solda kaynak metin salt okunur, sağda çeviri alanı (&quot;Çeviri girin…&quot;) yan yana gösterilir.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ürün Adı</td>
+<td>Kaynak dilde evet</td>
+<td>Sitede ve listelerde görünen ad. Dolu alan yeşil işaretlenir.</td>
+</tr>
+<tr>
+<td>Kısa Açıklama</td>
+<td>Hayır</td>
+<td>Kart altı / liste açıklaması; SEO meta açıklaması boşsa bu kullanılır.</td>
+</tr>
+<tr>
+<td>Açıklama</td>
+<td>Hayır</td>
+<td>Ürün detay sayfasındaki uzun açıklama.</td>
+</tr>
+</tbody></table>
+<p><strong>Sağ yan panel</strong></p>
+<table>
+<thead>
+<tr>
+<th>Bölüm</th>
+<th>İçerik</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Satış Durumu</td>
+<td><code>Satışta</code> (yeşil) / <code>Satış Kapalı</code> (kırmızı) rozeti.</td>
+</tr>
+<tr>
+<td>Kayıt Bilgisi</td>
+<td>Oluşturulma tarihi, Son Güncelleme (varsa), Varyant sayısı.</td>
+</tr>
+<tr>
+<td>Tehlikeli Alan</td>
+<td><strong>Satışı Kapat / Satışa Aç</strong> ve <strong>Ürünü Sil</strong> butonları (aşağıda).</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Fiyat Geçmişi</td>
+<td>Temel Bilgiler başlığı</td>
+<td>Fiyat değişim panelini açar.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Satışı Kapat / Satışa Aç</td>
+<td>Tehlikeli Alan</td>
+<td>Onay penceresi açılır: &quot;… ürünü satışa kapatılacak — tüm satış kanallarında satışı durur&quot; ya da &quot;satışa açılacak (tüm kanallarda)&quot;. Onaylayınca ürünün genel satış anahtarı anında değişir (Kaydet&#39;e gerek yok). Satışa açarken ürünün <strong>hiç varyantı yoksa</strong> ⚠️ &quot;satılabilir birim varyant olduğu için sitede satın alınamaz&quot; ve <strong>satış fiyatı 0 ise</strong> ⚠️ &quot;fiyatsız ürün satışa açılıyor&quot; uyarıları gösterilir (engellemez).</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Ürünü Sil ⚠️</td>
+<td>Tehlikeli Alan</td>
+<td>&quot;Ürünü Sil&quot; onay penceresi: &quot;&lt;ürün&gt; ürünü ve tüm varyantları silinecek. Bu işlem geri alınamaz.&quot; <strong>Kalıcı Olarak Sil</strong> ile ürün, varyantları ve özellikleri silinir, listeye dönülür. Geçmiş siparişler etkilenmez ama ürün panelde bir daha görünmez.</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<h3 id="ozellikler">Özellikler<a class="anchor" href="#ozellikler" aria-hidden="true">#</a></h3>
+<p><figure class="ekran"><a href="/rehber/img/catalog-products-detay--ozellikler-sekmesi.webp" class="buyut" data-alt="Özellikler sekmesi — grubun ürün özellikleri için seçim listeleri"><img src="/rehber/img/catalog-products-detay--ozellikler-sekmesi.webp" alt="Özellikler sekmesi — grubun ürün özellikleri için seçim listeleri" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Özellikler sekmesi — grubun ürün özellikleri için seçim listeleri</figcaption></figure>
+Ürün grubunda tanımlı, varyant ekseni <strong>olmayan</strong> özellikler (örn. Kumaş, Desen, Marka) burada girilir. Bu değerler
+ürünün tüm varyantları için ortaktır.</p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Her özellik için bir açılır liste</td>
+<td>Grup tanımında zorunluysa <code>*</code></td>
+<td>Seçenekler özellik tipinin değer havuzundan gelir; <code>— Seçiniz —</code> ile boş bırakılabilir.</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kaydet</td>
+<td>Kart başlığı sağı</td>
+<td>Tüm özellik seçimlerini topluca kaydeder; <code>Kaydedildi</code> / <code>Hata!</code> gösterir.</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<ul>
+<li>Grupta hiç özellik yoksa: &quot;Bu ürün grubunda henüz özellik tanımlı değil. Ürün Grupları sayfasından özellik
+ekleyebilirsiniz.&quot; bilgisi görünür.</li>
+<li>Bir özelliğin değer listesi boşsa önce <strong>Özellik Tipleri</strong> sayfasından değer ekleyin.</li>
+</ul>
+<h3 id="varyantlar">Varyantlar<a class="anchor" href="#varyantlar" aria-hidden="true">#</a></h3>
+<p><figure class="ekran"><a href="/rehber/img/catalog-products-detay--varyantlar-sekmesi.webp" class="buyut" data-alt="Varyantlar sekmesi — renk sekmeleri, varyant tablosu, Barkod Oluştur ve + Varyant Ekle"><img src="/rehber/img/catalog-products-detay--varyantlar-sekmesi.webp" alt="Varyantlar sekmesi — renk sekmeleri, varyant tablosu, Barkod Oluştur ve + Varyant Ekle" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Varyantlar sekmesi — renk sekmeleri, varyant tablosu, Barkod Oluştur ve + Varyant Ekle</figcaption></figure>
+Ürünün satılabilir birimleri. Her satır bir SKU&#39;dur. Sekme başlığında varyant sayısı görünür.</p>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SKU</td>
+<td>Varyant kodu. Otomatik üretilir: <code>ÜRÜNKODU-RENK-BEDEN</code> (her eksen değerinin ilk 6 harfi büyük harfle); çakışırsa sonuna 4 karakterlik ek gelir. Varsayılan varyantta SKU = ürün kodu. Panelden düzenlenemez.</td>
+</tr>
+<tr>
+<td>ÖZELLİKLER</td>
+<td>Eksen değerleri rozet olarak; <strong>birincil eksen</strong> (genelde renk) dolu renkli, diğerleri açık renkli. Eksensiz varyantta <code>—</code>.</td>
+</tr>
+<tr>
+<td>BARKOD</td>
+<td>Satır içi metin kutusu. Alandan çıkınca otomatik kaydedilir. Aynı barkod başka varyantta varsa <code>&#39;…&#39; barkodu başka bir varyanta atanmış.</code> hatası döner. Boşsa &quot;Barkod girilmedi&quot;.</td>
+</tr>
+<tr>
+<td>FİYAT (₺)</td>
+<td>Varyantın kendi satış fiyatı; satır içi düzenlenir, alandan çıkınca kaydedilir (<code>✓</code> kısa süre görünür). Her değişiklik fiyat geçmişine yazılır.</td>
+</tr>
+<tr>
+<td>STOK</td>
+<td>Tüm depolardaki <strong>kullanılabilir</strong> (rezerve düşülmüş) toplam miktar; salt okunur.</td>
+</tr>
+<tr>
+<td>DURUM</td>
+<td><code>Aktif</code> / <code>Pasif</code> rozeti; tıklayınca durum değişir (anında kaydedilir). Pasif varyant sitede satılmaz.</td>
+</tr>
+<tr>
+<td>🗑</td>
+<td>Varyantı sil — onay penceresi açar.</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>+ Varyant Ekle</td>
+<td>Kart başlığı sağı</td>
+<td>&quot;Varyant Ekle&quot; penceresi açılır (aşağıda).</td>
+<td>Grupta en az bir varyant ekseni olmalı; yoksa buton görünmez.</td>
+</tr>
+<tr>
+<td>Barkod Oluştur</td>
+<td>Kart başlığı sağı</td>
+<td>Barkodu boş olan tüm varyantlara, barkod seri sayacından ardışık <strong>EAN-13</strong> barkodlar üretip yazar ve kaydeder. Dolu barkodlara dokunmaz.</td>
+<td>En az bir varyant olmalı.</td>
+</tr>
+<tr>
+<td>⚙ (Barkod Seri Ayarı)</td>
+<td>Barkod Oluştur&#39;un yanı</td>
+<td>&quot;Barkod Seri Ayarı&quot; penceresi: <strong>Seri Başlangıç Değeri</strong> (en az 1) girilir; altında &quot;İlk üretilecek EAN-13: …&quot; önizlemesi. Kaydet ile sayaç güncellenir. Bu ayar <strong>tüm mağaza için ortaktır</strong>; üretilen barkodlar sayacı ilerletir.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Default Varyant Oluştur</td>
+<td>Boş durum (eksensiz grup)</td>
+<td>Grupta varyant ekseni yokken 0 varyantlı ürün için özniteliksiz tek varyant açar (SKU = ürün kodu).</td>
+<td>Grup eksensiz ve varyant yok.</td>
+</tr>
+<tr>
+<td>Renk sekmeleri</td>
+<td>Tablonun üstü</td>
+<td>Birincil eksende 2+ değer varsa varyantlar değer bazında sekmelere ayrılır: &quot;Kırmızı (4)&quot;, &quot;Siyah (4)&quot;.</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Varyantı Sil ⚠️</td>
+<td>Satır sonu 🗑</td>
+<td>&quot;Bu varyant kalıcı olarak silinecek. Devam etmek istiyor musunuz?&quot; → <strong>Sil</strong>.</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<p><strong>Varyant Ekle penceresi</strong>
+<figure class="ekran"><a href="/rehber/img/catalog-products-detay--varyant-ekle-modal.webp" class="buyut" data-alt="Varyant Ekle penceresi — eksen değerleri seçimi ve oluşturulacak kombinasyon listesi"><img src="/rehber/img/catalog-products-detay--varyant-ekle-modal.webp" alt="Varyant Ekle penceresi — eksen değerleri seçimi ve oluşturulacak kombinasyon listesi" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Varyant Ekle penceresi — eksen değerleri seçimi ve oluşturulacak kombinasyon listesi</figcaption></figure></p>
+<ul>
+<li>Her varyant ekseni (birincil eksen önce) için değerler <strong>çip</strong> olarak listelenir; tıklayarak seçersiniz, başlıkta
+&quot;(n seçili)&quot; yazar. Üründe zaten kullanılan değerler açılışta seçili gelir.</li>
+<li>Altta &quot;Oluşturulacak kombinasyonlar (N)&quot; kutusunda tüm kombinasyonlar (&quot;Kırmızı / S&quot;, &quot;Kırmızı / M&quot; …) listelenir.</li>
+<li><strong>N Kombinasyon Ekle</strong> butonu yalnızca en az bir kombinasyon varken aktiftir (aksi halde &quot;Kombinasyon Seçin&quot;).</li>
+<li>Zaten var olan kombinasyonlar <strong>atlanır</strong>, yalnız yeniler eklenir. Yeni varyantlar ürünün satış fiyatı ve alış
+fiyatıyla, <code>Aktif</code> olarak açılır. Pasif kombinasyon seçeneği yoktur — seçtiğiniz her kombinasyon oluşturulur.</li>
+<li>Bir eksenin değer listesi boşsa &quot;Bu özellik tipinde değer tanımlı değil.&quot; uyarısı görünür.</li>
+</ul>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> Eksensiz açılmış bir üründe ilk gerçek kombinasyon eklendiğinde mevcut <strong>varsayılan varyant otomatik
+pasife çekilir</strong> (silinmez; geçmiş sipariş/stok kaydı ona bağlı olabilir).</p>
+</blockquote>
+<h3 id="alt-ozellikler">Alt Özellikler<a class="anchor" href="#alt-ozellikler" aria-hidden="true">#</a></h3>
+<p><figure class="ekran"><a href="/rehber/img/catalog-products-detay--alt-ozellikler-sekmesi.webp" class="buyut" data-alt="Alt Özellikler sekmesi — eksen değeri sütunları ve alt özellik satırlarından oluşan ölçü tablosu"><img src="/rehber/img/catalog-products-detay--alt-ozellikler-sekmesi.webp" alt="Alt Özellikler sekmesi — eksen değeri sütunları ve alt özellik satırlarından oluşan ölçü tablosu" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Alt Özellikler sekmesi — eksen değeri sütunları ve alt özellik satırlarından oluşan ölçü tablosu</figcaption></figure>
+Yalnızca ürün grubunda bir varyant eksenine bağlı <strong>alt özellikler</strong> (örn. Beden eksenine bağlı Göğüs, Bel, Boy ölçüsü)
+tanımlıysa görünür. Değerler <strong>eksen değeri başına</strong> girilir ve tüm renklerde paylaşılır (&quot;tüm renkler için aynı beden
+değerleri paylaşılır&quot;).</p>
+<table>
+<thead>
+<tr>
+<th>Öğe</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Sütunlar</td>
+<td>Üründe kullanılan eksen değerleri (S, M, L …) renkli rozet olarak.</td>
+</tr>
+<tr>
+<td>Satırlar</td>
+<td>Alt özellikler (ALT ÖZELLİK sütunu); grup tanımında zorunluysa <code>*</code>.</td>
+</tr>
+<tr>
+<td>Hücreler</td>
+<td>Serbest metin/sayı kutusu (örn. <code>92</code>). Birden fazla eksenin alt özelliği varsa her eksen ayrı tablo başlığıyla listelenir.</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kaydet</td>
+<td>Kart başlığı sağı</td>
+<td>Tüm hücreleri topluca kaydeder.</td>
+<td>Üründe en az bir varyant olmalı (&quot;Alt özellik değeri girmek için önce varyant oluşturun.&quot;). Yazma yetkisi: ürün yönetimi izni (<code>catalog.products.manage</code>).</td>
+</tr>
+</tbody></table>
+<h3 id="stok">Stok<a class="anchor" href="#stok" aria-hidden="true">#</a></h3>
+<p><figure class="ekran"><a href="/rehber/img/catalog-products-detay--stok-sekmesi.webp" class="buyut" data-alt="Stok sekmesi — Toplam/Rezerve/Kullanılabilir özet kartları ve depo bazlı stok tablosu"><img src="/rehber/img/catalog-products-detay--stok-sekmesi.webp" alt="Stok sekmesi — Toplam/Rezerve/Kullanılabilir özet kartları ve depo bazlı stok tablosu" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Stok sekmesi — Toplam/Rezerve/Kullanılabilir özet kartları ve depo bazlı stok tablosu</figcaption></figure>
+Salt okunur izleme ekranıdır.</p>
+<table>
+<thead>
+<tr>
+<th>Öğe</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Toplam</td>
+<td>Tüm varyant ve depolardaki fiziksel miktar toplamı.</td>
+</tr>
+<tr>
+<td>Rezerve</td>
+<td>Onaylanmış siparişler için ayrılmış miktar (sarı).</td>
+</tr>
+<tr>
+<td>Kullanılabilir</td>
+<td>Toplam − Rezerve; satışa sunulabilecek miktar.</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DEPO</td>
+<td>Depo adı.</td>
+</tr>
+<tr>
+<td>VARYANT</td>
+<td>Varyant SKU&#39;su.</td>
+</tr>
+<tr>
+<td>TOPLAM / REZERVE / KULLANILABİLİR</td>
+<td>İlgili depo-varyant satırının miktarları. Rezerve 0&#39;dan büyükse sarı gösterilir.</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Stok Hareketi</td>
+<td>Tablo başlığı sağı</td>
+<td>Stok modülündeki Stoklar sayfasına götürür; giriş/çıkış/düzeltme orada yapılır.</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<p>Stok kaydı yoksa &quot;Stok kaydı bulunamadı.&quot; yazar.</p>
+<h3 id="satis-kanallari">Satış Kanalları<a class="anchor" href="#satis-kanallari" aria-hidden="true">#</a></h3>
+<p><figure class="ekran"><a href="/rehber/img/catalog-products-detay--satis-kanallari-sekmesi.webp" class="buyut" data-alt="Satış Kanalları sekmesi — kanal seçim çipleri, Öne Çıkar paneli ve varyant bazlı kanal fiyat tablosu"><img src="/rehber/img/catalog-products-detay--satis-kanallari-sekmesi.webp" alt="Satış Kanalları sekmesi — kanal seçim çipleri, Öne Çıkar paneli ve varyant bazlı kanal fiyat tablosu" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Satış Kanalları sekmesi — kanal seçim çipleri, Öne Çıkar paneli ve varyant bazlı kanal fiyat tablosu</figcaption></figure>
+Ürünün her satış kanalındaki fiyatı ve öne çıkarma durumu burada yönetilir.</p>
+<p><strong>Kanal seçimi</strong> — Üstte firmalara göre gruplanmış kanal çipleri: 🌐 web sitesi kanalları, 🛒 pazaryeri kanalları. Yalnız
+aktif kanallar listelenir; hiç kanal yoksa &quot;Aktif satış kanalı bulunamadı. Önce Ayarlar → Satış Kanalları&#39;ndan kanal
+oluşturun.&quot; uyarısı görünür.</p>
+<p><strong>Öne Çıkar paneli (seçili kanal için)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Alan / Buton</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Durum rozeti</td>
+<td><code>Sponsorlu — aktif</code> (şu an öne çıkıyor) · <code>Planlı / süresi dolmuş</code> (tarih girilmiş ama aktif değil) · <code>Pasif</code>.</td>
+</tr>
+<tr>
+<td>Başlangıç</td>
+<td>Tarih; boşsa bugün kabul edilir.</td>
+</tr>
+<tr>
+<td>Bitiş (boş = süresiz)</td>
+<td>Tarih; boş bırakılırsa süresiz.</td>
+</tr>
+<tr>
+<td>Öne Çıkar</td>
+<td>Kaydeder. Ürün bu kanalın listelerinde varsayılan sırada öne alınır ve kartta &quot;Sponsorlu&quot; rozeti görünür.</td>
+</tr>
+<tr>
+<td>Kaldır</td>
+<td>Öne çıkarmayı tamamen kaldırır (yalnız tarih girilmişse görünür).</td>
+</tr>
+</tbody></table>
+<p><strong>Fiyat tablosu</strong> — Başlıkta kanal adı, platform tipi ve <strong>kanal kuralı</strong> rozeti:</p>
+<ul>
+<li><code>Kanal kuralı: ×1.20 — tüm varyantlara uygulanır</code>: kanal tanımında çarpan var; varyant özel fiyat girmedikçe ana fiyat × çarpan uygulanır.</li>
+<li><code>Kanal kuralı: Manuel (varyant bazlı)</code>: her varyanta elle fiyat girilir.</li>
+<li><code>Kanal kuralı: Firmadan alınıyor</code>: kanalın kendi kuralı yok; ürün fiyatı geçerli.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Sütun</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>VARYANT</td>
+<td>SKU ve eksen değerleri.</td>
+</tr>
+<tr>
+<td>ANA FİYAT</td>
+<td>Varyantın kendi fiyatı (0 ise ürünün satış fiyatı); salt okunur.</td>
+</tr>
+<tr>
+<td>FİYAT TİPİ</td>
+<td><code>Üründen al</code> (varyant için kanal fiyatı yok — kanal kuralı/ürün fiyatı geçerli) · <code>Manuel</code> (sabit tutar) · <code>Çarpan</code> (ana fiyat × katsayı). Tip değişince tutar alanı sıfırlanır.</td>
+</tr>
+<tr>
+<td>KANAL FİYATI</td>
+<td>Manuel&#39;de ₺ tutar; Çarpan&#39;da <code>×</code> katsayı; Üründen al&#39;da hesaplanan fiyat (kanal çarpanı varsa yeşil ve <code>×1.20</code> rozetli, yoksa ana fiyat italik).</td>
+</tr>
+<tr>
+<td>LİSTE FİYATI</td>
+<td>Üstü çizili gösterilecek &quot;eski/karşılaştırma&quot; fiyatı; boş bırakılabilir. Ana fiyattan yüksekse sitede indirim yüzdesi rozeti çıkar.</td>
+</tr>
+<tr>
+<td>AKTİF</td>
+<td>Onay kutusu; kapatılırsa varyant bu kanalda satılmaz.</td>
+</tr>
+<tr>
+<td>Kaydet</td>
+<td>Satır bazlı kaydetme; kaydedilince <code>Kaydedildi</code> görünür.</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tümünü Kaydet</td>
+<td>Tablo başlığı sağı</td>
+<td>Tüm satırları tek seferde kaydeder.</td>
+<td>Kaydedilmemiş satır olmalı.</td>
+</tr>
+<tr>
+<td>Toplu fiyat → Tüm Varyantlara Uygula</td>
+<td>Tablonun üst şeridi</td>
+<td>Seçilen tipi (Manuel/Çarpan) ve tutarı tüm satırlara yazar; <strong>kaydetmez</strong> — ardından Tümünü Kaydet&#39;e basın. Satırları tek tek düzeltmeye devam edebilirsiniz.</td>
+<td>Tutar girilmiş olmalı.</td>
+</tr>
+</tbody></table>
+<ul>
+<li><strong>Düşük fiyat uyarısı:</strong> Kanal fiyatı ana fiyatın altına düşen varyantlar sarı zeminle ve ⚠️ simgesiyle işaretlenir;
+üstte &quot;N varyant için kanal fiyatı ana fiyatın altında. Kaydedebilirsiniz, ancak bu kanalda zarar satışı oluşabilir.&quot;
+uyarısı çıkar. Kayıt <strong>engellenmez</strong>.</li>
+<li>Kanal fiyat değişiklikleri de <strong>Fiyat Geçmişi</strong> panelinde (sarı kanal rozetiyle) listelenir.</li>
+<li>Ürünün varyantı yoksa &quot;Bu ürünün varyantı bulunmuyor.&quot; yazar.</li>
+</ul>
+<h3 id="gorseller">Görseller<a class="anchor" href="#gorseller" aria-hidden="true">#</a></h3>
+<p><figure class="ekran"><a href="/rehber/img/catalog-products-detay--gorseller-sekmesi.webp" class="buyut" data-alt="Görseller sekmesi — Resimler alt sekmesi: set/varyant seçimi, yükleme alanı ve mevcut resimler"><img src="/rehber/img/catalog-products-detay--gorseller-sekmesi.webp" alt="Görseller sekmesi — Resimler alt sekmesi: set/varyant seçimi, yükleme alanı ve mevcut resimler" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Görseller sekmesi — Resimler alt sekmesi: set/varyant seçimi, yükleme alanı ve mevcut resimler</figcaption></figure>
+İki alt sekmesi vardır: <strong>Resimler</strong> ve <strong>Videolar</strong>. Görseller <strong>resim setleri</strong> (örn. &quot;Varsayılan&quot;, &quot;Manken&quot;, &quot;Ürün&quot;)
+altında tutulur; hiç set tanımlı değilse &quot;Henüz resim seti tanımlanmamış. Katalog Ayarları sayfasından resim seti
+oluşturun.&quot; uyarısı görünür.</p>
+<p><strong>Resimler alt sekmesi</strong></p>
+<table>
+<thead>
+<tr>
+<th>Öğe</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Set: çipleri</td>
+<td>Yükleme yapılacak resim seti; varsayılan set seçili gelir.</td>
+</tr>
+<tr>
+<td>Ana Varyant: çipleri</td>
+<td>Grupta birincil eksen (renk) varsa <code>Ürün Geneli</code> + her renk değeri çip olarak; seçilen renk için yüklenen resimler o rengin tüm bedenlerine aittir.</td>
+</tr>
+<tr>
+<td>Varyant: listesi</td>
+<td>Birincil eksen yoksa ama varyant varsa SKU listesi (<code>Ürün Geneli</code> seçeneğiyle).</td>
+</tr>
+<tr>
+<td>Resim Yükle kartı</td>
+<td>&quot;Tıkla veya sürükle &amp; bırak&quot; alanı — JPG, PNG, WEBP; çoklu seçim. Seçilen dosyalar küçük önizleme olarak listelenir; üzerine gelince ad/boyut ve kaldırma (×) butonu çıkar.</td>
+</tr>
+<tr>
+<td>Mevcut resimleri arşivle (bu set + varyant için)</td>
+<td>Varsayılan <strong>işaretli</strong>. İşaretliyken yükleme onaylandığında aynı set + aynı varyant (veya ürün geneli) için mevcut aktif resimler <strong>arşive</strong> alınır (silinmez).</td>
+</tr>
+<tr>
+<td>Yükle (N)</td>
+<td>Yüklemeyi başlatır; ilerleme çubuğu &quot;Yükleniyor… 3 / 5&quot; gösterir. Bitince &quot;Resimler başarıyla yüklendi.&quot;</td>
+</tr>
+<tr>
+<td>Mevcut Resimler</td>
+<td>Toplam adet; üstte varyant/renk sekmeleri (her sekmede resim sayısı rozeti; hiç resmi olmayan sekmede turuncu nokta &quot;Resim yüklenmemiş&quot;). Her set ayrı başlık altında listelenir; resmi olmayan sette &quot;Resim yok&quot;.</td>
+</tr>
+<tr>
+<td>Resim kartı</td>
+<td><code>Ana</code> rozeti kapak resmini gösterir (kenarlığı renkli). Üzerine gelince: ⭐ <strong>Ana görsel yap</strong> / ⭐ Ana görsel (kaldır) ve 🗑 <strong>Arşivle</strong>.</td>
+</tr>
+</tbody></table>
+<p>Kurallar:</p>
+<ul>
+<li>Dosya adları otomatik verilir: <code>ÜRÜNKODU_SETKODU_VARYANT_xx.uzantı</code>; yerel dosya adı korunmaz.</li>
+<li>Yüklenen ilk resim, o set + varyant için henüz kapak yoksa otomatik <strong>Ana</strong> (kapak) olur; varyanta yüklemede aynı
+zamanda varyant kapağı olur.</li>
+<li>Arşivlenen resim sitede görünmez ama kaybolmaz; ileride panelden geri alınabilir (bu ekranda geri alma butonu yoktur).</li>
+<li>Sitede görseller kart/detay/zoom boyutlarında otomatik sunulur; ayrıca boyut üretmeniz gerekmez. Yüksek çözünürlüklü
+dikey (ürün) fotoğraf yüklemeniz yeterlidir.</li>
+<li>Üst başlıktaki kapak görseli, varyant kapaklarından türetilir ve yükleme sonrası bir sonraki sayfa açılışında güncellenir.</li>
+</ul>
+<p><strong>Videolar alt sekmesi</strong>
+<figure class="ekran"><a href="/rehber/img/catalog-products-detay--videolar-sekmesi.webp" class="buyut" data-alt="Görseller sekmesi — Videolar alt sekmesi: video yükleme, URL ile video ekleme ve mevcut videolar"><img src="/rehber/img/catalog-products-detay--videolar-sekmesi.webp" alt="Görseller sekmesi — Videolar alt sekmesi: video yükleme, URL ile video ekleme ve mevcut videolar" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Görseller sekmesi — Videolar alt sekmesi: video yükleme, URL ile video ekleme ve mevcut videolar</figcaption></figure></p>
+<table>
+<thead>
+<tr>
+<th>Öğe</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Set: çipleri</td>
+<td>Videonun bağlanacağı set.</td>
+</tr>
+<tr>
+<td>Video Yükle kartı</td>
+<td>&quot;Tıkla veya sürükle &amp; bırak&quot; — MP4, WEBM, MOV; çoklu seçim. Seçilenler ad + MB boyutuyla listelenir, × ile kaldırılır.</td>
+</tr>
+<tr>
+<td>Mevcut videoları arşivle (bu set için)</td>
+<td>Varsayılan <strong>işaretsiz</strong>. İşaretlenirse onay sırasında bu setin mevcut videoları arşive alınır.</td>
+</tr>
+<tr>
+<td>Yükle (N)</td>
+<td>Yüklemeyi başlatır; ilerleme çubuğu; &quot;Videolar başarıyla yüklendi.&quot;</td>
+</tr>
+<tr>
+<td>URL ile Video Ekle</td>
+<td><code>https://…/urun.mp4</code> gibi <strong>doğrudan video adresi</strong> (mp4/webm) girilip <strong>Ekle</strong>&#39;ye basılır. Dosya yüklemeye alternatiftir; kayıt anında aktif olur. Geçersiz adreste &quot;Geçerli bir video adresi girin (http/https).&quot; hatası.</td>
+</tr>
+<tr>
+<td>Mevcut Videolar</td>
+<td>Oynatıcıyla listelenir (mp4/webm/ogg oynatılabilir; diğer uzantılarda simge). Sağdaki 🗑 <strong>Arşivle</strong>. Boşsa &quot;Bu set için henüz video yüklenmemiş.&quot;</td>
+</tr>
+</tbody></table>
+<p>Ürün videosu, sitede ürün kartında video rozeti ve detay galerisinde video karesi olarak görünür.</p>
+<h3 id="etiketler">Etiketler<a class="anchor" href="#etiketler" aria-hidden="true">#</a></h3>
+<p><figure class="ekran"><a href="/rehber/img/catalog-products-detay--etiketler-sekmesi.webp" class="buyut" data-alt="Etiketler sekmesi — etiket çipleri ve giriş kutusu"><img src="/rehber/img/catalog-products-detay--etiketler-sekmesi.webp" alt="Etiketler sekmesi — etiket çipleri ve giriş kutusu" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Etiketler sekmesi — etiket çipleri ve giriş kutusu</figcaption></figure>
+Etiketler arama, filtreleme ve segmentasyonda kullanılır.</p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Etiket kutusu</td>
+<td>Hayır</td>
+<td>Yazıp <strong>Enter</strong> ya da <strong>virgül</strong> ile eklenir. Küçük harfe çevrilir, boşluklar <code>-</code> olur (örn. <code>Yaz Koleksiyonu</code> → <code>yaz-koleksiyonu</code>). Aynı etiket ikinci kez eklenmez. Kutu boşken <strong>Backspace</strong> son etiketi siler; çipteki × ile tek etiket kaldırılır. Kutudan çıkınca yarım kalan metin de etikete dönüşür.</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kaydet</td>
+<td>Kart başlığı sağı</td>
+<td>Etiket listesini kaydeder; <code>Kaydedildi</code> / <code>Hata oluştu</code>.</td>
+<td>Listede değişiklik olmalı (yoksa pasif).</td>
+</tr>
+</tbody></table>
+<h3 id="seo">SEO<a class="anchor" href="#seo" aria-hidden="true">#</a></h3>
+<p><figure class="ekran"><a href="/rehber/img/catalog-products-detay--seo-sekmesi.webp" class="buyut" data-alt="SEO sekmesi — URL slug, dil sekmeli meta alanları ve Google önizleme"><img src="/rehber/img/catalog-products-detay--seo-sekmesi.webp" alt="SEO sekmesi — URL slug, dil sekmeli meta alanları ve Google önizleme" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>SEO sekmesi — URL slug, dil sekmeli meta alanları ve Google önizleme</figcaption></figure></p>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>URL Slug</td>
+<td>Hayır</td>
+<td>Ürün sayfasının adresi: <code>/urun/&lt;slug&gt;</code>. Boşken Türkçe addan <strong>otomatik</strong> üretilir (Türkçe karakterler dönüştürülür, yalnız küçük harf-rakam-tire) ve sağda <code>Otomatik</code> etiketi görünür. Elle yazılınca yalnız <code>a-z</code>, <code>0-9</code>, <code>-</code> kabul edilir; <strong>Otomatiğe döndür</strong> bağlantısıyla tekrar otomatiğe alınır. Mağaza genelinde benzersiz olmalıdır.</td>
+</tr>
+<tr>
+<td>Meta Başlık</td>
+<td>Hayır</td>
+<td>Dil sekmeli; sayaç <code>n/60</code>, 60&#39;ı aşınca kırmızı. Boşsa ürün adı kullanılır.</td>
+</tr>
+<tr>
+<td>Meta Açıklama</td>
+<td>Hayır</td>
+<td>Dil sekmeli; sayaç <code>n/160</code>. Boşsa kısa açıklama kullanılır.</td>
+</tr>
+<tr>
+<td>Anahtar Kelimeler</td>
+<td>Hayır</td>
+<td>Virgülle ayrılmış liste.</td>
+</tr>
+</tbody></table>
+<ul>
+<li>Dil sekmelerinde (TR/EN…) o dilde meta başlık ya da açıklama girildiyse küçük bir nokta görünür.</li>
+<li>Sağdaki <strong>Google Önizleme</strong> kartı, seçili dil için adres, başlık ve açıklamanın arama sonucunda nasıl görüneceğini ve
+uzunluk sayaçlarını gösterir.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Buton/Aksiyon</th>
+<th>Nerede</th>
+<th>Ne olur</th>
+<th>Ön koşul / yetki</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kaydet</td>
+<td>Formun altı</td>
+<td>Slug ve meta alanlarını kaydeder. Başarısızsa &quot;Hata — slug çakışıyor olabilir&quot; (sunucu mesajları: &quot;Bu slug başka bir ürün tarafından kullanılıyor.&quot; / &quot;Geçerli bir URL üretilemedi — slug harf/rakam içermeli.&quot;).</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Otomatiğe döndür</td>
+<td>URL Slug başlığı</td>
+<td>Elle girilen slug&#39;ı siler, otomatik slug&#39;a döner.</td>
+<td>Slug elle girilmiş olmalı.</td>
+</tr>
+</tbody></table>
+<h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Durum / kural</th>
+<th>Açıklama</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Satışta</code> / <code>Satış Kapalı</code></td>
+<td>Ürünün <strong>genel</strong> satış anahtarı; kapalıyken hiçbir kanalda satılmaz. Yeni ürün kapalı doğar. Tehlikeli Alan&#39;dan değişir.</td>
+</tr>
+<tr>
+<td>Varyant <code>Aktif</code> / <code>Pasif</code></td>
+<td>Pasif varyant sitede seçilemez/satılamaz; Varyantlar sekmesinde rozete tıklayarak değişir.</td>
+</tr>
+<tr>
+<td>Kanal <code>AKTİF</code> kutusu</td>
+<td>Varyantın o kanalda satılıp satılmayacağı; ürün genel anahtarı açık olsa bile kanalda kapatılabilir.</td>
+</tr>
+<tr>
+<td>Satılabilir birim = varyant</td>
+<td>Sepet, stok ve sipariş her zaman varyanta bağlıdır. Eksensiz grupta varsayılan varyant otomatik açılır; eksenli grupta varyant eklenene kadar ürün taslaktır.</td>
+</tr>
+<tr>
+<td>Varsayılan varyant ↔ kombinasyon</td>
+<td>Özniteliksiz varsayılan varyant ile öznitelikli varyant aynı anda aktif olamaz; ilk kombinasyon eklenince varsayılan pasife çekilir.</td>
+</tr>
+<tr>
+<td>Fiyat sahipliği</td>
+<td>Kanal fiyatı ve sitede gösterilen fiyat <strong>varyant</strong> fiyatından okunur; varyant fiyatı 0 ise ürünün satış fiyatı kullanılır. Tek varsayılan varyantlı üründe Genel&#39;deki satış fiyatı varyanta senkron yazılır.</td>
+</tr>
+<tr>
+<td>Fiyat geçmişi</td>
+<td>Ürün satış/alış fiyatı, varyant fiyatı ve kanal fiyatı değişiklikleri tarih/kişi ile kaydedilir; Genel → Fiyat Geçmişi&#39;nde görülür.</td>
+</tr>
+<tr>
+<td>Barkod</td>
+<td>Elle girilebilir ya da &quot;Barkod Oluştur&quot; ile EAN-13 üretilir; aynı üründe ikisi karışık olabilir. Barkod benzersizdir.</td>
+</tr>
+<tr>
+<td>Görsel durumu</td>
+<td>Yüklenen resim/video <strong>aktif</strong>; &quot;arşivle&quot; ile <strong>arşiv</strong>e alınır (silinmez); yarım kalan yükleme iptal sayılır.</td>
+</tr>
+</tbody></table>
+<h2 id="adim-adim">Adım adım<a class="anchor" href="#adim-adim" aria-hidden="true">#</a></h2>
+<p><strong>Yeni üründe varyant + barkod + fiyat tamamlama</strong></p>
+<ol>
+<li><strong>Genel</strong> sekmesinde satış fiyatı ve KDV&#39;yi girip üstteki <strong>Kaydet</strong>&#39;e basın.</li>
+<li><strong>Varyantlar</strong> sekmesine geçin, <strong>+ Varyant Ekle</strong>&#39;ye tıklayın; renk ve beden değerlerini seçin, &quot;N Kombinasyon Ekle&quot;ye basın.</li>
+<li>Farklı fiyatlı varyant varsa <strong>FİYAT (₺)</strong> hücresini düzenleyin; alandan çıkınca kaydedilir.</li>
+<li><strong>Barkod Oluştur</strong>&#39;a basın; boş barkodlar otomatik dolar. Elinizdeki barkodları ilgili hücrelere yazabilirsiniz.</li>
+<li><strong>Görseller</strong> sekmesinde renk çipini seçip resimleri yükleyin; ilk resim kapak olur.</li>
+<li><strong>Satış Kanalları</strong> sekmesinde kanalı seçip gerekirse fiyat tipini/liste fiyatını girin, <strong>Tümünü Kaydet</strong>&#39;e basın.</li>
+<li><strong>Genel</strong> sekmesi → Tehlikeli Alan → <strong>Satışa Aç</strong>.</li>
+</ol>
+<p><strong>Bir kanalda tüm varyantlara %20 zamlı fiyat verme</strong></p>
+<ol>
+<li><strong>Satış Kanalları</strong> sekmesinde ilgili kanal çipini seçin.</li>
+<li>&quot;Toplu fiyat&quot; şeridinde tipi <strong>Çarpan</strong>, değeri <code>1.2</code> yazın, <strong>Tüm Varyantlara Uygula</strong>&#39;ya basın.</li>
+<li>Satırları kontrol edin (ana fiyatın altına düşen varsa sarı uyarı görünür) ve <strong>Tümünü Kaydet</strong>&#39;e basın.</li>
+</ol>
+<p><strong>Ürünü geçici olarak satıştan kaldırma</strong></p>
+<ol>
+<li><strong>Genel</strong> → sağdaki <strong>Tehlikeli Alan</strong> → <strong>Satışı Kapat</strong>.</li>
+<li>Açılan pencerede <strong>Satışı Kapat</strong>&#39;ı onaylayın; rozet <code>Satış Kapalı</code> olur, tüm kanallarda satış durur.</li>
+<li>Tek bir kanalda durdurmak içinse <strong>Satış Kanalları</strong> sekmesinde ilgili satırların <strong>AKTİF</strong> kutusunu kaldırıp kaydedin.</li>
+</ol>
+<h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Üst başlıktaki <strong>Kaydet</strong> yalnızca Genel sekmesini kaydeder. Özellikler, Alt Özellikler, Etiketler, SEO ve
+kanal fiyatlarının kendi Kaydet butonları vardır; Varyantlar sekmesindeki barkod/fiyat hücreleri ise alandan çıkınca
+kendiliğinden kaydedilir.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> &quot;Ürünü Sil&quot; ve &quot;Varyantı Sil&quot; geri alınamaz. Satışı durdurmak istiyorsanız silmek yerine <strong>Satışı Kapat</strong>
+ya da varyantı <strong>Pasif</strong> yapın; geçmiş sipariş ve stok kayıtları bu kayıtlara bağlıdır.</p>
+</blockquote>
+<blockquote class="callout dikkat">
+<p><strong>Dikkat:</strong> &quot;Mevcut resimleri arşivle&quot; kutusu varsayılan olarak işaretlidir. Mevcut resimlere <strong>ek</strong> resim yüklemek
+istiyorsanız yüklemeden önce kutunun işaretini kaldırın; aksi halde aynı set + varyanttaki eski resimler arşive gider.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> &quot;+ Varyant Ekle&quot; butonu görünmüyorsa ürün grubunda varyant ekseni tanımlı değildir. Ürün Grupları sayfasından
+gruba eksen ekleyin ya da eksensiz ürün için &quot;Default Varyant Oluştur&quot;u kullanın.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> Tedarikçi listesi boşsa Cari modülünde &quot;Tedarikçi&quot; tipinde aktif cari hesap yoktur; önce orada oluşturun.</p>
+</blockquote>
+<blockquote class="callout not">
+<p><strong>Not:</strong> Görseller sekmesi &quot;Henüz resim seti tanımlanmamış&quot; diyorsa Katalog Ayarları&#39;ndan en az bir resim seti
+(biri varsayılan) tanımlanmalıdır.</p>
+</blockquote>
+<h2 id="i-lgili-sayfalar">İlgili sayfalar<a class="anchor" href="#i-lgili-sayfalar" aria-hidden="true">#</a></h2>
+<ul>
+<li><a href="/rehber/katalog/urun-kartlari/">Ürün Kartları</a></li>
+<li><a href="/rehber/katalog/urun-olusturma/">Yeni Ürün Kartı</a></li>
+<li><a href="/rehber/katalog/toplu-resim-yukleme/">Toplu Resim Yükleme</a></li>
+<li><a href="/rehber/katalog/tedarikci-gonderimleri/">Tedarikçi Gönderimleri</a></li>
+<li><a href="/rehber/katalog/urun-gruplari/">Ürün Grupları</a></li>
+<li><a href="/rehber/katalog/ozellik-tipleri/">Özellik Tipleri</a></li>
+<li><a href="/rehber/katalog/katalog-ayarlari/">Katalog Ayarları</a></li>
+<li><a href="/rehber/stok/stok-takibi/">Stoklar</a></li>
+<li><a href="/rehber/cari/cari-kartlar/">Cari Hesaplar</a></li>
+</ul>
+
+<nav class="oncesonra"><a class="onceki" href="/rehber/katalog/urun-olusturma/">← Yeni Ürün Kartı</a><a class="sonraki" href="/rehber/katalog/tedarikci-gonderimleri/">Tedarikçi Gönderimleri →</a></nav></article></main></div>
+<div id="lightbox" hidden><img alt=""><div class="lb-alt"></div></div>
+<script>window.__REHBER_BASE='/rehber/';(function(){
+  var B=window.__REHBER_BASE||'/rehber/';
+  var inp=document.getElementById('arama'),box=document.getElementById('arama-sonuc'),idx=null;
+  function yukle(){ if(idx) return Promise.resolve(idx); return fetch(B+'arama.json').then(function(r){return r.json();}).then(function(d){idx=d;return d;}); }
+  function norm(s){ return (s||'').toLocaleLowerCase('tr-TR'); }
+  function ara(q){ q=norm(q.trim()); if(q.length<2){box.hidden=true;box.innerHTML='';return;}
+    yukle().then(function(d){
+      var sonuc=[]; d.forEach(function(p){ var puan=0; if(norm(p.t).indexOf(q)>=0)puan+=10; if(norm(p.s).indexOf(q)>=0)puan+=4;
+        var hb=(p.h||[]).filter(function(h){return norm(h).indexOf(q)>=0;}); puan+=hb.length*3; if(norm(p.x).indexOf(q)>=0)puan+=1;
+        if(puan>0) sonuc.push({p:p,puan:puan,hb:hb}); });
+      sonuc.sort(function(a,b){return b.puan-a.puan;}); sonuc=sonuc.slice(0,12);
+      box.innerHTML=sonuc.length?sonuc.map(function(s){return '<a href="'+s.p.u+'"><b>'+s.p.t+'</b><small>'+s.p.g+(s.hb.length?' · '+s.hb.slice(0,2).join(', '):'')+'</small></a>';}).join(''):'<div class="bos">Sonuç yok</div>';
+      box.hidden=false; });
+  }
+  if(inp){ inp.addEventListener('input',function(){ara(inp.value);}); inp.addEventListener('focus',function(){ if(inp.value) ara(inp.value); });
+    document.addEventListener('click',function(e){ if(!box.contains(e.target)&&e.target!==inp) box.hidden=true; }); }
+  var lb=document.getElementById('lightbox'); if(lb){ var im=lb.querySelector('img'), alt=lb.querySelector('.lb-alt');
+    document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('a.buyut'); if(!a) return; e.preventDefault(); im.src=a.getAttribute('href'); alt.textContent=a.dataset.alt||''; lb.hidden=false; });
+    lb.addEventListener('click',function(){lb.hidden=true;im.src='';}); document.addEventListener('keydown',function(e){ if(e.key==='Escape'){lb.hidden=true;} }); }
+  var aktif=document.querySelector('aside nav a.active'); if(aktif) aktif.scrollIntoView({block:'center'});
+})();
+</script></body></html>

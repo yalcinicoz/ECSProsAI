@@ -284,6 +284,21 @@ export function Sidebar({ onMobileClose }: SidebarProps) {
         ))}
       </nav>
 
+      {/* ── Kullanım Rehberi (2026-08-23): tüm admin panelleri için ortak statik rehber (/rehber) ── */}
+      <a
+        href="/rehber/"
+        target="_blank"
+        rel="noopener"
+        className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/10 transition-colors flex-shrink-0"
+        style={{ color: 'rgba(255,255,255,.55)', borderTop: '1px solid rgba(255,255,255,.1)' }}
+        title="Kullanım Rehberi (yeni sekmede açılır)"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 flex-shrink-0">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+        {!sidebarCollapsed && <span>Kullanım Rehberi</span>}
+      </a>
+
       {/* ── User ── */}
       <div
         className="flex items-center gap-3 px-3 py-3 flex-shrink-0"
