@@ -1033,8 +1033,16 @@ document.addEventListener("DOMContentLoaded", () => {
                         gorsel: k.imageUrl || "",
                         secenek: (k.optionsText || "").replaceAll(", ", " • "),
                         adet: k.quantity,
-                        tutar: k.lineTotal
-                    }))
+                        tutar: k.lineTotal,
+                        // İE-3 takip (2026-08-22): purchase kalemi — item_id varyant SKU (feed id), birim fiyat, indirim
+                        sku: k.sku || null,
+                        varyantId: k.variantId,
+                        birimFiyat: k.addedPrice,
+                        indirim: k.campaignLineDiscount || 0
+                    })),
+                    // İE-3: purchase event'i için sipariş toplamları (kargo/masraf ayrı)
+                    masraf
+
                 }));
                 sessionStorage.removeItem("msSepetKuponDurumu");
                 sessionStorage.removeItem("msTeslimatDurumu");
@@ -1077,6 +1085,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     });
                     initVeri = await initCevap.json().catch(() => null);
                 } catch { /* ağ hatası — aşağıda ele alınır */ }
+                if (initVeri?.success && initVeri.mock) {
+                    // MOCK ödeme (demo): sipariş anında paid+onaylı işaretlendi — 3D yok.
+                    // Başarı bayrağını koyup tamamlandı sayfasına git (sepet orada temizlenir).
+                    try { sessionStorage.setItem("msKartOdemeBekliyor", veri.data.orderId); } catch { }
+                    window.location.href = "/siparis-tamamlandi";
+                    return;
+                }
                 if (initVeri?.success && initVeri.html) {
                     // Kart ödeme niyeti bayrağı (2026-07-30): PayTR başarı dönüşünde merchant_ok_url'in
                     // query'si (?odeme=basarili) düşüyor — güvenilir sinyal bu sessionStorage bayrağı.

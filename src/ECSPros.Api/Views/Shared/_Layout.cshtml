@@ -1,9 +1,10 @@
 @inject ECSPros.Api.Services.IStoreContext MsLayoutStoreContext
 @{
-    const string markaAdi = "Misharitalia";
-    const string canonicalKok = "https://www.misharitalia.com";
+    var msPlatform = await MsLayoutStoreContext.GetPlatformAsync();
+    var markaAdi = msPlatform?.BrandName ?? "Misharitalia";
+    var canonicalKok = msPlatform?.CanonicalDomain ?? "https://www.misharitalia.com";
     var sayfaBasligi = ViewData["Title"]?.ToString() ?? markaAdi;
-    var metaDescription = ViewData["MetaDescription"]?.ToString() ?? "Misharitalia ile kadın, erkek ve çocuk modasında yeni sezon ürünlerini keşfedin.";
+    var metaDescription = ViewData["MetaDescription"]?.ToString() ?? $"{markaAdi} ile yeni sezon ürünlerini keşfedin.";
     var canonicalPath = ViewData["CanonicalPath"]?.ToString() ?? Context.Request.Path.Value ?? "/";
     canonicalPath = canonicalPath.StartsWith('/') ? canonicalPath : $"/{canonicalPath}";
     var canonicalUrl = $"{canonicalKok}{canonicalPath}";
@@ -103,6 +104,8 @@
     {
         <script type="application/ld+json">@Html.Raw(jsonLd)</script>
     }
+    @* İE-3 (2026-08-22): reklam/analytics takip — kanalda aktif entegrasyon yoksa boş *@
+    <partial name="~/Views/Shared/Store/_TakipBasligi.cshtml" />
 </head>
 @* Görsel hover efekti (2026-08-14): "zoom" seçiliyken kart görseli hover'da büyür,
    galeri gezinmesi kapalıdır (site.js msKartAyarlari.hoverEfekti'ne bakar). *@
@@ -137,6 +140,8 @@
     </main>
 
     <partial name="~/Views/Shared/_Footer.cshtml" />
+    @* İE-3: çerez/consent bandı — yalnız takip entegrasyonu olan kanalda ve tercih yoksa görünür *@
+    <partial name="~/Views/Shared/Store/_TakipCerezBandi.cshtml" />
 
     <environment include="Development">
         <script src="~/js/site.js" asp-append-version="true"></script>

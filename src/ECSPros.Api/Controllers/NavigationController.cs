@@ -362,9 +362,44 @@ public class NavigationController(IMediator mediator) : ControllerBase
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = new { affected = result.Value } });
     }
+
+    // ─── F2 Listeleme durumu (docs/satis-kanali-ortak-kurgu.md §3.2) ─────────────
+
+    /// <summary>Kanalın listeleme durumu özeti: durum ve sebep sayıları (özet çipleri).</summary>
+    [HttpGet("channel-products/{firmPlatformId:guid}/listing-summary")]
+    public async Task<IActionResult> GetListingSummary(
+        Guid firmPlatformId, [FromServices] ECSPros.Api.Services.ChannelListingStatusService svc, CancellationToken ct)
+    {
+        var s = await svc.GetSummaryAsync(firmPlatformId, ct);
+        var reasons = s.ReasonCounts
+            .OrderByDescending(kv => kv.Value)
+            .Select(kv => new { code = kv.Key, label = ECSPros.Api.Services.ChannelListingStatusService.ReasonLabel(kv.Key), count = kv.Value })
+            .ToList();
+        return Ok(new { success = true, data = new { statusCounts = s.StatusCounts, reasons, total = s.Total } });
+    }
+
+    /// <summary>Verilen ürünlerin bu kanaldaki listeleme durumu + sebepleri (liste sayfası rozetleri).</summary>
+    [HttpPost("channel-products/{firmPlatformId:guid}/listing-status")]
+    public async Task<IActionResult> GetListingStatuses(
+        Guid firmPlatformId, [FromBody] ListingStatusRequest req,
+        [FromServices] ECSPros.Api.Services.ChannelListingStatusService svc, CancellationToken ct)
+    {
+        var ids = (req.ProductIds ?? new()).Distinct().Take(500).ToList();
+        var map = await svc.ComputeManyAsync(firmPlatformId, ids, ct);
+        var data = map.ToDictionary(
+            kv => kv.Key,
+            kv => new
+            {
+                status = kv.Value.Status,
+                reasons = kv.Value.Reasons.Select(c => new { code = c, label = ECSPros.Api.Services.ChannelListingStatusService.ReasonLabel(c) }).ToList(),
+            });
+        return Ok(new { success = true, data });
+    }
 }
 
 // ─── Request Records ─────────────────────────────────────────────────────────
+
+public record ListingStatusRequest(List<Guid>? ProductIds);
 
 public record ChannelScopeRequest(string FillType, Dictionary<string, object>? FilterDef);
 public record ChannelScopeManualRequest(List<Guid>? ProductIds, string Action);

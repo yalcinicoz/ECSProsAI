@@ -38,6 +38,12 @@ public abstract class StorePageController : Controller
             .GetRequiredService<ECSPros.Api.Services.Store.IVisitorSegmentResolver>()
             .ResolveAsync(context.HttpContext, uye?.MemberId);
         ViewData["MsSegment"] = segment;
+        // Sosyal giriş (OAuth) — kanalda etkin olan sağlayıcılar (google/facebook);
+        // giriş modalı butonlarını buradan gösterir/gizler. Ayarlar 2 dk cache'li.
+        ViewData["MsSosyalGiris"] = platform is null
+            ? Array.Empty<string>()
+            : await SosyalGirisleriGetirAsync(
+                services, platform.Id, context.HttpContext.RequestAborted);
         // 2026-07-23 mobil kapı cutover'ı: SSR her sayfaya kısa ömürlü web API token'ı gömer
         // (layout meta + global fetch yaması) — /api/store/* artık kimliksiz isteklere kapalı.
         ViewData["MsApiToken"] = services
@@ -66,6 +72,17 @@ public abstract class StorePageController : Controller
         }
 
         await next();
+    }
+
+    private static async Task<IReadOnlyList<string>> SosyalGirisleriGetirAsync(
+        IServiceProvider services, Guid platformId, CancellationToken ct)
+    {
+        var provider = services.GetRequiredService<ECSPros.Shared.Contracts.ISocialLoginSettingsProvider>();
+        var sonuc = new List<string>();
+        foreach (var p in new[] { "google", "facebook" })
+            if (await provider.GetAsync(p, platformId, ct) is not null)
+                sonuc.Add(p);
+        return sonuc;
     }
 
     private static async Task<List<string>?> DuyurulariGetirAsync(

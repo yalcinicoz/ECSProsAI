@@ -36,6 +36,20 @@ interface PagedResult {
   pageSize: number
 }
 
+// F2 listeleme durumu (docs/satis-kanali-ortak-kurgu.md §3.2)
+interface ListingReason { code: string; label: string }
+interface ListingStatus { status: string; reasons: ListingReason[] }
+interface ListingSummary { statusCounts: Record<string, number>; reasons: { code: string; label: string; count: number }[]; total: number }
+const LISTING_LABELS: Record<string, { label: string; variant: 'success' | 'info' | 'warning' | 'danger' | 'neutral' }> = {
+  published:    { label: 'Yayında',     variant: 'success' },
+  ready:        { label: 'Hazır',       variant: 'info' },
+  pending:      { label: 'Bekliyor',    variant: 'info' },
+  missing_info: { label: 'Eksik bilgi', variant: 'warning' },
+  blocked:      { label: 'Engelli',     variant: 'neutral' },
+  failed:       { label: 'Hatalı',      variant: 'danger' },
+  deactivated:  { label: 'Düşürüldü',   variant: 'neutral' },
+}
+
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Tümü' },
   { value: 'selected', label: 'Kanalda' },
@@ -94,6 +108,21 @@ export function ChannelProductsPage() {
     enabled: !!channelId,
   })
   const items = pagedData?.items ?? []
+
+  // F2: özet çipleri + sayfadaki ürünlerin listeleme durumu rozetleri
+  const { data: listingSummary } = useQuery<ListingSummary>({
+    queryKey: ['listing-summary', channelId],
+    queryFn: async () => (await api.get(`/navigation/channel-products/${channelId}/listing-summary`)).data.data,
+    enabled: !!channelId,
+    staleTime: 60_000,
+  })
+  const pageIds = items.map(i => i.productId)
+  const { data: listingMap = {} } = useQuery<Record<string, ListingStatus>>({
+    queryKey: ['listing-status', channelId, pageIds.join(',')],
+    queryFn: async () => (await api.post(`/navigation/channel-products/${channelId}/listing-status`, { productIds: pageIds })).data.data,
+    enabled: !!channelId && pageIds.length > 0,
+  })
+
   const totalCount = pagedData?.totalCount ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
@@ -169,6 +198,24 @@ export function ChannelProductsPage() {
 
       {channelId && (
         <>
+          {/* F2 Özet çipleri (bilgi amaçlı; filtreleme F3'te) */}
+          {listingSummary && (
+            <div className="flex flex-wrap items-center gap-1.5 mb-3 text-xs">
+              <span style={{ color: 'var(--text-s)' }}>Listeleme:</span>
+              {Object.entries(LISTING_LABELS)
+                .filter(([k]) => (listingSummary.statusCounts[k] ?? 0) > 0)
+                .map(([k, m]) => (
+                  <Badge key={k} variant={m.variant}>{m.label} {listingSummary.statusCounts[k]}</Badge>
+                ))}
+              {listingSummary.reasons.slice(0, 4).map(r => (
+                <span key={r.code} className="px-2 py-0.5 rounded-full" title={r.code}
+                  style={{ border: '1px solid var(--border)', color: 'var(--text-s)', background: 'var(--surface)' }}>
+                  {r.label}: {r.count}
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* Filtre çubuğu */}
           <div className="card mb-4 flex flex-wrap items-end gap-3">
             <div className="flex-1 min-w-[220px]">
@@ -236,6 +283,7 @@ export function ChannelProductsPage() {
                     <th className="px-2 py-3 w-14"></th>
                     <th className="px-2 py-3">Ürün</th>
                     <th className="px-4 py-3">Kanal Durumu</th>
+                    <th className="px-4 py-3">Listeleme</th>
                     <th className="px-4 py-3 text-right">İşlem</th>
                   </tr>
                 </thead>
@@ -261,6 +309,25 @@ export function ChannelProductsPage() {
                             ? <Badge variant="warning">Durduruldu{it.saleStoppedUntil ? ` — ${new Date(it.saleStoppedUntil).toLocaleDateString('tr-TR')} kadar` : ''}</Badge>
                             : <Badge variant="success">Kanalda</Badge>}
                       </td>
+                      <td className="px-4 py-2">
+                        {(() => {
+                          const ls = listingMap[it.productId]
+                          if (!ls) return <span className="text-xs" style={{ color: 'var(--text-s)' }}>…</span>
+                          const m = LISTING_LABELS[ls.status] ?? { label: ls.status, variant: 'neutral' as const }
+                          const sebep = ls.reasons.filter(r => !['channel_excluded', 'sale_stopped'].includes(r.code))
+                          return (
+                            <div>
+                              <Badge variant={m.variant}>{m.label}</Badge>
+                              {sebep.length > 0 && (
+                                <div className="text-xs mt-0.5 max-w-[260px] truncate" title={sebep.map(r => r.label).join(' · ')}
+                                  style={{ color: 'var(--text-s)' }}>
+                                  {sebep.map(r => r.label).join(' · ')}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()}
+                      </td>
                       <td className="px-4 py-2 text-right">
                         {it.isSelected
                           ? <button className="text-xs underline" style={{ color: 'var(--text-m)' }} disabled={busy}
@@ -271,7 +338,7 @@ export function ChannelProductsPage() {
                     </tr>
                   ))}
                   {items.length === 0 && (
-                    <tr><td colSpan={5} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
+                    <tr><td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
                       Kayıt bulunamadı.
                     </td></tr>
                   )}

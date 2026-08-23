@@ -11,7 +11,14 @@
         </button>
 
         <a class="ms-ana-navigasyon-logo-link" asp-controller="Home" asp-action="Index">
+@if ((sepetPlatform?.BrandName ?? "Misharitalia") == "Misharitalia")
+{
             <img class="ms-ana-navigasyon-logo" src="/images/site_logo-144.png" alt="Mishar Italia" width="144" height="21" decoding="async">
+}
+else
+{
+            <strong class="ms-ana-navigasyon-logo">@sepetPlatform!.BrandName.ToUpperInvariant()</strong>
+}
         </a>
 
         <partial name="~/Views/ProjeElementleri/Navigasyon/_AnaNavigasyonSearch.cshtml" />

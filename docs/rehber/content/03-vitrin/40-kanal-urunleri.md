@@ -21,6 +21,10 @@ aralıklı "öne çıkar (Sponsorlu)" bayrağı ise ürün kartı detay sayfası
 4. **Toplu işlem çubuğu** — yalnız en az bir satır seçiliyken görünür.
 5. **Ürün tablosu** ve altta sayfalama (30 satır/sayfa).
 
+Filtre çubuğunun üstündeki **Listeleme özeti** satırı kanalın tamamı için durum ve en sık sebep sayılarını
+gösterir (örn. `Yayında 5.792` · `Engelli 11.309` · "Kanal stoğu yok: 10.972"). Sayılar birkaç dakikalık
+önbellekten gelir; sebebe göre filtreleme ileride eklenecektir.
+
 ## Liste ve filtreler
 | Sütun | Anlamı |
 |---|---|
@@ -28,6 +32,7 @@ aralıklı "öne çıkar (Sponsorlu)" bayrağı ise ürün kartı detay sayfası
 | (görsel) | Ürünün ana görseli. |
 | Ürün | Ürün adı ve altında kodu. |
 | Kanal Durumu | `Kanalda` (yeşil), `Durduruldu — gg.aa.yyyy kadar` (sarı; bitiş yoksa yalnız `Durduruldu`), `Kanaldan çıkarıldı` (gri). |
+| Listeleme | Ürünün bu kanalda **fiilen** yayında/satışta olup olmadığı: `Yayında` (yeşil) · `Hazır` (mavi, pazaryerine yüklenebilir) · `Bekliyor` (yükleme kuyruğunda) · `Eksik bilgi` (sarı) · `Engelli` (gri; çıkarıldı/durduruldu/satış kapalı/stok yok) · `Hatalı` (kırmızı, yükleme hatası) · `Düşürüldü`. Rozetin altında kısa sebepler yazar (örn. "Kanal stoğu yok · Kategori eşlemesi yok"). |
 | İşlem | Satır bazlı hızlı bağlantı: kanaldaysa **Çıkar**, değilse **Kanala al**. |
 
 | Filtre | Ne yapar |

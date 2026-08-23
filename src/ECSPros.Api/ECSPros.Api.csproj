@@ -57,4 +57,9 @@
     <ProjectReference Include="..\Modules\Storefront\ECSPros.Storefront.Application\ECSPros.Storefront.Application.csproj" />
   </ItemGroup>
 
+  <!-- Türkiye adres hiyerarşisi referans verisi (il/ilçe/mahalle) — SeedGeoAsync ile taze DB'ye yüklenir -->
+  <ItemGroup>
+    <Content Include="Data\Geo\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

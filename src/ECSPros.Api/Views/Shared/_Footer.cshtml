@@ -2,7 +2,9 @@
    kök label node = kolon başlığı, çocuk link node'ları = bağlantılar); menü tanımlı
    değilse tasarımın statik kolonları basılır. Bülten formu POST /api/store/newsletter'a
    bağlı. Mobil uygulama/sosyal linkler statik '#' (gerçek URL'ler config/Faz G). *@
+@inject ECSPros.Api.Services.IStoreContext MsFooterStoreContext
 @{
+    var msFooterMarkaAdi = (await MsFooterStoreContext.GetPlatformAsync())?.BrandName ?? "Misharitalia";
     var msFooterMenu = ViewData["MsFooterMenu"]
         as ECSPros.Storefront.Application.Queries.GetNavigationMenuDetail.NavigationMenuDetailDto;
     var msFooterKolonlar = msFooterMenu?.Nodes?.Where(n => n.Children.Count > 0).ToList();
@@ -16,13 +18,20 @@
 <footer class="ms-footer">
     <div class="ms-footer-ust">
         <section class="ms-footer-marka-kolon" aria-labelledby="ms-footer-marka-baslik">
-            <a class="ms-footer-logo" href="/ana-sayfa" aria-label="Mishar Italia ana sayfa">
+            <a class="ms-footer-logo" href="/ana-sayfa" aria-label="@msFooterMarkaAdi ana sayfa">
+@if (msFooterMarkaAdi == "Misharitalia")
+{
                 <span>MISHAR</span>
                 <strong>ITALIA</strong>
+}
+else
+{
+                <strong>@msFooterMarkaAdi.ToUpperInvariant()</strong>
+}
             </a>
-            <h2 id="ms-footer-marka-baslik" class="ms-footer-baslik">Misharitalia ile alışveriş daha net.</h2>
+            <h2 id="ms-footer-marka-baslik" class="ms-footer-baslik">@msFooterMarkaAdi ile alışveriş daha net.</h2>
             <p class="ms-footer-aciklama">Yeni sezon ürünleri, sipariş takibi ve üyelik avantajlarını tek yerden yönetin.</p>
-            <div class="ms-footer-guven-listesi" aria-label="Misharitalia hizmet avantajları">
+            <div class="ms-footer-guven-listesi" aria-label="@msFooterMarkaAdi hizmet avantajları">
                 <span><i class="fa-solid fa-shield-halved ms-fa-ikon" aria-hidden="true"></i> Güvenli alışveriş</span>
                 <span><i class="fa-solid fa-rotate-left ms-fa-ikon" aria-hidden="true"></i> Kolay iade</span>
                 <span><i class="fa-solid fa-truck-fast ms-fa-ikon" aria-hidden="true"></i> Hızlı teslimat</span>
@@ -83,7 +92,7 @@
 
         <section class="ms-footer-sag" aria-labelledby="ms-footer-bulten-baslik">
             <div class="ms-footer-bulten-kutu">
-                <span class="ms-footer-eyebrow">Misharitalia haberleri</span>
+                <span class="ms-footer-eyebrow">@msFooterMarkaAdi haberleri</span>
                 <h2 id="ms-footer-bulten-baslik" class="ms-footer-baslik">Fırsatları kaçırmayın</h2>
                 <p class="ms-footer-aciklama">Yeni ürün, kampanya ve kupon bildirimlerini almak için kaydolun.</p>
                 <form class="ms-footer-form" data-ms-bulten-form>
@@ -134,6 +143,8 @@
                 <a href="/gizlilik-ve-guvenlik">Gizlilik ve Güvenlik</a>
                 <a href="/kullanim-kosullari">Kullanım Koşulları</a>
                 <a href="/iletisim">Destek</a>
+                @* İE-6 (2026-08-22): çerez tercihlerini yeniden açma (GDPR "dilediğin zaman geri çek") — banner partial'ı dinler *@
+                <a href="#" data-ms-cerez-tercih rel="nofollow">Çerez Tercihleri</a>
             </nav>
         </div>
     </div>

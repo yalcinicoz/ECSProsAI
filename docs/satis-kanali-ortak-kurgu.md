@@ -8,6 +8,12 @@
 > kapsam kararı sorumluların işi, günlük operasyon ekranına konmaz — K9'a ek); (4) kural şemasına
 > **ExcludedProductGroupIds** eklendi ("tümü, şu gruplar hariç"); (5) pazaryeri aday SQL'i storefront ile aynı
 > görünürlük anlamına geçti (K10 kapandı). İzole 5051 kabul testleri ✓ (kanal başına sayılar birebir).
+> **F2 Listeleme durumu UYGULANDI (2026-08-23) ⚠️ restart bekliyor:** `Api/Services/ChannelListingStatusService`
+> (cross-schema raw-SQL + 2 dk IMemoryCache anlık görüntü; **denormalize kolon YOK** — hibrit kapsam satırsız `all`
+> kanallarında denormalizasyon anlamsız, §2.2'den bilinçli sapma; readiness motoruna `blocked` EKLENMEDİ — blocked
+> durumu bu hesaplayıcıda katman-2+stok+satış kapalıdan türetilir). Uçlar: `listing-summary` (özet çipler),
+> `listing-status` (ürün bazlı, ≤500). Panel: Kanal Ürünleri'nde Listeleme sütunu + özet satırı. Çapraz doğrulama:
+> mishar `published`=5.792 = Merchant feed ürün sayısı. K15 olay tabanlı readiness tetiği hâlâ açık (F8'e).
 > F0 Yetenek modeli **UYGULANDI (2026-08-23)** — `ChannelCapabilities` (Shared.Contracts/Channels) + `IChannelCapabilityResolver` (Core.Infrastructure, 2 dk IMemoryCache), `core_platform_types.capabilities` / `core_firm_platforms.capability_overrides` (jsonb, migration `AddChannelCapabilities` canlı DB'de uygulandı), seed: `dropship_partner` tipi + koda göre backfill (idempotent), `IsMarketplace` artık `pushListing`'den türetilir (kolon korunur), admin: Platform Tipleri yetenek editörü (3 şablon butonu), kanal formu ezme editörü (4 alan) + kart/tablo rozetleri, rehber sayfaları güncellendi. İzole 5051 testi ✓ (ezme yazma/sanitize/negatif/temizleme, tip güncelleme, türetme). **Sırada F1 Kapsam.**
 > Alan: 🛠 **Admin panel** (pano #2) + zorunlu çekirdek dokunuşları (Core/Storefront/Integration/Catalog) +
 > 🔌 Dış API (pano #3) ile kesişen noktalar işaretlidir.

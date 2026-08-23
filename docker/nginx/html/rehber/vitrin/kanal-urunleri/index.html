@@ -21,6 +21,9 @@ aralıklı &quot;öne çıkar (Sponsorlu)&quot; bayrağı ise ürün kartı deta
 <li><strong>Toplu işlem çubuğu</strong> — yalnız en az bir satır seçiliyken görünür.</li>
 <li><strong>Ürün tablosu</strong> ve altta sayfalama (30 satır/sayfa).</li>
 </ol>
+<p>Filtre çubuğunun üstündeki <strong>Listeleme özeti</strong> satırı kanalın tamamı için durum ve en sık sebep sayılarını
+gösterir (örn. <code>Yayında 5.792</code> · <code>Engelli 11.309</code> · &quot;Kanal stoğu yok: 10.972&quot;). Sayılar birkaç dakikalık
+önbellekten gelir; sebebe göre filtreleme ileride eklenecektir.</p>
 <h2 id="liste-ve-filtreler">Liste ve filtreler<a class="anchor" href="#liste-ve-filtreler" aria-hidden="true">#</a></h2>
 <table>
 <thead>
@@ -44,6 +47,10 @@ aralıklı &quot;öne çıkar (Sponsorlu)&quot; bayrağı ise ürün kartı deta
 <tr>
 <td>Kanal Durumu</td>
 <td><code>Kanalda</code> (yeşil), <code>Durduruldu — gg.aa.yyyy kadar</code> (sarı; bitiş yoksa yalnız <code>Durduruldu</code>), <code>Kanaldan çıkarıldı</code> (gri).</td>
+</tr>
+<tr>
+<td>Listeleme</td>
+<td>Ürünün bu kanalda <strong>fiilen</strong> yayında/satışta olup olmadığı: <code>Yayında</code> (yeşil) · <code>Hazır</code> (mavi, pazaryerine yüklenebilir) · <code>Bekliyor</code> (yükleme kuyruğunda) · <code>Eksik bilgi</code> (sarı) · <code>Engelli</code> (gri; çıkarıldı/durduruldu/satış kapalı/stok yok) · <code>Hatalı</code> (kırmızı, yükleme hatası) · <code>Düşürüldü</code>. Rozetin altında kısa sebepler yazar (örn. &quot;Kanal stoğu yok · Kategori eşlemesi yok&quot;).</td>
 </tr>
 <tr>
 <td>İşlem</td>

@@ -35,6 +35,13 @@ korur, all'a dönüş 17101 (test kalıntıları silindi). Publish alındı. **2
 (sidebar "Kanal Kapsamı"; Kanal Ürünleri'nden sekme kaldırıldı — günlük operasyonla kapsam kararı ayrıştı) +
 filtreye **Hariç Tutulan Ürün Grupları** (ExcludedProductGroupIds — "tümü, iç çamaşırı hariç"; kategori/kampanya
 filtrelerinde de kullanılabilir) + rehber sayfası `vitrin/kanal-kapsami` (build ✓). İzole 5051: grup(398)+hariç(16703)=katalog(17101) ✓.
+**F2 LİSTELEME DURUMU UYGULANDI (2026-08-23) ⚠️ restart bekliyor; SIRADA F3 ekran:** `ChannelListingStatusService`
+(Api/Services; cross-schema raw-SQL, 2 dk cache, denormalize kolon YOK — plan v1.2 notu): durumlar
+published/ready/pending/missing_info/blocked/failed/deactivated + sebep kataloğu (channel_excluded, sale_stopped,
+sale_closed, out_of_stock=K17 formülü, price_zero, no_channel_price, readiness kodları, push_failed:<kod>);
+uçlar `GET .../listing-summary` + `POST .../listing-status`; panel Kanal Ürünleri'ne Listeleme sütunu + özet
+çipleri (npm build ✓); rehber Kanal Ürünleri güncellendi. İzole 5051 ✓: mishar published=5.792 (Merchant feed ile
+birebir), julude çıkarılan→blocked/channel_excluded, trendyol readiness sebepleri (no_category_mapping 16.087).
 
 F0 (yetenek modeli): `Shared.Contracts/Channels/ChannelCapabilities.cs` (+`IChannelCapabilityResolver`, Core.Infrastructure impl.
 2 dk IMemoryCache), `core_platform_types.capabilities` + `core_firm_platforms.capability_overrides` jsonb (migration

@@ -1,0 +1,82 @@
+Id,CountryId,Code,NameI18n,IsActive,SortOrder,CreatedAt,CreatedBy,UpdatedAt,UpdatedBy,IsDeleted,DeletedAt,DeletedBy,Region
+fc0f7e12-4b89-40a3-86c4-d5d3c07779db,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,01,"{""tr"": ""Adana""}",t,1,2026-07-09 13:27:17.006188+00,,,,f,,,Akdeniz
+2749d0af-da2f-4abe-92e9-60a697890699,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,02,"{""tr"": ""Adıyaman""}",t,2,2026-07-09 13:27:17.006188+00,,,,f,,,Güneydoğu Anadolu
+2b498881-6b41-487a-bcb3-a848b2c0fe49,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,03,"{""tr"": ""Afyonkarahisar""}",t,3,2026-07-09 13:27:17.006188+00,,,,f,,,Ege
+71538481-02ae-44f7-aece-9aa0837a517e,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,04,"{""tr"": ""Ağrı""}",t,4,2026-07-09 13:27:17.006188+00,,,,f,,,Doğu Anadolu
+2c8e604f-c059-45d7-88ed-764b99fe4764,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,68,"{""tr"": ""Aksaray""}",t,68,2026-07-09 13:27:17.006188+00,,,,f,,,İç Anadolu
+4eb42539-2a51-44ab-9654-0e088f831535,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,05,"{""tr"": ""Amasya""}",t,5,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+0743095c-7ab3-49da-b66e-0aa50d68afcc,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,06,"{""tr"": ""Ankara""}",t,6,2026-07-09 13:27:17.006188+00,,,,f,,,İç Anadolu
+30b59edc-d480-4e7b-a6b6-d3e3fe3e7652,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,07,"{""tr"": ""Antalya""}",t,7,2026-07-09 13:27:17.006188+00,,,,f,,,Akdeniz
+fd8d3a47-bacc-446f-80ea-2a2567ff122b,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,75,"{""tr"": ""Ardahan""}",t,75,2026-07-09 13:27:17.006188+00,,,,f,,,Doğu Anadolu
+e1c87546-0006-4cad-acdc-3dc7831010e9,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,08,"{""tr"": ""Artvin""}",t,8,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+823e5a39-cfc9-4b16-b7ba-aaae906d9151,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,09,"{""tr"": ""Aydın""}",t,9,2026-07-09 13:27:17.006188+00,,,,f,,,Ege
+12083258-7fb8-4d78-8374-898a4125a2f5,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,10,"{""tr"": ""Balıkesir""}",t,10,2026-07-09 13:27:17.006188+00,,,,f,,,Marmara
+66576d1c-ea7a-4da3-b410-e2a5b4cb33f2,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,74,"{""tr"": ""Bartın""}",t,74,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+1d0af5a7-ca28-4714-879d-6d49e475945d,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,72,"{""tr"": ""Batman""}",t,72,2026-07-09 13:27:17.006188+00,,,,f,,,Güneydoğu Anadolu
+f5d2a954-35e7-4f36-b445-747cd95f4e1d,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,69,"{""tr"": ""Bayburt""}",t,69,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+6111521c-4638-488a-8a3c-b000e148130e,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,11,"{""tr"": ""Bilecik""}",t,11,2026-07-09 13:27:17.006188+00,,,,f,,,Marmara
+d8d49624-3cdf-430d-9805-26aa29191387,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,12,"{""tr"": ""Bingöl""}",t,12,2026-07-09 13:27:17.006188+00,,,,f,,,Doğu Anadolu
+4b4da06f-582e-43b8-945d-b488ac0f7b90,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,13,"{""tr"": ""Bitlis""}",t,13,2026-07-09 13:27:17.006188+00,,,,f,,,Doğu Anadolu
+b0ee5218-4cd2-4662-b7d0-2e6c6b233675,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,14,"{""tr"": ""Bolu""}",t,14,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+add1e23e-e2f3-41cf-917b-d129cc18a282,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,15,"{""tr"": ""Burdur""}",t,15,2026-07-09 13:27:17.006188+00,,,,f,,,Akdeniz
+0fcc7462-a6e1-4867-9d9f-a3f73de618d3,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,16,"{""tr"": ""Bursa""}",t,16,2026-07-09 13:27:17.006188+00,,,,f,,,Marmara
+0507b122-4965-4b85-aa78-08c511c77a88,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,17,"{""tr"": ""Çanakkale""}",t,17,2026-07-09 13:27:17.006188+00,,,,f,,,Marmara
+d1d7f1b4-b7c9-4c24-a609-37bb85d4c55d,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,18,"{""tr"": ""Çankırı""}",t,18,2026-07-09 13:27:17.006188+00,,,,f,,,İç Anadolu
+46e2c2b8-7f19-4310-870a-546ce0c9c0b4,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,19,"{""tr"": ""Çorum""}",t,19,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+393f10de-7ae6-44fb-99a4-09bcb03dad2d,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,20,"{""tr"": ""Denizli""}",t,20,2026-07-09 13:27:17.006188+00,,,,f,,,Ege
+e6f41150-f0a4-4b8c-8641-030c006bee74,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,21,"{""tr"": ""Diyarbakır""}",t,21,2026-07-09 13:27:17.006188+00,,,,f,,,Güneydoğu Anadolu
+fa605728-f1c5-4356-bda5-b7778fb15810,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,81,"{""tr"": ""Düzce""}",t,81,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+09685d3c-67bf-4005-b4fa-e1d49c169576,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,22,"{""tr"": ""Edirne""}",t,22,2026-07-09 13:27:17.006188+00,,,,f,,,Marmara
+0505a606-d0f9-4173-b1e2-8ea2a46f90cb,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,23,"{""tr"": ""Elazığ""}",t,23,2026-07-09 13:27:17.006188+00,,,,f,,,Doğu Anadolu
+fdb92f15-3bcd-4460-a656-9e78eff8b718,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,24,"{""tr"": ""Erzincan""}",t,24,2026-07-09 13:27:17.006188+00,,,,f,,,Doğu Anadolu
+20e6e96c-51d8-4f4d-a6af-c50f365e0339,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,25,"{""tr"": ""Erzurum""}",t,25,2026-07-09 13:27:17.006188+00,,,,f,,,Doğu Anadolu
+7ed72a78-7c87-44bf-adc5-e8833025c1c1,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,26,"{""tr"": ""Eskişehir""}",t,26,2026-07-09 13:27:17.006188+00,,,,f,,,İç Anadolu
+1eaace54-1569-4083-a7ae-5e9fd1bc0ac2,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,27,"{""tr"": ""Gaziantep""}",t,27,2026-07-09 13:27:17.006188+00,,,,f,,,Güneydoğu Anadolu
+8d17bd12-a5ff-4389-a18e-bf698f43ae74,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,28,"{""tr"": ""Giresun""}",t,28,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+a2755f5d-c9c5-4cf9-927e-be16ec1b56ef,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,29,"{""tr"": ""Gümüşhane""}",t,29,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+710065af-6386-4403-a203-05daa6689f7a,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,30,"{""tr"": ""Hakkari""}",t,30,2026-07-09 13:27:17.006188+00,,,,f,,,Doğu Anadolu
+d69c4851-e7f0-4a37-9cb7-57d4ab2e19c6,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,31,"{""tr"": ""Hatay""}",t,31,2026-07-09 13:27:17.006188+00,,,,f,,,Akdeniz
+42cb65f7-6ad7-4269-b11d-3c387383d34c,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,76,"{""tr"": ""Iğdır""}",t,76,2026-07-09 13:27:17.006188+00,,,,f,,,Doğu Anadolu
+8f306969-c494-4c93-897d-39bf44abf5e7,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,32,"{""tr"": ""Isparta""}",t,32,2026-07-09 13:27:17.006188+00,,,,f,,,Akdeniz
+bb9020e3-c06b-45ba-b0f2-440f8f935fc7,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,34,"{""tr"": ""İstanbul""}",t,34,2026-07-09 13:27:17.006188+00,,,,f,,,Marmara
+bbf8e575-3968-4803-ba62-a9b7ad5b1021,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,35,"{""tr"": ""İzmir""}",t,35,2026-07-09 13:27:17.006188+00,,,,f,,,Ege
+4624e6fd-bea7-40d2-a4cb-412f6f90c0d4,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,46,"{""tr"": ""Kahramanmaraş""}",t,46,2026-07-09 13:27:17.006188+00,,,,f,,,Akdeniz
+a28df7fa-2759-4f4c-9f06-31d533ac75a8,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,78,"{""tr"": ""Karabük""}",t,78,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+8e73fb44-b537-4240-b244-6a57d1ec209c,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,70,"{""tr"": ""Karaman""}",t,70,2026-07-09 13:27:17.006188+00,,,,f,,,İç Anadolu
+2e2b8252-537b-447d-ae90-456379116866,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,36,"{""tr"": ""Kars""}",t,36,2026-07-09 13:27:17.006188+00,,,,f,,,Doğu Anadolu
+b2894e7c-e2ce-4d75-9605-38d723c862cd,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,37,"{""tr"": ""Kastamonu""}",t,37,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+c7fc60ac-8edd-43d4-a3d7-70e47b0591e7,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,38,"{""tr"": ""Kayseri""}",t,38,2026-07-09 13:27:17.006188+00,,,,f,,,İç Anadolu
+6402c2af-d3ef-4c3e-82d8-19e4c5bdd1b5,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,71,"{""tr"": ""Kırıkkale""}",t,71,2026-07-09 13:27:17.006188+00,,,,f,,,İç Anadolu
+13f9e540-83ee-418d-a257-223f9d82ec1d,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,39,"{""tr"": ""Kırklareli""}",t,39,2026-07-09 13:27:17.006188+00,,,,f,,,Marmara
+117379f5-7a32-4a0e-b55f-8e725c00281b,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,40,"{""tr"": ""Kırşehir""}",t,40,2026-07-09 13:27:17.006188+00,,,,f,,,İç Anadolu
+8689a74e-9e94-4b65-b8b0-60a83a8caf7b,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,79,"{""tr"": ""Kilis""}",t,79,2026-07-09 13:27:17.006188+00,,,,f,,,Güneydoğu Anadolu
+3407a43c-e900-4cd7-aab3-811a229e7178,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,41,"{""tr"": ""Kocaeli""}",t,41,2026-07-09 13:27:17.006188+00,,,,f,,,Marmara
+93b8e03e-e62d-4cd6-8528-3818b2ff4cac,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,42,"{""tr"": ""Konya""}",t,42,2026-07-09 13:27:17.006188+00,,,,f,,,İç Anadolu
+ea00d2b3-e8ca-4543-969b-72dc0dddb528,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,43,"{""tr"": ""Kütahya""}",t,43,2026-07-09 13:27:17.006188+00,,,,f,,,Ege
+74ea49d9-c915-4f66-84c5-b1a856df6dd0,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,44,"{""tr"": ""Malatya""}",t,44,2026-07-09 13:27:17.006188+00,,,,f,,,Doğu Anadolu
+59f2296c-4eb2-4df9-8f10-5a08f5181fc0,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,45,"{""tr"": ""Manisa""}",t,45,2026-07-09 13:27:17.006188+00,,,,f,,,Ege
+a045e16c-7d14-4dc5-89d8-560d23d7e985,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,47,"{""tr"": ""Mardin""}",t,47,2026-07-09 13:27:17.006188+00,,,,f,,,Güneydoğu Anadolu
+23e4b7d0-fd97-4d86-952b-3ca43b9e8fec,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,33,"{""tr"": ""Mersin""}",t,33,2026-07-09 13:27:17.006188+00,,,,f,,,Akdeniz
+4df81dc7-d19e-4f72-ac3d-dfbd98f3a992,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,48,"{""tr"": ""Muğla""}",t,48,2026-07-09 13:27:17.006188+00,,,,f,,,Ege
+36156154-9335-4f38-8966-de053474db4c,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,49,"{""tr"": ""Muş""}",t,49,2026-07-09 13:27:17.006188+00,,,,f,,,Doğu Anadolu
+5829e6a0-b15a-44a3-aa60-513faf636b81,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,50,"{""tr"": ""Nevşehir""}",t,50,2026-07-09 13:27:17.006188+00,,,,f,,,İç Anadolu
+64e0cf05-a77b-4a67-a62e-032044e0ccad,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,51,"{""tr"": ""Niğde""}",t,51,2026-07-09 13:27:17.006188+00,,,,f,,,İç Anadolu
+5d5c956d-3918-4c4b-9a42-c905ad11e599,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,52,"{""tr"": ""Ordu""}",t,52,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+26fed8a0-a21c-4d37-b687-e2eb1c4e0df4,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,80,"{""tr"": ""Osmaniye""}",t,80,2026-07-09 13:27:17.006188+00,,,,f,,,Akdeniz
+3afbcce8-b32d-489a-b11d-d9988ad6db79,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,53,"{""tr"": ""Rize""}",t,53,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+6beb843f-18c6-4ae8-9bff-77da03ac4ad5,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,54,"{""tr"": ""Sakarya""}",t,54,2026-07-09 13:27:17.006188+00,,,,f,,,Marmara
+d76a9b11-3eff-4e19-8d68-d088fbdf6e83,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,55,"{""tr"": ""Samsun""}",t,55,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+7ec34807-c96f-4937-b342-5b1ceacbeede,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,56,"{""tr"": ""Siirt""}",t,56,2026-07-09 13:27:17.006188+00,,,,f,,,Güneydoğu Anadolu
+c213339a-d4e5-4f50-a7da-380c298aa2aa,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,57,"{""tr"": ""Sinop""}",t,57,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+29fffba7-9add-4dff-b4ac-365fe22136b5,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,58,"{""tr"": ""Sivas""}",t,58,2026-07-09 13:27:17.006188+00,,,,f,,,İç Anadolu
+2f3f9e7d-0cc3-46cc-a7f1-358bf8ce4e88,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,63,"{""tr"": ""Şanlıurfa""}",t,63,2026-07-09 13:27:17.006188+00,,,,f,,,Güneydoğu Anadolu
+4308ae44-1db0-452e-9e87-d66bf5e43c1e,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,73,"{""tr"": ""Şırnak""}",t,73,2026-07-09 13:27:17.006188+00,,,,f,,,Güneydoğu Anadolu
+40d9d3c7-86b1-4fe7-a759-f51a2bc8ceb0,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,59,"{""tr"": ""Tekirdağ""}",t,59,2026-07-09 13:27:17.006188+00,,,,f,,,Marmara
+6cd92e60-1295-42cb-ab01-e6f25f57492a,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,60,"{""tr"": ""Tokat""}",t,60,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+1e7b3f49-c09a-4470-942a-495927984d70,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,61,"{""tr"": ""Trabzon""}",t,61,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz
+44929456-5b87-48d6-90cf-b8e4ae50ae63,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,62,"{""tr"": ""Tunceli""}",t,62,2026-07-09 13:27:17.006188+00,,,,f,,,Doğu Anadolu
+830a964b-7d69-4b88-a9e1-c6bcb4f673b8,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,64,"{""tr"": ""Uşak""}",t,64,2026-07-09 13:27:17.006188+00,,,,f,,,Ege
+05729c49-88f3-41b1-adad-8683aba0f808,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,65,"{""tr"": ""Van""}",t,65,2026-07-09 13:27:17.006188+00,,,,f,,,Doğu Anadolu
+7effde79-5a23-49bf-96d1-76c4c57bd1cc,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,77,"{""tr"": ""Yalova""}",t,77,2026-07-09 13:27:17.006188+00,,,,f,,,Marmara
+3307ba3f-f664-4aad-980b-0baadfd52494,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,66,"{""tr"": ""Yozgat""}",t,66,2026-07-09 13:27:17.006188+00,,,,f,,,İç Anadolu
+2304a4b2-c284-48b8-a1d7-369eaea1fdb7,cfa75112-e2ed-45e8-82da-6ca4a04ecee1,67,"{""tr"": ""Zonguldak""}",t,67,2026-07-09 13:27:17.006188+00,,,,f,,,Karadeniz

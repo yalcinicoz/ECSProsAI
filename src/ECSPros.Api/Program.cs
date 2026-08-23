@@ -249,6 +249,7 @@ builder.Services.AddScoped<ECSPros.Api.Services.StoreUrunDetayBuilder>(); // ür
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.VitrinSrcsetSaglayici>(); // vitrin görsel srcset üretimi (A fazı — varyant varsa basılır)
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IInStockProductProvider, ECSPros.Api.Services.InStockProductProvider>();
 builder.Services.AddScoped<ECSPros.Shared.Contracts.Channels.IChannelStockCalculator, ECSPros.Api.Services.InStockProductProvider>(); // K17 kanal stok formülü
+builder.Services.AddScoped<ECSPros.Api.Services.ChannelListingStatusService>(); // F2 listeleme durumu hesaplayıcısı
 // H10: vitrin "indirimli ürünler" kaynak bayrağı — kanalda CompareAtPrice > Price olan ürün kümesi
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IDiscountedProductProvider, ECSPros.Api.Services.DiscountedProductProvider>();
 // B-005/006: genel liste fiyat sıralaması gösterilen (efektif) fiyattan — kanal override → BasePrice

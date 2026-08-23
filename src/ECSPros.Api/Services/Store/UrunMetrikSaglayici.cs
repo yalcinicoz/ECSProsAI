@@ -35,13 +35,26 @@ public sealed class UrunMetrikSaglayici(NpgsqlDataSource dataSource, IMemoryCach
 
         await using var baglanti = await dataSource.OpenConnectionAsync(ct);
 
-        // Onaylı yorumlar: ortalama + sayı (ProductCode → ürün)
+        // Onaylı yorumlar + dış kanal özetleri: çok kaynaklı ağırlıklı ortalama + sayı
+        // (ProductCode → ürün). Kart görünümüyle aynı kaynak (own + trendyol/amazon/...).
         await using (var cmd = new NpgsqlCommand("""
-            SELECT p."Id", AVG(r."Rating")::float8, COUNT(*)::int
-            FROM storefront.product_reviews r
-            JOIN catalog.products p ON p."Code" = r."ProductCode" AND NOT p."IsDeleted"
-            WHERE r."FirmPlatformId" = @firm AND r."Status" = 'approved' AND NOT r."IsDeleted"
-            GROUP BY p."Id"
+            WITH src AS (
+                SELECT p."Id", SUM(r."Rating")::float8 AS toplam, COUNT(*)::int AS sayi
+                FROM storefront.product_reviews r
+                JOIN catalog.products p ON p."Code" = r."ProductCode" AND NOT p."IsDeleted"
+                WHERE r."FirmPlatformId" = @firm AND r."Status" = 'approved' AND NOT r."IsDeleted"
+                GROUP BY p."Id"
+                UNION ALL
+                SELECT p."Id", SUM(prs."AverageRating" * prs."ReviewCount")::float8 AS toplam,
+                       SUM(prs."ReviewCount")::int AS sayi
+                FROM storefront.product_rating_sources prs
+                JOIN catalog.products p ON p."Code" = prs."ProductCode" AND NOT p."IsDeleted"
+                WHERE prs."FirmPlatformId" = @firm AND NOT prs."IsDeleted" AND prs."ReviewCount" > 0
+                GROUP BY p."Id"
+            )
+            SELECT "Id", (SUM(toplam) / NULLIF(SUM(sayi), 0))::float8, SUM(sayi)::int
+            FROM src
+            GROUP BY "Id"
             """, baglanti))
         {
             cmd.Parameters.AddWithValue("firm", firmPlatformId);

@@ -38,7 +38,11 @@ public sealed record StorePlatformBilgisi(
     IReadOnlyList<(string Kod, string Ad)>? SiralamaSecenekleri = null,
     // Mega menü (2026-08-14): üst menü linklerinin üzerine gelince mega menü açılsın mı —
     // Settings."navigation"."megaMenuHover"; varsayılan KAPALI (kullanıcı kararı: "Açılmayacak").
-    bool MegaMenuHover = false)
+    bool MegaMenuHover = false,
+    // Marka adı + canonical kök (Settings."brandName"/"canonicalDomain") — başlık/footer/SEO.
+    // Yoksa varsayılan Misharitalia (mevcut davranış korunur).
+    string BrandName = "Misharitalia",
+    string CanonicalDomain = "https://www.misharitalia.com")
 {
     public IReadOnlyList<(string Kod, string Ad)> SiralamaListesi =>
         SiralamaSecenekleri ?? ECSPros.Shared.Contracts.ProductSortCatalog.Tumu;
@@ -252,7 +256,17 @@ public sealed class StoreContext(
                 && nav.TryGetProperty("megaMenuHover", out var mmh)
                 && mmh.ValueKind == System.Text.Json.JsonValueKind.True;
 
-            return new StorePlatformBilgisi(platform.Id, platform.Code, tema!, tokenlar, stokBitenGoster, stokBitenTarih, kartAyarlari, siralamalar, megaMenuHover);
+            // Marka adı + canonical kök (vitrin başlığı/footer/SEO) — yoksa Misharitalia varsayılanı
+            var brandName = platform.Settings.TryGetValue("brandName", out var bnObj)
+                && bnObj is System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.String } bn
+                && !string.IsNullOrWhiteSpace(bn.GetString())
+                ? bn.GetString()! : "Misharitalia";
+            var canonicalDomain = platform.Settings.TryGetValue("canonicalDomain", out var cdObj)
+                && cdObj is System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.String } cd
+                && !string.IsNullOrWhiteSpace(cd.GetString())
+                ? cd.GetString()! : "https://www.misharitalia.com";
+
+            return new StorePlatformBilgisi(platform.Id, platform.Code, tema!, tokenlar, stokBitenGoster, stokBitenTarih, kartAyarlari, siralamalar, megaMenuHover, brandName, canonicalDomain);
         });
     }
 }

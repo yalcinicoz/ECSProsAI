@@ -5,6 +5,7 @@
     // 3. seviye varsa yan sekme=çocuk, panel=torun grid. Kampanya bölümü ve alt nav
     // Faz G'ye kadar STATİK kalır (plan B1/K7).
     var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
+    var msMarka = (ViewData["MsPlatform"] as ECSPros.Api.Services.StorePlatformBilgisi)?.BrandName ?? "Misharitalia";
 
     var mobilKampanyalar = new[]
     {
@@ -37,8 +38,15 @@
     <template data-ms-mobil-menu-sablon>
     <section class="ms-ana-navigasyon-mobil-kutu" role="dialog" aria-modal="true" aria-label="Mobil kategori menüsü">
         <header class="ms-ana-navigasyon-mobil-ust">
-            <a class="ms-ana-navigasyon-mobil-logo-link" asp-controller="Home" asp-action="Index" aria-label="Mishar Italia ana sayfa">
+            <a class="ms-ana-navigasyon-mobil-logo-link" asp-controller="Home" asp-action="Index" aria-label="@msMarka ana sayfa">
+@if (msMarka == "Misharitalia")
+{
                 <img class="ms-ana-navigasyon-mobil-logo" src="/images/site_logo-144.png" alt="Mishar Italia" width="144" height="21" loading="lazy" decoding="async">
+}
+else
+{
+                <strong class="ms-ana-navigasyon-mobil-logo">@msMarka.ToUpperInvariant()</strong>
+}
             </a>
             <button class="ms-ana-navigasyon-mobil-kapat" type="button" data-ms-mobil-menu-kapat aria-label="Menüyü kapat">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

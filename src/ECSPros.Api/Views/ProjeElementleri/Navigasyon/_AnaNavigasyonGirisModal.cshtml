@@ -1,3 +1,8 @@
+@{
+    var msSosyalGiris = ViewData["MsSosyalGiris"] as IReadOnlyList<string> ?? Array.Empty<string>();
+    var msGoogleVar = msSosyalGiris.Contains("google");
+    var msFacebookVar = msSosyalGiris.Contains("facebook");
+}
     <div class="ms-giris-modal" data-ms-giris-modal aria-hidden="true">
         <div class="ms-giris-modal-kaplama" data-ms-giris-modal-kapat></div>
         <section class="ms-giris-modal-kutu" role="dialog" aria-modal="true" aria-labelledby="ms-giris-modal-baslik">
@@ -88,12 +93,21 @@
                 <button class="ms-giris-buton ms-giris-buton-birincil" type="button" data-ms-giris-eposta-gonder>E-Posta ile Giriş Yap</button>
             </div>
 
-            <div class="ms-giris-ayrac"><span>veya</span></div>
+            @if (msGoogleVar || msFacebookVar)
+            {
+                <div class="ms-giris-ayrac"><span>veya</span></div>
 
-            <div class="ms-giris-sosyal-listesi">
-                <button class="ms-giris-sosyal ms-giris-sosyal-google" type="button"><span class="ms-giris-sosyal-ikon">G</span>Google ile giriş yap</button>
-                <button class="ms-giris-sosyal ms-giris-sosyal-facebook" type="button"><span class="ms-giris-sosyal-ikon">f</span>Facebook ile giriş yap</button>
-            </div>
+                <div class="ms-giris-sosyal-listesi">
+                    @if (msGoogleVar)
+                    {
+                        <button class="ms-giris-sosyal ms-giris-sosyal-google" type="button" data-ms-sosyal-giris="google"><span class="ms-giris-sosyal-ikon">G</span>Google ile giriş yap</button>
+                    }
+                    @if (msFacebookVar)
+                    {
+                        <button class="ms-giris-sosyal ms-giris-sosyal-facebook" type="button" data-ms-sosyal-giris="facebook"><span class="ms-giris-sosyal-ikon">f</span>Facebook ile giriş yap</button>
+                    }
+                </div>
+            }
 
             <button class="ms-giris-buton ms-giris-buton-misafir" type="button" data-ms-giris-modal-kapat>Misafir Olarak Devam Et</button>
             <button class="ms-giris-buton ms-giris-buton-kayit" type="button" data-ms-kayit-modal-ac>Kayıt Ol</button>
@@ -121,6 +135,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const girisModal = document.querySelector("[data-ms-giris-modal]");
     const kayitModal = document.querySelector("[data-ms-kayit-modal]");
     if (!girisModal) { return; }
+
+    // OAuth sosyal giriş — buton yalnız kanalda etkin sağlayıcı için render edilir
+    // (SSR tarafında koşullu basıldığı için burada yalnızca tıklama bağlanır).
+    document.querySelectorAll("[data-ms-sosyal-giris]").forEach((buton) => {
+        buton.addEventListener("click", () => {
+            const saglayici = buton.dataset.msSosyalGiris;
+            const donus = encodeURIComponent(location.pathname + location.search);
+            window.location.href = "/api/store/auth/external/" + saglayici + "/start?returnUrl=" + donus;
+        });
+    });
 
     const hataGoster = (alan, mesaj) => {
         if (!alan) { return; }

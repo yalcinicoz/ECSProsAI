@@ -16,7 +16,7 @@ namespace ECSPros.Api.Services.Store;
 /// ConfigJson örneği: { "productSource": { "source": "best-sellers", "limit": 12 } }
 /// </summary>
 public record BlockProductSource(
-    string Source,                       // new-arrivals | best-sellers | campaign | category | brand | manual | recently-viewed | favorites
+    string Source,                       // new-arrivals | best-sellers | top-rated | campaign | category | brand | manual | recently-viewed | favorites | random
     Guid? CategoryId = null,             // category: ChannelCategoryId (admin seçiminden)
     Guid? BrandValueId = null,           // brand: definition attribute value id (marka)
     List<string>? ProductCodes = null,   // manual: sıra korunur
@@ -106,6 +106,32 @@ public class PageBlockSourceResolver(IMediator mediator, IProductService product
             case "new-arrivals":
                 return await KartlariGetirAsync(firmPlatformId, source with { Sort = source.Sort ?? "newest" },
                     page, limit, ct: ct);
+
+            case "random":
+            {
+                // Demo/merchandising: metrik verisi olmayan senaryoda karışık ürün seçkisi.
+                // Geniş bir havuz çekip karıştırır (her yayın/cache döngüsünde farklı sıra).
+                var havuzLimiti = Math.Min(limit * 4, 48);
+                var havuz = await KartlariGetirAsync(firmPlatformId, source, 1, havuzLimiti, ct: ct);
+                return havuz.OrderBy(_ => Guid.NewGuid()).Take(limit).ToList();
+            }
+
+            case "top-rated":
+            {
+                // Yüksek puanlılar: çok kaynaklı puan (StoreProductDto.Rating) azalan; eşitlikte
+                // yorum sayısı azalan. Az yorumlu (1-2) 5.0 flukeleri listenin başına geçmesin
+                // diye minimum yorum eşiği uygulanır. Tüm satışa açık ürünler havuzu çekilir
+                // (demo kataloğu ~600 ürün).
+                const int minYorum = 5;
+                const int havuzLimiti = 1000;
+                var havuz = await KartlariGetirAsync(firmPlatformId, source, 1, havuzLimiti, ct: ct);
+                return havuz
+                    .Where(k => k.ReviewCount >= minYorum)
+                    .OrderByDescending(k => k.Rating)
+                    .ThenByDescending(k => k.ReviewCount)
+                    .Take(limit)
+                    .ToList();
+            }
 
             case "manual":
             {

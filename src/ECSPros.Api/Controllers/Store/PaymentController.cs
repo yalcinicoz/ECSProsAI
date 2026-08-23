@@ -1,9 +1,11 @@
 using ECSPros.Api.Services.Store;
+using ECSPros.Order.Application.Commands.MockPayment;
 using ECSPros.Order.Application.Commands.PayTrPayment;
 using ECSPros.Order.Application.Queries.GetOrderForPayment;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ECSPros.Api.Controllers.Store;
@@ -27,6 +29,7 @@ public class PaymentController(
     IOrderConfirmationService orderConfirmations,
     IHttpClientFactory httpClientFactory,
     IConfiguration configuration,
+    IWebHostEnvironment env,
     ILogger<PaymentController> logger) : ControllerBase
 {
     /// <summary>Adım 1: sipariş + kart → PayTR /odeme → 3D HTML. Kart alanları burada bırakılır.</summary>
@@ -36,7 +39,7 @@ public class PaymentController(
     {
         var ayar = await settingsProvider.GetAsync(ct);
         if (ayar is null)
-            return BadRequest(new { success = false, error = "Ödeme sağlayıcı yapılandırılmamış (PayTR)." });
+            return await MockOdemeAsync(req, ct);
 
         var siparisSonuc = await mediator.Send(new GetOrderForPaymentQuery(req.OrderId), ct);
         if (siparisSonuc.IsFailure) return BadRequest(new { success = false, error = siparisSonuc.Error });
@@ -122,6 +125,55 @@ public class PaymentController(
         // PayTR 3D akışında HTML döner (tarayıcıya basılıp bankaya yönlenir);
         // JSON dönerse (hata) aynen iletilir. İçerik kart verisi taşımaz.
         return Ok(new { success = true, html = sonuc.Icerik });
+    }
+
+    /// <summary>
+    /// Demo/mock ödeme: PayTR yapılandırılmamışken (yalnız demo/test ortamları) kart ödemesini
+    /// gerçek aracı olmadan "paid + onaylı" olarak sonuçlandırır. Üretimde asla kullanılmaz
+    /// (env.IsProduction çifte koruması + PayTR yapılandırması zaten mevcut).
+    /// </summary>
+    private async Task<IActionResult> MockOdemeAsync(PayTrInitRequest req, CancellationToken ct)
+    {
+        if (env.IsProduction())
+            return BadRequest(new { success = false, error = "Ödeme sağlayıcı yapılandırılmamış (PayTR)." });
+
+        // Seçimden bağımsız algoritma: kart numarası Luhn'dan geçmezse "geçersiz kart" → başarısız.
+        var kartGecerli = KartNumarasiGecerli(req.CardNumber);
+        var sonuc = await mediator.Send(new MockPaymentUygulaCommand(req.OrderId, Basarili: kartGecerli), ct);
+        if (sonuc.IsFailure)
+            return BadRequest(new { success = false, error = sonuc.Error });
+
+        if (!kartGecerli)
+        {
+            logger.LogInformation("MOCK ödeme BAŞARISIZ (geçersiz kart): OrderId={OrderId}", req.OrderId);
+            return Ok(new { success = false, mock = true, error = "Ödeme başarısız: geçersiz kart numarası." });
+        }
+
+        logger.LogInformation("MOCK ödeme uygulandı: OrderId={OrderId}", req.OrderId);
+        return Ok(new { success = true, mock = true, orderId = req.OrderId });
+    }
+
+    /// <summary>Luhn sağlama algoritması — kart numarasının geçerliliğini doğrular (mock ödeme).</summary>
+    private static bool KartNumarasiGecerli(string? kartNo)
+    {
+        if (string.IsNullOrWhiteSpace(kartNo)) return false;
+        var rakamlar = new string(kartNo.Where(char.IsDigit).ToArray());
+        if (rakamlar.Length < 12) return false;
+
+        var toplam = 0;
+        var ikili = false; // en sağdaki (kontrol) basamak ikilenmez
+        for (var i = rakamlar.Length - 1; i >= 0; i--)
+        {
+            var d = rakamlar[i] - '0';
+            if (ikili)
+            {
+                d *= 2;
+                if (d > 9) d -= 9;
+            }
+            toplam += d;
+            ikili = !ikili;
+        }
+        return toplam % 10 == 0;
     }
 
     /// <summary>Taksit seçenekleri (2026-07-30): kartın ilk 6 hanesi (BIN) + sipariş/sepet tutarına göre
