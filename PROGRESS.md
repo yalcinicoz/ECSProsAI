@@ -28,7 +28,7 @@ kapsam filtresi (K2), üç katman (kapsam → kanal kararı → listeleme durumu
 tasarımı ("yapılacaklar" görünümü, çekmece + Düzelt hedefleri), dört iş yönü: Y1 pazaryeri push (var), Y2 dropship bayi
 (bizim Partner API, varsayılan kapsam fiyat var ∩ stok≥3 ∩ kaynak=biz), Y3 biz pazaryeriyiz (satıcı=kaynak),
 Y4 biz dropship satıcıyız (`ISupplyConnector` dosya/HTTP bağlayıcıları → ProductSubmission Kapı 1/2). Fazlar F0-F8;
-kararlar K1-K10 kapalı, K11-K16 açık. ★ Bulgu: storefront opt-out vs pazaryeri aday opt-in anlam çatlağı (K10 ile kapanır).
+kararlar K1-K18 KAPALI (v1.1: K17 kanal stok formülü stockQuantity=max(0,net−minStock+1), K18 bayi fiyat politikası ayrı çalışma). ★ Bulgu: storefront opt-out vs pazaryeri aday opt-in anlam çatlağı (K10 ile kapanır).
 Rehber ana sayfasına "ürünleri satış kanalına nasıl yüklerim" SSS tablosu eklendi (a02819a).
 
 **Admin Paneli Kullanım Rehberi v2 (2026-08-23, Admin panel alanı) — İÇERİK TAMAM, ekran görüntüleri bekliyor:**

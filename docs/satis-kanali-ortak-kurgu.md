@@ -1,6 +1,6 @@
 # Satış Kanalı Ortak Kurgusu — Kanal Ürünleri, Dropshipping (iki yön), Pazaryeri, Tedarik Kaynakları
 
-> Sürüm: **v1 — 2026-08-23** (inceleme için taslak; uygulama başlamadı)
+> Sürüm: **v1.1 — 2026-08-23** (v1 incelemesi sonrası: açık kararlar kapatıldı, kanal stok formülü eklendi, bayi fiyat politikası ayrı çalışmaya ayrıldı; uygulama başlamadı)
 > Alan: 🛠 **Admin panel** (pano #2) + zorunlu çekirdek dokunuşları (Core/Storefront/Integration/Catalog) +
 > 🔌 Dış API (pano #3) ile kesişen noktalar işaretlidir.
 > İlgili dokümanlar: `docs/pazaryeri-entegrasyon-veri-yonetimi.md` (pazaryeri eşleme/yükleme, F1-F5 canlı),
@@ -56,12 +56,14 @@ Kapalı = kullanıcıyla mutabık (2026-08-23). Açık = uygulama öncesi kapat�
 | K8 | Y4 (biz dropship satıcıyız) için **tedarik kaynağı bağlayıcı altyapısı** kurulur; dış API ve dosya aynı soyutlamadan geçer; gelen kayıtlar mevcut **ürün gönderimi (ProductSubmission) Kapı 1/2** hattına düşer, doğrudan kataloğa yazılmaz. | **KAPALI** (ilk adaptör: dosya; somut dış API geldiğinde adaptör eklenir) |
 | K9 | Kanal ürünleri ekranı "yapılacaklar" görünümüdür; eşleme sayfası "tanım" görünümü kalır; `/marketplaces` mağaza detayı mağaza/batch yönetimi için kalır, ürün bazlı çalışma kanal ürünleri ekranına taşınır. | **KAPALI** (önceki tur önerisi, itiraz gelmedi) |
 | K10 | Storefront (opt-out) ile pazaryeri aday sorgusu (opt-in) arasındaki anlam çatlağı **kapsam materyalizasyonu** ile kapanır: kapsamdaki her ürünün `channel_products` satırı olur; "satır yoksa kanalda" kuralı kalkar. | **KAPALI** (teknik sonuç) |
-| K11 | Dropship bayiye **fiyatı olmayan ürün gösterilmez** (vs. "fiyatsız, talep et") | **AÇIK** — öneri: gösterilmez |
-| K12 | Satıcı ürünlerinin (Y3) pazaryerine gönderilmesi (satıcının malını üçüncü pazaryerinde satmak) | **AÇIK** — öneri: kanal bayrağıyla açıkça izin verilmedikçe kapalı; sözleşme/kargo/fatura zinciri ayrı karar |
-| K13 | Y4'te sipariş iletimi: ürün sahibine sipariş **API ile push / e-posta+Excel / yalnız bizde kayıt** | **AÇIK** — öneri: kaynak yeteneği (`canPushOrder`); yoksa günlük sipariş dosyası |
-| K14 | Y4'te fiyatlama: ürün sahibinin verdiği **liste/alış fiyatı + bizim kural** (marj %, yuvarlama) mı, sahibin belirlediği satış fiyatı mı | **AÇIK** — öneri: alış fiyatı + kanal fiyat kuralı (mevcut fiyat tipi/kanal fiyatı motoru) |
-| K15 | Hazırlık (readiness) yeniden hesaplama: manuel tetik (bugün) → zamanlayıcı/olay tabanlı | **AÇIK** — öneri: grup/eşleme değişince olay + gece tam tarama |
-| K16 | Eşlemenin platform-geneli varsayılanı `definition` şeması kuralına tabi mi (yalnız geliştirici firma doldurur) | **AÇIK** — öneri: evet; firma/kanal istisnası firma tarafında |
+| K11 | Dropship bayiye **fiyatı olmayan ürün gösterilmez** ("fiyatsız, talep et" yok) | **KAPALI** (2026-08-23) |
+| K12 | Satıcı ürünlerinin (Y3) pazaryerine gönderilmesi: **kanal bayrağıyla açıkça izin verilmedikçe kapalı**; sözleşme/kargo/fatura zinciri açıldığında ayrı karar | **KAPALI** (2026-08-23) |
+| K13 | Y4'te sipariş iletimi: kaynak yeteneği `canPushOrder` varsa API push; yoksa **günlük sipariş dosyası** (Excel/CSV, e-posta/SFTP); her durumda iç kayıt | **KAPALI** (2026-08-23) |
+| K14 | Y4'te fiyatlama: ürün sahibinin **alış/liste fiyatı + bizim kural** (marj %, yuvarlama) → kanal fiyat tipine yazılır; mevcut fiyat tipi/kanal fiyatı motoru | **KAPALI** (2026-08-23) |
+| K15 | Hazırlık (readiness) yeniden hesaplama: **grup/eşleme/ürün değişince olay tabanlı + gece tam tarama** (manuel tetik kalır) | **KAPALI** (2026-08-23) |
+| K16 | Eşlemenin platform-geneli varsayılanı **`definition` kuralına tabi** (yalnız geliştirici firma doldurur); firma/kanal istisnası firma tarafında | **KAPALI** (2026-08-23) |
+| K17 | **Kanal stok formülü:** `netStock` = satış kanallarına açık depo/kısımlardaki toplam stok (`WarehouseSection.IsSellableOnline`; mağaza depoları da bu bayrakla dış satışa açılabilir) − toplam rezerv; kanala verilen adet **`stockQuantity = max(0, netStock − minStock + 1)`** (minStock=3, net=3 → 1; net=2 → 0). Kapsam/satılabilirlik şartı `stockQuantity ≥ 1`. Tüm kanal tipleri (site dahil; site varsayılanı minStock=1 → formül bugünkü netStock'a eşittir). | **KAPALI** (2026-08-23) |
+| K18 | **Bayi (dropship) fiyat politikası ayrı çalışmadır** — bu dokümanda yalnız "kanal fiyatı var/yok" bilgisi kullanılır; iskonto/marj/liste kuralları ayrı plan dokümanında (`docs/bayi-fiyat-politikasi.md`, henüz yazılmadı) | **KAPALI** (kapsam dışı) |
 
 ---
 
@@ -79,7 +81,7 @@ Kapalı = kullanıcıyla mutabık (2026-08-23). Açık = uygulama öncesi kapat�
 | `thirdPartySellerProducts` | Y3 satıcı ürünleri kapsama girebilir | **varsayılan açık** | açık | **kapalı** | **kapalı** |
 | `externalSupplyProducts` | Y4 dış kaynak ürünleri kapsama girebilir | açık | açık | kapalı (zincirleme dropship yok) | kanal bazında |
 | `orderDirection` | Sipariş yönü | `internal` | `internal` | `partner_push` (Partner API POST) | `pull` (adapter) |
-| `defaultMinStock` | Kapsam için varsayılan stok eşiği | 1 | 1 | **3** | 1 |
+| `defaultMinStock` | Kanal stok formülünün eşiği (K17: `stockQuantity = max(0, netStock − minStock + 1)`) | 1 | 1 | **3** | 1 |
 | `autoPublish` | Kapsama giren ürün otomatik "Kanalda" | evet | evet | evet | evet (gönderim yine elle/toplu) |
 | `pullsFromPartnerApi` | Karşı taraf bizim Partner API'mizi kullanır | — | — | **evet** (`catalog.read`, `stock.read`, `order.write`) | — |
 
@@ -122,7 +124,7 @@ LİSTELEME DURUMU  (ListingStatus + sebepler)  ─► personel "Düzelt" ─► 
 - `ProductFillType=all` → tüm satılabilir ürünler (görseli olan; `IsSaleOpen` kapsam şartı değil, katman 3 sebebidir).
 - `filter`/`mixed` → `ProductFilterHelper.BuildFilterQuery(FilterDef)` (kategori/kampanya ile aynı kural şeması) + manuel
   eklenenler − manuel hariç tutulanlar. Kural şemasına eklenecekler: `SourceTypes` (own/seller/supply), `SupplySourceIds`,
-  `HasChannelPrice` (bu kanalda fiyatı var), `MinStock` (kanal varsayılanı).
+  `HasChannelPrice` (bu kanalda fiyatı var), `MinStock` (kanal varsayılanı; K17 formülüyle `stockQuantity ≥ 1` şartı — `netStock` yalnız `IsSellableOnline` kısımlardan, rezerv düşülmüş).
 - Tetik: filtre kaydedilince, ürün oluşturulunca/gruba girince (olay), gece tam tarama. Sonuç: kapsama giren ürün için
   satır (InScope=true, IsActive=autoPublish), çıkan için InScope=false (karar geçmişi silinmez).
 - Storefront okuma yolu: deny-set yerine **kapsam+karar seti** (`InScope && IsActive && !stopped`); `IChannelProductFlagService`
@@ -192,7 +194,8 @@ Kanal kararı (mevcut yetki) · Kapsam düzenleme (`channel.scope.manage` yeni) 
   istisnadır (manuel ekle/hariç yine var ama günlük yöntem değil).
 - Sipariş: bayi `POST /api/partner/v1/orders` (F2b-2d, henüz yok) → bizim sipariş + kargo; bayi kanalı sipariş listesinde
   kanal olarak görünür (mevcut kanal bazlı sipariş modeli yeterli).
-- Bayiye dışa verilen stok: kanal `MinStock` altındakiler 0 olarak döner (oversell freni), K4 ile tutarlı.
+- Bayiye dışa verilen stok (Partner `stock.read`): K17 formülü `stockQuantity = max(0, netStock − minStock + 1)`; 0 dönen ürün kapsamda "stok yok" sebebiyle listelenmez (oversell freni). Aynı formül pazaryeri stok gönderiminde ve site stok kontrolünde kullanılır (tek hesaplayıcı `IChannelStockCalculator`, Inventory modülü).
+- Bayi fiyat listesi/iskonto kuralları K18 gereği ayrı çalışma; bu fazda yalnız "kanal fiyatı var" (mevcut ChannelVariant/fiyat tipi) kullanılır.
 
 ## 6. Y3 — Biz pazaryeriyiz (üçüncü taraf satıcı ürünleri bizim kanallarımızda)
 
@@ -284,7 +287,7 @@ Kargo takibi geri okuması `FetchOrderStatusAsync` varsa otomatik, yoksa panelde
 | Faz | Kapsam | Çıktı / kabul kriteri | Bağımlılık |
 |---|---|---|---|
 | **F0 Yetenek modeli** | `PlatformType.Capabilities` + seed + kanal override; `IsMarketplace` türetilmiş; admin kanal formunda yetenek görünümü (salt okunur + ezilebilir alanlar) | Tüm mevcut kanallar bugünkü davranışı korur; Satış Kanalları sayfasında yetenek rozetleri | — |
-| **F1 Kapsam** | `FirmPlatform.ProductFilterDef/FillType/MinStock`, kural şemasına `SourceTypes/HasChannelPrice/MinStock`, `SyncChannelScope` komutu + olay/gece tetik, `channel_products` InScope/ScopeSource/IsExcluded; storefront + pazaryeri aday okuma **tek kümeye** geçer; Kapsam sekmesi | **Kabul:** `all` + legacy → storefront ürün kümesi değişmez (sayı karşılaştırma testi kanal başına); pazaryeri aday listesi kapsam kümesine eşit; filtre kaydet→sync→sayı önizleme ✓ | F0 |
+| **F1 Kapsam** | `FirmPlatform.ProductFilterDef/FillType/MinStock`, kural şemasına `SourceTypes/HasChannelPrice/MinStock`, `SyncChannelScope` komutu + olay/gece tetik, `channel_products` InScope/ScopeSource/IsExcluded; storefront + pazaryeri aday okuma **tek kümeye** geçer; kapsam sync sonrası kanal cache invalidation; `IChannelStockCalculator` (K17); Kapsam sekmesi | **Kabul:** `all` + legacy → storefront ürün kümesi değişmez (sayı karşılaştırma testi kanal başına); pazaryeri aday listesi kapsam kümesine eşit; filtre kaydet→sync→sayı önizleme ✓ | F0 |
 | **F2 Listeleme durumu** | `ComputeListingStatus` + denormalize alanlar + readiness `blocked` + sebep kataloğu + "Düzelt" hedef tablosu; yeniden hesap tetikleri (K15) | Her kanal tipi için sebepler doğru üretilir (test matrisi: görselsiz/fiyatsız/satış kapalı/eşleme eksik/push hatalı/durdurulmuş) | F1 |
 | **F3 Ekran** | Ürünler sekmesi yeni sütun/çip/filtre/çekmece/toplu işlemler; sunucu tarafı "filtreye uyan tümü"; Gönderimler sekmesi; yetkiler; rehber sayfası güncellemesi | K16 site-panel: pazaryeri push/yeniden dene/listeden düşür bu ekrandan; `/marketplaces` ürün sekmesi link verir | F2 |
 | **F4 Dropship bayi (Y2)** | `dropship_partner` tipi + varsayılanlar, kanal↔Partner API hesabı bağı, Partner `catalog/stock` uçlarının kanal kapsam/fiyatına göre yanıtı, "şablondan kopyala"; F2b-2d sipariş POST (Dış API alanı) | Bayi token'ı ile katalog çekimi yalnız kapsamı ve kanal fiyatını döner; stok eşiği altı 0; bir negatif: fiyatı olmayan ürün dönmez (K11) | F1, Dış API |
@@ -298,12 +301,12 @@ boşluğa alınabilir). Somut bir dış API geldiğinde F6 tamamsa yalnız `<fir
 
 ---
 
-## 10. Açık sorular (uygulama öncesi)
-1. K11, K12, K13, K14, K15, K16 (tablo §1).
-2. Kapsam filtresi `MinStock` hangi stok: satılabilir kısım toplamı (IsSellableOnline) mı, merkez depo mu? Öneri: satılabilir toplam.
-3. Dropship bayi kanalının fiyat listesi: mevcut kanal fiyat tipi/ChannelVariant mekanizması yeterli mi, yoksa "bayi iskonto %" kuralı mı? Öneri: mevcut mekanizma + kanal bazlı toplu fiyat kuralı (ayrı iş).
-4. Y4 görselleri: dış URL'den indirilip bizde saklanır (varsayılan) — telif/sözleşme notu.
-5. `ListingStatus` denormalize alanı ile Redis/IMemoryCache önbellek sürümleri: storefront DTO'larına sızmıyor (yalnız admin), sürüm artırımı gerekmez — doğrulanacak.
+## 10. Açık sorular — KAPATILDI (2026-08-23 kullanıcı yanıtları)
+1. K11-K16 öneriler kabul edildi (§1 tablosu güncellendi).
+2. Kanal stok hesabı → **K17**: `netStock` = satış kanallarına açık (`WarehouseSection.IsSellableOnline`) depo/kısım stoğu − rezerv; `stockQuantity = max(0, netStock − minStock + 1)`. Mağaza depoları kendi POS satışını sürdürür; bayrak açılırsa dış kanallara da sayılır. Uygulama: Inventory'de tek `IChannelStockCalculator` (kanal minStock parametreli), F1'de kapsam kriteri, F4'te Partner stok yanıtı, pazaryeri stok batch'inde aynı çağrı.
+3. Bayi fiyat politikası → **K18** ayrı çalışma.
+4. Y4 görselleri dış URL'den indirilip bizde saklanır (varsayılan) — kabul.
+5. Önbellek notu (teknik, kullanıcı kararı gerektirmez): `ListingStatus` yalnız admin okur, storefront DTO'larına girmez → Redis sürüm artırımı gerekmez; F1'de storefront görünürlük kümesi değiştiği için kanal ürün/facet cache'leri (channelcat vb.) sync sonrası **invalidate edilir** — uygulama notu olarak F1'e eklendi.
 
 ## 11. Riskler ve sınırlar
 - F1 storefront okuma yolunu değiştirir — en riskli adım; kabul testi "kanal başına ürün sayısı eşit" olmadan canlıya çıkmaz; izole 5051'de ölçülür.
