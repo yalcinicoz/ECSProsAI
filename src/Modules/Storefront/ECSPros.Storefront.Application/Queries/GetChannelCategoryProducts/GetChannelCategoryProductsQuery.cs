@@ -108,6 +108,7 @@ public class GetChannelCategoryProductsQueryHandler(
     ICardMessageResolver cardMessageResolver,
     ISocialProofResolver socialProofResolver,
     IProductMetricsProvider productMetrics,
+    IProductReviewStatsService reviewStats,
     ICacheService cache)
     : IRequestHandler<GetChannelCategoryProductsQuery, Result<PagedResult<ChannelCategoryProductItemDto>>>
 {
@@ -162,11 +163,8 @@ public class GetChannelCategoryProductsQueryHandler(
             .Where(c => c.Id == request.ChannelCategoryId)
             .Select(c => c.FirmPlatformId).FirstOrDefaultAsync(ct);
         var kodlar = items.Select(i => i.Code).Distinct().ToList();
-        var puanlar = await sfDb.ProductReviews.AsNoTracking()
-            .Where(r => r.FirmPlatformId == platformId && r.Status == "approved" && kodlar.Contains(r.ProductCode))
-            .GroupBy(r => r.ProductCode)
-            .Select(g => new { Kod = g.Key, Ortalama = g.Average(r => r.Rating), Sayi = g.Count() })
-            .ToDictionaryAsync(g => g.Kod, ct);
+        // Çok kaynaklı puan (own + dış kanallar) — arama/liste kartlarıyla aynı servis.
+        var puanlar = await reviewStats.GetStatsAsync(platformId, kodlar, ct);
 
         // H5: kart video rozeti — ürün başına ilk aktif videonun URL'i. Puanlar gibi cache DIŞINDA
         // (aktarım/yeni video eklendiğinde TTL beklemeden görünür). Kod → ProductId üzerinden.
@@ -216,7 +214,7 @@ public class GetChannelCategoryProductsQueryHandler(
         {
             var yeni = items[i];
             if (puanlar.TryGetValue(yeni.Code, out var p))
-                yeni = yeni with { Rating = Math.Round(p.Ortalama, 1), ReviewCount = p.Sayi };
+                yeni = yeni with { Rating = p.Average, ReviewCount = p.Count };
             if (videolar.TryGetValue(yeni.Code, out var vurl))
                 yeni = yeni with { VideoUrl = vurl };
             if (kampanyaByKod.TryGetValue(yeni.Code, out var kmpListe) && kmpListe.Count > 0)
@@ -535,6 +533,30 @@ public class GetChannelCategoryProductsQueryHandler(
             .OrderBy(x => x.ProductId).ThenBy(x => x.ColorValueId)
             .ToList();
 
+        // 2026-08-23: ekseni (renk) OLMAYAN ürünler de tek kart olarak listeye girer (ColorValueId = Guid.Empty).
+        // Önceden renk modundaki karışık kategorilerde (örn. demo Mutfak & Kahve: termos renkli, kapsül kahve
+        // renksiz) bu ürünler facet'te sayılıyor ama listede hiç çıkmıyordu → "10'lu (4)" seçilince 0 ürün.
+        // Kartın görseli ürün düzeyi görselden (VariantId null), fiyatı varyantlarından; renk çiti/AxisColors yok.
+        var eksenliUrunler = colorPairs.Select(pr => pr.ProductId).ToHashSet();
+        var eksensizVaryantlar = allVariants.Where(v => !eksenliUrunler.Contains(v.ProductId))
+            .GroupBy(v => v.ProductId)
+            .ToDictionary(g => g.Key, g => g.Select(v => v.Id).ToList());
+        foreach (var (pid, vids) in eksensizVaryantlar)
+        {
+            var kanal = vids.Select(v => variantChannelPrice.GetValueOrDefault(v)).Where(pr => pr > 0).DefaultIfEmpty(0).Min();
+            var baz = vids.Select(v => variantPrice.GetValueOrDefault(v)).Where(pr => pr > 0).DefaultIfEmpty(0).Min();
+            var eskiFiyat = vids.Select(v => variantCompareAt.GetValueOrDefault(v)).Where(c => c > 0).DefaultIfEmpty(0).Max();
+            colorPairs.Add(new
+            {
+                ProductId = pid,
+                ColorValueId = Guid.Empty,
+                VariantIds = vids,
+                Price = kanal > 0 ? kanal : baz,
+                ChannelPrice = kanal,
+                EskiFiyat = eskiFiyat
+            });
+        }
+
         // Primary axis tanımlı değilse fallback: 1 kart/ürün
         if (colorPairs.Count == 0)
             return await BuildFallbackProductItems(allProductIds, request, cdnBase, ct);
@@ -552,8 +574,17 @@ public class GetChannelCategoryProductsQueryHandler(
                 .ToHashSet()
             : new HashSet<Guid>();
 
+        // 2026-08-23: eksensiz kartlar (Guid.Empty) ürün düzeyi görseliyle de görünür
+        var eksensizUrunIdleri = eksensizVaryantlar.Keys.ToList();
+        var productIdsWithImage = eksensizUrunIdleri.Count > 0
+            ? (await catDb.ProductImages.AsNoTracking()
+                .Where(img => eksensizUrunIdleri.Contains(img.ProductId)
+                           && img.Status == Catalog.Domain.Entities.ProductImageStatus.Active)
+                .Select(img => img.ProductId).Distinct().ToListAsync(ct)).ToHashSet()
+            : new HashSet<Guid>();
         var visiblePairs = colorPairs
-            .Where(p => p.VariantIds.Any(vid => variantIdsWithImage.Contains(vid)))
+            .Where(p => p.VariantIds.Any(vid => variantIdsWithImage.Contains(vid))
+                     || (p.ColorValueId == Guid.Empty && productIdsWithImage.Contains(p.ProductId)))
             .ToList();
 
         // Arama renk daraltması (kabul testi 2026-07-22 revizyonu): kelimenin eşleştiği
@@ -872,6 +903,7 @@ public class GetChannelCategoryProductsQueryHandler(
         // görselleriyle. Detay linki ?color={eksenDeğerId} (detay tarafı eksen değerini
         // filtre_rengi bucket'ına çözer).
         var axisColorsByProduct = pagedProductPairs
+            .Where(p => p.ColorValueId != Guid.Empty)   // 2026-08-23: eksensiz kartın renk çiti yok
             .GroupBy(p => p.ProductId)
             .ToDictionary(
                 g => g.Key,
@@ -944,7 +976,7 @@ public class GetChannelCategoryProductsQueryHandler(
                     imageUrl, price,
                     product.IsSaleOpen, 0, false, null,
                     Colors: allColorMap.GetValueOrDefault(pair.ProductId),
-                    SelectedColorValueId: pair.ColorValueId,
+                    SelectedColorValueId: pair.ColorValueId == Guid.Empty ? null : pair.ColorValueId,   // 2026-08-23: eksensiz kart
                     SelectedColorNameI18n: colorValueNameMap.TryGetValue(pair.ColorValueId, out var seciliAd)
                         ? seciliAd.Item1
                         : null,

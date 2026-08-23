@@ -33,6 +33,11 @@ ek_ozellik) + değer havuzları (+spf 20/25, sac_tipi +3) + 74 grup ataması + `
 Tipi/Özellik grupları doğrulandı. ★ psql demo erişimi: ~/.pgpass'e ecommerce_demo satırı eklendi. **(3) Seçimde zıplama düzeltmesi (her iki site):**
 sr-only checkbox'ın konum atası sticky sol panel olduğundan kaydırılmış listede seçim yapınca panel/sayfa yukarı
 zıplıyordu → `.ms-filtre-secim` `relative` (headless ölçüm: zıplama 337px→0). CSS build alındı, publish+publish-demo güncel.
+**(4) Renk modunda eksensiz ürünler (2026-08-23):** `GetChannelCategoryProductsQuery.HandleColorMode` renk ekseni
+olmayan ürünleri tek kart (ColorValueId=Guid.Empty, ürün düzeyi görsel, renk çiti yok) olarak listeye katar — önceden
+karışık kategorilerde (demo Mutfak & Kahve: termos renkli + kapsül kahve renksiz) facet sayıyor ama liste göstermiyordu
+→ "10'lu (4)" seçilince 0 ürün. Demo: mutfak-kahve 173→221 kart, 10'lu → 4 ürün görselli ✓; prod kadin 6000→6000
+(prod'da yalnız 13 eksensiz ürün). ⚠️ ecspros + ecspros-demo restart bekliyor.
 
 **Reklam/Analytics/Dönüşüm takibi — A–F CANLIDA ✅ (2026-08-22 restart + kullanıcı kabul testi; 2026-08-23 KAPATILDI —
 gerçek GA4/Meta/Merchant hesap bilgileri girilince son doğrulama yapılacak: GA4 DebugView, Meta Test Events, Merchant
