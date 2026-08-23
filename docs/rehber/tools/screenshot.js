@@ -9,7 +9,51 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const IMG = path.resolve(__dirname, '../img'); fs.mkdirSync(IMG, { recursive: true });
 const BASE = (process.env.REHBER_BASE || 'https://admin-telemania.ecspros.com').replace(/\/$/, '');
 const EXE = process.env.CHROME || process.env.HOME + '/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome';
-const FILTRE = process.argv[2] || null;
+const FILTRE = process.argv[2] ? process.argv[2].split(',') : null;
+// Detay rotaları için API'den kayıt id'si çözücüler (liste → ilk satır tıklaması yetersiz kalan sayfalar)
+const RESOLVERS = {
+  'orders-detay': { list: '/api/orders?page=1&pageSize=1', detail: '/orders/{id}' },
+  'orders-returns-detay': { list: '/api/orders/returns?page=1&pageSize=1', detail: '/orders/returns/{id}' },
+  'catalog-product-submissions-detay': { list: '/api/catalog/product-submissions?page=1&pageSize=1', detail: '/catalog/product-submissions/{id}' },
+  'storefront-channel-categories-detay': { list: '/api/navigation/channel-categories?firmPlatformId={platformId}', detail: '/storefront/channel-categories/{id}' },
+  'storefront-pages-detay': { list: '/api/pages/blocks?firmPlatformId={platformId}', detail: '/storefront/pages/{id}?platformId={platformId}' },
+  'marketplaces-detay': { list: '/api/marketplaces/overview', detail: '/marketplaces/{id}' },
+  'inventory-transfers-detay': { list: '/api/inventory/transfers?page=1&pageSize=1', detail: '/inventory/transfers/{id}' },
+  'promotion-campaigns-detay': { list: '/api/promotion/campaigns?activeOnly=false', detail: '/promotion/campaigns/{id}' },
+  'accounts-detay': { list: '/api/accounts?page=1&pageSize=1', detail: '/accounts/{id}' },
+};
+async function apiGet(page, url) {
+  return page.evaluate(async (u) => {
+    const t = localStorage.getItem('access_token');
+    const r = await fetch(u, { headers: t ? { Authorization: 'Bearer ' + t } : {} });
+    return r.ok ? r.json() : null;
+  }, url);
+}
+function ilkId(json) {
+  let d = json && json.data !== undefined ? json.data : json;
+  if (Array.isArray(d)) { const f = d.find(x => x && x.id) || (d[0] && d[0].stores && d[0].stores[0]); return f ? f.id : null; }
+  if (d && Array.isArray(d.items) && d.items[0]) return d.items[0].id;
+  if (d && Array.isArray(d.stores) && d.stores[0]) return d.stores[0].id;
+  if (d && Array.isArray(d.roots) && d.roots[0]) return d.roots[0].id;
+  return d && d.id ? d.id : null;
+}
+let platformIdCache = null;
+async function platformId(page) {
+  if (platformIdCache) return platformIdCache;
+  // Kanal kategorisi/vitrin verisi olan (gerçek site) platformu tercih et — ilk platform bir test/pazaryeri kanalı olabilir
+  const firms = await apiGet(page, '/api/core/firms');
+  const firmList = Array.isArray(firms?.data) ? firms.data : [];
+  let enIyi = null, enCok = -1;
+  for (const f of firmList) {
+    const pls = await apiGet(page, `/api/core/firms/${f.id}/platforms`);
+    for (const pl of (Array.isArray(pls?.data) ? pls.data : [])) {
+      const kats = await apiGet(page, `/api/navigation/channel-categories?firmPlatformId=${pl.id}`);
+      const n = Array.isArray(kats?.data) ? kats.data.length : 0;
+      if (n > enCok) { enCok = n; enIyi = pl.id; }
+    }
+  }
+  platformIdCache = enIyi; return platformIdCache;
+}
 let sharp = null; try { sharp = (await import('sharp')).default; } catch { }
 
 // [slug, yol, seçenekler] — yol ":detay" içeriyorsa liste → ilk satır tıklanır
@@ -41,7 +85,9 @@ const ROTALAR = [
   ['settings-users', '/settings/users'], ['settings-roles', '/settings/roles'], ['settings-audit-logs', '/settings/audit-logs'],
 ];
 
-const br = await chromium.launch({ executablePath: EXE, headless: true, args: ['--no-sandbox'] });
+const args = ['--no-sandbox'];
+if (process.env.REHBER_RESOLVE) args.push('--host-resolver-rules=MAP ' + process.env.REHBER_RESOLVE.replace(':', ' ')); // örn. admin-telemania.ecspros.com:127.0.0.1
+const br = await chromium.launch({ executablePath: EXE, headless: true, args });
 const ctx = await br.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, ignoreHTTPSErrors: true, locale: 'tr-TR' });
 const page = await ctx.newPage();
 page.setDefaultTimeout(20000);
@@ -62,9 +108,16 @@ await page.evaluate(() => { try { localStorage.removeItem('sidebarCollapsed'); }
 
 let ok = 0, fail = 0; const rapor = [];
 for (const [slug, yol] of ROTALAR) {
-  if (FILTRE && !slug.includes(FILTRE)) continue;
+  if (FILTRE && !FILTRE.some(f => slug.includes(f))) continue;
   try {
-    if (yol.includes(':detay')) {
+    if (RESOLVERS[slug]) {
+      const r = RESOLVERS[slug];
+      const pid = r.list.includes('{platformId}') || r.detail.includes('{platformId}') ? await platformId(page) : null;
+      const json = await apiGet(page, r.list.replace('{platformId}', pid || ''));
+      const id = ilkId(json);
+      if (!id) throw new Error('API\'den kayıt bulunamadı (liste boş)');
+      await page.goto(BASE + '/admin' + r.detail.replace('{id}', id).replace('{platformId}', pid || ''), { waitUntil: 'networkidle' });
+    } else if (yol.includes(':detay')) {
       const listeYolu = yol.replace(/\/:detay$/, '');
       await page.goto(BASE + '/admin' + listeYolu, { waitUntil: 'networkidle' });
       await page.waitForTimeout(600);
