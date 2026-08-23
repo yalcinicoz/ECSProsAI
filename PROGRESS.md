@@ -2,7 +2,7 @@
 
 > **Kural:** Her session bu dosyadan başla, bu dosyayla bitir.
 > Bir faz tamamlanmadan bir sonrakine geçme.
-> Son güncelleme: 2026-08-22
+> Son güncelleme: 2026-08-23
 
 ---
 
@@ -21,6 +21,15 @@
 | 4 | 🏪 **Satıcı paneli** | `satici/` + `/api/supplier/*` | **TAMAMLANDI ⚠️ restart+nginx+DNS bekliyor (2026-08-11)**: ürün ekleme/düzenleme (onay akışlı), fiyat&stok, siparişler+kargo+fatura, mali durum, kampanya opt-in, Hesabım (kargo modu); partner API ile AYNI komutlar; subdomain partner.misharitalia.com | DNS A kaydı + nginx restart (kullanıcı) → kullanıcı kabul testi | `docs/satici-paneli-tasarimi.md` |
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!) | Mobil geliştirici teste başlar; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
+
+**Satış kanalı ortak kurgusu (2026-08-23, Admin panel alanı) — PLAN v1 İNCELEMEDE, uygulama başlamadı:**
+`docs/satis-kanali-ortak-kurgu.md` — tek kanal modeli (tip ayrımı yerine yetenek bayrakları K1), kanala özel kayıtlı
+kapsam filtresi (K2), üç katman (kapsam → kanal kararı → listeleme durumu+sebep), `/storefront/channel-products` yeniden
+tasarımı ("yapılacaklar" görünümü, çekmece + Düzelt hedefleri), dört iş yönü: Y1 pazaryeri push (var), Y2 dropship bayi
+(bizim Partner API, varsayılan kapsam fiyat var ∩ stok≥3 ∩ kaynak=biz), Y3 biz pazaryeriyiz (satıcı=kaynak),
+Y4 biz dropship satıcıyız (`ISupplyConnector` dosya/HTTP bağlayıcıları → ProductSubmission Kapı 1/2). Fazlar F0-F8;
+kararlar K1-K10 kapalı, K11-K16 açık. ★ Bulgu: storefront opt-out vs pazaryeri aday opt-in anlam çatlağı (K10 ile kapanır).
+Rehber ana sayfasına "ürünleri satış kanalına nasıl yüklerim" SSS tablosu eklendi (a02819a).
 
 **Admin Paneli Kullanım Rehberi v2 (2026-08-23, Admin panel alanı) — İÇERİK TAMAM, ekran görüntüleri bekliyor:**
 eski tek sayfalık demo rehberi yerine tüm admin panelleri için ORTAK çok sayfalı statik site: kaynak `docs/rehber/content/**.md`
