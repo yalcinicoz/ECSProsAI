@@ -22,6 +22,15 @@
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!) | Mobil geliştirici teste başlar; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
+**Ürün tedarik iş akışı (2026-08-23, Admin panel alanı) — PLAN v1 İNCELEMEDE, uygulama başlamadı:**
+`docs/urun-tedarik-is-akisi.md` — kullanıcı kurgusu: asıl süreç AYRIŞTIRMA+ETİKETLEME (sayım=gerçek, İ1);
+SA/mal kabul esnek ve bloklamaz (İ2/İ3); mutabakat dönemsel/istatistiksel (İ4 — belgeler kaba, satıcı fazla
+gönderir); satışa giriş = stok + F2 `published` (İ5), KPI: teslim→ayrıştırma→satışa giriş süreleri + satışa
+girmeyenler (sebepleri ChannelListingStatusService'ten). Yeni Procurement modülü önerisi (K1), ölü
+fin_supplier_deliveries terk (K2), fazlar T1-T6. AÇIK: K7 etiket formatı, K8 fatura→cari (B0-B4), K9 ayrıştırmada
+kart açma yetkisi, K10 Legacy stok ezmesi kesim planı (★ T4 canlıya bunsuz alınmaz). Keşif bulguları: PO yok;
+SupplierDelivery şeması ölü; transferler stok taşımıyor (ayrı iş); AdjustStock'ta BinId yok; ürün etiketi yazdırma yok.
+
 **Satış kanalı ortak kurgusu (2026-08-23, Admin panel alanı) — F0 CANLIDA, F1 KAPSAM UYGULANDI ⚠️ restart bekliyor; SIRADA F2 Listeleme durumu:**
 F1: `storefront.channel_scopes` (kanal başına all|filter|mixed + FilterDef) + `channel_products` InScope/ScopeSource/IsExcluded
 (migration `AddChannelScope` canlı DB'de); HİBRİT kapsam: all = örtük (satır yoksa kanalda, F1 öncesiyle aynı), filter|mixed =
