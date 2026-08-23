@@ -2951,6 +2951,46 @@ public static class DatabaseSeeder
             }
         }
 
+        // Saç boyası VARYANT rengi (2026-08-23, kullanıcı isteği): grup ekseni `renk` (IsVariant+IsPrimaryAxis) zaten
+        // atanmış; ürün adındaki ton (Sarı/Kumral/Kahve/Kızıl…) mevcut renk havuzunun en yakın değerine eşlenir ve
+        // rengi olmayan aktif varyantlara product_variant_attributes satırı yazılır (mevcut yapı — yeni mekanizma yok).
+        var sacBoyalari = urunler.Where(u => u.Grup == "tlm_sac_boyasi").ToList();
+        if (sacBoyalari.Count > 0 && tipler.TryGetValue("renk", out var renkTipId))
+        {
+            var renkHavuzu = (await db.AttributeValues.Where(v => !v.IsDeleted && v.AttributeTypeId == renkTipId)
+                .Select(v => new { v.Id, Ad = v.NameI18n }).ToListAsync())
+                .GroupBy(v => (v.Ad.TryGetValue("tr", out var t) ? t : v.Ad.Values.FirstOrDefault() ?? "").Trim().ToLowerInvariant())
+                .ToDictionary(g => g.Key, g => g.First().Id);
+            var boyaIdler = sacBoyalari.Select(u => u.Id).ToList();
+            var boyaVaryantlari = await db.ProductVariants.AsNoTracking()
+                .Where(v => v.IsActive && !v.IsDeleted && boyaIdler.Contains(v.ProductId))
+                .Select(v => new { v.Id, v.ProductId }).ToListAsync();
+            var boyaVaryantIdler = boyaVaryantlari.Select(v => v.Id).ToList();
+            var renkliVaryantlar = (await db.ProductVariantAttributes.AsNoTracking()
+                .Where(va => va.AttributeTypeId == renkTipId && boyaVaryantIdler.Contains(va.VariantId))
+                .Select(va => va.VariantId).ToListAsync()).ToHashSet();
+            var varyantByUrun = boyaVaryantlari.GroupBy(v => v.ProductId).ToDictionary(g => g.Key, g => g.Select(v => v.Id).ToList());
+            int renkEklenen = 0;
+            foreach (var u in sacBoyalari)
+            {
+                var ad = u.Ad.TryGetValue("tr", out var trAd) ? trAd : u.Ad.Values.FirstOrDefault() ?? "";
+                string? havuzAdi = Var(ad, "Kızıl", "Kizil") ? "Kırmızı"
+                    : Var(ad, "Bakır", "Bakir") ? "Turuncu"
+                    : Ilk(ad, ("Siyah", "Siyah"), ("Kahve", "Kahverengi"), ("Kestane", "Kahverengi"), ("Çikolata", "Kahverengi"), ("Fındık", "Kahverengi"),
+                          ("Kumral", "Kahverengi"), ("Karamel", "Kahverengi"), ("Sarı", "Sarı"), ("Sari", "Sarı"), ("Platin", "Sarı"), ("Bal ", "Sarı"),
+                          ("Nude", "Bej"), ("Gri", "Gri"), ("Mor", "Mor"), ("Beyaz", "Beyaz"));
+                if (havuzAdi is null || !renkHavuzu.TryGetValue(havuzAdi.ToLowerInvariant(), out var renkDegerId)) continue;
+                if (!varyantByUrun.TryGetValue(u.Id, out var vids)) continue;
+                foreach (var vid in vids)
+                {
+                    if (!renkliVaryantlar.Add(vid)) continue;
+                    db.ProductVariantAttributes.Add(new ProductVariantAttribute { Id = Guid.NewGuid(), VariantId = vid, AttributeTypeId = renkTipId, AttributeValueId = renkDegerId, CreatedAt = DateTime.UtcNow });
+                    renkEklenen++;
+                }
+            }
+            if (renkEklenen > 0) Console.WriteLine($"✓ Seed: Telemania saç boyası varyant rengi — {renkEklenen} varyant.");
+        }
+
         // Renk filtresi (2026-08-23, kullanıcı isteği): demo DB'de (telemania platformu olan veritabanı) ham `renk`
         // tipi filtreye açılır — içecek kapları/boya/maskara renk varyantları hex'li 27 değerle swatch grubu olur.
         // Misharitalia `filtre_rengi` (kürasyonlu havuz) kullanır; orada `renk` kapalı kalır (telemania platformu yok).

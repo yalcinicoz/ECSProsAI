@@ -41,6 +41,10 @@ karışık kategorilerde (demo Mutfak & Kahve: termos renkli + kapsül kahve ren
 **(5) Renk filtresi (2026-08-23, kullanıcı isteği):** demo DB'de (telemania platformu olan DB) seeder `renk`
 tipini filtreye açar (UseInFilter=true — prod'da telemania yok, `filtre_rengi` düzeni değişmez); facet motoru `renk`
 grubunu da swatch'lı (hex) renk grubu sayar. İzole Demo: kamp-outdoor Renk grubu + seçimde 22→5 kart ✓.
+**(6) Saç boyası varyant rengi (2026-08-23):** seeder ürün adındaki tonu (Kahve/Kestane/Kumral→Kahverengi, Sarı/Platin/Bal→Sarı,
+Kızıl→Kırmızı, Bakır→Turuncu, Nude→Bej, Siyah…) mevcut renk havuzuna eşleyip rengi olmayan aktif varyantlara yazar
+(76 varyant; mevcut yapı — product_variant_attributes) → /sac-bakim'de Renk grubu ✓. Not: /ev-ve-temizlik'te Renk
+grubunun görünmemesi 10 dk kategori facet cache'iydi (dolunca göründü).
 
 **Reklam/Analytics/Dönüşüm takibi — A–F CANLIDA ✅ (2026-08-22 restart + kullanıcı kabul testi; 2026-08-23 KAPATILDI —
 gerçek GA4/Meta/Merchant hesap bilgileri girilince son doğrulama yapılacak: GA4 DebugView, Meta Test Events, Merchant
