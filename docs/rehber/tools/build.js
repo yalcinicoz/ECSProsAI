@@ -99,8 +99,10 @@ function layout({ title, bodyHtml, activeG, activeP, crumbs }) {
 <script>window.__REHBER_BASE='${BASE}';${js}</script></body></html>`;
 }
 
-fs.rmSync(OUT, { recursive: true, force: true });
+// DİKKAT: OUT klasörü nginx'e bind-mount edilir — klasörün KENDİSİ silinmez (silinirse container eski inode'a bakar,
+// /rehber 500 döner ve nginx restart gerekir); yalnız içeriği temizlenir.
 fs.mkdirSync(OUT, { recursive: true });
+for (const e of fs.readdirSync(OUT)) fs.rmSync(path.join(OUT, e), { recursive: true, force: true });
 fs.writeFileSync(path.join(OUT, 'site.css'), css);
 if (fs.existsSync(IMG)) fs.cpSync(IMG, path.join(OUT, 'img'), { recursive: true });
 
