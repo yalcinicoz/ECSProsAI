@@ -22,6 +22,16 @@
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!) | Mobil geliştirici teste başlar; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
+**Telemania demo filtreleri (2026-08-23, Web sitesi alanı) — UYGULANDI ⚠️ ecspros-demo + ecspros restart bekliyor:**
+(1) Regresyon düzeltmesi: 8d46a00 (08-15) sonrası Kategori sanal facet grubu özellik/fiyat seçimine göre daralıp tek
+seçenekte düşüyordu ("Hacim seçince seçenekler kayboluyor") → `GetStoreFacetsQuery.BuildFacetsWithSelections` kategori
+sayımı artık seçimden BAĞIMSIZ tüm tabandan (kararlı kategori kutusu; Misharitalia'da da geçerli). (2) Demo filtre
+zenginleştirmesi: 7 yeni özellik tipi (paket_adedi, yas_grubu, bez_bedeni, urun_formu, sac_rengi, kullanim_tipi,
+ek_ozellik) + değer havuzları (+spf 20/25, sac_tipi +3) + 74 grup ataması + `SeedTelemaniaFilterEnrichmentAsync`
+(ürün ADLARINDAN deterministik kurallarla 784 ürün-özellik değeri; idempotent; prod'da no-op) — demo DB'ye izole
+5051 Demo açılışıyla yazıldı; kategori sayfalarında Saç Tipi/Saç Rengi/Form/Paket Adedi/Yaş Grubu/SPF/Kullanım
+Tipi/Özellik grupları doğrulandı. ★ psql demo erişimi: ~/.pgpass'e ecommerce_demo satırı eklendi.
+
 **Reklam/Analytics/Dönüşüm takibi — A–F CANLIDA ✅ (2026-08-22 restart + kullanıcı kabul testi; 2026-08-23 KAPATILDI —
 gerçek GA4/Meta/Merchant hesap bilgileri girilince son doğrulama yapılacak: GA4 DebugView, Meta Test Events, Merchant
 feed kabulü). Canlıda doğrulandı: çerez bandı + consent günlüğü, test event kuyruğu, feed üretimi (mishar 5.792 ürün /

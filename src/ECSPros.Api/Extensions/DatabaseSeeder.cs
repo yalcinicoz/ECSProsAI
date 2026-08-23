@@ -23,11 +23,13 @@ public static class DatabaseSeeder
         await SeedPlatformTypesAsync(services);
         await SeedStorefrontDefaultsAsync(scope.ServiceProvider);
         await SeedCrmDefaultsAsync(scope.ServiceProvider);
+        await SeedGeoAsync(scope.ServiceProvider);
         await SeedCmsLegalPagesAsync(scope.ServiceProvider);
         await SeedReturnReasonsAsync(scope.ServiceProvider);
         await SeedCorporatePagesAsync(scope.ServiceProvider);
         await SeedFaqPageAsync(scope.ServiceProvider);
         await SeedDefaultVitrinAsync(scope.ServiceProvider);
+        await SeedTelemaniaVitrinAsync(scope.ServiceProvider);
         await SeedCargoCarriersAsync(scope.ServiceProvider);
         await SeedPlatformServiceCatalogAsync(scope.ServiceProvider);
         await SeedCampaignTypesAsync(scope.ServiceProvider);
@@ -207,6 +209,27 @@ public static class DatabaseSeeder
             HelpI18n = yardim is null ? null : new() { ["tr"] = yardim }
         };
 
+    /// <summary>Reklam/analytics takip servisi tipleri (İE-1) — TrackingSettingsProvider
+    /// ile birebir aynı küme; backfill bu tiplerde eksik şema alanı ekler.</summary>
+    private static readonly string[] TakipServisTipleri =
+    {
+        "analytics", "tag_manager", "ads", "merchant", "search_console",
+        "meta", "tiktok", "pinterest", "microsoft_ads", "clarity"
+    };
+
+    /// <summary>Takip servisi şeması: verilen alanlar + ortak `ownership` alanı
+    /// (customer | platform — hesap sahipliği, karar §7-10; davranışı değiştirmez).</summary>
+    private static List<PlatformSchemaField> TakipSemasi(params PlatformSchemaField[] alanlar)
+    {
+        var sema = new List<PlatformSchemaField>(alanlar)
+        {
+            Alan("ownership", "Hesap sahipliği (customer | platform)", "text", "settings",
+                yardim: "customer: hesap müşteri firmanın kendisine ait (varsayılan). platform: hesap ECSPros " +
+                        "tarafından açılmış alt mülk/pixel/Merchant hesabı. Yalnız bilgi/raporlama amaçlıdır.")
+        };
+        return sema;
+    }
+
     private static async Task SeedPlatformServiceCatalogAsync(IServiceProvider sp)
     {
         var context = sp.GetRequiredService<CoreDbContext>();
@@ -268,10 +291,12 @@ public static class DatabaseSeeder
             }),
             ("amazon", "Amazon", "marketplace", new List<PlatformSchemaField>
             {
-                Alan("sellerId",     "Seller ID",     "text",     "settings",    zorunlu: true),
-                Alan("accessKey",    "Access Key",    "password", "credentials", zorunlu: true),
-                Alan("secretKey",    "Secret Key",    "password", "credentials", zorunlu: true),
-                Alan("refreshToken", "Refresh Token", "password", "credentials")
+                Alan("sellerId",      "Seller ID",      "text",     "settings",    zorunlu: true),
+                Alan("marketplaceId", "Marketplace ID", "text",     "settings",    zorunlu: true,
+                    yardim: "Amazon pazar yeri kimliği (amazon.com.tr = A33AVAJ2PDY3EV)."),
+                Alan("accessKey",     "Access Key",     "password", "credentials", zorunlu: true),
+                Alan("secretKey",     "Secret Key",     "password", "credentials", zorunlu: true),
+                Alan("refreshToken",  "Refresh Token",  "password", "credentials")
             }),
             ("ciceksepeti", "Çiçeksepeti", "marketplace", new List<PlatformSchemaField>
             {
@@ -294,7 +319,95 @@ public static class DatabaseSeeder
                 Alan("testMode",     "Test Modu (zorunlu açık — canlı için PCI-DSS onayı gerekir)", "boolean", "settings",
                     yardim: "Şu an yalnız test modu desteklenir. Canlı ödeme için işletmenizin PCI-DSS SAQ D " +
                             "uyumu ve PayTR Direct API onayı gereklidir; o tamamlanana dek bu alan açık kalmalıdır.")
-            })
+            }),
+            // Sosyal giriş (OAuth) — firma/platform bazlı Google/Facebook kimlikleri. ClientSecret
+            // şifreli Credentials'ta; StoreAuthController bu kayıtları okur (firma/settings deseni).
+            ("google_oauth", "Google ile Giriş", "social_login", new List<PlatformSchemaField>
+            {
+                Alan("clientId",     "Client ID",       "text",     "settings",    zorunlu: true),
+                Alan("clientSecret", "Client Secret",   "password", "credentials", zorunlu: true),
+                Alan("redirectUri",  "Yönlendirme Adresi (boşsa otomatik)", "text", "settings",
+                    yardim: "OAuth callback adresi. Boş bırakılırsa platform host'undan üretilir."),
+                Alan("scopes",       "Kapsamlar (scopes)", "text", "settings",
+                    yardim: "Boşlukla ayrılmış OAuth kapsamları. Boşsa: openid email profile")
+            }),
+            ("facebook_oauth", "Facebook ile Giriş", "social_login", new List<PlatformSchemaField>
+            {
+                Alan("clientId",     "App ID",           "text",     "settings",    zorunlu: true),
+                Alan("clientSecret", "App Secret",       "password", "credentials", zorunlu: true),
+                Alan("redirectUri",  "Yönlendirme Adresi (boşsa otomatik)", "text", "settings",
+                    yardim: "OAuth callback adresi. Boş bırakılırsa platform host'undan üretilir."),
+                Alan("scopes",       "Kapsamlar (scopes)", "text", "settings",
+                    yardim: "Virgül/boşlukla ayrılmış OAuth kapsamları. Boşsa: email public_profile"),
+                Alan("graphApiVersion", "Graph API Sürümü", "text", "settings",
+                    yardim: "Facebook Graph API sürümü. Boşsa: v26.0")
+            }),
+            // Reklam / analytics / dönüşüm takibi servisleri (İE-1 Faz A, 2026-08-22 —
+            // plan: docs/reklam-analytics-entegrasyon-is-akisi.md). Alan anahtarları
+            // TrackingSettingsProvider + (Faz C/D) adapter'ların okuduğu anahtarlarla birebir.
+            // Secret'lar (accessToken/apiSecret/conversionApiToken) credentials → şifreli.
+            // `ownership` her serviste ortak: hesap müşterinin mi (customer) ECSPros'un mu
+            // (platform) — davranışı değiştirmez, panel rozeti + raporlama ayrımı (karar §7-10).
+            ("ga4", "Google Analytics 4", "analytics", TakipSemasi(
+                Alan("measurementId", "Ölçüm Kimliği (Measurement ID, G-XXXXXXX)", "text", "settings", zorunlu: true,
+                    yardim: "GA4 > Yönetici > Veri Akışları > Web akışı > Ölçüm Kimliği."),
+                Alan("measurementProtocolApiSecret", "Measurement Protocol API Secret", "password", "credentials",
+                    yardim: "Sunucu taraflı GA4 gönderimi için. GA4 > Veri Akışı > Measurement Protocol API secrets. " +
+                            "Boşsa yalnız tarayıcı tarafı (gtag) çalışır."),
+                Alan("sendServerSide", "Sunucu taraflı gönderim (Measurement Protocol)", "boolean", "settings",
+                    yardim: "Açıksa satın alma event'i sunucudan da gönderilir (API secret gerekir)."))),
+            ("gtm", "Google Tag Manager", "tag_manager", TakipSemasi(
+                Alan("containerId", "Container ID (GTM-XXXXXXX)", "text", "settings", zorunlu: true,
+                    yardim: "Tag Manager > Yönetici > Container ID."),
+                Alan("manageGa4", "GA4 GTM içinden yönetiliyor", "boolean", "settings",
+                    yardim: "Açıksa siteye ayrıca GA4 gtag basılmaz (çift sayım önlenir); GA4 etiketini GTM'de kurun."),
+                Alan("manageAds", "Google Ads GTM içinden yönetiliyor", "boolean", "settings",
+                    yardim: "Açıksa Google Ads dönüşüm etiketi siteye basılmaz; GTM'de kurun."),
+                Alan("managePixels", "Pixel'ler (Meta/TikTok/UET/Pinterest) GTM içinden yönetiliyor", "boolean", "settings",
+                    yardim: "Açıksa pixel script'leri siteye basılmaz; dataLayer event'leri GTM'de pixel etiketlerine bağlanır."))),
+            ("google_ads", "Google Ads", "ads", TakipSemasi(
+                Alan("conversionId", "Dönüşüm Kimliği (AW-XXXXXXXXX)", "text", "settings", zorunlu: true,
+                    yardim: "Google Ads > Araçlar > Dönüşümler > etiket kurulumu > AW- ile başlayan kimlik."),
+                Alan("purchaseLabel", "Satın Alma dönüşüm etiketi (label)", "text", "settings", zorunlu: true),
+                Alan("addToCartLabel", "Sepete Ekleme dönüşüm etiketi (label)", "text", "settings"),
+                Alan("beginCheckoutLabel", "Ödemeye Başlama dönüşüm etiketi (label)", "text", "settings"),
+                Alan("enhancedConversions", "Gelişmiş dönüşümler (hash'li e-posta gönder)", "boolean", "settings",
+                    yardim: "Açıksa satın almada müşteri e-postası SHA256 ile gtag'e iletilir (Google Ads'te de açık olmalı)."))),
+            ("google_merchant", "Google Merchant Center", "merchant", TakipSemasi(
+                Alan("merchantId", "Merchant ID", "text", "settings", zorunlu: true),
+                Alan("feedCountry", "Hedef ülke (ISO, örn. TR)", "text", "settings", zorunlu: true),
+                Alan("feedLanguage", "Feed dili (örn. tr)", "text", "settings", zorunlu: true),
+                Alan("currency", "Para birimi (örn. TRY)", "text", "settings", zorunlu: true),
+                Alan("includeOutOfStock", "Stoksuz varyantları feed'e dahil et (out_of_stock)", "boolean", "settings"),
+                // İE-5: kargo (karar §7-7 feed'e yazılır — sabit temel bedel) + feed anahtarı (sistem üretir)
+                Alan("shippingPrice", "Kargo bedeli (feed g:shipping, örn. 49.90; boş = yazılmaz)", "text", "settings",
+                    yardim: "Merchant Center sabit bedel ister; ücretsiz kargo eşiğini Merchant Center > Kargo ayarında tanımlayın."),
+                Alan("shippingService", "Kargo servis adı (örn. Standart Kargo)", "text", "settings"),
+                Alan("feedKey", "Feed erişim anahtarı (sistem üretir — değiştirmeyin)", "text", "settings",
+                    yardim: "Feed URL'si bu anahtarla korunur; boşsa ilk üretimde otomatik doldurulur."))),
+            ("google_search_console", "Google Search Console", "search_console", TakipSemasi(
+                Alan("verificationCode", "Site doğrulama kodu (meta content)", "text", "settings", zorunlu: true,
+                    yardim: "Search Console > Mülk ekle > HTML etiketi yöntemindeki content=\"...\" değeri."))),
+            ("meta", "Meta (Facebook/Instagram) Pixel + Conversions API", "meta", TakipSemasi(
+                Alan("pixelId", "Pixel ID (Dataset ID)", "text", "settings", zorunlu: true,
+                    yardim: "Meta Events Manager > Veri kaynakları > Pixel kimliği."),
+                Alan("accessToken", "Conversions API Access Token", "password", "credentials",
+                    yardim: "Events Manager > Ayarlar > Conversions API > Erişim jetonu oluştur. Sunucu taraflı gönderim için."),
+                Alan("conversionApiEnabled", "Conversions API (sunucu taraflı) açık", "boolean", "settings"),
+                Alan("testEventCode", "Test Event Code (yalnız test için)", "text", "settings",
+                    yardim: "Events Manager > Test Events kodu (TESTxxxxx). Doluyken sunucu event'leri test sekmesine düşer; canlıda BOŞ bırakın."))),
+            ("tiktok", "TikTok Pixel + Events API", "tiktok", TakipSemasi(
+                Alan("pixelId", "Pixel ID", "text", "settings", zorunlu: true),
+                Alan("accessToken", "Events API Access Token", "password", "credentials"),
+                Alan("eventsApiEnabled", "Events API (sunucu taraflı) açık", "boolean", "settings"))),
+            ("pinterest", "Pinterest Tag + Conversions API", "pinterest", TakipSemasi(
+                Alan("tagId", "Tag ID", "text", "settings", zorunlu: true),
+                Alan("conversionApiToken", "Conversions API Token", "password", "credentials"),
+                Alan("conversionApiEnabled", "Conversions API (sunucu taraflı) açık", "boolean", "settings"))),
+            ("microsoft_ads", "Microsoft Ads (UET)", "microsoft_ads", TakipSemasi(
+                Alan("uetTagId", "UET Tag ID", "text", "settings", zorunlu: true))),
+            ("microsoft_clarity", "Microsoft Clarity", "clarity", TakipSemasi(
+                Alan("projectId", "Project ID", "text", "settings", zorunlu: true)))
         };
 
         var katalogKodlari = servisler.Select(s => s.Kod).ToList();
@@ -315,11 +428,59 @@ public static class DatabaseSeeder
             })
             .ToList();
 
-        if (yeniler.Count == 0) return;
+        // Backfill: sosyal giriş (OAuth) ve takip (tracking) katalogları sonradan
+        // genişleyebilir — mevcut kayıtlara eksik şema alanlarını ekle; admin'in
+        // doldurduğu anahtarlar ve düzenlemeleri korunur.
+        var degisti = yeniler.Count > 0;
+        var backfillEdilenler = new List<string>();
+        var backfillTipleri = new HashSet<string>(TakipServisTipleri) { "social_login" };
+        var sosyalTanilar = servisler.Where(s => backfillTipleri.Contains(s.Tip)).ToList();
+        if (sosyalTanilar.Count > 0)
+        {
+            var sosyalKodlar = sosyalTanilar.Select(x => x.Kod).ToList();
+            var sosyalMevcutlar = await context.IntegrationServices
+                .Where(s => backfillTipleri.Contains(s.ServiceType)
+                    && sosyalKodlar.Contains(s.Code))
+                .ToListAsync();
 
-        context.IntegrationServices.AddRange(yeniler);
+            var semaOku = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            foreach (var tanim in sosyalTanilar)
+            {
+                var mevcut = sosyalMevcutlar.FirstOrDefault(m => m.Code == tanim.Kod);
+                if (mevcut is null) continue;
+
+                List<PlatformSchemaField> sema = new();
+                if (!string.IsNullOrEmpty(mevcut.SettingsSchemaJson))
+                {
+                    try
+                    {
+                        sema = System.Text.Json.JsonSerializer.Deserialize<List<PlatformSchemaField>>(
+                            mevcut.SettingsSchemaJson, semaOku) ?? new();
+                    }
+                    catch
+                    {
+                        sema = new();
+                    }
+                }
+
+                var eksikler = tanim.Sema.Where(y => sema.All(m => m.Key != y.Key)).ToList();
+                if (eksikler.Count == 0) continue;
+
+                sema.AddRange(eksikler);
+                mevcut.SettingsSchemaJson = System.Text.Json.JsonSerializer.Serialize(sema, SemaJsonAyar);
+                backfillEdilenler.Add($"{tanim.Kod}+{eksikler.Count}");
+                degisti = true;
+            }
+        }
+
+        if (yeniler.Count > 0)
+            context.IntegrationServices.AddRange(yeniler);
+
+        if (!degisti) return;
+
         await context.SaveChangesAsync();
-        Console.WriteLine($"✓ Seed: {yeniler.Count} platform servisi eklendi ({string.Join("/", yeniler.Select(y => y.Code))} IntegrationService).");
+        Console.WriteLine($"✓ Seed: platform servisi güncellendi (yeni: {string.Join("/", yeniler.Select(y => y.Code))}; " +
+                          $"şema backfill: {string.Join("/", backfillEdilenler)}).");
     }
 
     /// <summary>
@@ -889,6 +1050,43 @@ public static class DatabaseSeeder
     }
 
     /// <summary>
+    /// Türkiye adres hiyerarşisi referans verisini taze DB'ye yükler (ülke/il/ilçe/mahalle).
+    /// Üretimde bu veri bir kerelik dış import ile gelmişti; bundan sonra yeni DB kurulumu
+    /// Data/Geo/*.csv dosyalarından idempotent olarak dolar (il/ilçe/mahalle dropdown'ları).
+    /// Yalnız tablolar boşken çalışır — mevcut veriye dokunmaz.
+    /// </summary>
+    private static async Task SeedGeoAsync(IServiceProvider sp)
+    {
+        var crm = sp.GetRequiredService<ECSPros.Crm.Infrastructure.Persistence.CrmDbContext>();
+        await crm.Database.MigrateAsync();
+        if (await crm.Cities.AnyAsync()) return; // zaten dolu
+
+        var dataSource = sp.GetRequiredService<Npgsql.NpgsqlDataSource>();
+        var geoDir = Path.Combine(AppContext.BaseDirectory, "Data", "Geo");
+        if (!Directory.Exists(geoDir)) return;
+
+        var tablolar = new (string Table, string File)[]
+        {
+            ("crm.crm_countries",      "countries.csv"),
+            ("crm.crm_cities",         "cities.csv"),
+            ("crm.crm_districts",      "districts.csv"),
+            ("crm.crm_neighborhoods",  "neighborhoods.csv"),
+        };
+
+        await using var conn = await dataSource.OpenConnectionAsync();
+        foreach (var (table, file) in tablolar)
+        {
+            var yol = Path.Combine(geoDir, file);
+            if (!File.Exists(yol)) continue;
+
+            await using var writer = await conn.BeginTextImportAsync(
+                $"COPY {table} FROM STDIN (FORMAT csv, HEADER true)");
+            await writer.WriteAsync(await File.ReadAllTextAsync(yol));
+        }
+        Console.WriteLine("✓ Seed: Türkiye adres hiyerarşisi (il/ilçe/mahalle) yüklendi.");
+    }
+
+    /// <summary>
     /// Storefront migration'larını uygular ve tüm kategorilere varsayılan listing_mode atar.
     /// İdempotent — zaten doğru değeri olan kayıtlara dokunmaz.
     /// </summary>
@@ -1307,6 +1505,13 @@ public static class DatabaseSeeder
 
         // Ürün grubu özellik atamaları
         await SeedProductGroupAttributesAsync(context);
+
+        // Telemania demo — kalıcı kozmetik/kişisel bakım katalog tanımları (idempotent)
+        await SeedTelemaniaProductGroupsAsync(context);
+        await SeedTelemaniaAttributeValuesAsync(context);
+        await SeedTelemaniaDrinkwareAttributeValuesAsync(context);
+        await SeedTelemaniaProductGroupAttributesAsync(context);
+        await SeedTelemaniaFilterEnrichmentAsync(context);
     }
 
     private static async Task SeedAttributeTypesAsync(CatalogDbContext db)
@@ -1370,6 +1575,19 @@ public static class DatabaseSeeder
             ("ortam",        "Ortam",             "select", 430, true),
             // Çanta
             ("canta_agzi",   "Çanta Ağzı",        "select", 440, true),
+            // Kozmetik / kişisel bakım (Telemania demo — genel kullanım)
+            ("hacim",        "Hacim",             "select", 1000, true),
+            ("cilt_tipi",    "Cilt Tipi",         "select", 1010, true),
+            ("sac_tipi",     "Saç Tipi",          "select", 1020, true),
+            ("spf",          "SPF",               "select", 1030, true),
+            // Telemania demo filtre zenginleştirmesi (2026-08-23) — ürün adlarından türetilir
+            ("paket_adedi",  "Paket Adedi",       "select", 1040, true),
+            ("yas_grubu",    "Yaş Grubu",         "select", 1050, true),
+            ("bez_bedeni",   "Bez Bedeni",        "select", 1060, true),
+            ("urun_formu",   "Form",              "select", 1070, true),
+            ("sac_rengi",    "Saç Rengi",         "select", 1080, true),
+            ("kullanim_tipi","Kullanım Tipi",     "select", 1090, true),
+            ("ek_ozellik",   "Özellik",           "select", 1100, true),
             // Filtre dışı tipler
             ("renk",         "Renk",              "select", 900, false),
             // Manken (bkz. docs/manken-ozelligi-spec.md) — varyant üretmez, bilgilendirici;
@@ -1543,6 +1761,417 @@ public static class DatabaseSeeder
 
         if (added > 0) await db.SaveChangesAsync();
         Console.WriteLine($"✓ Seed: Ürün grupları — {added} yeni eklendi, {existingCodes.Count} zaten vardı.");
+    }
+
+    /// <summary>
+    /// Telemania demo (kozmetik/kişisel bakım + karma mağaza) — kalıcı ürün grupları.
+    /// Her Trendyol kategorisi AYRI bir ProductGroup olur (toplama grup yok; pazaryeri
+    /// kategori eşlemesi birebir yapılabilsin). Idempotent: eksik eklenir, var olan korunur.
+    /// </summary>
+    private static async Task SeedTelemaniaProductGroupsAsync(CatalogDbContext db)
+    {
+        var groups = new (string code, string name, int sort)[]
+        {
+            ("tlm_termos",              "Termos",                      1),
+            ("tlm_sac_boyasi",          "Saç Boyası",                  1),
+            ("tlm_mug",                 "Mug",                         1),
+            ("tlm_prezervatif",         "Prezervatif",                 1),
+            ("tlm_emzik",               "Emzik",                       1),
+            ("tlm_deodorant",           "Deodorant ve Roll on",        1),
+            ("tlm_sampuan",             "Şampuan",                     1),
+            ("tlm_sac_spreyi",          "Saç Spreyi",                  1),
+            ("tlm_yuz_kremi",           "Yüz Kremi",                   1),
+            ("tlm_sac_kremi",           "Saç Kremi",                   1),
+            ("tlm_maskara",             "Maskara",                     1),
+            ("tlm_sac_kopugu",          "Saç Köpüğü",                  1),
+            ("tlm_termal_canta",        "Termal Çanta",                1),
+            ("tlm_sac_maskesi",         "Saç Maskesi",                 1),
+            ("tlm_dus_jeli",            "Duş Jeli",                    1),
+            ("tlm_biberon",             "Biberon",                     1),
+            ("tlm_yuz_gunes_kremi",     "Yüz Güneş Kremi",             1),
+            ("tlm_sac_serumu",          "Saç Serum ve Yağı",           1),
+            ("tlm_hasta_bezi",          "Hasta Bezi",                  1),
+            ("tlm_vucut_gunes_kremi",   "Vücut Güneş Kremi",           1),
+            ("tlm_protez_dis_bakim",    "Protez Diş Bakım",            1),
+            ("tlm_kayganlastirici_jel", "Kayganlaştırıcı Jel",         1),
+            ("tlm_hasere_ilaci",        "Haşere İlacı",                1),
+            ("tlm_dis_macunu",          "Diş Macunu",                  1),
+            ("tlm_cilt_serumu",         "Cilt Serumu",                 1),
+            ("tlm_sogutucu_buzluk",     "Soğutucu & Buzluk",           1),
+            ("tlm_sinek_ilaci",         "Sinek İlacı ve Kovucu",       1),
+            ("tlm_sarjli_dis_fircasi",  "Şarj Edilebilir Diş Fırçası", 1),
+            ("tlm_kulak_ustu_kulaklik", "Kulak Üstü Kablolu Kulaklık", 1),
+            ("tlm_kulak_ici_kulaklik",  "Kulak İçi Kablolu Kulaklık",  1),
+            ("tlm_kapsul_kahve",        "Kapsül Kahve",                1),
+            ("tlm_kamp_yemek_seti",     "Kamp Yemek Seti",             1),
+            ("tlm_bebek_sampuani",      "Bebek Şampuanı",              1),
+            ("tlm_yatak_koruyucu",      "Yatak Koruyucu",              1),
+            ("tlm_temizlik_bezi",       "Temizlik Bezi",               1),
+            ("tlm_sac_fircasi",         "Saç Fırçası ve Tarak",        1),
+            ("tlm_kamp_matarasi",       "Kamp Matarası",               1),
+            ("tlm_goz_kremi",           "Göz Kremi",                   1),
+            ("tlm_fondoten",            "Fondöten",                    1),
+            ("tlm_el_kremi",            "El Kremi",                    1),
+            ("tlm_cikolata",            "Çikolata",                    1),
+            ("tlm_bebek_islak_mendil",  "Bebek Islak Mendil",          1),
+            ("tlm_yuz_temizleyici",     "Yüz Temizleyici",             1),
+            ("tlm_sac_bakim_seti",      "Saç Bakım Seti",              1),
+            ("tlm_krem_santi",          "Krem Şanti",                  1),
+            ("tlm_kadeh",               "Kadeh",                       1),
+            ("tlm_dripper",             "Dripper",                     1),
+            ("tlm_bitki_cayi",          "Diğer Bitki Çayları",         1),
+            ("tlm_bulasik_sungeri",     "Bulaşık Süngeri ve Fırçası",  1),
+            ("tlm_bebek_kremi",         "Bebek Kremi ve Yağı",         1),
+            ("tlm_bebek_gunes_kremi",   "Bebek Güneş Kremi",           1),
+            ("tlm_bardak",              "Bardak",                      1),
+            ("tlm_aydinlatici",         "Aydınlatıcı",                 1),
+            ("tlm_yuzey_temizleyici",   "Yüzey Temizleyici",           1),
+            ("tlm_vucut_spreyi",        "Vücut Spreyi",                1),
+            ("tlm_vucut_kremi",         "Vücut Kremi",                 1),
+            ("tlm_tiras_bicagi",        "Tıraş Bıçağı",                1),
+            ("tlm_spor_matara",         "Spor Matara",                 1),
+            ("tlm_shaker",              "Shaker & Kokteyl Seti",       1),
+            ("tlm_sac_tonigi",          "Saç Toniği",                  1),
+            ("tlm_sac_sekillendirici",  "Saç Şekillendirici Krem ve Wax", 1),
+            ("tlm_sac_parfumu",         "Saç Parfümü",                 1),
+            ("tlm_makyaj_temizleyici",  "Makyaj Temizleyici",          1),
+            ("tlm_kuru_sampuan",        "Kuru Şampuan",                1),
+            ("tlm_gunes_sonrasi",       "Güneş Sonrası Ürünü",         1),
+            ("tlm_goz_serumu",          "Göz Serumu",                  1),
+            ("tlm_filtre_kahve",        "Filtre ve Çekirdek Kahve",    1),
+            ("tlm_burun_bandi",         "Burun Bandı",                 1),
+            ("tlm_burun_aspiatoru",     "Burun Aspiratörü",            1),
+            ("tlm_bebek_bezi",          "Bebek Bezi",                  1),
+            ("tlm_bb_cc_krem",          "BB ve CC Krem",               1),
+            ("tlm_banyo_lifi",          "Banyo Lifi ve Süngeri",       1),
+            ("tlm_ayak_kremi",          "Ayak Kremi",                  1),
+        };
+
+        var existingCodes = new HashSet<string>(
+            await db.ProductGroups.Select(x => x.Code).ToListAsync());
+
+        int added = 0;
+        foreach (var (code, name, sort) in groups)
+        {
+            if (existingCodes.Contains(code)) continue;
+            db.ProductGroups.Add(new ProductGroup
+            {
+                Id        = Guid.NewGuid(),
+                Code      = code,
+                NameI18n  = new Dictionary<string, string> { ["tr"] = name },
+                IsActive  = true,
+                SortOrder = sort,
+                CreatedAt = DateTime.UtcNow,
+            });
+            existingCodes.Add(code);
+            added++;
+        }
+
+        if (added > 0) await db.SaveChangesAsync();
+        Console.WriteLine($"✓ Seed: Telemania ürün grupları — {added} yeni eklendi.");
+    }
+
+    /// <summary>Kozmetik attribute'leri için değer şablonları (idempotent).</summary>
+    private static async Task SeedTelemaniaAttributeValuesAsync(CatalogDbContext db)
+    {
+        var pools = new (string TypeCode, string[] Values)[]
+        {
+            ("hacim",     new[] { "50ml", "100ml", "150ml", "200ml", "250ml", "400ml", "500ml" }),
+            ("cilt_tipi", new[] { "Kuru", "Yağlı", "Karma", "Normal", "Hassas", "Tüm Cilt Tipleri" }),
+            ("sac_tipi",  new[] { "Kuru", "Yağlı", "Boyalı", "Hasarlı", "Normal", "Tüm Saç Tipleri" }),
+            ("spf",       new[] { "SPF 15", "SPF 20", "SPF 25", "SPF 30", "SPF 50", "SPF 50+" }),
+            // 2026-08-23 filtre zenginleştirmesi
+            ("sac_tipi",  new[] { "İnce Telli", "Kıvırcık", "Dökülen" }),
+            ("paket_adedi", new[] { "Tekli", "2'li", "3'lü", "4'lü", "5'li", "6'lı", "8'li", "10'lu", "12'li", "20'li", "24'lü", "30'lu", "60'lı", "120'li" }),
+            ("yas_grubu", new[] { "0-6 Ay", "6-18 Ay", "18+ Ay", "20+", "30+", "40+", "50+", "65+" }),
+            ("bez_bedeni", new[] { "Small", "Medium", "Large", "X-Large", "XX-Large" }),
+            ("urun_formu", new[] { "Roll-On", "Sprey", "Stick", "Krem", "Jel", "Köpük", "Serum", "Yağ", "Losyon", "Toz" }),
+            ("sac_rengi", new[] { "Sarı", "Kumral", "Kahve", "Kestane", "Kızıl", "Bakır", "Siyah", "Gri", "Platin", "Nude" }),
+            ("kullanim_tipi", new[] { "Termos Bardak", "Yemek Termosu", "Matara", "Kupa", "Kamp Seti", "Soğutucu", "Termos" }),
+            ("ek_ozellik", new[] { "Pipetli", "Kaşıklı", "Kulplu", "Paslanmaz Çelik" }),
+        };
+
+        var codes = pools.Select(p => p.TypeCode).ToArray();
+        var types = await db.AttributeTypes
+            .Where(a => codes.Contains(a.Code))
+            .ToDictionaryAsync(a => a.Code, a => a.Id);
+
+        int added = 0;
+        foreach (var (typeCode, values) in pools)
+        {
+            if (!types.TryGetValue(typeCode, out var typeId)) continue;
+            var existingNames = new HashSet<string>(await db.AttributeValues
+                .Where(v => v.AttributeTypeId == typeId)
+                .Select(v => v.NameI18n["tr"])
+                .ToListAsync());
+            int sort = 10;
+            foreach (var value in values)
+            {
+                if (existingNames.Contains(value)) continue;
+                db.AttributeValues.Add(new AttributeValue
+                {
+                    Id = Guid.NewGuid(),
+                    AttributeTypeId = typeId,
+                    NameI18n = new Dictionary<string, string> { ["tr"] = value, ["en"] = value },
+                    SortOrder = sort,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                });
+                sort += 10;
+                added++;
+            }
+        }
+
+        if (added > 0) await db.SaveChangesAsync();
+        Console.WriteLine($"✓ Seed: Telemania attribute değer şablonları — {added} yeni eklendi.");
+    }
+
+    /// <summary>
+    /// İçecek/soğutucu katalog değer havuzları (idempotent): hacim (litre/ml) + renk (hex'li).
+    /// SortOrder gerçek kapasite (ml) olarak tutulur; böylece facet değerleri birim karışık
+    /// olsa bile küçükten büyüğe sıralanır. Kozmetik hacimleri "50ml" kalıbında, içecek
+    /// hacimleri doğal Türkçe perakende biçiminde ("0,35 L") tutulur — farklı gruplardır.
+    /// </summary>
+    private static async Task SeedTelemaniaDrinkwareAttributeValuesAsync(CatalogDbContext db)
+    {
+        // (gösterim, ml cinsinden sortOrder)
+        var volumes = new (string Name, int Ml)[]
+        {
+            ("0,23 L", 230),
+            ("0,35 L", 350),
+            ("0,40 L", 400),
+            ("0,42 L", 420),
+            ("0,47 L", 470),
+            ("0,53 L", 530),
+            ("0,59 L", 590),
+            ("0,60 L", 600),
+            ("0,70 L", 700),
+            ("0,71 L", 710),
+            ("0,75 L", 750),
+            ("0,80 L", 800),
+            ("0,89 L", 890),
+            ("0,94 L", 940),
+            ("1 L",    1000),
+            ("1,06 L", 1060),
+            ("1,18 L", 1180),
+            ("1,40 L", 1400),
+            ("1,90 L", 1900),
+            ("4 L",    4000),
+            ("6,6 L",  6600),
+            ("7 L",    7000),
+            ("9,5 L",  9500),
+            ("14 L",   14000),
+            ("15,1 L", 15100),
+            ("23 L",   23000),
+            ("28,3 L", 28300),
+            ("47 L",   47000),
+            // Biberon (ml)
+            ("125ml",  125),
+            ("240ml",  240),
+            ("260ml",  260),
+            ("330ml",  330),
+        };
+
+        // (tr, en, hex, sortOrder) — filtre_rengi paletiyle aynı tonlar + içecek özgü renkler
+        var colors = new (string Tr, string En, string Hex, int Sort)[]
+        {
+            ("Siyah",      "Black",       "#000000", 10),
+            ("Beyaz",      "White",       "#FFFFFF", 20),
+            ("Gri",        "Grey",        "#808080", 30),
+            ("Kırmızı",    "Red",         "#E53935", 40),
+            ("Pembe",      "Pink",        "#EC407A", 50),
+            ("Turuncu",    "Orange",      "#FB8C00", 60),
+            ("Sarı",       "Yellow",      "#FDD835", 70),
+            ("Bej",        "Beige",       "#F5F0DC", 80),
+            ("Krem",       "Cream",       "#FFFDD0", 90),
+            ("Yeşil",      "Green",       "#43A047", 100),
+            ("Haki",       "Khaki",       "#8D7156", 110),
+            ("Mavi",       "Blue",        "#1E88E5", 120),
+            ("Koyu Mavi",  "Dark Blue",   "#0D47A1", 130),
+            ("Lacivert",   "Navy",        "#1A237E", 140),
+            ("Turkuaz",    "Turquoise",   "#00BCD4", 150),
+            ("Mor",        "Purple",      "#8E24AA", 160),
+            ("Lila",       "Lilac",       "#CE93D8", 170),
+            ("Kahverengi", "Brown",       "#6D4C41", 180),
+            ("Altın",      "Gold",        "#FFD600", 190),
+            ("Gümüş",      "Silver",      "#B0BEC5", 200),
+            ("Bordo",      "Burgundy",    "#7B1F2D", 210),
+            ("Pudra",      "Powder Pink", "#F2D5D5", 220),
+            ("Fuşya",      "Fuchsia",     "#D5007F", 230),
+            ("Eflatun",    "Lilac",       "#C4A0E8", 240),
+            ("Kamuflaj",   "Camouflage",  "#6B705C", 250),
+            ("Çelik",      "Steel",       "#90A4AE", 260),
+            ("Doğal",      "Natural",     "#E8D8B8", 270),
+        };
+
+        var types = await db.AttributeTypes
+            .Where(a => a.Code == "hacim" || a.Code == "renk")
+            .ToDictionaryAsync(a => a.Code, a => a.Id);
+
+        int added = 0;
+
+        if (types.TryGetValue("hacim", out var hacimId))
+        {
+            var existing = new HashSet<string>(await db.AttributeValues
+                .Where(v => v.AttributeTypeId == hacimId)
+                .Select(v => v.NameI18n["tr"])
+                .ToListAsync());
+            foreach (var (name, ml) in volumes)
+            {
+                if (existing.Contains(name)) continue;
+                db.AttributeValues.Add(new AttributeValue
+                {
+                    Id = Guid.NewGuid(),
+                    AttributeTypeId = hacimId,
+                    NameI18n = new Dictionary<string, string> { ["tr"] = name, ["en"] = name },
+                    SortOrder = ml,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                });
+                added++;
+            }
+        }
+
+        if (types.TryGetValue("renk", out var renkId))
+        {
+            var existing = new HashSet<string>(await db.AttributeValues
+                .Where(v => v.AttributeTypeId == renkId)
+                .Select(v => v.NameI18n["tr"])
+                .ToListAsync());
+            foreach (var (tr, en, hex, sort) in colors)
+            {
+                if (existing.Contains(tr)) continue;
+                db.AttributeValues.Add(new AttributeValue
+                {
+                    Id = Guid.NewGuid(),
+                    AttributeTypeId = renkId,
+                    NameI18n = new Dictionary<string, string> { ["tr"] = tr, ["en"] = en },
+                    HexCode = hex,
+                    SortOrder = sort,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                });
+                added++;
+            }
+        }
+
+        if (added > 0) await db.SaveChangesAsync();
+        Console.WriteLine($"✓ Seed: Telemania içecek/renk değer havuzu — {added} yeni eklendi.");
+    }
+
+    /// <summary>Kozmetik ürün gruplarına özellik atamaları (idempotent).</summary>
+    private static async Task SeedTelemaniaProductGroupAttributesAsync(CatalogDbContext db)
+    {
+        var attrTypes = await db.AttributeTypes.ToDictionaryAsync(a => a.Code, a => a.Id);
+        var groups = await db.ProductGroups.ToDictionaryAsync(g => g.Code, g => g.Id);
+
+        var existingPgas = await db.ProductGroupAttributes
+            .Select(x => new { x.ProductGroupId, x.AttributeTypeId }).ToListAsync();
+        var pgaSet = new HashSet<(Guid, Guid)>(existingPgas.Select(x => (x.ProductGroupId, x.AttributeTypeId)));
+
+        int added = 0;
+        void Attr(string grpCode, string attrCode, bool isVariant, bool isPrimary, bool isRequired, int sort)
+        {
+            if (!groups.TryGetValue(grpCode, out var gid)) return;
+            if (!attrTypes.TryGetValue(attrCode, out var aid)) return;
+            if (pgaSet.Contains((gid, aid))) return;
+            db.ProductGroupAttributes.Add(new ProductGroupAttribute
+            {
+                Id = Guid.NewGuid(), ProductGroupId = gid, AttributeTypeId = aid,
+                IsVariant = isVariant, IsPrimaryAxis = isPrimary,
+                IsRequired = isRequired, SortOrder = sort, CreatedAt = DateTime.UtcNow
+            });
+            pgaSet.Add((gid, aid));
+            added++;
+        }
+
+        // Kozmetik grupları: hacim (spec) + tip özelliği + varsa renk (varyant ekseni).
+        void Cosmetic(string g, string? tipAttr, bool renkVaryant = false)
+        {
+            Attr(g, "hacim", false, false, false, 1);
+            if (tipAttr is not null) Attr(g, tipAttr, false, false, false, 2);
+            if (renkVaryant) Attr(g, "renk", true, true, false, 3);
+        }
+
+        Cosmetic("tlm_sampuan", "sac_tipi");
+        Cosmetic("tlm_kuru_sampuan", "sac_tipi");
+        Cosmetic("tlm_bebek_sampuani", "sac_tipi");
+        Cosmetic("tlm_sac_kremi", "sac_tipi");
+        Cosmetic("tlm_sac_maskesi", "sac_tipi");
+        Cosmetic("tlm_sac_bakim_seti", "sac_tipi");
+        Cosmetic("tlm_sac_tonigi", "sac_tipi");
+        Cosmetic("tlm_sac_serumu", "sac_tipi");
+        Cosmetic("tlm_sac_spreyi", "sac_tipi");
+        Cosmetic("tlm_sac_kopugu", "sac_tipi");
+        Cosmetic("tlm_sac_sekillendirici", "sac_tipi");
+        Cosmetic("tlm_sac_parfumu", null);
+        Cosmetic("tlm_sac_boyasi", "sac_tipi", renkVaryant: true);
+        Cosmetic("tlm_sac_fircasi", null);
+        Cosmetic("tlm_deodorant", null);
+        Cosmetic("tlm_dus_jeli", "cilt_tipi");
+        Cosmetic("tlm_yuz_kremi", "cilt_tipi");
+        Cosmetic("tlm_cilt_serumu", "cilt_tipi");
+        Cosmetic("tlm_goz_kremi", "cilt_tipi");
+        Cosmetic("tlm_goz_serumu", "cilt_tipi");
+        Cosmetic("tlm_bb_cc_krem", "cilt_tipi", renkVaryant: true);
+        Cosmetic("tlm_el_kremi", "cilt_tipi");
+        Cosmetic("tlm_vucut_kremi", "cilt_tipi");
+        Cosmetic("tlm_ayak_kremi", "cilt_tipi");
+        Cosmetic("tlm_bebek_kremi", "cilt_tipi");
+        Cosmetic("tlm_vucut_spreyi", "cilt_tipi");
+        Cosmetic("tlm_yuz_temizleyici", "cilt_tipi");
+        Cosmetic("tlm_makyaj_temizleyici", "cilt_tipi");
+        Cosmetic("tlm_yuz_gunes_kremi", "spf");
+        Cosmetic("tlm_vucut_gunes_kremi", "spf");
+        Cosmetic("tlm_bebek_gunes_kremi", "spf");
+        Cosmetic("tlm_gunes_sonrasi", "spf");
+        Cosmetic("tlm_maskara", null, renkVaryant: true);
+        Cosmetic("tlm_fondoten", "cilt_tipi", renkVaryant: true);
+        Cosmetic("tlm_aydinlatici", "cilt_tipi", renkVaryant: true);
+        Cosmetic("tlm_dis_macunu", null);
+        Cosmetic("tlm_sarjli_dis_fircasi", null);
+        Cosmetic("tlm_protez_dis_bakim", null);
+        Cosmetic("tlm_banyo_lifi", null);
+
+        // İçecek / soğutucu grupları: hacim (ürün seviyesi spec) + renk (varyant ekseni).
+        // Biberon hacmi ml cinsinden, diğerleri litre cinsinden — değer havuzunda ikisi de var.
+        void Drinkware(string g)
+        {
+            Attr(g, "hacim", false, false, false, 1);
+            Attr(g, "renk", true, true, false, 2);
+        }
+
+        Drinkware("tlm_termos");
+        Drinkware("tlm_mug");
+        Drinkware("tlm_bardak");
+        Drinkware("tlm_kadeh");
+        Drinkware("tlm_kamp_matarasi");
+        Drinkware("tlm_spor_matara");
+        Drinkware("tlm_shaker");
+        Drinkware("tlm_sogutucu_buzluk");
+        Drinkware("tlm_termal_canta");
+        Drinkware("tlm_kamp_yemek_seti");
+        Drinkware("tlm_biberon");
+        // Demleyicinin kapasitesi yok; yalnız renk ekseni anlamlı.
+        Attr("tlm_dripper", "renk", true, true, false, 1);
+
+        // 2026-08-23 filtre zenginleştirmesi — değerler SeedTelemaniaFilterEnrichmentAsync ile ürün adlarından türetilir
+        foreach (var g in new[] { "tlm_termos", "tlm_mug", "tlm_kamp_matarasi", "tlm_spor_matara", "tlm_sogutucu_buzluk", "tlm_termal_canta", "tlm_kamp_yemek_seti", "tlm_bardak", "tlm_kadeh", "tlm_shaker" })
+        { Attr(g, "kullanim_tipi", false, false, false, 10); Attr(g, "ek_ozellik", false, false, false, 11); }
+        foreach (var g in new[] { "tlm_prezervatif", "tlm_emzik", "tlm_hasta_bezi", "tlm_bebek_bezi", "tlm_bebek_islak_mendil", "tlm_sac_boyasi", "tlm_maskara", "tlm_kapsul_kahve", "tlm_dis_macunu", "tlm_temizlik_bezi", "tlm_bulasik_sungeri", "tlm_tiras_bicagi", "tlm_burun_bandi", "tlm_yatak_koruyucu", "tlm_cikolata", "tlm_krem_santi", "tlm_bitki_cayi", "tlm_filtre_kahve" })
+            Attr(g, "paket_adedi", false, false, false, 12);
+        foreach (var g in new[] { "tlm_emzik", "tlm_biberon", "tlm_yuz_kremi", "tlm_goz_kremi", "tlm_cilt_serumu", "tlm_goz_serumu", "tlm_bebek_sampuani", "tlm_bebek_kremi", "tlm_bebek_gunes_kremi" })
+            Attr(g, "yas_grubu", false, false, false, 13);
+        foreach (var g in new[] { "tlm_hasta_bezi", "tlm_bebek_bezi" }) Attr(g, "bez_bedeni", false, false, false, 14);
+        foreach (var g in new[] { "tlm_deodorant", "tlm_sac_spreyi", "tlm_sac_kopugu", "tlm_sac_sekillendirici", "tlm_sac_serumu", "tlm_yuz_temizleyici", "tlm_makyaj_temizleyici", "tlm_hasere_ilaci", "tlm_sinek_ilaci", "tlm_yuzey_temizleyici", "tlm_yuz_gunes_kremi", "tlm_vucut_gunes_kremi", "tlm_bebek_gunes_kremi", "tlm_gunes_sonrasi", "tlm_vucut_spreyi", "tlm_vucut_kremi", "tlm_el_kremi", "tlm_bebek_kremi" })
+            Attr(g, "urun_formu", false, false, false, 15);
+        Attr("tlm_sac_boyasi", "sac_rengi", false, false, false, 16);
+        foreach (var g in new[] { "tlm_deodorant", "tlm_tiras_bicagi", "tlm_kulak_ustu_kulaklik", "tlm_kulak_ici_kulaklik", "tlm_vucut_spreyi", "tlm_emzik" })
+            Attr(g, "cinsiyet", false, false, false, 17);
+        // kozmetik gruplarında hacim zaten atanmış; hasta/bebek bezi + islak mendil + prezervatif için hacim anlamsız
+
+        if (added > 0) await db.SaveChangesAsync();
+        Console.WriteLine($"✓ Seed: Telemania grup özellik atamaları — {added} yeni eklendi.");
     }
 
     private static async Task SeedProductGroupAttributesAsync(CatalogDbContext db)
@@ -2028,9 +2657,12 @@ public static class DatabaseSeeder
         var core = sp.GetRequiredService<CoreDbContext>();
         var mediator = sp.GetRequiredService<MediatR.IMediator>();
 
-        var platformlar = await core.FirmPlatforms.Where(fp => fp.IsActive).Select(fp => fp.Id).ToListAsync();
-        foreach (var platformId in platformlar)
+        var platformlar = await core.FirmPlatforms.Where(fp => fp.IsActive)
+            .Select(fp => new { fp.Id, fp.Code }).ToListAsync();
+        foreach (var p in platformlar)
         {
+            if (p.Code == "telemania") continue; // Telemania kendi vitrin seed'ini kullanır
+            var platformId = p.Id;
             var dokunulmus = await storefront.PageBlocks.IgnoreQueryFilters().AnyAsync(b => b.FirmPlatformId == platformId)
                 || await storefront.PublishedSnapshots.IgnoreQueryFilters().AnyAsync(x => x.FirmPlatformId == platformId);
             if (dokunulmus) continue;
@@ -2044,7 +2676,7 @@ public static class DatabaseSeeder
             var metinler = new[]
             {
                 "Yeni sezon koleksiyonunu keşfet!",
-                "Mishar'a özel fırsatlar seni bekliyor.",
+                "Özel fırsatlar seni bekliyor.",
                 "Sepette avantajlı ürünleri kaçırma.",
             };
             for (var i = 0; i < metinler.Length; i++)
@@ -2120,5 +2752,372 @@ public static class DatabaseSeeder
                 ? $"✓ Seed: {platformId} için varsayılan vitrin yayınlandı (v{yayin.Value})."
                 : $"⚠ Seed: {platformId} vitrin yayını başarısız: {yayin.Error}");
         }
+    }
+
+    /// <summary>
+    /// Telemania demo ana sayfası: 5 geniş kategori kapsülü (Kozmetik, Ev ve Temizlik,
+    /// Aksesuar ve Teknoloji, Sağlık ve Kişisel Bakım, Kamp ve Outdoor) + 3 merchandising
+    /// carousel (Çok Satanlar / Yüksek Puanlılar / Çok Ziyaret Edilenler). Metrik verisi
+    /// olmadığı için carousel'lar "random" kaynağından karışık ürün basar. Pazaryeri ürün
+    /// GRUPLARI ayrı kalır — yalnız vitrin kategorileri genişler (idempotent; setup_vitrin.sql
+    /// vitrin'i temizlediğinde yeniden kurulur).
+    /// </summary>
+    /// <summary>
+    /// Telemania demo filtre zenginleştirmesi (2026-08-23, kullanıcı: "gruplara eklenebilecek yeni filtre
+    /// seçeneklerini ekle"): tlm_* gruplarındaki ürünlerin ADLARINDAN deterministik kurallarla özellik
+    /// değerleri türetilir ve eksik olanlar catalog.product_attributes'a yazılır (idempotent — var olan
+    /// satır tekrar eklenmez, admin'in elle girdikleri ezilmez). Havuzda olmayan hacim (ör. 75ml) ve SPF
+    /// değerleri havuza eklenir. Prod DB'de tlm_* gruplarında ürün olmadığından no-op.
+    /// Kurallar: hacim (N ml/gr), spf (SPF/GKF N), paket_adedi (N'li / N Adet / N kapsül),
+    /// urun_formu (Roll-On/Sprey/Stick/Köpük/Serum/Yağ/Jel/Losyon/Krem/Toz), cinsiyet (Kadın/Erkek/Unisex),
+    /// yas_grubu (a-b Ay, a+ Ay, NN+), bez_bedeni (Small…XX-Large), sac_rengi (ton anahtar sözcüğü),
+    /// kullanim_tipi + ek_ozellik (içecek kapları), sac_tipi/cilt_tipi anahtar sözcükleri.
+    /// </summary>
+    private static async Task SeedTelemaniaFilterEnrichmentAsync(CatalogDbContext db)
+    {
+        var tipler = await db.AttributeTypes.Where(t => !t.IsDeleted).ToDictionaryAsync(t => t.Code, t => t.Id);
+        string[] gerekli = { "hacim", "spf", "paket_adedi", "urun_formu", "cinsiyet", "yas_grubu", "bez_bedeni", "sac_rengi", "kullanim_tipi", "ek_ozellik", "sac_tipi", "cilt_tipi" };
+        if (gerekli.Any(g => !tipler.ContainsKey(g))) return;
+
+        var urunler = await db.Products.AsNoTracking()
+            .Where(p => !p.IsDeleted && p.ProductGroupId != null && p.ProductGroup!.Code.StartsWith("tlm_"))
+            .Select(p => new { p.Id, p.ProductGroupId, Grup = p.ProductGroup!.Code, Ad = p.NameI18n })
+            .ToListAsync();
+        if (urunler.Count == 0) return;
+
+        var degerler = await db.AttributeValues.Where(v => !v.IsDeleted && gerekli.Select(g => tipler[g]).Contains(v.AttributeTypeId))
+            .Select(v => new { v.Id, v.AttributeTypeId, Ad = v.NameI18n }).ToListAsync();
+        var degerByTipAd = new Dictionary<(Guid, string), Guid>();
+        foreach (var v in degerler)
+        {
+            var ad = v.Ad.TryGetValue("tr", out var t) ? t : v.Ad.Values.FirstOrDefault() ?? "";
+            degerByTipAd.TryAdd((v.AttributeTypeId, ad.Trim().ToLowerInvariant()), v.Id);
+        }
+        var sonSira = degerler.Count * 10 + 1000;
+        Guid DegerAl(string tipKodu, string ad)
+        {
+            var tipId = tipler[tipKodu];
+            var key = (tipId, ad.Trim().ToLowerInvariant());
+            if (degerByTipAd.TryGetValue(key, out var id)) return id;
+            var yeni = new AttributeValue
+            {
+                Id = Guid.NewGuid(), AttributeTypeId = tipId,
+                NameI18n = new Dictionary<string, string> { ["tr"] = ad, ["en"] = ad },
+                SortOrder = sonSira += 10, IsActive = true, CreatedAt = DateTime.UtcNow
+            };
+            db.AttributeValues.Add(yeni);
+            degerByTipAd[key] = yeni.Id;
+            return yeni.Id;
+        }
+
+        var urunIdler = urunler.Select(u => u.Id).ToList();
+        var mevcut = await db.ProductAttributes.AsNoTracking()
+            .Where(pa => !pa.IsDeleted && urunIdler.Contains(pa.ProductId) && pa.AttributeValueId != null)
+            .Select(pa => new { pa.ProductId, pa.AttributeTypeId, AttributeValueId = pa.AttributeValueId!.Value })
+            .ToListAsync();
+        var mevcutTipli = mevcut.Select(m => (m.ProductId, m.AttributeTypeId)).ToHashSet();
+        var mevcutSatir = mevcut.Select(m => (m.ProductId, m.AttributeTypeId, m.AttributeValueId)).ToHashSet();
+
+        int eklenen = 0;
+        void Ata(Guid urunId, string tipKodu, string deger, bool tekDeger = true)
+        {
+            if (string.IsNullOrWhiteSpace(deger)) return;
+            var tipId = tipler[tipKodu];
+            if (tekDeger && mevcutTipli.Contains((urunId, tipId))) return;   // tek değerli tipte mevcut değer korunur
+            var degerId = DegerAl(tipKodu, deger);
+            if (!mevcutSatir.Add((urunId, tipId, degerId))) return;
+            mevcutTipli.Add((urunId, tipId));
+            db.ProductAttributes.Add(new ProductAttribute { Id = Guid.NewGuid(), ProductId = urunId, AttributeTypeId = tipId, AttributeValueId = degerId, CreatedAt = DateTime.UtcNow });
+            eklenen++;
+        }
+
+        static bool Var(string ad, params string[] anahtarlar) => anahtarlar.Any(k => ad.Contains(k, StringComparison.OrdinalIgnoreCase));
+        static string? Ilk(string ad, params (string Anahtar, string Deger)[] kurallar)
+        {
+            var enIyi = (Pos: int.MaxValue, Deger: (string?)null);
+            foreach (var (anahtar, deger) in kurallar)
+            {
+                var i = ad.IndexOf(anahtar, StringComparison.OrdinalIgnoreCase);
+                if (i >= 0 && i < enIyi.Pos) enIyi = (i, deger);
+            }
+            return enIyi.Deger;
+        }
+        static string PaketEtiket(int n)
+        {
+            if (n <= 1) return "Tekli";
+            var son = n % 10 != 0 ? n % 10 : (n % 100 != 0 ? n % 100 : n);
+            var ek = son switch
+            {
+                1 or 2 or 5 or 7 or 8 or 20 or 50 or 70 or 80 => "li",
+                3 or 4 or 100 => "lü",
+                6 or 40 or 60 or 90 => "lı",
+                9 or 10 or 30 => "lu",
+                _ => "lı"
+            };
+            return $"{n}'{ek}";
+        }
+        var icecek = new HashSet<string> { "tlm_termos", "tlm_mug", "tlm_kamp_matarasi", "tlm_spor_matara", "tlm_sogutucu_buzluk", "tlm_termal_canta", "tlm_kamp_yemek_seti", "tlm_bardak", "tlm_kadeh", "tlm_shaker", "tlm_biberon" };
+        var formGruplari = new HashSet<string> { "tlm_deodorant", "tlm_sac_spreyi", "tlm_sac_kopugu", "tlm_sac_sekillendirici", "tlm_sac_serumu", "tlm_yuz_temizleyici", "tlm_makyaj_temizleyici", "tlm_hasere_ilaci", "tlm_sinek_ilaci", "tlm_yuzey_temizleyici", "tlm_yuz_gunes_kremi", "tlm_vucut_gunes_kremi", "tlm_bebek_gunes_kremi", "tlm_gunes_sonrasi", "tlm_vucut_spreyi", "tlm_vucut_kremi", "tlm_el_kremi", "tlm_bebek_kremi" };
+        var cinsiyetGruplari = new HashSet<string> { "tlm_deodorant", "tlm_tiras_bicagi", "tlm_kulak_ustu_kulaklik", "tlm_kulak_ici_kulaklik", "tlm_vucut_spreyi", "tlm_emzik" };
+        var yasGruplari = new HashSet<string> { "tlm_emzik", "tlm_biberon", "tlm_yuz_kremi", "tlm_goz_kremi", "tlm_cilt_serumu", "tlm_goz_serumu", "tlm_bebek_sampuani", "tlm_bebek_kremi", "tlm_bebek_gunes_kremi" };
+        var bezGruplari = new HashSet<string> { "tlm_hasta_bezi", "tlm_bebek_bezi" };
+        var hacimsiz = new HashSet<string> { "tlm_hasta_bezi", "tlm_bebek_bezi", "tlm_bebek_islak_mendil", "tlm_prezervatif", "tlm_emzik", "tlm_kulak_ustu_kulaklik", "tlm_kulak_ici_kulaklik", "tlm_temizlik_bezi", "tlm_bulasik_sungeri", "tlm_tiras_bicagi", "tlm_burun_bandi", "tlm_burun_aspiatoru", "tlm_yatak_koruyucu", "tlm_kapsul_kahve", "tlm_cikolata" };
+        var sacTipiGruplari = new HashSet<string> { "tlm_sampuan", "tlm_kuru_sampuan", "tlm_bebek_sampuani", "tlm_sac_kremi", "tlm_sac_maskesi", "tlm_sac_bakim_seti", "tlm_sac_tonigi", "tlm_sac_serumu", "tlm_sac_spreyi", "tlm_sac_kopugu", "tlm_sac_sekillendirici", "tlm_sac_boyasi" };
+        var ciltTipiGruplari = new HashSet<string> { "tlm_dus_jeli", "tlm_yuz_kremi", "tlm_cilt_serumu", "tlm_goz_kremi", "tlm_goz_serumu", "tlm_bb_cc_krem", "tlm_el_kremi", "tlm_vucut_kremi", "tlm_ayak_kremi", "tlm_bebek_kremi", "tlm_vucut_spreyi", "tlm_yuz_temizleyici", "tlm_makyaj_temizleyici", "tlm_fondoten", "tlm_aydinlatici" };
+
+        var rxMl = new System.Text.RegularExpressions.Regex(@"(\d+(?:[.,]\d+)?)\s*(ml|mL|ML|Ml)\b", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        var rxSpf = new System.Text.RegularExpressions.Regex(@"\b(?:SPF|GKF)\s*(\d{1,3})(\+?)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var rxPaket = new System.Text.RegularExpressions.Regex(@"(\d{1,3})\s*(?:['’`]\s*)?(?:lu|lü|li|lı)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var rxAdet = new System.Text.RegularExpressions.Regex(@"(\d{1,3})\s*(?:adet|kapsul|kapsül|kapsulluk|kapsüllük|pcs)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var rxAyAralik = new System.Text.RegularExpressions.Regex(@"(\d{1,2})\s*-\s*(\d{1,2})\s*ay\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var rxAyArti = new System.Text.RegularExpressions.Regex(@"(\d{1,2})\s*\+\s*ay\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var rxYasArti = new System.Text.RegularExpressions.Regex(@"\b(\d{2})\s*\+(?!\s*ay)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        foreach (var u in urunler)
+        {
+            var ad = u.Ad.TryGetValue("tr", out var trAd) ? trAd : u.Ad.Values.FirstOrDefault() ?? "";
+            if (string.IsNullOrWhiteSpace(ad)) continue;
+
+            // hacim (kozmetik) — içecek kapları zaten litre havuzundan dolu
+            if (!icecek.Contains(u.Grup) && !hacimsiz.Contains(u.Grup))
+            {
+                var m = rxMl.Match(ad);
+                if (m.Success && decimal.TryParse(m.Groups[1].Value.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var mlDeger) && mlDeger > 0 && mlDeger <= 5000)
+                    Ata(u.Id, "hacim", mlDeger == Math.Floor(mlDeger) ? $"{(int)mlDeger}ml" : $"{mlDeger.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}ml");
+            }
+            // SPF
+            var spf = rxSpf.Match(ad);
+            if (spf.Success) Ata(u.Id, "spf", $"SPF {spf.Groups[1].Value}{spf.Groups[2].Value}");
+            // paket adedi
+            var paket = rxPaket.Match(ad); var adet = rxAdet.Match(ad);
+            if (paket.Success && int.TryParse(paket.Groups[1].Value, out var pn) && pn > 0 && pn <= 500) Ata(u.Id, "paket_adedi", PaketEtiket(pn));
+            else if (adet.Success && int.TryParse(adet.Groups[1].Value, out var an) && an > 0 && an <= 500) Ata(u.Id, "paket_adedi", PaketEtiket(an));
+            // form
+            if (formGruplari.Contains(u.Grup))
+            {
+                var form = Ilk(ad, ("Roll-On", "Roll-On"), ("Roll On", "Roll-On"), ("Rollon", "Roll-On"), ("Sprey", "Sprey"), ("Spray", "Sprey"), ("Aerosol", "Sprey"), ("Stick", "Stick"),
+                    ("Köpük", "Köpük"), ("Köpüğ", "Köpük"), ("Mousse", "Köpük"), ("Serum", "Serum"), ("Yağı", "Yağ"), ("Yağ ", "Yağ"), ("Oil", "Yağ"), ("Jel", "Jel"), ("Gel", "Jel"),
+                    ("Losyon", "Losyon"), ("Lotion", "Losyon"), ("Sütü", "Losyon"), ("Süt ", "Losyon"), ("Krem", "Krem"), ("Cream", "Krem"), ("Creme", "Krem"), ("Toz", "Toz"), ("Powder", "Toz"));
+                if (form is not null) Ata(u.Id, "urun_formu", form);
+            }
+            // cinsiyet
+            if (cinsiyetGruplari.Contains(u.Grup))
+            {
+                var c = Ilk(ad, ("Unisex", "Unisex"), ("Unısex", "Unisex"), ("Kadın", "Kadın"), ("Kadin", "Kadın"), ("Women", "Kadın"), ("Woman", "Kadın"), ("Kız", "Kadın"), ("Erkek", "Erkek"), ("Men ", "Erkek"), ("MEN ", "Erkek"), ("Man ", "Erkek"));
+                if (c is not null) Ata(u.Id, "cinsiyet", c);
+            }
+            // yaş grubu
+            if (yasGruplari.Contains(u.Grup))
+            {
+                var ar = rxAyAralik.Match(ad); var arti = rxAyArti.Match(ad); var yas = rxYasArti.Match(ad);
+                if (ar.Success) Ata(u.Id, "yas_grubu", $"{ar.Groups[1].Value}-{ar.Groups[2].Value} Ay");
+                else if (arti.Success) Ata(u.Id, "yas_grubu", $"{arti.Groups[1].Value}+ Ay");
+                else if (yas.Success && int.TryParse(yas.Groups[1].Value, out var y) && y is >= 18 and <= 80) Ata(u.Id, "yas_grubu", $"{y}+");
+            }
+            // bez bedeni
+            if (bezGruplari.Contains(u.Grup))
+            {
+                var b = Ilk(ad, ("XXLarge", "XX-Large"), ("XX Large", "XX-Large"), ("XXL", "XX-Large"), ("XLarge", "X-Large"), ("X Large", "X-Large"), ("X-Large", "X-Large"), ("Xlarge", "X-Large"), ("XL", "X-Large"), ("Large", "Large"), ("Medium", "Medium"), ("Small", "Small"));
+                if (b is not null) Ata(u.Id, "bez_bedeni", b);
+            }
+            // saç rengi (saç boyası)
+            if (u.Grup == "tlm_sac_boyasi")
+            {
+                var r = Ilk(ad, ("Kızıl", "Kızıl"), ("Kizil", "Kızıl"), ("Bakır", "Bakır"), ("Bakir", "Bakır"), ("Platin", "Platin"), ("Sarı", "Sarı"), ("Sari", "Sarı"), ("Kumral", "Kumral"), ("Kestane", "Kestane"), ("Kahve", "Kahve"), ("Siyah", "Siyah"), ("Gri", "Gri"), ("Nude", "Nude"));
+                if (r is not null) Ata(u.Id, "sac_rengi", r);
+            }
+            // içecek kapları: kullanım tipi + özellikler
+            if (icecek.Contains(u.Grup) && u.Grup != "tlm_biberon")
+            {
+                var kt = Ilk(ad, ("Yemek", "Yemek Termosu"), ("Kavanoz", "Yemek Termosu"), ("Soğutucu", "Soğutucu"), ("Cooler", "Soğutucu"), ("Buzluk", "Soğutucu"),
+                    ("Kupa", "Kupa"), ("Mug", "Kupa"), ("Matara", "Matara"), ("Flask", "Matara"), ("Bottle", "Matara"), ("Şişe", "Matara"),
+                    ("Bardak", "Termos Bardak"), ("Tumbler", "Termos Bardak"), ("Quencher", "Termos Bardak"), ("Kadeh", "Termos Bardak"), ("Cup", "Termos Bardak"), ("Set", "Kamp Seti"));
+                Ata(u.Id, "kullanim_tipi", kt ?? "Termos");
+                if (Var(ad, "Pipet", "Straw")) Ata(u.Id, "ek_ozellik", "Pipetli", tekDeger: false);
+                if (Var(ad, "Kaşık")) Ata(u.Id, "ek_ozellik", "Kaşıklı", tekDeger: false);
+                if (Var(ad, "Kulp", "Handle")) Ata(u.Id, "ek_ozellik", "Kulplu", tekDeger: false);
+                if (Var(ad, "Çelik", "Steel")) Ata(u.Id, "ek_ozellik", "Paslanmaz Çelik", tekDeger: false);
+            }
+            // saç tipi / cilt tipi anahtar sözcükleri
+            if (sacTipiGruplari.Contains(u.Grup))
+            {
+                var st = Ilk(ad, ("Boyalı", "Boyalı"), ("Hasarlı", "Hasarlı"), ("Yıpranmış", "Hasarlı"), ("Dökülme", "Dökülen"), ("Dökülen", "Dökülen"), ("İnce Telli", "İnce Telli"), ("Ince Telli", "İnce Telli"), ("Kıvırcık", "Kıvırcık"), ("Bukle", "Kıvırcık"), ("Kuru Saç", "Kuru"), ("Yağlı Saç", "Yağlı"), ("Tüm Saç", "Tüm Saç Tipleri"));
+                if (st is not null) Ata(u.Id, "sac_tipi", st);
+            }
+            if (ciltTipiGruplari.Contains(u.Grup))
+            {
+                var ct = Ilk(ad, ("Hassas", "Hassas"), ("Karma", "Karma"), ("Yağlı", "Yağlı"), ("Kuru Cilt", "Kuru"), ("Kuru ve", "Kuru"), ("Normal", "Normal"), ("Tüm Cilt", "Tüm Cilt Tipleri"));
+                if (ct is not null) Ata(u.Id, "cilt_tipi", ct);
+            }
+        }
+
+        if (eklenen > 0 || db.ChangeTracker.HasChanges())
+        {
+            await db.SaveChangesAsync();
+            Console.WriteLine($"✓ Seed: Telemania filtre zenginleştirmesi — {eklenen} ürün-özellik değeri eklendi.");
+        }
+    }
+
+    private static async Task SeedTelemaniaVitrinAsync(IServiceProvider sp)
+    {
+        var storefront = sp.GetRequiredService<StorefrontDbContext>();
+        var core = sp.GetRequiredService<CoreDbContext>();
+        var catalog = sp.GetRequiredService<CatalogDbContext>();
+        var mediator = sp.GetRequiredService<MediatR.IMediator>();
+
+        var platform = await core.FirmPlatforms
+            .Where(fp => fp.IsActive && fp.Code == "telemania")
+            .Select(fp => new { fp.Id })
+            .FirstOrDefaultAsync();
+        if (platform is null) return;
+
+        var platformId = platform.Id;
+        var dokunulmus = await storefront.PageBlocks.IgnoreQueryFilters().AnyAsync(b => b.FirmPlatformId == platformId)
+            || await storefront.PublishedSnapshots.IgnoreQueryFilters().AnyAsync(x => x.FirmPlatformId == platformId);
+        if (dokunulmus) return;
+
+        // 5 geniş ana sayfa kategorisi: slug, ad, toplanan tlm_* grup kodları
+        var heroTanimlar = new (string Slug, string Ad, string[] Gruplar)[]
+        {
+            ("kozmetik", "Kozmetik", new[]
+            {
+                // Saç
+                "tlm_sampuan","tlm_sac_kremi","tlm_sac_maskesi","tlm_sac_serumu","tlm_sac_boyasi","tlm_sac_spreyi",
+                "tlm_sac_kopugu","tlm_sac_tonigi","tlm_sac_sekillendirici","tlm_sac_parfumu","tlm_kuru_sampuan","tlm_sac_fircasi","tlm_sac_bakim_seti",
+                // Cilt
+                "tlm_yuz_kremi","tlm_cilt_serumu","tlm_goz_kremi","tlm_goz_serumu","tlm_yuz_temizleyici","tlm_el_kremi","tlm_ayak_kremi","tlm_burun_bandi",
+                // Makyaj
+                "tlm_maskara","tlm_fondoten","tlm_aydinlatici","tlm_bb_cc_krem","tlm_makyaj_temizleyici",
+                // Vücut & Banyo
+                "tlm_dus_jeli","tlm_deodorant","tlm_vucut_spreyi","tlm_vucut_kremi","tlm_banyo_lifi","tlm_tiras_bicagi",
+                // Güneş
+                "tlm_yuz_gunes_kremi","tlm_vucut_gunes_kremi","tlm_gunes_sonrasi","tlm_bebek_gunes_kremi",
+            }),
+            ("ev-ve-temizlik", "Ev ve Temizlik", new[]
+            {
+                "tlm_temizlik_bezi","tlm_yuzey_temizleyici","tlm_bulasik_sungeri","tlm_hasere_ilaci","tlm_sinek_ilaci","tlm_yatak_koruyucu",
+                "tlm_termos","tlm_mug","tlm_kapsul_kahve","tlm_filtre_kahve","tlm_cikolata","tlm_krem_santi","tlm_bitki_cayi",
+                "tlm_kadeh","tlm_bardak","tlm_dripper","tlm_shaker",
+            }),
+            ("aksesuar-ve-teknoloji", "Aksesuar ve Teknoloji", new[]
+            {
+                "tlm_kulak_ustu_kulaklik","tlm_kulak_ici_kulaklik",
+            }),
+            ("saglik-ve-kisisel-bakim", "Sağlık ve Kişisel Bakım", new[]
+            {
+                "tlm_prezervatif","tlm_kayganlastirici_jel","tlm_hasta_bezi",
+                "tlm_dis_macunu","tlm_sarjli_dis_fircasi","tlm_protez_dis_bakim",
+                "tlm_bebek_sampuani","tlm_bebek_kremi","tlm_bebek_bezi","tlm_bebek_islak_mendil","tlm_biberon","tlm_emzik","tlm_burun_aspiatoru",
+            }),
+            ("kamp-ve-outdoor", "Kamp ve Outdoor", new[]
+            {
+                "tlm_kamp_yemek_seti","tlm_kamp_matarasi","tlm_spor_matara","tlm_termal_canta","tlm_sogutucu_buzluk",
+            }),
+        };
+
+        // Grup kodu → Id (eksik/çıkarılmış grup kodu yok sayılır; kapsam doğrulaması vitrin değil menü katmanında yapılır)
+        var tumKodlar = heroTanimlar.SelectMany(h => h.Gruplar).Distinct().ToList();
+        var groupMap = await catalog.ProductGroups
+            .Where(pg => tumKodlar.Contains(pg.Code))
+            .ToDictionaryAsync(pg => pg.Code, pg => pg.Id);
+
+        var heroListesi = new List<(Guid Id, string Ad, string Slug)>();
+        var sira = 0;
+        foreach (var h in heroTanimlar)
+        {
+            var gidler = h.Gruplar.Where(groupMap.ContainsKey).Select(g => groupMap[g]).ToList();
+            if (gidler.Count == 0) continue;
+
+            var mevcut = await storefront.ChannelCategories
+                .FirstOrDefaultAsync(c => c.FirmPlatformId == platformId && c.Slug == h.Slug);
+            var hero = mevcut ?? new ECSPros.Storefront.Domain.Entities.ChannelCategory
+            {
+                FirmPlatformId = platformId,
+                NameI18n = new Dictionary<string, string> { ["tr"] = h.Ad },
+                Slug = h.Slug,
+                Status = "published",
+                FillType = "filter",
+                CreatedAt = DateTime.UtcNow,
+            };
+            hero.NameI18n["tr"] = h.Ad;
+            hero.Status = "published";
+            hero.FillType = "filter";
+            hero.FilterDef = new Dictionary<string, object> { ["productGroupIds"] = gidler };
+            // Hero kategorilerin SortOrder'ı granül (yaprak) kategorilerin ÜZERİNDE tutulur
+            // (200+) — "Kategori" filtresi yaprak grupları seçsin diye.
+            hero.SortOrder = 200 + (++sira);
+            if (mevcut is null) storefront.ChannelCategories.Add(hero);
+            heroListesi.Add((hero.Id, h.Ad, h.Slug));
+        }
+        await storefront.SaveChangesAsync();
+
+        // Duyuru şeridi
+        var duyuru = new ECSPros.Storefront.Domain.Entities.PageBlock
+        {
+            FirmPlatformId = platformId, Placement = "global-top", BlockType = "announcement",
+            TitleI18n = new() { ["tr"] = "Duyuru Şeridi" }, SortOrder = 1, IsActive = true,
+        };
+        var metinler = new[] { "Yeni sezon koleksiyonunu keşfet!", "Özel fırsatlar seni bekliyor.", "Sepette avantajlı ürünleri kaçırma." };
+        for (var i = 0; i < metinler.Length; i++)
+            duyuru.Items.Add(new ECSPros.Storefront.Domain.Entities.PageBlockItem
+            {
+                TitleI18n = new() { ["tr"] = metinler[i] }, SortOrder = i + 1, IsActive = true,
+            });
+        storefront.PageBlocks.Add(duyuru);
+
+        // Kapsül şeridi: 5 geniş kategori (görsel = kategori ilk ürün görseli)
+        var kapsul = new ECSPros.Storefront.Domain.Entities.PageBlock
+        {
+            FirmPlatformId = platformId, Placement = "homepage", BlockType = "categories",
+            TitleI18n = new() { ["tr"] = "Alışverişe Başla" }, SortOrder = 1, IsActive = true,
+            ConfigJson = "{\"gorunum\":\"kapsul\",\"mobileCarousel\":true}",
+        };
+        var kapsulSira = 0;
+        foreach (var (heroId, ad, slug) in heroListesi)
+        {
+            var urunler = await mediator.Send(
+                new ECSPros.Storefront.Application.Queries.GetChannelCategoryProducts.GetChannelCategoryProductsQuery(heroId, 1, 1));
+            var gorsel = urunler.IsSuccess ? urunler.Value!.Items.FirstOrDefault()?.MainImageUrl : null;
+            if (gorsel is null) continue;
+            kapsul.Items.Add(new ECSPros.Storefront.Domain.Entities.PageBlockItem
+            {
+                TitleI18n = new() { ["tr"] = ad }, ImageUrl = gorsel, LinkUrl = "/" + slug,
+                SortOrder = ++kapsulSira, IsActive = true,
+            });
+        }
+        storefront.PageBlocks.Add(kapsul);
+
+        // Merchandising carousel'ları — "Yüksek Puanlılar" çok kaynaklı gerçek puanı
+        // (own + dış kanallar) kullanır; diğerleri metrik olmadığından rastgele kalır.
+        var rails = new (string Ad, string Source)[]
+        {
+            ("Çok Satanlar", "random"),
+            ("Yüksek Puanlılar", "top-rated"),
+            ("Çok Ziyaret Edilenler", "random"),
+        };
+        var railSira = 1;
+        foreach (var (ad, src) in rails)
+        {
+            storefront.PageBlocks.Add(new ECSPros.Storefront.Domain.Entities.PageBlock
+            {
+                FirmPlatformId = platformId, Placement = "homepage", BlockType = "carousel", Template = "standart",
+                TitleI18n = new() { ["tr"] = ad },
+                SubtitleI18n = new() { ["tr"] = "Telemania öne çıkanlar." },
+                SortOrder = ++railSira, IsActive = true,
+                ConfigJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    productSource = new { source = src, limit = 12 },
+                    tema = "varsayilan",
+                }),
+            });
+        }
+
+        await storefront.SaveChangesAsync();
+        var yayin = await mediator.Send(
+            new ECSPros.Storefront.Application.Commands.PublishPageSnapshot.PublishPageSnapshotCommand(
+                platformId, null, "Telemania demo ana sayfası (5 kategori + random rails)"));
+        Console.WriteLine(yayin.IsSuccess
+            ? $"✓ Seed: Telemania ana sayfası yayınlandı (v{yayin.Value})."
+            : $"⚠ Seed: Telemania ana sayfa yayını başarısız: {yayin.Error}");
     }
 }

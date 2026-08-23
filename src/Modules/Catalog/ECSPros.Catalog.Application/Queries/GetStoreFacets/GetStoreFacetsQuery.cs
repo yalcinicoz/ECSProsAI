@@ -303,50 +303,15 @@ public class GetStoreFacetsQueryHandler(
         if (tamSonuc.IsFailure)
             return tamSonuc;
 
-        // Kategori sanal grubu: özellik seçimleri + fiyat uygulanmış, kategori kısıtı
-        // UYGULANMAMIŞ küme (grup kendi seçimini dışlar). Not: UrunGruplariSaglarMi'nin
-        // veri kümesi kategori-kısıtlı tabandan yüklendi; kısıt dışı ürünler için ek yükleme.
+        // Kategori sanal grubu (2026-08-23 düzeltmesi — kullanıcı: "Hacim seçince kategori seçenekleri
+        // kayboluyor", 8d46a00 sonrası regresyon): kategori kutusu ÖZELLİK ve FİYAT seçiminden BAĞIMSIZ,
+        // kategori kısıtı da uygulanmamış TÜM tabandan sayılır — kararlı kategori listesi (eski menü-kökü
+        // kutusunun kararlılığı + yaprak kategoriler). Diğer gruplar/fiyat/liste kategori kısıtlı kümeden
+        // hesaplanmaya devam eder. Özellik seçimine göre daralan kategori sayımı istenirse bu blok
+        // yeniden UrunGruplariSaglarMi + FiyatUygula ile kurulur (8d46a00'daki sürüm).
         Dictionary<Guid, int>? kategoriSayimi = null;
         if (productCategoryMap is not null)
-        {
-            var kategoriKumesi = tumTaban;
-            if (tumGruplar.Count > 0)
-            {
-                if (seciliKategoriler is not null)
-                {
-                    // kısıt dışı ürünlerin seçili değer eşleşmelerini de yükle
-                    var disari = tumTaban.Where(id => !urunVaryantDegerleri.ContainsKey(id) && !urunSeviyesiDegerleri.ContainsKey(id)).ToList();
-                    if (disari.Count > 0)
-                    {
-                        var ekSatirlar = await db.ProductVariantAttributes.AsNoTracking()
-                            .Where(va => secili.Contains(va.AttributeValueId) && disari.Contains(va.Variant.ProductId) && va.Variant.IsActive)
-                            .Select(va => new { va.Variant.ProductId, va.VariantId, va.AttributeValueId })
-                            .ToListAsync(ct);
-                        foreach (var satir in ekSatirlar)
-                        {
-                            if (!urunVaryantDegerleri.TryGetValue(satir.ProductId, out var varyantlar))
-                                urunVaryantDegerleri[satir.ProductId] = varyantlar = new();
-                            if (!varyantlar.TryGetValue(satir.VariantId, out var degerler))
-                                varyantlar[satir.VariantId] = degerler = new();
-                            degerler.Add(satir.AttributeValueId);
-                        }
-                        var ekUrunSatirlari = await db.ProductAttributes.AsNoTracking()
-                            .Where(pa => pa.AttributeValueId != null && secili.Contains(pa.AttributeValueId.Value) && disari.Contains(pa.ProductId))
-                            .Select(pa => new { pa.ProductId, AttributeValueId = pa.AttributeValueId!.Value })
-                            .ToListAsync(ct);
-                        foreach (var satir in ekUrunSatirlari)
-                        {
-                            if (!urunSeviyesiDegerleri.TryGetValue(satir.ProductId, out var degerler))
-                                urunSeviyesiDegerleri[satir.ProductId] = degerler = new();
-                            degerler.Add(satir.AttributeValueId);
-                        }
-                    }
-                }
-                kategoriKumesi = tumTaban.Where(id => UrunGruplariSaglarMi(id, tumGruplar)).ToList();
-            }
-            kategoriKumesi = await FiyatUygula(kategoriKumesi);
-            kategoriSayimi = KategoriSayimi(kategoriKumesi, productCategoryMap);
-        }
+            kategoriSayimi = KategoriSayimi(tumTaban, productCategoryMap);
 
         var girdilerByCode = tamSonuc.Value!.Attributes.ToDictionary(a => a.TypeCode);
 
