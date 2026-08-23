@@ -8,6 +8,16 @@
 
 ---
 
+## 0a. Uygulama durumu (2026-08-23)
+
+**A–F fazları CANLIDA.** 2026-08-22 restart sonrası kullanıcı kabul testi: katalog/form ✓, çerez bandı + consent
+günlüğü ✓, band metni ayarı ✓, test event kuyruğu ✓ (adapter yokken `Atlandı`), feed üretimi ✓ (mishar 5.792 ürün /
+37.162 kalem, 7,8 sn; `/feeds/mishar/google-shopping.xml?key=…` 200, yanlış anahtar 404). Bulgular düzeltildi:
+zorunlu şema alanı doğrulaması (panel + sunucu, `IntegrationSchemaValidator`), feed worker 10 dk tarama.
+**Açık:** gerçek GA4/Meta/Merchant kimlikleri girilince son doğrulama (GA4 DebugView, Meta Test Events + CAPI
+dedup, Merchant feed kabulü/uyarıları); Faz G yalnız istenirse. Öneri: `appsettings.Production.json` →
+`"Feeds": { "OutputPath": "/opt/ECSProsAI/feeds" }` (şu an publish/App_Data altında).
+
 ## 0. Revizyon notları (v1 → v2)
 
 v1 incelemesinde bulunan eksikler ve bu sürümdeki çözümleri:

@@ -2,7 +2,7 @@
 
 > **Kural:** Her session bu dosyadan başla, bu dosyayla bitir.
 > Bir faz tamamlanmadan bir sonrakine geçme.
-> Son güncelleme: 2026-07-31
+> Son güncelleme: 2026-08-22
 
 ---
 
@@ -21,6 +21,52 @@
 | 4 | 🏪 **Satıcı paneli** | `satici/` + `/api/supplier/*` | **TAMAMLANDI ⚠️ restart+nginx+DNS bekliyor (2026-08-11)**: ürün ekleme/düzenleme (onay akışlı), fiyat&stok, siparişler+kargo+fatura, mali durum, kampanya opt-in, Hesabım (kargo modu); partner API ile AYNI komutlar; subdomain partner.misharitalia.com | DNS A kaydı + nginx restart (kullanıcı) → kullanıcı kabul testi | `docs/satici-paneli-tasarimi.md` |
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!) | Mobil geliştirici teste başlar; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
+
+**Reklam/Analytics/Dönüşüm takibi — A–F CANLIDA ✅ (2026-08-22 restart + kullanıcı kabul testi; 2026-08-23 KAPATILDI —
+gerçek GA4/Meta/Merchant hesap bilgileri girilince son doğrulama yapılacak: GA4 DebugView, Meta Test Events, Merchant
+feed kabulü). Canlıda doğrulandı: çerez bandı + consent günlüğü, test event kuyruğu, feed üretimi (mishar 5.792 ürün /
+37.162 kalem, 7,8 sn, /feeds URL 200/404). Kabul testi bulguları düzeltildi (zorunlu şema alanı doğrulaması panel+sunucu;
+feed worker 10 dk tarama). Öneri: appsettings.Production.json → "Feeds":{"OutputPath":"/opt/ECSProsAI/feeds"}.
+Kalan: İE-7 Faz G (OAuth reklam yönetimi) yalnız istenirse.** Geçmiş: İE-1 Faz A UYGULANDI (2026-08-22; plan
+`docs/reklam-analytics-entegrasyon-is-akisi.md` v2, kararlar kapalı: EU consent zorunlu, feed g:shipping,
+satıcı/partner vitrin siparişi purchase üretir, hesap sahipliği customer|platform):** seed kataloğuna 10 takip
+servisi (`ga4/gtm/google_ads/google_merchant/google_search_console/meta/tiktok/pinterest/microsoft_ads/
+microsoft_clarity`, secret'lar credentials/password, ortak `ownership` alanı; backfill artık takip tiplerini de
+kapsar) — **izole 5051 Development açılışında paylaşımlı DB'ye seed EDİLDİ (definition.integration_services,
+10 satır; backfill testi ✓)**; `UpdateTrackingSettingsCommand` + `PUT /api/core/firm-platforms/{id}/tracking-settings`
+(Settings."tracking": consentBanner=true/consentDefault=deny SABİT, purchaseAt confirmed|created);
+`Services/Store/TrackingSettingsProvider` (`ITrackingSettingsProvider.GetAsync/GetSecretsAsync`, 2 dk cache,
+kanala özel > firma geneli) DI'da; admin IntegrationServicesPage tip etiketleri (npm build alındı).
+Alanlar: çekirdek (Core/seed) + admin etiket. **İE-2 Faz B de UYGULANDI (2026-08-22, ⚠️ restart bekliyor;
+migration `AddTrackingEventOutbox` canlı DB'de):** `Shared.Contracts/Tracking/CommerceEvent` sözleşmesi +
+`ICommerceEventPublisher`; `integration.tracking_event_outbox` + `tracking_order_context`; Api
+`Services/Tracking/` (OutboxCommerceEventPublisher, TrackingOrderContextRecorder, TrackingHttpContextReader,
+OrderTrackingEventBuilder, TrackingDispatchWorker, ITrackingAdapter); Order event'leri → purchase/refund
+(kaynak filtresi: LegacyOrderId/ExternalOrderNumber üretmez); sign_up/login/newsletter üreticileri;
+`POST /api/store/events` (mobil referans §9); `Tracking:Enabled/DryRun` (Dev+Demo KAPALI). İzole 5051
+DRY-RUN ✓ (outbox/dedup/400'ler/consent; worker skipped — adapter Faz D). Restart sonrası canlıda
+`journalctl -u ecspros -n 80 | grep "Tracking dispatch"` → "AKTİF ✓" beklenir.
+**İE-3 Faz C de UYGULANDI (2026-08-22, ⚠️ restart bekliyor — Web sitesi alanı):** `TrackingScriptProvider` +
+`_TakipBasligi.cshtml` (Consent Mode v2 default deny, window.ecspros köprüsü, GTM/gtag/pixel yükleyicileri izin
+kapılı) + `_TakipCerezBandi.cshtml` (3 kategori, 180 gün) + site.js `msTakip` (merkezi fetch gözlemcisi + sayfa
+JSON blokları + purchase tek sefer) + VariantDisplayInfo/CartItemDto.Sku; headless Chromium E2E 21/21 ✓; kanalda
+entegrasyon kaydı yokken hiçbir script/band basılmaz (Telemania kapalı). Restart sonrası: panelden mishar kanalına
+GA4/Meta/Ads kayıtları girilince devreye girer. **İE-4 Faz D de UYGULANDI (2026-08-22, ⚠️ restart bekliyor; admin build ALINDI):** Meta CAPI / TikTok Events / GA4
+MP adapter'ları (`Services/Tracking/Adapters/`), `api/tracking` (status/outbox/retry/test-event), panel
+Pazarlama → "Takip & Reklam" (`/marketing/tracking`); izole 5051 DRY-RUN ✓ (hedefleme, consent kapısı, log, 401).
+**İE-6 Faz F de UYGULANDI (2026-08-22, ⚠️ restart bekliyor; migration AddTrackingConsentLog canlı DB'de; admin
+build alındı):** consent ispat günlüğü + `POST /api/store/consent` + üye senkronu (çerez yokken SSR üyenin son
+tercihi) + band metinleri kanal ayarından + footer "Çerez Tercihleri" + panel Vitrin → "Takip & Çerez"
+(`/storefront/tracking-consent`: metinler, purchaseAt, izin istatistiği, KVKK şablonu); headless E2E ✓.
+**İE-5 Faz E de UYGULANDI (2026-08-22, ⚠️ restart bekliyor; Storefront migration AddChannelCategoryGoogleCategory canlı
+DB'de; admin build alındı) → REKLAM/ANALYTICS İŞ AKIŞI A-F TAMAM (G opsiyonel):** FeedProductReader (raw SQL) +
+FeedGenerator (Google XML + Meta CSV, giyim alanları, g:shipping ayardan) + FeedGeneratorWorker (6 sa, feedKey otomatik)
++ `GET /feeds/{kanal}/...?key=` + api/tracking/feed-status|feed/generate + panel feed kartı + Kanal Kategorileri
+"Google ürün kategorisi" alanı; izole 5051: 5.792 ürün / 37.162 kalem 11 sn ✓. Restart sonrası: panelden
+google_merchant kaydı (merchantId, TR/tr/TRY, kargo bedeli) → ilk üretim 2 dk → URL'yi Merchant Center'a ver.
+KALAN: İE-7 Faz G (OAuth reklam yönetimi — yalnız istenirse); canlı doğrulamalar (GA4 DebugView, Meta Test Events,
+Merchant feed kabulü) kullanıcıda. 🧪 kullanıcı testi: Admin → Ayarlar → Entegrasyon Servisleri'nde 10 yeni servis;
+Firma → Entegrasyonlar → Meta ekle (pixelId zorunlu, accessToken maskeli); restart sonrası PUT tracking-settings.
 
 **Sipariş operasyonu OP1 (2026-08-09) — UYGULANIYOR (plan onaylı: `docs/siparis-operasyon-plani.md`):**
 Kurgu K-1..K-17 kararlarıyla onaylandı (toplama görevleri → ara ayrıştırma → masa son ayrıştırma →
