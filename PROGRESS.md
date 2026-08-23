@@ -30,7 +30,9 @@ zenginleştirmesi: 7 yeni özellik tipi (paket_adedi, yas_grubu, bez_bedeni, uru
 ek_ozellik) + değer havuzları (+spf 20/25, sac_tipi +3) + 74 grup ataması + `SeedTelemaniaFilterEnrichmentAsync`
 (ürün ADLARINDAN deterministik kurallarla 784 ürün-özellik değeri; idempotent; prod'da no-op) — demo DB'ye izole
 5051 Demo açılışıyla yazıldı; kategori sayfalarında Saç Tipi/Saç Rengi/Form/Paket Adedi/Yaş Grubu/SPF/Kullanım
-Tipi/Özellik grupları doğrulandı. ★ psql demo erişimi: ~/.pgpass'e ecommerce_demo satırı eklendi.
+Tipi/Özellik grupları doğrulandı. ★ psql demo erişimi: ~/.pgpass'e ecommerce_demo satırı eklendi. **(3) Seçimde zıplama düzeltmesi (her iki site):**
+sr-only checkbox'ın konum atası sticky sol panel olduğundan kaydırılmış listede seçim yapınca panel/sayfa yukarı
+zıplıyordu → `.ms-filtre-secim` `relative` (headless ölçüm: zıplama 337px→0). CSS build alındı, publish+publish-demo güncel.
 
 **Reklam/Analytics/Dönüşüm takibi — A–F CANLIDA ✅ (2026-08-22 restart + kullanıcı kabul testi; 2026-08-23 KAPATILDI —
 gerçek GA4/Meta/Merchant hesap bilgileri girilince son doğrulama yapılacak: GA4 DebugView, Meta Test Events, Merchant

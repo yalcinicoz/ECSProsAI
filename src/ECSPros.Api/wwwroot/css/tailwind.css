@@ -12387,8 +12387,11 @@
     @apply mt-3 grid gap-3 overflow-y-auto pr-1;
   }
 
+  /* 2026-08-23: `relative` ŞART — sr-only (absolute) checkbox'ın konum atası etiket olmalı. Aksi halde ata
+     sticky sol panel olur; liste içi kaydırmada gizli input eski yerinde kalır, tıklama focus'u tarayıcıya o
+     noktayı görünür alana kaydırtır → panel/sayfa yukarı zıplar, açık grup ekran dışına çıkar. */
   .ms-filtre-secim {
-    @apply flex cursor-pointer items-center gap-3 text-[12px] text-slate-700;
+    @apply relative flex cursor-pointer items-center gap-3 text-[12px] text-slate-700;
   }
 
   .ms-filtre-renk-secim {
