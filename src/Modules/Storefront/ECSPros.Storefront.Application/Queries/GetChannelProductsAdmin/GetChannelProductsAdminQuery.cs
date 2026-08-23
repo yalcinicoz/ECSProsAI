@@ -52,9 +52,23 @@ public class GetChannelProductsAdminQueryHandler(IStorefrontDbContext sfDb, ICat
         // küçük (yalnız çıkarılan/durdurulan/durum atanmış ürünler).
         var stateRows = await sfDb.ChannelProducts.AsNoTracking()
             .Where(cp => cp.FirmPlatformId == request.FirmPlatformId)
-            .Select(cp => new { cp.ProductId, cp.IsActive, cp.SaleStoppedFrom, cp.SaleStoppedUntil })
+            .Select(cp => new { cp.ProductId, cp.IsActive, cp.SaleStoppedFrom, cp.SaleStoppedUntil, cp.InScope, cp.IsExcluded })
             .ToListAsync(ct);
         var stateByProduct = stateRows.ToDictionary(r => r.ProductId);
+
+        // F1 kapsam: filter|mixed kanalda liste tabanı = kapsamdaki ürünler (InScope && !IsExcluded); all → tüm katalog.
+        var filterBased = await sfDb.ChannelScopes.AsNoTracking()
+            .AnyAsync(s => s.FirmPlatformId == request.FirmPlatformId && (s.FillType == "filter" || s.FillType == "mixed"), ct);
+        if (filterBased)
+        {
+            var inScope = stateRows.Where(r => r.InScope && !r.IsExcluded).Select(r => r.ProductId).ToHashSet();
+            baseQuery = baseQuery.Where(p => inScope.Contains(p.Id));
+        }
+        else
+        {
+            var manuallyExcluded = stateRows.Where(r => r.IsExcluded).Select(r => r.ProductId).ToHashSet();
+            if (manuallyExcluded.Count > 0) baseQuery = baseQuery.Where(p => !manuallyExcluded.Contains(p.Id));
+        }
 
         bool Selected(Guid pid) => !stateByProduct.TryGetValue(pid, out var st) || st.IsActive;
         bool StoppedNow(Guid pid) => stateByProduct.TryGetValue(pid, out var st)

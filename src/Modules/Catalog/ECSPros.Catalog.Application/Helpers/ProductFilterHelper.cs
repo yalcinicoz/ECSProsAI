@@ -11,10 +11,18 @@ public static class ProductFilterHelper
         ICatalogDbContext db,
         CategoryFilterRules? rules,
         HashSet<Guid>? platformPriceProductIds = null,
-        HashSet<Guid>? productIdsInStockRange = null)
+        HashSet<Guid>? productIdsInStockRange = null,
+        HashSet<Guid>? channelPricedProductIds = null,
+        HashSet<Guid>? channelStockProductIds = null)
     {
         var q = db.Products.AsNoTracking();
         if (rules is null) return q;
+
+        // F1 kanal kapsamı: kanal fiyatı var / kanal stok eşiği — Storefront/Inventory tarafında çözülen Id kümeleri.
+        if (rules.HasChannelPrice == true)
+            q = channelPricedProductIds is not null ? q.Where(p => channelPricedProductIds.Contains(p.Id)) : q.Where(p => false);
+        if (rules.MinStock is > 0)
+            q = channelStockProductIds is not null ? q.Where(p => channelStockProductIds.Contains(p.Id)) : q.Where(p => false);
 
         if (rules.ProductGroupIds is { Count: > 0 })
             q = q.Where(p => rules.ProductGroupIds.Contains(p.ProductGroupId));

@@ -50,6 +50,12 @@ public class CategoryFilterRules
     // Etiket filtresi (Product.Tags — en az biri eşleşmeli)
     public List<string>? Tags { get; set; }
 
+    // F1 kanal kapsamı kriterleri (docs/satis-kanali-ortak-kurgu.md §3.1) — çağıran taraf çözer:
+    /// <summary>true → yalnız bu kanalda fiyatı (ChannelVariant.Price &gt; 0) olan ürünler (K4/K11).</summary>
+    public bool? HasChannelPrice { get; set; }
+    /// <summary>K17: net stok ≥ MinStock olan en az bir varyantı bulunan ürünler (stockQuantity ≥ 1).</summary>
+    public int? MinStock { get; set; }
+
     private static readonly JsonSerializerOptions _opts = new() { PropertyNameCaseInsensitive = true };
 
     public static CategoryFilterRules? From(Dictionary<string, object>? raw)

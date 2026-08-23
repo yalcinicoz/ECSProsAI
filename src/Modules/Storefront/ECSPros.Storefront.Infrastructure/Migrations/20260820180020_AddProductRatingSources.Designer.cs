@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using ECSPros.Storefront.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ECSPros.Storefront.Infrastructure.Migrations
 {
     [DbContext(typeof(StorefrontDbContext))]
-    partial class StorefrontDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260820180020_AddProductRatingSources")]
+    partial class AddProductRatingSources
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -204,10 +207,6 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
                     b.Property<Guid>("FirmPlatformId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("GoogleCategoryId")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -337,21 +336,11 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
                     b.Property<Guid>("FirmPlatformId")
                         .HasColumnType("uuid");
 
-                    b.Property<bool>("InScope")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
-
-                    b.Property<bool>("IsExcluded")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
 
                     b.Property<Dictionary<string, string>>("NameI18n")
                         .HasColumnType("jsonb");
@@ -364,13 +353,6 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
 
                     b.Property<DateTime?>("SaleStoppedUntil")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ScopeSource")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasDefaultValue("legacy");
 
                     b.Property<Dictionary<string, string>>("ShortDescriptionI18n")
                         .HasColumnType("jsonb");
@@ -390,8 +372,6 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
 
                     b.HasIndex("FirmPlatformId", "ProductId")
                         .IsUnique();
-
-                    b.HasIndex("FirmPlatformId", "InScope", "IsExcluded");
 
                     b.ToTable("channel_products", "storefront");
                 });
@@ -440,62 +420,6 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("channel_product_groups", "storefront");
-                });
-
-            modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.ChannelScope", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("FillType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<Dictionary<string, object>>("FilterDef")
-                        .HasColumnType("jsonb");
-
-                    b.Property<Guid>("FirmPlatformId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("LastSyncError")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<int?>("MatchedCount")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("SyncedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("UpdatedBy")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FirmPlatformId")
-                        .IsUnique();
-
-                    b.ToTable("channel_scopes", "storefront");
                 });
 
             modelBuilder.Entity("ECSPros.Storefront.Domain.Entities.ChannelVariant", b =>

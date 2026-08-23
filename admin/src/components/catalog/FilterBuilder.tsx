@@ -27,6 +27,9 @@ export interface FilterDef {
   imageUpdatedBefore?: string | null
   tags?: string[]
   attributeFilters?: AttributeFilterItem[]
+  // F1 kanal kapsamı kriterleri (yalnız channelScope modunda gösterilir)
+  hasChannelPrice?: boolean | null
+  minStock?: number | null
 }
 
 interface AttributeFilterItem { attributeTypeId: string; valueIds: string[] }
@@ -73,6 +76,8 @@ export function buildDescription(
   if (def.isActive === true) parts.push('Sadece aktif')
   if (def.isActive === false) parts.push('Sadece pasif')
 
+  if (def.hasChannelPrice) parts.push('Bu kanalda fiyatı olanlar')
+  if (def.minStock != null && def.minStock > 0) parts.push(`Kanal stok eşiği ≥ ${def.minStock}`)
   if (def.stockMin != null && def.stockMax != null) parts.push(`Stok: ${def.stockMin}–${def.stockMax} adet`)
   else if (def.stockMin != null) parts.push(`Min stok: ${def.stockMin} adet`)
   else if (def.stockMax != null) parts.push(`Maks stok: ${def.stockMax} adet`)
@@ -108,11 +113,13 @@ export function buildDescription(
 export interface FilterBuilderProps {
   value: FilterDef
   onChange: (def: FilterDef, description: string) => void
+  /** F1: kanal kapsamı bağlamı — "Bu kanalda fiyatı var" ve "Kanal stok eşiği" bölümlerini gösterir. */
+  channelScope?: boolean
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
+export function FilterBuilder({ value, onChange, channelScope = false }: FilterBuilderProps) {
   const { data: productGroups = [] } = useQuery<ProductGroup[]>({
     queryKey: ['product-groups-simple'],
     queryFn: async () => { const { data } = await api.get('/catalog/product-groups'); return data.data },
@@ -325,6 +332,31 @@ export function FilterBuilder({ value, onChange }: FilterBuilderProps) {
           onClear={() => update({ stockMin: null, stockMax: null })}
         />
       </Section>
+
+      {/* F1 Kanal kapsamı kriterleri */}
+      {channelScope && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Section title="Kanal Fiyatı" hint="Bu kanalda fiyatı (kanal fiyatı > 0) olan ürünler">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
+                checked={def.hasChannelPrice === true}
+                onChange={e => update({ hasChannelPrice: e.target.checked ? true : null })} />
+              <span className="text-sm" style={{ color: 'var(--text)' }}>Yalnız bu kanalda fiyatı olanlar</span>
+            </label>
+          </Section>
+          <Section title="Kanal Stok Eşiği" hint="net stok ≥ eşik olan en az bir varyant (kanala verilen adet = net − eşik + 1)">
+            <div className="flex items-center gap-2">
+              <div className="relative w-32">
+                <input type="number" className="inp !pr-10" placeholder="örn. 3" min={1}
+                  value={def.minStock != null ? String(def.minStock) : ''}
+                  onChange={e => update({ minStock: e.target.value !== '' ? Math.max(1, +e.target.value) : null })} />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs pointer-events-none" style={{ color: 'var(--text-s)' }}>adet</span>
+              </div>
+              {def.minStock != null && <ClearBtn onClick={() => update({ minStock: null })} />}
+            </div>
+          </Section>
+        </div>
+      )}
 
       {/* Oluşturma Tarihi */}
       <Section title="Oluşturma Tarihi" hint="Yeni eklenen ürünler">

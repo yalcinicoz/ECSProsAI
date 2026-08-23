@@ -173,12 +173,42 @@ builder.Services.AddScoped<ECSPros.Shared.Infrastructure.Messaging.ISmtpSettings
 // SMS ayarları DB'deki platform servis tanımından (yoksa log yedeği — GES Telekom)
 builder.Services.AddScoped<ECSPros.Shared.Infrastructure.Messaging.ISmsSettingsProvider,
     ECSPros.Api.Services.DbSmsSettingsProvider>();
+// Sosyal giriş (OAuth) ayarları — firma/platform bazlı social_login entegrasyonundan
+builder.Services.AddScoped<ECSPros.Shared.Contracts.ISocialLoginSettingsProvider,
+    ECSPros.Api.Services.SocialLoginSettingsProvider>();
+builder.Services.AddScoped<ECSPros.Api.Services.SocialLoginService>();
 // H3: Görsel arama ayarları DB'deki visual_search entegrasyonundan (yoksa VisualSearch:* config)
 builder.Services.AddScoped<ECSPros.Api.Services.IVisualSearchSettingsProvider,
     ECSPros.Api.Services.DbVisualSearchSettingsProvider>();
 // PayTR ödeme ayarları DB'deki payment entegrasyonundan (2026-07-30, yalnız test modu)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IPaymentSettingsProvider,
     ECSPros.Api.Services.Store.DbPaymentSettingsProvider>();
+// Takip/reklam ayarları (İE-1 Faz A, 2026-08-22 — docs/reklam-analytics-entegrasyon-is-akisi.md):
+// kanalın aktif GA4/GTM/Ads/Meta/... entegrasyonları; public ayarlar + secret'lar ayrı, 2 dk cache.
+builder.Services.AddScoped<ECSPros.Api.Services.Store.ITrackingSettingsProvider,
+    ECSPros.Api.Services.Store.TrackingSettingsProvider>();
+// İE-2 Faz B: commerce event sözleşmesi → outbox (integration.tracking_event_outbox) → dispatcher
+builder.Services.AddScoped<ECSPros.Shared.Contracts.Tracking.ICommerceEventPublisher,
+    ECSPros.Api.Services.Tracking.OutboxCommerceEventPublisher>();
+builder.Services.AddScoped<ECSPros.Api.Services.Tracking.ITrackingOrderContextRecorder,
+    ECSPros.Api.Services.Tracking.TrackingOrderContextRecorder>();
+builder.Services.AddScoped<ECSPros.Api.Services.Tracking.IOrderTrackingEventBuilder,
+    ECSPros.Api.Services.Tracking.OrderTrackingEventBuilder>();
+// İE-4 Faz D: server-side takip adapter'ları (worker kanal entegrasyonu + consent ile eşler) + 5 sn HTTP
+builder.Services.AddHttpClient(ECSPros.Api.Services.Tracking.Adapters.TrackingAdapterBase.HttpClientName,
+    c => c.Timeout = TimeSpan.FromSeconds(5));
+builder.Services.AddScoped<ECSPros.Api.Services.Tracking.ITrackingAdapter, ECSPros.Api.Services.Tracking.Adapters.MetaConversionsAdapter>();
+builder.Services.AddScoped<ECSPros.Api.Services.Tracking.ITrackingAdapter, ECSPros.Api.Services.Tracking.Adapters.TikTokEventsAdapter>();
+builder.Services.AddScoped<ECSPros.Api.Services.Tracking.ITrackingAdapter, ECSPros.Api.Services.Tracking.Adapters.Ga4MeasurementProtocolAdapter>();
+// İE-5 Faz E: Merchant Center / Meta katalog feed'i — reader+generator (scoped), durum+tetik (singleton), worker
+builder.Services.AddScoped<ECSPros.Api.Services.Tracking.Feed.FeedProductReader>();
+builder.Services.AddScoped<ECSPros.Api.Services.Tracking.Feed.FeedGenerator>();
+builder.Services.AddSingleton<ECSPros.Api.Services.Tracking.Feed.IFeedStatusStore, ECSPros.Api.Services.Tracking.Feed.FeedStatusStore>();
+builder.Services.AddSingleton<ECSPros.Api.Services.Tracking.Feed.FeedTrigger>();
+builder.Services.AddSingleton<ECSPros.Api.Services.Tracking.Feed.IFeedTrigger>(sp => sp.GetRequiredService<ECSPros.Api.Services.Tracking.Feed.FeedTrigger>());
+// İE-3 Faz C: head script modeli (_TakipBasligi.cshtml) — bot UA / entegrasyon yoksa null
+builder.Services.AddScoped<ECSPros.Api.Services.Store.ITrackingScriptProvider,
+    ECSPros.Api.Services.Store.TrackingScriptProvider>();
 builder.Services.AddScoped<ECSPros.Api.Services.Store.PayTrDirectService>();
 builder.Services.AddHttpClient("paytr"); // PayTR /odeme çağrıları için ayrı named client
 // 2026-08-04: platformun sitede sunduğu ödeme yöntemleri + kapıda ödeme bedel/limit
@@ -218,6 +248,7 @@ builder.Services.AddSingleton<ECSPros.Api.Services.UrunKategoriHaritasi>(); // l
 builder.Services.AddScoped<ECSPros.Api.Services.StoreUrunDetayBuilder>(); // ürün detay VM (hem /urun/{code} hem gerçek slug URL'i kullanır)
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.VitrinSrcsetSaglayici>(); // vitrin görsel srcset üretimi (A fazı — varyant varsa basılır)
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IInStockProductProvider, ECSPros.Api.Services.InStockProductProvider>();
+builder.Services.AddScoped<ECSPros.Shared.Contracts.Channels.IChannelStockCalculator, ECSPros.Api.Services.InStockProductProvider>(); // K17 kanal stok formülü
 // H10: vitrin "indirimli ürünler" kaynak bayrağı — kanalda CompareAtPrice > Price olan ürün kümesi
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IDiscountedProductProvider, ECSPros.Api.Services.DiscountedProductProvider>();
 // B-005/006: genel liste fiyat sıralaması gösterilen (efektif) fiyattan — kanal override → BasePrice
@@ -252,6 +283,9 @@ builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Mapping.MarketplaceC
 // hata sınıflandırıcı ve sonuç sorgulama worker'ı (worker hem hosted hem controller'dan
 // elle tetiklenebilir — tek örnek).
 builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Send.TrendyolSellerClient>();
+// Amazon kimlikleri Core'dan çözer; Integration.Infrastructure'daki singleton adapter'lar kullanır.
+builder.Services.AddSingleton<ECSPros.Integration.Application.Adapters.IMarketplaceCredentialResolver,
+    ECSPros.Api.Services.Marketplace.Send.CoreMarketplaceCredentialResolver>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Marketplace.Send.MarketplaceErrorClassifier>();
 builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Send.MarketplaceSendService>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Marketplace.Send.MarketplaceBatchWorker>();
@@ -259,6 +293,7 @@ builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Send.MarketplaceIssu
 builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Send.MarketplaceReconciliationService>();
 builder.Services.AddHostedService(sp =>
     sp.GetRequiredService<ECSPros.Api.Services.Marketplace.Send.MarketplaceBatchWorker>());
+builder.Services.AddHostedService<ECSPros.Api.Services.ChannelScopeSyncWorker>(); // F1 kanal kapsamı gece taraması
 builder.Services.AddSingleton<ECSPros.Api.Services.IStoreMemberSession, ECSPros.Api.Services.StoreMemberSession>(); // D1: SSR üye kimliği (HttpOnly cookie)
 builder.Services.AddTransient<ECSPros.Crm.Application.Services.ISmsSender, ECSPros.Api.Services.CrmSmsSenderAdapter>(); // D4: OTP SMS köprüsü
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IPageBlockSourceResolver, ECSPros.Api.Services.Store.PageBlockSourceResolver>(); // G3: vitrin ürün/koleksiyon kaynağı motoru
@@ -284,7 +319,9 @@ builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacySyncService>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacyOrderSyncService>();
 builder.Services.AddHttpClient("legacy-order", c => c.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddHostedService<ECSPros.Api.Services.Legacy.LegacySyncWorker>();
-builder.Services.AddHostedService<ECSPros.Api.Services.Fulfillment.CargoNotifyWorker>(); // OP5: kargo bildirim outbox'ı (varsayılan KAPALI — KG1'de açılır)
+builder.Services.AddHostedService<ECSPros.Api.Services.Fulfillment.CargoNotifyWorker>();
+builder.Services.AddHostedService<ECSPros.Api.Services.Tracking.TrackingDispatchWorker>();
+builder.Services.AddHostedService<ECSPros.Api.Services.Tracking.Feed.FeedGeneratorWorker>(); // İE-5: feed üretimi (Feeds:Enabled, 6 sa) // İE-2: commerce event outbox dispatcher (Tracking:Enabled; adapter'lar Faz D) // OP5: kargo bildirim outbox'ı (varsayılan KAPALI — KG1'de açılır)
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.PlayIntegrityVerifier>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.AppAttestVerifier>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.DevBypassVerifier>();

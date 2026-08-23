@@ -20,6 +20,8 @@ public static class DependencyInjection
         services.AddScoped<IStorefrontDbContext>(sp => sp.GetRequiredService<StorefrontDbContext>());
         services.AddScoped<IChannelPricingService, StorefrontChannelPricingService>();
         services.AddScoped<IChannelProductFlagService, StorefrontChannelProductFlagService>();
+        services.AddMemoryCache();
+        services.AddScoped<Application.Services.ChannelScoping.ChannelScopeResolver>();   // F1 kanal kapsamı
         services.AddScoped<IProductReviewStatsService, StorefrontProductReviewStatsService>(); // E7: kart/detay puanları
         services.AddScoped<ICardMessageResolver, Application.Services.CardMessageResolver>(); // Ürün Kartı F2: kart mesajları
 

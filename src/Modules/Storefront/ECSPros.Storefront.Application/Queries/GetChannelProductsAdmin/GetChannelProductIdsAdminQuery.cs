@@ -34,6 +34,24 @@ public class GetChannelProductIdsAdminQueryHandler(IStorefrontDbContext sfDb, IC
                 || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(s));
         }
 
+        // F1 kapsam: filter|mixed kanalda taban = kapsamdaki ürünler; all'da manuel hariç tutulanlar düşer.
+        var filterBased = await sfDb.ChannelScopes.AsNoTracking()
+            .AnyAsync(sc => sc.FirmPlatformId == request.FirmPlatformId && (sc.FillType == "filter" || sc.FillType == "mixed"), ct);
+        var scopeRows = await sfDb.ChannelProducts.AsNoTracking()
+            .Where(cp => cp.FirmPlatformId == request.FirmPlatformId && (cp.IsExcluded || (filterBased && cp.InScope)))
+            .Select(cp => new { cp.ProductId, cp.InScope, cp.IsExcluded })
+            .ToListAsync(ct);
+        if (filterBased)
+        {
+            var inScope = scopeRows.Where(r => r.InScope && !r.IsExcluded).Select(r => r.ProductId).ToHashSet();
+            baseQuery = baseQuery.Where(p => inScope.Contains(p.Id));
+        }
+        else
+        {
+            var manuallyExcluded = scopeRows.Where(r => r.IsExcluded).Select(r => r.ProductId).ToHashSet();
+            if (manuallyExcluded.Count > 0) baseQuery = baseQuery.Where(p => !manuallyExcluded.Contains(p.Id));
+        }
+
         var status = request.Status?.ToLower();
         if (status is "excluded" or "stopped" or "selected")
         {

@@ -8,6 +8,8 @@ import { Modal } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Pagination } from '@/components/ui/Pagination'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { cn } from '@/lib/utils'
+import { ChannelScopeTab } from './ChannelScopeTab'
 
 interface Firm { id: string; nameI18n: Record<string, string> }
 interface Channel { id: string; nameI18n: Record<string, string>; code: string; firmId: string; firmName: string }
@@ -143,6 +145,8 @@ export function ChannelProductsPage() {
     })
   }
 
+  const [tab, setTab] = useState<'urunler' | 'kapsam'>('urunler')   // F1: Ürünler | Kapsam sekmeleri
+
   if (chLoading) return <PageSpinner />
 
   return (
@@ -168,6 +172,15 @@ export function ChannelProductsPage() {
       </div>
 
       {channelId && (
+        <div className="tab-scroll mb-4">
+          <button className={cn('stab', tab === 'urunler' && 'active')} onClick={() => setTab('urunler')}>Ürünler</button>
+          <button className={cn('stab', tab === 'kapsam' && 'active')} onClick={() => setTab('kapsam')}>Kapsam</button>
+        </div>
+      )}
+
+      {channelId && tab === 'kapsam' && <ChannelScopeTab channelId={channelId} />}
+
+      {channelId && tab === 'urunler' && (
         <>
           {/* Filtre çubuğu */}
           <div className="card mb-4 flex flex-wrap items-end gap-3">

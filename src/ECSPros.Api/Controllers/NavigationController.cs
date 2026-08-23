@@ -312,9 +312,62 @@ public class NavigationController(IMediator mediator) : ControllerBase
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = new { affected = result.Value } });
     }
+
+    // ─── F1 Kanal kapsamı (docs/satis-kanali-ortak-kurgu.md §3.1) ────────────────
+
+    /// <summary>Kanal kapsam tanımı + manuel eklenen/hariç tutulan ürünler + son sync bilgisi.</summary>
+    [HttpGet("channel-products/{firmPlatformId:guid}/scope")]
+    public async Task<IActionResult> GetChannelScope(Guid firmPlatformId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new ECSPros.Storefront.Application.Queries.GetChannelScope.GetChannelScopeQuery(firmPlatformId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kapsam tanımını kaydeder (all|filter|mixed + filtre) ve hemen günceller. Yanıt: eşleşen ürün sayısı.</summary>
+    [HttpPut("channel-products/{firmPlatformId:guid}/scope")]
+    public async Task<IActionResult> UpsertChannelScope(Guid firmPlatformId, [FromBody] ChannelScopeRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new ECSPros.Storefront.Application.Commands.UpsertChannelScope.UpsertChannelScopeCommand(
+            firmPlatformId, req.FillType, req.FilterDef), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { matched = result.Value } });
+    }
+
+    /// <summary>Kaydetmeden filtreyi çalıştırır: eşleşen / toplam ürün sayısı.</summary>
+    [HttpPost("channel-products/{firmPlatformId:guid}/scope/preview")]
+    public async Task<IActionResult> PreviewChannelScope(Guid firmPlatformId, [FromBody] ChannelScopeRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new ECSPros.Storefront.Application.Queries.PreviewChannelScope.PreviewChannelScopeQuery(
+            firmPlatformId, req.FillType, req.FilterDef), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kapsamı yeniden hesaplar (filter|mixed kanal).</summary>
+    [HttpPost("channel-products/{firmPlatformId:guid}/scope/sync")]
+    public async Task<IActionResult> SyncChannelScope(Guid firmPlatformId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new ECSPros.Storefront.Application.Commands.SyncChannelScope.SyncChannelScopeCommand(firmPlatformId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { matched = result.Value } });
+    }
+
+    /// <summary>Kapsamda manuel işlem: include (kapsama ekle) | exclude (kalıcı hariç tut) | clear (manuel kararı kaldır).</summary>
+    [HttpPost("channel-products/{firmPlatformId:guid}/scope/manual")]
+    public async Task<IActionResult> SetChannelScopeManual(Guid firmPlatformId, [FromBody] ChannelScopeManualRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new ECSPros.Storefront.Application.Commands.SetChannelScopeManual.SetChannelScopeManualCommand(
+            firmPlatformId, req.ProductIds ?? new(), req.Action), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { affected = result.Value } });
+    }
 }
 
 // ─── Request Records ─────────────────────────────────────────────────────────
+
+public record ChannelScopeRequest(string FillType, Dictionary<string, object>? FilterDef);
+public record ChannelScopeManualRequest(List<Guid>? ProductIds, string Action);
 
 public record SetChannelProductFeaturedRequest(DateTime? FeaturedFrom, DateTime? FeaturedUntil);
 

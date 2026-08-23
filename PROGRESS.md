@@ -22,7 +22,17 @@
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!) | Mobil geliştirici teste başlar; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
-**Satış kanalı ortak kurgusu (2026-08-23, Admin panel alanı) — F0 UYGULANDI ⚠️ restart bekliyor; SIRADA F1 Kapsam:**
+**Satış kanalı ortak kurgusu (2026-08-23, Admin panel alanı) — F0 CANLIDA, F1 KAPSAM UYGULANDI ⚠️ restart bekliyor; SIRADA F2 Listeleme durumu:**
+F1: `storefront.channel_scopes` (kanal başına all|filter|mixed + FilterDef) + `channel_products` InScope/ScopeSource/IsExcluded
+(migration `AddChannelScope` canlı DB'de); HİBRİT kapsam: all = örtük (satır yoksa kanalda, F1 öncesiyle aynı), filter|mixed =
+materyalize InScope satırları; `ChannelScopeResolver` (+ kural şemasına HasChannelPrice/MinStock), Sync/Upsert/SetManual komutları,
+GetScope/Preview sorguları, uçlar `/navigation/channel-products/{id}/scope[...]`; flag servisi deny-set 60 sn IMemoryCache +
+komutlarda invalidation; MarketplaceAdminService aday SQL'i storefront ile AYNI anlama geçti (K10 opt-in/opt-out çatlağı kapandı);
+`ChannelScopeSyncWorker` (03:xx gece + açılışta 24h eski); K17 `IChannelStockCalculator` (InStockProductProvider) ; admin Kanal
+Ürünleri → Ürünler|Kapsam sekmeleri (`ChannelScopeTab.tsx`), FilterBuilder `channelScope` kriterleri (npm build ✓).
+İzole 5051 ✓: 4 kanal × 4 durum manage sayıları canlıyla birebir; trendyol_alyena'da filtre→398 ürün, manuel ekle/hariç, sync
+korur, all'a dönüş 17101 (test kalıntıları silindi). Publish alındı. KALAN F1 işi: rehber sayfası (Kanal Ürünleri → Kapsam sekmesi).
+
 F0 (yetenek modeli): `Shared.Contracts/Channels/ChannelCapabilities.cs` (+`IChannelCapabilityResolver`, Core.Infrastructure impl.
 2 dk IMemoryCache), `core_platform_types.capabilities` + `core_firm_platforms.capability_overrides` jsonb (migration
 `20260823183506_AddChannelCapabilities` canlı DB'ye uygulandı, additive), seed `dropship_partner` tipi + koda göre capabilities

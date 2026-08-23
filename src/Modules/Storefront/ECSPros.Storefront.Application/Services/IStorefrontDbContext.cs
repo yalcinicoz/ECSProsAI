@@ -8,6 +8,7 @@ public interface IStorefrontDbContext
     DbSet<NavigationMenu> NavigationMenus { get; }
     DbSet<NavNode> NavNodes { get; }
     DbSet<ChannelProduct> ChannelProducts { get; }
+    DbSet<ChannelScope> ChannelScopes { get; }
     DbSet<ChannelVariant> ChannelVariants { get; }
     DbSet<ChannelCategory> ChannelCategories { get; }
     DbSet<ChannelCategoryGroup> ChannelCategoryGroups { get; }
@@ -19,6 +20,8 @@ public interface IStorefrontDbContext
     DbSet<CollectionItem> CollectionItems { get; }
     DbSet<ProductReview> ProductReviews { get; }
     DbSet<ProductReviewPhoto> ProductReviewPhotos { get; }
+    DbSet<ProductRatingSource> ProductRatingSources { get; }
+    DbSet<ProductReviewDisplaySettings> ProductReviewDisplaySettings { get; }
     DbSet<SavedSearch> SavedSearches { get; }
     DbSet<ViewedProduct> ViewedProducts { get; }
     DbSet<CartRemovedItem> CartRemovedItems { get; }

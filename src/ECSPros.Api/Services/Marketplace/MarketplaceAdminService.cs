@@ -111,9 +111,16 @@ public sealed class MarketplaceAdminService(
             ? new Dictionary<string, string>()
             : JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? new Dictionary<string, string>();
 
-    // Aktif satış penceresi: kanal satırı açık VE durdurma penceresi şu anı kapsamıyor.
-    private const string ChannelActiveWhere = @"
-        cp.""IsActive"" AND NOT cp.""IsDeleted""
+    // F1 kapsam+karar kümesi (docs/satis-kanali-ortak-kurgu.md §3.1, K10): storefront deny-set ile AYNI anlam.
+    // Kanal kapsamı filter|mixed → yalnız InScope satırı olan ürünler; all (ya da kapsam yok) → satır yoksa kanalda
+    // (opt-out). Her durumda: IsExcluded değil, IsActive (satır varsa) ve durdurma penceresi şu anı kapsamıyor.
+    // Kullanım: FROM catalog.products p LEFT JOIN storefront.channel_products cp ON (kanal, ürün, NOT IsDeleted)
+    //           LEFT JOIN storefront.channel_scopes sc ON sc.FirmPlatformId = @platform AND NOT sc.IsDeleted
+    private const string ChannelVisibleWhere = @"
+        (CASE WHEN sc.""FillType"" IN ('filter','mixed')
+              THEN cp.""Id"" IS NOT NULL AND cp.""InScope"" AND NOT cp.""IsExcluded""
+              ELSE cp.""Id"" IS NULL OR NOT cp.""IsExcluded"" END)
+        AND (cp.""Id"" IS NULL OR cp.""IsActive"")
         AND NOT (cp.""SaleStoppedFrom"" IS NOT NULL AND cp.""SaleStoppedFrom"" <= now()
                  AND (cp.""SaleStoppedUntil"" IS NULL OR cp.""SaleStoppedUntil"" >= now()))";
 
@@ -196,16 +203,20 @@ public sealed class MarketplaceAdminService(
 
         // 3) Yüklenecek ürünler (ürün düzeyi): kanalda açık, hiç varyantı gönderilmemiş
         const string toUploadSql = @"
-            SELECT cp.""FirmPlatformId"", COUNT(*)::int
-            FROM storefront.channel_products cp
-            JOIN catalog.products p ON p.""Id"" = cp.""ProductId"" AND NOT p.""IsDeleted"" AND p.""IsSaleOpen""
-            WHERE cp.""FirmPlatformId"" = ANY(@ids) AND " + ChannelActiveWhere + @"
+            SELECT fp.""Id"", COUNT(*)::int
+            FROM core.core_firm_platforms fp
+            CROSS JOIN catalog.products p
+            LEFT JOIN storefront.channel_products cp ON cp.""FirmPlatformId"" = fp.""Id"" AND cp.""ProductId"" = p.""Id"" AND NOT cp.""IsDeleted""
+            LEFT JOIN storefront.channel_scopes sc ON sc.""FirmPlatformId"" = fp.""Id"" AND NOT sc.""IsDeleted""
+            WHERE fp.""Id"" = ANY(@ids) AND NOT p.""IsDeleted"" AND p.""IsSaleOpen""
+              AND EXISTS (SELECT 1 FROM catalog.product_images img WHERE img.""ProductId"" = p.""Id"" AND NOT img.""IsDeleted"")
+              AND " + ChannelVisibleWhere + @"
               AND NOT EXISTS (
                   SELECT 1 FROM integration.marketplace_products mp
                   JOIN catalog.product_variants v ON v.""Id"" = mp.""VariantId""
-                  WHERE NOT mp.""IsDeleted"" AND mp.""FirmPlatformId"" = cp.""FirmPlatformId""
-                    AND v.""ProductId"" = cp.""ProductId"")
-            GROUP BY cp.""FirmPlatformId""";
+                  WHERE NOT mp.""IsDeleted"" AND mp.""FirmPlatformId"" = fp.""Id""
+                    AND v.""ProductId"" = p.""Id"")
+            GROUP BY fp.""Id""";
 
         var toUpload = new Dictionary<Guid, int>();
         await using (var cmd = new NpgsqlCommand(toUploadSql, conn) { CommandTimeout = 30 })
@@ -334,17 +345,20 @@ public sealed class MarketplaceAdminService(
                        COUNT(v.""Id"") FILTER (WHERE v.""IsActive"" AND NOT v.""IsDeleted"")::int,
                        COUNT(*) OVER()::int,
                        rd.""Status"", rd.""ReasonsJson""::text
-                FROM storefront.channel_products cp
-                JOIN catalog.products p ON p.""Id"" = cp.""ProductId"" AND NOT p.""IsDeleted"" AND p.""IsSaleOpen""
+                FROM catalog.products p
+                LEFT JOIN storefront.channel_products cp ON cp.""FirmPlatformId"" = @platform AND cp.""ProductId"" = p.""Id"" AND NOT cp.""IsDeleted""
+                LEFT JOIN storefront.channel_scopes sc ON sc.""FirmPlatformId"" = @platform AND NOT sc.""IsDeleted""
                 LEFT JOIN catalog.product_variants v ON v.""ProductId"" = p.""Id""
                 LEFT JOIN integration.marketplace_product_readiness rd
                        ON rd.""Marketplace"" = @mp AND rd.""ProductId"" = p.""Id""
                       AND rd.""FirmPlatformId"" IS NULL AND NOT rd.""IsDeleted""
-                WHERE cp.""FirmPlatformId"" = @platform AND " + ChannelActiveWhere + @"
+                WHERE NOT p.""IsDeleted"" AND p.""IsSaleOpen""
+                  AND EXISTS (SELECT 1 FROM catalog.product_images img WHERE img.""ProductId"" = p.""Id"" AND NOT img.""IsDeleted"")
+                  AND " + ChannelVisibleWhere + @"
                   AND NOT EXISTS (
                       SELECT 1 FROM integration.marketplace_products mp
                       JOIN catalog.product_variants v2 ON v2.""Id"" = mp.""VariantId""
-                      WHERE NOT mp.""IsDeleted"" AND mp.""FirmPlatformId"" = cp.""FirmPlatformId""
+                      WHERE NOT mp.""IsDeleted"" AND mp.""FirmPlatformId"" = @platform
                         AND v2.""ProductId"" = p.""Id"")"
                 + readinessFilter
                 + (string.IsNullOrWhiteSpace(search) ? "" :
@@ -675,16 +689,19 @@ public sealed class MarketplaceAdminService(
             SELECT COUNT(*) FILTER (WHERE rd.""Status"" = 'ready')::int,
                    COUNT(*) FILTER (WHERE rd.""Status"" IS NOT NULL AND rd.""Status"" <> 'ready')::int,
                    COUNT(*) FILTER (WHERE rd.""Status"" IS NULL)::int
-            FROM storefront.channel_products cp
-            JOIN catalog.products p ON p.""Id"" = cp.""ProductId"" AND NOT p.""IsDeleted"" AND p.""IsSaleOpen""
+            FROM catalog.products p
+            LEFT JOIN storefront.channel_products cp ON cp.""FirmPlatformId"" = @platform AND cp.""ProductId"" = p.""Id"" AND NOT cp.""IsDeleted""
+            LEFT JOIN storefront.channel_scopes sc ON sc.""FirmPlatformId"" = @platform AND NOT sc.""IsDeleted""
             LEFT JOIN integration.marketplace_product_readiness rd
                    ON rd.""Marketplace"" = @mp AND rd.""ProductId"" = p.""Id""
                   AND rd.""FirmPlatformId"" IS NULL AND NOT rd.""IsDeleted""
-            WHERE cp.""FirmPlatformId"" = @platform AND " + ChannelActiveWhere + @"
+            WHERE NOT p.""IsDeleted"" AND p.""IsSaleOpen""
+              AND EXISTS (SELECT 1 FROM catalog.product_images img WHERE img.""ProductId"" = p.""Id"" AND NOT img.""IsDeleted"")
+              AND " + ChannelVisibleWhere + @"
               AND NOT EXISTS (
                   SELECT 1 FROM integration.marketplace_products mp
                   JOIN catalog.product_variants v2 ON v2.""Id"" = mp.""VariantId""
-                  WHERE NOT mp.""IsDeleted"" AND mp.""FirmPlatformId"" = cp.""FirmPlatformId""
+                  WHERE NOT mp.""IsDeleted"" AND mp.""FirmPlatformId"" = @platform
                     AND v2.""ProductId"" = p.""Id"")";
 
         await using var cmd = new NpgsqlCommand(sql, conn) { CommandTimeout = 30 };

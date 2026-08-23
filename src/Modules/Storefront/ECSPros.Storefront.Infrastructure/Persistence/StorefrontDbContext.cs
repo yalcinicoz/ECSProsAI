@@ -12,6 +12,7 @@ public class StorefrontDbContext : DbContext, IStorefrontDbContext
     public DbSet<NavigationMenu> NavigationMenus => Set<NavigationMenu>();
     public DbSet<NavNode> NavNodes => Set<NavNode>();
     public DbSet<ChannelProduct> ChannelProducts => Set<ChannelProduct>();
+    public DbSet<ChannelScope> ChannelScopes => Set<ChannelScope>();
     public DbSet<ChannelVariant> ChannelVariants => Set<ChannelVariant>();
     public DbSet<ChannelCategory> ChannelCategories => Set<ChannelCategory>();
     public DbSet<ChannelCategoryGroup> ChannelCategoryGroups => Set<ChannelCategoryGroup>();
@@ -23,6 +24,8 @@ public class StorefrontDbContext : DbContext, IStorefrontDbContext
     public DbSet<CollectionItem> CollectionItems => Set<CollectionItem>();
     public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
     public DbSet<ProductReviewPhoto> ProductReviewPhotos => Set<ProductReviewPhoto>();
+    public DbSet<ProductRatingSource> ProductRatingSources => Set<ProductRatingSource>();
+    public DbSet<ProductReviewDisplaySettings> ProductReviewDisplaySettings => Set<ProductReviewDisplaySettings>();
     public DbSet<SavedSearch> SavedSearches => Set<SavedSearch>();
     public DbSet<ViewedProduct> ViewedProducts => Set<ViewedProduct>();
     public DbSet<CartRemovedItem> CartRemovedItems => Set<CartRemovedItem>();

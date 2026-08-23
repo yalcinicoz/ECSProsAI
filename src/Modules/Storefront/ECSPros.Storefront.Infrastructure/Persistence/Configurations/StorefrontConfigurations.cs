@@ -67,7 +67,26 @@ public class ChannelProductConfiguration : IEntityTypeConfiguration<ChannelProdu
         builder.HasIndex(cp => new { cp.FirmPlatformId, cp.ProductId }).IsUnique();
         // M2/M3 deny-set sorgusu: platformda çıkarılan (IsActive=false) / durdurulan ürünler.
         builder.HasIndex(cp => new { cp.FirmPlatformId, cp.IsActive });
+        // F1 kapsam: filter kanallarında görünür küme = InScope && !IsExcluded && IsActive
+        builder.Property(cp => cp.ScopeSource).HasMaxLength(20).IsRequired().HasDefaultValue("legacy");
+        builder.Property(cp => cp.InScope).HasDefaultValue(true);
+        builder.Property(cp => cp.IsExcluded).HasDefaultValue(false);
+        builder.HasIndex(cp => new { cp.FirmPlatformId, cp.InScope, cp.IsExcluded });
         builder.HasQueryFilter(cp => !cp.IsDeleted);
+    }
+}
+
+public class ChannelScopeConfiguration : IEntityTypeConfiguration<ChannelScope>
+{
+    public void Configure(EntityTypeBuilder<ChannelScope> builder)
+    {
+        builder.ToTable("channel_scopes");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.FillType).HasMaxLength(20).IsRequired();
+        builder.Property(s => s.FilterDef).HasColumnType("jsonb");
+        builder.Property(s => s.LastSyncError).HasMaxLength(1000);
+        builder.HasIndex(s => s.FirmPlatformId).IsUnique();
+        builder.HasQueryFilter(s => !s.IsDeleted);
     }
 }
 
