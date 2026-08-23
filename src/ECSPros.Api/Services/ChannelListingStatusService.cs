@@ -275,6 +275,47 @@ public sealed class ChannelListingStatusService(
         return (string?)await cmd.ExecuteScalarAsync(ct);
     }
 
+
+    // ── F3 çekmece: ürünün pazaryeri varyant detayı ───────────────────────────
+    public sealed record PushVariantDto(Guid VariantId, string? Sku, string? ExternalId, string SyncStatus,
+        string? LastErrorCode, string? LastSyncError, DateTime? LastSyncedAt);
+    public sealed record ProductListingDetailDto(
+        string Status, List<string> Reasons, bool IsPushChannel, string? MarketplaceCode, List<PushVariantDto> Variants);
+
+    public async Task<ProductListingDetailDto> GetProductDetailAsync(Guid firmPlatformId, Guid productId, CancellationToken ct)
+    {
+        var status = await ComputeAsync(firmPlatformId, productId, ct);
+        var caps = await capabilityResolver.GetAsync(firmPlatformId, ct);
+        var variants = new List<PushVariantDto>();
+        string? marketplace = null;
+        if (caps.PushListing)
+        {
+            await using var conn = await dataSource.OpenConnectionAsync(ct);
+            marketplace = await GetMarketplaceCodeAsync(conn, firmPlatformId, ct);
+            const string sql = @"
+                SELECT mp.""VariantId"", v.""Sku"", mp.""ExternalId"", mp.""SyncStatus"",
+                       mp.""LastErrorCode"", mp.""LastSyncError"", mp.""LastSyncedAt""
+                FROM integration.marketplace_products mp
+                JOIN catalog.product_variants v ON v.""Id"" = mp.""VariantId""
+                WHERE NOT mp.""IsDeleted"" AND mp.""FirmPlatformId"" = @platform AND v.""ProductId"" = @product
+                ORDER BY v.""Sku""";
+            await using var cmd = new NpgsqlCommand(sql, conn) { CommandTimeout = 30 };
+            cmd.Parameters.AddWithValue("platform", firmPlatformId);
+            cmd.Parameters.AddWithValue("product", productId);
+            await using var r = await cmd.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct))
+                variants.Add(new PushVariantDto(
+                    r.GetGuid(0),
+                    r.IsDBNull(1) ? null : r.GetString(1),
+                    r.IsDBNull(2) ? null : r.GetString(2),
+                    r.GetString(3),
+                    r.IsDBNull(4) ? null : r.GetString(4),
+                    r.IsDBNull(5) ? null : r.GetString(5),
+                    r.IsDBNull(6) ? null : r.GetDateTime(6)));
+        }
+        return new ProductListingDetailDto(status.Status, status.Reasons, caps.PushListing, marketplace, variants);
+    }
+
     /// <summary>Sebep kodu → kullanıcı etiketi (rehber/panel ortak).</summary>
     public static string ReasonLabel(string code) => code switch
     {

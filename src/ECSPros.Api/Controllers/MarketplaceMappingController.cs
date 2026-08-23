@@ -143,11 +143,14 @@ public class MarketplaceMappingController(
 
     /// <summary>Yükleme hazırlık denetimini yeniden hesaplar (tüm katalog × pazaryeri).</summary>
     [HttpPost("readiness/recompute")]
-    public async Task<IActionResult> RecomputeReadiness([FromQuery] string marketplace, CancellationToken ct)
+    public async Task<IActionResult> RecomputeReadiness(
+        [FromQuery] string marketplace, [FromBody] RecomputeReadinessRequest? req = null, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(marketplace))
             return BadRequest(new { success = false, error = "marketplace zorunlu." });
-        var result = await readiness.RecomputeAsync(Norm(marketplace), null, ct);
+        // F3: gövdede productIds verilirse yalnız o ürünler yeniden hesaplanır (çekmecedeki "Hazırlığı yeniden hesapla").
+        var result = await readiness.RecomputeAsync(Norm(marketplace),
+            req?.ProductIds is { Count: > 0 } ? req.ProductIds : null, ct);
         return Ok(new { success = true, data = result });
     }
 
@@ -182,3 +185,5 @@ public class MarketplaceMappingController(
         return Ok(new { success = true, data = result });
     }
 }
+
+public record RecomputeReadinessRequest(List<Guid>? ProductIds);

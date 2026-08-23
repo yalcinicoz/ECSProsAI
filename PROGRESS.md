@@ -42,6 +42,15 @@ sale_closed, out_of_stock=K17 formülü, price_zero, no_channel_price, readiness
 uçlar `GET .../listing-summary` + `POST .../listing-status`; panel Kanal Ürünleri'ne Listeleme sütunu + özet
 çipleri (npm build ✓); rehber Kanal Ürünleri güncellendi. İzole 5051 ✓: mishar published=5.792 (Merchant feed ile
 birebir), julude çıkarılan→blocked/channel_excluded, trendyol readiness sebepleri (no_category_mapping 16.087).
+**F3 EKRAN UYGULANDI (2026-08-23) ⚠️ restart bekliyor; plan fazlarından SIRADA F4 dropship bayi (Dış API alanıyla ortak):**
+Kanal Ürünleri ekranı tamam: özet çipleri TIKLANABİLİR (listing filtresi) + Sebep açılır listesi (`manage`/`ids`
+uçlarına `listing`+`reason` paramları, ChannelListingStatusService id-kısıtı); satır tıklaması → sağ çekmece
+`ChannelProductDrawer.tsx` (kanal kararı aksiyonları tek ürün, sebep başına Düzelt linki, pazaryeri varyant+ham
+hata tablosu, Gönder/Yeniden Dene=/marketplaces/{id}/sync-products, Hazırlığı Hesapla=readiness/recompute artık
+ürün-bazlı body.productIds); toplu çubukta pazaryeri kanalında "Pazaryerine Gönder" (capabilities.pushListing).
+"Listeden düşür" (deactivate) backend'i YOK — bilinçli eksik. Rehber Kanal Ürünleri güncellendi (çekmece+çipler).
+İzole 5051 ✓: listing=published 5792 / blocked 11309 liste sayıları özetle birebir, reason=sale_stopped 324,
+blocked∩stopped=324, trendyol çekmece detayı (push:true, mp:trendyol), bilinmeyen listing→0.
 
 F0 (yetenek modeli): `Shared.Contracts/Channels/ChannelCapabilities.cs` (+`IChannelCapabilityResolver`, Core.Infrastructure impl.
 2 dk IMemoryCache), `core_platform_types.capabilities` + `core_firm_platforms.capability_overrides` jsonb (migration

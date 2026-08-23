@@ -268,11 +268,20 @@ public class NavigationController(IMediator mediator) : ControllerBase
     [HttpGet("channel-products/{firmPlatformId:guid}/manage")]
     public async Task<IActionResult> GetChannelProductsAdmin(
         Guid firmPlatformId, [FromQuery] string? search, [FromQuery] string? status,
+        [FromQuery] string? listing, [FromQuery] string? reason,
+        [FromServices] ECSPros.Api.Services.ChannelListingStatusService listingSvc,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 30, CancellationToken ct = default)
     {
+        // F3: listeleme durumu/sebep filtresi — id kümesi hesaplayıcıdan çözülür, sorguya kısıt olarak geçer.
+        HashSet<Guid>? restrict = null;
+        if (!string.IsNullOrWhiteSpace(listing) || !string.IsNullOrWhiteSpace(reason))
+            restrict = await listingSvc.GetProductIdsByStatusAsync(firmPlatformId,
+                string.IsNullOrWhiteSpace(listing) ? null : listing,
+                string.IsNullOrWhiteSpace(reason) ? null : reason, ct);
+
         var result = await mediator.Send(
             new ECSPros.Storefront.Application.Queries.GetChannelProductsAdmin.GetChannelProductsAdminQuery(
-                firmPlatformId, search, status, page, pageSize), ct);
+                firmPlatformId, search, status, page, pageSize, restrict), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
@@ -280,11 +289,19 @@ public class NavigationController(IMediator mediator) : ControllerBase
     /// <summary>"Tüm eşleşenleri seç" — filtreye uyan tüm ürün Id'leri (toplu işlem için).</summary>
     [HttpGet("channel-products/{firmPlatformId:guid}/manage/ids")]
     public async Task<IActionResult> GetChannelProductIdsAdmin(
-        Guid firmPlatformId, [FromQuery] string? search, [FromQuery] string? status, CancellationToken ct)
+        Guid firmPlatformId, [FromQuery] string? search, [FromQuery] string? status,
+        [FromQuery] string? listing, [FromQuery] string? reason,
+        [FromServices] ECSPros.Api.Services.ChannelListingStatusService listingSvc, CancellationToken ct = default)
     {
+        HashSet<Guid>? restrict = null;
+        if (!string.IsNullOrWhiteSpace(listing) || !string.IsNullOrWhiteSpace(reason))
+            restrict = await listingSvc.GetProductIdsByStatusAsync(firmPlatformId,
+                string.IsNullOrWhiteSpace(listing) ? null : listing,
+                string.IsNullOrWhiteSpace(reason) ? null : reason, ct);
+
         var result = await mediator.Send(
             new ECSPros.Storefront.Application.Queries.GetChannelProductsAdmin.GetChannelProductIdsAdminQuery(
-                firmPlatformId, search, status), ct);
+                firmPlatformId, search, status, restrict), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
@@ -376,6 +393,23 @@ public class NavigationController(IMediator mediator) : ControllerBase
             .Select(kv => new { code = kv.Key, label = ECSPros.Api.Services.ChannelListingStatusService.ReasonLabel(kv.Key), count = kv.Value })
             .ToList();
         return Ok(new { success = true, data = new { statusCounts = s.StatusCounts, reasons, total = s.Total } });
+    }
+
+    /// <summary>F3 çekmece: ürünün bu kanaldaki listeleme detayı — durum, sebepler (etiketli), pazaryeri varyant satırları (ham hata dahil).</summary>
+    [HttpGet("channel-products/{firmPlatformId:guid}/listing-detail/{productId:guid}")]
+    public async Task<IActionResult> GetListingDetail(
+        Guid firmPlatformId, Guid productId,
+        [FromServices] ECSPros.Api.Services.ChannelListingStatusService svc, CancellationToken ct)
+    {
+        var d = await svc.GetProductDetailAsync(firmPlatformId, productId, ct);
+        return Ok(new { success = true, data = new
+        {
+            status = d.Status,
+            reasons = d.Reasons.Select(c => new { code = c, label = ECSPros.Api.Services.ChannelListingStatusService.ReasonLabel(c) }).ToList(),
+            isPushChannel = d.IsPushChannel,
+            marketplaceCode = d.MarketplaceCode,
+            variants = d.Variants,
+        } });
     }
 
     /// <summary>Verilen ürünlerin bu kanaldaki listeleme durumu + sebepleri (liste sayfası rozetleri).</summary>

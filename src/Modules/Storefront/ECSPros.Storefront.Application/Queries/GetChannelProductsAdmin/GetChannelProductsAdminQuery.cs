@@ -17,7 +17,9 @@ public record GetChannelProductsAdminQuery(
     string? Search = null,
     string? Status = null,   // all | selected | excluded | stopped
     int Page = 1,
-    int PageSize = 30) : IRequest<Result<PagedResult<ChannelProductAdminItemDto>>>;
+    int PageSize = 30,
+    IReadOnlyCollection<Guid>? RestrictToProductIds = null   // F3: listeleme durumu/sebep filtresi (controller çözer)
+    ) : IRequest<Result<PagedResult<ChannelProductAdminItemDto>>>;
 
 public record ChannelProductAdminItemDto(
     Guid ProductId,
@@ -95,6 +97,12 @@ public class GetChannelProductsAdminQueryHandler(IStorefrontDbContext sfDb, ICat
             // Kanalda: çıkarılmamış (opt-out). Çıkarılan Id'ler hariç tümü.
             var excluded = stateRows.Where(r => !r.IsActive).Select(r => r.ProductId).ToHashSet();
             baseQuery = baseQuery.Where(p => !excluded.Contains(p.Id));
+        }
+
+        if (request.RestrictToProductIds is not null)
+        {
+            var allow = request.RestrictToProductIds as HashSet<Guid> ?? request.RestrictToProductIds.ToHashSet();
+            baseQuery = baseQuery.Where(p => allow.Contains(p.Id));
         }
 
         var total = await baseQuery.CountAsync(ct);

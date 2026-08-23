@@ -21,9 +21,10 @@ aralıklı "öne çıkar (Sponsorlu)" bayrağı ise ürün kartı detay sayfası
 4. **Toplu işlem çubuğu** — yalnız en az bir satır seçiliyken görünür.
 5. **Ürün tablosu** ve altta sayfalama (30 satır/sayfa).
 
-Filtre çubuğunun üstündeki **Listeleme özeti** satırı kanalın tamamı için durum ve en sık sebep sayılarını
-gösterir (örn. `Yayında 5.792` · `Engelli 11.309` · "Kanal stoğu yok: 10.972"). Sayılar birkaç dakikalık
-önbellekten gelir; sebebe göre filtreleme ileride eklenecektir.
+Filtre çubuğunun üstündeki **Listeleme özeti** çipleri kanalın tamamı için durum sayılarını gösterir
+(örn. `Yayında 5.792` · `Engelli 11.309`); **çipe tıklayınca liste o duruma süzülür**, `Tümü` sıfırlar.
+Filtre çubuğundaki **Sebep** listesi (sayılarıyla) belirli bir soruna odaklanmayı sağlar (örn. yalnız
+"Kategori eşlemesi yok" olanlar). Sayılar birkaç dakikalık önbellekten gelir.
 
 ## Liste ve filtreler
 | Sütun | Anlamı |
@@ -40,7 +41,7 @@ gösterir (örn. `Yayında 5.792` · `Engelli 11.309` · "Kanal stoğu yok: 10.9
 | Ara (kod veya ad) | Yazıp **Ara**'ya basın ya da Enter; ürün kodu veya adında arar. |
 | Durum | `Tümü`, `Kanalda`, `Kanaldan Çıkarılan`, `Durdurulan`. |
 
-Satır tıklamak detay açmaz; işlemler satırdaki bağlantı ve toplu çubukla yapılır. Kanal, arama ya da durum
+**Satıra tıklayınca sağdan detay çekmecesi açılır** (aşağıda); onay kutusu ve İşlem sütunu tıklamaları çekmeceyi açmaz. Kanal, arama ya da durum
 değişince seçim sıfırlanır. Sonuç yoksa "Kayıt bulunamadı." yazar.
 
 ## Butonlar ve aksiyonlar
@@ -54,6 +55,17 @@ değişince seçim sıfırlanır. Sonuç yoksa "Kayıt bulunamadı." yazar.
 | Satışı Durdur | Toplu çubuk | "Satışı Durdur — N ürün" penceresi açılır (aşağıda). | — |
 | Satışı Başlat | Toplu çubuk | Seçili ürünlerdeki durdurma penceresini kaldırır; satış hemen açılır. | — |
 | Sayfalama | Tablo altı | 30'arlı sayfalar arasında geçiş. | — |
+
+### Detay çekmecesi (satır tıklaması)
+| Bölüm | İçerik / aksiyonlar |
+|---|---|
+| Başlık | Görsel, ad, kod, **Ürün detayına git** bağlantısı. |
+| Kanal Kararı | Mevcut rozet + **Kanala Al / Kanaldan Çıkar**, **Satışı Durdur… / Satışı Başlat** (tek ürün). |
+| Listeleme Durumu | Rozet + sebep listesi; her sebebin yanında **Düzelt** bağlantısı: fiyat/satış kapalı → ürün detayı, stok → Stok sayfası, eşleme sebepleri → Eşleme sayfası, "Hazırlık hesaplanmadı" → **Hesapla** butonu. |
+| Pazaryeri Yüklemesi (yalnız pazaryeri kanalı) | Varyant tablosu (SKU, durum, dış Id, son senkron), hatalı varyantların **ham hata** metinleri; **Gönder / Yeniden Dene** (sonuç asenkron, birkaç dakika içinde durum güncellenir) ve **Hazırlığı Hesapla** butonları. |
+
+Toplu çubukta pazaryeri kanallarında ek **Pazaryerine Gönder** butonu vardır (seçili ürünler; hazır
+olmayanlar atlanır, sayısı yanıtta bildirilir). "Listeden düşür" (pazaryerinde pasife alma) henüz yoktur.
 
 ### Satışı Durdur penceresi
 | Alan | Zorunlu | Açıklama / kurallar |

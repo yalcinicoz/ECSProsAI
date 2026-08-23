@@ -8,9 +8,10 @@ import { Modal } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Pagination } from '@/components/ui/Pagination'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { ChannelProductDrawer, type DrawerProduct } from './ChannelProductDrawer'
 
 interface Firm { id: string; nameI18n: Record<string, string> }
-interface Channel { id: string; nameI18n: Record<string, string>; code: string; firmId: string; firmName: string }
+interface Channel { id: string; nameI18n: Record<string, string>; code: string; firmId: string; firmName: string; capabilities?: { pushListing?: boolean } }
 
 function channelLabel(ch: Channel): string {
   return ch.nameI18n?.['tr'] ?? ch.nameI18n?.[Object.keys(ch.nameI18n ?? {})[0]] ?? ch.code
@@ -75,6 +76,11 @@ export function ChannelProductsPage() {
   const [stopModalOpen, setStopModalOpen] = useState(false)
   const [stopFrom, setStopFrom] = useState('')
   const [stopUntil, setStopUntil] = useState('')
+  // F3: listeleme durumu/sebep filtreleri + sağ çekmece + durdurma hedefi (toplu ya da tek ürün)
+  const [listingF, setListingF] = useState('')
+  const [reasonF, setReasonF] = useState('')
+  const [drawer, setDrawer] = useState<DrawerProduct | null>(null)
+  const [stopTargetIds, setStopTargetIds] = useState<string[] | null>(null)
 
   // ── Kanal listesi (firma → platform) ──────────────────────────────────────
   const { data: firms = [], isLoading: firmsLoading } = useQuery<Firm[]>({
@@ -98,10 +104,12 @@ export function ChannelProductsPage() {
 
   // ── Ürün listesi ──────────────────────────────────────────────────────────
   const { data: pagedData, isLoading: listLoading } = useQuery<PagedResult>({
-    queryKey: ['channel-products', channelId, search, status, page],
+    queryKey: ['channel-products', channelId, search, status, listingF, reasonF, page],
     queryFn: async () => {
       const params = new URLSearchParams({ status, page: String(page), pageSize: String(PAGE_SIZE) })
       if (search) params.set('search', search)
+      if (listingF) params.set('listing', listingF)
+      if (reasonF) params.set('reason', reasonF)
       const { data } = await api.get(`/navigation/channel-products/${channelId}/manage?${params}`)
       return data.data
     },
@@ -127,9 +135,22 @@ export function ChannelProductsPage() {
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
   // Kanal/filtre değişince seçim sıfırlanır
-  useEffect(() => { setSelected(new Set()) }, [channelId, search, status])
+  useEffect(() => { setSelected(new Set()); setDrawer(null) }, [channelId, search, status, listingF, reasonF])
+  useEffect(() => {
+    if (!drawer) return
+    const it = items.find(i => i.productId === drawer.productId)
+    if (it) setDrawer(d => d && ({ ...d, isSelected: it.isSelected, isStoppedNow: it.isStoppedNow, saleStoppedUntil: it.saleStoppedUntil }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items])
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['channel-products', channelId] })
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['channel-products', channelId] })
+    queryClient.invalidateQueries({ queryKey: ['listing-status', channelId] })
+    queryClient.invalidateQueries({ queryKey: ['listing-summary', channelId] })
+    queryClient.invalidateQueries({ queryKey: ['listing-detail', channelId] })
+  }
+  const selectedChannel = channels.find(c => c.id === channelId)
+  const isPushChannel = selectedChannel?.capabilities?.pushListing === true
 
   const applySearch = () => { setPage(1); setSearch(searchInput.trim()) }
 
@@ -146,18 +167,33 @@ export function ChannelProductsPage() {
       const { data } = await api.post(`/navigation/channel-products/${channelId}/bulk-stop`, vars)
       return data.data.affected as number
     },
-    onSuccess: () => { setSelected(new Set()); setStopModalOpen(false); setStopFrom(''); setStopUntil(''); invalidate() },
+    onSuccess: () => { setSelected(new Set()); setStopModalOpen(false); setStopFrom(''); setStopUntil(''); setStopTargetIds(null); invalidate() },
   })
 
   const selectAllMatching = async () => {
     const params = new URLSearchParams({ status })
     if (search) params.set('search', search)
+    if (listingF) params.set('listing', listingF)
+    if (reasonF) params.set('reason', reasonF)
     const { data } = await api.get(`/navigation/channel-products/${channelId}/manage/ids?${params}`)
     setSelected(new Set(data.data as string[]))
   }
 
+  const pushMutation = useMutation({
+    mutationFn: async (productIds: string[]) => (await api.post(`/marketplaces/${channelId}/sync-products`, { productIds })).data.data,
+    onSuccess: () => { setSelected(new Set()); invalidate() },
+  })
+
   const selectedIds = useMemo(() => Array.from(selected), [selected])
-  const busy = selectMutation.isPending || stopMutation.isPending
+  const busy = selectMutation.isPending || stopMutation.isPending || pushMutation.isPending
+
+  // F3 çekmece kanal kararı aksiyonları
+  const onChannelAction = (action: 'select' | 'unselect' | 'stop' | 'start', productId: string) => {
+    if (action === 'select') selectMutation.mutate({ productIds: [productId], selected: true })
+    else if (action === 'unselect') selectMutation.mutate({ productIds: [productId], selected: false })
+    else if (action === 'start') stopMutation.mutate({ productIds: [productId], from: null, until: null })
+    else { setStopTargetIds([productId]); setStopModalOpen(true) }
+  }
 
   const toggleRow = (id: string) => {
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -198,21 +234,23 @@ export function ChannelProductsPage() {
 
       {channelId && (
         <>
-          {/* F2 Özet çipleri (bilgi amaçlı; filtreleme F3'te) */}
+          {/* F3 Özet çipleri — tıklayınca listeyi o duruma süzer */}
           {listingSummary && (
             <div className="flex flex-wrap items-center gap-1.5 mb-3 text-xs">
               <span style={{ color: 'var(--text-s)' }}>Listeleme:</span>
+              <button type="button" onClick={() => { setPage(1); setListingF(''); setReasonF('') }}
+                className="px-2 py-0.5 rounded-full"
+                style={{ border: '1px solid var(--border)', background: listingF === '' && reasonF === '' ? 'var(--brand)' : 'var(--surface)', color: listingF === '' && reasonF === '' ? '#fff' : 'var(--text-s)' }}>
+                Tümü {listingSummary.total}
+              </button>
               {Object.entries(LISTING_LABELS)
                 .filter(([k]) => (listingSummary.statusCounts[k] ?? 0) > 0)
                 .map(([k, m]) => (
-                  <Badge key={k} variant={m.variant}>{m.label} {listingSummary.statusCounts[k]}</Badge>
+                  <button key={k} type="button" onClick={() => { setPage(1); setReasonF(''); setListingF(f => f === k ? '' : k) }}
+                    className="rounded-full" style={{ outline: listingF === k ? '2px solid var(--brand)' : 'none', borderRadius: '9999px' }}>
+                    <Badge variant={m.variant}>{m.label} {listingSummary.statusCounts[k]}</Badge>
+                  </button>
                 ))}
-              {listingSummary.reasons.slice(0, 4).map(r => (
-                <span key={r.code} className="px-2 py-0.5 rounded-full" title={r.code}
-                  style={{ border: '1px solid var(--border)', color: 'var(--text-s)', background: 'var(--surface)' }}>
-                  {r.label}: {r.count}
-                </span>
-              ))}
             </div>
           )}
 
@@ -235,6 +273,15 @@ export function ChannelProductsPage() {
               <label className="flbl mb-1.5">Durum</label>
               <select className="inp" value={status} onChange={e => { setPage(1); setStatus(e.target.value) }}>
                 {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div className="min-w-[220px]">
+              <label className="flbl mb-1.5">Sebep</label>
+              <select className="inp" value={reasonF} onChange={e => { setPage(1); setReasonF(e.target.value) }}>
+                <option value="">Tümü</option>
+                {(listingSummary?.reasons ?? []).map(r => (
+                  <option key={r.code} value={r.code.split(':')[0]}>{r.label} ({r.count})</option>
+                ))}
               </select>
             </div>
           </div>
@@ -261,13 +308,19 @@ export function ChannelProductsPage() {
                 onClick={() => selectMutation.mutate({ productIds: selectedIds, selected: false })}>
                 <Ban size={14} /> Kanaldan Çıkar
               </Button>
-              <Button variant="secondary" disabled={busy} onClick={() => setStopModalOpen(true)}>
+              <Button variant="secondary" disabled={busy} onClick={() => { setStopTargetIds(null); setStopModalOpen(true) }}>
                 <PauseCircle size={14} /> Satışı Durdur
               </Button>
               <Button variant="secondary" disabled={busy}
                 onClick={() => stopMutation.mutate({ productIds: selectedIds, from: null, until: null })}>
                 <PlayCircle size={14} /> Satışı Başlat
               </Button>
+              {isPushChannel && (
+                <Button disabled={busy} loading={pushMutation.isPending}
+                  onClick={() => pushMutation.mutate(selectedIds)}>
+                  Pazaryerine Gönder
+                </Button>
+              )}
             </div>
           )}
 
@@ -289,8 +342,14 @@ export function ChannelProductsPage() {
                 </thead>
                 <tbody>
                   {items.map(it => (
-                    <tr key={it.productId} className="text-sm" style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td className="px-4 py-2">
+                    <tr key={it.productId} className="text-sm cursor-pointer hover:opacity-90"
+                      style={{ borderBottom: '1px solid var(--border)' }}
+                      onClick={() => setDrawer({
+                        productId: it.productId, code: it.code, name: nameOf(it.nameI18n),
+                        mainImageUrl: it.mainImageUrl, isSelected: it.isSelected,
+                        isStoppedNow: it.isStoppedNow, saleStoppedUntil: it.saleStoppedUntil,
+                      })}>
+                      <td className="px-4 py-2" onClick={e => e.stopPropagation()}>
                         <input type="checkbox" checked={selected.has(it.productId)} onChange={() => toggleRow(it.productId)} />
                       </td>
                       <td className="px-2 py-2">
@@ -328,7 +387,7 @@ export function ChannelProductsPage() {
                           )
                         })()}
                       </td>
-                      <td className="px-4 py-2 text-right">
+                      <td className="px-4 py-2 text-right" onClick={e => e.stopPropagation()}>
                         {it.isSelected
                           ? <button className="text-xs underline" style={{ color: 'var(--text-m)' }} disabled={busy}
                               onClick={() => selectMutation.mutate({ productIds: [it.productId], selected: false })}>Çıkar</button>
@@ -350,8 +409,14 @@ export function ChannelProductsPage() {
         </>
       )}
 
+      {/* F3 sağ çekmece */}
+      {drawer && channelId && (
+        <ChannelProductDrawer channelId={channelId} product={drawer} busy={busy}
+          onClose={() => setDrawer(null)} onChannelAction={onChannelAction} />
+      )}
+
       {/* Satışı Durdur modalı */}
-      <Modal open={stopModalOpen} onClose={() => setStopModalOpen(false)} title={`Satışı Durdur — ${selected.size} ürün`}>
+      <Modal open={stopModalOpen} onClose={() => setStopModalOpen(false)} title={`Satışı Durdur — ${(stopTargetIds ?? selectedIds).length} ürün`}>
         <div className="space-y-4">
           <p className="text-sm" style={{ color: 'var(--text-s)' }}>
             Tarih boş bırakılırsa <strong>anlık ve süresiz</strong> durdurulur. Bitiş tarihi verilirse
@@ -371,7 +436,7 @@ export function ChannelProductsPage() {
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setStopModalOpen(false)}>Vazgeç</Button>
             <Button disabled={stopMutation.isPending} onClick={() => stopMutation.mutate({
-              productIds: selectedIds,
+              productIds: stopTargetIds ?? selectedIds,
               from: stopFrom ? new Date(stopFrom).toISOString() : new Date().toISOString(),
               until: stopUntil ? new Date(stopUntil).toISOString() : null,
             })}>

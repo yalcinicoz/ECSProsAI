@@ -15,7 +15,8 @@ namespace ECSPros.Storefront.Application.Queries.GetChannelProductsAdmin;
 public record GetChannelProductIdsAdminQuery(
     Guid FirmPlatformId,
     string? Search = null,
-    string? Status = null) : IRequest<Result<List<Guid>>>;
+    string? Status = null,
+    IReadOnlyCollection<Guid>? RestrictToProductIds = null) : IRequest<Result<List<Guid>>>;
 
 public class GetChannelProductIdsAdminQueryHandler(IStorefrontDbContext sfDb, ICatalogDbContext catDb)
     : IRequestHandler<GetChannelProductIdsAdminQuery, Result<List<Guid>>>
@@ -50,6 +51,12 @@ public class GetChannelProductIdsAdminQueryHandler(IStorefrontDbContext sfDb, IC
         {
             var manuallyExcluded = scopeRows.Where(r => r.IsExcluded).Select(r => r.ProductId).ToHashSet();
             if (manuallyExcluded.Count > 0) baseQuery = baseQuery.Where(p => !manuallyExcluded.Contains(p.Id));
+        }
+
+        if (request.RestrictToProductIds is not null)
+        {
+            var allow = request.RestrictToProductIds as HashSet<Guid> ?? request.RestrictToProductIds.ToHashSet();
+            baseQuery = baseQuery.Where(p => allow.Contains(p.Id));
         }
 
         var status = request.Status?.ToLower();

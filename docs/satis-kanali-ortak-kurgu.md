@@ -14,6 +14,12 @@
 > durumu bu hesaplayıcıda katman-2+stok+satış kapalıdan türetilir). Uçlar: `listing-summary` (özet çipler),
 > `listing-status` (ürün bazlı, ≤500). Panel: Kanal Ürünleri'nde Listeleme sütunu + özet satırı. Çapraz doğrulama:
 > mishar `published`=5.792 = Merchant feed ürün sayısı. K15 olay tabanlı readiness tetiği hâlâ açık (F8'e).
+> **F3 Ekran UYGULANDI (2026-08-23) ⚠️ restart bekliyor:** tıklanabilir özet çipleri + Sebep filtresi
+> (`manage`/`manage/ids` `listing`+`reason` paramları, id-kısıtı ile), satır tıklaması → sağ çekmece
+> (`ChannelProductDrawer`: kanal kararı aksiyonları, sebep başına Düzelt hedefi §4.3, pazaryeri varyant/ham hata
+> tablosu, Gönder/Yeniden Dene = `sync-products`, ürün-bazlı Hazırlığı Hesapla = `readiness/recompute` body
+> productIds), toplu çubukta yetenek bazlı "Pazaryerine Gönder". "Listeden düşür" (deactivate batch) hâlâ YOK —
+> backend'i F6+ öncesi ayrı iş. CompletionModal çekmeceye gömülmedi; eşleme sebepleri Eşleme sayfasına link verir.
 > F0 Yetenek modeli **UYGULANDI (2026-08-23)** — `ChannelCapabilities` (Shared.Contracts/Channels) + `IChannelCapabilityResolver` (Core.Infrastructure, 2 dk IMemoryCache), `core_platform_types.capabilities` / `core_firm_platforms.capability_overrides` (jsonb, migration `AddChannelCapabilities` canlı DB'de uygulandı), seed: `dropship_partner` tipi + koda göre backfill (idempotent), `IsMarketplace` artık `pushListing`'den türetilir (kolon korunur), admin: Platform Tipleri yetenek editörü (3 şablon butonu), kanal formu ezme editörü (4 alan) + kart/tablo rozetleri, rehber sayfaları güncellendi. İzole 5051 testi ✓ (ezme yazma/sanitize/negatif/temizleme, tip güncelleme, türetme). **Sırada F1 Kapsam.**
 > Alan: 🛠 **Admin panel** (pano #2) + zorunlu çekirdek dokunuşları (Core/Storefront/Integration/Catalog) +
 > 🔌 Dış API (pano #3) ile kesişen noktalar işaretlidir.

@@ -21,9 +21,10 @@ aralıklı &quot;öne çıkar (Sponsorlu)&quot; bayrağı ise ürün kartı deta
 <li><strong>Toplu işlem çubuğu</strong> — yalnız en az bir satır seçiliyken görünür.</li>
 <li><strong>Ürün tablosu</strong> ve altta sayfalama (30 satır/sayfa).</li>
 </ol>
-<p>Filtre çubuğunun üstündeki <strong>Listeleme özeti</strong> satırı kanalın tamamı için durum ve en sık sebep sayılarını
-gösterir (örn. <code>Yayında 5.792</code> · <code>Engelli 11.309</code> · &quot;Kanal stoğu yok: 10.972&quot;). Sayılar birkaç dakikalık
-önbellekten gelir; sebebe göre filtreleme ileride eklenecektir.</p>
+<p>Filtre çubuğunun üstündeki <strong>Listeleme özeti</strong> çipleri kanalın tamamı için durum sayılarını gösterir
+(örn. <code>Yayında 5.792</code> · <code>Engelli 11.309</code>); <strong>çipe tıklayınca liste o duruma süzülür</strong>, <code>Tümü</code> sıfırlar.
+Filtre çubuğundaki <strong>Sebep</strong> listesi (sayılarıyla) belirli bir soruna odaklanmayı sağlar (örn. yalnız
+&quot;Kategori eşlemesi yok&quot; olanlar). Sayılar birkaç dakikalık önbellekten gelir.</p>
 <h2 id="liste-ve-filtreler">Liste ve filtreler<a class="anchor" href="#liste-ve-filtreler" aria-hidden="true">#</a></h2>
 <table>
 <thead>
@@ -73,7 +74,7 @@ gösterir (örn. <code>Yayında 5.792</code> · <code>Engelli 11.309</code> · &
 <td><code>Tümü</code>, <code>Kanalda</code>, <code>Kanaldan Çıkarılan</code>, <code>Durdurulan</code>.</td>
 </tr>
 </tbody></table>
-<p>Satır tıklamak detay açmaz; işlemler satırdaki bağlantı ve toplu çubukla yapılır. Kanal, arama ya da durum
+<p><strong>Satıra tıklayınca sağdan detay çekmecesi açılır</strong> (aşağıda); onay kutusu ve İşlem sütunu tıklamaları çekmeceyi açmaz. Kanal, arama ya da durum
 değişince seçim sıfırlanır. Sonuç yoksa &quot;Kayıt bulunamadı.&quot; yazar.</p>
 <h2 id="butonlar-ve-aksiyonlar">Butonlar ve aksiyonlar<a class="anchor" href="#butonlar-ve-aksiyonlar" aria-hidden="true">#</a></h2>
 <table>
@@ -134,6 +135,33 @@ değişince seçim sıfırlanır. Sonuç yoksa &quot;Kayıt bulunamadı.&quot; y
 <td>—</td>
 </tr>
 </tbody></table>
+<h3 id="detay-cekmecesi-satir-tiklamasi">Detay çekmecesi (satır tıklaması)<a class="anchor" href="#detay-cekmecesi-satir-tiklamasi" aria-hidden="true">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Bölüm</th>
+<th>İçerik / aksiyonlar</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Başlık</td>
+<td>Görsel, ad, kod, <strong>Ürün detayına git</strong> bağlantısı.</td>
+</tr>
+<tr>
+<td>Kanal Kararı</td>
+<td>Mevcut rozet + <strong>Kanala Al / Kanaldan Çıkar</strong>, <strong>Satışı Durdur… / Satışı Başlat</strong> (tek ürün).</td>
+</tr>
+<tr>
+<td>Listeleme Durumu</td>
+<td>Rozet + sebep listesi; her sebebin yanında <strong>Düzelt</strong> bağlantısı: fiyat/satış kapalı → ürün detayı, stok → Stok sayfası, eşleme sebepleri → Eşleme sayfası, &quot;Hazırlık hesaplanmadı&quot; → <strong>Hesapla</strong> butonu.</td>
+</tr>
+<tr>
+<td>Pazaryeri Yüklemesi (yalnız pazaryeri kanalı)</td>
+<td>Varyant tablosu (SKU, durum, dış Id, son senkron), hatalı varyantların <strong>ham hata</strong> metinleri; <strong>Gönder / Yeniden Dene</strong> (sonuç asenkron, birkaç dakika içinde durum güncellenir) ve <strong>Hazırlığı Hesapla</strong> butonları.</td>
+</tr>
+</tbody></table>
+<p>Toplu çubukta pazaryeri kanallarında ek <strong>Pazaryerine Gönder</strong> butonu vardır (seçili ürünler; hazır
+olmayanlar atlanır, sayısı yanıtta bildirilir). &quot;Listeden düşür&quot; (pazaryerinde pasife alma) henüz yoktur.</p>
 <h3 id="satisi-durdur-penceresi">Satışı Durdur penceresi<a class="anchor" href="#satisi-durdur-penceresi" aria-hidden="true">#</a></h3>
 <table>
 <thead>
