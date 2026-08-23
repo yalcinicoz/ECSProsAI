@@ -30,7 +30,10 @@ sekmeler, durumlar/iş kuralları, adım adım, ipuçları, ilgili sayfalar; kay
 yazım kılavuzu `docs/rehber/YAZIM-KILAVUZU.md`. nginx: `/rehber` ana `locations.inc`'e eklendi (⚠️ `docker compose restart nginx`
 bekliyor; demo host'ta zaten vardı → canlı), admin sol menüye "Kullanım Rehberi" linki (build alındı). Görseller: 106 yer tutucu
 (`img/<rota-slug>.webp`), `tools/screenshot.js` hazır (REHBER_USER/PASS ya da REHBER_TOKEN ile; detay sayfaları listeden ilk
-satır) — kullanıcı kararı bekleniyor. Ajan bulguları (panel hataları adayı): Dashboard "Bugün POS Satış" kartı tarih süzmüyor;
+satır) — **97 görsel çekildi (2026-08-23, kullanıcı onayıyla demo admin hesabı; sayfa + sekme/modal/bölüm durumları;
+`screenshot.js` API tabanlı detay çözücüler + `screenshot-states.js`) — eksik 9: demo verisi olmayan detaylar
+(tedarikçi gönderimi, iade, transfer, kampanya, cari detay, red modalı, masa) + 3 seçici (alt özellikler sekmesi, varyant ekle,
+kullanıcı düzenle/durum modalı).** Ajan bulguları (panel hataları adayı): Dashboard "Bugün POS Satış" kartı tarih süzmüyor;
 Entegrasyon Logları "Hatalı" sekmesi status=error süzüyor ama komutlar failure yazıyor; Depo düzenle rezervasyon önceliği 0 açılıyor;
 admin şifre sıfırlama MustChangePassword=false yapıyor (diyalog metniyle çelişki).
 
