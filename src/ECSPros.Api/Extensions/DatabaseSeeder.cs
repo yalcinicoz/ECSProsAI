@@ -2951,6 +2951,20 @@ public static class DatabaseSeeder
             }
         }
 
+        // Renk filtresi (2026-08-23, kullanıcı isteği): demo DB'de (telemania platformu olan veritabanı) ham `renk`
+        // tipi filtreye açılır — içecek kapları/boya/maskara renk varyantları hex'li 27 değerle swatch grubu olur.
+        // Misharitalia `filtre_rengi` (kürasyonlu havuz) kullanır; orada `renk` kapalı kalır (telemania platformu yok).
+        var telemaniaVar = await db.Database.SqlQuery<int>($"""SELECT 1 AS "Value" FROM core.core_firm_platforms WHERE "Code" = 'telemania' AND NOT "IsDeleted" LIMIT 1""").AnyAsync();
+        if (telemaniaVar)
+        {
+            var renkTipi = await db.AttributeTypes.FirstOrDefaultAsync(t => t.Code == "renk");
+            if (renkTipi is not null && !renkTipi.UseInFilter)
+            {
+                renkTipi.UseInFilter = true;
+                Console.WriteLine("✓ Seed: Telemania — 'renk' özelliği filtreye açıldı (UseInFilter=true).");
+            }
+        }
+
         if (eklenen > 0 || db.ChangeTracker.HasChanges())
         {
             await db.SaveChangesAsync();

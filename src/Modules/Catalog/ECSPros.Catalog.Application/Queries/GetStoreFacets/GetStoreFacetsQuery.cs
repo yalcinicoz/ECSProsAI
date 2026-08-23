@@ -452,7 +452,7 @@ public class GetStoreFacetsQueryHandler(
                 return new AttributeFacetDto(
                     t.Code,
                     t.NameI18n,
-                    t.Code == "filtre_rengi",
+                    t.Code is "filtre_rengi" or "renk",   // 2026-08-23: demo kanalında ham "renk" (hex'li) de swatch'lı renk grubu
                     g.OrderBy(c => valueById[c.AttributeValueId].SortOrder)
                         .Select(c =>
                         {

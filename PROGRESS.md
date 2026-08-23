@@ -38,6 +38,9 @@ olmayan ürünleri tek kart (ColorValueId=Guid.Empty, ürün düzeyi görsel, re
 karışık kategorilerde (demo Mutfak & Kahve: termos renkli + kapsül kahve renksiz) facet sayıyor ama liste göstermiyordu
 → "10'lu (4)" seçilince 0 ürün. Demo: mutfak-kahve 173→221 kart, 10'lu → 4 ürün görselli ✓; prod kadin 6000→6000
 (prod'da yalnız 13 eksensiz ürün). ⚠️ ecspros + ecspros-demo restart bekliyor.
+**(5) Renk filtresi (2026-08-23, kullanıcı isteği):** demo DB'de (telemania platformu olan DB) seeder `renk`
+tipini filtreye açar (UseInFilter=true — prod'da telemania yok, `filtre_rengi` düzeni değişmez); facet motoru `renk`
+grubunu da swatch'lı (hex) renk grubu sayar. İzole Demo: kamp-outdoor Renk grubu + seçimde 22→5 kart ✓.
 
 **Reklam/Analytics/Dönüşüm takibi — A–F CANLIDA ✅ (2026-08-22 restart + kullanıcı kabul testi; 2026-08-23 KAPATILDI —
 gerçek GA4/Meta/Merchant hesap bilgileri girilince son doğrulama yapılacak: GA4 DebugView, Meta Test Events, Merchant
