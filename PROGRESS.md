@@ -27,8 +27,7 @@
 SA/mal kabul esnek ve bloklamaz (İ2/İ3); mutabakat dönemsel/istatistiksel (İ4 — belgeler kaba, satıcı fazla
 gönderir); satışa giriş = stok + F2 `published` (İ5), KPI: teslim→ayrıştırma→satışa giriş süreleri + satışa
 girmeyenler (sebepleri ChannelListingStatusService'ten). Yeni Procurement modülü önerisi (K1), ölü
-fin_supplier_deliveries terk (K2), fazlar T1-T6. AÇIK: K7 etiket formatı, K8 fatura→cari (B0-B4), K9 ayrıştırmada
-kart açma yetkisi, K10 Legacy stok ezmesi kesim planı (★ T4 canlıya bunsuz alınmaz). Keşif bulguları: PO yok;
+fin_supplier_deliveries terk (K2), fazlar T1-T6. v1.1 (08-24): K7-K10 KAPALI — K7 kullanıcı tasarımlı etiket şablonları (yeni T3 fazı: core_label_templates + görsel editör + /yazdir/etiket), K8 fatura→cari AYRI iş, K9 kart ayrıştırma ÖNCESİ açılır (kart-eksik bildirimi kuyruğu), K10 go-live'da Legacy toplu stok güncellemesi kapatılır (T5 kontrol maddesi). K1-K6 önerileri kullanıcı onayı bekliyor. Keşif bulguları: PO yok;
 SupplierDelivery şeması ölü; transferler stok taşımıyor (ayrı iş); AdjustStock'ta BinId yok; ürün etiketi yazdırma yok.
 
 **Satış kanalı ortak kurgusu (2026-08-23, Admin panel alanı) — F0 CANLIDA, F1 KAPSAM UYGULANDI ⚠️ restart bekliyor; SIRADA F2 Listeleme durumu:**
