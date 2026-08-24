@@ -21,6 +21,7 @@ const BREADCRUMB: Record<string, string> = {
   '/storefront/channel-products':  'Kanal Ürünleri',
   '/storefront/channel-scope':     'Kanal Kapsamı',
   '/procurement/purchase-orders':  'Satın Almalar',
+  '/procurement/receipts':         'Mal Kabul',
   '/storefront/contact-messages':  'İletişim Mesajları',
   '/storefront/notifications':     'Bildirimler',
   '/storefront/newsletter':        'Bülten Aboneleri',

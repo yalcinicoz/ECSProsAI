@@ -34,6 +34,8 @@ import { ChannelProductsPage } from '@/pages/storefront/ChannelProductsPage'
 import { ChannelScopePage } from '@/pages/storefront/ChannelScopePage'
 import { PurchaseOrdersPage } from '@/pages/procurement/PurchaseOrdersPage'
 import { PurchaseOrderDetailPage } from '@/pages/procurement/PurchaseOrderDetailPage'
+import { ReceiptsPage } from '@/pages/procurement/ReceiptsPage'
+import { ReceiptDetailPage } from '@/pages/procurement/ReceiptDetailPage'
 import { ChannelCategoryDetailPage } from '@/pages/storefront/ChannelCategoryDetailPage'
 import { CollectionsModerationPage } from '@/pages/storefront/CollectionsModerationPage'
 import { ReviewsModerationPage } from '@/pages/storefront/ReviewsModerationPage'
@@ -126,6 +128,8 @@ export const router = createBrowserRouter(
             { path: 'storefront/channel-scope',            element: <ChannelScopePage /> },
             { path: 'procurement/purchase-orders',         element: <PurchaseOrdersPage /> },
             { path: 'procurement/purchase-orders/:id',     element: <PurchaseOrderDetailPage /> },
+            { path: 'procurement/receipts',                element: <ReceiptsPage /> },
+            { path: 'procurement/receipts/:id',            element: <ReceiptDetailPage /> },
             { path: 'storefront/collections',              element: <CollectionsModerationPage /> },
             { path: 'storefront/reviews',                  element: <ReviewsModerationPage /> },
             { path: 'storefront/pages',                    element: <PagesManagementPage /> },

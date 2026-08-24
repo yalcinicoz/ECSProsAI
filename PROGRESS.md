@@ -31,7 +31,12 @@ fin_supplier_deliveries terk (K2), fazlar T1-T6. **T1 UYGULANDI (2026-08-24) ⚠
 migration `InitProcurement` canlı DB'de ✓), SA-YYYYAAGG-#### kod, kalem upsert/sil (append semantiği), durum makinesi
 (closed→receiving geri açılır), Excel panoya yapıştır (sütun eşleme, TR virgül), permission `procurement.manage`+`sort`
 (seed permDefs + FirmAdmin/All listeleri), admin sidebar "Tedarik" grubu + PurchaseOrders(+Detail)Page (npm build ✓),
-rehber 11-tedarik bölümü (70 sayfa). İzole 5051 ✓ (negatifler dahil; test PO silindi). v1.1 (08-24): K7-K10 KAPALI — K7 kullanıcı tasarımlı etiket şablonları (yeni T3 fazı: core_label_templates + görsel editör + /yazdir/etiket), K8 fatura→cari AYRI iş, K9 kart ayrıştırma ÖNCESİ açılır (kart-eksik bildirimi kuyruğu), K10 go-live'da Legacy toplu stok güncellemesi kapatılır (T5 kontrol maddesi). K1-K6 önerileri kullanıcı onayı bekliyor. Keşif bulguları: PO yok;
+rehber 11-tedarik bölümü (70 sayfa). İzole 5051 ✓ (negatifler dahil; test PO silindi).
+**T2 MAL KABUL UYGULANDI (2026-08-24) ⚠️ restart bekliyor; SIRADA T3 Etiket Şablonları:** receipt_batches/_items/
+_purchase_orders (migration `AddReceiptBatches` ✓), kalemsiz parti (İ2), MK-#### kod, durum received→sorting→completed
+(geri açılır), gevşek SA bağı link/unlink (ordered→receiving bilgi amaçlı; farklı tedarikçi 400), fatura bağı
+(finance listesinden seçim), kaba evrak kalemleri; admin Mal Kabul (liste+detay, sidebar); rehber 20-mal-kabul.
+İzole 5051 ✓ (idempotent link, tamamlanmışa kalem 400; test verileri silindi). v1.1 (08-24): K7-K10 KAPALI — K7 kullanıcı tasarımlı etiket şablonları (yeni T3 fazı: core_label_templates + görsel editör + /yazdir/etiket), K8 fatura→cari AYRI iş, K9 kart ayrıştırma ÖNCESİ açılır (kart-eksik bildirimi kuyruğu), K10 go-live'da Legacy toplu stok güncellemesi kapatılır (T5 kontrol maddesi). K1-K6 önerileri kullanıcı onayı bekliyor. Keşif bulguları: PO yok;
 SupplierDelivery şeması ölü; transferler stok taşımıyor (ayrı iş); AdjustStock'ta BinId yok; ürün etiketi yazdırma yok.
 
 **Satış kanalı ortak kurgusu (2026-08-23, Admin panel alanı) — F0 CANLIDA, F1 KAPSAM UYGULANDI ⚠️ restart bekliyor; SIRADA F2 Listeleme durumu:**

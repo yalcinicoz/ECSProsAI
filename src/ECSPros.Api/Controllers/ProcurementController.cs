@@ -4,6 +4,14 @@ using ECSPros.Procurement.Application.Commands.DeletePurchaseOrderItem;
 using ECSPros.Procurement.Application.Commands.SetPurchaseOrderStatus;
 using ECSPros.Procurement.Application.Commands.UpdatePurchaseOrder;
 using ECSPros.Procurement.Application.Commands.UpsertPurchaseOrderItems;
+using ECSPros.Procurement.Application.Commands.CreateReceiptBatch;
+using ECSPros.Procurement.Application.Commands.DeleteReceiptBatchItem;
+using ECSPros.Procurement.Application.Commands.SetReceiptBatchPurchaseOrders;
+using ECSPros.Procurement.Application.Commands.SetReceiptBatchStatus;
+using ECSPros.Procurement.Application.Commands.UpdateReceiptBatch;
+using ECSPros.Procurement.Application.Commands.UpsertReceiptBatchItems;
+using ECSPros.Procurement.Application.Queries.GetReceiptBatchDetail;
+using ECSPros.Procurement.Application.Queries.GetReceiptBatches;
 using ECSPros.Procurement.Application.Queries.GetPurchaseOrderDetail;
 using ECSPros.Procurement.Application.Queries.GetPurchaseOrders;
 using ECSPros.Shared.Kernel.Authorization;
@@ -86,7 +94,91 @@ public class ProcurementController(IMediator mediator) : ControllerBase
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
     }
+
+    // ─── T2 Mal Kabul (docs/urun-tedarik-is-akisi.md §2.2) ───────────────────────
+
+    /// <summary>Mal kabul partileri (tedarikçi/durum/arama filtreli, sayfalı).</summary>
+    [HttpGet("receipts")]
+    public async Task<IActionResult> GetReceiptBatches(
+        [FromQuery] Guid? supplierId, [FromQuery] string? status, [FromQuery] string? search,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetReceiptBatchesQuery(supplierId, status, search, page, pageSize), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Parti detayı (kaba kalemler + bağlı satın almalar).</summary>
+    [HttpGet("receipts/{id:guid}")]
+    public async Task<IActionResult> GetReceiptBatch(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetReceiptBatchDetailQuery(id), ct);
+        if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Parti açar (İ2: kalem bilgisi zorunsuz); kod MK-YYYYAAGG-#### otomatik.</summary>
+    [HttpPost("receipts")]
+    public async Task<IActionResult> CreateReceiptBatch([FromBody] CreateReceiptBatchRequest req, CancellationToken ct)
+    {
+        Guid? userId = Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("sub")?.Value, out var uid) ? uid : null;
+        var result = await mediator.Send(new CreateReceiptBatchCommand(
+            req.SupplierId, req.WarehouseId, req.ReceivedAt, req.PackageCount, req.DeliveryNoteNumber, req.Notes, userId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Created(string.Empty, new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>Başlık günceller (tarih, koli, irsaliye no, fatura bağı, not).</summary>
+    [HttpPut("receipts/{id:guid}")]
+    public async Task<IActionResult> UpdateReceiptBatch(Guid id, [FromBody] UpdateReceiptBatchRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new UpdateReceiptBatchCommand(
+            id, req.ReceivedAt, req.PackageCount, req.DeliveryNoteNumber, req.SupplierInvoiceId, req.Notes), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Durum: received→sorting→completed; completed→sorting geri açma.</summary>
+    [HttpPost("receipts/{id:guid}/status")]
+    public async Task<IActionResult> SetReceiptBatchStatus(Guid id, [FromBody] SetPurchaseOrderStatusRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new SetReceiptBatchStatusCommand(id, req.Status), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Kaba evrak kalemi ekle/güncelle (opsiyonel — yalnız mutabakat girdisi).</summary>
+    [HttpPost("receipts/{id:guid}/items")]
+    public async Task<IActionResult> UpsertReceiptItems(Guid id, [FromBody] UpsertReceiptBatchItemsRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new UpsertReceiptBatchItemsCommand(id, req.Items ?? new()), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { affected = result.Value } });
+    }
+
+    /// <summary>Kaba kalemi siler (soft).</summary>
+    [HttpDelete("receipts/{id:guid}/items/{itemId:guid}")]
+    public async Task<IActionResult> DeleteReceiptItem(Guid id, Guid itemId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new DeleteReceiptBatchItemCommand(id, itemId), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Parti ↔ SA gevşek bağı: link | unlink (İ3; SA 'ordered' ise bilgi amaçlı 'receiving'e alınır).</summary>
+    [HttpPost("receipts/{id:guid}/purchase-orders")]
+    public async Task<IActionResult> SetReceiptPurchaseOrders(Guid id, [FromBody] SetReceiptPurchaseOrdersRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new SetReceiptBatchPurchaseOrdersCommand(id, req.PurchaseOrderIds ?? new(), req.Action), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { affected = result.Value } });
+    }
 }
+
+public record CreateReceiptBatchRequest(Guid SupplierId, Guid WarehouseId, DateTime? ReceivedAt, int? PackageCount, string? DeliveryNoteNumber, string? Notes);
+public record UpdateReceiptBatchRequest(DateTime? ReceivedAt, int? PackageCount, string? DeliveryNoteNumber, Guid? SupplierInvoiceId, string? Notes);
+public record UpsertReceiptBatchItemsRequest(List<ReceiptBatchItemInput>? Items);
+public record SetReceiptPurchaseOrdersRequest(List<Guid>? PurchaseOrderIds, string Action);
 
 public record CreatePurchaseOrderRequest(Guid SupplierId, DateTime? OrderDate, DateTime? ExpectedDate, string? Notes);
 public record UpdatePurchaseOrderRequest(DateTime? OrderDate, DateTime? ExpectedDate, string? Notes);

@@ -6,7 +6,12 @@
 > (closed→receiving geri açma dahil), Excel panoya yapıştır (sütun eşleme + TR sayı biçimi), yetkiler
 > `procurement.manage`/`procurement.sort` (seed; firm_admin dahil), admin: Tedarik → Satın Almalar (liste+detay),
 > rehber `11-tedarik/10-satin-almalar`. İzole 5051 ✓ (kod üretimi, toplamlar, negatifler: adet 0 / kimliksiz kalem /
-> kapalıya kalem / geçersiz geçiş / yetkisiz 403). **Sırada T2 Mal Kabul.**
+> kapalıya kalem / geçersiz geçiş / yetkisiz 403). **T2 Mal Kabul UYGULANDI (2026-08-24) ⚠️ restart bekliyor** —
+> ReceiptBatch(+Item+PO bağı) entity'leri (migration `AddReceiptBatches` canlı DB'de), MK-#### kod, kalemsiz parti
+> açma, durum makinesi (completed→sorting geri aç), gevşek çoktan-çoğa SA bağı (link'te ordered→receiving; farklı
+> tedarikçi SA'sı reddedilir), fatura gevşek bağı, kaba evrak kalemleri; admin Mal Kabul liste+detay; rehber
+> `20-mal-kabul`. İzole 5051 ✓ (kalemsiz sorting, idempotent link, tamamlanmışa kalem 400, çapraz tedarikçi 400).
+> **Sırada T3 Etiket Şablonları.**
 > Alan: 🛠 **Admin panel** (pano #2) + Inventory/Finance/Catalog çekirdek dokunuşları.
 > İlgili: `docs/01-gereksinim-ve-kapsam.md` §11 (Tedarik ve Cari), `docs/03-veritabani-tasarimi.md`
 > (fin_supplier_* tabloları — kodda var, akış yok), `docs/cari-cati-gecis-plani.md` (B0-B4: bakiye yalnız

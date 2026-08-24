@@ -9,6 +9,9 @@ public class ProcurementDbContext(DbContextOptions<ProcurementDbContext> options
 {
     public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
     public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
+    public DbSet<ReceiptBatch> ReceiptBatches => Set<ReceiptBatch>();
+    public DbSet<ReceiptBatchItem> ReceiptBatchItems => Set<ReceiptBatchItem>();
+    public DbSet<ReceiptBatchPurchaseOrder> ReceiptBatchPurchaseOrders => Set<ReceiptBatchPurchaseOrder>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
