@@ -55,7 +55,12 @@ ETİKET BASIMI ayrı+keyfî (sayım üretmez): /procurement/labels yığın list
 /procurement/sorting "Sayım/Teslim" iki mod (OKUTMA her okutma +1 anında; ADET barkod 1 kez + adet — markalı/kendi
 etiketli ürünler basımsız sayılır), `sorting/scan` ucu (parti,varyant) bekleyen kayıtta BİRİKİR; lookup yetkisi
 serbestleşti (plain Authorize). Rehber: 35-etiket-basimi + 40-sayim-teslim (74 sayfa). İzole 5051 ✓.
-v1.1 (08-24): K7-K10 KAPALI — K7 kullanıcı tasarımlı etiket şablonları (yeni T3 fazı: core_label_templates + görsel editör + /yazdir/etiket), K8 fatura→cari AYRI iş, K9 kart ayrıştırma ÖNCESİ açılır (kart-eksik bildirimi kuyruğu), K10 go-live'da Legacy toplu stok güncellemesi kapatılır (T5 kontrol maddesi). K1-K6 önerileri kullanıcı onayı bekliyor. Keşif bulguları: PO yok;
+**T5 YERLEŞTİRME+STOK UYGULANDI (2026-08-24) ⚠️ restart bekliyor; SIRADA T6 Rapor+KPI (son faz):**
+StockMovement.From/ToBinId (migration ✓), Inventory ReceiveToBinCommand (bin bazlı stok upsert + purchase movement
+Ref=sorting_entry — tedarik girişinin TEK kapısı K3), PlaceSortingEntry (parti-depo kuralı stok ÖNCESİ; kısmi böler),
+bins lookup, Sayım/Teslim ekranı Yerleştirme sekmesi (raf okut→işaretle→yerleştir; satışa kapalı kısım uyarısı).
+İzole 5051 ✓; test stoğu movement toplamıyla geri alındı. ★★ K10 GO-LIVE ENGELİ: Legacy toplu stok senkronu
+kesilmeden yerleştirme CANLIDA KULLANILMAMALI (10dk mutlak ezme yeni girişleri siler). v1.1 (08-24): K7-K10 KAPALI — K7 kullanıcı tasarımlı etiket şablonları (yeni T3 fazı: core_label_templates + görsel editör + /yazdir/etiket), K8 fatura→cari AYRI iş, K9 kart ayrıştırma ÖNCESİ açılır (kart-eksik bildirimi kuyruğu), K10 go-live'da Legacy toplu stok güncellemesi kapatılır (T5 kontrol maddesi). K1-K6 önerileri kullanıcı onayı bekliyor. Keşif bulguları: PO yok;
 SupplierDelivery şeması ölü; transferler stok taşımıyor (ayrı iş); AdjustStock'ta BinId yok; ürün etiketi yazdırma yok.
 
 **Satış kanalı ortak kurgusu (2026-08-23, Admin panel alanı) — F0 CANLIDA, F1 KAPSAM UYGULANDI ⚠️ restart bekliyor; SIRADA F2 Listeleme durumu:**

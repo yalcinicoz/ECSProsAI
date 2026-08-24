@@ -13,6 +13,8 @@ using ECSPros.Procurement.Application.Commands.UpsertReceiptBatchItems;
 using ECSPros.Procurement.Application.Queries.GetReceiptBatchDetail;
 using ECSPros.Procurement.Application.Queries.GetReceiptBatches;
 using ECSPros.Procurement.Application.Commands.AccumulateSortingCount;
+using ECSPros.Procurement.Application.Commands.PlaceSortingEntry;
+using ECSPros.Procurement.Application.Queries.LookupBins;
 using ECSPros.Procurement.Application.Commands.CreateSortingEntry;
 using ECSPros.Procurement.Application.Commands.DeleteSortingEntry;
 using ECSPros.Procurement.Application.Commands.MarkSortingEntryLabeled;
@@ -261,6 +263,27 @@ public class ProcurementController(IMediator mediator) : ControllerBase
         return Ok(new { success = true });
     }
 
+    /// <summary>T5: birim (raf) arama — barkod TAM → kod içeren; kısım/depo adlarıyla.</summary>
+    [HttpGet("sorting/bins")]
+    public async Task<IActionResult> LookupBins([FromQuery] string term, [FromQuery] Guid? warehouseId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new LookupBinsQuery(term ?? "", warehouseId), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>
+    /// T5 Yerleştirme: sayım kaydını birime atar → STOK GİRER (movement: purchase, Ref=sorting_entry).
+    /// quantity verilmezse tamamı; kısmi yerleştirmede kalan yeni bekleyen kayıtta kalır.
+    /// </summary>
+    [HttpPost("sorting/entries/{id:guid}/place")]
+    [RequirePermission(Permissions.ProcurementSort)]
+    public async Task<IActionResult> PlaceSortingEntry(Guid id, [FromBody] PlaceEntryRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new PlaceSortingEntryCommand(id, req.BinId, req.Quantity, CurrentUserId()), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
     /// <summary>K9 kart-eksik bildirimleri (varsayılan yalnız açık olanlar).</summary>
     [HttpGet("sorting/missing-cards")]
     [RequirePermission(Permissions.ProcurementSort)]
@@ -305,6 +328,7 @@ public record UpdateSortingEntryRequest(decimal Quantity, decimal? UnitCost);
 public record MarkLabeledRequest(int Count);
 public record CreateMissingCardRequest(Guid? BatchId, string DescriptionText);
 public record ScanCountRequest(Guid? BatchId, Guid VariantId, decimal Quantity = 1, decimal? UnitCost = null);
+public record PlaceEntryRequest(Guid BinId, decimal? Quantity = null);
 
 public record CreatePurchaseOrderRequest(Guid SupplierId, DateTime? OrderDate, DateTime? ExpectedDate, string? Notes);
 public record UpdatePurchaseOrderRequest(DateTime? OrderDate, DateTime? ExpectedDate, string? Notes);

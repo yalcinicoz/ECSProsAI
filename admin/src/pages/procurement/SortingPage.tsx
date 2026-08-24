@@ -17,6 +17,7 @@ interface Cand { variantId: string; productCode: string; name: string; sku: stri
 interface Entry { id: string; receiptBatchId: string | null; variantId: string; productCode: string; name: string; sku: string; barcode: string | null; quantity: number; unitCost: number | null; putawayStatus: string; createdAt: string }
 interface Notice { id: string; descriptionText: string; createdAt: string }
 interface BatchRow { id: string; code: string; status: string }
+interface BinCand { binId: string; code: string; barcode: string | null; section: string; warehouse: string; warehouseId: string; sellableOnline: boolean; exact: boolean }
 
 const num = (s: string) => { const v = parseFloat(s.replace(/\./g, '').replace(',', '.')); return isNaN(v) ? parseFloat(s.replace(',', '.')) : v }
 
@@ -24,7 +25,15 @@ export function SortingPage() {
   const qc = useQueryClient()
   const [batchId, setBatchId] = useState<string>(() => sessionStorage.getItem('sorting.batchId') ?? '')
   useEffect(() => { sessionStorage.setItem('sorting.batchId', batchId) }, [batchId])
+  const [tab, setTab] = useState<'sayim' | 'yerlestirme'>('sayim')
   const [mode, setMode] = useState<'scan' | 'qty'>('scan')
+  // Yerleştirme sekmesi durumu
+  const [binTerm, setBinTerm] = useState('')
+  const [binCands, setBinCands] = useState<BinCand[] | null>(null)
+  const [bin, setBin] = useState<BinCand | null>(null)
+  const [placeSel, setPlaceSel] = useState<Set<string>>(new Set())
+  const [placeQty, setPlaceQty] = useState<Record<string, string>>({})
+  const binRef = useRef<HTMLInputElement>(null)
   const [term, setTerm] = useState('')
   const [cands, setCands] = useState<Cand[] | null>(null)
   const [sel, setSel] = useState<Cand | null>(null)
@@ -130,8 +139,32 @@ export function SortingPage() {
     onSuccess: invalidate, onError: onErr,
   })
 
+  const searchBin = async () => {
+    setMsg(null)
+    const t = binTerm.trim(); if (t.length < 2) return
+    const { data } = await api.get(`/procurement/sorting/bins?term=${encodeURIComponent(t)}`)
+    const list: BinCand[] = data.data
+    if (list.length === 1 && list[0].exact) { setBin(list[0]); setBinCands(null); setBinTerm('') }
+    else setBinCands(list)
+  }
+  const placeMut = useMutation({
+    mutationFn: async (v: { id: string; quantity: number | null }) =>
+      api.post(`/procurement/sorting/entries/${v.id}/place`, { binId: bin!.binId, quantity: v.quantity }),
+    onError: onErr,
+  })
+  const placeSelected = async () => {
+    if (!bin) return
+    for (const id of Array.from(placeSel)) {
+      const e = entries.find(x => x.id === id); if (!e) continue
+      const raw = placeQty[id]; const q = raw ? num(raw) : null
+      try { await placeMut.mutateAsync({ id, quantity: q && q > 0 && q < e.quantity ? q : null }) } catch { break }
+    }
+    setPlaceSel(new Set()); setPlaceQty({}); invalidate()
+  }
+
   const entries = entriesData?.items ?? []
   const toplam = entries.reduce((s, e) => s + e.quantity, 0)
+  const pendingEntries = entries.filter(e => e.putawayStatus !== 'placed')
 
   return (
     <div className="p-6">
@@ -164,6 +197,55 @@ export function SortingPage() {
         {last && <span className="text-sm pb-2" style={{ color: 'var(--text-m)' }}>Son: <b>{last}</b></span>}
       </div>
 
+      <div className="tab-scroll mb-4">
+        <button className={tab === 'sayim' ? 'stab active' : 'stab'} onClick={() => setTab('sayim')}>Sayım</button>
+        <button className={tab === 'yerlestirme' ? 'stab active' : 'stab'} onClick={() => setTab('yerlestirme')}>
+          Yerleştirme{pendingEntries.length > 0 ? ` (${pendingEntries.length})` : ''}
+        </button>
+      </div>
+
+      {tab === 'yerlestirme' && (
+        <div className="card mb-4 space-y-3">
+          <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+            Birim (raf) barkodunu okutun → yerleştirilecek sayımları seçin → <b>Yerleştir</b>: stok seçilen birime girer
+            (hareket: satın alma, belge: sayım kaydı). Kısmi adet girilirse kalan bekleyen kayıtta kalır.
+          </p>
+          <div className="flex gap-2">
+            <input ref={binRef} className="inp flex-1 font-mono" value={binTerm}
+              onChange={e => setBinTerm(e.target.value)} onKeyDown={e => e.key === 'Enter' && searchBin()}
+              placeholder="Birim (raf) barkodu okutun ya da kodunu yazın…" />
+            <Button variant="secondary" onClick={searchBin}><Search size={14} /> Bul</Button>
+          </div>
+          {binCands !== null && binCands.length === 0 && (
+            <p className="text-sm" style={{ color: '#92400e' }}>Birim bulunamadı.</p>
+          )}
+          {binCands !== null && binCands.length > 0 && (
+            <ul className="divide-y rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)', borderColor: 'var(--border)' }}>
+              {binCands.map(c => (
+                <li key={c.binId} className="px-3 py-2 text-sm cursor-pointer hover:opacity-80"
+                  style={{ color: 'var(--text)' }} onClick={() => { setBin(c); setBinCands(null); setBinTerm('') }}>
+                  <b>{c.code}</b> — {c.section} / {c.warehouse}{c.sellableOnline ? '' : ' (satışa kapalı kısım)'}
+                </li>
+              ))}
+            </ul>
+          )}
+          {bin && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg px-3 py-2.5" style={{ background: 'var(--surface2)' }}>
+              <span className="text-sm" style={{ color: 'var(--text)' }}>
+                Seçili birim: <b>{bin.code}</b> — {bin.section} / {bin.warehouse}
+                {!bin.sellableOnline && <span style={{ color: '#92400e' }}> · satışa kapalı kısım (ürün sitede satılmaz)</span>}
+              </span>
+              <button className="text-xs underline" style={{ color: 'var(--text-s)' }} onClick={() => setBin(null)}>değiştir</button>
+              <div className="flex-1" />
+              <Button size="sm" disabled={placeSel.size === 0} loading={placeMut.isPending} onClick={placeSelected}>
+                Seçilenleri Yerleştir ({placeSel.size})
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'sayim' && (
       <div className="card mb-4 space-y-3">
         <div className="flex gap-2">
           <input ref={searchRef} autoFocus className="inp flex-1 font-mono" value={term}
@@ -206,6 +288,8 @@ export function SortingPage() {
         )}
         {msg && <p className="text-sm" style={{ color: '#ef4444' }}>{msg}</p>}
       </div>
+      )}
+      {tab === 'yerlestirme' && msg && <p className="text-sm mb-3" style={{ color: '#ef4444' }}>{msg}</p>}
 
       {notices.length > 0 && (
         <div className="card mb-4">
@@ -231,19 +315,37 @@ export function SortingPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs" style={{ color: 'var(--text-s)', background: 'var(--surface2)' }}>
+                {tab === 'yerlestirme' && <th className="px-3 py-2.5 w-10"></th>}
                 {['ÜRÜN', 'SKU / BARKOD', 'ADET', 'MALİYET', 'YERLEŞTİRME', 'SON', ''].map(h => <th key={h} className="px-4 py-2.5 font-semibold">{h}</th>)}
               </tr>
             </thead>
             <tbody>
               {entries.map(e => (
                 <tr key={e.id} style={{ borderTop: '1px solid var(--border)' }}>
+                  {tab === 'yerlestirme' && (
+                    <td className="px-3 py-2">
+                      {e.putawayStatus !== 'placed' && (
+                        <input type="checkbox" checked={placeSel.has(e.id)}
+                          onChange={() => setPlaceSel(prev => { const n = new Set(prev); n.has(e.id) ? n.delete(e.id) : n.add(e.id); return n })} />
+                      )}
+                    </td>
+                  )}
                   <td className="px-4 py-2" style={{ color: 'var(--text)' }}>{e.name}<span className="block text-xs" style={{ color: 'var(--text-s)' }}>{e.productCode}</span></td>
                   <td className="px-4 py-2 font-mono text-xs" style={{ color: 'var(--text-m)' }}>{e.sku}<span className="block">{e.barcode ?? ''}</span></td>
                   <td className="px-4 py-2">
-                    {e.putawayStatus === 'placed' ? e.quantity : (
-                      <input className="inp w-20 !py-1" defaultValue={e.quantity} key={`${e.id}-${e.quantity}`}
-                        onBlur={ev => { const v = num(ev.target.value); if (v > 0 && v !== e.quantity) editQtyMut.mutate({ id: e.id, quantity: v, unitCost: e.unitCost }) }} />
-                    )}
+                    {e.putawayStatus === 'placed' ? e.quantity
+                      : tab === 'yerlestirme' ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          {e.quantity}
+                          {placeSel.has(e.id) && (
+                            <input className="inp w-16 !py-1" placeholder="kısmi" value={placeQty[e.id] ?? ''}
+                              onChange={ev => setPlaceQty(pq => ({ ...pq, [e.id]: ev.target.value }))} title="Boş = tamamı" />
+                          )}
+                        </span>
+                      ) : (
+                        <input className="inp w-20 !py-1" defaultValue={e.quantity} key={`${e.id}-${e.quantity}`}
+                          onBlur={ev => { const v = num(ev.target.value); if (v > 0 && v !== e.quantity) editQtyMut.mutate({ id: e.id, quantity: v, unitCost: e.unitCost }) }} />
+                      )}
                   </td>
                   <td className="px-4 py-2" style={{ color: 'var(--text-m)' }}>{e.unitCost != null ? `${e.unitCost.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺` : '—'}</td>
                   <td className="px-4 py-2">
@@ -260,7 +362,7 @@ export function SortingPage() {
                 </tr>
               ))}
               {entries.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>Henüz sayım yok — barkod okutarak başlayın.</td></tr>
+                <tr><td colSpan={tab === 'yerlestirme' ? 8 : 7} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>Henüz sayım yok — barkod okutarak başlayın.</td></tr>
               )}
             </tbody>
           </table>

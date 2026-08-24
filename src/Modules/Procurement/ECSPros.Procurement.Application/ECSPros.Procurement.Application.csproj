@@ -5,6 +5,8 @@
     <ProjectReference Include="..\..\..\Shared\ECSPros.Shared.Kernel\ECSPros.Shared.Kernel.csproj" />
     <ProjectReference Include="..\..\Catalog\ECSPros.Catalog.Application\ECSPros.Catalog.Application.csproj" />
     <ProjectReference Include="..\..\Catalog\ECSPros.Catalog.Domain\ECSPros.Catalog.Domain.csproj" />
+    <ProjectReference Include="..\..\Inventory\ECSPros.Inventory.Application\ECSPros.Inventory.Application.csproj" />
+    <ProjectReference Include="..\..\Inventory\ECSPros.Inventory.Domain\ECSPros.Inventory.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -102,7 +102,7 @@ public sealed class EtiketYazdirController(NpgsqlDataSource dataSource) : Contro
         if (tpl is null) return NotFound("Şablon bulunamadı.");
 
         const string sql = @"
-            SELECT b.""Code"", COALESCE(b.""Barcode"",''), COALESCE(s.""NameI18n""->>'tr', s.""Code"", ''),
+            SELECT b.""Code"", COALESCE(b.""Barcode"",''), COALESCE(NULLIF(s.""Name"",''), s.""Code"", ''),
                    COALESCE(w.""NameI18n""->>'tr', w.""Code"", '')
             FROM inventory.inv_warehouse_bins b
             JOIN inventory.inv_warehouse_sections s ON s.""Id"" = b.""SectionId""

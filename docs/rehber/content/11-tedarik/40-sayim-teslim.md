@@ -3,7 +3,7 @@ title: Sayım / Depoya Teslim
 route: /procurement/sorting
 group: Tedarik
 order: 40
-summary: Etiketlemesi biten ürünlerin depoya teslim için okutularak sayıldığı ekran — gerçek sayım budur; okutma modunda her okutma +1, adet modunda barkod bir kez okutulup adet girilir.
+summary: Etiketlemesi biten ürünlerin depoya teslim için okutularak sayıldığı ve rafa yerleştirilerek stoğa alındığı ekran — okutma modunda her okutma +1; Yerleştirme sekmesinde raf barkodu okutulup seçilen sayımlar stoğa girer.
 ---
 
 ## Ne işe yarar
@@ -25,6 +25,18 @@ kayıtlardan yapılır. Satın alma/teslim belgeleriyle eşleşme aranmaz; fark 
    katalog sorumlusu kartı açınca "çöz" ile kapatılır ve sayım yapılır (K9).
 4. **Sayım listesi** — ürün başına biriken adet (yanlış okutma satırdaki adet kutusundan düzeltilir ya da satır silinir),
    maliyet, yerleştirme durumu (`Bekliyor` / `Yerleşti` — Yerleşti kayıtlar kilitlidir, stok girmiştir).
+
+## Yerleştirme sekmesi (stok girişi)
+Sayımı biten ürünler rafa konurken **Yerleştirme** sekmesi kullanılır:
+1. **Birim (raf) barkodunu okutun** (ya da kodunu yazın) — kısım/depo adıyla doğrulanır; satışa kapalı kısım
+   seçilirse uyarı görünür (ürün stoğa girer ama sitede satılmaz).
+2. Bekleyen sayımlardan yerleştirilecekleri **işaretleyin**; kısmi yerleştirmede seçili satıra adet yazın
+   (boş = tamamı; kalan bekleyen kayıtta kalır).
+3. **Seçilenleri Yerleştir** → stok seçilen birime girer (hareket: `Satın Alma`, belge: sayım kaydı, birim
+   düzeyinde izlenebilir). Satışa açık kısımdaysa ürün kısa süre içinde sitede stoklu görünür.
+
+Kurallar: partili sayım yalnız **partinin teslim alındığı depodaki** birime yerleştirilebilir; partisiz sayım
+her birime konabilir. Yerleşen kayıt düzenlenemez/silinemez.
 
 ## Kurallar
 - İlk sayımda `Teslim Alındı` parti kendiliğinden `Ayrıştırılıyor` olur; tamamlanmış partiye sayım eklenemez (önce Geri Aç).

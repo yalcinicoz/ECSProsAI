@@ -40,7 +40,16 @@
 > sayım, Etiket Basımı sayfası, Sayım/Teslim ekranı (iki mod), rehber `35-etiket-basimi` + `40-sayim-teslim`.
 > İzole 5051 ✓ (3+5=8 etiketli çoklu basım; 3 okutma + adet 10 → tek kayıt 13; partisiz ayrı birikim;
 > bozuk items 404; 0 adet / olmayan varyant 400).
-> **Sırada T5 Yerleştirme + stok (★ K10 Legacy kesimi olmadan canlıda KULLANILMAZ).**
+> **T5 Yerleştirme + stok UYGULANDI (2026-08-24) ⚠️ restart bekliyor** — `StockMovement.From/ToBinId` (migration
+> `AddMovementBinIds` canlı DB'de; izlenebilirlik kırığı kapandı), Inventory `ReceiveToBinCommand` (tedarik stok
+> girişinin tek kapısı: bin bazlı upsert + movement purchase/Ref=sorting_entry/ToBinId), Procurement
+> `PlaceSortingEntryCommand` (parti-depo kuralı stok yazımından ÖNCE; kısmi yerleştirmede kayıt bölünür),
+> birim arama ucu, Sayım/Teslim ekranına **Yerleştirme sekmesi** (raf barkodu okut → sayımları işaretle →
+> Seçilenleri Yerleştir; satışa kapalı kısım uyarısı); rehber güncellendi. İzole 5051 ✓ (kısmi 6+4, movement
+> purchase|sorting_entry|ToBinId, yanlış depo 400, yerleşmiş kayıt kilidi, sayımı aşan adet 400; test stoğu
+> movement toplamıyla GERİ ALINDI). **★ K10 GO-LIVE: Legacy toplu stok senkronu kesilmeden yerleştirme canlıda
+> KULLANILMAMALI** — kesim `Legacy:Sync` stok ayağının kapatılmasıdır (kullanıcı kararı; personele duyurulur).
+> **Sırada T6 Rapor + KPI (son faz).**
 > Alan: 🛠 **Admin panel** (pano #2) + Inventory/Finance/Catalog çekirdek dokunuşları.
 > İlgili: `docs/01-gereksinim-ve-kapsam.md` §11 (Tedarik ve Cari), `docs/03-veritabani-tasarimi.md`
 > (fin_supplier_* tabloları — kodda var, akış yok), `docs/cari-cati-gecis-plani.md` (B0-B4: bakiye yalnız
