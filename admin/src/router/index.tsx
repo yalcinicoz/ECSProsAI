@@ -38,6 +38,7 @@ import { ReceiptsPage } from '@/pages/procurement/ReceiptsPage'
 import { ReceiptDetailPage } from '@/pages/procurement/ReceiptDetailPage'
 import { LabelTemplatesPage } from '@/pages/settings/LabelTemplatesPage'
 import { SortingPage } from '@/pages/procurement/SortingPage'
+import { LabelsPage } from '@/pages/procurement/LabelsPage'
 import { ChannelCategoryDetailPage } from '@/pages/storefront/ChannelCategoryDetailPage'
 import { CollectionsModerationPage } from '@/pages/storefront/CollectionsModerationPage'
 import { ReviewsModerationPage } from '@/pages/storefront/ReviewsModerationPage'
@@ -134,6 +135,7 @@ export const router = createBrowserRouter(
             { path: 'procurement/receipts/:id',            element: <ReceiptDetailPage /> },
             { path: 'settings/label-templates',            element: <LabelTemplatesPage /> },
             { path: 'procurement/sorting',                 element: <SortingPage /> },
+            { path: 'procurement/labels',                  element: <LabelsPage /> },
             { path: 'storefront/collections',              element: <CollectionsModerationPage /> },
             { path: 'storefront/reviews',                  element: <ReviewsModerationPage /> },
             { path: 'storefront/pages',                    element: <PagesManagementPage /> },

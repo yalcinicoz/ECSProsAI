@@ -1,6 +1,16 @@
 # Ürün Tedarik İş Akışı — Satın Alma → Mal Kabul → Ayrıştırma/Etiketleme → Yerleştirme → Satışa Giriş
 
-> Sürüm: **v1.2 — 2026-08-24** (TÜM kararlar K1-K10 KAPALI)
+> Sürüm: **v1.3 — 2026-08-24** (T4 REVİZYONU — kullanıcı onayı: ayrıştırma fiziki/sistem dışı; etiket basımı
+> AYRI ve KEYFÎ bir işlem, SAYIM ÜRETMEZ; gerçek sayım = depoya teslim OKUTMASI, iki modlu)
+> **T4 revizyon kurgusu:** (a) Fiziki ayrıştırma + kalite kontrol → sistem dışı, ekran yok (defolu takibi ileriye).
+> (b) **Etiket Basımı** `/procurement/labels` (procurement.manage): yığın listesi + deste adedi → "Tümünü Yazdır"
+> tek sekmede tüm desteler (`/yazdir/etiket?items=vid:adet,...`, ≤50 ürün / ≤2000 etiket); kayıt üretmez.
+> (c) **Sayım / Depoya Teslim** `/procurement/sorting` (procurement.sort): OKUTMA modu her okutma +1, ADET modu
+> barkod bir kez + adet (markalı/kendi etiketli yüksek adetli ürünler — üretici barkodu varyantla eşleşiyorsa
+> etiket basılmadan sayılır); sayım (parti, varyant) başına BEKLEYEN kayıtta birikir (`sorting/scan` ucu);
+> oturum kapanışı YOK — parti durumu yeterli (kullanıcı kararı). K9 bildirimi sayım ekranında.
+> (d) Yerleştirme T5 değişmedi. SortingEntry şeması aynen; LabelPrinted/LabelCount artık yalnız opsiyonel iz.
+
 > **Uygulama durumu:** **T1 UYGULANDI (2026-08-24) ⚠️ restart bekliyor** — Procurement modülü
 > (`procurement` şeması, migration `InitProcurement` canlı DB'de), PurchaseOrder+Item CRUD, durum makinesi
 > (closed→receiving geri açma dahil), Excel panoya yapıştır (sütun eşleme + TR sayı biçimi), yetkiler

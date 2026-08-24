@@ -112,7 +112,8 @@ const NAV_SECTIONS: NavSection[] = [
   { label: 'Tedarik', items: [
     { label: 'Satın Almalar', to: '/procurement/purchase-orders', icon: 'inbox', permission: 'procurement.manage' },
     { label: 'Mal Kabul', to: '/procurement/receipts', icon: 'box', permission: 'procurement.manage' },
-    { label: 'Ayrıştırma', to: '/procurement/sorting', icon: 'layers', permission: 'procurement.sort' },
+    { label: 'Etiket Basımı', to: '/procurement/labels', icon: 'filetext', permission: 'procurement.manage' },
+    { label: 'Sayım / Teslim', to: '/procurement/sorting', icon: 'layers', permission: 'procurement.sort' },
     { label: 'Etiket Şablonları', to: '/settings/label-templates', icon: 'scan', permission: 'procurement.manage' },
   ]},
   { label: 'Pazarlama', items: [

@@ -120,7 +120,7 @@ export function ReceiptDetailPage() {
           <div className="flex items-center gap-2 flex-wrap">
             {b.status !== 'completed' && (
               <Button size="sm" onClick={() => { sessionStorage.setItem('sorting.batchId', b.id); navigate('/procurement/sorting') }}>
-                Ayrıştırma Ekranı →
+                Sayım / Teslim →
               </Button>
             )}
             {(NEXT[b.status] ?? []).map(a => (

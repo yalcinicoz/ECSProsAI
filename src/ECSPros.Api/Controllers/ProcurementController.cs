@@ -12,6 +12,7 @@ using ECSPros.Procurement.Application.Commands.UpdateReceiptBatch;
 using ECSPros.Procurement.Application.Commands.UpsertReceiptBatchItems;
 using ECSPros.Procurement.Application.Queries.GetReceiptBatchDetail;
 using ECSPros.Procurement.Application.Queries.GetReceiptBatches;
+using ECSPros.Procurement.Application.Commands.AccumulateSortingCount;
 using ECSPros.Procurement.Application.Commands.CreateSortingEntry;
 using ECSPros.Procurement.Application.Commands.DeleteSortingEntry;
 using ECSPros.Procurement.Application.Commands.MarkSortingEntryLabeled;
@@ -188,7 +189,6 @@ public class ProcurementController(IMediator mediator) : ControllerBase
 
     /// <summary>Varyant arama (barkod TAM → SKU TAM → içeren; en çok 10 aday). Yalnız MEVCUT kartlar (K9).</summary>
     [HttpGet("sorting/lookup")]
-    [RequirePermission(Permissions.ProcurementSort)]
     public async Task<IActionResult> LookupVariants([FromQuery] string term, CancellationToken ct)
     {
         var result = await mediator.Send(new LookupVariantsQuery(term ?? ""), ct);
@@ -204,6 +204,20 @@ public class ProcurementController(IMediator mediator) : ControllerBase
     {
         var result = await mediator.Send(new GetSortingEntriesQuery(batchId, unbatched, putawayStatus, page, pageSize), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>
+    /// GERÇEK SAYIM (T4 revizyonu): depoya teslim okutması. Okutma modu quantity=1 ile her okutmada çağrılır,
+    /// adet modu tek seferde N gönderir; aynı (parti, varyant) bekleyen kayıtta BİRİKİR.
+    /// </summary>
+    [HttpPost("sorting/scan")]
+    [RequirePermission(Permissions.ProcurementSort)]
+    public async Task<IActionResult> Scan([FromBody] ScanCountRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new AccumulateSortingCountCommand(
+            req.BatchId, req.VariantId, req.Quantity, req.UnitCost, CurrentUserId()), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { entryId = result.Value.EntryId, quantity = result.Value.Quantity } });
     }
 
     /// <summary>Sayım kaydı oluşturur (İ1). 'received' parti kendiliğinden 'sorting' olur.</summary>
@@ -290,6 +304,7 @@ public record CreateSortingEntryRequest(Guid? BatchId, Guid VariantId, decimal Q
 public record UpdateSortingEntryRequest(decimal Quantity, decimal? UnitCost);
 public record MarkLabeledRequest(int Count);
 public record CreateMissingCardRequest(Guid? BatchId, string DescriptionText);
+public record ScanCountRequest(Guid? BatchId, Guid VariantId, decimal Quantity = 1, decimal? UnitCost = null);
 
 public record CreatePurchaseOrderRequest(Guid SupplierId, DateTime? OrderDate, DateTime? ExpectedDate, string? Notes);
 public record UpdatePurchaseOrderRequest(DateTime? OrderDate, DateTime? ExpectedDate, string? Notes);

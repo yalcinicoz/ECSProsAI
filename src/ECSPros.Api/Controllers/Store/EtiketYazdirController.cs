@@ -20,13 +20,43 @@ public sealed class EtiketYazdirController(NpgsqlDataSource dataSource) : Contro
 
     private sealed record Tpl(decimal WidthMm, decimal HeightMm, List<Element> Elements);
 
+    /// <summary>Tek ürün: variantId&count. Toplu deste (T4 revizyonu): items=vid:adet,vid:adet — her yığının
+    /// destesi art arda basılır; etiket basımı SAYIM ÜRETMEZ (keyfi işlem, sayım depoya teslim okutmasıdır).</summary>
     [HttpGet("etiket")]
     public async Task<IActionResult> Etiket(
-        [FromQuery] Guid templateId, [FromQuery] Guid variantId, [FromQuery] int count = 1, CancellationToken ct = default)
+        [FromQuery] Guid templateId, [FromQuery] Guid? variantId, [FromQuery] int count = 1,
+        [FromQuery] string? items = null, CancellationToken ct = default)
     {
-        count = Math.Clamp(count, 1, 500);
         var tpl = await LoadTemplateAsync(templateId, "product", ct);
         if (tpl is null) return NotFound("Şablon bulunamadı.");
+
+        var istek = new List<(Guid Vid, int Count)>();
+        if (!string.IsNullOrWhiteSpace(items))
+        {
+            foreach (var part in items.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var kv = part.Split(':');
+                if (kv.Length == 2 && Guid.TryParse(kv[0], out var vid) && int.TryParse(kv[1], out var n))
+                    istek.Add((vid, Math.Clamp(n, 1, 500)));
+            }
+        }
+        else if (variantId.HasValue) istek.Add((variantId.Value, Math.Clamp(count, 1, 500)));
+        if (istek.Count == 0) return NotFound("Basılacak ürün yok.");
+        if (istek.Count > 50) return BadRequest("Tek basımda en çok 50 farklı ürün.");
+        if (istek.Sum(x => x.Count) > 2000) return BadRequest("Tek basımda en çok 2000 etiket.");
+
+        var desteler = new List<(Dictionary<string, string> Data, int Count)>();
+        foreach (var (vid, n) in istek)
+        {
+            var data = await LoadVariantDataAsync(vid, ct);
+            if (data is null) return NotFound($"Varyant bulunamadı: {vid}");
+            desteler.Add((data, n));
+        }
+        return Content(RenderHtmlMulti(tpl, desteler), "text/html", Encoding.UTF8);
+    }
+
+    private async Task<Dictionary<string, string>?> LoadVariantDataAsync(Guid variantId, CancellationToken ct)
+    {
 
         // Varyant + ürün + renk/beden değerleri (tek raw-SQL; attribute tipleri definition şemasında)
         const string sql = @"
@@ -48,10 +78,10 @@ public sealed class EtiketYazdirController(NpgsqlDataSource dataSource) : Contro
         await using var cmd = new NpgsqlCommand(sql, conn);
         cmd.Parameters.AddWithValue("id", variantId);
         await using var r = await cmd.ExecuteReaderAsync(ct);
-        if (!await r.ReadAsync(ct)) return NotFound("Varyant bulunamadı.");
+        if (!await r.ReadAsync(ct)) return null;
 
         var price = r.GetDecimal(2);
-        var data = new Dictionary<string, string>
+        return new Dictionary<string, string>
         {
             ["sku"] = r.GetString(0),
             ["barcode"] = r.GetString(1),
@@ -61,7 +91,6 @@ public sealed class EtiketYazdirController(NpgsqlDataSource dataSource) : Contro
             ["color"] = r.GetString(5),
             ["size"] = r.GetString(6),
         };
-        return Content(RenderHtml(tpl, data, count), "text/html", Encoding.UTF8);
     }
 
     [HttpGet("etiket-birim")]
@@ -114,7 +143,11 @@ public sealed class EtiketYazdirController(NpgsqlDataSource dataSource) : Contro
     private static string H(string s) => System.Net.WebUtility.HtmlEncode(s);
 
     private static string RenderHtml(Tpl tpl, Dictionary<string, string> data, int count)
+        => RenderHtmlMulti(tpl, new List<(Dictionary<string, string>, int)> { (data, count) });
+
+    private static string RenderHtmlMulti(Tpl tpl, List<(Dictionary<string, string> Data, int Count)> desteler)
     {
+        var count = desteler.Sum(d => d.Count);
         var sb = new StringBuilder();
         sb.Append($@"<!DOCTYPE html><html lang=""tr""><head><meta charset=""utf-8""><title>Etiket</title>
 <style>
@@ -130,8 +163,11 @@ public sealed class EtiketYazdirController(NpgsqlDataSource dataSource) : Contro
 <script src=""/js/jsbarcode.min.js""></script></head><body>
 <div class=""bar"">Yazdırmak için <button onclick=""window.print()"">Yazdır</button> — {count} etiket</div>");
 
-        string one = BuildLabel(tpl, data);
-        for (var i = 0; i < count; i++) sb.Append(one);
+        foreach (var (data, n) in desteler)
+        {
+            var one = BuildLabel(tpl, data);
+            for (var i = 0; i < n; i++) sb.Append(one);
+        }
 
         sb.Append(@"<script>
 document.querySelectorAll('svg.bc').forEach(function(el){
