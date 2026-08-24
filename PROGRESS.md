@@ -22,12 +22,16 @@
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!) | Mobil geliştirici teste başlar; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
-**Ürün tedarik iş akışı (2026-08-23, Admin panel alanı) — PLAN v1 İNCELEMEDE, uygulama başlamadı:**
+**Ürün tedarik iş akışı (2026-08-23, Admin panel alanı) — v1.2 TÜM KARARLAR KAPALI — UYGULAMA BAŞLADI:**
 `docs/urun-tedarik-is-akisi.md` — kullanıcı kurgusu: asıl süreç AYRIŞTIRMA+ETİKETLEME (sayım=gerçek, İ1);
 SA/mal kabul esnek ve bloklamaz (İ2/İ3); mutabakat dönemsel/istatistiksel (İ4 — belgeler kaba, satıcı fazla
 gönderir); satışa giriş = stok + F2 `published` (İ5), KPI: teslim→ayrıştırma→satışa giriş süreleri + satışa
 girmeyenler (sebepleri ChannelListingStatusService'ten). Yeni Procurement modülü önerisi (K1), ölü
-fin_supplier_deliveries terk (K2), fazlar T1-T6. v1.1 (08-24): K7-K10 KAPALI — K7 kullanıcı tasarımlı etiket şablonları (yeni T3 fazı: core_label_templates + görsel editör + /yazdir/etiket), K8 fatura→cari AYRI iş, K9 kart ayrıştırma ÖNCESİ açılır (kart-eksik bildirimi kuyruğu), K10 go-live'da Legacy toplu stok güncellemesi kapatılır (T5 kontrol maddesi). K1-K6 önerileri kullanıcı onayı bekliyor. Keşif bulguları: PO yok;
+fin_supplier_deliveries terk (K2), fazlar T1-T6. **T1 UYGULANDI (2026-08-24) ⚠️ restart bekliyor; SIRADA T2 Mal Kabul:** Procurement modülü (`procurement` şeması,
+migration `InitProcurement` canlı DB'de ✓), SA-YYYYAAGG-#### kod, kalem upsert/sil (append semantiği), durum makinesi
+(closed→receiving geri açılır), Excel panoya yapıştır (sütun eşleme, TR virgül), permission `procurement.manage`+`sort`
+(seed permDefs + FirmAdmin/All listeleri), admin sidebar "Tedarik" grubu + PurchaseOrders(+Detail)Page (npm build ✓),
+rehber 11-tedarik bölümü (70 sayfa). İzole 5051 ✓ (negatifler dahil; test PO silindi). v1.1 (08-24): K7-K10 KAPALI — K7 kullanıcı tasarımlı etiket şablonları (yeni T3 fazı: core_label_templates + görsel editör + /yazdir/etiket), K8 fatura→cari AYRI iş, K9 kart ayrıştırma ÖNCESİ açılır (kart-eksik bildirimi kuyruğu), K10 go-live'da Legacy toplu stok güncellemesi kapatılır (T5 kontrol maddesi). K1-K6 önerileri kullanıcı onayı bekliyor. Keşif bulguları: PO yok;
 SupplierDelivery şeması ölü; transferler stok taşımıyor (ayrı iş); AdjustStock'ta BinId yok; ürün etiketi yazdırma yok.
 
 **Satış kanalı ortak kurgusu (2026-08-23, Admin panel alanı) — F0 CANLIDA, F1 KAPSAM UYGULANDI ⚠️ restart bekliyor; SIRADA F2 Listeleme durumu:**

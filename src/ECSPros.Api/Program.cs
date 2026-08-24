@@ -21,6 +21,7 @@ using ECSPros.Crm.Application.Queries.GetMembers;
 using ECSPros.Inventory.Application.Queries.GetWarehouses;
 using ECSPros.Order.Application.Queries.GetOrders;
 using ECSPros.Cms.Infrastructure;
+using ECSPros.Procurement.Infrastructure;
 using ECSPros.Requests.Infrastructure;
 using ECSPros.Core.Application.Queries.GetLanguages;
 using ECSPros.Core.Infrastructure;
@@ -154,6 +155,7 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(GetCurrentAccountsQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(GetNavigationMenusQuery).Assembly);
     cfg.RegisterServicesFromAssembly(typeof(ECSPros.Requests.Application.Queries.GetRequests.GetRequestsQuery).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(ECSPros.Procurement.Application.Queries.GetPurchaseOrders.GetPurchaseOrdersQuery).Assembly);   // T1 Tedarik
     // API katmanındaki SignalR event handler'ları
     cfg.RegisterServicesFromAssembly(typeof(OrderConfirmedSignalRHandler).Assembly);
 
@@ -228,6 +230,7 @@ builder.Services.AddFinanceInfrastructure(npgsqlDataSource);
 builder.Services.AddPromotionInfrastructure(npgsqlDataSource);
 builder.Services.AddCmsInfrastructure(npgsqlDataSource);
 builder.Services.AddRequestsInfrastructure(npgsqlDataSource);
+builder.Services.AddProcurementInfrastructure(npgsqlDataSource);   // T1 Tedarik
 builder.Services.AddPosInfrastructure(npgsqlDataSource);
 builder.Services.AddIntegrationInfrastructure(npgsqlDataSource);
 builder.Services.AddAccountsInfrastructure(npgsqlDataSource);

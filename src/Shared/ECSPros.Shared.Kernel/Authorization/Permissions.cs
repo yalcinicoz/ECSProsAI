@@ -27,6 +27,11 @@ public static class Permissions
     /// <summary>Depo, stok ve transfer yönetimi.</summary>
     public const string InventoryManage = "inventory.manage";
 
+    /// <summary>Tedarik: satın alma / mal kabul yönetimi (docs/urun-tedarik-is-akisi.md T1).</summary>
+    public const string ProcurementManage = "procurement.manage";
+    /// <summary>Tedarik: ayrıştırma + yerleştirme (depo personeli).</summary>
+    public const string ProcurementSort = "procurement.sort";
+
     /// <summary>Paket birleştirme / tek fatura istisna akışı — normal akış paket
     /// başına faturadır; bu izin bilinçli istisna işlemi içindir (karar 2026-07-19).
     /// firm_admin'e varsayılan verilmez.</summary>
@@ -40,6 +45,8 @@ public static class Permissions
         CatalogImagesManage,
         CatalogSettingsManage,
         InventoryManage,
+        ProcurementManage,
+        ProcurementSort,
     ];
 
     /// <summary>Tüm permission kodları — super_admin ve platform_admin rollerine atanır.</summary>
@@ -53,5 +60,7 @@ public static class Permissions
         CatalogSettingsManage,
         InventoryManage,
         OrderPackagesMerge,
+        ProcurementManage,
+        ProcurementSort,
     ];
 }

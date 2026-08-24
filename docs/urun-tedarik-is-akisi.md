@@ -1,6 +1,12 @@
 # Ürün Tedarik İş Akışı — Satın Alma → Mal Kabul → Ayrıştırma/Etiketleme → Yerleştirme → Satışa Giriş
 
-> Sürüm: **v1.1 — 2026-08-24** (K7-K10 kullanıcı kararlarıyla güncellendi; K1-K6 önerileri onay bekliyor; uygulama başlamadı)
+> Sürüm: **v1.2 — 2026-08-24** (TÜM kararlar K1-K10 KAPALI)
+> **Uygulama durumu:** **T1 UYGULANDI (2026-08-24) ⚠️ restart bekliyor** — Procurement modülü
+> (`procurement` şeması, migration `InitProcurement` canlı DB'de), PurchaseOrder+Item CRUD, durum makinesi
+> (closed→receiving geri açma dahil), Excel panoya yapıştır (sütun eşleme + TR sayı biçimi), yetkiler
+> `procurement.manage`/`procurement.sort` (seed; firm_admin dahil), admin: Tedarik → Satın Almalar (liste+detay),
+> rehber `11-tedarik/10-satin-almalar`. İzole 5051 ✓ (kod üretimi, toplamlar, negatifler: adet 0 / kimliksiz kalem /
+> kapalıya kalem / geçersiz geçiş / yetkisiz 403). **Sırada T2 Mal Kabul.**
 > Alan: 🛠 **Admin panel** (pano #2) + Inventory/Finance/Catalog çekirdek dokunuşları.
 > İlgili: `docs/01-gereksinim-ve-kapsam.md` §11 (Tedarik ve Cari), `docs/03-veritabani-tasarimi.md`
 > (fin_supplier_* tabloları — kodda var, akış yok), `docs/cari-cati-gecis-plani.md` (B0-B4: bakiye yalnız
@@ -144,12 +150,12 @@ Ek ekran: **Etiket Şablonları** (`/settings/label-templates`, §2.5). Rehber: 
 
 | # | Karar | Durum |
 |---|---|---|
-| K1 | Yeni **Procurement (Tedarik)** modülü (`procurement` şeması); stok etkisi Inventory'de (event kalıbı) | ÖNERİ — onay bekliyor |
-| K2 | Ölü `fin_supplier_deliveries/_items` şeması terk edilir (boş; yeni model Procurement'ta). `fin_supplier_invoices` KALIR ve partiye bağlanır | ÖNERİ |
-| K3 | Sayım tek gerçek (İ1): stok girişi YALNIZ yerleştirme komutundan; serbest `stocks/adjust` kalır ama tedarik girişleri için kullanımdan düşürülür (ekranda yönlendirme notu) | ÖNERİ |
-| K4 | SA kalem girişi: form + panoya yapıştır (Excel). Ayrı dosya yükleme YOK (ilk sürüm) | ÖNERİ |
-| K5 | Mutabakat dönemseldir; parti kapanışı elle; fark bloke etmez (İ4). Fazlalık için "fiyat revizyonu" NOTU tutulur (fatura düzeltme otomasyonu YOK — Finance ayrı iş) | ÖNERİ |
-| K6 | Satışa giriş = stok + `published` (İ5); `OnSaleAt` gün hassasiyetli worker damgası | ÖNERİ |
+| K1 | Yeni **Procurement (Tedarik)** modülü (`procurement` şeması); stok etkisi Inventory'de (event kalıbı) | **KAPALI** (2026-08-24) |
+| K2 | Ölü `fin_supplier_deliveries/_items` şeması terk edilir (boş; yeni model Procurement'ta). `fin_supplier_invoices` KALIR ve partiye bağlanır | **KAPALI** (2026-08-24) |
+| K3 | Sayım tek gerçek (İ1): stok girişi YALNIZ yerleştirme komutundan; serbest `stocks/adjust` kalır ama tedarik girişleri için kullanımdan düşürülür (ekranda yönlendirme notu) | **KAPALI** (2026-08-24) |
+| K4 | SA kalem girişi: form + panoya yapıştır (Excel). Ayrı dosya yükleme YOK (ilk sürüm) | **KAPALI** (2026-08-24) |
+| K5 | Mutabakat dönemseldir; parti kapanışı elle; fark bloke etmez (İ4). Fazlalık için "fiyat revizyonu" NOTU tutulur (fatura düzeltme otomasyonu YOK — Finance ayrı iş) | **KAPALI** (2026-08-24) |
+| K6 | Satışa giriş = stok + `published` (İ5); `OnSaleAt` gün hassasiyetli worker damgası | **KAPALI** (2026-08-24) |
 | K7 | **Sabit etiket formatı YOK — kullanıcı tasarımlı şablonlar** (§2.5: şablon entity + görsel düzenleyici + şablonlu yazdırma; ürün ve birim/raf etiketi aynı altyapı) | **KAPALI** (2026-08-24) |
 | K8 | Faturanın cariye işlenmesi (PostAccountTransaction, B0-B4 uyumu; paralel SupplierTransaction defterinin emekliliği) **AYRI İŞTİR** — bu planın kapsamı dışında, Finans alanında ayrıca planlanır | **KAPALI** (2026-08-24) |
 | K9 | **Ürün kartı ayrıştırma ÖNCESİ açılmış olur; ayrıştırma personelinin kart açmayla ilgisi yoktur.** Ekran yalnız mevcut varyantı eşler; bulunamayan ürün için "kart eksik" bildirimi (katalog sorumlusuna kuyruk) | **KAPALI** (2026-08-24) |

@@ -1226,6 +1226,8 @@ public static class DatabaseSeeder
             (Code: Permissions.CatalogSettingsManage,   Name: "Katalog Ayarları",            Module: "catalog"),
             (Code: Permissions.InventoryManage,         Name: "Envanter Yönetimi",           Module: "inventory"),
             (Code: Permissions.OrderPackagesMerge,      Name: "Paket Birleştirme (İstisna)", Module: "order"),
+            (Code: Permissions.ProcurementManage,       Name: "Tedarik Yönetimi",            Module: "procurement"),
+            (Code: Permissions.ProcurementSort,         Name: "Ayrıştırma / Yerleştirme",    Module: "procurement"),
         };
 
         var existingCodes = await context.Permissions.Select(p => p.Code).ToListAsync();

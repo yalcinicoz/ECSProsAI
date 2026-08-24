@@ -109,6 +109,9 @@ const NAV_SECTIONS: NavSection[] = [
     { label: 'Stok Takibi',      to: '/inventory/stocks',     icon: 'boxes' },
     { label: 'Stok Hareketleri', to: '/inventory/transfers',  icon: 'refreshcw' },
   ]},
+  { label: 'Tedarik', items: [
+    { label: 'Satın Almalar', to: '/procurement/purchase-orders', icon: 'inbox', permission: 'procurement.manage' },
+  ]},
   { label: 'Pazarlama', items: [
     { label: 'Kampanyalar',  to: '/promotion/campaigns',  icon: 'percent' },
     { label: 'Kampanya Tipleri', to: '/promotion/campaign-types', icon: 'layers' },
