@@ -42,7 +42,13 @@ _purchase_orders (migration `AddReceiptBatches` ✓), kalemsiz parti (İ2), MK-#
 taşma uyarısı, örnek veri, ürün koduyla test basımı), yazdırma `/yazdir/etiket?templateId&variantId&count` +
 `/yazdir/etiket-birim` (AllowAnonymous+GUID; JsBarcode EAN13/CODE128; renk/beden definition.attribute_* joinli
 raw-SQL; fiyat TR biçimi), varsayılan hedef tip başına TEK (devir otomatik). ★ plan settings.manage demişti →
-procurement.manage kullanıldı (permission yok). İzole 5051 ✓. v1.1 (08-24): K7-K10 KAPALI — K7 kullanıcı tasarımlı etiket şablonları (yeni T3 fazı: core_label_templates + görsel editör + /yazdir/etiket), K8 fatura→cari AYRI iş, K9 kart ayrıştırma ÖNCESİ açılır (kart-eksik bildirimi kuyruğu), K10 go-live'da Legacy toplu stok güncellemesi kapatılır (T5 kontrol maddesi). K1-K6 önerileri kullanıcı onayı bekliyor. Keşif bulguları: PO yok;
+procurement.manage kullanıldı (permission yok). İzole 5051 ✓.
+**T4 AYRIŞTIRMA UYGULANDI (2026-08-24) ⚠️ restart bekliyor; SIRADA T5 Yerleştirme+stok (★ K10: Legacy stok
+senkronu kesilmeden canlıda kullanılmaz):** sorting_entries + missing_card_notices (migration ✓), lookup
+(barkod TAM→SKU TAM→içeren, renk/beden definition join), sayım CRUD (placed kilitli), parti auto received→sorting,
+etiket sayacı, K9 bildirim aç/çöz, procurement.sort uçlarda; admin /procurement/sorting (barkod-dostu: otomatik
+odak, tek tam eşleşme→direkt seçim, Kaydet+Etiket Bas, partisiz mod) + Mal Kabul'den geçiş; rehber 40-ayristirma
+(73 sayfa). İzole 5051 ✓ (test verileri silindi). v1.1 (08-24): K7-K10 KAPALI — K7 kullanıcı tasarımlı etiket şablonları (yeni T3 fazı: core_label_templates + görsel editör + /yazdir/etiket), K8 fatura→cari AYRI iş, K9 kart ayrıştırma ÖNCESİ açılır (kart-eksik bildirimi kuyruğu), K10 go-live'da Legacy toplu stok güncellemesi kapatılır (T5 kontrol maddesi). K1-K6 önerileri kullanıcı onayı bekliyor. Keşif bulguları: PO yok;
 SupplierDelivery şeması ölü; transferler stok taşımıyor (ayrı iş); AdjustStock'ta BinId yok; ürün etiketi yazdırma yok.
 
 **Satış kanalı ortak kurgusu (2026-08-23, Admin panel alanı) — F0 CANLIDA, F1 KAPSAM UYGULANDI ⚠️ restart bekliyor; SIRADA F2 Listeleme durumu:**

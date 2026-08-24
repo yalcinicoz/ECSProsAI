@@ -82,3 +82,33 @@ public class ReceiptBatchPurchaseOrderConfiguration : IEntityTypeConfiguration<R
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }
+
+public class SortingEntryConfiguration : IEntityTypeConfiguration<SortingEntry>
+{
+    public void Configure(EntityTypeBuilder<SortingEntry> builder)
+    {
+        builder.ToTable("sorting_entries");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Quantity).HasPrecision(18, 3);
+        builder.Property(x => x.UnitCost).HasPrecision(18, 4);
+        builder.Property(x => x.PutawayStatus).HasMaxLength(20).IsRequired();
+        builder.HasIndex(x => x.ReceiptBatchId);
+        builder.HasIndex(x => x.VariantId);
+        builder.HasIndex(x => new { x.PutawayStatus, x.CreatedAt });
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
+public class MissingCardNoticeConfiguration : IEntityTypeConfiguration<MissingCardNotice>
+{
+    public void Configure(EntityTypeBuilder<MissingCardNotice> builder)
+    {
+        builder.ToTable("missing_card_notices");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.DescriptionText).HasMaxLength(1000).IsRequired();
+        builder.Property(x => x.Status).HasMaxLength(20).IsRequired();
+        builder.HasIndex(x => new { x.Status, x.CreatedAt });
+        builder.HasIndex(x => x.ReceiptBatchId);
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}

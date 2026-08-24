@@ -23,6 +23,61 @@ namespace ECSPros.Procurement.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ECSPros.Procurement.Domain.Entities.MissingCardNotice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DescriptionText")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("ReceiptBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ResolvedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceiptBatchId");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("missing_card_notices", "procurement");
+                });
+
             modelBuilder.Entity("ECSPros.Procurement.Domain.Entities.PurchaseOrder", b =>
                 {
                     b.Property<Guid>("Id")
@@ -319,6 +374,81 @@ namespace ECSPros.Procurement.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("receipt_batch_purchase_orders", "procurement");
+                });
+
+            modelBuilder.Entity("ECSPros.Procurement.Domain.Entities.SortingEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("LabelCount")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("LabelPrinted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("OnSaleAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("PlacedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("PlacedBinId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PutawayStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<Guid?>("ReceiptBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("StockMovementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("UnitCost")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceiptBatchId");
+
+                    b.HasIndex("VariantId");
+
+                    b.HasIndex("PutawayStatus", "CreatedAt");
+
+                    b.ToTable("sorting_entries", "procurement");
                 });
 
             modelBuilder.Entity("ECSPros.Procurement.Domain.Entities.PurchaseOrderItem", b =>

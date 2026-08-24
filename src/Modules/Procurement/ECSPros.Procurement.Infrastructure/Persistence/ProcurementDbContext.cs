@@ -12,6 +12,8 @@ public class ProcurementDbContext(DbContextOptions<ProcurementDbContext> options
     public DbSet<ReceiptBatch> ReceiptBatches => Set<ReceiptBatch>();
     public DbSet<ReceiptBatchItem> ReceiptBatchItems => Set<ReceiptBatchItem>();
     public DbSet<ReceiptBatchPurchaseOrder> ReceiptBatchPurchaseOrders => Set<ReceiptBatchPurchaseOrder>();
+    public DbSet<SortingEntry> SortingEntries => Set<SortingEntry>();
+    public DbSet<MissingCardNotice> MissingCardNotices => Set<MissingCardNotice>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

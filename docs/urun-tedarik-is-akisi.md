@@ -18,7 +18,15 @@
 > (sürükleme, taşma uyarısı, örnek veriyle önizleme, ürün koduyla test basımı), rehber `30-etiket-sablonlari`.
 > Not: plan §6 `settings.manage` demişti — böyle bir permission yok, `procurement.manage` kullanıldı.
 > İzole 5051 ✓ (varsayılan devri, kod türetme, 3 kopya+3 barkod svg, bozuk JSON/ölçü/tip 400, hedef tip uyuşmazlığı 404).
-> **Sırada T4 Ayrıştırma.**
+> **T4 Ayrıştırma UYGULANDI (2026-08-24) ⚠️ restart bekliyor** — `sorting_entries` + `missing_card_notices`
+> (migration `AddSortingEntries` canlı DB'de), varyant arama (barkod TAM → SKU TAM → içeren; renk/beden/fiyat ile),
+> sayım CRUD (yerleşmiş kayıt kilitli), ilk sayımda parti received→sorting, etiket sayaç ucu, K9 kart-eksik
+> bildirimi (aç/çöz), `procurement.sort` yetkisi uçlarda; admin `/procurement/sorting` barkod-dostu operasyon
+> ekranı (otomatik odak, tek tam eşleşmede doğrudan seçim, Kaydet+Etiket Bas → /yazdir/etiket, partisiz mod,
+> bildirim listesi) + Mal Kabul detayından geçiş butonu; rehber `40-ayristirma`. Not: UnitCost SA'dan otomatik
+> ÖNERİLMİYOR (v1 elle — İ3 gevşek bağ; T6 raporu maliyeti kayıttan okur). İzole 5051 ✓ (3 varyant sayımı,
+> parti otomatik sorting, etiket sayacı, adet 0 / olmayan varyant / tamamlanmış parti 400, partisiz sayım,
+> bildirim aç/çöz). **Sırada T5 Yerleştirme + stok (★ K10 Legacy kesimi olmadan canlıda KULLANILMAZ).**
 > Alan: 🛠 **Admin panel** (pano #2) + Inventory/Finance/Catalog çekirdek dokunuşları.
 > İlgili: `docs/01-gereksinim-ve-kapsam.md` §11 (Tedarik ve Cari), `docs/03-veritabani-tasarimi.md`
 > (fin_supplier_* tabloları — kodda var, akış yok), `docs/cari-cati-gecis-plani.md` (B0-B4: bakiye yalnız

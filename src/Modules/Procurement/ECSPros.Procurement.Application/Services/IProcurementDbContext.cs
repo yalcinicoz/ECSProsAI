@@ -10,5 +10,7 @@ public interface IProcurementDbContext
     DbSet<ReceiptBatch> ReceiptBatches { get; }
     DbSet<ReceiptBatchItem> ReceiptBatchItems { get; }
     DbSet<ReceiptBatchPurchaseOrder> ReceiptBatchPurchaseOrders { get; }
+    DbSet<SortingEntry> SortingEntries { get; }
+    DbSet<MissingCardNotice> MissingCardNotices { get; }
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 }

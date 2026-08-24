@@ -12,6 +12,15 @@ using ECSPros.Procurement.Application.Commands.UpdateReceiptBatch;
 using ECSPros.Procurement.Application.Commands.UpsertReceiptBatchItems;
 using ECSPros.Procurement.Application.Queries.GetReceiptBatchDetail;
 using ECSPros.Procurement.Application.Queries.GetReceiptBatches;
+using ECSPros.Procurement.Application.Commands.CreateSortingEntry;
+using ECSPros.Procurement.Application.Commands.DeleteSortingEntry;
+using ECSPros.Procurement.Application.Commands.MarkSortingEntryLabeled;
+using ECSPros.Procurement.Application.Commands.UpdateSortingEntry;
+using ECSPros.Procurement.Application.Commands.CreateMissingCardNotice;
+using ECSPros.Procurement.Application.Commands.ResolveMissingCardNotice;
+using ECSPros.Procurement.Application.Queries.GetMissingCardNotices;
+using ECSPros.Procurement.Application.Queries.GetSortingEntries;
+using ECSPros.Procurement.Application.Queries.LookupVariants;
 using ECSPros.Procurement.Application.Queries.GetPurchaseOrderDetail;
 using ECSPros.Procurement.Application.Queries.GetPurchaseOrders;
 using ECSPros.Shared.Kernel.Authorization;
@@ -173,12 +182,114 @@ public class ProcurementController(IMediator mediator) : ControllerBase
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = new { affected = result.Value } });
     }
+
+    // ─── T4 Ayrıştırma (docs/urun-tedarik-is-akisi.md §2.3 — sistemin kalbi) ─────
+    // Yetki: procurement.sort (depo personeli); manage sahipleri role üzerinden sort'u da alır.
+
+    /// <summary>Varyant arama (barkod TAM → SKU TAM → içeren; en çok 10 aday). Yalnız MEVCUT kartlar (K9).</summary>
+    [HttpGet("sorting/lookup")]
+    [RequirePermission(Permissions.ProcurementSort)]
+    public async Task<IActionResult> LookupVariants([FromQuery] string term, CancellationToken ct)
+    {
+        var result = await mediator.Send(new LookupVariantsQuery(term ?? ""), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Sayım kayıtları (parti / partisiz / yerleştirme durumu filtreli).</summary>
+    [HttpGet("sorting/entries")]
+    [RequirePermission(Permissions.ProcurementSort)]
+    public async Task<IActionResult> GetSortingEntries(
+        [FromQuery] Guid? batchId, [FromQuery] bool? unbatched, [FromQuery] string? putawayStatus,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetSortingEntriesQuery(batchId, unbatched, putawayStatus, page, pageSize), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Sayım kaydı oluşturur (İ1). 'received' parti kendiliğinden 'sorting' olur.</summary>
+    [HttpPost("sorting/entries")]
+    [RequirePermission(Permissions.ProcurementSort)]
+    public async Task<IActionResult> CreateSortingEntry([FromBody] CreateSortingEntryRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new CreateSortingEntryCommand(
+            req.BatchId, req.VariantId, req.Quantity, req.UnitCost, CurrentUserId()), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Created(string.Empty, new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>Sayım kaydını günceller (yalnız yerleştirilmemiş).</summary>
+    [HttpPut("sorting/entries/{id:guid}")]
+    [RequirePermission(Permissions.ProcurementSort)]
+    public async Task<IActionResult> UpdateSortingEntry(Guid id, [FromBody] UpdateSortingEntryRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new UpdateSortingEntryCommand(id, req.Quantity, req.UnitCost), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Sayım kaydını siler (yalnız yerleştirilmemiş; soft).</summary>
+    [HttpDelete("sorting/entries/{id:guid}")]
+    [RequirePermission(Permissions.ProcurementSort)]
+    public async Task<IActionResult> DeleteSortingEntry(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new DeleteSortingEntryCommand(id), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Etiket basıldı işareti (basım /yazdir/etiket sekmesinde yapılır; sayaç burada tutulur).</summary>
+    [HttpPost("sorting/entries/{id:guid}/labeled")]
+    [RequirePermission(Permissions.ProcurementSort)]
+    public async Task<IActionResult> MarkLabeled(Guid id, [FromBody] MarkLabeledRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new MarkSortingEntryLabeledCommand(id, req.Count), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>K9 kart-eksik bildirimleri (varsayılan yalnız açık olanlar).</summary>
+    [HttpGet("sorting/missing-cards")]
+    [RequirePermission(Permissions.ProcurementSort)]
+    public async Task<IActionResult> GetMissingCards([FromQuery] Guid? batchId, [FromQuery] string? status, CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetMissingCardNoticesQuery(batchId, status ?? "open"), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kart eksik bildirimi düşer (kart AÇILMAZ — katalog sorumlusu kuyruğu, K9).</summary>
+    [HttpPost("sorting/missing-cards")]
+    [RequirePermission(Permissions.ProcurementSort)]
+    public async Task<IActionResult> CreateMissingCard([FromBody] CreateMissingCardRequest req, CancellationToken ct)
+    {
+        var result = await mediator.Send(new CreateMissingCardNoticeCommand(req.BatchId, req.DescriptionText, CurrentUserId()), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Created(string.Empty, new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>Bildirimi çözer (kart açıldı).</summary>
+    [HttpPost("sorting/missing-cards/{id:guid}/resolve")]
+    [RequirePermission(Permissions.ProcurementSort)]
+    public async Task<IActionResult> ResolveMissingCard(Guid id, CancellationToken ct)
+    {
+        var result = await mediator.Send(new ResolveMissingCardNoticeCommand(id, CurrentUserId()), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    private Guid? CurrentUserId() =>
+        Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("sub")?.Value, out var uid) ? uid : null;
 }
+
 
 public record CreateReceiptBatchRequest(Guid SupplierId, Guid WarehouseId, DateTime? ReceivedAt, int? PackageCount, string? DeliveryNoteNumber, string? Notes);
 public record UpdateReceiptBatchRequest(DateTime? ReceivedAt, int? PackageCount, string? DeliveryNoteNumber, Guid? SupplierInvoiceId, string? Notes);
 public record UpsertReceiptBatchItemsRequest(List<ReceiptBatchItemInput>? Items);
 public record SetReceiptPurchaseOrdersRequest(List<Guid>? PurchaseOrderIds, string Action);
+public record CreateSortingEntryRequest(Guid? BatchId, Guid VariantId, decimal Quantity, decimal? UnitCost);
+public record UpdateSortingEntryRequest(decimal Quantity, decimal? UnitCost);
+public record MarkLabeledRequest(int Count);
+public record CreateMissingCardRequest(Guid? BatchId, string DescriptionText);
 
 public record CreatePurchaseOrderRequest(Guid SupplierId, DateTime? OrderDate, DateTime? ExpectedDate, string? Notes);
 public record UpdatePurchaseOrderRequest(DateTime? OrderDate, DateTime? ExpectedDate, string? Notes);

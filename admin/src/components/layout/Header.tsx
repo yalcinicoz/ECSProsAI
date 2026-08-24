@@ -23,6 +23,7 @@ const BREADCRUMB: Record<string, string> = {
   '/procurement/purchase-orders':  'Satın Almalar',
   '/procurement/receipts':         'Mal Kabul',
   '/settings/label-templates':     'Etiket Şablonları',
+  '/procurement/sorting':          'Ayrıştırma',
   '/storefront/contact-messages':  'İletişim Mesajları',
   '/storefront/notifications':     'Bildirimler',
   '/storefront/newsletter':        'Bülten Aboneleri',
