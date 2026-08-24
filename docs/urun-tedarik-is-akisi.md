@@ -36,7 +36,11 @@
 > bildirim listesi) + Mal Kabul detayından geçiş butonu; rehber `40-ayristirma`. Not: UnitCost SA'dan otomatik
 > ÖNERİLMİYOR (v1 elle — İ3 gevşek bağ; T6 raporu maliyeti kayıttan okur). İzole 5051 ✓ (3 varyant sayımı,
 > parti otomatik sorting, etiket sayacı, adet 0 / olmayan varyant / tamamlanmış parti 400, partisiz sayım,
-> bildirim aç/çöz). **Sırada T5 Yerleştirme + stok (★ K10 Legacy kesimi olmadan canlıda KULLANILMAZ).**
+> bildirim aç/çöz). **T4 revizyonu UYGULANDI (2026-08-24) ⚠️ restart bekliyor** — çoklu deste basımı, `sorting/scan` birikimli
+> sayım, Etiket Basımı sayfası, Sayım/Teslim ekranı (iki mod), rehber `35-etiket-basimi` + `40-sayim-teslim`.
+> İzole 5051 ✓ (3+5=8 etiketli çoklu basım; 3 okutma + adet 10 → tek kayıt 13; partisiz ayrı birikim;
+> bozuk items 404; 0 adet / olmayan varyant 400).
+> **Sırada T5 Yerleştirme + stok (★ K10 Legacy kesimi olmadan canlıda KULLANILMAZ).**
 > Alan: 🛠 **Admin panel** (pano #2) + Inventory/Finance/Catalog çekirdek dokunuşları.
 > İlgili: `docs/01-gereksinim-ve-kapsam.md` §11 (Tedarik ve Cari), `docs/03-veritabani-tasarimi.md`
 > (fin_supplier_* tabloları — kodda var, akış yok), `docs/cari-cati-gecis-plani.md` (B0-B4: bakiye yalnız
