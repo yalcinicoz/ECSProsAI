@@ -16,6 +16,7 @@ public interface ICoreDbContext
     DbSet<CargoRule> CargoRules { get; }
     DbSet<CargoBarcodeRange> CargoBarcodeRanges { get; }
     DbSet<PlatformType> PlatformTypes { get; }
+    DbSet<LabelTemplate> LabelTemplates { get; }
     DbSet<Firm> Firms { get; }
     DbSet<FirmPlatform> FirmPlatforms { get; }
     DbSet<IntegrationService> IntegrationServices { get; }

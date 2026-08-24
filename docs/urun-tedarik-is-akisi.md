@@ -11,7 +11,14 @@
 > açma, durum makinesi (completed→sorting geri aç), gevşek çoktan-çoğa SA bağı (link'te ordered→receiving; farklı
 > tedarikçi SA'sı reddedilir), fatura gevşek bağı, kaba evrak kalemleri; admin Mal Kabul liste+detay; rehber
 > `20-mal-kabul`. İzole 5051 ✓ (kalemsiz sorting, idempotent link, tamamlanmışa kalem 400, çapraz tedarikçi 400).
-> **Sırada T3 Etiket Şablonları.**
+> **T3 Etiket Şablonları UYGULANDI (2026-08-24) ⚠️ restart bekliyor** — `core.core_label_templates` (migration
+> `AddLabelTemplates` canlı DB'de), Upsert/Delete/Get (varsayılan hedef tip başına tek; kod addan türetilir),
+> `/yazdir/etiket` + `/yazdir/etiket-birim` ([AllowAnonymous]+GUID kalıbı; JsBarcode: 13 hane→EAN13, değilse
+> CODE128; @page = şablon ölçüsü, sayfa başına 1 etiket), admin `/settings/label-templates` görsel düzenleyici
+> (sürükleme, taşma uyarısı, örnek veriyle önizleme, ürün koduyla test basımı), rehber `30-etiket-sablonlari`.
+> Not: plan §6 `settings.manage` demişti — böyle bir permission yok, `procurement.manage` kullanıldı.
+> İzole 5051 ✓ (varsayılan devri, kod türetme, 3 kopya+3 barkod svg, bozuk JSON/ölçü/tip 400, hedef tip uyuşmazlığı 404).
+> **Sırada T4 Ayrıştırma.**
 > Alan: 🛠 **Admin panel** (pano #2) + Inventory/Finance/Catalog çekirdek dokunuşları.
 > İlgili: `docs/01-gereksinim-ve-kapsam.md` §11 (Tedarik ve Cari), `docs/03-veritabani-tasarimi.md`
 > (fin_supplier_* tabloları — kodda var, akış yok), `docs/cari-cati-gecis-plani.md` (B0-B4: bakiye yalnız

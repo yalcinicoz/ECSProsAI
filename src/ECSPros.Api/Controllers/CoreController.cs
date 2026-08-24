@@ -100,6 +100,37 @@ public class CoreController : ControllerBase
         return Ok(new { success = true });
     }
 
+    // ── Etiket Şablonları (Tedarik T3, K7 — kullanıcı tasarımlı) ──────────────
+
+    /// <summary>Etiket şablonları (targetType=product|bin; activeOnly).</summary>
+    [HttpGet("label-templates")]
+    public async Task<IActionResult> GetLabelTemplates([FromQuery] string? targetType, [FromQuery] bool activeOnly = false, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new ECSPros.Core.Application.Queries.GetLabelTemplates.GetLabelTemplatesQuery(targetType, activeOnly), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Şablon oluştur/güncelle (Id null → yeni). IsDefault hedef tip başına tektir.</summary>
+    [HttpPost("label-templates")]
+    [RequirePermission(ECSPros.Shared.Kernel.Authorization.Permissions.ProcurementManage)]
+    public async Task<IActionResult> UpsertLabelTemplate([FromBody] UpsertLabelTemplateRequest req, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Core.Application.Commands.UpsertLabelTemplate.UpsertLabelTemplateCommand(
+            req.Id, req.Name, req.TargetType, req.WidthMm, req.HeightMm, req.ElementsJson, req.IsDefault, req.IsActive), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>Şablonu siler (soft).</summary>
+    [HttpDelete("label-templates/{id:guid}")]
+    [RequirePermission(ECSPros.Shared.Kernel.Authorization.Permissions.ProcurementManage)]
+    public async Task<IActionResult> DeleteLabelTemplate(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ECSPros.Core.Application.Commands.DeleteLabelTemplate.DeleteLabelTemplateCommand(id), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
     /// <summary>Entegrasyon servislerini listeler.</summary>
     [HttpGet("integration-services")]
     public async Task<IActionResult> GetIntegrationServices([FromQuery] string? serviceType = null, CancellationToken ct = default)
@@ -624,6 +655,10 @@ public record UpdatePlatformTypeRequest(
     List<PlatformSchemaField>? SettingsSchema = null,
     ECSPros.Shared.Contracts.Channels.ChannelCapabilities? Capabilities = null
 );
+
+public record UpsertLabelTemplateRequest(
+    Guid? Id, string Name, string TargetType, decimal WidthMm, decimal HeightMm,
+    string ElementsJson, bool IsDefault, bool IsActive);
 
 public record CreateExpenseTypeRequest(
     string Code,

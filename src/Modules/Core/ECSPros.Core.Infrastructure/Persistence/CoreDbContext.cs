@@ -20,6 +20,7 @@ public class CoreDbContext : DbContext, ICoreDbContext
     public DbSet<LookupType> LookupTypes => Set<LookupType>();
     public DbSet<LookupValue> LookupValues => Set<LookupValue>();
     public DbSet<PlatformType> PlatformTypes => Set<PlatformType>();
+    public DbSet<LabelTemplate> LabelTemplates => Set<LabelTemplate>();
     public DbSet<Firm> Firms => Set<Firm>();
     public DbSet<FirmPlatform> FirmPlatforms => Set<FirmPlatform>();
     public DbSet<IntegrationService> IntegrationServices => Set<IntegrationService>();
