@@ -125,6 +125,19 @@ Arama profili (EXPLAIN ANALYZE): sayfa başına birden çok kez çalışan aday 
 **Eşitlik:** 7/7 arama (3 kelimeli "siyah deri ceket" ve anlamsız "zzz qqq elbise" dahil) — ürün kodları VE kart
 görselleri (renk-kartı seçimi) canlıyla md5 birebir ✓.
 
+## D3 UYGULANDI (2026-08-26 22:12) — sır döndürme + git geçmiş temizliği
+- ✅ DB (PostgreSQL `ecommerce`), Redis ve JWT (prod+dev) sırları DÖNDÜRÜLDÜ; yeni değerler yalnız
+  untracked dosyalarda (.env, appsettings.{Production,Demo,Development}.json, ~/.pgpass) + tüm publish
+  kopyaları güncellendi. Üç servis (ecspros, -demo, -staging) 22:12'de yeniden başladı; canlı: /health
+  Healthy + "Redis cache: AKTİF ✓"; staging env dosyasında şifre yok (doğrulandı).
+- ✅ Git geçmiş temizliği (git-filter-repo): 5 tarihsel sır değeri tüm geçmişten ***KALDIRILDI*** ile
+  değiştirildi; **yanlışlıkla commit'lenmiş publish-demo/ (903 dosya, appsettings sırları dahil) geçmişten
+  tamamen silindi** (repo 192→78 MiB); .gitignore'a publish-demo/ eklendi. GitHub'a force-push yapıldı
+  (commit hash'leri değişti — PROGRESS'teki eski hash referansları artık tarihsel nottur).
+- Yedek: `~/yedekler/d3-oncesi-20260826-2204/` (eski config'ler + eski-geçmişli repo aynası; 700 izinli).
+  Not: eski sırlar döndürüldüğü için geçmiş kopyalarda görünmeleri artık risk değildir.
+- Kalan: D5 (yük testi) ve D6 (eski üye hash politikası) kullanıcı kararında.
+
 **FAZ 2 BU ADIMLA KAPANDI.** Bilinçli ertelenenler (gerektiğinde ayrı iş): ürün arama read-model'i (rapor madde 5 —
 mevcut sonuçlar hedefi karşıladığı için kurulmadı), küçük kart DTO + HTML küçültme, cache event-invalidation
 (TTL yedek güvence yeterli), VitrinVmBuilder koleksiyon N+1, blok batch çözme. Faz 3 çoklu-instance'a geçişte,

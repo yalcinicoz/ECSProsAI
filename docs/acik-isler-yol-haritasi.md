@@ -22,7 +22,7 @@ Kod işi değil; ilgili fazları açan anahtarlar. Hazır olan işaretlenir.
 | # | Girdi/Karar | Bloke ettiği iş |
 |---|---|---|
 | 0.1 | **DNS A kaydı** `partner.misharitalia.com` + nginx recreate | F5 satıcı paneli kabul testi |
-| 0.2 | **D3** — DB/Redis/JWT sır DÖNDÜRME + git geçmiş temizliği zamanı (JWT herkesi düşürür; Redis şifresi 3 yer + `docker compose up -d redis`) | F8 güvenlik kapanışı |
+| 0.2 | ~~**D3** — sır döndürme + git geçmiş temizliği~~ ✅ **YAPILDI 2026-08-26** (DB/Redis/JWT döndü, geçmiş filter-repo ile temiz, publish-demo geçmişten silindi, force-push) | — |
 | 0.3 | **D6** — eski MD5/SHA256 üye hash'leri: zorunlu sıfırlama mı, "girişte yükselt" ile devam mı? | F8 |
 | 0.4 | **D5** — yük testi istenip istenmediği (istenirse araç+senaryo öneririm) | F8 |
 | 0.5 | **DP key yedek cron'u**: `0 4 * * 0 /opt/ECSProsAI/tools/ops/backup-dp-keys.sh` (crontab'a ekleme) | — |
@@ -107,7 +107,7 @@ Kod işi değil; ilgili fazları açan anahtarlar. Hazır olan işaretlenir.
 ## FAZ 8 — Güvenlik/dayanıklılık kapanışı + sürekli iyileştirme
 **Alan:** ortak çekirdek · **Plan:** `docs/dayaniklilik-faz0-plani.md` (Faz 0-1-2 tamam) · **Bloklayan:** 0.2-0.4
 
-- [ ] **8.1 D3 uygulaması:** sır döndürme (planlı kesinti) + git geçmiş temizliği.
+- [x] **8.1 D3 uygulaması** ✅ 2026-08-26 — bkz. `docs/dayaniklilik-faz0-plani.md` D3 bölümü.
 - [ ] **8.2 D6 uygulaması:** karar doğrultusunda eski hash politikası.
 - [ ] **8.3 D5:** istenirse yük testi kurulumu + Faz 2 sonrası doğrulama ölçümü.
 - [ ] **8.4 Faz 4 (sürekli):** correlation id + ProblemDetails, kritik akış testleri (xUnit+Testcontainers),
