@@ -55,3 +55,8 @@ ECSGYE.Solution/
 # Faz 0 sır hijyeni: ortam ayar dosyaları sır içerir, izlenmez
 src/**/appsettings.Development.json
 src/**/appsettings.Demo.json
+
+# 2026-08-26 D3: publish çıktıları asla izlenmez (publish-demo yanlışlıkla commit'lenmişti)
+publish/
+publish-demo/
+publish-staging/
