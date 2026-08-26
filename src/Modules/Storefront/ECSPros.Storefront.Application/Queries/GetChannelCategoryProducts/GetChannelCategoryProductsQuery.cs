@@ -381,17 +381,47 @@ public class GetChannelCategoryProductsQueryHandler(
     // ProductGroupAttribute.IsPrimaryAxis=true olan attribute type → o eksenin
     // distinct değerleri kadar kart oluşturulur.
     // Örnek: 6 renk × 4 beden = 24 varyant → 6 kart
-    private async Task<Result<PagedResult<ChannelCategoryProductItemDto>>> HandleColorMode(
-        GetChannelCategoryProductsQuery request,
+    /// <summary>Renk modu kartı: ürün×renk (eksensiz üründe ColorValueId=Guid.Empty, 1 kart).</summary>
+    public sealed record KartPair(Guid ProductId, Guid ColorValueId, List<Guid> VariantIds,
+        decimal Price, decimal ChannelPrice, decimal EskiFiyat);
+
+    public sealed record UrunBilgi(Guid ProductGroupId, decimal BasePrice, DateTime CreatedAt);
+
+    public sealed record KartEvreniSonucu(
+        List<KartPair> VisiblePairs,
+        List<KartPair> TumColorPairs,
+        Dictionary<Guid, UrunBilgi> ProductInfo,
+        HashSet<Guid> InStockVariants,
+        Dictionary<Guid, decimal> VariantChannelPrice,
+        Dictionary<Guid, decimal> VariantPrice,
+        List<Guid> AxisTypeIds,
+        List<Guid> AllProductIds,
+        bool FallbackGerekli);
+
+    /// <summary>Renk modunun KART EVRENİNİ kurar: kategori ürünleri → (ürün×renk) kartları →
+    /// görsel/arama/stok/kategori-fiyat elemeleri. Liste (HandleColorMode) ve kategori facet
+    /// motoru (KanalKategoriKartFacetleri) AYNI evreni kullanır — başlık ve filtre sayıları
+    /// aynı birimde (renk kartı) ve birebir tutarlı kalır (2026-08-26 kullanıcı kararı).</summary>
+    public static async Task<KartEvreniSonucu> KartEvreniKurAsync(
+        ICatalogDbContext catDb,
+        IStorefrontDbContext sfDb,
+        IStockService stockService,
+        IChannelPricingService pricingService,
+        IInStockProductProvider inStock,
         ChannelCategory cat,
-        string cdnBase,
+        Guid channelCategoryId,
+        bool showOutOfStock,
+        DateTime? outOfStockSince,
+        string? search,
+        List<Guid>? restrictProductIds,
         CancellationToken ct)
     {
         // 1. Kategorideki tüm ürün ID'leri
-        var allProductIds = await ResolveCategoryProductIds(cat, request.ChannelCategoryId,
-            request.ShowOutOfStock, request.OutOfStockSince, ct);
+        var allProductIds = await ResolveCategoryProductIds(
+            sfDb, catDb, stockService, pricingService, inStock,
+            cat, channelCategoryId, showOutOfStock, outOfStockSince, ct);
         // 2026-08-15: kategori sanal filtresi (seçili yaprak kategorilerin ürünleri)
-        if (request.RestrictProductIds is { Count: > 0 } kisit)
+        if (restrictProductIds is { Count: > 0 } kisit)
         {
             var kisitKumesi = kisit.ToHashSet();
             allProductIds = allProductIds.Where(kisitKumesi.Contains).ToList();
@@ -401,7 +431,7 @@ public class GetChannelCategoryProductsQueryHandler(
         // (GetStoreProducts aramasıyla aynı semantik). Fallback moduna da daralmış liste gider.
         // kelime → eşleşen özellik değeri id'leri (renk mi değil mi pair evreniyle netleşir)
         var aramaKelimeDegerleri = new Dictionary<string, List<Guid>>();
-        if (!string.IsNullOrWhiteSpace(request.Search) && allProductIds.Count > 0)
+        if (!string.IsNullOrWhiteSpace(search) && allProductIds.Count > 0)
         {
             // Kabul testi 2026-07-22: çok kelimeli arama — genel aramayla aynı semantik
             // (her kelime AND; kod/ad/varyant özellik değeri adı — "sarı gömlek" çalışır)
@@ -409,7 +439,7 @@ public class GetChannelCategoryProductsQueryHandler(
             // renge daraltılır. Faz 2 arama hızlandırma (2026-08-26): kelime→değer id listeleri
             // ÖNCE tek sorguyla bulunur; ürün predicate'i ad-LIKE yerine bu id listelerini
             // kullanır (AttributeValueId indeksi — GetStoreProducts ile aynı desen).
-            var kelimeListesi = request.Search.Trim().ToLower()
+            var kelimeListesi = search.Trim().ToLower()
                 .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var adaylar = await catDb.AttributeValues.AsNoTracking()
                 .Where(av => kelimeListesi.Any(k =>
@@ -442,15 +472,15 @@ public class GetChannelCategoryProductsQueryHandler(
         }
 
         if (allProductIds.Count == 0)
-            return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
-                [], 0, request.Page, request.PageSize));
+            return new KartEvreniSonucu([], [], new(), new(), new(), new(), [], allProductIds, false);
 
         // 2. Ürün bilgi haritası (grup + B10 fiyat/tarih — filtre ve sıralama için)
-        var productInfo = await catDb.Products.AsNoTracking()
+        var productInfo2 = (await catDb.Products.AsNoTracking()
             .Where(p => allProductIds.Contains(p.Id))
             .Select(p => new { p.Id, p.ProductGroupId, p.BasePrice, p.CreatedAt })
-            .ToDictionaryAsync(p => p.Id, ct);
-        var productGroupMap = productInfo.ToDictionary(kv => kv.Key, kv => kv.Value.ProductGroupId);
+            .ToListAsync(ct))
+            .ToDictionary(p => p.Id, p => new UrunBilgi(p.ProductGroupId, p.BasePrice, p.CreatedAt));
+        var productGroupMap = productInfo2.ToDictionary(kv => kv.Key, kv => kv.Value.ProductGroupId);
 
         var groupIds = productGroupMap.Values.Distinct().ToList();
 
@@ -527,17 +557,10 @@ public class GetChannelCategoryProductsQueryHandler(
                 // İndirim öncesi fiyat: rengin varyantları arasındaki en yüksek pozitif CompareAt.
                 var eskiFiyat = vids.Select(v => variantCompareAt.GetValueOrDefault(v))
                                     .Where(c => c > 0).DefaultIfEmpty(0).Max();
-                return new
-                {
-                    g.Key.ProductId,
-                    ColorValueId = g.Key.AttributeValueId,
-                    VariantIds   = vids,
-                    // Gösterilen/filtre/sıralama fiyatı = kanal (satış) fiyatı; yoksa base
-                    Price = kanal > 0 ? kanal : baz,
-                    // Kategori platformPrice kuralı YALNIZ gerçek kanal fiyatına uygulanır (0 = kanal yok)
-                    ChannelPrice = kanal,
-                    EskiFiyat = eskiFiyat   // 0 ise indirim yok
-                };
+                // Gösterilen/filtre/sıralama fiyatı = kanal (satış) fiyatı; yoksa base.
+                // Kategori platformPrice kuralı YALNIZ gerçek kanal fiyatına uygulanır (0 = kanal yok).
+                return new KartPair(g.Key.ProductId, g.Key.AttributeValueId, vids,
+                    kanal > 0 ? kanal : baz, kanal, eskiFiyat);
             })
             .OrderBy(x => x.ProductId).ThenBy(x => x.ColorValueId)
             .ToList();
@@ -555,20 +578,12 @@ public class GetChannelCategoryProductsQueryHandler(
             var kanal = vids.Select(v => variantChannelPrice.GetValueOrDefault(v)).Where(pr => pr > 0).DefaultIfEmpty(0).Min();
             var baz = vids.Select(v => variantPrice.GetValueOrDefault(v)).Where(pr => pr > 0).DefaultIfEmpty(0).Min();
             var eskiFiyat = vids.Select(v => variantCompareAt.GetValueOrDefault(v)).Where(c => c > 0).DefaultIfEmpty(0).Max();
-            colorPairs.Add(new
-            {
-                ProductId = pid,
-                ColorValueId = Guid.Empty,
-                VariantIds = vids,
-                Price = kanal > 0 ? kanal : baz,
-                ChannelPrice = kanal,
-                EskiFiyat = eskiFiyat
-            });
+            colorPairs.Add(new KartPair(pid, Guid.Empty, vids, kanal > 0 ? kanal : baz, kanal, eskiFiyat));
         }
 
         // Primary axis tanımlı değilse fallback: 1 kart/ürün
         if (colorPairs.Count == 0)
-            return await BuildFallbackProductItems(allProductIds, request, cdnBase, ct);
+            return new KartEvreniSonucu([], [], new(), new(), new(), new(), [], allProductIds, true);
 
         // 7. Görseli olan renkleri filtrele — görselsiz renk listede çıkmaz
         var allPairVariantIds = colorPairs.SelectMany(p => p.VariantIds).Distinct().ToList();
@@ -637,7 +652,7 @@ public class GetChannelCategoryProductsQueryHandler(
 
         // Görseli olan renk yoksa ürün düzeyindeki fallback ile devam et
         if (visiblePairs.Count == 0)
-            return await BuildFallbackProductItems(allProductIds, request, cdnBase, ct);
+            return new KartEvreniSonucu([], colorPairs, new(), new(), variantChannelPrice, variantPrice, axisTypeIds, allProductIds, true);
 
         // ── Stok görünürlüğü (RENK düzeyi, 2026-07-14): tekstilde ürünler renk varyantıyla
         // listelenir. Ürün düzeyi filtre (ResolveCategoryProductIds) yalnız TÜM renkleri stoksuz
@@ -650,15 +665,15 @@ public class GetChannelCategoryProductsQueryHandler(
             visiblePairs = visiblePairs.Where(pair =>
             {
                 if (pair.VariantIds.Any(inStockVariants.Contains)) return true;   // renkte stok var
-                if (!request.ShowOutOfStock) return false;                        // stoksuz renk gizli
-                if (request.OutOfStockSince is null) return true;
-                return productInfo.TryGetValue(pair.ProductId, out var pi)
-                    && pi.CreatedAt >= request.OutOfStockSince.Value;
+                if (!showOutOfStock) return false;                        // stoksuz renk gizli
+                if (outOfStockSince is null) return true;
+                return productInfo2.TryGetValue(pair.ProductId, out var pi)
+                    && pi.CreatedAt >= outOfStockSince.Value;
             }).ToList();
 
             if (visiblePairs.Count == 0)
-                return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
-                    [], 0, request.Page, request.PageSize));
+                return new KartEvreniSonucu([], colorPairs, productInfo2, inStockVariants,
+                    variantChannelPrice, variantPrice, axisTypeIds, allProductIds, false);
         }
 
         // ── Kategori kendi fiyat kuralı RENK düzeyinde (2026-07-30): ürün-seviyesi filtre
@@ -674,7 +689,7 @@ public class GetChannelCategoryProductsQueryHandler(
         {
             var pinnedProductIds = cat.FillType == "mixed"
                 ? (await sfDb.ChannelCategoryProducts.AsNoTracking()
-                    .Where(p => p.ChannelCategoryId == request.ChannelCategoryId && !p.IsExcluded)
+                    .Where(p => p.ChannelCategoryId == channelCategoryId && !p.IsExcluded)
                     .Select(p => p.ProductId).ToListAsync(ct)).ToHashSet()
                 : new HashSet<Guid>();
 
@@ -687,9 +702,35 @@ public class GetChannelCategoryProductsQueryHandler(
             }).ToList();
 
             if (visiblePairs.Count == 0)
-                return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
-                    [], 0, request.Page, request.PageSize));
+                return new KartEvreniSonucu([], colorPairs, productInfo2, inStockVariants,
+                    variantChannelPrice, variantPrice, axisTypeIds, allProductIds, false);
         }
+
+        return new KartEvreniSonucu(visiblePairs, colorPairs, productInfo2, inStockVariants,
+            variantChannelPrice, variantPrice, axisTypeIds, allProductIds, false);
+    }
+
+    private async Task<Result<PagedResult<ChannelCategoryProductItemDto>>> HandleColorMode(
+        GetChannelCategoryProductsQuery request,
+        ChannelCategory cat,
+        string cdnBase,
+        CancellationToken ct)
+    {
+        var evren = await KartEvreniKurAsync(catDb, sfDb, stockService, pricingService, inStock,
+            cat, request.ChannelCategoryId, request.ShowOutOfStock, request.OutOfStockSince,
+            request.Search, request.RestrictProductIds, ct);
+        if (evren.FallbackGerekli)
+            return await BuildFallbackProductItems(evren.AllProductIds, request, cdnBase, ct);
+        var visiblePairs = evren.VisiblePairs;
+        var colorPairs = evren.TumColorPairs;
+        var productInfo = evren.ProductInfo;
+        var inStockVariants = evren.InStockVariants;
+        var variantChannelPrice = evren.VariantChannelPrice;
+        var variantPrice = evren.VariantPrice;
+        var axisTypeIds = evren.AxisTypeIds;
+        if (visiblePairs.Count == 0)
+            return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
+                [], 0, request.Page, request.PageSize));
 
         // ── B10: özellik filtresi — kart (ürün×renk) kendi varyantları üzerinden;
         // grup içi OR, gruplar arası AND aynı varyantta sağlanmalı (kırmızı+M birlikte).

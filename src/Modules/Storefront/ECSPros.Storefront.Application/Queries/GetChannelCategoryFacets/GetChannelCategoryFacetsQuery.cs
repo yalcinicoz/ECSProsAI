@@ -51,7 +51,9 @@ public class GetChannelCategoryFacetsQueryHandler(
         // v8: tek seçenekli filtre grupları panelden düşürülür (2026-07-17)
         // v9: kategori sanal grubu sayımı (CategoryCounts) DTO'ya girdi (2026-08-15) — harita
         //     yokken cache'lenmez ki sayımsız girdi 10 dk kalmasın.
-        var cacheKey = $"channelcat:facets:v9:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
+        // v10: renk modunda sayı birimi ÜRÜN→KART (2026-08-26 kullanıcı kararı — liste başlığı,
+        //      filtre sayıları ve seçim sonrası başlık aynı birimde, birebir tutarlı).
+        var cacheKey = $"channelcat:facets:v10:{request.ChannelCategoryId}:{request.ShowOutOfStock}:{request.OutOfStockSince:yyyyMMdd}";
         StoreFacetsDto? cached = null;
         if (!secimliMi)
         {
@@ -71,9 +73,29 @@ public class GetChannelCategoryFacetsQueryHandler(
 
         if (cat.ListingMode != "model")
         {
-            // 2026-07-17: listeyle birebir aynı ürün kümesi — dolum tipi (manual/filter/
-            // mixed) + satış anahtarı + kanal seçimi/durdurma + stok görünürlüğü geçitleri
-            // ortak çözümleyicide. Filtre seçenekleri yalnız listelenen ürünlerden oluşur.
+            // v10 (2026-08-26): renk modunda sayım listenin KART EVRENİ üzerinden — liste
+            // başlığı (kart) ile filtre sayıları aynı birim ve seçme kuralı birebir aynı.
+            // "Kategoride ara" da evren kurucusuna gider (liste arama semantiğiyle birebir).
+            var evren = await Queries.GetChannelCategoryProducts.GetChannelCategoryProductsQueryHandler
+                .KartEvreniKurAsync(
+                    catDb, sfDb, stockService, pricingService, inStock,
+                    cat, request.ChannelCategoryId, request.ShowOutOfStock, request.OutOfStockSince,
+                    request.Search, null, ct);
+            if (!evren.FallbackGerekli)
+            {
+                var dto = await KanalKategoriKartFacetleri.KurAsync(
+                    catDb, evren.VisiblePairs, evren.ProductInfo,
+                    request.SelectedValueIds, request.PriceMin, request.PriceMax,
+                    request.ProductCategoryMap, request.SelectedCategoryIds, ct);
+                if (!secimliMi && request.ProductCategoryMap is not null)
+                {
+                    try { await cache.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(10), ct); } catch { /* best-effort */ }
+                }
+                return Result.Success(dto);
+            }
+
+            // Fallback (renk ekseni yok → 1 kart/ürün): kart=ürün olduğundan eski ürün-tabanlı
+            // sayım zaten aynı birimdedir.
             productIds = await Queries.GetChannelCategoryProducts.GetChannelCategoryProductsQueryHandler
                 .ResolveCategoryProductIds(
                     sfDb, catDb, stockService, pricingService, inStock,

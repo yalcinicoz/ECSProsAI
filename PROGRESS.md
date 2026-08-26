@@ -38,6 +38,17 @@ Anasayfa > Tesettür Giyim > Tesettür Etek"); dış/boş referer'da kural taban
 İzole 5051 ✓: referer'lı/referer'sız/google-referer/kök-kategori senaryoları. ★ İÇERİK NOTU: /yeni-gelenler
 koleksiyonu canlıda 0 ürün (10 günlük görsel-güncelleme penceresi boş) — panelden pencere genişletilebilir.
 
+**Kategori filtre sayıları KART birimine geçti (2026-08-26, Web sitesi alanı) ⚠️ restart bekliyor:**
+Kullanıcı kararı: "hem filtre hem liste başlıklarında renk sayıları görünsün" — önceden liste başlığı KART
+(ürün×renk), facet ÜRÜN sayıyordu (/yeni-gelenler: başlık 8950, Kadın(2604), seçince 5952 tutarsızlığı).
+Renk modunun kart evreni `KartEvreniKurAsync` statiğine çıkarıldı (HandleColorMode davranış-nötr refactor;
+KartPair/UrunBilgi/KartEvreniSonucu kayıtları); YENİ `KanalKategoriKartFacetleri` motoru facet'i AYNI evrenden
+kart birimiyle sayar (liste seçme kuralıyla birebir: ürün-seviyesi değer ürüne, varyant değeri kartın kendi
+varyantlarına; grup kendi seçimini dışlar; kategori sanal grubu bilinçli bağımsız 2026-08-23; fiyat sınırları
+kart fiyatından); channelcat:facets v9→v10. İzole 5051 ✓: 3 sayfada 12/12 tek-seçim ve çapraz-grup çift-seçim
+facet=başlık birebir; 4 sayfada kart listeleri canlıyla md5 eşit (refactor nötr); arama sayfaları ürün birimli
+kaldı (değişmedi). Not: api/store kategori facet uçları da artık kart sayar (mobil additive alan anlamı).
+
 **Ürün tedarik iş akışı (2026-08-23, Admin panel alanı) — v1.2 TÜM KARARLAR KAPALI — UYGULAMA BAŞLADI:**
 `docs/urun-tedarik-is-akisi.md` — kullanıcı kurgusu: asıl süreç AYRIŞTIRMA+ETİKETLEME (sayım=gerçek, İ1);
 SA/mal kabul esnek ve bloklamaz (İ2/İ3); mutabakat dönemsel/istatistiksel (İ4 — belgeler kaba, satıcı fazla
