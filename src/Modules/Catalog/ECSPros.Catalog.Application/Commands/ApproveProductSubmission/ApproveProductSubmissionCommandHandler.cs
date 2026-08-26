@@ -34,6 +34,8 @@ public class ApproveProductSubmissionCommandHandler
         var product = await _db.Products
             .Include(p => p.Variants.Where(v => !v.IsDeleted)).ThenInclude(v => v.VariantAttributes.Where(a => !a.IsDeleted))
             .Include(p => p.Attributes.Where(a => !a.IsDeleted))
+            .AsSplitQuery()   // Faz 2: kardeş koleksiyon Include kartezyeni önlenir
+            .AsSplitQuery()   // Faz 2: kardeş koleksiyon Include kartezyeni önlenir
             .FirstOrDefaultAsync(p => p.SupplierId == submission.SupplierId
                 && p.SupplierProductCode == submission.SupplierProductCode, ct);
         var isRevision = product is not null;

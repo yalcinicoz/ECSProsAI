@@ -50,6 +50,8 @@ public class GetAttributeTypesQueryHandler : IRequestHandler<GetAttributeTypesQu
     public async Task<Result<List<AttributeTypeDto>>> Handle(GetAttributeTypesQuery request, CancellationToken ct)
     {
         var query = _db.AttributeTypes
+            .AsNoTracking()
+            .AsSplitQuery()   // Faz 2: kardeş koleksiyon Include kartezyeni önlenir
             .Include(a => a.Values.Where(v => !v.IsDeleted))
             .Include(a => a.AxisSubAttributes.Where(s => !s.IsDeleted))
                 .ThenInclude(s => s.SubAttributeType)

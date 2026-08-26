@@ -17,7 +17,9 @@ public class GetSessionSummaryQueryHandler : IRequestHandler<GetSessionSummaryQu
     public async Task<Result<SessionSummaryDto>> Handle(GetSessionSummaryQuery request, CancellationToken cancellationToken)
     {
         var session = await _context.PosSessions
+            .AsNoTracking()
             .Include(s => s.Register)
+            .AsSplitQuery()   // Faz 2: kardeş koleksiyon Include kartezyeni önlenir
             .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken);
 
         if (session is null)
@@ -26,6 +28,7 @@ public class GetSessionSummaryQueryHandler : IRequestHandler<GetSessionSummaryQu
         var sales = await _context.PosSales
             .Include(s => s.Payments)
             .Where(s => s.SessionId == request.SessionId)
+            .AsSplitQuery()   // Faz 2: kardeş koleksiyon Include kartezyeni önlenir
             .ToListAsync(cancellationToken);
 
         var completedSales = sales.Where(s => s.Status == "completed").ToList();

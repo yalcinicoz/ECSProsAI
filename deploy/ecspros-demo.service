@@ -1,0 +1,19 @@
+[Unit]
+Description=ECSPros API Service — Telemania Demo
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=yalcin
+WorkingDirectory=/opt/ECSProsAI/publish-demo
+ExecStart=/usr/bin/dotnet /opt/ECSProsAI/publish-demo/ECSPros.Api.dll
+Restart=on-failure
+RestartSec=5
+Environment=ASPNETCORE_ENVIRONMENT=Demo
+Environment=ASPNETCORE_URLS=http://0.0.0.0:5050
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ecspros-demo
+
+[Install]
+WantedBy=multi-user.target

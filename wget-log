@@ -1,0 +1,6 @@
+--2026-08-04 14:39:52--  https://eu-west-1-files.wetransfer.net/files/07IVVXvCkkVdBrEkGNuurKJLVOTymGcCBqnYtXWckqCRTTPTw?Expires=1786459114
+Resolving eu-west-1-files.wetransfer.net (eu-west-1-files.wetransfer.net)... 13.226.155.112, 13.226.155.48, 13.226.155.34, ...
+Connecting to eu-west-1-files.wetransfer.net (eu-west-1-files.wetransfer.net)|13.226.155.112|:443... connected.
+HTTP request sent, awaiting response... 403 Forbidden
+2026-08-04 14:39:52 ERROR 403: Forbidden.
+

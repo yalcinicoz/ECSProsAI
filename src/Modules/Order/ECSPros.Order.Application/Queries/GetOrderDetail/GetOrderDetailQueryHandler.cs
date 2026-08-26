@@ -17,8 +17,10 @@ public class GetOrderDetailQueryHandler : IRequestHandler<GetOrderDetailQuery, R
     public async Task<Result<OrderDetailDto>> Handle(GetOrderDetailQuery request, CancellationToken cancellationToken)
     {
         var order = await _context.Orders
+            .AsNoTracking()
             .Include(o => o.Items)
             .Include(o => o.Payments)
+            .AsSplitQuery()   // Faz 2: kardeş koleksiyon Include kartezyeni önlenir
             .FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
 
         if (order is null)

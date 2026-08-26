@@ -33,8 +33,10 @@ public class GetUserDetailQueryHandler : IRequestHandler<GetUserDetailQuery, Res
     public async Task<Result<UserDetailDto>> Handle(GetUserDetailQuery request, CancellationToken ct)
     {
         var user = await _db.Users
+            .AsNoTracking()
             .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
             .Include(u => u.UserPermissions).ThenInclude(up => up.Permission)
+            .AsSplitQuery()   // Faz 2: kardeş koleksiyon Include kartezyeni önlenir
             .FirstOrDefaultAsync(u => u.Id == request.Id, ct);
 
         if (user is null)

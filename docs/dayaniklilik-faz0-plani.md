@@ -85,6 +85,24 @@ ChannelScopeResolver.HasChannelPrice ve ProductFilterHelper fiyat-aralığı (k�
 **Eşitlik:** ilk sayfa ürün sırası ve fiyat dizisi BİREBİR aynı ✓; ürün detayı kanonik 301→200, fiyatlar dolu ✓.
 Kalan Paket 1-4 maddeleri aşağıdaki Faz 2 listesinde.
 
+## Faz 2 — Adım 2 UYGULANDI (2026-08-26) ⚠️ restart bekliyor
+- ✅ **AsSplitQuery + AsNoTracking paketi (11 sorgu):** çok-Include kartesyen patlaması kesildi — mağaza ürün
+  detayı, Catalog ürün detayı, sipariş detayı, kullanıcı detayı, iade detayı, firma detayı, ürün grupları,
+  attribute tipleri, POS oturum özeti, ApproveProductSubmission (yalnız split, tracked kalır),
+  ProductCampaignResolver. 6 Application projesine `Microsoft.EntityFrameworkCore.Relational 8.0.14` eklendi.
+- ✅ **PageComposer aktif-pointer cache:** `GetActivePageSnapshot` pointer sorgusu 15 sn IMemoryCache —
+  her sayfa isteğinde DB'ye giden pointer okuması kalktı (yayın en geç 15 sn gecikmeyle görünür).
+- ✅ **PageComposer stampede koruması:** compose cache-miss yolu anahtar bazlı `SemaphoreSlim` ile
+  tekilleştirildi (double-check'li; 10 sn kilit bekleme sınırı — alınamazsa üretim yine yapılır, doğruluk bozulmaz).
+  Cache patladığında eşzamanlı N istek artık N ayrı pahalı üretim yapmaz.
+**Ölçüm (izole 5051, 5×25, canlı 5000 ile AYNI ANDA aynı veri):**
+| Uç | Önce p50/p95 | Sonra p50/p95 |
+|---|---|---|
+| / (ana sayfa) | 34 / 45 ms | **15 / 21 ms** |
+| /urun-listesi | 394 / 443 ms | **288 / 335 ms** |
+| ürün detayı | 199 / 256 ms (canlı) | 185 / 301 ms |
+**Eşitlik:** liste ürün kodları canlı 5000 ile BİREBİR ✓; ürün detayı title + fiyat blokları md5 eşit ✓.
+
 ## Sonraki fazlar (ayrı iş emirleri)
 - **Faz 1:** EnableRetryOnFailure (15 DbContext), /health + DB/Redis check + nginx probe, ResilientHttpClient'ın
   gerçek kullanımı + timeout'lar, admin/supplier auth rate-limit, eski MD5/SHA256 hash zorunlu sıfırlama,

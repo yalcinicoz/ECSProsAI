@@ -17,8 +17,10 @@ public class GetReturnDetailQueryHandler : IRequestHandler<GetReturnDetailQuery,
     public async Task<Result<ReturnDetailDto>> Handle(GetReturnDetailQuery request, CancellationToken cancellationToken)
     {
         var @return = await _context.Returns
+            .AsNoTracking()
             .Include(r => r.Items)
             .Include(r => r.Refunds)
+            .AsSplitQuery()   // Faz 2: kardeş koleksiyon Include kartezyeni önlenir
             .FirstOrDefaultAsync(r => r.Id == request.ReturnId, cancellationToken);
 
         if (@return is null)

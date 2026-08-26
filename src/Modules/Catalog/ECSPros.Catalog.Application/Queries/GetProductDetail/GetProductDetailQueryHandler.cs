@@ -17,6 +17,7 @@ public class GetProductDetailQueryHandler : IRequestHandler<GetProductDetailQuer
     public async Task<Result<ProductDetailDto>> Handle(GetProductDetailQuery request, CancellationToken cancellationToken)
     {
         var product = await _context.Products
+            .AsNoTracking()
             .Include(p => p.Attributes)
                 .ThenInclude(a => a.AttributeType)
             .Include(p => p.Attributes)
@@ -29,6 +30,7 @@ public class GetProductDetailQueryHandler : IRequestHandler<GetProductDetailQuer
                     .ThenInclude(va => va.AttributeValue)
             .Include(p => p.Variants)
                 .ThenInclude(v => v.Images)
+            .AsSplitQuery()   // Faz 2: kardeş koleksiyon Include kartezyeni önlenir
             .FirstOrDefaultAsync(p => p.Code == request.Code, cancellationToken);
 
         if (product is null)
@@ -41,6 +43,7 @@ public class GetProductDetailQueryHandler : IRequestHandler<GetProductDetailQuer
             .Include(s => s.SubAttributeType)
             .OrderBy(s => s.AxisAttributeType.SortOrder)
             .ThenBy(s => s.SortOrder)
+            .AsSplitQuery()   // Faz 2: kardeş koleksiyon Include kartezyeni önlenir
             .ToListAsync(cancellationToken);
 
         var schemaGrouped = axisSubAttrSchema

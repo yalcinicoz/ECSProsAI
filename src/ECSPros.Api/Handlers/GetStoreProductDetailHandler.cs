@@ -21,6 +21,7 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
             .AsNoTracking()
             .Include(p => p.Variants).ThenInclude(v => v.VariantAttributes).ThenInclude(va => va.AttributeType)
             .Include(p => p.Variants).ThenInclude(v => v.VariantAttributes).ThenInclude(va => va.AttributeValue)
+            .AsSplitQuery()   // Faz 2: kardeş koleksiyon Include kartezyeni önlenir
             .FirstOrDefaultAsync(p => p.Code == request.ProductCode && p.IsSaleOpen, ct);
 
         if (product is null)

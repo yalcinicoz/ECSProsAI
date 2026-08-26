@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using ECSPros.Catalog.Application.Queries.GetStoreProducts;
 using ECSPros.Shared.Contracts;
 using ECSPros.Storefront.Application.Commands.PublishPageSnapshot;
@@ -60,13 +61,19 @@ public interface IPageComposer
 /// verilmez (spec: boş blok basılmaz, boşluk bırakmaz). Versiyon bazlı cache G7'de
 /// bu servisin önüne gelir.
 /// </summary>
-public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver, ICacheService cache) : IPageComposer
+public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver, ICacheService cache,
+    Microsoft.Extensions.Caching.Memory.IMemoryCache memoryCache) : IPageComposer
 {
     // G7: anahtar versiyonu içerir — yeni yayın eski anahtarları kendiliğinden geçersiz
     // kılar (spec). TTL kısa: kompozisyon içinde ürün fiyat/puan gibi versiyondan
     // bağımsız tazelenen veri var. Redis kuralları: ICacheService hata-güvenli, Redis
     // yoksa NoOp — cache'siz de doğru çalışır (kod cache'e bağımlılık kurmaz).
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
+    // Faz 2 P0 (opt. raporu): aktif snapshot POINTER'ı kısa süreli süreç-içi cache'te — Redis HIT
+    // yolunda artık her istekte DB'ye gidilmez; yayın en geç 15 sn içinde görünür (kabul edilebilir).
+    private static readonly TimeSpan PointerTtl = TimeSpan.FromSeconds(15);
+    // Faz 2 P0: cache stampede koruması — aynı anahtarın pahalı üretimi süreç içinde tekilleştirilir.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> KilitHavuzu = new();
 
     private sealed record BlokPaketi(List<ResolvedBlockDto> Blocks);
     private sealed record UrunPaketi(List<StoreProductDto> Items);
@@ -89,6 +96,20 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver,
         var hazir = await cache.GetAsync<BlokPaketi>(anahtar, ct);
         if (hazir is not null)
             return (aktif.Version, await UyeBloklariniDoldurAsync(firmPlatformId, hazir.Blocks, memberId, ct));
+
+        // Faz 2 P0 stampede koruması: aynı anahtarın pahalı üretimi tekilleştirilir; kilidi
+        // bekleyen istek kilit açılınca cache'ten okur (double-check). Kilit güvenli süreyle sınırlı.
+        var kilit = KilitHavuzu.GetOrAdd(anahtar, _ => new SemaphoreSlim(1, 1));
+        var kilitAlindi = await kilit.WaitAsync(TimeSpan.FromSeconds(10), ct);
+        try
+        {
+            if (kilitAlindi)
+            {
+                hazir = await cache.GetAsync<BlokPaketi>(anahtar, ct);
+                if (hazir is not null)
+                    return (aktif.Version, await UyeBloklariniDoldurAsync(firmPlatformId, hazir.Blocks, memberId, ct));
+            }
+            // kilit alınamadıysa (10 sn) yine üret — doğruluk bozulmaz, yalnız tekilleştirme kaçar
 
         var snapshot = await AktifSnapshotAsync(firmPlatformId, ct);
         if (snapshot is null) return (0, []);
@@ -166,6 +187,11 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver,
 
         await cache.SetAsync(anahtar, new BlokPaketi(sonuc), CacheTtl, ct);
         return (snapshot.Version, await UyeBloklariniDoldurAsync(firmPlatformId, sonuc, memberId, ct));
+        }
+        finally
+        {
+            if (kilitAlindi) kilit.Release();
+        }
     }
 
     /// <summary>H10: üye bağlamlı kaynaklı blokların ürünlerini İSTEK ANINDA doldurur —
@@ -228,8 +254,12 @@ public class PageComposer(IMediator mediator, IPageBlockSourceResolver resolver,
 
     private async Task<SnapshotVersionDto> AktifVersiyonAsync(Guid firmPlatformId, CancellationToken ct)
     {
-        var sonuc = await mediator.Send(new GetActivePageSnapshotVersionQuery(firmPlatformId), ct);
-        return sonuc.IsSuccess ? sonuc.Value! : new SnapshotVersionDto(0, Guid.Empty);
+        return (await memoryCache.GetOrCreateAsync($"page-active:{firmPlatformId:N}", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = PointerTtl;
+            var sonuc = await mediator.Send(new GetActivePageSnapshotVersionQuery(firmPlatformId), ct);
+            return sonuc.IsSuccess ? sonuc.Value! : new SnapshotVersionDto(0, Guid.Empty);
+        }))!;
     }
 
     private async Task<PageSnapshotDto?> AktifSnapshotAsync(Guid firmPlatformId, CancellationToken ct)

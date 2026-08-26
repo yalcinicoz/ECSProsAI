@@ -50,6 +50,8 @@ public class GetProductGroupsQueryHandler : IRequestHandler<GetProductGroupsQuer
     public async Task<Result<List<ProductGroupDto>>> Handle(GetProductGroupsQuery request, CancellationToken ct)
     {
         var query = _db.ProductGroups
+            .AsNoTracking()
+            .AsSplitQuery()   // Faz 2: kardeş koleksiyon Include kartezyeni önlenir
             .Include(pg => pg.Attributes).ThenInclude(a => a.AttributeType)
             .Include(pg => pg.AxisSubAttributes.Where(s => !s.IsDeleted))
                 .ThenInclude(s => s.AxisAttributeType)

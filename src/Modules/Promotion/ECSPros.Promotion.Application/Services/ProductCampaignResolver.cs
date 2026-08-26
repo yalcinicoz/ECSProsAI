@@ -19,6 +19,7 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
     {
         var now = DateTime.UtcNow;
         return await db.Campaigns.AsNoTracking()
+            .AsSplitQuery()   // Faz 2: kardeş koleksiyon Include kartezyeni önlenir
             .Include(c => c.CampaignType)
             .Include(c => c.Products)
             .Include(c => c.Exclusions)

@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "snapshot_sequence": 67,
+  "agents": [],
+  "coordination": {
+    "schema_version": 1,
+    "sequence": 5,
+    "decisions": [],
+    "write_claims": [],
+    "reconciliations": [],
+    "projections": [
+      {
+        "child_id": "agent_4ba3620f",
+        "decision_ids": [],
+        "projected_bytes": 0,
+        "deduplicated": 0,
+        "omitted": 0,
+        "sequence": 1
+      },
+      {
+        "child_id": "agent_223522fc",
+        "decision_ids": [],
+        "projected_bytes": 0,
+        "deduplicated": 0,
+        "omitted": 0,
+        "sequence": 2
+      },
+      {
+        "child_id": "agent_7f9a7d03",
+        "decision_ids": [],
+        "projected_bytes": 0,
+        "deduplicated": 0,
+        "omitted": 0,
+        "sequence": 3
+      },
+      {
+        "child_id": "agent_6672985a",
+        "decision_ids": [],
+        "projected_bytes": 0,
+        "deduplicated": 0,
+        "omitted": 0,
+        "sequence": 4
+      },
+      {
+        "child_id": "agent_5e2c8e23",
+        "decision_ids": [],
+        "projected_bytes": 0,
+        "deduplicated": 0,
+        "omitted": 0,
+        "sequence": 5
+      }
+    ],
+    "contentions": []
+  }
+}

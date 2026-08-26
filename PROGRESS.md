@@ -79,6 +79,13 @@ sınırlandı (liste sayfalama-sonrası, detay, CHECKOUT sepet varyantları, gö
 p50 1221→394ms (3.1×), p95 1472→443ms; fiyat-artan 613→352; arama 547→332; çıktı BİREBİR eşit ✓. Tam çekim bilerek
 kalan: ChannelScopeResolver + ProductFilterHelper (küme gereği). SIRADA: Faz 2 kalanları (AsSplitQuery paketi,
 PageComposer pointer cache + stampede, DB'de sıralama/read-model, küçük kart DTO).
+**FAZ 2 ADIM 2 UYGULANDI (2026-08-26) ⚠️ restart bekliyor:** (1) AsSplitQuery+AsNoTracking ×11 sorgu (mağaza/katalog
+ürün detayı, sipariş/kullanıcı/iade/firma detayı, ürün grupları, attribute tipleri, POS oturum özeti,
+ApproveProductSubmission yalnız split, ProductCampaignResolver; 6 Application csproj'a EFCore.Relational 8.0.14).
+(2) PageComposer aktif-pointer 15sn IMemoryCache (yayın ≤15sn gecikir). (3) Compose cache-miss stampede koruması
+(anahtar bazlı SemaphoreSlim, double-check, 10sn kilit sınırı). ÖLÇÜM (5051 vs canlı aynı anda): ana sayfa p50
+34→15ms, /urun-listesi 394→288ms, ürün detayı 199→185ms; liste kodları + detay fiyatları canlıyla BİREBİR ✓.
+SIRADA: DB'de sıralama/read-model, küçük kart DTO + HTML küçültme, search-word N+1, eksik indeksler, VitrinVmBuilder N+1.
 **T6 RAPOR+KPI UYGULANDI (2026-08-26) — TEDARİK PLANI T1-T6 TAMAM ⚠️ restart bekliyor:** OnSaleStampWorker
 (6 saatte bir; site kanallarında F2 published → OnSaleAt), ProcurementReportService (mutabakat SA↔sayım↔fatura +
 partisiz kova; KPI teslim→sayım / sayım→satış / bekleyen yaş kovaları / satışa girmeyen / kart-eksik),

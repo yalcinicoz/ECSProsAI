@@ -35,8 +35,10 @@ public class GetFirmDetailQueryHandler : IRequestHandler<GetFirmDetailQuery, Res
     public async Task<Result<FirmDetailDto>> Handle(GetFirmDetailQuery request, CancellationToken ct)
     {
         var firm = await _db.Firms
+            .AsNoTracking()
             .Include(f => f.FirmPlatforms)
             .Include(f => f.PlatformIntegrations).ThenInclude(fi => fi.IntegrationService)
+            .AsSplitQuery()   // Faz 2: kardeş koleksiyon Include kartezyeni önlenir
             .FirstOrDefaultAsync(f => f.Id == request.Id, ct);
 
         if (firm is null)

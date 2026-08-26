@@ -8,7 +8,7 @@ await Migration.RunAsync(args);
 
 static class Migration
 {
-    const string MYSQL_CONN = "Server=51.178.208.50;Port=3306;Database=juludedb;Uid=web;Pwd={wb9&HqD&_zwg~?;Connection Timeout=30;SslMode=None;CharSet=utf8mb4;";
+    const string MYSQL_CONN = "Server=192.168.0.89;Port=3306;Database=juludedb;Uid=web;Pwd={wb9&HqD&_zwg~?;Connection Timeout=30;SslMode=None;CharSet=utf8mb4;";
     const string PG_CONN = "Host=localhost;Port=5432;Database=ecommerce_db;Username=ecommerce;Password=***KALDIRILDI***;";
 
     // Şemalar: attribute_types/values, image_sets, product_groups → "definition";
