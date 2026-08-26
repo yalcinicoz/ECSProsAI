@@ -19,7 +19,8 @@ public class StoreUrunDetayBuilder(
     ECSPros.Shared.Contracts.IProductCampaignResolver campaignResolver)
 {
     public async Task<UrunDetayVm?> BuildAsync(
-        string code, string? color, Guid platformId, StoreUyeKimlik? uye, CancellationToken ct)
+        string code, string? color, Guid platformId, StoreUyeKimlik? uye, CancellationToken ct,
+        string? kaynakKategoriSlug = null)
     {
         var sonuc = await mediator.Send(new GetStoreProductDetailQuery(code, platformId), ct);
         if (sonuc.IsFailure)
@@ -165,7 +166,7 @@ public class StoreUrunDetayBuilder(
         var kampanyaRenk = ECSPros.Shared.Contracts.CampaignBadgePalette.Resolve(kmp?.BadgeColor);
 
         var zincir = await mediator.Send(
-            new GetProductChannelCategoryChainQuery(platformId, urun.Id), ct);
+            new GetProductChannelCategoryChainQuery(platformId, urun.Id, kaynakKategoriSlug), ct);
         var breadcrumb = zincir.IsSuccess
             ? zincir.Value!.Select(k => new BreadcrumbAdimVm(TrAd(k.NameI18n), "/" + k.Slug)).ToList()
             : [];

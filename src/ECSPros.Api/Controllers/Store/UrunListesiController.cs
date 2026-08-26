@@ -507,7 +507,8 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
 
         var vm = await detayBuilder.BuildAsync(
             bulunan.ProductCode, bulunan.ColorValueId?.ToString(),
-            platform.Id, ViewData["MsUye"] as StoreUyeKimlik, ct);
+            platform.Id, ViewData["MsUye"] as StoreUyeKimlik, ct,
+            UrunDetayController.RefererKategoriSlug(Request));
         if (vm is not null)
         {
             ViewData["MsUrunDetay"] = vm;

@@ -19,7 +19,10 @@ namespace ECSPros.Storefront.Application.Queries.GetProductChannelCategoryChain;
 /// </summary>
 public record GetProductChannelCategoryChainQuery(
     Guid FirmPlatformId,
-    Guid ProductId) : IRequest<Result<List<ProductCategoryChainItemDto>>>;
+    Guid ProductId,
+    // 2026-08-26: ziyaretçinin GELDİĞİ kategori sayfası (Referer) — aday ya da adayın atasıysa
+    // zincir o yoldan kurulur ("Tesettür Etek listesinden geldim → breadcrumb Tesettür Etek").
+    string? PreferredSlug = null) : IRequest<Result<List<ProductCategoryChainItemDto>>>;
 
 public record ProductCategoryChainItemDto(Guid Id, string Slug, Dictionary<string, string> NameI18n);
 
@@ -72,6 +75,11 @@ public class GetProductChannelCategoryChainQueryHandler(
             if (rules is null)
                 return false;
 
+            // Zaman-pencereli koleksiyonlar ("Yeni Gelenler" vb.) breadcrumb adayı olmaz:
+            // pencere boşalınca breadcrumb boş sayfaya götürüyordu (kadin-yeni-gelenler vakası).
+            if (rules.ZamanPenceresiVar)
+                return false;
+
             var grupKurali = rules.ProductGroupIds is { Count: > 0 };
             var ozellikKurali = rules.AttributeFilters is { Count: > 0 };
 
@@ -117,6 +125,25 @@ public class GetProductChannelCategoryChainQueryHandler(
 
         if (adaylar.Count == 0)
             return Result.Success(new List<ProductCategoryChainItemDto>());
+
+        // Kaynak kategori tercihi: geldiği sayfa aday ya da bir adayın atasıysa seçim o dala daralır.
+        if (request.PreferredSlug is { Length: > 0 } tercihSlug
+            && kategoriler.FirstOrDefault(c =>
+                string.Equals(c.Slug, tercihSlug, StringComparison.OrdinalIgnoreCase)) is { } tercihKat)
+        {
+            bool TercihYolunda(Kategori aday)
+            {
+                var m = aday;
+                while (true)
+                {
+                    if (m.Id == tercihKat.Id) return true;
+                    if (m.ParentId is { } pid && idIleKategori.TryGetValue(pid, out var parent)) m = parent;
+                    else return false;
+                }
+            }
+            var uygun = adaylar.Where(TercihYolunda).ToList();
+            if (uygun.Count > 0) adaylar = uygun;
+        }
 
         var yaprak = adaylar
             .OrderByDescending(Derinlik)

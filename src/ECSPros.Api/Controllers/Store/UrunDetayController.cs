@@ -30,13 +30,28 @@ public class UrunDetayController(IMediator mediator, IStoreContext storeContext,
             return RedirectPermanent("/" + kanonikSlug);
 
         // Satışa kapalı / erişilemeyen ürün: 404 yerine ürünün kategorisine, yoksa ana sayfaya 301.
-        var vm = await detayBuilder.BuildAsync(code, color, platform.Id, ViewData["MsUye"] as StoreUyeKimlik, ct);
+        var vm = await detayBuilder.BuildAsync(code, color, platform.Id, ViewData["MsUye"] as StoreUyeKimlik, ct,
+            RefererKategoriSlug(Request));
         if (vm is null)
             return await KapaliUrunYonlendir(code, platform.Id, ct);
 
         ViewData["MsUrunDetay"] = vm;
         ViewData["Title"] = vm.Ad;
         return View("~/Views/UrunDetay/Index.cshtml");
+    }
+
+    /// <summary>Ziyaretçinin geldiği sayfa (Referer) aynı hosttaki tek segmentli bir yol ise
+    /// slug'ını döner — breadcrumb "geldiğin kategori" tercihinde kullanılır (2026-08-26).
+    /// Slug bir kategoriye denk gelmiyorsa zincir sorgusu tercihi sessizce yok sayar.</summary>
+    internal static string? RefererKategoriSlug(HttpRequest req)
+    {
+        var referer = req.Headers.Referer.ToString();
+        if (string.IsNullOrEmpty(referer) || !Uri.TryCreate(referer, UriKind.Absolute, out var u))
+            return null;
+        if (!string.Equals(u.Host, req.Host.Host, StringComparison.OrdinalIgnoreCase))
+            return null;   // yalnız kendi sitemizden gelen geçişler
+        var yol = u.AbsolutePath.Trim('/');
+        return yol.Length == 0 || yol.Contains('/') ? null : yol;
     }
 
     // Satışa kapalı/erişilemeyen ürün için 301: ürünün (satış durumundan bağımsız) kanal

@@ -80,7 +80,9 @@ public class GetProductsLeafChannelCategoriesQueryHandler(
             .Where(c => c.FillType is "filter" or "mixed")
             .Select(c => (Kategori: c, Rules: CategoryFilterRules.From(c.FilterDef)))
             .Where(x => x.Rules is not null
-                        && (x.Rules.ProductGroupIds is { Count: > 0 } || x.Rules.AttributeFilters is { Count: > 0 }))
+                        && (x.Rules.ProductGroupIds is { Count: > 0 } || x.Rules.AttributeFilters is { Count: > 0 })
+                        // Zaman-pencereli koleksiyonlar yaprak kategori sayılmaz (zincirle aynı kural)
+                        && !x.Rules.ZamanPenceresiVar)
             .ToList();
 
         var idIleKategori = kategoriler.ToDictionary(c => c.Id);

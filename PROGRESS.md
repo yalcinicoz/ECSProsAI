@@ -27,6 +27,17 @@
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!) | Mobil geliştirici teste başlar; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
+**Ürün detay breadcrumb düzeltmesi (2026-08-26, Web sitesi alanı) ⚠️ restart bekliyor:** iki değişiklik —
+(1) **Zaman-pencereli koleksiyon kategorileri** (CreatedAfter*/ImageUpdated* kurallı, örn. "Kadın Yeni Gelenler"
+imageUpdatedAfterDays:10) breadcrumb/yaprak-kategori ADAYI OLMAZ (`CategoryFilterRules.ZamanPenceresiVar`,
+zincir+leaf sorguları): pencere boşalınca breadcrumb 0 ürünlük sayfaya götürüyordu (kadin-yeni-gelenler vakası);
+Kategori facet'inde de koleksiyon yerine gerçek kategoriler sayılır (339'luk tutarsızlık kapandı; manuel eklenen
+ürünler koleksiyonda kalır). (2) **Kaynak-farkında breadcrumb:** ürün detayında aynı-host Referer tek segmentli
+kategori sayfasıysa ve o kategori ürünün adayı/atasıysa zincir o yoldan kurulur ("Tesettür Etek'ten geldim →
+Anasayfa > Tesettür Giyim > Tesettür Etek"); dış/boş referer'da kural tabanlı kanonik zincir (SEO stabil).
+İzole 5051 ✓: referer'lı/referer'sız/google-referer/kök-kategori senaryoları. ★ İÇERİK NOTU: /yeni-gelenler
+koleksiyonu canlıda 0 ürün (10 günlük görsel-güncelleme penceresi boş) — panelden pencere genişletilebilir.
+
 **Ürün tedarik iş akışı (2026-08-23, Admin panel alanı) — v1.2 TÜM KARARLAR KAPALI — UYGULAMA BAŞLADI:**
 `docs/urun-tedarik-is-akisi.md` — kullanıcı kurgusu: asıl süreç AYRIŞTIRMA+ETİKETLEME (sayım=gerçek, İ1);
 SA/mal kabul esnek ve bloklamaz (İ2/İ3); mutabakat dönemsel/istatistiksel (İ4 — belgeler kaba, satıcı fazla

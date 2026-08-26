@@ -61,6 +61,13 @@ public class CategoryFilterRules
     /// <summary>K17: net stok ≥ MinStock olan en az bir varyantı bulunan ürünler (stockQuantity ≥ 1).</summary>
     public int? MinStock { get; set; }
 
+    /// <summary>Zaman-pencereli (dönen koleksiyon) kural mı — "Yeni Gelenler" gibi tarih
+    /// eşikli kategoriler ürünün KALICI evi değildir: breadcrumb / yaprak-kategori adayı
+    /// sayılmazlar (2026-08-26 — boş koleksiyona giden ölü breadcrumb düzeltmesi).</summary>
+    public bool ZamanPenceresiVar =>
+        CreatedAfter is not null || CreatedBefore is not null || CreatedAfterDays is not null
+        || ImageUpdatedAfter is not null || ImageUpdatedBefore is not null || ImageUpdatedAfterDays is not null;
+
     private static readonly JsonSerializerOptions _opts = new() { PropertyNameCaseInsensitive = true };
 
     public static CategoryFilterRules? From(Dictionary<string, object>? raw)
