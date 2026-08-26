@@ -13,7 +13,11 @@ public static class DependencyInjection
     {
         services.AddDbContext<CrmDbContext>(options =>
             options.UseNpgsql(dataSource,
-                o => o.MigrationsHistoryTable("__ef_migrations_crm", "crm")));
+                o =>
+                {
+                    o.MigrationsHistoryTable("__ef_migrations_crm", "crm");
+                    o.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);   // Faz 1: geçici DB hatasında otomatik yeniden dene
+                }));
 
         services.AddScoped<ICrmDbContext>(sp => sp.GetRequiredService<CrmDbContext>());
         services.AddScoped<Shared.Contracts.IMemberService, CrmMemberService>(); // G5: modüller arası üye bilgisi

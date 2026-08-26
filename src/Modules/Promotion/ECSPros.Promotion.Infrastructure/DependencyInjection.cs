@@ -13,7 +13,11 @@ public static class DependencyInjection
     {
         services.AddDbContext<PromotionDbContext>(options =>
             options.UseNpgsql(dataSource,
-                o => o.MigrationsHistoryTable("__ef_migrations_promotion", "promotion")));
+                o =>
+                {
+                    o.MigrationsHistoryTable("__ef_migrations_promotion", "promotion");
+                    o.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);   // Faz 1: geçici DB hatasında otomatik yeniden dene
+                }));
 
         services.AddScoped<IPromotionDbContext>(sp => sp.GetRequiredService<PromotionDbContext>());
 

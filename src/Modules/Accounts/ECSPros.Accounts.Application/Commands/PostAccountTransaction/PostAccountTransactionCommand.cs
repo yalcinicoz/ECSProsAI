@@ -47,6 +47,12 @@ public class PostAccountTransactionCommandHandler
         if (r.AccountId is null && r.OwnerId == Guid.Empty)
             return Result.Failure<PostedTransactionDto>("Hesap sahibi (OwnerId) zorunludur.");
 
+        // Faz 1 (EnableRetryOnFailure): kullanıcı-transaction'ı ExecutionStrategy ile sarılmalı;
+        // yeniden denemede gövde baştan çalışır (kilit + okuma + yazım hepsi içeride, idempotent).
+        var strategy = _db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+        _db.ChangeTracker.Clear();
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
         try
         {
@@ -126,6 +132,7 @@ public class PostAccountTransactionCommandHandler
             await tx.RollbackAsync(CancellationToken.None);
             return Result.Failure<PostedTransactionDto>("Hareket kaydedilemedi: " + ex.Message);
         }
+        });
     }
 
     /// <summary>Üye hesapları M-{6 hane}; diğer sahip tipleri O-{6 hane}. Advisory lock ile serileşir.</summary>

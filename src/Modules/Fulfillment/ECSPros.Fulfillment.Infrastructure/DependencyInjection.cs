@@ -12,7 +12,11 @@ public static class DependencyInjection
     {
         services.AddDbContext<FulfillmentDbContext>(options =>
             options.UseNpgsql(dataSource,
-                o => o.MigrationsHistoryTable("__ef_migrations_fulfillment", "fulfillment")));
+                o =>
+                {
+                    o.MigrationsHistoryTable("__ef_migrations_fulfillment", "fulfillment");
+                    o.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);   // Faz 1: geçici DB hatasında otomatik yeniden dene
+                }));
 
         services.AddScoped<IFulfillmentDbContext>(sp => sp.GetRequiredService<FulfillmentDbContext>());
         services.AddScoped<IPackageNumberService, Services.PackageNumberService>();

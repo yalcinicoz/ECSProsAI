@@ -157,6 +157,23 @@ public static class StockOps
             if (st.Quantity == 0 && st.ReservedQuantity == 0)
                 db.Stocks.Remove(st);
         }
+        // Faz 1 (Faz 0 test bulgusu): kısımsız/rafsız (BinId null) eski/çıplak satırlar raf listesine
+        // girmediğinden tüketim sessizce no-op oluyordu. Son çare olarak çıplak satırlardan düş.
+        if (remaining > 0)
+        {
+            var bare = await db.Stocks
+                .Where(s => s.VariantId == variantId && s.WarehouseId == warehouseId && s.BinId == null && s.Quantity > 0)
+                .OrderBy(s => s.Id).ToListAsync(ct);
+            foreach (var st in bare)
+            {
+                if (remaining <= 0) break;
+                int take = Math.Min(remaining, st.Quantity);
+                st.Quantity -= take;
+                remaining -= take;
+                if (st.Quantity == 0 && st.ReservedQuantity == 0)
+                    db.Stocks.Remove(st);
+            }
+        }
         // remaining > 0 ise depoda yeterli fiziksel stok yoktu — POS anlık satışta bu kabul edilir
         // (eski handler de Math.Max(0,...) ile yutuyordu); satır oluşturmuyoruz.
     }

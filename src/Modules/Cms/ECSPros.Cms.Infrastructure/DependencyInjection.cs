@@ -12,7 +12,11 @@ public static class DependencyInjection
     {
         services.AddDbContext<CmsDbContext>(options =>
             options.UseNpgsql(dataSource,
-                o => o.MigrationsHistoryTable("__ef_migrations_cms", "cms")));
+                o =>
+                {
+                    o.MigrationsHistoryTable("__ef_migrations_cms", "cms");
+                    o.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);   // Faz 1: geçici DB hatasında otomatik yeniden dene
+                }));
 
         services.AddScoped<ICmsDbContext>(sp => sp.GetRequiredService<CmsDbContext>());
 

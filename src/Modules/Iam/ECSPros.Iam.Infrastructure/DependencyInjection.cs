@@ -14,7 +14,11 @@ public static class DependencyInjection
     {
         services.AddDbContext<IamDbContext>(options =>
             options.UseNpgsql(dataSource,
-                o => o.MigrationsHistoryTable("__ef_migrations_iam", "iam")));
+                o =>
+                {
+                    o.MigrationsHistoryTable("__ef_migrations_iam", "iam");
+                    o.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);   // Faz 1: geçici DB hatasında otomatik yeniden dene
+                }));
 
         services.AddScoped<IIamDbContext>(sp => sp.GetRequiredService<IamDbContext>());
         services.AddScoped<IPasswordHasher, PasswordHasher>();

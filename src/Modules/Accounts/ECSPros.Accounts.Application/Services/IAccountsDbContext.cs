@@ -15,5 +15,6 @@ public interface IAccountsDbContext
     DbSet<CommissionGroupRate> CommissionGroupRates { get; }
     DbSet<SettlementLine> SettlementLines { get; }
     DatabaseFacade Database { get; }
+    Microsoft.EntityFrameworkCore.ChangeTracking.ChangeTracker ChangeTracker { get; }   // Faz 1: retry sarması gövde temizliği
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

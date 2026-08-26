@@ -15,7 +15,11 @@ public static class DependencyInjection
     {
         services.AddDbContext<StorefrontDbContext>(options =>
             options.UseNpgsql(dataSource,
-                o => o.MigrationsHistoryTable("__ef_migrations_storefront", "storefront")));
+                o =>
+                {
+                    o.MigrationsHistoryTable("__ef_migrations_storefront", "storefront");
+                    o.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);   // Faz 1: geçici DB hatasında otomatik yeniden dene
+                }));
 
         services.AddScoped<IStorefrontDbContext>(sp => sp.GetRequiredService<StorefrontDbContext>());
         services.AddScoped<IChannelPricingService, StorefrontChannelPricingService>();

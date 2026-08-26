@@ -57,7 +57,15 @@ Log.Logger = new LoggerConfiguration()
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<HostOptions>(o =>
-    o.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
+{
+    o.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore;
+    o.ShutdownTimeout = TimeSpan.FromSeconds(30);   // Faz 1: worker'lara temiz kapanış süresi
+});
+
+// Faz 1: canlılık/hazırlık sinyali (nginx/izleme) — DB zorunlu, Redis opsiyonel (degraded).
+builder.Services.AddHealthChecks()
+    .AddCheck<ECSPros.Api.Services.Health.DbHealthCheck>("postgresql")
+    .AddCheck<ECSPros.Api.Services.Health.RedisHealthCheck>("redis");
 
 // ─── Serilog Full Configuration ─────────────────────────────────────
 builder.Host.UseSerilog((ctx, lc) => lc
@@ -212,13 +220,13 @@ builder.Services.AddSingleton<ECSPros.Api.Services.Tracking.Feed.IFeedTrigger>(s
 builder.Services.AddScoped<ECSPros.Api.Services.Store.ITrackingScriptProvider,
     ECSPros.Api.Services.Store.TrackingScriptProvider>();
 builder.Services.AddScoped<ECSPros.Api.Services.Store.PayTrDirectService>();
-builder.Services.AddHttpClient("paytr", c => c.Timeout = TimeSpan.FromSeconds(20)); // PayTR /odeme çağrıları
+ECSPros.Shared.Infrastructure.Http.ResilientHttpClientExtensions.AddResilientHttpClient(builder.Services, "paytr", c => c.Timeout = TimeSpan.FromSeconds(20)); // PayTR — Faz 1: retry+devre kesici
 // Faz 0 (AI analiz raporu §3.3): kullanılan tüm named client'lar açık timeout ile kayıtlı olsun
 // (kayıtsız ad default 100 sn timeout'lu client döner — asılı dış servis thread'i uzun bloklar).
-builder.Services.AddHttpClient("visual-search",      c => c.Timeout = TimeSpan.FromSeconds(10));
-builder.Services.AddHttpClient("play-integrity",     c => c.Timeout = TimeSpan.FromSeconds(10));
-builder.Services.AddHttpClient("TrendyolSeller",     c => c.Timeout = TimeSpan.FromSeconds(30));
-builder.Services.AddHttpClient("TrendyolReference",  c => c.Timeout = TimeSpan.FromSeconds(120)); // büyük referans indirme
+ECSPros.Shared.Infrastructure.Http.ResilientHttpClientExtensions.AddResilientHttpClient(builder.Services, "visual-search", c => c.Timeout = TimeSpan.FromSeconds(10));
+ECSPros.Shared.Infrastructure.Http.ResilientHttpClientExtensions.AddResilientHttpClient(builder.Services, "play-integrity", c => c.Timeout = TimeSpan.FromSeconds(10));
+ECSPros.Shared.Infrastructure.Http.ResilientHttpClientExtensions.AddResilientHttpClient(builder.Services, "TrendyolSeller", c => c.Timeout = TimeSpan.FromSeconds(30));
+ECSPros.Shared.Infrastructure.Http.ResilientHttpClientExtensions.AddResilientHttpClient(builder.Services, "TrendyolReference", c => c.Timeout = TimeSpan.FromSeconds(120)); // büyük referans indirme
 // 2026-08-04: platformun sitede sunduğu ödeme yöntemleri + kapıda ödeme bedel/limit
 // (FirmPlatform.Settings, panel Kanallar ekranı) — SSR ödeme sayfası + checkout doğrulaması
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IPaymentOptionsProvider,
@@ -329,7 +337,7 @@ builder.Services.AddScoped<ECSPros.Api.Services.Store.IOrderConfirmationService,
 // (varsayılan KAPALI + DryRun; Legacy:Sync:Enabled + DryRun=false ile gerçek yazım)
 builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacySyncService>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacyOrderSyncService>();
-builder.Services.AddHttpClient("legacy-order", c => c.Timeout = TimeSpan.FromSeconds(30));
+ECSPros.Shared.Infrastructure.Http.ResilientHttpClientExtensions.AddResilientHttpClient(builder.Services, "legacy-order", c => c.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddHostedService<ECSPros.Api.Services.Legacy.LegacySyncWorker>();
 builder.Services.AddHostedService<ECSPros.Api.Services.Fulfillment.CargoNotifyWorker>();
 builder.Services.AddHostedService<ECSPros.Api.Services.Tracking.TrackingDispatchWorker>();
@@ -449,6 +457,16 @@ builder.Services.AddRateLimiter(options =>
     };
     // Kimlik uçları (login/register/otp/refresh): IP başına dakikada 60 —
     // CGNAT arkasındaki meşru kalabalığa pay bırakır, brute-force'u anlamsızlaştırır.
+    // Faz 1: admin/supplier login-refresh brute-force freni (nginx birinci, bu ikinci savunma)
+    options.AddPolicy("admin-auth", ctx =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            IstemciIpAnahtari(ctx),
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
     options.AddPolicy("store-auth", ctx =>
         System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
             IstemciIpAnahtari(ctx),
@@ -638,6 +656,26 @@ app.UseAuthentication();
 app.UseMiddleware<ECSPros.Api.Middleware.DeviceRequestGuardMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
+
+// Faz 1: /health — anonim canlılık/hazırlık ucu (DB Unhealthy → 503; Redis degraded 200 döner).
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResultStatusCodes =
+    {
+        [Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy] = StatusCodes.Status200OK,
+        [Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded] = StatusCodes.Status200OK,
+        [Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable,
+    },
+    ResponseWriter = async (ctx, report) =>
+    {
+        ctx.Response.ContentType = "application/json";
+        await ctx.Response.WriteAsJsonAsync(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new { name = e.Key, status = e.Value.Status.ToString(), description = e.Value.Description }),
+        });
+    },
+}).AllowAnonymous();
 // robots.txt tek kaynaktan üretilir (BotDisiRotalar) — wwwroot'ta statik dosya YOK
 app.MapGet("/robots.txt", () => Results.Text(ECSPros.Api.Services.BotDisiRotalar.RobotsTxt(), "text/plain; charset=utf-8"));
 

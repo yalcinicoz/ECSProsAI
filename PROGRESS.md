@@ -67,7 +67,13 @@ noktasına sarıldı; izole 5051 kabul: 10 paralel −2 → tam 5 başarı, fina
 base appsettings sırsız, Dev/Demo json untracked (diskte), 12 factory → DesignTimeConnection (ECSPROS_DB ??
 Production.json). ★ D3 AÇIK: sır DÖNDÜRME + git geçmiş temizliği kullanıcı zamanlar. (3) named HttpClient
 timeout'ları. (4) ValidationException→400. (5) admin şifresi log'dan kaldırıldı. ★ Test bulgusu: kısımsız
-depoda Consume no-op (mevcut davranış) — Faz 1 maddesi. SIRADA: Faz 1 (retry/health/resilience).
+depoda Consume no-op (mevcut davranış) — Faz 1 maddesi. **FAZ 1 UYGULANDI (2026-08-26) ⚠️ restart bekliyor:** EnableRetryOnFailure ×16 (+PostAccountTransaction
+ExecutionStrategy sarması + Accounts ChangeTracker), /health (custom Db+Redis check; Redis degraded=200),
+AddResilientHttpClient 6 named client'ta gerçek kullanımda, admin-auth rate limit 10/dk (test: 429 ✓),
+prod CORS yalnız https, DP key yedek scripti (tools/ops/backup-dp-keys.sh; ★ cp -a mtime tuzağı düzeltildi;
+cron önerisi kullanıcıda), ShutdownTimeout 30sn, kısımsız depo Consume fallback. İzole 5051 ✓ (health 200,
+retry açıkken 10 paralel −2 → tam 5 başarı). ★ D6 AÇIK: eski üye hash'leri zorunlu sıfırlama kararı kullanıcıda.
+SIRADA: yük testi → Faz 2 (performans paketleri).
 **T6 RAPOR+KPI UYGULANDI (2026-08-26) — TEDARİK PLANI T1-T6 TAMAM ⚠️ restart bekliyor:** OnSaleStampWorker
 (6 saatte bir; site kanallarında F2 published → OnSaleAt), ProcurementReportService (mutabakat SA↔sayım↔fatura +
 partisiz kova; KPI teslim→sayım / sayım→satış / bekleyen yaş kovaları / satışa girmeyen / kart-eksik),

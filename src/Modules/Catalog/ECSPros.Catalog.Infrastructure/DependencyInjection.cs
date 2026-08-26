@@ -13,7 +13,11 @@ public static class DependencyInjection
     {
         services.AddDbContext<CatalogDbContext>(options =>
             options.UseNpgsql(dataSource,
-                o => o.MigrationsHistoryTable("__ef_migrations_catalog", "catalog")));
+                o =>
+                {
+                    o.MigrationsHistoryTable("__ef_migrations_catalog", "catalog");
+                    o.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);   // Faz 1: geçici DB hatasında otomatik yeniden dene
+                }));
 
         services.AddScoped<ICatalogDbContext>(sp => sp.GetRequiredService<CatalogDbContext>());
         services.AddScoped<IImageUploadService, LocalDiskImageUploadService>();

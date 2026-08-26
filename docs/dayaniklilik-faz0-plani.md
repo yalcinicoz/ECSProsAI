@@ -48,6 +48,27 @@
   ikinci tur 3 stokta 2 paralel −2 → tam 1 başarı. Test bulgusu (mevcut davranış, ayrı not):
   kısımsız/rafsız depoda Consume sessizce no-op (bare stok satırını görmez) — Faz 1'de ele alınmalı.
 
+## Faz 1 durumu — UYGULANDI (2026-08-26) ⚠️ restart bekliyor
+- ✅ `EnableRetryOnFailure(3, 5sn)` — 16 `UseNpgsql(dataSource…)` kaydının tamamı; kullanıcı-transaction'ları
+  ExecutionStrategy'ye sarıldı: StockTx (zaten hazırdı) + `PostAccountTransactionCommand` (Clear + strateji).
+- ✅ `/health` (anonim): custom DbHealthCheck (SELECT 1, 3sn) + RedisHealthCheck (yaz-oku; yapılandırılmamış/erişilemez
+  → Degraded 200 — cache opsiyonel, CLAUDE.md kuralı); DB Unhealthy → 503. JSON gövde.
+- ✅ Dış HTTP dayanıklılığı: `AddResilientHttpClient` (retry×3 + devre kesici) artık gerçekten kullanılıyor —
+  paytr(20sn), legacy-order(30sn), visual-search(10sn), play-integrity(10sn), TrendyolSeller(30sn),
+  TrendyolReference(120sn). Ölü kod olmaktan çıktı.
+- ✅ App-layer rate limit: `admin-auth` (IP başına 10/dk) — Auth login/token/refresh + SupplierAuth login/refresh.
+  Test: 10×401 ardından 429 ✓.
+- ✅ Prod CORS daraltıldı: yalnız https origin'ler kaldı (localhost + http çıkarıldı; untracked Production.json).
+- ✅ DP key yedeği: `tools/ops/backup-dp-keys.sh` (ilk yedek alındı: ~/yedekler/dp-keys-20260826). Cron önerisi:
+  `0 4 * * 0 /opt/ECSProsAI/tools/ops/backup-dp-keys.sh` (kullanıcı ekler). Tuzak düzeltildi: cp -a mtime korur.
+- ✅ `ShutdownTimeout=30sn`.
+- ✅ Faz 0 bulgusu kapandı: kısımsız depoda Consume artık çıplak (BinId null) satırlardan son çare düşer.
+- Kabul (izole 5051): /health 200 JSON (postgresql+redis Healthy) ✓; retry AÇIKKEN eşzamanlılık: 10 paralel −2
+  → tam 5 başarı, final 0 ✓; login 11.-12. istek 429 ✓.
+- ⚠️ **D6 AÇIK (kullanıcı kararı):** eski MD5/SHA256 üye hash'leri — zorunlu şifre sıfırlama akışı üyelere
+  sürtünme yaratır; toplu re-hash düz metinsiz mümkün değil. Karar: (a) zorunlu sıfırlama, (b) mevcut
+  "girişte yükselt" davranışıyla devam. Uygulanmadı.
+
 ## Sonraki fazlar (ayrı iş emirleri)
 - **Faz 1:** EnableRetryOnFailure (15 DbContext), /health + DB/Redis check + nginx probe, ResilientHttpClient'ın
   gerçek kullanımı + timeout'lar, admin/supplier auth rate-limit, eski MD5/SHA256 hash zorunlu sıfırlama,

@@ -5,6 +5,7 @@ using ECSPros.Iam.Application.Queries.GetSupplierUser;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ECSPros.Api.Controllers;
 
@@ -25,6 +26,7 @@ public class SupplierAuthController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("admin-auth")]
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] SupplierLoginRequest req, CancellationToken ct)
     {
@@ -35,6 +37,7 @@ public class SupplierAuthController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("refresh")]
+    [EnableRateLimiting("admin-auth")]
     [AllowAnonymous]
     public async Task<IActionResult> Refresh([FromBody] SupplierRefreshRequest req, CancellationToken ct)
     {

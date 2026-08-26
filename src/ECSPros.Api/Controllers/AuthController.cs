@@ -6,6 +6,7 @@ using ECSPros.Shared.Kernel.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace ECSPros.Api.Controllers;
@@ -23,6 +24,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Kullanıcı girişi — JWT access token + refresh token döner.</summary>
     [HttpPost("login")]
+    [EnableRateLimiting("admin-auth")]
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
     {
@@ -36,6 +38,7 @@ public class AuthController : ControllerBase
     /// <summary>API hesabı (makine kimliği) — OAuth2 client_credentials ile access token alır.
     /// Yalnız RequireScope ile korunan partner uçlarına erişir; iç uçları geçemez (type=api_client).</summary>
     [HttpPost("token")]
+    [EnableRateLimiting("admin-auth")]
     [AllowAnonymous]
     public async Task<IActionResult> Token([FromBody] ApiTokenRequest request, CancellationToken ct)
     {
@@ -49,6 +52,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Refresh token ile yeni access token alır.</summary>
     [HttpPost("refresh")]
+    [EnableRateLimiting("admin-auth")]
     [AllowAnonymous]
     public async Task<IActionResult> Refresh([FromBody] RefreshRequest request, CancellationToken ct)
     {
