@@ -298,6 +298,8 @@ builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Send.MarketplaceReco
 builder.Services.AddHostedService(sp =>
     sp.GetRequiredService<ECSPros.Api.Services.Marketplace.Send.MarketplaceBatchWorker>());
 builder.Services.AddHostedService<ECSPros.Api.Services.ChannelScopeSyncWorker>(); // F1 kanal kapsamı gece taraması
+builder.Services.AddHostedService<ECSPros.Api.Services.OnSaleStampWorker>(); // Tedarik T6: satışa giriş damgası
+builder.Services.AddScoped<ECSPros.Api.Services.ProcurementReportService>(); // Tedarik T6: dönem raporu
 builder.Services.AddSingleton<ECSPros.Api.Services.IStoreMemberSession, ECSPros.Api.Services.StoreMemberSession>(); // D1: SSR üye kimliği (HttpOnly cookie)
 builder.Services.AddTransient<ECSPros.Crm.Application.Services.ISmsSender, ECSPros.Api.Services.CrmSmsSenderAdapter>(); // D4: OTP SMS köprüsü
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IPageBlockSourceResolver, ECSPros.Api.Services.Store.PageBlockSourceResolver>(); // G3: vitrin ürün/koleksiyon kaynağı motoru

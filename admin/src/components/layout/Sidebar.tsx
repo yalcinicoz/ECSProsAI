@@ -114,6 +114,7 @@ const NAV_SECTIONS: NavSection[] = [
     { label: 'Mal Kabul', to: '/procurement/receipts', icon: 'box', permission: 'procurement.manage' },
     { label: 'Etiket Basımı', to: '/procurement/labels', icon: 'filetext', permission: 'procurement.manage' },
     { label: 'Sayım / Teslim', to: '/procurement/sorting', icon: 'layers', permission: 'procurement.sort' },
+    { label: 'Tedarik Raporu', to: '/procurement/report', icon: 'gauge', permission: 'procurement.manage' },
     { label: 'Etiket Şablonları', to: '/settings/label-templates', icon: 'scan', permission: 'procurement.manage' },
   ]},
   { label: 'Pazarlama', items: [

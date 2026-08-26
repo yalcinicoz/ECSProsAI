@@ -60,7 +60,12 @@ StockMovement.From/ToBinId (migration ✓), Inventory ReceiveToBinCommand (bin b
 Ref=sorting_entry — tedarik girişinin TEK kapısı K3), PlaceSortingEntry (parti-depo kuralı stok ÖNCESİ; kısmi böler),
 bins lookup, Sayım/Teslim ekranı Yerleştirme sekmesi (raf okut→işaretle→yerleştir; satışa kapalı kısım uyarısı).
 İzole 5051 ✓; test stoğu movement toplamıyla geri alındı. ★★ K10 GO-LIVE ENGELİ: Legacy toplu stok senkronu
-kesilmeden yerleştirme CANLIDA KULLANILMAMALI (10dk mutlak ezme yeni girişleri siler). v1.1 (08-24): K7-K10 KAPALI — K7 kullanıcı tasarımlı etiket şablonları (yeni T3 fazı: core_label_templates + görsel editör + /yazdir/etiket), K8 fatura→cari AYRI iş, K9 kart ayrıştırma ÖNCESİ açılır (kart-eksik bildirimi kuyruğu), K10 go-live'da Legacy toplu stok güncellemesi kapatılır (T5 kontrol maddesi). K1-K6 önerileri kullanıcı onayı bekliyor. Keşif bulguları: PO yok;
+kesilmeden yerleştirme CANLIDA KULLANILMAMALI (10dk mutlak ezme yeni girişleri siler). **T6 RAPOR+KPI UYGULANDI (2026-08-26) — TEDARİK PLANI T1-T6 TAMAM ⚠️ restart bekliyor:** OnSaleStampWorker
+(6 saatte bir; site kanallarında F2 published → OnSaleAt), ProcurementReportService (mutabakat SA↔sayım↔fatura +
+partisiz kova; KPI teslim→sayım / sayım→satış / bekleyen yaş kovaları / satışa girmeyen / kart-eksik),
+GET /api/procurement/report + admin Tedarik Raporu + rehber 50-tedarik-raporu (75 sayfa). İzole 5051 ✓ (fark +12
+fazla gönderim senaryosu; damga simülasyonu; test verileri+stok geri alındı). ★★ KALAN: K10 go-live kesimi
+(Legacy stok senkronu kapatılmadan Yerleştirme canlıda KULLANILMAZ — karar kullanıcıda). v1.1 (08-24): K7-K10 KAPALI — K7 kullanıcı tasarımlı etiket şablonları (yeni T3 fazı: core_label_templates + görsel editör + /yazdir/etiket), K8 fatura→cari AYRI iş, K9 kart ayrıştırma ÖNCESİ açılır (kart-eksik bildirimi kuyruğu), K10 go-live'da Legacy toplu stok güncellemesi kapatılır (T5 kontrol maddesi). K1-K6 önerileri kullanıcı onayı bekliyor. Keşif bulguları: PO yok;
 SupplierDelivery şeması ölü; transferler stok taşımıyor (ayrı iş); AdjustStock'ta BinId yok; ürün etiketi yazdırma yok.
 
 **Satış kanalı ortak kurgusu (2026-08-23, Admin panel alanı) — F0 CANLIDA, F1 KAPSAM UYGULANDI ⚠️ restart bekliyor; SIRADA F2 Listeleme durumu:**

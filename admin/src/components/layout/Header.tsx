@@ -25,6 +25,7 @@ const BREADCRUMB: Record<string, string> = {
   '/settings/label-templates':     'Etiket Şablonları',
   '/procurement/sorting':          'Sayım / Depoya Teslim',
   '/procurement/labels':           'Etiket Basımı',
+  '/procurement/report':           'Tedarik Raporu',
   '/storefront/contact-messages':  'İletişim Mesajları',
   '/storefront/notifications':     'Bildirimler',
   '/storefront/newsletter':        'Bülten Aboneleri',

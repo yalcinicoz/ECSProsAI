@@ -313,6 +313,22 @@ public class ProcurementController(IMediator mediator) : ControllerBase
         return Ok(new { success = true });
     }
 
+    /// <summary>
+    /// T6 Tedarik Raporu: dönemsel mutabakat (SA ↔ sayım ↔ fatura — İ4: KESİN DEĞİLDİR) + KPI'lar +
+    /// satışa girmeyenler. Varsayılan dönem: son 30 gün.
+    /// </summary>
+    [HttpGet("report")]
+    public async Task<IActionResult> GetReport(
+        [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] Guid? supplierId,
+        [FromServices] ECSPros.Api.Services.ProcurementReportService reportSvc, CancellationToken ct)
+    {
+        var t = (to ?? DateTime.UtcNow.Date.AddDays(1)).ToUniversalTime();
+        var f = (from ?? t.AddDays(-30)).ToUniversalTime();
+        if (f >= t) return BadRequest(new { success = false, error = "Başlangıç bitişten önce olmalı." });
+        var (lines, kpis, notOnSale) = await reportSvc.GetAsync(f, t, supplierId, ct);
+        return Ok(new { success = true, data = new { from = f, to = t, lines, kpis, notOnSale } });
+    }
+
     private Guid? CurrentUserId() =>
         Guid.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
             ?? User.FindFirst("sub")?.Value, out var uid) ? uid : null;

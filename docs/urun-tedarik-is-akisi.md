@@ -49,7 +49,15 @@
 > purchase|sorting_entry|ToBinId, yanlış depo 400, yerleşmiş kayıt kilidi, sayımı aşan adet 400; test stoğu
 > movement toplamıyla GERİ ALINDI). **★ K10 GO-LIVE: Legacy toplu stok senkronu kesilmeden yerleştirme canlıda
 > KULLANILMAMALI** — kesim `Legacy:Sync` stok ayağının kapatılmasıdır (kullanıcı kararı; personele duyurulur).
-> **Sırada T6 Rapor + KPI (son faz).**
+> **T6 Rapor + KPI UYGULANDI (2026-08-26) — PLAN FAZLARI TAMAM ⚠️ restart bekliyor** —
+> `OnSaleStampWorker` (6 saatte bir: yerleşmiş kayıtların ürünü herhangi bir SİTE kanalında F2 `published` ise
+> OnSaleAt damgası; site = pushListing yok + sipariş içeride), `ProcurementReportService` (dönemsel mutabakat
+> SA↔sayım↔fatura tedarikçi bazında + partisiz kovası; KPI: teslim→sayım, sayım→satışa giriş, bekleyen yaş
+> kovaları, satışa girmeyenler, kart-eksik), `GET /api/procurement/report`, admin **Tedarik Raporu** sayfası,
+> rehber `50-tedarik-raporu` (75 sayfa). İzole 5051 ✓ (SA 100/1500₺ ↔ sayım 112/1.652₺ → fark +12 fazla
+> gönderim; yerleştirme→satışa-girmeyen 1→damga→0; ters dönem 400; test verileri ve stok geri alındı).
+> **KALAN (uygulama dışı):** ★★ K10 go-live kesimi — Legacy toplu stok senkronu kapatılmadan Yerleştirme
+> canlıda kullanılmaz (karar/zaman kullanıcıda); T3 etiket şablonlarının gerçek yazıcıyla saha doğrulaması.
 > Alan: 🛠 **Admin panel** (pano #2) + Inventory/Finance/Catalog çekirdek dokunuşları.
 > İlgili: `docs/01-gereksinim-ve-kapsam.md` §11 (Tedarik ve Cari), `docs/03-veritabani-tasarimi.md`
 > (fin_supplier_* tabloları — kodda var, akış yok), `docs/cari-cati-gecis-plani.md` (B0-B4: bakiye yalnız
