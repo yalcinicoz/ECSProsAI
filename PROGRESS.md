@@ -8,6 +8,11 @@
 
 ## 🧭 ÇALIŞMA ALANLARI PANOSU (session başında ÖNCE buraya bak)
 
+> **2026-08-26:** Tüm açık işler fazlara bölünmüş tek dokümanda toplandı: **`docs/acik-isler-yol-haritasi.md`**
+> (FAZ 0 kullanıcı girdileri; F1 satış kanalı F4-F8; F2 tedarik cutover; F3 kargo; F4 pazaryeri; F5 satıcı;
+> F6 mobil; F7 go-live PART B; F8 güvenlik/dayanıklılık; F9 veri kalitesi). İş seçimi ve kapanış işaretleme
+> artık bu doküman üzerinden; pano alan-durumu özetini tutmaya devam eder.
+
 > **Kural (2026-07-22, kullanıcı kararı):** Geliştirme 4 ayrı alanda yürür ve alanlar birbirine
 > karıştırılmaz. Oturum başında hangi alanda çalışılacağı NETLEŞTİRİLİR — kullanıcı alan
 > belirtmediyse SORULUR, varsayılmaz. Bir oturumda tek alanda ilerlenir (zorunlu ortak-çekirdek
