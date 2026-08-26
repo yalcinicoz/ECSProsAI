@@ -17,8 +17,6 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
     public async Task<Result<StoreProductDetailDto>> Handle(GetStoreProductDetailQuery request, CancellationToken ct)
     {
         var cdnBase = await CdnHelper.BuildListUrlAsync(db, ct);
-        var channelPrices = await pricingService.GetActiveVariantPricesAsync(request.FirmPlatformId, ct);
-
         var product = await db.Products
             .AsNoTracking()
             .Include(p => p.Variants).ThenInclude(v => v.VariantAttributes).ThenInclude(va => va.AttributeType)
@@ -27,6 +25,10 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
 
         if (product is null)
             return Result.Failure<StoreProductDetailDto>("Ürün bulunamadı.");
+
+        // Faz 2 P0: kanal fiyatları yalnız BU ürünün varyantları için (tam platform çekimi kaldırıldı).
+        var channelPrices = await pricingService.GetActiveVariantPricesAsync(
+            request.FirmPlatformId, product.Variants.Select(v => v.Id).ToList(), ct);
 
         // Kanal seçimi/durdurma (M2/M3): bu kanalda çıkarılan/durdurulan ürün detaydan da düşer
         // (Failure → UrunDetayController 301 ile kategoriye/ana sayfaya yönlendirir).

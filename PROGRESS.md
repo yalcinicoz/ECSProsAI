@@ -73,7 +73,12 @@ AddResilientHttpClient 6 named client'ta gerçek kullanımda, admin-auth rate li
 prod CORS yalnız https, DP key yedek scripti (tools/ops/backup-dp-keys.sh; ★ cp -a mtime tuzağı düzeltildi;
 cron önerisi kullanıcıda), ShutdownTimeout 30sn, kısımsız depo Consume fallback. İzole 5051 ✓ (health 200,
 retry açıkken 10 paralel −2 → tam 5 başarı). ★ D6 AÇIK: eski üye hash'leri zorunlu sıfırlama kararı kullanıcıda.
-SIRADA: yük testi → Faz 2 (performans paketleri).
+**FAZ 2 PAKET 1/ADIM 1 UYGULANDI (2026-08-26) ⚠️ restart bekliyor:** taban çizgisi ölçüldü (izole 5051,
+5 eşzamanlı×25) ve raporun 1 no'lu P0'ı uygulandı — GetActiveVariantPricesAsync(variantIds) overload'u, 5 çağıran
+sınırlandı (liste sayfalama-sonrası, detay, CHECKOUT sepet varyantları, görsel arama, grup). SONUÇ: /urun-listesi
+p50 1221→394ms (3.1×), p95 1472→443ms; fiyat-artan 613→352; arama 547→332; çıktı BİREBİR eşit ✓. Tam çekim bilerek
+kalan: ChannelScopeResolver + ProductFilterHelper (küme gereği). SIRADA: Faz 2 kalanları (AsSplitQuery paketi,
+PageComposer pointer cache + stampede, DB'de sıralama/read-model, küçük kart DTO).
 **T6 RAPOR+KPI UYGULANDI (2026-08-26) — TEDARİK PLANI T1-T6 TAMAM ⚠️ restart bekliyor:** OnSaleStampWorker
 (6 saatte bir; site kanallarında F2 published → OnSaleAt), ProcurementReportService (mutabakat SA↔sayım↔fatura +
 partisiz kova; KPI teslim→sayım / sayım→satış / bekleyen yaş kovaları / satışa girmeyen / kart-eksik),

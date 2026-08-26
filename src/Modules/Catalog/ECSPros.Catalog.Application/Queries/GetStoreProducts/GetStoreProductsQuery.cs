@@ -102,7 +102,8 @@ public class GetStoreProductsQueryHandler(
     public async Task<Result<PagedResult<StoreProductDto>>> Handle(GetStoreProductsQuery request, CancellationToken ct)
     {
         var cdnBase = await CdnHelper.BuildListUrlAsync(db, ct);
-        var channelPrices = await pricingService.GetActiveVariantPricesAsync(request.FirmPlatformId, ct);
+        // Faz 2 P0: kanal fiyatları artık SAYFALAMA SONRASI, yalnız sayfadaki varyantlar için çekilir
+        // (önceden platformdaki TÜM aktif varyant fiyatları belleğe alınıyordu — rapor #1 darboğazı).
         // B11: öne çıkanlar (az sayıda) — varsayılan sırada öne alınır, rozet bayrağına yazılır
         var oneCikanlar = await flagService.GetFeaturedProductIdsAsync(request.FirmPlatformId, ct);
         // Kanal seçimi/durdurma (M2/M3): bu kanalda çıkarılan/durdurulan ürünler — IsSaleOpen
@@ -328,6 +329,8 @@ public class GetStoreProductsQueryHandler(
         }
 
         var productIds = products.Select(p => p.Id).ToList();
+        var channelPrices = await pricingService.GetActiveVariantPricesAsync(
+            request.FirmPlatformId, products.SelectMany(p => p.Variants).Select(v => v.Id).ToList(), ct);
 
         // Main images (VariantId ile — B8 hover galerisi ana görselin RENGİNE ait görsellerden kurulur)
         var firstImages = await db.ProductImages

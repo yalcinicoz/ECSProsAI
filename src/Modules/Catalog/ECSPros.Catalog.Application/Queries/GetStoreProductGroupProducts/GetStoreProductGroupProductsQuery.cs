@@ -38,7 +38,6 @@ public class GetStoreProductGroupProductsQueryHandler(
     public async Task<Result<StoreProductGroupProductsDto>> Handle(
         GetStoreProductGroupProductsQuery request, CancellationToken ct)
     {
-        var channelPrices = await pricingService.GetActiveVariantPricesAsync(request.FirmPlatformId, ct);
         // Kanal seçimi/durdurma (M2/M3): kanaldan çıkarılan/durdurulan ürünler gruptan da düşer.
         var kanalDisi = await flagService.GetChannelExcludedProductIdsAsync(request.FirmPlatformId, ct);
         var group = await db.ProductGroups
@@ -71,6 +70,10 @@ public class GetStoreProductGroupProductsQueryHandler(
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .ToListAsync(ct);
+
+        // Faz 2 P0: yalnız bu grubun ürün varyantlarının kanal fiyatları.
+        var channelPrices = await pricingService.GetActiveVariantPricesAsync(
+            request.FirmPlatformId, products.SelectMany(p => p.Variants).Select(v => v.Id).ToList(), ct);
 
         var items = products.Select(p =>
         {

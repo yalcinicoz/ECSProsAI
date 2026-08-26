@@ -88,7 +88,9 @@ public class CheckoutCommandHandler(
         // ★ GÜVENLİK (2026-07-31): kalem fiyatı İSTEMCİDEN alınmaz — SUNUCUDA yeniden hesaplanır
         // (kanal fiyatı > varyant BasePrice; storefront gösterimiyle aynı). Böylece istemci sahte
         // düşük fiyat gönderip "az öde, çok ürün al" yapamaz; PayTR tam gerçek tutarı çeker.
-        var kanalFiyatlar = await pricingService.GetActiveVariantPricesAsync(request.FirmPlatformId, ct);
+        // Faz 2 P0: yalnız sepetteki varyantların kanal fiyatları (tam platform çekimi kaldırıldı).
+        var kanalFiyatlar = await pricingService.GetActiveVariantPricesAsync(
+            request.FirmPlatformId, request.Items.Select(i => i.VariantId).Distinct().ToList(), ct);
 
         var tedarikciByVariant = new Dictionary<Guid, Guid?>();
         var sunucuFiyatByVariant = new Dictionary<Guid, decimal>();

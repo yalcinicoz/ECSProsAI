@@ -69,6 +69,22 @@
   sürtünme yaratır; toplu re-hash düz metinsiz mümkün değil. Karar: (a) zorunlu sıfırlama, (b) mevcut
   "girişte yükselt" davranışıyla devam. Uygulanmadı.
 
+## Faz 2 — Paket 1 / Adım 1 UYGULANDI (2026-08-26) ⚠️ restart bekliyor
+Kod optimizasyon raporunun "ilk kod değişikliği bu olmalı" dediği P0: **tam-platform kanal fiyatı çekimi kaldırıldı.**
+`IChannelPricingService.GetActiveVariantPricesAsync(firmPlatformId, variantIds)` overload'u eklendi; 5 çağıran
+sayfadaki/sepetteki varyantlarla sınırlandı: GetStoreProducts (sayfalama SONRASI), ürün detayı, **Checkout**
+(sepet varyantları — fiyat güvenlik hesabı aynı), görsel arama kartları, grup ürünleri. Tam çekim bilerek kalanlar:
+ChannelScopeResolver.HasChannelPrice ve ProductFilterHelper fiyat-aralığı (küme gereği tüm platform).
+**Ölçüm (izole 5051, 5 eşzamanlı × 25 istek, aynı veri):**
+| Uç | Önce p50/p95 | Sonra p50/p95 |
+|---|---|---|
+| /urun-listesi | 1221 / 1472 ms | **394 / 443 ms (3.1×)** |
+| /urun-listesi?fiyat-artan | 613 / 767 ms | 352 / 415 ms |
+| /urun-listesi?q=elbise | 547 / 603 ms | 332 / 390 ms |
+| / (ana sayfa, cache) | 23 / 41 ms | 34 / 45 ms (eşdeğer) |
+**Eşitlik:** ilk sayfa ürün sırası ve fiyat dizisi BİREBİR aynı ✓; ürün detayı kanonik 301→200, fiyatlar dolu ✓.
+Kalan Paket 1-4 maddeleri aşağıdaki Faz 2 listesinde.
+
 ## Sonraki fazlar (ayrı iş emirleri)
 - **Faz 1:** EnableRetryOnFailure (15 DbContext), /health + DB/Redis check + nginx probe, ResilientHttpClient'ın
   gerçek kullanımı + timeout'lar, admin/supplier auth rate-limit, eski MD5/SHA256 hash zorunlu sıfırlama,

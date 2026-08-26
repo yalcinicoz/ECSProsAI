@@ -52,7 +52,9 @@ public class GetVisualSearchCardsQueryHandler(
         var productIds = products.Select(p => p.Id).ToList();
 
         var cdnBase = await CdnHelper.BuildListUrlAsync(db, ct);
-        var channelPrices = await pricingService.GetActiveVariantPricesAsync(request.FirmPlatformId, ct);
+        // Faz 2 P0: yalnız karttaki ürünlerin varyant fiyatları.
+        var channelPrices = await pricingService.GetActiveVariantPricesAsync(
+            request.FirmPlatformId, products.SelectMany(p => p.Variants).Select(v => v.Id).ToList(), ct);
 
         // Ürün başına ilk görsel (liste sayfası kalıbı)
         var firstImages = await db.ProductImages
