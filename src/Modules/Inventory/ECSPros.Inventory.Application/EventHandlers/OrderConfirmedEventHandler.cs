@@ -13,16 +13,20 @@ public class OrderConfirmedEventHandler(IInventoryDbContext context) : INotifica
         // WarehouseId boş (Guid.Empty) → online sipariş (ör. storefront ödeme onayı): depo-bağımsız
         // satılabilir-online raflar arası rezerve et. Dolu → belirli depo (admin onay akışı, değişmedi).
         var online = notification.WarehouseId == Guid.Empty;
-        foreach (var item in notification.Items)
+        // Faz 0 (StockTx): varyant başına advisory kilit + transaction — eşzamanlı rezervasyon yarışını serileştirir.
+        await StockTx.RunAsync(context, notification.Items.Select(i => i.VariantId), async () =>
         {
-            if (online)
-                await StockOps.ReserveOnlineAsync(context, item.VariantId,
-                    item.Quantity, "order", notification.OrderId, cancellationToken);
-            else
-                await StockOps.ReserveAsync(context, item.VariantId, notification.WarehouseId,
-                    item.Quantity, "order", notification.OrderId, cancellationToken);
-        }
+            foreach (var item in notification.Items)
+            {
+                if (online)
+                    await StockOps.ReserveOnlineAsync(context, item.VariantId,
+                        item.Quantity, "order", notification.OrderId, cancellationToken);
+                else
+                    await StockOps.ReserveAsync(context, item.VariantId, notification.WarehouseId,
+                        item.Quantity, "order", notification.OrderId, cancellationToken);
+            }
 
-        await context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
+        }, cancellationToken);
     }
 }

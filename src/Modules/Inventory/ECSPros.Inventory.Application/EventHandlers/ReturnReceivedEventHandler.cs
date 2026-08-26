@@ -13,6 +13,8 @@ public class ReturnReceivedEventHandler(IInventoryDbContext context, IPublisher 
 {
     public async Task Handle(ReturnReceivedEvent notification, CancellationToken cancellationToken)
     {
+        await StockTx.RunAsync(context, notification.Items.Select(i => i.VariantId), async () =>
+        {
         foreach (var item in notification.Items)
         {
             await StockOps.ReceiveAsync(context, item.VariantId, notification.WarehouseId, item.Quantity, preferReturns: true, cancellationToken);
@@ -30,6 +32,7 @@ public class ReturnReceivedEventHandler(IInventoryDbContext context, IPublisher 
         }
 
         await context.SaveChangesAsync(cancellationToken);
+        }, cancellationToken);
 
         if (notification.Items.Count > 0)
             await publisher.Publish(

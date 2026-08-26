@@ -9,7 +9,7 @@ public class PosDbContextFactory : IDesignTimeDbContextFactory<PosDbContext>
     {
         var optionsBuilder = new DbContextOptionsBuilder<PosDbContext>();
         optionsBuilder.UseNpgsql(
-            "Host=localhost;Port=5432;Database=ecommerce_db;Username=ecommerce;Password=***KALDIRILDI***",
+            ECSPros.Shared.Kernel.DesignTime.DesignTimeConnection.Resolve(),
             o => o.MigrationsHistoryTable("__ef_migrations_pos", "pos"));
 
         return new PosDbContext(optionsBuilder.Options);

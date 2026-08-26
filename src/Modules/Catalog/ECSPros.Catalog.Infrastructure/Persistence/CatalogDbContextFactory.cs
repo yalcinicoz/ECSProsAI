@@ -9,7 +9,7 @@ public class CatalogDbContextFactory : IDesignTimeDbContextFactory<CatalogDbCont
     {
         var optionsBuilder = new DbContextOptionsBuilder<CatalogDbContext>();
         optionsBuilder.UseNpgsql(
-            "Host=localhost;Port=5432;Database=ecommerce_db;Username=ecommerce;Password=***KALDIRILDI***",
+            ECSPros.Shared.Kernel.DesignTime.DesignTimeConnection.Resolve(),
             o => o.MigrationsHistoryTable("__ef_migrations_catalog", "catalog"));
 
         return new CatalogDbContext(optionsBuilder.Options);

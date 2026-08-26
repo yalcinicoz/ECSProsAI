@@ -9,7 +9,7 @@ public class CrmDbContextFactory : IDesignTimeDbContextFactory<CrmDbContext>
     {
         var optionsBuilder = new DbContextOptionsBuilder<CrmDbContext>();
         optionsBuilder.UseNpgsql(
-            "Host=localhost;Port=5432;Database=ecommerce_db;Username=ecommerce;Password=***KALDIRILDI***",
+            ECSPros.Shared.Kernel.DesignTime.DesignTimeConnection.Resolve(),
             o => o.MigrationsHistoryTable("__ef_migrations_crm", "crm"));
 
         return new CrmDbContext(optionsBuilder.Options);

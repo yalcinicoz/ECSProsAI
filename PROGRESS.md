@@ -60,7 +60,15 @@ StockMovement.From/ToBinId (migration ✓), Inventory ReceiveToBinCommand (bin b
 Ref=sorting_entry — tedarik girişinin TEK kapısı K3), PlaceSortingEntry (parti-depo kuralı stok ÖNCESİ; kısmi böler),
 bins lookup, Sayım/Teslim ekranı Yerleştirme sekmesi (raf okut→işaretle→yerleştir; satışa kapalı kısım uyarısı).
 İzole 5051 ✓; test stoğu movement toplamıyla geri alındı. ★★ K10 GO-LIVE ENGELİ: Legacy toplu stok senkronu
-kesilmeden yerleştirme CANLIDA KULLANILMAMALI (10dk mutlak ezme yeni girişleri siler). **T6 RAPOR+KPI UYGULANDI (2026-08-26) — TEDARİK PLANI T1-T6 TAMAM ⚠️ restart bekliyor:** OnSaleStampWorker
+kesilmeden yerleştirme CANLIDA KULLANILMAMALI (10dk mutlak ezme yeni girişleri siler). **DAYANIKLILIK FAZ 0 UYGULANDI (2026-08-26) ⚠️ restart bekliyor (plan `docs/dayaniklilik-faz0-plani.md`,
+kaynak docs/AIAnalizRaporlari):** (1) STOK ATOMİKLİĞİ — `StockTx.RunAsync` (açık tx + sıralı
+pg_advisory_xact_lock(42901,hashtext(variantId)) + ChangeTracker.Clear + ExecutionStrategy) 10 mutasyon
+noktasına sarıldı; izole 5051 kabul: 10 paralel −2 → tam 5 başarı, final 0 ✓. (2) Sır hijyeni: compose→.env,
+base appsettings sırsız, Dev/Demo json untracked (diskte), 12 factory → DesignTimeConnection (ECSPROS_DB ??
+Production.json). ★ D3 AÇIK: sır DÖNDÜRME + git geçmiş temizliği kullanıcı zamanlar. (3) named HttpClient
+timeout'ları. (4) ValidationException→400. (5) admin şifresi log'dan kaldırıldı. ★ Test bulgusu: kısımsız
+depoda Consume no-op (mevcut davranış) — Faz 1 maddesi. SIRADA: Faz 1 (retry/health/resilience).
+**T6 RAPOR+KPI UYGULANDI (2026-08-26) — TEDARİK PLANI T1-T6 TAMAM ⚠️ restart bekliyor:** OnSaleStampWorker
 (6 saatte bir; site kanallarında F2 published → OnSaleAt), ProcurementReportService (mutabakat SA↔sayım↔fatura +
 partisiz kova; KPI teslim→sayım / sayım→satış / bekleyen yaş kovaları / satışa girmeyen / kart-eksik),
 GET /api/procurement/report + admin Tedarik Raporu + rehber 50-tedarik-raporu (75 sayfa). İzole 5051 ✓ (fark +12

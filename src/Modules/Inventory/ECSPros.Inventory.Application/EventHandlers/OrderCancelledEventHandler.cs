@@ -16,6 +16,14 @@ public class OrderCancelledEventHandler : INotificationHandler<OrderCancelledEve
 
     public async Task Handle(OrderCancelledEvent notification, CancellationToken cancellationToken)
     {
+        // Faz 0 (StockTx): kilitlemek için varyantlar ön-sorguyla belirlenir; gövde kilit altında TAZE okur.
+        var variantIds = await _context.StockReservations.AsNoTracking()
+            .Where(r => r.ReferenceType == "order" && r.ReferenceId == notification.OrderId && r.Status == "reserved")
+            .Select(r => r.VariantId).Distinct().ToListAsync(cancellationToken);
+        if (variantIds.Count == 0) return;
+
+        await StockTx.RunAsync(_context, variantIds, async () =>
+        {
         var reservations = await _context.StockReservations
             .Where(r => r.ReferenceType == "order"
                      && r.ReferenceId == notification.OrderId
@@ -37,5 +45,6 @@ public class OrderCancelledEventHandler : INotificationHandler<OrderCancelledEve
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+        }, cancellationToken);
     }
 }

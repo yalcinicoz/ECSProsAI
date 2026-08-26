@@ -9,7 +9,7 @@ public class PromotionDbContextFactory : IDesignTimeDbContextFactory<PromotionDb
     {
         var optionsBuilder = new DbContextOptionsBuilder<PromotionDbContext>();
         optionsBuilder.UseNpgsql(
-            "Host=localhost;Port=5432;Database=ecommerce_db;Username=ecommerce;Password=***KALDIRILDI***",
+            ECSPros.Shared.Kernel.DesignTime.DesignTimeConnection.Resolve(),
             o => o.MigrationsHistoryTable("__ef_migrations_promotion", "promotion"));
 
         return new PromotionDbContext(optionsBuilder.Options);

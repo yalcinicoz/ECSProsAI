@@ -20,6 +20,7 @@ public interface ICrmDbContext
     DbSet<Neighborhood> Neighborhoods { get; }
     DbSet<MemberSession> MemberSessions { get; }
     DbSet<OtpCode> OtpCodes { get; }
+    DbSet<MemberExternalLogin> MemberExternalLogins { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

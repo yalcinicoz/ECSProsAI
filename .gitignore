@@ -51,3 +51,7 @@ docs/KabulTestKiti/
 
 # Eski proje inceleme kopyası (2026-08-04) — ana repoya eklenmez
 ECSGYE.Solution/
+
+# Faz 0 sır hijyeni: ortam ayar dosyaları sır içerir, izlenmez
+src/**/appsettings.Development.json
+src/**/appsettings.Demo.json

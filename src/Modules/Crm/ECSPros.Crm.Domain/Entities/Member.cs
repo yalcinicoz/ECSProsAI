@@ -47,4 +47,5 @@ public class Member : BaseEntity
     public ICollection<MemberPrice> Prices { get; set; } = new List<MemberPrice>();
     public ICollection<MemberDiscount> Discounts { get; set; } = new List<MemberDiscount>();
     public ICollection<OrderTemplate> OrderTemplates { get; set; } = new List<OrderTemplate>();
+    public ICollection<MemberExternalLogin> ExternalLogins { get; set; } = new List<MemberExternalLogin>();
 }

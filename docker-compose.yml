@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ecommerce
-      POSTGRES_PASSWORD: ***KALDIRILDI***
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ecommerce_db
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
@@ -53,6 +53,7 @@ services:
       - ./admin/dist:/usr/share/nginx/html/admin:ro
       - ./satici/dist:/usr/share/nginx/html/satici:ro
       - ./media:/usr/share/nginx/html/media:ro
+      - ./docker/nginx/html/rehber:/usr/share/nginx/html/rehber:ro
       - ./docker/nginx/certs:/etc/nginx/certs:ro
     depends_on:
       - postgres

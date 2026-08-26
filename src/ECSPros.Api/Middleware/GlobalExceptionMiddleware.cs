@@ -31,6 +31,9 @@ public class GlobalExceptionMiddleware
     {
         var (statusCode, message) = exception switch
         {
+            // Faz 0 (AI analiz raporu §3.9): FluentValidation hataları 500 değil 400 dönmeli.
+            FluentValidation.ValidationException v => (HttpStatusCode.BadRequest,
+                string.Join(" ", v.Errors.Select(e => e.ErrorMessage).DefaultIfEmpty(v.Message))),
             UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "Yetkisiz erişim."),
             KeyNotFoundException => (HttpStatusCode.NotFound, "Kayıt bulunamadı."),
             ArgumentException e => (HttpStatusCode.BadRequest, e.Message),

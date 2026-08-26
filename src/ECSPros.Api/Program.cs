@@ -212,7 +212,13 @@ builder.Services.AddSingleton<ECSPros.Api.Services.Tracking.Feed.IFeedTrigger>(s
 builder.Services.AddScoped<ECSPros.Api.Services.Store.ITrackingScriptProvider,
     ECSPros.Api.Services.Store.TrackingScriptProvider>();
 builder.Services.AddScoped<ECSPros.Api.Services.Store.PayTrDirectService>();
-builder.Services.AddHttpClient("paytr"); // PayTR /odeme çağrıları için ayrı named client
+builder.Services.AddHttpClient("paytr", c => c.Timeout = TimeSpan.FromSeconds(20)); // PayTR /odeme çağrıları
+// Faz 0 (AI analiz raporu §3.3): kullanılan tüm named client'lar açık timeout ile kayıtlı olsun
+// (kayıtsız ad default 100 sn timeout'lu client döner — asılı dış servis thread'i uzun bloklar).
+builder.Services.AddHttpClient("visual-search",      c => c.Timeout = TimeSpan.FromSeconds(10));
+builder.Services.AddHttpClient("play-integrity",     c => c.Timeout = TimeSpan.FromSeconds(10));
+builder.Services.AddHttpClient("TrendyolSeller",     c => c.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddHttpClient("TrendyolReference",  c => c.Timeout = TimeSpan.FromSeconds(120)); // büyük referans indirme
 // 2026-08-04: platformun sitede sunduğu ödeme yöntemleri + kapıda ödeme bedel/limit
 // (FirmPlatform.Settings, panel Kanallar ekranı) — SSR ödeme sayfası + checkout doğrulaması
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IPaymentOptionsProvider,

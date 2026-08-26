@@ -9,7 +9,7 @@ public class FinanceDbContextFactory : IDesignTimeDbContextFactory<FinanceDbCont
     {
         var optionsBuilder = new DbContextOptionsBuilder<FinanceDbContext>();
         optionsBuilder.UseNpgsql(
-            "Host=localhost;Port=5432;Database=ecommerce_db;Username=ecommerce;Password=***KALDIRILDI***",
+            ECSPros.Shared.Kernel.DesignTime.DesignTimeConnection.Resolve(),
             o => o.MigrationsHistoryTable("__ef_migrations_finance", "finance"));
 
         return new FinanceDbContext(optionsBuilder.Options);

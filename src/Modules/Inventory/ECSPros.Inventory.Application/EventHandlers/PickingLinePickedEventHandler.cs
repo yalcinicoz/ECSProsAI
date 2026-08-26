@@ -17,6 +17,9 @@ public class PickingLinePickedEventHandler(IInventoryDbContext db)
 {
     public async Task Handle(PickingLinePickedEvent notification, CancellationToken ct)
     {
+        // Faz 0 (StockTx): varyant kilidi — toplama düşümü eşzamanlı rezervasyon/satışla yarışmaz.
+        await StockTx.RunAsync(db, notification.Items.Select(i => i.VariantId), async () =>
+        {
         foreach (var item in notification.Items)
         {
             var kalanMiktar = item.Quantity;
@@ -70,5 +73,6 @@ public class PickingLinePickedEventHandler(IInventoryDbContext db)
             }
         }
         await db.SaveChangesAsync(ct);
+        }, ct);
     }
 }

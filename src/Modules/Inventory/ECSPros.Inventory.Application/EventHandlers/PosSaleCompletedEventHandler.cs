@@ -10,6 +10,9 @@ public class PosSaleCompletedEventHandler(IInventoryDbContext context) : INotifi
 {
     public async Task Handle(PosSaleCompletedEvent notification, CancellationToken cancellationToken)
     {
+        // Faz 0 (StockTx): varyant kilidi — eşzamanlı POS satışı/rezervasyon aynı stoğu iki kez düşüremez.
+        await StockTx.RunAsync(context, notification.Items.Select(i => i.VariantId), async () =>
+        {
         foreach (var soldItem in notification.Items)
         {
             var quantity = (int)Math.Ceiling(soldItem.Quantity);
@@ -28,5 +31,6 @@ public class PosSaleCompletedEventHandler(IInventoryDbContext context) : INotifi
         }
 
         await context.SaveChangesAsync(cancellationToken);
+        }, cancellationToken);
     }
 }

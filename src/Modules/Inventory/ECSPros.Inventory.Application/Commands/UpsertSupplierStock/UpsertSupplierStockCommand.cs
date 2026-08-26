@@ -77,9 +77,13 @@ public class UpsertSupplierStockCommandHandler : IRequestHandler<UpsertSupplierS
         }
 
         // 4) Stok upsert — MUTLAK miktar (tedarikçi mevcut seviyeyi bildirir)
+        // Faz 0 (StockTx): varyant kilitleri altında — rezervasyon/tüketimle yarışı serileştirir.
         var variantIds = request.Items.Select(i => i.VariantId).ToList();
+        var whId = warehouse.Id; var secId = section.Id; var binId = bin.Id;   // Clear() sonrası detached — yalnız Id kullan
+        await StockTx.RunAsync(_db, variantIds, async () =>
+        {
         var existing = await _db.Stocks
-            .Where(s => s.SectionId == section.Id && variantIds.Contains(s.VariantId))
+            .Where(s => s.SectionId == secId && variantIds.Contains(s.VariantId))
             .ToListAsync(ct);
         var byVariant = existing.ToDictionary(s => s.VariantId);
 
@@ -95,9 +99,9 @@ public class UpsertSupplierStockCommandHandler : IRequestHandler<UpsertSupplierS
                 _db.Stocks.Add(new Stock
                 {
                     VariantId = item.VariantId,
-                    WarehouseId = warehouse.Id,
-                    SectionId = section.Id,
-                    BinId = bin.Id,
+                    WarehouseId = whId,
+                    SectionId = secId,
+                    BinId = binId,
                     StockType = "physical",
                     Quantity = qty,
                     ReservedQuantity = 0
@@ -106,6 +110,7 @@ public class UpsertSupplierStockCommandHandler : IRequestHandler<UpsertSupplierS
         }
 
         await _db.SaveChangesAsync(ct);
+        }, ct);
         return Result.Success(request.Items.Count);
     }
 }

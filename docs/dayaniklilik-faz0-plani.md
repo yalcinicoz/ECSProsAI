@@ -29,6 +29,25 @@
    ReturnReceived event handler'ları, AdjustStock, UpsertSupplierStock, ReceiveToBin (tedarik T5).
    Kabul: iki eşzamanlı rezervasyon/tüketim aynı serbest stoğu iki kez alamaz (izole 5051 eşzamanlılık testi).
 
+## Faz 0 durumu — UYGULANDI (2026-08-26) ⚠️ restart bekliyor
+- ✅ 1. Sır hijyeni: compose `${POSTGRES_PASSWORD}`/`***KALDIRILDI***` (.env mevcut, gitignored);
+  base `appsettings.json` sırsız (DB/Redis şifreleri, Jwt Secret, Legacy şifre boş); Development+Demo
+  json'ları gitignore'a alındı ve diskte sırlarıyla duruyor; 12 `*DbContextFactory` →
+  `DesignTimeConnection.Resolve()` (ECSPROS_DB env ?? untracked Production.json ?? şifresiz localhost).
+  ⚠️ D3 AÇIK: sır DÖNDÜRME + git geçmişi temizliği kullanıcı zamanlamasıyla ayrı iş.
+- ✅ 2. Named HttpClient'lar timeout'larıyla kayıtlı (visual-search 10sn, play-integrity 10sn,
+  TrendyolSeller 30sn, TrendyolReference 120sn, paytr 20sn). Düzeltilen rapor notu: kayıtsız
+  CreateClient(ad) çakılmaz; sorun 100 sn default timeout idi.
+- ✅ 3. `ValidationException` → 400 (mesajlarla) — GlobalExceptionMiddleware.
+- ✅ 4. Admin şifresi stdout'a basılmıyor (admin seed prod'da kalır — D4).
+- ✅ 5. Stok atomikliği: `StockTx.RunAsync` (ExecutionStrategy + açık tx + SIRALI
+  `pg_advisory_xact_lock(42901, hashtext(variantId))` + ChangeTracker.Clear — Faz 1 retry'a hazır);
+  sarılan 10 nokta: OrderConfirmed/Cancelled/Shipped, PickingLinePicked, PosSaleCompleted/Refunded,
+  ReturnReceived, AdjustStock (negatif kontrol kilit ALTINDA — TOCTOU kapandı), UpsertSupplierStock,
+  ReceiveToBin. Kabul testi (izole 5051): stok 10 iken 10 paralel −2 → TAM 5 başarı/5 red, final 0;
+  ikinci tur 3 stokta 2 paralel −2 → tam 1 başarı. Test bulgusu (mevcut davranış, ayrı not):
+  kısımsız/rafsız depoda Consume sessizce no-op (bare stok satırını görmez) — Faz 1'de ele alınmalı.
+
 ## Sonraki fazlar (ayrı iş emirleri)
 - **Faz 1:** EnableRetryOnFailure (15 DbContext), /health + DB/Redis check + nginx probe, ResilientHttpClient'ın
   gerçek kullanımı + timeout'lar, admin/supplier auth rate-limit, eski MD5/SHA256 hash zorunlu sıfırlama,

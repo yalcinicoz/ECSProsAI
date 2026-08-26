@@ -25,6 +25,8 @@ public static class DependencyInjection
 
         // Marketplace adapters
         services.AddSingleton<IMarketplaceAdapter, TrendyolMarketplaceAdapter>();
+        services.AddSingleton<AmazonSpApiClient>();
+        services.AddSingleton<IMarketplaceAdapter, AmazonMarketplaceAdapter>();
 
         // Cargo adapters
         services.AddSingleton<ICargoAdapter, YurticiCargoAdapter>();

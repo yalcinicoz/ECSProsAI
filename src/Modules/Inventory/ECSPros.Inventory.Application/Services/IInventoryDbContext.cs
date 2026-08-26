@@ -15,5 +15,8 @@ public interface IInventoryDbContext
     DbSet<TransferRequest> TransferRequests { get; }
     DbSet<TransferRequestItem> TransferRequestItems { get; }
 
+    /// <summary>Faz 0 (StockTx): açık transaction + advisory kilit için — DbContext otomatik karşılar.</summary>
+    Microsoft.EntityFrameworkCore.Infrastructure.DatabaseFacade Database { get; }
+    Microsoft.EntityFrameworkCore.ChangeTracking.ChangeTracker ChangeTracker { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

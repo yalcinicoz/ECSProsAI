@@ -31,6 +31,7 @@ public class CrmDbContext : DbContext, ICrmDbContext
     public DbSet<OrderTemplateItem> OrderTemplateItems => Set<OrderTemplateItem>();
     public DbSet<MemberSession> MemberSessions => Set<MemberSession>();
     public DbSet<OtpCode> OtpCodes => Set<OtpCode>();
+    public DbSet<MemberExternalLogin> MemberExternalLogins => Set<MemberExternalLogin>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

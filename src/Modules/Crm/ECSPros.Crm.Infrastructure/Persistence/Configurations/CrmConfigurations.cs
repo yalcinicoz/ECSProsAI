@@ -324,3 +324,19 @@ public class MemberSessionConfiguration : IEntityTypeConfiguration<MemberSession
         b.HasOne(x => x.Member).WithMany().HasForeignKey(x => x.MemberId);
     }
 }
+
+public class MemberExternalLoginConfiguration : IEntityTypeConfiguration<MemberExternalLogin>
+{
+    public void Configure(EntityTypeBuilder<MemberExternalLogin> b)
+    {
+        b.ToTable("crm_member_external_logins");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Provider).HasMaxLength(30).IsRequired();
+        b.Property(x => x.ProviderUserId).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Email).HasMaxLength(200);
+        b.HasIndex(x => new { x.Provider, x.ProviderUserId }).IsUnique();
+        b.HasIndex(x => x.MemberId);
+        b.HasQueryFilter(x => !x.IsDeleted);
+        b.HasOne(x => x.Member).WithMany(x => x.ExternalLogins).HasForeignKey(x => x.MemberId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

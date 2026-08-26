@@ -12,6 +12,8 @@ public class PosSaleRefundedEventHandler(IInventoryDbContext context, IPublisher
 {
     public async Task Handle(PosSaleRefundedEvent notification, CancellationToken cancellationToken)
     {
+        await StockTx.RunAsync(context, notification.Items.Select(i => i.VariantId), async () =>
+        {
         foreach (var item in notification.Items)
         {
             var quantity = (int)Math.Ceiling(item.Quantity);
@@ -30,6 +32,7 @@ public class PosSaleRefundedEventHandler(IInventoryDbContext context, IPublisher
         }
 
         await context.SaveChangesAsync(cancellationToken);
+        }, cancellationToken);
 
         if (notification.Items.Count > 0)
             await publisher.Publish(

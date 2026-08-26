@@ -37,6 +37,11 @@ public class ReceiveToBinCommandHandler(IInventoryDbContext db)
         if (!bin.Warehouse.IsActive) return Result.Failure<ReceiveToBinResult>("Birimin deposu pasif.");
         if (!bin.Bin.IsActive) return Result.Failure<ReceiveToBinResult>("Birim (raf) pasif.");
 
+        var whId = bin.Warehouse.Id; var secId = bin.Section.Id; var bId = bin.Bin.Id;
+        StockMovement movement = null!;
+        // Faz 0 (StockTx): varyant kilidi — tedarik girişi diğer stok mutasyonlarıyla serileşir.
+        await StockTx.RunAsync(db, new[] { request.VariantId }, async () =>
+        {
         var stock = await db.Stocks.FirstOrDefaultAsync(s =>
             s.VariantId == request.VariantId && s.BinId == request.BinId, ct);
         if (stock is null)
@@ -44,9 +49,9 @@ public class ReceiveToBinCommandHandler(IInventoryDbContext db)
             stock = new Stock
             {
                 VariantId = request.VariantId,
-                WarehouseId = bin.Warehouse.Id,
-                SectionId = bin.Section.Id,
-                BinId = bin.Bin.Id,
+                WarehouseId = whId,
+                SectionId = secId,
+                BinId = bId,
                 StockType = "physical",
                 Quantity = 0,
             };
@@ -55,11 +60,11 @@ public class ReceiveToBinCommandHandler(IInventoryDbContext db)
         stock.Quantity += request.Quantity;
         stock.UpdatedAt = DateTime.UtcNow;
 
-        var movement = new StockMovement
+        movement = new StockMovement
         {
             VariantId = request.VariantId,
-            ToWarehouseId = bin.Warehouse.Id,
-            ToBinId = bin.Bin.Id,
+            ToWarehouseId = whId,
+            ToBinId = bId,
             MovementType = "purchase",
             Quantity = request.Quantity,
             ReferenceType = request.ReferenceType,
@@ -67,8 +72,8 @@ public class ReceiveToBinCommandHandler(IInventoryDbContext db)
             CreatedBy = request.CreatedBy,
         };
         db.StockMovements.Add(movement);
-
         await db.SaveChangesAsync(ct);
-        return Result.Success(new ReceiveToBinResult(movement.Id, bin.Warehouse.Id, bin.Section.Id));
+        }, ct);
+        return Result.Success(new ReceiveToBinResult(movement.Id, whId, secId));
     }
 }

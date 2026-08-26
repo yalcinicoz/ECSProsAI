@@ -19,13 +19,17 @@ public class AdjustStockCommandHandler(IInventoryDbContext context, IPublisher p
         if (!warehouseExists)
             return Result.Failure<Guid>("Depo bulunamadı.");
 
+        // Faz 0 (StockTx): negatif kontrol + düşüm kilit altında — eşzamanlı iki düzeltme aynı stoğu iki kez düşemez.
+        StockMovement movement = null!;
+        string? hata = null;
+        await StockTx.RunAsync(context, new[] { request.VariantId }, async () =>
+        {
         if (request.QuantityDelta < 0)
         {
             var mevcut = await context.Stocks
                 .Where(s => s.VariantId == request.VariantId && s.WarehouseId == request.WarehouseId)
                 .SumAsync(s => (int?)s.Quantity, cancellationToken) ?? 0;
-            if (mevcut + request.QuantityDelta < 0)
-                return Result.Failure<Guid>("Stok miktarı negatife düşemez.");
+            if (mevcut + request.QuantityDelta < 0) { hata = "Stok miktarı negatife düşemez."; return; }
             await StockOps.ConsumeAsync(context, request.VariantId, request.WarehouseId, -request.QuantityDelta, cancellationToken);
         }
         else if (request.QuantityDelta > 0)
@@ -33,7 +37,7 @@ public class AdjustStockCommandHandler(IInventoryDbContext context, IPublisher p
             await StockOps.ReceiveAsync(context, request.VariantId, request.WarehouseId, request.QuantityDelta, preferReturns: false, cancellationToken);
         }
 
-        var movement = new StockMovement
+        movement = new StockMovement
         {
             VariantId = request.VariantId,
             ToWarehouseId = request.QuantityDelta > 0 ? request.WarehouseId : null,
@@ -45,6 +49,8 @@ public class AdjustStockCommandHandler(IInventoryDbContext context, IPublisher p
         };
         context.StockMovements.Add(movement);
         await context.SaveChangesAsync(cancellationToken);
+        }, cancellationToken);
+        if (hata is not null) return Result.Failure<Guid>(hata);
 
         if (request.QuantityDelta > 0)
             await publisher.Publish(new StockIncreasedEvent([request.VariantId]), cancellationToken);

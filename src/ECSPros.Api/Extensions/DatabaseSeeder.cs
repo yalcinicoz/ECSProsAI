@@ -1325,7 +1325,7 @@ public static class DatabaseSeeder
         context.UserRoles.Add(new UserRole { UserId = adminUser.Id, RoleId = superAdminRole.Id });
         await context.SaveChangesAsync();
 
-        Console.WriteLine("✓ Seed: Admin kullanıcısı oluşturuldu. (admin / Admin123!)");
+        Console.WriteLine("✓ Seed: Admin kullanıcısı oluşturuldu (varsayılan şifre — ilk girişte değişim zorunlu)."); // Faz 0: şifre log'a basılmaz
     }
 
     /// <summary>
