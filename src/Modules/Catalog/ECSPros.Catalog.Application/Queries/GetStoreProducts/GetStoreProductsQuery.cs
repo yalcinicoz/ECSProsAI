@@ -144,25 +144,36 @@ public class GetStoreProductsQueryHandler(
             // özellik değeri adı (renk/beden...) içinde geçmeli.
             var aramaKelimeleri = request.Search.Trim().ToLower()
                 .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            // Faz 2 arama hızlandırma (2026-08-26): kelimeyle eşleşen özellik değeri id'leri ÖNCE
+            // tek sorguyla bulunur (SQL-lower adlar), ürün predicate'ine ad-LIKE yerine bu id
+            // listeleri verilir — ~1M satırlık varyant-özellik jsonb taraması yerine
+            // IX_product_variant_attributes_AttributeValueId kullanılır (EXPLAIN ile doğrulandı).
+            var degerAdaylari = await db.AttributeValues.AsNoTracking()
+                .Where(av => aramaKelimeleri.Any(k =>
+                    PgJsonFunctions.JsonText(av.NameI18n, "tr")!.ToLower().Contains(k)))
+                .Select(av => new { av.Id, Ad = PgJsonFunctions.JsonText(av.NameI18n, "tr")!.ToLower() })
+                .ToListAsync(ct);
             foreach (var kelime in aramaKelimeleri)
             {
                 var k = kelime;
-                q = q.Where(p => p.Code.ToLower().Contains(k)
+                var kelimeDegerleri = degerAdaylari
+                    .Where(a => a.Ad != null && a.Ad.Contains(k)).Select(a => a.Id).ToList();
+                foreach (var id in kelimeDegerleri) aramaRenkIdleri.Add(id);
+                // Varyant-özellik eşleşmesi ürün id kümesine çevrilir: OR içindeki EXISTS
+                // trigram indekslerini (IX_products_Code_trgm / IX_products_NameTr_trgm)
+                // devre dışı bırakıyordu; üç kol da indekslenebilir olunca seq scan kalkar.
+                var varyantUrunIdleri = kelimeDegerleri.Count == 0 ? []
+                    : await db.ProductVariantAttributes.AsNoTracking()
+                        .Where(va => kelimeDegerleri.Contains(va.AttributeValueId) && va.Variant.IsActive)
+                        .Select(va => va.Variant.ProductId)
+                        .Distinct()
+                        .ToListAsync(ct);
+                q = varyantUrunIdleri.Count > 0
+                    ? q.Where(p => p.Code.ToLower().Contains(k)
                               || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(k)
-                              || p.Variants.Any(v => v.IsActive && v.VariantAttributes.Any(va =>
-                                     PgJsonFunctions.JsonText(va.AttributeValue.NameI18n, "tr")!
-                                         .ToLower().Contains(k))));
-            }
-            if (aramaKelimeleri.Length > 0)
-            {
-                // Renk daraltması için: herhangi bir kelimeyle eşleşen özellik değeri id'leri
-                // (dayanıklılık Faz 2: kelime başına ayrı sorgu yerine TEK sorgu — birleşim aynı küme)
-                var eslesenDegerler = await db.AttributeValues.AsNoTracking()
-                    .Where(av => aramaKelimeleri.Any(k =>
-                        PgJsonFunctions.JsonText(av.NameI18n, "tr")!.ToLower().Contains(k)))
-                    .Select(av => av.Id)
-                    .ToListAsync(ct);
-                foreach (var id in eslesenDegerler) aramaRenkIdleri.Add(id);
+                              || varyantUrunIdleri.Contains(p.Id))
+                    : q.Where(p => p.Code.ToLower().Contains(k)
+                              || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(k));
             }
         }
 
@@ -236,7 +247,9 @@ public class GetStoreProductsQueryHandler(
                 .Take(request.PageSize)
                 .Select(a => a.Id)
                 .ToList();
-            products = await q.Where(p => sayfaIdleri.Contains(p.Id)).ToListAsync(ct);
+            // Faz 2: sayfa çekimi yalnız id ile — ağır arama/filtre predicate'i yeniden çalıştırılmaz
+            products = await db.Products.AsNoTracking().Include(p => p.Variants)
+                .Where(p => sayfaIdleri.Contains(p.Id)).ToListAsync(ct);
             products = products.OrderBy(p => sayfaIdleri.IndexOf(p.Id)).ToList();
         }
         else if (ProductSortCatalog.MetrikMi(request.Sort))
@@ -268,7 +281,9 @@ public class GetStoreProductsQueryHandler(
                 .Take(request.PageSize)
                 .Select(a => a.Id)
                 .ToList();
-            products = await q.Where(p => sayfaIdleri.Contains(p.Id)).ToListAsync(ct);
+            // Faz 2: sayfa çekimi yalnız id ile — ağır arama/filtre predicate'i yeniden çalıştırılmaz
+            products = await db.Products.AsNoTracking().Include(p => p.Variants)
+                .Where(p => sayfaIdleri.Contains(p.Id)).ToListAsync(ct);
             products = products.OrderBy(p => sayfaIdleri.IndexOf(p.Id)).ToList();
         }
         else if (!string.IsNullOrWhiteSpace(request.Search) && string.IsNullOrEmpty(request.Sort))
@@ -314,7 +329,9 @@ public class GetStoreProductsQueryHandler(
                 .Take(request.PageSize)
                 .Select(a => a.Id)
                 .ToList();
-            products = await q.Where(p => sayfaIdleri.Contains(p.Id)).ToListAsync(ct);
+            // Faz 2: sayfa çekimi yalnız id ile — ağır arama/filtre predicate'i yeniden çalıştırılmaz
+            products = await db.Products.AsNoTracking().Include(p => p.Variants)
+                .Where(p => sayfaIdleri.Contains(p.Id)).ToListAsync(ct);
             products = products.OrderBy(p => sayfaIdleri.IndexOf(p.Id)).ToList();
         }
         else

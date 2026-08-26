@@ -91,6 +91,12 @@ migration'la canlıya uygulandı (ord_orders.MemberId, ord_order_items.SupplierI
 rapordaki "Status" düzeltildi, Member'da alan IsActive) + ANALYZE; arama kelime N+1 tek sorguya indi (EF8 unnest,
 4 aramada kod+görsel md5 birebir ✓) ama arama p50 ~1.9sn DEĞİŞMEDİ → /urunler?search maliyeti aday kümesinde,
 Paket 2 (iki aşamalı listeleme/read-model) birincil hedefi. SIRADA: DB'de sıralama/read-model + küçük kart DTO.
+**FAZ 2 ADIM 4 — ARAMA 5× + FAZ 2 KAPANDI (2026-08-26) ⚠️ restart bekliyor (trgm indeksler canlı DB'de ŞİMDİDEN):**
+pg_trgm + GIN ifade indeksleri (IX_products_Code_trgm / IX_products_NameTr_trgm, migration AddProductSearchTrgmIndexes)
++ arama predicate'inde varyant EXISTS → kelime başına ürün-id kümesi (üç OR kolu da indekslenebilir) + sayfa çekimi
+yalnız id ile (ağır predicate 2. kez çalışmıyor). Arama "sarı elbise" p50 1866→371ms (5×), "elbise" 1050→492ms;
+7/7 arama kod+görsel birebir; liste/ana sayfa regresyon yok. Read-model KURULMADI (hedef karşılandı — gerekirse ayrı iş);
+kalan iyileştirmeler (küçük DTO, event-invalidation, VitrinVmBuilder N+1) bilinçli ertelendi. Faz 3 çoklu-instance'da.
 **T6 RAPOR+KPI UYGULANDI (2026-08-26) — TEDARİK PLANI T1-T6 TAMAM ⚠️ restart bekliyor:** OnSaleStampWorker
 (6 saatte bir; site kanallarında F2 published → OnSaleAt), ProcurementReportService (mutabakat SA↔sayım↔fatura +
 partisiz kova; KPI teslim→sayım / sayım→satış / bekleyen yaş kovaları / satışa girmeyen / kart-eksik),

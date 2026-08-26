@@ -103,6 +103,33 @@ Kalan Paket 1-4 maddeleri aşağıdaki Faz 2 listesinde.
 | ürün detayı | 199 / 256 ms (canlı) | 185 / 301 ms |
 **Eşitlik:** liste ürün kodları canlı 5000 ile BİREBİR ✓; ürün detayı title + fiyat blokları md5 eşit ✓.
 
+## Faz 2 — Adım 4 UYGULANDI (2026-08-26): ARAMA SAYFASI + FAZ 2 KAPANIŞI ⚠️ restart bekliyor
+Arama profili (EXPLAIN ANALYZE): sayfa başına birden çok kez çalışan aday sorgusunda iki darboğaz —
+(a) ~1M satırlık `product_variant_attributes` jsonb ad taraması, (b) 29K ürün üzerinde ad/kod LIKE seq scan (~430 ms).
+- ✅ **pg_trgm + GIN ifade indeksleri** (migration `AddProductSearchTrgmIndexes`, CANLI DB'DE): `IX_products_Code_trgm`
+  (lower("Code")), `IX_products_NameTr_trgm` (lower(jsonb_extract_path_text("NameI18n",'tr'))) — EF üretimi
+  `lower(...) LIKE @p` ile birebir aynı ifade (SQL logundan doğrulandı); ad/kod taraması 430→6.7 ms (EXPLAIN ✓).
+- ✅ **Arama predicate'i indekslenebilir hale getirildi** (GetStoreProductsQuery + GetChannelCategoryProductsQuery):
+  kelime→özellik değeri id listeleri ÖNCE tek sorguyla bulunur; OR içindeki varyant-özellik EXISTS'i (trigram
+  indekslerini devre dışı bırakıyordu) kelime başına ürün-id kümesine çevrildi — üç kol da BitmapOr'lanır.
+- ✅ **Sayfa çekimi yalnız id ile** (3 sıralama yolu: fiyat/metrik/alaka): ağır arama/filtre predicate'i sayfa
+  başına İKİNCİ kez çalıştırılmıyor.
+**Ölçüm (izole 5051 vs canlı AYNI ANDA, 5×25):**
+| Arama | Önce p50/p95 | Sonra p50/p95 |
+|---|---|---|
+| "sarı elbise" | 1866 / 2702 ms | **371 / 426 ms (5×)** |
+| "kırmızı bluz" | 1899 / 2119 ms | **373 / 421 ms (5×)** |
+| "elbise" (tek kelime) | 1050 / 1279 ms | **492 / 597 ms** |
+| /urun-listesi (regresyon) | 227 / 261 ms | 207 / 236 ms (eşdeğer) |
+| / (regresyon) | 11 / 16 ms | 12 / 16 ms (eşdeğer) |
+**Eşitlik:** 7/7 arama (3 kelimeli "siyah deri ceket" ve anlamsız "zzz qqq elbise" dahil) — ürün kodları VE kart
+görselleri (renk-kartı seçimi) canlıyla md5 birebir ✓.
+
+**FAZ 2 BU ADIMLA KAPANDI.** Bilinçli ertelenenler (gerektiğinde ayrı iş): ürün arama read-model'i (rapor madde 5 —
+mevcut sonuçlar hedefi karşıladığı için kurulmadı), küçük kart DTO + HTML küçültme, cache event-invalidation
+(TTL yedek güvence yeterli), VitrinVmBuilder koleksiyon N+1, blok batch çözme. Faz 3 çoklu-instance'a geçişte,
+Faz 4 sürekli.
+
 ## Faz 2 — Adım 3 UYGULANDI (2026-08-26) ⚠️ restart bekliyor
 - ✅ **Eksik indeksler (rapor madde 7) CANLI DB'DE:** `IX_ord_orders_MemberId` (partial IsDeleted=false),
   `IX_ord_order_items_SupplierId` (partial NOT NULL), `IX_crm_members_IsActive_CreatedAt` (partial) —

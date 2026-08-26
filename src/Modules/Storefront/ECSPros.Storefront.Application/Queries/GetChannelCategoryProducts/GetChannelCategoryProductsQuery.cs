@@ -405,39 +405,40 @@ public class GetChannelCategoryProductsQueryHandler(
         {
             // Kabul testi 2026-07-22: çok kelimeli arama — genel aramayla aynı semantik
             // (her kelime AND; kod/ad/varyant özellik değeri adı — "sarı gömlek" çalışır)
-            var aramaQ = catDb.Products.AsNoTracking().Where(p => allProductIds.Contains(p.Id));
-            foreach (var kelime in request.Search.Trim().ToLower()
-                         .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                var k = kelime;
-                aramaQ = aramaQ.Where(p => p.Code.ToLower().Contains(k)
-                              || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(k)
-                              || p.Variants.Any(v => v.IsActive && v.VariantAttributes.Any(va =>
-                                     PgJsonFunctions.JsonText(va.AttributeValue.NameI18n, "tr")!
-                                         .ToLower().Contains(k))));
-            }
-            allProductIds = await aramaQ.Select(p => p.Id).ToListAsync(ct);
-
             // Kabul testi 2026-07-22 (revizyon): arama kelimesi bir RENK adıysa kartlar o
-            // renge daraltılır — "kırmızı elbise"de kırmızı olmayan renk kartları gelmez.
-            // Dayanıklılık Faz 2: kelime başına ayrı sorgu yerine TEK sorgu (herhangi bir kelimeyle
-            // eşleşen adaylar SQL-lower adlarıyla çekilir), kelime→id ayrımı bellekte yapılır.
+            // renge daraltılır. Faz 2 arama hızlandırma (2026-08-26): kelime→değer id listeleri
+            // ÖNCE tek sorguyla bulunur; ürün predicate'i ad-LIKE yerine bu id listelerini
+            // kullanır (AttributeValueId indeksi — GetStoreProducts ile aynı desen).
             var kelimeListesi = request.Search.Trim().ToLower()
                 .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (kelimeListesi.Length > 0)
+            var adaylar = await catDb.AttributeValues.AsNoTracking()
+                .Where(av => kelimeListesi.Any(k =>
+                    PgJsonFunctions.JsonText(av.NameI18n, "tr")!.ToLower().Contains(k)))
+                .Select(av => new { av.Id, Ad = PgJsonFunctions.JsonText(av.NameI18n, "tr")!.ToLower() })
+                .ToListAsync(ct);
+            var aramaQ = catDb.Products.AsNoTracking().Where(p => allProductIds.Contains(p.Id));
+            foreach (var kelime in kelimeListesi)
             {
-                var adaylar = await catDb.AttributeValues.AsNoTracking()
-                    .Where(av => kelimeListesi.Any(k =>
-                        PgJsonFunctions.JsonText(av.NameI18n, "tr")!.ToLower().Contains(k)))
-                    .Select(av => new { av.Id, Ad = PgJsonFunctions.JsonText(av.NameI18n, "tr")!.ToLower() })
-                    .ToListAsync(ct);
-                foreach (var k in kelimeListesi)
-                {
-                    var eslesen = adaylar.Where(a => a.Ad != null && a.Ad.Contains(k))
-                        .Select(a => a.Id).ToList();
-                    if (eslesen.Count > 0) aramaKelimeDegerleri[k] = eslesen;
-                }
+                var k = kelime;
+                var eslesen = adaylar.Where(a => a.Ad != null && a.Ad.Contains(k))
+                    .Select(a => a.Id).ToList();
+                if (eslesen.Count > 0) aramaKelimeDegerleri[k] = eslesen;
+                // Varyant-özellik eşleşmesi ürün id kümesine çevrilir (trigram indeksleri
+                // kullanılabilsin diye — GetStoreProducts ile aynı desen).
+                var varyantUrunIdleri = eslesen.Count == 0 ? []
+                    : await catDb.ProductVariantAttributes.AsNoTracking()
+                        .Where(va => eslesen.Contains(va.AttributeValueId) && va.Variant.IsActive)
+                        .Select(va => va.Variant.ProductId)
+                        .Distinct()
+                        .ToListAsync(ct);
+                aramaQ = varyantUrunIdleri.Count > 0
+                    ? aramaQ.Where(p => p.Code.ToLower().Contains(k)
+                                  || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(k)
+                                  || varyantUrunIdleri.Contains(p.Id))
+                    : aramaQ.Where(p => p.Code.ToLower().Contains(k)
+                                  || PgJsonFunctions.JsonText(p.NameI18n, "tr")!.ToLower().Contains(k));
             }
+            allProductIds = await aramaQ.Select(p => p.Id).ToListAsync(ct);
         }
 
         if (allProductIds.Count == 0)
