@@ -86,6 +86,11 @@ ApproveProductSubmission yalnız split, ProductCampaignResolver; 6 Application c
 (anahtar bazlı SemaphoreSlim, double-check, 10sn kilit sınırı). ÖLÇÜM (5051 vs canlı aynı anda): ana sayfa p50
 34→15ms, /urun-listesi 394→288ms, ürün detayı 199→185ms; liste kodları + detay fiyatları canlıyla BİREBİR ✓.
 SIRADA: DB'de sıralama/read-model, küçük kart DTO + HTML küçültme, search-word N+1, eksik indeksler, VitrinVmBuilder N+1.
+**FAZ 2 ADIM 3 UYGULANDI (2026-08-26) ⚠️ restart bekliyor (indeksler canlı DB'de ŞİMDİDEN aktif):** 3 eksik indeks
+migration'la canlıya uygulandı (ord_orders.MemberId, ord_order_items.SupplierId partial, crm_members IsActive+CreatedAt —
+rapordaki "Status" düzeltildi, Member'da alan IsActive) + ANALYZE; arama kelime N+1 tek sorguya indi (EF8 unnest,
+4 aramada kod+görsel md5 birebir ✓) ama arama p50 ~1.9sn DEĞİŞMEDİ → /urunler?search maliyeti aday kümesinde,
+Paket 2 (iki aşamalı listeleme/read-model) birincil hedefi. SIRADA: DB'de sıralama/read-model + küçük kart DTO.
 **T6 RAPOR+KPI UYGULANDI (2026-08-26) — TEDARİK PLANI T1-T6 TAMAM ⚠️ restart bekliyor:** OnSaleStampWorker
 (6 saatte bir; site kanallarında F2 published → OnSaleAt), ProcurementReportService (mutabakat SA↔sayım↔fatura +
 partisiz kova; KPI teslim→sayım / sayım→satış / bekleyen yaş kovaları / satışa girmeyen / kart-eksik),

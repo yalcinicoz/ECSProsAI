@@ -37,6 +37,7 @@ public class MemberConfiguration : IEntityTypeConfiguration<Member>
         builder.HasIndex(x => x.Email).IsUnique().HasFilter("\"Email\" IS NOT NULL");
         builder.HasIndex(x => x.Phone).IsUnique().HasFilter("\"Phone\" IS NOT NULL");
         builder.HasIndex(x => x.LegacyMemberId).IsUnique().HasFilter("\"LegacyMemberId\" IS NOT NULL");
+        builder.HasIndex(x => new { x.IsActive, x.CreatedAt }).HasFilter("\"IsDeleted\" = false"); // admin üye listesi (dayanıklılık Faz 2; raporun Status önerisi — Member'da alan IsActive)
         builder.HasOne<City>().WithMany().HasForeignKey(x => x.CityId); // E2: şehir (G9 segmenti)
         builder.HasQueryFilter(x => !x.IsDeleted);
 

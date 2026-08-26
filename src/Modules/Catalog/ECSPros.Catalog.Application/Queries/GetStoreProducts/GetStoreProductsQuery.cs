@@ -142,8 +142,9 @@ public class GetStoreProductsQueryHandler(
             // contains ile hiç sonuç vermiyordu (renk ad alanında değil, varyant özelliğinde).
             // Her kelime AYRI aranır (AND): kod VEYA Türkçe ad VEYA aktif varyantın
             // özellik değeri adı (renk/beden...) içinde geçmeli.
-            foreach (var kelime in request.Search.Trim().ToLower()
-                         .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            var aramaKelimeleri = request.Search.Trim().ToLower()
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (var kelime in aramaKelimeleri)
             {
                 var k = kelime;
                 q = q.Where(p => p.Code.ToLower().Contains(k)
@@ -151,9 +152,14 @@ public class GetStoreProductsQueryHandler(
                               || p.Variants.Any(v => v.IsActive && v.VariantAttributes.Any(va =>
                                      PgJsonFunctions.JsonText(va.AttributeValue.NameI18n, "tr")!
                                          .ToLower().Contains(k))));
-                // Renk daraltması için: kelimeyle eşleşen özellik değeri id'leri
+            }
+            if (aramaKelimeleri.Length > 0)
+            {
+                // Renk daraltması için: herhangi bir kelimeyle eşleşen özellik değeri id'leri
+                // (dayanıklılık Faz 2: kelime başına ayrı sorgu yerine TEK sorgu — birleşim aynı küme)
                 var eslesenDegerler = await db.AttributeValues.AsNoTracking()
-                    .Where(av => PgJsonFunctions.JsonText(av.NameI18n, "tr")!.ToLower().Contains(k))
+                    .Where(av => aramaKelimeleri.Any(k =>
+                        PgJsonFunctions.JsonText(av.NameI18n, "tr")!.ToLower().Contains(k)))
                     .Select(av => av.Id)
                     .ToListAsync(ct);
                 foreach (var id in eslesenDegerler) aramaRenkIdleri.Add(id);

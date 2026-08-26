@@ -420,15 +420,23 @@ public class GetChannelCategoryProductsQueryHandler(
 
             // Kabul testi 2026-07-22 (revizyon): arama kelimesi bir RENK adıysa kartlar o
             // renge daraltılır — "kırmızı elbise"de kırmızı olmayan renk kartları gelmez.
-            foreach (var kelime in request.Search.Trim().ToLower()
-                         .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            // Dayanıklılık Faz 2: kelime başına ayrı sorgu yerine TEK sorgu (herhangi bir kelimeyle
+            // eşleşen adaylar SQL-lower adlarıyla çekilir), kelime→id ayrımı bellekte yapılır.
+            var kelimeListesi = request.Search.Trim().ToLower()
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (kelimeListesi.Length > 0)
             {
-                var k = kelime;
-                var eslesen = await catDb.AttributeValues.AsNoTracking()
-                    .Where(av => PgJsonFunctions.JsonText(av.NameI18n, "tr")!.ToLower().Contains(k))
-                    .Select(av => av.Id)
+                var adaylar = await catDb.AttributeValues.AsNoTracking()
+                    .Where(av => kelimeListesi.Any(k =>
+                        PgJsonFunctions.JsonText(av.NameI18n, "tr")!.ToLower().Contains(k)))
+                    .Select(av => new { av.Id, Ad = PgJsonFunctions.JsonText(av.NameI18n, "tr")!.ToLower() })
                     .ToListAsync(ct);
-                if (eslesen.Count > 0) aramaKelimeDegerleri[k] = eslesen;
+                foreach (var k in kelimeListesi)
+                {
+                    var eslesen = adaylar.Where(a => a.Ad != null && a.Ad.Contains(k))
+                        .Select(a => a.Id).ToList();
+                    if (eslesen.Count > 0) aramaKelimeDegerleri[k] = eslesen;
+                }
             }
         }
 

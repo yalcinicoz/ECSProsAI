@@ -40,6 +40,7 @@ public class OrderConfiguration : IEntityTypeConfiguration<Domain.Entities.Order
         // da anlık dönsün — soft-delete filtreli kısmi indeksler
         builder.HasIndex(x => new { x.Status, x.CreatedAt }).HasFilter("\"IsDeleted\" = false");
         builder.HasIndex(x => x.CreatedAt).HasFilter("\"IsDeleted\" = false");
+        builder.HasIndex(x => x.MemberId).HasFilter("\"IsDeleted\" = false"); // üye sipariş geçmişi (dayanıklılık Faz 2)
         builder.HasIndex(x => x.LegacyOrderId).IsUnique().HasFilter("\"LegacyOrderId\" IS NOT NULL");
         builder.HasQueryFilter(x => !x.IsDeleted);
         builder.Ignore(x => x.DomainEvents);
@@ -70,6 +71,7 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
         builder.Property(x => x.TaxAmount).HasPrecision(18, 2);
         builder.Property(x => x.Total).HasPrecision(18, 2);
         builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => x.SupplierId).HasFilter("\"SupplierId\" IS NOT NULL"); // tedarikçi/satıcı kalem filtreleri (dayanıklılık Faz 2)
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

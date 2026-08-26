@@ -103,6 +103,20 @@ Kalan Paket 1-4 maddeleri aşağıdaki Faz 2 listesinde.
 | ürün detayı | 199 / 256 ms (canlı) | 185 / 301 ms |
 **Eşitlik:** liste ürün kodları canlı 5000 ile BİREBİR ✓; ürün detayı title + fiyat blokları md5 eşit ✓.
 
+## Faz 2 — Adım 3 UYGULANDI (2026-08-26) ⚠️ restart bekliyor
+- ✅ **Eksik indeksler (rapor madde 7) CANLI DB'DE:** `IX_ord_orders_MemberId` (partial IsDeleted=false),
+  `IX_ord_order_items_SupplierId` (partial NOT NULL), `IX_crm_members_IsActive_CreatedAt` (partial) —
+  migration'lar `AddOrderMemberSupplierIndexes` (Order) + `AddMemberListIndex` (Crm) uygulandı + ANALYZE.
+  Not: rapordaki `Members(Status, CreatedAt)` önerisi düzeltildi — Member'da Status alanı yok; admin üye
+  listesi `IsActive` filtreler + `CreatedAt DESC` sıralar, indeks buna göre kuruldu.
+- ✅ **Arama kelime döngüsü N+1 kapandı:** GetStoreProductsQuery + GetChannelCategoryProductsQuery'de kelime
+  başına ayrı `AttributeValues` sorgusu yerine TEK sorgu (`kelimeler.Any(k => …Contains(k))` — EF8 unnest
+  çevirisi ✓); Storefront'ta kelime→id sözlüğü SQL-lower adlar üzerinden bellekte ayrıştırılır.
+  **Eşitlik:** "sarı elbise", "kırmızı elbise", "mavi gömlek", "kırmızı bluz" — ürün kodları VE kart görselleri
+  (renk-kartı seçimi) canlıyla md5 birebir ✓. **Ölçüm:** arama p50 1945→1940 ms — kazanç yok; kelime sorguları
+  zaten ucuzmuş, /urunler?search 'in ~2 sn'lik maliyeti aday kümesinin tamamının işlenmesinde →
+  bu sayfa Paket 2 (iki aşamalı listeleme / DB'de sıralama / read-model) işinin BİRİNCİL hedefi.
+
 ## Sonraki fazlar (ayrı iş emirleri)
 - **Faz 1:** EnableRetryOnFailure (15 DbContext), /health + DB/Redis check + nginx probe, ResilientHttpClient'ın
   gerçek kullanımı + timeout'lar, admin/supplier auth rate-limit, eski MD5/SHA256 hash zorunlu sıfırlama,
