@@ -995,6 +995,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     requestedCargoName: teslimat.kargo?.ad || null,
                     couponId: kupon?.couponId || null,
                     couponDiscount: kupon?.tutar || null,
+                    // 2026-08-27: sunucu kuponu KODLA yeniden doğrular; tutar sunucuda hesaplanır
+                    couponCode: kupon?.kod || null,
                     // 2026-07-30: kapıda ödeme bedeli sunucuda bu yönteme göre hesaplanıp
                     // sipariş toplamına yazılır (tutar istemciden gönderilmez)
                     paymentMethod: seciliOdemeYontemi(),

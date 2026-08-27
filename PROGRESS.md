@@ -43,6 +43,12 @@ kalıcı · D5 ✅ hafif yük testi (izole 5051, karma trafik: doygunluk ~50-60 
 bulgu: postgres /dev/shm 64MB → compose'a shm_size:1g eklendi ⚠️ `docker compose up -d postgres` kullanıcıda) ·
 0.5 DP-key cron ✅ eklendi+doğrulandı. Kalan dış girdiler ilgili fazların Adım 0'ı oldu (yol haritası güncellendi).
 
+**9.4 KAMPANYA KALANLARI KAPANDI (2026-08-27, Web sitesi) ⚠️ restart bekliyor:** motor `discount`
+(koşullu/cart — panelden oluşturulabilen ama sessizce çalışmayan tip) + `bundle` handler'ları (18/18 motor testi);
+★★ GÜVENLİK: checkout kuponu artık SUNUCUDA doğrulanır (couponCode → ICouponValidator; istemci couponDiscount
+YOK SAYILIR, UseCoupon sunucu tutarıyla) — önceden keyfî indirim tutarı gönderilebiliyordu. Ertelenen: cross_group_gift
+(şema eksik), free_shipping (kargo ücreti mekanizması yok → KG fazı; KARGOTEST kampanyası işlevsiz), review_reward.
+
 **B10 KAPANDI — fiyat filtresi efektif fiyata geçti (2026-08-27, Web sitesi) ⚠️ restart bekliyor:** arama/mağaza
 liste fiyat filtresi + seçim-duyarlı facet fiyat uygulaması kartta gösterilen fiyatla (kanal ?? BasePrice) çalışır;
 kaydırıcı SINIRLARI BasePrice'tan (bilinen kozmetik sınır). FAZ 9 ilerleme: 9.1/9.2/9.9 analizle kapandı (B-09 zaten

@@ -129,7 +129,8 @@ public class ProductCampaignResolver(IPromotionDbContext db) : IProductCampaignR
         if (cartOnly.Count > 0)
         {
             var cartLines = items
-                .Select(i => new CartLineItem(i.VariantId, i.Quantity, itemPrices.GetValueOrDefault(i.VariantId, i.UnitPrice)))
+                .Select(i => new CartLineItem(i.VariantId, i.Quantity,
+                    itemPrices.GetValueOrDefault(i.VariantId, i.UnitPrice), i.ProductId))
                 .ToList();
             foreach (var (cid, c) in cartOnly)
             {

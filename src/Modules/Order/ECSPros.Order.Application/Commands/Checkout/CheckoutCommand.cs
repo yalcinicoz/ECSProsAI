@@ -39,12 +39,17 @@ public record CheckoutCommand(
     Guid? RequestedCargoIntegrationId = null,
     string? RequestedCargoName = null,
     string? PaymentMethod = null,      // kart | kapida-nakit | kapida-kart (2026-07-30)
-    decimal? CouponDiscount = null) : IRequest<Result<CheckoutSonucu>>;
+    decimal? CouponDiscount = null,
+    // 2026-08-27 (9.4 güvenlik): kupon KODU — sunucu yeniden doğrular ve tutarı KENDİ hesaplar;
+    // CouponDiscount artık yalnız görüntü amaçlıdır ve sipariş hesabında YOK SAYILIR.
+    string? CouponCode = null) : IRequest<Result<CheckoutSonucu>>;
 
 /// <summary>Checkout dönüşü (2026-07-30): OrderNumber da döner — onay ekranı insan
 /// okunur numarayı (kanal bazlı seri, F1-F5 kod sistemi) GUID'e düşmeden gösterir
 /// (misafir siparişte üye-listesi geri araması yapılamıyordu).</summary>
-public record CheckoutSonucu(Guid OrderId, string OrderNumber);
+public record CheckoutSonucu(Guid OrderId, string OrderNumber,
+    // 2026-08-27: sunucu doğrulamalı kupon bilgisi — kullanım kaydı (UseCoupon) bu değerlerle atılır.
+    decimal CouponDiscount = 0, Guid? CouponId = null);
 
 public record CheckoutItem(
     Guid VariantId,
@@ -71,6 +76,7 @@ public class CheckoutCommandHandler(
     ECSPros.Shared.Contracts.IChannelProductFlagService flagService,
     ECSPros.Shared.Contracts.IChannelPricingService pricingService,
     ECSPros.Shared.Contracts.IProductCampaignResolver campaignResolver,
+    ECSPros.Shared.Contracts.ICouponValidator couponValidator,
     ECSPros.Shared.Contracts.IPaymentOptionsProvider paymentOptions)
     : IRequestHandler<CheckoutCommand, Result<CheckoutSonucu>>
 {
@@ -128,6 +134,22 @@ public class CheckoutCommandHandler(
         var subtotal = request.Items.Sum(i => i.Quantity * EtkinFiyat(i.VariantId));
         var kampanyaSepetIndirim = Math.Min(kampanyaSonuc.CartDiscount, subtotal);
 
+        // 2026-08-27 (9.4): kupon SUNUCUDA doğrulanır ve tutar SUNUCUDA hesaplanır —
+        // istemciden gelen CouponDiscount asla esas alınmaz (keyfî indirim gönderilebiliyordu).
+        // Kod geçersizse sipariş OLUŞTURULMAZ (müşteri beklediği indirimi almadan ödemesin).
+        var kuponIndirim = 0m;
+        Guid? kuponId = null;
+        if (!string.IsNullOrWhiteSpace(request.CouponCode))
+        {
+            var kupon = await couponValidator.ValidateAsync(
+                request.CouponCode!.Trim(), subtotal, request.MemberId, ct);
+            if (!kupon.Gecerli)
+                return Result.Failure<CheckoutSonucu>(
+                    $"Kupon uygulanamadı: {kupon.Error} Kuponu kaldırıp yeniden deneyin.");
+            kuponIndirim = Math.Min(kupon.DiscountAmount, subtotal);
+            kuponId = kupon.CouponId;
+        }
+
         // 2026-07-30: kapıda ödeme hizmet bedeli SUNUCUDA hesaplanır (istemciden tutar
         // alınmaz — ödeme sayfasındaki bilgi bu değerin görüntüsüdür) ve sipariş toplamına
         // yazılır; üst sınır üstü kapıda ödeme sunucuda da reddedilir. Kupon indirimi de
@@ -139,7 +161,7 @@ public class CheckoutCommandHandler(
             return Result.Failure<CheckoutSonucu>("Seçilen ödeme yöntemi bu mağazada şu an kullanılamıyor; lütfen başka bir yöntem seçin.");
 
         var kapidaOdeme = request.PaymentMethod is "kapida-nakit" or "kapida-kart";
-        var indirim = Math.Clamp((request.CouponDiscount ?? 0m) + kampanyaSepetIndirim, 0m, subtotal);
+        var indirim = Math.Clamp(kuponIndirim + kampanyaSepetIndirim, 0m, subtotal);
         var masraf = kapidaOdeme ? odemeSecenekleri.CodServiceFee : 0m;
         if (kapidaOdeme && odemeSecenekleri.CodMaxOrderTotal > 0
             && subtotal - indirim >= odemeSecenekleri.CodMaxOrderTotal)
@@ -220,7 +242,7 @@ public class CheckoutCommandHandler(
                 0m, kalemBrut[i]);
         }
 
-        var kuponToplam = Math.Clamp(request.CouponDiscount ?? 0m, 0m,
+        var kuponToplam = Math.Clamp(kuponIndirim, 0m,
             kalemBrut.Sum() - kalemPay.Sum());
         var kuponBazToplam = kalemBrut.Select((b, i) => b - kalemPay[i]).Sum();
         if (kuponToplam > 0 && kuponBazToplam > 0)
@@ -260,6 +282,6 @@ public class CheckoutCommandHandler(
         }
 
         await db.SaveChangesAsync(ct);
-        return Result.Success(new CheckoutSonucu(order.Id, orderNumber));
+        return Result.Success(new CheckoutSonucu(order.Id, orderNumber, kuponIndirim, kuponId));
     }
 }

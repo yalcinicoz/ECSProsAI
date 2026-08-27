@@ -81,16 +81,18 @@ public class StoreCheckoutController(
             req.Items.Select(i => new CheckoutItem(i.VariantId, i.Sku, i.ProductName, i.VariantInfo ?? "", i.Quantity, i.UnitPrice)).ToList(),
             req.CustomerNotes, req.CartId, kabulKayitlari,
             req.RequestedCargoIntegrationId, req.RequestedCargoName,
-            req.PaymentMethod, req.CouponDiscount), ct);
+            req.PaymentMethod, req.CouponDiscount, req.CouponCode), ct);
 
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
 
         // C10: kupon kullanım kaydı (C3'te yalnız doğrulanmıştı) — sipariş oluştuktan sonra.
         // Misafirde kayıt atlanır: CouponUsage.MemberId zorunlu (üye kuponları misafire
         // zaten doğrulanmaz; genel kuponun misafir kullanımı sayaca yazılmaz — bilinen sınır).
-        if (memberId is { } uyeKimlik && req.CouponId is { } kuponId && req.CouponDiscount is { } indirim)
+        // 2026-08-27 (9.4): kayıt SUNUCU doğrulamalı kupon bilgisiyle atılır (istemci
+        // CouponId/CouponDiscount alanları yok sayılır — sahte kayıt/keyfî tutar kapatıldı).
+        if (memberId is { } uyeKimlik && result.Value!.CouponId is { } kuponId && result.Value!.CouponDiscount > 0)
             await mediator.Send(new ECSPros.Promotion.Application.Commands.UseCoupon.UseCouponCommand(
-                kuponId, uyeKimlik, result.Value!.OrderId, indirim), ct);
+                kuponId, uyeKimlik, result.Value!.OrderId, result.Value!.CouponDiscount), ct);
 
         // O2 (2026-08-04, akış değişti): onay YENİ SİTEDE alınır — kapıda siparişte
         // (politika gerektiriyorsa) onay SMS/e-postası gönderilir; sipariş onaylanınca
@@ -155,7 +157,8 @@ public record StoreCheckoutRequest(
     string? CustomerNotes = null,
     Guid? CartId = null,
     Guid? CouponId = null,           // C10: uygulanan kuponun kullanım kaydı için
-    decimal? CouponDiscount = null,
+    decimal? CouponDiscount = null,  // 2026-08-27: artık yalnız görüntü — sipariş hesabında yok sayılır
+    string? CouponCode = null,       // 2026-08-27 (9.4 güvenlik): sunucu bu kodu yeniden doğrular, tutarı kendisi hesaplar
     List<string>? AcceptedContracts = null, // C8: onaylanan sözleşme kodları (kayıt sunucuda çözülür)
     Guid? RequestedCargoIntegrationId = null, // 2026-07-22: müşterinin kargo tercihi
     string? RequestedCargoName = null,

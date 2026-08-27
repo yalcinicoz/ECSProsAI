@@ -23,6 +23,8 @@ public static class DependencyInjection
 
         // F2: kampanya çözümleme servisi (F3 kart/detay + F4 checkout ortak çekirdek).
         services.AddScoped<IProductCampaignResolver, ProductCampaignResolver>();
+        // 2026-08-27: checkout sunucu-taraflı kupon doğrulaması (Shared.Contracts portu)
+        services.AddScoped<ECSPros.Shared.Contracts.ICouponValidator, ECSPros.Promotion.Application.Services.CouponValidatorService>();
 
         return services;
     }

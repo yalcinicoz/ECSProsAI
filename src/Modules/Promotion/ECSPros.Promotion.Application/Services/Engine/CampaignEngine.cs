@@ -21,6 +21,10 @@ public static class CampaignEngine
             "fixed_discount"      => ApplyFixedDiscount(campaign, name, cartItems, applicableVariantIds, settings),
             "buy_x_get_y"         => ApplyBuyXGetY(campaign, name, cartItems, applicableVariantIds, settings),
             "min_cart_discount"   => ApplyMinCartDiscount(campaign, name, cartItems, settings),
+            // 2026-08-27 (FAZ 9/9.4): birleşik "discount" tipi (koşullu/cart) ve "bundle" —
+            // panel şeması vardı, motoru yoktu; bu tipte kampanyalar sessizce çalışmıyordu.
+            "discount"            => ApplyDiscount(campaign, name, cartItems, applicableVariantIds, settings),
+            "bundle"              => ApplyBundle(campaign, name, cartItems, applicableVariantIds, settings),
             _                     => null
         };
     }
@@ -153,6 +157,96 @@ public static class CampaignEngine
 
         return new DiscountLine(campaign.Id, campaign.Code, name, "buy_x_get_y",
             Math.Round(totalDiscount, 2), affectedVariants);
+    }
+
+    // ─── discount (birleşik tip, 2026-08-27) ─────────────────────────
+    // Settings: applyTo cart|selected; conditionType none|cartAmount|cartQty|scopeAmount|scopeQty;
+    // conditionValue; benefitType percent|amount; benefitValue; maxDiscountAmount (yüzde tavanı).
+    // NOT: applyTo=selected + koşulsuz + percent/amount ürün-bazlı yolda fiyata gömülür
+    // (ProductCampaignResolver) ve buraya GELMEZ — burada kalanlar cart tabanlı/koşullu olanlardır.
+    private static DiscountLine? ApplyDiscount(
+        Campaign campaign, string name,
+        IReadOnlyList<CartLineItem> cartItems,
+        HashSet<Guid> applicableVariantIds,
+        Dictionary<string, object> settings)
+    {
+        var applyTo = GetString(settings, "applyTo") ?? "selected";
+        var scope = applicableVariantIds.Count == 0
+            ? cartItems.ToList()
+            : cartItems.Where(i => applicableVariantIds.Contains(i.VariantId)).ToList();
+        if (scope.Count == 0) return null;
+
+        var condType = GetString(settings, "conditionType") ?? "none";
+        var condVal = GetDecimal(settings, "conditionValue");
+        var cartTotal = cartItems.Sum(i => i.LineTotal);
+        var scopeTotal = scope.Sum(i => i.LineTotal);
+        var kosulOk = condType switch
+        {
+            "cartAmount"  => cartTotal >= condVal,
+            "cartQty"     => cartItems.Sum(i => i.Quantity) >= condVal,
+            "scopeAmount" => scopeTotal >= condVal,
+            "scopeQty"    => scope.Sum(i => i.Quantity) >= condVal,
+            _             => true
+        };
+        if (!kosulOk) return null;
+
+        var benefitType = GetString(settings, "benefitType") ?? "percent";
+        var val = GetDecimal(settings, "benefitValue");
+        if (val <= 0) return null;
+
+        var taban = applyTo == "cart" ? cartTotal : scopeTotal;
+        if (taban <= 0) return null;
+        var discount = benefitType == "amount"
+            ? Math.Min(val, taban)
+            : Math.Round(taban * val / 100, 2);
+        var max = GetDecimal(settings, "maxDiscountAmount");
+        if (benefitType == "percent" && max > 0) discount = Math.Min(discount, max);
+        if (discount <= 0) return null;
+
+        var etkilenen = (applyTo == "cart" ? (IEnumerable<CartLineItem>)cartItems : scope)
+            .Select(i => i.VariantId).Distinct().ToList();
+        return new DiscountLine(campaign.Id, campaign.Code, name, "discount", discount, etkilenen);
+    }
+
+    // ─── bundle (Kombin, 2026-08-27) ─────────────────────────────────
+    // Settings: minBundleItems (≥2 FARKLI ürün); bundleBenefitType fixedPrice|percent|amount;
+    // bundleBenefitValue. Farklı ürün = ProductId (yoksa varyant). Bilinçli sade model:
+    // fayda kapsam satır TOPLAMINA bir kez uygulanır (adet başına set kurulmaz);
+    // fixedPrice'ta indirim = kapsam toplamı − paket fiyatı (toplam fiyatın altındaysa).
+    private static DiscountLine? ApplyBundle(
+        Campaign campaign, string name,
+        IReadOnlyList<CartLineItem> cartItems,
+        HashSet<Guid> applicableVariantIds,
+        Dictionary<string, object> settings)
+    {
+        var minItems = (int)GetDecimal(settings, "minBundleItems");
+        if (minItems < 2) return null;
+        var scope = applicableVariantIds.Count == 0
+            ? cartItems.ToList()
+            : cartItems.Where(i => applicableVariantIds.Contains(i.VariantId)).ToList();
+        if (scope.Count == 0) return null;
+
+        var farkli = scope
+            .Select(i => i.ProductId != Guid.Empty ? "p:" + i.ProductId : "v:" + i.VariantId)
+            .Distinct().Count();
+        if (farkli < minItems) return null;
+
+        var toplam = scope.Sum(i => i.LineTotal);
+        if (toplam <= 0) return null;
+        var tip = GetString(settings, "bundleBenefitType") ?? "percent";
+        var val = GetDecimal(settings, "bundleBenefitValue");
+        if (val <= 0) return null;
+        var discount = tip switch
+        {
+            "percent"    => Math.Round(toplam * val / 100, 2),
+            "amount"     => Math.Min(val, toplam),
+            "fixedPrice" => toplam > val ? toplam - val : 0,
+            _            => 0
+        };
+        if (discount <= 0) return null;
+
+        return new DiscountLine(campaign.Id, campaign.Code, name, "bundle",
+            Math.Round(discount, 2), scope.Select(i => i.VariantId).Distinct().ToList());
     }
 
     // ─── min_cart_discount ───────────────────────────────────────────
