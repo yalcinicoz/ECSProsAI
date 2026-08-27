@@ -43,6 +43,11 @@ kalıcı · D5 ✅ hafif yük testi (izole 5051, karma trafik: doygunluk ~50-60 
 bulgu: postgres /dev/shm 64MB → compose'a shm_size:1g eklendi ⚠️ `docker compose up -d postgres` kullanıcıda) ·
 0.5 DP-key cron ✅ eklendi+doğrulandı. Kalan dış girdiler ilgili fazların Adım 0'ı oldu (yol haritası güncellendi).
 
+**B10 KAPANDI — fiyat filtresi efektif fiyata geçti (2026-08-27, Web sitesi) ⚠️ restart bekliyor:** arama/mağaza
+liste fiyat filtresi + seçim-duyarlı facet fiyat uygulaması kartta gösterilen fiyatla (kanal ?? BasePrice) çalışır;
+kaydırıcı SINIRLARI BasePrice'tan (bilinen kozmetik sınır). FAZ 9 ilerleme: 9.1/9.2/9.9 analizle kapandı (B-09 zaten
+düzeltilmişti; M2/M3'te aktarılacak değer yok — yayinda≠durdurma; demo filtreleri doğrulandı).
+
 **Kategori filtre sayıları KART birimine geçti (2026-08-26, Web sitesi alanı) ⚠️ restart bekliyor:**
 Kullanıcı kararı: "hem filtre hem liste başlıklarında renk sayıları görünsün" — önceden liste başlığı KART
 (ürün×renk), facet ÜRÜN sayıyordu (/yeni-gelenler: başlık 8950, Kadın(2604), seçince 5952 tutarsızlığı).

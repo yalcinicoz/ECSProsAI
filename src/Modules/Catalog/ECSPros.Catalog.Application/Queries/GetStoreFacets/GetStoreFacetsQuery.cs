@@ -51,7 +51,8 @@ public record AttributeFacetValueDto(
 
 public class GetStoreFacetsQueryHandler(
     ICatalogDbContext db, IInStockProductProvider inStock, IMemoryCache memoryCache,
-    IChannelProductFlagService flagService)
+    IChannelProductFlagService flagService,
+    ECSPros.Shared.Contracts.IEffectivePriceProvider effectivePrices)
     : IRequestHandler<GetStoreFacetsQuery, Result<StoreFacetsDto>>
 {
     // Tüm-katalog facet'i sorgu başına ~4 sn süren bir aggregation; katalog nadiren
@@ -118,9 +119,13 @@ public class GetStoreFacetsQueryHandler(
         if (secimVar || hasSearch)
         {
             var baseIds = await q.Select(p => p.Id).ToListAsync(ct);
+            // B10 (2026-08-27): fiyat bağlamı efektif fiyatla — liste filtresiyle aynı küme
+            var efektif = (request.PriceMin.HasValue || request.PriceMax.HasValue)
+                ? await effectivePrices.GetMinEffectivePricesAsync(request.FirmPlatformId, ct)
+                : null;
             return await BuildFacetsWithSelections(
                 db, baseIds, request.SelectedValueIds, request.PriceMin, request.PriceMax,
-                sameVariant: false, ct, harita, seciliKategoriler);
+                sameVariant: false, ct, harita, seciliKategoriler, efektif);
         }
 
         // Ürün id'leri belleğe çekilmez — alt sorgu olarak aggregation'a gömülür
@@ -186,7 +191,10 @@ public class GetStoreFacetsQueryHandler(
         CancellationToken ct,
         // 2026-08-15: kategori sanal grubu (bkz. GetStoreFacetsQuery.ProductCategoryMap)
         IReadOnlyDictionary<Guid, Guid>? productCategoryMap = null,
-        List<Guid>? selectedCategoryIds = null)
+        List<Guid>? selectedCategoryIds = null,
+        // B10 kapanışı (2026-08-27): verilirse fiyat filtresi efektif (kanal) fiyatla uygulanır
+        // (kartla aynı); null → eski BasePrice davranışı (Storefront fallback çağıranları).
+        IReadOnlyDictionary<Guid, decimal>? efektifFiyatlar = null)
     {
         var secili = (selectedValueIds ?? []).Distinct().ToList();
         var seciliKategoriler = selectedCategoryIds is { Count: > 0 } && productCategoryMap is not null
@@ -278,6 +286,23 @@ public class GetStoreFacetsQueryHandler(
             if ((!priceMin.HasValue && !priceMax.HasValue) || ids.Count == 0) return ids;
             var min = priceMin ?? 0;
             var max = priceMax ?? decimal.MaxValue;
+            if (efektifFiyatlar is not null)
+            {
+                // B10: kartta gösterilen (efektif) fiyatla — liste filtresiyle birebir aynı küme
+                var eksikler = new List<Guid>();
+                var sonuc = new List<Guid>();
+                foreach (var id in ids)
+                {
+                    if (efektifFiyatlar.TryGetValue(id, out var f))
+                    { if (f >= min && f <= max) sonuc.Add(id); }
+                    else eksikler.Add(id);
+                }
+                if (eksikler.Count > 0)
+                    sonuc.AddRange(await db.Products.AsNoTracking()
+                        .Where(p => eksikler.Contains(p.Id) && p.BasePrice >= min && p.BasePrice <= max)
+                        .Select(p => p.Id).ToListAsync(ct));
+                return sonuc;
+            }
             return await db.Products.AsNoTracking()
                 .Where(p => ids.Contains(p.Id)
                     && (p.Variants.Any(v => v.IsActive && v.BasePrice > 0 && v.BasePrice >= min && v.BasePrice <= max)

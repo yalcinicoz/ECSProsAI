@@ -217,13 +217,22 @@ public class GetStoreProductsQueryHandler(
             }
         }
 
-        // B10: fiyat aralığı — kartın gösterdiği fiyatın kaynağı olan varyant BasePrice'ı
-        // aralıkta olan en az bir aktif varyant.
-        if (request.PriceMin.HasValue)
-            q = q.Where(p => p.Variants.Any(v => v.IsActive && v.BasePrice >= request.PriceMin.Value
-                && (!request.PriceMax.HasValue || v.BasePrice <= request.PriceMax.Value)));
-        else if (request.PriceMax.HasValue)
-            q = q.Where(p => p.Variants.Any(v => v.IsActive && v.BasePrice > 0 && v.BasePrice <= request.PriceMax.Value));
+        // B10 kapanışı (2026-08-27): fiyat filtresi kartta GÖSTERİLEN fiyatla çalışır —
+        // kanal override'lı üründe (kataloğun ~%7'si, ort. fark ~290 TL) BasePrice filtresi
+        // kartta 350 TL yazan ürünü ≤400 aralığından düşürebiliyordu. Efektif fiyat (kanal
+        // min ?? varyant BasePrice min) cache'li provider'dan; sözlükte olmayan ürün için
+        // ürün BasePrice'ına düşülür (kartla aynı son basamak).
+        if (request.PriceMin.HasValue || request.PriceMax.HasValue)
+        {
+            var efektif = await effectivePrices.GetMinEffectivePricesAsync(request.FirmPlatformId, ct);
+            var min = request.PriceMin ?? 0m;
+            var max = request.PriceMax ?? decimal.MaxValue;
+            var uygunIdler = efektif.Where(kv => kv.Value >= min && kv.Value <= max)
+                .Select(kv => kv.Key).ToList();
+            var sozluktekiler = efektif.Keys.ToList();
+            q = q.Where(p => uygunIdler.Contains(p.Id)
+                          || (!sozluktekiler.Contains(p.Id) && p.BasePrice >= min && p.BasePrice <= max));
+        }
 
         // B10 revizyonu (B-005/B-006, kabul testi 2026-07-22): fiyat sıralaması GÖSTERİLEN
         // (efektif) fiyattan yapılır — kanal override'ı varken BasePrice ile sıralamak kartta
