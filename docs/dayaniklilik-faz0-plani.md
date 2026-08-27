@@ -138,6 +138,27 @@ görselleri (renk-kartı seçimi) canlıyla md5 birebir ✓.
   Not: eski sırlar döndürüldüğü için geçmiş kopyalarda görünmeleri artık risk değildir.
 - Kalan: D5 (yük testi) ve D6 (eski üye hash politikası) kullanıcı kararında.
 
+## D5 UYGULANDI (2026-08-27) — hafif yük testi
+İzole 5051'e karma okuma trafiği (ana sayfa/kategori/liste/arama/detay ağırlıklı havuz), kademeli eşzamanlılık,
+seviye başına 30 sn (üreteç aynı sunucuda — CPU paylaşımlı, sayılar muhafazakâr):
+| Eşzamanlı | istek/sn | p50 | p95 | hata |
+|---|---|---|---|---|
+| 5 | 46.0 | 66 ms | 344 ms | 0 |
+| 10 | 54.4 | 99 ms | 642 ms | 0 |
+| 20 | 52.9 | 172 ms | 1.56 s | 0 |
+| 40 | 48.9 | 380 ms | 3.49 s | 29 |
+| 80 | 59.3 | 430 ms | 8.13 s | 0 |
+**Sonuç:** Doygunluk ~50-60 istek/sn (≈180-200K istek/saat) — mevcut insan trafiğinin (saatte 3-30) binlerce
+katı; diz noktası eşzamanlılık 10-20, sonrası kuyruk gecikmesi. **Bulgu:** 40 eşzamanlıdaki 29 hata Postgres
+container'ının varsayılan /dev/shm=64MB sınırından (53100 shared memory) — `docker-compose.yml`'e `shm_size: 1g`
+eklendi; **uygulanması `sudo docker compose up -d postgres` gerektirir (kısa DB kesintisi — kullanıcı zamanlar)**.
+Faz 3 (çoklu instance) ihtiyacı bu profilde yok.
+
+## D6 KARAR (2026-08-27): "girişte yükselt" KALICI POLİTİKA
+Eski MD5/SHA256 üye hash'leri için zorunlu sıfırlama YAPILMAYACAK; mevcut davranış (başarılı girişte BCrypt'e
+yükseltme) kalıcı politikadır. Hiç giriş yapmayan hesapların eski hash'i DB'de kalır — kabul edilen risk.
+D1-D6 kararlarının tamamı böylece KAPANDI.
+
 **FAZ 2 BU ADIMLA KAPANDI.** Bilinçli ertelenenler (gerektiğinde ayrı iş): ürün arama read-model'i (rapor madde 5 —
 mevcut sonuçlar hedefi karşıladığı için kurulmadı), küçük kart DTO + HTML küçültme, cache event-invalidation
 (TTL yedek güvence yeterli), VitrinVmBuilder koleksiyon N+1, blok batch çözme. Faz 3 çoklu-instance'a geçişte,

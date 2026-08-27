@@ -38,6 +38,11 @@ Anasayfa > Tesettür Giyim > Tesettür Etek"); dış/boş referer'da kural taban
 İzole 5051 ✓: referer'lı/referer'sız/google-referer/kök-kategori senaryoları. ★ İÇERİK NOTU: /yeni-gelenler
 koleksiyonu canlıda 0 ürün (10 günlük görsel-güncelleme penceresi boş) — panelden pencere genişletilebilir.
 
+**YOL HARİTASI FAZ 0 KAPANDI (2026-08-27):** 0.1 DNS ✅ (partner canlı doğrulandı) · D3 ✅ · D6 ✅ girişte-yükselt
+kalıcı · D5 ✅ hafif yük testi (izole 5051, karma trafik: doygunluk ~50-60 istek/sn ≈ mevcut trafiğin binlerce katı;
+bulgu: postgres /dev/shm 64MB → compose'a shm_size:1g eklendi ⚠️ `docker compose up -d postgres` kullanıcıda) ·
+0.5 DP-key cron ✅ eklendi+doğrulandı. Kalan dış girdiler ilgili fazların Adım 0'ı oldu (yol haritası güncellendi).
+
 **Kategori filtre sayıları KART birimine geçti (2026-08-26, Web sitesi alanı) ⚠️ restart bekliyor:**
 Kullanıcı kararı: "hem filtre hem liste başlıklarında renk sayıları görünsün" — önceden liste başlığı KART
 (ürün×renk), facet ÜRÜN sayıyordu (/yeni-gelenler: başlık 8950, Kadın(2604), seçince 5952 tutarsızlığı).

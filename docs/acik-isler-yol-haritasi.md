@@ -15,29 +15,12 @@ dayanıklılık Faz 0-1-2 (arama 5×). Aşağıdakiler **kalan** işlerdir.
 
 ---
 
-## FAZ 0 — Kullanıcıdan beklenen karar ve dış girdiler (bloklayanlar)
+## ~~FAZ 0~~ KAPANDI (2026-08-27) — kullanıcı kararı: açık faz kalmayacak
 
-Kod işi değil; ilgili fazları açan anahtarlar. Hazır olan işaretlenir.
-
-| # | Girdi/Karar | Bloke ettiği iş |
-|---|---|---|
-| 0.1 | **DNS A kaydı** `partner.misharitalia.com` + nginx recreate | F5 satıcı paneli kabul testi |
-| 0.2 | ~~**D3** — sır döndürme + git geçmiş temizliği~~ ✅ **YAPILDI 2026-08-26** (DB/Redis/JWT döndü, geçmiş filter-repo ile temiz, publish-demo geçmişten silindi, force-push) | — |
-| 0.3 | **D6** — eski MD5/SHA256 üye hash'leri: zorunlu sıfırlama mı, "girişte yükselt" ile devam mı? | F8 |
-| 0.4 | **D5** — yük testi istenip istenmediği (istenirse araç+senaryo öneririm) | F8 |
-| 0.5 | **DP key yedek cron'u**: `0 4 * * 0 /opt/ECSProsAI/tools/ops/backup-dp-keys.sh` (crontab'a ekleme) | — |
-| 0.6 | **K10 cutover kararı** — Legacy toplu stok senkronunun kapatılacağı tarih | F2 tedarik go-live (o güne dek Yerleştirme canlıda KULLANILMAZ) |
-| 0.7 | **Termal yazıcı saha testi** — etiket şablonlarının gerçek yazıcıda doğrulanması | F2 |
-| 0.8 | **Sipariş ONAY akışı kullanıcı testi** (onay linki /o/{token}; kart PayTR politika onayı istiyorsa auto-confirm yok) | konu kapanışı |
-| 0.9 | **Gerçek Trendyol API anahtarları** | F4 pazaryeri canlı deneme |
-| 0.10 | **PayTR canlı PCI-DSS onayı** (Direct API şimdilik YALNIZ test modu) | PayTR canlıya alma |
-| 0.11 | **Mobil uygulama yayın kimliği** — GCP servis hesabı + paket adı (Play Integrity), iOS için App Attest kimlikleri | F6 |
-| 0.12 | **GA4 / Meta / Merchant gerçek kimlikleri** — girilince reklam/analytics son doğrulama | kısa doğrulama turu |
-| 0.13 | **Eldi firması elden girişleri** — kargo entegrasyon kimlikleri, bölge kuralları, SMS, fatura serisi | mishar kanalı işletimi |
-| 0.14 | **Yorum fotoğrafları kaynak adresi** (319 foto, eski `GUID.jpg` sunucu/klasörü) | kısa aktarım işi |
-| 0.15 | **HepsiJet resmi API dokümanı** + Sürat IP engelinin açılması | F3 kargo adapter'ları |
-
----
+0.1 DNS+nginx ✅ (satıcı paneli dışarıdan canlı) · 0.2 D3 sır döndürme+geçmiş temizliği ✅ (2026-08-26) ·
+0.3 D6 ✅ karar: girişte-yükselt kalıcı · 0.4 D5 ✅ hafif yük testi yapıldı (~50-60 istek/sn doygunluk;
+shm_size bulgusu — bkz. dayanıklılık planı) · 0.5 DP-key cron ✅ (Pazar 04:00, elle doğrulandı).
+Kalan dış girdiler feshedilip ilgili fazların **Adım 0**'ı yapıldı (aşağıda); bağımsız küçükler F9'a taşındı.
 
 ## FAZ 1 — Satış kanalı planının tamamlanması (F4 → F6 → F7 → F8)
 **Alan:** Dış API + Admin panel · **Plan:** `docs/satis-kanali-ortak-kurgu.md` (K1-K18 kapalı; F0-F3+F5 canlıda)
@@ -56,6 +39,7 @@ Kod işi değil; ilgili fazları açan anahtarlar. Hazır olan işaretlenir.
 ## FAZ 2 — Tedarik go-live (K10 cutover)
 **Alan:** Admin panel · **Plan:** `docs/urun-tedarik-is-akisi.md` (T1-T6 canlıda) · **Bloklayan:** 0.6, 0.7
 
+- [ ] **Adım 0 (dış girdi):** K10 cutover tarihi (Legacy stok senkronu kesilecek gün — kullanıcı belirler) + termal yazıcı saha doğrulaması. *(eski 0.6, 0.7)*
 - [ ] **2.1** Cutover planı: Legacy toplu stok senkronunun stok ayağının kapatılması (Legacy:Sync yapılandırması),
       geri dönüş planıyla birlikte; kapanış anına kadar Yerleştirme canlıda kullanılmaz (10 dk'lık mutlak ezme
       yeni girişleri siler).
@@ -66,6 +50,7 @@ Kod işi değil; ilgili fazları açan anahtarlar. Hazır olan işaretlenir.
 ## FAZ 3 — Kargo entegrasyonu (KG1 → KG4)
 **Alan:** Kargo · **Plan:** `docs/kargo-entegrasyon-plani.md` · **Hazır:** PTT kimlik+barkod aralığı ✓, DHL/MNG kimlik ✓ + legacy çalışan kod
 
+- [ ] **Adım 0 (dış girdi):** HepsiJet resmi API dokümanı + Sürat IP engelinin açılması — yalnız 3.5'i bloklar, PTT/DHL beklemez. *(eski 0.15)*
 - [ ] **3.1 KG1** Gönderim kaydı modeli + **PTT adapter** (test ortamı teyidi açık) + **DHL/MNG adapter**
       (cancelOrder + Query sayfaları eksik; enum'lar `DHLMNGEnums.txt`).
 - [ ] **3.2 KG2** Panel: gönderim oluşturma/iptal/sorgu ekranları, kanal-kargo eşleştirme.
@@ -76,6 +61,7 @@ Kod işi değil; ilgili fazları açan anahtarlar. Hazır olan işaretlenir.
 ## FAZ 4 — Pazaryeri canlıya alma
 **Alan:** Admin panel · **Plan:** `docs/pazaryeri-entegrasyon-veri-yonetimi.md` (F1-F5 canlıda) · **Bloklayan:** 0.9
 
+- [ ] **Adım 0 (dış girdi):** Gerçek Trendyol API anahtarları (kullanıcı temin eder). *(eski 0.9)*
 - [ ] **4.1** Gerçek Trendyol anahtarlarıyla uçtan uca canlı deneme (ürün gönderimi + batch takibi + hata düzeltme döngüsü).
 - [ ] **4.2** Zamanlanmış senkron kadansları (fiyat/stok push periyotları, worker).
 - [ ] **4.3** F6+ diğer pazaryerleri (talep geldikçe; adapter'lar stub).
@@ -91,6 +77,7 @@ Kod işi değil; ilgili fazları açan anahtarlar. Hazır olan işaretlenir.
 ## FAZ 6 — Mobil uygulamaya hazırlık
 **Alan:** Mobil API · **Referans:** `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` · **Bloklayan:** 0.11
 
+- [ ] **Adım 0 (dış girdi):** Mobil yayın kimliği: GCP servis hesabı + paket adı (Play Integrity), iOS App Attest kimlikleri. *(eski 0.11)*
 - [ ] **6.1** Mobil geliştirici staging testleri (5055, DevBypass) — süregelen destek.
 - [ ] **6.2** Play Integrity gerçek config (GCP servis hesabı + paket adı) → prod attestation.
 - [ ] **6.3** iOS App Attest sunucu doğrulaması.
@@ -108,14 +95,20 @@ Kod işi değil; ilgili fazları açan anahtarlar. Hazır olan işaretlenir.
 **Alan:** ortak çekirdek · **Plan:** `docs/dayaniklilik-faz0-plani.md` (Faz 0-1-2 tamam) · **Bloklayan:** 0.2-0.4
 
 - [x] **8.1 D3 uygulaması** ✅ 2026-08-26 — bkz. `docs/dayaniklilik-faz0-plani.md` D3 bölümü.
-- [ ] **8.2 D6 uygulaması:** karar doğrultusunda eski hash politikası.
-- [ ] **8.3 D5:** istenirse yük testi kurulumu + Faz 2 sonrası doğrulama ölçümü.
+- [x] **8.2 D6** ✅ 2026-08-27 — karar: girişte-yükselt kalıcı politika; ek uygulama gerekmez.
+- [x] **8.3 D5** ✅ 2026-08-27 — hafif yük testi yapıldı; sonuçlar `docs/dayaniklilik-faz0-plani.md` D5 bölümünde; kalan tek adım 9.0e (shm_size uygulaması).
 - [ ] **8.4 Faz 4 (sürekli):** correlation id + ProblemDetails, kritik akış testleri (xUnit+Testcontainers),
       metrik/APM, pg_stat_statements.
 - [ ] **8.5 Faz 3 (KOŞULLU — yalnız çoklu instance'a geçişte):** worker leader-election/SKIP LOCKED, SignalR
       backplane, dağıtık rate limit, migration'ın deploy adımına alınması, medya object storage.
 
 ## FAZ 9 — Veri kalitesi ve teknik borç (bağımsız küçük/orta işler)
+
+- [ ] **9.0a (eski 0.8):** Sipariş ONAY akışı kullanıcı kabul testi (onay linki /o/{token}).
+- [ ] **9.0b (eski 0.10):** PayTR canlı PCI-DSS onayı → Direct API'nin test modundan çıkarılması.
+- [ ] **9.0c (eski 0.12):** Gerçek GA4/Meta/Merchant kimlikleri girilince reklam/analytics son doğrulama.
+- [ ] **9.0d (eski 0.13):** Eldi firması elden girişleri (kargo kimlikleri, bölge kuralları, SMS, fatura serisi).
+- [ ] **9.0e (2026-08-27 yük testi bulgusu):** `sudo docker compose up -d postgres` ile shm_size=1g'nin uygulanması (kısa DB kesintisi — kullanıcı zamanlar).
 
 - [ ] **9.1 B-09:** katalogda ~%37 ürün yanlış grupta — rapor `docs/urun-grup-eslesme-analizi-2026-07-18.md`;
       düzeltme stratejisi + toplu taşıma.
