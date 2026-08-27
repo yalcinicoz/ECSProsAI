@@ -110,10 +110,8 @@ Faz olmayan kalıntılar aşağıya taşındı:
 - [ ] **9.0d (eski 0.13):** Eldi firması elden girişleri (kargo kimlikleri, bölge kuralları, SMS, fatura serisi).
 - [ ] **9.0e (2026-08-27 yük testi bulgusu):** `sudo docker compose up -d postgres` ile shm_size=1g'nin uygulanması (kısa DB kesintisi — kullanıcı zamanlar).
 
-- [ ] **9.1 B-09:** katalogda ~%37 ürün yanlış grupta — rapor `docs/urun-grup-eslesme-analizi-2026-07-18.md`;
-      düzeltme stratejisi + toplu taşıma.
-- [ ] **9.2 M2/M3 değer aktarımı:** kanal seçim/durdurma alanlarının eski sistemden değer aktarımı
-      (`project_sale_visibility_model_2026-07-14.md`).
+- [x] **9.1 B-09** ✅ ZATEN DÜZELTİLMİŞTİ (2026-07-18 Faz 21, 10.482 ürün; rapor başlığı 'DÜZELTİLDİ') — 2026-08-27 güncel DB doğrulandı: Pantolon 3.109 (13.572 değil). Yol haritasına bayat hafıza notundan girmişti.
+- [x] **9.2 M2/M3 değer aktarımı** ✅ KAPANDI (2026-08-27, analizle — veri değişikliği YOK): M2 kanal seçimi legacy `plurunler.satista` → ChannelVariant.IsActive olarak ZATEN aktarılıyor (+mishar sürekli senkron); `satisaAcik` kolonu plurunler'de yok (ürün seviyesi apurunler→IsSaleOpen M1'de). M3 durdurma penceresinin legacy karşılığı YOK — `yayinda` pazaryeri yükleme/yayın durumudur (site kanallarında satıştaki ürünlerde 0; 2/9 durum kodları), SaleStopped'a eşlenemez. Not: pazaryeri `yayinda` durumu F4'te ilk-durum aktarımı için değerlendirilebilir.
 - [ ] **9.3 B10:** BasePrice ↔ kanal fiyatı ayrışması (Razor taşıma açık ucu).
 - [ ] **9.4 Kampanya kalanları:** kupon+kampanya birlikte optimizasyonu; eksik benefit handler'ları.
 - [ ] **9.5 Ürün kartı F3:** otomatik sinyaller (en düşük fiyat, sosyal kanıt, Sepette/Plus) — ayrı veri işleri.
@@ -121,8 +119,7 @@ Faz olmayan kalıntılar aşağıya taşındı:
 - [ ] **9.7 Deprecated temizlik:** `Warehouse.IsSellableOnline`, `inv_stocks.LocationId`,
       `inv_warehouse_locations` — Inventory refactoru gerektirir, aceleye getirilmez.
 - [ ] **9.8 erp_variant_data Phase11 düzeltmesi** — ERP aktarımı ertelenmişti; FAZ R (ERP ekranları) ile birlikte.
-- [ ] **9.9 [doğrulanacak] Telemania demo filtreleri** — demo API restart'ı yapıldı mı; demo+prod'da 7 yeni
-      filtre tipi görünür mü?
+- [x] **9.9 Telemania demo filtreleri** ✅ DOĞRULANDI (2026-08-27): demo canlı — kozmetikte 12 filtre grubu (Cilt Tipi/Cinsiyet/Hacim/Paket Adedi/Renk/Saç Rengi/Saç Tipi/SPF/Form/Yaş Grubu + Kategori/Fiyat), kategoriye duyarlı (saç-bakım 8 grup).
 
 ---
 
