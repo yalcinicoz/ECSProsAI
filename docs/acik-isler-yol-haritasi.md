@@ -91,16 +91,16 @@ Kalan dış girdiler feshedilip ilgili fazların **Adım 0**'ı yapıldı (aşa�
 - [ ] **7.2** Uygulama + izleme; sipariş senkronu F1-F4 canlı deneyimleriyle (virgül kültürü, varyant barkodu dersleri) uyumlu.
 - [ ] **7.3** K10 cutover (FAZ 2) ile takvim koordinasyonu — stok tek kaynağa iner.
 
-## FAZ 8 — Güvenlik/dayanıklılık kapanışı + sürekli iyileştirme
-**Alan:** ortak çekirdek · **Plan:** `docs/dayaniklilik-faz0-plani.md` (Faz 0-1-2 tamam) · **Bloklayan:** 0.2-0.4
+## ~~FAZ 8~~ KAPANDI (2026-08-27) — güvenlik/dayanıklılık kapanışı
+8.1 D3 ✅ (2026-08-26) · 8.2 D6 ✅ (girişte-yükselt kalıcı, ek iş yok) · 8.3 D5 ✅ (yük testi; kalan tek uygulama 9.0e shm_size).
+Faz olmayan kalıntılar aşağıya taşındı:
 
-- [x] **8.1 D3 uygulaması** ✅ 2026-08-26 — bkz. `docs/dayaniklilik-faz0-plani.md` D3 bölümü.
-- [x] **8.2 D6** ✅ 2026-08-27 — karar: girişte-yükselt kalıcı politika; ek uygulama gerekmez.
-- [x] **8.3 D5** ✅ 2026-08-27 — hafif yük testi yapıldı; sonuçlar `docs/dayaniklilik-faz0-plani.md` D5 bölümünde; kalan tek adım 9.0e (shm_size uygulaması).
-- [ ] **8.4 Faz 4 (sürekli):** correlation id + ProblemDetails, kritik akış testleri (xUnit+Testcontainers),
-      metrik/APM, pg_stat_statements.
-- [ ] **8.5 Faz 3 (KOŞULLU — yalnız çoklu instance'a geçişte):** worker leader-election/SKIP LOCKED, SignalR
-      backplane, dağıtık rate limit, migration'ın deploy adımına alınması, medya object storage.
+> **Sürekli bakım (faz değil — fırsat buldukça, tek tek):** correlation id + ProblemDetails · kritik akış
+> testleri (xUnit+Testcontainers) · metrik/APM · pg_stat_statements. Kaynak: dayanıklılık planı "Faz 4".
+>
+> **Koşullu (tetiği: çoklu instance'a geçiş — bugün ihtiyaç YOK, yük testi doğruladı):** worker
+> leader-election/SKIP LOCKED · SignalR backplane · dağıtık rate limit · migration'ın deploy adımına
+> alınması · medya object storage. Kaynak: dayanıklılık planı "Faz 3".
 
 ## FAZ 9 — Veri kalitesi ve teknik borç (bağımsız küçük/orta işler)
 
