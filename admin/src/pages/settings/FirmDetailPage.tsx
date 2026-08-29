@@ -448,29 +448,33 @@ function IntegrationForm({ firmId, platforms, integrationServices, target, onClo
       </div>
 
       <div className="p-4 rounded-xl space-y-4" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
-        {isEdit && canReveal && (
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs" style={{ color: 'var(--text-s)' }}>
-              {revealed
-                ? 'Kimlik bilgileri açık metin gösteriliyor — bu görüntüleme denetim kaydına yazıldı.'
-                : 'Saklı değerleri görmek için "Göster"e basın (denetim kaydına yazılır).'}
-            </span>
-            {revealed ? (
-              <Button type="button" variant="secondary" size="sm" onClick={() => {
+        {/* Göster/Gizle: düğümler HER ZAMAN mount, display ile gizlenir — koşullu mount/unmount
+            tarayıcı çeviri uzantılarıyla removeChild/insertBefore çökmesine yol açıyor
+            (bkz. hafıza: feedback_react_conditional_sibling_insertbefore, 2026-08-29 canlı hata). */}
+        <div className="flex items-center justify-between gap-3"
+          style={{ display: isEdit && canReveal ? undefined : 'none' }}>
+          <span className="text-xs" style={{ color: 'var(--text-s)' }}>
+            <span style={{ display: revealed ? undefined : 'none' }}>Kimlik bilgileri açık metin gösteriliyor — bu görüntüleme denetim kaydına yazıldı.</span>
+            <span style={{ display: revealed ? 'none' : undefined }}>Saklı değerleri görmek için "Göster"e basın (denetim kaydına yazılır).</span>
+          </span>
+          <Button type="button" variant="secondary" size="sm" disabled={revealing}
+            onClick={() => {
+              if (revealed) {
                 setRevealed(false)
                 setSchemaValues(initSchemaValues(schema, target))
                 setCredRows(extraRows(target?.credentials, schema, 'credentials'))
-              }}>
-                <EyeOff size={14} /> Gizle
-              </Button>
-            ) : (
-              <Button type="button" variant="secondary" size="sm" disabled={revealing} onClick={revealCredentials}>
-                <Eye size={14} /> {revealing ? 'Alınıyor…' : 'Göster'}
-              </Button>
-            )}
-          </div>
-        )}
-        {revealError && <p className="text-xs" style={{ color: '#ef4444' }}>{revealError}</p>}
+              } else {
+                void revealCredentials()
+              }
+            }}>
+            <EyeOff size={14} style={{ display: revealed ? undefined : 'none' }} />
+            <Eye size={14} style={{ display: revealed ? 'none' : undefined }} />
+            <span style={{ display: revealed ? undefined : 'none' }}>Gizle</span>
+            <span style={{ display: !revealed && !revealing ? undefined : 'none' }}>Göster</span>
+            <span style={{ display: !revealed && revealing ? undefined : 'none' }}>Alınıyor…</span>
+          </Button>
+        </div>
+        <p className="text-xs" style={{ color: '#ef4444', display: revealError ? undefined : 'none' }}>{revealError ?? ''}</p>
         {credSchemaFields.length > 0 && (
           <div>
             <label className="flbl mb-1">Kimlik Bilgileri (API)</label>
