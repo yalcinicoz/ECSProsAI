@@ -37,6 +37,11 @@ public static class Permissions
     /// firm_admin'e varsayılan verilmez.</summary>
     public const string OrderPackagesMerge = "order.packages.merge";
 
+    /// <summary>Firma entegrasyon kimlik bilgilerini (API key/secret vb.) açık metin olarak
+    /// görme — "Göster" düğmesi. Her görüntüleme iam.audit_logs'a yazılır (2026-08-29).
+    /// firm_admin'e varsayılan verilmez; super_admin/platform_admin'de vardır.</summary>
+    public const string IntegrationCredentialsReveal = "integration.credentials.reveal";
+
     /// <summary>Layer 2 — firm_admin rolüne atanan permission kodları.</summary>
     public static readonly IReadOnlyList<string> FirmAdminPermissions =
     [
@@ -62,5 +67,6 @@ public static class Permissions
         OrderPackagesMerge,
         ProcurementManage,
         ProcurementSort,
+        IntegrationCredentialsReveal,
     ];
 }

@@ -20,6 +20,8 @@ using ECSPros.Core.Application.Queries.GetCargoRules;
 using ECSPros.Core.Application.Queries.GetExpenseTypes;
 using ECSPros.Core.Application.Queries.GetFirmDetail;
 using ECSPros.Core.Application.Queries.GetFirmPlatformIntegrations;
+using ECSPros.Core.Application.Queries.RevealFirmPlatformIntegrationCredentials;
+using ECSPros.Api.Services.Store;
 using ECSPros.Core.Application.Queries.GetFirmPlatforms;
 using ECSPros.Core.Application.Queries.GetFirms;
 using ECSPros.Core.Application.Queries.GetIntegrationServices;
@@ -328,6 +330,28 @@ public class CoreController : ControllerBase
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Created(string.Empty, new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>Kimlik bilgilerini AÇIK METİN döner ("Göster" düğmesi). Yalnız
+    /// integration.credentials.reveal yetkisi; her çağrı iam.audit_logs'a
+    /// (Action=CredentialsRevealed, EntityType=FirmPlatformIntegration) yazılır — değerlerin
+    /// kendisi loga YAZILMAZ, yalnız anahtar adları. Yanıt cache'lenmez.</summary>
+    [HttpGet("firm-integrations/{id:guid}/credentials/reveal")]
+    [RequirePermission(Permissions.IntegrationCredentialsReveal)]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> RevealFirmPlatformIntegrationCredentials(
+        Guid id, [FromServices] IVitrinAuditLogger audit, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new RevealFirmPlatformIntegrationCredentialsQuery(id), ct);
+        if (result.IsFailure)
+            return NotFound(new { success = false, error = result.Error });
+
+        await audit.LogAsync(HttpContext, "CredentialsRevealed", "FirmPlatformIntegration", id,
+            oldValues: null,
+            newValues: new { serviceCode = result.Value.ServiceCode, keys = result.Value.Credentials.Keys.ToArray() },
+            firmPlatformId: Guid.Empty, title: result.Value.ServiceCode, ct: ct);
+
+        return Ok(new { success = true, data = result.Value });
     }
 
     /// <summary>Servis entegrasyonunu günceller (maskeli credential alanları korunur).</summary>

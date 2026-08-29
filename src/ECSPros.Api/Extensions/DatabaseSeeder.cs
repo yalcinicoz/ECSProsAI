@@ -1228,6 +1228,7 @@ public static class DatabaseSeeder
             (Code: Permissions.OrderPackagesMerge,      Name: "Paket Birleştirme (İstisna)", Module: "order"),
             (Code: Permissions.ProcurementManage,       Name: "Tedarik Yönetimi",            Module: "procurement"),
             (Code: Permissions.ProcurementSort,         Name: "Ayrıştırma / Yerleştirme",    Module: "procurement"),
+            (Code: Permissions.IntegrationCredentialsReveal, Name: "Entegrasyon Kimlik Bilgilerini Görme", Module: "core"),
         };
 
         var existingCodes = await context.Permissions.Select(p => p.Code).ToListAsync();

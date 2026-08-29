@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronRight, Info, Plus, X } from 'lucide-react'
+import { ChevronRight, Info, Plus, X, Eye, EyeOff } from 'lucide-react'
+import { useAuthStore } from '@/store/auth'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -195,6 +196,7 @@ function schemaFieldInput(
   f: SchemaField,
   value: string,
   onChange: (v: string) => void,
+  reveal = false,
 ) {
   const help = getFieldHelp(f)
   if (f.type === 'boolean') {
@@ -210,7 +212,7 @@ function schemaFieldInput(
       </div>
     )
   }
-  const inputType = f.type === 'password' ? 'password' : f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'
+  const inputType = f.type === 'password' && !reveal ? 'password' : f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'
   return (
     <div>
       <div className="flbl">
@@ -223,16 +225,17 @@ function schemaFieldInput(
 }
 
 function SchemaSectionFields({
-  fields, values, onChange,
+  fields, values, onChange, reveal = false,
 }: {
   fields: SchemaField[]
   values: Record<string, string>
   onChange: (key: string, v: string) => void
+  reveal?: boolean
 }) {
   return (
     <div className="grid grid-cols-2 gap-4">
       {fields.map(f => (
-        <div key={f.key}>{schemaFieldInput(f, values[f.key] ?? '', v => onChange(f.key, v))}</div>
+        <div key={f.key}>{schemaFieldInput(f, values[f.key] ?? '', v => onChange(f.key, v), reveal)}</div>
       ))}
     </div>
   )
@@ -297,6 +300,39 @@ function IntegrationForm({ firmId, platforms, integrationServices, target, onClo
   const [credRows, setCredRows] = useState<KVRow[]>(() => extraRows(target?.credentials, schema, 'credentials'))
   const [settingsRows, setSettingsRows] = useState<KVRow[]>(() => extraRows(target?.settings, schema, 'settings'))
   const [termsRows, setTermsRows] = useState<KVRow[]>(() => recordToRows(target?.terms))
+
+  // "Göster" (2026-08-29): integration.credentials.reveal yetkili kullanıcı saklı kimlik
+  // bilgilerini açık metin görür; sunucu her çağrıyı audit_logs'a yazar. Açılan değerler
+  // form alanlarına yazılır — kullanıcı değiştirmeden kaydederse aynı değer geri gider.
+  const canReveal = useAuthStore(s => s.hasPermission)('integration.credentials.reveal')
+  const [revealed, setRevealed] = useState(false)
+  const [revealing, setRevealing] = useState(false)
+  const [revealError, setRevealError] = useState<string | null>(null)
+  async function revealCredentials() {
+    if (!target) return
+    setRevealing(true); setRevealError(null)
+    try {
+      const res = await api.get(`/core/firm-integrations/${target.id}/credentials/reveal`)
+      const creds: Record<string, unknown> = res.data?.data?.credentials ?? {}
+      const schemaKeys = new Set(credSchemaFields.map(f => f.key))
+      setSchemaValues(sv => {
+        const next = { ...sv }
+        for (const f of credSchemaFields) {
+          const v = creds[f.key]
+          if (v !== undefined && v !== null) next[f.key] = String(v)
+        }
+        return next
+      })
+      setCredRows(recordToRows(creds).filter(r => !schemaKeys.has(r.key)))
+      setRevealed(true)
+    } catch (e: any) {
+      setRevealError(e?.response?.status === 403
+        ? 'Bu işlem için yetkiniz yok (integration.credentials.reveal).'
+        : (e?.response?.data?.error ?? 'Kimlik bilgileri alınamadı.'))
+    } finally {
+      setRevealing(false)
+    }
+  }
 
   function selectService(id: string) {
     setIntegrationServiceId(id)
@@ -412,6 +448,29 @@ function IntegrationForm({ firmId, platforms, integrationServices, target, onClo
       </div>
 
       <div className="p-4 rounded-xl space-y-4" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
+        {isEdit && canReveal && (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs" style={{ color: 'var(--text-s)' }}>
+              {revealed
+                ? 'Kimlik bilgileri açık metin gösteriliyor — bu görüntüleme denetim kaydına yazıldı.'
+                : 'Saklı değerleri görmek için "Göster"e basın (denetim kaydına yazılır).'}
+            </span>
+            {revealed ? (
+              <Button type="button" variant="secondary" size="sm" onClick={() => {
+                setRevealed(false)
+                setSchemaValues(initSchemaValues(schema, target))
+                setCredRows(extraRows(target?.credentials, schema, 'credentials'))
+              }}>
+                <EyeOff size={14} /> Gizle
+              </Button>
+            ) : (
+              <Button type="button" variant="secondary" size="sm" disabled={revealing} onClick={revealCredentials}>
+                <Eye size={14} /> {revealing ? 'Alınıyor…' : 'Göster'}
+              </Button>
+            )}
+          </div>
+        )}
+        {revealError && <p className="text-xs" style={{ color: '#ef4444' }}>{revealError}</p>}
         {credSchemaFields.length > 0 && (
           <div>
             <label className="flbl mb-1">Kimlik Bilgileri (API)</label>
@@ -419,7 +478,7 @@ function IntegrationForm({ firmId, platforms, integrationServices, target, onClo
               Şifreli saklanır; kayıttan sonra değerler maskeli (•••) görünür. Değiştirmek için
               maskenin üzerine yeni değeri yazın; maskeli bırakılan alan aynen korunur.
             </p>
-            <SchemaSectionFields fields={credSchemaFields} values={schemaValues}
+            <SchemaSectionFields fields={credSchemaFields} values={schemaValues} reveal={revealed}
               onChange={(k, v) => setSchemaValues(s => ({ ...s, [k]: v }))} />
           </div>
         )}
