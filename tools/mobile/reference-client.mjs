@@ -77,6 +77,24 @@ async function main() {
   const boot = await apiIstek('GET', `/api/store/bootstrap?code=mishar`)
   console.log(`✓ Bootstrap: HTTP ${boot.status}, kanal: ${boot.json?.data?.code}`)
 
+  // 2b) REPLAY NEGATİF TESTİ (FAZ 10/A3): birebir aynı imzalı istek (aynı nonce+imza)
+  // ikinci kez gönderilir — sunucu 401 "daha önce işlendi (replay)" DÖNMELİDİR.
+  // Uygulama her istekte YENİ nonce üretmelidir; bu adım sunucu korumasının kanıtıdır.
+  {
+    const path = `/api/store/bootstrap?code=mishar`
+    const sabitBasliklar = imzaBasliklari('GET', path, null)
+    const gonder = () => fetch(BASE + path, {
+      method: 'GET',
+      headers: { 'X-Client-Platform': PLATFORM, 'Authorization': `Bearer ${deviceToken}`, ...sabitBasliklar },
+    })
+    const ilk = await gonder()
+    const tekrar = await gonder()
+    const tekrarGovde = await tekrar.json().catch(() => null)
+    const beklendigiGibi = ilk.status === 200 && tekrar.status === 401
+    console.log(`${beklendigiGibi ? '✓' : '✗'} Replay testi: ilk HTTP ${ilk.status}, tekrar HTTP ${tekrar.status}` +
+      ` (beklenen 200 → 401${tekrarGovde?.error ? `; sunucu: "${tekrarGovde.error}"` : ''})`)
+  }
+
   // 3) Üye girişi (imzalı) — dönen üye JWT'si sonraki isteklerde device token YERİNE kullanılır
   if (process.env.EMAIL && process.env.PASSWORD) {
     const login = await apiIstek('POST', '/api/store/auth/login',
