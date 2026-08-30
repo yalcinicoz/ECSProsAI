@@ -1,6 +1,11 @@
 # Satış Kanalı Ortak Kurgusu — Kanal Ürünleri, Dropshipping (iki yön), Pazaryeri, Tedarik Kaynakları
 
-> Sürüm: **v1.2 — 2026-08-23** (v1.1 + F0 uygulama durumu)
+> Sürüm: **v1.3 — 2026-08-30** (v1.2 + canlı doğrulama)
+> **2026-08-30: F0+F1+F2+F3+F5 CANLIDA** — 23 Ağustos'ta uygulanan fazlar bugünkü restart'larla canlıya çıktı.
+> Canlı DB doğrulamaları: `channel_scopes` hazır ve boş (tüm kanallar örtük `all` — eski davranış birebir),
+> `channel_products.InScope` materyalize (86.369 satır), `SourceType` backfill (29.108 own + 1 seller),
+> mishar feed bugün 5.835 ürün üretti (published kesişimi tutarlı). Rehber `kanal-kapsami` + `kanal-urunleri`
+> sayfaları canlı /rehber'de. Panel tıklama doğrulaması kullanıcıda. **SIRADA: F4 dropship bayi (yol haritası FAZ 1.1).**
 > **Uygulama durumu (2026-08-23):** **F0 CANLIDA; F1 Kapsam UYGULANDI ⚠️ restart bekliyor.** F1 uygulama kararları:
 > (1) kapsam tanımı `FirmPlatform` yerine **`storefront.channel_scopes`** tablosunda (kanal verisi Storefront'ta);
 > (2) **hibrit materyalizasyon** — `all` örtük (satır yoksa kanalda, eski davranış birebir), `filter|mixed` materyalize

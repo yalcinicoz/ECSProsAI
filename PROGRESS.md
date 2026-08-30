@@ -27,6 +27,16 @@
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!) | Mobil geliştirici teste başlar; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
+**🤝 SORUMLULUK DEVRİ (2026-08-30, kullanıcı kararı):** Performans + çoklu sunucu/HA görevleri (FAZ 10 kalanları,
+FAZ 11, Kademe B, büyük ölçek planı, deploy/altyapı) EKİP ARKADAŞINA devredildi. Bu oturumlar SİTE + PANEL
+geliştirmelerine odaklanır; altyapı kesişiminde yalnız not düşülür.
+
+**Satış kanalı F0-F5 ✅ CANLIDA (2026-08-30, Admin panel):** 23 Ağustos'ta uygulanan F1 Kapsam + F2 Listeleme
+durumu + F3 Ekran + F5 Satıcı kaynağı bugünkü restart'larla canlıya çıktı; DB doğrulamaları temiz (channel_scopes
+boş=örtük all — davranış birebir; InScope 86.369; SourceType 29.108 own + 1 seller; mishar feed 5.835 ürün);
+rehber kanal-kapsami + kanal-urunleri sayfaları canlı /rehber'de. Panel tıklama doğrulaması kullanıcıda (test
+listesi oturum raporunda). SIRADA: F4 dropship bayi (yol haritası FAZ 1.1 — "F4'ü unutma").
+
 **FAZ 10 üçüncü tur (2026-08-30) — A5(analiz)+A6+A9+A10 ✅ CANLIDA (restart + kullanıcı testi: feed "✓ tamamlandı 37337 kalem/7 sn"; panel tamamlanma mesajı eklendi):**
 **A9** `ICacheBustPublisher` — admin cache silmeleri Redis pub/sub `ECSPros:cache:bust` ile tüm düğümlere yayılır
 (5 Storefront kapsam komutu + ChannelCapabilityResolver + ChannelListingStatusService + TrackingSettingsProvider;
