@@ -15,7 +15,8 @@ namespace ECSPros.Api.Services.Fulfillment;
 /// açılınca birikenler işlenir. Hata: üstel geri çekilme, 10 denemede failed.
 /// </summary>
 public class CargoNotifyWorker(IServiceScopeFactory scopeFactory,
-    IConfiguration config, ILogger<CargoNotifyWorker> logger) : BackgroundService
+    IConfiguration config, DistributedWorkerLock workerLock,
+    ILogger<CargoNotifyWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken st)
     {
@@ -38,6 +39,9 @@ public class CargoNotifyWorker(IServiceScopeFactory scopeFactory,
 
     private async Task KuyruguIsleAsync(CancellationToken ct)
     {
+        await using var lease = await workerLock.TryAcquireAsync("cargo-notify", ct);
+        if (lease is null) return;
+
         using var scope = scopeFactory.CreateScope();
         var fulDb = scope.ServiceProvider.GetRequiredService<IFulfillmentDbContext>();
         var orderDb = scope.ServiceProvider.GetRequiredService<IOrderDbContext>();

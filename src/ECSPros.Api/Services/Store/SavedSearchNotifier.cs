@@ -26,10 +26,14 @@ public class SavedSearchNotifier(
     IMemberService memberService,
     IEmailService emailService,
     IStoreLinkBuilder linkBuilder,
+    DistributedWorkerLock workerLock,
     ILogger<SavedSearchNotifier> logger) : ISavedSearchNotifier
 {
     public async Task<int> RunOnceAsync(CancellationToken ct = default)
     {
+        await using var lease = await workerLock.TryAcquireAsync("saved-search-notify", ct);
+        if (lease is null) return 0;
+
         var esik = DateTime.UtcNow.AddHours(-24);
         var kayitlar = await storefrontDb.SavedSearches
             .Where(s => s.NotifyEnabled && (s.LastNotifiedAt == null || s.LastNotifiedAt < esik))

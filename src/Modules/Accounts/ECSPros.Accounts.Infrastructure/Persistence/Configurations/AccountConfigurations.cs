@@ -36,6 +36,9 @@ public class CurrentAccountTransactionConfiguration : IEntityTypeConfiguration<C
             .HasForeignKey(t => t.LedgerId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(t => new { t.LedgerId, t.CreatedAt });
         b.HasIndex(t => new { t.ReferenceType, t.ReferenceId });
+        b.HasIndex(t => new { t.LedgerId, t.TransactionType, t.ReferenceType, t.ReferenceId })
+            .IsUnique()
+            .HasFilter("\"ReferenceId\" IS NOT NULL AND \"IsDeleted\" = false");
     }
 }
 

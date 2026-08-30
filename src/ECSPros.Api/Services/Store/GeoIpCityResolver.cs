@@ -74,17 +74,10 @@ public sealed class GeoIpCityResolver : IGeoIpCityResolver, IDisposable
         }
     }
 
-    /// <summary>Gerçek istemci IP'si — rate limiter'daki IstemciIpAnahtari ile aynı zincir
-    /// (Program.cs): Cloudflare → nginx → app'te sırasıyla CF-Connecting-IP,
-    /// X-Forwarded-For'un ilk halkası, soket adresi.</summary>
+    /// <summary>Gerçek istemci IP'si — ForwardedHeadersMiddleware güvenilir proxy
+    /// zincirini işledikten sonra tek kaynak RemoteIpAddress'dir.</summary>
     private static IPAddress? IstemciIp(HttpContext http)
     {
-        var cf = http.Request.Headers["CF-Connecting-IP"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(cf) && IPAddress.TryParse(cf.Trim(), out var cfIp))
-            return cfIp;
-        var xff = http.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(xff) && IPAddress.TryParse(xff.Split(',')[0].Trim(), out var xffIp))
-            return xffIp;
         return http.Connection.RemoteIpAddress;
     }
 

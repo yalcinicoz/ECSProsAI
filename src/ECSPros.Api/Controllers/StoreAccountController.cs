@@ -20,7 +20,6 @@ namespace ECSPros.Api.Controllers;
 [Authorize(Policy = "MemberOnly")]
 public class StoreAccountController(
     IMediator mediator,
-    IConfiguration configuration,
     ECSPros.Api.Services.Legacy.ILegacyOrderQueue legacyOrderQueue,
     ECSPros.Api.Services.Store.IOrderConfirmationService orderConfirmations) : ControllerBase
 {
@@ -276,7 +275,10 @@ public class StoreAccountController(
     /// En çok 5 dosya × 5 MB; içerik tipine göre uzantı verilir (istemci adı kullanılmaz).</summary>
     [HttpPost("returns/images")]
     [RequestSizeLimit(30_000_000)]
-    public async Task<IActionResult> UploadReturnImages([FromForm] List<IFormFile> files, CancellationToken ct)
+    public async Task<IActionResult> UploadReturnImages(
+        [FromForm] List<IFormFile> files,
+        [FromServices] ECSPros.Api.Services.Storage.IFileStorage storage,
+        CancellationToken ct)
     {
         var uzantilar = new Dictionary<string, string>
         {
@@ -292,17 +294,15 @@ public class StoreAccountController(
         if (files.Any(f => !uzantilar.ContainsKey(f.ContentType)))
             return BadRequest(new { success = false, error = "Yalnızca JPEG, PNG, WebP veya GIF görselleri yükleyebilirsiniz." });
 
-        var kok = configuration["Store:MediaRootPath"] ?? "/opt/ECSProsAI/media";
-        var altDizin = Path.Combine("returns", DateTime.UtcNow.ToString("yyyyMM"));
-        Directory.CreateDirectory(Path.Combine(kok, altDizin));
+        var altDizin = $"returns/{DateTime.UtcNow:yyyyMM}";
 
         var urls = new List<string>();
         foreach (var dosya in files)
         {
             var ad = $"{Guid.NewGuid():N}{uzantilar[dosya.ContentType]}";
-            await using var hedef = System.IO.File.Create(Path.Combine(kok, altDizin, ad));
-            await dosya.CopyToAsync(hedef, ct);
-            urls.Add($"/media/{altDizin.Replace(Path.DirectorySeparatorChar, '/')}/{ad}");
+            await using var stream = dosya.OpenReadStream();
+            var stored = await storage.SavePublicAsync(altDizin, ad, stream, dosya.ContentType, ct);
+            urls.Add(stored.PublicUrl);
         }
 
         return Ok(new { success = true, data = new { urls } });

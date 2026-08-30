@@ -155,6 +155,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ECSPros.Requests.Applicatio
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ECSPros.Requests.Infrastructure", "Modules\Requests\ECSPros.Requests.Infrastructure\ECSPros.Requests.Infrastructure.csproj", "{18E70062-36FC-4487-99A0-C2F08EE24C7E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ECSPros.Api.Tests", "..\tests\ECSPros.Api.Tests\ECSPros.Api.Tests.csproj", "{26E3255C-2F69-44F4-9A80-33F49028FF33}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -392,6 +394,10 @@ Global
 		{18E70062-36FC-4487-99A0-C2F08EE24C7E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{18E70062-36FC-4487-99A0-C2F08EE24C7E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{18E70062-36FC-4487-99A0-C2F08EE24C7E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{26E3255C-2F69-44F4-9A80-33F49028FF33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{26E3255C-2F69-44F4-9A80-33F49028FF33}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{26E3255C-2F69-44F4-9A80-33F49028FF33}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{26E3255C-2F69-44F4-9A80-33F49028FF33}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{1DC5412B-8F3B-417E-A94B-455CF81B918A} = {B6E50B67-33BE-4DD4-8850-50E3505E7EFA}

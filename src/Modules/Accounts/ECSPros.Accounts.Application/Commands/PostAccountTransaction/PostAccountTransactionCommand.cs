@@ -103,6 +103,24 @@ public class PostAccountTransactionCommandHandler
                 _db.AccountLedgers.Add(ledger);
             }
 
+            // Dış servis/worker retry'sinde aynı iş etkisi ikinci kez bakiyeye yansımasın.
+            // Kontrol advisory transaction lock altında yapılır; DB unique index'i de son
+            // savunma hattıdır. ReferenceId verilmemiş manuel hareketler etkilenmez.
+            if (r.ReferenceId is not null && !string.IsNullOrWhiteSpace(r.ReferenceType))
+            {
+                var existing = await _db.AccountTransactions.AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.LedgerId == ledger.Id &&
+                        t.TransactionType == r.TransactionType &&
+                        t.ReferenceType == r.ReferenceType &&
+                        t.ReferenceId == r.ReferenceId, ct);
+                if (existing is not null)
+                {
+                    await tx.CommitAsync(ct);
+                    return Result.Success(new PostedTransactionDto(
+                        existing.Id, existing.LedgerId, account.Id, existing.BalanceAfter));
+                }
+            }
+
             var newBalance = ledger.Balance + r.Credit - r.Debit;
             if (newBalance < 0 && !r.AllowNegativeBalance)
                 return Result.Failure<PostedTransactionDto>(

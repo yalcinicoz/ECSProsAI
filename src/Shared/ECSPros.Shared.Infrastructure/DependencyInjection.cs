@@ -21,49 +21,45 @@ public static class DependencyInjection
         // çağırdıysa etkisiz).
         services.AddMemoryCache();
 
-        var redisConnection = configuration.GetConnectionString("Redis");
-        if (!string.IsNullOrWhiteSpace(redisConnection))
+        if (RedisConnectionFactory.IsCacheConfigured(configuration))
         {
             // Bağlantı seçenekleri BURADA, kodda zorlanır — connection string'e kim ne
             // yazarsa yazsın bu güvenlik ağı geçerli kalır:
             //   AbortOnConnectFail=false → Redis kapalıyken uygulama açılışı/istekler patlamaz
             //   kısa timeout'lar        → kötü günde istek başına maliyet ~1 sn ile sınırlı
             //     (RedisCacheService'in devre kesicisi bu maliyeti de ilk isteklerle sınırlar)
-            var redisOptions = ConfigurationOptions.Parse(redisConnection);
-            redisOptions.AbortOnConnectFail = false;
-            redisOptions.ConnectTimeout = 1500;
-            redisOptions.ConnectRetry = 1;
-            redisOptions.AsyncTimeout = 1000;
-            redisOptions.SyncTimeout = 1000;
+            var cacheRedisOptions = RedisConnectionFactory.CreateCache(configuration);
 
             services.AddStackExchangeRedisCache(options =>
             {
-                options.ConfigurationOptions = redisOptions;
-                options.InstanceName = "ECSPros:";
+                options.ConfigurationOptions = cacheRedisOptions;
+                options.InstanceName = configuration["Redis:Cache:InstanceName"] ?? "ECSPros:";
             });
             services.AddSingleton<ICacheService, RedisCacheService>();
+        }
+        else
+        {
+            services.AddSingleton<ICacheService, NoOpCacheService>();
+        }
 
-            // FAZ 10 / A3-A4: cache DIŞI Redis kullanımı (SET NX/Lua/pub-sub — device state,
-            // login sayacı, cache bust) için paylaşılan multiplexer. Aynı güvenlik ağı
-            // seçenekleriyle (AbortOnConnectFail=false + kısa timeout) — Redis kapalıyken
-            // açılış patlamaz, işlemler hızlı hata verir; fail-open/closed kararı TÜKETİCİNİN
-            // sorumluluğudur (device state fail-closed, login sayacı memory'ye düşer).
-            services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisOptions));
+        // ─── Redis kritik state / pub-sub ─────────────────────────────
+        // Cache ve güvenlik/oturum/SignalR farklı eviction politikalarına sahip Redis
+        // kümelerinde çalışabilir. State bağlantısı yoksa güvenli mevcut fallback'ler korunur.
+        if (RedisConnectionFactory.IsStateConfigured(configuration))
+        {
+            var stateRedisOptions = RedisConnectionFactory.CreateState(configuration);
+            services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(stateRedisOptions));
 
-            // FAZ 10 / A4: hesap bazlı hatalı giriş sayacı Redis'te (kilit tüm düğümlerde);
-            // Redis hatasında sınıf kendi içinde düğüm-yerel sayaca düşer (fail-open).
+            // Hesap bazlı giriş sayacı Redis hatasında kendi memory sayacına düşer.
             services.AddSingleton<ILoginAttemptCounter, RedisLoginAttemptCounter>();
 
-            // FAZ 10 / A9: cache bust yayını + aboneliği. Abone HER düğümde çalışır
-            // (worker rol kapısına girmez) — admin komutunun sildiği IMemoryCache anahtarı
-            // diğer düğümlerin belleğinden de düşer.
+            // Cache bust pub/sub tüm API düğümlerinin local memory cache'ini temizler.
             services.AddSingleton<RedisCacheBustService>();
             services.AddSingleton<ICacheBustPublisher>(sp => sp.GetRequiredService<RedisCacheBustService>());
             services.AddHostedService(sp => sp.GetRequiredService<RedisCacheBustService>());
         }
         else
         {
-            services.AddSingleton<ICacheService, NoOpCacheService>();
             services.AddSingleton<ILoginAttemptCounter, MemoryLoginAttemptCounter>();
             services.AddSingleton<ICacheBustPublisher, LocalCacheBustService>();
         }

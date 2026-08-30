@@ -1,3 +1,3 @@
 # FAZ 10 / A10 — uzak düğüm listesi (nodes.conf olarak kopyalayın; A0 ikinci VM gelince doldurulur).
-# Sütunlar: ad  ssh-hedefi  publish-dizini  ready-url
-# node2  yalcin@10.0.0.2  /opt/ECSProsAI/publish  http://10.0.0.2:5000/ready
+# Sütunlar: ad  ssh-hedefi  deploy-kökü  ready-url
+# node2  yalcin@10.0.0.2  /opt/ECSProsAI  http://10.0.0.2:5000/ready

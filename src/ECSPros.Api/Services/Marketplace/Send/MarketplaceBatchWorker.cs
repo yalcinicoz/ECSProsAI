@@ -14,6 +14,7 @@ namespace ECSPros.Api.Services.Marketplace.Send;
 /// </summary>
 public sealed class MarketplaceBatchWorker(
     IServiceScopeFactory scopeFactory,
+    DistributedWorkerLock workerLock,
     ILogger<MarketplaceBatchWorker> logger) : BackgroundService
 {
     private static readonly TimeSpan Tick = TimeSpan.FromSeconds(60);
@@ -40,6 +41,9 @@ public sealed class MarketplaceBatchWorker(
     /// <param name="force">true → NextPollAt beklemeden tüm açık paketler sorgulanır (elle tetikleme).</param>
     public async Task ProcessDueBatchesAsync(CancellationToken ct, bool force = false)
     {
+        await using var lease = await workerLock.TryAcquireAsync("marketplace-batch-poll", ct);
+        if (lease is null) return;
+
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IIntegrationDbContext>();
 

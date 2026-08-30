@@ -5,7 +5,7 @@
 }
 <nav class="ms-urun-detay-breadcrumb" aria-label="Sayfa yolu">
         <a href="/">Anasayfa</a>
-        @foreach (var adim in vmCrumb?.Breadcrumb ?? [])
+        @foreach (var adim in vmCrumb?.Breadcrumb ?? Array.Empty<BreadcrumbAdimVm>())
         {
         <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i>
         <a href="@adim.Url">@adim.Ad</a>

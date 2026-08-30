@@ -434,12 +434,26 @@ public class ProductImageController : ControllerBase
         if (fileName.Contains('/') || fileName.Contains('\\') || fileName.Contains(".."))
             return BadRequest();
 
-        var db = HttpContext.RequestServices.GetRequiredService<ECSPros.Catalog.Application.Services.ICatalogDbContext>();
-        var savePath = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions
-            .FirstOrDefaultAsync(db.CatalogSettings.Where(x => x.Key == "ImageServer.LocalSavePath"), ct);
-        var basePath = string.IsNullOrWhiteSpace(savePath?.Value)
-            ? Path.Combine(AppContext.BaseDirectory, "uploads", "images", "products")
-            : savePath.Value;
+        var configuration = HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+        string basePath;
+        if (configuration.GetValue("Storage:Catalog:Enabled", false))
+        {
+            if (!string.Equals(configuration["Storage:Provider"] ?? "Local", "Local", StringComparison.OrdinalIgnoreCase))
+                return NotFound();
+            var root = configuration["Storage:Local:RootPath"]
+                ?? configuration["Store:MediaRootPath"]
+                ?? "/opt/ECSProsAI/media";
+            basePath = Path.Combine(root, "catalog", "images", "products");
+        }
+        else
+        {
+            var db = HttpContext.RequestServices.GetRequiredService<ECSPros.Catalog.Application.Services.ICatalogDbContext>();
+            var savePath = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions
+                .FirstOrDefaultAsync(db.CatalogSettings.Where(x => x.Key == "ImageServer.LocalSavePath"), ct);
+            basePath = string.IsNullOrWhiteSpace(savePath?.Value)
+                ? Path.Combine(AppContext.BaseDirectory, "uploads", "images", "products")
+                : savePath.Value;
+        }
         var filePath = Path.Combine(basePath, fileName);
 
         if (!System.IO.File.Exists(filePath))

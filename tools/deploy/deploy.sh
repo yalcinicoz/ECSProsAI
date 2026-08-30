@@ -1,55 +1,86 @@
 #!/usr/bin/env bash
-# FAZ 10 / A10 (2026-08-30) — çok düğümlü deploy betiği.
-#
-# Akış: temiz publish → (--migrate ile) migration'lar → her uzak düğüme rsync →
-#       sıralı restart talimatı (/ready bekleyerek — iki düğüm aynı anda kapanmaz).
-#
-# Düğüm listesi: tools/deploy/nodes.conf — satır başına bir uzak düğüm:
-#   ad  user@host  /opt/ECSProsAI/publish  http://host:5000/ready
-# Dosya yoksa/boşsa tek sunucu modu: yalnız yerel publish yapılır.
-#
-# NOT: restart sudo ister ve bu betik sudo ÇALIŞTIRMAZ (proje kuralı) — her düğüm için
-# çalıştırılacak komutu sırayla YAZDIRIR; operatör her adımda /ready 200 görmeden
-# sonraki düğüme geçmemelidir. Migration'lar TEK düğümden uygulanır (bu betiğin
-# koştuğu makine); diğer düğümlerde Node__MigrateOnStartup=false olmalıdır.
+# FAZ 11 / K2 — değişmez release hazırlama ve çok düğüme dağıtım.
+# Restart/aktivasyon yapmaz; activate-release.sh health gate ve rollback uygular.
 set -euo pipefail
-cd "$(dirname "$0")/../.."
 
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd -P)"
+cd "$REPO_ROOT"
 MIGRATE=0
-for arg in "$@"; do [ "$arg" = "--migrate" ] && MIGRATE=1; done
+for arg in "$@"; do
+  case "$arg" in --migrate) MIGRATE=1 ;; *) echo "Bilinmeyen argüman: $arg" >&2; exit 2 ;; esac
+done
 
-echo "── 1/4 Temiz publish (…/publish)"
-dotnet publish src/ECSPros.Api/ECSPros.Api.csproj -c Release -o "$PWD/publish"
+GIT_SHA="$(git rev-parse --short=12 HEAD 2>/dev/null || echo nogit)"
+RELEASE_ID="$(date -u +%Y%m%dT%H%M%SZ)_${GIT_SHA}"
+DEPLOY_ROOT="${DEPLOY_ROOT:-/opt/ECSProsAI}"
+LOCAL_RELEASES="$DEPLOY_ROOT/releases"
+LOCAL_RELEASE="$LOCAL_RELEASES/$RELEASE_ID"
+STAGE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ecspros-deploy.XXXXXXXX")"
+PUBLISH_DIR="$STAGE_DIR/publish"
+cleanup() {
+  case "$STAGE_DIR" in "${TMPDIR:-/tmp}"/ecspros-deploy.*) rm -rf -- "$STAGE_DIR" ;;
+    *) echo "Güvenlik: beklenmeyen stage yolu silinmedi: $STAGE_DIR" >&2 ;; esac
+}
+trap cleanup EXIT
+
+echo "── 1/5 Temiz ve benzersiz publish: $RELEASE_ID"
+dotnet publish src/ECSPros.Api/ECSPros.Api.csproj -c Release --no-restore -o "$PUBLISH_DIR"
 
 if [ "$MIGRATE" = "1" ]; then
-  echo "── 2/4 Migration'lar (tek düğümden — tüm context'ler)"
-  for ctx in IamDbContext CoreDbContext CatalogDbContext InventoryDbContext OrderDbContext \
-             CrmDbContext CmsDbContext PosDbContext PromotionDbContext FinanceDbContext \
-             FulfillmentDbContext IntegrationDbContext StorefrontDbContext AccountsDbContext; do
-    dotnet ef database update --project src/ECSPros.Api/ECSPros.Api.csproj --context "$ctx"
+  echo "── 2/5 Migration'lar (tek deploy düğümünden)"
+  MIGRATION_CONTEXTS=(
+    "Iam:IamDbContext" "Core:CoreDbContext" "Catalog:CatalogDbContext"
+    "Inventory:InventoryDbContext" "Order:OrderDbContext" "Crm:CrmDbContext"
+    "Cms:CmsDbContext" "Pos:PosDbContext" "Promotion:PromotionDbContext"
+    "Finance:FinanceDbContext" "Fulfillment:FulfillmentDbContext"
+    "Integration:IntegrationDbContext" "Storefront:StorefrontDbContext"
+    "Accounts:AccountsDbContext" "Requests:RequestsDbContext"
+    "Procurement:ProcurementDbContext"
+  )
+  for item in "${MIGRATION_CONTEXTS[@]}"; do
+    module="${item%%:*}"; ctx="${item#*:}"
+    project="src/Modules/$module/ECSPros.$module.Infrastructure/ECSPros.$module.Infrastructure.csproj"
+    dotnet ef database update --project "$project" \
+      --startup-project src/ECSPros.Api/ECSPros.Api.csproj --context "$ctx" \
+      --configuration Release --no-build
   done
 else
-  echo "── 2/4 Migration atlandı (--migrate verilmedi)"
+  echo "── 2/5 Migration atlandı (--migrate verilmedi)"
+fi
+
+echo "── 3/5 Yerel release hazırlanıyor: $LOCAL_RELEASE"
+mkdir -p -- "$LOCAL_RELEASES"
+[ ! -e "$LOCAL_RELEASE" ] || { echo "Release zaten var; üzerine yazılmayacak." >&2; exit 3; }
+mkdir -- "$LOCAL_RELEASE"
+rsync -a -- "$PUBLISH_DIR/" "$LOCAL_RELEASE/"
+mkdir -p -- "$DEPLOY_ROOT/config"
+if [ -f "$DEPLOY_ROOT/config/appsettings.Production.json" ]; then
+  ln -s "$DEPLOY_ROOT/config/appsettings.Production.json" "$LOCAL_RELEASE/appsettings.Production.json"
+else
+  echo "UYARI: ortak production config yok; aktivasyondan önce oluşturulmalı." >&2
 fi
 
 NODES_CONF="tools/deploy/nodes.conf"
+echo "── 4/5 Uzak düğümlere değişmez release dağıtımı"
 if [ -s "$NODES_CONF" ]; then
-  echo "── 3/4 Uzak düğümlere rsync"
-  grep -vE '^\s*(#|$)' "$NODES_CONF" | while read -r ad hedef dizin ready; do
-    echo "   → $ad ($hedef:$dizin)"
-    rsync -az --delete-after --exclude 'appsettings.Production.json' "$PWD/publish/" "$hedef:$dizin/"
-    # Production config'i ayrıca ve SİLMEDEN gönder (drift E4 önlemi — dosya her düğümde aynı olmalı)
-    rsync -az "$PWD/publish/appsettings.Production.json" "$hedef:$dizin/appsettings.Production.json"
+  grep -vE '^\s*(#|$)' "$NODES_CONF" | while read -r node_name ssh_target node_root ready_url; do
+    [ -n "$node_name" ] && [ -n "$ssh_target" ] && [ -n "$node_root" ] || { echo "Geçersiz nodes.conf satırı" >&2; exit 4; }
+    echo "   → $node_name ($ssh_target:$node_root/releases/$RELEASE_ID)"
+    ssh "$ssh_target" "mkdir -p '$node_root/releases/$RELEASE_ID' '$node_root/config' '$node_root/tools/deploy'"
+    rsync -az -- "$PUBLISH_DIR/" "$ssh_target:$node_root/releases/$RELEASE_ID/"
+    rsync -az -- tools/deploy/activate-release.sh "$ssh_target:$node_root/tools/deploy/activate-release.sh"
+    ssh "$ssh_target" "if [ -f '$node_root/config/appsettings.Production.json' ]; then ln -sfn '$node_root/config/appsettings.Production.json' '$node_root/releases/$RELEASE_ID/appsettings.Production.json'; else echo 'UYARI: production config yok' >&2; fi"
   done
 else
-  echo "── 3/4 Tek sunucu modu (nodes.conf yok/boş) — rsync yok"
+  echo "   Tek düğüm modu; nodes.conf yok/boş."
 fi
 
-echo "── 4/4 SIRALI restart talimatı (operatör çalıştırır, her adımda /ready 200 beklenir):"
-echo "   [yerel] sudo systemctl restart ecspros && curl -s -o /dev/null -w 'ready %{http_code}\n' --retry 30 --retry-delay 2 --retry-all-errors http://localhost:5000/ready"
+echo "── 5/5 Aktivasyon talimatları"
+echo "   [yerel] sudo bash tools/deploy/activate-release.sh '$DEPLOY_ROOT' '$RELEASE_ID' 'http://127.0.0.1:5000/ready'"
 if [ -s "$NODES_CONF" ]; then
-  grep -vE '^\s*(#|$)' "$NODES_CONF" | while read -r ad hedef dizin ready; do
-    echo "   [$ad] ssh $hedef 'sudo systemctl restart ecspros' && curl -s -o /dev/null -w 'ready %{http_code}\n' --retry 30 --retry-delay 2 --retry-all-errors ${ready:-http://DUZENLE:5000/ready}"
+  grep -vE '^\s*(#|$)' "$NODES_CONF" | while read -r node_name ssh_target node_root ready_url; do
+    echo "   [$node_name] ssh $ssh_target sudo bash '$node_root/tools/deploy/activate-release.sh' '$node_root' '$RELEASE_ID' '${ready_url:-http://127.0.0.1:5000/ready}'"
   done
 fi
-echo "Bitti — bir düğümün /ready'si 200 olmadan SONRAKİ düğümü yeniden başlatmayın."
+echo "Release hazır: $RELEASE_ID"
+echo "Her düğüm /ready=200 olmadan sonrakini aktive etmeyin. GitHub'a gönderim yapılmadı."

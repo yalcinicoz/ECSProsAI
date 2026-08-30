@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ECSPros.Core.Application.Services;
 using ECSPros.Integration.Application.Services;
+using ECSPros.Api.Services.Storage;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -64,13 +65,25 @@ public sealed class DbFeedStatusStore(IIntegrationDbContext db, NodeOptions node
 /// </summary>
 public interface IFeedTrigger { Task TriggerAsync(Guid platformId, CancellationToken ct = default); }
 
-public sealed class DbFeedTrigger(IIntegrationDbContext db) : IFeedTrigger
+public sealed class DbFeedTrigger(NpgsqlDataSource dataSource) : IFeedTrigger
 {
     public async Task TriggerAsync(Guid platformId, CancellationToken ct = default)
     {
-        db.FeedJobs.Add(new ECSPros.Integration.Domain.Entities.FeedJob
-        { FirmPlatformId = platformId, RequestedAt = DateTime.UtcNow, CreatedAt = DateTime.UtcNow });
-        await db.SaveChangesAsync(ct);
+        var now = DateTime.UtcNow;
+        await using var conn = await dataSource.OpenConnectionAsync(ct);
+        await using var cmd = new NpgsqlCommand("""
+            INSERT INTO integration.feed_jobs
+                ("Id", "FirmPlatformId", "RequestedAt", "Status", "AttemptCount", "CreatedAt", "IsDeleted")
+            VALUES
+                (@id, @platformId, @now, 'pending', 0, @now, false)
+            ON CONFLICT ("FirmPlatformId")
+                WHERE "Status" IN ('pending', 'processing') AND "IsDeleted" = false
+            DO NOTHING
+            """, conn);
+        cmd.Parameters.AddWithValue("id", Guid.NewGuid());
+        cmd.Parameters.AddWithValue("platformId", platformId);
+        cmd.Parameters.AddWithValue("now", now);
+        await cmd.ExecuteNonQueryAsync(ct);
     }
 }
 
@@ -96,13 +109,20 @@ public sealed class FeedGeneratorWorker(
     IConfiguration config,
     IHostEnvironment env,
     NpgsqlDataSource dataSource,
+    NodeOptions node,
     ILogger<FeedGeneratorWorker> logger) : BackgroundService
 {
+    private sealed record FeedJobLease(Guid JobId, Guid FirmPlatformId, int AttemptCount);
+    private sealed record FeedExecutionResult(bool Success, string? Error = null);
+
     protected override async Task ExecuteAsync(CancellationToken st)
     {
         var enabled = config.GetValue("Feeds:Enabled", true);
         var interval = TimeSpan.FromHours(Math.Max(1, config.GetValue("Feeds:IntervalHours", 6)));
         var poll = TimeSpan.FromSeconds(Math.Max(2, config.GetValue("Feeds:PollSeconds", 10)));
+        var lease = TimeSpan.FromSeconds(Math.Max(30, config.GetValue("Feeds:LeaseSeconds", 900)));
+        var maxAttempts = Math.Max(1, config.GetValue("Feeds:MaxAttempts", 5));
+        var retryDelay = TimeSpan.FromSeconds(Math.Max(1, config.GetValue("Feeds:RetryDelaySeconds", 60)));
         logger.LogInformation("Feed üretimi: {Durum} (aralık {Saat} sa, kuyruk kontrolü {Sn} sn, çıktı {Dir})",
             enabled ? "AKTİF ✓" : "KAPALI (Feeds:Enabled=false)", interval.TotalHours, poll.TotalSeconds, FeedPaths.OutputRoot(config, env));
         if (!enabled) return;
@@ -113,11 +133,11 @@ public sealed class FeedGeneratorWorker(
         {
             try
             {
-                // Panelden tetiklenmiş iş var mı? (DB kuyruğu — atomik sahiplen ve sil)
-                var tetik = await IsSahiplenAsync(st);
-                if (tetik is { } pid)
+                // Panelden tetiklenmiş iş var mı? Kalıcı DB kuyruğundan atomik lease al.
+                var tetik = await IsSahiplenAsync(lease, maxAttempts, st);
+                if (tetik is not null)
                 {
-                    await KanalUretAsync(pid, st);
+                    await SahiplenilenIsiCalistirAsync(tetik, lease, maxAttempts, retryDelay, st);
                     continue; // kuyrukta başka iş olabilir — beklemeden tekrar bak
                 }
 
@@ -139,26 +159,185 @@ public sealed class FeedGeneratorWorker(
         }
     }
 
-    /// <summary>En eski feed işini atomik sahiplenir (FOR UPDATE SKIP LOCKED + DELETE) ve aynı
-    /// kanalın kuyruktaki diğer kopyalarını da temizler (art arda "Şimdi üret" tek üretime iner).</summary>
-    private async Task<Guid?> IsSahiplenAsync(CancellationToken ct)
+    /// <summary>En eski hazır işi atomik sahiplenir. Süresi dolmuş processing satırları crash recovery
+    /// için yeniden alınabilir; satır iş başlamadan hiçbir zaman silinmez.</summary>
+    private async Task<FeedJobLease?> IsSahiplenAsync(TimeSpan lease, int maxAttempts, CancellationToken ct)
     {
         await using var conn = await dataSource.OpenConnectionAsync(ct);
         await using var cmd = new NpgsqlCommand("""
-            DELETE FROM integration.feed_jobs
-            WHERE "Id" IN (
-                SELECT "Id" FROM integration.feed_jobs
-                ORDER BY "RequestedAt" LIMIT 1 FOR UPDATE SKIP LOCKED)
-            RETURNING "FirmPlatformId"
+            WITH exhausted AS (
+                UPDATE integration.feed_jobs
+                SET "Status" = 'failed',
+                    "CompletedAt" = NOW(),
+                    "LeaseOwner" = NULL,
+                    "LeaseUntil" = NULL,
+                    "LastError" = COALESCE("LastError", 'Worker kaybı sonrası maksimum deneme sayısına ulaşıldı.'),
+                    "UpdatedAt" = NOW()
+                WHERE "IsDeleted" = false
+                  AND "Status" = 'processing'
+                  AND "LeaseUntil" <= NOW()
+                  AND "AttemptCount" >= @maxAttempts
+                RETURNING "Id"
+            ), candidate AS (
+                SELECT "Id"
+                FROM integration.feed_jobs
+                WHERE "IsDeleted" = false
+                  AND "AttemptCount" < @maxAttempts
+                  AND "RequestedAt" <= NOW()
+                  AND (
+                      "Status" = 'pending'
+                      OR ("Status" = 'processing' AND "LeaseUntil" <= NOW())
+                  )
+                ORDER BY "RequestedAt", "CreatedAt"
+                LIMIT 1
+                FOR UPDATE SKIP LOCKED
+            )
+            UPDATE integration.feed_jobs AS jobs
+            SET "Status" = 'processing',
+                "LeaseOwner" = @owner,
+                "LeaseUntil" = NOW() + @lease,
+                "AttemptCount" = jobs."AttemptCount" + 1,
+                "StartedAt" = COALESCE(jobs."StartedAt", NOW()),
+                "LastError" = NULL,
+                "UpdatedAt" = NOW()
+            FROM candidate
+            WHERE jobs."Id" = candidate."Id"
+            RETURNING jobs."Id", jobs."FirmPlatformId", jobs."AttemptCount"
             """, conn);
-        var sonuc = await cmd.ExecuteScalarAsync(ct);
-        if (sonuc is not Guid pid) return null;
+        cmd.Parameters.AddWithValue("maxAttempts", maxAttempts);
+        cmd.Parameters.AddWithValue("owner", node.Id);
+        cmd.Parameters.AddWithValue("lease", lease);
 
-        await using var temizle = new NpgsqlCommand(
-            "DELETE FROM integration.feed_jobs WHERE \"FirmPlatformId\" = @pid", conn);
-        temizle.Parameters.AddWithValue("pid", pid);
-        await temizle.ExecuteNonQueryAsync(ct);
-        return pid;
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        if (!await reader.ReadAsync(ct)) return null;
+        return new FeedJobLease(reader.GetGuid(0), reader.GetGuid(1), reader.GetInt32(2));
+    }
+
+    private async Task SahiplenilenIsiCalistirAsync(
+        FeedJobLease job,
+        TimeSpan lease,
+        int maxAttempts,
+        TimeSpan retryDelay,
+        CancellationToken stoppingToken)
+    {
+        using var executionCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+        var heartbeat = LeaseYenileAsync(job.JobId, lease, executionCts, stoppingToken);
+
+        try
+        {
+            var result = await KanalUretAsync(job.FirmPlatformId, executionCts.Token);
+            using var finalizationCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            if (result.Success)
+                await TamamlaAsync(job.JobId, finalizationCts.Token);
+            else
+                await BasarisizAsync(job, result.Error ?? "Feed üretimi başarısız.", maxAttempts, retryDelay, finalizationCts.Token);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            // Shutdown/crash sırasında satır processing kalır; lease dolunca başka worker geri alır.
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogWarning("Feed işi lease sahipliği kaybedildiği için durduruldu: {JobId}", job.JobId);
+        }
+        finally
+        {
+            executionCts.Cancel();
+            try { await heartbeat; }
+            catch (OperationCanceledException) { }
+        }
+    }
+
+    private async Task LeaseYenileAsync(
+        Guid jobId,
+        TimeSpan lease,
+        CancellationTokenSource executionCts,
+        CancellationToken stoppingToken)
+    {
+        var heartbeatInterval = TimeSpan.FromSeconds(Math.Max(10, lease.TotalSeconds / 3));
+        using var timer = new PeriodicTimer(heartbeatInterval);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(executionCts.Token))
+            {
+                await using var conn = await dataSource.OpenConnectionAsync(executionCts.Token);
+                await using var cmd = new NpgsqlCommand("""
+                    UPDATE integration.feed_jobs
+                    SET "LeaseUntil" = NOW() + @lease, "UpdatedAt" = NOW()
+                    WHERE "Id" = @id AND "Status" = 'processing' AND "LeaseOwner" = @owner
+                    """, conn);
+                cmd.Parameters.AddWithValue("id", jobId);
+                cmd.Parameters.AddWithValue("owner", node.Id);
+                cmd.Parameters.AddWithValue("lease", lease);
+                if (await cmd.ExecuteNonQueryAsync(executionCts.Token) != 1)
+                {
+                    logger.LogError("Feed işi lease sahipliği kaybedildi: {JobId} / {NodeId}", jobId, node.Id);
+                    executionCts.Cancel();
+                    return;
+                }
+            }
+        }
+        catch (OperationCanceledException) when (executionCts.IsCancellationRequested || stoppingToken.IsCancellationRequested)
+        {
+            // Normal iş bitişi veya servis kapanışı.
+        }
+        catch (Exception ex)
+        {
+            // Lease yenilenemiyorsa çift üretim riskini almamak için çalışan üretimi durdur.
+            logger.LogError(ex, "Feed işi lease yenilenemedi; üretim durduruluyor: {JobId}", jobId);
+            executionCts.Cancel();
+        }
+    }
+
+    private async Task TamamlaAsync(Guid jobId, CancellationToken ct)
+    {
+        await using var conn = await dataSource.OpenConnectionAsync(ct);
+        await using var cmd = new NpgsqlCommand("""
+            UPDATE integration.feed_jobs
+            SET "Status" = 'completed', "CompletedAt" = NOW(),
+                "LeaseOwner" = NULL, "LeaseUntil" = NULL, "LastError" = NULL, "UpdatedAt" = NOW()
+            WHERE "Id" = @id AND "Status" = 'processing' AND "LeaseOwner" = @owner
+            """, conn);
+        cmd.Parameters.AddWithValue("id", jobId);
+        cmd.Parameters.AddWithValue("owner", node.Id);
+        if (await cmd.ExecuteNonQueryAsync(ct) != 1)
+            throw new InvalidOperationException($"Feed işi tamamlanırken lease sahipliği bulunamadı: {jobId}");
+    }
+
+    private async Task BasarisizAsync(
+        FeedJobLease job,
+        string error,
+        int maxAttempts,
+        TimeSpan retryDelay,
+        CancellationToken ct)
+    {
+        var sonDeneme = job.AttemptCount >= maxAttempts;
+        var guvenliHata = error.Length > 2000 ? error[..2000] : error;
+        await using var conn = await dataSource.OpenConnectionAsync(ct);
+        await using var cmd = new NpgsqlCommand("""
+            UPDATE integration.feed_jobs
+            SET "Status" = @status,
+                "RequestedAt" = CASE WHEN @failed THEN "RequestedAt" ELSE NOW() + @retryDelay END,
+                "CompletedAt" = CASE WHEN @failed THEN NOW() ELSE NULL END,
+                "LeaseOwner" = NULL,
+                "LeaseUntil" = NULL,
+                "LastError" = @error,
+                "UpdatedAt" = NOW()
+            WHERE "Id" = @id AND "Status" = 'processing' AND "LeaseOwner" = @owner
+            """, conn);
+        cmd.Parameters.AddWithValue("status", sonDeneme ? "failed" : "pending");
+        cmd.Parameters.AddWithValue("failed", sonDeneme);
+        cmd.Parameters.AddWithValue("retryDelay", retryDelay);
+        cmd.Parameters.AddWithValue("error", guvenliHata);
+        cmd.Parameters.AddWithValue("id", job.JobId);
+        cmd.Parameters.AddWithValue("owner", node.Id);
+        if (await cmd.ExecuteNonQueryAsync(ct) != 1)
+            throw new InvalidOperationException($"Feed işi hata durumu yazılırken lease sahipliği bulunamadı: {job.JobId}");
+
+        logger.LogWarning("Feed işi {Durum}: {JobId}, deneme {Deneme}/{Maksimum}",
+            sonDeneme ? "kalıcı olarak başarısız" : "yeniden kuyruğa alındı",
+            job.JobId, job.AttemptCount, maxAttempts);
     }
 
     private async Task TumKanallariUretAsync(TimeSpan interval, CancellationToken ct)
@@ -182,13 +361,13 @@ public sealed class FeedGeneratorWorker(
         }
     }
 
-    public async Task KanalUretAsync(Guid platformId, CancellationToken ct)
+    private async Task<FeedExecutionResult> KanalUretAsync(Guid platformId, CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();
         var coreDb = scope.ServiceProvider.GetRequiredService<ICoreDbContext>();
         var statusStore = scope.ServiceProvider.GetRequiredService<IFeedStatusStore>();
         var platform = await coreDb.FirmPlatforms.AsNoTracking().Where(p => p.Id == platformId).Select(p => new { p.Code }).FirstOrDefaultAsync(ct);
-        if (platform is null) return;
+        if (platform is null) return new FeedExecutionResult(false, $"Feed platformu bulunamadı: {platformId}");
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var onceki = await statusStore.GetAsync(platformId, ct);
         await statusStore.SetAsync(new FeedStatus(platformId, platform.Code, onceki?.LastRunAt, onceki?.DurationMs ?? 0, onceki?.ProductCount ?? 0, onceki?.ItemCount ?? 0, onceki?.InStockCount ?? 0, onceki?.XmlBytes ?? 0, onceki?.CsvBytes ?? 0, null, true), ct);
@@ -198,16 +377,36 @@ public sealed class FeedGeneratorWorker(
             var generator = scope.ServiceProvider.GetRequiredService<FeedGenerator>();
             var dir = FeedPaths.PlatformDir(config, env, platform.Code);
             var r = await generator.GenerateAsync(platformId, platform.Code, dir, ct);
+            if (string.Equals(config["Storage:Provider"], "S3", StringComparison.OrdinalIgnoreCase))
+            {
+                var storage = scope.ServiceProvider.GetRequiredService<IFileStorage>();
+                await UploadFeedAsync(storage, platform.Code, "google-shopping.xml", r.XmlPath,
+                    "application/xml; charset=utf-8", ct);
+                await UploadFeedAsync(storage, platform.Code, "meta-catalog.csv", r.CsvPath,
+                    "text/csv; charset=utf-8", ct);
+            }
             sw.Stop();
             await statusStore.SetAsync(new FeedStatus(platformId, platform.Code, DateTime.UtcNow, (int)sw.ElapsedMilliseconds, r.ProductCount, r.ItemCount, r.InStockCount, r.XmlBytes, r.CsvBytes, null, false), ct);
             logger.LogInformation("Feed üretildi: {Kanal} — {Urun} ürün / {Kalem} kalem ({Stokta} stokta), {Ms} ms, xml {Kb} KB", platform.Code, r.ProductCount, r.ItemCount, r.InStockCount, sw.ElapsedMilliseconds, r.XmlBytes / 1024);
+            return new FeedExecutionResult(true);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
             await statusStore.SetAsync(new FeedStatus(platformId, platform.Code, onceki?.LastRunAt, (int)sw.ElapsedMilliseconds, onceki?.ProductCount ?? 0, onceki?.ItemCount ?? 0, onceki?.InStockCount ?? 0, onceki?.XmlBytes ?? 0, onceki?.CsvBytes ?? 0, ex.Message.Length > 500 ? ex.Message[..500] : ex.Message, false), CancellationToken.None);
             logger.LogError(ex, "Feed üretimi başarısız ({Kanal})", platform.Code);
+            return new FeedExecutionResult(false, ex.Message);
         }
+    }
+
+    private static async Task UploadFeedAsync(
+        IFileStorage storage, string platformCode, string fileName, string path,
+        string contentType, CancellationToken ct)
+    {
+        await using var input = new FileStream(
+            path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+        await storage.SavePublicAsync($"feeds/{platformCode}", fileName, input, contentType, ct);
     }
 
     /// <summary>A6 geçiş köprüsü: eski status.json dosyalarındaki son üretim durumunu DB'de karşılığı

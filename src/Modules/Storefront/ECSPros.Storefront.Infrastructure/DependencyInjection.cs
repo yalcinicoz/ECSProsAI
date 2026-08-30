@@ -17,6 +17,7 @@ public static class DependencyInjection
             options.UseNpgsql(dataSource,
                 o =>
                 {
+                    o.MigrationsAssembly(typeof(StorefrontDbContext).Assembly.FullName);
                     o.MigrationsHistoryTable("__ef_migrations_storefront", "storefront");
                     o.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);   // Faz 1: geçici DB hatasında otomatik yeniden dene
                 }));

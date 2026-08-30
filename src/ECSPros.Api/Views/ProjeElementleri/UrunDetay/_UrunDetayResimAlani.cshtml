@@ -6,11 +6,11 @@
     // veri gelene dek gizli (Faz G). Tasarım sözleşmesi: video <source>+poster, ilk ana
     // görsel eager/fetchpriority=high, görsellerde intrinsic ölçüler.
     var vmResim = ViewData["MsUrunDetay"] as UrunDetayVm;
-    var resimler = vmResim?.Gorseller ?? [];
+    var resimler = vmResim?.Gorseller ?? Array.Empty<string>();
     // Görselsiz ürün: no-image placeholder tek slayt olarak basılır (site geneli kuralı, 2026-07-17)
-    if (resimler.Count == 0) { resimler = ["/images/no-image.svg"]; }
+    if (resimler.Count == 0) { resimler = new[] { "/images/no-image.svg" }; }
     var resimAd = vmResim?.Ad ?? "Ürün görseli";
-    var videolar = vmResim?.Videolar ?? [];
+    var videolar = vmResim?.Videolar ?? Array.Empty<UrunVideoVm>();
     var videoPoster = resimler.Count > 0 ? resimler[0] : null;
     // 2026-07-30: ürün detay görselleri srcset — CDN anında ölçekler (640 sabit yerine
     // ana görselde 480-1440, thumb'da 120-360 merdiveni). Kalıp dışı URL'de null → tek kaynak.

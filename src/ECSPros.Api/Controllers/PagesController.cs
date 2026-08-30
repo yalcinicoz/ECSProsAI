@@ -164,7 +164,9 @@ public class PagesController(
     [HttpPost("media")]
     [RequestSizeLimit(6_000_000)]
     public async Task<IActionResult> UploadMedia(
-        IFormFile? file, [FromServices] IConfiguration configuration, CancellationToken ct)
+        IFormFile? file,
+        [FromServices] ECSPros.Api.Services.Storage.IFileStorage storage,
+        CancellationToken ct)
     {
         var uzantilar = new Dictionary<string, string>
         {
@@ -178,18 +180,16 @@ public class PagesController(
         if (!uzantilar.TryGetValue(file.ContentType, out var uzanti))
             return BadRequest(new { success = false, error = "Yalnızca JPEG, PNG, WebP, GIF veya SVG yükleyebilirsiniz." });
 
-        var kok = configuration["Store:MediaRootPath"] ?? "/opt/ECSProsAI/media";
-        var altDizin = Path.Combine("vitrin", DateTime.UtcNow.ToString("yyyyMM"));
-        Directory.CreateDirectory(Path.Combine(kok, altDizin));
+        var altDizin = $"vitrin/{DateTime.UtcNow:yyyyMM}";
         var ad = $"{Guid.NewGuid():N}{uzanti}";
-        var dosyaYolu = Path.Combine(kok, altDizin, ad);
-        await using (var hedef = System.IO.File.Create(dosyaYolu))
-            await file.CopyToAsync(hedef, ct);
+        await using var stream = file.OpenReadStream();
+        var stored = await storage.SavePublicAsync(altDizin, ad, stream, file.ContentType, ct);
 
         // A fazı (2026-07-30): responsive varyantlar (_w480/_w800/_w1200/_w1920.webp) —
         // storefront srcset bunlardan beslenir. Üretim hatası yüklemeyi düşürmez
         // (varyantsız görsel bugünkü gibi tek kaynak servis edilir).
-        if (ECSPros.Api.Services.Store.VitrinGorselVaryantlari.Desteklenir(file.ContentType))
+        if (stored.PhysicalPath is { } dosyaYolu &&
+            ECSPros.Api.Services.Store.VitrinGorselVaryantlari.Desteklenir(file.ContentType))
         {
             try
             {
@@ -202,7 +202,7 @@ public class PagesController(
             }
         }
 
-        return Ok(new { success = true, data = new { url = $"/media/{altDizin.Replace(Path.DirectorySeparatorChar, '/')}/{ad}" } });
+        return Ok(new { success = true, data = new { url = stored.PublicUrl } });
     }
 
     /// <summary>

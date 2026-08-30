@@ -3,16 +3,29 @@ using ECSPros.Shared.Kernel.Domain;
 namespace ECSPros.Integration.Domain.Entities;
 
 /// <summary>
-/// FAZ 10 / A6 — feed üretim iş kuyruğu (integration.feed_jobs). Panel "Şimdi üret"
-/// tetiği süreç-içi Channel yerine buraya satır ekler; FeedGeneratorWorker (yalnız
-/// Worker/Both rollü düğümde) satırı FOR UPDATE SKIP LOCKED ile sahiplenip SİLER —
-/// tetik hangi düğümden gelirse gelsin işi worker düğümü yapar, worker kapalıyken
-/// tetik kaybolmaz (DB'de bekler).
+/// FAZ 10 / A6 + FAZ 11 / K0 — kalıcı feed üretim kuyruğu. Worker satırı silmez;
+/// atomik lease ile sahiplenir. Process/VM lease sırasında kapanırsa süre dolunca
+/// başka worker işi geri alır. Tamamlanan ve kalıcı hata alan işler tanı için saklanır.
 /// </summary>
 public class FeedJob : BaseEntity
 {
     public Guid FirmPlatformId { get; set; }
     public DateTime RequestedAt { get; set; }
+    public string Status { get; set; } = FeedJobStatuses.Pending;
+    public string? LeaseOwner { get; set; }
+    public DateTime? LeaseUntil { get; set; }
+    public int AttemptCount { get; set; }
+    public DateTime? StartedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public string? LastError { get; set; }
+}
+
+public static class FeedJobStatuses
+{
+    public const string Pending = "pending";
+    public const string Processing = "processing";
+    public const string Completed = "completed";
+    public const string Failed = "failed";
 }
 
 /// <summary>

@@ -315,15 +315,21 @@ public class MarketplaceValueMappingConfiguration : IEntityTypeConfiguration<Mar
     }
 }
 
-/// <summary>FAZ 10 / A6 (2026-08-30): feed üretim iş kuyruğu — tetik DB'de, worker sahiplenip siler.</summary>
+/// <summary>FAZ 10 / A6 + FAZ 11 / K0: feed üretim iş kuyruğu — kalıcı durum ve lease.</summary>
 public class FeedJobConfiguration : IEntityTypeConfiguration<FeedJob>
 {
     public void Configure(EntityTypeBuilder<FeedJob> b)
     {
         b.ToTable("feed_jobs");
         b.HasKey(x => x.Id);
-        b.HasIndex(x => x.FirmPlatformId);
-        // Soft delete filtresi YOK: sahiplenilen iş fiziksel silinir (kuyruk tablosu).
+        b.Property(x => x.Status).HasMaxLength(20).IsRequired();
+        b.Property(x => x.LeaseOwner).HasMaxLength(100);
+        b.Property(x => x.LastError).HasMaxLength(2000);
+        b.HasIndex(x => new { x.Status, x.RequestedAt, x.LeaseUntil });
+        b.HasIndex(x => x.FirmPlatformId)
+            .IsUnique()
+            .HasFilter("\"Status\" IN ('pending', 'processing') AND \"IsDeleted\" = false");
+        b.HasQueryFilter(x => !x.IsDeleted);
     }
 }
 

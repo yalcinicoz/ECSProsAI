@@ -121,7 +121,9 @@ public class RequestsController(IMediator mediator) : ControllerBase
     [HttpPost("media")]
     [RequestSizeLimit(11_000_000)]
     public async Task<IActionResult> UploadMedia(
-        IFormFile? file, [FromServices] IConfiguration configuration, CancellationToken ct)
+        IFormFile? file,
+        [FromServices] ECSPros.Api.Services.Storage.IFileStorage storage,
+        CancellationToken ct)
     {
         var uzantilar = new Dictionary<string, string>
         {
@@ -135,13 +137,11 @@ public class RequestsController(IMediator mediator) : ControllerBase
         if (!uzantilar.TryGetValue(file.ContentType, out var uzanti))
             return BadRequest(new { success = false, error = "Yalnızca JPEG, PNG, WebP, GIF veya PDF yükleyebilirsiniz." });
 
-        var kok = configuration["Store:MediaRootPath"] ?? "/opt/ECSProsAI/media";
-        var altDizin = Path.Combine("talepler", DateTime.UtcNow.ToString("yyyyMM"));
-        Directory.CreateDirectory(Path.Combine(kok, altDizin));
+        var altDizin = $"talepler/{DateTime.UtcNow:yyyyMM}";
         var ad = $"{Guid.NewGuid():N}{uzanti}";
-        await using (var hedef = System.IO.File.Create(Path.Combine(kok, altDizin, ad)))
-            await file.CopyToAsync(hedef, ct);
+        await using var stream = file.OpenReadStream();
+        var stored = await storage.SavePublicAsync(altDizin, ad, stream, file.ContentType, ct);
 
-        return Ok(new { success = true, data = new { url = $"/media/{altDizin.Replace(Path.DirectorySeparatorChar, '/')}/{ad}" } });
+        return Ok(new { success = true, data = new { url = stored.PublicUrl } });
     }
 }

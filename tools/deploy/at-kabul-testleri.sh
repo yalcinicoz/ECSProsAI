@@ -43,8 +43,9 @@ fi
 
 echo "── A-T kabul testleri: A=$NODE_A  B=$NODE_B"
 
-# T1: iki düğüm de hazır ve kimlikleri FARKLI
-ra=$(curl -s --max-time 10 "$NODE_A/health/detail"); rb=$(curl -s --max-time 10 "$NODE_B/health/detail")
+# T1: iki düğüm de hazır ve kimlikleri FARKLI. /health/detail AdminOnly'dir;
+# anonim kabul betiği nodeId içeren LB-uyumlu /ready yanıtını kullanır.
+ra=$(curl -s --max-time 10 "$NODE_A/ready"); rb=$(curl -s --max-time 10 "$NODE_B/ready")
 na=$(echo "$ra" | grep -o '"nodeId":"[^"]*"' | head -1); nb=$(echo "$rb" | grep -o '"nodeId":"[^"]*"' | head -1)
 sa=$(echo "$ra" | grep -o '"status":"[^"]*"' | head -1);  sb=$(echo "$rb" | grep -o '"status":"[^"]*"' | head -1)
 if [ -n "$na" ] && [ -n "$nb" ] && [ "$na" != "$nb" ] && [ "$sa" = '"status":"Healthy"' ] && [ "$sb" = '"status":"Healthy"' ];

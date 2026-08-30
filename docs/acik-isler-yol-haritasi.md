@@ -100,7 +100,8 @@ Faz olmayan kalıntılar aşağıya taşındı:
 >
 > **Koşullu (tetiği: çoklu instance'a geçiş — bugün ihtiyaç YOK, yük testi doğruladı):** worker
 > leader-election/SKIP LOCKED · SignalR backplane · dağıtık rate limit · migration'ın deploy adımına
-> alınması · medya object storage. Kaynak: dayanıklılık planı "Faz 3".
+> alınması · ürün dışı upload/feed için ortak path. Ürün medyası harici subdomain/CDN'dedir. Kaynak:
+> dayanıklılık planı "Faz 3".
 
 ## FAZ 9 — Veri kalitesi ve teknik borç (bağımsız küçük/orta işler)
 
@@ -158,7 +159,8 @@ A1-A4 ve A7-A9 tek sunucuda da çalışır, A0 beklenmez; A5/A6 mount ile devrey
       (Requests/StoreAccount/Pages/StoreReviews/VitrinGorselVaryantlari), ürün görsel/video DB ayarı
       `ImageServer.LocalSavePath`+`PublicBaseUrl` (CatalogSettings), feed `Feeds:OutputPath`. HA-lite'ta A0
       mount'u gelince bu ÜÇ kök `/srv/ecspros-shared/*`'a çevrilir (yalnız config/DB ayarı — kod işi yok).
-      `IFileStorage` sözleşmesi S3 ile anlamlı → B3'e ertelendi (S3 zaten kullanıcı kararıyla ertelenmişti).
+      `IFileStorage` sözleşmesi hazır; S3 aktivasyonu ertelendi. Ürün görsellerinde mevcut harici
+      subdomain/CDN URL düzeni korunur ve katalog storage kapalı kalır.
 - [x] **10.A6** ✅ CANLIDA (2026-08-30; kullanıcı testi ✓ "✓ Üretim tamamlandı — 37337 kalem, 7 sn" + panel tamamlanma mesajı düzeltmesi) — feed tetiği `integration.feed_jobs`
       (FOR UPDATE SKIP LOCKED sahiplenme + kanal dedupe; 10 sn poll `Feeds:PollSeconds`), durum
       `integration.feed_status` (NodeId kolonu; panel her düğümden aynı durumu okur); migration CANLI DB'ye
@@ -186,6 +188,224 @@ A1-A4 ve A7-A9 tek sunucuda da çalışır, A0 beklenmez; A5/A6 mount ile devrey
 > **Ertelenen (Kademe B):** B1 SignalR backplane · B2 worker dağıtık claim · B3 S3/MinIO ·
 > B4 Patroni DB HA · B5 Redis Sentinel · B6 nginx shared-zone rate limit · B7 release testi.
 > B3/B4/B5 altyapıları kullanıcı kararıyla ertelendi (2026-08-30).
+> **Yeni karar (2026-08-30):** çoklu sunucuya geçmeden yapılabilecek kod hazırlıkları FAZ 11'e alındı;
+> canlı Patroni/Sentinel ve ikinci fiziksel sunucu aktivasyonu FAZ 12 kabul kapılarıyla yapılacak.
+> **Medya kararı (2026-08-30):** ürün görselleri projede/API disklerinde tutulmayacak; mevcut ayrı görsel
+> sunucusundan subdomain/CDN URL'leriyle sunulacak. S3/MinIO üretim aktivasyonu süresiz ertelendi.
+
+---
+
+## FAZ 11 — Çoklu sunucu kod dayanıklılığı (BAŞLADI 2026-08-30)
+
+**Alan:** API + worker + deployment · **Ana rapor:**
+`docs/coklu-sunucu-kalan-isler-ve-hedef-konfigurasyon.md` · **Uygulama promptu:**
+`docs/prompts/coklu-sunucu-tamamlama-ana-promptu.md`
+
+**Kural:** Bu faz yalnız kodu ve test edilebilir örnek konfigürasyonları hazırlar. Canlı PostgreSQL, Redis,
+OVH LB, Cloudflare, firewall veya ESXi üzerinde kullanıcıdan ayrı onay alınmadan değişiklik yapılmaz.
+Her madde küçük diff olarak uygulanır; build/test kanıtı yazılmadan `[x]` yapılmaz.
+
+- [x] **11.0 Planlama ve kesin yeniden denetim** ✅ TAMAMLANDI (2026-08-30): mevcut HA-lite kodu güncel
+      `HEAD 46eae97b` üzerinde yeniden incelendi. İki doküman oluşturuldu: kalan işler + hedef sunucu
+      konfigürasyonu raporu ve fazlı uygulama promptu. Kesin ilk açık: `FeedGeneratorWorker`, işi üretimden
+      önce `DELETE ... RETURNING` ile siliyor; silme sonrası process/VM kaybında tetik geri alınamıyor.
+- [ ] **11.1 K0 — Feed job atomik claim/lease ve crash recovery** 🟡 KOD+TEST DB KABULÜ TAMAM, PROCESS-KILL KABULÜ BEKLİYOR (2026-08-30):
+      `integration.feed_jobs` additive alanlarla `pending → processing → completed/failed` durum makinesine
+      geçirildi; `lease_owner`, `lease_until`, `attempt_count`, başlangıç/bitiş/hata alanları eklendi.
+      Claim `FOR UPDATE SKIP LOCKED` ile atomik; süre aşımı sonrası başka worker devralır; başarılı iş
+      yeniden çalışmaz, retry limiti aşan iş `failed` kalır. Kabul: eşzamanlı claim, lease-expiry devralma,
+      başarı ve kalıcı hata senaryoları testli; migration mevcut bekleyen işleri kaybetmeden `pending` yapıyor.
+      **Uygulanan:** `AddFeedJobLeases` additive migration; active kanal başına partial unique index; atomik claim;
+      uzun üretimde lease heartbeat; process/VM kaybında expired-lease devralma; `MaxAttempts` + gecikmeli retry;
+      son crash maksimum denemeye ulaştıysa otomatik `failed`; tamamlanan iş satırı tanı için saklanıyor; panel
+      tetiği aktif pending/processing işi idempotent biçimde birleştiriyor. Config: `Feeds:LeaseSeconds=900`,
+      `MaxAttempts=5`, `RetryDelaySeconds=60`. Kanıt: `dotnet build src/ECSPros.sln --no-restore` 0 hata
+      (mevcut 31 uyarı); EF migration script üretimi başarılı; rollback'li regresyon betiği
+      `tools/tests/feed-job-lease-regression.sql` hazır. **Açık kabul:** migration uygulanmış izole PostgreSQL'de
+      betiği çalıştırma + iki gerçek worker process ile eşzamanlı claim/crash testi; canlı DB'ye uygulanmadı.
+      Yerel izole DB denemesi 2026-08-30'da migration başlamadan durdu: local PostgreSQL parola istedi,
+      repoda parola yoktu; test DB oluşturulmadı ve mevcut `ecommerce_db` değişmedi. Sonraki hazırlıkta
+      `TestCategory=Acceptance` altında gerçek Npgsql eşzamanlı claim/lease takeover/completed ve retry-limit
+      → kalıcı `failed` testi eklendi;
+      yalnız adı `test|acceptance` içeren DB ve açık write onayıyla çalışır, aksi halde güvenli biçimde atlanır.
+      **Gerçek test DB kanıtı:** boş acceptance DB oluşturuldu, bağımlı modül migration'ları ve
+      `AddFeedJobLeases` uygulandı; eşzamanlı claim, lease-expiry takeover, completed tekrar-claim engeli ve
+      retry-limit → `failed` senaryoları geçti. İki gerçek worker process kill testi environment pending.
+- [ ] **11.2 K1 — Node rolü ve proxy güven zinciri** 🟡 KOD+UNIT TAMAM, NGINX/LB KABULÜ BEKLİYOR (2026-08-30): `Node:Role` yalnız `Api|Worker|Both`; typo startup'ı
+      durdurur. `UseForwardedHeaders` doğru middleware sırasında; yalnız konfigüre edilmiş LB/Nginx IP/ağları
+      güvenilir. Sahte `CF-Connecting-IP`/`X-Forwarded-For` client IP'yi değiştiremez. `/health/detail`
+      private network veya authorization ile korunur; `/live` ve `/ready` LB için açık kalır.
+      **Uygulanan:** `NodeOptions.Dogrula()` rolü canonical yapıyor, boş NodeId/geçersiz rol açılışı kesiyor;
+      `ReverseProxy:KnownProxies/KnownNetworks/ForwardLimit` typed config'i ve `UseForwardedHeaders` pipeline'ın
+      başına eklendi; eski geniş RFC1918 güven varsayımı kaldırıldı (güvenli varsayılan yalnız loopback).
+      Rate limiter, tracking, GeoIP ve ödeme IP kaydı ham CF/XFF başlıklarını okumuyor; tek kaynak middleware
+      sonrası `RemoteIpAddress`. `/health/detail` artık `AdminOnly`; `/health`, `/live`, `/ready` anonim kalıyor.
+      Kanıt: solution build 0 hata; `Node__Role=typo-test` başlangıcı beklenen `InvalidOperationException` ile
+      reddedildi; güvenilir proxy XFF'i uygulanırken güvenilmeyen soketten sahte XFF/CF başlıklarının client IP'yi
+      değiştirmediği middleware unit testleriyle doğrulandı. **Açık kabul:** Production config'e gerçek Nginx/OVH LB dar
+      IP/CIDR'leri ve doğru `ForwardLimit` girilecek; Nginx'in Cloudflare istemci IP'sini sanitize edilmiş XFF
+      olarak ilettiği ve `/health/detail` 401/authorized 200 davranışı gerçek zincirde doğrulanacak.
+- [x] **11.3 K2 — Atomik ve geri alınabilir deploy** ✅ KOD+LINUX KABULÜ TAMAM
+      (2026-08-30): `deploy.sh` benzersiz release dizinine temiz publish/rsync ve opsiyonel migration gate
+      uygular; `activate-release.sh` doğrulanmış hedefe atomik `current` symlink geçirir, `/ready` başarısızsa
+      önceki release'e döner ve yalnız doğrulanmış releases kökünde retention uygular. İki betik `bash -n`
+      kontrolünden geçti. `tools/tests/deploy-activation-regression.sh` disposable Linux kabulü için hazırlandı.
+      Disposable Ubuntu Linux
+      VM'de sahte `systemctl`/`curl` ile sağlam release aktivasyonu, eski release retention temizliği ve bozuk
+      `/ready` sonrası önceki release'e rollback testi geçti; yalnız `/tmp` altında açılan uzak test dizini
+      doğrulanıp temizlendi. Canlı servis restartı yapılmadı.
+- [x] **11.4 K3 — SignalR Redis backplane** ✅ KOD + KÜÇÜK-VM AUTH MESAJ/VM-LOSS KAPANDI
+      (2026-08-30): `Microsoft.AspNetCore.SignalR.StackExchangeRedis` backplane'i opt-in config ve ortam/uygulama
+      channel prefix'i ile eklendi; kritik Redis state bağlantısını kullanır. Farklı API node'larına bağlı istemci,
+      node kapanış ve reconnect testi gerçek Redis/Sentinel ortamında yapılacak. **Ara kabul:** disposable Linux
+      VM'de iki gerçek API process'i SignalR backplane açıkken aynı gerçek Redis bağlantısıyla başarıyla başladı.
+      Ardından iki ayrı Ubuntu VM'de private IP'lere bağlı Release API'ler aynı test PostgreSQL/Redis ile açıldı;
+      Redis state VM'ler arasında tüketildi ve API-A process'i kapatıldığında API-B `Healthy` kaldı. **Authenticated
+      hub kanıtı:** aynı JWT secret ile A ve B DashboardHub'a yetkili istemci bağlandı; API-B, kendi yerel
+      `MetricsUpdated` yayınına ek olarak Redis backplane üzerinden API-A'nın farklı zaman damgalı yayınını aldı.
+      `tools/tests/signalr-two-node-client.mjs` secret'ları yalnız stdin'den alır. Test için yalnız acceptance DB'de
+      geçici IAM kullanıcısı açıldı; test sonrası kullanıcı ve oluşturulan oturum, API process/dizinleri ve publish
+      paketi temizlendi. Gerçek üç-Sentinel reconnect/primary-loss testi kod fazının değil, FAZ 12 üretim öncesi
+      altyapı kabulünün kapısıdır.
+- [ ] **11.5 K4 — Dış etkili worker distributed claim + idempotency** 🟡 ORTAK DAĞITIK KİLİT+FİNANS
+      IDEMPOTENCY TAMAM, DIŞ SERVİS KABULÜ BEKLİYOR (2026-08-30): Settlement eligibility, Cargo notify,
+      Tracking dispatch, Saved-search notify, Marketplace batch ve Legacy sync tek tek ele alınır. DB lease,
+      unique idempotency key, retry/backoff, crash recovery ve reconciliation uygulanır. **Uygulanan:** bu altı tur
+      PostgreSQL session advisory lock ile node'lar arasında tek sahipli; process/VM kaybında bağlantıyla birlikte
+      kilit bırakılır. Session lock'ın bağlantı kapanınca diğer node'a geçtiğini gerçek PostgreSQL'de sınayan opt-in
+      acceptance testi eklendi ve fiziksel bağlantı semantiği için pooling kapalı koşuda geçti. Hakediş defter
+      kaydı reference tabanlı idempotent ve DB unique index ile korumalı; index test DB'de doğrulandı. Açık kabul:
+      iki gerçek worker, kill/recovery ve dış API timeout-after-success senaryoları; outbox sağlayıcı idempotency
+      anahtarları adapter bazında doğrulanacak. İki ayrı Linux `psql` process'iyle lock sahibi/çakışma/SIGKILL
+      sonrası yeniden sahiplenme testi için `tools/tests/worker-lock-process-regression.sh` eklendi; parola yalnız
+      stdin'den alınır ve DB adı `test|acceptance` güvenlik kapısından geçmek zorundadır. **Linux process-kill
+      kanıtı (2026-08-30):** disposable Ubuntu VM'deki ilk `psql` session advisory lock'u aldı, ikinci process
+      aynı lock'u alamadı; lock sahibi `SIGKILL` ile kapatılınca yeni process lock'u devraldı. Windows CRLF stdin
+      sonlandırması güvenli biçimde normalize edildi; holder gerçek worker semantiğine uygun idle DB session olarak
+      FIFO ile tutuldu. Uzak test dizini doğrulanarak temizlendi. Bu kanıt dış sağlayıcı timeout-after-success
+      idempotency/reconciliation kapısını kapatmaz. Yalnız `Role=Worker` veya in-memory lock kabul edilmez.
+- [x] **11.6 K5 — PostgreSQL multi-host primary bağlantısı** ✅ KOD KAPANDI, PATRONI KABULÜ FAZ 12'DE
+      (2026-08-30): Npgsql multi-host data source, yalnız multi-hostta primary targeting, host recheck ve doğrulanan
+      typed pool/timeout seçenekleri eklendi. `/ready`, `Postgres:RequirePrimary=true` iken bağlantının recovery/
+      standby değil yazılabilir primary olduğunu doğruluyor; acceptance paketi aynı koşulu sınar. Tek-host local
+      config geriye uyumlu. Kabul: Patroni test ortamında planned switchover sırasında API
+      restart olmadan bounded retry ile yazma devam eder; altyapı kurulana kadar `environment acceptance pending`.
+      Tek-primary acceptance hedefinin yazılabilir olduğu gerçek PostgreSQL'de doğrulandı; Patroni switchover
+      bununla kapanmış sayılmaz.
+- [x] **11.7 K6 — Redis Sentinel-aware bağlantı ve state ayrımı** ✅ KOD KAPANDI, SENTINEL KABULÜ FAZ 12'DE
+      (2026-08-30): `RedisCache` ve `RedisState` ayrı bağlantılar; typed `Standalone|Sentinel`, service name,
+      timeout/client adı ve legacy `Redis` fallback'i eklendi. Üç Sentinel/quorum 2 konfigürasyonu;
+      cache (`allkeys-lfu`) ile security/session/SignalR (`noeviction`) mantıksal setleri ayrılır. Kabul:
+      Redis primary kaybında uygulama restart olmadan reconnect ve kritik state sürekliliği; gerçek Sentinel
+      ortamı gelene kadar `environment acceptance pending`.
+- [x] **11.8 K7 — Node bağımsız storage** ✅ KOD KAPANDI, S3/MINIO AKTİVASYONU MİMARİ KARARLA ERTELENDİ
+      (2026-08-30): yorum/iade/talep/vitrin upload noktaları `IFileStorage` arkasına alındı; local provider
+      temp+atomik move, path traversal koruması ve public base URL kullanıyor. AWS SDK v4 tabanlı S3 provider;
+      AWS S3, path-style MinIO/OVH endpoint, streaming upload, public CDN URL ve süre sınırlandırılmış private
+      signed URL ve delete destekliyor; endpoint/credential yalnız secret config'ten gelir. Bilinmeyen provider
+      startup'ı durdurur. Katalog image/video servisleri için aynı provider adapter'ı eklendi; mevcut DB/CDN
+      düzenini bozmamak için `Storage:Catalog:Enabled=false` varsayılan ve cutover açıkça opt-in. S3 seçildiğinde
+      feed XML/CSV çıktıları object storage'a yükleniyor ve feed endpoint'i yalnız doğrulanmış `feedKey` sonrası
+      15 dakikalık signed URL üretiyor. Yerel
+      provider, key/path traversal ve katalog kategori ayrımı otomatik testli. **Üretim kararı:** ürün resmi
+      projeye yüklenmez; DB yalnız mevcut harici görsel subdomain/CDN URL/path bilgisini taşır. API görseli
+      indirmez, proxy etmez veya kendi diskine yazmaz; `Storage:Catalog:Enabled=false` kalır. S3 acceptance artık
+      FAZ 11/12 kapanış kapısı değildir. Ürün dışı upload/feed kullanılacaksa üretimde tüm API'lerin gördüğü
+      paylaşımlı path veya mevcut harici dosya servisi ayrıca konfigüre edilmelidir.
+- [x] **11.9 K8 — Otomatik test ve operasyon kanıtı** ✅ YEREL/KÜÇÜK-VM KANIT PAKETİ KAPANDI
+      (2026-08-30): solution'a `ECSPros.Api.Tests` MSTest projesi eklendi. Node role canonicalization/
+      fail-fast, PostgreSQL option sınırları, local storage atomik yazma-delete/path traversal, katalog image-video
+      key ayrımı, S3 fail-fast/HTTPS/signed-URL, Redis legacy/Sentinel mode-timeout ve proxy trust/spoof sınırlarını
+      kapsayan 49 unit test geçiyor. Eklenen üç PostgreSQL acceptance testi ile S3 upload/signed-read/delete ve
+      Redis cross-connection state/pub-sub testleri
+      ortam değişkeni verilmediğinde dış bağlantı yapmadan atlanıyor. İzole test DB'de feed eşzamanlı claim/lease
+      recovery ve session advisory-lock release kanıtını otomatik üretmek üzere hazır.
+      **Redis kanıtı (2026-08-30):** SSH tüneli üzerinden gerçek test Redis'e iki bağlantı açıldı; TTL key
+      yazma/diğer bağlantıdan okuma, pub/sub teslimi ve cleanup testi 1/1 geçti. Bu sonuç standalone bağlantı ve
+      cross-connection davranışını kanıtlar; Sentinel primary failover kanıtı değildir.
+      **PostgreSQL kanıtı (2026-08-30):** güvenlik kapılı üç acceptance testi gerçek test DB'de 3/3 geçti.
+      Boş DB migration koşusu Storefront, Accounts, Requests ve Procurement context'lerinde migration assembly'nin
+      startup assembly'ye kaydığını ortaya çıkardı; dört DI kaydına açık `MigrationsAssembly` eklendi ve history
+      tabloları ile Accounts idempotency index'i DB üzerinden doğrulandı.
+      Feed lease için rollback'li SQL regresyon betiği, iki additive migration için idempotent EF SQL üretimi ve
+      çoklu-node devreye alma/kabul runbook'u hazır. Kalan testler; gerçek worker process kill, worker duplicate,
+      cross-node Data Protection, SignalR, DB/Redis failover ve storage bağımsızlığı senaryoları `unit`,
+      `integration`, `environment acceptance` olarak ayrılır. Linux advisory-lock process-kill/recovery koşusu
+      gerçek test PostgreSQL üzerinde geçti. S3 acceptance testi kodda opsiyonel korunur fakat harici görsel
+      sunucusu kararı nedeniyle çalıştırılması ve S3 config'i doldurulması ertelenmiştir. Mock/unit sonuçları
+      gerçek failover kanıtı sayılmaz. **İki API process kanıtı:** Ubuntu VM'de `Node:Role=Api` ve
+      `MigrateOnStartup=false` ile iki Release API açıldı; farklı node ID, writable-primary PostgreSQL,
+      Redis-state ve Data Protection readiness sağlıklıydı. API-A challenge'ı API-B'de bir kez tüketildi;
+      API-A durdurulunca API-B hazır kaldı. Migration/seed ve dış etkili worker çalışmadı; test process/dizinleri
+      temizlendi. **İki-VM API kanıtı (2026-08-30):** `192.168.0.242` ve `192.168.0.243` üzerindeki iki gerçek
+      Release API farklı node ID ile hazır oldu; PostgreSQL writable-primary, Redis-state ve Data Protection
+      kontrolleri iki node'da sağlıklıydı. API-A'da üretilen challenge API-B'de yalnız bir kez tüketildi; API-A
+      process'i durdurulunca API-B sağlıklı kaldı. Test process/dizinleri ve yerel publish paketi temizlendi.
+      Aynı iki VM'de authenticated SignalR A→B Redis-backplane mesajı da ayrıca geçti. Bu kanıt VM/fiziksel host
+      power-off, Patroni veya Sentinel failover kanıtı değildir. **VM power-off kanıtı (2026-08-30):** başlangıçta
+      iki node authenticated SignalR A→B testini geçti; ardından `5.39.57.242` gerçek `systemctl poweroff` ile
+      kapatıldı. API-A/SSH erişimi düştüğü halde API-B `Healthy` kaldı ve VM kaybından sonra yeni login ile
+      authenticated DashboardHub `MetricsUpdated` olayı aldı. Bu API VM kaybını kanıtlar; iki VM aynı fiziksel
+      ESXi host üzerindeyse fiziksel host kaybı kanıtı değildir. VM2, test IAM kullanıcısı/oturumları ve yerel paket
+      temizlendi. VM1 tekrar açıldığında public SSH henüz kapalıyken private ping/SSH sağlıklıydı; VM2 jump host
+      üzerinden yalnız doğrulanmış acceptance dizini temizlendi. Test artığı kalmadı.
+      **Yerel storefront smoke (2026-08-30):** Windows'ta çalışan API, SSH tüneli üzerinden `.59` PostgreSQL
+      ve Redis'e bağlandı; migration/seed ve dış etkili worker'lar kapalı tutuldu. Ana sayfa, kategori sayfası,
+      Swagger, `/health` ve `/ready` HTTP 200; PostgreSQL writable-primary, Redis cache/state ve Data Protection
+      `Healthy` geçti. Razor runtime compilation sırasında bulunan ana sayfa/kategori/ürün detay collection
+      expression ve DI extension uyumsuzlukları düzeltildi. Redis secret hiçbir dosya veya loga yazılmadı.
+- [ ] **11.T Kod fazı kapanış kapısı** 🟡 TEST KAPSAMI KAPANDI, KALAN KOD K4/DIŞ SAĞLAYICI GÜVENLİĞİ
+      (2026-08-30): son birleşik koşuda solution build 0 hata/0 uyarı; 49 unit + 3 PostgreSQL + 1 Redis olmak
+      üzere 53 test geçti, yalnız S3 acceptance mimari karar gereği skipped;
+      sonraki hedefli koşuda Redis acceptance testi gerçek test Redis üzerinde 1/1 geçti;
+      PostgreSQL acceptance paketi gerçek test DB üzerinde 3/3 geçti;
+      iki ayrı Linux VM'deki gerçek API'ler shared DB/Redis/DP readiness, çapraz Redis state ve peer-process-stop
+      testini; aynı JWT ile authenticated SignalR A→B backplane yayınını ve gerçek API-A VM power-off sonrasında
+      API-B login/readiness/SignalR sürekliliğini geçti;
+      disposable Linux deploy activation/rollback/retention regresyonu geçti ve uzak test dizini temizlendi;
+      Integration+Accounts idempotent migration SQL üretimi başarılı; iki deploy betiği `bash -n`, tüm module
+      migration project yolları ve `git diff --check` temiz. Çapraz-node betiğinin korumalı `/health/detail`
+      yerine anonim `nodeId` taşıyan `/ready` kullanması düzeltildi. `Storage:Provider=S3` seçilip zorunlu endpoint/secret
+      config'i verilmediğinde startup beklendiği gibi durdu. Config örnekleri, migration preflight/rollback
+      yaklaşımı ve acceptance runbook'u güncel.
+      Küçük-VM test fazı kullanıcı kararıyla burada kapandı. Gerçek Patroni/Sentinel, Nginx/LB, fiziksel host,
+      backup restore ve 4.000 kullanıcı load/soak testleri FAZ 12 üretim öncesi altyapı kabuline taşındı ve 11.T'yi
+      bloke etmez. 11.T yalnız K4 worker/provider idempotency-reconciliation kod işi kapandığında `[x]` yapılır.
+
+## FAZ 12 — Scale-i3 üretim yerleşimi ve tam HA'ya geçiş
+
+**Alan:** OVH/ESXi + Nginx + PostgreSQL + Redis + storage · **Bloklayan:** FAZ 11 ilgili kod kapıları,
+canlı değişiklik için kullanıcı onayı ve bakım penceresi.
+
+- [x] **12.0 İlk fiziksel sunucu kararı** ✅ KAYDEDİLDİ (2026-08-30): mevcut OVH Scale-i3 — Intel Xeon
+      Gold 6438M, 32c/64t, 2.2/3.9 GHz, 256 GB ECC 4800 MHz. İlk kurulum tek fiziksel hostta yapılabilir;
+      bu kapasite başlangıcıdır, fiziksel HA değildir. Önerilen başlangıç VM'leri: `nginx-1` 2 vCPU/4 GB,
+      `api-1` ve `api-2` ayrı ayrı 8 vCPU/24 GB, `worker-1` 4 vCPU/12 GB, `postgres-1` 12 vCPU/64 GB,
+      `redis-1` 4 vCPU/16 GB, `monitoring-1` 4 vCPU/8 GB; ESXi için en az 16 GB rezerv.
+- [ ] **12.1 Disk/ağ envanteri ve son VM planı:** gerçek NVMe/RAID kapasitesi, disk endurance, private/public
+      uplink ve mevcut datastore ölçülmeden disk boyutları kesinleştirilmez. PostgreSQL OS/data/WAL ayrı virtual
+      disk; VM memory reservation ve vCPU:pCPU hedefi en fazla yaklaşık `1.5:1`.
+- [ ] **12.2 Tek Scale-i3 yerleşimi:** VM'ler, APP/DATA/MGMT ayrımı, Nginx→iki API upstream ve monitoring.
+      DB/Redis/Sentinel/Patroni otomasyonu henüz yoksa standalone çalışır; aynı fiziksel hosttaki sahte replica
+      veya üç quorum VM'i gerçek HA diye adlandırılmaz.
+- [ ] **12.3 Harici yedek:** PostgreSQL continuous WAL + günlük differential + haftalık full yedek, Scale-i3
+      dışındaki immutable/object storage'a kopya; aylık ayrı ortam restore testi. VM snapshot yedek sayılmaz.
+- [ ] **12.4 Tek-host 4.000 kullanıcı kapasite testi:** gerçek trafik dağılımına yakın load + en az 2 saat soak;
+      p50/p95/p99, 5xx, API CPU/RAM/GC, DB pool/slow query, Redis memory ve worker queue age kaydı. Donanım
+      yeterliliği testten önce garanti edilmez.
+- [ ] **12.5 İkinci fiziksel sunucu:** aynı failure domain dışında önerilen eş kapasite; `nginx-2`, `api-3/4`,
+      `postgres-2`, `redis-2`, `ha-2`. Tek fiziksel host kaybında 4.000 kullanıcı yükünü kalan host taşır.
+- [ ] **12.6 Bağımsız witness:** iki ESXi hosttan bağımsız 2 vCPU/4 GB/40 GB VM; etcd-3 + Sentinel-3.
+- [ ] **12.7 Stateful HA:** Patroni + 3 etcd, PostgreSQL synchronous standby; Redis primary/replica + 3 Sentinel
+      quorum 2. Ürün görselleri mevcut bağımsız subdomain/CDN sunucusundan gelir; API storage'ına alınmaz.
+      Planned ve unplanned failover sonuçları kayıtlı.
+- [ ] **12.8 Çift Nginx ve OVH LB:** LB health check fiziksel hostu değil her Nginx üzerinden API `/ready`
+      zincirini kontrol eder; origin erişimi Cloudflare/OVH LB kaynaklarıyla sınırlı; WebSocket ve upstream retry
+      testli.
+- [ ] **12.T Tam HA kabul kapısı:** bir API process, API VM, Nginx VM, Redis primary, PostgreSQL primary ve son
+      olarak bir ESXi host kontrollü kapatılır. Tek host kapalıyken 4.000 kullanıcı SLO testi, cross-node eski
+      credential/cookie decrypt, SignalR, worker idempotency, harici görsel subdomain erişimi ve offsite restore testlerinin tamamı
+      geçmeden yapı “tam HA” olarak adlandırılmaz.
 
 ## Önerilen sıra
 
@@ -193,3 +413,5 @@ A1-A4 ve A7-A9 tek sunucuda da çalışır, A0 beklenmez; A5/A6 mount ile devrey
 2. Ticari etki sırası önerim: **F1 (satış kanalı F4)** → **F3 (kargo KG1)** → **F2 (tedarik cutover, 0.6 netleşince)**
    → **F4 (Trendyol canlı)** → **F7 (go-live PART B)** → F5/F6 paralel fırsat buldukça → F8/F9 araya serpiştirilir.
 3. Her faz kapanışında bu dokümanda işaretle + PROGRESS panosunu güncelle (K18 kapanış raporu kuralı geçerli).
+4. Çoklu sunucu çalışmasında sıra: **11.1 → 11.2 → 11.3 → 11.4/11.7 → 11.5 → 11.6 → 11.8 →
+   11.9/11.T → 12.1-12.4 → ikinci fiziksel sunucu geldiğinde 12.5-12.T**.

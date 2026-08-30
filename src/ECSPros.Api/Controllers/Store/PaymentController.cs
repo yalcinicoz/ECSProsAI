@@ -292,10 +292,7 @@ public class PaymentController(
 
     private string IstemciIp()
     {
-        var cf = Request.Headers["CF-Connecting-IP"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(cf)) return cf.Trim();
-        var xff = Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(xff)) return xff.Split(',')[0].Trim();
+        // ForwardedHeadersMiddleware yalnız güvenilir Nginx/LB zincirini işler.
         return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
     }
 }

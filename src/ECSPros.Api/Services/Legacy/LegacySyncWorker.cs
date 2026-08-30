@@ -20,6 +20,7 @@ public sealed class LegacySyncWorker(
     LegacyOrderSyncService orderSync,
     IServiceScopeFactory scopeFactory,
     IConfiguration config,
+    DistributedWorkerLock workerLock,
     ILogger<LegacySyncWorker> logger) : BackgroundService
 {
     private static readonly TimeSpan KontrolAraligi = TimeSpan.FromSeconds(60);
@@ -42,6 +43,13 @@ public sealed class LegacySyncWorker(
             {
                 if (config.GetValue("Legacy:Sync:Enabled", false) && sync.IsConfigured)
                 {
+                    await using var lease = await workerLock.TryAcquireAsync("legacy-sync", stoppingToken);
+                    if (lease is null)
+                    {
+                        await Task.Delay(KontrolAraligi, stoppingToken);
+                        continue;
+                    }
+
                     var simdi = DateTime.UtcNow;
                     var fiyatStokAralik = TimeSpan.FromMinutes(Math.Max(3, config.GetValue("Legacy:Sync:PriceStockMinutes", 10)));
                     var katalogAralik = TimeSpan.FromMinutes(Math.Max(30, config.GetValue("Legacy:Sync:CatalogMinutes", 360)));

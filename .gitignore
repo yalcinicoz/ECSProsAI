@@ -32,6 +32,7 @@ nohup.out
 
 # Secrets
 src/**/appsettings.Production.json
+/appsettingsTest.json
 
 # Media uploads (binary files)
 media/
@@ -42,6 +43,11 @@ docker/nginx/certs/
 # Tools build artifacts
 tools/**/bin/
 tools/**/obj/
+tests/**/bin/
+tests/**/obj/
+
+# Local generation / verification scratch files
+/tmp/
 
 # Node dependencies
 node_modules/

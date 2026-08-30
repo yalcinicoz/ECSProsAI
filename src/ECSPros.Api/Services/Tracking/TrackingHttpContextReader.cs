@@ -87,10 +87,8 @@ public static class TrackingHttpContextReader
 
     public static string IstemciIp(HttpContext http)
     {
-        var cf = http.Request.Headers["CF-Connecting-IP"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(cf)) return cf.Trim();
-        var xff = http.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(xff)) return xff.Split(',')[0].Trim();
+        // FAZ 11 / K1: ForwardedHeadersMiddleware yalnız güvenilir proxy zincirini
+        // işledikten sonra RemoteIpAddress gerçek istemciyi temsil eder.
         return http.Connection.RemoteIpAddress?.ToString() ?? "";
     }
 

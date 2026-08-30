@@ -124,7 +124,9 @@ public class StoreReviewsController(IMediator mediator, IProductService productS
     [Authorize(Policy = "MemberOnly")]
     [RequestSizeLimit(30_000_000)]
     public async Task<IActionResult> UploadReviewImages(
-        [FromForm] List<IFormFile> files, [FromServices] IConfiguration configuration, CancellationToken ct)
+        [FromForm] List<IFormFile> files,
+        [FromServices] ECSPros.Api.Services.Storage.IFileStorage storage,
+        CancellationToken ct)
     {
         var uzantilar = new Dictionary<string, string>
         {
@@ -140,17 +142,15 @@ public class StoreReviewsController(IMediator mediator, IProductService productS
         if (files.Any(f => !uzantilar.ContainsKey(f.ContentType)))
             return BadRequest(new { success = false, error = "Yalnızca JPEG, PNG, WebP veya GIF yükleyebilirsiniz." });
 
-        var kok = configuration["Store:MediaRootPath"] ?? "/opt/ECSProsAI/media";
-        var altDizin = Path.Combine("reviews", DateTime.UtcNow.ToString("yyyyMM"));
-        Directory.CreateDirectory(Path.Combine(kok, altDizin));
+        var altDizin = $"reviews/{DateTime.UtcNow:yyyyMM}";
 
         var urls = new List<string>();
         foreach (var dosya in files)
         {
             var ad = $"{Guid.NewGuid():N}{uzantilar[dosya.ContentType]}";
-            await using var hedef = System.IO.File.Create(Path.Combine(kok, altDizin, ad));
-            await dosya.CopyToAsync(hedef, ct);
-            urls.Add($"/media/{altDizin.Replace(Path.DirectorySeparatorChar, '/')}/{ad}");
+            await using var stream = dosya.OpenReadStream();
+            var stored = await storage.SavePublicAsync(altDizin, ad, stream, dosya.ContentType, ct);
+            urls.Add(stored.PublicUrl);
         }
 
         return Ok(new { success = true, data = new { urls } });

@@ -11,6 +11,7 @@ public static class DependencyInjection
         services.AddDbContext<AccountsDbContext>(options =>
             options.UseNpgsql(dataSource, o =>
                 {
+                    o.MigrationsAssembly(typeof(AccountsDbContext).Assembly.FullName);
                     o.MigrationsHistoryTable("__ef_migrations_accounts", "accounts");
                     o.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);   // Faz 1: geçici DB hatasında otomatik yeniden dene
                 }));

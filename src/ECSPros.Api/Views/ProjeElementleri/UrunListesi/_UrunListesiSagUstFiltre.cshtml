@@ -5,7 +5,11 @@
     // chip'leri (Fiyatı Düşenler/Flash/Yeni) veri kaynağı olmadığı için gizli (Faz G).
     // Davranış script'i misharix'ten değişmeden alındı.
     var vm = ViewData["MsUrunListesi"] as UrunListesiVm
-             ?? new UrunListesiVm("Ürünler", 0, 24, [], "", [], 0, 0, []);
+             ?? new UrunListesiVm(
+                 "Ürünler", 0, 24,
+                 Array.Empty<UrunKartVm>(), "",
+                 Array.Empty<FiltreGrupVm>(), 0, 0,
+                 Array.Empty<NavKategori>());
     var cinsiyet = vm.FiltreGruplari.FirstOrDefault(g => g.TipKodu == "cinsiyet");
 
     // B10: sıralama sunucu tarafında — aktif seçenek URL'deki sort parametresinden gelir.
@@ -19,7 +23,7 @@
 
     // 2026-07-17: seçili filtreler — Fiyat Aralığı'nın sağında grup başına bir select;
     // panelde o grubun seçimleri listelenir, tıklanan seçim filtreden düşürülür.
-    var seciliIdKumesi = (vm.SeciliDegerler ?? []).ToHashSet();
+    var seciliIdKumesi = (vm.SeciliDegerler ?? Array.Empty<Guid>()).ToHashSet();
     var seciliFiltreGruplari = vm.FiltreGruplari
         .Select(g => (Grup: g, Secili: g.Degerler.Where(d => seciliIdKumesi.Contains(d.ValueId)).ToList()))
         .Where(x => x.Secili.Count > 0)

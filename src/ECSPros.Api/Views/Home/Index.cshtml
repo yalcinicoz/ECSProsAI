@@ -5,7 +5,8 @@
     // düzenlenir). Yayın yoksa yerleşim boş kalır (admin kararı).
     ViewData["Title"] = "Ana Sayfa";
     ViewData["MsMobilAltBar"] = true;
-    var vitrinBloklar = ViewData["MsVitrinBloklar"] as IReadOnlyList<VitrinBlokVm> ?? [];
+    var vitrinBloklar = ViewData["MsVitrinBloklar"] as IReadOnlyList<VitrinBlokVm>
+        ?? Array.Empty<VitrinBlokVm>();
 
     // LCP: ilk slider görseli head'de preload edilir (PageSpeed D fazı, 2026-07-30) —
     // tarayıcı hero'yu 460KB HTML'in gövdesini parse etmeden indirmeye başlar.

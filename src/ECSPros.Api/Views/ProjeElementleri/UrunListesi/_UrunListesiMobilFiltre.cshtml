@@ -7,7 +7,11 @@
     // sözlüğü gerçek gruplardan gelir). Hızlı Teslimat/Ücretsiz Kargo demo chip'leri Faz G'ye
     // kadar gizli; sıralamada veri karşılığı olmayan seçenekler B10'a kadar gizli.
     var vm = ViewData["MsUrunListesi"] as UrunListesiVm
-             ?? new UrunListesiVm("Ürünler", 0, 24, [], "", [], 0, 0, []);
+             ?? new UrunListesiVm(
+                 "Ürünler", 0, 24,
+                 Array.Empty<UrunKartVm>(), "",
+                 Array.Empty<FiltreGrupVm>(), 0, 0,
+                 Array.Empty<NavKategori>());
     var anaFiltreAdlari = vm.FiltreGruplari.ToDictionary(g => g.TipKodu, g => g.Ad);
     anaFiltreAdlari["fiyat"] = "Fiyat";
     var anaFiltreAdlariJson = System.Text.Json.JsonSerializer.Serialize(anaFiltreAdlari);

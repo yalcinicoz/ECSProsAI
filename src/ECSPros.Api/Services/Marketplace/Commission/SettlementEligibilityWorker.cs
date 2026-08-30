@@ -14,6 +14,7 @@ namespace ECSPros.Api.Services.Marketplace.Commission;
 /// </summary>
 public sealed class SettlementEligibilityWorker(
     IServiceScopeFactory scopeFactory,
+    DistributedWorkerLock workerLock,
     ILogger<SettlementEligibilityWorker> logger) : BackgroundService
 {
     private static readonly TimeSpan Periyot = TimeSpan.FromMinutes(30);
@@ -33,6 +34,9 @@ public sealed class SettlementEligibilityWorker(
 
     private async Task TaramaYap(CancellationToken ct)
     {
+        await using var lease = await workerLock.TryAcquireAsync("settlement-eligibility", ct);
+        if (lease is null) return;
+
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IAccountsDbContext>();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();

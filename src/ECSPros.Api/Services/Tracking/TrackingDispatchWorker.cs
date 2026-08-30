@@ -20,6 +20,7 @@ namespace ECSPros.Api.Services.Tracking;
 public sealed class TrackingDispatchWorker(
     IServiceScopeFactory scopeFactory,
     IConfiguration config,
+    DistributedWorkerLock workerLock,
     ILogger<TrackingDispatchWorker> logger) : BackgroundService
 {
     private static readonly int[] BackoffMinutes = { 1, 5, 30, 120, 360 };
@@ -56,6 +57,9 @@ public sealed class TrackingDispatchWorker(
 
     private async Task DilimIsleAsync(bool dryRun, CancellationToken ct)
     {
+        await using var lease = await workerLock.TryAcquireAsync("tracking-dispatch", ct);
+        if (lease is null) return;
+
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IIntegrationDbContext>();
         var ayarlar = scope.ServiceProvider.GetRequiredService<ITrackingSettingsProvider>();

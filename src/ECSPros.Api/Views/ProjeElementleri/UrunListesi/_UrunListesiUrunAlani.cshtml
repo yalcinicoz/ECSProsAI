@@ -5,7 +5,11 @@
     // ile tek kaynak); ilk sayfa sunucudan render edilir (plan 3.3), devamı misharix
     // infinite-scroll modülüyle (kartHazirla/sonra hook'ları) JSON'dan gelir.
     var vm = ViewData["MsUrunListesi"] as UrunListesiVm
-             ?? new UrunListesiVm("Ürünler", 0, 24, [], "", [], 0, 0, []);
+             ?? new UrunListesiVm(
+                 "Ürünler", 0, 24,
+                 Array.Empty<UrunKartVm>(), "",
+                 Array.Empty<FiltreGrupVm>(), 0, 0,
+                 Array.Empty<NavKategori>());
 }
 <section class="ms-urun-listesi-urun-alani lazy-infinite-on" data-ms-page-module="infinite-scroll" data-ms-infinite-scroll data-ms-infinite-config="urun-listesi" data-ms-infinite-toplam="100" data-ms-infinite-ilk="20" data-ms-infinite-adet="20" data-ms-infinite-esik="0.8" data-ms-infinite-sadece-ilk="true" aria-label="Ürünlerin yayınlanacağı alan">
     @await Html.PartialAsync("~/Views/ProjeElementleri/UrunListesi/_UrunListesiSagUstFiltre.cshtml")

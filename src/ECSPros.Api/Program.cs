@@ -46,6 +46,7 @@ using ECSPros.Order.Infrastructure;
 using ECSPros.Pos.Infrastructure;
 using ECSPros.Promotion.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Npgsql;
@@ -66,7 +67,25 @@ builder.Services.Configure<HostOptions>(o =>
 // seçeneklere göre kapılanır. Yapılandırma yoksa tek sunucu davranışı aynen korunur.
 var nodeOptions = builder.Configuration.GetSection("Node").Get<ECSPros.Api.Services.NodeOptions>()
     ?? new ECSPros.Api.Services.NodeOptions();
+nodeOptions.Dogrula(); // FAZ 11 / K1: typo güvenli biçimde startup'ı durdurur.
 builder.Services.AddSingleton(nodeOptions);
+
+// FAZ 11 / K1: X-Forwarded-* yalnız açıkça tanımlı Nginx/LB soketlerinden kabul edilir.
+// Güvenli varsayılan sadece loopback'tir; production config gerçek proxy IP/CIDR'lerini
+// vermelidir. Middleware sonrası bütün uygulama gerçek IP için RemoteIpAddress kullanır.
+var reverseProxyOptions = builder.Configuration.GetSection("ReverseProxy")
+    .Get<ECSPros.Api.Services.ReverseProxyOptions>() ?? new ECSPros.Api.Services.ReverseProxyOptions();
+var forwardedHeadersOptions = reverseProxyOptions.CreateForwardedHeadersOptions();
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = forwardedHeadersOptions.ForwardedHeaders;
+    options.ForwardLimit = forwardedHeadersOptions.ForwardLimit;
+    options.KnownProxies.Clear();
+    options.KnownNetworks.Clear();
+    foreach (var address in forwardedHeadersOptions.KnownProxies) options.KnownProxies.Add(address);
+    foreach (var network in forwardedHeadersOptions.KnownNetworks) options.KnownNetworks.Add(network);
+});
 
 // Faz 1: canlılık/hazırlık sinyali (nginx/izleme) — DB zorunlu, Redis cache opsiyonel (degraded).
 // FAZ 10 / A8: "ready" etiketli kontroller /ready ucunu besler (PG + DP key ring + Redis state).
@@ -95,7 +114,30 @@ builder.Host.UseSerilog((ctx, lc) => lc
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("DefaultConnection is not configured.");
 
-var npgsqlDataSource = new NpgsqlDataSourceBuilder(connectionString)
+var postgresOptions = builder.Configuration.GetSection("Postgres").Get<PostgresOptions>()
+    ?? new PostgresOptions();
+postgresOptions.Validate();
+builder.Services.AddSingleton(postgresOptions);
+
+var connectionBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+{
+    HostRecheckSeconds = postgresOptions.HostRecheckSeconds,
+    LoadBalanceHosts = postgresOptions.LoadBalanceHosts,
+    MinPoolSize = postgresOptions.MinPoolSize,
+    MaxPoolSize = postgresOptions.MaxPoolSize,
+    ConnectionIdleLifetime = postgresOptions.ConnectionIdleLifetimeSeconds,
+    Timeout = postgresOptions.TimeoutSeconds,
+    CommandTimeout = postgresOptions.CommandTimeoutSeconds
+};
+// Npgsql primary targeting yalnız multi-host bağlantıda geçerlidir. Tek host local/dev
+// bağlantısı aynı typed pool ayarlarıyla çalışır; production iki host verdiğinde primary
+// discovery otomatik devreye girer.
+var multiHostConnection = (connectionBuilder.Host ?? string.Empty)
+    .Split(',', StringSplitOptions.RemoveEmptyEntries).Length > 1;
+if (postgresOptions.RequirePrimary && multiHostConnection)
+    connectionBuilder.TargetSessionAttributes = "primary";
+
+var npgsqlDataSource = new NpgsqlDataSourceBuilder(connectionBuilder.ConnectionString)
     .EnableDynamicJson()
     .Build();
 builder.Services.AddSingleton(npgsqlDataSource);
@@ -203,6 +245,16 @@ builder.Services.AddValidatorsFromAssembly(typeof(GetOrdersQuery).Assembly);
 
 // ─── Shared Infrastructure (Redis, Email, SMS stubs) ───────────────
 builder.Services.AddSharedInfrastructure(builder.Configuration);
+builder.Services.AddSingleton<ECSPros.Api.Services.DistributedWorkerLock>();
+var storageProvider = builder.Configuration["Storage:Provider"] ?? "Local";
+if (storageProvider.Equals("Local", StringComparison.OrdinalIgnoreCase))
+    builder.Services.AddSingleton<ECSPros.Api.Services.Storage.IFileStorage,
+        ECSPros.Api.Services.Storage.LocalFileStorage>();
+else if (storageProvider.Equals("S3", StringComparison.OrdinalIgnoreCase))
+    builder.Services.AddSingleton<ECSPros.Api.Services.Storage.IFileStorage>(
+        new ECSPros.Api.Services.Storage.S3FileStorage(builder.Configuration));
+else
+    throw new InvalidOperationException("Storage:Provider yalnız Local veya S3 olabilir.");
 // SMTP ayarları DB'deki platform servis tanımından (yoksa Email:Smtp config yedeği)
 builder.Services.AddScoped<ECSPros.Shared.Infrastructure.Messaging.ISmtpSettingsProvider,
     ECSPros.Api.Services.DbSmtpSettingsProvider>();
@@ -263,6 +315,16 @@ builder.Services.AddScoped<ECSPros.Shared.Contracts.IPaymentOptionsProvider,
 builder.Services.AddIamInfrastructure(npgsqlDataSource, builder.Configuration);
 builder.Services.AddCoreInfrastructure(npgsqlDataSource);
 builder.Services.AddCatalogInfrastructure(npgsqlDataSource);
+// Catalog modülündeki eski local-disk kayıtlarını ortak Local/S3 sağlayıcısıyla değiştirir.
+// Mevcut ImageServer CDN düzeni kendiliğinden değişmesin diye geçiş açıkça opt-in'dir.
+if (builder.Configuration.GetValue("Storage:Catalog:Enabled", false))
+{
+    builder.Services.AddScoped<ECSPros.Api.Services.Storage.CatalogStorageUploadService>();
+    builder.Services.AddScoped<ECSPros.Catalog.Application.Services.IImageUploadService>(sp =>
+        sp.GetRequiredService<ECSPros.Api.Services.Storage.CatalogStorageUploadService>());
+    builder.Services.AddScoped<ECSPros.Catalog.Application.Services.IVideoUploadService>(sp =>
+        sp.GetRequiredService<ECSPros.Api.Services.Storage.CatalogStorageUploadService>());
+}
 builder.Services.AddInventoryInfrastructure(npgsqlDataSource);
 builder.Services.AddCrmInfrastructure(npgsqlDataSource);
 builder.Services.AddOrderInfrastructure(npgsqlDataSource);
@@ -278,10 +340,20 @@ builder.Services.AddAccountsInfrastructure(npgsqlDataSource);
 builder.Services.AddStorefrontInfrastructure(npgsqlDataSource);
 
 // ─── SignalR ────────────────────────────────────────────────────────
-builder.Services.AddSignalR(options =>
+var signalR = builder.Services.AddSignalR(options =>
 {
     options.EnableDetailedErrors = builder.Environment.IsDevelopment();
 });
+if (builder.Configuration.GetValue<bool>("Redis:SignalR:Enabled"))
+{
+    if (!ECSPros.Shared.Infrastructure.Caching.RedisConnectionFactory.IsStateConfigured(builder.Configuration))
+        throw new InvalidOperationException("Redis:SignalR:Enabled=true için Redis state bağlantısı zorunludur.");
+
+    var backplaneOptions = ECSPros.Shared.Infrastructure.Caching.RedisConnectionFactory.CreateState(builder.Configuration);
+    backplaneOptions.ChannelPrefix = StackExchange.Redis.RedisChannel.Literal(
+        builder.Configuration["Redis:SignalR:ChannelPrefix"] ?? "ECSPros:signalr");
+    signalR.AddStackExchangeRedis(options => options.Configuration = backplaneOptions);
+}
 builder.Services.AddScoped<IRealtimeNotificationService, SignalRNotificationService>();
 builder.Services.AddSingleton<ECSPros.Api.Hubs.DashboardPresenceTracker>(); // dashboard'a bağlı istemci sayacı — worker kimse yokken sorgu atmaz
 
@@ -361,7 +433,7 @@ builder.Services.AddSingleton<ECSPros.Api.Services.Store.IFaturaPdfProxy, ECSPro
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceTokenService, ECSPros.Api.Services.Store.DeviceTokenService>();
 // FAZ 10 / A3: challenge/nonce/secret state'i Redis'te — düğümler arası geçerli, Redis yoksa
 // FAIL-CLOSED (mobil attestation reddedilir; web etkilenmez). Bellek fallback'i BİLİNÇLİ yok.
-if (!string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("Redis")))
+if (ECSPros.Shared.Infrastructure.Caching.RedisConnectionFactory.IsStateConfigured(builder.Configuration))
     builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceStateStore,
         ECSPros.Api.Services.Store.RedisDeviceStateStore>();
 else
@@ -483,36 +555,13 @@ builder.Services.AddCors(options =>
 // çalışır (global limit YOK — SSR sayfaları ve diğer uçlar etkilenmez). IP bazlı hacim
 // freninin asıl katmanı nginx'tedir (00-ratelimit.conf); buradaki politika, nginx'i
 // atlayıp 5000 portuna doğrudan gelen istekleri de yakalayan ikinci savunma hattıdır.
-// FAZ 10 / A4: CF-Connecting-IP / X-Forwarded-For yalnız GÜVENİLİR PROXY'den (nginx/CF
-// zinciri — soket adresi loopback/özel ağdaysa) gelen bağlantılarda kabul edilir; 5000
-// portuna doğrudan bağlanan istemci başlık sahteleyip rate limit anahtarını değiştiremez
-// (rapor P1). Ağ listesi RateLimit:TrustedProxyNetworks (CIDR) ile değiştirilebilir.
-var guvenilirProxyAglari = (builder.Configuration.GetSection("RateLimit:TrustedProxyNetworks").Get<string[]>()
-    ?? new[] { "127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16" })
-    .Select(cidr =>
-    {
-        var parca = cidr.Split('/');
-        return new Microsoft.AspNetCore.HttpOverrides.IPNetwork(
-            System.Net.IPAddress.Parse(parca[0]), int.Parse(parca[1]));
-    })
-    .ToArray();
-
+// FAZ 11 / K1: UseForwardedHeaders güvenilir proxy'den gelen zinciri işledikten sonra
+// RemoteIpAddress tek kaynaktır. Ham CF/XFF başlıkları burada tekrar okunmaz.
 string IstemciIpAnahtari(HttpContext ctx)
 {
-    var soketIp = ctx.Connection.RemoteIpAddress;
-    if (soketIp is { IsIPv4MappedToIPv6: true }) soketIp = soketIp.MapToIPv4();
-    var proxydenGeldi = soketIp is not null && guvenilirProxyAglari.Any(ag => ag.Contains(soketIp));
-
-    if (proxydenGeldi)
-    {
-        // Cloudflare → nginx → app zincirinde gerçek istemci IP'si CF-Connecting-IP'dedir;
-        // yoksa nginx'in yazdığı X-Forwarded-For'un ilk halkası; o da yoksa soket adresi.
-        var cf = ctx.Request.Headers["CF-Connecting-IP"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(cf)) return cf.Trim();
-        var xff = ctx.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(xff)) return xff.Split(',')[0].Trim();
-    }
-    return soketIp?.ToString() ?? "bilinmeyen";
+    var remoteIp = ctx.Connection.RemoteIpAddress;
+    if (remoteIp is { IsIPv4MappedToIPv6: true }) remoteIp = remoteIp.MapToIPv4();
+    return remoteIp?.ToString() ?? "bilinmeyen";
 }
 
 builder.Services.AddRateLimiter(options =>
@@ -614,6 +663,7 @@ var app = builder.Build();
 
 // ─── Middleware Pipeline ────────────────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();
+app.UseForwardedHeaders(); // FAZ 11 / K1: IP/proto/host kullanan tüm middleware'lerden önce.
 
 // Üç swagger dokümanı, her biri BAĞIMSIZ adreste (arayüzde doküman seçici yok):
 //   /swagger-partner → "partner" (dış entegratörler, yalnız /api/partner/*; prod'da açık)
@@ -803,7 +853,7 @@ app.MapGet("/health/detail", async (
         workers = kayitliWorkerlar,
         checks = report.Entries.Select(e => new { name = e.Key, status = e.Value.Status.ToString(), description = e.Value.Description }),
     });
-}).AllowAnonymous();
+}).RequireAuthorization("AdminOnly");
 // robots.txt tek kaynaktan üretilir (BotDisiRotalar) — wwwroot'ta statik dosya YOK
 app.MapGet("/robots.txt", () => Results.Text(ECSPros.Api.Services.BotDisiRotalar.RobotsTxt(), "text/plain; charset=utf-8"));
 

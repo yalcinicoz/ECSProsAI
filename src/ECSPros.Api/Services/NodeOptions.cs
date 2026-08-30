@@ -15,10 +15,27 @@ namespace ECSPros.Api.Services;
 /// </summary>
 public sealed class NodeOptions
 {
+    private static readonly string[] GecerliRoller = ["Api", "Worker", "Both"];
+
     public string Id { get; set; } = Environment.MachineName;
     public string Role { get; set; } = "Both";
     public bool MigrateOnStartup { get; set; } = true;
 
+    public void Dogrula()
+    {
+        Id = Id?.Trim() ?? string.Empty;
+        if (Id.Length == 0)
+            throw new InvalidOperationException("Node:Id boş olamaz.");
+
+        var canonicalRole = GecerliRoller.FirstOrDefault(x =>
+            string.Equals(x, Role?.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (canonicalRole is null)
+            throw new InvalidOperationException(
+                $"Geçersiz Node:Role '{Role}'. İzin verilen değerler: {string.Join(", ", GecerliRoller)}.");
+
+        Role = canonicalRole;
+    }
+
     /// <summary>Arka plan worker'ları bu düğümde başlamalı mı?</summary>
-    public bool WorkerRolu => !string.Equals(Role, "Api", StringComparison.OrdinalIgnoreCase);
+    public bool WorkerRolu => Role is "Worker" or "Both";
 }

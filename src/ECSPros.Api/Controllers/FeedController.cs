@@ -1,5 +1,6 @@
 using ECSPros.Api.Services.Store;
 using ECSPros.Api.Services.Tracking.Feed;
+using ECSPros.Api.Services.Storage;
 using ECSPros.Core.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +20,8 @@ namespace ECSPros.Api.Controllers;
 public class FeedController(
     ICoreDbContext coreDb,
     ITrackingSettingsProvider trackingSettings,
+    IFeedStatusStore feedStatusStore,
+    IFileStorage storage,
     IConfiguration config,
     IHostEnvironment env) : ControllerBase
 {
@@ -40,6 +43,17 @@ public class FeedController(
         var merchant = s.Servis("google_merchant");
         var feedKey = merchant?.Get("feedKey");
         if (merchant is null || string.IsNullOrWhiteSpace(feedKey) || !string.Equals(feedKey, key.Trim(), StringComparison.Ordinal)) return NotFound();
+
+        if (string.Equals(config["Storage:Provider"], "S3", StringComparison.OrdinalIgnoreCase))
+        {
+            var status = await feedStatusStore.GetAsync(platformId.Value, ct);
+            if (status?.LastRunAt is null) return NotFound();
+            Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
+            Response.Headers["Cache-Control"] = "private, no-store";
+            var signedUrl = await storage.GetPrivateReadUrlAsync(
+                $"feeds/{platformCode}/{file}", TimeSpan.FromMinutes(15), ct);
+            return Redirect(signedUrl);
+        }
 
         var path = Path.Combine(FeedPaths.PlatformDir(config, env, platformCode), file);
         if (!System.IO.File.Exists(path)) return NotFound();

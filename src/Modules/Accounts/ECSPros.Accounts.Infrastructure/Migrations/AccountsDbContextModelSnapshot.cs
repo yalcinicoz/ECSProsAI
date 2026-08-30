@@ -370,6 +370,10 @@ namespace ECSPros.Accounts.Infrastructure.Migrations
 
                     b.HasIndex("ReferenceType", "ReferenceId");
 
+                    b.HasIndex("LedgerId", "TransactionType", "ReferenceType", "ReferenceId")
+                        .IsUnique()
+                        .HasFilter("\"ReferenceId\" IS NOT NULL AND \"IsDeleted\" = false");
+
                     b.ToTable("current_account_transactions", "accounts");
                 });
 

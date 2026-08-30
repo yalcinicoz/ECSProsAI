@@ -5,8 +5,11 @@ using Npgsql;
 
 namespace ECSPros.Api.Services.Health;
 
-/// <summary>Faz 1: PostgreSQL canlılık — paylaşılan NpgsqlDataSource üzerinden SELECT 1 (3 sn sınır).</summary>
-public sealed class DbHealthCheck(NpgsqlDataSource dataSource) : IHealthCheck
+/// <summary>
+/// PostgreSQL hazırlık kontrolü — bağlantıya ek olarak RequirePrimary=true iken sunucunun
+/// recovery/standby olmadığını doğrular. Böylece LB yazılamayan replica'ya trafik göndermez.
+/// </summary>
+public sealed class DbHealthCheck(NpgsqlDataSource dataSource, ECSPros.Api.Services.PostgresOptions options) : IHealthCheck
 {
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
     {
@@ -15,9 +18,14 @@ public sealed class DbHealthCheck(NpgsqlDataSource dataSource) : IHealthCheck
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             cts.CancelAfter(TimeSpan.FromSeconds(3));
             await using var conn = await dataSource.OpenConnectionAsync(cts.Token);
-            await using var cmd = new NpgsqlCommand("SELECT 1", conn);
-            await cmd.ExecuteScalarAsync(cts.Token);
-            return HealthCheckResult.Healthy("PostgreSQL erişilebilir.");
+            await using var cmd = new NpgsqlCommand(
+                options.RequirePrimary ? "SELECT NOT pg_is_in_recovery()" : "SELECT TRUE", conn);
+            var writablePrimary = await cmd.ExecuteScalarAsync(cts.Token) is true;
+            if (!writablePrimary)
+                return HealthCheckResult.Unhealthy("PostgreSQL bağlantısı standby/read-only; yazılabilir primary değil.");
+            return HealthCheckResult.Healthy(options.RequirePrimary
+                ? "PostgreSQL yazılabilir primary erişilebilir."
+                : "PostgreSQL erişilebilir.");
         }
         catch (Exception ex)
         {
@@ -62,7 +70,7 @@ public sealed class RedisStateHealthCheck(IServiceProvider services, IConfigurat
 {
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(configuration.GetConnectionString("Redis")))
+        if (!ECSPros.Shared.Infrastructure.Caching.RedisConnectionFactory.IsStateConfigured(configuration))
             return HealthCheckResult.Degraded("Redis yapılandırılmamış — mobil attestation fail-closed, site çalışır.");
         try
         {
@@ -87,7 +95,7 @@ public sealed class RedisHealthCheck(IDistributedCache cache, IConfiguration con
 {
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(configuration.GetConnectionString("Redis")))
+        if (!ECSPros.Shared.Infrastructure.Caching.RedisConnectionFactory.IsCacheConfigured(configuration))
             return HealthCheckResult.Healthy("Redis yapılandırılmamış (opsiyonel).");
         try
         {

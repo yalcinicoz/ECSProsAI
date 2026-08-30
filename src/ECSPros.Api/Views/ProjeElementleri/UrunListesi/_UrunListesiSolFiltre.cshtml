@@ -6,7 +6,11 @@
     // "Filtrele" butonuyla uygular (kategori tek seçim, buton o kategoriye götürür);
     // Kampanya bloğu veri kaynağı gelene dek gizli (Faz G).
     var vm = ViewData["MsUrunListesi"] as UrunListesiVm
-             ?? new UrunListesiVm("Ürünler", 0, 24, [], "", [], 0, 0, []);
+             ?? new UrunListesiVm(
+                 "Ürünler", 0, 24,
+                 Array.Empty<UrunKartVm>(), "",
+                 Array.Empty<FiltreGrupVm>(), 0, 0,
+                 Array.Empty<NavKategori>());
     var tr = new System.Globalization.CultureInfo("tr-TR");
 }
 <aside class="ms-urun-listesi-filtre" aria-label="Sol filtre alanı">

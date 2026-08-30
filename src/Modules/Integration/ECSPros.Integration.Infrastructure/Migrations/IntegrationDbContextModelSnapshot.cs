@@ -71,6 +71,12 @@ namespace ECSPros.Integration.Infrastructure.Migrations
 
             modelBuilder.Entity("ECSPros.Integration.Domain.Entities.FeedJob", b =>
                 {
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -93,8 +99,27 @@ namespace ECSPros.Integration.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("LeaseOwner")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("LeaseUntil")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("RequestedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -104,9 +129,15 @@ namespace ECSPros.Integration.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("FirmPlatformId");
+                    b.HasIndex("FirmPlatformId")
+                        .IsUnique()
+                        .HasFilter("\"Status\" IN ('pending', 'processing') AND \"IsDeleted\" = false");
+
+                    b.HasIndex("Status", "RequestedAt", "LeaseUntil");
 
                     b.ToTable("feed_jobs", "integration");
+
+                    b.HasQueryFilter((ECSPros.Integration.Domain.Entities.FeedJob e) => !e.IsDeleted);
                 });
 
             modelBuilder.Entity("ECSPros.Integration.Domain.Entities.FeedRunStatus", b =>
