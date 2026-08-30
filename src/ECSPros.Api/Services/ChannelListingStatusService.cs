@@ -19,6 +19,7 @@ namespace ECSPros.Api.Services;
 public sealed class ChannelListingStatusService(
     NpgsqlDataSource dataSource,
     IMemoryCache cache,
+    ECSPros.Shared.Contracts.ICacheBustPublisher cacheBust,
     IChannelCapabilityResolver capabilityResolver,
     IChannelStockCalculator stockCalculator)
 {
@@ -46,7 +47,8 @@ public sealed class ChannelListingStatusService(
         HashSet<Guid> WithImage,              // görseli olan ürünler (evren dışı hesap için no_image sebebi)
         HashSet<Guid> InScopeAll);            // kapsam kümesi (görselden bağımsız; out_of_scope sebebi)
 
-    public void Invalidate(Guid firmPlatformId) => cache.Remove(Key(firmPlatformId));
+    // FAZ 10 / A9: yerel silme + diğer düğümlere yayın (pub/sub; Redis'siz yalnız yerel).
+    public void Invalidate(Guid firmPlatformId) => cacheBust.Bust(Key(firmPlatformId));
     private static string Key(Guid id) => $"listing-status:{id:N}";
 
     public async Task<ListingStatusDto> ComputeAsync(Guid firmPlatformId, Guid productId, CancellationToken ct)

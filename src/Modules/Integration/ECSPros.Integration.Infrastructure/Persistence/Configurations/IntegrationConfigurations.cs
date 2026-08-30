@@ -314,3 +314,29 @@ public class MarketplaceValueMappingConfiguration : IEntityTypeConfiguration<Mar
         b.HasIndex(x => new { x.Marketplace, x.MpCategoryExternalId });
     }
 }
+
+/// <summary>FAZ 10 / A6 (2026-08-30): feed üretim iş kuyruğu — tetik DB'de, worker sahiplenip siler.</summary>
+public class FeedJobConfiguration : IEntityTypeConfiguration<FeedJob>
+{
+    public void Configure(EntityTypeBuilder<FeedJob> b)
+    {
+        b.ToTable("feed_jobs");
+        b.HasKey(x => x.Id);
+        b.HasIndex(x => x.FirmPlatformId);
+        // Soft delete filtresi YOK: sahiplenilen iş fiziksel silinir (kuyruk tablosu).
+    }
+}
+
+/// <summary>FAZ 10 / A6 (2026-08-30): kanal başına feed üretim durumu (status.json'un yerine).</summary>
+public class FeedRunStatusConfiguration : IEntityTypeConfiguration<FeedRunStatus>
+{
+    public void Configure(EntityTypeBuilder<FeedRunStatus> b)
+    {
+        b.ToTable("feed_status");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.PlatformCode).HasMaxLength(50);
+        b.Property(x => x.Error).HasMaxLength(500);
+        b.Property(x => x.NodeId).HasMaxLength(100);
+        b.HasIndex(x => x.FirmPlatformId).IsUnique();
+    }
+}

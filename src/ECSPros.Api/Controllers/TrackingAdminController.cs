@@ -107,7 +107,7 @@ public class TrackingAdminController(
             .Select(p => new { p.Code, p.Settings }).FirstOrDefaultAsync(ct);
         var kok = platform?.Settings.TryGetValue("canonicalDomain", out var cd) == true && cd?.ToString() is { Length: > 0 } cds ? cds.TrimEnd('/') : "";
         var key = merchant?.Get("feedKey");
-        var st = feedStatus.Get(firmPlatformId);
+        var st = await feedStatus.GetAsync(firmPlatformId, ct); // FAZ 10 / A6: durum DB'den
         return Ok(new
         {
             success = true,
@@ -136,7 +136,7 @@ public class TrackingAdminController(
             return BadRequest(new { success = false, error = "Bu kanalda aktif Google Merchant entegrasyonu yok." });
         if (!config.GetValue("Feeds:Enabled", true))
             return BadRequest(new { success = false, error = "Feeds:Enabled=false — bu ortamda feed üretimi kapalı." });
-        trigger.Trigger(req.FirmPlatformId);
+        await trigger.TriggerAsync(req.FirmPlatformId, ct); // FAZ 10 / A6: tetik DB kuyruğuna
         return Ok(new { success = true });
     }
 

@@ -140,25 +140,41 @@ A1-A4 ve A7-A9 tek sunucuda da çalışır, A0 beklenmez; A5/A6 mount ile devrey
 - [x] **10.A2** ✅ CANLIDA (2026-08-30) — `Node:Id/Role`; 10 worker yalnız Worker/Both'ta
       (DashboardMetricsWorker bilinçli her düğümde — düğüm-yerel hub yayını, tek yayıncı B1'de); Serilog NodeId;
       `/health/detail` nodeId+rol+worker listesi.
-- [x] **10.A3** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — `IDeviceStateStore` (Redis: challenge tek-kullanımlık
+- [x] **10.A3** ✅ CANLIDA (2026-08-30 ikinci restart; kullanıcı testleri ✓ challenge tek-kullanımlık + staging replay 200→401) — `IDeviceStateStore` (Redis: challenge tek-kullanımlık
       atomik tüketim, nonce SET NX, secret SET EX; anahtar öneki `ECSPros:device:`); Redis erişilemezse FAIL-CLOSED
       (503, bellek fallback'i bilinçli YOK); `/ready`'ye `redis-state` kontrolü eklendi (yapılandırılmış+erişilemez →
       503; yapılandırılmamış → degraded; `/health` bu kontrolü çalıştırmaz — cache degraded=200 davranışı korundu).
       İzole 5051 ✓ (challenge ikinci kullanımda 400).
-- [x] **10.A4** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — login sayacı `ILoginAttemptCounter` portunda:
+- [x] **10.A4** ✅ CANLIDA (2026-08-30 ikinci restart; kullanıcı testleri ✓ 6. denemede kilit) — login sayacı `ILoginAttemptCounter` portunda:
       Redis'te INCR+PEXPIRE tek Lua turunda (`ECSPros:login:*`), Redis hatasında düğüm-yerel sayaca düşer (fail-open,
       uyarı loglu); `IstemciIpAnahtari` artık CF-Connecting-IP/XFF'i yalnız güvenilir proxy soketinden kabul eder
       (vars. loopback+RFC1918; `RateLimit:TrustedProxyNetworks`). İzole 5051 ✓ (5 denemede kilit; taze süreçte kilit
       SÜRÜYOR → sayaç Redis'te kanıtlı). Not: nginx dışı 5000 erişiminin firewall'da kapalılığı kullanıcı teyidi bekler.
-- [ ] **10.A5** `IFileStorage` sözleşmesi + paylaşımlı-disk adapter'ı (6 yazma noktası; `Storage:Root`).
-- [ ] **10.A6** Feed tetikleme → DB job tablosu (`SKIP LOCKED`), `status.json` → DB satırı.
+- [x] **10.A5** ✅ ANALİZLE KAPANDI (2026-08-30, plan sapması — gerekçeli): 6 yazma noktasının TAMAMI zaten
+      yapılandırılabilir kökten yazıyor — 4 yükleme noktası + vitrin varyantları `Store:MediaRootPath`
+      (Requests/StoreAccount/Pages/StoreReviews/VitrinGorselVaryantlari), ürün görsel/video DB ayarı
+      `ImageServer.LocalSavePath`+`PublicBaseUrl` (CatalogSettings), feed `Feeds:OutputPath`. HA-lite'ta A0
+      mount'u gelince bu ÜÇ kök `/srv/ecspros-shared/*`'a çevrilir (yalnız config/DB ayarı — kod işi yok).
+      `IFileStorage` sözleşmesi S3 ile anlamlı → B3'e ertelendi (S3 zaten kullanıcı kararıyla ertelenmişti).
+- [x] **10.A6** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — feed tetiği `integration.feed_jobs`
+      (FOR UPDATE SKIP LOCKED sahiplenme + kanal dedupe; 10 sn poll `Feeds:PollSeconds`), durum
+      `integration.feed_status` (NodeId kolonu; panel her düğümden aynı durumu okur); migration CANLI DB'ye
+      uygulandı (eklemeli); eski status.json'lar açılışta bir kez DB'ye aktarılır (gereksiz toplu yeniden
+      üretim yok); SKIP LOCKED sahiplenme+dedupe SQL'i rollback'li psql testinde doğrulandı.
 - [x] **10.A7** ✅ CANLIDA (2026-08-30) — `Node:MigrateOnStartup=false` açılış migrate+seed'i
       atlar (varsayılan true); deploy betiği entegrasyonu A10'da.
 - [x] **10.A8** ✅ CANLIDA (2026-08-30) — `/live` (bağımlılıksız) + `/ready` (PG+DP unhealthy→503;
       Redis degraded=200, A3 ile zorunlulaşacak); nginx upstream'in `/ready` kullanması A0/A10'da.
-- [ ] **10.A9** Cache bust yayını (Redis pub/sub `ECSPros:cache:bust`).
-- [ ] **10.A10** Deploy betiği çoklu hedef + loglara NodeId.
-- [ ] **10.A-T** Çapraz düğüm kabul testleri (KabulTestKiti).
+- [x] **10.A9** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — `ICacheBustPublisher` (Shared.Contracts):
+      yerel IMemoryCache silme + Redis pub/sub `ECSPros:cache:bust` yayını; abone HER düğümde (rol kapısız
+      hosted service). Porta geçenler: 5 Storefront kanal-kapsam komutu (ChannelProductCacheKeys),
+      ChannelCapabilityResolver, ChannelListingStatusService, TrackingSettingsProvider. Redis'siz yalnız
+      yerel (kısa TTL güvenlik ağı). İzole 5051 ✓: PUBLISH→abone sayısı 1, "Cache bust alındı" logu.
+- [x] **10.A10** ✅ UYGULANDI (2026-08-30) — `tools/deploy/deploy.sh`: temiz publish + `--migrate` (14 context)
+      + `nodes.conf`'taki uzak düğümlere rsync (config drift E4 önlemi) + sıralı restart talimatı (/ready
+      bekleyerek; sudo komutlarını operatör çalıştırır). `nodes.conf` A0 ikinci VM gelince doldurulur;
+      loglara NodeId A2'de eklendi.
+- [ ] **10.A-T** Çapraz düğüm kabul testleri (KabulTestKiti) — **A0 bekliyor** (ikinci VM olmadan koşulamaz).
 
 > **Ertelenen (Kademe B):** B1 SignalR backplane · B2 worker dağıtık claim · B3 S3/MinIO ·
 > B4 Patroni DB HA · B5 Redis Sentinel · B6 nginx shared-zone rate limit · B7 release testi.

@@ -53,11 +53,19 @@ public static class DependencyInjection
             // FAZ 10 / A4: hesap bazlı hatalı giriş sayacı Redis'te (kilit tüm düğümlerde);
             // Redis hatasında sınıf kendi içinde düğüm-yerel sayaca düşer (fail-open).
             services.AddSingleton<ILoginAttemptCounter, RedisLoginAttemptCounter>();
+
+            // FAZ 10 / A9: cache bust yayını + aboneliği. Abone HER düğümde çalışır
+            // (worker rol kapısına girmez) — admin komutunun sildiği IMemoryCache anahtarı
+            // diğer düğümlerin belleğinden de düşer.
+            services.AddSingleton<RedisCacheBustService>();
+            services.AddSingleton<ICacheBustPublisher>(sp => sp.GetRequiredService<RedisCacheBustService>());
+            services.AddHostedService(sp => sp.GetRequiredService<RedisCacheBustService>());
         }
         else
         {
             services.AddSingleton<ICacheService, NoOpCacheService>();
             services.AddSingleton<ILoginAttemptCounter, MemoryLoginAttemptCounter>();
+            services.AddSingleton<ICacheBustPublisher, LocalCacheBustService>();
         }
 
         // ─── Email / SMS ────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
 using ECSPros.Storefront.Application.Commands.SyncChannelScope;
 using ECSPros.Storefront.Application.Services;
@@ -5,7 +6,6 @@ using ECSPros.Storefront.Application.Services.ChannelScoping;
 using ECSPros.Storefront.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace ECSPros.Storefront.Application.Commands.UpsertChannelScope;
 
@@ -13,7 +13,7 @@ namespace ECSPros.Storefront.Application.Commands.UpsertChannelScope;
 public record UpsertChannelScopeCommand(Guid FirmPlatformId, string FillType, Dictionary<string, object>? FilterDef)
     : IRequest<Result<int>>;
 
-public class UpsertChannelScopeCommandHandler(IStorefrontDbContext sfDb, IMediator mediator, IMemoryCache cache)
+public class UpsertChannelScopeCommandHandler(IStorefrontDbContext sfDb, IMediator mediator, ICacheBustPublisher cacheBust)
     : IRequestHandler<UpsertChannelScopeCommand, Result<int>>
 {
     private static readonly HashSet<string> Allowed = new(StringComparer.OrdinalIgnoreCase) { "all", "filter", "mixed" };
@@ -45,7 +45,7 @@ public class UpsertChannelScopeCommandHandler(IStorefrontDbContext sfDb, IMediat
             foreach (var r in rows) r.InScope = true;
             scope.MatchedCount = null; scope.SyncedAt = DateTime.UtcNow; scope.LastSyncError = null;
             await sfDb.SaveChangesAsync(ct);
-            cache.Remove(ChannelProductCacheKeys.Excluded(request.FirmPlatformId));
+            cacheBust.Bust(ChannelProductCacheKeys.Excluded(request.FirmPlatformId));
             return Result.Success(0);
         }
 

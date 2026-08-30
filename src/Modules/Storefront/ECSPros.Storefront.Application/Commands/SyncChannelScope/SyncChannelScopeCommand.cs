@@ -1,12 +1,12 @@
 using ECSPros.Catalog.Application.Helpers;
 using ECSPros.Shared.Contracts.Channels;
+using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
 using ECSPros.Storefront.Application.Services;
 using ECSPros.Storefront.Application.Services.ChannelScoping;
 using ECSPros.Storefront.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace ECSPros.Storefront.Application.Commands.SyncChannelScope;
 
@@ -22,7 +22,7 @@ public class SyncChannelScopeCommandHandler(
     IStorefrontDbContext sfDb,
     ChannelScopeResolver resolver,
     IChannelCapabilityResolver capabilities,
-    IMemoryCache cache)
+    ICacheBustPublisher cacheBust)
     : IRequestHandler<SyncChannelScopeCommand, Result<int>>
 {
     public async Task<Result<int>> Handle(SyncChannelScopeCommand request, CancellationToken ct)
@@ -30,7 +30,7 @@ public class SyncChannelScopeCommandHandler(
         var scope = await sfDb.ChannelScopes.FirstOrDefaultAsync(s => s.FirmPlatformId == request.FirmPlatformId, ct);
         if (scope is null || !scope.IsFilterBased)
         {
-            cache.Remove(ChannelProductCacheKeys.Excluded(request.FirmPlatformId));
+            cacheBust.Bust(ChannelProductCacheKeys.Excluded(request.FirmPlatformId));
             return Result.Success(0);
         }
 
@@ -81,7 +81,7 @@ public class SyncChannelScopeCommandHandler(
             scope.MatchedCount = matched.Count;
             scope.LastSyncError = null;
             await sfDb.SaveChangesAsync(ct);
-            cache.Remove(ChannelProductCacheKeys.Excluded(request.FirmPlatformId));
+            cacheBust.Bust(ChannelProductCacheKeys.Excluded(request.FirmPlatformId));
             return Result.Success(matched.Count);
         }
         catch (Exception ex)

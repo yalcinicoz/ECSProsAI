@@ -27,7 +27,19 @@
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!) | Mobil geliştirici teste başlar; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
-**FAZ 10 devam (2026-08-30 ikinci tur) — A3+A4 UYGULANDI ⚠️ restart bekliyor:** **A3** device state
+**FAZ 10 üçüncü tur (2026-08-30) — A5(analiz)+A6+A9+A10 TAMAM; A6+A9 ⚠️ restart bekliyor:**
+**A9** `ICacheBustPublisher` — admin cache silmeleri Redis pub/sub `ECSPros:cache:bust` ile tüm düğümlere yayılır
+(5 Storefront kapsam komutu + ChannelCapabilityResolver + ChannelListingStatusService + TrackingSettingsProvider;
+abone her düğümde; izole testte PUBLISH→"Cache bust alındı" kanıtı). **A6** feed tetiği/durumu DB'de
+(`integration.feed_jobs` SKIP LOCKED + `feed_status` NodeId'li; migration canlı DB'ye uygulandı; status.json
+açılışta bir kez DB'ye köprülenir; SQL rollback'li psql testiyle doğrulandı). **A5 ANALİZLE KAPANDI:** 6 yazma
+noktasının tamamı zaten yapılandırılabilir kökte (`Store:MediaRootPath` / `ImageServer.LocalSavePath` DB /
+`Feeds:OutputPath`) — mount'a geçiş A0'da yalnız ayar; IFileStorage B3(S3) ile. **A10** `tools/deploy/deploy.sh`
+(çok düğüm rsync + sıralı restart talimatı + --migrate). Staging publish'i de güncellendi (A3 testinde staging
+env'e Node__Role=Api eklendi — staging artık canlı worker'ları ÇİFTLEMEZ). KALAN: A0 (kullanıcı: 2. VM + nginx
+ip_hash + /srv/ecspros-shared) → A-T kabul testleri; firewall 5000 teyidi kullanıcıda.
+
+**FAZ 10 ikinci tur (2026-08-30) — A3+A4 ✅ CANLIDA (restart + kullanıcı testleri ✓):** **A3** device state
 (challenge/nonce/secret) → Redis `IDeviceStateStore`, FAIL-CLOSED (Redis'siz mobil attestation 503; web etkilenmez);
 `/ready`'ye `redis-state` zorunlu kontrolü (/health'te çalışmaz — cache degraded=200 korundu). **A4** login sayacı →
 Redis (Lua INCR+PEXPIRE atomik; Redis hatasında düğüm-yerel fail-open) + `IstemciIpAnahtari` CF-Connecting-IP/XFF

@@ -24,6 +24,8 @@ public class IntegrationDbContext(DbContextOptions<IntegrationDbContext> options
     public DbSet<MarketplaceBatchItem> MarketplaceBatchItems => Set<MarketplaceBatchItem>();
     public DbSet<MarketplaceErrorPattern> MarketplaceErrorPatterns => Set<MarketplaceErrorPattern>();
     public DbSet<MarketplaceIssue> MarketplaceIssues => Set<MarketplaceIssue>();
+    public DbSet<FeedJob> FeedJobs => Set<FeedJob>();               // FAZ 10 / A6
+    public DbSet<FeedRunStatus> FeedStatuses => Set<FeedRunStatus>(); // FAZ 10 / A6
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

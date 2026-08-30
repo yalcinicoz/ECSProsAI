@@ -236,12 +236,13 @@ builder.Services.AddHttpClient(ECSPros.Api.Services.Tracking.Adapters.TrackingAd
 builder.Services.AddScoped<ECSPros.Api.Services.Tracking.ITrackingAdapter, ECSPros.Api.Services.Tracking.Adapters.MetaConversionsAdapter>();
 builder.Services.AddScoped<ECSPros.Api.Services.Tracking.ITrackingAdapter, ECSPros.Api.Services.Tracking.Adapters.TikTokEventsAdapter>();
 builder.Services.AddScoped<ECSPros.Api.Services.Tracking.ITrackingAdapter, ECSPros.Api.Services.Tracking.Adapters.Ga4MeasurementProtocolAdapter>();
-// İE-5 Faz E: Merchant Center / Meta katalog feed'i — reader+generator (scoped), durum+tetik (singleton), worker
+// İE-5 Faz E: Merchant Center / Meta katalog feed'i — reader+generator (scoped), worker.
+// FAZ 10 / A6: durum+tetik artık DB'de (integration.feed_status / feed_jobs) — panel tetiği
+// hangi düğümden gelirse gelsin worker düğümü işler, durum her düğümden aynı okunur.
 builder.Services.AddScoped<ECSPros.Api.Services.Tracking.Feed.FeedProductReader>();
 builder.Services.AddScoped<ECSPros.Api.Services.Tracking.Feed.FeedGenerator>();
-builder.Services.AddSingleton<ECSPros.Api.Services.Tracking.Feed.IFeedStatusStore, ECSPros.Api.Services.Tracking.Feed.FeedStatusStore>();
-builder.Services.AddSingleton<ECSPros.Api.Services.Tracking.Feed.FeedTrigger>();
-builder.Services.AddSingleton<ECSPros.Api.Services.Tracking.Feed.IFeedTrigger>(sp => sp.GetRequiredService<ECSPros.Api.Services.Tracking.Feed.FeedTrigger>());
+builder.Services.AddScoped<ECSPros.Api.Services.Tracking.Feed.IFeedStatusStore, ECSPros.Api.Services.Tracking.Feed.DbFeedStatusStore>();
+builder.Services.AddScoped<ECSPros.Api.Services.Tracking.Feed.IFeedTrigger, ECSPros.Api.Services.Tracking.Feed.DbFeedTrigger>();
 // İE-3 Faz C: head script modeli (_TakipBasligi.cshtml) — bot UA / entegrasyon yoksa null
 builder.Services.AddScoped<ECSPros.Api.Services.Store.ITrackingScriptProvider,
     ECSPros.Api.Services.Store.TrackingScriptProvider>();

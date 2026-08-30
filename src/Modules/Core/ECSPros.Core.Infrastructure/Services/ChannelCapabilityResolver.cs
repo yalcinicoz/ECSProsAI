@@ -15,11 +15,14 @@ public sealed class ChannelCapabilityResolver : IChannelCapabilityResolver
     private static readonly TimeSpan Ttl = TimeSpan.FromMinutes(2);
     private readonly ICoreDbContext _db;
     private readonly IMemoryCache _cache;
+    private readonly ECSPros.Shared.Contracts.ICacheBustPublisher _cacheBust;
 
-    public ChannelCapabilityResolver(ICoreDbContext db, IMemoryCache cache)
+    public ChannelCapabilityResolver(ICoreDbContext db, IMemoryCache cache,
+        ECSPros.Shared.Contracts.ICacheBustPublisher cacheBust)
     {
         _db = db;
         _cache = cache;
+        _cacheBust = cacheBust;
     }
 
     private static string Key(Guid id) => $"chcaps:{id:N}";
@@ -47,7 +50,8 @@ public sealed class ChannelCapabilityResolver : IChannelCapabilityResolver
 
     public void Invalidate(Guid? firmPlatformId = null)
     {
-        if (firmPlatformId.HasValue) _cache.Remove(Key(firmPlatformId.Value));
+        // FAZ 10 / A9: yerel silme + diğer düğümlere yayın (pub/sub; Redis'siz yalnız yerel).
+        if (firmPlatformId.HasValue) _cacheBust.Bust(Key(firmPlatformId.Value));
         // Tümünü temizleme gerekirse TTL (2 dk) yeterli — tip düzeyi değişiklik nadir.
     }
 }

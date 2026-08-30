@@ -64,6 +64,7 @@ public interface ITrackingSettingsProvider
 public class TrackingSettingsProvider(
     ICoreDbContext db,
     IMemoryCache cache,
+    ECSPros.Shared.Contracts.ICacheBustPublisher cacheBust,
     ILogger<TrackingSettingsProvider> logger) : ITrackingSettingsProvider
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(2);
@@ -167,12 +168,13 @@ public class TrackingSettingsProvider(
         return sonuc;
     }
 
+    // FAZ 10 / A9: yerel silme + diğer düğümlere yayın (pub/sub; Redis'siz yalnız yerel).
     public void Invalidate(Guid firmPlatformId)
     {
-        cache.Remove(PublicKey(firmPlatformId));
+        cacheBust.Bust(PublicKey(firmPlatformId));
         foreach (var code in new[] { "ga4", "gtm", "google_ads", "google_merchant", "google_search_console",
                      "meta", "tiktok", "pinterest", "microsoft_ads", "microsoft_clarity" })
-            cache.Remove(SecretKey(firmPlatformId, code));
+            cacheBust.Bust(SecretKey(firmPlatformId, code));
     }
 
     /// <summary>Settings."tracking" sözlüğü (string→string); yoksa boş.</summary>

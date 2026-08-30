@@ -3,6 +3,10 @@
 **Tarih:** 2026-08-29 · **Değerlendirilen rapor:** `docs/ECSProsAI_Kod_Coklu_Sunucu_Uyumluluk_Raporu.pdf` (v1.0, commit bf92edc3)
 **Durum:** ✅ ONAYLANDI (2026-08-30) — Kademe A uygulanıyor (`docs/acik-isler-yol-haritasi.md` FAZ 10).
 **Kullanıcı kararı:** Sentinel/Patroni/S3 işleri (B3/B4/B5) ERTELENDİ.
+**Uygulama durumu (2026-08-30):** A1-A4, A7-A10 tamam (A1/A2/A7/A8 + A3/A4 canlıda; A6/A9 restart bekliyor);
+**A5 plan sapması:** 6 yazma noktasının tamamı zaten yapılandırılabilir kökte (`Store:MediaRootPath`,
+`ImageServer.LocalSavePath` DB ayarı, `Feeds:OutputPath`) — HA-lite'ta mount'a geçiş yalnız ayar değişikliği;
+`IFileStorage` sözleşmesi B3 (S3) ile birlikte yapılacak. Kalan: A0 (dış girdi) → A-T.
 **İlgili:** `docs/dayaniklilik-faz0-plani.md` (Faz 3 "çoklu instance" başlığı bu dokümanla ayrıntılanır)
 
 ---

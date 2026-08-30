@@ -1,7 +1,7 @@
+using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
 using ECSPros.Storefront.Application.Services;
 using ECSPros.Storefront.Application.Services.ChannelScoping;
-using Microsoft.Extensions.Caching.Memory;
 using ECSPros.Storefront.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +19,7 @@ public record BulkSetChannelProductStopCommand(
     DateTime? From,
     DateTime? Until) : IRequest<Result<int>>;
 
-public class BulkSetChannelProductStopCommandHandler(IStorefrontDbContext db, IMemoryCache cache)
+public class BulkSetChannelProductStopCommandHandler(IStorefrontDbContext db, ICacheBustPublisher cacheBust)
     : IRequestHandler<BulkSetChannelProductStopCommand, Result<int>>
 {
     public async Task<Result<int>> Handle(BulkSetChannelProductStopCommand request, CancellationToken ct)
@@ -67,7 +67,7 @@ public class BulkSetChannelProductStopCommandHandler(IStorefrontDbContext db, IM
         if (degisen > 0)
         {
             await db.SaveChangesAsync(ct);
-            cache.Remove(ChannelProductCacheKeys.Excluded(request.FirmPlatformId));   // F1: görünürlük önbelleği
+            cacheBust.Bust(ChannelProductCacheKeys.Excluded(request.FirmPlatformId));   // F1: görünürlük önbelleği
         }
         return Result.Success(degisen);
     }

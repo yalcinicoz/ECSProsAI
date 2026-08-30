@@ -1,11 +1,11 @@
 using ECSPros.Shared.Contracts.Channels;
+using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
 using ECSPros.Storefront.Application.Services;
 using ECSPros.Storefront.Application.Services.ChannelScoping;
 using ECSPros.Storefront.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace ECSPros.Storefront.Application.Commands.SetChannelScopeManual;
 
@@ -18,7 +18,7 @@ public record SetChannelScopeManualCommand(Guid FirmPlatformId, List<Guid> Produ
     : IRequest<Result<int>>;
 
 public class SetChannelScopeManualCommandHandler(
-    IStorefrontDbContext sfDb, IChannelCapabilityResolver capabilities, IMemoryCache cache)
+    IStorefrontDbContext sfDb, IChannelCapabilityResolver capabilities, ICacheBustPublisher cacheBust)
     : IRequestHandler<SetChannelScopeManualCommand, Result<int>>
 {
     public async Task<Result<int>> Handle(SetChannelScopeManualCommand request, CancellationToken ct)
@@ -58,7 +58,7 @@ public class SetChannelScopeManualCommandHandler(
             }
         }
         await sfDb.SaveChangesAsync(ct);
-        cache.Remove(ChannelProductCacheKeys.Excluded(request.FirmPlatformId));
+        cacheBust.Bust(ChannelProductCacheKeys.Excluded(request.FirmPlatformId));
         return Result.Success(n);
     }
 }
