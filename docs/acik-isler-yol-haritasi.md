@@ -133,7 +133,10 @@ Kaynak: `docs/coklu-sunucu-uyumluluk-degerlendirmesi.md` §3. **Kullanıcı kara
 Kademe A başlar; **Sentinel/Patroni/S3 (Kademe B altyapı kalemleri B3/B4/B5) ERTELENDİ.**
 A1-A4 ve A7-A9 tek sunucuda da çalışır, A0 beklenmez; A5/A6 mount ile devreye alınır.
 
-- [ ] **10.A0 (dış girdi, kullanıcı):** ikinci VM, nginx upstream (`ip_hash`), paylaşımlı dizin `/srv/ecspros-shared`.
+- [ ] **10.A0 (dış girdi, kullanıcı):** ikinci VM + paylaşımlı dizin `/srv/ecspros-shared` + nginx upstream.
+      ★ HAZIRLIK TAMAM (2026-08-30): adım adım runbook `docs/coklu-sunucu-a0-kurulum.md` · nginx şablonu
+      `docker/nginx/conf.d/upstream-ecspros.conf.example` (CF-Connecting-IP hash'li yapışkanlık — CF arkasında
+      ip_hash yanlış dağıtır) · firewall adımı §3'te (bekleyen teyit buraya bağlandı).
 - [x] **10.A1** ✅ CANLIDA (2026-08-30 restart, canlı /ready+DP doğrulandı) — DP key ring DB'de (`iam.data_protection_keys`,
       migration canlı DB'ye uygulandı); dosya deposu salt-okunur geri dönüş yolu + açılışta idempotent dosya→DB
       aktarımı (canlı anahtar DB'de, izole 5051 ✓). `~/.ecspros/dp-keys` yedeği bir sürüm daha korunur.
@@ -174,7 +177,11 @@ A1-A4 ve A7-A9 tek sunucuda da çalışır, A0 beklenmez; A5/A6 mount ile devrey
       + `nodes.conf`'taki uzak düğümlere rsync (config drift E4 önlemi) + sıralı restart talimatı (/ready
       bekleyerek; sudo komutlarını operatör çalıştırır). `nodes.conf` A0 ikinci VM gelince doldurulur;
       loglara NodeId A2'de eklendi.
-- [ ] **10.A-T** Çapraz düğüm kabul testleri (KabulTestKiti) — **A0 bekliyor** (ikinci VM olmadan koşulamaz).
+- [ ] **10.A-T** Çapraz düğüm kabul testleri — **A0 bekliyor**; ★ BETİK HAZIR (2026-08-30):
+      `tools/deploy/at-kabul-testleri.sh` (T1 kimlikler · T2 /ready+DP · T3 challenge A→B · T4 login kilidi A→B
+      · `--kesinti` süreklilik modu; elle kontroller runbook §7'de). Tek düğümde prova: T2-T4 ✓, T1 tasarım
+      gereği "aynı kimlik" diye kalıyor. Plan sapması: API-düzeyi testler bağımsız betikte; KabulTestKiti
+      (tarayıcı/UX) opsiyonel ikinci doğrulama.
 
 > **Ertelenen (Kademe B):** B1 SignalR backplane · B2 worker dağıtık claim · B3 S3/MinIO ·
 > B4 Patroni DB HA · B5 Redis Sentinel · B6 nginx shared-zone rate limit · B7 release testi.
