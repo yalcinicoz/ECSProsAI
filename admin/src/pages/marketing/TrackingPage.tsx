@@ -88,11 +88,29 @@ export function TrackingPage() {
     enabled: !!selectedChannelId, refetchInterval: 10000,
   })
   const [feedMsg, setFeedMsg] = useState<string | null>(null)
+  // FAZ 10/A6: tetik DB kuyruğuna yazılır, worker düğümü ~10 sn içinde sahiplenir.
+  // Tamamlanmayı lastRunAt DEĞİŞİMİNDEN anlarız (tetik anındaki değer saklanır — saat
+  // farkından etkilenmez); "kuyruğa alındı" mesajı asılı kalmasın diye ✓ mesajına çevrilir.
+  const [feedBeklenen, setFeedBeklenen] = useState<string | null>(null) // tetik anındaki lastRunAt
   const feedGen = useMutation({
     mutationFn: async () => api.post('/tracking/feed/generate', { firmPlatformId: selectedChannelId }),
-    onSuccess: () => { setFeedMsg('Üretim kuyruğa alındı — durum 10 sn\'de bir yenilenir.'); setTimeout(() => qc.invalidateQueries({ queryKey: ['tracking-feed'] }), 3000) },
+    onSuccess: () => {
+      setFeedBeklenen(feed?.status?.lastRunAt ?? '(hiç)')
+      setFeedMsg('Üretim kuyruğa alındı — worker ~10 sn içinde başlar, durum bu kartta yenilenir.')
+      setTimeout(() => qc.invalidateQueries({ queryKey: ['tracking-feed'] }), 3000)
+    },
     onError: (e: unknown) => setFeedMsg((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Üretim başlatılamadı.'),
   })
+  useEffect(() => {
+    if (feedBeklenen === null || !feed?.status || feed.status.running) return
+    const suanki = feed.status.lastRunAt ?? '(hiç)'
+    if (suanki !== feedBeklenen) {
+      setFeedMsg(feed.status.error
+        ? `Üretim HATAYLA bitti: ${feed.status.error}`
+        : `✓ Üretim tamamlandı — ${feed.status.itemCount} kalem, ${Math.round(feed.status.durationMs / 1000)} sn.`)
+      setFeedBeklenen(null)
+    }
+  }, [feed, feedBeklenen])
   const retry = useMutation({
     mutationFn: async (id: string) => api.post(`/tracking/outbox/${id}/retry`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['tracking-outbox'] }); qc.invalidateQueries({ queryKey: ['tracking-status'] }) },
