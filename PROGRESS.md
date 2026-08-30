@@ -27,7 +27,16 @@
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!) | Mobil geliştirici teste başlar; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
-**FAZ 10 ÇOKLU SUNUCU KADEME A BAŞLADI (2026-08-30, ortak çekirdek) — A1+A2+A7+A8 UYGULANDI ⚠️ restart bekliyor:**
+**FAZ 10 devam (2026-08-30 ikinci tur) — A3+A4 UYGULANDI ⚠️ restart bekliyor:** **A3** device state
+(challenge/nonce/secret) → Redis `IDeviceStateStore`, FAIL-CLOSED (Redis'siz mobil attestation 503; web etkilenmez);
+`/ready`'ye `redis-state` zorunlu kontrolü (/health'te çalışmaz — cache degraded=200 korundu). **A4** login sayacı →
+Redis (Lua INCR+PEXPIRE atomik; Redis hatasında düğüm-yerel fail-open) + `IstemciIpAnahtari` CF-Connecting-IP/XFF
+yalnız güvenilir proxy soketinden (vars. loopback+RFC1918, `RateLimit:TrustedProxyNetworks`). İzole 5051 ✓: challenge
+tek-kullanımlık (2. kullanım 400), 5 hatalı girişte kilit + TAZE SÜREÇTE kilit sürüyor (sayaç Redis'te kanıtlı),
+/ready redis-state Healthy. ⚠️ nginx dışı 5000 erişiminin firewall kapalılığı kullanıcı teyidi bekliyor. SIRADA: A9 →
+A5/A6 (A0 mount) → A10 → A-T.
+
+**FAZ 10 ÇOKLU SUNUCU KADEME A BAŞLADI (2026-08-30, ortak çekirdek) — A1+A2+A7+A8 ✅ CANLIDA (restart + canlı doğrulama yapıldı):**
 Kullanıcı onayı: Kademe A uygulanıyor; **Sentinel/Patroni/S3 (B3/B4/B5) ERTELENDİ.** Bu tur:
 **A1** DP key ring → DB (`iam.data_protection_keys`, migration CANLI DB'ye UYGULANDI; dosya deposu salt-okunur
 geri dönüş + açılışta idempotent dosya→DB aktarımı — canlı anahtar DB'de doğrulandı, 3 açılışta tek satır kaldı);

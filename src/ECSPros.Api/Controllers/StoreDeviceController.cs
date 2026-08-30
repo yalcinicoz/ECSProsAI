@@ -2,13 +2,14 @@ using ECSPros.Api.Services.Store;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace ECSPros.Api.Controllers;
 
 /// <summary>
 /// Mobil cihaz doğrulama uçları (2026-07-23): challenge → attestation → kısa ömürlü
 /// anonim device token + oturum imza secret'ı. Akış docs/mobil-api-referansi.md'de.
+/// FAZ 10 / A3: challenge/secret state'i Redis'te (IDeviceStateStore) — Redis yoksa
+/// fail-closed (503; web sitesi bu uçları kullanmaz, etkilenmez).
 /// </summary>
 [ApiController]
 [Route("api/store/device")]
@@ -16,16 +17,26 @@ namespace ECSPros.Api.Controllers;
 public class StoreDeviceController(
     IEnumerable<IDeviceAttestationVerifier> verifiers,
     IDeviceTokenService tokenService,
-    IMemoryCache cache,
+    IDeviceStateStore stateStore,
     ILogger<StoreDeviceController> logger) : ControllerBase
 {
+    private ObjectResult DepoErisimYaniti() => StatusCode(StatusCodes.Status503ServiceUnavailable,
+        new { success = false, error = "Cihaz doğrulama servisi şu anda kullanılamıyor — lütfen tekrar deneyin." });
+
     /// <summary>Attestation'a gömülecek tek kullanımlık challenge (10 dk geçerli).</summary>
     [HttpGet("challenge")]
     [AllowAnonymous]
-    public IActionResult Challenge()
+    public async Task<IActionResult> Challenge()
     {
         var nonce = Guid.NewGuid().ToString("N");
-        cache.Set($"device-challenge:{nonce}", true, TimeSpan.FromMinutes(10));
+        try
+        {
+            await stateStore.ChallengeKaydetAsync(nonce, TimeSpan.FromMinutes(10));
+        }
+        catch (DeviceStateErisimHatasi)
+        {
+            return DepoErisimYaniti();
+        }
         return Ok(new { success = true, data = new { challenge = nonce } });
     }
 
@@ -41,11 +52,16 @@ public class StoreDeviceController(
         if (string.IsNullOrWhiteSpace(body.Attestation) || string.IsNullOrWhiteSpace(body.Challenge))
             return BadRequest(new { success = false, error = "attestation ve challenge zorunludur." });
 
-        // Challenge tek kullanımlık — bulunamadıysa süresi geçti ya da tekrar kullanılıyor
-        var challengeAnahtari = $"device-challenge:{body.Challenge}";
-        if (!cache.TryGetValue(challengeAnahtari, out _))
-            return BadRequest(new { success = false, error = "Challenge geçersiz veya süresi doldu." });
-        cache.Remove(challengeAnahtari);
+        // Challenge tek kullanımlık — atomik tüket (yoksa süresi geçti ya da tekrar kullanılıyor)
+        try
+        {
+            if (!await stateStore.ChallengeTuketAsync(body.Challenge))
+                return BadRequest(new { success = false, error = "Challenge geçersiz veya süresi doldu." });
+        }
+        catch (DeviceStateErisimHatasi)
+        {
+            return DepoErisimYaniti();
+        }
 
         // Geliştirme köprüsü yalnız config'te secret tanımlıysa devreye girer
         var bypass = verifiers.OfType<DevBypassVerifier>().FirstOrDefault();
@@ -69,7 +85,15 @@ public class StoreDeviceController(
             return Unauthorized(new { success = false, error = sonuc.Hata });
         }
 
-        var token = tokenService.TokenUret(platform!);
+        DeviceTokenSonucu token;
+        try
+        {
+            token = await tokenService.TokenUretAsync(platform!);
+        }
+        catch (DeviceStateErisimHatasi)
+        {
+            return DepoErisimYaniti();
+        }
         return Ok(new
         {
             success = true,

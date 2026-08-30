@@ -17,6 +17,10 @@ public static class DependencyInjection
         // ICacheService HER ZAMAN kayıtlıdır: Redis yapılandırılmamışsa NoOp'a düşer.
         // Böylece bağlantı dizesinin silinmesi/bozulması ICacheService enjekte eden
         // handler'ları DI hatasıyla patlatamaz — site en kötü ihtimalle cache'siz çalışır.
+        // MemoryLoginAttemptCounter / Redis geri dönüş yolu için (TryAdd — host zaten
+        // çağırdıysa etkisiz).
+        services.AddMemoryCache();
+
         var redisConnection = configuration.GetConnectionString("Redis");
         if (!string.IsNullOrWhiteSpace(redisConnection))
         {
@@ -38,10 +42,22 @@ public static class DependencyInjection
                 options.InstanceName = "ECSPros:";
             });
             services.AddSingleton<ICacheService, RedisCacheService>();
+
+            // FAZ 10 / A3-A4: cache DIŞI Redis kullanımı (SET NX/Lua/pub-sub — device state,
+            // login sayacı, cache bust) için paylaşılan multiplexer. Aynı güvenlik ağı
+            // seçenekleriyle (AbortOnConnectFail=false + kısa timeout) — Redis kapalıyken
+            // açılış patlamaz, işlemler hızlı hata verir; fail-open/closed kararı TÜKETİCİNİN
+            // sorumluluğudur (device state fail-closed, login sayacı memory'ye düşer).
+            services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisOptions));
+
+            // FAZ 10 / A4: hesap bazlı hatalı giriş sayacı Redis'te (kilit tüm düğümlerde);
+            // Redis hatasında sınıf kendi içinde düğüm-yerel sayaca düşer (fail-open).
+            services.AddSingleton<ILoginAttemptCounter, RedisLoginAttemptCounter>();
         }
         else
         {
             services.AddSingleton<ICacheService, NoOpCacheService>();
+            services.AddSingleton<ILoginAttemptCounter, MemoryLoginAttemptCounter>();
         }
 
         // ─── Email / SMS ────────────────────────────────────────────────

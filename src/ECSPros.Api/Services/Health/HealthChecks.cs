@@ -52,6 +52,33 @@ public sealed class DataProtectionHealthCheck(
 }
 
 /// <summary>
+/// FAZ 10 / A3: /ready için Redis STATE kontrolü — cihaz doğrulama state'i (challenge/nonce/
+/// secret) Redis'te ve fail-closed olduğundan, Redis yapılandırılmış ama erişilemiyorsa düğüm
+/// hazır DEĞİLDİR (503 → nginx upstream düğümü çıkarır). Redis hiç yapılandırılmamışsa
+/// Degraded döner (bilinçli ops durumu: mobil attestation kapalı, site çalışır).
+/// /health bu kontrolü ÇALIŞTIRMAZ — oradaki degraded=200 cache davranışı korunur.
+/// </summary>
+public sealed class RedisStateHealthCheck(IServiceProvider services, IConfiguration configuration) : IHealthCheck
+{
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(configuration.GetConnectionString("Redis")))
+            return HealthCheckResult.Degraded("Redis yapılandırılmamış — mobil attestation fail-closed, site çalışır.");
+        try
+        {
+            var redis = services.GetRequiredService<StackExchange.Redis.IConnectionMultiplexer>();
+            await redis.GetDatabase().PingAsync();
+            return HealthCheckResult.Healthy("Redis state deposu erişilebilir.");
+        }
+        catch (Exception ex)
+        {
+            return HealthCheckResult.Unhealthy(
+                "Redis erişilemiyor — cihaz doğrulama state'i kullanılamaz (fail-closed).", ex);
+        }
+    }
+}
+
+/// <summary>
 /// Faz 1: Redis canlılık — IDistributedCache yaz-oku turu (bağlantı seçenekleri zaten 1-1.5 sn timeout'lu).
 /// Redis yapılandırılmamışsa (NoOpCacheService/MemoryDistributedCache) Healthy döner — cache opsiyoneldir;
 /// yapılandırılmış ama erişilemezse DEGRADED (site cache'siz de çalışır — CLAUDE.md Redis kuralı).

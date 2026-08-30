@@ -175,14 +175,15 @@ public sealed record DeviceTokenSonucu(string DeviceToken, string SigningSecret,
 
 /// <summary>
 /// Attestation geçen istemciye kısa ömürlü anonim device JWT + oturuma özel HMAC secret'ı
-/// üretir. Secret sunucu bellekli (jti → secret, token ömrü kadar); istek imzaları
+/// üretir. FAZ 10 / A3: secret artık IDeviceStateStore'da (Redis) — attestation A düğümünde,
+/// imzalı istek B düğümünde doğrulanabilir; Redis yoksa FAIL-CLOSED. İstek imzaları
 /// DeviceRequestGuardMiddleware'de bu secret'la denetlenir. Token type=device claim'i taşır —
 /// MemberOnly/AdminOnly policy'lerinden geçemez.
 /// </summary>
 public interface IDeviceTokenService
 {
-    DeviceTokenSonucu TokenUret(string platform);
-    string? SecretGetir(string jti);
+    Task<DeviceTokenSonucu> TokenUretAsync(string platform);
+    Task<string?> SecretGetirAsync(string jti);
 
     /// <summary>Web (SSR) istemci token'ı: sayfa render'ında HTML'e gömülür, site JS'i
     /// /api/* çağrılarında taşır. type=web — imza/secret gerektirmez (cihaz attestation'ı
@@ -192,9 +193,9 @@ public interface IDeviceTokenService
     (string Token, DateTime ExpiresAt) WebTokenUret(int yenilemeSayisi = 0);
 }
 
-public sealed class DeviceTokenService(IConfiguration config, IMemoryCache cache) : IDeviceTokenService
+public sealed class DeviceTokenService(IConfiguration config, IDeviceStateStore stateStore) : IDeviceTokenService
 {
-    public DeviceTokenSonucu TokenUret(string platform)
+    public async Task<DeviceTokenSonucu> TokenUretAsync(string platform)
     {
         var dakika = config.GetValue("MobileAttestation:DeviceTokenMinutes", 15);
         var jti = Guid.NewGuid().ToString("N");
@@ -215,11 +216,11 @@ public sealed class DeviceTokenService(IConfiguration config, IMemoryCache cache
             expires: bitis,
             signingCredentials: new SigningCredentials(anahtar, SecurityAlgorithms.HmacSha256));
 
-        cache.Set($"device-secret:{jti}", secret, bitis - DateTime.UtcNow);
+        await stateStore.SecretKaydetAsync(jti, secret, bitis - DateTime.UtcNow);
         return new DeviceTokenSonucu(new JwtSecurityTokenHandler().WriteToken(token), secret, bitis);
     }
 
-    public string? SecretGetir(string jti) => cache.Get<string>($"device-secret:{jti}");
+    public Task<string?> SecretGetirAsync(string jti) => stateStore.SecretGetirAsync(jti);
 
     public (string Token, DateTime ExpiresAt) WebTokenUret(int yenilemeSayisi = 0)
     {

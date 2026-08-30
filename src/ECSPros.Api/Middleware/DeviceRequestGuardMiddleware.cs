@@ -2,7 +2,6 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using ECSPros.Api.Services.Store;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace ECSPros.Api.Middleware;
 
@@ -24,14 +23,16 @@ namespace ECSPros.Api.Middleware;
 /// </summary>
 public class DeviceRequestGuardMiddleware(
     RequestDelegate next,
-    IMemoryCache cache,
     IConfiguration config,
     ILogger<DeviceRequestGuardMiddleware> logger)
 {
     private const int TimestampToleransSn = 300;
     private static readonly TimeSpan NoncePencere = TimeSpan.FromMinutes(10);
 
-    public async Task InvokeAsync(HttpContext context, IDeviceTokenService tokenService)
+    // FAZ 10 / A3: nonce/secret state'i IDeviceStateStore'da (Redis) — imza A düğümünde
+    // üretilip B düğümünde doğrulanabilir; Redis erişilemezse FAIL-CLOSED (503).
+    public async Task InvokeAsync(HttpContext context, IDeviceTokenService tokenService,
+        ECSPros.Api.Services.Store.IDeviceStateStore stateStore)
     {
         var yol = context.Request.Path.Value ?? string.Empty;
         var storeYuzeyi = yol.StartsWith("/api/store/", StringComparison.OrdinalIgnoreCase);
@@ -45,7 +46,16 @@ public class DeviceRequestGuardMiddleware(
         // 1) Device token'lı istek → imza zorunlu (device uçları hariç; token orada üretiliyor)
         if (tip == "device" && !deviceUcu)
         {
-            var hata = await ImzaDogrulaAsync(context, tokenService);
+            string? hata;
+            try
+            {
+                hata = await ImzaDogrulaAsync(context, tokenService, stateStore);
+            }
+            catch (DeviceStateErisimHatasi)
+            {
+                await Reddet(context, "Cihaz doğrulama servisi şu anda kullanılamıyor — lütfen tekrar deneyin.", 503);
+                return;
+            }
             if (hata is not null)
             {
                 await Reddet(context, hata);
@@ -65,12 +75,13 @@ public class DeviceRequestGuardMiddleware(
         await next(context);
     }
 
-    private async Task<string?> ImzaDogrulaAsync(HttpContext context, IDeviceTokenService tokenService)
+    private async Task<string?> ImzaDogrulaAsync(HttpContext context, IDeviceTokenService tokenService,
+        ECSPros.Api.Services.Store.IDeviceStateStore stateStore)
     {
         var jti = context.User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti);
         if (jti is null) return "Geçersiz device token.";
 
-        var secret = tokenService.SecretGetir(jti);
+        var secret = await tokenService.SecretGetirAsync(jti);
         if (secret is null) return "Device oturumu bulunamadı — yeniden attestation gerekli.";
 
         var tsMetin = context.Request.Headers["X-Timestamp"].FirstOrDefault();
@@ -83,15 +94,13 @@ public class DeviceRequestGuardMiddleware(
             || Math.Abs(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - ts) > TimestampToleransSn)
             return "İstek zaman damgası geçersiz veya süresi dolmuş.";
 
-        // Replay reddi: nonce tek kullanımlık (jti kapsamında)
-        var nonceAnahtari = $"device-nonce:{jti}:{nonce}";
-        if (cache.TryGetValue(nonceAnahtari, out _))
+        // Replay reddi: nonce tek kullanımlık (jti kapsamında) — Redis SET NX atomik
+        if (!await stateStore.NonceIlkKullanimMiAsync(jti, nonce, NoncePencere))
         {
             logger.LogWarning("Replay denemesi engellendi: jti={Jti} nonce={Nonce} yol={Yol}",
                 jti, nonce, context.Request.Path);
             return "Bu istek daha önce işlendi (replay).";
         }
-        cache.Set(nonceAnahtari, true, NoncePencere);
 
         // Gövde hash'i (requestHash) — imza gövdeyi de bağlar
         string govdeHash;

@@ -134,19 +134,27 @@ Kademe A başlar; **Sentinel/Patroni/S3 (Kademe B altyapı kalemleri B3/B4/B5) E
 A1-A4 ve A7-A9 tek sunucuda da çalışır, A0 beklenmez; A5/A6 mount ile devreye alınır.
 
 - [ ] **10.A0 (dış girdi, kullanıcı):** ikinci VM, nginx upstream (`ip_hash`), paylaşımlı dizin `/srv/ecspros-shared`.
-- [x] **10.A1** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — DP key ring DB'de (`iam.data_protection_keys`,
+- [x] **10.A1** ✅ CANLIDA (2026-08-30 restart, canlı /ready+DP doğrulandı) — DP key ring DB'de (`iam.data_protection_keys`,
       migration canlı DB'ye uygulandı); dosya deposu salt-okunur geri dönüş yolu + açılışta idempotent dosya→DB
       aktarımı (canlı anahtar DB'de, izole 5051 ✓). `~/.ecspros/dp-keys` yedeği bir sürüm daha korunur.
-- [x] **10.A2** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — `Node:Id/Role`; 10 worker yalnız Worker/Both'ta
+- [x] **10.A2** ✅ CANLIDA (2026-08-30) — `Node:Id/Role`; 10 worker yalnız Worker/Both'ta
       (DashboardMetricsWorker bilinçli her düğümde — düğüm-yerel hub yayını, tek yayıncı B1'de); Serilog NodeId;
       `/health/detail` nodeId+rol+worker listesi.
-- [ ] **10.A3** Device state → Redis (`IDeviceStateStore`; challenge/nonce `SET NX EX`, secret `SET EX`; Redis yoksa fail-closed).
-- [ ] **10.A4** Login sayacı → Redis + `CF-Connecting-IP` yalnız güvenilir proxy'den (ForwardedHeaders known-proxies).
+- [x] **10.A3** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — `IDeviceStateStore` (Redis: challenge tek-kullanımlık
+      atomik tüketim, nonce SET NX, secret SET EX; anahtar öneki `ECSPros:device:`); Redis erişilemezse FAIL-CLOSED
+      (503, bellek fallback'i bilinçli YOK); `/ready`'ye `redis-state` kontrolü eklendi (yapılandırılmış+erişilemez →
+      503; yapılandırılmamış → degraded; `/health` bu kontrolü çalıştırmaz — cache degraded=200 davranışı korundu).
+      İzole 5051 ✓ (challenge ikinci kullanımda 400).
+- [x] **10.A4** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — login sayacı `ILoginAttemptCounter` portunda:
+      Redis'te INCR+PEXPIRE tek Lua turunda (`ECSPros:login:*`), Redis hatasında düğüm-yerel sayaca düşer (fail-open,
+      uyarı loglu); `IstemciIpAnahtari` artık CF-Connecting-IP/XFF'i yalnız güvenilir proxy soketinden kabul eder
+      (vars. loopback+RFC1918; `RateLimit:TrustedProxyNetworks`). İzole 5051 ✓ (5 denemede kilit; taze süreçte kilit
+      SÜRÜYOR → sayaç Redis'te kanıtlı). Not: nginx dışı 5000 erişiminin firewall'da kapalılığı kullanıcı teyidi bekler.
 - [ ] **10.A5** `IFileStorage` sözleşmesi + paylaşımlı-disk adapter'ı (6 yazma noktası; `Storage:Root`).
 - [ ] **10.A6** Feed tetikleme → DB job tablosu (`SKIP LOCKED`), `status.json` → DB satırı.
-- [x] **10.A7** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — `Node:MigrateOnStartup=false` açılış migrate+seed'i
+- [x] **10.A7** ✅ CANLIDA (2026-08-30) — `Node:MigrateOnStartup=false` açılış migrate+seed'i
       atlar (varsayılan true); deploy betiği entegrasyonu A10'da.
-- [x] **10.A8** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — `/live` (bağımlılıksız) + `/ready` (PG+DP unhealthy→503;
+- [x] **10.A8** ✅ CANLIDA (2026-08-30) — `/live` (bağımlılıksız) + `/ready` (PG+DP unhealthy→503;
       Redis degraded=200, A3 ile zorunlulaşacak); nginx upstream'in `/ready` kullanması A0/A10'da.
 - [ ] **10.A9** Cache bust yayını (Redis pub/sub `ECSPros:cache:bust`).
 - [ ] **10.A10** Deploy betiği çoklu hedef + loglara NodeId.

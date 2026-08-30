@@ -68,12 +68,15 @@ var nodeOptions = builder.Configuration.GetSection("Node").Get<ECSPros.Api.Servi
     ?? new ECSPros.Api.Services.NodeOptions();
 builder.Services.AddSingleton(nodeOptions);
 
-// Faz 1: canlılık/hazırlık sinyali (nginx/izleme) — DB zorunlu, Redis opsiyonel (degraded).
-// FAZ 10 / A8: "ready" etiketli kontroller /ready ucunu besler (PG + DP key ring; Redis
-// bugün degraded=200 — A3 ile güvenlik state'i Redis'e taşınınca /ready için zorunlu olacak).
+// Faz 1: canlılık/hazırlık sinyali (nginx/izleme) — DB zorunlu, Redis cache opsiyonel (degraded).
+// FAZ 10 / A8: "ready" etiketli kontroller /ready ucunu besler (PG + DP key ring + Redis state).
+// FAZ 10 / A3: "redis-state" — güvenlik state'i (device challenge/nonce/secret) Redis'te ve
+// fail-closed; Redis erişilemezse /ready 503. /health bu kontrolü ÇALIŞTIRMAZ (aşağıdaki
+// predicate) — oradaki "cache degraded=200" davranışı bilinçli olarak korunur.
 builder.Services.AddHealthChecks()
     .AddCheck<ECSPros.Api.Services.Health.DbHealthCheck>("postgresql", tags: new[] { "ready" })
-    .AddCheck<ECSPros.Api.Services.Health.RedisHealthCheck>("redis", tags: new[] { "ready" })
+    .AddCheck<ECSPros.Api.Services.Health.RedisHealthCheck>("redis")
+    .AddCheck<ECSPros.Api.Services.Health.RedisStateHealthCheck>("redis-state", tags: new[] { "ready" })
     .AddCheck<ECSPros.Api.Services.Health.DataProtectionHealthCheck>("dataprotection", tags: new[] { "ready" });
 
 // ─── Serilog Full Configuration ─────────────────────────────────────
@@ -355,6 +358,14 @@ builder.Services.AddScoped<ECSPros.Api.Services.Store.IVitrinAuditLogger, ECSPro
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IFaturaPdfProxy, ECSPros.Api.Services.Store.FaturaPdfProxy>(); // H1: entegratör fatura PDF proxy'si (allowlist config'ten)
 // Mobil cihaz doğrulama (2026-07-23): Play Integrity / App Attest → kısa ömürlü device token
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceTokenService, ECSPros.Api.Services.Store.DeviceTokenService>();
+// FAZ 10 / A3: challenge/nonce/secret state'i Redis'te — düğümler arası geçerli, Redis yoksa
+// FAIL-CLOSED (mobil attestation reddedilir; web etkilenmez). Bellek fallback'i BİLİNÇLİ yok.
+if (!string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("Redis")))
+    builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceStateStore,
+        ECSPros.Api.Services.Store.RedisDeviceStateStore>();
+else
+    builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceStateStore,
+        ECSPros.Api.Services.Store.RedisYapilandirilmamisDeviceStateStore>();
 // Part B: eski sistem (juludedb) köprüsü — hata-güvenli, connection string boşsa no-op
 // F1 (2026-08-04): eski B4 doğrudan-INSERT gateway'i kaldırıldı — sipariş senkronu artık
 // outbox kuyruğu + LegacySyncWorker dilimi + eski SiparisOlusturFromModel servisi üzerinden.
@@ -471,15 +482,36 @@ builder.Services.AddCors(options =>
 // çalışır (global limit YOK — SSR sayfaları ve diğer uçlar etkilenmez). IP bazlı hacim
 // freninin asıl katmanı nginx'tedir (00-ratelimit.conf); buradaki politika, nginx'i
 // atlayıp 5000 portuna doğrudan gelen istekleri de yakalayan ikinci savunma hattıdır.
-static string IstemciIpAnahtari(HttpContext ctx)
+// FAZ 10 / A4: CF-Connecting-IP / X-Forwarded-For yalnız GÜVENİLİR PROXY'den (nginx/CF
+// zinciri — soket adresi loopback/özel ağdaysa) gelen bağlantılarda kabul edilir; 5000
+// portuna doğrudan bağlanan istemci başlık sahteleyip rate limit anahtarını değiştiremez
+// (rapor P1). Ağ listesi RateLimit:TrustedProxyNetworks (CIDR) ile değiştirilebilir.
+var guvenilirProxyAglari = (builder.Configuration.GetSection("RateLimit:TrustedProxyNetworks").Get<string[]>()
+    ?? new[] { "127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16" })
+    .Select(cidr =>
+    {
+        var parca = cidr.Split('/');
+        return new Microsoft.AspNetCore.HttpOverrides.IPNetwork(
+            System.Net.IPAddress.Parse(parca[0]), int.Parse(parca[1]));
+    })
+    .ToArray();
+
+string IstemciIpAnahtari(HttpContext ctx)
 {
-    // Cloudflare → nginx → app zincirinde gerçek istemci IP'si CF-Connecting-IP'dedir;
-    // yoksa nginx'in yazdığı X-Forwarded-For'un ilk halkası; o da yoksa soket adresi.
-    var cf = ctx.Request.Headers["CF-Connecting-IP"].FirstOrDefault();
-    if (!string.IsNullOrWhiteSpace(cf)) return cf.Trim();
-    var xff = ctx.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-    if (!string.IsNullOrWhiteSpace(xff)) return xff.Split(',')[0].Trim();
-    return ctx.Connection.RemoteIpAddress?.ToString() ?? "bilinmeyen";
+    var soketIp = ctx.Connection.RemoteIpAddress;
+    if (soketIp is { IsIPv4MappedToIPv6: true }) soketIp = soketIp.MapToIPv4();
+    var proxydenGeldi = soketIp is not null && guvenilirProxyAglari.Any(ag => ag.Contains(soketIp));
+
+    if (proxydenGeldi)
+    {
+        // Cloudflare → nginx → app zincirinde gerçek istemci IP'si CF-Connecting-IP'dedir;
+        // yoksa nginx'in yazdığı X-Forwarded-For'un ilk halkası; o da yoksa soket adresi.
+        var cf = ctx.Request.Headers["CF-Connecting-IP"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(cf)) return cf.Trim();
+        var xff = ctx.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(xff)) return xff.Split(',')[0].Trim();
+    }
+    return soketIp?.ToString() ?? "bilinmeyen";
 }
 
 builder.Services.AddRateLimiter(options =>
@@ -694,8 +726,10 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Faz 1: /health — anonim canlılık/hazırlık ucu (DB Unhealthy → 503; Redis degraded 200 döner).
+// A3: redis-state kontrolü /health'te çalışmaz — sıkı Redis zorunluluğu yalnız /ready'de.
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
+    Predicate = r => r.Name != "redis-state",
     ResultStatusCodes =
     {
         [Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy] = StatusCodes.Status200OK,
@@ -721,8 +755,8 @@ app.MapHealthChecks("/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.H
 }).AllowAnonymous();
 
 // FAZ 10 / A8: /ready — bu düğüm trafik almaya hazır mı (nginx upstream health bu ucu
-// kullanacak): PG + Data Protection key ring zorunlu; Redis şimdilik degraded=200 (A3'te
-// güvenlik state'i Redis'e taşınınca zorunluya çevrilecek — bkz. RedisHealthCheck notu).
+// kullanacak): PG + Data Protection key ring + Redis state (A3: yapılandırılmış ama
+// erişilemeyen Redis → 503; hiç yapılandırılmamışsa degraded=200 — bilinçli ops durumu).
 app.MapHealthChecks("/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
     Predicate = r => r.Tags.Contains("ready"),
