@@ -156,7 +156,7 @@ A1-A4 ve A7-A9 tek sunucuda da çalışır, A0 beklenmez; A5/A6 mount ile devrey
       `ImageServer.LocalSavePath`+`PublicBaseUrl` (CatalogSettings), feed `Feeds:OutputPath`. HA-lite'ta A0
       mount'u gelince bu ÜÇ kök `/srv/ecspros-shared/*`'a çevrilir (yalnız config/DB ayarı — kod işi yok).
       `IFileStorage` sözleşmesi S3 ile anlamlı → B3'e ertelendi (S3 zaten kullanıcı kararıyla ertelenmişti).
-- [x] **10.A6** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — feed tetiği `integration.feed_jobs`
+- [x] **10.A6** ✅ CANLIDA (2026-08-30; kullanıcı testi ✓ "✓ Üretim tamamlandı — 37337 kalem, 7 sn" + panel tamamlanma mesajı düzeltmesi) — feed tetiği `integration.feed_jobs`
       (FOR UPDATE SKIP LOCKED sahiplenme + kanal dedupe; 10 sn poll `Feeds:PollSeconds`), durum
       `integration.feed_status` (NodeId kolonu; panel her düğümden aynı durumu okur); migration CANLI DB'ye
       uygulandı (eklemeli); eski status.json'lar açılışta bir kez DB'ye aktarılır (gereksiz toplu yeniden
@@ -165,7 +165,7 @@ A1-A4 ve A7-A9 tek sunucuda da çalışır, A0 beklenmez; A5/A6 mount ile devrey
       atlar (varsayılan true); deploy betiği entegrasyonu A10'da.
 - [x] **10.A8** ✅ CANLIDA (2026-08-30) — `/live` (bağımlılıksız) + `/ready` (PG+DP unhealthy→503;
       Redis degraded=200, A3 ile zorunlulaşacak); nginx upstream'in `/ready` kullanması A0/A10'da.
-- [x] **10.A9** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — `ICacheBustPublisher` (Shared.Contracts):
+- [x] **10.A9** ✅ CANLIDA (2026-08-30; journal "Cache bust aboneliği kuruldu" doğrulandı) — `ICacheBustPublisher` (Shared.Contracts):
       yerel IMemoryCache silme + Redis pub/sub `ECSPros:cache:bust` yayını; abone HER düğümde (rol kapısız
       hosted service). Porta geçenler: 5 Storefront kanal-kapsam komutu (ChannelProductCacheKeys),
       ChannelCapabilityResolver, ChannelListingStatusService, TrackingSettingsProvider. Redis'siz yalnız
