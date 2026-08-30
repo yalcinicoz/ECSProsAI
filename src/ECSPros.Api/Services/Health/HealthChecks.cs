@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Npgsql;
@@ -21,6 +22,31 @@ public sealed class DbHealthCheck(NpgsqlDataSource dataSource) : IHealthCheck
         catch (Exception ex)
         {
             return HealthCheckResult.Unhealthy("PostgreSQL erişilemiyor.", ex);
+        }
+    }
+}
+
+/// <summary>
+/// FAZ 10 / A8: Data Protection key ring okunabilirliği — Protect/Unprotect turu.
+/// Key ring (DB birincil + dosya yedekli, A1) okunamazsa entegrasyon kimlik bilgileri
+/// çözülemez; /ready bu durumda 503 döner ve nginx upstream düğümü trafikten çıkarır.
+/// </summary>
+public sealed class DataProtectionHealthCheck(
+    Microsoft.AspNetCore.DataProtection.IDataProtectionProvider provider) : IHealthCheck
+{
+    public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken ct = default)
+    {
+        try
+        {
+            var protector = provider.CreateProtector("ECSPros.HealthCheck");
+            var geri = protector.Unprotect(protector.Protect("ping"));
+            return Task.FromResult(geri == "ping"
+                ? HealthCheckResult.Healthy("Data Protection key ring okunabilir.")
+                : HealthCheckResult.Unhealthy("Data Protection tur doğrulaması başarısız."));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(HealthCheckResult.Unhealthy("Data Protection key ring okunamıyor.", ex));
         }
     }
 }

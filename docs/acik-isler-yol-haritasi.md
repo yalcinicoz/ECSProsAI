@@ -127,6 +127,35 @@ Faz olmayan kalıntılar aşağıya taşındı:
 
 ---
 
+## FAZ 10 — Çoklu sunucu uyumluluğu, Kademe A "HA-lite" (ONAYLANDI 2026-08-30)
+
+Kaynak: `docs/coklu-sunucu-uyumluluk-degerlendirmesi.md` §3. **Kullanıcı kararı (2026-08-30):**
+Kademe A başlar; **Sentinel/Patroni/S3 (Kademe B altyapı kalemleri B3/B4/B5) ERTELENDİ.**
+A1-A4 ve A7-A9 tek sunucuda da çalışır, A0 beklenmez; A5/A6 mount ile devreye alınır.
+
+- [ ] **10.A0 (dış girdi, kullanıcı):** ikinci VM, nginx upstream (`ip_hash`), paylaşımlı dizin `/srv/ecspros-shared`.
+- [x] **10.A1** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — DP key ring DB'de (`iam.data_protection_keys`,
+      migration canlı DB'ye uygulandı); dosya deposu salt-okunur geri dönüş yolu + açılışta idempotent dosya→DB
+      aktarımı (canlı anahtar DB'de, izole 5051 ✓). `~/.ecspros/dp-keys` yedeği bir sürüm daha korunur.
+- [x] **10.A2** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — `Node:Id/Role`; 10 worker yalnız Worker/Both'ta
+      (DashboardMetricsWorker bilinçli her düğümde — düğüm-yerel hub yayını, tek yayıncı B1'de); Serilog NodeId;
+      `/health/detail` nodeId+rol+worker listesi.
+- [ ] **10.A3** Device state → Redis (`IDeviceStateStore`; challenge/nonce `SET NX EX`, secret `SET EX`; Redis yoksa fail-closed).
+- [ ] **10.A4** Login sayacı → Redis + `CF-Connecting-IP` yalnız güvenilir proxy'den (ForwardedHeaders known-proxies).
+- [ ] **10.A5** `IFileStorage` sözleşmesi + paylaşımlı-disk adapter'ı (6 yazma noktası; `Storage:Root`).
+- [ ] **10.A6** Feed tetikleme → DB job tablosu (`SKIP LOCKED`), `status.json` → DB satırı.
+- [x] **10.A7** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — `Node:MigrateOnStartup=false` açılış migrate+seed'i
+      atlar (varsayılan true); deploy betiği entegrasyonu A10'da.
+- [x] **10.A8** ✅ UYGULANDI (2026-08-30) ⚠️ restart bekliyor — `/live` (bağımlılıksız) + `/ready` (PG+DP unhealthy→503;
+      Redis degraded=200, A3 ile zorunlulaşacak); nginx upstream'in `/ready` kullanması A0/A10'da.
+- [ ] **10.A9** Cache bust yayını (Redis pub/sub `ECSPros:cache:bust`).
+- [ ] **10.A10** Deploy betiği çoklu hedef + loglara NodeId.
+- [ ] **10.A-T** Çapraz düğüm kabul testleri (KabulTestKiti).
+
+> **Ertelenen (Kademe B):** B1 SignalR backplane · B2 worker dağıtık claim · B3 S3/MinIO ·
+> B4 Patroni DB HA · B5 Redis Sentinel · B6 nginx shared-zone rate limit · B7 release testi.
+> B3/B4/B5 altyapıları kullanıcı kararıyla ertelendi (2026-08-30).
+
 ## Önerilen sıra
 
 1. **FAZ 0'daki hazır girdiler** hangileriyse önce onların açtığı fazlar (örn. DNS geldiyse F5.1 hemen).

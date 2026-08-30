@@ -1,11 +1,12 @@
 using ECSPros.Iam.Application.Services;
 using ECSPros.Iam.Domain.Entities;
 using ECSPros.Shared.Kernel.Domain;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Iam.Infrastructure.Persistence;
 
-public class IamDbContext : DbContext, IIamDbContext
+public class IamDbContext : DbContext, IIamDbContext, IDataProtectionKeyContext
 {
     public IamDbContext(DbContextOptions<IamDbContext> options) : base(options) { }
 
@@ -23,10 +24,16 @@ public class IamDbContext : DbContext, IIamDbContext
     public DbSet<SupplierUser> SupplierUsers => Set<SupplierUser>();
     public DbSet<SupplierUserSession> SupplierUserSessions => Set<SupplierUserSession>();
 
+    // FAZ 10 / A1: Data Protection key ring — düğümler arası ortak depo.
+    // Anahtarlar DB yedeğiyle birlikte yedeklenir; ~/.ecspros/dp-keys dosya deposu
+    // bir sürüm boyunca salt-okunur geri dönüş yolu olarak kalır (Program.cs).
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("iam");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(IamDbContext).Assembly);
+        modelBuilder.Entity<DataProtectionKey>().ToTable("data_protection_keys");
         base.OnModelCreating(modelBuilder);
     }
 

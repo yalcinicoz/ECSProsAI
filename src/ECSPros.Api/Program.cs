@@ -62,16 +62,26 @@ builder.Services.Configure<HostOptions>(o =>
     o.ShutdownTimeout = TimeSpan.FromSeconds(30);   // Faz 1: worker'lara temiz kapanış süresi
 });
 
+// FAZ 10 / A2: düğüm kimliği + rolü — worker kayıtları ve açılış migrate/seed bu
+// seçeneklere göre kapılanır. Yapılandırma yoksa tek sunucu davranışı aynen korunur.
+var nodeOptions = builder.Configuration.GetSection("Node").Get<ECSPros.Api.Services.NodeOptions>()
+    ?? new ECSPros.Api.Services.NodeOptions();
+builder.Services.AddSingleton(nodeOptions);
+
 // Faz 1: canlılık/hazırlık sinyali (nginx/izleme) — DB zorunlu, Redis opsiyonel (degraded).
+// FAZ 10 / A8: "ready" etiketli kontroller /ready ucunu besler (PG + DP key ring; Redis
+// bugün degraded=200 — A3 ile güvenlik state'i Redis'e taşınınca /ready için zorunlu olacak).
 builder.Services.AddHealthChecks()
-    .AddCheck<ECSPros.Api.Services.Health.DbHealthCheck>("postgresql")
-    .AddCheck<ECSPros.Api.Services.Health.RedisHealthCheck>("redis");
+    .AddCheck<ECSPros.Api.Services.Health.DbHealthCheck>("postgresql", tags: new[] { "ready" })
+    .AddCheck<ECSPros.Api.Services.Health.RedisHealthCheck>("redis", tags: new[] { "ready" })
+    .AddCheck<ECSPros.Api.Services.Health.DataProtectionHealthCheck>("dataprotection", tags: new[] { "ready" });
 
 // ─── Serilog Full Configuration ─────────────────────────────────────
 builder.Host.UseSerilog((ctx, lc) => lc
     .ReadFrom.Configuration(ctx.Configuration)
     .Enrich.FromLogContext()
     .Enrich.WithProperty("Application", "ECSPros")
+    .Enrich.WithProperty("NodeId", nodeOptions.Id) // FAZ 10 / A2: loglar düğüm etiketli
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}")
     .WriteTo.File("logs/ecspros-.log",
         rollingInterval: RollingInterval.Day,
@@ -135,15 +145,28 @@ builder.Services.Configure<Microsoft.AspNetCore.Mvc.Razor.RazorViewEngineOptions
 builder.Services.AddMemoryCache();
 
 // ─── Data Protection (FirmPlatformIntegration.Credentials at-rest şifreleme) ──
-// Key ring publish dizini DIŞINDA kalıcı dizinde tutulur — publish/deploy'da silinirse
-// DB'deki şifreli kimlik bilgileri ÇÖZÜLEMEZ (yeniden girilmeleri gerekir). Yol
-// DataProtection:KeysPath ile değiştirilebilir; varsayılan ~/.ecspros/dp-keys.
+// FAZ 10 / A1: key ring artık DB'de (iam.data_protection_keys) — çoklu düğümde ortak
+// depo + DB yedeğine dahil. Eski dosya deposu (~/.ecspros/dp-keys) SİLİNMEZ: bir sürüm
+// boyunca salt-okunur geri dönüş yolu olarak okunur, açılışta içeriği DB'ye kopyalanır
+// (DataProtectionDosyaAnahtarAktarici). Yol DataProtection:KeysPath ile değiştirilebilir.
 var dpKeysPath = builder.Configuration["DataProtection:KeysPath"]
     ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ecspros", "dp-keys");
 Directory.CreateDirectory(dpKeysPath);
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(dpKeysPath))
+    .PersistKeysToDbContext<ECSPros.Iam.Infrastructure.Persistence.IamDbContext>()
     .SetApplicationName("ECSPros");
+// EF repository'yi "DB birincil + dosya yedekli" bileşik depoyla sar (yazma yalnız DB'ye).
+builder.Services.AddSingleton<Microsoft.Extensions.Options.IPostConfigureOptions<Microsoft.AspNetCore.DataProtection.KeyManagement.KeyManagementOptions>>(sp =>
+    new Microsoft.Extensions.Options.PostConfigureOptions<Microsoft.AspNetCore.DataProtection.KeyManagement.KeyManagementOptions>(
+        Microsoft.Extensions.Options.Options.DefaultName, options =>
+        {
+            var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+            var dosyaRepo = new Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository(
+                new DirectoryInfo(dpKeysPath), loggerFactory);
+            options.XmlRepository = new ECSPros.Api.Services.DbOncelikliDosyaYedekliXmlRepository(
+                options.XmlRepository!, dosyaRepo,
+                loggerFactory.CreateLogger<ECSPros.Api.Services.DbOncelikliDosyaYedekliXmlRepository>());
+        }));
 
 // ─── MediatR ───────────────────────────────────────────────────────
 builder.Services.AddMediatR(cfg =>
@@ -246,7 +269,7 @@ builder.Services.AddCmsInfrastructure(npgsqlDataSource);
 builder.Services.AddRequestsInfrastructure(npgsqlDataSource);
 builder.Services.AddProcurementInfrastructure(npgsqlDataSource);   // T1 Tedarik
 builder.Services.AddPosInfrastructure(npgsqlDataSource);
-builder.Services.AddIntegrationInfrastructure(npgsqlDataSource);
+builder.Services.AddIntegrationInfrastructure(npgsqlDataSource, nodeOptions.WorkerRolu);
 builder.Services.AddAccountsInfrastructure(npgsqlDataSource);
 builder.Services.AddStorefrontInfrastructure(npgsqlDataSource);
 
@@ -279,7 +302,8 @@ builder.Services.AddScoped<ECSPros.Shared.Contracts.IProductMetricsProvider, ECS
 builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.SaticiIslemleri>();
 // P3a: satıcı komisyon çözücüsü + hakediş uygunlaşma worker'ı (Accounts/Catalog/Promotion → host'ta)
 builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Commission.KomisyonCozucu>();
-builder.Services.AddHostedService<ECSPros.Api.Services.Marketplace.Commission.SettlementEligibilityWorker>();
+if (nodeOptions.WorkerRolu) // FAZ 10 / A2
+    builder.Services.AddHostedService<ECSPros.Api.Services.Marketplace.Commission.SettlementEligibilityWorker>();
 builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.MarketplaceAdminService>(); // Pazaryeri yönetim ekranları — cross-schema okuma katmanı
 
 // Pazaryeri referans verisi (marketplace_ref ayrı DB): kategori/özellik/değer senkronu.
@@ -309,10 +333,15 @@ builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Send.MarketplaceSend
 builder.Services.AddSingleton<ECSPros.Api.Services.Marketplace.Send.MarketplaceBatchWorker>();
 builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Send.MarketplaceIssueService>();
 builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Send.MarketplaceReconciliationService>();
-builder.Services.AddHostedService(sp =>
-    sp.GetRequiredService<ECSPros.Api.Services.Marketplace.Send.MarketplaceBatchWorker>());
-builder.Services.AddHostedService<ECSPros.Api.Services.ChannelScopeSyncWorker>(); // F1 kanal kapsamı gece taraması
-builder.Services.AddHostedService<ECSPros.Api.Services.OnSaleStampWorker>(); // Tedarik T6: satışa giriş damgası
+// FAZ 10 / A2: arka plan worker'ları yalnız Worker/Both rollü düğümde başlar.
+// MarketplaceBatchWorker singleton kaydı koşulsuz kalır — controller'dan elle tetiklenebilir.
+if (nodeOptions.WorkerRolu)
+{
+    builder.Services.AddHostedService(sp =>
+        sp.GetRequiredService<ECSPros.Api.Services.Marketplace.Send.MarketplaceBatchWorker>());
+    builder.Services.AddHostedService<ECSPros.Api.Services.ChannelScopeSyncWorker>(); // F1 kanal kapsamı gece taraması
+    builder.Services.AddHostedService<ECSPros.Api.Services.OnSaleStampWorker>(); // Tedarik T6: satışa giriş damgası
+}
 builder.Services.AddScoped<ECSPros.Api.Services.ProcurementReportService>(); // Tedarik T6: dönem raporu
 builder.Services.AddSingleton<ECSPros.Api.Services.IStoreMemberSession, ECSPros.Api.Services.StoreMemberSession>(); // D1: SSR üye kimliği (HttpOnly cookie)
 builder.Services.AddTransient<ECSPros.Crm.Application.Services.ISmsSender, ECSPros.Api.Services.CrmSmsSenderAdapter>(); // D4: OTP SMS köprüsü
@@ -338,16 +367,23 @@ builder.Services.AddScoped<ECSPros.Api.Services.Store.IOrderConfirmationService,
 builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacySyncService>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacyOrderSyncService>();
 ECSPros.Shared.Infrastructure.Http.ResilientHttpClientExtensions.AddResilientHttpClient(builder.Services, "legacy-order", c => c.Timeout = TimeSpan.FromSeconds(30));
-builder.Services.AddHostedService<ECSPros.Api.Services.Legacy.LegacySyncWorker>();
-builder.Services.AddHostedService<ECSPros.Api.Services.Fulfillment.CargoNotifyWorker>();
-builder.Services.AddHostedService<ECSPros.Api.Services.Tracking.TrackingDispatchWorker>();
-builder.Services.AddHostedService<ECSPros.Api.Services.Tracking.Feed.FeedGeneratorWorker>(); // İE-5: feed üretimi (Feeds:Enabled, 6 sa) // İE-2: commerce event outbox dispatcher (Tracking:Enabled; adapter'lar Faz D) // OP5: kargo bildirim outbox'ı (varsayılan KAPALI — KG1'de açılır)
+if (nodeOptions.WorkerRolu) // FAZ 10 / A2
+{
+    builder.Services.AddHostedService<ECSPros.Api.Services.Legacy.LegacySyncWorker>();
+    builder.Services.AddHostedService<ECSPros.Api.Services.Fulfillment.CargoNotifyWorker>();
+    builder.Services.AddHostedService<ECSPros.Api.Services.Tracking.TrackingDispatchWorker>();
+    builder.Services.AddHostedService<ECSPros.Api.Services.Tracking.Feed.FeedGeneratorWorker>(); // İE-5: feed üretimi (Feeds:Enabled, 6 sa) // İE-2: commerce event outbox dispatcher (Tracking:Enabled; adapter'lar Faz D) // OP5: kargo bildirim outbox'ı (varsayılan KAPALI — KG1'de açılır)
+}
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.PlayIntegrityVerifier>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.AppAttestVerifier>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.DevBypassVerifier>();
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IStoreLinkBuilder, ECSPros.Api.Services.Store.StoreLinkBuilder>(); // H8: e-postalardaki mutlak site linki (Store:Hosts tersinden)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.ISavedSearchNotifier, ECSPros.Api.Services.Store.SavedSearchNotifier>(); // H8: favori arama bildirimi taraması
-builder.Services.AddHostedService<ECSPros.Api.Services.Store.SavedSearchNotifyWorker>(); // H8: periyodik tarama (günde-1 sınırı LastNotifiedAt'ta)
+if (nodeOptions.WorkerRolu) // FAZ 10 / A2
+    builder.Services.AddHostedService<ECSPros.Api.Services.Store.SavedSearchNotifyWorker>(); // H8: periyodik tarama (günde-1 sınırı LastNotifiedAt'ta)
+// DashboardMetricsWorker rol kapısına GİRMEZ: salt-okunur, yalnız bu düğüme bağlı admin
+// SignalR istemcilerine yayın yapar (sticky oturum) — Api rollü düğümde de çalışmalı.
+// Tek yayıncı + backplane Kademe B / B1'in konusu.
 builder.Services.AddHostedService<DashboardMetricsWorker>();
 builder.Services.AddSingleton<ECSPros.Api.Services.MigrationService>();
 
@@ -676,6 +712,63 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
         });
     },
 }).AllowAnonymous();
+
+// FAZ 10 / A8: /live — süreç ayakta mı (hiçbir dış bağımlılık kontrol edilmez; restart
+// kararı için). Predicate=false → kayıtlı kontroller çalıştırılmadan Healthy döner.
+app.MapHealthChecks("/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false,
+}).AllowAnonymous();
+
+// FAZ 10 / A8: /ready — bu düğüm trafik almaya hazır mı (nginx upstream health bu ucu
+// kullanacak): PG + Data Protection key ring zorunlu; Redis şimdilik degraded=200 (A3'te
+// güvenlik state'i Redis'e taşınınca zorunluya çevrilecek — bkz. RedisHealthCheck notu).
+app.MapHealthChecks("/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = r => r.Tags.Contains("ready"),
+    ResultStatusCodes =
+    {
+        [Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy] = StatusCodes.Status200OK,
+        [Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded] = StatusCodes.Status200OK,
+        [Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy] = StatusCodes.Status503ServiceUnavailable,
+    },
+    ResponseWriter = async (ctx, report) =>
+    {
+        ctx.Response.ContentType = "application/json";
+        await ctx.Response.WriteAsJsonAsync(new
+        {
+            status = report.Status.ToString(),
+            nodeId = nodeOptions.Id,
+            checks = report.Entries.Select(e => new { name = e.Key, status = e.Value.Status.ToString(), description = e.Value.Description }),
+        });
+    },
+}).AllowAnonymous();
+
+// FAZ 10 / A2: /health/detail — düğüm kimliği, rolü ve bu düğümde kayıtlı worker'lar
+// (çoklu düğümde "hangi düğüm worker" sorusunun cevabı; nginx upstream'e girmeyen tanı ucu).
+var kayitliWorkerlar = nodeOptions.WorkerRolu
+    ? new[]
+    {
+        "MarketplaceOrderFetch", "SettlementEligibility", "MarketplaceBatch", "ChannelScopeSync",
+        "OnSaleStamp", "LegacySync", "CargoNotify", "TrackingDispatch", "FeedGenerator",
+        "SavedSearchNotify", "DashboardMetrics",
+    }
+    : new[] { "DashboardMetrics" }; // düğüm-yerel dashboard yayını her rolde çalışır
+app.MapGet("/health/detail", async (
+    Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService hcs, CancellationToken ct) =>
+{
+    var report = await hcs.CheckHealthAsync(ct);
+    return Results.Json(new
+    {
+        status = report.Status.ToString(),
+        nodeId = nodeOptions.Id,
+        role = nodeOptions.Role,
+        migrateOnStartup = nodeOptions.MigrateOnStartup,
+        startedAtUtc = System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime(),
+        workers = kayitliWorkerlar,
+        checks = report.Entries.Select(e => new { name = e.Key, status = e.Value.Status.ToString(), description = e.Value.Description }),
+    });
+}).AllowAnonymous();
 // robots.txt tek kaynaktan üretilir (BotDisiRotalar) — wwwroot'ta statik dosya YOK
 app.MapGet("/robots.txt", () => Results.Text(ECSPros.Api.Services.BotDisiRotalar.RobotsTxt(), "text/plain; charset=utf-8"));
 
@@ -684,16 +777,30 @@ app.MapHub<FulfillmentHub>("/hubs/fulfillment");
 app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapHub<DashboardHub>("/hubs/dashboard");
 
-// Permission/rol ve dil seed'i her ortamda çalışır (idempotent — eksik kayıtları ekler)
-await DatabaseSeeder.SeedPermissionsAndRolesAsync(app.Services);
-await DatabaseSeeder.SeedLanguagesAsync(app.Services);
+// FAZ 10 / A7: çoklu düğümde migration/seed yarışını önlemek için açılış migrate+seed'i
+// yalnız Node:MigrateOnStartup=true düğümde çalışır (varsayılan true — tek sunucu aynen).
+// Diğer düğümlerde şema, deploy adımındaki `dotnet ef database update` ile gelir.
+if (nodeOptions.MigrateOnStartup)
+{
+    // Permission/rol ve dil seed'i her ortamda çalışır (idempotent — eksik kayıtları ekler)
+    await DatabaseSeeder.SeedPermissionsAndRolesAsync(app.Services);
+    await DatabaseSeeder.SeedLanguagesAsync(app.Services);
 
-// Temel sistem seed'i her ortamda çalışır
-await DatabaseSeeder.SeedAsync(app.Services);
+    // Temel sistem seed'i her ortamda çalışır
+    await DatabaseSeeder.SeedAsync(app.Services);
 
-// Demo veri seed'i — sadece Development ortamında çalışır (production'da crash'e neden olur)
-if (app.Environment.IsDevelopment())
-    await DemoDataSeeder.SeedAsync(app.Services);
+    // Demo veri seed'i — sadece Development ortamında çalışır (production'da crash'e neden olur)
+    if (app.Environment.IsDevelopment())
+        await DemoDataSeeder.SeedAsync(app.Services);
+}
+else
+{
+    Log.Information("Node:MigrateOnStartup=false — açılış migrate/seed bu düğümde atlandı (NodeId: {NodeId}).", nodeOptions.Id);
+}
+
+// FAZ 10 / A1: eski dosya deposundaki Data Protection anahtarlarını DB'ye kopyala
+// (idempotent; tablo henüz yoksa uyarı loglar, açılışı bozmaz).
+await ECSPros.Api.Services.DataProtectionDosyaAnahtarAktarici.AktarAsync(app.Services, dpKeysPath);
 
 // GeoIP durum satırı — singleton'ı açılışta bir kez kurup AKTİF/KAPALI log'unu bastırır
 // (Redis drift detektörü kalıbı; dosya yoksa yalnız uyarı loglanır, açılış etkilenmez).

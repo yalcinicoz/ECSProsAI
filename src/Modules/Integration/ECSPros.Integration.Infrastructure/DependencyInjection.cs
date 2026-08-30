@@ -14,8 +14,10 @@ namespace ECSPros.Integration.Infrastructure;
 
 public static class DependencyInjection
 {
+    /// <param name="workerRoluAktif">FAZ 10 / A2: false ise arka plan worker'ları bu düğümde
+    /// kaydedilmez (Node:Role=Api). Varsayılan true — tek sunucu davranışı değişmez.</param>
     public static IServiceCollection AddIntegrationInfrastructure(
-        this IServiceCollection services, NpgsqlDataSource dataSource)
+        this IServiceCollection services, NpgsqlDataSource dataSource, bool workerRoluAktif = true)
     {
         services.AddDbContext<IntegrationDbContext>(options =>
             options.UseNpgsql(dataSource,
@@ -44,8 +46,9 @@ public static class DependencyInjection
         // HttpClient factory (required by adapters)
         services.AddHttpClient();
 
-        // Background workers
-        services.AddHostedService<MarketplaceOrderFetchWorker>();
+        // Background workers — yalnız Worker/Both rollü düğümde (FAZ 10 / A2)
+        if (workerRoluAktif)
+            services.AddHostedService<MarketplaceOrderFetchWorker>();
 
         return services;
     }
