@@ -16,7 +16,10 @@ public sealed record RefSyncRunDto(
 
 public sealed record RefSummaryDto(
     string Marketplace, long CategoryCount, long AttributeCount, long ValueCount,
-    long RemovedCategoryCount, RefSyncRunDto? LastRun);
+    long RemovedCategoryCount, RefSyncRunDto? LastRun,
+    // RF1 (2026-08-31): özellik kapsamı — yaprak kategorilerin kaçı taranmış (attributes_synced_at
+    // damgalı) ve en eski tarama ne zaman ("her an hazır" ilkesinin panel göstergesi).
+    long LeafCount = 0, long LeafSyncedCount = 0, DateTime? OldestAttributeSyncAt = null);
 
 /// <summary>
 /// Referans senkron motoru (docs/pazaryeri-entegrasyon-veri-yonetimi.md §1):
@@ -30,6 +33,7 @@ public sealed class MarketplaceReferenceSyncService(
     IEnumerable<IMarketplaceReferenceDownloader> downloaders,
     IHostApplicationLifetime lifetime,
     IServiceProvider serviceProvider,
+    IConfiguration configuration,
     ILogger<MarketplaceReferenceSyncService> logger)
 {
     private static readonly TimeSpan StaleAfter = TimeSpan.FromMinutes(5);
@@ -49,8 +53,11 @@ public sealed class MarketplaceReferenceSyncService(
         var downloader = downloaders.FirstOrDefault(d => d.ServiceCode == marketplace);
         if (downloader is null)
             return (null, $"'{marketplace}' için referans indirici yok. Desteklenenler: {string.Join(", ", SupportedMarketplaces)}");
-        if (scope is not ("categories" or "attributes"))
-            return (null, "scope 'categories' veya 'attributes' olmalı.");
+        // RF1 (2026-08-31): 'attributes-missing' — yalnız hiç taranmamış ya da bayat (Trendyol:
+        // ReferenceStaleDays, vars. 7 gün) yaprak kategorilerin özellikleri; kesinti sonrası
+        // kaldığı yerden devam ve haftalık tazeleme bu modla verimli çalışır.
+        if (scope is not ("categories" or "attributes" or "attributes-missing"))
+            return (null, "scope 'categories', 'attributes' veya 'attributes-missing' olmalı.");
 
         var ds = await refDb.GetAsync(ct);
         if (ds is null)
@@ -105,7 +112,8 @@ public sealed class MarketplaceReferenceSyncService(
 
             var totals = scope == "categories"
                 ? await SyncCategoriesAsync(ds, downloader, runId, ct)
-                : await SyncAttributesAsync(ds, downloader, runId, categoryIds, ct);
+                : await SyncAttributesAsync(ds, downloader, runId, categoryIds,
+                    onlyMissingOrStale: scope == "attributes-missing", ct);
 
             await using var done = ds.CreateCommand(
                 """
@@ -277,25 +285,38 @@ public sealed class MarketplaceReferenceSyncService(
 
     private async Task<SyncTotals> SyncAttributesAsync(
         NpgsqlDataSource ds, IMarketplaceReferenceDownloader downloader, Guid runId,
-        List<string>? categoryIds, CancellationToken ct)
+        List<string>? categoryIds, bool onlyMissingOrStale, CancellationToken ct)
     {
         var marketplace = downloader.ServiceCode;
 
         // Hedef küme: verilen liste ya da tüm aktif yaprak kategoriler.
+        // RF1: onlyMissingOrStale → yalnız hiç taranmamış ya da bayat olanlar (kaldığı yerden devam).
         List<string> targets;
         if (categoryIds is { Count: > 0 })
             targets = categoryIds;
         else
         {
+            var staleDays = Math.Max(1, configuration.GetValue("Trendyol:ReferenceStaleDays", 7));
             targets = [];
             await using var cmd = ds.CreateCommand(
-                "SELECT external_id FROM mp_categories WHERE marketplace=$1 AND is_leaf AND removed_at IS NULL ORDER BY external_id");
+                onlyMissingOrStale
+                    ? """
+                      SELECT external_id FROM mp_categories
+                      WHERE marketplace=$1 AND is_leaf AND removed_at IS NULL
+                        AND (attributes_synced_at IS NULL OR attributes_synced_at < now() - make_interval(days => $2))
+                      ORDER BY attributes_synced_at NULLS FIRST, external_id
+                      """
+                    : "SELECT external_id FROM mp_categories WHERE marketplace=$1 AND is_leaf AND removed_at IS NULL ORDER BY external_id");
             cmd.Parameters.AddWithValue(marketplace);
+            if (onlyMissingOrStale) cmd.Parameters.AddWithValue(staleDays);
             await using var reader = await cmd.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct)) targets.Add(reader.GetString(0));
         }
         if (targets.Count == 0)
+        {
+            if (onlyMissingOrStale) return new SyncTotals(0, 0, 0, 0); // her şey güncel — iş yok
             throw new InvalidOperationException("Hedef kategori yok — önce kategori senkronu çalıştırın (scope=categories).");
+        }
 
         await using (var total = ds.CreateCommand("UPDATE mp_sync_runs SET total_categories=$2 WHERE id=$1"))
         {
@@ -313,6 +334,13 @@ public sealed class MarketplaceReferenceSyncService(
                 var attrs = await downloader.DownloadCategoryAttributesAsync(categoryId, ct);
                 var t = await ApplyCategoryAttributesAsync(ds, runId, marketplace, categoryId, attrs, ct);
                 added += t.Added; changed += t.Changed; removed += t.Removed; unchanged += t.Unchanged;
+
+                // RF1: kapsam damgası — 0 özellik dönen kategori de "tarandı" sayılır.
+                await using var stamp = ds.CreateCommand(
+                    "UPDATE mp_categories SET attributes_synced_at=now() WHERE marketplace=$1 AND external_id=$2");
+                stamp.Parameters.AddWithValue(marketplace);
+                stamp.Parameters.AddWithValue(categoryId);
+                await stamp.ExecuteNonQueryAsync(ct);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -574,13 +602,16 @@ public sealed class MarketplaceReferenceSyncService(
         var ds = await refDb.GetAsync(ct);
         if (ds is null) return null;
 
-        var counts = new Dictionary<string, (long Cat, long Attr, long Val, long Removed)>();
+        var counts = new Dictionary<string, (long Cat, long Attr, long Val, long Removed, long Leaf, long LeafSynced, DateTime? Oldest)>();
         await using (var cmd = ds.CreateCommand(
             """
             SELECT c.marketplace,
                    count(*) FILTER (WHERE c.removed_at IS NULL),
                    count(*) FILTER (WHERE c.removed_at IS NOT NULL),
-                   COALESCE(a.cnt, 0), COALESCE(v.cnt, 0)
+                   COALESCE(a.cnt, 0), COALESCE(v.cnt, 0),
+                   count(*) FILTER (WHERE c.is_leaf AND c.removed_at IS NULL),
+                   count(*) FILTER (WHERE c.is_leaf AND c.removed_at IS NULL AND c.attributes_synced_at IS NOT NULL),
+                   min(c.attributes_synced_at) FILTER (WHERE c.is_leaf AND c.removed_at IS NULL)
             FROM mp_categories c
             LEFT JOIN (SELECT marketplace, count(*) cnt FROM mp_category_attributes WHERE removed_at IS NULL GROUP BY 1) a USING (marketplace)
             LEFT JOIN (SELECT marketplace, count(*) cnt FROM mp_attribute_values WHERE removed_at IS NULL GROUP BY 1) v USING (marketplace)
@@ -588,7 +619,8 @@ public sealed class MarketplaceReferenceSyncService(
             """))
         await using (var reader = await cmd.ExecuteReaderAsync(ct))
             while (await reader.ReadAsync(ct))
-                counts[reader.GetString(0)] = (reader.GetInt64(1), reader.GetInt64(3), reader.GetInt64(4), reader.GetInt64(2));
+                counts[reader.GetString(0)] = (reader.GetInt64(1), reader.GetInt64(3), reader.GetInt64(4), reader.GetInt64(2),
+                    reader.GetInt64(5), reader.GetInt64(6), reader.IsDBNull(7) ? null : reader.GetDateTime(7));
 
         var runs = await GetRunsAsync(null, 200, ct);
         var marketplaces = counts.Keys.Union(runs.Select(r => r.Marketplace)).Union(SupportedMarketplaces);
@@ -596,7 +628,8 @@ public sealed class MarketplaceReferenceSyncService(
         {
             var c = counts.GetValueOrDefault(m);
             return new RefSummaryDto(m, c.Cat, c.Attr, c.Val, c.Removed,
-                runs.FirstOrDefault(r => r.Marketplace == m));
+                runs.FirstOrDefault(r => r.Marketplace == m),
+                c.Leaf, c.LeafSynced, c.Oldest);
         }).ToList();
     }
 

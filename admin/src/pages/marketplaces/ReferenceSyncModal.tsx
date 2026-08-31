@@ -32,11 +32,16 @@ interface RefSummary {
   valueCount: number
   removedCategoryCount: number
   lastRun: RefSyncRun | null
+  // RF1: özellik kapsamı (yaprak kategorilerin kaçı taranmış)
+  leafCount: number
+  leafSyncedCount: number
+  oldestAttributeSyncAt: string | null
 }
 
 const SCOPE_LABEL: Record<string, string> = {
   categories: 'Kategoriler',
   attributes: 'Özellikler + Değerler',
+  'attributes-missing': 'Özellikler (eksik/bayat)',
 }
 
 const MP_NAME: Record<string, string> = {
@@ -172,6 +177,12 @@ export function ReferenceSyncModal({ open, onClose }: { open: boolean; onClose: 
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--text)' }}>
                       {s.attributeCount.toLocaleString('tr-TR')}
+                      {/* RF1: kapsam göstergesi — "her an hazır" ilkesinin ölçüsü */}
+                      {s.leafCount > 0 && (
+                        <div className="text-[11px]" style={{ color: s.leafSyncedCount >= s.leafCount * 0.99 ? 'var(--brand)' : '#d97706' }}>
+                          kapsam %{Math.floor((s.leafSyncedCount / s.leafCount) * 100)} ({s.leafSyncedCount.toLocaleString('tr-TR')}/{s.leafCount.toLocaleString('tr-TR')} yaprak)
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: 'var(--text)' }}>
                       {s.valueCount.toLocaleString('tr-TR')}
@@ -218,6 +229,7 @@ export function ReferenceSyncModal({ open, onClose }: { open: boolean; onClose: 
               <select className="inp" value={scope} onChange={(e) => setScope(e.target.value)}>
                 <option value="categories">Kategoriler</option>
                 <option value="attributes">Özellikler + Değerler (tüm yaprak kategoriler)</option>
+                <option value="attributes-missing">Özellikler — yalnız eksik/bayat (kaldığı yerden devam)</option>
               </select>
             </div>
             <Button size="sm" onClick={() => start.mutate()} disabled={start.isPending}>

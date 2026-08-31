@@ -162,6 +162,10 @@ public sealed class MarketplaceRefDb : IAsyncDisposable
             );
             CREATE INDEX IF NOT EXISTS ix_mp_change_log_unprocessed
                 ON mp_change_log (marketplace, id) WHERE processed_at IS NULL;
+
+            -- RF1 (2026-08-31): kapsam takibi — bu kategorinin özellik+değerleri en son ne zaman
+            -- BAŞARIYLA indirildi (0 özellik dönen kategori de damgalanır; NULL = hiç taranmadı).
+            ALTER TABLE mp_categories ADD COLUMN IF NOT EXISTS attributes_synced_at timestamptz NULL;
             """;
         await using var cmd = ds.CreateCommand(sql);
         await cmd.ExecuteNonQueryAsync(ct);

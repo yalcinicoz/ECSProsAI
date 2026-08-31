@@ -1,7 +1,7 @@
 # Pazaryeri Referans Verisi ve Eşleme Altyapısı — Plan
 
-> **Sürüm:** v1 — 2026-08-31 · **Durum:** PLAN ONAYLANDI (kullanıcı, 2026-08-31) — **uygulama K kararları
-> netleşince fazlar sırasıyla başlar**; her faz bitmeden diğerine geçilmez.
+> **Sürüm:** v1.1 — 2026-08-31 · **Durum:** UYGULAMA BAŞLADI (K1/K2/K3/K5/K6 kapalı — yalnız K4 açık;
+> sıra: RF1 → RF2 → F4 dropship bayi); her faz bitmeden diğerine geçilmez.
 > **Alan:** Admin panel (pano #2) + Integration/marketplace_ref çekirdeği.
 > **İlgili:** `docs/pazaryeri-entegrasyon-veri-yonetimi.md` (F1-F5 canlı), `docs/satis-kanali-ortak-kurgu.md`
 > (listeleme/readiness), `docs/pazaryerleri-yonetim-modulu` kayıtları, rehber `92-kategori-ve-ozellik-eslestirme`.
@@ -41,10 +41,15 @@ Readiness bu katmandan olay tabanlı beslenir.
 
 ## 3. Fazlar
 
-### RF1 — Tam kapsam senkronu (≈ 2-3 gün)
-Tüm yaprak kategorilerin özellik+değerlerinin indirilmesi: oran-limitli/backoff'lu tarama, kesinti sonrası
-kaldığı yerden devam, `mp_sync_runs`'a kapsam metrikleri (kaç kategori/özellik/değer, süre, hata).
-Panelde referans kartına "kapsam: %X" göstergesi.
+### RF1 — Tam kapsam senkronu — ✅ UYGULANDI (2026-08-31) ⚠️ restart + ilk tam koşu bekliyor
+TESPİT: senkron motoru tam kapsamı ZATEN destekliyordu (categoryIds boş → tüm yapraklar; 150ms oran gecikmesi
+`Trendyol:ReferenceRequestDelayMs`; heartbeat/ilerleme; kategori başına hata toleransı) — yalnız hiç o modda
+koşulmamıştı. Eklenenler: `mp_categories.attributes_synced_at` kapsam damgası (0 özellikli kategori de damgalanır;
+kolon canlı DB'ye idempotent ALTER ile uygulandı), `scope=attributes-missing` (yalnız hiç taranmamış/bayat —
+`Trendyol:ReferenceStaleDays` vars. 7 gün; kesinti sonrası kaldığı yerden devam + haftalık tazeleme bu modla),
+özet DTO'suna yaprak/taranmış/en-eski metrikleri, panel senkron penceresine "kapsam %X (N/M yaprak)" göstergesi
+ve yeni kapsam seçeneği. İlk tam koşu: restart sonrası panelden "Özellikler — yalnız eksik/bayat" (~20-30 dk,
+arka planda, ilerleme pencerede).
 **Kabul:** yaprak kategorilerin ≥%99'unun özellik+değerleri DB'de; koşum idempotent (ikinci tam koşum
 yalnız delta yazar); Trendyol oran limiti aşım hatası üretmez.
 
@@ -79,16 +84,13 @@ yalnız indirici + oran limiti profili yazılır.
 
 ## 4. Karar soruları (K)
 
-1. **K1 Dağıtım modeli:** (a) her kurulum kendi senkronu (bugünkü, yalnız otomatikleşmiş) · (b) **merkezî
-   snapshot paketi (ÖNERİ)** · (c) merkezî canlı API. B, C'nin ön adımıdır — çöpe gitmez.
-2. **K2 Kanal istisnası:** eşlemede kanal bazlı istisna opsiyonu kilitlensin mi (salt pazaryeri-düzeyi)?
-   (Öneri: kilitleme — ekranda gizle; model silinmez, ileride gerekirse açılır.)
-3. **K3 Tazeleme kadansı:** öneri haftalık tam tarama + günlük hafif değişiklik kontrolü.
+1. ~~K1~~ **KAPANDI (2026-08-31): merkezî snapshot paketi** — RF3 buna göre kurgulanır.
+2. ~~K2~~ **KAPANDI (2026-08-31): kilitle** — ekranda kanal istisnası gizlenir; veri modeli korunur. *(Uygulaması RF4 ekran işleriyle birlikte.)*
+3. ~~K3~~ **KAPANDI (2026-08-31): haftalık tam tarama + günlük delta kontrolü.**
 4. **K4 Eşleme operasyonu:** kampanyayı kim yürütür (içerik ekibi / birlikte), hedef tarih ve "hazır ürün oranı" hedefi?
-5. **K5 API erişimi teyidi:** 26 Temmuz senkronu satıcı anahtarı olmadan mı yapıldı? (Kategori uçları anahtarsızsa
-   RF1 hemen koşabilir; anahtar gerekiyorsa FAZ 4 Adım 0'a bağlanır.)
-6. **K6 Sıralama:** RF1+RF2 hemen mi başlasın, yoksa F4 dropship bayi önce mi? (İkisi bağımsız; öneri: RF1+RF2
-   kısa olduğundan önce, sonra F4.)
+5. ~~K5 API erişimi teyidi~~ **KAPANDI (2026-08-31):** TrendyolReferenceDownloader kimlik başlığı KULLANMIYOR —
+   kategori/özellik uçları halka açık; 26 Temmuz senkronu da anahtarsız tamamlanmış. RF1 satıcı anahtarı beklemez.
+6. ~~K6~~ **KAPANDI (2026-08-31): RF1+RF2 önce, ardından F4 dropship bayi.**
 
 ## 5. Riskler
 
