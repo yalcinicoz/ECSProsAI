@@ -558,15 +558,13 @@ public class GetStoreProductsQueryHandler(
             Guid? anaRenkId = ilkGorsel?.VariantId is { } anaVaryantId
                 && variantColorOf.TryGetValue(anaVaryantId, out var arid) ? arid : null;
 
-            // B8 hover galerisi: ana görselin ait olduğu rengin görselleri (≤4). Renk
-            // çözülemiyorsa galeri verilmez — farklı renklerin karışık havuzu "tekrarlı
+            // B8 hover galerisi: KARTTA GÖSTERİLEN rengin görselleri (≤4) — aşağıda, eşleşen
+            // renk (arama kelimesi/renk filtresi) çözüldükten SONRA kurulur. 2026-08-31
+            // (kullanıcı bildirimi): önceden burada anaRenk'ten (varsayılan renk) kuruluyordu →
+            // pembe filtresinde kart pembe ama hover galerisi başka rengin görselleriydi.
+            // Renk çözülemiyorsa galeri verilmez — farklı renklerin karışık havuzu "tekrarlı
             // galeri" üretir (detay handler'ındaki dersle aynı).
             List<string>? galleryUrls = null;
-            if (anaRenkId is { } anaRenk
-                && imagesByProductColor.TryGetValue((p.Id, anaRenk), out var galeriImgs))
-            {
-                galleryUrls = galeriImgs.Take(4).Select(fn2 => cdnBase + fn2).ToList();
-            }
 
             var renkler = colorsByProduct.GetValueOrDefault(p.Id) ?? new();
             // Kart aramadaki renk kelimesiyle eşleşen renkle gösteriliyorsa bedenler de o renkten;
@@ -581,6 +579,13 @@ public class GetStoreProductsQueryHandler(
                 // Eşleşen varyantın ilk görseli kart görseli olur — "sarı" ararken sarı görülsün
                 if (ilkGorselByVariant.TryGetValue(varyantEslesme.VariantId, out var eslesenDosya))
                     mainImage = cdnBase + eslesenDosya;
+            }
+
+            // Hover galerisi kartta gösterilen renkten (eşleşen renk ?? ana renk) — yukarıdaki not.
+            if ((eslesenRenkId ?? anaRenkId) is { } galeriRenk
+                && imagesByProductColor.TryGetValue((p.Id, galeriRenk), out var galeriImgs))
+            {
+                galleryUrls = galeriImgs.Take(4).Select(fn2 => cdnBase + fn2).ToList();
             }
 
             // Kartta sepete ekle: kartta gösterilen rengin varyant havuzu → beden seçenekleri.

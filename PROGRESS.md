@@ -31,6 +31,7 @@
 FİLTRESİYLE listelenen çok renkli ürünün kartı varsayılan renkte geliyordu (pembe filtrede gri kart — kullanıcı
 bildirimi); filtre değerleri artık aramadaki renk kelimeleriyle aynı mekanizmaya beslenir → kart eşleşen rengin
 görseli+linki+bedenleriyle. Beden gibi renk-dışı filtreler kartı boyamaz (bilinçli). İzole 5051 ✓ (commit 2cf6790).
+**Devamı (aynı gün, kullanıcı 2. bildirim):** hover GALERİSİ de kartta gösterilen renkten — galleryUrls eşleşen renk çözülmeden anaRenk'ten kuruluyordu (pembe kartta başka rengin hover görselleri, örn. şalvar pantolon); artık (eslesenRenk ?? anaRenk) havuzundan, çözülmezse galeri yok. İzole 5051 ✓: pembe filtrede 4/4 galeri dosyası DB'de Pembe varyantın; filtresiz arama varsayılan galeriyle.
 
 **🤝 SORUMLULUK DEVRİ (2026-08-30, kullanıcı kararı):** Performans + çoklu sunucu/HA görevleri (FAZ 10 kalanları,
 FAZ 11, Kademe B, büyük ölçek planı, deploy/altyapı) EKİP ARKADAŞINA devredildi. Bu oturumlar SİTE + PANEL
