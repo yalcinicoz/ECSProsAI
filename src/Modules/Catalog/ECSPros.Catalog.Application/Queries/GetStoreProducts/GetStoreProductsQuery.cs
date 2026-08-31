@@ -177,6 +177,22 @@ public class GetStoreProductsQueryHandler(
             }
         }
 
+        // 2026-08-31 (kullanıcı bildirimi): FİLTREDEN seçilen renk de kartı boyar — pembe
+        // filtresiyle listelenen çok renkli ürünün kartı gri (varsayılan) görselle geliyordu.
+        // Filtredeki filtre_rengi/renk değerleri, aramadaki renk kelimeleriyle AYNI mekanizmaya
+        // (aramaRenkIdleri → eslesenRenkId/varyant yedeği → kart görseli+linki+bedenleri)
+        // beslenir; renk-dışı filtre değerleri (beden vb.) bilinçli eklenmez — varyant yedeği
+        // yanlış renge düşürebilirdi.
+        if (request.AttributeValueIds is { Count: > 0 } filtreIdleri)
+        {
+            var filtreRenkIdleri = await db.AttributeValues.AsNoTracking()
+                .Where(av => filtreIdleri.Contains(av.Id)
+                          && (av.AttributeType.Code == "filtre_rengi" || av.AttributeType.Code == "renk"))
+                .Select(av => av.Id)
+                .ToListAsync(ct);
+            foreach (var id in filtreRenkIdleri) aramaRenkIdleri.Add(id);
+        }
+
         if (request.CreatedSince.HasValue)
             q = q.Where(p => p.CreatedAt >= request.CreatedSince.Value);
 
