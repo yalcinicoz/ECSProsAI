@@ -1,7 +1,7 @@
 # Pazaryeri Referans Verisi ve Eşleme Altyapısı — Plan
 
 > **Sürüm:** v1.1 — 2026-08-31 · **Durum:** UYGULAMA BAŞLADI (K1/K2/K3/K5/K6 kapalı — yalnız K4 açık;
-> sıra: RF1 → RF2 → F4 dropship bayi); her faz bitmeden diğerine geçilmez.
+> sıra: ~~RF1 ✅~~ → RF2 → F4 dropship bayi); her faz bitmeden diğerine geçilmez.
 > **Alan:** Admin panel (pano #2) + Integration/marketplace_ref çekirdeği.
 > **İlgili:** `docs/pazaryeri-entegrasyon-veri-yonetimi.md` (F1-F5 canlı), `docs/satis-kanali-ortak-kurgu.md`
 > (listeleme/readiness), `docs/pazaryerleri-yonetim-modulu` kayıtları, rehber `92-kategori-ve-ozellik-eslestirme`.
@@ -41,7 +41,7 @@ Readiness bu katmandan olay tabanlı beslenir.
 
 ## 3. Fazlar
 
-### RF1 — Tam kapsam senkronu — ✅ UYGULANDI (2026-08-31) ⚠️ restart + ilk tam koşu bekliyor
+### RF1 — Tam kapsam senkronu — ✅ TAMAMLANDI (2026-08-31; kabul CANLIDA sağlandı)
 TESPİT: senkron motoru tam kapsamı ZATEN destekliyordu (categoryIds boş → tüm yapraklar; 150ms oran gecikmesi
 `Trendyol:ReferenceRequestDelayMs`; heartbeat/ilerleme; kategori başına hata toleransı) — yalnız hiç o modda
 koşulmamıştı. Eklenenler: `mp_categories.attributes_synced_at` kapsam damgası (0 özellikli kategori de damgalanır;
@@ -50,8 +50,9 @@ kolon canlı DB'ye idempotent ALTER ile uygulandı), `scope=attributes-missing` 
 özet DTO'suna yaprak/taranmış/en-eski metrikleri, panel senkron penceresine "kapsam %X (N/M yaprak)" göstergesi
 ve yeni kapsam seçeneği. İlk tam koşu: restart sonrası panelden "Özellikler — yalnız eksik/bayat" (~20-30 dk,
 arka planda, ilerleme pencerede).
-**Kabul:** yaprak kategorilerin ≥%99'unun özellik+değerleri DB'de; koşum idempotent (ikinci tam koşum
-yalnız delta yazar); Trendyol oran limiti aşım hatası üretmez.
+**Kabul ✅ (2026-08-31 canlı koşu):** kapsam **%100 (3.351/3.351 yaprak)**; **73.215 özellik + 9.933.610 değer**
+(~10,0M satır) 28 dakikada, **sıfır hatayla** indirildi (20:13→20:42); oran limiti aşımı yaşanmadı. İdempotens:
+attributes-missing ikinci koşuda hedef bulamaz (saniyeler içinde biter). Referans sözlüğü artık "her an hazır".
 
 ### RF2 — Zamanlanmış tazeleme + değişiklik akışı (≈ 2 gün)
 Periyodik senkron (K3 kadansı; mevcut hosted-worker kalıbı — ⚠️ worker kayıtları A2 rol kapısı düzenine uyar,
