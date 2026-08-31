@@ -275,6 +275,17 @@ export function ChannelProductsPage() {
                 {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
+            {/* Fiili yayın durumu filtresi — üstteki çiplerle aynı state'i kullanır (senkron) */}
+            <div className="min-w-[180px]">
+              <label className="flbl mb-1.5">Listeleme</label>
+              <select className="inp" value={listingF} onChange={e => { setPage(1); setListingF(e.target.value) }}>
+                <option value="">Tümü{listingSummary ? ` (${listingSummary.total})` : ''}</option>
+                {Object.entries(LISTING_LABELS).map(([k, m]) => {
+                  const n = listingSummary?.statusCounts[k] ?? 0
+                  return <option key={k} value={k}>{m.label}{listingSummary ? ` (${n})` : ''}</option>
+                })}
+              </select>
+            </div>
             <div className="min-w-[220px]">
               <label className="flbl mb-1.5">Sebep</label>
               <select className="inp" value={reasonF} onChange={e => { setPage(1); setReasonF(e.target.value) }}>
