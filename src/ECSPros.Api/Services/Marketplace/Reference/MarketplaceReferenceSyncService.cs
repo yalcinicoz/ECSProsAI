@@ -137,7 +137,15 @@ public sealed class MarketplaceReferenceSyncService(
             try
             {
                 var health = serviceProvider.GetRequiredService<Mapping.MappingHealthService>();
-                await health.ProcessAsync(marketplace, ct);
+                var sonuc = await health.ProcessAsync(marketplace, ct);
+                // RF5: referans değişimi eşleme kırdıysa/işaretlediyse ürün hazırlıkları
+                // elle tetiksiz tazelensin (tüm katalog — günde en çok bir kez, senkron sonrası).
+                if (sonuc.BrokenCount + sonuc.ReviewCount > 0)
+                {
+                    using var kapsam = serviceProvider.CreateScope();
+                    kapsam.ServiceProvider.GetRequiredService<Mapping.MarketplaceMappingService>()
+                        .ReadinessTetikle(marketplace, null);
+                }
             }
             catch (Exception hex)
             {

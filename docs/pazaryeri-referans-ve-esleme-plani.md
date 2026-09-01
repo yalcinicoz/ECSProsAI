@@ -89,9 +89,16 @@ yaklaşımı (ad + değer kümesi örtüşmesi).
 RF2 ilk otomatik koşusu da doğrulandı (2026-09-01 10:01 categories + attributes-missing, her şey tazeydi).
 **Kabul:** kampanya sonunda mishar kataloğunda "eşleme eksik" sebepli ürün kalmaz (hedef oran K4'te netleşir).
 
-### RF5 — K15 olay tabanlı readiness (≈ 1-2 gün)
+### RF5 — K15 olay tabanlı readiness — ✅ UYGULANDI (2026-09-01) ⚠️ restart bekliyor
 Referans/eşleme değişiklik olayları → etkilenen ürünlerin readiness'ının kuyruklu yeniden hesabı (mevcut
 `readiness/recompute` altyapısı üzerinden; feed A6 kuyruk deseni şablon).
+**Uygulama (2026-09-01):** `MarketplaceMappingService.ReadinessTetikle` — kategori eşleme kaydet/sil,
+toplu eşleme (tek tetik), özellik eşleme ve değer eşleme kaydında etkilenen grupların ürünleri arka planda
+`RecomputeAsync(marketplace, productIds)` ile yeniden hesaplanır + pazaryeri kanallarının listeleme önbelleği
+A9 cache-bust üzerinden tüm düğümlerde düşürülür; referans senkronu sonrası sağlık taraması kırık/gözden-geçir
+bulursa TAM katalog yeniden hesaplanır. Hata yalnız loglanır (elle "Hazırlığı Hesapla" yedek yol olarak durur).
+★ K2 tespiti: panelde kanal-istisna arayüzü ZATEN yok ve kayıt DTO'su FirmPlatformId taşımıyor — kilit fiilen
+sağlı; veri modeli (çözümleme zinciri) korunuyor. K2 ek iş çıkmadan kapandı.
 **Kabul:** bir eşleme değişince etkilenen ürünlerin listeleme sebepleri elle tetiksiz güncellenir.
 
 ### RF6 — Çoklu pazaryeri genişletmesi (talep geldikçe)

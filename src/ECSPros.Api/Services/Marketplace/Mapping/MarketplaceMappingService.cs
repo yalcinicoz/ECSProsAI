@@ -15,9 +15,77 @@ namespace ECSPros.Api.Services.Marketplace.Mapping;
 public sealed class MarketplaceMappingService(
     NpgsqlDataSource mainDb,
     MarketplaceRefDb refDb,
-    IIntegrationDbContext db)
+    IIntegrationDbContext db,
+    IServiceScopeFactory scopeFactory,
+    ILogger<MarketplaceMappingService> logger)
 {
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
+
+    // ── RF5 (2026-09-01, K15 kapanışı): olay tabanlı readiness ───────────────
+    /// <summary>Eşleme değişikliği sonrası etkilenen ürünlerin yükleme hazırlığı ARKA PLANDA
+    /// yeniden hesaplanır ve pazaryeri kanallarının listeleme önbelleği düğümler arası
+    /// düşürülür — panelde elle "Hazırlığı Hesapla" gerekmez. productGroupIds null =
+    /// tüm katalog (referans senkronu sonrası kırılan eşlemeler için). Hata yalnız loglanır,
+    /// eşleme kaydı akışını asla bozmaz.</summary>
+    internal void ReadinessTetikle(string marketplace, IReadOnlyCollection<Guid>? productGroupIds)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                List<Guid>? urunler = null;
+                if (productGroupIds is { Count: > 0 })
+                {
+                    urunler = [];
+                    await using (var conn = await mainDb.OpenConnectionAsync())
+                    await using (var cmd = new NpgsqlCommand(
+                        """SELECT "Id" FROM catalog.products WHERE "ProductGroupId" = ANY($1) AND NOT "IsDeleted" """, conn))
+                    {
+                        cmd.Parameters.AddWithValue(productGroupIds.ToArray());
+                        await using var r = await cmd.ExecuteReaderAsync();
+                        while (await r.ReadAsync()) urunler.Add(r.GetGuid(0));
+                    }
+                    if (urunler.Count == 0) return; // grupta ürün yok — hesaplanacak şey yok
+                }
+
+                using var scope = scopeFactory.CreateScope();
+                var readiness = scope.ServiceProvider.GetRequiredService<MarketplaceReadinessService>();
+                await readiness.RecomputeAsync(marketplace, urunler);
+
+                // Listeleme durumu 2 dk önbelleği beklemesin: pazaryeri kanallarında düşür
+                // (Invalidate A9 cache-bust'tan geçer — tüm düğümlerde temizlenir).
+                var listing = scope.ServiceProvider.GetRequiredService<ECSPros.Api.Services.ChannelListingStatusService>();
+                await using (var conn = await mainDb.OpenConnectionAsync())
+                await using (var cmd = new NpgsqlCommand(
+                    """
+                    SELECT fp."Id" FROM core.core_firm_platforms fp
+                    JOIN core.core_platform_types pt ON pt."Id" = fp."PlatformTypeId"
+                    WHERE pt."Code" = $1 AND NOT fp."IsDeleted"
+                    """, conn))
+                {
+                    cmd.Parameters.AddWithValue(marketplace);
+                    await using var r = await cmd.ExecuteReaderAsync();
+                    while (await r.ReadAsync()) listing.Invalidate(r.GetGuid(0));
+                }
+
+                logger.LogInformation(
+                    "RF5: eşleme değişikliği sonrası hazırlık yeniden hesaplandı ({Marketplace}, {Kapsam})",
+                    marketplace, urunler is null ? "tüm katalog" : $"{urunler.Count} ürün");
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "RF5 readiness tetiklemesi başarısız ({Marketplace}) — panel 'Hazırlığı Hesapla' ile elle tazelenebilir.", marketplace);
+            }
+        });
+    }
+
+    /// <summary>Hedef kategorisi verilen pazaryeri kategorisi olan grupların id'leri
+    /// (özellik/değer eşlemesi değişince etkilenen kapsam).</summary>
+    private async Task<List<Guid>> HedefKategoriGruplariAsync(string marketplace, string mpCategoryExternalId, CancellationToken ct)
+        => await db.MarketplaceCategoryMappings
+            .Where(m => m.Marketplace == marketplace && m.TargetExternalId == mpCategoryExternalId && !m.IsDeleted)
+            .Select(m => m.ProductGroupId)
+            .ToListAsync(ct);
 
     // ── Kategori eşleme ──────────────────────────────────────────────────────
 
@@ -160,10 +228,12 @@ public sealed class MarketplaceMappingService(
             }
             var (dto, error) = await SaveCategoryMappingAsync(new SaveCategoryMappingRequest(
                 marketplace, item.ProductGroupId, "direct",
-                hedef.ExternalId, hedef.Name, hedef.Path, null, null), userId, ct);
+                hedef.ExternalId, hedef.Name, hedef.Path, null, null), userId, ct, readinessTetikle: false);
             if (dto is null) { failed++; errors.Add($"{item.ProductGroupId}: {error}"); }
             else saved++;
         }
+        if (saved > 0) // RF5: toplu iş TEK tetik — grup başına ayrı hesap turu açılmaz
+            ReadinessTetikle(marketplace, items.Select(i => i.ProductGroupId).Distinct().ToList());
         return new BulkCategoryMappingResult(saved, failed, errors.Take(20).ToList());
     }
 
@@ -182,7 +252,7 @@ public sealed class MarketplaceMappingService(
     }
 
     public async Task<(CategoryMappingDto? Dto, string? Error)> SaveCategoryMappingAsync(
-        SaveCategoryMappingRequest req, Guid? userId, CancellationToken ct)
+        SaveCategoryMappingRequest req, Guid? userId, CancellationToken ct, bool readinessTetikle = true)
     {
         if (req.MappingKind is not ("direct" or "rules" or "pool"))
             return (null, "mappingKind direct | rules | pool olmalı.");
@@ -225,6 +295,9 @@ public sealed class MarketplaceMappingService(
         existing.StatusNote = null;
 
         await db.SaveChangesAsync(ct);
+        // RF5: kayıt başarılı — etkilenen grubun hazırlığı arka planda tazelenir
+        // (toplu kayıtta bastırılır; toplu iş sonunda tek seferde tetiklenir).
+        if (readinessTetikle) ReadinessTetikle(req.Marketplace, [req.ProductGroupId]);
         return (ToDto(existing), null);
     }
 
@@ -236,6 +309,7 @@ public sealed class MarketplaceMappingService(
         m.DeletedAt = DateTime.UtcNow;
         m.DeletedBy = userId;
         await db.SaveChangesAsync(ct);
+        ReadinessTetikle(m.Marketplace, [m.ProductGroupId]); // RF5: eşleme kalktı — sebepler tazelensin
         return true;
     }
 
@@ -392,6 +466,8 @@ public sealed class MarketplaceMappingService(
         existing.Status = "active";
         existing.StatusNote = null;
         await db.SaveChangesAsync(ct);
+        // RF5: bu kategoriye eşli grupların hazırlığı tazelensin (zorunlu özellik eşlemesi sebep düşürebilir)
+        ReadinessTetikle(req.Marketplace, await HedefKategoriGruplariAsync(req.Marketplace, req.MpCategoryExternalId, ct));
         return null;
     }
 
@@ -530,6 +606,9 @@ public sealed class MarketplaceMappingService(
             changed++;
         }
         await db.SaveChangesAsync(ct);
+        // RF5: değer eşlemesi değişti — bu kategoriye eşli grupların hazırlığı tazelensin
+        if (changed > 0)
+            ReadinessTetikle(req.Marketplace, await HedefKategoriGruplariAsync(req.Marketplace, req.MpCategoryExternalId, ct));
         return changed;
     }
 
