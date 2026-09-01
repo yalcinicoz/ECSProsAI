@@ -156,9 +156,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const kategoriId = aramaAlani.dataset.msAramaKategoriId || "";
         const kategoriSlug = aramaAlani.dataset.msAramaKategoriSlug || "";
         const kategoriAd = aramaAlani.dataset.msAramaKategoriAd || "";
-        // Kabul testi 2026-07-22 (revizyon): kategori sayfasında arama VARSAYILAN olarak
-        // kategori kapsamındadır — çip aktif başlar; tıklama kapsamı tüm mağazaya genişletir.
-        let kategorideAra = kategoriId !== "";
+        // 2026-09-01 (kullanıcı kararı — 2026-07-22 revizyonunu geri alır): arama VARSAYILAN
+        // olarak GENEL kapsamdadır; kullanıcı isterse çipe tıklayıp kategoriye daraltır.
+        let kategorideAra = false;
         const kategorideMi = () => kategorideAra && kategoriId !== "";
         const tumSonucUrl = (terim) => kategorideMi()
             ? `/${encodeURIComponent(kategoriSlug)}?search=${encodeURIComponent(terim)}`
@@ -244,9 +244,8 @@ document.addEventListener("DOMContentLoaded", () => {
             kategorideAraButonlari.forEach((buton) => {
                 buton.hidden = false;
                 buton.textContent = kategoriAd ? `${kategoriAd} içinde ara` : "Kategoride ara";
-                // Varsayılan kapsam kategori — çip aktif başlar (aria + görsel durum)
-                buton.setAttribute("aria-pressed", "true");
-                buton.classList.add("ms-ana-navigasyon-kategoride-ara-aktif");
+                // 2026-09-01: varsayılan kapsam GENEL — çip pasif başlar, tıklama daraltır.
+                buton.setAttribute("aria-pressed", "false");
                 buton.addEventListener("click", () => {
                     // Toggle: aktifken tıklamak kapsamı TÜM MAĞAZAYA genişletir (öneri +
                     // Enter genel arar); tekrar tıklamak kategoriye döner. Sonuca gitme
