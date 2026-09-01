@@ -427,7 +427,7 @@ function CategoryTab({
 }) {
   const [search, setSearch] = useState('')
   const [onlyUnmapped, setOnlyUnmapped] = useState(false)
-  const [bulkMode, setBulkMode] = useState(false) // RF4: eşleme kampanyası modu
+  const [bulkMode, setBulkMode] = useState(false) // RF4: toplu eşleme modu (grup → pazaryeri kategorisi)
 
   const list = useMemo(() => {
     let l = overview.groups
@@ -450,7 +450,7 @@ function CategoryTab({
             <input type="checkbox" checked={onlyUnmapped} onChange={(e) => setOnlyUnmapped(e.target.checked)} />
             Yalnız eşsiz / gözden geçirilecekler
           </label>
-          {/* RF4: ilerleme + kampanya modu — eşsiz grup kalmayana kadar toplu öneriyle hızlı eşleme */}
+          {/* RF4: ilerleme + toplu eşleme modu — eşlenmemiş grup kalmayana kadar öneriyle hızlı eşleme */}
           <div className="mt-2 text-[11px]" style={{ color: 'var(--text-s)' }}>
             Eşli {overview.mappedCount}/{overview.groups.length} grup
             <span className="mx-1">·</span>
@@ -508,7 +508,7 @@ function CategoryTab({
   )
 }
 
-// ── RF4: toplu öneri / eşleme kampanyası paneli (2026-09-01) ─────────────────
+// ── RF4: toplu eşleme paneli (2026-09-01) — ürün grubu → pazaryeri kategorisi ──
 // Aktif eşlemesi olmayan TÜM gruplar tek tabloda; her satırda ilk 3 öneri hap olarak,
 // en yüksek skorlu öneri ÖN SEÇİLİ gelir. "Atla" satırı kampanyadan çıkarır. Kaydet,
 // seçilenleri tek istekte (bulk-category) birebir eşler — kısmi hata işi durdurmaz.
@@ -563,7 +563,7 @@ function BulkSuggestPanel({ marketplace, onSaved }: { marketplace: string; onSav
   return (
     <div className="card p-0 overflow-hidden">
       <div className="flex flex-wrap items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-        <strong className="text-sm" style={{ color: 'var(--text)' }}>Eşleme kampanyası — {rows.length} eşsiz grup</strong>
+        <strong className="text-sm" style={{ color: 'var(--text)' }}>Toplu eşleme — {rows.length} eşlenmemiş ürün grubu</strong>
         <span className="text-xs" style={{ color: 'var(--text-s)' }}>Öneriye tıklayarak değiştirin; "atla" satırı bu turda dışarıda bırakır.</span>
         <div className="ml-auto flex items-center gap-2">
           {msg && <span className="text-xs" style={{ color: msg.ok ? 'var(--brand)' : '#ef4444' }}>{msg.text}</span>}
