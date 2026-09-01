@@ -6587,7 +6587,12 @@
             kategorideAraButonlari.forEach((kategorideAra) => {
                 kategorideAra.hidden = !sonucVar || !kategorideAraGosterilebilir;
 
-                if (!sonucVar || !kategorideAraGosterilebilir) {
+                // 2026-09-01 düzeltmesi: aktif sınıfı yalnız kategori bağlamı hiç olmayan
+                // sayfalarda sökülür. Önceden "sonuç yokken" de sökülüyordu ama sonuç gelince
+                // GERİ EKLENMİYORDU — kategori sayfasında varsayılan-aktif kapsam düğmesi
+                // ("TESETTÜR içinde ara") turuncu yerine beyaz görünüyordu (kullanıcı bildirimi).
+                // Kapsam durumunu (_AnaNavigasyonSearch) bölüm scripti yönetir; burada dokunulmaz.
+                if (!kategorideAraGosterilebilir) {
                     kategorideAra.classList.remove("ms-ana-navigasyon-kategoride-ara-aktif");
                     kategorideAra.setAttribute("aria-pressed", "false");
                 }
