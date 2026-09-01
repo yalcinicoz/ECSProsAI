@@ -54,6 +54,28 @@ public class MarketplaceMappingController(
         return Ok(new { success = true, data });
     }
 
+    /// <summary>RF4 (2026-09-01): eşleme kampanyası — aktif eşlemesi olmayan TÜM grupların
+    /// öneri listesi (grup başına ilk 3, ürün sayısına göre sıralı; önerisiz gruplar boş listeyle).</summary>
+    [HttpGet("suggest-all")]
+    public async Task<IActionResult> SuggestAll([FromQuery] string marketplace, CancellationToken ct)
+    {
+        var data = await service.SuggestAllAsync(Norm(marketplace), ct);
+        return Ok(new { success = true, data });
+    }
+
+    /// <summary>RF4: toplu birebir kategori eşleme — kısmi hata işi durdurmaz, öğe bazında raporlanır.</summary>
+    [HttpPost("bulk-category")]
+    public async Task<IActionResult> BulkSaveCategoryMappings([FromBody] BulkCategoryMappingRequest request, CancellationToken ct)
+    {
+        if (request.Items is not { Count: > 0 })
+            return BadRequest(new { success = false, error = "items boş olamaz." });
+        if (request.Items.Count > 500)
+            return BadRequest(new { success = false, error = "Tek istekte en çok 500 eşleme." });
+        var data = await service.BulkSaveCategoryMappingsAsync(
+            Norm(request.Marketplace), request.Items, UserId, ct);
+        return Ok(new { success = true, data });
+    }
+
     [HttpPut("category")]
     public async Task<IActionResult> SaveCategoryMapping([FromBody] SaveCategoryMappingRequest request, CancellationToken ct)
     {

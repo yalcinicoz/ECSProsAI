@@ -97,10 +97,15 @@ public sealed class MarketplaceMappingService(
         if (string.IsNullOrWhiteSpace(groupName)) return [];
 
         var candidates = await LoadLeafCategoriesAsync(marketplace, ct);
-        // Skor = kendi adıyla benzerlik YA DA üst kategori adlarından en iyisi (×0.85):
-        // "Spor Ayakkabı" grubu, adı hiç benzemese de "... > Spor Ayakkabı > Sneaker" gibi
-        // o dalın altındaki yaprakları aday göstermeli (bot/bağcıklı bot vakasının tersi yönü).
-        return candidates
+        return OnerileriSkorla(groupName, candidates, 5);
+    }
+
+    /// <summary>Skor = kendi adıyla benzerlik YA DA üst kategori adlarından en iyisi (×0.85):
+    /// "Spor Ayakkabı" grubu, adı hiç benzemese de "... > Spor Ayakkabı > Sneaker" gibi
+    /// o dalın altındaki yaprakları aday göstermeli (bot/bağcıklı bot vakasının tersi yönü).</summary>
+    private static List<CategorySuggestionDto> OnerileriSkorla(
+        string groupName, List<MpCategoryDto> candidates, int adet)
+        => candidates
             .Select(c =>
             {
                 var nameScore = TextSimilarity.Score(groupName, c.Name);
@@ -111,9 +116,55 @@ public sealed class MarketplaceMappingService(
             })
             .Where(x => x.Score >= 40)
             .OrderByDescending(x => x.Score).ThenBy(x => x.c.Path.Length)
-            .Take(5)
+            .Take(adet)
             .Select(x => new CategorySuggestionDto(x.c.ExternalId, x.c.Name, x.c.Path, x.Score))
             .ToList();
+
+    /// <summary>RF4 (2026-09-01): eşleme kampanyası — aktif eşlemesi OLMAYAN tüm grupların
+    /// öneri listesi tek çağrıda (yaprak kategoriler bir kez yüklenir; grup başına ilk 3).
+    /// Önerisiz gruplar da döner (skor eşiğini geçen aday yoksa boş liste — elle eşlenir).</summary>
+    public async Task<List<GroupSuggestionRowDto>> SuggestAllAsync(string marketplace, CancellationToken ct)
+    {
+        var overview = await GetOverviewAsync(marketplace, ct);
+        var essizler = overview.Groups
+            .Where(g => g.Mapping is null || g.Mapping.Status != "active")
+            .OrderByDescending(g => g.ProductCount)
+            .ToList();
+        if (essizler.Count == 0) return [];
+
+        var candidates = await LoadLeafCategoriesAsync(marketplace, ct);
+        return essizler
+            .Select(g => new GroupSuggestionRowDto(
+                g.ProductGroupId, g.Code, g.Name, g.ProductCount,
+                OnerileriSkorla(g.Name, candidates, 3)))
+            .ToList();
+    }
+
+    /// <summary>RF4: toplu birebir (direct) kategori eşleme — her öğe mevcut tekil kayıt
+    /// yolundan geçer (doğrulama/audit aynı); hedef ad/yol referans DB'den çözülür.
+    /// Kısmi hata toplu işi durdurmaz; hatalar öğe bazında raporlanır.</summary>
+    public async Task<BulkCategoryMappingResult> BulkSaveCategoryMappingsAsync(
+        string marketplace, List<BulkCategoryMappingItem> items, Guid? userId, CancellationToken ct)
+    {
+        var kategoriler = (await LoadLeafCategoriesAsync(marketplace, ct))
+            .ToDictionary(c => c.ExternalId, c => c);
+        int saved = 0, failed = 0;
+        var errors = new List<string>();
+        foreach (var item in items)
+        {
+            if (!kategoriler.TryGetValue(item.TargetExternalId, out var hedef))
+            {
+                failed++;
+                errors.Add($"{item.ProductGroupId}: hedef kategori bulunamadı ({item.TargetExternalId}).");
+                continue;
+            }
+            var (dto, error) = await SaveCategoryMappingAsync(new SaveCategoryMappingRequest(
+                marketplace, item.ProductGroupId, "direct",
+                hedef.ExternalId, hedef.Name, hedef.Path, null, null), userId, ct);
+            if (dto is null) { failed++; errors.Add($"{item.ProductGroupId}: {error}"); }
+            else saved++;
+        }
+        return new BulkCategoryMappingResult(saved, failed, errors.Take(20).ToList());
     }
 
     private async Task<List<MpCategoryDto>> LoadLeafCategoriesAsync(string marketplace, CancellationToken ct)

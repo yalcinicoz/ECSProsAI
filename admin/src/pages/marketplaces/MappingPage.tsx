@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronDown, ChevronUp, Plus, Search, Trash2, X } from 'lucide-react'
@@ -427,6 +427,7 @@ function CategoryTab({
 }) {
   const [search, setSearch] = useState('')
   const [onlyUnmapped, setOnlyUnmapped] = useState(false)
+  const [bulkMode, setBulkMode] = useState(false) // RF4: eşleme kampanyası modu
 
   const list = useMemo(() => {
     let l = overview.groups
@@ -449,6 +450,15 @@ function CategoryTab({
             <input type="checkbox" checked={onlyUnmapped} onChange={(e) => setOnlyUnmapped(e.target.checked)} />
             Yalnız eşsiz / gözden geçirilecekler
           </label>
+          {/* RF4: ilerleme + kampanya modu — eşsiz grup kalmayana kadar toplu öneriyle hızlı eşleme */}
+          <div className="mt-2 text-[11px]" style={{ color: 'var(--text-s)' }}>
+            Eşli {overview.mappedCount}/{overview.groups.length} grup
+            <span className="mx-1">·</span>
+            <button type="button" className="underline" style={{ color: 'var(--brand)' }}
+              onClick={() => setBulkMode((v) => !v)}>
+              {bulkMode ? 'Tekil düzenlemeye dön' : `Toplu öneriyle eşle (${overview.unmappedCount + overview.reviewCount})`}
+            </button>
+          </div>
         </div>
         <div className="max-h-[560px] overflow-y-auto">
           {list.map((g) => (
@@ -478,7 +488,9 @@ function CategoryTab({
       </div>
 
       <div>
-        {selected ? (
+        {bulkMode ? (
+          <BulkSuggestPanel marketplace={marketplace} onSaved={onSaved} />
+        ) : selected ? (
           <CategoryEditor
             key={`${marketplace}-${selected.productGroupId}-${selected.mapping?.id ?? 'new'}`}
             marketplace={marketplace}
@@ -491,6 +503,113 @@ function CategoryTab({
             <p className="text-sm" style={{ color: 'var(--text-m)' }}>Soldan bir ürün grubu seçin.</p>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── RF4: toplu öneri / eşleme kampanyası paneli (2026-09-01) ─────────────────
+// Aktif eşlemesi olmayan TÜM gruplar tek tabloda; her satırda ilk 3 öneri hap olarak,
+// en yüksek skorlu öneri ÖN SEÇİLİ gelir. "Atla" satırı kampanyadan çıkarır. Kaydet,
+// seçilenleri tek istekte (bulk-category) birebir eşler — kısmi hata işi durdurmaz.
+
+interface SuggestRow {
+  productGroupId: string; code: string; name: string; productCount: number
+  suggestions: { externalId: string; name: string; path: string; score: number }[]
+}
+
+function BulkSuggestPanel({ marketplace, onSaved }: { marketplace: string; onSaved: () => void }) {
+  const [secimler, setSecimler] = useState<Record<string, string>>({}) // groupId → externalId | '' (atla)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const { data: rows = [], isLoading, refetch } = useQuery<SuggestRow[]>({
+    queryKey: ['mapping-suggest-all', marketplace],
+    queryFn: async () =>
+      (await api.get(`/marketplaces/mapping/suggest-all?marketplace=${marketplace}`)).data.data ?? [],
+  })
+
+  // İlk yüklemede en iyi öneri ön seçili (önerisi olmayanlar atlanmış başlar)
+  useEffect(() => {
+    if (rows.length === 0) return
+    setSecimler((mevcut) => {
+      const n = { ...mevcut }
+      for (const r of rows) if (!(r.productGroupId in n)) n[r.productGroupId] = r.suggestions[0]?.externalId ?? ''
+      return n
+    })
+  }, [rows])
+
+  const seciliAdet = rows.filter((r) => secimler[r.productGroupId]).length
+
+  const kaydet = useMutation({
+    mutationFn: async () => {
+      const items = rows
+        .filter((r) => secimler[r.productGroupId])
+        .map((r) => ({ productGroupId: r.productGroupId, targetExternalId: secimler[r.productGroupId] }))
+      return (await api.post('/marketplaces/mapping/bulk-category', { marketplace, items })).data.data
+    },
+    onSuccess: (d) => {
+      setMsg({ ok: d.failed === 0, text: `${d.saved} grup eşlendi${d.failed ? `, ${d.failed} hata: ${d.errors?.[0] ?? ''}` : '.'}` })
+      setSecimler({})
+      refetch()
+      onSaved()
+    },
+    onError: () => setMsg({ ok: false, text: 'Toplu eşleme kaydedilemedi.' }),
+  })
+
+  if (isLoading) return <div className="card py-16 text-center text-sm" style={{ color: 'var(--text-m)' }}>Öneriler hesaplanıyor…</div>
+  if (rows.length === 0)
+    return <div className="card py-16 text-center text-sm" style={{ color: 'var(--text-m)' }}>🎉 Eşsiz grup kalmadı — tüm gruplar eşli.</div>
+
+  return (
+    <div className="card p-0 overflow-hidden">
+      <div className="flex flex-wrap items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+        <strong className="text-sm" style={{ color: 'var(--text)' }}>Eşleme kampanyası — {rows.length} eşsiz grup</strong>
+        <span className="text-xs" style={{ color: 'var(--text-s)' }}>Öneriye tıklayarak değiştirin; "atla" satırı bu turda dışarıda bırakır.</span>
+        <div className="ml-auto flex items-center gap-2">
+          {msg && <span className="text-xs" style={{ color: msg.ok ? 'var(--brand)' : '#ef4444' }}>{msg.text}</span>}
+          <Button size="sm" disabled={seciliAdet === 0 || kaydet.isPending} onClick={() => kaydet.mutate()}>
+            Seçilen {seciliAdet} grubu eşle
+          </Button>
+        </div>
+      </div>
+      <div className="max-h-[620px] overflow-y-auto">
+        {rows.map((r) => (
+          <div key={r.productGroupId} className="px-4 py-2.5" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text)' }}>
+              <strong>{r.name}</strong>
+              <span className="text-[11px] tabular-nums" style={{ color: 'var(--text-s)' }}>{r.productCount.toLocaleString('tr-TR')} ürün</span>
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {r.suggestions.length === 0 && (
+                <span className="text-xs" style={{ color: '#d97706' }}>Öneri bulunamadı — tekil düzenlemeden elle eşleyin.</span>
+              )}
+              {r.suggestions.map((s) => (
+                <button key={s.externalId} type="button" title={s.path}
+                  onClick={() => setSecimler((m) => ({ ...m, [r.productGroupId]: s.externalId }))}
+                  className="px-2 py-1 rounded-lg text-xs"
+                  style={{
+                    border: '1px solid var(--border)',
+                    background: secimler[r.productGroupId] === s.externalId ? 'var(--brand)' : 'var(--surface)',
+                    color: secimler[r.productGroupId] === s.externalId ? '#fff' : 'var(--text-m)',
+                  }}>
+                  {s.path} <span className="opacity-70">%{s.score}</span>
+                </button>
+              ))}
+              {r.suggestions.length > 0 && (
+                <button type="button"
+                  onClick={() => setSecimler((m) => ({ ...m, [r.productGroupId]: '' }))}
+                  className="px-2 py-1 rounded-lg text-xs"
+                  style={{
+                    border: '1px dashed var(--border)',
+                    background: !secimler[r.productGroupId] ? 'var(--surface2)' : 'var(--surface)',
+                    color: 'var(--text-s)',
+                  }}>
+                  atla
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

@@ -76,11 +76,17 @@ eşlemeleri işaretler (MappingHealth); rozet bayatlamayı gösterir.
 Trendyol'a hiç çıkmadan güncel sözlüğe kavuşur. Merkezî canlı API (K1-c) ileride bunun üstüne kurulabilir.
 **Kabul:** taze kurulumda tek komutla tam sözlük; aynı paketi iki kez içe aktarmak idempotent.
 
-### RF4 — Eşleme operasyonu + öneri aracı (≈ 3-4 gün araç + operasyon süresi K4)
+### RF4 — Eşleme operasyonu + öneri aracı — ✅ ARAÇ UYGULANDI (2026-09-01) ⚠️ restart bekliyor; operasyon K4
 ~144 ECS yaprak grubunun Trendyol kategorilerine eşlenmesi kampanyası: ad benzerliği + mevcut ürün özellik
 istatistiklerinden **öneri listesi** (grup başına en olası 3 kategori), toplu onay akışı, ilerleme panosu
 (eşli grup %, açık zorunlu özellik sayısı, pazaryeri-hazır ürün oranı). Özellik/değer eşlemede aynı öneri
 yaklaşımı (ad + değer kümesi örtüşmesi).
+**Araç (2026-09-01):** tekil `suggest-categories` zaten vardı (ad+yol benzerliği, eşik 40) — üzerine:
+`GET mapping/suggest-all` (eşsiz TÜM gruplar × ilk 3 öneri, ürün sayısına göre; yaprak kategoriler tek yükleme),
+`POST mapping/bulk-category` (≤500 öğe; her öğe mevcut tekil kayıt yolundan — doğrulama/audit aynı; kısmi hata
+öğe bazında raporlanır) ve panelde **eşleme kampanyası modu**: Kategoriler sekmesinde "Eşli X/Y grup" ilerlemesi +
+"Toplu öneriyle eşle (N)" — satır başına öneri hapları (en iyisi ön seçili, atla seçeneği), tek tıkla toplu kayıt.
+RF2 ilk otomatik koşusu da doğrulandı (2026-09-01 10:01 categories + attributes-missing, her şey tazeydi).
 **Kabul:** kampanya sonunda mishar kataloğunda "eşleme eksik" sebepli ürün kalmaz (hedef oran K4'te netleşir).
 
 ### RF5 — K15 olay tabanlı readiness (≈ 1-2 gün)

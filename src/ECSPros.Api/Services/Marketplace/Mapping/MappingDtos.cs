@@ -135,3 +135,16 @@ public sealed record ReviewRowDto(
     string? Note,
     string? MpCategoryExternalId,
     Guid? ProductGroupId);
+
+// ── RF4 toplu öneri/eşleme (2026-09-01, plan: docs/pazaryeri-referans-ve-esleme-plani.md) ──
+
+/// <summary>Eşsiz bir grup + onun için önerilen ilk 3 kategori (kampanya tablosunun satırı).</summary>
+public sealed record GroupSuggestionRowDto(
+    Guid ProductGroupId, string Code, string Name, int ProductCount,
+    List<CategorySuggestionDto> Suggestions);
+
+public sealed record BulkCategoryMappingItem(Guid ProductGroupId, string TargetExternalId);
+
+public sealed record BulkCategoryMappingRequest(string Marketplace, List<BulkCategoryMappingItem> Items);
+
+public sealed record BulkCategoryMappingResult(int Saved, int Failed, List<string> Errors);
