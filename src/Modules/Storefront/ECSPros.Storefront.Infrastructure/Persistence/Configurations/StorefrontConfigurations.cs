@@ -480,3 +480,18 @@ public class CardMessageConfiguration : IEntityTypeConfiguration<CardMessage>
         builder.HasQueryFilter(m => !m.IsDeleted);
     }
 }
+
+/// <summary>Popüler aramalar (2026-09-01): terim × gün sayaç kovası — artırım raw SQL upsert.</summary>
+public class SearchTermStatConfiguration : IEntityTypeConfiguration<SearchTermStat>
+{
+    public void Configure(EntityTypeBuilder<SearchTermStat> builder)
+    {
+        builder.ToTable("search_term_stats");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Term).HasMaxLength(60).IsRequired();
+        // Upsert çakışma hedefi (ON CONFLICT) — kova başına tek satır
+        builder.HasIndex(s => new { s.FirmPlatformId, s.Term, s.Day }).IsUnique();
+        builder.HasIndex(s => new { s.FirmPlatformId, s.Day });
+        // Soft delete filtresi yok: kovalar fiziksel temizlenir (fırsatçı prune)
+    }
+}

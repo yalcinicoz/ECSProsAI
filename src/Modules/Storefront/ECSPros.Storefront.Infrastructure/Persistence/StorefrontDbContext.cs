@@ -27,6 +27,7 @@ public class StorefrontDbContext : DbContext, IStorefrontDbContext
     public DbSet<ProductRatingSource> ProductRatingSources => Set<ProductRatingSource>();
     public DbSet<ProductReviewDisplaySettings> ProductReviewDisplaySettings => Set<ProductReviewDisplaySettings>();
     public DbSet<SavedSearch> SavedSearches => Set<SavedSearch>();
+    public DbSet<SearchTermStat> SearchTermStats => Set<SearchTermStat>(); // popüler aramalar (2026-09-01)
     public DbSet<ViewedProduct> ViewedProducts => Set<ViewedProduct>();
     public DbSet<CartRemovedItem> CartRemovedItems => Set<CartRemovedItem>();
     public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();

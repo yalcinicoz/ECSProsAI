@@ -1,4 +1,5 @@
 using ECSPros.Api.Models.Store;
+using ECSPros.Api.Services.Store;
 using ECSPros.Api.Services;
 using ECSPros.Catalog.Application.Queries.FilterSimilarProducts;
 using ECSPros.Catalog.Application.Queries.GetStoreFacets;
@@ -55,10 +56,22 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         => GenelListeAsync(null, filtre, SayfaNo(page), ct);
 
     [HttpGet("/urunler")]
-    public Task<IActionResult> Arama([FromQuery] string? search, [FromQuery] string? codes, [FromQuery] ListeFiltre filtre, [FromQuery] int? page, CancellationToken ct)
-        => !string.IsNullOrWhiteSpace(codes)
-            ? GorselAramaSonucListesiAsync(codes, filtre, ct)
-            : GenelListeAsync(string.IsNullOrWhiteSpace(search) ? null : search.Trim(), filtre, SayfaNo(page), ct);
+    public async Task<IActionResult> Arama([FromQuery] string? search, [FromQuery] string? codes, [FromQuery] ListeFiltre filtre, [FromQuery] int? page, CancellationToken ct)
+    {
+        // Popüler aramalar (2026-09-01): SSR metin araması da sayaca yazar (yalnız 1. sayfa;
+        // bot/normalizasyon filtreleri izleyicide). Görsel arama (codes) sayılmaz.
+        if (string.IsNullOrWhiteSpace(codes) && !string.IsNullOrWhiteSpace(search) && SayfaNo(page) == 1)
+        {
+            var izlemePlatformu = await storeContext.GetPlatformAsync(ct);
+            if (izlemePlatformu is not null)
+                HttpContext.RequestServices.GetRequiredService<AramaTerimIzleyici>()
+                    .Kaydet(izlemePlatformu.Id, search, Request.Headers.UserAgent.ToString());
+        }
+
+        return !string.IsNullOrWhiteSpace(codes)
+            ? await GorselAramaSonucListesiAsync(codes, filtre, ct)
+            : await GenelListeAsync(string.IsNullOrWhiteSpace(search) ? null : search.Trim(), filtre, SayfaNo(page), ct);
+    }
 
     /// <summary>2026-08-03: görsel arama sonuç sayfası — dropdown'daki "Tümünü Gör"/Enter,
     /// eşleşen ürün KODLARINI ?codes= ile taşır; standart liste sayfası o kodlarla, görsel

@@ -56,6 +56,10 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
         CancellationToken ct = default)
     {
         var platform = await storeContext.GetPlatformAsync(ct);
+        // Popüler aramalar (2026-09-01): yalnız ilk sayfa sayılır (sayfalama tekrarları şişirmesin)
+        if (page == 1 && !string.IsNullOrWhiteSpace(search))
+            HttpContext.RequestServices.GetRequiredService<ECSPros.Api.Services.Store.AramaTerimIzleyici>()
+                .Kaydet(firmPlatformId, search, Request.Headers.UserAgent.ToString());
         // 2026-08-15: attrs içinde yaprak KATEGORİ id'si de gelebilir (liste sayfası Kategori
         // filtresi) — haritayla ayrılır, kategori seçimi ürün-id kısıtına çevrilir (additive).
         var harita = await kategoriHaritasi.GetAsync(firmPlatformId, ct);
@@ -67,6 +71,24 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
             ApplyStockFilter: true, ShowOutOfStock: platform?.StokBitenGoster ?? false, OutOfStockSince: platform?.StokBitenGosterTarih), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Popüler arama terimleri — son 30 günün gerçek aramalarından (en az 3 kez aranmış),
+    /// veri birikene kadar liste tohum terimlerle tamamlanır. Arama kutusu açılışında
+    /// "Popüler Aramalar" chip'lerini beslemek içindir; 5 dk sunucu önbelleği vardır.</summary>
+    /// <param name="firmPlatformId">Zorunlu. Kanal kimliği (bootstrap yanıtındaki id).</param>
+    /// <param name="limit">Dönen terim sayısı (varsayılan 10, en çok 20).</param>
+    [HttpGet("popular-searches")]
+    public async Task<IActionResult> GetPopularSearches(
+        [FromQuery] Guid firmPlatformId,
+        [FromQuery] int limit = 10,
+        [FromServices] ECSPros.Api.Services.Store.PopulerAramaServisi populer = null!,
+        CancellationToken ct = default)
+    {
+        if (firmPlatformId == Guid.Empty)
+            return BadRequest(new { success = false, error = "firmPlatformId gerekli." });
+        var terimler = await populer.GetirAsync(firmPlatformId, limit, ct);
+        return Ok(new { success = true, data = new { terms = terimler } });
     }
 
     /// <summary>Ürün detayını döner.</summary>
