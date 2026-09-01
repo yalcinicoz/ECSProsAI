@@ -612,6 +612,10 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
+    // 2026-09-01: controller XML yorumları (summary + param açıklamaları) swagger'a akar —
+    // sort değer listesi, attrs biçimi gibi bilgiler /swagger-mobile'da görünür.
+    var xmlYolu = Path.Combine(AppContext.BaseDirectory, "ECSPros.Api.xml");
+    if (File.Exists(xmlYolu)) c.IncludeXmlComments(xmlYolu, includeControllerXmlComments: true);
     // Partner API dokümanı — yalnız /api/partner/* uçları; prod'da da açık (dış entegratörler için).
     c.SwaggerDoc("partner", new OpenApiInfo { Title = "ECSPros Partner API", Version = "v1" });
     // Mobil API dokümanı — kendi satış kanalımız: web sitesinin kullandığı /api/store/* yüzeyinin

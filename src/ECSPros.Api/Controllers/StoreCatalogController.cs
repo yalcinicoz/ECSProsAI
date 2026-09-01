@@ -31,7 +31,18 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
         return Ok(new { success = true, data = result.Value });
     }
 
-    /// <summary>Genel ürün listesi (arama + B10 filtre/sıralama; attrs = virgüllü attributeValueId listesi).</summary>
+    /// <summary>Genel ürün listesi — arama, filtre, fiyat aralığı ve sıralama destekler.</summary>
+    /// <param name="firmPlatformId">Zorunlu. Kanal kimliği (bootstrap yanıtındaki id).</param>
+    /// <param name="search">Serbest metin arama (ürün kodu, ad ya da renk/beden gibi özellik değeri).</param>
+    /// <param name="page">Sayfa numarası (1'den başlar).</param>
+    /// <param name="pageSize">Sayfa boyutu (varsayılan 24).</param>
+    /// <param name="attrs">Virgüllü attributeValueId listesi (facets yanıtındaki değer id'leri).
+    /// Yaprak kanal-kategori id'si de bu listeye konur — sunucu ayırır.</param>
+    /// <param name="priceMin">Alt fiyat sınırı (kartta gösterilen efektif fiyata göre).</param>
+    /// <param name="priceMax">Üst fiyat sınırı.</param>
+    /// <param name="sort">Geçerli değerler: default · price_asc · price_desc · newest · rating_desc ·
+    /// reviews_desc · favorites_desc · cart_desc · views_desc · sales_desc.
+    /// "Popüler ürünler" için sales_desc (çok satılan) ya da views_desc (çok bakılan) kullanın.</param>
     [HttpGet("products")]
     public async Task<IActionResult> GetProducts(
         [FromQuery] Guid firmPlatformId,
@@ -79,7 +90,16 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
         return Ok(new { success = true, data = result.Value });
     }
 
-    /// <summary>Kanal kategorisine ait ürünleri döner (müşteriye dönük, anonim; B10: search/attrs/fiyat/sort).</summary>
+    /// <summary>Kanal kategorisine ait ürünleri döner (müşteriye dönük, anonim).</summary>
+    /// <param name="id">Kanal kategori id'si (channel-categories yanıtından).</param>
+    /// <param name="page">Sayfa numarası (1'den başlar).</param>
+    /// <param name="pageSize">Sayfa boyutu (varsayılan 24).</param>
+    /// <param name="search">Kategori içinde serbest metin arama.</param>
+    /// <param name="attrs">Virgüllü attributeValueId listesi (kategori facets yanıtındaki değer id'leri).</param>
+    /// <param name="priceMin">Alt fiyat sınırı (efektif fiyata göre).</param>
+    /// <param name="priceMax">Üst fiyat sınırı.</param>
+    /// <param name="sort">Geçerli değerler: default · price_asc · price_desc · newest · rating_desc ·
+    /// reviews_desc · favorites_desc · cart_desc · views_desc · sales_desc.</param>
     [HttpGet("channel-categories/{id:guid}/products")]
     public async Task<IActionResult> GetChannelCategoryProducts(
         Guid id,

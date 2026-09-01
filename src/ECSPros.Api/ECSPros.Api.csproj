@@ -4,6 +4,11 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- 2026-09-01: XML yorumları swagger'a akar (uç/param açıklamaları /swagger-mobile ve
+         /swagger-partner'da görünsün diye — mobil ekip parametre kataloğunu swagger'dan okur).
+         1591: her public üyeye doc zorunluluğu uyarısı kapalı (binlerce mevcut üye). -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
