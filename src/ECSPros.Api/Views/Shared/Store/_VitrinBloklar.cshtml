@@ -435,12 +435,13 @@
                 <div class="ms-gorunum-marka-grid @(blok.MobilCarousel ? "ms-gorunum-banner-mobil-carousel" : "")">
                     @foreach (var marka in blok.Ogeler)
                     {
-                        @* Panelden yüklenen marka görseli (GorselUrl) kolajın İLK karesi olur —
-                           önceden hiç kullanılmıyordu, kartlar yalnız config.images (seed'in demo
-                           kolajı) gösteriyordu. Kalanlar config.images'ten tamamlanır (≤4). *@
-                        var mozaik = (marka.GorselUrl is { Length: > 0 } markaGorsel
-                            ? new[] { markaGorsel }.Concat(marka.EkGorseller.Where(g => g != markaGorsel))
-                            : marka.EkGorseller).Take(4).ToList();
+                        @* 2026-09-01 (kullanıcı kararı): panelden marka görseli (logo/banner)
+                           yüklendiyse kartta YALNIZ o gösterilir — config.images kolajı (seed'in
+                           demo görselleri) tamamen devre dışı kalır. Görsel yüklenmemişse eski
+                           kolaj davranışı (config.images ≤4) korunur. *@
+                        var mozaik = marka.GorselUrl is { Length: > 0 } markaGorsel
+                            ? new List<string> { markaGorsel }
+                            : marka.EkGorseller.Take(4).ToList();
                         <a class="ms-gorunum-marka-karti" href="@(marka.LinkUrl ?? "#")">
                             @if (marka.Rozet is not null)
                             {
