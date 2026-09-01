@@ -103,7 +103,7 @@ yalnız indirici + oran limiti profili yazılır.
 1. ~~K1~~ **KAPANDI (2026-08-31): merkezî snapshot paketi** — RF3 buna göre kurgulanır.
 2. ~~K2~~ **KAPANDI (2026-08-31): kilitle** — ekranda kanal istisnası gizlenir; veri modeli korunur. *(Uygulaması RF4 ekran işleriyle birlikte.)*
 3. ~~K3~~ **KAPANDI (2026-08-31): haftalık tam tarama + günlük delta kontrolü.**
-4. **K4 Eşleme operasyonu:** kampanyayı kim yürütür (içerik ekibi / birlikte), hedef tarih ve "hazır ürün oranı" hedefi?
+4. ~~K4~~ **KAPANDI (2026-09-01): toplu eşleme operasyonu ERTELENDİ** — dev aşamasında mevcut test eşlemeleri yeterli (kullanıcı kararı); tam operasyon go-live/gerçek Trendyol denemesi (FAZ 4) öncesi araçla koşulur.
 5. ~~K5 API erişimi teyidi~~ **KAPANDI (2026-08-31):** TrendyolReferenceDownloader kimlik başlığı KULLANMIYOR —
    kategori/özellik uçları halka açık; 26 Temmuz senkronu da anahtarsız tamamlanmış. RF1 satıcı anahtarı beklemez.
 6. ~~K6~~ **KAPANDI (2026-08-31): RF1+RF2 önce, ardından F4 dropship bayi.**
