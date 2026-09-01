@@ -70,11 +70,17 @@ Panel: senkron penceresine TazelikRozeti — son koşu >8 gün (ya da hiç yok) 
 mp_sync_runs'ta görülür (kullanıcı/oturum doğrulaması); senkron sonrası değişen kategori/özellik etkilenen
 eşlemeleri işaretler (MappingHealth); rozet bayatlamayı gösterir.
 
-### RF3 — Merkezî dağıtım (K1 kararına göre; ≈ 2-4 gün)
-Önerilen v1: **imzalı snapshot paketi** — merkezî ortamda üretilen sürümlü dışa aktarım (JSON/dump + checksum
-+ üretim tarihi) ve kurulum tarafında içe aktarım komutu (`import-marketplace-ref <paket>`); kurulumlar
-Trendyol'a hiç çıkmadan güncel sözlüğe kavuşur. Merkezî canlı API (K1-c) ileride bunun üstüne kurulabilir.
-**Kabul:** taze kurulumda tek komutla tam sözlük; aynı paketi iki kez içe aktarmak idempotent.
+### RF3 — Merkezî dağıtım — ✅ UYGULANDI + KABUL (2026-09-01)
+**Uygulama (2026-09-01, "en uygunu" kullanıcı delegasyonuyla):** `tools/sozluk/sozluk-paketle.sh` +
+`sozluk-yukle.sh`. Paket = tar.gz: manifest.json (şema sürümü + sha256'lar) + marketplace_ref pg_dump
+(10M satır JSON yerine kanıtlanmış araç; ~527MB) + kategori eşlemeleri JSON'u **ürün grubu KODU anahtarıyla**
+(kurulumlar arası taşınabilir tek kimlik; özellik/değer eşlemeleri Ortak Sözlük kimlik çalışmasına kadar v1
+dışı — plan sapması, gerekçeli). Yükleme: sha256 doğrulama → pg_restore --clean (ref DB paketle birebir) →
+eşleme upsert'i grup koduna göre (yerelde olmayan kod ATLANIR+raporlanır; FirmPlatformId NULL satırlarda
+unique index NULL yakalamadığından idempotens NOT EXISTS ile). Uygulama restart'ı gerekmez.
+**Kabul ✅ (2026-09-01):** paket üretildi (v202609011354, 527MB) → geçici DB'ye tek komutla yüklendi,
+sayılar birebir (3.868 kategori / 73.256 özellik / 9.934.233 değer) → aynı paket İKİNCİ kez yüklendi:
+eşleme sayısı sabit (137) — idempotent. Merkezî canlı API (K1-c) ileride bu paketin üstüne kurulabilir.
 
 ### RF4 — Eşleme operasyonu + öneri aracı — ✅ ARAÇ UYGULANDI (2026-09-01) ⚠️ restart bekliyor; operasyon K4
 ~144 ECS yaprak grubunun Trendyol kategorilerine eşlenmesi kampanyası: ad benzerliği + mevcut ürün özellik
