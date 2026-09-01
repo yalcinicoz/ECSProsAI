@@ -417,16 +417,37 @@
 
         case "brands":
             <div class="ms-ana-sayfa-elment">
+                @* 2026-09-01 (kullanıcı bildirimi): blok BAŞLIKSIZ basılıyordu — panelde girilen
+                   başlık ("Markalar") standart başlık satırıyla gösterilir ki blok sayfada
+                   tanınabilsin (tasarım demo sayfasında başlık dokümantasyon h3'üydü). *@
+                @if (blok.Baslik.Length > 0)
+                {
+                    <div class="ms-gorunum-baslik-satiri">
+                        <div>
+                            <h2>@blok.Baslik</h2>
+                            @if (blok.AltBaslik is not null)
+                            {
+                                <p>@blok.AltBaslik</p>
+                            }
+                        </div>
+                    </div>
+                }
                 <div class="ms-gorunum-marka-grid @(blok.MobilCarousel ? "ms-gorunum-banner-mobil-carousel" : "")">
                     @foreach (var marka in blok.Ogeler)
                     {
+                        @* Panelden yüklenen marka görseli (GorselUrl) kolajın İLK karesi olur —
+                           önceden hiç kullanılmıyordu, kartlar yalnız config.images (seed'in demo
+                           kolajı) gösteriyordu. Kalanlar config.images'ten tamamlanır (≤4). *@
+                        var mozaik = (marka.GorselUrl is { Length: > 0 } markaGorsel
+                            ? new[] { markaGorsel }.Concat(marka.EkGorseller.Where(g => g != markaGorsel))
+                            : marka.EkGorseller).Take(4).ToList();
                         <a class="ms-gorunum-marka-karti" href="@(marka.LinkUrl ?? "#")">
                             @if (marka.Rozet is not null)
                             {
                                 <span class="ms-gorunum-marka-etiket">@marka.Rozet</span>
                             }
                             <span class="ms-gorunum-marka-urunler" aria-hidden="true">
-                                @foreach (var gorsel in marka.EkGorseller.Take(4))
+                                @foreach (var gorsel in mozaik)
                                 {
                                     <span class="ms-gorunum-marka-urun">
                                         <img data-ms-lazy-src="@gorsel" alt="" width="90" height="134" loading="lazy" decoding="async">
