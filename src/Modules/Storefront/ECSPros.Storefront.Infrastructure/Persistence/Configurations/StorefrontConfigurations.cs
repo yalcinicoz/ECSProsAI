@@ -495,3 +495,22 @@ public class SearchTermStatConfiguration : IEntityTypeConfiguration<SearchTermSt
         // Soft delete filtresi yok: kovalar fiziksel temizlenir (fırsatçı prune)
     }
 }
+
+/// <summary>Satıcıya Soru Sor (2026-09-01): ürün soruları — ProductReview deseni.</summary>
+public class ProductQuestionConfiguration : IEntityTypeConfiguration<ProductQuestion>
+{
+    public void Configure(EntityTypeBuilder<ProductQuestion> builder)
+    {
+        builder.ToTable("product_questions");
+        builder.HasKey(q => q.Id);
+        builder.Property(q => q.ProductCode).HasMaxLength(50).IsRequired();
+        builder.Property(q => q.Question).HasMaxLength(1000).IsRequired();
+        builder.Property(q => q.Answer).HasMaxLength(2000);
+        builder.Property(q => q.Status).HasMaxLength(20).IsRequired();
+        builder.Property(q => q.MemberName).HasMaxLength(100).IsRequired();
+        builder.HasIndex(q => new { q.FirmPlatformId, q.ProductCode, q.Status }); // detay listesi
+        builder.HasIndex(q => new { q.FirmPlatformId, q.MemberId });              // hesabım
+        builder.HasIndex(q => new { q.FirmPlatformId, q.Status, q.CreatedAt });   // moderasyon
+        builder.HasQueryFilter(q => !q.IsDeleted);
+    }
+}

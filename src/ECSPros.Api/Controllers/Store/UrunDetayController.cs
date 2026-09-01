@@ -36,6 +36,12 @@ public class UrunDetayController(IMediator mediator, IStoreContext storeContext,
             return await KapaliUrunYonlendir(code, platform.Id, ct);
 
         ViewData["MsUrunDetay"] = vm;
+        // Satıcıya Soru Sor (2026-09-01): yayındaki (cevaplanmış) sorular SSR — form için kanal id.
+        var soruSonucu = await mediator.Send(
+            new ECSPros.Storefront.Application.Queries.ProductQuestions.GetProductQuestionsQuery(
+                platform.Id, vm.Kod), ct);
+        ViewData["MsUrunSorular"] = soruSonucu.IsSuccess ? soruSonucu.Value! : new();
+        ViewData["MsUrunSorularPlatform"] = platform.Id;
         ViewData["Title"] = vm.Ad;
         return View("~/Views/UrunDetay/Index.cshtml");
     }

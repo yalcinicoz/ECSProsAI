@@ -43,6 +43,7 @@ import { ProcurementReportPage } from '@/pages/procurement/ProcurementReportPage
 import { ChannelCategoryDetailPage } from '@/pages/storefront/ChannelCategoryDetailPage'
 import { CollectionsModerationPage } from '@/pages/storefront/CollectionsModerationPage'
 import { ReviewsModerationPage } from '@/pages/storefront/ReviewsModerationPage'
+import { ProductQuestionsPage } from '@/pages/storefront/ProductQuestionsPage'
 import { PagesManagementPage } from '@/pages/storefront/PagesManagementPage'
 import { PagesHistoryPage } from '@/pages/storefront/PagesHistoryPage'
 import { PageBlockDetailPage } from '@/pages/storefront/PageBlockDetailPage'
@@ -140,6 +141,7 @@ export const router = createBrowserRouter(
             { path: 'procurement/report',                  element: <ProcurementReportPage /> },
             { path: 'storefront/collections',              element: <CollectionsModerationPage /> },
             { path: 'storefront/reviews',                  element: <ReviewsModerationPage /> },
+            { path: 'storefront/questions',                element: <ProductQuestionsPage /> },
             { path: 'storefront/pages',                    element: <PagesManagementPage /> },
             { path: 'storefront/pages/history',            element: <PagesHistoryPage /> },
             { path: 'storefront/pages/:id',                element: <PageBlockDetailPage /> },

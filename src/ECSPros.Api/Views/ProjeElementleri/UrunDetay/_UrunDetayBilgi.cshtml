@@ -262,4 +262,85 @@
                     <p class="ms-urun-detay-degerlendirme-bos">Bu ürün için henüz değerlendirme yapılmadı.</p>
                     }
                 </section>
+
+                @* Satıcıya Soru Sor (2026-09-01, kullanıcı isteği): yayındaki (cevaplanmış) sorular
+                   SSR listelenir; üye soru formu bölüm içinde açılır, misafir giriş modalına gider.
+                   Sorular pending doğar — admin cevabıyla burada görünür (moderasyon panelde). *@
+                @{
+                    var msSorular = ViewData["MsUrunSorular"] as List<ECSPros.Storefront.Application.Queries.ProductQuestions.ProductQuestionDto> ?? new();
+                    var msSoruUye = ViewData["MsUye"] is not null;
+                    var msSoruPlatform = ViewData["MsUrunSorularPlatform"];
+                    var msSoruKultur = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+                }
+                <section class="ms-urun-detay-bolum" id="urun-sorulari">
+                    <h2 class="ms-urun-detay-bolum-baslik">Ürün Soruları (@msSorular.Count)</h2>
+                    @foreach (var soru in msSorular)
+                    {
+                    <article class="ms-urun-detay-degerlendirme">
+                        <div class="ms-urun-puan">
+                            <span><strong>@soru.MemberName</strong> sordu</span>
+                            <span>@soru.CreatedAt.ToString("d MMMM yyyy", msSoruKultur)</span>
+                        </div>
+                        <p>@soru.Question</p>
+                        <p><strong>Satıcı:</strong> @soru.Answer</p>
+                    </article>
+                    }
+                    @if (msSorular.Count == 0)
+                    {
+                    <p class="ms-urun-detay-degerlendirme-bos">Bu ürün için henüz soru sorulmadı — ilk soruyu siz sorun.</p>
+                    }
+
+                    @if (msSoruUye)
+                    {
+                    <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-soru-sor-ac>Satıcıya Soru Sor</button>
+                    <form data-ms-soru-sor-form data-ms-soru-urun="@b.Kod" data-ms-soru-platform="@msSoruPlatform" hidden>
+                        <textarea class="inp" name="question" rows="3" minlength="10" maxlength="1000" required
+                                  placeholder="Ürünle ilgili sorunuzu yazın (en az 10 karakter). Sorunuz cevaplanınca burada maskeli adınızla yayınlanır."></textarea>
+                        <div>
+                            <button class="ms-buton ms-buton-m" type="submit">Gönder</button>
+                            <span data-ms-soru-mesaj role="status"></span>
+                        </div>
+                    </form>
+                    <script>
+                        (function () {
+                            const ac = document.querySelector("[data-ms-soru-sor-ac]");
+                            const form = document.querySelector("[data-ms-soru-sor-form]");
+                            if (!ac || !form) { return; }
+                            ac.addEventListener("click", () => { form.hidden = false; ac.hidden = true; form.querySelector("textarea").focus(); });
+                            form.addEventListener("submit", async (e) => {
+                                e.preventDefault();
+                                const mesaj = form.querySelector("[data-ms-soru-mesaj]");
+                                mesaj.textContent = "Gönderiliyor…";
+                                try {
+                                    const yanit = await fetch("/api/store/questions", {
+                                        method: "POST",
+                                        headers: {
+                                            "Content-Type": "application/json",
+                                            Authorization: "Bearer " + localStorage.getItem("ecspros_member_token")
+                                        },
+                                        body: JSON.stringify({
+                                            firmPlatformId: form.dataset.msSoruPlatform,
+                                            productCode: form.dataset.msSoruUrun,
+                                            question: form.question.value
+                                        })
+                                    });
+                                    const veri = await yanit.json();
+                                    if (veri && veri.success) {
+                                        form.question.value = "";
+                                        form.question.disabled = true;
+                                        form.querySelector("button[type=submit]").disabled = true;
+                                        mesaj.textContent = "✓ Sorunuz satıcıya iletildi — cevaplanınca burada ve Hesabım → Sorularım'da görünecek.";
+                                    } else {
+                                        mesaj.textContent = (veri && veri.error) || "Sorunuz gönderilemedi.";
+                                    }
+                                } catch { mesaj.textContent = "Sorunuz gönderilemedi — lütfen tekrar deneyin."; }
+                            });
+                        })();
+                    </script>
+                    }
+                    else
+                    {
+                    <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-giris-modal-ac>Satıcıya Soru Sor (giriş yapın)</button>
+                    }
+                </section>
             </aside>

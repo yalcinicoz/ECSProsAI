@@ -78,6 +78,7 @@ const NAV_SECTIONS: NavSection[] = [
     { label: 'Kanal Kapsamı', to: '/storefront/channel-scope', icon: 'filter' },
     { label: 'Koleksiyon Moderasyonu', to: '/storefront/collections', icon: 'layout' },
     { label: 'Yorum Moderasyonu', to: '/storefront/reviews', icon: 'layout' },
+    { label: 'Ürün Soruları', to: '/storefront/questions', icon: 'inbox' },
     { label: 'Vitrin Yönetimi', to: '/storefront/pages', icon: 'layout' },
     { label: 'Katalog Ayarları',   to: '/catalog/settings',                  icon: 'settings' },
   ]},

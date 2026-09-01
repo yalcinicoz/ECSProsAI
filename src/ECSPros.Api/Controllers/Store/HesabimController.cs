@@ -602,6 +602,39 @@ public class HesabimController(
         return HesabimSayfasi("Yorumlarım", "~/Views/ProjeElementleri/Hesabim/_HesabimYorumlarim.cshtml");
     }
 
+    /// <summary>Satıcıya Soru Sor (2026-09-01): üyenin ürün soruları + satıcı cevapları.</summary>
+    [HttpGet("/Hesabim/Sorularim")]
+    [HttpGet("/sorularim")]
+    public async Task<IActionResult> Sorularim(CancellationToken ct)
+    {
+        var platform = await storeContext.GetPlatformAsync(ct);
+        var sorular = new List<(ECSPros.Storefront.Application.Queries.ProductQuestions.ProductQuestionDto Soru, HesabimKoleksiyonUrunVm? Urun)>();
+        if (platform is not null)
+        {
+            var sonuc = await mediator.Send(
+                new ECSPros.Storefront.Application.Queries.ProductQuestions.GetMemberQuestionsQuery(
+                    platform.Id, _memberId), ct);
+            var liste = sonuc.IsSuccess ? sonuc.Value! : new();
+
+            // Ürün ad/görsel haritası (Yorumlarım kalıbı — tek Catalog sorgusu)
+            var kodlar = liste.Select(s => s.ProductCode).Distinct().ToList();
+            var urunMap = new Dictionary<string, HesabimKoleksiyonUrunVm>();
+            if (kodlar.Count > 0)
+            {
+                var urunler = await mediator.Send(
+                    new ECSPros.Catalog.Application.Queries.GetStoreProducts.GetStoreProductsQuery(
+                        platform.Id, ProductCodes: kodlar, PageSize: kodlar.Count), ct);
+                if (urunler.IsSuccess)
+                    urunMap = urunler.Value!.Items.ToDictionary(
+                        p => p.Code,
+                        p => new HesabimKoleksiyonUrunVm(p.Code, UrunKartMap.TrAd(p.NameI18n), p.MainImageUrl));
+            }
+            sorular = liste.Select(s => (s, urunMap.GetValueOrDefault(s.ProductCode))).ToList();
+        }
+        ViewData["MsSorular"] = sorular;
+        return HesabimSayfasi("Sorularım", "~/Views/ProjeElementleri/Hesabim/_HesabimSorularim.cshtml");
+    }
+
     /// <summary>E5: favori kodlar → Catalog'dan kart verisi (liste/ana sayfayla aynı kart
     /// kaynağı); silinen/pasif ürünün favorisi listelenmez, favori sırası korunur.</summary>
     [HttpGet("/Favorilerim")]

@@ -1,0 +1,80 @@
+@* Satıcıya Soru Sor (2026-09-01): üyenin ürün soruları ve satıcı cevapları — Yorumlarım
+   sayfa kabuğunun sadeleşmiş kardeşi. Sorular ürün detayından sorulur; burada yalnız
+   izlenir (cevaplanan yayında da görünür, gizlenen yalnız burada görünür). *@
+@{
+    var msSorular = ViewData["MsSorular"] as List<(ECSPros.Storefront.Application.Queries.ProductQuestions.ProductQuestionDto Soru, ECSPros.Api.Models.Store.HesabimKoleksiyonUrunVm? Urun)> ?? new();
+    var msBekleyen = msSorular.Where(s => s.Soru.Status == "pending").ToList();
+    var msCevapli = msSorular.Where(s => s.Soru.Status != "pending").ToList();
+    var trKultur = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+}
+
+<section class="ms-hesabim-sayfa" aria-labelledby="ms-hesabim-sorular-baslik">
+    <partial name="~/Views/ProjeElementleri/Hesabim/_HesabimYanMenu.cshtml" model='@("sorular")' />
+
+    <section class="ms-hesabim-icerik">
+        <header class="ms-hesabim-baslik">
+            <h2 id="ms-hesabim-sorular-baslik">Sorularım</h2>
+        </header>
+
+        <div class="ms-hesabim-liste-sayfa">
+            <div class="ms-hesabim-liste-ust">
+                <div>
+                    <h3>Satıcıya sorduğunuz sorular</h3>
+                    <p>Ürün detay sayfasındaki "Satıcıya Soru Sor" ile ilettiğiniz sorular ve cevapları burada listelenir. Cevaplanan sorular ürün sayfasında maskeli adınızla yayınlanır.</p>
+                </div>
+            </div>
+
+            @if (msSorular.Count == 0)
+            {
+            <section class="ms-hesabim-bos-durum">
+                <i class="fa-solid fa-comment-dots ms-fa-ikon" aria-hidden="true"></i>
+                <h3>Henüz soru sormadınız</h3>
+                <p>Merak ettiğiniz bir ürünün detay sayfasındaki "Satıcıya Soru Sor" bağlantısını kullanabilirsiniz.</p>
+            </section>
+            }
+            else
+            {
+            @foreach (var grup in new[] { ("Cevap Bekleyenler", msBekleyen), ("Cevaplananlar", msCevapli) })
+            {
+                if (grup.Item2.Count == 0) { continue; }
+                <h3 class="ms-hesabim-grup-baslik">@grup.Item1 (@grup.Item2.Count)</h3>
+                foreach (var (soru, urun) in grup.Item2)
+                {
+                <article class="ms-hesabim-liste-karti">
+                    <div class="ms-hesabim-liste-karti-ust">
+                        @if (urun is not null)
+                        {
+                            <a class="ms-hesabim-liste-karti-urun" href="/urun/@soru.ProductCode">
+                                @if (!string.IsNullOrEmpty(urun.GorselUrl))
+                                {
+                                    <img src="@urun.GorselUrl" alt="@urun.Ad" width="48" height="72" loading="lazy">
+                                }
+                                <strong>@urun.Ad</strong>
+                            </a>
+                        }
+                        else
+                        {
+                            <a class="ms-hesabim-liste-karti-urun" href="/urun/@soru.ProductCode"><strong>@soru.ProductCode</strong></a>
+                        }
+                        <span class="ms-hesabim-liste-karti-tarih">@soru.CreatedAt.ToString("d MMMM yyyy", trKultur)</span>
+                    </div>
+                    <p><strong>Sorunuz:</strong> @soru.Question</p>
+                    @if (soru.Status == "pending")
+                    {
+                        <p class="ms-hesabim-liste-karti-durum">⏳ Satıcı cevabı bekleniyor.</p>
+                    }
+                    else
+                    {
+                        <p><strong>Satıcı cevabı@(soru.AnsweredAt is { } ca ? $" ({ca.ToString("d MMMM yyyy", trKultur)})" : ""):</strong> @soru.Answer</p>
+                        @if (soru.Status == "hidden")
+                        {
+                            <p class="ms-hesabim-liste-karti-durum">Bu soru ürün sayfasında yayınlanmıyor (yalnız siz görüyorsunuz).</p>
+                        }
+                    }
+                </article>
+                }
+            }
+            }
+        </div>
+    </section>
+</section>

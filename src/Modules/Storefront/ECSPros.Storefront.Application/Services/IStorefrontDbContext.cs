@@ -19,6 +19,7 @@ public interface IStorefrontDbContext
     DbSet<Collection> Collections { get; }
     DbSet<CollectionItem> CollectionItems { get; }
     DbSet<ProductReview> ProductReviews { get; }
+    DbSet<ProductQuestion> ProductQuestions { get; } // Satıcıya Soru Sor (2026-09-01)
     DbSet<ProductReviewPhoto> ProductReviewPhotos { get; }
     DbSet<ProductRatingSource> ProductRatingSources { get; }
     DbSet<ProductReviewDisplaySettings> ProductReviewDisplaySettings { get; }

@@ -525,6 +525,13 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         if (vm is not null)
         {
             ViewData["MsUrunDetay"] = vm;
+            // Satıcıya Soru Sor (2026-09-01): yayındaki sorular — kanonik slug rotası da
+            // /urun/{code} ile aynı bölümü render eder (UrunDetayController'daki yükleme eşi).
+            var soruSonucu = await mediator.Send(
+                new ECSPros.Storefront.Application.Queries.ProductQuestions.GetProductQuestionsQuery(
+                    platform.Id, vm.Kod), ct);
+            ViewData["MsUrunSorular"] = soruSonucu.IsSuccess ? soruSonucu.Value! : new();
+            ViewData["MsUrunSorularPlatform"] = platform.Id;
             ViewData["Title"] = vm.Ad;
             return View("~/Views/UrunDetay/Index.cshtml");
         }
