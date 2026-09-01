@@ -54,12 +54,21 @@ arka planda, ilerleme pencerede).
 (~10,0M satır) 28 dakikada, **sıfır hatayla** indirildi (20:13→20:42); oran limiti aşımı yaşanmadı. İdempotens:
 attributes-missing ikinci koşuda hedef bulamaz (saniyeler içinde biter). Referans sözlüğü artık "her an hazır".
 
-### RF2 — Zamanlanmış tazeleme + değişiklik akışı (≈ 2 gün)
+### RF2 — Zamanlanmış tazeleme + değişiklik akışı — ✅ UYGULANDI (2026-09-01) ⚠️ restart bekliyor
 Periyodik senkron (K3 kadansı; mevcut hosted-worker kalıbı — ⚠️ worker kayıtları A2 rol kapısı düzenine uyar,
 altyapı ekibinin deploy düzenine dokunulmaz, yalnız not düşülür) → change_log → MappingHealth otomatik işleme →
 panelde "referans güncelliği" rozeti + bayatlama eşiği uyarısı + kırık/gözden-geçir eşleme raporu.
-**Kabul:** senkron sonrası değişen kategori/özellik, etkilenen eşlemeleri işaretler ve panelde görünür;
-senkron hiç koşmazsa X gün sonra uyarı çıkar.
+**Uygulama (2026-09-01):** `MarketplaceReferenceRefreshWorker` — günlük `MarketplaceRef:AutoSync:HourUtc`
+(vars. 04 UTC) saatinde her pazaryeri için sırayla categories → attributes-missing (staleDays=7 →
+TAM tarama haftaya kendiliğinden yayılır = K3 "haftalık tam + günlük delta" tek işte); koşu bitişi beklenir,
+kısmi hatada gün işaretlenmez (10 dk sonra yeniden dener), 3 saat zaman aşımı; A2 rol kapısının içinde
+(yalnız Worker/Both düğüm), `Enabled=false` ile kapanır; /health/detail listesine eklendi. MappingHealth
+zaten her koşu sonrası motor içinde çalışıyor; kırık/gözden-geçir rozetleri MappingPage'de mevcuttu.
+Panel: senkron penceresine TazelikRozeti — son koşu >8 gün (ya da hiç yok) → kırmızı "bayat", en eski
+özellik taraması >14 gün → sarı uyarı, aksi yeşil "güncel".
+**Kabul:** restart sonrası journal "Referans tazeleme: AKTİF ✓"; İLK OTOMATİK KOŞU ertesi sabah
+mp_sync_runs'ta görülür (kullanıcı/oturum doğrulaması); senkron sonrası değişen kategori/özellik etkilenen
+eşlemeleri işaretler (MappingHealth); rozet bayatlamayı gösterir.
 
 ### RF3 — Merkezî dağıtım (K1 kararına göre; ≈ 2-4 gün)
 Önerilen v1: **imzalı snapshot paketi** — merkezî ortamda üretilen sürümlü dışa aktarım (JSON/dump + checksum

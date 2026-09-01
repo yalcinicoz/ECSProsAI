@@ -44,6 +44,20 @@ const SCOPE_LABEL: Record<string, string> = {
   'attributes-missing': 'Özellikler (eksik/bayat)',
 }
 
+// RF2: referans güncelliği — otomatik günlük tazeleme (worker) beklenen kadans; son koşu
+// 8 günü aştıysa (ya da hiç yoksa) BAYAT, en eski özellik taraması 14 günü aştıysa uyarı.
+function TazelikRozeti({ sonKosu, enEskiTarama }: { sonKosu: string | null; enEskiTarama: string | null | undefined }) {
+  const gun = (t: string | null | undefined) =>
+    t ? Math.floor((Date.now() - new Date(t).getTime()) / 86400000) : null
+  const sonG = gun(sonKosu)
+  const eskiG = gun(enEskiTarama)
+  if (sonG === null || sonG > 8)
+    return <Badge variant="danger">bayat{sonG !== null ? ` — son koşu ${sonG} gün önce` : ''}</Badge>
+  if (eskiG !== null && eskiG > 14)
+    return <Badge variant="warning">en eski tarama {eskiG} gün önce</Badge>
+  return <Badge variant="success">güncel</Badge>
+}
+
 const MP_NAME: Record<string, string> = {
   trendyol: 'Trendyol',
   hepsiburada: 'Hepsiburada',
@@ -191,14 +205,15 @@ export function ReferenceSyncModal({ open, onClose }: { open: boolean; onClose: 
                       {s.lastRun ? (
                         <div className="flex items-center gap-2">
                           <RunStatusBadge run={s.lastRun} />
+                          <TazelikRozeti sonKosu={s.lastRun.startedAt} enEskiTarama={s.oldestAttributeSyncAt} />
                           <span className="text-xs" style={{ color: 'var(--text-s)' }}>
                             {SCOPE_LABEL[s.lastRun.scope] ?? s.lastRun.scope} ·{' '}
                             {timeAgo(s.lastRun.startedAt)}
                           </span>
                         </div>
                       ) : (
-                        <span className="text-xs" style={{ color: 'var(--text-s)' }}>
-                          Henüz senkron yapılmadı
+                        <span className="text-xs inline-flex items-center gap-2" style={{ color: 'var(--text-s)' }}>
+                          Henüz senkron yapılmadı <TazelikRozeti sonKosu={null} enEskiTarama={null} />
                         </span>
                       )}
                     </td>

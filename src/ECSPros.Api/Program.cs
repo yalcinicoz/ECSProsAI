@@ -453,6 +453,8 @@ builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacyOrderSyncService
 ECSPros.Shared.Infrastructure.Http.ResilientHttpClientExtensions.AddResilientHttpClient(builder.Services, "legacy-order", c => c.Timeout = TimeSpan.FromSeconds(30));
 if (nodeOptions.WorkerRolu) // FAZ 10 / A2
 {
+    // RF2: günlük pazaryeri referans tazeleme (kategoriler + eksik/bayat özellikler)
+    builder.Services.AddHostedService<ECSPros.Api.Services.Marketplace.Reference.MarketplaceReferenceRefreshWorker>();
     builder.Services.AddHostedService<ECSPros.Api.Services.Legacy.LegacySyncWorker>();
     builder.Services.AddHostedService<ECSPros.Api.Services.Fulfillment.CargoNotifyWorker>();
     builder.Services.AddHostedService<ECSPros.Api.Services.Tracking.TrackingDispatchWorker>();
@@ -834,7 +836,7 @@ app.MapHealthChecks("/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.
 var kayitliWorkerlar = nodeOptions.WorkerRolu
     ? new[]
     {
-        "MarketplaceOrderFetch", "SettlementEligibility", "MarketplaceBatch", "ChannelScopeSync",
+        "MarketplaceOrderFetch", "MarketplaceReferenceRefresh", "SettlementEligibility", "MarketplaceBatch", "ChannelScopeSync",
         "OnSaleStamp", "LegacySync", "CargoNotify", "TrackingDispatch", "FeedGenerator",
         "SavedSearchNotify", "DashboardMetrics",
     }

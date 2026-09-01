@@ -66,3 +66,5 @@ src/**/appsettings.Demo.json
 publish/
 publish-demo/
 publish-staging/
+appsettings.Production.json.bak*
+*.bak-faz11
