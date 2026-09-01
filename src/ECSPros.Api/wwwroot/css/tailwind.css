@@ -13977,6 +13977,26 @@
     transform: skewX(10deg) scale(1.16);
   }
 
+  /* 2026-09-01 (kullanıcı kararı): panelden yüklenen TEK marka logosu/banner'ı —
+     4'lü eğik kolaj yerine düz, tam genişlik, taşmasız (contain) tek kare. */
+  .ms-gorunum-marka-urunler-tek {
+    grid-template-columns: 1fr;
+    @apply bg-white;
+  }
+
+  .ms-gorunum-marka-urun-tek,
+  .ms-gorunum-marka-urunler-tek .ms-gorunum-marka-urun:first-child,
+  .ms-gorunum-marka-urunler-tek .ms-gorunum-marka-urun:last-child {
+    margin-inline: 0;
+    transform: none;
+    @apply bg-white;
+  }
+
+  .ms-gorunum-marka-urun-tek img {
+    @apply object-contain object-center;
+    transform: none;
+  }
+
   .ms-gorunum-marka-bilgi {
     @apply grid gap-1 bg-white p-3;
   }

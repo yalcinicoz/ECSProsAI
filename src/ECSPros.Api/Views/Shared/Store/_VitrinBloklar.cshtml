@@ -435,26 +435,34 @@
                 <div class="ms-gorunum-marka-grid @(blok.MobilCarousel ? "ms-gorunum-banner-mobil-carousel" : "")">
                     @foreach (var marka in blok.Ogeler)
                     {
-                        @* 2026-09-01 (kullanıcı kararı): panelden marka görseli (logo/banner)
-                           yüklendiyse kartta YALNIZ o gösterilir — config.images kolajı (seed'in
-                           demo görselleri) tamamen devre dışı kalır. Görsel yüklenmemişse eski
-                           kolaj davranışı (config.images ≤4) korunur. *@
-                        var mozaik = marka.GorselUrl is { Length: > 0 } markaGorsel
-                            ? new List<string> { markaGorsel }
-                            : marka.EkGorseller.Take(4).ToList();
                         <a class="ms-gorunum-marka-karti" href="@(marka.LinkUrl ?? "#")">
                             @if (marka.Rozet is not null)
                             {
                                 <span class="ms-gorunum-marka-etiket">@marka.Rozet</span>
                             }
-                            <span class="ms-gorunum-marka-urunler" aria-hidden="true">
-                                @foreach (var gorsel in mozaik)
-                                {
-                                    <span class="ms-gorunum-marka-urun">
-                                        <img data-ms-lazy-src="@gorsel" alt="" width="90" height="134" loading="lazy" decoding="async">
+                            @* 2026-09-01 (kullanıcı kararı): panelden marka görseli (logo/banner)
+                               yüklendiyse kart görseli YALNIZ odur — düz (eğiksiz), tam genişlik,
+                               taşmasız tek kare (-tek varyant CSS'i). Görsel yüklenmemişse
+                               tasarımın 4'lü eğik kolajı (config.images) yedek davranıştır. *@
+                            @if (marka.GorselUrl is { Length: > 0 } markaGorsel)
+                            {
+                                <span class="ms-gorunum-marka-urunler ms-gorunum-marka-urunler-tek" aria-hidden="true">
+                                    <span class="ms-gorunum-marka-urun ms-gorunum-marka-urun-tek">
+                                        <img data-ms-lazy-src="@markaGorsel" alt="" loading="lazy" decoding="async">
                                     </span>
-                                }
-                            </span>
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="ms-gorunum-marka-urunler" aria-hidden="true">
+                                    @foreach (var gorsel in marka.EkGorseller.Take(4))
+                                    {
+                                        <span class="ms-gorunum-marka-urun">
+                                            <img data-ms-lazy-src="@gorsel" alt="" width="90" height="134" loading="lazy" decoding="async">
+                                        </span>
+                                    }
+                                </span>
+                            }
                             <span class="ms-gorunum-marka-bilgi">
                                 <strong>@marka.Baslik</strong>
                                 @if (marka.UrunSayisiMetni is not null)
