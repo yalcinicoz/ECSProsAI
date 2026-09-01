@@ -6201,7 +6201,16 @@
 
     acButonu.addEventListener("click", panelAc);
     kapatButonlari.forEach((buton) => buton.addEventListener("click", panelKapat));
-    anaSekmeler.forEach((sekme) => sekme.addEventListener("click", () => anaSekmeAc(sekme.dataset.msMobilAnaSekme)));
+    anaSekmeler.forEach((sekme) => sekme.addEventListener("click", () => {
+        // 2026-09-01: alt kategorisi olmayan kök (data-ms-mobil-ana-url dolu) panel açmaz,
+        // doğrudan ürün listeleme sayfasına gider (örn. Etiketin Yarısı → /etiketin-yarisi).
+        const dogrudanUrl = sekme.dataset.msMobilAnaUrl;
+        if (dogrudanUrl) {
+            window.location.href = dogrudanUrl;
+            return;
+        }
+        anaSekmeAc(sekme.dataset.msMobilAnaSekme);
+    }));
     yanSekmeler.forEach((sekme) => sekme.addEventListener("click", () => yanSekmeAc(sekme.dataset.msMobilYanSekme)));
 
     const kampanyaKapat = () => {

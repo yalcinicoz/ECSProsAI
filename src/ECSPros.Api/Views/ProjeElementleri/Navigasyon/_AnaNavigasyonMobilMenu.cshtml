@@ -59,7 +59,10 @@ else
             @for (var i = 0; i < nav.Kokler.Count; i++)
             {
                 var kok = nav.Kokler[i];
-                <button class="ms-ana-navigasyon-mobil-ana-sekme@(i == 0 ? " ms-ana-navigasyon-mobil-ana-sekme-aktif" : "")" type="button" data-ms-mobil-ana-sekme="@kok.Slug" aria-pressed="@(i == 0 ? "true" : "false")">@kok.Ad</button>
+                @* 2026-09-01 (kullanıcı isteği): alt kategorisi OLMAYAN kök (örn. Etiketin Yarısı)
+                   sekmeye tıklanınca panel açmak yerine doğrudan ürün listesine gider —
+                   data-ms-mobil-ana-url dolu ise site.js yönlendirir. *@
+                <button class="ms-ana-navigasyon-mobil-ana-sekme@(i == 0 ? " ms-ana-navigasyon-mobil-ana-sekme-aktif" : "")" type="button" data-ms-mobil-ana-sekme="@kok.Slug" data-ms-mobil-ana-url="@(kok.Cocuklar.Count == 0 ? kok.Url : null)" aria-pressed="@(i == 0 ? "true" : "false")">@kok.Ad</button>
             }
         </nav>
 
