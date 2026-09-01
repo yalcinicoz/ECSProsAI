@@ -290,13 +290,16 @@
                     <p class="ms-urun-detay-degerlendirme-bos">Bu ürün için henüz soru sorulmadı — ilk soruyu siz sorun.</p>
                     }
 
-                    @if (msSoruUye)
-                    {
-                    <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-soru-sor-ac>Satıcıya Soru Sor</button>
-                    <form data-ms-soru-sor-form data-ms-soru-urun="@b.Kod" data-ms-soru-platform="@msSoruPlatform" hidden>
-                        <textarea class="inp" name="question" rows="3" minlength="10" maxlength="1000" required
+                    @* 2026-09-01 (kullanıcı geri bildirimi): misafir CTA'sı + üye formu BİRLİKTE
+                       render edilir; giriş modalı başarılı olunca (ms:uye-giris olayı) sayfa
+                       yenilenmeden CTA düşer ve form DOĞRUDAN açılır. *@
+                    <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-giris-modal-ac data-ms-soru-giris-cta hidden="@(msSoruUye)">Satıcıya Soru Sor (giriş yapın)</button>
+                    <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-soru-sor-ac hidden="@(!msSoruUye)">Satıcıya Soru Sor</button>
+                    <form data-ms-soru-sor-form data-ms-soru-urun="@b.Kod" data-ms-soru-platform="@msSoruPlatform" hidden style="display:grid;gap:.5rem">
+                        <textarea class="ms-form-metin-alani" name="question" rows="4" minlength="10" maxlength="1000" required
+                                  style="width:100%;box-sizing:border-box"
                                   placeholder="Ürünle ilgili sorunuzu yazın (en az 10 karakter). Sorunuz cevaplanınca burada maskeli adınızla yayınlanır."></textarea>
-                        <div>
+                        <div style="display:flex;align-items:center;gap:.75rem">
                             <button class="ms-buton ms-buton-m" type="submit">Gönder</button>
                             <span data-ms-soru-mesaj role="status"></span>
                         </div>
@@ -305,8 +308,16 @@
                         (function () {
                             const ac = document.querySelector("[data-ms-soru-sor-ac]");
                             const form = document.querySelector("[data-ms-soru-sor-form]");
+                            const girisCta = document.querySelector("[data-ms-soru-giris-cta]");
                             if (!ac || !form) { return; }
                             ac.addEventListener("click", () => { form.hidden = false; ac.hidden = true; form.querySelector("textarea").focus(); });
+                            // Giriş modalı başarıyla kapanınca (reload YOK) formu doğrudan aç
+                            document.addEventListener("ms:uye-giris", () => {
+                                if (girisCta) { girisCta.hidden = true; }
+                                ac.hidden = true;
+                                form.hidden = false;
+                                form.querySelector("textarea").focus();
+                            });
                             form.addEventListener("submit", async (e) => {
                                 e.preventDefault();
                                 const mesaj = form.querySelector("[data-ms-soru-mesaj]");
@@ -337,10 +348,5 @@
                             });
                         })();
                     </script>
-                    }
-                    else
-                    {
-                    <button class="ms-buton ms-buton-m ms-buton-sade" type="button" data-ms-giris-modal-ac>Satıcıya Soru Sor (giriş yapın)</button>
-                    }
                 </section>
             </aside>
