@@ -27,7 +27,7 @@
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!) | Mobil geliştirici teste başlar; sonra Play Integrity config (GCP+paket adı) → App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md`, `tools/mobile/STAGING.md` |
 | 6 | 🚚 **Kargo entegrasyonu** (gerçek taşıyıcı API) | Integration modülü + `admin/` + Views | **KG1 BAŞLIYOR (2026-07-29)**: PTT hazır (kimlik ✓ + barkod aralığı ✓ 278358735860-278358799999; test aralığı pasife alındı); DHL/MNG hazır (kimlik+müşteri no ✓, legacy çalışan kod `docs/APIDocs/MNGKargoAPIDocs/`, enum'lar `DHLMNGEnums.txt`); Sürat WSDL ✓ ama IP engeli sürüyor; HepsiJet topluluk haritası, resmi doküman bekleniyor. Kararlar: tetik=sipariş onayı, 21:00 fiziki teslim kontrolü, tahsilat kapsamı bölge×ödeme matrisi, MNG→DHL ad CANLIDA | KG1: gönderim kaydı modeli + PTT adapter (test ortamı teyidi açık soru) + DHL adapter (cancelOrder+Query sayfaları eksik) → KG2 panel → KG3 bildirim → KG4 site | `docs/kargo-entegrasyon-plani.md` |
 
-**Satıcıya Soru Sor (2026-09-01, Web sitesi + Admin panel — K16 birlikte) ⚠️ restart bekliyor:**
+**Satıcıya Soru Sor (2026-09-01, Web sitesi + Admin panel — K16 birlikte) ✅ CANLIDA (2026-09-02 restart; kullanıcı testleri olumlu):**
 storefront.product_questions (migration canlıda; pending→answered(yayın)→hidden; maskeli ad anlık görüntü,
 aynı üründe cevapsız soru varken yenisi engellenir). Site: ürün detayında "Ürün Soruları (N)" bölümü (yalnız
 cevaplılar, slug + /urun rotalarının ikisinde) + üyeye bölüm içi soru formu (member token'la POST), misafire
@@ -36,6 +36,17 @@ Panel: Ürün Soruları sayfası (/storefront/questions; Cevapla-ve-Yayınla, ce
 bekleyen en eski önce). Mobil: GET /api/store/questions/product/{code} + POST /api/store/questions swagger'da.
 İzole 5051 ✓: anonim uç cevaplıyı döndü/bekleyeni gizledi, POST yetkisiz 401, SSR bölüm+maskeli ad. Satıcı
 paneline akıtma (seller ürünleri) bilinçli v2.
+**Devamı — panel anlık bildirim paketi (2026-09-02) ✅ CANLIDA (kullanıcı testleri olumlu, commit 757a453):**
+yeni soru → SignalR `topic:questions` (QuestionCreated/QuestionAnswered; panelin İLK hub bağlantısı —
+QuestionAlerts bileşeni, /hubs/notifications + access_token) → sağ üstte tıklanabilir toast; sidebar "Ürün
+Soruları"nda kırmızı bekleyen rozeti + sekme başlığı `(N) ECSPros Admin` (60 sn poll güvence — hub kopsa da
+en geç 1 dk); Dashboard "Cevap Bekleyen Soru" kartı; soru sayfasında hazır cevap şablonları (tarayıcı-yerel
+localStorage, ortak yönetim v2); İLK cevapta üyeye "cevaplandı" e-postası (UrunSoruCevapEpostasi fire-and-forget,
+IStoreLinkBuilder linki; cevap güncellemesi yeniden GÖNDERMEZ — AnswerCommand ilk-cevap bool döner). İzole 5051
+SignalR uçtan uca ✓ (üye token hub'a reddedildi). Ayrıca aynı restart'la: soru formu girişte yenilemesiz açılır
+(`ms:uye-giris` olayı) + textarea tam genişlik; search varsayılanı GENEL kapsam (kategoride ara düğmeye tıklayınca,
+2026-09-01 kullanıcı kararı — 2026-07-22 varsayılanını tersine çevirir) + düğme rengi düzeltmesi. Çoklu sunucuda
+SignalR backplane B1'de (altyapı ekibi).
 
 **Mobil menü çocuksuz kök doğrudan gider (2026-09-01, Web sitesi) ✅ CANLIDA:** alt kategorisi olmayan
 kök sekme (Etiketin Yarısı, Çok Satanlar) tıklamada panel yerine ürün listesine gider (data-ms-mobil-ana-url +
