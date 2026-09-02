@@ -11,28 +11,34 @@
 
                 @* C4-b: kartlar canlı adreslerden (template + script); Adresi Düzenle E4'e
                    kadar gizli (update API'si hesabım-adreslerim ile gelecek). *@
+                @* 2026-09-02 (kullanıcı isteği): kartta buton/checkbox yok — üst sol köşede
+                   "Kargo Adresi" ve "Fatura Adresi" radio'ları; varsayılan adreste ikisi de
+                   seçili gelir. Radio'lar ms-onay-kart kalıbından BİLİNÇLİ küçük/sade. *@
+                <style>
+                    .ms-adres-rol-grup { display: flex; gap: 1.1rem; margin-bottom: .4rem; }
+                    .ms-adres-rol { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 600; cursor: pointer; user-select: none; }
+                    .ms-adres-rol input { accent-color: var(--ms-renk-primary, #f27a1a); width: 1rem; height: 1rem; margin: 0; cursor: pointer; }
+                </style>
                 <p data-ms-adres-uye-degil hidden>Adreslerinizi görmek için <button class="ms-siparis-sozlesme-link" type="button" data-ms-giris-modal-ac>giriş yapın</button>.</p>
                 <p data-ms-adres-bos hidden>Kayıtlı adresiniz yok. "Yeni Adres Ekle" ile ilk adresinizi oluşturun.</p>
                 <div class="ms-siparis-asama-izgara" data-ms-adres-listesi></div>
                 <template data-ms-adres-sablon>
                     <section class="ms-siparis-asama-kart ms-siparis-adres-karti" data-ms-adres-karti>
+                        <div class="ms-adres-rol-grup">
+                            <label class="ms-adres-rol">
+                                <input type="radio" name="ms-adres-kargo-rol" data-ms-adres-kargo-rol>
+                                Kargo Adresi
+                            </label>
+                            <label class="ms-adres-rol">
+                                <input type="radio" name="ms-adres-fatura-rol" data-ms-adres-fatura-rol>
+                                Fatura Adresi
+                            </label>
+                        </div>
                         <div class="ms-siparis-asama-kart-ust">
                             <strong data-ms-adres-baslik></strong>
-                            <span class="ms-siparis-etiket-rozet" data-ms-adres-etiket>Alternatif</span>
                         </div>
                         <p data-ms-adres-metin></p>
                         <p data-ms-adres-telefon></p>
-                        <div class="ms-siparis-adres-aksiyonlar">
-                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-adres-sec>Bu Adresi Seç</button>
-                            @* 2026-09-02 (kullanıcı isteği): fatura seçimi ayrı blok değil, adres
-                               kartının İÇİNDE — işaretli kart varsa fatura o adrese kesilir,
-                               yoksa teslimat adresine (tek kart işaretli kalır, radio gibi). *@
-                            <label class="ms-onay-kart">
-                                <input class="ms-onay-input" type="checkbox" data-ms-adres-fatura>
-                                <span class="ms-onay-kutu" aria-hidden="true"></span>
-                                <span class="ms-onay-metin">Fatura adresi</span>
-                            </label>
-                        </div>
                     </section>
                 </template>
                 @if (false)
@@ -402,15 +408,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // 2026-09-02: seçim kart radio'larıyla (Kargo Adresi / Fatura Adresi) — rol taşıyan
+    // kartlar vurgulanır, radio işaretleri durumla eşitlenir.
     const kartlariIsaretle = () => {
         listeAlani.querySelectorAll("[data-ms-adres-karti]").forEach((kart) => {
-            const secili = kart.dataset.msAdresId === seciliAdres?.id;
-            const etiket = kart.querySelector("[data-ms-adres-etiket]");
-            const sec = kart.querySelector("[data-ms-adres-sec]");
-            kart.classList.toggle("ms-siparis-adres-karti-secili", secili);
-            etiket?.classList.toggle("ms-siparis-etiket-rozet-aktif", secili);
-            if (etiket) { etiket.textContent = secili ? "Seçili" : "Alternatif"; }
-            if (sec) { sec.textContent = secili ? "Seçili Adres" : "Bu Adresi Seç"; sec.disabled = secili; }
+            const kargoSecili = kart.dataset.msAdresId === seciliAdres?.id;
+            const faturaSecili = kart.dataset.msAdresId === seciliFaturaAdres?.id;
+            kart.classList.toggle("ms-siparis-adres-karti-secili", kargoSecili || faturaSecili);
+            const kargoRol = kart.querySelector("[data-ms-adres-kargo-rol]");
+            const faturaRol = kart.querySelector("[data-ms-adres-fatura-rol]");
+            if (kargoRol) { kargoRol.checked = kargoSecili; }
+            if (faturaRol) { faturaRol.checked = faturaSecili; }
         });
     };
 
@@ -423,27 +431,32 @@ document.addEventListener("DOMContentLoaded", () => {
             .filter(Boolean).join(" • ");
         kart.querySelector("[data-ms-adres-metin]").textContent = `${adres.recipientName} • ${parcalar}`;
         kart.querySelector("[data-ms-adres-telefon]").textContent = "Telefon: " + (adres.recipientPhone || "-");
-        kart.querySelector("[data-ms-adres-sec]").addEventListener("click", () => {
-            seciliAdres = adres;
-            kartlariIsaretle();
-            durumuYayinla();
-            kargoYukle(); // adres (mahalle) değişti — kargo seçenekleri yenilenir
-        });
-        // "Fatura adresi" işareti — tek kartta kalır (radio gibi); işaret kalkarsa fatura
-        // teslimat adresine döner. Teslimatla aynı kart işaretlenirse fiilen "aynı adres"tir.
-        const faturaGirdi = kart.querySelector("[data-ms-adres-fatura]");
-        if (faturaGirdi) {
-            faturaGirdi.checked = adres.id === seciliFaturaAdres?.id;
-            faturaGirdi.addEventListener("change", () => {
-                if (faturaGirdi.checked) {
-                    seciliFaturaAdres = adres;
-                    listeAlani.querySelectorAll("[data-ms-adres-fatura]").forEach((g) => {
-                        if (g !== faturaGirdi) { g.checked = false; }
-                    });
-                } else if (seciliFaturaAdres?.id === adres.id) {
-                    seciliFaturaAdres = null;
-                }
+        // Kargo rolü — teslimat adresi seçimi (eski "Bu Adresi Seç" düğmesinin yerine).
+        // Fatura "aynı adres" durumundaysa (varsayılan) kargoyla birlikte taşınır;
+        // başka karta açıkça alındıysa yerinde kalır.
+        const kargoRol = kart.querySelector("[data-ms-adres-kargo-rol]");
+        if (kargoRol) {
+            kargoRol.checked = adres.id === seciliAdres?.id;
+            kargoRol.addEventListener("change", () => {
+                if (!kargoRol.checked) { return; }
+                const oncekiId = seciliAdres?.id;
+                seciliAdres = adres;
+                if (!seciliFaturaAdres || seciliFaturaAdres.id === oncekiId) { seciliFaturaAdres = adres; }
+                kartlariIsaretle();
+                durumuYayinla();
+                kargoYukle(); // adres (mahalle) değişti — kargo seçenekleri yenilenir
+            });
+        }
+        // Fatura rolü — fatura hangi karttaysa o adrese kesilir; kargoyla aynı karttaysa
+        // fiilen "teslimat adresiyle aynı"dır (billingSameAsShipping).
+        const faturaRol = kart.querySelector("[data-ms-adres-fatura-rol]");
+        if (faturaRol) {
+            faturaRol.checked = adres.id === seciliFaturaAdres?.id;
+            faturaRol.addEventListener("change", () => {
+                if (!faturaRol.checked) { return; }
+                seciliFaturaAdres = adres;
                 faturaHataGoster("");
+                kartlariIsaretle();
                 durumuYayinla();
             });
         }
@@ -458,6 +471,8 @@ document.addEventListener("DOMContentLoaded", () => {
         liste.forEach((adres) => listeAlani.appendChild(kartKur(adres)));
         if (bosMesaj) { bosMesaj.hidden = liste.length > 0; }
         seciliAdres = liste.find((a) => a.isDefault) || liste[0] || null;
+        // Varsayılan adreste iki rol de seçili başlar (fatura ayrıca seçilmemişse)
+        if (!seciliFaturaAdres) { seciliFaturaAdres = seciliAdres; }
         kartlariIsaretle();
         durumuYayinla();
         kargoYukle(); // varsayılan adresle kargo seçenekleri gelir
