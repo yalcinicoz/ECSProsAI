@@ -75,6 +75,7 @@ public class StoreCheckoutController(
             req.ShippingRecipientName, req.ShippingRecipientPhone,
             req.ShippingCountryId, req.ShippingCityId, req.ShippingDistrictId,
             req.ShippingAddressLine, req.ShippingPostalCode, req.ShippingDeliveryNotes,
+            req.ShippingNeighborhoodId,
             req.BillingSameAsShipping, req.BillingRecipientName,
             req.BillingTaxOffice, req.BillingTaxNumber, req.BillingCompanyName,
             req.BillingCountryId, req.BillingCityId, req.BillingDistrictId, req.BillingAddressLine,
@@ -144,6 +145,8 @@ public record StoreCheckoutRequest(
     string ShippingAddressLine,
     string? ShippingPostalCode,
     string? ShippingDeliveryNotes,
+    // 2026-09-02: mahalle — "Kargoya Ver" önerisinin mahalle kurallı ayağı için siparişe yazılır
+    Guid? ShippingNeighborhoodId,
     bool BillingSameAsShipping,
     string? BillingRecipientName,
     string? BillingTaxOffice,

@@ -984,6 +984,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     shippingCityId: teslimat.cityId,
                     shippingDistrictId: teslimat.districtId,
                     shippingAddressLine: [teslimat.neighborhoodName, teslimat.addressLine].filter(Boolean).join(" "),
+                    shippingNeighborhoodId: teslimat.neighborhoodId || null, // 2026-09-02: kargo önerisinin mahalle ayağı
                     shippingPostalCode: teslimat.postalCode || null,
                     shippingDeliveryNotes: teslimat.deliveryNotes || null,
                     billingSameAsShipping: !faturaAdres,

@@ -19,6 +19,8 @@ public record CheckoutCommand(
     string ShippingAddressLine,
     string? ShippingPostalCode,
     string? ShippingDeliveryNotes,
+    // 2026-09-02: mahalle id — "Kargoya Ver" önerisinin mahalle kurallı ayağı buradan beslenir
+    Guid? ShippingNeighborhoodId,
     // Billing
     bool BillingSameAsShipping,
     string? BillingRecipientName,
@@ -207,6 +209,7 @@ public class CheckoutCommandHandler(
             ShippingCountryId = request.ShippingCountryId,
             ShippingCityId = request.ShippingCityId,
             ShippingDistrictId = request.ShippingDistrictId,
+            ShippingNeighborhoodId = request.ShippingNeighborhoodId,
             ShippingAddressLine = request.ShippingAddressLine,
             ShippingPostalCode = request.ShippingPostalCode,
             ShippingDeliveryNotes = request.ShippingDeliveryNotes,
