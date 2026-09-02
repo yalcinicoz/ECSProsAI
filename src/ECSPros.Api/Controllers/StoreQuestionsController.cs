@@ -1,3 +1,4 @@
+using ECSPros.Shared.Infrastructure.Messaging;
 using ECSPros.Storefront.Application.Commands.ProductQuestions;
 using ECSPros.Storefront.Application.Queries.ProductQuestions;
 using MediatR;
@@ -13,7 +14,10 @@ namespace ECSPros.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/store/questions")]
-public class StoreQuestionsController(IMediator mediator) : ControllerBase
+public class StoreQuestionsController(
+    IMediator mediator,
+    IRealtimeNotificationService realtime,
+    ILogger<StoreQuestionsController> logger) : ControllerBase
 {
     private Guid MemberId => Guid.Parse(
         User.FindFirst("sub")?.Value
@@ -61,6 +65,25 @@ public class StoreQuestionsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new CreateProductQuestionCommand(
             req.FirmPlatformId, MemberId, req.ProductCode.Trim(), req.Question ?? "", maskeli), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+
+        // Panel anlık bildirimi (topic:questions) — hub hatası soru kaydını asla düşürmez.
+        try
+        {
+            var soruMetni = (req.Question ?? "").Trim();
+            await realtime.SendQuestionEventAsync("QuestionCreated", new
+            {
+                id = result.Value,
+                productCode = req.ProductCode.Trim(),
+                question = soruMetni.Length > 200 ? soruMetni[..200] + "…" : soruMetni,
+                memberName = maskeli,
+                createdAt = DateTime.UtcNow
+            }, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Soru bildirimi hub'a gönderilemedi: {QuestionId}", result.Value);
+        }
+
         return Ok(new { success = true, data = new { id = result.Value } });
     }
 }

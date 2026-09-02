@@ -468,6 +468,7 @@ builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerif
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.DevBypassVerifier>();
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IStoreLinkBuilder, ECSPros.Api.Services.Store.StoreLinkBuilder>(); // H8: e-postalardaki mutlak site linki (Store:Hosts tersinden)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.ISavedSearchNotifier, ECSPros.Api.Services.Store.SavedSearchNotifier>(); // H8: favori arama bildirimi taraması
+builder.Services.AddSingleton<ECSPros.Api.Services.Store.UrunSoruCevapEpostasi>(); // Satıcıya Soru Sor: ilk cevapta üyeye "cevaplandı" e-postası (fire-and-forget, kendi scope'u)
 if (nodeOptions.WorkerRolu) // FAZ 10 / A2
     builder.Services.AddHostedService<ECSPros.Api.Services.Store.SavedSearchNotifyWorker>(); // H8: periyodik tarama (günde-1 sınırı LastNotifiedAt'ta)
 // DashboardMetricsWorker rol kapısına GİRMEZ: salt-okunur, yalnız bu düğüme bağlı admin

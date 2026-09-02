@@ -3,6 +3,7 @@ import { NavLink, Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui'
 import { useAuthStore } from '@/store/auth'
+import { useQuestionAlertStore } from '@/store/questionAlerts'
 import { Search, X } from 'lucide-react'
 
 // ── Nav structure (matches option-h) ──────────────────────────────────────────
@@ -159,6 +160,8 @@ export function Sidebar({ onMobileClose }: SidebarProps) {
   const { user, logout } = useAuthStore()
   const hasPermission = useAuthStore((s) => s.hasPermission)
   const [search, setSearch] = useState('')
+  // Cevap bekleyen ürün sorusu — QuestionAlerts besler; sıfırlanana kadar kırmızı rozet
+  const bekleyenSoru = useQuestionAlertStore((s) => s.pendingCount)
 
   // Permission'lı öğeler yalnız yetkili kullanıcıda görünür; sonra arama filtresi uygulanır
   const visibleSections = NAV_SECTIONS.map((s) => ({
@@ -268,7 +271,11 @@ export function Sidebar({ onMobileClose }: SidebarProps) {
               <div className="nav-section-lbl">{section.label}</div>
             )}
             {sidebarCollapsed && <div className="h-2" />}
-            {section.items.map((item) => (
+            {section.items.map((item) => {
+              // Ürün Soruları: cevap bekleyen sayısı canlı rozet (kırmızı — cevaplanana kadar)
+              const soruRozeti = item.to === '/storefront/questions' && bekleyenSoru > 0
+              const badge = soruRozeti ? bekleyenSoru : item.badge
+              return (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -278,18 +285,26 @@ export function Sidebar({ onMobileClose }: SidebarProps) {
                   cn('nav-lnk', isActive && 'active', sidebarCollapsed && 'justify-center px-0 py-2')
                 }
               >
-                <span className="ni flex-shrink-0">{ICON[item.icon]}</span>
+                <span className="ni flex-shrink-0 relative">
+                  {ICON[item.icon]}
+                  {sidebarCollapsed && soruRozeti && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full" style={{ background: '#ef4444' }} />
+                  )}
+                </span>
                 {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
-                {!sidebarCollapsed && item.badge != null && (
+                {!sidebarCollapsed && badge != null && (
                   <span
                     className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
-                    style={{ background: 'rgba(52,211,153,.2)', color: '#34d399' }}
+                    style={soruRozeti
+                      ? { background: '#ef4444', color: '#fff' }
+                      : { background: 'rgba(52,211,153,.2)', color: '#34d399' }}
                   >
-                    {item.badge}
+                    {badge}
                   </span>
                 )}
               </NavLink>
-            ))}
+              )
+            })}
           </div>
         ))}
       </nav>

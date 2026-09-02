@@ -45,7 +45,8 @@ public class CreateProductQuestionCommandHandler(IStorefrontDbContext db)
     }
 }
 
-/// <summary>Admin cevabı: answer dolu → answered (yayında). Yayındaki cevap güncellenebilir.</summary>
+/// <summary>Admin cevabı: answer dolu → answered (yayında). Yayındaki cevap güncellenebilir.
+/// Dönen bool = İLK cevap mı (üye e-postası yalnız ilk cevapta gönderilir, güncellemede değil).</summary>
 public record AnswerProductQuestionCommand(Guid QuestionId, string Answer, Guid? AnsweredBy)
     : IRequest<Result<bool>>;
 
@@ -61,12 +62,13 @@ public class AnswerProductQuestionCommandHandler(IStorefrontDbContext db)
         var soru = await db.ProductQuestions.FirstOrDefaultAsync(q => q.Id == request.QuestionId, ct);
         if (soru is null) return Result.Failure<bool>("Soru bulunamadı.");
 
+        var ilkCevap = soru.AnsweredAt is null;
         soru.Answer = cevap;
         soru.Status = "answered";
         soru.AnsweredAt = DateTime.UtcNow;
         soru.AnsweredBy = request.AnsweredBy;
         await db.SaveChangesAsync(ct);
-        return Result.Success(true);
+        return Result.Success(ilkCevap);
     }
 }
 

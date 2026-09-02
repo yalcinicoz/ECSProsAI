@@ -13,4 +13,7 @@ public interface IRealtimeNotificationService
 
     /// <summary>Belirli kullanıcıya kişisel bildirim gönderir.</summary>
     Task SendUserNotificationAsync(string userId, string eventType, object data, CancellationToken ct = default);
+
+    /// <summary>Ürün soruları topic'ine (panel moderasyonu) bildirim gönderir.</summary>
+    Task SendQuestionEventAsync(string eventType, object data, CancellationToken ct = default);
 }

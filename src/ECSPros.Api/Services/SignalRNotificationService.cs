@@ -40,4 +40,10 @@ public class SignalRNotificationService(
         await notificationHub.Clients.Group($"user:{userId}")
             .SendAsync(eventType, data, ct);
     }
+
+    public async Task SendQuestionEventAsync(string eventType, object data, CancellationToken ct = default)
+    {
+        await notificationHub.Clients.Group("topic:questions")
+            .SendAsync(eventType, data, ct);
+    }
 }

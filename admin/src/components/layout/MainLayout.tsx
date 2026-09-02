@@ -3,6 +3,7 @@ import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { FavoritesPanel } from './FavoritesPanel'
 import { CommandPalette } from './CommandPalette'
+import { QuestionAlerts } from './QuestionAlerts'
 import { useUIStore } from '@/store/ui'
 import { cn } from '@/lib/utils'
 
@@ -58,6 +59,7 @@ export function MainLayout() {
       {/* ── Global overlays ── */}
       <FavoritesPanel />
       <CommandPalette />
+      <QuestionAlerts />
     </div>
   )
 }

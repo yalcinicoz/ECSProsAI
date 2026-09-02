@@ -1,3 +1,5 @@
+using ECSPros.Api.Services.Store;
+using ECSPros.Shared.Infrastructure.Messaging;
 using ECSPros.Storefront.Application.Commands.ProductQuestions;
 using ECSPros.Storefront.Application.Queries.ProductQuestions;
 using MediatR;
@@ -14,7 +16,11 @@ namespace ECSPros.Api.Controllers;
 [ApiController]
 [Route("api/product-questions")]
 [Authorize]
-public class ProductQuestionsController(IMediator mediator) : ControllerBase
+public class ProductQuestionsController(
+    IMediator mediator,
+    IRealtimeNotificationService realtime,
+    UrunSoruCevapEpostasi cevapEpostasi,
+    ILogger<ProductQuestionsController> logger) : ControllerBase
 {
     private Guid? UserId =>
         Guid.TryParse(User.FindFirst("sub")?.Value, out var id) ? id : null;
@@ -37,6 +43,14 @@ public class ProductQuestionsController(IMediator mediator) : ControllerBase
     {
         var result = await mediator.Send(new AnswerProductQuestionCommand(id, req.Answer ?? "", UserId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+
+        // Üyeye "cevaplandı" e-postası — yalnız İLK cevapta (güncelleme yeniden göndermez).
+        if (result.Value) cevapEpostasi.ArkaPlandaGonder(id);
+
+        // Diğer panel kullanıcılarının rozeti/listesi anında tazelensin.
+        try { await realtime.SendQuestionEventAsync("QuestionAnswered", new { id }, ct); }
+        catch (Exception ex) { logger.LogWarning(ex, "Cevap bildirimi hub'a gönderilemedi: {QuestionId}", id); }
+
         return Ok(new { success = true, data = true });
     }
 

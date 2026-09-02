@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import api from '@/api/client'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { ShoppingCart, Package, Users, CreditCard } from 'lucide-react'
+import { useQuestionAlertStore } from '@/store/questionAlerts'
+import { ShoppingCart, Package, Users, CreditCard, MessageCircleQuestion } from 'lucide-react'
 
 interface Stats {
   totalOrders: number
@@ -12,6 +14,8 @@ interface Stats {
 }
 
 export function DashboardPage() {
+  // QuestionAlerts katmanı besler (60 sn poll + SignalR) — kart canlı kalır
+  const bekleyenSoru = useQuestionAlertStore((s) => s.pendingCount)
   const { data, isLoading } = useQuery<Stats>({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
@@ -48,7 +52,7 @@ export function DashboardPage() {
     <div className="p-6">
       <h1 className="text-xl font-bold mb-6" style={{ color: 'var(--text)' }}>Dashboard</h1>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {cards.map((c) => (
           <div key={c.label} className="card p-4">
             <div
@@ -63,6 +67,21 @@ export function DashboardPage() {
             <div className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>{c.label}</div>
           </div>
         ))}
+
+        {/* Cevap bekleyen ürün soruları — sıfır değilse kırmızı vurgulu, tıklanınca moderasyon */}
+        <Link to="/storefront/questions" className="card p-4 hover:opacity-90 transition-opacity"
+          style={bekleyenSoru > 0 ? { borderColor: '#ef4444' } : undefined}>
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+            style={{ background: '#ef444415', color: '#ef4444' }}
+          >
+            <MessageCircleQuestion size={20} />
+          </div>
+          <div className="text-2xl font-bold" style={{ color: bekleyenSoru > 0 ? '#ef4444' : 'var(--text)' }}>
+            {bekleyenSoru.toLocaleString('tr-TR')}
+          </div>
+          <div className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>Cevap Bekleyen Soru</div>
+        </Link>
       </div>
     </div>
   )
