@@ -2,14 +2,15 @@
    markup birebir alınıp canlıya bağlandı — demo değerler boşaltıldı, alanlara data-ms-adres-*
    bağları eklendi; İl/İlçe/Mahalle select'leri aynı görsel sınıflarla ama data-ms-adres-select
    attribute'uyla (site.js'in ozel-select'i dinamik seçenek desteklemez — davranış teslimat
-   sayfası script'inde, seçenekler api/store/geo'dan). Fatura türü radio'ları görseldir,
-   adres kaydına girmez (kurumsal fatura C10 checkout'ta). Telefon ülke bileşeni site.js'ten. *@
+   sayfası script'inde, seçenekler api/store/geo'dan). 2026-09-02: işlevsiz "Fatura Türü"
+   radio'ları kaldırıldı — kurumsal fatura seçimi artık teslimat adımındaki Fatura Adresi
+   bölümünde (adres kaydına fatura bilgisi girmez). Telefon ülke bileşeni site.js'ten. *@
     <div class="ms-ornek-modal ms-siparis-adres-modal" data-ms-adres-modal aria-hidden="true">
         <div class="ms-ornek-modal-kaplama" data-ms-adres-modal-kapat></div>
         <section class="ms-ornek-modal-kutu ms-ornek-modal-boyut-xl" role="dialog" aria-modal="true" aria-labelledby="ms-siparis-adres-modal-baslik">
             <button class="ms-ornek-modal-kapat" type="button" data-ms-adres-modal-kapat aria-label="Adres düzenleme modalını kapat">×</button>
             <h3 id="ms-siparis-adres-modal-baslik" class="ms-ornek-modal-baslik">Adresi Düzenle</h3>
-            <p class="ms-ornek-modal-aciklama">Teslimat adresi, alıcı bilgisi ve telefon bilgisini bu alanda güncelleyebilirsiniz.</p>
+            <p class="ms-ornek-modal-aciklama">Adres, alıcı bilgisi ve telefon bilgisini bu alanda güncelleyebilirsiniz.</p>
 
             <div class="ms-form-izgara">
                 <label class="ms-form-alani ms-form-alani-genis">
@@ -24,27 +25,6 @@
                     <span class="ms-form-etiket">Soyad</span>
                     <input class="ms-form-girdi" type="text" autocomplete="family-name" data-ms-adres-soyad>
                 </label>
-                <div class="ms-form-alani ms-form-alani-genis">
-                    <span class="ms-form-etiket">Fatura Türü</span>
-                    <div class="ms-onay-listesi ms-siparis-adres-secim-listesi">
-                        <label class="ms-onay-kart">
-                            <input class="ms-onay-input" type="radio" name="ms-adres-fatura-turu" checked>
-                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
-                            <span class="ms-onay-metin">
-                                Bireysel
-                                <span class="ms-onay-yardim">Kişisel fatura bilgileriyle devam et</span>
-                            </span>
-                        </label>
-                        <label class="ms-onay-kart">
-                            <input class="ms-onay-input" type="radio" name="ms-adres-fatura-turu">
-                            <span class="ms-onay-kutu ms-onay-kutu-yuvarlak" aria-hidden="true"></span>
-                            <span class="ms-onay-metin">
-                                Kurumsal
-                                <span class="ms-onay-yardim">Firma bilgileriyle fatura oluştur</span>
-                            </span>
-                        </label>
-                    </div>
-                </div>
                 <div class="ms-form-alani">
                     <span class="ms-form-etiket">Ülke</span>
                     <div class="ms-ozel-select ms-ozel-select-kilitli" data-ms-ozel-select>

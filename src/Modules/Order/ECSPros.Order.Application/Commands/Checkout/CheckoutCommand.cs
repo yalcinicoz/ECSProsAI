@@ -85,6 +85,25 @@ public class CheckoutCommandHandler(
         if (!request.Items.Any())
             return Result.Failure<CheckoutSonucu>("Sepet boş.");
 
+        // 2026-09-02: fatura farklı adrese — istemci doğrulaması atlansa da alan zorunlulukları
+        // SUNUCUDA denetlenir (arayüz bugüne dek billingSameAsShipping:true sabit gönderiyordu).
+        if (!request.BillingSameAsShipping
+            && (string.IsNullOrWhiteSpace(request.BillingRecipientName)
+                || request.BillingCountryId is null || request.BillingCityId is null
+                || request.BillingDistrictId is null
+                || string.IsNullOrWhiteSpace(request.BillingAddressLine)))
+            return Result.Failure<CheckoutSonucu>("Fatura adresi eksik: alıcı adı, il/ilçe ve adres satırı zorunludur.");
+
+        // Kurumsal fatura bilgisi kısmi gönderilemez — üç alan birlikte dolu olmalı.
+        var kurumsalAlanVar = !string.IsNullOrWhiteSpace(request.BillingCompanyName)
+            || !string.IsNullOrWhiteSpace(request.BillingTaxOffice)
+            || !string.IsNullOrWhiteSpace(request.BillingTaxNumber);
+        if (kurumsalAlanVar
+            && (string.IsNullOrWhiteSpace(request.BillingCompanyName)
+                || string.IsNullOrWhiteSpace(request.BillingTaxOffice)
+                || string.IsNullOrWhiteSpace(request.BillingTaxNumber)))
+            return Result.Failure<CheckoutSonucu>("Kurumsal fatura için firma adı, vergi dairesi ve vergi numarası birlikte zorunludur.");
+
         // Kanal seçimi/durdurma (M2/M3): bu kanalda çıkarılan/durdurulan ürün siparişe geçemez.
         var kanalDisi = await flagService.GetChannelExcludedProductIdsAsync(request.FirmPlatformId, ct);
 

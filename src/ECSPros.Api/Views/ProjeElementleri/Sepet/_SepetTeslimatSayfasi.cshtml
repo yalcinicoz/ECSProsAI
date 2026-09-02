@@ -67,6 +67,57 @@
                         <p class="ms-sepet-bolum-aciklama" data-ms-kargo-bos>Kargo seçenekleri için önce teslimat adresi seçin.</p>
                     </div>
                 </section>
+
+                @* 2026-09-02 (kullanıcı isteği): fatura farklı adrese kesilebilir — adres tipi YOK,
+                   fatura adresi siparişe anlık görüntü olarak yazılır (Order Billing* alanları hazırdı,
+                   ödeme sayfası billingSameAsShipping:true sabit gönderiyordu). Üye aynı adres
+                   defterinden ikinci seçim yapar; kurumsal fatura zorunlu değil, opsiyonel işaret. *@
+                <section class="ms-siparis-asama-kart">
+                    <strong>Fatura Adresi</strong>
+                    <div class="ms-onay-listesi">
+                        <label class="ms-onay-kart">
+                            <input class="ms-onay-input" type="checkbox" data-ms-fatura-farkli>
+                            <span class="ms-onay-kutu" aria-hidden="true"></span>
+                            <span class="ms-onay-metin">
+                                Faturayı farklı adrese kestir
+                                <span class="ms-onay-yardim">İşaretlenmezse fatura teslimat adresine düzenlenir.</span>
+                            </span>
+                        </label>
+                    </div>
+                    <div data-ms-fatura-alani hidden>
+                        <div class="ms-sepet-ust">
+                            <p class="ms-sepet-bolum-aciklama">Fatura için bir adres seçin.</p>
+                            <button class="ms-buton ms-buton-s ms-buton-sade" type="button" data-ms-fatura-adres-ekle>Yeni Adres Ekle</button>
+                        </div>
+                        <p class="ms-sepet-bolum-aciklama" data-ms-fatura-bos hidden>Kayıtlı adresiniz yok — "Yeni Adres Ekle" ile fatura adresi oluşturun.</p>
+                        <div class="ms-siparis-asama-izgara" data-ms-fatura-listesi></div>
+                        <div class="ms-onay-listesi">
+                            <label class="ms-onay-kart">
+                                <input class="ms-onay-input" type="checkbox" data-ms-fatura-kurumsal>
+                                <span class="ms-onay-kutu" aria-hidden="true"></span>
+                                <span class="ms-onay-metin">
+                                    Kurumsal fatura istiyorum
+                                    <span class="ms-onay-yardim">Firma adı ve vergi bilgileriyle fatura düzenlenir.</span>
+                                </span>
+                            </label>
+                        </div>
+                        <div class="ms-form-izgara" data-ms-fatura-kurumsal-alani hidden>
+                            <label class="ms-form-alani">
+                                <span class="ms-form-etiket">Firma Adı</span>
+                                <input class="ms-form-girdi" type="text" placeholder="Örn. ABC Tekstil Ltd. Şti." data-ms-fatura-firma>
+                            </label>
+                            <label class="ms-form-alani">
+                                <span class="ms-form-etiket">Vergi Dairesi</span>
+                                <input class="ms-form-girdi" type="text" data-ms-fatura-vergi-dairesi>
+                            </label>
+                            <label class="ms-form-alani">
+                                <span class="ms-form-etiket">Vergi Numarası</span>
+                                <input class="ms-form-girdi" type="text" inputmode="numeric" maxlength="11" data-ms-fatura-vergi-no>
+                            </label>
+                        </div>
+                        <div class="ms-uyari ms-uyari-hata" data-ms-fatura-hata hidden></div>
+                    </div>
+                </section>
             </section>
 
             @* 2026-07-30 (kullanıcı kararı): başlık 'Sepet Özeti' — panel gerçek sepet
@@ -79,6 +130,7 @@
                     @* 2026-08-03: sepet-seviyesi kampanya indirimi (GET cart campaignDiscount) *@
                     <div class="ms-siparis-satiri" data-ms-teslimat-kampanya-satiri hidden><span class="ms-siparis-etiket">Kampanya İndirimi</span><span class="ms-siparis-deger ms-urun-fiyat-indirimli" data-ms-teslimat-kampanya-tutar>-0,00 TL</span></div>
                     <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Adres</span><span class="ms-siparis-deger" data-ms-teslimat-ozet-adres>Seçilmedi</span></div>
+                    <div class="ms-siparis-satiri" data-ms-teslimat-fatura-satiri hidden><span class="ms-siparis-etiket">Fatura Adresi</span><span class="ms-siparis-deger" data-ms-teslimat-ozet-fatura>—</span></div>
                     <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Kargo</span><span class="ms-siparis-deger ms-siparis-ucretsiz" data-ms-teslimat-ozet-kargo>Ücretsiz</span></div>
                     <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Tahmini Teslimat</span><span class="ms-siparis-deger">2-4 iş günü</span></div>
                 </div>
@@ -246,19 +298,58 @@ document.addEventListener("DOMContentLoaded", () => {
     const kargoListesi = document.querySelector("[data-ms-kargo-listesi]");
     const ozetKargo = document.querySelector("[data-ms-teslimat-ozet-kargo]");
 
+    // ── Fatura adresi (2026-09-02): fatura farklı adrese kesilebilir — adres tipi yok,
+    // üye AYNI adres defterinden ikinci seçim yapar (misafirde ayrı sessionStorage kaydı);
+    // kurumsal fatura opsiyonel. Seçim msTeslimatDurumu.fatura ile ödeme adımına akar.
+    const faturaKutu = document.querySelector("[data-ms-fatura-farkli]");
+    const faturaAlani = document.querySelector("[data-ms-fatura-alani]");
+    const faturaListesi = document.querySelector("[data-ms-fatura-listesi]");
+    const faturaBos = document.querySelector("[data-ms-fatura-bos]");
+    const faturaKurumsalKutu = document.querySelector("[data-ms-fatura-kurumsal]");
+    const faturaKurumsalAlani = document.querySelector("[data-ms-fatura-kurumsal-alani]");
+    const faturaHata = document.querySelector("[data-ms-fatura-hata]");
+    const ozetFatura = document.querySelector("[data-ms-teslimat-ozet-fatura]");
+    const ozetFaturaSatiri = document.querySelector("[data-ms-teslimat-fatura-satiri]");
+    let seciliFaturaAdres = null;
+    let adresKayitlari = [];         // üye adres defteri (fatura listesi de buradan çizilir)
+    let faturaOtoSecAnahtar = null;  // modaldan fatura için eklenen adres kaydedilince otomatik seçilir
+    let modalHedef = "teslimat";     // adres modalı hangi liste için açıldı (teslimat | fatura)
+
     const hataGoster = (mesaj) => {
         if (!modalHata) { return; }
         modalHata.textContent = mesaj || "";
         modalHata.hidden = !mesaj;
     };
 
+    const faturaHataGoster = (mesaj) => {
+        if (!faturaHata) { return; }
+        faturaHata.textContent = mesaj || "";
+        faturaHata.hidden = !mesaj;
+    };
+
+    // Fatura seçimi yoksa null döner → ödeme sayfası billingSameAsShipping:true gönderir.
+    const faturaDurumu = () => {
+        if (!faturaKutu?.checked || !seciliFaturaAdres) { return null; }
+        const kurumsal = faturaKurumsalKutu?.checked === true ? {
+            firmaAdi: document.querySelector("[data-ms-fatura-firma]")?.value.trim() || "",
+            vergiDairesi: document.querySelector("[data-ms-fatura-vergi-dairesi]")?.value.trim() || "",
+            vergiNo: document.querySelector("[data-ms-fatura-vergi-no]")?.value.trim() || ""
+        } : null;
+        return { adres: seciliFaturaAdres, kurumsal };
+    };
+
     const durumuYayinla = () => {
+        const fatura = faturaDurumu();
         try {
-            if (seciliAdres) { sessionStorage.setItem("msTeslimatDurumu", JSON.stringify({ ...seciliAdres, kargo: seciliKargo })); }
+            if (seciliAdres) { sessionStorage.setItem("msTeslimatDurumu", JSON.stringify({ ...seciliAdres, kargo: seciliKargo, fatura })); }
             else { sessionStorage.removeItem("msTeslimatDurumu"); }
         } catch { /* depolama kapalı */ }
         if (ozetAdres) { ozetAdres.textContent = seciliAdres?.title || "Seçilmedi"; }
         if (ozetKargo) { ozetKargo.textContent = seciliKargo?.ad || "Ücretsiz"; }
+        if (ozetFaturaSatiri) {
+            ozetFaturaSatiri.hidden = !fatura;
+            if (ozetFatura && fatura) { ozetFatura.textContent = fatura.adres.title || fatura.adres.recipientName || "Seçildi"; }
+        }
     };
 
     // ── Kargo seçenekleri (mahalle bazlı) ──
@@ -340,13 +431,72 @@ document.addEventListener("DOMContentLoaded", () => {
         return kart;
     };
 
-    const ciz = (adresler) => {
-        listeAlani.innerHTML = "";
-        (adresler || []).forEach((adres) => listeAlani.appendChild(kartKur(adres)));
-        if (bosMesaj) { bosMesaj.hidden = (adresler || []).length > 0; }
-        seciliAdres = (adresler || []).find((a) => a.isDefault) || (adresler || [])[0] || null;
-        kartlariIsaretle();
+    // ── Fatura adres listesi — teslimat kart şablonuyla aynı görünüm, ayrı seçim durumu ──
+    const faturaKartlariniIsaretle = () => {
+        faturaListesi?.querySelectorAll("[data-ms-adres-karti]").forEach((kart) => {
+            const secili = kart.dataset.msAdresId === seciliFaturaAdres?.id;
+            const etiket = kart.querySelector("[data-ms-adres-etiket]");
+            const sec = kart.querySelector("[data-ms-adres-sec]");
+            kart.classList.toggle("ms-siparis-adres-karti-secili", secili);
+            etiket?.classList.toggle("ms-siparis-etiket-rozet-aktif", secili);
+            if (etiket) { etiket.textContent = secili ? "Seçili" : "Alternatif"; }
+            if (sec) { sec.textContent = secili ? "Seçili Adres" : "Bu Adresi Seç"; sec.disabled = secili; }
+        });
+    };
+
+    const faturaAdresleri = () => {
+        const liste = [...adresKayitlari];
+        if (misafirMi()) {
+            try {
+                const f = JSON.parse(sessionStorage.getItem("msMisafirFaturaAdres") || "null");
+                if (f) { liste.push(f); }
+            } catch { }
+        }
+        return liste;
+    };
+
+    const faturaCiz = () => {
+        if (!faturaListesi) { return; }
+        faturaListesi.innerHTML = "";
+        const liste = faturaAdresleri();
+        liste.forEach((adres) => {
+            const kart = sablon.content.firstElementChild.cloneNode(true);
+            kart.dataset.msAdresId = adres.id;
+            kart.querySelector("[data-ms-adres-baslik]").textContent = adres.title;
+            const parcalar = [adres.addressLine, adres.neighborhoodName, adres.districtName && adres.cityName
+                ? `${adres.districtName} / ${adres.cityName}` : (adres.districtName || adres.cityName)]
+                .filter(Boolean).join(" • ");
+            kart.querySelector("[data-ms-adres-metin]").textContent = `${adres.recipientName} • ${parcalar}`;
+            kart.querySelector("[data-ms-adres-telefon]").textContent = "Telefon: " + (adres.recipientPhone || "-");
+            kart.querySelector("[data-ms-adres-sec]").addEventListener("click", () => {
+                seciliFaturaAdres = adres;
+                faturaHataGoster("");
+                faturaKartlariniIsaretle();
+                durumuYayinla();
+            });
+            faturaListesi.appendChild(kart);
+        });
+        if (faturaBos) { faturaBos.hidden = liste.length > 0; }
+        // Seçim listeden güncel nesneyle yenilenir (silinen adres düşer); modaldan fatura
+        // için eklenen adres kaydedilince otomatik seçilir.
+        seciliFaturaAdres = liste.find((a) => a.id === seciliFaturaAdres?.id) || null;
+        if (faturaOtoSecAnahtar) {
+            const aday = liste.find((a) => a.title === faturaOtoSecAnahtar);
+            if (aday) { seciliFaturaAdres = aday; faturaHataGoster(""); }
+            faturaOtoSecAnahtar = null;
+        }
+        faturaKartlariniIsaretle();
         durumuYayinla();
+    };
+
+    const ciz = (adresler) => {
+        adresKayitlari = adresler || [];
+        listeAlani.innerHTML = "";
+        adresKayitlari.forEach((adres) => listeAlani.appendChild(kartKur(adres)));
+        if (bosMesaj) { bosMesaj.hidden = adresKayitlari.length > 0; }
+        seciliAdres = adresKayitlari.find((a) => a.isDefault) || adresKayitlari[0] || null;
+        kartlariIsaretle();
+        faturaCiz(); // durumuYayinla'yı da çağırır
         kargoYukle(); // varsayılan adresle kargo seçenekleri gelir
     };
 
@@ -473,8 +623,24 @@ document.addEventListener("DOMContentLoaded", () => {
         modal?.setAttribute("aria-hidden", "false");
         geoBaslat();
     };
-    document.querySelector("[data-ms-adres-ekle]")?.addEventListener("click", modalAc);
+    document.querySelector("[data-ms-adres-ekle]")?.addEventListener("click", () => { modalHedef = "teslimat"; modalAc(); });
     document.querySelector("[data-ms-adres-uye-degil] [data-ms-giris-modal-ac]")?.addEventListener("click", () => {});
+
+    // ── Fatura bölümü etkileşimleri ──
+    faturaKutu?.addEventListener("change", () => {
+        if (faturaAlani) { faturaAlani.hidden = !faturaKutu.checked; }
+        faturaHataGoster("");
+        if (faturaKutu.checked) { faturaCiz(); } else { durumuYayinla(); }
+    });
+    faturaKurumsalKutu?.addEventListener("change", () => {
+        if (faturaKurumsalAlani) { faturaKurumsalAlani.hidden = !faturaKurumsalKutu.checked; }
+        faturaHataGoster("");
+        durumuYayinla();
+    });
+    ["[data-ms-fatura-firma]", "[data-ms-fatura-vergi-dairesi]", "[data-ms-fatura-vergi-no]"].forEach((secici) => {
+        document.querySelector(secici)?.addEventListener("input", durumuYayinla);
+    });
+    document.querySelector("[data-ms-fatura-adres-ekle]")?.addEventListener("click", () => { modalHedef = "fatura"; modalAc(); });
 
     modal?.querySelector("[data-ms-adres-modal-kaydet]")?.addEventListener("click", async (olay) => {
         const buton = olay.currentTarget;
@@ -492,9 +658,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // 2026-07-22: misafir adresi sunucuya değil sessionStorage'a yazılır — sipariş
         // oluştuğunda adres bilgisi checkout isteğiyle (shipping* alanları) sunucuya gider.
+        // 2026-09-02: fatura hedefli açılışta AYRI anahtara (msMisafirFaturaAdres) yazılır —
+        // misafirin teslimat adresi ezilmez; kayıt fatura listesinde otomatik seçilir.
         if (misafirMi()) {
+            const faturaIcin = modalHedef === "fatura";
             const misafirAdres = {
-                id: "misafir-adres",
+                id: faturaIcin ? "misafir-fatura-adres" : "misafir-adres",
                 title: baslik,
                 countryId: geoDurum.ulkeId, countryName: "Türkiye",
                 cityId: geoDurum.il.id, cityName: geoDurum.il.ad,
@@ -504,9 +673,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 recipientName: `${ad} ${soyad}`,
                 recipientPhone: "0" + telefonHam,
                 deliveryNotes: oku("[data-ms-adres-notu]") || null,
-                isDefault: true
+                isDefault: !faturaIcin
             };
-            try { sessionStorage.setItem("msMisafirAdres", JSON.stringify(misafirAdres)); } catch { }
+            try { sessionStorage.setItem(faturaIcin ? "msMisafirFaturaAdres" : "msMisafirAdres", JSON.stringify(misafirAdres)); } catch { }
+            if (faturaIcin) { faturaOtoSecAnahtar = baslik; }
             modal.classList.remove("ms-ornek-modal-acik");
             modal.setAttribute("aria-hidden", "true");
             yenile();
@@ -534,6 +704,9 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const veri = await cevap.json().catch(() => null);
             if (!veri?.success) { hataGoster(veri?.error || "Adres kaydedilemedi."); return; }
+            // Fatura için eklendiyse yenilenen listede otomatik fatura adresi seçilir
+            // (adres yine sıradan defter kaydıdır — fatura tipli adres yok).
+            if (modalHedef === "fatura") { faturaOtoSecAnahtar = baslik; }
             modal.classList.remove("ms-ornek-modal-acik");
             modal.setAttribute("aria-hidden", "true");
             yenile();
@@ -544,13 +717,32 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ── Ödemeye Geç guard'ı: adres seçilmeden geçilmez (capture, kaynak yönlendirmesinden önce)
+    // ── Ödemeye Geç guard'ı: adres seçilmeden geçilmez (capture, kaynak yönlendirmesinden önce);
+    // fatura farklı adrese işaretliyse adres seçimi + kurumsal alanları da denetlenir.
     document.querySelectorAll("[data-ms-siparis-asama-git='odeme']").forEach((buton) => {
         buton.addEventListener("click", (olay) => {
             if (!seciliAdres) {
                 olay.stopImmediatePropagation();
                 if (!token() && !misafirMi()) { document.querySelector("[data-ms-giris-modal-ac]")?.click(); return; }
+                modalHedef = "teslimat";
                 modalAc();
+                return;
+            }
+            if (faturaKutu?.checked) {
+                if (!seciliFaturaAdres) {
+                    olay.stopImmediatePropagation();
+                    faturaHataGoster("Fatura için bir adres seçin ya da \"Faturayı farklı adrese kestir\" işaretini kaldırın.");
+                    faturaAlani?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    return;
+                }
+                if (faturaKurumsalKutu?.checked) {
+                    const f = faturaDurumu();
+                    if (!f?.kurumsal?.firmaAdi || !f.kurumsal.vergiDairesi || !f.kurumsal.vergiNo) {
+                        olay.stopImmediatePropagation();
+                        faturaHataGoster("Kurumsal fatura için firma adı, vergi dairesi ve vergi numarası zorunludur.");
+                        faturaAlani?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }
+                }
             }
         }, true);
     });

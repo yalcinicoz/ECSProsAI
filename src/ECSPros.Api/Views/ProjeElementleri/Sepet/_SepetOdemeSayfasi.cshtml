@@ -951,6 +951,13 @@ document.addEventListener("DOMContentLoaded", () => {
             hataGoster(["Adres kaydınızda il/ilçe bilgisi eksik — lütfen teslimat adımından yeni bir adres oluşturun."]);
             return;
         }
+        // 2026-09-02: fatura farklı adrese — teslimat adımındaki seçim (msTeslimatDurumu.fatura)
+        // billing* alanlarına çevrilir; seçim yoksa fatura teslimat adresine (eski davranış).
+        const faturaAdres = teslimat.fatura?.adres || null;
+        if (faturaAdres && (!faturaAdres.countryId || !faturaAdres.cityId || !faturaAdres.districtId)) {
+            hataGoster(["Fatura adresinde il/ilçe bilgisi eksik — lütfen teslimat adımından fatura adresini yeniden seçin."]);
+            return;
+        }
         const { toplam, indirim, masraf } = toplamlar();
 
         // C7: eşik üzeri + TCKN doğrulanmamış → modal (sunucu guard'ı da 400 döner)
@@ -979,7 +986,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     shippingAddressLine: [teslimat.neighborhoodName, teslimat.addressLine].filter(Boolean).join(" "),
                     shippingPostalCode: teslimat.postalCode || null,
                     shippingDeliveryNotes: teslimat.deliveryNotes || null,
-                    billingSameAsShipping: true,
+                    billingSameAsShipping: !faturaAdres,
+                    billingRecipientName: faturaAdres?.recipientName || null,
+                    billingCountryId: faturaAdres?.countryId || null,
+                    billingCityId: faturaAdres?.cityId || null,
+                    billingDistrictId: faturaAdres?.districtId || null,
+                    billingAddressLine: faturaAdres
+                        ? [faturaAdres.neighborhoodName, faturaAdres.addressLine].filter(Boolean).join(" ")
+                        : null,
+                    billingCompanyName: teslimat.fatura?.kurumsal?.firmaAdi || null,
+                    billingTaxOffice: teslimat.fatura?.kurumsal?.vergiDairesi || null,
+                    billingTaxNumber: teslimat.fatura?.kurumsal?.vergiNo || null,
                     items: sepet.items.map((k) => ({
                         variantId: k.variantId,
                         sku: k.productCode || "",
@@ -1051,6 +1068,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // 2026-07-22: misafir akışı kalıntıları — sipariş tamamlandı, bayrak/adres düşer
                 sessionStorage.removeItem("msMisafirSiparis");
                 sessionStorage.removeItem("msMisafirAdres");
+                sessionStorage.removeItem("msMisafirFaturaAdres"); // 2026-09-02: fatura adresi de düşer
             } catch { /* depolama kapalı — onay sayfası sipariş no'suz açılır */ }
 
             // ── PayTR kart ödemesi (2026-07-30, YALNIZ TEST MODU) ──
