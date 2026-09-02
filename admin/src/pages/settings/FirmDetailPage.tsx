@@ -293,12 +293,24 @@ function IntegrationForm({ firmId, platforms, integrationServices, target, onClo
   const selectedService = integrationServices.find(s => s.id === integrationServiceId)
   const schema = selectedService?.settingsSchema ?? []
   const hasSchema = schema.length > 0
+  const isCargoService = (selectedService?.serviceType ?? target?.serviceType) === 'cargo'
 
   const [schemaValues, setSchemaValues] = useState<Record<string, string>>(
     () => initSchemaValues(schema, target))
   // Şema dışı anahtarlar (ya da şemasız serviste tüm anahtarlar) serbest editörde
   const [credRows, setCredRows] = useState<KVRow[]>(() => extraRows(target?.credentials, schema, 'credentials'))
-  const [settingsRows, setSettingsRows] = useState<KVRow[]>(() => extraRows(target?.settings, schema, 'settings'))
+  const [settingsRows, setSettingsRows] = useState<KVRow[]>(() =>
+    extraRows(target?.settings, schema, 'settings')
+      // paymentMethods kargo formundaki checkbox'larla yönetilir — serbest satıra düşmesin
+      .filter(r => !(target?.serviceType === 'cargo' && r.key === 'paymentMethods')))
+
+  // Kargo sözleşmesi ödeme uygunluğu (2026-09-02, kullanıcı kararı): settings.paymentMethods —
+  // bu sözleşmeyle HANGİ ödeme yöntemli siparişler gönderilebilir (kapıda tahsilat yeteneği +
+  // Sürat'ın ödeme tipine göre ayrı sözleşme istisnası). Boş = kısıt yok (geri uyum).
+  const [cargoPaymentMethods, setCargoPaymentMethods] = useState<string[]>(() => {
+    const kayitli = target?.settings?.['paymentMethods']
+    return Array.isArray(kayitli) ? kayitli.filter((y): y is string => typeof y === 'string') : []
+  })
   const [termsRows, setTermsRows] = useState<KVRow[]>(() => recordToRows(target?.terms))
 
   // "Göster" (2026-08-29): integration.credentials.reveal yetkili kullanıcı saklı kimlik
@@ -365,6 +377,11 @@ function IntegrationForm({ firmId, platforms, integrationServices, target, onClo
         const raw = schemaValues[f.key]
         if (raw !== undefined && raw !== '') settings[f.key] = schemaValueToBody(f, raw)
       }
+      // Kargo: ödeme uygunluğu — işaret varsa yazılır, yoksa anahtar hiç gönderilmez (kısıt yok)
+      if (isCargoService) {
+        if (cargoPaymentMethods.length > 0) settings['paymentMethods'] = cargoPaymentMethods
+        else delete settings['paymentMethods']
+      }
       // Zorunlu şema alanları (2026-08-22): boş bırakılan * alan kaydı engeller (sunucu da doğrular)
       const eksik = schema.filter(f => f.required && f.type !== 'boolean')
         .filter(f => { const raw = schemaValues[f.key]; return raw === undefined || String(raw).trim() === '' })
@@ -414,6 +431,31 @@ function IntegrationForm({ firmId, platforms, integrationServices, target, onClo
         <input className="inp" value={name} onChange={e => setName(e.target.value)}
           placeholder="örn: Yurtiçi Kargo — 2026 Sözleşmesi" />
       </div>
+
+      {/* Kargo sözleşmesi ödeme uygunluğu (2026-09-02): "Kargoya Ver" önerisi ve (müşteri kargo
+          seçimi açık kanalda ödeme filtresi verildiğinde) teslimat listesi bu işaretlerle süzülür. */}
+      {isCargoService && (
+        <div className="space-y-2 p-3 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>Uygun Ödeme Yöntemleri (sözleşme kapsamı)</p>
+          {[
+            { key: 'kart', label: 'Kart ile Öde (Online) — tahsilatsız gönderi' },
+            { key: 'kapida-nakit', label: 'Kapıda Nakit Ödeme (nakit tahsilat hizmeti var)' },
+            { key: 'kapida-kart', label: 'Kapıda Kart ile Ödeme (kapıda kart tahsilat hizmeti var)' },
+          ].map(y => (
+            <label key={y.key} className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
+                checked={cargoPaymentMethods.includes(y.key)}
+                onChange={e => setCargoPaymentMethods(m => e.target.checked ? [...m, y.key] : m.filter(x => x !== y.key))} />
+              <span className="text-sm" style={{ color: 'var(--text)' }}>{y.label}</span>
+            </label>
+          ))}
+          <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+            Hiçbiri işaretli değilse kısıt yok sayılır (her ödeme yöntemine uygun). Sipariş kargoya
+            verilirken öneri, siparişin ödeme yöntemine uyan sözleşmelerden gelir — örn. Sürat'ın
+            kapıda ödeme sözleşmesinde yalnız kapıda yöntemleri işaretleyin.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div>

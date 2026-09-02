@@ -42,7 +42,12 @@ public sealed record StorePlatformBilgisi(
     // Marka adı + canonical kök (Settings."brandName"/"canonicalDomain") — başlık/footer/SEO.
     // Yoksa varsayılan Misharitalia (mevcut davranış korunur).
     string BrandName = "Misharitalia",
-    string CanonicalDomain = "https://www.misharitalia.com")
+    string CanonicalDomain = "https://www.misharitalia.com",
+    // Müşteri kargo seçimi (2026-09-02, kullanıcı kararı): /teslimat'ta kargo şirketi seçimi
+    // gösterilsin mi — Settings."customerCargoSelection"; varsayılan KAPALI (sektör pratiği:
+    // atama otomatik/operasyonda; kapalıyken sipariş RequestedCargo'suz oluşur, "Kargoya Ver"
+    // önerisi öncelik + ödeme uygunluğuyla hesaplanır).
+    bool MusteriKargoSecimi = false)
 {
     public IReadOnlyList<(string Kod, string Ad)> SiralamaListesi =>
         SiralamaSecenekleri ?? ECSPros.Shared.Contracts.ProductSortCatalog.Tumu;
@@ -266,7 +271,11 @@ public sealed class StoreContext(
                 && !string.IsNullOrWhiteSpace(cd.GetString())
                 ? cd.GetString()! : "https://www.misharitalia.com";
 
-            return new StorePlatformBilgisi(platform.Id, platform.Code, tema!, tokenlar, stokBitenGoster, stokBitenTarih, kartAyarlari, siralamalar, megaMenuHover, brandName, canonicalDomain);
+            // Müşteri kargo seçimi (Settings."customerCargoSelection") — varsayılan kapalı
+            var musteriKargoSecimi = platform.Settings.TryGetValue("customerCargoSelection", out var cksObj)
+                && cksObj is System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.True };
+
+            return new StorePlatformBilgisi(platform.Id, platform.Code, tema!, tokenlar, stokBitenGoster, stokBitenTarih, kartAyarlari, siralamalar, megaMenuHover, brandName, canonicalDomain, musteriKargoSecimi);
         });
     }
 }

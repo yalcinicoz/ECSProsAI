@@ -27,9 +27,16 @@ public class SepetController(
     [HttpGet("/sepet")]
     public IActionResult Index() => View("~/Views/Sepet/Index.cshtml");
 
-    /// <summary>C4-b: teslimat adımı — adres seçimi üye gerektirir (sayfa script'i yönetir).</summary>
+    /// <summary>C4-b: teslimat adımı — adres seçimi üye gerektirir (sayfa script'i yönetir).
+    /// 2026-09-02: kargo şirketi seçimi platform ayarına bağlı (customerCargoSelection,
+    /// varsayılan KAPALI) — kapalıyken kargo kartı çizilmez, atama operasyonda yapılır.</summary>
     [HttpGet("/teslimat")]
-    public IActionResult Teslimat() => View("~/Views/Sepet/Teslimat.cshtml");
+    public async Task<IActionResult> Teslimat([FromServices] IStoreContext storeContext, CancellationToken ct)
+    {
+        var platform = await storeContext.GetPlatformAsync(ct);
+        ViewData["MsMusteriKargoSecimi"] = platform?.MusteriKargoSecimi == true;
+        return View("~/Views/Sepet/Teslimat.cshtml");
+    }
 
     /// <summary>C5: ödeme adımı (test modu — K2; tahsilat mock, sipariş C10 checkout'uyla oluşur).</summary>
     [HttpGet("/odeme")]

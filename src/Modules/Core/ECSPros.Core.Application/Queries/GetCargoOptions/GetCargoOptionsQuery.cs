@@ -11,7 +11,11 @@ namespace ECSPros.Core.Application.Queries.GetCargoOptions;
 /// entegrasyonları genel ("default" kural) önceliğiyle döner. Genel kuralı olmayan
 /// aktif kargolar listenin sonuna ada göre eklenir (atama zorunlu değil — spec kararı).
 /// </summary>
-public record GetCargoOptionsQuery(Guid FirmPlatformId, Guid? NeighborhoodId)
+/// <param name="PaymentMethod">2026-09-02: dolu gelirse entegrasyonlar bu ödeme yöntemine
+/// uygunluklarıyla süzülür — entegrasyon Settings."paymentMethods" dizisi (kart / kapida-nakit /
+/// kapida-kart alt kümesi; YOKSA hepsine uygun sayılır). "Kargoya Ver" önerisi bu filtreyle
+/// gelir; Sürat'ın ödeme tipine göre ayrı sözleşme istisnası da böyle çözülür.</param>
+public record GetCargoOptionsQuery(Guid FirmPlatformId, Guid? NeighborhoodId, string? PaymentMethod = null)
     : IRequest<Result<List<CargoOptionDto>>>;
 
 public record CargoOptionDto(Guid IntegrationId, string Name, string ServiceCode, bool MahalleyeOzel);
@@ -38,8 +42,15 @@ public class GetCargoOptionsQueryHandler(ICoreDbContext db)
                 fi.Name,
                 ServisAd = fi.IntegrationService.NameI18n,
                 fi.IntegrationService.Code,
+                fi.Settings,
             })
             .ToListAsync(ct);
+
+        // Ödeme yöntemi filtresi: entegrasyon Settings."paymentMethods" bu yöntemi içermiyorsa elenir
+        // (anahtar yoksa/boşsa kısıt yok — geri uyum: mevcut kayıtlar her yönteme uygun sayılır).
+        if (!string.IsNullOrWhiteSpace(request.PaymentMethod))
+            aktifKargolar = aktifKargolar.Where(k => YontemUygun(k.Settings, request.PaymentMethod!)).ToList();
+
         if (aktifKargolar.Count == 0)
             return Result.Success(new List<CargoOptionDto>());
 
@@ -79,5 +90,18 @@ public class GetCargoOptionsQueryHandler(ICoreDbContext db)
             .ToList();
 
         return Result.Success(liste);
+    }
+
+    private static bool YontemUygun(Dictionary<string, object>? settings, string yontem)
+    {
+        if (settings is null
+            || !settings.TryGetValue("paymentMethods", out var v)
+            || v is not System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.Array } dizi)
+            return true;
+        var liste = dizi.EnumerateArray()
+            .Where(e => e.ValueKind == System.Text.Json.JsonValueKind.String)
+            .Select(e => e.GetString())
+            .ToList();
+        return liste.Count == 0 || liste.Contains(yontem);
     }
 }

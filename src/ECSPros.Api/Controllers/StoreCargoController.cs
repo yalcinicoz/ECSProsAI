@@ -13,13 +13,16 @@ namespace ECSPros.Api.Controllers;
 [Route("api/store/cargo-options")]
 public class StoreCargoController(IMediator mediator) : ControllerBase
 {
+    /// <param name="paymentMethod">Opsiyonel (2026-09-02): kart | kapida-nakit | kapida-kart —
+    /// verilirse liste bu yönteme uygun entegrasyonlarla süzülür (panel "Kargoya Ver" önerisi).</param>
     [HttpGet]
     public async Task<IActionResult> GetOptions(
-        [FromQuery] Guid firmPlatformId, [FromQuery] Guid? neighborhoodId, CancellationToken ct)
+        [FromQuery] Guid firmPlatformId, [FromQuery] Guid? neighborhoodId,
+        [FromQuery] string? paymentMethod, CancellationToken ct)
     {
         if (firmPlatformId == Guid.Empty)
             return BadRequest(new { success = false, error = "firmPlatformId zorunlu." });
-        var result = await mediator.Send(new GetCargoOptionsQuery(firmPlatformId, neighborhoodId), ct);
+        var result = await mediator.Send(new GetCargoOptionsQuery(firmPlatformId, neighborhoodId, paymentMethod), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });

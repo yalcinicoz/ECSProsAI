@@ -204,6 +204,8 @@ export function OrderDetailPage() {
   const [warehouseId, setWarehouseId] = useState('')
   const [cancelReason, setCancelReason] = useState('')
   const [shipIntegrationId, setShipIntegrationId] = useState('')
+  // 2026-09-02: müşteri tercihi yoksa otomatik öneri (öncelik + mahalle + ödeme uygunluğu)
+  const [shipSuggestion, setShipSuggestion] = useState('')
   const [trackingNumber, setTrackingNumber] = useState('')
   const [packageCount, setPackageCount] = useState(1)
   const [actionError, setActionError] = useState('')
@@ -451,11 +453,28 @@ export function OrderDetailPage() {
             <Button size="sm" onClick={() => { setActionError(''); setProcessOpen(true) }}>İşleme Al</Button>
           )}
           {order.status === 'processing' && (
-            <Button size="sm" onClick={() => {
+            <Button size="sm" onClick={async () => {
               setActionError('')
+              setShipSuggestion('')
               // Müşterinin teslimat adımındaki kargo tercihi varsayılan gelir (bağlayıcı değil)
               if (!shipIntegrationId && order?.requestedCargoIntegrationId) setShipIntegrationId(order.requestedCargoIntegrationId)
               setShipOpen(true)
+              // 2026-09-02: tercih yoksa öneri — kargo kural önceliği + mahalle + siparişin
+              // ödeme yöntemine uygun sözleşme (entegrasyon settings.paymentMethods filtresi).
+              // Öneri alınamazsa personel elle seçer; modal akışı asla bloklanmaz.
+              if (!shipIntegrationId && !order?.requestedCargoIntegrationId && order?.firmPlatformId) {
+                try {
+                  const p = new URLSearchParams({ firmPlatformId: order.firmPlatformId })
+                  if (order.shippingNeighborhoodId) p.set('neighborhoodId', order.shippingNeighborhoodId)
+                  if (order.paymentMethod) p.set('paymentMethod', order.paymentMethod)
+                  const res = await api.get('/store/cargo-options?' + p.toString())
+                  const ilk = res.data?.data?.[0]
+                  if (ilk?.integrationId) {
+                    setShipIntegrationId(prev => prev || ilk.integrationId)
+                    setShipSuggestion(ilk.name ?? '')
+                  }
+                } catch { /* öneri servisi erişilemedi — elle seçim */ }
+              }
             }}>Kargoya Ver</Button>
           )}
           {order.status === 'shipped' && (
@@ -794,6 +813,12 @@ export function OrderDetailPage() {
             {cargoIntegrations.length === 0 && (
               <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
                 Bu firma için tanımlı kargo anlaşması yok — Ayarlar → Firmalar → Entegrasyonlar'dan eklenebilir.
+              </p>
+            )}
+            {shipSuggestion && (
+              <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+                Önerilen: <strong>{shipSuggestion}</strong> — kural önceliği ve siparişin ödeme
+                yöntemine ({order.paymentMethod ?? 'kart'}) uygunluğa göre seçildi, değiştirebilirsiniz.
               </p>
             )}
           </div>

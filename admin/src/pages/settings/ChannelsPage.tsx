@@ -194,6 +194,11 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
   // Kendi satış kanallarımızda AÇIK; pazaryerlerinde KAPALI (kargoyu pazaryeri yönetir).
   // Ayar yoksa açık kabul edilir (eski sistemdeki kargoGonder varsayılanıyla aynı).
   const [cargoDispatch, setCargoDispatch] = useState(target?.settings?.['cargoDispatchEnabled'] !== false)
+  // Müşteri kargo seçimi (2026-09-02, kullanıcı kararı): /teslimat'ta kargo şirketi seçimi.
+  // Varsayılan KAPALI — sektör pratiği: taşıyıcı operasyonda otomatik atanır (öncelik + ödeme
+  // uygunluğu); açık kanalda müşteri mahalle kurallı listeden seçer (tercih bağlayıcı değil).
+  const [customerCargoSelection, setCustomerCargoSelection] = useState(
+    target?.settings?.['customerCargoSelection'] === true)
   // F0 (K1): kanal bazlı yetenek ezmeleri — yalnız ezilebilir anahtarlar; diğerleri tip varsayılanı.
   const [capOverrides, setCapOverrides] = useState<CapabilityOverrides>(() => ({ ...(target?.capabilityOverrides ?? {}) }))
   const [fieldValues, setFieldValues] = useState<Record<string, string>>(() => {
@@ -226,7 +231,7 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
       // Şema dışı mevcut anahtarlar korunur (stockControlEnabled, tema/domain vb. —
       // backend Settings/Credentials'ı olduğu gibi değiştirir, merge etmez)
       // Stok görünürlüğü anahtarları burada özel ele alınıyor — genel korumadan hariç tut.
-      const ozelSettings = new Set(['showOutOfStock', 'outOfStockVisibleSince', 'paymentMethods', 'codServiceFee', 'codMaxOrderTotal', 'legacyPlatformId', 'cargoDispatchEnabled'])
+      const ozelSettings = new Set(['showOutOfStock', 'outOfStockVisibleSince', 'paymentMethods', 'codServiceFee', 'codMaxOrderTotal', 'legacyPlatformId', 'cargoDispatchEnabled', 'customerCargoSelection'])
       if (target) {
         const schemaKeys = new Set(schema.map(f => f.key))
         for (const [k, v] of Object.entries(target.credentials ?? {})) if (v != null && !schemaKeys.has(k)) credentials[k] = v
@@ -239,6 +244,7 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
       settings['codMaxOrderTotal'] = parseFloat(codMax) >= 0 ? parseFloat(codMax) : 3000
       if (legacyPlatformId && parseInt(legacyPlatformId) > 0) settings['legacyPlatformId'] = parseInt(legacyPlatformId)
       settings['cargoDispatchEnabled'] = cargoDispatch
+      settings['customerCargoSelection'] = customerCargoSelection
       for (const f of schema) {
         const v = fieldValues[f.key] ?? ''
         if (v) {
@@ -461,6 +467,16 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
           Kendi satış kanallarımızda AÇIK olmalı — paket hazırlandığında kargo şirketine bildirilir.
           Pazaryerlerinde KAPALI: kargo bilgisini pazaryeri kendisi iletir. Kapalıyken bu kanalın
           siparişlerinde kargo gönderisi oluşturulmaz.
+        </p>
+        <label className="flex items-center gap-2 cursor-pointer pt-1" style={{ borderTop: '1px solid var(--border)' }}>
+          <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
+            checked={customerCargoSelection} onChange={e => setCustomerCargoSelection(e.target.checked)} />
+          <span className="text-sm" style={{ color: 'var(--text)' }}>Müşteri teslimat adımında kargo şirketi seçebilsin</span>
+        </label>
+        <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+          Varsayılan KAPALI: taşıyıcı "Kargoya Ver" adımında öncelik + ödeme uygunluğuna göre önerilir,
+          müşteri seçim görmez. Açılırsa /teslimat'ta mahalle kurallı liste gösterilir (tercih bağlayıcı
+          değildir). Değişiklik ~1 dk içinde siteye yansır.
         </p>
       </div>
 

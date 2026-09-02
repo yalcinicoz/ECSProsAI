@@ -105,12 +105,19 @@
                 </div>
                 <div class="ms-uyari ms-uyari-hata" data-ms-fatura-hata hidden></div>
 
+                @* 2026-09-02 (kullanıcı kararı): kargo seçimi platform ayarına bağlı
+                   (customerCargoSelection, varsayılan KAPALI) — kapalıyken kart hiç çizilmez,
+                   sipariş RequestedCargo'suz oluşur, taşıyıcı "Kargoya Ver"de operasyonca
+                   atanır (öncelik + ödeme uygunluğu önerisiyle). *@
+                @if (ViewData["MsMusteriKargoSecimi"] as bool? ?? false)
+                {
                 <section class="ms-siparis-asama-kart">
                     <strong>Kargo Seçimi</strong>
                     <div class="ms-onay-listesi" data-ms-kargo-listesi>
                         <p class="ms-sepet-bolum-aciklama" data-ms-kargo-bos>Kargo seçenekleri için önce teslimat adresi seçin.</p>
                     </div>
                 </section>
+                }
             </section>
 
             @* 2026-07-30 (kullanıcı kararı): başlık 'Sepet Özeti' — panel gerçek sepet
@@ -124,7 +131,10 @@
                     <div class="ms-siparis-satiri" data-ms-teslimat-kampanya-satiri hidden><span class="ms-siparis-etiket">Kampanya İndirimi</span><span class="ms-siparis-deger ms-urun-fiyat-indirimli" data-ms-teslimat-kampanya-tutar>-0,00 TL</span></div>
                     <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Adres</span><span class="ms-siparis-deger" data-ms-teslimat-ozet-adres>Seçilmedi</span></div>
                     <div class="ms-siparis-satiri" data-ms-teslimat-fatura-satiri hidden><span class="ms-siparis-etiket">Fatura Adresi</span><span class="ms-siparis-deger" data-ms-teslimat-ozet-fatura>—</span></div>
+                    @if (ViewData["MsMusteriKargoSecimi"] as bool? ?? false)
+                    {
                     <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Kargo</span><span class="ms-siparis-deger ms-siparis-ucretsiz" data-ms-teslimat-ozet-kargo>Ücretsiz</span></div>
+                    }
                     <div class="ms-siparis-satiri"><span class="ms-siparis-etiket">Tahmini Teslimat</span><span class="ms-siparis-deger">2-4 iş günü</span></div>
                 </div>
                 <div class="ms-siparis-toplam">
