@@ -48,6 +48,18 @@ SignalR uçtan uca ✓ (üye token hub'a reddedildi). Ayrıca aynı restart'la: 
 2026-09-01 kullanıcı kararı — 2026-07-22 varsayılanını tersine çevirir) + düğme rengi düzeltmesi. Çoklu sunucuda
 SignalR backplane B1'de (altyapı ekibi).
 
+**Fatura farklı adrese (2026-09-02, Web sitesi) ✅ CANLIDA (restart + kullanıcı testleri olumlu; commit'ler dcda300→28ac694→9eb40e9):**
+/teslimat adres kartlarında buton/checkbox YOK — üst sol köşede küçük "Kargo Adresi"/"Fatura Adresi" radio'ları
+(`.ms-adres-rol`, ms-onay-kart kalıbından bilinçli sade; varsayılan adreste ikisi de seçili; fatura "aynı adres"teyken
+kargoyla birlikte taşınır, açıkça ayrı karta alındıysa kalır). Adres tipi YOK — fatura siparişe anlık görüntü
+(Order Billing* alanları zaten vardı; ödeme sayfası billingSameAsShipping'i artık seçime göre gönderir). Kurumsal
+fatura adres listesi altında opsiyonel işaret (firma+vergi dairesi+vergi no; adres seçiminden bağımsız — aynı adrese
+kurumsal da kesilir); CheckoutCommandHandler sunucu doğrulaması (eksik fatura alanı / kısmi kurumsal → 400). Misafir
+adresleri LİSTE modeline geçti (`msMisafirAdresler`, eski tekil `msMisafirAdres` geriye dönük okunur; sipariş sonrası
+temizlenir). Adres modalındaki yıllardır işlevsiz "Fatura Türü" radio'ları kaldırıldı. Panel değişmedi (sipariş
+detayı FATURA kartı + fatura modalı ön-dolumu zaten vardı — K16 hazırdı). Bilinen sınır: kurumsal profil kayıtlı
+değil (her siparişte girilir, v2 adayı); sipariş tamamlandı ekranı/e-postası fatura adresini ayrıca göstermez.
+
 **Mobil menü çocuksuz kök doğrudan gider (2026-09-01, Web sitesi) ✅ CANLIDA:** alt kategorisi olmayan
 kök sekme (Etiketin Yarısı, Çok Satanlar) tıklamada panel yerine ürün listesine gider (data-ms-mobil-ana-url +
 site.js dalı); çocuklu kökler eski davranış. Kullanıcı testi olumlu. Ayrıca arama dropdown tespiti: popüler
