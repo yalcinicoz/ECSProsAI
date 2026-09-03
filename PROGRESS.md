@@ -6,6 +6,96 @@
 
 ---
 
+**NGINX DİSK DENETİMİ VE LEGACY STOCK AUTO-REPAIR KAYITLARI GITHUB İLE EŞİTLENDİ (2026-09-03):**
+Kullanıcının açık talebiyle bekleyen `PROGRESS.md` ve `docs/handoff/sunucu-altyapi-devri.md` değişiklikleri
+GitHub yayın kapsamına alındı. Öncesinde iki dosya geçici `pre-auto-repair-docs-publish-20260903-122623`
+stash'iyle korundu; `git fetch --prune origin` sonucunda yerel `main` ile `origin/main` farkı `0/0` çıktı ve
+dosyalar çatışmasız geri uygulandı. Yayın yalnız Nginx LB salt-okunur disk analizi, Legacy Stock `1 satır/2
+adet` tanısı, yedekli auto-mapping repair aktivasyonu ve final sağlık/işlevsel kabul kayıtlarını içerir; kod,
+secret, config veya deploy artefaktı eklenmedi. Dokümantasyon-only değişiklik nedeniyle uygulama testi yeniden
+çalıştırılmadı; `git diff --check` başarılıdır. Bu GitHub adımında production sunucu/veritabanı değişikliği
+yapılmadı.
+
+**LEGACY STOCK AUTO-MAPPING REPAIR KALICI ETKİNLEŞTİRİLDİ (2026-09-03):**
+Tekrarlayan `1 satır/2 adet` fail-closed hatasının aktif üründeki sonradan eklenmiş `1` varyanttan geldiği
+salt-okunur tanıyla kesinleştirildikten sonra kullanıcı onayıyla kontrollü onarım uygulandı. Yarışı önlemek
+için yalnız Legacy Stock ve ERP worker kısa süre durduruldu; ana API/site etkilenmedi. API1 env yedeği
+`/etc/ecspros/legacy-stock-worker.env.pre-auto-repair-20260903T121551Z`
+(`SHA-256 065a27db7f009ffb401a475e19bc7d6e099e0c49e87a2d49a053d4448fb7d0ab`) ve PostgreSQL'de ilgili beş
+tabloyu içeren `/var/backups/ecspros-stock/pre-auto-mapping-repair-20260903T121606Z.dump`
+(`68.913.824 byte`, 5/5 TABLE DATA, SHA-256
+`3c2adb773013f23b60679dd5236491a9b978a5de0be0db0adc1774e8d34a215e`) doğrulandı.
+
+Final worker ayarları `Enabled=true`, `DryRun=false`, `RepairMissingMappings=true`,
+`MappingRepairDryRun=false`, `BlockOnUnmappedQuantity=true` ve tolerans `0/0` olarak bırakıldı. İlk gerçek
+tur tam olarak `1` varyant ve `2` varyant-özellik bağı olmak üzere `3` mapping değişikliği yaptı; yeni raf,
+attribute value veya eşlenemeyen özellik `0`. Aynı turda canlı stoktaki `92` değişiklik işlendi ve
+kaynak/eşleşen `254045`, eşleşmeme `0/0` oldu. Sonraki iki kontrollü turda mapping repair ayrı ayrı
+`değişiklik=0` verdi; canlı kaynak hareketleri nedeniyle stokta `12` ve `17` normal değişiklik işlendi,
+eşleşmeme her ikisinde de `0/0` kaldı.
+
+Final salt-okunur fingerprint'te `product_variants 334197` (`+1`),
+`product_variant_attributes 994972` (`+2`), `attribute_values 9658` ve `warehouse_bins 13862` doğrulandı.
+Aktif stok satırı `241896`, kullanılabilir stok `254050`, toplam Quantity `255258`, ReservedQuantity `1208`;
+negatif kullanılabilir stok, kopuk varyant/raf ve aktif barkod/raf çifti mükerrerlik kontrollerinin tamamı
+`0`. ERP worker yeniden açıldı; ilk katalog ve fiyat turları `değişiklik=0`, unit `active`, `NRestarts=0`
+tamamlandı. Restart yapılmadan gelen ilk doğal 300 saniyelik turda mapping repair yine `değişiklik=0`;
+canlı kaynaktaki `102` stok değişikliği işlendi, kaynak/eşleşen `254078` ve eşleşmeme `0/0` oldu. API1 ana
+API, LegacyImport, ERP ve LegacyStock unit'leri `active`, `NRestarts=0`; `5050/5060/5061/5062` `/ready`
+kontrolleri başarılı ve onarım sonrası stock/ERP hata öncelikli logları boştur. Production MySQL yalnız
+server-side READ ONLY okundu; MySQL yazısı/DDL, migration, kod deploy'u ve GitHub işlemi yapılmadı.
+
+**LEGACY STOCK YENİ 1 SATIR/2 ADET FAIL-CLOSED HATASI SINIFLANDIRILDI — ONARIM UYGULANMADI (2026-09-03):**
+API1 Legacy Stock worker loglarında hata `2026-09-03 12:03:55 UTC` ve `12:09:00 UTC` turlarında doğrulandı.
+İki tur da `1 satır/2 adet` eşleşmeme nedeniyle `0/0` güvenlik kapısında gerçek stok yazımından önce durmuş;
+unit ve ERP worker `active`, `NRestarts=0` kalmıştır. Aradaki ERP katalog turu `değişiklik=0` döndüğü için
+kayıt kendiliğinden tamamlanmamıştır.
+
+Production MySQL `READ ONLY/rollback`, PostgreSQL `default_transaction_read_only=on` guard'larıyla çalışan
+tanı sonucunda kaynak `159.147 satır/254.040 adet`, eşleşen `159.146 satır/254.038 adet` bulundu. Farkın
+tamamı aktif hedef ürüne ait `1` eksik varyant ve `2` stok adedidir; eksik/pasif/silinmiş raf, silinmiş ürün,
+ürünü olmayan varyant veya sınıflandırılamayan kayıt `0` çıktı. Mapping-repair dry-run planı `1` varyant ve
+`2` varyant-özellik bağı olmak üzere `3` değişiklik; yeni attribute value, yeni raf ve eşlenemeyen özellik
+`0` gösterdi.
+
+Bu tekrar, ERP katalog turunun ana ürün değişmemişken sonradan eklenen varyantı yakalamadığını ve stock
+worker'ın `RepairMissingMappings=false` bırakıldığı için doğru biçimde fail-closed kaldığını gösterir. Kalıcı
+çözüm olarak mevcut parent-price guard'lı mapping repair'in stock turu öncesinde etkin tutulması önerilir:
+`RepairMissingMappings=true`, `MappingRepairDryRun=false`; `BlockOnUnmappedQuantity=true` ve `0/0` eşikleri
+aynen korunur. Son dry-run yaklaşık `3,6 saniye` sürdüğünden 300 saniyelik periyotta belirgin darboğaz
+beklenmez. Bu incelemede onarım/config/restart uygulanmadı; production MySQL/PostgreSQL yazısı, migration,
+deployment veya GitHub işlemi yapılmadı. Uzak geçici tanı dosyaları sonuçtan sonra kaldırıldı.
+
+**NGINX LB DİSK DOLULUĞU SALT-OKUNUR İNCELENDİ (2026-09-03):**
+Nginx LB root filesystem'i `48 GB` boyutunda, `35 GB` kullanılmış, `11 GB` boş ve `%78` doludur. Inode
+kullanımı yalnız `%13`; küçük dosya/inode tükenmesi yoktur. Fiziksel disk `100 GB`, LVM physical/volume
+group `96,95 GB` ve bunun `48,47 GB` bölümü henüz logical volume'a ayrılmamıştır; dolayısıyla diskte root
+filesystem dışında önemli büyütme kapasitesi mevcuttur.
+
+Kullanımın ana kaynağı `/var` altındaki `28 GB` veridir. Bunun `22 GB`'ı `/var/cache/nginx`, `5,7 GB`'ı
+`/var/log`, yalnız `524 MB`'ı `/var/lib` altındadır. Nginx cache'te `228.550` dosya ve yaklaşık
+`22.474.067.984 byte` veri bulunur: video havuzu `8,1 GB`, iki Julude havuzu toplam `4,1 GB`, Gulseli,
+Misharitalia, Olurbutik ve Tozlu havuzları yaklaşık `2,1 GB`'ar, ECSPros/tcdn havuzu `1,4 GB` kullanır.
+Etkin Nginx config'inde video için `max_size=8g/inactive=3d`, sekiz ayrı CDN havuzu için ayrı ayrı
+`max_size=2G/inactive=60d` tanımlıdır; toplam tasarlanmış cache tavanı yaklaşık `24 GB`'dır. Mevcut kullanım
+bu limitlerle uyumludur ve cache dosyalarının `128.010` adedi bir günden, `21.193` adedi yedi günden,
+`9.370` adedi otuz günden eskidir.
+
+Log kullanımının `3,1 GB`'ı systemd journal, `2,6 GB`'ı Nginx loglarıdır. Nginx loglarının yaklaşık
+`2,0 GB`'ı Tozlu altındadır; en büyük üretici `site_custom_access_logs.log` olup önceki günlük dosya
+yaklaşık `997 MB`, güncel dosya inceleme anında yaklaşık `529 MB`'dır. Alt-site logları için ayrı
+`/etc/logrotate.d/nginx-all-sites` kuralı aktiftir: günlük kontrol, `80M` size, `rotate 5`, compress ve
+delaycompress; `logrotate.timer` çalışmaktadır. Journald için açık bir `SystemMaxUse`/retention override'ı
+yoktur. Silinmiş fakat process tarafından açık tutulan dosya yalnız `60.992 byte` olduğundan disk kaçağı
+değildir. `nginx -t` başarılı ve servis aktiftir.
+
+Sonuç: doluluğun ana nedeni cache sızıntısı değil, toplam `24 GB`'a izin veren çoklu CDN/video cache tasarımı;
+ikincil neden limitsiz-varsayılan journald kullanımı ve yüksek hacimli Tozlu özel access logudur. Güvenli
+iyileştirme seçenekleri ayrı onayla root LV'yi mevcut `48,47 GB` VG boşluğundan büyütmek, journald için
+ölçülü bir üst sınır tanımlamak, Tozlu özel logunun gerekliliği/formatını gözden geçirmek ve cache havuzlarının
+`max_size/inactive` değerlerini trafik ihtiyacına göre küçültmektir. Bu incelemede hiçbir cache/log silinmedi;
+config, service, LVM, deployment, production veritabanı veya GitHub işlemi yapılmadı.
+
 **ADMIN, STOREFRONT VE WORKER DEĞİŞİKLİKLERİ GITHUB İLE EŞİTLENDİ (2026-09-03):**
 Kullanıcının açık GitHub yayın talebi öncesinde mevcut tracked ve untracked çalışmalar
 `pre-github-publish-20260903-120150` stash'iyle korundu. `git fetch --prune origin` sonrasında yerel `main`

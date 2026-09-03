@@ -133,6 +133,9 @@ Son kategori release kabulü:
 
 Önemli geri dönüş yedeklerinden bazıları:
 
+- `/var/backups/ecspros-stock/pre-auto-mapping-repair-20260903T121606Z.dump`
+  (`68.913.824 byte`, SHA-256 `3c2adb773013f23b60679dd5236491a9b978a5de0be0db0adc1774e8d34a215e`;
+  ilgili beş tablo ve beş TABLE DATA kaydı doğrulandı)
 - `/var/backups/ecspros-stock/pre-mapping-repair-20260903T112322Z.dump`
   (`68.790.676 byte`, SHA-256 `f7b7b45fe31986c5927ef865d07d6d8baf55a1d3f04e54e1a22c36fa0f2197de`;
   ilgili beş tablo ve beş TABLE DATA kaydı doğrulandı)
@@ -203,7 +206,7 @@ Redis1 üzerinde iki ayrı instance bulunur:
 - Aktif release: `/opt/ECSProsAI/stock-worker-releases/20260903T113525Z_worker_variant_price_guard`.
 - Aralık: `300 saniye`.
 - Final ayarlar: `Enabled=true`, `DryRun=false`, `BlockOnUnmappedQuantity=true`, eşleşmeme toleransı `0/0`,
-  `RepairMissingMappings=false`, `MappingRepairDryRun=true`.
+  `RepairMissingMappings=true`, `MappingRepairDryRun=false`.
 - MySQL gerçek stok kaynağıdır; admin paneli cutover öncesi stok otoritesi değildir.
 - 2026-09-03 fail-closed farkı salt-okunur tanıda `131 satır/290 adet` olarak sınıflandırıldı: `20` eksik
   varyant, `7` eksik raf ve `40` varyant-özellik bağı; yeni attribute value/eşlenemeyen özellik `0`. Ana
@@ -217,6 +220,13 @@ Redis1 üzerinde iki ayrı instance bulunur:
 - Unit `active/running`, enabled, `NRestarts=0`, loopback `/ready=200`. Legacy mapping repair yeni varyantta
   ana ürünün pozitif `BasePrice` ve nullable `BaseCost` değerlerini devralır; parent fiyat pozitif değilse
   herhangi bir repair insert'i öncesinde fail-closed durur.
+- 2026-09-03'te ana ürün `LastUpdate` alanı değişmeden eklenen yeni stoklu varyant ERP katalog turunda
+  yakalanmadı ve iki stock turunda `1 satır/2 adet` fail-closed fark oluşturdu. Salt-okunur plan sonrası
+  yedekli gerçek repair `1 varyant + 2 özellik bağı` ekledi; takip eden iki repair turu `0` değişiklik verdi.
+  Aynı durumun tekrar etmemesi için parent-price guard'lı mapping repair kalıcı etkin bırakıldı; `0/0`
+  güvenlik kapısı korunur ve repair tamamlanamazsa stok yazımı yine engellenir. Restart yapılmadan gelen ilk
+  doğal turda repair `0`, kaynak/eşleşen `254078`, eşleşmeme `0/0`; onarım sonrası stock/ERP hata öncelikli
+  logları boş ve iki worker `/ready=200`, `NRestarts=0` doğrulandı.
 - Stock ve ERP worker release köklerinde yalnız aktif `20260903T113525Z_worker_variant_price_guard` dizini
   bırakıldı. Geri dönüş dump'ları korunur; eski release'ler tekrar gerekirse doğrulanmış artefakttan yeniden
   yayımlanmalıdır.
