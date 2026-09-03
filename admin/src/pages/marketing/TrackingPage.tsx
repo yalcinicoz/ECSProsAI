@@ -5,7 +5,8 @@ import { RefreshCw, Send, RotateCcw, ExternalLink } from 'lucide-react'
 import api from '@/api/client'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { DataTable, Pager, tarihSaat } from '@/components/ui/DataTable'
+import { DataTable, Pager } from '@/components/ui/DataTable'
+import { tarihSaat } from '@/components/ui/DataTable.utils'
 import { cn } from '@/lib/utils'
 
 /**
@@ -54,7 +55,6 @@ export function TrackingPage() {
   const [tab, setTab] = useState('')
   const [page, setPage] = useState(1)
   const [testMsg, setTestMsg] = useState<string | null>(null)
-  useEffect(() => { if (selectedChannelId) sessionStorage.setItem('tracking.channelId', selectedChannelId) }, [selectedChannelId])
 
   const { data: firms = [] } = useQuery<Firm[]>({ queryKey: ['firms'], queryFn: async () => (await api.get('/core/firms')).data.data ?? [] })
   const platformQueries = useQueries({
@@ -66,34 +66,38 @@ export function TrackingPage() {
     })),
   })
   const channels = useMemo(() => platformQueries.flatMap(q => q.data ?? []), [platformQueries])
-  useEffect(() => { if (!selectedChannelId && channels.length) setSelectedChannelId(channels[0].id) }, [channels, selectedChannelId])
+  const effectiveChannelId = selectedChannelId || channels[0]?.id || ''
+  useEffect(() => {
+    if (effectiveChannelId) sessionStorage.setItem('tracking.channelId', effectiveChannelId)
+  }, [effectiveChannelId])
 
   const { data: st, isLoading, refetch, isFetching } = useQuery<StatusDto>({
-    queryKey: ['tracking-status', selectedChannelId],
-    queryFn: async () => (await api.get(`/tracking/status?firmPlatformId=${selectedChannelId}`)).data.data,
-    enabled: !!selectedChannelId, refetchInterval: 15000,
+    queryKey: ['tracking-status', effectiveChannelId],
+    queryFn: async () => (await api.get(`/tracking/status?firmPlatformId=${effectiveChannelId}`)).data.data,
+    enabled: !!effectiveChannelId, refetchInterval: 15000,
   })
   const { data: ob } = useQuery<Paged<OutboxRow>>({
-    queryKey: ['tracking-outbox', selectedChannelId, tab, page],
+    queryKey: ['tracking-outbox', effectiveChannelId, tab, page],
     queryFn: async () => {
-      const p = new URLSearchParams({ firmPlatformId: selectedChannelId, page: String(page), pageSize: '30' })
+      const p = new URLSearchParams({ firmPlatformId: effectiveChannelId, page: String(page), pageSize: '30' })
       if (tab) p.set('status', tab)
       return (await api.get(`/tracking/outbox?${p}`)).data.data
     },
-    enabled: !!selectedChannelId, refetchInterval: 15000,
+    enabled: !!effectiveChannelId, refetchInterval: 15000,
   })
   const { data: feed } = useQuery<FeedStatusDto>({
-    queryKey: ['tracking-feed', selectedChannelId],
-    queryFn: async () => (await api.get(`/tracking/feed-status?firmPlatformId=${selectedChannelId}`)).data.data,
-    enabled: !!selectedChannelId, refetchInterval: 10000,
+    queryKey: ['tracking-feed', effectiveChannelId],
+    queryFn: async () => (await api.get(`/tracking/feed-status?firmPlatformId=${effectiveChannelId}`)).data.data,
+    enabled: !!effectiveChannelId, refetchInterval: 10000,
   })
   const [feedMsg, setFeedMsg] = useState<string | null>(null)
   // FAZ 10/A6: tetik DB kuyruğuna yazılır, worker düğümü ~10 sn içinde sahiplenir.
   // Tamamlanmayı lastRunAt DEĞİŞİMİNDEN anlarız (tetik anındaki değer saklanır — saat
   // farkından etkilenmez); "kuyruğa alındı" mesajı asılı kalmasın diye ✓ mesajına çevrilir.
   const [feedBeklenen, setFeedBeklenen] = useState<string | null>(null) // tetik anındaki lastRunAt
+  const [handledFeedCompletionKey, setHandledFeedCompletionKey] = useState<string | null>(null)
   const feedGen = useMutation({
-    mutationFn: async () => api.post('/tracking/feed/generate', { firmPlatformId: selectedChannelId }),
+    mutationFn: async () => api.post('/tracking/feed/generate', { firmPlatformId: effectiveChannelId }),
     onSuccess: () => {
       setFeedBeklenen(feed?.status?.lastRunAt ?? '(hiç)')
       setFeedMsg('Üretim kuyruğa alındı — worker ~10 sn içinde başlar, durum bu kartta yenilenir.')
@@ -101,25 +105,29 @@ export function TrackingPage() {
     },
     onError: (e: unknown) => setFeedMsg((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Üretim başlatılamadı.'),
   })
-  useEffect(() => {
-    if (feedBeklenen === null || !feed?.status || feed.status.running) return
-    const suanki = feed.status.lastRunAt ?? '(hiç)'
-    if (suanki !== feedBeklenen) {
-      setFeedMsg(feed.status.error
-        ? `Üretim HATAYLA bitti: ${feed.status.error}`
-        : `✓ Üretim tamamlandı — ${feed.status.itemCount} kalem, ${Math.round(feed.status.durationMs / 1000)} sn.`)
-      setFeedBeklenen(null)
-    }
-  }, [feed, feedBeklenen])
   const retry = useMutation({
     mutationFn: async (id: string) => api.post(`/tracking/outbox/${id}/retry`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['tracking-outbox'] }); qc.invalidateQueries({ queryKey: ['tracking-status'] }) },
   })
   const test = useMutation({
-    mutationFn: async () => (await api.post('/tracking/test-event', { firmPlatformId: selectedChannelId })).data,
+    mutationFn: async () => (await api.post('/tracking/test-event', { firmPlatformId: effectiveChannelId })).data,
     onSuccess: (d) => { setTestMsg(d?.data?.outboxId ? `Test event kuyruğa yazıldı (${d.data.dedupId}). 5-10 sn içinde sonucu aşağıda görürsünüz.` : 'Test event yazılamadı (takip kapalı olabilir).'); setTab(''); setPage(1); setTimeout(() => { qc.invalidateQueries({ queryKey: ['tracking-outbox'] }); qc.invalidateQueries({ queryKey: ['tracking-status'] }) }, 7000) },
     onError: (e: unknown) => setTestMsg((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Test event gönderilemedi.'),
   })
+
+  const completedStatus = feed?.status
+  const completionKey = completedStatus
+    ? `${effectiveChannelId}:${completedStatus.lastRunAt ?? '(hiç)'}:${completedStatus.error ?? ''}`
+    : null
+  if (feedBeklenen !== null && completedStatus && !completedStatus.running
+    && (completedStatus.lastRunAt ?? '(hiç)') !== feedBeklenen
+    && completionKey !== handledFeedCompletionKey) {
+    setHandledFeedCompletionKey(completionKey)
+    setFeedMsg(completedStatus.error
+      ? `Üretim HATAYLA bitti: ${completedStatus.error}`
+      : `✓ Üretim tamamlandı — ${completedStatus.itemCount} kalem, ${Math.round(completedStatus.durationMs / 1000)} sn.`)
+    setFeedBeklenen(null)
+  }
 
   const outboxRows = ob?.items ?? []
   const totalPages = Math.ceil((ob?.totalCount ?? 0) / 30)
@@ -135,11 +143,11 @@ export function TrackingPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <select className="sel" value={selectedChannelId} onChange={e => { setSelectedChannelId(e.target.value); setPage(1) }}>
+          <select className="sel" value={effectiveChannelId} onChange={e => { setSelectedChannelId(e.target.value); setPage(1) }}>
             {channels.map(c => <option key={c.id} value={c.id}>{c.firmName} — {getName(c.nameI18n) || c.code}</option>)}
           </select>
           <Button variant="secondary" size="sm" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={cn('w-4 h-4', isFetching && 'animate-spin')} /></Button>
-          <Button size="sm" onClick={() => { setTestMsg(null); test.mutate() }} disabled={!selectedChannelId || test.isPending || !st?.enabled}>
+          <Button size="sm" onClick={() => { setTestMsg(null); test.mutate() }} disabled={!effectiveChannelId || test.isPending || !st?.enabled}>
             <Send className="w-4 h-4 mr-1" /> Test event gönder
           </Button>
         </div>

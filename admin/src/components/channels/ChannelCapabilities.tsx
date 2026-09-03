@@ -4,95 +4,22 @@
  * Backend: Shared.Contracts/Channels/ChannelCapabilities.cs ile birebir anahtarlar (camelCase).
  */
 import { Badge } from '@/components/ui/Badge'
+import {
+  CAPABILITY_META,
+  DEFAULT_CAPABILITIES,
+  MARKETPLACE_CAPABILITIES,
+  OVERRIDABLE_KEYS,
+  isOverridable,
+  type CapabilityOverrides,
+  type ChannelCapabilities,
+} from './channelCapabilitiesModel'
 
-export interface ChannelCapabilities {
-  pushListing: boolean
-  externalTaxonomy: boolean
-  readinessLevel: 'light' | 'light_price' | 'full'
-  priceSource: 'channel_price_type' | 'channel_price_list' | 'channel_price_readback'
-  saleStopWindow: boolean
-  remoteDeactivate: boolean
-  thirdPartySellerProducts: boolean
-  externalSupplyProducts: boolean
-  orderDirection: 'internal' | 'partner_push' | 'pull'
-  minStock: number
-  autoPublish: boolean
-  pullsFromPartnerApi: boolean
-}
-
-export type CapabilityOverrides = Partial<Pick<ChannelCapabilities,
-  'thirdPartySellerProducts' | 'externalSupplyProducts' | 'autoPublish' | 'minStock'>>
-
-export const OVERRIDABLE_KEYS = ['thirdPartySellerProducts', 'externalSupplyProducts', 'autoPublish', 'minStock'] as const
-
-export const DEFAULT_CAPABILITIES: ChannelCapabilities = {
-  pushListing: false,
-  externalTaxonomy: false,
-  readinessLevel: 'light',
-  priceSource: 'channel_price_type',
-  saleStopWindow: true,
-  remoteDeactivate: false,
-  thirdPartySellerProducts: false,
-  externalSupplyProducts: false,
-  orderDirection: 'internal',
-  minStock: 1,
-  autoPublish: true,
-  pullsFromPartnerApi: false,
-}
-
-/** Pazaryeri varsayılanı (Trendyol/Amazon…) — "Pazaryeri kanalı" hızlı seçimi için. */
-export const MARKETPLACE_CAPABILITIES: ChannelCapabilities = {
-  ...DEFAULT_CAPABILITIES,
-  pushListing: true,
-  externalTaxonomy: true,
-  readinessLevel: 'full',
-  priceSource: 'channel_price_readback',
-  remoteDeactivate: true,
-  orderDirection: 'pull',
-}
-
-type Meta =
-  | { key: keyof ChannelCapabilities; label: string; help: string; kind: 'bool' }
-  | { key: keyof ChannelCapabilities; label: string; help: string; kind: 'number'; min: number }
-  | { key: keyof ChannelCapabilities; label: string; help: string; kind: 'select'; options: { value: string; label: string }[] }
-
-export const CAPABILITY_META: Meta[] = [
-  { key: 'pushListing', label: 'Ürün dışarı gönderilir (pazaryeri)', help: 'Ürünler batch/adaptörle karşı tarafa yüklenir. Açıksa bu tip "Pazaryeri" sayılır.', kind: 'bool' },
-  { key: 'externalTaxonomy', label: 'Dış kategori/özellik eşlemesi gerekir', help: 'Ürün grubu → dış kategori, özellik/değer eşlemeleri bu kanal için zorunludur.', kind: 'bool' },
-  { key: 'readinessLevel', label: 'Hazırlık denetimi', help: 'Ürünün bu kanalda listelenebilmesi için yapılan ön kontrol seviyesi.', kind: 'select',
-    options: [{ value: 'light', label: 'Hafif (görsel, fiyat, satış açık)' }, { value: 'light_price', label: 'Hafif + kanal fiyatı var' }, { value: 'full', label: 'Tam (eşleme + zorunlu özellik)' }] },
-  { key: 'priceSource', label: 'Fiyat kaynağı', help: 'Kanal fiyatının nereden geldiği.', kind: 'select',
-    options: [{ value: 'channel_price_type', label: 'Kanal fiyat tipi' }, { value: 'channel_price_list', label: 'Bayi fiyat listesi' }, { value: 'channel_price_readback', label: 'Kanal fiyatı + pazaryeri geri okuma' }] },
-  { key: 'saleStopWindow', label: 'Satış durdurma penceresi', help: 'Ürünün satışı tarih aralığıyla geçici durdurulabilir.', kind: 'bool' },
-  { key: 'remoteDeactivate', label: 'Listeden düşürme (deactivate) batch\'i', help: 'Pazaryerinde yüklü ürün uzaktan pasife alınabilir.', kind: 'bool' },
-  { key: 'thirdPartySellerProducts', label: 'Üçüncü taraf satıcı ürünleri', help: 'Satıcı panelinden gelen (bizim olmayan) ürünler bu kanalın kapsamına girebilir.', kind: 'bool' },
-  { key: 'externalSupplyProducts', label: 'Dış tedarik kaynağı ürünleri', help: 'Dropship tedarik kaynaklarından (dış API/Excel) gelen ürünler kapsama girebilir.', kind: 'bool' },
-  { key: 'orderDirection', label: 'Sipariş yönü', help: 'Siparişin bu kanalda nasıl oluştuğu.', kind: 'select',
-    options: [{ value: 'internal', label: 'İçeride oluşur (site/POS)' }, { value: 'partner_push', label: 'Bayi Partner API ile gönderir' }, { value: 'pull', label: 'Pazaryerinden çekilir' }] },
-  { key: 'minStock', label: 'Stok eşiği (minStock)', help: 'Kanala verilen adet = max(0, net stok − eşik + 1). Eşik 3 ise net 3 adet → 1 verilir.', kind: 'number', min: 0 },
-  { key: 'autoPublish', label: 'Kapsama giren ürün otomatik kanalda', help: 'Kapalıysa ürün kapsama girse de personel "Kanala al" demeden satışa açılmaz.', kind: 'bool' },
-  { key: 'pullsFromPartnerApi', label: 'Karşı taraf bizim Partner API\'mizi kullanır', help: 'Dropship bayi ürün/stok/fiyatı bizim API\'mizden çeker.', kind: 'bool' },
-]
+export type { CapabilityOverrides, ChannelCapabilities } from './channelCapabilitiesModel'
 
 const metaOf = (key: keyof ChannelCapabilities) => CAPABILITY_META.find(m => m.key === key)!
 const selectLabel = (key: keyof ChannelCapabilities, value: string) => {
   const m = metaOf(key)
   return m.kind === 'select' ? (m.options.find(o => o.value === value)?.label ?? value) : value
-}
-
-export function isOverridable(key: string): key is (typeof OVERRIDABLE_KEYS)[number] {
-  return (OVERRIDABLE_KEYS as readonly string[]).includes(key)
-}
-
-export function mergeCapabilities(base: ChannelCapabilities, overrides?: CapabilityOverrides | null): ChannelCapabilities {
-  const out = { ...base }
-  if (!overrides) return out
-  for (const k of OVERRIDABLE_KEYS) {
-    const v = overrides[k]
-    if (v === undefined || v === null) continue
-    ;(out as any)[k] = v
-  }
-  return out
 }
 
 /** Yetenek rozetleri — liste/kart/başlık için kısa özet. */
@@ -176,8 +103,19 @@ export function CapabilityOverridesEditor({ base, overrides, onChange }: {
 }) {
   const setKey = (k: (typeof OVERRIDABLE_KEYS)[number], v: unknown) => {
     const next: CapabilityOverrides = { ...overrides }
-    if (v === undefined) delete (next as any)[k]
-    else (next as any)[k] = v
+    if (k === 'minStock') {
+      if (typeof v === 'number') next.minStock = v
+      else delete next.minStock
+    } else if (k === 'thirdPartySellerProducts') {
+      if (typeof v === 'boolean') next.thirdPartySellerProducts = v
+      else delete next.thirdPartySellerProducts
+    } else if (k === 'externalSupplyProducts') {
+      if (typeof v === 'boolean') next.externalSupplyProducts = v
+      else delete next.externalSupplyProducts
+    } else {
+      if (typeof v === 'boolean') next.autoPublish = v
+      else delete next.autoPublish
+    }
     onChange(next)
   }
   const readOnly = CAPABILITY_META.filter(m => !isOverridable(m.key))

@@ -44,6 +44,24 @@ interface GroupState {
   movedCount?: number
 }
 
+type DirectoryHandleWithEntries = FileSystemDirectoryHandle & {
+  entries: () => AsyncIterableIterator<[string, FileSystemHandle]>
+}
+
+type WindowWithDirectoryPicker = Window & {
+  showDirectoryPicker?: (options: { mode: 'readwrite' }) => Promise<FileSystemDirectoryHandle>
+}
+
+type DataTransferItemWithFileSystemHandle = DataTransferItem & {
+  getAsFileSystemHandle: () => Promise<FileSystemHandle | null>
+}
+
+type ApiError = {
+  message?: string
+  name?: string
+  response?: { data?: { error?: string } }
+}
+
 // ── Filename parsing ───────────────────────────────────────────────────────────
 
 function parseFileName(name: string): { barcode: string; order: number } {
@@ -65,7 +83,7 @@ async function readDirImages(
   dirHandle: FileSystemDirectoryHandle,
 ): Promise<{ file: File; fileHandle: FileSystemFileHandle }[]> {
   const result: { file: File; fileHandle: FileSystemFileHandle }[] = []
-  for await (const [name, handle] of (dirHandle as any).entries()) {
+  for await (const [name, handle] of (dirHandle as DirectoryHandleWithEntries).entries()) {
     if (handle.kind !== 'file') continue
     if (name === 'yuklenenler') continue
     const lower = name.toLowerCase()
@@ -83,14 +101,14 @@ async function moveToUploaded(
   originalFile: File,
   serverFileName: string,
 ): Promise<void> {
-  const subDir = await (dirHandle as any).getDirectoryHandle('yuklenenler', { create: true })
+  const subDir = await dirHandle.getDirectoryHandle('yuklenenler', { create: true })
   const sourceExt = originalFile.name.match(/\.[^/.]+$/)?.[0]?.toLowerCase() ?? ''
   const archiveFileName = serverFileName.replace(/\.[^/.]+$/, '') + sourceExt
   const newHandle: FileSystemFileHandle = await subDir.getFileHandle(archiveFileName, { create: true })
-  const writable = await (newHandle as any).createWritable()
+  const writable = await newHandle.createWritable()
   await writable.write(originalFile)
   await writable.close()
-  await (dirHandle as any).removeEntry(originalFile.name)
+  await dirHandle.removeEntry(originalFile.name)
 }
 
 // ── BarcodeGroupCard ───────────────────────────────────────────────────────────
@@ -295,13 +313,13 @@ export function BulkImageUploadPage() {
 
   const handlePickFolder = async () => {
     try {
-      const handle = await (window as any).showDirectoryPicker({ mode: 'readwrite' })
+      const handle = await (window as WindowWithDirectoryPicker).showDirectoryPicker!({ mode: 'readwrite' })
       setDirHandle(handle)
       setGroups([])
       const entries = await readDirImages(handle)
       await processFiles(entries)
-    } catch (e: any) {
-      if (e?.name !== 'AbortError') console.error(e)
+    } catch (error: unknown) {
+      if ((error as ApiError)?.name !== 'AbortError') console.error(error)
     }
   }
 
@@ -320,11 +338,12 @@ export function BulkImageUploadPage() {
     const items = Array.from(e.dataTransfer.items)
     // Try File System Access API via DataTransferItem.getAsFileSystemHandle
     if (fsSupportd && items[0] && 'getAsFileSystemHandle' in items[0]) {
-      const handle = await (items[0] as any).getAsFileSystemHandle()
+      const handle = await (items[0] as DataTransferItemWithFileSystemHandle).getAsFileSystemHandle()
       if (handle?.kind === 'directory') {
-        setDirHandle(handle)
+        const directoryHandle = handle as FileSystemDirectoryHandle
+        setDirHandle(directoryHandle)
         setGroups([])
-        const entries = await readDirImages(handle)
+        const entries = await readDirImages(directoryHandle)
         await processFiles(entries)
         return
       }
@@ -336,12 +355,12 @@ export function BulkImageUploadPage() {
   }
 
   const handleRemoveFile = (barcode: string, fileIndex: number) => {
-    setGroups(prev => prev.map(s => {
+    setGroups(prev => prev.flatMap(s => {
       if (s.barcodeGroup.barcode !== barcode) return s
       const newFiles = s.barcodeGroup.files.filter((_, i) => i !== fileIndex)
-      if (newFiles.length === 0) return null as any
+      if (newFiles.length === 0) return []
       return { ...s, barcodeGroup: { ...s.barcodeGroup, files: newFiles } }
-    }).filter(Boolean))
+    }))
   }
 
   // ── Stats ─────────────────────────────────────────────────────────────────
@@ -452,11 +471,12 @@ export function BulkImageUploadPage() {
             ? { ...s, uploadStatus: 'done', movedCount: moved }
             : s
         ))
-      } catch (e: any) {
+      } catch (error: unknown) {
+        const uploadError = error as ApiError
         fail++
         setGroups(prev => prev.map(s =>
           s.barcodeGroup.barcode === barcodeGroup.barcode
-            ? { ...s, uploadStatus: 'error', uploadError: e?.response?.data?.error ?? e?.message ?? 'Hata' }
+            ? { ...s, uploadStatus: 'error', uploadError: uploadError.response?.data?.error ?? uploadError.message ?? 'Hata' }
             : s
         ))
       }
@@ -543,7 +563,7 @@ export function BulkImageUploadPage() {
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold"
               style={{ background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }}>
               <FolderOpen size={13} style={{ color: 'var(--brand)' }} />
-              {(dirHandle as any).name}
+              {dirHandle.name}
             </div>
           )}
         </div>
@@ -569,8 +589,7 @@ export function BulkImageUploadPage() {
           </div>
           <input
             type="file" multiple accept="image/*"
-            // @ts-ignore
-            webkitdirectory=""
+            {...({ webkitdirectory: '' } as { webkitdirectory: string })}
             onChange={handleFallbackChange}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
           />

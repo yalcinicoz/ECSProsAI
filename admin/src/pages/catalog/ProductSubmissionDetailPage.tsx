@@ -7,7 +7,14 @@ import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { SUBMISSION_STATUS_MAP } from './ProductSubmissionsPage'
+
+const SUBMISSION_STATUS_MAP: Record<string, { label: string; variant: BadgeVariant }> = {
+  pending:  { label: 'Bekliyor',   variant: 'warning' },
+  approved: { label: 'Onaylandı',  variant: 'success' },
+  rejected: { label: 'Reddedildi', variant: 'danger' },
+}
+
+type ApiError = { response?: { data?: { error?: string } } }
 
 interface VariantPayload {
   axisValues?: Record<string, string>
@@ -62,7 +69,7 @@ export function ProductSubmissionDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['product-submissions'] })
       setErr(null)
     },
-    onError: (e: any) => setErr(e?.response?.data?.error ?? 'Onay başarısız.'),
+    onError: (e: ApiError) => setErr(e.response?.data?.error ?? 'Onay başarısız.'),
   })
 
   const reject = useMutation({
@@ -72,7 +79,7 @@ export function ProductSubmissionDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['product-submissions'] })
       setRejectOpen(false); setReason(''); setErr(null)
     },
-    onError: (e: any) => setErr(e?.response?.data?.error ?? 'Red başarısız.'),
+    onError: (e: ApiError) => setErr(e.response?.data?.error ?? 'Red başarısız.'),
   })
 
   if (isLoading || !s) return <PageSpinner />

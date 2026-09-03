@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { errText } from '@/components/ui/DataTable'
+import { errText } from '@/components/ui/DataTable.utils'
 import { basariSesi, hataSesi, seslendir } from '@/lib/sesler'
 
 /**

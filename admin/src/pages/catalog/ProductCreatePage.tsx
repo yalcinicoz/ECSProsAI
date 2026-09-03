@@ -135,7 +135,8 @@ export function ProductCreatePage() {
           {/* Error */}
           {createMutation.isError && (
             <p className="text-sm" style={{ color: 'var(--danger, #ef4444)' }}>
-              {(createMutation.error as any)?.response?.data?.error ?? 'Hata oluştu. Tekrar deneyin.'}
+              {(createMutation.error as { response?: { data?: { error?: string } } })?.response?.data?.error
+                ?? 'Hata oluştu. Tekrar deneyin.'}
             </p>
           )}
 

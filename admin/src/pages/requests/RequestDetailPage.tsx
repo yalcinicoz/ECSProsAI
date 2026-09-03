@@ -12,6 +12,15 @@ import {
 
 interface AdminUser { id: string; fullName: string }
 
+function apiErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error !== 'object' || error === null || !('response' in error)) return fallback
+  const response = error.response
+  if (typeof response !== 'object' || response === null || !('data' in response)) return fallback
+  const data = response.data
+  if (typeof data !== 'object' || data === null || !('error' in data)) return fallback
+  return typeof data.error === 'string' ? data.error : fallback
+}
+
 function useAdminUsers() {
   return useQuery<AdminUser[]>({
     queryKey: ['iam-users-mini'],
@@ -100,7 +109,7 @@ function EditModal({ r, onClose }: { r: RequestDetail; onClose: () => void }) {
       queryClient.invalidateQueries({ queryKey: ['requests'] })
       onClose()
     },
-    onError: (e: any) => setError(e.response?.data?.error ?? 'Kaydedilemedi.'),
+    onError: (error: unknown) => setError(apiErrorMessage(error, 'Kaydedilemedi.')),
   })
 
   return (
@@ -154,7 +163,7 @@ function StatusChangeModal({ r, newStatus, onClose }: { r: RequestDetail; newSta
       queryClient.invalidateQueries({ queryKey: ['requests'] })
       onClose()
     },
-    onError: (e: any) => setError(e.response?.data?.error ?? 'Durum değiştirilemedi.'),
+    onError: (error: unknown) => setError(apiErrorMessage(error, 'Durum değiştirilemedi.')),
   })
 
   return (
@@ -202,7 +211,7 @@ export function RequestDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['request', id] })
       queryClient.invalidateQueries({ queryKey: ['requests'] })
     },
-    onError: (e: any) => setCommentError(e.response?.data?.error ?? 'Yorum gönderilemedi.'),
+    onError: (error: unknown) => setCommentError(apiErrorMessage(error, 'Yorum gönderilemedi.')),
   })
 
   const assign = useMutation({
@@ -222,8 +231,8 @@ export function RequestDetailPage() {
       form.append('file', f)
       const res = await api.post('/requests/media', form, { headers: { 'Content-Type': 'multipart/form-data' } })
       setFiles(prev => [...prev, res.data.data.url])
-    } catch (e: any) {
-      setCommentError(e.response?.data?.error ?? 'Dosya yüklenemedi.')
+    } catch (error: unknown) {
+      setCommentError(apiErrorMessage(error, 'Dosya yüklenemedi.'))
     } finally {
       setUploading(false)
     }

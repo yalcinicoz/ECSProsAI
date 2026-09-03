@@ -4,7 +4,8 @@ import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { DataTable, errText, i18nAd } from '@/components/ui/DataTable'
+import { DataTable } from '@/components/ui/DataTable'
+import { errText, i18nAd } from '@/components/ui/DataTable.utils'
 
 interface PackingStation {
   id: string

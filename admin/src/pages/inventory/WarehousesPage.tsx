@@ -14,6 +14,7 @@ import { useLanguages } from '@/hooks/useLanguages'
 import { FL } from '@/lib/field-labels'
 import { buildI18nValues } from '@/lib/i18n-helper'
 import { cn } from '@/lib/utils'
+import { getWarehouseName } from './warehouseHelpers'
 
 const PERM = 'inventory.manage'
 
@@ -33,10 +34,6 @@ export interface Warehouse {
   isSellableOnline: boolean
   isActive: boolean
   sortOrder: number
-}
-
-export function getWarehouseName(w: Warehouse): string {
-  return w.nameI18n['tr'] ?? w.nameI18n[Object.keys(w.nameI18n)[0]] ?? w.code
 }
 
 type FormState = {

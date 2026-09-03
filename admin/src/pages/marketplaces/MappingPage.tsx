@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, ChevronDown, ChevronUp, Plus, Search, Trash2, X } from 'lucide-react'
@@ -7,7 +7,8 @@ import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { StoreLogo, pickTr } from './MarketplacesPage'
+import { StoreLogo } from './MarketplacesPage'
+import { pickTr } from './marketplaceOverview'
 
 // ── Types (API DTO karşılıkları) ─────────────────────────────────────────────
 
@@ -528,23 +529,15 @@ function BulkSuggestPanel({ marketplace, onSaved }: { marketplace: string; onSav
       (await api.get(`/marketplaces/mapping/suggest-all?marketplace=${marketplace}`)).data.data ?? [],
   })
 
-  // İlk yüklemede en iyi öneri ön seçili (önerisi olmayanlar atlanmış başlar)
-  useEffect(() => {
-    if (rows.length === 0) return
-    setSecimler((mevcut) => {
-      const n = { ...mevcut }
-      for (const r of rows) if (!(r.productGroupId in n)) n[r.productGroupId] = r.suggestions[0]?.externalId ?? ''
-      return n
-    })
-  }, [rows])
-
-  const seciliAdet = rows.filter((r) => secimler[r.productGroupId]).length
+  // Kullanıcı açıkça "atla" seçmediyse ilk öneri ön seçilidir.
+  const secimOf = (row: SuggestRow) => secimler[row.productGroupId] ?? row.suggestions[0]?.externalId ?? ''
+  const seciliAdet = rows.filter((row) => secimOf(row)).length
 
   const kaydet = useMutation({
     mutationFn: async () => {
       const items = rows
-        .filter((r) => secimler[r.productGroupId])
-        .map((r) => ({ productGroupId: r.productGroupId, targetExternalId: secimler[r.productGroupId] }))
+        .filter((row) => secimOf(row))
+        .map((row) => ({ productGroupId: row.productGroupId, targetExternalId: secimOf(row) }))
       return (await api.post('/marketplaces/mapping/bulk-category', { marketplace, items })).data.data
     },
     onSuccess: (d) => {
@@ -589,8 +582,8 @@ function BulkSuggestPanel({ marketplace, onSaved }: { marketplace: string; onSav
                   className="px-2 py-1 rounded-lg text-xs"
                   style={{
                     border: '1px solid var(--border)',
-                    background: secimler[r.productGroupId] === s.externalId ? 'var(--brand)' : 'var(--surface)',
-                    color: secimler[r.productGroupId] === s.externalId ? '#fff' : 'var(--text-m)',
+                    background: secimOf(r) === s.externalId ? 'var(--brand)' : 'var(--surface)',
+                    color: secimOf(r) === s.externalId ? '#fff' : 'var(--text-m)',
                   }}>
                   {s.path} <span className="opacity-70">%{s.score}</span>
                 </button>
@@ -601,7 +594,7 @@ function BulkSuggestPanel({ marketplace, onSaved }: { marketplace: string; onSav
                   className="px-2 py-1 rounded-lg text-xs"
                   style={{
                     border: '1px dashed var(--border)',
-                    background: !secimler[r.productGroupId] ? 'var(--surface2)' : 'var(--surface)',
+                    background: !secimOf(r) ? 'var(--surface2)' : 'var(--surface)',
                     color: 'var(--text-s)',
                   }}>
                   atla

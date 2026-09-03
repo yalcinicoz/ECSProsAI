@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
@@ -518,10 +518,13 @@ export function PageBlockDetailPage() {
   const [hataMesaji, setHataMesaji] = useState('')
   const [ogeler, setOgeler] = useState<ItemDto[]>([])
   const [ogeModal, setOgeModal] = useState<{ index: number; oge: ItemDto } | null>(null)
+  const [loadedBlock, setLoadedBlock] = useState<BlockDetail | undefined>()
 
-  useEffect(() => {
-    if (blok) { setForm({ ...blok }); setOgeler(blok.items.map((i) => ({ ...i }))) }
-  }, [blok])
+  if (blok && blok !== loadedBlock) {
+    setLoadedBlock(blok)
+    setForm({ ...blok })
+    setOgeler(blok.items.map((i) => ({ ...i })))
+  }
 
   const tipDef = catalog?.blockTypes.find((t) => t.code === form?.blockType)
 

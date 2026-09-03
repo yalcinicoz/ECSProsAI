@@ -9,12 +9,13 @@ import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { useSuppliers } from './PurchaseOrdersPage'
+import { useSuppliers } from './procurementHelpers'
 
 interface Line { supplierId: string | null; supplierTitle: string; poCount: number; poQuantity: number; poAmount: number; countedQuantity: number; countedCost: number; invoiceAmount: number; diffQuantity: number }
 interface Kpis { avgReceiptToCountHours: number | null; avgCountToOnSaleHours: number | null; pendingCount: number; pendingQuantity: number; pending0_2: number; pending3_7: number; pending7Plus: number; placedNotOnSaleCount: number; placedNotOnSaleQuantity: number; openMissingCards: number; oldestMissingCardDays: number | null }
 interface NotOnSale { entryId: string; productId: string; productCode: string; name: string; sku: string; quantity: number; placedAt: string }
 interface Report { from: string; to: string; lines: Line[]; kpis: Kpis; notOnSale: NotOnSale[] }
+type LoadedReport = Report & { loadedAt: number }
 
 const tl = (n: number) => n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const iso = (d: Date) => d.toISOString().slice(0, 10)
@@ -28,12 +29,13 @@ export function ProcurementReportPage() {
   const [applied, setApplied] = useState({ from, to, supplierId })
   const { data: suppliers = [] } = useSuppliers()
 
-  const { data: rpt, isLoading } = useQuery<Report>({
+  const { data: rpt, isLoading } = useQuery<LoadedReport>({
     queryKey: ['procurement-report', applied],
     queryFn: async () => {
       const p = new URLSearchParams({ from: applied.from, to: applied.to })
       if (applied.supplierId) p.set('supplierId', applied.supplierId)
-      return (await api.get(`/procurement/report?${p}`)).data.data
+      const report = (await api.get(`/procurement/report?${p}`)).data.data as Report
+      return { ...report, loadedAt: Date.now() }
     },
   })
 
@@ -134,7 +136,7 @@ export function ProcurementReportPage() {
               </thead>
               <tbody>
                 {rpt.notOnSale.map(r => {
-                  const gun = (Date.now() - new Date(r.placedAt).getTime()) / 86400000
+                  const gun = (rpt.loadedAt - new Date(r.placedAt).getTime()) / 86400000
                   return (
                     <tr key={r.entryId} style={{ borderTop: '1px solid var(--border)' }}>
                       <td className="px-4 py-2" style={{ color: 'var(--text)' }}>{r.name}<span className="block text-xs" style={{ color: 'var(--text-s)' }}>{r.productCode}</span></td>

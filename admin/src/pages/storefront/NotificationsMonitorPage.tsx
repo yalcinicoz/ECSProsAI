@@ -4,7 +4,7 @@ import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
-import { useFirmPlatforms } from '@/pages/cms/CmsPagesPage'
+import { useFirmPlatforms } from '@/pages/cms/cmsPageShared'
 
 interface StockAlert {
   id: string

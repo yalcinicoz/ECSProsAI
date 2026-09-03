@@ -130,6 +130,8 @@ interface Warehouse {
   nameI18n: Record<string, string>
 }
 
+type ApiError = { response?: { data?: { error?: string } } }
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 // client-side EAN-13 (fallback — used only if API unavailable)
@@ -680,7 +682,7 @@ function ChannelsPricingTab({ product }: { product: ProductDetail }) {
     setSavedRows(new Set())
     setBulkPrice('')
     setBulkPriceType('manual')
-  }, [pricingData, selectedChannelId, product.variants])
+  }, [pricingData, selectedChannelId, product.variants, product.basePrice])
 
   function updateRow(variantId: string, patch: Partial<PricingRow>) {
     setRows(prev => ({ ...prev, [variantId]: { ...prev[variantId], ...patch } }))
@@ -2329,7 +2331,8 @@ export function ProductDetailPage() {
                             onClick={() => {
                               setAxisSelections((prev) => {
                                 const next = new Set(prev[axis.attributeTypeId] ?? [])
-                                isSelected ? next.delete(v.id) : next.add(v.id)
+                                if (isSelected) next.delete(v.id)
+                                else next.add(v.id)
                                 return { ...prev, [axis.attributeTypeId]: next }
                               })
                             }}
@@ -2381,7 +2384,7 @@ export function ProductDetailPage() {
 
               {addVariantsMutation.isError && (
                 <p className="text-sm" style={{ color: '#ef4444' }}>
-                  {(addVariantsMutation.error as any)?.response?.data?.error ?? 'Hata oluştu.'}
+                  {(addVariantsMutation.error as ApiError)?.response?.data?.error ?? 'Hata oluştu.'}
                 </p>
               )}
             </div>
@@ -2432,7 +2435,7 @@ export function ProductDetailPage() {
           )}
           {updateSettingMutation.isError && (
             <p className="text-sm" style={{ color: '#ef4444' }}>
-              {(updateSettingMutation.error as any)?.response?.data?.error ?? 'Hata oluştu.'}
+              {(updateSettingMutation.error as ApiError)?.response?.data?.error ?? 'Hata oluştu.'}
             </p>
           )}
         </div>
@@ -2800,6 +2803,7 @@ function OneCikarPaneli({ firmPlatformId, productId }: { firmPlatformId: string;
   const queryClient = useQueryClient()
   const [from, setFrom] = useState('')
   const [until, setUntil] = useState('')
+  const [loadedWindowKey, setLoadedWindowKey] = useState<string | null>(null)
 
   const { data: durum } = useQuery<{ featuredFrom: string | null; featuredUntil: string | null; isFeaturedNow: boolean }>({
     queryKey: ['channel-product-featured', firmPlatformId, productId],
@@ -2809,10 +2813,15 @@ function OneCikarPaneli({ firmPlatformId, productId }: { firmPlatformId: string;
     },
   })
 
-  useEffect(() => {
+  const windowKey = durum
+    ? `${firmPlatformId}:${productId}:${durum.featuredFrom ?? ''}:${durum.featuredUntil ?? ''}`
+    : null
+
+  if (durum && loadedWindowKey !== windowKey) {
+    setLoadedWindowKey(windowKey)
     setFrom(durum?.featuredFrom ? durum.featuredFrom.slice(0, 10) : '')
     setUntil(durum?.featuredUntil ? durum.featuredUntil.slice(0, 10) : '')
-  }, [durum])
+  }
 
   const kaydet = useMutation({
     mutationFn: async (payload: { featuredFrom: string | null; featuredUntil: string | null }) => {

@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
-import { DataTable, i18nAd } from '@/components/ui/DataTable'
+import { DataTable } from '@/components/ui/DataTable'
+import { i18nAd } from '@/components/ui/DataTable.utils'
 
 interface Role {
   id: string

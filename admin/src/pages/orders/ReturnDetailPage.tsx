@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { RETURN_STATUS_MAP, type ReturnReason } from './ReturnsPage'
+import type { ReturnReason } from './ReturnsPage'
+import { RETURN_STATUS_MAP } from './orderConstants'
 
 interface ReturnItem {
   id: string

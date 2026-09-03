@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/api/client'
 import { Button } from '@/components/ui/Button'
@@ -76,16 +76,15 @@ export function CommissionPage() {
   // ── Sekme 1: Varsayılan oranlar ──
   const [defaults, setDefaults] = useState<Record<string, string>>({})
   const [groupSearch, setGroupSearch] = useState('')
-  const defaultsLoaded = useRef(false)
+  const [defaultsLoaded, setDefaultsLoaded] = useState(false)
   const { data: groupRates = [] } = useQuery<{ productGroupId: string; ratePercent: number }[]>({
     queryKey: ['commission-group-rates'],
     queryFn: async () => (await api.get('/commission/group-rates')).data.data ?? [],
   })
-  useEffect(() => {
-    if (defaultsLoaded.current || groupRates.length === 0) return
+  if (!defaultsLoaded && groupRates.length > 0) {
     setDefaults(Object.fromEntries(groupRates.map(r => [r.productGroupId, String(r.ratePercent)])))
-    defaultsLoaded.current = true
-  }, [groupRates])
+    setDefaultsLoaded(true)
+  }
 
   const saveDefaults = useMutation({
     mutationFn: async () => {
@@ -109,13 +108,18 @@ export function CommissionPage() {
     queryFn: async () => (await api.get(`/commission/suppliers/${supplierId}/contract`)).data.data,
     enabled: !!supplierId,
   })
-  useEffect(() => {
-    if (!contractFetched) return
+  const [loadedContractState, setLoadedContractState] = useState<{
+    supplierId: string
+    contract: ContractDto | null | undefined
+  } | null>(null)
+  if (contractFetched && (
+    loadedContractState?.supplierId !== supplierId || loadedContractState.contract !== loadedContract
+  )) {
+    setLoadedContractState({ supplierId, contract: loadedContract })
     setContract(loadedContract ? { ...bosSozlesme(), ...loadedContract,
       groupRates: loadedContract.groupRates ?? [], productRates: loadedContract.productRates ?? [],
       turnoverTiers: loadedContract.turnoverTiers ?? [] } : bosSozlesme())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contractFetched, loadedContract])
+  }
 
   const saveContract = useMutation({
     mutationFn: async () => { await api.put(`/commission/suppliers/${supplierId}/contract`, contract) },
@@ -144,10 +148,16 @@ export function CommissionPage() {
     queryFn: async () => (await api.get('/commission/campaigns')).data.data ?? [],
     enabled: tab === 'campaigns',
   })
-  const [campaignEdits, setCampaignEdits] = useState<Record<string, { rate: string; share: string; optIn: boolean }>>({})
+  type CampaignEdit = { rate: string; share: string; optIn: boolean }
+  const [campaignEdits, setCampaignEdits] = useState<Record<string, CampaignEdit>>({})
+  const campaignEditOf = (campaign: CampaignRow): CampaignEdit => campaignEdits[campaign.id] ?? {
+    rate: campaign.supplierCommissionRate == null ? '' : String(campaign.supplierCommissionRate),
+    share: String(campaign.supplierDiscountSharePercent),
+    optIn: campaign.requiresSupplierOptIn,
+  }
   const campaignTerms = useMutation({
     mutationFn: async (c: CampaignRow) => {
-      const e = campaignEdits[c.id]
+      const e = campaignEditOf(c)
       await api.put(`/commission/campaigns/${c.id}/supplier-terms`, {
         supplierCommissionRate: e.rate.trim() === '' ? null : parseFloat(e.rate),
         supplierDiscountSharePercent: e.share.trim() === '' ? 0 : parseFloat(e.share),
@@ -156,18 +166,6 @@ export function CommissionPage() {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['commission-campaigns'] }),
   })
-  useEffect(() => {
-    if (campaigns.length === 0) return
-    setCampaignEdits(prev => {
-      const next = { ...prev }
-      for (const c of campaigns)
-        if (!next[c.id]) next[c.id] = {
-          rate: c.supplierCommissionRate == null ? '' : String(c.supplierCommissionRate),
-          share: String(c.supplierDiscountSharePercent), optIn: c.requiresSupplierOptIn,
-        }
-      return next
-    })
-  }, [campaigns])
 
   // ── Sekme 4: Hakedişler ──
   const [setSupplier, setSetSupplier] = useState('')
@@ -423,8 +421,7 @@ export function CommissionPage() {
             </thead>
             <tbody>
               {campaigns.map(c => {
-                const e = campaignEdits[c.id]
-                if (!e) return null
+                const e = campaignEditOf(c)
                 return (
                   <tr key={c.id} style={{ borderBottom: '1px solid var(--border)', color: 'var(--text)' }}>
                     <td className="py-2 pr-3">

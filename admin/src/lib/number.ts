@@ -32,7 +32,7 @@ export function applyNumericMask(raw: string, decimals = 2): string {
   if (!raw) return ''
 
   const isNeg = raw.startsWith('-')
-  let work = isNeg ? raw.slice(1) : raw
+  const work = isNeg ? raw.slice(1) : raw
 
   let intStr = ''
   let decStr: string | null = null

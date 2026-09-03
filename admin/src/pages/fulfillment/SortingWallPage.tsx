@@ -5,7 +5,7 @@ import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { errText } from '@/components/ui/DataTable'
+import { errText } from '@/components/ui/DataTable.utils'
 import { useAuthStore } from '@/store/auth'
 
 /**

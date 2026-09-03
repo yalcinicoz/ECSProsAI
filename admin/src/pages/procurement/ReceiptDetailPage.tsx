@@ -2,7 +2,7 @@
  * T2 Mal Kabul parti detayı: başlık (düzenlenebilir) + durum aksiyonları + gevşek SA bağları (bağla/çöz)
  * + kaba evrak kalemleri + fatura bağı. Hiçbir alan ayrıştırmayı kısıtlamaz (İ2/İ3).
  */
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Plus, Trash2, X } from 'lucide-react'
@@ -11,8 +11,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { PO_STATUS, useSuppliers } from './PurchaseOrdersPage'
-import { RB_STATUS, useWarehouses, whName } from './ReceiptsPage'
+import { PO_STATUS, RB_STATUS, apiErrorMessage, useSuppliers, useWarehouses, whName } from './procurementHelpers'
 
 interface ItemDto { id: string; descriptionText: string; quantity: number | null; unitPrice: number | null }
 interface LinkedPo { id: string; code: string; status: string; orderDate: string; itemCount: number; totalQuantity: number; totalAmount: number }
@@ -22,6 +21,14 @@ interface DetailDto {
   status: string; notes: string | null; items: ItemDto[]; purchaseOrders: LinkedPo[]
 }
 interface InvoiceOpt { id: string; invoiceNumber: string; invoiceDate: string; grandTotal: number }
+interface HeaderForm { packageCount: string; deliveryNoteNumber: string; notes: string }
+interface HeaderUpdate {
+  packageCount: number | null
+  deliveryNoteNumber: string | null
+  supplierInvoiceId: string | null
+  notes: string | null
+}
+interface ReceiptItemInput { descriptionText: string; quantity: number | null; unitPrice: number | null }
 
 const NEXT: Record<string, { to: string; label: string; variant?: 'secondary' }[]> = {
   received: [{ to: 'sorting', label: 'Ayrıştırmaya Başla' }],
@@ -45,7 +52,7 @@ export function ReceiptDetailPage() {
     enabled: !!id,
   })
   const invalidate = () => { qc.invalidateQueries({ queryKey: ['receipt-batch', id] }); qc.invalidateQueries({ queryKey: ['receipt-batches'] }) }
-  const onErr = (e: any) => setErr(e?.response?.data?.error ?? 'İşlem başarısız.')
+  const onErr = (error: unknown) => setErr(apiErrorMessage(error, 'İşlem başarısız.'))
 
   // Tedarikçinin faturaları (bağ için) + açık SA'ları
   const { data: invoices = [] } = useQuery<InvoiceOpt[]>({
@@ -64,11 +71,11 @@ export function ReceiptDetailPage() {
     onSuccess: () => { setErr(null); invalidate() }, onError: onErr,
   })
   const headerMut = useMutation({
-    mutationFn: async (body: any) => api.put(`/procurement/receipts/${id}`, body),
-    onSuccess: () => { setErr(null); invalidate() }, onError: onErr,
+    mutationFn: async (body: HeaderUpdate) => api.put(`/procurement/receipts/${id}`, body),
+    onSuccess: () => { setErr(null); setHeaderDraft(null); invalidate() }, onError: onErr,
   })
   const itemsMut = useMutation({
-    mutationFn: async (items: any[]) => api.post(`/procurement/receipts/${id}/items`, { items }),
+    mutationFn: async (items: ReceiptItemInput[]) => api.post(`/procurement/receipts/${id}/items`, { items }),
     onSuccess: () => { setErr(null); setNewItem({ desc: '', qty: '', price: '' }); invalidate() }, onError: onErr,
   })
   const delItemMut = useMutation({
@@ -81,8 +88,7 @@ export function ReceiptDetailPage() {
     onSuccess: () => { setErr(null); setPoToLink(''); invalidate(); qc.invalidateQueries({ queryKey: ['purchase-orders'] }) }, onError: onErr,
   })
 
-  const [hdr, setHdr] = useState({ packageCount: '', deliveryNoteNumber: '', notes: '' })
-  useEffect(() => { if (b) setHdr({ packageCount: b.packageCount?.toString() ?? '', deliveryNoteNumber: b.deliveryNoteNumber ?? '', notes: b.notes ?? '' }) }, [b])
+  const [headerDraft, setHeaderDraft] = useState<{ receiptId: string; value: HeaderForm } | null>(null)
   const [newItem, setNewItem] = useState({ desc: '', qty: '', price: '' })
   const [poToLink, setPoToLink] = useState('')
 
@@ -93,6 +99,16 @@ export function ReceiptDetailPage() {
   const linkedIds = new Set(b.purchaseOrders.map(p => p.id))
   const linkable = supplierPos.filter(p => !linkedIds.has(p.id) && p.status !== 'cancelled')
   const invoice = invoices.find(i => i.id === b.supplierInvoiceId)
+  const hdr = headerDraft?.receiptId === b.id
+    ? headerDraft.value
+    : {
+        packageCount: b.packageCount?.toString() ?? '',
+        deliveryNoteNumber: b.deliveryNoteNumber ?? '',
+        notes: b.notes ?? '',
+      }
+  const updateHeader = (patch: Partial<HeaderForm>) => {
+    setHeaderDraft({ receiptId: b.id, value: { ...hdr, ...patch } })
+  }
 
   const saveHeader = () => headerMut.mutate({
     packageCount: hdr.packageCount ? parseInt(hdr.packageCount) : null,
@@ -133,15 +149,15 @@ export function ReceiptDetailPage() {
           <div className="flex flex-wrap items-end gap-3 mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
             <div className="w-28">
               <label className="flbl mb-1">Koli</label>
-              <input type="number" min="0" className="inp" value={hdr.packageCount} onChange={e => setHdr(h => ({ ...h, packageCount: e.target.value }))} />
+              <input type="number" min="0" className="inp" value={hdr.packageCount} onChange={e => updateHeader({ packageCount: e.target.value })} />
             </div>
             <div className="w-44">
               <label className="flbl mb-1">İrsaliye no</label>
-              <input className="inp" value={hdr.deliveryNoteNumber} onChange={e => setHdr(h => ({ ...h, deliveryNoteNumber: e.target.value }))} />
+              <input className="inp" value={hdr.deliveryNoteNumber} onChange={e => updateHeader({ deliveryNoteNumber: e.target.value })} />
             </div>
             <div className="flex-1 min-w-[200px]">
               <label className="flbl mb-1">Not</label>
-              <input className="inp" value={hdr.notes} onChange={e => setHdr(h => ({ ...h, notes: e.target.value }))} />
+              <input className="inp" value={hdr.notes} onChange={e => updateHeader({ notes: e.target.value })} />
             </div>
             <Button size="sm" variant="secondary" loading={headerMut.isPending} onClick={saveHeader}>Kaydet</Button>
           </div>

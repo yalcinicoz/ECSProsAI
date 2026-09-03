@@ -196,7 +196,12 @@ export function ChannelProductsPage() {
   }
 
   const toggleRow = (id: string) => {
-    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
   const pageAllSelected = items.length > 0 && items.every(i => selected.has(i.productId))
   const togglePageAll = () => {

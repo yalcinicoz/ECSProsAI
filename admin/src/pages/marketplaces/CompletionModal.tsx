@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { Check } from 'lucide-react'
 import api from '@/api/client'
@@ -42,15 +42,22 @@ interface CompletionView {
  * yazılmaz). productIds birden fazlaysa TOPLU mod: form ilk ürüne göre kurulur, girilenler
  * seçili ürünlerin tümüne uygulanır.
  */
-export function CompletionModal({
-  open, onClose, marketplace, productIds, onSaved,
-}: {
+interface CompletionModalProps {
   open: boolean
   onClose: () => void
   marketplace: string
   productIds: string[]
   onSaved: () => void
-}) {
+}
+
+export function CompletionModal(props: CompletionModalProps) {
+  const resetKey = props.open ? `${props.marketplace}:${props.productIds.join(',')}` : 'closed'
+  return <CompletionModalContent key={resetKey} {...props} />
+}
+
+function CompletionModalContent({
+  open, onClose, marketplace, productIds, onSaved,
+}: CompletionModalProps) {
   const bulk = productIds.length > 1
   const [category, setCategory] = useState<(MpCategory & { source: string }) | null>(null)
   const [values, setValues] = useState<Record<string, { externalId: string | null; text: string | null }>>({})
@@ -62,11 +69,6 @@ export function CompletionModal({
       (await api.get(`/marketplaces/mapping/completion?marketplace=${marketplace}&productId=${productIds[0]}`)).data.data,
     enabled: open && productIds.length > 0,
   })
-
-  // Modal her açılışta temiz başlar
-  useEffect(() => {
-    if (open) { setCategory(null); setValues({}); setMsg(null) }
-  }, [open, productIds.join(',')])
 
   const save = useMutation({
     mutationFn: async () => {

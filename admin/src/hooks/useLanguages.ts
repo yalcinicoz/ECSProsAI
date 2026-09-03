@@ -13,16 +13,24 @@ export interface LanguageExt extends Language {
   isDefault?: boolean
 }
 
+interface LanguageDto {
+  code: string
+  nativeName: string
+  direction: string
+  isDefault: boolean
+  sortOrder: number
+}
+
 export function useLanguages() {
   return useQuery<LanguageExt[]>({
     queryKey: ['languages'],
     queryFn: async () => {
       const { data } = await api.get('/core/languages')
       // Sort by default first, then by sortOrder
-      const sorted = [...data.data].sort((a: any, b: any) =>
-        b.isDefault - a.isDefault || a.sortOrder - b.sortOrder
+      const sorted = ([...(data.data as LanguageDto[])]).sort((a, b) =>
+        Number(b.isDefault) - Number(a.isDefault) || a.sortOrder - b.sortOrder
       )
-      return sorted.map((l: any) => ({
+      return sorted.map((l) => ({
         code: l.code,
         name: l.nativeName,
         flag: FLAG_MAP[l.code] ?? '🌐',

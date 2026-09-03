@@ -5,7 +5,7 @@ import api from '@/api/client'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
 
-export const SUBMISSION_STATUS_MAP: Record<string, { label: string; variant: BadgeVariant }> = {
+const SUBMISSION_STATUS_MAP: Record<string, { label: string; variant: BadgeVariant }> = {
   pending:  { label: 'Bekliyor',    variant: 'warning' },
   approved: { label: 'Onaylandı',   variant: 'success' },
   rejected: { label: 'Reddedildi',  variant: 'danger' },

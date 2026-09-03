@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { apiErrorMessage } from './procurementHelpers'
 
 interface Cand { variantId: string; productCode: string; name: string; sku: string; barcode: string | null; color: string | null; size: string | null; price: number; exact: boolean }
 interface Entry { id: string; receiptBatchId: string | null; variantId: string; productCode: string; name: string; sku: string; barcode: string | null; quantity: number; unitCost: number | null; putawayStatus: string; createdAt: string }
@@ -76,7 +77,7 @@ export function SortingPage() {
     qc.invalidateQueries({ queryKey: entriesKey }); qc.invalidateQueries({ queryKey: ['missing-cards', batchId] })
     qc.invalidateQueries({ queryKey: ['sorting-batches'] }); qc.invalidateQueries({ queryKey: ['receipt-batches'] })
   }
-  const onErr = (e: any) => setMsg(e?.response?.data?.error ?? 'İşlem başarısız.')
+  const onErr = (error: unknown) => setMsg(apiErrorMessage(error, 'İşlem başarısız.'))
 
   const scanMut = useMutation({
     mutationFn: async (v: { variantId: string; quantity: number; unitCost?: number | null; label: string }) =>
@@ -326,7 +327,12 @@ export function SortingPage() {
                     <td className="px-3 py-2">
                       {e.putawayStatus !== 'placed' && (
                         <input type="checkbox" checked={placeSel.has(e.id)}
-                          onChange={() => setPlaceSel(prev => { const n = new Set(prev); n.has(e.id) ? n.delete(e.id) : n.add(e.id); return n })} />
+                          onChange={() => setPlaceSel(prev => {
+                            const next = new Set(prev)
+                            if (next.has(e.id)) next.delete(e.id)
+                            else next.add(e.id)
+                            return next
+                          })} />
                       )}
                     </td>
                   )}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
@@ -25,6 +25,15 @@ interface CargoRule {
 interface GeoItem { id: string; nameI18n?: Record<string, string>; name?: string }
 
 const geoAd = (g: GeoItem) => g.nameI18n?.tr ?? Object.values(g.nameI18n ?? {})[0] ?? g.name ?? ''
+
+function apiErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error !== 'object' || error === null || !('response' in error)) return fallback
+  const response = error.response
+  if (typeof response !== 'object' || response === null || !('data' in response)) return fallback
+  const data = response.data
+  if (typeof data !== 'object' || data === null || !('error' in data)) return fallback
+  return typeof data.error === 'string' ? data.error : fallback
+}
 
 // Sıralı entegrasyon listesi düzenleyicisi — genel ve mahalle bölümleri paylaşır
 function KargoSiraListesi({ liste, degistir, kargolar, bosMesaj }: {
@@ -81,27 +90,28 @@ export function CargoZonesPage() {
     queryFn: async () => (await api.get('/core/firms')).data.data,
   })
   const [firmId, setFirmId] = useState('')
-  useEffect(() => { if (!firmId && firms.length > 0) setFirmId(firms[0].id) }, [firms, firmId])
+  const selectedFirmId = firmId || firms[0]?.id || ''
 
   const { data: kargolar = [], isLoading: kargoYukleniyor } = useQuery<CargoIntegration[]>({
-    queryKey: ['cargo-integrations', firmId],
-    queryFn: async () => (await api.get(`/core/firms/${firmId}/integrations?serviceType=cargo`)).data.data,
-    enabled: !!firmId,
+    queryKey: ['cargo-integrations', selectedFirmId],
+    queryFn: async () => (await api.get(`/core/firms/${selectedFirmId}/integrations?serviceType=cargo`)).data.data,
+    enabled: !!selectedFirmId,
   })
   const { data: kurallar = [], isLoading: kuralYukleniyor } = useQuery<CargoRule[]>({
-    queryKey: ['cargo-rules', firmId],
-    queryFn: async () => (await api.get(`/core/firms/${firmId}/cargo-rules`)).data.data,
-    enabled: !!firmId,
+    queryKey: ['cargo-rules', selectedFirmId],
+    queryFn: async () => (await api.get(`/core/firms/${selectedFirmId}/cargo-rules`)).data.data,
+    enabled: !!selectedFirmId,
   })
 
   // ── Genel öncelik (ruleType=default) ──
-  const [genel, setGenel] = useState<string[] | null>(null) // null = henüz kurallardan doldurulmadı
+  const [genelDraft, setGenelDraft] = useState<{ firmId: string; liste: string[] } | null>(null)
   const genelSunucu = useMemo(() => kurallar
     .filter((r) => r.ruleType === 'default' && r.isActive)
     .sort((a, b) => b.priority - a.priority)
     .map((r) => r.firmPlatformIntegrationId), [kurallar])
-  useEffect(() => { setGenel(null) }, [firmId])
+  const genel = genelDraft?.firmId === selectedFirmId ? genelDraft.liste : null
   const genelListe = genel ?? genelSunucu
+  const setGenel = (liste: string[]) => setGenelDraft({ firmId: selectedFirmId, liste })
 
   // ── Mahalle seçimi (il → ilçe → mahalle arama) ──
   const [ilId, setIlId] = useState<string | null>(null)
@@ -132,13 +142,16 @@ export function CargoZonesPage() {
   })
 
   // ── Seçili mahallenin atamaları (ruleType=neighborhood) ──
-  const [mahalleListe, setMahalleListe] = useState<string[] | null>(null)
+  const [mahalleDraft, setMahalleDraft] = useState<{ mahalleId: string; liste: string[] } | null>(null)
   const mahalleSunucu = useMemo(() => kurallar
     .filter((r) => r.ruleType === 'neighborhood' && r.neighborhoodId === mahalle?.id && r.isActive)
     .sort((a, b) => b.priority - a.priority)
     .map((r) => r.firmPlatformIntegrationId), [kurallar, mahalle])
-  useEffect(() => { setMahalleListe(null) }, [mahalle?.id])
+  const mahalleListe = mahalleDraft && mahalleDraft.mahalleId === mahalle?.id ? mahalleDraft.liste : null
   const mahalleAtama = mahalleListe ?? mahalleSunucu
+  const setMahalleListe = (liste: string[]) => {
+    if (mahalle) setMahalleDraft({ mahalleId: mahalle.id, liste })
+  }
 
   // Mahalle başına atama sayısı — arama listesinde rozet olarak gösterilir
   const atamaSayilari = useMemo(() => {
@@ -153,7 +166,7 @@ export function CargoZonesPage() {
   const [kayitDurum, setKayitDurum] = useState('')
   const kaydet = useMutation({
     mutationFn: async (p: { ruleType: string; neighborhoodId: string | null; liste: string[] }) =>
-      api.put(`/core/firms/${firmId}/cargo-rules`, {
+      api.put(`/core/firms/${selectedFirmId}/cargo-rules`, {
         ruleType: p.ruleType,
         neighborhoodId: p.neighborhoodId,
         // Üst satır en yüksek önceliği alır (sunucu DESC sıralar)
@@ -162,12 +175,11 @@ export function CargoZonesPage() {
     onSuccess: () => {
       setKayitDurum('Kaydedildi ✓')
       setTimeout(() => setKayitDurum(''), 2500)
-      queryClient.invalidateQueries({ queryKey: ['cargo-rules', firmId] })
-      setGenel(null); setMahalleListe(null)
+      queryClient.invalidateQueries({ queryKey: ['cargo-rules', selectedFirmId] })
+      setGenelDraft(null); setMahalleDraft(null)
     },
-    onError: (e) => {
-      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-      setKayitDurum((e as any).response?.data?.error ?? 'Kaydedilemedi.')
+    onError: (error: unknown) => {
+      setKayitDurum(apiErrorMessage(error, 'Kaydedilemedi.'))
     },
   })
 
@@ -181,7 +193,12 @@ export function CargoZonesPage() {
           {kayitDurum && <span className="text-sm text-[var(--text-m)]">{kayitDurum}</span>}
           {firms.length > 1 && (
             <div className="w-56">
-              <SearchableSelect value={firmId || null} onChange={(v) => v && setFirmId(v)}
+              <SearchableSelect value={selectedFirmId || null} onChange={(v) => {
+                if (!v) return
+                setFirmId(v)
+                setGenelDraft(null)
+                setMahalleDraft(null)
+              }}
                 options={firms.map((f) => ({ value: f.id, label: f.nameI18n?.tr ?? f.id }))} placeholder="Firma" />
             </div>
           )}
@@ -190,10 +207,10 @@ export function CargoZonesPage() {
 
       {/* Kargo entegrasyonu yok uyarısı — her zaman mount, display ile gizli (insertBefore tuzağı) */}
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-3"
-        style={{ display: !kargoYukleniyor && firmId && !kargolar.some((k) => k.isActive) ? undefined : 'none' }}>
+        style={{ display: !kargoYukleniyor && selectedFirmId && !kargolar.some((k) => k.isActive) ? undefined : 'none' }}>
         <p className="text-sm text-amber-800">
           Bu firmada tanımlı aktif kargo entegrasyonu yok — kargo bölgeleri tanımlamak için önce{' '}
-          <Link to={`/settings/firms/${firmId}`} className="font-medium underline">firma entegrasyonları</Link>{' '}
+          <Link to={`/settings/firms/${selectedFirmId}`} className="font-medium underline">firma entegrasyonları</Link>{' '}
           sayfasından bir kargo servisi ekleyin.
         </p>
       </div>
@@ -223,19 +240,26 @@ export function CargoZonesPage() {
         <div className="grid gap-3 md:grid-cols-3">
           <div>
             <label className="mb-1 block text-sm text-[var(--text-m)]">İl</label>
-            <SearchableSelect value={ilId} onChange={(v) => { setIlId(v); setIlceId(null); setMahalle(null) }}
+            <SearchableSelect value={ilId} onChange={(v) => {
+              setIlId(v); setIlceId(null); setMahalle(null); setMahalleDraft(null)
+            }}
               options={iller.map((i) => ({ value: i.id, label: geoAd(i) }))} placeholder="İl seç" />
           </div>
           <div>
             <label className="mb-1 block text-sm text-[var(--text-m)]">İlçe</label>
-            <SearchableSelect value={ilceId} onChange={(v) => { setIlceId(v); setMahalle(null) }}
+            <SearchableSelect value={ilceId} onChange={(v) => {
+              setIlceId(v); setMahalle(null); setMahalleDraft(null)
+            }}
               options={ilceler.map((i) => ({ value: i.id, label: geoAd(i) }))} placeholder="İlçe seç" />
           </div>
           <div>
             <label className="mb-1 block text-sm text-[var(--text-m)]">Mahalle</label>
             <SearchableSelect
               value={mahalle?.id ?? null}
-              onChange={(v) => setMahalle(mahalleler.find((m) => m.id === v) ?? null)}
+              onChange={(v) => {
+                setMahalle(mahalleler.find((m) => m.id === v) ?? null)
+                setMahalleDraft(null)
+              }}
               options={mahalleler.map((m) => ({
                 value: m.id,
                 label: geoAd(m) + ((atamaSayilari.get(m.id) ?? 0) > 0 ? ` · ${atamaSayilari.get(m.id)} kargo` : ''),

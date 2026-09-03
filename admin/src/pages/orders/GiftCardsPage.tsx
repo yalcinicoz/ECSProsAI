@@ -4,7 +4,8 @@ import api from '@/api/client'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { DataTable, Pager, errText, para, i18nAd } from '@/components/ui/DataTable'
+import { DataTable, Pager } from '@/components/ui/DataTable'
+import { errText, para, i18nAd } from '@/components/ui/DataTable.utils'
 import { cn } from '@/lib/utils'
 
 interface GiftCard {

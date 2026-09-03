@@ -11,6 +11,7 @@ import { X, ExternalLink, RefreshCw, UploadCloud } from 'lucide-react'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { apiErrorMessage } from '@/lib/api-error'
 
 export interface DrawerProduct {
   productId: string
@@ -25,6 +26,7 @@ export interface DrawerProduct {
 interface ReasonDto { code: string; label: string }
 interface VariantDto { variantId: string; sku: string | null; externalId: string | null; syncStatus: string; lastErrorCode: string | null; lastSyncError: string | null; lastSyncedAt: string | null }
 interface DetailDto { status: string; reasons: ReasonDto[]; isPushChannel: boolean; marketplaceCode: string | null; variants: VariantDto[] }
+interface PushResult { mode?: string; submitted?: number; skippedNotReady?: number; skippedUnchanged?: number }
 
 const STATUS_META: Record<string, { label: string; variant: 'success' | 'info' | 'warning' | 'danger' | 'neutral' }> = {
   published: { label: 'Yayında', variant: 'success' },
@@ -76,13 +78,13 @@ export function ChannelProductDrawer({ channelId, product, onClose, onChannelAct
 
   const pushMut = useMutation({
     mutationFn: async () => (await api.post(`/marketplaces/${channelId}/sync-products`, { productIds: [product.productId] })).data.data,
-    onSuccess: (d: any) => { setMsg(d?.mode === 'batch' ? `Gönderildi: ${d.submitted} varyant (hazır olmayan ${d.skippedNotReady ?? 0}, değişmeyen ${d.skippedUnchanged ?? 0} atlandı). Sonuç asenkron — birkaç dakika içinde durum güncellenir.` : 'Gönderildi.'); invalidate() },
-    onError: (e: any) => setMsg(e?.response?.data?.error ?? 'Gönderilemedi.'),
+    onSuccess: (d: PushResult) => { setMsg(d?.mode === 'batch' ? `Gönderildi: ${d.submitted} varyant (hazır olmayan ${d.skippedNotReady ?? 0}, değişmeyen ${d.skippedUnchanged ?? 0} atlandı). Sonuç asenkron — birkaç dakika içinde durum güncellenir.` : 'Gönderildi.'); invalidate() },
+    onError: (e: unknown) => setMsg(apiErrorMessage(e, 'Gönderilemedi.')),
   })
   const recomputeMut = useMutation({
     mutationFn: async () => (await api.post(`/marketplaces/mapping/readiness/recompute?marketplace=${detail?.marketplaceCode}`, { productIds: [product.productId] })).data.data,
     onSuccess: () => { setMsg('Hazırlık yeniden hesaplandı.'); invalidate() },
-    onError: (e: any) => setMsg(e?.response?.data?.error ?? 'Hesaplanamadı.'),
+    onError: (e: unknown) => setMsg(apiErrorMessage(e, 'Hesaplanamadı.')),
   })
 
   const sm = detail ? (STATUS_META[detail.status] ?? { label: detail.status, variant: 'neutral' as const }) : null

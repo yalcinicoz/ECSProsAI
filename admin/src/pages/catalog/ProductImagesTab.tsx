@@ -240,8 +240,8 @@ function ImagesSection({
           } else {
             lastUploadError = perFileResult?.error ?? `Sunucu başarısız döndü: ${JSON.stringify(json)}`
           }
-        } catch (e: any) {
-          lastUploadError = e?.message ?? 'Ağ hatası'
+        } catch (error: unknown) {
+          lastUploadError = error instanceof Error ? error.message : 'Ağ hatası'
         }
         setUploadProgress({ current: i + 1, total: pendingFiles.length })
       }
@@ -267,8 +267,9 @@ function ImagesSection({
       await api.post(`/catalog/products/${productId}/images/confirm`, { batchId, replaceSet, confirmedImages })
       setPendingFiles([]); setUploadDone(true)
       qc.invalidateQueries({ queryKey: ['product-images', productId] })
-    } catch (e: any) {
-      setUploadError(e?.response?.data?.error ?? 'Yükleme sırasında hata oluştu.')
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { error?: string } } }
+      setUploadError(apiError.response?.data?.error ?? 'Yükleme sırasında hata oluştu.')
     } finally {
       setUploadProgress(null)
     }
@@ -609,8 +610,9 @@ function VideosSection({ productId, imageSets, publicBaseUrl, cdn }: {
       })
       setPendingFiles([]); setUploadDone(true)
       qc.invalidateQueries({ queryKey: ['product-videos', productId] })
-    } catch (e: any) {
-      setUploadError(e?.response?.data?.error ?? 'Yükleme sırasında hata oluştu.')
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { error?: string } } }
+      setUploadError(apiError.response?.data?.error ?? 'Yükleme sırasında hata oluştu.')
     } finally {
       setUploadProgress(null)
     }

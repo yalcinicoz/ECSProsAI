@@ -6,6 +6,47 @@
 
 ---
 
+**ADMIN ESLINT DEĞİŞİKLİKLERİ GITHUB İLE EŞİTLENDİ (2026-09-03):**
+Kullanıcının yerel çalışmalar kaybolmadan GitHub'daki son değişikliklerin alınması ve ardından yerel
+değişikliklerin yayınlanması isteği uygulandı. İşlem öncesinde tracked fark
+`.deployment/pre-github-sync-20260903-093735/tracked.patch`, `11` untracked yardımcı dosya aynı klasörde
+`untracked-files.zip` ve dosya envanteri olarak yedeklendi; ayrıca
+`admin-eslint-before-github-sync-20260903-093735` adlı Git stash oluşturuldu. `git fetch --prune origin`
+sonucunda yerel HEAD ile `origin/main` farkı `0/0` çıktı; GitHub'dan alınmayı bekleyen yeni commit yoktu.
+Korunan değişiklikler yeniden uygulandı ve conflict oluşmadı.
+
+Senkron sonrası `npm run lint` `0 error / 0 warning`, `npx tsc --noEmit -p tsconfig.app.json` başarılı ve
+`git diff --check` temiz sonuçlandı. Admin ESLint değişiklikleri, yeni yardımcı modüller ve ilerleme kayıtları
+commit edilerek `origin/main` dalına gönderildi; yerel HEAD ile uzak dalın tam hash eşitliği doğrulandı.
+Geri dönüş güvenliği için stash ve `.deployment` yedeği silinmedi. Secret, production veritabanı,
+sunucu/deployment veya migration işlemi yapılmadı.
+
+**ADMIN ESLINT TEKNİK BORCU KONTROLLÜ OLARAK TEMİZLENDİ — YAYINLANMADI (2026-09-03):**
+Admin başlangıç envanterinde `61` dosyaya dağılmış `176 error / 6 warning` vardı. Başlıca kaynaklar
+`103` adet `@typescript-eslint/no-explicit-any`, `42` adet Fast Refresh component-only export,
+`21` adet effect içinde senkron state güncellemesi ve `5` hook dependency uyarısıydı. Kurallar
+kapatılmadan, yeni `eslint-disable`/`@ts-ignore` eklenmeden ve otomatik toplu `--fix` kullanılmadan
+dosya grupları halinde temizlendi. API hataları `unknown` + dar type guard ile ayrıştırıldı; form/request
+DTO'ları açık tiplere geçirildi. Component dosyalarındaki ortak sabit, formatter ve query helper'ları
+`11` yeni `.ts` modülüne ayrıldı. Bu nedenle başlangıçta problemi olmayan `24` tüketici dosyada yalnız
+import kaynağı değiştirildi.
+
+React hook düzeltmelerinde kullanıcı taslağını veya seçim davranışını bozabilecek çözümler kabul edilmedi.
+İlk denemede görülen `setTimeout(0)` erteleme ve query fonksiyonunda state yan etkisi tamamen kaldırıldı.
+Kanal varsayımları türetilmiş ID, veriyle başlatılan formlar guarded reference/keyed component veya kayıt
+anahtarlı draft, modal sıfırlaması keyed child ve görev kargo seçenekleri salt-okunur React Query cache
+sonuçlarıyla çözüldü. `SearchableSelect` açılış hazırlığı doğrudan kullanıcı event'ine taşındı; mevcut klavye,
+odak ve açılma yönü davranışı korundu.
+
+Final `npm run lint`, toplam `158` admin dosyasında `0 error / 0 warning`; final
+`npx tsc --noEmit -p tsconfig.app.json` başarılı ve `git diff --check` temizdir. AGENTS kuralına uygun olarak
+production build çalıştırılmadı. Bunun yerine Vite development server açıldı; admin başlangıç HTML'i,
+`main.tsx` ve DataTable/SearchableSelect, katalog ürün-görsel, cari, fulfillment, kargo, procurement,
+tracking, marketplace, storefront consent ve etiket şablonu dahil `15` temsilî değişen modülün her biri
+Vite transform üzerinden `HTTP 200` verdi; smoke sonrası yerel dev server kapatıldı. Otomatik admin UI test
+altyapısı repository'de bulunmadığından gerçek tarayıcı form etkileşimleri bu turda otomatik koşturulamadı.
+Backend, production veritabanı, migration, sunucu/deployment ve GitHub commit/push işlemi yapılmadı.
+
 **GITHUB SENKRONİZASYONU VE YEREL ÇALIŞMALARIN YAYINA HAZIRLANMASI (2026-09-03):**
 Yerel tracked/untracked kaynaklar GitHub kontrolünden önce `.deployment/pre-github-sync-20260903-085633`
 altında tracked binary patch ve dosya envanteriyle, ayrıca iki ayrı Git stash kaydıyla geri alınabilir biçimde

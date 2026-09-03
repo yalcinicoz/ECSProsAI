@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
-import { DataTable, Pager, tarihSaat } from '@/components/ui/DataTable'
+import { DataTable, Pager } from '@/components/ui/DataTable'
+import { tarihSaat } from '@/components/ui/DataTable.utils'
 
 interface AuditLog {
   id: string

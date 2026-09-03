@@ -13,34 +13,13 @@ import { Modal } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Pagination } from '@/components/ui/Pagination'
 import { PageSpinner } from '@/components/ui/Spinner'
-
-export interface SupplierOpt { id: string; title: string; code: string }
-
-export const PO_STATUS: Record<string, { label: string; variant: 'success' | 'info' | 'warning' | 'danger' | 'neutral' }> = {
-  draft:     { label: 'Taslak',        variant: 'neutral' },
-  ordered:   { label: 'Sipariş Verildi', variant: 'info' },
-  receiving: { label: 'Teslim Alınıyor', variant: 'warning' },
-  closed:    { label: 'Kapandı',       variant: 'success' },
-  cancelled: { label: 'İptal',         variant: 'danger' },
-}
+import { PO_STATUS, apiErrorMessage, useSuppliers } from './procurementHelpers'
 
 interface PoRow {
   id: string; code: string; supplierId: string; orderDate: string; expectedDate: string | null
   status: string; itemCount: number; totalQuantity: number; totalAmount: number; notes: string | null
 }
 interface Paged { items: PoRow[]; totalCount: number; page: number; pageSize: number }
-
-export function useSuppliers() {
-  return useQuery<SupplierOpt[]>({
-    queryKey: ['suppliers-simple'],
-    queryFn: async () => {
-      const { data } = await api.get('/accounts?accountType=supplier&isActive=true&pageSize=500')
-      const items = data.data?.items ?? data.data ?? []
-      return items.map((a: any) => ({ id: a.id, title: a.title, code: a.code }))
-    },
-    staleTime: 60_000,
-  })
-}
 
 const PAGE_SIZE = 20
 const tl = (n: number) => n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -164,7 +143,7 @@ export function PurchaseOrdersPage() {
             <label className="flbl mb-1.5">Not (opsiyonel)</label>
             <input className="inp" value={newNotes} onChange={e => setNewNotes(e.target.value)} placeholder="örn. yaz sezonu ilk parti" />
           </div>
-          {createMut.isError && <p className="text-sm" style={{ color: '#ef4444' }}>{(createMut.error as any)?.response?.data?.error ?? 'Oluşturulamadı.'}</p>}
+          {createMut.isError && <p className="text-sm" style={{ color: '#ef4444' }}>{apiErrorMessage(createMut.error, 'Oluşturulamadı.')}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setCreateOpen(false)}>İptal</Button>
             <Button onClick={() => createMut.mutate()} loading={createMut.isPending} disabled={!newSupplier}>Oluştur</Button>

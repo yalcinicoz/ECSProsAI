@@ -14,8 +14,9 @@ import type { PlatformType } from './PlatformTypesPage'
 import { ChannelForm } from './ChannelsPage'
 import type { FirmPlatformWithFirm, Firm } from './ChannelsPage'
 import { CapabilityBadges } from '@/components/channels/ChannelCapabilities'
-import { getFieldHelp, getFieldLabel } from './PlatformTypesPage'
+import { getFieldHelp, getFieldLabel } from './platformTypeFields'
 import type { SchemaField } from './PlatformTypesPage'
+import { apiErrorMessage, apiErrorStatus } from '@/lib/api-error'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -325,10 +326,10 @@ function IntegrationForm({ firmId, platforms, integrationServices, target, onClo
       })
       setCredRows(recordToRows(creds).filter(r => !schemaKeys.has(r.key)))
       setRevealed(true)
-    } catch (e: any) {
-      setRevealError(e?.response?.status === 403
+    } catch (e: unknown) {
+      setRevealError(apiErrorStatus(e) === 403
         ? 'Bu işlem için yetkiniz yok (integration.credentials.reveal).'
-        : (e?.response?.data?.error ?? 'Kimlik bilgileri alınamadı.'))
+        : apiErrorMessage(e, 'Kimlik bilgileri alınamadı.'))
     } finally {
       setRevealing(false)
     }
@@ -527,7 +528,10 @@ function IntegrationForm({ firmId, platforms, integrationServices, target, onClo
 
       {mutation.isError && (
         <p className="text-sm" style={{ color: '#ef4444' }}>
-          {(mutation.error as any)?.response?.data?.error ?? (mutation.error as Error)?.message ?? 'Hata oluştu. Lütfen tekrar deneyin.'}
+          {apiErrorMessage(
+            mutation.error,
+            mutation.error instanceof Error ? mutation.error.message : 'Hata oluştu. Lütfen tekrar deneyin.',
+          )}
         </p>
       )}
 

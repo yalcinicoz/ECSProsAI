@@ -6,7 +6,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { Pager, tarihSaat } from '@/components/ui/DataTable'
+import { Pager } from '@/components/ui/DataTable'
+import { tarihSaat } from '@/components/ui/DataTable.utils'
 
 interface QuestionRow {
   id: string; productCode: string; question: string; answer: string | null

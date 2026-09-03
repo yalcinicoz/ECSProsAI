@@ -9,8 +9,10 @@ import { Modal } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { PageSpinner } from '@/components/ui/Spinner'
 import type { PlatformType, SchemaField } from './PlatformTypesPage'
-import { CapabilityBadges, CapabilityOverridesEditor, DEFAULT_CAPABILITIES, MARKETPLACE_CAPABILITIES, mergeCapabilities, type CapabilityOverrides, type ChannelCapabilities } from '@/components/channels/ChannelCapabilities'
-import { getFieldLabel } from './PlatformTypesPage'
+import { CapabilityBadges, CapabilityOverridesEditor } from '@/components/channels/ChannelCapabilities'
+import { DEFAULT_CAPABILITIES, MARKETPLACE_CAPABILITIES, mergeCapabilities, type CapabilityOverrides, type ChannelCapabilities } from '@/components/channels/channelCapabilitiesModel'
+import { getFieldLabel } from './platformTypeFields'
+import { apiErrorMessage } from '@/lib/api-error'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -488,7 +490,7 @@ export function ChannelForm({ platformTypes, firms, initialFirmId, target, onClo
 
       {mutation.isError && (
         <p className="text-sm" style={{ color: '#ef4444' }}>
-          {(mutation.error as any)?.response?.data?.error ?? 'Hata oluştu. Lütfen tekrar deneyin.'}
+          {apiErrorMessage(mutation.error, 'Hata oluştu. Lütfen tekrar deneyin.')}
         </p>
       )}
 

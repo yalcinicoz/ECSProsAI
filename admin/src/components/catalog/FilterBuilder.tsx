@@ -51,7 +51,7 @@ function tr(i18n: Record<string, string> | undefined, fallback = ''): string {
   return i18n['tr'] ?? i18n['en'] ?? i18n[Object.keys(i18n)[0]] ?? fallback
 }
 
-export function buildDescription(
+function buildDescription(
   def: FilterDef,
   refs: { groups: ProductGroup[]; attrTypes: AttributeType[]; suppliers: Supplier[] },
 ): string {

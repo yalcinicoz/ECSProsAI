@@ -5,7 +5,8 @@ import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
-import { StoreLogo, timeAgo } from './MarketplacesPage'
+import { StoreLogo } from './MarketplacesPage'
+import { daysSince, timeAgo } from './marketplaceOverview'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -47,10 +48,8 @@ const SCOPE_LABEL: Record<string, string> = {
 // RF2: referans güncelliği — otomatik günlük tazeleme (worker) beklenen kadans; son koşu
 // 8 günü aştıysa (ya da hiç yoksa) BAYAT, en eski özellik taraması 14 günü aştıysa uyarı.
 function TazelikRozeti({ sonKosu, enEskiTarama }: { sonKosu: string | null; enEskiTarama: string | null | undefined }) {
-  const gun = (t: string | null | undefined) =>
-    t ? Math.floor((Date.now() - new Date(t).getTime()) / 86400000) : null
-  const sonG = gun(sonKosu)
-  const eskiG = gun(enEskiTarama)
+  const sonG = daysSince(sonKosu)
+  const eskiG = daysSince(enEskiTarama)
   if (sonG === null || sonG > 8)
     return <Badge variant="danger">bayat{sonG !== null ? ` — son koşu ${sonG} gün önce` : ''}</Badge>
   if (eskiG !== null && eskiG > 14)

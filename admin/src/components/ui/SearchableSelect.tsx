@@ -59,19 +59,17 @@ export function SearchableSelect({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  // Focus search on open + detect upward direction
-  useEffect(() => {
-    if (open) {
-      setQuery('')
-      setHighlighted(value ? Math.max(0, filtered.findIndex((o) => o.value === value)) : 0)
-      if (wrapRef.current) {
-        const rect = wrapRef.current.getBoundingClientRect()
-        const spaceBelow = window.innerHeight - rect.bottom
-        setOpenUpward(spaceBelow < 280)
-      }
-      requestAnimationFrame(() => searchRef.current?.focus())
+  function openDropdown() {
+    setQuery('')
+    setHighlighted(value ? Math.max(0, options.findIndex((o) => o.value === value)) : 0)
+    if (wrapRef.current) {
+      const rect = wrapRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      setOpenUpward(spaceBelow < 280)
     }
-  }, [open])
+    setOpen(true)
+    requestAnimationFrame(() => searchRef.current?.focus())
+  }
 
   // Scroll highlighted item into view
   useEffect(() => {
@@ -83,7 +81,7 @@ export function SearchableSelect({
     if (!open) {
       if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
         e.preventDefault()
-        setOpen(true)
+        openDropdown()
       }
       return
     }
@@ -107,7 +105,11 @@ export function SearchableSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={id}
-        onClick={() => !disabled && setOpen((o) => !o)}
+        onClick={() => {
+          if (disabled) return
+          if (open) setOpen(false)
+          else openDropdown()
+        }}
         onKeyDown={handleKeyDown}
         className={cn(
           'inp flex items-center justify-between gap-2 text-left cursor-pointer',

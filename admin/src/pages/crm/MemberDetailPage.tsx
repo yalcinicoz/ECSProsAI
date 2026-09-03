@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { ORDER_STATUS_MAP, type OrderSummary } from '../orders/OrdersPage'
+import type { OrderSummary } from '../orders/OrdersPage'
+import { ORDER_STATUS_MAP } from '../orders/orderConstants'
 
 interface MemberDetail {
   id: string
@@ -154,11 +155,12 @@ export function MemberDetailPage() {
     },
   })
 
-  useEffect(() => {
-    if (!member) return
+  const [loadedMember, setLoadedMember] = useState<MemberDetail | undefined>()
+  if (member && member !== loadedMember) {
+    setLoadedMember(member)
     setGroupId(member.memberGroupId)
     setIsActive(member.isActive)
-  }, [member])
+  }
 
   const save = useMutation({
     mutationFn: async () => {

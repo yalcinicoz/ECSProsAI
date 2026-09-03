@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '@/api/client'
@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { errText, tarihSaat } from '@/components/ui/DataTable'
-import { PLAN_DURUM, PLAN_TIP, dagitimDurum, ToplanmaIlerleme } from './PickingPlansPage'
+import { errText, tarihSaat } from '@/components/ui/DataTable.utils'
+import { ToplanmaIlerleme } from './PickingPlansPage'
+import { PLAN_DURUM, PLAN_TIP, dagitimDurum } from './pickingPlanHelpers'
 import { cn } from '@/lib/utils'
 
 interface PlanDetail {
@@ -100,8 +101,8 @@ export function TaskDetailPage() {
   const dagitim = dagitimDurum(assignedLines, totalLines)
 
   // Atanabilir satırlar (toplanmamış/kapanmamış)
-  const atanabilir = useMemo(() => lines.filter(l => l.status === 'pending' || l.status === 'assigned'), [lines])
-  const atanmamis = useMemo(() => lines.filter(l => l.status === 'pending' && !l.assignedTo), [lines])
+  const atanabilir = lines.filter(l => l.status === 'pending' || l.status === 'assigned')
+  const atanmamis = lines.filter(l => l.status === 'pending' && !l.assignedTo)
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['picking-plan-detail', id] })

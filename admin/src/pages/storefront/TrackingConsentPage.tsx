@@ -37,7 +37,6 @@ export function TrackingConsentPage() {
   const [selectedChannelId, setSelectedChannelId] = useState<string>(() => sessionStorage.getItem('trackingConsent.channelId') ?? '')
   const [form, setForm] = useState({ purchaseAt: 'confirmed', bannerTitle: '', bannerText: '', policyUrl: '', policyLabel: '' })
   const [msg, setMsg] = useState<string | null>(null)
-  useEffect(() => { if (selectedChannelId) sessionStorage.setItem('trackingConsent.channelId', selectedChannelId) }, [selectedChannelId])
 
   const { data: firms = [] } = useQuery<Firm[]>({ queryKey: ['firms'], queryFn: async () => (await api.get('/core/firms')).data.data ?? [] })
   const platformQueries = useQueries({
@@ -49,27 +48,32 @@ export function TrackingConsentPage() {
     })),
   })
   const channels = useMemo(() => platformQueries.flatMap(q => q.data ?? []), [platformQueries])
-  const selected = channels.find(c => c.id === selectedChannelId)
-  useEffect(() => { if (!selectedChannelId && channels.length) setSelectedChannelId(channels[0].id) }, [channels, selectedChannelId])
+  const effectiveChannelId = selectedChannelId || channels[0]?.id || ''
+  const selected = channels.find(c => c.id === effectiveChannelId)
   useEffect(() => {
+    if (effectiveChannelId) sessionStorage.setItem('trackingConsent.channelId', effectiveChannelId)
+  }, [effectiveChannelId])
+  const [loadedSelected, setLoadedSelected] = useState<Channel | null | undefined>(null)
+  if (selected !== loadedSelected) {
+    setLoadedSelected(selected)
     const t = (selected?.settings?.['tracking'] ?? {}) as Record<string, unknown>
     setForm({
-      purchaseAt: (t['purchaseAt'] as string) || 'confirmed',
-      bannerTitle: (t['bannerTitle'] as string) || '',
-      bannerText: (t['bannerText'] as string) || '',
-      policyUrl: (t['policyUrl'] as string) || '',
-      policyLabel: (t['policyLabel'] as string) || '',
+      purchaseAt: typeof t['purchaseAt'] === 'string' ? t['purchaseAt'] || 'confirmed' : 'confirmed',
+      bannerTitle: typeof t['bannerTitle'] === 'string' ? t['bannerTitle'] : '',
+      bannerText: typeof t['bannerText'] === 'string' ? t['bannerText'] : '',
+      policyUrl: typeof t['policyUrl'] === 'string' ? t['policyUrl'] : '',
+      policyLabel: typeof t['policyLabel'] === 'string' ? t['policyLabel'] : '',
     })
-  }, [selected])
+  }
 
   const { data: stats } = useQuery<ConsentStats>({
-    queryKey: ['consent-stats', selectedChannelId],
-    queryFn: async () => (await api.get(`/tracking/consent-stats?firmPlatformId=${selectedChannelId}`)).data.data,
-    enabled: !!selectedChannelId,
+    queryKey: ['consent-stats', effectiveChannelId],
+    queryFn: async () => (await api.get(`/tracking/consent-stats?firmPlatformId=${effectiveChannelId}`)).data.data,
+    enabled: !!effectiveChannelId,
   })
 
   const save = useMutation({
-    mutationFn: async () => api.put(`/core/firm-platforms/${selectedChannelId}/tracking-settings`, {
+    mutationFn: async () => api.put(`/core/firm-platforms/${effectiveChannelId}/tracking-settings`, {
       purchaseAt: form.purchaseAt,
       bannerTitle: form.bannerTitle || null, bannerText: form.bannerText || null,
       policyUrl: form.policyUrl || null, policyLabel: form.policyLabel || null,
@@ -89,7 +93,7 @@ export function TrackingConsentPage() {
             <Link to="/marketing/tracking" className="underline ml-1">Pazarlama → Takip &amp; Reklam</Link>.
           </p>
         </div>
-        <select className="sel" value={selectedChannelId} onChange={e => setSelectedChannelId(e.target.value)}>
+        <select className="sel" value={effectiveChannelId} onChange={e => setSelectedChannelId(e.target.value)}>
           {channels.map(c => <option key={c.id} value={c.id}>{c.firmName} — {getName(c.nameI18n) || c.code}</option>)}
         </select>
       </div>
@@ -129,7 +133,7 @@ export function TrackingConsentPage() {
             </select>
           </label>
           <div className="flex items-center gap-3">
-            <Button onClick={() => { setMsg(null); save.mutate() }} disabled={!selectedChannelId || save.isPending}><Save className="w-4 h-4 mr-1" /> Kaydet</Button>
+            <Button onClick={() => { setMsg(null); save.mutate() }} disabled={!effectiveChannelId || save.isPending}><Save className="w-4 h-4 mr-1" /> Kaydet</Button>
             {msg && <span className="text-sm" style={{ color: 'var(--text-s)' }}>{msg}</span>}
           </div>
         </div>

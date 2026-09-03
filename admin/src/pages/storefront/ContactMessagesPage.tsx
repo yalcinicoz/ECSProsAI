@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
-import { useFirmPlatforms } from '@/pages/cms/CmsPagesPage'
+import { useFirmPlatforms } from '@/pages/cms/cmsPageShared'
 
 interface ContactMessage {
   id: string

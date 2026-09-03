@@ -12,8 +12,10 @@ import { useLanguages } from '@/hooks/useLanguages'
 import { useAuthStore } from '@/store/auth'
 import { FL } from '@/lib/field-labels'
 import { buildI18nValues } from '@/lib/i18n-helper'
-import { SchemaEditor, getFieldLabel } from './PlatformTypesPage'
+import { SchemaEditor } from './PlatformTypesPage'
+import { getFieldLabel } from './platformTypeFields'
 import type { SchemaField } from './PlatformTypesPage'
+import { apiErrorMessage } from '@/lib/api-error'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -315,7 +317,7 @@ export function IntegrationServicesPage() {
 
       {(createMutation.isError || updateMutation.isError) && (
         <p className="text-sm" style={{ color: '#ef4444' }}>
-          {((createMutation.error ?? updateMutation.error) as any)?.response?.data?.error ?? 'Hata oluştu.'}
+          {apiErrorMessage(createMutation.error ?? updateMutation.error, 'Hata oluştu.')}
         </p>
       )}
     </div>

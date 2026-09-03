@@ -3,7 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import api from '@/api/client'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { errText } from '@/components/ui/DataTable'
+import { errText } from '@/components/ui/DataTable.utils'
 import { basariSesi, hataSesi } from '@/lib/sesler'
 
 /**

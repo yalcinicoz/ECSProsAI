@@ -10,7 +10,7 @@ import { IntegerInput } from '@/components/ui/IntegerInput'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { PermissionGuard } from '@/components/ui/PermissionGuard'
 import type { Warehouse } from './WarehousesPage'
-import { getWarehouseName } from './WarehousesPage'
+import { getWarehouseName } from './warehouseHelpers'
 
 const PERM = 'inventory.manage'
 
@@ -135,7 +135,8 @@ export function WarehouseDetailPage() {
 
   const toggleExpand = (sid: string) => setExpanded(prev => {
     const next = new Set(prev)
-    next.has(sid) ? next.delete(sid) : next.add(sid)
+    if (next.has(sid)) next.delete(sid)
+    else next.add(sid)
     return next
   })
 

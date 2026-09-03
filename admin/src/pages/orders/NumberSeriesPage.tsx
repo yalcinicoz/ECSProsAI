@@ -6,6 +6,15 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { PageSpinner } from '@/components/ui/Spinner'
 
+function apiErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error !== 'object' || error === null || !('response' in error)) return fallback
+  const response = error.response
+  if (typeof response !== 'object' || response === null || !('data' in response)) return fallback
+  const data = response.data
+  if (typeof data !== 'object' || data === null || !('error' in data)) return fallback
+  return typeof data.error === 'string' ? data.error : fallback
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface SeriesRow {
@@ -80,7 +89,7 @@ function SeriesTable({ title, hint, endpoint, queryKey, sampleOf }: {
       setSavedId(id)
       setTimeout(() => setSavedId(null), 2000)
     },
-    onError: (err: any) => setError(err?.response?.data?.error ?? 'Kaydedilemedi.'),
+    onError: (err: unknown) => setError(apiErrorMessage(err, 'Kaydedilemedi.')),
   })
 
   const edit = (r: SeriesRow) => edits[r.firmPlatformId] ?? {
@@ -212,7 +221,7 @@ function CargoRangesCard() {
       queryClient.invalidateQueries({ queryKey: ['cargo-barcode-ranges', integrationId] })
       setStart(''); setEnd(''); setError(null)
     },
-    onError: (err: any) => setError(err?.response?.data?.error ?? 'Aralık eklenemedi.'),
+    onError: (err: unknown) => setError(apiErrorMessage(err, 'Aralık eklenemedi.')),
   })
 
   const toggleActive = useMutation({

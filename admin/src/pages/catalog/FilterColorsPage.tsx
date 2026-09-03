@@ -143,8 +143,9 @@ export function FilterColorsPage() {
   }
 
   const isPending = createMutation.isPending || updateMutation.isPending
-  const apiError = (createMutation.error as any)?.response?.data?.error
-    ?? (updateMutation.error as any)?.response?.data?.error
+  const apiError = (createMutation.error as { response?: { data?: { error?: string } } } | null)?.response?.data?.error
+    ?? (updateMutation.error as { response?: { data?: { error?: string } } } | null)?.response?.data?.error
+  const deleteApiError = (deleteMutation.error as { response?: { data?: { error?: string } } } | null)?.response?.data?.error
 
   if (isLoading || langsLoading) return <PageSpinner />
 
@@ -336,9 +337,9 @@ export function FilterColorsPage() {
             <strong style={{ color: 'var(--text)' }}>{getName(deleteTarget)}</strong> filtre rengi silinecek.
             Bu işlem geri alınamaz.
           </p>
-          {(deleteMutation.error as any)?.response?.data?.error && (
+          {deleteApiError && (
             <p className="text-sm mt-3" style={{ color: '#ef4444' }}>
-              {(deleteMutation.error as any).response.data.error}
+              {deleteApiError}
             </p>
           )}
         </Modal>

@@ -22,6 +22,15 @@ const SUPPLIER_KINDS = [
 ]
 const isSupplier = (t: string) => t === 'supplier' || t === 'both'
 
+function apiErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error !== 'object' || error === null || !('response' in error)) return fallback
+  const response = error.response
+  if (typeof response !== 'object' || response === null || !('data' in response)) return fallback
+  const data = response.data
+  if (typeof data !== 'object' || data === null || !('error' in data)) return fallback
+  return typeof data.error === 'string' ? data.error : fallback
+}
+
 const TYPE_BADGE: Record<string, { label: string; color: string }> = {
   customer: { label: 'Müşteri',    color: 'var(--brand)' },
   supplier: { label: 'Tedarikçi', color: '#f59e0b' },
@@ -91,7 +100,7 @@ export function AccountCreatePage() {
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       navigate(`/accounts/${id}`)
     },
-    onError: (err: any) => setError(err?.response?.data?.error ?? 'Bir hata oluştu.'),
+    onError: (err: unknown) => setError(apiErrorMessage(err, 'Bir hata oluştu.')),
   })
 
   return (
@@ -102,7 +111,7 @@ export function AccountCreatePage() {
       <h1 className="text-xl font-bold mb-6" style={{ color: 'var(--text)' }}>Yeni Cari Kart</h1>
 
       <div className="card p-6 space-y-5">
-        <AccountFormFields form={form} setForm={setForm as any} groups={groups} isCreate />
+        <AccountFormFields form={form} setForm={setForm} groups={groups} isCreate />
         {error && <p className="text-sm text-red-500">{error}</p>}
         <div className="flex justify-end gap-2 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
           <Button variant="secondary" onClick={() => navigate('/accounts')}>İptal</Button>
@@ -174,7 +183,7 @@ export function AccountDetailPage() {
       setEditing(false)
       setError('')
     },
-    onError: (err: any) => setError(err?.response?.data?.error ?? 'Bir hata oluştu.'),
+    onError: (err: unknown) => setError(apiErrorMessage(err, 'Bir hata oluştu.')),
   })
 
   const addLedgerMutation = useMutation({
@@ -190,7 +199,7 @@ export function AccountDetailPage() {
       setLedgerForm({ currency: 'USD', description: '' })
       setLedgerError('')
     },
-    onError: (err: any) => setLedgerError(err?.response?.data?.error ?? 'Bir hata oluştu.'),
+    onError: (err: unknown) => setLedgerError(apiErrorMessage(err, 'Bir hata oluştu.')),
   })
 
   function startEdit() {
@@ -206,6 +215,10 @@ export function AccountDetailPage() {
       notes: account.notes ?? '', isActive: account.isActive,
     })
     setEditing(true)
+  }
+
+  const updateForm = (updater: (current: FormState) => FormState) => {
+    setForm(current => current ? updater(current) : current)
   }
 
   if (isLoading || !account) return <PageSpinner />
@@ -239,7 +252,7 @@ export function AccountDetailPage() {
 
       {editing && form ? (
         <div className="card p-6 space-y-5">
-          <AccountFormFields form={form} setForm={setForm as any} groups={groups} />
+          <AccountFormFields form={form} setForm={updateForm} groups={groups} />
           {error && <p className="text-sm text-red-500">{error}</p>}
           <div className="flex justify-end gap-2 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
             <Button variant="secondary" onClick={() => { setEditing(false); setError('') }}>İptal</Button>
@@ -382,37 +395,38 @@ export function AccountDetailPage() {
 
 // ── Shared form fields ─────────────────────────────────────────────────────────
 
-function AccountFormFields({ form, setForm, groups, isCreate = false }: {
-  form: CreateFormState | FormState
-  setForm: (f: any) => void
+function AccountFormFields<T extends FormState>({ form, setForm, groups, isCreate = false }: {
+  form: T
+  setForm: (updater: (current: T) => T) => void
   groups: AccountGroup[]
   isCreate?: boolean
 }) {
-  const F = form as CreateFormState
+  const F = form
+  const code = 'code' in F && typeof F.code === 'string' ? F.code : ''
 
   return (
     <>
       {isCreate && (
         <div>
           <label className="flbl">Kod <span className="text-red-500">*</span></label>
-          <input className="inp" value={F.code} onChange={e => setForm((f: any) => ({ ...f, code: e.target.value.toUpperCase() }))} placeholder="Örn: C-0001" />
+          <input className="inp" value={code} onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))} placeholder="Örn: C-0001" />
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
           <label className="flbl">Ünvan <span className="text-red-500">*</span></label>
-          <input className="inp" value={F.title} onChange={e => setForm((f: any) => ({ ...f, title: e.target.value }))} placeholder="Firma veya kişi adı" />
+          <input className="inp" value={F.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Firma veya kişi adı" />
         </div>
         <div>
           <label className="flbl">Cari Tipi</label>
-          <select className="inp" value={F.accountType} onChange={e => setForm((f: any) => ({ ...f, accountType: e.target.value }))}>
+          <select className="inp" value={F.accountType} onChange={e => setForm(f => ({ ...f, accountType: e.target.value }))}>
             {ACCOUNT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
         </div>
         <div>
           <label className="flbl">Grup</label>
-          <select className="inp" value={F.groupId} onChange={e => setForm((f: any) => ({ ...f, groupId: e.target.value }))}>
+          <select className="inp" value={F.groupId} onChange={e => setForm(f => ({ ...f, groupId: e.target.value }))}>
             <option value="">— Grup yok —</option>
             {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
@@ -420,7 +434,7 @@ function AccountFormFields({ form, setForm, groups, isCreate = false }: {
         {isSupplier(F.accountType) && (
           <div className="col-span-2">
             <label className="flbl">Satıcı Tipi</label>
-            <select className="inp" value={F.supplierKind} onChange={e => setForm((f: any) => ({ ...f, supplierKind: e.target.value }))}>
+            <select className="inp" value={F.supplierKind} onChange={e => setForm(f => ({ ...f, supplierKind: e.target.value }))}>
               {SUPPLIER_KINDS.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}
             </select>
             <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
@@ -435,15 +449,15 @@ function AccountFormFields({ form, setForm, groups, isCreate = false }: {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="flbl">Vergi No / TC</label>
-            <input className="inp" value={F.taxNumber} onChange={e => setForm((f: any) => ({ ...f, taxNumber: e.target.value }))} placeholder="Vergi numarası" />
+            <input className="inp" value={F.taxNumber} onChange={e => setForm(f => ({ ...f, taxNumber: e.target.value }))} placeholder="Vergi numarası" />
           </div>
           <div>
             <label className="flbl">Vergi Dairesi</label>
-            <input className="inp" value={F.taxOffice} onChange={e => setForm((f: any) => ({ ...f, taxOffice: e.target.value }))} placeholder="Vergi dairesi" />
+            <input className="inp" value={F.taxOffice} onChange={e => setForm(f => ({ ...f, taxOffice: e.target.value }))} placeholder="Vergi dairesi" />
           </div>
           <div className="col-span-2">
             <label className="flbl">İletişim Kişisi</label>
-            <input className="inp" value={F.contactName} onChange={e => setForm((f: any) => ({ ...f, contactName: e.target.value }))} placeholder="Ad Soyad" />
+            <input className="inp" value={F.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))} placeholder="Ad Soyad" />
           </div>
         </div>
       </fieldset>
@@ -453,23 +467,23 @@ function AccountFormFields({ form, setForm, groups, isCreate = false }: {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="flbl">Telefon</label>
-            <input className="inp" value={F.phone} onChange={e => setForm((f: any) => ({ ...f, phone: e.target.value }))} placeholder="+90 555 000 00 00" />
+            <input className="inp" value={F.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+90 555 000 00 00" />
           </div>
           <div>
             <label className="flbl">E-posta</label>
-            <input className="inp" type="email" value={F.email} onChange={e => setForm((f: any) => ({ ...f, email: e.target.value }))} placeholder="ornek@firma.com" />
+            <input className="inp" type="email" value={F.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="ornek@firma.com" />
           </div>
           <div className="col-span-2">
             <label className="flbl">Adres</label>
-            <textarea className="ta" rows={2} value={F.address} onChange={e => setForm((f: any) => ({ ...f, address: e.target.value }))} placeholder="Açık adres" />
+            <textarea className="ta" rows={2} value={F.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Açık adres" />
           </div>
           <div>
             <label className="flbl">Şehir</label>
-            <input className="inp" value={F.city} onChange={e => setForm((f: any) => ({ ...f, city: e.target.value }))} placeholder="İstanbul" />
+            <input className="inp" value={F.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="İstanbul" />
           </div>
           <div>
             <label className="flbl">Ülke</label>
-            <input className="inp" value={F.country} onChange={e => setForm((f: any) => ({ ...f, country: e.target.value }))} placeholder="TR" />
+            <input className="inp" value={F.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))} placeholder="TR" />
           </div>
         </div>
       </fieldset>
@@ -479,11 +493,11 @@ function AccountFormFields({ form, setForm, groups, isCreate = false }: {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="flbl">Kredi Limiti</label>
-            <input className="inp" type="number" min={0} value={F.creditLimit} onChange={e => setForm((f: any) => ({ ...f, creditLimit: parseFloat(e.target.value) || 0 }))} />
+            <input className="inp" type="number" min={0} value={F.creditLimit} onChange={e => setForm(f => ({ ...f, creditLimit: parseFloat(e.target.value) || 0 }))} />
           </div>
           <div>
             <label className="flbl">Para Birimi</label>
-            <select className="inp" value={F.currency} onChange={e => setForm((f: any) => ({ ...f, currency: e.target.value }))}>
+            <select className="inp" value={F.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}>
               {['TRY', 'USD', 'EUR', 'GBP'].map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -492,12 +506,12 @@ function AccountFormFields({ form, setForm, groups, isCreate = false }: {
 
       <div>
         <label className="flbl">Notlar</label>
-        <textarea className="ta" rows={2} value={F.notes} onChange={e => setForm((f: any) => ({ ...f, notes: e.target.value }))} placeholder="İç notlar" />
+        <textarea className="ta" rows={2} value={F.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="İç notlar" />
       </div>
 
       {!isCreate && (
         <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]" checked={F.isActive} onChange={e => setForm((f: any) => ({ ...f, isActive: e.target.checked }))} />
+          <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]" checked={F.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} />
           <span className="text-sm" style={{ color: 'var(--text)' }}>Aktif</span>
         </label>
       )}
