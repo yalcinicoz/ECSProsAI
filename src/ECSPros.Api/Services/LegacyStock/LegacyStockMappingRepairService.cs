@@ -71,6 +71,10 @@ public sealed class LegacyStockMappingRepairService(
                 foreach (var sourceVariant in missingVariants)
                 {
                     var variantId = Guid.NewGuid();
+                    var targetProduct = products[sourceVariant.ProductCode];
+                    var parentPricing = ValidateParentPricing(
+                        sourceVariant.Barcode, sourceVariant.ProductCode,
+                        targetProduct.BasePrice, targetProduct.BaseCost);
                     var createdAt = sourceVariant.CreatedAt.HasValue
                         ? DateTime.SpecifyKind(sourceVariant.CreatedAt.Value, DateTimeKind.Utc)
                         : DateTime.UtcNow;
@@ -79,13 +83,18 @@ public sealed class LegacyStockMappingRepairService(
                     {
                         await ExecAsync(pg, tx, """
                             INSERT INTO catalog.product_variants
-                              ("Id","ProductId","Sku","Barcode","BasePrice","IsActive","CreatedAt","IsDeleted")
-                            VALUES (@id,@productId,@sku,@barcode,0,true,@createdAt,false)
+                              ("Id","ProductId","Sku","Barcode","BasePrice","BaseCost","IsActive","CreatedAt","IsDeleted")
+                            VALUES (@id,@productId,@sku,@barcode,@basePrice,
+                                    CASE WHEN @hasBaseCost THEN @baseCost ELSE NULL END,
+                                    true,@createdAt,false)
                             """, ct,
                             ("id", variantId),
-                            ("productId", products[sourceVariant.ProductCode]),
+                            ("productId", targetProduct.Id),
                             ("sku", sourceVariant.Barcode),
                             ("barcode", sourceVariant.Barcode),
+                            ("basePrice", parentPricing.BasePrice),
+                            ("hasBaseCost", parentPricing.BaseCost.HasValue),
+                            ("baseCost", parentPricing.BaseCost.GetValueOrDefault()),
                             ("createdAt", createdAt));
                     }
                     variantCount++;
@@ -273,7 +282,7 @@ public sealed class LegacyStockMappingRepairService(
 
     private static void ValidateVariantCandidates(
         IReadOnlyList<SourceVariant> candidates,
-        IReadOnlyDictionary<string, Guid> products,
+        IReadOnlyDictionary<string, TargetProduct> products,
         IReadOnlyDictionary<string, TargetVariant> variants,
         IReadOnlySet<string> usedSkus)
     {
@@ -283,13 +292,24 @@ public sealed class LegacyStockMappingRepairService(
                 throw new InvalidOperationException($"Varyant barkodu 50 karakter sınırını aşıyor: {candidate.Barcode}.");
             if (candidate.Barcode.Length > 200)
                 throw new InvalidOperationException($"Varyant SKU değeri 200 karakter sınırını aşıyor: {candidate.Barcode}.");
-            if (candidate.ProductCode.Length == 0 || !products.ContainsKey(candidate.ProductCode))
+            if (candidate.ProductCode.Length == 0 || !products.TryGetValue(candidate.ProductCode, out var product))
                 throw new InvalidOperationException(
                     $"Stoklu varyantın aktif hedef ürünü bulunamadı: barkod={candidate.Barcode}, ürün={candidate.ProductCode}.");
+            _ = ValidateParentPricing(
+                candidate.Barcode, candidate.ProductCode, product.BasePrice, product.BaseCost);
             if (usedSkus.Contains(candidate.Barcode))
                 throw new InvalidOperationException(
                     $"Stoklu varyant barkodu hedefte başka bir SKU tarafından kullanılıyor: {candidate.Barcode}.");
         }
+    }
+
+    internal static (decimal BasePrice, decimal? BaseCost) ValidateParentPricing(
+        string barcode, string productCode, decimal basePrice, decimal? baseCost)
+    {
+        if (basePrice <= 0)
+            throw new InvalidOperationException(
+                $"Stoklu varyantın hedef ürün taban fiyatı pozitif değil: barkod={barcode}, ürün={productCode}.");
+        return (basePrice, baseCost);
     }
 
     private static void ValidateBinCandidates(
@@ -325,14 +345,16 @@ public sealed class LegacyStockMappingRepairService(
         return code;
     }
 
-    private static async Task<Dictionary<string, Guid>> LoadActiveProductsAsync(
+    private static async Task<Dictionary<string, TargetProduct>> LoadActiveProductsAsync(
         NpgsqlConnection pg, NpgsqlTransaction tx, CancellationToken ct)
     {
-        var result = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        var result = new Dictionary<string, TargetProduct>(StringComparer.OrdinalIgnoreCase);
         await using var command = new NpgsqlCommand(
-            "SELECT \"Code\",\"Id\" FROM catalog.products WHERE NOT \"IsDeleted\"", pg, tx);
+            "SELECT \"Code\",\"Id\",\"BasePrice\",\"BaseCost\" FROM catalog.products WHERE NOT \"IsDeleted\"", pg, tx);
         await using var reader = await command.ExecuteReaderAsync(ct);
-        while (await reader.ReadAsync(ct)) result.Add(reader.GetString(0), reader.GetGuid(1));
+        while (await reader.ReadAsync(ct))
+            result.Add(reader.GetString(0), new(
+                reader.GetGuid(1), reader.GetDecimal(2), reader.IsDBNull(3) ? null : reader.GetDecimal(3)));
         return result;
     }
 
@@ -451,6 +473,7 @@ public sealed class LegacyStockMappingRepairService(
         IReadOnlyDictionary<string, SourceVariant> Variants,
         IReadOnlyDictionary<string, SourceBin> Bins,
         IReadOnlyDictionary<int, string> AttributeTypeCodes);
+    private sealed record TargetProduct(Guid Id, decimal BasePrice, decimal? BaseCost);
     private sealed record TargetVariant(Guid Id, bool IsDeleted, bool IsActive);
     private sealed record TargetBinStatus(Guid Id, bool IsDeleted, bool IsActive);
 

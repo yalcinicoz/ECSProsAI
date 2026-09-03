@@ -724,6 +724,29 @@
     background-image: url('/images/site_logo-288.png');
   }
 
+  /* Ana sayfanın story ve kategori kapsülü gibi küçük görsellerinde, gerçek görsel
+     decode edilene kadar kırık görsel/alt metin yerine ölçekli Tozlu wordmark göster. */
+  .ms-kucuk-gorsel-yukleme {
+    @apply relative overflow-hidden;
+  }
+
+  .ms-kucuk-gorsel-yukleme img.ms-lazy-gorsel {
+    @apply bg-transparent;
+  }
+
+  .ms-kucuk-gorsel-placeholder {
+    @apply pointer-events-none absolute inset-0 z-[2] grid place-items-center bg-white transition-opacity duration-300;
+  }
+
+  .ms-kucuk-gorsel-placeholder span {
+    @apply block h-4 w-[72%] bg-contain bg-center bg-no-repeat text-transparent;
+    background-image: url('/images/site_logo-288.png');
+  }
+
+  .ms-kucuk-gorsel-yukleme img.ms-lazy-gorsel-yuklendi ~ .ms-kucuk-gorsel-placeholder {
+    @apply opacity-0;
+  }
+
   .ms-lazy-placeholderli-kalici .ms-lazy-skeleton {
     @apply opacity-100;
   }
@@ -3310,6 +3333,10 @@
   .ms-story-gorsel {
     @apply relative flex h-[82px] w-[82px] items-center justify-center rounded-[24px] border-[3px] bg-white p-2.5 sm:h-[96px] sm:w-[96px] sm:rounded-[29px];
     border-color: var(--ms-story-renk);
+  }
+
+  .ms-story-gorsel .ms-kucuk-gorsel-placeholder {
+    @apply inset-2 rounded-[18px] sm:rounded-[23px];
   }
 
   .ms-story-gorsel::after {
@@ -13910,6 +13937,14 @@
 
   .ms-gorunum-kategori-kapsul img {
     @apply h-16 w-16 shrink-0 rounded-full object-cover object-top;
+  }
+
+  .ms-gorunum-kategori-kapsul-gorsel {
+    @apply block h-16 w-16 shrink-0 rounded-full bg-white;
+  }
+
+  .ms-gorunum-kategori-kapsul-gorsel .ms-kucuk-gorsel-placeholder {
+    @apply rounded-full;
   }
 
   .ms-gorunum-kategori-kapsul strong {

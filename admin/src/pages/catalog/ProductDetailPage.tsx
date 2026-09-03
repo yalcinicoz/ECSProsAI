@@ -1996,10 +1996,26 @@ export function ProductDetailPage() {
               </span>
             </div>
           ) : (
-            <div className="card overflow-hidden max-w-2xl">
-              <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
-                <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Ürün Özellikleri</h2>
-                <div className="flex items-center gap-2">
+            <div className="card w-full max-w-6xl overflow-hidden shadow-sm">
+              <div
+                className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+                style={{ borderColor: 'var(--border)' }}
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                    style={{ background: 'var(--brand-bg)', color: 'var(--brand)' }}
+                  >
+                    <Settings2 size={18} aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-base font-semibold" style={{ color: 'var(--text)' }}>Ürün Özellikleri</h2>
+                    <p className="mt-0.5 text-xs" style={{ color: 'var(--text-s)' }}>
+                      Ürünün filtreleme ve varyant bilgilerini düzenleyin
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
                   {attrSaveStatus === 'ok' && (
                     <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg font-medium"
                       style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
@@ -2014,7 +2030,7 @@ export function ProductDetailPage() {
                   </Button>
                 </div>
               </div>
-              <div className="p-5 space-y-4">
+              <div className="grid grid-cols-1 gap-x-8 gap-y-5 p-5 md:grid-cols-2">
                 {nonVariantGroupAttrs.map((ga) => {
                   const values = attrTypeMap.get(ga.attributeTypeId) ?? []
                   const attrName = ga.attributeTypeNameI18n['tr'] ?? ga.attributeTypeCode
@@ -2026,13 +2042,14 @@ export function ProductDetailPage() {
                         {ga.isRequired && <span style={{ color: '#ef4444' }}> *</span>}
                       </label>
                       <select
-                        className="sel"
+                        className="inp cursor-pointer"
+                        style={{ color: selectedValueId ? 'var(--text)' : 'var(--text-s)' }}
                         value={selectedValueId}
                         onChange={(e) => setAttrForm((f) => ({ ...f, [ga.attributeTypeId]: e.target.value }))}
                       >
-                        <option value="">— Seçiniz —</option>
+                        <option value="" style={{ color: 'var(--text-s)' }}>— Seçiniz —</option>
                         {values.map((v) => (
-                          <option key={v.id} value={v.id}>
+                          <option key={v.id} value={v.id} style={{ color: 'var(--text)' }}>
                             {v.nameI18n['tr'] ?? v.nameI18n[Object.keys(v.nameI18n)[0]] ?? v.id}
                           </option>
                         ))}

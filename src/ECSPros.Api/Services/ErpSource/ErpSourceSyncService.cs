@@ -656,12 +656,19 @@ public sealed class ErpSourceSyncService(
             return (id, affected > 0);
         }
         id = Guid.NewGuid();
-        await ExecAsync(pg, tx, """
+        // Admin AddProductVariants ile aynı sözleşme: yeni varyant ana ürünün fiyat ve
+        // maliyetini aynen devralır. Kanal/kardeş varyanttan fiyat tahmin edilmez;
+        // ana ürün fiyatı 0 ise 0 kalır ve normal pozitif-fiyat filtreleri devrededir.
+        var inserted = await ExecAsync(pg, tx, """
             INSERT INTO catalog.product_variants
-              ("Id","ProductId","Sku","Barcode","BasePrice","IsActive","CreatedAt","UpdatedAt","IsDeleted")
-            VALUES (@id,@product,@sku,@barcode,0,true,@created,@updated,false)
+              ("Id","ProductId","Sku","Barcode","BasePrice","BaseCost","IsActive","CreatedAt","UpdatedAt","IsDeleted")
+            SELECT @id,p."Id",@sku,@barcode,p."BasePrice",p."BaseCost",true,@created,@updated,false
+              FROM catalog.products p
+             WHERE p."Id"=@product AND NOT p."IsDeleted"
             """, ct, ("id", id.Value), ("product", productId), ("sku", v.Barcode), ("barcode", v.Barcode),
             ("created", v.CreatedAtUtc ?? DateTime.UtcNow), ("updated", (object?)v.UpdatedAtUtc ?? DBNull.Value));
+        if (inserted != 1)
+            throw new InvalidOperationException($"ERP varyantının hedef ürünü bulunamadı: {v.Barcode}.");
         return (id, true);
     }
 

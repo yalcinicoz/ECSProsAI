@@ -1,6 +1,6 @@
 # ECSProsAI — Sunucu ve Altyapı Devir Belgesi
 
-> Durum tarihi: 2026-09-02  
+> Durum tarihi: 2026-09-03
 > Workspace: `D:\NewProje\ECSProsAI`  
 > Bu belge yeni **sunucu ve altyapı sohbetinin** başlangıç kaynağıdır.
 
@@ -47,7 +47,7 @@ Yeni sohbet şu sırayla başlamalıdır:
 | ERP/V3 MSSQL | Public kapalı | `192.168.0.100:1433` | Katalog ve fiyat gerçek kaynağı |
 
 SSH kayıt adları `appsettingsTest.json` içinde `Infrastructure.SSH.Api1`, `Api2`, `Postgres1`, `Redis1`,
-`LegacyProduction` ve `LegacyProductionNgnix` olarak tutulur. Dosya git dışıdır. Private key path değeri
+`LegacyProduction` ve `NginxLb` olarak tutulur. Dosya git dışıdır. Private key path değeri
 belgeye kopyalanmaz.
 
 Ürün görselleri ayrı görsel sunucusu/subdomain'den gelir. API release'ine ürün görsel dosyası yüklenmez.
@@ -55,9 +55,9 @@ Dosya yoksa görsel Nginx'i “Resim hazırlanıyor” cevabı döndürür.
 
 ## 4. API1 ve API2 mevcut yayın durumu
 
-- Aktif release: `20260902T134516Z_image_pending_cleanup`
+- Aktif release: `20260903T105211Z_home_multibanner_placeholder`
 - Her iki node symlink'i:
-  `/opt/ECSProsAI/current -> /opt/ECSProsAI/releases/20260902T134516Z_image_pending_cleanup`
+  `/opt/ECSProsAI/current -> /opt/ECSProsAI/releases/20260903T105211Z_home_multibanner_placeholder`
 - Systemd unit: `ecspros.service`
 - ExecStart: `/usr/bin/dotnet /opt/ECSProsAI/current/ECSPros.Api.dll`
 - Node env dosyaları:
@@ -68,6 +68,8 @@ Dosya yoksa görsel Nginx'i “Resim hazırlanıyor” cevabı döndürür.
 - API1 `/ready`: PostgreSQL, Redis state ve Data Protection Healthy.
 - API2 `/ready`: PostgreSQL, Redis state ve Data Protection Healthy.
 - Bu release dirty yerel çalışma ağacından üretilmiştir; GitHub HEAD tek başına release'i temsil etmez.
+- Kullanıcının açık isteğiyle iki node'un `releases` kökünde yalnız bu çalışan release bırakılmıştır;
+  worker release kökleri ve symlink'leri ayrıdır ve korunmuştur.
 
 2026-09-02 çoklu-node kabulü:
 
@@ -79,6 +81,15 @@ Dosya yoksa görsel Nginx'i “Resim hazırlanıyor” cevabı döndürür.
 - Tüm sentetik soru/koşu kayıtları temizlendi; kalan test kaydı `0`.
 - Rolling yayın API2 canary -> API1 sırasıyla health gate üzerinden tamamlandı. İki node `active`,
   `NRestarts=0`, `/ready=200`; direct/public ana sayfa ve kategori kontrolleri `200`, son 15 dakika warning yok.
+
+2026-09-03 çoklu-banner küçük görsel release kabulü:
+
+- `20260903T105211Z_home_multibanner_placeholder` API2 canary -> API1 sırasıyla yayınlandı.
+- İki node `active`, `NRestarts=0`, private `/ready=200`; direct ana sayfa/kategori ve public rotalar `200`.
+- Public ana sayfada 12 çoklu-banner kartının tamamında markalı placeholder/lazy kaynak sözleşmesi mevcut;
+  toplam küçük-görsel loader/placeholder sayısı `16`, boş görsel `src` sayısı `0`.
+- Final kabulden sonra önceki API release'i kaldırıldı; iki API release kökünde yalnız çalışan release kaldı.
+- Admin ve ayrı worker release/symlink'leri değiştirilmedi; migration/veritabanı işlemi yapılmadı.
 
 Son kategori release kabulü:
 
@@ -122,6 +133,12 @@ Son kategori release kabulü:
 
 Önemli geri dönüş yedeklerinden bazıları:
 
+- `/var/backups/ecspros-stock/pre-mapping-repair-20260903T112322Z.dump`
+  (`68.790.676 byte`, SHA-256 `f7b7b45fe31986c5927ef865d07d6d8baf55a1d3f04e54e1a22c36fa0f2197de`;
+  ilgili beş tablo ve beş TABLE DATA kaydı doğrulandı)
+- `/var/backups/ecspros-stock/pre-real-stock-sync-20260903T114802Z.dump`
+  (`13.328.569 byte`, SHA-256 `49dcc89c4f50bb35966bfa946e910a8b044b7901f7c87e3bffa58e74ae1de5a3`;
+  `inventory.inv_stocks` TABLE DATA kaydı doğrulandı)
 - `/var/backups/ecspros-erp/pre-generated-description-cleanup-20260902T151532Z.dump`
 - `/var/backups/ecspros-stock/pre-mapping-repair-20260901T1923Z.dump`
 - `/var/backups/ecspros-stock/pre-real-stock-sync-20260901T1926Z.dump`
@@ -155,12 +172,14 @@ Redis1 üzerinde iki ayrı instance bulunur:
 - Yer: API1.
 - Rol/profile: `Worker / ErpSource`.
 - Yalnız private `192.168.0.100:1433` MSSQL kaynağını okur.
-- Aktif release: `/opt/ECSProsAI/erp-worker-releases/20260902T151532Z_erp_attributes`.
+- Aktif release: `/opt/ECSProsAI/erp-worker-releases/20260903T113525Z_worker_variant_price_guard`.
 - Katalog aralığı `15 dk`, fiyat aralığı `10 dk`, overlap `30 dk`.
 - Worker Data Protection fallback yolu: `/opt/ECSProsAI/shared/dp-keys` (systemd `ReadWritePaths` içinde).
 - Geç zenginleşen ürünlerde ürün özellikleri, renk/varyant ve eşlenmiş tedarikçi güncellenir; ürün açıklaması
   okunmaz veya yazılmaz. En fazla 100 ürünlük newest-first özellik uzlaştırması çalışır. Final worker `/ready`
   `200`, restart `0`.
+- Yeni oluşturulan ERP varyantı ana ürünün `BasePrice`/`BaseCost` değerlerini aynen devralır; kanal, kardeş
+  varyant veya kaynaktan fiyat tahmini yapılmaz. Ana ürün bulunamaz/silinmişse işlem fail-closed durur.
 - ERP stok yeteneği yoktur.
 - Kaynak eski TLS kullandığından yalnız bu process'e özel uyumluluk uygulanmıştır; kalıcı iş ERP TLS 1.2+
   yükseltmesidir.
@@ -181,10 +200,26 @@ Redis1 üzerinde iki ayrı instance bulunur:
 - Unit: `ecspros-legacy-stock.service`.
 - Yer: API1, ayrı process.
 - Symlink: `/opt/ECSProsAI/stock-worker-current`.
-- Son release kaydı: `20260901T192909Z_stock_final_30dd430c`.
+- Aktif release: `/opt/ECSProsAI/stock-worker-releases/20260903T113525Z_worker_variant_price_guard`.
 - Aralık: `300 saniye`.
-- `DryRun=false`, mapping repair kapalı, eşleşmeme toleransı sıfır.
+- Final ayarlar: `Enabled=true`, `DryRun=false`, `BlockOnUnmappedQuantity=true`, eşleşmeme toleransı `0/0`,
+  `RepairMissingMappings=false`, `MappingRepairDryRun=true`.
 - MySQL gerçek stok kaynağıdır; admin paneli cutover öncesi stok otoritesi değildir.
+- 2026-09-03 fail-closed farkı salt-okunur tanıda `131 satır/290 adet` olarak sınıflandırıldı: `20` eksik
+  varyant, `7` eksik raf ve `40` varyant-özellik bağı; yeni attribute value/eşlenemeyen özellik `0`. Ana
+  ürün/section kayıtları geçerliydi. Yedekli ve aşamalı mapping repair `67` değişiklik yaptı; ikinci tur `0`
+  ile idempotent oldu ve repair tekrar kapatıldı.
+- Gerçek stok turu `3265` değişiklikten sonra kaynak/eşleşen `254087`, eşleşmeme `0/0`; ikinci tur
+  `değişiklik=0` tamamlandı. Canlı kaynak hareketi `27` değişiklikle işlendi ve sonraki sakin tur yine `0`
+  oldu. Restart yapılmadan gelen ilk doğal 300 saniyelik tur da `10` değişikliği işledi; final kaynak/eşleşen
+  ve salt-okunur hedef kullanılabilir stok `254040`, aktif stok satırı `241841`, eşleşmeme ve bütünlük
+  ihlallerinin tamamı `0`.
+- Unit `active/running`, enabled, `NRestarts=0`, loopback `/ready=200`. Legacy mapping repair yeni varyantta
+  ana ürünün pozitif `BasePrice` ve nullable `BaseCost` değerlerini devralır; parent fiyat pozitif değilse
+  herhangi bir repair insert'i öncesinde fail-closed durur.
+- Stock ve ERP worker release köklerinde yalnız aktif `20260903T113525Z_worker_variant_price_guard` dizini
+  bırakıldı. Geri dönüş dump'ları korunur; eski release'ler tekrar gerekirse doğrulanmış artefakttan yeniden
+  yayımlanmalıdır.
 
 Worker env dosyalarının içeriği gösterilmez veya başka node'a körlemesine kopyalanmaz. Worker release'i API
 release'inden ayrı yönetilir; API deploy'u worker symlink'lerini otomatik değiştirmez.
@@ -192,9 +227,10 @@ release'inden ayrı yönetilir; API deploy'u worker symlink'lerini otomatik değ
 ## 9. Admin yayını
 
 - Test Nginx `/admin/` rotası aktiftir.
-- Admin release: `/usr/share/nginx/admin-releases/20260902T131010Z_catalog_image_failclosed`.
+- Admin release: `/usr/share/nginx/admin-releases/20260903T100440Z_home_small_image_admin_attributes`.
 - Aktif symlink: `/usr/share/nginx/html/admin`.
 - Index ve hashed JavaScript asset HTTP `200` doğrulandı.
+- Kullanıcının açık isteğiyle `admin-releases` kökünde yalnız bu çalışan release bırakılmıştır.
 - Admin build bu altyapı sohbetinde yeniden üretilmez; kod sohbeti hazır artefakt ve kapsam vermelidir.
 
 ## 10. Standart rolling deployment prosedürü
