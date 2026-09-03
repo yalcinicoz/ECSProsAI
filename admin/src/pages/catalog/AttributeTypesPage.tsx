@@ -41,7 +41,7 @@ interface AttributeType {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-export const DATA_TYPE_OPTIONS = [
+const DATA_TYPE_OPTIONS = [
   { value: 'select',       label: 'Seçim Listesi' },
   { value: 'multi_select', label: 'Çoklu Seçim' },
   { value: 'text',         label: 'Metin' },
@@ -49,7 +49,7 @@ export const DATA_TYPE_OPTIONS = [
   { value: 'boolean',      label: 'Evet/Hayır' },
 ]
 
-export const DATA_TYPE_LABELS: Record<string, string> = {
+const DATA_TYPE_LABELS: Record<string, string> = {
   select:       'Seçim Listesi',
   multi_select: 'Çoklu Seçim',
   text:         'Metin',

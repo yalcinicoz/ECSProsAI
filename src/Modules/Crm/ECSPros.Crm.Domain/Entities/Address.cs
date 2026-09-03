@@ -4,6 +4,8 @@ namespace ECSPros.Crm.Domain.Entities;
 
 public class Address : BaseEntity
 {
+    /// <summary>Geçici legacy MySQL importunda webmemberaddresses.Id.</summary>
+    public int? LegacyAddressId { get; set; }
     public Guid MemberId { get; set; }
     public string Title { get; set; } = string.Empty;
     public Guid? CountryId { get; set; }

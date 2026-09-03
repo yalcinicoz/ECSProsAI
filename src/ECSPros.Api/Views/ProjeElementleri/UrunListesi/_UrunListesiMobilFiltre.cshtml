@@ -1,11 +1,11 @@
 @using ECSPros.Api.Models.Store
 @inject ECSPros.Api.Services.IStoreContext MsStoreContext
 @{
-    // B7: Mobil filtre canlı facet'lere bağlandı — panel/chip/detay markup'ları misharix'in
-    // beden/renk/fiyat panellerinin birebir kopyası, gruplar @foreach ile gerçek facet'lerden
-    // üretilir. Davranış script'i misharix'ten değişmeden alındı (tek bağlama: anaFiltreAdlari
-    // sözlüğü gerçek gruplardan gelir). Hızlı Teslimat/Ücretsiz Kargo demo chip'leri Faz G'ye
-    // kadar gizli; sıralamada veri karşılığı olmayan seçenekler B10'a kadar gizli.
+    // B7: Mobil filtre canlı facet'lere bağlandı. Mobil chip/detay panel kabukları sunucuda
+    // üretilir; seçenekler aynı HTML'i tekrar şişirmemek için ilk açılışta masaüstü facet
+    // kaynağından klonlanır. Fiyat paneli dört sabit aralığıyla ayrı davranışını korur.
+    // Hızlı Teslimat/Ücretsiz Kargo demo chip'leri Faz G'ye kadar gizli; sıralamada veri
+    // karşılığı olmayan seçenekler B10'a kadar gizli.
     var vm = ViewData["MsUrunListesi"] as UrunListesiVm
              ?? new UrunListesiVm(
                  "Ürünler", 0, 24,
@@ -73,29 +73,7 @@
         <span class="sr-only">@grup.Ad ara</span>
         <input name="@(grup.TipKodu)_ara" type="search" placeholder="@grup.Ad Ara">
     </label>
-    @if (grup.RenkTipi)
-    {
-    <div class="ms-urun-listesi-mobil-chip-secenekler ms-filtre-renk-listesi">
-        @foreach (var deger in grup.Degerler)
-        {
-        <label class="ms-filtre-secim ms-filtre-renk-secim" data-filter-option>
-            <input name="checkbox_1" type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
-            <span class="ms-filtre-kutu" aria-hidden="true"></span>
-            <span class="ms-filtre-renk" style="--ms-renk:@(deger.Hex ?? "#E2E8F0")" aria-hidden="true"></span>
-            <span class="ms-filtre-renk-bilgi"><strong>@deger.Ad</strong><span class="ms-filtre-secim-adet">(@deger.UrunSayisi)</span></span>
-        </label>
-        }
-    </div>
-    }
-    else
-    {
-    <div class="ms-urun-listesi-mobil-chip-secenekler">
-        @foreach (var deger in grup.Degerler)
-        {
-        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>@deger.Ad <span class="ms-filtre-secim-adet">(@deger.UrunSayisi)</span></span></label>
-        }
-    </div>
-    }
+    <div class="ms-urun-listesi-mobil-chip-secenekler@(grup.RenkTipi ? " ms-filtre-renk-listesi" : "")" data-ms-mobil-lazy-secenekler></div>
     <div class="ms-urun-listesi-mobil-chip-panel-alt">
         <button type="button" data-ms-mobil-chip-panel-temizle>Temizle</button>
         <button type="button" data-ms-mobil-chip-panel-kapat>Uygula</button>
@@ -170,29 +148,7 @@
         <span class="sr-only">@grup.Ad ara</span>
         <input name="@(grup.TipKodu)_ara" type="search" placeholder="@grup.Ad ara">
     </label>
-    @if (grup.RenkTipi)
-    {
-    <div class="ms-urun-listesi-mobil-secenek-listesi ms-filtre-renk-listesi">
-        @foreach (var deger in grup.Degerler)
-        {
-        <label class="ms-filtre-secim ms-filtre-renk-secim" data-filter-option>
-            <input name="checkbox_1" type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
-            <span class="ms-filtre-kutu" aria-hidden="true"></span>
-            <span class="ms-filtre-renk" style="--ms-renk:@(deger.Hex ?? "#E2E8F0")" aria-hidden="true"></span>
-            <span class="ms-filtre-renk-bilgi"><strong>@deger.Ad</strong><span class="ms-filtre-secim-adet">(@deger.UrunSayisi)</span></span>
-        </label>
-        }
-    </div>
-    }
-    else
-    {
-    <div class="ms-urun-listesi-mobil-secenek-listesi">
-        @foreach (var deger in grup.Degerler)
-        {
-        <label class="ms-filtre-secim"><input type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)"><span class="ms-filtre-kutu" aria-hidden="true"></span><span>@deger.Ad <span class="ms-filtre-secim-adet">(@deger.UrunSayisi)</span></span></label>
-        }
-    </div>
-    }
+    <div class="ms-urun-listesi-mobil-secenek-listesi@(grup.RenkTipi ? " ms-filtre-renk-listesi" : "")" data-ms-mobil-lazy-secenekler></div>
     <div class="ms-urun-listesi-mobil-alt"><button type="button" data-ms-urun-mobil-filtre-detay-kapat>Uygula</button></div>
 </section>
 }
@@ -229,7 +185,7 @@
                 const panel = sayfa.querySelector("[data-ms-urun-mobil-filtre-panel]");
                 const acButonlari = sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-ac]");
                 const kapatButonlari = sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-kapat]");
-                const detayAcButonlari = sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-detay-ac]");
+                const detayAcButonlari = panel?.querySelectorAll("[data-ms-urun-mobil-filtre-detay-ac]") || [];
                 const detayKapatButonlari = sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-detay-kapat]");
                 const detayPanelleri = sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-detay]");
                 const detayTemizleButonlari = sayfa.querySelectorAll(".ms-urun-listesi-mobil-temizle");
@@ -245,7 +201,7 @@
                 const chipPanelKapatButonlari = sayfa.querySelectorAll("[data-ms-mobil-chip-panel-kapat]");
                 const chipPanelTemizleButonlari = sayfa.querySelectorAll("[data-ms-mobil-chip-panel-temizle]");
                 const filtreAramalari = sayfa.querySelectorAll(".ms-urun-listesi-mobil-arama input");
-                const mobilFiltreSecimleri = sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-detay] input[type='checkbox'], [data-ms-urun-mobil-filtre-detay] input[type='radio'], [data-ms-mobil-chip-panel] input[type='checkbox'], [data-ms-mobil-chip-panel] input[type='radio']");
+                const mobilFiltreSecimleriAl = () => sayfa.querySelectorAll("[data-ms-urun-mobil-filtre-detay] input[type='checkbox'], [data-ms-urun-mobil-filtre-detay] input[type='radio'], [data-ms-mobil-chip-panel] input[type='checkbox'], [data-ms-mobil-chip-panel] input[type='radio']");
                 const hizliFiltreSeridi = sayfa.querySelector("[data-ms-mobil-secili-filtre-seridi]");
                 const mobilSabitAlan = sayfa.querySelector(".ms-urun-listesi-mobil-sabit");
                 const mobilAraclar = sayfa.querySelector(".ms-urun-listesi-mobil-araclar");
@@ -316,6 +272,36 @@
                     });
                 };
 
+                const detaySecenekleriniYukle = (detayPanel, detayAdi) => {
+                    const hedefListe = detayPanel?.querySelector("[data-ms-mobil-lazy-secenekler]");
+                    if (!hedefListe || hedefListe.dataset.msYuklendi === "true") {
+                        return;
+                    }
+
+                    const kaynakGrup = Array.from(sayfa.querySelectorAll("[data-ms-filtre-grup]"))
+                        .find((grup) => grup.dataset.msFiltreGrup === detayAdi);
+                    const kaynakListe = kaynakGrup?.querySelector("[data-ms-filtre-secenek-listesi]");
+                    if (!kaynakListe) {
+                        return;
+                    }
+
+                    const parca = document.createDocumentFragment();
+                    Array.from(kaynakListe.children).forEach((secenek) => {
+                        const kopya = secenek.cloneNode(true);
+                        const renkBilgisi = kopya.querySelector(".ms-filtre-renk-bilgi");
+                        const adet = secenek.dataset.msFiltreAdet;
+                        if (renkBilgisi && adet && !renkBilgisi.querySelector(".ms-filtre-secim-adet")) {
+                            const adetAlani = document.createElement("span");
+                            adetAlani.className = "ms-filtre-secim-adet";
+                            adetAlani.textContent = `(${Number(adet).toLocaleString("tr-TR")})`;
+                            renkBilgisi.append(adetAlani);
+                        }
+                        parca.append(kopya);
+                    });
+                    hedefListe.replaceChildren(parca);
+                    hedefListe.dataset.msYuklendi = "true";
+                };
+
                 const detayPanelAc = (detayAdi) => {
                     const hedefPanel = sayfa.querySelector(`[data-ms-urun-mobil-filtre-detay="${detayAdi}"]`);
 
@@ -323,6 +309,7 @@
                         return;
                     }
 
+                    detaySecenekleriniYukle(hedefPanel, detayAdi);
                     panelKapat(panel);
                     detayPanelleri.forEach(panelKapat);
                     chipPanelleriKapat();
@@ -340,6 +327,7 @@
                         return;
                     }
 
+                    detaySecenekleriniYukle(hedefPanel, panelAdi);
                     navigasyonYuksekliginiGuncelle();
                     hedefPanel.hidden = false;
                     hedefPanel.dataset.msAcik = "true";
@@ -355,8 +343,12 @@
                 const filtreGrubuAl = (input) => {
                     const chipPanel = input.closest("[data-ms-mobil-chip-panel]");
                     const detayPanel = input.closest("[data-ms-urun-mobil-filtre-detay]");
+                    const masaustuGrup = input.closest("[data-ms-filtre-grup]");
 
-                    return chipPanel?.dataset.msMobilChipPanel || detayPanel?.dataset.msUrunMobilFiltreDetay || "";
+                    return chipPanel?.dataset.msMobilChipPanel
+                        || detayPanel?.dataset.msUrunMobilFiltreDetay
+                        || masaustuGrup?.dataset.msFiltreGrup
+                        || "";
                 };
 
                 const inputMetniAl = (input) => input.closest("label")?.textContent.trim() || "";
@@ -364,11 +356,11 @@
                 const grupSeciliDegerleriAl = (grup) => {
                     const seciliDegerler = new Set();
 
-                    mobilFiltreSecimleri.forEach((input) => {
+                    sayfa.querySelectorAll("[data-ms-filtre-deger]").forEach((input) => {
                         const metin = inputMetniAl(input);
 
                         if (filtreGrubuAl(input) === grup && input.checked && metin) {
-                            seciliDegerler.add(metin);
+                            seciliDegerler.add(input.dataset.msFiltreDeger || metin);
                         }
                     });
 
@@ -511,16 +503,13 @@
                         return;
                     }
 
-                    mobilFiltreSecimleri.forEach((input) => {
-                        if (input === kaynakInput || filtreGrubuAl(input) !== grup) {
+                    const degerId = kaynakInput.dataset.msFiltreDeger;
+                    sayfa.querySelectorAll("[data-ms-filtre-deger]").forEach((input) => {
+                        if (input === kaynakInput || input.dataset.msFiltreDeger !== degerId) {
                             return;
                         }
 
-                        const inputMetni = input.closest("label")?.textContent.trim();
-
-                        if (inputMetni === metin) {
-                            input.checked = secili;
-                        }
+                        input.checked = secili;
                     });
                 };
 
@@ -541,7 +530,7 @@
                         }
                     });
 
-                    mobilFiltreSecimleri.forEach((input) => {
+                    mobilFiltreSecimleriAl().forEach((input) => {
                         const labelMetni = input.closest("label")?.textContent.trim();
 
                         if (labelMetni === metin) {
@@ -570,6 +559,7 @@
                     secimler.forEach((input) => {
                         const metin = input.closest("label")?.textContent.trim();
                         input.checked = false;
+                        esSecimleriGuncelle(input, false);
                         seciliFiltreKaldir(metin);
                     });
 
@@ -698,6 +688,7 @@
                 });
 
                 chipPanelAcButonlari.forEach((buton) => {
+                    buton.dataset.msMobilChipBagli = "true";
                     buton.addEventListener("click", (event) => {
                         event.stopPropagation();
                         chipPanelAc(buton);
@@ -895,37 +886,41 @@
                     });
                 });
 
-                mobilFiltreSecimleri.forEach((input) => {
-                    input.addEventListener("change", () => {
-                        const metin = input.closest("label")?.textContent.trim();
-                        const grup = filtreGrubuAl(input);
+                sayfa.addEventListener("change", (event) => {
+                    const input = event.target;
+                    if (!input?.matches?.("input[type='checkbox'], input[type='radio']")
+                        || !input.closest("[data-ms-urun-mobil-filtre-detay], [data-ms-mobil-chip-panel]")) {
+                        return;
+                    }
 
-                        if (!metin) {
-                            return;
-                        }
+                    const metin = input.closest("label")?.textContent.trim();
+                    const grup = filtreGrubuAl(input);
 
-                        if (input.type === "radio" && input.checked) {
-                            mobilFiltreSecimleri.forEach((digerInput) => {
-                                if (digerInput === input || filtreGrubuAl(digerInput) !== grup || digerInput.type !== "radio") {
-                                    return;
-                                }
+                    if (!metin) {
+                        return;
+                    }
 
-                                const digerMetin = digerInput.closest("label")?.textContent.trim();
+                    if (input.type === "radio" && input.checked) {
+                        mobilFiltreSecimleriAl().forEach((digerInput) => {
+                            if (digerInput === input || filtreGrubuAl(digerInput) !== grup || digerInput.type !== "radio") {
+                                return;
+                            }
 
-                                if (digerMetin && digerMetin !== metin) {
-                                    seciliFiltreKaldir(digerMetin);
-                                }
-                            });
-                        }
+                            const digerMetin = digerInput.closest("label")?.textContent.trim();
 
-                        esSecimleriGuncelle(input, input.checked);
+                            if (digerMetin && digerMetin !== metin) {
+                                seciliFiltreKaldir(digerMetin);
+                            }
+                        });
+                    }
 
-                        if (input.checked) {
-                            seciliFiltreEkle(metin);
-                        } else {
-                            seciliFiltreKaldir(metin);
-                        }
-                    });
+                    esSecimleriGuncelle(input, input.checked);
+
+                    if (input.checked) {
+                        seciliFiltreEkle(metin);
+                    } else {
+                        seciliFiltreKaldir(metin);
+                    }
                 });
 
                 sayfa.addEventListener("click", (event) => {
@@ -933,6 +928,10 @@
                     const dinamikAnaChip = event.target.closest("[data-ms-mobil-ana-filtre-chip]");
 
                     if (dinamikAnaChip && sayfa.contains(dinamikAnaChip)) {
+                        if (dinamikAnaChip.dataset.msMobilChipBagli === "true") {
+                            return;
+                        }
+
                         if (dinamikAnaChip.matches("[data-ms-mobil-chip-panel-ac]")) {
                             chipPanelAc(dinamikAnaChip);
                         } else {
@@ -965,7 +964,7 @@
                 });
 
                 // Fiyat girdileri yazıldıkça sayaç/işaret canlı güncellensin (checkbox'ların
-                // change akışına benzer; girdiler mobilFiltreSecimleri koleksiyonunda yok)
+                // change akışına benzer; number girdileri seçim koleksiyonunda yok)
                 sayfa.querySelectorAll('[data-ms-urun-mobil-filtre-detay="fiyat"] input[type="number"]')
                     .forEach((girdi) => girdi.addEventListener("input", seciliFiltreleriGuncelle));
 

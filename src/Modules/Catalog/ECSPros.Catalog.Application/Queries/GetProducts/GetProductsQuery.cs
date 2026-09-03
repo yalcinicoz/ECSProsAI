@@ -8,7 +8,8 @@ public record GetProductsQuery(
     Guid? ProductGroupId = null,
     bool ActiveOnly = true,
     int Page = 1,
-    int PageSize = 20) : IRequest<Result<PagedResult<ProductListDto>>>;
+    int PageSize = 20,
+    string? Sort = null) : IRequest<Result<PagedResult<ProductListDto>>>;
 
 public record ProductListDto(
     Guid Id,

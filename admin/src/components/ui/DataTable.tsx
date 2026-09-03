@@ -67,14 +67,3 @@ export function Pager({ page, totalPages, onChange }: { page: number; totalPages
     </div>
   )
 }
-
-export function errText(e: unknown) {
-  const err = e as { response?: { data?: { error?: string } } }
-  return err.response?.data?.error ?? 'İşlem başarısız oldu.'
-}
-
-export const tarih = (v?: string | null) => (v ? new Date(v).toLocaleDateString('tr-TR') : '—')
-export const tarihSaat = (v?: string | null) => (v ? new Date(v).toLocaleString('tr-TR') : '—')
-export const para = (n: number, birim = '₺') =>
-  `${n.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ${birim}`
-export const i18nAd = (m?: Record<string, string> | null) => m?.['tr'] ?? Object.values(m ?? {})[0] ?? '—'

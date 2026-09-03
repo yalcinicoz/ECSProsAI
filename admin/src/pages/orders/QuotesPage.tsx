@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
-import { DataTable, Pager, errText, tarih, tarihSaat, para } from '@/components/ui/DataTable'
+import { DataTable, Pager } from '@/components/ui/DataTable'
+import { errText, tarih, tarihSaat, para } from '@/components/ui/DataTable.utils'
 import { cn } from '@/lib/utils'
 
 interface Quote {

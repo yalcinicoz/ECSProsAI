@@ -64,8 +64,8 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         {
             var izlemePlatformu = await storeContext.GetPlatformAsync(ct);
             if (izlemePlatformu is not null)
-                HttpContext.RequestServices.GetRequiredService<AramaTerimIzleyici>()
-                    .Kaydet(izlemePlatformu.Id, search, Request.Headers.UserAgent.ToString());
+                await HttpContext.RequestServices.GetRequiredService<AramaTerimIzleyici>()
+                    .KaydetAsync(izlemePlatformu.Id, search, Request.Headers.UserAgent.ToString(), ct);
         }
 
         return !string.IsNullOrWhiteSpace(codes)

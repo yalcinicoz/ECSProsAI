@@ -315,9 +315,30 @@ builder.Services.AddScoped<ECSPros.Shared.Contracts.IPaymentOptionsProvider,
 builder.Services.AddIamInfrastructure(npgsqlDataSource, builder.Configuration);
 builder.Services.AddCoreInfrastructure(npgsqlDataSource);
 builder.Services.AddCatalogInfrastructure(npgsqlDataSource);
-// Catalog modülündeki eski local-disk kayıtlarını ortak Local/S3 sağlayıcısıyla değiştirir.
-// Mevcut ImageServer CDN düzeni kendiliğinden değişmesin diye geçiş açıkça opt-in'dir.
-if (builder.Configuration.GetValue("Storage:Catalog:Enabled", false))
+builder.Services.AddSingleton<ECSPros.Catalog.Application.Services.ICatalogSettingSecretProtector,
+    ECSPros.Api.Services.Storage.CatalogSettingSecretProtector>();
+builder.Services.AddScoped<ECSPros.Api.Services.Storage.ICatalogImageStorageSettingsProvider,
+    ECSPros.Api.Services.Storage.CatalogImageStorageSettingsProvider>();
+builder.Services.AddSingleton<ECSPros.Api.Services.Storage.IStorefrontMediaSftpStore,
+    ECSPros.Api.Services.Storage.StorefrontMediaSftpStore>();
+builder.Services.AddSingleton<ECSPros.Api.Services.Storage.IStorefrontMediaObjectStore,
+    ECSPros.Api.Services.Storage.StorefrontMediaObjectStore>();
+builder.Services.AddScoped<ECSPros.Api.Services.Storage.IStorefrontMediaUploadService,
+    ECSPros.Api.Services.Storage.StorefrontMediaUploadService>();
+var dualTargetCatalogImagesEnabled =
+    builder.Configuration.GetValue("CatalogImageStorage:Enabled", true);
+// Panel ürün görseli yüklemeleri varsayılan olarak SFTP/WebP + S3/JPEG çift hedefe gider.
+// Yerel geliştirme/teşhis fallback'i ancak CatalogImageStorage:Enabled=false ile açıkça seçilir.
+if (dualTargetCatalogImagesEnabled)
+{
+    builder.Services.AddSingleton<ECSPros.Api.Services.Storage.ICatalogImageSftpStore,
+        ECSPros.Api.Services.Storage.CatalogImageSftpStore>();
+    builder.Services.AddSingleton<ECSPros.Api.Services.Storage.ICatalogImageObjectStore,
+        ECSPros.Api.Services.Storage.CatalogImageObjectStore>();
+    builder.Services.AddScoped<ECSPros.Catalog.Application.Services.IImageUploadService,
+        ECSPros.Api.Services.Storage.DualTargetCatalogImageUploadService>();
+}
+else if (builder.Configuration.GetValue("Storage:Catalog:Enabled", false))
 {
     builder.Services.AddScoped<ECSPros.Api.Services.Storage.CatalogStorageUploadService>();
     builder.Services.AddScoped<ECSPros.Catalog.Application.Services.IImageUploadService>(sp =>
@@ -335,7 +356,7 @@ builder.Services.AddCmsInfrastructure(npgsqlDataSource);
 builder.Services.AddRequestsInfrastructure(npgsqlDataSource);
 builder.Services.AddProcurementInfrastructure(npgsqlDataSource);   // T1 Tedarik
 builder.Services.AddPosInfrastructure(npgsqlDataSource);
-builder.Services.AddIntegrationInfrastructure(npgsqlDataSource, nodeOptions.WorkerRolu);
+builder.Services.AddIntegrationInfrastructure(npgsqlDataSource, nodeOptions.GenelWorkerRolu);
 builder.Services.AddAccountsInfrastructure(npgsqlDataSource);
 builder.Services.AddStorefrontInfrastructure(npgsqlDataSource);
 
@@ -378,7 +399,7 @@ builder.Services.AddScoped<ECSPros.Shared.Contracts.IProductMetricsProvider, ECS
 builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.SaticiIslemleri>();
 // P3a: satıcı komisyon çözücüsü + hakediş uygunlaşma worker'ı (Accounts/Catalog/Promotion → host'ta)
 builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Commission.KomisyonCozucu>();
-if (nodeOptions.WorkerRolu) // FAZ 10 / A2
+if (nodeOptions.GenelWorkerRolu) // FAZ 10 / A2
     builder.Services.AddHostedService<ECSPros.Api.Services.Marketplace.Commission.SettlementEligibilityWorker>();
 builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.MarketplaceAdminService>(); // Pazaryeri yönetim ekranları — cross-schema okuma katmanı
 
@@ -411,7 +432,7 @@ builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Send.MarketplaceIssu
 builder.Services.AddScoped<ECSPros.Api.Services.Marketplace.Send.MarketplaceReconciliationService>();
 // FAZ 10 / A2: arka plan worker'ları yalnız Worker/Both rollü düğümde başlar.
 // MarketplaceBatchWorker singleton kaydı koşulsuz kalır — controller'dan elle tetiklenebilir.
-if (nodeOptions.WorkerRolu)
+if (nodeOptions.GenelWorkerRolu)
 {
     builder.Services.AddHostedService(sp =>
         sp.GetRequiredService<ECSPros.Api.Services.Marketplace.Send.MarketplaceBatchWorker>());
@@ -454,7 +475,68 @@ builder.Services.AddScoped<ECSPros.Api.Services.Store.IOrderConfirmationService,
 builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacySyncService>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Legacy.LegacyOrderSyncService>();
 ECSPros.Shared.Infrastructure.Http.ResilientHttpClientExtensions.AddResilientHttpClient(builder.Services, "legacy-order", c => c.Timeout = TimeSpan.FromSeconds(30));
-if (nodeOptions.WorkerRolu) // FAZ 10 / A2
+
+// Kalıcı gerçek-kaynak akışı: V3 ERP/SQL Server -> PostgreSQL. Güvenli varsayılan KAPALI
+// ve dry-run; yalnız Worker/Both node'da zamanlanır. MySQL görsel/sipariş geçiş işleri ayrıdır.
+var erpSourceOptions = builder.Configuration.GetSection("ErpSource")
+    .Get<ECSPros.Api.Services.ErpSource.ErpSourceOptions>()
+    ?? new ECSPros.Api.Services.ErpSource.ErpSourceOptions();
+if (string.IsNullOrWhiteSpace(erpSourceOptions.ConnectionString))
+{
+    erpSourceOptions.ConnectionString =
+        builder.Configuration.GetConnectionString("ErpSource") ?? string.Empty;
+}
+erpSourceOptions.Validate();
+builder.Services.AddSingleton(erpSourceOptions);
+builder.Services.AddSingleton<ECSPros.Api.Services.ErpSource.IErpSourceReader,
+    ECSPros.Api.Services.ErpSource.SqlServerErpSourceReader>();
+builder.Services.AddSingleton<ECSPros.Api.Services.ErpSource.ErpSourceSyncService>();
+
+// Production MySQL -> PostgreSQL geçici üye/sipariş/fatura/iade importu. Bağlantı kaynağı
+// eski çift-yönlü Legacy ayarından ayrıdır; varsayılan KAPALI + dry-run ve MySQL tarafı READ ONLY.
+var legacyReadImportOptions = builder.Configuration.GetSection("LegacyReadImport")
+    .Get<ECSPros.Api.Services.LegacyImport.LegacyReadImportOptions>()
+    ?? new ECSPros.Api.Services.LegacyImport.LegacyReadImportOptions();
+if (string.IsNullOrWhiteSpace(legacyReadImportOptions.ConnectionString))
+{
+    legacyReadImportOptions.ConnectionString =
+        builder.Configuration.GetConnectionString("LegacyReadImport") ?? string.Empty;
+}
+legacyReadImportOptions.Validate();
+builder.Services.AddSingleton(legacyReadImportOptions);
+builder.Services.AddSingleton<ECSPros.Api.Services.LegacyImport.ILegacyReadSource,
+    ECSPros.Api.Services.LegacyImport.MySqlLegacyReadSource>();
+var legacyStockSyncOptions = builder.Configuration.GetSection("LegacyStockSync")
+    .Get<ECSPros.Api.Services.LegacyStock.LegacyStockSyncOptions>()
+    ?? new ECSPros.Api.Services.LegacyStock.LegacyStockSyncOptions();
+legacyStockSyncOptions.Validate();
+builder.Services.AddSingleton(legacyStockSyncOptions);
+builder.Services.AddSingleton<ECSPros.Api.Services.LegacyStock.LegacyStockSyncService>();
+builder.Services.AddSingleton<ECSPros.Api.Services.LegacyStock.LegacyStockMappingRepairService>();
+builder.Services.AddSingleton<ECSPros.Api.Services.LegacyImport.ILegacyMemberAddressReader,
+    ECSPros.Api.Services.LegacyImport.LegacyMemberAddressReader>();
+builder.Services.AddSingleton<ECSPros.Api.Services.LegacyImport.ILegacyOrderAggregateReader,
+    ECSPros.Api.Services.LegacyImport.LegacyOrderAggregateReader>();
+builder.Services.AddSingleton<ECSPros.Api.Services.LegacyImport.ILegacyInvoiceReader,
+    ECSPros.Api.Services.LegacyImport.LegacyInvoiceReader>();
+builder.Services.AddSingleton<ECSPros.Api.Services.LegacyImport.ILegacyReturnReader,
+    ECSPros.Api.Services.LegacyImport.LegacyReturnReader>();
+builder.Services.AddScoped<ECSPros.Api.Services.LegacyImport.ILegacyImportCheckpointStore,
+    ECSPros.Api.Services.LegacyImport.LegacyImportCheckpointStore>();
+builder.Services.AddScoped<ECSPros.Api.Services.LegacyImport.LegacyImportReconciliationService>();
+builder.Services.AddScoped<ECSPros.Api.Services.LegacyImport.ILegacyCommerceImportSlice,
+    ECSPros.Api.Services.LegacyImport.LegacyMemberAddressImportSlice>();
+builder.Services.AddScoped<ECSPros.Api.Services.LegacyImport.ILegacyCommerceImportSlice,
+    ECSPros.Api.Services.LegacyImport.LegacyOrderImportSlice>();
+builder.Services.AddScoped<ECSPros.Api.Services.LegacyImport.ILegacyCommerceImportSlice,
+    ECSPros.Api.Services.LegacyImport.LegacyInvoiceImportSlice>();
+builder.Services.AddScoped<ECSPros.Api.Services.LegacyImport.ILegacyCommerceImportSlice,
+    ECSPros.Api.Services.LegacyImport.LegacyReturnImportSlice>();
+builder.Services.AddScoped<ECSPros.Api.Services.LegacyImport.ILegacyCommerceImportSlice,
+    ECSPros.Api.Services.LegacyImport.LegacyImageMetadataImportSlice>();
+builder.Services.AddScoped<ECSPros.Api.Services.LegacyImport.ILegacyCommerceImportSlice,
+    ECSPros.Api.Services.LegacyImport.LegacyMissingImageMetadataImportSlice>();
+if (nodeOptions.GenelWorkerRolu) // FAZ 10 / A2
 {
     // RF2: günlük pazaryeri referans tazeleme (kategoriler + eksik/bayat özellikler)
     builder.Services.AddHostedService<ECSPros.Api.Services.Marketplace.Reference.MarketplaceReferenceRefreshWorker>();
@@ -463,18 +545,24 @@ if (nodeOptions.WorkerRolu) // FAZ 10 / A2
     builder.Services.AddHostedService<ECSPros.Api.Services.Tracking.TrackingDispatchWorker>();
     builder.Services.AddHostedService<ECSPros.Api.Services.Tracking.Feed.FeedGeneratorWorker>(); // İE-5: feed üretimi (Feeds:Enabled, 6 sa) // İE-2: commerce event outbox dispatcher (Tracking:Enabled; adapter'lar Faz D) // OP5: kargo bildirim outbox'ı (varsayılan KAPALI — KG1'de açılır)
 }
+if (nodeOptions.ErpSourceWorkerRolu)
+    builder.Services.AddHostedService<ECSPros.Api.Services.ErpSource.ErpSourceSyncWorker>();
+if (nodeOptions.LegacyImportWorkerRolu)
+    builder.Services.AddHostedService<ECSPros.Api.Services.LegacyImport.LegacyCommerceImportWorker>();
+if (nodeOptions.LegacyStockWorkerRolu)
+    builder.Services.AddHostedService<ECSPros.Api.Services.LegacyStock.LegacyStockSyncWorker>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.PlayIntegrityVerifier>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.AppAttestVerifier>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IDeviceAttestationVerifier, ECSPros.Api.Services.Store.DevBypassVerifier>();
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IStoreLinkBuilder, ECSPros.Api.Services.Store.StoreLinkBuilder>(); // H8: e-postalardaki mutlak site linki (Store:Hosts tersinden)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.ISavedSearchNotifier, ECSPros.Api.Services.Store.SavedSearchNotifier>(); // H8: favori arama bildirimi taraması
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.UrunSoruCevapEpostasi>(); // Satıcıya Soru Sor: ilk cevapta üyeye "cevaplandı" e-postası (fire-and-forget, kendi scope'u)
-if (nodeOptions.WorkerRolu) // FAZ 10 / A2
+if (nodeOptions.GenelWorkerRolu) // FAZ 10 / A2
     builder.Services.AddHostedService<ECSPros.Api.Services.Store.SavedSearchNotifyWorker>(); // H8: periyodik tarama (günde-1 sınırı LastNotifiedAt'ta)
-// DashboardMetricsWorker rol kapısına GİRMEZ: salt-okunur, yalnız bu düğüme bağlı admin
-// SignalR istemcilerine yayın yapar (sticky oturum) — Api rollü düğümde de çalışmalı.
-// Tek yayıncı + backplane Kademe B / B1'in konusu.
-builder.Services.AddHostedService<DashboardMetricsWorker>();
+// DashboardMetricsWorker salt-okunur ve normal Api/Worker düğümlerinde çalışır. Yalnız
+// izole LegacyImport profilinde gereksiz ikinci yayıncı oluşturmamak için kaydedilmez.
+if (!nodeOptions.SadeceIzoleWorker)
+    builder.Services.AddHostedService<DashboardMetricsWorker>();
 builder.Services.AddSingleton<ECSPros.Api.Services.MigrationService>();
 
 // ─── JWT Authentication ────────────────────────────────────────────
@@ -715,13 +803,20 @@ app.Use(async (context, next) =>
         var surumluStatikDosya = context.Request.Query.ContainsKey("v")
             || requestPath.StartsWith("/images/performance/", StringComparison.OrdinalIgnoreCase)
             || requestPath.StartsWith("/fontawesome-free-7.2.0-web/", StringComparison.OrdinalIgnoreCase);
+        // Mega menü fragment'i kullanıcıya özel veri içermez ve controller tarafından
+        // Host bazında kısa süreli cache'lenir. Genel HTML no-store kuralı bu açık
+        // performans istisnasının ResponseCache başlığını ezmemelidir.
+        var onbelleklenebilirHtmlParcasi = requestPath.Equals(
+            "/store/navigation/mega-menu",
+            StringComparison.OrdinalIgnoreCase);
 
         if (response.StatusCode == StatusCodes.Status200OK && surumluStatikDosya)
         {
             response.Headers.CacheControl = "public,max-age=31536000,immutable";
         }
         else if (response.StatusCode == StatusCodes.Status200OK
-            && contentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
+            && contentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase)
+            && !onbelleklenebilirHtmlParcasi)
         {
             response.Headers.CacheControl = "no-cache,no-store,must-revalidate";
             response.Headers.Pragma = "no-cache";
@@ -841,14 +936,23 @@ app.MapHealthChecks("/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.
 
 // FAZ 10 / A2: /health/detail — düğüm kimliği, rolü ve bu düğümde kayıtlı worker'lar
 // (çoklu düğümde "hangi düğüm worker" sorusunun cevabı; nginx upstream'e girmeyen tanı ucu).
-var kayitliWorkerlar = nodeOptions.WorkerRolu
-    ? new[]
-    {
+var kayitliWorkerlar = new List<string>();
+if (nodeOptions.GenelWorkerRolu)
+{
+    kayitliWorkerlar.AddRange([
         "MarketplaceOrderFetch", "MarketplaceReferenceRefresh", "SettlementEligibility", "MarketplaceBatch", "ChannelScopeSync",
-        "OnSaleStamp", "LegacySync", "CargoNotify", "TrackingDispatch", "FeedGenerator",
-        "SavedSearchNotify", "DashboardMetrics",
-    }
-    : new[] { "DashboardMetrics" }; // düğüm-yerel dashboard yayını her rolde çalışır
+        "OnSaleStamp", "LegacySync", "CargoNotify", "TrackingDispatch",
+        "FeedGenerator", "SavedSearchNotify"
+    ]);
+}
+if (nodeOptions.ErpSourceWorkerRolu)
+    kayitliWorkerlar.Add("ErpSourceSync");
+if (nodeOptions.LegacyImportWorkerRolu)
+    kayitliWorkerlar.Add("LegacyCommerceImport");
+if (nodeOptions.LegacyStockWorkerRolu)
+    kayitliWorkerlar.Add("LegacyStockSync");
+if (!nodeOptions.SadeceIzoleWorker)
+    kayitliWorkerlar.Add("DashboardMetrics"); // düğüm-yerel dashboard yayını
 app.MapGet("/health/detail", async (
     Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService hcs, CancellationToken ct) =>
 {
@@ -858,6 +962,7 @@ app.MapGet("/health/detail", async (
         status = report.Status.ToString(),
         nodeId = nodeOptions.Id,
         role = nodeOptions.Role,
+        workerProfile = nodeOptions.WorkerProfile,
         migrateOnStartup = nodeOptions.MigrateOnStartup,
         startedAtUtc = System.Diagnostics.Process.GetCurrentProcess().StartTime.ToUniversalTime(),
         workers = kayitliWorkerlar,

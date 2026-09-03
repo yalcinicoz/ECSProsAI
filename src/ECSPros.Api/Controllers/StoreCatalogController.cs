@@ -58,8 +58,8 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
         var platform = await storeContext.GetPlatformAsync(ct);
         // Popüler aramalar (2026-09-01): yalnız ilk sayfa sayılır (sayfalama tekrarları şişirmesin)
         if (page == 1 && !string.IsNullOrWhiteSpace(search))
-            HttpContext.RequestServices.GetRequiredService<ECSPros.Api.Services.Store.AramaTerimIzleyici>()
-                .Kaydet(firmPlatformId, search, Request.Headers.UserAgent.ToString());
+            await HttpContext.RequestServices.GetRequiredService<ECSPros.Api.Services.Store.AramaTerimIzleyici>()
+                .KaydetAsync(firmPlatformId, search, Request.Headers.UserAgent.ToString(), ct);
         // 2026-08-15: attrs içinde yaprak KATEGORİ id'si de gelebilir (liste sayfası Kategori
         // filtresi) — haritayla ayrılır, kategori seçimi ürün-id kısıtına çevrilir (additive).
         var harita = await kategoriHaritasi.GetAsync(firmPlatformId, ct);

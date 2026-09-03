@@ -6,17 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
-
-export const INVOICE_STATUS_MAP: Record<string, { label: string; variant: 'success' | 'warning' | 'neutral' | 'danger' }> = {
-  created:   { label: 'Oluşturuldu', variant: 'success' },
-  cancelled: { label: 'İptal',       variant: 'danger' },
-}
-
-export const INVOICE_TYPE_MAP: Record<string, string> = {
-  e_archive: 'e-Arşiv',
-  e_invoice: 'e-Fatura',
-  export:    'İhracat',
-}
+import { INVOICE_STATUS_MAP, INVOICE_TYPE_MAP } from './orderConstants'
 
 const TABS = [
   { key: 'created',   label: 'Oluşturulan' },

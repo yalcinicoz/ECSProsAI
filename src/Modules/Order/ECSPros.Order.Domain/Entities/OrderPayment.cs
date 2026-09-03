@@ -4,6 +4,8 @@ namespace ECSPros.Order.Domain.Entities;
 
 public class OrderPayment : BaseEntity
 {
+    /// <summary>Geçici legacy MySQL importunda oporderpayments.Id.</summary>
+    public int? LegacyOrderPaymentId { get; set; }
     public Guid OrderId { get; set; }
     public Guid PaymentMethodId { get; set; }
     public decimal Amount { get; set; }

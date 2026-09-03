@@ -12,14 +12,16 @@ import { ChannelForm, type Firm, type FirmPlatformWithFirm } from '../settings/C
 import type { PlatformType } from '../settings/PlatformTypesPage'
 import { CompletionModal } from './CompletionModal'
 import {
-  type MarketplaceStore,
-  useMarketplaceOverview,
   StoreLogo,
-  storeHealth,
+} from './MarketplacesPage'
+import {
   HEALTH_COLOR,
   pickTr,
+  storeHealth,
   timeAgo,
-} from './MarketplacesPage'
+  useMarketplaceOverview,
+  type MarketplaceStore,
+} from './marketplaceOverview'
 
 // ── Tipler ────────────────────────────────────────────────────────────────────
 

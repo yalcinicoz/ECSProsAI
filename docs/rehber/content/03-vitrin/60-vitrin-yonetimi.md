@@ -166,7 +166,7 @@ işler, kalıcı kayıt için sayfadaki **Kaydet** gerekir. "Öğe yok — öğe
 | Video URL (story) | Story tipinde oynatılacak video adresi. |
 | Buton metni (TR) | Banner/slider butonu. |
 | Link | Listeden seçilir: `Ana Sayfa (/)`, `Tüm Ürünler (/urun-listesi)`, kanalın kategorileri (`Ad (/url)`) ya da `Özel URL (elle gir)…` — özel değer `/` veya `https://` ile başlamalı, aksi halde kırmızı uyarı. |
-| Görsel / Mobil görsel | **Görsel Yükle** ile dosya seçilir (JPEG/PNG/WebP/GIF/SVG) ve sunucuya yüklenir; **Değiştir** / **Kaldır**. Tipine göre önerilen boyut altta yazar (aşağıdaki tablo). Öneriye uymayan dosyada sarı uyarı + **Yine de Yükle** / **Vazgeç**. |
+| Görsel / Mobil görsel | **Görsel Yükle** ile dosya seçilir (JPEG/PNG/WebP/GIF/SVG) ve CDN'ye yüklenir; **Değiştir** / **Kaldır**. Ürünlerin `images` kökü kullanılmaz: masaüstü dosyaları `storefront/pages/desktop`, mobil dosyaları `storefront/pages/mobile` altında tutulur ve public URL `https://cdn.misharitalia.com/storefront-v1/...` biçimindedir. Tipine göre önerilen boyut altta yazar (aşağıdaki tablo). Öneriye uymayan dosyada sarı uyarı + **Yine de Yükle** / **Vazgeç**. |
 | İkon | Açılır ızgaradan ikon seçilir (kamyon, yüzde, hediye, yıldız…); **Kaldır** temizler. Banner rozet metni için aynı alanda serbest metin (`%50 İndirim`) yazılabilir. |
 | Sıra | Sayı. |
 | Aktif | Pasif öğe yayına girmez. |

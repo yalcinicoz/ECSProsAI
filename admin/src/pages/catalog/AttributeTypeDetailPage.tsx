@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Plus, ChevronRight, ArrowLeft, Pencil, Trash2 } from 'lucide-react'
@@ -16,7 +16,24 @@ import { buildI18nValues } from '@/lib/i18n-helper'
 
 const PLATFORM_PERM = 'catalog.platform.manage'
 import { FL } from '@/lib/field-labels'
-import { DATA_TYPE_LABELS, DATA_TYPE_OPTIONS } from './AttributeTypesPage'
+
+const DATA_TYPE_OPTIONS = [
+  { value: 'select',       label: 'Seçim Listesi' },
+  { value: 'multi_select', label: 'Çoklu Seçim' },
+  { value: 'text',         label: 'Metin' },
+  { value: 'number',       label: 'Sayı' },
+  { value: 'boolean',      label: 'Evet/Hayır' },
+]
+
+const DATA_TYPE_LABELS: Record<string, string> = {
+  select:       'Seçim Listesi',
+  multi_select: 'Çoklu Seçim',
+  text:         'Metin',
+  number:       'Sayı',
+  boolean:      'Evet/Hayır',
+}
+
+type ApiError = { response?: { data?: { error?: string } } }
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -68,6 +85,7 @@ export function AttributeTypeDetailPage() {
   }>({ nameI18n: {}, dataType: 'select', sortOrder: 0, isActive: true, useInFilter: false })
   const [settingsDirty, setSettingsDirty] = useState(false)
   const [settingsSaved, setSettingsSaved] = useState(false)
+  const [initializedAttrTypeId, setInitializedAttrTypeId] = useState<string | null>(null)
 
   const [addValueOpen, setAddValueOpen] = useState(false)
   const [valueForm, setValueForm] = useState<{
@@ -99,6 +117,22 @@ export function AttributeTypeDetailPage() {
 
   const attrType = attrTypes.find((a) => a.id === id)
   const deleteValueName = attrType?.values.find((v) => v.id === deleteValueId)?.nameI18n
+
+  // Route aynı component örneğini kullansa bile formu yalnız yeni özellik tipi için başlat.
+  // Aynı ID için yapılan sorgu yenilemeleri, kullanıcının kaydedilmemiş formunu ezmez.
+  if (attrType && initializedAttrTypeId !== attrType.id) {
+    setInitializedAttrTypeId(attrType.id)
+    setSettingsForm({
+      nameI18n: attrType.nameI18n,
+      dataType: attrType.dataType,
+      sortOrder: attrType.sortOrder,
+      isActive: attrType.isActive,
+      useInFilter: attrType.useInFilter,
+    })
+    setSettingsDirty(false)
+  } else if (!attrType && initializedAttrTypeId !== null) {
+    setInitializedAttrTypeId(null)
+  }
 
   const { data: usageProducts = [], isLoading: usageLoading } = useQuery<ProductByValue[]>({
     queryKey: ['attribute-value-products', usageValue?.id],
@@ -202,19 +236,6 @@ export function AttributeTypeDetailPage() {
     [],
   )
 
-  useEffect(() => {
-    if (attrType) {
-      setSettingsForm({
-        nameI18n: attrType.nameI18n,
-        dataType: attrType.dataType,
-        sortOrder: attrType.sortOrder,
-        isActive: attrType.isActive,
-        useInFilter: attrType.useInFilter,
-      })
-      setSettingsDirty(false)
-    }
-  }, [attrType?.id])
-
   const typeI18nValues = useMemo(
     () => buildI18nValues(settingsForm.nameI18n, languages),
     [settingsForm.nameI18n, languages],
@@ -303,7 +324,7 @@ export function AttributeTypeDetailPage() {
               {settingsSaved && <span className="text-xs" style={{ color: 'var(--brand)' }}>Kaydedildi</span>}
               {updateSettingsMutation.isError && (
                 <span className="text-xs" style={{ color: '#ef4444' }}>
-                  {(updateSettingsMutation.error as any)?.response?.data?.error ?? 'Hata oluştu'}
+                  {(updateSettingsMutation.error as ApiError)?.response?.data?.error ?? 'Hata oluştu'}
                 </span>
               )}
               <Button
@@ -610,7 +631,7 @@ export function AttributeTypeDetailPage() {
 
           {addValueMutation.isError && !duplicateLang && (
             <p className="text-sm" style={{ color: '#ef4444' }}>
-              {(addValueMutation.error as any)?.response?.data?.error ?? 'Hata oluştu. Lütfen tekrar deneyin.'}
+              {(addValueMutation.error as ApiError)?.response?.data?.error ?? 'Hata oluştu. Lütfen tekrar deneyin.'}
             </p>
           )}
         </div>
@@ -701,7 +722,7 @@ export function AttributeTypeDetailPage() {
 
             {updateValueMutation.isError && (
               <p className="text-sm" style={{ color: '#ef4444' }}>
-                {(updateValueMutation.error as any)?.response?.data?.error ?? 'Hata oluştu. Lütfen tekrar deneyin.'}
+                {(updateValueMutation.error as ApiError)?.response?.data?.error ?? 'Hata oluştu. Lütfen tekrar deneyin.'}
               </p>
             )}
           </div>
@@ -735,7 +756,7 @@ export function AttributeTypeDetailPage() {
         </p>
         {deleteValueMutation.isError && (
           <p className="text-sm mt-3" style={{ color: '#ef4444' }}>
-            {(deleteValueMutation.error as any)?.response?.data?.error ?? 'Hata oluştu.'}
+            {(deleteValueMutation.error as ApiError)?.response?.data?.error ?? 'Hata oluştu.'}
           </p>
         )}
       </Modal>

@@ -7,7 +7,16 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { PermissionGuard } from '@/components/ui/PermissionGuard'
-import { TRANSFER_TYPES, STATUS_MAP, TRANSITIONS } from './TransfersPage'
+import { TRANSFER_TYPES, STATUS_MAP, TRANSITIONS } from './transferConstants'
+
+function apiErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error !== 'object' || error === null || !('response' in error)) return fallback
+  const response = error.response
+  if (typeof response !== 'object' || response === null || !('data' in response)) return fallback
+  const data = response.data
+  if (typeof data !== 'object' || data === null || !('error' in data)) return fallback
+  return typeof data.error === 'string' ? data.error : fallback
+}
 
 const PERM = 'inventory.manage'
 
@@ -74,8 +83,8 @@ export function TransferDetailPage() {
       setNewItem(emptyItem())
       setAddError('')
     },
-    onError: (err: any) => {
-      setAddError(err?.response?.data?.error ?? 'Kalem eklenemedi.')
+    onError: (err: unknown) => {
+      setAddError(apiErrorMessage(err, 'Kalem eklenemedi.'))
     },
   })
 

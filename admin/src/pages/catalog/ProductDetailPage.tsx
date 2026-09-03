@@ -130,6 +130,8 @@ interface Warehouse {
   nameI18n: Record<string, string>
 }
 
+type ApiError = { response?: { data?: { error?: string } } }
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 // client-side EAN-13 (fallback — used only if API unavailable)
@@ -680,7 +682,7 @@ function ChannelsPricingTab({ product }: { product: ProductDetail }) {
     setSavedRows(new Set())
     setBulkPrice('')
     setBulkPriceType('manual')
-  }, [pricingData, selectedChannelId, product.variants])
+  }, [pricingData, selectedChannelId, product.variants, product.basePrice])
 
   function updateRow(variantId: string, patch: Partial<PricingRow>) {
     setRows(prev => ({ ...prev, [variantId]: { ...prev[variantId], ...patch } }))
@@ -1107,8 +1109,15 @@ export function ProductDetailPage() {
   const { data: product, isLoading: productLoading } = useQuery<ProductDetail>({
     queryKey: ['product', code],
     queryFn: async () => {
-      const { data } = await api.get(`/catalog/products/${code}`)
-      return data.data
+      try {
+        const { data } = await api.get(`/catalog/products/${code}`)
+        return data.data
+      } catch (error: unknown) {
+        const status = (error as { response?: { status?: number } })?.response?.status
+        if (status !== 404) throw error
+        const { data } = await api.post(`/catalog/products/${code}/refresh-from-erp`)
+        return data.data
+      }
     },
     enabled: !!code,
   })
@@ -1987,10 +1996,26 @@ export function ProductDetailPage() {
               </span>
             </div>
           ) : (
-            <div className="card overflow-hidden max-w-2xl">
-              <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
-                <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Ürün Özellikleri</h2>
-                <div className="flex items-center gap-2">
+            <div className="card w-full max-w-6xl overflow-hidden shadow-sm">
+              <div
+                className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+                style={{ borderColor: 'var(--border)' }}
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                    style={{ background: 'var(--brand-bg)', color: 'var(--brand)' }}
+                  >
+                    <Settings2 size={18} aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-base font-semibold" style={{ color: 'var(--text)' }}>Ürün Özellikleri</h2>
+                    <p className="mt-0.5 text-xs" style={{ color: 'var(--text-s)' }}>
+                      Ürünün filtreleme ve varyant bilgilerini düzenleyin
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
                   {attrSaveStatus === 'ok' && (
                     <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg font-medium"
                       style={{ background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
@@ -2005,7 +2030,7 @@ export function ProductDetailPage() {
                   </Button>
                 </div>
               </div>
-              <div className="p-5 space-y-4">
+              <div className="grid grid-cols-1 gap-x-8 gap-y-5 p-5 md:grid-cols-2">
                 {nonVariantGroupAttrs.map((ga) => {
                   const values = attrTypeMap.get(ga.attributeTypeId) ?? []
                   const attrName = ga.attributeTypeNameI18n['tr'] ?? ga.attributeTypeCode
@@ -2017,13 +2042,14 @@ export function ProductDetailPage() {
                         {ga.isRequired && <span style={{ color: '#ef4444' }}> *</span>}
                       </label>
                       <select
-                        className="sel"
+                        className="inp cursor-pointer"
+                        style={{ color: selectedValueId ? 'var(--text)' : 'var(--text-s)' }}
                         value={selectedValueId}
                         onChange={(e) => setAttrForm((f) => ({ ...f, [ga.attributeTypeId]: e.target.value }))}
                       >
-                        <option value="">— Seçiniz —</option>
+                        <option value="" style={{ color: 'var(--text-s)' }}>— Seçiniz —</option>
                         {values.map((v) => (
-                          <option key={v.id} value={v.id}>
+                          <option key={v.id} value={v.id} style={{ color: 'var(--text)' }}>
                             {v.nameI18n['tr'] ?? v.nameI18n[Object.keys(v.nameI18n)[0]] ?? v.id}
                           </option>
                         ))}
@@ -2322,7 +2348,8 @@ export function ProductDetailPage() {
                             onClick={() => {
                               setAxisSelections((prev) => {
                                 const next = new Set(prev[axis.attributeTypeId] ?? [])
-                                isSelected ? next.delete(v.id) : next.add(v.id)
+                                if (isSelected) next.delete(v.id)
+                                else next.add(v.id)
                                 return { ...prev, [axis.attributeTypeId]: next }
                               })
                             }}
@@ -2374,7 +2401,7 @@ export function ProductDetailPage() {
 
               {addVariantsMutation.isError && (
                 <p className="text-sm" style={{ color: '#ef4444' }}>
-                  {(addVariantsMutation.error as any)?.response?.data?.error ?? 'Hata oluştu.'}
+                  {(addVariantsMutation.error as ApiError)?.response?.data?.error ?? 'Hata oluştu.'}
                 </p>
               )}
             </div>
@@ -2425,7 +2452,7 @@ export function ProductDetailPage() {
           )}
           {updateSettingMutation.isError && (
             <p className="text-sm" style={{ color: '#ef4444' }}>
-              {(updateSettingMutation.error as any)?.response?.data?.error ?? 'Hata oluştu.'}
+              {(updateSettingMutation.error as ApiError)?.response?.data?.error ?? 'Hata oluştu.'}
             </p>
           )}
         </div>
@@ -2793,6 +2820,7 @@ function OneCikarPaneli({ firmPlatformId, productId }: { firmPlatformId: string;
   const queryClient = useQueryClient()
   const [from, setFrom] = useState('')
   const [until, setUntil] = useState('')
+  const [loadedWindowKey, setLoadedWindowKey] = useState<string | null>(null)
 
   const { data: durum } = useQuery<{ featuredFrom: string | null; featuredUntil: string | null; isFeaturedNow: boolean }>({
     queryKey: ['channel-product-featured', firmPlatformId, productId],
@@ -2802,10 +2830,15 @@ function OneCikarPaneli({ firmPlatformId, productId }: { firmPlatformId: string;
     },
   })
 
-  useEffect(() => {
+  const windowKey = durum
+    ? `${firmPlatformId}:${productId}:${durum.featuredFrom ?? ''}:${durum.featuredUntil ?? ''}`
+    : null
+
+  if (durum && loadedWindowKey !== windowKey) {
+    setLoadedWindowKey(windowKey)
     setFrom(durum?.featuredFrom ? durum.featuredFrom.slice(0, 10) : '')
     setUntil(durum?.featuredUntil ? durum.featuredUntil.slice(0, 10) : '')
-  }, [durum])
+  }
 
   const kaydet = useMutation({
     mutationFn: async (payload: { featuredFrom: string | null; featuredUntil: string | null }) => {

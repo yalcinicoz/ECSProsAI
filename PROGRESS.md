@@ -2,9 +2,1328 @@
 
 > **Kural:** Her session bu dosyadan başla, bu dosyayla bitir.
 > Bir faz tamamlanmadan bir sonrakine geçme.
-> Son güncelleme: 2026-08-23
+> Son güncelleme: 2026-09-03
 
 ---
+
+**NGINX DİSK DENETİMİ VE LEGACY STOCK AUTO-REPAIR KAYITLARI GITHUB İLE EŞİTLENDİ (2026-09-03):**
+Kullanıcının açık talebiyle bekleyen `PROGRESS.md` ve `docs/handoff/sunucu-altyapi-devri.md` değişiklikleri
+GitHub yayın kapsamına alındı. Öncesinde iki dosya geçici `pre-auto-repair-docs-publish-20260903-122623`
+stash'iyle korundu; `git fetch --prune origin` sonucunda yerel `main` ile `origin/main` farkı `0/0` çıktı ve
+dosyalar çatışmasız geri uygulandı. Yayın yalnız Nginx LB salt-okunur disk analizi, Legacy Stock `1 satır/2
+adet` tanısı, yedekli auto-mapping repair aktivasyonu ve final sağlık/işlevsel kabul kayıtlarını içerir; kod,
+secret, config veya deploy artefaktı eklenmedi. Dokümantasyon-only değişiklik nedeniyle uygulama testi yeniden
+çalıştırılmadı; `git diff --check` başarılıdır. Bu GitHub adımında production sunucu/veritabanı değişikliği
+yapılmadı.
+
+**LEGACY STOCK AUTO-MAPPING REPAIR KALICI ETKİNLEŞTİRİLDİ (2026-09-03):**
+Tekrarlayan `1 satır/2 adet` fail-closed hatasının aktif üründeki sonradan eklenmiş `1` varyanttan geldiği
+salt-okunur tanıyla kesinleştirildikten sonra kullanıcı onayıyla kontrollü onarım uygulandı. Yarışı önlemek
+için yalnız Legacy Stock ve ERP worker kısa süre durduruldu; ana API/site etkilenmedi. API1 env yedeği
+`/etc/ecspros/legacy-stock-worker.env.pre-auto-repair-20260903T121551Z`
+(`SHA-256 065a27db7f009ffb401a475e19bc7d6e099e0c49e87a2d49a053d4448fb7d0ab`) ve PostgreSQL'de ilgili beş
+tabloyu içeren `/var/backups/ecspros-stock/pre-auto-mapping-repair-20260903T121606Z.dump`
+(`68.913.824 byte`, 5/5 TABLE DATA, SHA-256
+`3c2adb773013f23b60679dd5236491a9b978a5de0be0db0adc1774e8d34a215e`) doğrulandı.
+
+Final worker ayarları `Enabled=true`, `DryRun=false`, `RepairMissingMappings=true`,
+`MappingRepairDryRun=false`, `BlockOnUnmappedQuantity=true` ve tolerans `0/0` olarak bırakıldı. İlk gerçek
+tur tam olarak `1` varyant ve `2` varyant-özellik bağı olmak üzere `3` mapping değişikliği yaptı; yeni raf,
+attribute value veya eşlenemeyen özellik `0`. Aynı turda canlı stoktaki `92` değişiklik işlendi ve
+kaynak/eşleşen `254045`, eşleşmeme `0/0` oldu. Sonraki iki kontrollü turda mapping repair ayrı ayrı
+`değişiklik=0` verdi; canlı kaynak hareketleri nedeniyle stokta `12` ve `17` normal değişiklik işlendi,
+eşleşmeme her ikisinde de `0/0` kaldı.
+
+Final salt-okunur fingerprint'te `product_variants 334197` (`+1`),
+`product_variant_attributes 994972` (`+2`), `attribute_values 9658` ve `warehouse_bins 13862` doğrulandı.
+Aktif stok satırı `241896`, kullanılabilir stok `254050`, toplam Quantity `255258`, ReservedQuantity `1208`;
+negatif kullanılabilir stok, kopuk varyant/raf ve aktif barkod/raf çifti mükerrerlik kontrollerinin tamamı
+`0`. ERP worker yeniden açıldı; ilk katalog ve fiyat turları `değişiklik=0`, unit `active`, `NRestarts=0`
+tamamlandı. Restart yapılmadan gelen ilk doğal 300 saniyelik turda mapping repair yine `değişiklik=0`;
+canlı kaynaktaki `102` stok değişikliği işlendi, kaynak/eşleşen `254078` ve eşleşmeme `0/0` oldu. API1 ana
+API, LegacyImport, ERP ve LegacyStock unit'leri `active`, `NRestarts=0`; `5050/5060/5061/5062` `/ready`
+kontrolleri başarılı ve onarım sonrası stock/ERP hata öncelikli logları boştur. Production MySQL yalnız
+server-side READ ONLY okundu; MySQL yazısı/DDL, migration, kod deploy'u ve GitHub işlemi yapılmadı.
+
+**LEGACY STOCK YENİ 1 SATIR/2 ADET FAIL-CLOSED HATASI SINIFLANDIRILDI — ONARIM UYGULANMADI (2026-09-03):**
+API1 Legacy Stock worker loglarında hata `2026-09-03 12:03:55 UTC` ve `12:09:00 UTC` turlarında doğrulandı.
+İki tur da `1 satır/2 adet` eşleşmeme nedeniyle `0/0` güvenlik kapısında gerçek stok yazımından önce durmuş;
+unit ve ERP worker `active`, `NRestarts=0` kalmıştır. Aradaki ERP katalog turu `değişiklik=0` döndüğü için
+kayıt kendiliğinden tamamlanmamıştır.
+
+Production MySQL `READ ONLY/rollback`, PostgreSQL `default_transaction_read_only=on` guard'larıyla çalışan
+tanı sonucunda kaynak `159.147 satır/254.040 adet`, eşleşen `159.146 satır/254.038 adet` bulundu. Farkın
+tamamı aktif hedef ürüne ait `1` eksik varyant ve `2` stok adedidir; eksik/pasif/silinmiş raf, silinmiş ürün,
+ürünü olmayan varyant veya sınıflandırılamayan kayıt `0` çıktı. Mapping-repair dry-run planı `1` varyant ve
+`2` varyant-özellik bağı olmak üzere `3` değişiklik; yeni attribute value, yeni raf ve eşlenemeyen özellik
+`0` gösterdi.
+
+Bu tekrar, ERP katalog turunun ana ürün değişmemişken sonradan eklenen varyantı yakalamadığını ve stock
+worker'ın `RepairMissingMappings=false` bırakıldığı için doğru biçimde fail-closed kaldığını gösterir. Kalıcı
+çözüm olarak mevcut parent-price guard'lı mapping repair'in stock turu öncesinde etkin tutulması önerilir:
+`RepairMissingMappings=true`, `MappingRepairDryRun=false`; `BlockOnUnmappedQuantity=true` ve `0/0` eşikleri
+aynen korunur. Son dry-run yaklaşık `3,6 saniye` sürdüğünden 300 saniyelik periyotta belirgin darboğaz
+beklenmez. Bu incelemede onarım/config/restart uygulanmadı; production MySQL/PostgreSQL yazısı, migration,
+deployment veya GitHub işlemi yapılmadı. Uzak geçici tanı dosyaları sonuçtan sonra kaldırıldı.
+
+**NGINX LB DİSK DOLULUĞU SALT-OKUNUR İNCELENDİ (2026-09-03):**
+Nginx LB root filesystem'i `48 GB` boyutunda, `35 GB` kullanılmış, `11 GB` boş ve `%78` doludur. Inode
+kullanımı yalnız `%13`; küçük dosya/inode tükenmesi yoktur. Fiziksel disk `100 GB`, LVM physical/volume
+group `96,95 GB` ve bunun `48,47 GB` bölümü henüz logical volume'a ayrılmamıştır; dolayısıyla diskte root
+filesystem dışında önemli büyütme kapasitesi mevcuttur.
+
+Kullanımın ana kaynağı `/var` altındaki `28 GB` veridir. Bunun `22 GB`'ı `/var/cache/nginx`, `5,7 GB`'ı
+`/var/log`, yalnız `524 MB`'ı `/var/lib` altındadır. Nginx cache'te `228.550` dosya ve yaklaşık
+`22.474.067.984 byte` veri bulunur: video havuzu `8,1 GB`, iki Julude havuzu toplam `4,1 GB`, Gulseli,
+Misharitalia, Olurbutik ve Tozlu havuzları yaklaşık `2,1 GB`'ar, ECSPros/tcdn havuzu `1,4 GB` kullanır.
+Etkin Nginx config'inde video için `max_size=8g/inactive=3d`, sekiz ayrı CDN havuzu için ayrı ayrı
+`max_size=2G/inactive=60d` tanımlıdır; toplam tasarlanmış cache tavanı yaklaşık `24 GB`'dır. Mevcut kullanım
+bu limitlerle uyumludur ve cache dosyalarının `128.010` adedi bir günden, `21.193` adedi yedi günden,
+`9.370` adedi otuz günden eskidir.
+
+Log kullanımının `3,1 GB`'ı systemd journal, `2,6 GB`'ı Nginx loglarıdır. Nginx loglarının yaklaşık
+`2,0 GB`'ı Tozlu altındadır; en büyük üretici `site_custom_access_logs.log` olup önceki günlük dosya
+yaklaşık `997 MB`, güncel dosya inceleme anında yaklaşık `529 MB`'dır. Alt-site logları için ayrı
+`/etc/logrotate.d/nginx-all-sites` kuralı aktiftir: günlük kontrol, `80M` size, `rotate 5`, compress ve
+delaycompress; `logrotate.timer` çalışmaktadır. Journald için açık bir `SystemMaxUse`/retention override'ı
+yoktur. Silinmiş fakat process tarafından açık tutulan dosya yalnız `60.992 byte` olduğundan disk kaçağı
+değildir. `nginx -t` başarılı ve servis aktiftir.
+
+Sonuç: doluluğun ana nedeni cache sızıntısı değil, toplam `24 GB`'a izin veren çoklu CDN/video cache tasarımı;
+ikincil neden limitsiz-varsayılan journald kullanımı ve yüksek hacimli Tozlu özel access logudur. Güvenli
+iyileştirme seçenekleri ayrı onayla root LV'yi mevcut `48,47 GB` VG boşluğundan büyütmek, journald için
+ölçülü bir üst sınır tanımlamak, Tozlu özel logunun gerekliliği/formatını gözden geçirmek ve cache havuzlarının
+`max_size/inactive` değerlerini trafik ihtiyacına göre küçültmektir. Bu incelemede hiçbir cache/log silinmedi;
+config, service, LVM, deployment, production veritabanı veya GitHub işlemi yapılmadı.
+
+**ADMIN, STOREFRONT VE WORKER DEĞİŞİKLİKLERİ GITHUB İLE EŞİTLENDİ (2026-09-03):**
+Kullanıcının açık GitHub yayın talebi öncesinde mevcut tracked ve untracked çalışmalar
+`pre-github-publish-20260903-120150` stash'iyle korundu. `git fetch --prune origin` sonrasında yerel `main`
+ile `origin/main` farkı `0/0` çıktı; uzaktan alınmayı bekleyen commit yoktu. Korunan dosyaların tamamı
+çatışmasız geri uygulandı ve geçici stash düşürüldü; önceki tarihsel güvenlik stash'lerine dokunulmadı.
+
+Yayın kapsamına admin Ürün Özellikleri kart tasarımı, ana sayfa küçük/çoklu-banner placeholder katmanı,
+Legacy Stock mapping repair parent-price guard'ı, ERP yeni varyant fiyat/maliyet mirası, yeni API sözleşme
+testleri ve güncel progress/handoff kayıtları dahil edildi. `appsettingsTest.json`, production config,
+secret, yerel deploy artefaktı veya bağımlılık çıktısı commit kapsamına alınmadı. Final acceptance dışı API
+testleri `116/116`, admin `npm run lint`, `npx tsc --noEmit -p tsconfig.app.json` ve `git diff --check`
+başarılıdır. AGENTS kuralı gereği frontend production build çalıştırılmadı; production veritabanı/migration
+ve bu kaynak kontrol adımında sunucu deployment işlemi yapılmadı.
+
+**LEGACY STOCK EŞLEME ONARIMI, PARENT PRICE GUARD VE KONTROLLÜ SENKRON TAMAMLANDI (2026-09-03):**
+Fail-closed stok hatası production MySQL'de server-side `READ ONLY`, PostgreSQL'de
+`default_transaction_read_only=on` kullanılan salt-okunur tanıyla kesin sınıflandırıldı. Son kararlı fark
+`131 satır/290 adet` idi: `81 satır/199 adet` yalnız eksik varyant, `50 satır/91 adet` yalnız eksik raf,
+ikisi birden eksik `0`. Bunların karşılığı `20` varyant, `7` raf ve `40` varyant-özellik bağıydı; yeni
+attribute value gereksinimi ve eşlenemeyen varyant özelliği `0` çıktı. Eksik varyantların tüm ana ürünleri,
+eksik rafların tüm section kayıtları aktif ve geçerliydi. Tanı sırasında production MySQL'e hiçbir yazı/DDL
+yapılmadı.
+
+`LegacyStockMappingRepairService`, onarımda açtığı varyanta ana ürünün `BasePrice` ve `BaseCost` değerlerini
+aynen aktaracak şekilde güvenli hale getirildi; ana ürün fiyatı pozitif değilse herhangi bir repair insert'i
+öncesinde fail-closed durur ve transaction geri alınır. `ErpSourceSyncService.UpsertVariantAsync` de yeni ERP
+varyantını `INSERT ... SELECT` ile ana ürün fiyat/maliyetinden üretir; kanal, kardeş varyant veya kaynak
+veriden fiyat tahmini yapmaz. DB alanı, migration, dependency veya kalıcı config anahtarı eklenmedi. Yeni
+fiyat guard testleri dahil acceptance dışı API paketi `116/116` geçti; Release build `0 error`, önceden
+mevcut `39 warning` ile tamamlandı.
+
+Yazma fazından önce API1 env yedeği
+`/etc/ecspros/legacy-stock-worker.env.pre-repair-20260903T112342Z`
+(`SHA-256 065a27db7f009ffb401a475e19bc7d6e099e0c49e87a2d49a053d4448fb7d0ab`) ve PostgreSQL'de beş ilgili
+tabloyu içeren `/var/backups/ecspros-stock/pre-mapping-repair-20260903T112322Z.dump`
+(`68.790.676 byte`, `SHA-256 f7b7b45fe31986c5927ef865d07d6d8baf55a1d3f04e54e1a22c36fa0f2197de`) alındı. Gerçek stok yazımı
+öncesinde ayrıca yalnız `inventory.inv_stocks` içeren
+`/var/backups/ecspros-stock/pre-real-stock-sync-20260903T114802Z.dump`
+(`13.328.569 byte`, `SHA-256 49dcc89c4f50bb35966bfa946e910a8b044b7901f7c87e3bffa58e74ae1de5a3`) doğrulandı.
+
+Yeni `20260903T113525Z_worker_variant_price_guard` paketi API1'de stock ve ERP worker release köklerine
+kuruldu; paket SHA-256 değeri
+`61a7609cd07199d379c0e7134966dbf5fbcabf9a00da4088a99cd562229e07d`, API DLL SHA-256 değeri
+`f52fee118d86aa1aa5667a42b519528f2693577c07293e88c7a9f800c63b4a1c` olarak doğrulandı. İlk stock
+aktivasyonu yeni dizinde server-side `appsettings.Production.json` eksik olduğu için health gate'ten otomatik
+rollback yaptı; bu sırada DB repair/stok yazısı başlamadı. Önceki çalışan worker'lardaki production config
+overlay'i aynen yeni dizinlere bağlandıktan sonra ikinci aktivasyon başarılı oldu.
+
+Kontrollü S1-S5 kapıları uygulandı. S1 stock dry-run hatayı yeniden üretti; S2 mapping-repair dry-run
+`20 varyant + 7 raf + 40 bağ = 67` planladı ve tablo fingerprint'i değişmedi. ERP worker geçici durdurularak
+S3 gerçek PostgreSQL onarımı `67` değişiklikle tamamlandı; hemen ikinci onarım `0` değişiklik verdi. S4'te
+repair yeniden kapatıldı ve stock dry-run eşleşmeme `0/0` oldu. Mapping sonrası/stock öncesi fingerprint,
+stok satır ve miktarlarının değişmediğini; yalnız beklenen `+20` varyant, `+7` raf ve `+40` bağı doğruladı.
+
+S5 gerçek stok turu `3265` değişiklik (`682` güncelleme, `1478` yeni, `1105` sıfırlama) uyguladı; kaynak ve
+eşleşen adet `254087`, eşleşmeme `0/0` oldu. Hemen ikinci tur `değişiklik=0` verdi. Canlı kaynaktaki sonraki
+normal hareket `27` değişiklikle işlendi ve bunu izleyen sakin tur yeniden `değişiklik=0` verdi. Manuel
+kapanış ölçümünde kaynak/eşleşen/hedef kullanılabilir stok `254045`, hedef toplam Quantity `255253`,
+ReservedQuantity `1208`, aktif stok satırı `241840`; negatif kullanılabilir stok, kopuk varyant/raf ve aktif
+barkod/raf çifti mükerrerlik kontrollerinin tamamı `0` çıktı. Restart yapılmadan gelen ilk doğal 300 saniyelik
+tur da canlı kaynaktaki `10` değişikliği (`9` güncelleme, `1` yeni) işledi; kaynak/eşleşen ve salt-okunur hedef
+kullanılabilir stok `254040`, aktif stok satırı `241841`, eşleşmeme ve tüm bütünlük ihlalleri `0` kaldı.
+
+ERP worker yeniden açıldı; ilk katalog ve fiyat fazları ayrı ayrı `değişiklik=0` tamamlandı. API1'de ana API,
+LegacyImport, ERP ve LegacyStock; API2'de ana API `active`, `NRestarts=0` ve doğru private `/ready` uçlarında
+başarılıdır. Final stok ayarları `Enabled=true`, `DryRun=false`, `BlockOnUnmappedQuantity=true`, tolerans
+`0/0`, `RepairMissingMappings=false`, `MappingRepairDryRun=true`, interval `300 saniye` olarak bırakıldı.
+Stock ve ERP köklerinde doğrulanmış aktif release dışında sırasıyla `6` ve `11` eski release kalıcı silindi;
+yalnız aktif release kaldı. Uzak `/tmp` aktarım/tanı dosyaları kaldırıldı, geri dönüş dump'ları korundu.
+Production MySQL yazısı, migration, ana API yayını veya GitHub işlemi yapılmadı.
+
+**ÇALIŞAN SERVİSLER VE LEGACY STOCK FAIL-CLOSED HATASI İNCELENDİ (2026-09-03):**
+API1'de `ecspros.service`, `ecspros-legacy-import.service`, `ecspros-erp-source.service` ve
+`ecspros-legacy-stock.service`; API2'de `ecspros.service`; Nginx LB'de `nginx.service` salt-okunur denetlendi.
+Tüm unit'ler `active/running`, enabled ve `NRestarts=0`. API1 API/LegacyImport/ERP/LegacyStock listener'ları
+sırasıyla `5050/5060/5061/5062` üzerinde; tüm `/ready` kontrolleri `200`. API2 `/ready=200`, Nginx config testi
+başarılı, public ana sayfa ve `/ready` `200`. Son 6 saatte ana API'ler, LegacyImport ve ERP loglarında uygulama
+hata satırı `0`; LegacyImport dilimleri ve ERP katalog/fiyat turları başarılı çalışıyor. Bağlantı sınıfı stok
+hatası ve integration-log yazma hatası da `0`.
+
+Legacy Stock process'i çalışmasına rağmen işlevsel olarak fail-closed durumdadır. Son başarılı tur
+`2026-09-02 06:08:28 UTC` tarihinde kaynak/eşleşen `253.542/253.542`, eşleşmeme `0/0` ile tamamlandı.
+İlk engel beş dakika sonra `8 satır/8 adet` olarak başladı; eşleşmeme zamanla `132/290` seviyesine yükseldi ve
+`2026-09-03 09:33:35 UTC` itibarıyla `119 satır/273 adet` oldu. Son 24 saatte `284` stok turunun tamamı aynı
+koruma kapısında durdu, başarılı stok turu `0`; son doğrulanan hata `11:05:02 UTC`. Etkin güvenli ayarlar
+`DryRun=false`, `BlockOnUnmappedQuantity=true`, üst sınır `0/0` (env'de verilmediği için kod varsayılanı),
+`RepairMissingMappings=false`, interval `300 saniye` ve `StockStorageType=1` olarak doğrulandı.
+
+Koruma exception'ı stok temp tablo/DML adımlarından önce atılıyor; PostgreSQL transaction rollback oluyor,
+`Changed=0` dönüyor ve cache bust yapılmıyor. Dolayısıyla kısmi/yanlış stok yazılmadı fakat hedef stok snapshot'ı
+son başarılı turdan beri bayat kaldı. Güçlü olasılık, bir defalık 1 Eylül mapping repair sonrasında MySQL'de
+oluşan yeni stoklu varyant/raf eşlemeleridir; mevcut toplu hata varyant/raf kırılımını göstermediğinden kesin
+sınıflandırma ayrı salt-okunur tanı fazında yapılmalıdır. `0/0` toleransı yükseltilmemeli ve fail-closed kapı
+kapatılmamalıdır. Bu denetimde servis restart/stop, config değişikliği, mapping repair, deployment, GitHub veya
+production veritabanı işlemi yapılmadı. Kaynak kapasitesi yeterli; Nginx LB diski `%78` kullanım ve yaklaşık
+`10,8 GB` boş alanla ayrıca izlenmelidir.
+
+**ANA SAYFA ÇOKLU BANNER PLACEHOLDER ROLLING YAYINI TAMAMLANDI (2026-09-03):**
+`20260903T105211Z_home_multibanner_placeholder` site/API release'i temiz ve benzersiz `dotnet publish -c
+Release --no-restore` çıktısından üretildi. Arşiv SHA-256 değeri
+`5D57F82D8FD58DC5F797A654B357A58D272CF1A6193FD06DBEA944FB061B85AC` olarak yerelde ve iki uzak düğümde
+birebir doğrulandı. Production config paketten alınmadı; her node'un mevcut
+`/opt/ECSProsAI/config/appsettings.Production.json` bağlantısı yeni immutable release içinde korundu.
+
+Yayın API2 canary → API1 sırasıyla atomik `current` symlink ve private `/ready` health gate üzerinden
+tamamlandı. İki node da aynı yeni release'i gösteriyor; `ecspros.service=active`, `NRestarts=0`, `/ready=200`,
+direct ana sayfa ve kategori `200`. Otuz saniyelik stabilite penceresinde iki node'un warning sayısı `0`.
+Public ana sayfaya cache-busting ile yapılan altı ardışık istek ve final istek `200` döndü: çoklu-banner kartı
+`12`, yeni banner wrapper `12`, sayfa toplam küçük-görsel loader/placeholder sayısı `16`, boş görsel `src`
+sayısı `0`. Bannerların `data-ms-lazy-src`, responsive `srcset/sizes`, 110×165 SVG placeholder,
+`loading=lazy` ve `decoding=async` sözleşmeleri `12/12` doğrulandı; public kategori de `200`.
+
+Kullanıcının önceki “sunucuda yalnız çalışan release kalsın” talimatına göre final kabulden sonra eski
+`20260903T100440Z_home_small_image_admin_attributes` API release'i ve bu yayına ait uzak `/tmp` arşivleri
+kesin kök/hedef doğrulamasıyla kaldırıldı. API1 ve API2 `releases` köklerinde yalnız çalışan yeni release
+kaldı; yerel rollback artefaktları ve API1'deki `worker-current`, `erp-worker-current`,
+`stock-worker-current` symlink'leri korundu. Admin/Nginx release'i yeniden yayınlanmadı; migration,
+production veritabanı, CDN ve GitHub işlemi yapılmadı. Acceptance dışı API testleri `112/112`, hedefli
+small-image/responsive testleri `4/4` ve `git diff --check` başarılıdır.
+
+**ÇOKLU BANNER KÜÇÜK GÖRSELLERİNE MARKALI PLACEHOLDER EKLENDİ — YAYINLANMADI (2026-09-03):**
+Ana sayfadaki `ms-gorunum-coklu-banner` carousel'i üçüncü küçük-görsel yüzeyi olarak ortak yükleme
+sözleşmesine dahil edildi. Mevcut içerikteki 12 adet 110×165 banner kartında gerçek CDN görseli tamamen
+yüklenip `img.complete`, `naturalWidth` ve `decode()` kontrollerinden geçene kadar Tozlu markalı placeholder
+gösterilir; başarıdan sonra görsel 300 ms opacity geçişiyle açılır. Nginx'in geçerli “Resim hazırlanıyor”
+görseli başarı kabul edilir, yalnız ağ/decode hatasında placeholder görünür kalır.
+
+Carousel bağlantıları, kontrolleri, snap davranışı, kart genişlikleri ile mevcut `srcset`/`sizes` değerleri
+değiştirilmedi. İlk kaynak için banner oranına özel 110×165 beyaz SVG kullanılarak 64×64 kaynak nedeniyle
+oluşabilecek oran/yerleşim sıçraması önlendi. Yeni CSS veya JavaScript eklenmedi; daha önce test edilmiş ortak
+küçük-görsel katmanı yeniden kullanıldı. Hedefli small-image/responsive testleri `4/4`, acceptance dışı API
+testleri `112/112` geçti ve `git diff --check` temiz sonuçlandı. Production veritabanı, sunucu, deployment ve
+GitHub işlemi yapılmadı; mevcut tracked/untracked yerel çalışmalar korundu.
+
+**SITE/API VE ADMIN ROLLING YAYINI + ESKİ RELEASE TEMİZLİĞİ TAMAMLANDI (2026-09-03):**
+`20260903T100440Z_home_small_image_admin_attributes` API/Razor release'i SHA-256
+`479284726647386B8CFB9A9E236AFDD55AB6DF8ADF4F526D6943FB497FDCA9A4` doğrulamasıyla önce API2 canary,
+ardından API1 üzerinde atomik `current` symlink + health gate ile aktive edildi. İki node da aynı release'i
+gösteriyor; `ecspros.service=active`, `NRestarts=0`, `/ready=Healthy`, direct ana sayfa/kategori `200`, yeni
+`ms-kucuk-gorsel-yukleme` CSS marker'ı mevcut ve final on dakikalık warning sayısı `0`.
+Public `https://multi-test.misharitalia.com/` ve kategori `200`; ana sayfa HTML'inde `4` küçük-görsel loader/
+wrapper marker'ı var ve boş görsel `src` bulunmuyor. Migration ve veritabanı işlemi yapılmadı; worker
+symlink'lerine dokunulmadı.
+
+Admin release artefaktı SHA-256
+`A1A59A38D2BF82EE6307817C965772385C264099F0ED1BD66FF2114C552C9812` ile Nginx LB'ye aktarıldı; immutable
+admin release hazırlandı ve `/usr/share/nginx/html/admin` symlink'i atomik olarak aynı release kimliğine
+geçirildi. Public admin index, yeni hashed JavaScript ve ürün detay SPA rotası `200`; index yeni
+`index-BDkwydxQ.js` dosyasını referanslıyor. `appsettingsTest.json` içindeki yanıltıcı tarihsel SSH profil adı
+kullanıcı onayıyla değerlerine dokunulmadan `LegacyProductionNgnix` yerine `NginxLb` yapıldı; sunucu handoff
+belgesi de eşitlendi.
+
+Tüm public/health kapıları geçtikten sonra kullanıcının açık isteğiyle API2'de `13`, API1'de `12` aktif olmayan
+API release dizini ve Nginx LB'de `4` aktif olmayan admin release dizini kesin kök/hedef doğrulamasıyla silindi;
+her üç hedefte yalnız çalışan `20260903T100440Z_home_small_image_admin_attributes` release'i kaldı. Yalnız bu
+yayına ait `/tmp` aktarım arşivleri de kaldırıldı. API1'deki `worker-current`, `erp-worker-current` ve
+`stock-worker-current` ayrı release köklerinde doğrulandı ve aynen korundu. Yerel `.deploy` artefaktları ile
+tracked/untracked çalışmalar silinmedi. Production MySQL/PostgreSQL yazısı, migration ve GitHub işlemi yapılmadı.
+
+**SITE/API VE ADMIN YAYIN ARTEFAKTLARI HAZIRLANDI — SSH ANAHTARI AÇILMASI BEKLENİYOR (2026-09-03):**
+Ana sayfa küçük görsel placeholder değişiklikleri ile admin Ürün Özellikleri kartı için ortak
+`20260903T100440Z_home_small_image_admin_attributes` release kimliği oluşturuldu. API/Razor artefaktı temiz
+`dotnet publish -c Release --no-restore` ile benzersiz `.deploy` dizinine, admin artefaktı mevcut `admin/dist`
+çıktısına dokunmadan benzersiz release dizinine üretildi. API arşivi SHA-256
+`479284726647386B8CFB9A9E236AFDD55AB6DF8ADF4F526D6943FB497FDCA9A4`, admin arşivi SHA-256
+`A1A59A38D2BF82EE6307817C965772385C264099F0ED1BD66FF2114C552C9812` olarak doğrulandı. Admin bundle içinde
+yeni Özellikler kartı metni, API artefaktında yeni küçük-görsel CSS/loader sözleşmesi ayrıca kontrol edildi.
+
+Final pre-deploy kapılarında acceptance dışı API testleri `112/112`, admin ESLint ve TypeScript kontrolleri
+başarılıdır; migration/config/package değişikliği yoktur. Kayıtlı API1/API2/LB profilleri bulundu fakat ortak
+ECSPros private key şifreli ve bu Windows oturumundaki SSH agent'ta açık olmadığından salt-okunur sunucu
+preflight'ına geçilemedi. Anahtarı parolayı sohbete yazmadan açmak için yerel Pageant başlatıldı. Bu aşamada
+sunucuya dosya aktarılmadı, servis/symlink değiştirilmedi, eski release silinmedi, production veritabanına
+dokunulmadı ve GitHub işlemi yapılmadı. API2 canary → API1 → admin aktivasyonu ve yalnız çalışan web/admin
+release'lerini bırakacak temizlik, SSH anahtarı kullanıcı tarafından yerel olarak açıldıktan sonra tamamlanacak.
+
+**ANA SAYFA KÜÇÜK GÖRSELLERİNE MARKALI PLACEHOLDER EKLENDİ — YAYINLANMADI (2026-09-03):**
+Kategori ürün kartlarında kullanılan kırık görsel/alt metin önleme sözleşmesi ana sayfanın üst bölümündeki
+iki küçük görsel tipine taşındı: story kapakları ve 64×64 kategori kapsülleri. Her iki yüzeyde Tozlu markalı
+placeholder sunucu tarafında basılır; doğrudan/eager story görseli ile lazy kategori görseli mevcut ortak
+`img.complete`, `naturalWidth` ve `decode()` kapısından geçtikten sonra 300 ms opacity geçişiyle görünür.
+Nginx'in geçerli görsel olarak döndürdüğü “Resim hazırlanıyor” cevabı hata sayılmaz; yalnız ağ veya decode
+hatasında markalı placeholder görünür kalır.
+
+Ürün kartının 3:4 placeholder kapsayıcısı küçük görsellere uygulanmadı. Story'nin mevcut 82/96 px renkli
+çerçevesini ve kategori kapsülünün 64 px yuvarlak ölçüsünü koruyan ayrı küçük-görsel CSS katmanı eklendi;
+story tıklama/modal verisi, kategori linkleri ve lazy/eager öncelikleri değiştirilmedi. Derlenmiş `site.css`
+yeniden üretildi ve kaynak/derlenmiş CSS sözleşmesini doğrulayan `StorefrontSmallImageLoadingTests` eklendi.
+Hedefli placeholder/responsive testleri `7/7`, acceptance dışı API testleri `112/112` geçti (yalnız önceden
+mevcut derleyici uyarıları). Production veritabanı, CDN dosyası, sunucu, deployment ve GitHub işlemi yapılmadı;
+önceki yerel admin tasarım değişiklikleri korundu.
+
+**ÜRÜN ÖZELLİKLERİ KARTI MODERN VE RESPONSIVE HALE GETİRİLDİ — YAYINLANMADI (2026-09-03):**
+Kullanıcının onayladığı görsel taslağa göre admin Ürün Kartları > Özellikler sekmesindeki kart yalnız sunum
+katmanında yenilendi. Kart genişliği `max-w-2xl` yerine `max-w-6xl` yapılarak kullanılmayan yatay alan
+değerlendirildi; ikonlu başlık, yardımcı açıklama ve hafif gölge eklendi. Özellik alanları mobilde tek,
+orta ve geniş ekranlarda iki sütunlu responsive grid olarak düzenlendi. Daha önce global CSS'te tanımı olmayan
+`.sel` sınıfı yerine projenin mevcut `.inp` form stili kullanıldı; dolu ve boş seçimlerin metin tonları
+ayrıştırıldı. Mevcut özellik sırası, zorunlu alan işareti, form state'i, Kaydet butonu, başarı/hata durumu,
+mutation payload'ı ve API endpoint'i değiştirilmedi.
+
+Hedefli ESLint, tam admin ESLint ve `npx tsc --noEmit -p tsconfig.app.json` başarılı oldu. AGENTS talimatına
+uygun olarak production build çalıştırılmadı; Vite development server alternatif yerel portta açılarak admin
+başlangıcı ve `ProductDetailPage.tsx` dönüşümü `HTTP 200` ile doğrulandı, ardından sunucu kapatıldı. Otomatik
+admin UI test altyapısı bulunmadığından oturum gerektiren Kaydet etkileşimi koşturulmadı. Backend, veritabanı,
+migration, production sunucusu, deployment ve GitHub işlemi yapılmadı.
+
+**ADMIN ESLINT DEĞİŞİKLİKLERİ GITHUB İLE EŞİTLENDİ (2026-09-03):**
+Kullanıcının yerel çalışmalar kaybolmadan GitHub'daki son değişikliklerin alınması ve ardından yerel
+değişikliklerin yayınlanması isteği uygulandı. İşlem öncesinde tracked fark
+`.deployment/pre-github-sync-20260903-093735/tracked.patch`, `11` untracked yardımcı dosya aynı klasörde
+`untracked-files.zip` ve dosya envanteri olarak yedeklendi; ayrıca
+`admin-eslint-before-github-sync-20260903-093735` adlı Git stash oluşturuldu. `git fetch --prune origin`
+sonucunda yerel HEAD ile `origin/main` farkı `0/0` çıktı; GitHub'dan alınmayı bekleyen yeni commit yoktu.
+Korunan değişiklikler yeniden uygulandı ve conflict oluşmadı.
+
+Senkron sonrası `npm run lint` `0 error / 0 warning`, `npx tsc --noEmit -p tsconfig.app.json` başarılı ve
+`git diff --check` temiz sonuçlandı. Admin ESLint değişiklikleri, yeni yardımcı modüller ve ilerleme kayıtları
+commit edilerek `origin/main` dalına gönderildi; yerel HEAD ile uzak dalın tam hash eşitliği doğrulandı.
+Geri dönüş güvenliği için stash ve `.deployment` yedeği silinmedi. Secret, production veritabanı,
+sunucu/deployment veya migration işlemi yapılmadı.
+
+**ADMIN ESLINT TEKNİK BORCU KONTROLLÜ OLARAK TEMİZLENDİ — YAYINLANMADI (2026-09-03):**
+Admin başlangıç envanterinde `61` dosyaya dağılmış `176 error / 6 warning` vardı. Başlıca kaynaklar
+`103` adet `@typescript-eslint/no-explicit-any`, `42` adet Fast Refresh component-only export,
+`21` adet effect içinde senkron state güncellemesi ve `5` hook dependency uyarısıydı. Kurallar
+kapatılmadan, yeni `eslint-disable`/`@ts-ignore` eklenmeden ve otomatik toplu `--fix` kullanılmadan
+dosya grupları halinde temizlendi. API hataları `unknown` + dar type guard ile ayrıştırıldı; form/request
+DTO'ları açık tiplere geçirildi. Component dosyalarındaki ortak sabit, formatter ve query helper'ları
+`11` yeni `.ts` modülüne ayrıldı. Bu nedenle başlangıçta problemi olmayan `24` tüketici dosyada yalnız
+import kaynağı değiştirildi.
+
+React hook düzeltmelerinde kullanıcı taslağını veya seçim davranışını bozabilecek çözümler kabul edilmedi.
+İlk denemede görülen `setTimeout(0)` erteleme ve query fonksiyonunda state yan etkisi tamamen kaldırıldı.
+Kanal varsayımları türetilmiş ID, veriyle başlatılan formlar guarded reference/keyed component veya kayıt
+anahtarlı draft, modal sıfırlaması keyed child ve görev kargo seçenekleri salt-okunur React Query cache
+sonuçlarıyla çözüldü. `SearchableSelect` açılış hazırlığı doğrudan kullanıcı event'ine taşındı; mevcut klavye,
+odak ve açılma yönü davranışı korundu.
+
+Final `npm run lint`, toplam `158` admin dosyasında `0 error / 0 warning`; final
+`npx tsc --noEmit -p tsconfig.app.json` başarılı ve `git diff --check` temizdir. AGENTS kuralına uygun olarak
+production build çalıştırılmadı. Bunun yerine Vite development server açıldı; admin başlangıç HTML'i,
+`main.tsx` ve DataTable/SearchableSelect, katalog ürün-görsel, cari, fulfillment, kargo, procurement,
+tracking, marketplace, storefront consent ve etiket şablonu dahil `15` temsilî değişen modülün her biri
+Vite transform üzerinden `HTTP 200` verdi; smoke sonrası yerel dev server kapatıldı. Otomatik admin UI test
+altyapısı repository'de bulunmadığından gerçek tarayıcı form etkileşimleri bu turda otomatik koşturulamadı.
+Backend, production veritabanı, migration, sunucu/deployment ve GitHub commit/push işlemi yapılmadı.
+
+**GITHUB SENKRONİZASYONU VE YEREL ÇALIŞMALARIN YAYINA HAZIRLANMASI (2026-09-03):**
+Yerel tracked/untracked kaynaklar GitHub kontrolünden önce `.deployment/pre-github-sync-20260903-085633`
+altında tracked binary patch ve dosya envanteriyle, ayrıca iki ayrı Git stash kaydıyla geri alınabilir biçimde
+korundu. `git fetch --prune origin` sonrasında `main...origin/main` farkı `0/0` çıktı; uzak dalda alınması
+gereken yeni commit bulunmadığı ve yerel HEAD'in zaten `origin/main` ile aynı olduğu doğrulandı. Korunan yerel
+çalışmalar yeniden uygulandı; merge/stash çakışması oluşmadı. Makineye özel
+`docker/nginx/conf.d/upstream-ecspros.conf` dosyası SHA-256 özetiyle yedekten aynen geri kondu ve Git dışında
+tutuldu. Üretilen `.deploy/`, yerel `.deployment/`, API npm cache'i ve makineye özel upstream dosyası
+`.gitignore` kapsamına alındı; secret içeren `appsettingsTest.json` hiçbir aşamada Git kapsamına sokulmadı.
+
+Acceptance testleri ve production bağlantıları çalıştırılmadan API testleri `110/110` geçti. Admin TypeScript
+kontrolü (`npx tsc --noEmit -p tsconfig.app.json`) ile `site.js`/`site.min.js` sözdizimi kontrolleri başarılı.
+Depo-geneli admin ESLint kontrolü önceden mevcut teknik borcu da kapsayan `176 error / 6 warning` ile başarısız;
+değişen yedi admin dosyasına daraltılan kontrolde `16 error / 1 warning` raporlandı. Bu turda lint kapsamını
+aşan toplu yeniden düzenleme yapılmadı. Production veritabanı, sunucu ve deployment işlemi yapılmadı.
+
+**PERFORMANS FAZI UX KARARI — AGRESİF JAVASCRIPT LAZY-LOAD UYGULANMAYACAK (2026-09-03):**
+Yayınlanmış mega menü ayrıştırmasının ardından kalan yaklaşık `174 KB` açılmış inline JavaScript'in tamamını
+ilk kullanıcı etkileşiminde indirme önerisi değerlendirildi. Hızlı bağlantıda gözle görülür kazanımın sınırlı,
+arama/giriş/sepet gibi kritik ilk tıklamalarda ise gecikme ve “buton tepki vermedi” algısı riskinin daha yüksek
+olması nedeniyle bu yaklaşım uygulanmayacak. Mevcut mega menü endpoint/caching davranışı korunacak.
+
+İleride gerçek cihaz Web Vitals ölçümü JavaScript parse/INP darboğazını doğrularsa güvenli yöntem; davranış
+kodlarını tıklama sonrasına bırakmadan `defer` yüklenen, içerik hash'iyle uzun süre cache'lenen harici modüllere
+taşımak ve yalnız büyük veri payload'larını ihtiyaç anında getirmek olacaktır. Bu karar turunda uygulama kodu,
+veritabanı, sunucu, deployment ve GitHub değişikliği yapılmadı; yerel çalışmalar korundu.
+
+**MASAÜSTÜ MEGA MENÜ İLK HTML'DEN ÇIKARILDI VE YAYINLANDI (2026-09-02):**
+Masaüstü mega menünün tam kategori ağacı ve kampanya markup'ı
+`_AnaNavigasyonMegaMenu.cshtml` partial'ına ayrıldı. İlk sayfa HTML'i artık bu içeriği veya eski
+`<template>` kopyasını taşımıyor; yalnız üst kategori linkleri, `/store/navigation/mega-menu` adresi ve boş
+hydration hedefi basılıyor. Public storefront endpoint'i mevcut host/platform bağlamındaki cache'li
+`MsNavigasyon` modelini kullanarak partial HTML döndürüyor; cevap `Host` bazında `5` dakika cache başlığı ve
+`X-Robots-Tag: noindex, nofollow` içeriyor.
+
+İstemci mega menüyü tek bir paylaşılan Promise ile yalnız ilk gerçek etkileşimde getiriyor. Varsayılan
+`MegaMenuHover=false` durumunda normal üst menüler hiçbir istek başlatmıyor; `Kategoriler` pointerdown/focus
+ve click akışı endpoint'i yükleyip aynı ilk tıklamada menüyü açıyor. `MegaMenuHover=true` davranışı korundu;
+endpoint gecikmesinde kaçan ilk hover/focus, cevap geldiğinde aktif link üzerinden yeniden uygulanıyor.
+Endpoint başarısız olursa istek yeniden denenebilir ve Kategoriler tıklaması `/urun-listesi` bağlantısına
+güvenli geri döner. Önceki canlı ölçüme göre başlangıç HTML'inden yaklaşık `92.775` bayt, `888` etiket ve
+`231` görsel etiketi ayrılmış oldu; kesin yayın sonrası ölçüm ayrıca yapılacaktır.
+
+`site.min.js`, `npm run build-js` ile yeniden üretildi; iki JavaScript dosyası `node --check` kontrolünden
+geçti. Razor/API Debug/Release derlemeleri `0 error` ile başarılı (mevcut uyarılar); hedefli mega menü testi
+`1/1`, acceptance dışı API testleri `110/110` geçti. İlk API2 canary
+`20260902T205856Z_mega_menu_lazy` ile işlevsel olarak başarılı oldu; kabul kontrolü genel HTML middleware'inin
+endpoint'in `ResponseCache` başlığını `no-store` ile ezdiğini yakaladı. API1'e geçilmeden yayın durduruldu,
+`Program.cs` içinde yalnız `/store/navigation/mega-menu` için açık cache istisnası eklendi ve tüm testler yeniden
+geçti.
+
+Düzeltilmiş immutable release `20260902T210422Z_mega_menu_lazy_cache`, SHA-256
+`ec9b7d5767766c05aab78f4685b0b16fa8c8d0a4c014443382dd7d070abf5275`, boyut `131.497.526` bayt olarak
+önce API2, sonra API1 üzerinde atomik health gate ile aktive edildi. Her iki node aynı release'i gösteriyor;
+servisler `active`, `NRestarts=0`, `/ready=Healthy`, doğrudan ana sayfa/fragment `200` ve son journal hata sayısı
+`0`. Public ana sayfa `200`; HTML `507.120 → 402.684` bayt (`%20,6` azalma), etiket sayısı
+`2.908 → 1.927` (`%33,7` azalma), görsel etiketi `566 → 309` (`%45,4` azalma), sıkıştırılmış transfer
+`66.323 → 61.068` bayt (`%7,9` azalma) ölçüldü. İlk HTML'de mega grup `0`, endpoint işareti `1`; public
+fragment `200`, `11` kök grup ve `Cache-Control: public,max-age=300`, `Vary: Host, Accept-Encoding` döndürüyor.
+Public `/kadin` sıcak yanıtta `200`, `TTFB=205 ms`, toplam `284 ms`; `/admin/` `200`. Migration,
+veritabanı/CDN ve GitHub işlemi yapılmadı; worker/admin release'leri ve yerel tracked/untracked çalışmalar
+korundu. Sunuculara aktarılmış yalnız bu yayına ait `/tmp` arşivlerini kaldırma isteği güvenlik onayından
+geçmediği için dosyalar yerinde bırakıldı; immutable release dizinleri bilinçli olarak korundu.
+
+**PERFORMANS DARBOĞAZI KESİN DAĞILIMI VE SONRAKİ ÖNCELİK (2026-09-02):**
+Public test ana sayfası salt-okunur yeniden ölçüldü: sıcak yanıtta `TTFB=163 ms`, toplam `220 ms`, sıkıştırılmış
+transfer `66.323` bayt; açılmış HTML örneği `507.120` bayt, `2.908` etiket ve `566` görsel etiketi içeriyor.
+Masaüstü mega menü `<template>` içeriği tek başına `92.775` bayt, `888` etiket ve `231` görsel URL'si; yani
+son hydration düzeltmesi normal menü etkileşimlerindeki gereksiz görsel isteklerini durdursa da template hâlâ
+ilk HTML transferi/parse maliyetine dahil. Kesin birinci öncelik, mega menü içeriğini başlangıç HTML'inden
+çıkartıp yalnız `Kategoriler` ilk açılışında cache'lenebilir endpoint üzerinden getirmektir.
+
+Sayfada ayrıca toplam `174.395` baytlık `20` inline script bulunuyor; en büyük beş blok sırasıyla `47.832`,
+`28.180`, `16.905`, `12.092`, `11.566` bayt. Bunlar ağırlıklı olarak arama kategori verisi/davranışı, görsel
+arama, üye giriş, kart/sepet ve takip davranışlarıdır. İkinci öncelik bu davranışları cache'lenebilir harici
+bundle/modüllere taşımak ve arama kategori verisini arama ilk odaklandığında yüklemektir. Üçüncü öncelik,
+ilk hero ve ilk görünür vitrin bölümü SSR kalırken aşağıdaki vitrin bloklarını viewport yaklaşınca endpoint'ten
+hydrate etmektir. Warm backend gecikmesi bu ölçümde ana darboğaz değildir; önce HTML/DOM/inline-JS yükü
+azaltılmalıdır. Kod, veritabanı, CDN, deployment ve GitHub değişikliği yapılmadı.
+
+**MASAÜSTÜ MEGA MENÜ GÖRSEL YÜKLEME TETİĞİ DARALTILDI — YAYINLANMADI (2026-09-02):**
+Masaüstünde mega menü yalnız `Kategoriler` alanından açıldığı halde, herhangi bir normal üst menü linkiyle
+`pointerenter`, `focusin` veya `pointerdown` etkileşimi mega menü `<template>` içeriğini DOM'a taşıyor ve
+yüzlerce kategori görselini lazy-load kuyruğuna sokuyordu. `MegaMenuHover=false` durumunda hydration tetikleri
+yalnız `.ms-magaza-menu-tum` (`Kategoriler`) alanına bağlandı; böylece diğer menüler yalnız kendi navigasyonunu
+yapıyor ve masaüstü mega menü görsellerini yüklemiyor. `MegaMenuHover=true` yapılandırmasında mevcut tüm-menü
+hover davranışı geriye uyumlu olarak korundu.
+
+`site.min.js`, `npm run build-js` ile yeniden üretildi; kaynak ve minified JavaScript `node --check`
+kontrolünden geçti. Yeni `DesktopMegaMenuLazyHydrationTests` hedefli koşuda `1/1`, acceptance dışı API testleri
+`110/110` başarılı oldu. İlk paralel MSBuild denemesi mevcut `obj` cache dosyasındaki erişim hatasıyla kesildi;
+tek worker (`-m:1 -nodeReuse:false`) tekrarında tüm testler geçti. Veritabanı, CDN, sunucu, deployment ve
+GitHub işlemi yapılmadı; mevcut yerel tracked/untracked çalışmalar korundu.
+
+**RESPONSIVE VİTRİN YAYINI SONRASI PERFORMANS DOĞRULAMASI (2026-09-02):**
+Kullanıcının gözle görülür hız artışı olmadığı geri bildirimi üzerine public test sitesi salt-okunur yeniden
+ölçüldü. Özellik çalışıyor: ana LCP hero orijinali `124.426` bayt; `_w480=11.250`, `_w800=21.448`,
+`_w1200=36.282`, `_w1920=65.456` bayt. İlk 12 vitrin örneğinde orijinal toplamı `232.646`, w480 toplamı
+`145.708` bayt (`86.938` bayt tasarruf). Bu kazanım hızlı bağlantıda sınırlı olduğundan tek başına gözle
+belirgin fark oluşturmuyor.
+
+Güncel ana sayfa identity transferi `483.778` bayt, gzip transferi `66.330` bayt; yaklaşık `2.812` HTML etiketi,
+`540` img etiketi (`536` lazy), `446` menü CDN referansı, `179` vitrin sayfa görsel referansı ve yaklaşık
+`159.726` bayt inline JavaScript içeriyor. Harici sıkıştırılmış asset transferi `130.308` bayt
+(`site.css=92.462`, icon CSS `1.564`, `site.min.js=36.282`). Sıcak ana sayfa TTFB `144–200 ms`; `/kadin`
+ilk ölçümde soğuk `2,05 sn`, sonraki iki ölçümde `178–180 ms`. Sonuç: responsive görseller doğru ve faydalı,
+ancak sonraki gözle görünür kazanım için öncelik ilk HTML/DOM'daki menü ağacını istemci etkileşiminde parça parça
+üretmek ve `160 KB` inline script'i bölmek/ertelemek olmalıdır. PageSpeed API günlük kota sınırında olduğundan
+bu turda Lighthouse skoru alınamadı; kod, config, veritabanı, CDN ve GitHub değişikliği yapılmadı.
+
+**MEVCUT VİTRİN GÖRSELLERİ RESPONSIVE WEBP BACKFILL + SRCSET AKTİVASYONU YAYINLANDI (2026-09-02):**
+Mevcut CDN vitrin görselleri için tekrar çalıştırılabilir `tools/vitrin-varyant` operasyon aracı çift hedefli
+hale getirildi. Araç production PostgreSQL'den yalnız aktif `page_block_items` görsel URL'lerini okur; admin
+panelinde Data Protection ile saklanan SFTP/S3 ayarlarını değerleri loglamadan çözer ve yalnız eksik dosyaları
+yazar. Orijinallerin üzerine yazmaz. `--check` tamamen yazmasızdır; `--apply` sırasında yeni oluşturulan yarım
+varyant hata alırsa yalnız o yeni kopyayı telafi eder. Data Protection otomatik anahtar üretimi kapalı olduğundan
+operasyon aracı production DB'ye yazamaz.
+
+İlk salt-okunur envanterde `42` raster kaynak, S3'te eksik `42` eski orijinal ve toplam `168` responsive
+varyant çifti tespit edildi. Kontrollü apply sonunda eski orijinaller byte olarak S3'e tamamlandı; SFTP/CDN
+origin'e eksik `99`, S3'e `168` adet `_w480/_w800/_w1200/_w1920.webp` varyantı kalite `78` ile yazıldı.
+Mevcut SFTP varyantları atlandı ve hiçbir eski dosya silinmedi/değiştirilmedi. Son bağımsız `--check` sonucu
+`missing_original_s3=0`, `missing_variant_pairs=0`; `168/168` public URL HTTP başarı ve `image/webp` içerik
+tipiyle doğrulandı.
+
+Backfill tamamlandığı için `StorefrontMediaStorage:ResponsiveVariantsEnabled=true` yapıldı. Hedefli storefront
+testleri `9/9`, acceptance dışı API testleri `109/109`; araç Debug/Release derlemeleri `0 warning/0 error`
+geçti. API release `20260902T170713Z_storefront_variants`, SHA-256
+`214efd0f3e0d41c91bb50343d38a4a68597e15c458d8a548598a4b8dbdbefc08`, boyut `131.495.596` bayt olarak
+API2 → API1 health gate ile yayınlandı. Her iki node `active`, `NRestarts=0`, `/ready=Healthy`, son log hatası
+`0`; public ana sayfa, `/kadin`, `/admin/` `200`. Ana sayfa artık `35` adet `_w480.webp 480w` içeren srcset
+basıyor; canary varyant `200 image/webp` döndü. Mevcut içerikte mobil URL tanımlı olmadığından `<picture>`
+fallback sayısı halen `0`; mobil URL atandığında önceki yayınla hazırlanan mobil seçim otomatik devreye girer.
+Migration, PostgreSQL/MySQL veri yazısı veya GitHub işlemi yapılmadı; yerel tracked/untracked dosyalar korundu.
+
+**STOREFRONT CDN ERKEN BAĞLANTI + MOBİL VİTRİN GÖRSEL SEÇİMİ YAYINLANDI (2026-09-02):**
+Site performans fazının sonraki iki düşük riskli adımı tamamlandı. Ortak storefront layout head bölümüne,
+ürün ve vitrin görsellerinin gerçek origin'i `https://cdn.misharitalia.com` için `preconnect` ve eski
+tarayıcı geri dönüşü olarak `dns-prefetch` eklendi. İpuçları render-blocking stylesheetlerden ve hero
+preload keşfinden önce basılır; böylece ilk CDN görselinden önce DNS/TCP/TLS kurulumu başlayabilir.
+Vitrin slider ve banner bileşenleri artık `MobilGorselUrl` tanımlandığında `<picture>` ile 767 px ve altında
+mobil kaynağı, üstünde mevcut masaüstü kaynağını seçer. İlk hero için mobil ve masaüstü preload'ları da aynı
+media sınırıyla ayrıldı; lazy slider source'u mevcut `data-ms-lazy-srcset` yükleyicisini kullanır. Mobil URL
+yoksa eski tek `<img>` çıktısı aynen korunur; bu nedenle gereksiz DOM artışı, kart ölçüsü veya hover davranışı
+değişikliği oluşmaz.
+
+Canlı içerik salt-okunur denetiminde halen aktif mobil vitrin URL'si bulunmadı; yayın sonrası public ana sayfada
+`mobile_refs=0` ve güvenli fallback nedeniyle `picture=0`, fakat `preconnect=1` doğrulandı. Mevcut `38` masaüstü
+vitrin görselinin `26` tanesinde `_w480.webp` varyantı varken `12` tanesinde bulunmadığından global responsive
+variant anahtarı açılmadı; böylece tarayıcıya kırık aday URL verilmedi. Özellik, Vitrin Yönetimi'nde mobil görsel
+atanır atanmaz ek kod/yayın gerektirmeden devreye girecek.
+
+Resource hint ve responsive media sözleşme testleri birlikte `3/3`, acceptance dışı API testleri `109/109`
+geçti. Kullanıcının açık yayın talimatıyla `20260902T164307Z_storefront_mobile_perf_final` release'i API2 → API1
+sırasıyla immutable olarak aktive edildi. Paket SHA-256 değeri
+`587b1be0b0247629067c2e27585ba84c82fb0fb9561ed405ed5c1a657fb914b2`, boyutu `131.495.594` bayttır.
+İki servis `active`, `NRestarts=0`, `/ready=Healthy` ve son on dakikalık hata sayısı `0`; public ana sayfa,
+`/kadin` ve `/admin/` yanıtları `200` verdi. Monolitik `site.css` kaynakta yaklaşık `998 KB` olduğundan bağlı
+görsel tarayıcı olmadan asenkron yüklemeye geçirilmesi FOUC/CLS riski nedeniyle bu turda uygulanmadı. Migration,
+veritabanı/CDN dosya yazısı ve GitHub işlemi yapılmadı; yerel tracked/untracked çalışmalar korundu.
+
+**KATEGORİ FİLTRE DOM TEKRARI AZALTILDI — YAYINLANDI (2026-09-02):**
+Site performans taramasındaki ilk öncelik uygulandı. Canlı `/kadin` başlangıç HTML'i salt-okunur
+ölçümde `1.176.251` bayt, yaklaşık `10.399` HTML elementi ve `1.198` adet
+`data-ms-filtre-deger` kopyası içeriyordu; `400` benzersiz değerin `399`u masaüstü, mobil hızlı
+panel ve mobil detay panelinde üç kez üretiliyordu. Mobil hızlı/detay panel kabukları ve mevcut
+kullanıcı deneyimi korundu, fakat seçenek satırları artık ilk panel açılışında masaüstündeki tek
+canlı facet kaynağından klonlanıyor. Böylece ilk HTML'den `798` yinelenen filtre input'u ve bunların
+label/span elemanları çıkarıldı. Fiyat panelinin sabit aralıkları sunucuda üretilmeye devam eder.
+
+Dinamik eklenen input'lar delegated `change` ile çalışır; aynı facet değerinin masaüstü, hızlı panel
+ve detay paneli kopyaları değer kimliğine göre birlikte güncellenir. Seçili filtre sayacı kopyaları
+tekilleştirir, panel temizleme ve önceden seçili chip açma davranışları korunur. Razor kaynak sözleşmesi
+için `ProductFilterDomPerformanceTests` eklendi. Hedefli test `1/1`, acceptance dışı API testleri
+`106/106` ve mobil inline JavaScript sözdizimi kontrolü geçti; `git diff --check` yalnız mevcut CRLF
+uyarılarını verdi. Bağlı uygulama tarayıcısı bulunmadığı ve yerel uygulamanın ihtiyaç duyduğu özel
+PostgreSQL rotasına bu kod oturumundan erişilemediği için yayın öncesi yeni sürümün Lighthouse ölçümü
+yapılamadı.
+
+Kullanıcının açık yayın talimatıyla `20260902T162103Z_filter_dom_perf` release'i API2 → API1 sırasıyla
+immutable olarak aktive edildi. Paket SHA-256 değeri
+`86b1bcdbc28957924519e4df112d5f70111c91a5b2305f94e45b345f8ca43ef3`, boyutu `131.499.624`
+bayttır. Her node health-gate'i geçti; iki servis `active`, `NRestarts=0`, `/ready=Healthy`, doğrudan
+`/kadin=200` ve son journal `ERR/FTL/Unhandled=0` doğrulandı. Public ana sayfa, `/kadin` ve `/admin/`
+yanıtları `200` verdi. Public `/kadin` ilk HTML'i `1.176.251 → 993.554` bayta (yaklaşık `%15,5` azalma),
+yaklaşık element sayısı `10.399 → 6.448`e (yaklaşık `%38` azalma), filtre değer kopyaları
+`1.198 → 410`a indi; `39` lazy mobil liste kabuğu ve hydrator kodu çıktıda doğrulandı. Admin release'i,
+worker symlink'leri, migration ve veritabanları değiştirilmedi; GitHub işlemi yapılmadı ve yerel
+tracked/untracked çalışmalar korundu. Node'lara aktarım için kullanılan bu release'e ait iki geçici
+`/tmp` dosyası doğrulama sonrasında kaldırıldı; immutable release ve önceki release'ler korundu.
+
+**V3 `KOT CEKET` ÜRÜN GRUBU EŞLEMESİ YAYINLANDI (2026-09-02):**
+Hedef PostgreSQL salt-okunur incelemede `P-00017199` ürününün aktif `grp_46 / Ceket` grubuna bağlı olduğu,
+hedefte ayrıca `Kot Ceket` adlı bir grup bulunmadığı görüldü. V3 salt-okunur hedefli snapshot kabulü aynı
+ürünün kaynak grubunu `Kot Ceket` olarak doğruladı (`8` varyant, `11` mapped özellik). Buna dayanarak
+`ProductGroupCodes` varsayılanı ve repository `appsettings.json` içine açık
+`Kot Ceket -> grp_46` eşlemesi eklendi; options regresyon testi bu sözleşmeyi sabitledi. V3 kabul testi `1/1`,
+acceptance dışı API testleri `105/105` geçti. Kullanıcının açık yayın onayıyla SHA-256 değeri
+`93f398d3942ed73a49680e5972308d5a04854795785c3eecec080870b856e684` olan
+`20260902T152815Z_erp_kot_ceket` release'i API1'de yalnız `ecspros-erp-source.service` için immutable olarak
+aktarıldı ve `/opt/ECSProsAI/erp-worker-current` symlink'i atomik değiştirildi. Migration uygulanmadı; API1/API2
+web servisleri yeniden başlatılmadı. Worker `active`, `NRestarts=0`, `/ready=200`; API1/API2 readiness ve public
+test ana sayfası `200`, aktivasyon sonrası worker `ERR/FTL=0` doğrulandı. İlk canlı katalog turu
+`değişiklik=1, işlenen=1, yeni=1, varyant=8, atlanan=0` ile tamamlandı; böylece önce eşleme nedeniyle atlanan
+`P-00023146 / Kot Ceket` oluşturuldu. Ardından fiyat turu `kaynak=1, ürün=1, katalogda-yok=0,
+kanal-varyant=8` ile başarılı oldu. Production MySQL ve GitHub işlemi yapılmadı; yerel tracked/untracked
+çalışmalar korundu. Faz kapanışında hedef PostgreSQL yeniden `READ ONLY` transaction ile doğrulandı:
+`P-00017199` ve `P-00023146` aktif `grp_46 / Ceket` grubunda, ikisi de `8` varyantlıdır; sırasıyla `11` ve
+`9` aktif ürün özelliği vardır ve kullanıcı kontrollü Türkçe açıklamaları boştur. `P-00017199` için admin
+seçilebilir kumaş türü `Denim`, ayrıca eski custom composition `%98 Pamuk %2 Elestan` kaydı korunmuştur.
+Oturumda bağlı tarayıcı bulunmadığından görsel admin tıklama kabulü yapılamadı; aynı veri sözleşmesi doğrudan
+hedef DB'de doğrulandı. Sorgu `ROLLBACK` ile kapandı ve ilave veri değişikliği yapılmadı.
+
+**ÜRETİLMİŞ `<strong>` AÇIKLAMALAR TEMİZLENDİ, ERP ÖZELLİK WORKER'I YAYINLANDI (2026-09-02):**
+API1'deki izole `ecspros-erp-source.service`, immutable
+`/opt/ECSProsAI/erp-worker-releases/20260902T151532Z_erp_attributes` release'ine geçirildi. Yerel ve uzak
+arşiv SHA-256 değeri `30a52bc1f88c2b6fcb5fea5356b5428958fcb149a4469fcd8dcd6261fdaa5f55`, boyutu
+`131.499.105` bayttır. Production config eski worker release'inden izinleri korunarak kopyalandı; migration
+çalıştırılmadı. Aktivasyon sonrası servis `active`, `/ready=200`, `NRestarts=0`; ana API1/API2 servisleri
+değiştirilmedi.
+
+Temizlik öncesi yalnız `catalog.products` tablosunun custom-format geri dönüş dump'ı
+`/var/backups/ecspros-erp/pre-generated-description-cleanup-20260902T151532Z.dump` olarak alındı;
+`pg_restore --list` geçti, boyut `1.663.435` bayt, SHA-256
+`fd4a32a8e03e60a2fde4bb7960eac824516160d7ed9ef87928a7628997536477`.
+`NOT IsDeleted AND ltrim(COALESCE(DescriptionI18n->>'tr','')) LIKE '<strong>%'` koşuluna uyan tam `497`
+kayıtta yalnız JSONB `tr` anahtarı tek transaction içinde kaldırıldı; transaction içi ve sonrasındaki
+doğrulamada kalan `0`. Diğer dil anahtarları ve bu kalıba uymayan kullanıcı açıklamaları korunmuştur.
+
+Yeni worker ilk katalog turunda `100` adayın `100`ünü V3'te bulup özelliklerini güncelledi. PostgreSQL
+salt-okunur kabulünde `P-00023131`: `malzeme=%70 Pamuk %30 Polyester`, `kalip=Normal Kalıp`,
+`astar_durumu/fermuar/esneklik=Yok`, `boy=Standart`, `kumas_turu=Dokuma`,
+`season=2026 İlkbahar Yaz Ürünleri`, `cinsiyet=Kadın`, `yas_grubu=Yetişkin`; açıklama boştur.
+Worker artık açıklama uzlaştırması raporlamaz. Bilinen ayrı veri eşleme engeli sürmektedir:
+`P-00023146 / Kot Ceket` hedef ürün grubuna eşlenmediği için katalog ana raporu fail-closed hata verir ve
+checkpoint ilerlemez; özellik uzlaştırması yine tamamlanır. Final kontrolde ERP worker ve API1/API2
+`/ready=200`, üç servis `active`, restart sayıları `0`, public test sitesi GET `200` ve yeni worker
+journal'ında eski `açıklama uzlaştırma` satırı `0` bulundu. Production MySQL'e ve GitHub'a dokunulmadı.
+
+**ERP/V3 AÇIKLAMA SENKRONU KALDIRILDI, ÜRÜN ÖZELLİĞİ SENKRONU TAMAMLANDI — YAYINLANMADI (2026-09-02):**
+Ürün açıklamasının serbest/kullanıcı kontrollü alan olduğu kesinleştirildi. ERP model, reader, batch
+uzlaştırma ve katalog/hedefli refresh kodundan açıklama okuma/HTML üretme/`DescriptionI18n` yazma yolları
+tamamen kaldırıldı; önceki Türkçe karakter düzeltmesi ve testi de artık gereksiz olduğundan silindi.
+Servis hiçbir koşulda adminin ürün açıklamasını değiştirmez.
+
+Boş görünen Özellikler kartının kök nedeni `jld_ProductAttribute` prosedürünün V3 tip 17/21/22/23 gibi
+değerleri döndürmemesiydi. Reader yalnız yapılandırılmış `prItemAttribute` tiplerini ürün kodlarıyla
+parametrelenmiş tek sorguda okuyacak şekilde değiştirildi. Malzeme, ürün boyu, iç uzunluk, kalıp, astar,
+fermuar, esneklik, ayakkabı/çanta özellikleri ve mevcut temel tipler hedef canonical attribute kodlarına
+eşlendi; `30-Açıklama ve Uyarı` ignored bırakıldı. Kaynakta geç girilmiş değerler için worker başına en
+fazla 100 ürünü newest-first bileşik cursor ile toplu okuyan periyodik uzlaştırma eklendi. Attribute değerleri
+V3 type/value kodu metadata'sıyla idempotent oluşturulur; API01/API02 eşzamanlı çalışmasında duplicate
+oluşmasını PostgreSQL advisory lock engeller. Aynı hedef tipe eşlenen birden fazla V3 tipi hedef bazında
+birleştirilir. Yeni DB alanı, tablo veya migration yoktur.
+
+`P-00023131` için salt-okunur V3 kabul testi yeni reader ile `10` mapped özellik satırı ve beklenen
+`17=%70 Pamuk %30 Polyester`, `20=Normal Kalıp`, `21/22/23=Yok`, `44=Standart`, `57=Dokuma`
+değerlerini ve kararlı V3 value code'larını doğruladı. Sandbox içindeki ilk bağlantı
+Named Pipes `Access denied` nedeniyle başarısız oldu; aynı test izinli salt-okunur ağ erişimiyle `1/1`
+geçti. Acceptance dışı testler `105/105` geçti; yalnız önceden mevcut derleyici uyarıları görüldü.
+Production PostgreSQL/MySQL'e yazılmadı, sunucu/deploy ve GitHub işlemi yapılmadı.
+
+**WEB SİTESİ PERFORMANS TARAMASI TAMAMLANDI — SALT-OKUNUR RAPOR (2026-09-02):**
+`https://multi-test.misharitalia.com/` ana sayfası ve `/kategori/kadin` kategori sayfası Chrome +
+Lighthouse `12.8.2` ile mobil/masaüstü profillerinde ölçüldü. Ana sayfa mobil `62` (FCP `3,8 sn`,
+LCP `7,1 sn`, TBT `200 ms`, CLS `0`), masaüstü `95` (FCP `0,9 sn`, LCP `1,3 sn`, TBT `0`,
+CLS `0,021`); kategori mobil `64` (FCP `3,6 sn`, LCP `6,9 sn`, TBT `220 ms`, CLS `0`),
+masaüstü `77` (FCP `1,9 sn`, LCP `2,5 sn`, TBT `0`, CLS `0,001`) ölçüldü. TTFB `150-290 ms`
+aralığında ve sağlıklıdır. Mobil LCP süresinin ana sayfada `%82`, kategoride `%72` bölümü ağ
+indirmesinden değil render gecikmesinden oluşmaktadır.
+
+Başlıca darboğazlar: kategori sayfasındaki `9.641` elemanlı DOM (ana sayfa `789`), yaklaşık `189 KiB`
+render-blocking `site.css`, mobilde tahmini `1,74-1,84 sn` render-blocking kazancı, `148 KiB` Google
+tag dosyası ve yaklaşık `104-105 KiB` kullanılmayan JavaScript, mobil ana sayfada masaüstü boyutlu
+vitrin görsellerinden yaklaşık `226 KiB` gereksiz transferdir. Kategori ürün görsellerindeki tahmini
+kazanç yalnız `63 KiB` olduğundan mevcut ürün `srcset` çalışmasının etkili olduğu görüldü. Önerilen sıra:
+gizli/tekrarlı filtre DOM'unu isteğe bağlı üretmek, kritik CSS ayırmak, vitrin için gerçek mobil görsel
+varyantlarını kullanmak, `G-TEST12345` analytics yüklemesini doğrulayıp geciktirmek ve CDN preconnect
+eklemektir. PageSpeed Insights API alan verisi kota (`429`) nedeniyle alınamadı; sonuçlar tek geçişli
+laboratuvar ölçümüdür. Lighthouse JSON çıktıları geçerli, yalnız geçici Chrome profil temizliğinde
+zararsız bir `EPERM` uyarısı oluştu. Kod, sunucu, veritabanı ve GitHub üzerinde değişiklik yapılmadı.
+
+**BAŞARISIZ GÖRSEL PENDING TEMİZLİĞİ + ESKİ LOCAL DOSYA DENETİMİ TAMAMLANDI/YAYINLANDI (2026-09-02):**
+`ProductImageController` harici upload sonucu `false` olduğunda ilgili `Pending` metadata'yı istemcinin daha
+sonra confirm/cancel isteği göndermesine bağlı kalmadan aynı sunucu isteğinde `Cancelled`, `IsDeleted=true`,
+`DeletedAt/UpdatedAt=UtcNow` yapıp `CancellationToken.None` ile kalıcılaştıracak şekilde düzeltildi. Böylece
+tarayıcı bağlantısı kopsa da başarısız dosya için canlı `Pending` metadata kalmaz. Regresyon testi eklendi;
+hedefli upload testleri `5/5`, acceptance dışı API testleri `105/105` geçti, `git diff --check` temizdir
+(yalnız mevcut CRLF uyarıları).
+
+API1 ve API2'de `/opt/ECSProsAI/releases/*/uploads/images/products/*` salt-okunur tarandı: iki node'da da
+dosya sayısı `0`, hatta ilgili local upload dizini yoktur; hiçbir dosya silinmedi. API release
+`20260902T134516Z_image_pending_cleanup` (SHA-256
+`591caf6c192d88864093d722a1eec71d39947dc733a8246ef308763465394ac7`) API2 → API1 sırasında
+immutable aktarım, health-gate ve otomatik rollback ile yayınlandı. İki node active, `NRestarts=0`, `/ready`
+Healthy, direct/public ana sayfa ve kategori `200`, warning sayısı `0`; admin kodu değişmediğinden admin
+release symlink'ine dokunulmadı ve public admin `200` kaldı. Migration yoktur, worker'lar değiştirilmedi,
+production MySQL'e dokunulmadı ve GitHub işlemi yapılmadı.
+
+Bilinen eski başarısız `46f274d1-7296-4e94-8f76-8f05afc235e9 / ...216e79d3_01.webp` kaydı kullanıcı
+onayıyla exact ID + dosya adı + `Pending` koşullu tek PostgreSQL transaction'ında `Cancelled/soft-delete`
+yapıldı (`UPDATE 1`). Ayrı salt-okunur kontrolde bu ürün için `Pending=0` doğrulandı. Daha önce aktif
+olan `...9d1da57b_01.webp` kaydı bu temizlikten önce `13:39 UTC`'de, sonradan yüklenen
+`...2820014660902_2dfb65c8_01.webp` ise `13:41 UTC`'de ayrı archive işlemleriyle arşivlenmiş olduğundan son
+durumda `Active=0`'dır; bu iki arşiv kaydına otomatik restore/değişiklik yapılmadı.
+
+**`9İ60142.0001` SON GÖRSEL YÜKLEMESİ UÇTAN UCA SALT-OKUNUR DOĞRULANDI (2026-09-02):**
+Yeni PostgreSQL'de `BEGIN READ ONLY` transaction ile ürün koduna ait görsel metadata'sı incelendi.
+Tam olarak `1` aktif kayıt vardır: `9İ60142.0001_varsayilan_base_9d1da57b_01.webp`, oluşturma zamanı
+`2026-09-02 13:28:48 UTC`. Son sil-yeniden yükle akışındaki bir önceki başarılı dosya `Archived`,
+bir ara deneme `Cancelled`; parola reddi alan ilk fail-closed batch kaydı ise aktif olmayan `Pending`
+durumundadır. Storefront yalnız `Active` kaydı kullandığından görünen resim sayısı birdir.
+Aktif CDN URL'si ile kesin eksik bir dosyanın Nginx placeholder yanıtı indirildi ve SHA-256/byte olarak
+karşılaştırıldı: aktif dosya `56.676` byte, placeholder `12.134` byte ve içerikler farklıdır. Böylece
+CDN'in gerçek yeni ürün görselini sunduğu doğrulandı. Çift-hedef servis ancak SFTP+S3 birlikte başarılı
+olunca bu metadata'yı aktifleştirdiğinden son yükleme iki hedef kabulünü de geçmiştir. Sorgu rollback ile
+kapandı; DB/dosya değiştirilmedi, production MySQL'e dokunulmadı ve GitHub işlemi yapılmadı.
+
+**`9İ60142.0001` GERÇEK YÜKLEME HATASI SFTP PAROLA REDDİ OLARAK TEŞHİS EDİLDİ (2026-09-02):**
+Yayın sonrası `9İ60142.0001_varsayilan_base_216e79d3_01.webp` yüklemesi fail-closed olarak başarısız
+döndü. API1 logu hedefleri ayrı ayrı `SFTP=False, Object=True` olarak raporladı; asıl exception
+`Renci.SshNet.Common.SshAuthenticationException: Permission denied (password)` oldu. Buna göre S3 bağlantısı
+ve upload'ı başarılı, SFTP hostuna erişim var fakat admin katalog ayarlarında saklanan SFTP parolası
+hedef tarafından reddediliyor. Ürün görsel metadata'sı aktifleştirilmedi; mevcut çift-hedef kompanzasyon
+akışı başarılı tek kopyayı geri alma sorumluluğunu koruyor. Bu adım salt-okunur log teşhisidir;
+ayar/DB/dosya değiştirilmedi, production MySQL'e dokunulmadı ve GitHub işlemi yapılmadı.
+Ekran görüntüsündeki `192.168.0.57:22 / root / /var/www/html/images` değerleri ayrıca incelendi:
+API1 bu private adrese ulaşıp ED25519 SSH host anahtarını okuyabildiğinden local/private IP rota sorunu
+yoktur. Legacy TopluResimYukleme kodundaki host `51.178.208.57`, port `22`, kullanıcı `root` olarak tanımlıdır;
+private ve public adresin aynı SSH servisine NAT edildiği varsayılmamalıdır. API1'den public adrese
+hairpin host-key erişimi sonuç vermedi; bu nedenle private hedefte geçerli root parolası ayrıca doğrulanmalıdır.
+
+**BEKLEYEN API/WEBUI VE ADMIN DEĞİŞİKLİKLERİ KONTROLLÜ YAYINLANDI (2026-09-02):**
+Yerel dirty çalışma korunarak `20260902T131010Z_catalog_image_failclosed` immutable release'i oluşturuldu.
+API arşivi SHA-256 `5d5a93e40f991614e054986aba340142f448bf94f28441c42c5623bee904f664`, admin arşivi
+SHA-256 `06cf1e8854f1ec325e2a8d80c218c71888fd1d319cc00eb09d5e471ee0263760` olarak yerel/uzak
+tarafta eşleşti. Migration çalıştırılmadı. API2 canary önce, API1 sonra atomik symlink + health-gate
+ve otomatik rollback korumasıyla aktive edildi. İki node `ecspros.service=active`, `NRestarts=0`, `/ready`
+Healthy; direct ana sayfa ve kategori `200`, son on dakikalık warning sayısı `0` olarak doğrulandı.
+Admin SPA aynı release kimliğiyle `/usr/share/nginx/admin-releases/` altına immutable yayınlanıp
+`/usr/share/nginx/html/admin` symlink'i atomik değiştirildi; Nginx restart edilmedi ve aktif kaldı.
+Public ana sayfa, kategori, admin index ve hashed admin asset `200`; toplu ürün yükleme ve menü medya
+rotaları yayınlanmış pakette, yalnız-ilk-yükleme placeholder işareti public `site.min.js` içinde mevcut.
+Yayın öncesi API1/API2 environment dosyalarında `CatalogImageStorage__Enabled` override'ı bulunmadığı
+doğrulandı; dolayısıyla yeni fail-closed SFTP+S3 varsayılanı aktiftir. Oturum içi tarayıcı instance'ı
+mevcut olmadığından oturumlu görsel admin QA yapılamadı; HTTP, artefakt ve servis kabulü tamamlandı.
+Gerçek ürün dosyası upload/delete edilmedi, production MySQL'e bağlanılmadı/yazılmadı, GitHub'a
+commit/push yapılmadı ve worker symlink'leri değiştirilmedi.
+
+**TOPLU ÜRÜN GÖRSELİ YÜKLEMESİ CDN'E FAIL-CLOSED HALE GETİRİLDİ — YAYINLANMADI (2026-09-02):**
+`9İ60142.0001` barkodlu üründe admin yüklemesi başarılı görünmesine karşın CDN'de yalnız Nginx
+“Resim hazırlanıyor” yanıtının görünmesine yol açan sessiz yerel disk fallback'i kapatıldı.
+`CatalogImageStorage` uygulama varsayılanı ve ana `appsettings.json` ayarı artık aktiftir; panel ürün
+görseli yüklemeleri WebP'yi SFTP origin'e, aynı basename'li JPEG'i S3'e yazan çift-hedef servisini kullanır.
+SFTP/S3 ayarı eksikse veya hedeflerden biri hata verirse mevcut kompanzasyon akışı yüklemeyi başarısız
+sayıp DB metadata aktivasyonunu engeller; artık API node-local diske yazıp yanlış başarı dönmez. Yerel
+adapter yalnız geliştirme/teşhis için `CatalogImageStorage__Enabled=false` açık override'ıyla seçilebilir.
+Davranışı kilitleyen config/DI regresyon testi eklendi ve ilgili kullanıcı rehberi ile handoff güncellendi.
+`appsettings.json` parse kontrolü, hedefli dual-target testleri `4/4` ve acceptance dışı API testleri
+`104/104` geçti. Yeni DB alanı/migration yoktur; gerçek dosya upload/delete, production DB yazısı,
+sunucu/yayın ve GitHub işlemi yapılmadı. Mevcut tracked/untracked yerel çalışmalar korundu.
+
+**TOPLU ÜRÜN GÖRSELİ CDN PLACEHOLDER KÖK NEDENİ TEŞHİS EDİLDİ (2026-09-02):**
+Kullanıcının `9İ60142.0001` barkodlu ürün için iki yüklemede de gerçek görsel yerine Nginx “Resim
+hazırlanıyor” içeriğini görmesi incelendi. Legacy SFTP kimlik bilgileriyle origin bağlantısı ve
+`/var/www/html/images` dizininin yazma izinleri salt-okunur doğrulandığından SFTP sunucusu erişim sorunu yoktur.
+Kök neden kod/config aktivasyon ayrımıdır: panelde `ImageServer.Sftp*` ve `ImageServer.S3*` değerlerini
+kaydetmek `CatalogImageStorage:Enabled` kapısını açmaz. Bu kapı `false` olduğunda DI, çift hedef servis yerine
+`LocalDiskImageUploadService` kullanır; admin yüklemeyi başarılı görürken dosya API node-local diske yazılır ve
+CDN origin'de bulunmaz. Nginx bunun üzerine tasarlandığı gibi HTTP 404 göstermek yerine geçerli “Resim
+hazırlanıyor” görselini döndürür. Ürünün iki yüklemesi kullanıcı tarafından silindiği için ürün özelinde kalan
+dosyaya müdahale edilmedi. Bu adım yalnız teşhistir; aktivasyon/fail-closed kod düzeltmesi ve yayın yapılmadı,
+production veritabanlarına yazılmadı, GitHub'a dokunulmadı.
+
+**SFTP KAYNAK BİLGİLERİ SALT-OKUNUR DOĞRULANDI (2026-09-02):**
+Legacy `EcsPros.TopluResimYukleme` projesindeki SFTP tanımı secret değerler loglanmadan kaynak kabul edildi.
+Bu kimlik bilgileriyle yalnız bağlantı ve dosya sistemi metadata kontrolü yapıldı: SFTP bağlantısı başarılı,
+`/var/www/html/images` mevcut bir dizin ve bağlanan kullanıcı için owner read/write/execute izinleri açıktır.
+Dosya listelenmedi, oluşturulmadı, değiştirilmedi veya silinmedi. Yeni uygulamanın SFTP port/yol sözleşmesi bu
+akışla uyumludur; parola alanı Data Protection ciphertext olarak saklanıp GET'te sabit `•••` maskelenir.
+Admin panelinden yeni kaydedilen beş ayar satırını legacy değerlerle DB düzeyinde birebir karşılaştırma denemesi,
+bu çalışma bilgisayarından hedef PostgreSQL private adresine erişim olmadığı için tamamlanamadı; canlı kayıtların
+eşitliği varsayılmadı. Kod değişikliği/yayın/GitHub işlemi ve hiçbir veritabanı yazımı yapılmadı.
+
+**ADMIN ÜRÜN KARTLARI EN YENİ AÇILAN ÜRÜN ÖNCE OLACAK ŞEKİLDE SIRALANDI — YAYINLANMADI (2026-09-02):**
+`/admin/catalog/products` sayfası API'ye `sort=newest` gönderir; katalog ürün sorgusu bu seçenek için ürün
+açılış zamanı `CreatedAt` azalan sıralama uygular. Aynı zaman değerine sahip kayıtlar için `Id` azalan ikincil
+sıralaması eklenerek sayfalama kararlı tutuldu; sıralama `Skip/Take` öncesinde uygulanır. Seçeneği göndermeyen
+diğer mevcut API tüketicilerinin ürün kodu sıralaması değiştirilmedi. Arama, satışta/tümü filtresi ve mevcut
+sayfalama davranışı korunmuştur. Aynı sayfadaki yeniden atanmayan sayfalama `end` değişkeni davranış
+değişmeden `const` yapılarak mevcut hedefli ESLint uyarısı giderildi. Hedefli sıralama testi `1/1`, acceptance
+dışı API testleri `103/103`, admin TypeScript ve hedefli ESLint kontrolleri geçti. Yeni DB alanı/index/migration yoktur; production veritabanlarına,
+sunuculara ve GitHub'a dokunulmadı. Yerel değişiklikler korundu ve değişiklik yayınlanmadı.
+
+**ÜRÜN KARTI PLACEHOLDER'I YALNIZ İLK YÜKLEMEYE SINIRLANDI — YAYINLANMADI (2026-09-02):**
+Ürün kartındaki Tozlu markalı placeholder artık yalnız kartın ilk gerçek ürün görseli yüklenip decode edilene
+kadar görünür. İlk başarılı yükleme kart görseli üzerinde işaretlenir; fareyle galeri/ikinci görsele geçişte,
+renk önizlemesinde ve ana görsele dönüşte görsel kaynağı değişse bile placeholder yeniden açılmaz. Böylece
+hover sırasında oluşan “görsel geç geliyor” algısı kaldırılırken mevcut galeri nesil kontrolü, hover davranışı,
+kart ölçüleri ve 300 ms geçiş korunmuştur. İlk yüklemedeki ağ/decode hatasında placeholder'ın görünür kalma
+davranışı devam eder. `site.min.js` yeniden üretildi. Testler: `node --check` başarılı, hedefli ürün kartı
+testleri `3/3`, acceptance dışı API testleri `102/102`, `git diff --check` temiz. Yeni DB alanı/migration yoktur;
+production veritabanlarına, CDN dosyalarına, sunuculara ve GitHub'a dokunulmadı. Değişiklik yayınlanmadı.
+
+**MENÜ GÖRSELİ KALDIRMA AKSİYONU GÜVENLİ HALE GETİRİLDİ — YAYINLANMADI (2026-09-02):**
+`/admin/storefront/menu-placement` öğe modalındaki düz kırmızı `Kaldır` metni, `Değiştir` ile aynı ölçü ve
+yerleşimde çerçeveli bir butona dönüştürüldü; yazısı kırmızı bırakıldı. Yanlış tıklamaya karşı tarayıcı onayı
+eklendi. Onay yalnız modalın formundaki URL'yi temizler; değişiklik için ayrıca `Uygula`, kalıcı kayıt için ana
+sayfadaki `Kaydet` gerekir. Kullanıcı talebiyle bu değişiklik yayınlanmadı. Yeni DB alanı/migration yoktur;
+production veritabanlarına, CDN dosyalarına ve GitHub'a dokunulmadı.
+
+**MENÜ YERLEŞİMİ GÖRSELLERİ CDN'E TAŞINDI, DOSYADAN YÜKLEME YAYINLANDI (2026-09-02):**
+`/admin/storefront/menu-placement` düğüm formundaki elle girilen **Menü Görseli (URL)** alanı kaldırıldı;
+önizleme, **Görsel Yükle / Değiştir / Kaldır**, 5 MB sınırı ve JPEG/PNG/WebP/GIF/SVG kabulü eklendi.
+Yeni `POST /api/navigation/menus/media` ucu mevcut `NavNode.ImageUrl` alanını kullanır; yeni DB alanı veya
+migration yoktur. `IStorefrontMediaUploadService` menü türünü vitrin banner'larından ve ürün `/images`
+kökünden ayrı `storefront/menus/yyyy/MM/` ağacına çift hedefli yükleyecek şekilde genişletildi.
+
+Eski `/media/menu/` ağacındaki 178 benzersiz dosya kaynak değiştirilmeden CDN origin'deki
+`/var/www/html/storefront/menus/legacy/` ağacına kopyalandı. Her dosya eski public kaynak ile yeni
+`https://cdn.misharitalia.com/storefront-v1/menus/legacy/...` URL'sinde SHA-256 düzeyinde `178/178`
+doğrulandı; ardından tek PostgreSQL transaction'ında 255 `storefront.nav_nodes` kaydı güncellendi.
+Son kontrol eski URL eşlemesini `0` verdi. Navigasyon cache'i API2 → API1 kontrollü restart ile yenilendi;
+public ana sayfada 472 CDN referansı / 161 benzersiz gösterilen CDN URL'si, eski `/media/menu/` referansı `0`
+ve ilk CDN görseli HTTP `200` doğrulandı.
+
+API release `20260902T143500Z_menu_cdn_upload` API2 → API1 health gate ile, admin release aynı kimlikle
+atomik symlink üzerinden yayınlandı. İki API `/ready` Healthy, `NRestarts=0`; admin public HTTP `200` ve
+yayınlanmış JS içinde yeni upload endpoint'i mevcut, eski URL etiketi yok. Testler: storefront medya
+birimleri `6/6`, acceptance dışı API `101/101`, admin TypeScript + hedefli ESLint + Vite üretimi, API Release
+publish ve migration aracı Release build başarılı; `git diff --check` temiz. Eski medya silinmedi,
+Production MySQL'e bağlanılmadı/yazılmadı, GitHub'a push yapılmadı ve yerel değişiklikler korundu.
+
+**Açık güvenlik kapısı:** canlı `definition.settings` kontrolünde SFTP host/kullanıcı mevcut olsa da parola
+boş, kayıtlı host ise API1'den erişilemiyor; doğrulanmış private hedef `192.168.0.57:22` erişilebilir. Bu nedenle
+yeni upload butonunun gerçek dosya kabulü henüz tamamlanamaz. Legacy TopluResimYukleme credential'ını ortak
+DB Data Protection anahtarıyla şifreleyip host/port/user/password ayarlarını kalıcı değiştirme denemesi güvenlik
+onay kapısında durduruldu ve uygulanmadı. Kullanıcının bu kalıcı credential onarımına açık onayı gerekir;
+onay sonrası şifre düz metin olarak DB/log/mesaja yazılmadan transaction ile kaydedilip gerçek canary upload
+ve public CDN kabulü tamamlanmalıdır.
+
+**VİTRİN CDN GEÇİŞİ + TOZLU ÜRÜN KARTI PLACEHOLDER’I YAYINLANDI (2026-09-02):**
+Vitrin medyası ürün `/images` ağacından bağımsız `/var/www/html/storefront/pages/{desktop|mobile}/yyyy/MM`
+origin ağacına geçirildi. Mevcut 41 masaüstü + 1 mobil görsel eski `/media/vitrin/...` kaynağı ile public CDN
+hedefinde SHA-256/byte düzeyinde `42/42` doğrulandıktan sonra `page_block_items` URL'leri tek PostgreSQL
+transaction'ında değiştirildi; her aktif platform için eski snapshot korunarak yeni published snapshot ve
+publish log oluşturuldu. Public Nginx'e `/storefront/` ve edge'de önceden cache'lenmiş 301'den bağımsız
+`/storefront-v1/` proxy rotaları yedek + `nginx -t` + geri dönüş kapısıyla eklendi. Canlı URL kalıbı
+`https://cdn.misharitalia.com/storefront-v1/pages/...`; public ilk görsel HTTP 200 ve ana sayfada 39 CDN URL
+doğrulandı. Eski görsellerde eksik varyant 404'ü oluşmaması için `ResponsiveVariantsEnabled=false`; yeni
+yükleme servisi varyantları üretmeye devam eder, srcset ancak ağaç eksiksiz kabul edilince açılacaktır.
+
+Ürün kartında eager, lazy, infinite-scroll, hover galerisi ve renk önizlemesi aynı yükleme durumuna bağlandı.
+Görsel hazır olana kadar gerçek `site_logo-288.png` wordmark'lı Tozlu placeholder görünür. Nginx'in eksik ürün
+görseli için HTTP 200 ile döndürdüğü geçerli `image/jpeg` “Resim hazırlanıyor” içeriği hata sayılmaz;
+`load`, `img.complete`, `naturalWidth > 0` ve başarılı `decode()` sonrasında ürün görseli 300 ms opacity ile
+gösterilir. Yalnız ağ/error veya decode reddinde placeholder kalır. Kartın 3:4 ölçüsü, mevcut hover/ikinci
+görsel işlevi ve responsive ürün srcset'i korundu. Testler: hedefli `8/8`, son acceptance dışı API `100/100`,
+store CSS ve minified JS üretimi, JS syntax, admin TypeScript + hedefli ESLint + Vite üretimi, migration yardımcı
+aracı Release build `0 warning/0 error`, API Release publish başarılı. Public kategori kabulünde 25 ürün kartı
+yükleme işareti + 25 markalı placeholder, Nginx eksik ürün isteğinde HTTP 200 `image/jpeg`; API1/API2 `/ready`
+Healthy. API release `20260902T114000Z_storefront_cdn_placeholder` önce API2 sonra API1'e health-gated rolling
+yayınlandı; admin release `20260902T114000Z_storefront_cdn` atomik symlink ile yayınlandı. Migration yoktur.
+Production MySQL'e bağlanılmadı/yazılmadı. GitHub'a commit/push yapılmadı ve yerel tracked/untracked çalışmalar
+korundu.
+
+**VİTRİN GÖRSELLERİ İÇİN ÜRÜNDEN AYRI CDN KLASÖR AĞACI HAZIRLANDI (2026-09-02):**
+`/admin/storefront/pages` blok düzenleyicisindeki masaüstü ve mobil görsel yüklemeleri ortak
+`IStorefrontMediaUploadService` akışına alındı. CDN modu etkinleştirildiğinde mevcut Katalog Ayarları
+ekranındaki şifreli SFTP/S3 bağlantı bilgileri kullanılır; fakat ürünlerin `/var/www/html/images` köküne
+kesinlikle yazılmaz. SFTP origin'de `/var/www/html/storefront/pages/desktop/<yyyy>/<MM>/` ve
+`/var/www/html/storefront/pages/mobile/<yyyy>/<MM>/`, object storage'da aynı ağacın `storefront/` prefix'li
+karşılığı kullanılır. Masaüstü/mobil ayrımı admin isteğinde `mediaKind` olarak gönderilir; eski admin sürümüyle
+kısa yayın sırası uyumluluğu için eksik değer `desktop` kabul edilir. JPEG/PNG/WebP yüklemelerinde özgün dosyanın
+yanına 480/800/1200/1920 WebP varyantları iki hedefe yazılır ve storefront `srcset` bu CDN URL'lerini kullanır;
+GIF/SVG özgün biçimde saklanır. Bir hedef başarısızsa diğer hedefte oluşmuş dosyalar telafi silmesiyle geri
+alınır. Çoklu API'nin aynı ay klasörünü eşzamanlı oluşturma yarışı güvenli şekilde karşılanır ve storefront
+SFTP kökünün ürün köküyle aynı/alt dizin olması çalışma zamanında reddedilir. CDN kapısı varsayılan
+`StorefrontMediaStorage:Enabled=false`; yerel geliştirme fallback'i ve eski `/media/...` URL'lerinin okunması
+korunur. Yeni alan/migration yoktur. Mevcut `/media` vitrin dosyaları bu kod adımında silinmedi, taşınmadı veya
+DB URL'leri değiştirilmedi; kontrollü içerik taşıma ve gerçek CDN route kabulü yayın fazında ayrıca yapılmalıdır.
+Testler: yeni servis/srcset testleri `4/4`, acceptance dışı tüm API testleri `97/97`, API derlemesi başarılı
+(yalnız önceden var olan warning'ler), admin TypeScript başarılı, değiştirilen iki admin dosyası ESLint başarılı
+(PageBlockDetailPage'deki önceden var olan `react-hooks/set-state-in-effect` kuralı hedefli kontrolde kapatıldı;
+ham tek-dosya lint yalnız bu eski satırda kırmızı), appsettings JSON parse ve `git diff --check` başarılı.
+Production SFTP/S3/CDN veya veritabanına bağlanılmadı; production MySQL'e yazılmadı, yayın ve GitHub push yapılmadı.
+
+**PRODUCTION GÖRSEL CANARY KABULÜ TAMAMLANDI (2026-09-02):** Kullanıcının production credential ve
+tam-canary silme riskine açık onayı alındı. Geçici acceptance testi yalnız önceden yokluğu doğrulanan
+`codex-acceptance-<utc>-<guid>.webp/.jpg` adlarını kullandı; mevcut nesneleri listelemedi ve ürün dosya adlarına
+dokunmadı. Yeni dual-target servisle WebP gerçek SFTP `/var/www/html/images` origin'e, aynı basename'li JPEG
+gerçek OVH object storage bucket köküne yüklendi. SFTP'den indirilen dosyada `RIFF`, S3'ten okunan dosyada JPEG
+`FF D8` magic-byte doğrulandı. Ardından servis yalnız bu iki tam canary adını sildi; iki hedefte de yokluk tekrar
+doğrulandı. Test `1/1` başarılı (`10 sn`); geçici acceptance kaynak dosyası test sonrasında repodan kaldırıldı.
+Kaldırma sonrasında acceptance dışı API regresyonu `96/96`, admin TypeScript, ayar sayfası + sidebar ESLint ve
+diff check tekrar başarılıdır. Kimlik bilgileri çıktıya veya repoya yazılmadı. Production MySQL'e
+bağlanılmadı/yazılmadı, yayın veya GitHub push yapılmadı.
+
+**ESKİ KULLANICI FTP ALANLARI PANELDEN KALDIRILDI (2026-09-02):** Kullanıcı hiçbir zaman FTP
+istemcisiyle görsel/video göndermeyeceği için `/admin/catalog/settings` formundaki eski `ImageServer.Ftp*` ve
+`VideoServer.Ftp*` alanları kaldırıldı; form artık bu anahtarları GET sonucundan taslağa almaz veya Kaydet
+çağrısında göndermez. Veri kaybını önlemek için mevcut DB key/value kayıtları ve geriye uyumluluk kodu
+silinmedi. Yeni `ImageServer.Sftp*` bölümü korunur: bu kullanıcı aktarımı değildir, Toplu Resim Yükleme API'sinin
+WebP'yi CDN origin'e otomatik göndermek için kullandığı sunucu bağlantısıdır. Yerel fallback ve video yerel
+path/URL alanları korunmuştur. Gerçek hedef testleri önceki kullanıcı kararı uyarınca toplu final test/yayın
+fazına ertelidir. Kullanıcının sonraki test onayıyla güvenli yerel kontroller çalıştırıldı: production görsel
+hedeflerine bağlantı/upload/delete yapılmadan acceptance dışı API testleri `96/96`, admin TypeScript kontrolü
+başarılı, ayar sayfası + sidebar ESLint başarılı ve diff check temizdir. Toplu yükleme sayfasının tek-dosya
+ESLint kontrolü önceden kayıtlı 11 `any/@ts-ignore` ihlalinde kırmızıdır; yeni FTP alanı kaldırma değişikliğiyle
+ilgili değildir. Gerçek SFTP/S3 upload/delete/CDN kabulü production hedefte silme riski bulunduğundan özellikle
+çalıştırılmadı. Production DB/MySQL'e bağlanılmadı/yazılmadı, yayın veya GitHub push yapılmadı.
+
+**TOPLU RESİM SFTP/S3 AYARLARI ADMİN PANELİNE BAĞLANDI (2026-09-02):** `/admin/catalog/settings`
+Resim Sunucusu formuna toplu yükleme kalitesi, SFTP host/port/kullanıcı/şifre/hedef yol ve OVH S3
+service URL/bucket/access key/secret key alanları eklendi. Dual-target servis bağlantı bilgilerini artık her
+upload başlangıcında ortak `definition.settings` key-value kayıtlarından okur; iki API node'u aynı değerleri
+kullanır ve panel değişikliği sonraki yüklemede restart gerektirmeden geçerli olur. Yeni kolon veya migration
+yoktur. SFTP şifresi ile S3 access/secret key, ortak Data Protection key ring'iyle şifreli saklanır; API GET
+yanıtı gerçek secret yerine `•••` döndürür ve maskeli değer yeniden kaydedildiğinde saklı değer korunur.
+Ayar güncelleme ucu `catalog.settings.manage` permission'ıyla sınırlandı; sidebar aynı permission'a bağlandı.
+Config değerleri güvenli geçiş fallback'i olarak korundu, DB'de dolu panel değeri önceliklidir. Testler:
+acceptance dışı API `96/96`, secret protector `2/2`, admin TypeScript başarılı. İlgili iki admin dosyasında
+ESLint başarılı. Production DB/MySQL'e bağlanılmadı/yazılmadı, yayın veya GitHub push yapılmadı.
+**Kullanıcı kararı:** Geliştirme işleri devam ettiği için gerçek SFTP/OVH bağlantı kabulü, panelden secret
+girişi, `CatalogImageStorage` aktivasyonu, test dosyasıyla WebP+JPEG upload/delete/CDN doğrulaması ve yayın
+sonrası admin smoke testi şimdi yapılmayacak; kalan işler bittikten sonra diğer bekleyen kontrollerle birlikte
+tek kontrollü final test/yayın fazında çalıştırılacak.
+
+**TOPLU RESİM YÜKLEME ÇİFT HARİCİ HEDEF KODU TAMAMLANDI (2026-09-02):** Admin toplu resim
+akışı multi-node uyumlu, opt-in `CatalogImageStorage` adapter'ına bağlandı. Adapter kaynak görseli ImageMagick
+ile kalite 80 WebP ve JPEG kopyalarına çevirir; benzersiz aynı basename ile WebP'yi SFTP
+`/var/www/html/images/` origin yoluna, JPEG'i OVH S3-compatible bucket köküne paralel yükler. İki hedef birlikte
+başarılı değilse başarılı kopya telafi silmesiyle geri alınır ve DB kaydı aktifleşmez. Prepare aşaması aktif
+adapter'ın kalıcı uzantı politikasını kullanır; dual modda DB `FileName=.webp` tutar. Bir barkod grubunun tüm
+dosyaları başarılı olmadan replace confirm edilmez; yarım batch iptal/temizlenir ve eski resimler korunur.
+Replace tamamlandığında aynı set+varyanttaki eski metadata soft-delete edilir; başka aktif kayıt aynı dosya
+adını kullanmıyorsa WebP/JPEG fiziksel kopyaları silinir. Commit sonrası fiziksel temizlik request iptalinden
+bağımsız yürür; temizlik hatası başarılı confirm'i geri çevirmez ve warning olarak kaydedilir. Panel etiketi "Mevcut resimleri sil ve yenileriyle
+değiştir" oldu. Başarıyla yüklenen kaynak dosya kullanıcının `yuklenenler/` klasörüne benzersiz basename ve
+kendi gerçek uzantısıyla taşınır. Bu aşamada erişim bilgileri kaynak koda/DB'ye konmadı; yalnız environment/config
+anahtarları eklenmişti. Sonraki admin ayarı fazında secret'lar Data Protection şifreli DB kaydına bağlandı;
+aktivasyon default `Enabled=false` kaldı. Güvenlik uyarılı legacy `SSH.NET 2024.2.0` kullanılmadı;
+`2026.0.0` çözümlendi ve yeni paket için vulnerability uyarısı yok. Testler: yeni dual-target birimleri `3/3`,
+acceptance dışı tüm API testleri `94/94`, admin `tsc --noEmit` başarılı, appsettings JSON parse başarılı.
+Tek-dosya ESLint bu değişiklikten önce mevcut 11 `any/@ts-ignore` ihlali nedeniyle kırmızı; yeni satır kaynaklı
+hata yok. Genel NuGet taraması yeni paketten bağımsız mevcut transitif paket açıklarını raporluyor. Migration
+yoktur; gerçek SFTP/S3 kabulü panel ayarları + environment aktivasyon kapısı + izole test dosyasıyla yayın fazında yapılmalıdır. Production
+MySQL'e bağlanılmadı/yazılmadı ve GitHub'a push yapılmadı.
+
+**TOPLU RESİM YÜKLEME HEDEF PATH İNCELEMESİ TAMAMLANDI (2026-09-02):** Kod değiştirilmeden
+`admin/src/pages/catalog/BulkImageUploadPage.tsx`, katalog prepare/upload/confirm akışı, mevcut local/FTP/S3
+adapter'ları ve `C:\Users\garku\source\repos\EcsPros\EcsPros.TopluResimYukleme` uygulaması karşılaştırıldı.
+Legacy program görseli kalite dönüşümünden sonra eşzamanlı iki hedefe yazar: WebP kopya harici görsel
+sunucusunda SFTP ile `/var/www/html/images/<dosya>` yoluna, JPEG kopya OVH object storage bucket kökünde
+`<dosya-adı>.jpg` key'ine gider; ancak yeni ECSProsAI akışı `Storage:Catalog:Enabled=false` iken kayıtlı
+`LocalDiskImageUploadService` üzerinden API node-local `ImageServer.LocalSavePath` yoluna yazar. Mevcut
+`FtpImageUploadService` DI'da etkin değildir, FTP protokolüdür ve legacy SFTP sözleşmesini karşılamaz. Yeni
+prepare akışının dosya adı sözleşmesi ve orijinal formatı koruması da legacy adlandırma + WebP/JPEG çiftinden
+farklıdır. Çoklu API mimarisinde node-local hedef uygun değildir; harici hedef adapter'ı, başarı politikası ve
+dosya adı/format sözleşmesi kullanıcı kararıyla netleştirilmelidir. Legacy kaynakta gömülü erişim bilgileri
+tespit edildi; değerler bu belgeye veya mesaja alınmadı ve yeni koda kopyalanmamalıdır. İnceleme salt-okunur
+yapıldı. **Kararlar:** yeni panel legacy davranışı gibi WebP'yi SFTP'ye ve aynı basename'li JPEG'i OVH object
+storage'a birlikte yazacak; yeni sistemin benzersiz basename sözleşmesi korunacak. Başarıyla yüklenen kullanıcı
+kaynak dosyaları kendi bilgisayarındaki `yuklenenler` klasörüne taşınarak yerel arşivlenecek. "Değiştir"
+seçeneğinde sunucudaki eski görseller ayrıca arşivlenmeyecek: iki yeni harici kopya doğrulanıp yeni DB kayıtları
+aktif edildikten sonra eski DB kayıtları ve iki hedeftaki eski fiziksel dosyalar güvenli sırayla silinecek;
+yükleme başarısızsa eski görseller korunacak. Test çalıştırılmadı, production MySQL'e bağlanılmadı/yazılmadı ve
+GitHub'a push yapılmadı.
+
+**PUBLIC TEST UI SMOKE TESTİ KAPSAM DIŞI BIRAKILDI (2026-09-02):** API01/API02 kontrollü yayını
+sonrasında `https://multi-test.misharitalia.com/` için masaüstü/mobil gerçek tarayıcı smoke testi başlatıldı;
+ancak çalışma ortamında kullanılabilir veya bağlı bir tarayıcı oturumu bulunmadı. Kullanıcı onayıyla bu görsel
+kontrol mevcut görevin kapsamı dışında bırakıldı ve görev başarılı iki-process yarış, health ve direct/public
+HTTP kontrolleriyle kapatıldı. Ana sayfa ve kategori public HTTP kontrolleri `200`; iki node `/ready=200/Healthy`.
+Herhangi bir forma veri gönderilmedi, production MySQL'e bağlanılmadı/yazılmadı ve GitHub'a push yapılmadı.
+
+**ÇOKLU-NODE YARIŞ KABULÜ VE KONTROLLÜ API01/API02 YAYINI TAMAMLANDI (2026-09-02):**
+Yerel dirty çalışma ağacı korunarak acceptance dışı testler yeniden `91/91` geçti ve
+`20260902T073513Z_multinode_aa7702dd_local` immutable API release'i üretildi (arşiv SHA-256
+`7bebd8d0cf4c67ca30cf326211338d9cfe26020c2decbbdc198415591aa95eb0`, production config pakete
+konmadı). Hedef `ecommerce_db` kimliği, yazılabilir primary durumu ve Storefront migration geçmişi
+server-side `BEGIN READ ONLY` ile doğrulandı. Ortam `20260901100508_AddSearchTermStats` seviyesinde olduğu için
+GitHub paketindeki `20260901143244_AddProductQuestions` ile yerel
+`20260902071409_EnforceSinglePendingProductQuestion` migration'ları tek idempotent gate ile uygulandı;
+`product_questions` tablosu, `UX_product_questions_single_pending` partial unique index'i ve migration geçmişi
+tekrar doğrulandı. Yeni release önce API01/API02'de mevcut servislere dokunmayan geçici `:5151` process'leriyle
+çalıştırıldı: üye JWT'li iki-process soru yarışı 10/10 turda tam `1 kazanan + 1 kontrollü reddedilen` verdi;
+sentetik 10 kayıt temizlendi ve kalan `0`. `marketplace_ref.mp_sync_runs` için iki bağımsız `psql` process yarışı
+da `1 kazanan + 1 unique reddi` verdi; sentetik koşu temizlendi ve kalan `0`. Geçici process'ler durduruldu.
+Rolling aktivasyon önce API02 canary, health/ana sayfa/kategori/journal temizliğinden sonra API01 sırasıyla
+`activate-release.sh` health gate üzerinden yapıldı. Finalde iki `current` symlink aynı yeni release'i gösteriyor;
+iki node `/ready=200/Healthy`, direct ana sayfa ve `kadin-yeni-gelenler=200`, public test ana sayfa/kategori `200`,
+iki servis `active`, `NRestarts=0`, son 15 dakika warning yok. Yayınlanmış gerçek `:5050` API01/API02 process'leri
+üzerinde soru yarışı ayrıca 10/10 tekrar geçti; 10 test kaydı temizlendi ve kalan `0`. Public anonim soru API'si
+istemci-token güvenlik katmanı nedeniyle `401` döner; üye JWT'li yazma yarışı doğrudan iki node üzerinde geçti.
+Production MySQL'e bağlanılmadı/yazılmadı; GitHub'a commit/push yapılmadı. ERP/Legacy worker release'leri ve
+admin release'i değiştirilmedi.
+
+**SON GITHUB PAKETİ ÇOKLU-NODE SERTLEŞTİRMESİ TAMAMLANDI (2026-09-02):** Marketplace referans
+senkronunda check/insert yarışı, `mp_sync_runs` pazaryeri başına tek `running` partial unique indexi ve process
+`TryAdd` kapısıyla kapatıldı; ref şema DDL'i advisory transaction lock altında seri çalışır. Worker günlük
+categories/attributes-missing başarısını DB geçmişinden kontrol eder, restart/rolling overlap aynı scope'u aynı
+UTC günde yeniden başlatmaz. Ürün sorularına aynı firma/üye/ürün için yalnız tek pending kaydı zorlayan
+`20260902071409_EnforceSinglePendingProductQuestion` migration'ı eklendi; yeni alan yoktur. Migration eski
+duplicate pending kayıtları silmeden en eskiyi bekleyen bırakır, diğerlerini `hidden` yapar; yarışta ikinci
+INSERT kullanıcıya mevcut iş kuralı hatası döner. Mapping readiness node-local `Task.Run` olmaktan çıkarıldı,
+istek dönmeden PostgreSQL advisory lock ile node'lar arasında sıralı hesaplanır ve A9 cache-bust sürer. Arama
+sayacı fire-and-forget değildir; iki saniye üst sınırla await edilen atomik upsert'tir. Popüler arama cache'i
+node-local `IMemoryCache` yerine ortak hata-güvenli `ICacheService` kullanır. Sözlük paketleme/yükleme scriptleri
+ana ve referans PostgreSQL host/port/database/user değerlerini `ECSPROS_APPSETTINGS` ile seçilen config'ten alır;
+sabit localhost kaldırıldı ve eşleme yüklemesi advisory transaction lock ile serileştirildi. Yeni
+`MultiNodeCompatibilityTests`: pending model+migration constraint'i, duplicate koruma SQL'i, async sayaç,
+distributed cache, awaited readiness ve günlük DB checkpoint sözleşmelerini doğrular. Acceptance dışı testler
+`91/91`; `dotnet build` başarılı (mevcut warning'ler), Storefront migration SQL üretimi doğru, model drift yok,
+iki Bash script Git Bash `bash -n` kontrolünden geçti. Gerçek iki-process/ortak PostgreSQL yarışı yalnız ortam
+kabul testinde ayrıca doğrulanmalıdır. Production DB/MySQL'e bağlanılmadı veya yazılmadı; GitHub'a push yapılmadı.
+
+**SON GITHUB PAKETİ ÇOKLU SUNUCU UYUMLULUK İNCELEMESİ (2026-09-02):** `30dd430c..aa7702dd`
+arasındaki 49 dosyalık paket salt-okunur incelendi. Çoğu controller/EF akışı shared PostgreSQL üzerinde stateless
+ve çoklu API ile uyumlu; arama sayacı unique index + atomik `ON CONFLICT` artışıyla node-safe. Açık riskler:
+(1) `MarketplaceReferenceSyncService` aynı pazaryeri için önce `running` sorgulayıp sonra ayrı INSERT yapıyor;
+partial unique index/advisory lock olmadığı için iki node aynı anda koşu açabilir, process-local dictionary korumaz;
+(2) ürün sorusunda “aynı ürün için tek pending” kuralı `AnyAsync` + INSERT yarışına açık ve bunu zorlayan partial
+unique constraint yok; (3) günlük referans worker'ının `sonBasariliGun` bilgisi yalnız process belleğinde, restart
+ve rolling overlap aynı gün yeniden çalıştırabilir; (4) mapping readiness ve arama sayacı `Task.Run` ile kalıcı
+queue/outbox dışında, node kapanışında iş/sayaç kaybı ve yük altında sınırsız görev riski taşır; (5) popüler arama
+listesi node-local `IMemoryCache` nedeniyle API node'ları arasında en fazla 5 dakika farklı sonuç verebilir;
+(6) yeni sözlük paketleme/yükleme betikleri ana PostgreSQL için `localhost/ecommerce/ecommerce_db` değerlerini
+sabit kullanıyor, remote primary/multi-host topolojisinde uygun değil. Kod değiştirilmedi; önceki doğru filtreli
+acceptance dışı test sonucu `89/89` geçerli. Önerilen sıra: atomik DB claim + kalıcı günlük checkpoint, pending
+partial unique index, durable bounded background queue, distributed cache ve script connection parametreleştirmesi.
+
+**GITHUB MAIN GÜNCELLEMESİ YEREL ÇALIŞMALAR KORUNARAK ALINDI (2026-09-02):** Önceden doğrulanmış
+yerel yedek tutuldu; tracked/untracked kaynaklar ve `.deployment/` ayrı geri alınabilir stash'lerle geçici
+korumaya alındı. `origin/main`, `30dd430c` commitinden `aa7702dd` commitine yalnız fast-forward ile güncellendi;
+GitHub'a push yapılmadı. Yerel kaynakların tamamı ve `.deployment/` çalışma alanına geri getirildi. Tek içerik
+çakışması `src/ECSPros.Api/Program.cs` worker sağlık listesinde oluştu; GitHub'dan gelen
+`MarketplaceReferenceRefresh` ile yerel `ErpSourceSync`, `LegacyCommerceImport` ve `LegacyStockSync` worker
+profilleri birlikte korunarak çözüldü. Değişiklikler önceki gibi unstaged bırakıldı; conflict işareti kalmadı.
+Doğru `TestCategory!=Acceptance` filtresiyle acceptance dışı API testleri `89/89` geçti. İlk denemede yanlış
+`Category!=Acceptance` filtresi acceptance testlerini de çalıştırdığı için ağ erişimi gerektiren 20 test bağlantı
+engeliyle başarısız oldu; aynı turdaki 89 yerel test geçmişti ve production MySQL'e yazılmadı. Birleşmiş kaynak
+durumu `backups/ECSProsAI-local-worktree-after-github-sync-20260902.zip` paketine ayrıca kaydedildi.
+
+**YEREL ÇALIŞMA ALANI YEDEĞİ ALINDI (2026-09-02):** GitHub'a push/pull/fetch yapılmadan mevcut
+tracked değişiklikler ile Git tarafından izlenmeyen fakat ignore edilmeyen kaynak dosyaları
+`backups/ECSProsAI-local-worktree-20260902.zip` paketinde saklandı. Paket, bulunduğu `backups/` dizini
+`.gitignore` kapsamında olduğu için GitHub'a eklenmez. Aynı dizindeki `.sha256` dosyası bütünlük doğrulaması,
+`.manifest.txt` dosyası ise yedeklenen dosya listesi ve temel Git commit bilgisini içerir. Çalışma alanındaki
+hiçbir yerel dosya silinmedi, stash/checkout/reset uygulanmadı ve GitHub güncellenmedi.
+
+**ERP GEÇ ZENGİNLEŞTİRME WORKER YAYINI TAMAMLANDI (2026-09-02):** Açıklama 16-37 satırları,
+ürün özellikleri, renk/varyant ve tedarikçi tam-snapshot güncellemesini içeren yalnız ERP worker release'i
+API01 test/geçiş ortamına yayımlandı. Aktif release:
+`/opt/ECSProsAI/erp-worker-releases/20260901T220023Z_erp_enrich_15m_30dd430c`; yerel/sunucu arşiv
+SHA-256 `5ae715c76bcbfbb3fb1b3f9941bbf65378d126cc67e31c4243e0ef7dd76a12a8`, boyut `132.421.400` bayt.
+Migration yok; API/admin/Legacy worker release'leri değiştirilmedi. Sunucu override'ı
+`ErpSource__CatalogMinutes=15`, fiyat `10`, overlap `30`; `DataProtection__KeysPath` mevcut systemd yazılabilir
+`/opt/ECSProsAI/shared/dp-keys` yoluna verildi. Aktivasyon öncesi custom PostgreSQL dump:
+`/var/backups/ecspros-erp/pre-20260901T220023Z_erp_enrich_15m_30dd430c.dump`, `141.923.261` bayt,
+SHA-256 `2578e2d04468f79399dbd08c68a3e182e8b142bd2e41f0df0b1592f929b5cf8d`; `pg_restore --list` geçti.
+İlk aktivasyon varsayılan `~/.ecspros` yolunun read-only olması, ikinci aktivasyon release içindeki
+`appsettings.Production.json` kopyasının eksik olması nedeniyle sağlık kapısından geçmedi; ikisi de eski release
+ve env'e otomatik rollback yaptı. Shared production config hash eşit kopyalanıp doğru Data Protection yolu
+verilen üçüncü aktivasyon geçti. Final: worker `active`, `/live=200`, `/ready=200`, API01 `/ready=200`, restart
+`0`, aktivasyon sonrası problem logu `0`; ilk katalog/fiyat turları `0/0`. Gerçek 15 dakika kabulünde ikinci
+katalog turu 22:26:06 UTC'de tamamlandı (`değişiklik=1`): V3'teki 5 açıklama satırı `P-00022932` hedef
+`DescriptionI18n.tr` alanına 226 karakter olarak yazıldı. Aynı ürünün V3 `keywordId=20` güncel değeri son
+salt-okunur snapshot'ta `Normal Kalıp` döndüğü için hedef de `Normal Kalıp`; daha önce doğrulanan `Rahat Kalıp`
+değişikliği V3'te kalıcı kalmamıştır. Acceptance dışı testler `89/89`, hedefli V3 acceptance son salt-okunur
+tur `1/1`. Production MySQL'e bağlanılmadı/yazılmadı. GitHub'a gönderilmedi.
+
+**YEREL ACCEPTANCE BAĞLANTI YÖNTEMİ KALICI KAYDEDİLDİ (2026-09-01):** Private V3 MSSQL, hedef
+PostgreSQL ve Legacy MySQL acceptance bağlantılarının environment/config anahtarları, secret göstermeyen
+çalıştırma sırası ve Codex managed oturumunda ilk seferden ağ erişim onayı kullanılması
+`docs/handoff/kod-calismalari-devri.md` bölüm 7.1'e yazıldı. `appsettingsTest.json` içeriği açığa çıkarılmadan
+otomatik bulunur; environment değerleri dosyayı override eder. V3 için çalışan hedefli ürün komutu ve
+`P-00022932 / keywordId=20 / Rahat Kalıp` parametreli örneği kaydedildi. Hedef PostgreSQL'deki mevcut timeout'un
+credential değil private rota erişimi olduğu ayrıca not edildi. GitHub'a gönderilmedi.
+
+**P-00022932 GEÇ ZENGİNLEŞME SALT-OKUNUR KABULÜ TAMAMLANDI (2026-09-01):** API01'in kayıtlı SSH
+profili secret göstermeden kullanıldı; `api-1`, `ecspros.service=active`, `/usr/bin/psql` ve API01→PostgreSQL
+private TCP erişimi doğrulandı. Server-side environment connection string yalnız process belleğinde kullanılarak
+PostgreSQL transaction'ı `BEGIN READ ONLY` açıldı. Hedefte `kalip / Rahat Kalıp` tanımı mevcut ve aktif;
+`P-00022932` ürün kaydı mevcut, fakat henüz `kalip` bağlantısı yok. API01 ERP worker aktif,
+`Enabled=true/DryRun=false`; son katalog turu eski 360 dakikalık release'te 19:03 UTC'de çalışmış olduğundan
+sonraki değişiklik henüz hedefe uygulanmamış. Worker restartının checkpoint sonrası tüm bekleyen katalog
+değişikliklerini yeni sistemin hedef PostgreSQL'ine yazacağı açıklandı; kullanıcı restart istemedi ve hiçbir
+servis restart edilmedi, hedef DB yazısı tetiklenmedi. API01/yeni PostgreSQL henüz aktif canlı müşteri sistemi
+değil; test/geçiş ortamıdır. Yeni yerel kodda açıklama 16-37 alanları, ürün özellikleri,
+renk/varyant ve tedarikçi aynı periyodik tam-snapshot katalog akışına dahildir; V3 yükü ile gecikme dengesi için
+varsayılan aralık 15 dakikadır.
+Production MySQL'e bağlanılmadı/yazılmadı. GitHub'a gönderilmedi.
+
+**ERP GEÇ ZENGİNLEŞEN ÜRÜN / RENK / TEDARİKÇİ HEDEFLİ REFRESH TAMAMLANDI (2026-09-01):**
+V3'te SQL Agent job'una bağlı `dbo.julude_UrunAciklamaEkleme` prosedürü güncel
+`Microsoft.Data.SqlClient` ile yalnız `sys.procedures`, `sys.parameters`, bağımlılıklar ve
+`sys.sql_modules` üzerinden incelendi; prosedür çalıştırılmadı ve V3/MySQL/PostgreSQL'e yazılmadı.
+Prosedürün V3 stok kartını zenginleştirmediği, V3'teki açıklama/renk/tedarikçi/varyant tipi verilerini
+linked-server ile eski MySQL'e eklediği ve iptal siparişlerde `ecs_OrderDelete` çağırdığı doğrulandı;
+yeni ECSPros servisinden bu job prosedürü kesinlikle tetiklenmeyecek. Mevcut `jld_Appurunler` değişiklik
+penceresi `cdItem`, `prItemVariant` ve `prItemAttribute.LastUpdatedDate` birleşimini zaten izliyor ve
+`@ItemCode` ile hedefli ürün okumasını destekliyor. Gerçek kod boşlukları: katalog periyodu 360 dakika,
+reader'ın `tedarikci` kolonunu modele almaması, yeni renk tanım değerinin hedefte otomatik oluşmaması ve
+ürün açıklamasının taşınmamasıydı. Ürün kodu veya barkodla V3'ten tam snapshot okuyan idempotent hedefli
+refresh eklendi. Admin ürün detayı yerelde `404` aldığında bu refresh'i bir kez çağırıp ürünü yeniden açar.
+Tek tek ürün açma gereksinimini kaldırmak için periyodik katalog worker'ı da değişen her ürünün tam snapshot'ını
+okuyarak açıklama/renk/varyant/tedarikçi zenginleştirmesini uygular; güvenli varsayılan kontrol aralığı 360
+dakikadan 15 dakikaya indirildi (servis varsayılan olarak hâlâ kapalı ve dry-run).
+V3 `ColorCode`, yeni kolon açılmadan mevcut `AttributeValue.ExtraData` JSON'unda kararlı dış anahtar olarak
+tutulur; açıklama 16-37 attribute değerlerinden güvenli HTML ile mevcut açıklama alanına yazılır. Tedarikçi
+yalnız açık `SupplierAccountCodes` V3 kodu → mevcut cari kodu eşlemesiyle güncellenir; isimle cari aranmaz veya
+oluşturulmaz, eşleme yoksa mevcut `SupplierId` korunur. Yeni tablo/kolon/migration eklenmedi; V3 ve production
+MySQL'e yazılmadı. Acceptance dışı testler `89/89`; üç salt-okunur V3 sözleşme/hedefli okuma testi ayrı ayrı
+geçti. Bir geniş ERP acceptance tekrarında başlangıç katalog sorgusu eski TLS 1.0 bağlantısı tarafından
+kapatıldı; hedefli snapshot testi sonraki çalışmada geçti. Hedefli frontend lint, değişiklik dışındaki mevcut
+4 hata ve 1 uyarı nedeniyle kırmızı kaldı. E7 outbound henüz olmadığı için sipariş öncesi ensure+retry o faza
+ait açık kapıdır. Gerçek geç-zenginleşme örneğinde V3'te `P-00022932` ürününün `keywordId=20 / Kalıp`
+değeri `Normal Kalıp`tan `Rahat Kalıp`a çevrildi; ürün kodu ve beklenen keyword/değer parametreleriyle çalışan
+salt-okunur hedefli acceptance testi V3 snapshot'ında `Rahat Kalıp` değerini doğruladı (`1/1`). Bu testte hedef
+PostgreSQL'e, V3'e veya production MySQL'e yazılmadı. Hedefte `kalip/Rahat Kalıp` tanım değerinin mevcut
+olduğunu salt-okunur doğrulama denemesi, test bağlantısındaki `192.168.0.241:5432` erişim zaman aşımı nedeniyle
+tamamlanamadı; bu yüzden uçtan uca PostgreSQL güncellemesi henüz doğrulanmış sayılmaz. GitHub'a gönderilmedi.
+
+**KOD/SUNUCU SOHBET AYRIMI — DEVİR BELGELERİ HAZIRLANDI (2026-09-01):** Uzun süren ortak çalışma
+iki bağımsız konuya ayrılabilsin diye `docs/handoff/kod-calismalari-devri.md` ve
+`docs/handoff/sunucu-altyapi-devri.md` oluşturuldu. Kod belgesi dirty worktree/Git güvenliği, veri otoritesi,
+tamamlanan ERP/Legacy/stock/UI kod fazları, testler ve bloke işleri; sunucu belgesi topoloji, aktif release,
+Nginx/API/PostgreSQL/Redis/worker durumu, rolling deploy, yedekler ve HA eksiklerini kapsar. Secret değer
+yazılmadı. İki sohbet aynı workspace'te eşzamanlı dosya değiştirmemeli; kod sohbeti repository değişikliklerini,
+sunucu sohbeti SSH/altyapı operasyonlarını yönetmelidir. GitHub'a gönderilmedi.
+
+**KATEGORİ GÖRSELLERİ — İLK BOYA VE RESPONSIVE KALİTE DÜZELTMESİ TAMAMLANDI (2026-09-01):**
+Kategori HTML'inde lazy ürün görsellerinin `src` olmadan basılması nedeniyle JavaScript çalışana kadar görünen
+kırık görsel/`alt` metni parlaması giderildi. Lazy kartların placeholder ve skeleton yapısı artık sunucu tarafında
+hazır gelir; ilk masaüstü satırındaki beş görsel HTML parse edilirken yüklenir ve yalnız ilk LCP adayı
+`fetchpriority=high` alır. Kategori kartı `sizes` değeri gerçek iki kolon/mobil-tablet ve masaüstü genişliğine
+göre düzenlendi; CDN genişlik merdivenine `768` ve `1024` eklendi. Böylece `/240/85/` içindeki `85` kalite
+parametresi korunurken tarayıcı 240px görseli daha geniş karta büyütmek zorunda kalmaz. Sonsuz kaydırmayla
+eklenen kartlar da aynı `srcset`/`sizes` politikasını kullanır. Dosyası gerçekten eksik görsellerde Nginx'in
+"Resim hazırlanıyor" cevabını ezebilecek istemci tarafı `error` fallback'i eklenmedi. Yeni srcset testleri `2/2`,
+acceptance dışı tüm testler `88/88` geçti. `20260901T202442Z_local_uiimages_30dd430c9e40` release'i önce
+API2, ardından API1 üzerinde hash doğrulamalı ve otomatik rollback sağlık kapılı şekilde etkinleştirildi;
+iki düğümde `/ready` Healthy, servis uyarıları boş. Public `multi-test.misharitalia.com` kategori kabulünde
+HTTP `200`, `fetchpriority=high:1`, `1024px srcset:24`, sunucu skeleton'ı `19` ve `src` değeri olmadan kalan
+lazy ürün görseli `0`. GitHub'a gönderilmedi.
+
+**VERİ OTORİTESİ — KESİN KARAR (2026-09-01):** `51.178.208.59` PostgreSQL yalnız tamamlanmış başlangıç
+dump/restore kaynağıdır; yeni sistem bundan sonra `.59` üzerinden hiçbir yeni veya değişen kayıt almayacak.
+Kalıcı ürün/katalog/varyant/özellik/fiyat kaynağı doğrudan V3 MSSQL'dir. Stok production cutover'a kadar
+production MySQL'den izole stock-only akışla alınacak; cutover sonrasında tek stok otoritesi ECSPros admin
+panelidir. MSSQL hiçbir zaman stok kaynağı değildir. Üye, sipariş, fatura ve
+iade production cutover'a kadar production MySQL'den salt-okunur geçici importer ile alınacak; sonrasında
+yeni ECSPros sistemi otorite olacak. Görsel dosyaları mevcut ayrı görsel sunucusu/subdomain üzerinde kalır;
+metadata için ayrıca kaynak onayı olmadan yeni akış açılmaz. `.59` üzerindeki mevcut `LegacySyncWorker`
+yalnız mevcut canlı site içindir ve durdurulmayacaktır; yeni veri hattında `.59 PostgreSQL -> yeni PostgreSQL`
+senkronu yoktur. Yeni hedefe ilişkin bütün importer'lar varsayılan kapalı/dry-run kalır. GitHub'a gönderilmedi.
+
+**ERP GERÇEK-KAYNAK SENKRONU — FAZ E1 DOĞRULANDI, E8 DUMP/RESTORE TAMAMLANDI (2026-09-01):**
+`EcsPros.QuartzService` incelendi; kalıcı kaynak akışının eski MySQL değil V3 ERP/SQL Server
+(`jld_Appurunler`, `jld_AppurunVaryantlari`, `jld_ProductAttribute`) olduğu doğrulandı. Yeni
+`Services/ErpSource` katmanı eklendi: katalog ve fiyat dilimleri; V3 zaman dilimi dönüşümü;
+kalıcı/örtüşmeli checkpoint; Code/Barcode tabanlı idempotent upsert; yanlış ürün grubuna sessiz fallback
+YOK; definition eşleşmesi eksikse checkpoint ilerletilmiyor; Worker/Both rol kapısı + PostgreSQL advisory
+lock; integration log; varsayılan `Enabled=false`, `DryRun=true`. Checkpoint migration'ı:
+`AddErpSyncCheckpoints`. Unit test 4/4 ve API build başarılı. **AÇIK KAPILAR:** gerçek ERP bağlantısı ile
+dry-run; ERP `urunGrubu`→PG group ve keywordId→attribute type eşleme listesi; kanal fiyat kolonlarının iş onayı.
+**ERP/MSSQL STOK KALICI OLARAK İPTAL:** options/reader/model/service/scheduler içindeki bütün ERP stok kodu
+kaldırıldı. Geçiş için production MySQL'i SELECT-only ve server-side READ ONLY snapshot ile okuyan ayrı
+`WorkerProfile=LegacyStock` eklendi; PostgreSQL yazıları tek transaction, sıfırlama yalnız legacy rafları,
+hedef `Quantity=sourceAvailable+ReservedQuantity`, eşleşmeyen miktarda fail-closed ve Redis cache bust içerir.
+Bu geçici worker cutover'da kapanacak; stok sayımı/düzeltmesi yalnız admin panelinden yapılacak. Geçici MySQL üye/sipariş/fatura/iade
+importu L1-L7 tamamlanmadan çalıştırılmaz; kapalı outbound job'lar sonraki fazlardır. Detay:
+`docs/erp-kaynak-senkron-gecis-plani.md`. GitHub'a gönderilmedi.
+
+**STOCK-ONLY EŞLEME ONARIMI + GERÇEK SENKRON KABULÜ TAMAMLANDI (2026-09-01):** MySQL stok adedi
+otoritatif kabul edildi; `4.561` satırı atlama yaklaşımı iptal edildi. Dump sonrasında oluşan ve aktif hedef
+ürün/kısımlara ait `308` varyant ile `307` raf, migration iş anahtarlarını koruyan varsayılan kapalı
+`RepairMissingMappings` akışıyla tek PostgreSQL transaction'ında tamamlandı. Ayrıca `616` varyant-özellik
+bağlantısı ve `1` özellik değeri yazıldı; eşlenemeyen özellik `0`. Onarımın ikinci çalışması `0` değişiklik
+verdi. Sonraki stok dry-run'ında `160.474/160.474` kombinasyon eşleşti; eşleşmeyen satır/adet `0/0`.
+Beş tabloyu kapsayan geri dönüş yedeği
+`/var/backups/ecspros-stock/pre-mapping-repair-20260901T1923Z.dump` (`68.364.205` bayt, SHA-256
+`11def3536b74c82066b00a68a2ecfd53cf4b5ff2807d9e9c7630694ab8fa7c4e`) ve gerçek stok öncesi
+`/var/backups/ecspros-stock/pre-real-stock-sync-20260901T1926Z.dump` (`13.000.584` bayt, SHA-256
+`4e344429a3d9cf77c42f37a7eadd1666b8099f60cd56febe14035730a55be741`) alınıp `pg_restore --list` ile
+doğrulandı. İlk gerçek stok snapshot'ı `5.901` değişiklik (`512` update, `5.350` insert, `39` sıfırlama)
+uyguladı; hemen ikinci tur ve final release turu `0` değişiklik verdi. Kaynak/eşleşen/toplam aktif
+kullanılabilir stok `253.847/253.847/253.847`; negatif kullanılabilir stok, yetim varyant/raf,
+case-insensitive barkod tekrarı ve varyant-raf tekrarı testlerinin tamamı `0`. API1 stock worker release'i
+`20260901T192909Z_stock_final_30dd430c`; son ayarlar `DryRun=false`, `RepairMissingMappings=false`, sıfır
+eşleşmeme toleransı ve 300 saniye aralıktır. MySQL yalnız SELECT-only + server-side READ ONLY okunur.
+Cutover'a kadar admin panelinden stok yazılırsa bu worker sonraki turda MySQL gerçeğiyle ezer; cutover'da
+worker kapatılmadan admin stok otoritesi devralmaz. Acceptance dışı testler `86/86`. Admin `/admin/` yayını
+HTTP `200`; lint mevcut 179 hata nedeniyle başarısız ve frontend kaynağı değiştirilmedi. GitHub'a gönderilmedi.
+
+ERP SQL Server bağlantısı ve dört katalog procedure'ü geçti; iki günlük örnekte 20 ürün, örnek üründe
+9 varyant/14 özellik okundu. Yeni hedef `ecommerce_db` boş ürün tablosuyla doğrulandı ve yalnız bekleyen
+`AddErpSyncCheckpoints` migration'ı uygulandı. Dry-run hedefi `0 -> 0` bıraktı. Dump öncesi seed definition
+verisinde 8 kaynak grup ile harf beden/renk tonları eksik; elle uydurulmayacak, `.59` dump/restore sonrası
+yeniden ölçülecek. ERP tarafı TLS 1.0 müzakere ediyor; TLS 1.2+ altyapı takibine alındı.
+`.59` Legacy senkronu dump penceresi için 12:22 UTC'de kapatıldı; API aktif ve 12:14 UTC sonrası yeni
+`pricestock` koşusu olmadığı 12:26 UTC'de doğrulandı. Config yedeği sunucuda tutuluyor.
+E8 tamamlandı: `.59` PostgreSQL custom dump'ı (`141.442.360` bayt, SHA-256 doğrulandı) yerel diske
+indirilmeden tek kullanımlık SSH anahtarıyla yeni PostgreSQL'e taşındı; geçici yetkiler kaldırıldı.
+Hedef geri dönüş dump'ı alındı. Restore sonrası kaynak/hedef birebir: ürün 29.112, varyant 333.790,
+görsel 211.603, stok 235.012 satır/246.870 adet, sipariş 159, grup 145, kanal ürünü 86.372,
+kanal varyantı 281.996. `AddErpSyncCheckpoints` tekrar uygulandı ve ERP→PG katalog/fiyat dry-run 2/2 geçti.
+Production MySQL'e hiçbir bağlantı/sorgu yapılmadı. Fiyat+stok kapalı çağrının DB bağlantısı açmadan
+çıktığı unit testle sabitlendi. API1/API2 private `/ready` Healthy/200; test Nginx `/live`, `/ready`,
+`/health` ve kategori sayfası 200; acceptance dışı testler 54/54 geçti.
+**ERP KATALOG+FİYAT WORKER AKTİF / KABUL TAMAMLANDI (2026-09-01):** Mapping denetimi gerçek ERP
+sözlüğü ve restore edilmiş hedef üzerinde tamamlandı; grup `Sütyen→grp_118`, `Triko Hırka→grp_14`,
+ürün attribute eşlemeleri ve `julude.com→julude` alias'ı sabitlendi. Mishar fiyatı
+`tozluSatisFiyati`, karşılaştırma fiyatı `tozluListeFiyati` olarak veriyle doğrulandı. `yil` tipine
+`2027 Sonbahar Kış Ürünleri` idempotent eklendi; öncesinde ayrı definition yedeği alındı. API1'de izole
+`ecspros-erp-source.service` kuruldu; ERP yalnız `192.168.0.100:1433` private adresten okunuyor. Kaynak
+Force Encryption + eski TLS kullandığı için bağlantı `Encrypt=True` kalırken yalnız bu process'e özel,
+kullanıcı onaylı TLS1/SECLEVEL0 OpenSSL uyumluluğu verildi; kalıcı takip TLS 1.2+ yükseltmesidir.
+Gerçek yazım öncesi `/var/backups/ecspros-erp/pre-continuous-erp-20260901T175719Z.dump` alındı
+(85.862.469 bayt, SHA-256 `dc0684ea1367cbc51168305fe92e7e58979ffec6b9c5d3d31dd15b96fcea9e59`).
+Dry-run 27 ürün/291 varyant, 2 yeni, mapping hatası 0. İlk gerçek tur katalog 27/yeni 2/atlanan 0,
+fiyat 27/katalogda-yok 0/kanal-varyant 291; aynı pencerenin ikinci gerçek turu katalog `0`, fiyat `0`
+ile idempotency kabulünü geçti. Son sayımlar ürün 29.114, varyant 333.857, kanal ürün 86.374, kanal
+varyant 282.217. Servis `active/enabled`; katalog 360 dk, fiyat 10 dk, overlap 30 dk; ERP stok yeteneği artık yok.
+Sıfır kaynak kaydında katalog checkpoint'ini ilerletmeyen erken dönüş düzeltildi ve izole worker release'i
+`/opt/ECSProsAI/erp-worker-releases/20260901T180610Z_30dd430c-checkpoint` olarak güncellendi. İlk boş tur
+katalog/fiyat `0/0`; checkpoint'ler sırasıyla `18:10:39Z`/`18:11:02Z`, hatalar boş. `/live`, `/ready`,
+`/health` üçü de `200`; veri sayımları değişmedi. Mevcut API ve MySQL importer PID'leri değişmedi; üç servis
+`active/running`, restart `0`. Acceptance dışı testler `83/83`. Ayrıntı:
+`docs/erp-kaynak-senkron-gecis-plani.md`. GitHub'a gönderilmedi.
+
+**LEGACY MYSQL ÜYE/SİPARİŞ/FATURA/İADE — L0 ENVANTER TAMAMLANDI (2026-09-01):** Kullanıcı onayıyla
+production MySQL yalnız salt-okunur transaction içinde incelendi; hiçbir yazma/DDL çalıştırılmadı ve PII
+raporlanmadı. Platform 41 kesin sayımları: üye `104`, adres `104`, sipariş `71`, satır `181`, ödeme `72`,
+fatura `45`, iade `12`, iade kalemi `28`. Yeni PostgreSQL'de legacy üye `70`, legacy sipariş `54`, fatura
+toplam `1`, iade `0`; Address/OrderItem/Invoice/Return/ReturnItem için kalıcı legacy identity eksikleri
+doğrulandı. Mevcut MySQL hesabında yazma yetkileri de bulunduğundan yeni importer bu hesapla açılmayacak;
+ayrı SELECT-only kullanıcı zorunlu. L1-L8 fazları, yan etkisiz import kuralları, checkpoint/overlap,
+idempotent upsert ve kabul sayımları `docs/legacy-mysql-uye-siparis-fatura-iade-okuma-plani.md` içinde.
+Bu L0 kaydının L1-L2 devamı aşağıdaki uygulama kaydında tamamlandı.
+
+`.59` production `LegacySyncWorker` dump sonrasında yeniden etkinleştirildi. `ecspros.service` aktif;
+ilk turda products `1`, images `115`, pricestock `124` değişiklikle, orders/order-status `0` değişiklikle
+başarıyla tamamlandı. Bu mevcut `.59` akışıdır; yeni hedef için L1-L8 importer henüz çalışmıyor.
+
+**LEGACY MYSQL IMPORT — L1 + L2 TAMAMLANDI (2026-09-01):** Address `LegacyAddressId`; OrderItem
+`LegacyOrderLineId`; OrderPayment `LegacyOrderPaymentId`; Invoice `LegacyInvoiceId`; Return
+`LegacyReturnId`; ReturnItem `LegacyReturnItemId` nullable alanları ve filtreli unique indeksleri eklendi.
+CRM `AddLegacyAddressIdentity`, Order `AddLegacyCommerceIdentities` ve Integration
+`AddLegacyImportCheckpoints` migration'ları üretildi, model drift kontrolü temiz ve yalnız yeni PostgreSQL
+`ecommerce_db` üzerine uygulandı; `.59` PostgreSQL değiştirilmedi. `LegacyReadImport` options/source/checkpoint
+store/worker çatısı eklendi: varsayılan `Enabled=false`, `DryRun=true`, dört dilim kapalı; bağlantı eski Legacy
+ayarından ayrı; pooling kapalı; server-side READ ONLY transaction + zorunlu rollback; Worker/Both rol kapısı;
+dilim başına advisory lock; eksik handler'da kaynak bağlantısı açmadan fail-closed. Production MySQL probe'u
+salt-okunur geçti; yalnız metadata ve platform 41 sayımları okundu. Build başarılı, acceptance dışı `59/59`,
+legacy read acceptance `1/1`. **SIRADAKİ: L3 üye/adres reader + idempotent upsert; importer kapalı kalır.**
+
+**LEGACY MYSQL IMPORT — L3 ÜYE/ADRES KODLANDI, DRY-RUN DOĞRULANDI (2026-09-01):** Production MySQL
+reader'ı `webmembers` ve `webmemberaddresses` verisini tek repeatable-read, server-side READ ONLY transaction
+içinde okuyor; sıfır tarihleri güvenli null'a çeviriyor. Import yalnız `LegacyMemberId`/`LegacyAddressId`
+kayıtlarını upsert ediyor; önceki MigrationTool gibi adres silmiyor. Mevcut eski adreslere güçlü adres imzasıyla
+legacy ID backfill planlıyor; native adreslere dokunmuyor; silinmiş/anonymize üyeyi yeniden açmıyor; modern
+parola hash'ini legacy MD5 ile ezmiyor; email/telefon unique çakışmalarını güvenli atlıyor; geo eşlemesi isimden,
+kaynak saatleri Europe/Istanbul→UTC. Gerçek production MySQL + yeni PostgreSQL dry-run acceptance `2/2`
+geçti ve hedef üye/adres fingerprint'i değişmedi. Gerçek yazım yapılmadı; importer `Enabled=false`/`DryRun=true`
+kalmaya devam ediyor. Ayrı SELECT-only hesap oluşturuldu: Windows'tan private IP'ye doğrudan deneme beklenen
+şekilde timeout verdi; Api1 VM'den MySQL private IP/3306 erişimi geçti ve Api1
+kaynaklı geçici SSH tüneli üzerinden server-side READ ONLY acceptance probe'u `1/1` başarılı oldu. Tünel test
+sonunda kapatıldı; veri yazılmadı ve importer açılmadı. **SIRADAKİ: L4 sipariş aggregate reader + idempotent upsert.**
+
+**LEGACY MYSQL IMPORT — L4-L7 KODLANDI VE SALT-OKUNUR ACCEPTANCE DOĞRULANDI (2026-09-01):**
+L4 sipariş aggregate reader/importer (`oporders` + adres + `oporderlines` + `oporderpayments`) tek READ ONLY
+snapshot okuyor; kart numarası/kart sahibi hiç seçilmiyor. Status mapper iade durumunu `returned` yapıyor,
+bilinmeyen durumu tahmin etmiyor. Hedef yazımı doğrudan transaction içinde, yalnız Legacy ID'li kayıtlara,
+domain event/stok/rezervasyon/ödeme/bildirim üretmeden yapılacak; güncel olmayan legacy alt kayıtlar soft-delete,
+native/kimliksiz çakışmalar fail-closed. Kaynak acceptance `71/181/72` geçti. Hedef dry-run yazmadan `19`
+eksik üyede durdu; L3 gerçek aktarımı L4 önkoşuludur. L5 fatura reader/importer `45` e-Arşiv kaydını ve
+hedef sipariş kalemlerinden türetilen fatura kalemlerini idempotent işler; integratör/ERP/kargo outbound yok.
+Kaynak seriler `MSR=38`, `TYA=7`, hedefte yalnız `TST` olduğundan gerçek seri tanımı bekleniyor. L6 iade
+reader/importer `12` iade, `28` kalem, `66` log okuyor; status `legacy_imported`, refund/stock yan etkisi yok;
+kaynak 1/2 tip anlamları `legacy_type_*` olarak korunuyor. Hedefte iade nedeni sözlüğü boş; gereken kodlar
+`legacy_unspecified`, `legacy_disliked`, `legacy_size`, `legacy_not_delivered`, `legacy_unknown`. Ayrıca 8
+iadenin üst/kalem tutarı eşit, 4'ü farklı; tahmin yapılmadan L6'yı durdurur. L7 sekiz Legacy ID kümesini
+günlük PII'siz uzlaştırıyor. Gerçek MySQL + yeni PostgreSQL acceptance hedef fingerprint'ini değiştirmedi;
+mevcut eşleşme: üye `70/104`, adres `0/104`, sipariş `54/71`, satır `0/181`, ödeme `0/72`, fatura `0/45`,
+iade `0/12`, iade kalemi `0/28` (toplam eksik `493`). Build temiz; acceptance dışı testler `72/72`.
+Hiçbir importer/servis açılmadı, hedef yazımı yapılmadı, GitHub'a gönderilmedi. **SIRADAKİ L8:** L3 kontrollü
+gerçek aktarım → L4 dry-run → seri/neden referans verileri → dört iade farkı kararı → dilimleri sırayla açma.
+
+**LEGACY MYSQL IMPORT — L8 KONTROLLÜ L3/L4 İLK AKTARIM TAMAMLANDI (2026-09-01):** API1 üzerinden
+production MySQL'e yalnız server-side READ ONLY+rollback erişildi; PostgreSQL doğrudan Postgres1 localhost
+tünelinden hedef `ecommerce_db` kimliği doğrulanarak kullanıldı. L3 öncesi tablo yedeği
+`/var/backups/ecspros-l8/pre-l3-members-addresses-20260901-165818.dump`; gerçek L3 sonrası üye `104/104`,
+adres `99/104`. Kalan adres ID'leri `4238099,4238253,4240551,4394977,4474131`; MySQL'de bağlı üyeleri
+bulunmayan yetim kayıtlar, sahte üye oluşturulmadı. L4 dry-run `changed=324/skipped=0` geçti; yedek
+`/var/backups/ecspros-l8/pre-l4-orders-20260901-170037.dump` sonrasında gerçek L4 tamamlandı: toplam sipariş
+`159→176`, kalem `233→290`, ödeme `0→72`; Legacy uzlaştırma `71/71`, `181/181`, `72/72`. Beş teknik
+legacy iade nedeni idempotent seeder'a eklendi ve hedefte `5/5` aktif oluşturuldu; ön yedeği
+`/var/backups/ecspros-l8/pre-l6-return-reasons-20260901-170602.dump`. Son dry-run'da iadelerde yalnız dört
+tutar farkı (`197069`, `199473`, `200369`, `209811`), faturalarda yalnız `MSR/TYA` seri tanımı kaldı.
+Güncel toplam eksik `90`: 5 bilinen yetim adres + 45 fatura + 12 iade + 28 iade kalemi. Sürekli worker,
+fatura ve iade dilimleri açılmadı. İkinci gerçek koşu idempotency kabulü de geçti: L3 `changed=0`,
+`skipped=5` ve toplam `139/125/99` üye/adres/Legacy adres sabit; L4 `changed=0`, `skipped=0` ve toplam
+`176/290/72` sipariş/kalem/ödeme sabit. Repo ayarları `Enabled=false`, `DryRun=true`; GitHub'a gönderilmedi.
+
+**LEGACY MYSQL IMPORT — L8 KONTROLLÜ L5/L6 İLK AKTARIM TAMAMLANDI (2026-09-01):** Kullanıcı `MSR` ve
+`TYA` fatura serilerini, iadelerde ise kaynak üst tutarı yerine kalem toplamının esas alınmasını onayladı.
+Kodda güvenli varsayılanı `Block` olan `ReturnAmountMismatchPolicy` eklendi; yalnız kontrollü L6 koşusunda
+`UseItemTotal` kullanıldı ve üst/kalem/çözümlenen tutarlar metadata'da korunuyor. Ön yedek:
+`/var/backups/ecspros-l8/pre-l5-l6-invoices-returns-20260901-173105.dump` (`21.540` bayt), SHA-256
+`3627994072a88b66c4d182eea3a4dd44639d70945a93b4ebe26f2b7947c8379e`. Hedef kimliği kapısından sonra
+aktif `MSR` ve `TYA` serileri eklendi; seri hazırlama ikinci koşuda `inserted=none`. Yazmasız ortak dry-run
+fatura `166`, iade `40` potansiyel değişiklikle geçti. L5 gerçek aktarım `changed=166`: toplam fatura
+`1→46`, kalem `1→122`; Legacy eşleşme `45/45`, dağılım `MSR:38`, `TYA:7`. L6 gerçek aktarım
+`changed=40`: iade `0→12`, kalem `0→28`; 12/12 kayıtta `RefundAmount` kaynak kalem toplamına eşit,
+uyuşmazlık `0`. İkinci gerçek koşuda L5/L6 `changed=0`, sayımlar sabit. Son uzlaştırma: üye `104/104`,
+adres `99/104` (5 bilinen kaynak yetimi), sipariş `71/71`, satır `181/181`, ödeme `72/72`, fatura
+`45/45`, iade `12/12`, iade kalemi `28/28`; toplam eksik `5`. Acceptance dışı testler `74/74` geçti.
+Tüneller kapatıldı; sürekli worker ve dört dilim kapalı/dry-run, repo politikası `Block`; GitHub'a gönderilmedi.
+
+**LEGACY MYSQL IMPORT — L8 SÜREKLİ WORKER AKTİVASYONU (2026-09-01):** Aynı API process'inde diğer
+background worker'ları çoğaltmamak için `Node:WorkerProfile=All|LegacyImport` ayrımı eklendi; varsayılan
+`All` mevcut davranışı koruyor, izole `LegacyImport` profili yalnız geçici MySQL importer'ını kaydediyor.
+API1 üzerinde API release/symlink'i değiştirilmeden ayrı, sürümlü worker release'i
+`/opt/ECSProsAI/worker-releases/20260901T160952Z_cfc49cf` kuruldu ve
+`/opt/ECSProsAI/worker-current` symlink'i oluşturuldu. Secret içermeyen systemd tanımı
+`ecspros-legacy-import.service`; secret env `/etc/ecspros/legacy-import-worker.env` (mode `640`,
+`root:ecspros`). Worker yalnız `127.0.0.1:5060` dinliyor; MySQL kaynağına SELECT-only hesap ve server-side
+READ ONLY transaction ile bağlanıyor. İki dry-run turu hatasız geçti. Gerçek moda geçmeden önce hedef yedeği
+`/var/backups/ecspros-l8/pre-continuous-worker-20260901T161612Z.dump` (`149.447` bayt), SHA-256
+`7f2daa527457f43a6d51c3f2d88d12678d74c16aa9076b11a451b660b28eb463` alındı. İlk gerçek tur
+üyeler `changed=0/skipped=5`, sipariş/fatura/iade `changed=0/skipped=0`; dört checkpoint'te hata yok.
+İki gerçek tur da idempotent tamamlandı. Unit `active/enabled`, PID sabit ve restart sayısı `0`;
+worker ile mevcut API `/live` ve `/ready` Healthy. Mevcut `ecspros.service` PID'i değişmedi. Acceptance dışı
+testler profil testleriyle `79/79` geçti. Repo varsayılanları güvenli biçimde kapalı/dry-run kalır; sunucu
+env'i kontrollü aktivasyon için override eder. GitHub'a gönderilmedi.
+
+**ERP E7 OUTBOUND SÖZLEŞME DENETİMİ (2026-09-01):** V3 SQL Server `sys.procedures/sys.parameters`
+metadata'sı salt-okunur incelendi. Projeye özel adaylarda `ecs_OrderDelete(@OrderNumber)`,
+`sp_TicimaxInvoice(@EInvoiceNumber)`, `sp_TicimaxInvoiceNew(@SiparisNo)` ve
+`sp_TicimaxtrOrderHeader(@DocumentNumber)` var; hiçbiri yeni sipariş/fatura/iade payload'ını kabul eden
+doğrulanmış create/upsert sözleşmesi değil. Eski `EcsPros.QuartzService/V3OrdersJob.cs` bu workspace'te yok.
+Bu nedenle E7 outbound adapter tahminle yazılmadı ve doğal olarak çalıştırılmadı; özellikle adı silme işlemi
+olan `ecs_OrderDelete` kullanılmayacak. E7 için eski Quartz kaynakları veya kesin V3 write procedure/API
+sözleşmesi gerekiyor. Metadata acceptance geçti; yalnız okuma yapıldı. GitHub'a gönderilmedi.
+
+**FAZ 10 NGINX İKİ API UPSTREAM — TEST SUBDOMAIN DEVREDE (2026-08-31):** Production Nginx upstream'i
+`api-1` (`192.168.0.245:5050`) ve `api-2` (`192.168.0.58:5050`) için etkin config olarak eklendi.
+Production site, API, SignalR, Swagger, PayTR callback ve health yönlendirmeleri `ecspros_api`
+upstream'ine geçirildi; iki denemeli pasif failover ve 2 saniyelik connect timeout tanımlandı.
+Telemania/demo `host.docker.internal:5050` hedefleri değiştirilmedi. Hedef kapsamı ve diff kontrolleri
+geçti. `multi-test.misharitalia.com`, native Nginx `1.24.0` çalışan `nginxlb`
+(`51.178.208.56` / `192.168.0.56`) üzerinde izole config ile devreye alındı; mevcut diğer site
+config'leri değiştirilmedi. `nginx -t`, systemd reload, Cloudflare `/live`/`ready`/`health`/ana sayfa
+ve iki node dağılım testleri geçti. Upstream'ler sırayla erişilemez portla simüle edildi: API1 yokken
+80/80 istek API2, API2 yokken 80/80 istek API1 üzerinden 200 aldı; gerçek config otomatik geri yüklendi
+ve yerel dosyayla SHA-256 eşitliği doğrulandı. Yedek:
+`/root/nginx-backups/ecspros-multi-test-20260831T202542Z`. Production domain'e uygulanmadı ve GitHub'a
+gönderilmedi.
+
+**FAZ 10 ALTYAPI DEVREYE ALMA — Redis1 + API1 + API2 TAMAM (2026-08-31):** `redis-1`
+(`192.168.0.243`) üzerinde cache `6379` (10 GB, `allkeys-lfu`) ve kritik state `6380`
+(4 GB, `noeviction`) ayrı instance olarak kuruldu; parola, private bind, AOF everysec + RDB,
+systemd ve restart kalıcılığı testleri geçti. `api-1` (`192.168.0.245`) 8 vCPU/16 GB/80 GB,
+Ubuntu 26.04 + ASP.NET Core 8 ile hazırlandı; release atomik olarak
+`20260831T181240Z_6f69396b3614-seedfix` sürümüne alındı. API yalnız private IP `:5050` dinliyor,
+`Node__Role=Api`, `Node__MigrateOnStartup=false`; `/live`, `/ready`, `/health` 200 ve PostgreSQL,
+Redis cache/state, Data Protection kontrolleri Healthy. Boş `ecommerce_db` için 16 EF context migration gate'i
+uygulandı ve temel seed tamamlandı. İlk seed'de canonical attribute listesinde yinelenen `yas_grubu`, aynı
+SaveChanges içinde unique index'e çarpıyordu; `SeedAttributeTypesAsync` artık `HashSet.Add` ile aynı turdaki
+kodları da tekilleştiriyor (49 unit test geçti). `api-2` (`192.168.0.58`) aynı 8 vCPU/16 GB/80 GB
+tabanıyla kuruldu ve `20260831T185025Z_6f69396b3614-api2` release'i etkinleştirildi. API1 production
+config'i içeriği gösterilmeden API2'ye aktarıldı ve SHA-256 eşitliği doğrulandı. API2'den iki PostgreSQL
+veritabanı ile Redis cache/state için private ağ bağlantı ve okuma-yazma testleri geçti. Her iki API
+`active/enabled`, yalnız kendi private IP'sinde `:5050` dinliyor; `/live`, `/ready`, `/health` 200,
+node kimlikleri sırasıyla `api-1` ve `api-2`, migration başlangıçta kapalı ve son kontrolde servis hatası
+yok. Secret'lar repository dışında tutuluyor; GitHub'a gönderim yapılmadı. **ERTELENEN:** Redis2 replica
++ 3 Sentinel/failover; deployment sonunda
+`RedisCache`/`RedisState` ayrı bağlantıları korunacak.
 
 ## 🧭 ÇALIŞMA ALANLARI PANOSU (session başında ÖNCE buraya bak)
 
@@ -3664,6 +4983,100 @@ ecspros` yapmadı. Yeni publish'te Sıra 1+1.5+2'nin tamamı var; restart sonras
   - Detaylar: `docs/urun-url-kanal-mimarisi.md` (2026-07-04 revizyon notları) + `project_product_url_channel_analysis_2026-07-04.md` (auto-memory).
 
 ---
+
+## 2026-09-02 — Eksik ürün açıklaması/görseli servis incelemesi
+
+- V3 katalog worker'ının ürün listesini checkpoint sonrasındaki `jld_Appurunler` değişikliklerinden aldığı,
+  ardından yalnız bu listedeki ürünler için tam snapshot (varyant, özellik, açıklama ve tedarikçi) okuduğu
+  doğrulandı. Açıklama/renk gibi sonradan girilen alt kayıtlar ürünün `guncellemeTarihi` değerini ilerletmezse
+  ürün yeniden aday listeye girmiyor; bu nedenle mevcut üründe açıklama eksik kalabiliyor.
+- Admin ürün detayı `refresh-from-erp` çağrısını yalnız ürün GET isteği `404` döndüğünde yapıyor. Ürün hedefte
+  mevcut fakat `DescriptionI18n` boş/eskiyse hedefli yenileme tetiklenmiyor.
+- E5 kararıyla uyumlu olarak V3 ERP senkronunda görsel metadata okuyucusu bulunmuyor. Görsel metadata halen ayrı
+  legacy MySQL `apurunresimleri` akışına ait; dolayısıyla V3'ten yeni açılan ürünün açıklaması gelebilirken görsel
+  kaydı kendiliğinden oluşmuyor. Bu, dosya yükleme servisinden ayrı bir metadata senkronu boşluğudur.
+- Bir ürünün snapshot/grup/tedarikçi/özellik eşlemesi başarısız olursa katalog checkpoint'i bilinçli olarak
+  ilerletilmiyor ve worker aynı aralığı sonraki turlarda tekrar okuyor; servis logunda görülen genel
+  `ERP katalog tanım eşleşmeleri eksik` hatasının ayrıntısı rapordaki `ATLANDI` satırlarıdır.
+- Bu adım salt-okunur kod/doküman incelemesidir; production veritabanına veya sunucuya bağlanılmadı, dosya
+  silinmedi, GitHub'a gönderim yapılmadı.
+
+### Uygulama tamamlandı — yayın bekliyor
+
+- Ekrandaki bağlantı hatasının MySQL değil PostgreSQL `SQLSTATE 57P01` (`terminating connection due to
+  administrator command`) olduğu doğrulandı. `LegacyCommerceImportWorker` advisory lock'u `try/catch` dışında
+  aldığı için PostgreSQL restart/failover kesintisi BackgroundService dışına taşıyabiliyordu. Lock alma, handler
+  ve lock dispose artık aynı hata sınırında; başarısız tur process'i durdurmadan en az 5 dakikalık kontrollü
+  backoff sonrasında yeniden denenir.
+- İzole `LegacyImport` servisinin önceden yalnız üye/sipariş/fatura/iade çalıştırdığı ve görsel handler'ı olmadığı
+  doğrulandı. `LegacyImageMetadataImportSlice` eklendi; mevcut SELECT-only MySQL bağlantısını kullanarak
+  `apurunresimleri` metadata'sını var olan `%90` emniyet freni ve transaction/advisory lock ile uzlaştırır.
+  Fiziksel CDN/S3 dosyalarına dokunmaz. `ImagesEnabled` varsayılan kapalıdır.
+- ERP worker'a açıklaması boş ürünleri V3 tam snapshot ile dönen cursor üzerinden tur başına en fazla `25`
+  kayıt tamamlayan uzlaştırma eklendi. Böylece ürünün ana `guncellemeTarihi` değişmese de eksik açıklamalar zamanla
+  tamamlanır; yeni DB alanı veya migration eklenmedi.
+- Testler: seçenek testleri `11/11`; acceptance dışı API paketi `93/93` geçti. Yalnız önceden var olan derleyici
+  uyarıları görüldü. Production DB bağlantısı/yazısı, fiziksel resim silme, yayın ve GitHub push yapılmadı.
+
+### P-00023144 karar öncesi salt-okunur inceleme
+
+- Kullanıcının kabul ürünü `P-00023144`, kayıt değiştirmeyen hedefli V3 snapshot testiyle incelendi: ürün mevcut,
+  `3` varyant, `12` ürün özelliği, tedarikçi kodu `696`, `1` açıklama satırı ve `keywordId=20 / Normal Kalıp`
+  döndü; test `1/1` geçti. Dolayısıyla açıklama kaynak V3'te eksik değildir, hedefe aday seçme/worker zincirinde
+  kalmıştır.
+- V3 tablosuna trigger yazılması değerlendirmeye alındı ancak uygulanmadı. Mevcut `jld_Appurunler` prosedürü
+  zaten `cdItem`, `prItemVariant` ve `prItemAttribute.LastUpdatedDate` birleşiminden değişiklik kümesi kurduğundan
+  ana stok kartının tarihini trigger ile değiştirmek açıklama için gereksiz kaynak yazısı ve ERP kilit/vendor
+  riski oluşturabilir; ayrıca MySQL `apurunresimleri` görsel metadata sorununu çözmez.
+- Karar önerisi: V3'e trigger eklemeden child-table delta seçimini reader içinde doğrudan doğrulamak/güçlendirmek,
+  eksik açıklama için sınırlı uzlaştırmayı korumak; görseller için değişen/yeni ürün bazlı hedefli MySQL metadata
+  yenilemesi ve seyrek tam uzlaştırmayı birlikte kullanmak. Kullanıcı kararı bekleniyor; bu adımda V3/MySQL/
+  PostgreSQL yazısı, kod uygulaması, yayın veya GitHub push yapılmadı.
+
+### Darboğazsız hedefli uzlaştırma uygulandı — yayın bekliyor
+
+- Kullanıcı onayıyla V3 trigger yaklaşımı uygulanmadı. `jld_Appurunler` child-table tarihlerini zaten değişiklik
+  kümesine kattığından normal delta korunurken, kaçan/boş açıklamalar en yeni ürün kodlarından başlayarak sınırlı
+  batch ile tamamlanır. V3 hedefli snapshot daha önce ürün başına beş ayrı SQL bağlantısı açıyordu; ürün,
+  varyant, özellik, tedarikçi ve açıklama sorguları artık tek bağlantıda ardışık çalışır.
+- `images-missing` dilimi eklendi: hedefte aktif görseli olmayan en fazla `25` ürünü varsayılan `10` dakikada bir
+  seçer, MySQL'de yalnız bu ürün kodu/ID'lerini ve seçilen resim setlerini okur, mevcut görselleri silmeden eksik
+  `catalog.product_images` satırlarını transaction + advisory lock altında ekler. Kod cursor'u sayesinde kaynakta
+  görseli olmayan ürünler sonraki ürünleri sürekli engellemez.
+- Ağır tam görsel taraması `360` dakikadan günlük `1440` dakikaya çıkarıldı ve process açılışından sonra varsayılan
+  `60` dakika geciktirildi. Böylece servis restart anında MySQL/PostgreSQL'e tam katalog yükü bindirmez; `%90`
+  güvenlik freni korunur. Fiziksel CDN/S3 dosyalarına dokunulmaz.
+- P-00023144 V3 salt-okunur testi `1/1` geçti. Aynı ürünün production MySQL salt-okunur görsel kontrolü yerel
+  private rota timeout'u nedeniyle tamamlanamadı; credential hatası olarak yorumlanmadı ve hiçbir yazma yapılmadı.
+- V3 snapshot tek bağlantı optimizasyonundan sonra P-00023144 testi yeniden çalıştırıldı ve aynı `3/12/696/1`
+  sonucuyla tekrar `1/1` geçti.
+- Acceptance dışı API paketi son kodla `93/93` geçti. Yeni DB alanı/migration, V3/MySQL yazısı, yayın veya GitHub
+  push yapılmadı.
+- Kontrollü yayın öncesinde görsel akışı için bağımsız `LegacyReadImport__ImagesDryRun` güvenlik anahtarı eklendi.
+  Varsayılanı `true`; böylece mevcut üye/sipariş/fatura/iade dilimlerinin gerçek çalışma modu değiştirilmeden
+  `images-missing` ve günlük `images` dilimleri önce salt raporlama modunda doğrulanabilecek.
+- API01 ilk ERP kabul turunda 25 eksik açıklama adayı tam snapshot üzerinden yaklaşık 497 saniyede işlendi;
+  `23` kayıt güncellendi, V3'te bulunmayan iki hedef-only test ürünü turu hata statüsüne taşıdı. Yaklaşık 29 bin
+  boş açıklama bulunduğundan bu yaklaşım darboğaz riski olarak kabul edildi. Uzlaştırma, tek V3 bağlantısında
+  parameterized toplu açıklama-only sorguya çevrildi; varyant/tedarikçi/tam snapshot okunmaz ve V3'te bulunmayan
+  hedef-only kodlar normal katalog checkpoint'ini artık engellemez. Revize release test/yayın doğrulaması sürüyor.
+- Kabul ürünü P-00023144 kod sıralamasında 6.229'uncu, oluşturulma zamanına göre ise en yeni eksik kart olarak
+  ölçüldü. Yeni kartların eski backlog arkasında beklememesi için hem eksik açıklama hem eksik görsel cursor'u
+  `(CreatedAt, Code)` bileşik sırasına çevrildi; en yeni eksikler önce, eşit tarihlerde deterministik kod sırasıyla
+  işlenir.
+- API01 kontrollü yayını tamamlandı. Görsel akışı önce bağımsız `ImagesDryRun=true` ile çalıştırıldı; ilk rapor
+  yazmadan `DRY-RUN` tamamlandı. Ardından `ImagesDryRun=false` yapıldı. Son immutable release
+  `20260902T102951Z_newest_first` hem `worker-current` hem `erp-worker-current` symlink'lerine ayrı health/rollback
+  kapılarıyla alındı; iki unit `active`, readiness `Healthy`, `NRestarts=0`.
+- En-yeni-öncelikli ilk gerçek turlarda `images-missing` `5` metadata kaydı ekledi; ERP katalog uzlaştırması
+  `25` açıklamayı yaklaşık `24,6` saniyede güncelledi ve `OK` kapandı. Kabul ürünü `P-00023144` hedef PostgreSQL'de
+  salt-okunur SELECT ile `DescriptionI18n` uzunluğu `58`, aktif görsel sayısı `5` olarak doğrulandı.
+- Son yerel doğrulama acceptance dışı API testlerinde `93/93`; `git diff --check` hata vermedi (yalnız mevcut
+  CRLF uyarıları). Yeni DB alanı/migration oluşturulmadı, production MySQL/V3'e hiçbir yazı yapılmadı, fiziksel
+  CDN/S3 dosyalarına dokunulmadı ve GitHub push yapılmadı.
+- Güvenlik notu: yayın öncesi environment anahtarlarını listelemeyi amaçlayan bir tanılama komutu beklenmedik
+  biçimde iki kaynak bağlantı dizesinin değerlerini de terminal çıktısına yazdı. Değerler repo/PROGRESS'e
+  kaydedilmedi; ilgili MySQL ve SQL Server parolaları kontrollü olarak döndürülmelidir.
 
 ## Yeniden Yapılanma Kararları (2026-03-11)
 

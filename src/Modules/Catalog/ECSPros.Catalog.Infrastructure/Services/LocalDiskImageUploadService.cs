@@ -25,6 +25,9 @@ public class LocalDiskImageUploadService : IImageUploadService
         _logger = logger;
     }
 
+    public string GetStoredFileExtension(string sourceExtension) =>
+        sourceExtension.Trim().TrimStart('.').ToLowerInvariant();
+
     private async Task<(string savePath, string publicBaseUrl)> LoadSettingsAsync(CancellationToken ct)
     {
         var settings = await _db.CatalogSettings

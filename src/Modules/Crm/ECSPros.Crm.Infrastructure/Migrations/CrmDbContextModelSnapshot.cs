@@ -96,6 +96,9 @@ namespace ECSPros.Crm.Infrastructure.Migrations
                     b.Property<bool>("IsValidated")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("LegacyAddressId")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("MemberId")
                         .HasColumnType("uuid");
 
@@ -145,6 +148,10 @@ namespace ECSPros.Crm.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LegacyAddressId")
+                        .IsUnique()
+                        .HasFilter("\"LegacyAddressId\" IS NOT NULL");
 
                     b.HasIndex("MemberId");
 

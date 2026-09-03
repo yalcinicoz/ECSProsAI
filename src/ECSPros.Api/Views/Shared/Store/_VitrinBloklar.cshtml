@@ -16,6 +16,8 @@
     var tr = new System.Globalization.CultureInfo("tr-TR");
     string Fiyat(decimal f) => f.ToString("N2", tr) + " TL";
     var msVitrinPlatformId = (ViewData["MsPlatform"] as ECSPros.Api.Services.StorePlatformBilgisi)?.Id.ToString() ?? "";
+    const string msKucukGorselPlaceholderSrc = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23ffffff'/%3E%3C/svg%3E";
+    const string msCokluBannerPlaceholderSrc = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='165' viewBox='0 0 110 165'%3E%3Crect width='110' height='165' fill='%23ffffff'/%3E%3C/svg%3E";
 }
 
 @foreach (var blok in Model)
@@ -39,14 +41,38 @@
                                 var slideUrl = slide.GorselUrl ?? slide.MobilGorselUrl;
                                 var slideSrcset = MsSrcset.Srcset(slideUrl);
                                 var slideBoyut = MsSrcset.Boyut(slideUrl);
+                                var slideMobilUrl = string.Equals(slide.MobilGorselUrl, slideUrl, StringComparison.Ordinal)
+                                    ? null
+                                    : slide.MobilGorselUrl;
+                                var slideMobilSrcset = MsSrcset.Srcset(slideMobilUrl);
                             }
                             @if (i == 0)
                             {
+                                @if (!string.IsNullOrWhiteSpace(slideMobilUrl))
+                                {
+                            <picture class="contents">
+                                <source media="(max-width: 767px)" srcset="@(slideMobilSrcset ?? slideMobilUrl)" sizes="100vw">
+                                <img class="no-lazy" src="@slideUrl" srcset="@slideSrcset" sizes="@(slideSrcset is null ? null : "100vw")" alt="@slide.Baslik" width="@(slideBoyut?.Genislik ?? 1200)" height="@(slideBoyut?.Yukseklik ?? 525)" loading="eager" fetchpriority="high" decoding="async" data-ms-lazy="false">
+                            </picture>
+                                }
+                                else
+                                {
                             <img class="no-lazy" src="@slideUrl" srcset="@slideSrcset" sizes="@(slideSrcset is null ? null : "100vw")" alt="@slide.Baslik" width="@(slideBoyut?.Genislik ?? 1200)" height="@(slideBoyut?.Yukseklik ?? 525)" loading="eager" fetchpriority="high" decoding="async" data-ms-lazy="false">
+                                }
                             }
                             else
                             {
+                                @if (!string.IsNullOrWhiteSpace(slideMobilUrl))
+                                {
+                            <picture class="contents">
+                                <source media="(max-width: 767px)" data-ms-lazy-srcset="@(slideMobilSrcset ?? slideMobilUrl)" data-ms-lazy-sizes="100vw">
+                                <img data-ms-lazy-src="@slideUrl" data-ms-lazy-srcset="@slideSrcset" data-ms-lazy-sizes="@(slideSrcset is null ? null : "100vw")" alt="@slide.Baslik" width="@(slideBoyut?.Genislik ?? 1200)" height="@(slideBoyut?.Yukseklik ?? 525)" loading="lazy">
+                            </picture>
+                                }
+                                else
+                                {
                             <img data-ms-lazy-src="@slideUrl" data-ms-lazy-srcset="@slideSrcset" data-ms-lazy-sizes="@(slideSrcset is null ? null : "100vw")" alt="@slide.Baslik" width="@(slideBoyut?.Genislik ?? 1200)" height="@(slideBoyut?.Yukseklik ?? 525)" loading="lazy">
+                                }
                             }
                         </a>
                     }
@@ -75,11 +101,14 @@
             <div class="ms-ana-sayfa-elment">
             <section class="ms-story" data-ms-story aria-label="Story alanı">
                 <div class="ms-story-listesi no-lazy">
+                    @* data-ms-urun-gorsel-yukleme adı tarihsel; complete/naturalWidth/decode
+                       kapısını paylaşmak için küçük vitrin görsellerinde de bilinçli kullanılır. *@
                     @foreach (var story in blok.Ogeler)
                     {
                         <button class="ms-story-karti" type="button" data-ms-story-grup="@storyAnahtarlari[story.Id]" data-ms-story-ac="@blok.Ogeler.ToList().IndexOf(story)">
-                            <span class="ms-story-gorsel">
-                                <img class="no-lazy" src="@story.GorselUrl" alt="@story.Baslik story görseli" width="64" height="64">
+                            <span class="ms-story-gorsel ms-kucuk-gorsel-yukleme">
+                                <img class="no-lazy ms-lazy-gorsel" data-ms-urun-gorsel-yukleme="true" data-ms-lazy="false" src="@story.GorselUrl" alt="@story.Baslik story görseli" width="64" height="64" loading="eager" decoding="async">
+                                <span class="ms-kucuk-gorsel-placeholder" aria-hidden="true"><span>Tozlu</span></span>
                             </span>
                             <span class="ms-story-etiket">@story.Baslik</span>
                         </button>
@@ -139,8 +168,19 @@
                 {
                     var reklamSrcset = MsSrcset.Srcset(reklamBanner.GorselUrl);
                     var reklamBoyut = MsSrcset.Boyut(reklamBanner.GorselUrl);
+                    var reklamMobilSrcset = MsSrcset.Srcset(reklamBanner.MobilGorselUrl);
                     <a class="ms-gorunum-reklam-vitrin-banner" href="@(reklamBanner.LinkUrl ?? "#")" aria-label="@reklamBanner.Baslik">
+                        @if (!string.IsNullOrWhiteSpace(reklamBanner.MobilGorselUrl))
+                        {
+                        <picture class="contents">
+                            <source media="(max-width: 767px)" data-ms-lazy-srcset="@(reklamMobilSrcset ?? reklamBanner.MobilGorselUrl)" data-ms-lazy-sizes="100vw">
+                            <img data-ms-lazy-src="@reklamBanner.GorselUrl" data-ms-lazy-srcset="@reklamSrcset" data-ms-lazy-sizes="@(reklamSrcset is null ? null : "(max-width: 768px) 100vw, 50vw")" alt="@reklamBanner.Baslik" width="@(reklamBoyut?.Genislik ?? 1200)" height="@(reklamBoyut?.Yukseklik ?? 525)" loading="lazy" decoding="async">
+                        </picture>
+                        }
+                        else
+                        {
                         <img data-ms-lazy-src="@reklamBanner.GorselUrl" data-ms-lazy-srcset="@reklamSrcset" data-ms-lazy-sizes="@(reklamSrcset is null ? null : "(max-width: 768px) 100vw, 50vw")" alt="@reklamBanner.Baslik" width="@(reklamBoyut?.Genislik ?? 1200)" height="@(reklamBoyut?.Yukseklik ?? 525)" loading="lazy" decoding="async">
+                        }
                     </a>
                 }
 
@@ -178,8 +218,19 @@
                     {
                         var bannerSrcset = MsSrcset.Srcset(banner.GorselUrl);
                         var bannerBoyut = MsSrcset.Boyut(banner.GorselUrl);
+                        var bannerMobilSrcset = MsSrcset.Srcset(banner.MobilGorselUrl);
                         <a class="ms-gorunum-banner-karti" href="@(banner.LinkUrl ?? "#")" target="@(banner.YeniSekme ? "_blank" : null)">
+                            @if (!string.IsNullOrWhiteSpace(banner.MobilGorselUrl))
+                            {
+                            <picture class="contents">
+                                <source media="(max-width: 767px)" data-ms-lazy-srcset="@(bannerMobilSrcset ?? banner.MobilGorselUrl)" data-ms-lazy-sizes="100vw">
+                                <img data-ms-lazy-src="@banner.GorselUrl" data-ms-lazy-srcset="@bannerSrcset" data-ms-lazy-sizes="@(bannerSrcset is null ? null : "(max-width: 768px) 100vw, 403px")" alt="@banner.Baslik" width="@(bannerBoyut?.Genislik ?? 400)" height="@(bannerBoyut?.Yukseklik ?? 164)" loading="lazy" decoding="async">
+                            </picture>
+                            }
+                            else
+                            {
                             <img data-ms-lazy-src="@banner.GorselUrl" data-ms-lazy-srcset="@bannerSrcset" data-ms-lazy-sizes="@(bannerSrcset is null ? null : "(max-width: 768px) 100vw, 403px")" alt="@banner.Baslik" width="@(bannerBoyut?.Genislik ?? 400)" height="@(bannerBoyut?.Yukseklik ?? 164)" loading="lazy" decoding="async">
+                            }
                         </a>
                     }
                 </div>
@@ -407,7 +458,10 @@
                     @foreach (var kategori in blok.Ogeler)
                     {
                         <a class="ms-gorunum-kategori-kapsul" href="@(kategori.LinkUrl ?? "#")">
-                            <img data-ms-lazy-src="@kategori.GorselUrl" alt="@kategori.Baslik" width="64" height="64" loading="lazy">
+                            <span class="ms-gorunum-kategori-kapsul-gorsel ms-kucuk-gorsel-yukleme">
+                                <img class="ms-lazy-gorsel" data-ms-urun-gorsel-yukleme="true" data-ms-lazy-src="@kategori.GorselUrl" src="@msKucukGorselPlaceholderSrc" alt="@kategori.Baslik" width="64" height="64" loading="lazy" decoding="async">
+                                <span class="ms-kucuk-gorsel-placeholder" aria-hidden="true"><span>Tozlu</span></span>
+                            </span>
                             <strong>@kategori.Baslik</strong>
                         </a>
                     }
@@ -528,8 +582,9 @@
                     {
                         var cokluSrcset = MsSrcset.Srcset(oge.GorselUrl);
                         var cokluBoyut = MsSrcset.Boyut(oge.GorselUrl);
-                        <a class="ms-gorunum-banner-karti" href="@(oge.LinkUrl ?? "#")" target="@(oge.YeniSekme ? "_blank" : null)" aria-label="@oge.Baslik bannerını incele">
-                            <img data-ms-lazy-src="@oge.GorselUrl" data-ms-lazy-srcset="@cokluSrcset" data-ms-lazy-sizes="@(cokluSrcset is null ? null : "(max-width: 768px) 45vw, 110px")" alt="@oge.Baslik banner görseli" width="@(cokluBoyut?.Genislik ?? 110)" height="@(cokluBoyut?.Yukseklik ?? 165)" loading="lazy">
+                        <a class="ms-gorunum-banner-karti ms-kucuk-gorsel-yukleme" href="@(oge.LinkUrl ?? "#")" target="@(oge.YeniSekme ? "_blank" : null)" aria-label="@oge.Baslik bannerını incele">
+                            <img class="ms-lazy-gorsel" data-ms-urun-gorsel-yukleme="true" data-ms-lazy-src="@oge.GorselUrl" data-ms-lazy-srcset="@cokluSrcset" data-ms-lazy-sizes="@(cokluSrcset is null ? null : "(max-width: 768px) 45vw, 110px")" src="@msCokluBannerPlaceholderSrc" alt="@oge.Baslik banner görseli" width="@(cokluBoyut?.Genislik ?? 110)" height="@(cokluBoyut?.Yukseklik ?? 165)" loading="lazy" decoding="async">
+                            <span class="ms-kucuk-gorsel-placeholder" aria-hidden="true"><span>Tozlu</span></span>
                         </a>
                     }
                 </div>

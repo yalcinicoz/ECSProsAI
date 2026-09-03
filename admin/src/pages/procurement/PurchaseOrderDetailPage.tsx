@@ -11,7 +11,16 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { PO_STATUS, useSuppliers } from './PurchaseOrdersPage'
+import { PO_STATUS, apiErrorMessage, useSuppliers } from './procurementHelpers'
+
+interface PurchaseOrderItemInput {
+  modelText?: string | null
+  colorText?: string | null
+  sizeText?: string | null
+  quantity: number
+  unitPrice: number
+  notes?: string | null
+}
 
 interface ItemDto { id: string; variantId: string | null; modelText: string | null; colorText: string | null; sizeText: string | null; quantity: number; unitPrice: number; total: number; notes: string | null; sortOrder: number }
 interface DetailDto { id: string; code: string; supplierId: string; orderDate: string; expectedDate: string | null; status: string; notes: string | null; totalQuantity: number; totalAmount: number; items: ItemDto[] }
@@ -43,14 +52,14 @@ export function PurchaseOrderDetailPage() {
     enabled: !!id,
   })
   const invalidate = () => { qc.invalidateQueries({ queryKey: ['purchase-order', id] }); qc.invalidateQueries({ queryKey: ['purchase-orders'] }) }
-  const onErr = (e: any) => setErr(e?.response?.data?.error ?? 'İşlem başarısız.')
+  const onErr = (error: unknown) => setErr(apiErrorMessage(error, 'İşlem başarısız.'))
 
   const statusMut = useMutation({
     mutationFn: async (to: string) => api.post(`/procurement/purchase-orders/${id}/status`, { status: to }),
     onSuccess: () => { setErr(null); invalidate() }, onError: onErr,
   })
   const itemsMut = useMutation({
-    mutationFn: async (items: any[]) => api.post(`/procurement/purchase-orders/${id}/items`, { items }),
+    mutationFn: async (items: PurchaseOrderItemInput[]) => api.post(`/procurement/purchase-orders/${id}/items`, { items }),
     onSuccess: () => { setErr(null); setNewRow({ model: '', color: '', size: '', qty: '', price: '' }); setPasteOpen(false); invalidate() },
     onError: onErr,
   })
@@ -72,7 +81,7 @@ export function PurchaseOrderDetailPage() {
     return Array.from({ length: colCount }, (_, i) => mapping[i] ?? defaults[i] ?? 'skip')
   }, [colCount, mapping])
   const pasteItems = useMemo(() => parsed.map(cells => {
-    const it: any = { quantity: 0, unitPrice: 0 }
+    const it: PurchaseOrderItemInput = { quantity: 0, unitPrice: 0 }
     cells.forEach((c, i) => {
       const m = effMapping[i]
       if (m === 'model') it.modelText = c

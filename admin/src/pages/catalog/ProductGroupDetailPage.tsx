@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Plus, ChevronRight, ArrowLeft, Tag, Layers, X, Star, Lock, Pencil, Trash2 } from 'lucide-react'
@@ -44,6 +44,8 @@ interface ProductGroupWithAxis extends ProductGroup {
   axisSubAttributes: AxisSubAttribute[]
 }
 
+type ApiError = { response?: { data?: { error?: string } } }
+
 function getAttrTypeName(a: Pick<ProductGroupAttribute, 'attributeTypeCode' | 'attributeTypeNameI18n'>): string {
   return a.attributeTypeNameI18n['tr'] ?? a.attributeTypeNameI18n[Object.keys(a.attributeTypeNameI18n)[0]] ?? a.attributeTypeCode
 }
@@ -88,6 +90,7 @@ export function ProductGroupDetailPage() {
   const [editNameI18n, setEditNameI18n] = useState<Record<string, string>>({})
   const [nameDirty, setNameDirty] = useState(false)
   const [nameSaved, setNameSaved] = useState(false)
+  const [initializedGroupId, setInitializedGroupId] = useState<string | null>(null)
 
   // Add attribute modal
   const [addAttrOpen, setAddAttrOpen] = useState(false)
@@ -133,6 +136,15 @@ export function ProductGroupDetailPage() {
   })
 
   const group = groups.find((g) => g.id === id) as ProductGroupWithAxis | undefined
+
+  // Formu route değişiminde başlat; aynı grubun sorgu yenilemesi taslağı ezmesin.
+  if (group && initializedGroupId !== group.id) {
+    setInitializedGroupId(group.id)
+    setEditNameI18n(group.nameI18n)
+    setNameDirty(false)
+  } else if (!group && initializedGroupId !== null) {
+    setInitializedGroupId(null)
+  }
 
   const addAttrMutation = useMutation({
     mutationFn: async () => {
@@ -220,13 +232,6 @@ export function ProductGroupDetailPage() {
       setTimeout(() => setNameSaved(false), 2500)
     },
   })
-
-  useEffect(() => {
-    if (group) {
-      setEditNameI18n(group.nameI18n)
-      setNameDirty(false)
-    }
-  }, [group?.id])
 
   const sourceLang = languages.find((l) => l.isDefault)?.code ?? languages[0]?.code ?? 'tr'
 
@@ -576,7 +581,7 @@ export function ProductGroupDetailPage() {
           </div>
           <label className="flex items-center gap-2 cursor-pointer select-none"><input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]" checked={subAttrForm.isRequired} onChange={(e) => setSubAttrForm((f) => ({ ...f, isRequired: e.target.checked }))} /><span className="text-sm" style={{ color: 'var(--text)' }}>Zorunlu</span></label>
           <div><label className="flbl">Sıra</label><IntegerInput value={subAttrForm.sortOrder} onChange={(v) => setSubAttrForm((f) => ({ ...f, sortOrder: v ?? 0 }))} /></div>
-          {addSubAttrMutation.isError && <p className="text-sm" style={{ color: '#ef4444' }}>{(addSubAttrMutation.error as any)?.response?.data?.error ?? 'Hata oluştu. Lütfen tekrar deneyin.'}</p>}
+          {addSubAttrMutation.isError && <p className="text-sm" style={{ color: '#ef4444' }}>{(addSubAttrMutation.error as ApiError)?.response?.data?.error ?? 'Hata oluştu. Lütfen tekrar deneyin.'}</p>}
         </div>
       </Modal>
 

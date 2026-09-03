@@ -3,12 +3,13 @@
  * Sol: şablon listesi. Sağ: düzenleyici — ölçü, eleman listesi, canlı önizleme (4px/mm, örnek veriyle),
  * önizlemede sürükleyerek konumlandırma, kağıt dışına taşma uyarısı, test yazdırma (/yazdir/etiket).
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Printer, Trash2 } from 'lucide-react'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { apiErrorMessage } from '@/lib/api-error'
 
 interface El { type: 'barcode' | 'field' | 'text' | 'price'; field?: string; text?: string; x: number; y: number; w: number; h: number; fontPt: number; align: 'left' | 'center' | 'right'; bold: boolean }
 interface Tpl { id: string; code: string; name: string; targetType: 'product' | 'bin'; widthMm: number; heightMm: number; elementsJson: string; isDefault: boolean; isActive: boolean }
@@ -31,6 +32,9 @@ const newEl = (type: El['type']): El => ({
   x: 2, y: 2, w: type === 'barcode' ? 30 : 25, h: type === 'barcode' ? 12 : 6, fontPt: 8, align: 'left', bold: false,
 })
 
+const isTargetType = (value: string): value is Tpl['targetType'] => value === 'product' || value === 'bin'
+const isTextAlign = (value: string): value is El['align'] => value === 'left' || value === 'center' || value === 'right'
+
 export function LabelTemplatesPage() {
   const qc = useQueryClient()
   const { data: templates = [], isLoading } = useQuery<Tpl[]>({
@@ -50,19 +54,30 @@ export function LabelTemplatesPage() {
     if (!t) { setSelId('new'); setForm({ name: '', targetType: 'product', widthMm: 40, heightMm: 30, isDefault: templates.length === 0, isActive: true }); setEls([newEl('barcode'), { ...newEl('field'), y: 16, field: 'name' }]) }
     else { setSelId(t.id); setForm({ name: t.name, targetType: t.targetType, widthMm: t.widthMm, heightMm: t.heightMm, isDefault: t.isDefault, isActive: t.isActive }); setEls(JSON.parse(t.elementsJson || '[]')) }
   }
-  useEffect(() => { if (selId === null && templates.length > 0) load(templates[0]) }, [templates])  // eslint-disable-line
+  const [loadedTemplates, setLoadedTemplates] = useState<Tpl[] | null>(null)
+  if (loadedTemplates !== templates) {
+    setLoadedTemplates(templates)
+    if (selId === null && templates.length > 0) {
+      const first = templates[0]
+      setMsg(null)
+      setSelEl(null)
+      setSelId(first.id)
+      setForm({ name: first.name, targetType: first.targetType, widthMm: first.widthMm, heightMm: first.heightMm, isDefault: first.isDefault, isActive: first.isActive })
+      setEls(JSON.parse(first.elementsJson || '[]'))
+    }
+  }
 
   const saveMut = useMutation({
     mutationFn: async () => (await api.post('/core/label-templates', {
       id: selId === 'new' ? null : selId, ...form, elementsJson: JSON.stringify(els),
     })).data.data,
     onSuccess: (d: { id: string }) => { setMsg('Kaydedildi.'); setSelId(d.id); qc.invalidateQueries({ queryKey: ['label-templates'] }) },
-    onError: (e: any) => setMsg(e?.response?.data?.error ?? 'Kaydedilemedi.'),
+    onError: (e: unknown) => setMsg(apiErrorMessage(e, 'Kaydedilemedi.')),
   })
   const delMut = useMutation({
     mutationFn: async (id: string) => api.delete(`/core/label-templates/${id}`),
     onSuccess: () => { setSelId(null); qc.invalidateQueries({ queryKey: ['label-templates'] }) },
-    onError: (e: any) => setMsg(e?.response?.data?.error ?? 'Silinemedi.'),
+    onError: (e: unknown) => setMsg(apiErrorMessage(e, 'Silinemedi.')),
   })
 
   // Önizlemede sürükleme
@@ -144,7 +159,10 @@ export function LabelTemplatesPage() {
               </div>
               <div>
                 <label className="flbl mb-1">Hedef</label>
-                <select className="inp" value={form.targetType} onChange={e => setForm(f => ({ ...f, targetType: e.target.value as any }))}>
+                <select className="inp" value={form.targetType} onChange={e => {
+                  const targetType = e.target.value
+                  if (isTargetType(targetType)) setForm(f => ({ ...f, targetType }))
+                }}>
                   <option value="product">Ürün</option><option value="bin">Birim / Raf</option>
                 </select>
               </div>
@@ -236,8 +254,11 @@ export function LabelTemplatesPage() {
                       <div className="w-24"><label className="flbl mb-1">Yazı (pt)</label>
                         <input type="number" step="0.5" className="inp" value={sel.fontPt}
                           onChange={e => setEls(p => p.map((x, i) => i === selEl ? { ...x, fontPt: +e.target.value || 6 } : x))} /></div>
-                      <div><label className="flbl mb-1">Hiza</label>
-                        <select className="inp" value={sel.align} onChange={e => setEls(p => p.map((x, i) => i === selEl ? { ...x, align: e.target.value as any } : x))}>
+                        <div><label className="flbl mb-1">Hiza</label>
+                        <select className="inp" value={sel.align} onChange={e => {
+                          const align = e.target.value
+                          if (isTextAlign(align)) setEls(p => p.map((x, i) => i === selEl ? { ...x, align } : x))
+                        }}>
                           <option value="left">Sol</option><option value="center">Orta</option><option value="right">Sağ</option>
                         </select></div>
                       <label className="flex items-center gap-1.5 text-sm cursor-pointer pb-2" style={{ color: 'var(--text)' }}>

@@ -10,14 +10,22 @@
                  Array.Empty<UrunKartVm>(), "",
                  Array.Empty<FiltreGrupVm>(), 0, 0,
                  Array.Empty<NavKategori>());
+    // `auto`: destekleyen tarayıcı gerçek grid kolonunu ölçer. Fallback; mobil/tablette
+    // iki kolonun gerçek genişliğine, masaüstünde 4/5 kolonun güvenli üst sınırına göre.
+    const string kategoriKartSizes = "auto, (max-width: 1023px) calc((100vw - 8px) / 2), 360px";
+    ViewData["MsKartSizes"] = kategoriKartSizes;
 }
 <section class="ms-urun-listesi-urun-alani lazy-infinite-on" data-ms-page-module="infinite-scroll" data-ms-infinite-scroll data-ms-infinite-config="urun-listesi" data-ms-infinite-toplam="100" data-ms-infinite-ilk="20" data-ms-infinite-adet="20" data-ms-infinite-esik="0.8" data-ms-infinite-sadece-ilk="true" aria-label="Ürünlerin yayınlanacağı alan">
     @await Html.PartialAsync("~/Views/ProjeElementleri/UrunListesi/_UrunListesiSagUstFiltre.cshtml")
 
     <div class="ms-urun-listesi-urun-grid" data-ms-infinite-liste aria-live="polite">
-        @foreach (var urun in vm.IlkSayfa)
+        @for (var kartIndex = 0; kartIndex < vm.IlkSayfa.Count; kartIndex++)
         {
-            @await Html.PartialAsync("~/Views/ProjeElementleri/Urun/_UrunKarti.cshtml", urun)
+            // Masaüstündeki ilk beşli satır HTML parse edilirken başlasın; yalnız ilk
+            // görsel LCP adayı olarak yüksek ağ önceliği alır.
+            ViewData["MsKartOncelikliGorsel"] = kartIndex < 5;
+            ViewData["MsKartYuksekOncelikliGorsel"] = kartIndex == 0;
+            @await Html.PartialAsync("~/Views/ProjeElementleri/Urun/_UrunKarti.cshtml", vm.IlkSayfa[kartIndex])
         }
     </div>
     @if (vm.IlkSayfa.Count == 0 && vm.BosDurumMesaji is { Length: > 0 })
@@ -34,6 +42,7 @@
             .ms-urun-listesi-bos-metin { margin: 0; font-size: 16px; color: #4a4a4a; }
         </style>
     }
+    @{ ViewData["MsKartOncelikliGorsel"] = false; ViewData["MsKartYuksekOncelikliGorsel"] = false; }
     <template data-ms-infinite-template>
         @await Html.PartialAsync("~/Views/ProjeElementleri/Urun/_UrunKarti.cshtml", null)
     </template>
@@ -66,6 +75,15 @@
             ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[k]);
 
         const trAd = (i18n) => (i18n && (i18n.tr || Object.values(i18n)[0])) || "";
+
+        const kartGenislikleri = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ECSPros.Api.Services.Store.UrunGorselSrcset.KartGenislikleri));
+        const kartSizes = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(kategoriKartSizes));
+        const kartSrcset = (url) => {
+            const eslesme = /^(https?:\/\/[^\s"]+\/img\/)(\d+)(\/\d+\/[^\s"]+)$/i.exec(String(url || ""));
+            return eslesme
+                ? kartGenislikleri.map((genislik) => `${eslesme[1]}${genislik}${eslesme[3]} ${genislik}w`).join(", ")
+                : "";
+        };
 
         // İki liste DTO'su tek biçime indirgenir (kategori: basePrice, arama: minPrice).
         // Görselsiz renkler tooltip'te listelenmez (B9 kuralı — detay onları göstermez).
@@ -185,6 +203,11 @@
             const gorsel = kart.querySelector("[data-ms-urun-galeri-gorsel]");
             if (gorsel && v.gorsel) {
                 gorsel.dataset.msLazySrc = v.gorsel;
+                const srcset = kartSrcset(v.gorsel);
+                if (srcset) {
+                    gorsel.dataset.msLazySrcset = srcset;
+                    gorsel.dataset.msLazySizes = kartSizes;
+                }
                 gorsel.alt = v.ad;
             } else if (gorsel) {
                 // Görselsiz ürün: no-image placeholder (site geneli kuralı, 2026-07-17)

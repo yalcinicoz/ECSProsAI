@@ -854,6 +854,37 @@ public static class DatabaseSeeder
     {
         var context = sp.GetRequiredService<CoreDbContext>();
 
+        // Geçici production MySQL iade aktarımının tarihsel nedenleri ayrı teknik kodlarla
+        // tutulur. Storefront seçim listesi LookupValue üzerinden çalıştığı için bu kayıtlar
+        // müşteriye gösterilen neden ağacını değiştirmez. Kod bazlı ve idempotenttir.
+        var legacyReasons = new (string Code, string Tr, string En, int SortOrder)[]
+        {
+            ("legacy_unspecified", "Belirsiz (Eski Sistem)", "Unspecified (Legacy)", 901),
+            ("legacy_disliked", "Beğenmedim (Eski Sistem)", "Disliked (Legacy)", 902),
+            ("legacy_size", "Beden (Eski Sistem)", "Size (Legacy)", 903),
+            ("legacy_not_delivered", "Teslim Edilmedi (Eski Sistem)", "Not Delivered (Legacy)", 904),
+            ("legacy_unknown", "Bilinmeyen (Eski Sistem)", "Unknown (Legacy)", 999)
+        };
+        var legacyCodes = legacyReasons.Select(x => x.Code).ToArray();
+        var existingLegacyCodes = await context.ReturnReasons.AsNoTracking()
+            .Where(x => legacyCodes.Contains(x.Code))
+            .Select(x => x.Code)
+            .ToListAsync();
+        foreach (var reason in legacyReasons.Where(x => !existingLegacyCodes.Contains(x.Code)))
+        {
+            context.ReturnReasons.Add(new ECSPros.Core.Domain.Entities.ReturnReason
+            {
+                Code = reason.Code,
+                NameI18n = new() { ["tr"] = reason.Tr, ["en"] = reason.En },
+                RequiresInspection = false,
+                IsCustomerFault = false,
+                IsActive = true,
+                SortOrder = reason.SortOrder
+            });
+        }
+        if (context.ChangeTracker.HasChanges())
+            await context.SaveChangesAsync();
+
         if (await context.LookupTypes.AnyAsync(t => t.Code == "return_reason"))
             return;
 
@@ -1464,6 +1495,17 @@ public static class DatabaseSeeder
             ["ImageServer.CdnThumbHeight"] = "240",
             ["ImageServer.CdnListHeight"]  = "640",
             ["ImageServer.CdnZoomHeight"]  = "1200",
+            ["ImageServer.UploadQuality"]  = "80",
+            ["ImageServer.SftpHost"]       = "",
+            ["ImageServer.SftpPort"]       = "22",
+            ["ImageServer.SftpUser"]       = "",
+            ["ImageServer.SftpPassword"]   = "",
+            ["ImageServer.SftpBasePath"]   = "/var/www/html/images",
+            ["ImageServer.S3ServiceUrl"]   = "https://s3.de.io.cloud.ovh.net/",
+            ["ImageServer.S3Bucket"]       = "",
+            ["ImageServer.S3AccessKey"]    = "",
+            ["ImageServer.S3SecretKey"]    = "",
+            ["ImageServer.S3ForcePathStyle"] = "true",
             ["VideoServer.LocalSavePath"]  = "/opt/ECSProsAI/media/videos/products/",
             ["VideoServer.PublicBaseUrl"]  = "/media/videos/products/",
             ["VideoServer.FtpHost"]        = "localhost",
@@ -1530,6 +1572,7 @@ public static class DatabaseSeeder
         // Demografik attribute değerleri
         await SeedCinsiyetValuesAsync(context);
         await SeedYasGrubuValuesAsync(context);
+        await SeedErpSourceAttributeValuesAsync(context);
 
         // Var/Yok tipi ikili özelliklerin değerleri
         await SeedVarYokValuesAsync(context, "fermuar", "esneklik", "balen", "dolgu", "ic_cep");
@@ -1637,7 +1680,9 @@ public static class DatabaseSeeder
 
         foreach (var (code, tr, dt, sort, useInFilter) in canonical)
         {
-            if (!existingCodes.Contains(code))
+            // HashSet'i aynı turda da güncelle: canonical listesine yanlışlıkla aynı kod
+            // iki kez girerse unique index'e çarpmadan ilk tanımı esas al.
+            if (existingCodes.Add(code))
             {
                 db.AttributeTypes.Add(new AttributeType
                 {
@@ -2646,6 +2691,36 @@ public static class DatabaseSeeder
         }
         if (added > 0) await db.SaveChangesAsync();
         Console.WriteLine($"✓ Seed: Yaş grubu değerleri — {added} yeni eklendi.");
+    }
+
+    private static async Task SeedErpSourceAttributeValuesAsync(CatalogDbContext db)
+    {
+        var yilType = await db.AttributeTypes.FirstOrDefaultAsync(a => a.Code == "yil");
+        if (yilType is null) return;
+
+        const string tr = "2027 Sonbahar Kış Ürünleri";
+        var exists = await db.AttributeValues
+            .AnyAsync(v => v.AttributeTypeId == yilType.Id && v.NameI18n["tr"] == tr);
+        if (exists) return;
+
+        var sort = (await db.AttributeValues
+            .Where(v => v.AttributeTypeId == yilType.Id)
+            .MaxAsync(v => (int?)v.SortOrder) ?? 0) + 10;
+        db.AttributeValues.Add(new AttributeValue
+        {
+            Id = Guid.NewGuid(),
+            AttributeTypeId = yilType.Id,
+            NameI18n = new Dictionary<string, string>
+            {
+                ["tr"] = tr,
+                ["en"] = "2027 Fall Winter Products"
+            },
+            SortOrder = sort,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+        Console.WriteLine("✓ Seed: ERP yıl/sezon değeri eklendi.");
     }
 
     private static async Task SeedVarYokValuesAsync(CatalogDbContext db, params string[] codes)

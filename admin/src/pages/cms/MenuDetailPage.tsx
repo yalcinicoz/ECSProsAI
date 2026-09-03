@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Plus, Trash2, ChevronRight, ChevronDown, Save, GripVertical } from 'lucide-react'
@@ -226,7 +226,7 @@ export function MenuDetailPage() {
   const [items, setItems] = useState<DraftItem[]>([])
   const [editKey, setEditKey] = useState<string | null>(null)
   const [savedOk, setSavedOk] = useState(false)
-  const initedMenuId = useRef<string | null>(null)
+  const [initedMenuId, setInitedMenuId] = useState<string | null>(null)
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
 
@@ -239,12 +239,10 @@ export function MenuDetailPage() {
     enabled: !!id,
   })
 
-  useEffect(() => {
-    if (menu && initedMenuId.current !== menu.id) {
-      initedMenuId.current = menu.id
-      setItems(dtoToFlat(menu.nodes))
-    }
-  }, [menu])
+  if (menu && initedMenuId !== menu.id) {
+    setInitedMenuId(menu.id)
+    setItems(dtoToFlat(menu.nodes))
+  }
 
   // ── Mutations ─────────────────────────────────────────────────────────────
 

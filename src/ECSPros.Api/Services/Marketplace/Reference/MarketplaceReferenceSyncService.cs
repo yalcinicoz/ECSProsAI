@@ -85,19 +85,56 @@ public sealed class MarketplaceReferenceSyncService(
         }
 
         var runId = Guid.NewGuid();
-        await using (var ins = ds.CreateCommand(
-            "INSERT INTO mp_sync_runs (id, marketplace, scope, status) VALUES ($1,$2,$3,'running')"))
+        if (!_running.TryAdd(marketplace, runId))
+            return (null, $"'{marketplace}' için bu process içinde zaten süren bir referans senkronu var.");
+
+        try
         {
+            await using var ins = ds.CreateCommand(
+                "INSERT INTO mp_sync_runs (id, marketplace, scope, status) VALUES ($1,$2,$3,'running')");
             ins.Parameters.AddWithValue(runId);
             ins.Parameters.AddWithValue(marketplace);
             ins.Parameters.AddWithValue(scope);
             await ins.ExecuteNonQueryAsync(ct);
         }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            _running.TryRemove(new KeyValuePair<string, Guid>(marketplace, runId));
+            return (null, $"'{marketplace}' için başka bir node üzerinde zaten süren bir referans senkronu var.");
+        }
+        catch
+        {
+            _running.TryRemove(new KeyValuePair<string, Guid>(marketplace, runId));
+            throw;
+        }
 
-        _running[marketplace] = runId;
         // Arka planda yürüt — istek beklemez, durum mp_sync_runs'tan izlenir.
         _ = Task.Run(() => ExecuteAsync(runId, downloader, scope, categoryIds, lifetime.ApplicationStopping));
         return (runId, null);
+    }
+
+    /// <summary>Günlük worker checkpoint'i: başarılı koşu DB'de durduğu için restart/node değişiminde korunur.</summary>
+    public async Task<bool> HasCompletedRunOnDayAsync(
+        string marketplace, string scope, DateOnly utcDay, CancellationToken ct)
+    {
+        var ds = await refDb.GetAsync(ct);
+        if (ds is null) return false;
+
+        var startUtc = utcDay.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var endUtc = startUtc.AddDays(1);
+        await using var cmd = ds.CreateCommand(
+            """
+            SELECT EXISTS (
+                SELECT 1 FROM mp_sync_runs
+                WHERE marketplace=$1 AND scope=$2 AND status='completed'
+                  AND finished_at >= $3 AND finished_at < $4
+            )
+            """);
+        cmd.Parameters.AddWithValue(marketplace);
+        cmd.Parameters.AddWithValue(scope);
+        cmd.Parameters.AddWithValue(startUtc);
+        cmd.Parameters.AddWithValue(endUtc);
+        return (bool)(await cmd.ExecuteScalarAsync(ct) ?? false);
     }
 
     private async Task ExecuteAsync(
@@ -143,8 +180,8 @@ public sealed class MarketplaceReferenceSyncService(
                 if (sonuc.BrokenCount + sonuc.ReviewCount > 0)
                 {
                     using var kapsam = serviceProvider.CreateScope();
-                    kapsam.ServiceProvider.GetRequiredService<Mapping.MarketplaceMappingService>()
-                        .ReadinessTetikle(marketplace, null);
+                    await kapsam.ServiceProvider.GetRequiredService<Mapping.MarketplaceMappingService>()
+                        .ReadinessTetikleAsync(marketplace, null, ct);
                 }
             }
             catch (Exception hex)

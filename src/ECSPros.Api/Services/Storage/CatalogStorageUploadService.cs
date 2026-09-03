@@ -13,6 +13,9 @@ public sealed class CatalogStorageUploadService(
     private const string ImageCategory = "catalog/images/products";
     private const string VideoCategory = "catalog/videos/products";
 
+    string IImageUploadService.GetStoredFileExtension(string sourceExtension) =>
+        sourceExtension.Trim().TrimStart('.').ToLowerInvariant();
+
     Task<bool> IImageUploadService.UploadAsync(
         Stream fileStream, string fileName, CancellationToken ct) =>
         UploadAsync(ImageCategory, fileStream, fileName, ContentType(fileName), ct);

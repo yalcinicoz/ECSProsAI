@@ -55,6 +55,15 @@ const CHANGE_TYPE_LABEL: Record<string, string> = {
   cargo_change: 'Kargo kodu değişimi',
 }
 
+function apiErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error !== 'object' || error === null || !('response' in error)) return fallback
+  const response = error.response
+  if (typeof response !== 'object' || response === null || !('data' in response)) return fallback
+  const data = response.data
+  if (typeof data !== 'object' || data === null || !('error' in data)) return fallback
+  return typeof data.error === 'string' ? data.error : fallback
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function OrderPackagesSection({ orderId, orderStatus, cargoIntegrations }: {
@@ -90,12 +99,12 @@ export function OrderPackagesSection({ orderId, orderStatus, cargoIntegrations }
   })
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['order-packages', orderId] })
-  const fail = (err: any, fallback: string) => setError(err?.response?.data?.error ?? fallback)
+  const fail = (error: unknown, fallback: string) => setError(apiErrorMessage(error, fallback))
 
   const splitMutation = useMutation({
     mutationFn: async () => { await api.post('/fulfillment/packages/split', { orderId }) },
     onSuccess: () => { setError(''); refresh() },
-    onError: (e: any) => fail(e, 'Paketleme başarısız.'),
+    onError: (error: unknown) => fail(error, 'Paketleme başarısız.'),
   })
 
   const renumberMutation = useMutation({
@@ -103,7 +112,7 @@ export function OrderPackagesSection({ orderId, orderStatus, cargoIntegrations }
       await api.post(`/fulfillment/packages/${renumberFor!.id}/renumber`, { reason })
     },
     onSuccess: () => { setRenumberFor(null); setError(''); refresh() },
-    onError: (e: any) => fail(e, 'Yeniden numaralandırma başarısız.'),
+    onError: (error: unknown) => fail(error, 'Yeniden numaralandırma başarısız.'),
   })
 
   const mergeMutation = useMutation({
@@ -111,7 +120,7 @@ export function OrderPackagesSection({ orderId, orderStatus, cargoIntegrations }
       await api.post('/fulfillment/packages/merge', { packageIds: selected, reason })
     },
     onSuccess: () => { setMergeOpen(false); setSelected([]); setError(''); refresh() },
-    onError: (e: any) => fail(e, 'Birleştirme başarısız.'),
+    onError: (error: unknown) => fail(error, 'Birleştirme başarısız.'),
   })
 
   const cargoMutation = useMutation({
@@ -123,7 +132,7 @@ export function OrderPackagesSection({ orderId, orderStatus, cargoIntegrations }
       })
     },
     onSuccess: () => { setCargoFor(null); setError(''); refresh() },
-    onError: (e: any) => fail(e, 'Kargo kodu atanamadı.'),
+    onError: (error: unknown) => fail(error, 'Kargo kodu atanamadı.'),
   })
 
   const aktifPaketler = packages.filter(p => p.status !== 'merged')

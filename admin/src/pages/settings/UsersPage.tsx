@@ -4,7 +4,8 @@ import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { DataTable, Pager, errText, tarihSaat, i18nAd } from '@/components/ui/DataTable'
+import { DataTable, Pager } from '@/components/ui/DataTable'
+import { errText, tarihSaat, i18nAd } from '@/components/ui/DataTable.utils'
 
 interface User {
   id: string

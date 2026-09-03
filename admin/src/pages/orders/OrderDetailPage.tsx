@@ -7,9 +7,16 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { Link } from 'react-router-dom'
-import { ORDER_STATUS_MAP, PAYMENT_STATUS_MAP, PAYMENT_METHOD_MAP } from './OrdersPage'
-import { RETURN_STATUS_MAP, type ReturnSummary } from './ReturnsPage'
-import { INVOICE_STATUS_MAP, INVOICE_TYPE_MAP, type InvoiceSummary, type InvoiceSeries } from './InvoicesPage'
+import type { ReturnSummary } from './ReturnsPage'
+import type { InvoiceSummary, InvoiceSeries } from './InvoicesPage'
+import {
+  INVOICE_STATUS_MAP,
+  INVOICE_TYPE_MAP,
+  ORDER_STATUS_MAP,
+  PAYMENT_METHOD_MAP,
+  PAYMENT_STATUS_MAP,
+  RETURN_STATUS_MAP,
+} from './orderConstants'
 import { OrderPackagesSection } from './OrderPackagesSection'
 
 interface OrderItem {

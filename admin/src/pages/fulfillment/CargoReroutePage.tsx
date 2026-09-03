@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { errText, tarihSaat } from '@/components/ui/DataTable'
+import { errText, tarihSaat } from '@/components/ui/DataTable.utils'
 import { cn } from '@/lib/utils'
 
 // OP5: Kargo Yönlendirme — kargo outbox kuyruğunu taşıyıcı bazlı gruplu gösterir;

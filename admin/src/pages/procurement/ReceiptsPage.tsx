@@ -13,26 +13,7 @@ import { Modal } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Pagination } from '@/components/ui/Pagination'
 import { PageSpinner } from '@/components/ui/Spinner'
-import { useSuppliers } from './PurchaseOrdersPage'
-
-export const RB_STATUS: Record<string, { label: string; variant: 'success' | 'info' | 'warning' | 'neutral' }> = {
-  received:  { label: 'Teslim Alındı', variant: 'info' },
-  sorting:   { label: 'Ayrıştırılıyor', variant: 'warning' },
-  completed: { label: 'Tamamlandı', variant: 'success' },
-}
-
-export interface WarehouseOpt { id: string; nameI18n: Record<string, string>; code: string }
-export function useWarehouses() {
-  return useQuery<WarehouseOpt[]>({
-    queryKey: ['warehouses-simple'],
-    queryFn: async () => {
-      const { data } = await api.get('/inventory/warehouses')
-      return (data.data ?? []).filter((w: any) => w.isActive !== false)
-    },
-    staleTime: 60_000,
-  })
-}
-export const whName = (w?: WarehouseOpt) => w ? (w.nameI18n?.['tr'] ?? w.code) : '—'
+import { RB_STATUS, apiErrorMessage, useSuppliers, useWarehouses, whName } from './procurementHelpers'
 
 interface RbRow {
   id: string; code: string; supplierId: string; warehouseId: string; receivedAt: string
@@ -185,7 +166,7 @@ export function ReceiptsPage() {
             <label className="flbl mb-1.5">Not (ops.)</label>
             <input className="inp" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
           </div>
-          {createMut.isError && <p className="text-sm" style={{ color: '#ef4444' }}>{(createMut.error as any)?.response?.data?.error ?? 'Oluşturulamadı.'}</p>}
+          {createMut.isError && <p className="text-sm" style={{ color: '#ef4444' }}>{apiErrorMessage(createMut.error, 'Oluşturulamadı.')}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setCreateOpen(false)}>İptal</Button>
             <Button onClick={() => createMut.mutate()} loading={createMut.isPending} disabled={!form.supplierId || !form.warehouseId}>Oluştur</Button>

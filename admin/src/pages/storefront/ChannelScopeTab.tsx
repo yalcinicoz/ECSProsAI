@@ -4,13 +4,14 @@
  * (kanal kapsamı kriterleri açık), eşleşen sayı önizlemesi, Kaydet (hemen günceller), Kapsamı Güncelle,
  * manuel eklenen / hariç tutulan listeleri (ürün kodu ile ekle).
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw, Plus, X, Ban } from 'lucide-react'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { FilterBuilder, type FilterDef } from '@/components/catalog/FilterBuilder'
+import { apiErrorMessage } from '@/lib/api-error'
 
 interface ScopeProduct { productId: string; code: string; nameI18n: Record<string, string> }
 interface ScopeDto {
@@ -48,14 +49,15 @@ export function ChannelScopeTab({ channelId }: { channelId: string }) {
   const [manualCode, setManualCode] = useState('')
   const [manualErr, setManualErr] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
+  const [loadedScope, setLoadedScope] = useState<ScopeDto | undefined>()
 
-  useEffect(() => {
-    if (!scope) return
+  if (scope && scope !== loadedScope) {
+    setLoadedScope(scope)
     setFillType(scope.fillType)
     setFilterDef(scope.filterDef ?? {})
     setDirty(false)
     setPreview(null)
-  }, [scope])
+  }
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['channel-scope', channelId] })
@@ -69,18 +71,18 @@ export function ChannelScopeTab({ channelId }: { channelId: string }) {
   const saveMut = useMutation({
     mutationFn: async () => (await api.put(`/navigation/channel-products/${channelId}/scope`, { fillType, filterDef: fillType === 'all' ? null : filterDef })).data.data,
     onSuccess: d => { setMsg(fillType === 'all' ? 'Kapsam "Tümü" olarak kaydedildi.' : `Kapsam kaydedildi ve güncellendi: ${d.matched} ürün filtreden geçti.`); invalidate() },
-    onError: (e: any) => setMsg(e?.response?.data?.error ?? 'Kaydedilemedi.'),
+    onError: (e: unknown) => setMsg(apiErrorMessage(e, 'Kaydedilemedi.')),
   })
   const syncMut = useMutation({
     mutationFn: async () => (await api.post(`/navigation/channel-products/${channelId}/scope/sync`)).data.data,
     onSuccess: d => { setMsg(`Kapsam güncellendi: ${d.matched} ürün filtreden geçti.`); invalidate() },
-    onError: (e: any) => setMsg(e?.response?.data?.error ?? 'Güncellenemedi.'),
+    onError: (e: unknown) => setMsg(apiErrorMessage(e, 'Güncellenemedi.')),
   })
   const manualMut = useMutation({
     mutationFn: async ({ productIds, action }: { productIds: string[]; action: 'include' | 'exclude' | 'clear' }) =>
       (await api.post(`/navigation/channel-products/${channelId}/scope/manual`, { productIds, action })).data.data,
     onSuccess: () => { setManualCode(''); setManualErr(null); invalidate() },
-    onError: (e: any) => setManualErr(e?.response?.data?.error ?? 'İşlem başarısız.'),
+    onError: (e: unknown) => setManualErr(apiErrorMessage(e, 'İşlem başarısız.')),
   })
 
   // Ürün kodundan Id çözümü (manuel ekle / hariç tut)
@@ -162,7 +164,7 @@ export function ChannelScopeTab({ channelId }: { channelId: string }) {
           </Button>
         )}
         <Button onClick={() => saveMut.mutate()} loading={saveMut.isPending}
-          disabled={!dirty || (filterBased && Object.keys(filterDef).filter(k => (filterDef as any)[k] != null && !(Array.isArray((filterDef as any)[k]) && (filterDef as any)[k].length === 0)).length === 0)}>
+          disabled={!dirty || (filterBased && !Object.values(filterDef).some(value => value != null && (!Array.isArray(value) || value.length > 0)))}>
           Kaydet ve Güncelle
         </Button>
         {msg && <p className="w-full text-xs" style={{ color: 'var(--text-s)' }}>{msg}</p>}

@@ -18,11 +18,33 @@ interface SearchResult {
   to: string
 }
 
+interface ProductSearchItem {
+  id: string
+  code: string
+  nameI18n?: Record<string, string>
+  variantCount: number
+}
+
+interface OrderSearchItem {
+  id: string
+  orderNumber: string
+  grandTotal?: number
+  status: string
+}
+
+interface MemberSearchItem {
+  id: string
+  firstName: string
+  lastName: string
+  email?: string | null
+  phone?: string | null
+}
+
 // ── API helpers ───────────────────────────────────────────────────────────────
 
 async function searchProducts(q: string): Promise<SearchResult[]> {
   const { data } = await api.get(`/catalog/products?search=${encodeURIComponent(q)}&pageSize=5&activeOnly=false`)
-  return (data.data?.items ?? []).map((p: any) => ({
+  return ((data.data?.items ?? []) as ProductSearchItem[]).map((p) => ({
     id: p.id,
     type: 'product',
     title: p.nameI18n?.tr ?? p.nameI18n?.[Object.keys(p.nameI18n ?? {})[0]] ?? p.code,
@@ -33,7 +55,7 @@ async function searchProducts(q: string): Promise<SearchResult[]> {
 
 async function searchOrders(q: string): Promise<SearchResult[]> {
   const { data } = await api.get(`/orders?search=${encodeURIComponent(q)}&pageSize=5`)
-  return (data.data?.items ?? []).map((o: any) => ({
+  return ((data.data?.items ?? []) as OrderSearchItem[]).map((o) => ({
     id: o.id,
     type: 'order',
     title: `#${o.orderNumber}`,
@@ -44,7 +66,7 @@ async function searchOrders(q: string): Promise<SearchResult[]> {
 
 async function searchMembers(q: string): Promise<SearchResult[]> {
   const { data } = await api.get(`/crm/members?search=${encodeURIComponent(q)}&pageSize=5`)
-  return (data.data?.items ?? []).map((m: any) => ({
+  return ((data.data?.items ?? []) as MemberSearchItem[]).map((m) => ({
     id: m.id,
     type: 'member',
     title: `${m.firstName} ${m.lastName}`,

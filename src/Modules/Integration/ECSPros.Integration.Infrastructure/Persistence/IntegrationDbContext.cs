@@ -10,6 +10,8 @@ public class IntegrationDbContext(DbContextOptions<IntegrationDbContext> options
     public DbSet<IntegrationLog> IntegrationLogs => Set<IntegrationLog>();
     public DbSet<MarketplaceProduct> MarketplaceProducts => Set<MarketplaceProduct>();
     public DbSet<ErpVariantData> ErpVariantData => Set<ErpVariantData>();
+    public DbSet<ErpSyncCheckpoint> ErpSyncCheckpoints => Set<ErpSyncCheckpoint>();
+    public DbSet<LegacyImportCheckpoint> LegacyImportCheckpoints => Set<LegacyImportCheckpoint>();
     public DbSet<LegacyOrderOutbox> LegacyOrderOutbox => Set<LegacyOrderOutbox>();
     public DbSet<TrackingEventOutbox> TrackingEventOutbox => Set<TrackingEventOutbox>();
     public DbSet<TrackingOrderContext> TrackingOrderContexts => Set<TrackingOrderContext>();

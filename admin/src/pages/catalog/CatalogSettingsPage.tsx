@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Check, Trash2 } from 'lucide-react'
 import api from '@/api/client'
@@ -11,6 +11,10 @@ import { cn } from '@/lib/utils'
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface CatalogSetting { key: string; value: string }
+
+function apiErrorMessage(error: unknown, fallback: string): string {
+  return (error as { response?: { data?: { error?: string } } } | null)?.response?.data?.error ?? fallback
+}
 
 interface ImageSet {
   id: string
@@ -32,21 +36,22 @@ const IMAGE_SERVER_FIELDS: { key: string; label: string; type: string; hint?: st
   { key: 'ImageServer.CdnThumbHeight', label: 'Thumbnail Yüksekliği',  type: 'number', hint: '240 (sepet, listeleme küçük resim)' },
   { key: 'ImageServer.CdnListHeight',  label: 'Liste/Detay Yüksekliği',type: 'number', hint: '640 (kategori listesi, ürün detayı)' },
   { key: 'ImageServer.CdnZoomHeight',  label: 'Zoom Yüksekliği',       type: 'number', hint: '1200 (ürün detayı zoom)' },
-  // Yerel / FTP Yükleme (CDN kullanılmıyorsa)
-  { key: 'ImageServer.LocalSavePath',  label: 'Yerel Kayıt Dizini',    type: 'text',   hint: 'örn: /opt/ECSProsAI/media/images/products/', section: 'Yerel Depolama / FTP' },
+  // Toplu yükleme çift hedefi
+  { key: 'ImageServer.UploadQuality',  label: 'Dönüştürme Kalitesi (%)', type: 'number', hint: '80 (1-100 arası)', section: 'Toplu Yükleme — SFTP' },
+  { key: 'ImageServer.SftpHost',       label: 'SFTP Sunucu Adresi',    type: 'text',   hint: 'örn: images.example.com' },
+  { key: 'ImageServer.SftpPort',       label: 'SFTP Port',             type: 'number', hint: '22' },
+  { key: 'ImageServer.SftpUser',       label: 'SFTP Kullanıcı Adı',    type: 'text' },
+  { key: 'ImageServer.SftpPassword',   label: 'SFTP Şifre',            type: 'password' },
+  { key: 'ImageServer.SftpBasePath',   label: 'SFTP Dosya Yolu',       type: 'text',   hint: '/var/www/html/images' },
+  { key: 'ImageServer.S3ServiceUrl',   label: 'S3 Servis URL',         type: 'text',   hint: 'https://s3.de.io.cloud.ovh.net/', section: 'Toplu Yükleme — OVH Object Storage' },
+  { key: 'ImageServer.S3Bucket',       label: 'S3 Bucket',             type: 'text' },
+  { key: 'ImageServer.S3AccessKey',    label: 'S3 Access Key',         type: 'password' },
+  { key: 'ImageServer.S3SecretKey',    label: 'S3 Secret Key',         type: 'password' },
+  // Yerel fallback (CDN kullanılmıyorsa)
+  { key: 'ImageServer.LocalSavePath',  label: 'Yerel Kayıt Dizini',    type: 'text',   hint: 'örn: /opt/ECSProsAI/media/images/products/', section: 'Yerel Depolama' },
   { key: 'ImageServer.PublicBaseUrl',  label: 'Yerel Sunucu URL',      type: 'text',   hint: 'örn: /media/images/products/' },
-  { key: 'ImageServer.FtpHost',        label: 'FTP Sunucu Adresi',     type: 'text',   hint: 'örn: ftp.imageserver.com' },
-  { key: 'ImageServer.FtpPort',        label: 'FTP Port',              type: 'number', hint: '21' },
-  { key: 'ImageServer.FtpUser',        label: 'FTP Kullanıcı Adı',     type: 'text' },
-  { key: 'ImageServer.FtpPassword',    label: 'FTP Şifre',             type: 'password' },
-  { key: 'ImageServer.FtpBasePath',    label: 'FTP Dosya Yolu',        type: 'text',   hint: 'örn: /images/products/' },
   { key: 'VideoServer.LocalSavePath',  label: 'Video Kayıt Dizini',    type: 'text',   hint: 'örn: /opt/ECSProsAI/media/videos/products/', section: 'Video Sunucusu' },
   { key: 'VideoServer.PublicBaseUrl',  label: 'Video Sunucu URL',      type: 'text',   hint: 'örn: /media/videos/products/' },
-  { key: 'VideoServer.FtpHost',        label: 'FTP Sunucu Adresi',     type: 'text',   hint: 'örn: ftp.imageserver.com' },
-  { key: 'VideoServer.FtpPort',        label: 'FTP Port',              type: 'number', hint: '21' },
-  { key: 'VideoServer.FtpUser',        label: 'FTP Kullanıcı Adı',     type: 'text' },
-  { key: 'VideoServer.FtpPassword',    label: 'FTP Şifre',             type: 'password' },
-  { key: 'VideoServer.FtpBasePath',    label: 'FTP Dosya Yolu',        type: 'text',   hint: 'örn: /videos/products/' },
 ]
 
 // ── CatalogSettingsPage ───────────────────────────────────────────────────────
@@ -97,7 +102,7 @@ export function CatalogSettingsPage() {
 
 function ImageServerTab() {
   const qc = useQueryClient()
-  const [draft, setDraft] = useState<Record<string, string>>({})
+  const [edits, setEdits] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState(false)
 
   const { data: settings = [], isLoading } = useQuery<CatalogSetting[]>({
@@ -108,24 +113,17 @@ function ImageServerTab() {
     },
   })
 
-  // Populate draft from loaded settings
-  useEffect(() => {
-    if (!settings.length) return
-    const map: Record<string, string> = {}
-    for (const f of IMAGE_SERVER_FIELDS) {
-      map[f.key] = settings.find(s => s.key === f.key)?.value ?? ''
-    }
-    setDraft(map)
-  }, [settings])
+  const valueOf = (key: string) => edits[key] ?? settings.find(s => s.key === key)?.value ?? ''
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       for (const f of IMAGE_SERVER_FIELDS) {
-        await api.put(`/catalog/settings/${f.key}`, { value: draft[f.key] ?? '' })
+        await api.put(`/catalog/settings/${f.key}`, { value: valueOf(f.key) })
       }
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['catalog-settings'] })
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['catalog-settings'] })
+      setEdits({})
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     },
@@ -136,7 +134,10 @@ function ImageServerTab() {
   return (
     <div className="card" style={{ maxWidth: 560 }}>
       <p className="text-xs mb-5" style={{ color: 'var(--text-s)' }}>
-        Resim yükleme için FTP sunucu bilgileri. Değişiklikler anında geçerli olur.
+        CDN ve uygulamanın otomatik toplu resim aktarım bilgileri. Kullanıcı FTP ile dosya göndermez.
+        Vitrin Yönetimi de aynı güvenli SFTP/S3 bağlantısını kullanır; dosyalarını ürünlerin images dizinine
+        değil ayrı storefront dizinine yazar. Secret alanları kaydedildikten sonra maskeli gösterilir;
+        değişiklikler sonraki yüklemede geçerli olur.
       </p>
 
       <div className="space-y-4">
@@ -149,11 +150,11 @@ function ImageServerTab() {
             )}
             <label className="flbl">{f.label}</label>
             <input
-              className={cn('inp', draft[f.key] && 'ok')}
+              className={cn('inp', valueOf(f.key) && 'ok')}
               type={f.type}
               placeholder={f.hint}
-              value={draft[f.key] ?? ''}
-              onChange={e => setDraft(d => ({ ...d, [f.key]: e.target.value }))}
+              value={valueOf(f.key)}
+              onChange={e => setEdits(d => ({ ...d, [f.key]: e.target.value }))}
             />
           </div>
         ))}
@@ -161,7 +162,7 @@ function ImageServerTab() {
 
       {saveMutation.isError && (
         <p className="text-sm mt-4" style={{ color: '#ef4444' }}>
-          {(saveMutation.error as any)?.response?.data?.error ?? 'Kayıt sırasında hata oluştu.'}
+          {apiErrorMessage(saveMutation.error, 'Kayıt sırasında hata oluştu.')}
         </p>
       )}
 
@@ -431,9 +432,7 @@ function ImageSetsTab() {
 
               {(saveMutation.isError || deleteMutation.isError) && (
                 <p className="text-sm" style={{ color: '#ef4444' }}>
-                  {(saveMutation.error as any)?.response?.data?.error
-                    ?? (deleteMutation.error as any)?.response?.data?.error
-                    ?? 'Hata oluştu.'}
+                  {apiErrorMessage(saveMutation.error, apiErrorMessage(deleteMutation.error, 'Hata oluştu.'))}
                 </p>
               )}
 

@@ -10,12 +10,20 @@ public class FtpImageUploadService : IImageUploadService
 {
     private readonly CatalogDbContext _db;
     private readonly ILogger<FtpImageUploadService> _logger;
+    private readonly ICatalogSettingSecretProtector _secretProtector;
 
-    public FtpImageUploadService(CatalogDbContext db, ILogger<FtpImageUploadService> logger)
+    public FtpImageUploadService(
+        CatalogDbContext db,
+        ILogger<FtpImageUploadService> logger,
+        ICatalogSettingSecretProtector secretProtector)
     {
         _db = db;
         _logger = logger;
+        _secretProtector = secretProtector;
     }
+
+    public string GetStoredFileExtension(string sourceExtension) =>
+        sourceExtension.Trim().TrimStart('.').ToLowerInvariant();
 
     private async Task<ImageServerSettings> LoadSettingsAsync(CancellationToken ct = default)
     {
@@ -30,7 +38,7 @@ public class FtpImageUploadService : IImageUploadService
             FtpHost: Get("ImageServer.FtpHost", "localhost"),
             FtpPort: int.TryParse(Get("ImageServer.FtpPort", "21"), out var p) ? p : 21,
             FtpUser: Get("ImageServer.FtpUser", "anonymous"),
-            FtpPassword: Get("ImageServer.FtpPassword", ""),
+            FtpPassword: _secretProtector.Unprotect(Get("ImageServer.FtpPassword", "")),
             FtpBasePath: Get("ImageServer.FtpBasePath", "/images/products/"),
             PublicBaseUrl: Get("ImageServer.PublicBaseUrl", "http://localhost/images/products/")
         );

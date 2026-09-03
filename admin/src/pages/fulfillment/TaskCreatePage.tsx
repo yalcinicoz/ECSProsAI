@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
-import { DataTable, errText, tarihSaat } from '@/components/ui/DataTable'
-import { PLAN_TIP } from './PickingPlansPage'
+import { DataTable } from '@/components/ui/DataTable'
+import { errText, tarihSaat } from '@/components/ui/DataTable.utils'
+import { PLAN_TIP } from './pickingPlanHelpers'
 
 // ── API tipleri ──────────────────────────────────────────────────────────────
 interface CandidatePreview {
@@ -41,6 +42,7 @@ const geoAd = (g: GeoItem) => g.nameI18n?.['tr'] ?? g.name ?? '—'
 
 export function TaskCreatePage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   // ── Filtre state ──
   const [kanallar, setKanallar] = useState<string[]>([])
@@ -125,19 +127,14 @@ export function TaskCreatePage() {
     placeholderData: prev => prev,
   })
 
-  // Kargo seçenekleri önizlemede görülen distinct kargolarınızdan birikir
-  // (kargo filtresi seçiliyken de eski seçenekler listede kalsın diye biriktirme)
-  const [kargoOpts, setKargoOpts] = useState<Record<string, string>>({})
-  useEffect(() => {
-    if (!aday) return
-    setKargoOpts(prev => {
-      const next = { ...prev }
-      for (const o of aday.onizleme) {
-        if (o.cargoIntegrationId) next[o.cargoIntegrationId] = o.cargoName ?? 'Kargo'
-      }
-      return next
-    })
-  }, [aday])
+  // Önceki filtre sonuçları React Query önbelleğinde kaldığı sürece kargo seçeneklerini
+  // birlikte göster; böylece seçili kargo filtresi diğer seçenekleri listeden düşürmez.
+  const kargoOpts: Record<string, string> = {}
+  for (const [, candidates] of queryClient.getQueriesData<Candidates>({ queryKey: ['task-candidates'] })) {
+    for (const order of candidates?.onizleme ?? []) {
+      if (order.cargoIntegrationId) kargoOpts[order.cargoIntegrationId] = order.cargoName ?? 'Kargo'
+    }
+  }
 
   // ── Görev oluşturma ──
   const olustur = useMutation({

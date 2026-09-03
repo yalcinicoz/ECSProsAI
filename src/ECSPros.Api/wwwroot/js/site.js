@@ -926,15 +926,88 @@
         const placeholder = document.createElement("span");
         placeholder.className = "ms-lazy-placeholder-zemin";
         placeholder.setAttribute("aria-hidden", "true");
-        placeholder.innerHTML = "<span>Placeholder</span>";
+        const urunGorseli = img.dataset.msUrunGorselYukleme === "true";
+        if (urunGorseli) {
+            kapsayici.classList.add("ms-urun-gorsel-placeholderli");
+            placeholder.classList.add("ms-urun-markali-placeholder");
+        }
+        placeholder.innerHTML = urunGorseli ? "<span>Tozlu</span>" : "<span>Placeholder</span>";
 
         const skeleton = document.createElement("span");
         skeleton.className = "ms-lazy-skeleton";
         skeleton.setAttribute("aria-hidden", "true");
 
         kapsayici.appendChild(placeholder);
-        kapsayici.appendChild(skeleton);
+        if (!urunGorseli) {
+            kapsayici.appendChild(skeleton);
+        }
     };
+
+    const urunGorseliniHazirla = (img, sifirla = false) => {
+        if (!(img instanceof HTMLImageElement) || img.dataset.msUrunGorselYukleme !== "true") {
+            return;
+        }
+
+        if (sifirla) {
+            const nesil = Number.parseInt(img.dataset.msUrunGorselNesil || "0", 10) + 1;
+            img.dataset.msUrunGorselNesil = String(nesil);
+            // Markalı placeholder yalnız kartın ilk görseli hazırlanırken görünür.
+            // Hover/renk değişimlerinde mevcut görsel yeni kaynak yüklenene kadar korunur.
+            if (img.dataset.msUrunGorselIlkYuklendi !== "true") {
+                img.classList.remove("ms-lazy-gorsel-yuklendi");
+            }
+        }
+
+        const tamamla = async () => {
+            // Lazy placeholder'ın kendi data URI load olayı gerçek ürün görseli değildir.
+            if (img.dataset.msLazySrc || img.dataset.msLazySrcset || !img.complete || img.naturalWidth <= 0) {
+                return;
+            }
+
+            const nesil = img.dataset.msUrunGorselNesil || "0";
+            try {
+                await img.decode();
+            } catch {
+                // İlk yükleme başarısızsa placeholder kalır; sonraki galeri geçişleri
+                // daha önce başarıyla yüklenmiş görseli placeholder ile örtmez.
+                if ((img.dataset.msUrunGorselNesil || "0") === nesil
+                    && img.dataset.msUrunGorselIlkYuklendi !== "true") {
+                    img.classList.remove("ms-lazy-gorsel-yuklendi");
+                }
+                return;
+            }
+
+            if ((img.dataset.msUrunGorselNesil || "0") === nesil && img.complete && img.naturalWidth > 0) {
+                img.dataset.msUrunGorselIlkYuklendi = "true";
+                img.classList.add("ms-lazy-gorsel-yuklendi");
+            }
+        };
+
+        if (img.dataset.msUrunGorselHazir !== "true") {
+            img.dataset.msUrunGorselHazir = "true";
+            img.addEventListener("load", tamamla);
+            img.addEventListener("error", () => {
+                if (img.dataset.msUrunGorselIlkYuklendi !== "true") {
+                    img.classList.remove("ms-lazy-gorsel-yuklendi");
+                }
+            });
+        }
+
+        if (!img.dataset.msLazySrc && !img.dataset.msLazySrcset && img.complete) {
+            void tamamla();
+        }
+    };
+
+    const urunGorselleriniHazirla = (kok = document) => {
+        if (kok instanceof HTMLImageElement) {
+            urunGorseliniHazirla(kok);
+            return;
+        }
+        kok?.querySelectorAll?.("img[data-ms-urun-gorsel-yukleme='true']")
+            .forEach((img) => urunGorseliniHazirla(img));
+    };
+
+    window.msUrunGorselYuklemeyeHazirla = urunGorseliniHazirla;
 
     const gorselYukle = (img) => {
         const lazySrc = img.dataset.msLazySrc;
@@ -943,13 +1016,21 @@
         const lazyPictureSources = img.closest("picture")?.querySelectorAll("source[data-ms-lazy-srcset]") || [];
 
         if (!lazySrc && !lazySrcset && lazyPictureSources.length === 0) {
-            img.classList.add("ms-lazy-gorsel-yuklendi");
+            if (img.dataset.msUrunGorselYukleme === "true") {
+                urunGorseliniHazirla(img);
+            } else {
+                img.classList.add("ms-lazy-gorsel-yuklendi");
+            }
             return;
         }
 
-        img.addEventListener("load", () => {
-            img.classList.add("ms-lazy-gorsel-yuklendi");
-        }, { once: true });
+        if (img.dataset.msUrunGorselYukleme === "true") {
+            urunGorseliniHazirla(img, true);
+        } else {
+            img.addEventListener("load", () => {
+                img.classList.add("ms-lazy-gorsel-yuklendi");
+            }, { once: true });
+        }
 
         if (lazySizes) {
             img.sizes = lazySizes;
@@ -977,9 +1058,11 @@
         img.removeAttribute("data-ms-lazy-src");
         img.removeAttribute("data-ms-lazy-srcset");
         img.removeAttribute("data-ms-lazy-sizes");
+        urunGorseliniHazirla(img);
     };
 
     const gorselHazirla = (img) => {
+        urunGorseliniHazirla(img);
         if (!(img instanceof HTMLImageElement) || !lazyInfiniteAktifMi(img) || img.dataset.msLazyHazir === "true" || img.dataset.msLazy === "false" || img.classList.contains("no-lazy")) {
             return;
         }
@@ -1042,12 +1125,14 @@
     }
 
     const baslat = () => {
+        urunGorselleriniHazirla();
         lazyLoadYenile();
 
         if ("MutationObserver" in window) {
             const mutationObserver = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
                     mutation.addedNodes.forEach((node) => {
+                        urunGorselleriniHazirla(node);
                         if (node instanceof HTMLImageElement) {
                             gorselHazirla(node);
                         } else {
@@ -4546,6 +4631,7 @@
         gorsel.removeAttribute("sizes");
         gorsel.removeAttribute("data-ms-lazy-srcset");
         gorsel.removeAttribute("data-ms-lazy-sizes");
+        window.msUrunGorselYuklemeyeHazirla?.(gorsel, true);
         gorsel.src = url;
     });
 
@@ -4571,6 +4657,7 @@
 
         const gorsel = anaGorsel(onizlenenKart);
         if (gorsel && eskiSrc) {
+            window.msUrunGorselYuklemeyeHazirla?.(gorsel, true);
             gorsel.src = eskiSrc;
         }
         onizlenenKart = null;
@@ -4632,6 +4719,7 @@
                         gorsel.removeAttribute("sizes");
                         gorsel.removeAttribute("data-ms-lazy-srcset");
                         gorsel.removeAttribute("data-ms-lazy-sizes");
+                        window.msUrunGorselYuklemeyeHazirla?.(gorsel, true);
                         gorsel.src = resimler[hedefIndex];
                         gorsel.removeAttribute("data-ms-lazy-src");
                         window.requestAnimationFrame(() => {
@@ -5218,6 +5306,7 @@
                     gorsel.removeAttribute("sizes");
                     gorsel.removeAttribute("data-ms-lazy-srcset");
                     gorsel.removeAttribute("data-ms-lazy-sizes");
+                    window.msUrunGorselYuklemeyeHazirla?.(gorsel, true);
                     gorsel.src = resimler[hedefIndex];
                     window.requestAnimationFrame(() => {
                         gorsel.classList.remove("ms-urun-gorsel-degisiyor");
@@ -7052,30 +7141,50 @@
     const menuler = document.querySelectorAll("[data-ms-magaza-menu]");
 
     menuler.forEach((menu) => {
-        let magazaMenuBaslatildi = false;
+        const anaMenuLink = menu.querySelector(".ms-magaza-menu-tum > .ms-magaza-menu-link");
+        let magazaMenuBaslatma = null;
+        let menuAcKapat = null;
 
         const magazaMenuBaslat = () => {
-        if (magazaMenuBaslatildi) {
-            return;
+        if (magazaMenuBaslatma) {
+            return magazaMenuBaslatma;
         }
 
-        magazaMenuBaslatildi = true;
+        magazaMenuBaslatma = (async () => {
         const sablon = menu.querySelector("[data-ms-magaza-mega-menu-sablon]");
 
         if (sablon instanceof HTMLTemplateElement) {
             sablon.parentNode?.insertBefore(sablon.content.cloneNode(true), sablon);
             sablon.remove();
+        } else if (!menu.querySelector("[data-ms-magaza-mega-menu]")) {
+            const hedef = menu.querySelector("[data-ms-magaza-mega-menu-hedef]");
+            const url = menu.dataset.msMegaMenuUrl;
+
+            if (!hedef || !url) {
+                return false;
+            }
+
+            hedef.setAttribute("aria-busy", "true");
+            const yanit = await fetch(url, {
+                headers: { "Accept": "text/html" },
+                credentials: "same-origin"
+            });
+            if (!yanit.ok) {
+                throw new Error(`Mega menü yüklenemedi (${yanit.status}).`);
+            }
+
+            hedef.innerHTML = await yanit.text();
+            hedef.removeAttribute("aria-busy");
         }
 
         const megaMenu = menu.querySelector("[data-ms-magaza-mega-menu]");
-        const anaMenuLink = menu.querySelector(".ms-magaza-menu-tum > .ms-magaza-menu-link");
         const ustLinkler = menu.querySelectorAll("[data-ms-magaza-menu-link]");
         const kampanyaListesi = menu.querySelector(".ms-magaza-mega-kampanya-listesi");
         const kampanyaKontrolleri = menu.querySelectorAll("[data-ms-kampanya-kaydir]");
         const menuIc = menu.querySelector(".ms-magaza-menu-ic");
 
         if (!megaMenu || !anaMenuLink) {
-            return;
+            return false;
         }
 
         const solKolon = document.createElement("div");
@@ -7242,6 +7351,14 @@
             ustLinkler.forEach((link) => link.classList.remove("ms-magaza-menu-link-aktif"));
         };
 
+        menuAcKapat = () => {
+            if (megaMenu.classList.contains("ms-magaza-mega-menu-acik")) {
+                kategoriKapat();
+            } else {
+                menuAc();
+            }
+        };
+
         // Mega menü hover ayarı (2026-08-14, data-ms-mega-hover panel Menü Yerleşimi'nden):
         // kapalıyken (varsayılan) üzerine gelmek mega menüyü AÇMAZ; mega menü yalnız
         // "Kategoriler" tıklamasıyla açılır/kapanır. Menü linkleri her iki modda da
@@ -7252,14 +7369,6 @@
             anaMenuLink.addEventListener("mouseenter", menuAc);
             anaMenuLink.addEventListener("focus", menuAc);
         }
-        anaMenuLink.addEventListener("click", (event) => {
-            event.preventDefault();
-            if (megaMenu.classList.contains("ms-magaza-mega-menu-acik")) {
-                kategoriKapat();
-            } else {
-                menuAc();
-            }
-        });
 
         ustLinkler.forEach((link) => {
             const kategori = link.dataset.msMagazaMenuLink;
@@ -7294,6 +7403,19 @@
             });
             // tıklama = navigasyon (href kategorinin ürün listesi) — preventDefault kaldırıldı
         });
+
+        // Endpoint cevabı gelene kadar ilk mouseenter/focus olayı tamamlanmış olabilir.
+        // Hover modu açıksa o anda üzerinde/odakta olunan linkin beklenen panelini aç.
+        if (hoverIleAcilir) {
+            const etkinUstLink = Array.from(ustLinkler).find((link) =>
+                link.matches(":hover") || link === document.activeElement);
+            if (etkinUstLink) {
+                menuAc();
+                kategoriAc(etkinUstLink.dataset.msMagazaMenuLink, true);
+            } else if (anaMenuLink.matches(":hover") || anaMenuLink === document.activeElement) {
+                menuAc();
+            }
+        }
 
         menu.addEventListener("mouseleave", kategoriKapat);
 
@@ -7471,11 +7593,37 @@
                 kategoriKapat();
             }
         });
+        return true;
+        })().catch(() => {
+            menu.querySelector("[data-ms-magaza-mega-menu-hedef]")?.removeAttribute("aria-busy");
+            magazaMenuBaslatma = null;
+            return false;
+        });
+
+        return magazaMenuBaslatma;
         };
 
-        menu.addEventListener("pointerenter", magazaMenuBaslat, { once: true });
-        menu.addEventListener("focusin", magazaMenuBaslat, { once: true });
-        menu.addEventListener("pointerdown", magazaMenuBaslat, { once: true, capture: true });
+        anaMenuLink?.addEventListener("click", async (event) => {
+            event.preventDefault();
+            if (await magazaMenuBaslat()) {
+                menuAcKapat?.();
+            } else {
+                window.location.assign(anaMenuLink.href);
+            }
+        });
+
+        // Hover ile mega menü kapalıyken normal üst menü linkleri yalnız navigasyon yapar.
+        // Mega menü HTML'ini yalnız Kategoriler gerçekten kullanılacağı zaman endpoint'ten
+        // getir. Hover modu açıksa normal üst menü etkileşimi de ön yüklemeyi başlatır.
+        const megaMenuTetikAlani = menu.dataset.msMegaHover === "1"
+            ? menu
+            : menu.querySelector(".ms-magaza-menu-tum");
+
+        if (menu.dataset.msMegaHover === "1") {
+            megaMenuTetikAlani?.addEventListener("pointerenter", magazaMenuBaslat, { once: true });
+        }
+        megaMenuTetikAlani?.addEventListener("focusin", magazaMenuBaslat, { once: true });
+        megaMenuTetikAlani?.addEventListener("pointerdown", magazaMenuBaslat, { once: true, capture: true });
     });
 })();
 

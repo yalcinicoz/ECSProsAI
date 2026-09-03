@@ -6,14 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
-
-export const RETURN_STATUS_MAP: Record<string, { label: string; variant: 'success' | 'warning' | 'neutral' | 'danger' }> = {
-  requested: { label: 'Talep Edildi', variant: 'warning' },
-  approved:  { label: 'Onaylandı',    variant: 'warning' },
-  received:  { label: 'Teslim Alındı', variant: 'success' },
-  refunded:  { label: 'Geri Ödendi',  variant: 'success' },
-  rejected:  { label: 'Reddedildi',   variant: 'danger' },
-}
+import { RETURN_STATUS_MAP } from './orderConstants'
 
 const TABS = [
   { key: 'requested', label: 'Talep Edilen' },

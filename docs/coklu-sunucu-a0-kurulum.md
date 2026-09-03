@@ -52,12 +52,23 @@ istisna ise not düşün. Örnek (ufw): `sudo ufw allow from 10.0.0.2 to any por
   - `docker-compose.yml` nginx volume: `./media:...` → `/srv/ecspros-shared/media:/usr/share/nginx/html/media:ro`
     → `sudo docker compose up -d nginx` (restart değil — volume değişikliği up ister).
 
-## 5. nginx upstream (düğüm 1)
+## 5. nginx upstream (`192.168.0.59`)
 
-`docker/nginx/conf.d/upstream-ecspros.conf.example` içindeki adımlar:
-kopyala → düğüm 2 IP'sini düzelt → üç dosyada `host.docker.internal:5000` hedeflerini `ecspros_api`
-yap (**5050'li satırlara dokunma**) → `sudo docker compose restart nginx`.
-Yapışkanlık CF-Connecting-IP hash'iyle sağlanır (şablondaki açıklama).
+Repository'de `docker/nginx/conf.d/upstream-ecspros.conf` etkin durumdadır. Production upstream:
+
+- `api-1`: `192.168.0.245:5050`
+- `api-2`: `192.168.0.58:5050`
+
+`default.conf`, `locations.inc` ve `satici-locations.inc` production isteklerini `ecspros_api`
+upstream'ine yollar. `host.docker.internal:5050` kullanan Telemania/demo hedefleri bilinçli olarak
+değiştirilmemiştir. Yapışkanlık `00-gercek-istemci-ip.conf` tarafından üretilen gerçek istemci IP'sinin
+tutarlı hash'iyle sağlanır. Açık kaynak nginx aktif health check yapmadığı için bağlantı hatası, timeout
+ve 502/503/504 cevaplarında en fazla diğer düğüm denenir; gönderilmiş non-idempotent istek yeniden
+gönderilmez.
+
+Canlıya almadan önce çalışan container içinde `nginx -t` zorunludur. Test başarılıysa config mount'u
+değişmediği için kesintisiz `nginx -s reload` tercih edilir; `docker compose restart nginx` yalnız reload
+başarısızsa kullanılmalıdır.
 
 ## 6. Deploy ve sıralı restart
 

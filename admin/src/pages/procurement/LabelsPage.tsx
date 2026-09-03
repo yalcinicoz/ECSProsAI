@@ -3,7 +3,7 @@
  * Yığın listesi kurulur (ürün + deste adedi), "Tümünü Yazdır" tek sekmede tüm desteleri art arda basar;
  * her yığının destesi kendi ürünüyledir. Eksik çıkarsa satırdan ek basılır. Gerçek sayım: Sayım/Teslim ekranı.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Printer, Search, Trash2, AlertTriangle } from 'lucide-react'
 import api from '@/api/client'
@@ -30,7 +30,7 @@ export function LabelsPage() {
     queryKey: ['label-templates-product'],
     queryFn: async () => (await api.get('/core/label-templates?targetType=product&activeOnly=true')).data.data,
   })
-  useEffect(() => { if (!tplId && templates.length) setTplId((templates.find(t => t.isDefault) ?? templates[0]).id) }, [templates, tplId])
+  const selectedTplId = tplId || (templates.find(template => template.isDefault) ?? templates[0])?.id || ''
 
   const doSearch = async () => {
     setSel(null)
@@ -50,9 +50,9 @@ export function LabelsPage() {
     setSel(null); setCands(null); setTerm(''); setCnt(''); searchRef.current?.focus()
   }
   const printItems = (items: Row[]) => {
-    if (!tplId || items.length === 0) return
+    if (!selectedTplId || items.length === 0) return
     const q = items.map(r => `${r.variantId}:${r.count}`).join(',')
-    window.open(`/yazdir/etiket?templateId=${tplId}&items=${q}`, '_blank')
+    window.open(`/yazdir/etiket?templateId=${selectedTplId}&items=${q}`, '_blank')
   }
   const toplam = rows.reduce((s, r) => s + r.count, 0)
 
@@ -70,9 +70,9 @@ export function LabelsPage() {
       <div className="card mb-4 flex flex-wrap items-end gap-3">
         <div className="min-w-[240px]">
           <label className="flbl mb-1.5">Etiket şablonu</label>
-          <SearchableSelect value={tplId} onChange={v => setTplId(v ?? '')}
+          <SearchableSelect value={selectedTplId} onChange={v => setTplId(v ?? '')}
             options={templates.map(t => ({ value: t.id, label: t.name + (t.isDefault ? ' (varsayılan)' : '') }))}
-            placeholder={templates.length ? 'Şablon seçin…' : 'Şablon yok — önce Etiket Şablonları'} hasValue={!!tplId} />
+            placeholder={templates.length ? 'Şablon seçin…' : 'Şablon yok — önce Etiket Şablonları'} hasValue={!!selectedTplId} />
         </div>
       </div>
 
@@ -118,7 +118,7 @@ export function LabelsPage() {
           <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Basılacak desteler — {rows.length} yığın · {toplam} etiket</h2>
           <div className="flex gap-2">
             {rows.length > 0 && <Button size="sm" variant="secondary" onClick={() => setRows([])}>Temizle</Button>}
-            <Button size="sm" disabled={!tplId || rows.length === 0} onClick={() => printItems(rows)}>
+            <Button size="sm" disabled={!selectedTplId || rows.length === 0} onClick={() => printItems(rows)}>
               <Printer size={14} /> Tümünü Yazdır
             </Button>
           </div>
@@ -139,7 +139,7 @@ export function LabelsPage() {
                     onChange={e => setRows(p => p.map((x, j) => j === i ? { ...x, count: num(e.target.value) } : x))} />
                 </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
-                  <button className="text-xs underline mr-3" style={{ color: 'var(--brand)' }} disabled={!tplId}
+                  <button className="text-xs underline mr-3" style={{ color: 'var(--brand)' }} disabled={!selectedTplId}
                     onClick={() => printItems([r])}>Bu desteyi bas</button>
                   <button className="p-1 rounded hover:opacity-70" onClick={() => setRows(p => p.filter((_, j) => j !== i))}>
                     <Trash2 size={14} style={{ color: 'var(--text-s)' }} />

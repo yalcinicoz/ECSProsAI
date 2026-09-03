@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '@/api/client'
@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { QuillEditor } from '@/components/QuillEditor'
-import { PAGE_TYPE_MAP, useFirmPlatforms, type CmsPageSummary } from './CmsPagesPage'
+import type { CmsPageSummary } from './CmsPagesPage'
+import { PAGE_TYPE_MAP, useFirmPlatforms } from './cmsPageShared'
 import { cn } from '@/lib/utils'
 
 export interface PageSectionItem {
@@ -307,9 +308,10 @@ export function CmsPageDetailPage() {
   const [saved, setSaved] = useState(false)
   const [copyOpen, setCopyOpen] = useState(false)
   const [openSection, setOpenSection] = useState<string | null>(null)
+  const [loadedPage, setLoadedPage] = useState<CmsPageDetail | undefined>()
 
-  useEffect(() => {
-    if (!page) return
+  if (page && page !== loadedPage) {
+    setLoadedPage(page)
     setName(page.nameI18n?.['tr'] ?? '')
     setSlug(page.slugI18n?.['tr'] ?? '')
     setMetaTitle(page.metaTitleI18n?.['tr'] ?? '')
@@ -317,7 +319,7 @@ export function CmsPageDetailPage() {
     setIsActive(page.isActive)
     setPublishAt(toDateInput(page.publishAt))
     setUnpublishAt(toDateInput(page.unpublishAt))
-  }, [page])
+  }
 
   const save = useMutation({
     mutationFn: async () => {

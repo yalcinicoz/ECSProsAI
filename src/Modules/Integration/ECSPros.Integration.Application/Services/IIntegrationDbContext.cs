@@ -9,6 +9,8 @@ public interface IIntegrationDbContext
     DbSet<IntegrationLog> IntegrationLogs { get; }
     DbSet<MarketplaceProduct> MarketplaceProducts { get; }
     DbSet<ErpVariantData> ErpVariantData { get; }
+    DbSet<ErpSyncCheckpoint> ErpSyncCheckpoints { get; }
+    DbSet<LegacyImportCheckpoint> LegacyImportCheckpoints { get; }
     DbSet<LegacyOrderOutbox> LegacyOrderOutbox { get; }
     DbSet<TrackingEventOutbox> TrackingEventOutbox { get; }
     DbSet<TrackingOrderContext> TrackingOrderContexts { get; }

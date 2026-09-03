@@ -511,6 +511,10 @@ public class ProductQuestionConfiguration : IEntityTypeConfiguration<ProductQues
         builder.HasIndex(q => new { q.FirmPlatformId, q.ProductCode, q.Status }); // detay listesi
         builder.HasIndex(q => new { q.FirmPlatformId, q.MemberId });              // hesabım
         builder.HasIndex(q => new { q.FirmPlatformId, q.Status, q.CreatedAt });   // moderasyon
+        builder.HasIndex(q => new { q.FirmPlatformId, q.MemberId, q.ProductCode })
+            .HasDatabaseName("UX_product_questions_single_pending")
+            .IsUnique()
+            .HasFilter("\"Status\" = 'pending' AND NOT \"IsDeleted\"");
         builder.HasQueryFilter(q => !q.IsDeleted);
     }
 }

@@ -64,6 +64,11 @@ TAM tarama haftaya kendiliğinden yayılır = K3 "haftalık tam + günlük delta
 kısmi hatada gün işaretlenmez (10 dk sonra yeniden dener), 3 saat zaman aşımı; A2 rol kapısının içinde
 (yalnız Worker/Both düğüm), `Enabled=false` ile kapanır; /health/detail listesine eklendi. MappingHealth
 zaten her koşu sonrası motor içinde çalışıyor; kırık/gözden-geçir rozetleri MappingPage'de mevcuttu.
+**Çoklu-node sertleştirmesi (2026-09-02):** `mp_sync_runs` üzerinde pazaryeri başına yalnız bir
+`status='running'` satıra izin veren partial unique index eklendi; process-local `TryAdd` hızlı kapısıyla birlikte
+iki node'un check/insert yarışında ikinci koşu DB tarafından reddedilir. Şema kurulumu advisory transaction lock
+ile seri çalışır. Günlük başarı yalnız bellekte tutulmaz; worker her scope için bugünkü tamamlanmış koşuyu DB'den
+kontrol eder, restart/rolling overlap sonrası aynı işi yeniden başlatmaz.
 Panel: senkron penceresine TazelikRozeti — son koşu >8 gün (ya da hiç yok) → kırmızı "bayat", en eski
 özellik taraması >14 gün → sarı uyarı, aksi yeşil "güncel".
 **Kabul:** restart sonrası journal "Referans tazeleme: AKTİF ✓"; İLK OTOMATİK KOŞU ertesi sabah
@@ -78,6 +83,10 @@ eşlemeleri işaretler (MappingHealth); rozet bayatlamayı gösterir.
 dışı — plan sapması, gerekçeli). Yükleme: sha256 doğrulama → pg_restore --clean (ref DB paketle birebir) →
 eşleme upsert'i grup koduna göre (yerelde olmayan kod ATLANIR+raporlanır; FirmPlatformId NULL satırlarda
 unique index NULL yakalamadığından idempotens NOT EXISTS ile). Uygulama restart'ı gerekmez.
+**Çoklu-sunucu düzeltmesi (2026-09-02):** Ana ve referans PostgreSQL host/port/database/user değerleri artık
+sabit `localhost` değil, `ECSPROS_APPSETTINGS` ile seçilen ayarın `DefaultConnection`/`MarketplaceRef`
+connection stringlerinden okunur. Yükleme eşleme transaction'ı advisory lock ile eşzamanlı ikinci yüklemeye karşı
+seri çalışır; parola yalnız process environment'ında tutulup adım sonunda silinir.
 **Kabul ✅ (2026-09-01):** paket üretildi (v202609011354, 527MB) → geçici DB'ye tek komutla yüklendi,
 sayılar birebir (3.868 kategori / 73.256 özellik / 9.934.233 değer) → aynı paket İKİNCİ kez yüklendi:
 eşleme sayısı sabit (137) — idempotent. Merkezî canlı API (K1-c) ileride bu paketin üstüne kurulabilir.
@@ -98,11 +107,14 @@ RF2 ilk otomatik koşusu da doğrulandı (2026-09-01 10:01 categories + attribut
 ### RF5 — K15 olay tabanlı readiness — ✅ UYGULANDI (2026-09-01) ⚠️ restart bekliyor
 Referans/eşleme değişiklik olayları → etkilenen ürünlerin readiness'ının kuyruklu yeniden hesabı (mevcut
 `readiness/recompute` altyapısı üzerinden; feed A6 kuyruk deseni şablon).
-**Uygulama (2026-09-01):** `MarketplaceMappingService.ReadinessTetikle` — kategori eşleme kaydet/sil,
-toplu eşleme (tek tetik), özellik eşleme ve değer eşleme kaydında etkilenen grupların ürünleri arka planda
+**Uygulama (2026-09-01; çoklu-node sertleştirme 2026-09-02):**
+`MarketplaceMappingService.ReadinessTetikleAsync` — kategori eşleme kaydet/sil,
+toplu eşleme (tek tetik), özellik eşleme ve değer eşleme kaydında etkilenen grupların ürünleri istek dönmeden
 `RecomputeAsync(marketplace, productIds)` ile yeniden hesaplanır + pazaryeri kanallarının listeleme önbelleği
 A9 cache-bust üzerinden tüm düğümlerde düşürülür; referans senkronu sonrası sağlık taraması kırık/gözden-geçir
-bulursa TAM katalog yeniden hesaplanır. Hata yalnız loglanır (elle "Hazırlığı Hesapla" yedek yol olarak durur).
+bulursa TAM katalog yeniden hesaplanır. Node-local `Task.Run` kaldırıldı; aynı pazaryerindeki hesaplar PostgreSQL
+advisory lock ile node'lar arasında sıralanır, ikinci istek ilkinden sonra güncel DB durumunu hesaplar. Hata yalnız
+loglanır (elle "Hazırlığı Hesapla" yedek yol olarak durur).
 ★ K2 tespiti: panelde kanal-istisna arayüzü ZATEN yok ve kayıt DTO'su FirmPlatformId taşımıyor — kilit fiilen
 sağlı; veri modeli (çözümleme zinciri) korunuyor. K2 ek iş çıkmadan kapandı.
 **Kabul:** bir eşleme değişince etkilenen ürünlerin listeleme sebepleri elle tetiksiz güncellenir.

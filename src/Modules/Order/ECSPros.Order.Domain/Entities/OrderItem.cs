@@ -4,6 +4,8 @@ namespace ECSPros.Order.Domain.Entities;
 
 public class OrderItem : BaseEntity
 {
+    /// <summary>Geçici legacy MySQL importunda oporderlines.Id.</summary>
+    public int? LegacyOrderLineId { get; set; }
     public Guid OrderId { get; set; }
     public Guid VariantId { get; set; }
     /// <summary>Sipariş anında üründen kopyalanan tedarikçi (snapshot) — paket

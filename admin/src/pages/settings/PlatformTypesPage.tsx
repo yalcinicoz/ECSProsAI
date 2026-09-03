@@ -10,20 +10,15 @@ import { I18nField } from '@/components/ui/I18nField'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { useLanguages } from '@/hooks/useLanguages'
 import { FL } from '@/lib/field-labels'
-import { CapabilitiesEditor, CapabilityBadges, DEFAULT_CAPABILITIES, MARKETPLACE_CAPABILITIES, type ChannelCapabilities } from '@/components/channels/ChannelCapabilities'
+import { CapabilitiesEditor, CapabilityBadges } from '@/components/channels/ChannelCapabilities'
+import { DEFAULT_CAPABILITIES, MARKETPLACE_CAPABILITIES, type ChannelCapabilities } from '@/components/channels/channelCapabilitiesModel'
 import { buildI18nValues } from '@/lib/i18n-helper'
+import { getFieldLabel, type SchemaField } from './platformTypeFields'
+import { apiErrorMessage } from '@/lib/api-error'
+
+export type { SchemaField } from './platformTypeFields'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-export interface SchemaField {
-  key: string
-  labelI18n: Record<string, string>
-  type: 'text' | 'password' | 'number' | 'date' | 'boolean'
-  section: 'credentials' | 'settings'
-  required: boolean
-  /** Alan yanındaki info ikonunda gösterilen açıklama — yoksa ikon çıkmaz. */
-  helpI18n?: Record<string, string> | null
-}
 
 export interface PlatformType {
   id: string
@@ -54,17 +49,6 @@ const emptyForm = (): FormState => ({ code: '', nameI18n: {}, isMarketplace: fal
 
 function getName(p: Pick<PlatformType, 'nameI18n' | 'code'>) {
   return p.nameI18n?.['tr'] ?? p.nameI18n?.[Object.keys(p.nameI18n ?? {})[0]] ?? p.code
-}
-
-export function getFieldLabel(f: SchemaField, lang = 'tr'): string {
-  if (!f.labelI18n) return f.key
-  return f.labelI18n[lang] ?? f.labelI18n['tr'] ?? f.labelI18n[Object.keys(f.labelI18n)[0]] ?? f.key
-}
-
-export function getFieldHelp(f: SchemaField, lang = 'tr'): string | null {
-  const h = f.helpI18n
-  if (!h) return null
-  return h[lang] ?? h['tr'] ?? h[Object.keys(h)[0]] ?? null
 }
 
 // ── Schema Field Card ─────────────────────────────────────────────────────────
@@ -373,7 +357,7 @@ export function PlatformTypesPage() {
 
       {(createMutation.isError || updateMutation.isError) && (
         <p className="text-sm" style={{ color: '#ef4444' }}>
-          {((createMutation.error ?? updateMutation.error) as any)?.response?.data?.error ?? 'Hata oluştu.'}
+          {apiErrorMessage(createMutation.error ?? updateMutation.error, 'Hata oluştu.')}
         </p>
       )}
     </div>

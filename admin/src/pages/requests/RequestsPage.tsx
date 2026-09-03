@@ -26,6 +26,15 @@ interface ListResponse {
 
 const TABS = ['', 'new', 'evaluation', 'planned', 'in_progress', 'testing', 'done', 'rejected', 'cancelled']
 
+function apiErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error !== 'object' || error === null || !('response' in error)) return fallback
+  const response = error.response
+  if (typeof response !== 'object' || response === null || !('data' in response)) return fallback
+  const data = response.data
+  if (typeof data !== 'object' || data === null || !('error' in data)) return fallback
+  return typeof data.error === 'string' ? data.error : fallback
+}
+
 function CreateRequestModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('yeni_ozellik')
@@ -44,8 +53,8 @@ function CreateRequestModal({ onClose, onCreated }: { onClose: () => void; onCre
       form.append('file', f)
       const res = await api.post('/requests/media', form, { headers: { 'Content-Type': 'multipart/form-data' } })
       setFiles(prev => [...prev, res.data.data.url])
-    } catch (e: any) {
-      setError(e.response?.data?.error ?? 'Dosya yüklenemedi.')
+    } catch (error: unknown) {
+      setError(apiErrorMessage(error, 'Dosya yüklenemedi.'))
     } finally {
       setUploading(false)
     }
@@ -59,7 +68,7 @@ function CreateRequestModal({ onClose, onCreated }: { onClose: () => void; onCre
         attachments: files,
       })).data.data as { id: string },
     onSuccess: d => onCreated(d.id),
-    onError: (e: any) => setError(e.response?.data?.error ?? 'Talep oluşturulamadı.'),
+    onError: (error: unknown) => setError(apiErrorMessage(error, 'Talep oluşturulamadı.')),
   })
 
   return (

@@ -26,9 +26,17 @@
         @await Html.PartialAsync("~/Views/ProjeElementleri/Urun/_UrunKarti.cshtml", Model)
     </div>
     <script>
-        // Önizleme lazy-load motorunu yüklemez — görselleri doğrudan bağla
+        // Önizleme lazy-load motorunu yüklemez — aynı decode/complete kapısıyla bağla.
         document.querySelectorAll("[data-ms-lazy-src]").forEach((g) => {
             if (g.dataset.msLazySrc) { g.src = g.dataset.msLazySrc; }
+            g.removeAttribute("data-ms-lazy-src");
+            const goster = async () => {
+                if (!g.complete || g.naturalWidth <= 0) { return; }
+                try { await g.decode(); } catch { return; }
+                if (g.complete && g.naturalWidth > 0) { g.classList.add("ms-lazy-gorsel-yuklendi"); }
+            };
+            g.addEventListener("load", goster, { once: true });
+            if (g.complete) { void goster(); }
         });
 
         // F2: alan rotasyonları — _Layout'taki bant + mesaj satırı script'lerinin kısaltılmışı

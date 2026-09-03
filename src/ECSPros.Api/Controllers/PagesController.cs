@@ -159,13 +159,14 @@ public class PagesController(
         Guid FirmPlatformId, string Placement, string? City, string? Gender,
         string? Device, bool IsMember, Guid? MemberGroupId);
 
-    /// <summary>Vitrin öğe görseli yükleme (2026-07-22): URL elle girilmez — dosya
-    /// media/vitrin altına kaydedilir, dönen /media yolu öğeye yazılır (E8 iade deseni).</summary>
+    /// <summary>Vitrin öğe görseli yükleme: URL elle girilmez. CDN etkinse ürün görsellerinden
+    /// ayrı storefront/pages/{desktop|mobile} ağacına çift hedefli yazılır.</summary>
     [HttpPost("media")]
     [RequestSizeLimit(6_000_000)]
     public async Task<IActionResult> UploadMedia(
         IFormFile? file,
-        [FromServices] ECSPros.Api.Services.Storage.IFileStorage storage,
+        [FromForm] string? mediaKind,
+        [FromServices] ECSPros.Api.Services.Storage.IStorefrontMediaUploadService storage,
         CancellationToken ct)
     {
         var uzantilar = new Dictionary<string, string>
@@ -180,26 +181,16 @@ public class PagesController(
         if (!uzantilar.TryGetValue(file.ContentType, out var uzanti))
             return BadRequest(new { success = false, error = "Yalnızca JPEG, PNG, WebP, GIF veya SVG yükleyebilirsiniz." });
 
-        var altDizin = $"vitrin/{DateTime.UtcNow:yyyyMM}";
         var ad = $"{Guid.NewGuid():N}{uzanti}";
         await using var stream = file.OpenReadStream();
-        var stored = await storage.SavePublicAsync(altDizin, ad, stream, file.ContentType, ct);
-
-        // A fazı (2026-07-30): responsive varyantlar (_w480/_w800/_w1200/_w1920.webp) —
-        // storefront srcset bunlardan beslenir. Üretim hatası yüklemeyi düşürmez
-        // (varyantsız görsel bugünkü gibi tek kaynak servis edilir).
-        if (stored.PhysicalPath is { } dosyaYolu &&
-            ECSPros.Api.Services.Store.VitrinGorselVaryantlari.Desteklenir(file.ContentType))
+        ECSPros.Api.Services.Storage.StoredFile stored;
+        try
         {
-            try
-            {
-                await ECSPros.Api.Services.Store.VitrinGorselVaryantlari.UretAsync(dosyaYolu, ct);
-            }
-            catch (Exception ex)
-            {
-                HttpContext.RequestServices.GetRequiredService<ILogger<PagesController>>()
-                    .LogWarning(ex, "Vitrin görsel varyantları üretilemedi: {Dosya}", dosyaYolu);
-            }
+            stored = await storage.UploadAsync(mediaKind ?? "desktop", ad, stream, file.ContentType, ct);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, error = ex.Message });
         }
 
         return Ok(new { success = true, data = new { url = stored.PublicUrl } });

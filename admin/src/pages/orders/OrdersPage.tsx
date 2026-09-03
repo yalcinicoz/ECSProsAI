@@ -4,32 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
-
-export const ORDER_STATUS_MAP: Record<string, { label: string; variant: 'success' | 'warning' | 'neutral' | 'danger' }> = {
-  pending:    { label: 'Bekleyen',   variant: 'warning' },
-  confirmed:  { label: 'Onaylı',     variant: 'warning' },
-  processing: { label: 'İşlemde',    variant: 'warning' },
-  shipped:    { label: 'Kargoda',    variant: 'success' },
-  delivered:  { label: 'Teslim',     variant: 'success' },
-  cancelled:  { label: 'İptal',      variant: 'danger' },
-  returned:   { label: 'İade',       variant: 'danger' },
-}
-
-export const PAYMENT_STATUS_MAP: Record<string, string> = {
-  pending:  'Bekliyor',
-  unpaid:   'Ödenmedi',
-  paid:     'Ödendi',
-  partial:  'Kısmi',
-  refunded: 'İade Edildi',
-  failed:   'Başarısız',
-}
-
-// 2026-08-04: ödeme yöntemi (checkout PaymentMethod kolonu) — null = eski kayıt/başka kanal
-export const PAYMENT_METHOD_MAP: Record<string, string> = {
-  'kart':         'Kart (Online)',
-  'kapida-nakit': 'Kapıda Nakit',
-  'kapida-kart':  'Kapıda Kart',
-}
+import { ORDER_STATUS_MAP, PAYMENT_METHOD_MAP, PAYMENT_STATUS_MAP } from './orderConstants'
 
 // 2026-08-04 (kullanıcı kararı): filtre yöntem değil tahsilat durumu —
 // alınan = paid; alınmayan = paid dışı her durum (unpaid/pending/failed/partial)

@@ -48,9 +48,13 @@ tests/**/obj/
 
 # Local generation / verification scratch files
 /tmp/
+/.deployment/
+/.deploy/
+/docker/nginx/conf.d/upstream-ecspros.conf
 
 # Node dependencies
 node_modules/
+src/ECSPros.Api/.npm-cache/
 tools/misharix-sync/shots/
 publish-staging/
 docs/KabulTestKiti/

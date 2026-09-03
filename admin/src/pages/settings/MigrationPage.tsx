@@ -7,6 +7,7 @@ import {
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
+import { apiErrorMessage } from '@/lib/api-error'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -218,7 +219,7 @@ export function MigrationPage() {
 
           {runMutation.isError && (
             <p className="text-sm text-red-600">
-              {(runMutation.error as any)?.response?.data?.error ?? 'Bir hata oluştu'}
+              {apiErrorMessage(runMutation.error, 'Bir hata oluştu')}
             </p>
           )}
         </div>

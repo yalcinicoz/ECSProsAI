@@ -9,7 +9,7 @@ import { PageSpinner } from '@/components/ui/Spinner'
 import { PermissionGuard } from '@/components/ui/PermissionGuard'
 import { cn } from '@/lib/utils'
 import type { Warehouse } from './WarehousesPage'
-import { getWarehouseName } from './WarehousesPage'
+import { getWarehouseName } from './warehouseHelpers'
 
 const PERM = 'inventory.manage'
 

@@ -4,8 +4,10 @@ import { useNavigate } from 'react-router-dom'
 import api from '@/api/client'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { DataTable, Pager, errText, tarihSaat } from '@/components/ui/DataTable'
+import { DataTable, Pager } from '@/components/ui/DataTable'
+import { errText, tarihSaat } from '@/components/ui/DataTable.utils'
 import { cn } from '@/lib/utils'
+import { PLAN_DURUM, PLAN_TIP, dagitimDurum } from './pickingPlanHelpers'
 
 interface PickingPlan {
   id: string
@@ -23,29 +25,6 @@ interface PickingPlan {
 }
 
 interface PagedResult<T> { items: T[]; totalCount: number; page: number; pageSize: number }
-
-export const PLAN_DURUM: Record<string, [string, BadgeVariant]> = {
-  pending:   ['Bekliyor', 'warning'],
-  picking:   ['Toplanıyor', 'info'],
-  completed: ['Tamamlandı', 'success'],
-  cancelled: ['İptal', 'danger'],
-}
-
-export const PLAN_TIP: Record<string, string> = {
-  single_item: 'Tek ürünlü',
-  bulk: 'Çok ürünlü',
-  single: 'Tekli',
-  batch: 'Toplu',
-  wave: 'Dalga',
-}
-
-/** OP1: dağıtım rozeti — atama durumunu bir bakışta gösterir. */
-export function dagitimDurum(assigned: number, total: number): { label: string; variant: BadgeVariant } {
-  if (total === 0) return { label: 'Satır yok', variant: 'neutral' }
-  if (assigned === 0) return { label: 'Dağıtım yapılmadı', variant: 'danger' }
-  if (assigned < total) return { label: `Dağıtım eksik (${assigned}/${total})`, variant: 'warning' }
-  return { label: 'Dağıtım tamam', variant: 'success' }
-}
 
 /** Toplanma ilerlemesi — picked/total + yüzde çubuğu. */
 export function ToplanmaIlerleme({ picked, total }: { picked: number; total: number }) {

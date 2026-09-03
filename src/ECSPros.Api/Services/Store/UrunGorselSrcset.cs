@@ -17,7 +17,7 @@ public static partial class UrunGorselSrcset
     private static partial Regex CdnKalibi();
 
     /// <summary>Görselin gösterileceği bağlama göre genişlik merdiveni.</summary>
-    public static readonly int[] KartGenislikleri = [240, 360, 480, 640];      // liste/carousel kartı (ekranda ~180-240px)
+    public static readonly int[] KartGenislikleri = [240, 360, 480, 640, 768, 1024]; // liste/grid kartı (tablet ve yüksek DPI dahil)
     public static readonly int[] DetayGenislikleri = [480, 768, 1024, 1440];   // detay ana görseli (büyük + zoom)
     public static readonly int[] ThumbGenislikleri = [120, 240, 360];          // detay küçük görselleri
 
