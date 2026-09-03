@@ -5055,6 +5055,34 @@ ecspros` yapmadı. Yeni publish'te Sıra 1+1.5+2'nin tamamı var; restart sonras
   biçimde iki kaynak bağlantı dizesinin değerlerini de terminal çıktısına yazdı. Değerler repo/PROGRESS'e
   kaydedilmedi; ilgili MySQL ve SQL Server parolaları kontrollü olarak döndürülmelidir.
 
+### 2026-09-03 — ERP katalog → varyant → fiyat bağımlılık zinciri kalıcılaştırıldı ve yayınlandı
+
+- API01 worker logları salt-okunur incelendi. `ERP fiyat diliminde katalogda bulunmayan 1 ürün var` uyarısının
+  aynı ürünün katalog fazındaki gerçek kök hatasının devamı olduğu belirlendi: `P-00023147`, V3 ürün grubu
+  `Eşofman Altı` hedefte eşleşmediği için açılmıyor; fiyat fazı daha sonra aynı kartı bulamıyordu.
+- Mevcut katalog çözümleyicinin hedefteki benzersiz ve birebir Türkçe adları zaten otomatik eşlediği doğrulandı.
+  Adı farklı olan bu semantik eşleşme güvenli ve açık biçimde `Eşofman Altı -> grp_47 (Eşofman)` olarak hem
+  varsayılan seçeneklere hem uygulama ayarına eklendi. Boş ürün-grubu mapping değerleri artık startup validation
+  aşamasında reddedilir.
+- ERP worker'ın birbirinden bağımsız katalog/fiyat kilitleri tek dağıtık pipeline kilidinde birleştirildi. Fiyat
+  zamanı geldiğinde katalog fazı mutlaka önce çalışır; ürün ve varyant fazı operasyonel olarak başarılı olmadan
+  fiyat fazı çalıştırılmaz ve fiyat checkpoint'i korunur. Böylece sıralama `stok kartı -> varyant -> fiyat`
+  olarak deterministik hale geldi. Ayrı legacy stok worker'ının mevcut mapping-repair + fail-closed davranışı
+  son halkada stok yazımını eksik katalog/varyant üzerinde engellemeye devam eder.
+- Testler: `ErpSourceOptionsTests` `3/3`; acceptance dışı API paketi `117/117` geçti. `git diff --check` temiz
+  (yalnız çalışma alanının mevcut LF/CRLF bilgilendirmeleri). Yeni DB alanı/migration eklenmedi; production
+  MySQL/V3'e yazılmadı.
+- API01 ilk release denemesi production ayar dosyası pakette bulunmadığı için `localhost` bağlantısına düştü;
+  health kabul edilmeden önceki release'e geri alındı. Çalışan release'in `appsettings.Production.json` dosyası
+  sırları terminale yazdırılmadan yeni immutable release'e taşındı ve yayın yeniden yapıldı. Son release:
+  `20260903T124741Z_erp_dependency_pipeline`; `/health` PostgreSQL/Redis/Data Protection için `Healthy`, unit
+  `active/running`, `NRestarts=0`.
+- İlk canlı pipeline sonucu: katalog `OK`, `2` yeni ürün, `24` varyant, `0` atlanan; hemen arkasındaki fiyat
+  fazı `OK`, `2` ürün, `24` kanal-varyantı, `katalogda-yok=0`. Böylece `P-00023147 / Eşofman Altı` kaynaklı
+  iki ardışık hata kapandı.
+- Kabulden sonra API01 `/tmp` yayın arşivi, önceki ERP release'i ve yerel `.codex-tmp-erp-deploy` dizini silindi.
+  Sunucuda yalnız çalışan ERP release'i bırakıldı; kullanıcıya ait başka dosya veya yedeğe dokunulmadı.
+
 ## Yeniden Yapılanma Kararları (2026-03-11)
 
 ### Genel Yaklaşım

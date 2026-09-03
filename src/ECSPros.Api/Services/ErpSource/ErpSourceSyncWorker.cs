@@ -29,15 +29,16 @@ public sealed class ErpSourceSyncWorker(
                 if (options.Enabled && sync.IsConfigured)
                 {
                     var now = DateTime.UtcNow;
-                    if (options.CatalogEnabled && now - lastCatalog >= TimeSpan.FromMinutes(Math.Max(3, options.CatalogMinutes)))
+                    var catalogDue = options.CatalogEnabled &&
+                        now - lastCatalog >= TimeSpan.FromMinutes(Math.Max(3, options.CatalogMinutes));
+                    var priceDue = options.PriceEnabled &&
+                        now - lastPrice >= TimeSpan.FromMinutes(Math.Max(3, options.PriceMinutes));
+
+                    if (catalogDue || priceDue)
                     {
-                        lastCatalog = now;
-                        await RunWithLeaseAsync("erp-source-catalog", sync.SyncCatalogAsync, stoppingToken);
-                    }
-                    if (options.PriceEnabled && DateTime.UtcNow - lastPrice >= TimeSpan.FromMinutes(Math.Max(3, options.PriceMinutes)))
-                    {
-                        lastPrice = DateTime.UtcNow;
-                        await RunWithLeaseAsync("erp-source-price", sync.SyncPricesAsync, stoppingToken);
+                        await RunPipelineWithLeaseAsync(catalogDue, priceDue, stoppingToken);
+                        if (options.CatalogEnabled) lastCatalog = now;
+                        if (priceDue) lastPrice = now;
                     }
                 }
             }
@@ -49,12 +50,35 @@ public sealed class ErpSourceSyncWorker(
         }
     }
 
-    private async Task RunWithLeaseAsync(string lockName,
-        Func<CancellationToken, Task<ErpSourceSyncReport>> action, CancellationToken ct)
+    private async Task RunPipelineWithLeaseAsync(bool catalogDue, bool priceDue, CancellationToken ct)
     {
-        await using var lease = await workerLock.TryAcquireAsync(lockName, ct);
+        await using var lease = await workerLock.TryAcquireAsync("erp-source-catalog-price-pipeline", ct);
         if (lease is null) return;
-        var report = await action(ct);
+
+        ErpSourceSyncReport? catalogReport = null;
+        if (options.CatalogEnabled && (catalogDue || priceDue))
+        {
+            catalogReport = await sync.SyncCatalogAsync(ct);
+            await LogReportAsync(catalogReport, ct);
+        }
+
+        if (!priceDue) return;
+        if (options.CatalogEnabled && !IsOperationalSuccess(catalogReport))
+        {
+            logger.LogWarning(
+                "ERP fiyat senkronu çalıştırılmadı: katalog/ürün/varyant bağımlılık fazı başarılı değil. Fiyat checkpoint'i korunarak sonraki çevrimde yeniden denenecek.");
+            return;
+        }
+
+        var priceReport = await sync.SyncPricesAsync(ct);
+        await LogReportAsync(priceReport, ct);
+    }
+
+    internal static bool IsOperationalSuccess(ErpSourceSyncReport? report)
+        => report is not null && report.Success && report.Error is null;
+
+    private async Task LogReportAsync(ErpSourceSyncReport report, CancellationToken ct)
+    {
         var operationalSuccess = report.Success && report.Error is null;
         if (operationalSuccess)
             logger.LogInformation("ERP kaynak [{Slice}] {Status}: değişiklik={Changed}, süre={Duration}ms\n{Detail}",
