@@ -12,9 +12,9 @@ klasöre koyarsınız; bu ekran dosya adından barkodu okur, barkodun bağlı ol
 tek tuşla yükler. Katalog ve fotoğraf ekibi, yeni sezon/parti resimlerini kataloğa işlerken bu ekranı kullanır.
 
 ## Ekran yerleşimi
-![Toplu Resim Yükleme — set/arşiv ayar şeridi, klasör seçme alanı, özet şeridi ve barkod kartları](img/catalog-bulk-images.webp)
+![Toplu Resim Yükleme — set/değiştirme ayar şeridi, klasör seçme alanı, özet şeridi ve barkod kartları](img/catalog-bulk-images.webp)
 1. **Yol bağlantısı** — "Ürün Kartları › Toplu Resim Yükleme".
-2. **Ayar şeridi** — `Set:` çipleri (resim seti) ve sağda **Mevcut resimleri arşivle** onay kutusu.
+2. **Ayar şeridi** — `Set:` çipleri (resim seti) ve sağda **Mevcut resimleri sil ve yenileriyle değiştir** onay kutusu.
 3. **Klasör alanı** — "Klasör seç veya sürükle-bırak" kesikli kutu; dosya adı biçimi ve taşıma bilgisi; seçilen klasörün adı.
 4. **Özet şeridi** (klasör seçilince) — toplam resim, eşleşen ürün, bulunamayan barkod, sorgulanıyor sayaçları; sağda
    yükleme sonucu ve **Tümünü Yükle (N)** butonu.
@@ -35,7 +35,7 @@ tek tuşla yükler. Katalog ve fotoğraf ekibi, yeni sezon/parti resimlerini kat
 | Buton/Aksiyon | Nerede | Ne olur | Ön koşul / yetki |
 |---|---|---|---|
 | Set: çipleri | Ayar şeridi | Resimlerin yükleneceği resim setini seçer; varsayılan set seçili gelir. | En az bir resim seti tanımlı olmalı. |
-| Mevcut resimleri arşivle | Ayar şeridi | Varsayılan **işaretli**. İşaretliyken her varyant için seçili setteki mevcut aktif resimler arşive alınır ve yeni resimler onların yerine geçer. İşareti kaldırırsanız yeni resimler mevcutların yanına eklenir (ilk dosya yine kapak olarak işaretlenir). | — |
+| Mevcut resimleri sil ve yenileriyle değiştir | Ayar şeridi | Varsayılan **işaretli**. İşaretliyken yeni grubun tüm dosyaları iki harici hedefe de başarıyla yüklendikten sonra aynı set + varyanttaki eski resimler silinir. İşareti kaldırırsanız yeni resimler mevcutların yanına eklenir. | — |
 | Klasör seç (tıklama) | Klasör alanı | Tarayıcının klasör seçme penceresi açılır; klasör okuma + yazma izni istenir (taşıma için). | Chrome/Edge gibi klasör erişimini destekleyen tarayıcı. |
 | Sürükle-bırak | Klasör alanı | Klasörü ya da dosyaları kutuya bırakın; klasör bırakılırsa taşıma özelliği de çalışır. | — |
 | Tümünü Yükle (N) | Özet şeridi sağı | Eşleşen ve henüz yüklenmemiş tüm barkod gruplarını sırayla yükler; N = yüklenecek grup sayısı. | Tüm barkod sorguları bitmiş olmalı, en az bir eşleşme, set seçili. |
@@ -67,11 +67,15 @@ tek tuşla yükler. Katalog ve fotoğraf ekibi, yeni sezon/parti resimlerini kat
 - Resimler daima **varyanta bağlı** yüklenir (ürün geneline değil). Renk ekseni olan ürünlerde aynı rengin tüm
   bedenleri aynı barkoda sahip olmadığından, bir rengin resimlerini o rengin **herhangi bir bedeninin** barkoduyla
   yüklemeniz yeterlidir; site, renk için o varyantın resimlerini kullanır.
-- "Mevcut resimleri arşivle" yalnız **aynı set + aynı varyant**taki resimleri arşivler; başka setler ve diğer
-  varyantlar etkilenmez. Arşivlenen resim silinmez.
+- "Mevcut resimleri sil ve yenileriyle değiştir" yalnız **aynı set + aynı varyant**taki resimleri siler; başka
+  setler ve diğer varyantlar etkilenmez. Yeni grubun tamamı yüklenemezse eski resimler korunur.
+- Her yeni resmin WebP kopyası harici SFTP origin'e, aynı basename'li JPEG kopyası object storage'a yazılır;
+  iki hedef birlikte başarılı olmadan resim aktif edilmez.
+- Çift hedefli yükleme normal uygulama yapılandırmasında varsayılan aktiftir. SFTP veya S3 ayarı eksikse
+  ya da hedeflerden biri hata verirse yükleme başarısız olur; sistem sessizce API'nin yerel diskine dönmez.
 - Klasörü dosya seçici ile (klasör erişimi olmadan) ya da dosya sürükleyerek yüklediyseniz taşıma yapılmaz; ekranda
   "Bu tarayıcı otomatik taşıma desteklemiyor — yükleme sonrası dosyalar yerinde kalır" uyarısı görünür.
-- Başarılı yüklenen dosya, klasör erişimi varsa `yuklenenler/<sunucu-dosya-adı>` olarak taşınır ve asıl dosya
+- Başarılı yüklenen dosya, klasör erişimi varsa `yuklenenler/<benzersiz-ad><kaynak-uzantısı>` olarak taşınır ve asıl dosya
   silinir; böylece aynı klasörü tekrar açtığınızda yalnız yüklenmemiş dosyalar kalır. Yüklenemeyen dosya yerinde kalır.
 - Aynı klasör yeniden açılırsa önceki sonuçlar sıfırlanır; yüklenmiş (taşınmış) dosyalar artık listede görünmez.
 
@@ -80,7 +84,8 @@ tek tuşla yükler. Katalog ve fotoğraf ekibi, yeni sezon/parti resimlerini kat
 **Bir çekim partisini yükleme**
 1. Resimleri bilgisayarınızda tek bir klasöre `barkod_1.jpg, barkod_2.jpg …` biçiminde adlandırarak koyun.
 2. **Katalog → Toplu Resim Yükleme**'yi açın; `Set:` çiplerinden doğru seti seçin (genelde varsayılan).
-3. Eski resimlerin yerine geçmesini istiyorsanız **Mevcut resimleri arşivle** işaretli kalsın; eklemek istiyorsanız kaldırın.
+3. Eski resimlerin yerine geçmesini istiyorsanız **Mevcut resimleri sil ve yenileriyle değiştir** işaretli kalsın;
+   mevcutların yanına eklemek istiyorsanız kaldırın.
 4. Klasör alanına tıklayıp klasörü seçin (tarayıcı izin sorarsa "Dosyaları düzenle/kaydet" iznini verin) ya da klasörü kutuya sürükleyin.
 5. Özet şeridinde `Sorgulanıyor...` bitene kadar bekleyin. `Bulunamadı` olan barkodları not alın.
 6. Kartlardaki küçük resimleri kontrol edin; yanlış dosyayı × ile listeden çıkarın. Kapak olacak resim 1 numaralı olmalı.

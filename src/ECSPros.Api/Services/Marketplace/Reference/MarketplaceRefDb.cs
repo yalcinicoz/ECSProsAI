@@ -79,6 +79,9 @@ public sealed class MarketplaceRefDb : IAsyncDisposable
     private static async Task EnsureSchemaAsync(NpgsqlDataSource ds, CancellationToken ct)
     {
         const string sql = """
+            BEGIN;
+            SELECT pg_advisory_xact_lock(hashtextextended('marketplace-ref-schema', 8317));
+
             CREATE TABLE IF NOT EXISTS mp_categories (
                 marketplace          text NOT NULL,
                 external_id          text NOT NULL,
@@ -149,6 +152,22 @@ public sealed class MarketplaceRefDb : IAsyncDisposable
             CREATE INDEX IF NOT EXISTS ix_mp_sync_runs_mp
                 ON mp_sync_runs (marketplace, started_at DESC);
 
+            -- Çoklu node güvenliği: eski sürümden kalmış eşzamanlı running satırlar varsa
+            -- yalnız en yenisini canlı bırak; ardından pazaryeri başına tek canlı koşuyu DB zorlasın.
+            WITH ranked AS (
+                SELECT id, row_number() OVER (
+                    PARTITION BY marketplace ORDER BY started_at DESC, id DESC) AS rn
+                FROM mp_sync_runs
+                WHERE status = 'running'
+            )
+            UPDATE mp_sync_runs r
+            SET status='failed', finished_at=now(),
+                error='Çoklu node tek-koşu kuralı etkinleştirilirken kapatıldı.'
+            FROM ranked x
+            WHERE r.id=x.id AND x.rn > 1;
+            CREATE UNIQUE INDEX IF NOT EXISTS ux_mp_sync_runs_marketplace_running
+                ON mp_sync_runs (marketplace) WHERE status = 'running';
+
             CREATE TABLE IF NOT EXISTS mp_change_log (
                 id            bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                 sync_run_id   uuid NOT NULL,
@@ -166,6 +185,7 @@ public sealed class MarketplaceRefDb : IAsyncDisposable
             -- RF1 (2026-08-31): kapsam takibi — bu kategorinin özellik+değerleri en son ne zaman
             -- BAŞARIYLA indirildi (0 özellik dönen kategori de damgalanır; NULL = hiç taranmadı).
             ALTER TABLE mp_categories ADD COLUMN IF NOT EXISTS attributes_synced_at timestamptz NULL;
+            COMMIT;
             """;
         await using var cmd = ds.CreateCommand(sql);
         await cmd.ExecuteNonQueryAsync(ct);

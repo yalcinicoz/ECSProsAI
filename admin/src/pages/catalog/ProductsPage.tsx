@@ -66,6 +66,7 @@ export function ProductsPage() {
         page: String(page),
         pageSize: String(PAGE_SIZE),
         activeOnly: String(activeOnly),
+        sort: 'newest',
       })
       if (debouncedSearch) params.set('search', debouncedSearch)
       const { data } = await api.get(`/catalog/products?${params}`)
@@ -97,7 +98,7 @@ export function ProductsPage() {
   const pageNums = useMemo(() => {
     const half = 2
     let start = Math.max(1, page - half)
-    let end   = Math.min(totalPages, start + 4)
+    const end = Math.min(totalPages, start + 4)
     start = Math.max(1, end - 4)
     return Array.from({ length: end - start + 1 }, (_, i) => start + i)
   }, [page, totalPages])

@@ -42,8 +42,10 @@ public sealed class MarketplaceReferenceRefreshWorker(
                     var hepsiBasarili = true;
                     foreach (var marketplace in sync.SupportedMarketplaces)
                     {
-                        hepsiBasarili &= await KosuVeBekleAsync(marketplace, "categories", st);
-                        hepsiBasarili &= await KosuVeBekleAsync(marketplace, "attributes-missing", st);
+                        hepsiBasarili &= await GunlukKosuGerekirseCalistirAsync(
+                            marketplace, "categories", bugun, st);
+                        hepsiBasarili &= await GunlukKosuGerekirseCalistirAsync(
+                            marketplace, "attributes-missing", bugun, st);
                     }
                     // Kısmi hata: gün işaretlenmez → sonraki 10 dk kontrolünde yeniden denenir
                     // (StartAsync süren koşuyu zaten reddeder; sonsuz döngü olmaz).
@@ -58,6 +60,20 @@ public sealed class MarketplaceReferenceRefreshWorker(
             try { await Task.Delay(KontrolAraligi, st); }
             catch (OperationCanceledException) { break; }
         }
+    }
+
+    private async Task<bool> GunlukKosuGerekirseCalistirAsync(
+        string marketplace, string scope, DateOnly bugun, CancellationToken st)
+    {
+        if (await sync.HasCompletedRunOnDayAsync(marketplace, scope, bugun, st))
+        {
+            logger.LogInformation(
+                "Referans tazeleme bugün zaten tamamlanmış; atlandı: {Marketplace}/{Scope}",
+                marketplace, scope);
+            return true;
+        }
+
+        return await KosuVeBekleAsync(marketplace, scope, st);
     }
 
     /// <summary>Senkronu başlatır ve bitişini bekler. true = tamamlandı (ya da iş yoktu).</summary>

@@ -194,6 +194,32 @@ public class ErpVariantDataConfiguration : IEntityTypeConfiguration<ErpVariantDa
     }
 }
 
+public sealed class ErpSyncCheckpointConfiguration : IEntityTypeConfiguration<ErpSyncCheckpoint>
+{
+    public void Configure(EntityTypeBuilder<ErpSyncCheckpoint> b)
+    {
+        b.ToTable("erp_sync_checkpoints");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Slice).HasMaxLength(30).IsRequired();
+        b.Property(x => x.LastError).HasMaxLength(2000);
+        b.HasIndex(x => x.Slice).IsUnique().HasFilter("\"IsDeleted\" = false");
+        b.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
+public sealed class LegacyImportCheckpointConfiguration : IEntityTypeConfiguration<LegacyImportCheckpoint>
+{
+    public void Configure(EntityTypeBuilder<LegacyImportCheckpoint> b)
+    {
+        b.ToTable("legacy_import_checkpoints");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Slice).HasMaxLength(30).IsRequired();
+        b.Property(x => x.LastError).HasMaxLength(2000);
+        b.HasIndex(x => new { x.PlatformId, x.Slice }).IsUnique().HasFilter("\"IsDeleted\" = false");
+        b.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
 public class MarketplaceCategoryMappingConfiguration : IEntityTypeConfiguration<MarketplaceCategoryMapping>
 {
     public void Configure(EntityTypeBuilder<MarketplaceCategoryMapping> b)

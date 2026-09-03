@@ -4,6 +4,8 @@ namespace ECSPros.Order.Domain.Entities;
 
 public class Invoice : BaseEntity
 {
+    /// <summary>Geçici legacy MySQL importunda opinvoices.Id.</summary>
+    public int? LegacyInvoiceId { get; set; }
     public Guid OrderId { get; set; }
     /// <summary>Faturanın bağlı olduğu paket — normal akış paket başına faturadır;
     /// null, tek-fatura istisna akışı ve eski kayıtlar içindir (F2, karar 2026-07-19).</summary>

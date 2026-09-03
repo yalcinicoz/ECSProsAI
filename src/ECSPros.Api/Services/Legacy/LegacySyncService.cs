@@ -27,10 +27,13 @@ public sealed class LegacySyncService(
 {
     private const string DEF = "definition";
     private const string CAT = "catalog";
+    private (DateTime CreatedAt, string Code)? _missingImageCursor;
 
     private string MySqlConn => config["Legacy:MySqlConnection"] ?? "";
     private int LegacyPlatformId => config.GetValue("Legacy:MisharLegacyPlatformId", 41);
     private bool DryRun => config.GetValue("Legacy:Sync:DryRun", true);
+    private bool PricesEnabled => config.GetValue("Legacy:Sync:Prices", true);
+    private bool StockEnabled => config.GetValue("Legacy:Sync:Stock", true);
     private DateTime ProductCreatedAfter =>
         config.GetValue("Legacy:Sync:ProductCreatedAfter", new DateTime(2026, 7, 9));
 
@@ -44,32 +47,59 @@ public sealed class LegacySyncService(
         var t0 = DateTime.UtcNow;
         var log = new StringBuilder();
         bool dry = DryRun;
+        bool pricesEnabled = PricesEnabled;
+        bool stockEnabled = StockEnabled;
+        string slice = pricesEnabled
+            ? stockEnabled ? "pricestock" : "price"
+            : stockEnabled ? "stock" : "pricestock";
+
+        if (!pricesEnabled && !stockEnabled)
+        {
+            log.AppendLine("[FİYAT/STOK] Prices=false ve Stock=false; dilim kapalı.");
+            return new(true, dry, slice, 0, log.ToString(), null, DurMs(t0));
+        }
+
         try
         {
             await using var pg = await dataSource.OpenConnectionAsync(ct);
             await using var my = new MySqlConnection(MySqlConn);
             await my.OpenAsync(ct);
 
+            int changed = 0;
             var barcodeToVariant = await PgMapAsync(pg, $"SELECT \"Barcode\", \"Id\" FROM {CAT}.product_variants WHERE \"IsDeleted\"=false AND \"Barcode\" IS NOT NULL AND \"Barcode\"<>''", ct);
             var legacyVariantBarcode = await MyIntStringMapAsync(my, "SELECT Id, barkod FROM apurunvaryantlari WHERE barkod IS NOT NULL AND barkod<>''", ct);
 
-            int changed = 0;
-            changed += await SyncBasePriceAsync(pg, my, log, dry, ct);
-            changed += await SyncChannelPriceAsync(pg, my, log, dry, barcodeToVariant, legacyVariantBarcode, ct);
-            changed += await SyncStockAsync(pg, my, log, dry, barcodeToVariant, legacyVariantBarcode, ct);
+            if (pricesEnabled)
+            {
+                changed += await SyncBasePriceAsync(pg, my, log, dry, ct);
+                changed += await SyncChannelPriceAsync(pg, my, log, dry, barcodeToVariant, legacyVariantBarcode, ct);
+            }
+            else
+            {
+                log.AppendLine("[FİYAT] kapalı; [KANAL FİYAT] kapalı.");
+            }
+
+            if (stockEnabled)
+                changed += await SyncStockAsync(pg, my, log, dry, barcodeToVariant, legacyVariantBarcode, ct);
+            else
+                log.AppendLine("[STOK] kapalı.");
 
             if (!dry && changed > 0)
             {
-                await PgExecAsync(pg, $"ANALYZE {CAT}.products", ct);
-                await PgExecAsync(pg, "ANALYZE storefront.channel_variants", ct);
-                await PgExecAsync(pg, "ANALYZE inventory.inv_stocks", ct);
+                if (pricesEnabled)
+                {
+                    await PgExecAsync(pg, $"ANALYZE {CAT}.products", ct);
+                    await PgExecAsync(pg, "ANALYZE storefront.channel_variants", ct);
+                }
+                if (stockEnabled)
+                    await PgExecAsync(pg, "ANALYZE inventory.inv_stocks", ct);
             }
-            return new(true, dry, "pricestock", changed, log.ToString(), null, DurMs(t0));
+            return new(true, dry, slice, changed, log.ToString(), null, DurMs(t0));
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Legacy senkron (fiyat/stok) hatası");
-            return new(false, dry, "pricestock", 0, log.ToString(), ex.Message, DurMs(t0));
+            return new(false, dry, slice, 0, log.ToString(), ex.Message, DurMs(t0));
         }
     }
 
@@ -221,15 +251,31 @@ public sealed class LegacySyncService(
 
     // ─── DİLİM 2: GÖRSELLER (seyrek) — Faz 26b portu ─────────────────────────
     // product_images'a gelen FK yok → drift varsa tek transaction'da sil + yeniden kur.
-    public async Task<Report> SyncImagesAsync(CancellationToken ct)
+    public Task<Report> SyncImagesAsync(CancellationToken ct) =>
+        SyncImagesCoreAsync(MySqlConn, LegacyPlatformId, DryRun, ct);
+
+    /// <summary>
+    /// İzole LegacyImport worker'ının SELECT-only MySQL bağlantısıyla görsel metadata uzlaştırması.
+    /// Fiziksel görsel dosyalarına dokunmaz; yalnız catalog.product_images kayıtlarını yeniler.
+    /// </summary>
+    public Task<Report> SyncImagesFromReadOnlySourceAsync(
+        string sourceConnectionString, int legacyPlatformId, bool dryRun, CancellationToken ct) =>
+        SyncImagesCoreAsync(sourceConnectionString, legacyPlatformId, dryRun, ct);
+
+    private async Task<Report> SyncImagesCoreAsync(
+        string sourceConnectionString, int legacyPlatformId, bool dryRun, CancellationToken ct)
     {
         var t0 = DateTime.UtcNow;
         var log = new StringBuilder();
-        bool dry = DryRun;
+        bool dry = dryRun;
         try
         {
+            if (string.IsNullOrWhiteSpace(sourceConnectionString))
+                return new(false, dry, "images", 0, log.ToString(),
+                    "Legacy görsel kaynağı ConnectionString boş.", DurMs(t0));
+
             await using var pg = await dataSource.OpenConnectionAsync(ct);
-            await using var my = new MySqlConnection(MySqlConn);
+            await using var my = new MySqlConnection(sourceConnectionString);
             await my.OpenAsync(ct);
 
             var codeToProduct = await PgMapAsync(pg, $"SELECT \"Code\", \"Id\" FROM {CAT}.products WHERE \"IsDeleted\"=false", ct);
@@ -245,7 +291,7 @@ public sealed class LegacySyncService(
 
             // Varyant başına tek set: platformun resim seti (dfplatforms.resimSetId) öncelikli;
             // yoksa en yeni yüklenen set, eşitlikte çok resimli, sonra küçük setId.
-            int preferredSet = await LoadPreferredImageSetAsync(my, ct);
+            int preferredSet = await LoadPreferredImageSetAsync(my, legacyPlatformId, ct);
             var chosenSet = new Dictionary<(int, int?), (int setId, int cnt, DateTime maxT)>();
             // maxT string olarak çekilir: legacy'de '0000-00-00' sıfır-tarihler var, GetDateTime patlar.
             await using (var rs = await MyQueryAsync(my, @"SELECT urunId, urunAnaVaryantId, IFNULL(resimSetId,1) AS setId, COUNT(*) AS c,
@@ -345,6 +391,248 @@ public sealed class LegacySyncService(
             logger.LogError(ex, "Legacy senkron (görsel) hatası");
             return new(false, dry, "images", 0, log.ToString(), ex.Message, DurMs(t0));
         }
+    }
+
+    /// <summary>
+    /// Görseli olmayan sınırlı bir ürün grubunu MySQL'den hedefli tamamlar. Tam katalog taraması
+    /// yapmaz ve mevcut ürün görsellerini silmez; sık kadansta düşük maliyetli toparlama içindir.
+    /// </summary>
+    public async Task<Report> SyncMissingImagesFromReadOnlySourceAsync(
+        string sourceConnectionString, int legacyPlatformId, bool dryRun, int batchSize, CancellationToken ct)
+    {
+        var t0 = DateTime.UtcNow;
+        var log = new StringBuilder();
+        try
+        {
+            if (string.IsNullOrWhiteSpace(sourceConnectionString))
+                return new(false, dryRun, "images-missing", 0, log.ToString(),
+                    "Legacy görsel kaynağı ConnectionString boş.", DurMs(t0));
+
+            await using var pg = await dataSource.OpenConnectionAsync(ct);
+            var missing = await ReadMissingImageProductsAsync(pg, _missingImageCursor, batchSize, ct);
+            if (missing.Count == 0 && _missingImageCursor is not null)
+            {
+                _missingImageCursor = null;
+                missing = await ReadMissingImageProductsAsync(pg, null, batchSize, ct);
+            }
+            if (missing.Count == 0)
+                return new(true, dryRun, "images-missing", 0,
+                    "[GÖRSEL-HEDEFLİ] Görselsiz ürün bulunmadı.", null, DurMs(t0));
+            _missingImageCursor = (missing[^1].CreatedAt, missing[^1].Code);
+
+            await using var my = new MySqlConnection(sourceConnectionString);
+            await my.OpenAsync(ct);
+            var productByLegacyId = await LoadLegacyProductsByCodesAsync(my, missing, ct);
+            if (productByLegacyId.Count == 0)
+                return new(true, dryRun, "images-missing", 0,
+                    $"[GÖRSEL-HEDEFLİ] Aday {missing.Count}; MySQL ürün eşleşmesi yok.", null, DurMs(t0));
+
+            var imageSetMap = await LoadImageSetMapAsync(pg, my, ct);
+            if (imageSetMap.Count == 0)
+                return new(false, dryRun, "images-missing", 0, log.ToString(),
+                    "image_sets eşlemesi boş — hedefli senkron atlandı.", DurMs(t0));
+
+            int preferredSet = await LoadPreferredImageSetAsync(my, legacyPlatformId, ct);
+            var legacyIds = productByLegacyId.Keys.ToArray();
+            var chosenSets = await LoadChosenImageSetsAsync(my, legacyIds, preferredSet, ct);
+            var sourceImages = await LoadTargetedSourceImagesAsync(
+                my, legacyIds, productByLegacyId, chosenSets, ct);
+            var targetVariants = await LoadTargetVariantsAsync(
+                pg, missing.Select(x => x.ProductId).ToArray(), ct);
+
+            int validRows = sourceImages.Count(x =>
+                x.LegacyVariantId is null ||
+                (!string.IsNullOrWhiteSpace(x.Barcode) && targetVariants.ContainsKey(x.Barcode)));
+            log.AppendLine(
+                $"[GÖRSEL-HEDEFLİ] aday={missing.Count}, MySQL ürün={productByLegacyId.Count}, kaynak görsel={sourceImages.Count}, yazılabilir={validRows}.");
+            if (dryRun || validRows == 0)
+                return new(true, dryRun, "images-missing", validRows, log.ToString(), null, DurMs(t0));
+
+            await using var tx = await pg.BeginTransactionAsync(ct);
+            bool locked = await PgScalarAsync<bool>(pg,
+                "SELECT pg_try_advisory_xact_lock(hashtext('legacy_sync_images'))", ct, tx);
+            if (!locked)
+            {
+                await tx.RollbackAsync(ct);
+                return new(false, dryRun, "images-missing", 0, log.ToString(),
+                    "Başka bir instance görsel metadata'sını güncelliyor — bu tur atlandı.", DurMs(t0));
+            }
+
+            int inserted = 0;
+            var firstVariants = new HashSet<int>();
+            var batchId = Guid.NewGuid();
+            foreach (var image in sourceImages)
+            {
+                Guid? variantId = null;
+                if (image.LegacyVariantId is not null)
+                {
+                    if (string.IsNullOrWhiteSpace(image.Barcode) ||
+                        !targetVariants.TryGetValue(image.Barcode, out var resolvedVariant)) continue;
+                    variantId = resolvedVariant;
+                }
+                var setId = imageSetMap.TryGetValue(image.LegacySetId, out var mappedSet)
+                    ? mappedSet
+                    : imageSetMap.Values.First();
+                bool variantCover = image.LegacyVariantId is int legacyVariantId &&
+                                    firstVariants.Add(legacyVariantId);
+                inserted += await PgExecCountAsync(pg, tx, $"""
+                    INSERT INTO {CAT}.product_images
+                        ("Id","ProductId","VariantId","ImageSetId","FileName","SortOrder",
+                         "IsProductCover","IsVariantCover","Status","BatchId","CreatedAt","IsDeleted")
+                    SELECT @id,@productId,@variantId::uuid,@setId,@fileName,@sortOrder,
+                           false,@variantCover,'Active',@batchId,now(),false
+                     WHERE NOT EXISTS (
+                         SELECT 1 FROM {CAT}.product_images existing
+                          WHERE existing."ProductId"=@productId
+                            AND existing."VariantId" IS NOT DISTINCT FROM @variantId::uuid
+                            AND existing."FileName"=@fileName
+                            AND existing."IsDeleted"=false)
+                    """, ct,
+                    ("id", Guid.NewGuid()), ("productId", image.ProductId),
+                    ("variantId", (object?)variantId ?? DBNull.Value), ("setId", setId),
+                    ("fileName", image.FileName), ("sortOrder", image.SortOrder),
+                    ("variantCover", variantCover), ("batchId", batchId));
+            }
+            await tx.CommitAsync(ct);
+            log.AppendLine($"[GÖRSEL-HEDEFLİ] eklenen={inserted}.");
+            return new(true, false, "images-missing", inserted, log.ToString(), null, DurMs(t0));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Legacy hedefli eksik görsel senkronu hatası");
+            return new(false, dryRun, "images-missing", 0, log.ToString(), ex.Message, DurMs(t0));
+        }
+    }
+
+    private sealed record MissingImageProduct(Guid ProductId, string Code, DateTime CreatedAt);
+    private sealed record TargetedSourceImage(
+        Guid ProductId, int? LegacyVariantId, string? Barcode, int LegacySetId,
+        string FileName, int SortOrder);
+
+    private static async Task<List<MissingImageProduct>> ReadMissingImageProductsAsync(
+        NpgsqlConnection pg, (DateTime CreatedAt, string Code)? cursor, int batchSize, CancellationToken ct)
+    {
+        var cursorFilter = cursor.HasValue
+            ? "AND (p.\"CreatedAt\"<@cursorCreated OR (p.\"CreatedAt\"=@cursorCreated AND p.\"Code\"<@cursorCode))"
+            : string.Empty;
+        await using var command = new NpgsqlCommand($"""
+            SELECT p."Id",p."Code",p."CreatedAt"
+              FROM {CAT}.products p
+             WHERE p."IsDeleted"=false
+               {cursorFilter}
+               AND NOT EXISTS (
+                   SELECT 1 FROM {CAT}.product_images i
+                    WHERE i."ProductId"=p."Id" AND i."IsDeleted"=false AND i."Status"='Active')
+             ORDER BY p."CreatedAt" DESC,p."Code" DESC
+             LIMIT @limit
+            """, pg);
+        if (cursor.HasValue)
+        {
+            command.Parameters.AddWithValue("cursorCreated", cursor.Value.CreatedAt);
+            command.Parameters.AddWithValue("cursorCode", cursor.Value.Code);
+        }
+        command.Parameters.Add("limit", NpgsqlTypes.NpgsqlDbType.Integer).Value = batchSize;
+        var result = new List<MissingImageProduct>(batchSize);
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct)) result.Add(new(reader.GetGuid(0), reader.GetString(1), reader.GetDateTime(2)));
+        return result;
+    }
+
+    private static async Task<Dictionary<int, MissingImageProduct>> LoadLegacyProductsByCodesAsync(
+        MySqlConnection my, IReadOnlyList<MissingImageProduct> products, CancellationToken ct)
+    {
+        var parameterNames = products.Select((_, i) => $"@code{i}").ToArray();
+        await using var command = new MySqlCommand(
+            $"SELECT Id,urunKodu FROM apurunler WHERE urunKodu IN ({string.Join(',', parameterNames)})", my)
+            { CommandTimeout = 120 };
+        for (int i = 0; i < products.Count; i++)
+            command.Parameters.AddWithValue(parameterNames[i], products[i].Code);
+        var byCode = products.ToDictionary(x => x.Code, StringComparer.OrdinalIgnoreCase);
+        var result = new Dictionary<int, MissingImageProduct>();
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            var code = reader.GetString(1);
+            if (byCode.TryGetValue(code, out var product)) result[reader.GetInt32(0)] = product;
+        }
+        return result;
+    }
+
+    private static async Task<Dictionary<(int ProductId, int? VariantId), int>> LoadChosenImageSetsAsync(
+        MySqlConnection my, int[] productIds, int preferredSet, CancellationToken ct)
+    {
+        var parameters = productIds.Select((_, i) => $"@id{i}").ToArray();
+        await using var command = new MySqlCommand($"""
+            SELECT urunId,urunAnaVaryantId,IFNULL(resimSetId,1),COUNT(*),
+                   DATE_FORMAT(MAX(IFNULL(olusturmaTarihi,'1900-01-01')),'%Y-%m-%d %H:%i:%s')
+              FROM apurunresimleri
+             WHERE isSilindi=0 AND resimDosyaAdi IS NOT NULL AND resimDosyaAdi<>''
+               AND urunId IN ({string.Join(',', parameters)})
+             GROUP BY urunId,urunAnaVaryantId,IFNULL(resimSetId,1)
+            """, my) { CommandTimeout = 120 };
+        for (int i = 0; i < productIds.Length; i++) command.Parameters.AddWithValue(parameters[i], productIds[i]);
+        var candidates = new Dictionary<(int, int?), (int setId, int cnt, DateTime maxT)>();
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            var key = (reader.GetInt32(0), reader.IsDBNull(1) ? (int?)null : reader.GetInt32(1));
+            var maxT = !reader.IsDBNull(4) && DateTime.TryParse(reader.GetString(4), out var parsed)
+                ? parsed : DateTime.MinValue;
+            SetSecimBirlestir(candidates, key, reader.GetInt32(2),
+                Convert.ToInt32(reader.GetValue(3)), maxT, preferredSet);
+        }
+        return candidates.ToDictionary(x => (x.Key.Item1, x.Key.Item2), x => x.Value.setId);
+    }
+
+    private static async Task<List<TargetedSourceImage>> LoadTargetedSourceImagesAsync(
+        MySqlConnection my, int[] productIds,
+        IReadOnlyDictionary<int, MissingImageProduct> products,
+        IReadOnlyDictionary<(int ProductId, int? VariantId), int> chosenSets,
+        CancellationToken ct)
+    {
+        var parameters = productIds.Select((_, i) => $"@id{i}").ToArray();
+        await using var command = new MySqlCommand($"""
+            SELECT r.resimSetId,r.urunId,r.urunAnaVaryantId,r.resimDosyaAdi,r.siraNo,v.barkod
+              FROM apurunresimleri r
+              LEFT JOIN apurunvaryantlari v ON v.Id=r.urunAnaVaryantId
+             WHERE r.isSilindi=0 AND r.resimDosyaAdi IS NOT NULL AND r.resimDosyaAdi<>''
+               AND r.urunId IN ({string.Join(',', parameters)})
+             ORDER BY r.urunId,r.urunAnaVaryantId,r.siraNo
+            """, my) { CommandTimeout = 120 };
+        for (int i = 0; i < productIds.Length; i++) command.Parameters.AddWithValue(parameters[i], productIds[i]);
+        var seen = new HashSet<(Guid ProductId, int? VariantId, string FileName)>();
+        var result = new List<TargetedSourceImage>();
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            int legacySetId = reader.IsDBNull(0) ? 1 : reader.GetInt32(0);
+            int productId = reader.GetInt32(1);
+            int? variantId = reader.IsDBNull(2) ? null : reader.GetInt32(2);
+            if (!products.TryGetValue(productId, out var product) ||
+                !chosenSets.TryGetValue((productId, variantId), out var chosenSet) ||
+                chosenSet != legacySetId) continue;
+            string fileName = reader.GetString(3);
+            if (!seen.Add((product.ProductId, variantId, fileName))) continue;
+            result.Add(new(product.ProductId, variantId,
+                reader.IsDBNull(5) ? null : reader.GetString(5), legacySetId,
+                fileName, reader.IsDBNull(4) ? 0 : reader.GetInt32(4)));
+        }
+        return result;
+    }
+
+    private static async Task<Dictionary<string, Guid>> LoadTargetVariantsAsync(
+        NpgsqlConnection pg, Guid[] productIds, CancellationToken ct)
+    {
+        await using var command = new NpgsqlCommand($"""
+            SELECT "Barcode","Id" FROM {CAT}.product_variants
+             WHERE "IsDeleted"=false AND "ProductId"=ANY(@productIds)
+               AND "Barcode" IS NOT NULL AND "Barcode"<>''
+            """, pg);
+        command.Parameters.AddWithValue("productIds", productIds);
+        var result = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct)) result[reader.GetString(0)] = reader.GetGuid(1);
+        return result;
     }
 
     // ─── DİLİM 3 (B1): YENİ ÜRÜN KARTLARI ────────────────────────────────────
@@ -706,12 +994,17 @@ public sealed class LegacySyncService(
     // 2023 Julude setini (daha kalabalık) seçip 404 üretiyordu. Platformun kendi seti
     // (dfplatforms.resimSetId — eski sitenin gösterdiği set) her zaman kazanır; o set
     // varyantta hiç yoksa en yeni yüklenen set, eşitlikte çok resimli, sonra küçük setId.
-    private async Task<int> LoadPreferredImageSetAsync(MySqlConnection my, CancellationToken ct)
+    private async Task<int> LoadPreferredImageSetAsync(MySqlConnection my, CancellationToken ct) =>
+        await LoadPreferredImageSetAsync(my, LegacyPlatformId, ct);
+
+    private static async Task<int> LoadPreferredImageSetAsync(
+        MySqlConnection my, int legacyPlatformId, CancellationToken ct)
     {
         try
         {
             await using var cmd = new MySqlCommand(
-                $"SELECT resimSetId FROM dfplatforms WHERE Id={LegacyPlatformId}", my);
+                "SELECT resimSetId FROM dfplatforms WHERE Id=@platformId", my);
+            cmd.Parameters.AddWithValue("@platformId", legacyPlatformId);
             var v = await cmd.ExecuteScalarAsync(ct);
             return v is null or DBNull ? 1 : Convert.ToInt32(v);
         }
@@ -771,6 +1064,14 @@ public sealed class LegacySyncService(
         await using var cmd = new NpgsqlCommand(sql, pg, tx) { CommandTimeout = 120 };
         foreach (var (name, value) in ps) cmd.Parameters.AddWithValue(name, value ?? DBNull.Value);
         await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    private static async Task<int> PgExecCountAsync(NpgsqlConnection pg, NpgsqlTransaction tx,
+        string sql, CancellationToken ct, params (string name, object? value)[] ps)
+    {
+        await using var cmd = new NpgsqlCommand(sql, pg, tx) { CommandTimeout = 120 };
+        foreach (var (name, value) in ps) cmd.Parameters.AddWithValue(name, value ?? DBNull.Value);
+        return await cmd.ExecuteNonQueryAsync(ct);
     }
 
     private static async Task<T> PgScalarAsync<T>(NpgsqlConnection pg, string sql, CancellationToken ct,

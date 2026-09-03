@@ -39,14 +39,38 @@
                                 var slideUrl = slide.GorselUrl ?? slide.MobilGorselUrl;
                                 var slideSrcset = MsSrcset.Srcset(slideUrl);
                                 var slideBoyut = MsSrcset.Boyut(slideUrl);
+                                var slideMobilUrl = string.Equals(slide.MobilGorselUrl, slideUrl, StringComparison.Ordinal)
+                                    ? null
+                                    : slide.MobilGorselUrl;
+                                var slideMobilSrcset = MsSrcset.Srcset(slideMobilUrl);
                             }
                             @if (i == 0)
                             {
+                                @if (!string.IsNullOrWhiteSpace(slideMobilUrl))
+                                {
+                            <picture class="contents">
+                                <source media="(max-width: 767px)" srcset="@(slideMobilSrcset ?? slideMobilUrl)" sizes="100vw">
+                                <img class="no-lazy" src="@slideUrl" srcset="@slideSrcset" sizes="@(slideSrcset is null ? null : "100vw")" alt="@slide.Baslik" width="@(slideBoyut?.Genislik ?? 1200)" height="@(slideBoyut?.Yukseklik ?? 525)" loading="eager" fetchpriority="high" decoding="async" data-ms-lazy="false">
+                            </picture>
+                                }
+                                else
+                                {
                             <img class="no-lazy" src="@slideUrl" srcset="@slideSrcset" sizes="@(slideSrcset is null ? null : "100vw")" alt="@slide.Baslik" width="@(slideBoyut?.Genislik ?? 1200)" height="@(slideBoyut?.Yukseklik ?? 525)" loading="eager" fetchpriority="high" decoding="async" data-ms-lazy="false">
+                                }
                             }
                             else
                             {
+                                @if (!string.IsNullOrWhiteSpace(slideMobilUrl))
+                                {
+                            <picture class="contents">
+                                <source media="(max-width: 767px)" data-ms-lazy-srcset="@(slideMobilSrcset ?? slideMobilUrl)" data-ms-lazy-sizes="100vw">
+                                <img data-ms-lazy-src="@slideUrl" data-ms-lazy-srcset="@slideSrcset" data-ms-lazy-sizes="@(slideSrcset is null ? null : "100vw")" alt="@slide.Baslik" width="@(slideBoyut?.Genislik ?? 1200)" height="@(slideBoyut?.Yukseklik ?? 525)" loading="lazy">
+                            </picture>
+                                }
+                                else
+                                {
                             <img data-ms-lazy-src="@slideUrl" data-ms-lazy-srcset="@slideSrcset" data-ms-lazy-sizes="@(slideSrcset is null ? null : "100vw")" alt="@slide.Baslik" width="@(slideBoyut?.Genislik ?? 1200)" height="@(slideBoyut?.Yukseklik ?? 525)" loading="lazy">
+                                }
                             }
                         </a>
                     }
@@ -139,8 +163,19 @@
                 {
                     var reklamSrcset = MsSrcset.Srcset(reklamBanner.GorselUrl);
                     var reklamBoyut = MsSrcset.Boyut(reklamBanner.GorselUrl);
+                    var reklamMobilSrcset = MsSrcset.Srcset(reklamBanner.MobilGorselUrl);
                     <a class="ms-gorunum-reklam-vitrin-banner" href="@(reklamBanner.LinkUrl ?? "#")" aria-label="@reklamBanner.Baslik">
+                        @if (!string.IsNullOrWhiteSpace(reklamBanner.MobilGorselUrl))
+                        {
+                        <picture class="contents">
+                            <source media="(max-width: 767px)" data-ms-lazy-srcset="@(reklamMobilSrcset ?? reklamBanner.MobilGorselUrl)" data-ms-lazy-sizes="100vw">
+                            <img data-ms-lazy-src="@reklamBanner.GorselUrl" data-ms-lazy-srcset="@reklamSrcset" data-ms-lazy-sizes="@(reklamSrcset is null ? null : "(max-width: 768px) 100vw, 50vw")" alt="@reklamBanner.Baslik" width="@(reklamBoyut?.Genislik ?? 1200)" height="@(reklamBoyut?.Yukseklik ?? 525)" loading="lazy" decoding="async">
+                        </picture>
+                        }
+                        else
+                        {
                         <img data-ms-lazy-src="@reklamBanner.GorselUrl" data-ms-lazy-srcset="@reklamSrcset" data-ms-lazy-sizes="@(reklamSrcset is null ? null : "(max-width: 768px) 100vw, 50vw")" alt="@reklamBanner.Baslik" width="@(reklamBoyut?.Genislik ?? 1200)" height="@(reklamBoyut?.Yukseklik ?? 525)" loading="lazy" decoding="async">
+                        }
                     </a>
                 }
 
@@ -178,8 +213,19 @@
                     {
                         var bannerSrcset = MsSrcset.Srcset(banner.GorselUrl);
                         var bannerBoyut = MsSrcset.Boyut(banner.GorselUrl);
+                        var bannerMobilSrcset = MsSrcset.Srcset(banner.MobilGorselUrl);
                         <a class="ms-gorunum-banner-karti" href="@(banner.LinkUrl ?? "#")" target="@(banner.YeniSekme ? "_blank" : null)">
+                            @if (!string.IsNullOrWhiteSpace(banner.MobilGorselUrl))
+                            {
+                            <picture class="contents">
+                                <source media="(max-width: 767px)" data-ms-lazy-srcset="@(bannerMobilSrcset ?? banner.MobilGorselUrl)" data-ms-lazy-sizes="100vw">
+                                <img data-ms-lazy-src="@banner.GorselUrl" data-ms-lazy-srcset="@bannerSrcset" data-ms-lazy-sizes="@(bannerSrcset is null ? null : "(max-width: 768px) 100vw, 403px")" alt="@banner.Baslik" width="@(bannerBoyut?.Genislik ?? 400)" height="@(bannerBoyut?.Yukseklik ?? 164)" loading="lazy" decoding="async">
+                            </picture>
+                            }
+                            else
+                            {
                             <img data-ms-lazy-src="@banner.GorselUrl" data-ms-lazy-srcset="@bannerSrcset" data-ms-lazy-sizes="@(bannerSrcset is null ? null : "(max-width: 768px) 100vw, 403px")" alt="@banner.Baslik" width="@(bannerBoyut?.Genislik ?? 400)" height="@(bannerBoyut?.Yukseklik ?? 164)" loading="lazy" decoding="async">
+                            }
                         </a>
                     }
                 </div>

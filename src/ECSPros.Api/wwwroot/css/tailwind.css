@@ -713,6 +713,17 @@
     @apply pointer-events-none opacity-0;
   }
 
+  /* Ürün kartı yüklenirken Tozlu wordmark görünür; gerçek görsel veya Nginx'in
+     "Resim hazırlanıyor" görseli decode edilince 300 ms'de kaybolur. */
+  .ms-urun-markali-placeholder {
+    @apply bg-white;
+  }
+
+  .ms-urun-markali-placeholder span {
+    @apply block h-14 w-[58%] border-0 bg-transparent bg-contain bg-center bg-no-repeat p-0 text-transparent shadow-none;
+    background-image: url('/images/site_logo-288.png');
+  }
+
   .ms-lazy-placeholderli-kalici .ms-lazy-skeleton {
     @apply opacity-100;
   }
@@ -1470,6 +1481,10 @@
 
   .ms-urun-gorsel {
     @apply h-full w-full object-cover object-top transition duration-200 ease-out;
+  }
+
+  .ms-urun-gorsel-placeholderli .ms-urun-gorsel {
+    transition-duration: 300ms;
   }
 
   .ms-urun-gorsel-degisiyor {

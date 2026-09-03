@@ -156,6 +156,7 @@ public class AddressConfiguration : IEntityTypeConfiguration<Address>
         builder.Property(x => x.PostalCode).HasMaxLength(10);
         builder.Property(x => x.RecipientName).HasMaxLength(200).IsRequired();
         builder.Property(x => x.RecipientPhone).HasMaxLength(20).IsRequired();
+        builder.HasIndex(x => x.LegacyAddressId).IsUnique().HasFilter("\"LegacyAddressId\" IS NOT NULL");
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

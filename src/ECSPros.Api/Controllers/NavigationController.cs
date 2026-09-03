@@ -76,6 +76,39 @@ public class NavigationController(IMediator mediator) : ControllerBase
         return Ok(new { success = true });
     }
 
+    /// <summary>Menü düğümü görselini ayrı storefront/menus CDN ağacına yükler.</summary>
+    [HttpPost("menus/media")]
+    [RequestSizeLimit(6_000_000)]
+    public async Task<IActionResult> UploadMenuMedia(
+        IFormFile? file,
+        [FromServices] ECSPros.Api.Services.Storage.IStorefrontMediaUploadService storage,
+        CancellationToken ct)
+    {
+        var uzantilar = new Dictionary<string, string>
+        {
+            ["image/jpeg"] = ".jpg", ["image/png"] = ".png",
+            ["image/webp"] = ".webp", ["image/gif"] = ".gif", ["image/svg+xml"] = ".svg",
+        };
+        if (file is null || file.Length == 0)
+            return BadRequest(new { success = false, error = "Görsel dosyası gönderilmedi." });
+        if (file.Length > 5_000_000)
+            return BadRequest(new { success = false, error = "Görsel en fazla 5 MB olabilir." });
+        if (!uzantilar.TryGetValue(file.ContentType, out var uzanti))
+            return BadRequest(new { success = false, error = "Yalnızca JPEG, PNG, WebP, GIF veya SVG yükleyebilirsiniz." });
+
+        var ad = $"{Guid.NewGuid():N}{uzanti}";
+        await using var stream = file.OpenReadStream();
+        try
+        {
+            var stored = await storage.UploadAsync("menu", ad, stream, file.ContentType, ct);
+            return Ok(new { success = true, data = new { url = stored.PublicUrl } });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, error = ex.Message });
+        }
+    }
+
     [HttpDelete("menus/{id:guid}")]
     public async Task<IActionResult> DeleteMenu(Guid id, CancellationToken ct)
     {

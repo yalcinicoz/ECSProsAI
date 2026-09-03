@@ -178,10 +178,10 @@ function LinkSecici({ deger, degistir, kategoriler }: {
   )
 }
 
-// 2026-07-22: öğe görseli — URL elle girilmez; dosya seçilir, POST /pages/media
-// sunucuya (media/vitrin/yyyyMM) yükler, burada görselin kendisi gösterilir.
-function GorselAlani({ etiket, deger, degistir, spec }: {
+// Öğenin masaüstü ve mobil görselleri CDN'de birbirinden ayrı klasörlere yüklenir.
+function GorselAlani({ etiket, deger, degistir, spec, mediaKind }: {
   etiket: string; deger: string | null; degistir: (v: string | null) => void; spec?: GorselSpec
+  mediaKind: 'desktop' | 'mobile'
 }) {
   const [yukleniyor, setYukleniyor] = useState(false)
   const [hata, setHata] = useState<string | null>(null)
@@ -192,6 +192,7 @@ function GorselAlani({ etiket, deger, degistir, spec }: {
     try {
       const fd = new FormData()
       fd.append('file', dosya)
+      fd.append('mediaKind', mediaKind)
       const { data } = await api.post('/pages/media', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       degistir(data.data.url)
     } catch (e) {
@@ -847,9 +848,11 @@ export function PageBlockDetailPage() {
             {/* 2026-07-22: görseller dosyadan yüklenir (URL elle girilmez); rozet → ikon seçici.
                 2026-07-30 (B fazı): blok tipine göre boyut/oran/KB önerisi + yükleme öncesi uyarı */}
             <GorselAlani etiket="Görsel" deger={ogeModal.oge.imageUrl}
+              mediaKind="desktop"
               spec={GORSEL_SPEKLERI[form.blockType]?.gorsel}
               degistir={(v) => setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, imageUrl: v } })} />
             <GorselAlani etiket="Mobil görsel" deger={ogeModal.oge.mobileImageUrl}
+              mediaKind="mobile"
               spec={GORSEL_SPEKLERI[form.blockType]?.mobil ?? GORSEL_SPEKLERI[form.blockType]?.gorsel}
               degistir={(v) => setOgeModal({ ...ogeModal, oge: { ...ogeModal.oge, mobileImageUrl: v } })} />
             <IkonSecici deger={ogeModal.oge.badgeLabel}

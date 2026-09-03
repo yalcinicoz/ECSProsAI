@@ -87,15 +87,30 @@
     <meta property="og:url" content="@canonicalUrl" />
     <meta property="og:image" content="@openGraphImageUrl" />
     <meta name="twitter:card" content="summary_large_image" />
+    @* Ürün ve vitrin görselleri ayrı CDN origin'inden gelir. DNS/TCP/TLS bağlantısını
+       ilk görsel keşfedilmeden başlat; dns-prefetch eski tarayıcılar için geri dönüş yoludur. *@
+    <link rel="dns-prefetch" href="//cdn.misharitalia.com" />
+    <link rel="preconnect" href="https://cdn.misharitalia.com" />
     @if (ViewData["MsPreloadHero"] is string msPreloadHero)
     {
         @* LCP görseli erken indirilsin — ana sayfa ilk slider görseli (D fazı, 2026-07-30).
            imagesrcset: preload, <img srcset>'in seçeceği varyantla aynı dosyayı indirsin
            (yoksa çift indirme olur); varyantsız eski görselde düz href'e düşer (A fazı). *@
-        var msHeroSrcset = (Context.RequestServices.GetService(
+        var msVitrinSrcset = (Context.RequestServices.GetService(
             typeof(ECSPros.Api.Services.Store.VitrinSrcsetSaglayici))
-            as ECSPros.Api.Services.Store.VitrinSrcsetSaglayici)?.Srcset(msPreloadHero);
+            as ECSPros.Api.Services.Store.VitrinSrcsetSaglayici);
+        var msHeroSrcset = msVitrinSrcset?.Srcset(msPreloadHero);
+        var msMobilHero = ViewData["MsPreloadHeroMobile"] as string;
+        var msMobilHeroSrcset = msVitrinSrcset?.Srcset(msMobilHero);
+        if (!string.IsNullOrWhiteSpace(msMobilHero))
+        {
+        <link rel="preload" as="image" href="@msMobilHero" imagesrcset="@(msMobilHeroSrcset ?? msMobilHero)" imagesizes="100vw" media="(max-width: 767px)" fetchpriority="high" />
+        <link rel="preload" as="image" href="@msPreloadHero" imagesrcset="@msHeroSrcset" imagesizes="@(msHeroSrcset is null ? null : "100vw")" media="(min-width: 768px)" fetchpriority="high" />
+        }
+        else
+        {
         <link rel="preload" as="image" href="@msPreloadHero" imagesrcset="@msHeroSrcset" imagesizes="@(msHeroSrcset is null ? null : "100vw")" fetchpriority="high" />
+        }
     }
     <link rel="stylesheet" href="~/fontawesome-free-7.2.0-web/css/ikonall.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />

@@ -33,8 +33,11 @@ public class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, Result<
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var items = await query
-            .OrderBy(x => x.Code)
+        var orderedQuery = string.Equals(request.Sort, "newest", StringComparison.OrdinalIgnoreCase)
+            ? query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id)
+            : query.OrderBy(x => x.Code);
+
+        var items = await orderedQuery
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(x => new ProductListDto(

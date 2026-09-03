@@ -11,31 +11,37 @@
 #                          özellik/değer eşlemeleri Ortak Sözlük kimlik çalışmasına kadar v1 DIŞI)
 #
 # Kullanım: bash tools/sozluk/sozluk-paketle.sh [çıktı-dizini]
-# Bağlantılar appsettings.Production.json'dan okunur; paket adı sozluk-vYYYYMMDDHHMM.tar.gz
+# Bağlantılar ECSPROS_APPSETTINGS (varsayılan appsettings.Production.json) içindeki
+# ConnectionStrings'den okunur; paket adı sozluk-vYYYYMMDDHHMM.tar.gz.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 CIKTI="${1:-/tmp}"
+AYAR_DOSYASI="${ECSPROS_APPSETTINGS:-src/ECSPros.Api/appsettings.Production.json}"
 SURUM="$(date -u +%Y%m%d%H%M)"
 IS_DIZINI="$(mktemp -d)"
 trap 'rm -rf "$IS_DIZINI"' EXIT
 
 oku() { python3 -c "
 import json,sys
-cs=json.load(open('src/ECSPros.Api/appsettings.Production.json'))['ConnectionStrings']['$1']
+cs=json.load(open(sys.argv[1]))['ConnectionStrings']['$1']
 d=dict(p.split('=',1) for p in cs.split(';') if '=' in p)
-print(d.get('$2',''))"; }
+print(d.get('$2',''))" "$AYAR_DOSYASI"; }
 
 # ── marketplace_ref dump ─────────────────────────────────────────────────────
-REF_HOST=$(oku MarketplaceRef Host); REF_DB=$(oku MarketplaceRef Database)
+REF_HOST=$(oku MarketplaceRef Host); REF_PORT=$(oku MarketplaceRef Port); REF_PORT="${REF_PORT:-5432}"
+REF_DB=$(oku MarketplaceRef Database)
 REF_USER=$(oku MarketplaceRef Username); export PGPASSWORD=$(oku MarketplaceRef Password)
 echo "1/3 marketplace_ref dökülüyor ($REF_DB)…"
-pg_dump -h "$REF_HOST" -U "$REF_USER" -d "$REF_DB" -Fc --no-owner --no-acl \
+pg_dump -h "$REF_HOST" -p "$REF_PORT" -U "$REF_USER" -d "$REF_DB" -Fc --no-owner --no-acl \
   -f "$IS_DIZINI/marketplace_ref.dump"
 unset PGPASSWORD
 
 # ── Kategori eşlemeleri (grup KODU anahtarıyla) ──────────────────────────────
 echo "2/3 kategori eşlemeleri dökülüyor…"
-psql -h localhost -U ecommerce -d ecommerce_db -At -c "
+MAIN_HOST=$(oku DefaultConnection Host); MAIN_PORT=$(oku DefaultConnection Port); MAIN_PORT="${MAIN_PORT:-5432}"
+MAIN_DB=$(oku DefaultConnection Database); MAIN_USER=$(oku DefaultConnection Username)
+export PGPASSWORD=$(oku DefaultConnection Password)
+psql -h "$MAIN_HOST" -p "$MAIN_PORT" -U "$MAIN_USER" -d "$MAIN_DB" -At -c "
 SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) FROM (
   SELECT g.\"Code\" AS group_code, m.\"Marketplace\" AS marketplace,
          m.\"MappingKind\" AS mapping_kind, m.\"TargetExternalId\" AS target_external_id,
@@ -45,6 +51,7 @@ SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) FROM (
   JOIN definition.product_groups g ON g.\"Id\" = m.\"ProductGroupId\"
   WHERE m.\"FirmPlatformId\" IS NULL AND NOT m.\"IsDeleted\" AND m.\"Status\"='active'
 ) t" > "$IS_DIZINI/kategori-eslemeleri.json"
+unset PGPASSWORD
 
 # ── Manifest + arşiv ─────────────────────────────────────────────────────────
 echo "3/3 manifest + arşiv…"

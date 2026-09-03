@@ -10,6 +10,25 @@ namespace ECSPros.Api.Services;
 /// </summary>
 public sealed class DistributedWorkerLock(NpgsqlDataSource dataSource)
 {
+    /// <summary>İşi mutlaka çalıştırması gereken istekler için lock boşalana kadar bekler.</summary>
+    public async Task<IAsyncDisposable> AcquireAsync(string jobName, CancellationToken ct)
+    {
+        var connection = await dataSource.OpenConnectionAsync(ct);
+        try
+        {
+            await using var command = new NpgsqlCommand(
+                "SELECT pg_advisory_lock(hashtextextended(@jobName, 8317))", connection);
+            command.Parameters.AddWithValue("jobName", jobName);
+            await command.ExecuteScalarAsync(ct);
+            return new Handle(connection, jobName);
+        }
+        catch
+        {
+            await connection.DisposeAsync();
+            throw;
+        }
+    }
+
     public async Task<IAsyncDisposable?> TryAcquireAsync(string jobName, CancellationToken ct)
     {
         var connection = await dataSource.OpenConnectionAsync(ct);

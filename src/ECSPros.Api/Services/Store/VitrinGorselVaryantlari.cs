@@ -49,6 +49,11 @@ public static class VitrinGorselVaryantlari
 public class VitrinSrcsetSaglayici(IConfiguration configuration, IMemoryCache cache)
 {
     private string MediaKok => configuration["Store:MediaRootPath"] ?? "/opt/ECSProsAI/media";
+    private string StorefrontCdnKok =>
+        (configuration["StorefrontMediaStorage:PublicBaseUrl"] ??
+         "https://cdn.misharitalia.com/storefront-v1").TrimEnd('/');
+    private bool CdnVaryantlariEtkin =>
+        configuration.GetValue("StorefrontMediaStorage:ResponsiveVariantsEnabled", false);
 
     /// <summary>Görselin gerçek piksel boyutları (dosya başlığından, cache'li) — img
     /// width/height öznitelikleri GERÇEK oranla basılırsa tarayıcının ayırdığı alan
@@ -78,6 +83,13 @@ public class VitrinSrcsetSaglayici(IConfiguration configuration, IMemoryCache ca
     /// <summary>Varyantlar varsa "url_w480.webp 480w, ..." dizesi; yoksa null.</summary>
     public string? Srcset(string? gorselUrl)
     {
+        if (CdnVaryantlariEtkin && IsStorefrontCdnRaster(gorselUrl))
+        {
+            var cdnUrl = gorselUrl!;
+            var urlDizin = cdnUrl[..cdnUrl.LastIndexOf('/')];
+            return string.Join(", ", VitrinGorselVaryantlari.Genislikler.Select(genislik =>
+                $"{urlDizin}/{VitrinGorselVaryantlari.VaryantDosyaAdi(cdnUrl, genislik)} {genislik}w"));
+        }
         if (string.IsNullOrEmpty(gorselUrl) || !gorselUrl.StartsWith("/media/", StringComparison.Ordinal))
             return null;
         return cache.GetOrCreate("vitrin-srcset:" + gorselUrl, girdi =>
@@ -98,5 +110,19 @@ public class VitrinSrcsetSaglayici(IConfiguration configuration, IMemoryCache ca
             }
             return parcalar.Count == 0 ? null : string.Join(", ", parcalar);
         });
+    }
+
+    private bool IsStorefrontCdnRaster(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url) ||
+            !url.StartsWith(StorefrontCdnKok + "/", StringComparison.OrdinalIgnoreCase))
+            return false;
+        var extension = Path.GetExtension(Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            ? uri.AbsolutePath
+            : url);
+        return extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".png", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".webp", StringComparison.OrdinalIgnoreCase);
     }
 }

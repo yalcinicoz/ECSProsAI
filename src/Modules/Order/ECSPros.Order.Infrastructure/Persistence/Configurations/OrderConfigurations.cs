@@ -71,6 +71,7 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
         builder.Property(x => x.TaxAmount).HasPrecision(18, 2);
         builder.Property(x => x.Total).HasPrecision(18, 2);
         builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => x.LegacyOrderLineId).IsUnique().HasFilter("\"LegacyOrderLineId\" IS NOT NULL");
         builder.HasIndex(x => x.SupplierId).HasFilter("\"SupplierId\" IS NOT NULL"); // tedarikçi/satıcı kalem filtreleri (dayanıklılık Faz 2)
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
@@ -125,6 +126,7 @@ public class OrderPaymentConfiguration : IEntityTypeConfiguration<OrderPayment>
         builder.Property(x => x.CurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(x => x.Status).HasMaxLength(30).IsRequired();
         builder.Property(x => x.Details).HasColumnType("jsonb");
+        builder.HasIndex(x => x.LegacyOrderPaymentId).IsUnique().HasFilter("\"LegacyOrderPaymentId\" IS NOT NULL");
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }
@@ -180,6 +182,7 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.Property(x => x.ErpStatus).HasMaxLength(30);
         builder.Property(x => x.ErpReference).HasMaxLength(100);
         builder.Property(x => x.Status).HasMaxLength(30).IsRequired();
+        builder.HasIndex(x => x.LegacyInvoiceId).IsUnique().HasFilter("\"LegacyInvoiceId\" IS NOT NULL");
         builder.HasIndex(x => new { x.InvoiceSerial, x.InvoiceYear, x.InvoiceSequence }).IsUnique();
         builder.HasIndex(x => x.PackageId);
         builder.HasQueryFilter(x => !x.IsDeleted);
@@ -312,6 +315,7 @@ public class ReturnConfiguration : IEntityTypeConfiguration<Return>
         builder.Property(x => x.RefundMethod).HasMaxLength(30).IsRequired();
         builder.Property(x => x.RefundStatus).HasMaxLength(30).IsRequired();
         builder.Property(x => x.RefundAmount).HasPrecision(18, 2);
+        builder.HasIndex(x => x.LegacyReturnId).IsUnique().HasFilter("\"LegacyReturnId\" IS NOT NULL");
         builder.HasIndex(x => x.ReturnNumber).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
         builder.HasMany(x => x.Items).WithOne(x => x.Return).HasForeignKey(x => x.ReturnId);
@@ -329,6 +333,7 @@ public class ReturnItemConfiguration : IEntityTypeConfiguration<ReturnItem>
         builder.Property(x => x.InspectionResult).HasMaxLength(30);
         builder.Property(x => x.UnitRefundAmount).HasPrecision(18, 2);
         builder.Property(x => x.TotalRefundAmount).HasPrecision(18, 2);
+        builder.HasIndex(x => x.LegacyReturnItemId).IsUnique().HasFilter("\"LegacyReturnItemId\" IS NOT NULL");
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

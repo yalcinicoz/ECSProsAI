@@ -10,7 +10,15 @@ public record UpdateCatalogSettingCommand(string Key, string Value) : IRequest<R
 public class UpdateCatalogSettingCommandHandler : IRequestHandler<UpdateCatalogSettingCommand, Result<bool>>
 {
     private readonly ICatalogDbContext _db;
-    public UpdateCatalogSettingCommandHandler(ICatalogDbContext db) => _db = db;
+    private readonly ICatalogSettingSecretProtector _secretProtector;
+
+    public UpdateCatalogSettingCommandHandler(
+        ICatalogDbContext db,
+        ICatalogSettingSecretProtector secretProtector)
+    {
+        _db = db;
+        _secretProtector = secretProtector;
+    }
 
     public async Task<Result<bool>> Handle(UpdateCatalogSettingCommand request, CancellationToken ct)
     {
@@ -28,7 +36,16 @@ public class UpdateCatalogSettingCommandHandler : IRequestHandler<UpdateCatalogS
                 return Result.Failure<bool>("Barkod seri değeri 1 veya daha büyük bir sayı olmalıdır.");
         }
 
-        setting.Value = request.Value.Trim();
+        var value = request.Value.Trim();
+        if (_secretProtector.IsSecret(request.Key))
+        {
+            // Panelden maskeli değer geri gelirse saklı secret değiştirilmez.
+            if (value == ICatalogSettingSecretProtector.MaskedValue)
+                return Result.Success(true);
+            value = _secretProtector.Protect(value);
+        }
+
+        setting.Value = value;
         setting.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
         return Result.Success(true);

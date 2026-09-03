@@ -9,10 +9,8 @@
     // boş = yalnız "Kategoriler" tıklamasıyla açılır (varsayılan) — site.js bu bayrağa bakar.
     var megaHover = (await MsStoreContext.GetPlatformAsync())?.MegaMenuHover == true ? "1" : "";
 
-    static string BasHarfler(string ad) =>
-        string.Concat(ad.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(p => char.ToUpperInvariant(p[0])));
 }
-<div class="ms-magaza-desktop-menu-kapsayici d-none d-lg-block ms-magaza-desktop-menu" data-ms-magaza-menu data-ms-mega-hover="@megaHover">
+<div class="ms-magaza-desktop-menu-kapsayici d-none d-lg-block ms-magaza-desktop-menu" data-ms-magaza-menu data-ms-mega-hover="@megaHover" data-ms-mega-menu-url="/store/navigation/mega-menu">
         <div class="ms-magaza-menu-ic">
             <div class="ms-magaza-menu-kaydirma-grubu">
             <div class="ms-magaza-menu-ogesi ms-magaza-menu-tum">
@@ -20,107 +18,7 @@
                     <i class="fa-solid fa-bars ms-fa-ikon ms-magaza-menu-link-ikon" aria-hidden="true"></i>
                     Kategoriler <span class="ms-magaza-menu-yeni">Yeni</span>
                 </a>
-                <template data-ms-magaza-mega-menu-sablon>
-                <div class="ms-magaza-mega-menu" data-ms-magaza-mega-menu>
-                    @for (var i = 0; i < nav.Kokler.Count; i++)
-                    {
-                        var kok = nav.Kokler[i];
-                        <div class="ms-magaza-mega-kategori-grubu" data-ms-magaza-kategori-grubu="@kok.Slug">
-                            <a class="ms-magaza-mega-sol-link" href="@kok.Url" data-ms-magaza-kategori="@kok.Slug">@kok.Ad <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i></a>
-                            <div class="@(i == 0 ? "ms-magaza-mega-icerik ms-magaza-mega-icerik-varsayilan" : "ms-magaza-mega-icerik")">
-                                @if (kok.UcuncuSeviyeVar)
-                                {
-                                    foreach (var cocuk in kok.Cocuklar)
-                                    {
-                                        <section class="ms-magaza-mega-bolum">
-                                            <a class="ms-magaza-mega-baslik" href="@cocuk.Url">@cocuk.Ad</a>
-                                            <div class="ms-magaza-mega-resimli-grid">
-                                                @foreach (var alt in cocuk.Cocuklar)
-                                                {
-                                                    if (!string.IsNullOrWhiteSpace(alt.GorselUrl))
-                                                    {
-                                                    <a class="ms-magaza-mega-resimli-link" href="@alt.Url"><img src="@alt.GorselUrl" alt="@alt.Ad" width="110" height="165" loading="lazy"><span>@alt.Ad</span></a>
-                                                    }
-                                                    else
-                                                    {
-                                                    <a class="ms-magaza-mega-resimli-link ms-magaza-mega-resimli-link-resimsiz" href="@alt.Url"><span class="ms-magaza-mega-resimsiz-gorsel" aria-hidden="true"><span>@BasHarfler(alt.Ad)</span></span><span>@alt.Ad</span></a>
-                                                    }
-                                                }
-                                            </div>
-                                        </section>
-                                    }
-                                }
-                                else
-                                {
-                                    <section class="ms-magaza-mega-bolum">
-                                        <a class="ms-magaza-mega-baslik" href="@kok.Url">@kok.Ad</a>
-                                        <div class="ms-magaza-mega-resimli-grid">
-                                            @if (kok.Cocuklar.Count == 0)
-                                            {
-                                                <a class="ms-magaza-mega-resimli-link ms-magaza-mega-resimli-link-resimsiz" href="@kok.Url"><span class="ms-magaza-mega-resimsiz-gorsel" aria-hidden="true"><span>@BasHarfler(kok.Ad)</span></span><span>@kok.Ad</span></a>
-                                            }
-                                            @foreach (var alt in kok.Cocuklar)
-                                            {
-                                                if (!string.IsNullOrWhiteSpace(alt.GorselUrl))
-                                                {
-                                                <a class="ms-magaza-mega-resimli-link" href="@alt.Url"><img src="@alt.GorselUrl" alt="@alt.Ad" width="110" height="165" loading="lazy"><span>@alt.Ad</span></a>
-                                                }
-                                                else
-                                                {
-                                                <a class="ms-magaza-mega-resimli-link ms-magaza-mega-resimli-link-resimsiz" href="@alt.Url"><span class="ms-magaza-mega-resimsiz-gorsel" aria-hidden="true"><span>@BasHarfler(alt.Ad)</span></span><span>@alt.Ad</span></a>
-                                                }
-                                            }
-                                        </div>
-                                    </section>
-                                }
-                            </div>
-                        </div>
-                    }
-                </div>
-                <div class="ms-magaza-mega-kampanya-seridi" aria-label="Kampanyalar">
-                    <span class="ms-magaza-mega-kampanya-etiket">Kampanyalar</span>
-                    <button class="ms-magaza-mega-kampanya-kontrol ms-magaza-mega-kampanya-kontrol-sol" type="button" aria-label="Önceki kampanyalar" data-ms-kampanya-kaydir="sol">
-                        <i class="fa-solid fa-chevron-left ms-fa-ikon ms-magaza-mega-kampanya-kontrol-ikon" aria-hidden="true"></i>
-                    </button>
-                    <div class="ms-magaza-mega-kampanya-listesi">
-                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
-                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="Yeni Gelen Ürünler" width="110" height="165" loading="lazy">
-                            <span title="Yeni Gelen Ürünler">Yeni Gelen Ürünler</span>
-                        </a>
-                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
-                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="Kampanya Detayları" width="110" height="165" loading="lazy">
-                            <span title="Kampanya Detayları">Kampanya Detayları</span>
-                        </a>
-                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
-                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="İyi Fiyatlı Ürünler" width="110" height="165" loading="lazy">
-                            <span title="İyi Fiyatlı Ürünler">İyi Fiyatlı Ürünler</span>
-                        </a>
-                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
-                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="Avantajlı Ürünler" width="110" height="165" loading="lazy">
-                            <span title="Avantajlı Ürünler">Avantajlı Ürünler</span>
-                        </a>
-                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
-                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="İndirim Kuponları" width="110" height="165" loading="lazy">
-                            <span title="İndirim Kuponları">İndirim Kuponları</span>
-                        </a>
-                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
-                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="Fırsat Ürünleri" width="110" height="165" loading="lazy">
-                            <span title="Fırsat Ürünleri">Fırsat Ürünleri</span>
-                        </a>
-                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
-                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="Çok Satanlar" width="110" height="165" loading="lazy">
-                            <span title="Çok Satanlar">Çok Satanlar</span>
-                        </a>
-                        <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
-                            <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="Sepette Fırsat" width="110" height="165" loading="lazy">
-                            <span title="Sepette Fırsat">Sepette Fırsat</span>
-                        </a>
-                    </div>
-                    <button class="ms-magaza-mega-kampanya-kontrol ms-magaza-mega-kampanya-kontrol-sag" type="button" aria-label="Sonraki kampanyalar" data-ms-kampanya-kaydir="sag">
-                        <i class="fa-solid fa-chevron-right ms-fa-ikon ms-magaza-mega-kampanya-kontrol-ikon" aria-hidden="true"></i>
-                    </button>
-                </div>
-                </template>
+                <div data-ms-magaza-mega-menu-hedef></div>
             </div>
 
             <div class="ms-magaza-menu-kaydirma" data-ms-magaza-menu-kaydirma>

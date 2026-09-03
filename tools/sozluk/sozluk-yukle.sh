@@ -13,13 +13,15 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 PAKET="${1:?kullanım: sozluk-yukle.sh <paket.tar.gz> [hedef-ref-db]}"
+AYAR_DOSYASI="${ECSPROS_APPSETTINGS:-src/ECSPros.Api/appsettings.Production.json}"
 
 oku() { python3 -c "
 import json,sys
-cs=json.load(open('src/ECSPros.Api/appsettings.Production.json'))['ConnectionStrings']['$1']
+cs=json.load(open(sys.argv[1]))['ConnectionStrings']['$1']
 d=dict(p.split('=',1) for p in cs.split(';') if '=' in p)
-print(d.get('$2',''))"; }
-REF_HOST=$(oku MarketplaceRef Host); REF_DB="${2:-$(oku MarketplaceRef Database)}"
+print(d.get('$2',''))" "$AYAR_DOSYASI"; }
+REF_HOST=$(oku MarketplaceRef Host); REF_PORT=$(oku MarketplaceRef Port); REF_PORT="${REF_PORT:-5432}"
+REF_DB="${2:-$(oku MarketplaceRef Database)}"
 REF_USER=$(oku MarketplaceRef Username)
 
 IS_DIZINI="$(mktemp -d)"
@@ -40,14 +42,18 @@ PY
 
 echo "2/3 marketplace_ref geri yükleniyor ($REF_DB)…"
 export PGPASSWORD=$(oku MarketplaceRef Password)
-pg_restore -h "$REF_HOST" -U "$REF_USER" -d "$REF_DB" \
+pg_restore -h "$REF_HOST" -p "$REF_PORT" -U "$REF_USER" -d "$REF_DB" \
   --clean --if-exists --no-owner --no-acl "$IS_DIZINI/marketplace_ref.dump"
 unset PGPASSWORD
 
 echo "3/3 kategori eşlemeleri upsert ediliyor…"
-python3 - "$IS_DIZINI" <<'PY'
+MAIN_HOST=$(oku DefaultConnection Host); MAIN_PORT=$(oku DefaultConnection Port); MAIN_PORT="${MAIN_PORT:-5432}"
+MAIN_DB=$(oku DefaultConnection Database); MAIN_USER=$(oku DefaultConnection Username)
+export PGPASSWORD=$(oku DefaultConnection Password)
+python3 - "$IS_DIZINI" "$MAIN_HOST" "$MAIN_PORT" "$MAIN_USER" "$MAIN_DB" <<'PY'
 import json, subprocess, sys
 d = sys.argv[1]
+host, port, user, database = sys.argv[2:6]
 esleme = json.load(open(f"{d}/kategori-eslemeleri.json"))
 if not esleme:
     print("  pakette eşleme yok — atlandı."); sys.exit(0)
@@ -61,6 +67,7 @@ satirlar = "\n".join(
     for r in esleme)
 sql = """
 BEGIN;
+SELECT pg_advisory_xact_lock(hashtextextended('sozluk-yukle-main', 8317));
 CREATE TEMP TABLE paket_esleme (group_code text, marketplace text, mapping_kind text,
   target_external_id text, target_name text, target_path text, rules_json text, pool_json text);
 COPY paket_esleme FROM STDIN;
@@ -93,10 +100,11 @@ WHERE m."ProductGroupId"=g."Id" AND m."Marketplace"=pe.marketplace AND m."FirmPl
 SELECT 'eşleme upsert: ' || count(*) FROM paket_esleme;
 COMMIT;
 """
-r = subprocess.run(["psql","-h","localhost","-U","ecommerce","-d","ecommerce_db","-q","-At"],
+r = subprocess.run(["psql","-h",host,"-p",port,"-U",user,"-d",database,"-q","-At"],
                    input=sql, capture_output=True, text=True)
 print(r.stdout.strip() or "(çıktı yok)")
 if r.returncode != 0:
     print(r.stderr[-800:]); sys.exit(1)
 PY
+unset PGPASSWORD
 echo "TAMAM — sözlük yüklendi."

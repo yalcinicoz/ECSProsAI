@@ -40,6 +40,7 @@ using ECSPros.Catalog.Application.Queries.GetProducts;
 using ECSPros.Catalog.Application.Queries.GetProductTags;
 using ECSPros.Catalog.Application.Queries.LookupProducts;
 using ECSPros.Api.Authorization;
+using ECSPros.Api.Services.ErpSource;
 using ECSPros.Shared.Kernel.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -53,10 +54,12 @@ namespace ECSPros.Api.Controllers;
 public class CatalogController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly ErpSourceSyncService _erpSource;
 
-    public CatalogController(IMediator mediator)
+    public CatalogController(IMediator mediator, ErpSourceSyncService erpSource)
     {
         _mediator = mediator;
+        _erpSource = erpSource;
     }
 
     // ─── Products ──────────────────────────────────────────────────────────────
@@ -69,9 +72,10 @@ public class CatalogController : ControllerBase
         [FromQuery] bool activeOnly = true,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] string? sort = null,
         CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetProductsQuery(search, productGroupId, activeOnly, page, pageSize), ct);
+        var result = await _mediator.Send(new GetProductsQuery(search, productGroupId, activeOnly, page, pageSize, sort), ct);
         return Ok(new { success = true, data = result.Value });
     }
 
@@ -99,6 +103,38 @@ public class CatalogController : ControllerBase
             return NotFound(new { success = false, error = result.Error });
 
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>V3 gerçek kaynaktan tek ürünü koduyla idempotent yeniler.</summary>
+    [HttpPost("products/{code}/refresh-from-erp")]
+    [RequirePermission(Permissions.CatalogProductsManage)]
+    public async Task<IActionResult> RefreshProductFromErp(string code, CancellationToken ct)
+    {
+        var report = await _erpSource.RefreshProductAsync(code, ct);
+        if (!report.Success)
+            return UnprocessableEntity(new { success = false, error = report.Error, detail = report.Detail });
+        var product = await _mediator.Send(new GetProductDetailQuery(code), ct);
+        return Ok(new
+        {
+            success = true,
+            data = product.IsSuccess ? product.Value : null,
+            refresh = new { report.Changed, report.DryRun, report.DurationMs, report.Detail }
+        });
+    }
+
+    /// <summary>V3 barkodundan ürün kodunu çözer ve ürünü idempotent yeniler.</summary>
+    [HttpPost("variants/by-barcode/{barcode}/refresh-from-erp")]
+    [RequirePermission(Permissions.CatalogProductsManage)]
+    public async Task<IActionResult> RefreshProductFromErpByBarcode(string barcode, CancellationToken ct)
+    {
+        var report = await _erpSource.RefreshProductByBarcodeAsync(barcode, ct);
+        if (!report.Success)
+            return UnprocessableEntity(new { success = false, error = report.Error, detail = report.Detail });
+        return Ok(new
+        {
+            success = true,
+            refresh = new { report.Changed, report.DryRun, report.DurationMs, report.Detail }
+        });
     }
 
     /// <summary>Ürünü günceller.</summary>
@@ -193,6 +229,7 @@ public class CatalogController : ControllerBase
 
     /// <summary>Katalog ayarını günceller.</summary>
     [HttpPut("settings/{key}")]
+    [RequirePermission(Permissions.CatalogSettingsManage)]
     public async Task<IActionResult> UpdateCatalogSetting(string key, [FromBody] UpdateCatalogSettingRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new UpdateCatalogSettingCommand(key, request.Value), ct);

@@ -243,6 +243,9 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("LegacyInvoiceId")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid");
 
@@ -296,6 +299,10 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("InvoiceSeriesId");
+
+                    b.HasIndex("LegacyInvoiceId")
+                        .IsUnique()
+                        .HasFilter("\"LegacyInvoiceId\" IS NOT NULL");
 
                     b.HasIndex("OrderId");
 
@@ -960,6 +967,9 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("LegacyOrderLineId")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid");
 
@@ -1030,6 +1040,10 @@ namespace ECSPros.Order.Infrastructure.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LegacyOrderLineId")
+                        .IsUnique()
+                        .HasFilter("\"LegacyOrderLineId\" IS NOT NULL");
 
                     b.HasIndex("OrderId");
 
@@ -1214,6 +1228,9 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("LegacyOrderPaymentId")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid");
 
@@ -1232,6 +1249,10 @@ namespace ECSPros.Order.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LegacyOrderPaymentId")
+                        .IsUnique()
+                        .HasFilter("\"LegacyOrderPaymentId\" IS NOT NULL");
 
                     b.HasIndex("OrderId");
 
@@ -1517,6 +1538,9 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("LegacyReturnId")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("MemberId")
                         .HasColumnType("uuid");
 
@@ -1573,6 +1597,10 @@ namespace ECSPros.Order.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("LegacyReturnId")
+                        .IsUnique()
+                        .HasFilter("\"LegacyReturnId\" IS NOT NULL");
+
                     b.HasIndex("ReturnNumber")
                         .IsUnique();
 
@@ -1610,6 +1638,9 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("LegacyReturnItemId")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("OrderItemId")
                         .HasColumnType("uuid");
 
@@ -1645,6 +1676,10 @@ namespace ECSPros.Order.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LegacyReturnItemId")
+                        .IsUnique()
+                        .HasFilter("\"LegacyReturnItemId\" IS NOT NULL");
 
                     b.HasIndex("ReturnId");
 

@@ -1,0 +1,82 @@
+@using ECSPros.Api.Models.Store
+@model NavigasyonVm
+@functions {
+    private static string BasHarfler(string ad) =>
+        string.Concat(ad.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2)
+            .Select(p => char.ToUpperInvariant(p[0])));
+}
+<div class="ms-magaza-mega-menu" data-ms-magaza-mega-menu>
+    @for (var i = 0; i < Model.Kokler.Count; i++)
+    {
+        var kok = Model.Kokler[i];
+        <div class="ms-magaza-mega-kategori-grubu" data-ms-magaza-kategori-grubu="@kok.Slug">
+            <a class="ms-magaza-mega-sol-link" href="@kok.Url" data-ms-magaza-kategori="@kok.Slug">@kok.Ad <i class="fa-solid fa-chevron-right ms-fa-ikon" aria-hidden="true"></i></a>
+            <div class="@(i == 0 ? "ms-magaza-mega-icerik ms-magaza-mega-icerik-varsayilan" : "ms-magaza-mega-icerik")">
+                @if (kok.UcuncuSeviyeVar)
+                {
+                    foreach (var cocuk in kok.Cocuklar)
+                    {
+                        <section class="ms-magaza-mega-bolum">
+                            <a class="ms-magaza-mega-baslik" href="@cocuk.Url">@cocuk.Ad</a>
+                            <div class="ms-magaza-mega-resimli-grid">
+                                @foreach (var alt in cocuk.Cocuklar)
+                                {
+                                    if (!string.IsNullOrWhiteSpace(alt.GorselUrl))
+                                    {
+                                    <a class="ms-magaza-mega-resimli-link" href="@alt.Url"><img src="@alt.GorselUrl" alt="@alt.Ad" width="110" height="165" loading="lazy"><span>@alt.Ad</span></a>
+                                    }
+                                    else
+                                    {
+                                    <a class="ms-magaza-mega-resimli-link ms-magaza-mega-resimli-link-resimsiz" href="@alt.Url"><span class="ms-magaza-mega-resimsiz-gorsel" aria-hidden="true"><span>@BasHarfler(alt.Ad)</span></span><span>@alt.Ad</span></a>
+                                    }
+                                }
+                            </div>
+                        </section>
+                    }
+                }
+                else
+                {
+                    <section class="ms-magaza-mega-bolum">
+                        <a class="ms-magaza-mega-baslik" href="@kok.Url">@kok.Ad</a>
+                        <div class="ms-magaza-mega-resimli-grid">
+                            @if (kok.Cocuklar.Count == 0)
+                            {
+                                <a class="ms-magaza-mega-resimli-link ms-magaza-mega-resimli-link-resimsiz" href="@kok.Url"><span class="ms-magaza-mega-resimsiz-gorsel" aria-hidden="true"><span>@BasHarfler(kok.Ad)</span></span><span>@kok.Ad</span></a>
+                            }
+                            @foreach (var alt in kok.Cocuklar)
+                            {
+                                if (!string.IsNullOrWhiteSpace(alt.GorselUrl))
+                                {
+                                <a class="ms-magaza-mega-resimli-link" href="@alt.Url"><img src="@alt.GorselUrl" alt="@alt.Ad" width="110" height="165" loading="lazy"><span>@alt.Ad</span></a>
+                                }
+                                else
+                                {
+                                <a class="ms-magaza-mega-resimli-link ms-magaza-mega-resimli-link-resimsiz" href="@alt.Url"><span class="ms-magaza-mega-resimsiz-gorsel" aria-hidden="true"><span>@BasHarfler(alt.Ad)</span></span><span>@alt.Ad</span></a>
+                                }
+                            }
+                        </div>
+                    </section>
+                }
+            </div>
+        </div>
+    }
+</div>
+<div class="ms-magaza-mega-kampanya-seridi" aria-label="Kampanyalar">
+    <span class="ms-magaza-mega-kampanya-etiket">Kampanyalar</span>
+    <button class="ms-magaza-mega-kampanya-kontrol ms-magaza-mega-kampanya-kontrol-sol" type="button" aria-label="Önceki kampanyalar" data-ms-kampanya-kaydir="sol">
+        <i class="fa-solid fa-chevron-left ms-fa-ikon ms-magaza-mega-kampanya-kontrol-ikon" aria-hidden="true"></i>
+    </button>
+    <div class="ms-magaza-mega-kampanya-listesi">
+        @foreach (var baslik in new[] { "Yeni Gelen Ürünler", "Kampanya Detayları", "İyi Fiyatlı Ürünler", "Avantajlı Ürünler", "İndirim Kuponları", "Fırsat Ürünleri", "Çok Satanlar", "Sepette Fırsat" })
+        {
+            <a class="ms-magaza-mega-kampanya-link" href="/urun-listesi">
+                <img src="/images/performance/coklu-banner/ayakkabi-menu-desktop-v2.webp" alt="@baslik" width="110" height="165" loading="lazy">
+                <span title="@baslik">@baslik</span>
+            </a>
+        }
+    </div>
+    <button class="ms-magaza-mega-kampanya-kontrol ms-magaza-mega-kampanya-kontrol-sag" type="button" aria-label="Sonraki kampanyalar" data-ms-kampanya-kaydir="sag">
+        <i class="fa-solid fa-chevron-right ms-fa-ikon ms-magaza-mega-kampanya-kontrol-ikon" aria-hidden="true"></i>
+    </button>
+</div>

@@ -1,0 +1,38 @@
+[Unit]
+Description=ECSPros Temporary Legacy MySQL Stock Worker (api-1)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ecspros
+Group=ecspros
+WorkingDirectory=/opt/ECSProsAI/stock-worker-current
+ExecStart=/usr/bin/dotnet /opt/ECSProsAI/stock-worker-current/ECSPros.Api.dll
+EnvironmentFile=/etc/ecspros/api-1.env
+EnvironmentFile=/etc/ecspros/legacy-stock-worker.env
+Restart=always
+RestartSec=5
+TimeoutStartSec=120
+TimeoutStopSec=45
+KillSignal=SIGTERM
+SuccessExitStatus=143
+UMask=0027
+LimitNOFILE=65535
+TasksMax=2048
+MemoryHigh=3G
+MemoryMax=4G
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/ECSProsAI/shared /opt/ECSProsAI/media /var/log/ecspros
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

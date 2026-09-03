@@ -1253,6 +1253,11 @@ namespace ECSPros.Storefront.Infrastructure.Migrations
 
                     b.HasIndex("FirmPlatformId", "MemberId");
 
+                    b.HasIndex("FirmPlatformId", "MemberId", "ProductCode")
+                        .IsUnique()
+                        .HasDatabaseName("UX_product_questions_single_pending")
+                        .HasFilter("\"Status\" = 'pending' AND NOT \"IsDeleted\"");
+
                     b.HasIndex("FirmPlatformId", "ProductCode", "Status");
 
                     b.HasIndex("FirmPlatformId", "Status", "CreatedAt");

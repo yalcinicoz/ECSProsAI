@@ -4,6 +4,8 @@ namespace ECSPros.Order.Domain.Entities;
 
 public class ReturnItem : BaseEntity
 {
+    /// <summary>Geçici legacy MySQL importunda opiadeurunler.Id.</summary>
+    public int? LegacyReturnItemId { get; set; }
     public Guid ReturnId { get; set; }
     public Guid OrderItemId { get; set; }
     public Guid VariantId { get; set; }

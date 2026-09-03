@@ -19,6 +19,9 @@ public class CreateProductQuestionCommandHandler(IStorefrontDbContext db)
     public async Task<Result<Guid>> Handle(CreateProductQuestionCommand request, CancellationToken ct)
     {
         var soru = request.Question?.Trim() ?? "";
+        var urunKodu = request.ProductCode?.Trim() ?? "";
+        if (urunKodu.Length == 0)
+            return Result.Failure<Guid>("Ürün kodu zorunludur.");
         if (soru.Length < 10)
             return Result.Failure<Guid>("Sorunuz en az 10 karakter olmalıdır.");
         if (soru.Length > 1000)
@@ -26,7 +29,7 @@ public class CreateProductQuestionCommandHandler(IStorefrontDbContext db)
 
         var bekleyenVar = await db.ProductQuestions.AnyAsync(q =>
             q.FirmPlatformId == request.FirmPlatformId && q.MemberId == request.MemberId
-            && q.ProductCode == request.ProductCode && q.Status == "pending", ct);
+            && q.ProductCode == urunKodu && q.Status == "pending", ct);
         if (bekleyenVar)
             return Result.Failure<Guid>("Bu ürün için cevap bekleyen bir sorunuz zaten var.");
 
@@ -34,13 +37,27 @@ public class CreateProductQuestionCommandHandler(IStorefrontDbContext db)
         {
             FirmPlatformId = request.FirmPlatformId,
             MemberId = request.MemberId,
-            ProductCode = request.ProductCode.Trim(),
+            ProductCode = urunKodu,
             Question = soru,
             MemberName = request.MaskedMemberName,
             Status = "pending",
         };
         db.ProductQuestions.Add(kayit);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            // Çoklu API yarışı: iki node AnyAsync kontrolünü aynı anda geçebilir. DB'deki
+            // partial unique index ikinci INSERT'i reddeder; kullanıcıya iş kuralı hatası dön.
+            var yaristaEklenenVar = await db.ProductQuestions.AsNoTracking().AnyAsync(q =>
+                q.FirmPlatformId == request.FirmPlatformId && q.MemberId == request.MemberId
+                && q.ProductCode == urunKodu && q.Status == "pending", ct);
+            if (yaristaEklenenVar)
+                return Result.Failure<Guid>("Bu ürün için cevap bekleyen bir sorunuz zaten var.");
+            throw;
+        }
         return Result.Success(kayit.Id);
     }
 }

@@ -164,6 +164,64 @@ function usedCategoryIds(tree: EditNode[], acc = new Map<string, number>()): Map
   return acc
 }
 
+function MenuGorselAlani({ deger, degistir }: {
+  deger: string; degistir: (value: string) => void
+}) {
+  const [yukleniyor, setYukleniyor] = useState(false)
+  const [hata, setHata] = useState<string | null>(null)
+
+  const yukle = async (dosya: File | undefined) => {
+    if (!dosya) return
+    setYukleniyor(true)
+    setHata(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', dosya)
+      const { data } = await api.post('/navigation/menus/media', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      degistir(data.data.url)
+    } catch (error) {
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+      setHata((error as any).response?.data?.error ?? 'Görsel yüklenemedi.')
+    } finally {
+      setYukleniyor(false)
+    }
+  }
+
+  return (
+    <div>
+      <label className="flbl">Menü Görseli</label>
+      <div className="flex items-center gap-3">
+        {deger
+          ? <img src={deger} alt="" className="h-16 w-16 rounded-lg border border-[var(--border)] object-cover" />
+          : <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-[var(--border)] text-xs text-[var(--text-s)]">yok</div>}
+        <div className="space-y-1">
+          <div className="flex flex-wrap gap-2">
+            <label className="inline-block cursor-pointer rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs text-[var(--text-m)] hover:bg-[var(--surface2)]">
+              {yukleniyor ? 'Yükleniyor…' : deger ? 'Değiştir' : 'Görsel Yükle'}
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                className="hidden" disabled={yukleniyor}
+                onChange={(e) => { yukle(e.target.files?.[0]); e.target.value = '' }} />
+            </label>
+            {deger && (
+              <button type="button"
+                className="rounded-lg border border-red-200 px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/30"
+                onClick={() => {
+                  if (window.confirm('Menü görselini kaldırmak istediğinize emin misiniz?')) degistir('')
+                }}>
+                Kaldır
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-[var(--text-s)]">En fazla 5 MB</p>
+          {hata && <p className="text-xs text-red-600">{hata}</p>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function MenuPlacementPage() {
   const queryClient = useQueryClient()
 
@@ -695,14 +753,8 @@ export function MenuPlacementPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="flbl">Menü Görseli (URL)</label>
-              <input value={form.imageUrl}
-                onChange={(e) => setForm(f => ({ ...f, imageUrl: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl text-sm"
-                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }}
-                placeholder="/media/menu/…" />
-            </div>
+            <MenuGorselAlani deger={form.imageUrl}
+              degistir={(imageUrl) => setForm(f => ({ ...f, imageUrl }))} />
             <div>
               <label className="flbl">Rozet</label>
               <input value={form.badgeLabel}

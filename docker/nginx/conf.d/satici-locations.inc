@@ -3,7 +3,10 @@
     # API — ana site ile aynı upstream + oran sınırları
     location /api/supplier/auth/ {
         limit_req zone=ecs_auth burst=20 nodelay;
-        proxy_pass http://host.docker.internal:5000;
+        proxy_pass http://ecspros_api;
+        proxy_connect_timeout 2s;
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+        proxy_next_upstream_tries 2;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -12,7 +15,10 @@
     }
     location /api/ {
         limit_req zone=ecs_api burst=100 nodelay;
-        proxy_pass http://host.docker.internal:5000;
+        proxy_pass http://ecspros_api;
+        proxy_connect_timeout 2s;
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+        proxy_next_upstream_tries 2;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection keep-alive;

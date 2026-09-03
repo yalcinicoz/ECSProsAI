@@ -73,7 +73,10 @@
     # En-uzun-önek eşleşmesiyle /api/'den önce yakalanır.
     location /api/store/auth/ {
         limit_req zone=ecs_auth burst=20 nodelay;
-        proxy_pass http://host.docker.internal:5000;
+        proxy_pass http://ecspros_api;
+        proxy_connect_timeout 2s;
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+        proxy_next_upstream_tries 2;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection keep-alive;
@@ -86,7 +89,10 @@
 
     location /api/ {
         limit_req zone=ecs_api burst=100 nodelay;
-        proxy_pass http://host.docker.internal:5000;
+        proxy_pass http://ecspros_api;
+        proxy_connect_timeout 2s;
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+        proxy_next_upstream_tries 2;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection keep-alive;
@@ -99,7 +105,10 @@
 
     # SignalR WebSocket
     location /hubs/ {
-        proxy_pass http://host.docker.internal:5000;
+        proxy_pass http://ecspros_api;
+        proxy_connect_timeout 2s;
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+        proxy_next_upstream_tries 2;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -110,7 +119,10 @@
 
     # Swagger + diğer backend endpoint'leri
     location /swagger {
-        proxy_pass http://host.docker.internal:5000;
+        proxy_pass http://ecspros_api;
+        proxy_connect_timeout 2s;
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+        proxy_next_upstream_tries 2;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection keep-alive;
@@ -126,7 +138,10 @@
     # Statik asset'ler (css/js/ikons/images/video/fontawesome) app'in UseStaticFiles'ından gelir.
     # Eski SPA yedeği 8080 portunda (default.conf) — SPA emekli olunca o blok kaldırılacak.
     location / {
-        proxy_pass http://host.docker.internal:5000;
+        proxy_pass http://ecspros_api;
+        proxy_connect_timeout 2s;
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+        proxy_next_upstream_tries 2;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection keep-alive;

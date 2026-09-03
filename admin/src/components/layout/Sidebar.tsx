@@ -80,7 +80,7 @@ const NAV_SECTIONS: NavSection[] = [
     { label: 'Yorum Moderasyonu', to: '/storefront/reviews', icon: 'layout' },
     { label: 'Ürün Soruları', to: '/storefront/questions', icon: 'inbox' },
     { label: 'Vitrin Yönetimi', to: '/storefront/pages', icon: 'layout' },
-    { label: 'Katalog Ayarları',   to: '/catalog/settings',                  icon: 'settings' },
+    { label: 'Katalog Ayarları',   to: '/catalog/settings',                  icon: 'settings', permission: 'catalog.settings.manage' },
   ]},
   { label: 'Sipariş Yönetimi', items: [
     { label: 'Siparişler', to: '/orders',           icon: 'shoppingbag' },

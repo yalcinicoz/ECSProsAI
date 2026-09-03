@@ -13,6 +13,7 @@ using ECSPros.Inventory.Application.Queries.GetTransferDetail;
 using ECSPros.Inventory.Application.Queries.GetTransfers;
 using ECSPros.Inventory.Application.Queries.GetWarehouseLocations;
 using ECSPros.Inventory.Application.Queries.GetWarehouses;
+using ECSPros.Shared.Contracts;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,10 +27,12 @@ namespace ECSPros.Api.Controllers;
 public class InventoryController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly ICacheBustPublisher _cacheBust;
 
-    public InventoryController(IMediator mediator)
+    public InventoryController(IMediator mediator, ICacheBustPublisher cacheBust)
     {
         _mediator = mediator;
+        _cacheBust = cacheBust;
     }
 
     /// <summary>Depoları listeler.</summary>
@@ -206,6 +209,7 @@ public class InventoryController : ControllerBase
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
 
+        ECSPros.Api.Services.StockCacheInvalidation.Bust(_cacheBust);
         return Ok(new { success = true, data = new { movementId = result.Value } });
     }
 

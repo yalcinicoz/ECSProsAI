@@ -62,12 +62,17 @@ Kanal seçimi tarayıcı oturumunda hatırlanır; Kanal Kategorileri'nde seçti�
 | Kategori | Kategori tipinde evet | Aranabilir liste "Ad (/url)"; seçilince öğenin adresi kategorinin URL'si olur. |
 | Adres (URL) | Link tipinde | `/kampanya` gibi site içi yol ya da `https://…` tam adres. |
 | Menü Etiketi | Link/Başlık'ta evet; Kategori'de hayır | Menüde görünen yazı (örn. `KADIN`). Kategori tipinde boş bırakılırsa kategori adı kullanılır. |
-| Menü Görseli (URL) | Hayır | Mega menüde öğenin yanında gösterilen küçük görsel (`/media/menu/…`). |
+| Menü Görseli | Hayır | Mega menüde öğenin yanında gösterilen küçük görsel. **Görsel Yükle** ile dosya seçilir; CDN adresi sistem tarafından oluşturulur. JPEG, PNG, WebP, GIF ve SVG kabul edilir, en fazla 5 MB olabilir. |
 | Rozet | Hayır | Öğenin yanında küçük etiket (`YENİ`). |
 | Menüde göster | — | İşareti kaldırılırsa öğe pasif olur: sitede görünmez, yerleşimde saklanır. |
 
 Pencere altındaki buton yeni öğede **Ekle**, düzenlemede **Uygula**; Kategori tipinde kategori seçilmeden, diğer
 tiplerde etiket girilmeden buton pasiftir.
+
+Menü görselleri vitrin banner'larından ve ürün görsellerinden ayrı olarak CDN'deki
+`/storefront-v1/menus/YYYY/MM/` ağacında tutulur. Kullanıcı URL girmez; **Değiştir** yeni dosyayı yükler.
+Kırmızı yazılı **Kaldır** butonu önce onay sorar; onaydan sonra yalnız formdaki görsel bağlantısını temizler.
+Değişikliğin ağaca geçmesi için modalda **Uygula**, kalıcı olması için sayfada ayrıca **Kaydet** kullanılmalıdır.
 
 ## Durumlar ve iş kuralları
 - Menü tek bir kanala aittir; her kanalın kendi üst menüsü vardır.

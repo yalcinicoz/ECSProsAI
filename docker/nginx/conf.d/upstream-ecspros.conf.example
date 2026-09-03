@@ -1,29 +1,26 @@
-# FAZ 10 / A0 — iki düğümlü API upstream ŞABLONU (2026-08-30).
+# FAZ 10 / A0 — iki düğümlü API upstream ŞABLONU (2026-08-31).
 # Aktifleştirme (runbook: docs/coklu-sunucu-a0-kurulum.md):
-#   1) Bu dosyayı upstream-ecspros.conf olarak kopyalayıp düğüm 2 IP'sini düzeltin.
-#   2) conf.d'deki PROD hedeflerini upstream'e çevirin (5050'li dev/telemania hedeflerine DOKUNMAYIN):
+#   1) Bu dosyayı upstream-ecspros.conf olarak kopyalayın.
+#   2) conf.d'deki PROD hedeflerini upstream'e çevirin (host.docker.internal:5050 kullanan
+#      dev/telemania hedeflerine DOKUNMAYIN):
 #      sed -i 's|http://host.docker.internal:5000|http://ecspros_api|g' default.conf locations.inc satici-locations.inc
 #   3) sudo docker compose restart nginx
 #
-# Yapışkanlık: SignalR admin hub'ları backplane'siz çalıştığı için aynı istemci hep aynı
-# düğüme gitmelidir. Cloudflare arkasında $remote_addr CF edge IP'sidir — klasik ip_hash
-# YANLIŞ dağıtır; gerçek istemci IP'si CF-Connecting-IP başlığından hash'lenir (boşsa soket IP).
-map $http_cf_connecting_ip $ecspros_sticky {
-    ""      $remote_addr;
-    default $http_cf_connecting_ip;
-}
+# Yapışkanlık: SignalR negotiate/upgrade akışında aynı istemcinin aynı düğüme gitmesi için
+# 00-gercek-istemci-ip.conf tarafından üretilen gerçek istemci IP'si hash'lenir.
 
 upstream ecspros_api {
-    hash $ecspros_sticky consistent;
-    # Düğüm 1 — nginx'in çalıştığı makine (host-gateway)
-    server host.docker.internal:5000 max_fails=3 fail_timeout=10s;
-    # Düğüm 2 — ÖZEL AĞ IP'sini yazın (örn. 10.0.0.2)
-    server 10.0.0.2:5000             max_fails=3 fail_timeout=10s;
+    zone ecspros_api 64k;
+    hash $gercek_istemci_ip consistent;
+    keepalive 64;
+
+    server 192.168.0.245:5050 max_fails=3 fail_timeout=10s;
+    server 192.168.0.58:5050  max_fails=3 fail_timeout=10s;
 }
 
 # NOT (açık kaynak nginx): aktif health-check YOKTUR — düğüm düşünce passive failover
 # devreye girer (bağlantı hatası/timeout'ta istek diğer düğüme gider, max_fails sonrası
 # düğüm fail_timeout süresince devre dışı kalır). /ready ucu deploy betiğinin sıralı
 # restart beklemesi içindir (tools/deploy/deploy.sh). İsterseniz cron ile de izlenebilir.
-# 502/503'te de diğer düğüme geçilsin isterseniz proxy_pass kullanan location'lara:
-#   proxy_next_upstream error timeout http_502 http_503 http_504;
+# Production location'larında bağlantı/timeout/502/503/504 durumunda en fazla diğer
+# düğüm bir kez denenir. non_idempotent bilinçli olarak eklenmez; gönderilmiş POST tekrarlanmaz.

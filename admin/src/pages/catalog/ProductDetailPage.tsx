@@ -1107,8 +1107,15 @@ export function ProductDetailPage() {
   const { data: product, isLoading: productLoading } = useQuery<ProductDetail>({
     queryKey: ['product', code],
     queryFn: async () => {
-      const { data } = await api.get(`/catalog/products/${code}`)
-      return data.data
+      try {
+        const { data } = await api.get(`/catalog/products/${code}`)
+        return data.data
+      } catch (error: unknown) {
+        const status = (error as { response?: { status?: number } })?.response?.status
+        if (status !== 404) throw error
+        const { data } = await api.post(`/catalog/products/${code}/refresh-from-erp`)
+        return data.data
+      }
     },
     enabled: !!code,
   })

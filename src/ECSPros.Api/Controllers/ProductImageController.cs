@@ -148,7 +148,10 @@ public class ProductImageController : ControllerBase
     [HttpPost("products/{productId:guid}/images/prepare")]
     public async Task<IActionResult> PrepareImageBatch(Guid productId, [FromBody] PrepareImageBatchRequest request, CancellationToken ct = default)
     {
-        var command = new PrepareImageBatchCommand(productId, request.VariantId, request.ImageSetId, request.FileExtensions, request.ReplaceSet);
+        var storedExtensions = request.FileExtensions
+            .Select(_imageUploadService.GetStoredFileExtension)
+            .ToList();
+        var command = new PrepareImageBatchCommand(productId, request.VariantId, request.ImageSetId, storedExtensions, request.ReplaceSet);
         var result = await _mediator.Send(command, ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
@@ -160,13 +163,17 @@ public class ProductImageController : ControllerBase
     [RequestFormLimits(MultipartBodyLengthLimit = long.MaxValue, ValueLengthLimit = int.MaxValue)]
     public async Task<IActionResult> UploadToFtp(Guid batchId, CancellationToken ct = default)
     {
+        var db = HttpContext.RequestServices
+            .GetRequiredService<ECSPros.Catalog.Application.Services.ICatalogDbContext>();
+
         // Pending batch'teki imageId→fileName mapping'ini çek
-        var pendingImages = await GetPendingBatchImages(batchId, ct);
+        var pendingImages = await GetPendingBatchImages(db, batchId, ct);
         if (pendingImages is null)
             return BadRequest(new { success = false, error = "Batch bulunamadı veya pending değil." });
 
         var files = Request.Form.Files;
         var results = new List<object>();
+        var failedMetadataChanged = false;
 
         foreach (var file in files)
         {
@@ -177,16 +184,30 @@ public class ProductImageController : ControllerBase
                 continue;
             }
 
-            if (!pendingImages.TryGetValue(imageId, out var fileName))
+            if (!pendingImages.TryGetValue(imageId, out var pendingImage))
             {
                 results.Add(new { imageId, fileName = (string?)null, success = false, error = "ImageId batch'te bulunamadı" });
                 continue;
             }
 
+            var fileName = pendingImage.FileName;
             using var stream = file.OpenReadStream();
             var uploadSuccess = await _imageUploadService.UploadAsync(stream, fileName, ct);
+            if (!uploadSuccess)
+            {
+                // Harici hedef upload'ı başarısızsa istemcinin ayrı confirm/cancel
+                // isteğine güvenme; bağlantı kopsa bile Pending metadata bırakma.
+                pendingImage.Status = ECSPros.Catalog.Domain.Entities.ProductImageStatus.Cancelled;
+                pendingImage.IsDeleted = true;
+                pendingImage.DeletedAt = DateTime.UtcNow;
+                pendingImage.UpdatedAt = DateTime.UtcNow;
+                failedMetadataChanged = true;
+            }
             results.Add(new { imageId, fileName, success = uploadSuccess });
         }
+
+        if (failedMetadataChanged)
+            await db.SaveChangesAsync(CancellationToken.None);
 
         return Ok(new { success = true, data = new { results } });
     }
@@ -477,11 +498,11 @@ public class ProductImageController : ControllerBase
 
     // ─── Helper ───────────────────────────────────────────────────────────────
 
-    private async Task<Dictionary<Guid, string>?> GetPendingBatchImages(Guid batchId, CancellationToken ct)
+    private static async Task<Dictionary<Guid, ECSPros.Catalog.Domain.Entities.ProductImage>?> GetPendingBatchImages(
+        ECSPros.Catalog.Application.Services.ICatalogDbContext db,
+        Guid batchId,
+        CancellationToken ct)
     {
-        // IImageUploadService üzerinden değil, doğrudan MediatR aracılığıyla erişmek yerine
-        // ICatalogDbContext'e ihtiyaç var. Controller'da DI ile çözmek için IServiceProvider kullanıyoruz.
-        var db = HttpContext.RequestServices.GetRequiredService<ECSPros.Catalog.Application.Services.ICatalogDbContext>();
         var images = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions
             .ToListAsync(
                 db.ProductImages.Where(x => x.BatchId == batchId && x.Status == ECSPros.Catalog.Domain.Entities.ProductImageStatus.Pending),
@@ -490,7 +511,7 @@ public class ProductImageController : ControllerBase
         if (!images.Any())
             return null;
 
-        return images.ToDictionary(x => x.Id, x => x.FileName);
+        return images.ToDictionary(x => x.Id);
     }
 }
 

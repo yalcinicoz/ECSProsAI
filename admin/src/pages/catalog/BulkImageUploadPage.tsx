@@ -76,7 +76,7 @@ async function readDirImages(
   return result
 }
 
-/** Move file to yuklenenler/{serverFileName}, delete original */
+/** Archive the original bytes locally with a unique name and the original extension. */
 async function moveToUploaded(
   dirHandle: FileSystemDirectoryHandle,
   _fileHandle: FileSystemFileHandle,
@@ -84,7 +84,9 @@ async function moveToUploaded(
   serverFileName: string,
 ): Promise<void> {
   const subDir = await (dirHandle as any).getDirectoryHandle('yuklenenler', { create: true })
-  const newHandle: FileSystemFileHandle = await subDir.getFileHandle(serverFileName, { create: true })
+  const sourceExt = originalFile.name.match(/\.[^/.]+$/)?.[0]?.toLowerCase() ?? ''
+  const archiveFileName = serverFileName.replace(/\.[^/.]+$/, '') + sourceExt
+  const newHandle: FileSystemFileHandle = await subDir.getFileHandle(archiveFileName, { create: true })
   const writable = await (newHandle as any).createWritable()
   await writable.write(originalFile)
   await writable.close()
@@ -408,7 +410,15 @@ export function BulkImageUploadPage() {
           } catch { /* skip */ }
         }
 
-        if (successfulIds.length === 0) throw new Error('Hiçbir dosya yüklenemedi')
+        if (successfulIds.length !== prepared.length) {
+          // Unique batch adları sayesinde tüm batch'i iptal edip yüklenmiş parçaları güvenle temizleyebiliriz.
+          await api.post(`/catalog/products/${variantInfo.productId}/images/confirm`, {
+            batchId, replaceSet: false, confirmedImages: [],
+          })
+          throw new Error(
+            `Yükleme tamamlanamadı (${successfulIds.length}/${prepared.length}); mevcut resimler korundu.`
+          )
+        }
 
         // Confirm
         const confirmedImages = prepared
@@ -501,7 +511,7 @@ export function BulkImageUploadPage() {
           <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]"
             checked={replaceSet} onChange={e => setReplaceSet(e.target.checked)} />
           <span className="text-xs font-medium" style={{ color: 'var(--text-m)' }}>
-            Mevcut resimleri arşivle
+            Mevcut resimleri sil ve yenileriyle değiştir
           </span>
         </label>
       </div>

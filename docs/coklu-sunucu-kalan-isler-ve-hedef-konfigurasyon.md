@@ -26,6 +26,11 @@ Kesin nedenler şunlardır:
   geriye uyumlu opt-in olarak hazır. Üretim kararı gereği ürün görselleri projede tutulmayacak; mevcut ayrı
   görsel sunucusundan subdomain/CDN URL'leriyle sunulacak. S3/MinIO aktivasyonu ertelendi ve katalog adapter'ı
   `Storage:Catalog:Enabled=false` kalacak.
+- Toplu ürün resmi için genel katalog adapter'ından ayrı `CatalogImageStorage` dual-target adapter'ı hazırdır:
+  WebP harici SFTP origin'e, JPEG OVH object storage'a yazılır. Varsayılan aktiftir ve iki API node'u aynı
+  harici hedefleri ve ortak DB'deki Data Protection şifreli panel ayarlarını kullanır. Hedeflerden biri
+  başarısızsa metadata aktifleştirilmez; yerel fallback ancak geliştirme/teşhis için açıkça kapatılarak
+  seçilebilir. Gerçek hedef kabulü yayın fazında uygulanır.
 
 Önerilen son yapı, iki fiziksel sunucu üzerinde simetrik **2 Nginx + 4 API + 2 PostgreSQL + 2 Redis** dağılımı ve üçüncü bağımsız bir witness'tır. Üç API teknik olarak kurulabilir fakat 2+1 asimetrik dağılım yüzünden fiziksel sunucu kaybında kapasite öngörüsü zayıftır. Bu nedenle üretim hedefi 2+2, toplam dört API olmalıdır.
 
@@ -34,7 +39,7 @@ Kesin nedenler şunlardır:
 | Alan | Durum | Açıklama |
 |---|---|---|
 | Data Protection key paylaşımı | Tamamlandı | Anahtarların PostgreSQL'de tutulması ve dosya fallback'i mevcut. |
-| Node rolü | Kod tamam | `Api`, `Worker`, `Both`; geçersiz rol startup'ı durdurur. Gerçek node kabulü bekliyor. |
+| Node rolü | Kod tamam + API1 kabulü geçti | `Api`, `Worker`, `Both`; geçersiz rol startup'ı durdurur. `WorkerProfile=All|LegacyImport|LegacyStock|ErpSource` ile izole importer/stock/ERP process'i diğer worker'ları başlatmadan çalışabilir. |
 | Device/security state | Tamamlandı | Redis kullanımı ve fail-closed davranış mevcut. |
 | Login sayaçları | Kod tamam | Dağıtık sayaç Redis'e taşındı; proxy trust/spoof unit testleri geçti. Gerçek LB zinciri bekliyor. |
 | Feed job/status | Kod tamam | Atomik claim/lease/heartbeat/retry/crash recovery var; izole DB kabulü bekliyor. |
@@ -266,7 +271,7 @@ Bellek alarmları yüzde 70 uyarı ve yüzde 85 kritik olarak başlamalıdır. S
 | No | Öncelik | İş | Sorumlu | Bağımlılık | Kabul kriteri |
 |---|---|---|---|---|---|
 | K0 | Kritik | Feed job için atomik claim/lease ve crash recovery | Kod | PostgreSQL migration | İş önce silinmez; `pending -> processing -> completed/failed`, lease expiry ve retry testleri geçer. |
-| K1 | Kritik | Node role doğrulaması | Kod | Yok | Yalnız `Api`, `Worker`, `Both` kabul edilir; typo startup'ı durdurur. |
+| K1 | Kritik | Node role/profile doğrulaması | Kod | Yok | Yalnız `Api`, `Worker`, `Both` ve `All`, `LegacyImport` profilleri kabul edilir; typo startup'ı durdurur. |
 | K2 | Kritik | Forwarded Headers güven zinciri | Kod + Altyapı | Sabit LB/Nginx IP listesi | Client IP yalnız tanımlı proxy zincirinden alınır; spoof testi başarısız olur. |
 | K3 | Kritik | SignalR Redis backplane | Kod + Redis | Sentinel/state Redis | İki farklı API'ye bağlı istemciler aynı mesajı alır; node kapatma testi geçer. |
 | K4 | Kritik | Worker distributed claim ve idempotency | Kod | PostgreSQL | Aynı job dört process'te eşzamanlı tetiklense bile dış etki tam bir kez oluşur. |
@@ -395,3 +400,31 @@ Aşağıdakilerin tamamı kanıtlanmadan yapı **tam HA** olarak adlandırılmam
 ## 14. Sonuç
 
 Kod tabanı çoklu API için önemli ölçüde hazırlanmıştır ancak kalan kritik kod maddeleri ve stateful servis failover işleri tamamlanmadan üretim yapısı fiziksel sunucu arızasına dayanıklı değildir. Doğru hedef iki fiziksel host üzerinde simetrik 2+2 API, çift Nginx, PostgreSQL primary/standby, Redis primary/replica ve bağımsız witness'tır. Uygulamanın “4.000 aktif kullanıcı ve tek fiziksel host kaybı” kabul testini geçmesi nihai release şartıdır.
+
+## 15. Geçici kabul ortamı güncel yayın notu (2026-09-01)
+
+- API1 ve API2 `20260901T_stock_diag_30dd430c` release'iyle aktiftir; private health kontrolleri geçmiştir.
+- ERP worker yalnız katalog ve fiyat okur. MSSQL stok kodu ve sunucu stok ayarı tamamen kaldırılmıştır.
+- Geçici MySQL stock-only worker API1'de ayrı process olarak aktiftir. Dump sonrası eksik `308` varyant ve
+  `307` raf transaction'lı/idempotent onarımla tamamlandı; ikinci onarım turu `0`. Gerçek stok snapshot'ı
+  ilk tur `5.901`, ikinci/final tur `0` değişiklik verdi. Son kaynak/eşleşen adet `253.847/253.847`,
+  eşleşmeyen satır/adet `0/0`; onarım tekrar kapatıldı ve sıfır tolerans korunuyor.
+- `multi-test.misharitalia.com` Nginx konfigürasyonuna `/admin/` React SPA rotası eklendi; `nginx -t` ve reload
+  başarılıdır. Admin artefaktı `/usr/share/nginx/admin-releases/20260901T_admin` altına yayımlandı ve
+  `/usr/share/nginx/html/admin` atomik symlink'iyle aktiftir; index ve hashed JavaScript asset'i HTTP `200`.
+
+## 16. Son GitHub paketi çoklu-node sertleştirmesi (2026-09-02)
+
+- Marketplace referans koşuları partial unique running index + process kapısıyla atomik tek-koşu oldu; günlük
+  tamamlanma DB geçmişinden okunur ve restart sonrası korunur.
+- Ürün sorularında aynı firma/üye/ürün için tek pending kuralı partial unique index ile DB seviyesinde zorlanır;
+  migration eski duplicate kayıtları silmeden `hidden` durumuna alır.
+- Mapping readiness fire-and-forget olmaktan çıkarıldı; shared PostgreSQL advisory lock altında sıralı ve await
+  edilen akışa dönüştürüldü. Cache bust tüm API node'larına yayınlanmaya devam eder.
+- Arama sayacı doğrudan await edilen, iki saniye sınırlandırılmış atomik upsert'tir. Popüler arama listesi
+  node-local memory yerine ortak `ICacheService` kullanır; Redis yoksa güvenli cache miss ile DB'den okunur.
+- Sözlük scriptleri ana/referans PostgreSQL bağlantılarını seçilebilir appsettings dosyasından alır; ana DB için
+  sabit localhost varsayımı kaldırılmıştır.
+- Yerel doğrulama: acceptance dışı testler `91/91`, Storefront migration model drift yok, üretilen migration SQL'i
+  duplicate koruma + partial unique index içeriyor, iki Bash script `bash -n` kontrolünden geçti. Ortamda gerçek
+  çok-process yarış testi yapılmadığından bu ayrıca environment acceptance kapısıdır.

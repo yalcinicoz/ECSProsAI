@@ -47,7 +47,7 @@
         // KURAL (2026-07-17): gruplar başlangıçta kapalı (seçili değerler üst bardaki
         // seçili-filtre selectlerinde zaten görünür); açılınca akordeon devreye girer.
         var acik = false;
-    <div class="ms-filtre-kapsayici" data-filter-block>
+    <div class="ms-filtre-kapsayici" data-filter-block data-ms-filtre-grup="@grup.TipKodu">
         <button class="ms-filtre-baslik" type="button" data-filter-toggle aria-expanded="@(acik ? "true" : "false")">
             @grup.Ad
             <i class="fa-solid fa-chevron-down ms-fa-ikon ms-filtre-ok@(acik ? " ms-filtre-ok-acik" : "")" aria-hidden="true"></i>
@@ -60,10 +60,10 @@
             @if (grup.RenkTipi)
             {
             <h3 class="ms-filtre-grup-basligi">Renkler</h3>
-            <div class="ms-filtre-secim-listesi ms-filtre-renk-listesi">
+            <div class="ms-filtre-secim-listesi ms-filtre-renk-listesi" data-ms-filtre-secenek-listesi>
                 @foreach (var deger in grup.Degerler)
                 {
-                <label class="ms-filtre-secim ms-filtre-renk-secim" data-filter-option>
+                <label class="ms-filtre-secim ms-filtre-renk-secim" data-filter-option data-ms-filtre-adet="@deger.UrunSayisi">
                     <input name="checkbox_1" type="checkbox" data-ms-filtre-deger="@deger.ValueId" checked="@vm.DegerSecili(deger.ValueId)">
                     <span class="ms-filtre-kutu" aria-hidden="true"></span>
                     <span class="ms-filtre-renk" style="--ms-renk:@(deger.Hex ?? "#E2E8F0")" aria-hidden="true"></span>
@@ -74,7 +74,7 @@
             }
             else
             {
-            <div class="ms-filtre-secim-listesi">
+            <div class="ms-filtre-secim-listesi" data-ms-filtre-secenek-listesi>
                 @foreach (var deger in grup.Degerler)
                 {
                 <label class="ms-filtre-secim" data-filter-option>
