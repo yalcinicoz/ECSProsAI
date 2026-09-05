@@ -36,6 +36,7 @@ public sealed class ErpSourceOptions
     public Dictionary<string, string> ProductGroupCodes { get; set; } = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Kot Ceket"] = "grp_46",
+        ["Eşofman Altı"] = "grp_47",
         ["Sütyen"] = "grp_118",
         ["Triko Hırka"] = "grp_14"
     };
@@ -123,6 +124,8 @@ public sealed class ErpSourceOptions
             throw new InvalidOperationException("ErpSource:StartupDelaySeconds 0-600 aralığında olmalı.");
         if (SupplierAccountCodes.Any(x => string.IsNullOrWhiteSpace(x.Key) || string.IsNullOrWhiteSpace(x.Value)))
             throw new InvalidOperationException("ErpSource supplier account mapping anahtar/değerleri boş olamaz.");
+        if (ProductGroupCodes.Any(x => string.IsNullOrWhiteSpace(x.Key) || string.IsNullOrWhiteSpace(x.Value)))
+            throw new InvalidOperationException("ErpSource product group mapping anahtar/değerleri boş olamaz.");
 
         if (!Enabled) return;
         if (string.IsNullOrWhiteSpace(ConnectionString))
