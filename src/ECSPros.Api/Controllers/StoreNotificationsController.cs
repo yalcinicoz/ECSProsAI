@@ -73,4 +73,22 @@ public class StoreNotificationsController(
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
+
+    /// <summary>Mobil push cihaz kayıtları (2026-09-05) — bildirim gönderim/izleme
+    /// yüzeyi: üye filtresiyle üyenin cihaz token'ları TAM haliyle döner (panel üye
+    /// detayı + operasyon). Store tarafındaki 'mine' ucu maskeli verir, bu uç admin'dir.</summary>
+    [HttpGet("push-devices")]
+    public async Task<IActionResult> GetPushDevices(
+        [FromQuery] Guid? firmPlatformId = null,
+        [FromQuery] Guid? memberId = null,
+        [FromQuery] string? status = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new ECSPros.Storefront.Application.Queries.PushDevices
+            .GetPushDevicesForAdminQuery(firmPlatformId, memberId, status, page, pageSize), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
 }
