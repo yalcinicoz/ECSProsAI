@@ -169,6 +169,7 @@ TCKN eşiği (`Store:TcknThreshold`) üstü tutarlarda kimlik no zorunluluğu su
 | Favoriler | `GET/POST /api/store/favorites`, `DELETE /favorites/{productCode}` |
 | Koleksiyonlar | `GET/POST /api/store/collections`, `PUT/DELETE /{id}`, `POST /{id}/items`, `POST /saved/toggle`; paylaşım linki verisi kataloğa `shareCode` ile gelir |
 | Yorumlar | `GET /api/store/reviews/product/{code}` + `/summary` (anonim); `GET /reviews/mine`, `GET /reviews/reviewable`, `POST /reviews`, `POST /reviews/images`, `DELETE /reviews/{id}` |
+| Satıcıya sorular | `GET /api/store/questions/product/{productCode}?firmPlatformId=&limit=` (anonim — yayındaki cevaplanmış sorular, ad maskeli, limit ≤50); `GET /questions/mine` (Sorularım: cevaplananlar + bekleyenler), `POST /questions` (aynı üründe cevap bekleyen soru varken yenisi engellenir) |
 | Kayıtlı aramalar | `GET/POST /api/store/saved-searches`, `PUT/DELETE /{id}` |
 | Stok alarmı | `GET/POST /api/store/stock-alerts` |
 | Gezilen ürünler | `GET /api/store/viewed-products`, `DELETE` (temizle) |
