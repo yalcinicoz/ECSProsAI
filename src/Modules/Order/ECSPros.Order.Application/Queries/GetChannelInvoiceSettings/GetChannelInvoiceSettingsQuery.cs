@@ -55,10 +55,11 @@ public class GetChannelInvoiceSettingsQueryHandler(IOrderDbContext db, IFirmReso
                 .ToList();
             var missing = InvoiceTypes.All.Where(t => bs.All(b => b.InvoiceType != t)).ToList();
             var warnings = new List<string>();
+            // Kullanıcı kuralı (2026-09-06): her aktif satış kanalı ÜÇ tipte de seriye bağlı olmalı
+            if (c.IsActive && missing.Count > 0)
+                warnings.Add($"Eksik seri yuvası: {string.Join(", ", missing.Select(InvoiceTypes.Label))} — kanal her üç tipte de seriye bağlı olmalı.");
             if (c.IsActive && missing.Contains(InvoiceTypes.EArchive))
-                warnings.Add("e-Arşiv serisi bağlı değil — paket kapanışında otomatik fatura kesilemez.");
-            if (c.IsActive && method == InvoiceSendMethods.IntegratorApi && missing.Count > 0)
-                warnings.Add($"Entegratör gönderimi için eksik yuva: {string.Join(", ", missing.Select(InvoiceTypes.Label))}.");
+                warnings.Add("e-Arşiv serisi bağlı olmadığından paket kapanışında otomatik fatura kesilemez.");
             foreach (var b in bs.Where(b => !b.SeriesActive))
                 warnings.Add($"{InvoiceTypes.Label(b.InvoiceType)} yuvasındaki {b.Serial} serisi pasif.");
             return new ChannelInvoiceSettingsDto(c.Id, c.FirmId, c.Code, c.Name, c.IsActive, method, bs, missing, warnings);
