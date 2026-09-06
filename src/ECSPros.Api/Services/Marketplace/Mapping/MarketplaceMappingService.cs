@@ -387,14 +387,15 @@ public sealed class MarketplaceMappingService(
         if (MappingTargets.IsErp(marketplace))
         {
             // EM0: ERP özellik tipleri kategoriye bağlı değildir — sözlükteki tüm attribute_type kayıtları
+            // EM3: varyant eksenleri de aynı listede (is_variant_axis=true, zorunlu) — kind=variant_axis
             var types = await db.ErpReferenceItems
-                .Where(i => i.TargetSystem == marketplace && i.Kind == ErpReferenceKinds.AttributeType && i.IsActive)
-                .OrderBy(i => i.Name).ToListAsync(ct);
+                .Where(i => i.TargetSystem == marketplace && (i.Kind == ErpReferenceKinds.AttributeType || i.Kind == ErpReferenceKinds.VariantAxis) && i.IsActive)
+                .OrderBy(i => i.Kind == ErpReferenceKinds.VariantAxis ? 0 : 1).ThenBy(i => i.Name).ToListAsync(ct);
             var valueCounts = await db.ErpReferenceItems
                 .Where(i => i.TargetSystem == marketplace && i.Kind == ErpReferenceKinds.AttributeValue && i.IsActive && i.ParentCode != null)
                 .GroupBy(i => i.ParentCode!).Select(g => new { Code = g.Key, N = g.Count() }).ToDictionaryAsync(x => x.Code, x => x.N, ct);
             foreach (var t in types)
-                mpAttrs.Add((t.Code, t.Name, false, true, false, "list", valueCounts.GetValueOrDefault(t.Code)));
+                mpAttrs.Add((t.Code, t.Name, t.Kind == ErpReferenceKinds.VariantAxis, true, t.Kind == ErpReferenceKinds.VariantAxis, "list", valueCounts.GetValueOrDefault(t.Code)));
         }
         if (ds is not null)
         {
@@ -473,8 +474,11 @@ public sealed class MarketplaceMappingService(
     public async Task<string?> SaveAttributeMappingAsync(
         SaveAttributeMappingRequest req, Guid? userId, CancellationToken ct)
     {
-        if (req.Strategy is not ("map_values" or "pass_literal" or "fixed_value"))
-            return "strategy map_values | pass_literal | fixed_value olmalı.";
+        // EM3: ERP hedefinde "ignore" — ERP özelliği bilinçli olarak katalog özelliği yapılmaz (bugünkü IgnoredProductAttributeTypeCodes)
+        if (req.Strategy == "ignore" && !MappingTargets.IsErp(req.Marketplace))
+            return "ignore stratejisi yalnız ERP hedefinde geçerlidir.";
+        if (req.Strategy is not ("map_values" or "pass_literal" or "fixed_value" or "ignore"))
+            return "strategy map_values | pass_literal | fixed_value | ignore olmalı.";
         if (req.Strategy is "map_values" or "pass_literal" && req.AttributeTypeId is null)
             return "Bu stratejide bizim özellik tipi (attributeTypeId) zorunlu.";
         if (req.Strategy == "fixed_value" && string.IsNullOrWhiteSpace(req.FixedValue))
@@ -786,7 +790,8 @@ public sealed class MarketplaceMappingService(
         var mappedSet = mapped.ToHashSet();
         return await q.OrderBy(i => i.Kind).ThenBy(i => i.Name).Take(limit)
             .Select(i => new ErpReferenceItemDto(i.Id, i.TargetSystem, i.Kind, i.Code, i.Name, i.ParentCode, i.IsActive, i.Source, i.LastSeenAt,
-                i.Kind == ErpReferenceKinds.ProductGroup && mappedSet.Contains(i.Code)))
+                (i.Kind == ErpReferenceKinds.ProductGroup && mappedSet.Contains(i.Code)) || i.MappedTargetId != null,
+                i.MappedTargetKind, i.MappedTargetId, i.MappedTargetLabel))
             .ToListAsync(ct);
     }
 
@@ -812,7 +817,8 @@ public sealed class MarketplaceMappingService(
         item.IsDeleted = false; item.DeletedAt = null; item.LastSeenAt = DateTime.UtcNow;
         item.UpdatedAt = DateTime.UtcNow; item.UpdatedBy = userId;
         await db.SaveChangesAsync(ct);
-        return (new ErpReferenceItemDto(item.Id, item.TargetSystem, item.Kind, item.Code, item.Name, item.ParentCode, item.IsActive, item.Source, item.LastSeenAt, false), null);
+        return (new ErpReferenceItemDto(item.Id, item.TargetSystem, item.Kind, item.Code, item.Name, item.ParentCode, item.IsActive, item.Source, item.LastSeenAt,
+            item.MappedTargetId != null, item.MappedTargetKind, item.MappedTargetId, item.MappedTargetLabel), null);
     }
 
     public async Task<string?> DeactivateErpItemAsync(Guid id, Guid? userId, CancellationToken ct)
@@ -823,6 +829,41 @@ public sealed class MarketplaceMappingService(
             && await db.MarketplaceCategoryMappings.AnyAsync(m => m.Marketplace == item.TargetSystem && m.TargetExternalId == item.Code, ct))
             return $"{item.Code} bir grup eşlemesinde kullanılıyor; önce eşlemeyi kaldırın.";
         item.IsActive = false; item.UpdatedAt = DateTime.UtcNow; item.UpdatedBy = userId;
+        await db.SaveChangesAsync(ct);
+        return null;
+    }
+
+    /// <summary>EM3: kural gerektirmeyen birebir eşleme (supplier → accounts.current_accounts; color → attribute_value).</summary>
+    public async Task<string?> SetErpItemTargetAsync(Guid id, string? targetKind, Guid? targetId, string? label, Guid? userId, CancellationToken ct)
+    {
+        var item = await db.ErpReferenceItems.FirstOrDefaultAsync(i => i.Id == id, ct);
+        if (item is null) return "Sözlük kaydı bulunamadı.";
+        if (targetId is null)
+        {
+            item.MappedTargetKind = null; item.MappedTargetId = null; item.MappedTargetLabel = null;
+        }
+        else
+        {
+            var expected = item.Kind switch
+            {
+                ErpReferenceKinds.Supplier => "account",
+                ErpReferenceKinds.Color => "attribute_value",
+                _ => null
+            };
+            if (expected is null) return $"{item.Kind} türü sözlük satırından birebir eşlenmez; grup/özellik/değer eşlemelerini ilgili sekmeden yapın.";
+            if (!string.Equals(targetKind, expected, StringComparison.OrdinalIgnoreCase)) return $"Hedef türü {expected} olmalı.";
+            if (expected == "account")
+            {
+                await using var cmd = mainDb.CreateCommand(
+                    """SELECT "Title" FROM accounts.current_accounts WHERE "Id"=$1 AND NOT "IsDeleted" AND "AccountType"='supplier'""");
+                cmd.Parameters.AddWithValue(targetId.Value);
+                var title = (string?)await cmd.ExecuteScalarAsync(ct);
+                if (title is null) return "Tedarikçi cari hesabı bulunamadı.";
+                label ??= title;
+            }
+            item.MappedTargetKind = expected; item.MappedTargetId = targetId; item.MappedTargetLabel = label;
+        }
+        item.UpdatedAt = DateTime.UtcNow; item.UpdatedBy = userId;
         await db.SaveChangesAsync(ct);
         return null;
     }

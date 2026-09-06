@@ -168,4 +168,5 @@ public sealed record BulkCategoryMappingResult(int Saved, int Failed, List<strin
 public sealed record ErpTargetDto(string Key, string ServiceCode, string Name, bool HasContract, int GroupCount);
 public sealed record ErpReferenceItemDto(
     Guid Id, string TargetSystem, string Kind, string Code, string Name, string? ParentCode,
-    bool IsActive, string Source, DateTime LastSeenAt, bool IsMapped);
+    bool IsActive, string Source, DateTime LastSeenAt, bool IsMapped,
+    string? MappedTargetKind = null, Guid? MappedTargetId = null, string? MappedTargetLabel = null);

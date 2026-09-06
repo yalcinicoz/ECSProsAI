@@ -66,6 +66,15 @@ public class MarketplaceMappingController(
         return Ok(new { success = true, data = dto });
     }
 
+    /// <summary>EM3: sözlük satırına birebir hedef (supplier → cari, color → değer); targetId null = kaldır.</summary>
+    [HttpPut("erp-items/{id:guid}/target")]
+    public async Task<IActionResult> SetErpItemTarget(Guid id, [FromBody] SetErpItemTargetRequest req, CancellationToken ct)
+    {
+        var err = await service.SetErpItemTargetAsync(id, req.TargetKind, req.TargetId, req.Label, UserId, ct);
+        if (err is not null) return BadRequest(new { success = false, error = err });
+        return Ok(new { success = true });
+    }
+
     /// <summary>EM0: sözlük kaydını pasife alır (eşlemede kullanılan grup pasife alınamaz).</summary>
     [HttpDelete("erp-items/{id:guid}")]
     public async Task<IActionResult> DeactivateErpItem(Guid id, CancellationToken ct)
@@ -250,3 +259,4 @@ public class MarketplaceMappingController(
 public record RecomputeReadinessRequest(List<Guid>? ProductIds);
 
 public sealed record UpsertErpItemRequest(string Target, string Kind, string Code, string Name, string? ParentCode = null);
+public sealed record SetErpItemTargetRequest(string? TargetKind, Guid? TargetId, string? Label = null);

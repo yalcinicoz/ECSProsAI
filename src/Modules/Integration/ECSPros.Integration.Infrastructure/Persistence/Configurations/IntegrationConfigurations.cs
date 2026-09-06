@@ -387,6 +387,8 @@ public class ErpReferenceItemConfiguration : IEntityTypeConfiguration<ErpReferen
         b.Property(x => x.ParentCode).HasMaxLength(100);
         b.Property(x => x.Source).HasMaxLength(20).IsRequired();
         b.Property(x => x.RawJson).HasColumnType("jsonb");
+        b.Property(x => x.MappedTargetKind).HasMaxLength(30);
+        b.Property(x => x.MappedTargetLabel).HasMaxLength(300);
         b.HasIndex(x => new { x.TargetSystem, x.Kind, x.Code }).IsUnique().HasFilter("\"IsDeleted\" = false");
         b.HasIndex(x => new { x.TargetSystem, x.Kind, x.Name });
         b.HasIndex(x => new { x.TargetSystem, x.Kind, x.ParentCode });

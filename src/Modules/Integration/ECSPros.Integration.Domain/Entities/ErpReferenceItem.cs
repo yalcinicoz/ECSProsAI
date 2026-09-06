@@ -25,6 +25,11 @@ public class ErpReferenceItem : BaseEntity
     /// <summary>manual | sync</summary>
     public string Source { get; set; } = "manual";
     public string? RawJson { get; set; }
+    /// <summary>EM3: kural gerektirmeyen birebir eşlemeler (supplier → account, color → attribute_value) sözlük satırında
+    /// tutulur; grup/özellik/değer eşlemeleri marketplace_*_mappings tablolarındadır.</summary>
+    public string? MappedTargetKind { get; set; }
+    public Guid? MappedTargetId { get; set; }
+    public string? MappedTargetLabel { get; set; }
 }
 
 public static class ErpReferenceKinds
