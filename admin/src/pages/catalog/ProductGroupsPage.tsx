@@ -28,6 +28,7 @@ export interface ProductGroupAttribute {
   isRequired: boolean
   isPrimaryAxis: boolean
   sortOrder: number
+  defaultAttributeValueId?: string | null
 }
 
 export interface ProductGroup {

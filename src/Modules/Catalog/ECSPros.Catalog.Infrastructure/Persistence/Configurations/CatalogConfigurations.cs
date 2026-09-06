@@ -61,6 +61,7 @@ public class ProductGroupAttributeConfiguration : IEntityTypeConfiguration<Produ
     {
         builder.ToTable("product_group_attributes", "definition");
         builder.HasKey(x => x.Id);
+        builder.HasIndex(x => x.DefaultAttributeValueId);
         builder.HasIndex(x => new { x.ProductGroupId, x.AttributeTypeId }).IsUnique();
         builder.HasQueryFilter(x => !x.IsDeleted);
 

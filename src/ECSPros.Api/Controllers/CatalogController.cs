@@ -456,7 +456,7 @@ public class CatalogController : ControllerBase
     [RequirePermission(Permissions.CatalogPlatformManage)]
     public async Task<IActionResult> AddProductGroupAttribute(Guid id, [FromBody] AddProductGroupAttributeRequest request, CancellationToken ct)
     {
-        var result = await _mediator.Send(new AddProductGroupAttributeCommand(id, request.AttributeTypeId, request.IsVariant, request.IsRequired, request.SortOrder), ct);
+        var result = await _mediator.Send(new AddProductGroupAttributeCommand(id, request.AttributeTypeId, request.IsVariant, request.IsRequired, request.SortOrder, request.DefaultAttributeValueId), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Created($"/api/catalog/product-groups/{id}/attributes", new { success = true, data = new { id = result.Value } });
@@ -478,7 +478,7 @@ public class CatalogController : ControllerBase
     [RequirePermission(Permissions.CatalogPlatformManage)]
     public async Task<IActionResult> UpdateProductGroupAttribute(Guid groupId, Guid attrId, [FromBody] UpdateProductGroupAttributeRequest request, CancellationToken ct)
     {
-        var result = await _mediator.Send(new UpdateProductGroupAttributeCommand(attrId, request.IsVariant, request.IsRequired, request.SortOrder), ct);
+        var result = await _mediator.Send(new UpdateProductGroupAttributeCommand(attrId, request.IsVariant, request.IsRequired, request.SortOrder, request.DefaultAttributeValueId), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
@@ -628,7 +628,8 @@ public record AddProductGroupAttributeRequest(
     Guid AttributeTypeId,
     bool IsVariant = false,
     bool IsRequired = false,
-    int SortOrder = 0);
+    int SortOrder = 0,
+    Guid? DefaultAttributeValueId = null);
 
 public record AddAxisSubAttributeRequest(
     Guid AxisAttributeTypeId,
@@ -636,7 +637,7 @@ public record AddAxisSubAttributeRequest(
     bool IsRequired = false,
     int SortOrder = 0);
 
-public record UpdateProductGroupAttributeRequest(bool IsVariant = false, bool IsRequired = false, int SortOrder = 0);
+public record UpdateProductGroupAttributeRequest(bool IsVariant = false, bool IsRequired = false, int SortOrder = 0, Guid? DefaultAttributeValueId = null);
 
 public record UpdateAxisSubAttributeRequest(bool IsRequired = false, int SortOrder = 0);
 

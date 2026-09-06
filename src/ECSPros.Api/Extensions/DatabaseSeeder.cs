@@ -1647,8 +1647,8 @@ public static class DatabaseSeeder
         await SeedTelemaniaProductGroupAttributesAsync(context);
         await SeedTelemaniaFilterEnrichmentAsync(context);
 
-        // Ürün Alt Grubu: her ürün grubuna (Telemania dahil) serbest metin özelliği (2026-09-06)
-        await SeedUrunAltGrubuGroupAttributesAsync(context);
+        // Ürün Grubu (üst ad) seçim özelliği: tüm gruplara atama + değer havuzu + grup varsayılanı + geri dolum (2026-09-06)
+        await SeedUrunGrubuAsync(context);
     }
 
     private static async Task SeedAttributeTypesAsync(CatalogDbContext db)
@@ -1730,9 +1730,10 @@ public static class DatabaseSeeder
             // Manken (bkz. docs/manken-ozelligi-spec.md) — varyant üretmez, bilgilendirici;
             // değeri ProductAttribute.CustomValue JSONB alanında tutulur, AttributeValue havuzu kullanılmaz
             ("manken",       "Manken",            "json",   910, false),
-            // Ürün Alt Grubu (2026-09-06, kullanıcı kararı): serbest metin, zorunlu değil, filtreye girmez;
-            // TÜM ürün gruplarına SeedUrunAltGrubuGroupAttributesAsync ile atanır.
-            ("urun_alt_grubu", "Ürün Alt Grubu",   "text",  1200, false),
+            // Ürün Grubu üst adı (2026-09-06, kullanıcı kararı — katman YOK): gruplar tablosu tek seviye
+            // ("Kot Ceket" bir gruptur), üst ad ("Ceket") bu SEÇİM tipli özellikte; değer havuzu grup adlarından,
+            // grup başına varsayılan değer (ProductGroupAttribute.DefaultAttributeValueId). SeedUrunGrubuAsync.
+            ("urun_grubu",   "Ürün Grubu",        "select", 1200, false),
         };
 
         var existingCodes = new HashSet<string>(await db.AttributeTypes.Select(a => a.Code).ToListAsync());
@@ -2600,64 +2601,107 @@ public static class DatabaseSeeder
     }
 
     /// <summary>
-    /// "Ürün Alt Grubu" (urun_alt_grubu, text, zorunlu değil) özelliğini silinmemiş TÜM ürün
-    /// gruplarına atar (2026-09-06, kullanıcı kararı). Sonradan açılan gruplar da her açılışta
-    /// yakalanır — idempotent: tip yoksa oluşturur, grup ataması varsa dokunmaz, soft-silinmiş
-    /// atamayı geri açar. Ürün kartı bu özelliği grup şemasından alır; ürün başına satır gerekmez.
+    /// "Ürün Grubu" (urun_grubu, SEÇİM, zorunlu değil) — kullanıcı kararı 2026-09-06: gruplama katmanı YOK,
+    /// gruplar tablosu tek seviye ("Kot Ceket" bir grup), üst ad ("Ceket") bu özellikte. İdempotent adımlar:
+    /// (1) eski urun_alt_grubu/text kaydı varsa yerinde urun_grubu/select'e çevrilir, (2) tüm gruplara atanır,
+    /// (3) değer havuzu = silinmemiş grup adları (tr; ExtraData.productGroupCode), (4) her grubun varsayılanı
+    /// kendi adına eşit değer (boşsa), (5) özelliği hiç olmayan ürünlere grup varsayılanı yazılır (ham SQL).
+    /// Havuz sonradan panelden sadeleştirilir; Kot Ceket açılınca üst adı Ceket panelde varsayılan seçilir.
     /// </summary>
-    private static async Task SeedUrunAltGrubuGroupAttributesAsync(CatalogDbContext db)
+    private static async Task SeedUrunGrubuAsync(CatalogDbContext db)
     {
-        const string code = "urun_alt_grubu";
-        var type = await db.AttributeTypes.IgnoreQueryFilters().FirstOrDefaultAsync(a => a.Code == code);
+        const string code = "urun_grubu";
+        var type = await db.AttributeTypes.IgnoreQueryFilters().FirstOrDefaultAsync(a => a.Code == code)
+                   ?? await db.AttributeTypes.IgnoreQueryFilters().FirstOrDefaultAsync(a => a.Code == "urun_alt_grubu");
         if (type is null)
         {
             type = new AttributeType
             {
                 Id = Guid.NewGuid(), Code = code,
-                NameI18n = new Dictionary<string, string> { ["tr"] = "Ürün Alt Grubu" },
-                DataType = "text", IsActive = true, SortOrder = 1200, UseInFilter = false,
-                CreatedAt = DateTime.UtcNow
+                NameI18n = new Dictionary<string, string> { ["tr"] = "Ürün Grubu" },
+                DataType = "select", IsActive = true, SortOrder = 1200, UseInFilter = false, CreatedAt = DateTime.UtcNow
             };
             db.AttributeTypes.Add(type);
-            await db.SaveChangesAsync();
         }
-        else if (type.IsDeleted)
+        else if (type.Code != code || type.DataType != "select" || type.IsDeleted || !type.IsActive)
         {
+            type.Code = code; type.DataType = "select";
+            type.NameI18n = new Dictionary<string, string> { ["tr"] = "Ürün Grubu" };
             type.IsDeleted = false; type.DeletedAt = null; type.DeletedBy = null; type.IsActive = true;
             type.UpdatedAt = DateTime.UtcNow;
         }
+        await db.SaveChangesAsync();
 
-        var groupIds = await db.ProductGroups.Select(g => g.Id).ToListAsync();
-        var existing = await db.ProductGroupAttributes.IgnoreQueryFilters()
-            .Where(x => x.AttributeTypeId == type.Id)
-            .ToListAsync();
-        var byGroup = existing.ToDictionary(x => x.ProductGroupId);
+        var groups = await db.ProductGroups.Select(g => new { g.Id, g.Code, g.NameI18n }).ToListAsync();
 
-        int added = 0, restored = 0;
-        foreach (var gid in groupIds)
+        // (2) grup ataması
+        var pgas = await db.ProductGroupAttributes.IgnoreQueryFilters().Where(x => x.AttributeTypeId == type.Id).ToListAsync();
+        var byGroup = pgas.ToDictionary(x => x.ProductGroupId);
+        int added = 0;
+        foreach (var g in groups)
         {
-            if (byGroup.TryGetValue(gid, out var pga))
+            if (byGroup.TryGetValue(g.Id, out var pga))
             {
-                if (!pga.IsDeleted) continue;
-                pga.IsDeleted = false; pga.DeletedAt = null; pga.DeletedBy = null;
-                pga.UpdatedAt = DateTime.UtcNow;
-                restored++;
+                if (pga.IsDeleted) { pga.IsDeleted = false; pga.DeletedAt = null; pga.DeletedBy = null; pga.UpdatedAt = DateTime.UtcNow; }
                 continue;
             }
-            db.ProductGroupAttributes.Add(new ProductGroupAttribute
+            pga = new ProductGroupAttribute
             {
-                Id = Guid.NewGuid(), ProductGroupId = gid, AttributeTypeId = type.Id,
-                IsVariant = false, IsPrimaryAxis = false, IsRequired = false,
-                SortOrder = 200, CreatedAt = DateTime.UtcNow
-            });
-            added++;
+                Id = Guid.NewGuid(), ProductGroupId = g.Id, AttributeTypeId = type.Id,
+                IsVariant = false, IsPrimaryAxis = false, IsRequired = false, SortOrder = 200, CreatedAt = DateTime.UtcNow
+            };
+            db.ProductGroupAttributes.Add(pga); byGroup[g.Id] = pga; added++;
         }
 
-        if (added > 0 || restored > 0 || db.ChangeTracker.HasChanges())
+        // (3) değer havuzu: grup adları (tr)
+        var values = await db.AttributeValues.IgnoreQueryFilters().Where(v => v.AttributeTypeId == type.Id).ToListAsync();
+        var byName = values.Where(v => v.NameI18n.ContainsKey("tr")).GroupBy(v => v.NameI18n["tr"]).ToDictionary(x => x.Key, x => x.First());
+        int valuesAdded = 0, sort = 10;
+        foreach (var g in groups.OrderBy(x => x.NameI18n.TryGetValue("tr", out var n) ? n : x.Code))
         {
-            await db.SaveChangesAsync();
-            Console.WriteLine($"✓ Seed: Ürün Alt Grubu özelliği — {added} gruba eklendi, {restored} atama geri açıldı ({groupIds.Count} grup).");
+            var tr = g.NameI18n.TryGetValue("tr", out var n) ? n.Trim() : g.Code;
+            if (string.IsNullOrWhiteSpace(tr)) continue;
+            if (byName.TryGetValue(tr, out var v))
+            {
+                if (v.IsDeleted) { v.IsDeleted = false; v.DeletedAt = null; v.DeletedBy = null; v.UpdatedAt = DateTime.UtcNow; }
+                continue;
+            }
+            v = new AttributeValue
+            {
+                Id = Guid.NewGuid(), AttributeTypeId = type.Id,
+                NameI18n = new Dictionary<string, string>(g.NameI18n.Where(kv => !string.IsNullOrWhiteSpace(kv.Value))) { ["tr"] = tr },
+                ExtraData = new Dictionary<string, object> { ["productGroupCode"] = g.Code },
+                SortOrder = sort += 10, IsActive = true, CreatedAt = DateTime.UtcNow
+            };
+            db.AttributeValues.Add(v); byName[tr] = v; valuesAdded++;
         }
+
+        // (4) grup varsayılanı = kendi adı
+        int defaultsSet = 0;
+        foreach (var g in groups)
+        {
+            var tr = g.NameI18n.TryGetValue("tr", out var n) ? n.Trim() : g.Code;
+            if (byGroup[g.Id].DefaultAttributeValueId is null && byName.TryGetValue(tr, out var v))
+            { byGroup[g.Id].DefaultAttributeValueId = v.Id; defaultsSet++; }
+        }
+        await db.SaveChangesAsync();
+
+        // (5) geri dolum: özelliği hiç olmayan ürünlere grup varsayılanı (ham SQL — 29K satır)
+        var backfilled = await db.Database.ExecuteSqlRawAsync("""
+            INSERT INTO catalog.product_attributes ("Id","ProductId","AttributeTypeId","AttributeValueId","CreatedAt","IsDeleted")
+            SELECT gen_random_uuid(), p."Id", pga."AttributeTypeId", pga."DefaultAttributeValueId", timezone('utc', now()), false
+              FROM catalog.products p
+              JOIN definition.product_group_attributes pga
+                ON pga."ProductGroupId" = p."ProductGroupId" AND NOT pga."IsDeleted" AND pga."DefaultAttributeValueId" IS NOT NULL
+              JOIN definition.attribute_types t ON t."Id" = pga."AttributeTypeId" AND t."Code" = 'urun_grubu'
+             WHERE NOT p."IsDeleted"
+               AND NOT EXISTS (SELECT 1 FROM catalog.product_attributes pa
+                                WHERE pa."ProductId" = p."Id" AND pa."AttributeTypeId" = pga."AttributeTypeId" AND NOT pa."IsDeleted")
+            """);
+        if (backfilled > 0) await db.Database.ExecuteSqlRawAsync("ANALYZE catalog.product_attributes");
+
+        if (added > 0 || valuesAdded > 0 || defaultsSet > 0 || backfilled > 0)
+            Console.WriteLine($"✓ Seed: Ürün Grubu (seçim) — {added} grup ataması, {valuesAdded} değer, {defaultsSet} varsayılan, {backfilled} ürün geri dolumu.");
     }
 
     private static async Task SeedFilterRengiAttributeTypeAsync(CatalogDbContext context)

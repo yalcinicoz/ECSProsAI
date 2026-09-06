@@ -88,6 +88,18 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
             }
         }
 
+        // Grup varsayılan özellik değerleri (2026-09-06): seçim tipli özelliklerde grubun
+        // DefaultAttributeValueId'si yeni ürüne otomatik yazılır (örn. "Ürün Grubu" = Ceket).
+        var varsayilanlar = await _context.ProductGroupAttributes
+            .Where(a => a.ProductGroupId == request.ProductGroupId && !a.IsVariant && a.DefaultAttributeValueId != null)
+            .Select(a => new { a.AttributeTypeId, ValueId = a.DefaultAttributeValueId!.Value })
+            .ToListAsync(cancellationToken);
+        foreach (var v in varsayilanlar)
+            product.Attributes.Add(new ProductAttribute
+            {
+                Id = Guid.NewGuid(), AttributeTypeId = v.AttributeTypeId, AttributeValueId = v.ValueId, CreatedAt = DateTime.UtcNow
+            });
+
         _context.Products.Add(product);
         await _context.SaveChangesAsync(cancellationToken);
         return Result.Success(new CreateProductResult(product.Id, product.Code));
