@@ -28,14 +28,22 @@ export interface InvoiceSummary {
   hasIntegratorPdf?: boolean
 }
 
+// FE0 (2026-09-06): seri tekil ve TİPLİ — bkz. docs/fatura-entegrasyon-plani.md §2.2
 export interface InvoiceSeries {
   id: string
   firmId: string
-  name?: string
-  eArchiveSerial: string
-  eInvoiceSerial: string
-  exportSerial: string
+  serial: string
+  invoiceType: 'e_archive' | 'e_invoice' | 'export' | string
+  name?: string | null
+  description?: string | null
+  integrationContractId?: string | null
+  integrationContractName?: string | null
   isActive: boolean
+  retiredAt?: string | null
+  channelCount: number
+  lastYear?: string | null
+  lastSequence: number
+  lastInvoiceDate?: string | null
 }
 
 interface PagedResult<T> {
@@ -50,9 +58,9 @@ export function SeriesModal({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient()
   const [name, setName] = useState('')
   const [firmId, setFirmId] = useState('')
-  const [eArchive, setEArchive] = useState('')
-  const [eInvoice, setEInvoice] = useState('')
-  const [exportSerial, setExportSerial] = useState('')
+  const [serial, setSerial] = useState('')
+  const [invoiceType, setInvoiceType] = useState('e_archive')
+  const [description, setDescription] = useState('')
   const [error, setError] = useState('')
 
   const { data: firms = [] } = useQuery<{ id: string; nameI18n: Record<string, string> }[]>({
@@ -67,13 +75,13 @@ export function SeriesModal({ onClose }: { onClose: () => void }) {
   const create = useMutation({
     mutationFn: async () => {
       await api.post('/orders/invoice-series', {
-        firmId, name: name || null, eArchiveSerial: eArchive,
-        eInvoiceSerial: eInvoice || null, exportSerial: exportSerial || null,
+        firmId, serial, invoiceType, name: name || null, description: description || null,
       })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice-series'] })
-      setName(''); setEArchive(''); setEInvoice(''); setExportSerial(''); setError('')
+      queryClient.invalidateQueries({ queryKey: ['invoice-series-active'] })
+      setName(''); setSerial(''); setDescription(''); setError('')
     },
     onError: (e: unknown) => {
       const err = e as { response?: { data?: { error?: string } } }
@@ -84,15 +92,18 @@ export function SeriesModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal open onClose={onClose} title="Fatura Serileri">
       <p className="text-xs mb-3" style={{ color: 'var(--text-s)' }}>
-        Fatura numarası seriden türetilir (ör. MSH2026000000001). Fatura oluşturabilmek için en az bir aktif seri gerekir.
+        Her seri tek bir üç harfli ön ek ve tek bir tiptir (e-Arşiv / e-Fatura / İhracat); numara seriden türetilir
+        (ör. MSH2026000000001). Satış kanalları her tip için kendi yuvasına yalnız aynı tipteki seriyi bağlar.
       </p>
       <div className="space-y-1 max-h-48 overflow-y-auto mb-4">
         {series.map(s => (
           <div key={s.id} className="flex items-center gap-3 px-2 py-1.5 text-sm rounded-lg"
             style={{ background: 'var(--surface2)' }}>
+            <span className="font-mono font-semibold" style={{ color: 'var(--text)' }}>{s.serial}</span>
+            <Badge variant="info">{INVOICE_TYPE_MAP[s.invoiceType] ?? s.invoiceType}</Badge>
             <span style={{ color: 'var(--text)' }}>{s.name ?? '—'}</span>
             <span className="text-xs" style={{ color: 'var(--text-s)' }}>
-              e-Arşiv: {s.eArchiveSerial} · e-Fatura: {s.eInvoiceSerial} · İhracat: {s.exportSerial}
+              {s.channelCount} kanal · son no {s.lastYear ? `${s.lastYear}/${s.lastSequence}` : '—'}
             </span>
             {!s.isActive && <Badge variant="neutral">Pasif</Badge>}
           </div>
@@ -116,23 +127,29 @@ export function SeriesModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="flbl">e-Arşiv Seri <span className="text-red-500">*</span></label>
-            <input className="inp" value={eArchive} onChange={e => setEArchive(e.target.value.toUpperCase())} placeholder="MSH" />
+            <label className="flbl">Seri (3 harf) <span className="text-red-500">*</span></label>
+            <input className="inp font-mono" value={serial} maxLength={3}
+              onChange={e => setSerial(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))} placeholder="MSH" />
           </div>
           <div>
-            <label className="flbl">e-Fatura Seri</label>
-            <input className="inp" value={eInvoice} onChange={e => setEInvoice(e.target.value.toUpperCase())} placeholder="(e-Arşiv ile aynı)" />
+            <label className="flbl">Tip <span className="text-red-500">*</span></label>
+            <select className="inp" value={invoiceType} onChange={e => setInvoiceType(e.target.value)}>
+              {Object.entries(INVOICE_TYPE_MAP).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
           </div>
           <div>
-            <label className="flbl">İhracat Seri</label>
-            <input className="inp" value={exportSerial} onChange={e => setExportSerial(e.target.value.toUpperCase())} placeholder="(e-Arşiv ile aynı)" />
+            <label className="flbl">Açıklama</label>
+            <input className="inp" value={description} onChange={e => setDescription(e.target.value)} placeholder="isteğe bağlı" />
           </div>
         </div>
+        <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+          Aynı harfler bir firmada tipten bağımsız yalnız bir kez tanımlanabilir; tip sonradan değiştirilemez.
+        </p>
         {error && <p className="text-sm text-red-500">{error}</p>}
       </div>
       <div className="flex justify-between gap-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
         <Button size="sm" onClick={() => create.mutate()} loading={create.isPending}
-          disabled={!firmId || !eArchive.trim()}>+ Seri Ekle</Button>
+          disabled={!firmId || serial.length !== 3}>+ Seri Ekle</Button>
         <Button variant="secondary" onClick={onClose}>Kapat</Button>
       </div>
     </Modal>

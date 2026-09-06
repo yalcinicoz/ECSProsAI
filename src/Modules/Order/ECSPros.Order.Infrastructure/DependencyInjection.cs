@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<IOrderDbContext>(sp => sp.GetRequiredService<OrderDbContext>());
         services.AddScoped<IOrderNumberService, Services.OrderNumberService>();
         services.AddScoped<IFirmResolver, Services.FirmResolver>(); // OP2: otomatik fatura serisi
+        services.AddScoped<IInvoiceNumberService, Services.InvoiceNumberService>(); // FE0: seri×yıl sayacı
 
         return services;
     }

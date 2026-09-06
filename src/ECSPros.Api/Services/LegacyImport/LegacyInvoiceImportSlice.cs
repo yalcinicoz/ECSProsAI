@@ -127,13 +127,14 @@ public sealed class LegacyInvoiceImportSlice(
         await using (var command = connection.CreateCommand())
         {
             command.CommandText = """
-                SELECT "Id","EArchiveSerial","EInvoiceSerial","ExportSerial"
+                SELECT "Id","Serial","InvoiceType"
                   FROM "order".ord_invoice_series
                  WHERE "IsActive" AND NOT "IsDeleted"
                 """;
+            // FE0 (2026-09-06): seri tekil + TİPLİ — eşleşme (serial, tip) çiftiyle
             await using var dbReader = await command.ExecuteReaderAsync(ct);
             while (await dbReader.ReadAsync(ct))
-                series.Add(new(dbReader.GetGuid(0), Text(dbReader, 1), Text(dbReader, 2), Text(dbReader, 3)));
+                series.Add(new(dbReader.GetGuid(0), Text(dbReader, 1), Text(dbReader, 2)));
         }
 
         var existing = new Dictionary<int, TargetInvoice>();
@@ -183,10 +184,9 @@ public sealed class LegacyInvoiceImportSlice(
             TargetSeries? series = null;
             if (number is not null)
             {
-                series = references.Series.SingleOrDefault(x => invoiceType == "e_archive"
-                    ? x.EArchiveSerial.Equals(number.Serial, StringComparison.OrdinalIgnoreCase)
-                    : x.EInvoiceSerial.Equals(number.Serial, StringComparison.OrdinalIgnoreCase));
-                if (series is null) rowErrors.Add($"fatura {row.Id}: hedefte {number.Serial} aktif fatura serisi yok");
+                series = references.Series.SingleOrDefault(x =>
+                    x.InvoiceType == invoiceType && x.Serial.Equals(number.Serial, StringComparison.OrdinalIgnoreCase));
+                if (series is null) rowErrors.Add($"fatura {row.Id}: hedefte {number.Serial} aktif {invoiceType} fatura serisi yok");
             }
             references.Existing.TryGetValue(row.Id, out var existing);
             if (existing is { IsDeleted: true }) rowErrors.Add($"fatura {row.Id}: hedef legacy kayıt silinmiş");
@@ -376,7 +376,7 @@ public sealed class LegacyInvoiceImportSlice(
     private sealed record TargetOrderItem(
         Guid Id, Guid OrderId, string ProductName, string VariantInfo, int Quantity, decimal UnitPrice,
         decimal DiscountAmount, decimal TaxAmount, decimal Total);
-    private sealed record TargetSeries(Guid Id, string EArchiveSerial, string EInvoiceSerial, string ExportSerial);
+    private sealed record TargetSeries(Guid Id, string Serial, string InvoiceType);
     private sealed record TargetInvoice(Guid Id, int? LegacyId, string Serial, string Year, int Sequence, bool IsDeleted);
     private sealed record TargetInvoiceItem(Guid Id, Guid OrderItemId, bool IsDeleted);
     private sealed record TargetReferences(

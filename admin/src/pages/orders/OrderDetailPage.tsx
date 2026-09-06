@@ -851,24 +851,25 @@ export function OrderDetailPage() {
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="flbl">Fatura Serisi <span className="text-red-500">*</span></label>
-              <select className="inp" value={invSeriesId} onChange={e => setInvSeriesId(e.target.value)}>
-                <option value="">Seri seçin</option>
-                {invoiceSeries.map(s => (
-                  <option key={s.id} value={s.id}>{s.name ?? s.eArchiveSerial}</option>
-                ))}
-              </select>
-              {invoiceSeries.length === 0 && (
-                <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
-                  Aktif seri yok — Faturalar sayfasındaki "Fatura Serileri"nden tanımlanır.
-                </p>
-              )}
-            </div>
-            <div>
               <label className="flbl">Tip</label>
-              <select className="inp" value={invType} onChange={e => setInvType(e.target.value)}>
+              <select className="inp" value={invType} onChange={e => { setInvType(e.target.value); setInvSeriesId('') }}>
                 {Object.entries(INVOICE_TYPE_MAP).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
+            </div>
+            <div>
+              <label className="flbl">Fatura Serisi <span className="text-red-500">*</span></label>
+              {/* FE0: seri tipli — yalnız seçilen tipteki aktif seriler listelenir */}
+              <select className="inp" value={invSeriesId} onChange={e => setInvSeriesId(e.target.value)}>
+                <option value="">Seri seçin</option>
+                {invoiceSeries.filter(s => s.invoiceType === invType).map(s => (
+                  <option key={s.id} value={s.id}>{s.serial}{s.name ? ` · ${s.name}` : ''}</option>
+                ))}
+              </select>
+              {invoiceSeries.filter(s => s.invoiceType === invType).length === 0 && (
+                <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
+                  Bu tipte aktif seri yok — Faturalar sayfasındaki "Fatura Serileri"nden tanımlanır.
+                </p>
+              )}
             </div>
           </div>
           <div>

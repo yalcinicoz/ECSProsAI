@@ -6,50 +6,49 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Order.Application.Commands.CreateInvoice;
 
-public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand, Result<Guid>>
+/// <summary>
+/// Bizim serimizden fatura kesimi (NumberSource=internal). FE0: seri tipi istekle uyuşmalı; numara,
+/// seri×yıl sayacından atomik tahsis edilir ve fatura satırıyla AYNI transaction'da yazılır
+/// (fatura yazılamazsa sayaç geri alınır — boşluk oluşmaz). Tarih-sıra kuralı FE1/K3.
+/// </summary>
+public class CreateInvoiceCommandHandler(
+    IOrderDbContext context,
+    IInvoiceNumberService numberService)
+    : IRequestHandler<CreateInvoiceCommand, Result<Guid>>
 {
-    private readonly IOrderDbContext _context;
-
-    public CreateInvoiceCommandHandler(IOrderDbContext context)
-    {
-        _context = context;
-    }
-
     public async Task<Result<Guid>> Handle(CreateInvoiceCommand request, CancellationToken cancellationToken)
     {
-        var order = await _context.Orders
+        var order = await context.Orders
             .Include(o => o.Items)
             .FirstOrDefaultAsync(o => o.Id == request.OrderId, cancellationToken);
-
         if (order is null)
             return Result.Failure<Guid>("Sipariş bulunamadı.");
 
-        var series = await _context.InvoiceSeries
-            .FirstOrDefaultAsync(s => s.Id == request.InvoiceSeriesId && s.IsActive, cancellationToken);
+        if (!InvoiceTypes.IsValid(request.InvoiceType))
+            return Result.Failure<Guid>("Fatura tipi e_archive, e_invoice veya export olmalıdır.");
 
+        var series = await context.InvoiceSeries.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == request.InvoiceSeriesId, cancellationToken);
         if (series is null)
-            return Result.Failure<Guid>("Aktif fatura serisi bulunamadı.");
+            return Result.Failure<Guid>("Fatura serisi bulunamadı.");
+        if (!series.IsActive)
+            return Result.Failure<Guid>($"{series.Serial} serisi pasif; pasif seriden fatura kesilemez.");
+        if (series.InvoiceType != request.InvoiceType)
+            return Result.Failure<Guid>(
+                $"Seri tipi uyuşmuyor: {series.Serial} {InvoiceTypes.Label(series.InvoiceType)} serisidir, {InvoiceTypes.Label(request.InvoiceType)} faturası kesilemez.");
 
-        var year = request.InvoiceDate.Year.ToString();
-        var serial = request.InvoiceType switch
+        var invoiceDateUtc = request.InvoiceDate.Kind switch
         {
-            "e_archive" => series.EArchiveSerial,
-            "e_invoice"  => series.EInvoiceSerial,
-            "export"     => series.ExportSerial,
-            _            => series.EArchiveSerial
+            DateTimeKind.Utc => request.InvoiceDate,
+            DateTimeKind.Local => request.InvoiceDate.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(request.InvoiceDate, DateTimeKind.Utc)
         };
 
-        // Seri için son sıra numarasını bul
-        var lastSequence = await _context.Invoices
-            .Where(i => i.InvoiceSeriesId == request.InvoiceSeriesId
-                        && i.InvoiceYear == year
-                        && i.InvoiceType == request.InvoiceType)
-            .MaxAsync(i => (int?)i.InvoiceSequence, cancellationToken) ?? 0;
+        var sendMethod = await context.ChannelInvoiceSettings.AsNoTracking()
+            .Where(s => s.FirmPlatformId == order.FirmPlatformId)
+            .Select(s => s.SendMethod)
+            .FirstOrDefaultAsync(cancellationToken) ?? InvoiceSendMethods.Manual;
 
-        var sequence = lastSequence + 1;
-        var invoiceNumber = $"{serial}{year}{sequence:D9}";
-
-        // Sipariş kalemlerinden fatura kalemleri oluştur
         var items = order.Items.Select(i => new InvoiceItem
         {
             OrderItemId = i.Id,
@@ -62,17 +61,23 @@ public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand,
             Total = i.Total
         }).ToList();
 
+        await using var tx = await context.BeginTransactionAsync(cancellationToken);
+        var no = await numberService.AllocateAsync(series.Id, series.Serial, invoiceDateUtc, cancellationToken);
+
         var invoice = new Invoice
         {
             OrderId = request.OrderId,
             PackageId = request.PackageId,
-            InvoiceSeriesId = request.InvoiceSeriesId,
+            InvoiceSeriesId = series.Id,
             InvoiceType = request.InvoiceType,
-            InvoiceSerial = serial,
-            InvoiceYear = year,
-            InvoiceSequence = sequence,
-            InvoiceNumber = invoiceNumber,
-            InvoiceDate = request.InvoiceDate,
+            InvoiceSerial = no.Serial,
+            InvoiceYear = no.Year,
+            InvoiceSequence = no.Sequence,
+            InvoiceNumber = no.Number,
+            InvoiceDate = invoiceDateUtc,
+            NumberSource = InvoiceNumberSources.Internal,
+            SendMethod = sendMethod,
+            IntegrationContractId = series.IntegrationContractId,
             RecipientName = request.RecipientName,
             RecipientTaxOffice = request.RecipientTaxOffice,
             RecipientTaxNumber = request.RecipientTaxNumber,
@@ -82,17 +87,16 @@ public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand,
             TotalDiscount = order.TotalDiscount,
             TotalTax = order.TotalTax,
             GrandTotal = order.GrandTotal,
-            IntegratorStatus = "pending",
-            ErpStatus = "pending",
+            IntegratorStatus = sendMethod == InvoiceSendMethods.IntegratorApi ? "pending" : "not_applicable",
+            ErpStatus = sendMethod == InvoiceSendMethods.Erp ? "pending" : "not_applicable",
             Status = "created",
             CreatedBy = request.CreatedBy
         };
+        foreach (var item in items) invoice.Items.Add(item);
 
-        foreach (var item in items)
-            invoice.Items.Add(item);
-
-        _context.Invoices.Add(invoice);
-        await _context.SaveChangesAsync(cancellationToken);
+        context.Invoices.Add(invoice);
+        await context.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
 
         return Result.Success(invoice.Id);
     }

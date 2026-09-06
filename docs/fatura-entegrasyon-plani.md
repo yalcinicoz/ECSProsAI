@@ -1,6 +1,6 @@
 # Fatura Entegrasyonu Planı — Seriler, Entegratör Sözleşmeleri, Gönderim Yöntemleri, Dış Numaralı Faturalar, Takip
 
-> Sürüm: **v1.1 — 2026-09-06** (seri TİPLİ tanımlanır — kullanıcı eki) · Durum: **TASLAK — K8 KAPANDI; K1-K7, K9-K11 kullanıcı onayı bekliyor**
+> Sürüm: **v1.2 — 2026-09-06** · Durum: **FE0 UYGULANDI ⚠️ restart bekliyor** (kullanıcı "Başla" 2026-09-06); K8 KAPANDI; K1-K7, K9-K11 açık — FE1 (K3), FE3 (K1), FE5 (K4-K6) bu kararlara bağlı
 > Alan: **Admin panel (pano #2) + Order/Core modülleri.** ERP (Nebim V3) yönü ekip arkadaşının
 > `docs/erp-kaynak-senkron-gecis-plani.md` E7 kapısına bağlanır; o taraf bu planda yalnız arayüz sözleşmesi olarak geçer.
 > İlgili: `docs/siparis-paket-kargo-kod-plani.md` (paket başına fatura), `docs/siparis-operasyon-plani.md` (OP2 paket
@@ -73,11 +73,12 @@ Sayaç ayrı tabloda: `order.ord_invoice_series_counters (SeriesId, Year, LastSe
 üretimi bu satırı `SELECT … FOR UPDATE` ile kilitler. **Sıra (seri, yıl) bazındadır; tipten bağımsızdır** (bir seri = bir
 numara akışı). Yıl değişince 1'den başlar (GİB kalıbı `ABC2026000000001`, 16 karakter).
 
-### 2.3 Kanal bağları (Core)
-`FirmPlatform.InvoiceSeriesId` kaldırılır; yerine:
-- `FirmPlatform.InvoiceSendMethod`: `integrator_api | erp | marketplace | manual` (varsayılan `manual` — hiçbir şey
-  gönderilmez, yalnız kayıt; go-live öncesi her kanal açıkça seçilir).
-- `core.core_firm_platform_invoice_series (FirmPlatformId, InvoiceType, SeriesId)` — `InvoiceType ∈ {e_archive, e_invoice, export}`,
+### 2.3 Kanal bağları (Order — FE0 uygulama kararı: Core değil)
+`FirmPlatform.InvoiceSeriesId` kaldırıldı. Faturalama ayarı ve yuvalar **`order` şemasında** tutulur (modüller arası
+FK/sözleşme açmamak için; kanal `FirmPlatformId` gevşek referans, doğrulama `IFirmResolver` raw-SQL ile):
+- `order.ord_channel_invoice_settings (FirmPlatformId, SendMethod)`: `integrator_api | erp | marketplace | manual`
+  (varsayılan `manual` — hiçbir şey gönderilmez, yalnız kayıt; go-live öncesi her kanal açıkça seçilir).
+- `order.ord_channel_invoice_series (FirmPlatformId, InvoiceType, InvoiceSeriesId)` — `InvoiceType ∈ {e_archive, e_invoice, export}`,
   (kanal, tip) tekil. Kanal yalnız kendi firmasının serilerini bağlayabilir ve **`Series.InvoiceType == bağ.InvoiceType`
   şartı sunucuda doğrulanır** (uyumsuz tip → 400 "Seri tipi yuvayla uyuşmuyor"). Panel seçicileri yuva tipine göre süzer.
 - Fatura kesiminde de aynı kural: `CreateInvoice(InvoiceType, SeriesId)` çağrısında seri tipi istekle uyuşmazsa 400;
@@ -140,7 +141,7 @@ Pazaryeri ve ERP adaptörleri de bu komutu kullanır; elle giriş panelden aynı
 
 | Faz | İş | Kabul kriteri |
 |---|---|---|
-| **FE0** Model | Tekil **tipli** seri + sayaç + kanal bağ tablosu + `InvoiceSendMethod` + fatura kayıt genişletmesi; migration'da mevcut üçlü setler tekil serilere **ayrıştırılır** (her kolon kendi tipiyle: EArchiveSerial→e_archive, EInvoiceSerial→e_invoice, ExportSerial→export; **aynı harf birden fazla kolonda ise yalnız e_archive tipiyle taşınır, diğerleri boş bırakılıp panelde kırmızı uyarıyla elle tanımlanır** — TST/TST/TST bu durumdadır), mevcut tek fatura yeni seri Id'sine bağlanır; `LegacyInvoiceImportSlice` yeni tabloya uyarlanır (ekip arkadaşıyla) | İki DB'de migration temiz; eski `InvoiceSeriesId` alanı kaldırıldı; import dilimi dry-run `0` hata; tip uyumsuz bağ/kesim 400 |
+| **FE0** Model ✅ **UYGULANDI (2026-09-06)** — migration `20260906120838_TypedInvoiceSeriesAndChannelBindings` (Order) + `20260906120857_DropFirmPlatformInvoiceSeriesId` (Core) ecommerce_db + ecommerce_demo'ya uygulandı (demo'da bekleyen 4 eski migration da geldi); sayaç 50 eşzamanlı tahsis testi 1..50 boşluksuz ✓; izole 5051 açılış ✓; sözleşme alanı FE3'e kadar OPSİYONEL (katalogda einvoice servisi yok); uçlar: `invoice-series` GET/POST/PUT, `/{id}/deactivate|activate`, `invoice-settings/channels[/{id}]` GET/PUT; panel: seri modalı tipli, sipariş fatura formu tipe göre süzer (seri sayfası/pasifleştirme/kanal Faturalama bölümü FE2) | Tekil **tipli** seri + sayaç + kanal bağ tablosu + `InvoiceSendMethod` + fatura kayıt genişletmesi; migration'da mevcut üçlü setler tekil serilere **ayrıştırılır** (her kolon kendi tipiyle: EArchiveSerial→e_archive, EInvoiceSerial→e_invoice, ExportSerial→export; **aynı harf birden fazla kolonda ise yalnız e_archive tipiyle taşınır, diğerleri boş bırakılıp panelde kırmızı uyarıyla elle tanımlanır** — TST/TST/TST bu durumdadır), mevcut tek fatura yeni seri Id'sine bağlanır; `LegacyInvoiceImportSlice` yeni tabloya uyarlanır (ekip arkadaşıyla) | İki DB'de migration temiz; eski `InvoiceSeriesId` alanı kaldırıldı; import dilimi dry-run `0` hata; tip uyumsuz bağ/kesim 400 |
 | **FE1** Numara güvencesi + dış kayıt | Kilitli sayaç, tarih/yıl kuralları, boşluk raporu, `invoices/external` ucu, idempotent anahtar | 50 eşzamanlı kesimde 1..50 boşluksuz; geçmiş tarihli istek 400; aynı dış numara ikinci kez 409/idempotent |
 | **FE2** Seri/kanal operasyonu (panel) | Seri sayfası (tip sütunu + oluşturmada tip seçimi), pasifleştirme+yerine-geçecek (**yalnız aynı tipte** seri önerilir), kanal Faturalama bölümü (her yuva kendi tipindeki serileri listeler), readiness uyarısı | Kullanılan seri yerine seri verilmeden pasife alınamaz (400); farklı tipte yerine-geçecek 400; verilince kanallar taşınır; serisiz aktif kanal panelde kırmızı |
 | **FE3** Entegratör kataloğu + sözleşme + ilk adaptör | `einvoice` servis kaydı + şema, firma sözleşmesi formu, `IEInvoiceProvider`, K1 adaptörü sandbox | Sandbox'ta e-arşiv gönder/iptal/durum/PDF geçer; mükellef sorgusu doğru tip seçer |

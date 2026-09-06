@@ -150,11 +150,57 @@ public class InvoiceSeriesConfiguration : IEntityTypeConfiguration<InvoiceSeries
         builder.ToTable("ord_invoice_series");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Name).HasMaxLength(100);
-        builder.Property(x => x.EArchiveSerial).HasMaxLength(3).IsRequired();
-        builder.Property(x => x.EInvoiceSerial).HasMaxLength(3).IsRequired();
-        builder.Property(x => x.ExportSerial).HasMaxLength(3).IsRequired();
+        builder.Property(x => x.Description).HasMaxLength(500);
+        builder.Property(x => x.Serial).HasMaxLength(3).IsRequired();
+        builder.Property(x => x.InvoiceType).HasMaxLength(20).IsRequired();
+        // Aynı harfler firma içinde tipten bağımsız bir kez (plan §0.2-3); soft-silinmişler dışarıda
+        builder.HasIndex(x => new { x.FirmId, x.Serial }).IsUnique().HasFilter("\"IsDeleted\" = false");
+        builder.HasIndex(x => x.IntegrationContractId);
         builder.HasQueryFilter(x => !x.IsDeleted);
-        builder.HasMany(x => x.Invoices).WithOne(x => x.InvoiceSeries).HasForeignKey(x => x.InvoiceSeriesId);
+        builder.HasMany(x => x.Invoices).WithOne(x => x.InvoiceSeries).HasForeignKey(x => x.InvoiceSeriesId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasMany(x => x.Counters).WithOne(x => x.InvoiceSeries).HasForeignKey(x => x.InvoiceSeriesId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(x => x.ChannelBindings).WithOne(x => x.InvoiceSeries).HasForeignKey(x => x.InvoiceSeriesId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public class InvoiceSeriesCounterConfiguration : IEntityTypeConfiguration<InvoiceSeriesCounter>
+{
+    public void Configure(EntityTypeBuilder<InvoiceSeriesCounter> builder)
+    {
+        builder.ToTable("ord_invoice_series_counters");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Year).HasMaxLength(4).IsRequired();
+        // ON CONFLICT hedefi: filtresiz tekil indeks (sayaç satırı soft-silinmez)
+        builder.HasIndex(x => new { x.InvoiceSeriesId, x.Year }).IsUnique();
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
+public class ChannelInvoiceSettingsConfiguration : IEntityTypeConfiguration<ChannelInvoiceSettings>
+{
+    public void Configure(EntityTypeBuilder<ChannelInvoiceSettings> builder)
+    {
+        builder.ToTable("ord_channel_invoice_settings");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.SendMethod).HasMaxLength(30).IsRequired();
+        builder.HasIndex(x => x.FirmPlatformId).IsUnique().HasFilter("\"IsDeleted\" = false");
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
+public class ChannelInvoiceSeriesBindingConfiguration : IEntityTypeConfiguration<ChannelInvoiceSeriesBinding>
+{
+    public void Configure(EntityTypeBuilder<ChannelInvoiceSeriesBinding> builder)
+    {
+        builder.ToTable("ord_channel_invoice_series");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.InvoiceType).HasMaxLength(20).IsRequired();
+        builder.HasIndex(x => new { x.FirmPlatformId, x.InvoiceType }).IsUnique().HasFilter("\"IsDeleted\" = false");
+        builder.HasIndex(x => x.InvoiceSeriesId);
+        builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }
 
@@ -182,8 +228,16 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.Property(x => x.ErpStatus).HasMaxLength(30);
         builder.Property(x => x.ErpReference).HasMaxLength(100);
         builder.Property(x => x.Status).HasMaxLength(30).IsRequired();
+        builder.Property(x => x.NumberSource).HasMaxLength(20).IsRequired().HasDefaultValue("internal");
+        builder.Property(x => x.SendMethod).HasMaxLength(30);
+        builder.Property(x => x.ExternalDocumentId).HasMaxLength(100);
+        builder.Property(x => x.ExternalSource).HasMaxLength(50);
         builder.HasIndex(x => x.LegacyInvoiceId).IsUnique().HasFilter("\"LegacyInvoiceId\" IS NOT NULL");
         builder.HasIndex(x => new { x.InvoiceSerial, x.InvoiceYear, x.InvoiceSequence }).IsUnique();
+        // Dış numaralı fatura idempotens anahtarı (plan §2.5)
+        builder.HasIndex(x => new { x.ExternalSource, x.InvoiceNumber }).IsUnique().HasFilter("\"ExternalSource\" IS NOT NULL");
+        builder.HasIndex(x => x.Ettn).IsUnique().HasFilter("\"Ettn\" IS NOT NULL");
+        builder.HasIndex(x => x.IntegratorStatus);
         builder.HasIndex(x => x.PackageId);
         builder.HasQueryFilter(x => !x.IsDeleted);
         builder.HasMany(x => x.Items).WithOne(x => x.Invoice).HasForeignKey(x => x.InvoiceId);
