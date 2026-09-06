@@ -66,6 +66,7 @@ import { OrderDetailPage as OrderAdminDetailPage } from '@/pages/orders/OrderDet
 import { ReturnsPage } from '@/pages/orders/ReturnsPage'
 import { ReturnDetailPage } from '@/pages/orders/ReturnDetailPage'
 import { InvoicesPage } from '@/pages/orders/InvoicesPage'
+import { InvoiceSeriesPage } from '@/pages/orders/InvoiceSeriesPage'
 import { CmsPagesPage } from '@/pages/cms/CmsPagesPage'
 import { CmsPageDetailPage } from '@/pages/cms/CmsPageDetailPage'
 import { CampaignsPage } from '@/pages/promotion/CampaignsPage'
@@ -171,6 +172,7 @@ export const router = createBrowserRouter(
             { path: 'orders/returns/:id',  element: <ReturnDetailPage /> },
             { path: 'orders/quotes',       element: <QuotesPage /> },
             { path: 'orders/invoices',     element: <InvoicesPage /> },
+            { path: 'orders/invoice-series', element: <InvoiceSeriesPage /> },
             { path: 'orders/gift-cards',   element: <GiftCardsPage /> },
             { path: 'orders/number-series', element: <NumberSeriesPage /> },
             { path: 'orders/cargo-zones',  element: <CargoZonesPage /> },

@@ -53,109 +53,6 @@ interface PagedResult<T> {
   pageSize: number
 }
 
-// ── Fatura serileri yönetimi ──────────────────────────────────────────────────
-export function SeriesModal({ onClose }: { onClose: () => void }) {
-  const queryClient = useQueryClient()
-  const [name, setName] = useState('')
-  const [firmId, setFirmId] = useState('')
-  const [serial, setSerial] = useState('')
-  const [invoiceType, setInvoiceType] = useState('e_archive')
-  const [description, setDescription] = useState('')
-  const [error, setError] = useState('')
-
-  const { data: firms = [] } = useQuery<{ id: string; nameI18n: Record<string, string> }[]>({
-    queryKey: ['firms'],
-    queryFn: async () => (await api.get('/core/firms')).data.data,
-  })
-  const { data: series = [] } = useQuery<InvoiceSeries[]>({
-    queryKey: ['invoice-series'],
-    queryFn: async () => (await api.get('/orders/invoice-series?activeOnly=false')).data.data,
-  })
-
-  const create = useMutation({
-    mutationFn: async () => {
-      await api.post('/orders/invoice-series', {
-        firmId, serial, invoiceType, name: name || null, description: description || null,
-      })
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoice-series'] })
-      queryClient.invalidateQueries({ queryKey: ['invoice-series-active'] })
-      setName(''); setSerial(''); setDescription(''); setError('')
-    },
-    onError: (e: unknown) => {
-      const err = e as { response?: { data?: { error?: string } } }
-      setError(err.response?.data?.error ?? 'Seri oluşturulamadı.')
-    },
-  })
-
-  return (
-    <Modal open onClose={onClose} title="Fatura Serileri">
-      <p className="text-xs mb-3" style={{ color: 'var(--text-s)' }}>
-        Her seri tek bir üç harfli ön ek ve tek bir tiptir (e-Arşiv / e-Fatura / İhracat); numara seriden türetilir
-        (ör. MSH2026000000001). Satış kanalları her tip için kendi yuvasına yalnız aynı tipteki seriyi bağlar.
-      </p>
-      <div className="space-y-1 max-h-48 overflow-y-auto mb-4">
-        {series.map(s => (
-          <div key={s.id} className="flex items-center gap-3 px-2 py-1.5 text-sm rounded-lg"
-            style={{ background: 'var(--surface2)' }}>
-            <span className="font-mono font-semibold" style={{ color: 'var(--text)' }}>{s.serial}</span>
-            <Badge variant="info">{INVOICE_TYPE_MAP[s.invoiceType] ?? s.invoiceType}</Badge>
-            <span style={{ color: 'var(--text)' }}>{s.name ?? '—'}</span>
-            <span className="text-xs" style={{ color: 'var(--text-s)' }}>
-              {s.channelCount} kanal · son no {s.lastYear ? `${s.lastYear}/${s.lastSequence}` : '—'}
-            </span>
-            {!s.isActive && <Badge variant="neutral">Pasif</Badge>}
-          </div>
-        ))}
-        {series.length === 0 && <p className="text-sm" style={{ color: 'var(--text-s)' }}>Tanımlı seri yok.</p>}
-      </div>
-      <div className="space-y-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-        <h3 className="text-xs font-semibold" style={{ color: 'var(--text-s)' }}>YENİ SERİ</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="flbl">Firma <span className="text-red-500">*</span></label>
-            <select className="inp" value={firmId} onChange={e => setFirmId(e.target.value)}>
-              <option value="">Firma seçin</option>
-              {firms.map(f => <option key={f.id} value={f.id}>{f.nameI18n?.['tr'] ?? f.id}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="flbl">Ad</label>
-            <input className="inp" value={name} onChange={e => setName(e.target.value)} placeholder="ör. Ana Seri" />
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="flbl">Seri (3 harf) <span className="text-red-500">*</span></label>
-            <input className="inp font-mono" value={serial} maxLength={3}
-              onChange={e => setSerial(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))} placeholder="MSH" />
-          </div>
-          <div>
-            <label className="flbl">Tip <span className="text-red-500">*</span></label>
-            <select className="inp" value={invoiceType} onChange={e => setInvoiceType(e.target.value)}>
-              {Object.entries(INVOICE_TYPE_MAP).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="flbl">Açıklama</label>
-            <input className="inp" value={description} onChange={e => setDescription(e.target.value)} placeholder="isteğe bağlı" />
-          </div>
-        </div>
-        <p className="text-xs" style={{ color: 'var(--text-s)' }}>
-          Aynı harfler bir firmada tipten bağımsız yalnız bir kez tanımlanabilir; tip sonradan değiştirilemez.
-        </p>
-        {error && <p className="text-sm text-red-500">{error}</p>}
-      </div>
-      <div className="flex justify-between gap-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
-        <Button size="sm" onClick={() => create.mutate()} loading={create.isPending}
-          disabled={!firmId || serial.length !== 3}>+ Seri Ekle</Button>
-        <Button variant="secondary" onClick={onClose}>Kapat</Button>
-      </div>
-    </Modal>
-  )
-}
-
 // ── Fatura detay modalı (liste verisinden; PDF URL girişi + iptal) ────────────
 function InvoiceModal({ invoice, onClose }: { invoice: InvoiceSummary; onClose: () => void }) {
   const queryClient = useQueryClient()
@@ -234,7 +131,6 @@ export function InvoicesPage() {
   const [tab, setTab] = useState('created')
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<InvoiceSummary | null>(null)
-  const [seriesOpen, setSeriesOpen] = useState(false)
 
   const { data, isLoading } = useQuery<PagedResult<InvoiceSummary>>({
     queryKey: ['invoices', tab, page],
@@ -256,7 +152,7 @@ export function InvoicesPage() {
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Faturalar</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{totalCount} kayıt</p>
         </div>
-        <Button size="sm" variant="secondary" onClick={() => setSeriesOpen(true)}>Fatura Serileri</Button>
+        <Link to="/orders/invoice-series"><Button size="sm" variant="secondary">Fatura Serileri</Button></Link>
       </div>
 
       <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -331,7 +227,6 @@ export function InvoicesPage() {
       )}
 
       {selected && <InvoiceModal invoice={selected} onClose={() => setSelected(null)} />}
-      {seriesOpen && <SeriesModal onClose={() => setSeriesOpen(false)} />}
     </div>
   )
 }

@@ -91,6 +91,7 @@ const NAV_SECTIONS: NavSection[] = [
     { label: 'Kargo Yönlendirme', to: '/fulfillment/cargo-reroute', icon: 'truck' },
     { label: 'İadeler',    to: '/orders/returns',   icon: 'rotateccw' },
     { label: 'Faturalar',  to: '/orders/invoices',  icon: 'filetext' },
+    { label: 'Fatura Serileri', to: '/orders/invoice-series', icon: 'sliders' },
     { label: 'Teklifler',  to: '/orders/quotes',    icon: 'handshake' },
     { label: 'Pazaryerleri', to: '/marketplaces',   icon: 'store' },
     { label: 'Numara Serileri', to: '/orders/number-series', icon: 'sliders' },
