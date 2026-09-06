@@ -10,8 +10,9 @@ adımları da alındı. Diğer yerel değişiklikler korundu; `appsettings.json`
 Birleşmiş kodda admin `npm run lint` ve TypeScript `--noEmit` başarılı; acceptance dışı API testleri
 `120/120` geçti. İlk sandbox denemesinde NuGet.Config erişimi engellendi; yetkili tekrar başarılı oldu.
 Testler ayrı `.codex-tmp-git-sync-tests` yolunda çalıştırıldı ve bu geçici çıktı kaldırıldı.
-Merge commit'i normal push ile gönderilmek üzere hazırlandı; force push, sunucu yayını, migration veya
-production veritabanı işlemi yapılmadı.
+`ec7d2165` merge commit'i normal push ile gönderildi; yeniden fetch sonrasında yerel/uzak farkı
+`0/0` ve çalışma ağacı temiz doğrulandı. Force push, sunucu yayını, migration veya production
+veritabanı işlemi yapılmadı.
 
 **ADMIN FİLTRE DÜZENİ — TEK ORTAK ÖZELLİK EDİTÖRÜ (2026-09-06):**
 `FilterBuilder.tsx` içinde her özellik için ayrı büyük kart açan düzen tek aramalı özellik/değer seçim
