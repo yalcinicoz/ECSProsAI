@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Plus, X, Tag, ChevronDown } from 'lucide-react'
+import { Plus, X, Tag, ChevronDown, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import api from '@/api/client'
 
@@ -39,7 +39,7 @@ interface AttributeFilterItem { attributeTypeId: string; valueIds: string[] }
 interface ProductGroup { id: string; code: string; nameI18n: Record<string, string> }
 interface AttributeValue {
   id: string; nameI18n: Record<string, string>
-  filterColors: { code: string; nameI18n: Record<string, string>; hexCode?: string }[]
+  filterColors?: { code: string; nameI18n: Record<string, string>; hexCode?: string }[]
 }
 interface AttributeType { id: string; code: string; nameI18n: Record<string, string>; values: AttributeValue[] }
 interface Supplier { id: string; title: string; code: string; accountType?: string }
@@ -49,6 +49,35 @@ interface Supplier { id: string; title: string; code: string; accountType?: stri
 function tr(i18n: Record<string, string> | undefined, fallback = ''): string {
   if (!i18n) return fallback
   return i18n['tr'] ?? i18n['en'] ?? i18n[Object.keys(i18n)[0]] ?? fallback
+}
+
+function matchesSearch(query: string, ...values: (string | undefined)[]): boolean {
+  const normalized = query.trim().toLocaleLowerCase('tr-TR')
+  if (!normalized) return true
+  return values.some(value => value?.toLocaleLowerCase('tr-TR').includes(normalized))
+}
+
+function useCloseOnOutside(open: boolean, onClose: () => void) {
+  const rootRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
+
+  useEffect(() => {
+    if (!open) return
+
+    function handlePointerDown(event: PointerEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node))
+        onCloseRef.current()
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [open])
+
+  return rootRef
 }
 
 function buildDescription(
@@ -154,13 +183,21 @@ export function FilterBuilder({ value, onChange, channelScope = false }: FilterB
   // ── State ─────────────────────────────────────────────────────────────────
 
   const [def, setDef] = useState<FilterDef>(() => value)
+  const defRef = useRef<FilterDef>(value)
   const [groupOpen, setGroupOpen] = useState(false)
   const [exGroupOpen, setExGroupOpen] = useState(false)
   const [suppOpen, setSuppOpen] = useState(false)
+  const [groupSearch, setGroupSearch] = useState('')
+  const [exGroupSearch, setExGroupSearch] = useState('')
+  const [suppSearch, setSuppSearch] = useState('')
   const [tagInput, setTagInput] = useState('')
   const [tagFocused, setTagFocused] = useState(false)
   const tagInputRef = useRef<HTMLInputElement>(null)
-  const [attrFilters, setAttrFilters] = useState<AttributeFilterItem[]>(value.attributeFilters ?? [])
+  const [activeAttrTypeId, setActiveAttrTypeId] = useState('')
+  const [attrTypeOpen, setAttrTypeOpen] = useState(false)
+  const [attrValueOpen, setAttrValueOpen] = useState(false)
+  const [attrTypeSearch, setAttrTypeSearch] = useState('')
+  const [attrValueSearch, setAttrValueSearch] = useState('')
 
   const refs = useMemo(() => ({ groups: productGroups, attrTypes, suppliers }), [productGroups, attrTypes, suppliers])
 
@@ -171,16 +208,15 @@ export function FilterBuilder({ value, onChange, channelScope = false }: FilterB
   }, [onChange, refs])
 
   const update = useCallback((patch: Partial<FilterDef>) => {
-    setDef(prev => {
-      const next = { ...prev, ...patch }
-      emitDef(next)
-      return next
-    })
+    const next = { ...defRef.current, ...patch }
+    defRef.current = next
+    setDef(next)
+    emitDef(next)
   }, [emitDef])
 
   useEffect(() => {
     if (productGroups.length || attrTypes.length || suppliers.length)
-      emitDef(def)
+      emitDef(defRef.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productGroups.length, attrTypes.length, suppliers.length])
 
@@ -206,36 +242,55 @@ export function FilterBuilder({ value, onChange, channelScope = false }: FilterB
     update({ tags: next.length ? next : undefined })
   }
 
-  function addAttrFilter() {
-    const usedTypeIds = attrFilters.map(f => f.attributeTypeId)
-    const first = attrTypes.find(a => !usedTypeIds.includes(a.id))
-    if (!first) return
-    const next = [...attrFilters, { attributeTypeId: first.id, valueIds: [] }]
-    setAttrFilters(next); update({ attributeFilters: next.filter(f => f.valueIds.length) })
+  function selectAttrType(typeId: string) {
+    setActiveAttrTypeId(typeId)
+    setAttrTypeOpen(false)
+    setAttrValueOpen(false)
+    setAttrTypeSearch('')
+    setAttrValueSearch('')
   }
-  function removeAttrFilter(idx: number) {
-    const next = attrFilters.filter((_, i) => i !== idx)
-    setAttrFilters(next); update({ attributeFilters: next.filter(f => f.valueIds.length) })
+
+  function removeAttrFilter(typeId: string) {
+    update({ attributeFilters: (defRef.current.attributeFilters ?? []).filter(f => f.attributeTypeId !== typeId) })
   }
-  function changeAttrType(idx: number, typeId: string) {
-    const next = attrFilters.map((f, i) => i === idx ? { attributeTypeId: typeId, valueIds: [] } : f)
-    setAttrFilters(next); update({ attributeFilters: next.filter(f => f.valueIds.length) })
-  }
-  function toggleAttrValue(idx: number, valueId: string) {
-    const next = attrFilters.map((f, i) => {
-      if (i !== idx) return f
-      const valueIds = f.valueIds.includes(valueId) ? f.valueIds.filter(v => v !== valueId) : [...f.valueIds, valueId]
-      return { ...f, valueIds }
-    })
-    setAttrFilters(next); update({ attributeFilters: next.filter(f => f.valueIds.length) })
+
+  function toggleAttrValue(valueId: string) {
+    if (!activeAttrTypeId) return
+    const current = defRef.current.attributeFilters ?? []
+    const existing = current.find(f => f.attributeTypeId === activeAttrTypeId)
+    const values = existing?.valueIds ?? []
+    const valueIds = values.includes(valueId) ? values.filter(id => id !== valueId) : [...values, valueId]
+    const next = existing
+      ? current.map(f => f.attributeTypeId === activeAttrTypeId ? { ...f, valueIds } : f)
+      : [...current, { attributeTypeId: activeAttrTypeId, valueIds }]
+    update({ attributeFilters: next.filter(f => f.valueIds.length > 0) })
   }
 
   const description = useMemo(() => buildDescription(def, refs), [def, refs])
-  const usedTypeIds = attrFilters.map(f => f.attributeTypeId)
+  const attrFilters = def.attributeFilters ?? []
+  const activeAttrType = attrTypes.find(a => a.id === activeAttrTypeId)
+  const activeValueIds = attrFilters.find(f => f.attributeTypeId === activeAttrTypeId)?.valueIds ?? []
+  const availableTypes = attrTypes.filter(a => matchesSearch(attrTypeSearch, tr(a.nameI18n), a.code))
+  const availableValues = (activeAttrType?.values ?? []).filter(val => matchesSearch(
+    attrValueSearch, tr(val.nameI18n),
+    ...(val.filterColors ?? []).flatMap(color => [color.code, tr(color.nameI18n)]),
+  ))
   const hasFilters = description !== 'Tüm ürünler'
   // Odaklanıldığında tüm mevcut etiketler, yazılınca filtrelenir
   const tagSuggestions = allTags.filter(
     t => !def.tags?.includes(t) && t.toLowerCase().includes(tagInput.toLowerCase()),
+  )
+  const filteredProductGroups = useMemo(
+    () => productGroups.filter(g => matchesSearch(groupSearch, tr(g.nameI18n), g.code)),
+    [groupSearch, productGroups],
+  )
+  const filteredExcludedProductGroups = useMemo(
+    () => productGroups.filter(g => matchesSearch(exGroupSearch, tr(g.nameI18n), g.code)),
+    [exGroupSearch, productGroups],
+  )
+  const filteredSuppliers = useMemo(
+    () => suppliers.filter(s => matchesSearch(suppSearch, s.title, s.code)),
+    [suppSearch, suppliers],
   )
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -249,13 +304,15 @@ export function FilterBuilder({ value, onChange, channelScope = false }: FilterB
           label={id => tr(productGroups.find(g => g.id === id)?.nameI18n) || '…'}
           onRemove={id => toggleMultiId('productGroupIds', id)} />
         <Dropdown label={def.productGroupIds?.length ? 'Başka grup ekle' : 'Ürün grubu seç'}
-          open={groupOpen} onToggle={() => setGroupOpen(o => !o)}>
-          {productGroups.map(g => (
+          open={groupOpen} onToggle={() => setGroupOpen(o => !o)}
+          searchValue={groupSearch} onSearchChange={setGroupSearch} searchPlaceholder="Ürün grubu ara…">
+          {filteredProductGroups.map(g => (
             <DropItem key={g.id} selected={(def.productGroupIds ?? []).includes(g.id)}
-              onClick={() => { toggleMultiId('productGroupIds', g.id); setGroupOpen(false) }}>
+              onChange={() => toggleMultiId('productGroupIds', g.id)}>
               {tr(g.nameI18n, g.code)}
             </DropItem>
           ))}
+          {filteredProductGroups.length === 0 && <EmptySearchResult />}
         </Dropdown>
       </Section>
 
@@ -265,13 +322,15 @@ export function FilterBuilder({ value, onChange, channelScope = false }: FilterB
           label={id => tr(productGroups.find(g => g.id === id)?.nameI18n) || '…'}
           onRemove={id => toggleMultiId('excludedProductGroupIds', id)} />
         <Dropdown label={def.excludedProductGroupIds?.length ? 'Başka grup hariç tut' : 'Hariç tutulacak grubu seç'}
-          open={exGroupOpen} onToggle={() => setExGroupOpen(o => !o)}>
-          {productGroups.map(g => (
+          open={exGroupOpen} onToggle={() => setExGroupOpen(o => !o)}
+          searchValue={exGroupSearch} onSearchChange={setExGroupSearch} searchPlaceholder="Hariç tutulacak grubu ara…">
+          {filteredExcludedProductGroups.map(g => (
             <DropItem key={g.id} selected={(def.excludedProductGroupIds ?? []).includes(g.id)}
-              onClick={() => { toggleMultiId('excludedProductGroupIds', g.id); setExGroupOpen(false) }}>
+              onChange={() => toggleMultiId('excludedProductGroupIds', g.id)}>
               {tr(g.nameI18n, g.code)}
             </DropItem>
           ))}
+          {filteredExcludedProductGroups.length === 0 && <EmptySearchResult />}
         </Dropdown>
       </Section>
 
@@ -282,13 +341,15 @@ export function FilterBuilder({ value, onChange, channelScope = false }: FilterB
           onRemove={id => toggleMultiId('supplierIds', id)} />
         {suppliers.length > 0 ? (
           <Dropdown label={def.supplierIds?.length ? 'Başka tedarikçi ekle' : 'Tedarikçi seç'}
-            open={suppOpen} onToggle={() => setSuppOpen(o => !o)}>
-            {suppliers.map(s => (
+            open={suppOpen} onToggle={() => setSuppOpen(o => !o)}
+            searchValue={suppSearch} onSearchChange={setSuppSearch} searchPlaceholder="Tedarikçi ara…">
+            {filteredSuppliers.map(s => (
               <DropItem key={s.id} selected={(def.supplierIds ?? []).includes(s.id)}
-                onClick={() => { toggleMultiId('supplierIds', s.id); setSuppOpen(false) }}>
+                onChange={() => toggleMultiId('supplierIds', s.id)}>
                 {s.title}
               </DropItem>
             ))}
+            {filteredSuppliers.length === 0 && <EmptySearchResult />}
           </Dropdown>
         ) : (
           <span className="text-xs" style={{ color: 'var(--text-s)' }}>Tanımlı tedarikçi yok</span>
@@ -525,49 +586,78 @@ export function FilterBuilder({ value, onChange, channelScope = false }: FilterB
 
       {/* Özellik Filtreleri */}
       <Section title="Özellik Filtreleri" hint="Renk, beden, cinsiyet vb.">
-        {attrFilters.map((af, idx) => {
-          const atype = attrTypes.find(a => a.id === af.attributeTypeId)
-          return (
-            <div key={idx} className="mb-3 p-3 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-              <div className="flex items-center gap-2 mb-2">
-                <select className="inp text-sm flex-1" value={af.attributeTypeId}
-                  onChange={e => changeAttrType(idx, e.target.value)}>
-                  {attrTypes.filter(a => a.id === af.attributeTypeId || !usedTypeIds.includes(a.id))
-                    .map(a => <option key={a.id} value={a.id}>{tr(a.nameI18n, a.code)}</option>)}
-                </select>
-                <button type="button" onClick={() => removeAttrFilter(idx)}
-                  className="p-1 rounded-lg hover:bg-red-50 flex-shrink-0" style={{ color: '#ef4444' }}>
-                  <X size={14} />
+        <div className="p-3 rounded-xl" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <SearchSelect
+              label={activeAttrType ? tr(activeAttrType.nameI18n, activeAttrType.code) : 'Özellik seçin'}
+              open={attrTypeOpen}
+              onToggle={() => { setAttrTypeOpen(open => !open); setAttrValueOpen(false) }}
+              searchValue={attrTypeSearch} onSearchChange={setAttrTypeSearch}
+              searchPlaceholder="Özellik ara…">
+              {availableTypes.map(item => (
+                <button key={item.id} type="button"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--surface2)]"
+                  style={{ color: item.id === activeAttrTypeId ? 'var(--brand)' : 'var(--text)' }}
+                  onClick={() => selectAttrType(item.id)}>
+                  <span className="min-w-0 flex-1 truncate">{tr(item.nameI18n, item.code)}</span>
+                  {attrFilters.some(f => f.attributeTypeId === item.id) && <span className="text-xs">Filtre eklendi</span>}
                 </button>
-              </div>
-              {atype && (
-                <div className="flex flex-wrap gap-1.5">
-                  {atype.values.map(val => {
-                    const selected = af.valueIds.includes(val.id)
-                    const hex = val.filterColors?.[0]?.hexCode
-                    return (
-                      <button key={val.id} type="button" onClick={() => toggleAttrValue(idx, val.id)}
-                        className={cn('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-all',
-                          selected ? 'border-[var(--brand)]' : 'border-transparent hover:border-[var(--border)]')}
-                        style={{ background: selected ? 'var(--brand-bg)' : 'var(--surface)', color: selected ? 'var(--brand)' : 'var(--text-m)' }}>
-                        {hex && <span className="w-3 h-3 rounded-full border border-white/30 flex-shrink-0" style={{ background: hex }} />}
-                        {tr(val.nameI18n)}{selected && <span className="ml-0.5 opacity-60">×</span>}
-                      </button>
-                    )
-                  })}
-                  {atype.values.length === 0 && <span className="text-xs" style={{ color: 'var(--text-s)' }}>Değer yok</span>}
-                </div>
+              ))}
+              {availableTypes.length === 0 && <EmptySearchResult />}
+            </SearchSelect>
+            <SearchSelect
+              label={!activeAttrType ? 'Önce özellik seçin' : activeValueIds.length ? `${activeValueIds.length} değer seçildi` : 'Değer seçin'}
+              open={attrValueOpen} disabled={!activeAttrType}
+              onToggle={() => { setAttrValueOpen(open => !open); setAttrTypeOpen(false) }}
+              searchValue={attrValueSearch} onSearchChange={setAttrValueSearch}
+              searchPlaceholder="Değer ara…">
+              {availableValues.map(val => {
+                const hex = val.filterColors?.[0]?.hexCode
+                return (
+                  <DropItem key={val.id} selected={activeValueIds.includes(val.id)} onChange={() => toggleAttrValue(val.id)}>
+                    <span className="flex min-w-0 items-center gap-2">
+                      {hex && <span className="h-3 w-3 flex-shrink-0 rounded-full border border-black/10" style={{ background: hex }} />}
+                      <span className="truncate">{tr(val.nameI18n)}</span>
+                    </span>
+                  </DropItem>
+                )
+              })}
+              {activeAttrType && !activeAttrType.values.length && (
+                <div className="px-3 py-3 text-sm" style={{ color: 'var(--text-s)' }}>Bu özellik için değer yok</div>
               )}
+              {!!activeAttrType?.values.length && availableValues.length === 0 && <EmptySearchResult />}
+            </SearchSelect>
+          </div>
+          {attrFilters.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2" aria-label="Seçilen özellik filtreleri">
+              {attrFilters.map(filter => {
+                const type = attrTypes.find(a => a.id === filter.attributeTypeId)
+                const name = type ? tr(type.nameI18n, type.code) : 'Özellik'
+                const summary = filter.valueIds.map(id => tr(type?.values.find(v => v.id === id)?.nameI18n, id)).join(', ')
+                return (
+                  <span key={filter.attributeTypeId}
+                    className="inline-flex max-w-full items-center rounded-full border text-xs"
+                    style={{ background: 'var(--brand-bg)', color: 'var(--brand)', borderColor: 'var(--brand)' }}>
+                    <button type="button" title={`${name}: ${summary}`}
+                      aria-label={`${name} filtresini düzenle: ${summary}`}
+                      aria-pressed={activeAttrTypeId === filter.attributeTypeId}
+                      className="min-w-0 rounded-l-full px-3 py-1.5 text-left hover:underline"
+                      onClick={() => { selectAttrType(filter.attributeTypeId); setAttrValueOpen(true) }}>
+                      <span className="block max-w-72 truncate"><strong>{name}:</strong> {summary}</span>
+                    </button>
+                    <button type="button" aria-label={`${name} filtresini kaldır`}
+                      className="mr-1 rounded-full p-1 hover:bg-[var(--surface)]"
+                      onClick={() => removeAttrFilter(filter.attributeTypeId)}>
+                      <X size={12} />
+                    </button>
+                  </span>
+                )
+              })}
             </div>
-          )
-        })}
-        {attrTypes.length > usedTypeIds.length && (
-          <button type="button" onClick={addAttrFilter}
-            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-dashed transition-colors"
-            style={{ borderColor: 'var(--border)', color: 'var(--text-m)' }}>
-            <Plus size={13} /> Özellik filtresi ekle
-          </button>
-        )}
+          ) : (
+            <p className="mt-2 text-xs" style={{ color: 'var(--text-s)' }}>Özellik ve değer seçerek filtre ekleyin.</p>
+          )}
+        </div>
       </Section>
 
       {/* Otomatik açıklama */}
@@ -616,9 +706,19 @@ function ChipList({ items, label, onRemove }: { items: string[]; label: (id: str
   )
 }
 
-function Dropdown({ label, open, onToggle, children }: { label: string; open: boolean; onToggle: () => void; children: React.ReactNode }) {
+function Dropdown({ label, open, onToggle, searchValue, onSearchChange, searchPlaceholder, children }: {
+  label: string
+  open: boolean
+  onToggle: () => void
+  searchValue: string
+  onSearchChange: (value: string) => void
+  searchPlaceholder: string
+  children: React.ReactNode
+}) {
+  const rootRef = useCloseOnOutside(open, onToggle)
+
   return (
-    <div className="relative">
+    <div ref={rootRef} className="relative">
       <button type="button"
         className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg border transition-colors"
         style={{ borderColor: 'var(--border)', color: 'var(--text-m)', background: 'var(--surface2)' }}
@@ -626,23 +726,99 @@ function Dropdown({ label, open, onToggle, children }: { label: string; open: bo
         <Plus size={12} /> {label} <ChevronDown size={12} className={cn('transition-transform', open && 'rotate-180')} />
       </button>
       {open && (
-        <div className="absolute z-20 mt-1 w-60 rounded-xl shadow-lg py-1 overflow-y-auto max-h-52"
+        <div className="absolute z-20 mt-1 w-72 rounded-xl shadow-lg overflow-hidden"
           style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-          {children}
+          <div className="p-2" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                style={{ color: 'var(--text-s)' }} />
+              <input
+                autoFocus
+                type="search"
+                className="inp w-full !pl-8 !pr-8 text-sm"
+                placeholder={searchPlaceholder}
+                value={searchValue}
+                onChange={event => onSearchChange(event.target.value)}
+                onKeyDown={event => { if (event.key === 'Escape') onToggle() }}
+              />
+              {searchValue && (
+                <button type="button" aria-label="Aramayı temizle"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2"
+                  style={{ color: 'var(--text-s)' }}
+                  onClick={() => onSearchChange('')}>
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="py-1 overflow-y-auto max-h-56">{children}</div>
         </div>
       )}
     </div>
   )
 }
 
-function DropItem({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
+function DropItem({ selected, onChange, children }: { selected: boolean; onChange: () => void; children: React.ReactNode }) {
   return (
-    <button type="button"
-      className={cn('w-full text-left px-3 py-2 text-sm transition-colors', !selected && 'hover:bg-[var(--surface2)]')}
+    <label
+      className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-[var(--surface2)]"
       style={{ color: selected ? 'var(--brand)' : 'var(--text)' }}
-      onClick={onClick}>
-      {selected && <span className="mr-1">✓</span>}{children}
-    </button>
+    >
+      <input type="checkbox" checked={selected} onChange={onChange}
+        className="h-4 w-4 flex-shrink-0 rounded accent-[var(--brand)]" />
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+    </label>
+  )
+}
+
+function EmptySearchResult() {
+  return <div className="px-3 py-3 text-sm" style={{ color: 'var(--text-s)' }}>Eşleşen kayıt bulunamadı</div>
+}
+
+function SearchSelect({ label, open, disabled = false, onToggle, searchValue, onSearchChange, searchPlaceholder, children }: {
+  label: string
+  open: boolean
+  disabled?: boolean
+  onToggle: () => void
+  searchValue: string
+  onSearchChange: (value: string) => void
+  searchPlaceholder: string
+  children: React.ReactNode
+}) {
+  const rootRef = useCloseOnOutside(open, onToggle)
+
+  return (
+    <div ref={rootRef} className="relative min-w-0">
+      <button type="button" disabled={disabled} aria-expanded={open}
+        className="inp flex w-full items-center justify-between gap-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-60"
+        onClick={onToggle}>
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <ChevronDown size={14} className={cn('flex-shrink-0 transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && !disabled && (
+        <div className="absolute left-0 right-0 z-30 mt-1 min-w-64 overflow-hidden rounded-xl shadow-lg"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <div className="p-2" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="relative">
+              <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
+                style={{ color: 'var(--text-s)' }} />
+              <input autoFocus type="search" className="inp w-full !pl-8 !pr-8 text-sm"
+                placeholder={searchPlaceholder} value={searchValue}
+                onChange={event => onSearchChange(event.target.value)}
+                onKeyDown={event => { if (event.key === 'Escape') onToggle() }} />
+              {searchValue && (
+                <button type="button" aria-label="Aramayı temizle"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2"
+                  style={{ color: 'var(--text-s)' }} onClick={() => onSearchChange('')}>
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="max-h-56 overflow-y-auto py-1">{children}</div>
+        </div>
+      )}
+    </div>
   )
 }
 

@@ -97,6 +97,9 @@ yerel dosyalar güvenceye alındıktan sonra yapılmalıdır.
 
 Ek kurallar:
 
+- `51.178.208.59` / `192.168.0.59` üzerinde salt-okunur inceleme serbesttir; veritabanı, dosya, servis veya
+  yapılandırma değişikliği yasaktır. Nginx LB (`51.178.208.56` / `192.168.0.56`) production altyapısıdır;
+  kullanıcıdan ilgili işlem için açık izin alınmadan yayın veya başka bir değişiklik yapılamaz.
 - MSSQL hiçbir zaman stok kaynağı değildir; ERP stok reader/worker kodu kaldırılmıştır.
 - `51.178.208.59` PostgreSQL yalnız tamamlanmış başlangıç dump/restore kaynağıdır. Yeni veya değişen
   kayıtlar buradan yeni PostgreSQL'e senkronlanmaz.

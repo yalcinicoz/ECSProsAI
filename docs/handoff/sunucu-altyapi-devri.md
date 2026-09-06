@@ -46,6 +46,11 @@ Yeni sohbet şu sırayla başlamalıdır:
 | Legacy production | `51.178.208.59` | `192.168.0.59` | Eski production site/DB; bağımsız tutulur |
 | ERP/V3 MSSQL | Public kapalı | `192.168.0.100:1433` | Katalog ve fiyat gerçek kaynağı |
 
+Kesin operasyon sınırı: `51.178.208.59` / `192.168.0.59` üzerinde salt-okunur veri ve durum incelemesine
+izin vardır; hiçbir yazma veya sistem değişikliği yapılamaz. `51.178.208.56` / `192.168.0.56` Nginx LB de
+production altyapısıdır ve kullanıcı ilgili değişikliğe açıkça izin vermeden release, symlink, dosya,
+yapılandırma veya servis işlemi uygulanamaz. Salt-okunur inceleme izni değişiklik/yayın izni değildir.
+
 SSH kayıt adları `appsettingsTest.json` içinde `Infrastructure.SSH.Api1`, `Api2`, `Postgres1`, `Redis1`,
 `LegacyProduction` ve `NginxLb` olarak tutulur. Dosya git dışıdır. Private key path değeri
 belgeye kopyalanmaz.
@@ -237,7 +242,7 @@ release'inden ayrı yönetilir; API deploy'u worker symlink'lerini otomatik değ
 ## 9. Admin yayını
 
 - Test Nginx `/admin/` rotası aktiftir.
-- Admin release: `/usr/share/nginx/admin-releases/20260903T100440Z_home_small_image_admin_attributes`.
+- Admin release: `/usr/share/nginx/admin-releases/20260906T131000Z_single_attribute_editor` (2026-09-06).
 - Aktif symlink: `/usr/share/nginx/html/admin`.
 - Index ve hashed JavaScript asset HTTP `200` doğrulandı.
 - Kullanıcının açık isteğiyle `admin-releases` kökünde yalnız bu çalışan release bırakılmıştır.

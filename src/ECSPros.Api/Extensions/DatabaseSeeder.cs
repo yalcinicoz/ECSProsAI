@@ -2864,13 +2864,15 @@ public static class DatabaseSeeder
         if (yilType is null) return;
 
         const string tr = "2027 Sonbahar Kış Ürünleri";
-        // NameI18n["tr"] eşitliği predicate içinde EF'ce çevrilemiyor (get_Item) — 2026-09-05
-        // açılış çökmesi. Dosyadaki yerleşik kalıp: projeksiyonla çek, bellekte karşılaştır.
-        var exists = (await db.AttributeValues
+        // NameI18n JSON sözlüğündeki indexer karşılaştırması Npgsql tarafından predicate içinde
+        // SQL'e çevrilemiyor. İlgili tipin küçük değer kümesini projekte edip karşılaştırmayı
+        // bellekte yapmak hem tek hem çok düğümlü açılış seed'ini güvenli tutar.
+        var existingNames = await db.AttributeValues
             .Where(v => v.AttributeTypeId == yilType.Id)
-            .Select(v => v.NameI18n["tr"])
-            .ToListAsync())
-            .Contains(tr);
+            .Select(v => v.NameI18n)
+            .ToListAsync();
+        var exists = existingNames.Any(names =>
+            names.TryGetValue("tr", out var name) && string.Equals(name, tr, StringComparison.Ordinal));
         if (exists) return;
 
         var sort = (await db.AttributeValues
