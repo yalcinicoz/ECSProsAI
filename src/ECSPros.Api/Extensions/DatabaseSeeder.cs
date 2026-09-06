@@ -1592,6 +1592,9 @@ public static class DatabaseSeeder
         await SeedTelemaniaDrinkwareAttributeValuesAsync(context);
         await SeedTelemaniaProductGroupAttributesAsync(context);
         await SeedTelemaniaFilterEnrichmentAsync(context);
+
+        // Ürün Alt Grubu: her ürün grubuna (Telemania dahil) serbest metin özelliği (2026-09-06)
+        await SeedUrunAltGrubuGroupAttributesAsync(context);
     }
 
     private static async Task SeedAttributeTypesAsync(CatalogDbContext db)
@@ -1673,6 +1676,9 @@ public static class DatabaseSeeder
             // Manken (bkz. docs/manken-ozelligi-spec.md) — varyant üretmez, bilgilendirici;
             // değeri ProductAttribute.CustomValue JSONB alanında tutulur, AttributeValue havuzu kullanılmaz
             ("manken",       "Manken",            "json",   910, false),
+            // Ürün Alt Grubu (2026-09-06, kullanıcı kararı): serbest metin, zorunlu değil, filtreye girmez;
+            // TÜM ürün gruplarına SeedUrunAltGrubuGroupAttributesAsync ile atanır.
+            ("urun_alt_grubu", "Ürün Alt Grubu",   "text",  1200, false),
         };
 
         var existingCodes = new HashSet<string>(await db.AttributeTypes.Select(a => a.Code).ToListAsync());
@@ -2539,6 +2545,67 @@ public static class DatabaseSeeder
         Console.WriteLine($"✓ Seed: {added} grup özelliği, {subAdded} eksen alt özelliği eklendi.");
     }
 
+    /// <summary>
+    /// "Ürün Alt Grubu" (urun_alt_grubu, text, zorunlu değil) özelliğini silinmemiş TÜM ürün
+    /// gruplarına atar (2026-09-06, kullanıcı kararı). Sonradan açılan gruplar da her açılışta
+    /// yakalanır — idempotent: tip yoksa oluşturur, grup ataması varsa dokunmaz, soft-silinmiş
+    /// atamayı geri açar. Ürün kartı bu özelliği grup şemasından alır; ürün başına satır gerekmez.
+    /// </summary>
+    private static async Task SeedUrunAltGrubuGroupAttributesAsync(CatalogDbContext db)
+    {
+        const string code = "urun_alt_grubu";
+        var type = await db.AttributeTypes.IgnoreQueryFilters().FirstOrDefaultAsync(a => a.Code == code);
+        if (type is null)
+        {
+            type = new AttributeType
+            {
+                Id = Guid.NewGuid(), Code = code,
+                NameI18n = new Dictionary<string, string> { ["tr"] = "Ürün Alt Grubu" },
+                DataType = "text", IsActive = true, SortOrder = 1200, UseInFilter = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            db.AttributeTypes.Add(type);
+            await db.SaveChangesAsync();
+        }
+        else if (type.IsDeleted)
+        {
+            type.IsDeleted = false; type.DeletedAt = null; type.DeletedBy = null; type.IsActive = true;
+            type.UpdatedAt = DateTime.UtcNow;
+        }
+
+        var groupIds = await db.ProductGroups.Select(g => g.Id).ToListAsync();
+        var existing = await db.ProductGroupAttributes.IgnoreQueryFilters()
+            .Where(x => x.AttributeTypeId == type.Id)
+            .ToListAsync();
+        var byGroup = existing.ToDictionary(x => x.ProductGroupId);
+
+        int added = 0, restored = 0;
+        foreach (var gid in groupIds)
+        {
+            if (byGroup.TryGetValue(gid, out var pga))
+            {
+                if (!pga.IsDeleted) continue;
+                pga.IsDeleted = false; pga.DeletedAt = null; pga.DeletedBy = null;
+                pga.UpdatedAt = DateTime.UtcNow;
+                restored++;
+                continue;
+            }
+            db.ProductGroupAttributes.Add(new ProductGroupAttribute
+            {
+                Id = Guid.NewGuid(), ProductGroupId = gid, AttributeTypeId = type.Id,
+                IsVariant = false, IsPrimaryAxis = false, IsRequired = false,
+                SortOrder = 200, CreatedAt = DateTime.UtcNow
+            });
+            added++;
+        }
+
+        if (added > 0 || restored > 0 || db.ChangeTracker.HasChanges())
+        {
+            await db.SaveChangesAsync();
+            Console.WriteLine($"✓ Seed: Ürün Alt Grubu özelliği — {added} gruba eklendi, {restored} atama geri açıldı ({groupIds.Count} grup).");
+        }
+    }
+
     private static async Task SeedFilterRengiAttributeTypeAsync(CatalogDbContext context)
     {
         const string typeCode = "filtre_rengi";
@@ -2699,8 +2766,13 @@ public static class DatabaseSeeder
         if (yilType is null) return;
 
         const string tr = "2027 Sonbahar Kış Ürünleri";
-        var exists = await db.AttributeValues
-            .AnyAsync(v => v.AttributeTypeId == yilType.Id && v.NameI18n["tr"] == tr);
+        // NameI18n["tr"] eşitliği predicate içinde EF'ce çevrilemiyor (get_Item) — 2026-09-05
+        // açılış çökmesi. Dosyadaki yerleşik kalıp: projeksiyonla çek, bellekte karşılaştır.
+        var exists = (await db.AttributeValues
+            .Where(v => v.AttributeTypeId == yilType.Id)
+            .Select(v => v.NameI18n["tr"])
+            .ToListAsync())
+            .Contains(tr);
         if (exists) return;
 
         var sort = (await db.AttributeValues

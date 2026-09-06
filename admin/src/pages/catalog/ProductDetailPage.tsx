@@ -1221,6 +1221,8 @@ export function ProductDetailPage() {
   const [confirmStatusChange, setConfirmStatusChange] = useState<boolean | null>(null)
   // attributeTypeId → selected attributeValueId
   const [attrForm, setAttrForm] = useState<Record<string, string>>({})
+  // attributeTypeId → serbest metin (dataType='text'; CustomValue {"tr": "..."} — pazaryeri gönderimiyle aynı sözleşme)
+  const [attrText, setAttrText] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (product) {
@@ -1234,10 +1236,18 @@ export function ProductDetailPage() {
       setSupplierId(product.supplierId)
       setSupplierProductCode(product.supplierProductCode ?? '')
       const init: Record<string, string> = {}
+      const initText: Record<string, string> = {}
       for (const a of product.attributes) {
         if (a.attributeValueId) init[a.attributeTypeId] = a.attributeValueId
+        else if (a.customValue) {
+          try {
+            const cv = JSON.parse(a.customValue) as Record<string, unknown>
+            if (typeof cv?.tr === 'string') initText[a.attributeTypeId] = cv.tr
+          } catch { /* eski/serbest biçim — metin alanı boş başlar */ }
+        }
       }
       setAttrForm(init)
+      setAttrText(initText)
       // init barcodes
       const bc: Record<string, string> = {}
       for (const v of product.variants) {
@@ -1285,11 +1295,20 @@ export function ProductDetailPage() {
     mutationFn: async () => {
       const group = groups.find((g) => g.id === product!.productGroupId)
       const nonVariantAttrs = (group?.attributes ?? []).filter((a) => !a.isVariant)
-      const attributes = nonVariantAttrs.map((a) => ({
-        attributeTypeId: a.attributeTypeId,
-        attributeValueId: attrForm[a.attributeTypeId] ?? null,
-        customValue: null,
-      }))
+      const attributes = nonVariantAttrs.map((a) => {
+        if (attrDataType.get(a.attributeTypeId) === 'text') {
+          const text = (attrText[a.attributeTypeId] ?? '').trim()
+          // boş metin → satır gönderilmez → sunucu mevcut satırı siler
+          return text
+            ? { attributeTypeId: a.attributeTypeId, attributeValueId: null, customValue: JSON.stringify({ tr: text }) }
+            : null
+        }
+        return {
+          attributeTypeId: a.attributeTypeId,
+          attributeValueId: attrForm[a.attributeTypeId] ?? null,
+          customValue: null,
+        }
+      }).filter((x): x is NonNullable<typeof x> => x !== null)
       await api.put(`/catalog/products/${product!.id}/attributes`, { attributes })
     },
     onSuccess: () => {
@@ -1565,6 +1584,13 @@ export function ProductDetailPage() {
   const attrTypeMap = useMemo(() => {
     const m = new Map<string, { id: string; nameI18n: Record<string, string> }[]>()
     attrTypes.forEach((t) => m.set(t.id, t.values))
+    return m
+  }, [attrTypes])
+
+  // attributeTypeId → dataType (text tipli özellikler select yerine serbest metin alanı alır)
+  const attrDataType = useMemo(() => {
+    const m = new Map<string, string>()
+    attrTypes.forEach((t) => m.set(t.id, t.dataType))
     return m
   }, [attrTypes])
 
@@ -2035,6 +2061,24 @@ export function ProductDetailPage() {
                   const values = attrTypeMap.get(ga.attributeTypeId) ?? []
                   const attrName = ga.attributeTypeNameI18n['tr'] ?? ga.attributeTypeCode
                   const selectedValueId = attrForm[ga.attributeTypeId] ?? ''
+                  if (attrDataType.get(ga.attributeTypeId) === 'text') {
+                    return (
+                      <div key={ga.id}>
+                        <label className="flbl">
+                          {attrName}
+                          {ga.isRequired && <span style={{ color: '#ef4444' }}> *</span>}
+                        </label>
+                        <input
+                          className="inp"
+                          type="text"
+                          maxLength={200}
+                          value={attrText[ga.attributeTypeId] ?? ''}
+                          placeholder="Serbest metin"
+                          onChange={(e) => setAttrText((f) => ({ ...f, [ga.attributeTypeId]: e.target.value }))}
+                        />
+                      </div>
+                    )
+                  }
                   return (
                     <div key={ga.id}>
                       <label className="flbl">
