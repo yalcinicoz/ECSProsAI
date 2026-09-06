@@ -39,12 +39,12 @@ public class GetProductByChannelSlugQueryHandler(IStorefrontDbContext sfDb, ICat
         if (urun is null)
             return Result.Success<ProductByChannelSlugDto?>(null);
 
-        // Varyantın renk ekseni değeri (detayda ?color= ile o renk seçilsin): filtre_rengi
-        // öncelikli, yoksa serbest-metin "renk". Bulunamazsa null (detay ilk rengi seçer).
+        // Varyantın renk ekseni değeri (detayda ?color= ile o renk seçilsin): "renk" ekseni
+        // öncelikli (2026-09-06 — detay artık renk ekseniyle gruplar), yoksa filtre_rengi.
         var renkDeger = await catDb.ProductVariantAttributes.AsNoTracking()
             .Where(va => va.VariantId == variantId.Value
                       && (va.AttributeType.Code == "filtre_rengi" || va.AttributeType.Code == "renk"))
-            .OrderByDescending(va => va.AttributeType.Code == "filtre_rengi")
+            .OrderByDescending(va => va.AttributeType.Code == "renk")
             .Select(va => (Guid?)va.AttributeValueId)
             .FirstOrDefaultAsync(ct);
 

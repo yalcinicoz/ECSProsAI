@@ -31,12 +31,15 @@ public class StoreUrunDetayBuilder(
         if (varyantlar.Count == 0)
             return null;
 
+        // 2026-09-06: renk seçenekleri RENK EKSENİ değerleriyle kurulur (her rengin kendi kimliği);
+        // filtre_rengi (IsColor) yalnız renk ekseni olmayan katalogda yedektir. Aksi halde aynı filtre
+        // ailesindeki iki gerçek renk (Mavi + İndigo) tek butona çöküyordu.
         var renkTipKodu = varyantlar
             .SelectMany(v => v.Attributes)
-            .FirstOrDefault(a => a.IsColor)?.AttributeTypeCode
+            .FirstOrDefault(a => a.AttributeTypeCode == "renk")?.AttributeTypeCode
             ?? varyantlar
                 .SelectMany(v => v.Attributes)
-                .FirstOrDefault(a => a.AttributeTypeCode == "renk")?.AttributeTypeCode;
+                .FirstOrDefault(a => a.IsColor)?.AttributeTypeCode;
 
         var renkDegerleri = renkTipKodu is null
             ? []

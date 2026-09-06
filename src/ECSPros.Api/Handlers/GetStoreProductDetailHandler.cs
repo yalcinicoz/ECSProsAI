@@ -61,18 +61,19 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
             .GroupBy(i => i.VariantId!.Value)
             .ToDictionary(g => g.Key, g => g.ToList());
 
-        // Renk grubu: filtre_rengi varsa o, yoksa renk ekseni. Migrasyon verisinde filtre_rengi
-        // hiç atanmamış durumda; renk'e bakılmazsa görselsiz varyantlar tüm renklerin karışık
-        // ürün-düzeyi havuzuna düşüyordu (aynı poz her renkten bir kez → "tekrarlı" galeri).
+        // Renk grubu = varyantın RENK EKSENİ değeri (her rengin kendi kimliği) — 2026-09-06 kullanıcı kararı.
+        // filtre_rengi kaba bir renk AİLESİdir (katalog filtresi + renk noktası için); gruplama anahtarı
+        // olarak kullanılınca aynı aileye düşen iki gerçek renk (Mavi + İndigo → filtre Mavi) tek seçeneğe
+        // çöküp galerileri karışıyordu (P-00022295). Yalnız renk ekseni olmayan katalogda filtre_rengi'ne düşülür.
         var variantColorValue = product.Variants.Where(v => v.IsActive)
             .Select(v => new
             {
                 VariantId = v.Id,
                 ColorValueId = v.VariantAttributes
-                    .Where(va => va.AttributeType.Code == "filtre_rengi")
+                    .Where(va => va.AttributeType.Code == "renk")
                     .Select(va => (Guid?)va.AttributeValue.Id).FirstOrDefault()
                     ?? v.VariantAttributes
-                    .Where(va => va.AttributeType.Code == "renk")
+                    .Where(va => va.AttributeType.Code == "filtre_rengi")
                     .Select(va => (Guid?)va.AttributeValue.Id).FirstOrDefault()
             })
             .Where(x => x.ColorValueId.HasValue)
@@ -128,7 +129,7 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
                 HexCode: hexByValueId.GetValueOrDefault(a.AttributeValue.Id),
                 ValueSortOrder: a.AttributeValue.SortOrder)).ToList();
 
-            // Öncelik: renk grubu görselleri (filtre_rengi/renk) → varyantın kendi görselleri
+            // Öncelik: renk grubu görselleri (renk ekseni; yedek filtre_rengi) → varyantın kendi görselleri
             // (VariantId doğrudan eşleşen) → ürün düzeyinde ortak görseller (VariantId=null).
             // Renk ekseni hiç olmayan kataloglarda ikinci adım olmasa varyanta özel görseller
             // sessizce kaybolurdu. Ürün düzeyi havuz yalnızca üründe hiç varyant-bağlı görsel
