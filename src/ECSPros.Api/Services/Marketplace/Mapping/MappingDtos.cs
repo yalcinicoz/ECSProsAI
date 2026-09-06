@@ -2,14 +2,29 @@ namespace ECSPros.Api.Services.Marketplace.Mapping;
 
 // ── Kategori eşleme ──────────────────────────────────────────────────────────
 
+/// <summary>EM1 (2026-09-06): kural = 1..n koşul (VE) → hedef. Eski kayıtlar tek koşulu AttributeTypeCode/ValueId
+/// alanlarında taşır; <see cref="EffectiveConditions"/> her iki biçimi tek listeye indirger. Kayıtta hem
+/// Conditions hem (ilk koşul olarak) eski alanlar yazılır — geriye uyumlu okuma.</summary>
 public sealed record MappingRuleDto(
     int Order,
-    string AttributeTypeCode,
-    Guid ValueId,
-    string ValueLabel,
+    string? AttributeTypeCode,
+    Guid? ValueId,
+    string? ValueLabel,
     string TargetExternalId,
     string TargetName,
-    string TargetPath);
+    string TargetPath,
+    List<MappingConditionDto>? Conditions = null)
+{
+    public IReadOnlyList<MappingConditionDto> EffectiveConditions()
+    {
+        if (Conditions is { Count: > 0 }) return Conditions;
+        if (!string.IsNullOrWhiteSpace(AttributeTypeCode) && ValueId is { } v && v != Guid.Empty)
+            return [new MappingConditionDto(AttributeTypeCode, v, ValueLabel ?? "")];
+        return [];
+    }
+}
+
+public sealed record MappingConditionDto(string AttributeTypeCode, Guid ValueId, string ValueLabel);
 
 public sealed record PoolTargetDto(string ExternalId, string Name, string Path);
 

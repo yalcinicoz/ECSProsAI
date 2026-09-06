@@ -12,15 +12,24 @@ import { pickTr } from './marketplaceOverview'
 
 // ── Types (API DTO karşılıkları) ─────────────────────────────────────────────
 
+interface MappingCondition { attributeTypeCode: string; valueId: string; valueLabel: string }
+// EM1: kural = 1..n koşul (VE) → hedef; attributeTypeCode/valueId eski tek-koşul alanları (geriye uyum)
 interface MappingRule {
   order: number
-  attributeTypeCode: string
-  valueId: string
-  valueLabel: string
+  attributeTypeCode?: string | null
+  valueId?: string | null
+  valueLabel?: string | null
   targetExternalId: string
   targetName: string
   targetPath: string
+  conditions?: MappingCondition[] | null
 }
+const ruleConditions = (r: MappingRule): MappingCondition[] =>
+  r.conditions && r.conditions.length > 0
+    ? r.conditions
+    : r.attributeTypeCode && r.valueId
+      ? [{ attributeTypeCode: r.attributeTypeCode, valueId: r.valueId, valueLabel: r.valueLabel ?? '' }]
+      : [{ attributeTypeCode: '', valueId: '', valueLabel: '' }]
 interface PoolTarget { externalId: string; name: string; path: string }
 interface CategoryMapping {
   id: string
@@ -186,7 +195,7 @@ function CategoryEditor({
   const [target, setTarget] = useState<MpCategory | null>(
     m?.targetExternalId ? { externalId: m.targetExternalId, name: m.targetName ?? '', path: m.targetPath ?? '' } : null,
   )
-  const [rules, setRules] = useState<MappingRule[]>(m?.rules ?? [])
+  const [rules, setRules] = useState<MappingRule[]>((m?.rules ?? []).map((r) => ({ ...r, conditions: ruleConditions(r) })))
   const [pool, setPool] = useState<PoolTarget[]>(m?.pool ?? [])
   const [poolAdd, setPoolAdd] = useState<MpCategory | null>(null)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -207,7 +216,11 @@ function CategoryEditor({
         targetExternalId: target?.externalId ?? null,
         targetName: target?.name ?? null,
         targetPath: target?.path ?? null,
-        rules: kind === 'rules' ? rules.map((r, i) => ({ ...r, order: i })) : null,
+        rules: kind === 'rules' ? rules.map((r, i) => {
+          const conds = (r.conditions ?? []).filter((c) => c.attributeTypeCode && c.valueId)
+          return { order: i, conditions: conds, attributeTypeCode: conds[0]?.attributeTypeCode ?? null, valueId: conds[0]?.valueId ?? null, valueLabel: conds[0]?.valueLabel ?? null,
+            targetExternalId: r.targetExternalId, targetName: r.targetName, targetPath: r.targetPath }
+        }) : null,
         pool: kind === 'pool' ? pool : null,
       }
       await api.put('/marketplaces/mapping/category', body)
@@ -228,6 +241,17 @@ function CategoryEditor({
   }
   function updateRule(i: number, patch: Partial<MappingRule>) {
     setRules((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)))
+  }
+  function updateCondition(i: number, ci: number, patch: Partial<MappingCondition>) {
+    setRules((rs) => rs.map((r, idx) => idx !== i ? r : {
+      ...r, conditions: (r.conditions ?? []).map((c, cidx) => (cidx === ci ? { ...c, ...patch } : c)),
+    }))
+  }
+  function addCondition(i: number) {
+    setRules((rs) => rs.map((r, idx) => idx !== i ? r : { ...r, conditions: [...(r.conditions ?? []), { attributeTypeCode: '', valueId: '', valueLabel: '' }] }))
+  }
+  function removeCondition(i: number, ci: number) {
+    setRules((rs) => rs.map((r, idx) => idx !== i ? r : { ...r, conditions: (r.conditions ?? []).filter((_, cidx) => cidx !== ci) }))
   }
   function moveRule(i: number, dir: -1 | 1) {
     setRules((rs) => {
@@ -295,37 +319,49 @@ function CategoryEditor({
       ) : kind === 'rules' ? (
         <div>
           <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-s)' }}>
-            KURALLAR — ilk eşleşen kazanır (ör. cinsiyet = Kadın → Kadın Pantolon)
+            KURALLAR — ilk eşleşen kazanır; bir kuralın TÜM koşulları sağlanmalı (ör. cinsiyet = Kadın VE yaş grubu = Çocuk → Kız Çocuk Kot Ceket)
           </p>
           {rules.map((r, i) => (
             <div key={i} className="rounded-lg p-2.5 mb-2" style={{ border: '1px solid var(--border)' }}>
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <select
-                  className="inp"
-                  style={{ width: 160 }}
-                  value={r.attributeTypeCode}
-                  onChange={(e) => updateRule(i, { attributeTypeCode: e.target.value, valueId: '', valueLabel: '' })}
-                >
-                  <option value="">Özellik seç…</option>
-                  {ownTypes.map((t) => (
-                    <option key={t.id} value={t.code ?? t.id}>{pickTr(t.nameI18n, t.code ?? '')}</option>
+              <div className="flex items-start gap-2 mb-2 flex-wrap">
+                <div className="flex flex-col gap-1.5">
+                  {(r.conditions ?? []).map((c, ci) => (
+                    <div key={ci} className="flex items-center gap-2">
+                      {ci > 0 && <span className="text-[10px] font-semibold w-6" style={{ color: 'var(--brand)' }}>VE</span>}
+                      {ci === 0 && <span className="w-6" />}
+                      <select
+                        className="inp"
+                        style={{ width: 160 }}
+                        value={c.attributeTypeCode}
+                        onChange={(e) => updateCondition(i, ci, { attributeTypeCode: e.target.value, valueId: '', valueLabel: '' })}
+                      >
+                        <option value="">Özellik seç…</option>
+                        {ownTypes.map((t) => (
+                          <option key={t.id} value={t.code ?? t.id}>{pickTr(t.nameI18n, t.code ?? '')}</option>
+                        ))}
+                      </select>
+                      <span className="text-xs" style={{ color: 'var(--text-s)' }}>=</span>
+                      <select
+                        className="inp"
+                        style={{ width: 160 }}
+                        value={c.valueId}
+                        onChange={(e) => {
+                          const v = typeValues(c.attributeTypeCode).find((x) => x.id === e.target.value)
+                          updateCondition(i, ci, { valueId: e.target.value, valueLabel: v ? pickTr(v.nameI18n) : '' })
+                        }}
+                      >
+                        <option value="">Değer seç…</option>
+                        {typeValues(c.attributeTypeCode).map((v) => (
+                          <option key={v.id} value={v.id}>{pickTr(v.nameI18n)}</option>
+                        ))}
+                      </select>
+                      {(r.conditions ?? []).length > 1 && (
+                        <button onClick={() => removeCondition(i, ci)} className="p-1 hover:opacity-70" title="Koşulu kaldır"><X size={13} /></button>
+                      )}
+                    </div>
                   ))}
-                </select>
-                <span className="text-xs" style={{ color: 'var(--text-s)' }}>=</span>
-                <select
-                  className="inp"
-                  style={{ width: 160 }}
-                  value={r.valueId}
-                  onChange={(e) => {
-                    const v = typeValues(r.attributeTypeCode).find((x) => x.id === e.target.value)
-                    updateRule(i, { valueId: e.target.value, valueLabel: v ? pickTr(v.nameI18n) : '' })
-                  }}
-                >
-                  <option value="">Değer seç…</option>
-                  {typeValues(r.attributeTypeCode).map((v) => (
-                    <option key={v.id} value={v.id}>{pickTr(v.nameI18n)}</option>
-                  ))}
-                </select>
+                  <button onClick={() => addCondition(i)} className="text-[11px] self-start ml-8 underline" style={{ color: 'var(--brand)' }}>+ koşul ekle (VE)</button>
+                </div>
                 <div className="ml-auto flex items-center gap-1">
                   <button onClick={() => moveRule(i, -1)} className="p-1 hover:opacity-70" title="Yukarı"><ChevronUp size={14} /></button>
                   <button onClick={() => moveRule(i, 1)} className="p-1 hover:opacity-70" title="Aşağı"><ChevronDown size={14} /></button>
@@ -345,7 +381,7 @@ function CategoryEditor({
             </div>
           ))}
           <Button size="sm" variant="ghost" onClick={() =>
-            setRules((rs) => [...rs, { order: rs.length, attributeTypeCode: '', valueId: '', valueLabel: '', targetExternalId: '', targetName: '', targetPath: '' }])}>
+            setRules((rs) => [...rs, { order: rs.length, conditions: [{ attributeTypeCode: '', valueId: '', valueLabel: '' }], targetExternalId: '', targetName: '', targetPath: '' }])}>
             <Plus size={13} /> Kural Ekle
           </Button>
           <div className="mt-3">

@@ -281,6 +281,13 @@ public sealed class MarketplaceMappingService(
             return (null, "Birebir eşlemede hedef kategori zorunlu.");
         if (req.MappingKind == "rules" && req.Rules is not { Count: > 0 })
             return (null, "Koşullu eşlemede en az bir kural gerekli.");
+        List<MappingRuleDto>? normalizedRules = null;
+        if (req.MappingKind == "rules")
+        {
+            var (nr, err) = MappingRuleResolver.Normalize(req.Rules!);
+            if (err is not null) return (null, err);
+            normalizedRules = nr;
+        }
         if (req.MappingKind == "pool" && req.Pool is not { Count: > 1 })
             return (null, "Havuz eşlemesinde en az iki aday kategori seçilmeli.");
 
@@ -308,7 +315,7 @@ public sealed class MarketplaceMappingService(
         existing.TargetName = req.MappingKind == "pool" ? null : req.TargetName;
         existing.TargetPath = req.MappingKind == "pool" ? null : req.TargetPath;
         existing.RulesJson = req.MappingKind == "rules"
-            ? JsonSerializer.Serialize(req.Rules!.OrderBy(r => r.Order).ToList(), JsonOpts) : null;
+            ? JsonSerializer.Serialize(normalizedRules, JsonOpts) : null;
         existing.PoolJson = req.MappingKind == "pool"
             ? JsonSerializer.Serialize(req.Pool, JsonOpts) : null;
         // Personel kaydetti = gözden geçirilmiş sayılır.
