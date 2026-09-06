@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { Modal } from '@/components/ui/Modal'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { StoreLogo } from './MarketplacesPage'
 import { pickTr } from './marketplaceOverview'
 
@@ -1017,7 +1018,6 @@ function ErpGroupMapModal({ target, item, overview, ownTypes, onClose, onSaved }
   target: string; item: ErpItem; overview: Overview | undefined; ownTypes: OwnAttrType[]; onClose: () => void; onSaved: () => void
 }) {
   const [groupId, setGroupId] = useState<string | null>(null)
-  const [q, setQ] = useState('')
   const [error, setError] = useState('')
   // Gruplar: üst sayfanın özeti henüz yüklenmediyse popup kendisi çeker (aynı sorgu anahtarı → önbellek paylaşılır)
   const { data: ownOverview } = useQuery<Overview>({
@@ -1026,17 +1026,21 @@ function ErpGroupMapModal({ target, item, overview, ownTypes, onClose, onSaved }
     enabled: !overview,
   })
   const groups = (overview ?? ownOverview)?.groups ?? []
-  const filtered = useMemo(() => {
-    const t = q.trim().toLocaleLowerCase('tr-TR')
-    const l = t ? groups.filter((g) => g.name.toLocaleLowerCase('tr-TR').includes(t) || g.code.toLowerCase().includes(t)) : groups
-    return l.slice(0, 200)
-  }, [groups, q])
+  const trCmp = (a: string, b: string) => a.localeCompare(b, 'tr-TR')
+  const groupOptions = useMemo(() => [...groups]
+    .sort((a, b) => trCmp(a.name, b.name))
+    .map((g) => ({ value: g.productGroupId, label: `${g.name} · ${g.productCount} ürün${g.mapping ? ' · eşli' : ''}` })), [groups])
+  const typeOptions = useMemo(() => [...ownTypes]
+    .map((t) => ({ value: t.code ?? t.id, label: pickTr(t.nameI18n, t.code ?? '') }))
+    .sort((a, b) => trCmp(a.label, b.label)), [ownTypes])
+  const valueOptions = (code: string) => (ownTypes.find((x) => x.code === code)?.values ?? [])
+    .map((v) => ({ value: v.id, label: pickTr(v.nameI18n) }))
+    .sort((a, b) => trCmp(a.label, b.label))
   const secili = groups.find((g) => g.productGroupId === groupId)
   const mevcut = secili?.mapping
   // Kip: bu ERP grubu, seçilen bizim grubun eşlemesine hangi rolle girer?
   const [kind, setKind] = useState<'direct' | 'rules' | 'pool'>('direct')
   const [conds, setConds] = useState<MappingCondition[]>([{ attributeTypeCode: '', valueId: '', valueLabel: '' }])
-  const typeValues = (code: string) => ownTypes.find((x) => x.code === code)?.values ?? []
   const hedef = { targetExternalId: item.code, targetName: item.name, targetPath: `${item.name} [${item.code}]` }
   const gecerliKosullar = conds.filter((c) => c.attributeTypeCode && c.valueId)
   const save = useMutation({
@@ -1078,30 +1082,8 @@ function ErpGroupMapModal({ target, item, overview, ownTypes, onClose, onSaved }
         </div>
         <div>
           <label className="flbl">Bizim ürün grubu *</label>
-          <div className="relative mb-2">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-s)' }} />
-            <input className="inp pl-8" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Grup adı veya kodu yazın…" autoFocus />
-          </div>
-          {/* Açılır liste yerine popup içinde kaydırılabilir liste: modal gövdesi overflow'lu olduğundan
-              absolute dropdown kırpılıyordu (2026-09-06). */}
-          <div className="thin-scroll overflow-y-auto rounded-lg" style={{ maxHeight: 170, border: '1px solid var(--border)' }}>
-            {filtered.map((g) => (
-              <button key={g.productGroupId} type="button"
-                onClick={() => setGroupId(g.productGroupId)}
-                className="w-full flex items-center justify-between px-3 py-2 text-left text-sm"
-                style={{
-                  borderBottom: '1px solid var(--border)',
-                  background: groupId === g.productGroupId ? 'var(--brand-bg)' : 'transparent',
-                  color: 'var(--text)',
-                }}>
-                <span>{g.name} <code className="text-xs ml-1" style={{ color: 'var(--text-s)' }}>{g.code}</code></span>
-                <span className="text-xs" style={{ color: 'var(--text-s)' }}>{g.productCount} ürün{g.mapping ? ' · eşli' : ''}</span>
-              </button>
-            ))}
-            {groups.length === 0 && <p className="px-3 py-3 text-xs" style={{ color: 'var(--text-s)' }}>Gruplar yükleniyor…</p>}
-            {groups.length > 0 && filtered.length === 0 && <p className="px-3 py-3 text-xs" style={{ color: 'var(--text-s)' }}>Eşleşen grup yok.</p>}
-          </div>
-          {secili && <p className="text-xs mt-1" style={{ color: 'var(--brand)' }}>Seçili: {secili.name}</p>}
+          {/* portal: modal gövdesi overflow'lu → açılır liste body'de sabit konumla açılır, kırpılmaz */}
+          <SearchableSelect value={groupId} onChange={setGroupId} options={groupOptions} placeholder={groups.length === 0 ? 'Gruplar yükleniyor…' : 'Grup ara ve seç…'} hasValue={!!groupId} portal />
         </div>
         {secili && (
           <div className="rounded-lg p-3 space-y-2" style={{ border: '1px solid var(--border)' }}>
@@ -1128,17 +1110,15 @@ function ErpGroupMapModal({ target, item, overview, ownTypes, onClose, onSaved }
                 {conds.map((c, ci) => (
                   <div key={ci} className="flex items-center gap-2">
                     <span className="text-[10px] font-semibold w-6" style={{ color: 'var(--brand)' }}>{ci > 0 ? 'VE' : ''}</span>
-                    <select className="inp" style={{ width: 170 }} value={c.attributeTypeCode}
-                      onChange={(e) => setConds((cs) => cs.map((x, i) => i === ci ? { attributeTypeCode: e.target.value, valueId: '', valueLabel: '' } : x))}>
-                      <option value="">Özellik seç…</option>
-                      {ownTypes.map((t) => <option key={t.id} value={t.code ?? t.id}>{pickTr(t.nameI18n, t.code ?? '')}</option>)}
-                    </select>
+                    <div style={{ width: 190 }}>
+                      <SearchableSelect value={c.attributeTypeCode || null} options={typeOptions} placeholder="Özellik ara…" portal hasValue={!!c.attributeTypeCode}
+                        onChange={(v) => setConds((cs) => cs.map((x, i) => i === ci ? { attributeTypeCode: v ?? '', valueId: '', valueLabel: '' } : x))} />
+                    </div>
                     <span className="text-xs" style={{ color: 'var(--text-s)' }}>=</span>
-                    <select className="inp" style={{ width: 170 }} value={c.valueId}
-                      onChange={(e) => { const v = typeValues(c.attributeTypeCode).find((x) => x.id === e.target.value); setConds((cs) => cs.map((x, i) => i === ci ? { ...x, valueId: e.target.value, valueLabel: v ? pickTr(v.nameI18n) : '' } : x)) }}>
-                      <option value="">Değer seç…</option>
-                      {typeValues(c.attributeTypeCode).map((v) => <option key={v.id} value={v.id}>{pickTr(v.nameI18n)}</option>)}
-                    </select>
+                    <div style={{ width: 190 }}>
+                      <SearchableSelect value={c.valueId || null} options={valueOptions(c.attributeTypeCode)} placeholder="Değer ara…" portal hasValue={!!c.valueId} disabled={!c.attributeTypeCode}
+                        onChange={(v) => { const opt = valueOptions(c.attributeTypeCode).find((o) => o.value === v); setConds((cs) => cs.map((x, i) => i === ci ? { ...x, valueId: v ?? '', valueLabel: opt?.label ?? '' } : x)) }} />
+                    </div>
                     {conds.length > 1 && <button type="button" onClick={() => setConds((cs) => cs.filter((_, i) => i !== ci))} className="p-1 hover:opacity-70"><X size={13} /></button>}
                   </div>
                 ))}

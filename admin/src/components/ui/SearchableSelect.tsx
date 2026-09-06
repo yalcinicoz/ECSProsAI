@@ -5,6 +5,7 @@
  * - Dışarı tıklayınca kapanır
  */
 import { useState, useRef, useEffect, useId } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { ChevronDown, X, Search } from 'lucide-react'
 
@@ -22,6 +23,8 @@ export interface SearchableSelectProps {
   disabled?: boolean
   className?: string
   hasValue?: boolean
+  /** Açılır listeyi document.body'ye taşır (sabit konum): overflow'lu kapsayıcılar (Modal gövdesi) kırpmasın. */
+  portal?: boolean
 }
 
 export function SearchableSelect({
@@ -33,9 +36,12 @@ export function SearchableSelect({
   disabled = false,
   className,
   hasValue,
+  portal = false,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false)
   const [openUpward, setOpenUpward] = useState(false)
+  const [pos, setPos] = useState<{ top: number; left: number; width: number; bottom: number } | null>(null)
+  const dropRef = useRef<HTMLDivElement>(null)
   const [query, setQuery] = useState('')
   const [highlighted, setHighlighted] = useState(0)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -51,7 +57,8 @@ export function SearchableSelect({
   // Close on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+      const t = e.target as Node
+      if (wrapRef.current && !wrapRef.current.contains(t) && !(dropRef.current && dropRef.current.contains(t))) {
         setOpen(false)
       }
     }
@@ -66,10 +73,19 @@ export function SearchableSelect({
       const rect = wrapRef.current.getBoundingClientRect()
       const spaceBelow = window.innerHeight - rect.bottom
       setOpenUpward(spaceBelow < 280)
+      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width, bottom: window.innerHeight - rect.top + 4 })
     }
     setOpen(true)
     requestAnimationFrame(() => searchRef.current?.focus())
   }
+
+  useEffect(() => {
+    if (!portal || !open) return
+    const kapat = () => setOpen(false)
+    window.addEventListener('resize', kapat)
+    document.addEventListener('scroll', kapat, true)
+    return () => { window.removeEventListener('resize', kapat); document.removeEventListener('scroll', kapat, true) }
+  }, [portal, open])
 
   // Scroll highlighted item into view
   useEffect(() => {
@@ -94,59 +110,18 @@ export function SearchableSelect({
     if (e.key === 'Escape') { setOpen(false) }
   }
 
-  const isOk = hasValue || value != null
-
-  return (
-    <div ref={wrapRef} className={cn('relative', className)}>
-      {/* Trigger */}
-      <button
-        type="button"
-        disabled={disabled}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={id}
-        onClick={() => {
-          if (disabled) return
-          if (open) setOpen(false)
-          else openDropdown()
-        }}
-        onKeyDown={handleKeyDown}
-        className={cn(
-          'inp flex items-center justify-between gap-2 text-left cursor-pointer',
-          isOk && 'ok',
-          disabled && 'cursor-not-allowed',
-        )}
-      >
-        <span className={cn('truncate flex-1', !selected && 'text-[var(--text-s)]')}>
-          {selected ? selected.label : placeholder}
-        </span>
-        <span className="flex items-center gap-1 flex-shrink-0">
-          {clearable && selected && (
-            <span
-              role="button"
-              tabIndex={-1}
-              onMouseDown={(e) => { e.stopPropagation(); onChange(null) }}
-              className="text-[var(--text-s)] hover:text-[var(--text)] p-0.5 rounded"
-            >
-              <X size={12} />
-            </span>
-          )}
-          <ChevronDown
-            size={14}
-            className={cn('text-[var(--text-s)] transition-transform', open && 'rotate-180')}
-          />
-        </span>
-      </button>
-
-      {/* Dropdown */}
-      {open && (
+  // Açılır liste (yerinde ya da portal ile body'de; portal'da sabit konum, z-index modal'ın üstünde)
+  const dropdown = (
         <div
-          className="absolute z-50 w-full rounded-xl shadow-xl overflow-hidden"
+          ref={dropRef}
+          className={cn('rounded-xl shadow-xl overflow-hidden', portal ? 'fixed z-[1000]' : 'absolute z-50 w-full')}
           style={{
             background: 'var(--surface)',
             border: '1px solid var(--border)',
             minWidth: '180px',
-            ...(openUpward ? { bottom: 'calc(100% + 4px)' } : { top: 'calc(100% + 4px)' }),
+            ...(portal && pos
+              ? (openUpward ? { bottom: pos.bottom, left: pos.left, width: pos.width } : { top: pos.top, left: pos.left, width: pos.width })
+              : (openUpward ? { bottom: 'calc(100% + 4px)' } : { top: 'calc(100% + 4px)' })),
           }}
         >
           {/* Search */}
@@ -196,7 +171,56 @@ export function SearchableSelect({
             )}
           </ul>
         </div>
-      )}
+  )
+
+  const isOk = hasValue || value != null
+
+  return (
+    <div ref={wrapRef} className={cn('relative', className)}>
+      {/* Trigger */}
+      <button
+        type="button"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => {
+          if (disabled) return
+          if (open) setOpen(false)
+          else openDropdown()
+        }}
+        onKeyDown={handleKeyDown}
+        className={cn(
+          'inp flex items-center justify-between gap-2 text-left cursor-pointer',
+          isOk && 'ok',
+          disabled && 'cursor-not-allowed',
+        )}
+      >
+        <span className={cn('truncate flex-1', !selected && 'text-[var(--text-s)]')}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <span className="flex items-center gap-1 flex-shrink-0">
+          {clearable && selected && (
+            <span
+              role="button"
+              tabIndex={-1}
+              onMouseDown={(e) => { e.stopPropagation(); onChange(null) }}
+              className="text-[var(--text-s)] hover:text-[var(--text)] p-0.5 rounded"
+            >
+              <X size={12} />
+            </span>
+          )}
+          <ChevronDown
+            size={14}
+            className={cn('text-[var(--text-s)] transition-transform', open && 'rotate-180')}
+          />
+        </span>
+      </button>
+
+      {/* Dropdown */}
+      {open && (portal && pos ? createPortal(dropdown, document.body) : dropdown)}
     </div>
   )
+
+
 }
