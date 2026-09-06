@@ -72,3 +72,8 @@ publish-demo/
 publish-staging/
 appsettings.Production.json.bak*
 *.bak-faz11
+
+# Sır/yerel çalışma dosyaları (2026-09-06): canlı DB kimliği ve içinde API token bulunan kaydedilmiş sayfalar
+docs/liveDbSettings.json
+/d2.html
+/detay.html
