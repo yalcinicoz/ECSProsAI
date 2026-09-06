@@ -763,6 +763,18 @@ var app = builder.Build();
 // ─── Middleware Pipeline ────────────────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseForwardedHeaders(); // FAZ 11 / K1: IP/proto/host kullanan tüm middleware'lerden önce.
+// 2026-09-06: art arda eğik çizgi normalize (mobil istemci "baseUrl/" + "/api/..." → "//api/..." → 404).
+// Yalnız yol düzeltilir; sorgu dizesi ve gövde dokunulmaz; yönlendirme yapılmaz (aynı istek işlenir).
+app.Use((ctx, next) =>
+{
+    var path = ctx.Request.Path.Value;
+    if (path is not null && path.Contains("//"))
+    {
+        while (path.Contains("//")) path = path.Replace("//", "/");
+        ctx.Request.Path = path;
+    }
+    return next();
+});
 
 // Üç swagger dokümanı, her biri BAĞIMSIZ adreste (arayüzde doküman seçici yok):
 //   /swagger-partner → "partner" (dış entegratörler, yalnız /api/partner/*; prod'da açık)
