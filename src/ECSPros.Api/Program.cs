@@ -850,6 +850,28 @@ app.UseWhen(
 // misharix ile aynı kök yollar, partial'lardaki /ikons/... referansları değişmeden çalışır)
 // Bot-dışı yollar (sepet/ödeme/hesabım/benzer/api…): X-Robots-Tag başlığı — statiklerden ÖNCE
 app.UseMiddleware<ECSPros.Api.Services.XRobotsTagMiddleware>();
+// Mobil uygulama bağlantı doğrulaması (2026-09-06): /.well-known/assetlinks.json (Android App Links) ve
+// /.well-known/apple-app-site-association (iOS Universal Links — UZANTISIZ, yine application/json).
+// Varsayılan statik sağlayıcı nokta-klasörleri gizler ve uzantısız dosyayı sunmaz; bu yüzden ayrı sağlayıcı.
+// 200 + yönlendirmesiz: www doğrudan; apex (misharitalia.com) nginx'te 301 istisnası ile buraya proxy'lenir.
+{
+    var wellKnown = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"), ".well-known");
+    if (Directory.Exists(wellKnown))
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            RequestPath = "/.well-known",
+            FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(wellKnown),
+            ServeUnknownFileTypes = true,
+            DefaultContentType = "application/json",
+            OnPrepareResponse = ctx =>
+            {
+                ctx.Context.Response.ContentType = "application/json";
+                ctx.Context.Response.Headers.CacheControl = "public, max-age=3600";
+            }
+        });
+    else
+        Log.Warning("/.well-known dizini yok ({Yol}) — App Links / Universal Links doğrulama dosyaları sunulmayacak.", wellKnown);
+}
 app.UseStaticFiles(new StaticFileOptions
 {
     // Layout'taki css/js referansları asp-append-version'lı (?v=hash) — içerik değişince
