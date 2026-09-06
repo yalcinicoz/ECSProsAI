@@ -415,6 +415,13 @@ canlı değişiklik için kullanıcı onayı ve bakım penceresi.
 - [ ] **13.3 FE5** otomatik fatura politikası + 17 kargodaki siparişin faturalanması.
 - [ ] **13.4 FE6/FE7** ERP (E7, ekip arkadaşı) ve pazaryeri yöntemleri (FAZ 4'e bağlı).
 
+## FAZ 14 — ERP eşleme (PLAN TASLAK 2026-09-06)
+
+- [ ] **14.0** `docs/erp-esleme-plani.md` K1-K6 kullanıcı onayı (K1/K2 ekip arkadaşıyla).
+- [ ] **14.1 EM0-EM1** ERP sözlüğü + hedef anahtarı "erp:nebim" + çok koşullu kural modeli.
+- [ ] **14.2 EM2-EM3** config sözlüklerinin tablolara taşınması (worker: ekip arkadaşı) + eşlenmemiş kuyruğu/panel sekmeleri.
+- [ ] **14.3 EM4-EM5** tedarikçi eşlemesi + E7 çözücü.
+
 ## Önerilen sıra
 
 1. **FAZ 0'daki hazır girdiler** hangileriyse önce onların açtığı fazlar (örn. DNS geldiyse F5.1 hemen).
