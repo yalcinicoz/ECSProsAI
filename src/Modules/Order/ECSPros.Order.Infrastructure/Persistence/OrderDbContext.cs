@@ -16,6 +16,10 @@ public class OrderDbContext : DbContext, IOrderDbContext
     public DbSet<OrderTax> OrderTaxes => Set<OrderTax>();
     public DbSet<OrderPayment> OrderPayments => Set<OrderPayment>();
     public DbSet<InvoiceSeries> InvoiceSeries => Set<InvoiceSeries>();
+    public DbSet<InvoiceSeriesCounter> InvoiceSeriesCounters => Set<InvoiceSeriesCounter>();
+    public DbSet<ChannelInvoiceSettings> ChannelInvoiceSettings => Set<ChannelInvoiceSettings>();
+    public DbSet<ChannelInvoiceSeriesBinding> ChannelInvoiceSeriesBindings => Set<ChannelInvoiceSeriesBinding>();
+    public DbSet<InvoiceDispatch> InvoiceDispatches => Set<InvoiceDispatch>();
     public DbSet<OrderNumberSeries> OrderNumberSeries => Set<OrderNumberSeries>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
@@ -55,5 +59,25 @@ public class OrderDbContext : DbContext, IOrderDbContext
             }
         }
         return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IOrderTransactionScope> BeginTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        if (Database.CurrentTransaction is not null) return JoinedTransactionScope.Instance;
+        var tx = await Database.BeginTransactionAsync(cancellationToken);
+        return new OwnedTransactionScope(tx);
+    }
+
+    private sealed class JoinedTransactionScope : IOrderTransactionScope
+    {
+        public static readonly JoinedTransactionScope Instance = new();
+        public Task CommitAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    private sealed class OwnedTransactionScope(Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction tx) : IOrderTransactionScope
+    {
+        public Task CommitAsync(CancellationToken cancellationToken = default) => tx.CommitAsync(cancellationToken);
+        public ValueTask DisposeAsync() => tx.DisposeAsync();
     }
 }

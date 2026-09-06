@@ -29,6 +29,20 @@ public class CancelInvoiceCommandHandler : IRequestHandler<CancelInvoiceCommand,
         invoice.UpdatedAt = DateTime.UtcNow;
         invoice.UpdatedBy = request.CancelledBy;
 
+        // FE4: entegratöre gitmiş faturanın iptali de entegratöre bildirilir (K9: e-arşiv iptal; e-fatura iade — FE5)
+        if (invoice.SendMethod == Domain.Entities.InvoiceSendMethods.IntegratorApi
+            && invoice.IntegratorStatus is "sent" or "accepted")
+        {
+            invoice.IntegratorStatus = "cancel_queued";
+            _context.InvoiceDispatches.Add(new Domain.Entities.InvoiceDispatch
+            {
+                InvoiceId = invoice.Id, Action = Domain.Entities.InvoiceDispatchActions.Cancel,
+                Status = Domain.Entities.InvoiceDispatchStatuses.Pending,
+                IntegrationContractId = invoice.IntegrationContractId, NextAttemptAt = DateTime.UtcNow,
+                CreatedBy = request.CancelledBy
+            });
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
         return Result.Success(true);
     }

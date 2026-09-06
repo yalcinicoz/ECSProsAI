@@ -372,3 +372,26 @@ public class FeedRunStatusConfiguration : IEntityTypeConfiguration<FeedRunStatus
         b.HasIndex(x => x.FirmPlatformId).IsUnique();
     }
 }
+
+/// <summary>EM0: ERP sözlüğü — (hedef sistem, tür, kod) tekil; ad araması için indeks.</summary>
+public class ErpReferenceItemConfiguration : IEntityTypeConfiguration<ErpReferenceItem>
+{
+    public void Configure(EntityTypeBuilder<ErpReferenceItem> b)
+    {
+        b.ToTable("erp_reference_items");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.TargetSystem).HasMaxLength(50).IsRequired();
+        b.Property(x => x.Kind).HasMaxLength(30).IsRequired();
+        b.Property(x => x.Code).HasMaxLength(100).IsRequired();
+        b.Property(x => x.Name).HasMaxLength(300).IsRequired();
+        b.Property(x => x.ParentCode).HasMaxLength(100);
+        b.Property(x => x.Source).HasMaxLength(20).IsRequired();
+        b.Property(x => x.RawJson).HasColumnType("jsonb");
+        b.Property(x => x.MappedTargetKind).HasMaxLength(30);
+        b.Property(x => x.MappedTargetLabel).HasMaxLength(300);
+        b.HasIndex(x => new { x.TargetSystem, x.Kind, x.Code }).IsUnique().HasFilter("\"IsDeleted\" = false");
+        b.HasIndex(x => new { x.TargetSystem, x.Kind, x.Name });
+        b.HasIndex(x => new { x.TargetSystem, x.Kind, x.ParentCode });
+        b.HasQueryFilter(x => !x.IsDeleted);
+    }
+}

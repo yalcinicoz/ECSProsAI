@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronDown, ChevronUp, Plus, Search, Trash2, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Database, Plus, Search, Trash2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
@@ -12,15 +12,24 @@ import { pickTr } from './marketplaceOverview'
 
 // ── Types (API DTO karşılıkları) ─────────────────────────────────────────────
 
+interface MappingCondition { attributeTypeCode: string; valueId: string; valueLabel: string }
+// EM1: kural = 1..n koşul (VE) → hedef; attributeTypeCode/valueId eski tek-koşul alanları (geriye uyum)
 interface MappingRule {
   order: number
-  attributeTypeCode: string
-  valueId: string
-  valueLabel: string
+  attributeTypeCode?: string | null
+  valueId?: string | null
+  valueLabel?: string | null
   targetExternalId: string
   targetName: string
   targetPath: string
+  conditions?: MappingCondition[] | null
 }
+const ruleConditions = (r: MappingRule): MappingCondition[] =>
+  r.conditions && r.conditions.length > 0
+    ? r.conditions
+    : r.attributeTypeCode && r.valueId
+      ? [{ attributeTypeCode: r.attributeTypeCode, valueId: r.valueId, valueLabel: r.valueLabel ?? '' }]
+      : [{ attributeTypeCode: '', valueId: '', valueLabel: '' }]
 interface PoolTarget { externalId: string; name: string; path: string }
 interface CategoryMapping {
   id: string
@@ -186,7 +195,7 @@ function CategoryEditor({
   const [target, setTarget] = useState<MpCategory | null>(
     m?.targetExternalId ? { externalId: m.targetExternalId, name: m.targetName ?? '', path: m.targetPath ?? '' } : null,
   )
-  const [rules, setRules] = useState<MappingRule[]>(m?.rules ?? [])
+  const [rules, setRules] = useState<MappingRule[]>((m?.rules ?? []).map((r) => ({ ...r, conditions: ruleConditions(r) })))
   const [pool, setPool] = useState<PoolTarget[]>(m?.pool ?? [])
   const [poolAdd, setPoolAdd] = useState<MpCategory | null>(null)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -207,7 +216,11 @@ function CategoryEditor({
         targetExternalId: target?.externalId ?? null,
         targetName: target?.name ?? null,
         targetPath: target?.path ?? null,
-        rules: kind === 'rules' ? rules.map((r, i) => ({ ...r, order: i })) : null,
+        rules: kind === 'rules' ? rules.map((r, i) => {
+          const conds = (r.conditions ?? []).filter((c) => c.attributeTypeCode && c.valueId)
+          return { order: i, conditions: conds, attributeTypeCode: conds[0]?.attributeTypeCode ?? null, valueId: conds[0]?.valueId ?? null, valueLabel: conds[0]?.valueLabel ?? null,
+            targetExternalId: r.targetExternalId, targetName: r.targetName, targetPath: r.targetPath }
+        }) : null,
         pool: kind === 'pool' ? pool : null,
       }
       await api.put('/marketplaces/mapping/category', body)
@@ -228,6 +241,17 @@ function CategoryEditor({
   }
   function updateRule(i: number, patch: Partial<MappingRule>) {
     setRules((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)))
+  }
+  function updateCondition(i: number, ci: number, patch: Partial<MappingCondition>) {
+    setRules((rs) => rs.map((r, idx) => idx !== i ? r : {
+      ...r, conditions: (r.conditions ?? []).map((c, cidx) => (cidx === ci ? { ...c, ...patch } : c)),
+    }))
+  }
+  function addCondition(i: number) {
+    setRules((rs) => rs.map((r, idx) => idx !== i ? r : { ...r, conditions: [...(r.conditions ?? []), { attributeTypeCode: '', valueId: '', valueLabel: '' }] }))
+  }
+  function removeCondition(i: number, ci: number) {
+    setRules((rs) => rs.map((r, idx) => idx !== i ? r : { ...r, conditions: (r.conditions ?? []).filter((_, cidx) => cidx !== ci) }))
   }
   function moveRule(i: number, dir: -1 | 1) {
     setRules((rs) => {
@@ -295,37 +319,49 @@ function CategoryEditor({
       ) : kind === 'rules' ? (
         <div>
           <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-s)' }}>
-            KURALLAR — ilk eşleşen kazanır (ör. cinsiyet = Kadın → Kadın Pantolon)
+            KURALLAR — ilk eşleşen kazanır; bir kuralın TÜM koşulları sağlanmalı (ör. cinsiyet = Kadın VE yaş grubu = Çocuk → Kız Çocuk Kot Ceket)
           </p>
           {rules.map((r, i) => (
             <div key={i} className="rounded-lg p-2.5 mb-2" style={{ border: '1px solid var(--border)' }}>
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <select
-                  className="inp"
-                  style={{ width: 160 }}
-                  value={r.attributeTypeCode}
-                  onChange={(e) => updateRule(i, { attributeTypeCode: e.target.value, valueId: '', valueLabel: '' })}
-                >
-                  <option value="">Özellik seç…</option>
-                  {ownTypes.map((t) => (
-                    <option key={t.id} value={t.code ?? t.id}>{pickTr(t.nameI18n, t.code ?? '')}</option>
+              <div className="flex items-start gap-2 mb-2 flex-wrap">
+                <div className="flex flex-col gap-1.5">
+                  {(r.conditions ?? []).map((c, ci) => (
+                    <div key={ci} className="flex items-center gap-2">
+                      {ci > 0 && <span className="text-[10px] font-semibold w-6" style={{ color: 'var(--brand)' }}>VE</span>}
+                      {ci === 0 && <span className="w-6" />}
+                      <select
+                        className="inp"
+                        style={{ width: 160 }}
+                        value={c.attributeTypeCode}
+                        onChange={(e) => updateCondition(i, ci, { attributeTypeCode: e.target.value, valueId: '', valueLabel: '' })}
+                      >
+                        <option value="">Özellik seç…</option>
+                        {ownTypes.map((t) => (
+                          <option key={t.id} value={t.code ?? t.id}>{pickTr(t.nameI18n, t.code ?? '')}</option>
+                        ))}
+                      </select>
+                      <span className="text-xs" style={{ color: 'var(--text-s)' }}>=</span>
+                      <select
+                        className="inp"
+                        style={{ width: 160 }}
+                        value={c.valueId}
+                        onChange={(e) => {
+                          const v = typeValues(c.attributeTypeCode).find((x) => x.id === e.target.value)
+                          updateCondition(i, ci, { valueId: e.target.value, valueLabel: v ? pickTr(v.nameI18n) : '' })
+                        }}
+                      >
+                        <option value="">Değer seç…</option>
+                        {typeValues(c.attributeTypeCode).map((v) => (
+                          <option key={v.id} value={v.id}>{pickTr(v.nameI18n)}</option>
+                        ))}
+                      </select>
+                      {(r.conditions ?? []).length > 1 && (
+                        <button onClick={() => removeCondition(i, ci)} className="p-1 hover:opacity-70" title="Koşulu kaldır"><X size={13} /></button>
+                      )}
+                    </div>
                   ))}
-                </select>
-                <span className="text-xs" style={{ color: 'var(--text-s)' }}>=</span>
-                <select
-                  className="inp"
-                  style={{ width: 160 }}
-                  value={r.valueId}
-                  onChange={(e) => {
-                    const v = typeValues(r.attributeTypeCode).find((x) => x.id === e.target.value)
-                    updateRule(i, { valueId: e.target.value, valueLabel: v ? pickTr(v.nameI18n) : '' })
-                  }}
-                >
-                  <option value="">Değer seç…</option>
-                  {typeValues(r.attributeTypeCode).map((v) => (
-                    <option key={v.id} value={v.id}>{pickTr(v.nameI18n)}</option>
-                  ))}
-                </select>
+                  <button onClick={() => addCondition(i)} className="text-[11px] self-start ml-8 underline" style={{ color: 'var(--brand)' }}>+ koşul ekle (VE)</button>
+                </div>
                 <div className="ml-auto flex items-center gap-1">
                   <button onClick={() => moveRule(i, -1)} className="p-1 hover:opacity-70" title="Yukarı"><ChevronUp size={14} /></button>
                   <button onClick={() => moveRule(i, 1)} className="p-1 hover:opacity-70" title="Aşağı"><ChevronDown size={14} /></button>
@@ -345,7 +381,7 @@ function CategoryEditor({
             </div>
           ))}
           <Button size="sm" variant="ghost" onClick={() =>
-            setRules((rs) => [...rs, { order: rs.length, attributeTypeCode: '', valueId: '', valueLabel: '', targetExternalId: '', targetName: '', targetPath: '' }])}>
+            setRules((rs) => [...rs, { order: rs.length, conditions: [{ attributeTypeCode: '', valueId: '', valueLabel: '' }], targetExternalId: '', targetName: '', targetPath: '' }])}>
             <Plus size={13} /> Kural Ekle
           </Button>
           <div className="mt-3">
@@ -727,10 +763,14 @@ function AttributesTab({
   const [expanded, setExpanded] = useState<string | null>(null)
   const [rowMsg, setRowMsg] = useState<Record<string, string>>({})
 
-  const { data: targets = [] } = useQuery<MappedTarget[]>({
+  const erp = isErpTarget(marketplace)
+  const { data: mappedTargets = [] } = useQuery<MappedTarget[]>({
     queryKey: ['mapped-targets', marketplace],
     queryFn: async () => (await api.get(`/marketplaces/mapping/mapped-targets?marketplace=${marketplace}`)).data.data ?? [],
+    enabled: !erp,
   })
+  // EM3: ERP özellikleri kategoriye bağlı değildir — tek sanal hedef "*"
+  const targets: MappedTarget[] = erp ? [{ externalId: '*', name: 'Tüm ERP özellikleri ve varyant eksenleri', path: '', viaGroups: [] }] : mappedTargets
 
   const effectiveTarget = targetId ?? targets[0]?.externalId ?? null
 
@@ -832,9 +872,12 @@ function AttributesTab({
                       >
                         <option value="map_values">Değer eşle</option>
                         <option value="pass_literal" disabled={!a.allowCustom}>Serbest geçir</option>
+                        {erp && <option value="ignore">Yok say (katalog özelliği yapılmaz)</option>}
                         <option value="fixed_value">Sabit değer</option>
                       </select>
-                      {strategy === 'fixed_value' ? (
+                      {strategy === 'ignore' ? (
+                        <span className="text-xs" style={{ color: 'var(--text-s)' }}>ERP'den gelen bu alan katalog özelliğine yazılmaz.</span>
+                      ) : strategy === 'fixed_value' ? (
                         <input
                           className="inp"
                           style={{ width: 140 }}
@@ -961,6 +1004,221 @@ function ReviewTab({ marketplace, onGoCategory }: { marketplace: string; onGoCat
 
 // ── Ana Sayfa ────────────────────────────────────────────────────────────────
 
+// ── EM0: ERP sözlüğü (docs/erp-esleme-plani.md §2.1) ─────────────────────────
+interface ErpItem { id: string; targetSystem: string; kind: string; code: string; name: string; parentCode: string | null; isActive: boolean; source: string; lastSeenAt: string; isMapped: boolean }
+const ERP_KINDS: Record<string, string> = {
+  product_group: 'Ürün grubu', variant_axis: 'Varyant ekseni', attribute_type: 'Özellik tipi', attribute_value: 'Özellik değeri', supplier: 'Tedarikçi', color: 'Renk',
+}
+const isErpTarget = (t: string) => t.startsWith('erp:')
+
+function ErpDictionaryPanel({ target }: { target: string }) {
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState(true)
+  const [kind, setKind] = useState('product_group')
+  const [q, setQ] = useState('')
+  const [form, setForm] = useState({ code: '', name: '', parentCode: '' })
+  const [error, setError] = useState('')
+  const { data: items = [] } = useQuery<ErpItem[]>({
+    queryKey: ['erp-items', target, kind, q],
+    queryFn: async () => (await api.get(`/marketplaces/mapping/erp-items?target=${encodeURIComponent(target)}&kind=${kind}&q=${encodeURIComponent(q)}&limit=500`)).data.data ?? [],
+  })
+  const invalidate = () => { queryClient.invalidateQueries({ queryKey: ['erp-items'] }); queryClient.invalidateQueries({ queryKey: ['mapping-targets'] }) }
+  const upsert = useMutation({
+    mutationFn: async () => { await api.post('/marketplaces/mapping/erp-items', { target, kind, code: form.code, name: form.name, parentCode: form.parentCode || null }) },
+    onSuccess: () => { invalidate(); setForm({ code: '', name: '', parentCode: '' }); setError('') },
+    onError: (e: unknown) => setError((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Kaydedilemedi.'),
+  })
+  const deactivate = useMutation({
+    mutationFn: async (id: string) => { await api.delete(`/marketplaces/mapping/erp-items/${id}`) },
+    onSuccess: () => { invalidate(); setError('') },
+    onError: (e: unknown) => setError((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Pasife alınamadı.'),
+  })
+  const needsParent = kind === 'attribute_value'
+  return (
+    <div className="card overflow-hidden p-0 mb-4">
+      <button className="w-full flex items-center justify-between px-4 py-3" onClick={() => setOpen((o) => !o)}>
+        <div className="text-left">
+          <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>ERP Sözlüğü</h2>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>
+            ERP tarafındaki grup, özellik, değer ve tedarikçi kodları. Worker doldurur (EM2/EM3); elle ekleme serbest. Eşleme hedefleri buradan seçilir.
+          </p>
+        </div>
+        {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-3" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="flex flex-wrap items-end gap-2 pt-3">
+            <div>
+              <label className="flbl">Tür</label>
+              <select className="inp" value={kind} onChange={(e) => setKind(e.target.value)}>
+                {Object.entries(ERP_KINDS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
+            </div>
+            <div><label className="flbl">Kod</label><input className="inp font-mono" style={{ width: 140 }} value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} placeholder="ERP kodu" /></div>
+            <div><label className="flbl">Ad</label><input className="inp" style={{ width: 220 }} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="ERP'deki ad" /></div>
+            {(needsParent || kind === 'product_group') && (
+              <div><label className="flbl">{needsParent ? 'Özellik tipi kodu *' : 'Üst grup kodu'}</label><input className="inp font-mono" style={{ width: 140 }} value={form.parentCode} onChange={(e) => setForm((f) => ({ ...f, parentCode: e.target.value }))} /></div>
+            )}
+            <Button size="sm" onClick={() => upsert.mutate()} loading={upsert.isPending} disabled={!form.code.trim() || !form.name.trim() || (needsParent && !form.parentCode.trim())}><Plus size={14} /> Ekle / Güncelle</Button>
+            <div className="ml-auto"><input className="inp" style={{ width: 200 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Sözlükte ara" /></div>
+          </div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <div className="max-h-64 overflow-y-auto rounded-lg" style={{ border: '1px solid var(--border)' }}>
+            <table className="w-full">
+              <thead>
+                <tr style={{ background: 'var(--surface2)' }}>
+                  {['KOD', 'AD', 'ÜST', 'KAYNAK', 'DURUM', ''].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--text-s)' }}>{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((i) => (
+                  <tr key={i.id} style={{ borderTop: '1px solid var(--border)' }}>
+                    <td className="px-3 py-1.5 font-mono text-xs" style={{ color: 'var(--text)' }}>{i.code}</td>
+                    <td className="px-3 py-1.5 text-sm" style={{ color: 'var(--text)' }}>{i.name}</td>
+                    <td className="px-3 py-1.5 font-mono text-xs" style={{ color: 'var(--text-s)' }}>{i.parentCode ?? '—'}</td>
+                    <td className="px-3 py-1.5 text-xs" style={{ color: 'var(--text-s)' }}>{i.source === 'sync' ? 'ERP' : 'elle'}</td>
+                    <td className="px-3 py-1.5">
+                      {!i.isActive ? <Badge variant="neutral">Pasif</Badge>
+                        : i.kind === 'product_group' ? (i.isMapped ? <Badge variant="success">Eşli</Badge> : <Badge variant="danger">Eşlenmemiş</Badge>)
+                        : <Badge variant="info">Aktif</Badge>}
+                    </td>
+                    <td className="px-3 py-1.5 text-right">
+                      {i.isActive && <button className="text-xs underline" style={{ color: 'var(--text-s)' }} onClick={() => deactivate.mutate(i.id)}>pasife al</button>}
+                    </td>
+                  </tr>
+                ))}
+                {items.length === 0 && <tr><td colSpan={6} className="px-3 py-4 text-center text-xs" style={{ color: 'var(--text-s)' }}>Bu türde sözlük kaydı yok — yukarıdan ekleyin ya da ERP senkronunu bekleyin.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── EM3: ERP tedarikçi eşlemesi (sözlük satırı → cari) ───────────────────────
+function ErpSuppliersTab({ target }: { target: string }) {
+  const queryClient = useQueryClient()
+  const [error, setError] = useState('')
+  const { data: items = [] } = useQuery<ErpItem[] & { mappedTargetId?: string | null; mappedTargetLabel?: string | null }[]>({
+    queryKey: ['erp-items', target, 'supplier', ''],
+    queryFn: async () => (await api.get(`/marketplaces/mapping/erp-items?target=${encodeURIComponent(target)}&kind=supplier&limit=1000`)).data.data ?? [],
+  })
+  const { data: accounts = [] } = useQuery<{ id: string; code: string; title: string }[]>({
+    queryKey: ['supplier-accounts-for-erp'],
+    queryFn: async () => (await api.get('/accounts?accountType=supplier&pageSize=500')).data.data?.items ?? [],
+    staleTime: 60_000,
+  })
+  const save = useMutation({
+    mutationFn: async (p: { id: string; targetId: string | null; label: string | null }) => {
+      await api.put(`/marketplaces/mapping/erp-items/${p.id}/target`, { targetKind: p.targetId ? 'account' : null, targetId: p.targetId, label: p.label })
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['erp-items'] }); setError('') },
+    onError: (err) => setError(errText(err, 'Kaydedilemedi.')),
+  })
+  const rows = items as (ErpItem & { mappedTargetId?: string | null; mappedTargetLabel?: string | null })[]
+  return (
+    <div className="card overflow-hidden p-0">
+      <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+        <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Tedarikçiler</h2>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>
+          ERP tedarikçi kodu → bizim tedarikçi carisi. Eşlenmemiş tedarikçili ürünlerde kart tedarikçisi boş kalır (ürün yine yazılır).
+        </p>
+      </div>
+      <table className="w-full">
+        <thead>
+          <tr style={{ background: 'var(--surface2)' }}>
+            {['ERP KODU', 'ERP ADI', 'BİZİM CARİ', 'DURUM'].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--text-s)' }}>{h}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((i) => (
+            <tr key={i.id} style={{ borderTop: '1px solid var(--border)' }}>
+              <td className="px-3 py-2 font-mono text-xs" style={{ color: 'var(--text)' }}>{i.code}</td>
+              <td className="px-3 py-2 text-sm" style={{ color: 'var(--text)' }}>{i.name}</td>
+              <td className="px-3 py-2">
+                <select className="inp" style={{ minWidth: 260 }} value={i.mappedTargetId ?? ''}
+                  onChange={(e) => { const a = accounts.find((x) => x.id === e.target.value); save.mutate({ id: i.id, targetId: e.target.value || null, label: a ? `${a.code} · ${a.title}` : null }) }}>
+                  <option value="">— eşlenmemiş —</option>
+                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} · {a.title}</option>)}
+                </select>
+              </td>
+              <td className="px-3 py-2">{i.mappedTargetId ? <Badge variant="success">Eşli</Badge> : <Badge variant="danger">Eşlenmemiş</Badge>}</td>
+            </tr>
+          ))}
+          {rows.length === 0 && <tr><td colSpan={4} className="px-3 py-6 text-center text-xs" style={{ color: 'var(--text-s)' }}>Sözlükte tedarikçi kaydı yok — ERP Sözlüğü panelinden "Tedarikçi" türüyle ekleyin ya da senkronu bekleyin.</td></tr>}
+        </tbody>
+      </table>
+      {error && <p className="px-4 py-2 text-sm text-red-500">{error}</p>}
+    </div>
+  )
+}
+
+// ── EM3: eşlenmemiş ERP grupları kuyruğu (ERP grubu → bizim grup, birebir) ───
+function ErpUnmappedTab({ target, overview, onSaved }: { target: string; overview: Overview; onSaved: () => void }) {
+  const queryClient = useQueryClient()
+  const [choice, setChoice] = useState<Record<string, string>>({})
+  const [error, setError] = useState('')
+  const { data: items = [] } = useQuery<ErpItem[]>({
+    queryKey: ['erp-items', target, 'product_group', ''],
+    queryFn: async () => (await api.get(`/marketplaces/mapping/erp-items?target=${encodeURIComponent(target)}&kind=product_group&limit=2000`)).data.data ?? [],
+  })
+  const unmapped = items.filter((i) => i.isActive && !i.isMapped)
+  const save = useMutation({
+    mutationFn: async (i: ErpItem) => {
+      const groupId = choice[i.id]
+      await api.put('/marketplaces/mapping/category', {
+        marketplace: target, productGroupId: groupId, mappingKind: 'direct',
+        targetExternalId: i.code, targetName: i.name, targetPath: `${i.name} [${i.code}]`, rules: null, pool: null,
+      })
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['erp-items'] }); onSaved(); setError('') },
+    onError: (err) => setError(errText(err, 'Eşlenemedi.')),
+  })
+  return (
+    <div className="card overflow-hidden p-0">
+      <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+        <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Eşlenmemiş ERP grupları ({unmapped.length})</h2>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>
+          ERP'den gelen ama bizim bir grubumuza bağlanmamış gruplar. Eşlenmemiş gruptaki ürünler aktarılmaz. Bizde karşılığı yoksa önce Katalog → Ürün Grupları'ndan grup açın (K4).
+        </p>
+      </div>
+      <table className="w-full">
+        <thead>
+          <tr style={{ background: 'var(--surface2)' }}>
+            {['ERP KODU', 'ERP ADI', 'BİZİM GRUP', ''].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--text-s)' }}>{h}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {unmapped.map((i) => {
+            const g = overview.groups.find((x) => x.productGroupId === choice[i.id])
+            const already = g?.mapping && g.mapping.status === 'active'
+            return (
+              <tr key={i.id} style={{ borderTop: '1px solid var(--border)' }}>
+                <td className="px-3 py-2 font-mono text-xs" style={{ color: 'var(--text)' }}>{i.code}</td>
+                <td className="px-3 py-2 text-sm" style={{ color: 'var(--text)' }}>{i.name}</td>
+                <td className="px-3 py-2">
+                  <select className="inp" style={{ minWidth: 240 }} value={choice[i.id] ?? ''} onChange={(e) => setChoice((c) => ({ ...c, [i.id]: e.target.value }))}>
+                    <option value="">— grup seç —</option>
+                    {overview.groups.map((gr) => <option key={gr.productGroupId} value={gr.productGroupId}>{gr.name}{gr.mapping ? ' (eşli)' : ''}</option>)}
+                  </select>
+                  {already && <p className="text-[11px] mt-0.5" style={{ color: '#f59e0b' }}>Bu grubun mevcut eşlemesi bu ERP koduyla DEĞİŞTİRİLİR.</p>}
+                </td>
+                <td className="px-3 py-2 text-right">
+                  <Button size="sm" disabled={!choice[i.id]} loading={save.isPending && save.variables?.id === i.id} onClick={() => save.mutate(i)}>Eşle</Button>
+                </td>
+              </tr>
+            )
+          })}
+          {unmapped.length === 0 && <tr><td colSpan={4} className="px-3 py-6 text-center text-xs" style={{ color: 'var(--text-s)' }}>Eşlenmemiş ERP grubu yok.</td></tr>}
+        </tbody>
+      </table>
+      {error && <p className="px-4 py-2 text-sm text-red-500">{error}</p>}
+    </div>
+  )
+}
+
 export function MappingPage() {
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -968,11 +1226,19 @@ export function MappingPage() {
   const tab = searchParams.get('tab') ?? 'kategoriler'
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
 
-  const { data: refSummary = [] } = useQuery<{ marketplace: string; categoryCount: number }[]>({
-    queryKey: ['mp-ref-summary-mini'],
-    queryFn: async () => (await api.get('/marketplaces/reference-sync/summary')).data.data ?? [],
+  // EM0: hedefler = pazaryerleri (referans özeti) + ERP servisleri ("erp:<kod>")
+  const { data: targetsData } = useQuery<{ marketplaces: { marketplace: string; categoryCount: number }[]; erp: { key: string; serviceCode: string; name: string; hasContract: boolean; groupCount: number }[] }>({
+    queryKey: ['mapping-targets'],
+    queryFn: async () => (await api.get('/marketplaces/mapping/targets')).data.data,
     staleTime: 60 * 1000,
   })
+  const isErp = isErpTarget(marketplace)
+  const { data: erpGroups = [] } = useQuery<ErpItem[]>({
+    queryKey: ['erp-items', marketplace, 'product_group', ''],
+    queryFn: async () => (await api.get(`/marketplaces/mapping/erp-items?target=${encodeURIComponent(marketplace)}&kind=product_group&limit=2000`)).data.data ?? [],
+    enabled: isErp,
+  })
+  const erpUnmappedCount = erpGroups.filter((i) => i.isActive && !i.isMapped).length
 
   const { data: overview, isLoading } = useQuery<Overview>({
     queryKey: ['mapping-overview', marketplace],
@@ -989,14 +1255,16 @@ export function MappingPage() {
     setSearchParams((p) => { const n = new URLSearchParams(p); n.set(key, value); return n }, { replace: true })
   }
 
+  const refSummary = targetsData?.marketplaces ?? []
   const marketplaces = refSummary.length > 0 ? refSummary : [{ marketplace: 'trendyol', categoryCount: 0 }]
+  const erpTargets = targetsData?.erp ?? []
 
   return (
     <div className="p-6">
       <div className="mb-4">
-        <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Pazaryeri Eşleştirme</h1>
+        <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Eşleştirme — Pazaryeri &amp; ERP</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>
-          Ürün gruplarınızı, özelliklerinizi ve değerlerinizi pazaryeri karşılıklarıyla eşleyin
+          Ürün gruplarınızı, özelliklerinizi ve değerlerinizi pazaryeri ya da ERP karşılıklarıyla eşleyin. Eşleme grup + özellik koşuluyla kurulur (kurallı kip).
         </p>
       </div>
 
@@ -1023,6 +1291,23 @@ export function MappingPage() {
             </button>
           )
         })}
+        {erpTargets.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setParam('mp', t.key)}
+            title={t.hasContract ? `${t.groupCount} ERP grubu sözlükte` : 'Bu ERP için sözleşme yok — sözlük yine de elle doldurulabilir'}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-sm font-medium transition-all"
+            style={
+              marketplace === t.key
+                ? { background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--brand)' }
+                : { background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }
+            }
+          >
+            <Database size={16} />
+            ERP: {t.name}
+            {!t.hasContract && <span className="text-[10px]" style={{ color: '#f59e0b' }}>sözleşmesiz</span>}
+          </button>
+        ))}
         <div className="ml-auto flex items-center gap-3 text-xs" style={{ color: 'var(--text-m)' }}>
           {overview ? (
             <>
@@ -1037,15 +1322,18 @@ export function MappingPage() {
       {/* Sekmeler */}
       <div className="flex items-center gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
         {[
-          ['kategoriler', 'Kategori Eşleme'],
+          ['kategoriler', isErp ? 'Ürün Grubu Eşleme' : 'Kategori Eşleme'],
           ['ozellikler', 'Özellik & Değer'],
           ['gozden', `Gözden Geçir${overview && overview.reviewCount > 0 ? ` (${overview.reviewCount})` : ''}`],
+          ...(isErp ? [['tedarikciler', 'Tedarikçiler'], ['eslenmemis', `Eşlenmemiş${erpUnmappedCount > 0 ? ` (${erpUnmappedCount})` : ''}`]] : []),
         ].map(([key, label]) => (
           <button key={key} className={cn('stab', tab === key && 'active')} onClick={() => setParam('tab', key)}>
             {label}
           </button>
         ))}
       </div>
+
+      {isErp && <ErpDictionaryPanel target={marketplace} />}
 
       {isLoading || !overview ? (
         <PageSpinner />
@@ -1060,6 +1348,10 @@ export function MappingPage() {
         />
       ) : tab === 'ozellikler' ? (
         <AttributesTab marketplace={marketplace} ownTypes={ownTypes} initialTarget={null} />
+      ) : tab === 'tedarikciler' && isErp ? (
+        <ErpSuppliersTab target={marketplace} />
+      ) : tab === 'eslenmemis' && isErp ? (
+        <ErpUnmappedTab target={marketplace} overview={overview} onSaved={() => queryClient.invalidateQueries({ queryKey: ['mapping-overview', marketplace] })} />
       ) : (
         <ReviewTab
           marketplace={marketplace}

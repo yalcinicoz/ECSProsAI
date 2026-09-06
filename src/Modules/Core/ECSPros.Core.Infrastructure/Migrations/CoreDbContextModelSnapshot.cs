@@ -421,9 +421,6 @@ namespace ECSPros.Core.Infrastructure.Migrations
                     b.Property<Guid>("FirmId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("InvoiceSeriesId")
-                        .HasColumnType("uuid");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 

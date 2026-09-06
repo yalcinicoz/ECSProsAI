@@ -33,7 +33,8 @@ public class GetInvoicesQueryHandler : IRequestHandler<GetInvoicesQuery, Result<
                 i.Id, i.OrderId, i.InvoiceNumber, i.InvoiceType,
                 i.InvoiceDate, i.RecipientName, i.GrandTotal,
                 i.Status, i.IntegratorStatus, i.CreatedAt,
-                i.IntegratorInvoiceUrl != null && i.IntegratorInvoiceUrl != ""))
+                i.IntegratorInvoiceUrl != null && i.IntegratorInvoiceUrl != "",
+                i.NumberSource, i.ExternalSource))
             .ToListAsync(cancellationToken);
 
         return Result.Success(new PagedResult<InvoiceListDto>(items, total, request.Page, request.PageSize));

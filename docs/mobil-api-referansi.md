@@ -209,6 +209,28 @@ TikTok Events API, GA4 Measurement Protocol — Faz D) kanal + consent kuralıyl
 - `dedupId` istemci üretir (uuid); aynı event'i tekrar gönderirse sunucu yok sayar.
 - Yanıt her zaman `{ success: true }` (takip kapalıyken de); rate limit `store-sensitive`.
 
+## 10. Push bildirim cihaz kaydı — `/api/store/push-devices` (2026-09-05)
+
+Bildirim gönderimi için cihazın FCM/APNs token'ı üye bilgisiyle birlikte sunucuda tutulur
+(`storefront.push_devices`). Kayıt **anonim de yapılabilir** (bildirim izni girişten önce
+istenebilir); girişliyken (üye JWT'siyle) gönderilen kayıt üyeye bağlanır. Uçlar idempotenttir.
+
+| Method | Uç | Erişim | Açıklama |
+|--------|-----|--------|---------|
+| POST | `/api/store/push-devices` | Anonim/Üye | Kayıt + güncelleme (aynı token'a upsert). Gövde: `{ "firmPlatformId": "...", "platform": "android\|ios", "token": "<FCM/APNs token>", "deviceId": "<kurulum kimliği — önerilir>", "appVersion": "1.4.2" }` |
+| POST | `/api/store/push-devices/revoke` | Anonim | Kaydı iptal eder. Gövde: `{ "firmPlatformId": "...", "token": "..." }` — token yoksa da başarı döner |
+| GET | `/api/store/push-devices/mine?firmPlatformId=` | Üye | Üyenin kayıtlı cihazları (token maskeli, son 8 karakter) |
+
+**İstemci sözleşmesi — token şu anlarda POST edilir:**
+1. Token ilk alındığında ve FCM/APNs token'ı her DEĞİŞTİĞİNDE (`deviceId` sabit gönderilir —
+   sunucu aynı `deviceId`'nin eski token kayıtlarını `revoked`'a çeker).
+2. **Girişten hemen sonra** (üye JWT'siyle) → kayıt üyeye bağlanır.
+3. **Çıkıştan hemen sonra** (JWT'siz) → üye bağlantısı kopar; cihaz anonim kayda döner.
+   Üyeye özel bildirim istenmiyorsa çıkışta `revoke` da çağrılabilir.
+
+Gönderilen üye durumu kaydın SON halidir: girişli istek bağlar, girişsiz istek koparır.
+Platform yalnız `android`/`ios`; token 10-512 karakter. Rate limit: `store-auth` havuzu.
+
 ## Bilinen eksikler / notlar
 
 1. **Kargo takip**: gerçek servis yok — sitedeki `/uyeliksiz-kargo-takip` demo HTML'dir.

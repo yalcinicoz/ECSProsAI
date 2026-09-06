@@ -3,6 +3,8 @@ namespace ECSPros.Integration.Application.Adapters;
 public interface IEInvoiceAdapter
 {
     string ServiceCode { get; }
+    /// <summary>Gerçek API'ye bağlı olmayan taslak adaptör — canlı sözleşmede (testMode=false) gönderim ENGELLENİR (FE4).</summary>
+    bool IsStub => false;
     Task<EInvoiceResult> SendInvoiceAsync(Guid firmIntegrationId, EInvoicePayload payload, CancellationToken ct = default);
     Task<EInvoiceResult> CancelInvoiceAsync(Guid firmIntegrationId, string invoiceUuid, string reason, CancellationToken ct = default);
     Task<string?> GetInvoiceStatusAsync(Guid firmIntegrationId, string invoiceUuid, CancellationToken ct = default);

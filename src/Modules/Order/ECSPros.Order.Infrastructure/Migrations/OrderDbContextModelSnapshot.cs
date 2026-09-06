@@ -24,6 +24,99 @@ namespace ECSPros.Order.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ECSPros.Order.Domain.Entities.ChannelInvoiceSeriesBinding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FirmPlatformId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InvoiceSeriesId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("InvoiceType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceSeriesId");
+
+                    b.HasIndex("FirmPlatformId", "InvoiceType")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("ord_channel_invoice_series", "order");
+                });
+
+            modelBuilder.Entity("ECSPros.Order.Domain.Entities.ChannelInvoiceSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FirmPlatformId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SendMethod")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FirmPlatformId")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("ord_channel_invoice_settings", "order");
+                });
+
             modelBuilder.Entity("ECSPros.Order.Domain.Entities.GiftCard", b =>
                 {
                     b.Property<Guid>("Id")
@@ -192,9 +285,23 @@ namespace ECSPros.Order.Infrastructure.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<Guid?>("Ettn")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExternalDocumentId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ExternalSource")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<decimal>("GrandTotal")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid?>("IntegrationContractId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("IntegratorInvoiceUrl")
                         .HasMaxLength(500)
@@ -227,7 +334,7 @@ namespace ECSPros.Order.Infrastructure.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)");
 
-                    b.Property<Guid>("InvoiceSeriesId")
+                    b.Property<Guid?>("InvoiceSeriesId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("InvoiceType")
@@ -245,6 +352,13 @@ namespace ECSPros.Order.Infrastructure.Migrations
 
                     b.Property<int?>("LegacyInvoiceId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("NumberSource")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("internal");
 
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid");
@@ -273,6 +387,10 @@ namespace ECSPros.Order.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("SendMethod")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -298,6 +416,12 @@ namespace ECSPros.Order.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Ettn")
+                        .IsUnique()
+                        .HasFilter("\"Ettn\" IS NOT NULL");
+
+                    b.HasIndex("IntegratorStatus");
+
                     b.HasIndex("InvoiceSeriesId");
 
                     b.HasIndex("LegacyInvoiceId")
@@ -308,10 +432,96 @@ namespace ECSPros.Order.Infrastructure.Migrations
 
                     b.HasIndex("PackageId");
 
+                    b.HasIndex("ExternalSource", "InvoiceNumber")
+                        .IsUnique()
+                        .HasFilter("\"ExternalSource\" IS NOT NULL");
+
                     b.HasIndex("InvoiceSerial", "InvoiceYear", "InvoiceSequence")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"NumberSource\" = 'internal'");
 
                     b.ToTable("ord_invoices", "order");
+                });
+
+            modelBuilder.Entity("ECSPros.Order.Domain.Entities.InvoiceDispatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("Attempt")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("IntegrationContractId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("MaxAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ProviderCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Dictionary<string, object>>("RequestSnapshot")
+                        .HasColumnType("jsonb");
+
+                    b.Property<Dictionary<string, object>>("ResponseSnapshot")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("Status", "NextAttemptAt");
+
+                    b.ToTable("ord_invoice_dispatches", "order");
                 });
 
             modelBuilder.Entity("ECSPros.Order.Domain.Entities.InvoiceItem", b =>
@@ -401,23 +611,20 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("EArchiveSerial")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)");
-
-                    b.Property<string>("EInvoiceSerial")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)");
-
-                    b.Property<string>("ExportSerial")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)");
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid>("FirmId")
                         .HasColumnType("uuid");
+
+                    b.Property<Guid?>("IntegrationContractId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("InvoiceType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -429,6 +636,14 @@ namespace ECSPros.Order.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<DateTime?>("RetiredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Serial")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -437,7 +652,62 @@ namespace ECSPros.Order.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("IntegrationContractId");
+
+                    b.HasIndex("FirmId", "Serial")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
+
                     b.ToTable("ord_invoice_series", "order");
+                });
+
+            modelBuilder.Entity("ECSPros.Order.Domain.Entities.InvoiceSeriesCounter", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InvoiceSeriesId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastInvoiceDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("LastSequence")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Year")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceSeriesId", "Year")
+                        .IsUnique();
+
+                    b.ToTable("ord_invoice_series_counters", "order");
                 });
 
             modelBuilder.Entity("ECSPros.Order.Domain.Entities.Order", b =>
@@ -1945,6 +2215,17 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.ToTable("ord_shipment_items", "order");
                 });
 
+            modelBuilder.Entity("ECSPros.Order.Domain.Entities.ChannelInvoiceSeriesBinding", b =>
+                {
+                    b.HasOne("ECSPros.Order.Domain.Entities.InvoiceSeries", "InvoiceSeries")
+                        .WithMany("ChannelBindings")
+                        .HasForeignKey("InvoiceSeriesId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("InvoiceSeries");
+                });
+
             modelBuilder.Entity("ECSPros.Order.Domain.Entities.GiftCardTransaction", b =>
                 {
                     b.HasOne("ECSPros.Order.Domain.Entities.GiftCard", "GiftCard")
@@ -1961,8 +2242,7 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.HasOne("ECSPros.Order.Domain.Entities.InvoiceSeries", "InvoiceSeries")
                         .WithMany("Invoices")
                         .HasForeignKey("InvoiceSeriesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("ECSPros.Order.Domain.Entities.Order", "Order")
                         .WithMany("Invoices")
@@ -1975,6 +2255,17 @@ namespace ECSPros.Order.Infrastructure.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("ECSPros.Order.Domain.Entities.InvoiceDispatch", b =>
+                {
+                    b.HasOne("ECSPros.Order.Domain.Entities.Invoice", "Invoice")
+                        .WithMany("Dispatches")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Invoice");
+                });
+
             modelBuilder.Entity("ECSPros.Order.Domain.Entities.InvoiceItem", b =>
                 {
                     b.HasOne("ECSPros.Order.Domain.Entities.Invoice", "Invoice")
@@ -1984,6 +2275,17 @@ namespace ECSPros.Order.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Invoice");
+                });
+
+            modelBuilder.Entity("ECSPros.Order.Domain.Entities.InvoiceSeriesCounter", b =>
+                {
+                    b.HasOne("ECSPros.Order.Domain.Entities.InvoiceSeries", "InvoiceSeries")
+                        .WithMany("Counters")
+                        .HasForeignKey("InvoiceSeriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("InvoiceSeries");
                 });
 
             modelBuilder.Entity("ECSPros.Order.Domain.Entities.OrderDiscount", b =>
@@ -2136,11 +2438,17 @@ namespace ECSPros.Order.Infrastructure.Migrations
 
             modelBuilder.Entity("ECSPros.Order.Domain.Entities.Invoice", b =>
                 {
+                    b.Navigation("Dispatches");
+
                     b.Navigation("Items");
                 });
 
             modelBuilder.Entity("ECSPros.Order.Domain.Entities.InvoiceSeries", b =>
                 {
+                    b.Navigation("ChannelBindings");
+
+                    b.Navigation("Counters");
+
                     b.Navigation("Invoices");
                 });
 

@@ -575,6 +575,9 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("DefaultAttributeValueId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -608,6 +611,8 @@ namespace ECSPros.Catalog.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AttributeTypeId");
+
+                    b.HasIndex("DefaultAttributeValueId");
 
                     b.HasIndex("ProductGroupId", "AttributeTypeId")
                         .IsUnique();

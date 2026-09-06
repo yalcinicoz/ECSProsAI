@@ -41,3 +41,11 @@ export const RETURN_STATUS_MAP: Record<string, { label: string; variant: 'succes
   refunded: { label: 'Geri Ödendi', variant: 'success' },
   rejected: { label: 'Reddedildi', variant: 'danger' },
 }
+
+// FE1: fatura numarasının kaynağı
+export const INVOICE_SOURCE_MAP: Record<string, string> = {
+  internal: 'Bizim seri',
+  erp: 'ERP',
+  marketplace: 'Pazaryeri',
+  integrator: 'Entegratör',
+}

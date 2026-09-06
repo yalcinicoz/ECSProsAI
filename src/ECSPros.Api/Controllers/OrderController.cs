@@ -8,6 +8,17 @@ using ECSPros.Order.Application.Commands.ConvertQuoteToOrder;
 using ECSPros.Order.Application.Commands.CreateGiftCard;
 using ECSPros.Order.Application.Commands.CreateInvoice;
 using ECSPros.Order.Application.Commands.ManageOrderNumberSeries;
+using ECSPros.Order.Application.Commands.UpdateInvoiceSeries;
+using ECSPros.Order.Application.Commands.RegisterExternalInvoice;
+using ECSPros.Order.Application.Queries.GetInvoiceSeriesGaps;
+using ECSPros.Order.Application.Queries.GetInvoiceDispatches;
+using ECSPros.Order.Application.Queries.GetEInvoiceContracts;
+using ECSPros.Order.Application.Commands.RetryInvoiceDispatch;
+using ECSPros.Order.Application.Commands.ResendInvoice;
+using ECSPros.Order.Application.Commands.DeactivateInvoiceSeries;
+using ECSPros.Order.Application.Commands.ActivateInvoiceSeries;
+using ECSPros.Order.Application.Commands.SetChannelInvoiceSettings;
+using ECSPros.Order.Application.Queries.GetChannelInvoiceSettings;
 using ECSPros.Order.Application.Commands.CreateOrder;
 using ECSPros.Order.Application.Commands.CreateQuote;
 using ECSPros.Order.Application.Commands.CreateReturn;
@@ -302,15 +313,17 @@ public class OrderController : ControllerBase
         return Ok(new { success = true });
     }
 
-    /// <summary>Fatura serileri (P1d — fatura oluşturma formunun seri seçicisi).</summary>
+    /// <summary>Fatura serileri — FE0: tekil, TİPLİ (firma/tip süzgeci; kanal yuvası ve fatura formu seçicileri).</summary>
     [HttpGet("invoice-series")]
-    public async Task<IActionResult> GetInvoiceSeries([FromQuery] bool activeOnly = true, CancellationToken ct = default)
+    public async Task<IActionResult> GetInvoiceSeries(
+        [FromQuery] bool activeOnly = true, [FromQuery] Guid? firmId = null, [FromQuery] string? invoiceType = null,
+        CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetInvoiceSeriesQuery(activeOnly), ct);
+        var result = await _mediator.Send(new GetInvoiceSeriesQuery(activeOnly, firmId, invoiceType), ct);
         return Ok(new { success = true, data = result.Value });
     }
 
-    /// <summary>Yeni fatura serisi tanımlar (P1d).</summary>
+    /// <summary>Yeni fatura serisi tanımlar (FE0: serial + tip zorunlu; aynı harfler firma içinde bir kez).</summary>
     [HttpPost("invoice-series")]
     public async Task<IActionResult> CreateInvoiceSeries([FromBody] CreateInvoiceSeriesRequest request, CancellationToken ct)
     {
@@ -318,10 +331,134 @@ public class OrderController : ControllerBase
         if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
 
         var result = await _mediator.Send(new CreateInvoiceSeriesCommand(
-            request.FirmId, request.Name, request.EArchiveSerial,
-            request.EInvoiceSerial ?? "", request.ExportSerial ?? "", uid), ct);
+            request.FirmId, request.Serial, request.InvoiceType, request.Name, request.Description,
+            request.IntegrationContractId, uid), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Created("/api/orders/invoice-series", new { success = true, data = new { id = result.Value } });
+    }
+
+    /// <summary>FE1: dış numaralı (ERP / pazaryeri / entegratör) fatura kaydı — idempotent (kaynak, numara).</summary>
+    [HttpPost("{orderId:guid}/invoices/external")]
+    public async Task<IActionResult> RegisterExternalInvoice(Guid orderId, [FromBody] RegisterExternalInvoiceRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
+        var result = await _mediator.Send(new RegisterExternalInvoiceCommand(
+            orderId, request.PackageId, request.NumberSource, request.ExternalSource, request.InvoiceNumber,
+            request.InvoiceType, request.InvoiceDate, request.Ettn, request.ExternalDocumentId,
+            request.RecipientName, request.RecipientAddress, request.RecipientTaxOffice, request.RecipientTaxNumber,
+            request.RecipientCompanyName, request.IntegratorInvoiceUrl, uid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        var data = new { id = result.Value!.InvoiceId, alreadyExisted = result.Value.AlreadyExisted };
+        return result.Value.AlreadyExisted ? Ok(new { success = true, data }) : Created($"/api/orders/invoices/{data.id}", new { success = true, data });
+    }
+
+    /// <summary>FE3: firma bazlı e-fatura entegratör sözleşmeleri (seri formu seçicisi; kimlik değeri dönmez).</summary>
+    [HttpGet("invoice-series/contracts")]
+    public async Task<IActionResult> GetEInvoiceContracts([FromQuery] Guid? firmId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetEInvoiceContractsQuery(firmId), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>FE4: gönderim kuyruğu (status: pending|done|dead|blocked; invoiceId ile fatura zaman çizelgesi).</summary>
+    [HttpGet("invoice-dispatches")]
+    public async Task<IActionResult> GetInvoiceDispatches([FromQuery] string? status, [FromQuery] Guid? invoiceId,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetInvoiceDispatchesQuery(status, invoiceId, page, Math.Clamp(pageSize, 1, 200)), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>FE4: ölü/engelli gönderim işini yeniden kuyruğa alır.</summary>
+    [HttpPost("invoice-dispatches/{id:guid}/retry")]
+    public async Task<IActionResult> RetryInvoiceDispatch(Guid id, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
+        var result = await _mediator.Send(new RetryInvoiceDispatchCommand(id, uid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>FE4: fatura için yeni gönderim işi açar (bekleyen iş yoksa).</summary>
+    [HttpPost("invoices/{invoiceId:guid}/resend")]
+    public async Task<IActionResult> ResendInvoice(Guid invoiceId, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
+        var result = await _mediator.Send(new ResendInvoiceCommand(invoiceId, uid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { dispatchId = result.Value } });
+    }
+
+    /// <summary>FE1: seri boşluk denetimi (sayaç ↔ kayıtlı numaralar).</summary>
+    [HttpGet("invoice-series/{id:guid}/gaps")]
+    public async Task<IActionResult> GetInvoiceSeriesGaps(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetInvoiceSeriesGapsQuery(id), ct);
+        if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Seri ad/açıklama/sözleşme günceller (serial ve tip değişmez).</summary>
+    [HttpPut("invoice-series/{id:guid}")]
+    public async Task<IActionResult> UpdateInvoiceSeries(Guid id, [FromBody] UpdateInvoiceSeriesRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
+        var result = await _mediator.Send(new UpdateInvoiceSeriesCommand(id, request.Name, request.Description, request.IntegrationContractId, uid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Seriyi pasife alır; kanal bağı varsa yerine geçecek (aynı tip) seri zorunlu, bağlar taşınır.</summary>
+    [HttpPost("invoice-series/{id:guid}/deactivate")]
+    public async Task<IActionResult> DeactivateInvoiceSeries(Guid id, [FromBody] DeactivateInvoiceSeriesRequest? request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
+        var result = await _mediator.Send(new DeactivateInvoiceSeriesCommand(id, request?.ReplacementSeriesId, uid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    [HttpPost("invoice-series/{id:guid}/activate")]
+    public async Task<IActionResult> ActivateInvoiceSeries(Guid id, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
+        var result = await _mediator.Send(new ActivateInvoiceSeriesCommand(id, uid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>Kanal faturalama ayarları: gönderim yöntemi + e-arşiv/e-fatura/ihracat yuvaları + uyarılar (FE0 §2.3).</summary>
+    [HttpGet("invoice-settings/channels")]
+    public async Task<IActionResult> GetChannelInvoiceSettings(CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetChannelInvoiceSettingsQuery(), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    [HttpGet("invoice-settings/channels/{firmPlatformId:guid}")]
+    public async Task<IActionResult> GetChannelInvoiceSettingsOne(Guid firmPlatformId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetChannelInvoiceSettingsQuery(firmPlatformId), ct);
+        if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value!.First() });
+    }
+
+    /// <summary>Kanal faturalama ayarını yazar — yuva tipi ile seri tipi uyuşmazsa 400.</summary>
+    [HttpPut("invoice-settings/channels/{firmPlatformId:guid}")]
+    public async Task<IActionResult> SetChannelInvoiceSettings(Guid firmPlatformId, [FromBody] SetChannelInvoiceSettingsRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
+        var result = await _mediator.Send(new SetChannelInvoiceSettingsCommand(
+            firmPlatformId, request.SendMethod ?? "manual", request.EArchiveSeriesId, request.EInvoiceSeriesId, request.ExportSeriesId, uid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
     }
 
     /// <summary>Entegratör PDF adresini kaydeder (P1d — storefront "Faturayı Görüntüle" kaynağı).</summary>
@@ -525,8 +662,18 @@ public record ReceiveReturnRequest(Guid WarehouseId, string? InspectionNotes);
 public record UpsertNumberSeriesRequest(string Prefix, int PadLength, bool IsActive = true);
 
 public record CreateInvoiceSeriesRequest(
-    Guid FirmId, string? Name, string EArchiveSerial,
-    string? EInvoiceSerial = null, string? ExportSerial = null);
+    Guid FirmId, string Serial, string InvoiceType, string? Name = null, string? Description = null,
+    Guid? IntegrationContractId = null);
+
+public record UpdateInvoiceSeriesRequest(string? Name, string? Description, Guid? IntegrationContractId);
+public record RegisterExternalInvoiceRequest(
+    string NumberSource, string ExternalSource, string InvoiceNumber, string InvoiceType, DateTime InvoiceDate,
+    Guid? PackageId = null, Guid? Ettn = null, string? ExternalDocumentId = null,
+    string? RecipientName = null, string? RecipientAddress = null, string? RecipientTaxOffice = null,
+    string? RecipientTaxNumber = null, string? RecipientCompanyName = null, string? IntegratorInvoiceUrl = null);
+public record DeactivateInvoiceSeriesRequest(Guid? ReplacementSeriesId);
+public record SetChannelInvoiceSettingsRequest(
+    string? SendMethod, Guid? EArchiveSeriesId, Guid? EInvoiceSeriesId, Guid? ExportSeriesId);
 
 public record SetInvoiceIntegratorUrlRequest(string? IntegratorInvoiceUrl);
 

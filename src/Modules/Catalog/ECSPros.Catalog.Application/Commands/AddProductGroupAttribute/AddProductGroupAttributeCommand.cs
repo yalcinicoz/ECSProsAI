@@ -11,7 +11,8 @@ public record AddProductGroupAttributeCommand(
     Guid AttributeTypeId,
     bool IsVariant,
     bool IsRequired,
-    int SortOrder
+    int SortOrder,
+    Guid? DefaultAttributeValueId = null
 ) : IRequest<Result<Guid>>;
 
 public class AddProductGroupAttributeCommandHandler : IRequestHandler<AddProductGroupAttributeCommand, Result<Guid>>
@@ -35,6 +36,10 @@ public class AddProductGroupAttributeCommandHandler : IRequestHandler<AddProduct
         if (existing)
             return Result.Failure<Guid>("Bu özellik zaten bu gruba ekli.");
 
+        if (request.DefaultAttributeValueId is { } dv
+            && !await _db.AttributeValues.AnyAsync(v => v.Id == dv && v.AttributeTypeId == request.AttributeTypeId, ct))
+            return Result.Failure<Guid>("Varsayılan değer bu özellik tipine ait değil.");
+
         var pga = new ProductGroupAttribute
         {
             Id = Guid.NewGuid(),
@@ -43,6 +48,7 @@ public class AddProductGroupAttributeCommandHandler : IRequestHandler<AddProduct
             IsVariant = request.IsVariant,
             IsRequired = request.IsRequired,
             SortOrder = request.SortOrder,
+            DefaultAttributeValueId = request.DefaultAttributeValueId,
             CreatedAt = DateTime.UtcNow
         };
 

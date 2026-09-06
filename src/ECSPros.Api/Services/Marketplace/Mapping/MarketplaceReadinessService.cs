@@ -308,12 +308,10 @@ public sealed class MarketplaceReadinessService(
                 var rules = string.IsNullOrEmpty(m.RulesJson) ? [] :
                     JsonSerializer.Deserialize<List<MappingRuleDto>>(m.RulesJson, JsonOpts) ?? [];
                 var byType = ownValues.GetValueOrDefault(productId);
-                foreach (var rule in rules.OrderBy(r => r.Order))
-                {
-                    if (!typeIdByCode.TryGetValue(rule.AttributeTypeCode, out var typeId)) continue;
-                    if (byType?.TryGetValue(typeId, out var vals) == true && vals.Contains(rule.ValueId))
-                        return (rule.TargetExternalId, rule.TargetPath, null);
-                }
+                // EM1: tek çözücü — kuralın TÜM koşulları (VE) sağlanmalı
+                var hit = MappingRuleResolver.Resolve(rules,
+                    code => typeIdByCode.TryGetValue(code, out var tid) ? tid : null, byType);
+                if (hit is not null) return (hit.TargetExternalId, hit.TargetPath, null);
                 // hiçbir kural tutmadı → varsayılan hedef, o da yoksa eksik
                 return m.Target is not null
                     ? (m.Target, m.TargetPath, null)

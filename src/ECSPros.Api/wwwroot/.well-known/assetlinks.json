@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.misharix.misharitalia",
+      "sha256_cert_fingerprints": [
+        "6C:7A:7F:1C:31:B4:0A:89:70:5A:1F:D2:97:54:34:3D:5F:E6:03:6D:80:55:77:F9:CD:17:A6:03:4E:59:3B:E8",
+        "C5:FA:0D:36:22:7B:F0:BD:7B:D8:C5:F5:F3:AC:90:1F:59:52:BF:7A:0C:F3:32:97:B1:CB:16:F0:22:A7:10:EA"
+      ]
+    }
+  }
+]

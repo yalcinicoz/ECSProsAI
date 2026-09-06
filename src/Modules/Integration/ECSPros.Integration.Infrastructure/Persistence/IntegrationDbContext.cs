@@ -28,6 +28,7 @@ public class IntegrationDbContext(DbContextOptions<IntegrationDbContext> options
     public DbSet<MarketplaceIssue> MarketplaceIssues => Set<MarketplaceIssue>();
     public DbSet<FeedJob> FeedJobs => Set<FeedJob>();               // FAZ 10 / A6
     public DbSet<FeedRunStatus> FeedStatuses => Set<FeedRunStatus>(); // FAZ 10 / A6
+    public DbSet<ErpReferenceItem> ErpReferenceItems => Set<ErpReferenceItem>(); // EM0
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

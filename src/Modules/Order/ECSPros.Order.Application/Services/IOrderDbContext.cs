@@ -22,6 +22,10 @@ public interface IOrderDbContext
     DbSet<ReturnItem> ReturnItems { get; }
     DbSet<ReturnRefund> ReturnRefunds { get; }
     DbSet<InvoiceSeries> InvoiceSeries { get; }
+    DbSet<InvoiceSeriesCounter> InvoiceSeriesCounters { get; }
+    DbSet<ChannelInvoiceSettings> ChannelInvoiceSettings { get; }
+    DbSet<ChannelInvoiceSeriesBinding> ChannelInvoiceSeriesBindings { get; }
+    DbSet<InvoiceDispatch> InvoiceDispatches { get; }
     DbSet<OrderNumberSeries> OrderNumberSeries { get; }
     DbSet<Quote> Quotes { get; }
     DbSet<QuoteItem> QuoteItems { get; }
@@ -29,4 +33,13 @@ public interface IOrderDbContext
     DbSet<GiftCardTransaction> GiftCardTransactions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Numara tahsisi + fatura yazımı gibi bölünmez adımlar için. Zaten açık bir
+    /// transaction varsa ona katılır (Commit/Dispose no-op) — iç içe çağrılarda güvenli.</summary>
+    Task<IOrderTransactionScope> BeginTransactionAsync(CancellationToken cancellationToken = default);
+}
+
+public interface IOrderTransactionScope : IAsyncDisposable
+{
+    Task CommitAsync(CancellationToken cancellationToken = default);
 }

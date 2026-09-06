@@ -26,7 +26,8 @@ public record ProductGroupAttributeDto(
     bool IsVariant,
     bool IsRequired,
     bool IsPrimaryAxis,
-    int SortOrder
+    int SortOrder,
+    Guid? DefaultAttributeValueId = null
 );
 
 public record ProductGroupAxisSubAttributeDto(
@@ -79,7 +80,7 @@ public class GetProductGroupsQueryHandler : IRequestHandler<GetProductGroupsQuer
                          .OrderBy(a => a.SortOrder)
                          .Select(a => new ProductGroupAttributeDto(
                              a.Id, a.AttributeTypeId, a.AttributeType.Code,
-                             a.AttributeType.NameI18n, a.IsVariant, a.IsRequired, a.IsPrimaryAxis, a.SortOrder))
+                             a.AttributeType.NameI18n, a.IsVariant, a.IsRequired, a.IsPrimaryAxis, a.SortOrder, a.DefaultAttributeValueId))
                          .ToList(),
             pg.AxisSubAttributes
                 .OrderBy(s => s.AxisAttributeTypeId).ThenBy(s => s.SortOrder)

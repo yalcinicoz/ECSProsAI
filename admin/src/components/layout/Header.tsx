@@ -14,6 +14,7 @@ const BREADCRUMB: Record<string, string> = {
   '/orders':                       'Siparişler',
   '/orders/returns':               'İadeler',
   '/orders/invoices':              'Faturalar',
+  '/orders/invoice-series':        'Fatura Serileri',
   '/orders/quotes':                'Teklifler',
   '/orders/gift-cards':            'Hediye Kartları',
   '/crm/members':                  'Üyeler',

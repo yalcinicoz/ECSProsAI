@@ -58,6 +58,15 @@ interface MemberSession {
   userAgent?: string
 }
 
+interface PushDevice {
+  id: string
+  platform: string
+  token: string
+  appVersion?: string
+  status: string
+  lastSeenAt: string
+}
+
 interface Engagement {
   favoriteCount: number
   collectionCount: number
@@ -101,6 +110,12 @@ export function MemberDetailPage() {
     enabled: !!id,
     retry: false,
   })
+  const { data: pushDevicesData } = useQuery<{ items: PushDevice[] }>({
+    queryKey: ['member-push-devices', id],
+    queryFn: async () => (await api.get(`/store-notifications/push-devices?memberId=${id}&pageSize=50`)).data.data,
+  })
+  const pushDevices = pushDevicesData?.items ?? []
+
   const { data: engagement } = useQuery<Engagement>({
     queryKey: ['member-engagement', id],
     queryFn: async () => (await api.get(`/crm/members/${id}/engagement`)).data.data,
@@ -349,6 +364,26 @@ export function MemberDetailPage() {
                 <span>{new Date(s.createdAt).toLocaleString('tr-TR')}</span>
                 {s.ipAddress && <span>· {s.ipAddress}</span>}
                 {s.userAgent && <span className="truncate" title={s.userAgent}>· {s.userAgent.slice(0, 40)}…</span>}
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        <Section title={`Mobil Bildirim Cihazları (${pushDevices.length})`}>
+          {pushDevices.length === 0 && (
+            <p className="text-sm" style={{ color: 'var(--text-s)' }}>Kayıtlı mobil cihaz yok.</p>
+          )}
+          <div className="space-y-1 max-h-64 overflow-y-auto">
+            {pushDevices.map(d => (
+              <div key={d.id} className="flex items-center gap-2 text-xs p-1.5 rounded"
+                style={{ color: 'var(--text-s)' }}>
+                <Badge variant={d.status === 'active' ? 'success' : 'neutral'}>
+                  {d.status === 'active' ? 'Aktif' : 'İptal'}
+                </Badge>
+                <span className="uppercase font-medium">{d.platform}</span>
+                {d.appVersion && <span>· v{d.appVersion}</span>}
+                <span>· Son görülme: {new Date(d.lastSeenAt).toLocaleString('tr-TR')}</span>
+                <span className="truncate" title={d.token}>· …{d.token.slice(-8)}</span>
               </div>
             ))}
           </div>

@@ -10,8 +10,20 @@ public class Invoice : BaseEntity
     /// <summary>Faturanın bağlı olduğu paket — normal akış paket başına faturadır;
     /// null, tek-fatura istisna akışı ve eski kayıtlar içindir (F2, karar 2026-07-19).</summary>
     public Guid? PackageId { get; set; }
-    public Guid InvoiceSeriesId { get; set; }
+    /// <summary>Bizim serimizden üretilen faturada dolu; dış numaralı (ERP/pazaryeri/entegratör) faturada null (FE0 §2.4).</summary>
+    public Guid? InvoiceSeriesId { get; set; }
     public string InvoiceType { get; set; } = string.Empty;
+    /// <summary>internal | erp | marketplace | integrator — bkz. <see cref="InvoiceNumberSources"/>.</summary>
+    public string NumberSource { get; set; } = InvoiceNumberSources.Internal;
+    /// <summary>Kesim anındaki kanal gönderim yöntemi (anlık görüntü; bkz. <see cref="InvoiceSendMethods"/>).</summary>
+    public string? SendMethod { get; set; }
+    /// <summary>Kullanılan entegratör sözleşmesi (seri üzerinden çözülür; anlık görüntü).</summary>
+    public Guid? IntegrationContractId { get; set; }
+    /// <summary>GİB evrensel tekil tanımlayıcı (ETTN).</summary>
+    public Guid? Ettn { get; set; }
+    /// <summary>Dış kaynaktaki belge kimliği ve kaynağı (erp | marketplace:&lt;kanal&gt; | integrator:&lt;kod&gt;).</summary>
+    public string? ExternalDocumentId { get; set; }
+    public string? ExternalSource { get; set; }
     public string InvoiceSerial { get; set; } = string.Empty;
     public string InvoiceYear { get; set; } = string.Empty;
     public int InvoiceSequence { get; set; }
@@ -48,6 +60,7 @@ public class Invoice : BaseEntity
     public Guid? CancelsInvoiceId { get; set; }
 
     public Order Order { get; set; } = null!;
-    public InvoiceSeries InvoiceSeries { get; set; } = null!;
+    public InvoiceSeries? InvoiceSeries { get; set; }
     public ICollection<InvoiceItem> Items { get; set; } = new List<InvoiceItem>();
+    public ICollection<InvoiceDispatch> Dispatches { get; set; } = new List<InvoiceDispatch>();
 }

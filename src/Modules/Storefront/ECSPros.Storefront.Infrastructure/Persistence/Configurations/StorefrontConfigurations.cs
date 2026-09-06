@@ -518,3 +518,23 @@ public class ProductQuestionConfiguration : IEntityTypeConfiguration<ProductQues
         builder.HasQueryFilter(q => !q.IsDeleted);
     }
 }
+
+/// <summary>Mobil push cihaz kaydı (2026-09-05): kanal+token tekil; üye cihazları ve
+/// token rotasyonu (DeviceIdentifier) indeksli.</summary>
+public class PushDeviceConfiguration : IEntityTypeConfiguration<PushDevice>
+{
+    public void Configure(EntityTypeBuilder<PushDevice> builder)
+    {
+        builder.ToTable("push_devices");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Platform).HasMaxLength(20).IsRequired();
+        builder.Property(d => d.Token).HasMaxLength(512).IsRequired();
+        builder.Property(d => d.DeviceIdentifier).HasMaxLength(100);
+        builder.Property(d => d.AppVersion).HasMaxLength(30);
+        builder.Property(d => d.Status).HasMaxLength(20).IsRequired();
+        builder.HasIndex(d => new { d.FirmPlatformId, d.Token }).IsUnique(); // upsert hedefi
+        builder.HasIndex(d => new { d.FirmPlatformId, d.MemberId, d.Status });     // üyenin cihazları
+        builder.HasIndex(d => new { d.FirmPlatformId, d.DeviceIdentifier });       // token rotasyonu
+        builder.HasQueryFilter(d => !d.IsDeleted);
+    }
+}

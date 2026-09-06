@@ -542,6 +542,7 @@ if (nodeOptions.GenelWorkerRolu) // FAZ 10 / A2
     builder.Services.AddHostedService<ECSPros.Api.Services.Marketplace.Reference.MarketplaceReferenceRefreshWorker>();
     builder.Services.AddHostedService<ECSPros.Api.Services.Legacy.LegacySyncWorker>();
     builder.Services.AddHostedService<ECSPros.Api.Services.Fulfillment.CargoNotifyWorker>();
+    builder.Services.AddHostedService<ECSPros.Api.Services.Invoicing.InvoiceDispatchWorker>(); // FE4: fatura gönderim outbox'ı (InvoiceDispatch:Enabled, varsayılan KAPALI)
     builder.Services.AddHostedService<ECSPros.Api.Services.Tracking.TrackingDispatchWorker>();
     builder.Services.AddHostedService<ECSPros.Api.Services.Tracking.Feed.FeedGeneratorWorker>(); // İE-5: feed üretimi (Feeds:Enabled, 6 sa) // İE-2: commerce event outbox dispatcher (Tracking:Enabled; adapter'lar Faz D) // OP5: kargo bildirim outbox'ı (varsayılan KAPALI — KG1'de açılır)
 }
@@ -762,6 +763,18 @@ var app = builder.Build();
 // ─── Middleware Pipeline ────────────────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseForwardedHeaders(); // FAZ 11 / K1: IP/proto/host kullanan tüm middleware'lerden önce.
+// 2026-09-06: art arda eğik çizgi normalize (mobil istemci "baseUrl/" + "/api/..." → "//api/..." → 404).
+// Yalnız yol düzeltilir; sorgu dizesi ve gövde dokunulmaz; yönlendirme yapılmaz (aynı istek işlenir).
+app.Use((ctx, next) =>
+{
+    var path = ctx.Request.Path.Value;
+    if (path is not null && path.Contains("//"))
+    {
+        while (path.Contains("//")) path = path.Replace("//", "/");
+        ctx.Request.Path = path;
+    }
+    return next();
+});
 
 // Üç swagger dokümanı, her biri BAĞIMSIZ adreste (arayüzde doküman seçici yok):
 //   /swagger-partner → "partner" (dış entegratörler, yalnız /api/partner/*; prod'da açık)
@@ -849,6 +862,28 @@ app.UseWhen(
 // misharix ile aynı kök yollar, partial'lardaki /ikons/... referansları değişmeden çalışır)
 // Bot-dışı yollar (sepet/ödeme/hesabım/benzer/api…): X-Robots-Tag başlığı — statiklerden ÖNCE
 app.UseMiddleware<ECSPros.Api.Services.XRobotsTagMiddleware>();
+// Mobil uygulama bağlantı doğrulaması (2026-09-06): /.well-known/assetlinks.json (Android App Links) ve
+// /.well-known/apple-app-site-association (iOS Universal Links — UZANTISIZ, yine application/json).
+// Varsayılan statik sağlayıcı nokta-klasörleri gizler ve uzantısız dosyayı sunmaz; bu yüzden ayrı sağlayıcı.
+// 200 + yönlendirmesiz: www doğrudan; apex (misharitalia.com) nginx'te 301 istisnası ile buraya proxy'lenir.
+{
+    var wellKnown = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"), ".well-known");
+    if (Directory.Exists(wellKnown))
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            RequestPath = "/.well-known",
+            FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(wellKnown),
+            ServeUnknownFileTypes = true,
+            DefaultContentType = "application/json",
+            OnPrepareResponse = ctx =>
+            {
+                ctx.Context.Response.ContentType = "application/json";
+                ctx.Context.Response.Headers.CacheControl = "public, max-age=3600";
+            }
+        });
+    else
+        Log.Warning("/.well-known dizini yok ({Yol}) — App Links / Universal Links doğrulama dosyaları sunulmayacak.", wellKnown);
+}
 app.UseStaticFiles(new StaticFileOptions
 {
     // Layout'taki css/js referansları asp-append-version'lı (?v=hash) — içerik değişince

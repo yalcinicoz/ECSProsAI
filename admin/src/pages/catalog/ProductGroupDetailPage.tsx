@@ -26,6 +26,7 @@ interface AttributeType {
   dataType: string
   isActive: boolean
   sortOrder: number
+  values?: { id: string; nameI18n: Record<string, string> }[]
 }
 
 interface AxisSubAttribute {
@@ -95,15 +96,15 @@ export function ProductGroupDetailPage() {
   // Add attribute modal
   const [addAttrOpen, setAddAttrOpen] = useState(false)
   const [attrForm, setAttrForm] = useState<{
-    attributeTypeId: string | null; isVariant: boolean; isRequired: boolean; sortOrder: number
-  }>({ attributeTypeId: null, isVariant: false, isRequired: false, sortOrder: 0 })
+    attributeTypeId: string | null; isVariant: boolean; isRequired: boolean; sortOrder: number; defaultAttributeValueId: string | null
+  }>({ attributeTypeId: null, isVariant: false, isRequired: false, sortOrder: 0, defaultAttributeValueId: null })
 
   // Edit attribute modal
   const [editAttrOpen, setEditAttrOpen] = useState(false)
   const [editAttrTarget, setEditAttrTarget] = useState<ProductGroupAttribute | null>(null)
   const [editAttrForm, setEditAttrForm] = useState<{
-    isVariant: boolean; isRequired: boolean; sortOrder: number
-  }>({ isVariant: false, isRequired: false, sortOrder: 0 })
+    isVariant: boolean; isRequired: boolean; sortOrder: number; defaultAttributeValueId: string | null
+  }>({ isVariant: false, isRequired: false, sortOrder: 0, defaultAttributeValueId: null })
 
   // Delete group confirm
   const [deleteGroupOpen, setDeleteGroupOpen] = useState(false)
@@ -151,6 +152,7 @@ export function ProductGroupDetailPage() {
       await api.post(`/catalog/product-groups/${id}/attributes`, {
         attributeTypeId: attrForm.attributeTypeId, isVariant: attrForm.isVariant,
         isRequired: attrForm.isRequired, sortOrder: attrForm.sortOrder,
+        defaultAttributeValueId: attrForm.defaultAttributeValueId || null,
       })
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['product-groups'] }); setAddAttrOpen(false) },
@@ -161,6 +163,7 @@ export function ProductGroupDetailPage() {
       if (!editAttrTarget) return
       await api.put(`/catalog/product-groups/${id}/attributes/${editAttrTarget.id}`, {
         isVariant: editAttrForm.isVariant, isRequired: editAttrForm.isRequired, sortOrder: editAttrForm.sortOrder,
+        defaultAttributeValueId: editAttrForm.defaultAttributeValueId || null,
       })
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['product-groups'] }); setEditAttrOpen(false) },
@@ -264,13 +267,26 @@ export function ProductGroupDetailPage() {
   }, [group?.axisSubAttributes])
 
   function openAddAttr() {
-    setAttrForm({ attributeTypeId: null, isVariant: false, isRequired: false, sortOrder: (group?.attributes.length ?? 0) * 10 })
+    setAttrForm({ attributeTypeId: null, isVariant: false, isRequired: false, sortOrder: (group?.attributes.length ?? 0) * 10, defaultAttributeValueId: null })
     setAddAttrOpen(true)
+  }
+
+  // Grup varsayılan değeri (2026-09-06): yalnız seçim tipli özelliklerde; yeni ürün/ERP aktarımı bu değeri alır
+  const valueOptionsOf = (attributeTypeId: string | null) => {
+    const t = attrTypes.find((x) => x.id === attributeTypeId)
+    if (!t || t.dataType !== 'select') return null
+    return (t.values ?? []).map((v) => ({ id: v.id, label: v.nameI18n?.['tr'] ?? v.nameI18n?.[Object.keys(v.nameI18n ?? {})[0]] ?? v.id }))
+  }
+  const valueLabel = (attr: ProductGroupAttribute) => {
+    if (!attr.defaultAttributeValueId) return null
+    const t = attrTypes.find((x) => x.id === attr.attributeTypeId)
+    const v = t?.values?.find((x) => x.id === attr.defaultAttributeValueId)
+    return v ? (v.nameI18n?.['tr'] ?? Object.values(v.nameI18n ?? {})[0] ?? '?') : '?'
   }
 
   function openEditAttr(attr: ProductGroupAttribute) {
     setEditAttrTarget(attr)
-    setEditAttrForm({ isVariant: attr.isVariant, isRequired: attr.isRequired, sortOrder: attr.sortOrder })
+    setEditAttrForm({ isVariant: attr.isVariant, isRequired: attr.isRequired, sortOrder: attr.sortOrder, defaultAttributeValueId: attr.defaultAttributeValueId ?? null })
     editAttrMutation.reset()
     setEditAttrOpen(true)
   }
@@ -393,6 +409,7 @@ export function ProductGroupDetailPage() {
                 <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Varyant Ekseni</th>
                 <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Ana Eksen</th>
                 <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Zorunlu</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Varsayılan</th>
                 <th className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-s)' }}>Sıra</th>
                 <PermissionGuard permission={PLATFORM_PERM}>
                   <th className="px-4 py-2.5" />
@@ -444,6 +461,7 @@ export function ProductGroupDetailPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-center">{attr.isRequired ? <Badge variant="warning">Zorunlu</Badge> : <span className="text-sm" style={{ color: 'var(--text-s)' }}>—</span>}</td>
+                  <td className="px-4 py-3">{valueLabel(attr) ? <Badge variant="info">{valueLabel(attr)}</Badge> : <span className="text-sm" style={{ color: 'var(--text-s)' }}>—</span>}</td>
                   <td className="px-4 py-3 text-center"><span className="text-sm" style={{ color: 'var(--text-s)' }}>{attr.sortOrder}</span></td>
                   <PermissionGuard permission={PLATFORM_PERM}>
                     <td className="px-3 py-3">
@@ -552,6 +570,16 @@ export function ProductGroupDetailPage() {
             <label className="flex items-center gap-2 cursor-pointer select-none"><input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]" checked={attrForm.isRequired} onChange={(e) => setAttrForm((f) => ({ ...f, isRequired: e.target.checked }))} /><span className="text-sm" style={{ color: 'var(--text)' }}>Zorunlu</span></label>
           </div>
           <div><label className="flbl">Sıra</label><IntegerInput value={attrForm.sortOrder} onChange={(v) => setAttrForm((f) => ({ ...f, sortOrder: v ?? 0 }))} /></div>
+          {valueOptionsOf(attrForm.attributeTypeId) && (
+            <div>
+              <label className="flbl">Varsayılan değer</label>
+              <select className="inp" value={attrForm.defaultAttributeValueId ?? ''} onChange={(e) => setAttrForm((f) => ({ ...f, defaultAttributeValueId: e.target.value || null }))}>
+                <option value="">— yok —</option>
+                {valueOptionsOf(attrForm.attributeTypeId)!.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+              </select>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>Yeni ürün ve ERP aktarımı bu değeri otomatik alır; üründe değiştirilebilir.</p>
+            </div>
+          )}
           {addAttrMutation.isError && <p className="text-sm" style={{ color: '#ef4444' }}>Hata oluştu. Lütfen tekrar deneyin.</p>}
         </div>
       </Modal>
@@ -565,6 +593,16 @@ export function ProductGroupDetailPage() {
             <label className="flex items-center gap-2 cursor-pointer select-none"><input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]" checked={editAttrForm.isRequired} onChange={(e) => setEditAttrForm((f) => ({ ...f, isRequired: e.target.checked }))} /><span className="text-sm" style={{ color: 'var(--text)' }}>Zorunlu</span></label>
           </div>
           <div><label className="flbl">Sıra</label><IntegerInput value={editAttrForm.sortOrder} onChange={(v) => setEditAttrForm((f) => ({ ...f, sortOrder: v ?? 0 }))} /></div>
+          {valueOptionsOf(editAttrTarget?.attributeTypeId ?? null) && (
+            <div>
+              <label className="flbl">Varsayılan değer</label>
+              <select className="inp" value={editAttrForm.defaultAttributeValueId ?? ''} onChange={(e) => setEditAttrForm((f) => ({ ...f, defaultAttributeValueId: e.target.value || null }))}>
+                <option value="">— yok —</option>
+                {valueOptionsOf(editAttrTarget?.attributeTypeId ?? null)!.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+              </select>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>Yeni ürün ve ERP aktarımı bu değeri otomatik alır; üründe değiştirilebilir.</p>
+            </div>
+          )}
           {editAttrMutation.isError && <p className="text-sm" style={{ color: '#ef4444' }}>Hata oluştu. Lütfen tekrar deneyin.</p>}
         </div>
       </Modal>
