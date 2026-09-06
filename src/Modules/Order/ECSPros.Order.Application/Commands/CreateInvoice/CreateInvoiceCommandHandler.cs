@@ -44,6 +44,15 @@ public class CreateInvoiceCommandHandler(
             _ => DateTime.SpecifyKind(request.InvoiceDate, DateTimeKind.Utc)
         };
 
+        // FE1: tarih-sıra kuralı (gelecek tarih / geriye tarih / eski yıl yasak)
+        var counters = await context.InvoiceSeriesCounters.AsNoTracking()
+            .Where(c => c.InvoiceSeriesId == series.Id)
+            .Select(c => new { c.Year, c.LastInvoiceDate })
+            .ToListAsync(cancellationToken);
+        var dateError = InvoiceDateRules.Validate(
+            invoiceDateUtc, counters.Select(c => (c.Year, c.LastInvoiceDate)).ToList(), DateTime.UtcNow);
+        if (dateError is not null) return Result.Failure<Guid>(dateError);
+
         var sendMethod = await context.ChannelInvoiceSettings.AsNoTracking()
             .Where(s => s.FirmPlatformId == order.FirmPlatformId)
             .Select(s => s.SendMethod)

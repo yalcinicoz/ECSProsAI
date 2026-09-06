@@ -16,6 +16,7 @@ import {
   PAYMENT_METHOD_MAP,
   PAYMENT_STATUS_MAP,
   RETURN_STATUS_MAP,
+  INVOICE_SOURCE_MAP,
 } from './orderConstants'
 import { OrderPackagesSection } from './OrderPackagesSection'
 
@@ -218,6 +219,17 @@ export function OrderDetailPage() {
   const [actionError, setActionError] = useState('')
   const [invoiceOpen, setInvoiceOpen] = useState(false)
   const [invSeriesId, setInvSeriesId] = useState('')
+  // FE1: dış numaralı fatura kaydı (ERP / pazaryeri / entegratör)
+  const [extOpen, setExtOpen] = useState(false)
+  const [extSource, setExtSource] = useState<'erp' | 'marketplace' | 'integrator'>('erp')
+  const [extCode, setExtCode] = useState('')
+  const [extNumber, setExtNumber] = useState('')
+  const [extType, setExtType] = useState('e_archive')
+  const [extDate, setExtDate] = useState(new Date().toISOString().slice(0, 10))
+  const [extEttn, setExtEttn] = useState('')
+  const [extDocId, setExtDocId] = useState('')
+  const [extUrl, setExtUrl] = useState('')
+  const [extError, setExtError] = useState('')
   const [invType, setInvType] = useState('e_archive')
   const [invDate, setInvDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [invRecipient, setInvRecipient] = useState('')
@@ -380,6 +392,30 @@ export function OrderDetailPage() {
   const doConfirm = useMutation({
     mutationFn: async () => actionMutation('confirm', { warehouseId })(),
     onSuccess: () => setConfirmOpen(false),
+  })
+
+  const registerExternal = useMutation({
+    mutationFn: async () => {
+      setExtError('')
+      const { data } = await api.post(`/orders/${id}/invoices/external`, {
+        numberSource: extSource,
+        externalSource: extCode.trim().toLowerCase(),
+        invoiceNumber: extNumber.trim().toUpperCase(),
+        invoiceType: extType,
+        invoiceDate: new Date(`${extDate}T12:00:00`).toISOString(),
+        ettn: extEttn.trim() || null,
+        externalDocumentId: extDocId.trim() || null,
+        integratorInvoiceUrl: extUrl.trim() || null,
+      })
+      return data.data as { id: string; alreadyExisted: boolean }
+    },
+    onSuccess: (r) => {
+      queryClient.invalidateQueries({ queryKey: ['order-invoices', id] })
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      if (r.alreadyExisted) setExtError('Bu kaynak + numara zaten kayıtlıydı; yeni kayıt açılmadı.')
+      else { setExtOpen(false); setExtNumber(''); setExtEttn(''); setExtDocId(''); setExtUrl('') }
+    },
+    onError: (e: unknown) => setExtError((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Kaydedilemedi.'),
   })
 
   const createInvoice = useMutation({
@@ -638,6 +674,9 @@ export function OrderDetailPage() {
                   </span>
                   <span className="font-medium" style={{ color: 'var(--text)' }}>{money(inv.grandTotal, cur)}</span>
                   <Badge variant={ist.variant}>{ist.label}</Badge>
+                  {inv.numberSource && inv.numberSource !== 'internal' && (
+                    <Badge variant="neutral">{INVOICE_SOURCE_MAP[inv.numberSource] ?? inv.numberSource}{inv.externalSource ? ` · ${inv.externalSource}` : ''}</Badge>
+                  )}
                   {inv.hasIntegratorPdf && <span className="text-xs" style={{ color: 'var(--text-s)' }}>PDF ✓</span>}
                   <Link to="/orders/invoices" className="text-xs ml-auto underline" style={{ color: 'var(--brand)' }}>
                     Faturalarda aç →
@@ -650,6 +689,7 @@ export function OrderDetailPage() {
             )}
             <div className="mt-2">
               <Button size="sm" variant="secondary" onClick={openInvoiceModal}>+ Fatura Oluştur</Button>
+              <Button size="sm" variant="ghost" className="ml-2" onClick={() => { setExtError(''); setExtOpen(true) }}>Dış Fatura Kaydet</Button>
             </div>
           </Section>
 
@@ -844,6 +884,62 @@ export function OrderDetailPage() {
         <div className="flex justify-end gap-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
           <Button variant="secondary" onClick={() => setShipOpen(false)}>Vazgeç</Button>
           <Button onClick={() => shipMutation.mutate()} loading={shipMutation.isPending}>Kargoya Ver</Button>
+        </div>
+      </Modal>
+
+      <Modal open={extOpen} onClose={() => setExtOpen(false)} title="Dış Numaralı Fatura Kaydet"
+        footer={<>
+          <Button variant="secondary" onClick={() => setExtOpen(false)}>Vazgeç</Button>
+          <Button onClick={() => registerExternal.mutate()} loading={registerExternal.isPending}
+            disabled={!extCode.trim() || !extNumber.trim()}>Kaydet</Button>
+        </>}>
+        <div className="space-y-3">
+          <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+            Faturayı ERP, pazaryeri ya da entegratör kesmişse numarası burada kayıt altına alınır; bizim serimiz ve sayaç kullanılmaz.
+            Aynı kaynak + numara ikinci kez kaydedilmez.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="flbl">Numara kaynağı <span className="text-red-500">*</span></label>
+              <select className="inp" value={extSource} onChange={e => setExtSource(e.target.value as 'erp' | 'marketplace' | 'integrator')}>
+                <option value="erp">ERP</option>
+                <option value="marketplace">Pazaryeri</option>
+                <option value="integrator">Entegratör</option>
+              </select>
+            </div>
+            <div>
+              <label className="flbl">Kaynak kodu <span className="text-red-500">*</span></label>
+              <input className="inp" value={extCode} onChange={e => setExtCode(e.target.value)} placeholder="nebim / trendyol / uyumsoft" />
+            </div>
+            <div>
+              <label className="flbl">Fatura numarası <span className="text-red-500">*</span></label>
+              <input className="inp font-mono" value={extNumber} onChange={e => setExtNumber(e.target.value.toUpperCase())} placeholder="ABC2026000000123" />
+            </div>
+            <div>
+              <label className="flbl">Tip</label>
+              <select className="inp" value={extType} onChange={e => setExtType(e.target.value)}>
+                {Object.entries(INVOICE_TYPE_MAP).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="flbl">Fatura tarihi</label>
+              <input className="inp" type="date" value={extDate} onChange={e => setExtDate(e.target.value)} />
+            </div>
+            <div>
+              <label className="flbl">ETTN (UUID)</label>
+              <input className="inp font-mono" value={extEttn} onChange={e => setExtEttn(e.target.value)} placeholder="isteğe bağlı" />
+            </div>
+            <div>
+              <label className="flbl">Dış belge kimliği</label>
+              <input className="inp" value={extDocId} onChange={e => setExtDocId(e.target.value)} placeholder="isteğe bağlı" />
+            </div>
+            <div>
+              <label className="flbl">PDF / görüntüleme adresi</label>
+              <input className="inp" value={extUrl} onChange={e => setExtUrl(e.target.value)} placeholder="https://…" />
+            </div>
+          </div>
+          <p className="text-xs" style={{ color: 'var(--text-s)' }}>Alıcı bilgileri ve tutarlar siparişten alınır.</p>
+          {extError && <p className="text-sm text-red-500">{extError}</p>}
         </div>
       </Modal>
 

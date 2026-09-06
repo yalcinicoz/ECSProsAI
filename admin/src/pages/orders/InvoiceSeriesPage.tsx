@@ -116,8 +116,15 @@ function NewSeriesModal({ firms, defaultFirmId, onClose }: { firms: FirmRow[]; d
 
 // ── Düzenle ───────────────────────────────────────────────────────────────────
 
+interface GapRow { year: string; expectedLast: number; recordedCount: number; cancelledCount: number; missingSequences: number[]; missingTotal: number; lastInvoiceDate: string | null }
+
 function EditSeriesModal({ series, usedBy, onClose }: { series: InvoiceSeries; usedBy: ChannelSettings[]; onClose: () => void }) {
   const queryClient = useQueryClient()
+  // FE1: boşluk denetimi (sayaç ↔ kayıtlı numaralar)
+  const { data: gaps = [] } = useQuery<GapRow[]>({
+    queryKey: ['invoice-series-gaps', series.id],
+    queryFn: async () => (await api.get(`/orders/invoice-series/${series.id}/gaps`)).data.data ?? [],
+  })
   const [name, setName] = useState(series.name ?? '')
   const [description, setDescription] = useState(series.description ?? '')
   const [error, setError] = useState('')
@@ -158,6 +165,22 @@ function EditSeriesModal({ series, usedBy, onClose }: { series: InvoiceSeries; u
             {series.lastInvoiceDate && <> · son fatura tarihi {fmtDate(series.lastInvoiceDate)}</>}</div>
           <div>Kullanan kanallar: {usedBy.length === 0 ? 'yok' : usedBy.map(c => c.channelName || c.channelCode).join(', ')}</div>
           {series.retiredAt && <div>Pasife alındı: {fmtDate(series.retiredAt)}</div>}
+        </div>
+        <div>
+          <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-s)' }}>BOŞLUK DENETİMİ</p>
+          {gaps.length === 0
+            ? <p className="text-xs" style={{ color: 'var(--text-s)' }}>Bu seriden henüz numara üretilmedi.</p>
+            : gaps.map(g => (
+              <div key={g.year} className="flex flex-wrap items-center gap-2 text-xs py-1" style={{ borderTop: '1px solid var(--border)', color: 'var(--text-m)' }}>
+                <b style={{ color: 'var(--text)' }}>{g.year}</b>
+                <span>son sıra {g.expectedLast}</span>
+                <span>· kayıtlı {g.recordedCount}</span>
+                {g.cancelledCount > 0 && <span>· iptal {g.cancelledCount}</span>}
+                {g.missingTotal === 0
+                  ? <Badge variant="success">boşluk yok</Badge>
+                  : <Badge variant="danger">{g.missingTotal} eksik: {g.missingSequences.slice(0, 20).join(', ')}{g.missingTotal > 20 ? '…' : ''}</Badge>}
+              </div>
+            ))}
         </div>
         {error && <p className="text-sm text-red-500">{error}</p>}
       </div>

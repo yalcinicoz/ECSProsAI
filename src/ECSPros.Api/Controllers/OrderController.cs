@@ -9,6 +9,8 @@ using ECSPros.Order.Application.Commands.CreateGiftCard;
 using ECSPros.Order.Application.Commands.CreateInvoice;
 using ECSPros.Order.Application.Commands.ManageOrderNumberSeries;
 using ECSPros.Order.Application.Commands.UpdateInvoiceSeries;
+using ECSPros.Order.Application.Commands.RegisterExternalInvoice;
+using ECSPros.Order.Application.Queries.GetInvoiceSeriesGaps;
 using ECSPros.Order.Application.Commands.DeactivateInvoiceSeries;
 using ECSPros.Order.Application.Commands.ActivateInvoiceSeries;
 using ECSPros.Order.Application.Commands.SetChannelInvoiceSettings;
@@ -331,6 +333,31 @@ public class OrderController : ControllerBase
         return Created("/api/orders/invoice-series", new { success = true, data = new { id = result.Value } });
     }
 
+    /// <summary>FE1: dış numaralı (ERP / pazaryeri / entegratör) fatura kaydı — idempotent (kaynak, numara).</summary>
+    [HttpPost("{orderId:guid}/invoices/external")]
+    public async Task<IActionResult> RegisterExternalInvoice(Guid orderId, [FromBody] RegisterExternalInvoiceRequest request, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
+        var result = await _mediator.Send(new RegisterExternalInvoiceCommand(
+            orderId, request.PackageId, request.NumberSource, request.ExternalSource, request.InvoiceNumber,
+            request.InvoiceType, request.InvoiceDate, request.Ettn, request.ExternalDocumentId,
+            request.RecipientName, request.RecipientAddress, request.RecipientTaxOffice, request.RecipientTaxNumber,
+            request.RecipientCompanyName, request.IntegratorInvoiceUrl, uid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        var data = new { id = result.Value!.InvoiceId, alreadyExisted = result.Value.AlreadyExisted };
+        return result.Value.AlreadyExisted ? Ok(new { success = true, data }) : Created($"/api/orders/invoices/{data.id}", new { success = true, data });
+    }
+
+    /// <summary>FE1: seri boşluk denetimi (sayaç ↔ kayıtlı numaralar).</summary>
+    [HttpGet("invoice-series/{id:guid}/gaps")]
+    public async Task<IActionResult> GetInvoiceSeriesGaps(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetInvoiceSeriesGapsQuery(id), ct);
+        if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
     /// <summary>Seri ad/açıklama/sözleşme günceller (serial ve tip değişmez).</summary>
     [HttpPut("invoice-series/{id:guid}")]
     public async Task<IActionResult> UpdateInvoiceSeries(Guid id, [FromBody] UpdateInvoiceSeriesRequest request, CancellationToken ct)
@@ -596,6 +623,11 @@ public record CreateInvoiceSeriesRequest(
     Guid? IntegrationContractId = null);
 
 public record UpdateInvoiceSeriesRequest(string? Name, string? Description, Guid? IntegrationContractId);
+public record RegisterExternalInvoiceRequest(
+    string NumberSource, string ExternalSource, string InvoiceNumber, string InvoiceType, DateTime InvoiceDate,
+    Guid? PackageId = null, Guid? Ettn = null, string? ExternalDocumentId = null,
+    string? RecipientName = null, string? RecipientAddress = null, string? RecipientTaxOffice = null,
+    string? RecipientTaxNumber = null, string? RecipientCompanyName = null, string? IntegratorInvoiceUrl = null);
 public record DeactivateInvoiceSeriesRequest(Guid? ReplacementSeriesId);
 public record SetChannelInvoiceSettingsRequest(
     string? SendMethod, Guid? EArchiveSeriesId, Guid? EInvoiceSeriesId, Guid? ExportSeriesId);

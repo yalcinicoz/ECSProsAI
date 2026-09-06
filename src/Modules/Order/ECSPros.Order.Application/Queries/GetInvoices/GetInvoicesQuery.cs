@@ -20,4 +20,6 @@ public record InvoiceListDto(
     string Status,
     string IntegratorStatus,
     DateTime CreatedAt,
-    bool HasIntegratorPdf = false); // H1 additive: entegratör PDF'i var mı (URL sızmaz)
+    bool HasIntegratorPdf = false, // H1 additive: entegratör PDF'i var mı (URL sızmaz)
+    string NumberSource = "internal", // FE1: internal | erp | marketplace | integrator
+    string? ExternalSource = null);

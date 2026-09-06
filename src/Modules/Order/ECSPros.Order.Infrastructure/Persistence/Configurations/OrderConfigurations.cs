@@ -233,7 +233,8 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.Property(x => x.ExternalDocumentId).HasMaxLength(100);
         builder.Property(x => x.ExternalSource).HasMaxLength(50);
         builder.HasIndex(x => x.LegacyInvoiceId).IsUnique().HasFilter("\"LegacyInvoiceId\" IS NOT NULL");
-        builder.HasIndex(x => new { x.InvoiceSerial, x.InvoiceYear, x.InvoiceSequence }).IsUnique();
+        // Seri/yıl/sıra tekilliği yalnız BİZİM ürettiğimiz numaralar için; dış numaralar (ExternalSource, InvoiceNumber) ile tekildir
+        builder.HasIndex(x => new { x.InvoiceSerial, x.InvoiceYear, x.InvoiceSequence }).IsUnique().HasFilter("\"NumberSource\" = 'internal'");
         // Dış numaralı fatura idempotens anahtarı (plan §2.5)
         builder.HasIndex(x => new { x.ExternalSource, x.InvoiceNumber }).IsUnique().HasFilter("\"ExternalSource\" IS NOT NULL");
         builder.HasIndex(x => x.Ettn).IsUnique().HasFilter("\"Ettn\" IS NOT NULL");

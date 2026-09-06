@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
-import { INVOICE_STATUS_MAP, INVOICE_TYPE_MAP } from './orderConstants'
+import { INVOICE_STATUS_MAP, INVOICE_TYPE_MAP, INVOICE_SOURCE_MAP } from './orderConstants'
 
 const TABS = [
   { key: 'created',   label: 'Oluşturulan' },
@@ -26,6 +26,8 @@ export interface InvoiceSummary {
   integratorStatus: string
   createdAt: string
   hasIntegratorPdf?: boolean
+  numberSource?: string
+  externalSource?: string | null
 }
 
 // FE0 (2026-09-06): seri tekil ve TİPLİ — bkz. docs/fatura-entegrasyon-plani.md §2.2
@@ -188,7 +190,7 @@ export function InvoicesPage() {
                   className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
                   style={{ borderBottom: '1px solid var(--border)' }}>
                   <td className="px-4 py-3">
-                    <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{inv.invoiceNumber}</code>
+                    <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{inv.invoiceNumber}{inv.numberSource && inv.numberSource !== 'internal' && <Badge variant="neutral" className="ml-2">{INVOICE_SOURCE_MAP[inv.numberSource] ?? inv.numberSource}</Badge>}</code>
                   </td>
                   <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-m)' }}>
                     {INVOICE_TYPE_MAP[inv.invoiceType] ?? inv.invoiceType}
