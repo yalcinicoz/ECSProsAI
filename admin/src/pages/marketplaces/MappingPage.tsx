@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { Modal } from '@/components/ui/Modal'
-import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { StoreLogo } from './MarketplacesPage'
 import { pickTr } from './marketplaceOverview'
 
@@ -1018,12 +1017,21 @@ function ErpGroupMapModal({ target, item, overview, onClose, onSaved }: {
   target: string; item: ErpItem; overview: Overview | undefined; onClose: () => void; onSaved: () => void
 }) {
   const [groupId, setGroupId] = useState<string | null>(null)
+  const [q, setQ] = useState('')
   const [error, setError] = useState('')
-  const options = (overview?.groups ?? []).map((g) => ({
-    value: g.productGroupId,
-    label: `${g.name} · ${g.productCount} ürün${g.mapping ? ' · eşli' : ''}`,
-  }))
-  const secili = overview?.groups.find((g) => g.productGroupId === groupId)
+  // Gruplar: üst sayfanın özeti henüz yüklenmediyse popup kendisi çeker (aynı sorgu anahtarı → önbellek paylaşılır)
+  const { data: ownOverview } = useQuery<Overview>({
+    queryKey: ['mapping-overview', target],
+    queryFn: async () => (await api.get(`/marketplaces/mapping/overview?marketplace=${target}`)).data.data,
+    enabled: !overview,
+  })
+  const groups = (overview ?? ownOverview)?.groups ?? []
+  const filtered = useMemo(() => {
+    const t = q.trim().toLocaleLowerCase('tr-TR')
+    const l = t ? groups.filter((g) => g.name.toLocaleLowerCase('tr-TR').includes(t) || g.code.toLowerCase().includes(t)) : groups
+    return l.slice(0, 200)
+  }, [groups, q])
+  const secili = groups.find((g) => g.productGroupId === groupId)
   const mevcut = secili?.mapping
   const save = useMutation({
     mutationFn: async () => {
@@ -1048,7 +1056,30 @@ function ErpGroupMapModal({ target, item, overview, onClose, onSaved }: {
         </div>
         <div>
           <label className="flbl">Bizim ürün grubu *</label>
-          <SearchableSelect value={groupId} onChange={setGroupId} options={options} placeholder="Grup ara…" hasValue={!!groupId} />
+          <div className="relative mb-2">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-s)' }} />
+            <input className="inp pl-8" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Grup adı veya kodu yazın…" autoFocus />
+          </div>
+          {/* Açılır liste yerine popup içinde kaydırılabilir liste: modal gövdesi overflow'lu olduğundan
+              absolute dropdown kırpılıyordu (2026-09-06). */}
+          <div className="thin-scroll overflow-y-auto rounded-lg" style={{ maxHeight: 260, border: '1px solid var(--border)' }}>
+            {filtered.map((g) => (
+              <button key={g.productGroupId} type="button"
+                onClick={() => setGroupId(g.productGroupId)}
+                className="w-full flex items-center justify-between px-3 py-2 text-left text-sm"
+                style={{
+                  borderBottom: '1px solid var(--border)',
+                  background: groupId === g.productGroupId ? 'var(--brand-bg)' : 'transparent',
+                  color: 'var(--text)',
+                }}>
+                <span>{g.name} <code className="text-xs ml-1" style={{ color: 'var(--text-s)' }}>{g.code}</code></span>
+                <span className="text-xs" style={{ color: 'var(--text-s)' }}>{g.productCount} ürün{g.mapping ? ' · eşli' : ''}</span>
+              </button>
+            ))}
+            {groups.length === 0 && <p className="px-3 py-3 text-xs" style={{ color: 'var(--text-s)' }}>Gruplar yükleniyor…</p>}
+            {groups.length > 0 && filtered.length === 0 && <p className="px-3 py-3 text-xs" style={{ color: 'var(--text-s)' }}>Eşleşen grup yok.</p>}
+          </div>
+          {secili && <p className="text-xs mt-1" style={{ color: 'var(--brand)' }}>Seçili: {secili.name}</p>}
         </div>
         {mevcut && (
           <p className="text-xs" style={{ color: '#b45309' }}>
