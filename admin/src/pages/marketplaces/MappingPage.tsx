@@ -1007,7 +1007,7 @@ function ReviewTab({ marketplace, onGoCategory }: { marketplace: string; onGoCat
 // ── Ana Sayfa ────────────────────────────────────────────────────────────────
 
 // ── EM0: ERP sözlüğü (docs/erp-esleme-plani.md §2.1) ─────────────────────────
-interface ErpItem { id: string; targetSystem: string; kind: string; code: string; name: string; parentCode: string | null; isActive: boolean; source: string; lastSeenAt: string; isMapped: boolean }
+interface ErpItem { id: string; targetSystem: string; kind: string; code: string; name: string; parentCode: string | null; isActive: boolean; source: string; lastSeenAt: string; isMapped: boolean; mappingId?: string | null; mappedProductGroupId?: string | null; mappedProductGroupName?: string | null; mappedTargetId?: string | null; mappedTargetLabel?: string | null }
 const ERP_KINDS: Record<string, string> = {
   product_group: 'Ürün grubu', variant_axis: 'Varyant ekseni', attribute_type: 'Özellik tipi', attribute_value: 'Özellik değeri', supplier: 'Tedarikçi', color: 'Renk',
 }
@@ -1082,10 +1082,15 @@ function ErpDictionaryPanel({ target, overview, onSaved }: { target: string; ove
     onSuccess: () => { invalidate(); setForm({ code: '', name: '', parentCode: '' }); setError('') },
     onError: (e: unknown) => setError((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Kaydedilemedi.'),
   })
-  const deactivate = useMutation({
+  const remove = useMutation({
     mutationFn: async (id: string) => { await api.delete(`/marketplaces/mapping/erp-items/${id}`) },
     onSuccess: () => { invalidate(); setError('') },
-    onError: (e: unknown) => setError((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Pasife alınamadı.'),
+    onError: (e: unknown) => setError((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Silinemedi.'),
+  })
+  const removeMapping = useMutation({
+    mutationFn: async (mappingId: string) => { await api.delete(`/marketplaces/mapping/category/${mappingId}`) },
+    onSuccess: () => { invalidate(); onSaved(); setError('') },
+    onError: (e: unknown) => setError((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Eşleme silinemedi.'),
   })
   const needsParent = kind === 'attribute_value'
   return (
@@ -1094,7 +1099,7 @@ function ErpDictionaryPanel({ target, overview, onSaved }: { target: string; ove
         <div className="text-left">
           <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>ERP Sözlüğü</h2>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>
-            ERP tarafındaki grup, özellik, değer ve tedarikçi kodları. Worker doldurur (EM2/EM3); elle ekleme serbest. Eşleme hedefleri buradan seçilir.
+            ERP tarafındaki grup, özellik, değer ve tedarikçi kodları. Ürün grubu eşlemesi satırdaki "Eşle" ile yapılır; eşleme ve sözlük kaydı silinebilir.
           </p>
         </div>
         {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -1121,7 +1126,7 @@ function ErpDictionaryPanel({ target, overview, onSaved }: { target: string; ove
             <table className="w-full">
               <thead>
                 <tr style={{ background: 'var(--surface2)' }}>
-                  {['KOD', 'AD', 'ÜST', 'KAYNAK', 'DURUM', ''].map((h) => <th key={h} className={cn('px-3 py-2 text-xs font-semibold', h === '' ? 'text-right' : 'text-left')} style={{ color: 'var(--text-s)' }}>{h}</th>)}
+                  {['KOD', 'AD', 'ÜST', 'KAYNAK', 'BİZİM GRUP', 'DURUM', ''].map((h) => <th key={h} className={cn('px-3 py-2 text-xs font-semibold', h === '' ? 'text-right' : 'text-left')} style={{ color: 'var(--text-s)' }}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -1131,22 +1136,27 @@ function ErpDictionaryPanel({ target, overview, onSaved }: { target: string; ove
                     <td className="px-3 py-1.5 text-sm" style={{ color: 'var(--text)' }}>{i.name}</td>
                     <td className="px-3 py-1.5 font-mono text-xs" style={{ color: 'var(--text-s)' }}>{i.parentCode ?? '—'}</td>
                     <td className="px-3 py-1.5 text-xs" style={{ color: 'var(--text-s)' }}>{i.source === 'sync' ? 'ERP' : 'elle'}</td>
+                    <td className="px-3 py-1.5 text-sm" style={{ color: 'var(--text)' }}>{i.kind === 'product_group' ? (i.mappedProductGroupName ?? <span style={{ color: 'var(--text-s)' }}>—</span>) : (i.mappedTargetLabel ?? '')}</td>
                     <td className="px-3 py-1.5">
-                      {!i.isActive ? <Badge variant="neutral">Pasif</Badge>
-                        : i.kind === 'product_group' ? (i.isMapped ? <Badge variant="success">Eşli</Badge> : <Badge variant="danger">Eşlenmemiş</Badge>)
-                        : <Badge variant="info">Aktif</Badge>}
+                      {i.kind === 'product_group' || i.kind === 'supplier'
+                        ? (i.isMapped ? <Badge variant="success">Eşli</Badge> : <Badge variant="danger">Eşlenmemiş</Badge>)
+                        : <Badge variant="info">Sözlükte</Badge>}
                     </td>
                     <td className="px-3 py-1.5 text-right whitespace-nowrap">
-                      {i.isActive && i.kind === 'product_group' && (
-                        <Button size="sm" variant={i.isMapped ? 'secondary' : 'primary'} className="mr-2" onClick={() => setMapItem(i)}>
-                          {i.isMapped ? 'Yeniden Eşle' : 'Eşle'}
-                        </Button>
+                      {i.kind === 'product_group' && !i.mappingId && (
+                        <Button size="sm" className="mr-2" onClick={() => setMapItem(i)}>Eşle</Button>
                       )}
-                      {i.isActive && <button className="text-xs underline" style={{ color: 'var(--text-s)' }} onClick={() => deactivate.mutate(i.id)}>pasife al</button>}
+                      {i.kind === 'product_group' && i.mappingId && (
+                        <Button size="sm" variant="secondary" className="mr-2" loading={removeMapping.isPending && removeMapping.variables === i.mappingId}
+                          onClick={() => { if (window.confirm(`${i.code} ↔ ${i.mappedProductGroupName} eşlemesi silinsin mi?`)) removeMapping.mutate(i.mappingId!) }}>Eşlemeyi Sil</Button>
+                      )}
+                      <button className="text-xs underline" style={{ color: i.mappingId ? 'var(--text-s)' : '#dc2626' }}
+                        title={i.mappingId ? 'Önce eşlemeyi silin' : 'Sözlük kaydını sil'} disabled={!!i.mappingId}
+                        onClick={() => { if (window.confirm(`${i.code} sözlük kaydı silinsin mi?`)) remove.mutate(i.id) }}>sil</button>
                     </td>
                   </tr>
                 ))}
-                {items.length === 0 && <tr><td colSpan={6} className="px-3 py-4 text-center text-xs" style={{ color: 'var(--text-s)' }}>Bu türde sözlük kaydı yok — yukarıdan ekleyin ya da ERP senkronunu bekleyin.</td></tr>}
+                {items.length === 0 && <tr><td colSpan={7} className="px-3 py-4 text-center text-xs" style={{ color: 'var(--text-s)' }}>Bu türde sözlük kaydı yok — yukarıdan ekleyin ya da ERP senkronunu bekleyin.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -1219,70 +1229,6 @@ function ErpSuppliersTab({ target }: { target: string }) {
   )
 }
 
-// ── EM3: eşlenmemiş ERP grupları kuyruğu (ERP grubu → bizim grup, birebir) ───
-function ErpUnmappedTab({ target, overview, onSaved }: { target: string; overview: Overview; onSaved: () => void }) {
-  const queryClient = useQueryClient()
-  const [choice, setChoice] = useState<Record<string, string>>({})
-  const [error, setError] = useState('')
-  const { data: items = [] } = useQuery<ErpItem[]>({
-    queryKey: ['erp-items', target, 'product_group', ''],
-    queryFn: async () => (await api.get(`/marketplaces/mapping/erp-items?target=${encodeURIComponent(target)}&kind=product_group&limit=2000`)).data.data ?? [],
-  })
-  const unmapped = items.filter((i) => i.isActive && !i.isMapped)
-  const save = useMutation({
-    mutationFn: async (i: ErpItem) => {
-      const groupId = choice[i.id]
-      await api.put('/marketplaces/mapping/category', {
-        marketplace: target, productGroupId: groupId, mappingKind: 'direct',
-        targetExternalId: i.code, targetName: i.name, targetPath: `${i.name} [${i.code}]`, rules: null, pool: null,
-      })
-    },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['erp-items'] }); onSaved(); setError('') },
-    onError: (err) => setError(errText(err, 'Eşlenemedi.')),
-  })
-  return (
-    <div className="card overflow-hidden p-0">
-      <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
-        <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>Eşlenmemiş ERP grupları ({unmapped.length})</h2>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>
-          ERP'den gelen ama bizim bir grubumuza bağlanmamış gruplar. Eşlenmemiş gruptaki ürünler aktarılmaz. Bizde karşılığı yoksa önce Katalog → Ürün Grupları'ndan grup açın (K4).
-        </p>
-      </div>
-      <table className="w-full">
-        <thead>
-          <tr style={{ background: 'var(--surface2)' }}>
-            {['ERP KODU', 'ERP ADI', 'BİZİM GRUP', ''].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--text-s)' }}>{h}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {unmapped.map((i) => {
-            const g = overview.groups.find((x) => x.productGroupId === choice[i.id])
-            const already = g?.mapping && g.mapping.status === 'active'
-            return (
-              <tr key={i.id} style={{ borderTop: '1px solid var(--border)' }}>
-                <td className="px-3 py-2 font-mono text-xs" style={{ color: 'var(--text)' }}>{i.code}</td>
-                <td className="px-3 py-2 text-sm" style={{ color: 'var(--text)' }}>{i.name}</td>
-                <td className="px-3 py-2">
-                  <select className="inp" style={{ minWidth: 240 }} value={choice[i.id] ?? ''} onChange={(e) => setChoice((c) => ({ ...c, [i.id]: e.target.value }))}>
-                    <option value="">— grup seç —</option>
-                    {overview.groups.map((gr) => <option key={gr.productGroupId} value={gr.productGroupId}>{gr.name}{gr.mapping ? ' (eşli)' : ''}</option>)}
-                  </select>
-                  {already && <p className="text-[11px] mt-0.5" style={{ color: '#f59e0b' }}>Bu grubun mevcut eşlemesi bu ERP koduyla DEĞİŞTİRİLİR.</p>}
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <Button size="sm" disabled={!choice[i.id]} loading={save.isPending && save.variables?.id === i.id} onClick={() => save.mutate(i)}>Eşle</Button>
-                </td>
-              </tr>
-            )
-          })}
-          {unmapped.length === 0 && <tr><td colSpan={4} className="px-3 py-6 text-center text-xs" style={{ color: 'var(--text-s)' }}>Eşlenmemiş ERP grubu yok.</td></tr>}
-        </tbody>
-      </table>
-      {error && <p className="px-4 py-2 text-sm text-red-500">{error}</p>}
-    </div>
-  )
-}
-
 export function MappingPage() {
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -1297,12 +1243,7 @@ export function MappingPage() {
     staleTime: 60 * 1000,
   })
   const isErp = isErpTarget(marketplace)
-  const { data: erpGroups = [] } = useQuery<ErpItem[]>({
-    queryKey: ['erp-items', marketplace, 'product_group', ''],
-    queryFn: async () => (await api.get(`/marketplaces/mapping/erp-items?target=${encodeURIComponent(marketplace)}&kind=product_group&limit=2000`)).data.data ?? [],
-    enabled: isErp,
-  })
-  const erpUnmappedCount = erpGroups.filter((i) => i.isActive && !i.isMapped).length
+
 
   const { data: overview, isLoading } = useQuery<Overview>({
     queryKey: ['mapping-overview', marketplace],
@@ -1386,10 +1327,10 @@ export function MappingPage() {
       {/* Sekmeler */}
       <div className="flex items-center gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
         {[
-          ['kategoriler', isErp ? 'Ürün Grubu Eşleme' : 'Kategori Eşleme'],
+          ...(isErp ? [] : [['kategoriler', 'Kategori Eşleme']]),
           ['ozellikler', 'Özellik & Değer'],
           ['gozden', `Gözden Geçir${overview && overview.reviewCount > 0 ? ` (${overview.reviewCount})` : ''}`],
-          ...(isErp ? [['tedarikciler', 'Tedarikçiler'], ['eslenmemis', `Eşlenmemiş${erpUnmappedCount > 0 ? ` (${erpUnmappedCount})` : ''}`]] : []),
+          ...(isErp ? [['tedarikciler', 'Tedarikçiler']] : []),
         ].map(([key, label]) => (
           <button key={key} className={cn('stab', tab === key && 'active')} onClick={() => setParam('tab', key)}>
             {label}
@@ -1401,7 +1342,7 @@ export function MappingPage() {
 
       {isLoading || !overview ? (
         <PageSpinner />
-      ) : tab === 'kategoriler' ? (
+      ) : tab === 'kategoriler' && !isErp ? (
         <CategoryTab
           marketplace={marketplace}
           overview={overview}
@@ -1414,8 +1355,8 @@ export function MappingPage() {
         <AttributesTab marketplace={marketplace} ownTypes={ownTypes} initialTarget={null} />
       ) : tab === 'tedarikciler' && isErp ? (
         <ErpSuppliersTab target={marketplace} />
-      ) : tab === 'eslenmemis' && isErp ? (
-        <ErpUnmappedTab target={marketplace} overview={overview} onSaved={() => queryClient.invalidateQueries({ queryKey: ['mapping-overview', marketplace] })} />
+      ) : (tab === 'kategoriler' || tab === 'eslenmemis') && isErp ? (
+        <AttributesTab marketplace={marketplace} ownTypes={ownTypes} initialTarget={null} />
       ) : (
         <ReviewTab
           marketplace={marketplace}

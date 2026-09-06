@@ -75,11 +75,11 @@ public class MarketplaceMappingController(
         return Ok(new { success = true });
     }
 
-    /// <summary>EM0: sözlük kaydını pasife alır (eşlemede kullanılan grup pasife alınamaz).</summary>
+    /// <summary>EM0/EM3: sözlük kaydını siler (eşlemede kullanılan grup silinemez — önce eşleme silinir).</summary>
     [HttpDelete("erp-items/{id:guid}")]
-    public async Task<IActionResult> DeactivateErpItem(Guid id, CancellationToken ct)
+    public async Task<IActionResult> DeleteErpItem(Guid id, CancellationToken ct)
     {
-        var err = await service.DeactivateErpItemAsync(id, UserId, ct);
+        var err = await service.DeleteErpItemAsync(id, UserId, ct);
         if (err is not null) return BadRequest(new { success = false, error = err });
         return Ok(new { success = true });
     }

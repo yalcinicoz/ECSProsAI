@@ -784,15 +784,29 @@ public sealed class MarketplaceMappingService(
             var like = $"%{query.Trim()}%";
             q = q.Where(i => EF.Functions.ILike(i.Name, like) || EF.Functions.ILike(i.Code, like));
         }
-        var mapped = await db.MarketplaceCategoryMappings
-            .Where(m => m.Marketplace == target && m.TargetExternalId != null)
-            .Select(m => m.TargetExternalId!).Distinct().ToListAsync(ct);
-        var mappedSet = mapped.ToHashSet();
-        return await q.OrderBy(i => i.Kind).ThenBy(i => i.Name).Take(limit)
-            .Select(i => new ErpReferenceItemDto(i.Id, i.TargetSystem, i.Kind, i.Code, i.Name, i.ParentCode, i.IsActive, i.Source, i.LastSeenAt,
-                (i.Kind == ErpReferenceKinds.ProductGroup && mappedSet.Contains(i.Code)) || i.MappedTargetId != null,
-                i.MappedTargetKind, i.MappedTargetId, i.MappedTargetLabel))
-            .ToListAsync(ct);
+        // Grup eşlemeleri (ERP kodu → bizim grup): satırda göster + "Eşlemeyi Sil" için mapping Id
+        var mappedRows = await db.MarketplaceCategoryMappings
+            .Where(m => m.Marketplace == target && m.TargetExternalId != null && m.FirmPlatformId == null)
+            .Select(m => new { m.Id, m.TargetExternalId, m.ProductGroupId }).ToListAsync(ct);
+        var groupNames = new Dictionary<Guid, string>();
+        if (mappedRows.Count > 0)
+        {
+            await using var cmd = mainDb.CreateCommand(
+                """SELECT "Id", COALESCE("NameI18n"->>'tr', "Code") FROM definition.product_groups WHERE "Id" = ANY($1)""");
+            cmd.Parameters.AddWithValue(mappedRows.Select(m => m.ProductGroupId).Distinct().ToArray());
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct)) groupNames[reader.GetGuid(0)] = reader.GetString(1);
+        }
+        var mappedByCode = mappedRows.GroupBy(m => m.TargetExternalId!).ToDictionary(g => g.Key, g => g.First());
+        var items = await q.OrderBy(i => i.Kind).ThenBy(i => i.Name).Take(limit).ToListAsync(ct);
+        return items.Select(i =>
+        {
+            var m = i.Kind == ErpReferenceKinds.ProductGroup ? mappedByCode.GetValueOrDefault(i.Code) : null;
+            return new ErpReferenceItemDto(i.Id, i.TargetSystem, i.Kind, i.Code, i.Name, i.ParentCode, i.IsActive, i.Source, i.LastSeenAt,
+                m is not null || i.MappedTargetId != null,
+                i.MappedTargetKind, i.MappedTargetId, i.MappedTargetLabel,
+                m?.Id, m?.ProductGroupId, m is null ? null : groupNames.GetValueOrDefault(m.ProductGroupId));
+        }).ToList();
     }
 
     /// <summary>Elle sözlük kaydı (upsert: (hedef, tür, kod) varsa ad/üst kod/aktiflik güncellenir, Source manual kalır).</summary>
@@ -821,14 +835,15 @@ public sealed class MarketplaceMappingService(
             item.MappedTargetId != null, item.MappedTargetKind, item.MappedTargetId, item.MappedTargetLabel), null);
     }
 
-    public async Task<string?> DeactivateErpItemAsync(Guid id, Guid? userId, CancellationToken ct)
+    /// <summary>Sözlük kaydını siler (soft delete; kullanıcı isteği 2026-09-06: pasif yerine sil). Grup eşlemesi varsa önce o kaldırılır.</summary>
+    public async Task<string?> DeleteErpItemAsync(Guid id, Guid? userId, CancellationToken ct)
     {
         var item = await db.ErpReferenceItems.FirstOrDefaultAsync(i => i.Id == id, ct);
         if (item is null) return "Sözlük kaydı bulunamadı.";
         if (item.Kind == ErpReferenceKinds.ProductGroup
             && await db.MarketplaceCategoryMappings.AnyAsync(m => m.Marketplace == item.TargetSystem && m.TargetExternalId == item.Code, ct))
-            return $"{item.Code} bir grup eşlemesinde kullanılıyor; önce eşlemeyi kaldırın.";
-        item.IsActive = false; item.UpdatedAt = DateTime.UtcNow; item.UpdatedBy = userId;
+            return $"{item.Code} bir grup eşlemesinde kullanılıyor; önce eşlemeyi silin.";
+        item.IsDeleted = true; item.DeletedAt = DateTime.UtcNow; item.DeletedBy = userId;
         await db.SaveChangesAsync(ct);
         return null;
     }

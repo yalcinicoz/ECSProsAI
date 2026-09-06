@@ -169,4 +169,5 @@ public sealed record ErpTargetDto(string Key, string ServiceCode, string Name, b
 public sealed record ErpReferenceItemDto(
     Guid Id, string TargetSystem, string Kind, string Code, string Name, string? ParentCode,
     bool IsActive, string Source, DateTime LastSeenAt, bool IsMapped,
-    string? MappedTargetKind = null, Guid? MappedTargetId = null, string? MappedTargetLabel = null);
+    string? MappedTargetKind = null, Guid? MappedTargetId = null, string? MappedTargetLabel = null,
+    Guid? MappingId = null, Guid? MappedProductGroupId = null, string? MappedProductGroupName = null);
