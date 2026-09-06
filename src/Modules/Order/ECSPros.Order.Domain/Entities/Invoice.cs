@@ -62,4 +62,5 @@ public class Invoice : BaseEntity
     public Order Order { get; set; } = null!;
     public InvoiceSeries? InvoiceSeries { get; set; }
     public ICollection<InvoiceItem> Items { get; set; } = new List<InvoiceItem>();
+    public ICollection<InvoiceDispatch> Dispatches { get; set; } = new List<InvoiceDispatch>();
 }

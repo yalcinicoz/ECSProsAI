@@ -12,6 +12,8 @@ public class ELogoEInvoiceAdapter(
     ILogger<ELogoEInvoiceAdapter> logger) : IEInvoiceAdapter
 {
     public string ServiceCode => "elogo";
+    /// <summary>Taslak: gerçek eLogo API çağrısı yok — yalnız testMode sözleşmede simülasyon (FE3 K1 ile gerçeklenecek).</summary>
+    public bool IsStub => true;
 
     public async Task<EInvoiceResult> SendInvoiceAsync(
         Guid firmIntegrationId, EInvoicePayload payload, CancellationToken ct = default)

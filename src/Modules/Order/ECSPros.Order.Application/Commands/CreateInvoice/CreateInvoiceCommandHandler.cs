@@ -96,12 +96,21 @@ public class CreateInvoiceCommandHandler(
             TotalDiscount = order.TotalDiscount,
             TotalTax = order.TotalTax,
             GrandTotal = order.GrandTotal,
-            IntegratorStatus = sendMethod == InvoiceSendMethods.IntegratorApi ? "pending" : "not_applicable",
+            IntegratorStatus = sendMethod == InvoiceSendMethods.IntegratorApi ? "queued" : "not_applicable",
             ErpStatus = sendMethod == InvoiceSendMethods.Erp ? "pending" : "not_applicable",
             Status = "created",
             CreatedBy = request.CreatedBy
         };
         foreach (var item in items) invoice.Items.Add(item);
+
+        // FE4: kanal entegratör-API yöntemindeyse gönderim işi outbox'a düşer (aynı transaction)
+        if (sendMethod == InvoiceSendMethods.IntegratorApi)
+            invoice.Dispatches.Add(new InvoiceDispatch
+            {
+                Action = InvoiceDispatchActions.Send, Status = InvoiceDispatchStatuses.Pending,
+                IntegrationContractId = series.IntegrationContractId, NextAttemptAt = DateTime.UtcNow,
+                CreatedBy = request.CreatedBy
+            });
 
         context.Invoices.Add(invoice);
         await context.SaveChangesAsync(cancellationToken);

@@ -542,6 +542,7 @@ if (nodeOptions.GenelWorkerRolu) // FAZ 10 / A2
     builder.Services.AddHostedService<ECSPros.Api.Services.Marketplace.Reference.MarketplaceReferenceRefreshWorker>();
     builder.Services.AddHostedService<ECSPros.Api.Services.Legacy.LegacySyncWorker>();
     builder.Services.AddHostedService<ECSPros.Api.Services.Fulfillment.CargoNotifyWorker>();
+    builder.Services.AddHostedService<ECSPros.Api.Services.Invoicing.InvoiceDispatchWorker>(); // FE4: fatura gönderim outbox'ı (InvoiceDispatch:Enabled, varsayılan KAPALI)
     builder.Services.AddHostedService<ECSPros.Api.Services.Tracking.TrackingDispatchWorker>();
     builder.Services.AddHostedService<ECSPros.Api.Services.Tracking.Feed.FeedGeneratorWorker>(); // İE-5: feed üretimi (Feeds:Enabled, 6 sa) // İE-2: commerce event outbox dispatcher (Tracking:Enabled; adapter'lar Faz D) // OP5: kargo bildirim outbox'ı (varsayılan KAPALI — KG1'de açılır)
 }

@@ -12,7 +12,94 @@ const TABS = [
   { key: 'created',   label: 'Oluşturulan' },
   { key: 'cancelled', label: 'İptal Edilen' },
   { key: '',          label: 'Tümü' },
+  { key: 'queue',     label: 'Gönderim Kuyruğu' },
 ]
+
+// FE4: gönderim kuyruğu
+interface DispatchRow {
+  id: string; invoiceId: string; invoiceNumber: string; invoiceType: string; orderId: string
+  action: string; status: string; providerCode: string | null; attempt: number; maxAttempts: number
+  nextAttemptAt: string | null; lastAttemptAt: string | null; completedAt: string | null; lastError: string | null
+  responseSnapshot: Record<string, unknown> | null; createdAt: string
+}
+const DISPATCH_STATUS: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'neutral' }> = {
+  pending: { label: 'Bekliyor', variant: 'info' },
+  done:    { label: 'Tamamlandı', variant: 'success' },
+  dead:    { label: 'Ölü mektup', variant: 'danger' },
+  blocked: { label: 'Engelli', variant: 'warning' },
+}
+const DISPATCH_ACTION: Record<string, string> = { send: 'Gönder', cancel: 'İptal bildir', status: 'Durum sor' }
+const INTEGRATOR_STATUS: Record<string, string> = {
+  not_applicable: 'Gönderim yok', pending: 'Bekliyor', queued: 'Kuyrukta', retrying: 'Tekrar denenecek',
+  sent: 'Gönderildi', accepted: 'Kabul edildi', rejected: 'Reddedildi', error: 'Hata', blocked: 'Engelli',
+  cancel_queued: 'İptal kuyrukta', cancelled: 'İptal bildirildi',
+}
+const fmtDt = (iso: string | null | undefined) => iso ? new Date(iso).toLocaleString('tr-TR') : '—'
+
+function DispatchQueue() {
+  const queryClient = useQueryClient()
+  const [status, setStatus] = useState('pending')
+  const [error, setError] = useState('')
+  const { data, isLoading } = useQuery<PagedResult<DispatchRow>>({
+    queryKey: ['invoice-dispatches', status],
+    queryFn: async () => (await api.get(`/orders/invoice-dispatches?status=${status}&pageSize=100`)).data.data,
+    refetchInterval: 30_000,
+  })
+  const retry = useMutation({
+    mutationFn: async (id: string) => { await api.post(`/orders/invoice-dispatches/${id}/retry`, {}) },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['invoice-dispatches'] }); setError('') },
+    onError: (e: unknown) => setError((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Tekrar denenemedi.'),
+  })
+  const rows = data?.items ?? []
+  return (
+    <div className="card overflow-hidden p-0">
+      <div className="flex flex-wrap items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+        {Object.entries(DISPATCH_STATUS).map(([k, v]) => (
+          <button key={k} className={cn('stab', status === k && 'active')} onClick={() => setStatus(k)}>{v.label}</button>
+        ))}
+        <button className={cn('stab', status === '' && 'active')} onClick={() => setStatus('')}>Tümü</button>
+        <span className="text-xs ml-auto" style={{ color: 'var(--text-s)' }}>{data?.totalCount ?? 0} iş · worker kapalıysa kuyruk birikir</span>
+      </div>
+      <table className="w-full">
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
+            {['FATURA', 'İŞLEM', 'SAĞLAYICI', 'DENEME', 'SONRAKİ', 'DURUM', 'SON HATA', ''].map(h => (
+              <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold tracking-wider" style={{ color: 'var(--text-s)' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(d => {
+            const st = DISPATCH_STATUS[d.status] ?? { label: d.status, variant: 'neutral' as const }
+            return (
+              <tr key={d.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                <td className="px-3 py-2.5">
+                  <Link to={`/orders/${d.orderId}`} className="text-xs font-mono underline" style={{ color: 'var(--brand)' }}>{d.invoiceNumber}</Link>
+                  <span className="text-xs ml-2" style={{ color: 'var(--text-s)' }}>{INVOICE_TYPE_MAP[d.invoiceType] ?? d.invoiceType}</span>
+                </td>
+                <td className="px-3 py-2.5 text-xs" style={{ color: 'var(--text)' }}>{DISPATCH_ACTION[d.action] ?? d.action}</td>
+                <td className="px-3 py-2.5 text-xs" style={{ color: 'var(--text-m)' }}>{d.providerCode ?? '—'}</td>
+                <td className="px-3 py-2.5 text-xs tabular-nums" style={{ color: 'var(--text-m)' }}>{d.attempt}/{d.maxAttempts}</td>
+                <td className="px-3 py-2.5 text-xs" style={{ color: 'var(--text-m)' }}>{d.status === 'pending' ? fmtDt(d.nextAttemptAt) : fmtDt(d.completedAt ?? d.lastAttemptAt)}</td>
+                <td className="px-3 py-2.5"><Badge variant={st.variant}>{st.label}</Badge></td>
+                <td className="px-3 py-2.5 text-xs max-w-md" style={{ color: '#b91c1c' }}>{d.lastError ?? ''}</td>
+                <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                  {(d.status === 'dead' || d.status === 'blocked') && (
+                    <Button size="sm" variant="secondary" onClick={() => retry.mutate(d.id)} loading={retry.isPending && retry.variables === d.id}>Tekrar Dene</Button>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
+          {!isLoading && rows.length === 0 && (
+            <tr><td colSpan={8} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>Bu durumda iş yok.</td></tr>
+          )}
+        </tbody>
+      </table>
+      {error && <p className="px-4 py-2 text-sm" style={{ color: '#ef4444' }}>{error}</p>}
+    </div>
+  )
+}
 
 export interface InvoiceSummary {
   id: string
@@ -77,6 +164,16 @@ function InvoiceModal({ invoice, onClose }: { invoice: InvoiceSummary; onClose: 
     onSuccess: () => { invalidate(); onClose() },
     onError: onErr,
   })
+  const { data: dispatches } = useQuery<PagedResult<DispatchRow>>({
+    queryKey: ['invoice-dispatches', 'inv', invoice.id],
+    queryFn: async () => (await api.get(`/orders/invoice-dispatches?invoiceId=${invoice.id}&pageSize=20`)).data.data,
+  })
+  const [resendError, setResendError] = useState('')
+  const resend = useMutation({
+    mutationFn: async () => { await api.post(`/orders/invoices/${invoice.id}/resend`, {}) },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['invoice-dispatches'] }); queryClient.invalidateQueries({ queryKey: ['invoices'] }); setResendError('') },
+    onError: (e: unknown) => setResendError((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Gönderilemedi.'),
+  })
   const cancel = useMutation({
     mutationFn: async () => { await api.post(`/orders/invoices/${invoice.id}/cancel`, {}) },
     onSuccess: () => { invalidate(); onClose() },
@@ -107,6 +204,29 @@ function InvoiceModal({ invoice, onClose }: { invoice: InvoiceSummary; onClose: 
       </div>
 
       <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="rounded-lg p-3 mb-3 text-xs" style={{ background: 'var(--surface2)', color: 'var(--text-m)' }}>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-semibold" style={{ color: 'var(--text)' }}>Entegratör durumu:</span>
+            <Badge variant="neutral">{INTEGRATOR_STATUS[invoice.integratorStatus] ?? invoice.integratorStatus}</Badge>
+            {invoice.status !== 'cancelled' && (invoice.numberSource ?? 'internal') === 'internal' && !['sent', 'accepted', 'queued', 'pending', 'retrying'].includes(invoice.integratorStatus) && (
+              <Button size="sm" variant="ghost" onClick={() => resend.mutate()} loading={resend.isPending}>Entegratöre Gönder</Button>
+            )}
+          </div>
+          {(dispatches?.items ?? []).map(d => {
+            const st = DISPATCH_STATUS[d.status] ?? { label: d.status, variant: 'neutral' as const }
+            return (
+              <div key={d.id} className="flex flex-wrap items-center gap-2 py-1" style={{ borderTop: '1px solid var(--border)' }}>
+                <span>{fmtDt(d.createdAt)}</span>
+                <span>{DISPATCH_ACTION[d.action] ?? d.action}</span>
+                <Badge variant={st.variant}>{st.label}</Badge>
+                <span>{d.attempt}/{d.maxAttempts}</span>
+                {d.lastError && <span style={{ color: '#b91c1c' }}>{d.lastError}</span>}
+              </div>
+            )
+          })}
+          {(dispatches?.items ?? []).length === 0 && <div>Gönderim işi yok.</div>}
+          {resendError && <div style={{ color: '#ef4444' }}>{resendError}</div>}
+        </div>
         <label className="flbl">Entegratör PDF Adresi (https)</label>
         <input className="inp" value={pdfUrl} onChange={e => setPdfUrl(e.target.value)}
           placeholder="https://.../earchive/....pdf" />
@@ -141,6 +261,7 @@ export function InvoicesPage() {
       if (tab) params.set('status', tab)
       return (await api.get(`/orders/invoices?${params}`)).data.data
     },
+    enabled: tab !== 'queue',
   })
 
   const invoices = data?.items ?? []
@@ -164,6 +285,7 @@ export function InvoicesPage() {
         ))}
       </div>
 
+      {tab === 'queue' ? <DispatchQueue /> : (<>
       <div className="card overflow-hidden">
         <table className="w-full">
           <thead>
@@ -227,6 +349,7 @@ export function InvoicesPage() {
             style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Sonraki →</button>
         </div>
       )}
+      </>)}
 
       {selected && <InvoiceModal invoice={selected} onClose={() => setSelected(null)} />}
     </div>

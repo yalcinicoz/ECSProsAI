@@ -58,12 +58,14 @@ public partial class CreateInvoiceSeriesCommandHandler(IOrderDbContext db, IFirm
 }
 
 /// <summary>Sözleşme doğrulaması: verildiyse firmaya ait, einvoice tipli ve firma-geneli olmalı.
-/// Zorunluluk FE3'te (entegratör kataloğu gelince) açılır — bkz. plan §2.2.</summary>
+/// FE3 ile ZORUNLU (2026-09-06) — bkz. plan §2.2.</summary>
 public static class InvoiceSeriesContractRules
 {
     public static async Task<string?> ValidateAsync(IFirmResolver firmResolver, Guid firmId, Guid? contractId, CancellationToken ct)
     {
-        if (contractId is null) return null;
+        // FE3 (2026-09-06): sözleşme ZORUNLU — her seri bir entegratör sözleşmesine aittir (plan §0.2)
+        if (contractId is null)
+            return "Her seri bir entegratör sözleşmesine bağlanmalıdır — önce Ayarlar → Firmalar → Entegrasyonlar'dan e-fatura entegratörü sözleşmesi tanımlayın.";
         var contracts = await firmResolver.GetEInvoiceContractsAsync(firmId, ct);
         var contract = contracts.FirstOrDefault(c => c.Id == contractId.Value);
         if (contract is null) return "Entegratör sözleşmesi bulunamadı ya da bu firmaya ait değil.";

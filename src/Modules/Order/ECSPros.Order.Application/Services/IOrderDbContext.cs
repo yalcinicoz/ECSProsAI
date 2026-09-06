@@ -25,6 +25,7 @@ public interface IOrderDbContext
     DbSet<InvoiceSeriesCounter> InvoiceSeriesCounters { get; }
     DbSet<ChannelInvoiceSettings> ChannelInvoiceSettings { get; }
     DbSet<ChannelInvoiceSeriesBinding> ChannelInvoiceSeriesBindings { get; }
+    DbSet<InvoiceDispatch> InvoiceDispatches { get; }
     DbSet<OrderNumberSeries> OrderNumberSeries { get; }
     DbSet<Quote> Quotes { get; }
     DbSet<QuoteItem> QuoteItems { get; }

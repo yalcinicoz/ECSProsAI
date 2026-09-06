@@ -166,6 +166,24 @@ public class InvoiceSeriesConfiguration : IEntityTypeConfiguration<InvoiceSeries
     }
 }
 
+public class InvoiceDispatchConfiguration : IEntityTypeConfiguration<InvoiceDispatch>
+{
+    public void Configure(EntityTypeBuilder<InvoiceDispatch> builder)
+    {
+        builder.ToTable("ord_invoice_dispatches");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Action).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.Status).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.ProviderCode).HasMaxLength(50);
+        builder.Property(x => x.LastError).HasMaxLength(2000);
+        builder.Property(x => x.RequestSnapshot).HasColumnType("jsonb");
+        builder.Property(x => x.ResponseSnapshot).HasColumnType("jsonb");
+        builder.HasIndex(x => new { x.Status, x.NextAttemptAt });
+        builder.HasIndex(x => x.InvoiceId);
+        builder.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
 public class InvoiceSeriesCounterConfiguration : IEntityTypeConfiguration<InvoiceSeriesCounter>
 {
     public void Configure(EntityTypeBuilder<InvoiceSeriesCounter> builder)
@@ -242,6 +260,7 @@ public class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.HasIndex(x => x.PackageId);
         builder.HasQueryFilter(x => !x.IsDeleted);
         builder.HasMany(x => x.Items).WithOne(x => x.Invoice).HasForeignKey(x => x.InvoiceId);
+        builder.HasMany(x => x.Dispatches).WithOne(x => x.Invoice).HasForeignKey(x => x.InvoiceId);
     }
 }
 

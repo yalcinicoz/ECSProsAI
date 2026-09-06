@@ -19,6 +19,7 @@ public class OrderDbContext : DbContext, IOrderDbContext
     public DbSet<InvoiceSeriesCounter> InvoiceSeriesCounters => Set<InvoiceSeriesCounter>();
     public DbSet<ChannelInvoiceSettings> ChannelInvoiceSettings => Set<ChannelInvoiceSettings>();
     public DbSet<ChannelInvoiceSeriesBinding> ChannelInvoiceSeriesBindings => Set<ChannelInvoiceSeriesBinding>();
+    public DbSet<InvoiceDispatch> InvoiceDispatches => Set<InvoiceDispatch>();
     public DbSet<OrderNumberSeries> OrderNumberSeries => Set<OrderNumberSeries>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();

@@ -22,6 +22,9 @@ const SEND_METHOD_MAP: Record<string, string> = {
 }
 
 interface FirmRow { id: string; code: string; nameI18n: Record<string, string> }
+// FE3: firma bazlı e-fatura entegratör sözleşmesi (kimlik değerleri gelmez)
+interface ContractRow { id: string; firmId: string; serviceCode: string; name: string | null; isActive: boolean; status: string; testMode: boolean; firmWide: boolean }
+const contractLabel = (c: ContractRow) => `${c.name ?? c.serviceCode} (${c.serviceCode}${c.testMode ? ' · test' : ''})`
 
 interface ChannelBinding { invoiceType: string; seriesId: string; serial: string; seriesName: string | null; seriesActive: boolean }
 interface ChannelSettings {
@@ -48,18 +51,22 @@ const fmtDate = (iso: string | null | undefined) => iso ? new Date(iso).toLocale
 
 // ── Yeni seri ─────────────────────────────────────────────────────────────────
 
-function NewSeriesModal({ firms, defaultFirmId, onClose }: { firms: FirmRow[]; defaultFirmId: string; onClose: () => void }) {
+function NewSeriesModal({ firms, contracts, defaultFirmId, onClose }: { firms: FirmRow[]; contracts: ContractRow[]; defaultFirmId: string; onClose: () => void }) {
   const queryClient = useQueryClient()
   const [firmId, setFirmId] = useState(defaultFirmId)
   const [serial, setSerial] = useState('')
   const [invoiceType, setInvoiceType] = useState<string>('e_archive')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [contractId, setContractId] = useState('')
   const [error, setError] = useState('')
+  const firmContracts = contracts.filter(c => c.firmId === firmId && c.firmWide && c.isActive)
 
   const create = useMutation({
     mutationFn: async () => {
-      await api.post('/orders/invoice-series', { firmId, serial, invoiceType, name: name || null, description: description || null })
+      await api.post('/orders/invoice-series', {
+        firmId, serial, invoiceType, name: name || null, description: description || null, integrationContractId: contractId || null,
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice-series'] })
@@ -73,7 +80,7 @@ function NewSeriesModal({ firms, defaultFirmId, onClose }: { firms: FirmRow[]; d
     <Modal open onClose={onClose} title="Yeni Fatura Serisi"
       footer={<>
         <Button variant="secondary" onClick={onClose}>Vazgeç</Button>
-        <Button onClick={() => create.mutate()} loading={create.isPending} disabled={!firmId || serial.length !== 3}>Seri Ekle</Button>
+        <Button onClick={() => create.mutate()} loading={create.isPending} disabled={!firmId || serial.length !== 3 || !contractId}>Seri Ekle</Button>
       </>}>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
@@ -100,12 +107,24 @@ function NewSeriesModal({ firms, defaultFirmId, onClose }: { firms: FirmRow[]; d
             </select>
           </div>
         </div>
-        <div>
-          <label className="flbl">Açıklama</label>
-          <input className="inp" value={description} onChange={e => setDescription(e.target.value)} placeholder="isteğe bağlı" />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="flbl">Entegratör sözleşmesi <span className="text-red-500">*</span></label>
+            <select className="inp" value={contractId} onChange={e => setContractId(e.target.value)} disabled={!firmId}>
+              <option value="">Sözleşme seçin</option>
+              {firmContracts.map(c => <option key={c.id} value={c.id}>{contractLabel(c)}</option>)}
+            </select>
+            {firmId && firmContracts.length === 0 && (
+              <p className="text-xs mt-1 text-red-500">Bu firmada aktif e-fatura entegratör sözleşmesi yok — Ayarlar → Firmalar → firma → Entegrasyonlar'dan "einvoice" tipli servis ekleyin.</p>
+            )}
+          </div>
+          <div>
+            <label className="flbl">Açıklama</label>
+            <input className="inp" value={description} onChange={e => setDescription(e.target.value)} placeholder="isteğe bağlı" />
+          </div>
         </div>
         <p className="text-xs" style={{ color: 'var(--text-s)' }}>
-          Aynı harfler bir firmada tipten bağımsız yalnız bir kez tanımlanabilir; tip sonradan değiştirilemez.
+          Her seri bir entegratör sözleşmesine aittir. Aynı harfler bir firmada tipten bağımsız yalnız bir kez tanımlanabilir; tip sonradan değiştirilemez.
           Numara örneği: <code>{serial || 'MSH'}{new Date().getFullYear()}000000001</code>
         </p>
         {error && <p className="text-sm text-red-500">{error}</p>}
@@ -118,7 +137,7 @@ function NewSeriesModal({ firms, defaultFirmId, onClose }: { firms: FirmRow[]; d
 
 interface GapRow { year: string; expectedLast: number; recordedCount: number; cancelledCount: number; missingSequences: number[]; missingTotal: number; lastInvoiceDate: string | null }
 
-function EditSeriesModal({ series, usedBy, onClose }: { series: InvoiceSeries; usedBy: ChannelSettings[]; onClose: () => void }) {
+function EditSeriesModal({ series, usedBy, contracts, onClose }: { series: InvoiceSeries; usedBy: ChannelSettings[]; contracts: ContractRow[]; onClose: () => void }) {
   const queryClient = useQueryClient()
   // FE1: boşluk denetimi (sayaç ↔ kayıtlı numaralar)
   const { data: gaps = [] } = useQuery<GapRow[]>({
@@ -127,12 +146,14 @@ function EditSeriesModal({ series, usedBy, onClose }: { series: InvoiceSeries; u
   })
   const [name, setName] = useState(series.name ?? '')
   const [description, setDescription] = useState(series.description ?? '')
+  const [contractId, setContractId] = useState(series.integrationContractId ?? '')
   const [error, setError] = useState('')
+  const firmContracts = contracts.filter(c => c.firmId === series.firmId && c.firmWide && (c.isActive || c.id === series.integrationContractId))
 
   const save = useMutation({
     mutationFn: async () => {
       await api.put(`/orders/invoice-series/${series.id}`, {
-        name: name || null, description: description || null, integrationContractId: series.integrationContractId ?? null,
+        name: name || null, description: description || null, integrationContractId: contractId || null,
       })
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['invoice-series'] }); onClose() },
@@ -143,7 +164,7 @@ function EditSeriesModal({ series, usedBy, onClose }: { series: InvoiceSeries; u
     <Modal open onClose={onClose} title={`${series.serial} · ${INVOICE_TYPE_MAP[series.invoiceType] ?? series.invoiceType}`}
       footer={<>
         <Button variant="secondary" onClick={onClose}>Kapat</Button>
-        <Button onClick={() => save.mutate()} loading={save.isPending}>Kaydet</Button>
+        <Button onClick={() => save.mutate()} loading={save.isPending} disabled={!contractId}>Kaydet</Button>
       </>}>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
@@ -152,8 +173,12 @@ function EditSeriesModal({ series, usedBy, onClose }: { series: InvoiceSeries; u
             <input className="inp" value={name} onChange={e => setName(e.target.value)} />
           </div>
           <div>
-            <label className="flbl">Entegratör Sözleşmesi</label>
-            <input className="inp" value={series.integrationContractName ?? '— (FE3 ile bağlanacak)'} disabled />
+            <label className="flbl">Entegratör sözleşmesi <span className="text-red-500">*</span></label>
+            <select className="inp" value={contractId} onChange={e => setContractId(e.target.value)}>
+              <option value="">Sözleşme seçin</option>
+              {firmContracts.map(c => <option key={c.id} value={c.id}>{contractLabel(c)}</option>)}
+            </select>
+            {firmContracts.length === 0 && <p className="text-xs mt-1 text-red-500">Bu firmada e-fatura sözleşmesi yok — Ayarlar → Firmalar → Entegrasyonlar.</p>}
           </div>
         </div>
         <div>
@@ -381,6 +406,10 @@ export function InvoiceSeriesPage() {
     queryKey: ['invoice-series'],
     queryFn: async () => (await api.get('/orders/invoice-series?activeOnly=false')).data.data ?? [],
   })
+  const { data: contracts = [] } = useQuery<ContractRow[]>({
+    queryKey: ['einvoice-contracts'],
+    queryFn: async () => (await api.get('/orders/invoice-series/contracts')).data.data ?? [],
+  })
   const { data: channels = [] } = useQuery<ChannelSettings[]>({
     queryKey: ['channel-invoice-settings'],
     queryFn: async () => (await api.get('/orders/invoice-settings/channels')).data.data ?? [],
@@ -441,7 +470,7 @@ export function InvoiceSeriesPage() {
           <table className="w-full">
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-                {['FİRMA', 'SERİ', 'TİP', 'AD', 'KULLANAN KANALLAR', 'SON NUMARA', 'SON FATURA', 'DURUM', ''].map(h => (
+                {['FİRMA', 'SERİ', 'TİP', 'AD', 'SÖZLEŞME', 'KULLANAN KANALLAR', 'SON NUMARA', 'SON FATURA', 'DURUM', ''].map(h => (
                   <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold tracking-wider" style={{ color: 'var(--text-s)' }}>{h}</th>
                 ))}
               </tr>
@@ -458,6 +487,11 @@ export function InvoiceSeriesPage() {
                     <td className="px-3 py-2.5 text-sm" style={{ color: 'var(--text)' }}>
                       {s.name ?? '—'}
                       {s.description && <span className="block text-xs" style={{ color: 'var(--text-s)' }}>{s.description}</span>}
+                    </td>
+                    <td className="px-3 py-2.5 text-xs" style={{ color: 'var(--text-m)' }}>
+                      {s.integrationContractId
+                        ? (s.integrationContractName ?? 'bağlı')
+                        : <Badge variant="danger">sözleşmesiz</Badge>}
                     </td>
                     <td className="px-3 py-2.5 text-xs" style={{ color: 'var(--text-m)' }}>
                       {used.length === 0 ? <span style={{ color: 'var(--text-s)' }}>—</span>
@@ -479,7 +513,7 @@ export function InvoiceSeriesPage() {
                 )
               })}
               {rows.length === 0 && (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>Filtreye uyan seri yok.</td></tr>
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-s)' }}>Filtreye uyan seri yok.</td></tr>
               )}
             </tbody>
           </table>
@@ -492,8 +526,8 @@ export function InvoiceSeriesPage() {
 
       <ChannelSlotsCard channels={channels} series={series} firms={firms} />
 
-      {newOpen && <NewSeriesModal firms={firms} defaultFirmId={firmFilter} onClose={() => setNewOpen(false)} />}
-      {editing && <EditSeriesModal series={editing} usedBy={usedBy(editing)} onClose={() => setEditing(null)} />}
+      {newOpen && <NewSeriesModal firms={firms} contracts={contracts} defaultFirmId={firmFilter} onClose={() => setNewOpen(false)} />}
+      {editing && <EditSeriesModal series={editing} usedBy={usedBy(editing)} contracts={contracts} onClose={() => setEditing(null)} />}
       {deactivating && (
         <DeactivateModal series={deactivating} usedBy={usedBy(deactivating)}
           candidates={series.filter(c => c.id !== deactivating.id && c.firmId === deactivating.firmId && c.invoiceType === deactivating.invoiceType && c.isActive)}

@@ -14,4 +14,4 @@ public sealed record ChannelInfo(Guid Id, Guid FirmId, string Code, string Name,
 
 public sealed record IntegrationContractInfo(
     Guid Id, Guid FirmId, Guid? FirmPlatformId, string ServiceCode, string ServiceType,
-    string? Name, bool IsActive, string Status);
+    string? Name, bool IsActive, string Status, bool TestMode = false);

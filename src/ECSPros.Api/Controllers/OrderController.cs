@@ -11,6 +11,10 @@ using ECSPros.Order.Application.Commands.ManageOrderNumberSeries;
 using ECSPros.Order.Application.Commands.UpdateInvoiceSeries;
 using ECSPros.Order.Application.Commands.RegisterExternalInvoice;
 using ECSPros.Order.Application.Queries.GetInvoiceSeriesGaps;
+using ECSPros.Order.Application.Queries.GetInvoiceDispatches;
+using ECSPros.Order.Application.Queries.GetEInvoiceContracts;
+using ECSPros.Order.Application.Commands.RetryInvoiceDispatch;
+using ECSPros.Order.Application.Commands.ResendInvoice;
 using ECSPros.Order.Application.Commands.DeactivateInvoiceSeries;
 using ECSPros.Order.Application.Commands.ActivateInvoiceSeries;
 using ECSPros.Order.Application.Commands.SetChannelInvoiceSettings;
@@ -347,6 +351,45 @@ public class OrderController : ControllerBase
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         var data = new { id = result.Value!.InvoiceId, alreadyExisted = result.Value.AlreadyExisted };
         return result.Value.AlreadyExisted ? Ok(new { success = true, data }) : Created($"/api/orders/invoices/{data.id}", new { success = true, data });
+    }
+
+    /// <summary>FE3: firma bazlı e-fatura entegratör sözleşmeleri (seri formu seçicisi; kimlik değeri dönmez).</summary>
+    [HttpGet("invoice-series/contracts")]
+    public async Task<IActionResult> GetEInvoiceContracts([FromQuery] Guid? firmId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetEInvoiceContractsQuery(firmId), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>FE4: gönderim kuyruğu (status: pending|done|dead|blocked; invoiceId ile fatura zaman çizelgesi).</summary>
+    [HttpGet("invoice-dispatches")]
+    public async Task<IActionResult> GetInvoiceDispatches([FromQuery] string? status, [FromQuery] Guid? invoiceId,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(new GetInvoiceDispatchesQuery(status, invoiceId, page, Math.Clamp(pageSize, 1, 200)), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>FE4: ölü/engelli gönderim işini yeniden kuyruğa alır.</summary>
+    [HttpPost("invoice-dispatches/{id:guid}/retry")]
+    public async Task<IActionResult> RetryInvoiceDispatch(Guid id, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
+        var result = await _mediator.Send(new RetryInvoiceDispatchCommand(id, uid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>FE4: fatura için yeni gönderim işi açar (bekleyen iş yoksa).</summary>
+    [HttpPost("invoices/{invoiceId:guid}/resend")]
+    public async Task<IActionResult> ResendInvoice(Guid invoiceId, CancellationToken ct)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
+        var result = await _mediator.Send(new ResendInvoiceCommand(invoiceId, uid), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = new { dispatchId = result.Value } });
     }
 
     /// <summary>FE1: seri boşluk denetimi (sayaç ↔ kayıtlı numaralar).</summary>

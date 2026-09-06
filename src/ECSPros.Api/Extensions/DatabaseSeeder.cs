@@ -254,6 +254,60 @@ public static class DatabaseSeeder
             }),
             // GES Telekom (TT Mesaj) — restapi.ttmesaj.com; alan adları GesTelekomSmsService/
             // DbSmsSettingsProvider'ın okuduğu anahtarlarla birebir aynı olmalı.
+            // FE3 e-fatura entegratörü (2026-09-06): sözleşme FİRMA geneli tanımlanır, seri bu sözleşmeye bağlanır
+            ("elogo", "eLogo", "einvoice", new List<PlatformSchemaField>
+            {
+                Alan("username",    "Kullanıcı Adı",                   "text",     "credentials", zorunlu: true),
+                Alan("password",    "Şifre / API Anahtarı",            "password", "credentials", zorunlu: true),
+                Alan("apiUrl",      "Servis Adresi (API URL)",         "text",     "settings",    yardim: "Boşsa adaptörün varsayılan canlı/sandbox adresi kullanılır."),
+                Alan("senderAlias", "Gönderici Birim Etiketi (GB)",    "text",     "settings",    yardim: "urn:mail:defaultgb@firma.com biçiminde; e-Fatura için zorunlu."),
+                Alan("testMode",    "Test Modu (sandbox)",             "boolean",  "settings",    yardim: "Açıkken sandbox/simülasyon; canlı gönderim için KAPATIN.")
+            }),
+            // FE3 e-fatura entegratörü (2026-09-06): sözleşme FİRMA geneli tanımlanır, seri bu sözleşmeye bağlanır
+            ("uyumsoft", "Uyumsoft", "einvoice", new List<PlatformSchemaField>
+            {
+                Alan("username",    "Kullanıcı Adı",                   "text",     "credentials", zorunlu: true),
+                Alan("password",    "Şifre / API Anahtarı",            "password", "credentials", zorunlu: true),
+                Alan("apiUrl",      "Servis Adresi (API URL)",         "text",     "settings",    yardim: "Boşsa adaptörün varsayılan canlı/sandbox adresi kullanılır."),
+                Alan("senderAlias", "Gönderici Birim Etiketi (GB)",    "text",     "settings",    yardim: "urn:mail:defaultgb@firma.com biçiminde; e-Fatura için zorunlu."),
+                Alan("testMode",    "Test Modu (sandbox)",             "boolean",  "settings",    yardim: "Açıkken sandbox/simülasyon; canlı gönderim için KAPATIN.")
+            }),
+            // FE3 e-fatura entegratörü (2026-09-06): sözleşme FİRMA geneli tanımlanır, seri bu sözleşmeye bağlanır
+            ("foriba", "Foriba (Sovos)", "einvoice", new List<PlatformSchemaField>
+            {
+                Alan("username",    "Kullanıcı Adı",                   "text",     "credentials", zorunlu: true),
+                Alan("password",    "Şifre / API Anahtarı",            "password", "credentials", zorunlu: true),
+                Alan("apiUrl",      "Servis Adresi (API URL)",         "text",     "settings",    yardim: "Boşsa adaptörün varsayılan canlı/sandbox adresi kullanılır."),
+                Alan("senderAlias", "Gönderici Birim Etiketi (GB)",    "text",     "settings",    yardim: "urn:mail:defaultgb@firma.com biçiminde; e-Fatura için zorunlu."),
+                Alan("testMode",    "Test Modu (sandbox)",             "boolean",  "settings",    yardim: "Açıkken sandbox/simülasyon; canlı gönderim için KAPATIN.")
+            }),
+            // FE3 e-fatura entegratörü (2026-09-06): sözleşme FİRMA geneli tanımlanır, seri bu sözleşmeye bağlanır
+            ("edm", "EDM Bilişim", "einvoice", new List<PlatformSchemaField>
+            {
+                Alan("username",    "Kullanıcı Adı",                   "text",     "credentials", zorunlu: true),
+                Alan("password",    "Şifre / API Anahtarı",            "password", "credentials", zorunlu: true),
+                Alan("apiUrl",      "Servis Adresi (API URL)",         "text",     "settings",    yardim: "Boşsa adaptörün varsayılan canlı/sandbox adresi kullanılır."),
+                Alan("senderAlias", "Gönderici Birim Etiketi (GB)",    "text",     "settings",    yardim: "urn:mail:defaultgb@firma.com biçiminde; e-Fatura için zorunlu."),
+                Alan("testMode",    "Test Modu (sandbox)",             "boolean",  "settings",    yardim: "Açıkken sandbox/simülasyon; canlı gönderim için KAPATIN.")
+            }),
+            // FE3 e-fatura entegratörü (2026-09-06): sözleşme FİRMA geneli tanımlanır, seri bu sözleşmeye bağlanır
+            ("nilvera", "Nilvera", "einvoice", new List<PlatformSchemaField>
+            {
+                Alan("username",    "Kullanıcı Adı",                   "text",     "credentials", zorunlu: true),
+                Alan("password",    "Şifre / API Anahtarı",            "password", "credentials", zorunlu: true),
+                Alan("apiUrl",      "Servis Adresi (API URL)",         "text",     "settings",    yardim: "Boşsa adaptörün varsayılan canlı/sandbox adresi kullanılır."),
+                Alan("senderAlias", "Gönderici Birim Etiketi (GB)",    "text",     "settings",    yardim: "urn:mail:defaultgb@firma.com biçiminde; e-Fatura için zorunlu."),
+                Alan("testMode",    "Test Modu (sandbox)",             "boolean",  "settings",    yardim: "Açıkken sandbox/simülasyon; canlı gönderim için KAPATIN.")
+            }),
+            // FE3 e-fatura entegratörü (2026-09-06): sözleşme FİRMA geneli tanımlanır, seri bu sözleşmeye bağlanır
+            ("izibiz", "İzibiz", "einvoice", new List<PlatformSchemaField>
+            {
+                Alan("username",    "Kullanıcı Adı",                   "text",     "credentials", zorunlu: true),
+                Alan("password",    "Şifre / API Anahtarı",            "password", "credentials", zorunlu: true),
+                Alan("apiUrl",      "Servis Adresi (API URL)",         "text",     "settings",    yardim: "Boşsa adaptörün varsayılan canlı/sandbox adresi kullanılır."),
+                Alan("senderAlias", "Gönderici Birim Etiketi (GB)",    "text",     "settings",    yardim: "urn:mail:defaultgb@firma.com biçiminde; e-Fatura için zorunlu."),
+                Alan("testMode",    "Test Modu (sandbox)",             "boolean",  "settings",    yardim: "Açıkken sandbox/simülasyon; canlı gönderim için KAPATIN.")
+            }),
             ("gestelekom", "GES Telekom SMS", "sms", new List<PlatformSchemaField>
             {
                 Alan("apiUrl",       "API Adresi (boşsa restapi.ttmesaj.com)", "text",     "settings"),

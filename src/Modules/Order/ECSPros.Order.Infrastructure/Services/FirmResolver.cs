@@ -28,6 +28,7 @@ public class FirmResolver(OrderDbContext db) : IFirmResolver
         public string? Name { get; set; }
         public bool IsActive { get; set; }
         public string Status { get; set; } = "";
+        public bool TestMode { get; set; }
     }
 
     public async Task<Guid?> GetFirmIdAsync(Guid firmPlatformId, CancellationToken ct = default)
@@ -67,7 +68,8 @@ public class FirmResolver(OrderDbContext db) : IFirmResolver
         var query = firmId is null
             ? db.Database.SqlQuery<ContractRow>($"""
                 SELECT i."Id", i."FirmId", i."FirmPlatformId", s."Code" AS "ServiceCode", s."ServiceType",
-                       i."Name", i."IsActive", i."Status"
+                       i."Name", i."IsActive", i."Status",
+                       COALESCE((i."Settings"->>'testMode') IN ('true','True','1'), false) AS "TestMode"
                 FROM core.core_firm_platform_integrations i
                 JOIN definition.integration_services s ON s."Id" = i."IntegrationServiceId"
                 WHERE i."IsDeleted" = false AND s."ServiceType" = 'einvoice'
@@ -75,7 +77,8 @@ public class FirmResolver(OrderDbContext db) : IFirmResolver
                 """)
             : db.Database.SqlQuery<ContractRow>($"""
                 SELECT i."Id", i."FirmId", i."FirmPlatformId", s."Code" AS "ServiceCode", s."ServiceType",
-                       i."Name", i."IsActive", i."Status"
+                       i."Name", i."IsActive", i."Status",
+                       COALESCE((i."Settings"->>'testMode') IN ('true','True','1'), false) AS "TestMode"
                 FROM core.core_firm_platform_integrations i
                 JOIN definition.integration_services s ON s."Id" = i."IntegrationServiceId"
                 WHERE i."IsDeleted" = false AND s."ServiceType" = 'einvoice' AND i."FirmId" = {firmId.Value}
@@ -83,7 +86,7 @@ public class FirmResolver(OrderDbContext db) : IFirmResolver
                 """);
         var rows = await query.ToListAsync(ct);
         return rows.Select(r => new IntegrationContractInfo(
-            r.Id, r.FirmId, r.FirmPlatformId, r.ServiceCode, r.ServiceType, r.Name, r.IsActive, r.Status)).ToList();
+            r.Id, r.FirmId, r.FirmPlatformId, r.ServiceCode, r.ServiceType, r.Name, r.IsActive, r.Status, r.TestMode)).ToList();
     }
 
     private static ChannelInfo Map(ChannelRow r) => new(r.Id, r.FirmId, r.Code, r.Name ?? r.Code, r.IsActive);
