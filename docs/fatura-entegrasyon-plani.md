@@ -1,6 +1,6 @@
 # Fatura Entegrasyonu Planı — Seriler, Entegratör Sözleşmeleri, Gönderim Yöntemleri, Dış Numaralı Faturalar, Takip
 
-> Sürüm: **v1.0 — 2026-09-06** · Durum: **TASLAK — K1-K11 karar soruları kullanıcı onayı bekliyor**
+> Sürüm: **v1.1 — 2026-09-06** (seri TİPLİ tanımlanır — kullanıcı eki) · Durum: **TASLAK — K8 KAPANDI; K1-K7, K9-K11 kullanıcı onayı bekliyor**
 > Alan: **Admin panel (pano #2) + Order/Core modülleri.** ERP (Nebim V3) yönü ekip arkadaşının
 > `docs/erp-kaynak-senkron-gecis-plani.md` E7 kapısına bağlanır; o taraf bu planda yalnız arayüz sözleşmesi olarak geçer.
 > İlgili: `docs/siparis-paket-kargo-kod-plani.md` (paket başına fatura), `docs/siparis-operasyon-plani.md` (OP2 paket
@@ -13,10 +13,14 @@
 
 1. **Entegratör sözleşmeleri firma bazlıdır.** Bir firma aynı anda birden fazla entegratörle çalışabilir. Sözleşme
    kanal düzeyinde değildir; kanal, seri üzerinden dolaylı olarak sözleşmeye ulaşır.
-2. **Fatura serileri tekildir.** Seri kaydı tek bir üç harfli ön eki temsil eder (bugünkü e-arşiv/e-fatura/ihracat
-   üçlü seti kaldırılır). **Her seri bir entegratör sözleşmesine bağlanır.**
-3. **Satış kanalı serileri tiple bağlar:** kanalda e-arşiv, e-fatura ve ihracat için ayrı ayrı seri seçilir. Aynı seri
-   birden fazla kanalda kullanılabilir.
+2. **Fatura serileri tekildir ve TİPLİDİR.** Seri kaydı tek bir üç harfli ön eki temsil eder (bugünkü e-arşiv/e-fatura/
+   ihracat üçlü seti kaldırılır) ve **tanımlanırken tipi seçilir: e-arşiv, e-fatura veya ihracat**. Tip sonradan
+   değiştirilemez (numara üretildiyse). **Her seri bir entegratör sözleşmesine bağlanır.**
+3. **Satış kanalı serileri tiple bağlar ve tip eşleşmek zorundadır:** kanalda e-arşiv, e-fatura ve ihracat yuvalarına
+   yalnız **aynı tipteki** seri bağlanabilir (e-arşiv yuvasına e-fatura serisi seçilemez; seçici zaten yalnız o tipi
+   listeler, sunucu da doğrular). Aynı seri birden fazla kanalda kullanılabilir. **Gerekçe (kullanıcı, 2026-09-06):**
+   pratikteki en büyük karışıklık, bir e-arşiv serisinin bir yerde e-arşiv, başka yerde e-fatura için kullanılmasıdır;
+   tip seride sabitlenince bu yapısal olarak imkânsız hale gelir.
 4. **Seri pasife alınırken kanal serisiz kalamaz.** Pasifleştirme, seriyi kullanan aktif kanal varsa yerine geçecek
    seri verilmeden reddedilir; verilirse tüm bağlar tek işlemde yeni seriye taşınır.
 5. **Gönderim yöntemi satış kanalına özeldir:** (a) entegratöre API ile biz göndeririz, (b) ERP gönderir,
@@ -58,7 +62,8 @@
 | Alan | Açıklama |
 |---|---|
 | `FirmId` | Firma (seri VKN'ye aittir) |
-| `Serial` | 3 büyük harf; **firma içinde tekil** |
+| `Serial` | 3 büyük harf; **firma içinde tekil** (tipten bağımsız — aynı harfler iki tipte tanımlanamaz, karışıklığın kaynağı budur) |
+| `InvoiceType` | **`e_archive | e_invoice | export` — zorunlu, oluşturmada seçilir; sayaç 0'dan ileri gittiyse değiştirilemez** |
 | `Name` | Serbest ad |
 | `IntegrationContractId` | → `core_firm_platform_integrations.Id` (einvoice). **Zorunlu**, kanal yöntemi ERP/pazaryeri olsa bile seri bir sözleşmeye aittir (K2) |
 | `IsActive`, `RetiredAt` | Pasifleştirme izi; pasif seri numara üretmez ama geçmiş faturalar ona bağlı kalır |
@@ -73,7 +78,10 @@ numara akışı). Yıl değişince 1'den başlar (GİB kalıbı `ABC202600000000
 - `FirmPlatform.InvoiceSendMethod`: `integrator_api | erp | marketplace | manual` (varsayılan `manual` — hiçbir şey
   gönderilmez, yalnız kayıt; go-live öncesi her kanal açıkça seçilir).
 - `core.core_firm_platform_invoice_series (FirmPlatformId, InvoiceType, SeriesId)` — `InvoiceType ∈ {e_archive, e_invoice, export}`,
-  (kanal, tip) tekil. Kanal yalnız kendi firmasının serilerini bağlayabilir.
+  (kanal, tip) tekil. Kanal yalnız kendi firmasının serilerini bağlayabilir ve **`Series.InvoiceType == bağ.InvoiceType`
+  şartı sunucuda doğrulanır** (uyumsuz tip → 400 "Seri tipi yuvayla uyuşmuyor"). Panel seçicileri yuva tipine göre süzer.
+- Fatura kesiminde de aynı kural: `CreateInvoice(InvoiceType, SeriesId)` çağrısında seri tipi istekle uyuşmazsa 400;
+  otomatik kesim kanalın ilgili yuvasından seriyi alır, dolayısıyla tip zaten eşleşir.
 - **Bütünlük kuralları:** aktif kanal + `integrator_api` yöntemi → üç tipin de serisi dolu olmalı (readiness);
   seri pasifleştirme → bağlı aktif kanal varsa `replacementSeriesId` zorunlu, taşıma tek transaction; seri silme yok.
 - Panelde kanal ayarında "Faturalama" bölümü: yöntem + üç seri seçici + uyarı rozeti ("e-fatura serisi eksik").
@@ -101,7 +109,8 @@ Pazaryeri ve ERP adaptörleri de bu komutu kullanır; elle giriş panelden aynı
 - **Tarih kuralı:** `InvoiceDate ≥ LastInvoiceDate` (aynı gün serbest), gelecek tarih yasak; ihlalde açık hata (K3).
 - Yıl dönümü: yeni yıl sayacı 1'den başlar; eski yıla fatura kesilemez (K3).
 - İptal numarayı tüketir (mevcut davranış korunur). **Boşluk denetimi** raporu: seri/yıl bazında beklenen–gerçek fark.
-- Unique index `(Serial, Year, Sequence)` kalır; ek `(ExternalSource, InvoiceNumber)` kısmi tekil indeks.
+- Unique index `(Serial, Year, Sequence)` kalır; ek `(ExternalSource, InvoiceNumber)` kısmi tekil indeks; seri tablosunda
+  `(FirmId, Serial)` tekil (tip ne olursa olsun aynı harfler bir kez).
 
 ### 2.6 Gönderim kuyruğu ve adaptörler (Order + Integration)
 - Outbox: `order.ord_invoice_dispatches (InvoiceId, Method, Action=send|cancel|status, Attempt, NextAttemptAt, Status,
@@ -131,9 +140,9 @@ Pazaryeri ve ERP adaptörleri de bu komutu kullanır; elle giriş panelden aynı
 
 | Faz | İş | Kabul kriteri |
 |---|---|---|
-| **FE0** Model | Tekil seri + sayaç + kanal bağ tablosu + `InvoiceSendMethod` + fatura kayıt genişletmesi; migration'da mevcut üçlü setler tekil serilere **ayrıştırılır** (aynı harf tek kayıt), TST → mevcut tek fatura yeni seri Id'sine bağlanır; `LegacyInvoiceImportSlice` yeni tabloya uyarlanır (ekip arkadaşıyla) | İki DB'de migration temiz; eski `InvoiceSeriesId` alanı kaldırıldı; import dilimi dry-run `0` hata |
+| **FE0** Model | Tekil **tipli** seri + sayaç + kanal bağ tablosu + `InvoiceSendMethod` + fatura kayıt genişletmesi; migration'da mevcut üçlü setler tekil serilere **ayrıştırılır** (her kolon kendi tipiyle: EArchiveSerial→e_archive, EInvoiceSerial→e_invoice, ExportSerial→export; **aynı harf birden fazla kolonda ise yalnız e_archive tipiyle taşınır, diğerleri boş bırakılıp panelde kırmızı uyarıyla elle tanımlanır** — TST/TST/TST bu durumdadır), mevcut tek fatura yeni seri Id'sine bağlanır; `LegacyInvoiceImportSlice` yeni tabloya uyarlanır (ekip arkadaşıyla) | İki DB'de migration temiz; eski `InvoiceSeriesId` alanı kaldırıldı; import dilimi dry-run `0` hata; tip uyumsuz bağ/kesim 400 |
 | **FE1** Numara güvencesi + dış kayıt | Kilitli sayaç, tarih/yıl kuralları, boşluk raporu, `invoices/external` ucu, idempotent anahtar | 50 eşzamanlı kesimde 1..50 boşluksuz; geçmiş tarihli istek 400; aynı dış numara ikinci kez 409/idempotent |
-| **FE2** Seri/kanal operasyonu (panel) | Seri sayfası, pasifleştirme+yerine-geçecek, kanal Faturalama bölümü, readiness uyarısı | Kullanılan seri yerine seri verilmeden pasife alınamaz (400); verilince kanallar taşınır; serisiz aktif kanal panelde kırmızı |
+| **FE2** Seri/kanal operasyonu (panel) | Seri sayfası (tip sütunu + oluşturmada tip seçimi), pasifleştirme+yerine-geçecek (**yalnız aynı tipte** seri önerilir), kanal Faturalama bölümü (her yuva kendi tipindeki serileri listeler), readiness uyarısı | Kullanılan seri yerine seri verilmeden pasife alınamaz (400); farklı tipte yerine-geçecek 400; verilince kanallar taşınır; serisiz aktif kanal panelde kırmızı |
 | **FE3** Entegratör kataloğu + sözleşme + ilk adaptör | `einvoice` servis kaydı + şema, firma sözleşmesi formu, `IEInvoiceProvider`, K1 adaptörü sandbox | Sandbox'ta e-arşiv gönder/iptal/durum/PDF geçer; mükellef sorgusu doğru tip seçer |
 | **FE4** Gönderim kuyruğu + takip | Outbox + worker + geri çekilme + ölü-mektup; Faturalar detay çekmecesi, Tekrar Dene, Hata Kuyruğu | Entegratör kapalıyken kesilen fatura kuyrukta bekler, açılınca gönderilir; 3 hatalı deneme sonrası ölü-mektupta görünür ve elle tekrar denenebilir |
 | **FE5** Otomatik fatura politikası | Kesim tetiği (paket kapanışı / kargoya veriş — K4), 17 kargodaki siparişin geriye dönük faturalanması (K4), tip seçimi (K5), ihracat tetiği (K6) | Kargoya verilen hiçbir siparişte faturasız paket kalmaz; rapor sıfır |
@@ -153,7 +162,7 @@ Sıra: FE0 → FE1 → FE2 → FE3 → FE4 → FE5; FE6/FE7 dış bağımlılık
 | K5 | e-fatura / e-arşiv seçimi: alıcı VKN mükellef sorgusu ile otomatik mi, operatör seçer mi? | Otomatik (entegratör mükellef sorgusu), operatör geçersiz kılabilir |
 | K6 | İhracat tipi tetiği: teslimat ülkesi TR dışı → ihracat serisi | Otomatik |
 | K7 | Pazaryeri-kesimli kanallarda pazaryerinden numarayı API ile mi çekeriz, elle mi girilir? Kendi faturamızı pazaryerine yükleyen kanal var mı? | Trendyol API ile; elle giriş yedek yol |
-| K8 | Aynı seri birden fazla tipe (e-arşiv + e-fatura) bağlanabilir mi? | **Engelle** (GİB seri/tip ayrımı; teyit edilecek) — tek seri tek tip |
+| ~~K8~~ | ~~Aynı seri birden fazla tipe bağlanabilir mi?~~ **KAPANDI (2026-09-06, kullanıcı):** seri tanımında tip zorunlu; kanal yuvası yalnız aynı tipteki seriyi kabul eder; aynı harfler firma içinde tek kayıt | Uygulandı: §0.2-3, §2.2, §2.3, FE0/FE2 |
 | K9 | İptal: e-arşivde entegratör iptali; e-faturada iptal yerine iade faturası mı? | GİB kuralı: e-arşiv iptal, e-fatura için iade faturası (Order iade akışına bağlanır) |
 | K10 | Firma başına aynı anda birden çok sözleşme olduğunda seri seçiminde gösterim | Seri formunda sözleşme zorunlu seçici; kanal seçicide seri yanında sözleşme adı |
 | K11 | Worker deploy'u (Node rolü) ve E7 arayüzü — ekip arkadaşıyla paylaşım noktası | FE4 öncesi tek toplantı; bu plan onlara gönderilir |
