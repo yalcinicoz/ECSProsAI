@@ -62,15 +62,26 @@ public class FirmResolver(OrderDbContext db) : IFirmResolver
 
     public async Task<IReadOnlyList<IntegrationContractInfo>> GetEInvoiceContractsAsync(Guid? firmId = null, CancellationToken ct = default)
     {
-        var rows = await db.Database.SqlQuery<ContractRow>($"""
-            SELECT i."Id", i."FirmId", i."FirmPlatformId", s."Code" AS "ServiceCode", s."ServiceType",
-                   i."Name", i."IsActive", i."Status"
-            FROM core.core_firm_platform_integrations i
-            JOIN definition.integration_services s ON s."Id" = i."IntegrationServiceId"
-            WHERE i."IsDeleted" = false AND s."ServiceType" = 'einvoice'
-              AND ({firmId} IS NULL OR i."FirmId" = {firmId})
-            ORDER BY i."Name"
-            """).ToListAsync(ct);
+        // Not: null Guid? parametresi "42P18 could not determine data type" verir (2026-09-06 canlı hata) —
+        // firma süzgeci iki ayrı sorguyla verilir, null parametre hiç gönderilmez.
+        var query = firmId is null
+            ? db.Database.SqlQuery<ContractRow>($"""
+                SELECT i."Id", i."FirmId", i."FirmPlatformId", s."Code" AS "ServiceCode", s."ServiceType",
+                       i."Name", i."IsActive", i."Status"
+                FROM core.core_firm_platform_integrations i
+                JOIN definition.integration_services s ON s."Id" = i."IntegrationServiceId"
+                WHERE i."IsDeleted" = false AND s."ServiceType" = 'einvoice'
+                ORDER BY i."Name"
+                """)
+            : db.Database.SqlQuery<ContractRow>($"""
+                SELECT i."Id", i."FirmId", i."FirmPlatformId", s."Code" AS "ServiceCode", s."ServiceType",
+                       i."Name", i."IsActive", i."Status"
+                FROM core.core_firm_platform_integrations i
+                JOIN definition.integration_services s ON s."Id" = i."IntegrationServiceId"
+                WHERE i."IsDeleted" = false AND s."ServiceType" = 'einvoice' AND i."FirmId" = {firmId.Value}
+                ORDER BY i."Name"
+                """);
+        var rows = await query.ToListAsync(ct);
         return rows.Select(r => new IntegrationContractInfo(
             r.Id, r.FirmId, r.FirmPlatformId, r.ServiceCode, r.ServiceType, r.Name, r.IsActive, r.Status)).ToList();
     }
