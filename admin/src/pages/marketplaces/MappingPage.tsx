@@ -7,6 +7,8 @@ import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { Modal } from '@/components/ui/Modal'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { StoreLogo } from './MarketplacesPage'
 import { pickTr } from './marketplaceOverview'
 
@@ -1011,9 +1013,61 @@ const ERP_KINDS: Record<string, string> = {
 }
 const isErpTarget = (t: string) => t.startsWith('erp:')
 
-function ErpDictionaryPanel({ target }: { target: string }) {
+// EM3 (2026-09-06 kullanıcı isteği): sözlükteki ERP grubu → bizim grup, popup'ta aramalı seçiciyle birebir eşleme
+function ErpGroupMapModal({ target, item, overview, onClose, onSaved }: {
+  target: string; item: ErpItem; overview: Overview | undefined; onClose: () => void; onSaved: () => void
+}) {
+  const [groupId, setGroupId] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const options = (overview?.groups ?? []).map((g) => ({
+    value: g.productGroupId,
+    label: `${g.name} · ${g.productCount} ürün${g.mapping ? ' · eşli' : ''}`,
+  }))
+  const secili = overview?.groups.find((g) => g.productGroupId === groupId)
+  const mevcut = secili?.mapping
+  const save = useMutation({
+    mutationFn: async () => {
+      await api.put('/marketplaces/mapping/category', {
+        marketplace: target, productGroupId: groupId, mappingKind: 'direct',
+        targetExternalId: item.code, targetName: item.name, targetPath: `${item.name} [${item.code}]`, rules: null, pool: null,
+      })
+    },
+    onSuccess: () => { onSaved(); onClose() },
+    onError: (err) => setError(errText(err, 'Eşlenemedi.')),
+  })
+  return (
+    <Modal open onClose={onClose} title="ERP grubunu eşle"
+      footer={<>
+        <Button variant="secondary" onClick={onClose}>Vazgeç</Button>
+        <Button onClick={() => save.mutate()} loading={save.isPending} disabled={!groupId}>Eşle</Button>
+      </>}>
+      <div className="space-y-3">
+        <div className="rounded-lg p-3 text-sm" style={{ background: 'var(--surface2)', color: 'var(--text)' }}>
+          <span className="font-mono font-semibold">{item.code}</span> · {item.name}
+          {item.parentCode && <span className="text-xs ml-2" style={{ color: 'var(--text-s)' }}>üst: {item.parentCode}</span>}
+        </div>
+        <div>
+          <label className="flbl">Bizim ürün grubu *</label>
+          <SearchableSelect value={groupId} onChange={setGroupId} options={options} placeholder="Grup ara…" hasValue={!!groupId} />
+        </div>
+        {mevcut && (
+          <p className="text-xs" style={{ color: '#b45309' }}>
+            Bu grubun mevcut eşlemesi ({mevcut.mappingKind === 'direct' ? mevcut.targetName ?? mevcut.targetExternalId : mevcut.mappingKind === 'rules' ? 'kurallı' : 'havuz'}) bu ERP koduyla birebir eşlemeye DEĞİŞTİRİLİR.
+          </p>
+        )}
+        <p className="text-xs" style={{ color: 'var(--text-s)' }}>
+          Bu eşleme birebirdir. Grup birden fazla ERP grubuna gidiyorsa (cinsiyet vb. koşulla) Ürün Grubu Eşleme sekmesinde "Kurallı" kipi kullanın.
+        </p>
+        {error && <p className="text-sm text-red-500">{error}</p>}
+      </div>
+    </Modal>
+  )
+}
+
+function ErpDictionaryPanel({ target, overview, onSaved }: { target: string; overview: Overview | undefined; onSaved: () => void }) {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(true)
+  const [mapItem, setMapItem] = useState<ErpItem | null>(null)
   const [kind, setKind] = useState('product_group')
   const [q, setQ] = useState('')
   const [form, setForm] = useState({ code: '', name: '', parentCode: '' })
@@ -1067,7 +1121,7 @@ function ErpDictionaryPanel({ target }: { target: string }) {
             <table className="w-full">
               <thead>
                 <tr style={{ background: 'var(--surface2)' }}>
-                  {['KOD', 'AD', 'ÜST', 'KAYNAK', 'DURUM', ''].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--text-s)' }}>{h}</th>)}
+                  {['KOD', 'AD', 'ÜST', 'KAYNAK', 'DURUM', ''].map((h) => <th key={h} className={cn('px-3 py-2 text-xs font-semibold', h === '' ? 'text-right' : 'text-left')} style={{ color: 'var(--text-s)' }}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -1082,7 +1136,12 @@ function ErpDictionaryPanel({ target }: { target: string }) {
                         : i.kind === 'product_group' ? (i.isMapped ? <Badge variant="success">Eşli</Badge> : <Badge variant="danger">Eşlenmemiş</Badge>)
                         : <Badge variant="info">Aktif</Badge>}
                     </td>
-                    <td className="px-3 py-1.5 text-right">
+                    <td className="px-3 py-1.5 text-right whitespace-nowrap">
+                      {i.isActive && i.kind === 'product_group' && (
+                        <Button size="sm" variant={i.isMapped ? 'secondary' : 'primary'} className="mr-2" onClick={() => setMapItem(i)}>
+                          {i.isMapped ? 'Yeniden Eşle' : 'Eşle'}
+                        </Button>
+                      )}
                       {i.isActive && <button className="text-xs underline" style={{ color: 'var(--text-s)' }} onClick={() => deactivate.mutate(i.id)}>pasife al</button>}
                     </td>
                   </tr>
@@ -1092,6 +1151,11 @@ function ErpDictionaryPanel({ target }: { target: string }) {
             </table>
           </div>
         </div>
+      )}
+      {mapItem && (
+        <ErpGroupMapModal target={target} item={mapItem} overview={overview}
+          onClose={() => setMapItem(null)}
+          onSaved={() => { invalidate(); onSaved() }} />
       )}
     </div>
   )
@@ -1333,7 +1397,7 @@ export function MappingPage() {
         ))}
       </div>
 
-      {isErp && <ErpDictionaryPanel target={marketplace} />}
+      {isErp && <ErpDictionaryPanel target={marketplace} overview={overview} onSaved={() => queryClient.invalidateQueries({ queryKey: ['mapping-overview', marketplace] })} />}
 
       {isLoading || !overview ? (
         <PageSpinner />
