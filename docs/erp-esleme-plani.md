@@ -1,6 +1,6 @@
 # ERP Eşleme Planı — Nebim V3 Sözlüğü, Grup + Özellik Koşullu Kurallar, Yapılandırma Sözlüklerinin Tablolara Taşınması
 
-> Sürüm: **v1.0 — 2026-09-06** · Durum: **TASLAK — K1-K6 kullanıcı onayı bekliyor**
+> Sürüm: **v1.1 — 2026-09-06** · Durum: **EM0 UYGULANDI ⚠️ restart bekliyor** (kullanıcı "Başla"); K1-K6 açık (EM1 bağımsız, EM2+ K1/K2 ile)
 > Alan: **Admin panel (pano #2) + Integration/Catalog çekirdeği.** ERP okuma/yazma worker'ı ekip arkadaşında
 > (`docs/erp-kaynak-senkron-gecis-plani.md`); bu plan worker'ın config yerine tablodan okuyacağı sözleşmeyi tanımlar.
 > İlgili: `docs/pazaryeri-referans-ve-esleme-plani.md` (aynı desen), `docs/stok-karti-ve-urun-yonetimi.md`.
@@ -73,7 +73,7 @@ kısayolu — operatör onaylı). Öneri aracı (ad benzerliği) aynen çalış�
 
 | Faz | İş | Kabul |
 |---|---|---|
-| **EM0** Sözlük + hedef anahtarı | `erp_reference_items` tablosu + migration; eşleme servislerinde hedef sistem çözümü ("erp:*" ise sözlükten); `GET /api/marketplaces/mapping/targets` (pazaryerleri + ERP sözleşmeleri); elle sözlük kaydı ucu | Nebim hedefi seçilebilir; sözlüğe elle eklenen grup kategori seçicide görünür |
+| **EM0** Sözlük + hedef anahtarı ✅ **UYGULANDI (2026-09-06)** — `integration.erp_reference_items` (anahtar **TargetSystem** "erp:<servis>" — planın IntegrationId anahtarı yerine; IntegrationId yalnız köken; migration `AddErpReferenceItems` dev+demo), MarketplaceMappingService ERP dalları (grup arama/öneri/özellik/değer sözlükten; readiness tetikleme ERP'de atlanır), uçlar `mapping/targets` (pazaryerleri + ERP servisleri), `mapping/erp-items` GET/POST(upsert)/DELETE(pasif), panel: hedef çiplerinde "ERP: Nebim" + ERP Sözlüğü paneli (tür/kod/ad/üst kod, eşli/eşlenmemiş rozeti) + "Ürün Grubu Eşleme" sekme adı | `erp_reference_items` tablosu + migration; eşleme servislerinde hedef sistem çözümü ("erp:*" ise sözlükten); `GET /api/marketplaces/mapping/targets` (pazaryerleri + ERP sözleşmeleri); elle sözlük kaydı ucu | Nebim hedefi seçilebilir; sözlüğe elle eklenen grup kategori seçicide görünür |
 | **EM1** Kural genişletmesi | `conditions[]` modeli + geriye uyumlu okuma + çözücü tekleştirme (readiness + send + ERP) + panel "+ koşul" | "cinsiyet=kadın VE yaş=çocuk" kuralı kaydedilir, readiness doğru hedefi seçer; eski tek koşullu kayıtlar bozulmaz |
 | **EM2** Config sözlüklerinin taşınması | Tek seferlik aktarım: 4 grup, 2 eksen, 29 tip, 15 yok-sayılan, 1 takma ad → tablolar; worker config yerine tablodan okur (ekip arkadaşı); config anahtarları kaldırılır | Worker dry-run eski/yeni eşleme sonucu birebir; config boş |
 | **EM3** Eşlenmemiş kuyruğu + panel sekmeleri | Worker eşlenmemiş kodu sözlüğe yazar (Kind + Code + Name); panelde Eşlenmemiş sekmesi + sayaç + "grup aç" kısayolu; Varyant Eksenleri ve Tedarikçiler sekmeleri | Yeni Nebim grubu geldiğinde panelde kırmızı görünür, eşlenince sonraki turda ürün yazılır |

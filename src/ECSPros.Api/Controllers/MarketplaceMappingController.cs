@@ -18,7 +18,8 @@ public class MarketplaceMappingController(
     MarketplaceMappingService service,
     MappingHealthService health,
     MarketplaceReadinessService readiness,
-    MarketplaceCompletionService completion) : ControllerBase
+    MarketplaceCompletionService completion,
+    ECSPros.Api.Services.Marketplace.Reference.MarketplaceReferenceSyncService referenceSync) : ControllerBase
 {
     private Guid? UserId =>
         Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"), out var id)
@@ -34,6 +35,44 @@ public class MarketplaceMappingController(
             return BadRequest(new { success = false, error = "marketplace zorunlu." });
         var data = await service.GetOverviewAsync(Norm(marketplace), ct);
         return Ok(new { success = true, data });
+    }
+
+    /// <summary>EM0: eşleme hedefleri — pazaryerleri (referans özeti) + ERP servisleri ("erp:&lt;kod&gt;").</summary>
+    [HttpGet("targets")]
+    public async Task<IActionResult> GetTargets(CancellationToken ct)
+    {
+        var marketplaces = await referenceSync.GetSummaryAsync(ct);
+        var erp = await service.GetErpTargetsAsync(ct);
+        return Ok(new { success = true, data = new { marketplaces, erp } });
+    }
+
+    /// <summary>EM0: ERP sözlüğü (tür/arama süzgeçli).</summary>
+    [HttpGet("erp-items")]
+    public async Task<IActionResult> GetErpItems(
+        [FromQuery] string target, [FromQuery] string? kind, [FromQuery] string? q, [FromQuery] int limit = 200, CancellationToken ct = default)
+    {
+        if (!ECSPros.Integration.Domain.Entities.MappingTargets.IsErp(target))
+            return BadRequest(new { success = false, error = "target 'erp:<servis>' olmalı." });
+        var data = await service.GetErpItemsAsync(Norm(target), kind, q, Math.Clamp(limit, 1, 2000), ct);
+        return Ok(new { success = true, data });
+    }
+
+    /// <summary>EM0: elle sözlük kaydı (upsert).</summary>
+    [HttpPost("erp-items")]
+    public async Task<IActionResult> UpsertErpItem([FromBody] UpsertErpItemRequest req, CancellationToken ct)
+    {
+        var (dto, err) = await service.UpsertErpItemAsync(Norm(req.Target), req.Kind, req.Code, req.Name, req.ParentCode, UserId, ct);
+        if (err is not null) return BadRequest(new { success = false, error = err });
+        return Ok(new { success = true, data = dto });
+    }
+
+    /// <summary>EM0: sözlük kaydını pasife alır (eşlemede kullanılan grup pasife alınamaz).</summary>
+    [HttpDelete("erp-items/{id:guid}")]
+    public async Task<IActionResult> DeactivateErpItem(Guid id, CancellationToken ct)
+    {
+        var err = await service.DeactivateErpItemAsync(id, UserId, ct);
+        if (err is not null) return BadRequest(new { success = false, error = err });
+        return Ok(new { success = true });
     }
 
     /// <summary>Hedef kategori seçicinin arama ucu (yalnız yaprak, aktif kategoriler).</summary>
@@ -209,3 +248,5 @@ public class MarketplaceMappingController(
 }
 
 public record RecomputeReadinessRequest(List<Guid>? ProductIds);
+
+public sealed record UpsertErpItemRequest(string Target, string Kind, string Code, string Name, string? ParentCode = null);

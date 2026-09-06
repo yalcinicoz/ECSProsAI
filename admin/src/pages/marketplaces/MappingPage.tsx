@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronDown, ChevronUp, Plus, Search, Trash2, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Database, Plus, Search, Trash2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
@@ -961,6 +961,99 @@ function ReviewTab({ marketplace, onGoCategory }: { marketplace: string; onGoCat
 
 // ── Ana Sayfa ────────────────────────────────────────────────────────────────
 
+// ── EM0: ERP sözlüğü (docs/erp-esleme-plani.md §2.1) ─────────────────────────
+interface ErpItem { id: string; targetSystem: string; kind: string; code: string; name: string; parentCode: string | null; isActive: boolean; source: string; lastSeenAt: string; isMapped: boolean }
+const ERP_KINDS: Record<string, string> = {
+  product_group: 'Ürün grubu', variant_axis: 'Varyant ekseni', attribute_type: 'Özellik tipi', attribute_value: 'Özellik değeri', supplier: 'Tedarikçi', color: 'Renk',
+}
+const isErpTarget = (t: string) => t.startsWith('erp:')
+
+function ErpDictionaryPanel({ target }: { target: string }) {
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState(true)
+  const [kind, setKind] = useState('product_group')
+  const [q, setQ] = useState('')
+  const [form, setForm] = useState({ code: '', name: '', parentCode: '' })
+  const [error, setError] = useState('')
+  const { data: items = [] } = useQuery<ErpItem[]>({
+    queryKey: ['erp-items', target, kind, q],
+    queryFn: async () => (await api.get(`/marketplaces/mapping/erp-items?target=${encodeURIComponent(target)}&kind=${kind}&q=${encodeURIComponent(q)}&limit=500`)).data.data ?? [],
+  })
+  const invalidate = () => { queryClient.invalidateQueries({ queryKey: ['erp-items'] }); queryClient.invalidateQueries({ queryKey: ['mapping-targets'] }) }
+  const upsert = useMutation({
+    mutationFn: async () => { await api.post('/marketplaces/mapping/erp-items', { target, kind, code: form.code, name: form.name, parentCode: form.parentCode || null }) },
+    onSuccess: () => { invalidate(); setForm({ code: '', name: '', parentCode: '' }); setError('') },
+    onError: (e: unknown) => setError((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Kaydedilemedi.'),
+  })
+  const deactivate = useMutation({
+    mutationFn: async (id: string) => { await api.delete(`/marketplaces/mapping/erp-items/${id}`) },
+    onSuccess: () => { invalidate(); setError('') },
+    onError: (e: unknown) => setError((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Pasife alınamadı.'),
+  })
+  const needsParent = kind === 'attribute_value'
+  return (
+    <div className="card overflow-hidden p-0 mb-4">
+      <button className="w-full flex items-center justify-between px-4 py-3" onClick={() => setOpen((o) => !o)}>
+        <div className="text-left">
+          <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>ERP Sözlüğü</h2>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-s)' }}>
+            ERP tarafındaki grup, özellik, değer ve tedarikçi kodları. Worker doldurur (EM2/EM3); elle ekleme serbest. Eşleme hedefleri buradan seçilir.
+          </p>
+        </div>
+        {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-3" style={{ borderTop: '1px solid var(--border)' }}>
+          <div className="flex flex-wrap items-end gap-2 pt-3">
+            <div>
+              <label className="flbl">Tür</label>
+              <select className="inp" value={kind} onChange={(e) => setKind(e.target.value)}>
+                {Object.entries(ERP_KINDS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select>
+            </div>
+            <div><label className="flbl">Kod</label><input className="inp font-mono" style={{ width: 140 }} value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} placeholder="ERP kodu" /></div>
+            <div><label className="flbl">Ad</label><input className="inp" style={{ width: 220 }} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="ERP'deki ad" /></div>
+            {(needsParent || kind === 'product_group') && (
+              <div><label className="flbl">{needsParent ? 'Özellik tipi kodu *' : 'Üst grup kodu'}</label><input className="inp font-mono" style={{ width: 140 }} value={form.parentCode} onChange={(e) => setForm((f) => ({ ...f, parentCode: e.target.value }))} /></div>
+            )}
+            <Button size="sm" onClick={() => upsert.mutate()} loading={upsert.isPending} disabled={!form.code.trim() || !form.name.trim() || (needsParent && !form.parentCode.trim())}><Plus size={14} /> Ekle / Güncelle</Button>
+            <div className="ml-auto"><input className="inp" style={{ width: 200 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Sözlükte ara" /></div>
+          </div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <div className="max-h-64 overflow-y-auto rounded-lg" style={{ border: '1px solid var(--border)' }}>
+            <table className="w-full">
+              <thead>
+                <tr style={{ background: 'var(--surface2)' }}>
+                  {['KOD', 'AD', 'ÜST', 'KAYNAK', 'DURUM', ''].map((h) => <th key={h} className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--text-s)' }}>{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((i) => (
+                  <tr key={i.id} style={{ borderTop: '1px solid var(--border)' }}>
+                    <td className="px-3 py-1.5 font-mono text-xs" style={{ color: 'var(--text)' }}>{i.code}</td>
+                    <td className="px-3 py-1.5 text-sm" style={{ color: 'var(--text)' }}>{i.name}</td>
+                    <td className="px-3 py-1.5 font-mono text-xs" style={{ color: 'var(--text-s)' }}>{i.parentCode ?? '—'}</td>
+                    <td className="px-3 py-1.5 text-xs" style={{ color: 'var(--text-s)' }}>{i.source === 'sync' ? 'ERP' : 'elle'}</td>
+                    <td className="px-3 py-1.5">
+                      {!i.isActive ? <Badge variant="neutral">Pasif</Badge>
+                        : i.kind === 'product_group' ? (i.isMapped ? <Badge variant="success">Eşli</Badge> : <Badge variant="danger">Eşlenmemiş</Badge>)
+                        : <Badge variant="info">Aktif</Badge>}
+                    </td>
+                    <td className="px-3 py-1.5 text-right">
+                      {i.isActive && <button className="text-xs underline" style={{ color: 'var(--text-s)' }} onClick={() => deactivate.mutate(i.id)}>pasife al</button>}
+                    </td>
+                  </tr>
+                ))}
+                {items.length === 0 && <tr><td colSpan={6} className="px-3 py-4 text-center text-xs" style={{ color: 'var(--text-s)' }}>Bu türde sözlük kaydı yok — yukarıdan ekleyin ya da ERP senkronunu bekleyin.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function MappingPage() {
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -968,11 +1061,13 @@ export function MappingPage() {
   const tab = searchParams.get('tab') ?? 'kategoriler'
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
 
-  const { data: refSummary = [] } = useQuery<{ marketplace: string; categoryCount: number }[]>({
-    queryKey: ['mp-ref-summary-mini'],
-    queryFn: async () => (await api.get('/marketplaces/reference-sync/summary')).data.data ?? [],
+  // EM0: hedefler = pazaryerleri (referans özeti) + ERP servisleri ("erp:<kod>")
+  const { data: targetsData } = useQuery<{ marketplaces: { marketplace: string; categoryCount: number }[]; erp: { key: string; serviceCode: string; name: string; hasContract: boolean; groupCount: number }[] }>({
+    queryKey: ['mapping-targets'],
+    queryFn: async () => (await api.get('/marketplaces/mapping/targets')).data.data,
     staleTime: 60 * 1000,
   })
+  const isErp = isErpTarget(marketplace)
 
   const { data: overview, isLoading } = useQuery<Overview>({
     queryKey: ['mapping-overview', marketplace],
@@ -989,14 +1084,16 @@ export function MappingPage() {
     setSearchParams((p) => { const n = new URLSearchParams(p); n.set(key, value); return n }, { replace: true })
   }
 
+  const refSummary = targetsData?.marketplaces ?? []
   const marketplaces = refSummary.length > 0 ? refSummary : [{ marketplace: 'trendyol', categoryCount: 0 }]
+  const erpTargets = targetsData?.erp ?? []
 
   return (
     <div className="p-6">
       <div className="mb-4">
-        <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Pazaryeri Eşleştirme</h1>
+        <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Eşleştirme — Pazaryeri &amp; ERP</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>
-          Ürün gruplarınızı, özelliklerinizi ve değerlerinizi pazaryeri karşılıklarıyla eşleyin
+          Ürün gruplarınızı, özelliklerinizi ve değerlerinizi pazaryeri ya da ERP karşılıklarıyla eşleyin. Eşleme grup + özellik koşuluyla kurulur (kurallı kip).
         </p>
       </div>
 
@@ -1023,6 +1120,23 @@ export function MappingPage() {
             </button>
           )
         })}
+        {erpTargets.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setParam('mp', t.key)}
+            title={t.hasContract ? `${t.groupCount} ERP grubu sözlükte` : 'Bu ERP için sözleşme yok — sözlük yine de elle doldurulabilir'}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-sm font-medium transition-all"
+            style={
+              marketplace === t.key
+                ? { background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--brand)' }
+                : { background: 'var(--surface2)', color: 'var(--text-m)', border: '1px solid var(--border)' }
+            }
+          >
+            <Database size={16} />
+            ERP: {t.name}
+            {!t.hasContract && <span className="text-[10px]" style={{ color: '#f59e0b' }}>sözleşmesiz</span>}
+          </button>
+        ))}
         <div className="ml-auto flex items-center gap-3 text-xs" style={{ color: 'var(--text-m)' }}>
           {overview ? (
             <>
@@ -1037,7 +1151,7 @@ export function MappingPage() {
       {/* Sekmeler */}
       <div className="flex items-center gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
         {[
-          ['kategoriler', 'Kategori Eşleme'],
+          ['kategoriler', isErp ? 'Ürün Grubu Eşleme' : 'Kategori Eşleme'],
           ['ozellikler', 'Özellik & Değer'],
           ['gozden', `Gözden Geçir${overview && overview.reviewCount > 0 ? ` (${overview.reviewCount})` : ''}`],
         ].map(([key, label]) => (
@@ -1046,6 +1160,8 @@ export function MappingPage() {
           </button>
         ))}
       </div>
+
+      {isErp && <ErpDictionaryPanel target={marketplace} />}
 
       {isLoading || !overview ? (
         <PageSpinner />

@@ -148,3 +148,9 @@ public sealed record BulkCategoryMappingItem(Guid ProductGroupId, string TargetE
 public sealed record BulkCategoryMappingRequest(string Marketplace, List<BulkCategoryMappingItem> Items);
 
 public sealed record BulkCategoryMappingResult(int Saved, int Failed, List<string> Errors);
+
+// ── EM0: ERP hedefleri + sözlük ──────────────────────────────────────────────
+public sealed record ErpTargetDto(string Key, string ServiceCode, string Name, bool HasContract, int GroupCount);
+public sealed record ErpReferenceItemDto(
+    Guid Id, string TargetSystem, string Kind, string Code, string Name, string? ParentCode,
+    bool IsActive, string Source, DateTime LastSeenAt, bool IsMapped);

@@ -27,6 +27,7 @@ public interface IIntegrationDbContext
     DbSet<MarketplaceIssue> MarketplaceIssues { get; }
     DbSet<FeedJob> FeedJobs { get; }               // FAZ 10 / A6
     DbSet<FeedRunStatus> FeedStatuses { get; }     // FAZ 10 / A6
+    DbSet<ErpReferenceItem> ErpReferenceItems { get; } // EM0: ERP sözlüğü
     /// <summary>Jsonb payload filtreleri gibi EF'e çevrilemeyen sorgular için (Accounts kalıbı).</summary>
     DatabaseFacade Database { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

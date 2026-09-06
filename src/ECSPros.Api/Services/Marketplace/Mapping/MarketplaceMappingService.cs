@@ -31,6 +31,7 @@ public sealed class MarketplaceMappingService(
     internal async Task ReadinessTetikleAsync(
         string marketplace, IReadOnlyCollection<Guid>? productGroupIds, CancellationToken ct)
     {
+        if (MappingTargets.IsErp(marketplace)) return; // EM0: ERP hedefi için pazaryeri readiness'ı yok
         try
         {
             // Birden fazla API aynı anda eşleme değiştirse bile readiness hesapları node'lar
@@ -137,6 +138,17 @@ public sealed class MarketplaceMappingService(
     public async Task<List<MpCategoryDto>> SearchMpCategoriesAsync(
         string marketplace, string query, int limit, CancellationToken ct)
     {
+        // EM0: ERP hedefinde "kategori" = ERP ürün grubu; kaynak marketplace_ref değil firma sözlüğü
+        if (MappingTargets.IsErp(marketplace))
+        {
+            var q = $"%{query}%";
+            return await db.ErpReferenceItems
+                .Where(i => i.TargetSystem == marketplace && i.Kind == ErpReferenceKinds.ProductGroup && i.IsActive
+                            && (query == "" || EF.Functions.ILike(i.Name, q) || EF.Functions.ILike(i.Code, q)))
+                .OrderBy(i => i.Name).Take(limit)
+                .Select(i => new MpCategoryDto(i.Code, i.Name, i.Name + " [" + i.Code + "]"))
+                .ToListAsync(ct);
+        }
         var ds = await refDb.GetAsync(ct);
         if (ds is null) return [];
 
@@ -243,6 +255,11 @@ public sealed class MarketplaceMappingService(
 
     private async Task<List<MpCategoryDto>> LoadLeafCategoriesAsync(string marketplace, CancellationToken ct)
     {
+        if (MappingTargets.IsErp(marketplace))
+            return await db.ErpReferenceItems
+                .Where(i => i.TargetSystem == marketplace && i.Kind == ErpReferenceKinds.ProductGroup && i.IsActive)
+                .Select(i => new MpCategoryDto(i.Code, i.Name, i.Name + " [" + i.Code + "]"))
+                .ToListAsync(ct);
         var ds = await refDb.GetAsync(ct);
         if (ds is null) return [];
         await using var cmd = ds.CreateCommand(
@@ -359,7 +376,19 @@ public sealed class MarketplaceMappingService(
     {
         // Pazaryeri özellikleri + değer sayıları (referans DB)
         var mpAttrs = new List<(string ExtId, string Name, bool Req, bool Ac, bool Va, string Vm, int ValCount)>();
-        var ds = await refDb.GetAsync(ct);
+        var ds = MappingTargets.IsErp(marketplace) ? null : await refDb.GetAsync(ct);
+        if (MappingTargets.IsErp(marketplace))
+        {
+            // EM0: ERP özellik tipleri kategoriye bağlı değildir — sözlükteki tüm attribute_type kayıtları
+            var types = await db.ErpReferenceItems
+                .Where(i => i.TargetSystem == marketplace && i.Kind == ErpReferenceKinds.AttributeType && i.IsActive)
+                .OrderBy(i => i.Name).ToListAsync(ct);
+            var valueCounts = await db.ErpReferenceItems
+                .Where(i => i.TargetSystem == marketplace && i.Kind == ErpReferenceKinds.AttributeValue && i.IsActive && i.ParentCode != null)
+                .GroupBy(i => i.ParentCode!).Select(g => new { Code = g.Key, N = g.Count() }).ToDictionaryAsync(x => x.Code, x => x.N, ct);
+            foreach (var t in types)
+                mpAttrs.Add((t.Code, t.Name, false, true, false, "list", valueCounts.GetValueOrDefault(t.Code)));
+        }
         if (ds is not null)
         {
             await using var cmd = ds.CreateCommand(
@@ -509,9 +538,15 @@ public sealed class MarketplaceMappingService(
             }
         }
 
-        // Pazaryeri değerleri (referans DB)
+        // Pazaryeri değerleri (referans DB) — EM0: ERP hedefinde sözlükteki attribute_value (ParentCode = tip kodu)
         var mpValues = new List<MpValueDto>();
-        var ds = await refDb.GetAsync(ct);
+        if (MappingTargets.IsErp(marketplace))
+            mpValues = await db.ErpReferenceItems
+                .Where(i => i.TargetSystem == marketplace && i.Kind == ErpReferenceKinds.AttributeValue && i.IsActive && i.ParentCode == mpAttributeId)
+                .OrderBy(i => i.Name)
+                .Select(i => new MpValueDto(i.Code, i.Code, i.Name))
+                .ToListAsync(ct);
+        var ds = MappingTargets.IsErp(marketplace) ? null : await refDb.GetAsync(ct);
         if (ds is not null)
         {
             await using var cmd = ds.CreateCommand(
@@ -694,5 +729,94 @@ public sealed class MarketplaceMappingService(
                 return false;
         }
         return n > 0;
+    }
+
+    // ── EM0: ERP hedefleri ve sözlük ──────────────────────────────────────────
+
+    /// <summary>Katalogdaki ERP servisleri (definition.integration_services, ServiceType=erp) → "erp:&lt;kod&gt;" hedefleri;
+    /// sözleşme (core_firm_platform_integrations) varsa işaretlenir; sözlükteki grup sayısı ile.</summary>
+    public async Task<List<ErpTargetDto>> GetErpTargetsAsync(CancellationToken ct)
+    {
+        var services = new List<(string Code, string Name, bool HasContract)>();
+        await using (var cmd = mainDb.CreateCommand(
+            """
+            SELECT s."Code", COALESCE(s."NameI18n"->>'tr', s."Code"),
+                   EXISTS (SELECT 1 FROM core.core_firm_platform_integrations i
+                            WHERE i."IntegrationServiceId" = s."Id" AND NOT i."IsDeleted" AND i."IsActive")
+            FROM definition.integration_services s
+            WHERE s."ServiceType" = 'erp' AND NOT s."IsDeleted"
+            ORDER BY s."Code"
+            """))
+        await using (var reader = await cmd.ExecuteReaderAsync(ct))
+            while (await reader.ReadAsync(ct))
+                services.Add((reader.GetString(0), reader.GetString(1), reader.GetBoolean(2)));
+
+        var counts = await db.ErpReferenceItems
+            .Where(i => i.Kind == ErpReferenceKinds.ProductGroup && i.IsActive)
+            .GroupBy(i => i.TargetSystem).Select(g => new { g.Key, N = g.Count() })
+            .ToDictionaryAsync(x => x.Key, x => x.N, ct);
+
+        return services.Select(sv =>
+        {
+            var key = MappingTargets.Erp(sv.Code);
+            return new ErpTargetDto(key, sv.Code, sv.Name, sv.HasContract, counts.GetValueOrDefault(key));
+        }).ToList();
+    }
+
+    public async Task<List<ErpReferenceItemDto>> GetErpItemsAsync(
+        string target, string? kind, string? query, int limit, CancellationToken ct)
+    {
+        var q = db.ErpReferenceItems.Where(i => i.TargetSystem == target);
+        if (!string.IsNullOrWhiteSpace(kind)) q = q.Where(i => i.Kind == kind);
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var like = $"%{query.Trim()}%";
+            q = q.Where(i => EF.Functions.ILike(i.Name, like) || EF.Functions.ILike(i.Code, like));
+        }
+        var mapped = await db.MarketplaceCategoryMappings
+            .Where(m => m.Marketplace == target && m.TargetExternalId != null)
+            .Select(m => m.TargetExternalId!).Distinct().ToListAsync(ct);
+        var mappedSet = mapped.ToHashSet();
+        return await q.OrderBy(i => i.Kind).ThenBy(i => i.Name).Take(limit)
+            .Select(i => new ErpReferenceItemDto(i.Id, i.TargetSystem, i.Kind, i.Code, i.Name, i.ParentCode, i.IsActive, i.Source, i.LastSeenAt,
+                i.Kind == ErpReferenceKinds.ProductGroup && mappedSet.Contains(i.Code)))
+            .ToListAsync(ct);
+    }
+
+    /// <summary>Elle sözlük kaydı (upsert: (hedef, tür, kod) varsa ad/üst kod/aktiflik güncellenir, Source manual kalır).</summary>
+    public async Task<(ErpReferenceItemDto? Dto, string? Error)> UpsertErpItemAsync(
+        string target, string kind, string code, string name, string? parentCode, Guid? userId, CancellationToken ct)
+    {
+        if (!MappingTargets.IsErp(target)) return (null, "Hedef 'erp:<servis>' biçiminde olmalı.");
+        if (!ErpReferenceKinds.IsValid(kind)) return (null, "Geçersiz sözlük türü.");
+        code = code.Trim(); name = name.Trim();
+        if (code.Length is 0 or > 100) return (null, "Kod zorunlu (≤100).");
+        if (name.Length is 0 or > 300) return (null, "Ad zorunlu (≤300).");
+        parentCode = string.IsNullOrWhiteSpace(parentCode) ? null : parentCode.Trim();
+
+        var item = await db.ErpReferenceItems.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(i => i.TargetSystem == target && i.Kind == kind && i.Code == code, ct);
+        if (item is null)
+        {
+            item = new ErpReferenceItem { TargetSystem = target, Kind = kind, Code = code, Source = "manual", CreatedBy = userId };
+            db.ErpReferenceItems.Add(item);
+        }
+        item.Name = name; item.ParentCode = parentCode; item.IsActive = true;
+        item.IsDeleted = false; item.DeletedAt = null; item.LastSeenAt = DateTime.UtcNow;
+        item.UpdatedAt = DateTime.UtcNow; item.UpdatedBy = userId;
+        await db.SaveChangesAsync(ct);
+        return (new ErpReferenceItemDto(item.Id, item.TargetSystem, item.Kind, item.Code, item.Name, item.ParentCode, item.IsActive, item.Source, item.LastSeenAt, false), null);
+    }
+
+    public async Task<string?> DeactivateErpItemAsync(Guid id, Guid? userId, CancellationToken ct)
+    {
+        var item = await db.ErpReferenceItems.FirstOrDefaultAsync(i => i.Id == id, ct);
+        if (item is null) return "Sözlük kaydı bulunamadı.";
+        if (item.Kind == ErpReferenceKinds.ProductGroup
+            && await db.MarketplaceCategoryMappings.AnyAsync(m => m.Marketplace == item.TargetSystem && m.TargetExternalId == item.Code, ct))
+            return $"{item.Code} bir grup eşlemesinde kullanılıyor; önce eşlemeyi kaldırın.";
+        item.IsActive = false; item.UpdatedAt = DateTime.UtcNow; item.UpdatedBy = userId;
+        await db.SaveChangesAsync(ct);
+        return null;
     }
 }
