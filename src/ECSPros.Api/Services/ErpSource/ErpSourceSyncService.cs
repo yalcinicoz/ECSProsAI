@@ -18,6 +18,7 @@ public sealed class ErpSourceSyncService(
     ILogger<ErpSourceSyncService> logger)
 {
     private (DateTime CreatedAt, string Code)? _productAttributeCursor;
+    private DateTime _nextSupplierReconciliationUtc = DateTime.MinValue;
 
     public bool IsConfigured => source.IsConfigured;
 
@@ -164,6 +165,7 @@ public sealed class ErpSourceSyncService(
             var startedAt = DateTime.UtcNow;
             await using var pg = await dataSource.OpenConnectionAsync(ct);
             var since = await GetSinceAsync(pg, "catalog", ct);
+            var supplierReconciliation = await ReconcileSuppliersIfDueAsync(pg, detail, ct);
             var changedProducts = await source.ReadProductsAsync(since, ct);
             var productCodes = changedProducts.Select(x => x.Code)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -177,7 +179,7 @@ public sealed class ErpSourceSyncService(
             {
                 if (!options.DryRun)
                     await SaveCheckpointAsync(pg, "catalog", startedAt, null, ct);
-                return Ok("catalog", reconciliation.Changed, detail, sw);
+                return Ok("catalog", reconciliation.Changed + supplierReconciliation.Changed, detail, sw);
             }
 
             var groups = await LoadGroupsAsync(pg, ct);
@@ -191,7 +193,7 @@ public sealed class ErpSourceSyncService(
             if (missingPlatforms.Length > 0)
                 throw new InvalidOperationException(
                     $"ERP kanal fiyat eşlemesindeki platformlar hedefte yok: {string.Join(", ", missingPlatforms)}.");
-            int changed = reconciliation.Changed, newProducts = 0, variants = 0, skipped = 0;
+            int changed = reconciliation.Changed + supplierReconciliation.Changed, newProducts = 0, variants = 0, skipped = 0;
             bool blockingMappingError = false;
 
             foreach (var productCode in productCodes.OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
@@ -532,7 +534,11 @@ public sealed class ErpSourceSyncService(
         var configured = options.ProductGroupCodes.FirstOrDefault(x => Normalize(x.Key) == normalized);
         if (!string.IsNullOrWhiteSpace(configured.Value) && groups.ByCode.TryGetValue(configured.Value, out var mapped))
             return mapped;
-        return groups.ByNormalizedName.TryGetValue(normalized, out var exact) ? exact : null;
+        if (groups.ByNormalizedName.TryGetValue(normalized, out var exact)) return exact;
+        var prefixCode = options.ResolveProductGroupPrefixCode(sourceName);
+        return prefixCode is not null && groups.ByCode.TryGetValue(prefixCode, out var prefixMapped)
+            ? prefixMapped
+            : null;
     }
 
     private static async Task<GroupMaps> LoadGroupsAsync(NpgsqlConnection pg, CancellationToken ct)
@@ -978,25 +984,189 @@ public sealed class ErpSourceSyncService(
         }
     }
 
+    private async Task<(int Candidates, int Changed)> ReconcileSuppliersIfDueAsync(
+        NpgsqlConnection pg, StringBuilder detail, CancellationToken ct)
+    {
+        if (!options.SupplierReconciliationEnabled || DateTime.UtcNow < _nextSupplierReconciliationUtc)
+            return (0, 0);
+        if (source is not IErpSupplierCatalogReader supplierReader)
+            throw new InvalidOperationException("ERP kaynağı toplu tedarikçi uzlaştırmasını desteklemiyor.");
+
+        var suppliers = await supplierReader.ReadSuppliersAsync(ct);
+        var productSuppliers = await supplierReader.ReadProductSuppliersAsync(ct);
+        var changed = 0;
+        var errors = new List<string>();
+        await using var tx = options.DryRun ? null : await pg.BeginTransactionAsync(ct);
+        try
+        {
+            if (tx is not null)
+                await ExecAsync(pg, tx, "SELECT pg_advisory_xact_lock(hashtext(@key))", ct,
+                    ("key", "erp-supplier-reconciliation"));
+
+            foreach (var supplier in suppliers.OrderBy(x => x.Code, StringComparer.OrdinalIgnoreCase))
+            {
+                ct.ThrowIfCancellationRequested();
+                // Açık mapping personelin yönettiği mevcut bir cariyi hedefler; otomatik V3 carisi oluşturulmaz.
+                if (options.SupplierAccountCodes.ContainsKey(supplier.Code)) continue;
+                var ensured = await EnsureAutomaticSupplierAccountAsync(pg, tx, supplier, options.DryRun, ct);
+                if (ensured.Changed) changed++;
+                if (ensured.Error is not null) errors.Add(ensured.Error);
+            }
+
+            if (errors.Count > 0)
+                throw new InvalidOperationException(
+                    $"ERP tedarikçi cari uzlaştırmasında {errors.Count} çakışma var: {string.Join(" | ", errors.Take(5))}");
+            var productLinksChanged = await ReconcileProductSuppliersAsync(pg, tx, productSuppliers, ct);
+            changed += productLinksChanged;
+            if (tx is not null) await tx.CommitAsync(ct);
+            _nextSupplierReconciliationUtc = DateTime.UtcNow.AddMinutes(options.SupplierReconciliationMinutes);
+            detail.AppendLine($"[ERP TEDARİKÇİ] kaynak={suppliers.Count}, ürünBağı={productSuppliers.Count}, " +
+                              $"ürünBağıDeğişen={productLinksChanged}, toplamDeğişen={changed}, " +
+                              $"sonrakiKontrol={_nextSupplierReconciliationUtc:O}.");
+            return (suppliers.Count, changed);
+        }
+        catch
+        {
+            if (tx is not null) await tx.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+    }
+
+    private async Task<int> ReconcileProductSuppliersAsync(
+        NpgsqlConnection pg, NpgsqlTransaction? tx,
+        IReadOnlyList<ErpProductSupplierRow> productSuppliers, CancellationToken ct)
+    {
+        if (options.DryRun || productSuppliers.Count == 0) return 0;
+
+        var changed = 0;
+        foreach (var batch in productSuppliers.Chunk(500))
+        {
+            ct.ThrowIfCancellationRequested();
+            var productCodes = batch.Select(x => x.ProductCode).ToArray();
+            var accountCodes = batch.Select(x =>
+                    options.SupplierAccountCodes.TryGetValue(x.SupplierCode, out var configuredCode)
+                        ? configuredCode
+                        : options.BuildSupplierAccountCode(x.SupplierCode))
+                .ToArray();
+            await using var command = new NpgsqlCommand("""
+                UPDATE catalog.products AS p
+                   SET "SupplierId"=a."Id","UpdatedAt"=now()
+                  FROM unnest(@productCodes,@accountCodes) AS m("ProductCode","AccountCode")
+                  JOIN accounts.current_accounts AS a
+                    ON a."Code"=m."AccountCode"
+                   AND NOT a."IsDeleted" AND a."IsActive"
+                   AND a."AccountType" IN ('supplier','both')
+                 WHERE p."Code"=m."ProductCode" AND NOT p."IsDeleted"
+                   AND p."SupplierId" IS DISTINCT FROM a."Id"
+                """, pg, tx);
+            command.Parameters.Add(new NpgsqlParameter<string[]>("productCodes",
+                NpgsqlDbType.Array | NpgsqlDbType.Text) { TypedValue = productCodes });
+            command.Parameters.Add(new NpgsqlParameter<string[]>("accountCodes",
+                NpgsqlDbType.Array | NpgsqlDbType.Text) { TypedValue = accountCodes });
+            changed += await command.ExecuteNonQueryAsync(ct);
+        }
+        return changed;
+    }
+
     private async Task<(Guid? AccountId, string? BlockingError)> ResolveSupplierAsync(
         NpgsqlConnection pg, ErpSupplierRow? supplier, StringBuilder detail, CancellationToken ct)
     {
         if (supplier is null) return (null, null);
-        if (!options.SupplierAccountCodes.TryGetValue(supplier.Code, out var accountCode))
+        if (options.SupplierAccountCodes.TryGetValue(supplier.Code, out var configuredCode))
+        {
+            var configured = await FindSupplierAccountAsync(pg, null, configuredCode, ct);
+            return configured is { IsActive: true } ? (configured.Id, null) : (null,
+                $"V3 tedarikçi mapping hedef carisi bulunamadı veya pasif: {supplier.Code}->{configuredCode}.");
+        }
+
+        if (!options.SupplierReconciliationEnabled)
         {
             detail.AppendLine($"! V3 tedarikçi eşlemesi yok: code={supplier.Code}, name={supplier.Name}; mevcut SupplierId korunur.");
             return (null, null);
         }
-        await using var command = new NpgsqlCommand("""
-            SELECT "Id" FROM accounts.current_accounts
-             WHERE "Code"=@code AND "AccountType" IN ('supplier','both')
-               AND "IsActive" AND NOT "IsDeleted"
-            """, pg);
-        command.Parameters.AddWithValue("code", accountCode);
-        var value = await command.ExecuteScalarAsync(ct);
-        return value is Guid id ? (id, null) : (null,
-            $"V3 tedarikçi mapping hedef carisi bulunamadı: {supplier.Code}->{accountCode}.");
+
+        var ensured = await EnsureAutomaticSupplierAccountAsync(pg, null, supplier, options.DryRun, ct);
+        if (ensured.Error is not null) return (null, ensured.Error);
+        if (ensured.Changed)
+            detail.AppendLine($"+ V3 tedarikçi carisi eşlendi: {supplier.Code}->{ensured.AccountCode} ({supplier.Name}).");
+        if (ensured.AccountId is null && !options.DryRun)
+            detail.AppendLine($"! V3 tedarikçi carisi pasif; mevcut SupplierId korunur: {ensured.AccountCode}.");
+        return (ensured.AccountId, null);
     }
+
+    private async Task<AutomaticSupplierResult> EnsureAutomaticSupplierAccountAsync(
+        NpgsqlConnection pg, NpgsqlTransaction? tx, ErpSupplierRow supplier, bool dryRun, CancellationToken ct)
+    {
+        var accountCode = options.BuildSupplierAccountCode(supplier.Code);
+        var title = supplier.Name.Trim();
+        if (title.Length > 300)
+            return new(null, accountCode, false, $"V3 tedarikçi adı 300 karakteri aşıyor: {supplier.Code}.");
+
+        var existing = await FindSupplierAccountAsync(pg, tx, accountCode, ct, includeInvalid: true);
+        if (existing is not null && (existing.IsDeleted || existing.AccountType is not ("supplier" or "both")))
+            return new(null, accountCode, false,
+                $"Otomatik V3 cari kodu başka/pasif-silinmiş hesapla çakışıyor: {accountCode}.");
+
+        if (dryRun)
+            return new(existing is { IsActive: true } ? existing.Id : null, accountCode,
+                existing is null || !string.Equals(existing.Title, title, StringComparison.Ordinal), null);
+
+        var changed = false;
+        if (existing is null)
+        {
+            var accountId = Guid.NewGuid();
+            changed = await ExecAsync(pg, tx, """
+                INSERT INTO accounts.current_accounts
+                    ("Id","Code","Title","AccountType","SupplierKind","OwnerType","Country",
+                     "CreditLimit","Currency","Notes","IsActive","CreatedAt","IsDeleted")
+                VALUES (@id,@code,@title,'supplier','normal','external','TR',0,'TRY',@notes,true,now(),false)
+                ON CONFLICT ("Code") DO NOTHING
+                """, ct, ("id", accountId), ("code", accountCode), ("title", title),
+                ("notes", $"V3 ERP tedarikçisi; kaynak kod={supplier.Code}.")) > 0;
+            existing = await FindSupplierAccountAsync(pg, tx, accountCode, ct, includeInvalid: true);
+            if (existing is null)
+                return new(null, accountCode, changed, $"Otomatik V3 tedarikçi carisi oluşturulamadı: {accountCode}.");
+            if (existing.IsDeleted || existing.AccountType is not ("supplier" or "both"))
+                return new(null, accountCode, changed, $"Otomatik V3 cari kodu başka hesapla çakışıyor: {accountCode}.");
+        }
+
+        if (!string.Equals(existing.Title, title, StringComparison.Ordinal))
+        {
+            changed |= await ExecAsync(pg, tx, """
+                UPDATE accounts.current_accounts SET "Title"=@title,"UpdatedAt"=now()
+                 WHERE "Id"=@id AND "Title" IS DISTINCT FROM @title
+                """, ct, ("id", existing.Id), ("title", title)) > 0;
+        }
+
+        changed |= await ExecAsync(pg, tx, """
+            INSERT INTO accounts.current_account_ledgers
+                ("Id","CurrentAccountId","ConceptCode","Currency","Description","IsDefault",
+                 "Balance","CreatedAt","IsDeleted")
+            VALUES (@id,@account,'cari','TRY','Varsayılan TRY hesabı',true,0,now(),false)
+            ON CONFLICT ("CurrentAccountId","ConceptCode","Currency") WHERE "IsDeleted"=false DO NOTHING
+            """, ct, ("id", Guid.NewGuid()), ("account", existing.Id)) > 0;
+        return new(existing.IsActive ? existing.Id : null, accountCode, changed, null);
+    }
+
+    private static async Task<SupplierAccountRow?> FindSupplierAccountAsync(
+        NpgsqlConnection pg, NpgsqlTransaction? tx, string accountCode, CancellationToken ct,
+        bool includeInvalid = false)
+    {
+        await using var command = new NpgsqlCommand($"""
+            SELECT "Id","Title","AccountType","IsActive","IsDeleted"
+              FROM accounts.current_accounts
+             WHERE "Code"=@code
+             {(includeInvalid ? "" : "AND NOT \"IsDeleted\" AND \"AccountType\" IN ('supplier','both')")}
+            """, pg, tx);
+        command.Parameters.AddWithValue("code", accountCode);
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        return await reader.ReadAsync(ct)
+            ? new(reader.GetGuid(0), reader.GetString(1), reader.GetString(2), reader.GetBoolean(3), reader.GetBoolean(4))
+            : null;
+    }
+
+    private sealed record AutomaticSupplierResult(Guid? AccountId, string AccountCode, bool Changed, string? Error);
+    private sealed record SupplierAccountRow(Guid Id, string Title, string AccountType, bool IsActive, bool IsDeleted);
 
     private static Task<int> ApplySupplierAsync(
         NpgsqlConnection pg, NpgsqlTransaction tx, Guid productId, Guid? supplierId, CancellationToken ct)

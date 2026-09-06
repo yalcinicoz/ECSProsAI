@@ -6,7 +6,7 @@ namespace ECSPros.Api.Services.ErpSource;
 
 /// <summary>V3 ERP'nin katalog ve fiyat prosedürlerini salt-okuma çağırır. Stok kaynağı değildir.</summary>
 public sealed class SqlServerErpSourceReader(ErpSourceOptions options)
-    : IErpSourceReader, IErpProductAttributeBatchReader
+    : IErpSourceReader, IErpProductAttributeBatchReader, IErpSupplierCatalogReader
 {
     private readonly TimeZoneInfo _sourceTimeZone = ResolveTimeZone(options.SourceTimeZoneId);
     public bool IsConfigured => !string.IsNullOrWhiteSpace(options.ConnectionString);
@@ -26,6 +26,62 @@ public sealed class SqlServerErpSourceReader(ErpSourceOptions options)
         await ReadProductSliceAsync(connection, sourceSince, creationSlice: true, rows, ct);
         await ReadProductSliceAsync(connection, sourceSince, creationSlice: false, rows, ct);
         return rows.Values.OrderBy(x => x.Code, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    public async Task<IReadOnlyList<ErpSupplierRow>> ReadSuppliersAsync(CancellationToken ct)
+    {
+        EnsureConfigured();
+        await using var connection = new SqlConnection(options.ConnectionString);
+        await connection.OpenAsync(ct);
+        await using var command = new SqlCommand("""
+            SELECT CONVERT(varchar(50),a.AttributeCode),d.AttributeDescription
+              FROM prItemAttribute a WITH (NOLOCK)
+              JOIN cdItemAttributeDesc d WITH (NOLOCK)
+                ON d.AttributeTypeCode=a.AttributeTypeCode AND d.AttributeCode=a.AttributeCode
+               AND d.ItemTypeCode=1 AND d.LangCode='TR'
+             WHERE a.AttributeTypeCode=3
+             GROUP BY a.AttributeCode,d.AttributeDescription
+             ORDER BY a.AttributeCode
+            """, connection) { CommandTimeout = options.CommandTimeoutSeconds };
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        var result = new List<ErpSupplierRow>();
+        while (await reader.ReadAsync(ct))
+        {
+            var code = reader.GetString(0).Trim();
+            var name = reader.GetString(1).Trim();
+            if (code.Length > 0 && name.Length > 0) result.Add(new(code, name));
+        }
+        return result;
+    }
+
+    public async Task<IReadOnlyList<ErpProductSupplierRow>> ReadProductSuppliersAsync(CancellationToken ct)
+    {
+        EnsureConfigured();
+        await using var connection = new SqlConnection(options.ConnectionString);
+        await connection.OpenAsync(ct);
+        await using var command = new SqlCommand("""
+            WITH ranked AS
+            (
+                SELECT a.ItemCode,CONVERT(varchar(50),a.AttributeCode) AS SupplierCode,
+                       ROW_NUMBER() OVER (PARTITION BY a.ItemCode ORDER BY a.AttributeCode) AS rn
+                  FROM prItemAttribute a WITH (NOLOCK)
+                 WHERE a.ItemTypeCode=1 AND a.AttributeTypeCode=3
+            )
+            SELECT ItemCode,SupplierCode
+              FROM ranked
+             WHERE rn=1
+             ORDER BY ItemCode
+            """, connection) { CommandTimeout = options.CommandTimeoutSeconds };
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        var result = new List<ErpProductSupplierRow>();
+        while (await reader.ReadAsync(ct))
+        {
+            var productCode = reader.GetString(0).Trim();
+            var supplierCode = reader.GetString(1).Trim();
+            if (productCode.Length > 0 && supplierCode.Length > 0)
+                result.Add(new(productCode, supplierCode));
+        }
+        return result;
     }
 
     public async Task<IReadOnlyList<ErpVariantRow>> ReadVariantsAsync(string productCode, CancellationToken ct)

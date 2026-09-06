@@ -29,6 +29,8 @@ public sealed record ErpProductAttributeRow(
 
 public sealed record ErpSupplierRow(string Code, string Name);
 
+public sealed record ErpProductSupplierRow(string ProductCode, string SupplierCode);
+
 public sealed record ErpProductSnapshot(
     ErpProductRow Product,
     IReadOnlyList<ErpVariantRow> Variants,

@@ -28,9 +28,21 @@ public sealed class ErpSourceOptions
     public bool AutoCreateColorValues { get; set; } = true;
     public bool AutoCreateProductAttributeValues { get; set; } = true;
 
+    public bool SupplierReconciliationEnabled { get; set; } = true;
+    public int SupplierReconciliationMinutes { get; set; } = 60;
+    public string SupplierAccountCodePrefix { get; set; } = "V3-SUP-";
+
     /// <summary>V3 tedarikçi AttributeCode -> ECSPros accounts.current_accounts.Code.</summary>
     public Dictionary<string, string> SupplierAccountCodes { get; set; } =
         new(StringComparer.OrdinalIgnoreCase);
+
+    public string BuildSupplierAccountCode(string sourceCode)
+    {
+        var code = $"{SupplierAccountCodePrefix}{sourceCode.Trim()}";
+        if (code.Length > 50)
+            throw new InvalidOperationException($"V3 tedarikçi cari kodu 50 karakteri aşıyor: {sourceCode}.");
+        return code;
+    }
 
     /// <summary>ERP urunGrubu değeri -> definition.product_groups.Code. Eşleşmeyen yeni ürün yazılmaz.</summary>
     public Dictionary<string, string> ProductGroupCodes { get; set; } = new(StringComparer.OrdinalIgnoreCase)
@@ -40,6 +52,36 @@ public sealed class ErpSourceOptions
         ["Sütyen"] = "grp_118",
         ["Triko Hırka"] = "grp_14"
     };
+
+    /// <summary>
+    /// Birebir ad/kod eşleşmesi bulunamadığında kullanılan kontrollü ERP ürün grubu ailesi eşlemeleri.
+    /// Anahtar yalnız tam kelime veya "anahtar + boşluk" öneki olarak eşleşir; en uzun tekil kural kazanır.
+    /// </summary>
+    public Dictionary<string, string> ProductGroupPrefixCodes { get; set; } = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Triko"] = "grp_14",
+        ["Tesettür Triko"] = "grp_14"
+    };
+
+    public string? ResolveProductGroupPrefixCode(string? sourceName)
+    {
+        if (string.IsNullOrWhiteSpace(sourceName)) return null;
+        var normalized = ErpSourceSyncService.Normalize(sourceName);
+        var matches = ProductGroupPrefixCodes
+            .Select(x => (Prefix: ErpSourceSyncService.Normalize(x.Key), x.Value))
+            .Where(x => normalized == x.Prefix || normalized.StartsWith(x.Prefix + " ", StringComparison.Ordinal))
+            .OrderByDescending(x => x.Prefix.Length)
+            .ToArray();
+        if (matches.Length == 0) return null;
+
+        var longestLength = matches[0].Prefix.Length;
+        var targetCodes = matches
+            .TakeWhile(x => x.Prefix.Length == longestLength)
+            .Select(x => x.Value)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return targetCodes.Length == 1 ? targetCodes[0] : null;
+    }
 
     /// <summary>V3 varyantTipId -> definition.attribute_types.Code.</summary>
     public Dictionary<int, string> VariantAttributeTypeCodes { get; set; } = new()
@@ -124,8 +166,14 @@ public sealed class ErpSourceOptions
             throw new InvalidOperationException("ErpSource:StartupDelaySeconds 0-600 aralığında olmalı.");
         if (SupplierAccountCodes.Any(x => string.IsNullOrWhiteSpace(x.Key) || string.IsNullOrWhiteSpace(x.Value)))
             throw new InvalidOperationException("ErpSource supplier account mapping anahtar/değerleri boş olamaz.");
+        if (string.IsNullOrWhiteSpace(SupplierAccountCodePrefix) || SupplierAccountCodePrefix.Length > 40)
+            throw new InvalidOperationException("ErpSource supplier account code prefix 1-40 karakter olmalı.");
+        if (SupplierReconciliationMinutes is < 5 or > 1440)
+            throw new InvalidOperationException("ErpSource:SupplierReconciliationMinutes 5-1440 aralığında olmalı.");
         if (ProductGroupCodes.Any(x => string.IsNullOrWhiteSpace(x.Key) || string.IsNullOrWhiteSpace(x.Value)))
             throw new InvalidOperationException("ErpSource product group mapping anahtar/değerleri boş olamaz.");
+        if (ProductGroupPrefixCodes.Any(x => string.IsNullOrWhiteSpace(x.Key) || string.IsNullOrWhiteSpace(x.Value)))
+            throw new InvalidOperationException("ErpSource product group prefix mapping anahtar/değerleri boş olamaz.");
 
         if (!Enabled) return;
         if (string.IsNullOrWhiteSpace(ConnectionString))

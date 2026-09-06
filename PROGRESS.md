@@ -1,10 +1,170 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**ADMIN FİLTRE DÜZENİ — TEK ORTAK ÖZELLİK EDİTÖRÜ (2026-09-06):**
+`FilterBuilder.tsx` içinde her özellik için ayrı büyük kart açan düzen tek aramalı özellik/değer seçim
+alanına dönüştürüldü. Seçilen filtreler altta özellik adı ve değerlerini içeren kompakt etiketlerde gösterilir;
+etikete tıklama aynı editörde değerleri açar, etiketteki kaldırma düğmesi yalnız ilgili filtreyi kaldırır.
+Uzun etiketler kısaltılır ve tam içerik title/erişilebilir ad üzerinden okunabilir. Özellik değiştirmek mevcut
+filtreleri silmez ve parent'a veri değişikliği göndermez; değer seçimi ilgili özellik kaydını günceller veya
+ekler. Ayrı özellik listesi state'i kaldırılarak etiketler ve kaydedilecek tanım aynı listeden beslenir.
+Arama, çoklu checkbox, renk göstergesi ve dış-tıklama davranışları korundu. `npm run lint`,
+`npx tsc -p tsconfig.app.json --noEmit` ve `git diff --check` geçti. Kaynak handler'larını çalıştıran
+yerel Node kontrolünde kayıtlı Kadın filtresine Marka ekleme, eski özelliği düzenlerken diğerini koruma,
+son değeri kaldırma, filtre silme ve grup/tarih kriterlerini koruma doğrulandı. Tarayıcı görsel testi
+yapılmadı; bu turda build, yayın veya sunucu işlemi yapılmadı.
+
+Kullanıcının güncel build'i hazırlamasından sonra admin, açık yayın izni kapsamında
+`20260906T131000Z_single_attribute_editor` release'iyle Nginx LB üzerinde atomik etkinleştirildi.
+Dist'te tek editör etiketleri bulunduğu ve eski ekle butonunun bulunmadığı kontrol edildi. Dış admin
+HTML'i `200` ve yeni `index-CKjS-mlB.js` referansı doğrulandı; dışarıdan indirilen JavaScript SHA-256
+değeri yerel build ile birebir eşleşti. Nginx `active`; disk `%78`, boş alan `11 GB`.
+Önceki admin release'i ve bu yayına ait yerel/uzak geçici dosyalar kaldırıldı; yalnız çalışan release kaldı.
+PowerShell pipe sonundaki CR karakteri betik sonrasında hata kodu üretti; geçiş ve temizlik sonuçları ayrı
+salt-okunur SSH kontrolünde başarıyla doğrulandı. Tarayıcı içi etkileşim/görsel kabul henüz yapılmadı.
+Nginx config/restart, API, veritabanı, `.59` veya GitHub üzerinde değişiklik yapılmadı.
+
 > **Kural:** Her session bu dosyadan başla, bu dosyayla bitir.
 > Bir faz tamamlanmadan bir sonrakine geçme.
-> Son güncelleme: 2026-09-03
+> Son güncelleme: 2026-09-06
 
 ---
+
+**NGINX DİSK KULLANIMI SALT-OKUNUR İNCELENDİ (2026-09-06):**
+Admin yayını tamamlandıktan sonra Nginx LB disk durumu salt-okunur denetlendi. Kök ext4 bölüm `48 GB` toplam,
+`35 GB` kullanılan, `11 GB` boş ve `%78` dolu; inode kullanımı yalnız `%14` seviyesindedir. Admin release
+yalnız `3.1 MB` olduğundan doluluğun kaynağı admin yayınları değildir. `/var/cache/nginx` `22 GB` ve `241.204`
+dosyadır: video cache `8.1 GB`, tenant CDN cache'leri yaklaşık `14 GB` (Julude `4.1 GB`; Tozlu, Mishar Italia,
+Olur Butik ve Gülseli yaklaşık `2.1 GB`; ECSPros `1.4 GB`). `/var/log/nginx` `2.5 GB`; bunun `1.9 GB`'ı Tozlu
+loglarıdır ve en büyük iki aktif/rotated dosya yaklaşık `829 MB` ile `537 MB`'tır. Systemd journal `3.1 GB`,
+`/tmp` `2.8 MB` bulundu; silinmiş fakat süreççe açık tutulan Nginx dosyası yoktur. Cache, log veya journal
+silinmedi; config/reload/restart uygulanmadı ve `.59` üzerinde işlem yapılmadı.
+
+**FİLTRE DROPDOWN'LARINA DIŞ TIKLAMAYLA KAPANMA EKLENDİ (2026-09-06):**
+Admin `FilterBuilder` içindeki Ürün Grupları, Hariç Tutulan Ürün Grupları, Tedarikçi, özellik tipi ve özellik
+değeri açılır menülerine ortak `pointerdown` tabanlı dış-tıklama davranışı eklendi. Menü içindeki arama,
+checkbox ve seçim işlemleri menüyü kapatmaz; sayfadaki başka bir alana veya başka filtre menüsüne tıklanınca
+önceki menü kapanır. Açma düğmesiyle toggle ve mevcut `Escape` davranışları korunmuştur. Event listener yalnız
+menü açıkken bağlanır ve kapanma/unmount sırasında temizlenir; yeni bağımlılık eklenmedi. Hedefli ESLint,
+TypeScript `--noEmit`, tüm admin `npm run lint` ve `git diff --check` başarılıdır. Production build/yayın,
+Nginx, `.59`, API, veritabanı veya GitHub işlemi ilk aşamada yapılmadı; yayın güncel dist'in dışarıda
+üretilmesini bekledi. Kullanıcının build'i dışarıda üretmesinden sonra yeni dış-tıklama ve state koruma içerikleri
+dist içinde doğrulandı. SHA-256 kontrollü paket yalnız Nginx LB'ye aktarıldı ve admin symlink'i atomik olarak
+`20260906T125800Z_filter_dropdown_state` release'ine geçirildi. Dış admin HTML ve yeni hashed JavaScript asset
+`200`, Nginx `active` doğrulandı. Nginx config/reload/restart, `.59`, API, veritabanı ve GitHub üzerinde işlem
+yapılmadı. Kabulden sonra önceki admin release'i kaldırıldı; sunucuda yalnız çalışan release bırakıldı. Uzak
+`/tmp` yayın dosyaları ve yerel `.codex-tmp-admin-deploy-20260906T125800Z` klasörü temizlendi.
+
+**YENİ ÖZELLİK FİLTRESİ EKLERKEN ÖNCEKİ FİLTRENİN KAYBOLMASI DÜZELTİLDİ (2026-09-06):**
+Admin `FilterBuilder` state akışında parent `onChange` çağrısının React `setDef` updater fonksiyonu içinden
+çalıştırıldığı tespit edildi. Concurrent/tekrarlı render koşullarında eski `def` snapshot'ının daha yeni özellik
+filtresi seçimini ezebilmesini önlemek için güncel tanım `defRef` ile tek noktada tutulup state ve parent callback
+sıralı biçimde güncellenecek hale getirildi. Referans listeleri sonradan yüklendiğinde açıklama da aynı güncel
+snapshot üzerinden üretilir. Yeni boş özellik satırı eklemek filtre tanımını semantik olarak değiştirmediği için
+parent'a gereksiz güncelleme gönderilmesi kaldırıldı; böylece yeni satır açılırken mevcut filtreler korunur.
+Hedefli ESLint, TypeScript `--noEmit`, tüm admin `npm run lint` ve `git diff --check` başarılıdır. Açık tarayıcı
+yüzeyi bulunmadığından canlı formda kayıt değiştiren UI testi yapılmadı. Production build/yayın, Nginx, `.59`,
+API, veritabanı veya GitHub işlemi yapılmadı; hotfix yayını güncel dist'in dışarıda üretilmesini beklemektedir.
+
+**ÖZELLİK FİLTRESİ `filterColors` RUNTIME HATASI DÜZELTİLDİ (2026-09-06):**
+Aramalı özellik filtresi yayını sonrasında bazı API özellik değerlerinde `filterColors` alanının hiç gelmemesi
+nedeniyle tarayıcıda `Cannot read properties of undefined (reading 'flatMap')` hatası oluştuğu doğrulandı.
+Frontend modeli gerçek API sözleşmesine uygun biçimde alanı opsiyonel kabul edecek ve arama anahtarlarını
+üretirken eksik değeri boş diziye düşürecek şekilde düzeltildi; renk örneği gösterimi opsiyonel zincirle
+korunmaya devam eder. Hedefli ESLint, TypeScript `--noEmit` ve tüm admin `npm run lint` kontrolleri başarılıdır.
+Repository kuralı nedeniyle ajan oturumunda production build çalıştırılmadı; hotfix yayını güncel dist'in
+dışarıda üretilmesini bekledi. Bu ilk aşamada sunucu, Nginx, `.59`, API, veritabanı veya GitHub üzerinde işlem
+yapılmadı. Kullanıcının build'i dışarıda üretmesinden sonra null guard ve aramalı özellik
+içerikleri dist içinde doğrulandı. SHA-256 kontrollü hotfix paketi yalnız Nginx LB'ye aktarıldı; admin symlink'i
+atomik olarak `20260906T124700Z_attribute_filter_null_guard` release'ine geçirildi. Dış admin HTML ve yeni
+hashed JavaScript asset `200`, Nginx `active` doğrulandı. Nginx config/reload/restart, `.59`, API, veritabanı ve
+GitHub üzerinde işlem yapılmadı. Kabulden sonra önceki hatalı admin release'i kaldırıldı; sunucuda yalnız çalışan
+hotfix release'i bırakıldı. Uzak `/tmp` yayın dosyaları ve yerel
+`.codex-tmp-admin-deploy-20260906T124700Z` klasörü temizlendi.
+
+**ÖZELLİK FİLTRELERİ ARAMALI VE KOMPAKT SEÇİME GEÇİRİLDİ (2026-09-06):**
+Admin `FilterBuilder` içindeki özellik filtrelerinin bütün değerleri sayfaya açık biçimde basan yapısı
+değiştirildi. Her filtre satırında özellik tipi artık aramalı tekli seçimdir; seçilen özellik diğer satırlarda
+tekrar gösterilmez ve özellik değiştiğinde eski değerler temizlenir. Özellik değerleri kapalı, seçili adetini
+gösteren aramalı checkbox menüsüne taşındı; seçim sırasında menü kapanmaz, liste sınırlı yükseklikte scroll olur,
+renk örnekleri korunur. Seçilen değerler kompakt chip olarak gösterilir ve toplu temizleme eylemi bulunur. Yeni
+satır boş `Özellik seçin` durumunda açılır; özellik seçilmeden değer menüsü kullanılamaz. Mobilde alanlar alt alta,
+geniş ekranda iki sütun yerleşir. Yeni bağımlılık eklenmedi. `git diff --check`, hedefli
+`npx eslint src/components/catalog/FilterBuilder.tsx`, `npx tsc -p tsconfig.app.json --noEmit` ve tüm admin
+`npm run lint` başarılıdır. Repository `AGENTS.md` kuralı ajan oturumunda production build çalıştırılmasını
+yasakladığı ve mevcut `admin/dist` bu son değişiklikten önce üretildiği için eski artefakt yeniden yayınlanmadı.
+Bu ilk aşamada production/MySQL/V3, `.59`, Nginx LB ve GitHub üzerinde işlem yapılmadı; admin yayını güncel
+build'in dışarıda üretilmesini bekledi. Kullanıcının build'i dışarıda üretmesinden sonra yeni
+`Özellik ara`, `Değer ara` ve `Seçilenleri temizle` içerikleri dist içinde doğrulandı. SHA-256 kontrollü paket
+yalnız Nginx LB'ye aktarıldı ve admin symlink'i atomik olarak
+`20260906T124100Z_attribute_filter_search` release'ine geçirildi. Nginx config/reload/restart, API, veritabanı,
+`.59` ve GitHub üzerinde işlem yapılmadı. Dışarıdan admin HTML ile yeni hashed JavaScript asset `200`, Nginx
+`active` doğrulandı. Kabulden sonra yalnız önceki admin release'i silindi; sunucuda çalışan release bırakıldı.
+Uzak `/tmp` yayın dosyaları ile yerel `.codex-tmp-admin-deploy-20260906T124100Z` klasörü temizlendi.
+
+**PRODUCTION SUNUCU YAZMA SINIRLARI NETLEŞTİRİLDİ (2026-09-06):**
+`51.178.208.59` / `192.168.0.59` legacy production sunucusunda her türlü salt-okunur veri ve durum
+incelemesine izin verildiği, buna karşılık dosya/veritabanı/servis/yapılandırma dahil hiçbir değişiklik
+yapılamayacağı proje ve handoff talimatlarına kaydedildi. `51.178.208.56` / `192.168.0.56` Nginx LB'nin de
+production altyapısı olduğu ve kullanıcıdan ilgili işlem için açık izin alınmadan release yükleme veya silme,
+symlink/config değişikliği, reload/restart ya da başka bir yazma işlemi uygulanamayacağı belirtildi. Bu kayıt
+sırasında `CLAUDE.md` içindeki `.59` için eski çalıştırılabilir deploy/restart/migration yönergeleri de yanlışlık
+riskini kaldırmak amacıyla aktif talimat olmaktan çıkarılıp salt-okunur kontrol sınırıyla değiştirildi. Bu kayıt
+sırasında hiçbir sunucuya bağlantı kurulmadı ve hiçbir sunucu/veritabanı değişikliği yapılmadı. Bekleyen admin
+değişikliğinin güncel `dist` artefaktı henüz üretilmediğinden yayın gerçekleştirilmedi. Kullanıcı Nginx LB
+üzerindeki admin yayınına sonradan açık izin verdi; ancak yeniden kontrolde `admin/dist/index.html` dosyasının
+2026-09-02 tarihli ve yeni `Ürün grubu ara` içeriğinden yoksun olduğu görüldü. Repository `AGENTS.md` kuralı
+ajan oturumunda production build çalıştırılmasını yasakladığından eski paket gönderilmedi ve Nginx sunucusunda
+hiçbir işlem yapılmadı. Kullanıcının build'i dışarıda üretmesinden sonra `dist/index.html` tarihi ve yeni filtre
+içeriği doğrulandı; açık yayın izniyle SHA-256 kontrollü paket yalnız Nginx LB'ye aktarıldı. Admin symlink'i
+atomik olarak `20260906T121900Z_filter_search_checkbox` release'ine geçirildi; Nginx config/reload/restart,
+API, veritabanı ve `.59` üzerinde işlem yapılmadı. Dışarıdan admin HTML ve yeni hashed JavaScript asset `200`,
+asset cache başlığı `public, max-age=31536000, immutable`, Nginx `active` doğrulandı. Kabul sonrası yalnız eski
+admin release'i kaldırıldı; sunucuda çalışan release bırakıldı. Uzak `/tmp` yayın dosyaları ve yerel
+`.codex-tmp-admin-deploy-20260906T121900Z` klasörü temizlendi.
+
+**FİLTRE TANIMI ÇOKLU SEÇİMLERİNE ARAMA VE CHECKBOX EKLENDİ (2026-09-06):**
+Admin `FilterBuilder` içindeki `Ürün Grupları`, `Hariç Tutulan Ürün Grupları` ve `Tedarikçi` seçimleri ortak
+aramalı çoklu seçim davranışına geçirildi. Açılır listenin üstünde Türkçe büyük/küçük harf uyumlu isim/kod
+araması, aramayı temizleme düğmesi ve her satırda gerçek checkbox bulunur. Seçim/kaldırma yalnız filtre
+değerini günceller; menüyü kapatmaz, böylece kullanıcı art arda birden fazla kayıt seçebilir. Mevcut seçili
+chip gösterimi ve chip üzerinden kaldırma korunmuştur; sonuç bulunamadığında açık mesaj gösterilir. Yeni
+bağımlılık eklenmedi. `npm run lint`, hedefli `npx eslint src/components/catalog/FilterBuilder.tsx` ve
+`npx tsc -p tsconfig.app.json --noEmit` başarılıdır. Production build, deployment, GitHub push veya
+production veritabanı işlemi yapılmadı. Kullanıcının sonraki yayın talebinde mevcut `admin/dist` artefaktının
+2026-09-02 tarihli olduğu ve yeni aramalı checkbox değişikliğini içermediği doğrulandı. Repository/AGENTS
+kuralı etkileşimli ajan oturumunda production `npm run build` çalıştırılmasını yasakladığı için eski artefakt
+yayınlanmadı; güncel admin dist dışarıda üretildikten sonra atomik admin release yayını beklemektedir.
+
+**KADIN YENİ GELENLER KANAL KATEGORİSİ FİLTRESİ SALT-OKUNUR DOĞRULANDI (2026-09-06):**
+`fca5c333-8ee2-40d2-a246-e0b9175c581e` kimlikli kanal kategorisinin kod davranışı ve production kaydı
+değişiklik yapılmadan incelendi. `ProductFilterHelper`, `productGroupIds` null/boş olduğunda grup kısıtı
+uygulamaz; diğer bütün aktif kuralları `AND` ile birleştirir. `createdAfterDays` ürünün `CreatedAt` (stok kartı
+açılış), `imageUpdatedAfterDays` ise herhangi bir aktif görselin `UpdatedAt ?? CreatedAt` alanını kullanır.
+
+Kayıtlı kategori `mixed/published/color` durumundadır ve beklentinin aksine `FilterDef.productGroupIds`
+içinde 22 grup saklıdır: Bluz, Body, Bustiyer, Ceket, Elbise, Eşofman, Etek, Gömlek, Hırka, İkili Takım, Kap,
+Kimono, Mont, Panço, Pantolon, Pijama, Sweatshirt, Triko, T-Shirt, Tulum, Tunik ve Yelek. Özel özellik filtresi
+`Cinsiyet=Kadın`, tarih kuralları `createdAfterDays=30` ve `imageUpdatedAfterDays=10` olarak doğrulandı. Ayrı
+`Gruplar` sekmesi bağı sayısı 0'dır; bu bağlar filtredeki `productGroupIds` listesinden farklıdır. Salt-okunur
+anlık sayımda grup kısıtı olmadan temel koşulları sağlayan 116, kayıtlı 22 grup kısıtıyla 92 ürün bulundu.
+Kategori `mixed` olsa da elle sabitlenmiş/harici tutulmuş ürün satırı şu anda yoktur; vitrin sorgusu filtreyi
+canlı hesapladığı için materyalize satırın olmaması kategoriyi boşaltmaz. Son vitrin sonucu ayrıca global satış,
+kanal seçimi/durdurma ve stok görünürlüğü geçitlerinden etkilenebilir. Kod/config değişikliği, test, deployment,
+GitHub işlemi veya production veritabanı yazısı yapılmadı.
+
+**GITHUB SON GÜNCELLEME KONTROLÜ (2026-09-05):**
+`origin` prune edilerek yeniden fetch edildi; yerel `main` ile `origin/main` farkı `0/0` bulundu ve alınacak
+yeni commit olmadığı doğrulandı. Bekleyen tracked/untracked yerel çalışmalara ve mevcut stash kayıtlarına
+dokunulmadı. Kod değişikliği, push, deployment veya production veritabanı işlemi yapılmadığı için uygulama
+testleri yeniden çalıştırılmadı.
+
+**GITHUB DEĞİŞİKLİKLERİ YEREL ÇALIŞMALAR KORUNARAK ALINDI (2026-09-05):**
+Kullanıcının talebiyle mevcut tracked ve untracked çalışmalar isimli geçici stash ile korundu; uzak
+`origin/main` dalındaki 11 commit `git pull --ff-only` ile `50a40f0e` commit'ine kadar alındı. Stash
+çatışmasız geri uygulandı ve işlem sonunda yerel `main` ile `origin/main` aynı commit'te doğrulandı. Önceden
+bekleyen ERP tedarikçi eşleme, tek sunucu seed düzeltmesi, ayar ve test değişikliklerinin tamamı çalışma
+alanında korunmaktadır. `git diff --check` başarılıdır; yalnız Git senkronizasyonu yapıldığı için uygulama
+testleri yeniden çalıştırılmadı. GitHub'a push, deployment veya production veritabanı işlemi yapılmadı.
 
 **NGINX DİSK DENETİMİ VE LEGACY STOCK AUTO-REPAIR KAYITLARI GITHUB İLE EŞİTLENDİ (2026-09-03):**
 Kullanıcının açık talebiyle bekleyen `PROGRESS.md` ve `docs/handoff/sunucu-altyapi-devri.md` değişiklikleri
@@ -5105,6 +5265,92 @@ ecspros` yapmadı. Yeni publish'te Sıra 1+1.5+2'nin tamamı var; restart sonras
   iki ardışık hata kapandı.
 - Kabulden sonra API01 `/tmp` yayın arşivi, önceki ERP release'i ve yerel `.codex-tmp-erp-deploy` dizini silindi.
   Sunucuda yalnız çalışan ERP release'i bırakıldı; kullanıcıya ait başka dosya veya yedeğe dokunulmadı.
+
+### 2026-09-04 — ERP Triko ürün grubu ailesi eşlemesi
+
+- API01/API02 servisleri ve health uçları salt-okunur kontrol edildi. API, ERP source ve legacy worker unit'leri
+  `active/running`, restart sayıları `0`; PostgreSQL/Redis/Data Protection health kontrolleri `Healthy`. Görülen
+  hata bağlantı kaynaklı değil, katalog tanım eşlemesi kaynaklıdır.
+- V3'te yeni açılan `P-00023152 / Triko Takım`, `P-00023154 / Triko Ceket`, `P-00023155` ve `P-00023156 /
+  Triko Bluz` kartları hedef ürün grubuna eşleşemediği için katalog fazı güvenli biçimde durmuş; buna bağlı fiyat
+  fazı çalıştırılmamış ve `P-00023152` stok mapping repair işlemi aktif hedef ürün bulamamıştır.
+- Daha önce onaylı `Triko Hırka -> grp_14` semantiğine dayanarak tek tek yeni ad eklemek yerine kontrollü
+  `Triko -> grp_14` ve `Tesettür Triko -> grp_14` aile eşlemeleri eklendi. İkinci kural ilk canlı logda görülen
+  `P-00023160`–`P-00023163` Tunik/Yelek/Hırka kartlarını da kapsar. Çözümleyici sırası birebir yapılandırma, hedefte birebir ad ve son
+  olarak tam kelime sınırına sahip en uzun prefix kuralıdır. `Trikolu ...` gibi benzer ama farklı adlar eşleşmez;
+  çakışan/bilinmeyen gruplar fail-closed kalır.
+- Seçenek doğrulaması boş prefix anahtar/değerlerini startup aşamasında reddeder. Hedefli V3 snapshot testleri
+  `P-00023152` ve `P-00023154` için ayrı ayrı `1/1`; `ErpSourceOptionsTests` `5/5`; acceptance dışı API paketi
+  `119/119` geçti. Yeni DB alanı/migration eklenmedi ve production MySQL/V3'e yazı yapılmadı.
+- API01 ERP worker kontrollü yayını tamamlandı. İlk release doğrudan `Triko ...` kartlarını eşledi; canlı logda
+  görülen `Tesettür Triko ...` ailesi de eklenip nihai immutable release
+  `20260904T143645Z_erp_triko_family_complete` health/rollback kapısıyla etkinleştirildi. Unit `active/running`,
+  `NRestarts=0`; PostgreSQL/Redis/Data Protection health kontrolleri `Healthy`.
+- Nihai canlı kabul zinciri: katalog `OK`, kalan `4` ürün oluşturuldu, `166` varyant işlendi, `atlanan=0`;
+  fiyat `OK`, `katalogda-yok=0`, `145` kanal-varyantı işlendi; legacy stok eşleme onarımı `OK`; stock-only
+  `eşleşmeyenSatır=0`, `eşleşmeyenAdet=0`. Böylece katalog -> varyant -> fiyat -> stok silsilesi tamamlandı.
+- Son testler ayrı geçici artifacts klasöründe `ErpSourceOptionsTests 5/5` ve acceptance dışı API paketi
+  `119/119` geçti. Normal test çıktısının ilk denemesi Visual Studio'nun açık tuttuğu `ECSPros.Api.xml` nedeniyle
+  yazılamadı; kullanıcı/IDE süreçlerine dokunulmadı. Derlemede yalnız mevcut uyarılar görüldü.
+- Eski ERP release'leri ve bu işe ait API01 `/tmp` yayın arşivleri temizlendi; sunucuda yalnız çalışan nihai
+  release bırakıldı. Production MySQL/V3'e doğrudan yazı yapılmadı; yeni DB alanı/migration eklenmedi.
+
+### 2026-09-04 — V3 tedarikçileri admin cari kartlarına otomatik uzlaştırma
+
+- Admin `Cari > Cari Kartlar` production envanteri READ ONLY transaction ile incelendi: aktif tedarikçi tipinde
+  yalnız `C-0001 / Deneme Cari` ve `C-TEST-MP / Test Pazaryeri Satıcısı` vardı; gerçek V3 tedarikçileri henüz
+  `accounts.current_accounts` içine alınmamıştı.
+- V3 `prItemAttribute` içindeki `AttributeTypeCode=3` tedarikçi envanteri `NOLOCK` ve salt-okunur sorguyla
+  doğrulandı: ürüne atanmış `441` benzersiz tedarikçi, en uzun kaynak kod `7`, en uzun ad `47` karakter.
+- Elle yüzlerce `SupplierAccountCodes` satırı tutmak yerine kalıcı uzlaştırma eklendi. Worker varsayılan saatlik
+  kontrolde V3 tedarikçilerini salt-okunur toplu alır; eksikleri `V3-SUP-{kaynakKod}` doğal koduyla `supplier /
+  normal` cari kart ve varsayılan TRY cari hesabı olarak idempotent oluşturur, V3 isim değişikliklerini günceller.
+  Personelin pasife aldığı cari yeniden aktifleştirilmez; açık `SupplierAccountCodes` override'ları önceliklidir;
+  müşteri/başka tip kod çakışması katalog yazımını fail-closed durdurur.
+- Ürün senkronu otomatik V3 cari kodunu doğrudan çözer; böylece yeni ürünün `SupplierId` alanı boş kalmaz.
+  Yeni DB alanı/migration eklenmedi. V3/production MySQL'e yazı yapılmaz; yazılar yalnız ECSPros PostgreSQL
+  cari/ledger ve normal ürün senkronu kapsamındadır.
+- Saatlik uzlaştırma ürün bağlarını da kapsayacak biçimde tamamlandı. V3 `prItemAttribute` içinden her ürünün
+  `AttributeTypeCode=3` kaydı tek toplu `NOLOCK` sorgusuyla okunur; hedefte yalnız farklı `SupplierId` değerleri
+  500'lük parametrik PostgreSQL paketleriyle güncellenir. Böylece ana stok kartının `LastUpdatedDate` alanı
+  değişmese bile yeni/değişen tedarikçi bağı yakalanır; her ürün için ayrı V3 bağlantısı kurulmaz.
+- Test: acceptance dışı API paketi ayrı geçici artifacts klasöründe `120/120` geçti; Release publish başarılı,
+  yalnız mevcut derleyici uyarıları görüldü. API01 release
+  `20260904T164307Z_erp_supplier_links` olarak kontrollü yayınlandı. İlk başlatmada production ayar dosyasının
+  kopya sahipliği `root` kaldığı için servis ayarı okuyamadı; dosya sahipliği önceki çalışan release ile
+  `ecspros:ecspros 640` olarak eşitlenip servis düzeltildi. Son durum `active/running`, `NRestarts=0`, `/live` ve
+  `/ready` Healthy.
+- İlk canlı uzlaştırma: `441` V3 tedarikçi, `441` varsayılan TRY ledger, `29.469` kaynak ürün bağı;
+  `29.099` hedef ürün bağı güncellendi. Salt-okunur kabul sorgusunda `P-00023152`–`P-00023163` ürünlerinin
+  tamamı `V3-SUP-696 / GÜLSELİ TEKSTİL` ile bağlı doğrulandı. V3/production MySQL'e hiçbir yazı yapılmadı;
+  DB şeması/migration değişmedi. API01'de yalnız çalışan release bırakıldı; iki eski worker release'i, iki
+  aktarım arşivi ve yerelde bu iş için oluşturulan test/deploy artifacts klasörleri doğrulanarak silindi.
+  `git diff --check` temiz; yerel `HEAD` ile `origin/main` aynı tabanda (`92885bd3`), değişiklikler yerelde
+  commit edilmeden korunuyor ve GitHub'a gönderilmedi.
+- V3 tedarikçi detay kaynağı salt-okunur şema/veri sorgularıyla ayrıca incelendi. `prItemAttribute` için yalnız
+  `cdItem` ve `cdItemAttribute` foreign key'leri var; `AttributeTypeCode=3 / AttributeCode` bir `CurrAccCode`
+  değildir. Vergi no/dairesi ve temel cari alanları `cdCurrAcc`, adresler `prCurrAccPostalAddress`, iletişimler
+  `prCurrAccCommunication`, varsayılan bağlantılar `prCurrAccDefault` tablolarındadır. `cdItemAttribute.Description`
+  441 tedarikçi tanımının tamamında boştur; cari kod alternatifi değildir. `prCurrAccAttribute` üzerinden kısmi
+  köprü bulundu: 441 kaynağın 55'i eşleşiyor, 53'ü tekil/güvenli, 2'si birden fazla cariye bağlı; tekil 53'ün
+  36'sında vergi no, 4'ünde vergi dairesi, 53'ünde adres, 3'ünde iletişim bulunuyor. Kalan 386 tanım için
+  deterministik cari bağı yoktur; ad eşleştirmesi de yalnız bir belirsiz sonuç verdiğinden üretimde kullanılmadı.
+  Hiçbir kod/canlı veri değiştirilmedi ve V3'e yazılmadı. İnceleme bittikten sonra geçici `.codex-tmp-v3-inspect`
+  aracı ve kalan build artifacts klasörü doğrulanarak kaldırıldı; kalıcı API test projesi korunuyor.
+
+### 2026-09-05 — Tek sunucu açılış seed çökmesi düzeltmesi
+
+- Ekip arkadaşının tek sunuculu test ortamında bildirdiği açılış çökmesi yerel kaynakta doğrulandı: commit
+  `7b6b6b79` ile gelen `SeedErpSourceAttributeValuesAsync`, `NameI18n["tr"]` JSON sözlüğü karşılaştırmasını
+  `AnyAsync` predicate'i içinde çalıştırdığı için Npgsql/EF Core ifadeyi SQL'e çeviremiyordu. Tek sunucu
+  varsayılanında `Node:Role=Both` ve `Node:MigrateOnStartup=true` olduğundan bu hata her restart'ta seed sırasında
+  unhandled exception ve systemd restart döngüsü oluşturabiliyordu.
+- Sorgu, yalnız ilgili `yil` tipinin `NameI18n` sözlüklerini projekte edip Türkçe değer karşılaştırmasını bellekte
+  yapacak şekilde mevcut güvenli proje kalıbına çevrildi. Böylece tek sunucu açılışı korunurken çok sunuculu
+  topolojide yalnız migrate/seed düğümünün davranışı değişir; worker/API rol kapıları etkilenmez. Kaynak genelinde
+  aynı `AnyAsync(...NameI18n[indexer]...)` deseni tekrar tarandı ve başka örnek bulunmadı.
+- Acceptance dışı API test paketi ayrı artifacts yolunda `120/120` geçti; yalnız önceden mevcut derleyici
+  uyarıları görüldü. Production yayını ve GitHub push yapılmadı.
 
 ## Yeniden Yapılanma Kararları (2026-03-11)
 

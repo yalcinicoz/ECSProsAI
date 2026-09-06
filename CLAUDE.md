@@ -349,45 +349,24 @@ public static IServiceCollection AddXxxInfrastructure(
 
 ---
 
-## Deployment (Production)
+## Production sunucu güvenlik sınırı
+
+- `51.178.208.59` / `192.168.0.59` legacy production sunucusudur. Bu sunucuda salt-okunur veri ve durum
+  incelemesi yapılabilir; dosya, veritabanı, servis, yapılandırma veya uygulama üzerinde hiçbir değişiklik
+  yapılamaz.
+- `51.178.208.56` / `192.168.0.56` Nginx LB de production altyapısıdır. Kullanıcının ilgili işlem için açık
+  izni olmadan release yükleme/silme, symlink değiştirme, Nginx yapılandırması düzenleme/reload/restart veya
+  başka bir yazma işlemi yapılamaz.
+- Bir yayın talebinde hedef sunucu ve kapsam açıkça doğrulanır; salt-okunur inceleme izni yayın/değişiklik
+  izni sayılmaz.
+
+## Deployment (Legacy Production — değişiklik yasak)
 
 **Sunucu**: `51.178.208.59`
 
-**Altyapı** (Docker Compose — `/opt/ECSProsAI`):
-```bash
-sudo docker compose up -d          # postgres, redis, nginx başlat
-sudo docker compose ps             # durum kontrol
-sudo docker compose restart nginx  # nginx yeniden başlat
-```
-
-**API Servisi** (systemd — published binary):
-```bash
-sudo systemctl start ecspros       # başlat
-sudo systemctl stop ecspros        # durdur
-sudo systemctl restart ecspros     # yeniden başlat
-sudo systemctl status ecspros      # durum
-journalctl -u ecspros -f           # canlı log
-```
-
-**Kod değişikliği sonrası deploy:**
-```bash
-cd /opt/ECSProsAI
-dotnet publish src/ECSPros.Api/ECSPros.Api.csproj -c Release -o /opt/ECSProsAI/publish --no-restore
-sudo systemctl restart ecspros
-```
-
-Servis dosyası: `/etc/systemd/system/ecspros.service`
-Binary: `/opt/ECSProsAI/publish/ECSPros.Api.dll`
-
-**Tüm migration'ları uygulamak**:
-```bash
-cd /opt/ECSProsAI
-for ctx in IamDbContext CoreDbContext CatalogDbContext InventoryDbContext OrderDbContext CrmDbContext CmsDbContext PosDbContext PromotionDbContext FinanceDbContext FulfillmentDbContext; do
-  dotnet ef database update --project src/ECSPros.Api/ECSPros.Api.csproj --context $ctx
-done
-```
-
-**Önemli**: `docker-compose.yml`'de nginx servisine `extra_hosts: - "host.docker.internal:host-gateway"` eklenmiştir. Bu Linux'ta `host.docker.internal` çözümlemesi için zorunludur.
+Bu hedef için eski deploy, restart ve migration komutları aktif çalışma talimatı değildir. Yalnız kullanıcı
+talebi kapsamındaki salt-okunur sorgular, servis durumu ve log incelemeleri yapılabilir. Her türlü yayın,
+restart/reload, migration, dosya kopyalama/silme, symlink veya yapılandırma değişikliği yasaktır.
 
 ### Redis Cache Kuralları (2026-07-07 — bozulmaması için)
 

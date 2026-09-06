@@ -16,3 +16,10 @@ public interface IErpProductAttributeBatchReader
     Task<IReadOnlyDictionary<string, IReadOnlyList<ErpProductAttributeRow>>> ReadProductAttributesAsync(
         IReadOnlyCollection<string> productCodes, CancellationToken ct);
 }
+
+/// <summary>V3'te ürünlere atanmış tedarikçi tanımlarını toplu ve salt-okunur verir.</summary>
+public interface IErpSupplierCatalogReader
+{
+    Task<IReadOnlyList<ErpSupplierRow>> ReadSuppliersAsync(CancellationToken ct);
+    Task<IReadOnlyList<ErpProductSupplierRow>> ReadProductSuppliersAsync(CancellationToken ct);
+}
