@@ -1,15 +1,22 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
-**NEBİM ÜRÜN GRUPLARI → BİZİM GRUPLAR EŞLEME — ARAÇ HAZIR, V3 BAĞLANTISI BEKLİYOR (2026-09-07):**
-Kullanıcı: Nebim (V3) ürün gruplarını al, bizim gruplara eşle, olmayanı ekle. V3 bağlantı dizesi bu makinede YOK
-(`ErpSource:ConnectionString` boş, Production/servis ortamında da yok; eski projenin appsettings'i eski sunucuda,
-SSH yok). Araç yazıldı: `tools/veri-bakim/NebimGrupEsleme` (Microsoft.Data.SqlClient + Npgsql; env `V3CONN`):
-`discover` (V3 özellik tipleri — "Ürün Grubu" tipini bulmak için), `groups --type N | --procedure`, `plan` (kuru
-rapor: mevcut erp:nebim eşlemesi → config ProductGroupCodes → ad birebir → PrefixCodes → YENİ GRUP), `apply
-[--create-missing]` (sözlük `erp_reference_items` product_group + `marketplace_category_mappings` erp:nebim direct;
-yeni grup = slug kod + özellik şablonu adı en yakın gruptan (Kot Ceket→Ceket) kopya; tek transaction). Not:
-mevcut 2 erp:nebim satırı çift (KC→kot_ceket) — FirmPlatformId NULL tekil indeksi çifti engellemiyor. Sırada:
-kullanıcıdan V3 bağlantısı (dosyaya, chat'e değil) → discover → plan raporu → onay → apply.
+**NEBİM ÜRÜN GRUPLARI → BİZİM GRUPLAR EŞLEME UYGULANDI (2026-09-07):**
+V3 bağlantısı eski projenin YEREL kopyasında bulundu: `ECSGYE.Solution/ECSGYE.Common/appsettings.json` → "V3"
+(Server 135.125.172.93, DB Eldi_V3; gitignore'daki klasör aramada gözden kaçmıştı) → `~/.ecspros/v3.conn` (600).
+★ Bağlantı için eski TLS gerekir: `OPENSSL_CONF=<scratch>/openssl-legacy.cnf` (MinProtocol TLSv1, SECLEVEL=0) —
+yoksa "pre-login handshake / SSL error 31"; sunucu eski SQL Server (STRING_AGG yok). Araç
+`tools/veri-bakim/NebimGrupEsleme` (discover/groups/plan/apply, `--skip`, ad TitleCase, şablon = son sözcük →
+ilk sözcük eşleşen grup). Nebim "Ürün Grubu" = özellik tipi 2 (204 değer, 29.485 ürün). Sonuç: **44 eşleşti**
+(ad birebir; Kot Ceket 0016 → kot_ceket — ad eşleşmesi config'in önüne alındı, appsettings ProductGroupCodes
+"Kot Ceket"→kot_ceket düzeltildi; elle girilmiş yanlış "KC" sözlük satırı silindi), **143 yeni grup açıldı**
+(kod slug, ad TitleCase; 506 özellik şablon kopyası — Jean Pantolon←Pantolon, Çapraz Çanta←Çanta, Pijama
+Takımı←Pijama…; Abiye/Kemer/Çorap/kozmetik gibi ~60 grup şablonsuz → panelden "Özellikleri Kopyala"), sözlük
+`erp_reference_items` 187 satır (MappedTarget dolu), `marketplace_category_mappings` erp:nebim 187 aktif (grup
+sayısı 145→288). **17 Nebim grubu bilinçli ATLANDI, kullanıcı kararı bekliyor:** Triko Bluz/Ceket/Elbise/Etek/
+Hırka/Kazak/Panço/Pantolon/Süveter/Takım/Tulum/Tunik/Yelek (config Triko→grp_14 mi, kendi grubu mu?), Eşofman
+Altı (→Eşofman?), Sütyen (→İç Giyim?), Büstiyer (bizde "Bustiyer" yazımı), "tozlu" (00, 58 ürün — yer tutucu).
+Yeni grupların "Ürün Grubu" seçim özelliği + varsayılanı seed'de (restart) tamamlanır. ERP worker (EM2) hâlâ
+config okur — DB eşlemesi ile config aynı yönde tutuldu.
 
 **CRM MÜŞTERİ İLİŞKİLERİ (ESKİ /crm/musteri-iliskileri-yonetimi) — KEŞİF + PLAN v1 TASLAK (2026-09-07):**
 Eski panel kaynağı yerelde yok, eski sunucuya SSH yok → keşif eski MySQL `cm_*` tablolarından (scratchpad

@@ -15,6 +15,7 @@ var cmd = args[0];
 int? typeCode = ArgInt("--type");
 bool useProc = args.Contains("--procedure");
 bool createMissing = args.Contains("--create-missing");
+var skipCodes = (Array.IndexOf(args, "--skip") is var si && si >= 0 && si + 1 < args.Length ? args[si + 1] : "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
 if (string.IsNullOrWhiteSpace(v3Conn)) { Console.Error.WriteLine("V3CONN ortam değişkeni boş."); return 2; }
 
 switch (cmd)
@@ -45,7 +46,7 @@ async Task DiscoverAsync()
         SELECT t.AttributeTypeCode, t.AttributeTypeDescription,
                (SELECT COUNT(DISTINCT a.ItemCode) FROM prItemAttribute a WITH (NOLOCK) WHERE a.AttributeTypeCode=t.AttributeTypeCode) urun,
                (SELECT COUNT(*) FROM cdItemAttributeDesc d WITH (NOLOCK) WHERE d.AttributeTypeCode=t.AttributeTypeCode AND d.ItemTypeCode=1 AND d.LangCode='TR') deger,
-               (SELECT TOP 1 STRING_AGG(CONVERT(varchar(200), x.AttributeDescription), ' | ') FROM (SELECT TOP 6 d.AttributeDescription FROM cdItemAttributeDesc d WITH (NOLOCK) WHERE d.AttributeTypeCode=t.AttributeTypeCode AND d.ItemTypeCode=1 AND d.LangCode='TR' ORDER BY d.AttributeCode) x) ornek
+               (SELECT TOP 1 d.AttributeDescription FROM cdItemAttributeDesc d WITH (NOLOCK) WHERE d.AttributeTypeCode=t.AttributeTypeCode AND d.ItemTypeCode=1 AND d.LangCode='TR' ORDER BY d.AttributeCode) ornek
           FROM cdItemAttributeTypeDesc t WITH (NOLOCK)
          WHERE t.ItemTypeCode=1 AND t.LangCode='TR'
          ORDER BY t.AttributeTypeCode
@@ -112,12 +113,15 @@ async Task PlanAsync(bool apply)
     var cfg = LoadConfigMaps();
 
     var plan = new List<(string Code, string Name, int Items, Guid? GroupId, string? GroupCode, string Method)>();
-    foreach (var g in nebim)
+    foreach (var g0 in nebim)
     {
+        if (skipCodes.Contains(g0.Code)) { Console.WriteLine($"(atlandı: {g0.Code} {g0.Name})"); continue; }
+        var g = (g0.Code, Name: TitleTr(g0.Name), g0.ItemCount);
         var n = Norm(g.Name);
         if (mevcut.TryGetValue(g.Code, out var m)) { var o = ours.First(x => x.Id == m); plan.Add((g.Code, g.Name, g.ItemCount, m, o.Code, "mevcut eşleme")); continue; }
-        if (cfg.Codes.TryGetValue(n, out var cc) && byCode.TryGetValue(cc, out var oc)) { plan.Add((g.Code, g.Name, g.ItemCount, oc.Id, oc.Code, "config ProductGroupCodes")); continue; }
+        // 2026-09-06 kararı (katman yok, "Kot Ceket" kendi grubudur): ad birebir eşleşme config'in ÖNÜNDE
         if (byName.TryGetValue(n, out var on)) { plan.Add((g.Code, g.Name, g.ItemCount, on.Id, on.Code, "ad birebir")); continue; }
+        if (cfg.Codes.TryGetValue(n, out var cc) && byCode.TryGetValue(cc, out var oc)) { plan.Add((g.Code, g.Name, g.ItemCount, oc.Id, oc.Code, "config ProductGroupCodes")); continue; }
         var pc = cfg.Prefix.Where(p => n == p.Key || n.StartsWith(p.Key + " ")).OrderByDescending(p => p.Key.Length).Select(p => p.Value).Distinct().ToArray();
         if (pc.Length == 1 && byCode.TryGetValue(pc[0], out var op)) { plan.Add((g.Code, g.Name, g.ItemCount, op.Id, op.Code, "config PrefixCodes")); continue; }
         plan.Add((g.Code, g.Name, g.ItemCount, null, null, "YENİ GRUP"));
@@ -188,7 +192,8 @@ async Task PlanAsync(bool apply)
 
 (Guid Id, string Code, string Name)? SablonBul(string name, List<(Guid Id, string Code, string Name)> ours)
 {
-    // "Kot Ceket" → "Ceket"; "Tesettür Triko Hırka" → "Hırka" (son sözcük), sonra son iki sözcük; yoksa null
+    // "Kot Ceket" → "Ceket"; "Tesettür Triko Hırka" → "Hırka" (son sözcük), sonra son iki sözcük; olmazsa ilk sözcük
+    // ("Pijama Takımı" → Pijama); yoksa null
     var w = Norm(name).Split(' ');
     var byName = ours.GroupBy(x => Norm(x.Name)).Where(g => g.Count() == 1).ToDictionary(g => g.Key, g => g.First());
     for (var take = Math.Min(2, w.Length - 1); take >= 1; take--)
@@ -196,7 +201,23 @@ async Task PlanAsync(bool apply)
         var suffix = string.Join(' ', w.Skip(w.Length - take));
         if (byName.TryGetValue(suffix, out var hit)) return hit;
     }
+    if (w.Length > 1 && byName.TryGetValue(w[0], out var first)) return first;
     return null;
+}
+
+static string TitleTr(string s)
+{
+    // "şişme mont" → "Şişme Mont", "DENİZ ŞORT" → "Deniz Şort"; kısaltma gibi 2-3 harfli tamamı büyükler korunur
+    var tr = CultureInfo.GetCultureInfo("tr-TR");
+    var words = s.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    for (var i = 0; i < words.Length; i++)
+    {
+        var w = words[i];
+        if (w.Length <= 3 && w.All(char.IsUpper)) continue;
+        var lower = w.ToLower(tr);
+        words[i] = lower.Length == 0 ? w : (lower[0] == 'i' ? "İ" : lower[..1].ToUpper(tr)) + lower[1..];
+    }
+    return string.Join(' ', words);
 }
 
 (Dictionary<string, string> Codes, Dictionary<string, string> Prefix) LoadConfigMaps()
