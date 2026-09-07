@@ -1,5 +1,14 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**DÜZELTME: ADMİN "ETİKET ŞABLONLARI" SAYFASI AÇILMIYORDU (2026-09-07):**
+`LabelTemplatesPage` render içinde `loadedTemplates !== templates` ile ilk şablonu seçiyordu; `templates`
+`data ?? []` ile her render'da YENİ dizi olduğundan (yükleme sırasında) koşul hep doğru → setState döngüsü →
+React "Too many re-renders" → sayfa hata ekranı. Sunucu tarafı (tablo, `elements` jsonb eşlemesi, uç) sorunsuz,
+logda hata yoktu. Düzeltme: sabit `BOS_SABLONLAR` referansı (`data ?? BOS_SABLONLAR`); effect'e taşıma lint
+kuralına (setState-in-effect) takıldığı için render-kalıbı korundu. Lint/tsc ✓, `admin/dist` derlendi (yerel nginx
+bind-mount → hemen yayında; LB admin release'i kullanıcı izniyle). Ders: `useQuery` sonucuna `= []` varsayılanı
+verip referans karşılaştırması yapma — sabit boş dizi kullan.
+
 **POPÜLER ARAMALAR — SONUÇLU + ÇOK KİŞİLİ + KÜFÜR FİLTRESİ (2026-09-07, kullanıcı kararı, Web sitesi alanı):**
 Arama kutusu dropdown'ındaki "Popüler Aramalar" için üç kural: (1) yalnız SONUÇ getiren aramalar, (2) birden fazla
 kişinin yaptığı aramalar, (3) küfür içeren aramalar loglanmaz/aranmaz/listelenmez. Uygulama: `search_term_stats`
