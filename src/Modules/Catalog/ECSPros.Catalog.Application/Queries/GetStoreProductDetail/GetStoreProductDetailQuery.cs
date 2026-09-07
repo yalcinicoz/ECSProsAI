@@ -15,7 +15,17 @@ public record StoreProductDetailDto(
     Dictionary<string, string>? DescriptionI18n = null,
     List<StoreProductAttributeDto>? Attributes = null,
     Dictionary<string, string>? ProductGroupNameI18n = null,
-    List<StoreProductVideoDto>? Videos = null); // H5 additive: efektif URL'li aktif videolar
+    List<StoreProductVideoDto>? Videos = null, // H5 additive: efektif URL'li aktif videolar
+    // A10 (2026-09-07, mobil): ürün seviyesi fiyat özeti + kampanya + grup kimliği + slug — kart önizlemesine
+    // bağımlılık kalmasın (deep link'te indirim görünmüyordu). Hesap: Razor detayla (StoreUrunDetayBuilder) AYNI.
+    decimal MinPrice = 0,                        // satış fiyatı (kanal fiyatı → varyant → en düşük pozitif)
+    decimal? CompareAtPrice = null,              // çizili fiyat (MinPrice'tan büyükse)
+    decimal? CampaignPrice = null,               // ürün-bazlı kampanyalı fiyat (null = yok / sepette)
+    string? CampaignName = null,
+    Guid? ProductGroupId = null,
+    string? Slug = null,                         // kanonik ürün slug'ı (kanal); null = slug yok
+    Dictionary<Guid, string>? VariantSlugs = null, // varyant (renk) → slug (renk butonları/deep link)
+    Guid? SelectedColorValueId = null);          // slug ile açıldıysa slug'ın rengi
 
 public record StoreProductVideoDto(string VideoUrl, string? ThumbnailUrl); // H5
 

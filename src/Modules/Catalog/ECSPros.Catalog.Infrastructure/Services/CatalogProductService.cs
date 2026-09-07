@@ -97,9 +97,14 @@ public class CatalogProductService(ICatalogDbContext db) : IProductService
                 va.VariantId,
                 TipKodu = va.AttributeType.Code,
                 TipAd = va.AttributeType.NameI18n,
-                DegerAd = va.AttributeValue.NameI18n
+                DegerAd = va.AttributeValue.NameI18n,
+                va.AttributeValueId
             })
             .ToListAsync(ct);
+
+        // A2 (2026-09-07): renk/beden değer KİMLİKLERİ — istemci metin ("Renk: Siyah") ayrıştırmasın.
+        var bedenByVariant = attrSatirlari.Where(a => a.TipKodu == "beden")
+            .GroupBy(a => a.VariantId).ToDictionary(g => g.Key, g => g.First().AttributeValueId);
 
         static string TrAd(Dictionary<string, string> i18n, string yedek = "") =>
             i18n.TryGetValue("tr", out var ad) ? ad : i18n.Values.FirstOrDefault() ?? yedek;
@@ -123,6 +128,8 @@ public class CatalogProductService(ICatalogDbContext db) : IProductService
                 GorselCoz(v.Id, v.ProductId),
                 ozetByVariant.TryGetValue(v.Id, out var ozet) && ozet.Length > 0 ? ozet : null,
                 v.ProductId,
-                string.IsNullOrWhiteSpace(v.Sku) ? null : v.Sku));
+                string.IsNullOrWhiteSpace(v.Sku) ? null : v.Sku,
+                renkByVariant.TryGetValue(v.Id, out var renkId) ? renkId : null,
+                bedenByVariant.TryGetValue(v.Id, out var bedenId) ? bedenId : null));
     }
 }

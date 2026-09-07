@@ -116,10 +116,13 @@
                     <div data-ms-adres-ilce-kapsayici></div>
                     <input type="hidden" name="Ilce" data-ms-adres-form="ilce">
                 </div>
-                <label class="ms-form-alani ms-form-alani-genis">
+                <div class="ms-form-alani ms-form-alani-genis">
                     <span class="ms-form-etiket">Mahalle</span>
-                    <input name="Mahalle" class="ms-form-girdi" type="text" value="" autocomplete="address-level3" data-ms-adres-form="mahalle">
-                </label>
+                    @* B4 (2026-09-07): serbest metin yerine aramalı seçici — kayda mahalle KİMLİĞİ yazılır
+                       (kargo mahalle kuralı + mobil uygulama ad→kimlik tahmini yapmasın). *@
+                    <div data-ms-adres-mahalle-kapsayici></div>
+                    <input type="hidden" name="Mahalle" data-ms-adres-form="mahalle">
+                </div>
                 <label class="ms-form-alani ms-form-alani-genis">
                     <span class="ms-form-etiket">Adres</span>
                     <textarea name="AcikAdres" class="ms-form-metin-alani" rows="4" autocomplete="street-address" data-ms-adres-form="acikadres"></textarea>
@@ -258,16 +261,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const ilKapsayici = modal.querySelector("[data-ms-adres-il-kapsayici]");
     const ilceKapsayici = modal.querySelector("[data-ms-adres-ilce-kapsayici]");
+    const mahalleKapsayici = modal.querySelector("[data-ms-adres-mahalle-kapsayici]");
     let iller = [];
 
     const illeriKur = (secilecek) => ozelSelectKur(ilKapsayici, alan("il"), iller, "Seçim yapın", "İl", secilecek || null);
-    const ilceleriYukle = async (cityId, secilecek) => {
+    // B4: mahalle listesi ilçeye bağlı (teslimat adımıyla aynı uç ve sınır)
+    const mahalleleriYukle = async (districtId, secilecek) => {
+        const mahalleler = districtId ? await geoGetir("neighborhoods?districtId=" + districtId + "&limit=200") : [];
+        ozelSelectKur(mahalleKapsayici, alan("mahalle"), mahalleler, "Seçim yapın", "Mahalle", secilecek || null);
+    };
+    const ilceleriYukle = async (cityId, secilecek, mahalleSecilecek) => {
         const ilceler = cityId ? await geoGetir("districts?cityId=" + cityId) : [];
         ozelSelectKur(ilceKapsayici, alan("ilce"), ilceler, "Seçim yapın", "İlçe", secilecek || null);
+        await mahalleleriYukle(secilecek || null, mahalleSecilecek || null);
     };
 
     alan("il").addEventListener("change", () => {
         ilceleriYukle(alan("il").value);
+    });
+    alan("ilce").addEventListener("change", () => {
+        mahalleleriYukle(alan("ilce").value);
     });
 
     // ── Kart listesi ──
@@ -338,11 +351,17 @@ document.addEventListener("DOMContentLoaded", () => {
         alan("ad").value = adParcalari.join(" ");
         const tel = (adres.recipientPhone || "").replace(/\D/g, "").replace(/^90/, "");
         alan("telefon").value = [tel.slice(0, 3), tel.slice(3, 6), tel.slice(6, 8), tel.slice(8, 10)].filter(Boolean).join(" ");
-        alan("mahalle").value = adres.neighborhoodName || "";
         alan("acikadres").value = adres.addressLine || "";
         alan("varsayilan").checked = !!adres.isDefault;
         illeriKur(adres.cityId || null);
-        await ilceleriYukle(adres.cityId || null, adres.districtId || null);
+        await ilceleriYukle(adres.cityId || null, adres.districtId || null, adres.neighborhoodId || null);
+        // Eski kayıt (kimliksiz, yalnız ad): listede aynı adlı mahalle varsa seçili gelir
+        if (!alan("mahalle").value && adres.neighborhoodName) {
+            const hedef = adres.neighborhoodName.trim().toLocaleLowerCase("tr");
+            const secenek = [...mahalleKapsayici.querySelectorAll("[data-ms-ozel-select-secenek]")]
+                .find((s) => s.textContent.trim().toLocaleLowerCase("tr") === hedef);
+            secenek?.click();
+        }
         mesajGoster("");
         modalAc("Adresi Düzenle");
     };
@@ -370,8 +389,8 @@ document.addEventListener("DOMContentLoaded", () => {
             cityName: alan("il").dataset.msSecilenAd || "",
             districtId: alan("ilce").value,
             districtName: alan("ilce").dataset.msSecilenAd || "",
-            neighborhoodId: null,
-            neighborhoodName: alan("mahalle").value.trim() || null,
+            neighborhoodId: alan("mahalle").value || null,
+            neighborhoodName: alan("mahalle").dataset.msSecilenAd || null,
             addressLine: alan("acikadres").value.trim() || null,
             postalCode: null,
             recipientName: (alan("ad").value.trim() + " " + alan("soyad").value.trim()).trim(),

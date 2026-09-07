@@ -124,7 +124,8 @@ public class PaymentController(
 
         // PayTR 3D akışında HTML döner (tarayıcıya basılıp bankaya yönlenir);
         // JSON dönerse (hata) aynen iletilir. İçerik kart verisi taşımaz.
-        return Ok(new { success = true, html = sonuc.Icerik });
+        // B6 (2026-09-07, mobil): standart zarf — data.html; kök html eski web istemcisi için korunur.
+        return Ok(new { success = true, data = new { html = sonuc.Icerik }, html = sonuc.Icerik });
     }
 
     /// <summary>

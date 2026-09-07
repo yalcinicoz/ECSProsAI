@@ -1,5 +1,4 @@
-using ECSPros.Order.Application.Queries.GetOrderDetail;
-using ECSPros.Order.Application.Queries.GetOrders;
+using ECSPros.Order.Application.Queries.GetMemberDeliveredItems;
 using ECSPros.Shared.Contracts;
 using ECSPros.Storefront.Application.Commands.CreateProductReview;
 using ECSPros.Storefront.Application.Commands.DeleteProductReview;
@@ -25,30 +24,33 @@ public class StoreReviewsController(IMediator mediator, IProductService productS
         User.FindFirst("sub")?.Value
         ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
 
-    /// <summary>Üyenin teslim edilmiş sipariş kalemleri → ürün kodu haritası
-    /// (kod → OrderItemId). Yorumlanabilirlik + kanıt kalemi buradan.</summary>
-    private async Task<Dictionary<string, Guid>> TeslimEdilenKodlarAsync(CancellationToken ct)
+    /// <summary>Üyenin teslim edilmiş sipariş kalemleri, ürün koduna çözülmüş ve ürün başına TEK kayıt
+    /// (en yeni sipariş). Yorumlanabilirlik + satın alma kanıtı buradan. A11 (2026-09-07): tek toplu sorgu
+    /// (eski N+1 sipariş detayı yerine) ve ad/görsel/varyant özeti ile zengin liste.</summary>
+    private async Task<List<ReviewableProductDto>> TeslimEdilenUrunlerAsync(CancellationToken ct)
     {
-        var sonuc = new Dictionary<string, Guid>();
-        var siparisler = await mediator.Send(new GetOrdersQuery("delivered", MemberId, null, 1, 50), ct);
-        if (siparisler.IsFailure) return sonuc;
-
-        var kalemler = new List<(Guid VariantId, Guid ItemId)>();
-        foreach (var ozet in siparisler.Value!.Items)
-        {
-            var detay = await mediator.Send(new GetOrderDetailQuery(ozet.Id), ct);
-            if (detay.IsSuccess)
-                kalemler.AddRange(detay.Value!.Items.Select(i => (i.VariantId, i.Id)));
-        }
-        if (kalemler.Count == 0) return sonuc;
+        var kalemler = await mediator.Send(new GetMemberDeliveredItemsQuery(MemberId, 50), ct);
+        if (kalemler.IsFailure || kalemler.Value!.Count == 0) return [];
 
         var gorunumler = await productService.GetVariantDisplayAsync(
-            kalemler.Select(k => k.VariantId).Distinct().ToList(), ct);
-        foreach (var (variantId, itemId) in kalemler)
-            if (gorunumler.TryGetValue(variantId, out var g) && !sonuc.ContainsKey(g.ProductCode))
-                sonuc[g.ProductCode] = itemId;
+            kalemler.Value.Select(k => k.VariantId).Distinct().ToList(), ct);
+
+        var sonuc = new List<ReviewableProductDto>();
+        var gorulen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var k in kalemler.Value) // sipariş tarihine göre yeniden eskiye
+        {
+            if (!gorunumler.TryGetValue(k.VariantId, out var g) || !gorulen.Add(g.ProductCode)) continue;
+            var ad = g.ProductNameI18n.TryGetValue("tr", out var tr) ? tr
+                   : g.ProductNameI18n.Values.FirstOrDefault() ?? k.ProductName;
+            sonuc.Add(new ReviewableProductDto(
+                g.ProductCode, ad, g.ImageUrl, g.OptionsText ?? k.VariantInfo,
+                k.OrderId, k.OrderNumber, k.OrderedAt, k.OrderItemId, k.VariantId, g.ColorValueId, g.SizeValueId));
+        }
         return sonuc;
     }
+
+    private async Task<Dictionary<string, Guid>> TeslimEdilenKodlarAsync(CancellationToken ct) =>
+        (await TeslimEdilenUrunlerAsync(ct)).ToDictionary(u => u.ProductCode, u => u.OrderItemId, StringComparer.Ordinal);
 
     /// <summary>Ürünün yayında yorumları (anonim erişim — ürün sayfası/değerlendirmeler).
     /// H9 additive: ratings (çoklu puan), sort (newest|oldest), search (metin).</summary>
@@ -80,14 +82,24 @@ public class StoreReviewsController(IMediator mediator, IProductService productS
         return Ok(new { success = true, data = result.Value });
     }
 
-    /// <summary>Yorumlarım — üyenin tüm yorumları (sekmeler client'ta ayrışır).</summary>
+    /// <summary>Yorumlarım — üyenin tüm yorumları (sekmeler client'ta ayrışır). B1 (2026-09-07): satırda
+    /// ürün adı + görsel de gelir (productName/imageUrl; ürün satışta değilse null).</summary>
     [HttpGet("mine")]
     [Authorize(Policy = "MemberOnly")]
-    public async Task<IActionResult> GetMine([FromQuery] Guid firmPlatformId, CancellationToken ct)
+    public async Task<IActionResult> GetMine(
+        [FromQuery] Guid firmPlatformId,
+        [FromServices] ECSPros.Api.Services.Store.StoreKartZenginlestirici zengin = null!, CancellationToken ct = default)
     {
         var result = await mediator.Send(new GetMemberReviewsQuery(firmPlatformId, MemberId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = result.Value });
+        var harita = await zengin.GetirAsync(firmPlatformId, result.Value!.Select(y => y.ProductCode), ct);
+        var data = result.Value.Select(y =>
+        {
+            var o = ECSPros.Api.Services.Store.StoreKartZenginlestirici.Ozet(harita, y.ProductCode);
+            return new ECSPros.Api.Models.Store.MemberReviewItemDto(y.Id, y.ProductCode, y.Rating, y.Text, y.Status,
+                y.RejectReason, y.IsDeleted, y.CreatedAt, y.DeletedAt, y.Topic, y.Photos, o?.ProductName, o?.ImageUrl);
+        }).ToList();
+        return Ok(new { success = true, data });
     }
 
     [HttpPost]
@@ -156,17 +168,18 @@ public class StoreReviewsController(IMediator mediator, IProductService productS
         return Ok(new { success = true, data = new { urls } });
     }
 
-    /// <summary>Üyenin yorumlayabileceği ürün kodları (teslim edilmiş − yorumlanmış).</summary>
+    /// <summary>Üyenin yorumlayabileceği ürünler (teslim edilmiş − yorumlanmış). A11 (2026-09-07): düz kod
+    /// listesi yerine ad/görsel/varyant özeti/sipariş no içeren nesne listesi — istemci katalog tamamlamaz.</summary>
     [HttpGet("reviewable")]
     [Authorize(Policy = "MemberOnly")]
     public async Task<IActionResult> GetReviewable([FromQuery] Guid firmPlatformId, CancellationToken ct)
     {
-        var teslimEdilenler = await TeslimEdilenKodlarAsync(ct);
+        var teslimEdilenler = await TeslimEdilenUrunlerAsync(ct);
         var yorumlar = await mediator.Send(new GetMemberReviewsQuery(firmPlatformId, MemberId), ct);
         var yorumlanan = yorumlar.IsSuccess
             ? yorumlar.Value!.Where(y => !y.IsDeleted).Select(y => y.ProductCode).ToHashSet()
             : new HashSet<string>();
-        return Ok(new { success = true, data = teslimEdilenler.Keys.Where(k => !yorumlanan.Contains(k)).ToList() });
+        return Ok(new { success = true, data = teslimEdilenler.Where(u => !yorumlanan.Contains(u.ProductCode)).ToList() });
     }
 
     [HttpDelete("{reviewId}")]
@@ -178,6 +191,20 @@ public class StoreReviewsController(IMediator mediator, IProductService productS
         return Ok(new { success = true });
     }
 }
+
+/// <summary>A11: yorumlanabilir ürün — mobil/web listesi ek istek atmadan gösterir.</summary>
+public record ReviewableProductDto(
+    string ProductCode,
+    string ProductName,
+    string? ImageUrl,
+    string? VariantInfo,
+    Guid OrderId,
+    string OrderNumber,
+    DateTime OrderedAt,
+    Guid OrderItemId,
+    Guid VariantId,
+    Guid? ColorValueId = null,
+    Guid? SizeValueId = null);
 
 public record StoreReviewRequest(
     Guid FirmPlatformId, string? ProductCode, int Rating, string? Text,

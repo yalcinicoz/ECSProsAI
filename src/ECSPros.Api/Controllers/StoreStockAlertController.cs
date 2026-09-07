@@ -1,3 +1,4 @@
+using ECSPros.Storefront.Application.Commands.CancelStockAlert;
 using ECSPros.Storefront.Application.Commands.CreateStockAlert;
 using ECSPros.Storefront.Application.Queries.GetMemberStockAlerts;
 using MediatR;
@@ -51,6 +52,25 @@ public class StoreStockAlertController(IMediator mediator) : ControllerBase
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
+
+/// <summary>B3 (2026-09-07): stok alarmını geri al — POST yanıtındaki alertId ile.</summary>
+[HttpDelete("{alertId:guid}")]
+public async Task<IActionResult> Cancel(Guid alertId, CancellationToken ct)
+{
+    var result = await mediator.Send(new CancelStockAlertCommand(MemberId, alertId), ct);
+    if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
+    return Ok(new { success = true });
+}
+
+/// <summary>B3: alertId bilinmiyorsa varyantla geri al — <c>DELETE /api/store/stock-alerts?variantId=&amp;firmPlatformId=</c>.</summary>
+[HttpDelete]
+public async Task<IActionResult> CancelByVariant([FromQuery] Guid variantId, [FromQuery] Guid? firmPlatformId, CancellationToken ct)
+{
+    if (variantId == Guid.Empty) return BadRequest(new { success = false, error = "variantId gerekli." });
+    var result = await mediator.Send(new CancelStockAlertCommand(MemberId, null, firmPlatformId, variantId), ct);
+    if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
+    return Ok(new { success = true });
+}
 }
 
 public record StoreStockAlertRequest(

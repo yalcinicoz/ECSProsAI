@@ -29,20 +29,36 @@ public class StoreCmsController(IMediator mediator) : ControllerBase
 
     /// <summary>
     /// C8: hukuki/bilgilendirme sayfaları (mesafeli satış sözleşmesi, ön bilgilendirme…).
-    /// codes virgülle ayrılır; verilmezse platformun tüm legal sayfaları döner.
+    /// codes virgülle ayrılır; verilmezse platformun tüm sayfaları (pageType) döner.
+    /// B7 (2026-09-07): codes'ta sayfa kodu, site slug'ı (kargo-ve-teslimat) ya da takma ad (sss) verilebilir;
+    /// pageType = legal (varsayılan) | corporate | all. Yanıtta <c>slug</c> sitedeki URL ile birebirdir.
     /// </summary>
     [HttpGet("legal")]
     public async Task<IActionResult> GetLegalPages(
         [FromQuery] Guid firmPlatformId,
         [FromQuery] string? codes,
-        CancellationToken ct)
+        [FromQuery] string pageType = "legal",
+        CancellationToken ct = default)
     {
         var kodListesi = string.IsNullOrWhiteSpace(codes)
             ? null
             : codes.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-        var result = await mediator.Send(new ECSPros.Cms.Application.Queries.GetStoreLegalPages.GetStoreLegalPagesQuery(firmPlatformId, kodListesi), ct);
+        var result = await mediator.Send(new ECSPros.Cms.Application.Queries.GetStoreLegalPages.GetStoreLegalPagesQuery(firmPlatformId, kodListesi, pageType), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>B7 (2026-09-07, mobil): sitedeki URL slug'ı / kod / takma ad → tek sayfa (legal veya kurumsal).
+    /// Örn. <c>/api/store/cms/pages/by-slug/gizlilik-ve-guvenlik</c>. Bulunamazsa 404.</summary>
+    [HttpGet("pages/by-slug/{slug}")]
+    public async Task<IActionResult> GetPageBySlug(string slug, [FromQuery] Guid firmPlatformId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new ECSPros.Cms.Application.Queries.GetStoreLegalPages
+            .GetStoreLegalPagesQuery(firmPlatformId, [slug], "all"), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        var sayfa = result.Value!.FirstOrDefault();
+        if (sayfa is null) return NotFound(new { success = false, error = "Sayfa bulunamadı." });
+        return Ok(new { success = true, data = sayfa });
     }
 
     [HttpGet("pages")]

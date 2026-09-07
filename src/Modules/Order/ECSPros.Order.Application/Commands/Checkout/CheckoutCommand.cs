@@ -79,7 +79,8 @@ public class CheckoutCommandHandler(
     ECSPros.Shared.Contracts.IChannelPricingService pricingService,
     ECSPros.Shared.Contracts.IProductCampaignResolver campaignResolver,
     ECSPros.Shared.Contracts.ICouponValidator couponValidator,
-    ECSPros.Shared.Contracts.IPaymentOptionsProvider paymentOptions)
+    ECSPros.Shared.Contracts.IPaymentOptionsProvider paymentOptions,
+    IPublisher publisher)
     : IRequestHandler<CheckoutCommand, Result<CheckoutSonucu>>
 {
     public async Task<Result<CheckoutSonucu>> Handle(CheckoutCommand request, CancellationToken ct)
@@ -304,6 +305,12 @@ public class CheckoutCommandHandler(
         }
 
         await db.SaveChangesAsync(ct);
+
+        // A4 (2026-09-07): kapıda ödemede sepet HEMEN temizlenir; kartta ödeme onayında
+        // (PayTrCallbackUygula / MockPaymentUygula) — başarısız kart denemesinde sepet korunur.
+        if (request.CartId is { } sepetId && request.PaymentMethod != "kart")
+            await publisher.Publish(new ECSPros.Order.Domain.Events.CartConvertedToOrderEvent(order.Id, sepetId), ct);
+
         return Result.Success(new CheckoutSonucu(order.Id, orderNumber, kuponIndirim, kuponId));
     }
 }

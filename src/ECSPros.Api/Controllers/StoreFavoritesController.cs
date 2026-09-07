@@ -20,13 +20,24 @@ public class StoreFavoritesController(IMediator mediator) : ControllerBase
         User.FindFirst("sub")?.Value
         ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
 
-    /// <summary>Üyenin favori ürün kodları (yeni → eski) — kalp işaretleme için hafif liste.</summary>
+    /// <summary>Üyenin favorileri (yeni → eski). B1 (2026-09-07): satırda ürün adı/görsel (renge göre)/fiyat da
+    /// gelir — <c>light=true</c> ile eski hafif liste (yalnız kod + renk) alınır (kalp işaretleme).</summary>
     [HttpGet]
-    public async Task<IActionResult> GetMine([FromQuery] Guid firmPlatformId, CancellationToken ct)
+    public async Task<IActionResult> GetMine(
+        [FromQuery] Guid firmPlatformId, [FromQuery] bool light = false,
+        [FromServices] ECSPros.Api.Services.Store.StoreKartZenginlestirici zengin = null!, CancellationToken ct = default)
     {
         var result = await mediator.Send(new GetMemberFavoritesQuery(firmPlatformId, MemberId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = result.Value });
+        if (light) return Ok(new { success = true, data = result.Value });
+        var harita = await zengin.GetirAsync(firmPlatformId, result.Value!.Select(f => f.ProductCode), ct);
+        var data = result.Value.Select(f =>
+        {
+            var o = ECSPros.Api.Services.Store.StoreKartZenginlestirici.Ozet(harita, f.ProductCode, f.ColorValueId);
+            return new ECSPros.Api.Models.Store.FavoriteItemDto(f.ProductCode, f.ColorValueId,
+                o?.ProductName, o?.ImageUrl, o?.MinPrice, o?.CompareAtPrice, o?.CampaignPrice, o is not null && o.IsActive);
+        }).ToList();
+        return Ok(new { success = true, data });
     }
 
     [HttpPost]

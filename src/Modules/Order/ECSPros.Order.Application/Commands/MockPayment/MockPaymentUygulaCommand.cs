@@ -59,6 +59,10 @@ public class MockPaymentUygulaCommandHandler(
         order.PaymentStatus = "paid";
         await db.SaveChangesAsync(ct);
 
+        // A4 (2026-09-07): mock ödeme alındı → sepet temizle.
+        if (order.CartId is { } sepetId)
+            await publisher.Publish(new ECSPros.Order.Domain.Events.CartConvertedToOrderEvent(order.Id, sepetId), ct);
+
         // Ödeme alındı → otomatik onay (pending → confirmed). Onay, OrderConfirmedEvent ile
         // online stok rezervasyonunu tetikler (WarehouseId=Guid.Empty → depo-bağımsız).
         // Onay hatası ödeme kaydını bloklamaz; log'a düşer, personel elle onaylayabilir.

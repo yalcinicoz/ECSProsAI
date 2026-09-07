@@ -91,12 +91,48 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
         return Ok(new { success = true, data = new { terms = terimler } });
     }
 
-    /// <summary>Ürün detayını döner.</summary>
+    /// <summary>Ürün detayını döner. A5 (2026-09-07): <c>code</c> ürün kodu (P-xxxxx) YA DA sitedeki ürün
+    /// slug'ı olabilir (örn. <c>kadin-...-1475253</c>) — slug'la açılırsa <c>selectedColorValueId</c> slug'ın rengidir.</summary>
     [HttpGet("products/{code}")]
     public async Task<IActionResult> GetProduct(string code, [FromQuery] Guid firmPlatformId, CancellationToken ct)
     {
         var result = await mediator.Send(new GetStoreProductDetailQuery(code, firmPlatformId), ct);
+        if (result.IsFailure && result.Error == "Ürün bulunamadı." && code.Contains('-') && !code.StartsWith("P-", StringComparison.OrdinalIgnoreCase))
+        {
+            var cozum = await mediator.Send(new ECSPros.Storefront.Application.Queries.GetProductByChannelSlug
+                .GetProductByChannelSlugQuery(firmPlatformId, code.Trim().TrimStart('/')), ct);
+            if (cozum.IsSuccess && cozum.Value is { } eslesme)
+            {
+                result = await mediator.Send(new GetStoreProductDetailQuery(eslesme.ProductCode, firmPlatformId), ct);
+                if (result.IsSuccess)
+                    result = ECSPros.Shared.Kernel.Common.Result.Success(result.Value! with { SelectedColorValueId = eslesme.ColorValueId });
+            }
+        }
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>A5 (2026-09-07): site ürün linkindeki slug → ürün kodu (+ rengi). Deep link için hafif çözümleyici;
+    /// detay istemiyorsanız bunu, istiyorsanız doğrudan <c>products/{slug}</c> kullanın.</summary>
+    [HttpGet("products/by-slug")]
+    public async Task<IActionResult> GetProductBySlug([FromQuery] string slug, [FromQuery] Guid firmPlatformId, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(slug))
+            return BadRequest(new { success = false, error = "slug gerekli." });
+        var cozum = await mediator.Send(new ECSPros.Storefront.Application.Queries.GetProductByChannelSlug
+            .GetProductByChannelSlugQuery(firmPlatformId, slug.Trim().TrimStart('/')), ct);
+        if (cozum.IsFailure) return BadRequest(new { success = false, error = cozum.Error });
+        if (cozum.Value is null) return NotFound(new { success = false, error = "Ürün bulunamadı." });
+        return Ok(new { success = true, data = new { productCode = cozum.Value.ProductCode, colorValueId = cozum.Value.ColorValueId } });
+    }
+
+    /// <summary>A5 (2026-09-07): kategori slug'ı → kanal kategorisi (yayında olan). İstemci slug indeksi kurmasın.</summary>
+    [HttpGet("channel-categories/by-slug/{slug}")]
+    public async Task<IActionResult> GetChannelCategoryBySlug(string slug, [FromQuery] Guid firmPlatformId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new ECSPros.Storefront.Application.Queries.GetChannelCategoryBySlug
+            .GetChannelCategoryBySlugQuery(firmPlatformId, slug.Trim().TrimStart('/')), ct);
+        if (result.IsFailure) return NotFound(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }
 

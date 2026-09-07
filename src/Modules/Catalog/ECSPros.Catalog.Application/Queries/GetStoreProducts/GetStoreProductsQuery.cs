@@ -83,7 +83,13 @@ public record StoreProductDto(
     int CartCount = 0,                           // Sosyal kanıt (2026-08-10): son 30 günde kaç farklı sepette — cache DIŞI eklenir
     int FavoriteCount = 0,                       // Sosyal kanıt: kaç farklı üyenin favorisi — cache DIŞI eklenir
     int ViewCount = 0,                           // Sosyal kanıt: kaç farklı üye baktı — cache DIŞI eklenir
-    List<CardSizeDto>? Sizes = null);            // Kartta sepete ekle (2026-08-14): ana rengin beden seçenekleri
+    List<CardSizeDto>? Sizes = null)             // Kartta sepete ekle (2026-08-14): ana rengin beden seçenekleri
+{
+    // B5 (2026-09-07, mobil): iki liste ucu aynı alan adlarını da taşır — kategori ucundaki ProductId/BasePrice
+    // burada takma ad olarak verilir (salt-okunur; önbellekten okurken yok sayılır).
+    public Guid ProductId => Id;
+    public decimal BasePrice => MinPrice;
+}
 
 public class GetStoreProductsQueryHandler(
     ICatalogDbContext db,
@@ -417,17 +423,27 @@ public class GetStoreProductsQueryHandler(
         var variantIds      = variantData.Select(v => v.Id).ToList();
         var variantToProduct = variantData.ToDictionary(v => v.Id, v => v.ProductId);
 
-        // Color attributes (AttributeType.Code == "filtre_rengi")
-        var colorAttrs = await db.ProductVariantAttributes
+        // Color attributes (AttributeType.Code == "filtre_rengi"); A3 (2026-09-07): filtre_rengi satırı hiç
+        // olmayan üründe (1.338 ürün) kart colors[] boş kalıyordu → o ürünlerde 'renk' ekseni renk sayılır.
+        var colorAttrsHam = await db.ProductVariantAttributes
             .AsNoTracking()
-            .Where(va => variantIds.Contains(va.VariantId) && va.AttributeType.Code == "filtre_rengi")
+            .Where(va => variantIds.Contains(va.VariantId) && (va.AttributeType.Code == "filtre_rengi" || va.AttributeType.Code == "renk"))
             .Select(va => new {
                 va.VariantId,
                 va.AttributeValueId,
                 NameI18n = va.AttributeValue.NameI18n,
-                HexCode  = va.AttributeValue.HexCode
+                HexCode  = va.AttributeValue.HexCode,
+                TipKodu  = va.AttributeType.Code
             })
             .ToListAsync(ct);
+        var filtreRengiOlanUrunler = colorAttrsHam
+            .Where(c => c.TipKodu == "filtre_rengi" && variantToProduct.ContainsKey(c.VariantId))
+            .Select(c => variantToProduct[c.VariantId]).ToHashSet();
+        var colorAttrs = colorAttrsHam
+            .Where(c => variantToProduct.TryGetValue(c.VariantId, out var pid)
+                        && (filtreRengiOlanUrunler.Contains(pid) ? c.TipKodu == "filtre_rengi" : c.TipKodu == "renk"))
+            .Select(c => new { c.VariantId, c.AttributeValueId, c.NameI18n, c.HexCode })
+            .ToList();
 
         // Other attributes
         var otherAttrs = await db.ProductVariantAttributes
@@ -508,12 +524,15 @@ public class GetStoreProductsQueryHandler(
             if (!variantToProduct.TryGetValue(ca.VariantId, out var pid)) continue;
             if (!colorsByProduct.TryGetValue(pid, out var list))
                 colorsByProduct[pid] = list = new();
+            var renkStoklu = stokluRenkler.Contains((pid, ca.AttributeValueId));
+            // A8 (2026-09-07): kategori ucuyla aynı stok kuralı — stoksuz renk (kanal ayarı kapalıysa) listelenmez.
+            if (!renkStoklu && request.ApplyStockFilter && !request.ShowOutOfStock) continue;
             if (list.All(c => c.ValueId != ca.AttributeValueId))
                 list.Add(new(ca.AttributeValueId, ca.NameI18n, ca.HexCode,
                     imagesByProductColor.TryGetValue((pid, ca.AttributeValueId), out var renkImgs)
                         ? cdnBase + renkImgs[0]
                         : null,
-                    InStock: stokluRenkler.Contains((pid, ca.AttributeValueId))));
+                    InStock: renkStoklu));
         }
 
         foreach (var oa in otherAttrs)
@@ -567,6 +586,14 @@ public class GetStoreProductsQueryHandler(
             List<string>? galleryUrls = null;
 
             var renkler = colorsByProduct.GetValueOrDefault(p.Id) ?? new();
+            // A8 (2026-09-07): ana görselin rengi stoksuz diye listeden düştüyse kart, stoklu ilk renkle gösterilir
+            // (kategori ucuyla tutarlı — stoksuz renk kartı yok).
+            if (renkler.Count > 0 && anaRenkId is { } ar && renkler.All(c => c.ValueId != ar))
+            {
+                anaRenkId = renkler[0].ValueId;
+                if (imagesByProductColor.TryGetValue((p.Id, renkler[0].ValueId), out var yeniAnaImgs) && yeniAnaImgs.Count > 0)
+                    mainImage = cdnBase + yeniAnaImgs[0];
+            }
             // Kart aramadaki renk kelimesiyle eşleşen renkle gösteriliyorsa bedenler de o renkten;
             // filtre_rengi'nde doğrudan eşleşme yoksa eşleşen varyant üzerinden (rengi + görseli) düşülür.
             var eslesenRenkId = aramaRenkIdleri.Count > 0

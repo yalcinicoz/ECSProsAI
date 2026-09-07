@@ -13,6 +13,8 @@ namespace ECSPros.Cms.Application.Queries.GetStoreLegalPages;
 /// F1: PageType parametreli — kurumsal içerik sayfaları "corporate" tipiyle aynı
 /// mekanizmayı kullanır.
 /// </summary>
+/// <param name="PageType">legal | corporate | all (B7 2026-09-07: "all" tip filtresi uygulamaz).</param>
+/// <param name="Codes">Sayfa kodu, site slug'ı ya da takma ad (B7: StoreSiteRoutes ile koda çözülür).</param>
 public record GetStoreLegalPagesQuery(
     Guid FirmPlatformId,
     List<string>? Codes = null,
@@ -22,7 +24,10 @@ public record StoreLegalPageDto(
     string Code,
     string Title,
     string BodyHtml,
-    DateTime? ContentUpdatedAt);
+    DateTime? ContentUpdatedAt,
+    string? Slug = null,          // B7: sitedeki URL yolu (baştaki / olmadan) — kurumsal sayfalarda site linkiyle birebir
+    string? PageType = null,      // legal | corporate
+    string[]? Aliases = null);    // B7: bu sayfayı çözen diğer anahtarlar
 
 public class GetStoreLegalPagesQueryHandler(ICmsDbContext db)
     : IRequestHandler<GetStoreLegalPagesQuery, Result<List<StoreLegalPageDto>>>
@@ -31,15 +36,17 @@ public class GetStoreLegalPagesQueryHandler(ICmsDbContext db)
     {
         var now = DateTime.UtcNow;
 
+        var tumTipler = string.Equals(request.PageType, "all", StringComparison.OrdinalIgnoreCase);
         var sayfalar = await db.Pages
             .Where(p => p.FirmPlatformId == request.FirmPlatformId
-                        && p.PageType == request.PageType
+                        && (tumTipler || p.PageType == request.PageType)
                         && p.IsActive
                         && (p.PublishAt == null || p.PublishAt <= now)
                         && (p.UnpublishAt == null || p.UnpublishAt > now))
             .Select(p => new
             {
                 p.Code,
+                p.PageType,
                 p.NameI18n,
                 p.UpdatedAt,
                 p.CreatedAt,
@@ -53,8 +60,14 @@ public class GetStoreLegalPagesQueryHandler(ICmsDbContext db)
 
         // Settings jsonb sözlüğü SQL'e çevrilemez — html alanı bellek tarafında okunur
         // (platform başına bir avuç sayfa; SepetController 5 dk IMemoryCache'ler).
+        // B7: istenen anahtarlar (kod / site slug'ı / takma ad) → kod
+        var bilinenKodlar = sayfalar.Select(p => p.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var istenenKodlar = request.Codes?
+            .Select(c => ECSPros.Cms.Application.Helpers.StoreSiteRoutes.Resolve(c, bilinenKodlar).Code)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         var liste = sayfalar
-            .Where(p => request.Codes == null || request.Codes.Contains(p.Code))
+            .Where(p => istenenKodlar == null || istenenKodlar.Contains(p.Code))
             .Select(p => new StoreLegalPageDto(
                 p.Code,
                 p.NameI18n.TryGetValue("tr", out var ad) ? ad : p.NameI18n.Values.FirstOrDefault() ?? p.Code,
@@ -62,7 +75,10 @@ public class GetStoreLegalPagesQueryHandler(ICmsDbContext db)
                     .Select(s => s.Settings.TryGetValue("html", out var html) ? html?.ToString() : null)
                     .Where(h => !string.IsNullOrWhiteSpace(h))),
                 p.Sections.Select(s => s.UpdatedAt)
-                    .Concat(new DateTime?[] { p.UpdatedAt ?? p.CreatedAt }).Max()))
+                    .Concat(new DateTime?[] { p.UpdatedAt ?? p.CreatedAt }).Max(),
+                ECSPros.Cms.Application.Helpers.StoreSiteRoutes.SlugFor(p.Code),
+                p.PageType,
+                ECSPros.Cms.Application.Helpers.StoreSiteRoutes.AliasesFor(p.Code) is { Length: > 0 } al ? al : null))
             .Where(p => p.BodyHtml.Length > 0)
             .ToList();
 

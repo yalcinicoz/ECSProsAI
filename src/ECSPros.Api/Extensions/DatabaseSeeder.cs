@@ -25,6 +25,7 @@ public static class DatabaseSeeder
         await SeedStorefrontDefaultsAsync(scope.ServiceProvider);
         await SeedCrmDefaultsAsync(scope.ServiceProvider);
         await SeedGeoAsync(scope.ServiceProvider);
+        await SeedAddressNeighborhoodBackfillAsync(scope.ServiceProvider);
         await SeedCmsLegalPagesAsync(scope.ServiceProvider);
         await SeedReturnReasonsAsync(scope.ServiceProvider);
         await SeedCorporatePagesAsync(scope.ServiceProvider);
@@ -801,6 +802,24 @@ public static class DatabaseSeeder
             await cms.SaveChangesAsync();
             Console.WriteLine($"✓ Seed: {eklenen} kurumsal CMS sayfası oluşturuldu.");
         }
+
+        // B7 (2026-09-07, mobil): kurumsal sayfaların SlugI18n["tr"] değeri sitedeki URL ile birebir olsun
+        // (kargo-ve-teslimat gibi) — önceden kod (kurumsal-kargo-teslimat) yazılıyordu. İdempotent.
+        var slugKodlari = ECSPros.Cms.Application.Helpers.StoreSiteRoutes.Routes.Select(r => r.Code).ToList();
+        var slugSayfalari = await cms.Pages.Where(p => slugKodlari.Contains(p.Code)).ToListAsync();
+        int slugDuzeltilen = 0;
+        foreach (var sayfa in slugSayfalari)
+        {
+            var hedef = ECSPros.Cms.Application.Helpers.StoreSiteRoutes.SlugFor(sayfa.Code);
+            if (sayfa.SlugI18n.TryGetValue("tr", out var mevcut) && mevcut == hedef) continue;
+            sayfa.SlugI18n = new Dictionary<string, string>(sayfa.SlugI18n) { ["tr"] = hedef };
+            sayfa.UpdatedAt = DateTime.UtcNow; slugDuzeltilen++;
+        }
+        if (slugDuzeltilen > 0)
+        {
+            await cms.SaveChangesAsync();
+            Console.WriteLine($"✓ Seed: {slugDuzeltilen} kurumsal sayfa slug'ı site URL'iyle eşitlendi.");
+        }
     }
 
     /// <summary>F1: kurumsal sayfa içerikleri — tasarım partial'larının panel iç HTML'i
@@ -1141,6 +1160,38 @@ public static class DatabaseSeeder
     /// Data/Geo/*.csv dosyalarından idempotent olarak dolar (il/ilçe/mahalle dropdown'ları).
     /// Yalnız tablolar boşken çalışır — mevcut veriye dokunmaz.
     /// </summary>
+    /// <summary>
+    /// B4 (2026-09-07, mobil): web hesap formundan gelen adreslerde mahalle KİMLİĞİ boştu (yalnız ad) —
+    /// ilçesi içinde adı tam eşleşen TEK mahalle varsa kimlik (ve boşsa posta kodu) yazılır. "Mahallesi/Mah./Mh."
+    /// ekleri iki tarafta da atılır; birden çok eşleşme atlanır (elle düzeltme). İdempotent: yalnız NULL satırlar.
+    /// </summary>
+    private static async Task SeedAddressNeighborhoodBackfillAsync(IServiceProvider sp)
+    {
+        var db = sp.GetRequiredService<ECSPros.Crm.Infrastructure.Persistence.CrmDbContext>();
+        var guncellenen = await db.Database.ExecuteSqlRawAsync("""
+            WITH aday AS (
+              SELECT a."Id" adres_id, n."Id" mahalle_id, n."PostalCode" posta,
+                     count(*) OVER (PARTITION BY a."Id") adet
+                FROM crm.crm_addresses a
+                JOIN crm.crm_neighborhoods n
+                  ON n."DistrictId" = a."DistrictId"
+                 AND regexp_replace(lower(n."NameI18n"->>'tr'), '\s*(mahallesi|mah\.?|mh\.?)\s*$', '')
+                   = regexp_replace(lower(trim(a."NeighborhoodName")), '\s*(mahallesi|mah\.?|mh\.?)\s*$', '')
+               WHERE a."NeighborhoodId" IS NULL
+                 AND a."DistrictId" IS NOT NULL
+                 AND coalesce(a."NeighborhoodName", '') <> ''
+                 AND NOT a."IsDeleted")
+            UPDATE crm.crm_addresses a
+               SET "NeighborhoodId" = aday.mahalle_id,
+                   "PostalCode" = coalesce(a."PostalCode", aday.posta),
+                   "UpdatedAt" = timezone('utc', now())
+              FROM aday
+             WHERE aday.adres_id = a."Id" AND aday.adet = 1
+            """);
+        if (guncellenen > 0)
+            Console.WriteLine($"✓ Seed: {guncellenen} adreste mahalle kimliği addan geri dolduruldu.");
+    }
+
     private static async Task SeedGeoAsync(IServiceProvider sp)
     {
         var crm = sp.GetRequiredService<ECSPros.Crm.Infrastructure.Persistence.CrmDbContext>();

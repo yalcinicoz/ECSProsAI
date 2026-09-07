@@ -8,10 +8,12 @@ namespace ECSPros.Order.Application.Queries.GetOrderDetail;
 public class GetOrderDetailQueryHandler : IRequestHandler<GetOrderDetailQuery, Result<OrderDetailDto>>
 {
     private readonly IOrderDbContext _context;
+    private readonly ECSPros.Shared.Contracts.IProductService _productService;
 
-    public GetOrderDetailQueryHandler(IOrderDbContext context)
+    public GetOrderDetailQueryHandler(IOrderDbContext context, ECSPros.Shared.Contracts.IProductService productService)
     {
         _context = context;
+        _productService = productService;
     }
 
     public async Task<Result<OrderDetailDto>> Handle(GetOrderDetailQuery request, CancellationToken cancellationToken)
@@ -25,6 +27,16 @@ public class GetOrderDetailQueryHandler : IRequestHandler<GetOrderDetailQuery, R
 
         if (order is null)
             return Result.Failure<OrderDetailDto>("Sipariş bulunamadı.");
+
+        // A1 (2026-09-07): kalem zenginleştirme (ürün kodu, varyant görseli, renk/beden kimliği) — tek toplu
+        // Catalog sorgusu; hata-güvenli (katalog erişilemezse kalemler zenginleştirilmeden döner).
+        var gosterim = new Dictionary<Guid, ECSPros.Shared.Contracts.VariantDisplayInfo>();
+        try
+        {
+            gosterim = await _productService.GetVariantDisplayAsync(
+                order.Items.Select(i => i.VariantId).Distinct().ToList(), cancellationToken);
+        }
+        catch { /* zenginleştirme isteğe bağlı */ }
 
         return Result.Success(new OrderDetailDto(
             order.Id,
@@ -45,9 +57,14 @@ public class GetOrderDetailQueryHandler : IRequestHandler<GetOrderDetailQuery, R
             order.InternalNotes,
             order.CreatedAt,
             order.ConfirmedAt,
-            order.Items.Select(i => new OrderDetailItemDto(
-                i.Id, i.VariantId, i.Sku, i.ProductName, i.VariantInfo,
-                i.Quantity, i.UnitPrice, i.DiscountAmount, i.TaxAmount, i.Total, i.Status)).ToList(),
+            order.Items.Select(i =>
+            {
+                gosterim.TryGetValue(i.VariantId, out var g);
+                return new OrderDetailItemDto(
+                    i.Id, i.VariantId, i.Sku, i.ProductName, i.VariantInfo,
+                    i.Quantity, i.UnitPrice, i.DiscountAmount, i.TaxAmount, i.Total, i.Status,
+                    g?.ProductCode, g?.ImageUrl, g?.ColorValueId, g?.SizeValueId);
+            }).ToList(),
             order.Payments.Select(p => new OrderDetailPaymentDto(
                 p.Id, p.PaymentMethodId, p.Amount, p.CurrencyCode, p.Status)).ToList(),
             order.FirmPlatformId,

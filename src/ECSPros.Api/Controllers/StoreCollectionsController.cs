@@ -24,12 +24,23 @@ public class StoreCollectionsController(IMediator mediator) : ControllerBase
         User.FindFirst("sub")?.Value
         ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
 
+    /// <summary>B1 (2026-09-07): koleksiyon satırında <c>items[]</c> (ürün adı/görsel/fiyat) da gelir; itemCodes korunur.
+    /// <c>light=true</c> eski şekil.</summary>
     [HttpGet]
-    public async Task<IActionResult> GetMine([FromQuery] Guid firmPlatformId, CancellationToken ct)
+    public async Task<IActionResult> GetMine(
+        [FromQuery] Guid firmPlatformId, [FromQuery] bool light = false,
+        [FromServices] ECSPros.Api.Services.Store.StoreKartZenginlestirici zengin = null!, CancellationToken ct = default)
     {
         var result = await mediator.Send(new GetMemberCollectionsQuery(firmPlatformId, MemberId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = result.Value });
+        if (light) return Ok(new { success = true, data = result.Value });
+        var harita = await zengin.GetirAsync(firmPlatformId, result.Value!.SelectMany(k => k.ItemCodes), ct);
+        var data = result.Value.Select(k => new ECSPros.Api.Models.Store.MemberCollectionItemDto(
+            k.Id, k.Name, k.Description, k.IsPublic, k.IsShareable, k.ShareCode, k.Status, k.ViewCount, k.IsQuickSave,
+            k.UpdatedAt, k.CreatedAt, k.ItemCodes,
+            k.ItemCodes.Select(c => ECSPros.Api.Services.Store.StoreKartZenginlestirici.Ozet(harita, c))
+                .Where(o => o is not null).Select(o => o!).ToList())).ToList();
+        return Ok(new { success = true, data });
     }
 
     [HttpPost]

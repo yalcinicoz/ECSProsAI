@@ -37,8 +37,10 @@ public class GetMemberLoyaltyQueryHandler : IRequestHandler<GetMemberLoyaltyQuer
             .Include(a => a.Transactions.OrderByDescending(t => t.CreatedAt).Take(20))
             .FirstOrDefaultAsync(a => a.MemberId == request.MemberId, ct);
 
+        // C3 (2026-09-07, mobil): hesap henüz açılmamışsa 400 yerine SIFIR bakiyeli hesap görünümü —
+        // sadakat programı işlem ürettiğinde gerçek satır oluşur; istemci tek şemayla çalışır.
         if (account is null)
-            return Result.Failure<LoyaltyDto>("Sadakat hesabı bulunamadı.");
+            return Result.Success(new LoyaltyDto(Guid.Empty, request.MemberId, 0, 0, 0, 0m, []));
 
         var dto = new LoyaltyDto(
             account.Id, account.MemberId,

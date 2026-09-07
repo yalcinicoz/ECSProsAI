@@ -98,6 +98,10 @@ public class PayTrCallbackUygulaCommandHandler(
         order.PaymentStatus = !request.Basarili ? "failed" : eksikOdeme ? "underpaid" : "paid";
         await db.SaveChangesAsync(ct);
 
+        // A4 (2026-09-07): ödeme alındı → sepet kalemleri sunucuda temizlenir (eksik ödemede de — sipariş oluştu).
+        if (request.Basarili && order.CartId is { } sepetId)
+            await publisher.Publish(new ECSPros.Order.Domain.Events.CartConvertedToOrderEvent(order.Id, sepetId), ct);
+
         // Ödeme başarılı VE TAM ise siparişi OTOMATİK ONAYLA (pending → confirmed). Onay,
         // OrderConfirmedEvent ile online stok rezervasyonunu tetikler (WarehouseId=Guid.Empty →
         // depo-bağımsız). Onay hatası ödeme kaydını BLOKLAMAZ; log'a düşer, personel elle onaylayabilir.

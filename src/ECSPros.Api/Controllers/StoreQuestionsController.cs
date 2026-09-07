@@ -39,14 +39,23 @@ public class StoreQuestionsController(
         return Ok(new { success = true, data = result.Value });
     }
 
-    /// <summary>Hesabım → Sorularım: üyenin tüm soruları ve cevapları.</summary>
+    /// <summary>Hesabım → Sorularım: üyenin tüm soruları ve cevapları. B1 (2026-09-07): satırda ürün adı + görsel.</summary>
     [HttpGet("mine")]
     [Authorize(Policy = "MemberOnly")]
-    public async Task<IActionResult> GetMine([FromQuery] Guid firmPlatformId, CancellationToken ct)
+    public async Task<IActionResult> GetMine(
+        [FromQuery] Guid firmPlatformId,
+        [FromServices] ECSPros.Api.Services.Store.StoreKartZenginlestirici zengin = null!, CancellationToken ct = default)
     {
         var result = await mediator.Send(new GetMemberQuestionsQuery(firmPlatformId, MemberId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = result.Value });
+        var harita = await zengin.GetirAsync(firmPlatformId, result.Value!.Select(q => q.ProductCode), ct);
+        var data = result.Value.Select(q =>
+        {
+            var o = ECSPros.Api.Services.Store.StoreKartZenginlestirici.Ozet(harita, q.ProductCode);
+            return new ECSPros.Api.Models.Store.MemberQuestionItemDto(q.Id, q.ProductCode, q.Question, q.Answer, q.Status,
+                q.MemberName, q.CreatedAt, q.AnsweredAt, o?.ProductName, o?.ImageUrl);
+        }).ToList();
+        return Ok(new { success = true, data });
     }
 
     /// <summary>Soru sor — aynı üründe cevap bekleyen sorunuz varken yenisi engellenir.</summary>

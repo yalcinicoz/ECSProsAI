@@ -37,6 +37,7 @@ public static class PageBlockCatalog
         new("cart", "Sepet"),
         new("checkout-delivery", "Teslimat"),
         new("checkout-payment", "Ödeme"),
+        new("search", "Arama Sayfası"),   // B8 (2026-09-07, mobil): arama açılışı (popüler ürünler vb.) panelden yönetilir
     ];
 
     /// <summary>Banner grid şablonları (GorunumTipleri/_Banner sekmeleri); reklam = banner+ürün vitrini kompoziti.</summary>

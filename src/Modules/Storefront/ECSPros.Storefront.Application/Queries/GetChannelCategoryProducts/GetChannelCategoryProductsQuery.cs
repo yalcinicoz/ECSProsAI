@@ -96,7 +96,12 @@ public record ChannelCategoryProductItemDto(
     int CartCount = 0,                               // Sosyal kanıt (2026-08-10): son 30 günde kaç farklı sepette — cache DIŞI eklenir
     int FavoriteCount = 0,                           // Sosyal kanıt: kaç farklı üyenin favorisi — cache DIŞI eklenir
     int ViewCount = 0,                               // Sosyal kanıt: kaç farklı üye baktı — cache DIŞI eklenir
-    List<CardSizeDto>? Sizes = null);                // Kartta sepete ekle (2026-08-14): kartın (ürün×renk) beden seçenekleri
+    List<CardSizeDto>? Sizes = null)                 // Kartta sepete ekle (2026-08-14): kartın (ürün×renk) beden seçenekleri
+{
+    // B5 (2026-09-07, mobil): arama ucuyla ortak alan adları — Id/MinPrice takma adları (BasePrice zaten kanal satış fiyatıdır).
+    public Guid Id => ProductId;
+    public decimal MinPrice => BasePrice;
+}
 
 public class GetChannelCategoryProductsQueryHandler(
     IStorefrontDbContext sfDb,

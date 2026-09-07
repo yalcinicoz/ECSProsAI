@@ -11,7 +11,8 @@ using Microsoft.EntityFrameworkCore;
 namespace ECSPros.Api.Handlers;
 
 public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbContext invDb,
-    IChannelPricingService pricingService, IChannelProductFlagService flagService)
+    IChannelPricingService pricingService, IChannelProductFlagService flagService,
+    IProductCampaignResolver campaignResolver, IMediator mediator)
     : IRequestHandler<GetStoreProductDetailQuery, Result<StoreProductDetailDto>>
 {
     public async Task<Result<StoreProductDetailDto>> Handle(GetStoreProductDetailQuery request, CancellationToken ct)
@@ -39,12 +40,15 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
 
         var activeVariantIds = product.Variants.Where(v => v.IsActive).Select(v => v.Id).ToList();
 
-        // Hex kodları — AttributeValue.HexCode direkt kullanılır
+        // Hex kodları — AttributeValue.HexCode direkt kullanılır (A3 2026-09-07: renk ekseninde de varsa).
         var hexByValueId = product.Variants
             .SelectMany(v => v.VariantAttributes)
-            .Where(va => va.AttributeType.Code == "filtre_rengi" && va.AttributeValue.HexCode != null)
+            .Where(va => va.AttributeType.Code is "filtre_rengi" or "renk" && va.AttributeValue.HexCode != null)
             .GroupBy(va => va.AttributeValue.Id)
             .ToDictionary(g => g.Key, g => g.First().AttributeValue.HexCode!);
+        // A3: renk ekseni 'renk' — filtre_rengi (aile) olmayan üründe (1.338 ürün) IsColor hiç true olmuyordu.
+        // Kural: 'renk' varsa renk ekseni odur; yoksa filtre_rengi renk sayılır.
+        var renkEkseniVar = product.Variants.Any(v => v.VariantAttributes.Any(va => va.AttributeType.Code == "renk"));
 
         // Görseller — FileName+VariantId bazlı deduplicate (DB'de aynı resim çift kayıtlı olabilir)
         var allImgs = (await db.ProductImages.AsNoTracking()
@@ -125,7 +129,7 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
             var attrs = v.VariantAttributes.Select(a => new StoreVariantAttributeDto(
                 a.AttributeType.Code, a.AttributeType.NameI18n,
                 a.AttributeValue.Id, a.AttributeValue.NameI18n,
-                IsColor: a.AttributeType.Code == "filtre_rengi",
+                IsColor: renkEkseniVar ? a.AttributeType.Code == "renk" : a.AttributeType.Code == "filtre_rengi",
                 HexCode: hexByValueId.GetValueOrDefault(a.AttributeValue.Id),
                 ValueSortOrder: a.AttributeValue.SortOrder)).ToList();
 
@@ -185,10 +189,53 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
             .Select(v => new StoreProductVideoDto(v.Url!, v.ThumbnailUrl))
             .ToList();
 
+        // A10: ürün seviyesi fiyat özeti — Razor detayla (StoreUrunDetayBuilder) aynı kural:
+        // kanal fiyatı → varyant fiyatı → en düşük pozitif; çizili fiyat yalnız satış fiyatından büyükse.
+        var enDusukPozitif = variants
+            .SelectMany(v => new[] { v.PlatformPrice ?? 0m, v.BasePrice })
+            .Where(f => f > 0).DefaultIfEmpty(product.BasePrice).Min();
+        var fiyatliVaryant = variants
+            .Where(v => (v.PlatformPrice ?? v.BasePrice) > 0)
+            .OrderBy(v => v.PlatformPrice ?? v.BasePrice)
+            .FirstOrDefault() ?? variants.FirstOrDefault();
+        var minPrice = fiyatliVaryant is null ? product.BasePrice : (fiyatliVaryant.PlatformPrice ?? fiyatliVaryant.BasePrice);
+        if (minPrice <= 0) minPrice = enDusukPozitif;
+        decimal? compareAt = fiyatliVaryant?.CompareAtPrice is { } eski && eski > minPrice ? eski : null;
+
+        string? kampanyaAdi = null; decimal? kampanyaFiyat = null;
+        try
+        {
+            var kmp = (await campaignResolver.ResolveForProductsAsync(request.FirmPlatformId, [product.Id], ct))
+                .GetValueOrDefault(product.Id);
+            if (kmp is not null)
+            {
+                kampanyaAdi = kmp.BadgeLabel ?? kmp.Name;
+                kampanyaFiyat = CampaignPricing.EffectivePrice(kmp, minPrice);
+            }
+        }
+        catch { /* kampanya çözülemedi — kampanyasız detay */ }
+
+        // A5/A10: kanal slug'ları (varyant → slug); kanonik slug = fiyatlı/ilk varyantın slug'ı.
+        Dictionary<Guid, string>? variantSlugs = null; string? slug = null;
+        try
+        {
+            var slugSonuc = await mediator.Send(new ECSPros.Storefront.Application.Queries.GetChannelVariantSlugs
+                .GetChannelVariantSlugsQuery(request.FirmPlatformId, variants.Select(v => v.Id).ToList()), ct);
+            if (slugSonuc.IsSuccess && slugSonuc.Value is { Count: > 0 } vs)
+            {
+                variantSlugs = vs;
+                slug = (fiyatliVaryant is not null && vs.TryGetValue(fiyatliVaryant.Id, out var s1)) ? s1
+                     : vs.Values.FirstOrDefault();
+            }
+        }
+        catch { /* slug isteğe bağlı */ }
+
         return Result.Success(new StoreProductDetailDto(
             product.Id, product.Code, product.NameI18n, product.ShortDescriptionI18n,
             product.IsSaleOpen, variants,
             product.DescriptionI18n, productAttrs, groupName,
-            videos.Count > 0 ? videos : null));
+            videos.Count > 0 ? videos : null,
+            minPrice, compareAt, kampanyaFiyat, kampanyaAdi,
+            product.ProductGroupId, slug, variantSlugs));
     }
 }

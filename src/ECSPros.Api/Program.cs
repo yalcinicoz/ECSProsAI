@@ -170,7 +170,11 @@ builder.Services.Configure<GzipCompressionProviderOptions>(options =>
     options.Level = CompressionLevel.Fastest;
 });
 
-var mvcBuilder = builder.Services.AddControllersWithViews()
+var mvcBuilder = builder.Services.AddControllersWithViews(options =>
+    {
+        // A6 (2026-09-07, mobil): /api/store/* için X-Firm-Platform başlığı → firmPlatformId (query/gövde) yedeği.
+        options.Filters.Add<ECSPros.Api.Filters.FirmPlatformHeaderFilter>();
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
@@ -310,6 +314,7 @@ ECSPros.Shared.Infrastructure.Http.ResilientHttpClientExtensions.AddResilientHtt
 // (FirmPlatform.Settings, panel Kanallar ekranı) — SSR ödeme sayfası + checkout doğrulaması
 builder.Services.AddScoped<ECSPros.Shared.Contracts.IPaymentOptionsProvider,
     ECSPros.Api.Services.Store.PaymentOptionsProvider>();
+builder.Services.AddScoped<ECSPros.Api.Services.Store.StoreKartZenginlestirici>(); // B1 (2026-09-07)
 
 // ─── Infrastructure Modules ────────────────────────────────────────
 builder.Services.AddIamInfrastructure(npgsqlDataSource, builder.Configuration);

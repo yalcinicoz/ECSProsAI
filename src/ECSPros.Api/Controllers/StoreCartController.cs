@@ -56,7 +56,11 @@ public class StoreCartController(IMediator mediator, ICoreDbContext coreDb, IMem
 
         var result = await mediator.Send(new GetCartQuery(cartId, memberId, sessionId, firmPlatformId, dislananlar), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
-        return Ok(new { success = true, data = result.Value });
+        // A7 (2026-09-07, mobil): sepet satırı yoksa data'sız yanıt yerine BOŞ SEPET nesnesi — zarf kuralı
+        // ("data her zaman var") korunur; Id = Guid.Empty "henüz sepet yok" demektir (ilk kalem ekleme oluşturur).
+        var sepet = result.Value ?? new ECSPros.Crm.Application.Queries.GetCart.CartDto(
+            Guid.Empty, memberId, sessionId, firmPlatformId ?? Guid.Empty, "TRY", [], 0m);
+        return Ok(new { success = true, data = sepet });
     }
 
     [HttpPost("items")]

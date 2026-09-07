@@ -59,7 +59,13 @@ public record OrderDetailItemDto(
     decimal DiscountAmount,
     decimal TaxAmount,
     decimal Total,
-    string Status);
+    string Status,
+    // A1/A2 (2026-09-07, mobil): kalem görseli + ürün kodu + renk/beden değer kimlikleri — Catalog'dan
+    // IProductService ile zenginleştirilir; varyant silinmişse null kalır.
+    string? ProductCode = null,
+    string? ImageUrl = null,
+    Guid? ColorValueId = null,
+    Guid? SizeValueId = null);
 
 public record OrderDetailPaymentDto(
     Guid Id,
