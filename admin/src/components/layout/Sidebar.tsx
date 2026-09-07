@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store/ui'
 import { useAuthStore } from '@/store/auth'
 import { useQuestionAlertStore } from '@/store/questionAlerts'
+import { useTicketAlertStore } from '@/store/ticketAlerts'
 import { Search, X } from 'lucide-react'
 
 // ── Nav structure (matches option-h) ──────────────────────────────────────────
@@ -104,6 +105,7 @@ const NAV_SECTIONS: NavSection[] = [
   ]},
   { label: 'Müşteriler', items: [
     { label: 'Üyeler', to: '/crm/members',       icon: 'users' },
+    { label: 'Müşteri İlişkileri', to: '/crm/tickets', icon: 'clipboard' },
     { label: 'Gruplar', to: '/crm/member-groups', icon: 'usersround' },
     { label: 'İletişim Mesajları', to: '/storefront/contact-messages', icon: 'mail' },
   ]},
@@ -163,6 +165,7 @@ export function Sidebar({ onMobileClose }: SidebarProps) {
   const [search, setSearch] = useState('')
   // Cevap bekleyen ürün sorusu — QuestionAlerts besler; sıfırlanana kadar kırmızı rozet
   const bekleyenSoru = useQuestionAlertStore((s) => s.pendingCount)
+  const bekleyenKayit = useTicketAlertStore((s) => s.pendingCount)
 
   // Permission'lı öğeler yalnız yetkili kullanıcıda görünür; sonra arama filtresi uygulanır
   const visibleSections = NAV_SECTIONS.map((s) => ({
@@ -275,7 +278,8 @@ export function Sidebar({ onMobileClose }: SidebarProps) {
             {section.items.map((item) => {
               // Ürün Soruları: cevap bekleyen sayısı canlı rozet (kırmızı — cevaplanana kadar)
               const soruRozeti = item.to === '/storefront/questions' && bekleyenSoru > 0
-              const badge = soruRozeti ? bekleyenSoru : item.badge
+              const kayitRozeti = item.to === '/crm/tickets' && bekleyenKayit > 0
+              const badge = soruRozeti ? bekleyenSoru : kayitRozeti ? bekleyenKayit : item.badge
               return (
               <NavLink
                 key={item.to}

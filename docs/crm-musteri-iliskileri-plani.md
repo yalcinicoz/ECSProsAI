@@ -1,4 +1,4 @@
-# Müşteri İlişkileri Yönetimi (CRM Talep/Şikayet) — Plan v1 (TASLAK, onay bekliyor)
+# Müşteri İlişkileri Yönetimi (CRM Talep/Şikayet) — Plan v2 (ONAYLI · T0-T3 UYGULANDI 2026-09-07 ⚠️ restart bekliyor)
 
 > Eski ECS panelindeki `/crm/musteri-iliskileri-yonetimi` sayfasının bu projeye taşınması.
 > Keşif kaynağı: eski panelin kaynak kodu yerelde yok, eski sunucuya SSH tanımı yok → keşif eski MySQL
@@ -68,7 +68,14 @@ MigrationTool yeni faz: `cm_crm` + `yapilan_islemler` + `etiket` + `kontrol_eden
 personel: Ad" snapshot), sipariş eşleme (OrderNumber / LegacyOrderId), üye eşleme (LegacyMemberId). HTML içerik
 temizliği (inline style/tablo kırpma, tozlu CDN görselleri korunur).
 
-## 3. Fazlar (onay sonrası)
+## 3. Fazlar — durum (2026-09-07)
+- **T0 ✅** `crm.crm_ticket_statuses/_subjects/_tickets/_activities/_reads/_notifications/_legacy_staff` + `crm_ticket_tracking_seq` (migration `AddCrmTickets`, dev+demo), seed 6 durum + 22 konu, API `api/crm/tickets/*` (liste+sayaç, detay, open, order-lookup, create, activities, hidden, notifications seen/opened, settings, media).
+- **T1 ✅** Admin: Müşteriler › Müşteri İlişkileri — liste (`/crm/tickets`), yeni kayıt (`/new`, sipariş sorgu + kanal seçimi), detay (`/:trackingNo` — Kayıt/Sipariş/Üye/Log sekmeleri, Yeni İşlem modalı, gizle), ayarlar (`/settings`).
+- **T2 ✅** Bildirim: Header çanı (`TicketBell`, yanıp söner; gördü / kayda girdi ayrı), QuestionAlerts'e `TicketNotification` olayı + 60 sn poll, sidebar rozeti; üye detayı + sipariş detayı "Müşteri İlişkileri" bloğu.
+- **T3 ✅** MigrationTool **Faz 30** (`dotnet run 30 [dry]`, `PG_CONN` env): 43.190 kayıt, 77.977 işlem, 137.764 okundu, 68.746 bildirim, 41 pasif eski personel IAM kullanıcısı (52 silinmiş personel ad-anlık görüntü). ⚠️ Eski işlem görselleri (`/media/crm/legacy/*`, 1.185 işlem + 2.501 kayıt) dosya kopyası eski sunucu erişimi bekliyor. Cutover'da faz yeniden çalıştırılır (LegacyId'li satırlar yenilenir, yeni kayıtlar korunur).
+- **T4** yok (K7: müşteri görmez). Kalan: rehber sayfası.
+
+### 3.0 Orijinal faz planı
 - **T0** Veri modeli + migration + seed (durumlar, 22 konu + alan kuralları) + API (liste/detay/oluştur/işlem/okundu).
 - **T1** Admin: liste + yeni kayıt + detay (zaman çizelgesi, durum, etiketleme, okundu).
 - **T2** Bildirim (panel çanı) + üye/sipariş detay entegrasyonları + ayarlar ekranı.
@@ -76,25 +83,21 @@ temizliği (inline style/tablo kırpma, tozlu CDN görselleri korunur).
 - **T4** (K7 evetse) Site/mobil "Taleplerim" yüzeyi.
 - Rehber sayfası + PROGRESS.
 
-## 4. Kararlar (K — onay bekliyor)
-Bkz. §5; kararlar netleşince buraya taşınır.
+## 4. Kararlar (kullanıcı yanıtları, 2026-09-07 — kesin)
 
-## 5. Açık sorular
-- **K1 Kapsam:** Eski sayfa yalnız talep/şikayet kayıtları mı; yoksa (a) üye/sipariş işlem günlüğü ("notlar":
-  arama yapıldı, kara liste, ürün değişikliği), (b) "Sorunlu siparişler" listesi, (c) müşteri temsilcisi kalite
-  puanlama da aynı sayfanın sekmeleri mi? Hangileri bu işe dahil?
-- **K2 Bildirim:** Etiketlenen personel eski sistemde nasıl haber alıyordu (panel çanı / e-posta / SMS)? Yeni:
-  panel çanı varsayılan; e-posta istenir mi?
-- **K3 Eski veri:** 43K kayıt + 125K işlem aktarılsın mı (salt-okunur geçmiş), yoksa sıfırdan mı başlansın?
-  Aktarılacaksa 53 eski personelin yeni kullanıcılara eşlemesi (ad listesi çıkarırım, siz eşlersiniz).
-- **K4 Takip numarası:** Eski 10 haneli sayısal TakipNo yerine `CRM-2026-000123` gibi seri mi, yoksa eski biçim mi?
-  Aktarılan eski kayıtlar eski numarasını korur.
-- **K5 İçerik:** Zengin metin (kalın/liste/görsel) + görsel yükleme sürsün mü; sipariş kalemleri tablosunu gövdeye
-  ekleme davranışı istenir mi?
-- **K6 Durumlar/konular:** 6 durum ve 22 konu aynen seed edilsin mi? "Çözülemedi" eski sistemde gizli — kalksın mı?
-  Konu→alan kuralları panelden yönetilebilir olsun mu?
-- **K7 Müşteriye görünürlük:** Müşteri sitede/mobilde (Hesabım) kendi kayıtlarını ve durumunu görsün mü, yeni
-  talep açabilsin mi? (Eski sistemde iç kullanım gibi görünüyor.)
-- **K8 Yetki:** Kim görür/kaydeder/durum değiştirir? Öneri: `crm.tickets.view` ve `crm.tickets.manage`; ayrıca
-  "yalnız etiketlendiğim kayıtlar" görünümü.
-- **K9 Kanal:** Kayıtlar kanala (Mishar/Tozlu/Julude…) bağlı mı, ortak mı? Eski veri tek platform (tozlu ağırlıklı).
+| # | Karar |
+|---|---|
+| K1 Kapsam | Yalnız talep/şikayet kayıtları: `cm_crm`, `_yapilan_islemler`, `_etiket`, `_kontrol_edenler`, `_durum`, `_tur`, `_konu_basliklari(_alanlar)`, `_alanlar`, `cm_bildirim`, `cm_crm_not` (detayda üye/sipariş notu olarak okunur). Sorunlu siparişler ve MT kalite puanlama DIŞARIDA. |
+| K2 Bildirim | Yeni kayıt açılınca kimseye bildirim YOK. İşlem eklenince: kaydı açan, o kayıtta işlem yapmış olanlar, etiketlenen (ve etiketlenip hâlâ işlem yapmamış olanlar). Yalnız panel çanı; okunmamış varsa yanıp söner. **"Gördü" ve "kayda girdi" ayrı** (SeenAt/OpenedAt); gördü ama girmediyse bildirim yanmaya devam eder ve kayıtta "gördü, girmedi" olarak tarih-saat-kullanıcıyla yazılır; kayda girince söner ve "kayda girdi" işlenir. |
+| K3 Eski veri | Aktarılır (43K kayıt + 121K işlem + 369K okundu + 115K bildirim). Eski personel kayıtları da taşınır: `dfpersonel` → IAM kullanıcısı (kullanıcı adı/e-posta eşleşirse mevcut; yoksa PASİF kullanıcı açılır, `MustChangePassword`), eşleme `crm_ticket_legacy_staff`. |
+| K4 Takip no | Eski biçim sürer: `unix saniye + sıra` (10 hane; sıra `crm_ticket_tracking_seq` 50.000'den başlar → eski numaralarla çakışmaz; UNIQUE). Aktarılan kayıt eski numarasını korur. |
+| K5 İçerik | Zengin metin (Quill) sürer; **görsel gövdeye gömülmez, ek olarak yüklenir** (`/media/crm/...`); konu "Resim" zorunlu alanı → en az bir ek. Eski kayıtlardaki `/upload/Images/cm_crm/*` görselleri ek listesine alınır (dosya kopyası eski sunucu erişimi gelince), ürün tablolarındaki CDN görselleri olduğu gibi kalır. Sipariş kalemleri gövdeye eklenmez (eski sistemde de yoktu; detayda Sipariş sekmesi). |
+| K6 Durum/konu | 6 durum + 22 konu + konu→alan kuralları aynen. "Çözülemedi" GİZLİ durum: varsayılan listede görünmez, filtreyle görünür; yeni işlemde seçilemez. "Hatalı Kayıt" mükerrer kontrolünden muaf. Konu/alan/durum ayarları panelden yönetilir (tablo, definition değil). |
+| K7 Müşteri | Görmez; iç sistem. Site/mobil yüzeyi YOK. |
+| K8 Yetki | Şimdilik herkese açık (`[Authorize]`); panel geneli yetki modeli ayrı iş. |
+| K9 Kanal | Kayıt kanala bağlı değil; sipariş numarası kanalı belirler. Aynı numara birden fazla siparişte (farklı kanal) bulunursa formda **kanal seçici** açılır. |
+| Ek | Eski akış aynen: konu seçilir → tür konudan türer; sipariş no girilince müşteri ad/telefon siparişten kopyalanır; mükerrer kontrol = aynı sipariş + aynı konu açık kayıt; detay sayfası sekmeleri Kayıt / Sipariş / Üye / Log — sayfadan ayrılmadan müşteri ve sipariş bilgisi. Eski koddaki hatalar (çalışmayan "kayıt notu" formu, GET'te yan etki, transaction yokluğu) taşınmaz. |
+
+## 5. Uygulama notları (eski kod keşfi — ECSGYE.Solution, 2026-09-07)
+- Takip no: `DateTimeOffset.Now.ToUnixTimeSeconds() + CRMID` (PanelYordamlar.cs:1502,1644). Bildirim kalıpları: "Oluşturduğunuz / İşlem Yaptığınız / Etiketlendiniz / Etiketlendiğiniz … kaydına yeni işlem yapıldı" (1834-1924). Okundu: detay her açılışta eksik işlemler için `kontrol_edenler` (1376-1394); liste "Kontrol Edildi" = son işlem okunmuş mu. Etiketleme tek kişi, sahiplik değiştirmez. `cm_bildirim.Goruldu/Acildi` 1=hayır 2=evet.
+- Eski tablo sayıları (2026-09-07): crm 43.187 (Gizle=1: 3), işlem 121.207 (Gizle=1 açılış satırı 43.206), etiket 8.407, okundu 368.824, bildirim 115.145, personel 53 aktif kullanıcı. Sipariş no biçimleri: 7-13 haneli eski numaralar + 21 `ORD-…`; görselli kayıt 6.839 (ürün tablosu CDN) + işlemde 1.410 (`/upload/Images/cm_crm/`).

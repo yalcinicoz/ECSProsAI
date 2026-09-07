@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Bell, Moon, Sun, Star, Search, Menu } from 'lucide-react'
+import { Moon, Sun, Star, Search, Menu } from 'lucide-react'
+import { TicketBell } from './TicketBell'
 import { useUIStore } from '@/store/ui'
 import { cn } from '@/lib/utils'
 
@@ -138,18 +139,8 @@ export function Header({ onMobileMenuOpen }: HeaderProps) {
           <span>Favorilere Ekle</span>
         </button>
 
-        {/* Bildirimler */}
-        <button
-          type="button"
-          className="relative w-9 h-9 flex items-center justify-center rounded-xl transition-colors"
-          style={{ color: 'var(--text-m)' }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface2)')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = '')}
-          title="Bildirimler"
-        >
-          <Bell size={16} />
-          <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full" />
-        </button>
+        {/* Bildirimler — Müşteri İlişkileri çanı (2026-09-07) */}
+        <TicketBell />
 
         {/* Dark / Light mode */}
         <button

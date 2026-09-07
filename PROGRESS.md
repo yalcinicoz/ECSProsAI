@@ -1,5 +1,29 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**CRM MÜŞTERİ İLİŞKİLERİ (TALEP/ŞİKAYET) UYGULANDI — T0-T3 (2026-09-07, Admin panel alanı, plan v2 K1-K9 kullanıcı yanıtlarıyla):**
+Kararlar: yalnız talep/şikayet; yeni kayıtta bildirim YOK, işlemde kaydı açan + işlem yapanlar + etiketlenen (+etiketlenip
+işlem yapmamış); yalnız panel çanı, "gördü" ve "kayda girdi" ayrı (SeenAt/OpenedAt), ikisi olana dek yanar; takip no eski
+biçim `unix + sıra` (sıra 50.000'den, unique); görsel gövdeye gömülmez → ek; Çözülemedi gizli durum (filtreyle görünür,
+seçilemez); Hatalı Kayıt mükerrer muaf; müşteri görmez; yetki herkese; kanal siparişten (aynı no birden çok kanalda →
+seçici). Kod: Crm modülü `Ticket/TicketActivity/TicketRead/TicketNotification/TicketStatus/TicketSubject/TicketLegacyStaff`
+(migration `AddCrmTickets` dev+demo), `HtmlTemizleyici`, komutlar (Create/AddActivity/Open/Seen/Opened/Settings/Hidden),
+sorgular (liste+sayaç/detay/bildirimlerim/ayarlar), `CrmTicketsController` (`api/crm/tickets`), `CrmTicketOrderLookup`
+(ham SQL: OrderNumber/ExternalOrderNumber/LegacyOrderId → adaylar), seed 6 durum + 22 konu (eski konu→alan matrisi).
+Admin: `/crm/tickets` (liste, sayaç kutuları, süzgeçler, "Kontrol edildi/edilmedi" = son işlemi okudum mu), `/crm/tickets/new`
+(konu → tür, zorunlu alan yıldızları, sipariş "Sorgula", kanal radio, Quill, ek yükleme), `/crm/tickets/:trackingNo`
+(sol kayıt kartı + Yeni İşlem + Gizle; sağ Kayıt/Sipariş/Üye/Log — sipariş kalemleri/ödeme/üyenin siparişleri, üye özeti,
+müşterinin diğer kayıtları, bildirim izi "gördü / kayda girmedi", kontrol edenler), `/crm/tickets/settings`; `TicketBell`
+(Header — çan kırmızı yanıp söner, liste açılınca "gördü", tıklayınca "kayda girdi"), QuestionAlerts'e `TicketNotification`
+(user:{id} grubu) toast + 60 sn poll, sidebar rozeti, üye/sipariş detayında "Müşteri İlişkileri" bloğu (+ yeni kayıt kısayolu
+sipariş no ön dolu). **Eski veri aktarıldı (MigrationTool Faz 30, `PG_CONN` env + ~/.pgpass):** 43.190 kayıt / 77.977 işlem /
+137.764 okundu / 68.746 bildirim / 41 pasif IAM kullanıcısı ("Eski personel (aktarım)", rastgele şifre, MustChangePassword;
+admin aktive eder) + 52 silinmiş personel ad-anlık görüntü; kimlikler deterministik (`30000000-0000-0000-000K-…`) → tekrar
+çalıştırılabilir, yeni kayıtlar korunur → cutover'da yeniden çalıştır. Sipariş/üye bağı 0 (eski numaralar bizde yok; bizdeki
+`ORD-…` ile eşleşmedi), metin anlık görüntü. ⚠️ eski işlem görselleri `/media/crm/legacy/<dosya>` ek listesinde, dosyalar
+eski sunucuda `wwwroot/upload/Images/cm_crm/` — HTTP'den ve SSH'tan erişilemedi, kopya için erişim gerekiyor. İzole 5051 ✓
+(seed + uçlar 401/404); admin/dist derlendi (yerel nginx hemen — restart öncesi sayfalar 404 alır), API publish 14:02
+⚠️ **restart bekliyor**. Kalan: rehber sayfası; yetki (panel geneli ayrı iş).
+
 **DASHBOARD "EŞLENMEMİŞ ERP GRUBU" KARTI + EŞLEME SAYFASI SÜZGECİ (2026-09-07, kullanıcı isteği, Admin panel alanı):**
 `GET /api/marketplaces/mapping/targets` ERP hedefine `unmappedGroupCount` (sözlükte eşlemesi olmayan ürün grubu; kural
 `GetErpItemsAsync.IsMapped` ile aynı: eşleme satırı yok VE MappedTargetId boş), `placeholderProductCount` (`gecici`

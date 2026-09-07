@@ -29,6 +29,16 @@ public class CrmDbContext : DbContext, ICrmDbContext
     public DbSet<MemberDiscount> MemberDiscounts => Set<MemberDiscount>();
     public DbSet<OrderTemplate> OrderTemplates => Set<OrderTemplate>();
     public DbSet<OrderTemplateItem> OrderTemplateItems => Set<OrderTemplateItem>();
+    public DbSet<TicketStatus> TicketStatuses => Set<TicketStatus>();
+    public DbSet<TicketSubject> TicketSubjects => Set<TicketSubject>();
+    public DbSet<Ticket> Tickets => Set<Ticket>();
+    public DbSet<TicketActivity> TicketActivities => Set<TicketActivity>();
+    public DbSet<TicketRead> TicketReads => Set<TicketRead>();
+    public DbSet<TicketNotification> TicketNotifications => Set<TicketNotification>();
+    public DbSet<TicketLegacyStaff> TicketLegacyStaff => Set<TicketLegacyStaff>();
+
+    public async Task<long> NextTicketSequenceAsync(CancellationToken ct = default)
+        => await Database.SqlQueryRaw<long>("SELECT nextval('crm.crm_ticket_tracking_seq') AS \"Value\"").SingleAsync(ct);
     public DbSet<MemberSession> MemberSessions => Set<MemberSession>();
     public DbSet<OtpCode> OtpCodes => Set<OtpCode>();
     public DbSet<MemberExternalLogin> MemberExternalLogins => Set<MemberExternalLogin>();
@@ -36,6 +46,7 @@ public class CrmDbContext : DbContext, ICrmDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("crm");
+        modelBuilder.HasSequence<long>("crm_ticket_tracking_seq", "crm").StartsAt(50000).IncrementsBy(1);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CrmDbContext).Assembly);
         base.OnModelCreating(modelBuilder);
     }

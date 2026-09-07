@@ -40,8 +40,9 @@ static class Migration
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         int phase = args.Length > 0 ? int.Parse(args[0]) : 0;
 
-        mysql = new MySqlConnection(MYSQL_CONN);
-        pg = new NpgsqlConnection(PG_CONN);
+        // Ortam değişkeni verilirse bağlantılar oradan (şifresiz PG_CONN ~/.pgpass ile çalışır — 2026-09-07)
+        mysql = new MySqlConnection(Environment.GetEnvironmentVariable("MYSQL_CONN") ?? MYSQL_CONN);
+        pg = new NpgsqlConnection(Environment.GetEnvironmentVariable("PG_CONN") ?? PG_CONN);
         mysql.Open();
         pg.Open();
 
@@ -86,7 +87,9 @@ static class Migration
         // Faz 29: ürün videosu + yorum/puan aktarımı (mishar). args[1]=="dry" → yalnız rapor.
         if (phase == 29) await Phase29_VideosAndReviews(args.Length > 1 && args[1] == "dry");
 
-        if (phase is 26 or 27 or 28 or 29) { Log($"=== Faz {phase} bitti ==="); return; }
+        // Faz 30: Müşteri İlişkileri (cm_crm*) aktarımı — personel→IAM, kayıt, işlem, okundu, bildirim. args[1]=="dry" → yalnız rapor.
+        if (phase == 30) await Phase30_CrmTickets(args.Length > 1 && args[1] == "dry");
+        if (phase is 26 or 27 or 28 or 29 or 30) { Log($"=== Faz {phase} bitti ==="); return; }
         Log("=== Migration tamamlandı! ===");
         Log($"  image_sets                  : {PgCount($"{DEF}.image_sets")}");
         Log($"  attribute_types              : {PgCount($"{DEF}.attribute_types")}");
@@ -3772,4 +3775,334 @@ static class Migration
         PgExec("ANALYZE storefront.nav_nodes");
         Log("FAZ 25 tamamlandı.");
     }
+
+    // ═════════════════════════════════════════════════════════════════════════════════════════
+    // FAZ 30 — Müşteri İlişkileri (eski cm_crm*) aktarımı (2026-09-07, plan docs/crm-musteri-iliskileri-plani.md v2 K3)
+    // Kaynak: cm_crm, cm_crm_yapilan_islemler (Gizle=0), cm_crm_kontrol_edenler, cm_bildirim (CRM URL'li), dfpersonel.
+    // Hedef: crm.crm_tickets / _activities / _reads / _notifications / _legacy_staff (+ iam.iam_users: eşleşmeyen eski
+    // personel PASİF kullanıcı olarak açılır, rastgele şifre, MustChangePassword). Kimlikler DETERMİNİSTİK (legacy id'den
+    // türetilir) → tekrar çalıştırılabilir: LegacyId'li satırlar silinip yeniden yazılır (ID korunur).
+    // Görsel: eski /upload/Images/cm_crm/* img etiketleri gövdeden çıkarılıp Attachments'a (/media/crm/legacy/*) alınır
+    // (K5 — dosya kopyası eski sunucu erişimi gelince); CDN ürün tabloları gövdede kalır. Tarihler Europe/Istanbul → UTC.
+    // ═════════════════════════════════════════════════════════════════════════════════════════
+    static readonly TimeZoneInfo TrTz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
+    static DateTime TrToUtc(DateTime t) => TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(t, DateTimeKind.Unspecified), TrTz);
+    static Guid LegacyGuid(int kind, long id) => Guid.Parse($"30000000-0000-0000-{kind:D4}-{id:D12}");
+    static string HtmlToText(string html, int max = 5000)
+    {
+        var s = Regex.Replace(html, @"<(script|style)\b[^>]*>.*?</\1\s*>", " ", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        s = Regex.Replace(s, @"</(p|div|br|li|tr|h[1-6]|td)\s*>|<br\s*/?>", " ", RegexOptions.IgnoreCase);
+        s = Regex.Replace(s, "<[^>]+>", "");
+        s = System.Net.WebUtility.HtmlDecode(s).Replace(' ', ' ');
+        s = Regex.Replace(s, @"\s{2,}", " ").Trim();
+        return s.Length > max ? s[..max] : s;
+    }
+    /// <summary>Eski panel yüklemelerini (/upload/Images/cm_crm/…) gövdeden ayırıp ek listesine alır; diğer img'ler kalır.</summary>
+    static (string Html, List<string> Ekler) CrmGovdeAyikla(string? html)
+    {
+        var ekler = new List<string>();
+        if (string.IsNullOrWhiteSpace(html)) return ("", ekler);
+        var s = Regex.Replace(html, @"<img\b[^>]*src=[""']?(/upload/Images/cm_crm/[^""'\s>]+)[""']?[^>]*>", m =>
+        {
+            var yol = m.Groups[1].Value;
+            ekler.Add("/media/crm/legacy/" + yol.Split('/').Last());
+            return "";
+        }, RegexOptions.IgnoreCase);
+        s = Regex.Replace(s, @"<(script|iframe|object|embed|form)\b[^>]*>.*?</\1\s*>", "", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        s = Regex.Replace(s, @"\s+on[a-z]+\s*=\s*(""[^""]*""|'[^']*'|[^\s>]+)", "", RegexOptions.IgnoreCase);
+        s = Regex.Replace(s, @"(<p>(\s|&nbsp;|<br\s*/?>)*</p>\s*)+$", "", RegexOptions.IgnoreCase); // sondaki boş paragraflar
+        return (s.Trim(), ekler.Distinct().ToList());
+    }
+
+    static async Task Phase30_CrmTickets(bool dryRun)
+    {
+        Log($"=== FAZ 30: Müşteri İlişkileri aktarımı{(dryRun ? " (DRY RUN — yazma yok)" : "")} ===");
+        await Task.CompletedTask;
+
+        // ── hedef sözlükleri ──
+        var statusByLegacy = new Dictionary<int, Guid>(); Guid statusDefault = Guid.Empty;
+        using (var r = PgQuery("SELECT \"Id\",\"LegacyId\",\"IsDefault\" FROM crm.crm_ticket_statuses WHERE NOT \"IsDeleted\""))
+            while (r.Read()) { if (!r.IsDBNull(1)) statusByLegacy[r.GetInt32(1)] = r.GetGuid(0); if (r.GetBoolean(2)) statusDefault = r.GetGuid(0); }
+        var subjectByLegacy = new Dictionary<int, (Guid Id, string Type)>();
+        using (var r = PgQuery("SELECT \"Id\",\"LegacyId\",\"Type\" FROM crm.crm_ticket_subjects WHERE NOT \"IsDeleted\" AND \"LegacyId\" IS NOT NULL"))
+            while (r.Read()) subjectByLegacy[r.GetInt32(1)] = (r.GetGuid(0), r.GetString(2));
+        if (statusByLegacy.Count == 0 || subjectByLegacy.Count == 0) { Log("! Durum/konu seed'i yok — önce API açılışı (seed) çalışmalı."); return; }
+        var memberByLegacy = new Dictionary<int, Guid>();
+        using (var r = PgQuery("SELECT \"Id\",\"LegacyMemberId\" FROM crm.crm_members WHERE NOT \"IsDeleted\" AND \"LegacyMemberId\" IS NOT NULL"))
+            while (r.Read()) memberByLegacy[r.GetInt32(1)] = r.GetGuid(0);
+        var orderByLegacy = new Dictionary<int, (Guid Id, Guid Platform, Guid? Member)>();
+        var orderByNumber = new Dictionary<string, (Guid Id, Guid Platform, Guid? Member)>(StringComparer.OrdinalIgnoreCase);
+        using (var r = PgQuery("SELECT \"Id\",\"FirmPlatformId\",\"MemberId\",\"OrderNumber\",\"LegacyOrderId\" FROM \"order\".ord_orders WHERE NOT \"IsDeleted\""))
+            while (r.Read())
+            {
+                var v = (r.GetGuid(0), r.GetGuid(1), r.IsDBNull(2) ? (Guid?)null : r.GetGuid(2));
+                orderByNumber[r.GetString(3)] = v;
+                if (!r.IsDBNull(4)) orderByLegacy[r.GetInt32(4)] = v;
+            }
+        Log($"  Hedef sözlükler: durum {statusByLegacy.Count}, konu {subjectByLegacy.Count}, legacy üye {memberByLegacy.Count}, sipariş {orderByNumber.Count} (legacy {orderByLegacy.Count})");
+
+        // ── eski personel ──
+        var personel = new Dictionary<int, (string Ad, string Kullanici, string? Eposta, bool Aktif)>();
+        using (var r = MysqlQuery("SELECT Id, TRIM(COALESCE(adi,'')), TRIM(COALESCE(soyadi,'')), TRIM(COALESCE(kullaniciadi,'')), NULLIF(TRIM(COALESCE(epostaAdresi,'')),''), durum FROM dfpersonel"))
+            while (r.Read())
+                personel[r.GetInt32(0)] = ($"{r.GetString(1)} {r.GetString(2)}".Trim(), r.GetString(3), r.IsDBNull(4) ? null : r.GetString(4), r.GetInt32(5) == 1);
+
+        // CRM verisinde geçen personel kimlikleri
+        var kullanilan = new HashSet<int>();
+        using (var r = MysqlQuery("""
+            SELECT OlusturanPersonelID FROM cm_crm UNION SELECT GuncelleyenPersonelID FROM cm_crm
+            UNION SELECT OlusturanPersonelID FROM cm_crm_yapilan_islemler UNION SELECT EtiketlenenPersonelID FROM cm_crm_yapilan_islemler
+            UNION SELECT PersonelID FROM cm_crm_kontrol_edenler
+            UNION SELECT KullaniciID FROM cm_bildirim WHERE URL LIKE '%musteri-iliskileri-yonetimi%'
+            """))
+            while (r.Read()) { if (!r.IsDBNull(0)) { var id = r.GetInt32(0); if (id > 0) kullanilan.Add(id); } }
+        Log($"  Eski personel: {personel.Count} tanımlı, CRM verisinde geçen {kullanilan.Count}");
+
+        // mevcut eşleme + IAM kullanıcıları
+        var staff = new Dictionary<int, (Guid? UserId, string Name)>();
+        using (var r = PgQuery("SELECT \"LegacyId\",\"UserId\",\"Name\" FROM crm.crm_ticket_legacy_staff WHERE NOT \"IsDeleted\""))
+            while (r.Read()) staff[r.GetInt32(0)] = (r.IsDBNull(1) ? null : r.GetGuid(1), r.GetString(2));
+        var iamByUser = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        var iamByMail = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        using (var r = PgQuery("SELECT \"Id\",\"Username\",\"Email\" FROM iam.iam_users WHERE NOT \"IsDeleted\""))
+            while (r.Read()) { iamByUser[r.GetString(1)] = r.GetGuid(0); iamByMail[r.GetString(2)] = r.GetGuid(0); }
+
+        int staffMevcut = 0, staffEslesti = 0, staffYeni = 0, staffAdsiz = 0;
+        var yeniIam = new List<(Guid Id, string User, string Mail, string First, string Last)>();
+        var yeniStaff = new List<(int Legacy, Guid? UserId, string Name, string User)>();
+        foreach (var id in kullanilan.OrderBy(x => x))
+        {
+            if (staff.TryGetValue(id, out var m) && m.UserId != null) { staffMevcut++; continue; }
+            if (!personel.TryGetValue(id, out var p))
+            {
+                // dfpersonel'de tanımı kalmamış (silinmiş) personel: IAM kullanıcısı AÇILMAZ; ad anlık görüntü, okundu/bildirimi atlanır
+                staffAdsiz++; yeniStaff.Add((id, null, $"Eski personel #{id}", "")); staff[id] = (null, $"Eski personel #{id}"); continue;
+            }
+            Guid? uid = null;
+            if (p.Kullanici.Length > 0 && iamByUser.TryGetValue(p.Kullanici, out var u1)) { uid = u1; staffEslesti++; }
+            else if (p.Eposta != null && iamByMail.TryGetValue(p.Eposta, out var u2)) { uid = u2; staffEslesti++; }
+            else
+            {
+                var newId = LegacyGuid(9, id);
+                var user = p.Kullanici.Length > 0 ? p.Kullanici : $"eski-personel-{id}";
+                if (iamByUser.ContainsKey(user)) user = $"{user}-{id}";
+                var mail = p.Eposta != null && !iamByMail.ContainsKey(p.Eposta) ? p.Eposta : $"eski-personel-{id}@eski.local";
+                var parts = p.Ad.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var first = parts.Length > 0 ? string.Join(' ', parts[..^1]).Trim() : "Eski"; if (first.Length == 0) first = parts.Length > 0 ? parts[0] : "Eski";
+                var last = parts.Length > 1 ? parts[^1] : (parts.Length == 1 ? "" : "Personel");
+                yeniIam.Add((newId, user, mail, first, last)); iamByUser[user] = newId; iamByMail[mail] = newId;
+                uid = newId; staffYeni++;
+            }
+            yeniStaff.Add((id, uid, p.Ad, p.Kullanici));
+            staff[id] = (uid, p.Ad);
+        }
+        Log($"  Personel eşleme: mevcut {staffMevcut}, IAM'de bulundu {staffEslesti}, yeni PASİF IAM kullanıcısı {staffYeni} (tanımsız {staffAdsiz})");
+
+        // ── kayıtlar ──
+        var tickets = new List<(int CrmId, long TakipNo, int TurId, int KonuId, int DurumId, string ArayanAd, string ArayanTel, int MusteriId, string MusteriAd, string MusteriTel,
+            string SiparisId, int Olusturan, DateTime OlusturmaUtc, int Guncelleyen, DateTime? GuncellemeUtc, string Html, bool Gizle)>();
+        using (var r = MysqlQuery("""
+            SELECT CRMID, COALESCE(TakipNo,0), COALESCE(TurID,1), COALESCE(KonuBasligiID,0), COALESCE(DurumID,1),
+                   COALESCE(ArayanAdSoyad,''), COALESCE(ArayanTelefon,''), MusteriID, COALESCE(MusteriAdSoyad,''), COALESCE(MusteriTelefon,''),
+                   COALESCE(SiparisID,''), COALESCE(OlusturanPersonelID,0), OlusturmaTarihi, COALESCE(GuncelleyenPersonelID,0), GuncellemeTarihi,
+                   COALESCE(IcerikFull, Icerik, ''), COALESCE(Gizle,0)
+              FROM cm_crm ORDER BY CRMID
+            """))
+            while (r.Read())
+                tickets.Add((r.GetInt32(0), r.GetInt64(1), r.GetInt32(2), r.GetInt32(3), r.GetInt32(4), r.GetString(5), r.GetString(6), r.GetInt32(7), r.GetString(8), r.GetString(9),
+                    r.GetString(10), r.GetInt32(11), TrToUtc(r.GetDateTime(12)), r.GetInt32(13), r.IsDBNull(14) ? null : TrToUtc(r.GetDateTime(14)), r.GetString(15), r.GetInt32(16) == 1));
+        Log($"  cm_crm: {tickets.Count} kayıt");
+
+        // ── işlemler (Gizle=0) ──
+        var acts = new List<(int Id, int CrmId, string Html, int Personel, DateTime Utc, int DurumId, int OncekiDurum, int Etiket)>();
+        using (var r = MysqlQuery("""
+            SELECT YapilanIslemID, CRMID, COALESCE(IcerikFull, Icerik, ''), COALESCE(OlusturanPersonelID,0), OlusturmaTarihi,
+                   COALESCE(DurumID,0), COALESCE(DurumDegisikligi,0), COALESCE(EtiketlenenPersonelID,0)
+              FROM cm_crm_yapilan_islemler WHERE COALESCE(Gizle,0)=0 ORDER BY CRMID, YapilanIslemID
+            """))
+            while (r.Read()) acts.Add((r.GetInt32(0), r.GetInt32(1), r.GetString(2), r.GetInt32(3), TrToUtc(r.GetDateTime(4)), r.GetInt32(5), r.GetInt32(6), r.GetInt32(7)));
+        var actIds = acts.Select(a => a.Id).ToHashSet();
+        Log($"  işlem: {acts.Count}");
+
+        // ── okundu ──
+        var reads = new List<(int Id, int CrmId, int IslemId, int Personel, DateTime Utc)>();
+        using (var r = MysqlQuery("SELECT KontrolEdenlerID, CRMID, YapilanIslemID, PersonelID, Tarih FROM cm_crm_kontrol_edenler ORDER BY KontrolEdenlerID"))
+            while (r.Read()) reads.Add((r.GetInt32(0), r.GetInt32(1), r.GetInt32(2), r.GetInt32(3), TrToUtc(r.GetDateTime(4))));
+        var readsEsli = reads.Where(x => actIds.Contains(x.IslemId)).GroupBy(x => (x.IslemId, x.Personel)).Select(g => g.OrderBy(x => x.Utc).First()).ToList();
+        Log($"  okundu: {reads.Count} (işleme bağlı ve tekil {readsEsli.Count}; açılış satırına bağlı olanlar atlanır)");
+
+        // ── bildirimler (CRM URL'li) ──
+        var notes = new List<(int Id, int Kullanici, long TakipNo, string Icerik, DateTime Utc, DateTime? Gorulme, DateTime? Acilma)>();
+        using (var r = MysqlQuery("""
+            SELECT BildirimID, KullaniciID, CAST(SUBSTRING_INDEX(URL,'/',-1) AS UNSIGNED), COALESCE(Icerik,''), OlusturmaTarihi,
+                   IF(Goruldu=2, COALESCE(GorulmeTarihi, OlusturmaTarihi), NULL), IF(Acildi=2, COALESCE(AcilmaTarihi, GorulmeTarihi, OlusturmaTarihi), NULL)
+              FROM cm_bildirim WHERE URL LIKE '%musteri-iliskileri-yonetimi/%' ORDER BY BildirimID
+            """))
+            while (r.Read()) notes.Add((r.GetInt32(0), r.GetInt32(1), r.GetInt64(2), r.GetString(3), TrToUtc(r.GetDateTime(4)),
+                r.IsDBNull(5) ? null : TrToUtc(r.GetDateTime(5)), r.IsDBNull(6) ? null : TrToUtc(r.GetDateTime(6))));
+        Log($"  bildirim (CRM): {notes.Count}");
+
+        // ── dönüşüm ──
+        var takipKullanilan = new HashSet<long>();
+        using (var r = PgQuery("SELECT \"TrackingNo\" FROM crm.crm_tickets WHERE \"LegacyId\" IS NULL")) while (r.Read()) takipKullanilan.Add(r.GetInt64(0));
+        var ticketIdByCrm = new Dictionary<int, Guid>(); var takipByCrm = new Dictionary<int, long>(); var ticketIdByTakip = new Dictionary<long, Guid>();
+        int siparisBagli = 0, uyeBagli = 0, konuYok = 0, takipUretildi = 0, govdeEk = 0;
+        var subjectFallback = subjectByLegacy.Values.First().Id; // konu 0/bilinmeyen → ilk konu (eski veride nadir); raporda sayılır
+        var actByCrm = acts.GroupBy(a => a.CrmId).ToDictionary(g => g.Key, g => g.ToList());
+        var ticketRows = new List<object?[]>();
+        foreach (var t in tickets)
+        {
+            var id = LegacyGuid(1, t.CrmId); ticketIdByCrm[t.CrmId] = id;
+            var takip = t.TakipNo;
+            if (takip < 1000000000) { takip = new DateTimeOffset(t.OlusturmaUtc).ToUnixTimeSeconds() + t.CrmId; takipUretildi++; }
+            while (!takipKullanilan.Add(takip)) takip++;
+            takipByCrm[t.CrmId] = takip; ticketIdByTakip[takip] = id;
+            if (!subjectByLegacy.TryGetValue(t.KonuId, out var subj)) { subj = (subjectFallback, t.TurId == 1 ? "complaint" : "request"); konuYok++; }
+            var type = t.KonuId != 0 && subjectByLegacy.ContainsKey(t.KonuId) ? subj.Type : (t.TurId == 1 ? "complaint" : "request");
+            var status = statusByLegacy.TryGetValue(t.DurumId, out var st) ? st : statusDefault;
+            Guid? memberId = t.MusteriId > 0 && memberByLegacy.TryGetValue(t.MusteriId, out var mid) ? mid : null;
+            var sip = t.SiparisId.Trim(); if (sip == "0") sip = "";
+            Guid? orderId = null, platformId = null;
+            if (sip.Length > 0)
+            {
+                if (orderByNumber.TryGetValue(sip, out var o) || (int.TryParse(sip, out var lid) && orderByLegacy.TryGetValue(lid, out o)))
+                { orderId = o.Id; platformId = o.Platform; memberId ??= o.Member; siparisBagli++; }
+            }
+            if (memberId != null) uyeBagli++;
+            var (html, ekler) = CrmGovdeAyikla(t.Html); if (ekler.Count > 0) govdeEk++;
+            var olusturan = staff.TryGetValue(t.Olusturan, out var ol) ? ol : (null, t.Olusturan > 0 ? $"Eski personel #{t.Olusturan}" : "Sistem");
+            var guncelleyen = t.Guncelleyen > 0 && staff.TryGetValue(t.Guncelleyen, out var gu) ? gu : (null, null);
+            var crmActs = actByCrm.GetValueOrDefault(t.CrmId) ?? [];
+            var last = crmActs.Count > 0 ? crmActs.MaxBy(a => a.Utc) : default;
+            ticketRows.Add([id, takip, type, subj.Id, status, memberId, t.MusteriId > 0 ? t.MusteriId : null, Kisalt(t.MusteriAd, 255), Telefon10(t.MusteriTel), Kisalt(t.ArayanAd, 255), Telefon10(t.ArayanTel),
+                orderId, sip.Length > 0 ? Kisalt(sip, 50) : null, platformId, html, HtmlToText(html), JsonSerializer.Serialize(ekler),
+                olusturan.Item1, Kisalt(olusturan.Item2 ?? "", 150), guncelleyen.Item1, guncelleyen.Item2 == null ? null : Kisalt(guncelleyen.Item2, 150),
+                crmActs.Count > 0 ? last.Utc : t.OlusturmaUtc, crmActs.Count > 0 ? LegacyGuid(2, last.Id) : null, crmActs.Count, t.Gizle, t.CrmId, t.OlusturmaUtc, t.GuncellemeUtc]);
+        }
+        Log($"  Kayıt dönüşümü: sipariş bağlı {siparisBagli}, üye bağlı {uyeBagli}, konu eşleşmeyen {konuYok}, takip no üretilen {takipUretildi}, gövdeden ek ayrılan {govdeEk}");
+
+        var actRows = new List<object?[]>(); int actEk = 0;
+        foreach (var a in acts)
+        {
+            if (!ticketIdByCrm.TryGetValue(a.CrmId, out var tid)) continue;
+            var (html, ekler) = CrmGovdeAyikla(a.Html); if (ekler.Count > 0) actEk++;
+            var st = statusByLegacy.TryGetValue(a.DurumId, out var s1) ? s1 : statusDefault;
+            Guid? prev = a.OncekiDurum != 0 && statusByLegacy.TryGetValue(a.OncekiDurum, out var s2) && s2 != st ? s2 : null;
+            var user = staff.TryGetValue(a.Personel, out var u) ? u : (null, a.Personel > 0 ? $"Eski personel #{a.Personel}" : "Sistem");
+            var tag = a.Etiket > 0 && staff.TryGetValue(a.Etiket, out var tg) ? tg : (null, null);
+            actRows.Add([LegacyGuid(2, a.Id), tid, html, HtmlToText(html), JsonSerializer.Serialize(ekler), user.Item1, Kisalt(user.Item2 ?? "", 150), st, prev, tag.Item1, tag.Item2 == null ? null : Kisalt(tag.Item2, 150), a.Id, a.Utc]);
+        }
+        var readRows = new List<object?[]>();
+        foreach (var x in readsEsli)
+        {
+            if (!ticketIdByCrm.TryGetValue(x.CrmId, out var tid) || !staff.TryGetValue(x.Personel, out var u) || u.UserId == null) continue;
+            readRows.Add([LegacyGuid(3, x.Id), tid, LegacyGuid(2, x.IslemId), u.UserId, Kisalt(u.Name, 150), x.Id, x.Utc]);
+        }
+        var noteRows = new List<object?[]>(); int noteKayitYok = 0;
+        foreach (var n in notes)
+        {
+            if (!ticketIdByTakip.TryGetValue(n.TakipNo, out var tid)) { noteKayitYok++; continue; }
+            if (!staff.TryGetValue(n.Kullanici, out var u) || u.UserId == null) continue;
+            var kind = n.Icerik.Contains("Etiketlendiniz") ? "tagged" : n.Icerik.Contains("Etiketlendiğiniz") ? "tagged_followup" : n.Icerik.Contains("Oluşturduğunuz") ? "created_by" : "participant";
+            noteRows.Add([LegacyGuid(4, n.Id), u.UserId, tid, n.TakipNo, null, kind, Kisalt(n.Icerik.Trim(), 500), n.Gorulme, n.Acilma, n.Id, n.Utc]);
+        }
+        Log($"  Hazır: kayıt {ticketRows.Count}, işlem {actRows.Count} (ek ayrılan {actEk}), okundu {readRows.Count}, bildirim {noteRows.Count} (kaydı bulunmayan {noteKayitYok})");
+        if (dryRun) { Log("  DRY RUN: yazılmadı."); return; }
+
+        // ── yazım (LegacyId'li satırlar silinip yeniden; ID deterministik → korunur) ──
+        using (var tx = pg.BeginTransaction())
+        {
+            foreach (var (id, user, mail, first, last) in yeniIam)
+                PgExec("""
+                    INSERT INTO iam.iam_users ("Id","Username","Email","PasswordHash","FirstName","LastName","Department","IsActive","MustChangePassword","Preferences","CreatedAt","CreatedBy","IsDeleted")
+                    VALUES (@id,@u,@m,@ph,@f,@l,'Eski personel (aktarım)',false,true,'{}'::jsonb,@now,@by,false)
+                    ON CONFLICT ("Id") DO NOTHING
+                    """, ("id", id), ("u", user), ("m", mail), ("ph", BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N"))),
+                    ("f", Kisalt(first, 100)), ("l", Kisalt(last.Length == 0 ? "-" : last, 100)), ("now", Now), ("by", LegacyGuid(9, 0)));
+            foreach (var (legacy, uid, name, user) in yeniStaff)
+                PgExec("""
+                    INSERT INTO crm.crm_ticket_legacy_staff ("Id","LegacyId","Name","Username","UserId","CreatedAt","IsDeleted")
+                    VALUES (@id,@l,@n,@u,@uid,@now,false)
+                    ON CONFLICT ("LegacyId") DO UPDATE SET "UserId"=EXCLUDED."UserId", "Name"=EXCLUDED."Name", "Username"=EXCLUDED."Username", "UpdatedAt"=now()
+                    """, ("id", LegacyGuid(8, legacy)), ("l", legacy), ("n", Kisalt(name, 150)), ("u", user.Length == 0 ? null : Kisalt(user, 100)), ("uid", uid), ("now", Now));
+            PgExec("DELETE FROM crm.crm_ticket_notifications WHERE \"LegacyId\" IS NOT NULL");
+            PgExec("DELETE FROM crm.crm_ticket_reads WHERE \"LegacyId\" IS NOT NULL");
+            PgExec("DELETE FROM crm.crm_ticket_activities WHERE \"LegacyId\" IS NOT NULL");
+            PgExec("DELETE FROM crm.crm_tickets WHERE \"LegacyId\" IS NOT NULL");
+
+            using (var w = pg.BeginBinaryImport("""
+                COPY crm.crm_tickets ("Id","TrackingNo","Type","SubjectId","StatusId","MemberId","LegacyMemberId","CustomerName","CustomerPhone","CallerName","CallerPhone",
+                  "OrderId","OrderNumber","FirmPlatformId","BodyHtml","BodyText","Attachments","CreatedByUserId","CreatedByName","UpdatedByUserId","UpdatedByName",
+                  "LastActivityAt","LastActivityId","ActivityCount","IsHidden","LegacyId","CreatedAt","UpdatedAt","IsDeleted") FROM STDIN (FORMAT BINARY)
+                """))
+            {
+                foreach (var r in ticketRows)
+                {
+                    w.StartRow();
+                    w.Write((Guid)r[0]!); w.Write((long)r[1]!); w.Write((string)r[2]!); w.Write((Guid)r[3]!); w.Write((Guid)r[4]!);
+                    WriteN(w, r[5]); WriteN(w, r[6]); w.Write((string)r[7]!); w.Write((string)r[8]!); w.Write((string)r[9]!); w.Write((string)r[10]!);
+                    WriteN(w, r[11]); WriteN(w, r[12]); WriteN(w, r[13]); w.Write((string)r[14]!); w.Write((string)r[15]!); w.Write((string)r[16]!, NpgsqlTypes.NpgsqlDbType.Jsonb);
+                    WriteN(w, r[17]); w.Write((string)r[18]!); WriteN(w, r[19]); WriteN(w, r[20]);
+                    w.Write((DateTime)r[21]!, NpgsqlTypes.NpgsqlDbType.TimestampTz); WriteN(w, r[22]); w.Write((int)r[23]!); w.Write((bool)r[24]!); w.Write((int)r[25]!);
+                    w.Write((DateTime)r[26]!, NpgsqlTypes.NpgsqlDbType.TimestampTz); WriteN(w, r[27], NpgsqlTypes.NpgsqlDbType.TimestampTz); w.Write(false);
+                }
+                w.Complete();
+            }
+            using (var w = pg.BeginBinaryImport("""
+                COPY crm.crm_ticket_activities ("Id","TicketId","BodyHtml","BodyText","Attachments","UserId","UserName","StatusId","PreviousStatusId","TaggedUserId","TaggedUserName","LegacyId","CreatedAt","IsDeleted") FROM STDIN (FORMAT BINARY)
+                """))
+            {
+                foreach (var r in actRows)
+                {
+                    w.StartRow();
+                    w.Write((Guid)r[0]!); w.Write((Guid)r[1]!); w.Write((string)r[2]!); w.Write((string)r[3]!); w.Write((string)r[4]!, NpgsqlTypes.NpgsqlDbType.Jsonb);
+                    WriteN(w, r[5]); w.Write((string)r[6]!); w.Write((Guid)r[7]!); WriteN(w, r[8]); WriteN(w, r[9]); WriteN(w, r[10]); w.Write((int)r[11]!);
+                    w.Write((DateTime)r[12]!, NpgsqlTypes.NpgsqlDbType.TimestampTz); w.Write(false);
+                }
+                w.Complete();
+            }
+            using (var w = pg.BeginBinaryImport("""
+                COPY crm.crm_ticket_reads ("Id","TicketId","ActivityId","UserId","UserName","LegacyId","CreatedAt","IsDeleted") FROM STDIN (FORMAT BINARY)
+                """))
+            {
+                foreach (var r in readRows)
+                {
+                    w.StartRow();
+                    w.Write((Guid)r[0]!); w.Write((Guid)r[1]!); w.Write((Guid)r[2]!); w.Write((Guid)r[3]!); w.Write((string)r[4]!); w.Write((int)r[5]!);
+                    w.Write((DateTime)r[6]!, NpgsqlTypes.NpgsqlDbType.TimestampTz); w.Write(false);
+                }
+                w.Complete();
+            }
+            using (var w = pg.BeginBinaryImport("""
+                COPY crm.crm_ticket_notifications ("Id","UserId","TicketId","TrackingNo","ActivityId","Kind","Message","SeenAt","OpenedAt","LegacyId","CreatedAt","IsDeleted") FROM STDIN (FORMAT BINARY)
+                """))
+            {
+                foreach (var r in noteRows)
+                {
+                    w.StartRow();
+                    w.Write((Guid)r[0]!); w.Write((Guid)r[1]!); w.Write((Guid)r[2]!); w.Write((long)r[3]!); WriteN(w, r[4]); w.Write((string)r[5]!); w.Write((string)r[6]!);
+                    WriteN(w, r[7], NpgsqlTypes.NpgsqlDbType.TimestampTz); WriteN(w, r[8], NpgsqlTypes.NpgsqlDbType.TimestampTz); w.Write((int)r[9]!);
+                    w.Write((DateTime)r[10]!, NpgsqlTypes.NpgsqlDbType.TimestampTz); w.Write(false);
+                }
+                w.Complete();
+            }
+            tx.Commit();
+        }
+        PgExec("ANALYZE crm.crm_tickets; ANALYZE crm.crm_ticket_activities; ANALYZE crm.crm_ticket_reads; ANALYZE crm.crm_ticket_notifications;");
+        Log($"  YAZILDI: IAM yeni {yeniIam.Count}, personel eşleme {yeniStaff.Count}, kayıt {ticketRows.Count}, işlem {actRows.Count}, okundu {readRows.Count}, bildirim {noteRows.Count}");
+        Log("  Eski işlem görselleri /media/crm/legacy/* olarak ek listesinde — dosyalar eski sunucudan (wwwroot/upload/Images/cm_crm) kopyalanmalı.");
+    }
+    static NpgsqlDataReader PgQuery(string sql)
+    {
+        var cmd = new NpgsqlCommand(sql, pg) { CommandTimeout = 600 };
+        return cmd.ExecuteReader();
+    }
+    static string Kisalt(string s, int n) => s.Length > n ? s[..n] : s;
+    static string Telefon10(string s) { var d = new string(s.Where(char.IsDigit).ToArray()); return d.Length > 10 ? d[^10..] : d; }
+    static void WriteN(NpgsqlBinaryImporter w, object? v, NpgsqlTypes.NpgsqlDbType? t = null)
+    {
+        if (v is null) { w.WriteNull(); return; }
+        if (t is { } tt) w.Write(v, tt); else w.Write(v);
+    }
+
 }

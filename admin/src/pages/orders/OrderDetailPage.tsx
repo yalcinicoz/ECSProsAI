@@ -19,6 +19,7 @@ import {
   INVOICE_SOURCE_MAP,
 } from './orderConstants'
 import { OrderPackagesSection } from './OrderPackagesSection'
+import { TicketsSection } from '@/pages/crm/tickets/TicketsSection'
 
 interface OrderItem {
   id: string
@@ -625,6 +626,8 @@ export function OrderDetailPage() {
             orderStatus={order.status}
             cargoIntegrations={cargoIntegrations}
           />
+
+          <TicketsSection orderId={order.id} orderNumber={order.orderNumber} />
 
           <Section title="Kargo">
             {shipments.length === 0 && (

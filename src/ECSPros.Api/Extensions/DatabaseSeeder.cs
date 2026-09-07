@@ -1152,6 +1152,69 @@ public static class DatabaseSeeder
             await db.SaveChangesAsync();
             Console.WriteLine("✓ Seed: varsayılan üye grubu (standart) oluşturuldu.");
         }
+        await SeedCrmTicketDefaultsAsync(db);
+    }
+
+    /// <summary>
+    /// Müşteri İlişkileri: 6 durum + 22 konu başlığı (eski cm_crm_durum / cm_crm_konu_basliklari(_alanlar), K6 aynen).
+    /// İdempotent: LegacyId/Code varsa dokunmaz (panelden düzenlenen ad/alan korunur).
+    /// </summary>
+    private static async Task SeedCrmTicketDefaultsAsync(ECSPros.Crm.Infrastructure.Persistence.CrmDbContext db)
+    {
+        var mevcutDurum = await db.TicketStatuses.IgnoreQueryFilters().Select(s => s.Code).ToListAsync();
+        var durumlar = new (string Code, string Name, string Color, int Sort, bool Hidden, bool Resolved, bool Exempt, bool Default, int Legacy)[]
+        {
+            ("beklemede", "Beklemede", "#ef4444", 1, false, false, false, true, 1),
+            ("ilgili_birimde", "İlgili Birimde", "#f59e0b", 2, false, false, false, false, 2),
+            ("cozulemedi", "Çözülemedi", "#6b7280", 3, true, false, false, false, 3),   // gizli: yanlış açılan kayıtlar (K6)
+            ("cozuldu", "Çözüldü", "#22c55e", 4, false, true, false, false, 4),
+            ("hatali_kayit", "Hatalı Kayıt", "#94a3b8", 5, false, false, true, false, 5),
+            ("tazmin_surecinde", "Tazmin Sürecinde", "#06b6d4", 6, false, false, false, false, 6),
+        };
+        int d = 0;
+        foreach (var x in durumlar.Where(x => !mevcutDurum.Contains(x.Code)))
+        {
+            db.TicketStatuses.Add(new ECSPros.Crm.Domain.Entities.TicketStatus { Code = x.Code, Name = x.Name, Color = x.Color, SortOrder = x.Sort,
+                IsHidden = x.Hidden, IsResolved = x.Resolved, ExemptFromDuplicateCheck = x.Exempt, IsDefault = x.Default, LegacyId = x.Legacy });
+            d++;
+        }
+        // konular: (legacyId, ad, tür, sıra, zorunlu alanlar) — eski konu→alan matrisi: hepsinde içerik+arayan; Resim yalnız
+        // 1,2,3,5,14,18; SiparişID 17 ve 19 hariç; 15 ve 19'da arayan bilgisi yok
+        string[] tam = ["orderNumber", "callerName", "callerPhone", "body"];
+        string[] resimli = ["orderNumber", "callerName", "callerPhone", "body", "image"];
+        var konular = new (int Legacy, string Name, string Type, int Sort, string[] Fields)[]
+        {
+            (3, "Eksik Aksesuar - İkili Takım Eksiklikleri", "complaint", 4, resimli),
+            (2, "Eksik Ürün", "complaint", 5, resimli),
+            (1, "Çapraz Kargo", "complaint", 6, resimli),
+            (4, "Ürün İadesi Girilmemiş Müşteriler", "complaint", 13, tam),
+            (5, "Ürün İadesi Hatalı Girilenler", "complaint", 14, resimli),
+            (14, "Hasarlı ve Kayıp Kargo Tutanak İşlemleri", "complaint", 16, resimli),
+            (17, "Müşteri Temsilcisi Şikayet / Teşekkür", "complaint", 18, ["callerName", "callerPhone", "body"]),
+            (20, "Kargo Personeli Şikayeti", "complaint", 21, tam),
+            (13, "Sipariş Aciliyet", "request", 1, tam),
+            (11, "Dekont Talebi", "request", 2, tam),
+            (12, "Kredi Kartı ve Bakiye Ödemeleri", "request", 3, tam),
+            (6, "Kargo Teslimatı", "request", 7, tam),
+            (7, "Kargo Geri Çekim", "request", 8, tam),
+            (8, "Adres Değişikliği", "request", 9, tam),
+            (9, "Alıcı İsim Değişikliği", "request", 10, tam),
+            (10, "Kargo Fiyat Güncelleme", "request", 11, tam),
+            (16, "Kargo Bekletme", "request", 12, tam),
+            (22, "Sipariş Kontrollü Çıkış", "request", 15, tam),
+            (15, "Kargo Operasyon", "request", 17, ["orderNumber", "body"]),
+            (18, "İadesi Kabul Edilmeyen Ürünler", "request", 19, resimli),
+            (19, "Kargo Firma Değişikliği", "request", 20, ["body"]),
+            (21, "Kargo Kurye Talebi", "request", 22, tam),
+        };
+        var mevcutKonu = await db.TicketSubjects.IgnoreQueryFilters().Where(s => s.LegacyId != null).Select(s => s.LegacyId!.Value).ToListAsync();
+        int k = 0;
+        foreach (var x in konular.Where(x => !mevcutKonu.Contains(x.Legacy)))
+        {
+            db.TicketSubjects.Add(new ECSPros.Crm.Domain.Entities.TicketSubject { Name = x.Name, Type = x.Type, SortOrder = x.Sort, IsActive = true, RequiredFields = x.Fields.ToList(), LegacyId = x.Legacy });
+            k++;
+        }
+        if (d + k > 0) { await db.SaveChangesAsync(); Console.WriteLine($"✓ Seed: Müşteri İlişkileri — {d} durum, {k} konu başlığı."); }
     }
 
     /// <summary>
