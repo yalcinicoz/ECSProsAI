@@ -1,5 +1,16 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**GİYİM GRUPLARINA "ORTAM" ÖZELLİĞİ — SEED (2026-09-07):**
+Mevcut `ortam` özellik tipi (Sort=430, filtrede; önceden yalnız 7 ayakkabı grubunda, ERP'den gelen 23 serbest değerli)
+`DatabaseSeeder.SeedProductGroupAttributesAsync` içindeki `Cloth()` tabanına eklendi (sort 105) → 39 giyim grubuna daha
+atandı (toplam 46 grup). Yeni `SeedOrtamValuesAsync` kanonik havuzu kurar: Günlük, Spor, Abiye, Tesettür, Gece,
+Düğün/Nikah, Kokteyl, Mezuniyet/Balo, Parti, İş/Ofis, Plaj, Ev (tr+en, 10'ar sıra). Eşleşme tr-TR harf duyarsız:
+`TESETTÜR`→`Tesettür` gibi mevcutlar yerinde düzeltildi (6 düzeltme, 6 yeni); eski ERP değerleri (Casual/Günlük,
+Beachwear…) 1.569 ürün özelliğine bağlı olduğu için SİLİNMEDİ — kanoniklere birleştirme panelden yapılır.
+İzole 5051 açılışında seed doğrulandı ve ortak DB'ye uygulandı; `publish`, `publish-demo`, `publish-staging`
+aynı binary ile eşitlendi. ⚠️ `sudo systemctl restart ecspros` (+ staging/demo) kullanıcıda — veri zaten DB'de,
+restart yalnız binary'yi eşitler; demo DB'si (ecommerce_demo) seed'i kendi restart'ında alır.
+
 **GITHUB ÇİFT YÖNLÜ EŞİTLEME — YEREL ÇALIŞMALAR KORUNDU (2026-09-06):**
 Kullanıcının açık al/gönder talebiyle 13 dosyadaki yerel admin, ERP tedarikçi/ürün grubu, seed ve dokümantasyon
 çalışmaları önce `b4a31592` commit'iyle korundu. Başlangıçta untracked çalışma yoktu; gitignored
@@ -39,7 +50,7 @@ Nginx config/restart, API, veritabanı, `.59` veya GitHub üzerinde değişiklik
 
 > **Kural:** Her session bu dosyadan başla, bu dosyayla bitir.
 > Bir faz tamamlanmadan bir sonrakine geçme.
-> Son güncelleme: 2026-09-06
+> Son güncelleme: 2026-09-07
 
 ---
 

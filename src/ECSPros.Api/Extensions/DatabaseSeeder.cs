@@ -1626,6 +1626,7 @@ public static class DatabaseSeeder
         // Demografik attribute değerleri
         await SeedCinsiyetValuesAsync(context);
         await SeedYasGrubuValuesAsync(context);
+        await SeedOrtamValuesAsync(context);
         await SeedErpSourceAttributeValuesAsync(context);
 
         // Var/Yok tipi ikili özelliklerin değerleri
@@ -2367,7 +2368,7 @@ public static class DatabaseSeeder
             subAdded++;
         }
 
-        // Giyim: renk (V,P) + beden (V) + material + cinsiyet + season + esneklik + ekstralar
+        // Giyim: renk (V,P) + beden (V) + material + cinsiyet + season + esneklik + ortam + ekstralar
         // + ürün boyu (beden eksenine bağlı ölçü sub-attribute'ü — hemen hemen tüm giyimde geçerli)
         // astar_durumu/boy/fermuar/kumas_turu/yas_grubu: 2026-07-02 legacy veri analizinde neredeyse
         // tüm giyim gruplarında gerçek değer bulunduğu görüldü (bkz. project_phase13_product_attribute_values_2026-07-02),
@@ -2386,6 +2387,9 @@ public static class DatabaseSeeder
             Attr(g, "fermuar",      false, false, false, 102);
             Attr(g, "kumas_turu",   false, false, false, 103);
             Attr(g, "yas_grubu",    false, false, false, 104);
+            // Ortam (2026-09-07): Abiye / Tesettür / Spor / Günlük ... — tüm giyim gruplarında ortak
+            // (ayakkabıda zaten grup-bazlı ekstra olarak var; değer havuzu SeedOrtamValuesAsync)
+            Attr(g, "ortam",        false, false, false, 105);
             int s = 7;
             foreach (var e in extras) Attr(g, e, false, false, false, s++);
             Sub(g, "beden", "urun_boyu", false, 50);
@@ -2856,6 +2860,69 @@ public static class DatabaseSeeder
         }
         if (added > 0) await db.SaveChangesAsync();
         Console.WriteLine($"✓ Seed: Yaş grubu değerleri — {added} yeni eklendi.");
+    }
+
+    /// <summary>
+    /// Ortam (ortam, SEÇİM, filtrede) kanonik değer havuzu — 2026-09-07 kullanıcı talebi: giyim gruplarına
+    /// Ortam özelliği (Abiye, Tesettür, Spor ...). Tip zaten SeedAttributeTypesAsync'te (Sort=430) ve ERP
+    /// aktarımından gelen serbest değerler (Casual/Günlük, Beachwear, TESETTÜR ...) ürünlere bağlı olduğundan
+    /// SİLİNMEZ. Eşleşme tr adıyla büyük/küçük harf duyarsız (tr-TR): eşleşen eski değerin adı kanonik
+    /// yazıma çekilir (TESETTÜR → Tesettür), en adı ve sıra boşsa doldurulur; eşleşmeyen kanonik değer eklenir.
+    /// Kalan eski değerlerin kanoniklere birleştirilmesi panelden (değer birleştirme) yapılır.
+    /// </summary>
+    private static async Task SeedOrtamValuesAsync(CatalogDbContext db)
+    {
+        var attrType = await db.AttributeTypes.FirstOrDefaultAsync(a => a.Code == "ortam");
+        if (attrType is null) return;
+
+        var canonical = new (string Tr, string En, int Sort)[]
+        {
+            ("Günlük",         "Casual",          10),
+            ("Spor",           "Sport",           20),
+            ("Abiye",          "Evening Wear",    30),
+            ("Tesettür",       "Modest Wear",     40),
+            ("Gece",           "Night Out",       50),
+            ("Düğün/Nikah",    "Wedding",         60),
+            ("Kokteyl",        "Cocktail",        70),
+            ("Mezuniyet/Balo", "Prom/Graduation", 80),
+            ("Parti",          "Party",           90),
+            ("İş/Ofis",        "Business/Office", 100),
+            ("Plaj",           "Beach",           110),
+            ("Ev",             "Homewear",        120),
+        };
+
+        var tr = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
+        var existing = await db.AttributeValues
+            .Where(v => v.AttributeTypeId == attrType.Id)
+            .ToListAsync();
+        var byName = new Dictionary<string, AttributeValue>(StringComparer.Create(tr, ignoreCase: true));
+        foreach (var v in existing)
+            if (v.NameI18n.TryGetValue("tr", out var n) && !string.IsNullOrWhiteSpace(n) && !byName.ContainsKey(n.Trim()))
+                byName[n.Trim()] = v;
+
+        int added = 0, fixedUp = 0;
+        foreach (var (name, en, sort) in canonical)
+        {
+            if (byName.TryGetValue(name, out var v))
+            {
+                bool changed = false;
+                if (v.NameI18n["tr"] != name) { v.NameI18n = new Dictionary<string, string>(v.NameI18n) { ["tr"] = name }; changed = true; }
+                if (!v.NameI18n.ContainsKey("en")) { v.NameI18n = new Dictionary<string, string>(v.NameI18n) { ["en"] = en }; changed = true; }
+                if (v.SortOrder == 0) { v.SortOrder = sort; changed = true; }
+                if (!v.IsActive) { v.IsActive = true; changed = true; }
+                if (changed) { v.UpdatedAt = DateTime.UtcNow; fixedUp++; }
+                continue;
+            }
+            var nv = new AttributeValue
+            {
+                Id = Guid.NewGuid(), AttributeTypeId = attrType.Id,
+                NameI18n = new Dictionary<string, string> { ["tr"] = name, ["en"] = en },
+                SortOrder = sort, IsActive = true, CreatedAt = DateTime.UtcNow,
+            };
+            db.AttributeValues.Add(nv); byName[name] = nv; added++;
+        }
+        if (added > 0 || fixedUp > 0) await db.SaveChangesAsync();
+        Console.WriteLine($"✓ Seed: Ortam değerleri — {added} yeni eklendi, {fixedUp} mevcut düzeltildi.");
     }
 
     private static async Task SeedErpSourceAttributeValuesAsync(CatalogDbContext db)
