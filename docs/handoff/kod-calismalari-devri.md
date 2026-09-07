@@ -212,6 +212,20 @@ Acceptance testleri yalnız doğru private ağ/tünel, izole test veritabanı ve
 
 ### 7.1 Yerel acceptance bağlantı yöntemi — kalıcı not
 
+**2026-09-06 kullanıcı düzeltmesi — erişim yolu:** Kullanıcının bilgisayarından `192.168.0.*`
+private adreslerine doğrudan bağlantı denenmez. Kullanıcı bu iş için API01/API02 üzerinden
+salt-okunur kontrol veya geçici SSH tünelini açıkça onayladı. Bu sınır, aşağıdaki eski doğrudan
+bağlantı/rota teşhis notlarından önceliklidir; deploy, restart veya DB yazma izni değildir.
+API01 kaydı `Infrastructure.SSH.Api1` üzerinden process belleğine okunur. Kayıtlı anahtar
+OpenSSH biçimindedir: `C:\Windows\System32\OpenSSH\ssh.exe` kullanılmalıdır; PuTTY `plink`
+bu anahtarı doğrudan okuyamaz. Anahtarı dönüştürmeyin, içeriğini göstermeyin.
+`BatchMode=yes`, `StrictHostKeyChecking=yes`, `ExitOnForwardFailure=yes` ile loopback-only
+tünel kullanılabilir: `127.0.0.1:15432 -> API01 -> 192.168.0.241:5432`,
+`127.0.0.1:11433 -> API01 -> 192.168.0.100:1433`. Portların boş olduğunu/forward başarısını
+doğrulayın. Test process'ine yalnız geçici environment override verin; secret dosyayı değiştirmeyin.
+Hedef kabul bağlantısında `default_transaction_read_only=on` korunur. Test sonrası yalnız bu
+işin tünel process'i kapatılır ve geçici çıktıları temizlenir. `.59` alternatif hedef değildir.
+
 Bağlantı değerleri yeniden sorulmaz veya terminale yazdırılmaz. Testler repository kökünden çalıştırılır;
 `AcceptanceTestEnvironment`, çalışma dizininden yukarı doğru `.gitignore` kapsamındaki
 `appsettingsTest.json` dosyasını bulur. Öncelik environment variable, sonra aşağıdaki config anahtarıdır:

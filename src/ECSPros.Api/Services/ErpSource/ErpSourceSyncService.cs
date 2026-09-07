@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Npgsql;
 using NpgsqlTypes;
+using ECSPros.Api.Services.Marketplace.Mapping;
 
 namespace ECSPros.Api.Services.ErpSource;
 
@@ -47,7 +48,7 @@ public sealed class ErpSourceSyncService(
             var channelPlatforms = await LoadConfiguredPlatformsAsync(pg, ct);
             var existing = await FindProductAsync(pg, snapshot.Product.Code, ct);
             var groupId = ResolveGroup(snapshot.Product.ProductGroupName, groups);
-            if (existing is null && groupId is null)
+            if (groupId is null && (existing is null || options.UsePanelGroupMappings))
                 return new(false, options.DryRun, "product-refresh", 0, "",
                     $"ERP grubu eşleşmedi: {snapshot.Product.ProductGroupName}", (int)sw.ElapsedMilliseconds);
 
@@ -213,11 +214,11 @@ public sealed class ErpSourceSyncService(
                 var sourceAttributes = snapshot.Attributes;
                 var existing = await FindProductAsync(pg, currentProduct.Code, ct);
                 var groupId = ResolveGroup(currentProduct.ProductGroupName, groups);
-                if (existing is null && groupId is null)
+                if (groupId is null && (existing is null || options.UsePanelGroupMappings))
                 {
                     skipped++;
                     blockingMappingError = true;
-                    detail.AppendLine($"! ATLANDI yeni ürün {currentProduct.Code}: ERP grubu '{currentProduct.ProductGroupName}' eşleşmedi.");
+                    detail.AppendLine($"! ATLANDI ürün {currentProduct.Code}: ERP grubu '{currentProduct.ProductGroupName}' eşleşmedi.");
                     continue;
                 }
 
@@ -531,6 +532,8 @@ public sealed class ErpSourceSyncService(
     {
         if (string.IsNullOrWhiteSpace(sourceName)) return null;
         string normalized = Normalize(sourceName);
+        if (options.UsePanelGroupMappings)
+            return ErpPanelGroupResolver.Resolve(sourceName, groups.PanelCodesByName!, groups.PanelGroupsByCode!);
         var configured = options.ProductGroupCodes.FirstOrDefault(x => Normalize(x.Key) == normalized);
         if (!string.IsNullOrWhiteSpace(configured.Value) && groups.ByCode.TryGetValue(configured.Value, out var mapped))
             return mapped;
@@ -541,7 +544,7 @@ public sealed class ErpSourceSyncService(
             : null;
     }
 
-    private static async Task<GroupMaps> LoadGroupsAsync(NpgsqlConnection pg, CancellationToken ct)
+    private async Task<GroupMaps> LoadGroupsAsync(NpgsqlConnection pg, CancellationToken ct)
     {
         var byCode = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
         var candidates = new Dictionary<string, List<Guid>>();
@@ -554,7 +557,46 @@ public sealed class ErpSourceSyncService(
             if (!candidates.TryGetValue(name, out var list)) candidates[name] = list = [];
             list.Add(id);
         }
-        return new(byCode, candidates.Where(x => x.Value.Count == 1).ToDictionary(x => x.Key, x => x.Value[0]));
+        await r.DisposeAsync();
+        var maps = new GroupMaps(byCode, candidates.Where(x => x.Value.Count == 1).ToDictionary(x => x.Key, x => x.Value[0]));
+        if (!options.UsePanelGroupMappings) return maps;
+        var names = new Dictionary<string, List<string>>();
+        var mapped = new Dictionary<string, List<Guid>>(StringComparer.Ordinal);
+        await using (var dictionary = new NpgsqlCommand("""
+            SELECT "Code", "Name" FROM integration.erp_reference_items
+            WHERE "TargetSystem"=@target AND "Kind"='product_group' AND "IsActive" AND NOT "IsDeleted"
+            """, pg))
+        {
+            dictionary.Parameters.AddWithValue("target", options.MappingTargetSystem);
+            await using var rows = await dictionary.ExecuteReaderAsync(ct);
+            while (await rows.ReadAsync(ct))
+            {
+                var name = Normalize(rows.GetString(1));
+                if (!names.TryGetValue(name, out var codes)) names[name] = codes = [];
+                codes.Add(rows.GetString(0));
+            }
+        }
+        await using (var mappings = new NpgsqlCommand("""
+            SELECT m."ProductGroupId",m."MappingKind",m."TargetExternalId",m."RulesJson",m."PoolJson"
+            FROM integration.marketplace_category_mappings m
+            JOIN definition.product_groups g ON g."Id"=m."ProductGroupId" AND g."IsActive" AND NOT g."IsDeleted"
+            WHERE m."Marketplace"=@target AND m."FirmPlatformId" IS NULL AND m."Status"='active' AND NOT m."IsDeleted"
+            """, pg))
+        {
+            mappings.Parameters.AddWithValue("target", options.MappingTargetSystem);
+            await using var rows = await mappings.ExecuteReaderAsync(ct);
+            while (await rows.ReadAsync(ct))
+            {
+                var codes = ErpGroupMappingTargets.Read(rows.GetString(1), rows.IsDBNull(2) ? null : rows.GetString(2),
+                    rows.IsDBNull(3) ? null : rows.GetString(3), rows.IsDBNull(4) ? null : rows.GetString(4));
+                foreach (var code in codes)
+                {
+                    if (!mapped.TryGetValue(code, out var ids)) mapped[code] = ids = [];
+                    ids.Add(rows.GetGuid(0));
+                }
+            }
+        }
+        return maps with { PanelCodesByName = names, PanelGroupsByCode = mapped };
     }
 
     private static async Task<Dictionary<string, Guid>> LoadAttributeTypesAsync(NpgsqlConnection pg, CancellationToken ct)
@@ -916,6 +958,7 @@ public sealed class ErpSourceSyncService(
     {
         if (!options.AutoCreateProductAttributeValues) return;
         var mapped = attributes
+            .Where(x => !x.UseExistingDefinitionOnly)
             .Where(x => options.ProductAttributeTypeCodes.ContainsKey(x.KeywordId))
             .Select(x => new
             {
@@ -1210,6 +1253,7 @@ public sealed class ErpSourceSyncService(
         _ => NpgsqlDbType.Text
     };
 
-    private sealed record GroupMaps(Dictionary<string, Guid> ByCode, Dictionary<string, Guid> ByNormalizedName);
+    private sealed record GroupMaps(Dictionary<string, Guid> ByCode, Dictionary<string, Guid> ByNormalizedName,
+        Dictionary<string, List<string>>? PanelCodesByName = null, Dictionary<string, List<Guid>>? PanelGroupsByCode = null);
     private sealed record AttributeReplaceResult(bool Complete, bool Changed);
 }

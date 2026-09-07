@@ -9,6 +9,9 @@ public sealed class ErpSourceOptions
 {
     public bool Enabled { get; set; }
     public bool DryRun { get; set; } = true;
+    // Activate only after the panel/config dry-run comparison; no automatic data migration.
+    public bool UsePanelGroupMappings { get; set; }
+    public string MappingTargetSystem { get; set; } = "erp:nebim";
     public bool CatalogEnabled { get; set; } = true;
     public bool PriceEnabled { get; set; } = true;
     public string ConnectionString { get; set; } = "";
@@ -150,6 +153,10 @@ public sealed class ErpSourceOptions
 
     public void Validate()
     {
+        if (UsePanelGroupMappings && (string.IsNullOrWhiteSpace(MappingTargetSystem)
+            || !MappingTargetSystem.StartsWith("erp:", StringComparison.Ordinal) || MappingTargetSystem.Length <= 4
+            || MappingTargetSystem != MappingTargetSystem.Trim()))
+            throw new InvalidOperationException("Panel grup eşlemesi hedefi erp:<servis> biçiminde olmalıdır.");
         var ignored = IgnoredProductAttributeTypeCodes.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var overlap = ProductAttributeTypeCodes.Keys.Where(ignored.Contains).ToArray();
         if (overlap.Length > 0)

@@ -26,7 +26,7 @@ ana ekseni belirlerken ya da varyant eksenine bağlı ölçü bilgileri (alt öz
 ![Ürün Grupları listesi — Tümü/Aktif anahtarı, Yeni Grup butonu ve grup tablosu](img/catalog-product-groups.webp)
 1. **Başlık ve kayıt sayısı** — "Ürün Grupları", yanında (yetki yoksa) Salt Okunur rozeti, altında toplam kayıt sayısı.
 2. **Sağ üst araç çubuğu** — `Tümü` / `Aktif` anahtarı ve **Yeni Grup** butonu.
-3. **Tablo** — gruplar Sıra'ya, eşitlikte ada göre sıralı; satıra tıklayınca detay açılır.
+3. **Tablo** — üstte grup adı/kodu arama kutusu ve görünen/toplam grup sayısı; gruplar Sıra'ya, eşitlikte ada göre sıralı; satıra tıklayınca detay açılır.
 
 ![Ürün Grubu detayı — özet kartları, Ad (Çeviriler), Özellikler tablosu ve Varyant Ekseni Alt Özellikleri](img/catalog-product-groups-detay.webp)
 1. **Kırıntı ve başlık** — `Ürün Grupları › <ad>`; altında kod rozeti ve Aktif/Pasif rozeti; sağda (ürün yoksa) **Grubu Sil**.
@@ -49,8 +49,11 @@ ana ekseni belirlerken ya da varyant eksenine bağlı ölçü bilgileri (alt öz
 | Filtre | Ne yapar |
 |---|---|
 | `Tümü` / `Aktif` anahtarı | `Aktif` seçiliyken yalnız aktif gruplar listelenir. Varsayılan `Tümü`. |
+| Grup adı veya koduyla ara | Yazdıkça mevcut listeyi süzer; grup kodu ve ad çevirilerinde arar. Büyük/küçük harf ve Türkçe karakter farkı gözetmez (`gomlek` → `Gömlek`). `Tümü/Aktif` filtresiyle birlikte çalışır. |
 
-- Arama kutusu ve sayfalama yoktur; tüm gruplar tek sayfada, **Sıra** (küçükten büyüğe) ve sonra ada göre sıralıdır.
+- Sayfalama yoktur; arama mevcut gruplar üzerinde tarayıcıda yapılır, her harfte yeni API isteği gönderilmez. Sonuçlar **Sıra** (küçükten büyüğe) ve sonra ada göre sıralı kalır.
+- Arama kutusundaki **×** veya kutudayken **Esc** aramayı temizler; seçili `Tümü/Aktif` filtresi değişmez. Yanında görünen/toplam grup sayısı gösterilir.
+- Aramayla eşleşen kayıt yoksa "Aramanızla eşleşen ürün grubu bulunamadı" yazısı görünür.
 - **Satıra tıklayınca** grubun detay sayfası açılır (`/catalog/product-groups/<id>`).
 - Kayıt yoksa "Ürün grubu bulunamadı" yazısı görünür.
 

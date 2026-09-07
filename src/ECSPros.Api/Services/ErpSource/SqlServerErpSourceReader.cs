@@ -161,6 +161,8 @@ public sealed class SqlServerErpSourceReader(ErpSourceOptions options)
 
         var codeParameters = codes.Select((_, i) => $"@code{i}").ToArray();
         var typeParameters = typeCodes.Select((_, i) => $"@type{i}").ToArray();
+        var useOrtamPriority = options.ProductAttributeTypeCodes.TryGetValue("55", out var ortamType)
+            && string.Equals(ortamType, "ortam", StringComparison.OrdinalIgnoreCase);
         await using var command = new SqlCommand($"""
             SELECT a.ItemCode,CONVERT(varchar(20),a.AttributeTypeCode),
                    t.AttributeTypeDescription,d.AttributeDescription,CONVERT(varchar(100),a.AttributeCode)
@@ -174,6 +176,14 @@ public sealed class SqlServerErpSourceReader(ErpSourceOptions options)
                AND a.AttributeTypeCode IN ({string.Join(',', typeParameters)})
              ORDER BY a.ItemCode,a.AttributeTypeCode,a.AttributeCode
             """, connection) { CommandTimeout = options.CommandTimeoutSeconds };
+        if (useOrtamPriority)
+            command.CommandText += $"""
+                ;
+                SELECT DISTINCT ItemCode
+                  FROM prItemAttribute
+                 WHERE ItemTypeCode=1 AND AttributeTypeCode=8 AND AttributeCode='1'
+                   AND ItemCode IN ({string.Join(',', codeParameters)})
+                """;
         for (var i = 0; i < codes.Length; i++)
             command.Parameters.Add(new SqlParameter(codeParameters[i], SqlDbType.VarChar, 20) { Value = codes[i] });
         for (var i = 0; i < typeCodes.Length; i++)
@@ -187,6 +197,16 @@ public sealed class SqlServerErpSourceReader(ErpSourceOptions options)
             if (!result.TryGetValue(code, out var rows)) result[code] = rows = [];
             rows.Add(new(reader.GetString(1).Trim(), reader.GetString(3).Trim(),
                 reader.GetString(2).Trim(), reader.GetString(4).Trim()));
+        }
+        if (useOrtamPriority)
+        {
+            if (!await reader.NextResultAsync(ct))
+                throw new InvalidOperationException("V3 Ortam öncelik işaretleri okunamadı.");
+            while (await reader.ReadAsync(ct))
+            {
+                var code = reader.GetString(0).Trim();
+                result[code] = ErpOrtamPriority.Apply(result.GetValueOrDefault(code) ?? [], true).ToList();
+            }
         }
         return result.ToDictionary(x => x.Key, x => (IReadOnlyList<ErpProductAttributeRow>)x.Value,
             StringComparer.OrdinalIgnoreCase);

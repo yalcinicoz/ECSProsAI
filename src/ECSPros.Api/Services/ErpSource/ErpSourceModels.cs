@@ -25,7 +25,10 @@ public sealed record ErpProductAttributeRow(
     string KeywordId,
     string Value,
     string? Key = null,
-    string? SourceCode = null);
+    string? SourceCode = null)
+{
+    public bool UseExistingDefinitionOnly { get; init; }
+}
 
 public sealed record ErpSupplierRow(string Code, string Name);
 
