@@ -61,6 +61,21 @@
         return 301 https://partner.misharitalia.com/;
     }
 
+    # Uygulamanın kendi /store/navigation/* SSR uçları (mega menü tembel yükleme: /store/navigation/mega-menu)
+    # aşağıdaki eski-URL 301'inden MUAF — aksi halde tarayıcı fetch'i 301 alıp mega menü açılamıyor,
+    # "Kategoriler" tıklaması /urun-listesi'ne düşüyordu (2026-09-07 canlı hata).
+    location ^~ /store/navigation/ {
+        proxy_pass http://ecspros_api;
+        proxy_connect_timeout 2s;
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+        proxy_next_upstream_tries 2;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $gercek_istemci_ip;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     # Eski /store/ URL'leri için geriye dönük uyumluluk
     location ^~ /store {
         return 301 /;
