@@ -76,6 +76,10 @@ import { CouponsPage } from '@/pages/promotion/CouponsPage'
 import { MembersPage } from '@/pages/crm/MembersPage'
 import { MemberDetailPage } from '@/pages/crm/MemberDetailPage'
 import { MemberGroupsPage } from '@/pages/crm/MemberGroupsPage'
+import { TicketsPage } from '@/pages/crm/tickets/TicketsPage'
+import { TicketCreatePage } from '@/pages/crm/tickets/TicketCreatePage'
+import { TicketDetailPage } from '@/pages/crm/tickets/TicketDetailPage'
+import { TicketSettingsPage } from '@/pages/crm/tickets/TicketSettingsPage'
 import { QuotesPage } from '@/pages/orders/QuotesPage'
 import { GiftCardsPage } from '@/pages/orders/GiftCardsPage'
 import { NumberSeriesPage } from '@/pages/orders/NumberSeriesPage'
@@ -187,6 +191,10 @@ export const router = createBrowserRouter(
             { path: 'crm/members',       element: <MembersPage /> },
             { path: 'crm/members/:id',   element: <MemberDetailPage /> },
             { path: 'crm/member-groups', element: <MemberGroupsPage /> },
+            { path: 'crm/tickets',           element: <TicketsPage /> },
+            { path: 'crm/tickets/new',       element: <TicketCreatePage /> },
+            { path: 'crm/tickets/settings',  element: <TicketSettingsPage /> },
+            { path: 'crm/tickets/:trackingNo', element: <TicketDetailPage /> },
 
             // POS
             { path: 'pos/sales',     element: <PosSalesPage /> },

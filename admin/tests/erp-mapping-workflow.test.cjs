@@ -152,6 +152,18 @@ test('mapped view lists only healthy active ERP group codes', () => {
   assert.equal(button(tree, 'Eşle'), undefined)
 })
 
+test('dashboard unmapped filter and explicit status tabs coexist after merge', () => {
+  const props = { ...baseProps, onlyUnmappedInitial: true, placeholderProductCount: 7 }
+  const tree = harness().render('ErpDictionaryPanel', props)
+  const keys = all(tree, (n) => n.type === 'tr' && n.key).map((n) => n.key)
+  assert.ok(!keys.includes('mapped'))
+  assert.ok(keys.includes('unmapped') && keys.includes('conflict'))
+  assert.ok(text(tree).includes('Geçici Grup'))
+  const mapped = harness().render('ErpDictionaryPanel', { ...props, mappingState: 'mapped' })
+  assert.deepEqual(all(mapped, (n) => n.type === 'tr' && n.key).map((n) => n.key), ['mapped'])
+  assert.equal(all(mapped, (n) => n.type === 'input' && n.props.type === 'checkbox').length, 0)
+})
+
 test('loading and the API row limit never appear as exact zero/full-inventory counters', () => {
   assert.ok(button(harness({ loading: true }).render('MappingPage'), 'Eşlenenler (…)'))
   const capped = Array.from({ length: 2000 }, (_, i) => ({ ...items[0], id: `id-${i}`, code: String(i) }))

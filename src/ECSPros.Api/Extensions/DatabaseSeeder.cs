@@ -24,6 +24,7 @@ public static class DatabaseSeeder
         await SeedProductSourceTypeBackfillAsync(scope.ServiceProvider);
         await SeedStorefrontDefaultsAsync(scope.ServiceProvider);
         await SeedCrmDefaultsAsync(scope.ServiceProvider);
+        await SeedPushTemplatesAsync(scope.ServiceProvider);
         await SeedGeoAsync(scope.ServiceProvider);
         await SeedAddressNeighborhoodBackfillAsync(scope.ServiceProvider);
         await SeedCmsLegalPagesAsync(scope.ServiceProvider);
@@ -247,6 +248,12 @@ public static class DatabaseSeeder
                 Alan("from",     "Gönderen",     "text",     "settings"),
                 Alan("fromName", "Gönderen Adı", "text",     "settings"),
                 Alan("useSsl",   "SSL",          "boolean",  "settings")
+            }),
+            // Mobil push (2026-09-07): Firebase servis hesabı JSON'u (Proje ayarları › Servis hesapları › yeni özel anahtar) — şifreli Credentials
+            ("fcm", "Firebase Cloud Messaging (Mobil Push)", "push", new List<PlatformSchemaField>
+            {
+                Alan("projectId",          "Firebase Proje ID",        "text",     "settings",    zorunlu: false, yardim: "Boşsa servis hesabı JSON'undaki project_id kullanılır (misharitalia-37192)."),
+                Alan("serviceAccountJson", "Servis Hesabı JSON",       "password", "credentials", zorunlu: true,  yardim: "Firebase › Proje ayarları › Servis hesapları › Yeni özel anahtar; dosyanın TAM içeriğini yapıştırın.")
             }),
             ("visual_search", "Görsel Arama", "visual_search", new List<PlatformSchemaField>
             {
@@ -1152,6 +1159,108 @@ public static class DatabaseSeeder
             await db.SaveChangesAsync();
             Console.WriteLine("✓ Seed: varsayılan üye grubu (standart) oluşturuldu.");
         }
+        await SeedCrmTicketDefaultsAsync(db);
+    }
+
+    /// <summary>Mobil push şablonları (docs/PUSH_BILDIRIM_ENTEGRASYONU.md §4) — Type bazında idempotent; panelden düzenlenen korunur.</summary>
+    private static async Task SeedPushTemplatesAsync(IServiceProvider sp)
+    {
+        var db = sp.GetRequiredService<ECSPros.Storefront.Infrastructure.Persistence.StorefrontDbContext>();
+        var mevcut = await db.PushTemplates.IgnoreQueryFilters().Select(t => t.Type).ToListAsync();
+        var T = "transactional"; var P = "marketing";
+        var liste = new (string Type, string Class, string Name, string Title, string Body, string Link, int Ttl, string Desc)[]
+        {
+            ("order_created", T, "Sipariş alındı", "Siparişin alındı ✅", "{orderNumber} numaralı siparişin hazırlanmaya başlıyor.", "/siparislerim/{orderId}", 86400, "Sipariş oluştu (kapıda) / kart ödemesi onaylandı"),
+            ("order_payment_pending", T, "Ödeme bekliyor", "Ödemen tamamlanmadı", "{orderNumber} siparişin ödeme bekliyor. Tamamlamak için dokun.", "/siparislerim/{orderId}", 86400, "Kart siparişi 60 dk içinde ödenmedi (bir kez)"),
+            ("order_confirmed", T, "Sipariş onaylandı", "Siparişin onaylandı", "{orderNumber} onaylandı, hazırlanıyor.", "/siparislerim/{orderId}", 86400, "Durum → confirmed"),
+            ("order_shipped", T, "Kargoya verildi", "Siparişin kargoya verildi 📦", "{orderNumber}, {cargoName} ile yola çıktı. Takip: {trackingNumber}", "/siparislerim/{orderId}", 86400, "Durum → shipped"),
+            ("order_delivered", T, "Teslim edildi", "Siparişin teslim edildi 🎉", "Keyifle kullan! Ürünlerini değerlendirmek ister misin?", "/siparislerim/{orderId}", 86400, "Durum → delivered"),
+            ("order_review_invite", T, "Değerlendirme daveti", "Ürünlerin nasıldı?", "{productName} için görüşün diğer müşterilere yol gösterir.", "/yorumlarim", 86400, "Teslim + 2 gün, değerlendirme yoksa"),
+            ("order_cancelled", T, "Sipariş iptal", "Siparişin iptal edildi", "{orderNumber} iptal edildi. Ödemen varsa iade sürecine alındı.", "/siparislerim/{orderId}", 86400, "Panelden iptal (üyenin kendi iptalinde gönderilmez)"),
+            ("return_status", T, "İade durumu", "İade talebin güncellendi", "{orderNumber}: {returnStatusLabel}", "/iadelerim", 86400, "İade onaylandı / reddedildi / teslim alındı"),
+            ("favorite_price_drop", P, "Favori fiyat düşüşü", "Favorindeki ürün indirimde 🔥", "{productName} şimdi {newPrice} (eski {oldPrice}).", "/urun/{productCode}", 21600, "Favori ürün ≥ %10 ucuzladı (Push:PriceDropPercent)"),
+            ("favorite_low_stock", P, "Favori son parçalar", "Son parçalar!", "{productName} tükenmek üzere.", "/urun/{productCode}", 21600, "Favori ürün toplam stok ≤ 3 (haftada 1)"),
+            ("stock_alert", T, "Stok geldi (haber ver)", "{productName} {variantInfo} stokta! 🔔", "İstediğin beden geldi, hemen sepete ekle.", "/urun/{productCode}", 21600, "\"Gelince haber ver\" kaydı olan varyant stoğa girdi"),
+            ("cart_reminder", P, "Sepet hatırlatma", "Sepetinde ürün bekliyor 🛒", "{productName} ve {n} ürün seni bekliyor.", "/sepet", 43200, "Sepet 3 saattir güncellenmedi; 24 saatte ikinci ve son"),
+            ("question_answered", T, "Soru cevaplandı", "Sorun cevaplandı 💬", "{productName} hakkındaki sorunun cevabı hazır.", "/sorularim", 86400, "Satıcı soruyu cevapladı"),
+            ("review_approved", T, "Yorum yayında", "Yorumun yayında", "{productName} yorumun diğer müşterilere gösteriliyor. Teşekkürler!", "/yorumlarim", 86400, "Yorum onaylandı"),
+            ("review_rejected", T, "Yorum reddedildi", "Yorumun yayınlanamadı", "Kurallara uymayan ifadeler nedeniyle yayınlanmadı.", "/yorumlarim", 86400, "Yorum reddedildi"),
+            ("coupon_assigned", T, "Kupon tanımlandı", "Sana özel kupon 🎁", "{couponCode}: {discountText}. {expiresAt} tarihine kadar geçerli.", "/indirim-kuponlarim", 86400, "Üyeye özel kupon açıldı"),
+            ("coupon_expiring", P, "Kupon bitiyor", "Kuponun yarın bitiyor", "{couponCode} kuponunu kaçırma.", "/indirim-kuponlarim", 43200, "Kullanılmamış kuponun bitmesine 24 saat"),
+            ("wallet_credit", T, "Cüzdana yükleme", "Cüzdanına {amount} yüklendi", "İade tutarın cüzdanında, hemen kullanabilirsin.", "/cuzdanim", 86400, "Cüzdana bakiye yüklendi"),
+            ("welcome", P, "Hoş geldin", "Hoş geldin 👋", "İlk siparişine özel fırsatlar seni bekliyor.", "/", 43200, "Kayıttan 1 saat sonra, sipariş yoksa"),
+            ("winback", P, "Geri kazanım", "Seni özledik", "Yeni gelenlere göz at.", "/yeni-gelenler", 43200, "30 gündür uygulama açılmadı (ayda 1)"),
+            ("viewed_reminder", P, "Gezilen ürünler", "Baktığın ürünler burada", "{productName} hâlâ stokta.", "/onceden-gezdiklerim", 43200, "Son 24 saatte gezdi, sepete eklemedi (haftada 2)"),
+        };
+        int k = 0;
+        foreach (var x in liste.Where(x => !mevcut.Contains(x.Type)))
+        {
+            db.PushTemplates.Add(new ECSPros.Storefront.Domain.Entities.PushTemplate { Type = x.Type, Class = x.Class, Name = x.Name, Title = x.Title, Body = x.Body, LinkTemplate = x.Link, Enabled = true, TtlSeconds = x.Ttl, Priority = x.Class == T ? "high" : "normal", Description = x.Desc });
+            k++;
+        }
+        if (k > 0) { await db.SaveChangesAsync(); Console.WriteLine($"✓ Seed: mobil push şablonları — {k} şablon."); }
+    }
+
+    /// <summary>
+    /// Müşteri İlişkileri: 6 durum + 22 konu başlığı (eski cm_crm_durum / cm_crm_konu_basliklari(_alanlar), K6 aynen).
+    /// İdempotent: LegacyId/Code varsa dokunmaz (panelden düzenlenen ad/alan korunur).
+    /// </summary>
+    private static async Task SeedCrmTicketDefaultsAsync(ECSPros.Crm.Infrastructure.Persistence.CrmDbContext db)
+    {
+        var mevcutDurum = await db.TicketStatuses.IgnoreQueryFilters().Select(s => s.Code).ToListAsync();
+        var durumlar = new (string Code, string Name, string Color, int Sort, bool Hidden, bool Resolved, bool Exempt, bool Default, int Legacy)[]
+        {
+            ("beklemede", "Beklemede", "#ef4444", 1, false, false, false, true, 1),
+            ("ilgili_birimde", "İlgili Birimde", "#f59e0b", 2, false, false, false, false, 2),
+            ("cozulemedi", "Çözülemedi", "#6b7280", 3, true, false, false, false, 3),   // gizli: yanlış açılan kayıtlar (K6)
+            ("cozuldu", "Çözüldü", "#22c55e", 4, false, true, false, false, 4),
+            ("hatali_kayit", "Hatalı Kayıt", "#94a3b8", 5, false, false, true, false, 5),
+            ("tazmin_surecinde", "Tazmin Sürecinde", "#06b6d4", 6, false, false, false, false, 6),
+        };
+        int d = 0;
+        foreach (var x in durumlar.Where(x => !mevcutDurum.Contains(x.Code)))
+        {
+            db.TicketStatuses.Add(new ECSPros.Crm.Domain.Entities.TicketStatus { Code = x.Code, Name = x.Name, Color = x.Color, SortOrder = x.Sort,
+                IsHidden = x.Hidden, IsResolved = x.Resolved, ExemptFromDuplicateCheck = x.Exempt, IsDefault = x.Default, LegacyId = x.Legacy });
+            d++;
+        }
+        // konular: (legacyId, ad, tür, sıra, zorunlu alanlar) — eski konu→alan matrisi: hepsinde içerik+arayan; Resim yalnız
+        // 1,2,3,5,14,18; SiparişID 17 ve 19 hariç; 15 ve 19'da arayan bilgisi yok
+        string[] tam = ["orderNumber", "callerName", "callerPhone", "body"];
+        string[] resimli = ["orderNumber", "callerName", "callerPhone", "body", "image"];
+        var konular = new (int Legacy, string Name, string Type, int Sort, string[] Fields)[]
+        {
+            (3, "Eksik Aksesuar - İkili Takım Eksiklikleri", "complaint", 4, resimli),
+            (2, "Eksik Ürün", "complaint", 5, resimli),
+            (1, "Çapraz Kargo", "complaint", 6, resimli),
+            (4, "Ürün İadesi Girilmemiş Müşteriler", "complaint", 13, tam),
+            (5, "Ürün İadesi Hatalı Girilenler", "complaint", 14, resimli),
+            (14, "Hasarlı ve Kayıp Kargo Tutanak İşlemleri", "complaint", 16, resimli),
+            (17, "Müşteri Temsilcisi Şikayet / Teşekkür", "complaint", 18, ["callerName", "callerPhone", "body"]),
+            (20, "Kargo Personeli Şikayeti", "complaint", 21, tam),
+            (13, "Sipariş Aciliyet", "request", 1, tam),
+            (11, "Dekont Talebi", "request", 2, tam),
+            (12, "Kredi Kartı ve Bakiye Ödemeleri", "request", 3, tam),
+            (6, "Kargo Teslimatı", "request", 7, tam),
+            (7, "Kargo Geri Çekim", "request", 8, tam),
+            (8, "Adres Değişikliği", "request", 9, tam),
+            (9, "Alıcı İsim Değişikliği", "request", 10, tam),
+            (10, "Kargo Fiyat Güncelleme", "request", 11, tam),
+            (16, "Kargo Bekletme", "request", 12, tam),
+            (22, "Sipariş Kontrollü Çıkış", "request", 15, tam),
+            (15, "Kargo Operasyon", "request", 17, ["orderNumber", "body"]),
+            (18, "İadesi Kabul Edilmeyen Ürünler", "request", 19, resimli),
+            (19, "Kargo Firma Değişikliği", "request", 20, ["body"]),
+            (21, "Kargo Kurye Talebi", "request", 22, tam),
+        };
+        var mevcutKonu = await db.TicketSubjects.IgnoreQueryFilters().Where(s => s.LegacyId != null).Select(s => s.LegacyId!.Value).ToListAsync();
+        int k = 0;
+        foreach (var x in konular.Where(x => !mevcutKonu.Contains(x.Legacy)))
+        {
+            db.TicketSubjects.Add(new ECSPros.Crm.Domain.Entities.TicketSubject { Name = x.Name, Type = x.Type, SortOrder = x.Sort, IsActive = true, RequiredFields = x.Fields.ToList(), LegacyId = x.Legacy });
+            k++;
+        }
+        if (d + k > 0) { await db.SaveChangesAsync(); Console.WriteLine($"✓ Seed: Müşteri İlişkileri — {d} durum, {k} konu başlığı."); }
     }
 
     /// <summary>
@@ -2717,7 +2826,8 @@ public static class DatabaseSeeder
         }
         await db.SaveChangesAsync();
 
-        var groups = await db.ProductGroups.Select(g => new { g.Id, g.Code, g.NameI18n }).ToListAsync();
+        // "gecici" = eşlenmemiş ERP grubundaki ürünlerin özelliksiz geçici grubu (2026-09-07) — Ürün Grubu havuzuna/atamasına girmez
+        var groups = await db.ProductGroups.Where(g => g.Code != "gecici").Select(g => new { g.Id, g.Code, g.NameI18n }).ToListAsync();
 
         // (2) grup ataması
         var pgas = await db.ProductGroupAttributes.IgnoreQueryFilters().Where(x => x.AttributeTypeId == type.Id).ToListAsync();

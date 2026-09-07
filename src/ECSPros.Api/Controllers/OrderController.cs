@@ -219,22 +219,24 @@ public class OrderController : ControllerBase
 
     /// <summary>İade talebini onaylar.</summary>
     [HttpPost("returns/{returnId:guid}/approve")]
-    public async Task<IActionResult> ApproveReturn(Guid returnId, CancellationToken ct)
+    public async Task<IActionResult> ApproveReturn(Guid returnId, [FromServices] ECSPros.Api.Services.Push.PushEtkilesim push, CancellationToken ct)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
         if (!Guid.TryParse(userId, out var uid)) return Unauthorized(new { success = false, error = "Geçersiz token." });
 
         var result = await _mediator.Send(new ApproveReturnCommand(returnId, uid), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        await push.IadeDurumuAsync(returnId, "İade talebiniz onaylandı", "approved", ct);
         return Ok(new { success = true });
     }
 
     /// <summary>İadeyi reddeder (requested → rejected).</summary>
     [HttpPatch("returns/{returnId:guid}/reject")]
-    public async Task<IActionResult> RejectReturn(Guid returnId, [FromBody] RejectReturnRequest request, CancellationToken ct)
+    public async Task<IActionResult> RejectReturn(Guid returnId, [FromBody] RejectReturnRequest request, [FromServices] ECSPros.Api.Services.Push.PushEtkilesim push, CancellationToken ct)
     {
         var result = await _mediator.Send(new RejectReturnCommand(returnId, request.Reason), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        await push.IadeDurumuAsync(returnId, "İade talebiniz reddedildi", "rejected", ct);
         return Ok(new { success = true });
     }
 

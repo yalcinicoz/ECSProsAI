@@ -489,8 +489,9 @@ public class SearchTermStatConfiguration : IEntityTypeConfiguration<SearchTermSt
         builder.ToTable("search_term_stats");
         builder.HasKey(s => s.Id);
         builder.Property(s => s.Term).HasMaxLength(60).IsRequired();
-        // Upsert çakışma hedefi (ON CONFLICT) — kova başına tek satır
-        builder.HasIndex(s => new { s.FirmPlatformId, s.Term, s.Day }).IsUnique();
+        builder.Property(s => s.VisitorHash).HasMaxLength(32).IsRequired().HasDefaultValue("");
+        // Upsert çakışma hedefi (ON CONFLICT) — kova başına tek satır (2026-09-07: + ziyaretçi anahtarı)
+        builder.HasIndex(s => new { s.FirmPlatformId, s.Term, s.Day, s.VisitorHash }).IsUnique();
         builder.HasIndex(s => new { s.FirmPlatformId, s.Day });
         // Soft delete filtresi yok: kovalar fiziksel temizlenir (fırsatçı prune)
     }
@@ -536,5 +537,52 @@ public class PushDeviceConfiguration : IEntityTypeConfiguration<PushDevice>
         builder.HasIndex(d => new { d.FirmPlatformId, d.MemberId, d.Status });     // üyenin cihazları
         builder.HasIndex(d => new { d.FirmPlatformId, d.DeviceIdentifier });       // token rotasyonu
         builder.HasQueryFilter(d => !d.IsDeleted);
+    }
+}
+
+// ── Mobil push bildirimleri (docs/PUSH_BILDIRIM_ENTEGRASYONU.md, 2026-09-07) ──
+public class PushTemplateConfiguration : IEntityTypeConfiguration<PushTemplate>
+{
+    public void Configure(EntityTypeBuilder<PushTemplate> b)
+    {
+        b.ToTable("push_templates");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Type).HasMaxLength(50).IsRequired();
+        b.Property(x => x.Class).HasMaxLength(20).IsRequired();
+        b.Property(x => x.Name).HasMaxLength(120).IsRequired();
+        b.Property(x => x.Title).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Body).HasMaxLength(1000).IsRequired();
+        b.Property(x => x.LinkTemplate).HasMaxLength(300).IsRequired();
+        b.Property(x => x.Priority).HasMaxLength(10).IsRequired();
+        b.Property(x => x.Description).HasMaxLength(500);
+        b.HasIndex(x => x.Type).IsUnique().HasFilter("\"IsDeleted\" = false");
+        b.HasQueryFilter(x => !x.IsDeleted);
+    }
+}
+
+public class PushNotificationConfiguration : IEntityTypeConfiguration<PushNotification>
+{
+    public void Configure(EntityTypeBuilder<PushNotification> b)
+    {
+        b.ToTable("push_notifications");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Platform).HasMaxLength(20).IsRequired();
+        b.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
+        b.Property(x => x.Type).HasMaxLength(50).IsRequired();
+        b.Property(x => x.Class).HasMaxLength(20).IsRequired();
+        b.Property(x => x.DedupId).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Title).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Body).HasMaxLength(1000).IsRequired();
+        b.Property(x => x.Link).HasMaxLength(500).IsRequired();
+        b.Property(x => x.ImageUrl).HasMaxLength(500);
+        b.Property(x => x.Status).HasMaxLength(20).IsRequired();
+        b.Property(x => x.FcmMessageId).HasMaxLength(200);
+        b.Property(x => x.ErrorCode).HasMaxLength(100);
+        b.Property(x => x.Data).HasColumnType("jsonb");
+        b.HasIndex(x => new { x.DedupId, x.DeviceId }).IsUnique();
+        b.HasIndex(x => new { x.Status, x.ScheduledAt });
+        b.HasIndex(x => new { x.MemberId, x.CreatedAt });
+        b.HasIndex(x => new { x.Type, x.CreatedAt });
+        b.HasQueryFilter(x => !x.IsDeleted);
     }
 }

@@ -23,18 +23,20 @@ public class ReviewsController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost("{id}/approve")]
-    public async Task<IActionResult> Approve(Guid id, CancellationToken ct)
+    public async Task<IActionResult> Approve(Guid id, [FromServices] ECSPros.Api.Services.Push.PushEtkilesim push, CancellationToken ct)
     {
         var result = await mediator.Send(new ModerateProductReviewCommand(id, true), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        await push.YorumModereEdildiAsync(id, true, ct);
         return Ok(new { success = true });
     }
 
     [HttpPost("{id}/reject")]
-    public async Task<IActionResult> Reject(Guid id, [FromBody] RejectReviewRequest? req, CancellationToken ct)
+    public async Task<IActionResult> Reject(Guid id, [FromBody] RejectReviewRequest? req, [FromServices] ECSPros.Api.Services.Push.PushEtkilesim push, CancellationToken ct)
     {
         var result = await mediator.Send(new ModerateProductReviewCommand(id, false, req?.Reason), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        await push.YorumModereEdildiAsync(id, false, ct);
         return Ok(new { success = true });
     }
 }

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import { useFirmPlatforms } from '@/pages/cms/cmsPageShared'
+import { PushTemplatesTab, PushLogTab } from './PushTabs'
 
 interface StockAlert {
   id: string
@@ -230,7 +231,7 @@ function SavedSearchesTab({ platformId }: { platformId: string }) {
 }
 
 export function NotificationsMonitorPage() {
-  const [tab, setTab] = useState<'stock-alerts' | 'saved-searches'>('stock-alerts')
+  const [tab, setTab] = useState<'stock-alerts' | 'saved-searches' | 'push-templates' | 'push-log'>('stock-alerts')
   const [platformId, setPlatformId] = useState('')
   const [scanResult, setScanResult] = useState('')
 
@@ -279,9 +280,16 @@ export function NotificationsMonitorPage() {
           onClick={() => setTab('stock-alerts')}>Stok Alarmları</button>
         <button className={cn('stab', tab === 'saved-searches' && 'active')}
           onClick={() => setTab('saved-searches')}>Kayıtlı Aramalar</button>
+        <button className={cn('stab', tab === 'push-templates' && 'active')}
+          onClick={() => setTab('push-templates')}>Push Şablonları</button>
+        <button className={cn('stab', tab === 'push-log' && 'active')}
+          onClick={() => setTab('push-log')}>Push Gönderimleri</button>
       </div>
 
-      {tab === 'stock-alerts' ? <StockAlertsTab platformId={platformId} /> : <SavedSearchesTab platformId={platformId} />}
+      {tab === 'stock-alerts' ? <StockAlertsTab platformId={platformId} />
+        : tab === 'saved-searches' ? <SavedSearchesTab platformId={platformId} />
+        : tab === 'push-templates' ? <PushTemplatesTab />
+        : <PushLogTab />}
     </div>
   )
 }

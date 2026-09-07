@@ -27,4 +27,4 @@ public record MemberDetailDto(
     Guid? CityId = null,             // E2: yaşadığı şehir (G9 segmenti)
     MarketingConsentsDto? MarketingConsents = null); // E2: duyuru tercihleri (Consents jsonb "marketing")
 
-public record MarketingConsentsDto(bool Email, bool Sms, bool Phone);
+public record MarketingConsentsDto(bool Email, bool Sms, bool Phone, bool Push = false);

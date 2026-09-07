@@ -1,5 +1,30 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+### GitHub / EM3 — Çift yönlü senkronizasyon ve çatışma kabulü (2026-09-07)
+
+- Kullanıcı GitHub değişikliklerini alma ve yerel çalışmaları gönderme onayı verdi.
+  Tracked/untracked çalışmalar `safety-before-github-sync-20260907-api-admin`
+  stash'inde ayrıca korundu, geri uygulandı ve `15963b86` commit'ine alındı.
+- `origin/main` üzerindeki 12 commit (`50723426` dahil) birleştirildi.
+  PROGRESS'in iki tarafındaki kayıtlar korundu. MappingPage'de yerel durum
+  sekmeleri/arama/yerinde Yeni Grup ile upstream dashboard `dict=unmapped`
+  bağlantısı ve geçici grup sayacı birlikte tutuldu; açık durum sekmesi
+  dashboard başlangıç filtresinden önceliklidir. Yeni regresyon eklendi.
+- ERP panel modu fail-closed kalır: eşleşmeyen ürün geçici gruba düşmez.
+  Upstream geçici grup yolu yalnız panel modu kapalıyken yeni ürünler için
+  korunur. İki tarafın Ortam/eşleme kodu kaybedilmedi.
+- Admin 23/23 test, TypeScript ve ilgili ESLint başarılı. API acceptance dışı
+  **133/133** geçti. İlk turdaki iki eski beklenti upstream Kot Ceket kodu ve
+  Triko varsayılanı değişimine aitti; varsayılan ve açıkça tanımlanan önek
+  davranışı ayrı doğrulanacak şekilde testler güncellendi. Production build yok.
+- Upstream arama, CRM talepleri ve push migration/seed kaynakları koda geldi;
+  hiçbiri DB üzerinde çalıştırılmadı. Yeni grup/veri açılmadı. Bu işlem sunucu
+  yayını değildir; çalışan API/admin/worker ve sunucu secret ayarları değişmedi.
+  `appsettingsTest.json` ignore kapsamında, commit dışında kaldı.
+- Birleştirme kontrolleri tamamlandı; normal (force olmayan) push ile `main`
+  gönderilecek ve remote SHA eşitliği kontrol edilecek. Güvenlik stash'leri
+  korunuyor; yalnız bu turun izole test çıktıları temizlendi.
+
 ### EM3 / API — Grup oluşturma ve özellik kopyalama yayını (2026-09-07)
 
 - Kullanıcının API güncelleme onayıyla mevcut `51f4feac` + korunmuş yerel
@@ -175,6 +200,135 @@
 - Ürün kartı grup güncellemesini eşlemeler tamamlanana kadar bekletme kararı korunur.
   Son kontrol: yerel HEAD ile alınan `origin/main` commit farkı `0/0`; yerel
   commitlenmemiş çalışmalar bunun üzerinde durur, GitHub'a gönderilmedi.
+
+**MOBİL PUSH BİLDİRİM ENTEGRASYONU UYGULANDI — `docs/PUSH_BILDIRIM_ENTEGRASYONU.md` (2026-09-07, Mobil API + Admin panel):**
+FCM HTTP v1 gönderici (`Services/Push/FcmClient` — servis hesabı JWT RS256 → OAuth2, 50 dk belirteç önbelleği; hata kodu
+sınıflandırması), ayar kaynağı `definition.integration_services` **"fcm"** (ServiceType `push`; firma entegrasyonu
+`serviceAccountJson` şifreli + `projectId`) → panel Ayarlar › Entegrasyonlar'dan girilir (tanımsızsa kuyruk birikir, hata yok).
+Tablolar `storefront.push_templates` (21 şablon seed, §4 metinleri) + `storefront.push_notifications` (cihaz başına satır,
+`(DedupId, DeviceId)` unique, token SHA-256) + `favorites.PriceAtAdd` (migration `AddPushNotifications` dev+demo).
+`PushKuyruk` (şablon → metin/link, link kataloğu doğrulaması, üyenin tüm aktif cihazları, pazarlama: `Consents.marketing.push`
+izni + sessiz saat 22-09 İstanbul → 09:00 erteleme + günde 2 / aynı tip haftada 2), `PushGonderimServisi` (queued → FCM;
+UNREGISTERED→cihaz revoked, INVALID_ARGUMENT→invalid, 429/5xx üstel bekleme ≤5; iptal koşulu sepet/favori/alarm; rozet =
+açılmamış sayısı), `PushTarayici` (15 dk: stock_alert [alarm notified], favorite_price_drop [≥%10, üye/gün 1, baz = ekleme
+fiyatı; eski favorilerde ilk tarama], favorite_low_stock [≤3, haftada 1], cart_reminder [3 sa / 24 sa ikinci], coupon_assigned /
+coupon_expiring, wallet_credit, welcome, winback, viewed_reminder, order_payment_pending, order_review_invite),
+`PushGondericiWorker` (15 sn; DistributedWorkerLock push-dispatch / push-scan; `Push:Enabled`). Olay tabanlı:
+`EventHandlers/PushOrderEventHandlers` (CartConvertedToOrder→order_created, confirmed, shipped [Shipment kargo+takip],
+delivered, cancelled [üyenin kendi iptali hariç], ReturnReceived) + `PushEtkilesim` kancaları (soru ilk cevap, yorum onay/ret,
+iade onay/ret). Mobil uçlar: `marketing-consents` PUT `push` + GET; `GET account/notifications`; `POST push-devices/opened`.
+Admin: Pazarlama › Bildirimler › **Push Şablonları** (düzenle/aç-kapat, link doğrulamalı) + **Push Gönderimleri** (log, 24 sa
+özet, tek cihaza/üyeye deneme) — `GET/PUT store-notifications/push-templates`, `GET push-log`, `POST push-test`. Doküman:
+mobil referans §13. YOK (belgeye not): favorite_back_in_stock, cart_price_drop, misafir sipariş push'u; yük testi (10K token)
+FCM anahtarı gelince. ⚠️ **restart bekliyor**; gerçek gönderim için Firebase servis hesabı JSON'u panelden girilmeli (kullanıcı).
+
+**CRM MÜŞTERİ İLİŞKİLERİ (TALEP/ŞİKAYET) UYGULANDI — T0-T3 (2026-09-07, Admin panel alanı, plan v2 K1-K9 kullanıcı yanıtlarıyla):**
+Kararlar: yalnız talep/şikayet; yeni kayıtta bildirim YOK, işlemde kaydı açan + işlem yapanlar + etiketlenen (+etiketlenip
+işlem yapmamış); yalnız panel çanı, "gördü" ve "kayda girdi" ayrı (SeenAt/OpenedAt), ikisi olana dek yanar; takip no eski
+biçim `unix + sıra` (sıra 50.000'den, unique); görsel gövdeye gömülmez → ek; Çözülemedi gizli durum (filtreyle görünür,
+seçilemez); Hatalı Kayıt mükerrer muaf; müşteri görmez; yetki herkese; kanal siparişten (aynı no birden çok kanalda →
+seçici). Kod: Crm modülü `Ticket/TicketActivity/TicketRead/TicketNotification/TicketStatus/TicketSubject/TicketLegacyStaff`
+(migration `AddCrmTickets` dev+demo), `HtmlTemizleyici`, komutlar (Create/AddActivity/Open/Seen/Opened/Settings/Hidden),
+sorgular (liste+sayaç/detay/bildirimlerim/ayarlar), `CrmTicketsController` (`api/crm/tickets`), `CrmTicketOrderLookup`
+(ham SQL: OrderNumber/ExternalOrderNumber/LegacyOrderId → adaylar), seed 6 durum + 22 konu (eski konu→alan matrisi).
+Admin: `/crm/tickets` (liste, sayaç kutuları, süzgeçler, "Kontrol edildi/edilmedi" = son işlemi okudum mu), `/crm/tickets/new`
+(konu → tür, zorunlu alan yıldızları, sipariş "Sorgula", kanal radio, Quill, ek yükleme), `/crm/tickets/:trackingNo`
+(sol kayıt kartı + Yeni İşlem + Gizle; sağ Kayıt/Sipariş/Üye/Log — sipariş kalemleri/ödeme/üyenin siparişleri, üye özeti,
+müşterinin diğer kayıtları, bildirim izi "gördü / kayda girmedi", kontrol edenler), `/crm/tickets/settings`; `TicketBell`
+(Header — çan kırmızı yanıp söner, liste açılınca "gördü", tıklayınca "kayda girdi"), QuestionAlerts'e `TicketNotification`
+(user:{id} grubu) toast + 60 sn poll, sidebar rozeti, üye/sipariş detayında "Müşteri İlişkileri" bloğu (+ yeni kayıt kısayolu
+sipariş no ön dolu). **Eski veri aktarıldı (MigrationTool Faz 30, `PG_CONN` env + ~/.pgpass):** 43.190 kayıt / 77.977 işlem /
+137.764 okundu / 68.746 bildirim / 41 pasif IAM kullanıcısı ("Eski personel (aktarım)", rastgele şifre, MustChangePassword;
+admin aktive eder) + 52 silinmiş personel ad-anlık görüntü; kimlikler deterministik (`30000000-0000-0000-000K-…`) → tekrar
+çalıştırılabilir, yeni kayıtlar korunur → cutover'da yeniden çalıştır. Sipariş/üye bağı 0 (eski numaralar bizde yok; bizdeki
+`ORD-…` ile eşleşmedi), metin anlık görüntü. ⚠️ eski işlem görselleri `/media/crm/legacy/<dosya>` ek listesinde, dosyalar
+eski sunucuda `wwwroot/upload/Images/cm_crm/` — HTTP'den ve SSH'tan erişilemedi, kopya için erişim gerekiyor. İzole 5051 ✓
+(seed + uçlar 401/404); admin/dist derlendi (yerel nginx hemen — restart öncesi sayfalar 404 alır), API publish 14:02
+⚠️ **restart bekliyor**. Kalan: rehber sayfası; yetki (panel geneli ayrı iş).
+
+**DASHBOARD "EŞLENMEMİŞ ERP GRUBU" KARTI + EŞLEME SAYFASI SÜZGECİ (2026-09-07, kullanıcı isteği, Admin panel alanı):**
+`GET /api/marketplaces/mapping/targets` ERP hedefine `unmappedGroupCount` (sözlükte eşlemesi olmayan ürün grubu; kural
+`GetErpItemsAsync.IsMapped` ile aynı: eşleme satırı yok VE MappedTargetId boş), `placeholderProductCount` (`gecici`
+grubundaki ürün; `ErpSourceOptions.UnmappedProductGroupCode`) ve `placeholderGroupCode` eklendi (MarketplaceMappingService
+artık `ErpSourceOptions` singleton'ını alır). Dashboard: "Eşlenmemiş ERP Grubu" kartı (Database ikonu; sayı >0 ya da geçici
+grupta ürün varsa kırmızı çerçeve; alt satır "N ürün geçici grupta"; 5 dk yenileme) → tıklanınca
+`/marketplaces/eslestirme?mp=erp:<kod>&dict=unmapped`. Eşleme sayfası: ERP Sözlüğü paneli `dict=unmapped` ile "Yalnız
+eşlenmemiş" süzgeci açık gelir (ürün grubu/tedarikçi türlerinde onay kutusu), ürün grubu türünde kırmızı bilgi şeridi
+(eşlenmemiş grup + geçici gruptaki ürün sayısı + yapılacak iş), ERP çipinde kırmızı eşlenmemiş rozeti. Panel `key={marketplace}`
+ile hedef değişince sıfırlanır. admin/dist derlendi (yerel nginx hemen), API publish 13:19 ⚠️ restart bekliyor (restart
+öncesi kart 0/0 gösterir — yeni alanlar eski binary'de yok).
+
+**NEBİM GRUP EŞLEMESİ KAPANDI + EŞLENMEMİŞ ERP GRUBU → GEÇİCİ GRUP KURALI (2026-09-07, kullanıcı kararları):**
+Bekleyen 17 Nebim grubu: Triko Bluz/Ceket/Elbise/Etek/Hırka/Kazak/Panço/Pantolon/Süveter/Takım/Tulum/Tunik/Yelek (13),
+Eşofman Altı, Sütyen → **her biri kendi grubu** (15 yeni grup, şablon: son sözcük grubu / Triko; Sütyen←İç Giyim elle);
+Büstiyer → **Bustiyer (grp_9)** eşlendi; "tozlu" (00, 58 ürün) **eşlenmedi**, sözlükte eşlenmemiş satır. Config
+`ErpSource:ProductGroupCodes` → {Kot Ceket, Büstiyer}, `ProductGroupPrefixCodes` boş (Triko→grp_14 kalktı; kod
+varsayılanları da). Toplam: 303 grup (bugün 158 yeni), erp:nebim eşleme 203 aktif, sözlük 204 (1 eşlenmemiş).
+`fondoten` çift grubu `tlm_fondoten` "Fondöten"e birleştirildi (yazım farkı; Büstiyer kararıyla aynı). **Şablonsuz 113
+gruba özellik kopyalandı** (elle şablon listesi, 1.019 özellik + 41 eksen-alt özellik; giyim→İç Giyim/Plaj/Pijama/Elbise,
+ayakkabı→Bot/Terlik/Spor Ayakkabı, aksesuar→Aksesuar/Çanta/Şal, kozmetik→tlm_* eş ürünler, elektronik→Telefon/Elektrikli
+Ev Aletleri); `urun_grubu` varsayılanı üst-ad anlamlı şablonlarda korunur (Bikini→Plaj Giyim), eş-ürün şablonlarında
+NULL → seed kendi adını yazar (Ruj≠Maskara). Yanlış şablonlu `babet_corabi` (ayakkabı) ve `pantolon_corabi` (pantolon)
+İç Giyim'den yeniden şablonlandı (ürün yoktu). ★ **YENİ KURAL (plan v1.4 ilke 4):** eşlenmemiş ERP grubundaki YENİ ürün
+atlanmaz, özelliksiz **`gecici` "Geçici Grup (Eşlenmemiş ERP)"** grubuna alınır (`ErpSourceOptions.UnmappedProductGroupCode`,
+boş → eski fail-closed), ERP grup adı sözlüğe eşlenmemiş düşer → panel Eşleştirme › ERP: Nebim › **Eşlenmemiş** kuyruğu
+personeli uyarır; eşleme + ürünü doğru gruba taşıma/güncelleme personel işi; grup eşlenince sonraki turda worker grubu
+düzeltir; mevcut ürünün grubuna dokunulmaz; seed `gecici`yi Ürün Grubu havuzundan hariç tutar. Kod: worker
+`PlaceholderGroupAsync`, seed `SeedUrunGrubuAsync` filtre, araç `--skip` → eşlenmemiş sözlük satırı. Publish alındı
+(/opt/ECSProsAI/publish 13:07) ⚠️ **restart bekliyor** (yeni grupların Ürün Grubu değer/varsayılanı seed'de tamamlanır).
+Bilinen sınır: worker sadece grup ADI görür (kod yok) → worker'ın yazdığı eşlenmemiş satırda Code=ad; araç kodlu satır
+yazdıysa ada göre çift yazmaz.
+
+**NEBİM ÜRÜN GRUPLARI → BİZİM GRUPLAR EŞLEME UYGULANDI (2026-09-07):**
+V3 bağlantısı eski projenin YEREL kopyasında bulundu: `ECSGYE.Solution/ECSGYE.Common/appsettings.json` → "V3"
+(Server 135.125.172.93, DB Eldi_V3; gitignore'daki klasör aramada gözden kaçmıştı) → `~/.ecspros/v3.conn` (600).
+★ Bağlantı için eski TLS gerekir: `OPENSSL_CONF=<scratch>/openssl-legacy.cnf` (MinProtocol TLSv1, SECLEVEL=0) —
+yoksa "pre-login handshake / SSL error 31"; sunucu eski SQL Server (STRING_AGG yok). Araç
+`tools/veri-bakim/NebimGrupEsleme` (discover/groups/plan/apply, `--skip`, ad TitleCase, şablon = son sözcük →
+ilk sözcük eşleşen grup). Nebim "Ürün Grubu" = özellik tipi 2 (204 değer, 29.485 ürün). Sonuç: **44 eşleşti**
+(ad birebir; Kot Ceket 0016 → kot_ceket — ad eşleşmesi config'in önüne alındı, appsettings ProductGroupCodes
+"Kot Ceket"→kot_ceket düzeltildi; elle girilmiş yanlış "KC" sözlük satırı silindi), **143 yeni grup açıldı**
+(kod slug, ad TitleCase; 506 özellik şablon kopyası — Jean Pantolon←Pantolon, Çapraz Çanta←Çanta, Pijama
+Takımı←Pijama…; Abiye/Kemer/Çorap/kozmetik gibi ~60 grup şablonsuz → panelden "Özellikleri Kopyala"), sözlük
+`erp_reference_items` 187 satır (MappedTarget dolu), `marketplace_category_mappings` erp:nebim 187 aktif (grup
+sayısı 145→288). **17 Nebim grubu bilinçli ATLANDI, kullanıcı kararı bekliyor:** Triko Bluz/Ceket/Elbise/Etek/
+Hırka/Kazak/Panço/Pantolon/Süveter/Takım/Tulum/Tunik/Yelek (config Triko→grp_14 mi, kendi grubu mu?), Eşofman
+Altı (→Eşofman?), Sütyen (→İç Giyim?), Büstiyer (bizde "Bustiyer" yazımı), "tozlu" (00, 58 ürün — yer tutucu).
+Yeni grupların "Ürün Grubu" seçim özelliği + varsayılanı seed'de (restart) tamamlanır. ERP worker (EM2) hâlâ
+config okur — DB eşlemesi ile config aynı yönde tutuldu.
+
+**CRM MÜŞTERİ İLİŞKİLERİ (ESKİ /crm/musteri-iliskileri-yonetimi) — KEŞİF + PLAN v1 TASLAK (2026-09-07):**
+Eski panel kaynağı yerelde yok, eski sunucuya SSH yok → keşif eski MySQL `cm_*` tablolarından (scratchpad
+`legacyq` throwaway MySql.Data 8.0.33 konsolu). Bulgular ve öneri `docs/crm-musteri-iliskileri-plani.md`:
+43K kayıt (Şikayet/Talep, 22 konu, 6 durum, konuya göre form alanları), 125K işlem zaman çizelgesi (durum
+değişikliği + personel etiketleme), 368K okundu kaydı, 153K üye/sipariş işlem günlüğü (`cm_crm_not`), sorunlu
+siparişler, MT kalite puanlama. Öneri: Crm modülünde `crm_tickets` + activities + reads + subjects (Requests
+deseni), admin Müşteriler › Müşteri İlişkileri (liste/yeni/detay/ayarlar), panel çanı bildirimi, MigrationTool
+aktarım fazı. **K1-K9 kullanıcı yanıtı bekliyor; onay gelmeden uygulama YOK.**
+
+**DÜZELTME: ADMİN "ETİKET ŞABLONLARI" SAYFASI AÇILMIYORDU (2026-09-07):**
+`LabelTemplatesPage` render içinde `loadedTemplates !== templates` ile ilk şablonu seçiyordu; `templates`
+`data ?? []` ile her render'da YENİ dizi olduğundan (yükleme sırasında) koşul hep doğru → setState döngüsü →
+React "Too many re-renders" → sayfa hata ekranı. Sunucu tarafı (tablo, `elements` jsonb eşlemesi, uç) sorunsuz,
+logda hata yoktu. Düzeltme: sabit `BOS_SABLONLAR` referansı (`data ?? BOS_SABLONLAR`); effect'e taşıma lint
+kuralına (setState-in-effect) takıldığı için render-kalıbı korundu. Lint/tsc ✓, `admin/dist` derlendi (yerel nginx
+bind-mount → hemen yayında; LB admin release'i kullanıcı izniyle). Ders: `useQuery` sonucuna `= []` varsayılanı
+verip referans karşılaştırması yapma — sabit boş dizi kullan.
+
+**POPÜLER ARAMALAR — SONUÇLU + ÇOK KİŞİLİ + KÜFÜR FİLTRESİ (2026-09-07, kullanıcı kararı, Web sitesi alanı):**
+Arama kutusu dropdown'ındaki "Popüler Aramalar" için üç kural: (1) yalnız SONUÇ getiren aramalar, (2) birden fazla
+kişinin yaptığı aramalar, (3) küfür içeren aramalar loglanmaz/aranmaz/listelenmez. Uygulama: `search_term_stats`
+kovası (platform, terim, gün) → (platform, terim, gün, **VisitorHash**) + **ResultCount** kolonu (migration
+`20260907112843_AddSearchTermStatVisitorAndResults`, StorefrontDbContext); sayaç artık SORGUDAN SONRA sonuç sayısı ve
+ziyaretçi anahtarıyla (üye → üye kimliği; misafir → SHA256(IP+UA) ilk 16 hex, kişisel veri saklanmaz) yazılır
+(`AramaTerimIzleyici.KaydetAsync` imzası değişti; /urunler SSR + store products API). Popüler sorgu: son 30 gün,
+`SUM(Count)≥3 AND COUNT(DISTINCT VisitorHash)≥2 AND MAX(ResultCount)>0`; eski satırlar (hash boş / sonuç NULL) yeni veri
+birikene dek listeye girmez, tohum liste tamamlar. `AramaKufurFiltresi` (singleton; sözcük listesi + `Store:BlockedSearchWords`
+/ `Store:BlockedSearchPrefixes` ile genişletilebilir; sözcük düzeyi eşleşme — "götür"/"bisiklet" takılmaz, "sikkk" gibi
+tekrarlı yazım yakalanır): /urunler ve kategori?search SSR'da sorgu çalışmaz, boş sonuç + "Bu arama yapılamıyor.";
+store API products/facets/category products 400 aynı mesaj; sayaç ve popüler liste süzer. ⚠️ Eski binary (restart
+öncesi) upsert'i yeni indeksle çakışır → LogDebug'a düşer, arama etkilenmez, sayım restart'a kadar durur.
+Panel karşılığı YOK (K16 notu): küfür listesi kodda/appsettings'te; ileride panelden yönetim istenirse ayrı iş.
 
 **A2 RENK ADI NORMALİZASYONU UYGULANDI (2026-09-07):**
 `Catalog.Application/Helpers/RenkAdiNormalizer.cs` + seed `SeedRenkAdiNormalizasyonAsync` (SeedCatalogAsync sonu):
@@ -2619,7 +2773,7 @@ yok. Secret'lar repository dışında tutuluyor; GitHub'a gönderim yapılmadı.
 | # | Alan | Kod tabanı | Durum | SIRADAKİ İŞ | Plan dokümanı |
 |---|------|-----------|-------|-------------|---------------|
 | 1 | 🌐 **Web sitesi** (Razor storefront) | `src/ECSPros.Api` Views + `/opt/misharix` tasarım | **2026-09-07 🐛 mega menü (Kategoriler) → /urun-listesi: nginx eski `/store` 301 kuralı tembel yüklenen `/store/navigation/mega-menu` fetch'ini yakalıyordu → `location ^~ /store/navigation/` muafiyeti (reload yapıldı, canlı headless doğrulandı ✓); reload öncesi 301'i önbellekleyen tarayıcılarda "önbelleğe alınmış dosyalar" temizliği gerekir**; **2026-09-06: ürün detayı renk seçimi/galeri artık RENK EKSENİ değer kimliğiyle gruplanır (filtre_rengi yalnız yedek + renk noktası) — P-00022295 Mavi/İndigo karışması giderildi ⚠️ restart bekliyor**; **FAZ H+İ TAMAM**; menü taşıma CANLIDA (2026-07-29); **2026-07-30 performans turu:** brotli SmallestSize→Fastest (~1.2sn TTFB düzeldi, CANLIDA) + statik cache başlıkları + HTTP/2 + **PageSpeed D+B+A + CLS düzeltmesi CANLIDA** (hero preload; panel görsel uyarıları; Magick.NET varyantlar+srcset; banner aspect-ratio kuralı + gerçek width/height — Lighthouse ana sayfa mobil 63→84, desktop 77→98, CLS 1.078→0.043); site 404 sayfası + vitrin link seçici CANLIDA; **Şimdi Al hızlı satın alma (A) + misafir hızlı sipariş CANLIDA ✓ (2026-07-30 kullanıcı doğruladı)**; üst filtre şeridi düzeltmesi + mobil 'Tüm Sonuçları Listele' kaldırma + fiyat filtresi işareti CANLIDA ✓ (fiyat işareti kullanıcı doğruladı) | Web sitesi alanında bekleyen iş yok — 2026-07-30 akşam turu da CANLIDA ✓: sözleşme onay kutusu düzeltmesi, sipariş no (GUID→seri, misafir dahil), kapıda ödeme bedeli sunucu hesaplı + özet satırı, sepetteki sözleşme bloğu kaldırıldı, teslimat özeti 'Sepet Özeti' + gerçek tutarlar (sahte demo tutar temizlendi) (kullanıcı doğruladı); **ürün görselleri responsive srcset UYGULANDI ⚠️ restart bekliyor** (CDN boyut merdiveni — kart/detay/thumb/zoom; dosya üretmez, UrunGorselSrcset); **kartta sepete ekle + mega menü ayarı UYGULANDI ⚠️ restart bekliyor (2026-08-14)**: kart DTO'larına beden listesi (`Sizes`, channelcat cache v9→v10), desktop hover beden paneli + mobil sepet ikonu/alt sayfa (`_KartSepetDavranis.cshtml`, varsayılan AÇIK — panel Ürün Kartı→Yerleşim `cartButton`), mega menü hover ayarı `Settings.navigation.megaMenuHover` (varsayılan KAPALI — panel Menü Yerleşimi; menü linkleri artık tıklamada ürün listesine gider, mega menü yalnız "Kategoriler" tıklamasıyla/ayar açıksa hover'la açılır); izole 5051 testi ✓; **devam turu aynı gün ⚠️ restart bekliyor**: galeri srcset düzeltmesi + hover efekti seçimi (galeri/zoom, panel) + benzer ürünler ikonu (/benzer/{kod} görsel arama, aynı grup+cinsiyet) + stoksuz renk soluk (cache v11) + renk hover önizleme + ikonlar 32px + ikon işlev balonları; **arama renk eşleşmesi düzeltmesi ✓ (kullanıcı doğruladı 2026-08-14)**: "sarı elbise" kartları eşleşen rengin görseli/linkiyle (renk-ekseni fallback — filtre_rengi eşlemesiz ürünler dahil, eşleşen varyant görseli), alaka sıralaması (renk+ad öne), öneri dropdown'ı ve infinite kartlar da aynı kural; ★ DB en_US.utf8: SQL lower() Türkçe I→i, ı sorunları için değer adları mixed-case olduğundan çalışıyor; **benzer ürünler crawler koruması ⚠️ restart bekliyor (2026-08-15 sabah)**: Meta crawler bir gecede ~8.700 /benzer isteğiyle kendi görsel arama sunucumuzu (search.misharitalia.com — kendi geliştirmemiz, dış/ücretli servis DEĞİL) yordu (03:00-05:00 servis 500 → sayfa yalnız kaynak ürünle kaldı; kod hatası değildi) — bot UA'larına servis çağrısı yok, X-Robots-Tag noindex/nofollow + robots.txt Disallow /benzer,/gorsel-arama + kart linki rel=nofollow, başarılı sonuç 12 saat IMemoryCache, servis hatasında "şu anda getirilemiyor" boş durumu (izole 5051 ✓, commit 9b9d218); **Kategori filtresi TÜM liste sayfalarında gerçek yaprak kategorilerden ⚠️ restart bekliyor (2026-08-15, kullanıcı: "genele uygulayalım")**: `Services/UrunKategoriHaritasi` (singleton; platform başına ürün→yaprak kanal kategorisi haritası, `GetProductsLeafChannelCategoriesQuery(ProductIds:null)`=tüm satışa açık ürünler, ~27K ürün/144 yaprak, 15 dk tazelik + arka plan tazeleme, ilk istek senkron ~2-4 sn) → facet motoruna KATEGORİ SANAL GRUBU: `GetStoreFacetsQuery/GetChannelCategoryFacetsQuery.ProductCategoryMap+SelectedCategoryIds`, `StoreFacetsDto.CategoryCounts` (additive; channelcat facets cache v8→v9), `BuildFacetsWithSelections` kategori kısıtı (diğer gruplar kısıtlı kümeden, kategori grubu kısıtsız kümeden); kategori id'leri attrs= içinde taşınır → `Harita.Ayir` kategori/özellik ayırır, `Harita.UrunIdleri` → `GetStoreProductsQuery.ProductIds` / `GetChannelCategoryProductsQuery.RestrictProductIds` (yeni, renk modu); api/store products + channel-categories/{id}/products uçları da attrs içindeki kategori id'sini aynı şekilde çözer (infinite scroll + mobil additive); `UrunListesiController.FiltreGruplariKur` Kategori grubunu FiltreGruplari başına koyar, `KategoriSecenekleri` HER YERDE boş (menü kökü/çocuk kutusu kalktı); izole 5051 ✓: /kadin Kategori "Kadın Yeni Gelenler(339)/Bluz(329)/Denim(286)/Elbise(273)…", /urunler?search=elbise "Elbise(273)/Abiye(20)/Kız Çocuk Elbise(14)…", /urun-listesi 144 yaprak, kategori seçimi liste+API tutarlı (529/529); ★ bilinen: yaprak seçimi breadcrumb kuralı (en derin→SortOrder) — "Yeni Gelenler" gibi koleksiyon kategorileri eşit derinlikte ürün kategorisinin önüne geçebilir (SortOrder ile yönetilir); kategori sayfası toplamı renk-kartı, facet sayımı ürün (önceden de öyle); **arama sayfalarında Kategori filtresi ürün kümesiyle sınırlı ⚠️ restart bekliyor (2026-08-15 kullanıcı kararı)**: görsel arama sonucu + benzer sayfalarında Kategori artık menü kökleri (nav.Kokler) değil, sayfadaki ürünlerin YAPRAK kanal kategorilerinden üretilir (`GetProductsLeafChannelCategoriesQuery` — breadcrumb kural motorunun toplu sürümü, en derin→SortOrder) ve normal filtre grubu gibi davranır (TipKodu "kategori", attrs= içinde id taşınır; sunucu id'yi kategori/özellik diye ayırır, seçim listeyi daraltır, klasik facet kuralıyla kendi seçimini dışlar, ≥2 seçenek yoksa gizli); KategoriSecenekleri bu sayfalarda boş; metin araması (/urunler?search=) HÂLÂ menü-kökü kategori kutusu kullanır (sayfalı sınırsız küme — ayrı iş); izole 5051 ✓ (11 ürünlük karışık küme: Kadın İkili Takım(6)/Denim/Erkek Pantolon/…; kategori seçimi 11→6, diğer gruplar yeniden hesaplandı); **görsel arama sonucu + benzer ürünler sayfalarına gerçek filtreler ✓ CANLIDA (2026-08-15, kullanıcı doğruladı)**: `GetStoreFacetsQuery.ProductCodes` (additive) — facet'ler yalnız sayfadaki kod kümesinden (seçim-duyarlı, cache dışı); `UrunListesiController.KodListesiVmAsync` ortak yardımcı (/urunler?codes= ve /benzer/{kod}): attrs/priceMin/priceMax/sort SSR uygulanır, sıralama seçilmediyse benzerlik sırası korunur; izole 5051 ✓ (benzer: Kategori/Beden/Filtre Rengi/Desen/Esneklik/Fiyat, filtreyle 9→4 kart, benzer kod listesi 12s cache sayesinde filtre yenilemeleri servise gitmez); **bot-dışı rotalar tek kaynak ⚠️ restart bekliyor (2026-08-15)**: `Services/BotDisiRotalar.cs` (sepet/teslimat/ödeme/hesabım+üye sayfaları/benzer/gorsel-arama/o/uyeliksiz-kargo-takip/api/hubs/agent/onizleme/yazdir/hata/…) → `/robots.txt` buradan ÜRETİLİR (wwwroot statik dosya SİLİNDİ; canlı publish/wwwroot/robots.txt geçici köprü olarak üretilen içerikle yazıldı — restart sonrası silinebilir, statik dosya varsa MapGet'ten önce sunulur) + `XRobotsTagMiddleware` bu yollara noindex,nofollow başlığı + Views'ta bu yollara giden 49 linke rel="nofollow" (Footer/GirişMenü/YanMenü/MobilAltBar/…); kart favori/koleksiyon/sepet butonları zaten link değil (JS→API, /api Disallow); /koleksiyon/{shareCode} paylaşım sayfası BİLİNÇLİ açık; ★ KURAL: yeni üye-etkileşim sayfası açılınca yolunu BotDisiRotalar.Onekler'e ekle; izole 5051 ✓; ★ LOG ANALİZİ (journal + nginx, 14 Ağu 19:00→15 Ağu 05:10 UTC): servise 7.812 istek gitti — 5.842×200 + 1.970×500/502; saatlik: 23:00 543 · 00:00 1.644 · 01:00 1.716 · 02:00 1.588 · 03:00 1.652 (1.419 hata) · 04:00 555 (540 hata); normal insan trafiği saatte 3-30 istek; nginx /benzer 8.756 istekten ~7.800'ü `meta-externalagent/1.1` UA'lı (bot 23:15 başladı, ~04:30 kesildi), insan tıklaması saatte 8-15; POST /gorsel-arama (gerçek modal araması) toplam yalnız 50 — yükün tamamı /benzer linkleri üzerinden; not: servis kendi sunucumuz olduğundan fatura yok, 500'ler yük/tükenme belirtisi — sunucunun kaynak/limitleri gözden geçirilebilir; **2026-08-14 gece turu ✓ CANLIDA (kullanıcı doğruladı)**: görsel arama modalı 4 kaynak (dosya/kamera/URL sunucudan indirilir/Ctrl+V yapıştırma) + ?page=N sonrası üste eklenen önceki-sayfa kartlarının tıklanamama düzeltmesi (yukarı yükleyici kartTiklamasiniHazirla bağlamıyordu; window.msKartTiklamasiniHazirla); **teslimat giriş/misafir kapısı sayfa seviyesine taşındı — CANLIDA ✓ (2026-08-03, kullanıcı doğruladı)** — mini sepetten /teslimat'a gelen misafirde "Üyeliksiz Devam Et" döngüsü düzeldi; **kampanya F5 CANLIDA ✓ (2026-08-03, kullanıcı doğruladı)**: buy_x_get_y motoru sameProduct=false/cheapestGetsBenefit/getBenefitType destekliyor (izole test 11/11) + GET cart campaignDiscount/campaigns/kalem campaignLineDiscount + mini sepet//sepet//teslimat//odeme özetlerinde "Kampanya İndirimi" satırı + satır rozetleri/çizik fiyat; **indirim kalemlere AĞIRLIKLI dağıtılır ve OrderItem.DiscountAmount/Total'a yazılır → iade tutarı kalem bazında doğru** (iş kuralı: "en ucuz bedava" yalnız toplamı belirler); **F5 devamı CANLIDA ✓ (2026-08-03 kullanıcı doğruladı):** kupon da kalemlere dağıtılır, checkbox/silme kampanya hesabını anında tazeler (GET cart excludedVariantIds), kart bandında çoklu kampanya animasyonlu+renkli dönüşüm (Campaign.BadgeColor + panel palet chip'i + CampaignBadgePalette; PageComposer c5) (Teslimat.cshtml kapı: modal otomatik açılır, misafir seçimi bayrak yazar, seçimsiz kapanış /sepet'e döner) | `docs/misharix-razor-tasima-plani.md` |
-| 2 | 🛠 **Admin panel** (React) | `admin/` | **📄 Fatura entegrasyonu `docs/fatura-entegrasyon-plani.md` v1.2 — FE0 CANLIDA + FE2 panel CANLIDA + **FE1 + FE3 altyapı + FE4 UYGULANDI ⚠️ restart bekliyor** (2026-09-06: tarih-sıra kuralı; dış numaralı fatura; boşluk denetimi; einvoice kataloğu 6 servis + seri↔sözleşme ZORUNLU; ord_invoice_dispatches outbox + InvoiceDispatchWorker (InvoiceDispatch:Enabled=false — K1 gerçek adaptörle açılır) + panel Gönderim Kuyruğu; 3 migration dev+demo DB'de; sırada K1 → gerçek adaptör, K4-K6 → FE5): tipli tekil seri + seri×yıl atomik sayaç + kanal faturalama ayarı/yuvaları (order şeması) + fatura kayıt genişletmesi; migration dev+demo DB'de; sonraki FE1 (K3 kararı) → FE2 panel; K1-K7/K9-K11 açık; yol haritası FAZ 13**; **2026-09-06 KARAR: gruplama katmanı YOK — özellik `urun_grubu` "Ürün Grubu" SEÇİM tipine çevrildi (eski urun_alt_grubu/text), değer havuzu = 144 grup adı, grup başına varsayılan (`ProductGroupAttribute.DefaultAttributeValueId`, migration AddProductGroupAttributeDefaultValue), 29.137 ürüne geri dolum (dev ✓ demo ✓; canlı .241 → `tools/veri-bakim/2026-09-06-urun-grubu-secimli.sql` veya açılış seed'i), yeni ürün varsayılanı otomatik alır; panel grup sayfasında "Varsayılan" sütunu + ekle/düzenle seçicisi ⚠️ restart bekliyor. ERP eşlemesi `docs/erp-esleme-plani.md` v1.1 — **EM0 + EM1 + EM3-panel UYGULANDI ⚠️ restart bekliyor** (erp_reference_items + "erp:nebim" hedefi + ERP sözlüğü; çok koşullu kural + MappingRuleResolver; ERP Tedarikçiler/Eşlenmemiş sekmeleri, varyant eksenleri, ignore stratejisi; migration AddErpReferenceItemMappedTarget dev+demo); **EM2 worker sözleşmesi plan §6 → ekip arkadaşına iletilecek**; K1-K6 açık**; Faz 9 tamam; Pazaryerleri veri yönetimi **F1-F5 CANLIDA** (2026-07-29 restart ile) — **PLAN TAMAMLANDI**; 2026-07-29: 8 kargo servisine SettingsSchema şablonu + Kargo Bölgeleri firma uyarısı CANLIDA (kullanıcı doğruladı) | Gerçek Trendyol anahtarlarıyla uçtan uca canlı deneme → F6+ diğer pazaryerleri (talep gelince) + zamanlanmış senkron kadansları | `docs/pazaryeri-entegrasyon-veri-yonetimi.md` |
+| 2 | 🛠 **Admin panel** (React) | `admin/` | **📄 Fatura entegrasyonu `docs/fatura-entegrasyon-plani.md` v1.2 — FE0 CANLIDA + FE2 panel CANLIDA + **FE1 + FE3 altyapı + FE4 UYGULANDI ⚠️ restart bekliyor** (2026-09-06: tarih-sıra kuralı; dış numaralı fatura; boşluk denetimi; einvoice kataloğu 6 servis + seri↔sözleşme ZORUNLU; ord_invoice_dispatches outbox + InvoiceDispatchWorker (InvoiceDispatch:Enabled=false — K1 gerçek adaptörle açılır) + panel Gönderim Kuyruğu; 3 migration dev+demo DB'de; sırada K1 → gerçek adaptör, K4-K6 → FE5): tipli tekil seri + seri×yıl atomik sayaç + kanal faturalama ayarı/yuvaları (order şeması) + fatura kayıt genişletmesi; migration dev+demo DB'de; sonraki FE1 (K3 kararı) → FE2 panel; K1-K7/K9-K11 açık; yol haritası FAZ 13**; **2026-09-06 KARAR: gruplama katmanı YOK — özellik `urun_grubu` "Ürün Grubu" SEÇİM tipine çevrildi (eski urun_alt_grubu/text), değer havuzu = 144 grup adı, grup başına varsayılan (`ProductGroupAttribute.DefaultAttributeValueId`, migration AddProductGroupAttributeDefaultValue), 29.137 ürüne geri dolum (dev ✓ demo ✓; canlı .241 → `tools/veri-bakim/2026-09-06-urun-grubu-secimli.sql` veya açılış seed'i), yeni ürün varsayılanı otomatik alır; panel grup sayfasında "Varsayılan" sütunu + ekle/düzenle seçicisi ⚠️ restart bekliyor. ERP eşlemesi `docs/erp-esleme-plani.md` v1.1 — **EM0 + EM1 + EM3-panel ✅ CANLIDA (2026-09-07 restart) + Nebim grup eşlemesi KAPANDI (203 eşleme, 158 yeni grup, eşlenmemiş→`gecici` kuralı, dashboard "Eşlenmemiş ERP Grubu" kartı — kullanıcı doğruladı)**; **EM2 worker sözleşmesi plan §6 → ekip arkadaşına iletilecek**; K1-K6 açık; sırada EM4 tedarikçi eşlemesi (SupplierAccountCodes boş → ürünlerde tedarikçi yazılmıyor)**; Faz 9 tamam; Pazaryerleri veri yönetimi **F1-F5 CANLIDA** (2026-07-29 restart ile) — **PLAN TAMAMLANDI**; 2026-07-29: 8 kargo servisine SettingsSchema şablonu + Kargo Bölgeleri firma uyarısı CANLIDA (kullanıcı doğruladı) | Gerçek Trendyol anahtarlarıyla uçtan uca canlı deneme → F6+ diğer pazaryerleri (talep gelince) + zamanlanmış senkron kadansları | `docs/pazaryeri-entegrasyon-veri-yonetimi.md` |
 | 3 | 🔌 **Dış API** (Partner entegrasyon) | `/api/partner/v1` + `Controllers/Partner/` | F0→F2b + **Satıcı P1-P2 CANLIDA + P3a hakediş motoru UYGULANDI ⚠️ restart bekliyor (2026-08-11)**: komisyon 5 katman + teslim tetikli hakediş + worker + kampanya opt-in + panel /commission; plan `docs/pazaryeri-satici-api-degerlendirmesi.md` | Satıcı P3a hakediş → P3b relay e-posta → P4 rate limit/sandbox → P5 panel | `docs/pazaryeri-satici-api-degerlendirmesi.md`, `docs/api-hesaplari-tasarimi.md` |
 | 4 | 🏪 **Satıcı paneli** | `satici/` + `/api/supplier/*` | **TAMAMLANDI ⚠️ restart+nginx+DNS bekliyor (2026-08-11)**: ürün ekleme/düzenleme (onay akışlı), fiyat&stok, siparişler+kargo+fatura, mali durum, kampanya opt-in, Hesabım (kargo modu); partner API ile AYNI komutlar; subdomain partner.misharitalia.com | DNS A kaydı + nginx restart (kullanıcı) → kullanıcı kabul testi | `docs/satici-paneli-tasarimi.md` |
 | 5 | 📱 **Mobil uygulama API** | mevcut `/api/store/*` + cihaz doğrulama + staging | Yüzey hazır + **kapı AÇIK** (kimliksiz store çağrısı 401); cihaz attestation altyapısı + SSR web token cutover'ı ⚠️ restart bekliyor; **staging KURULDU + DOĞRULANDI ✓ (2026-08-04)**: 5055 dışa açık, DevBypass ile uçtan uca zincir (attest→imzalı istek→üye) geçti, Postman attest kullanıcı doğruladı; rehber `docs/mobil-api-test-rehberi.md`; unit şablonu tools/mobile/ (Type=simple — notify tuzağı!); **🐛 Mobil 500 (channel-categories/{id}/products) KÖK NEDEN: staging 5055 eski binary + FE0 migration (InvoiceSeriesId kolonu kaldırıldı) → publish-staging ve publish-demo canlı publish ile eşitlendi, demo DB'ye TÜM bağlamların bekleyen migration'ları uygulandı, izole 5051/5052 doğrulandı ⚠️ `ecspros-staging` + `ecspros-demo` restart bekliyor (2026-09-06)**; **App Links / Universal Links doğrulama dosyaları UYGULANDI ⚠️ restart + nginx reload bekliyor (2026-09-06): wwwroot/.well-known/{assetlinks.json, apple-app-site-association} uygulama sunar (200, application/json, önbellek 1 sa; izole 5051 doğrulandı), apex misharitalia.com için nginx 301 istisnası `location ^~ /.well-known/`**; **push cihaz kaydı CANLIDA 5000 ✓ (2026-09-05); staging 5055 publish'i 30 Ağu'da kalmıştı → prod binary'siyle byte-aynı eşitlendi, ⚠️ `sudo systemctl restart ecspros-staging` bekliyor (mobil ekip push uçlarını swagger'da göremedi — sebep buydu)** | **Mobil BACKEND_ISTEKLERI A1-A11/B1-B8/C2-C3 UYGULANDI (2026-09-07) ⚠️ restart (ecspros + ecspros-staging); durum tablosu referans §12; açık: A2 renk adı normalizasyonu (veri kararı), B2 misafir gezinme, C4 Play Integrity** → sonra App Attest → staging kapat + secret imha | `docs/mobil-api-referansi.md` (§11 misafir takip, §12 istek durumu), `tools/mobile/STAGING.md` |

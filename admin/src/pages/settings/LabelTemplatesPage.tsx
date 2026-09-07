@@ -35,12 +35,15 @@ const newEl = (type: El['type']): El => ({
 const isTargetType = (value: string): value is Tpl['targetType'] => value === 'product' || value === 'bin'
 const isTextAlign = (value: string): value is El['align'] => value === 'left' || value === 'center' || value === 'right'
 
+const BOS_SABLONLAR: Tpl[] = [] // sabit referans — render başına yeni [] üretilmesin (aşağıdaki useEffect bağımlılığı)
+
 export function LabelTemplatesPage() {
   const qc = useQueryClient()
-  const { data: templates = [], isLoading } = useQuery<Tpl[]>({
+  const { data, isLoading } = useQuery<Tpl[]>({
     queryKey: ['label-templates'],
     queryFn: async () => (await api.get('/core/label-templates')).data.data,
   })
+  const templates = data ?? BOS_SABLONLAR
 
   const [selId, setSelId] = useState<string | 'new' | null>(null)
   const [form, setForm] = useState({ name: '', targetType: 'product' as 'product' | 'bin', widthMm: 40, heightMm: 30, isDefault: false, isActive: true })
@@ -54,6 +57,10 @@ export function LabelTemplatesPage() {
     if (!t) { setSelId('new'); setForm({ name: '', targetType: 'product', widthMm: 40, heightMm: 30, isDefault: templates.length === 0, isActive: true }); setEls([newEl('barcode'), { ...newEl('field'), y: 16, field: 'name' }]) }
     else { setSelId(t.id); setForm({ name: t.name, targetType: t.targetType, widthMm: t.widthMm, heightMm: t.heightMm, isDefault: t.isDefault, isActive: t.isActive }); setEls(JSON.parse(t.elementsJson || '[]')) }
   }
+  // Render sırasında durum ayarı (React "adjusting state during render" kalıbı): liste referansı değişince
+  // seçim yoksa ilk şablon seçilir. 2026-09-07 düzeltme: `templates` önceden `data ?? []` ile her render'da
+  // YENİ dizi üretiyordu → koşul hep doğru → setState döngüsü → "Too many re-renders" (sayfa açılmıyordu).
+  // Artık sabit BOS_SABLONLAR referansı kullanılır; setState-in-effect lint kuralı nedeniyle effect değil.
   const [loadedTemplates, setLoadedTemplates] = useState<Tpl[] | null>(null)
   if (loadedTemplates !== templates) {
     setLoadedTemplates(templates)

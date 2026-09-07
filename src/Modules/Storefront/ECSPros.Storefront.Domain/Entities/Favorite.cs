@@ -19,4 +19,6 @@ public class Favorite : BaseEntity
     /// <summary>Favorilenen renk (attribute value) — null: renk ekseni olmayan ürün/renksiz
     /// favori. 2026-07-16: favori artık ürün+renk bazlıdır (tüm renkler birden işaretlenmez).</summary>
     public Guid? ColorValueId { get; set; }
+    /// <summary>Favoriye eklendiği andaki satış fiyatı (push: favorite_price_drop eşiği, 2026-09-07). Eski kayıtlarda ilk taramada dolar.</summary>
+    public decimal? PriceAtAdd { get; set; }
 }

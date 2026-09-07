@@ -18,7 +18,8 @@ public sealed class MarketplaceMappingService(
     IIntegrationDbContext db,
     IServiceScopeFactory scopeFactory,
     DistributedWorkerLock workerLock,
-    ILogger<MarketplaceMappingService> logger)
+    ILogger<MarketplaceMappingService> logger,
+    ECSPros.Api.Services.ErpSource.ErpSourceOptions erpOptions)
 {
     private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
 
@@ -786,15 +787,39 @@ public sealed class MarketplaceMappingService(
             while (await reader.ReadAsync(ct))
                 services.Add((reader.GetString(0), reader.GetString(1), reader.GetBoolean(2)));
 
-        var counts = await db.ErpReferenceItems
+        var groupRows = await db.ErpReferenceItems
             .Where(i => i.Kind == ErpReferenceKinds.ProductGroup && i.IsActive)
-            .GroupBy(i => i.TargetSystem).Select(g => new { g.Key, N = g.Count() })
-            .ToDictionaryAsync(x => x.Key, x => x.N, ct);
+            .Select(i => new { i.TargetSystem, i.Code, i.MappedTargetId })
+            .ToListAsync(ct);
+        var counts = groupRows.GroupBy(i => i.TargetSystem).ToDictionary(g => g.Key, g => g.Count());
+        // eşlenmemiş = eşleme satırı yok VE sözlük hedefi boş (GetErpItemsAsync.IsMapped ile aynı kural)
+        var mappedCodes = await db.MarketplaceCategoryMappings
+            .Where(m => m.TargetExternalId != null && m.FirmPlatformId == null && m.Marketplace.StartsWith("erp:"))
+            .Select(m => new { m.Marketplace, m.TargetExternalId }).ToListAsync(ct);
+        var mappedSet = mappedCodes.Select(m => (m.Marketplace, m.TargetExternalId!)).ToHashSet();
+        var unmapped = groupRows.Where(i => i.MappedTargetId == null && !mappedSet.Contains((i.TargetSystem, i.Code)))
+            .GroupBy(i => i.TargetSystem).ToDictionary(g => g.Key, g => g.Count());
+
+        // 2026-09-07: eşlenmemiş ERP grubundan "geçici" gruba düşen ürünler (dashboard uyarısı)
+        var placeholderCode = erpOptions.UnmappedProductGroupCode;
+        var placeholderProducts = 0;
+        if (!string.IsNullOrWhiteSpace(placeholderCode))
+        {
+            await using var cmd = mainDb.CreateCommand(
+                """
+                SELECT COUNT(*)::int FROM catalog.products p
+                JOIN definition.product_groups g ON g."Id" = p."ProductGroupId"
+                WHERE g."Code" = $1 AND NOT p."IsDeleted"
+                """);
+            cmd.Parameters.AddWithValue(placeholderCode);
+            placeholderProducts = (int)(await cmd.ExecuteScalarAsync(ct) ?? 0);
+        }
 
         return services.Select(sv =>
         {
             var key = MappingTargets.Erp(sv.Code);
-            return new ErpTargetDto(key, sv.Code, sv.Name, sv.HasContract, counts.GetValueOrDefault(key));
+            return new ErpTargetDto(key, sv.Code, sv.Name, sv.HasContract, counts.GetValueOrDefault(key),
+                unmapped.GetValueOrDefault(key), placeholderProducts, placeholderCode);
         }).ToList();
     }
 

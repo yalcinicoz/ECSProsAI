@@ -165,7 +165,12 @@ public sealed record BulkCategoryMappingRequest(string Marketplace, List<BulkCat
 public sealed record BulkCategoryMappingResult(int Saved, int Failed, List<string> Errors);
 
 // ── EM0: ERP hedefleri + sözlük ──────────────────────────────────────────────
-public sealed record ErpTargetDto(string Key, string ServiceCode, string Name, bool HasContract, int GroupCount);
+/// <summary>
+/// ERP hedefi özeti. UnmappedGroupCount = sözlükte eşlemesi olmayan ürün grubu (panel kuyruğu);
+/// PlaceholderProductCount = eşlenmemiş ERP grubundan "geçici" gruba düşmüş ürün sayısı (2026-09-07 kuralı; dashboard kartı).
+/// </summary>
+public sealed record ErpTargetDto(string Key, string ServiceCode, string Name, bool HasContract, int GroupCount,
+    int UnmappedGroupCount = 0, int PlaceholderProductCount = 0, string? PlaceholderGroupCode = null);
 public sealed record ErpReferenceItemDto(
     Guid Id, string TargetSystem, string Kind, string Code, string Name, string? ParentCode,
     bool IsActive, string Source, DateTime LastSeenAt, bool IsMapped,

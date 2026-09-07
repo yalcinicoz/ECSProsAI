@@ -19,8 +19,11 @@
     // doldurur; buton yalnız bu bağlam varken görünür (misharix kuralı: !anaSayfaMi).
     var aramaAktifKategori = ViewData["MsAktifKategori"] as NavKategori;
 }
+        @* 2026-09-07: arama girdilerinde name YOK + autocomplete="off" — Chrome, Enter ile yönlendirmeyi
+           formsuz gönderim sayıp yazılanı alan adıyla geçmişe kaydediyor ve dropdown'ımızın üstünde kendi
+           öneri listesini açıyordu; adsız alan geçmişe yazılmaz, eski kayıtlar da eşleşmez. *@
         <div class="ms-ana-navigasyon-arama" data-ms-arama data-ms-arama-platform="@(aramaPlatform?.Id)" data-ms-arama-kategori-id="@(aramaAktifKategori?.Id)" data-ms-arama-kategori-slug="@(aramaAktifKategori?.Slug)" data-ms-arama-kategori-ad="@(aramaAktifKategori?.Ad)">
-            <input class="ms-ana-navigasyon-arama-input" data-ms-arama-input type="search" name="ms-search-query-main" role="searchbox" placeholder="Ürün, kategori veya marka ara" aria-label="Ürün, kategori veya marka ara" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="search" enterkeyhint="search" aria-autocomplete="none" readonly data-ms-autocomplete-kapat data-lpignore="true" data-1p-ignore="true" data-form-type="other">
+            <input class="ms-ana-navigasyon-arama-input" data-ms-arama-input type="search" role="searchbox" placeholder="Ürün, kategori veya marka ara" aria-label="Ürün, kategori veya marka ara" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="search" enterkeyhint="search" aria-autocomplete="none" readonly data-ms-autocomplete-kapat data-lpignore="true" data-1p-ignore="true" data-form-type="other">
             <i class="fa-solid fa-magnifying-glass ms-fa-ikon ms-ana-navigasyon-arama-ikon" aria-hidden="true"></i>
             <span class="ms-ana-navigasyon-arama-sag" aria-hidden="false">
                 <button class="ms-ana-navigasyon-kategoride-ara" type="button" data-ms-kategoride-ara aria-pressed="false" hidden>Kategoride ara</button>
@@ -42,7 +45,7 @@
                             </svg>
                         </button>
                         <div class="ms-ana-navigasyon-arama-panel-girdi-kutu">
-                        <input class="ms-ana-navigasyon-arama-panel-girdi" data-ms-arama-panel-input type="search" name="ms-search-query-panel" role="searchbox" placeholder="Ürün, kategori veya marka ara" aria-label="Ürün, kategori veya marka ara" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="search" enterkeyhint="search" aria-autocomplete="none" readonly data-ms-autocomplete-kapat data-lpignore="true" data-1p-ignore="true" data-form-type="other">
+                        <input class="ms-ana-navigasyon-arama-panel-girdi" data-ms-arama-panel-input type="search" role="searchbox" placeholder="Ürün, kategori veya marka ara" aria-label="Ürün, kategori veya marka ara" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="search" enterkeyhint="search" aria-autocomplete="none" readonly data-ms-autocomplete-kapat data-lpignore="true" data-1p-ignore="true" data-form-type="other">
                         <svg class="ms-ana-navigasyon-arama-panel-girdi-ikon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                         </svg>
@@ -403,7 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const populerAramalariDoldur = async () => {
             const kap = document.querySelector("[data-ms-populer-aramalar]");
             if (!kap) { return; }
-            const ARAMA_ANAHTARI = "ms-populer-aramalar:" + platformId;
+            const ARAMA_ANAHTARI = "ms-populer-aramalar:v2:" + platformId; // v2 (2026-09-07): kural değişimi — eski (küfür içerebilen) önbellek yok sayılır
             let terimler = null;
             try {
                 const kayit = JSON.parse(sessionStorage.getItem(ARAMA_ANAHTARI));

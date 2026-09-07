@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import * as signalR from '@microsoft/signalr'
 import api from '@/api/client'
 import { useQuestionAlertStore } from '@/store/questionAlerts'
+import { useTicketAlertStore } from '@/store/ticketAlerts'
 
 interface QuestionToast {
   key: number
@@ -23,6 +24,8 @@ export function QuestionAlerts() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const setPendingCount = useQuestionAlertStore((s) => s.setPendingCount)
+  const setTicketPending = useTicketAlertStore((s) => s.setPendingCount)
+  const [ticketToasts, setTicketToasts] = useState<{ key: number; trackingNo: number; message: string }[]>([])
   const [toasts, setToasts] = useState<QuestionToast[]>([])
   const toastKey = useRef(0)
 
@@ -36,6 +39,18 @@ export function QuestionAlerts() {
     refetchInterval: 60_000,
     refetchIntervalInBackground: true,
   })
+
+  // Müşteri İlişkileri: bekleyen bildirim sayısı (görülmemiş ya da kayda girilmemiş) — 60 sn poll + hub olayı
+  const { data: ticketPending } = useQuery({
+    queryKey: ['ticket-notifications-pending'],
+    queryFn: async () => {
+      const res = await api.get('/crm/tickets/notifications', { params: { pageSize: 1, onlyPending: true } })
+      return (res.data.data?.pendingCount ?? 0) as number
+    },
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: true,
+  })
+  useEffect(() => { setTicketPending(ticketPending ?? 0) }, [ticketPending, setTicketPending])
 
   // Sayaç → store (Sidebar rozeti + Dashboard kartı) ve sekme başlığı
   useEffect(() => {
@@ -72,6 +87,14 @@ export function QuestionAlerts() {
     })
     // Başka bir kullanıcı cevapladığında herkesin rozeti/listesi anında düşsün
     connection.on('QuestionAnswered', tazele)
+    // Müşteri İlişkileri: bana düşen bildirim (user:{id} grubu — hub bağlanınca otomatik) → toast + sayaç
+    connection.on('TicketNotification', (data: { trackingNo?: number; message?: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['ticket-notifications-pending'] })
+      queryClient.invalidateQueries({ queryKey: ['ticket-notifications'] })
+      const t = { key: ++toastKey.current, trackingNo: data?.trackingNo ?? 0, message: data?.message ?? 'Müşteri İlişkileri bildirimi' }
+      setTicketToasts((x) => [...x.slice(-2), t])
+      window.setTimeout(() => setTicketToasts((x) => x.filter((y) => y.key !== t.key)), 15_000)
+    })
 
     const abonelik = () => connection.invoke('Subscribe', 'questions').catch(() => {})
     connection.onreconnected(() => { abonelik(); tazele() })
@@ -82,10 +105,22 @@ export function QuestionAlerts() {
     return () => { connection.stop().catch(() => {}) }
   }, [queryClient])
 
-  if (toasts.length === 0) return null
+  if (toasts.length === 0 && ticketToasts.length === 0) return null
 
   return (
     <div className="fixed top-4 right-4 z-[100] space-y-2 w-[340px] max-w-[calc(100vw-2rem)]">
+      {ticketToasts.map((t) => (
+        <button key={`t${t.key}`} type="button"
+          onClick={() => { setTicketToasts((x) => x.filter((y) => y.key !== t.key)); navigate(`/crm/tickets/${t.trackingNo}`) }}
+          className="w-full text-left rounded-xl shadow-lg p-3 border cursor-pointer"
+          style={{ background: 'var(--surface)', borderColor: '#ef4444', color: 'var(--text)' }}>
+          <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: '#ef4444' }}>
+            <span>🔔 Müşteri İlişkileri</span><span className="ml-auto font-mono" style={{ color: 'var(--text-s)' }}>{t.trackingNo}</span>
+          </div>
+          <p className="text-sm mt-1">{t.message}</p>
+          <p className="text-[11px] mt-1" style={{ color: 'var(--text-s)' }}>kayda gitmek için tıklayın</p>
+        </button>
+      ))}
       {toasts.map((t) => (
         <button
           key={t.key}

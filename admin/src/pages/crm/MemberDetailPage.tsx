@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
 import type { OrderSummary } from '../orders/OrdersPage'
+import { TicketsSection } from './tickets/TicketsSection'
 import { ORDER_STATUS_MAP } from '../orders/orderConstants'
 
 interface MemberDetail {
@@ -353,6 +354,8 @@ export function MemberDetailPage() {
             )
           })}
         </Section>
+
+        <TicketsSection memberId={member.id} />
 
         <Section title="Oturumlar (son 10)">
           {sessions.length === 0 && <p className="text-sm" style={{ color: 'var(--text-s)' }}>Oturum kaydı yok.</p>}

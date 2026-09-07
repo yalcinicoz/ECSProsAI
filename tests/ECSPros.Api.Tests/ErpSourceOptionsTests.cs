@@ -18,9 +18,11 @@ public sealed class ErpSourceOptionsTests
         Assert.IsTrue(options.SupplierReconciliationEnabled);
         Assert.AreEqual(60, options.SupplierReconciliationMinutes);
         Assert.AreEqual("V3-SUP-696", options.BuildSupplierAccountCode("696"));
-        Assert.AreEqual("grp_46", options.ProductGroupCodes["Kot Ceket"]);
-        Assert.AreEqual("grp_47", options.ProductGroupCodes["Eşofman Altı"]);
-        Assert.AreEqual("grp_14", options.ProductGroupPrefixCodes["Triko"]);
+        Assert.AreEqual("kot_ceket", options.ProductGroupCodes["Kot Ceket"]);
+        Assert.AreEqual("grp_9", options.ProductGroupCodes["Büstiyer"]);
+        Assert.IsFalse(options.ProductGroupCodes.ContainsKey("Eşofman Altı"));
+        Assert.AreEqual(0, options.ProductGroupPrefixCodes.Count);
+        Assert.IsNull(options.ResolveProductGroupPrefixCode("Triko Takım"));
         Assert.AreEqual("malzeme", options.ProductAttributeTypeCodes["17"]);
         Assert.AreEqual("astar_durumu", options.ProductAttributeTypeCodes["21"]);
         Assert.AreEqual("fermuar", options.ProductAttributeTypeCodes["22"]);
@@ -66,9 +68,11 @@ public sealed class ErpSourceOptionsTests
     }
 
     [TestMethod]
-    public void TrikoAilesini_TamKelimeSiniriylaTekHedefeEsler()
+    public void AcikcaTanimlananTrikoKuralini_TamKelimeSiniriylaEsler()
     {
         var options = new ErpSourceOptions();
+        options.ProductGroupPrefixCodes["Triko"] = "grp_14";
+        options.ProductGroupPrefixCodes["Tesettür Triko"] = "grp_14";
 
         Assert.AreEqual("grp_14", options.ResolveProductGroupPrefixCode("Triko Takım"));
         Assert.AreEqual("grp_14", options.ResolveProductGroupPrefixCode("  TRİKO   Ceket "));

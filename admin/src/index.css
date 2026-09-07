@@ -238,3 +238,11 @@ html.dark .bx { background: rgba(100,116,139,.15); color: #94a3b8; border-color:
 .quill-wrap .ql-snow .ql-fill { fill: var(--text-m); }
 .quill-wrap .ql-snow .ql-picker { color: var(--text-m); }
 .quill-wrap .ql-snow .ql-picker-options { background: var(--surface); border-color: var(--border); }
+
+/* Müşteri İlişkileri kayıt/işlem içeriği (Quill HTML + eski kayıtların ürün tabloları) */
+.prose-crm p { margin: 0 0 .4em; }
+.prose-crm img { max-width: 160px; max-height: 160px; border-radius: 8px; border: 1px solid var(--border); margin: 4px 4px 4px 0; cursor: zoom-in; }
+.prose-crm table { border-collapse: collapse; font-size: 12px; max-width: 100%; display: block; overflow-x: auto; }
+.prose-crm td, .prose-crm th { border: 1px solid var(--border); padding: 2px 6px; }
+.prose-crm a { color: var(--brand); text-decoration: underline; }
+.prose-crm ul, .prose-crm ol { padding-left: 1.2em; margin: .3em 0; }

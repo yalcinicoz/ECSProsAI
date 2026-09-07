@@ -56,6 +56,21 @@ public class StorePushDevicesController(IMediator mediator) : ControllerBase
     }
 
     /// <summary>Üyenin kayıtlı cihazları — token maskeli (son 8 karakter) döner.</summary>
+    /// <summary>Bildirime tıklandı (data.dedupId geri yollanır) → push_notifications.OpenedAt. Üye JWT'siyle üyenin, değilse token'ın satırı.</summary>
+    [HttpPost("opened")]
+    public async Task<IActionResult> Opened([FromBody] PushOpenedRequest req, [FromServices] ECSPros.Storefront.Application.Services.IStorefrontDbContext sdb, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req?.DedupId)) return BadRequest(new { success = false, error = "dedupId zorunlu." });
+        var mid = UyeKimligi();
+        var q = sdb.PushNotifications.Where(n => n.DedupId == req.DedupId && n.OpenedAt == null);
+        if (mid is { } m) q = q.Where(n => n.MemberId == m);
+        else if (!string.IsNullOrWhiteSpace(req.Token)) { var h = ECSPros.Api.Services.Push.PushKuyruk.Hash(req.Token); q = q.Where(n => n.TokenHash == h); }
+        var rows = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(q, ct);
+        foreach (var n in rows) n.OpenedAt = DateTime.UtcNow;
+        if (rows.Count > 0) await sdb.SaveChangesAsync(ct);
+        return Ok(new { success = true, data = rows.Count });
+    }
+
     [HttpGet("mine")]
     [Authorize(Policy = "MemberOnly")]
     public async Task<IActionResult> GetMine([FromQuery] Guid firmPlatformId, CancellationToken ct)
@@ -72,3 +87,4 @@ public record PushDeviceRegisterRequest(
     Guid FirmPlatformId, string? Platform, string? Token, string? DeviceId, string? AppVersion);
 
 public record PushDeviceRevokeRequest(Guid FirmPlatformId, string? Token);
+public record PushOpenedRequest(string? DedupId, string? Token);

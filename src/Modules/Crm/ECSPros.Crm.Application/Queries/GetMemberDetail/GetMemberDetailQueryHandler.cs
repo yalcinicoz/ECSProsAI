@@ -33,7 +33,7 @@ public class GetMemberDetailQueryHandler : IRequestHandler<GetMemberDetailQuery,
             {
                 bool Acik(string ad) => je.TryGetProperty(ad, out var v)
                     && v.ValueKind == System.Text.Json.JsonValueKind.True;
-                pazarlama = new MarketingConsentsDto(Acik("email"), Acik("sms"), Acik("phone"));
+                pazarlama = new MarketingConsentsDto(Acik("email"), Acik("sms"), Acik("phone"), Acik("push"));
             }
         }
 

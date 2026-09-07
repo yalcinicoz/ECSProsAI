@@ -25,6 +25,8 @@ public class StorefrontDbContext : DbContext, IStorefrontDbContext
     public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
     public DbSet<ProductQuestion> ProductQuestions => Set<ProductQuestion>(); // Satıcıya Soru Sor (2026-09-01)
     public DbSet<PushDevice> PushDevices => Set<PushDevice>(); // Mobil push cihaz kaydı (2026-09-05)
+    public DbSet<PushTemplate> PushTemplates => Set<PushTemplate>();
+    public DbSet<PushNotification> PushNotifications => Set<PushNotification>();
     public DbSet<ProductReviewPhoto> ProductReviewPhotos => Set<ProductReviewPhoto>();
     public DbSet<ProductRatingSource> ProductRatingSources => Set<ProductRatingSource>();
     public DbSet<ProductReviewDisplaySettings> ProductReviewDisplaySettings => Set<ProductReviewDisplaySettings>();

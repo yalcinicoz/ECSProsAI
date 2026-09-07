@@ -10,14 +10,19 @@ namespace ECSPros.Api.Services.Store;
 /// PopulerAramaServisi: son 30 günün en çok arananları (eşik ≥3) + veri azken tohum liste
 /// (Store:PopularSearchSeed, yoksa dropdown'ın eski statik chip listesi).
 /// </summary>
-public sealed class AramaTerimIzleyici(NpgsqlDataSource dataSource, ILogger<AramaTerimIzleyici> logger)
+public sealed class AramaTerimIzleyici(NpgsqlDataSource dataSource, AramaKufurFiltresi kufur, ILogger<AramaTerimIzleyici> logger)
 {
+    /// <param name="visitorHash">Ziyaretçi anahtarı (AramaKufurFiltresi.ZiyaretciAnahtari) — "birden fazla kişi" ölçütü.</param>
+    /// <param name="resultCount">Aramanın getirdiği sonuç sayısı — yalnız sonuç getirenler popüler listeye girer.
+    /// 2026-09-07: kayıt artık sorgudan SONRA yapılır; küfür içeren terim hiç yazılmaz.</param>
     public async Task KaydetAsync(
-        Guid firmPlatformId, string? terim, string? userAgent, CancellationToken ct = default)
+        Guid firmPlatformId, string? terim, string? userAgent, string visitorHash, int resultCount, CancellationToken ct = default)
     {
         var t = Normalize(terim);
         if (t is null || firmPlatformId == Guid.Empty) return;
         if (TrackingScriptProvider.BotMu(userAgent)) return;
+        if (kufur.Engelli(t)) return;
+        visitorHash = (visitorHash ?? "").Length > 32 ? visitorHash![..32] : visitorHash ?? "";
 
         try
         {
@@ -27,13 +32,17 @@ public sealed class AramaTerimIzleyici(NpgsqlDataSource dataSource, ILogger<Aram
             await using var conn = await dataSource.OpenConnectionAsync(yazmaCt);
             await using var cmd = new NpgsqlCommand("""
                 INSERT INTO storefront.search_term_stats
-                    ("Id","FirmPlatformId","Term","Day","Count","CreatedAt","IsDeleted")
-                VALUES (gen_random_uuid(), $1, $2, current_date, 1, now(), false)
-                ON CONFLICT ("FirmPlatformId","Term","Day")
-                DO UPDATE SET "Count" = storefront.search_term_stats."Count" + 1, "UpdatedAt" = now()
+                    ("Id","FirmPlatformId","Term","Day","Count","VisitorHash","ResultCount","CreatedAt","IsDeleted")
+                VALUES (gen_random_uuid(), $1, $2, current_date, 1, $3, $4, now(), false)
+                ON CONFLICT ("FirmPlatformId","Term","Day","VisitorHash")
+                DO UPDATE SET "Count" = storefront.search_term_stats."Count" + 1,
+                              "ResultCount" = GREATEST(COALESCE(storefront.search_term_stats."ResultCount", 0), EXCLUDED."ResultCount"),
+                              "UpdatedAt" = now()
                 """, conn);
             cmd.Parameters.AddWithValue(firmPlatformId);
             cmd.Parameters.AddWithValue(t);
+            cmd.Parameters.AddWithValue(visitorHash);
+            cmd.Parameters.AddWithValue(Math.Max(0, resultCount));
             await cmd.ExecuteNonQueryAsync(yazmaCt);
 
             // Fırsatçı temizlik (~%1): 90 günden eski kovalar düşer — ayrı iş/worker gerekmez.
@@ -65,6 +74,7 @@ public sealed class PopulerAramaServisi(
     NpgsqlDataSource dataSource,
     IConfiguration configuration,
     ICacheService cache,
+    AramaKufurFiltresi kufur,
     ILogger<PopulerAramaServisi> logger)
 {
     // Dropdown'ın 2026-09-01 öncesi statik chip listesi — gerçek veri birikene kadar tohum.
@@ -82,15 +92,25 @@ public sealed class PopulerAramaServisi(
             try
             {
                 await using var conn = await dataSource.OpenConnectionAsync(ct);
+                // 2026-09-07 ölçütleri: son 30 gün, ≥3 arama, EN AZ 2 FARKLI ZİYARETÇİ, en az bir aramada SONUÇ var.
+                // Eski kayıtlar (ResultCount NULL / VisitorHash boş) yeni veri birikene dek listeye girmez — tohum tamamlar.
                 await using var cmd = new NpgsqlCommand("""
                     SELECT "Term" FROM storefront.search_term_stats
                     WHERE "FirmPlatformId" = $1 AND "Day" >= current_date - 30
-                    GROUP BY "Term" HAVING SUM("Count") >= 3
-                    ORDER BY SUM("Count") DESC, "Term" LIMIT 20
+                    GROUP BY "Term"
+                    HAVING SUM("Count") >= 3
+                       AND COUNT(DISTINCT NULLIF("VisitorHash", '')) >= 2
+                       AND COALESCE(MAX("ResultCount"), 0) > 0
+                    ORDER BY SUM("Count") DESC, "Term" LIMIT 40
                     """, conn);
                 cmd.Parameters.AddWithValue(firmPlatformId);
                 await using var reader = await cmd.ExecuteReaderAsync(ct);
-                while (await reader.ReadAsync(ct)) terimler.Add(reader.GetString(0));
+                while (await reader.ReadAsync(ct))
+                {
+                    var terim = reader.GetString(0);
+                    if (kufur.Engelli(terim) || terimler.Count >= 20) continue; // liste sonradan genişlese de süzülür
+                    terimler.Add(terim);
+                }
             }
             catch (Exception ex)
             {
