@@ -403,7 +403,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const populerAramalariDoldur = async () => {
             const kap = document.querySelector("[data-ms-populer-aramalar]");
             if (!kap) { return; }
-            const ARAMA_ANAHTARI = "ms-populer-aramalar:" + platformId;
+            const ARAMA_ANAHTARI = "ms-populer-aramalar:v2:" + platformId; // v2 (2026-09-07): kural değişimi — eski (küfür içerebilen) önbellek yok sayılır
             let terimler = null;
             try {
                 const kayit = JSON.parse(sessionStorage.getItem(ARAMA_ANAHTARI));
