@@ -123,8 +123,9 @@ uçlarda geçmez, üye token'ı da admin uçlarında geçmez.
 | GET | `/catalog/channel-categories?firmPlatformId=` | Kanal kategori ağacı (menü/nav bundan kurulur) |
 | GET | `/catalog/channel-categories/{id}/products?page=&pageSize=` | Kategori ürün listesi (sayfalı, filtre paramlı) |
 | GET | `/catalog/channel-categories/{id}/facets` | Kategori filtre yüzleri (beden/renk/fiyat…) |
-| GET | `/catalog/products?search=&page=` | Arama / genel ürün listesi |
+| GET | `/catalog/products?search=&page=` | Arama / genel ürün listesi. **2026-09-07:** küfür/hakaret içeren `search` için sorgu ÇALIŞMAZ → `400 {"success":false,"error":"Bu arama yapılamıyor."}` (aynı kural `products/facets` ve `channel-categories/{id}/products?search=` için); istemci mesajı gösterir, yeniden denemez |
 | GET | `/catalog/products/facets?search=` | Arama sonucu filtre yüzleri |
+| GET | `/catalog/popular-searches?firmPlatformId=&limit=` | Popüler aramalar (arama kutusu açılışı). **2026-09-07 ölçütleri:** son 30 gün, en az 3 arama, **en az 2 farklı ziyaretçi**, **en az bir aramada sonuç çıkmış**; küfür içerenler hiç sayılmaz/listelenmez; veri azken tohum listeyle tamamlanır (5 dk önbellek) |
 | GET | `/catalog/products/{code}?firmPlatformId=` | Ürün detayı (varyantlar, görseller, fiyat). **A5:** `{code}` ürün kodu (`P-xxxxx`) **ya da site ürün slug'ı** (`kadin-...-1475253`) olabilir; slug'la açılırsa `selectedColorValueId` slug'ın rengidir |
 | GET | `/catalog/products/by-slug?slug=` | **A5:** slug → `{productCode, colorValueId}` (hafif çözümleyici; 404 = yok) |
 | GET | `/catalog/channel-categories/by-slug/{slug}` | **A5:** kategori slug'ı → yayındaki kanal kategorisi (`id, nameI18n, slug, displayImageUrl, badgeLabel`) — istemci slug indeksi kurmaz |

@@ -456,6 +456,7 @@ builder.Services.AddScoped<ECSPros.Api.Services.Store.IPagePreviewService, ECSPr
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IVitrinAuditLogger, ECSPros.Api.Services.Store.VitrinAuditLogger>(); // G13: vitrin değişiklik geçmişi (iam.audit_logs)
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.IFaturaPdfProxy, ECSPros.Api.Services.Store.FaturaPdfProxy>(); // H1: entegratör fatura PDF proxy'si (allowlist config'ten)
 // Popüler aramalar (2026-09-01): terim sayacı + popüler liste servisi
+builder.Services.AddSingleton<ECSPros.Api.Services.Store.AramaKufurFiltresi>(); // 2026-09-07: arama küfür filtresi
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.AramaTerimIzleyici>();
 builder.Services.AddSingleton<ECSPros.Api.Services.Store.PopulerAramaServisi>();
 // Mobil cihaz doğrulama (2026-07-23): Play Integrity / App Attest → kısa ömürlü device token

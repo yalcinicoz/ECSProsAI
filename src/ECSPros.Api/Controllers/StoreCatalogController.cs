@@ -56,10 +56,10 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
         CancellationToken ct = default)
     {
         var platform = await storeContext.GetPlatformAsync(ct);
-        // Popüler aramalar (2026-09-01): yalnız ilk sayfa sayılır (sayfalama tekrarları şişirmesin)
-        if (page == 1 && !string.IsNullOrWhiteSpace(search))
-            await HttpContext.RequestServices.GetRequiredService<ECSPros.Api.Services.Store.AramaTerimIzleyici>()
-                .KaydetAsync(firmPlatformId, search, Request.Headers.UserAgent.ToString(), ct);
+        // 2026-09-07: küfür içeren arama YAPILMAZ ve loglanmaz — tek tip mesaj.
+        var kufur = HttpContext.RequestServices.GetRequiredService<ECSPros.Api.Services.Store.AramaKufurFiltresi>();
+        if (kufur.Engelli(search))
+            return BadRequest(new { success = false, error = ECSPros.Api.Services.Store.AramaKufurFiltresi.EngelMesaji });
         // 2026-08-15: attrs içinde yaprak KATEGORİ id'si de gelebilir (liste sayfası Kategori
         // filtresi) — haritayla ayrılır, kategori seçimi ürün-id kısıtına çevrilir (additive).
         var harita = await kategoriHaritasi.GetAsync(firmPlatformId, ct);
@@ -70,6 +70,12 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
             ProductIds: harita?.UrunIdleri(kategoriler),
             ApplyStockFilter: true, ShowOutOfStock: platform?.StokBitenGoster ?? false, OutOfStockSince: platform?.StokBitenGosterTarih), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        // Popüler aramalar (2026-09-01): yalnız ilk sayfa sayılır; 2026-09-07: sorgudan SONRA, sonuç sayısı ve
+        // ziyaretçi anahtarıyla (yalnız sonuç getiren + birden fazla kişinin aradığı terimler listelenir).
+        if (page == 1 && !string.IsNullOrWhiteSpace(search))
+            await HttpContext.RequestServices.GetRequiredService<ECSPros.Api.Services.Store.AramaTerimIzleyici>()
+                .KaydetAsync(firmPlatformId, search, Request.Headers.UserAgent.ToString(),
+                    ECSPros.Api.Services.Store.AramaKufurFiltresi.ZiyaretciAnahtari(HttpContext), result.Value!.TotalCount, ct);
         return Ok(new { success = true, data = result.Value });
     }
 
@@ -171,6 +177,8 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
         CancellationToken ct = default)
     {
         var platform = await storeContext.GetPlatformAsync(ct);
+        if (HttpContext.RequestServices.GetRequiredService<ECSPros.Api.Services.Store.AramaKufurFiltresi>().Engelli(search))
+            return BadRequest(new { success = false, error = ECSPros.Api.Services.Store.AramaKufurFiltresi.EngelMesaji });
         // 2026-08-15: attrs içindeki yaprak kategori id'leri → ürün-id kısıtı (bkz. GetProducts)
         var harita = platform is null ? null : await kategoriHaritasi.GetAsync(platform.Id, ct);
         var (kategoriler, ozellikler) = harita?.Ayir(ParseGuids(attrs)) ?? ([], ParseGuids(attrs));
@@ -203,6 +211,8 @@ public class StoreCatalogController(IMediator mediator, ECSPros.Api.Services.ISt
         CancellationToken ct = default)
     {
         var platform = await storeContext.GetPlatformAsync(ct);
+        if (HttpContext.RequestServices.GetRequiredService<ECSPros.Api.Services.Store.AramaKufurFiltresi>().Engelli(search))
+            return BadRequest(new { success = false, error = ECSPros.Api.Services.Store.AramaKufurFiltresi.EngelMesaji });
         var result = await mediator.Send(new GetStoreFacetsQuery(
             firmPlatformId, search, platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });

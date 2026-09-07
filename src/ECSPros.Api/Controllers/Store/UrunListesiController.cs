@@ -58,16 +58,8 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
     [HttpGet("/urunler")]
     public async Task<IActionResult> Arama([FromQuery] string? search, [FromQuery] string? codes, [FromQuery] ListeFiltre filtre, [FromQuery] int? page, CancellationToken ct)
     {
-        // Popüler aramalar (2026-09-01): SSR metin araması da sayaca yazar (yalnız 1. sayfa;
-        // bot/normalizasyon filtreleri izleyicide). Görsel arama (codes) sayılmaz.
-        if (string.IsNullOrWhiteSpace(codes) && !string.IsNullOrWhiteSpace(search) && SayfaNo(page) == 1)
-        {
-            var izlemePlatformu = await storeContext.GetPlatformAsync(ct);
-            if (izlemePlatformu is not null)
-                await HttpContext.RequestServices.GetRequiredService<AramaTerimIzleyici>()
-                    .KaydetAsync(izlemePlatformu.Id, search, Request.Headers.UserAgent.ToString(), ct);
-        }
-
+        // Popüler aramalar: sayaç artık GenelListeAsync içinde, sorgudan SONRA sonuç sayısıyla yazılır (2026-09-07);
+        // küfür içeren terim aranmaz/loglanmaz (boş sonuç sayfası). Görsel arama (codes) sayılmaz.
         return !string.IsNullOrWhiteSpace(codes)
             ? await GorselAramaSonucListesiAsync(codes, filtre, ct)
             : await GenelListeAsync(string.IsNullOrWhiteSpace(search) ? null : search.Trim(), filtre, SayfaNo(page), ct);
@@ -399,22 +391,29 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
 
         var platform = await storeContext.GetPlatformAsync(ct);
         var arama = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+        // 2026-09-07: kategoride küfürlü arama da yapılmaz — boş sonuç, tek tip mesaj.
+        var engelli = arama is not null && HttpContext.RequestServices.GetRequiredService<AramaKufurFiltresi>().Engelli(arama);
         // 2026-08-15: Kategori filtresi = sayfadaki ürünlerin yaprak kategorileri (attrs içinde id)
         var harita = platform is null ? null : await kategoriHaritasi.GetAsync(platform.Id, ct);
         var (seciliKategoriler, seciliOzellikler) = harita?.Ayir(filtre.DegerIdler) ?? ([], filtre.DegerIdler);
-        var urunler = await mediator.Send(new GetChannelCategoryProductsQuery(
-            kategori.Id, sayfa, SayfaBoyu,
-            arama, seciliOzellikler, filtre.PriceMin, filtre.PriceMax, filtre.Sort,
-            platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih,
-            RestrictProductIds: harita?.UrunIdleri(seciliKategoriler)), ct);
+        var urunler = engelli
+            ? ECSPros.Shared.Kernel.Common.Result.Success<ECSPros.Shared.Kernel.Common.PagedResult<ChannelCategoryProductItemDto>>(
+                new ECSPros.Shared.Kernel.Common.PagedResult<ChannelCategoryProductItemDto>([], 0, sayfa, SayfaBoyu))
+            : await mediator.Send(new GetChannelCategoryProductsQuery(
+                kategori.Id, sayfa, SayfaBoyu,
+                arama, seciliOzellikler, filtre.PriceMin, filtre.PriceMax, filtre.Sort,
+                platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih,
+                RestrictProductIds: harita?.UrunIdleri(seciliKategoriler)), ct);
         if (urunler.IsFailure)
             return NotFound();
 
-        var facets = await mediator.Send(new GetChannelCategoryFacetsQuery(
-            kategori.Id, platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih,
-            // 2026-07-17: seçim-duyarlı facet — aktif filtre/fiyat/arama bağlamı
-            seciliOzellikler, filtre.PriceMin, filtre.PriceMax, arama,
-            ProductCategoryMap: harita?.UrunKategori, SelectedCategoryIds: seciliKategoriler), ct);
+        var facets = engelli
+            ? ECSPros.Shared.Kernel.Common.Result.Failure<StoreFacetsDto>("engelli arama")
+            : await mediator.Send(new GetChannelCategoryFacetsQuery(
+                kategori.Id, platform?.StokBitenGoster ?? false, platform?.StokBitenGosterTarih,
+                // 2026-07-17: seçim-duyarlı facet — aktif filtre/fiyat/arama bağlamı
+                seciliOzellikler, filtre.PriceMin, filtre.PriceMax, arama,
+                ProductCategoryMap: harita?.UrunKategori, SelectedCategoryIds: seciliKategoriler), ct);
 
         var devamUrl = $"/api/store/catalog/channel-categories/{kategori.Id}/products?pageSize={SayfaBoyu}"
                        + (arama is null ? "" : "&search=" + Uri.EscapeDataString(arama))
@@ -437,6 +436,7 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             KategorideArama: arama,
             BaslangicSayfa: sayfa,
             BosDurumMesaji: urunler.Value.TotalCount > 0 ? null
+                : engelli ? AramaKufurFiltresi.EngelMesaji
                 : arama is not null
                     ? $"Bu kategoride \"{arama}\" aramasıyla eşleşen ürün bulunamadı."
                     : (filtre.DegerIdler is not null || filtre.PriceMin.HasValue || filtre.PriceMax.HasValue)
@@ -452,22 +452,36 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
         if (platform is null)
             return NotFound();
 
+        // 2026-09-07: küfür içeren arama YAPILMAZ (sorgu çalışmaz, sayaca yazılmaz) — boş sonuç sayfası, tek tip mesaj.
+        var kufur = HttpContext.RequestServices.GetRequiredService<AramaKufurFiltresi>();
+        var engelli = arama is not null && kufur.Engelli(arama);
+
         // 2026-08-15: Kategori filtresi = sonuçtaki ürünlerin yaprak kategorileri (attrs içinde id)
         var harita = await kategoriHaritasi.GetAsync(platform.Id, ct);
         var (seciliKategoriler, seciliOzellikler) = harita?.Ayir(filtre.DegerIdler) ?? ([], filtre.DegerIdler);
-        var urunler = await mediator.Send(new GetStoreProductsQuery(
-            platform.Id, arama, sayfa, SayfaBoyu,
-            seciliOzellikler, filtre.PriceMin, filtre.PriceMax, filtre.Sort,
-            ProductIds: harita?.UrunIdleri(seciliKategoriler),
-            ApplyStockFilter: true, ShowOutOfStock: platform.StokBitenGoster, OutOfStockSince: platform.StokBitenGosterTarih), ct);
+        var urunler = engelli
+            ? ECSPros.Shared.Kernel.Common.Result.Success(new ECSPros.Shared.Kernel.Common.PagedResult<StoreProductDto>([], 0, sayfa, SayfaBoyu))
+            : await mediator.Send(new GetStoreProductsQuery(
+                platform.Id, arama, sayfa, SayfaBoyu,
+                seciliOzellikler, filtre.PriceMin, filtre.PriceMax, filtre.Sort,
+                ProductIds: harita?.UrunIdleri(seciliKategoriler),
+                ApplyStockFilter: true, ShowOutOfStock: platform.StokBitenGoster, OutOfStockSince: platform.StokBitenGosterTarih), ct);
         if (urunler.IsFailure)
             return NotFound();
 
-        var facets = await mediator.Send(new GetStoreFacetsQuery(
-            platform.Id, arama, platform.StokBitenGoster, platform.StokBitenGosterTarih,
-            // 2026-07-17: seçim-duyarlı facet — aktif filtre/fiyat bağlamı
-            seciliOzellikler, filtre.PriceMin, filtre.PriceMax,
-            ProductCategoryMap: harita?.UrunKategori, SelectedCategoryIds: seciliKategoriler), ct);
+        // Popüler aramalar (2026-09-01/2026-09-07): 1. sayfa metin araması, sorgudan SONRA sonuç sayısı + ziyaretçi anahtarıyla.
+        if (arama is not null && sayfa == 1 && !engelli)
+            await HttpContext.RequestServices.GetRequiredService<AramaTerimIzleyici>()
+                .KaydetAsync(platform.Id, arama, Request.Headers.UserAgent.ToString(),
+                    AramaKufurFiltresi.ZiyaretciAnahtari(HttpContext), urunler.Value!.TotalCount, ct);
+
+        var facets = engelli
+            ? ECSPros.Shared.Kernel.Common.Result.Failure<StoreFacetsDto>("engelli arama")
+            : await mediator.Send(new GetStoreFacetsQuery(
+                platform.Id, arama, platform.StokBitenGoster, platform.StokBitenGosterTarih,
+                // 2026-07-17: seçim-duyarlı facet — aktif filtre/fiyat bağlamı
+                seciliOzellikler, filtre.PriceMin, filtre.PriceMax,
+                ProductCategoryMap: harita?.UrunKategori, SelectedCategoryIds: seciliKategoriler), ct);
 
         var nav = ViewData["MsNavigasyon"] as NavigasyonVm ?? NavigasyonVm.Bos;
         var devamUrl = $"/api/store/catalog/products?firmPlatformId={platform.Id}&pageSize={SayfaBoyu}"
@@ -490,6 +504,7 @@ public class UrunListesiController(IMediator mediator, IStoreContext storeContex
             SeciliSiralama: filtre.Sort,
             BaslangicSayfa: sayfa,
             BosDurumMesaji: urunler.Value.TotalCount > 0 ? null
+                : engelli ? AramaKufurFiltresi.EngelMesaji
                 : arama is not null
                     ? $"\"{arama}\" aramasıyla eşleşen ürün bulunamadı."
                     : "Gösterilecek ürün bulunamadı.");

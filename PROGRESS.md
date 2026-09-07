@@ -1,5 +1,20 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**POPÜLER ARAMALAR — SONUÇLU + ÇOK KİŞİLİ + KÜFÜR FİLTRESİ (2026-09-07, kullanıcı kararı, Web sitesi alanı):**
+Arama kutusu dropdown'ındaki "Popüler Aramalar" için üç kural: (1) yalnız SONUÇ getiren aramalar, (2) birden fazla
+kişinin yaptığı aramalar, (3) küfür içeren aramalar loglanmaz/aranmaz/listelenmez. Uygulama: `search_term_stats`
+kovası (platform, terim, gün) → (platform, terim, gün, **VisitorHash**) + **ResultCount** kolonu (migration
+`20260907112843_AddSearchTermStatVisitorAndResults`, StorefrontDbContext); sayaç artık SORGUDAN SONRA sonuç sayısı ve
+ziyaretçi anahtarıyla (üye → üye kimliği; misafir → SHA256(IP+UA) ilk 16 hex, kişisel veri saklanmaz) yazılır
+(`AramaTerimIzleyici.KaydetAsync` imzası değişti; /urunler SSR + store products API). Popüler sorgu: son 30 gün,
+`SUM(Count)≥3 AND COUNT(DISTINCT VisitorHash)≥2 AND MAX(ResultCount)>0`; eski satırlar (hash boş / sonuç NULL) yeni veri
+birikene dek listeye girmez, tohum liste tamamlar. `AramaKufurFiltresi` (singleton; sözcük listesi + `Store:BlockedSearchWords`
+/ `Store:BlockedSearchPrefixes` ile genişletilebilir; sözcük düzeyi eşleşme — "götür"/"bisiklet" takılmaz, "sikkk" gibi
+tekrarlı yazım yakalanır): /urunler ve kategori?search SSR'da sorgu çalışmaz, boş sonuç + "Bu arama yapılamıyor.";
+store API products/facets/category products 400 aynı mesaj; sayaç ve popüler liste süzer. ⚠️ Eski binary (restart
+öncesi) upsert'i yeni indeksle çakışır → LogDebug'a düşer, arama etkilenmez, sayım restart'a kadar durur.
+Panel karşılığı YOK (K16 notu): küfür listesi kodda/appsettings'te; ileride panelden yönetim istenirse ayrı iş.
+
 **A2 RENK ADI NORMALİZASYONU UYGULANDI (2026-09-07):**
 `Catalog.Application/Helpers/RenkAdiNormalizer.cs` + seed `SeedRenkAdiNormalizasyonAsync` (SeedCatalogAsync sonu):
 sözlük havuzun kendisinden (boşluklu adlarda ≥2 kez geçen sözcükler + tek başına geçenler + sabit ek liste),

@@ -489,8 +489,9 @@ public class SearchTermStatConfiguration : IEntityTypeConfiguration<SearchTermSt
         builder.ToTable("search_term_stats");
         builder.HasKey(s => s.Id);
         builder.Property(s => s.Term).HasMaxLength(60).IsRequired();
-        // Upsert çakışma hedefi (ON CONFLICT) — kova başına tek satır
-        builder.HasIndex(s => new { s.FirmPlatformId, s.Term, s.Day }).IsUnique();
+        builder.Property(s => s.VisitorHash).HasMaxLength(32).IsRequired().HasDefaultValue("");
+        // Upsert çakışma hedefi (ON CONFLICT) — kova başına tek satır (2026-09-07: + ziyaretçi anahtarı)
+        builder.HasIndex(s => new { s.FirmPlatformId, s.Term, s.Day, s.VisitorHash }).IsUnique();
         builder.HasIndex(s => new { s.FirmPlatformId, s.Day });
         // Soft delete filtresi yok: kovalar fiziksel temizlenir (fırsatçı prune)
     }

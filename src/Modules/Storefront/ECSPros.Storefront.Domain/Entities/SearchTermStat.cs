@@ -18,4 +18,10 @@ public class SearchTermStat : BaseEntity
     /// <summary>Gün kovası (UTC tarihi).</summary>
     public DateOnly Day { get; set; }
     public int Count { get; set; }
+    /// <summary>2026-09-07: ziyaretçi anahtarı (üye kimliği ya da IP+UA özeti) — popüler liste "birden fazla kişi"
+    /// ölçütü için; kova artık (platform, terim, gün, ziyaretçi). Eski satırlarda boş dize.</summary>
+    public string VisitorHash { get; set; } = string.Empty;
+    /// <summary>2026-09-07: aramanın getirdiği sonuç sayısı (kovadaki en yüksek değer) — popüler listeye yalnız
+    /// sonuç getiren aramalar girer. Null = eski kayıt (bilinmiyor).</summary>
+    public int? ResultCount { get; set; }
 }
