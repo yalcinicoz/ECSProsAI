@@ -113,9 +113,10 @@ async Task PlanAsync(bool apply)
     var cfg = LoadConfigMaps();
 
     var plan = new List<(string Code, string Name, int Items, Guid? GroupId, string? GroupCode, string Method)>();
+    var skipped = new List<(string Code, string Name)>();
     foreach (var g0 in nebim)
     {
-        if (skipCodes.Contains(g0.Code)) { Console.WriteLine($"(atlandı: {g0.Code} {g0.Name})"); continue; }
+        if (skipCodes.Contains(g0.Code)) { Console.WriteLine($"(atlandı: {g0.Code} {g0.Name} — sözlüğe EŞLENMEMİŞ yazılır, ürünleri geçici gruba düşer)"); skipped.Add((g0.Code, TitleTr(g0.Name))); continue; }
         var g = (g0.Code, Name: TitleTr(g0.Name), g0.ItemCount);
         var n = Norm(g.Name);
         if (mevcut.TryGetValue(g.Code, out var m)) { var o = ours.First(x => x.Id == m); plan.Add((g.Code, g.Name, g.ItemCount, m, o.Code, "mevcut eşleme")); continue; }
@@ -186,8 +187,16 @@ async Task PlanAsync(bool apply)
             mevcut[p.Code] = groupId.Value;
         }
     }
+    // atlananlar: sözlükte eşlenmemiş satır (panel "Eşlenmemiş" kuyruğu); var olan satıra dokunulmaz
+    int eslenmemis = 0;
+    foreach (var (code, name) in skipped)
+        eslenmemis += await Exec(pg, tx, """
+            INSERT INTO integration.erp_reference_items ("Id","TargetSystem","Kind","Code","Name","IsActive","FirstSeenAt","LastSeenAt","Source","CreatedAt","IsDeleted")
+            SELECT gen_random_uuid(), @t, 'product_group', @code, @name, true, now(), now(), 'tool', now(), false
+             WHERE NOT EXISTS (SELECT 1 FROM integration.erp_reference_items x WHERE x."TargetSystem"=@t AND x."Kind"='product_group' AND x."Code"=@code AND NOT x."IsDeleted")
+            """, ("t", Target), ("code", code), ("name", name));
     await tx.CommitAsync();
-    Console.WriteLine($"\nYAZILDI: sözlük {sozluk}, yeni eşleme {esleme}, yeni grup {yeni} (şablon özelliği {sablon}). Yeni grup açıldıysa 'Ürün Grubu' seçim özelliği/varsayılanı seed'de (restart) tamamlanır.");
+    Console.WriteLine($"\nYAZILDI: sözlük {sozluk}, yeni eşleme {esleme}, yeni grup {yeni} (şablon özelliği {sablon}), eşlenmemiş sözlük satırı {eslenmemis}. Yeni grup açıldıysa 'Ürün Grubu' seçim özelliği/varsayılanı seed'de (restart) tamamlanır.");
 }
 
 (Guid Id, string Code, string Name)? SablonBul(string name, List<(Guid Id, string Code, string Name)> ours)

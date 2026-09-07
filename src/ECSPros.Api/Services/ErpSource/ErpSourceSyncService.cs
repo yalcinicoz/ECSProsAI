@@ -48,8 +48,12 @@ public sealed class ErpSourceSyncService(
             var existing = await FindProductAsync(pg, snapshot.Product.Code, ct);
             var groupId = ResolveGroup(snapshot.Product.ProductGroupName, groups);
             if (existing is null && groupId is null)
-                return new(false, options.DryRun, "product-refresh", 0, "",
-                    $"ERP grubu eşleşmedi: {snapshot.Product.ProductGroupName}", (int)sw.ElapsedMilliseconds);
+            {
+                groupId = await PlaceholderGroupAsync(pg, snapshot.Product.Code, snapshot.Product.ProductGroupName, groups, detail, ct);
+                if (groupId is null)
+                    return new(false, options.DryRun, "product-refresh", 0, "",
+                        $"ERP grubu eşleşmedi: {snapshot.Product.ProductGroupName}", (int)sw.ElapsedMilliseconds);
+            }
 
             var supplier = await ResolveSupplierAsync(pg, snapshot.Supplier, detail, ct);
             if (supplier.BlockingError is not null)
@@ -215,10 +219,14 @@ public sealed class ErpSourceSyncService(
                 var groupId = ResolveGroup(currentProduct.ProductGroupName, groups);
                 if (existing is null && groupId is null)
                 {
-                    skipped++;
-                    blockingMappingError = true;
-                    detail.AppendLine($"! ATLANDI yeni ürün {currentProduct.Code}: ERP grubu '{currentProduct.ProductGroupName}' eşleşmedi.");
-                    continue;
+                    groupId = await PlaceholderGroupAsync(pg, currentProduct.Code, currentProduct.ProductGroupName, groups, detail, ct);
+                    if (groupId is null)
+                    {
+                        skipped++;
+                        blockingMappingError = true;
+                        detail.AppendLine($"! ATLANDI yeni ürün {currentProduct.Code}: ERP grubu '{currentProduct.ProductGroupName}' eşleşmedi.");
+                        continue;
+                    }
                 }
 
                 var supplier = await ResolveSupplierAsync(pg, snapshot.Supplier, detail, ct);
@@ -539,6 +547,33 @@ public sealed class ErpSourceSyncService(
         return prefixCode is not null && groups.ByCode.TryGetValue(prefixCode, out var prefixMapped)
             ? prefixMapped
             : null;
+    }
+
+    /// <summary>
+    /// Eşlenmemiş ERP grubu (2026-09-07 kullanıcı kararı): YENİ ürün atlanmaz, özelliksiz "geçici" gruba
+    /// (<see cref="ErpSourceOptions.UnmappedProductGroupCode"/>) alınır; ERP grup adı sözlüğe eşlenmemiş satır olarak
+    /// düşer (panel Eşleştirme › ERP: Nebim › Eşlenmemiş kuyruğu). Eşleme + ürünün doğru gruba taşınması personel işidir;
+    /// grup eşlenince sonraki turda ürün grubu otomatik düzelir (UpdateProductAsync). Geçici grup yoksa null → eski fail-closed.
+    /// Mevcut ürünün grubuna dokunulmaz (çağıran yalnız existing is null iken gelir).
+    /// </summary>
+    private async Task<Guid?> PlaceholderGroupAsync(NpgsqlConnection pg, string productCode, string? groupName,
+        GroupMaps groups, StringBuilder detail, CancellationToken ct)
+    {
+        var code = options.UnmappedProductGroupCode;
+        if (string.IsNullOrWhiteSpace(code) || !groups.ByCode.TryGetValue(code, out var id)) return null;
+        detail.AppendLine($"⚠ GEÇİCİ GRUP yeni ürün {productCode}: ERP grubu '{groupName}' eşlenmemiş → '{code}' grubuna alındı (eşleme + taşıma personel işi).");
+        logger.LogWarning("ERP grubu eşlenmemiş: ürün {Code} '{Group}' geçici gruba ({Placeholder}) alındı", productCode, groupName, code);
+        if (options.DryRun || string.IsNullOrWhiteSpace(groupName)) return id;
+        // sözlüğe eşlenmemiş satır (kod bilinmiyor → ad kod olarak; araç kodlu satır yazdıysa ada göre eşleşir, çift yazılmaz)
+        await ExecAsync(pg, null, """
+            INSERT INTO integration.erp_reference_items
+              ("Id","TargetSystem","Kind","Code","Name","IsActive","FirstSeenAt","LastSeenAt","Source","CreatedAt","IsDeleted")
+            SELECT gen_random_uuid(), 'erp:nebim', 'product_group', @name, @name, true, now(), now(), 'sync', now(), false
+             WHERE NOT EXISTS (SELECT 1 FROM integration.erp_reference_items x
+                                WHERE x."TargetSystem"='erp:nebim' AND x."Kind"='product_group' AND NOT x."IsDeleted"
+                                  AND (x."Code"=@name OR lower(x."Name")=lower(@name)))
+            """, ct, ("name", groupName.Trim()));
+        return id;
     }
 
     private static async Task<GroupMaps> LoadGroupsAsync(NpgsqlConnection pg, CancellationToken ct)

@@ -44,24 +44,31 @@ public sealed class ErpSourceOptions
         return code;
     }
 
-    /// <summary>ERP urunGrubu değeri -> definition.product_groups.Code. Eşleşmeyen yeni ürün yazılmaz.</summary>
+    /// <summary>
+    /// ERP urunGrubu değeri -> definition.product_groups.Code. Ad birebir eşleşme (Norm) bu sözlükten ÖNCE gelir
+    /// (2026-09-06 kararı: katman yok, "Triko Bluz" kendi grubudur). Sözlük yalnız yazımı farklı adlar içindir
+    /// (Büstiyer → Bustiyer). Eşleşmeyen yeni ürün <see cref="UnmappedProductGroupCode"/> grubuna alınır.
+    /// </summary>
     public Dictionary<string, string> ProductGroupCodes { get; set; } = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Kot Ceket"] = "grp_46",
-        ["Eşofman Altı"] = "grp_47",
-        ["Sütyen"] = "grp_118",
-        ["Triko Hırka"] = "grp_14"
+        ["Kot Ceket"] = "kot_ceket",
+        ["Büstiyer"] = "grp_9"
     };
+
+    /// <summary>
+    /// Hiçbir eşleşme bulunamayan ERP grubundaki YENİ ürünün alınacağı özelliksiz "geçici" grup kodu
+    /// (2026-09-07 kullanıcı kararı: ürün atlanmaz, geçici gruba alınır; sözlüğe eşlenmemiş satır düşer,
+    /// panel "Eşlenmemiş" kuyruğunda görünür; eşleme ve ürün güncellemesi personel işidir). Boş → eski
+    /// fail-closed davranış (ürün atlanır). Mevcut ürünün grubuna hiçbir durumda dokunulmaz.
+    /// </summary>
+    public string? UnmappedProductGroupCode { get; set; } = "gecici";
 
     /// <summary>
     /// Birebir ad/kod eşleşmesi bulunamadığında kullanılan kontrollü ERP ürün grubu ailesi eşlemeleri.
     /// Anahtar yalnız tam kelime veya "anahtar + boşluk" öneki olarak eşleşir; en uzun tekil kural kazanır.
     /// </summary>
-    public Dictionary<string, string> ProductGroupPrefixCodes { get; set; } = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["Triko"] = "grp_14",
-        ["Tesettür Triko"] = "grp_14"
-    };
+    public Dictionary<string, string> ProductGroupPrefixCodes { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    // 2026-09-07: Triko/Tesettür Triko → grp_14 önek kuralları KALDIRILDI — her Triko alt grubu kendi grubudur (kullanıcı kararı).
 
     public string? ResolveProductGroupPrefixCode(string? sourceName)
     {

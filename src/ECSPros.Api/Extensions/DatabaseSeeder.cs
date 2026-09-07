@@ -2717,7 +2717,8 @@ public static class DatabaseSeeder
         }
         await db.SaveChangesAsync();
 
-        var groups = await db.ProductGroups.Select(g => new { g.Id, g.Code, g.NameI18n }).ToListAsync();
+        // "gecici" = eşlenmemiş ERP grubundaki ürünlerin özelliksiz geçici grubu (2026-09-07) — Ürün Grubu havuzuna/atamasına girmez
+        var groups = await db.ProductGroups.Where(g => g.Code != "gecici").Select(g => new { g.Id, g.Code, g.NameI18n }).ToListAsync();
 
         // (2) grup ataması
         var pgas = await db.ProductGroupAttributes.IgnoreQueryFilters().Where(x => x.AttributeTypeId == type.Id).ToListAsync();

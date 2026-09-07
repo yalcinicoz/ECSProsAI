@@ -1,6 +1,6 @@
 # ERP Eşleme Planı — Nebim V3 Sözlüğü, Grup + Özellik Koşullu Kurallar, Yapılandırma Sözlüklerinin Tablolara Taşınması
 
-> Sürüm: **v1.3 — 2026-09-06** · Durum: **EM0 + EM1 + EM3 (panel) UYGULANDI ⚠️ restart bekliyor**; EM2 worker sözleşmesi §6'da — ekip arkadaşı uygular; K1-K6 açık
+> Sürüm: **v1.4 — 2026-09-07** (v1.3 — 2026-09-06) · Durum: **EM0 + EM1 + EM3 (panel) UYGULANDI ⚠️ restart bekliyor**; EM2 worker sözleşmesi §6'da — ekip arkadaşı uygular; K1-K6 açık
 > Alan: **Admin panel (pano #2) + Integration/Catalog çekirdeği.** ERP okuma/yazma worker'ı ekip arkadaşında
 > (`docs/erp-kaynak-senkron-gecis-plani.md`); bu plan worker'ın config yerine tablodan okuyacağı sözleşmeyi tanımlar.
 > İlgili: `docs/pazaryeri-referans-ve-esleme-plani.md` (aynı desen), `docs/stok-karti-ve-urun-yonetimi.md`.
@@ -15,7 +15,18 @@
    "Kadın Kot Ceket"). Eşleme = **grup + özellik koşulları** (cinsiyet, yaş grubu, kumaş…) → hedef kod.
 3. **Pazaryeri ile aynı mekanizma.** Yeni eşleme motoru yazılmaz; pazaryeri eşlemesinin sözlük + eşleme + kural +
    öneri deseni ERP hedefine açılır. Bugün yapılandırmada duran ERP sözlükleri tablolara taşınır ve config'ten kalkar.
-4. **Eşlenmemiş ERP kaydı ürün yazmaz** (mevcut fail-closed kural korunur) ama sessiz log yerine panelde görünür kuyruk olur.
+4. ~~Eşlenmemiş ERP kaydı ürün yazmaz~~ → **2026-09-07 kullanıcı kararı: eşlenmemiş ERP grubundaki YENİ ürün
+   atlanmaz, özelliksiz "Geçici Grup" (`definition.product_groups.Code='gecici'`, `ErpSource:UnmappedProductGroupCode`)
+   altına alınır.** ERP grup adı sözlüğe eşlenmemiş satır olarak düşer (panel Eşleştirme › ERP: Nebim › **Eşlenmemiş**
+   kuyruğu = personel uyarısı). Eşlemeyi ve ürünün doğru gruba taşınmasını/güncellenmesini **personel** yapar; grup
+   eşlenince sonraki turda worker ürünün grubunu otomatik düzeltir. Mevcut ürünün grubuna worker hiçbir durumda dokunmaz.
+   Geçici grup `urun_grubu` havuzuna/atamasına girmez (seed hariç tutar). Eşlenmemiş **özellik tipi** (keywordId) için
+   fail-closed sürer (§6.2). Uygulandı: `ErpSourceSyncService.PlaceholderGroupAsync` (config-okuyan bugünkü worker'da);
+   EM2 tablo-okuyan worker aynı kuralı korur.
+5. **Nebim grup adı birebir → kendi grubumuz** (2026-09-07): Triko Bluz/Ceket/…/Yelek (13), Eşofman Altı, Sütyen ayrı
+   gruptur (Triko→grp_14 önek kuralı ve Eşofman Altı→Eşofman, Sütyen→İç Giyim config eşlemeleri KALDIRILDI); yalnız
+   yazım farkı eşlenir (Büstiyer→Bustiyer, Fondoten→Fondöten); Nebim "tozlu" (00) yer tutucusu eşlenmez → sözlükte
+   eşlenmemiş, ürünleri geçici gruba düşer.
 
 ## 1. Mevcut durum (2026-09-06)
 
@@ -26,7 +37,7 @@
 | ERP ürün özellik tipi | `ProductAttributeTypeCodes` config: 29 kayıt (keywordId → attribute code); `IgnoredProductAttributeTypeCodes` 15 |
 | ERP değer takma adı | `ProductAttributeValueAliases` config: 1 kayıt; değerler `AttributeValue.ExtraData` içinde kaynak koduyla otomatik açılır |
 | ERP tedarikçi | `SupplierAccountCodes` config: **boş** → tedarikçi hiçbir ürüne yazılmıyor |
-| Eşlenmemiş kayıt | Worker log satırı; panelde görünmez |
+| Eşlenmemiş kayıt | ~~Worker log satırı; panelde görünmez~~ → 2026-09-07: yeni ürün `gecici` grubuna, sözlükte eşlenmemiş satır, panel kuyruğu (ilke 4) |
 | Pazaryeri eşleme motoru | ✅ `marketplace_category_mappings` (direct/rules/pool + RulesJson), `marketplace_attribute_mappings` (map_values/pass_literal/fixed_value), `marketplace_value_mappings`; öneri + toplu eşleme + sağlık + readiness canlı |
 | Kural modeli | Kural = tek koşul (attributeTypeCode = valueId) → hedef; sıralı; ilk eşleşen kazanır |
 
@@ -89,7 +100,7 @@ Sıra: EM0 → EM1 → EM2 → EM3 → EM4; EM5 E7 takvimine bağlı. Bir faz ka
 | K1 | Nebim V3'te grup/özellik/tedarikçi sözlüklerinin kaynağı (tablo/prosedür) ve dolum kadansı | Ekip arkadaşı belirler; günlük tam tarama yeterli |
 | K2 | Sözlük dolumu worker'da mı, ayrı "sözlük senkronu" düğmesi mi? | İkisi: worker günlük + panelde "Şimdi tara" |
 | K3 | İçe aktarımda ters kural (ERP grubu bizden kaba ise) şimdi mi? | Hayır — Nebim grupları bizimle aynı incelikte; ihtiyaç çıkınca |
-| K4 | Eşlenmemiş ERP grubu için "grup aç" kısayolu grubu ŞEMASIZ mı açar? | Evet, boş şema + uyarı; şema operatörce tamamlanır (K9 tedarik kuralıyla uyumlu: kart operatör işi) |
+| K4 | Eşlenmemiş ERP grubu için "grup aç" kısayolu grubu ŞEMASIZ mı açar? | Evet, boş şema + uyarı; şema operatörce tamamlanır (K9 tedarik kuralıyla uyumlu: kart operatör işi). **2026-09-07 ek karar:** eşleme yapılana kadar ürünler `gecici` grubunda bekler (ilke 4) |
 | K5 | `Marketplace` kolonunun `TargetSystem` olarak yeniden adlandırılması | Şimdi değil; EM0'da yalnız yorum/DTO adı; migration riski için ertelenir |
 | K6 | Değer eşlemesinde ERP değerleri otomatik açılmaya devam etsin mi (bugünkü AutoCreate*Values)? | Evet; yalnız eşlenmiş tiplerde, ExtraData kaynak kodu korunur |
 
@@ -122,7 +133,7 @@ Elle girilmiş satırlar (`Source='manual'`) ad güncellemesi alır, silinmez. V
 ### 6.2 Okuma sözleşmesi (config yerine)
 | Bugünkü config | Tablo / sorgu |
 |---|---|
-| `ProductGroupCodes[ad] → grupKodu` | `integration.marketplace_category_mappings` WHERE `"Marketplace"='erp:nebim'` AND `"TargetExternalId"=@erpGrupKodu` AND `"FirmPlatformId" IS NULL` AND `"Status"='active'` → `"ProductGroupId"`. Birden fazla satır (aynı ERP koduna birden çok grubumuz) → **K3 ters kural** gelene kadar mapping hatası (fail-closed). `MappingKind='rules'` satırlarında `RulesJson` içe aktarımda YOK SAYILIR (kurallar dışa yazım içindir); hedef eşleşmesi yalnız `TargetExternalId` + kural hedefleri (`RulesJson[].targetExternalId`) üzerinden — kural hedefi eşleşirse aynı grup. |
+| `ProductGroupCodes[ad] → grupKodu` | `integration.marketplace_category_mappings` WHERE `"Marketplace"='erp:nebim'` AND `"TargetExternalId"=@erpGrupKodu` AND `"FirmPlatformId" IS NULL` AND `"Status"='active'` → `"ProductGroupId"`. Birden fazla satır (aynı ERP koduna birden çok grubumuz) → **K3 ters kural** gelene kadar mapping hatası (fail-closed). **Hiç satır yoksa (2026-09-07):** yeni ürün `ErpSource:UnmappedProductGroupCode` (`gecici`) grubuna yazılır + sözlüğe eşlenmemiş `product_group` satırı (Code=Nebim kodu; kod yoksa ad); mevcut ürünün grubu korunur. `MappingKind='rules'` satırlarında `RulesJson` içe aktarımda YOK SAYILIR (kurallar dışa yazım içindir); hedef eşleşmesi yalnız `TargetExternalId` + kural hedefleri (`RulesJson[].targetExternalId`) üzerinden — kural hedefi eşleşirse aynı grup. |
 | `VariantAttributeTypeCodes[varyantTipId]` | `integration.marketplace_attribute_mappings` WHERE `"Marketplace"='erp:nebim'` AND `"MpCategoryExternalId"='*'` AND `"MpAttributeExternalId"=@varyantTipId` → `"AttributeTypeId"` (Strategy `map_values`) |
 | `ProductAttributeTypeCodes[keywordId]` | aynı tablo, `"MpAttributeExternalId"=@keywordId` → `"AttributeTypeId"` |
 | `IgnoredProductAttributeTypeCodes` | aynı tablo, `"Strategy"='ignore'` → keywordId yok sayılır. **Eşlemesi olmayan keywordId → bugünkü fail-closed korunur** ve sözlüğe `attribute_type` olarak yazılır (panelde eşlenmemiş görünür) |

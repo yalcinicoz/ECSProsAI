@@ -1,5 +1,26 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**NEBİM GRUP EŞLEMESİ KAPANDI + EŞLENMEMİŞ ERP GRUBU → GEÇİCİ GRUP KURALI (2026-09-07, kullanıcı kararları):**
+Bekleyen 17 Nebim grubu: Triko Bluz/Ceket/Elbise/Etek/Hırka/Kazak/Panço/Pantolon/Süveter/Takım/Tulum/Tunik/Yelek (13),
+Eşofman Altı, Sütyen → **her biri kendi grubu** (15 yeni grup, şablon: son sözcük grubu / Triko; Sütyen←İç Giyim elle);
+Büstiyer → **Bustiyer (grp_9)** eşlendi; "tozlu" (00, 58 ürün) **eşlenmedi**, sözlükte eşlenmemiş satır. Config
+`ErpSource:ProductGroupCodes` → {Kot Ceket, Büstiyer}, `ProductGroupPrefixCodes` boş (Triko→grp_14 kalktı; kod
+varsayılanları da). Toplam: 303 grup (bugün 158 yeni), erp:nebim eşleme 203 aktif, sözlük 204 (1 eşlenmemiş).
+`fondoten` çift grubu `tlm_fondoten` "Fondöten"e birleştirildi (yazım farkı; Büstiyer kararıyla aynı). **Şablonsuz 113
+gruba özellik kopyalandı** (elle şablon listesi, 1.019 özellik + 41 eksen-alt özellik; giyim→İç Giyim/Plaj/Pijama/Elbise,
+ayakkabı→Bot/Terlik/Spor Ayakkabı, aksesuar→Aksesuar/Çanta/Şal, kozmetik→tlm_* eş ürünler, elektronik→Telefon/Elektrikli
+Ev Aletleri); `urun_grubu` varsayılanı üst-ad anlamlı şablonlarda korunur (Bikini→Plaj Giyim), eş-ürün şablonlarında
+NULL → seed kendi adını yazar (Ruj≠Maskara). Yanlış şablonlu `babet_corabi` (ayakkabı) ve `pantolon_corabi` (pantolon)
+İç Giyim'den yeniden şablonlandı (ürün yoktu). ★ **YENİ KURAL (plan v1.4 ilke 4):** eşlenmemiş ERP grubundaki YENİ ürün
+atlanmaz, özelliksiz **`gecici` "Geçici Grup (Eşlenmemiş ERP)"** grubuna alınır (`ErpSourceOptions.UnmappedProductGroupCode`,
+boş → eski fail-closed), ERP grup adı sözlüğe eşlenmemiş düşer → panel Eşleştirme › ERP: Nebim › **Eşlenmemiş** kuyruğu
+personeli uyarır; eşleme + ürünü doğru gruba taşıma/güncelleme personel işi; grup eşlenince sonraki turda worker grubu
+düzeltir; mevcut ürünün grubuna dokunulmaz; seed `gecici`yi Ürün Grubu havuzundan hariç tutar. Kod: worker
+`PlaceholderGroupAsync`, seed `SeedUrunGrubuAsync` filtre, araç `--skip` → eşlenmemiş sözlük satırı. Publish alındı
+(/opt/ECSProsAI/publish 13:07) ⚠️ **restart bekliyor** (yeni grupların Ürün Grubu değer/varsayılanı seed'de tamamlanır).
+Bilinen sınır: worker sadece grup ADI görür (kod yok) → worker'ın yazdığı eşlenmemiş satırda Code=ad; araç kodlu satır
+yazdıysa ada göre çift yazmaz.
+
 **NEBİM ÜRÜN GRUPLARI → BİZİM GRUPLAR EŞLEME UYGULANDI (2026-09-07):**
 V3 bağlantısı eski projenin YEREL kopyasında bulundu: `ECSGYE.Solution/ECSGYE.Common/appsettings.json` → "V3"
 (Server 135.125.172.93, DB Eldi_V3; gitignore'daki klasör aramada gözden kaçmıştı) → `~/.ecspros/v3.conn` (600).
