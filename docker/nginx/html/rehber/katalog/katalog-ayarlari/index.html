@@ -9,7 +9,7 @@
 <div class="toc"><b>Bu sayfada</b><a href="#ne-ise-yarar">Ne işe yarar</a><a href="#ekran-yerlesimi">Ekran yerleşimi</a><a href="#sekmeler">Sekmeler</a><a href="#durumlar-ve-is-kurallari">Durumlar ve iş kuralları</a><a href="#adim-adim">Adım adım</a><a href="#i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar</a><a href="#i-lgili-sayfalar">İlgili sayfalar</a></div><h2 id="ne-ise-yarar">Ne işe yarar<a class="anchor" href="#ne-ise-yarar" aria-hidden="true">#</a></h2>
 <p>Katalog Ayarları, ürün görsellerinin ve videolarının <strong>nereye kaydedileceğini ve hangi adresten sunulacağını</strong> belirleyen
 ayarlar ile <strong>resim setlerini</strong> (aynı ürünün farklı çekim/kanal görsel takımları) yönetir. İki sekmesi vardır:
-<strong>Resim Sunucusu</strong> (CDN, yerel depolama/FTP, video sunucusu anahtarları) ve <strong>Resim Setleri</strong>.</p>
+<strong>Resim Sunucusu</strong> (CDN, uygulamanın otomatik SFTP/S3 aktarımı, yerel fallback ve video sunucusu anahtarları) ve <strong>Resim Setleri</strong>.</p>
 <p>Bu ekranı kurulum ve altyapı sorumluları kullanır — mağaza açılışında, görsel sunucusu/CDN değiştiğinde ya da yeni bir
 resim seti (örn. ikinci bir çekim takımı) tanımlanacağında. Günlük ürün işlemlerinde buraya dokunulmaz.</p>
 <blockquote class="callout dikkat">
@@ -21,13 +21,19 @@ sitedeki tüm ürün görsellerinin kırık/yanlış boyutta çıkmasına yol a�
 <ol>
 <li><strong>Başlık</strong> — &quot;Katalog Ayarları&quot;, altında &quot;Resim sunucusu ve resim seti yönetimi&quot;.</li>
 <li><strong>Sekmeler</strong> — <code>Resim Sunucusu</code> (varsayılan açık) ve <code>Resim Setleri</code>.</li>
-<li><strong>İçerik</strong> — Resim Sunucusu&#39;nda üç bölümlü ayar formu ve altta <strong>Kaydet</strong>; Resim Setleri&#39;nde set tablosu ve <strong>Yeni Set</strong> butonu.</li>
+<li><strong>İçerik</strong> — Resim Sunucusu&#39;nda bölümlü ayar formu ve altta <strong>Kaydet</strong>; Resim Setleri&#39;nde set tablosu ve <strong>Yeni Set</strong> butonu.</li>
 </ol>
 <h2 id="sekmeler">Sekmeler<a class="anchor" href="#sekmeler" aria-hidden="true">#</a></h2>
 <h3 id="resim-sunucusu">Resim Sunucusu<a class="anchor" href="#resim-sunucusu" aria-hidden="true">#</a></h3>
-<p>Formun başında &quot;Resim yükleme için FTP sunucu bilgileri. Değişiklikler anında geçerli olur.&quot; notu bulunur. Alanlar üç
-bölüme ayrılmıştır; dolu alanlar yeşil kenarlıkla işaretlenir. Değerler boş bırakılırsa sistem varsayılanı kullanılır
+<p>Formun başında CDN, toplu yükleme ve eski depolama bilgilerinin yönetildiği belirtilir. Alanlar bölümlere
+ayrılmıştır; dolu alanlar yeşil kenarlıkla işaretlenir. Değerler boş bırakılırsa sistem varsayılanı kullanılır
 (aşağıda belirtilmiştir).</p>
+<p>Vitrin Yönetimi aynı SFTP/S3 bağlantı bilgilerini kullanır; ancak ürün dosyalarının <code>/var/www/html/images</code>
+köküne yazmaz. Vitrin dosyaları ayrı <code>/var/www/html/storefront/pages/desktop</code> ve
+<code>/var/www/html/storefront/pages/mobile</code> ağaçlarında, object storage tarafında da <code>storefront/</code> prefix&#39;i altında tutulur.
+Public sunum yolu edge-cache güvenliği için sürümlüdür: <code>https://cdn.misharitalia.com/storefront-v1/</code>.
+Eski taşınmış görsellerde bulunmayan responsive adaylara istek atılmaması için CDN <code>srcset</code> kapısı varsayılan
+kapalıdır; yeni varyant ağacı eksiksiz doğrulandıktan sonra ayrıca açılabilir.</p>
 <h4 id="form-alanlari-cdn-ayarlari">Form alanları — CDN Ayarları<a class="anchor" href="#form-alanlari-cdn-ayarlari" aria-hidden="true">#</a></h4>
 <table>
 <thead>
@@ -63,7 +69,77 @@ bölüme ayrılmıştır; dolu alanlar yeşil kenarlıkla işaretlenir. Değerle
 <td>Ürün detayında büyütme (zoom) görseli. Boşsa <strong>1200</strong>.</td>
 </tr>
 </tbody></table>
-<h4 id="form-alanlari-yerel-depolama-ftp">Form alanları — Yerel Depolama / FTP<a class="anchor" href="#form-alanlari-yerel-depolama-ftp" aria-hidden="true">#</a></h4>
+<h4 id="form-alanlari-toplu-yukleme-sftp">Form alanları — Toplu Yükleme / SFTP<a class="anchor" href="#form-alanlari-toplu-yukleme-sftp" aria-hidden="true">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Dönüştürme Kalitesi (%)</td>
+<td>Evet</td>
+<td>SFTP WebP ve S3 JPEG kopyalarının kalitesi; varsayılan <strong>80</strong>, geçerli aralık 1-100.</td>
+</tr>
+<tr>
+<td>SFTP Sunucu Adresi</td>
+<td>Evet</td>
+<td>WebP origin sunucusunun host adı veya IP adresi.</td>
+</tr>
+<tr>
+<td>SFTP Port</td>
+<td>Evet</td>
+<td>Varsayılan <code>22</code>.</td>
+</tr>
+<tr>
+<td>SFTP Kullanıcı Adı</td>
+<td>Evet</td>
+<td>WebP origin hesabı.</td>
+</tr>
+<tr>
+<td>SFTP Şifre</td>
+<td>Evet</td>
+<td>Kaydedilince şifrelenir ve ekranda <code>•••</code> görünür. Maskeli değer değiştirilmeden kaydedilirse mevcut şifre korunur.</td>
+</tr>
+<tr>
+<td>SFTP Dosya Yolu</td>
+<td>Evet</td>
+<td>WebP hedef dizini; varsayılan <code>/var/www/html/images</code>.</td>
+</tr>
+</tbody></table>
+<h4 id="form-alanlari-toplu-yukleme-ovh-object-storage">Form alanları — Toplu Yükleme / OVH Object Storage<a class="anchor" href="#form-alanlari-toplu-yukleme-ovh-object-storage" aria-hidden="true">#</a></h4>
+<table>
+<thead>
+<tr>
+<th>Alan</th>
+<th>Zorunlu</th>
+<th>Açıklama / kurallar / örnek</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>S3 Servis URL</td>
+<td>Evet</td>
+<td>S3-compatible HTTPS endpoint; örnek <code>https://s3.de.io.cloud.ovh.net/</code>.</td>
+</tr>
+<tr>
+<td>S3 Bucket</td>
+<td>Evet</td>
+<td>JPEG kopyalarının yazılacağı bucket adı.</td>
+</tr>
+<tr>
+<td>S3 Access Key</td>
+<td>Evet</td>
+<td>Kaydedilince şifrelenir ve GET yanıtında maskelenir.</td>
+</tr>
+<tr>
+<td>S3 Secret Key</td>
+<td>Evet</td>
+<td>Kaydedilince şifrelenir ve GET yanıtında maskelenir.</td>
+</tr>
+</tbody></table>
+<h4 id="form-alanlari-yerel-depolama">Form alanları — Yerel Depolama<a class="anchor" href="#form-alanlari-yerel-depolama" aria-hidden="true">#</a></h4>
 <table>
 <thead>
 <tr>
@@ -81,31 +157,6 @@ bölüme ayrılmıştır; dolu alanlar yeşil kenarlıkla işaretlenir. Değerle
 <td>Yerel Sunucu URL</td>
 <td>Hayır</td>
 <td>Bu klasördeki dosyaların dışarıdan erişileceği adres ön eki (örn. <code>/media/images/products/</code>). CDN tanımlı olmayan setlerde görsel adresi buradan üretilir.</td>
-</tr>
-<tr>
-<td>FTP Sunucu Adresi</td>
-<td>Hayır</td>
-<td>Görsellerin FTP ile aktarılacağı sunucu (örn. <code>ftp.imageserver.com</code>).</td>
-</tr>
-<tr>
-<td>FTP Port</td>
-<td>Hayır</td>
-<td>Varsayılan <code>21</code>.</td>
-</tr>
-<tr>
-<td>FTP Kullanıcı Adı</td>
-<td>Hayır</td>
-<td>FTP hesabı.</td>
-</tr>
-<tr>
-<td>FTP Şifre</td>
-<td>Hayır</td>
-<td>Gizli alan (yazılan karakterler maskelenir).</td>
-</tr>
-<tr>
-<td>FTP Dosya Yolu</td>
-<td>Hayır</td>
-<td>FTP sunucusunda hedef klasör (örn. <code>/images/products/</code>).</td>
 </tr>
 </tbody></table>
 <h4 id="form-alanlari-video-sunucusu">Form alanları — Video Sunucusu<a class="anchor" href="#form-alanlari-video-sunucusu" aria-hidden="true">#</a></h4>
@@ -127,31 +178,6 @@ bölüme ayrılmıştır; dolu alanlar yeşil kenarlıkla işaretlenir. Değerle
 <td>Hayır</td>
 <td>Video dosyalarının dışarıdan erişim adresi ön eki (örn. <code>/media/videos/products/</code>).</td>
 </tr>
-<tr>
-<td>FTP Sunucu Adresi</td>
-<td>Hayır</td>
-<td>Video FTP sunucusu.</td>
-</tr>
-<tr>
-<td>FTP Port</td>
-<td>Hayır</td>
-<td>Varsayılan <code>21</code>.</td>
-</tr>
-<tr>
-<td>FTP Kullanıcı Adı</td>
-<td>Hayır</td>
-<td>FTP hesabı.</td>
-</tr>
-<tr>
-<td>FTP Şifre</td>
-<td>Hayır</td>
-<td>Gizli alan.</td>
-</tr>
-<tr>
-<td>FTP Dosya Yolu</td>
-<td>Hayır</td>
-<td>FTP sunucusunda hedef klasör (örn. <code>/videos/products/</code>).</td>
-</tr>
 </tbody></table>
 <table>
 <thead>
@@ -166,7 +192,7 @@ bölüme ayrılmıştır; dolu alanlar yeşil kenarlıkla işaretlenir. Değerle
 <td>Kaydet</td>
 <td>Formun altı, sağ</td>
 <td>Formdaki <strong>tüm</strong> alanlar tek seferde kaydedilir; başarılıysa yanında &quot;✓ Kaydedildi&quot; görünür. Hata olursa formun altında kırmızı mesaj çıkar (&quot;Kayıt sırasında hata oluştu.&quot; ya da sunucu mesajı).</td>
-<td>Panele giriş yapmış kullanıcı</td>
+<td><code>catalog.settings.manage</code></td>
 </tr>
 </tbody></table>
 <h3 id="resim-setleri">Resim Setleri<a class="anchor" href="#resim-setleri" aria-hidden="true">#</a></h3>
@@ -285,8 +311,17 @@ halinde) → <strong>Varsayılan</strong> set.</p>
 <h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
 <ul>
 <li><strong>Görsel adresi kuralı:</strong> Mağazadaki görsel adresleri <code>CDN Temel URL / yükseklik / kalite / dosya adı</code> biçiminde üretilir; üç yükseklik (thumbnail / liste-detay / zoom) farklı yerlerde kullanılır. Alan boşsa varsayılan (85, 240, 640, 1200) devreye girer.</li>
-<li><strong>Yükleme hedefi:</strong> Panelden yüklenen görseller <strong>Yerel Kayıt Dizini</strong>&#39;ne yazılır, adresleri <strong>Yerel Sunucu URL</strong> ile üretilir; videolar için aynı mantık Video Kayıt Dizini / Video Sunucu URL ile işler. Yerel Kayıt Dizini boşsa uygulama kendi varsayılan klasörünü kullanır.</li>
-<li><strong>FTP alanları:</strong> FTP ile harici görsel sunucusuna aktarım için saklanır; FTP&#39;ye yükleme etkinleştirildiğinde bu bilgiler kullanılır.</li>
+<li><strong>Toplu yükleme hedefi:</strong> Varsayılan aktif dual-target akışında WebP, SFTP Dosya Yolu&#39;na; aynı benzersiz
+basename&#39;li JPEG, S3 bucket köküne yazılır. Servis ayarları her dosya upload&#39;ının başlangıcında bu
+ekrandan yeniden okur.</li>
+<li><strong>Hata-güvenli davranış:</strong> SFTP veya S3 ayarı eksikse ya da hedeflerden biri başarısızsa görsel kaydı
+aktifleştirilmez. Normal yapılandırmada sessiz yerel disk fallback&#39;i yoktur; yerel adapter yalnız geliştirme
+veya teşhis için <code>CatalogImageStorage:Enabled=false</code> açık override&#39;ıyla seçilebilir.</li>
+<li><strong>Kullanıcı aktarımı:</strong> Kullanıcı FTP/SFTP istemcisiyle dosya göndermez. Toplu yükleme ekranına seçilen dosyaları API,
+arka planda SFTP ile CDN origin&#39;e ve S3 API&#39;siyle object storage&#39;a aktarır.</li>
+<li><strong>Secret güvenliği:</strong> SFTP şifresi ile S3 anahtarları Data Protection kullanılarak şifreli saklanır ve API GET yanıtında gerçek değerlerini dönmez.</li>
+<li><strong>Eski FTP alanları:</strong> Kullanıcı akışında kullanılmaz ve formda gösterilmez; veri kaybı oluşmaması için
+daha önce kaydedilmiş anahtarlar DB&#39;de yerinde bırakılır.</li>
 <li><strong>Varsayılan set:</strong> Sistemde tek bir varsayılan set vardır; düzenlenemez ve silinemez. Tüm yedek zincirlerinin son durağıdır.</li>
 <li><strong>Set silme koşulları:</strong> Set silinemez eğer — varsayılansa; sete bağlı resim varsa; sete bağlı video varsa; ürün bazlı set eşlemelerinde kullanılıyorsa; başka bir setin fallback&#39;iyse. Her durumda pencerede ilgili hata mesajı gösterilir.</li>
 <li><strong>Kod değişmez:</strong> Set kodu dosya adlarına işlendiği için oluşturulduktan sonra değiştirilemez.</li>
@@ -297,9 +332,9 @@ halinde) → <strong>Varsayılan</strong> set.</p>
 <ol>
 <li><strong>Katalog › Katalog Ayarları</strong>&#39;na girin; <code>Resim Sunucusu</code> sekmesi açık gelir.</li>
 <li><strong>CDN Temel URL</strong>&#39;yi (sonunda <code>/</code> olmadan) ve gerekirse <strong>CDN Kalite (%)</strong> ile üç yükseklik değerini girin.</li>
-<li>Panelden yükleme yapılacaksa <strong>Yerel Kayıt Dizini</strong> ve <strong>Yerel Sunucu URL</strong>&#39;yi doldurun.</li>
-<li><strong>Kaydet</strong>&#39;e tıklayın; &quot;Kaydedildi&quot; yazısını görün.</li>
-<li>Mağazada bir ürün detayını açıp görsellerin geldiğini kontrol edin.</li>
+<li>Toplu yükleme için SFTP host/port/kullanıcı/şifre/yol ile S3 servis URL/bucket/access key/secret key alanlarını doldurun.</li>
+<li><strong>Kaydet</strong>&#39;e tıklayın; &quot;Kaydedildi&quot; yazısını ve secret alanlarının maskelendiğini görün.</li>
+<li>Kontrollü bir toplu yüklemede WebP ve JPEG kopyalarının iki hedefte de oluştuğunu doğrulayın.</li>
 </ol>
 <h3 id="yeni-resim-seti-tanimlama">Yeni resim seti tanımlama<a class="anchor" href="#yeni-resim-seti-tanimlama" aria-hidden="true">#</a></h3>
 <ol>
@@ -314,7 +349,7 @@ halinde) → <strong>Varsayılan</strong> set.</p>
 <p><strong>İpucu:</strong> Yükseklik değerlerini değiştirmeden önce CDN&#39;nizin o yükseklikte görsel üretebildiğinden emin olun; CDN yalnız tanımlı boyutları sunuyorsa farklı bir değer kırık görsele yol açar.</p>
 </blockquote>
 <blockquote class="callout dikkat">
-<p><strong>Dikkat:</strong> Kaydet tüm alanları birden yazar; bir alanı bilerek boş bırakıyorsanız kaydedilen değer de boş olur ve sistem varsayılanı kullanılır.</p>
+<p><strong>Dikkat:</strong> Kaydet ekranda gösterilen alanları yazar. Eski FTP anahtarları ekranda gösterilmez ve Kaydet işlemi bunları değiştirmez.</p>
 </blockquote>
 <blockquote class="callout dikkat">
 <p><strong>Dikkat:</strong> Bir resim setini silemiyorsanız pencerede nedeni yazar (bağlı resim/video, ürün eşlemesi ya da başka setin fallback&#39;i). Önce bağımlılığı kaldırın ya da seti <strong>Pasif</strong> yapmakla yetinin.</p>

@@ -362,12 +362,12 @@ public class CatalogController : ControllerBase
         return Ok(new { success = true, data = result.Value });
     }
 
-    /// <summary>Yeni ürün grubu oluşturur.</summary>
+    /// <summary>Yeni ürün grubu oluşturur; copyAttributesFromGroupId verilirse kaynak grubun özellik şablonu kopyalanır.</summary>
     [HttpPost("product-groups")]
     [RequirePermission(Permissions.CatalogPlatformManage)]
     public async Task<IActionResult> CreateProductGroup([FromBody] CreateProductGroupRequest request, CancellationToken ct)
     {
-        var result = await _mediator.Send(new CreateProductGroupCommand(request.NameI18n, request.SortOrder), ct);
+        var result = await _mediator.Send(new CreateProductGroupCommand(request.NameI18n, request.SortOrder, request.CopyAttributesFromGroupId), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
         return Created("/api/catalog/product-groups", new { success = true, data = new { id = result.Value } });
@@ -617,7 +617,8 @@ public record AddAttributeValueRequest(
 
 public record CreateProductGroupRequest(
     Dictionary<string, string> NameI18n,
-    int SortOrder = 0);
+    int SortOrder = 0,
+    Guid? CopyAttributesFromGroupId = null);
 
 public record UpdateProductGroupRequest(
     Dictionary<string, string> NameI18n,

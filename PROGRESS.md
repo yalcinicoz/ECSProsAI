@@ -1,5 +1,18 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**YENİ ÜRÜN GRUBUNDA ÖZELLİK ŞABLONU KOPYALAMA (2026-09-07):**
+`POST /api/catalog/product-groups` gövdesine isteğe bağlı `copyAttributesFromGroupId` eklendi
+(`CreateProductGroupCommand`): kaynak grubun grup özellikleri (varyant ekseni / ana eksen / zorunlu / sıra /
+varsayılan değer) ve eksen alt özellikleri yeni Id'lerle yeni gruba kopyalanır, tek SaveChanges; kaynak yoksa
+"Özellikleri kopyalanacak kaynak ürün grubu bulunamadı." ve grup oluşturulmaz. Admin `ProductGroupsPage` "Yeni Ürün
+Grubu" modalına **Özellikleri Kopyala (isteğe bağlı)** aramalı seçici (portal, aktif+pasif gruplar) + önizleme
+(özellik/eksen/alt özellik sayısı, ★ ana eksen, `*` zorunlu etiketleri) eklendi. Rehber `50-urun-gruplari.md`
+güncellendi ve derlendi. İzole 5051 (demo DB, tek kullanımlık JWT) uçtan uca: Mont'tan 22 özellik + 4 alt özellik
+birebir, olmayan kaynak → hata, kopyasız → 0 özellik; test grupları silindi. API testleri 120/120, admin lint/tsc
+geçti, `admin/dist` derlendi. `publish`/`publish-demo`/`publish-staging` eşitlendi ⚠️ restart kullanıcıda.
+🐛 TESPİT: demo 5050'de admin girişi "IDX10703 key length is zero" veriyor — `appsettings.Demo.json`'da `Jwt:Secret`
+yok (ana appsettings'te boş); config/sır işi, dokunulmadı — kullanıcıya bildirildi.
+
 **GİYİM GRUPLARINA "ORTAM" ÖZELLİĞİ — SEED (2026-09-07):**
 Mevcut `ortam` özellik tipi (Sort=430, filtrede; önceden yalnız 7 ayakkabı grubunda, ERP'den gelen 23 serbest değerli)
 `DatabaseSeeder.SeedProductGroupAttributesAsync` içindeki `Cloth()` tabanına eklendi (sort 105) → 39 giyim grubuna daha

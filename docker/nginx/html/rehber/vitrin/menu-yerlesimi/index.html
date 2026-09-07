@@ -176,9 +176,9 @@ düzenini yeniden kurgularken kullanır. Menü yoksa site, kategori ağacını o
 <td>Menüde görünen yazı (örn. <code>KADIN</code>). Kategori tipinde boş bırakılırsa kategori adı kullanılır.</td>
 </tr>
 <tr>
-<td>Menü Görseli (URL)</td>
+<td>Menü Görseli</td>
 <td>Hayır</td>
-<td>Mega menüde öğenin yanında gösterilen küçük görsel (<code>/media/menu/…</code>).</td>
+<td>Mega menüde öğenin yanında gösterilen küçük görsel. <strong>Görsel Yükle</strong> ile dosya seçilir; CDN adresi sistem tarafından oluşturulur. JPEG, PNG, WebP, GIF ve SVG kabul edilir, en fazla 5 MB olabilir.</td>
 </tr>
 <tr>
 <td>Rozet</td>
@@ -193,6 +193,10 @@ düzenini yeniden kurgularken kullanır. Menü yoksa site, kategori ağacını o
 </tbody></table>
 <p>Pencere altındaki buton yeni öğede <strong>Ekle</strong>, düzenlemede <strong>Uygula</strong>; Kategori tipinde kategori seçilmeden, diğer
 tiplerde etiket girilmeden buton pasiftir.</p>
+<p>Menü görselleri vitrin banner&#39;larından ve ürün görsellerinden ayrı olarak CDN&#39;deki
+<code>/storefront-v1/menus/YYYY/MM/</code> ağacında tutulur. Kullanıcı URL girmez; <strong>Değiştir</strong> yeni dosyayı yükler.
+Kırmızı yazılı <strong>Kaldır</strong> butonu önce onay sorar; onaydan sonra yalnız formdaki görsel bağlantısını temizler.
+Değişikliğin ağaca geçmesi için modalda <strong>Uygula</strong>, kalıcı olması için sayfada ayrıca <strong>Kaydet</strong> kullanılmalıdır.</p>
 <h2 id="durumlar-ve-is-kurallari">Durumlar ve iş kuralları<a class="anchor" href="#durumlar-ve-is-kurallari" aria-hidden="true">#</a></h2>
 <ul>
 <li>Menü tek bir kanala aittir; her kanalın kendi üst menüsü vardır.</li>

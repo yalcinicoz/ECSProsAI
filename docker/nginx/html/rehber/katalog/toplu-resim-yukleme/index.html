@@ -11,10 +11,10 @@
 klasöre koyarsınız; bu ekran dosya adından barkodu okur, barkodun bağlı olduğu ürün/varyantı bulur ve tüm resimleri
 tek tuşla yükler. Katalog ve fotoğraf ekibi, yeni sezon/parti resimlerini kataloğa işlerken bu ekranı kullanır.</p>
 <h2 id="ekran-yerlesimi">Ekran yerleşimi<a class="anchor" href="#ekran-yerlesimi" aria-hidden="true">#</a></h2>
-<p><figure class="ekran"><a href="/rehber/img/catalog-bulk-images.webp" class="buyut" data-alt="Toplu Resim Yükleme — set/arşiv ayar şeridi, klasör seçme alanı, özet şeridi ve barkod kartları"><img src="/rehber/img/catalog-bulk-images.webp" alt="Toplu Resim Yükleme — set/arşiv ayar şeridi, klasör seçme alanı, özet şeridi ve barkod kartları" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Toplu Resim Yükleme — set/arşiv ayar şeridi, klasör seçme alanı, özet şeridi ve barkod kartları</figcaption></figure></p>
+<p><figure class="ekran"><a href="/rehber/img/catalog-bulk-images.webp" class="buyut" data-alt="Toplu Resim Yükleme — set/değiştirme ayar şeridi, klasör seçme alanı, özet şeridi ve barkod kartları"><img src="/rehber/img/catalog-bulk-images.webp" alt="Toplu Resim Yükleme — set/değiştirme ayar şeridi, klasör seçme alanı, özet şeridi ve barkod kartları" loading="lazy" onerror="this.closest('figure').classList.add('eksik')"></a><figcaption>Toplu Resim Yükleme — set/değiştirme ayar şeridi, klasör seçme alanı, özet şeridi ve barkod kartları</figcaption></figure></p>
 <ol>
 <li><strong>Yol bağlantısı</strong> — &quot;Ürün Kartları › Toplu Resim Yükleme&quot;.</li>
-<li><strong>Ayar şeridi</strong> — <code>Set:</code> çipleri (resim seti) ve sağda <strong>Mevcut resimleri arşivle</strong> onay kutusu.</li>
+<li><strong>Ayar şeridi</strong> — <code>Set:</code> çipleri (resim seti) ve sağda <strong>Mevcut resimleri sil ve yenileriyle değiştir</strong> onay kutusu.</li>
 <li><strong>Klasör alanı</strong> — &quot;Klasör seç veya sürükle-bırak&quot; kesikli kutu; dosya adı biçimi ve taşıma bilgisi; seçilen klasörün adı.</li>
 <li><strong>Özet şeridi</strong> (klasör seçilince) — toplam resim, eşleşen ürün, bulunamayan barkod, sorgulanıyor sayaçları; sağda
 yükleme sonucu ve <strong>Tümünü Yükle (N)</strong> butonu.</li>
@@ -48,9 +48,9 @@ okunmaz; yalnız klasörün kendi içindeki dosyalar alınır.</li>
 <td>En az bir resim seti tanımlı olmalı.</td>
 </tr>
 <tr>
-<td>Mevcut resimleri arşivle</td>
+<td>Mevcut resimleri sil ve yenileriyle değiştir</td>
 <td>Ayar şeridi</td>
-<td>Varsayılan <strong>işaretli</strong>. İşaretliyken her varyant için seçili setteki mevcut aktif resimler arşive alınır ve yeni resimler onların yerine geçer. İşareti kaldırırsanız yeni resimler mevcutların yanına eklenir (ilk dosya yine kapak olarak işaretlenir).</td>
+<td>Varsayılan <strong>işaretli</strong>. İşaretliyken yeni grubun tüm dosyaları iki harici hedefe de başarıyla yüklendikten sonra aynı set + varyanttaki eski resimler silinir. İşareti kaldırırsanız yeni resimler mevcutların yanına eklenir.</td>
 <td>—</td>
 </tr>
 <tr>
@@ -143,11 +143,15 @@ sıra numarası dosya adındaki sıraya göre 1&#39;den başlar; ilk resim hem <
 <li>Resimler daima <strong>varyanta bağlı</strong> yüklenir (ürün geneline değil). Renk ekseni olan ürünlerde aynı rengin tüm
 bedenleri aynı barkoda sahip olmadığından, bir rengin resimlerini o rengin <strong>herhangi bir bedeninin</strong> barkoduyla
 yüklemeniz yeterlidir; site, renk için o varyantın resimlerini kullanır.</li>
-<li>&quot;Mevcut resimleri arşivle&quot; yalnız <strong>aynı set + aynı varyant</strong>taki resimleri arşivler; başka setler ve diğer
-varyantlar etkilenmez. Arşivlenen resim silinmez.</li>
+<li>&quot;Mevcut resimleri sil ve yenileriyle değiştir&quot; yalnız <strong>aynı set + aynı varyant</strong>taki resimleri siler; başka
+setler ve diğer varyantlar etkilenmez. Yeni grubun tamamı yüklenemezse eski resimler korunur.</li>
+<li>Her yeni resmin WebP kopyası harici SFTP origin&#39;e, aynı basename&#39;li JPEG kopyası object storage&#39;a yazılır;
+iki hedef birlikte başarılı olmadan resim aktif edilmez.</li>
+<li>Çift hedefli yükleme normal uygulama yapılandırmasında varsayılan aktiftir. SFTP veya S3 ayarı eksikse
+ya da hedeflerden biri hata verirse yükleme başarısız olur; sistem sessizce API&#39;nin yerel diskine dönmez.</li>
 <li>Klasörü dosya seçici ile (klasör erişimi olmadan) ya da dosya sürükleyerek yüklediyseniz taşıma yapılmaz; ekranda
 &quot;Bu tarayıcı otomatik taşıma desteklemiyor — yükleme sonrası dosyalar yerinde kalır&quot; uyarısı görünür.</li>
-<li>Başarılı yüklenen dosya, klasör erişimi varsa <code>yuklenenler/&lt;sunucu-dosya-adı&gt;</code> olarak taşınır ve asıl dosya
+<li>Başarılı yüklenen dosya, klasör erişimi varsa <code>yuklenenler/&lt;benzersiz-ad&gt;&lt;kaynak-uzantısı&gt;</code> olarak taşınır ve asıl dosya
 silinir; böylece aynı klasörü tekrar açtığınızda yalnız yüklenmemiş dosyalar kalır. Yüklenemeyen dosya yerinde kalır.</li>
 <li>Aynı klasör yeniden açılırsa önceki sonuçlar sıfırlanır; yüklenmiş (taşınmış) dosyalar artık listede görünmez.</li>
 </ul>
@@ -156,7 +160,8 @@ silinir; böylece aynı klasörü tekrar açtığınızda yalnız yüklenmemiş 
 <ol>
 <li>Resimleri bilgisayarınızda tek bir klasöre <code>barkod_1.jpg, barkod_2.jpg …</code> biçiminde adlandırarak koyun.</li>
 <li><strong>Katalog → Toplu Resim Yükleme</strong>&#39;yi açın; <code>Set:</code> çiplerinden doğru seti seçin (genelde varsayılan).</li>
-<li>Eski resimlerin yerine geçmesini istiyorsanız <strong>Mevcut resimleri arşivle</strong> işaretli kalsın; eklemek istiyorsanız kaldırın.</li>
+<li>Eski resimlerin yerine geçmesini istiyorsanız <strong>Mevcut resimleri sil ve yenileriyle değiştir</strong> işaretli kalsın;
+mevcutların yanına eklemek istiyorsanız kaldırın.</li>
 <li>Klasör alanına tıklayıp klasörü seçin (tarayıcı izin sorarsa &quot;Dosyaları düzenle/kaydet&quot; iznini verin) ya da klasörü kutuya sürükleyin.</li>
 <li>Özet şeridinde <code>Sorgulanıyor...</code> bitene kadar bekleyin. <code>Bulunamadı</code> olan barkodları not alın.</li>
 <li>Kartlardaki küçük resimleri kontrol edin; yanlış dosyayı × ile listeden çıkarın. Kapak olacak resim 1 numaralı olmalı.</li>

@@ -7,9 +7,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Catalog.Application.Commands.CreateProductGroup;
 
+/// <param name="CopyAttributesFromGroupId">Dolu ise kaynak grubun özellik şablonu (grup özellikleri: varyant ekseni /
+/// ana eksen / zorunlu / sıra / varsayılan değer + eksen alt özellikleri) yeni gruba kopyalanır (2026-09-07).</param>
 public record CreateProductGroupCommand(
     Dictionary<string, string> NameI18n,
-    int SortOrder
+    int SortOrder,
+    Guid? CopyAttributesFromGroupId = null
 ) : IRequest<Result<Guid>>;
 
 public class CreateProductGroupCommandHandler : IRequestHandler<CreateProductGroupCommand, Result<Guid>>
@@ -41,6 +44,51 @@ public class CreateProductGroupCommandHandler : IRequestHandler<CreateProductGro
         };
 
         _db.ProductGroups.Add(group);
+
+        if (request.CopyAttributesFromGroupId is { } sourceId)
+        {
+            var sourceExists = await _db.ProductGroups.AnyAsync(pg => pg.Id == sourceId, ct);
+            if (!sourceExists)
+                return Result.Failure<Guid>("Özellikleri kopyalanacak kaynak ürün grubu bulunamadı.");
+
+            var now = DateTime.UtcNow;
+            var sourceAttrs = await _db.ProductGroupAttributes.AsNoTracking()
+                .Where(a => a.ProductGroupId == sourceId)
+                .ToListAsync(ct);
+            foreach (var a in sourceAttrs)
+            {
+                _db.ProductGroupAttributes.Add(new ProductGroupAttribute
+                {
+                    Id = Guid.NewGuid(),
+                    ProductGroupId = group.Id,
+                    AttributeTypeId = a.AttributeTypeId,
+                    IsVariant = a.IsVariant,
+                    IsRequired = a.IsRequired,
+                    IsPrimaryAxis = a.IsPrimaryAxis,
+                    SortOrder = a.SortOrder,
+                    DefaultAttributeValueId = a.DefaultAttributeValueId,
+                    CreatedAt = now
+                });
+            }
+
+            var sourceSubs = await _db.ProductGroupAxisSubAttributes.AsNoTracking()
+                .Where(s => s.ProductGroupId == sourceId)
+                .ToListAsync(ct);
+            foreach (var s in sourceSubs)
+            {
+                _db.ProductGroupAxisSubAttributes.Add(new ProductGroupAxisSubAttribute
+                {
+                    Id = Guid.NewGuid(),
+                    ProductGroupId = group.Id,
+                    AxisAttributeTypeId = s.AxisAttributeTypeId,
+                    SubAttributeTypeId = s.SubAttributeTypeId,
+                    IsRequired = s.IsRequired,
+                    SortOrder = s.SortOrder,
+                    CreatedAt = now
+                });
+            }
+        }
+
         await _db.SaveChangesAsync(ct);
 
         return Result.Success(group.Id);

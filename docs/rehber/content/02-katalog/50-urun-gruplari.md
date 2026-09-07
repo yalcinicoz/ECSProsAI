@@ -57,7 +57,7 @@ ana ekseni belirlerken ya da varyant eksenine bağlı ölçü bilgileri (alt öz
 ## Butonlar ve aksiyonlar
 | Buton/Aksiyon | Nerede | Ne olur | Ön koşul / yetki |
 |---|---|---|---|
-| Yeni Grup | Liste, sağ üst | "Yeni Ürün Grubu" penceresi açılır; Kaydet sonrası yeni grubun detayına gidilir. | `catalog.platform.manage` |
+| Yeni Grup | Liste, sağ üst | "Yeni Ürün Grubu" penceresi açılır; Kaydet sonrası yeni grubun detayına gidilir. İsteğe bağlı **Özellikleri Kopyala** ile başka bir grubun özellik şablonu yeni gruba kopyalanır. | `catalog.platform.manage` |
 | Grubu Sil | Detay, başlığın sağı | ⚠️ "Ürün Grubunu Sil" onayı: *"… grubu kalıcı olarak silinecek. Bu işlem geri alınamaz."* Onaylanınca grup silinir ve listeye dönülür. | `catalog.platform.manage`; **gruba bağlı ürün olmamalı** (ürün varsa buton hiç görünmez) |
 | Kaydet (Ad) | Detay, Ad (Çeviriler) kartı | Ad çevirileri kaydedilir; "Kaydedildi" yazısı görünür. Değişiklik yoksa pasiftir. | `catalog.platform.manage` |
 | Özellik Ekle | Detay, Özellikler kartı | "Özellik Ekle" penceresi açılır. Havuzdaki tüm özellikler zaten ekliyse buton pasiftir. | `catalog.platform.manage` |
@@ -133,11 +133,13 @@ tanımlanmamış" yazar. Ürün kartında her beden değeri için bu alt özelli
 
 ### Yeni ürün grubu oluşturma ve şablonunu kurma
 1. **Katalog › Ürün Grupları**'na girin, **Yeni Grup**'a tıklayın.
-2. **Ad**'ı (Türkçe ve varsa diğer diller) yazın, gerekirse **Sıra** verin; **Otomatik Kod**'u kontrol edip **Kaydet**'e tıklayın. Detay sayfası açılır.
-3. **Özellik Ekle** ile ürün özelliklerini ekleyin (örn. Kumaş Türü, Desen) — *Varyant Ekseni* işaretsiz, gerekiyorsa *Zorunlu*.
-4. Varyant oluşturacak özellikleri (örn. Renk, Beden) **Varyant Ekseni** işaretli olarak ekleyin.
-5. Ana Eksen sütununda listelemeye temel olacak eksenin (genellikle Renk) yıldızına tıklayın.
-6. Gerekirse **Alt Özellik Ekle** ile eksene ölçü alt özellikleri bağlayın (Beden → Paça Boyu, Bel Genişliği…).
+2. **Ad**'ı (Türkçe ve varsa diğer diller) yazın, gerekirse **Sıra** verin.
+3. Benzer bir grup varsa **Özellikleri Kopyala** alanından kaynak grubu seçin (örn. "Kot Ceket" için Ceket). Alanın altında kopyalanacak özellik sayısı, varyant ekseni sayısı ve eksen alt özelliği sayısı ile özellik etiketleri (★ ana eksen, `*` zorunlu) önizlenir. Kaynak grubun varyant ekseni / ana eksen / zorunlu / sıra / varsayılan değer ayarları ve eksen alt özellikleri aynen kopyalanır; kaynak grup daha sonra değişse kopya etkilenmez. Boş bırakılırsa grup özelliksiz açılır.
+4. **Otomatik Kod**'u kontrol edip **Kaydet**'e tıklayın. Detay sayfası açılır; kopyalanan şablon burada düzenlenebilir.
+5. **Özellik Ekle** ile ürün özelliklerini ekleyin (örn. Kumaş Türü, Desen) — *Varyant Ekseni* işaretsiz, gerekiyorsa *Zorunlu*.
+6. Varyant oluşturacak özellikleri (örn. Renk, Beden) **Varyant Ekseni** işaretli olarak ekleyin.
+7. Ana Eksen sütununda listelemeye temel olacak eksenin (genellikle Renk) yıldızına tıklayın.
+8. Gerekirse **Alt Özellik Ekle** ile eksene ölçü alt özellikleri bağlayın (Beden → Paça Boyu, Bel Genişliği…).
 
 > **Dikkat:** Ana ekseni **ilk ürünü oluşturmadan önce** belirleyin; gruba ürün girildikten sonra kilitlenir.
 
@@ -153,6 +155,8 @@ tanımlanmamış" yazar. Ürün kartında her beden değeri için bu alt özelli
 
 ## İpuçları ve sık karşılaşılan durumlar
 > **İpucu:** Özellik Ekle butonu pasifse havuzdaki tüm özellik tipleri bu gruba zaten eklidir; yeni bir özellik için önce Özellik Tipleri'nde tip oluşturun.
+
+> **İpucu:** Aynı şablonu birden çok grupta kullanacaksanız her seferinde elle özellik eklemek yerine yeni grubu **Özellikleri Kopyala** ile en yakın gruptan türetin; sonra yalnız farkları düzenleyin.
 
 > **İpucu:** Sıra alanına 10'ar aralık bırakın (0, 10, 20…); sonradan araya özellik eklemek kolaylaşır.
 

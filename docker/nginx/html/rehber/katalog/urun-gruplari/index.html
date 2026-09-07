@@ -104,7 +104,7 @@ gerekir. Yetki yoksa sayfa başlığının yanında <strong>Salt Okunur</strong>
 <tbody><tr>
 <td>Yeni Grup</td>
 <td>Liste, sağ üst</td>
-<td>&quot;Yeni Ürün Grubu&quot; penceresi açılır; Kaydet sonrası yeni grubun detayına gidilir.</td>
+<td>&quot;Yeni Ürün Grubu&quot; penceresi açılır; Kaydet sonrası yeni grubun detayına gidilir. İsteğe bağlı <strong>Özellikleri Kopyala</strong> ile başka bir grubun özellik şablonu yeni gruba kopyalanır.</td>
 <td><code>catalog.platform.manage</code></td>
 </tr>
 <tr>
@@ -317,7 +317,9 @@ tanımlanmamış&quot; yazar. Ürün kartında her beden değeri için bu alt ö
 <h3 id="yeni-urun-grubu-olusturma-ve-sablonunu-kurma">Yeni ürün grubu oluşturma ve şablonunu kurma<a class="anchor" href="#yeni-urun-grubu-olusturma-ve-sablonunu-kurma" aria-hidden="true">#</a></h3>
 <ol>
 <li><strong>Katalog › Ürün Grupları</strong>&#39;na girin, <strong>Yeni Grup</strong>&#39;a tıklayın.</li>
-<li><strong>Ad</strong>&#39;ı (Türkçe ve varsa diğer diller) yazın, gerekirse <strong>Sıra</strong> verin; <strong>Otomatik Kod</strong>&#39;u kontrol edip <strong>Kaydet</strong>&#39;e tıklayın. Detay sayfası açılır.</li>
+<li><strong>Ad</strong>&#39;ı (Türkçe ve varsa diğer diller) yazın, gerekirse <strong>Sıra</strong> verin.</li>
+<li>Benzer bir grup varsa <strong>Özellikleri Kopyala</strong> alanından kaynak grubu seçin (örn. &quot;Kot Ceket&quot; için Ceket). Alanın altında kopyalanacak özellik sayısı, varyant ekseni sayısı ve eksen alt özelliği sayısı ile özellik etiketleri (★ ana eksen, <code>*</code> zorunlu) önizlenir. Kaynak grubun varyant ekseni / ana eksen / zorunlu / sıra / varsayılan değer ayarları ve eksen alt özellikleri aynen kopyalanır; kaynak grup daha sonra değişse kopya etkilenmez. Boş bırakılırsa grup özelliksiz açılır.</li>
+<li><strong>Otomatik Kod</strong>&#39;u kontrol edip <strong>Kaydet</strong>&#39;e tıklayın. Detay sayfası açılır; kopyalanan şablon burada düzenlenebilir.</li>
 <li><strong>Özellik Ekle</strong> ile ürün özelliklerini ekleyin (örn. Kumaş Türü, Desen) — <em>Varyant Ekseni</em> işaretsiz, gerekiyorsa <em>Zorunlu</em>.</li>
 <li>Varyant oluşturacak özellikleri (örn. Renk, Beden) <strong>Varyant Ekseni</strong> işaretli olarak ekleyin.</li>
 <li>Ana Eksen sütununda listelemeye temel olacak eksenin (genellikle Renk) yıldızına tıklayın.</li>
@@ -341,6 +343,9 @@ tanımlanmamış&quot; yazar. Ürün kartında her beden değeri için bu alt ö
 <h2 id="i-puclari-ve-sik-karsilasilan-durumlar">İpuçları ve sık karşılaşılan durumlar<a class="anchor" href="#i-puclari-ve-sik-karsilasilan-durumlar" aria-hidden="true">#</a></h2>
 <blockquote class="callout ipucu">
 <p><strong>İpucu:</strong> Özellik Ekle butonu pasifse havuzdaki tüm özellik tipleri bu gruba zaten eklidir; yeni bir özellik için önce Özellik Tipleri&#39;nde tip oluşturun.</p>
+</blockquote>
+<blockquote class="callout ipucu">
+<p><strong>İpucu:</strong> Aynı şablonu birden çok grupta kullanacaksanız her seferinde elle özellik eklemek yerine yeni grubu <strong>Özellikleri Kopyala</strong> ile en yakın gruptan türetin; sonra yalnız farkları düzenleyin.</p>
 </blockquote>
 <blockquote class="callout ipucu">
 <p><strong>İpucu:</strong> Sıra alanına 10&#39;ar aralık bırakın (0, 10, 20…); sonradan araya özellik eklemek kolaylaşır.</p>
