@@ -12,6 +12,7 @@ using ECSPros.Order.Application.Queries.GetReturns;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ECSPros.Api.Controllers;
 
@@ -50,9 +51,34 @@ public class StoreAccountController(
     {
         var result = await mediator.Send(
             new ECSPros.Crm.Application.Commands.UpdateMemberMarketingConsents.UpdateMemberMarketingConsentsCommand(
-                GetMemberId(), req.Email, req.Sms, req.Phone), ct);
+                GetMemberId(), req.Email, req.Sms, req.Phone, req.Push), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true });
+    }
+
+    /// <summary>Duyuru tercihlerini oku (mobil ayarlar ekranı; push = pazarlama push izni, varsayılan false).</summary>
+    [HttpGet("marketing-consents")]
+    public async Task<IActionResult> GetMarketingConsents(CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetMemberDetailQuery(GetMemberId()), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        var c = result.Value.MarketingConsents;
+        return Ok(new { success = true, data = new { email = c?.Email ?? false, sms = c?.Sms ?? false, phone = c?.Phone ?? false, push = c?.Push ?? false } });
+    }
+
+    /// <summary>Uygulama içi "Bildirimlerim": üyeye gönderilmiş push bildirimleri (sayfalı, yeni→eski).</summary>
+    [HttpGet("notifications")]
+    public async Task<IActionResult> GetNotifications([FromQuery] int page = 1, [FromQuery] int pageSize = 20,
+        [FromServices] ECSPros.Storefront.Application.Services.IStorefrontDbContext sdb = null!, CancellationToken ct = default)
+    {
+        var mid = GetMemberId(); page = Math.Max(1, page); pageSize = Math.Clamp(pageSize, 1, 100);
+        var q = sdb.PushNotifications.AsNoTracking().Where(n => n.MemberId == mid && n.Status == "sent");
+        var total = await q.CountAsync(ct);
+        var unread = await q.CountAsync(n => n.OpenedAt == null, ct);
+        var items = await q.OrderByDescending(n => n.SentAt).Skip((page - 1) * pageSize).Take(pageSize)
+            .Select(n => new { n.Id, n.Type, n.Title, n.Body, n.Link, n.ImageUrl, dedupId = n.DedupId, sentAt = n.SentAt, n.OpenedAt })
+            .ToListAsync(ct);
+        return Ok(new { success = true, data = new { items, totalCount = total, unreadCount = unread, page, pageSize } });
     }
 
     /// <summary>E2: Aktif Cihazlar + Giriş Geçmişi — üyenin son oturumları.</summary>
@@ -370,7 +396,7 @@ public record UpdateProfileRequest(
     DateOnly? BirthDate,
     Guid? CityId = null);   // E2: yaşadığı şehir (G9 segmenti)
 
-public record MarketingConsentsRequest(bool Email, bool Sms, bool Phone);
+public record MarketingConsentsRequest(bool Email, bool Sms, bool Phone, bool? Push = null);   // Push: mobil pazarlama bildirimi izni (2026-09-07)
 
 /// <summary>E8: iade talebi isteği — kalem + neden seçimleri + yüklenen görsel URL'leri.</summary>
 public record StoreCreateReturnRequest(

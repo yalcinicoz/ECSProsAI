@@ -21,6 +21,8 @@ public interface IStorefrontDbContext
     DbSet<ProductReview> ProductReviews { get; }
     DbSet<ProductQuestion> ProductQuestions { get; } // Satıcıya Soru Sor (2026-09-01)
     DbSet<PushDevice> PushDevices { get; } // Mobil push cihaz kaydı (2026-09-05)
+    DbSet<PushTemplate> PushTemplates { get; }          // push şablonları (2026-09-07)
+    DbSet<PushNotification> PushNotifications { get; }  // push kuyruğu/logu
     DbSet<ProductReviewPhoto> ProductReviewPhotos { get; }
     DbSet<ProductRatingSource> ProductRatingSources { get; }
     DbSet<ProductReviewDisplaySettings> ProductReviewDisplaySettings { get; }

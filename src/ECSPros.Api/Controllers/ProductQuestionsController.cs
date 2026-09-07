@@ -39,13 +39,13 @@ public class ProductQuestionsController(
 
     /// <summary>Cevapla (yayına girer) — yayındaki cevap da bu uçla güncellenir.</summary>
     [HttpPost("{id:guid}/answer")]
-    public async Task<IActionResult> Answer(Guid id, [FromBody] AnswerQuestionRequest req, CancellationToken ct)
+    public async Task<IActionResult> Answer(Guid id, [FromBody] AnswerQuestionRequest req, [FromServices] ECSPros.Api.Services.Push.PushEtkilesim push, CancellationToken ct)
     {
         var result = await mediator.Send(new AnswerProductQuestionCommand(id, req.Answer ?? "", UserId), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
 
         // Üyeye "cevaplandı" e-postası — yalnız İLK cevapta (güncelleme yeniden göndermez).
-        if (result.Value) cevapEpostasi.ArkaPlandaGonder(id);
+        if (result.Value) { cevapEpostasi.ArkaPlandaGonder(id); await push.SoruCevaplandiAsync(id, ct); } // mobil push (question_answered, yalnız ilk cevap)
 
         // Diğer panel kullanıcılarının rozeti/listesi anında tazelensin.
         try { await realtime.SendQuestionEventAsync("QuestionAnswered", new { id }, ct); }

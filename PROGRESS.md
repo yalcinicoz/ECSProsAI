@@ -1,5 +1,26 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**MOBİL PUSH BİLDİRİM ENTEGRASYONU UYGULANDI — `docs/PUSH_BILDIRIM_ENTEGRASYONU.md` (2026-09-07, Mobil API + Admin panel):**
+FCM HTTP v1 gönderici (`Services/Push/FcmClient` — servis hesabı JWT RS256 → OAuth2, 50 dk belirteç önbelleği; hata kodu
+sınıflandırması), ayar kaynağı `definition.integration_services` **"fcm"** (ServiceType `push`; firma entegrasyonu
+`serviceAccountJson` şifreli + `projectId`) → panel Ayarlar › Entegrasyonlar'dan girilir (tanımsızsa kuyruk birikir, hata yok).
+Tablolar `storefront.push_templates` (21 şablon seed, §4 metinleri) + `storefront.push_notifications` (cihaz başına satır,
+`(DedupId, DeviceId)` unique, token SHA-256) + `favorites.PriceAtAdd` (migration `AddPushNotifications` dev+demo).
+`PushKuyruk` (şablon → metin/link, link kataloğu doğrulaması, üyenin tüm aktif cihazları, pazarlama: `Consents.marketing.push`
+izni + sessiz saat 22-09 İstanbul → 09:00 erteleme + günde 2 / aynı tip haftada 2), `PushGonderimServisi` (queued → FCM;
+UNREGISTERED→cihaz revoked, INVALID_ARGUMENT→invalid, 429/5xx üstel bekleme ≤5; iptal koşulu sepet/favori/alarm; rozet =
+açılmamış sayısı), `PushTarayici` (15 dk: stock_alert [alarm notified], favorite_price_drop [≥%10, üye/gün 1, baz = ekleme
+fiyatı; eski favorilerde ilk tarama], favorite_low_stock [≤3, haftada 1], cart_reminder [3 sa / 24 sa ikinci], coupon_assigned /
+coupon_expiring, wallet_credit, welcome, winback, viewed_reminder, order_payment_pending, order_review_invite),
+`PushGondericiWorker` (15 sn; DistributedWorkerLock push-dispatch / push-scan; `Push:Enabled`). Olay tabanlı:
+`EventHandlers/PushOrderEventHandlers` (CartConvertedToOrder→order_created, confirmed, shipped [Shipment kargo+takip],
+delivered, cancelled [üyenin kendi iptali hariç], ReturnReceived) + `PushEtkilesim` kancaları (soru ilk cevap, yorum onay/ret,
+iade onay/ret). Mobil uçlar: `marketing-consents` PUT `push` + GET; `GET account/notifications`; `POST push-devices/opened`.
+Admin: Pazarlama › Bildirimler › **Push Şablonları** (düzenle/aç-kapat, link doğrulamalı) + **Push Gönderimleri** (log, 24 sa
+özet, tek cihaza/üyeye deneme) — `GET/PUT store-notifications/push-templates`, `GET push-log`, `POST push-test`. Doküman:
+mobil referans §13. YOK (belgeye not): favorite_back_in_stock, cart_price_drop, misafir sipariş push'u; yük testi (10K token)
+FCM anahtarı gelince. ⚠️ **restart bekliyor**; gerçek gönderim için Firebase servis hesabı JSON'u panelden girilmeli (kullanıcı).
+
 **CRM MÜŞTERİ İLİŞKİLERİ (TALEP/ŞİKAYET) UYGULANDI — T0-T3 (2026-09-07, Admin panel alanı, plan v2 K1-K9 kullanıcı yanıtlarıyla):**
 Kararlar: yalnız talep/şikayet; yeni kayıtta bildirim YOK, işlemde kaydı açan + işlem yapanlar + etiketlenen (+etiketlenip
 işlem yapmamış); yalnız panel çanı, "gördü" ve "kayda girdi" ayrı (SeenAt/OpenedAt), ikisi olana dek yanar; takip no eski

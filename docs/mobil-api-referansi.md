@@ -317,3 +317,41 @@ Adres/fatura verisi dönmez; alıcı adı maskelidir. Kargo hareketleri entegras
    error:...}` döner — istemci 429'da üstel bekleme (exponential backoff) uygulamalıdır.
    Şifreli girişte hesap başına 5 hatalı deneme sonrası 15 dk kilit vardır; kullanıcıya
    dönen `error` mesajı gösterilmelidir.
+
+## 13. Push bildirimleri — backend uygulaması (`docs/PUSH_BILDIRIM_ENTEGRASYONU.md`, 2026-09-07)
+
+**Gönderim:** FCM HTTP v1 (servis hesabı OAuth2; legacy API yok). Servis hesabı JSON'u panelden girilir:
+Ayarlar › Entegrasyonlar › **Firebase Cloud Messaging (Mobil Push)** (`serviceAccountJson` şifreli, `projectId` boşsa JSON'dan).
+Tanımlı değilse kuyruk birikir, hata üretmez. Worker: 15 sn'de bir gönderim, 15 dk'da bir zamanlanmış tarama (`Push:Enabled`,
+`Push:ScanMinutes`, `Push:PriceDropPercent`=10, `Push:LowStockThreshold`=3, `Push:CartReminderHours`=3, `Push:MarketingDailyLimit`=2).
+
+**Mesaj:** §2.1 şablonu birebir — `notification.title/body(/image)`, `data.type/link/dedupId/sentAt` (+ senaryo alanları:
+`orderNumber`, `orderId`, `productCode`, `productName`…), android `priority/ttl/collapse_key/channel_id=default`, apns
+`apns-priority/collapse-id`, `badge` = üyenin açılmamış bildirim sayısı. İşlemsel HIGH/1 gün, pazarlama NORMAL/12 sa (fiyat/stok 6 sa).
+
+**Kurallar (§6):** pazarlama sınıfı yalnız `marketing-consents.push = true` üyelere; sessiz saat 22:00-09:00 (İstanbul) → 09:00'a
+ertelenir; üye başına günde 2, aynı tip haftada 2; `(dedupId, cihaz)` benzersiz; gönderim anında iptal koşulu (sepet boşaldı →
+`cart_*` atlanır, favoriden çıktı → `favorite_*`, alarm iptal → `stock_alert`). FCM `UNREGISTERED` → cihaz `revoked`,
+`INVALID_ARGUMENT` → `invalid`, 429/5xx → üstel bekleme (5 deneme). Link §3 kataloğuna göre doğrulanır (/odeme, /teslimat reddedilir;
+`/siparislerim/{id}` GUID olmalı).
+
+**Senaryolar:** olay tabanlı — `order_created` (sepet→sipariş), `order_confirmed`, `order_shipped` (kargo adı + takip no),
+`order_delivered`, `order_cancelled` (üyenin kendi iptalinde YOK), `return_status` (onay/ret/teslim alındı), `question_answered`
+(ilk cevap), `review_approved` / `review_rejected`. Zamanlanmış (15 dk) — `stock_alert` (gönderince alarm `notified`),
+`favorite_price_drop` (favoriye ekleme anındaki fiyata göre ≥ %10; eski favorilerde ilk tarama fiyatı baz), `favorite_low_stock`
+(≤3, haftada 1), `cart_reminder` (3 sa; 24 sa'te ikinci ve son), `coupon_assigned`, `coupon_expiring`, `wallet_credit`,
+`welcome`, `winback`, `viewed_reminder`, `order_payment_pending` (kart, 60 dk), `order_review_invite` (teslim + 2 gün).
+Yok: `favorite_back_in_stock` (önceki stok durumu izlenmiyor — sonraki sürüm), `cart_price_drop`, misafir sipariş bildirimi
+(checkout'ta cihaz kimliği yok — istenirse `X-Device-Id`).
+
+**Uçlar (mobil):**
+| Uç | Not |
+|---|---|
+| `PUT /api/store/account/marketing-consents` | gövdeye `push: boolean` eklendi (null → mevcut korunur; varsayılan false) |
+| `GET /api/store/account/marketing-consents` | `{email, sms, phone, push}` |
+| `GET /api/store/account/notifications?page=&pageSize=` | üyeye gönderilmiş bildirimler (`items[] {id,type,title,body,link,imageUrl,dedupId,sentAt,openedAt}`, `unreadCount`) |
+| `POST /api/store/push-devices/opened {dedupId, token?}` | tıklama → `openedAt` (üye JWT ile üyenin, değilse token'ın satırı) |
+
+**Panel:** Pazarlama › Bildirimler › **Push Şablonları** (başlık/gövde/link/TTL/öncelik/açık-kapalı, link doğrulamalı) ve
+**Push Gönderimleri** (log, 24 saat özeti, tek cihaza/üyeye deneme gönderimi — Firebase konsolundan toplu kampanya ASLA).
+Log: `storefront.push_notifications` (token yalnız SHA-256 hash), şablonlar `storefront.push_templates`.

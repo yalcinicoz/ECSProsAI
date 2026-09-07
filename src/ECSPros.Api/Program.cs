@@ -447,7 +447,16 @@ if (nodeOptions.GenelWorkerRolu)
 builder.Services.AddScoped<ECSPros.Api.Services.ProcurementReportService>(); // Tedarik T6: dönem raporu
 builder.Services.AddSingleton<ECSPros.Api.Services.IStoreMemberSession, ECSPros.Api.Services.StoreMemberSession>(); // D1: SSR üye kimliği (HttpOnly cookie)
 builder.Services.AddTransient<ECSPros.Crm.Application.Services.ISmsSender, ECSPros.Api.Services.CrmSmsSenderAdapter>(); // D4: OTP SMS köprüsü
-builder.Services.AddScoped<ECSPros.Api.Services.CrmTicketOrderLookup>(); // Müşteri İlişkileri: sipariş no → sipariş/müşteri adayları (2026-09-07)
+builder.Services.AddScoped<ECSPros.Api.Services.CrmTicketOrderLookup>();
+// Mobil push bildirimleri (docs/PUSH_BILDIRIM_ENTEGRASYONU.md, 2026-09-07): FCM v1 gönderici + kuyruk + tarayıcı + worker
+builder.Services.AddHttpClient(ECSPros.Api.Services.Push.FcmClient.HttpClientName, c => c.Timeout = TimeSpan.FromSeconds(20));
+builder.Services.AddScoped<ECSPros.Api.Services.Push.DbFcmSettingsProvider>();
+builder.Services.AddScoped<ECSPros.Api.Services.Push.FcmClient>();
+builder.Services.AddScoped<ECSPros.Api.Services.Push.PushKuyruk>();
+builder.Services.AddScoped<ECSPros.Api.Services.Push.PushGonderimServisi>();
+builder.Services.AddScoped<ECSPros.Api.Services.Push.PushTarayici>();
+builder.Services.AddScoped<ECSPros.Api.EventHandlers.PushSiparisYardimcisi>();
+builder.Services.AddHostedService<ECSPros.Api.Services.Push.PushGondericiWorker>(); // Müşteri İlişkileri: sipariş no → sipariş/müşteri adayları (2026-09-07)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IPageBlockSourceResolver, ECSPros.Api.Services.Store.PageBlockSourceResolver>(); // G3: vitrin ürün/koleksiyon kaynağı motoru
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IPageComposer, ECSPros.Api.Services.Store.PageComposer>(); // G4: yerleşim kompozisyonu (store API + Razor ortak)
 builder.Services.AddScoped<ECSPros.Api.Services.Store.IVitrinVmBuilder, ECSPros.Api.Services.Store.VitrinVmBuilder>(); // G5: blok → Razor VM (koleksiyon kartı zenginleştirme dahil)

@@ -24,6 +24,7 @@ public static class DatabaseSeeder
         await SeedProductSourceTypeBackfillAsync(scope.ServiceProvider);
         await SeedStorefrontDefaultsAsync(scope.ServiceProvider);
         await SeedCrmDefaultsAsync(scope.ServiceProvider);
+        await SeedPushTemplatesAsync(scope.ServiceProvider);
         await SeedGeoAsync(scope.ServiceProvider);
         await SeedAddressNeighborhoodBackfillAsync(scope.ServiceProvider);
         await SeedCmsLegalPagesAsync(scope.ServiceProvider);
@@ -247,6 +248,12 @@ public static class DatabaseSeeder
                 Alan("from",     "Gönderen",     "text",     "settings"),
                 Alan("fromName", "Gönderen Adı", "text",     "settings"),
                 Alan("useSsl",   "SSL",          "boolean",  "settings")
+            }),
+            // Mobil push (2026-09-07): Firebase servis hesabı JSON'u (Proje ayarları › Servis hesapları › yeni özel anahtar) — şifreli Credentials
+            ("fcm", "Firebase Cloud Messaging (Mobil Push)", "push", new List<PlatformSchemaField>
+            {
+                Alan("projectId",          "Firebase Proje ID",        "text",     "settings",    zorunlu: false, yardim: "Boşsa servis hesabı JSON'undaki project_id kullanılır (misharitalia-37192)."),
+                Alan("serviceAccountJson", "Servis Hesabı JSON",       "password", "credentials", zorunlu: true,  yardim: "Firebase › Proje ayarları › Servis hesapları › Yeni özel anahtar; dosyanın TAM içeriğini yapıştırın.")
             }),
             ("visual_search", "Görsel Arama", "visual_search", new List<PlatformSchemaField>
             {
@@ -1153,6 +1160,45 @@ public static class DatabaseSeeder
             Console.WriteLine("✓ Seed: varsayılan üye grubu (standart) oluşturuldu.");
         }
         await SeedCrmTicketDefaultsAsync(db);
+    }
+
+    /// <summary>Mobil push şablonları (docs/PUSH_BILDIRIM_ENTEGRASYONU.md §4) — Type bazında idempotent; panelden düzenlenen korunur.</summary>
+    private static async Task SeedPushTemplatesAsync(IServiceProvider sp)
+    {
+        var db = sp.GetRequiredService<ECSPros.Storefront.Infrastructure.Persistence.StorefrontDbContext>();
+        var mevcut = await db.PushTemplates.IgnoreQueryFilters().Select(t => t.Type).ToListAsync();
+        var T = "transactional"; var P = "marketing";
+        var liste = new (string Type, string Class, string Name, string Title, string Body, string Link, int Ttl, string Desc)[]
+        {
+            ("order_created", T, "Sipariş alındı", "Siparişin alındı ✅", "{orderNumber} numaralı siparişin hazırlanmaya başlıyor.", "/siparislerim/{orderId}", 86400, "Sipariş oluştu (kapıda) / kart ödemesi onaylandı"),
+            ("order_payment_pending", T, "Ödeme bekliyor", "Ödemen tamamlanmadı", "{orderNumber} siparişin ödeme bekliyor. Tamamlamak için dokun.", "/siparislerim/{orderId}", 86400, "Kart siparişi 60 dk içinde ödenmedi (bir kez)"),
+            ("order_confirmed", T, "Sipariş onaylandı", "Siparişin onaylandı", "{orderNumber} onaylandı, hazırlanıyor.", "/siparislerim/{orderId}", 86400, "Durum → confirmed"),
+            ("order_shipped", T, "Kargoya verildi", "Siparişin kargoya verildi 📦", "{orderNumber}, {cargoName} ile yola çıktı. Takip: {trackingNumber}", "/siparislerim/{orderId}", 86400, "Durum → shipped"),
+            ("order_delivered", T, "Teslim edildi", "Siparişin teslim edildi 🎉", "Keyifle kullan! Ürünlerini değerlendirmek ister misin?", "/siparislerim/{orderId}", 86400, "Durum → delivered"),
+            ("order_review_invite", T, "Değerlendirme daveti", "Ürünlerin nasıldı?", "{productName} için görüşün diğer müşterilere yol gösterir.", "/yorumlarim", 86400, "Teslim + 2 gün, değerlendirme yoksa"),
+            ("order_cancelled", T, "Sipariş iptal", "Siparişin iptal edildi", "{orderNumber} iptal edildi. Ödemen varsa iade sürecine alındı.", "/siparislerim/{orderId}", 86400, "Panelden iptal (üyenin kendi iptalinde gönderilmez)"),
+            ("return_status", T, "İade durumu", "İade talebin güncellendi", "{orderNumber}: {returnStatusLabel}", "/iadelerim", 86400, "İade onaylandı / reddedildi / teslim alındı"),
+            ("favorite_price_drop", P, "Favori fiyat düşüşü", "Favorindeki ürün indirimde 🔥", "{productName} şimdi {newPrice} (eski {oldPrice}).", "/urun/{productCode}", 21600, "Favori ürün ≥ %10 ucuzladı (Push:PriceDropPercent)"),
+            ("favorite_low_stock", P, "Favori son parçalar", "Son parçalar!", "{productName} tükenmek üzere.", "/urun/{productCode}", 21600, "Favori ürün toplam stok ≤ 3 (haftada 1)"),
+            ("stock_alert", T, "Stok geldi (haber ver)", "{productName} {variantInfo} stokta! 🔔", "İstediğin beden geldi, hemen sepete ekle.", "/urun/{productCode}", 21600, "\"Gelince haber ver\" kaydı olan varyant stoğa girdi"),
+            ("cart_reminder", P, "Sepet hatırlatma", "Sepetinde ürün bekliyor 🛒", "{productName} ve {n} ürün seni bekliyor.", "/sepet", 43200, "Sepet 3 saattir güncellenmedi; 24 saatte ikinci ve son"),
+            ("question_answered", T, "Soru cevaplandı", "Sorun cevaplandı 💬", "{productName} hakkındaki sorunun cevabı hazır.", "/sorularim", 86400, "Satıcı soruyu cevapladı"),
+            ("review_approved", T, "Yorum yayında", "Yorumun yayında", "{productName} yorumun diğer müşterilere gösteriliyor. Teşekkürler!", "/yorumlarim", 86400, "Yorum onaylandı"),
+            ("review_rejected", T, "Yorum reddedildi", "Yorumun yayınlanamadı", "Kurallara uymayan ifadeler nedeniyle yayınlanmadı.", "/yorumlarim", 86400, "Yorum reddedildi"),
+            ("coupon_assigned", T, "Kupon tanımlandı", "Sana özel kupon 🎁", "{couponCode}: {discountText}. {expiresAt} tarihine kadar geçerli.", "/indirim-kuponlarim", 86400, "Üyeye özel kupon açıldı"),
+            ("coupon_expiring", P, "Kupon bitiyor", "Kuponun yarın bitiyor", "{couponCode} kuponunu kaçırma.", "/indirim-kuponlarim", 43200, "Kullanılmamış kuponun bitmesine 24 saat"),
+            ("wallet_credit", T, "Cüzdana yükleme", "Cüzdanına {amount} yüklendi", "İade tutarın cüzdanında, hemen kullanabilirsin.", "/cuzdanim", 86400, "Cüzdana bakiye yüklendi"),
+            ("welcome", P, "Hoş geldin", "Hoş geldin 👋", "İlk siparişine özel fırsatlar seni bekliyor.", "/", 43200, "Kayıttan 1 saat sonra, sipariş yoksa"),
+            ("winback", P, "Geri kazanım", "Seni özledik", "Yeni gelenlere göz at.", "/yeni-gelenler", 43200, "30 gündür uygulama açılmadı (ayda 1)"),
+            ("viewed_reminder", P, "Gezilen ürünler", "Baktığın ürünler burada", "{productName} hâlâ stokta.", "/onceden-gezdiklerim", 43200, "Son 24 saatte gezdi, sepete eklemedi (haftada 2)"),
+        };
+        int k = 0;
+        foreach (var x in liste.Where(x => !mevcut.Contains(x.Type)))
+        {
+            db.PushTemplates.Add(new ECSPros.Storefront.Domain.Entities.PushTemplate { Type = x.Type, Class = x.Class, Name = x.Name, Title = x.Title, Body = x.Body, LinkTemplate = x.Link, Enabled = true, TtlSeconds = x.Ttl, Priority = x.Class == T ? "high" : "normal", Description = x.Desc });
+            k++;
+        }
+        if (k > 0) { await db.SaveChangesAsync(); Console.WriteLine($"✓ Seed: mobil push şablonları — {k} şablon."); }
     }
 
     /// <summary>
