@@ -1,5 +1,16 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**NEBİM ÜRÜN GRUPLARI → BİZİM GRUPLAR EŞLEME — ARAÇ HAZIR, V3 BAĞLANTISI BEKLİYOR (2026-09-07):**
+Kullanıcı: Nebim (V3) ürün gruplarını al, bizim gruplara eşle, olmayanı ekle. V3 bağlantı dizesi bu makinede YOK
+(`ErpSource:ConnectionString` boş, Production/servis ortamında da yok; eski projenin appsettings'i eski sunucuda,
+SSH yok). Araç yazıldı: `tools/veri-bakim/NebimGrupEsleme` (Microsoft.Data.SqlClient + Npgsql; env `V3CONN`):
+`discover` (V3 özellik tipleri — "Ürün Grubu" tipini bulmak için), `groups --type N | --procedure`, `plan` (kuru
+rapor: mevcut erp:nebim eşlemesi → config ProductGroupCodes → ad birebir → PrefixCodes → YENİ GRUP), `apply
+[--create-missing]` (sözlük `erp_reference_items` product_group + `marketplace_category_mappings` erp:nebim direct;
+yeni grup = slug kod + özellik şablonu adı en yakın gruptan (Kot Ceket→Ceket) kopya; tek transaction). Not:
+mevcut 2 erp:nebim satırı çift (KC→kot_ceket) — FirmPlatformId NULL tekil indeksi çifti engellemiyor. Sırada:
+kullanıcıdan V3 bağlantısı (dosyaya, chat'e değil) → discover → plan raporu → onay → apply.
+
 **CRM MÜŞTERİ İLİŞKİLERİ (ESKİ /crm/musteri-iliskileri-yonetimi) — KEŞİF + PLAN v1 TASLAK (2026-09-07):**
 Eski panel kaynağı yerelde yok, eski sunucuya SSH yok → keşif eski MySQL `cm_*` tablolarından (scratchpad
 `legacyq` throwaway MySql.Data 8.0.33 konsolu). Bulgular ve öneri `docs/crm-musteri-iliskileri-plani.md`:
