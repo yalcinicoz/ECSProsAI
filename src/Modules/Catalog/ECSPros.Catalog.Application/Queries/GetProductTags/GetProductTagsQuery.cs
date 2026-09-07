@@ -12,13 +12,16 @@ public class GetProductTagsQueryHandler(ICatalogDbContext db)
 {
     public async Task<Result<List<string>>> Handle(GetProductTagsQuery request, CancellationToken ct)
     {
+        // Tags jsonb sütunu: `Tags.Count > 0` Npgsql'de cardinality(jsonb)'ye çevrilip 42883 veriyordu (2026-09-07 canlı log).
+        // Boşluk filtresi bellekte yapılır; sütun küçük (etiket listesi), satır sayısı ürün sayısı kadar.
         var allTags = await db.Products
             .AsNoTracking()
-            .Where(p => p.Tags != null && p.Tags.Count > 0)
+            .Where(p => p.Tags != null)
             .Select(p => p.Tags)
             .ToListAsync(ct);
 
         var distinct = allTags
+            .Where(t => t != null && t.Count > 0)
             .SelectMany(t => t)
             .Where(t => !string.IsNullOrWhiteSpace(t))
             .Distinct()

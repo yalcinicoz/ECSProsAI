@@ -1,5 +1,15 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**DÜZELTME: SİLİNMİŞ GRUP KODUYLA YENİ GRUP "BİR HATA OLUŞTU" (2026-09-07):**
+Kullanıcı canlıda "Abiye Elbise" grubunu açıp sildi, aynı adla kopyalı yeniden açınca 500 aldı. Kök neden
+(kopyalamadan bağımsız, eski bug): `CreateProductGroupCommand` kod tekilliğini soft-delete filtreli `ProductGroups`
+üzerinden kontrol ediyor, `IX_product_groups_Code` ise filtresiz tekil indeks → silinmiş grubun kodu 23505 veriyor.
+Düzeltme: kontrol `IgnoreQueryFilters()` ile; kod `abiye_elbise_2` gibi eklenir. Aynı logda `GET /api/catalog/tags`
+`cardinality(jsonb)` 42883 (Tags jsonb'de `.Count > 0` çevirisi) → boşluk filtresi belleğe alındı. İzole 5051 (demo
+DB): oluştur→sil→aynı adla kopyalı oluştur ✓ (`_2`, 22 özellik + 4 alt), tags 200 ✓; testler 120/120.
+`publish`/`publish-demo`/`publish-staging` eşitlendi ⚠️ restart kullanıcıda. Admin `/admin` yerel nginx'te
+`admin/dist` bind-mount olduğundan yeni modal zaten görünüyordu.
+
 **YENİ ÜRÜN GRUBUNDA ÖZELLİK ŞABLONU KOPYALAMA (2026-09-07):**
 `POST /api/catalog/product-groups` gövdesine isteğe bağlı `copyAttributesFromGroupId` eklendi
 (`CreateProductGroupCommand`): kaynak grubun grup özellikleri (varyant ekseni / ana eksen / zorunlu / sıra /

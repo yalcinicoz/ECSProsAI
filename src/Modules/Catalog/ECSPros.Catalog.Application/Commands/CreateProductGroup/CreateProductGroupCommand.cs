@@ -27,10 +27,11 @@ public class CreateProductGroupCommandHandler : IRequestHandler<CreateProductGro
         if (string.IsNullOrEmpty(code))
             return Result.Failure<Guid>("Ad alanından geçerli bir kod üretilemedi.");
 
-        // Benzersizlik kontrolü: varsa sonuna sayı ekle
+        // Benzersizlik kontrolü: varsa sonuna sayı ekle. IX_product_groups_Code filtresiz tekil indeks olduğundan
+        // soft-delete edilmiş gruplar da sayılır (2026-09-07: silinen "Abiye Elbise" yeniden açılırken 23505 verdi).
         var baseCode = code;
         var suffix = 2;
-        while (await _db.ProductGroups.AnyAsync(pg => pg.Code == code, ct))
+        while (await _db.ProductGroups.IgnoreQueryFilters().AnyAsync(pg => pg.Code == code, ct))
             code = $"{baseCode}_{suffix++}";
 
         var group = new ProductGroup
