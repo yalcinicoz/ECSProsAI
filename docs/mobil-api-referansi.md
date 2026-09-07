@@ -279,7 +279,7 @@ Adres/fatura verisi dönmez; alıcı adı maskelidir. Kargo hareketleri entegras
 | Madde | Durum | Not |
 |-------|-------|-----|
 | A1 sipariş kalemi görsel/kod | ✅ | `items[].productCode/imageUrl/colorValueId/sizeValueId` |
-| A2 renk kimlikleri | ✅ kimlik / ⏳ ad normalizasyonu | Sepet+sipariş kalemlerinde `colorValueId/sizeValueId`. `renk` havuzu 5.690 serbest değer; "Siyahbeyaz"→"Siyah Beyaz" gibi bitişik adların düzeltilmesi katalog verisi kararıdır (öneri: bilinen renk sözcüklerinden deterministik ayırma), ayrı iş |
+| A2 renk kimlikleri + ad normalizasyonu | ✅ | Sepet+sipariş kalemlerinde `colorValueId/sizeValueId`. `renk` havuzu (5.690 serbest değer) `RenkAdiNormalizer` ile tek yazıma çekildi: bitişik adlar bilinen sözcüklere ayrıldı ("Siyahbeyaz"→"Siyah Beyaz"), `a.`/`k.`→Açık/Koyu, büyük harf→baş harf, sık yazım hataları (pempe→Pembe); 4.165 satır değişti, 382 farklı ad (tek kelimelik gerçek adlar/bilinmeyen bileşikler) olduğu gibi kaldı. Seed adımı idempotent — yeni ERP değerleri de her açılışta normalize edilir. Sipariş kalemindeki `variantInfo` eski metni saklar (snapshot); kimlikleri kullanın |
 | A3 renk `isColor` | ✅ | detay + liste `colors[]` |
 | A4 checkout sonrası sepet | ✅ | sunucu temizler (kapıda anında, kartta ödeme onayında) |
 | A5 slug | ✅ | `products/{slug}`, `products/by-slug`, `channel-categories/by-slug/{slug}`, detayda `slug`/`variantSlugs`; arama kartında slug yok (kategori kartında var) |

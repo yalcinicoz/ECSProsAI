@@ -1,5 +1,16 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**A2 RENK ADI NORMALİZASYONU UYGULANDI (2026-09-07):**
+`Catalog.Application/Helpers/RenkAdiNormalizer.cs` + seed `SeedRenkAdiNormalizasyonAsync` (SeedCatalogAsync sonu):
+sözlük havuzun kendisinden (boşluklu adlarda ≥2 kez geçen sözcükler + tek başına geçenler + sabit ek liste),
+bitişik ad yalnız 2-3 bilinen sözcüğe TEK biçimde ayrılıyorsa değişir; `a.`/`k.`→Açık/Koyu, `-lı/-li` ekleri,
+yazım haritası (pempe→pembe, hakı→haki, antrasıt→antrasit…), büyük harf→baş harf; kanonik yazım = havuzdaki en
+sık orijinal. Python dry-run ile C# çıktısı birebir (2.627 farklı ad, belirsizlik 0, sabit nokta ✓). Canlıda izole
+5051 seed'li açılışla uygulandı: **4.165 satır** değişti; yedek `~/yedekler/renk-adlari-oncesi-20260907.csv`
+(Id+NameI18n). Kalan 382 ad (Sedef, Zebra, Nohut… ve bilinmeyen bileşikler) dokunulmadı. Aynı açılış B4 adres
+geri dolumunu (56) ve B7 kurumsal slug eşitlemesini de canlıya işledi. Kimlik/bağ değişmedi (yalnız NameI18n.tr);
+renk filtresi filtre_rengi'nden geldiği için facet cache etkilenmez. ⚠️ restart binary eşitlemesi için (veri hazır).
+
 **MOBİL BACKEND İSTEKLERİ UYGULANDI — `docs/BACKEND_ISTEKLERI.md` (2026-09-07, Mobil API alanı):**
 Mobil ekibin 23 maddelik listesi (A1-A11, B1-B8, C2-C4) tek turda uygulandı; durum tablosu
 `docs/mobil-api-referansi.md` §12'de. Özet: **A1/A2** sipariş+sepet kalemlerinde `productCode/imageUrl/

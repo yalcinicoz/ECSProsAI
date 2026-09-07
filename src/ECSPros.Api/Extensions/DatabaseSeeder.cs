@@ -1701,6 +1701,36 @@ public static class DatabaseSeeder
 
         // Ürün Grubu (üst ad) seçim özelliği: tüm gruplara atama + değer havuzu + grup varsayılanı + geri dolum (2026-09-06)
         await SeedUrunGrubuAsync(context);
+
+        // A2 (2026-09-07, mobil): renk adı normalizasyonu — bitişik/kısaltmalı/büyük harfli 'renk' değerleri tek yazıma
+        await SeedRenkAdiNormalizasyonAsync(context);
+    }
+
+    /// <summary>A2: 'renk' değer havuzu — RenkAdiNormalizer (sözlük havuzdan kurulur, deterministik, sabit nokta).
+    /// Yalnız ad değişir (kimlik/bağlar aynı); çözülemeyen adlara dokunulmaz. İdempotent.</summary>
+    private static async Task SeedRenkAdiNormalizasyonAsync(CatalogDbContext db)
+    {
+        var renkTip = await db.AttributeTypes.FirstOrDefaultAsync(a => a.Code == "renk");
+        if (renkTip is null) return;
+        var degerler = await db.AttributeValues.Where(v => v.AttributeTypeId == renkTip.Id).ToListAsync();
+        var havuz = degerler.Select(v => v.NameI18n.GetValueOrDefault("tr") ?? "").Where(a => a.Length > 0).ToList();
+        if (havuz.Count == 0) return;
+        var normalizer = new ECSPros.Catalog.Application.Helpers.RenkAdiNormalizer(havuz);
+        int degisen = 0;
+        foreach (var v in degerler)
+        {
+            var eski = v.NameI18n.GetValueOrDefault("tr");
+            if (string.IsNullOrWhiteSpace(eski)) continue;
+            var yeni = normalizer.Normalize(eski);
+            if (yeni is null || yeni == eski) continue;
+            v.NameI18n = new Dictionary<string, string>(v.NameI18n) { ["tr"] = yeni };
+            v.UpdatedAt = DateTime.UtcNow; degisen++;
+        }
+        if (degisen > 0)
+        {
+            await db.SaveChangesAsync();
+            Console.WriteLine($"✓ Seed: {degisen} renk adı normalize edildi (A2).");
+        }
     }
 
     private static async Task SeedAttributeTypesAsync(CatalogDbContext db)
