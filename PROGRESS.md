@@ -1,5 +1,14 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**CRM MÜŞTERİ İLİŞKİLERİ (ESKİ /crm/musteri-iliskileri-yonetimi) — KEŞİF + PLAN v1 TASLAK (2026-09-07):**
+Eski panel kaynağı yerelde yok, eski sunucuya SSH yok → keşif eski MySQL `cm_*` tablolarından (scratchpad
+`legacyq` throwaway MySql.Data 8.0.33 konsolu). Bulgular ve öneri `docs/crm-musteri-iliskileri-plani.md`:
+43K kayıt (Şikayet/Talep, 22 konu, 6 durum, konuya göre form alanları), 125K işlem zaman çizelgesi (durum
+değişikliği + personel etiketleme), 368K okundu kaydı, 153K üye/sipariş işlem günlüğü (`cm_crm_not`), sorunlu
+siparişler, MT kalite puanlama. Öneri: Crm modülünde `crm_tickets` + activities + reads + subjects (Requests
+deseni), admin Müşteriler › Müşteri İlişkileri (liste/yeni/detay/ayarlar), panel çanı bildirimi, MigrationTool
+aktarım fazı. **K1-K9 kullanıcı yanıtı bekliyor; onay gelmeden uygulama YOK.**
+
 **DÜZELTME: ADMİN "ETİKET ŞABLONLARI" SAYFASI AÇILMIYORDU (2026-09-07):**
 `LabelTemplatesPage` render içinde `loadedTemplates !== templates` ile ilk şablonu seçiyordu; `templates`
 `data ?? []` ile her render'da YENİ dizi olduğundan (yükleme sırasında) koşul hep doğru → setState döngüsü →
