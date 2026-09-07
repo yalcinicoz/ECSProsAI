@@ -1136,12 +1136,16 @@ function ErpGroupMapModal({ target, item, overview, ownTypes, onClose, onSaved }
   )
 }
 
-function ErpDictionaryPanel({ target, overview, ownTypes, onSaved }: { target: string; overview: Overview | undefined; ownTypes: OwnAttrType[]; onSaved: () => void }) {
+function ErpDictionaryPanel({ target, overview, ownTypes, onSaved, onlyUnmappedInitial = false, placeholderProductCount = 0 }: {
+  target: string; overview: Overview | undefined; ownTypes: OwnAttrType[]; onSaved: () => void; onlyUnmappedInitial?: boolean; placeholderProductCount?: number
+}) {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(true)
   const [mapItem, setMapItem] = useState<ErpItem | null>(null)
   const [kind, setKind] = useState('product_group')
   const [q, setQ] = useState('')
+  // dashboard "Eşlenmemiş ERP Grubu" kartından gelince (?dict=unmapped) yalnız eşlenmemişler listelenir
+  const [onlyUnmapped, setOnlyUnmapped] = useState(onlyUnmappedInitial)
   const [form, setForm] = useState({ code: '', name: '', parentCode: '' })
   const [error, setError] = useState('')
   const { data: items = [] } = useQuery<ErpItem[]>({
@@ -1165,8 +1169,11 @@ function ErpDictionaryPanel({ target, overview, ownTypes, onSaved }: { target: s
     onError: (e: unknown) => setError((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Eşleme silinemedi.'),
   })
   const needsParent = kind === 'attribute_value'
+  const canFilterUnmapped = kind === 'product_group' || kind === 'supplier'
+  const shown = onlyUnmapped && canFilterUnmapped ? items.filter((i) => !i.isMapped) : items
+  const unmappedGroups = kind === 'product_group' ? items.filter((i) => !i.isMapped).length : 0
   return (
-    <div className="card overflow-hidden p-0 mb-4">
+    <div className="card overflow-hidden p-0 mb-4" style={onlyUnmapped && unmappedGroups > 0 ? { borderColor: '#ef4444' } : undefined}>
       <button className="w-full flex items-center justify-between px-4 py-3" onClick={() => setOpen((o) => !o)}>
         <div className="text-left">
           <h2 className="text-sm font-bold" style={{ color: 'var(--text)' }}>ERP Sözlüğü</h2>
@@ -1191,8 +1198,22 @@ function ErpDictionaryPanel({ target, overview, ownTypes, onSaved }: { target: s
               <div><label className="flbl">{needsParent ? 'Özellik tipi kodu *' : 'Üst grup kodu'}</label><input className="inp font-mono" style={{ width: 140 }} value={form.parentCode} onChange={(e) => setForm((f) => ({ ...f, parentCode: e.target.value }))} /></div>
             )}
             <Button size="sm" onClick={() => upsert.mutate()} loading={upsert.isPending} disabled={!form.code.trim() || !form.name.trim() || (needsParent && !form.parentCode.trim())}><Plus size={14} /> Ekle / Güncelle</Button>
-            <div className="ml-auto"><input className="inp" style={{ width: 200 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Sözlükte ara" /></div>
+            <div className="ml-auto flex items-center gap-3">
+              {canFilterUnmapped && (
+                <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: 'var(--text-m)' }}>
+                  <input type="checkbox" checked={onlyUnmapped} onChange={(e) => setOnlyUnmapped(e.target.checked)} />
+                  Yalnız eşlenmemiş
+                </label>
+              )}
+              <input className="inp" style={{ width: 200 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Sözlükte ara" />
+            </div>
           </div>
+          {kind === 'product_group' && (unmappedGroups > 0 || placeholderProductCount > 0) && (
+            <p className="text-xs rounded-lg px-3 py-2" style={{ background: '#ef444412', color: '#b91c1c' }}>
+              <b>{unmappedGroups}</b> ERP grubu eşlenmemiş; bu gruplardan gelen <b>{placeholderProductCount}</b> ürün özelliksiz <b>Geçici Grup</b>'ta bekliyor.
+              Satırdaki "Eşle" ile grubu eşleyin; ürünler sonraki ERP senkronunda doğru gruba taşınır (grubu elle de değiştirebilirsiniz — özellikleri tamamlamayı unutmayın).
+            </p>
+          )}
           {error && <p className="text-sm text-red-500">{error}</p>}
           <div className="max-h-64 overflow-y-auto rounded-lg" style={{ border: '1px solid var(--border)' }}>
             <table className="w-full">
@@ -1202,7 +1223,7 @@ function ErpDictionaryPanel({ target, overview, ownTypes, onSaved }: { target: s
                 </tr>
               </thead>
               <tbody>
-                {items.map((i) => (
+                {shown.map((i) => (
                   <tr key={i.id} style={{ borderTop: '1px solid var(--border)' }}>
                     <td className="px-3 py-1.5 font-mono text-xs" style={{ color: 'var(--text)' }}>{i.code}</td>
                     <td className="px-3 py-1.5 text-sm" style={{ color: 'var(--text)' }}>{i.name}</td>
@@ -1228,7 +1249,7 @@ function ErpDictionaryPanel({ target, overview, ownTypes, onSaved }: { target: s
                     </td>
                   </tr>
                 ))}
-                {items.length === 0 && <tr><td colSpan={7} className="px-3 py-4 text-center text-xs" style={{ color: 'var(--text-s)' }}>Bu türde sözlük kaydı yok — yukarıdan ekleyin ya da ERP senkronunu bekleyin.</td></tr>}
+                {shown.length === 0 && <tr><td colSpan={7} className="px-3 py-4 text-center text-xs" style={{ color: 'var(--text-s)' }}>{onlyUnmapped && items.length > 0 ? 'Eşlenmemiş kayıt yok — hepsi eşli.' : 'Bu türde sözlük kaydı yok — yukarıdan ekleyin ya da ERP senkronunu bekleyin.'}</td></tr>}
               </tbody>
             </table>
           </div>
@@ -1309,7 +1330,7 @@ export function MappingPage() {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
 
   // EM0: hedefler = pazaryerleri (referans özeti) + ERP servisleri ("erp:<kod>")
-  const { data: targetsData } = useQuery<{ marketplaces: { marketplace: string; categoryCount: number }[]; erp: { key: string; serviceCode: string; name: string; hasContract: boolean; groupCount: number }[] }>({
+  const { data: targetsData } = useQuery<{ marketplaces: { marketplace: string; categoryCount: number }[]; erp: { key: string; serviceCode: string; name: string; hasContract: boolean; groupCount: number; unmappedGroupCount?: number; placeholderProductCount?: number }[] }>({
     queryKey: ['mapping-targets'],
     queryFn: async () => (await api.get('/marketplaces/mapping/targets')).data.data,
     staleTime: 60 * 1000,
@@ -1372,7 +1393,7 @@ export function MappingPage() {
           <button
             key={t.key}
             onClick={() => setParam('mp', t.key)}
-            title={t.hasContract ? `${t.groupCount} ERP grubu sözlükte` : 'Bu ERP için sözleşme yok — sözlük yine de elle doldurulabilir'}
+            title={t.hasContract ? `${t.groupCount} ERP grubu sözlükte${(t.unmappedGroupCount ?? 0) > 0 ? `, ${t.unmappedGroupCount} eşlenmemiş` : ''}` : 'Bu ERP için sözleşme yok — sözlük yine de elle doldurulabilir'}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-sm font-medium transition-all"
             style={
               marketplace === t.key
@@ -1382,6 +1403,7 @@ export function MappingPage() {
           >
             <Database size={16} />
             ERP: {t.name}
+            {(t.unmappedGroupCount ?? 0) > 0 && <span className="text-[10px] font-bold px-1.5 rounded-full" style={{ background: '#ef4444', color: '#fff' }}>{t.unmappedGroupCount}</span>}
             {!t.hasContract && <span className="text-[10px]" style={{ color: '#f59e0b' }}>sözleşmesiz</span>}
           </button>
         ))}
@@ -1410,7 +1432,10 @@ export function MappingPage() {
         ))}
       </div>
 
-      {isErp && <ErpDictionaryPanel target={marketplace} overview={overview} ownTypes={ownTypes} onSaved={() => queryClient.invalidateQueries({ queryKey: ['mapping-overview', marketplace] })} />}
+      {isErp && <ErpDictionaryPanel key={marketplace} target={marketplace} overview={overview} ownTypes={ownTypes}
+        onlyUnmappedInitial={searchParams.get('dict') === 'unmapped'}
+        placeholderProductCount={erpTargets.find((t) => t.key === marketplace)?.placeholderProductCount ?? 0}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ['mapping-overview', marketplace] })} />}
 
       {isLoading || !overview ? (
         <PageSpinner />

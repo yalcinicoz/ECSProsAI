@@ -3,7 +3,10 @@ import { Link } from 'react-router-dom'
 import api from '@/api/client'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { useQuestionAlertStore } from '@/store/questionAlerts'
-import { ShoppingCart, Package, Users, CreditCard, MessageCircleQuestion } from 'lucide-react'
+import { ShoppingCart, Package, Users, CreditCard, MessageCircleQuestion, Database } from 'lucide-react'
+
+interface ErpTarget { key: string; name: string; unmappedGroupCount?: number; placeholderProductCount?: number }
+const ERP_BOS: ErpTarget[] = []
 
 interface Stats {
   totalOrders: number
@@ -37,6 +40,18 @@ export function DashboardPage() {
       }
     },
   })
+
+  // Eşlenmemiş ERP grupları + geçici gruptaki ürünler (2026-09-07 kuralı) — tıklanınca eşleme sayfası, yalnız eşlenmemişler süzülü
+  const { data: erpTargets = ERP_BOS } = useQuery<ErpTarget[]>({
+    queryKey: ['mapping-targets-erp'],
+    queryFn: async () => (await api.get('/marketplaces/mapping/targets')).data.data?.erp ?? [],
+    staleTime: 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+  })
+  const erpUnmapped = erpTargets.reduce((a, t) => a + (t.unmappedGroupCount ?? 0), 0)
+  const erpPlaceholder = erpTargets.reduce((a, t) => a + (t.placeholderProductCount ?? 0), 0)
+  const erpTarget = erpTargets.find((t) => (t.unmappedGroupCount ?? 0) > 0) ?? erpTargets[0]
+  const erpDikkat = erpUnmapped > 0 || erpPlaceholder > 0
 
   if (isLoading) return <PageSpinner />
 
@@ -82,6 +97,28 @@ export function DashboardPage() {
           </div>
           <div className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>Cevap Bekleyen Soru</div>
         </Link>
+
+        {/* Eşlenmemiş ERP grupları — ürünleri "Geçici Grup"ta bekler; tıklanınca ERP sözlüğü yalnız eşlenmemişlerle açılır */}
+        {erpTargets.length > 0 && (
+          <Link to={`/marketplaces/eslestirme?mp=${encodeURIComponent(erpTarget?.key ?? 'erp:nebim')}&dict=unmapped`}
+            className="card p-4 hover:opacity-90 transition-opacity"
+            title="ERP'den gelen ama bizim gruba eşlenmemiş ürün grupları. Bu gruplardaki yeni ürünler özelliksiz Geçici Grup'a alınır; eşleyince sonraki senkronda doğru gruba taşınır."
+            style={erpDikkat ? { borderColor: '#ef4444' } : undefined}>
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+              style={{ background: '#ef444415', color: '#ef4444' }}
+            >
+              <Database size={20} />
+            </div>
+            <div className="text-2xl font-bold" style={{ color: erpUnmapped > 0 ? '#ef4444' : 'var(--text)' }}>
+              {erpUnmapped.toLocaleString('tr-TR')}
+            </div>
+            <div className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>Eşlenmemiş ERP Grubu</div>
+            <div className="text-[11px] mt-0.5" style={{ color: erpPlaceholder > 0 ? '#ef4444' : 'var(--text-s)' }}>
+              {erpPlaceholder.toLocaleString('tr-TR')} ürün geçici grupta
+            </div>
+          </Link>
+        )}
       </div>
     </div>
   )

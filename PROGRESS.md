@@ -1,5 +1,17 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**DASHBOARD "EŞLENMEMİŞ ERP GRUBU" KARTI + EŞLEME SAYFASI SÜZGECİ (2026-09-07, kullanıcı isteği, Admin panel alanı):**
+`GET /api/marketplaces/mapping/targets` ERP hedefine `unmappedGroupCount` (sözlükte eşlemesi olmayan ürün grubu; kural
+`GetErpItemsAsync.IsMapped` ile aynı: eşleme satırı yok VE MappedTargetId boş), `placeholderProductCount` (`gecici`
+grubundaki ürün; `ErpSourceOptions.UnmappedProductGroupCode`) ve `placeholderGroupCode` eklendi (MarketplaceMappingService
+artık `ErpSourceOptions` singleton'ını alır). Dashboard: "Eşlenmemiş ERP Grubu" kartı (Database ikonu; sayı >0 ya da geçici
+grupta ürün varsa kırmızı çerçeve; alt satır "N ürün geçici grupta"; 5 dk yenileme) → tıklanınca
+`/marketplaces/eslestirme?mp=erp:<kod>&dict=unmapped`. Eşleme sayfası: ERP Sözlüğü paneli `dict=unmapped` ile "Yalnız
+eşlenmemiş" süzgeci açık gelir (ürün grubu/tedarikçi türlerinde onay kutusu), ürün grubu türünde kırmızı bilgi şeridi
+(eşlenmemiş grup + geçici gruptaki ürün sayısı + yapılacak iş), ERP çipinde kırmızı eşlenmemiş rozeti. Panel `key={marketplace}`
+ile hedef değişince sıfırlanır. admin/dist derlendi (yerel nginx hemen), API publish 13:19 ⚠️ restart bekliyor (restart
+öncesi kart 0/0 gösterir — yeni alanlar eski binary'de yok).
+
 **NEBİM GRUP EŞLEMESİ KAPANDI + EŞLENMEMİŞ ERP GRUBU → GEÇİCİ GRUP KURALI (2026-09-07, kullanıcı kararları):**
 Bekleyen 17 Nebim grubu: Triko Bluz/Ceket/Elbise/Etek/Hırka/Kazak/Panço/Pantolon/Süveter/Takım/Tulum/Tunik/Yelek (13),
 Eşofman Altı, Sütyen → **her biri kendi grubu** (15 yeni grup, şablon: son sözcük grubu / Triko; Sütyen←İç Giyim elle);
