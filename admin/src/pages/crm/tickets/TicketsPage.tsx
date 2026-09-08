@@ -109,6 +109,7 @@ export function TicketsPage() {
 
       <DataGrid<TicketListItem>
         gridId="tickets"
+        views
         grid={grid}
         columns={columns}
         extraFilters={extraFilters}

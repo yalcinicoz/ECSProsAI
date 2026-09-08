@@ -99,6 +99,7 @@ export function MembersPage() {
 
       <DataGrid<MemberSummary>
         gridId="members"
+        views
         grid={grid}
         columns={columns}
         extraFilters={EXTRA_FILTERS}

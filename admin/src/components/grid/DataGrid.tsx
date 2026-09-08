@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { ChevronRight, LayoutList, Table2 } from 'lucide-react'
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ColumnsMenu } from './ColumnsMenu'
 import { FilterBar } from './FilterBar'
 import { ExportButton, type GridExportConfig } from './ExportButton'
+import { ViewsMenu } from './ViewsMenu'
+import { useGridViews } from './useGridViews'
 import type { GridFilterField } from './filterUtils'
 import { GridPagination } from './GridPagination'
 import { useGridScrollRegistry } from './gridScrollContext'
 import { useBreakpoint } from './useBreakpoint'
 import type { GridStateApi } from './useGridState'
-import type { GridBreakpoint, GridColumn, GridFrozenConfig } from './types'
+import type { GridBreakpoint, GridColumn, GridCompactConfig, GridFrozenConfig, GridSelection } from './types'
 
 // DataGrid çekirdeği (plan §2.1, §2.4-2.7): tanım-güdümlü kolonlar, priority/kullanıcı tercihi, frozen bütçesi (%35 hedef / %40 sınır),
 // ghost yatay scrollbar + kenar gölgeleri, sıralama başlıkları, satır tıklama → detay (klavye dahil), Kolonlar menüsü, sayfalama.
@@ -45,6 +49,12 @@ export interface DataGridProps<T> {
   filterLeading?: ReactNode
   /** Excel export (plan §2.8): verilirse "Excel'e aktar ▾" düğmesi Kolonlar'ın solunda */
   export?: GridExportConfig
+  /** Kaydedilmiş görünümler (kişisel, sunucu tercihleri) — "Görünüm ▾" seçici */
+  views?: boolean
+  /** Mobil kompakt görünüm tanımı — verilirse mobilde Kompakt/Tablo geçişi */
+  compact?: GridCompactConfig<T>
+  /** Satır seçimi (onay kutusu kolonu + seçim çubuğu) */
+  selection?: GridSelection
   /** tablo min genişliği (px) — yatay kaydırmanın her zaman erişilebilir olması için (varsayılan: görünür kolon sayısı × 140) */
   minWidth?: number
   className?: string
@@ -63,8 +73,13 @@ function defaultVisible<T>(c: GridColumn<T>, bp: GridBreakpoint) {
 export function DataGrid<T>({
   gridId, columns, rows, totalCount, grid, loading, fetching, error, onRowClick, rowKey, empty,
   toolbarLeft, toolbarRight, toolbarBelow, frozen, pageSizes, minWidth, className, search, extraFilters, filterLeading, export: exportCfg,
+  views: viewsEnabled, compact, selection,
 }: DataGridProps<T>) {
   const bp = useBreakpoint()
+  const [sp] = useSearchParams()
+  const viewsApi = useGridViews(gridId, grid, sp, { enabled: !!viewsEnabled })
+  // varsayılan görünüm: temiz girişte bir kez (E14: filtreler çipte görünür kalır)
+  useEffect(() => { if (viewsEnabled && viewsApi.shouldApplyDefault) viewsApi.applyDefaultOnce() }, [viewsEnabled, viewsApi])
   const { state, prefs, setPrefs, resetPrefs } = grid
   const fzD = frozen?.desktop ?? DEFAULT_FROZEN.desktop, fzT = frozen?.tablet ?? DEFAULT_FROZEN.tablet, fzM = frozen?.mobile ?? DEFAULT_FROZEN.mobile
   const frozenCfg = useMemo<GridFrozenConfig>(() => ({ desktop: fzD, tablet: fzT, mobile: fzM }), [fzD, fzT, fzM])
@@ -171,7 +186,7 @@ export function DataGrid<T>({
   }, [registry, scrollId, bp])
 
   // ── satır tıklama → detay (klavye dahil) ──
-  const key = rowKey ?? ((r: T) => (r as { id?: string }).id ?? '')
+  const key = useMemo(() => rowKey ?? ((r: T) => (r as { id?: string }).id ?? ''), [rowKey])
   const rowClick = useCallback((r: T, e: React.MouseEvent | React.KeyboardEvent) => {
     if (!onRowClick) return
     const target = e.target as HTMLElement
@@ -190,7 +205,17 @@ export function DataGrid<T>({
   const allExportKeys = useMemo(() => columns.filter(c => c.exportable !== false).map(c => c.key), [columns])
   const visibleExportKeys = useMemo(() => ordered.filter(c => c.exportable !== false && visibleKeys.has(c.key)).map(c => c.key), [ordered, visibleKeys])
 
-  const colCount = visible.length
+  // ── satır seçimi ──
+  const rowIds = useMemo(() => rows.map(r => key(r)), [rows, key])
+  const allSelected = !!selection && rowIds.length > 0 && rowIds.every(id => selection.selected.has(id))
+  const toggleAll = () => { if (!selection) return; const s = new Set(selection.selected); if (allSelected) rowIds.forEach(id => s.delete(id)); else rowIds.forEach(id => s.add(id)); selection.onChange(s) }
+  const toggleOne = (id: string) => { if (!selection) return; const s = new Set(selection.selected); if (s.has(id)) s.delete(id); else s.add(id); selection.onChange(s) }
+
+  // ── mobil kompakt görünüm ──
+  const compactMode = !!compact && bp === 'mobile' && (prefs.mobileView ?? 'compact') === 'compact'
+  const [expanded, setExpanded] = useState<string | null>(null)
+
+  const colCount = visible.length + (selection ? 1 : 0)
   const tableMinWidth = minWidth ?? Math.max(480, colCount * 140)
   const filtered = state.filters.length > 0 || !!state.search
   const frozenSupported = columns.some(c => c.frozen) && frozenCfg[bp] > 0
@@ -200,25 +225,79 @@ export function DataGrid<T>({
       {(toolbarLeft || toolbarRight || columns.length > 0) && (
         <div className="flex flex-wrap items-start gap-2 mb-3">
           <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+            {viewsEnabled && <ViewsMenu views={viewsApi} />}
             {toolbarLeft}
             {hasFilterBar && <FilterBar grid={grid} fields={filterFields} search={search} bp={bp} leading={filterLeading} />}
           </div>
           <div className="flex items-center gap-2 ml-auto">
             {toolbarRight}
+            {compact && bp === 'mobile' && (
+              <button type="button" aria-label={compactMode ? 'Tablo görünümüne geç' : 'Kompakt görünüme geç'} title={compactMode ? 'Tablo' : 'Kompakt'}
+                onClick={() => setPrefs({ mobileView: compactMode ? 'table' : 'compact' })}
+                className="inline-flex items-center px-2.5 py-1.5 rounded-lg text-sm hover:bg-[var(--surface2)]" style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>
+                {compactMode ? <Table2 size={15} /> : <LayoutList size={15} />}
+              </button>
+            )}
             {exportCfg && <ExportButton grid={grid} config={exportCfg} visibleExportKeys={visibleExportKeys} allExportKeys={allExportKeys} />}
             <ColumnsMenu columns={ordered} visibleKeys={visibleKeys} prefs={prefs} setPrefs={setPrefs} resetPrefs={resetPrefs} frozenSupported={frozenSupported} />
           </div>
         </div>
       )}
       {toolbarBelow && <div className="mb-3">{toolbarBelow}</div>}
+      {selection && selection.selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-3 px-3 py-2 rounded-xl text-sm" style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)' }} role="status">
+          <span className="font-medium">{selection.selected.size} seçili</span>
+          <button type="button" className="text-xs underline" style={{ color: 'var(--text-s)' }} onClick={() => selection.onChange(new Set())}>seçimi temizle</button>
+          <div className="flex items-center gap-2 ml-auto">{selection.actions?.(selection.selected)}</div>
+        </div>
+      )}
 
       <div className="card overflow-hidden relative">
         {fetching && !loading && <div className="grid-progress" aria-hidden />}
+        {compactMode ? (
+          <div className="grid-compact" role="list">
+            {loading && <div className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor...</div>}
+            {!loading && error && <div className="px-4 py-6 text-center text-sm" role="alert" style={{ color: '#dc2626' }}>{error}</div>}
+            {!loading && !error && rows.length === 0 && <div className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>{empty ?? (filtered ? 'Filtreye uyan kayıt bulunamadı.' : 'Kayıt bulunamadı.')}</div>}
+            {!loading && !error && rows.map(r => {
+              const id = key(r); const isOpen = expanded === id
+              return (
+                <div key={id} role="listitem" className="grid-compact-row" style={{ borderBottom: '1px solid var(--border)' }}>
+                  <button type="button" className="w-full flex items-center gap-3 px-3 py-2.5 text-left" aria-expanded={isOpen} onClick={() => setExpanded(isOpen ? null : id)}>
+                    {selection && <input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]" checked={selection.selected.has(id)} onClick={e => e.stopPropagation()} onChange={() => toggleOne(id)} aria-label="Satırı seç" />}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2"><span className="text-sm font-medium truncate" style={{ color: 'var(--text)' }}>{compact!.title(r)}</span>{compact!.badge?.(r)}</div>
+                      {compact!.subtitle && <div className="text-xs truncate" style={{ color: 'var(--text-s)' }}>{compact!.subtitle(r)}</div>}
+                    </div>
+                    {compact!.right && <div className="text-sm font-medium whitespace-nowrap" style={{ color: 'var(--text)' }}>{compact!.right(r)}</div>}
+                    <ChevronRight size={16} className={cn('transition-transform', isOpen && 'rotate-90')} style={{ color: 'var(--text-s)' }} />
+                  </button>
+                  {isOpen && (
+                    <div className="px-3 pb-3 space-y-1">
+                      {visible.filter(c => c.header).map(c => (
+                        <div key={c.key} className="flex items-start justify-between gap-3 text-sm">
+                          <span className="text-xs uppercase" style={{ color: 'var(--text-s)' }}>{c.header}</span>
+                          <span className="text-right" style={{ color: 'var(--text)' }}>{c.cell(r)}</span>
+                        </div>
+                      ))}
+                      {onRowClick && (
+                        <button type="button" onClick={() => onRowClick(r)} className="mt-2 w-full px-3 py-2 rounded-lg text-sm font-medium" style={{ background: 'var(--brand)', color: '#fff' }}>Detay →</button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        ) : (
         <div className="grid-scroll-wrap" data-scroll={scrollPos} style={{ ['--grid-frozen-w' as string]: `${frozenWidth}px` }}>
           <div ref={scrollRef} id={scrollId} className="grid-scroll thin-scroll" tabIndex={-1}>
             <table ref={tableRef} className="w-full" style={{ minWidth: tableMinWidth }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
+                  {selection && (
+                    <th scope="col" className="px-3 py-3 w-8"><input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]" checked={allSelected} onChange={toggleAll} aria-label="Sayfadaki tümünü seç" /></th>
+                  )}
                   {visible.map(c => {
                     const left = frozenLefts.get(c.key)
                     const sorted = state.sort === c.key
@@ -262,6 +341,9 @@ export function DataGrid<T>({
                     tabIndex={onRowClick ? 0 : undefined}
                     className={cn('grid-row transition-colors', onRowClick && 'cursor-pointer hover:bg-[var(--surface2)] focus:outline-none focus-visible:bg-[var(--surface2)]')}
                     style={{ borderBottom: '1px solid var(--border)' }}>
+                    {selection && (
+                      <td className="px-3 py-3 w-8" data-stop-row-click=""><input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]" checked={selection.selected.has(key(r))} onChange={() => toggleOne(key(r))} aria-label="Satırı seç" /></td>
+                    )}
                     {visible.map(c => {
                       const left = frozenLefts.get(c.key)
                       const isFrozen = left !== undefined
@@ -278,6 +360,7 @@ export function DataGrid<T>({
             </table>
           </div>
         </div>
+        )}
         <GridPagination page={state.page} pageSize={state.pageSize} totalCount={totalCount} filtered={filtered}
           onPage={grid.setPage} onPageSize={grid.setPageSize} pageSizes={pageSizes} />
       </div>

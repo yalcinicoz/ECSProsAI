@@ -163,6 +163,13 @@ export function OrdersPage() {
         empty="Sipariş bulunamadı."
         minWidth={820}
         export={{ endpoint: '/orders/export', named: () => ({ statuses: tab.statuses || undefined }), fallbackFileName: 'siparisler.xlsx' }}
+        views
+        compact={{
+          title: o => o.orderNumber,
+          subtitle: o => `${o.recipientName ?? '—'} · ${new Date(o.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}`,
+          right: o => `${o.grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ${o.currencyCode === 'TRY' ? '₺' : o.currencyCode}`,
+          badge: o => { const st = ORDER_STATUS_MAP[o.status] ?? { label: o.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> },
+        }}
       />
     </div>
   )

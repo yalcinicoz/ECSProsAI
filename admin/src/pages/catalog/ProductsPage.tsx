@@ -144,6 +144,7 @@ export function ProductsPage() {
 
       <DataGrid<ProductListItem>
         gridId="products"
+        views
         grid={grid}
         columns={columns}
         extraFilters={extraFilters}

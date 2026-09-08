@@ -318,6 +318,7 @@ export function InvoicesPage() {
       {tab === 'queue' ? <DispatchQueue /> : (
         <DataGrid<InvoiceSummary>
           gridId="invoices"
+          views
           grid={grid}
           columns={columns}
           extraFilters={INVOICE_EXTRA_FILTERS}

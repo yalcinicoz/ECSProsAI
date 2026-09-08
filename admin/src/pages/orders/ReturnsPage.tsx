@@ -229,6 +229,7 @@ export function ReturnsPage() {
 
       <DataGrid<ReturnSummary>
         gridId="returns"
+        views
         grid={grid}
         columns={columns}
         extraFilters={RETURN_EXTRA_FILTERS}

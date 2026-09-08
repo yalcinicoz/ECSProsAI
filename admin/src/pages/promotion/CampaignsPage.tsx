@@ -80,6 +80,7 @@ export function CampaignsPage() {
 
       <DataGrid<Campaign>
         gridId="campaigns"
+        views
         grid={grid}
         columns={columns}
         extraFilters={EXTRA_FILTERS}

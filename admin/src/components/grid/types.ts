@@ -77,6 +77,24 @@ export interface GridPrefs {
   pageSize?: number
   /** Sabit kolonlar: auto (breakpoint + bütçe) | off */
   frozen?: 'auto' | 'off'
+  /** Mobil görünüm tercihi (compact tanımı olan grid'lerde) */
+  mobileView?: 'compact' | 'table'
+}
+
+/** Mobil kompakt görünüm (plan §2.7, F5): ana satırda başlık/alt başlık/sağ değer; dokununca diğer görünür kolonlar açılır. Otomatik karta dönüştürme YOK. */
+export interface GridCompactConfig<T> {
+  title: (row: T) => ReactNode
+  subtitle?: (row: T) => ReactNode
+  right?: (row: T) => ReactNode
+  badge?: (row: T) => ReactNode
+}
+
+/** Satır seçimi standardı (F5): seçim kümesi sayfa dışına taşınabilir; toplu aksiyonlar sayfaya aittir. */
+export interface GridSelection {
+  selected: Set<string>
+  onChange: (next: Set<string>) => void
+  /** seçim varken araç çubuğu altında gösterilecek aksiyonlar */
+  actions?: (selected: Set<string>) => ReactNode
 }
 
 export interface GridFrozenConfig { desktop: number; tablet: number; mobile: number }

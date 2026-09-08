@@ -30,6 +30,30 @@ public class UsersController : ControllerBase
         _mediator = mediator;
     }
 
+    // ─── Kişisel tercihler (DataGrid F5 — kaydedilmiş görünümler; Users.Preferences jsonb) ─────────────────────
+    /// <summary>Giriş yapan kullanıcının panel tercihleri (tüm sözlük; örn. grids.orders.views).</summary>
+    [HttpGet("users/me/preferences")]
+    public async Task<IActionResult> GetMyPreferences(CancellationToken ct)
+    {
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var uid))
+            return Unauthorized(new { success = false, error = "Kullanıcı kimliği okunamadı." });
+        var result = await _mediator.Send(new ECSPros.Iam.Application.Queries.GetMyPreferences.GetMyPreferencesQuery(uid), ct);
+        return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Tek tercih anahtarını yazar (value null → siler). Gövde: { key, value }.</summary>
+    [HttpPut("users/me/preferences")]
+    public async Task<IActionResult> SetMyPreference([FromBody] SetMyPreferenceRequest req, CancellationToken ct)
+    {
+        if (!Guid.TryParse(User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var uid))
+            return Unauthorized(new { success = false, error = "Kullanıcı kimliği okunamadı." });
+        var result = await _mediator.Send(new ECSPros.Iam.Application.Queries.GetMyPreferences.SetMyPreferenceCommand(uid, req.Key, req.Value), ct);
+        if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
+        return Ok(new { success = true });
+    }
+
+    public record SetMyPreferenceRequest(string Key, System.Text.Json.JsonElement? Value);
+
     // ─── Users ─────────────────────────────────────────────────────────────────
 
     /// <summary>Kullanıcıları sayfalı listeler.</summary>

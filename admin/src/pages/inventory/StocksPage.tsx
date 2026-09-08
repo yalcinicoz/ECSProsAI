@@ -244,6 +244,7 @@ export function StocksPage() {
 
       <DataGrid<StockAdminRow>
         gridId="stocks"
+        views
         grid={grid}
         columns={columns}
         extraFilters={EXTRA_FILTERS}
