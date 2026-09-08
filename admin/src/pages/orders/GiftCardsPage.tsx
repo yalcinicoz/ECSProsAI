@@ -4,7 +4,7 @@ import api from '@/api/client'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { DataTable, Pager } from '@/components/ui/DataTable'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
 import { errText, para, i18nAd } from '@/components/ui/DataTable.utils'
 import { cn } from '@/lib/utils'
 
@@ -114,23 +114,26 @@ function YeniKartModal({ onClose }: { onClose: () => void }) {
 
 export function GiftCardsPage() {
   const [tab, setTab] = useState<'active' | ''>('active')
-  const [search, setSearch] = useState('')
-  const [appliedSearch, setAppliedSearch] = useState('')
-  const [page, setPage] = useState(1)
+  // DataGrid F4 mekanik göç: arama/sayfa URL'de, sayfa boyu localStorage'da; uç sort/filtre desteklemez
+  const grid = useGridState('gift-cards', { defaultPageSize: 20 })
+  const [search, setSearch] = useState(grid.state.search)
   const [creating, setCreating] = useState(false)
 
-  const { data, isLoading } = useQuery<PagedResult<GiftCard>>({
-    queryKey: ['gift-cards', tab, appliedSearch, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: String(page), pageSize: '20' })
-      if (tab) params.set('status', tab)
-      if (appliedSearch) params.set('search', appliedSearch)
-      return (await api.get(`/orders/gift-cards?${params}`)).data.data
-    },
+  const { data, isLoading, isFetching, error: listError } = useQuery<PagedResult<GiftCard>>({
+    queryKey: ['gift-cards', tab, ...grid.queryKey],
+    queryFn: async () => (await api.get(`/orders/gift-cards?${grid.toParams({ status: tab || undefined })}`)).data.data,
+    placeholderData: prev => prev,
   })
 
   const cards = data?.items ?? []
-  const totalPages = Math.ceil((data?.totalCount ?? 0) / 20)
+  const columns: GridColumn<GiftCard>[] = [
+    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, cell: g => <code className="text-xs font-mono font-medium">{g.code}</code> },
+    { key: 'originalAmount', header: 'TUTAR', priority: 2, cell: g => para(g.originalAmount) },
+    { key: 'remainingAmount', header: 'KALAN', priority: 1, cell: g => <span className="font-medium">{para(g.remainingAmount)}</span> },
+    { key: 'validity', header: 'GEÇERLİLİK', priority: 2, cell: g => `${new Date(g.validFrom).toLocaleDateString('tr-TR')} → ${g.validUntil ? new Date(g.validUntil).toLocaleDateString('tr-TR') : 'süresiz'}` },
+    { key: 'isSingleUse', header: 'TEK KULLANIM', priority: 3, cell: g => (g.isSingleUse ? 'Evet' : 'Hayır') },
+    { key: 'status', header: 'DURUM', priority: 1, lockVisible: true, cell: g => { const [l, v] = DURUM[g.status] ?? [g.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
+  ]
 
   return (
     <div className="p-6">
@@ -143,35 +146,35 @@ export function GiftCardsPage() {
       </div>
 
       <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        <button className={cn('stab', tab === 'active' && 'active')} onClick={() => { setTab('active'); setPage(1) }}>Aktif</button>
-        <button className={cn('stab', tab === '' && 'active')} onClick={() => { setTab(''); setPage(1) }}>Tümü</button>
+        <button className={cn('stab', tab === 'active' && 'active')} onClick={() => { setTab('active'); grid.setPage(1) }}>Aktif</button>
+        <button className={cn('stab', tab === '' && 'active')} onClick={() => { setTab(''); grid.setPage(1) }}>Tümü</button>
       </div>
 
-      <div className="flex items-center gap-2 mb-4">
-        <input className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 220 }}
-          placeholder="Kart kodu ara…" value={search}
-          onChange={e => setSearch(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { setAppliedSearch(search.trim()); setPage(1) } }} />
-        <button onClick={() => { setAppliedSearch(search.trim()); setPage(1) }}
-          className="px-3 py-1.5 rounded-lg text-sm"
-          style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Ara</button>
-      </div>
-
-      <DataTable<GiftCard>
-        columns={[
-          { header: 'KOD', cell: g => <code className="text-xs font-mono font-medium">{g.code}</code> },
-          { header: 'TUTAR', cell: g => para(g.originalAmount) },
-          { header: 'KALAN', cell: g => <span className="font-medium">{para(g.remainingAmount)}</span> },
-          { header: 'GEÇERLİLİK', cell: g => `${new Date(g.validFrom).toLocaleDateString('tr-TR')} → ${g.validUntil ? new Date(g.validUntil).toLocaleDateString('tr-TR') : 'süresiz'}` },
-          { header: 'TEK KULLANIM', cell: g => (g.isSingleUse ? 'Evet' : 'Hayır') },
-          { header: 'DURUM', cell: g => { const [l, v] = DURUM[g.status] ?? [g.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
-        ]}
+      <DataGrid<GiftCard>
+        gridId="gift-cards"
+        grid={grid}
+        columns={columns}
         rows={cards}
+        totalCount={data?.totalCount ?? 0}
         loading={isLoading}
+        fetching={isFetching}
+        error={listError ? errText(listError) : null}
         empty='Hediye kartı yok. "+ Yeni Hediye Kartı" ile oluşturun.'
+        toolbarLeft={
+          <div className="flex items-center gap-2">
+            <input className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 220 }}
+              placeholder="Kart kodu ara…" value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') grid.setSearch(search) }} />
+            <button onClick={() => grid.setSearch(search)}
+              className="px-3 py-1.5 rounded-lg text-sm"
+              style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Ara</button>
+            {grid.state.search && (
+              <button onClick={() => { setSearch(''); grid.setSearch('') }} className="text-xs underline" style={{ color: 'var(--text-s)' }}>temizle</button>
+            )}
+          </div>
+        }
       />
-
-      <Pager page={page} totalPages={totalPages} onChange={setPage} />
       {creating && <YeniKartModal onClose={() => setCreating(false)} />}
     </div>
   )

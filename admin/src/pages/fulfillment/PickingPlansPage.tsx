@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '@/api/client'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { DataTable, Pager } from '@/components/ui/DataTable'
+import { DataGrid, RowActions, useGridState, type GridColumn } from '@/components/grid'
 import { errText, tarihSaat } from '@/components/ui/DataTable.utils'
 import { cn } from '@/lib/utils'
 import { PLAN_DURUM, PLAN_TIP, dagitimDurum } from './pickingPlanHelpers'
@@ -47,17 +47,17 @@ export function ToplanmaIlerleme({ picked, total }: { picked: number; total: num
 export function PickingPlansPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const [tab, setTab] = useState('')
-  const [page, setPage] = useState(1)
+  // DataGrid F4 (mekanik göç): durum sekmesi URL'de `?tab=`, sayfa/sayfa boyu grid'de.
+  const grid = useGridState('picking-plans', { defaultPageSize: 20 })
+  const [sp] = useSearchParams()
+  const tab = sp.get('tab') ?? ''
+  const setTab = (v: string) => grid.mutate(n => { if (v) n.set('tab', v); else n.delete('tab') })
   const [error, setError] = useState('')
 
-  const { data, isLoading } = useQuery<PagedResult<PickingPlan>>({
-    queryKey: ['picking-plans', tab, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: String(page), pageSize: '20' })
-      if (tab) params.set('status', tab)
-      return (await api.get(`/fulfillment/picking-plans?${params}`)).data.data
-    },
+  const { data, isLoading, isFetching, error: listError } = useQuery<PagedResult<PickingPlan>>({
+    queryKey: ['picking-plans', tab, ...grid.queryKey],
+    queryFn: async () => (await api.get(`/fulfillment/picking-plans?${grid.toParams({ status: tab || undefined })}`)).data.data,
+    placeholderData: prev => prev,
   })
 
   const aksiyon = useMutation({
@@ -70,7 +70,44 @@ export function PickingPlansPage() {
   })
 
   const plans = data?.items ?? []
-  const totalPages = Math.ceil((data?.totalCount ?? 0) / 20)
+  const columns: GridColumn<PickingPlan>[] = [
+    { key: 'planNumber', header: 'PLAN NO', priority: 1, lockVisible: true, frozen: true, cell: p => <code className="text-xs font-mono">{p.planNumber}</code> },
+    {
+      key: 'planType', header: 'TİP', priority: 2, cell: p => (
+        <Badge variant={p.planType === 'single_item' ? 'info' : 'neutral'}>
+          {PLAN_TIP[p.planType] ?? p.planType}
+        </Badge>
+      ),
+    },
+    { key: 'orderCount', header: 'SİPARİŞ', priority: 2, cell: p => <span style={{ color: 'var(--text-m)' }}>{p.orderCount || '—'}</span> },
+    {
+      key: 'assignment', header: 'DAĞITIM', priority: 2, cell: p => {
+        const d = dagitimDurum(p.assignedLines, p.totalLines)
+        return <Badge variant={d.variant}>{d.label}</Badge>
+      },
+    },
+    { key: 'progress', header: 'TOPLANMA', priority: 1, cell: p => <ToplanmaIlerleme picked={p.pickedLines} total={p.totalLines} /> },
+    { key: 'plannedAt', header: 'PLANLAMA', priority: 3, cell: p => tarihSaat(p.plannedAt) },
+    { key: 'status', header: 'DURUM', priority: 1, cell: p => { const [l, v] = PLAN_DURUM[p.status] ?? [p.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
+    {
+      key: 'actions', header: '', priority: 1, align: 'right', stopRowClick: true, exportable: false, cell: p => (
+        <RowActions className="whitespace-nowrap">
+          {p.status === 'pending' && (
+            <button className="text-xs underline" style={{ color: 'var(--brand)' }}
+              onClick={() => { if (window.confirm(`${p.planNumber} toplama başlatılsın mı?`)) aksiyon.mutate(`/fulfillment/picking-plans/${p.id}/start`) }}>
+              Başlat
+            </button>
+          )}
+          {p.status === 'picking' && (
+            <button className="text-xs underline text-green-600"
+              onClick={() => { if (window.confirm(`${p.planNumber} tamamlandı olarak işaretlensin mi?`)) aksiyon.mutate(`/fulfillment/picking-plans/${p.id}/complete`) }}>
+              Tamamla
+            </button>
+          )}
+        </RowActions>
+      ),
+    },
+  ]
 
   return (
     <div className="p-6">
@@ -85,58 +122,24 @@ export function PickingPlansPage() {
       <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
         {[['', 'Tümü'], ['pending', 'Bekleyen'], ['picking', 'Toplanan'], ['completed', 'Tamamlanan']].map(([v, l]) => (
           <button key={v} className={cn('stab', tab === v && 'active')}
-            onClick={() => { setTab(v); setPage(1) }}>{l}</button>
+            onClick={() => setTab(v)}>{l}</button>
         ))}
       </div>
 
       {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
 
-      <DataTable<PickingPlan>
-        columns={[
-          { header: 'PLAN NO', cell: p => <code className="text-xs font-mono">{p.planNumber}</code> },
-          {
-            header: 'TİP', cell: p => (
-              <Badge variant={p.planType === 'single_item' ? 'info' : 'neutral'}>
-                {PLAN_TIP[p.planType] ?? p.planType}
-              </Badge>
-            ),
-          },
-          { header: 'SİPARİŞ', cell: p => <span style={{ color: 'var(--text-m)' }}>{p.orderCount || '—'}</span> },
-          {
-            header: 'DAĞITIM', cell: p => {
-              const d = dagitimDurum(p.assignedLines, p.totalLines)
-              return <Badge variant={d.variant}>{d.label}</Badge>
-            },
-          },
-          { header: 'TOPLANMA', cell: p => <ToplanmaIlerleme picked={p.pickedLines} total={p.totalLines} /> },
-          { header: 'PLANLAMA', cell: p => tarihSaat(p.plannedAt) },
-          { header: 'DURUM', cell: p => { const [l, v] = PLAN_DURUM[p.status] ?? [p.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
-          {
-            header: '', className: 'text-right', cell: p => (
-              <span className="whitespace-nowrap">
-                {p.status === 'pending' && (
-                  <button className="text-xs underline" style={{ color: 'var(--brand)' }}
-                    onClick={e => { e.stopPropagation(); if (window.confirm(`${p.planNumber} toplama başlatılsın mı?`)) aksiyon.mutate(`/fulfillment/picking-plans/${p.id}/start`) }}>
-                    Başlat
-                  </button>
-                )}
-                {p.status === 'picking' && (
-                  <button className="text-xs underline text-green-600"
-                    onClick={e => { e.stopPropagation(); if (window.confirm(`${p.planNumber} tamamlandı olarak işaretlensin mi?`)) aksiyon.mutate(`/fulfillment/picking-plans/${p.id}/complete`) }}>
-                    Tamamla
-                  </button>
-                )}
-              </span>
-            ),
-          },
-        ]}
+      <DataGrid<PickingPlan>
+        gridId="picking-plans"
+        grid={grid}
+        columns={columns}
         rows={plans}
+        totalCount={data?.totalCount ?? 0}
         loading={isLoading}
+        fetching={isFetching}
+        error={listError ? errText(listError) : null}
         empty="Toplama görevi yok. 'Yeni Görev' ile filtreli görev oluşturabilirsiniz."
         onRowClick={p => navigate(`/fulfillment/tasks/${p.id}`)}
       />
-
-      <Pager page={page} totalPages={totalPages} onChange={setPage} />
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 Kaynak istek: `docs/Yeni Panel İçin Gelişmiş Tablo - DataGrid UX İyileştirme Promptu (1).md`.
 v1 analizi (envanter) §1'de korunur; v2 = kullanıcı kararları K1-K7 + 15 ek madde işlenmiş **nihai plan**.
-Durum: **ONAYLANDI (2026-09-08)** — F0 + F1 + F2 + F3 UYGULANDI (§3 tablosu ve PROGRESS); F4 + F5 UYGULANDI — plan kapsamı tamamlandı (kullanıcının gerçek veri testleri + restart bekliyor).
+Durum: **ONAYLANDI (2026-09-08)** — F0 + F1 + F2 + F3 UYGULANDI (§3 tablosu ve PROGRESS); F4 + F5 + F4-kalan (DataTable sayfaları, Pager kaldırıldı) UYGULANDI — plan kapsamı TAMAMLANDI (kullanıcının gerçek veri testleri + restart bekliyor).
 
 > Yeni panel Bootstrap değil, **React 19 + Tailwind v4 + option-h şablonu**dur. Plan bu tasarım dilini korur;
 > yeni UI framework/kütüphane getirmez (tek istisna: backend'e MiniExcel NuGet'i).

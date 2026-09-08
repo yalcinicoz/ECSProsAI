@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { Pager } from '@/components/ui/DataTable'
+import { Pagination } from '@/components/ui/Pagination'
 import { tarihSaat } from '@/components/ui/DataTable.utils'
 import { useQuestionAlertStore } from '@/store/questionAlerts'
 
@@ -210,7 +210,7 @@ export function ProductQuestionsPage() {
           ))}
         </div>
       )}
-      {totalPages > 1 && <Pager page={page} totalPages={totalPages} onChange={setPage} />}
+      {totalPages > 1 && <Pagination page={page} totalPages={totalPages} totalCount={data?.totalCount ?? 0} pageSize={data?.pageSize ?? 30} onChange={setPage} />}
     </div>
   )
 }

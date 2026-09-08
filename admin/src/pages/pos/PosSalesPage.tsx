@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import api from '@/api/client'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { DataTable, Pager } from '@/components/ui/DataTable'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
 import { errText, tarihSaat, para } from '@/components/ui/DataTable.utils'
 import { cn } from '@/lib/utils'
 
@@ -124,21 +125,27 @@ function DetayModal({ saleId, onClose }: { saleId: string; onClose: () => void }
 }
 
 export function PosSalesPage() {
-  const [tab, setTab] = useState('')
-  const [page, setPage] = useState(1)
+  // DataGrid F4 (mekanik göç): durum sekmesi URL'de `?tab=`, sayfa/sayfa boyu grid'de.
+  const grid = useGridState('pos-sales', { defaultPageSize: 20 })
+  const [sp] = useSearchParams()
+  const tab = sp.get('tab') ?? ''
+  const setTab = (v: string) => grid.mutate(n => { if (v) n.set('tab', v); else n.delete('tab') })
   const [detail, setDetail] = useState<string | null>(null)
 
-  const { data, isLoading } = useQuery<PagedResult<PosSale>>({
-    queryKey: ['pos-sales', tab, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: String(page), pageSize: '20' })
-      if (tab) params.set('status', tab)
-      return (await api.get(`/pos/sales?${params}`)).data.data
-    },
+  const { data, isLoading, isFetching, error } = useQuery<PagedResult<PosSale>>({
+    queryKey: ['pos-sales', tab, ...grid.queryKey],
+    queryFn: async () => (await api.get(`/pos/sales?${grid.toParams({ status: tab || undefined })}`)).data.data,
+    placeholderData: prev => prev,
   })
 
   const sales = data?.items ?? []
-  const totalPages = Math.ceil((data?.totalCount ?? 0) / 20)
+  const columns: GridColumn<PosSale>[] = [
+    { key: 'saleNumber', header: 'FİŞ NO', priority: 1, lockVisible: true, cell: s => <code className="text-xs font-mono">{s.saleNumber}</code> },
+    { key: 'total', header: 'TUTAR', priority: 1, cell: s => <span className="font-medium">{para(s.grandTotal)}</span> },
+    { key: 'createdAt', header: 'TARİH', priority: 2, cell: s => tarihSaat(s.createdAt) },
+    { key: 'status', header: 'DURUM', priority: 1, cell: s => { const [l, v] = DURUM[s.status] ?? [s.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
+    { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
+  ]
 
   return (
     <div className="p-6">
@@ -150,25 +157,22 @@ export function PosSalesPage() {
       <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
         {[['', 'Tümü'], ['completed', 'Tamamlanan'], ['refunded', 'İade']].map(([v, l]) => (
           <button key={v} className={cn('stab', tab === v && 'active')}
-            onClick={() => { setTab(v); setPage(1) }}>{l}</button>
+            onClick={() => setTab(v)}>{l}</button>
         ))}
       </div>
 
-      <DataTable<PosSale>
-        columns={[
-          { header: 'FİŞ NO', cell: s => <code className="text-xs font-mono">{s.saleNumber}</code> },
-          { header: 'TUTAR', cell: s => <span className="font-medium">{para(s.grandTotal)}</span> },
-          { header: 'TARİH', cell: s => tarihSaat(s.createdAt) },
-          { header: 'DURUM', cell: s => { const [l, v] = DURUM[s.status] ?? [s.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
-          { header: '', className: 'text-right', cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
-        ]}
+      <DataGrid<PosSale>
+        gridId="pos-sales"
+        grid={grid}
+        columns={columns}
         rows={sales}
+        totalCount={data?.totalCount ?? 0}
         loading={isLoading}
+        fetching={isFetching}
+        error={error ? errText(error) : null}
         empty="POS satışı yok."
         onRowClick={s => setDetail(s.id)}
       />
-
-      <Pager page={page} totalPages={totalPages} onChange={setPage} />
       {detail && <DetayModal saleId={detail} onClose={() => setDetail(null)} />}
     </div>
   )

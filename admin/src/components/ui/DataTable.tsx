@@ -53,17 +53,4 @@ export function DataTable<T extends { id: string }>({
   )
 }
 
-export function Pager({ page, totalPages, onChange }: { page: number; totalPages: number; onChange: (p: number) => void }) {
-  if (totalPages <= 1) return null
-  return (
-    <div className="flex items-center justify-center gap-2 mt-4">
-      <button onClick={() => onChange(Math.max(1, page - 1))} disabled={page === 1}
-        className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-        style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>← Önceki</button>
-      <span className="text-sm" style={{ color: 'var(--text-s)' }}>{page} / {totalPages}</span>
-      <button onClick={() => onChange(Math.min(totalPages, page + 1))} disabled={page === totalPages}
-        className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-        style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Sonraki →</button>
-    </div>
-  )
-}
+// Pager kaldırıldı (2026-09-08, DataGrid F4): sayfalı listeler DataGrid/GridPagination, ham tablolar Pagination kullanır.

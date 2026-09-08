@@ -11,6 +11,14 @@ const PAGES = [
   { path: '/admin/orders/invoices', gridId: 'invoices', list: '/api/orders/invoices' },
   { path: '/admin/orders/returns', gridId: 'returns', list: '/api/orders/returns' },
   { path: '/admin/promotion/campaigns', gridId: 'campaigns', list: '/api/promotion/campaigns' },
+  // F4 kalan: eski DataTable+Pager sayfaları (backend grid desteği yok → sıralama/filtre/export beklenmez)
+  { path: '/admin/settings/audit-logs', gridId: 'audit-logs', list: '/api/iam/audit-logs', basic: true },
+  { path: '/admin/integrations/logs', gridId: 'integration-logs', list: '/api/integrations/logs', basic: true },
+  { path: '/admin/fulfillment/picking-plans', gridId: 'picking-plans', list: '/api/fulfillment/picking-plans', basic: true },
+  { path: '/admin/pos/sales', gridId: 'pos-sales', list: '/api/pos/sales', basic: true },
+  { path: '/admin/orders/quotes', gridId: 'quotes', list: '/api/orders/quotes', basic: true },
+  { path: '/admin/finance/supplier-invoices', gridId: 'supplier-invoices', list: '/api/finance/supplier-invoices', basic: true },
+  { path: '/admin/orders/gift-cards', gridId: 'gift-cards', list: '/api/orders/gift-cards', basic: true },
 ]
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH, args: ['--no-sandbox'] })
 const sonuc = []
@@ -49,8 +57,10 @@ for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 
     const listCall = calls.find(c => c.startsWith(pg.list + '?'))
     ok(`${tag}: liste isteği page/pageSize ile`, !!listCall && listCall.includes('page=') && listCall.includes('pageSize='), listCall ?? 'istek yok')
     ok(`${tag}: Kolonlar menüsü`, await page.locator('button[aria-haspopup="menu"]:has(svg)', { hasText: mob ? '' : 'Kolonlar' }).count() >= 1)
-    ok(`${tag}: Excel düğmesi`, await page.locator('button:has-text("Excel")').count() + (mob ? await page.locator('button[aria-haspopup="menu"]').count() : 0) >= 1)
-    ok(`${tag}: FilterBar (arama veya filtre)`, await page.locator('input[aria-label="Ara"], button:has-text("Filtreler"), button:has-text("Gelişmiş"), select').count() >= 1)
+    if (!pg.basic) {
+      ok(`${tag}: Excel düğmesi`, await page.locator('button:has-text("Excel")').count() + (mob ? await page.locator('button[aria-haspopup="menu"]').count() : 0) >= 1)
+      ok(`${tag}: FilterBar (arama veya filtre)`, await page.locator('input[aria-label="Ara"], button:has-text("Filtreler"), button:has-text("Gelişmiş"), select').count() >= 1)
+    }
     const txt = await grid.count() ? await grid.innerText() : ''
     ok(`${tag}: boş durum metni`, /bulunamadı|yok|kayıt|eklenmemiş|arayın/i.test(txt))
     if (mob) ok(`${tag}: gövde yatay taşmıyor`, await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1))

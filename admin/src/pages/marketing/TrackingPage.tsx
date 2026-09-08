@@ -5,8 +5,8 @@ import { RefreshCw, Send, RotateCcw, ExternalLink } from 'lucide-react'
 import api from '@/api/client'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { DataTable, Pager } from '@/components/ui/DataTable'
-import { tarihSaat } from '@/components/ui/DataTable.utils'
+import { DataGrid, RowActions, useGridState, type GridColumn } from '@/components/grid'
+import { errText, tarihSaat } from '@/components/ui/DataTable.utils'
 import { cn } from '@/lib/utils'
 
 /**
@@ -53,7 +53,8 @@ export function TrackingPage() {
   const qc = useQueryClient()
   const [selectedChannelId, setSelectedChannelId] = useState<string>(() => sessionStorage.getItem('tracking.channelId') ?? '')
   const [tab, setTab] = useState('')
-  const [page, setPage] = useState(1)
+  // DataGrid F4 mekanik göç (outbox): sayfa/sayfa boyu grid durumunda; uç sort/filtre desteklemez
+  const grid = useGridState('tracking-outbox', { defaultPageSize: 30 })
   const [testMsg, setTestMsg] = useState<string | null>(null)
 
   const { data: firms = [] } = useQuery<Firm[]>({ queryKey: ['firms'], queryFn: async () => (await api.get('/core/firms')).data.data ?? [] })
@@ -76,14 +77,11 @@ export function TrackingPage() {
     queryFn: async () => (await api.get(`/tracking/status?firmPlatformId=${effectiveChannelId}`)).data.data,
     enabled: !!effectiveChannelId, refetchInterval: 15000,
   })
-  const { data: ob } = useQuery<Paged<OutboxRow>>({
-    queryKey: ['tracking-outbox', effectiveChannelId, tab, page],
-    queryFn: async () => {
-      const p = new URLSearchParams({ firmPlatformId: effectiveChannelId, page: String(page), pageSize: '30' })
-      if (tab) p.set('status', tab)
-      return (await api.get(`/tracking/outbox?${p}`)).data.data
-    },
+  const { data: ob, isLoading: obLoading, isFetching: obFetching, error: obError } = useQuery<Paged<OutboxRow>>({
+    queryKey: ['tracking-outbox', effectiveChannelId, tab, ...grid.queryKey],
+    queryFn: async () => (await api.get(`/tracking/outbox?${grid.toParams({ firmPlatformId: effectiveChannelId, status: tab || undefined })}`)).data.data,
     enabled: !!effectiveChannelId, refetchInterval: 15000,
+    placeholderData: prev => prev,
   })
   const { data: feed } = useQuery<FeedStatusDto>({
     queryKey: ['tracking-feed', effectiveChannelId],
@@ -111,7 +109,7 @@ export function TrackingPage() {
   })
   const test = useMutation({
     mutationFn: async () => (await api.post('/tracking/test-event', { firmPlatformId: effectiveChannelId })).data,
-    onSuccess: (d) => { setTestMsg(d?.data?.outboxId ? `Test event kuyruğa yazıldı (${d.data.dedupId}). 5-10 sn içinde sonucu aşağıda görürsünüz.` : 'Test event yazılamadı (takip kapalı olabilir).'); setTab(''); setPage(1); setTimeout(() => { qc.invalidateQueries({ queryKey: ['tracking-outbox'] }); qc.invalidateQueries({ queryKey: ['tracking-status'] }) }, 7000) },
+    onSuccess: (d) => { setTestMsg(d?.data?.outboxId ? `Test event kuyruğa yazıldı (${d.data.dedupId}). 5-10 sn içinde sonucu aşağıda görürsünüz.` : 'Test event yazılamadı (takip kapalı olabilir).'); setTab(''); grid.setPage(1); setTimeout(() => { qc.invalidateQueries({ queryKey: ['tracking-outbox'] }); qc.invalidateQueries({ queryKey: ['tracking-status'] }) }, 7000) },
     onError: (e: unknown) => setTestMsg((e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Test event gönderilemedi.'),
   })
 
@@ -130,7 +128,17 @@ export function TrackingPage() {
   }
 
   const outboxRows = ob?.items ?? []
-  const totalPages = Math.ceil((ob?.totalCount ?? 0) / 30)
+  const outboxColumns: GridColumn<OutboxRow>[] = [
+    { key: 'createdAt', header: 'ZAMAN', priority: 1, lockVisible: true, frozen: true, cell: r => tarihSaat(r.createdAt) },
+    { key: 'eventName', header: 'EVENT', priority: 1, cell: r => <code className="text-xs font-mono">{r.eventName}</code> },
+    { key: 'source', header: 'KAYNAK', priority: 2, cell: r => r.source },
+    { key: 'status', header: 'DURUM', priority: 1, cell: r => <Badge variant={DURUM[r.status]?.[1] ?? 'default'}>{DURUM[r.status]?.[0] ?? r.status}</Badge> },
+    { key: 'targets', header: 'HEDEFLER', priority: 3, cell: r => <span className="text-xs font-mono break-all" title={r.targetsJson ?? ''}>{(r.targetsJson ?? '[]').slice(0, 90)}</span> },
+    { key: 'attempts', header: 'DENEME', priority: 2, cell: r => `${r.attemptCount}${r.nextAttemptAt ? ' → ' + tarihSaat(r.nextAttemptAt) : ''}` },
+    { key: 'lastError', header: 'HATA', priority: 2, cell: r => <span className="text-xs text-red-600" title={r.lastError ?? ''}>{(r.lastError ?? '').slice(0, 80)}</span> },
+    { key: 'actions', header: '', priority: 2, align: 'right', exportable: false, stopRowClick: true, cell: r => (r.status === 'error' || r.status === 'skipped') ? (
+      <RowActions><Button variant="secondary" size="sm" onClick={() => retry.mutate(r.id)} title="Yeniden dene"><RotateCcw className="w-3.5 h-3.5" /></Button></RowActions>) : null },
+  ]
 
   return (
     <div className="p-6">
@@ -143,7 +151,7 @@ export function TrackingPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <select className="sel" value={effectiveChannelId} onChange={e => { setSelectedChannelId(e.target.value); setPage(1) }}>
+          <select className="sel" value={effectiveChannelId} onChange={e => { setSelectedChannelId(e.target.value); grid.setPage(1) }}>
             {channels.map(c => <option key={c.id} value={c.id}>{c.firmName} — {getName(c.nameI18n) || c.code}</option>)}
           </select>
           <Button variant="secondary" size="sm" onClick={() => refetch()} disabled={isFetching}><RefreshCw className={cn('w-4 h-4', isFetching && 'animate-spin')} /></Button>
@@ -246,25 +254,20 @@ export function TrackingPage() {
       </div>
       <div className="tab-scroll mb-3 flex gap-1" style={{ borderBottom: '1px solid var(--border)' }}>
         {[['', 'Tümü'], ['pending', 'Bekleyen'], ['error', 'Hatalı'], ['done', 'Gönderilen'], ['skipped', 'Atlanan']].map(([v, l]) => (
-          <button key={v} className={cn('stab', tab === v && 'active')} onClick={() => { setTab(v); setPage(1) }}>{l}</button>
+          <button key={v} className={cn('stab', tab === v && 'active')} onClick={() => { setTab(v); grid.setPage(1) }}>{l}</button>
         ))}
       </div>
-      <DataTable<OutboxRow>
-        columns={[
-          { header: 'ZAMAN', cell: r => tarihSaat(r.createdAt) },
-          { header: 'EVENT', cell: r => <code className="text-xs font-mono">{r.eventName}</code> },
-          { header: 'KAYNAK', cell: r => r.source },
-          { header: 'DURUM', cell: r => <Badge variant={DURUM[r.status]?.[1] ?? 'default'}>{DURUM[r.status]?.[0] ?? r.status}</Badge> },
-          { header: 'HEDEFLER', cell: r => <span className="text-xs font-mono break-all" title={r.targetsJson ?? ''}>{(r.targetsJson ?? '[]').slice(0, 90)}</span> },
-          { header: 'DENEME', cell: r => `${r.attemptCount}${r.nextAttemptAt ? ' → ' + tarihSaat(r.nextAttemptAt) : ''}` },
-          { header: 'HATA', cell: r => <span className="text-xs text-red-600" title={r.lastError ?? ''}>{(r.lastError ?? '').slice(0, 80)}</span> },
-          { header: '', cell: r => (r.status === 'error' || r.status === 'skipped') ? (
-            <Button variant="secondary" size="sm" onClick={() => retry.mutate(r.id)} title="Yeniden dene"><RotateCcw className="w-3.5 h-3.5" /></Button>) : null },
-        ]}
+      <DataGrid<OutboxRow>
+        gridId="tracking-outbox"
+        grid={grid}
+        columns={outboxColumns}
         rows={outboxRows}
+        totalCount={ob?.totalCount ?? 0}
+        loading={obLoading && !!effectiveChannelId}
+        fetching={obFetching}
+        error={obError ? errText(obError) : null}
         empty="Kuyrukta kayıt yok"
       />
-      {totalPages > 1 && <Pager page={page} totalPages={totalPages} onChange={setPage} />}
       <p className="mt-4 text-xs" style={{ color: 'var(--text-s)' }}>
         <ExternalLink className="inline w-3 h-3 mr-1" />Meta Events Manager → Test Events sekmesinde görmek için kanal Meta kaydına <code>testEventCode</code> girin; canlıda BOŞ bırakın.
         GA4 test event'i doğrulama ucuna gider (mülke yazılmaz). Tarayıcı tarafı event'ler bu listede görünmez (GA4 DebugView / Pixel Helper ile izlenir).
