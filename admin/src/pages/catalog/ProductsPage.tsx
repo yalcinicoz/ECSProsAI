@@ -69,7 +69,7 @@ export function ProductsPage() {
 
   const groupOptions = useMemo(() => groups.map(g => ({ value: g.id, label: getName(g) })).sort((a, b) => a.label.localeCompare(b.label, 'tr')), [groups])
 
-  const named = { activeOnly: String(activeOnly), sort: 'newest' }
+  const named = { activeOnly: String(activeOnly) }   // sıralama grid'den (varsayılan createdAt desc = eski 'newest'); named sort artık gönderilmez (2026-09-08: 'Geçersiz sıralama alanı: newest' düzeltmesi)
 
   const { data: result, isLoading, isFetching, error } = useQuery<PagedResult>({
     queryKey: ['products', activeOnly, ...grid.queryKey],

@@ -57,10 +57,14 @@ public static class ProductGrid
     public static IQueryable<Product> ApplyAll(IQueryable<Product> query, ProductListFilters f, GridRequest? grid)
         => Schema.ApplyFilters(ApplyNamed(query, f), grid);
 
-    /// <summary>Eski `sort` parametresi: newest → CreatedAt desc; diğer/boş → Code asc. Grid sort verilmişse o kazanır.</summary>
+    /// <summary>
+    /// Sıralama: grid `sort` şema beyaz listesindeyse şema; değilse (örn. eski istemcilerin `sort=newest`'i — aynı query parametresi
+    /// GridRequest.Sort'a da düşer) legacy kural: newest → CreatedAt desc; diğer/boş → Code asc. Bilinmeyen değer 400 ÜRETMEZ (2026-09-08 düzeltmesi).
+    /// </summary>
     public static IQueryable<Product> ApplySort(IQueryable<Product> query, GridRequest? grid, string? legacySort)
     {
-        if (grid?.Sort is { Length: > 0 }) return Schema.ApplySort(query, grid);
+        if (grid?.Sort is { Length: > 0 } key && Schema.SortableFields.Contains(key, StringComparer.OrdinalIgnoreCase)) return Schema.ApplySort(query, grid);
+        legacySort ??= grid?.Sort;
         return string.Equals(legacySort, "newest", StringComparison.OrdinalIgnoreCase)
             ? query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id)
             : query.OrderBy(x => x.Code).ThenBy(x => x.Id);

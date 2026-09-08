@@ -29,7 +29,12 @@ public sealed class AdminProductListOrderingTests
         Assert.IsTrue(createdAtOrder > newestBranch, "Newest seçeneği ürünleri CreatedAt azalan sıralamalıdır.");
         Assert.IsTrue(idOrder > createdAtOrder, "Eşit açılış zamanlarında kararlı Id sıralaması bulunmalıdır.");
         Assert.IsTrue(sortCall >= 0 && pagination > sortCall, "Sıralama sayfalama uygulanmadan önce yapılmalıdır.");
-        StringAssert.Contains(page, "sort: 'newest'");
+        // 2026-09-08: sayfa artık named `sort: 'newest'` GÖNDERMEZ (aynı query parametresi GridRequest.Sort'a düşüp "Geçersiz sıralama alanı"
+        // 400'üne yol açıyordu); en yeni ürün önce davranışı grid varsayılanıyla korunur: createdAt desc = ProductGrid.Schema sort anahtarı.
+        StringAssert.Contains(page, "defaultSort: 'createdAt', defaultDir: 'desc'");
+        Assert.IsFalse(page.Contains("sort: 'newest'", StringComparison.Ordinal), "Named sort=newest grid sıralamasını ezer ve 400 üretir.");
+        // sunucu tarafı: beyaz listede olmayan eski sort değeri (newest) 400 üretmez, legacy kurala düşer
+        StringAssert.Contains(grid, "Schema.SortableFields.Contains(key, StringComparer.OrdinalIgnoreCase)");
         StringAssert.Contains(controller, "new GetProductsQuery(search, productGroupId, activeOnly, grid.Page, grid.PageSize, sort, grid)");
     }
 
