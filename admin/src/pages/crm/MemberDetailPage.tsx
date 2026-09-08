@@ -28,7 +28,7 @@ interface MemberDetail {
   lastLoginAt?: string
   createdAt: string
   identityVerified?: boolean
-  marketingConsents?: { email: boolean; sms: boolean; phone: boolean }
+  marketingConsents?: { email: boolean; sms: boolean; phone: boolean; push: boolean }
 }
 
 interface MemberGroup {
@@ -264,6 +264,8 @@ export function MemberDetailPage() {
                 Duyuru tercihleri (üye kendi belirler): e-posta {member.marketingConsents.email ? '✓' : '✗'}
                 {' · '}SMS {member.marketingConsents.sms ? '✓' : '✗'}
                 {' · '}telefon {member.marketingConsents.phone ? '✓' : '✗'}
+                {' · '}mobil push {member.marketingConsents.push ? '✓' : '✗'}
+                {!member.marketingConsents.push && <span> — pazarlama sınıfı push (favori fiyat düşüşü, kupon, sepet hatırlatma…) bu üyeye GİTMEZ; üye uygulamadan bildirim iznini açmalı</span>}
               </p>
             )}
             {error && <p className="text-sm text-red-500">{error}</p>}

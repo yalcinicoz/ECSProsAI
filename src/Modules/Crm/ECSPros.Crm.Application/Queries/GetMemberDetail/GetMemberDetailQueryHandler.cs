@@ -24,7 +24,9 @@ public class GetMemberDetailQueryHandler : IRequestHandler<GetMemberDetailQuery,
 
         // E2: duyuru tercihleri Consents jsonb'nin "marketing" anahtarında
         // (jsonb'den JsonElement, aynı süreçte yazılmışsa DTO gelebilir).
-        MarketingConsentsDto? pazarlama = null;
+        // "marketing" anahtarı hiç yoksa üye hiçbir izin vermemiştir → hepsi kapalı olarak DÖNER
+        // (panel push iznini de gösterir; pazarlama sınıfı push izinsiz üyeye sessizce gitmez — 2026-09-08).
+        MarketingConsentsDto? pazarlama = new MarketingConsentsDto(false, false, false, false);
         if (member.Consents is not null && member.Consents.TryGetValue("marketing", out var m))
         {
             if (m is MarketingConsentsDto dto) pazarlama = dto;

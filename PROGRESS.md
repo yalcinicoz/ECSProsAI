@@ -1,5 +1,7 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**2026-09-08 push takip (Mobil API + Admin panel):** (1) Üye detayı › Mobil Bildirim Cihazları artık `push_devices.Id` + Kopyala + "Deneme gönder" (bildirim sayfası `?tab=push-log&deviceId=`/`&memberId=` ile ön-dolu açılır). (2) **"Favori ürüne %15 indirim yaptık, bildirim gitmedi" kök nedeni:** `favorite_price_drop` pazarlama sınıfı → `Consents.marketing.push=true` şart; test üyesinde `marketing` anahtarı yoktu (canlıda push izni açık ÜYE YOK), kuyruk sessizce 0 döner. Panel push iznini göstermiyordu → `GetMemberDetail` artık marketing anahtarı yokken de hepsi-kapalı DTO döner, panel "mobil push ✓/✗" + uyarı gösterir ⚠️ restart bekliyor (publish 09:32). İzin mobil uygulamadan `PUT /api/store/account/marketing-consents {push:true}` ile açılır; tarama 15 dk + efektif fiyat cache 2 dk. Not: staging (5055) aynı DB'yi paylaştığından `push-scan` advisory kilidini staging da alabilir → tarama logu ecspros-staging journal'ında çıkabilir.
+
 **MOBİL PUSH BİLDİRİM ENTEGRASYONU UYGULANDI — `docs/PUSH_BILDIRIM_ENTEGRASYONU.md` (2026-09-07, Mobil API + Admin panel):**
 FCM HTTP v1 gönderici (`Services/Push/FcmClient` — servis hesabı JWT RS256 → OAuth2, 50 dk belirteç önbelleği; hata kodu
 sınıflandırması), ayar kaynağı `definition.integration_services` **"fcm"** (ServiceType `push`; firma entegrasyonu
