@@ -35,7 +35,8 @@ public class StoreViewedProductsController(IMediator mediator) : ControllerBase
         {
             var o = ECSPros.Api.Services.Store.StoreKartZenginlestirici.Ozet(harita, v.ProductCode);
             return new ECSPros.Api.Models.Store.ViewedProductItemDto(v.ProductCode, v.ViewedAt,
-                o?.ProductName, o?.ImageUrl, o?.MinPrice, o?.CompareAtPrice, o?.CampaignPrice, o is not null && o.IsActive);
+                o?.ProductName, o?.ImageUrl, o?.MinPrice, o?.CompareAtPrice, o?.CampaignPrice, o is not null && o.IsActive,
+                o?.Price, o?.CampaignName, o?.CampaignBadges);
         }).ToList();
         return Ok(new { success = true, data });
     }

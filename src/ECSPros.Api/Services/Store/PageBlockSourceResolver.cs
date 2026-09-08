@@ -262,5 +262,6 @@ public class PageBlockSourceResolver(IMediator mediator, IProductService product
         CampaignName: p.CampaignName,
         CampaignPrice: p.CampaignPrice,
         CampaignBadges: p.CampaignBadges,
-        CardMessages: p.CardMessages);
+        CardMessages: p.CardMessages,
+        Price: p.Price);   // B9 (2026-09-08): tek fiyat sözleşmesi bloklarda da korunur
 }

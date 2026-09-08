@@ -1,4 +1,5 @@
 using ECSPros.Catalog.Application.Queries.GetStoreProducts;
+using ECSPros.Shared.Contracts;
 using MediatR;
 
 namespace ECSPros.Api.Services.Store;
@@ -50,11 +51,16 @@ public class StoreKartZenginlestirici(IMediator mediator)
 
     public static StoreUrunOzetDto? Ozet(Dictionary<string, StoreProductDto> harita, string code, Guid? colorValueId = null) =>
         harita.TryGetValue(code, out var p)
-            ? new StoreUrunOzetDto(p.Code, Ad(p), Gorsel(p, colorValueId), p.MinPrice, p.CompareAtPrice, p.CampaignPrice, p.IsActive)
+            ? new StoreUrunOzetDto(p.Code, Ad(p), Gorsel(p, colorValueId), p.MinPrice, p.CompareAtPrice, p.CampaignPrice, p.IsActive,
+                p.Price, p.CampaignName, p.CampaignBadges)
             : null;
 }
 
-/// <summary>B1: liste satırına gömülü ürün özeti (kartla aynı fiyat kuralı).</summary>
+/// <summary>
+/// B1: liste satırına gömülü ürün özeti (kartla aynı fiyat kuralı).
+/// B9 (2026-09-08, mobil): kartın kampanya rozetleri ve tek biçim fiyatı da taşınır — favori/gezilen/koleksiyon satırı
+/// listedeki kartla aynı görünsün diye. Kaynak zaten liste sorgusu; ek maliyet yok, alanlar burada düşüyordu.
+/// </summary>
 public record StoreUrunOzetDto(
     string ProductCode,
     string ProductName,
@@ -62,4 +68,7 @@ public record StoreUrunOzetDto(
     decimal MinPrice,
     decimal? CompareAtPrice,
     decimal? CampaignPrice,
-    bool IsActive);
+    bool IsActive,
+    decimal Price = 0,                                  // satış fiyatı (kampanya varsa kampanyalı)
+    string? CampaignName = null,                        // kazanan kampanyanın rozet adı
+    IReadOnlyList<CampaignBadge>? CampaignBadges = null); // ürünü kapsayan TÜM kampanyalar (ad+renk)

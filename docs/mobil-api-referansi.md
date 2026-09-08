@@ -395,3 +395,35 @@ question, review, coupon, campaign, account, info); `imageUrl` ürünle ilgili t
 `storefront.push_notifications`: `Inbox, Icon, DismissOnOpen, ExpiresAt, ReadAt, DismissedAt` (belgedeki `deleted_at` = `DismissedAt`;
 BaseEntity soft delete admin logunu gizleyeceği için ayrı kolon). Doğrulama: `NotificationInboxDbTests` (§7 prosedürü, gerçek DB, geri alınır).
 
+## 15. Vitrin fiyat + kampanya rozeti sözleşmesi (B9, 2026-09-08 UYGULANDI)
+
+Mobil ekibin `docs/BILDIRIMLERIM...` benzeri isteği (B9) uygulandı: fiyat TEK biçimde gelir, rozetler her yüzeyde aynıdır.
+
+**Fiyat alanları** (liste, kategori listesi, ürün detayı, favoriler, gezilenler, koleksiyonlar):
+
+| Alan | Anlam |
+|---|---|
+| `price` | **Satış fiyatı** — ürün-bazlı kampanya varsa kampanyalı fiyat, yoksa kanal satış fiyatı. İstemci başka hesap yapmaz. |
+| `compareAtPrice` | **Çizili referans** — indirim yoksa `null`. Kanal indiriminde kanal çizili fiyatı; kampanyada kampanya öncesi satış fiyatı; ikisi birlikteyse en yükseği. Salt gösterimdir, hiçbir hesaba girmez (2026-09-08 kullanıcı kararı). |
+| `minPrice` / `basePrice` | Kampanya öncesi satış fiyatı — **eski alan**, geçiş için korunuyor. |
+| `campaignPrice` | Kampanyalı fiyat — **eski alan**, `price` ile aynı bilgi. Mobil okumayacak; sahadaki eski sürümler bitince kaldırılacak. |
+
+İndirim üç kaynaktan gelir, ikisi fiyatı değiştirir: **kanal fiyat indirimi** (satış fiyatı zaten düşük, çizili fiyat kanaldan),
+**ürün-bazlı kampanya** (percent/amount — satış fiyatının üstüne uygulanır), **sepet-bağımlı kampanya** (2 al 1 öde, kargo bedava —
+fiyata dokunmaz, yalnız rozet). İkisi üst üste binebilir. Kural tek yerdedir: `Shared.Contracts.KartFiyatGorunumu.Hesapla`.
+
+**Rozetler:** `campaignName` (kazanan kampanyanın rozet adı) ve `campaignBadges: [{name, color?}]` (ürünü kapsayan TÜM kampanyalar,
+bantta dönüşümlü; `color` null → istemci marka rengini kullanır) artık **ürün detayında ve üye listelerinde de** var. Rozet gelmesi
+indirim anlamına gelmez: sepet-bağımlı kampanyada `price` değişmez.
+
+Örnek (canlı doğrulama, 2026-09-08):
+
+| Ürün | price | compareAtPrice | campaignBadges |
+|---|---|---|---|
+| P-00021945 (%15 kampanya) | 679,99 | 799,99 | %15 İndirim, Kargo Bedava |
+| P-00020386 (kanal indirimi) | 299,99 | 399,99 | Süper Fırsat, Kargo Bedava |
+
+**Etkilenen uçlar:** `GET /api/store/catalog/products`, `GET /api/store/catalog/products/{code}`, kanal kategori listesi,
+`GET /api/store/favorites`, `GET /api/store/viewed-products`, `GET /api/store/collections`. Web (Razor) görünümü değişmedi:
+kart çizili satırı yalnız kanal indiriminde çıkar, kampanyanın kendi satırı korunur.
+

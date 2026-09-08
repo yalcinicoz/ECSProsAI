@@ -83,7 +83,8 @@ public record StoreProductDto(
     int CartCount = 0,                           // Sosyal kanıt (2026-08-10): son 30 günde kaç farklı sepette — cache DIŞI eklenir
     int FavoriteCount = 0,                       // Sosyal kanıt: kaç farklı üyenin favorisi — cache DIŞI eklenir
     int ViewCount = 0,                           // Sosyal kanıt: kaç farklı üye baktı — cache DIŞI eklenir
-    List<CardSizeDto>? Sizes = null)             // Kartta sepete ekle (2026-08-14): ana rengin beden seçenekleri
+    List<CardSizeDto>? Sizes = null,             // Kartta sepete ekle (2026-08-14): ana rengin beden seçenekleri
+    decimal Price = 0)                           // B9 (2026-09-08): SATIŞ fiyatı — kampanya varsa kampanyalı (CompareAtPrice = çizili referans)
 {
     // B5 (2026-09-07, mobil): iki liste ucu aynı alan adlarını da taşır — kategori ucundaki ProductId/BasePrice
     // burada takma ad olarak verilir (salt-okunur; önbellekten okurken yok sayılır).
@@ -680,6 +681,14 @@ public class GetStoreProductsQueryHandler(
                     CampaignBadges = kmpListe.Select(k => new CampaignBadge(
                         k.BadgeLabel ?? k.Name, CampaignBadgePalette.Resolve(k.BadgeColor))).ToList()
                 };
+
+        // B9 (2026-09-08, mobil): tek fiyat sözleşmesi — price (satış) + compareAtPrice (çizili referans).
+        // Kampanya çözümünden SONRA, kural KartFiyatGorunumu'nda (istemci yorumlamaz).
+        for (var i = 0; i < items.Count; i++)
+        {
+            var (fiyat, cizili) = KartFiyatGorunumu.Hesapla(items[i].MinPrice, items[i].CompareAtPrice, items[i].CampaignPrice);
+            items[i] = items[i] with { Price = fiyat, CompareAtPrice = cizili };
+        }
 
         // Ürün Kartı F2: elle kart mesajları (kapsam: tümü/kategori/ürün kodu) — additive alan
         var mesajlar = await cardMessageResolver.ResolveForProductsAsync(

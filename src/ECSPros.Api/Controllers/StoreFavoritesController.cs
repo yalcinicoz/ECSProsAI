@@ -35,7 +35,8 @@ public class StoreFavoritesController(IMediator mediator) : ControllerBase
         {
             var o = ECSPros.Api.Services.Store.StoreKartZenginlestirici.Ozet(harita, f.ProductCode, f.ColorValueId);
             return new ECSPros.Api.Models.Store.FavoriteItemDto(f.ProductCode, f.ColorValueId,
-                o?.ProductName, o?.ImageUrl, o?.MinPrice, o?.CompareAtPrice, o?.CampaignPrice, o is not null && o.IsActive);
+                o?.ProductName, o?.ImageUrl, o?.MinPrice, o?.CompareAtPrice, o?.CampaignPrice, o is not null && o.IsActive,
+                o?.Price, o?.CampaignName, o?.CampaignBadges);
         }).ToList();
         return Ok(new { success = true, data });
     }

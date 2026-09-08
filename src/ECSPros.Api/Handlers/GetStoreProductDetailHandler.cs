@@ -203,17 +203,25 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
         decimal? compareAt = fiyatliVaryant?.CompareAtPrice is { } eski && eski > minPrice ? eski : null;
 
         string? kampanyaAdi = null; decimal? kampanyaFiyat = null;
+        List<ECSPros.Shared.Contracts.CampaignBadge>? kampanyaRozetleri = null;
         try
         {
-            var kmp = (await campaignResolver.ResolveForProductsAsync(request.FirmPlatformId, [product.Id], ct))
+            // B9 (2026-09-08): detay da listeyle AYNI rozet bandını döner (tüm kapsayan kampanyalar); fiyat yalnız kazanandan.
+            var kmpListe = (await campaignResolver.ResolveAllForProductsAsync(request.FirmPlatformId, [product.Id], ct))
                 .GetValueOrDefault(product.Id);
-            if (kmp is not null)
+            if (kmpListe is { Count: > 0 })
             {
-                kampanyaAdi = kmp.BadgeLabel ?? kmp.Name;
-                kampanyaFiyat = CampaignPricing.EffectivePrice(kmp, minPrice);
+                var kazanan = kmpListe[0];
+                kampanyaAdi = kazanan.BadgeLabel ?? kazanan.Name;
+                kampanyaFiyat = CampaignPricing.EffectivePrice(kazanan, minPrice);
+                kampanyaRozetleri = kmpListe.Select(k => new ECSPros.Shared.Contracts.CampaignBadge(
+                    k.BadgeLabel ?? k.Name, ECSPros.Shared.Contracts.CampaignBadgePalette.Resolve(k.BadgeColor))).ToList();
             }
         }
         catch { /* kampanya çözülemedi — kampanyasız detay */ }
+
+        // B9: tek fiyat sözleşmesi (kural KartFiyatGorunumu'nda; Razor detayı kendi hesabını yapar, etkilenmez)
+        var (satisFiyati, ciziliFiyat) = ECSPros.Shared.Contracts.KartFiyatGorunumu.Hesapla(minPrice, compareAt, kampanyaFiyat);
 
         // A5/A10: kanal slug'ları (varyant → slug); kanonik slug = fiyatlı/ilk varyantın slug'ı.
         Dictionary<Guid, string>? variantSlugs = null; string? slug = null;
@@ -235,7 +243,8 @@ public class GetStoreProductDetailHandler(ICatalogDbContext db, IInventoryDbCont
             product.IsSaleOpen, variants,
             product.DescriptionI18n, productAttrs, groupName,
             videos.Count > 0 ? videos : null,
-            minPrice, compareAt, kampanyaFiyat, kampanyaAdi,
-            product.ProductGroupId, slug, variantSlugs));
+            minPrice, ciziliFiyat, kampanyaFiyat, kampanyaAdi,
+            product.ProductGroupId, slug, variantSlugs,
+            Price: satisFiyati, CampaignBadges: kampanyaRozetleri));
     }
 }

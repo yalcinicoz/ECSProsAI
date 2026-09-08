@@ -96,7 +96,8 @@ public record ChannelCategoryProductItemDto(
     int CartCount = 0,                               // Sosyal kanıt (2026-08-10): son 30 günde kaç farklı sepette — cache DIŞI eklenir
     int FavoriteCount = 0,                           // Sosyal kanıt: kaç farklı üyenin favorisi — cache DIŞI eklenir
     int ViewCount = 0,                               // Sosyal kanıt: kaç farklı üye baktı — cache DIŞI eklenir
-    List<CardSizeDto>? Sizes = null)                 // Kartta sepete ekle (2026-08-14): kartın (ürün×renk) beden seçenekleri
+    List<CardSizeDto>? Sizes = null,                 // Kartta sepete ekle (2026-08-14): kartın (ürün×renk) beden seçenekleri
+    decimal Price = 0)                               // B9 (2026-09-08): SATIŞ fiyatı — kampanya varsa kampanyalı (CompareAtPrice = çizili referans)
 {
     // B5 (2026-09-07, mobil): arama ucuyla ortak alan adları — Id/MinPrice takma adları (BasePrice zaten kanal satış fiyatıdır).
     public Guid Id => ProductId;
@@ -212,8 +213,9 @@ public class GetChannelCategoryProductsQueryHandler(
             .Where(kv => kodById.ContainsKey(kv.Key))
             .ToDictionary(kv => kodById[kv.Key], kv => kv.Value);
 
+        // Fiyat görünümü kampanya olmasa da yazılır (aşağıdaki erken çıkışta da) — istemci tek biçim bekler.
         if (puanlar.Count == 0 && videolar.Count == 0 && kampanyaByKod.Count == 0
-            && mesajByKod.Count == 0 && sosyalByKod.Count == 0) return sonuc;
+            && mesajByKod.Count == 0 && sosyalByKod.Count == 0) return FiyatGorunumu(sonuc, items);
 
         for (var i = 0; i < items.Count; i++)
         {
@@ -239,8 +241,21 @@ public class GetChannelCategoryProductsQueryHandler(
                 yeni = yeni with { CartCount = sk.CartCount, FavoriteCount = sk.FavoriteCount, ViewCount = sk.ViewCount };
             items[i] = yeni;
         }
+        return FiyatGorunumu(sonuc, items);
+    }
+
+    /// <summary>B9 (2026-09-08): price (satış) + compareAtPrice (çizili referans) — kampanya sonrası, cache DIŞI
+    /// (cache ham kanal fiyatını tutar; her okumada yeniden hesaplanır, sürüm artırmak gerekmez).</summary>
+    private static Result<PagedResult<ChannelCategoryProductItemDto>> FiyatGorunumu(
+        Result<PagedResult<ChannelCategoryProductItemDto>> sonuc, List<ChannelCategoryProductItemDto> items)
+    {
+        for (var i = 0; i < items.Count; i++)
+        {
+            var (fiyat, cizili) = KartFiyatGorunumu.Hesapla(items[i].BasePrice, items[i].CompareAtPrice, items[i].CampaignPrice);
+            items[i] = items[i] with { Price = fiyat, CompareAtPrice = cizili };
+        }
         return Result.Success(new PagedResult<ChannelCategoryProductItemDto>(
-            items, sonuc.Value.TotalCount, sonuc.Value.Page, sonuc.Value.PageSize));
+            items, sonuc.Value!.TotalCount, sonuc.Value.Page, sonuc.Value.PageSize));
     }
 
     private async Task<Result<PagedResult<ChannelCategoryProductItemDto>>> HandleCore(

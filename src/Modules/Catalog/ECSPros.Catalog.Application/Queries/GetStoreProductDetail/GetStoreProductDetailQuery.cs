@@ -25,7 +25,9 @@ public record StoreProductDetailDto(
     Guid? ProductGroupId = null,
     string? Slug = null,                         // kanonik ürün slug'ı (kanal); null = slug yok
     Dictionary<Guid, string>? VariantSlugs = null, // varyant (renk) → slug (renk butonları/deep link)
-    Guid? SelectedColorValueId = null);          // slug ile açıldıysa slug'ın rengi
+    Guid? SelectedColorValueId = null,           // slug ile açıldıysa slug'ın rengi
+    decimal Price = 0,                           // B9 (2026-09-08): SATIŞ fiyatı — kampanya varsa kampanyalı (CompareAtPrice = çizili referans)
+    List<ECSPros.Shared.Contracts.CampaignBadge>? CampaignBadges = null);   // B9: ürünü kapsayan TÜM kampanyalar (ad+renk) — listeyle aynı rozet bandı
 
 public record StoreProductVideoDto(string VideoUrl, string? ThumbnailUrl); // H5
 
