@@ -15,6 +15,7 @@ interface User {
   lastName: string
   department: string
   jobTitle?: string
+  phone?: string | null
   isActive: boolean
   lastLoginAt?: string
   roles: string[]
@@ -35,6 +36,7 @@ function UserModal({ user, onClose }: { user: User | 'new'; onClose: () => void 
   const [lastName, setLastName] = useState(u?.lastName ?? '')
   const [department, setDepartment] = useState(u?.department ?? '')
   const [jobTitle, setJobTitle] = useState(u?.jobTitle ?? '')
+  const [phone, setPhone] = useState(u?.phone ?? '')
   const [isActive, setIsActive] = useState(u?.isActive ?? true)
   const [roleId, setRoleId] = useState('')
   const [error, setError] = useState('')
@@ -53,13 +55,13 @@ function UserModal({ user, onClose }: { user: User | 'new'; onClose: () => void 
           username: username.trim(), email: email.trim(), password,
           firstName: firstName.trim(), lastName: lastName.trim(),
           department: department.trim(), jobTitle: jobTitle.trim() || null,
-          phone: null, mustChangePassword: true,
+          phone: phone.trim() || null, mustChangePassword: true,
         })
       } else {
         await api.put(`/iam/users/${u!.id}`, {
           firstName: firstName.trim(), lastName: lastName.trim(),
           department: department.trim(), jobTitle: jobTitle.trim() || null,
-          phone: null, isActive,
+          phone: phone.trim() || null, isActive,
         })
       }
     },
@@ -139,6 +141,10 @@ function UserModal({ user, onClose }: { user: User | 'new'; onClose: () => void 
             <input className="inp" value={jobTitle} onChange={e => setJobTitle(e.target.value)} />
           </div>
         </div>
+        <div>
+          <label className="flbl">Telefon</label>
+          <input className="inp" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="05xx xxx xx xx" />
+        </div>
         {!isNew && (
           <>
             <label className="flex items-center gap-2 text-sm" style={{ color: 'var(--text)' }}>
@@ -201,7 +207,7 @@ export function UsersPage() {
 
       <div className="flex items-center gap-2 mb-4">
         <input className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 220 }}
-          placeholder="Ad, e-posta, kullanıcı adı ara…" value={search}
+          placeholder="Ad, e-posta, kullanıcı adı, telefon ara…" value={search}
           onChange={e => setSearch(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { setAppliedSearch(search.trim()); setPage(1) } }} />
         <button onClick={() => { setAppliedSearch(search.trim()); setPage(1) }}
@@ -214,6 +220,7 @@ export function UsersPage() {
           { header: 'KULLANICI ADI', cell: u => <code className="text-xs font-mono font-medium">{u.username}</code> },
           { header: 'AD SOYAD', cell: u => `${u.firstName} ${u.lastName}` },
           { header: 'E-POSTA', cell: u => u.email },
+          { header: 'TELEFON', cell: u => u.phone || '—' },
           { header: 'ROLLER', cell: u => (u.roles.length ? u.roles.join(', ') : '—') },
           { header: 'SON GİRİŞ', cell: u => tarihSaat(u.lastLoginAt) },
           { header: 'DURUM', cell: u => <Badge variant={u.isActive ? 'success' : 'neutral'}>{u.isActive ? 'Aktif' : 'Pasif'}</Badge> },

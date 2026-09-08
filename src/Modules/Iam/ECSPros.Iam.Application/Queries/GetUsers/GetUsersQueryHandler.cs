@@ -28,7 +28,8 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, Result<PagedU
                 u.Username.ToLower().Contains(s) ||
                 u.Email.ToLower().Contains(s) ||
                 u.FirstName.ToLower().Contains(s) ||
-                u.LastName.ToLower().Contains(s));
+                u.LastName.ToLower().Contains(s) ||
+                (u.Phone != null && u.Phone.Contains(s)));
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
@@ -40,7 +41,7 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, Result<PagedU
             .Select(u => new
             {
                 u.Id, u.Username, u.Email, u.FirstName, u.LastName,
-                u.Department, u.JobTitle, u.IsActive, u.LastLoginAt,
+                u.Department, u.JobTitle, u.Phone, u.IsActive, u.LastLoginAt,
                 Roles = u.UserRoles
                     .Where(ur => !ur.IsDeleted)
                     .Select(ur => ur.Role.Code)
@@ -50,7 +51,7 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, Result<PagedU
 
         var items = users.Select(u => new UserListDto(
             u.Id, u.Username, u.Email, u.FirstName, u.LastName,
-            u.Department, u.JobTitle, u.IsActive, u.LastLoginAt, u.Roles
+            u.Department, u.JobTitle, u.Phone, u.IsActive, u.LastLoginAt, u.Roles
         )).ToList();
 
         return Result.Success(new PagedUserResult(items, totalCount, request.Page, request.PageSize));

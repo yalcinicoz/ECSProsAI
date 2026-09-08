@@ -22,6 +22,7 @@ public record UserListDto(
     string LastName,
     string Department,
     string? JobTitle,
+    string? Phone,
     bool IsActive,
     DateTime? LastLoginAt,
     List<string> Roles);
