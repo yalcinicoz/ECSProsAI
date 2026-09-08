@@ -1,6 +1,8 @@
 export { DataGrid, RowActions } from './DataGrid'
 export type { DataGridProps } from './DataGrid'
 export { GridPagination } from './GridPagination'
+export { FilterBar } from './FilterBar'
+export * from './filterUtils'
 export { ColumnsMenu } from './ColumnsMenu'
 export { GridScrollProvider } from './GridScrollRegistry'
 export { useGridScrollRegistry } from './gridScrollContext'

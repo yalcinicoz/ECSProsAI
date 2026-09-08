@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ColumnsMenu } from './ColumnsMenu'
+import { FilterBar } from './FilterBar'
+import type { GridFilterField } from './filterUtils'
 import { GridPagination } from './GridPagination'
 import { useGridScrollRegistry } from './gridScrollContext'
 import { useBreakpoint } from './useBreakpoint'
@@ -22,6 +24,8 @@ export interface DataGridProps<T> {
   loading?: boolean
   /** arka planda yenileme (eski satırlar kalır, ince ilerleme çubuğu) */
   fetching?: boolean
+  /** sunucu hatası (örn. 400 geçersiz filtre) — tablo yerine mesaj; filtreler çipte kalır, kaldırılabilir */
+  error?: string | null
   onRowClick?: (row: T) => void
   rowKey?: (row: T) => string
   empty?: ReactNode
@@ -32,6 +36,12 @@ export interface DataGridProps<T> {
   toolbarBelow?: ReactNode
   frozen?: Partial<GridFrozenConfig>
   pageSizes?: number[]
+  /** global arama kutusu (false → yok) */
+  search?: { placeholder?: string } | false
+  /** kolona bağlı olmayan ek filtre alanları (örn. 'paid' boolean) */
+  extraFilters?: GridFilterField[]
+  /** filtre satırının en solunda (örn. küçük seçici) */
+  filterLeading?: ReactNode
   /** tablo min genişliği (px) — yatay kaydırmanın her zaman erişilebilir olması için (varsayılan: görünür kolon sayısı × 140) */
   minWidth?: number
   className?: string
@@ -48,8 +58,8 @@ function defaultVisible<T>(c: GridColumn<T>, bp: GridBreakpoint) {
 }
 
 export function DataGrid<T>({
-  gridId, columns, rows, totalCount, grid, loading, fetching, onRowClick, rowKey, empty,
-  toolbarLeft, toolbarRight, toolbarBelow, frozen, pageSizes, minWidth, className,
+  gridId, columns, rows, totalCount, grid, loading, fetching, error, onRowClick, rowKey, empty,
+  toolbarLeft, toolbarRight, toolbarBelow, frozen, pageSizes, minWidth, className, search, extraFilters, filterLeading,
 }: DataGridProps<T>) {
   const bp = useBreakpoint()
   const { state, prefs, setPrefs, resetPrefs } = grid
@@ -166,6 +176,13 @@ export function DataGrid<T>({
     onRowClick(r)
   }, [onRowClick])
 
+  // filtre alanları: kolon tanımındaki filter'lar (+ ek alanlar); alan adı filter.field ?? kolon anahtarı
+  const filterFields = useMemo<GridFilterField[]>(() => [
+    ...columns.filter(c => c.filter).map(c => ({ ...c.filter!, key: c.filter!.field ?? c.key, label: c.filter!.label ?? c.header })),
+    ...(extraFilters ?? []),
+  ], [columns, extraFilters])
+  const hasFilterBar = search !== false && (search !== undefined || filterFields.length > 0) || filterFields.length > 0
+
   const colCount = visible.length
   const tableMinWidth = minWidth ?? Math.max(480, colCount * 140)
   const filtered = state.filters.length > 0 || !!state.search
@@ -174,8 +191,11 @@ export function DataGrid<T>({
   return (
     <div className={cn('grid-root', className)} data-grid-id={gridId}>
       {(toolbarLeft || toolbarRight || columns.length > 0) && (
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">{toolbarLeft}</div>
+        <div className="flex flex-wrap items-start gap-2 mb-3">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+            {toolbarLeft}
+            {hasFilterBar && <FilterBar grid={grid} fields={filterFields} search={search} bp={bp} leading={filterLeading} />}
+          </div>
           <div className="flex items-center gap-2 ml-auto">
             {toolbarRight}
             <ColumnsMenu columns={ordered} visibleKeys={visibleKeys} prefs={prefs} setPrefs={setPrefs} resetPrefs={resetPrefs} frozenSupported={frozenSupported} />
@@ -219,12 +239,15 @@ export function DataGrid<T>({
                 {loading && (
                   <tr><td colSpan={colCount} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor...</td></tr>
                 )}
-                {!loading && rows.length === 0 && (
+                {!loading && error && (
+                  <tr><td colSpan={colCount} className="px-4 py-6 text-center text-sm" role="alert" style={{ color: '#dc2626' }}>{error}</td></tr>
+                )}
+                {!loading && !error && rows.length === 0 && (
                   <tr><td colSpan={colCount} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
                     {empty ?? (filtered ? 'Filtreye uyan kayıt bulunamadı.' : 'Kayıt bulunamadı.')}
                   </td></tr>
                 )}
-                {!loading && rows.map(r => (
+                {!loading && !error && rows.map(r => (
                   <tr key={key(r)}
                     onClick={onRowClick ? e => rowClick(r, e) : undefined}
                     onKeyDown={onRowClick ? e => { if (e.key === 'Enter' && e.target === e.currentTarget) rowClick(r, e) } : undefined}

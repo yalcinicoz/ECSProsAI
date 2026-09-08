@@ -26,7 +26,7 @@ export function GridPagination({ page, pageSize, totalCount, filtered, onPage, o
       <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-s)' }}>
         <span>{from}–{to} / {totalCount.toLocaleString('tr-TR')} kayıt{filtered ? ' (filtreli)' : ''}</span>
         <span className="mob-hide">· sayfa {page}/{totalPages}</span>
-        <label className="flex items-center gap-1">
+        <label className="flex items-center gap-1 whitespace-nowrap">
           <span className="mob-hide">Sayfa boyu</span>
           <select className="inp text-xs py-0.5 px-1.5 h-auto" value={pageSize} onChange={e => onPageSize(Number(e.target.value))} aria-label="Sayfa boyu">
             {sizes.map(s => <option key={s} value={s}>{s}</option>)}

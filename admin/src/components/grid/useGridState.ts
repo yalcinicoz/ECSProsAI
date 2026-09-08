@@ -129,7 +129,10 @@ export function useGridState(gridId: string, opts: GridStateOptions = {}) {
   /** react-query anahtarı için kararlı özet */
   const queryKey = useMemo(() => [gridId, state.page, state.pageSize, state.search, state.sort, state.dir, state.filters.map(f => `${f.field}=${f.op}:${f.value}`).join('&')], [gridId, state])
 
-  return { state, prefs, setPrefs, resetPrefs, setPage, setPageSize, setSearch, toggleSort, setSort, setFilter, removeFilter, clearFilters, toParams, activeFilterCount, queryKey }
+  /** Toplu URL değişikliği (aynı tikte birden çok setX çağrısı birbirini ezer — react-router updater kapanıştaki parametreleri görür). */
+  const mutate = update
+
+  return { state, prefs, setPrefs, resetPrefs, setPage, setPageSize, setSearch, toggleSort, setSort, setFilter, removeFilter, clearFilters, mutate, toParams, activeFilterCount, queryKey }
 }
 
 export type GridStateApi = ReturnType<typeof useGridState>
