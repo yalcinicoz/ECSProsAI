@@ -16,7 +16,7 @@ public sealed record PushIstek(
 
 /// <summary>
 /// Push kuyruğu (§5-§7): şablon → metin/link; hedef cihazlar (üyenin tüm aktif cihazları); pazarlama sınıfında izin
-/// (Consents.marketing.push), sessiz saat 22:00-09:00 (İstanbul) → 09:00'a erteleme, üye başına günde ≤2 ve aynı tip
+/// (Consents.marketing.push == false ise gitmez — opt-out), sessiz saat 22:00-09:00 (İstanbul) → 09:00'a erteleme, üye başına günde ≤2 ve aynı tip
 /// haftada ≤2; (DedupId, cihaz) benzersiz. Gönderim PushGonderimServisi'nde (worker).
 /// </summary>
 public sealed class PushKuyruk(IStorefrontDbContext sdb, ICrmDbContext cdb, IConfiguration config, ILogger<PushKuyruk> logger)
@@ -81,13 +81,15 @@ public sealed class PushKuyruk(IStorefrontDbContext sdb, ICrmDbContext cdb, ICon
         return PushIzni(consents);
     }
 
-    /// <summary>Consents.marketing.push == true (jsonb → JsonElement ya da aynı süreçte yazılmış sözlük).</summary>
+    /// <summary>Pazarlama push izni OPT-OUT'tur (2026-09-08 kullanıcı kararı): cihaz kaydı zaten OS bildirim izniyle
+    /// yapılır, ayrı bir "açma" istenmez. Yalnız üye uygulamadan kapattıysa (Consents.marketing.push == false) gitmez;
+    /// anahtar yoksa/true ise gider. (jsonb → JsonElement ya da aynı süreçte yazılmış sözlük.)</summary>
     public static bool PushIzni(Dictionary<string, object>? consents)
     {
-        if (consents is null || !consents.TryGetValue("marketing", out var m) || m is null) return false;
-        if (m is JsonElement je && je.ValueKind == JsonValueKind.Object) return je.TryGetProperty("push", out var p) && p.ValueKind == JsonValueKind.True;
-        if (m is Dictionary<string, object> d) return d.TryGetValue("push", out var v) && v is true;
-        return false;
+        if (consents is null || !consents.TryGetValue("marketing", out var m) || m is null) return true;
+        if (m is JsonElement je && je.ValueKind == JsonValueKind.Object) return !(je.TryGetProperty("push", out var p) && p.ValueKind == JsonValueKind.False);
+        if (m is Dictionary<string, object> d) return !(d.TryGetValue("push", out var v) && v is false);
+        return true;
     }
 
     public static string Doldur(string sablon, IReadOnlyDictionary<string, string> vars)

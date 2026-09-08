@@ -56,14 +56,14 @@ public class StoreAccountController(
         return Ok(new { success = true });
     }
 
-    /// <summary>Duyuru tercihlerini oku (mobil ayarlar ekranı; push = pazarlama push izni, varsayılan false).</summary>
+    /// <summary>Duyuru tercihlerini oku (mobil ayarlar ekranı; push = pazarlama push izni, OPT-OUT: varsayılan true, üye kapatabilir).</summary>
     [HttpGet("marketing-consents")]
     public async Task<IActionResult> GetMarketingConsents(CancellationToken ct)
     {
         var result = await mediator.Send(new GetMemberDetailQuery(GetMemberId()), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         var c = result.Value.MarketingConsents;
-        return Ok(new { success = true, data = new { email = c?.Email ?? false, sms = c?.Sms ?? false, phone = c?.Phone ?? false, push = c?.Push ?? false } });
+        return Ok(new { success = true, data = new { email = c?.Email ?? false, sms = c?.Sms ?? false, phone = c?.Phone ?? false, push = c?.Push ?? true } });
     }
 
     /// <summary>Uygulama içi "Bildirimlerim": üyeye gönderilmiş push bildirimleri (sayfalı, yeni→eski).</summary>

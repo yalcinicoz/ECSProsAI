@@ -24,9 +24,9 @@ public class GetMemberDetailQueryHandler : IRequestHandler<GetMemberDetailQuery,
 
         // E2: duyuru tercihleri Consents jsonb'nin "marketing" anahtarında
         // (jsonb'den JsonElement, aynı süreçte yazılmışsa DTO gelebilir).
-        // "marketing" anahtarı hiç yoksa üye hiçbir izin vermemiştir → hepsi kapalı olarak DÖNER
-        // (panel push iznini de gösterir; pazarlama sınıfı push izinsiz üyeye sessizce gitmez — 2026-09-08).
-        MarketingConsentsDto? pazarlama = new MarketingConsentsDto(false, false, false, false);
+        // "marketing" anahtarı hiç yoksa e-posta/SMS/telefon KAPALI, mobil push AÇIK döner: push izni opt-out'tur
+        // (OS bildirim izni cihaz kaydında alınır; üye uygulamadan kapatmadıkça pazarlama push'u gider — 2026-09-08).
+        MarketingConsentsDto? pazarlama = new MarketingConsentsDto(false, false, false, true);
         if (member.Consents is not null && member.Consents.TryGetValue("marketing", out var m))
         {
             if (m is MarketingConsentsDto dto) pazarlama = dto;
@@ -35,7 +35,9 @@ public class GetMemberDetailQueryHandler : IRequestHandler<GetMemberDetailQuery,
             {
                 bool Acik(string ad) => je.TryGetProperty(ad, out var v)
                     && v.ValueKind == System.Text.Json.JsonValueKind.True;
-                pazarlama = new MarketingConsentsDto(Acik("email"), Acik("sms"), Acik("phone"), Acik("push"));
+                bool Kapali(string ad) => je.TryGetProperty(ad, out var v)
+                    && v.ValueKind == System.Text.Json.JsonValueKind.False;
+                pazarlama = new MarketingConsentsDto(Acik("email"), Acik("sms"), Acik("phone"), !Kapali("push"));
             }
         }
 

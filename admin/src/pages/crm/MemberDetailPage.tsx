@@ -265,7 +265,7 @@ export function MemberDetailPage() {
                 {' · '}SMS {member.marketingConsents.sms ? '✓' : '✗'}
                 {' · '}telefon {member.marketingConsents.phone ? '✓' : '✗'}
                 {' · '}mobil push {member.marketingConsents.push ? '✓' : '✗'}
-                {!member.marketingConsents.push && <span> — pazarlama sınıfı push (favori fiyat düşüşü, kupon, sepet hatırlatma…) bu üyeye GİTMEZ; üye uygulamadan bildirim iznini açmalı</span>}
+                {!member.marketingConsents.push && <span> — üye uygulamadan pazarlama bildirimlerini KAPATMIŞ; favori fiyat düşüşü, kupon, sepet hatırlatma gibi pazarlama push'ları gitmez (sipariş bildirimleri gider)</span>}
               </p>
             )}
             {error && <p className="text-sm text-red-500">{error}</p>}

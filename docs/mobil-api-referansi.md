@@ -333,7 +333,7 @@ Tanımlı değilse kuyruk birikir, hata üretmez. Worker: 15 sn'de bir gönderim
 `orderNumber`, `orderId`, `productCode`, `productName`…), android `priority/ttl/collapse_key/channel_id=default`, apns
 `apns-priority/collapse-id`, `badge` = üyenin açılmamış bildirim sayısı. İşlemsel HIGH/1 gün, pazarlama NORMAL/12 sa (fiyat/stok 6 sa).
 
-**Kurallar (§6):** pazarlama sınıfı yalnız `marketing-consents.push = true` üyelere; sessiz saat 22:00-09:00 (İstanbul) → 09:00'a
+**Kurallar (§6):** pazarlama sınıfı push **opt-out**'tur (2026-09-08): OS bildirim izni cihaz kaydında alınmıştır, ayrıca açma istenmez; yalnız `marketing-consents.push = false` yapan üyeye gitmez; sessiz saat 22:00-09:00 (İstanbul) → 09:00'a
 ertelenir; üye başına günde 2, aynı tip haftada 2; `(dedupId, cihaz)` benzersiz; gönderim anında iptal koşulu (sepet boşaldı →
 `cart_*` atlanır, favoriden çıktı → `favorite_*`, alarm iptal → `stock_alert`). FCM `UNREGISTERED` → cihaz `revoked`,
 `INVALID_ARGUMENT` → `invalid`, 429/5xx → üstel bekleme (5 deneme). Link §3 kataloğuna göre doğrulanır (/odeme, /teslimat reddedilir;
@@ -351,7 +351,7 @@ Yok: `favorite_back_in_stock` (önceki stok durumu izlenmiyor — sonraki sürü
 **Uçlar (mobil):**
 | Uç | Not |
 |---|---|
-| `PUT /api/store/account/marketing-consents` | gövdeye `push: boolean` eklendi (null → mevcut korunur; varsayılan false) |
+| `PUT /api/store/account/marketing-consents` | gövdeye `push: boolean` eklendi (null → mevcut korunur; **varsayılan true** — ayarlar ekranındaki anahtar KAPATMA içindir) |
 | `GET /api/store/account/marketing-consents` | `{email, sms, phone, push}` |
 | `GET /api/store/account/notifications?page=&pageSize=` | üyeye gönderilmiş bildirimler (`items[] {id,type,title,body,link,imageUrl,dedupId,sentAt,openedAt}`, `unreadCount`) |
 | `POST /api/store/push-devices/opened {dedupId, token?}` | tıklama → `openedAt` (üye JWT ile üyenin, değilse token'ın satırı) |
