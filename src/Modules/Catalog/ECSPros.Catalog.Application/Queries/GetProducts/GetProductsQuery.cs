@@ -1,4 +1,5 @@
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 
 namespace ECSPros.Catalog.Application.Queries.GetProducts;
@@ -9,7 +10,9 @@ public record GetProductsQuery(
     bool ActiveOnly = true,
     int Page = 1,
     int PageSize = 20,
-    string? Sort = null) : IRequest<Result<PagedResult<ProductListDto>>>;
+    string? Sort = null,
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<ProductListDto>>>;
+    // Grid (2026-09-08, DataGrid F4): beyaz listeli f.* filtreleri + sort/dir (ProductGrid.Schema); null → eski davranış
 
 public record ProductListDto(
     Guid Id,

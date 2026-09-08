@@ -2,7 +2,7 @@
 
 Kaynak istek: `docs/Yeni Panel İçin Gelişmiş Tablo - DataGrid UX İyileştirme Promptu (1).md`.
 v1 analizi (envanter) §1'de korunur; v2 = kullanıcı kararları K1-K7 + 15 ek madde işlenmiş **nihai plan**.
-Durum: **ONAYLANDI (2026-09-08)** — F0 + F1 + F2 + F3 UYGULANDI (§3 tablosu ve PROGRESS); **pilot kapanışı kullanıcı testi bekliyor** (Siparişler'de gerçek veriyle sticky scroll + frozen + filtre + sayfalama + kolon + Excel birlikte) → sonra F4.
+Durum: **ONAYLANDI (2026-09-08)** — F0 + F1 + F2 + F3 UYGULANDI (§3 tablosu ve PROGRESS); F4 yaygınlaştırma UYGULANDI (kullanıcı 'devam et' kararıyla; pilotun gerçek veri testi kullanıcıda) → sırada F5.
 
 > Yeni panel Bootstrap değil, **React 19 + Tailwind v4 + option-h şablonu**dur. Plan bu tasarım dilini korur;
 > yeni UI framework/kütüphane getirmez (tek istisna: backend'e MiniExcel NuGet'i).
@@ -171,7 +171,7 @@ Otomatik karta dönüştürme YOK; operasyonel karşılaştırma için tablo yap
 | **F2 FilterBar + Siparişler pilotu ✅ (2026-09-08)** | global arama, hızlı/gelişmiş, çipler, tarih hızlı seçimleri, mobil "Filtreler (n)"; **Siparişler tam göç** (durum sekmeleri + sayaçlar korunur, `overflow-hidden` kaldırılır). | kullanıcı testi |
 | **F3 Excel ✅ (2026-09-08)** | `ExportButton` (tüm/görünür), Siparişler export uçtan uca. | 4.268-kayıt senaryosu: ekran 50, Excel 4.268 |
 | **Pilot kapanışı** | Sticky scroll + frozen + yoğun filtre + sayfalama + kolon kişiselleştirme + Excel **Siparişler'de birlikte** doğrulanmadan F4'e geçilmez [E7]. | onay |
-| **F4 Yaygınlaştırma** | Ürünler, Üyeler, Talepler, Stoklar, Faturalar, İadeler, Kampanyalar (her biri: backend harita + export + göç; ayrı commit); DataTable'daki 14 sayfa mekanik göç; eski `Pager`/sayfa içi sayfalayıcılar kaldırılır. | sayfa başına kısa test |
+| **F4 Yaygınlaştırma ✅ (2026-09-08)** | Ürünler, Üyeler, Talepler, Stoklar, Faturalar, İadeler, Kampanyalar (her biri: backend harita + export + göç; ayrı commit); DataTable'daki 14 sayfa mekanik göç; eski `Pager`/sayfa içi sayfalayıcılar kaldırılır. | sayfa başına kısa test |
 | **F5 İleri** | kişisel kaydedilmiş görünümler (sunucu tercihleri), mobil kompakt görünüm, satır seçimi standardı. | |
 
 Her faz: izole publish (5051) → kullanıcı testi → canlı publish; restart kullanıcıda.

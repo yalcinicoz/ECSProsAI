@@ -1,13 +1,15 @@
 import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { Pagination } from '@/components/ui/Pagination'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { PermissionGuard } from '@/components/ui/PermissionGuard'
 import { cn } from '@/lib/utils'
+import { DataGrid, useGridState, type GridColumn, type GridFilterField } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 import type { Warehouse } from './WarehousesPage'
 import { getWarehouseName } from './warehouseHelpers'
 
@@ -60,8 +62,6 @@ interface StockFacets {
   bins: FacetOption[]
 }
 
-const PAGE_SIZE = 30
-
 interface VariantInfo {
   id: string
   barcode: string
@@ -79,20 +79,30 @@ type AdjustForm = {
   notes: string
 }
 
+// DataGrid F4 (2026-09-08): arama (global search), depo ve ikincil facet seçimleri (variantId/sectionId/binId) adlandırılmış URL
+// parametreleri; "Mevcut" anahtarı f.inStock boolean grid filtresi; sıralama miktar/rezerve/mevcut; kolon tercihleri localStorage'da.
+const NAMED_KEYS = ['warehouseId', 'variantId', 'sectionId', 'binId'] as const
+
+const EXTRA_FILTERS: GridFilterField[] = [
+  { key: 'inStock', label: 'Mevcut stok', type: 'boolean', quick: true },
+  { key: 'quantity', label: 'Stok', type: 'number' },
+  { key: 'reserved', label: 'Rezerve', type: 'number' },
+  { key: 'available', label: 'Mevcut', type: 'number' },
+  { key: 'stockType', label: 'Stok tipi', type: 'enum', options: [{ value: 'physical', label: 'Fiziksel' }, { value: 'virtual', label: 'Sanal' }] },
+  { key: 'updatedAt', label: 'Güncellenme', type: 'date' },
+]
+
 export function StocksPage() {
   const queryClient = useQueryClient()
+  const grid = useGridState('stocks', { defaultPageSize: 30 })
+  const [sp] = useSearchParams()
+  const get = (k: string) => sp.get(k) ?? ''
+  const setNamed = (k: string, v: string, also?: (n: URLSearchParams) => void) => grid.mutate(n => { if (v) n.set(k, v); else n.delete(k); also?.(n) })
+  const named = () => Object.fromEntries(NAMED_KEYS.map(k => [k, get(k) || undefined]))
+  const warehouseId = get('warehouseId'), variantId = get('variantId'), sectionId = get('sectionId'), binId = get('binId')
+  const search = grid.state.search
 
-  const [warehouseId, setWarehouseId] = useState<string>('')
-  const [availableOnly, setAvailableOnly] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState(false)
-  const [searchInput, setSearchInput] = useState('')
-  const [search, setSearch] = useState('')     // uygulanmış arama (Ara/Enter ile)
-  const [page, setPage] = useState(1)
-  // İkincil filtre seçimleri (arama facet'lerinden)
-  const [variantId, setVariantId] = useState('')
-  const [sectionId, setSectionId] = useState('')
-  const [binId, setBinId] = useState('')
-
   const [barcodeInput, setBarcodeInput] = useState('')
   const [variantLookup, setVariantLookup] = useState<VariantInfo | null>(null)
   const [lookupError, setLookupError] = useState('')
@@ -114,45 +124,26 @@ export function StocksPage() {
   // Sayfa BOŞ açılır: filtre (arama veya depo) girilmeden sorgu atılmaz — 165K satırı
   // topluca çekmek tarayıcıyı donduruyordu.
   const filtreVar = !!(search || warehouseId)
-  const { data: stockPage, isLoading: sLoading } = useQuery<StockPage>({
-    queryKey: ['stocks-admin', search, warehouseId, availableOnly, variantId, sectionId, binId, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) })
-      if (search) params.set('search', search)
-      if (warehouseId) params.set('warehouseId', warehouseId)
-      if (availableOnly) params.set('availableOnly', 'true')
-      if (variantId) params.set('variantId', variantId)
-      if (sectionId) params.set('sectionId', sectionId)
-      if (binId) params.set('binId', binId)
-      const { data } = await api.get(`/inventory/stocks/admin-list?${params}`)
-      return data.data
-    },
+  const { data: stockPage, isLoading: sLoading, isFetching, error } = useQuery<StockPage>({
+    queryKey: ['stocks-admin', ...grid.queryKey, ...NAMED_KEYS.map(k => get(k))],
+    queryFn: async () => (await api.get(`/inventory/stocks/admin-list?${grid.toParams(named())}`)).data.data,
     enabled: filtreVar,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
-  const stocks = stockPage?.items ?? []
   const totalCount = stockPage?.totalCount ?? 0
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
-  // İkincil filtre seçenekleri — yalnız arama varken. Mevcut seçimler de gönderilir:
+  // İkincil filtre seçenekleri — yalnız arama varken. Mevcut seçimler + grid filtreleri de gönderilir:
   // her boyut diğer seçimlerle daraltılmış hesaplanır (sayaçlar listeyle tutarlı kalır).
+  const facetParams = (() => { const p = grid.toParams(named()); p.delete('page'); p.delete('pageSize'); p.delete('sort'); p.delete('dir'); return p.toString() })()
   const { data: facets } = useQuery<StockFacets>({
-    queryKey: ['stocks-facets', search, warehouseId, availableOnly, variantId, sectionId, binId],
-    queryFn: async () => {
-      const params = new URLSearchParams({ search })
-      if (warehouseId) params.set('warehouseId', warehouseId)
-      if (availableOnly) params.set('availableOnly', 'true')
-      if (variantId) params.set('variantId', variantId)
-      if (sectionId) params.set('sectionId', sectionId)
-      if (binId) params.set('binId', binId)
-      const { data } = await api.get(`/inventory/stocks/admin-list/facets?${params}`)
-      return data.data
-    },
+    queryKey: ['stocks-facets', facetParams],
+    queryFn: async () => (await api.get(`/inventory/stocks/admin-list/facets?${facetParams}`)).data.data,
     enabled: !!search,
     placeholderData: (prev) => prev,   // seçim değişince seçenekler yenilenirken çubuk titremesin
   })
 
-  const resetSecondary = () => { setVariantId(''); setSectionId(''); setBinId('') }
-  const applySearch = () => { setPage(1); resetSecondary(); setSearch(searchInput.trim()) }
+  const resetSecondary = (n: URLSearchParams) => { n.delete('variantId'); n.delete('sectionId'); n.delete('binId') }
 
   // Kademeli daraltma: depo seçiliyse kısımlar o depoya, kısım seçiliyse raflar o kısma süzülür.
   const sectionOptions = (facets?.sections ?? []).filter(s => !warehouseId || s.parentId === warehouseId)
@@ -205,6 +196,33 @@ export function StocksPage() {
     setTimeout(() => barcodeRef.current?.focus(), 100)
   }
 
+  const columns: GridColumn<StockAdminRow>[] = [
+    { key: 'productCode', header: 'ÜRÜN', frozen: true, lockVisible: true, minWidth: 260,
+      cell: s => (
+        <div className="flex items-center gap-2">
+          {s.imageUrl
+            ? <img src={s.imageUrl} alt="" className="w-9 h-9 rounded object-cover shrink-0" style={{ background: 'var(--surface2)' }} />
+            : <div className="w-9 h-9 rounded shrink-0" style={{ background: 'var(--surface2)' }} />}
+          <div className="min-w-0">
+            <div className="text-sm truncate" style={{ color: 'var(--text)' }}>{s.productName}</div>
+            <div className="text-xs" style={{ color: 'var(--text-s)' }}>
+              <code className="font-mono">{s.productCode}</code>
+              {s.options ? <span> · {s.options}</span> : null}
+            </div>
+          </div>
+        </div>) },
+    { key: 'warehouse', header: 'DEPO', priority: 1, lockVisible: true, cell: s => <span className="text-sm" style={{ color: 'var(--text)' }}>{s.warehouseName}</span> },
+    { key: 'section', header: 'KISIM', priority: 2, cell: s => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{s.sectionName ?? '—'}</span> },
+    { key: 'bin', header: 'RAF', priority: 2, cell: s => s.binCode
+      ? <code className="text-xs font-mono" style={{ color: 'var(--text-m)' }}>{s.binCode}</code>
+      : <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span> },
+    { key: 'quantity', header: 'STOK', sortable: true, align: 'right', priority: 1, cell: s => <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{s.quantity}</span> },
+    { key: 'reserved', header: 'REZ.', sortable: true, align: 'right', priority: 2,
+      cell: s => <span className="text-sm" style={{ color: s.reservedQuantity > 0 ? 'var(--brand)' : 'var(--text-s)' }}>{s.reservedQuantity}</span> },
+    { key: 'available', header: 'MEVCUT', sortable: true, align: 'right', priority: 1,
+      cell: s => <span className={cn('text-sm font-medium', s.availableQuantity <= 0 ? 'text-red-500' : s.availableQuantity <= 5 ? 'text-yellow-600' : '')}>{s.availableQuantity}</span> },
+  ]
+
   if (wLoading) return <PageSpinner />
 
   const isFormValid = form.variantId && form.warehouseId && form.quantityDelta !== 0
@@ -216,167 +234,67 @@ export function StocksPage() {
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Stok</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>
-            {filtreVar ? `${totalCount} kayıt` : 'Listelemek için ürün arayın veya depo seçin'}
+            {filtreVar ? `${totalCount.toLocaleString('tr-TR')} kayıt` : 'Listelemek için ürün arayın veya depo seçin'}
           </p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex gap-1">
-            <input
-              className="inp text-sm py-1.5 px-3 h-auto"
-              style={{ minWidth: 220 }}
-              value={searchInput}
-              onChange={e => setSearchInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && applySearch()}
-              placeholder="Ürün kodu / adı / barkod ara…"
-            />
-            <Button size="sm" variant="secondary" onClick={applySearch}><Search size={14} /></Button>
-          </div>
-          <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}>
-            {[false, true].map(v => (
-              <button key={String(v)}
-                onClick={() => { setPage(1); setAvailableOnly(v) }}
-                className={cn('px-3 py-1 rounded-lg text-sm font-medium transition-all',
-                  availableOnly === v ? 'bg-white shadow-sm' : 'text-[var(--text-s)]')}
-                style={availableOnly === v ? { color: 'var(--text)' } : {}}>
-                {v ? 'Mevcut' : 'Tümü'}
-              </button>
-            ))}
-          </div>
-          <select className="inp text-sm py-1.5 px-3 h-auto" value={warehouseId}
-            onChange={e => { setPage(1); setSectionId(''); setBinId(''); setWarehouseId(e.target.value) }}
-            style={{ minWidth: 160 }}>
+        <PermissionGuard permission={PERM}>
+          <Button size="sm" onClick={openAdjust}>+ Stok Hareketi</Button>
+        </PermissionGuard>
+      </div>
+
+      <DataGrid<StockAdminRow>
+        gridId="stocks"
+        grid={grid}
+        columns={columns}
+        extraFilters={EXTRA_FILTERS}
+        search={{ placeholder: 'Ürün kodu / adı / barkod ara…' }}
+        filterLeading={
+          <select className="inp text-sm !py-1.5 !px-2 !h-auto !w-auto" value={warehouseId} aria-label="Depo"
+            onChange={e => setNamed('warehouseId', e.target.value, n => { n.delete('sectionId'); n.delete('binId') })}>
             <option value="">Tüm Depolar</option>
-            {warehouses.map(w => (
-              <option key={w.id} value={w.id}>{getWarehouseName(w)}</option>
-            ))}
+            {warehouses.map(w => <option key={w.id} value={w.id}>{getWarehouseName(w)}</option>)}
           </select>
-          <PermissionGuard permission={PERM}>
-            <Button size="sm" onClick={openAdjust}>+ Stok Hareketi</Button>
-          </PermissionGuard>
-        </div>
-      </div>
-
-      {/* İkincil filtre — arama sonucundan türetilen varyant/kısım/raf seçenekleri */}
-      {!!search && facets && (facets.variants.length > 0 || facets.sections.length > 0) && (
-        <div className="card mb-4 flex items-end gap-3 flex-wrap">
-          <div>
-            <label className="flbl mb-1">Varyant</label>
-            <select className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 220 }}
-              value={variantId}
-              onChange={e => { setPage(1); setVariantId(e.target.value) }}>
-              <option value="">Tümü ({facets.variants.length})</option>
-              {facets.variants.map(v => (
-                <option key={v.id} value={v.id}>{v.label} — {v.count} kayıt</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="flbl mb-1">Kısım</label>
-            <select className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 170 }}
-              value={sectionId}
-              onChange={e => { setPage(1); setBinId(''); setSectionId(e.target.value) }}>
-              <option value="">Tümü ({sectionOptions.length})</option>
-              {sectionOptions.map(s => (
-                <option key={s.id} value={s.id}>{s.label} — {s.count} kayıt</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="flbl mb-1">Raf</label>
-            <select className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 150 }}
-              value={binId}
-              onChange={e => { setPage(1); setBinId(e.target.value) }}>
-              <option value="">Tümü ({binOptions.length})</option>
-              {binOptions.map(b => (
-                <option key={b.id} value={b.id}>{b.label} — {b.count} kayıt</option>
-              ))}
-            </select>
-          </div>
-          {(variantId || sectionId || binId) && (
-            <button className="text-xs underline pb-2" style={{ color: 'var(--text-s)' }}
-              onClick={() => { setPage(1); resetSecondary() }}>
-              İkincil filtreyi temizle
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Table */}
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['ÜRÜN', 'DEPO', 'KISIM', 'RAF', 'STOK', 'REZ.', 'MEVCUT'].map(h => (
-                <th key={h} className="px-4 py-3 text-xs font-semibold text-left"
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {!filtreVar && (
-              <tr><td colSpan={7} className="px-4 py-14 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Ürün kodu/adı/barkod arayın veya bir depo seçin — sonuçlar burada listelenir.
-              </td></tr>
+        }
+        toolbarBelow={!!search && facets && ((facets.variants?.length ?? 0) > 0 || (facets.sections?.length ?? 0) > 0) ? (
+          // İkincil filtre — arama sonucundan türetilen varyant/kısım/raf seçenekleri
+          <div className="card2 p-3 flex items-end gap-3 flex-wrap">
+            <div>
+              <label className="flbl mb-1">Varyant</label>
+              <select className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 220 }} value={variantId} onChange={e => setNamed('variantId', e.target.value)}>
+                <option value="">Tümü ({facets.variants.length})</option>
+                {facets.variants.map(v => <option key={v.id} value={v.id}>{v.label} — {v.count} kayıt</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="flbl mb-1">Kısım</label>
+              <select className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 170 }} value={sectionId} onChange={e => setNamed('sectionId', e.target.value, n => n.delete('binId'))}>
+                <option value="">Tümü ({sectionOptions.length})</option>
+                {sectionOptions.map(s => <option key={s.id} value={s.id}>{s.label} — {s.count} kayıt</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="flbl mb-1">Raf</label>
+              <select className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 150 }} value={binId} onChange={e => setNamed('binId', e.target.value)}>
+                <option value="">Tümü ({binOptions.length})</option>
+                {binOptions.map(b => <option key={b.id} value={b.id}>{b.label} — {b.count} kayıt</option>)}
+              </select>
+            </div>
+            {(variantId || sectionId || binId) && (
+              <button className="text-xs underline pb-2" style={{ color: 'var(--text-s)' }} onClick={() => grid.mutate(resetSecondary)}>
+                İkincil filtreyi temizle
+              </button>
             )}
-            {filtreVar && sLoading && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Yükleniyor...
-              </td></tr>
-            )}
-            {filtreVar && !sLoading && stocks.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Stok kaydı bulunamadı.
-              </td></tr>
-            )}
-            {stocks.map(s => (
-              <tr key={s.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-2">
-                  <div className="flex items-center gap-2">
-                    {s.imageUrl
-                      ? <img src={s.imageUrl} alt="" className="w-9 h-9 rounded object-cover shrink-0" style={{ background: 'var(--surface2)' }} />
-                      : <div className="w-9 h-9 rounded shrink-0" style={{ background: 'var(--surface2)' }} />}
-                    <div className="min-w-0">
-                      <div className="text-sm truncate" style={{ color: 'var(--text)' }}>{s.productName}</div>
-                      <div className="text-xs" style={{ color: 'var(--text-s)' }}>
-                        <code className="font-mono">{s.productCode}</code>
-                        {s.options ? <span> · {s.options}</span> : null}
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-2">
-                  <span className="text-sm" style={{ color: 'var(--text)' }}>{s.warehouseName}</span>
-                </td>
-                <td className="px-4 py-2">
-                  <span className="text-sm" style={{ color: 'var(--text-m)' }}>{s.sectionName ?? '—'}</span>
-                </td>
-                <td className="px-4 py-2">
-                  {s.binCode
-                    ? <code className="text-xs font-mono" style={{ color: 'var(--text-m)' }}>{s.binCode}</code>
-                    : <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span>}
-                </td>
-                <td className="px-4 py-2">
-                  <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{s.quantity}</span>
-                </td>
-                <td className="px-4 py-2">
-                  <span className="text-sm" style={{ color: s.reservedQuantity > 0 ? 'var(--brand)' : 'var(--text-s)' }}>
-                    {s.reservedQuantity}
-                  </span>
-                </td>
-                <td className="px-4 py-2">
-                  <span className={cn('text-sm font-medium',
-                    s.availableQuantity <= 0 ? 'text-red-500' : s.availableQuantity <= 5 ? 'text-yellow-600' : '')}>
-                    {s.availableQuantity}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {filtreVar && (
-          <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onChange={setPage} />
-        )}
-      </div>
+          </div>
+        ) : undefined}
+        rows={filtreVar ? (stockPage?.items ?? []) : []}
+        totalCount={filtreVar ? totalCount : 0}
+        loading={filtreVar && sLoading}
+        fetching={filtreVar && isFetching}
+        error={error ? errText(error) : null}
+        empty={filtreVar ? 'Stok kaydı bulunamadı.' : 'Ürün kodu/adı/barkod arayın veya bir depo seçin — sonuçlar burada listelenir.'}
+        minWidth={760}
+        export={{ endpoint: '/inventory/stocks/admin-list/export', named, fallbackFileName: 'stok.xlsx' }}
+      />
 
       {/* Adjust Modal */}
       <Modal open={adjustOpen} onClose={() => { setAdjustOpen(false); resetAdjustForm() }} title="Stok Hareketi">

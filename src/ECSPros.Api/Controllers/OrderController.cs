@@ -227,11 +227,26 @@ public class OrderController : ControllerBase
     /// <summary>İade taleplerini listeler.</summary>
     [HttpGet("returns")]
     public async Task<IActionResult> GetReturns(
-        [FromQuery] Guid? orderId, [FromQuery] Guid? memberId, [FromQuery] string? status,
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        [FromQuery] Guid? orderId, [FromQuery] Guid? memberId, [FromQuery] string? status, [FromQuery] string? search = null,
+        CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetReturnsQuery(orderId, memberId, status, page, pageSize), ct);
+        // DataGrid F4: page/pageSize/search/sort/dir/f.* (ReturnGrid.Schema beyaz listesi)
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetReturnsQuery(orderId, memberId, status, grid.Page, grid.PageSize, search, grid), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>İadeleri Excel'e aktarır (DataGrid F4): gövde search/sort/dir/filters/columns + named: status, orderId, memberId.</summary>
+    [HttpPost("returns/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportReturns([FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<OrderController> logger, CancellationToken ct)
+    {
+        var filters = new ReturnListFilters(ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "orderId"),
+            ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "memberId"), body.NamedValue("status"), body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "returns", "iadeler", "İadeler",
+            ECSPros.Api.Grid.ReturnExportColumns.All, max => _mediator.Send(new ExportReturnsQuery(filters, body.ToGridRequest(), max), ct), ct);
     }
 
     /// <summary>İade talebi detayını döner.</summary>
@@ -307,11 +322,25 @@ public class OrderController : ControllerBase
     /// <summary>Fatura listesi.</summary>
     [HttpGet("invoices")]
     public async Task<IActionResult> GetInvoices(
-        [FromQuery] Guid? orderId, [FromQuery] string? status,
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        [FromQuery] Guid? orderId, [FromQuery] string? status, [FromQuery] string? search = null,
+        CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetInvoicesQuery(orderId, status, page, pageSize), ct);
+        // DataGrid F4: page/pageSize/search/sort/dir/f.* (InvoiceGrid.Schema beyaz listesi)
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetInvoicesQuery(orderId, status, grid.Page, grid.PageSize, search, grid), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Faturaları Excel'e aktarır (DataGrid F4): gövde search/sort/dir/filters/columns + named: status, orderId.</summary>
+    [HttpPost("invoices/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportInvoices([FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<OrderController> logger, CancellationToken ct)
+    {
+        var filters = new InvoiceListFilters(ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "orderId"), body.NamedValue("status"), body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "invoices", "faturalar", "Faturalar",
+            ECSPros.Api.Grid.InvoiceExportColumns.All, max => _mediator.Send(new ExportInvoicesQuery(filters, body.ToGridRequest(), max), ct), ct);
     }
 
     /// <summary>Sipariş için fatura oluşturur.</summary>

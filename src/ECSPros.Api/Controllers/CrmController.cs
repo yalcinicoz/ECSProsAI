@@ -40,8 +40,27 @@ public class CrmController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetMembersQuery(search, activeOnly, page, pageSize), ct);
+        // DataGrid F4 (2026-09-08): sort/dir + f.* filtreleri (MemberGrid.Schema beyaz listesi); page/pageSize merkezi clamp (1..250).
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetMembersQuery(search, activeOnly, grid.Page, grid.PageSize, grid), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>
+    /// Üyeleri Excel'e aktarır (DataGrid F4, plan §2.8): gövdede aynı filtre modeli (search/sort/dir/filters + named: activeOnly)
+    /// + kolon listesi (boş = tümü). Sayfalama uygulanmaz; tavan Grid:ExportMaxRows, kullanıcı bazlı dakikada Grid:ExportPerMinute.
+    /// </summary>
+    [HttpPost("members/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportMembers([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<CrmController> logger, CancellationToken ct)
+    {
+        var grid = body.ToGridRequest();
+        var filters = new MemberListFilters(grid.Search, ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "activeOnly") ?? false);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "members", "uyeler", "Üyeler",
+            ECSPros.Api.Grid.MemberExportColumns.All,
+            max => _mediator.Send(new ExportMembersQuery(filters, grid, max), ct), ct);
     }
 
     /// <summary>Üye detayını döner.</summary>

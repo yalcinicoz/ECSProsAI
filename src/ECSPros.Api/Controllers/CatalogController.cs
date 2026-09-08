@@ -75,8 +75,29 @@ public class CatalogController : ControllerBase
         [FromQuery] string? sort = null,
         CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetProductsQuery(search, productGroupId, activeOnly, page, pageSize, sort), ct);
+        // DataGrid F4 (2026-09-08): sort/dir + f.* filtreleri (ProductGrid.Schema beyaz listesi); page/pageSize merkezi clamp (1..250).
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetProductsQuery(search, productGroupId, activeOnly, grid.Page, grid.PageSize, sort, grid), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>
+    /// Ürünleri Excel'e aktarır (DataGrid F4, plan §2.8): gövdede aynı filtre modeli (search/sort/dir/filters + named:
+    /// activeOnly, productGroupId, sort[legacy]) + kolon listesi (boş = tümü). Sayfalama uygulanmaz; tavan Grid:ExportMaxRows,
+    /// kullanıcı bazlı dakikada Grid:ExportPerMinute.
+    /// </summary>
+    [HttpPost("products/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportProducts([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<CatalogController> logger, CancellationToken ct)
+    {
+        var grid = body.ToGridRequest();
+        var filters = new ProductListFilters(grid.Search, ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "productGroupId"),
+            ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "activeOnly") ?? false);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "products", "urunler", "Ürünler",
+            ECSPros.Api.Grid.ProductExportColumns.All,
+            max => _mediator.Send(new ExportProductsQuery(filters, grid, max, body.NamedValue("sort")), ct), ct);
     }
 
     /// <summary>Yeni ürün oluşturur.</summary>

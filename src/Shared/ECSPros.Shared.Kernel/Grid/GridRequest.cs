@@ -71,3 +71,6 @@ public sealed class GridExportRequest
 
 /// <summary>Geçersiz grid isteği (bilinmeyen alan/operatör/değer). ArgumentException türevi → GlobalExceptionMiddleware 400 döner.</summary>
 public sealed class GridException(string message) : ArgumentException(message);
+
+/// <summary>Genel export kaynağı (handler → controller): sayfalamasız sıralı sorgu + toplam (tavan kontrolü). Sorgu çağıranın scope'unda tüketilir.</summary>
+public record GridExportSource<TRow>(int Count, IQueryable<TRow> Rows);

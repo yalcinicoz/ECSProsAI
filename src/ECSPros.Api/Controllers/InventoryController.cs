@@ -167,10 +167,27 @@ public class InventoryController : ControllerBase
         [FromQuery] Guid? binId = null,
         CancellationToken ct = default)
     {
+        // DataGrid F4 (2026-09-08): sort/dir + f.* (StockGrid.Schema beyaz listesi); page/pageSize merkezi clamp
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 30);
         var result = await _mediator.Send(new ECSPros.Api.Handlers.GetStocksAdminQuery(
-            search, warehouseId, availableOnly, page, pageSize, variantId, sectionId, binId), ct);
+            search, warehouseId, availableOnly, grid.Page, grid.PageSize, variantId, sectionId, binId, grid), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Stok listesini Excel'e aktarır (DataGrid F4): gövdede aynı filtre modeli (search/sort/dir/filters + named: warehouseId,
+    /// availableOnly, variantId, sectionId, binId) + kolon listesi. Ürün/depo adları satır satır zenginleştirilir (parti 500).</summary>
+    [HttpPost("stocks/admin-list/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportStocksAdmin([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<InventoryController> logger, CancellationToken ct)
+    {
+        var K = ECSPros.Api.Grid.GridExportEndpoint.Kimlik;
+        var filters = new ECSPros.Api.Grid.StockListFilters(body.Search, K(body, "warehouseId"),
+            ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "availableOnly") ?? false, K(body, "variantId"), K(body, "sectionId"), K(body, "binId"));
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "stocks", "stok", "Stok",
+            ECSPros.Api.Grid.StockExportColumns.All, max => _mediator.Send(new ECSPros.Api.Grid.ExportStocksQuery(filters, body.ToGridRequest(), max), ct), ct);
     }
 
     /// <summary>Arama sonucundan türetilen ikincil filtre seçenekleri: bulunan ürünün
@@ -186,7 +203,7 @@ public class InventoryController : ControllerBase
         CancellationToken ct = default)
     {
         var result = await _mediator.Send(new ECSPros.Api.Handlers.GetStocksAdminFacetsQuery(
-            search, warehouseId, availableOnly, variantId, sectionId, binId), ct);
+            search, warehouseId, availableOnly, variantId, sectionId, binId, ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query)), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
     }

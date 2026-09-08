@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
 import { RETURN_STATUS_MAP } from './orderConstants'
+import { DataGrid, useGridState, type GridColumn, type GridFilterField } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 
 const TABS = [
   { key: 'requested', label: 'Talep Edilen' },
@@ -163,105 +165,84 @@ function ReasonsModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-// ── İade listesi ──────────────────────────────────────────────────────────────
+// ── İade listesi — DataGrid F4: sekme ?tab= (requested varsayılan), filtre/arama/sıralama URL'de ──
+const RETURN_EXTRA_FILTERS: GridFilterField[] = [
+  { key: 'refundStatus', label: 'Geri ödeme durumu', type: 'text', ops: ['eq', 'contains'] },
+  { key: 'refundMethod', label: 'Geri ödeme yöntemi', type: 'text', ops: ['eq', 'contains'] },
+  { key: 'trackingNumber', label: 'Kargo takip no', type: 'text' },
+  { key: 'cargoReturnCode', label: 'Kargo iade kodu', type: 'text' },
+  { key: 'cargoReceivedAt', label: 'Teslim alınma tarihi', type: 'date' },
+]
+
 export function ReturnsPage() {
   const navigate = useNavigate()
-  const [tab, setTab] = useState('requested')
-  const [page, setPage] = useState(1)
+  const grid = useGridState('returns', { defaultPageSize: 20, defaultSort: 'createdAt', defaultDir: 'desc' })
+  const [sp] = useSearchParams()
+  const tab = sp.get('tab') ?? 'requested'
   const [reasonsOpen, setReasonsOpen] = useState(false)
 
-  const { data, isLoading } = useQuery<PagedResult<ReturnSummary>>({
-    queryKey: ['returns', tab, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: String(page), pageSize: '20' })
-      if (tab) params.set('status', tab)
-      return (await api.get(`/orders/returns?${params}`)).data.data
-    },
+  const { data, isLoading, isFetching, error } = useQuery<PagedResult<ReturnSummary>>({
+    queryKey: ['returns', tab, ...grid.queryKey],
+    queryFn: async () => (await api.get(`/orders/returns?${grid.toParams({ status: tab !== 'all' ? tab : undefined })}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
   const returns = data?.items ?? []
   const totalCount = data?.totalCount ?? 0
-  const totalPages = Math.ceil(totalCount / 20)
+  const switchTab = (key: string) => grid.mutate(n => { if (key === 'requested') n.delete('tab'); else n.set('tab', key) })
+
+  const columns: GridColumn<ReturnSummary>[] = [
+    { key: 'returnNumber', header: 'İADE NO', frozen: true, lockVisible: true, sortable: true, minWidth: 140,
+      cell: r => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{r.returnNumber}</code> },
+    { key: 'returnType', header: 'TİP', priority: 3, cell: r => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{r.returnType === 'refund' ? 'İade' : r.returnType}</span> },
+    { key: 'refundAmount', header: 'TUTAR', sortable: true, align: 'right', priority: 1, filter: { type: 'number', label: 'Tutar' },
+      cell: r => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{r.refundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span> },
+    { key: 'refundStatus', header: 'GERİ ÖDEME', sortable: true, priority: 2,
+      cell: r => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{r.refundMethod}{r.refundStatus ? ` · ${r.refundStatus}` : ''}</span> },
+    { key: 'status', header: 'DURUM', lockVisible: true, sortable: true, priority: 1,
+      cell: r => { const st = RETURN_STATUS_MAP[r.status] ?? { label: r.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> } },
+    { key: 'cargoReturnCode', header: 'KARGO İADE KODU', priority: 3, defaultVisible: false, cell: r => <span className="text-xs font-mono" style={{ color: 'var(--text-s)' }}>{r.cargoReturnCode ?? '—'}</span> },
+    { key: 'createdAt', header: 'TARİH', sortable: true, priority: 2, filter: { type: 'date', label: 'Tarih', quick: true },
+      cell: r => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(r.createdAt).toLocaleDateString('tr-TR')}</span> },
+    { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
+  ]
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>İadeler</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{totalCount} kayıt</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{totalCount.toLocaleString('tr-TR')} kayıt{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}</p>
         </div>
         <Button size="sm" variant="secondary" onClick={() => setReasonsOpen(true)}>İade Nedenleri</Button>
       </div>
 
       <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        {TABS.map(t => (
-          <button key={t.key} className={cn('stab', tab === t.key && 'active')}
-            onClick={() => { setTab(t.key); setPage(1) }}>
-            {t.label}
-          </button>
-        ))}
+        {TABS.map(t => {
+          const key = t.key === '' ? 'all' : t.key
+          return (
+            <button key={key} className={cn('stab', tab === key && 'active')} onClick={() => switchTab(key)}>{t.label}</button>
+          )
+        })}
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['İADE NO', 'TİP', 'TUTAR', 'GERİ ÖDEME', 'DURUM', 'TARİH', ''].map(h => (
-                <th key={h} className={`px-4 py-3 text-xs font-semibold ${h === '' ? 'w-20' : 'text-left'}`}
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor...</td></tr>
-            )}
-            {!isLoading && returns.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>İade bulunamadı.</td></tr>
-            )}
-            {returns.map(r => {
-              const st = RETURN_STATUS_MAP[r.status] ?? { label: r.status, variant: 'neutral' as const }
-              return (
-                <tr key={r.id} onClick={() => navigate(`/orders/returns/${r.id}`)}
-                  className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                  style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-4 py-3">
-                    <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{r.returnNumber}</code>
-                  </td>
-                  <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-m)' }}>
-                    {r.returnType === 'refund' ? 'İade' : r.returnType}
-                  </td>
-                  <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text)' }}>
-                    {r.refundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
-                  </td>
-                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-s)' }}>
-                    {r.refundMethod}{r.refundStatus ? ` · ${r.refundStatus}` : ''}
-                  </td>
-                  <td className="px-4 py-3"><Badge variant={st.variant}>{st.label}</Badge></td>
-                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-s)' }}>
-                    {new Date(r.createdAt).toLocaleDateString('tr-TR')}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-            style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>← Önceki</button>
-          <span className="text-sm" style={{ color: 'var(--text-s)' }}>{page} / {totalPages}</span>
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-            style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Sonraki →</button>
-        </div>
-      )}
+      <DataGrid<ReturnSummary>
+        gridId="returns"
+        grid={grid}
+        columns={columns}
+        extraFilters={RETURN_EXTRA_FILTERS}
+        search={{ placeholder: 'İade no, kargo takip no, kargo iade kodu…' }}
+        rows={returns}
+        totalCount={totalCount}
+        loading={isLoading}
+        fetching={isFetching}
+        error={error ? errText(error) : null}
+        onRowClick={r => navigate(`/orders/returns/${r.id}`)}
+        empty="İade bulunamadı."
+        minWidth={760}
+        export={{ endpoint: '/orders/returns/export', named: () => ({ status: tab !== 'all' ? tab : undefined }), fallbackFileName: 'iadeler.xlsx' }}
+      />
 
       {reasonsOpen && <ReasonsModal onClose={() => setReasonsOpen(false)} />}
     </div>

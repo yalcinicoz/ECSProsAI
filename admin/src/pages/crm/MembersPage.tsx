@@ -1,9 +1,13 @@
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
+import { errText } from '@/components/ui/DataTable.utils'
+import { DataGrid, useGridState, type GridColumn, type GridFilterField } from '@/components/grid'
+
+// Üyeler — DataGrid göçü (docs/datagrid-standardi-plani.md F4). Aktif/Tümü sekmesi `?tab=` ile URL'de (activeOnly named parametresi
+// korunur); filtre/arama/sıralama/sayfa URL'de, kolon tercihleri localStorage'da. Sunucu beyaz listesi: MemberGrid.Schema.
 
 export interface MemberSummary {
   id: string
@@ -23,109 +27,92 @@ interface PagedResult<T> {
   pageSize: number
 }
 
+const GENDER_OPTIONS = [
+  { value: 'male', label: 'Erkek' },
+  { value: 'female', label: 'Kadın' },
+  { value: 'unisex', label: 'Belirtilmemiş' },
+  { value: 'none', label: 'Boş' },
+]
+
+const EXTRA_FILTERS: GridFilterField[] = [
+  { key: 'isRegistered', label: 'Kayıtlı üye', type: 'boolean', quick: true },
+  { key: 'isEmailVerified', label: 'E-posta doğrulandı', type: 'boolean' },
+  { key: 'isPhoneVerified', label: 'Telefon doğrulandı', type: 'boolean' },
+  { key: 'gender', label: 'Cinsiyet', type: 'enum', multiple: true, options: GENDER_OPTIONS },
+  { key: 'companyName', label: 'Şirket', type: 'text' },
+  { key: 'taxNumber', label: 'Vergi no', type: 'text', ops: ['contains', 'startswith', 'eq'] },
+  { key: 'lastLoginAt', label: 'Son giriş', type: 'date' },
+  { key: 'legacyMemberId', label: 'Eski üye no', type: 'number' },
+]
+
 export function MembersPage() {
   const navigate = useNavigate()
-  const [tab, setTab] = useState<'active' | 'all'>('active')
-  const [search, setSearch] = useState('')
-  const [appliedSearch, setAppliedSearch] = useState('')
-  const [page, setPage] = useState(1)
+  const grid = useGridState('members', { defaultPageSize: 20, defaultSort: 'createdAt', defaultDir: 'desc' })
+  const [sp] = useSearchParams()
+  const tab: 'active' | 'all' = sp.get('tab') === 'all' ? 'all' : 'active'
+  const activeOnly = tab === 'active'
 
-  const { data, isLoading } = useQuery<PagedResult<MemberSummary>>({
-    queryKey: ['members', tab, appliedSearch, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: String(page), pageSize: '20' })
-      params.set('activeOnly', tab === 'active' ? 'true' : 'false')
-      if (appliedSearch) params.set('search', appliedSearch)
-      return (await api.get(`/crm/members?${params}`)).data.data
-    },
+  const { data, isLoading, isFetching, error } = useQuery<PagedResult<MemberSummary>>({
+    queryKey: ['members', tab, ...grid.queryKey],
+    queryFn: async () => (await api.get(`/crm/members?${grid.toParams({ activeOnly: String(activeOnly) })}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
   const members = data?.items ?? []
-  const totalPages = Math.ceil((data?.totalCount ?? 0) / 20)
+  const totalCount = data?.totalCount ?? 0
 
-  function applySearch() {
-    setAppliedSearch(search.trim())
-    setPage(1)
-  }
+  const columns: GridColumn<MemberSummary>[] = [
+    { key: 'name', header: 'AD SOYAD', frozen: true, lockVisible: true, priority: 1, minWidth: 160,
+      cell: m => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{m.firstName} {m.lastName}</span> },
+    { key: 'email', header: 'E-POSTA', sortable: true, priority: 1, filter: { type: 'text', label: 'E-posta' },
+      cell: m => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{m.email ?? '—'}</span> },
+    { key: 'phone', header: 'TELEFON', sortable: true, priority: 2, filter: { type: 'text', label: 'Telefon', ops: ['contains', 'startswith'] },
+      cell: m => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{m.phone ?? '—'}</span> },
+    { key: 'isRegistered', header: 'ÜYELİK', sortable: true, priority: 3,
+      cell: m => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{m.isRegistered ? 'Kayıtlı' : 'Misafir'}</span> },
+    { key: 'isActive', header: 'DURUM', sortable: true, priority: 1, lockVisible: true,
+      cell: m => <Badge variant={m.isActive ? 'success' : 'neutral'}>{m.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'createdAt', header: 'KAYIT', sortable: true, priority: 2, filter: { type: 'date', label: 'Kayıt tarihi', quick: true },
+      cell: m => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(m.createdAt).toLocaleDateString('tr-TR')}</span> },
+    { key: 'firstName', header: 'AD', sortable: true, priority: 3, defaultVisible: false, filter: { type: 'text', label: 'Ad' }, cell: m => m.firstName },
+    { key: 'lastName', header: 'SOYAD', sortable: true, priority: 3, defaultVisible: false, filter: { type: 'text', label: 'Soyad' }, cell: m => m.lastName },
+    { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
+  ]
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Üyeler</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{data?.totalCount ?? 0} kayıt</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>
+            {totalCount.toLocaleString('tr-TR')} kayıt{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}
+          </p>
         </div>
       </div>
 
+      {/* Aktif / Tümü — URL ?tab=all (aktif = parametresiz) */}
       <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        <button className={cn('stab', tab === 'active' && 'active')} onClick={() => { setTab('active'); setPage(1) }}>Aktif</button>
-        <button className={cn('stab', tab === 'all' && 'active')} onClick={() => { setTab('all'); setPage(1) }}>Tümü</button>
+        <button className={cn('stab', tab === 'active' && 'active')} onClick={() => grid.mutate(n => n.delete('tab'))}>Aktif</button>
+        <button className={cn('stab', tab === 'all' && 'active')} onClick={() => grid.mutate(n => n.set('tab', 'all'))}>Tümü</button>
       </div>
 
-      <div className="flex items-center gap-2 mb-4">
-        <input className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 260 }}
-          placeholder="Ad, e-posta veya telefon ara…" value={search}
-          onChange={e => setSearch(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') applySearch() }} />
-        <button onClick={applySearch} className="px-3 py-1.5 rounded-lg text-sm"
-          style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Ara</button>
-      </div>
-
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['AD SOYAD', 'E-POSTA', 'TELEFON', 'ÜYELİK', 'DURUM', 'KAYIT', ''].map(h => (
-                <th key={h} className={`px-4 py-3 text-xs font-semibold ${h === '' ? 'w-20' : 'text-left'}`}
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor...</td></tr>
-            )}
-            {!isLoading && members.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Üye bulunamadı.</td></tr>
-            )}
-            {members.map(m => (
-              <tr key={m.id} onClick={() => navigate(`/crm/members/${m.id}`)}
-                className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text)' }}>
-                  {m.firstName} {m.lastName}
-                </td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-m)' }}>{m.email ?? '—'}</td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-m)' }}>{m.phone ?? '—'}</td>
-                <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-s)' }}>
-                  {m.isRegistered ? 'Kayıtlı' : 'Misafir'}
-                </td>
-                <td className="px-4 py-3">
-                  <Badge variant={m.isActive ? 'success' : 'neutral'}>{m.isActive ? 'Aktif' : 'Pasif'}</Badge>
-                </td>
-                <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-s)' }}>
-                  {new Date(m.createdAt).toLocaleDateString('tr-TR')}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-            style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>← Önceki</button>
-          <span className="text-sm" style={{ color: 'var(--text-s)' }}>{page} / {totalPages}</span>
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-            style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Sonraki →</button>
-        </div>
-      )}
+      <DataGrid<MemberSummary>
+        gridId="members"
+        grid={grid}
+        columns={columns}
+        extraFilters={EXTRA_FILTERS}
+        search={{ placeholder: 'Ad, soyad, e-posta, telefon, şirket…' }}
+        rows={members}
+        totalCount={totalCount}
+        loading={isLoading}
+        fetching={isFetching}
+        error={error ? errText(error) : null}
+        onRowClick={m => navigate(`/crm/members/${m.id}`)}
+        empty="Üye bulunamadı."
+        minWidth={760}
+        export={{ endpoint: '/crm/members/export', named: () => ({ activeOnly: String(activeOnly) }), fallbackFileName: 'uyeler.xlsx' }}
+      />
     </div>
   )
 }

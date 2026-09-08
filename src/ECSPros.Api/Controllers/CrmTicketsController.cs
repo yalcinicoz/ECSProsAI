@@ -35,8 +35,31 @@ public class CrmTicketsController(IMediator mediator, ILogger<CrmTicketsControll
         [FromQuery] bool includeHidden = false, [FromQuery] string? sort = null, CancellationToken ct = default)
     {
         var (uid, _) = MevcutKullanici();
-        return Sonuc(await mediator.Send(new GetTicketsQuery(uid, page, pageSize, status, type, subjectId, createdBy, from, to, trackingNo,
-            customer, orderNumber, search, memberId, orderId, taggedMe, unreadByMe, includeHidden, sort), ct));
+        // DataGrid F4 (2026-09-08): sort/dir + f.* (TicketGrid.Schema beyaz listesi); page/pageSize merkezi clamp
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        return Sonuc(await mediator.Send(new GetTicketsQuery(uid, grid.Page, grid.PageSize, status, type, subjectId, createdBy, from, to, trackingNo,
+            customer, orderNumber, search, memberId, orderId, taggedMe, unreadByMe, includeHidden, sort, grid), ct));
+    }
+
+    /// <summary>Talepleri Excel'e aktarır (DataGrid F4): gövdede aynı filtre modeli (search/sort/dir/filters + named: status, type,
+    /// subjectId, createdBy, from, to, trackingNo, customer, orderNumber, memberId, orderId, taggedMe, unreadByMe, includeHidden, sort) + kolon listesi.</summary>
+    [HttpPost("export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> Export([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam, CancellationToken ct)
+    {
+        var (uid, _) = MevcutKullanici();
+        var E = ECSPros.Api.Grid.GridExportEndpoint.Tarih; // kısaltma
+        var filters = new TicketListFilters(
+            body.NamedValue("status"), body.NamedValue("type"), ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "subjectId"),
+            ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "createdBy"), E(body, "from"), E(body, "to"),
+            long.TryParse(body.NamedValue("trackingNo"), out var tn) ? tn : null,
+            body.NamedValue("customer"), body.NamedValue("orderNumber"), body.Search,
+            ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "memberId"), ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "orderId"),
+            ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "taggedMe") ?? false, ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "unreadByMe") ?? false,
+            ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "includeHidden") ?? false);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "tickets", "talepler", "Talepler",
+            ECSPros.Api.Grid.TicketExportColumns.All, max => mediator.Send(new ExportTicketsQuery(uid, filters, body.ToGridRequest(), max, body.NamedValue("sort")), ct), ct);
     }
 
     [HttpGet("{trackingNo:long}")]

@@ -16,17 +16,12 @@ public class GetInvoicesQueryHandler : IRequestHandler<GetInvoicesQuery, Result<
 
     public async Task<Result<PagedResult<InvoiceListDto>>> Handle(GetInvoicesQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.Invoices.AsQueryable();
-
-        if (request.OrderId.HasValue)
-            query = query.Where(i => i.OrderId == request.OrderId.Value);
-
-        if (!string.IsNullOrEmpty(request.Status))
-            query = query.Where(i => i.Status == request.Status);
+        // DataGrid F4 (2026-09-08): adlandırılmış filtreler + arama + grid filtreleri/sıralaması tek yerden (InvoiceGrid)
+        var query = InvoiceGrid.ApplyAll(_context.Invoices.AsQueryable(),
+            new InvoiceListFilters(request.OrderId, request.Status, request.Search), request.Grid);
 
         var total = await query.CountAsync(cancellationToken);
-        var items = await query
-            .OrderByDescending(i => i.CreatedAt)
+        var items = await InvoiceGrid.Schema.ApplySort(query, request.Grid)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(i => new InvoiceListDto(

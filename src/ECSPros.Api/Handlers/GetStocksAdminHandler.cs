@@ -2,6 +2,7 @@ using ECSPros.Catalog.Application.Services;
 using ECSPros.Inventory.Application.Services;
 using ECSPros.Shared.Contracts;
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,7 +23,9 @@ public record GetStocksAdminQuery(
     // İkincil filtre (arama sonucundan türetilen facet seçimleri)
     Guid? VariantId = null,
     Guid? SectionId = null,
-    Guid? BinId = null) : IRequest<Result<PagedResult<StockAdminRowDto>>>;
+    Guid? BinId = null,
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<StockAdminRowDto>>>;
+    // Grid (2026-09-08, DataGrid F4): beyaz listeli f.* filtreleri + sort/dir (StockGrid.Schema); null → eski davranış
 
 /// <summary>Arama sonucundan türetilen ikincil filtre seçenekleri: bulunan ürünün varyantları
 /// ve stoğun bulunduğu depo/kısım/raflar (sayaçlı). ParentId: kısım→depo, raf→kısım
@@ -32,7 +35,7 @@ public record GetStocksAdminFacetsQuery(
     // Mevcut ikincil seçimler: her facet boyutu DİĞER seçimlerle daraltılır (klasik facet
     // kuralı) — yoksa sayaçlar listeyle tutmaz (örn. varyant seçiliyken raf sayıları tüm
     // varyantların raflarını gösterir, seçilen raf boş liste döndürebilirdi).
-    Guid? VariantId = null, Guid? SectionId = null, Guid? BinId = null) : IRequest<Result<StockAdminFacetsDto>>;
+    Guid? VariantId = null, Guid? SectionId = null, Guid? BinId = null, GridRequest? Grid = null) : IRequest<Result<StockAdminFacetsDto>>;
 
 public record StockFacetOption(Guid Id, string Label, int Count, Guid? ParentId = null);
 
@@ -86,12 +89,13 @@ public class GetStocksAdminHandler(
         if (request.VariantId.HasValue) query = query.Where(st => st.VariantId == request.VariantId);
         if (request.SectionId.HasValue) query = query.Where(st => st.SectionId == request.SectionId);
         if (request.BinId.HasValue) query = query.Where(st => st.BinId == request.BinId);
+        // DataGrid F4: beyaz listeli grid filtreleri (StockGrid.Schema)
+        query = ECSPros.Api.Grid.StockGrid.Schema.ApplyFilters(query, request.Grid);
 
         var total = await query.CountAsync(ct);
 
-        // Aynı varyantın rafları alt alta gelsin diye varyant + kısım + raf sırası.
-        var rows = await query
-            .OrderBy(st => st.VariantId).ThenBy(st => st.SectionId).ThenBy(st => st.BinId)
+        // Grid sıralaması varsa o; yoksa aynı varyantın rafları alt alta gelsin diye varyant + kısım + raf sırası.
+        var rows = await ECSPros.Api.Grid.StockGrid.ApplySortCompat(query, request.Grid)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(st => new { st.Id, st.VariantId, st.WarehouseId, st.SectionId, st.BinId, st.Quantity, st.ReservedQuantity })
@@ -179,6 +183,7 @@ public class GetStocksAdminFacetsHandler(
         var query = invDb.Stocks.AsNoTracking().Where(st => variantIds.Contains(st.VariantId));
         if (request.WarehouseId.HasValue) query = query.Where(st => st.WarehouseId == request.WarehouseId);
         if (request.AvailableOnly) query = query.Where(st => st.Quantity > st.ReservedQuantity);
+        query = ECSPros.Api.Grid.StockGrid.Schema.ApplyFilters(query, request.Grid);   // DataGrid F4: sayaçlar listeyle tutarlı
 
         var rows = await query
             .Select(st => new { st.VariantId, st.WarehouseId, st.SectionId, st.BinId })

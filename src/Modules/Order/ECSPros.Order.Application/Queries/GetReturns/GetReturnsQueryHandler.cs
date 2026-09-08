@@ -16,21 +16,13 @@ public class GetReturnsQueryHandler : IRequestHandler<GetReturnsQuery, Result<Pa
 
     public async Task<Result<PagedResult<ReturnListDto>>> Handle(GetReturnsQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.Returns.AsQueryable();
-
-        if (request.OrderId.HasValue)
-            query = query.Where(r => r.OrderId == request.OrderId.Value);
-
-        if (request.MemberId.HasValue)
-            query = query.Where(r => r.MemberId == request.MemberId.Value);
-
-        if (!string.IsNullOrEmpty(request.Status))
-            query = query.Where(r => r.Status == request.Status);
+        // DataGrid F4 (2026-09-08): adlandırılmış filtreler + arama + grid filtreleri/sıralaması tek yerden (ReturnGrid)
+        var query = ReturnGrid.ApplyAll(_context.Returns.AsQueryable(),
+            new ReturnListFilters(request.OrderId, request.MemberId, request.Status, request.Search), request.Grid);
 
         var total = await query.CountAsync(cancellationToken);
 
-        var items = await query
-            .OrderByDescending(r => r.CreatedAt)
+        var items = await ReturnGrid.Schema.ApplySort(query, request.Grid)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(r => new ReturnListDto(

@@ -26,6 +26,10 @@ public sealed class GridSchema<T>
 
     public IReadOnlyCollection<string> SortableFields => _sorts.Keys;
     public IReadOnlyCollection<string> FilterableFields => _filters.Keys;
+    /// <summary>Alan tipi (testler/istemci meta için); bilinmeyen alan → null.</summary>
+    public GridFieldType? FieldTypeOf(string key) => _filters.TryGetValue(key, out var f) ? f.Type : null;
+    /// <summary>Enum alanının izinli değerleri (tanımlı değilse null).</summary>
+    public IReadOnlyCollection<string>? AllowedValuesOf(string key) => _filters.TryGetValue(key, out var f) ? f.Allowed?.ToList() : null;
 
     // ── tanım ──
     public GridSchema<T> Sort<TKey>(string key, Expression<Func<T, TKey>> selector) { _sorts[key] = selector; return this; }

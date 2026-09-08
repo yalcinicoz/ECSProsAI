@@ -1,10 +1,14 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
+import { DataGrid, useGridState, type GridColumn, type GridFilterField } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
+
+// Kampanyalar — DataGrid F4: `page` parametresiyle sayfalı uç (CampaignGrid.Schema); sekme ?tab=active|all (all varsayılan).
+// Ad (NameI18n jsonb) sıralanmaz/filtrelenmez; arama kod + rozet etiketi.
 
 interface CampaignType { id: string; nameI18n: Record<string, string> }
 interface Campaign {
@@ -12,75 +16,84 @@ interface Campaign {
   startsAt: string; endsAt?: string; isActive: boolean; priority: number
   fillType: string; campaignTypeId?: string; campaignTypeCode?: string
 }
+interface PagedResult<T> { items: T[]; totalCount: number; page: number; pageSize: number }
 
 const tr = (m?: Record<string, string> | null) => m?.['tr'] ?? Object.values(m ?? {})[0] ?? '—'
 const FILL_LABEL: Record<string, string> = { all: 'Tüm ürünler', manual: 'Manuel', filter: 'Filtre', mixed: 'Karma' }
 
+const EXTRA_FILTERS: GridFilterField[] = [
+  { key: 'isActive', label: 'Aktif', type: 'boolean', quick: true },
+  { key: 'fillType', label: 'Kapsam', type: 'enum', multiple: true, options: Object.entries(FILL_LABEL).map(([value, label]) => ({ value, label })) },
+  { key: 'priority', label: 'Öncelik', type: 'number' },
+  { key: 'endsAt', label: 'Bitiş', type: 'date' },
+  { key: 'badgeLabel', label: 'Rozet', type: 'text' },
+]
+
 export function CampaignsPage() {
   const navigate = useNavigate()
-  const [tab, setTab] = useState<'active' | 'all'>('all')
+  const grid = useGridState('campaigns', { defaultPageSize: 50, defaultSort: 'priority', defaultDir: 'desc' })
+  const [sp] = useSearchParams()
+  const tab = sp.get('tab') === 'active' ? 'active' : 'all'
 
-  const { data: campaigns = [], isLoading } = useQuery<Campaign[]>({
-    queryKey: ['campaigns', tab],
-    queryFn: async () => (await api.get(`/promotion/campaigns?activeOnly=${tab === 'active'}`)).data.data,
+  const { data, isLoading, isFetching, error } = useQuery<PagedResult<Campaign>>({
+    queryKey: ['campaigns', tab, ...grid.queryKey],
+    queryFn: async () => (await api.get(`/promotion/campaigns?${grid.toParams({ activeOnly: String(tab === 'active') })}`)).data.data,
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
   const { data: types = [] } = useQuery<CampaignType[]>({
     queryKey: ['campaign-types', 'all'],
     queryFn: async () => (await api.get('/promotion/campaign-types?activeOnly=false')).data.data,
   })
   const typeName = (tid?: string, tcode?: string) => tr(types.find(t => t.id === tid)?.nameI18n) ?? tcode ?? '—'
+  const campaigns = data?.items ?? []
+  const totalCount = data?.totalCount ?? 0
+  const switchTab = (key: 'active' | 'all') => grid.mutate(n => { if (key === 'all') n.delete('tab'); else n.set('tab', key) })
+
+  const columns: GridColumn<Campaign>[] = [
+    { key: 'code', header: 'KOD', frozen: true, lockVisible: true, sortable: true, minWidth: 120,
+      cell: c => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{c.code}</code> },
+    { key: 'name', header: 'AD', priority: 1, exportable: true, cell: c => <span className="text-sm" style={{ color: 'var(--text)' }}>{tr(c.nameI18n)}</span> },
+    { key: 'campaignTypeCode', header: 'TİP', priority: 2, cell: c => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{typeName(c.campaignTypeId, c.campaignTypeCode)}</span> },
+    { key: 'fillType', header: 'KAPSAM', priority: 3, cell: c => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{FILL_LABEL[c.fillType] ?? c.fillType}</span> },
+    { key: 'startsAt', header: 'TARİH', sortable: true, priority: 2, filter: { type: 'date', label: 'Başlangıç', quick: true },
+      cell: c => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(c.startsAt).toLocaleDateString('tr-TR')} → {c.endsAt ? new Date(c.endsAt).toLocaleDateString('tr-TR') : 'süresiz'}</span> },
+    { key: 'priority', header: 'ÖNCELİK', sortable: true, align: 'right', priority: 2, cell: c => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{c.priority}</span> },
+    { key: 'isActive', header: 'DURUM', lockVisible: true, sortable: true, priority: 1, cell: c => <Badge variant={c.isActive ? 'success' : 'neutral'}>{c.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'edit', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span> },
+  ]
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Kampanyalar</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{campaigns.length} kayıt</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{totalCount.toLocaleString('tr-TR')} kayıt{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}</p>
         </div>
         <Button size="sm" onClick={() => navigate('/promotion/campaigns/new')}>+ Yeni Kampanya</Button>
       </div>
 
       <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        <button className={cn('stab', tab === 'active' && 'active')} onClick={() => setTab('active')}>Yayında</button>
-        <button className={cn('stab', tab === 'all' && 'active')} onClick={() => setTab('all')}>Tümü</button>
+        <button className={cn('stab', tab === 'active' && 'active')} onClick={() => switchTab('active')}>Yayında</button>
+        <button className={cn('stab', tab === 'all' && 'active')} onClick={() => switchTab('all')}>Tümü</button>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['KOD', 'AD', 'TİP', 'KAPSAM', 'TARİH', 'ÖNCELİK', 'DURUM', ''].map(h => (
-                <th key={h} className={`px-4 py-3 text-xs font-semibold ${h === '' ? 'w-20' : 'text-left'}`}
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && <tr><td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor...</td></tr>}
-            {!isLoading && campaigns.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Kampanya yok. "+ Yeni Kampanya" ile tanımlayın.
-              </td></tr>
-            )}
-            {campaigns.map(camp => (
-              <tr key={camp.id} onClick={() => navigate(`/promotion/campaigns/${camp.id}`)}
-                className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="px-4 py-3"><code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{camp.code}</code></td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text)' }}>{tr(camp.nameI18n)}</td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-m)' }}>{typeName(camp.campaignTypeId, camp.campaignTypeCode)}</td>
-                <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-s)' }}>{FILL_LABEL[camp.fillType] ?? camp.fillType}</td>
-                <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-s)' }}>
-                  {new Date(camp.startsAt).toLocaleDateString('tr-TR')} → {camp.endsAt ? new Date(camp.endsAt).toLocaleDateString('tr-TR') : 'süresiz'}
-                </td>
-                <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-m)' }}>{camp.priority}</td>
-                <td className="px-4 py-3"><Badge variant={camp.isActive ? 'success' : 'neutral'}>{camp.isActive ? 'Aktif' : 'Pasif'}</Badge></td>
-                <td className="px-4 py-3 text-right"><span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataGrid<Campaign>
+        gridId="campaigns"
+        grid={grid}
+        columns={columns}
+        extraFilters={EXTRA_FILTERS}
+        search={{ placeholder: 'Kampanya kodu veya rozet etiketi…' }}
+        rows={campaigns}
+        totalCount={totalCount}
+        loading={isLoading}
+        fetching={isFetching}
+        error={error ? errText(error) : null}
+        onRowClick={c => navigate(`/promotion/campaigns/${c.id}`)}
+        empty={'Kampanya yok. "+ Yeni Kampanya" ile tanımlayın.'}
+        minWidth={820}
+        export={{ endpoint: '/promotion/campaigns/export', named: () => ({ activeOnly: String(tab === 'active') }), fallbackFileName: 'kampanyalar.xlsx' }}
+      />
     </div>
   )
 }

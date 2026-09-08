@@ -33,11 +33,30 @@ public class PromotionController : ControllerBase
     /// <summary>Kampanyaları listeler.</summary>
     [HttpGet("campaigns")]
     public async Task<IActionResult> GetCampaigns(
-        [FromQuery] bool activeOnly = true,
+        [FromQuery] bool activeOnly = true, [FromQuery] string? search = null,
         CancellationToken ct = default)
     {
+        // DataGrid F4 (2026-09-08): `page` parametresi varsa sayfalı+filtreli+sıralı (CampaignGrid.Schema); yoksa eski düz dizi (diğer çağıranlar bozulmaz)
+        if (Request.Query.ContainsKey("page"))
+        {
+            var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 50);
+            var paged = await _mediator.Send(new GetCampaignsGridQuery(new CampaignListFilters(activeOnly, search), grid), ct);
+            return Ok(new { success = true, data = paged.Value });
+        }
         var result = await _mediator.Send(new GetCampaignsQuery(activeOnly), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kampanyaları Excel'e aktarır (DataGrid F4): gövde search/sort/dir/filters/columns + named: activeOnly.</summary>
+    [HttpPost("campaigns/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportCampaigns([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<PromotionController> logger, CancellationToken ct)
+    {
+        var filters = new CampaignListFilters(ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "activeOnly") ?? false, body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "campaigns", "kampanyalar", "Kampanyalar",
+            ECSPros.Api.Grid.CampaignExportColumns.All, max => _mediator.Send(new ExportCampaignsQuery(filters, body.ToGridRequest(), max), ct), ct);
     }
 
     /// <summary>Kampanya detayı (düzenleme formu için — ürün kapsamı dahil).</summary>

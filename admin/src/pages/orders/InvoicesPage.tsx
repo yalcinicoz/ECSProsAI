@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
+import { DataGrid, useGridState, type GridColumn, type GridFilterField } from '@/components/grid'
+import { errText } from '@/components/ui/DataTable.utils'
 import { INVOICE_STATUS_MAP, INVOICE_TYPE_MAP, INVOICE_SOURCE_MAP } from './orderConstants'
 
 const TABS = [
@@ -248,108 +250,89 @@ function InvoiceModal({ invoice, onClose }: { invoice: InvoiceSummary; onClose: 
   )
 }
 
-// ── Fatura listesi ────────────────────────────────────────────────────────────
+// ── Fatura listesi — DataGrid F4 (docs/datagrid-standardi-plani.md): sekme ?tab= (created varsayılan), filtre/arama/sıralama URL'de ──
+const INVOICE_EXTRA_FILTERS: GridFilterField[] = [
+  { key: 'invoiceType', label: 'Tip', type: 'enum', multiple: true, quick: true, options: Object.entries(INVOICE_TYPE_MAP).map(([value, label]) => ({ value, label })) },
+  { key: 'numberSource', label: 'Numara kaynağı', type: 'enum', multiple: true, options: Object.entries(INVOICE_SOURCE_MAP).map(([value, label]) => ({ value, label })) },
+  { key: 'hasPdf', label: 'Entegratör PDF', type: 'boolean' },
+  { key: 'integratorStatus', label: 'Entegratör durumu', type: 'enum', multiple: true, options: Object.entries(INTEGRATOR_STATUS).map(([value, label]) => ({ value, label })) },
+  { key: 'taxNumber', label: 'Vergi no / TCKN', type: 'text', ops: ['contains', 'startswith'] },
+  { key: 'externalDocumentId', label: 'Dış belge no', type: 'text' },
+  { key: 'createdAt', label: 'Kayıt tarihi', type: 'date' },
+]
+
 export function InvoicesPage() {
-  const [tab, setTab] = useState('created')
-  const [page, setPage] = useState(1)
+  const grid = useGridState('invoices', { defaultPageSize: 20, defaultSort: 'createdAt', defaultDir: 'desc' })
+  const [sp] = useSearchParams()
+  const tab = sp.get('tab') ?? 'created'          // created | cancelled | '' (all) | queue
   const [selected, setSelected] = useState<InvoiceSummary | null>(null)
 
-  const { data, isLoading } = useQuery<PagedResult<InvoiceSummary>>({
-    queryKey: ['invoices', tab, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: String(page), pageSize: '20' })
-      if (tab) params.set('status', tab)
-      return (await api.get(`/orders/invoices?${params}`)).data.data
-    },
+  const { data, isLoading, isFetching, error } = useQuery<PagedResult<InvoiceSummary>>({
+    queryKey: ['invoices', tab, ...grid.queryKey],
+    queryFn: async () => (await api.get(`/orders/invoices?${grid.toParams({ status: tab && tab !== 'all' ? tab : undefined })}`)).data.data,
     enabled: tab !== 'queue',
+    placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
   const invoices = data?.items ?? []
   const totalCount = data?.totalCount ?? 0
-  const totalPages = Math.ceil(totalCount / 20)
+  const switchTab = (key: string) => grid.mutate(n => { if (key === 'created') n.delete('tab'); else n.set('tab', key) })
+
+  const columns: GridColumn<InvoiceSummary>[] = [
+    { key: 'invoiceNumber', header: 'FATURA NO', frozen: true, lockVisible: true, sortable: true, minWidth: 150,
+      cell: inv => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{inv.invoiceNumber}{inv.numberSource && inv.numberSource !== 'internal' && <Badge variant="neutral" className="ml-2">{INVOICE_SOURCE_MAP[inv.numberSource] ?? inv.numberSource}</Badge>}</code> },
+    { key: 'invoiceType', header: 'TİP', sortable: true, priority: 2, cell: inv => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{INVOICE_TYPE_MAP[inv.invoiceType] ?? inv.invoiceType}</span> },
+    { key: 'recipient', header: 'ALICI', frozen: true, sortable: true, priority: 1, filter: { type: 'text', label: 'Alıcı' },
+      cell: inv => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{inv.recipientName}</span> },
+    { key: 'total', header: 'TUTAR', sortable: true, align: 'right', priority: 1, filter: { type: 'number', label: 'Tutar' },
+      cell: inv => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{inv.grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span> },
+    { key: 'hasPdf', header: 'PDF', priority: 3, align: 'center', exportable: false, cell: inv => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{inv.hasIntegratorPdf ? '✓' : '—'}</span> },
+    { key: 'status', header: 'DURUM', lockVisible: true, sortable: true, priority: 1,
+      cell: inv => { const st = INVOICE_STATUS_MAP[inv.status] ?? { label: inv.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> } },
+    { key: 'integratorStatus', header: 'ENTEGRATÖR', priority: 3, defaultVisible: false, cell: inv => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{INTEGRATOR_STATUS[inv.integratorStatus] ?? inv.integratorStatus}</span> },
+    { key: 'invoiceDate', header: 'TARİH', sortable: true, priority: 2, filter: { type: 'date', label: 'Fatura tarihi', quick: true },
+      cell: inv => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(inv.invoiceDate).toLocaleDateString('tr-TR')}</span> },
+    { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
+  ]
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Faturalar</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{totalCount} kayıt</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{tab === 'queue' ? 'Gönderim kuyruğu' : `${totalCount.toLocaleString('tr-TR')} kayıt${grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}`}</p>
         </div>
         <Link to="/orders/invoice-series"><Button size="sm" variant="secondary">Fatura Serileri</Button></Link>
       </div>
 
       <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        {TABS.map(t => (
-          <button key={t.key} className={cn('stab', tab === t.key && 'active')}
-            onClick={() => { setTab(t.key); setPage(1) }}>{t.label}</button>
-        ))}
+        {TABS.map(t => {
+          const key = t.key === '' ? 'all' : t.key
+          return (
+            <button key={key} className={cn('stab', tab === key && 'active')} onClick={() => switchTab(key)}>{t.label}</button>
+          )
+        })}
       </div>
 
-      {tab === 'queue' ? <DispatchQueue /> : (<>
-      <div className="card overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              {['FATURA NO', 'TİP', 'ALICI', 'TUTAR', 'PDF', 'DURUM', 'TARİH', ''].map(h => (
-                <th key={h} className={`px-4 py-3 text-xs font-semibold ${h === '' ? 'w-20' : 'text-left'}`}
-                  style={{ color: 'var(--text-s)' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor...</td></tr>
-            )}
-            {!isLoading && invoices.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
-                Fatura bulunamadı. Fatura, sipariş detayındaki "Fatura Oluştur" ile kesilir.
-              </td></tr>
-            )}
-            {invoices.map(inv => {
-              const st = INVOICE_STATUS_MAP[inv.status] ?? { label: inv.status, variant: 'neutral' as const }
-              return (
-                <tr key={inv.id} onClick={() => setSelected(inv)}
-                  className="cursor-pointer hover:bg-[var(--surface2)] transition-colors"
-                  style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="px-4 py-3">
-                    <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{inv.invoiceNumber}{inv.numberSource && inv.numberSource !== 'internal' && <Badge variant="neutral" className="ml-2">{INVOICE_SOURCE_MAP[inv.numberSource] ?? inv.numberSource}</Badge>}</code>
-                  </td>
-                  <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-m)' }}>
-                    {INVOICE_TYPE_MAP[inv.invoiceType] ?? inv.invoiceType}
-                  </td>
-                  <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-m)' }}>{inv.recipientName}</td>
-                  <td className="px-4 py-3 text-sm font-medium" style={{ color: 'var(--text)' }}>
-                    {inv.grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
-                  </td>
-                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-s)' }}>
-                    {inv.hasIntegratorPdf ? '✓' : '—'}
-                  </td>
-                  <td className="px-4 py-3"><Badge variant={st.variant}>{st.label}</Badge></td>
-                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-s)' }}>
-                    {new Date(inv.invoiceDate).toLocaleDateString('tr-TR')}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-            style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>← Önceki</button>
-          <span className="text-sm" style={{ color: 'var(--text-s)' }}>{page} / {totalPages}</span>
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            className="px-3 py-1.5 rounded-lg text-sm disabled:opacity-40"
-            style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Sonraki →</button>
-        </div>
+      {tab === 'queue' ? <DispatchQueue /> : (
+        <DataGrid<InvoiceSummary>
+          gridId="invoices"
+          grid={grid}
+          columns={columns}
+          extraFilters={INVOICE_EXTRA_FILTERS}
+          search={{ placeholder: 'Fatura no, alıcı, vergi no, dış belge no…' }}
+          rows={invoices}
+          totalCount={totalCount}
+          loading={isLoading}
+          fetching={isFetching}
+          error={error ? errText(error) : null}
+          onRowClick={inv => setSelected(inv)}
+          empty={'Fatura bulunamadı. Fatura, sipariş detayındaki "Fatura Oluştur" ile kesilir.'}
+          minWidth={860}
+          export={{ endpoint: '/orders/invoices/export', named: () => ({ status: tab && tab !== 'all' ? tab : undefined }), fallbackFileName: 'faturalar.xlsx' }}
+        />
       )}
-      </>)}
 
       {selected && <InvoiceModal invoice={selected} onClose={() => setSelected(null)} />}
     </div>
