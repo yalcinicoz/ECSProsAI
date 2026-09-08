@@ -1,5 +1,7 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**2026-09-08 GitHub eşitleme + servis eşitleme:** origin/main (ekip arkadaşının ERP eşleme/Ortam önceliği/admin favoriler commit'leri 15963b8, b9d4b01, 66ff535) yerel main'e alındı, tek çakışma PROGRESS.md (iki taraf korundu), API Release build + admin tsc/build ✓, bekleyen migration YOK (15 bağlam DB ile eşit). `publish`/`publish-demo`/`publish-staging` aynı binary ile eşitlendi (appsettings*.json hariç; SHA eşit), `admin/dist` derlendi (nginx doğrudan servis ediyor) ⚠️ restart kullanıcıda: `ecspros`, `ecspros-staging`, `ecspros-demo`. Not: bu publish ekip arkadaşının ERP panel modu fail-closed davranışını da canlıya taşır.
+
 ### GitHub — Yerel geliştirmelerin paylaşım kaydı (2026-09-08)
 
 - Kullanıcı yerel çalışmaların GitHub'a gönderilmesini açıkça onayladı.
