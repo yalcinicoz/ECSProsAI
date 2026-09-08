@@ -321,7 +321,11 @@ Adres/fatura verisi dönmez; alıcı adı maskelidir. Kargo hareketleri entegras
 ## 13. Push bildirimleri — backend uygulaması (`docs/PUSH_BILDIRIM_ENTEGRASYONU.md`, 2026-09-07)
 
 **Gönderim:** FCM HTTP v1 (servis hesabı OAuth2; legacy API yok). Servis hesabı JSON'u panelden girilir:
-Ayarlar › Entegrasyonlar › **Firebase Cloud Messaging (Mobil Push)** (`serviceAccountJson` şifreli, `projectId` boşsa JSON'dan).
+Sidebar **Firmalar** › ilgili firma satırı › **Entegrasyonlar** bölümü › **Entegrasyon Ekle** › servis listesinden
+**Firebase Cloud Messaging (Mobil Push)** seçilir; "Servis Hesabı JSON" alanına dosyanın tam içeriği yapıştırılır
+(`serviceAccountJson` şifreli saklanır, `projectId` boşsa JSON'daki `project_id` kullanılır). Ayrı bir "Ayarlar › Entegrasyonlar"
+sayfası YOKTUR; sidebar'daki "Entegrasyonlar" linki log sayfasıdır, "Ayarlar" linki kullanıcı listesine açılır. Ekleme için ek
+yetki gerekmez; kayıtlı JSON'u sonradan "Göster" ile açmak `integration.credentials.reveal` yetkisi ister.
 Tanımlı değilse kuyruk birikir, hata üretmez. Worker: 15 sn'de bir gönderim, 15 dk'da bir zamanlanmış tarama (`Push:Enabled`,
 `Push:ScanMinutes`, `Push:PriceDropPercent`=10, `Push:LowStockThreshold`=3, `Push:CartReminderHours`=3, `Push:MarketingDailyLimit`=2).
 

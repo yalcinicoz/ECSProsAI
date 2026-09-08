@@ -19,7 +19,7 @@ public sealed class PushGonderimServisi(IStorefrontDbContext sdb, ICrmDbContext 
         var s = await ayarlar.GetAsync(ct);
         if (s is null)
         {
-            logger.LogWarning("Push: FCM servis hesabı tanımlı değil (Ayarlar › Entegrasyonlar › Firebase) — {N} bildirim kuyrukta bekliyor.", kuyruk.Count);
+            logger.LogWarning("Push: FCM servis hesabı tanımlı değil (panel Firmalar › firma detayı › Entegrasyonlar › Entegrasyon Ekle › Firebase Cloud Messaging) — {N} bildirim kuyrukta bekliyor.", kuyruk.Count);
             return (0, 0, 0);
         }
         var cihazIds = kuyruk.Select(n => n.DeviceId).Distinct().ToList();

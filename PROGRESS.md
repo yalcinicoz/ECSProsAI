@@ -3,7 +3,7 @@
 **MOBİL PUSH BİLDİRİM ENTEGRASYONU UYGULANDI — `docs/PUSH_BILDIRIM_ENTEGRASYONU.md` (2026-09-07, Mobil API + Admin panel):**
 FCM HTTP v1 gönderici (`Services/Push/FcmClient` — servis hesabı JWT RS256 → OAuth2, 50 dk belirteç önbelleği; hata kodu
 sınıflandırması), ayar kaynağı `definition.integration_services` **"fcm"** (ServiceType `push`; firma entegrasyonu
-`serviceAccountJson` şifreli + `projectId`) → panel Ayarlar › Entegrasyonlar'dan girilir (tanımsızsa kuyruk birikir, hata yok).
+`serviceAccountJson` şifreli + `projectId`) → panel Firmalar › firma detayı › Entegrasyonlar › Entegrasyon Ekle'den girilir (ayrı Ayarlar › Entegrasyonlar sayfası yok) (tanımsızsa kuyruk birikir, hata yok).
 Tablolar `storefront.push_templates` (21 şablon seed, §4 metinleri) + `storefront.push_notifications` (cihaz başına satır,
 `(DedupId, DeviceId)` unique, token SHA-256) + `favorites.PriceAtAdd` (migration `AddPushNotifications` dev+demo).
 `PushKuyruk` (şablon → metin/link, link kataloğu doğrulaması, üyenin tüm aktif cihazları, pazarlama: `Consents.marketing.push`
