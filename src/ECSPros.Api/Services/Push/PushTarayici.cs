@@ -11,7 +11,7 @@ namespace ECSPros.Api.Services.Push;
 /// favorite_back_in_stock önceki stok durumu bilgisi gerektirdiğinden ilk sürümde YOK (favorite_low_stock ve stock_alert var).
 /// </summary>
 public sealed class PushTarayici(NpgsqlDataSource ds, IStorefrontDbContext sdb, PushKuyruk kuyruk, IStockService stok, IEffectivePriceProvider fiyat,
-    IProductService urun, IConfiguration config, ILogger<PushTarayici> logger)
+    IProductCampaignResolver kampanya, IProductService urun, IConfiguration config, ILogger<PushTarayici> logger)
 {
     static readonly TimeZoneInfo TrTz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
     string Bugun => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TrTz).ToString("yyyy-MM-dd");
@@ -91,6 +91,8 @@ public sealed class PushTarayici(NpgsqlDataSource ds, IStorefrontDbContext sdb, 
     }
 
     // ── §4.2 favorite_price_drop (P, ≥%10 eşik, üye başına günde 1 = en büyük düşüş) + favorite_low_stock (P, ≤3, haftada 1) ──
+    // Fiyat = sitedeki kart fiyatı: kanal/base min fiyat + ETKİN KAMPANYA (percent/amount) — 2026-09-08: kampanya indirimi
+    // olmadan yalnız liste fiyatı değişimi yakalanıyordu ("%15 kampanya yaptık, bildirim gitmedi").
     async Task<int> FavoriAsync(CancellationToken ct)
     {
         var favs = await sdb.Favorites.ToListAsync(ct);
@@ -107,6 +109,8 @@ public sealed class PushTarayici(NpgsqlDataSource ds, IStorefrontDbContext sdb, 
         var varByCode = pv.GroupBy(x => x.Code).ToDictionary(g => g.Key, g => g.Select(x => x.VId).ToList());
         var stoklar = await stok.GetVariantAvailableStocksAsync(ct);
         var fiyatlar = new Dictionary<Guid, Dictionary<Guid, decimal>>();
+        var kampanyalar = new Dictionary<Guid, Dictionary<Guid, ProductCampaignInfo>>();
+        var tumPids = pidByCode.Values.Distinct().ToList();
         int n = 0; var degisti = false;
         foreach (var uyeGrup in favs.GroupBy(f => f.MemberId))
         {
@@ -114,8 +118,14 @@ public sealed class PushTarayici(NpgsqlDataSource ds, IStorefrontDbContext sdb, 
             foreach (var f in uyeGrup)
             {
                 if (!pidByCode.TryGetValue(f.ProductCode, out var pid)) continue;
-                if (!fiyatlar.TryGetValue(f.FirmPlatformId, out var pf)) fiyatlar[f.FirmPlatformId] = pf = await fiyat.GetMinEffectivePricesAsync(f.FirmPlatformId, ct);
+                if (!fiyatlar.TryGetValue(f.FirmPlatformId, out var pf))
+                {
+                    fiyatlar[f.FirmPlatformId] = pf = await fiyat.GetMinEffectivePricesAsync(f.FirmPlatformId, ct);
+                    kampanyalar[f.FirmPlatformId] = await kampanya.ResolveForProductsAsync(f.FirmPlatformId, tumPids, ct);
+                }
                 if (!pf.TryGetValue(pid, out var simdiki) || simdiki <= 0) continue;
+                if (kampanyalar[f.FirmPlatformId].TryGetValue(pid, out var ki) && CampaignPricing.EffectivePrice(ki, simdiki) is { } kampanyali)
+                    simdiki = kampanyali;
                 if (f.PriceAtAdd is null) { f.PriceAtAdd = simdiki; degisti = true; continue; }
                 var dusus = f.PriceAtAdd.Value - simdiki;
                 if (dusus > 0 && dusus >= f.PriceAtAdd.Value * esik && (enIyi is null || dusus > enIyi.Value.Eski - enIyi.Value.Yeni)) enIyi = (f, f.PriceAtAdd.Value, simdiki);
