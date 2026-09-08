@@ -357,5 +357,5 @@ Yok: `favorite_back_in_stock` (önceki stok durumu izlenmiyor — sonraki sürü
 | `POST /api/store/push-devices/opened {dedupId, token?}` | tıklama → `openedAt` (üye JWT ile üyenin, değilse token'ın satırı) |
 
 **Panel:** Pazarlama › Bildirimler › **Push Şablonları** (başlık/gövde/link/TTL/öncelik/açık-kapalı, link doğrulamalı) ve
-**Push Gönderimleri** (log, 24 saat özeti, tek cihaza/üyeye deneme gönderimi — Firebase konsolundan toplu kampanya ASLA).
+**Push Gönderimleri** (log, 24 saat özeti, tek cihaza/üyeye deneme gönderimi — Firebase konsolundan toplu kampanya ASLA). Deneme formundaki **Cihaz Id** = `push_devices.Id`; panelde Üyeler › üye detayı › *Mobil Bildirim Cihazları* bölümünde her cihazın Id'si, **Kopyala** ve **Deneme gönder** (formu `?tab=push-log&deviceId=` ile önceden doldurur) düğmeleri vardır; **Üyeye deneme gönder** üyenin tüm aktif cihazlarına gider (2026-09-08).
 Log: `storefront.push_notifications` (token yalnız SHA-256 hash), şablonlar `storefront.push_templates`.

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
@@ -230,8 +231,14 @@ function SavedSearchesTab({ platformId }: { platformId: string }) {
   )
 }
 
+type MonitorTab = 'stock-alerts' | 'saved-searches' | 'push-templates' | 'push-log'
+const MONITOR_TABS: MonitorTab[] = ['stock-alerts', 'saved-searches', 'push-templates', 'push-log']
+
 export function NotificationsMonitorPage() {
-  const [tab, setTab] = useState<'stock-alerts' | 'saved-searches' | 'push-templates' | 'push-log'>('stock-alerts')
+  // ?tab=push-log&deviceId=... ile üye detayından doğrudan deneme formuna gelinir.
+  const [sp] = useSearchParams()
+  const ilkTab = sp.get('tab') as MonitorTab | null
+  const [tab, setTab] = useState<MonitorTab>(ilkTab && MONITOR_TABS.includes(ilkTab) ? ilkTab : 'stock-alerts')
   const [platformId, setPlatformId] = useState('')
   const [scanResult, setScanResult] = useState('')
 

@@ -376,17 +376,32 @@ export function MemberDetailPage() {
           {pushDevices.length === 0 && (
             <p className="text-sm" style={{ color: 'var(--text-s)' }}>Kayıtlı mobil cihaz yok.</p>
           )}
+          {pushDevices.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mb-2 text-xs" style={{ color: 'var(--text-s)' }}>
+              <span>Cihaz Id'si push deneme formunun "Cihaz Id" alanına yapıştırılır; Üye Id ile gönderim tüm aktif cihazlara gider.</span>
+              <Link className="ml-auto" to={`/storefront/notifications?tab=push-log&memberId=${member.id}`}>
+                <Button variant="secondary" size="sm">Üyeye deneme gönder</Button>
+              </Link>
+            </div>
+          )}
           <div className="space-y-1 max-h-64 overflow-y-auto">
             {pushDevices.map(d => (
-              <div key={d.id} className="flex items-center gap-2 text-xs p-1.5 rounded"
-                style={{ color: 'var(--text-s)' }}>
+              <div key={d.id} className="flex flex-wrap items-center gap-2 text-xs p-1.5 rounded"
+                style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>
                 <Badge variant={d.status === 'active' ? 'success' : 'neutral'}>
                   {d.status === 'active' ? 'Aktif' : 'İptal'}
                 </Badge>
                 <span className="uppercase font-medium">{d.platform}</span>
                 {d.appVersion && <span>· v{d.appVersion}</span>}
                 <span>· Son görülme: {new Date(d.lastSeenAt).toLocaleString('tr-TR')}</span>
-                <span className="truncate" title={d.token}>· …{d.token.slice(-8)}</span>
+                <span className="truncate" title={`token …${d.token.slice(-8)}`}>· token …{d.token.slice(-8)}</span>
+                <span className="font-mono select-all" style={{ color: 'var(--text)' }} title="push_devices.Id">Id: {d.id}</span>
+                <Button variant="secondary" size="sm" onClick={() => navigator.clipboard?.writeText(d.id)}>Kopyala</Button>
+                {d.status === 'active' && (
+                  <Link to={`/storefront/notifications?tab=push-log&deviceId=${d.id}`}>
+                    <Button variant="secondary" size="sm">Deneme gönder</Button>
+                  </Link>
+                )}
               </div>
             ))}
           </div>

@@ -1,5 +1,6 @@
 // Mobil push (docs/PUSH_BILDIRIM_ENTEGRASYONU.md, 2026-09-07): şablon yönetimi + gönderim logu + tek cihaza test.
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
@@ -72,6 +73,7 @@ export function PushTemplatesTab() {
 }
 
 export function PushLogTab() {
+  const [sp] = useSearchParams()
   const [status, setStatus] = useState('')
   const [type, setType] = useState('')
   const [page, setPage] = useState(1)
@@ -80,7 +82,7 @@ export function PushLogTab() {
     queryFn: async () => (await api.get('/store-notifications/push-log', { params: { status: status || undefined, type: type || undefined, page, pageSize: 50 } })).data.data,
     refetchInterval: 30_000,
   })
-  const [test, setTest] = useState<{ deviceId: string; memberId: string; type: string; title: string; body: string; link: string }>({ deviceId: '', memberId: '', type: '', title: 'Deneme bildirimi', body: 'Bu bir deneme bildirimidir.', link: '/' })
+  const [test, setTest] = useState<{ deviceId: string; memberId: string; type: string; title: string; body: string; link: string }>({ deviceId: sp.get('deviceId') ?? '', memberId: sp.get('memberId') ?? '', type: '', title: 'Deneme bildirimi', body: 'Bu bir deneme bildirimidir.', link: '/' })
   const [testSonuc, setTestSonuc] = useState('')
   const gonder = useMutation({
     mutationFn: async () => (await api.post('/store-notifications/push-test', { deviceId: test.deviceId || null, memberId: test.memberId || null, type: test.type || null, title: test.title || null, body: test.body || null, link: test.link || null })).data.data as { queued: number; note: string },
@@ -91,7 +93,7 @@ export function PushLogTab() {
     <div className="space-y-4">
       <div className="card p-4">
         <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--text)' }}>Tek cihaza / üyeye deneme gönder</h3>
-        <p className="text-xs mb-2" style={{ color: 'var(--text-s)' }}>Firebase konsolundan toplu kampanya ASLA gönderilmez (proje canlı mağazayla ortak). Cihaz kimliğini üye detayı › Mobil Bildirim Cihazları'ndan ya da aşağıdaki "Push Cihazları" listesinden alın. Senaryo seçilirse şablon metni örnek değerlerle gider.</p>
+        <p className="text-xs mb-2" style={{ color: 'var(--text-s)' }}>Firebase konsolundan toplu kampanya ASLA gönderilmez (proje canlı mağazayla ortak). Cihaz Id'sini üye detayı › Mobil Bildirim Cihazları bölümünden (Kopyala / Deneme gönder) alın; Üye Id ise üye detay sayfasının adresindeki kimliktir — üyenin tüm aktif cihazlarına gider. Senaryo seçilirse şablon metni örnek değerlerle gider.</p>
         <div className="flex flex-wrap items-end gap-2">
           <div><label className="flbl">Cihaz Id</label><input className="inp font-mono" style={{ width: 300 }} value={test.deviceId} onChange={(e) => setTest({ ...test, deviceId: e.target.value })} placeholder="push_devices.Id" /></div>
           <div><label className="flbl">veya Üye Id</label><input className="inp font-mono" style={{ width: 300 }} value={test.memberId} onChange={(e) => setTest({ ...test, memberId: e.target.value })} /></div>
