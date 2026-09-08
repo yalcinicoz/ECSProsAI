@@ -21,4 +21,11 @@ public class Favorite : BaseEntity
     public Guid? ColorValueId { get; set; }
     /// <summary>Favoriye eklendiği andaki satış fiyatı (push: favorite_price_drop eşiği, 2026-09-07). Eski kayıtlarda ilk taramada dolar.</summary>
     public decimal? PriceAtAdd { get; set; }
+
+    /// <summary>
+    /// Son taramada favorilenen RENGİN varyantlarında stok yoktu (push: favorite_back_in_stock, 2026-09-08).
+    /// Tarama 0 görünce true yapar, stok dönünce bildirip false'a çeker — böylece "yeniden stokta" yalnız gerçek geçişte gider.
+    /// Mevcut kayıtlar false başlar: hâlihazırda tükenmiş favori ilk taramada işaretlenir, bildirim gitmez.
+    /// </summary>
+    public bool WasOutOfStock { get; set; }
 }

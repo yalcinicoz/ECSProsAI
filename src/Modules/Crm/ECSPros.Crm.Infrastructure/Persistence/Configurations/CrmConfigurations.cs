@@ -181,6 +181,7 @@ public class CartItemConfiguration : IEntityTypeConfiguration<CartItem>
         builder.ToTable("crm_cart_items");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.AddedPrice).HasPrecision(18, 2).IsRequired();
+        builder.Property(x => x.EffectivePriceAtAdd).HasPrecision(18, 2);
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

@@ -350,9 +350,13 @@ ertelenir; üye başına günde 2, aynı tip haftada 2; `(dedupId, cihaz)` benze
 (ilk cevap), `review_approved` / `review_rejected`. Zamanlanmış (15 dk) — `stock_alert` (gönderince alarm `notified`),
 `favorite_price_drop` (favoriye ekleme anındaki fiyata göre ≥ %10; eski favorilerde ilk tarama fiyatı baz), `favorite_low_stock`
 (≤3, haftada 1), `cart_reminder` (3 sa; 24 sa'te ikinci ve son), `coupon_assigned`, `coupon_expiring`, `wallet_credit`,
-`welcome`, `winback`, `viewed_reminder`, `order_payment_pending` (kart, 60 dk), `order_review_invite` (teslim + 2 gün).
-Yok: `favorite_back_in_stock` (önceki stok durumu izlenmiyor — sonraki sürüm), `cart_price_drop`, misafir sipariş bildirimi
-(checkout'ta cihaz kimliği yok — istenirse `X-Device-Id`).
+`welcome`, `winback`, `viewed_reminder`, `order_payment_pending` (kart, 60 dk), `order_review_invite` (teslim + 2 gün),
+**`favorite_back_in_stock`** (2026-09-08: favorilenen RENGİN varyantlarında stok 0'dan pozitife döndü — `Favorite.WasOutOfStock`
+tarama başında işaretlenir, dönüşte bildirilip sıfırlanır; aynı ürün için "gelince haber ver" bildirimi son 6 saatte gittiyse
+tekrarlanmaz; gün başına 1), **`cart_price_drop`** (2026-09-08: sepetteki ürünün kart fiyatı — kanal/base min + etkin kampanya —
+`CartItem.EffectivePriceAtAdd` tabanına göre ≥ %10 düştü; taban ilk taramada dolar, `Push:CartPriceDropDays`=14 gün içindeki
+sepetler, üye başına en büyük düşüş, kalem sepetten çıkarılırsa gönderim anında iptal).
+Yok: misafir sipariş bildirimi (checkout'ta cihaz kimliği yok — istenirse `X-Device-Id`).
 
 **Uçlar (mobil):**
 | Uç | Not |

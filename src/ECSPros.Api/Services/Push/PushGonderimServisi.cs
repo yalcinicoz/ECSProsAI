@@ -59,7 +59,10 @@ public sealed class PushGonderimServisi(IStorefrontDbContext sdb, ICrmDbContext 
         try
         {
             if (n.Type.StartsWith("cart_") && n.Data.TryGetValue("cartId", out var cid) && Guid.TryParse(cid, out var cartId))
-                return await cdb.CartItems.AnyAsync(i => i.CartId == cartId, ct);
+                // cart_price_drop: fiyatı düşen KALEM hâlâ sepette olmalı; cart_reminder: sepette herhangi bir ürün yeterli
+                return n.Data.TryGetValue("variantId", out var vid) && Guid.TryParse(vid, out var variantId)
+                    ? await cdb.CartItems.AnyAsync(i => i.CartId == cartId && i.VariantId == variantId, ct)
+                    : await cdb.CartItems.AnyAsync(i => i.CartId == cartId, ct);
             if (n.Type.StartsWith("favorite_") && n.MemberId is { } mid && n.Data.TryGetValue("productCode", out var code))
                 return await sdb.Favorites.AnyAsync(f => f.MemberId == mid && f.ProductCode == code, ct);
             if (n.Type == "stock_alert" && n.Data.TryGetValue("alertId", out var aid) && Guid.TryParse(aid, out var alertId))

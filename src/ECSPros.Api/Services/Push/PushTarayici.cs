@@ -10,7 +10,8 @@ namespace ECSPros.Api.Services.Push;
 /// kendi try/catch'inde; tekilleştirme PushKuyruk'ta (dedupId). Ham SQL ile şemalar arası okuma (Api katmanı).
 /// favorite_back_in_stock önceki stok durumu bilgisi gerektirdiğinden ilk sürümde YOK (favorite_low_stock ve stock_alert var).
 /// </summary>
-public sealed class PushTarayici(NpgsqlDataSource ds, IStorefrontDbContext sdb, PushKuyruk kuyruk, IStockService stok, IEffectivePriceProvider fiyat,
+public sealed class PushTarayici(NpgsqlDataSource ds, IStorefrontDbContext sdb, ECSPros.Crm.Application.Services.ICrmDbContext cdb,
+    PushKuyruk kuyruk, IStockService stok, IEffectivePriceProvider fiyat,
     IProductCampaignResolver kampanya, IProductService urun, IConfiguration config, ILogger<PushTarayici> logger)
 {
     static readonly TimeZoneInfo TrTz = TimeZoneInfo.FindSystemTimeZoneById("Europe/Istanbul");
@@ -22,7 +23,7 @@ public sealed class PushTarayici(NpgsqlDataSource ds, IStorefrontDbContext sdb, 
     {
         var adimlar = new (string Ad, Func<CancellationToken, Task<int>> F)[]
         {
-            ("stock_alert", StokAlarmiAsync), ("favorite", FavoriAsync), ("cart_reminder", SepetHatirlatmaAsync),
+            ("stock_alert", StokAlarmiAsync), ("favorite", FavoriAsync), ("cart_reminder", SepetHatirlatmaAsync), ("cart_price_drop", SepetFiyatDususuAsync),
             ("coupon", KuponAsync), ("wallet_credit", CuzdanAsync), ("welcome", HosGeldinAsync), ("winback", WinbackAsync),
             ("viewed_reminder", GezilenAsync), ("order_payment_pending", OdemeBekleyenAsync), ("order_review_invite", DegerlendirmeDavetiAsync),
         };
@@ -68,6 +69,40 @@ public sealed class PushTarayici(NpgsqlDataSource ds, IStorefrontDbContext sdb, 
     }
     static Dictionary<string, string> V(params (string, string?)[] kv) => kv.Where(x => x.Item2 != null).ToDictionary(x => x.Item1, x => x.Item2!);
 
+    /// <summary>
+    /// Favori stok geçişi (favorite_back_in_stock, 2026-09-08): mevcut stok 0/negatifse yalnız "stok yok" işaretlenir (bildirim yok);
+    /// stok döndüyse ancak ÖNCEKİ tarama stok yok demişse bildirilir. Dönüş: (bildirilsin mi, yeni StokYok değeri).
+    /// </summary>
+    public static (bool Bildir, bool StokYok) StokGecisi(bool oncekiStokYok, int mevcut)
+        => mevcut <= 0 ? (false, true) : (oncekiStokYok, false);
+
+    /// <summary>Fiyat düşüşü eşiği (favorite_price_drop / cart_price_drop): taban ve güncel pozitif, düşüş ≥ taban × eşik.</summary>
+    public static bool FiyatDususuVarMi(decimal taban, decimal simdiki, decimal esik)
+        => taban > 0 && simdiki > 0 && taban - simdiki >= taban * esik;
+
+    /// <summary>Ürün kodu → (ürün kimliği, varyant, varyantın renk ekseni değeri). @c = ürün kodu dizisi. Test aynı metni çalıştırır.</summary>
+    public const string VaryantRenkSql = """
+        SELECT p."Code", p."Id", v."Id",
+               COALESCE(
+                 (SELECT va."AttributeValueId" FROM catalog.product_variant_attributes va JOIN definition.attribute_types t ON t."Id"=va."AttributeTypeId"
+                   WHERE va."VariantId"=v."Id" AND NOT va."IsDeleted" AND t."Code"='renk' LIMIT 1),
+                 (SELECT va."AttributeValueId" FROM catalog.product_variant_attributes va JOIN definition.attribute_types t ON t."Id"=va."AttributeTypeId"
+                   WHERE va."VariantId"=v."Id" AND NOT va."IsDeleted" AND t."Code"='filtre_rengi' LIMIT 1))
+          FROM catalog.products p JOIN catalog.product_variants v ON v."ProductId"=p."Id" AND NOT v."IsDeleted"
+         WHERE p."Code" = ANY(@c) AND NOT p."IsDeleted"
+        """;
+
+    /// <summary>Favorinin varyantları: favorilenen renk varsa yalnız o rengin varyantları, yoksa (ya da renk artık yoksa) ürünün tümü.</summary>
+    public static List<Guid> RenkVaryantlari(IReadOnlyList<(Guid VId, Guid? ColorId)> varyantlar, Guid? colorValueId)
+    {
+        if (colorValueId is { } c)
+        {
+            var renkli = varyantlar.Where(x => x.ColorId == c).Select(x => x.VId).ToList();
+            if (renkli.Count > 0) return renkli;
+        }
+        return varyantlar.Select(x => x.VId).ToList();
+    }
+
     // ── §4.2 stock_alert (İ): "gelince haber ver" kaydı olan varyant stoğa girdi → gönder + alarmı kapat ──
     async Task<int> StokAlarmiAsync(CancellationToken ct)
     {
@@ -101,13 +136,18 @@ public sealed class PushTarayici(NpgsqlDataSource ds, IStorefrontDbContext sdb, 
         var dusukEsik = config.GetValue("Push:LowStockThreshold", 3);
         var urunler = await UrunlerAsync(favs.Select(f => f.ProductCode), ct);
         // ürün kimliği + varyantları (stok toplamı için)
-        var pv = await SorguAsync("""
-            SELECT p."Code", p."Id", v."Id" FROM catalog.products p JOIN catalog.product_variants v ON v."ProductId"=p."Id" AND NOT v."IsDeleted" WHERE p."Code"=ANY(@c) AND NOT p."IsDeleted"
-            """,
-            r => (Code: r.GetString(0), PId: r.GetGuid(1), VId: r.GetGuid(2)), ct, ("c", favs.Select(f => f.ProductCode).Distinct().ToArray()));
+        // Varyantın RENK ekseni değeri (yoksa filtre_rengi) — favori ürün+renk bazlı olduğundan "yeniden stokta" o rengin varyantlarına bakar.
+        var pv = await SorguAsync(VaryantRenkSql,
+            r => (Code: r.GetString(0), PId: r.GetGuid(1), VId: r.GetGuid(2), ColorId: r.IsDBNull(3) ? (Guid?)null : r.GetGuid(3)), ct,
+            ("c", favs.Select(f => f.ProductCode).Distinct().ToArray()));
         var pidByCode = pv.GroupBy(x => x.Code).ToDictionary(g => g.Key, g => g.First().PId);
-        var varByCode = pv.GroupBy(x => x.Code).ToDictionary(g => g.Key, g => g.Select(x => x.VId).ToList());
+        var varByCode = pv.GroupBy(x => x.Code).ToDictionary(g => g.Key, g => g.Select(x => (x.VId, x.ColorId)).ToList());
         var stoklar = await stok.GetVariantAvailableStocksAsync(ct);
+        // "Gelince haber ver" (stock_alert) bu taramada/son 6 saatte gitmişse aynı ürün için favori bildirimi tekrarlanmaz.
+        var alarmli = (await sdb.StockAlerts.AsNoTracking()
+            .Where(a => a.Status != "cancelled" && a.NotifiedAt != null && a.NotifiedAt >= DateTime.UtcNow.AddHours(-6))
+            .Select(a => new { a.MemberId, a.VariantId }).ToListAsync(ct))
+            .Select(x => (x.MemberId, x.VariantId)).ToHashSet();
         var fiyatlar = new Dictionary<Guid, Dictionary<Guid, decimal>>();
         var kampanyalar = new Dictionary<Guid, Dictionary<Guid, ProductCampaignInfo>>();
         var tumPids = pidByCode.Values.Distinct().ToList();
@@ -129,15 +169,25 @@ public sealed class PushTarayici(NpgsqlDataSource ds, IStorefrontDbContext sdb, 
                 if (f.PriceAtAdd is null) { f.PriceAtAdd = simdiki; degisti = true; continue; }
                 var dusus = f.PriceAtAdd.Value - simdiki;
                 if (dusus > 0 && dusus >= f.PriceAtAdd.Value * esik && (enIyi is null || dusus > enIyi.Value.Eski - enIyi.Value.Yeni)) enIyi = (f, f.PriceAtAdd.Value, simdiki);
-                // düşük stok
                 if (varByCode.TryGetValue(f.ProductCode, out var vids))
                 {
-                    var toplam = vids.Sum(v => stoklar.GetValueOrDefault(v));
+                    // düşük stok: ÜRÜN geneli (2026-09-07'den beri böyle; renk kırılımına çekilmedi)
+                    var toplam = vids.Sum(v => stoklar.GetValueOrDefault(v.VId));
                     if (toplam > 0 && toplam <= dusukEsik)
                     {
                         var u = urunler.GetValueOrDefault(f.ProductCode);
                         n += await kuyruk.EnqueueAsync(new PushIstek("favorite_low_stock", f.MemberId, V(("productName", u?.Name ?? f.ProductCode), ("productCode", f.ProductCode)),
                             $"favorite_low_stock:{f.MemberId}:{f.ProductCode}:{Hafta}", f.FirmPlatformId, ImageUrl: u?.ImageUrl), ct);
+                    }
+                    // yeniden stokta: favorilenen RENGİN varyantları 0'dan pozitife döndüyse (gün başına 1 — stok 0 çevresinde salınırsa tekrar etmez)
+                    var renkVids = RenkVaryantlari(vids, f.ColorValueId);
+                    var (bildir, stokYok) = StokGecisi(f.WasOutOfStock, renkVids.Sum(v => stoklar.GetValueOrDefault(v)));
+                    if (f.WasOutOfStock != stokYok) { f.WasOutOfStock = stokYok; degisti = true; }
+                    if (bildir && !renkVids.Any(v => alarmli.Contains((f.MemberId, v))))
+                    {
+                        var u = urunler.GetValueOrDefault(f.ProductCode);
+                        n += await kuyruk.EnqueueAsync(new PushIstek("favorite_back_in_stock", f.MemberId, V(("productName", u?.Name ?? f.ProductCode), ("productCode", f.ProductCode)),
+                            $"favorite_back_in_stock:{f.MemberId}:{f.ProductCode}:{Bugun}", f.FirmPlatformId, ImageUrl: u?.ImageUrl), ct);
                     }
                 }
             }
@@ -181,6 +231,57 @@ public sealed class PushTarayici(NpgsqlDataSource ds, IStorefrontDbContext sdb, 
                AND EXISTS (SELECT 1 FROM crm.crm_cart_items i WHERE i."CartId"=c."Id" AND NOT i."IsDeleted")
                AND NOT EXISTS (SELECT 1 FROM "order".ord_orders o WHERE o."MemberId"=c."MemberId" AND NOT o."IsDeleted" AND o."CreatedAt" >= COALESCE(c."UpdatedAt", c."CreatedAt"))
             """, r => (r.GetGuid(0), r.GetGuid(1), r.GetGuid(2), r.GetDateTime(3), r.GetInt32(4), r.GetGuid(5)), ct, ("h", saat));
+
+    // ── §4.3 cart_price_drop (P, 2026-09-08): sepetteki ürünün KART fiyatı (kanal/base min + etkin kampanya), sepete eklendiği
+    // andaki kart fiyatına göre ≥ %10 düştü. Taban CartItem.EffectivePriceAtAdd — null ise bu taramada doldurulur, bildirim
+    // üretilmez (Favorite.PriceAtAdd kalıbı; AddedPrice kampanya ÖNCESİ fiyat olduğundan taban olarak kullanılamaz, yanlış
+    // "indirim" üretirdi). Üye başına EN BÜYÜK düşüş, tarama başına 1 bildirim. Sepet kalemi çıkarılırsa gönderim anında iptal.
+    async Task<int> SepetFiyatDususuAsync(CancellationToken ct)
+    {
+        var esik = config.GetValue("Push:PriceDropPercent", 10m) / 100m;
+        var sinir = DateTime.UtcNow.AddDays(-config.GetValue("Push:CartPriceDropDays", 14));
+        var kalemler = await (from i in cdb.CartItems
+                              join c in cdb.Carts on i.CartId equals c.Id
+                              where c.MemberId != null && (c.UpdatedAt ?? c.CreatedAt) >= sinir
+                              select new { Kalem = i, MemberId = c.MemberId!.Value, c.FirmPlatformId, CartId = c.Id }).ToListAsync(ct);
+        if (kalemler.Count == 0) return 0;
+        var disp = await urun.GetVariantDisplayAsync(kalemler.Select(x => x.Kalem.VariantId).Distinct().ToList(), ct);
+        var tumPids = disp.Values.Select(d => d.ProductId).Where(x => x != Guid.Empty).Distinct().ToList();
+        var fiyatlar = new Dictionary<Guid, Dictionary<Guid, decimal>>();
+        var kampanyalar = new Dictionary<Guid, Dictionary<Guid, ProductCampaignInfo>>();
+        int n = 0; var degisti = false;
+        foreach (var uyeGrup in kalemler.GroupBy(x => x.MemberId))
+        {
+            (Guid CartId, Guid VariantId, Guid FirmPlatformId, decimal Eski, decimal Yeni, VariantDisplayInfo D)? enIyi = null;
+            foreach (var k in uyeGrup)
+            {
+                if (!disp.TryGetValue(k.Kalem.VariantId, out var d) || d.ProductId == Guid.Empty) continue;
+                if (!fiyatlar.TryGetValue(k.FirmPlatformId, out var pf))
+                {
+                    fiyatlar[k.FirmPlatformId] = pf = await fiyat.GetMinEffectivePricesAsync(k.FirmPlatformId, ct);
+                    kampanyalar[k.FirmPlatformId] = await kampanya.ResolveForProductsAsync(k.FirmPlatformId, tumPids, ct);
+                }
+                if (!pf.TryGetValue(d.ProductId, out var simdiki) || simdiki <= 0) continue;
+                if (kampanyalar[k.FirmPlatformId].TryGetValue(d.ProductId, out var ki) && CampaignPricing.EffectivePrice(ki, simdiki) is { } kampanyali)
+                    simdiki = kampanyali;
+                if (k.Kalem.EffectivePriceAtAdd is null) { k.Kalem.EffectivePriceAtAdd = simdiki; degisti = true; continue; }
+                var taban = k.Kalem.EffectivePriceAtAdd.Value;
+                if (!FiyatDususuVarMi(taban, simdiki, esik)) continue;
+                if (enIyi is null || taban - simdiki > enIyi.Value.Eski - enIyi.Value.Yeni)
+                    enIyi = (k.CartId, k.Kalem.VariantId, k.FirmPlatformId, taban, simdiki, d);
+            }
+            if (enIyi is { } e)
+            {
+                var yeni = e.Yeni.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+                n += await kuyruk.EnqueueAsync(new PushIstek("cart_price_drop", uyeGrup.Key,
+                    V(("productName", e.D.ProductNameI18n.GetValueOrDefault("tr") ?? "Ürün"), ("productCode", e.D.ProductCode),
+                      ("newPrice", Para(e.Yeni)), ("oldPrice", Para(e.Eski)), ("cartId", e.CartId.ToString()), ("variantId", e.VariantId.ToString())),
+                    $"cart_price_drop:{e.CartId}:{e.VariantId}:{yeni}", e.FirmPlatformId, ImageUrl: e.D.ImageUrl), ct);
+            }
+        }
+        if (degisti) await cdb.SaveChangesAsync(ct);
+        return n;
+    }
 
     // ── §4.5 coupon_assigned (üyeye özel kupon, son 24 saat) + coupon_expiring (kullanılmamış, 24 saat kaldı) ──
     async Task<int> KuponAsync(CancellationToken ct)
