@@ -1,0 +1,260 @@
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { ColumnsMenu } from './ColumnsMenu'
+import { GridPagination } from './GridPagination'
+import { useGridScrollRegistry } from './gridScrollContext'
+import { useBreakpoint } from './useBreakpoint'
+import type { GridStateApi } from './useGridState'
+import type { GridBreakpoint, GridColumn, GridFrozenConfig } from './types'
+
+// DataGrid çekirdeği (plan §2.1, §2.4-2.7): tanım-güdümlü kolonlar, priority/kullanıcı tercihi, frozen bütçesi (%35 hedef / %40 sınır),
+// ghost yatay scrollbar + kenar gölgeleri, sıralama başlıkları, satır tıklama → detay (klavye dahil), Kolonlar menüsü, sayfalama.
+// Mevcut tasarım dili: card, --border/--surface token'ları, DataTable başlık/hücre sınıfları.
+
+export interface DataGridProps<T> {
+  gridId: string
+  columns: GridColumn<T>[]
+  rows: T[]
+  totalCount: number
+  grid: GridStateApi
+  /** ilk yükleme (satır yok) */
+  loading?: boolean
+  /** arka planda yenileme (eski satırlar kalır, ince ilerleme çubuğu) */
+  fetching?: boolean
+  onRowClick?: (row: T) => void
+  rowKey?: (row: T) => string
+  empty?: ReactNode
+  /** araç çubuğu: sol (arama/hızlı filtreler), sağ (export vb.) — Kolonlar menüsü her zaman sağda */
+  toolbarLeft?: ReactNode
+  toolbarRight?: ReactNode
+  /** araç çubuğunun altında tam genişlik alan (filtre çipleri, gelişmiş panel) */
+  toolbarBelow?: ReactNode
+  frozen?: Partial<GridFrozenConfig>
+  pageSizes?: number[]
+  /** tablo min genişliği (px) — yatay kaydırmanın her zaman erişilebilir olması için (varsayılan: görünür kolon sayısı × 140) */
+  minWidth?: number
+  className?: string
+}
+
+const DEFAULT_FROZEN: GridFrozenConfig = { desktop: 2, tablet: 1, mobile: 0 }
+const FROZEN_TARGET = 0.35   // toplam sabit genişlik / viewport hedefi [E1]
+const FROZEN_HARD = 0.40     // tek kolon bile bunu aşarsa sabitleme kapanır [E1]
+
+function defaultVisible<T>(c: GridColumn<T>, bp: GridBreakpoint) {
+  if (c.defaultVisible === false) return false
+  const p = c.priority ?? 1
+  return bp === 'mobile' ? p === 1 : bp === 'tablet' ? p <= 2 : true
+}
+
+export function DataGrid<T>({
+  gridId, columns, rows, totalCount, grid, loading, fetching, onRowClick, rowKey, empty,
+  toolbarLeft, toolbarRight, toolbarBelow, frozen, pageSizes, minWidth, className,
+}: DataGridProps<T>) {
+  const bp = useBreakpoint()
+  const { state, prefs, setPrefs, resetPrefs } = grid
+  const fzD = frozen?.desktop ?? DEFAULT_FROZEN.desktop, fzT = frozen?.tablet ?? DEFAULT_FROZEN.tablet, fzM = frozen?.mobile ?? DEFAULT_FROZEN.mobile
+  const frozenCfg = useMemo<GridFrozenConfig>(() => ({ desktop: fzD, tablet: fzT, mobile: fzM }), [fzD, fzT, fzM])
+
+  // ── kolon sırası + görünürlük (priority varsayılanı; kullanıcı tercihi ezilmez [E5]) ──
+  const ordered = useMemo(() => {
+    const byKey = new Map(columns.map(c => [c.key, c]))
+    const out: GridColumn<T>[] = []
+    for (const k of prefs.order ?? []) { const c = byKey.get(k); if (c) { out.push(c); byKey.delete(k) } }
+    for (const c of columns) if (byKey.has(c.key)) out.push(c)
+    return out
+  }, [columns, prefs.order])
+
+  const visibleKeys = useMemo(() => {
+    const s = new Set<string>()
+    for (const c of ordered) {
+      if (c.lockVisible) { s.add(c.key); continue }
+      if (prefs.manualHidden?.includes(c.key)) continue
+      if (prefs.manualVisible?.includes(c.key)) { s.add(c.key); continue }
+      if (defaultVisible(c, bp)) s.add(c.key)
+    }
+    return s
+  }, [ordered, prefs.manualHidden, prefs.manualVisible, bp])
+
+  const visible = useMemo(() => ordered.filter(c => visibleKeys.has(c.key)), [ordered, visibleKeys])
+
+  // ── frozen: breakpoint adedi + bütçe kuralı; kullanıcı "off" diyebilir ──
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const tableRef = useRef<HTMLTableElement>(null)
+  const [colWidths, setColWidths] = useState<Record<string, number>>({})
+  const [containerW, setContainerW] = useState(0)
+
+  useLayoutEffect(() => {
+    const el = scrollRef.current; const tbl = tableRef.current
+    if (!el || !tbl) return
+    const measure = () => {
+      setContainerW(el.clientWidth)
+      const ths = tbl.querySelectorAll<HTMLTableCellElement>('thead th[data-key]')
+      const w: Record<string, number> = {}
+      ths.forEach(th => { w[th.dataset.key!] = th.getBoundingClientRect().width })
+      setColWidths(prev => {
+        const keys = Object.keys(w)
+        if (keys.length === Object.keys(prev).length && keys.every(k => Math.abs((prev[k] ?? -1) - w[k]) < 0.5)) return prev
+        return w
+      })
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el); ro.observe(tbl)
+    return () => ro.disconnect()
+  }, [visible, rows])
+
+  const frozenLefts = useMemo(() => {
+    const map = new Map<string, number>()
+    if (prefs.frozen === 'off') return map
+    const allowed = frozenCfg[bp]
+    if (allowed <= 0 || !containerW) return map
+    const candidates = visible.filter(c => c.frozen).slice(0, allowed)
+    let total = 0
+    for (const c of candidates) {
+      const w = colWidths[c.key] ?? 0
+      if (!w) break
+      if (map.size === 0 && w > containerW * FROZEN_HARD) break           // tek kolon bile sınırı aşıyor → sabitleme yok
+      if (total + w > containerW * FROZEN_TARGET) break                   // hedefi aşan aday serbest bırakılır
+      map.set(c.key, total); total += w
+    }
+    return map
+  }, [visible, colWidths, containerW, bp, prefs.frozen, frozenCfg])
+  const frozenWidth = useMemo(() => Array.from(frozenLefts.entries()).reduce((acc, [k]) => acc + (colWidths[k] ?? 0), 0), [frozenLefts, colWidths])
+  const lastFrozenKey = useMemo(() => { let last: string | null = null; for (const c of visible) if (frozenLefts.has(c.key)) last = c.key; return last }, [visible, frozenLefts])
+
+  // ── kaydırma durumu (kenar gölgeleri [E9]) + ghost scrollbar kaydı [E2/E8] ──
+  const [scrollPos, setScrollPos] = useState<'none' | 'start' | 'middle' | 'end'>('none')
+  const registry = useGridScrollRegistry()
+  const scrollId = `grid-scroll-${gridId}`
+
+  const updateScrollPos = useCallback(() => {
+    const el = scrollRef.current; if (!el) return
+    const max = el.scrollWidth - el.clientWidth
+    setScrollPos(max <= 1 ? 'none' : el.scrollLeft <= 1 ? 'start' : el.scrollLeft >= max - 1 ? 'end' : 'middle')
+  }, [])
+
+  useEffect(() => {
+    const el = scrollRef.current; if (!el) return
+    const raf = requestAnimationFrame(updateScrollPos)
+    const onScroll = () => { updateScrollPos(); registry?.report(scrollId, { lastInteraction: Date.now() }) }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    const ro = new ResizeObserver(updateScrollPos); ro.observe(el)
+    return () => { cancelAnimationFrame(raf); el.removeEventListener('scroll', onScroll); ro.disconnect() }
+  }, [updateScrollPos, registry, scrollId, rows, visible])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el || !registry || bp === 'mobile') return   // dokunmatikte doğal kaydırma; ghost gösterilmez
+    const unregister = registry.register({ id: scrollId, el, visibility: 0, bottomVisible: true, lastInteraction: 0 })
+    const bodyObs = new IntersectionObserver(([e]) => registry.report(scrollId, { visibility: e.isIntersecting ? e.intersectionRatio : 0 }),
+      { threshold: [0, 0.1, 0.25, 0.5, 0.75, 1] })
+    bodyObs.observe(el)
+    const sentinel = document.createElement('div'); sentinel.style.height = '1px'; sentinel.setAttribute('data-grid-bottom', '')
+    el.parentElement?.insertBefore(sentinel, el.nextSibling)
+    const bottomObs = new IntersectionObserver(([e]) => registry.report(scrollId, { bottomVisible: e.isIntersecting }))
+    bottomObs.observe(sentinel)
+    return () => { bodyObs.disconnect(); bottomObs.disconnect(); sentinel.remove(); unregister() }
+  }, [registry, scrollId, bp])
+
+  // ── satır tıklama → detay (klavye dahil) ──
+  const key = rowKey ?? ((r: T) => (r as { id?: string }).id ?? '')
+  const rowClick = useCallback((r: T, e: React.MouseEvent | React.KeyboardEvent) => {
+    if (!onRowClick) return
+    const target = e.target as HTMLElement
+    if (target.closest('[data-stop-row-click], a, button, input, select, textarea, label')) return
+    onRowClick(r)
+  }, [onRowClick])
+
+  const colCount = visible.length
+  const tableMinWidth = minWidth ?? Math.max(480, colCount * 140)
+  const filtered = state.filters.length > 0 || !!state.search
+  const frozenSupported = columns.some(c => c.frozen) && frozenCfg[bp] > 0
+
+  return (
+    <div className={cn('grid-root', className)} data-grid-id={gridId}>
+      {(toolbarLeft || toolbarRight || columns.length > 0) && (
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">{toolbarLeft}</div>
+          <div className="flex items-center gap-2 ml-auto">
+            {toolbarRight}
+            <ColumnsMenu columns={ordered} visibleKeys={visibleKeys} prefs={prefs} setPrefs={setPrefs} resetPrefs={resetPrefs} frozenSupported={frozenSupported} />
+          </div>
+        </div>
+      )}
+      {toolbarBelow && <div className="mb-3">{toolbarBelow}</div>}
+
+      <div className="card overflow-hidden relative">
+        {fetching && !loading && <div className="grid-progress" aria-hidden />}
+        <div className="grid-scroll-wrap" data-scroll={scrollPos} style={{ ['--grid-frozen-w' as string]: `${frozenWidth}px` }}>
+          <div ref={scrollRef} id={scrollId} className="grid-scroll thin-scroll" tabIndex={-1}>
+            <table ref={tableRef} className="w-full" style={{ minWidth: tableMinWidth }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
+                  {visible.map(c => {
+                    const left = frozenLefts.get(c.key)
+                    const sorted = state.sort === c.key
+                    const isFrozen = left !== undefined
+                    return (
+                      <th key={c.key} data-key={c.key} scope="col"
+                        aria-sort={sorted ? (state.dir === 'desc' ? 'descending' : 'ascending') : undefined}
+                        className={cn('px-4 py-3 text-xs font-semibold text-left whitespace-nowrap select-none', c.className,
+                          c.align === 'right' && 'text-right', c.align === 'center' && 'text-center',
+                          isFrozen && 'grid-frozen', isFrozen && c.key === lastFrozenKey && 'grid-frozen-last',
+                          c.sortable && 'cursor-pointer hover:text-[var(--text)]')}
+                        style={{ color: sorted ? 'var(--text)' : 'var(--text-s)', width: c.width, minWidth: c.minWidth, left }}
+                        onClick={c.sortable ? () => grid.toggleSort(c.key) : undefined}>
+                        <span className="inline-flex items-center gap-1">
+                          {c.header}
+                          {c.sortable && (sorted
+                            ? (state.dir === 'desc' ? <ArrowDown size={12} /> : <ArrowUp size={12} />)
+                            : <ChevronsUpDown size={12} className="opacity-40" />)}
+                        </span>
+                      </th>
+                    )
+                  })}
+                </tr>
+              </thead>
+              <tbody className={cn(fetching && !loading && 'opacity-60 transition-opacity')}>
+                {loading && (
+                  <tr><td colSpan={colCount} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>Yükleniyor...</td></tr>
+                )}
+                {!loading && rows.length === 0 && (
+                  <tr><td colSpan={colCount} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-s)' }}>
+                    {empty ?? (filtered ? 'Filtreye uyan kayıt bulunamadı.' : 'Kayıt bulunamadı.')}
+                  </td></tr>
+                )}
+                {!loading && rows.map(r => (
+                  <tr key={key(r)}
+                    onClick={onRowClick ? e => rowClick(r, e) : undefined}
+                    onKeyDown={onRowClick ? e => { if (e.key === 'Enter' && e.target === e.currentTarget) rowClick(r, e) } : undefined}
+                    tabIndex={onRowClick ? 0 : undefined}
+                    className={cn('grid-row transition-colors', onRowClick && 'cursor-pointer hover:bg-[var(--surface2)] focus:outline-none focus-visible:bg-[var(--surface2)]')}
+                    style={{ borderBottom: '1px solid var(--border)' }}>
+                    {visible.map(c => {
+                      const left = frozenLefts.get(c.key)
+                      const isFrozen = left !== undefined
+                      return (
+                        <td key={c.key} data-stop-row-click={c.stopRowClick ? '' : undefined}
+                          className={cn('px-4 py-3 text-sm', c.className, c.align === 'right' && 'text-right', c.align === 'center' && 'text-center',
+                            isFrozen && 'grid-frozen', isFrozen && c.key === lastFrozenKey && 'grid-frozen-last')}
+                          style={{ color: 'var(--text)', left }}>{c.cell(r)}</td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <GridPagination page={state.page} pageSize={state.pageSize} totalCount={totalCount} filtered={filtered}
+          onPage={grid.setPage} onPageSize={grid.setPageSize} pageSizes={pageSizes} />
+      </div>
+    </div>
+  )
+}
+
+/** Hücre içi aksiyon sarmalayıcısı: satır tıklaması bu alanda tetiklenmez (stopPropagation kalıbının ortak hali). */
+export function RowActions({ children, className }: { children: ReactNode; className?: string }) {
+  return <div data-stop-row-click="" className={cn('inline-flex items-center gap-1', className)} onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>{children}</div>
+}

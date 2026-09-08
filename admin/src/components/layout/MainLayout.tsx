@@ -6,11 +6,13 @@ import { CommandPalette } from './CommandPalette'
 import { QuestionAlerts } from './QuestionAlerts'
 import { useUIStore } from '@/store/ui'
 import { cn } from '@/lib/utils'
+import { GridScrollProvider } from '@/components/grid/GridScrollRegistry'
 
 export function MainLayout() {
   const { sidebarCollapsed, sidebarMobileOpen, setSidebarMobileOpen } = useUIStore()
 
   return (
+    <GridScrollProvider>
     <div className="min-h-dvh" style={{ background: 'var(--bg)' }}>
 
       {/* ── Desktop sidebar (fixed) ── */}
@@ -61,5 +63,6 @@ export function MainLayout() {
       <CommandPalette />
       <QuestionAlerts />
     </div>
+    </GridScrollProvider>
   )
 }

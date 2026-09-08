@@ -4,7 +4,7 @@ import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { DataTable, Pager } from '@/components/ui/DataTable'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
 import { errText, tarihSaat, i18nAd } from '@/components/ui/DataTable.utils'
 
 interface User {
@@ -178,22 +178,30 @@ function UserModal({ user, onClose }: { user: User | 'new'; onClose: () => void 
 }
 
 export function UsersPage() {
-  const [search, setSearch] = useState('')
-  const [appliedSearch, setAppliedSearch] = useState('')
-  const [page, setPage] = useState(1)
+  // DataGrid F1 teknik smoke-test (plan K5: gerçek UX pilotu Siparişler). Arama/sayfa URL'de, kolon tercihleri localStorage'da.
+  const grid = useGridState('users', { defaultPageSize: 20 })
+  const [search, setSearch] = useState(grid.state.search)
   const [editing, setEditing] = useState<User | 'new' | null>(null)
 
-  const { data, isLoading } = useQuery<PagedUsers>({
-    queryKey: ['iam-users', appliedSearch, page],
-    queryFn: async () => {
-      const params = new URLSearchParams({ page: String(page), pageSize: '20' })
-      if (appliedSearch) params.set('search', appliedSearch)
-      return (await api.get(`/iam/users?${params}`)).data.data
-    },
+  const { data, isLoading, isFetching } = useQuery<PagedUsers>({
+    queryKey: ['iam-users', ...grid.queryKey],
+    queryFn: async () => (await api.get(`/iam/users?${grid.toParams()}`)).data.data,
+    placeholderData: prev => prev,
   })
 
   const users = data?.items ?? []
-  const totalPages = data?.totalPages ?? Math.ceil((data?.totalCount ?? 0) / 20)
+  const columns: GridColumn<User>[] = [
+    { key: 'username', header: 'KULLANICI ADI', frozen: true, lockVisible: true, cell: u => <code className="text-xs font-mono font-medium">{u.username}</code> },
+    { key: 'name', header: 'AD SOYAD', priority: 1, cell: u => `${u.firstName} ${u.lastName}` },
+    { key: 'email', header: 'E-POSTA', priority: 2, cell: u => u.email },
+    { key: 'phone', header: 'TELEFON', priority: 3, cell: u => u.phone || '—' },
+    { key: 'department', header: 'DEPARTMAN', priority: 3, defaultVisible: false, cell: u => u.department || '—' },
+    { key: 'jobTitle', header: 'ÜNVAN', priority: 3, defaultVisible: false, cell: u => u.jobTitle || '—' },
+    { key: 'roles', header: 'ROLLER', priority: 2, cell: u => (u.roles.length ? u.roles.join(', ') : '—') },
+    { key: 'lastLogin', header: 'SON GİRİŞ', priority: 3, cell: u => tarihSaat(u.lastLoginAt) },
+    { key: 'status', header: 'DURUM', priority: 1, cell: u => <Badge variant={u.isActive ? 'success' : 'neutral'}>{u.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'edit', header: '', priority: 3, align: 'right', cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span> },
+  ]
 
   return (
     <div className="p-6">
@@ -205,34 +213,32 @@ export function UsersPage() {
         <Button size="sm" onClick={() => setEditing('new')}>+ Yeni Kullanıcı</Button>
       </div>
 
-      <div className="flex items-center gap-2 mb-4">
-        <input className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 220 }}
-          placeholder="Ad, e-posta, kullanıcı adı, telefon ara…" value={search}
-          onChange={e => setSearch(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { setAppliedSearch(search.trim()); setPage(1) } }} />
-        <button onClick={() => { setAppliedSearch(search.trim()); setPage(1) }}
-          className="px-3 py-1.5 rounded-lg text-sm"
-          style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Ara</button>
-      </div>
-
-      <DataTable<User>
-        columns={[
-          { header: 'KULLANICI ADI', cell: u => <code className="text-xs font-mono font-medium">{u.username}</code> },
-          { header: 'AD SOYAD', cell: u => `${u.firstName} ${u.lastName}` },
-          { header: 'E-POSTA', cell: u => u.email },
-          { header: 'TELEFON', cell: u => u.phone || '—' },
-          { header: 'ROLLER', cell: u => (u.roles.length ? u.roles.join(', ') : '—') },
-          { header: 'SON GİRİŞ', cell: u => tarihSaat(u.lastLoginAt) },
-          { header: 'DURUM', cell: u => <Badge variant={u.isActive ? 'success' : 'neutral'}>{u.isActive ? 'Aktif' : 'Pasif'}</Badge> },
-          { header: '', className: 'text-right', cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span> },
-        ]}
+      <DataGrid<User>
+        gridId="users"
+        grid={grid}
+        columns={columns}
         rows={users}
+        totalCount={data?.totalCount ?? 0}
         loading={isLoading}
-        empty="Kullanıcı yok."
+        fetching={isFetching}
         onRowClick={u => setEditing(u)}
+        empty="Kullanıcı yok."
+        toolbarLeft={
+          <div className="flex items-center gap-2">
+            <input className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 220 }}
+              placeholder="Ad, e-posta, kullanıcı adı, telefon ara…" value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') grid.setSearch(search) }} />
+            <button onClick={() => grid.setSearch(search)}
+              className="px-3 py-1.5 rounded-lg text-sm"
+              style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Ara</button>
+            {grid.state.search && (
+              <button onClick={() => { setSearch(''); grid.setSearch('') }} className="text-xs underline" style={{ color: 'var(--text-s)' }}>temizle</button>
+            )}
+          </div>
+        }
       />
 
-      <Pager page={page} totalPages={totalPages} onChange={setPage} />
       {editing !== null && <UserModal user={editing} onClose={() => setEditing(null)} />}
     </div>
   )

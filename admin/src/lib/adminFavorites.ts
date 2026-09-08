@@ -35,9 +35,18 @@ export function readFavorites(): UserFavorites {
 /** Token/oturum temizliği aynı kalır; yalnız doğrulanmış kullanıcı favorileri korunur. */
 export function clearSessionStoragePreservingFavorites() {
   const favorites = readFavorites()
+  // DataGrid kişisel tablo tercihleri (ecspros-grid:<gridId>:<userId>) de korunur — kullanıcıya özel anahtarlar, sır içermez.
+  const gridPrefs: [string, string][] = []
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i)
+      if (k && k.startsWith('ecspros-grid:')) gridPrefs.push([k, localStorage.getItem(k) ?? ''])
+    }
+  } catch { /* okunamazsa korunmaz */ }
   localStorage.clear()
   try {
     if (Object.keys(favorites).length) localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites))
+    for (const [k, v] of gridPrefs) localStorage.setItem(k, v)
   } catch { /* Oturum temizliği storage kota/izin hatasında da tamamlanmıştır. */ }
 }
 

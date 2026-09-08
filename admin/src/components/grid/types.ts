@@ -1,0 +1,85 @@
+// Panel DataGrid standardı (docs/datagrid-standardi-plani.md v2, F1 — 2026-09-08).
+// Tanım-güdümlü tablo: her sayfa yalnız kolonlarını ve ayarlarını verir; UX davranışı panel genelinde ortaktır.
+import type { ReactNode } from 'react'
+
+export type GridBreakpoint = 'mobile' | 'tablet' | 'desktop'
+
+export type GridFilterType = 'text' | 'enum' | 'date' | 'number' | 'boolean'
+
+export interface GridFilterOption { value: string; label: string }
+
+/** Kolonun filtre tanımı (F2 FilterBar bunu kullanır; F1'de yalnız taşınır). */
+export interface GridFilterDef {
+  type: GridFilterType
+  /** Filtre etiketinde/çipte görünen ad (varsayılan: kolon başlığı) */
+  label?: string
+  options?: GridFilterOption[]
+  /** enum: çoklu seçim (in) */
+  multiple?: boolean
+  /** Hızlı filtre çubuğunda görünsün (aksi halde Gelişmiş panelde) */
+  quick?: boolean
+  /** text için izin verilen operatörler (varsayılan contains|eq|startswith) */
+  ops?: string[]
+  /** Sunucu tarafındaki alan adı kolon anahtarından farklıysa */
+  field?: string
+}
+
+export interface GridColumn<T> {
+  /** Sıralama/filtre/export/gizleme anahtarı — sunucu GridSchema alan adıyla aynı */
+  key: string
+  header: string
+  cell: (row: T) => ReactNode
+  sortable?: boolean
+  filter?: GridFilterDef
+  /** 1 her zaman, 2 tablet ve üstü, 3 yalnız masaüstü (varsayılan görünürlük; kullanıcı tercihi ezilmez) */
+  priority?: 1 | 2 | 3
+  /** Masaüstünde sabit (sticky left) aday — bütçe kuralı (%35 hedef / %40 sınır) uygulanır */
+  frozen?: boolean
+  /** Varsayılan görünür (varsayılan true) */
+  defaultVisible?: boolean
+  /** Gizlenemez (kritik kolon) */
+  lockVisible?: boolean
+  /** Excel'e aktarılabilir (varsayılan true) */
+  exportable?: boolean
+  width?: number
+  minWidth?: number
+  align?: 'left' | 'right' | 'center'
+  className?: string
+  /** Hücre içi aksiyon düğmeleri barındırır: satır tıklaması bu hücrede tetiklenmez */
+  stopRowClick?: boolean
+}
+
+export interface GridFilterValue {
+  field: string
+  op: string
+  value: string
+  /** Hızlı seçim etiketi (örn. tarih "last7") — çipte gösterilir, URL'de fq.<field> */
+  quick?: string
+}
+
+export interface GridState {
+  page: number
+  pageSize: number
+  search: string
+  sort: string | null
+  dir: 'asc' | 'desc' | null
+  filters: GridFilterValue[]
+}
+
+/** Kişisel tablo tercihleri — localStorage `ecspros-grid:<gridId>:<userId>` (K3) */
+export interface GridPrefs {
+  /** Kolon sırası (anahtarlar); listede olmayanlar tanım sırasıyla sona eklenir */
+  order?: string[]
+  /** Kullanıcının AÇIKÇA açtığı kolonlar — responsive priority bunları gizlemez [E5] */
+  manualVisible?: string[]
+  /** Kullanıcının AÇIKÇA gizlediği kolonlar */
+  manualHidden?: string[]
+  pageSize?: number
+  /** Sabit kolonlar: auto (breakpoint + bütçe) | off */
+  frozen?: 'auto' | 'off'
+}
+
+export interface GridFrozenConfig { desktop: number; tablet: number; mobile: number }
+
+export const GRID_PAGE_SIZES = [25, 50, 100, 250]
+export const GRID_MAX_PAGE_SIZE = 250
