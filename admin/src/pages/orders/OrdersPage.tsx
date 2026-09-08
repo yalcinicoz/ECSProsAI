@@ -56,14 +56,13 @@ interface PagedResult<T> {
 
 const enumOpts = (m: Record<string, string>) => Object.entries(m).map(([value, label]) => ({ value, label }))
 
-// Kolona bağlı olmayan filtreler (sunucu şeması: paid bool, paymentMethod enum [none], phone/externalOrderNumber/cargo text)
+// Hızlı filtreler çubukta; diğer alanlar ilgili sütun başlığının filtre penceresinde (kullanıcı kararı 2026-09-08)
 const EXTRA_FILTERS: GridFilterField[] = [
   { key: 'paid', label: 'Ödemesi alınan', type: 'boolean', quick: true },
-  { key: 'paymentStatus', label: 'Ödeme durumu', type: 'enum', multiple: true, options: enumOpts(PAYMENT_STATUS_MAP) },
-  { key: 'paymentMethod', label: 'Ödeme yöntemi', type: 'enum', multiple: true, options: [...enumOpts(PAYMENT_METHOD_MAP), { value: 'none', label: 'Yöntemsiz (eski kayıt)' }] },
-  { key: 'phone', label: 'Telefon', type: 'text', ops: ['contains', 'startswith'] },
-  { key: 'externalOrderNumber', label: 'Dış sipariş no', type: 'text' },
-  { key: 'cargo', label: 'Kargo', type: 'text' },
+]
+const PAYMENT_FILTERS = [
+  { field: 'paymentStatus', label: 'Ödeme durumu', type: 'enum' as const, multiple: true, options: enumOpts(PAYMENT_STATUS_MAP) },
+  { field: 'paymentMethod', label: 'Ödeme yöntemi', type: 'enum' as const, multiple: true, options: [...enumOpts(PAYMENT_METHOD_MAP), { value: 'none', label: 'Yöntemsiz (eski kayıt)' }] },
 ]
 
 export function OrdersPage() {
@@ -104,13 +103,16 @@ export function OrdersPage() {
 
   const columns: GridColumn<OrderSummary>[] = [
     { key: 'orderNumber', header: 'SİPARİŞ NO', frozen: true, lockVisible: true, sortable: true, minWidth: 130,
+      filter: { type: 'text', label: 'Sipariş no', ops: ['startswith', 'contains', 'eq'] },
+      filters: [{ field: 'externalOrderNumber', label: 'Dış sipariş no', type: 'text' }, { field: 'cargo', label: 'Kargo', type: 'text' }],
       cell: o => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{o.orderNumber}</code> },
     { key: 'customer', header: 'MÜŞTERİ', frozen: true, sortable: true, priority: 1, filter: { type: 'text', label: 'Müşteri' },
+      filters: [{ field: 'phone', label: 'Telefon', type: 'text', ops: ['contains', 'startswith'] }],
       cell: o => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{o.recipientName ?? '—'}</span> },
     { key: 'total', header: 'TUTAR', sortable: true, align: 'right', priority: 1, filter: { type: 'number', label: 'Tutar' },
       cell: o => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
         {o.grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}{' '}{o.currencyCode === 'TRY' ? '₺' : o.currencyCode}</span> },
-    { key: 'paymentStatus', header: 'ÖDEME', sortable: true, priority: 2,
+    { key: 'paymentStatus', header: 'ÖDEME', sortable: true, priority: 2, filters: PAYMENT_FILTERS,
       cell: o => <>
         <span className="text-sm" style={{ color: 'var(--text)' }}>{o.paymentMethod ? (PAYMENT_METHOD_MAP[o.paymentMethod] ?? o.paymentMethod) : '—'}</span>
         <div className="text-xs" style={{ color: 'var(--text-s)' }}>{PAYMENT_STATUS_MAP[o.paymentStatus] ?? o.paymentStatus}</div>

@@ -7,6 +7,7 @@ import { ColumnsMenu } from './ColumnsMenu'
 import { FilterBar } from './FilterBar'
 import { ExportButton, type GridExportConfig } from './ExportButton'
 import { ViewsMenu } from './ViewsMenu'
+import { HeaderFilterButton } from './HeaderFilter'
 import { useGridViews } from './useGridViews'
 import type { GridFilterField } from './filterUtils'
 import { GridPagination } from './GridPagination'
@@ -195,10 +196,22 @@ export function DataGrid<T>({
   }, [onRowClick])
 
   // filtre alanları: kolon tanımındaki filter'lar (+ ek alanlar); alan adı filter.field ?? kolon anahtarı
+  // kolon başına başlık filtresi alanları (filter + filters); FilterBar çipler/mobil için tümünü görür, çubukta yalnız quick + kolonsuz ek alanlar
+  const columnFields = useMemo(() => {
+    const m = new Map<string, GridFilterField[]>()
+    for (const c of columns) {
+      const list: GridFilterField[] = []
+      if (c.filter) list.push({ ...c.filter, key: c.filter.field ?? c.key, label: c.filter.label ?? c.header })
+      for (const f of c.filters ?? []) list.push({ ...f, key: f.field, label: f.label })
+      if (list.length) m.set(c.key, list)
+    }
+    return m
+  }, [columns])
   const filterFields = useMemo<GridFilterField[]>(() => [
-    ...columns.filter(c => c.filter).map(c => ({ ...c.filter!, key: c.filter!.field ?? c.key, label: c.filter!.label ?? c.header })),
+    ...Array.from(columnFields.values()).flat(),
     ...(extraFilters ?? []),
-  ], [columns, extraFilters])
+  ], [columnFields, extraFilters])
+  const headerFieldKeys = useMemo(() => new Set(Array.from(columnFields.values()).flat().map(f => f.key)), [columnFields])
   const hasFilterBar = search !== false && (search !== undefined || filterFields.length > 0) || filterFields.length > 0
 
   // export kolon anahtarları: exportable !== false olan kolonlar (tanım sırasıyla); görünür küme kullanıcının o anki seçimi
@@ -227,7 +240,7 @@ export function DataGrid<T>({
           <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
             {viewsEnabled && <ViewsMenu views={viewsApi} />}
             {toolbarLeft}
-            {hasFilterBar && <FilterBar grid={grid} fields={filterFields} search={search} bp={bp} leading={filterLeading} />}
+            {hasFilterBar && <FilterBar grid={grid} fields={filterFields} search={search} bp={bp} leading={filterLeading} headerFieldKeys={headerFieldKeys} />}
           </div>
           <div className="flex items-center gap-2 ml-auto">
             {toolbarRight}
@@ -316,6 +329,7 @@ export function DataGrid<T>({
                           {c.sortable && (sorted
                             ? (state.dir === 'desc' ? <ArrowDown size={12} /> : <ArrowUp size={12} />)
                             : <ChevronsUpDown size={12} className="opacity-40" />)}
+                          {columnFields.has(c.key) && <HeaderFilterButton fields={columnFields.get(c.key)!} grid={grid} header={c.header || c.key} />}
                         </span>
                       </th>
                     )

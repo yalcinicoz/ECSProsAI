@@ -30,7 +30,10 @@ export interface GridColumn<T> {
   header: string
   cell: (row: T) => ReactNode
   sortable?: boolean
+  /** Başlık filtresi (ikon → açılır pencere); alan adı filter.field ?? key */
   filter?: GridFilterDef
+  /** Aynı başlık penceresinde gösterilecek EK alanlar (örn. ÖDEME: ödeme durumu + yöntem + tahsilat) — field ve label zorunlu */
+  filters?: (GridFilterDef & { field: string; label: string })[]
   /** 1 her zaman, 2 tablet ve üstü, 3 yalnız masaüstü (varsayılan görünürlük; kullanıcı tercihi ezilmez) */
   priority?: 1 | 2 | 3
   /** Masaüstünde sabit (sticky left) aday — bütçe kuralı (%35 hedef / %40 sınır) uygulanır */

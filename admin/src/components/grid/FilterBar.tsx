@@ -15,15 +15,24 @@ interface Props {
   bp: GridBreakpoint
   /** filtre çubuğunun solunda sabit içerik (örn. sekmeler değil; küçük düğmeler) */
   leading?: ReactNode
+  /** sütun başlığında ikonla sunulan alanlar (çubukta tekrar gösterilmez) */
+  headerFieldKeys?: Set<string>
 }
 
-export function FilterBar({ grid, fields, search, bp, leading }: Props) {
+export function FilterBar({ grid, fields, search, bp, leading, headerFieldKeys }: Props) {
   const { state } = grid
   const quick = fields.filter(f => f.quick)
-  const advanced = fields.filter(f => !f.quick)
-  const [advOpen, setAdvOpen] = useState(false)
+  // Sütun başlığında sunulmayan ve hızlı olmayan alanlar: "Diğer filtreler ▾" (kolonu olmayan ek alanlar için yedek)
+  const other = fields.filter(f => !f.quick && !headerFieldKeys?.has(f.key))
+  const [otherOpen, setOtherOpen] = useState(false)
+  const otherRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!otherOpen) return
+    const onDoc = (e: MouseEvent) => { if (otherRef.current && !otherRef.current.contains(e.target as Node)) setOtherOpen(false) }
+    document.addEventListener('mousedown', onDoc); return () => document.removeEventListener('mousedown', onDoc)
+  }, [otherOpen])
   const [sheetOpen, setSheetOpen] = useState(false)
-  const activeAdvanced = advanced.filter(f => state.filters.some(x => x.field === f.key)).length
+  const activeOther = other.filter(f => state.filters.some(x => x.field === f.key)).length
   const activeCount = state.filters.length
 
   const chips = (
@@ -65,20 +74,22 @@ export function FilterBar({ grid, fields, search, bp, leading }: Props) {
         {leading}
         {search !== false && <SearchBox grid={grid} placeholder={search?.placeholder} />}
         {quick.map(f => <FieldRow key={f.key} field={f} grid={grid} />)}
-        {advanced.length > 0 && (
-          <button type="button" onClick={() => setAdvOpen(o => !o)} aria-expanded={advOpen}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm"
-            style={{ border: '1px solid var(--border)', color: 'var(--text)', background: advOpen ? 'var(--surface2)' : undefined }}>
-            <SlidersHorizontal size={14} /> Gelişmiş{activeAdvanced > 0 && <span className="text-xs px-1.5 rounded-full" style={{ background: 'var(--brand)', color: '#fff' }}>{activeAdvanced}</span>}
-            <ChevronDown size={14} className={cn('transition-transform', advOpen && 'rotate-180')} />
-          </button>
+        {other.length > 0 && (
+          <div className="relative" ref={otherRef}>
+            <button type="button" onClick={() => setOtherOpen(o => !o)} aria-expanded={otherOpen} aria-haspopup="dialog"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm"
+              style={{ border: '1px solid var(--border)', color: 'var(--text)', background: otherOpen ? 'var(--surface2)' : undefined }}>
+              <SlidersHorizontal size={14} /> Diğer filtreler{activeOther > 0 && <span className="text-xs px-1.5 rounded-full" style={{ background: 'var(--brand)', color: '#fff' }}>{activeOther}</span>}
+              <ChevronDown size={14} className={cn('transition-transform', otherOpen && 'rotate-180')} />
+            </button>
+            {otherOpen && (
+              <div role="dialog" aria-label="Diğer filtreler" className="absolute left-0 mt-1 w-[300px] rounded-xl shadow-lg z-40 p-3 space-y-2" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                {other.map(f => <FieldRow key={f.key} field={f} grid={grid} stacked />)}
+              </div>
+            )}
+          </div>
         )}
       </div>
-      {advOpen && advanced.length > 0 && (
-        <div className="card2 p-3 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" role="region" aria-label="Gelişmiş filtreler">
-          {advanced.map(f => <FieldRow key={f.key} field={f} grid={grid} stacked />)}
-        </div>
-      )}
       {chips}
     </div>
   )
@@ -140,7 +151,7 @@ function Chip({ text, onRemove }: { text: string; onRemove: () => void }) {
 }
 
 // ── alan girişleri ──
-function FieldRow({ field, grid, stacked }: { field: GridFilterField; grid: GridStateApi; stacked?: boolean }) {
+export function FieldRow({ field, grid, stacked }: { field: GridFilterField; grid: GridStateApi; stacked?: boolean }) {
   const cur = grid.state.filters.find(f => f.field === field.key)
   const set = (v: Partial<GridFilterValue> & { value: string }) => grid.setFilter({ field: field.key, op: v.op ?? 'auto', value: v.value, quick: v.quick })
   const wrap = (node: ReactNode) => stacked
