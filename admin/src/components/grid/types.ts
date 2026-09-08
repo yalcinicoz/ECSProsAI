@@ -78,8 +78,13 @@ export interface GridPrefs {
   /** Kullanıcının AÇIKÇA gizlediği kolonlar */
   manualHidden?: string[]
   pageSize?: number
-  /** Sabit kolonlar: auto (breakpoint + bütçe) | off */
+  /** (eski) Sabit kolonlar: auto | off — geriye uyumluluk; `frozenKeys` tanımlıysa yok sayılır */
   frozen?: 'auto' | 'off'
+  /**
+   * Kullanıcının seçtiği sabit kolonlar (2026-09-08): tanımsız → kritik kolonlar (`GridColumn.frozen`) varsayılan;
+   * tanımlıysa yalnız bu liste sabittir (kritik kolon da çıkarılabilir). Sabit kolonlar sola alınır; %40 genişlik sınırı korunur.
+   */
+  frozenKeys?: string[]
   /** Mobil görünüm tercihi (compact tanımı olan grid'lerde) */
   mobileView?: 'compact' | 'table'
 }

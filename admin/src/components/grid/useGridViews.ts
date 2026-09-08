@@ -5,14 +5,14 @@ import type { GridStateApi } from './useGridState'
 import type { GridPrefs } from './types'
 
 // Kaydedilmiş görünümler (plan §2.9, K7 — kişisel): iam.Users.Preferences jsonb, anahtar `grids.<gridId>`.
-// Görünüm = URL parametreleri (filtreler, arama, sıralama, sekme… — page hariç) + kolon tercihleri (sıra/görünürlük/sayfa boyu/frozen).
+// Görünüm = URL parametreleri (filtreler, arama, sıralama, sekme… — page hariç) + kolon tercihleri (sıra/görünürlük/sayfa boyu/sabit kolonlar).
 // Varsayılan görünüm: listeye TEMİZ girişte (URL'de grid parametresi yokken) bir kez uygulanır; filtreleri çipte görünür.
 
 export interface GridView {
   id: string
   name: string
   params: Record<string, string>
-  prefs: Pick<GridPrefs, 'order' | 'manualVisible' | 'manualHidden' | 'pageSize' | 'frozen'>
+  prefs: Pick<GridPrefs, 'order' | 'manualVisible' | 'manualHidden' | 'pageSize' | 'frozen' | 'frozenKeys'>
   createdAt: string
 }
 
@@ -57,7 +57,7 @@ export function useGridViews(gridId: string, grid: GridStateApi, searchParams: U
 
   const snapshot = useCallback((): Omit<GridView, 'id' | 'name' | 'createdAt'> => ({
     params: currentParams(searchParams),
-    prefs: { order: grid.prefs.order, manualVisible: grid.prefs.manualVisible, manualHidden: grid.prefs.manualHidden, pageSize: grid.prefs.pageSize, frozen: grid.prefs.frozen },
+    prefs: { order: grid.prefs.order, manualVisible: grid.prefs.manualVisible, manualHidden: grid.prefs.manualHidden, pageSize: grid.prefs.pageSize, frozen: grid.prefs.frozen, frozenKeys: grid.prefs.frozenKeys },
   }), [searchParams, grid.prefs])
 
   const save = useCallback(async (name: string) => {

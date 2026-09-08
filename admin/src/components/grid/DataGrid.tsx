@@ -89,13 +89,18 @@ export function DataGrid<T>({
   const frozenCfg = useMemo<GridFrozenConfig>(() => ({ desktop: fzD, tablet: fzT, mobile: fzM }), [fzD, fzT, fzM])
 
   // ── kolon sırası + görünürlük (priority varsayılanı; kullanıcı tercihi ezilmez [E5]) ──
+  // sabit kolon kümesi: kullanıcı seçimi (frozenKeys) yoksa kritik kolonlar; eski 'off' tercihi → boş küme
+  const pinnedKeys = useMemo(() => new Set(prefs.frozenKeys ?? (prefs.frozen === 'off' ? [] : columns.filter(c => c.frozen).map(c => c.key))),
+    [prefs.frozenKeys, prefs.frozen, columns])
+  const userPinned = prefs.frozenKeys !== undefined
   const ordered = useMemo(() => {
     const byKey = new Map(columns.map(c => [c.key, c]))
     const out: GridColumn<T>[] = []
     for (const k of prefs.order ?? []) { const c = byKey.get(k); if (c) { out.push(c); byKey.delete(k) } }
     for (const c of columns) if (byKey.has(c.key)) out.push(c)
-    return out
-  }, [columns, prefs.order])
+    // sabit kolonlar sola alınır (kendi aralarındaki sıra korunur)
+    return [...out.filter(c => pinnedKeys.has(c.key)), ...out.filter(c => !pinnedKeys.has(c.key))]
+  }, [columns, prefs.order, pinnedKeys])
 
   const visibleKeys = useMemo(() => {
     const s = new Set<string>()
@@ -138,20 +143,22 @@ export function DataGrid<T>({
 
   const frozenLefts = useMemo(() => {
     const map = new Map<string, number>()
-    if (prefs.frozen === 'off') return map
     const allowed = frozenCfg[bp]
     if (allowed <= 0 || !containerW) return map
-    const candidates = visible.filter(c => c.frozen).slice(0, allowed)
+    // varsayılan (kritik) küme: breakpoint adedi + %35 hedef; kullanıcı seçimi: adet sınırı yok, yalnız %40 mutlak sınır (sığmayan serbest kalır)
+    const pinned = visible.filter(c => pinnedKeys.has(c.key))
+    const candidates = userPinned ? pinned : pinned.slice(0, allowed)
+    const limit = userPinned ? FROZEN_HARD : FROZEN_TARGET
     let total = 0
     for (const c of candidates) {
       const w = colWidths[c.key] ?? 0
       if (!w) break
       if (map.size === 0 && w > containerW * FROZEN_HARD) break           // tek kolon bile sınırı aşıyor → sabitleme yok
-      if (total + w > containerW * FROZEN_TARGET) break                   // hedefi aşan aday serbest bırakılır
+      if (total + w > containerW * limit) break                          // bütçeyi aşan aday serbest bırakılır
       map.set(c.key, total); total += w
     }
     return map
-  }, [visible, colWidths, containerW, bp, prefs.frozen, frozenCfg])
+  }, [visible, colWidths, containerW, bp, pinnedKeys, userPinned, frozenCfg])
   const frozenWidth = useMemo(() => Array.from(frozenLefts.entries()).reduce((acc, [k]) => acc + (colWidths[k] ?? 0), 0), [frozenLefts, colWidths])
   const lastFrozenKey = useMemo(() => { let last: string | null = null; for (const c of visible) if (frozenLefts.has(c.key)) last = c.key; return last }, [visible, frozenLefts])
 
@@ -234,7 +241,7 @@ export function DataGrid<T>({
   const colCount = visible.length + (selection ? 1 : 0)
   const tableMinWidth = minWidth ?? Math.max(480, colCount * 140)
   const filtered = state.filters.length > 0 || !!state.search
-  const frozenSupported = columns.some(c => c.frozen) && frozenCfg[bp] > 0
+  const frozenSupported = frozenCfg[bp] > 0   // herhangi bir kolon sabitlenebilir (mobilde kapalı)
 
   // ── sticky chrome: ghost başlık (üstte) + ghost sayfalama (altta) ──
   const cardRef = useRef<HTMLDivElement>(null)
@@ -307,7 +314,7 @@ export function DataGrid<T>({
               </button>
             )}
             {exportCfg && <ExportButton grid={grid} config={exportCfg} visibleExportKeys={visibleExportKeys} allExportKeys={allExportKeys} />}
-            <ColumnsMenu columns={ordered} visibleKeys={visibleKeys} prefs={prefs} setPrefs={setPrefs} resetPrefs={resetPrefs} frozenSupported={frozenSupported} />
+            <ColumnsMenu columns={ordered} visibleKeys={visibleKeys} prefs={prefs} setPrefs={setPrefs} resetPrefs={resetPrefs} frozenSupported={frozenSupported} pinnedKeys={pinnedKeys} effectiveFrozen={frozenLefts} />
           </div>
         </div>
       )}

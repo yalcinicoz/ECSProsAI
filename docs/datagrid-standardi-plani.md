@@ -125,7 +125,11 @@ GET /api/orders?page=1&pageSize=50&search=…&sort=createdAt&dir=desc&f.status=i
   tek frozen kolon bile **%40 mutlak sınırı** aşıyorsa sabitleme tamamen kapanır. Hesap her `resize`'da yenilenir.
 - **Mobil** [E10]: frozen kapalı (adet 0). İstisna olarak grid tanımı `mobile: 1` derse yalnız `priority 1` + dar (`≤ 120px`)
   bir kolon sabitlenebilir; bütçe kuralı yine geçerlidir. Temel prensip: **tüm görünür kolonlara erişim korunur**.
-- Kullanıcı "Kolonlar" menüsünden frozen'ı kapatabilir (`frozenOverride: 'off'`, localStorage).
+- **Kolon bazlı sabitleme (2026-09-08, kullanıcı kararı):** varsayılan sabit küme kritik kolonlardır (`GridColumn.frozen`); kullanıcı
+  "Kolonlar" menüsündeki raptiyeyle istediği kolonu sabitler ya da kritik kolonu sabitlikten çıkarır (`prefs.frozenKeys: string[]`,
+  localStorage + kaydedilmiş görünüm). Sabit kolonlar sola alınır (kendi aralarındaki sıra korunur). Kullanıcı seçiminde adet sınırı
+  yok; **%40 mutlak genişlik sınırı** korunur, sığmayanlar serbest kalır ve menüde "(sığmıyor)" ile işaretlenir. Eski `frozen: 'off'`
+  tercihi boş küme olarak okunur. Mobilde sabitleme kapalı (raptiye görünmez). Düzenek `grid-f8-check.mjs`.
 - Frozen kolonlar Kolonlar menüsünde gizlenebilir (lockVisible değilse); gizlenince bir sonraki aday sabitlenmez, adet düşer.
 
 ### 2.7 Responsive ve mobil davranış
