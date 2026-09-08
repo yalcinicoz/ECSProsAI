@@ -583,8 +583,13 @@ if (!nodeOptions.SadeceIzoleWorker)
 builder.Services.AddSingleton<ECSPros.Api.Services.MigrationService>();
 
 // ─── JWT Authentication ────────────────────────────────────────────
-var jwtSecret = builder.Configuration["Jwt:Secret"]
-    ?? throw new InvalidOperationException("Jwt:Secret is not configured.");
+// Boş/kısa anahtar önceden açılışta yakalanmıyor, ilk kimlik doğrulama isteğinde IDX10703 ile 500 dönüyordu
+// (2026-09-08 demo olayı: Demo ortamında Jwt:Secret hiç tanımlı değildi). Artık açılışta açık mesajla durur.
+var jwtSecret = builder.Configuration["Jwt:Secret"];
+if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < 32)
+    throw new InvalidOperationException(
+        $"Jwt:Secret yapılandırılmamış ya da 32 karakterden kısa (ortam: {builder.Environment.EnvironmentName}). " +
+        $"appsettings.{builder.Environment.EnvironmentName}.json içine en az 32 karakterlik rastgele bir 'Jwt:Secret' girin.");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
