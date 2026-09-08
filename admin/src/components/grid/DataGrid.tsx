@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ColumnsMenu } from './ColumnsMenu'
 import { FilterBar } from './FilterBar'
+import { ExportButton, type GridExportConfig } from './ExportButton'
 import type { GridFilterField } from './filterUtils'
 import { GridPagination } from './GridPagination'
 import { useGridScrollRegistry } from './gridScrollContext'
@@ -42,6 +43,8 @@ export interface DataGridProps<T> {
   extraFilters?: GridFilterField[]
   /** filtre satırının en solunda (örn. küçük seçici) */
   filterLeading?: ReactNode
+  /** Excel export (plan §2.8): verilirse "Excel'e aktar ▾" düğmesi Kolonlar'ın solunda */
+  export?: GridExportConfig
   /** tablo min genişliği (px) — yatay kaydırmanın her zaman erişilebilir olması için (varsayılan: görünür kolon sayısı × 140) */
   minWidth?: number
   className?: string
@@ -59,7 +62,7 @@ function defaultVisible<T>(c: GridColumn<T>, bp: GridBreakpoint) {
 
 export function DataGrid<T>({
   gridId, columns, rows, totalCount, grid, loading, fetching, error, onRowClick, rowKey, empty,
-  toolbarLeft, toolbarRight, toolbarBelow, frozen, pageSizes, minWidth, className, search, extraFilters, filterLeading,
+  toolbarLeft, toolbarRight, toolbarBelow, frozen, pageSizes, minWidth, className, search, extraFilters, filterLeading, export: exportCfg,
 }: DataGridProps<T>) {
   const bp = useBreakpoint()
   const { state, prefs, setPrefs, resetPrefs } = grid
@@ -183,6 +186,10 @@ export function DataGrid<T>({
   ], [columns, extraFilters])
   const hasFilterBar = search !== false && (search !== undefined || filterFields.length > 0) || filterFields.length > 0
 
+  // export kolon anahtarları: exportable !== false olan kolonlar (tanım sırasıyla); görünür küme kullanıcının o anki seçimi
+  const allExportKeys = useMemo(() => columns.filter(c => c.exportable !== false).map(c => c.key), [columns])
+  const visibleExportKeys = useMemo(() => ordered.filter(c => c.exportable !== false && visibleKeys.has(c.key)).map(c => c.key), [ordered, visibleKeys])
+
   const colCount = visible.length
   const tableMinWidth = minWidth ?? Math.max(480, colCount * 140)
   const filtered = state.filters.length > 0 || !!state.search
@@ -198,6 +205,7 @@ export function DataGrid<T>({
           </div>
           <div className="flex items-center gap-2 ml-auto">
             {toolbarRight}
+            {exportCfg && <ExportButton grid={grid} config={exportCfg} visibleExportKeys={visibleExportKeys} allExportKeys={allExportKeys} />}
             <ColumnsMenu columns={ordered} visibleKeys={visibleKeys} prefs={prefs} setPrefs={setPrefs} resetPrefs={resetPrefs} frozenSupported={frozenSupported} />
           </div>
         </div>

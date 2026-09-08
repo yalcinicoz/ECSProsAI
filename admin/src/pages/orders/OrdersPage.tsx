@@ -162,6 +162,7 @@ export function OrdersPage() {
         onRowClick={o => navigate(`/orders/${o.id}`)}
         empty="Sipariş bulunamadı."
         minWidth={820}
+        export={{ endpoint: '/orders/export', named: () => ({ statuses: tab.statuses || undefined }), fallbackFileName: 'siparisler.xlsx' }}
       />
     </div>
   )
