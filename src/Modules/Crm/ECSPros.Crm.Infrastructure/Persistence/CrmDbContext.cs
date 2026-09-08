@@ -45,6 +45,8 @@ public class CrmDbContext : DbContext, ICrmDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // DataGrid: jsonb sözlük alanlarında filtre/sıralama (GridJson.Text → jsonb_extract_path_text, yerleşik PG fonksiyonu)
+        modelBuilder.HasDbFunction(ECSPros.Shared.Kernel.Grid.GridJson.TextMethod).HasName("jsonb_extract_path_text").IsBuiltIn();
         modelBuilder.HasDefaultSchema("crm");
         modelBuilder.HasSequence<long>("crm_ticket_tracking_seq", "crm").StartsAt(50000).IncrementsBy(1);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CrmDbContext).Assembly);

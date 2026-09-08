@@ -31,6 +31,8 @@ public class IamDbContext : DbContext, IIamDbContext, IDataProtectionKeyContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // DataGrid: jsonb sözlük alanlarında filtre/sıralama (GridJson.Text → jsonb_extract_path_text, yerleşik PG fonksiyonu)
+        modelBuilder.HasDbFunction(ECSPros.Shared.Kernel.Grid.GridJson.TextMethod).HasName("jsonb_extract_path_text").IsBuiltIn();
         modelBuilder.HasDefaultSchema("iam");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(IamDbContext).Assembly);
         modelBuilder.Entity<DataProtectionKey>().ToTable("data_protection_keys");

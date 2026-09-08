@@ -22,6 +22,8 @@ public class InventoryDbContext : DbContext, IInventoryDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // DataGrid: jsonb sözlük alanlarında filtre/sıralama (GridJson.Text → jsonb_extract_path_text, yerleşik PG fonksiyonu)
+        modelBuilder.HasDbFunction(ECSPros.Shared.Kernel.Grid.GridJson.TextMethod).HasName("jsonb_extract_path_text").IsBuiltIn();
         modelBuilder.HasDefaultSchema("inventory");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(InventoryDbContext).Assembly);
         base.OnModelCreating(modelBuilder);
