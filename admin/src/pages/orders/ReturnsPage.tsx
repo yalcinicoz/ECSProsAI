@@ -166,13 +166,7 @@ function ReasonsModal({ onClose }: { onClose: () => void }) {
 }
 
 // ── İade listesi — DataGrid F4: sekme ?tab= (requested varsayılan), filtre/arama/sıralama URL'de ──
-const RETURN_EXTRA_FILTERS: GridFilterField[] = [
-  { key: 'refundStatus', label: 'Geri ödeme durumu', type: 'text', ops: ['eq', 'contains'] },
-  { key: 'refundMethod', label: 'Geri ödeme yöntemi', type: 'text', ops: ['eq', 'contains'] },
-  { key: 'trackingNumber', label: 'Kargo takip no', type: 'text' },
-  { key: 'cargoReturnCode', label: 'Kargo iade kodu', type: 'text' },
-  { key: 'cargoReceivedAt', label: 'Teslim alınma tarihi', type: 'date' },
-]
+const RETURN_EXTRA_FILTERS: GridFilterField[] = []   // ek alanlar sütun başlıklarında (2026-09-08)
 
 export function ReturnsPage() {
   const navigate = useNavigate()
@@ -193,17 +187,17 @@ export function ReturnsPage() {
   const switchTab = (key: string) => grid.mutate(n => { if (key === 'requested') n.delete('tab'); else n.set('tab', key) })
 
   const columns: GridColumn<ReturnSummary>[] = [
-    { key: 'returnNumber', header: 'İADE NO', frozen: true, lockVisible: true, sortable: true, minWidth: 140,
+    { key: 'returnNumber', header: 'İADE NO', filters: [{ field: 'trackingNumber', label: 'Kargo takip no', type: 'text' }, { field: 'cargoReturnCode', label: 'Kargo iade kodu', type: 'text' }], frozen: true, lockVisible: true, sortable: true, minWidth: 140,
       cell: r => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{r.returnNumber}</code> },
     { key: 'returnType', header: 'TİP', priority: 3, cell: r => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{r.returnType === 'refund' ? 'İade' : r.returnType}</span> },
     { key: 'refundAmount', header: 'TUTAR', sortable: true, align: 'right', priority: 1, filter: { type: 'number', label: 'Tutar' },
       cell: r => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{r.refundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span> },
-    { key: 'refundStatus', header: 'GERİ ÖDEME', sortable: true, priority: 2,
+    { key: 'refundStatus', header: 'GERİ ÖDEME', filters: [{ field: 'refundStatus', label: 'Geri ödeme durumu', type: 'text', ops: ['eq', 'contains'] }, { field: 'refundMethod', label: 'Geri ödeme yöntemi', type: 'text', ops: ['eq', 'contains'] }], sortable: true, priority: 2,
       cell: r => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{r.refundMethod}{r.refundStatus ? ` · ${r.refundStatus}` : ''}</span> },
     { key: 'status', header: 'DURUM', lockVisible: true, sortable: true, priority: 1,
       cell: r => { const st = RETURN_STATUS_MAP[r.status] ?? { label: r.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> } },
     { key: 'cargoReturnCode', header: 'KARGO İADE KODU', priority: 3, defaultVisible: false, cell: r => <span className="text-xs font-mono" style={{ color: 'var(--text-s)' }}>{r.cargoReturnCode ?? '—'}</span> },
-    { key: 'createdAt', header: 'TARİH', sortable: true, priority: 2, filter: { type: 'date', label: 'Tarih', quick: true },
+    { key: 'createdAt', header: 'TARİH', filters: [{ field: 'cargoReceivedAt', label: 'Teslim alınma tarihi', type: 'date' }], sortable: true, priority: 2, filter: { type: 'date', label: 'Tarih', quick: true },
       cell: r => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(r.createdAt).toLocaleDateString('tr-TR')}</span> },
     { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
   ]

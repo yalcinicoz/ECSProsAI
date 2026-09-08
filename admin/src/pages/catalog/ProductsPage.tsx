@@ -83,15 +83,10 @@ export function ProductsPage() {
 
   const extraFilters: GridFilterField[] = useMemo(() => [
     { key: 'productGroupId', label: 'Ürün grubu', type: 'enum', options: groupOptions, quick: true },
-    { key: 'sourceType', label: 'Kaynak', type: 'enum', multiple: true, options: SOURCE_TYPE_OPTIONS },
-    { key: 'basePrice', label: 'Liste fiyatı', type: 'number' },
-    { key: 'taxRate', label: 'KDV %', type: 'number' },
-    { key: 'supplierProductCode', label: 'Tedarikçi ürün kodu', type: 'text' },
-    { key: 'createdAt', label: 'Oluşturma', type: 'date' },
   ], [groupOptions])
 
   const columns: GridColumn<ProductListItem>[] = [
-    { key: 'code', header: 'ÜRÜN', frozen: true, lockVisible: true, sortable: true, minWidth: 220, filter: { type: 'text', label: 'Ürün kodu' },
+    { key: 'code', header: 'ÜRÜN', filters: [{ field: 'supplierProductCode', label: 'Tedarikçi ürün kodu', type: 'text' }, { field: 'basePrice', label: 'Liste fiyatı', type: 'number' }, { field: 'taxRate', label: 'KDV %', type: 'number' }, { field: 'createdAt', label: 'Oluşturma', type: 'date' }], frozen: true, lockVisible: true, sortable: true, minWidth: 220, filter: { type: 'text', label: 'Ürün kodu' },
       cell: (item) => (
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center" style={{ background: 'var(--brand-bg)', color: 'var(--brand)' }}>
@@ -103,7 +98,7 @@ export function ProductsPage() {
           </div>
         </div>
       ) },
-    { key: 'group', header: 'GRUP', priority: 2, cell: (item) => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{groupMap.get(item.productGroupId) ?? '—'}</span> },
+    { key: 'group', header: 'GRUP', filters: [{ field: 'sourceType', label: 'Kaynak', type: 'enum', multiple: true, options: SOURCE_TYPE_OPTIONS }], priority: 2, cell: (item) => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{groupMap.get(item.productGroupId) ?? '—'}</span> },
     { key: 'variantCount', header: 'VARYANT', priority: 3, align: 'center', cell: (item) => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{item.variantCount}</span> },
     { key: 'isSaleOpen', header: 'DURUM', priority: 1, align: 'center', sortable: true, lockVisible: true, filter: { type: 'boolean', label: 'Satışta' },
       cell: (item) => <Badge variant={item.isActive ? 'success' : 'neutral'}>{item.isActive ? 'Satışta' : 'Satış Kapalı'}</Badge> },

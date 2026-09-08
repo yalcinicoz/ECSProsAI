@@ -253,12 +253,6 @@ function InvoiceModal({ invoice, onClose }: { invoice: InvoiceSummary; onClose: 
 // ── Fatura listesi — DataGrid F4 (docs/datagrid-standardi-plani.md): sekme ?tab= (created varsayılan), filtre/arama/sıralama URL'de ──
 const INVOICE_EXTRA_FILTERS: GridFilterField[] = [
   { key: 'invoiceType', label: 'Tip', type: 'enum', multiple: true, quick: true, options: Object.entries(INVOICE_TYPE_MAP).map(([value, label]) => ({ value, label })) },
-  { key: 'numberSource', label: 'Numara kaynağı', type: 'enum', multiple: true, options: Object.entries(INVOICE_SOURCE_MAP).map(([value, label]) => ({ value, label })) },
-  { key: 'hasPdf', label: 'Entegratör PDF', type: 'boolean' },
-  { key: 'integratorStatus', label: 'Entegratör durumu', type: 'enum', multiple: true, options: Object.entries(INTEGRATOR_STATUS).map(([value, label]) => ({ value, label })) },
-  { key: 'taxNumber', label: 'Vergi no / TCKN', type: 'text', ops: ['contains', 'startswith'] },
-  { key: 'externalDocumentId', label: 'Dış belge no', type: 'text' },
-  { key: 'createdAt', label: 'Kayıt tarihi', type: 'date' },
 ]
 
 export function InvoicesPage() {
@@ -280,18 +274,18 @@ export function InvoicesPage() {
   const switchTab = (key: string) => grid.mutate(n => { if (key === 'created') n.delete('tab'); else n.set('tab', key) })
 
   const columns: GridColumn<InvoiceSummary>[] = [
-    { key: 'invoiceNumber', header: 'FATURA NO', frozen: true, lockVisible: true, sortable: true, minWidth: 150,
+    { key: 'invoiceNumber', header: 'FATURA NO', filters: [{ field: 'externalDocumentId', label: 'Dış belge no', type: 'text' }, { field: 'numberSource', label: 'Numara kaynağı', type: 'enum', multiple: true, options: Object.entries(INVOICE_SOURCE_MAP).map(([value, label]) => ({ value, label })) }], frozen: true, lockVisible: true, sortable: true, minWidth: 150,
       cell: inv => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{inv.invoiceNumber}{inv.numberSource && inv.numberSource !== 'internal' && <Badge variant="neutral" className="ml-2">{INVOICE_SOURCE_MAP[inv.numberSource] ?? inv.numberSource}</Badge>}</code> },
     { key: 'invoiceType', header: 'TİP', sortable: true, priority: 2, cell: inv => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{INVOICE_TYPE_MAP[inv.invoiceType] ?? inv.invoiceType}</span> },
-    { key: 'recipient', header: 'ALICI', frozen: true, sortable: true, priority: 1, filter: { type: 'text', label: 'Alıcı' },
+    { key: 'recipient', header: 'ALICI', filters: [{ field: 'taxNumber', label: 'Vergi no / TCKN', type: 'text', ops: ['contains', 'startswith'] }], frozen: true, sortable: true, priority: 1, filter: { type: 'text', label: 'Alıcı' },
       cell: inv => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{inv.recipientName}</span> },
     { key: 'total', header: 'TUTAR', sortable: true, align: 'right', priority: 1, filter: { type: 'number', label: 'Tutar' },
       cell: inv => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{inv.grandTotal.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span> },
-    { key: 'hasPdf', header: 'PDF', priority: 3, align: 'center', exportable: false, cell: inv => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{inv.hasIntegratorPdf ? '✓' : '—'}</span> },
+    { key: 'hasPdf', header: 'PDF', filters: [{ field: 'hasPdf', label: 'Entegratör PDF', type: 'boolean' }, { field: 'integratorStatus', label: 'Entegratör durumu', type: 'enum', multiple: true, options: Object.entries(INTEGRATOR_STATUS).map(([value, label]) => ({ value, label })) }], priority: 3, align: 'center', exportable: false, cell: inv => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{inv.hasIntegratorPdf ? '✓' : '—'}</span> },
     { key: 'status', header: 'DURUM', lockVisible: true, sortable: true, priority: 1,
       cell: inv => { const st = INVOICE_STATUS_MAP[inv.status] ?? { label: inv.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> } },
     { key: 'integratorStatus', header: 'ENTEGRATÖR', priority: 3, defaultVisible: false, cell: inv => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{INTEGRATOR_STATUS[inv.integratorStatus] ?? inv.integratorStatus}</span> },
-    { key: 'invoiceDate', header: 'TARİH', sortable: true, priority: 2, filter: { type: 'date', label: 'Fatura tarihi', quick: true },
+    { key: 'invoiceDate', header: 'TARİH', filters: [{ field: 'createdAt', label: 'Kayıt tarihi', type: 'date' }], sortable: true, priority: 2, filter: { type: 'date', label: 'Fatura tarihi', quick: true },
       cell: inv => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(inv.invoiceDate).toLocaleDateString('tr-TR')}</span> },
     { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
   ]

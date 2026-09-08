@@ -36,13 +36,6 @@ const GENDER_OPTIONS = [
 
 const EXTRA_FILTERS: GridFilterField[] = [
   { key: 'isRegistered', label: 'Kayıtlı üye', type: 'boolean', quick: true },
-  { key: 'isEmailVerified', label: 'E-posta doğrulandı', type: 'boolean' },
-  { key: 'isPhoneVerified', label: 'Telefon doğrulandı', type: 'boolean' },
-  { key: 'gender', label: 'Cinsiyet', type: 'enum', multiple: true, options: GENDER_OPTIONS },
-  { key: 'companyName', label: 'Şirket', type: 'text' },
-  { key: 'taxNumber', label: 'Vergi no', type: 'text', ops: ['contains', 'startswith', 'eq'] },
-  { key: 'lastLoginAt', label: 'Son giriş', type: 'date' },
-  { key: 'legacyMemberId', label: 'Eski üye no', type: 'number' },
 ]
 
 export function MembersPage() {
@@ -63,20 +56,20 @@ export function MembersPage() {
   const totalCount = data?.totalCount ?? 0
 
   const columns: GridColumn<MemberSummary>[] = [
-    { key: 'name', header: 'AD SOYAD', frozen: true, lockVisible: true, priority: 1, minWidth: 160,
+    { key: 'name', header: 'AD SOYAD', filters: [{ field: 'firstName', label: 'Ad', type: 'text' }, { field: 'lastName', label: 'Soyad', type: 'text' }, { field: 'gender', label: 'Cinsiyet', type: 'enum', multiple: true, options: GENDER_OPTIONS }, { field: 'companyName', label: 'Şirket', type: 'text' }, { field: 'taxNumber', label: 'Vergi no', type: 'text', ops: ['contains', 'startswith', 'eq'] }], frozen: true, lockVisible: true, priority: 1, minWidth: 160,
       cell: m => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{m.firstName} {m.lastName}</span> },
-    { key: 'email', header: 'E-POSTA', sortable: true, priority: 1, filter: { type: 'text', label: 'E-posta' },
+    { key: 'email', header: 'E-POSTA', filters: [{ field: 'isEmailVerified', label: 'E-posta doğrulandı', type: 'boolean' }], sortable: true, priority: 1, filter: { type: 'text', label: 'E-posta' },
       cell: m => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{m.email ?? '—'}</span> },
-    { key: 'phone', header: 'TELEFON', sortable: true, priority: 2, filter: { type: 'text', label: 'Telefon', ops: ['contains', 'startswith'] },
+    { key: 'phone', header: 'TELEFON', filters: [{ field: 'isPhoneVerified', label: 'Telefon doğrulandı', type: 'boolean' }], sortable: true, priority: 2, filter: { type: 'text', label: 'Telefon', ops: ['contains', 'startswith'] },
       cell: m => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{m.phone ?? '—'}</span> },
-    { key: 'isRegistered', header: 'ÜYELİK', sortable: true, priority: 3,
+    { key: 'isRegistered', header: 'ÜYELİK', filters: [{ field: 'legacyMemberId', label: 'Eski üye no', type: 'number' }], sortable: true, priority: 3,
       cell: m => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{m.isRegistered ? 'Kayıtlı' : 'Misafir'}</span> },
     { key: 'isActive', header: 'DURUM', sortable: true, priority: 1, lockVisible: true,
       cell: m => <Badge variant={m.isActive ? 'success' : 'neutral'}>{m.isActive ? 'Aktif' : 'Pasif'}</Badge> },
-    { key: 'createdAt', header: 'KAYIT', sortable: true, priority: 2, filter: { type: 'date', label: 'Kayıt tarihi', quick: true },
+    { key: 'createdAt', header: 'KAYIT', filters: [{ field: 'lastLoginAt', label: 'Son giriş', type: 'date' }], sortable: true, priority: 2, filter: { type: 'date', label: 'Kayıt tarihi', quick: true },
       cell: m => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(m.createdAt).toLocaleDateString('tr-TR')}</span> },
-    { key: 'firstName', header: 'AD', sortable: true, priority: 3, defaultVisible: false, filter: { type: 'text', label: 'Ad' }, cell: m => m.firstName },
-    { key: 'lastName', header: 'SOYAD', sortable: true, priority: 3, defaultVisible: false, filter: { type: 'text', label: 'Soyad' }, cell: m => m.lastName },
+    { key: 'firstName', header: 'AD', sortable: true, priority: 3, defaultVisible: false, cell: m => m.firstName },
+    { key: 'lastName', header: 'SOYAD', sortable: true, priority: 3, defaultVisible: false, cell: m => m.lastName },
     { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
   ]
 

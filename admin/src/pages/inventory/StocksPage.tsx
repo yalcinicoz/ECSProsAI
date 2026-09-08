@@ -85,11 +85,6 @@ const NAMED_KEYS = ['warehouseId', 'variantId', 'sectionId', 'binId'] as const
 
 const EXTRA_FILTERS: GridFilterField[] = [
   { key: 'inStock', label: 'Mevcut stok', type: 'boolean', quick: true },
-  { key: 'quantity', label: 'Stok', type: 'number' },
-  { key: 'reserved', label: 'Rezerve', type: 'number' },
-  { key: 'available', label: 'Mevcut', type: 'number' },
-  { key: 'stockType', label: 'Stok tipi', type: 'enum', options: [{ value: 'physical', label: 'Fiziksel' }, { value: 'virtual', label: 'Sanal' }] },
-  { key: 'updatedAt', label: 'Güncellenme', type: 'date' },
 ]
 
 export function StocksPage() {
@@ -216,10 +211,10 @@ export function StocksPage() {
     { key: 'bin', header: 'RAF', priority: 2, cell: s => s.binCode
       ? <code className="text-xs font-mono" style={{ color: 'var(--text-m)' }}>{s.binCode}</code>
       : <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span> },
-    { key: 'quantity', header: 'STOK', sortable: true, align: 'right', priority: 1, cell: s => <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{s.quantity}</span> },
-    { key: 'reserved', header: 'REZ.', sortable: true, align: 'right', priority: 2,
+    { key: 'quantity', header: 'STOK', filters: [{ field: 'quantity', label: 'Stok', type: 'number' }, { field: 'stockType', label: 'Stok tipi', type: 'enum', options: [{ value: 'physical', label: 'Fiziksel' }, { value: 'virtual', label: 'Sanal' }] }, { field: 'updatedAt', label: 'Güncellenme', type: 'date' }], sortable: true, align: 'right', priority: 1, cell: s => <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{s.quantity}</span> },
+    { key: 'reserved', header: 'REZ.', filters: [{ field: 'reserved', label: 'Rezerve', type: 'number' }], sortable: true, align: 'right', priority: 2,
       cell: s => <span className="text-sm" style={{ color: s.reservedQuantity > 0 ? 'var(--brand)' : 'var(--text-s)' }}>{s.reservedQuantity}</span> },
-    { key: 'available', header: 'MEVCUT', sortable: true, align: 'right', priority: 1,
+    { key: 'available', header: 'MEVCUT', filters: [{ field: 'available', label: 'Mevcut', type: 'number' }], sortable: true, align: 'right', priority: 1,
       cell: s => <span className={cn('text-sm font-medium', s.availableQuantity <= 0 ? 'text-red-500' : s.availableQuantity <= 5 ? 'text-yellow-600' : '')}>{s.availableQuantity}</span> },
   ]
 

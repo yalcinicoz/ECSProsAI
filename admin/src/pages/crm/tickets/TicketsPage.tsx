@@ -36,14 +36,6 @@ export function TicketsPage() {
 
   const extraFilters: GridFilterField[] = [
     { key: 'type', label: 'Tür', type: 'enum', quick: true, options: [{ value: 'complaint', label: 'Şikayet' }, { value: 'request', label: 'Talep' }] },
-    { key: 'orderNumber', label: 'Sipariş no', type: 'text', ops: ['eq', 'startswith', 'contains'] },
-    { key: 'customerPhone', label: 'Müşteri telefon', type: 'text', ops: ['contains', 'startswith'] },
-    { key: 'caller', label: 'Arayan', type: 'text' },
-    { key: 'callerPhone', label: 'Arayan telefon', type: 'text', ops: ['contains', 'startswith'] },
-    { key: 'createdByName', label: 'Kayıt açan (ad)', type: 'text' },
-    { key: 'lastActivityAt', label: 'Son işlem tarihi', type: 'date' },
-    { key: 'activityCount', label: 'İşlem sayısı', type: 'number' },
-    { key: 'hidden', label: 'Gizli', type: 'boolean' },
   ]
 
   const columns: GridColumn<TicketListItem>[] = [
@@ -55,21 +47,21 @@ export function TicketsPage() {
       </span> },
     { key: 'type', header: 'Tür / Konu', sortable: true, priority: 1,
       cell: t => <span style={{ color: 'var(--text)' }}><span className="text-xs" style={{ color: t.type === 'complaint' ? '#ef4444' : '#3b82f6' }}>{TYPE_LABEL[t.type] ?? t.type}</span><br />{t.subjectName}</span> },
-    { key: 'order', header: 'Sipariş', priority: 2,
+    { key: 'order', header: 'Sipariş', filters: [{ field: 'orderNumber', label: 'Sipariş no', type: 'text', ops: ['eq', 'startswith', 'contains'] }], priority: 2,
       cell: t => <span className="font-mono text-xs whitespace-nowrap" style={{ color: 'var(--text)' }}>
         {t.orderNumber ?? '—'}{t.firmPlatformId && platformNames[t.firmPlatformId] && <><br /><span style={{ color: 'var(--text-s)' }}>{platformNames[t.firmPlatformId]}</span></>}
       </span> },
-    { key: 'customer', header: 'Müşteri', sortable: true, priority: 1, filter: { type: 'text', label: 'Müşteri adı', quick: true },
+    { key: 'customer', header: 'Müşteri', filters: [{ field: 'customerPhone', label: 'Müşteri telefon', type: 'text', ops: ['contains', 'startswith'] }], sortable: true, priority: 1, filter: { type: 'text', label: 'Müşteri adı', quick: true },
       cell: t => <span style={{ color: 'var(--text)' }}>{t.customerName || '—'}<br /><span className="text-xs" style={{ color: 'var(--text-s)' }}>{fmtTelefon(t.customerPhone)}</span></span> },
-    { key: 'caller', header: 'Arayan', priority: 3,
+    { key: 'caller', header: 'Arayan', filters: [{ field: 'caller', label: 'Arayan', type: 'text' }, { field: 'callerPhone', label: 'Arayan telefon', type: 'text', ops: ['contains', 'startswith'] }], priority: 3,
       cell: t => <span style={{ color: 'var(--text)' }}>{t.callerName || '—'}<br /><span className="text-xs" style={{ color: 'var(--text-s)' }}>{fmtTelefon(t.callerPhone)}</span></span> },
-    { key: 'createdAt', header: 'Kayıt', sortable: true, priority: 2, filter: { type: 'date', label: 'Kayıt tarihi', quick: true },
+    { key: 'createdAt', header: 'Kayıt', filters: [{ field: 'createdByName', label: 'Kayıt açan (ad)', type: 'text' }], sortable: true, priority: 2, filter: { type: 'date', label: 'Kayıt tarihi', quick: true },
       cell: t => <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{fmtTarih(t.createdAt)}<br />{t.createdByName}</span> },
-    { key: 'lastActivityAt', header: 'Son İşlem', sortable: true, priority: 3,
+    { key: 'lastActivityAt', header: 'Son İşlem', filters: [{ field: 'lastActivityAt', label: 'Son işlem tarihi', type: 'date' }, { field: 'activityCount', label: 'İşlem sayısı', type: 'number' }], sortable: true, priority: 3,
       cell: t => <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{fmtTarih(t.lastActivityAt)}<br />{t.updatedByName ?? ''} {t.activityCount > 0 && <span style={{ color: 'var(--text-s)' }}>({t.activityCount})</span>}</span> },
     { key: 'control', header: 'Kontrol', priority: 2, exportable: false,
       cell: t => t.readByMe ? <span className="text-xs" style={{ color: '#22c55e' }}>Kontrol edildi</span> : <span className="text-xs font-semibold" style={{ color: '#ef4444' }}>Kontrol edilmedi</span> },
-    { key: 'status', header: 'Durum', lockVisible: true, sortable: true, priority: 1,
+    { key: 'status', header: 'Durum', filters: [{ field: 'hidden', label: 'Gizli', type: 'boolean' }], lockVisible: true, sortable: true, priority: 1,
       cell: t => <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap" style={{ background: `${t.statusColor}20`, color: t.statusColor }}>{t.statusName}</span> },
   ]
 

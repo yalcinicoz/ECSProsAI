@@ -23,10 +23,6 @@ const FILL_LABEL: Record<string, string> = { all: 'Tüm ürünler', manual: 'Man
 
 const EXTRA_FILTERS: GridFilterField[] = [
   { key: 'isActive', label: 'Aktif', type: 'boolean', quick: true },
-  { key: 'fillType', label: 'Kapsam', type: 'enum', multiple: true, options: Object.entries(FILL_LABEL).map(([value, label]) => ({ value, label })) },
-  { key: 'priority', label: 'Öncelik', type: 'number' },
-  { key: 'endsAt', label: 'Bitiş', type: 'date' },
-  { key: 'badgeLabel', label: 'Rozet', type: 'text' },
 ]
 
 export function CampaignsPage() {
@@ -51,14 +47,14 @@ export function CampaignsPage() {
   const switchTab = (key: 'active' | 'all') => grid.mutate(n => { if (key === 'all') n.delete('tab'); else n.set('tab', key) })
 
   const columns: GridColumn<Campaign>[] = [
-    { key: 'code', header: 'KOD', frozen: true, lockVisible: true, sortable: true, minWidth: 120,
+    { key: 'code', header: 'KOD', filters: [{ field: 'badgeLabel', label: 'Rozet', type: 'text' }], frozen: true, lockVisible: true, sortable: true, minWidth: 120,
       cell: c => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{c.code}</code> },
     { key: 'name', header: 'AD', priority: 1, exportable: true, cell: c => <span className="text-sm" style={{ color: 'var(--text)' }}>{tr(c.nameI18n)}</span> },
     { key: 'campaignTypeCode', header: 'TİP', priority: 2, cell: c => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{typeName(c.campaignTypeId, c.campaignTypeCode)}</span> },
-    { key: 'fillType', header: 'KAPSAM', priority: 3, cell: c => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{FILL_LABEL[c.fillType] ?? c.fillType}</span> },
-    { key: 'startsAt', header: 'TARİH', sortable: true, priority: 2, filter: { type: 'date', label: 'Başlangıç', quick: true },
+    { key: 'fillType', header: 'KAPSAM', filters: [{ field: 'fillType', label: 'Kapsam', type: 'enum', multiple: true, options: Object.entries(FILL_LABEL).map(([value, label]) => ({ value, label })) }], priority: 3, cell: c => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{FILL_LABEL[c.fillType] ?? c.fillType}</span> },
+    { key: 'startsAt', header: 'TARİH', filters: [{ field: 'endsAt', label: 'Bitiş', type: 'date' }], sortable: true, priority: 2, filter: { type: 'date', label: 'Başlangıç', quick: true },
       cell: c => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(c.startsAt).toLocaleDateString('tr-TR')} → {c.endsAt ? new Date(c.endsAt).toLocaleDateString('tr-TR') : 'süresiz'}</span> },
-    { key: 'priority', header: 'ÖNCELİK', sortable: true, align: 'right', priority: 2, cell: c => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{c.priority}</span> },
+    { key: 'priority', header: 'ÖNCELİK', filters: [{ field: 'priority', label: 'Öncelik', type: 'number' }], sortable: true, align: 'right', priority: 2, cell: c => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{c.priority}</span> },
     { key: 'isActive', header: 'DURUM', lockVisible: true, sortable: true, priority: 1, cell: c => <Badge variant={c.isActive ? 'success' : 'neutral'}>{c.isActive ? 'Aktif' : 'Pasif'}</Badge> },
     { key: 'edit', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span> },
   ]
