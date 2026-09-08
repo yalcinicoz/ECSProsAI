@@ -67,7 +67,14 @@ public class StorePushDevicesController(IMediator mediator) : ControllerBase
         else if (!string.IsNullOrWhiteSpace(req.Token)) { var h = ECSPros.Api.Services.Push.PushKuyruk.Hash(req.Token); q = q.Where(n => n.TokenHash == h); }
         var rows = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(q, ct);
         foreach (var n in rows) n.OpenedAt = DateTime.UtcNow;
-        if (rows.Count > 0) await sdb.SaveChangesAsync(ct);
+        if (rows.Count > 0)
+        {
+            // Bildirimi açan cihaz canlıdır → LastSeenAt (üye hedeflemesinde "en son görülen cihaz" seçimi buna dayanır).
+            var cihazIds = rows.Select(n => n.DeviceId).Distinct().ToList();
+            var cihazlar = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(sdb.PushDevices.Where(d => cihazIds.Contains(d.Id)), ct);
+            foreach (var d in cihazlar) d.LastSeenAt = DateTime.UtcNow;
+            await sdb.SaveChangesAsync(ct);
+        }
         return Ok(new { success = true, data = rows.Count });
     }
 

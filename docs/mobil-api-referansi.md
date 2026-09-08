@@ -259,6 +259,12 @@ istenebilir); girişliyken (üye JWT'siyle) gönderilen kayıt üyeye bağlanır
 3. **Çıkıştan hemen sonra** (JWT'siz) → üye bağlantısı kopar; cihaz anonim kayda döner.
    Üyeye özel bildirim istenmiyorsa çıkışta `revoke` da çağrılabilir.
 
+4. **Her uygulama açılışında** (2026-09-08 önerisi) → aynı token'a upsert, yalnız `LastSeenAt` tazelenir; ek maliyeti yok.
+   Sunucu üyeye bildirim gönderirken **platform başına yalnız en son görülen cihazı** hedefler
+   (`deviceId` sabit tutulamadığında aynı telefonun eski satırlarına tekrar gitmesin diye); bildirime tıklama
+   (`opened`) da cihazı "görüldü" sayar. `deviceId` yine de kurulumlar arasında SABİT tutulmalı (iOS Keychain /
+   Android güvenli depo UUID) — eski token'ın anında `revoked` olması ancak böyle sağlanır.
+
 Gönderilen üye durumu kaydın SON halidir: girişli istek bağlar, girişsiz istek koparır.
 Platform yalnız `android`/`ios`; token 10-512 karakter. Rate limit: `store-auth` havuzu.
 
@@ -357,5 +363,5 @@ Yok: `favorite_back_in_stock` (önceki stok durumu izlenmiyor — sonraki sürü
 | `POST /api/store/push-devices/opened {dedupId, token?}` | tıklama → `openedAt` (üye JWT ile üyenin, değilse token'ın satırı) |
 
 **Panel:** Pazarlama › Bildirimler › **Push Şablonları** (başlık/gövde/link/TTL/öncelik/açık-kapalı, link doğrulamalı) ve
-**Push Gönderimleri** (log, 24 saat özeti, tek cihaza/üyeye deneme gönderimi — Firebase konsolundan toplu kampanya ASLA). Deneme formundaki **Cihaz Id** = `push_devices.Id`; panelde Üyeler › üye detayı › *Mobil Bildirim Cihazları* bölümünde her cihazın Id'si, **Kopyala** ve **Deneme gönder** (formu `?tab=push-log&deviceId=` ile önceden doldurur) düğmeleri vardır; **Üyeye deneme gönder** üyenin tüm aktif cihazlarına gider (2026-09-08).
+**Push Gönderimleri** (log, 24 saat özeti, tek cihaza/üyeye deneme gönderimi — Firebase konsolundan toplu kampanya ASLA). Deneme formundaki **Cihaz Id** = `push_devices.Id`; panelde Üyeler › üye detayı › *Mobil Bildirim Cihazları* bölümünde her cihazın Id'si, **Kopyala** ve **Deneme gönder** (formu `?tab=push-log&deviceId=` ile önceden doldurur) düğmeleri vardır; **Üyeye deneme gönder** üyenin platform başına en son görülen aktif cihazına gider (2026-09-08; `Push:LatestDevicePerPlatform=false` ile tüm aktif cihazlar).
 Log: `storefront.push_notifications` (token yalnız SHA-256 hash), şablonlar `storefront.push_templates`.

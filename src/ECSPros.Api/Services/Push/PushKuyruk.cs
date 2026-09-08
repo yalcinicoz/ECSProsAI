@@ -42,6 +42,11 @@ public sealed class PushKuyruk(IStorefrontDbContext sdb, ICrmDbContext cdb, ICon
             : i.MemberId is { } mid
                 ? await sdb.PushDevices.AsNoTracking().Where(d => d.MemberId == mid && d.Status == "active" && (i.FirmPlatformId == null || d.FirmPlatformId == i.FirmPlatformId)).ToListAsync(ct)
                 : [];
+        // 2026-09-08 (kullanıcı kararı): üye hedeflemesinde platform başına yalnız EN SON GÖRÜLEN cihaz. Uygulama kurulumlar
+        // arasında deviceId'yi sabit tutamadığında aynı telefon birden çok satır açıyor; eski token'lar bir süre FCM'de geçerli
+        // kaldığından bildirim tekrarlanıyordu. Doğrudan DeviceId ile gelen istek (deneme) etkilenmez.
+        if (i.DeviceId is null && cihazlar.Count > 1 && config.GetValue("Push:LatestDevicePerPlatform", true))
+            cihazlar = cihazlar.GroupBy(d => d.Platform).Select(g => g.OrderByDescending(d => d.LastSeenAt).First()).ToList();
         if (cihazlar.Count == 0) return 0;
         var memberId = i.MemberId ?? cihazlar[0].MemberId;
 
