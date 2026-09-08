@@ -359,9 +359,35 @@ Yok: `favorite_back_in_stock` (önceki stok durumu izlenmiyor — sonraki sürü
 |---|---|
 | `PUT /api/store/account/marketing-consents` | gövdeye `push: boolean` eklendi (null → mevcut korunur; **varsayılan true** — ayarlar ekranındaki anahtar KAPATMA içindir) |
 | `GET /api/store/account/marketing-consents` | `{email, sms, phone, push}` |
-| `GET /api/store/account/notifications?page=&pageSize=` | üyeye gönderilmiş bildirimler (`items[] {id,type,title,body,link,imageUrl,dedupId,sentAt,openedAt}`, `unreadCount`) |
-| `POST /api/store/push-devices/opened {dedupId, token?}` | tıklama → `openedAt` (üye JWT ile üyenin, değilse token'ın satırı) |
+| `GET /api/store/account/notifications?page=&pageSize=` | **Bildirimlerim** listesi — bkz. §14 (yeniden tanımlandı 2026-09-08) |
+| `POST /api/store/push-devices/opened {dedupId, token?}` | tıklama → `openedAt` **+ `readAt`** (şablon `dismissOnOpen` ise listeden düşer); üye JWT ile üyenin, değilse token'ın satırı |
 
 **Panel:** Pazarlama › Bildirimler › **Push Şablonları** (başlık/gövde/link/TTL/öncelik/açık-kapalı, link doğrulamalı) ve
 **Push Gönderimleri** (log, 24 saat özeti, tek cihaza/üyeye deneme gönderimi — Firebase konsolundan toplu kampanya ASLA). Deneme formundaki **Cihaz Id** = `push_devices.Id`; panelde Üyeler › üye detayı › *Mobil Bildirim Cihazları* bölümünde her cihazın Id'si, **Kopyala** ve **Deneme gönder** (formu `?tab=push-log&deviceId=` ile önceden doldurur) düğmeleri vardır; **Üyeye deneme gönder** üyenin platform başına en son görülen aktif cihazına gider (2026-09-08; `Push:LatestDevicePerPlatform=false` ile tüm aktif cihazlar).
 Log: `storefront.push_notifications` (token yalnız SHA-256 hash), şablonlar `storefront.push_templates`.
+
+## 14. Uygulama içi "Bildirimlerim" — `/api/store/account/notifications` (docs/BILDIRIMLERIM_BACKEND_ISTEGI.md, 2026-09-08 UYGULANDI)
+
+Listenin ve durumların tek sahibi backend'dir; mobil yerelde saklamaz. Hepsi **üye JWT** ister — cihaz/web token'ı ya da kimliksiz
+istek **401** `{success:false, error, code:"member_required"}`. `firmPlatformId` isteğe bağlıdır (query ya da `X-Firm-Platform`);
+verilmezse üyenin tüm platformlardaki satırları döner. Zarf `{success, data, error, code}`; tarihler ISO-8601 UTC.
+
+| Uç | Davranış |
+|---|---|
+| `GET …?page=1&pageSize=20` | görünür satırlar (`inbox=true`, silinmemiş, süresi dolmamış), `createdAt DESC`; `pageSize` ≤ 50; **her yanıtta `unreadCount`** (tüm liste) + `totalCount/page/pageSize/totalPages/hasNextPage`. Satır: `id, dedupId, type, class, title, body, link, imageUrl?, icon, createdAt, readAt, dismissOnOpen` |
+| `GET …/unread-count` | `{unreadCount}` (rozet için hafif uç) |
+| `POST …/{id}/read` | `readAt` (idempotent); şablon `dismissOnOpen` ise listeden düşer → `{unreadCount}`; yok/başkasının **404** |
+| `POST …/read-all` | görünen okunmamışların tümü → `{unreadCount:0}` |
+| `DELETE …/{id}` | kullanıcı silmesi (geri alma yok; zaten silinmiş → 200) → `{unreadCount}`; yok/başkasının **404** |
+| `DELETE …` | görünen tüm satırlar silinir → `{unreadCount:0}` |
+
+**Kurallar:** üyeye hedeflenen her bildirim (`memberId` dolu) FCM'e gidemese bile (cihaz yok / push izni kapalı / sıklık sınırı → `status=skipped`,
+`errorCode` no_device | no_consent | daily_limit | weekly_limit) cihazsız satırla (`DeviceId` null) listede görünür. Aynı olay üyenin
+birden çok cihazına gittiyse listede TEK satır görünür; okuma/silme aynı `dedupId`'li tüm satırlara uygulanır. Misafir cihaza giden
+kampanya satırları (`memberId` yok) listede yoktur. `icon` §5 anahtarlarından (order, cargo, payment, return, favorite, stock, cart,
+question, review, coupon, campaign, account, info); `imageUrl` ürünle ilgili türlerde (favori, stok, sepet, soru, yorum, gezilen) doludur.
+Şablon bazlı panel ayarları (Pazarlama › Bildirimler › Push Şablonları › düzenle): **Listede göster** (`inbox`), **İkon**, **Listede kalma
+(gün)** (`expiresDays`; varsayılan işlemsel 90 / pazarlama 30), **Açılınca listeden düşsün** (`dismissOnOpen`). Kolonlar
+`storefront.push_notifications`: `Inbox, Icon, DismissOnOpen, ExpiresAt, ReadAt, DismissedAt` (belgedeki `deleted_at` = `DismissedAt`;
+BaseEntity soft delete admin logunu gizleyeceği için ayrı kolon). Doğrulama: `NotificationInboxDbTests` (§7 prosedürü, gerçek DB, geri alınır).
+

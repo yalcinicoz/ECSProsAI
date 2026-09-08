@@ -66,11 +66,18 @@ public class StorePushDevicesController(IMediator mediator) : ControllerBase
         if (mid is { } m) q = q.Where(n => n.MemberId == m);
         else if (!string.IsNullOrWhiteSpace(req.Token)) { var h = ECSPros.Api.Services.Push.PushKuyruk.Hash(req.Token); q = q.Where(n => n.TokenHash == h); }
         var rows = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(q, ct);
-        foreach (var n in rows) n.OpenedAt = DateTime.UtcNow;
+        var simdi = DateTime.UtcNow;
+        foreach (var n in rows)
+        {
+            n.OpenedAt = simdi;
+            // Bildirimlerim (2026-09-08): push'tan açılma listede de okundu sayılır; dismissOnOpen ise listeden düşer
+            n.ReadAt ??= simdi;
+            if (n.DismissOnOpen) n.DismissedAt ??= simdi;
+        }
         if (rows.Count > 0)
         {
             // Bildirimi açan cihaz canlıdır → LastSeenAt (üye hedeflemesinde "en son görülen cihaz" seçimi buna dayanır).
-            var cihazIds = rows.Select(n => n.DeviceId).Distinct().ToList();
+            var cihazIds = rows.Where(n => n.DeviceId != null).Select(n => n.DeviceId!.Value).Distinct().ToList();
             var cihazlar = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(sdb.PushDevices.Where(d => cihazIds.Contains(d.Id)), ct);
             foreach (var d in cihazlar) d.LastSeenAt = DateTime.UtcNow;
             await sdb.SaveChangesAsync(ct);

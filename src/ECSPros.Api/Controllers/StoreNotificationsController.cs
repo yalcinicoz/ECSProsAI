@@ -82,9 +82,11 @@ public class StoreNotificationsController(
     [HttpGet("push-templates")]
     public async Task<IActionResult> PushTemplates([FromServices] ECSPros.Storefront.Application.Services.IStorefrontDbContext sdb, CancellationToken ct)
         => Ok(new { success = true, data = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
-            sdb.PushTemplates.AsNoTracking().OrderBy(t => t.Class).ThenBy(t => t.Name).Select(t => new { t.Id, t.Type, t.Class, t.Name, t.Title, t.Body, t.LinkTemplate, t.Enabled, t.TtlSeconds, t.Priority, t.Description }), ct) });
+            sdb.PushTemplates.AsNoTracking().OrderBy(t => t.Class).ThenBy(t => t.Name).Select(t => new { t.Id, t.Type, t.Class, t.Name, t.Title, t.Body, t.LinkTemplate, t.Enabled, t.TtlSeconds, t.Priority, t.Description, t.Inbox, t.Icon, t.ExpiresDays, t.DismissOnOpen }), ct) });
 
-    public record PushTemplateBody(string? Name, string Title, string Body, string LinkTemplate, bool Enabled, int? TtlSeconds, string? Priority);
+    /// <summary>Bildirimlerim alanları (2026-09-08): inbox (listede göster), icon (§5 anahtarı), expiresDays (listede kalma), dismissOnOpen.</summary>
+    public record PushTemplateBody(string? Name, string Title, string Body, string LinkTemplate, bool Enabled, int? TtlSeconds, string? Priority,
+        bool? Inbox = null, string? Icon = null, int? ExpiresDays = null, bool? DismissOnOpen = null);
 
     [HttpPut("push-templates/{type}")]
     public async Task<IActionResult> SavePushTemplate(string type, [FromBody] PushTemplateBody b, [FromServices] ECSPros.Storefront.Application.Services.IStorefrontDbContext sdb, CancellationToken ct)
@@ -99,6 +101,10 @@ public class StoreNotificationsController(
         t.Title = b.Title.Trim(); t.Body = b.Body.Trim(); t.LinkTemplate = (b.LinkTemplate ?? "/").Trim(); t.Enabled = b.Enabled;
         if (b.TtlSeconds is > 0) t.TtlSeconds = b.TtlSeconds.Value;
         if (b.Priority is "high" or "normal") t.Priority = b.Priority;
+        if (b.Inbox is { } inbox) t.Inbox = inbox;
+        if (b.Icon is { Length: > 0 } icon) { if (!ECSPros.Api.Services.Push.BildirimKutusu.Ikonlar.Contains(icon)) return BadRequest(new { success = false, error = "İkon anahtarı geçersiz: " + string.Join(", ", ECSPros.Api.Services.Push.BildirimKutusu.Ikonlar) }); t.Icon = icon; }
+        if (b.ExpiresDays is { } gun) { if (gun is < 1 or > 365) return BadRequest(new { success = false, error = "Listede kalma süresi 1-365 gün olmalı." }); t.ExpiresDays = gun; }
+        if (b.DismissOnOpen is { } d) t.DismissOnOpen = d;
         await sdb.SaveChangesAsync(ct);
         return Ok(new { success = true });
     }
@@ -114,7 +120,7 @@ public class StoreNotificationsController(
         page = Math.Max(1, page); pageSize = Math.Clamp(pageSize, 1, 200);
         var total = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.CountAsync(q, ct);
         var items = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(q.OrderByDescending(n => n.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(n => new { n.Id, n.MemberId, n.DeviceId, n.Platform, n.Type, n.Class, n.DedupId, n.Title, n.Body, n.Link, n.Status, n.ErrorCode, n.Attempts, n.ScheduledAt, n.SentAt, n.OpenedAt, n.CreatedAt }), ct);
+            .Select(n => new { n.Id, n.MemberId, n.DeviceId, n.Platform, n.Type, n.Class, n.DedupId, n.Title, n.Body, n.Link, n.Status, n.ErrorCode, n.Attempts, n.ScheduledAt, n.SentAt, n.OpenedAt, n.CreatedAt, n.Inbox, n.Icon, n.ReadAt, n.DismissedAt, n.ExpiresAt }), ct);
         var ozet = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
             sdb.PushNotifications.AsNoTracking().Where(n => n.CreatedAt >= DateTime.UtcNow.AddDays(-1)).GroupBy(n => n.Status).Select(g => new { status = g.Key, count = g.Count() }), ct);
         return Ok(new { success = true, data = new { items, totalCount = total, page, pageSize, last24h = ozet } });

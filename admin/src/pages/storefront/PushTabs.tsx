@@ -7,8 +7,11 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 
-interface PushTemplate { id: string; type: string; class: string; name: string; title: string; body: string; linkTemplate: string; enabled: boolean; ttlSeconds: number; priority: string; description?: string | null }
-interface PushLogItem { id: string; memberId: string | null; deviceId: string; platform: string; type: string; class: string; dedupId: string; title: string; body: string; link: string; status: string; errorCode: string | null; attempts: number; scheduledAt: string; sentAt: string | null; openedAt: string | null; createdAt: string }
+interface PushTemplate { id: string; type: string; class: string; name: string; title: string; body: string; linkTemplate: string; enabled: boolean; ttlSeconds: number; priority: string; description?: string | null
+  // Bildirimlerim (uygulama içi liste, docs/BILDIRIMLERIM_BACKEND_ISTEGI.md, 2026-09-08)
+  inbox: boolean; icon: string; expiresDays: number; dismissOnOpen: boolean }
+const IKONLAR: [string, string][] = [['order', 'Sipariş'], ['cargo', 'Kargo'], ['payment', 'Ödeme / cüzdan'], ['return', 'İade'], ['favorite', 'Favori'], ['stock', 'Stok'], ['cart', 'Sepet'], ['question', 'Soru'], ['review', 'Yorum'], ['coupon', 'Kupon'], ['campaign', 'Kampanya'], ['account', 'Hesap'], ['info', 'Bilgi']]
+interface PushLogItem { id: string; memberId: string | null; deviceId: string | null; platform: string; inbox?: boolean; readAt?: string | null; dismissedAt?: string | null; type: string; class: string; dedupId: string; title: string; body: string; link: string; status: string; errorCode: string | null; attempts: number; scheduledAt: string; sentAt: string | null; openedAt: string | null; createdAt: string }
 interface PushLog { items: PushLogItem[]; totalCount: number; page: number; pageSize: number; last24h: { status: string; count: number }[] }
 
 const STATUS_BADGE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = { sent: 'success', queued: 'warning', failed: 'danger', skipped: 'neutral' }
@@ -34,9 +37,10 @@ export function PushTemplatesTab() {
       <p className="text-xs px-4 py-2" style={{ color: 'var(--text-s)', borderBottom: '1px solid var(--border)' }}>
         Yer tutucular: {'{orderNumber} {orderId} {productName} {productCode} {cargoName} {trackingNumber} {newPrice} {oldPrice} {n} {couponCode} {discountText} {expiresAt} {amount} {variantInfo} {returnStatusLabel}'}.
         Pazarlama sınıfı: üye izni (push) + sessiz saat 22:00-09:00 + günde 2 / aynı tip haftada 2. Link uygulamanın tanıdığı yollardan olmalı (/odeme, /teslimat kullanılamaz).
+        <br />Uygulama içi <b>Bildirimlerim</b>: üyeye hedeflenen bildirim push gidemese de (cihaz/izin yok) listede görünür; "listede göster" kapalı şablonlar yalnız push'tur. İkon, listede kalma süresi ve "açılınca düşsün" şablondan gelir.
       </p>
       <table className="w-full text-sm">
-        <thead><tr style={{ background: 'var(--surface2)' }}>{['Senaryo', 'Sınıf', 'Başlık / Gövde', 'Link', 'Durum', ''].map((h) => <th key={h} className="px-3 py-2 text-left text-xs" style={{ color: 'var(--text-s)' }}>{h}</th>)}</tr></thead>
+        <thead><tr style={{ background: 'var(--surface2)' }}>{['Senaryo', 'Sınıf', 'Başlık / Gövde', 'Link', 'Liste', 'Durum', ''].map((h) => <th key={h} className="px-3 py-2 text-left text-xs" style={{ color: 'var(--text-s)' }}>{h}</th>)}</tr></thead>
         <tbody>
           {list.map((t) => (
             <tr key={t.type} style={{ borderTop: '1px solid var(--border)', opacity: t.enabled ? 1 : 0.55 }}>
@@ -44,11 +48,12 @@ export function PushTemplatesTab() {
               <td className="px-3 py-2"><Badge variant={t.class === 'marketing' ? 'info' : 'neutral'}>{t.class === 'marketing' ? 'pazarlama' : 'işlemsel'}</Badge></td>
               <td className="px-3 py-2" style={{ color: 'var(--text)' }}><b>{t.title}</b><br /><span className="text-xs" style={{ color: 'var(--text-m)' }}>{t.body}</span></td>
               <td className="px-3 py-2 font-mono text-xs" style={{ color: 'var(--text-m)' }}>{t.linkTemplate}</td>
+              <td className="px-3 py-2 text-xs" style={{ color: 'var(--text-m)' }} title={t.inbox ? `ikon: ${t.icon} · ${t.expiresDays} gün${t.dismissOnOpen ? ' · açılınca düşer' : ''}` : 'yalnız push'}>{t.inbox ? <>{IKONLAR.find(([k]) => k === t.icon)?.[1] ?? t.icon} · {t.expiresDays}g{t.dismissOnOpen ? ' · düşer' : ''}</> : <span style={{ color: 'var(--text-s)' }}>yalnız push</span>}</td>
               <td className="px-3 py-2"><button className="text-xs underline" style={{ color: t.enabled ? '#15803d' : '#ef4444' }} onClick={() => toggle.mutate(t)}>{t.enabled ? 'açık' : 'kapalı'}</button></td>
               <td className="px-3 py-2 text-right"><Button size="sm" variant="secondary" onClick={() => setEdit({ ...t })}>Düzenle</Button></td>
             </tr>
           ))}
-          {list.length === 0 && <tr><td colSpan={6} className="px-3 py-6 text-center text-xs" style={{ color: 'var(--text-s)' }}>Şablon yok — API açılış seed'i (restart) oluşturur.</td></tr>}
+          {list.length === 0 && <tr><td colSpan={7} className="px-3 py-6 text-center text-xs" style={{ color: 'var(--text-s)' }}>Şablon yok — API açılış seed'i (restart) oluşturur.</td></tr>}
         </tbody>
       </table>
       {edit && (
@@ -64,6 +69,15 @@ export function PushTemplatesTab() {
               <div><label className="flbl">Öncelik</label><select className="inp w-full" value={edit.priority} onChange={(e) => setEdit({ ...edit, priority: e.target.value })}><option value="high">high</option><option value="normal">normal</option></select></div>
             </div>
             <label className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--text)' }}><input type="checkbox" checked={edit.enabled} onChange={(e) => setEdit({ ...edit, enabled: e.target.checked })} /> Açık (kapalıysa bu senaryo gönderilmez)</label>
+            <div className="pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+              <div className="text-xs font-semibold mb-2" style={{ color: 'var(--text-s)' }}>Uygulama içi "Bildirimlerim"</div>
+              <label className="flex items-center gap-1.5 text-sm mb-2" style={{ color: 'var(--text)' }}><input type="checkbox" checked={edit.inbox} onChange={(e) => setEdit({ ...edit, inbox: e.target.checked })} /> Listede göster (kapalıysa yalnız push; ör. anlık flaş kampanya)</label>
+              <div className="grid grid-cols-3 gap-3">
+                <div><label className="flbl">İkon</label><select className="inp w-full" value={edit.icon} onChange={(e) => setEdit({ ...edit, icon: e.target.value })}>{IKONLAR.map(([k, l]) => <option key={k} value={k}>{l} ({k})</option>)}</select></div>
+                <div><label className="flbl">Listede kalma (gün)</label><input type="number" min={1} max={365} className="inp w-full" value={edit.expiresDays} onChange={(e) => setEdit({ ...edit, expiresDays: Number(e.target.value) })} /></div>
+                <label className="flex items-end gap-1.5 text-sm pb-2" style={{ color: 'var(--text)' }}><input type="checkbox" checked={edit.dismissOnOpen} onChange={(e) => setEdit({ ...edit, dismissOnOpen: e.target.checked })} /> Açılınca listeden düşsün</label>
+              </div>
+            </div>
             {error && <p className="text-sm" style={{ color: '#dc2626' }}>{error}</p>}
           </div>
         </Modal>

@@ -22,12 +22,12 @@ public sealed class PushGonderimServisi(IStorefrontDbContext sdb, ICrmDbContext 
             logger.LogWarning("Push: FCM servis hesabı tanımlı değil (panel Firmalar › firma detayı › Entegrasyonlar › Entegrasyon Ekle › Firebase Cloud Messaging) — {N} bildirim kuyrukta bekliyor.", kuyruk.Count);
             return (0, 0, 0);
         }
-        var cihazIds = kuyruk.Select(n => n.DeviceId).Distinct().ToList();
+        var cihazIds = kuyruk.Where(n => n.DeviceId != null).Select(n => n.DeviceId!.Value).Distinct().ToList();
         var cihazlar = await sdb.PushDevices.Where(d => cihazIds.Contains(d.Id)).ToDictionaryAsync(d => d.Id, ct);
         int sent = 0, failed = 0, skipped = 0;
         foreach (var n in kuyruk)
         {
-            if (!cihazlar.TryGetValue(n.DeviceId, out var cihaz) || cihaz.Status != "active")
+            if (n.DeviceId is null || !cihazlar.TryGetValue(n.DeviceId.Value, out var cihaz) || cihaz.Status != "active")
             { n.Status = "skipped"; n.ErrorCode = "device_inactive"; skipped++; continue; }
             if (!await OlayHalaGecerliAsync(n, ct)) { n.Status = "skipped"; n.ErrorCode = "cancelled_condition"; skipped++; continue; }
 

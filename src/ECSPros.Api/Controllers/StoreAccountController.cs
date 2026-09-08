@@ -66,20 +66,7 @@ public class StoreAccountController(
         return Ok(new { success = true, data = new { email = c?.Email ?? false, sms = c?.Sms ?? false, phone = c?.Phone ?? false, push = c?.Push ?? true } });
     }
 
-    /// <summary>Uygulama içi "Bildirimlerim": üyeye gönderilmiş push bildirimleri (sayfalı, yeni→eski).</summary>
-    [HttpGet("notifications")]
-    public async Task<IActionResult> GetNotifications([FromQuery] int page = 1, [FromQuery] int pageSize = 20,
-        [FromServices] ECSPros.Storefront.Application.Services.IStorefrontDbContext sdb = null!, CancellationToken ct = default)
-    {
-        var mid = GetMemberId(); page = Math.Max(1, page); pageSize = Math.Clamp(pageSize, 1, 100);
-        var q = sdb.PushNotifications.AsNoTracking().Where(n => n.MemberId == mid && n.Status == "sent");
-        var total = await q.CountAsync(ct);
-        var unread = await q.CountAsync(n => n.OpenedAt == null, ct);
-        var items = await q.OrderByDescending(n => n.SentAt).Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(n => new { n.Id, n.Type, n.Title, n.Body, n.Link, n.ImageUrl, dedupId = n.DedupId, sentAt = n.SentAt, n.OpenedAt })
-            .ToListAsync(ct);
-        return Ok(new { success = true, data = new { items, totalCount = total, unreadCount = unread, page, pageSize } });
-    }
+    // "Bildirimlerim" uçları 2026-09-08'de StoreNotificationInboxController'a taşındı (docs/BILDIRIMLERIM_BACKEND_ISTEGI.md).
 
     /// <summary>E2: Aktif Cihazlar + Giriş Geçmişi — üyenin son oturumları.</summary>
     [HttpGet("sessions")]

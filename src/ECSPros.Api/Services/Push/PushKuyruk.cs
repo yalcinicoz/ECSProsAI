@@ -47,33 +47,54 @@ public sealed class PushKuyruk(IStorefrontDbContext sdb, ICrmDbContext cdb, ICon
         // kaldığından bildirim tekrarlanıyordu. Doğrudan DeviceId ile gelen istek (deneme) etkilenmez.
         if (i.DeviceId is null && cihazlar.Count > 1 && config.GetValue("Push:LatestDevicePerPlatform", true))
             cihazlar = cihazlar.GroupBy(d => d.Platform).Select(g => g.OrderByDescending(d => d.LastSeenAt).First()).ToList();
-        if (cihazlar.Count == 0) return 0;
-        var memberId = i.MemberId ?? cihazlar[0].MemberId;
+        var memberId = i.MemberId ?? (cihazlar.Count > 0 ? cihazlar[0].MemberId : null);
+
+        // Uygulama içi liste (docs/BILDIRIMLERIM_BACKEND_ISTEGI.md §1/§6): üyeye hedeflenen bildirim FCM'e gidemese bile
+        // (cihaz yok / izin yok / sıklık sınırı) Inbox=true ise cihazsız 'skipped' satırla listede görünür.
+        var inbox = t?.Inbox ?? true;
+        var icon = t?.Icon is { Length: > 0 } ic ? ic : BildirimKutusu.IkonVarsayilan(i.Type);
+        var expiresAt = DateTime.UtcNow.AddDays(t?.ExpiresDays is > 0 ? t.ExpiresDays : (sinif == "marketing" ? 30 : 90));
+        var dismissOnOpen = t?.DismissOnOpen ?? false;
+        var data = new Dictionary<string, string>(i.Vars.Where(kv => kv.Value.Length <= 200)) { ["type"] = i.Type, ["link"] = link, ["dedupId"] = i.DedupId };
+        var platformId = i.FirmPlatformId ?? (cihazlar.Count > 0 ? cihazlar[0].FirmPlatformId : Guid.Empty);
+        if (platformId == Guid.Empty && memberId is { } mIdPlatform)   // cihazsız listeye giren satır: üyenin son kayıtlı cihazının (durumu ne olursa olsun) platformu
+            platformId = await sdb.PushDevices.AsNoTracking().Where(d => d.MemberId == mIdPlatform).OrderByDescending(d => d.LastSeenAt).Select(d => d.FirmPlatformId).FirstOrDefaultAsync(ct);
+        PushNotification Satir(PushDevice? d, string status, string? hata, DateTime scheduled) => new()
+        {
+            MemberId = memberId, DeviceId = d?.Id, FirmPlatformId = d?.FirmPlatformId ?? platformId, Platform = d?.Platform ?? "inbox",
+            TokenHash = d is null ? "" : Hash(d.Token), Type = i.Type, Class = sinif, DedupId = i.DedupId, Title = title, Body = body, Link = link,
+            ImageUrl = i.ImageUrl, Data = data, Status = status, ErrorCode = hata, ScheduledAt = scheduled,
+            Inbox = inbox, Icon = icon, ExpiresAt = expiresAt, DismissOnOpen = dismissOnOpen,
+        };
+        async Task<int> YalnizListeyeAsync(string neden)
+        {
+            if (!inbox || memberId is null || platformId == Guid.Empty) return 0;
+            if (await sdb.PushNotifications.AnyAsync(x => x.DedupId == i.DedupId && x.MemberId == memberId, ct)) return 0;   // aynı olay zaten var
+            sdb.PushNotifications.Add(Satir(null, "skipped", neden, DateTime.UtcNow));
+            await sdb.SaveChangesAsync(ct);
+            return 0;   // push gönderilmedi (dönüş değeri gönderim adedi)
+        }
+        if (cihazlar.Count == 0) return await YalnizListeyeAsync("no_device");
 
         var scheduled = DateTime.UtcNow;
         if (sinif == "marketing")
         {
-            if (memberId is null || !await PazarlamaIzniVarAsync(memberId.Value, ct)) return 0;
+            if (memberId is null) return 0;
+            if (!await PazarlamaIzniVarAsync(memberId.Value, ct)) return await YalnizListeyeAsync("no_consent");
             // günlük ≤2, aynı tip haftada ≤2 (skipped hariç)
             var bugun = IstanbulGunBaslangiciUtc(DateTime.UtcNow);
             var gunluk = await sdb.PushNotifications.CountAsync(n => n.MemberId == memberId && n.Class == "marketing" && n.Status != "skipped" && n.CreatedAt >= bugun && n.DeviceId == cihazlar[0].Id, ct);
-            if (gunluk >= config.GetValue("Push:MarketingDailyLimit", 2)) return 0;
+            if (gunluk >= config.GetValue("Push:MarketingDailyLimit", 2)) return await YalnizListeyeAsync("daily_limit");
             var haftalik = await sdb.PushNotifications.CountAsync(n => n.MemberId == memberId && n.Type == i.Type && n.Status != "skipped" && n.CreatedAt >= DateTime.UtcNow.AddDays(-7) && n.DeviceId == cihazlar[0].Id, ct);
-            if (haftalik >= config.GetValue("Push:MarketingWeeklySameTypeLimit", 2)) return 0;
+            if (haftalik >= config.GetValue("Push:MarketingWeeklySameTypeLimit", 2)) return await YalnizListeyeAsync("weekly_limit");
             scheduled = SessizSaatErtele(scheduled);
         }
 
-        var data = new Dictionary<string, string>(i.Vars.Where(kv => kv.Value.Length <= 200)) { ["type"] = i.Type, ["link"] = link, ["dedupId"] = i.DedupId };
-        var mevcut = await sdb.PushNotifications.Where(n => n.DedupId == i.DedupId).Select(n => n.DeviceId).ToListAsync(ct);
+        var mevcut = await sdb.PushNotifications.Where(n => n.DedupId == i.DedupId && n.DeviceId != null).Select(n => n.DeviceId!.Value).ToListAsync(ct);
         int n = 0;
         foreach (var d in cihazlar.Where(c => !mevcut.Contains(c.Id)))
         {
-            sdb.PushNotifications.Add(new PushNotification
-            {
-                MemberId = memberId, DeviceId = d.Id, FirmPlatformId = d.FirmPlatformId, Platform = d.Platform, TokenHash = Hash(d.Token),
-                Type = i.Type, Class = sinif, DedupId = i.DedupId, Title = title, Body = body, Link = link, ImageUrl = i.ImageUrl,
-                Data = data, Status = "queued", ScheduledAt = scheduled,
-            });
+            sdb.PushNotifications.Add(Satir(d, "queued", null, scheduled));
             n++;
         }
         if (n > 0) await sdb.SaveChangesAsync(ct);

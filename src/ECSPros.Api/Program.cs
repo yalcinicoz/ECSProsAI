@@ -453,7 +453,8 @@ builder.Services.AddHttpClient(ECSPros.Api.Services.Push.FcmClient.HttpClientNam
 builder.Services.AddScoped<ECSPros.Api.Services.Push.DbFcmSettingsProvider>();
 builder.Services.AddScoped<ECSPros.Api.Services.Push.FcmClient>();
 builder.Services.AddScoped<ECSPros.Api.Services.Push.PushKuyruk>();
-builder.Services.AddScoped<ECSPros.Api.Services.Push.PushEtkilesim>(); // soru cevabı / yorum / iade kancaları ([FromServices]); 2026-09-08 canlıda eksikti → 500
+builder.Services.AddScoped<ECSPros.Api.Services.Push.PushEtkilesim>();
+builder.Services.AddScoped<ECSPros.Api.Services.Push.BildirimKutusu>(); // uygulama içi Bildirimlerim (2026-09-08) // soru cevabı / yorum / iade kancaları ([FromServices]); 2026-09-08 canlıda eksikti → 500
 builder.Services.AddScoped<ECSPros.Api.Services.Push.PushGonderimServisi>();
 builder.Services.AddScoped<ECSPros.Api.Services.Push.PushTarayici>();
 builder.Services.AddScoped<ECSPros.Api.EventHandlers.PushSiparisYardimcisi>();

@@ -555,6 +555,10 @@ public class PushTemplateConfiguration : IEntityTypeConfiguration<PushTemplate>
         b.Property(x => x.LinkTemplate).HasMaxLength(300).IsRequired();
         b.Property(x => x.Priority).HasMaxLength(10).IsRequired();
         b.Property(x => x.Description).HasMaxLength(500);
+        b.Property(x => x.Icon).HasMaxLength(30).IsRequired().HasDefaultValue("info");
+        b.Property(x => x.Inbox).HasDefaultValue(true);
+        b.Property(x => x.ExpiresDays).HasDefaultValue(90);
+        b.Property(x => x.DismissOnOpen).HasDefaultValue(false);
         b.HasIndex(x => x.Type).IsUnique().HasFilter("\"IsDeleted\" = false");
         b.HasQueryFilter(x => !x.IsDeleted);
     }
@@ -579,9 +583,16 @@ public class PushNotificationConfiguration : IEntityTypeConfiguration<PushNotifi
         b.Property(x => x.FcmMessageId).HasMaxLength(200);
         b.Property(x => x.ErrorCode).HasMaxLength(100);
         b.Property(x => x.Data).HasColumnType("jsonb");
+        b.Property(x => x.Icon).HasMaxLength(30).IsRequired().HasDefaultValue("info");
+        b.Property(x => x.Inbox).HasDefaultValue(true);
+        b.Property(x => x.DismissOnOpen).HasDefaultValue(false);
+        b.Property(x => x.ExpiresAt).HasDefaultValueSql("now() + interval '90 days'");
         b.HasIndex(x => new { x.DedupId, x.DeviceId }).IsUnique();
+        // cihazsız (yalnız listeye giren) satır: üye başına aynı dedupId bir kez
+        b.HasIndex(x => new { x.DedupId, x.MemberId }).IsUnique().HasDatabaseName("ix_push_notifications_dedup_member_inbox").HasFilter("\"DeviceId\" IS NULL");
         b.HasIndex(x => new { x.Status, x.ScheduledAt });
         b.HasIndex(x => new { x.MemberId, x.CreatedAt });
+        b.HasIndex(x => new { x.MemberId, x.CreatedAt }, "ix_push_notifications_inbox").HasFilter("\"Inbox\" AND \"DismissedAt\" IS NULL");   // liste ucu (kısmi; genel indeks korunur)
         b.HasIndex(x => new { x.Type, x.CreatedAt });
         b.HasQueryFilter(x => !x.IsDeleted);
     }

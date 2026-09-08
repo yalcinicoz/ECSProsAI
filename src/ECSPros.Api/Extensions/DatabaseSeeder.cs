@@ -1195,7 +1195,7 @@ public static class DatabaseSeeder
         int k = 0;
         foreach (var x in liste.Where(x => !mevcut.Contains(x.Type)))
         {
-            db.PushTemplates.Add(new ECSPros.Storefront.Domain.Entities.PushTemplate { Type = x.Type, Class = x.Class, Name = x.Name, Title = x.Title, Body = x.Body, LinkTemplate = x.Link, Enabled = true, TtlSeconds = x.Ttl, Priority = x.Class == T ? "high" : "normal", Description = x.Desc });
+            db.PushTemplates.Add(new ECSPros.Storefront.Domain.Entities.PushTemplate { Type = x.Type, Class = x.Class, Name = x.Name, Title = x.Title, Body = x.Body, LinkTemplate = x.Link, Enabled = true, TtlSeconds = x.Ttl, Icon = ECSPros.Api.Services.Push.BildirimKutusu.IkonVarsayilan(x.Type), ExpiresDays = x.Class == "marketing" ? 30 : 90, Priority = x.Class == T ? "high" : "normal", Description = x.Desc });
             k++;
         }
         if (k > 0) { await db.SaveChangesAsync(); Console.WriteLine($"✓ Seed: mobil push şablonları — {k} şablon."); }

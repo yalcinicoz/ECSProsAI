@@ -19,4 +19,10 @@ public class PushTemplate : BaseEntity
     public int TtlSeconds { get; set; } = 86400;
     public string Priority { get; set; } = "high";            // high | normal
     public string? Description { get; set; }                  // tetikleyici açıklaması (panelde bilgi)
+
+    // Uygulama içi "Bildirimlerim" (docs/BILDIRIMLERIM_BACKEND_ISTEGI.md, 2026-09-08)
+    public bool Inbox { get; set; } = true;                   // false → yalnız push, listede gösterilmez
+    public string Icon { get; set; } = "info";                // §5 ikon anahtarı (order, cargo, payment, return, favorite, stock, cart, question, review, coupon, campaign, account, info)
+    public int ExpiresDays { get; set; } = 90;                // listede kalma süresi (öneri: işlemsel 90, pazarlama 30)
+    public bool DismissOnOpen { get; set; }                   // dokununca listeden düşsün
 }
