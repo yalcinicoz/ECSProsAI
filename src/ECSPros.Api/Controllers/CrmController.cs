@@ -142,13 +142,26 @@ public class CrmController : ControllerBase
 
     /// <summary>Manuel cüzdan düzeltmesi (panel) — credit bakiye artırır, debit azaltır.</summary>
     [HttpPost("members/{id:guid}/wallet/adjust")]
-    public async Task<IActionResult> AdjustMemberWallet(Guid id, [FromBody] AdjustWalletRequest req, CancellationToken ct)
+    public async Task<IActionResult> AdjustMemberWallet(Guid id, [FromBody] AdjustWalletRequest req,
+        [FromServices] ECSPros.Api.Services.Push.PushKuyruk pushKuyruk, [FromServices] ILogger<CrmController> logger, CancellationToken ct)
     {
         var result = await _mediator.Send(
             new ECSPros.Crm.Application.Commands.AdjustMemberWallet.AdjustMemberWalletCommand(
                 id, req.Direction, req.Amount, req.Description), ct);
         if (result.IsFailure)
             return BadRequest(new { success = false, error = result.Error });
+        // 2026-09-08: bakiye yüklemesi 15 dk'lık taramayı beklemeden anında push kuyruğuna (dedup = tarayıcıyla AYNI
+        // anahtar `wallet_credit:{txId}` → tarama ikinci satır açmaz). Push hatası bakiye işlemini bozmaz.
+        if (req.Direction == "credit")
+        {
+            try
+            {
+                var tutar = req.Amount.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("tr-TR")) + " ₺";
+                await pushKuyruk.EnqueueAsync(new ECSPros.Api.Services.Push.PushIstek("wallet_credit", id,
+                    new Dictionary<string, string> { ["amount"] = tutar }, $"wallet_credit:{result.Value!.TransactionId}"), ct);
+            }
+            catch (Exception ex) { logger.LogWarning(ex, "Cüzdan yükleme push kuyruğa alınamadı {MemberId}", id); }
+        }
         return Ok(new { success = true, data = result.Value });
     }
 
