@@ -2,7 +2,7 @@
 
 Kaynak istek: `docs/Yeni Panel İçin Gelişmiş Tablo - DataGrid UX İyileştirme Promptu (1).md`.
 v1 analizi (envanter) §1'de korunur; v2 = kullanıcı kararları K1-K7 + 15 ek madde işlenmiş **nihai plan**.
-Durum: **onay bekliyor** — onaydan sonra F0'dan başlanır.
+Durum: **ONAYLANDI (2026-09-08)** — F0 backend temeli UYGULANDI (aşağıdaki §3 tablosu ve PROGRESS); sırada F1.
 
 > Yeni panel Bootstrap değil, **React 19 + Tailwind v4 + option-h şablonu**dur. Plan bu tasarım dilini korur;
 > yeni UI framework/kütüphane getirmez (tek istisna: backend'e MiniExcel NuGet'i).
@@ -166,7 +166,7 @@ Otomatik karta dönüştürme YOK; operasyonel karşılaştırma için tablo yap
 
 | Faz | Kapsam | Doğrulama |
 |---|---|---|
-| **F0 Backend temeli** | `GridRequest/GridFilter/GridSchema`, `f.*` binder, `ApplyFilters/ApplySort`, merkezi clamp, MiniExcel + `GridExportWriter`, `grid-export` kullanıcı bazlı RateLimiter, audit. **Siparişler**: `GetOrdersQuery` sort/filter haritası, `status-counts` aynı istek, `POST /orders/export`. | izole 5051: 400 (bilinmeyen kolon), 429 (6. export), 100K tavanı, filtre=ekran eşitliği |
+| **F0 Backend temeli ✅ (2026-09-08)** | `GridRequest/GridFilter/GridSchema`, `f.*` binder, `ApplyFilters/ApplySort`, merkezi clamp, MiniExcel + `GridExportWriter`, `grid-export` kullanıcı bazlı RateLimiter, audit. **Siparişler**: `GetOrdersQuery` sort/filter haritası, `status-counts` aynı istek, `POST /orders/export`. | izole 5051: 400 (bilinmeyen kolon), 429 (6. export), 100K tavanı, filtre=ekran eşitliği |
 | **F1 DataGrid çekirdeği** | `DataGrid`, `useGridState`, `useBreakpoint`, ghost scrollbar + registry + bottom offset + kenar gölgeleri, frozen bütçesi, `ColumnsMenu`, `GridPagination`. **Smoke-test: Kullanıcılar** (teknik, riski düşük). | panel: masaüstü/tablet/mobil ölçüler (headless Chromium) |
 | **F2 FilterBar + Siparişler pilotu** | global arama, hızlı/gelişmiş, çipler, tarih hızlı seçimleri, mobil "Filtreler (n)"; **Siparişler tam göç** (durum sekmeleri + sayaçlar korunur, `overflow-hidden` kaldırılır). | kullanıcı testi |
 | **F3 Excel** | `ExportButton` (tüm/görünür), Siparişler export uçtan uca. | 4.268-kayıt senaryosu: ekran 50, Excel 4.268 |

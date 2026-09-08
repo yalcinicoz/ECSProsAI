@@ -16,51 +16,14 @@ public class GetOrdersQueryHandler : IRequestHandler<GetOrdersQuery, Result<Page
 
     public async Task<Result<PagedOrderResult>> Handle(GetOrdersQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.Orders.AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(request.Status))
-            query = query.Where(o => o.Status == request.Status);
-
-        if (request.Statuses is { Count: > 0 })
-            query = query.Where(o => request.Statuses.Contains(o.Status));
-
-        if (request.MemberId.HasValue)
-            query = query.Where(o => o.MemberId == request.MemberId);
-
-        if (request.FirmPlatformId.HasValue)
-            query = query.Where(o => o.FirmPlatformId == request.FirmPlatformId.Value);
-
-        if (request.CreatedFrom.HasValue)
-            query = query.Where(o => o.CreatedAt >= request.CreatedFrom.Value);
-
-        if (request.CreatedTo.HasValue)
-            query = query.Where(o => o.CreatedAt < request.CreatedTo.Value); // exclusive üst sınır
-
-        // 2026-08-04: ödeme yöntemi filtresi — "none" = yöntemi kayıtlı olmayan (eski/başka kanal)
-        if (!string.IsNullOrWhiteSpace(request.PaymentMethod))
-            query = request.PaymentMethod == "none"
-                ? query.Where(o => o.PaymentMethod == null)
-                : query.Where(o => o.PaymentMethod == request.PaymentMethod);
-
-        // 2026-08-04: ödemesi alınan/alınmayan — alınan = paid; alınmayan = paid dışı her durum
-        // (unpaid/pending/failed/partial). Panel filtresi bunu kullanır.
-        if (request.PaymentCollected.HasValue)
-            query = request.PaymentCollected.Value
-                ? query.Where(o => o.PaymentStatus == "paid")
-                : query.Where(o => o.PaymentStatus != "paid");
-
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var term = request.Search.Trim().ToLower();
-            query = query.Where(o =>
-                o.OrderNumber.ToLower().Contains(term) ||
-                o.ShippingRecipientName.ToLower().Contains(term));
-        }
+        // DataGrid F0 (2026-09-08): adlandırılmış filtreler + global arama + beyaz listeli grid filtreleri TEK yerden (OrderGrid).
+        var filters = new OrderListFilters(request.Status, request.Statuses, request.MemberId, request.FirmPlatformId,
+            request.CreatedFrom, request.CreatedTo, request.PaymentMethod, request.PaymentCollected, request.Search);
+        var query = OrderGrid.ApplyAll(_context.Orders.AsQueryable(), filters, request.Grid);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var items = await query
-            .OrderByDescending(o => o.CreatedAt)
+        var items = await OrderGrid.Schema.ApplySort(query, request.Grid)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(o => new OrderListDto(

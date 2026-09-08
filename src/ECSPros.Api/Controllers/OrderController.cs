@@ -37,6 +37,7 @@ using ECSPros.Order.Application.Queries.GetOrderDetail;
 using ECSPros.Order.Application.Queries.GetOrderPayments;
 using ECSPros.Order.Application.Queries.GetOrderShipments;
 using ECSPros.Order.Application.Queries.GetOrders;
+using ECSPros.Shared.Kernel.Grid;
 using ECSPros.Order.Application.Queries.GetOrderStatusCounts;
 using ECSPros.Order.Application.Queries.GetInvoiceSeries;
 using ECSPros.Order.Application.Commands.CreateInvoiceSeries;
@@ -75,25 +76,62 @@ public class OrderController : ControllerBase
         [FromQuery] bool? paymentCollected = null,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
-        var statusList = string.IsNullOrWhiteSpace(statuses)
-            ? null
-            : statuses.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        var statusList = SplitCsv(statuses);
+        // DataGrid F0 (2026-09-08): sort/dir + f.* filtreleri (OrderGrid.Schema beyaz listesi); page/pageSize merkezi clamp (1..250).
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
         var result = await _mediator.Send(new GetOrdersQuery(
-            status, memberId, search, page, pageSize,
-            statusList, AsUtc(from), AsUtc(to), firmPlatformId, paymentMethod, paymentCollected), ct);
+            status, memberId, search, grid.Page, grid.PageSize,
+            statusList, AsUtc(from), AsUtc(to), firmPlatformId, paymentMethod, paymentCollected, grid), ct);
         return Ok(new { success = true, data = result.Value });
     }
 
-    /// <summary>Durum bazlı sipariş sayıları — yalnız aktif durumlar sayılır (kapalı durumlar milyonlara ulaşır).</summary>
+    /// <summary>Durum bazlı sipariş sayıları — yalnız aktif durumlar sayılır (kapalı durumlar milyonlara ulaşır).
+    /// Listeyle aynı filtre parametrelerini (search, from/to, paymentMethod, paymentCollected, f.*) alır; durum filtresi hariç uygulanır.</summary>
     [HttpGet("status-counts")]
-    public async Task<IActionResult> GetOrderStatusCounts([FromQuery] string? statuses, CancellationToken ct)
+    public async Task<IActionResult> GetOrderStatusCounts(
+        [FromQuery] string? statuses, [FromQuery] string? search = null, [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null,
+        [FromQuery] Guid? memberId = null, [FromQuery] Guid? firmPlatformId = null,
+        [FromQuery] string? paymentMethod = null, [FromQuery] bool? paymentCollected = null, CancellationToken ct = default)
     {
-        var statusList = string.IsNullOrWhiteSpace(statuses)
-            ? new List<string> { "pending", "confirmed", "processing", "shipped" }
-            : statuses.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-        var result = await _mediator.Send(new GetOrderStatusCountsQuery(statusList), ct);
+        var statusList = SplitCsv(statuses) ?? new List<string> { "pending", "confirmed", "processing", "shipped" };
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query);
+        var filters = new OrderListFilters(null, null, memberId, firmPlatformId, AsUtc(from), AsUtc(to), paymentMethod, paymentCollected, search);
+        var result = await _mediator.Send(new GetOrderStatusCountsQuery(statusList, filters, grid), ct);
         return Ok(new { success = true, data = result.Value });
     }
+
+    /// <summary>
+    /// Siparişleri Excel'e aktarır (DataGrid F0/F3, plan §2.8): gövdede aynı filtre modeli (search/sort/dir/filters + named:
+    /// statuses, status, from, to, memberId, firmPlatformId, paymentMethod, paymentCollected) + kolon listesi (boş = tümü).
+    /// Sayfalama uygulanmaz; tavan Grid:ExportMaxRows (100.000), kullanıcı bazlı dakikada Grid:ExportPerMinute (5).
+    /// </summary>
+    [HttpPost("export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportOrders([FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<OrderController> logger, CancellationToken ct)
+    {
+        var grid = body.ToGridRequest();
+        DateTime? Tarih(string key) => DateTime.TryParse(body.NamedValue(key), System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var d) ? DateTime.SpecifyKind(d, DateTimeKind.Utc) : null;
+        Guid? Kimlik(string key) => Guid.TryParse(body.NamedValue(key), out var g) ? g : null;
+        bool? Bayrak(string key) => bool.TryParse(body.NamedValue(key), out var b) ? b : null;
+        var filters = new OrderListFilters(body.NamedValue("status"), SplitCsv(body.NamedValue("statuses")), Kimlik("memberId"), Kimlik("firmPlatformId"),
+            Tarih("from"), Tarih("to"), body.NamedValue("paymentMethod"), Bayrak("paymentCollected"), grid.Search);
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var src = await _mediator.Send(new ExportOrdersQuery(filters, grid, config.GetValue("Grid:ExportMaxRows", 100_000)), ct);
+        if (src.IsFailure) return BadRequest(new { success = false, error = src.Error });
+        var cols = ECSPros.Api.Grid.GridExportWriter.Select(ECSPros.Api.Grid.OrderExportColumns.All, body.Columns);
+        var file = await ECSPros.Api.Grid.GridExportWriter.WriteToTempAsync(src.Value!.Rows.AsEnumerable(), cols, "Siparişler", ct);
+        await ECSPros.Api.Grid.GridExportWriter.AuditAsync(iam, HttpContext, "orders", src.Value.Count,
+            new { grid.Search, grid.Sort, grid.Dir, filters = grid.Filters.Select(f => $"{f.Field} {f.Op} {f.Value}").ToList(), named = body.Named, columns = cols.Select(c => c.Key).ToList() },
+            sw, logger, ct);
+        return File(file, ECSPros.Api.Grid.GridExportWriter.XlsxMime, ECSPros.Api.Grid.GridExportWriter.FileName("siparisler"));
+    }
+
+    private static List<string>? SplitCsv(string? csv) => string.IsNullOrWhiteSpace(csv) ? null
+        : csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
     // timestamptz kolonlara Kind=Unspecified DateTime yazılamaz (Npgsql)
     private static DateTime? AsUtc(DateTime? d) => d is null ? null

@@ -681,9 +681,22 @@ builder.Services.AddRateLimiter(options =>
     options.OnRejected = async (ctx, ct) =>
     {
         ctx.HttpContext.Response.ContentType = "application/json; charset=utf-8";
-        await ctx.HttpContext.Response.WriteAsync(
-            """{"success":false,"error":"Çok fazla istek gönderildi. Lütfen biraz bekleyip tekrar deneyin."}""", ct);
+        var mesaj = ctx.HttpContext.Request.Path.Value?.EndsWith("/export", StringComparison.OrdinalIgnoreCase) == true
+            ? "Dakikada en fazla 5 dışa aktarma yapılabilir. Lütfen biraz bekleyin."
+            : "Çok fazla istek gönderildi. Lütfen biraz bekleyip tekrar deneyin.";
+        await ctx.HttpContext.Response.WriteAsync($$"""{"success":false,"error":"{{mesaj}}"}""", ct);
     };
+    // DataGrid Excel export (2026-09-08, K6): KULLANICI bazlı (sub claim; anonimse IP) dakikada Grid:ExportPerMinute (5) —
+    // bir kullanıcının export'u diğerlerini engellemez.
+    options.AddPolicy("grid-export", ctx =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            "u:" + (ctx.User.FindFirst("sub")?.Value ?? ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? IstemciIpAnahtari(ctx)),
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = ctx.RequestServices.GetRequiredService<IConfiguration>().GetValue("Grid:ExportPerMinute", 5),
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
     // Kimlik uçları (login/register/otp/refresh): IP başına dakikada 60 —
     // CGNAT arkasındaki meşru kalabalığa pay bırakır, brute-force'u anlamsızlaştırır.
     // Faz 1: admin/supplier login-refresh brute-force freni (nginx birinci, bu ikinci savunma)

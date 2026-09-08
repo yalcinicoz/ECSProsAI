@@ -1,4 +1,5 @@
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 
 namespace ECSPros.Order.Application.Queries.GetOrders;
@@ -14,7 +15,9 @@ public record GetOrdersQuery(
     DateTime? CreatedTo = null,
     Guid? FirmPlatformId = null,
     string? PaymentMethod = null,
-    bool? PaymentCollected = null) : IRequest<Result<PagedOrderResult>>;
+    bool? PaymentCollected = null,
+    GridRequest? Grid = null) : IRequest<Result<PagedOrderResult>>;
+    // Grid (2026-09-08, DataGrid F0): beyaz listeli f.* filtreleri + sort/dir (OrderGrid.Schema); null → eski davranış
     // PaymentMethod (2026-08-04): kart | kapida-nakit | kapida-kart | none (= yöntemi olmayan eski kayıtlar)
     // PaymentCollected (2026-08-04): true = ödemesi alınan (paid), false = alınmayan (paid dışı)
 
