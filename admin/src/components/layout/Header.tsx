@@ -85,6 +85,7 @@ export function Header({ onMobileMenuOpen }: HeaderProps) {
 
   return (
     <header
+      data-top-bar=""
       className="h-14 flex items-center px-4 gap-3 flex-shrink-0 sticky top-0 z-30"
       style={{ background: 'var(--header)', borderBottom: '1px solid var(--border)', backdropFilter: 'blur(8px)' }}
     >

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronRight, LayoutList, Table2 } from 'lucide-react'
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
@@ -13,11 +14,13 @@ import type { GridFilterField } from './filterUtils'
 import { GridPagination } from './GridPagination'
 import { useGridScrollRegistry } from './gridScrollContext'
 import { useBreakpoint } from './useBreakpoint'
+import { useStickyChrome } from './stickyChrome'
 import type { GridStateApi } from './useGridState'
 import type { GridBreakpoint, GridColumn, GridCompactConfig, GridFrozenConfig, GridSelection } from './types'
 
 // DataGrid çekirdeği (plan §2.1, §2.4-2.7): tanım-güdümlü kolonlar, priority/kullanıcı tercihi, frozen bütçesi (%35 hedef / %40 sınır),
 // ghost yatay scrollbar + kenar gölgeleri, sıralama başlıkları, satır tıklama → detay (klavye dahil), Kolonlar menüsü, sayfalama.
+// Sticky chrome (2026-09-08): kolon başlıkları üstte, sayfalama altta sabit kopya (stickyChrome.ts) — ghost scrollbar ile aynı görünürlük kuralı.
 // Mevcut tasarım dili: card, --border/--surface token'ları, DataTable başlık/hücre sınıfları.
 
 export interface DataGridProps<T> {
@@ -233,6 +236,58 @@ export function DataGrid<T>({
   const filtered = state.filters.length > 0 || !!state.search
   const frozenSupported = columns.some(c => c.frozen) && frozenCfg[bp] > 0
 
+  // ── sticky chrome: ghost başlık (üstte) + ghost sayfalama (altta) ──
+  const cardRef = useRef<HTMLDivElement>(null)
+  const theadRef = useRef<HTMLTableSectionElement>(null)
+  const pagRef = useRef<HTMLDivElement>(null)
+  const ghostHeadRef = useRef<HTMLDivElement>(null)
+  const chromeRefs = useMemo(() => ({ card: cardRef, scroll: scrollRef, thead: theadRef, pagination: pagRef }), [])
+  const chrome = useStickyChrome(chromeRefs, { header: !compactMode, pagination: true, version: rows })
+  // ghost başlık gerçek kaydırmayı izler (tek yön); üzerinde tekerlek yatayı gerçek kaba iletilir
+  useEffect(() => {
+    const g = ghostHeadRef.current, real = scrollRef.current
+    if (!g || !real || !chrome.header) return
+    const sync = () => { g.scrollLeft = real.scrollLeft }
+    sync()
+    real.addEventListener('scroll', sync, { passive: true })
+    return () => real.removeEventListener('scroll', sync)
+  }, [chrome.header])
+
+  const headerRow = (ghost: boolean) => (
+    <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
+      {selection && (
+        <th scope="col" className="px-3 py-3 w-8"><input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]" checked={allSelected} onChange={toggleAll} aria-label="Sayfadaki tümünü seç" /></th>
+      )}
+      {visible.map(c => {
+        const left = frozenLefts.get(c.key)
+        const sorted = state.sort === c.key
+        const isFrozen = left !== undefined
+        return (
+          <th key={c.key} data-key={ghost ? undefined : c.key} data-ghost-key={ghost ? c.key : undefined} scope="col"
+            aria-sort={sorted ? (state.dir === 'desc' ? 'descending' : 'ascending') : undefined}
+            className={cn('px-4 py-3 text-xs font-semibold text-left whitespace-nowrap select-none', c.className,
+              c.align === 'right' && 'text-right', c.align === 'center' && 'text-center',
+              isFrozen && 'grid-frozen', isFrozen && c.key === lastFrozenKey && 'grid-frozen-last',
+              c.sortable && 'cursor-pointer hover:text-[var(--text)]')}
+            style={{ color: sorted ? 'var(--text)' : 'var(--text-s)', width: c.width, minWidth: c.minWidth, left }}
+            onClick={c.sortable ? () => grid.toggleSort(c.key) : undefined}>
+            <span className="inline-flex items-center gap-1">
+              {c.header}
+              {c.sortable && (sorted
+                ? (state.dir === 'desc' ? <ArrowDown size={12} /> : <ArrowUp size={12} />)
+                : <ChevronsUpDown size={12} className="opacity-40" />)}
+              {columnFields.has(c.key) && <HeaderFilterButton fields={columnFields.get(c.key)!} grid={grid} header={c.header || c.key} />}
+            </span>
+          </th>
+        )
+      })}
+    </tr>
+  )
+  const pagination = (
+    <GridPagination page={state.page} pageSize={state.pageSize} totalCount={totalCount} filtered={filtered}
+      onPage={grid.setPage} onPageSize={grid.setPageSize} pageSizes={pageSizes} />
+  )
+
   return (
     <div className={cn('grid-root', className)} data-grid-id={gridId}>
       {(toolbarLeft || toolbarRight || columns.length > 0) && (
@@ -265,7 +320,7 @@ export function DataGrid<T>({
         </div>
       )}
 
-      <div className="card overflow-hidden relative">
+      <div ref={cardRef} className="card overflow-hidden relative">
         {fetching && !loading && <div className="grid-progress" aria-hidden />}
         {compactMode ? (
           <div className="grid-compact" role="list">
@@ -306,35 +361,8 @@ export function DataGrid<T>({
         <div className="grid-scroll-wrap" data-scroll={scrollPos} style={{ ['--grid-frozen-w' as string]: `${frozenWidth}px` }}>
           <div ref={scrollRef} id={scrollId} className="grid-scroll thin-scroll" tabIndex={-1}>
             <table ref={tableRef} className="w-full" style={{ minWidth: tableMinWidth }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-                  {selection && (
-                    <th scope="col" className="px-3 py-3 w-8"><input type="checkbox" className="w-4 h-4 rounded accent-[var(--brand)]" checked={allSelected} onChange={toggleAll} aria-label="Sayfadaki tümünü seç" /></th>
-                  )}
-                  {visible.map(c => {
-                    const left = frozenLefts.get(c.key)
-                    const sorted = state.sort === c.key
-                    const isFrozen = left !== undefined
-                    return (
-                      <th key={c.key} data-key={c.key} scope="col"
-                        aria-sort={sorted ? (state.dir === 'desc' ? 'descending' : 'ascending') : undefined}
-                        className={cn('px-4 py-3 text-xs font-semibold text-left whitespace-nowrap select-none', c.className,
-                          c.align === 'right' && 'text-right', c.align === 'center' && 'text-center',
-                          isFrozen && 'grid-frozen', isFrozen && c.key === lastFrozenKey && 'grid-frozen-last',
-                          c.sortable && 'cursor-pointer hover:text-[var(--text)]')}
-                        style={{ color: sorted ? 'var(--text)' : 'var(--text-s)', width: c.width, minWidth: c.minWidth, left }}
-                        onClick={c.sortable ? () => grid.toggleSort(c.key) : undefined}>
-                        <span className="inline-flex items-center gap-1">
-                          {c.header}
-                          {c.sortable && (sorted
-                            ? (state.dir === 'desc' ? <ArrowDown size={12} /> : <ArrowUp size={12} />)
-                            : <ChevronsUpDown size={12} className="opacity-40" />)}
-                          {columnFields.has(c.key) && <HeaderFilterButton fields={columnFields.get(c.key)!} grid={grid} header={c.header || c.key} />}
-                        </span>
-                      </th>
-                    )
-                  })}
-                </tr>
+              <thead ref={theadRef}>
+                {headerRow(false)}
               </thead>
               <tbody className={cn(fetching && !loading && 'opacity-60 transition-opacity')}>
                 {loading && (
@@ -375,9 +403,20 @@ export function DataGrid<T>({
           </div>
         </div>
         )}
-        <GridPagination page={state.page} pageSize={state.pageSize} totalCount={totalCount} filtered={filtered}
-          onPage={grid.setPage} onPageSize={grid.setPageSize} pageSizes={pageSizes} />
+        <div ref={pagRef}>{pagination}</div>
       </div>
+      {chrome.header && createPortal(
+        <div ref={ghostHeadRef} className="grid-ghost-header" data-ghost-header={gridId} aria-hidden={false}
+          style={{ left: chrome.header.left, width: chrome.header.width, top: chrome.header.top, ['--grid-frozen-w' as string]: `${frozenWidth}px` }}
+          onWheel={e => { const real = scrollRef.current; if (real && Math.abs(e.deltaX) > Math.abs(e.deltaY)) real.scrollLeft += e.deltaX }}>
+          <table className="w-full" style={{ width: chrome.header.tableWidth, minWidth: tableMinWidth }}>
+            <colgroup>{chrome.header.colWidths.map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
+            <thead>{headerRow(true)}</thead>
+          </table>
+        </div>, document.body)}
+      {chrome.pagination && createPortal(
+        <div className="grid-ghost-pagination" data-bottom-bar="" data-ghost-pagination={gridId}
+          style={{ left: chrome.pagination.left, width: chrome.pagination.width }}>{pagination}</div>, document.body)}
     </div>
   )
 }

@@ -116,6 +116,8 @@ GET /api/orders?page=1&pageSize=50&search=…&sort=createdAt&dir=desc&f.status=i
   En sağda sağ gölge, en solda sol gölge kaybolur; kaydırma yoksa hiç görünmez. Gölgeler frozen kolonun üstünde kalır.
 - Üstte ikinci scrollbar: **yok** (kalabalık, dokunmatikte anlamsız).
 
+**Sticky başlık + sticky sayfalama (2026-09-08 eki, kullanıcı isteği):** kolon başlıkları ve sayfalama da ghost scrollbar ile aynı kuralla sabitlenir — thead overflow kabının içinde olduğundan `position: sticky` window'a göre çalışmaz; `stickyChrome.ts` gerçek başlık uygulama başlığının (`[data-top-bar]`) altına girince body'ye portal edilen sabit kopyayı (`.grid-ghost-header`, aynı başlık JSX'i → sıralama/filtre çalışır, scrollLeft eşlenir, frozen sticky), gerçek sayfalama fold altında kalınca sabit sayfalama kopyasını (`.grid-ghost-pagination`, `data-bottom-bar`) gösterir. Düzenek `grid-f7-check.mjs`.
+
 ### 2.6 Frozen (sabit) kolon kuralları [E1, E10]
 - `position: sticky; left: <px>`; `left` = önceki frozen kolon genişlikleri toplamı (`ResizeObserver`). Başlık hem `top` hem `left` sticky; z-index kademeli.
 - Varsayılan adet: **masaüstü 2, tablet 1, mobil 0**; grid tanımında değiştirilebilir (`frozen: {desktop, tablet, mobile}`).

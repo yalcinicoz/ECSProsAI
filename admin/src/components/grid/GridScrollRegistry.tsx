@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { GridScrollContext, type GridScrollEntry, type GridScrollRegistryApi } from './gridScrollContext'
+import { GRID_CHROME_EVENT } from './stickyChrome'
 
 // Sticky ("ghost") yatay scrollbar (plan §2.5, E2/E3/E8/E9):
 //  • Her DataGrid kaydırma sarmalayıcısını buraya kaydeder ve görünürlüğünü bildirir.
@@ -84,7 +85,8 @@ function GhostScrollbar({ entry }: { entry: GridScrollEntry | null }) {
     const onScrollWin = () => { cancelAnimationFrame(raf.current); raf.current = requestAnimationFrame(measure) }
     window.addEventListener('scroll', onScrollWin, { passive: true })
     window.addEventListener('resize', onScrollWin)
-    return () => { ro.disconnect(); window.removeEventListener('scroll', onScrollWin); window.removeEventListener('resize', onScrollWin); cancelAnimationFrame(raf.current) }
+    window.addEventListener(GRID_CHROME_EVENT, onScrollWin)   // ghost sayfalama açılınca/kapanınca alt offset yenilenir
+    return () => { ro.disconnect(); window.removeEventListener('scroll', onScrollWin); window.removeEventListener('resize', onScrollWin); window.removeEventListener(GRID_CHROME_EVENT, onScrollWin); cancelAnimationFrame(raf.current) }
   }, [needed, entry])
 
   // çift yönlü senkron; kaynak bayrağı + rAF ile geri besleme döngüsü yok [E8]

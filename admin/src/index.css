@@ -152,6 +152,18 @@ thead .grid-frozen { background: var(--surface2); z-index: 4; }
 .grid-ghost-scroll::-webkit-scrollbar { height: 12px; }
 .grid-ghost-scroll::-webkit-scrollbar-thumb { background: rgba(128,128,128,.5); border-radius: 6px; border: 2px solid var(--surface); }
 .grid-ghost-scroll::-webkit-scrollbar-thumb:hover { background: rgba(128,128,128,.75); }
+/* sticky chrome: ghost kolon başlığı (üst sabit alanın altında) + ghost sayfalama (altta; data-bottom-bar → ghost scrollbar üstüne çıkar) */
+.grid-ghost-header {
+  position: fixed; z-index: 25; overflow: hidden;
+  background: var(--surface2); border-bottom: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+.grid-ghost-header table { table-layout: fixed; }
+.grid-ghost-header thead tr { border-bottom: 0 !important; }
+.grid-ghost-pagination {
+  position: fixed; bottom: 0; z-index: 25;
+  background: var(--surface); border-top: 1px solid var(--border); box-shadow: 0 -2px 8px rgba(0,0,0,.08);
+}
+.grid-ghost-pagination > div { border-top: 0 !important; }
 /* arka plan yenileme çubuğu */
 .grid-progress { position: absolute; top: 0; left: 0; right: 0; height: 2px; z-index: 5; overflow: hidden; background: color-mix(in srgb, var(--brand) 20%, transparent); }
 .grid-progress::after { content: ''; position: absolute; top: 0; bottom: 0; width: 35%; background: var(--brand); animation: grid-progress 1s ease-in-out infinite; }
