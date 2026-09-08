@@ -133,6 +133,26 @@ Sıra: EM0 → EM1 → EM2 → EM3 → EM4; EM5 E7 takvimine bağlı. Bir faz ka
 
 ## 6. EM2 — Worker sözleşmesi (ekip arkadaşı için; 2026-09-06)
 
+### 2026-09-07 — Grup kodu/varsayılan uygulaması yayınlandı
+
+API01/API02 ve ERP worker `20260907T210000Z_panel_group_defaults` ile panel grup
+modunda aktif. Normal ERP katalog/fiyat turu başarılı. Onaylı tek seferlik bakım
+13.433 kart grubunu ve 29.088 boş urun_grubu alanını uyguladı; ikinci prova 0/0.
+61 eşlenmeyen kart korundu. Ayrıntılar stok-karti-esleme-etkisi raporu ve PROGRESS.
+Bu kapanış yalnız grup/varsayılan aşamasıdır; özellik/değer/tedarikçi sözlüklerinin
+tamamının config'ten tabloya geçmesi gibi diğer EM2 kapsamları tamamlandı sayılmaz.
+
+### 2026-09-07 — Kanonik kod ve grup varsayılanı (yerel; yayın bekliyor)
+
+- Panel modunda V3 snapshot tip 2 grup kodunu kendi sözlük eşitliğiyle okur;
+  tekillik kontrolünden sonra kodla doğrudan panel çözümü kullanılır. Böylece
+  stok kartı etki raporuyla kalıcı reader aynı kaynak kodunu esas alır.
+- Boş urun_grubu alanı yalnız doğru grup çözüldükten sonra mevcut aktif ve
+  tekil grup varsayılanından eklenir. Mevcut/soft-delete değerler ezilmez;
+  özellik-only taraması eski grup varsayılanı yazmaz. Tanım yaratılmaz.
+- Yerel regresyon 137/137. Gerçek yazım kabulü ve worker/API panel modu
+  aktivasyonu henüz yapılmadı; mevcut worker eski ayarlarla çalışmaktadır.
+
 ### 2026-09-07 — Ortam / TESETTÜR önceliği (yerel; yayınlanmadı)
 
 - Kullanıcı kararı: V3 prItemAttribute ItemTypeCode=1, AttributeTypeCode=8,

@@ -47,7 +47,7 @@ public sealed class ErpSourceSyncService(
             var attrValues = await LoadAttributeValuesAsync(pg, ct);
             var channelPlatforms = await LoadConfiguredPlatformsAsync(pg, ct);
             var existing = await FindProductAsync(pg, snapshot.Product.Code, ct);
-            var groupId = ResolveGroup(snapshot.Product.ProductGroupName, groups);
+            var groupId = ResolveGroup(snapshot.Product, groups);
             if (groupId is null && (existing is null || options.UsePanelGroupMappings))
             {
                 if (existing is null && !options.UsePanelGroupMappings)
@@ -117,6 +117,7 @@ public sealed class ErpSourceSyncService(
                     pg, tx, productId, snapshot.Attributes, attrTypes, attrValues, detail, ct);
                 if (!productAttrs.Complete) throw new InvalidOperationException($"Ürün eşleşmesi değişti: {code}.");
                 changed |= productAttrs.Changed;
+                changed |= await EnsureGroupDefaultAsync(pg, tx, productId, ct) > 0;
                 if (existing is null)
                     foreach (var platformId in channelPlatforms.Values)
                         changed |= await EnsureChannelProductAsync(pg, tx, productId, platformId, ct) > 0;
@@ -218,7 +219,7 @@ public sealed class ErpSourceSyncService(
                 var sourceVariants = snapshot.Variants;
                 var sourceAttributes = snapshot.Attributes;
                 var existing = await FindProductAsync(pg, currentProduct.Code, ct);
-                var groupId = ResolveGroup(currentProduct.ProductGroupName, groups);
+                var groupId = ResolveGroup(currentProduct, groups);
                 if (groupId is null && (existing is null || options.UsePanelGroupMappings))
                 {
                     if (existing is null && !options.UsePanelGroupMappings)
@@ -312,6 +313,7 @@ public sealed class ErpSourceSyncService(
                         throw new InvalidOperationException(
                             $"ERP ürün attribute eşleşmesi doğrulama sonrasında değişti: {currentProduct.Code}.");
                     productChanged |= productAttributes.Changed;
+                    productChanged |= await EnsureGroupDefaultAsync(pg, tx, productId, ct) > 0;
 
                     // Yeni ERP ürünü kanala da bağlanır. Mevcut ürünlerdeki personel kapsam/
                     // aktiflik kararlarına dokunulmaz; fiyat dilimi varyant satırlarını idempotent
@@ -408,6 +410,8 @@ public sealed class ErpSourceSyncService(
                     ("key", $"erp-product:{code.ToLowerInvariant()}"));
                 var result = await ReplaceProductAttributesAsync(
                     pg, tx, product.Value.Id, rows, attrTypes, attrValues, detail, ct);
+                // Attribute-only reconciliation has not resolved the ERP group; it must not
+                // fill a classification from a potentially stale local group.
                 if (result.Complete && result.Changed) changed++;
                 await tx.CommitAsync(ct);
             }
@@ -538,8 +542,11 @@ public sealed class ErpSourceSyncService(
             """, ct, ("slice", slice), ("watermark", watermark), ("error", (object?)error ?? DBNull.Value));
     }
 
-    private Guid? ResolveGroup(string? sourceName, GroupMaps groups)
+    private Guid? ResolveGroup(ErpProductRow product, GroupMaps groups)
     {
+        if (options.UsePanelGroupMappings && !string.IsNullOrWhiteSpace(product.ProductGroupCode))
+            return ErpPanelGroupResolver.ResolveCode(product.ProductGroupCode, groups.PanelGroupsByCode!);
+        var sourceName = product.ProductGroupName;
         if (string.IsNullOrWhiteSpace(sourceName)) return null;
         string normalized = Normalize(sourceName);
         if (options.UsePanelGroupMappings)
@@ -683,6 +690,11 @@ public sealed class ErpSourceSyncService(
         await using var r = await cmd.ExecuteReaderAsync(ct);
         return await r.ReadAsync(ct) ? (r.GetGuid(0), r.GetGuid(1)) : null;
     }
+
+    private Task<int> EnsureGroupDefaultAsync(NpgsqlConnection pg, NpgsqlTransaction tx, Guid productId,
+        CancellationToken ct) => options.UsePanelGroupMappings
+        ? ExecAsync(pg, tx, ErpProductGroupDefault.InsertMissingSql, ct, ("product", productId))
+        : Task.FromResult(0);
 
     private static Task<int> InsertProductAsync(NpgsqlConnection pg, NpgsqlTransaction tx, Guid id, Guid groupId,
         ErpProductRow p, CancellationToken ct) => ExecAsync(pg, tx, """

@@ -37,7 +37,9 @@ public class GetReviewsForModerationQueryHandler(IStorefrontDbContext db)
             q = q.Where(r => r.Status == request.Status);
 
         var toplam = await q.CountAsync(ct);
-        var kayitlar = await q.OrderBy(r => r.CreatedAt)
+        // En yeni yorum önce; aynı tarihli kayıtlarda sayfalama sırası sabit kalsın.
+        var kayitlar = await q.OrderByDescending(r => r.CreatedAt)
+            .ThenByDescending(r => r.Id)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(r => new ModerationReviewDto(

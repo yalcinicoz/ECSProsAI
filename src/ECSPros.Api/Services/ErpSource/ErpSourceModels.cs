@@ -11,7 +11,10 @@ public sealed record ErpProductRow(
     bool IsSaleOpen,
     DateTime? CreatedAtUtc,
     DateTime? UpdatedAtUtc,
-    IReadOnlyDictionary<string, decimal?> Values);
+    IReadOnlyDictionary<string, decimal?> Values)
+{
+    public string? ProductGroupCode { get; init; }
+}
 
 public sealed record ErpVariantAttributeRow(int TypeId, string Value, string? SourceCode = null);
 

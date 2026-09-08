@@ -222,6 +222,24 @@ public sealed class SqlServerErpSourceReader(ErpSourceOptions options)
         await connection.OpenAsync(ct);
         await ReadProductSliceAsync(connection, DateTime.UtcNow, false, rows, ct, code);
         if (!rows.TryGetValue(code, out var product)) return null;
+        if (options.UsePanelGroupMappings)
+        {
+            await using var groupCommand = new SqlCommand("""
+                SELECT DISTINCT COALESCE(d.AttributeCode,a.AttributeCode)
+                FROM prItemAttribute a
+                LEFT JOIN cdItemAttributeDesc d
+                  ON d.ItemTypeCode=a.ItemTypeCode AND d.AttributeTypeCode=a.AttributeTypeCode
+                 AND d.AttributeCode=a.AttributeCode AND d.LangCode='TR'
+                WHERE a.ItemTypeCode=1 AND a.AttributeTypeCode=2 AND a.ItemCode=@code
+                """, connection) { CommandTimeout = options.CommandTimeoutSeconds };
+            groupCommand.Parameters.Add(new SqlParameter("@code", SqlDbType.VarChar, 20) { Value = code });
+            var codes = new List<string>();
+            await using (var groupReader = await groupCommand.ExecuteReaderAsync(ct))
+                while (await groupReader.ReadAsync(ct)) codes.Add(groupReader.GetString(0).Trim());
+            if (codes.Count != 1 || string.IsNullOrWhiteSpace(codes[0]))
+                throw new InvalidOperationException($"V3 ürün grup kodu eksik veya belirsiz: {code}.");
+            product = product with { ProductGroupCode = codes[0] };
+        }
         var variants = await ReadVariantsAsync(connection, code, ct);
         var attributes = await ReadProductAttributesAsync(connection, code, ct);
         var supplier = await ReadSupplierAsync(connection, code, ct);

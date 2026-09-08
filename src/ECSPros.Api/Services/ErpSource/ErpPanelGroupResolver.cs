@@ -4,6 +4,9 @@ namespace ECSPros.Api.Services.ErpSource;
 
 public static class ErpPanelGroupResolver
 {
+    public static Guid? ResolveCode(string sourceCode, IReadOnlyDictionary<string, List<Guid>> groupsByCode)
+        => ErpGroupMappingTargets.Resolve(groupsByCode.GetValueOrDefault(sourceCode.Trim()) ?? []);
+
     public static Guid? Resolve(string? sourceName, IReadOnlyDictionary<string, List<string>> codesByName,
         IReadOnlyDictionary<string, List<Guid>> groupsByCode)
     {

@@ -160,6 +160,9 @@ public sealed class ErpSourceOptions
 
     public void Validate()
     {
+        if (UsePanelGroupMappings && ProductAttributeTypeCodes.Values.Any(
+                x => string.Equals(x, "urun_grubu", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("Panel modunda urun_grubu yalnız grup varsayılanından gelir; ERP özellik eşlemesiyle ezilemez.");
         if (UsePanelGroupMappings && (string.IsNullOrWhiteSpace(MappingTargetSystem)
             || !MappingTargetSystem.StartsWith("erp:", StringComparison.Ordinal) || MappingTargetSystem.Length <= 4
             || MappingTargetSystem != MappingTargetSystem.Trim()))

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { clearSessionStoragePreservingFavorites } from '@/lib/adminFavorites'
 
 export const api = axios.create({
   baseURL: '/api',
@@ -26,7 +27,7 @@ api.interceptors.response.use(
       original._retry = true
       const refreshToken = localStorage.getItem('refresh_token')
       if (!refreshToken) {
-        localStorage.clear()
+        clearSessionStoragePreservingFavorites()
         window.location.href = '/admin/login'
         return Promise.reject(error)
       }
@@ -38,7 +39,7 @@ api.interceptors.response.use(
         original.headers.Authorization = `Bearer ${accessToken}`
         return api(original)
       } catch {
-        localStorage.clear()
+        clearSessionStoragePreservingFavorites()
         window.location.href = '/admin/login'
         return Promise.reject(error)
       }

@@ -4,6 +4,10 @@ import { Moon, Sun, Star, Search, Menu } from 'lucide-react'
 import { TicketBell } from './TicketBell'
 import { useUIStore } from '@/store/ui'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/auth'
+import { useFavoritesStore } from '@/store/favorites'
+import { favoriteForRoute } from '@/lib/adminFavorites'
+import { findActiveItem } from './sidebarNavigation'
 
 // Breadcrumb map: pathname → label
 const BREADCRUMB: Record<string, string> = {
@@ -56,6 +60,13 @@ interface HeaderProps {
 
 export function Header({ onMobileMenuOpen }: HeaderProps) {
   const location = useLocation()
+  const user = useAuthStore((state) => state.user)
+  const hasPermission = useAuthStore((state) => state.hasPermission)
+  const { byUser, add } = useFavoritesStore()
+  const current = favoriteForRoute(location.pathname + location.search + location.hash)
+  const item = findActiveItem(location.pathname)
+  const canAdd = Boolean(user && current && item && (!item.permission || hasPermission(item.permission)))
+  const isFavorite = Boolean(user && current && Object.hasOwn(byUser, user.id) && byUser[user.id].some((fav) => fav.to === current.to))
   const { darkMode, toggleDarkMode, setFavsPanelOpen, setCmdOpen, sidebarCollapsed, toggleSidebar } = useUIStore()
 
   // Ctrl+K → open command palette
@@ -129,14 +140,18 @@ export function Header({ onMobileMenuOpen }: HeaderProps) {
         {/* Favorilere Ekle */}
         <button
           type="button"
-          onClick={() => setFavsPanelOpen(true)}
+          disabled={!canAdd}
+          onClick={() => {
+            if (user && current && canAdd) add(user.id, current.to)
+            setFavsPanelOpen(true)
+          }}
           className={cn(
             'mob-hide flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all',
           )}
           style={{ color: 'var(--text-m)', border: '1px solid var(--border)', background: 'var(--surface)' }}
         >
           <Star size={11} className="text-amber-400" />
-          <span>Favorilere Ekle</span>
+          <span>{isFavorite ? 'Favorilerde' : 'Favorilere Ekle'}</span>
         </button>
 
         {/* Bildirimler — Müşteri İlişkileri çanı (2026-09-07) */}

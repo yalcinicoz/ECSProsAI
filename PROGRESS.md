@@ -1,6 +1,414 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+### GitHub — Yerel geliştirmelerin paylaşım kaydı (2026-09-08)
+
+- Kullanıcı yerel çalışmaların GitHub'a gönderilmesini açıkça onayladı.
+  Taban: origin/main 311bc794; önceki 8 commit ve yerel değişiklikler birleştirildi.
+- Commit kapsamı: admin menü gruplaması/aktif route/erişilebilirlik, kişisel
+  favoriler/arama/kısayol, yorum moderasyonu en-yeni sırası, ERP panel grup kodu
+  ve boş grup varsayılanı, ilgili testler, bakım araçları ve faz raporları.
+- .codex-tmp-publish yerel geçici/deploy klasörü gitignore'a eklendi; silinmedi.
+  appsettingsTest.json, sırlar, derleme çıktıları ve geçici SSH/deploy araçları
+  gönderim kapsamı dışında. Güvenlik stash'i korunuyor.
+- Birleşmiş kod doğrulaması: admin 51/51, API acceptance dışı 138/138,
+  TypeScript ve genel ESLint başarılı. Bu GitHub paylaşımı sunucu yayını,
+  migration veya veritabanı bakım komutlarının çalıştırılması değildir.
+
+### GitHub — Son değişiklikler alındı, yerel çalışmalar korundu (2026-09-08)
+
+- Kullanıcı yalnız alma/koruma istedi. Yerel tracked + untracked 54 dosyanın
+  envanteri alındı; safety-before-github-sync-20260908-favorites-reviews stash'i
+  oluşturuldu (1fc4a39a357d4cb64034fbf588512c84b6ad95ce), silinmedi.
+- origin fetch sonrası b9d4b014 -> 311bc794 fast-forward: 8 commit, 15 dosya.
+  Gelenler mobil push/üye cihazları, personel telefon alanı ve mobil dokümanlar.
+  Yerel değişiklikler stash apply ile geri alındı. Yalnız PROGRESS çakıştı;
+  iki tarafın kayıtları birlikte korundu. Kod çatışması ve unmerged dosya yok.
+- Yerel dosyalar stash blob'larıyla Git satır-sonu normalizasyonu üzerinden
+  karşılaştırıldı: PROGRESS dışındaki 53 dosyada içerik farkı/kayıp yok.
+  Stash apply'ın staging durumu eski unstaged haline döndürüldü; ignored
+  appsettingsTest.json değiştirilmedi. İşlem sırasında yeniden oluşan yerel
+  obj çıktıları silinmedi. HEAD ve origin/main aynı, ahead/behind 0/0;
+  bizim değişiklikler commit edilmeden çalışma ağacında korunuyor.
+- Birleşmiş kaynak: admin node testleri 51/51, TypeScript --noEmit ve genel
+  ESLint başarılı; acceptance dışı API 138/138, mevcut derleyici uyarıları var.
+  Admin build, migration, DB/sunucu yazımı, yayın, commit ve push yapılmadı.
+
 **2026-09-08 push takip (Mobil API + Admin panel):** (1) Üye detayı › Mobil Bildirim Cihazları artık `push_devices.Id` + Kopyala + "Deneme gönder" (bildirim sayfası `?tab=push-log&deviceId=`/`&memberId=` ile ön-dolu açılır). (2) **"Favori ürüne %15 indirim yaptık, bildirim gitmedi" kök nedeni:** `favorite_price_drop` pazarlama sınıfı → `Consents.marketing.push=true` şart; test üyesinde `marketing` anahtarı yoktu (canlıda push izni açık ÜYE YOK), kuyruk sessizce 0 döner. Panel push iznini göstermiyordu → `GetMemberDetail` artık marketing anahtarı yokken de hepsi-kapalı DTO döner, panel "mobil push ✓/✗" + uyarı gösterir ⚠️ restart bekliyor (publish 09:32). **Kullanıcı kararı (aynı gün): push izni OPT-OUT** — OS izni cihaz kaydında alınır, ayrıca açma istenmez; `PushIzni` yalnız `marketing.push == false` ise engeller (anahtar yoksa gider), GET marketing-consents `push` varsayılanı true, panel 'mobil push ✗' = üye kapattı; ⚠️ docs/PUSH_BILDIRIM_ENTEGRASYONU.md salt-okunur (başka sahip), §6 satırı güncellenemedi; **(3) İkinci kök neden:** tarayıcı `IEffectivePriceProvider` (kanal/base min) kullanıyordu, kampanya indirimi hesaba katılmıyordu → `PushTarayici.FavoriAsync` artık `IProductCampaignResolver` + `CampaignPricing.EffectivePrice` ile sitedeki kart fiyatını baz alır (percent/amount; cart_only sayılmaz) ⚠️ restart (publish 10:38). (4) Personel tanımına telefon: panel Kullanıcılar formu Telefon alanı + liste sütunu + arama (backend Phone zaten vardı, panel null gönderiyordu). tarama 15 dk + efektif fiyat cache 2 dk. Not: staging (5055) aynı DB'yi paylaştığından `push-scan` advisory kilidini staging da alabilir → tarama logu ecspros-staging journal'ında çıkabilir.
+
+### ADM-FAV1 / E7 — Admin ve iki API yayını; temizlik kısmen tamamlandı (2026-09-08)
+
+- İlk admin dist eskiydi; kullanıcı build'i yeniden tamamladı. Yeni favori
+  metinleri ve storage anahtarı doğrulandı. .56 admin aktif sürümü:
+  /usr/share/nginx/admin-releases/20260908_admin_favorites.
+  JS index-BKRYvz01.js, CSS index-BUq58wP0.css; origin ve public HTML + 7 bağlı
+  dosya yerel paketle birebir SHA256/içerik kabulünden geçti.
+- API Linux publish ilk denemede NETSDK1047 (restore hedefi eksik) verdi;
+  linux-x64 restore sonrası Release publish başarılı, mevcut uyarılar var.
+  appsettings dosyaları arşivden dışlandı; sunucudaki çalışan ayarlar birebir
+  taşındı. API02 ardından API01, /opt/ECSProsAI/releases/20260908_reviews_favorites
+  sürümüne atomik + restart/rollback kapısıyla alındı. Yorum moderasyonu artık
+  CreatedAt DESC, Id DESC. Son API DLL SHA256 iki node'da aynı:
+  2e045abd88b3c24543cd2e06d989a125562d8d40ea98e89caa50666be6aea9c6.
+- Her iki API: live/ready/ana sayfa/örnek ürün 200; active/running, NRestarts=0,
+  başlangıç hata satırı 0, Redis aktif. Node Role=Api/MigrateOnStartup=false,
+  Push=false ve mevcut ERP panel ayarları korundu. İki restart'ta önceden
+  diskte değişmiş unit/drop-in için systemd daemon-reload uyarısı görüldü;
+  bu yayına ait olmayan ayar yüklenmedi, daemon-reload çalıştırılmadı.
+- Kaynak testleri önceki tur admin 51/51 ve API acceptance dışı 138/138,
+  TypeScript/ESLint başarılı. Gerçek oturumlu favori/moderasyon görsel kabulü
+  kullanıcıda; sunucu health/content kabulü tamamlandı. Worker'lar değişmedi,
+  restart edilmedi. DB/migration/seed/Nginx config/.59/GitHub değişikliği yok.
+- Temizlik: yerelde önceki geçici test/publish artifacts klasörleri ve üç eski
+  aktarım arşivi toplam 2.260.179.322 byte kalıcı silindi. Bu yayının yerel
+  publish çıktısı/iki arşivi ve API1/API2/.56 üzerindeki hash doğrulanmış /tmp
+  aktarım arşivleri de kaldırıldı. Kaynak/untracked çalışma, admin/dist ve
+  yardımcı betikler korundu; silinen çıktılar kaynaklardan yeniden üretilebilir.
+- Eski sunucu release'leri ve iki 2026-09-01 worker arşivinin kalıcı silinmesi
+  otomatik güvenlik denetiminde REDDEDİLDİ: yalnız test yedeği oldukları kesin
+  olmadığından rollback kaybı riski. Reddedilen işlem uygulanmadı/tekrarlanmadı.
+  Eski release'ler ve çalışan/son rollback korundu; kullanıcıdan eski sunucu
+  yayınlarını da kapsayan açık kalıcı silme onayı istenecek. İlgili envanter
+  .codex-tmp-publish/publish-inventory.py ile salt okunur alınmıştır.
+
+### ADM-FAV1 — Sağ panel kişisel favoriler, arama ve kısayol ekleme (2026-09-08)
+
+- Eski Header Favorilere Ekle yalnız paneli açıyor, sağ panel sabit örnek
+  bağlantılar/son ziyaret gösteriyor, Kısayol Ekle işlem yapmıyordu. Gerçek
+  kullanıcı favorileri bağlandı: mevcut pathname + query + hash korunur;
+  aynı URL tekrar eklenmez, Header Favorilerde durumunu gösterir.
+- FavoritesPanel: Türkçe/ASCII arama, menü gruplarından yetkili kısayol seçimi,
+  bulunduğum sayfayı ekle, favoriden kaldır, boş/hata durumları. Sabit örnek
+  ve gerçekte tutulmayan Son Ziyaret listesi kaldırıldı. Sipariş/stok canlı
+  sayaçları ilgili favorilerde korundu; yalnız panel/ilgili favori görünürken
+  kullanıcı kimliğine ayrılmış query ile alınır. Kapalı panel inert.
+- Yeni lib/adminFavorites.ts + store/favorites.ts: kullanıcı ID bazlı localStorage,
+  dış URL/bozuk kayıt kontrolü, güncel menü adı, 100 kısayol sınırı, yazma hatası
+  görünür. Cihazlar arası/sunucu senkronu yok; tarayıcı verisi silinirse kaybolur.
+- auth.ts ve api/client.ts içindeki çıkış/başarısız refresh temizliğinde yalnız
+  doğrulanmış favori kaydı korunur; access/refresh token ve diğer oturum verileri
+  temizlenmeye devam eder. Authentication endpoint/refresh davranışı değiştirilmedi.
+- Test: favorites.test.cjs 12/12; tüm admin node testleri 51/51. TypeScript
+  --noEmit, genel ESLint ve son değişen panelin hedefli ESLint'i başarılı.
+  İlk lint kontrolündeki no-control-regex hatası karakter kodu kontrolüyle
+  düzeltildi. Testler component/event + store/401 handler harness'idir;
+  gerçek tarayıcı görsel kabulü henüz yapılmadı.
+- Değişenler: Header.tsx, FavoritesPanel.tsx, auth.ts, api/client.ts, yeni
+  adminFavorites.ts/favorites.ts/favorites.test.cjs ve bu kayıt. Önceki yerel
+  işler korundu; migration, DB, sunucu, admin build, yayın ve GitHub işlemi yok.
+
+### ADM-MENU1 / E7 — Yorum moderasyonu sırası ve rozet denetimi (2026-09-08)
+
+- GetReviewsForModerationQuery: CreatedAt DESC, eşit tarihlerde Id DESC;
+  sıralama Skip/Take öncesinde uygulanır. Durum filtresi, moderasyon işlemleri
+  ve yorum fotoğraflarının kendi SortOrder sırası korunur. Yayın henüz yapılmadı;
+  bu değişiklik admin statik paketinde değil API katmanındadır.
+- Ürün Soruları render'ı kaybolmamış: pozitif pendingCount kırmızı sayı,
+  sıfırda rozet yok; kapalı/dar grupta nokta. QuestionAlerts mount'u, 60 saniye
+  poll, SignalR ve cevap sonrası invalidation değişmemiş. İlk veri gelmeden
+  store da sıfır olduğundan sadece HTML'de rozet olmaması gerçek sayının sıfır
+  olduğunu kanıtlamaz. Canlı oturum/API sayacı bu tur okunmadı.
+- Sidebar testine 0 -> 1 -> 0, arama, kapalı/dar grup regresyonu eklendi:
+  16/16 geçti. Yeni ReviewModerationOrderingTests kaynak-sözleşme testi dahil
+  acceptance dışı API paketi 138/138 geçti; derlemede mevcut uyarılar var.
+- Değişenler: yorum sorgusu, iki test dosyası ve bu kayıt. DB/sunucu/servis,
+  build (admin), yayın ve GitHub işlemi yapılmadı; önceki yerel işler korundu.
+
+### ADM-MENU1 — Üç menü adı yayına alındı (2026-09-08)
+
+- Kullanıcının dış terminalde hazırladığı build doğrulandı ve yalnız admin .56
+  üzerinde 20260908_admin_menu_labels sürümüne atomik geçirildi. JS:
+  index-DMwFsYRq.js. Kullanıcılar / Entegrasyon Logları / Entegrasyonlar etiketleri.
+- Origin ve public admin index + bağlı 7 dosya paketle birebir doğrulandı.
+  Kod kontrolleri önceki adımda 15/15 ve ESLint başarılı; görsel kabul kullanıcıda.
+- Geri dönüş 20260908T101000Z_admin_menu korundu. Rollback yardımcısı:
+  .codex-tmp-publish/admin-labels-deploy.py, Mode rollback. Yalnız bu yayının
+  yerel/uzak transfer arşivi hash kontrolüyle silindi; dist ve release'ler korundu.
+- Nginx config/restart, API/worker, DB, .59 ve GitHub değişikliği yapılmadı.
+
+### ADM-MENU1 — Menü adları netleştirildi (2026-09-08, yerel)
+
+- Kullanıcı isteğiyle Ayarlar → Kullanıcılar, Entegrasyonlar → Entegrasyon Logları,
+  Servis Kataloğu → Entegrasyonlar olarak değiştirildi. Yalnız sidebar etiketleri;
+  URL, grup, ikon, yetki ve yardımcı route eşleşmeleri aynı kaldı.
+- sidebarNavigation.ts ve sidebar-navigation.test.cjs güncellendi; sidebar testleri
+  15/15 ve hedefli ESLint başarılı. Build/yayın/GitHub/DB işlemi yapılmadı.
+
+### ADM-MENU1 — Yalnız admin yayını tamamlandı (2026-09-08)
+
+- Kullanıcı build'i dış terminalde tamamladı ve doğrudan admin yayınını onayladı.
+  Paket yeni menü metinleriyle doğrulandı: index-CCbMrncq.js / index-CYqUSsSc.css.
+- .56 üzerindeki /usr/share/nginx/html/admin symlink'i atomik olarak
+  /usr/share/nginx/admin-releases/20260908T101000Z_admin_menu sürümüne alındı.
+  Önceki 20260907T190000Z_site_admin klasörü geri dönüş için korundu; eski açık
+  tarayıcıların hash'li asset talepleri için önceki asset dosyaları da korundu.
+- Origin HTTP ve public https://multi-test.misharitalia.com/admin/ üzerinden
+  index ve bağlı 7 dosya (toplam 8) yerel paketle birebir içerik/SHA256 doğrulandı.
+  Önceki kod testleri 38/38, TypeScript/ESLint başarılı. Oturumlu tarayıcıda
+  görsel kabul kullanıcıya ait; health/content doğrulaması görsel kabul değildir.
+- Nginx config/reload/restart, API/worker, DB, .59 veya GitHub değişikliği yok.
+  Yalnız bu yayının yerel ve uzak aktarım arşivleri hash kontrolüyle kaldırıldı;
+  admin/dist ve çalışan/rollback sürümler korundu. Rollback yardımcı betiği
+  .codex-tmp-publish/admin-menu-deploy.py (Mode rollback) yerelde tutuldu.
+
+### ADM-MENU1 — Admin sidebar menü mimarisi, yerel uygulama (2026-09-08)
+
+- Kullanıcının onayladığı yedi karar uygulandı. Mevcut NAV_SECTIONS envanteri
+  sidebarNavigation.ts içine taşınıp iş amacına göre gruplandı; URL, ekran,
+  permission ve mevcut badge kaynakları korundu. Üye Grupları Tanımlar altında;
+  Dashboard/Proje Talepleri doğrudan link, diğer gruplar iki seviyeli accordion.
+- Normal kullanımda tek grup açık; aramada yetki filtresinden geçmiş tüm eşleşen
+  gruplar başlıklarıyla görünür. Arama temizlenince önceki accordion durumuna dönülür.
+  60 px ikon modunda grup tıklaması sidebar'ı genişletir ve o grubu açar.
+- Merkezi React Router matchPath çözümü exact, en özel prefix ve mevcut yardımcı
+  route pattern'larını kullanır. URL değişikliği aktif grubu açar; aynı URL'deki
+  manuel grup seçimi korunur. Sağ favoriler/global arama bileşenleri değiştirilmedi.
+- Kapalı grupta yalnız görünür çocukların bildirimi nokta ile belirtilir; sayı
+  toplanmaz. Ürün Soruları/Müşteri İlişkileri alt badge değerleri korunur.
+  Gerçek button, focus-visible, aria-expanded/controls ve mobil linkte kapanma var.
+  Mevcut icon haritasında eksik olan Kanal Kapsamı filter ikonu tamamlandı.
+- Kontrol: node --test tests/*.cjs 38/38 (15 yeni sidebar testi), admin TypeScript
+  --noEmit, hedefli ESLint ve npm run lint başarılı; git diff --check temiz.
+  Testler yerel component/event harness ve gerçek route matcher kullanır;
+  tarayıcıda görsel/gerçek klavye kabulü henüz yapılmadı. Production build,
+  AGENTS kuralı nedeniyle çalıştırılmadı; yerel önizleme/onay sonrası kullanıcı yapar.
+- Geri alma sınırı yalnız Sidebar.tsx değişikliği, yeni sidebarNavigation.ts,
+  tests/sidebar-navigation.test.cjs ve bu ADM-MENU1 bölümüdür. Önceki ERP/yerel
+  çalışmalar korunmuştur. Başka not/yedek oluşturulmadı; DB/migration/API/servis,
+  sunucu, GitHub commit/push ve yayın işlemi yapılmadı.
+
+### EM2 — API/worker aktivasyonu ve stok kartı uygulaması tamamlandı (2026-09-07)
+
+- Kullanıcı API01 ve normal gerçek katalog/fiyat/özellik senkronuna devam edecek
+  ERP worker aktivasyonuna ayrıca açık onay verdi. API01 ve ERP worker yeni
+  20260907T210000Z_panel_group_defaults release'ine health/rollback kapısıyla
+  geçirildi; önceki turdaki API02 ile aynı DLL hash'i ve panel modu kullanılıyor.
+  MigrateOnStartup=false ve Push=false korundu; Nginx/.59 değiştirilmedi.
+- Onaylı bakım Apply tek transaction'da COMMIT: 13.433 ProductGroupId güncelleme,
+  29.088 boş urun_grubu ekleme. Yalnız ilgili alanlar ve UpdatedAt yazıldı;
+  definition/fiyat/stok/görsel/açıklama tablolarına bakım yazımı yok.
+- İkinci gerçek Rehearse 0/0 ve ROLLBACK. Son READ ONLY raporda 29.088 kartın
+  grubu/özelliği aynı. 57 Tozlu/00 ve 4 V3 grup bağı olmayan kart korunuyor.
+  Örnek kartlarda sutyen/İç Giyim, kaban/Kaban, esofman_alti/Eşofman doğrulandı.
+- API01/API02 live/ready/ana sayfa/örnek ürün 200; Redis aktif, NRestarts=0,
+  başlangıç error logu 0. ERP worker ready=200, active/running, NRestarts=0;
+  yeni kodla ilk katalog ve fiyat turu OK, hata logu 0. Public site 200.
+  Aktif channel_scopes kaydı 0; kapsam yeniden yazımı yapılmadı.
+- Kod testleri önceki tur 137/137; gerçek SQL rollback/apply/idempotency kabulü
+  bu fazda tamamlandı. Rapor güncellendi. Yeni seed/migration/backup/push yok.
+  API01/API02 üzerindeki yalnız bu yayının SHA256 doğrulanmış /tmp aktarım
+  arşivleri silindi; çalışan ve rollback release'ler korundu. Önceden temizlik
+  onayı engeline takılan yerel .codex-tmp-publish klasörü bu tur silinmedi.
+
+### EM2 — Gerçek rollback provası ve kısmi yayın; aktivasyon onayı engeli (2026-09-07)
+
+- Linux Release publish başarılı. Yeni release
+  20260907T210000Z_panel_group_defaults API01/API02 ve API01 ERP worker için
+  ayrı klasörlerde hazırlandı. Sunucu ayarları korundu; release'e özel panel
+  modu true, MappingTargetSystem erp:nebim ve Push false. Startup seed false.
+- StokKartiEslemeRaporu Read/Rehearse/Apply modları eklendi. Yazım yalnız
+  ProductGroupId/UpdatedAt ve boş urun_grubu özelliğini kapsar. Mevcut farklı
+  veya soft-delete değerler korunur; definition/fiyat/stok/görsel yazımı yok.
+  Tek transaction, tablo kilitleri, lock timeout 5 sn, statement timeout 30 sn,
+  doğrulanmış 13433/29088 üst sınırları var. Gerçek Rehearse tam bu sayıları
+  verdi ve ROLLBACK tamamlandı. Araç derlemesi 0 hata/uyarı.
+- Yalnız API02 aktive edildi: ready/live/ana sayfa/ürün 200, Redis aktif,
+  NRestarts=0, başlangıç hata logu 0. API DLL SHA256
+  1c315f4d0a4d06d03642daf0ee95c6006f156519c936b87186f017cf0dbd99dd.
+- API01 ve worker aktivasyonu otomatik güvenlik denetiminde REDDEDİLDİ;
+  gerekçe DryRun=false worker'ın normal katalog/fiyat/özellik yazımlarını da
+  başlatması için daha açık kapsam onayı istenmesi. Reddedilen işlem yeniden
+  denenmedi veya dolaylı yapılmadı. API01 halen 20260907T190000Z_site_admin,
+  worker halen 20260907T080848Z_erp_panel_ortam; yeni klasörler pasif hazır.
+- Toplu Apply/COMMIT YAPILMADI. Kullanıcıdan API01 ve gerçek yazımlı ERP worker
+  panel modunun etkinleştirilmesine açık onay bekleniyor. Sonrasında Apply,
+  ikinci prova 0/0, source/hedef raporu ve site/cache/kapsam kontrolleri gerekli.
+  .59/MySQL değişmedi; GitHub push ve yeni backup yok. Bekleyen yayın paketleri
+  devam için korundu. Bu faz tamamlandı olarak işaretlenmedi.
+
+### EM2 — Kod: kanonik V3 grup kodu ve boş grup varsayılanı (2026-09-07)
+
+- Çalışan API01 ERP worker salt-okunur incelendi: release
+  20260907T080848Z_erp_panel_ortam; active, NRestarts=0. UsePanelGroupMappings
+  override yok (varsayılan false). Bu nedenle toplu kart yazımı henüz yapılmadı.
+- Panel modundaki hedefli V3 snapshot, tip 2 grup kodunu V3 sözlük JOIN'iyle
+  kanonik okur; tek kod yoksa durur. Model ProductGroupCode taşır, resolver önce
+  doğrulanmış kodu kullanır; bilinmeyen kod ad/config fallback'ine düşmez.
+  Kod taşımayan eski reader/test modellerinde mevcut ad çözümü korunur.
+- ErpProductGroupDefault yalnız mevcut aktif urun_grubu grup varsayılanını,
+  doğrulanmış ürün grubuna göre boş karta ekler. Tek aday şartı, ürün kapsamı,
+  geçici grup dışlama ve ON CONFLICT koruması var. Dolu veya soft-delete edilmiş
+  özellik korunur; tanım yaratılmaz. Hedefli refresh ve katalog transaction'ında
+  çalışır, panel modu kapalıyken devre dışıdır. Yalnız özellik taraması grup
+  çözmediğinden eski grubun varsayılanını yazmaması için bu adıma dahil edilmedi.
+- Panel modunda ERP özellik eşlemesinin urun_grubu'nu ayrıca ezmesi Validate
+  tarafından reddedilir. SQL sözleşme ve kod çözücü regresyonları eklendi;
+  acceptance dışı API paketi 137/137, git diff --check başarılı. Gerçek DB INSERT
+  kabulü henüz yapılmadı; SQL metin güvenlik testleri bunun yerine sayılmıyor.
+- Bu tur kod ve salt-okunur servis kontrolü: worker/API yayını, config aktivasyonu,
+  toplu kart/grup/özellik yazımı ve GitHub push yapılmadı. Sıradaki işletim fazı:
+  yeni kodun API/worker üzerinde aynı panel moduyla kontrollü aktivasyonu,
+  yeniden etki kontrolü ve hedefli kart yazımı/ikinci tur idempotency kabulü.
+
+### EM2 — Stok kartı yazmasız etki raporu tamamlandı (2026-09-07)
+
+- V3 tip 2 grup bağları API01 tünelinden SELECT ile, .241 hedefi repeatable-read
+  READ ONLY transaction ile karşılaştırıldı. 29.149 aktif karttan 29.088 tekil
+  eşlemeli: 13.433 grup değişikliği, 15.655 aynı grup; 29.088 boş urun_grubu
+  özelliği mevcut grup varsayılanıyla doldurulabilir. Yazım yapılmadı.
+- 57 kart 00/Tozlu; 4 kartın V3 grup bağı yok. Korunacak. Ham karşılaştırmadaki
+  537 küçük/büyük harf farkı V3 sözlük JOIN'iyle doğrulandı, tahmini alias yok.
+- tools/veri-bakim/StokKartiEslemeRaporu SELECT-only araç/SQL/tünel runner eklendi;
+  derleme 0 hata/uyarı, gerçek okuma kabulü başarılı. İlk kaynak guard'ı eski
+  private adres varsayımını reddetti; kayıtlı V3 host/db doğrulanarak düzeltildi.
+  Tüneller kapatıldı; V3 TLS 1.0 uyarısı raporlandı, altyapı değiştirilmedi.
+- Rapor docs/raporlar/2026-09-07-stok-karti-esleme-etkisi.md. Worker/config,
+  ürün/fiyat/stok/görsel/açıklama, .59 ve MySQL değişmedi. Sonraki adım: panel
+  eşleme + grup varsayılanı kalıcı akışını güvenceye alarak hedefli uygulama;
+  eski worker'ın geri ezme riski çözülmeden toplu yazım yapılmayacak.
+
+### EM2 — Stok kartlarına uygulama ön incelemesi (2026-09-07)
+
+- Kullanıcı eşlemelerin bittiğini bildirerek stok kartı aşamasına devam istedi.
+  Referans raporu ve çalışan kod incelendi: 203 ERP grup eşlemesi hizalanmış,
+  ancak önceki hizalama ürün/varyant/stok tablolarına yazmamıştı. Son yayın
+  API/admin içindi; ERP worker aktivasyonu bu yayının parçası değildi.
+- Grup panelden okuma UsePanelGroupMappings opt-in; yalnız bunu açmak eski
+  ürünlerin tamamını taramayı garanti etmez (katalog checkpoint/delta kullanır).
+  Mevcut UpdateProductAsync grup dışında ad/vergi/satış durumuna da yazar;
+  genel senkronu toplu grup düzeltmesi diye başlatmak kapsamı genişletir.
+- Plan §6.2'deki grup varsayılanı (urun_grubu üst adı) yeni karta yazımı mevcut
+  InsertProductAsync içinde yok; grup değiştirmek tek başına bu özelliği
+  doldurmuş sayılmaz. Önce yalnız grup + ilgili varsayılan özellik için yazmasız
+  ürün bazlı etki listesi, belirsiz/manuel değer koruması ve hedefli uygulama
+  gerekir. Yeni grup/tip/değer açılmayacak; fiyat/stok/görsel/açıklama korunacak.
+- Bu tur inceleme/kayıt ile sınırlı: DB/worker/config değişmedi. 00/Tozlu ve
+  belirsiz eşlemeler zorlanmayacak. Sonraki adım yazmasız kart etki raporu ve
+  mevcut/yeni kartların bu eşlemeyi kullanacağı güvenli uygulama akışı.
+
+### Yayın — Dört migration ve site/API/admin tamamlandı (2026-09-07)
+
+- Kullanıcı ek AddPushDevices dahil dört migration için onay verdi. API01
+  üzerinden yalnız .241/ecommerce_db hedefinde kimlik/primary ve tam son
+  migration kontrolü, history lock, 5 sn lock timeout ve tek transaction ile
+  uygulandı: AddCrmTickets, AddPushDevices, AddSearchTermStatVisitorAndResults,
+  AddPushNotifications. Dört history kaydı ve yeni tablolar doğrulandı;
+  mevcut 13 search_term_stats kaydı korundu. Yeni yedek alınmadı.
+- b9d4b014 kodu Linux x64 Release derlendi; API acceptance dışı 133/133 ve
+  admin regresyon 23/23 geçti. Admin kullanıcı build'i index-B99bDKbO.js.
+  Etkileşimli npm build, genel seed, CRM eski veri aktarımı veya GitHub push yok.
+- API2 canary sonrası API1 ve admin atomik olarak
+  20260907T190000Z_site_admin release'ine geçirildi. API DLL SHA256 iki node'da
+  09380bdbd5cb5f26e0f526c327ec92f0c94b6e9520a7b877d0b2d2d89133b6ad.
+  İkisinde live/ready/ana sayfa/örnek ürün 200, active/running, NRestarts=0,
+  başlangıç hata logu 0 ve Redis AKTİF doğrulandı. Node Role=Api ve startup
+  migration/seed=false korundu. Worker release'lerine dokunulmadı.
+- Sunucu ayarları önceki release'den sahiplik/izinleri korunarak kopyalandı;
+  yeni release appsettings.Production.json paylaşılan symlink yerine bağımsız
+  kopyadır ve Push:Enabled=false verildi. Paylaşılan config/env değiştirilmedi.
+  Sonraki yayınlarda bu fark korunmalı: upstream push worker varsayılan açık.
+  CRM durumları ve push şablonları 0; ayrı başlangıç tanımı/seed işi yapılmadı.
+- Admin .56 üzerinde yalnız statik release/symlink değişti; eski hash'li
+  assets açık oturumlar için korundu. Nginx config/reload/restart yapılmadı.
+  Public multi-test ana sayfa, admin ve örnek ürün 200; public admin JS SHA256
+  yerel build ile aynı. Mevcut systemd daemon-reload uyarısı vardı; unit dosyası
+  bu işte değiştirilmedi veya daemon-reload çalıştırılmadı.
+- .59/MySQL'e yazı yok. Önceki turda doğrulanmış ERP yedeği silinmişti;
+  bu tur yeni yedek üretilmedi. Aktarım arşivleri başarılı aktivasyonda silindi;
+  yerel .codex-tmp-publish araç/derleme klasörü temizliği otomatik güvenlik
+  denetiminde reddedildi; silinmedi, açık klasör bazlı onay bekliyor. Önceki çalışan
+  release'ler rollback için korundu; kullanıcı dosyaları/stash'ler silinmedi.
+
+### Yayın — Ek migration gereksinimi doğrulandı; yedek temizliği (2026-09-07)
+
+- Kullanıcı önceki üç migration için yedeksiz uygulama ve eski yedekleri silme
+  onayı verdi. API01 üzerinden .241/ecommerce_db salt-okunur kontrolünde daha
+  eski bir eksik de bulundu: `20260905065424_AddPushDevices`. Son Storefront
+  migration `20260902071409_EnforceSinglePendingProductQuestion`; push_devices
+  tablosu da yok. Önceki üçlü liste eksikti; toplam dört migration gerekiyor.
+- Ek migration kapsamı onaylanmadan kısmi şema/yayın yapılmadı. CRM son kayıt
+  AddLegacyAddressIdentity; crm_tickets ve push_notifications da henüz yok.
+  DB yazımı, seed, servis restart, API/admin upload veya .59 değişikliği yok.
+- Güncel API Linux x64 Release publish başarılı (mevcut derleyici uyarıları);
+  admin kullanıcı build'i 18:26:34 olarak doğrulandı. Üç migration için offline
+  SQL üretimi başarılı; API host/seed başlatılmadı. İlk derleme sandbox NuGet
+  dosya erişiminde engellendi, izinli tekrar başarılı. git diff --check temiz.
+- Yeni PushGondericiWorker varsayılan Push:Enabled=true ve API rolünden bağımsız
+  kayıtlı. Yayında istenmeyen gönderim olmaması için Push:Enabled=false kontrolü
+  gerekli; bu tur config değişmedi. Genel seed/CRM aktarımı çalıştırılmayacak.
+- API01 backups envanterindeki tek dosya, bu işe ait
+  reference-definitions-20260907T161430Z.dump (500966 bayt), önceki kayıtla hash
+  ve mutlak yol doğrulanarak kullanıcı onayıyla kalıcı silindi. Yeni yedek yok;
+  bu kopyadan geri dönüş artık mümkün değil. Çalışan/eski release'ler ve diğer
+  kullanıcı çalışmaları korunuyor. Bu turun geçici yerel araç/derleme çıktıları
+  temizlendi. Sonraki adım: ek AddPushDevices onayı, dört migration ve kontrollü
+  API2→API1 / admin yayını; uygulama henüz tamamlanmış sayılmaz.
+
+### Yayın — Güncel admin build hazır (2026-09-07)
+
+- Kullanıcının build bildirimi doğrulandı: admin/dist/index.html 18:26:34,
+  ana paket index-B99bDKbO.js; son admin kaynaklarından daha yeni.
+  Ajan build çalıştırmadı. Üç migration için ayrı onay hâlâ bekleniyor;
+  bu kontrolde upload, restart, migration/seed veya GitHub yazımı yapılmadı.
+
+### Yayın — Site/admin ön kontrolü; migration onayı ve build bekliyor (2026-09-07)
+
+- Güncel HEAD b9d4b014. admin/dist hâlâ 13:51 tarihli index-eaho0lvP.js;
+  son kaynak/birleşimden eski. Kullanıcı terminalinde yeni admin build gerekli;
+  etkileşimli oturumda npm run build çalıştırılmadı.
+- API01 üzerinden yalnız SELECT ile .241/ecommerce_db kimliği doğrulandı.
+  CRM ve Storefront migration geçmişinde 20260907 tarihli kayıt yok:
+  AddSearchTermStatVisitorAndResults, AddCrmTickets ve AddPushNotifications
+  uygulanmamış. Bu şema gereksinimleri giderilmeden yeni binary yayınlanmadı.
+- İlk yerel ConnectionStringBuilder indexer kontrolü hedefi reddetti; kayıtlı
+  get_Item erişimiyle aynı güvenlik kontrolü doğru çalıştı. Yanlış hedefe
+  bağlantı/yazma yapılmadı.
+- Bu tur yalnız kontrol ve kayıt; sunucu dosyası, restart, DB migration/seed,
+  .59, Nginx ve GitHub değişmedi. Sonraki adım: hedef migration kapsamına ayrı
+  onay ve güncel admin artefaktı; sonra API2→API1 ve admin dosya yayını.
+
+### EM3 / Veri — .59 otoriteli grup ve özellik hizalaması tamamlandı (2026-09-07)
+
+- Kullanıcı .59 grupları, özellik tipleri/değerleri, şablonları ve ERP
+  eşlemelerini doğru kabul edip hedef farklılıkların değiştirilmesini onayladı.
+  Kaynak host anahtarı doğrulanmış SSH + PostgreSQL read-only snapshot; hedef
+  `.241 / ecommerce_db` kimlik kapısı kullanıldı. .59 Docker DB iç adresi
+  `172.18.0.3` doğrulandı; kaynakta yazma yok.
+- 157 grup eklendi, 1 grup güncellendi. Tipler zaten aynı (0 ekleme/değişiklik).
+  172 değer eklendi, 4.319 değer referansa göre güncellendi; 1.770 grup özellik
+  bağlantısı ve 138 eksen alt özellik bağlantısı eklendi, 1 grup bağlantısı değişti.
+  10 sözlük satırı değişti; 156 eşleme eklendi, 49 mevcut eşleme satırı güncellendi
+  (eski hedef/havuz soft-delete işlemleri dahil). Kalıcı silme yapılmadı.
+- Kaynak 203 ERP kodu ile hedef eşlemeler arasında fark 0. Tozlu/00 kaynakta
+  olduğu gibi eşlenmemiş; 303 referans grubuna ek yerel abiye_elbise_2 korundu.
+  Mevcut grup/tip/değer kimlikleri ve ürün kartı/varyant bağlantıları korundu.
+  12 renk adında 13 kaynak kimliği birden fazla hedefe uyuyor; rastgele birleşim
+  yapılmadı, raporda ayrıldı. Varsayılan şablon değerleri eksiksiz doğrulandı.
+- `align-reference-definitions.ps1/.sql`: fail-closed tip/kimlik/şablon kontrolleri,
+  tablo/advisory lock, hedef yedeği, ROLLBACK/COMMIT ve sayaçlar. Rollback prova,
+  gerçek uygulama, salt-okunur son karşılaştırma geçti. Tekrar provada tüm
+  yazım sayaçları 0. Uygulama kodu/build değişmedi; script sözdizimi kontrol edildi.
+- API01 yedeği `backups/reference-definitions-20260907T161430Z.dump` (0600,
+  500.966 bayt) geri dönüş için korundu, hash ve pg_restore liste kontrolü yapıldı.
+  Detay/istisnalar: docs/raporlar/2026-09-07-reference-erp-karsilastirma.md.
+  Ürün kartı backfill, worker/config, restart/yayın, migration, MySQL yazımı ve
+  GitHub push yapılmadı. Bu işin tüneli son kontrolden sonra kapatıldı.
+
+### EM3 / Veri — .59 referans ERP eşlemeleri kontrolü (2026-09-07)
+
+- API01 üzerinden yalnız bu işe ait loopback SSH tüneliyle .59 PostgreSQL
+  read-only snapshot okundu; .241 ecommerce_db kimliği doğrulanarak karşılaştırıldı.
+  Kaynak 303 aktif grup / 203 direct eşleme, hedef 147 grup; 157 kaynak grup kodu
+  hedefte yok. Kaynak aktif ERP grup sözlüğü kodlarında eksik yok.
+- 45 eşleme aynı hedefte mevcut. Fondöten 279 → tlm_fondoten ve Büstiyer 60 → grp_9
+  kaynak/hedef ve direct/rules/pool çakışma kontrolü sonrası hedefe eklendi.
+  Transaction rollback provası, gerçek commit ve salt-okunur son kabul başarılı.
+- 154 eşlemenin hedef grup kodu eksik; yeni grup/özellik şablonu oluşturma kapsamı
+  ayrıca onaylanacak. Abiye 21 ve Vantilatör 35014 bizde farklı hedeflere bağlı;
+  mevcut kararlar ezilmedi. Yeni grup/tip/değer ve ürün kartı yazımı yapılmadı.
+- Rapor: docs/raporlar/2026-09-07-reference-erp-karsilastirma.md.
+  SQL: tools/veri-bakim/2026-09-07-reference-two-mappings.sql.
+  Kaynak .59/MySQL, servisler, config, migration, yayın ve GitHub değişmedi.
+  Yalnız eklenen iki eşlemenin ID'leri rapora işlendi; mevcut kayıtlar korundu.
 
 ### GitHub / EM3 — Çift yönlü senkronizasyon ve çatışma kabulü (2026-09-07)
 

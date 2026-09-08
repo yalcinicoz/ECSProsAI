@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import api from '@/api/client'
+import { clearSessionStoragePreservingFavorites } from '@/lib/adminFavorites'
 
 export interface AuthUser {
   id: string
@@ -50,7 +51,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        localStorage.clear()
+        clearSessionStoragePreservingFavorites()
         set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false })
       },
 

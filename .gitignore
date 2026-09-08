@@ -47,6 +47,7 @@ tests/**/bin/
 tests/**/obj/
 
 # Local generation / verification scratch files
+/.codex-tmp-publish/
 /tmp/
 /.deployment/
 /.deploy/
