@@ -205,10 +205,15 @@ public sealed class PushTarayici(NpgsqlDataSource ds, IStorefrontDbContext sdb, 
     }
 
     // ── §4.5 wallet_credit: son 24 saatte cüzdana yükleme ──
+    // Cüzdan = Accounts cari çatısı (OwnerType=member, ConceptCode=wallet; bakiye YALNIZ PostAccountTransaction) — 2026-09-08:
+    // eski crm.crm_wallet_transactions tablosu BOŞ, panel bakiye eklemesi görülmüyordu.
     async Task<int> CuzdanAsync(CancellationToken ct)
     {
         var rows = await SorguAsync("""
-            SELECT t."Id", w."MemberId", t."Credit" FROM crm.crm_wallet_transactions t JOIN crm.crm_wallets w ON w."Id"=t."WalletId"
+            SELECT t."Id", a."OwnerId", t."Credit"
+              FROM accounts.current_account_transactions t
+              JOIN accounts.current_account_ledgers l ON l."Id"=t."LedgerId" AND NOT l."IsDeleted" AND l."ConceptCode"='wallet'
+              JOIN accounts.current_accounts a ON a."Id"=l."CurrentAccountId" AND NOT a."IsDeleted" AND a."OwnerType"='member'
              WHERE NOT t."IsDeleted" AND t."Credit" > 0 AND t."CreatedAt" >= now() - interval '24 hours'
             """, r => (Id: r.GetGuid(0), MemberId: r.GetGuid(1), Tutar: r.GetDecimal(2)), ct);
         int n = 0;

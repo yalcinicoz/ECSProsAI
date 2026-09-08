@@ -1,5 +1,7 @@
 # ECSPros — Geliştirme İlerleme Takibi
 
+**2026-09-08 push cüzdan düzeltmesi (Mobil API):** "üyeye bakiye ekledim, bildirim gelmedi" → `PushTarayici.CuzdanAsync` boş kalmış eski `crm.crm_wallet_transactions`'a bakıyordu; bakiye Accounts cari çatısına yazılıyor (`current_account_transactions` + ledger ConceptCode=wallet + OwnerType=member). Sorgu cari çatıya çevrildi, dedup `wallet_credit:{txId}`, 24 sa pencere. `publish`/demo/staging eşitlendi ⚠️ restart (ecspros, ecspros-staging, ecspros-demo). Not: `wallet_credit` şablon gövdesi "İade tutarın cüzdanında" — manuel hediye yüklemelerinde panel Push Şablonları'ndan metin genelleştirilebilir. Favori fiyat düşüşü 45 dk gecikmesi sistematik değil: 09:21 kampanya → 09:38 izin fix → 10:38 kampanya-fiyat fix → 10:42 restart'tan 20 sn sonra gitti; olağan gecikme ≤ 15 dk tarama + 2 dk fiyat cache.
+
 **2026-09-08 GitHub eşitleme + servis eşitleme:** origin/main (ekip arkadaşının ERP eşleme/Ortam önceliği/admin favoriler commit'leri 15963b8, b9d4b01, 66ff535) yerel main'e alındı, tek çakışma PROGRESS.md (iki taraf korundu), API Release build + admin tsc/build ✓, bekleyen migration YOK (15 bağlam DB ile eşit). `publish`/`publish-demo`/`publish-staging` aynı binary ile eşitlendi (appsettings*.json hariç; SHA eşit), `admin/dist` derlendi (nginx doğrudan servis ediyor) ⚠️ restart kullanıcıda: `ecspros`, `ecspros-staging`, `ecspros-demo`. Not: bu publish ekip arkadaşının ERP panel modu fail-closed davranışını da canlıya taşır.
 
 ### GitHub — Yerel geliştirmelerin paylaşım kaydı (2026-09-08)
