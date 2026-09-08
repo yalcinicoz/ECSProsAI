@@ -175,4 +175,7 @@ public sealed record ErpReferenceItemDto(
     Guid Id, string TargetSystem, string Kind, string Code, string Name, string? ParentCode,
     bool IsActive, string Source, DateTime LastSeenAt, bool IsMapped,
     string? MappedTargetKind = null, Guid? MappedTargetId = null, string? MappedTargetLabel = null,
-    Guid? MappingId = null, Guid? MappedProductGroupId = null, string? MappedProductGroupName = null);
+    Guid? MappingId = null, Guid? MappedProductGroupId = null, string? MappedProductGroupName = null,
+    bool MappingConflict = false, List<ErpGroupLinkDto>? MappingLinks = null);
+
+public sealed record ErpGroupLinkDto(Guid Id, Guid ProductGroupId, string Name);

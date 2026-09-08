@@ -82,9 +82,14 @@ export function SearchableSelect({
   useEffect(() => {
     if (!portal || !open) return
     const kapat = () => setOpen(false)
+    const handleScroll = (event: Event) => {
+      // Scrolling options (including keyboard navigation) must not dismiss the list.
+      if (event.target instanceof Node && dropRef.current?.contains(event.target)) return
+      kapat()
+    }
     window.addEventListener('resize', kapat)
-    document.addEventListener('scroll', kapat, true)
-    return () => { window.removeEventListener('resize', kapat); document.removeEventListener('scroll', kapat, true) }
+    document.addEventListener('scroll', handleScroll, true)
+    return () => { window.removeEventListener('resize', kapat); document.removeEventListener('scroll', handleScroll, true) }
   }, [portal, open])
 
   // Scroll highlighted item into view

@@ -96,6 +96,33 @@ Pazaryeri referans verisi güncellendiğinde sağlığı bozulan eşlemeler bura
 | Eşlemeye Git | Yalnız kategori satırlarında; Kategori Eşleme sekmesinde ilgili grubu açar. |
 | Onayla | Eşlemeyi olduğu gibi onaylar, listeden düşer. |
 
+### ERP: Nebim — eşlenen/eşlenmemiş ürün grupları
+
+ERP hedefi seçiliyken **Tedarikçiler** sekmesinin yanında **Eşlenenler (N)** ve
+**Eşlenmemişler (N)** bulunur. Bunlar aktif **ERP ürün grubu kodlarını** süzer;
+özellik/değer ve tedarikçi eşlemeleri kendi sekmelerindedir. Üstteki "Bizim gruplar"
+sayacı farklıdır: bir grubumuz birden fazla ERP koduna bağlı olabilir.
+
+- **Eşlenenler:** API'nin sağlıklı eşli olarak bildirdiği kodlar (birebir, kurallı veya havuz).
+- **Eşlenmemişler:** Eşlemesi bulunmayan veya çakışan aktif kodlar. Çakışan kayıtta
+  uyarı görünür; önce mevcut çakışma giderilmelidir. Pasif kodlar bu iki sayaca dahil değildir.
+- İki görünümde **Sözlükte ara** alanıyla kod veya adı daraltabilirsiniz. Okuma
+  sınırına ulaşılırsa sayı `+` ile gösterilir; tam envanter için aramayı daraltın.
+
+**Eşleme sırasında yeni ürün grubu oluşturma:**
+
+1. **Eşlenmemişler** → ilgili ERP satırında **Eşle**.
+2. "Bizim ürün grubu" alanı yanındaki **Yeni Grup**'a basın (`catalog.platform.manage` yetkisi gerekir).
+3. ERP adından önerilen adı kontrol edin; gerekirse ad çevirilerini ve sırayı düzenleyin.
+   **Özellikleri Kopyala** ile mevcut bir gruptan şablon seçebilirsiniz; önizleme
+   ve kayıt davranışı [Ürün Grupları](/rehber/katalog/urun-gruplari/) menüsüyle aynıdır.
+4. **Kaydet** grubu oluşturur ve eşleme penceresine geri döner; yeni grup seçili gelir.
+5. Eşleme kipini/koşullarını kontrol edip ayrıca **Eşle** ile eşlemeyi kaydedin.
+
+> **Dikkat:** Grup oluşturmak tek başına eşleme yapmaz. Sonradan eşlemeden vazgeçerseniz
+> oluşturduğunuz grup kalır; otomatik silinmez. Oluşturma formundaki İptal/Esc ise
+> mevcut eşleme taslağına döner. Her iki işlem ayrı kullanıcı onayıdır.
+
 ## Durumlar ve iş kuralları
 - **Eşleme durumları:** `active` (✓ sağlıklı) · `needs_review` (⚠ gözden geçirilmeli) · `broken` (⛔ kırıldı). Kırık ya da gözden geçirilecek eşleme sayaçta "gözden geçirilecek" olarak sayılır; kırık eşlemenin ürünleri denetimde "Kategori eşlemesi kırık" nedeniyle **Eksik** olur.
 - **Sağlık güncellemesi** her referans senkronundan sonra otomatik çalışır: kategori kaldırıldı → eşleme `broken`; kategori/özellik adı değişti → `needs_review`; serbest girişli özellik listeye bağlandı → o özelliği "Serbest geçir" gönderen eşleme `needs_review`; değer kaldırıldı → değer eşlemesi `broken`; kaldırılan kayıt geri gelirse durum kendiliğinden düzelir. Editörde **Kaydet** ya da Gözden Geçir'de **Onayla** eşlemeyi yeniden `active` yapar.

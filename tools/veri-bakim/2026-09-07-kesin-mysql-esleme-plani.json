@@ -1,0 +1,112 @@
+[
+  {
+    "groupCode": "grp_83",
+    "items": [
+      {
+        "externalId": "011",
+        "name": "Alışveriş Çantası",
+        "path": "Alışveriş Çantası"
+      },
+      {
+        "externalId": "1040",
+        "name": "Günlük Portföy Çanta",
+        "path": "Günlük Portföy Çanta"
+      },
+      {
+        "externalId": "1515",
+        "name": "Abiye Çanta",
+        "path": "Abiye Çanta"
+      },
+      {
+        "externalId": "130",
+        "name": "Çapraz Çanta",
+        "path": "Çapraz Çanta"
+      },
+      {
+        "externalId": "131",
+        "name": "Sırt Çantası",
+        "path": "Sırt Çantası"
+      },
+      {
+        "externalId": "133",
+        "name": "Günlük Çanta",
+        "path": "Günlük Çanta"
+      },
+      {
+        "externalId": "501",
+        "name": "Bel çantası",
+        "path": "Bel çantası"
+      },
+      {
+        "externalId": "7452",
+        "name": "Makyaj Çantası",
+        "path": "Makyaj Çantası"
+      },
+      {
+        "externalId": "5645",
+        "name": "Plaj Çantası",
+        "path": "Plaj Çantası"
+      }
+    ]
+  },
+  {
+    "groupCode": "grp_15",
+    "items": [
+      {
+        "externalId": "40",
+        "name": "Pijama Altı",
+        "path": "Pijama Altı"
+      },
+      {
+        "externalId": "AL",
+        "name": "Pijama Takımı",
+        "path": "Pijama Takımı"
+      }
+    ]
+  },
+  {
+    "groupCode": "grp_47",
+    "items": [
+      {
+        "externalId": "31",
+        "name": "Eşofman Altı",
+        "path": "Eşofman Altı"
+      },
+      {
+        "externalId": "AM",
+        "name": "Eşofman Takım",
+        "path": "Eşofman Takım"
+      }
+    ]
+  },
+  {
+    "groupCode": "grp_123",
+    "items": [
+      {
+        "externalId": "992",
+        "name": "Bikini",
+        "path": "Bikini"
+      },
+      {
+        "externalId": "993",
+        "name": "Mayo",
+        "path": "Mayo"
+      },
+      {
+        "externalId": "434",
+        "name": "Pareo",
+        "path": "Pareo"
+      }
+    ]
+  },
+  {
+    "groupCode": "grp_179",
+    "items": [
+      {
+        "externalId": "35014",
+        "name": "Vantilatör",
+        "path": "Vantilatör"
+      }
+    ]
+  }
+]

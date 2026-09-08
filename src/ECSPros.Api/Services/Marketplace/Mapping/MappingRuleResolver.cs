@@ -40,8 +40,10 @@ public static class MappingRuleResolver
         var i = 0;
         foreach (var r in rules.OrderBy(r => r.Order))
         {
-            var conds = r.EffectiveConditions()
-                .Where(c => !string.IsNullOrWhiteSpace(c.AttributeTypeCode) && c.ValueId != Guid.Empty)
+            var raw = r.EffectiveConditions();
+            if (raw.Any(c => string.IsNullOrWhiteSpace(c.AttributeTypeCode) || c.ValueId == Guid.Empty))
+                return (null, $"{i + 1}. kuralda eksik koşul var; tüm koşulları tamamlayın.");
+            var conds = raw
                 .GroupBy(c => (c.AttributeTypeCode, c.ValueId)).Select(g => g.First()).ToList();
             if (conds.Count == 0) return (null, $"{i + 1}. kuralda en az bir koşul (özellik = değer) gerekli.");
             if (string.IsNullOrWhiteSpace(r.TargetExternalId)) return (null, $"{i + 1}. kuralın hedefi seçilmemiş.");

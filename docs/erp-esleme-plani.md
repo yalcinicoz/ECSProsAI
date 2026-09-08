@@ -82,6 +82,28 @@ kısayolu — operatör onaylı). Öneri aracı (ad benzerliği) aynen çalış�
 
 ## 3. Fazlar
 
+### EM3 panel kullanım kolaylığı — 2026-09-07 (yerel, yayınlanmadı)
+
+- ERP hedefinde Tedarikçiler yanına **Eşlenenler (N)** ve **Eşlenmemişler (N)**
+  sekmeleri eklendi. Sayaçlar bizim ürün gruplarını değil, aktif ERP ürün grubu
+  kodlarını sayar. Birebir/kural/havuz için API'nin hesapladığı durum kullanılır;
+  çakışmalar eşlenmemiş görünümünde uyarılı kalır, pasif kodlar sayılmaz.
+- Bu iki görünümde ERP Sözlüğü ürün grubu türüne sabitlenir; kod/ad araması
+  durum filtresiyle birlikte çalışır. Özellik/değer ve tedarikçi sekmeleri ayrıdır.
+  Hedef değiştirilince sözlük filtre/pencere durumları sıfırlanır; normal pazaryeri akışı korunur.
+  Okuma hatası boş başarı gibi gösterilmez. Mevcut API'nin 2.000 kayıt sınırına
+  ulaşılırsa sayaç `+` ve listede daraltma uyarısı gösterilir; bu sayı tam envanter sayılmaz.
+- **Eşle → Yeni Grup**, Ürün Grupları menüsüyle ortak `CreateProductGroupModal`
+  formunu açar: çok dilli ad, sıra, otomatik kod, isteğe bağlı özellik şablonu
+  kopyalama ve önizleme korunur. Yeni Grup için `catalog.platform.manage` gerekir.
+  ERP adı başlangıç önerisidir; kayıt operatörün Kaydet onayıyla mevcut API'den yapılır.
+- Başarılı oluşturmada yeni grup eşleme penceresinde seçilir, ancak eşleme yazılmaz;
+  **Eşle** ayrıca onaylanır. Oluşturmadan vazgeçilirse eşleme taslağı korunur.
+  Grup oluşturulduktan sonra eşlemeden vazgeçilmesi grubu silmez. Aynı anda tek
+  pencere gösterilir; Escape/arka plan tıklaması iki pencereyi birden kapatmaz.
+- Bu geliştirmede gerçek grup/özellik/eşleme kaydı açılmadı, DB/worker/seed
+  çalıştırılmadı. Ürün kartlarına uygulamayı eşlemeler bitene kadar bekletme kararı sürer.
+
 | Faz | İş | Kabul |
 |---|---|---|
 | **EM0** Sözlük + hedef anahtarı ✅ **UYGULANDI (2026-09-06)** — `integration.erp_reference_items` (anahtar **TargetSystem** "erp:<servis>" — planın IntegrationId anahtarı yerine; IntegrationId yalnız köken; migration `AddErpReferenceItems` dev+demo), MarketplaceMappingService ERP dalları (grup arama/öneri/özellik/değer sözlükten; readiness tetikleme ERP'de atlanır), uçlar `mapping/targets` (pazaryerleri + ERP servisleri), `mapping/erp-items` GET/POST(upsert)/DELETE(pasif), panel: hedef çiplerinde "ERP: Nebim" + ERP Sözlüğü paneli (tür/kod/ad/üst kod, eşli/eşlenmemiş rozeti) + "Ürün Grubu Eşleme" sekme adı | `erp_reference_items` tablosu + migration; eşleme servislerinde hedef sistem çözümü ("erp:*" ise sözlükten); `GET /api/marketplaces/mapping/targets` (pazaryerleri + ERP sözleşmeleri); elle sözlük kaydı ucu | Nebim hedefi seçilebilir; sözlüğe elle eklenen grup kategori seçicide görünür |
@@ -110,6 +132,46 @@ Sıra: EM0 → EM1 → EM2 → EM3 → EM4; EM5 E7 takvimine bağlı. Bir faz ka
 - Sözlük firmaya özel: yedek/aktarım paketine dahil değil (marketplace_ref'ten farklı).
 
 ## 6. EM2 — Worker sözleşmesi (ekip arkadaşı için; 2026-09-06)
+
+### 2026-09-07 — Ortam / TESETTÜR önceliği (yerel; yayınlanmadı)
+
+- Kullanıcı kararı: V3 prItemAttribute ItemTypeCode=1, AttributeTypeCode=8,
+  AttributeCode=1 işaretli üründe tekli Ortam alanı TESETTÜR olur; tip 55'in Günlük vb.
+  değeri bu ürünlerde kullanılmaz. Diğer ürünlerde mevcut tip 55 aktarımı korunur.
+- Reader aynı bağlantı/komutta yalnız istenen ürünlerin işaretlerini ikinci sonuç
+  kümesinden okur; tek ürün ve toplu tazeleme aynı öncelik yardımcısını kullanır.
+  Kural yalnız kaynak tip 55 hedef ortam olarak yapılandırılmışken uygulanır.
+- Türetilmiş TESETTÜR satırı UseExistingDefinitionOnly taşır: önceden tanımlanmış
+  aktif seçenek kullanılır; yeni seçenek veya sahte V3 tip 55 değer kodu yaratılmaz.
+  Seçenek eksikse mevcut doğrulama hatasıyla durur. Grup çözümü değiştirilmez.
+- Bu kod yayın veya toplu ürün backfill'i değildir. Grup eşleşmesi olmayan ürünler
+  hâlâ mevcut güvenli durdurma kuralına tabidir. Tesettür işareti kaldırılır ve tip 55
+  değeri gelirse normal Ortam geri gelir; kaynakta ikisi de yoksa mevcut boş-kaynak
+  koruması sürer (kayıt silme bu değişiklik kapsamında değildir).
+
+### 2026-09-07 — Grup eşleme güvenlik uygulaması (yerel; yayınlanmadı)
+
+- Sözlük görünümü, silme koruması ve worker grup çözümü aynı hedef çıkarımını kullanır:
+  direct hedefi, rules varsayılanı + tüm kural hedefleri, pool adayları.
+- Çakışan aktif grup eşlemeleri panelde ayrı uyarı ve onaylı kaldırma seçenekleriyle
+  gösterilir; yeni çakışma API'de reddedilir. Kayıt/sözlük silme aynı ERP hedefi için
+  dağıtık kilitle korunur. API eksik koşul, farklı özelliğe ait değer, pasif hedef/grup,
+  boş veya mükerrer havuz adayı kabul etmez. Otomatik tanım açılmaz.
+- Worker grup tablosu okuma **opt-in**: `ErpSource:UsePanelGroupMappings=true`,
+  `ErpSource:MappingTargetSystem=erp:nebim`. Varsayılan false; mevcut canlı config
+  davranışı bu kodun eklenmesiyle sessizce değiştirilmez. Aktivasyon yapılmadı.
+- Panel modunda gelen grup adı aktif ERP sözlüğündeki tekil ad üzerinden kaynak koda,
+  sonra aktif/grup-geneli eşlemeler üzerinden tek hedef gruba çözülür. Kaynak modelinde
+  henüz ayrı grup kodu alanı bulunmadığı için aynı ad birden fazla koda aitse durulur.
+  Eksik/çakışan eşleme config, prefix veya yerel ad fallback'ine düşmez; eski ürün de
+  eksik eşleme ile sessizce güncellenmez. Kural koşulları içe yönde değerlendirilmez;
+  bir ERP hedefinin tek bizim gruba ait olması §6.2 sözleşmesine göre zorunludur.
+- Bu adım yalnız grup çözümünü kapsar. Özellik/değer/eksen/tedarikçi config geçişi,
+  sözlüğün V3'ten otomatik dolumu ve yeni kartın grup varsayılanı yazımı bu adımda
+  tamamlanmış sayılmaz. Mevcut seed veya bakım betiği çalıştırılmaz.
+- Aktivasyon öncesi: salt-okunur DB eşleme envanteri, config/panel sonuç karşılaştırması,
+  izole DB'de iki eşzamanlı API kaydı ve gerçek tarayıcı kabulü gerekir. DryRun etiketine
+  güvenip çalışan worker başlatılmamalı; DB yazmama sınırı ayrıca doğrulanmalıdır.
 
 Amaç: `ErpSourceOptions` içindeki sözlükler (`ProductGroupCodes`, `VariantAttributeTypeCodes`, `ProductAttributeTypeCodes`,
 `IgnoredProductAttributeTypeCodes`, `ProductAttributeValueAliases`, `SupplierAccountCodes`) yerine tablolar. Hedef sistem

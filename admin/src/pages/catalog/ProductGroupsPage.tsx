@@ -1,20 +1,16 @@
-import { useState, useMemo } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, useMemo, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Plus, ChevronRight, FolderOpen, Copy } from 'lucide-react'
-import { cn, toSnakeCase } from '@/lib/utils'
+import { Plus, ChevronRight, FolderOpen, Search, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { Modal } from '@/components/ui/Modal'
-import { IntegerInput } from '@/components/ui/IntegerInput'
-import { I18nField } from '@/components/ui/I18nField'
-import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { Input } from '@/components/ui/Input'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { PermissionGuard, ReadOnlyBadge } from '@/components/ui/PermissionGuard'
-import { useLanguages } from '@/hooks/useLanguages'
-import { FL } from '@/lib/field-labels'
-import { buildI18nValues } from '@/lib/i18n-helper'
+
+import { CreateProductGroupModal } from './CreateProductGroupModal'
 
 const PLATFORM_PERM = 'catalog.platform.manage'
 
@@ -59,20 +55,20 @@ function getName(pg: ProductGroup): string {
   return pg.nameI18n['tr'] ?? pg.nameI18n[Object.keys(pg.nameI18n)[0]] ?? '—'
 }
 
+function normalizeSearch(value: string): string {
+  return value.toLocaleLowerCase('tr').normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '').replace(/ı/g, 'i').replace(/\s+/g, ' ').trim()
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function ProductGroupsPage() {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  const { data: languages = [], isLoading: langsLoading } = useLanguages()
 
   const [activeOnly, setActiveOnly] = useState(false)
+  const [search, setSearch] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
   const [createOpen, setCreateOpen] = useState(false)
-  const [form, setForm] = useState<{
-    nameI18n: Record<string, string>
-    sortOrder: number
-    copyFromGroupId: string | null
-  }>({ nameI18n: {}, sortOrder: 0, copyFromGroupId: null })
 
   const { data: groups = [], isLoading } = useQuery<ProductGroup[]>({
     queryKey: ['product-groups', activeOnly],
@@ -82,70 +78,23 @@ export function ProductGroupsPage() {
     },
   })
 
-  // Kopya kaynağı listesi: aktif/pasif tüm gruplar (liste filtresi "Aktif" olsa da pasif gruptan kopyalanabilsin)
-  const { data: allGroups = [] } = useQuery<ProductGroup[]>({
-    queryKey: ['product-groups', false],
-    queryFn: async () => {
-      const { data } = await api.get('/catalog/product-groups?activeOnly=false')
-      return data.data
-    },
-    enabled: createOpen,
-  })
-
-  const mutation = useMutation({
-    mutationFn: async () => {
-      const { data } = await api.post('/catalog/product-groups', {
-        nameI18n: form.nameI18n,
-        sortOrder: form.sortOrder,
-        copyAttributesFromGroupId: form.copyFromGroupId,
-      })
-      return data.data.id as string
-    },
-    onSuccess: (id) => {
-      queryClient.invalidateQueries({ queryKey: ['product-groups'] })
-      setCreateOpen(false)
-      navigate(`/catalog/product-groups/${id}`)
-    },
-  })
-
-  const sourceLang = languages.find((l) => l.isDefault)?.code ?? languages[0]?.code ?? 'tr'
-  const previewCode = toSnakeCase(form.nameI18n['tr'] ?? form.nameI18n[sourceLang] ?? '')
-
-  const i18nValues = useMemo(
-    () => buildI18nValues(form.nameI18n, languages),
-    [languages, form.nameI18n],
-  )
-
-  const i18nFields = useMemo(
-    () => [{ key: 'name', labels: FL.name, required: true }],
-    [],
-  )
-
-  function openCreate() {
-    setForm({ nameI18n: {}, sortOrder: 0, copyFromGroupId: null })
-    setCreateOpen(true)
-  }
-
-  const copySourceOptions = useMemo(
-    () =>
-      [...allGroups]
-        .sort((a, b) => getName(a).localeCompare(getName(b), 'tr'))
-        .map((g) => ({ value: g.id, label: g.isActive ? getName(g) : `${getName(g)} (pasif)` })),
-    [allGroups],
-  )
-  const copySource = useMemo(
-    () => allGroups.find((g) => g.id === form.copyFromGroupId) ?? null,
-    [allGroups, form.copyFromGroupId],
-  )
-  const attrLabel = (a: ProductGroupAttribute) =>
-    a.attributeTypeNameI18n['tr'] ?? Object.values(a.attributeTypeNameI18n)[0] ?? a.attributeTypeCode
-
   const sorted = useMemo(
     () => [...groups].sort((a, b) => a.sortOrder - b.sortOrder || getName(a).localeCompare(getName(b), 'tr')),
     [groups],
   )
+  const filtered = useMemo(() => {
+    const query = normalizeSearch(search)
+    return query
+      ? sorted.filter((g) => [g.code, ...Object.values(g.nameI18n)].some((value) => normalizeSearch(value).includes(query)))
+      : sorted
+  }, [sorted, search])
 
-  if (isLoading || langsLoading) return <PageSpinner />
+  function clearSearch() {
+    setSearch('')
+    searchRef.current?.focus()
+  }
+
+  if (isLoading) return <PageSpinner />
 
   return (
     <div className="p-6">
@@ -187,7 +136,7 @@ export function ProductGroupsPage() {
           </div>
 
           <PermissionGuard permission={PLATFORM_PERM}>
-            <Button onClick={openCreate}>
+            <Button onClick={() => setCreateOpen(true)}>
               <Plus size={14} /> Yeni Grup
             </Button>
           </PermissionGuard>
@@ -196,6 +145,38 @@ export function ProductGroupsPage() {
 
       {/* Table */}
       <div className="card overflow-hidden p-0">
+        <div
+          className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+          style={{ borderBottom: '1px solid var(--border)' }}
+        >
+          <div className="relative w-full sm:max-w-sm">
+            <Search size={16} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-s)' }} />
+            <Input
+              ref={searchRef}
+              role="searchbox"
+              aria-label="Ürün grubu ara"
+              placeholder="Grup adı veya koduyla ara…"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Escape') clearSearch() }}
+              style={{ paddingLeft: 36, paddingRight: 40 }}
+            />
+            {search && (
+              <button
+                type="button"
+                aria-label="Aramayı temizle"
+                onClick={clearSearch}
+                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-2 hover:bg-[var(--surface2)] focus-visible:outline-2 focus-visible:outline-[var(--brand)]"
+                style={{ color: 'var(--text-s)' }}
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+          <span role="status" className="text-xs shrink-0" style={{ color: 'var(--text-s)' }}>
+            {filtered.length} / {groups.length} grup
+          </span>
+        </div>
         <table className="w-full">
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
@@ -209,14 +190,14 @@ export function ProductGroupsPage() {
             </tr>
           </thead>
           <tbody>
-            {sorted.length === 0 && (
+            {filtered.length === 0 && (
               <tr>
                 <td colSpan={7} className="text-center py-12 text-sm" style={{ color: 'var(--text-s)' }}>
-                  Ürün grubu bulunamadı
+                  {search.trim() ? 'Aramanızla eşleşen ürün grubu bulunamadı' : 'Ürün grubu bulunamadı'}
                 </td>
               </tr>
             )}
-            {sorted.map((g) => {
+            {filtered.map((g) => {
               const variantCount = g.attributes.filter((a) => a.isVariant).length
               return (
                 <tr
@@ -267,124 +248,15 @@ export function ProductGroupsPage() {
         </table>
       </div>
 
-      {/* Create Modal */}
-      <Modal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        title="Yeni Ürün Grubu"
-        size="lg"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setCreateOpen(false)}>İptal</Button>
-            <Button
-              onClick={() => mutation.mutate()}
-              loading={mutation.isPending}
-            >
-              Kaydet
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-5">
-          <div>
-            <label className="flbl">Sıra</label>
-            <IntegerInput
-              value={form.sortOrder}
-              onChange={(v) => setForm((f) => ({ ...f, sortOrder: v ?? 0 }))}
-            />
-          </div>
-
-          {languages.length > 0 && (
-            <div>
-              <label className="flbl mb-2">Ad</label>
-              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-                <I18nField
-                  sourceLang={sourceLang}
-                  languages={languages}
-                  fields={i18nFields}
-                  values={i18nValues}
-                  onChange={(lang, _key, val) =>
-                    setForm((f) => ({ ...f, nameI18n: { ...f.nameI18n, [lang]: val } }))
-                  }
-                />
-              </div>
-            </div>
-          )}
-
-          <div>
-            <label className="flbl mb-2">Özellikleri Kopyala <span style={{ color: 'var(--text-s)' }}>(isteğe bağlı)</span></label>
-            <SearchableSelect
-              value={form.copyFromGroupId}
-              onChange={(v) => setForm((f) => ({ ...f, copyFromGroupId: v }))}
-              options={copySourceOptions}
-              placeholder="Kaynak ürün grubu seçin…"
-              clearable
-              portal
-            />
-            <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
-              Seçilen grubun özellik şablonu (varyant ekseni, ana eksen, zorunluluk, sıra, varsayılan değer ve eksen alt
-              özellikleri) yeni gruba kopyalanır. Kayıt sonrası detay sayfasından düzenlenebilir.
-            </p>
-            {copySource && (
-              <div
-                className="mt-2 rounded-xl px-3 py-2"
-                style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}
-                data-testid="copy-preview"
-              >
-                <div className="flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--text)' }}>
-                  <Copy size={12} style={{ color: 'var(--brand)' }} />
-                  {copySource.attributes.length} özellik
-                  {' · '}{copySource.attributes.filter((a) => a.isVariant).length} varyant ekseni
-                  {' · '}{(copySource.axisSubAttributes ?? []).length} eksen alt özelliği kopyalanacak
-                </div>
-                {copySource.attributes.length > 0 ? (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {[...copySource.attributes]
-                      .sort((a, b) => a.sortOrder - b.sortOrder)
-                      .map((a) => (
-                        <span
-                          key={a.id}
-                          className="text-xs px-2 py-0.5 rounded-md"
-                          style={{
-                            background: a.isVariant ? 'var(--brand-bg)' : 'var(--surface)',
-                            border: `1px solid ${a.isVariant ? 'var(--brand-b)' : 'var(--border)'}`,
-                            color: 'var(--text-m)',
-                          }}
-                          title={a.isVariant ? (a.isPrimaryAxis ? 'Varyant ekseni (ana)' : 'Varyant ekseni') : a.isRequired ? 'Zorunlu' : undefined}
-                        >
-                          {a.isPrimaryAxis ? '★ ' : ''}{attrLabel(a)}{a.isRequired && !a.isVariant ? ' *' : ''}
-                        </span>
-                      ))}
-                  </div>
-                ) : (
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>Kaynak grubun özelliği yok; boş şablonla oluşturulur.</p>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="flbl">Otomatik Kod</label>
-            <div
-              className="flex items-center gap-2 px-3 py-2 rounded-xl"
-              style={{ background: 'var(--surface2)', border: '1px solid var(--border)' }}
-            >
-              <code className="text-sm font-mono" style={{ color: previewCode ? 'var(--brand)' : 'var(--text-s)' }}>
-                {previewCode || '—'}
-              </code>
-            </div>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-s)' }}>
-              Türkçe addan otomatik üretilir. Kayıt sonrası değiştirilemez.
-            </p>
-          </div>
-
-          {mutation.isError && (
-            <p className="text-sm" style={{ color: '#ef4444' }}>
-              Hata oluştu. Lütfen tekrar deneyin.
-            </p>
-          )}
-        </div>
-      </Modal>
+      {createOpen && (
+        <CreateProductGroupModal
+          onClose={() => setCreateOpen(false)}
+          onCreated={(group) => {
+            setCreateOpen(false)
+            navigate(`/catalog/product-groups/${group.id}`)
+          }}
+        />
+      )}
     </div>
   )
 }

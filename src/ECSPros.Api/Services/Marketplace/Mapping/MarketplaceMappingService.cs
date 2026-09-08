@@ -289,8 +289,32 @@ public sealed class MarketplaceMappingService(
             if (err is not null) return (null, err);
             normalizedRules = nr;
         }
-        if (req.MappingKind == "pool" && req.Pool is not { Count: > 1 })
-            return (null, "Havuz eşlemesinde en az iki aday kategori seçilmeli.");
+        if (req.MappingKind == "pool" && ErpGroupMappingTargets.ValidatePool(req.Pool) is { } poolError)
+            return (null, poolError);
+
+        await using var erpLease = MappingTargets.IsErp(req.Marketplace)
+            ? await workerLock.AcquireAsync($"erp-group-mapping:{req.Marketplace}", ct) : null;
+        if (MappingTargets.IsErp(req.Marketplace))
+        {
+            var codes = ErpGroupMappingTargets.Read(req.MappingKind, req.TargetExternalId,
+                JsonSerializer.Serialize(normalizedRules ?? [], JsonOpts), JsonSerializer.Serialize(req.Pool ?? [], JsonOpts));
+            var validCodes = await db.ErpReferenceItems.Where(i => i.TargetSystem == req.Marketplace
+                && i.Kind == ErpReferenceKinds.ProductGroup && i.IsActive && codes.Contains(i.Code)).Select(i => i.Code).ToListAsync(ct);
+            if (codes.Any(c => !validCodes.Contains(c))) return (null, "ERP hedefi sözlükte bulunmuyor veya pasif; önce sözlüğü kontrol edin.");
+            await using var groupCheck = mainDb.CreateCommand("""SELECT EXISTS(SELECT 1 FROM definition.product_groups WHERE "Id"=$1 AND "IsActive" AND NOT "IsDeleted")""");
+            groupCheck.Parameters.AddWithValue(req.ProductGroupId);
+            if (await groupCheck.ExecuteScalarAsync(ct) is not true) return (null, "Ürün grubu bulunamadı veya pasif.");
+            foreach (var condition in (normalizedRules ?? []).SelectMany(r => r.EffectiveConditions()))
+            {
+                await using var check = mainDb.CreateCommand("""SELECT EXISTS(SELECT 1 FROM definition.attribute_values v JOIN definition.attribute_types t ON t."Id"=v."AttributeTypeId" WHERE v."Id"=$1 AND t."Code"=$2 AND v."IsActive" AND t."IsActive" AND NOT v."IsDeleted" AND NOT t."IsDeleted")""");
+                check.Parameters.AddWithValue(condition.ValueId); check.Parameters.AddWithValue(condition.AttributeTypeCode);
+                if (await check.ExecuteScalarAsync(ct) is not true) return (null, "Koşul değeri seçilen özelliğe ait değil veya pasif.");
+            }
+            var others = await db.MarketplaceCategoryMappings.Where(m => m.Marketplace == req.Marketplace
+                && m.FirmPlatformId == null && m.Status == "active" && m.ProductGroupId != req.ProductGroupId).ToListAsync(ct);
+            if (others.Any(m => ErpGroupMappingTargets.Read(m.MappingKind, m.TargetExternalId, m.RulesJson, m.PoolJson).Intersect(codes, StringComparer.Ordinal).Any()))
+                return (null, "ERP kodu başka bir ürün grubuna eşli. Önce çakışan eşlemeyi kaldırın; mevcut kayıt değiştirilmedi.");
+        }
 
         var existing = await db.MarketplaceCategoryMappings.FirstOrDefaultAsync(
             m => m.Marketplace == req.Marketplace && m.ProductGroupId == req.ProductGroupId
@@ -811,26 +835,32 @@ public sealed class MarketplaceMappingService(
         }
         // Grup eşlemeleri (ERP kodu → bizim grup): satırda göster + "Eşlemeyi Sil" için mapping Id
         var mappedRows = await db.MarketplaceCategoryMappings
-            .Where(m => m.Marketplace == target && m.TargetExternalId != null && m.FirmPlatformId == null)
-            .Select(m => new { m.Id, m.TargetExternalId, m.ProductGroupId }).ToListAsync(ct);
+            .Where(m => m.Marketplace == target && m.FirmPlatformId == null && m.Status == "active")
+            .ToListAsync(ct);
         var groupNames = new Dictionary<Guid, string>();
         if (mappedRows.Count > 0)
         {
             await using var cmd = mainDb.CreateCommand(
-                """SELECT "Id", COALESCE("NameI18n"->>'tr', "Code") FROM definition.product_groups WHERE "Id" = ANY($1)""");
+                """SELECT "Id", COALESCE("NameI18n"->>'tr', "Code") FROM definition.product_groups WHERE "Id" = ANY($1) AND "IsActive" AND NOT "IsDeleted" """);
             cmd.Parameters.AddWithValue(mappedRows.Select(m => m.ProductGroupId).Distinct().ToArray());
             await using var reader = await cmd.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct)) groupNames[reader.GetGuid(0)] = reader.GetString(1);
         }
-        var mappedByCode = mappedRows.GroupBy(m => m.TargetExternalId!).ToDictionary(g => g.Key, g => g.First());
+        var mappedByCode = mappedRows.Where(m => groupNames.ContainsKey(m.ProductGroupId))
+            .SelectMany(m => ErpGroupMappingTargets.Read(m.MappingKind, m.TargetExternalId, m.RulesJson, m.PoolJson)
+                .Select(code => (code, mapping: m)))
+            .GroupBy(x => x.code).ToDictionary(g => g.Key, g => g.Select(x => x.mapping).ToList());
         var items = await q.OrderBy(i => i.Kind).ThenBy(i => i.Name).Take(limit).ToListAsync(ct);
         return items.Select(i =>
         {
-            var m = i.Kind == ErpReferenceKinds.ProductGroup ? mappedByCode.GetValueOrDefault(i.Code) : null;
+            var matches = i.Kind == ErpReferenceKinds.ProductGroup ? mappedByCode.GetValueOrDefault(i.Code) : null;
+            var conflict = matches?.Select(m => m.ProductGroupId).Distinct().Count() > 1;
+            var m = matches is { Count: 1 } ? matches[0] : null;
             return new ErpReferenceItemDto(i.Id, i.TargetSystem, i.Kind, i.Code, i.Name, i.ParentCode, i.IsActive, i.Source, i.LastSeenAt,
-                m is not null || i.MappedTargetId != null,
+                i.Kind == ErpReferenceKinds.ProductGroup ? i.IsActive && m is not null : i.MappedTargetId != null,
                 i.MappedTargetKind, i.MappedTargetId, i.MappedTargetLabel,
-                m?.Id, m?.ProductGroupId, m is null ? null : groupNames.GetValueOrDefault(m.ProductGroupId));
+                m?.Id, m?.ProductGroupId, m is null ? null : groupNames.GetValueOrDefault(m.ProductGroupId), conflict,
+                matches?.Select(x => new ErpGroupLinkDto(x.Id, x.ProductGroupId, groupNames[x.ProductGroupId])).ToList());
         }).ToList();
     }
 
@@ -865,9 +895,13 @@ public sealed class MarketplaceMappingService(
     {
         var item = await db.ErpReferenceItems.FirstOrDefaultAsync(i => i.Id == id, ct);
         if (item is null) return "Sözlük kaydı bulunamadı.";
-        if (item.Kind == ErpReferenceKinds.ProductGroup
-            && await db.MarketplaceCategoryMappings.AnyAsync(m => m.Marketplace == item.TargetSystem && m.TargetExternalId == item.Code, ct))
-            return $"{item.Code} bir grup eşlemesinde kullanılıyor; önce eşlemeyi silin.";
+        await using var erpLease = await workerLock.AcquireAsync($"erp-group-mapping:{item.TargetSystem}", ct);
+        if (item.Kind == ErpReferenceKinds.ProductGroup)
+        {
+            var mappings = await db.MarketplaceCategoryMappings.Where(m => m.Marketplace == item.TargetSystem).ToListAsync(ct);
+            if (mappings.Any(m => ErpGroupMappingTargets.Read(m.MappingKind, m.TargetExternalId, m.RulesJson, m.PoolJson).Contains(item.Code)))
+                return $"{item.Code} bir grup/kural/havuz eşlemesinde kullanılıyor; önce eşlemeyi silin.";
+        }
         item.IsDeleted = true; item.DeletedAt = DateTime.UtcNow; item.DeletedBy = userId;
         await db.SaveChangesAsync(ct);
         return null;

@@ -60,6 +60,45 @@ Dosya yoksa görsel Nginx'i “Resim hazırlanıyor” cevabı döndürür.
 
 ## 4. API1 ve API2 mevcut yayın durumu
 
+**2026-09-07 12:08 UTC API güncellemesi:** API1/API2 current artık
+`20260907T120811Z_api_group_copy`. API2 canary ardından API1; readiness Healthy,
+active/NRestarts=0, public ana sayfa/ürün/admin 200. `51f4feac` ve korunmuş yerel
+koddan üretildi; grup kodu tekillik/kopyalama düzeltmeleri dahil. Yeni üç remote
+arama commit'i ve migration'ı dahil değil. Startup migration/seed kapalı;
+server config/env korundu. ERP worker aşağıdaki 08:08 release'inde kaldı.
+Admin `.56` üzerindeki `20260907T115312Z_admin_erp_workflow` değişmedi.
+Geçici transfer/test/publish çıktıları temiz; önceki release rollback için duruyor.
+Gerçek grup kopyalama yazmalı kullanıcı kabulü bekliyor.
+
+**2026-09-07 son yayın:** API1/API2 current ve API1 erp-worker-current,
+`20260907T080848Z_erp_panel_ortam` release'ine geçti. API2 canary sonra API1 ve ERP
+sağlık kapılarıyla aktive edildi; active/NRestarts=0 ve readiness Healthy.
+Admin `.56` üzerinde aynı release kimliğinde; index-D4s-P4n0.js public HTTP 200.
+Site ana sayfa/kategori/örnek ürün 200, İndigo ayrı renk seçeneği HTML'de doğrulandı.
+Startup migration kapalı ve mevcut config/env korunuyor; UsePanelGroupMappings açılmadı.
+Yeni Ortam=TESETTÜR önceliği binary'de, eski SyncTesetturAttribute=false env korunuyor
+(geri alınmış ayrı tesettür özelliği kodu yeni binary'de yok). Nginx config/reload yok.
+Önceki release'ler rollback için korundu. API1 transfer arşivi temizlendi; API2/.56
+transfer arşivleri ve yerel .codex-tmp-release-20260907 çıktıları da kullanıcının
+son açık onayıyla silindi, yoklukları doğrulandı; bekleyen geçici dosya temizliği yok.
+Unit dosyaları için mevcut daemon-reload uyarısı görüldü; bu yayında unit değiştirilmedi.
+
+**2026-09-07 geri alma güncellemesi:** Kullanıcı talebiyle API01 ERP worker ve API01/API02
+process'lerinde ErpSource__SyncTesetturAttribute=false uygulanıp kontrollü restart edildi;
+son kontrolde üçünde de false ve readiness 200. Aşağıdaki true aktivasyon kaydı tarihseldir.
+Tesettür tanımı ve ajanın yazdığı değerler .241'den kaldırıldı. Binary release değiştirilmedi;
+yerel kaynak geri alındı, yeniden yayın yapılana kadar false override korunmalıdır.
+
+**2026-09-07 güncel durum:** API01/API02 current ve API01 erp-worker-current ayrı release
+köklerinde `20260906T220653Z_tesettur_attribute` paketindedir. Üç process active,
+NRestarts=0; API01/API02/ERP readiness 200. SyncTesetturAttribute=true,
+Node__MigrateOnStartup=false; genel grup modu Legacy korundu. İlk yeni ERP turu 100 ürün
+özelliği güncelledi. Eski API/ERP release'leri başarılı kabul sonrası kaldırıldı; stok ve
+LegacyImport paketleri değiştirilmedi. Aşağıdaki Eylül 3 release ayrıntıları tarihsel nottur.
+ERP config kopyalarken yalnız copy2 yeterli değildir: uid/gid ve mode eski dosyayla aynı
+korunmalıdır. İlk denemede sahiplik nedeniyle sağlık başarısız olmuş, otomatik rollback
+çalışmış; sahiplik korunarak tekrar yayın başarılı olmuştur. Nginx ve .59 değiştirilmedi.
+
 - Aktif release: `20260903T105211Z_home_multibanner_placeholder`
 - Her iki node symlink'i:
   `/opt/ECSProsAI/current -> /opt/ECSProsAI/releases/20260903T105211Z_home_multibanner_placeholder`
@@ -241,8 +280,21 @@ release'inden ayrı yönetilir; API deploy'u worker symlink'lerini otomatik değ
 
 ## 9. Admin yayını
 
+**2026-09-07 güncel admin yayını:** Kullanıcının .56/admin kapsamlı açık onayı ve
+kendi aldığı build ile `20260907T115312Z_admin_erp_workflow` aktive edildi.
+`/usr/share/nginx/html/admin` bu yeni release'i gösteriyor. Ana bundle
+`index-eaho0lvP.js`, CSS `index-Dr0WfL_z.css`; 22 dosya hash'i ve origin/public
+admin rotaları + JS/CSS HTTP/hash kontrolleri başarılı. Ürün grubu araması,
+ERP Eşlenenler/Eşlenmemişler ve ortak Yeni Grup formu pakette.
+Önceki `20260907T080848Z_erp_panel_ortam` rollback için korundu; açık sekmeler
+için eski hashed asset'ler yeni release içinde erişilebilir. Yerel/uzak transfer
+arşivleri temizlendi. Nginx active, disk %77 (~11 GB boş); config/reload/restart,
+API/worker/DB/.59 veya GitHub işlemi yok. Oturumlu işlevsel kullanıcı kabulü bekliyor.
+
+Aşağıdaki 2026-09-06 bilgileri tarihsel kayıttır:
+
 - Test Nginx `/admin/` rotası aktiftir.
-- Admin release: `/usr/share/nginx/admin-releases/20260906T131000Z_single_attribute_editor` (2026-09-06).
+- Admin release: `/usr/share/nginx/admin-releases/20260906T194000Z_product_group` (2026-09-06).
 - Aktif symlink: `/usr/share/nginx/html/admin`.
 - Index ve hashed JavaScript asset HTTP `200` doğrulandı.
 - Kullanıcının açık isteğiyle `admin-releases` kökünde yalnız bu çalışan release bırakılmıştır.

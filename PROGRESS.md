@@ -2,6 +2,207 @@
 
 **2026-09-08 push takip (Mobil API + Admin panel):** (1) Üye detayı › Mobil Bildirim Cihazları artık `push_devices.Id` + Kopyala + "Deneme gönder" (bildirim sayfası `?tab=push-log&deviceId=`/`&memberId=` ile ön-dolu açılır). (2) **"Favori ürüne %15 indirim yaptık, bildirim gitmedi" kök nedeni:** `favorite_price_drop` pazarlama sınıfı → `Consents.marketing.push=true` şart; test üyesinde `marketing` anahtarı yoktu (canlıda push izni açık ÜYE YOK), kuyruk sessizce 0 döner. Panel push iznini göstermiyordu → `GetMemberDetail` artık marketing anahtarı yokken de hepsi-kapalı DTO döner, panel "mobil push ✓/✗" + uyarı gösterir ⚠️ restart bekliyor (publish 09:32). **Kullanıcı kararı (aynı gün): push izni OPT-OUT** — OS izni cihaz kaydında alınır, ayrıca açma istenmez; `PushIzni` yalnız `marketing.push == false` ise engeller (anahtar yoksa gider), GET marketing-consents `push` varsayılanı true, panel 'mobil push ✗' = üye kapattı; ⚠️ docs/PUSH_BILDIRIM_ENTEGRASYONU.md salt-okunur (başka sahip), §6 satırı güncellenemedi; **(3) İkinci kök neden:** tarayıcı `IEffectivePriceProvider` (kanal/base min) kullanıyordu, kampanya indirimi hesaba katılmıyordu → `PushTarayici.FavoriAsync` artık `IProductCampaignResolver` + `CampaignPricing.EffectivePrice` ile sitedeki kart fiyatını baz alır (percent/amount; cart_only sayılmaz) ⚠️ restart (publish 10:38). (4) Personel tanımına telefon: panel Kullanıcılar formu Telefon alanı + liste sütunu + arama (backend Phone zaten vardı, panel null gönderiyordu). tarama 15 dk + efektif fiyat cache 2 dk. Not: staging (5055) aynı DB'yi paylaştığından `push-scan` advisory kilidini staging da alabilir → tarama logu ecspros-staging journal'ında çıkabilir.
 
+### GitHub / EM3 — Çift yönlü senkronizasyon ve çatışma kabulü (2026-09-07)
+
+- Kullanıcı GitHub değişikliklerini alma ve yerel çalışmaları gönderme onayı verdi.
+  Tracked/untracked çalışmalar `safety-before-github-sync-20260907-api-admin`
+  stash'inde ayrıca korundu, geri uygulandı ve `15963b86` commit'ine alındı.
+- `origin/main` üzerindeki 12 commit (`50723426` dahil) birleştirildi.
+  PROGRESS'in iki tarafındaki kayıtlar korundu. MappingPage'de yerel durum
+  sekmeleri/arama/yerinde Yeni Grup ile upstream dashboard `dict=unmapped`
+  bağlantısı ve geçici grup sayacı birlikte tutuldu; açık durum sekmesi
+  dashboard başlangıç filtresinden önceliklidir. Yeni regresyon eklendi.
+- ERP panel modu fail-closed kalır: eşleşmeyen ürün geçici gruba düşmez.
+  Upstream geçici grup yolu yalnız panel modu kapalıyken yeni ürünler için
+  korunur. İki tarafın Ortam/eşleme kodu kaybedilmedi.
+- Admin 23/23 test, TypeScript ve ilgili ESLint başarılı. API acceptance dışı
+  **133/133** geçti. İlk turdaki iki eski beklenti upstream Kot Ceket kodu ve
+  Triko varsayılanı değişimine aitti; varsayılan ve açıkça tanımlanan önek
+  davranışı ayrı doğrulanacak şekilde testler güncellendi. Production build yok.
+- Upstream arama, CRM talepleri ve push migration/seed kaynakları koda geldi;
+  hiçbiri DB üzerinde çalıştırılmadı. Yeni grup/veri açılmadı. Bu işlem sunucu
+  yayını değildir; çalışan API/admin/worker ve sunucu secret ayarları değişmedi.
+  `appsettingsTest.json` ignore kapsamında, commit dışında kaldı.
+- Birleştirme kontrolleri tamamlandı; normal (force olmayan) push ile `main`
+  gönderilecek ve remote SHA eşitliği kontrol edilecek. Güvenlik stash'leri
+  korunuyor; yalnız bu turun izole test çıktıları temizlendi.
+
+### EM3 / API — Grup oluşturma ve özellik kopyalama yayını (2026-09-07)
+
+- Kullanıcının API güncelleme onayıyla mevcut `51f4feac` + korunmuş yerel
+  çalışma ağacı yayınlandı. Yeni remote arama commit'leri birleştirilmedi;
+  `AddSearchTermStatVisitorAndResults` migration'ı bu pakete dahil değil.
+- Acceptance dışı testler **133/133** geçti. İzole dizinde Linux x64 Release
+  publish başarılı; mevcut derleyici uyarıları var, hata yok. Kod değiştirilmedi.
+- API2 ardından API1 `20260907T120811Z_api_group_copy` release'ine geçirildi.
+  Arşiv SHA-256 kontrolü ve iki düğümde API/katalog DLL hash eşitliği doğrulandı.
+  Server-side appsettings/symlink, sahiplik ve environment korundu. Health
+  başarısızlığında önceki release'e dönüş kapısı hazırlandı; dönüş gerekmedi.
+- İki API readiness Healthy, active, NRestarts=0. API2 origin ana sayfa 200;
+  dış ana sayfa, admin ve örnek ürün HTTP 200. İki startup logunda migration/seed
+  atlandı ve Redis cache aktif doğrulandı. Servisler loopback değil kendi private
+  IP'lerinde :5050 dinliyor; başlangıç loopback kontrolü bu nedenle yanıt vermedi.
+- ERP worker eski `20260907T080848Z_erp_panel_ortam` release'inde korundu;
+  eşleme aktivasyonu, DB migration/seed, Nginx, `.59`, GitHub push yapılmadı.
+  Mevcut systemd daemon-reload uyarısı görüldü; unit/config değiştirilmedi.
+- İki uzak transfer arşivi ve bu işin dört yerel geçici test/publish/arşiv
+  çıktısı temizlendi; kaynaklar, stash'ler ve önceki sunucu release'i korundu.
+- Grup kodu tekillik düzeltmesi ve özellik kopyalama backend desteği artık
+  yayında. Gerçek yeni grup/özellik yazımı denenmedi; kullanıcı panelinde
+  kopyalama kabulü bekliyor. En yeni üç arama commit'inin yayını ayrı bekliyor.
+
+### EM3 / Admin — Yeni grup / özellik kopyalama hata teşhisi (2026-09-07)
+
+- Kullanıcının beklenmedik hata bildirimi için modal payload'ı ve
+  `CreateProductGroupCommandHandler` incelendi. API1/API2 salt-okunur SSH
+  kontrolünde ikisi de `20260907T080848Z_erp_panel_ortam` yayınında.
+- API1 son 90 dakika logunda grup kaydetme handler'ında PostgreSQL `23505`,
+  `IX_product_groups_Code` benzersizlik ihlali doğrulandı. Hata grup kodunun
+  çakışması; özellik kopyalarının bozuk olduğuna dair bulgu yok.
+- GitHub'dan önceden alınan `aa807b2b` düzeltmesi silinmiş grupları da
+  `IgnoreQueryFilters()` ile kod tekilliğine dahil ediyor. `d2a4be43` kaynak
+  grup özelliklerini kopyalama desteğini ekliyor; yeni admin yayınlandı ancak
+  bunları içeren API yayını henüz yapılmadı. Panel/API sürüm farkı giderilmeli.
+- Bu tur yalnız teşhis ve bu kayıt yapıldı; kod/test, gerçek kayıt oluşturma,
+  DB/seed/migration, restart/yayın veya GitHub yazımı yapılmadı. Önceki site
+  migration onayı bekleme durumu devam ediyor. Sonraki adım kontrollü API
+  yayını ve kullanıcıyla grup oluşturma/kopyalama kabulü.
+
+### Storefront — GitHub yayın ön kontrolü / migration onayı bekliyor (2026-09-07)
+
+- Fetch sonrası `HEAD...origin/main` sonucu `0 / 3`: f64a7770, 538c6639,
+  c252e85b site arama/popüler arama güncellemeleri mevcut. Yerel çalışmalar
+  korunuyor; bu kontrolde merge, commit/push veya sunucu yayını yapılmadı.
+- Yeni `AddSearchTermStatVisitorAndResults` migration'ı
+  `storefront.search_term_stats` tablosuna `VisitorHash` ve `ResultCount`
+  ekliyor, benzersiz indeksi değiştiriyor. Yeni arama SQL'i bu şemaya bağlı;
+  migration uygulanma durumu doğrulanmadan yalnız binary yayını güvenli değil.
+- Migration kaynak kodu ve arama sorgusu diff'i incelendi; kod değiştirilmedi,
+  build/test veya DB bağlantısı çalıştırılmadı. API startup migration/seed
+  kapalı kalacak; ERP worker, ürün eşleme aktivasyonu, `.59`, MySQL ve Nginx
+  üzerinde değişiklik yapılmadı.
+- Sonraki adım: hedef test PostgreSQL kimliği ve migration geçmişini doğrulamak;
+  eksikse yalnız bu migration için ayrıca kullanıcı onayı almak, ardından yerel
+  çalışmaları koruyarak birleştirme, test ve API2/API1 sıralı site yayını.
+
+### EM3 / Admin — .56 admin yayını tamamlandı (2026-09-07)
+
+- Kullanıcı kendi terminalinde build aldı ve `.56` üzerinde yalnız admin dosyaları/
+  aktif bağlantı güncellemesine açıkça onay verdi. 13:51 tarihli yeni paket kontrol
+  edildi: ürün grubu araması, Eşlenenler/Eşlenmemişler ve yerinde Yeni Grup metinleri
+  `index-eaho0lvP.js` içinde mevcut; yeniden build çalıştırılmadı.
+- Hedef SSH kaydı `Infrastructure.SSH.NginxLb` üzerinden bellekte okundu;
+  host `51.178.208.56 / nginxlb`, aktif admin symlink'i ve disk önce doğrulandı.
+  Yeni release: `/usr/share/nginx/admin-releases/20260907T115312Z_admin_erp_workflow`.
+  Arşiv SHA-256 ve 22 dosyanın tamamı doğrulandıktan sonra
+  `/usr/share/nginx/html/admin` atomik olarak yeni release'e geçirildi.
+- Önceki `20260907T080848Z_erp_panel_ortam` admin release'i geri dönüş için
+  korundu. Açık tarayıcıların eski chunk istekleri bozulmasın diye önceki yayının
+  eksik hashed asset'leri yeni klasörde de korundu; eski dosyaların üzerine yazılmadı.
+- Origin üzerinden index ve 8 JS/CSS HTTP/hash kabulü geçti. Dış adreste `/admin/`,
+  `/admin/catalog/product-groups`, `/admin/marketplaces/mapping?mp=erp:nebim&tab=eslenmemis`,
+  yeni ana JS ve CSS: HTTP 200, hash'ler yerel paketle birebir aynı.
+  Bu statik yayın kabulüdür; oturum açılarak gerçek grup/eşleme yazımı denenmedi.
+  Önceki kod kontrolleri 22/22 admin testi + TypeScript/ESLint başarılı.
+- Nginx active; disk %77, yaklaşık 11 GB boş. Nginx config/reload/restart,
+  API/worker yayını/restart, DB/seed/migration, `.59`, GitHub commit/push yapılmadı.
+  Yerel ve uzak yalnız bu yayına ait transfer arşivleri hash doğrulaması sonrası
+  silindi; build'den yeniden üretilebilir. Kaynak çalışmalar ve `admin/dist` korundu.
+- Sonraki adım: kullanıcı oturumunda iki ekranın görsel/işlevsel kabulü.
+
+### EM3 / Admin — Yayın ön kontrolü, güncel paket bekleniyor (2026-09-07)
+
+- Kullanıcının yayın isteğinde yerel artefakt ve devir kaydı kontrol edildi.
+  `admin/dist/index.html` 10:06 tarihli `index-D4s-P4n0.js` paketini gösteriyor;
+  son admin kaynak değişiklikleri 13:42–13:43 tarihli. Paket son grup araması ve
+  eşleme/yerinde Yeni Grup değişikliklerini içeren doğrulanmış yeni build değildir.
+- Repository talimatı gereği etkileşimli ajan oturumunda `npm run build`
+  çalıştırılmadı; kullanıcının kendi terminalinde güncel admin build'i bekleniyor.
+- Devir kaydındaki admin hedefi Nginx `.56`, aktif yol `/usr/share/nginx/html/admin`.
+  Production Nginx yazma sınırı nedeniyle yalnız admin release yükleme/aktif bağlantı
+  değişimi için hedefe özel onay istenecek. Henüz SSH, upload, symlink, restart,
+  config, API/worker/DB, `.59`, commit veya push işlemi yapılmadı.
+- Bu tur yalnız bu kayıt eklendi; kod değişmedi. Son kod doğrulaması 22/22 admin
+  testi + TypeScript/ESLint başarılı. Sonraki adım: güncel artefakt ve hedef onayı.
+
+### EM3 / Admin — ERP eşleme durum sekmeleri ve yerinde Yeni Grup (2026-09-07)
+
+- `MappingPage.tsx`: ERP hedefinde Tedarikçiler yanına **Eşlenenler (N)** ve
+  **Eşlenmemişler (N)** eklendi. Aktif ERP ürün grubu kodları sayılır; bizim grup
+  sayaçlarından ayrıdır. API'nin birebir/kural/havuz sonucu kullanılır; çakışmalı
+  kodlar eşlenmemişlerde uyarılı tutulur, pasif kayıtlar sayılmaz. Kod/ad araması
+  durum filtresiyle birlikte çalışır; bu görünümler gereksiz özellik tablosu açmaz.
+- Durum sınıflandırması `erpMappingForm.ts` içinde ortak yardımcıya alındı.
+  Hedef/durum geçişinde sözlük taslağı sıfırlanır; ERP sekmesinden normal pazaryerine
+  geçerken kategori sekmesine dönülür. Ortak query cache kullanılır. Okuma hatası
+  sıfır/başarılı boş sonuç sayılmaz; 2.000 kayıt API sınırında `+`/daraltma uyarısı var.
+- Menüdeki Yeni Grup formu `CreateProductGroupModal.tsx` olarak ortaklaştırıldı;
+  `ProductGroupsPage.tsx` arama, filtre, sıralama ve kayıt sonrası detaya gitmeyi korur.
+  ERP **Eşle → Yeni Grup** aynı ad/çeviri, sıra, otomatik kod, özellik şablonu
+  kopyalama ve önizleme formunu kullanır; `catalog.platform.manage` izni korunur.
+- ERP adı başlangıç önerisidir. Kullanıcı Kaydet'e basınca mevcut grup oluşturma
+  API'si kullanılır; grup seçili olarak eşleme taslağına dönülür. Eşleme için ayrıca
+  **Eşle** gerekir. İptal taslağı korur; oluşturma başarılı olup eşlemeden vazgeçilirse
+  grup silinmez. Aynı anda tek modal gösterilir; kayıt sürerken kapatma engellenir.
+- `erp-mapping-workflow.test.cjs` yeni regresyonları ve güncellenmiş grup arama
+  testleriyle **22/22** geçti: durum/çakışma/pasif filtreleri, sayaç/okuma hatası/sınır,
+  sekme geçişi, arama, izin sınırı, iptal, ayrı eşleme onayı, ortak form kopyalama
+  payload/önizlemesi, başarısız oluşturma ve pending kapatma. Admin TypeScript
+  `--noEmit`, ilgili 4 TS/TSX dosyasında ESLint ve `git diff --check` başarılı.
+  İlk ortaklaştırmada satır sonu kaynaklı bölüm ayırma hatası TypeScript'te yakalanıp
+  düzeltildi; testte bileşenler arası paylaşılan sahte hook durumu da ayrıştırıldı.
+- ERP faz planı ve eşleştirme rehberi güncellendi. Backend/DB/seed/migration,
+  gerçek grup/özellik/eşleme oluşturma, worker aktivasyonu, yayın, commit veya push
+  yapılmadı; testler bellek içi sahte API kullandı. Production build çalıştırılmadı,
+  geçici çıktı oluşturulmadı. Tarayıcı görsel/uçtan uca kabulü yayın öncesi bekliyor.
+  Ürün kartlarına uygulamayı eşlemeler bitene kadar bekletme kararı korunuyor.
+
+### Admin / Katalog — Ürün Grupları tablosunda arama (2026-09-07)
+
+- `admin/src/pages/catalog/ProductGroupsPage.tsx` tablosunun üstüne grup adı/kodu
+  araması, temizleme butonu ve görünen/toplam grup sayısı eklendi. Ad çevirileri de
+  aranır; büyük/küçük harf, Türkçe/ASCII harfler ve fazla boşluklar normalize edilir
+  (`gomlek` → `Gömlek`, `ic giyim` → `İç Giyim`). Sonuç yoksa açıklayıcı mesaj çıkar.
+- Arama mevcut veride tarayıcıda yapılır; her tuşta API çağrısı yoktur. Tümü/Aktif,
+  sıra/ad sıralaması, satırdan detaya gitme, izinler ve Yeni Grup özellik şablonu
+  kopyalama listesi korunur. × veya Esc yalnız aramayı temizler, odağı kutuda tutar.
+  İkon/metin çakışmaması için mevcut `.inp` stiline özel yatay padding verildi.
+- `admin/tests/product-group-search.test.cjs` ile gerçek sayfanın filtreleme ve olay
+  işleyicileri API/DB çağırmadan sınandı: 7 yeni test + 4 mevcut eşleme testi `11/11`.
+  Admin TypeScript `--noEmit` ve sayfa ESLint kontrolü başarılı. Kullanım rehberi
+  `docs/rehber/content/02-katalog/50-urun-gruplari.md` güncellendi.
+- Backend/DB, seed, migration, yeni grup/özellik kaydı, sunucu, publish, commit veya
+  push işlemi yok. Diğer yerel çalışmalar korunuyor. Production build çalıştırılmadı;
+  tarayıcı görsel kabulü ve yayın ayrı adım olarak bekliyor.
+
+### GitHub entegrasyonu — EM2/EM3 yerel çalışmalar korunarak güncelleme (2026-09-07)
+
+- Kullanıcının yalnız alma talebiyle `origin/main` fetch edildi; `main`,
+  `275a3ead` → `51f4feac` fast-forward ilerledi (7 commit, 55 dosya).
+  Yeni içerik: mobil/store API güncellemeleri, ürün grubu özellik şablonu kopyalama,
+  grup kodu/etiket sorgusu düzeltmeleri, Nginx kaynak örneği ve seed adımları.
+- Başlangıçtaki 32 tracked/untracked çalışma dosyası `ef6f1ee0` stash'iyle korundu
+  ve geri uygulandı. Tek çatışma `PROGRESS.md` idi; 855 satırlık yerel eklerin tamamı
+  ve GitHub kayıtları birlikte korundu. Diğer 31 dosyanın içeriği Git satır sonu
+  normalizasyonu dışında birebir doğrulandı; ignored `appsettingsTest.json` hash'i
+  değişmedi. İndeks önceki boş haline döndü; tüm yerel çalışmalar commitlenmemiş
+  olarak çalışma ağacında. Güvenlik stash'i ve eski stash'ler silinmedi.
+- Birleşmiş kodda acceptance dışı API testleri `133/133`, admin eşleme regresyonları
+  `4/4` geçti. Admin TypeScript `--noEmit` ve `SearchableSelect`, `MappingPage`,
+  `erpMappingForm`, `ProductGroupsPage` ESLint kontrolleri başarılı; `git diff --check`
+  temiz. İlk API test denemesi sandbox NuGet.Config erişim engelinde durdu;
+  yetkili tekrar başarılı. Derlemede nullable/XML yorum vb. uyarılar var, hata yok.
+- Testlerin izole `.codex-tmp-github-fetch-20260907` çıktısı iş sonunda kaldırıldı;
+  yeniden üretilebilir. Etkileşimli production admin build çalıştırılmadı.
+- Yeni migration dosyası gelmedi; ancak `DatabaseSeeder` içinde Ortam değerleri,
+  renk adı normalizasyonu, adres mahalle geri dolumu ve CMS slug seed değişiklikleri
+  var. API/worker başlatılmadı; seed, migration, DB yazımı, ürün kartı geri dolumu,
+  sunucu/deploy, commit veya push yapılmadı. `Node:MigrateOnStartup=true` ile açılış
+  bu seed'leri çalıştırabileceğinden sonraki yayın öncesinde ayrıca incelenmeli.
+- Ürün kartı grup güncellemesini eşlemeler tamamlanana kadar bekletme kararı korunur.
+  Son kontrol: yerel HEAD ile alınan `origin/main` commit farkı `0/0`; yerel
+  commitlenmemiş çalışmalar bunun üzerinde durur, GitHub'a gönderilmedi.
+
 **MOBİL PUSH BİLDİRİM ENTEGRASYONU UYGULANDI — `docs/PUSH_BILDIRIM_ENTEGRASYONU.md` (2026-09-07, Mobil API + Admin panel):**
 FCM HTTP v1 gönderici (`Services/Push/FcmClient` — servis hesabı JWT RS256 → OAuth2, 50 dk belirteç önbelleği; hata kodu
 sınıflandırması), ayar kaynağı `definition.integration_services` **"fcm"** (ServiceType `push`; firma entegrasyonu
@@ -204,6 +405,861 @@ Beachwear…) 1.569 ürün özelliğine bağlı olduğu için SİLİNMEDİ — k
 İzole 5051 açılışında seed doğrulandı ve ortak DB'ye uygulandı; `publish`, `publish-demo`, `publish-staging`
 aynı binary ile eşitlendi. ⚠️ `sudo systemctl restart ecspros` (+ staging/demo) kullanıcıda — veri zaten DB'de,
 restart yalnız binary'yi eşitler; demo DB'si (ecommerce_demo) seed'i kendi restart'ında alır.
+
+### EM2/EM3 — Kullanıcı kararı: ürün kartı grup güncellemesi bekleyecek (2026-09-07)
+
+- Kullanıcı, eşlemeler tamamlanmadan kesinleşen kodların ürün kartlarına da
+  uygulanmamasını istedi. Gerekirse özellik modeli ayrıca değerlendirilecek;
+  yeni özellik tipi/değeri oluşturma izni verilmedi.
+- Mevcut 61 kod eşlemesi korunuyor; son doğrulanmış envanterde 143 kod açık.
+  Bu tur DB sorgusu/yazımı, ürün grubu güncellemesi, yeni tanım, worker panel modu
+  aktivasyonu veya yayın yapılmadı. Yalnız bu karar kaydı eklendi.
+- Sonraki sıra: kalan eşleme kararları ve varsa onaylı özellik modeli netleşsin;
+  ardından ürün bazlı ön kontrol ve ayrıca kullanıcı onayıyla kontrollü uygulama.
+
+### EM2/EM3 — Yalnız tutarlı 17 MySQL kaynak adayı eşlendi (2026-09-07)
+
+- Kullanıcı şüpheli 6 öneriyi taşımamamızı, yalnız kesin görülenleri eşlememizi
+  istedi. 135 tek hedefli adayın tamamı kaydedilmedi. MySQL kanıtı tek hedefli,
+  ürün türü tutarlı ve mevcut hedef eşlemesi olmayan 17 kod seçildi:
+  Çanta 9 (011,1040,1515,130,131,133,501,7452,5645), Pijama 2 (40,AL),
+  Eşofman 2 (31,AM), Plaj Giyim 3 (992,993,434), Vantilatör 1 (35014).
+- .241 integration.marketplace_category_mappings içine 4 pool +1 direct satırı
+  eklendi. Mevcut44 eşleme tam satır EXCEPT kontrolüyle korundu. Ürün/tanım/sözlük
+  kaydı açılmadı/değiştirilmedi; MySQL/V3/.59 yazımı yok. Pool adayları içe yönde
+  aynı gruba gider; dışa yönde mevcut havuz seçim mekanizması geçerlidir.
+- Güvenlik: hedef DB/IP, aktif grup ve birebir sözlük kod/ad kontrolü; ortak advisory
+  kilit ve tablo kilitleri; başka gruptaki kod/geçmiş eşleme çakışmasında durma.
+  Plan ve SQL tools/veri-bakim/2026-09-07-kesin-mysql-esleme* dosyalarındadır.
+- İlk deneme SQL yorumundaki yer tutucu nedeniyle yürütmeden durdu; düzeltildi.
+  Rehearse ROLLBACK 5 ekleme, Apply COMMIT 5 ekleme; ikinci Rehearse 0 ekleme ile
+  idempotency doğrulandı. Bağımsız salt-okunur sayaç: 204 sözlük, 61 eşli, 143 açık.
+- Topuklu Terlik, Basic Body dahil önceki6 tahmini öneri uygulanmadı. Yeni yayın,
+  worker panel modu aktivasyonu veya GitHub push yok; yalnız eşleme verisi yazıldı.
+
+### EM2/EM3 — MySQL adaylarında ilk karar paketi (2026-09-07)
+
+- Çok hedefli 13 grubun cinsiyet satırları incelendi. Basic Body erkek bebekte
+  Elbise, Şortlu Takım kadında Pantolon; Şişme Yelek Mont/Kaban hedeflerinde.
+  Eski sonuçlar otomatik ticari doğruluk olarak alınmadı.
+- Rapora mevcut aktif hedefleri kullanan 6 onay bekleyen öneri eklendi: Basic Body
+  -> Body, Şişme Mont -> Mont, Şortlu Takım -> İkili Takım, Şişme Yelek -> Yelek,
+  Saç Kurutma Makinesi -> Elektirikli Ev Aletleri, Topuklu Terlik -> Terlik.
+  Triko politikası ve diğer belirsiz ürünlerde kullanıcı kararı/ürün kanıtı bekleniyor.
+- Yalnız rapor ve PROGRESS değişti. Eşleme/DB/ürün kaydı değiştirilmedi; mevcut44
+  korunuyor. Hedeflerin varlığı önceki salt-okunur envanterle kontrol edildi;
+  uygulama kodu değişmediği için derleme/test çalıştırılmadı.
+
+### EM2/EM3 — Kullanıcının MySQL Excel çıktısı incelendi (2026-09-07)
+
+- C:/Users/garku/Desktop/Query Result.xls salt-okunur açıldı: Sheet1, 8 beklenen
+  başlık ve 774 veri satırı; boş V3 grup adı/geçersiz MySQL grup ID yok. Kaynak dosya
+  değiştirilmedi. Spreadsheets SKILL.md katalog yolunda bulunamadığı için mevcut
+  admin xlsx bağımlılığıyla okundu; yeni bağımlılık/kurulum yapılmadı.
+- .241 canlı envanteri API01 üzerinden salt-okunur doğrulandı: 145 aktif PG grup,
+  204 ERP sözlük kaydı, 44 mevcut eşleme. Excel alt grup adları Türkçe case/boşluk
+  normalizasyonuyla V3 sözlük adlarına bağlandı; MySQL ID -> aktif grp_ID, yoksa
+  docs/grup_eslesme.md birleşme hedefi sırası uygulandı. 217 eski harita satırı okundu.
+- Kalan 160 grubun 135'i tek hedefli aday, 13'ü çok hedefli, 12'si MySQL alt grup
+  adında bulunamadı. 135 adayın 35'i mevcut başka ERP kodlarının bağlı olduğu gruba
+  gidiyor; direct kaydı ezilmemeli. Mevcut 44 eşlemenin 12'si eski yöntemle farklı
+  gruba gidiyor; eski gruplama daha kaba olabileceğinden yanlış sayılmadı/değişmedi.
+- 135 tek hedefli aday ticari doğruluk onayı değildir: Topuklu Terlik -> Peluş Terlik,
+  Ortam Kokusu -> Mutfak Gereçleri gibi eski hedefler ayrıca değerlendirilmeli.
+  Rapor: docs/raporlar/2026-09-07-mysql-excel-grup-esleme-adaylari.md; 160 kaydın
+  tamamı, mevcut 12 fark ve çok hedefli 13 grubun cinsiyet/altgrup kanıtları içerir.
+- Hiçbir DB/eşleme/ürün/tanım yazımı yapılmadı; yalnız rapor ve PROGRESS eklendi.
+  Doğrulama: XLS başlık/satır/ID kontrolleri ve salt-okunur hedef sayımı başarılı;
+  uygulama kodu değişmediğinden derleme/test çalıştırılmadı.
+
+### EM2/EM3 — MySQL envanteri için salt-okunur alternatif (2026-09-07)
+
+- Kullanıcı geçici MySQL SSH tünelini açıkça onayladı; otomatik güvenlik denetimi
+  onaya rağmen tünelin teknik olarak yazmayı engellemediği gerekçesiyle çağrıyı
+  reddetti. Tünel açılmadı; başka yoldan erişim kısıtı aşılmadı. Sorun artık eksik
+  kullanıcı onayı değil; mevcut aracın güvenlik sınırıdır. Aynı onay tekrar istenmedi.
+- tools/veri-bakim/mysql-grup-esleme-envanteri.sql hazırlandı: eski metodun
+  cinsiyet/sınıf/grup/altgrup JOIN'leri, START TRANSACTION READ ONLY ve ROLLBACK.
+  Kaynak kod kolonlarıyla karşılaştırıldı; canlı MySQL'de çalıştırılmadı.
+- Kullanıcının mevcut MySQL istemcisinden alınacak CSV çıktısı ile 160 kalan V3
+  grubu, aktif PG hedefleri ve eski birleşme haritası karşılaştırılabilir. Fallback
+  veya çoklu sonuçtan ilkini seçme yok; kesin aday sayısı veri gelene kadar bilinmiyor.
+- Uygulama kodu/DB/eşleme değişikliği yok. Dosya yalnız inceleme sorgusudur; production
+  üzerinde hiçbir yazım, kurulum veya sorgu yürütülmedi. Canlı sorgu testi bloke.
+
+### EM2/EM3 — Eski stok kartı metodundan MySQL eşleme araştırması (2026-09-07)
+
+- Kullanıcının isteğiyle iki alt ajan salt-okunur kod/doküman incelemesi yaptı.
+  Aranan metot eski C:/Users/garku/source/repos/EcsPros projesinde
+  EcsPros.Common/OrtakYordamlar/CreateStockCard.cs:786 UrunSinifBulAsync;
+  stok kartı akışında :125 çağrılıyor. V3 grup adı + cinsiyet ile
+  dfurunsiniflari -> dfurungruplari -> dfurunaltgruplari bağlantısı kullanılıyor;
+  ua.aciklama=@urunGrubu ve us.cinsiyetId=@cinsiyetId şartları var.
+- Bu yöntem üst grup adlarının birebir eşitliğinden daha iyi kaynak kanıtı sağlar.
+  MySQL urunGrupId, aktif PG grup kodu ve docs/grup_eslesme.md birleşme haritasıyla
+  ayrıca doğrulanmalı. MySQL kısa kodları/V3 AttributeCode aynı anahtar değildir.
+- Eski metotta boş sonuçta 1/1/493 fallback, çoklu sonuçta Rows[0] var; bunlar
+  yeni sisteme taşınmayacak. MigrationTool yürütülmedi (yazıcı/yıkıcı fazları var).
+  Tarihsel ecsprosInboundGroupV1 PROGRESS notları geri alınmış çalışmadır;
+  bugünkü panel grup çözümüyle karıştırılmamalı.
+- API01'de kurulum yapmadan mevcut istemciler kontrol edildi: dotnet/psql var,
+  mysql/mariadb/pymysql yok. .50:3306 için loopback SSH tüneli isteği otomatik
+  denetimde salt-okunurluğu tünelin enforce etmemesi gerekçesiyle reddedildi;
+  tünel açılmadı, alternatif yoldan aşılmadı. MySQL canlı satırları okunamadı;
+  kaç ek grubun eşlenebileceği henüz doğrulanmış değildir. Açık tünel onayı gerekiyor.
+- Yalnız PROGRESS güncellendi; kaynak/target DB, uygulama kodu, mevcut eşlemeler ve
+  production değişmedi. Kod testi gerekmedi; kanıt metot ve doküman incelemesidir.
+
+### Yayın geçici dosyalarının temizliği — tamamlandı (2026-09-07)
+
+- Kullanıcının açık evet onayıyla API2 ve .56 üzerindeki yalnız
+  /tmp/20260907T080848Z_erp_panel_ortam-api.tar.gz ve aynı kimlikli -admin.tar.gz
+  dosyaları yayın SHA256 değerleri doğrulanarak silindi; yoklukları doğrulandı.
+- Yerel D:/NewProje/ECSProsAI/.codex-tmp-release-20260907 mutlak yolu ve altında
+  reparse point bulunmadığı kontrol edilerek silindi; yokluğu doğrulandı.
+  Bunlar yeniden üretilebilir derleme/transfer çıktılarıdır; kaynak kod, admin/dist,
+  aktif release, rollback sürümleri ve yapılandırmalar korunmuştur.
+- Uygulama kodu/DB değişikliği veya restart yok; test yerine hedef/yokluk doğrulaması
+  yapıldı. PROGRESS ve sunucu devir notundaki bekleyen temizlik durumu güncellendi.
+
+### EM2/EM3 — Yayın sonrası eşleme ve Ortam kontrolü (2026-09-07)
+
+- API01 üzerinden .241 salt-okunur kontrol: 204 aktif ERP grup sözlük kaydı,
+  direct/rules/pool hedeflerinin birleşiminde 44 eşli, 160 eşlenmemiş kayıt.
+  Ortam=TESETTÜR ürün özellik ataması 8; önceki incelemede 0 idi. Bu kontrol yalnız
+  hedefteki atama sayısını doğrular; tüm V3 tesettür ürünlerinin tamamlandığı anlamına gelmez.
+- API2 ve .56 geçici arşivlerinin tek dosya yolları, symlink olmadığı ve yayın SHA256
+  değerleri doğrulandı. Silme çağrısı, devam et yanıtını açık silme onayı kabul etmeyen
+  otomatik güvenlik denetimince tekrar reddedildi; başka yoldan silme yapılmadı.
+  İki uzak arşiv ve yerel .codex-tmp-release-20260907 halen duruyor; aktif/eski
+  release'ler korunuyor. Bu tur tek yerel değişiklik PROGRESS; kod/DB yazımı/yayın yok.
+- Salt-okunur sayım sorgusu başarılı; uygulama kodu değişmedi, test/derleme gerekmedi.
+
+### Kontrollü yayın — 20260907T080848Z_erp_panel_ortam (2026-09-07)
+
+- Kullanıcı güncel admin build'ini üretti: index-D4s-P4n0.js. Admin/site/API/ERP
+  yayınına ve .56 üzerinde yalnız admin dosyası/symlink değişikliğine açık onay verdi.
+  .59 ve Nginx yapılandırması kapsam dışı; migration veya panel modu aktivasyonu yok.
+- Linux-x64 framework-dependent Release publish başarılı. API arşivi SHA256:
+  163AE3B02779C30A0D2C9B94D9AF60AD6CBBE99894D3373F8F486BBBE0D06747;
+  admin arşivi: 8EDA640ECCA43DF7BC59D93B9C571EEC599ABE84120B652DC532B8099ACBFD3F.
+  Pakette appsettings dosyaları yok; her servis kendi eski config dosyalarını
+  link/sahiplik/izinleri korunarak devralır. Önceki release rollback için korundu.
+- API2 aktive edildi: active/NRestarts=0; çalışan process startup migration=false.
+  Ready, ana sayfa, kadın-yeni-gelenler ve örnek tişört ürün rotası HTTP 200.
+  Yayın DLL hash'i F0482A18A1EAAE3DD489C1E6757C84AAEF28333078B434AC20C0591EA79CA357.
+- API unit restart'ında önceden disk üzerinde değişmiş unit/drop-in için daemon-reload
+  uyarısı geldi; unit/config değişikliği veya daemon-reload yapılmadı.
+- Final: API1/API2 current, API1 erp-worker-current ve .56 admin symlink'i
+  20260907T080848Z_erp_panel_ortam release'ine geçti. API/ERP active, NRestarts=0,
+  /ready Healthy. Eski release'ler olası rollback için yerinde bırakıldı.
+- Public /admin/ yeni index-D4s-P4n0.js içeriyor; index ve JS, ana sayfa, kategori,
+  örnek tişört HTTP 200. HTML decode sonrası ayrı İndigo renk seçeneği doğrulandı.
+  İlk düz metin araması HTML entity nedeniyle bulamamıştı; decode ile teyit edildi.
+- Yeni ERP katalog turu 100/100 özellik adayı okudu, 8 ürün güncelledi; bu sayının
+  tamamının Tesettür güncellemesi olduğu iddia edilmedi. Son log sayımında exception/
+  fail/ERR/WRN yok. LegacyStock/LegacyImport paketleri ve servisleri değiştirilmedi.
+- API1'in göreve ait /tmp API arşivi silindi (yeniden üretilebilir). API2 geçici
+  arşiv silme çağrısı otomatik güvenlik denetimince açık silme izni gerekçesiyle
+  reddedildi; alternatif yoldan silme denenmedi. API2/.56 transfer arşivleri ve yerel
+  .codex-tmp-release-20260907 çıktıları temizlik onayı bekliyor. Yayın tamamlandı.
+  .59'a erişilmedi; Nginx config/reload, migration, push veya panel aktivasyonu yok.
+
+### Yayın onayı sonrası ön kontrol (2026-09-07)
+
+- Kullanıcı .56'da yalnız admin dosyaları/symlink, API1/API2 ve ERP worker yayınına
+  onay verdi; .59 ve Nginx yapılandırması kapsam dışı kaldı.
+- API2 ve API1 salt-okunur kontrol edildi: ikisi de
+  20260906T220653Z_tesettur_attribute release'inde, active ve NRestarts=0.
+  Kayıtlı private /ready adreslerinde PostgreSQL/Redis state/Data Protection Healthy.
+  API2 disk %11 dolu/65 GB boş; API1 %17 dolu/60 GB boş.
+- İlk API2 loopback sağlık isteği başarısızdı; private bind adresiyle düzeltildi ve
+  her iki node sağlıklı doğrulandı. Servis veya config değiştirilmedi.
+- Güncel admin artefaktı eksik. Kullanıcının AGENTS talimatı etkileşimli oturumda
+  production npm build'i yasakladığı için dış terminalde admin build bekleniyor.
+  Eski dist yayınlanmadı; API/worker da bu tur aktive edilmedi. Tek değişen yerel
+  dosya PROGRESS; sunucuya dosya gönderimi, silme, migration veya restart yok.
+
+### Yayın hazırlığı — Admin, site/API ve ERP kapsam kontrolü (2026-09-07)
+
+- HEAD 275a3ead; f5947cdb sonrası GitHub değişiklikleri admin ERP sözlüğü eşleme
+  popup/portal, mapping API ve site gerçek renk ekseni önceliğini içeriyor
+  (Mavi/İndigo galeri ve renk seçeneği ayrımı). Yerel güvenlik/Ortam değişiklikleri
+  de çalışma ağacında korunuyor. Bu tabana göre migration/snapshot/seeder/Program
+  değişikliği yok; DB migration geçmişi bu tur ayrıca sorgulanmadı.
+- Admin dist/index.html 2026-09-06 tarihli; son yerel kaynakları kapsayan güncel
+  yayın artefaktı kabul edilmedi. Etkileşimli oturumda npm run build çalıştırılmadı.
+- Son API kontrolü 133/133; bu tur admin eşleme testleri 4/4 başarılı.
+  Admin TypeScript noEmit ve üç değişen dosyada hedefli ESLint de hatasız tamamlandı.
+- Yayın hedefleri devir kaydında API1/API2 ve ayrı API1 ERP worker; admin .56
+  /usr/share/nginx/html/admin symlink'i üzerinden sunuluyor. .56 production
+  altyapısına admin dosyası/symlink değişikliği için açık kapsam onayı gerekli.
+  .59'a erişilmedi; hiçbir sunucuya dosya gönderilmedi, yayın/aktivasyon yapılmadı.
+
+### EM2/EM3 — Onaylı TESETTÜR Ortam önceliği (2026-09-07)
+
+- Kullanıcı onayı uygulandı: V3 tip 8/kod 1 işaretli üründe Ortam=TESETTÜR,
+  diğer ürünlerde tip 55 değeri korunur. SqlServerErpSourceReader aynı komutta
+  yalnız istenen ürünlerin işaretlerini okur; ürün başına ek bağlantı/sorgu turu yok.
+  Tek ürün ve batch yolu ErpOrtamPriority üzerinden aynı sonucu üretir.
+- ErpProductAttributeRow.UseExistingDefinitionOnly işareti türetilmiş değerin
+  EnsureProductDefinitionValuesAsync tarafından açılmasını/metadata yazılmasını
+  engeller. Mevcut aktif TESETTÜR seçeneği kullanılır; eksikse doğrulama durdurur.
+  Yeni grup/tip/migration yok; grup eşleme davranışı ve aktivasyon ayarları değişmedi.
+- 5 yeni birim test: öncelik, diğer alanların korunması, işaretsiz normal değer,
+  boş özellikli tesettür ürünü, idempotency ve işaret kaldırılınca gelen normal değer.
+  İlk ara koşu 131/132 verdi; nihai kaynak yeniden derlenip ayrıntılı testle 133/133
+  başarılı doğrulandı. Mevcut derleyici uyarıları sürüyor; git diff --check temiz.
+- DB yazımı, backfill, canlı kaynak kabulü, yayın/push/servis aktivasyonu yapılmadı.
+  Sonraki kapı: eşli bir V3 tesettür ürününde salt-okunur kaynak kabulü ve onaylı yayın.
+  Kaynakta hem işaret hem tip 55 yoksa mevcut boş-kaynak koruması sürer; otomatik
+  değer silme eklenmedi. Detay docs/erp-esleme-plani.md §6'da.
+
+### EM2/EM3 — Ortam / Tesettür koşulu incelemesi (2026-09-07)
+
+- API01 üzerinden yalnız .241 PostgreSQL salt-okunur sorgulandı: aktif ortam tipi
+  DataType=select (tekli seçim), TESETTÜR değeri aktif fakat ürün ataması 0; tip 7 ürün
+  grubuna bağlı. ERP özellik eşleme tablosunda erp:nebim için silinmemiş kayıt yok.
+- Mevcut kod V3 tip 55'i ortam alanına taşır; tip 8 ignored listesindedir ve özellik
+  reader'ının mapped tip sorgusuna dahil değildir. ReplaceProductAttributesAsync aynı
+  tipteki mevcut değerleri kaynak değerleriyle değiştirir. Manuel TESETTÜR ataması,
+  V3'ten tip 55 geldiğinde bu nedenle kaybolabilir. TESETTÜR değerinde ERP kökeni yok.
+- MappingRuleResolver mevcut ortam değer ID'sini koşul olarak kullanabilir; fakat
+  içe grup çözümü kural koşullarını ürün özelliği üretmek için kullanmaz. Sadece kural
+  kaydı açmak ürünün Ortam değerini doldurmaz ve türetilmiş grup adı sorununu çözmez.
+- Karar gerekli: Tesettür işaretli üründe mevcut Günlük vb. Ortam değerinin yerine
+  TESETTÜR önceliklensin mi? Tekli alanı çokluya çevirmek veya başka özellik açmak
+  bu incelemede yapılmadı. Ürün/definition/eşleme yazımı ve yayın/aktivasyon yok.
+- İlk envanter sorgusu attribute_values tablosunda Code kolonu olmadığından hata
+  verdi; kolon kaldırılıp sorgu başarıyla tekrarlandı. İki salt-okunur kontrol başarılı;
+  uygulama kodu değişmediği için derleme/test çalıştırılmadı. Yalnız PROGRESS güncellendi.
+
+### EM2/EM3 — V3 ERP sözlüğü dolumu ve kesin grup eşlemeleri (2026-09-07)
+
+- Kullanıcının açık onayıyla V3 tip 2/TR sözlüğündeki 204 grup kodu .241/ecommerce_db
+  integration.erp_reference_items içine eklendi; 44 tekil birebir ad eşlemesi mevcut
+  integration.marketplace_category_mappings tablosuna direct olarak kaydedildi.
+  Kalan 160 sözlük kaydı manuel eşleme için hazır; rapor:
+  docs/raporlar/2026-09-07-erp-sozlugu-manuel-eslemeler.md.
+- İstenen iki alt ajan kaynak kodlarını ve eşleme güvenliğini ayrı inceledi.
+  tools/ErpGroupDictionaryImport insert-only araç eklendi: sunucu kimlik kontrolü,
+  API01 SSH tüneli, kodların sıfırlarını koruma, aktif/tekil ad kontrolü, mevcut
+  eşleme/geçmiş kaydı ezmeme, advisory ve tablo kilidi, transaction/rollback ve
+  önceki tüm sözlük/eşleme satırlarının değişmediğini doğrulayan kontrol içerir.
+- Test: uygulama öncesi rollback Rehearse başarılı; Apply 204/44; sonrasında ayrı
+  Inspect ve Rehearse ikisi de 0 ekleme/44 zaten eşli. Tekrar çalıştırmada mükerrer yok.
+  Hedef ürün grubu sayısı 145 kaldı; yeni grup, özellik tipi, seed/migration veya
+  ürün kartı yazımı yok. .59'a erişilmedi; V3 salt okundu. Yayın/push/aktivasyon yok.
+- 160 manuel eşleme ve prosedürün türettiği Tesettür önekli adların ham kaynak koduna
+  bağlanması worker aktivasyonu öncesinde açık iş. Otomatik periyodik sözlük güncelleme
+  bu araçla kurulmadı. Önceki sıfır sözlük envanteri bu onaylı dolumla değişmiştir.
+- Göreve ait .codex-tmp-erp-dictionary derleme çıktıları silindi (araç kaynakları
+  korundu), yalnız bu görevin SSH tüneli kapatıldı. git diff --check başarılı.
+
+### EM2/EM3 — Grup eşleme bütünlüğü kodu ve kontrollü worker yolu (2026-09-07)
+
+- ErpGroupMappingTargets ortak hedef çıkarımı eklendi: direct, rules varsayılan/kural
+  hedefleri ve pool adayları sözlük görünümü, silme koruması ve worker tarafından aynı
+  şekilde okunur. Çakışmalar First() ile gizlenmez; DTO/MappingPage çakışmayı ve ilgili
+  grup eşlemelerini gösterir, kullanıcı onayıyla seçilen grup eşlemesi kaldırılabilir.
+- ERP kayıt API'si aktif kaynak sözlük hedefi, aktif ürün grubu ve koşul değerinin aktif
+  özelliğe aidiyetini doğrular. Boş/mükerrer havuz adayı ve eksik VE koşulu reddedilir.
+  Farklı bizim gruplara aynı ERP kodu bağlanamaz. Kayıt ve sözlük silme aynı hedefin
+  DistributedWorkerLock kilidini kullanır. Kurallarda/havuzda kullanılan sözlük silinmez.
+- ErpSourceSyncService için opt-in UsePanelGroupMappings ve MappingTargetSystem eklendi.
+  Panel modunda aktif sözlük adı -> tek kaynak kodu -> tek aktif grup çözümü vardır;
+  belirsizlik hata, eksik eşleme null/atlama üretir. Config/prefix/ad fallback'i yoktur;
+  mevcut kart da eksik eşleme ile sessizce güncellenmez. Kaynakta ayrı grup kodu alanı
+  olmadığı için aynı adlı farklı kodlar otomatik çözümlenmez. Varsayılan false korunur.
+- Bu grup yolu, tüm EM2'nin tamamlanması değildir: özellik/değer/eksen/tedarikçi config
+  geçişi, V3 sözlük dolumu ve yeni ürün grup-varsayılanı yazımı ayrıca değerlendirilir.
+  Seed, migration, otomatik yeni grup/özellik tipi oluşturma eklenmedi/çalıştırılmadı.
+- Testler: API acceptance dışı 128/128 (8 yeni grup/koşul/havuz/opt-in testi dahil),
+  frontend 4/4, hedefli ESLint ve TypeScript noEmit başarılı; git diff --check temiz.
+  İlk derlemede raw-string/test API uyumluluk hataları düzeltildi. Yerel obj XML/DLL
+  erişim engeli nedeniyle ayrı .codex-tmp-mapping-integrity artifacts yolu kullanıldı;
+  NuGet config okuma izniyle derleme/test tamamlandı. Kullanıcının IDE süreci kapatılmadı.
+- API01 üzerinden .241/ecommerce_db salt-okunur PGOPTIONS ile gerçek envanter okundu:
+  erp:nebim aktif sözlük grubu 0, aktif grup eşlemesi 0. Tüm hedefler de incelendi:
+  silinmemiş ERP sözlük kaydı ve erp:* kategori eşlemesi hiçbir hedefte yok.
+  Bu nedenle sıfır çakışma kullanıma hazır olunduğu anlamına gelmez; veri henüz yoktur.
+- Hiçbir DB kaydı eklenmedi/değiştirilmedi, .59'a erişilmedi, yayın/push/aktivasyon yok.
+  Sonraki kapı: V3 sözlüğünün onaylı doğru kodlarla dolumu, panel eşlemeleri, salt-okunur
+  config/panel karşılaştırması ve izole DB'de eşzamanlı kayıt kabulü. Gerçek tarayıcı ve
+  DB yazmalı entegrasyon kabulü yapılmadı. Bu sınırlar docs/erp-esleme-plani.md §6'da kayıtlı.
+
+### EM2/EM3 — Eşleme bütünlüğü kontrolü, uygulama öncesi bulgular (2026-09-07)
+
+- Kullanıcının yeni tablodan eksikleri güvenle eşleme talebi için kayıt/okuma/silme
+  yolları incelendi. Bu bir kaynak kod incelemesidir; canlı DB'deki eşleme satırları
+  okunmadı, kayıt sayısı veya gerçek veri çakışması hakkında sonuç çıkarılmadı.
+- ERP sözlüğü integration.erp_reference_items; grup eşlemesi mevcut
+  integration.marketplace_category_mappings üzerindedir. Ayrı grup/tip açmak gerekmez.
+- GetErpItemsAsync yalnız TargetExternalId alanını okuyor, RulesJson hedefleri ve
+  PoolJson adayları sözlükteki eşli durumuna katılmıyor. Aynı kodun birden çok grup
+  eşlemesinde bulunmasında First() ile çakışma gizleniyor; Status active filtresi yok.
+- DeleteErpItemAsync de yalnız doğrudan TargetExternalId kullanımını koruyor;
+  kurallarda/havuzlarda kullanılan bir sözlük kaydı bu kontrolü aşabilir.
+- SaveCategoryMappingAsync havuzda iki satır sayıyor, iki farklı/geçerli hedefi
+  doğrulamıyor. MappingRuleResolver.Normalize eksik koşulları süzerek atıyor;
+  frontend düzeltmesine ek olarak API düzeyinde de tüm koşullar reddet/koru
+  doğrulaması gerekli. Hedef kod/aktif grup ve özellik-değer aidiyeti de kontrol edilmeli.
+- Yerel worker'ın config çözümlemesi devam ediyor; panel tablosunun tüketilmesi ayrı
+  EM2 işidir. Önceki 120 API ve 4 frontend testi bu backend veri bütünlüğü durumlarını
+  kapsamıyor. Öneri: ortak hedef çıkarımı + belirsizlik görünümü + API doğrulamaları +
+  silme koruması, sonra salt-okunur DB envanteri ve worker dry-run karşılaştırması.
+- Bu tur uygulama kodu/DB değiştirilmedi; yalnız bu PROGRESS kaydı. Yeni seed,
+  migration, otomatik eşleme, sunucu işlemi veya yayın yok.
+
+### EM2/EM3 — Uygulama öncesi salt kod incelemesi ve test (2026-09-07)
+
+- Kullanıcının önce oku/test et, sonra uygularız talebiyle CLAUDE, kod devir belgesi,
+  güncel PROGRESS ve ERP eşleme planı (özellikle §6 worker sözleşmesi) mevcut kaynakla
+  karşılaştırıldı. Bu tur uygulama kodu değiştirilmedi; yalnız bu denetim kaydı eklendi.
+- Son GitHub alımının tabanı f5947cdb ile karşılaştırmada DatabaseSeeder.cs ve Program.cs
+  aynı; yeni migration yok. Ancak bu, projede hiç seed bulunmadığı anlamına gelmez:
+  önceden mevcut SeedUrunGrubuAsync eksik tip/seçenek/bağ/default oluşturur, silinmiş
+  bazı tanımları geri açar ve eksik ürün özelliklerini geri doldurur. Program.cs bu
+  seed'i Node:MigrateOnStartup=true olduğunda çalıştırır. Bu tur çalıştırılmadı.
+- Yerel ErpSourceSyncService.ResolveGroup halen config ProductGroupCodes, birebir ad
+  ve prefix çözümü kullanıyor. Plan §6'daki panel eşleme tablolarına geçiş uygulanmış
+  kabul edilemez; panelin testlerden geçmesi worker'ın yeni eşlemeyi tükettiğini kanıtlamaz.
+- API acceptance dışı testler 120/120; frontend regresyon 4/4 geçti. Hedefli ESLint
+  0 hata/0 uyarı; TypeScript noEmit ve git diff --check başarılı.
+- DB bağlantısı/yazısı, kaynak .59 erişimi, servis başlangıcı, seed/migration, yayın ve
+  GitHub işlemi yok. Gerçek tarayıcı ve DB entegrasyon kabulü bu testlerin kapsamında değil.
+
+### EM3 — ERP eşleme popup regresyonlarının düzeltilmesi (2026-09-07)
+
+- Kullanıcı onayıyla portal SearchableSelect scroll dinleyicisi yalnız dış kaydırmalarda
+  kapatacak şekilde daraltıldı. Liste içi ve klavye kaynaklı liste kaydırması açık kalır;
+  dış kaydırma/resize kapatma ve listener temizliği korunur.
+- Kurallı kipte bütün koşullar tamamlanmadan Eşle açılmaz; mutation girişinde de kontrol
+  vardır. Eksik VE koşullarını sessizce atan filtre kaldırıldı, kullanıcıya tamamlama/
+  kaldırma açıklaması eklendi. Kayda koşulların tamamı gönderilir.
+- Havuz kipine aramalı ERP aday seçimi ve seçili aday etiketleri eklendi. Yeni havuz için
+  en az iki farklı kod gerekir; mevcut havuz adayları korunarak ekleme yapılır. Mükerrer
+  adaylar kod bazlı engellenir; yeni eklenen adaylar kaydetmeden kaldırılabilir. Bizim
+  grup değişince yeni aday seçimi temizlenir. Sözlük okuması yalnız Havuz kipinde yapılır.
+- `groups` useMemo bağımlılığı kararlı hale getirilerek önceki ESLint uyarısı giderildi.
+- Dosyalar: SearchableSelect.tsx, MappingPage.tsx, erpMappingForm.ts ve
+  admin/tests/erp-mapping.test.cjs. Yeni bağımlılık veya build çıktısı eklenmedi.
+- Test: `node --test tests/erp-mapping.test.cjs` 4/4 başarılı (tam/eksik koşul,
+  yeni havuz/mükerrer aday, mevcut aday koruma, gerçek component effect'inin mock event
+  ortamında iç/dış scroll/resize/cleanup kontrolü). Hedefli ESLint 0 hata/0 uyarı;
+  admin TypeScript noEmit ve git diff --check başarılı. Gerçek tarayıcı kabulü yapılmadı.
+- Bu tur DB bağlantısı/yazısı, özellik tipi veya ürün grubu eklemesi, migration, yayın ve
+  GitHub push yok. Önceki onaylı DB işleminde eklenenler yalnız urun_grubu tipi,
+  145 seçenek ve 144 grup-özellik bağlantısıydı; yeni ürün grubu açılmamıştı.
+
+### EM3 — GitHub sonrası ERP eşleme ekranı kontrolü (2026-09-07)
+
+- Kullanıcının yerel kontrol talebi üzerine SearchableSelect, ErpGroupMapModal ve
+  backend kategori eşleme doğrulaması incelendi. Kullanılabilir tarayıcı bulunmadığından
+  görsel/tıklamalı kabul yapılamadı; aşağıdaki bulgular kaynak kod incelemesine dayanır.
+- Portal seçicide document seviyesindeki capture scroll dinleyicisi hedef kontrolü
+  yapmadan kapatıyor; seçenek listesinin kendi scroll olayı da listeyi kapatır.
+- Kurallı kipte eksik koşullar filter ile sessizce çıkarılıyor; bir tam koşul varsa
+  Eşle aktif kalıyor. Kullanıcının eklediği fakat tamamlamadığı ikinci VE koşulu
+  gönderilmez, böylece beklenenden geniş kapsamlı kural kaydedilebilir.
+- İlk havuz eşlemesi popup'tan oluşturulamıyor: popup yalnız bir ERP adayı gönderiyor,
+  API en az iki aday istiyor. Mevcut çok adaylı havuza ekleme farklı bir akıştır.
+- İki değişen frontend dosyasında hedefli ESLint: 0 hata, MappingPage groups/useMemo
+  bağımlılığı için 1 uyarı. Önceki eşitleme kontrolünde TypeScript ve API 120/120 geçmişti;
+  bu testler tarayıcı etkileşiminin kabulü sayılmaz.
+- Bu tur yalnız inceleme ve bu PROGRESS kaydı yapıldı. Uygulama kodu, eşleme kayıtları,
+  veritabanı, servisler ve yayın değiştirilmedi. Önerilen sonraki iş üç bulgunun
+  kontrollü düzeltmesi ve gerçek tarayıcı regresyonudur.
+
+### GitHub güncellemelerinin yerel çalışmalar korunarak alınması (2026-09-07)
+
+- Kullanıcı talebiyle `origin` fetch edildi; `main`, `f5947cdb` üzerinden 7 commit
+  fast-forward alınarak `275a3ead` seviyesine getirildi. Push, yayın ve migration yapılmadı.
+- Gelenler: ERP sözlüğü eşleme popup'ı (birebir/kurallı/havuz), portal destekli aramalı
+  seçici ve gerçek renk eksenine göre ürün görsel/renk ayrımı. 9 dosya güncellendi.
+- Tracked + untracked yerel çalışmalar `d1ad054b` stash'iyle korunup çatışmasız geri
+  uygulandı. İki handoff dosyası stash ile birebir; 5 yeni bakım dosyası Git blob
+  karşılaştırmasıyla aynı içerikte (yalnız LF/CRLF normalizasyonu). Özel ayar dosyasının
+  SHA256 kontrolü değişmedi. Yerel PROGRESS kayıtları ile upstream satırı birlikte korundu.
+- `HEAD...origin/main` farkı 0/0, çatışmalı dosya yok; `git diff --check` ve admin
+  `tsc --noEmit -p tsconfig.app.json` başarılı. API acceptance dışı testler 120/120 geçti;
+  derlemede nullable, XML belge ve diğer mevcut uyarılar var, hata yok.
+- Kurtarma stash'i güvenlik için tutuldu; daha eski stash'lere dokunulmadı. DB ve sunucu
+  değişikliği yok; bu işlem sonrasında yerel çalışmalar halen commit edilmemiş durumda.
+
+### EM2 — Kullanıcı talebiyle Ürün Grubu tanımının yeniden doldurulması (2026-09-07)
+
+- Önceki geri alma sonrasında kullanıcı açıkça `urun_grubu` özellik tipini ve seçeneklerini
+  yeniden istedi. Kesilen işlem ayrı salt-okunur sorguyla kontrol edildi: select tipi ve
+  mevcut yerel gruplardan 145 seçenek kalıcı eklenmiş; ürün değeri ve grup bağlantısı 0 idi.
+- Ardından kullanıcının `.59` referansından karşılaştırıp eksikleri tamamlama talebi uygulandı.
+  API01 üzerinden loopback SSH tüneli kullanıldı. `.59` PostgreSQL bağlantısı zorunlu READ ONLY;
+  production MySQL/V3, kaynak verisi, nginx, çalışan servisler ve yayın paketleri değiştirilmedi.
+- İki tarafta 145 aktif ürün grubu ve 58 aktif özellik tipi var. Kod bazlı grup/tip,
+  tip içinde ID veya Türkçe seçenek adı bazlı karşılaştırmada eksik grup/tip/seçenek yoktu.
+  Tek eksik, `urun_grubu` için 144 grup-özellik bağlantısıydı. Yalnız `.241/ecommerce_db`
+  üzerinde bu bağlantılar, referanstaki bayrak/sıra ve eşlenen varsayılan seçenekleriyle eklendi.
+  Mevcut kayıtlar ezilmedi; ürün kartı geri dolumu, yeni ERP eşlemesi veya migration yapılmadı.
+- SQL önce transaction/ROLLBACK ile denendi (144 bağlantı, 144 varsayılan), sonra COMMIT
+  edildi. Tekrar denemede 0 ekleme; son karşılaştırmada eksik bağlantı 0. İşlemde mevcut
+  bağlantıların tam satır karşılaştırmasıyla değişmediği de doğrulandı.
+- Bakım kaynakları: `tools/veri-bakim/2026-09-07-urun-grubu-secenekleri.{ps1,sql}`,
+  `compare-reference-definitions.{ps1,sql}` ve `fill-reference-group-links.sql`.
+  Kaynak snapshot yalnız bellekte işlendi; sunucuya geçici betik/yedek bırakılmadı.
+  Uygulama kodu değişmedi; bu iş için SQL denemesi ve tekrar çalıştırma kontrolleri kullanıldı.
+  GitHub push ve yayın yapılmadı. Kullanıcı mevcut çalışan paketlerin doğru olduğunu söyledi;
+  aşağıdaki eski geri alma kaydındaki paket geri dönüşü önerisi artık uygulanacak iş değildir.
+
+**GERİ ALMA SINIRI — SON GITHUB EŞİTLEMESİ DOĞRULANDI (2026-09-07):**
+Kullanıcının genişletilmiş geri alma talebi için f5947cdb (Document completed GitHub
+synchronization), ec7d2165 merge sonrası sınır olarak doğrulandı. src/admin/tests/tools
+bu commit ile git diff --quiet karşılaştırmasında 0 fark. Kalan 1 görsel inceleme testi
+ve 8 inceleme/geri alma yardımcı dosyası kaldırıldı; untracked çıktı listesi temizdi.
+PROGRESS denetim geçmişi, gerçek sunucu durumunu anlatan handoff ve kullanıcının
+API01 üzerinden erişim/güvenlik düzeltmesi bilerek korundu; eski olay kayıtları çalıştırma
+talimatı değildir. appsettingsTest.json ve diğer kullanıcı sırları değiştirilmedi.
+GitHub kaynaklı üç migration READ ONLY doğrulandı ve KORUNDU:
+20260906160734_AddProductGroupAttributeDefaultValue,
+20260906164240_AddErpReferenceItems,
+20260906182451_AddErpReferenceItemMappedTarget.
+DefaultAttributeValueId, MappedTargetKind/Id/Label kolonları mevcut. Down migration yok.
+Önceki turlarda ajanın grup/Tesettür kayıtları kalıcı kaldırılmıştı; tekrar silinmedi.
+ÖNEMLİ: sunucuların binary paketleri son eşitleme sürümüne yeniden yayınlanmadı.
+Tesettür false override ile kapalı kalıyor. .56 production admin paketine ayrıca açık
+hedef izni olmadan yazılmaz; admin production build bu oturumda çalıştırılmaz.
+Dolayısıyla yerel geri alma tamam, çalışan paketlerin geri dönüşü halen ayrı açık iştir.
+Son doğrulama: API acceptance dışı 120/120, admin TypeScript noEmit başarılı; geçici
+.codex-tmp-final-rollback temizlendi, untracked liste boş. git diff --check geçti.
+
+**EM2 — TESETTÜR EKLEMELERİ DE GERİ ALINDI (2026-09-07):**
+Kullanıcı Tesettür dahil ajanın eklemelerinin tamamını geri almayı onayladı. Önce API01
+ERP worker, sonra API02 ve API01 için yalnız ErpSource__SyncTesetturAttribute=false
+uygulandı; env sahiplik/izinleri korundu, süreçler sırayla restart edildi. Her adım ve
+son salt-okunur kontrolde process değeri false, readiness 200. API02'de önceden mevcut
+unit değişiklik uyarısı tekrar görüldü; daemon-reload yapılmadı. Diğer worker'lar ve .56/.59
+değiştirilmedi. Eski binary mevcut release'te kaldığı için false override bilinçli korunur;
+yeni binary yayını yapılmadı. Silinen özelliğin bu process'lerden tekrar yazılması kapalıdır.
+Yerelde ErpSourceOptions ve SqlServerErpSourceReader Tesettür diff'leri geri alındı;
+ErpTesetturAttribute, iki Tesettür test dosyası ve eski hazırlık/yayın betikleri kaldırıldı.
+src/tests içinde SyncTesetturAttribute/ErpTesetturAttribute/v3_tesettur referansı kalmadı.
+DB .241: sabit tip ID 2a7bbf2f-8af7-451a-a1dc-2734f09b1a3a ve oluşturma zamanı kontrolü,
+tam sayım, bütün FK/CASCADE kapsam dışı kullanım korumasıyla önce DELETE/ROLLBACK,
+sonra DELETE/COMMIT yapıldı. Kalıcı kaldırılanlar 1 tip, 2 Evet/Hayır seçeneği,
+144 grup özelliği bağı, 898 otomatik ürün değeri. Ayrı READ ONLY sonuç hepsinde 0;
+aktif ürün kartı 29137. Diğer özellikler, stok/fiyat/görsel ve V3 kaynak verisi korunur.
+API acceptance dışı 120/120 geçti (kaldırılan Tesettür'e ait 3 test artık yok).
+Geçici .codex-tmp-tesettur-rollback çıktısı temizlendi; sunucuda geçici dosya/tünel yok.
+disable-owned-tesettur ve remove-owned-tesettur denetim araçları korundu. GitHub işlemi
+yok. Kalıcı silinen veriler için geri dönüş yalnız varsa önceki yedekten mümkündür.
+
+**EM2 — KULLANICI TALEBİYLE KALICI SİLME TAMAMLANDI (2026-09-07):**
+Kullanıcının açık "sil kalıcı olarak" talebiyle önceki soft-delete işleminin tam
+2026-09-06T23:21:31.475946Z zamanına ait kayıtları kalıcı kaldırıldı. Yalnız yeni .241
+ecommerce_db üzerinde API01 üzerinden çalışıldı. purge-owned-groups.ps1/.sql sabit
+kimlik/zaman/oluşturan/değiştiren kontrolleri, transaction, kısa lock timeout ve tüm
+FK (CASCADE dahil) kapsam dışı referans kontrollerini uygular. Önce DELETE/ROLLBACK
+provası, sonra açık onay kapsamında DELETE/COMMIT ve ayrı READ ONLY kontrolü başarılı.
+Fiziksel silinenler: 17 grup, 204 ERP sözlük kaydı (59 eşleme dahil), 29.137 otomatik
+ürün özellik değeri, 146 seçenek, 1 urun_grubu tipi, 467 grup özellik bağı ve 62 alt
+özellik bağı. Kapsam dışı referans bulunmadı. Son kontrol kalan sahipli grup/sözlük/
+ürün değeri/tip=0; aktif stok kartı=29137, bağımsız tesettur tanımı=1.
+Ürün kartları/varyant/fiyat/stok/görsel tablolarına DELETE uygulanmadı. .59, V3/MySQL,
+Nginx, servis/config/yayın ve GitHub değişikliği yok. Kalıcı silme soft-delete ile geri
+alınamaz; geri dönüş varsa önceki yedek gerektirir. Bu işte yeni yedek oluşturulmadı.
+Geçici manifest tablosu ON COMMIT DROP ile kapandı; sunucuda geçici dosya/tünel yok.
+Denetim betikleri kalıcı kaynak olarak tutuldu. Uygulama kodu değişmedi; ilgili testler
+gerçek DB prova/COMMIT/READ ONLY doğrulamasıdır. Eski soft-delete kayıtları tarihseldir.
+
+**EM2 — AÇIK KAPSAM ONAYI SONRASI DB GERİ ALMA TAMAMLANDI (2026-09-07):**
+Kullanıcı 17 grup, 204 sözlük/59 eşleme, 29.137 otomatik Ürün Grubu değeri ve ilgili
+tanımların soft-delete yöntemiyle kaldırılmasını öğrendikten sonra devam onayı verdi.
+Önceki güvenlik reddi sonrasında yeni açık onayla işlem yeniden denetime sunuldu ve izin
+verildi. API01 üzerinden yalnız .241 hedefinde kullanım/sahiplik kontrolleri tekrarlandı;
+ROLLBACK provası başarılı, ardından Apply COMMIT başarılı. Ayrı READ ONLY doğrulama:
+owned_groups_active=0, owned_dictionary_active=0, owned_product_values_active=0,
+owned_attribute_active=0; tesettur_active=1, active_products=29137.
+İlgili grup özellik/alt özellik bağları ve Ürün Grubu seçenekleri de soft-delete edildi.
+Fiziksel satır silinmedi; IsDeleted/DeletedAt ile geri kazanılabilir biçimde kaldırıldı.
+Stok kartları, varyantlar, fiyat, stok, görseller ve bağımsız Tesettür korunur. .59,
+V3/MySQL, Nginx, config, migration veya GitHub değişikliği yapılmadı; yayın yapılmadı.
+Yeni uygulama kodu yok; doğrulama gerçek SQL prova/COMMIT/READ ONLY kontrolleridir.
+Bir önceki turdaki yerel API 123/123 ve admin TypeScript sonuçları geçerlidir.
+Geçici dosya/yedek/tünel bırakılmadı. Rollback betikleri kalıcı denetim aracı olarak
+korundu. Aşağıdaki engellendi/59 hazır gibi kayıtlar tarihsel durumdur; güncel sonuç budur.
+
+**EM2 — KULLANICI TALEBİYLE YEREL GERİ ALMA; DB GERİ ALMA ENGELLENDİ (2026-09-07):**
+Kullanıcı yalnız ajanın ürün grubu eşleme çalışmalarını geri almayı onayladı.
+MappingPage, controller/DTO/service, ERP grup reader/model/çözümleyici ve ERP planındaki
+bu işe ait diff'ler ters uygulandı. GitHub'dan gelen panel ve migration kaynakları korundu.
+ErpSourceOptions/SqlServerErpSourceReader içindeki bağımsız Tesettür değişiklikleri,
+Tesettür testleri ve görsel karşılaştırma çalışması korundu. Gruba özel 4 sınıf, 3 test,
+geçiş runbook'u, sonuç raporu ve 10 hazırlık betiği/SQL dosyası (toplam 19 dosya) kaldırıldı.
+Önceki DB işlemlerinin tarihsel kayıtları sahiplik kanıtını kaybetmemek için aşağıda korunur;
+bunlar yeni işlem/aktivasyon talimatı değildir. Kod geri alındı, sunuculara yayın yapılmadı.
+READ ONLY ön kontrol: ajanın açtığı 17 grupta ürün sayısı 0; 29.137 urun_grubu değeri
+aynı işlem zamanında oluşturulmuş ve UpdatedAt/UpdatedBy boş. Grup/sözlük/tanım zamanları
+önceki kayıtlara uyuyor. rollback-owned-groups.ps1/.sql tek transaction soft-delete provası
+başarılı oldu (17 grup, 204 sözlük/59 eşleme, 29.137 otomatik alan değeri); ROLLBACK edildi.
+Apply çağrısı otomatik güvenlik denetiminde REDDEDİLDİ: toplu kayıtların tamamının yalnız
+ajana ait olduğu kanıtı yeterli görülmedi. Engel aşılmadı; hiçbir DB geri alma COMMIT'i
+yapılmadı. Kayıtlar hâlâ aktif. Sonraki DB adımı için kullanıcıya risk ve kapsam bildirilmeli.
+Ürün/fiyat/stok/görsel silinmedi; .59/V3/MySQL/Nginx değişmedi. Migration geri sarılmadı.
+Rollback araçları doğrulama/inceleme için korunur; varsayılan Inspect salt-okunurdur.
+Son kontroller: API acceptance dışı 123/123 başarılı; admin npx tsc --noEmit ve doğrudan
+yerel TypeScript noEmit başarılı; git diff --check başarılı (yalnız CRLF uyarıları).
+Eski 138 toplamındaki 15 grup-eşleme testi geri alınan işe aitti; bağımsız Tesettür
+testleri korunmuştur. Test için oluşturulan .codex-tmp-group-rollback çıktısı temizlendi.
+
+**EM2 — KESİN 57 EK GRUP EŞLEMESİ VE KALANLAR RAPORU (2026-09-07):**
+Kullanıcı yapılabilenleri uygulayıp kalanları raporlamayı istedi. API01 üzerinden yalnız
+yeni .241 hedefinde 204 V3 sözlüğü ve mevcut gruplar READ ONLY karşılaştırıldı.
+42 tam-ad/tek-aktif hedef yeniden kullanıldı; tarihsel Triko ailesi (13), Eşofman Altı
+ve Sütyen kararları için 15 ayrı v3_<kod> grubu oluşturuldu. Şablon/üst sınıf sırasıyla
+Triko, Eşofman, İç Giyim; ayrıntılı V3 adları korunur. Normal/Tesettür aynı gruba bağlı.
+`tools/tests/complete-v3-exact-groups.ps1/.sql` sabit gözden geçirilmiş liste, hedef
+kimliği/aktiflik/tekillik, mevcut karar koruması, timeout ve transaction kapıları içerir.
+Varsayılan Inspect server-side READ ONLY; Rehearse ROLLBACK; Apply COMMIT.
+Koruma provası başarılı: mevcut grup, grup özelliği ve alt özellik satırları tam-satır
+EXCEPT karşılaştırmasında değişmedi; kaynak metadata ve eski kararlar korundu.
+COMMIT: 15 yeni grup/57 yeni eşleme. Ayrı tekrar provası: 0/0. Son READ ONLY:
+204 kaynak, 59 iki koşulu hazır, 145 eşlenmemiş. Önceki iki Ceket eşlemesi korundu.
+Ürün kartları/grupları/özellik değerleri, fiyat/stok/görseller değiştirilmedi. Yeni
+kolon/migration yok; servis Legacy modunda kaldı; yayın/aktivasyon yapılmadı.
+.59/V3/MySQL/Nginx yazımı veya GitHub işlemi yok. Geçici SQL tabloları transaction
+sonunda kaldırıldı; SSH tek komut bağlantıları kapandı, dosya/yedek/tünel bırakılmadı.
+`docs/raporlar/2026-09-07-v3-grup-esleme-sonucu.md`: 42+15 tamamlanan liste, kalan 145
+kod/ad/öneri/eksik karar ve kabul kapıları. Kalanların önerileri ad temellidir, gerçek
+kart bazında doğrulanmış değildir; ortak ürün kodu incelemesi bu tur yapılmadı.
+Uygulama kodu değişmedi; ilgili kontroller SQL prova/idempotency, READ ONLY envanter
+ve PowerShell parser kontrolüdür. Uygulama regresyon paketi yeniden çalıştırılmadı.
+
+**STOREFRONT — P-00022295 RENK/GALERİ İNCELEMESİ (2026-09-07):**
+Kullanıcı admin görsellerinin doğru, sitede Mavi altında İndigo görsellerinin de geldiğini
+bildirdi. Public /erkek-bisiklet-yaka-kabartma-baskili-tisort-1525459 HTML'i salt-okunur
+incelendi: Mavi seçili; Mavi ve Yeşil renk seçenekleri var; 1746cb ve 1746d3 dosya
+aileleri aynı galeride. Kodda GetStoreProductDetailHandler önce filtre_rengi değerini
+galeri gruplama anahtarı yapıyor, renk yalnız fallback; IsColor da filtre_rengi için true.
+StoreUrunDetayBuilder bu işaretli eksenden renk düğmeleri oluşturuyor. Böylece aynı
+filtre rengine bağlı farklı gerçek renkler birleşebilir; İndigo'nun ayrı seçenek olmaması
+ve galeri karışması aynı storefront kuralıyla açıklanıyor. Bu tur DB/admin API üzerinden
+ürünün ham özellik değerleri ayrıca sorgulanmadı. Önerilen düzeltme: detay renk seçimi ve
+galeride gerçek renk kimliği, filtre_rengi yalnız katalog filtreleme amacıyla kullanılmalı;
+slug/beden/stok uyumu ve gerçek renk bulunmayan kayıtların fallback'i birlikte test edilmeli.
+Yalnız teşhis kaydı eklendi; uygulama kodu, DB, görseller ve yayın değiştirilmedi.
+
+**EM2 — GRUP EŞLEME GEÇMİŞİ VE .59 SALT-OKUNUR DOĞRULAMA (2026-09-07):**
+Kullanıcının talebiyle iki alt ajan Git/diff ve docs/SQL kayıtlarını bağımsız inceledi.
+`docs/grup_eslesme.md` eski MySQL grup ID eşlemelerini içerir; V3 tip 2 kodlarıyla
+doğrudan aynı anahtar değildir. PROGRESS geçmişinde Sütyen→İç Giyim, Eşofman Altı→Eşofman,
+Triko ailesi→Triko ve Ceket kararları bulundu. Bunlar yeni ayrı V3 gruplarının üst
+sınıflandırması için tarihsel kanıttır; otomatik veri değişikliği uygulanmadı.
+API01 SSH tüneli üzerinden .59 kendi PostgreSQL'i server-side READ ONLY ile sorgulandı:
+145 silinmemiş grubun tamamında urun_grubu varsayılanı kendi adı; kot_ceket→Kot Ceket
+dahil, kendi adından farklı üst grup yok. ERP sözlüğü boş; kategori eşleme tablosunda
+yalnız 137 Trendyol/direct kaydı var, ERP eşlemesi yok. İlgili .59 Git geçmişinde
+60c6241 seed/SQL adımı mevcut; kontrol edilen PROGRESS/ERP plan/veri-bakım yollarında
+tracked diff yok. Dev/demo dolum kaydı doğrulandı fakat hazır 204 V3 eşleme matrisi
+bulunmadı. .59 verisi, dosyaları ve servisleri değiştirilmedi.
+`legacy-product-group-reference.ps1` içine tekrar kullanılabilir GroupDefaults okuma
+modu eklendi; gerçek salt-okunur çalışma başarılı. Uygulama kodu değişmediği için uygulama
+testleri yeniden çalıştırılmadı. Bu işin SSH tüneli kapatıldı; geçici dosya/yedek yok.
+Sonraki adım: tarihsel kararlar ve ortak ürün kodlarıyla V3 üst sınıflandırma önerilerini
+kanıtlarıyla çıkarmak; eski MySQL grup numaralarını V3 kodu gibi kullanmamak.
+
+**EM2 — TESETTÜR SERVİSİ YAYINLANDI; GÖRSEL KARŞILAŞTIRMASI (2026-09-07):**
+Kullanıcının devam/tamamlama ve koşullu yayın talebi kapsamında Tesettür bölümü tamamlandı.
+`prepare-tesettur.ps1/.sql`: yeni .241 hedefinde tesettur/select, Evet/Hayır ve 146 grup bağı;
+0016 ve 2956 için normal/Tesettür aynı hedef. ROLLBACK provası, COMMIT ve ikinci provada
+0 değişiklik doğrulandı. Mevcut ürün değerleri bu hazırlıkla toplu değiştirilmedi.
+API regresyon 138/138; gerçek servis ReplaceProductAttributesAsync yazmalı kabulü izole DB'de
+1/1 (Evet→Hayır→Evet, aynı değer idempotency, başka özelliği koruma). Uygulama DB kullanıcısının
+CREATE DATABASE yetkisi yoktu; kullanıcı yetkisi değiştirilmeden kayıtlı .241 OS postgres
+erişimiyle yalnız ecspros_acceptance_tesettur_20260907 oluşturuldu. Test fixture'ı rollback
+edildi, kullanıcı tablosu sayısı 0 doğrulanıp geçici DB kaldırıldı. İlk tablo sayımı pg_toast
+sistem tablolarını içeriyordu; non-system filtreyle 0 doğrulandı.
+Temiz .NET publish başarılı. `tools/deploy/publish-tesettur.ps1` ile önce API02, API01,
+sonra API01 ERP worker `20260906T220653Z_tesettur_attribute` paketine geçti. DLL SHA-256:
+`866d7acc8fafd58109756d88f0f0d46706eb2cace88b38633b9ba5262c1576f7` üç hedefte aynı.
+İlk ERP geçişinde copy2 config sahipliğini korumadığı için UnauthorizedAccessException oldu;
+sağlık kapısı otomatik eski sürüme döndü. Betik kaynak dosyanın uid/gid'sini de koruyacak
+şekilde düzeltildi; hash doğrulamalı Erp -Resume ile ikinci geçiş başarılı. API02 restart'ta
+önceden disk üzerinde değişmiş unit/drop-in uyarısı görüldü; daemon-reload uygulanmadı.
+Son process doğrulaması: üçü active, NRestarts=0, SyncTesetturAttribute=true,
+Node__MigrateOnStartup=false. API01/API02/ERP readiness 200; dış ready/admin 200.
+ERP'nin yeni doğal turu aday=100, kaynak eşleşen=100, güncellenen=100; yeni başlangıçtan
+sonra exception satırı 0. Tüm katalog bir anda yenilenmiş sayılmaz; kalan kartlar mevcut
+periyodik uzlaştırma sırasıyla veya hedefli yenilemeyle gelir. Genel grup modu Legacy
+korundu: 202 kaynak grubunun ayrı yerel gruplara eşlenmesi/Database geçişi HALA TAMAMLANMADI.
+Stok worker, LegacyImport worker, .59, Nginx, MySQL/V3 yazımı veya GitHub işlemi yapılmadı.
+Önceki API/ERP release'leri başarılı sağlık/hash kontrolünden sonra kullanıcı temizlik talebiyle
+kaldırıldı. API1 disk %17/60 GB boş, API2 %11/65 GB boş; sunucudan doğrudan eski release'e
+geri dönüş kopyaları artık yok. Geçici arşivler, tüneller ve yerel test/publish çıktıları temizlendi.
+
+Görsel incelemesi: `LegacyImageComparisonAcceptanceTests` ve eski .59 salt-okunur aracına
+Images modu eklendi. MySQL 192.168.0.50 SELECT-only + server-side READ ONLY, yeni .241
+READ ONLY ve .59 kendi PostgreSQL'i READ ONLY karşılaştırıldı. P-00022295 üç tarafta
+14 aktif dosya; yeni ve .59 için dosya/sıra/barkod/kapak bayrakları aynı. Kaynakta silinmiş
+dosya 0, hedefte kaynakta bulunmayan aktif dosya 0. Son 100 ürün örneklemi: kaynak eşleşen
+100; kaynakta bulunmayan dosya adayı 0/0; kaynakta görseli olup hedefte görselsiz ürün 0.
+İlk hedef karşılaştırmasında boşta kalan SSH tüneli reset oldu; keepalive ile yeniden açılıp
+iki salt-okunur test 1/1 + 1/1 geçti. Bunlar tam katalog veya fiziksel CDN byte eşitliği
+kanıtı değildir; kullanıcının gördüğü görsel farkının kök nedeni henüz doğrulanmadı.
+Çalışan görsel ayarları: missing-images 10 dk, full-images 1440 dk, ilk full startup delay
+60 dk. Kodda full karşılaştırma dosya adlarını temel alıyor; yalnız sıra/varyant/set/kapak
+drift'i kaçabilir. Full rebuild tüm product_images metadata'sını yeniden kurduğu için
+native upload koruması ayrıca gözden geçirilmeli; bu tur tetiklenmedi/değiştirilmedi.
+Production görsel dosyası veya metadata silinmedi; kaynak .59'a yalnız bakıldı.
+
+**EM2 — TESETTÜR BAĞIMSIZ ÖZELLİK OKUMASI, YAYIN HENÜZ HAZIR DEĞİL (2026-09-06):**
+Kullanıcı aynı ürün grubunda ayrı Tesettür özelliği yaklaşımını onaylayıp tamamlanırsa
+servislerin yayınlanmasını istedi. `ErpTesetturAttribute` ve kapalı varsayılan
+`SyncTesetturAttribute` eklendi. Reader ürün başına sorgu yerine batch `cdItem` +
+`prItemAttribute` EXISTS (ItemTypeCode=1, AttributeTypeCode=8, AttributeCode=1) okur.
+Türetilmiş `v3_tesettur -> tesettur` Evet/Hayır satırı mevcut katalog/hedefli yenileme/
+periyodik attribute reconciliation akışına girer. Kaynakta işaret kaldırılınca açık Hayır
+üretilir; kaynak ürün yoksa değer üretilmez. Üyelik sorgusunda NOLOCK kullanılmaz.
+Grup adı değiştirilmez; tip 8'in diğer değerleri Tesettür diye sınıflandırılmaz.
+Sabit hedef/alias koruması eklendi. Tanım ve gerçek yazmalı kabul yapılmadan seçenek açılmaz.
+Üç unit test eklendi; acceptance dışı paket 138/138 geçti. Gerçek V3 SELECT-only batch
+kabulü 1/1: P-00023154 Hayır, P-00023160 Evet, olmayan kart için satır yok ve seçenek
+kapalıyken türetilmiş satır yok. API01 tüneli kullanıldı. İlk test sandbox NuGet.Config
+erişim engelinde durdu; erişim izniyle tekrar çalıştırma başarılı, mevcut derleyici uyarıları
+korundu. Production build/publish veya servis aktivasyonu yapılmadı.
+Kalan: hedef tesettur tanım/değer/grup bağları, gerçek yazmalı işaret ekleme/kaldırma kabulü,
+aynı gruba açık Tesettür hedefleri, 202 kaynak grubun genel eşlemesi ve kontrollü yayın.
+Bu tur DB/V3/.59/Nginx yazımı yok. Test artifacts ve bu işin V3 tüneli iş sonunda temizlendi.
+
+**EM2 — GRUP SEÇENEK HAVUZU, VARSAYILANLAR VE EKSİK ÜRÜN DEĞERLERİ (2026-09-06):**
+Kullanıcı GitHub'daki 60c62414 / `tools/veri-bakim/2026-09-06-urun-grubu-secimli.sql`
+yöntemiyle devamı onayladı. Kaynak SQL değiştirilmeden, yeni .241 hedefi için korumalı
+`tools/tests/complete-product-group-defaults.ps1` ve SQL eklendi. API01 üzerinden çalışır;
+varsayılan transaction/ROLLBACK provası, -Apply COMMIT, -Verify server-side read-only'dir.
+Aktif olmayan/silinmiş seçimleri canlandırmaz, mükerrer aktif adlarda durur. Yalnız eksik
+bağ/seçenek ve null varsayılanlar eklenir. Ürün özelliği mevcutsa (silinmiş kayıt dahil)
+korunur; ürün grubu, ERP eşlemesi ve diğer özellikler değişmez. Kısa yazma kilitleri,
+3 sn lock timeout ve 30 sn statement timeout eşzamanlı kullanıcı seçimi yarışını sınırlar.
+Ön kontrol 1 seçenek/3 varsayılan/0 ürün değeri. ROLLBACK provası geçti; COMMIT sonrası
+146 seçenek/146 grup varsayılanı/29137 ürün değeri doğrulandı: 145 seçenek, 143 varsayılan,
+29137 eksik ürün değeri eklendi. P-00023168 grp_14/Triko olarak kaldı, Ürün Grubu=Triko.
+Kot Ceket ve Blazer Ceket'in Ceket varsayılanları korundu. Son -Verify read-only başarılı;
+ikinci ROLLBACK provası bütün ekleme/güncellemelerde 0 verdi. Mevcut 146 varsayılan ve
+29137 ürün satırı transaction içi tam-satır karşılaştırmasında değişmeden korundu.
+Uygulama kodu/build/yayın, API/worker aktivasyonu, V3/MySQL/.59/Nginx ve GitHub işlemi yok.
+Geçici SQL tabloları ON COMMIT DROP ile kapandı; kalıcı geçici dosya/yedek/tünel bırakılmadı.
+Bu işlem mevcut yerel gruplara göre alan dolumudur; kalan 202 V3 grubunun eşlenmesi,
+Tesettür koşulları ve Database moduna geçiş tamamlanmış sayılmaz. Tarayıcı kabulü bekler.
+
+**EM2 — ONAYLI CEKET GRUPLARI VE EKSİK ÖZELLİK TANIMI (2026-09-06):**
+Kullanıcı V3 gruplarının ayrı kalmasını, Kot Ceket/Blazer Ceket için Ürün Grubu üst
+sınıflandırmasının Ceket olmasını onayladı. API01 üzerinden .241 salt-okunur kontrolde
+`urun_grubu` ve `urun_alt_grubu` tanımlarının olmadığı kesinleşti; alanın görünmemesi boş
+değerden değil eksik tanımdandı. Örnek P-00023168 mevcut grubu grp_14/Triko olarak görüldü.
+`tools/tests/prepare-v3-ceket-groups.ps1` ve SQL eklendi. Varsayılan çalışma yazmaları
+transaction içinde prova edip ROLLBACK yapar (salt-okunur değildir); -Apply COMMIT eder.
+Hedef kimliği, Ceket şablon kimliği, kaynak kod/ad, aktiflik ve mevcut eşleme çakışmaları
+kontrollüdür. Adla tahmin eşlemesi yok; mevcut farklı/bilerek boşaltılmış eşleme ezilmez.
+Önce rollback provası, sonra açık onay kapsamındaki COMMIT ve ikinci rollback provası geçti.
+Sonuç: v3_0016/Kot Ceket, v3_2956/Blazer Ceket; yeni gruplarda mevcut Ceket özellik ve
+alt-özellik şablonu kopyalandı. İki normal inbound hedef yazıldı; Tesettür null korundu.
+urun_grubu/select ve Ceket değeri oluşturuldu; 146 gruba özellik bağı eklendi. Yalnız
+grp_46 ve iki yeni grupta Ceket varsayılanı tanımlandı. Tekrar provada bağ/default ekleme
+0/0; grup ve eşleme yeniden yazılmadı. Ürün kartları/değerleri geri doldurulmadı veya
+taşınmadı. V3, MySQL, .59, Nginx, servis/config/yayın ve GitHub değişikliği yok.
+Kalıcı betikler dışında geçici dosya/yedek/tünel oluşturulmadı. Bu tur uygulama kodu
+değişmedi; gerçek transaction prova/uygulama/idempotency kontrolleri çalıştırıldı.
+Kalan 202 kaynak grup, Tesettür kararları, gerçek kart aktarım kabulü ve Database modunun
+aktivasyonu tamamlanmadı. Karttaki yeni alanın tarayıcı görsel kabulü yapılmadı.
+
+**EM2 — ADMIN PAKETİ YAYINLANDI (2026-09-06):**
+Kullanıcının hazırladığı 21:34 build'i ve .56 admin dosyaları için açık izinle
+`20260906T194000Z_product_group` release'i etkinleştirildi. `defaultAttributeValueId` ve
+Varsayılan değer içeriği pakette doğrulandı. Admin lint ve TypeScript noEmit başarılı.
+Arşiv SHA-256 kontrolünden sonra admin symlink'i atomik değiştirildi. Public multi-test
+admin HTML/JS HTTP 200; `index-BYZ6QmiD.js` SHA-256 yerelle eşleşti:
+`e9d9cd1a9d6c27b9b68f977849fe1cdb311b1e3dda0c66515474a7eb16ad870d`.
+Nginx active; config/restart, API/worker, DB, .59 ve GitHub değişikliği yok.
+Önceki admin release'i ve yalnız bu yayın için üretilen yerel/uzak geçici arşivler temizlendi;
+sunucuda yalnız yeni admin release'i kaldı. Disk %77, 11 GB boş.
+Bu kabul dosya yayınına aittir; oturumlu ürün kartında Ürün Grubu alanının veriyle
+görünmesi doğrulanmadı. Eksik grup-özellik seed/verisi frontend yayınıyla tamamlanmış sayılmaz.
+
+**EM2 — ADMIN YAYINI GÜNCEL BUILD BEKLİYOR (2026-09-06):**
+Kullanıcı yalnız .56 üzerindeki admin dosyalarının yayınına açık izin verdi; .59, Nginx
+yapılandırması ve DB kapsam dışı. Hazır `admin/dist/index.html` 15:09 tarihli eski
+`index-CKjS-mlB.js` paketini referanslıyor; ürün detay/grup kaynakları 20:07, MappingPage
+20:45 tarihli. Eski paket yeniden yayınlanmadı. Repository talimatı etkileşimli oturumda
+production build'i yasakladığından kullanıcı tarafından güncel build hazırlanması bekleniyor.
+Bu ön kontrolde kaynak kod, sunucu veya DB değişmedi; test çalıştırılmadı.
+
+**EM2 — V3 ÜRÜN GRUBU SÖZLÜĞÜ DOLDURULDU (2026-09-06):**
+Kullanıcının kapsam düzeltmesiyle .59 temelli eşleme önerisi uygulanmadı; yalnız V3
+`cdItemAttributeDesc` (ItemTypeCode=1, AttributeTypeCode=2, LangCode=TR) kod/ad tanımları
+API01 üzerinden yeni `192.168.0.241/ecommerce_db` ERP sözlüğüne aktarıldı.
+`tools/tests/import-v3-group-dictionary.ps1` varsayılan salt-okunur ön kontrol, açık `-Apply`
+ile tek transaction upsert yapar; hedef kimliği, kod/ad geçerliliği ve korunan eşleme
+metadatasını doğrular. İlk SQLCMD çıktı seçenek çakışması giderildi.
+Ön kontrol: kaynak 204, yeni 204. Uygulama: COMMIT; hedef 204, eşleme 0.
+Tekrar salt-okunur kontrol: kaynak 204, yeni 0, farklı ad 0. `0016=Kot Ceket` kodundaki
+başlangıç sıfırları ve Türkçe adlar korundu. Ürün kartları/yerel gruplar değiştirilmedi;
+V3 ve .59'a yazılmadı. Database modu/worker aktivasyonu, yayın ve GitHub push yapılmadı.
+Bu tur uygulama kodu değişmedi; script ön kontrol/uygulama/son kontrol çalıştırıldı.
+Göreve ait V3 tüneli kapatıldı; sunucuya geçici dosya veya yedek oluşturulmadı.
+
+**EM2 — .59 ESKİ GRUPLAMA YÖNTEMİ SALT-OKUNUR DOĞRULANDI (2026-09-06):**
+Kullanıcının eski sistemi örnek alma talebiyle API01 üzerinden geçici SSH forward kullanıldı.
+.59 kayıtlı anahtarla giriş reddedildi; kayıtlı parola yalnız bellekte kullanılarak SSH.NET ve
+known_hosts açık anahtar pin kontrolüyle bağlantı kuruldu. Host `ecsproshop`, uygulama yolu
+`/opt/ECSProsAI/publish`; uygulamanın kendi connection ayarları sunucu belleğinde okundu.
+PostgreSQL `ecommerce_db`, .59 içindeki Docker adresi `172.18.0.3`; `transaction_read_only=on`
+doğrulandı. Sunucuda dosya/DB/servis değişikliği yapılmadı; MySQL'e bağlanılmadı.
+Kartlar .59'da da `P-040980 / P-00020953 / P-00021123 -> grp_46 Ceket`,
+`P-040950 -> grp_73 Mont`, `P-040977 -> grp_18 Tunik`. ERP sözlüğü boş; bu gruplar için
+erp:* kategori eşleme kaydı yok. Sunucudaki LegacySyncService kaynak dosyası ve
+`docs/grup_eslesme.md` salt-okunur incelendi: eski yöntem V3 grup adını değil MySQL
+`apurunler.urunGrupId` değerini `grp_{id}` koduna ve birleştirme listesine bağlar.
+Örnek birleştirmeler: 76/Kadın Ceket -> grp_46, 78/Kadın Mont -> grp_73,
+90/Kız Çocuk Tunik -> grp_18. Bu satırların örnek kartlardaki geçmiş MySQL ID'leri olduğu
+iddia edilmedi; yöntem ile mevcut sonuç ayrı kanıtlardır.
+Öneri: V3 kaynak kodu+Tesettür koşulunu, ortak ürün kodlarının .59'da mevcut grup dağılımıyla
+bir defalık karşılaştırmak; tek hedefte birleşenleri aday yapmak, çelişenleri ayrıca gözden geçirmek.
+.59 sürekli kaynak yapılmaz; henüz eşleme/veri aktarılmadı.
+Kalıcı salt-okunur yardımcı `tools/tests/legacy-product-group-reference.ps1` eklendi;
+Inspect/Examples/Mechanism çalıştırıldı. Uygulama kodu değiştirilmedi; build/yayın yapılmadı.
+Geçici .59 SSH tüneli kapatıldı; sunucuya geçici dosya veya yedek bırakılmadı.
+
+**EM2 — EŞLEŞMEYEN GRUPLARDAN GERÇEK KART ÖRNEKLERİ (2026-09-06):**
+Kullanıcının örnek inceleme talebiyle API01 üzerinden V3 SELECT ve hedef PostgreSQL server-side
+read-only sorguları yapıldı. Eski config/ad/prefix kurallarında hedef bulunamayan, gerçekten
+ürün bağlı örnekler: V3 `2956 / Blazer Ceket` normal koşulu, `2400 / Şişme Yelek` normal koşulu,
+`14 / Tunik` Tesettür koşulu. Hedefte mevcut kartlar sırasıyla `P-040980 -> grp_46 / Ceket`,
+`P-040950 -> grp_73 / Mont`, `P-040977 -> grp_18 / Tunik` olarak doğrulandı. Hedef aktif
+grup envanterinde Blazer/Şişme adıyla birebir tanım yok; Tunik mevcut ama Tesettür Tunik adı yok.
+Bu örnekler V3 kartlarının tanımsız olmadığını, eski isim/prefix yaklaşımının kaynak kodu ile
+yerel grup anlamını her durumda bağlayamadığını gösteriyor. Mevcut kartın grubu bütün kaynak
+grup için otomatik doğruluk garantisi sayılmadı; eşleme veya veri değiştirilmedi. V3 2956 grubunda
+`P-00021123`, `P-00020953` gibi ek kart örnekleri de doğrulandı. MAX(ItemCode) sonucu tarih
+olarak yorumlanmadı. Bu tur yalnız inceleme/dokümantasyon; kod değişmedi, test/build/yayın yok.
+Geçici V3 SSH tüneli iş sonunda kapatıldı; sunucuya dosya/yedek bırakılmadı.
+
+**EM2 — ONAYLI ÜÇ MIGRATION UYGULANDI, GERÇEK ÖNİZLEME GEÇTİ (2026-09-06):**
+Kullanıcının açık onayıyla yalnız yeni PostgreSQL `192.168.0.241/ecommerce_db` üzerinde,
+API01 SSH yolu kullanılarak üç mevcut EF migration uygulandı: Catalog
+`20260906160734_AddProductGroupAttributeDefaultValue`, Integration
+`20260906164240_AddErpReferenceItems` ve `20260906182451_AddErpReferenceItemMappedTarget`.
+Önce Catalog/Integration modüllerinin tüm önceki migration'ları hedef geçmişiyle karşılaştırıldı;
+eksik öncül yok. Uygulama `tools/tests/erp-group-schema-migration.ps1` + `erp-group-schema.sql`
+ile tam üç Up işlemi ve EF 8.0.14 geçmiş kayıtları olarak, tek transaction / advisory lock /
+3 saniye lock timeout / 30 saniye statement timeout altında yapıldı. Başka migration uygulanmadı.
+Etkilenen grup-özellik tablosu ve iki migration history tablosu custom dump, Integration şeması
+schema-only dump ile yedeklendi; arşiv TOC ve SHA-256 doğrulandı (custom dump 42.057 byte,
+`ce99423e57374831689da76802bbeb7648cf20b45659ae3964d7874e793f1f9c`). Mevcut grup-özellik
+satır sayısı önce/sonra **1021/1021**; yeni ERP sözlük tablosu **0** satır. Ürün, fiyat, stok,
+V3/MySQL, .59 veya Nginx üzerinde değişiklik yok. Migration sonrası üç geçmiş kaydı ve gerekli
+kolonlar salt-okunur doğrulandı.
+API01/02 private readiness **200/200**. API01 API ve ERP worker `active/running`, `NRestarts=0`;
+restart/yayın yapılmadı. API01 loopback 5050 dinlemediğinden ilk HTTP denemesi başarısızdı;
+belgelenmiş private `192.168.0.245:5050` adresiyle sağlık doğrulandı.
+Gerçek `ErpGroupMigration_ReadOnly_Preview` API01 üzerinden iki loopback SSH forward ile **1/1**
+geçti; PostgreSQL server-side read-only korundu. V3 **204** grup tanımı; boş hedef nedeniyle
+mevcut/öneri farkı **204**. Eski kurallar normalde **59** hedef / **145** eksik koşul, Tesettür'de
+**13** hedef / **191** eksik koşul üretiyor. Bunlar grup/koşul sayılarıdır, etkilenen ürün sayısı
+değildir. Sözlük dolumu/iş eşlemesi uygulanmadı; Database modu ve yayın açılmadı. Kaynak eski TLS
+1.0 uyarısı verdi; TLS ayarları değiştirilmedi. Yerel regresyon **135/135** geçti.
+Önceki iş-sonu temizlik talebi kapsamında başarılı kabulden sonra yalnız bu işin geçici yedek
+dizini `/var/backups/ecspros-erp/group-schema-20260906-_ll36la5` iki dosyası ve SHA-256 doğrulanarak
+kaldırıldı; bu geçici yedek artık mevcut değil, eski yedeklere dokunulmadı. Geçici SSH tüneli ve
+yerel `.codex-tmp-group-tests` çıktıları temizlendi. Kalıcı kod/testler ve yerel çalışmalar korundu.
+
+**EM2 HEDEF KABULÜ — API01 ÜZERİNDEN ERİŞİM DOĞRULANDI, EKSİK ŞEMA (2026-09-06):**
+Kullanıcı private IP'lere kendi bilgisayarından doğrudan erişilemeyeceğini yeniden belirtti;
+API01/API02 veya SSH tüneli kullanılması kalıcı devir notuna kaydedildi. Kayıtlı anahtar
+OpenSSH biçiminde: PuTTY denemesi format nedeniyle çalışmadı, Windows OpenSSH istemcisiyle
+API01 (`api-1`) bağlantısı ve PostgreSQL private TCP erişimi başarılı oldu. Geçici loopback-only
+PostgreSQL/V3 tünellerinde test bağlantıları yalnız environment override ile değiştirildi;
+appsettingsTest.json değiştirilmedi ve secret değerler çıktıya verilmedi.
+Hedef kimliği API01 üzerinden `ecommerce_db / 192.168.0.241`, `transaction_read_only=on` olarak
+doğrulandı. Gerçek önizleme testi bağlantıyı geçti, PostgreSQL 42703 hatasıyla durdu:
+`definition.product_group_attributes.DefaultAttributeValueId` yok. İkinci salt-okunur şema ve
+migration geçmişi kontrolünde `integration.erp_reference_items` tablosunun da bulunmadığı,
+`20260906160734_AddProductGroupAttributeDefaultValue`, `20260906164240_AddErpReferenceItems`,
+`20260906182451_AddErpReferenceItemMappedTarget` migration'larının uygulanmadığı doğrulandı.
+Artık engel ağ değil, hedef şemadır. Bunlar GitHub'dan gelen mevcut migration kaynaklarıdır;
+bu turda migration/DB yazımı, servis değişikliği veya yayın yapılmadı. Devam için yeni hedefe
+bu şema değişikliklerini uygulama onayı gerekir; .59/Nginx kapsam dışıdır.
+Kalıcı salt-okunur araç: `tools/tests/erp-group-target-preflight.ps1` (Api1/Api2, allowlist hedef,
+SSH stdin ile bellek içi credential, server-side read-only, şema/migration sorguları).
+Araç başarıyla çalıştı; acceptance dışı API testleri aynı derlemede **135/135** geçti.
+Gerçek `ErpGroupMigration_ReadOnly_Preview` **şema eksikliği nedeniyle başarısız**; fark/eksik
+eşleme adetleri henüz hesaplanamadı. Yerel test artifacts klasörü kaldırıldı, yalnız bu işin
+SSH tünel process'i komutuyla tekil doğrulanarak kapatıldı. Kaynak dosyalar/yerel çalışmalar korundu.
+
+**EM2 — ÜRÜN GRUBU İÇE AKTARIM KODU TAMAMLANDI, HEDEF KABULÜ BLOKE (2026-09-06):**
+Kullanıcının devam/tamamlama talebiyle gerçek V3 kodu + bağımsız Tesettür koşulunu tüketen
+`ErpInboundGroupMapping` katalog ve hedefli ürün yenilemeye bağlandı. Mevcut sözlük `RawJson`
+alanında sürümlü `ecsprosInboundGroupV1` nesnesi normal/Tesettür için ayrı yerel grup hedefleri
+tutuyor; yeni kolon/migration eklenmedi. Dışa aktarım `RulesJson` kayıtları ters okunmuyor veya
+değiştirilmiyor. Aktif kaynak ve aktif/silinmemiş hedef şart; eksik koşulda diğer hedefe/ad/prefix'e
+düşülmez. Eksik eşlemeli kart atlanır, diğerleri işlenir ama checkpoint ilerletilmez. Kaynak grup
+tanımı eksik/çoklu olan kart için de diğer kartları engellemeyen, açık hata yolu eklendi.
+Panel Eşlenmemiş sekmesine normal/Tesettür hedef seçimi, kod/ad arama ve yalnız eksikler filtresi
+eklendi. Eski outbound eşlemeyi değiştiren düğmenin yerini ayrı inbound kayıt aldı. Kaydetme
+`catalog.products.manage`, toplu geçiş `definition.manage` yetkisi ister. Eski ekrandan kayıt
+eşzamanlı kullanıcı değişikliğini ezmez; JSON'un ilgisiz alanları korunur.
+`ErpLegacyGroupMapping` eski çözümü geçiş için ortaklaştırdı. `ErpGroupMappingMigration` ve
+`POST mapping/erp-group-migration`: varsayılan Apply=false SELECT-only önizleme; açık Apply=true
+yalnız hiç ayarlanmamış satırlara eski ad/prefix kararlarını normal/Tesettür için ayrı taşır.
+Mevcut veya bilerek boşaltılmış eşleme korunur. `ProductGroupMappingMode=Compare` yalnız DryRun=true;
+Database modu config grup eşlemelerini okumaz. Yeni ürünlerde grup varsayılanları ERP değerlerini
+ezmeden eklenir; mevcut ürünün personel özellikleri değiştirilmez.
+Doğrulama: acceptance dışı API **135/135**, V3 SELECT-only sözlük + gerçek normal/Tesettür kart
+testleri **3/3** geçti (`P-00023154`: grup 101/normal; `P-00023160`: Tesettür). Admin `npm run lint`
+ve `npx tsc -p tsconfig.app.json --noEmit` başarılı; `git diff --check` temiz. İlk yeni unit test
+derlemesi internal Normalize erişimi nedeniyle kırıldı; test sabit normalize edilmiş anahtarla
+düzeltildi ve son paket tamamen geçti. Mevcut derleyici uyarıları bu kapsamda değiştirilmedi.
+Hedef salt-okunur geçiş önizleme testi **başarısız**: `192.168.0.241:5432` bağlantı timeout.
+Bu nedenle gerçek hedef karşılaştırması, hedef yazmalı/idempotency ve tarayıcı etkileşim kabulü
+yapılamadı/yapılmadı. Varsayılan Legacy korundu; eski config anahtarları etkin geçişten önce
+kaldırılmadı. Genel EM2'nin özellik/varyant/tedarikçi config geçişi bu ürün grubu işinin dışındadır.
+Devreye alma kapıları `docs/runbooks/erp-grup-esleme-gecisi.md` içinde. Yayın/push/servis işlemi,
+production veya hedef DB yazımı yok. Bu işin `.codex-tmp-group-tests` çıktıları iş sonunda
+doğrulanarak kaldırıldı; yerel/untracked kaynaklar ve kalıcı testler korundu.
+
+**EM2 — V3 GRUP SÖZLÜĞÜ VE KAYNAK KOŞULU, İLK KOD AŞAMASI (2026-09-06):**
+Kullanıcı gerçek V3 grup kodunu kullanma ve Tesettür bilgisini ayrı koşul olarak koruma önerisini onayladı.
+`IErpProductGroupReader` ve SQL Server reader bütün tip 2 grup tanımlarını salt-okunur alıyor;
+snapshot `ErpProductGroupContext` içinde kaynak kod/ad ile tip 8 / kod 1 Tesettür bilgisini ayrı taşıyor.
+Baştaki sıfırlar korunuyor; belirsiz grup bağı ve eksik bağlı tanım sessizce birleştirilmiyor.
+`ErpProductGroupDictionary` katalog başında toplu, tur içinde yeni/değişen grupta hedefli sözlük upsert'i
+yapıyor. Operatörün pasiflik, kaynak ve eşleme alanları korunuyor; kaybolan kaynak kayıtları silinmiyor.
+Dry-run sözlük yazmıyor. `ProductGroupDictionaryEnabled` varsayılan kapalı; mevcut hedef migration'ı
+doğrulanmadan etkinleştirilmedi. Yeni DB kolon/migration eklenmedi, hedef veya production DB'ye yazılmadı.
+Doğrulama: acceptance dışı API testleri **125/125**, gerçek V3 SELECT-only sözlük kabulü **1/1** geçti;
+`git diff --check` temiz. Test çıktıları ayrı `.codex-tmp-group-tests` altında üretildi ve iş sonunda kaldırıldı.
+EM2 henüz tamamlanmadı: panelin dışa aktarım kurallarını körlemesine ters okumadan içe aktarım koşul
+sözleşmesi, eski grup/prefix eşlemelerinin taşınması, eski/yeni karşılaştırma ve grup varsayılanları
+tamamlanmalı. Mevcut config eşlemeleri kaldırılmadı; servis davranışı değiştirilmedi. Deploy/push yapılmadı.
+
+**ERP GRUP SÖZLÜĞÜ GEÇİŞİ — V3 KAYNAĞI DOĞRULANDI (2026-09-06):**
+Kullanıcının EM2 başlatma talebiyle V3 `dbo.jld_Appurunler` tanımı ve ilgili sözlükler SELECT ile incelendi.
+Gerçek grup kaynağı `cdItemAttributeDesc` (`ItemTypeCode=1, AttributeTypeCode=2, LangCode=TR`);
+ürün bağı `prItemAttribute` üzerinden geliyor. 204 grup tanımı bulundu; örnekler `0016=Kot Ceket`,
+`101=Triko Ceket`, `199=Triko Takım`. Kodlar baştaki sıfırlar korunarak metin tutulmalı.
+Mevcut prosedür, tip 8 değeri `1 / Tesettür Ürünleri` olan kartların grup adına `Tesettür ` öneki
+ekliyor. Bu özellik 1.463 üründe mevcut; prosedürün grup adı gerçek tip 2 tanımından farklı olabiliyor.
+Bu nedenle salt grup koduna geçiş, mevcut Tesettür/grup ayrımını kendiliğinden birleştirmemeli.
+Gerçek grup kodu ve tip 8 ayrımının panel eşleme modelinde nasıl temsil edileceği geçiş kararı olarak
+ortaya çıktı; uygulama değişikliği ve veri taşıma bu karar verilmeden yapılmadı. V3 sorguları salt-okunur;
+production veya hedef DB yazımı, deploy ve GitHub işlemi yok.
+
+**ERP ÜRÜN GRUBU EŞLEME İNCELEMESİ (2026-09-06):**
+Yeni alınan `docs/erp-esleme-plani.md` v1.3 ve uygulama kaynakları incelendi. Panel/sözlük ve çok koşullu
+kural altyapısı mevcut; stok kartı aktarım worker'ının tablo eşlemelerine geçişi (EM2) henüz uygulanmamış.
+`ErpSourceSyncService.ResolveGroup` hâlâ config → birebir ad → kontrollü prefix sırasını kullanıyor;
+ERP mapping tablolarını okumuyor. Reader/model yalnız `urunGrubu` adını taşıyor. Yeni `urun_grubu`
+özelliğinin grup varsayılanlarını aktarıma uygulayan kod da worker'da yok. Planın tedarikçilerin
+yazılmadığına dair mevcut durum notu birleşmiş kod için güncel değil: otomatik cari/ürün bağı uzlaştırması
+mevcut. Panelde eşli görünmek worker'ın bu eşlemeyi kullandığı anlamına gelmiyor. Bu incelemede yalnız
+dokümantasyon kaydı eklendi; kod, canlı veri, yayın veya GitHub işlemi yapılmadı.
 
 **GITHUB ÇİFT YÖNLÜ EŞİTLEME — YEREL ÇALIŞMALAR KORUNDU (2026-09-06):**
 Kullanıcının açık al/gönder talebiyle 13 dosyadaki yerel admin, ERP tedarikçi/ürün grubu, seed ve dokümantasyon
