@@ -78,3 +78,4 @@ appsettings.Production.json.bak*
 docs/liveDbSettings.json
 /d2.html
 /detay.html
+tools/tests/datagrid/node_modules

@@ -83,7 +83,13 @@ public static class TicketGrid
     public static IQueryable<Ticket> ApplyAll(IQueryable<Ticket> q, TicketListFilters f, Guid userId, ICrmDbContext db, GridRequest? grid, bool includeStatus)
     {
         q = ApplyNamed(q, f, userId, db);
-        q = includeStatus ? Schema.ApplyFilters(q, grid) : Schema.ApplyFilters(q, grid, "status");
+        // "Kontrol" (readByMe) kullanıcıya bağlı hesaplanır → şemada değil, burada özel: true = son işlemi okudum (ya da işlem yok)
+        var readByMe = grid?.Filters.FirstOrDefault(x => string.Equals(x.Field, "readByMe", StringComparison.OrdinalIgnoreCase));
+        if (readByMe is not null && bool.TryParse(readByMe.Value, out var okundu))
+            q = okundu
+                ? q.Where(t => t.LastActivityId == null || db.TicketReads.Any(x => x.ActivityId == t.LastActivityId && x.UserId == userId))
+                : q.Where(t => t.LastActivityId != null && !db.TicketReads.Any(x => x.ActivityId == t.LastActivityId && x.UserId == userId));
+        q = includeStatus ? Schema.ApplyFilters(q, grid, "readByMe") : Schema.ApplyFilters(q, grid, "status", "readByMe");
         // f.status verilmişse adlandırılmış durum kuralı (gizli olmayanlar) uygulanmaz — grid filtresi kazanır
         if (includeStatus && !(grid?.HasFilter("status") ?? false)) q = ApplyStatus(q, f.StatusCode);
         return q;

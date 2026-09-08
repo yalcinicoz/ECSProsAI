@@ -118,6 +118,7 @@ export function OrdersPage() {
         <div className="text-xs" style={{ color: 'var(--text-s)' }}>{PAYMENT_STATUS_MAP[o.paymentStatus] ?? o.paymentStatus}</div>
       </> },
     { key: 'status', header: 'DURUM', lockVisible: true, sortable: true, priority: 1,
+      filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(ORDER_STATUS_MAP).map(([value, v]) => ({ value, label: v.label })) },
       cell: o => { const st = ORDER_STATUS_MAP[o.status] ?? { label: o.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> } },
     { key: 'createdAt', header: 'TARİH', sortable: true, priority: 2, filter: { type: 'date', label: 'Tarih', quick: true },
       cell: o => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(o.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}</span> },

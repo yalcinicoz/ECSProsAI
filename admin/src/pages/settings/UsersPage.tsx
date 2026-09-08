@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
@@ -178,29 +178,39 @@ function UserModal({ user, onClose }: { user: User | 'new'; onClose: () => void 
 }
 
 export function UsersPage() {
-  // DataGrid F1 teknik smoke-test (plan K5: gerçek UX pilotu Siparişler). Arama/sayfa URL'de, kolon tercihleri localStorage'da.
-  const grid = useGridState('users', { defaultPageSize: 20 })
-  const [search, setSearch] = useState(grid.state.search)
+  // DataGrid (2026-09-08): sunucu taraflı filtre/sıralama/global arama (UserGrid.Schema) + Excel export; her sütunda başlık filtresi.
+  const grid = useGridState('users', { defaultPageSize: 20, defaultSort: 'username', defaultDir: 'asc' })
   const [editing, setEditing] = useState<User | 'new' | null>(null)
 
-  const { data, isLoading, isFetching } = useQuery<PagedUsers>({
+  const { data, isLoading, isFetching, error } = useQuery<PagedUsers>({
     queryKey: ['iam-users', ...grid.queryKey],
     queryFn: async () => (await api.get(`/iam/users?${grid.toParams()}`)).data.data,
     placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
+  const { data: roles } = useQuery<Role[]>({
+    queryKey: ['roles-select'],
+    queryFn: async () => (await api.get('/iam/roles')).data.data,
+  })
+  const roleOptions = useMemo(() => (roles ?? []).map(r => ({ value: r.code, label: i18nAd(r.nameI18n) || r.code })), [roles])
 
   const users = data?.items ?? []
   const columns: GridColumn<User>[] = [
-    { key: 'username', header: 'KULLANICI ADI', frozen: true, lockVisible: true, cell: u => <code className="text-xs font-mono font-medium">{u.username}</code> },
-    { key: 'name', header: 'AD SOYAD', priority: 1, cell: u => `${u.firstName} ${u.lastName}` },
-    { key: 'email', header: 'E-POSTA', priority: 2, cell: u => u.email },
-    { key: 'phone', header: 'TELEFON', priority: 3, cell: u => u.phone || '—' },
-    { key: 'department', header: 'DEPARTMAN', priority: 3, defaultVisible: false, cell: u => u.department || '—' },
-    { key: 'jobTitle', header: 'ÜNVAN', priority: 3, defaultVisible: false, cell: u => u.jobTitle || '—' },
-    { key: 'roles', header: 'ROLLER', priority: 2, cell: u => (u.roles.length ? u.roles.join(', ') : '—') },
-    { key: 'lastLogin', header: 'SON GİRİŞ', priority: 3, cell: u => tarihSaat(u.lastLoginAt) },
-    { key: 'status', header: 'DURUM', priority: 1, cell: u => <Badge variant={u.isActive ? 'success' : 'neutral'}>{u.isActive ? 'Aktif' : 'Pasif'}</Badge> },
-    { key: 'edit', header: '', priority: 3, align: 'right', cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span> },
+    { key: 'username', header: 'KULLANICI ADI', frozen: true, lockVisible: true, sortable: true, filter: { type: 'text', label: 'Kullanıcı adı' },
+      cell: u => <code className="text-xs font-mono font-medium">{u.username}</code> },
+    { key: 'name', header: 'AD SOYAD', priority: 1, sortable: true, filter: { type: 'text', label: 'Ad', field: 'firstName' },
+      filters: [{ field: 'lastName', label: 'Soyad', type: 'text' }],
+      cell: u => `${u.firstName} ${u.lastName}` },
+    { key: 'email', header: 'E-POSTA', priority: 2, sortable: true, filter: { type: 'text', label: 'E-posta' }, cell: u => u.email },
+    { key: 'phone', header: 'TELEFON', priority: 3, sortable: true, filter: { type: 'text', label: 'Telefon', ops: ['contains', 'startswith'] }, cell: u => u.phone || '—' },
+    { key: 'department', header: 'DEPARTMAN', priority: 3, defaultVisible: false, sortable: true, filter: { type: 'text', label: 'Departman' }, cell: u => u.department || '—' },
+    { key: 'jobTitle', header: 'ÜNVAN', priority: 3, defaultVisible: false, sortable: true, filter: { type: 'text', label: 'Ünvan' }, cell: u => u.jobTitle || '—' },
+    { key: 'roles', header: 'ROLLER', priority: 2, filter: { type: 'enum', multiple: true, label: 'Rol', field: 'role', options: roleOptions },
+      cell: u => (u.roles.length ? u.roles.join(', ') : '—') },
+    { key: 'lastLoginAt', header: 'SON GİRİŞ', priority: 3, sortable: true, filter: { type: 'date', label: 'Son giriş' }, cell: u => tarihSaat(u.lastLoginAt) },
+    { key: 'isActive', header: 'DURUM', priority: 1, sortable: true, filter: { type: 'boolean', label: 'Aktif', quick: true },
+      cell: u => <Badge variant={u.isActive ? 'success' : 'neutral'}>{u.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'edit', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span> },
   ]
 
   return (
@@ -208,35 +218,25 @@ export function UsersPage() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Kullanıcılar</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{data?.totalCount ?? 0} kayıt</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{(data?.totalCount ?? 0).toLocaleString('tr-TR')} kayıt{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}</p>
         </div>
         <Button size="sm" onClick={() => setEditing('new')}>+ Yeni Kullanıcı</Button>
       </div>
 
       <DataGrid<User>
         gridId="users"
+        views
         grid={grid}
         columns={columns}
         rows={users}
         totalCount={data?.totalCount ?? 0}
         loading={isLoading}
         fetching={isFetching}
+        error={error ? errText(error) : null}
         onRowClick={u => setEditing(u)}
         empty="Kullanıcı yok."
-        toolbarLeft={
-          <div className="flex items-center gap-2">
-            <input className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 220 }}
-              placeholder="Ad, e-posta, kullanıcı adı, telefon ara…" value={search}
-              onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') grid.setSearch(search) }} />
-            <button onClick={() => grid.setSearch(search)}
-              className="px-3 py-1.5 rounded-lg text-sm"
-              style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Ara</button>
-            {grid.state.search && (
-              <button onClick={() => { setSearch(''); grid.setSearch('') }} className="text-xs underline" style={{ color: 'var(--text-s)' }}>temizle</button>
-            )}
-          </div>
-        }
+        search={{ placeholder: 'Ad, e-posta, kullanıcı adı, telefon ara…' }}
+        export={{ endpoint: '/iam/users/export', fallbackFileName: 'kullanicilar.xlsx' }}
       />
 
       {editing !== null && <UserModal user={editing} onClose={() => setEditing(null)} />}

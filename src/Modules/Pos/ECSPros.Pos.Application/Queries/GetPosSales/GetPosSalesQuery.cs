@@ -1,4 +1,5 @@
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 
 namespace ECSPros.Pos.Application.Queries.GetPosSales;
@@ -10,7 +11,9 @@ public record GetPosSalesQuery(
     DateTime? DateTo = null,
     string? Status = null,
     int Page = 1,
-    int PageSize = 20) : IRequest<Result<PagedResult<PosSaleListDto>>>;
+    int PageSize = 20,
+    /// <summary>DataGrid (2026-09-08): verilirse sayfa/sıralama/filtre/arama buradan (PosSaleGrid.Schema); Page/PageSize yok sayılır.</summary>
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<PosSaleListDto>>>;
 
 public record PosSaleListDto(
     Guid Id,
@@ -20,4 +23,5 @@ public record PosSaleListDto(
     Guid? MemberId,
     string Status,
     decimal GrandTotal,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string? RegisterName = null);

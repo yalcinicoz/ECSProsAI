@@ -92,9 +92,26 @@ public class PosController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
+        // DataGrid (2026-09-08): page/pageSize/search/sort/dir/f.* (PosSaleGrid.Schema); adlandırılmış filtreler korunur
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
         var result = await _mediator.Send(
-            new GetPosSalesQuery(sessionId, registerId, dateFrom, dateTo, status, page, pageSize), ct);
+            new GetPosSalesQuery(sessionId, registerId, dateFrom, dateTo, status, page, pageSize, grid), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>POS satışlarını Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: sessionId, registerId, dateFrom, dateTo, status.</summary>
+    [HttpPost("sales/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportSales([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<PosController> logger, CancellationToken ct)
+    {
+        var g = ECSPros.Api.Grid.GridExportEndpoint.Kimlik;
+        var filters = new PosSaleListFilters(g(body, "sessionId"), g(body, "registerId"),
+            ECSPros.Api.Grid.GridExportEndpoint.Tarih(body, "dateFrom"), ECSPros.Api.Grid.GridExportEndpoint.Tarih(body, "dateTo"),
+            body.NamedValue("status"), body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "pos-sales", "pos-satislari", "POS Satışları",
+            ECSPros.Api.Grid.PosSaleExportColumns.All, max => _mediator.Send(new ExportPosSalesQuery(filters, body.ToGridRequest(), max), ct), ct);
     }
 
     /// <summary>POS satış detayını döner.</summary>

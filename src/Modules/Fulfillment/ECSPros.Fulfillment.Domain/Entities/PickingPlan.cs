@@ -15,6 +15,8 @@ public class PickingPlan : AggregateRoot
     public DateTime? CompletedAt { get; set; }
 
     public ICollection<SortingBin> Bins { get; set; } = new List<SortingBin>();
+    /// <summary>DataGrid (2026-09-08): sipariş sayısı / dağıtım / ilerleme filtreleri için satır navigasyonu (yalnız sorgu; şema değişmez).</summary>
+    public ICollection<PickingPlanLine> Lines { get; set; } = new List<PickingPlanLine>();
 
     public void Start(Guid startedBy)
     {

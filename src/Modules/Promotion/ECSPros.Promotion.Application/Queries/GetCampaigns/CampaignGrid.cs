@@ -8,8 +8,8 @@ using Microsoft.EntityFrameworkCore;
 namespace ECSPros.Promotion.Application.Queries.GetCampaigns;
 
 /// <summary>
-/// Kampanyalar DataGrid şeması (F4). NameI18n jsonb sıralanmaz/filtrelenmez; kod/aktiflik/tarih/öncelik/platform/doldurma tipi beyaz listede.
-/// Global arama: yalnız kod (jsonb sözlük indexer'ı Where'de çevrilmez; ad araması istemcide değil, ileride ->> ile eklenir).
+/// Kampanyalar DataGrid şeması (F4). Ad (NameI18n jsonb "tr") GridJson.Text DbFunction'ıyla (jsonb_extract_path_text) sunucu tarafında
+/// filtrelenir/sıralanır; kod/aktiflik/tarih/öncelik/platform/doldurma tipi beyaz listede. Global arama: kod + rozet + ad (tr).
 /// </summary>
 public static class CampaignGrid
 {
@@ -17,6 +17,7 @@ public static class CampaignGrid
 
     public static readonly GridSchema<Campaign> Schema = new GridSchema<Campaign>()
         .Text("code", c => c.Code)
+        .Text("name", c => GridJson.Text(c.NameI18n, "tr"))
         .Text("badgeLabel", c => c.BadgeLabel)
         .Enum("fillType", c => c.FillType, FillTypes)
         .Enum("campaignTypeCode", c => c.CampaignType.Code)
@@ -28,6 +29,7 @@ public static class CampaignGrid
         .Number("priority", c => c.Priority)
         .Guid("firmPlatformId", c => c.FirmPlatformId)
         .Sort("code", c => c.Code)
+        .Sort("name", c => GridJson.Text(c.NameI18n, "tr"))
         .Sort("priority", c => c.Priority)
         .Sort("startsAt", c => c.StartsAt)
         .Sort("endsAt", c => c.EndsAt)
@@ -46,7 +48,9 @@ public static class CampaignGrid
         if (!string.IsNullOrWhiteSpace(f.Search))
         {
             var term = f.Search.Trim().ToLower();
-            query = query.Where(c => c.Code.ToLower().Contains(term) || (c.BadgeLabel != null && c.BadgeLabel.ToLower().Contains(term)));
+            query = query.Where(c => c.Code.ToLower().Contains(term)
+                || (c.BadgeLabel != null && c.BadgeLabel.ToLower().Contains(term))
+                || (GridJson.Text(c.NameI18n, "tr") != null && GridJson.Text(c.NameI18n, "tr")!.ToLower().Contains(term)));
         }
         return query;
     }

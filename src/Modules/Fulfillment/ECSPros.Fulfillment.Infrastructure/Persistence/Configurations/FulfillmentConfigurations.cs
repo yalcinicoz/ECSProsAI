@@ -127,7 +127,7 @@ public class PickingPlanLineConfiguration : IEntityTypeConfiguration<PickingPlan
         builder.HasQueryFilter(l => !l.IsDeleted);
 
         builder.HasOne(l => l.PickingPlan)
-            .WithMany()
+            .WithMany(p => p.Lines)
             .HasForeignKey(l => l.PickingPlanId)
             .OnDelete(DeleteBehavior.Cascade);
     }

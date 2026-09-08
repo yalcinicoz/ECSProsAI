@@ -556,14 +556,26 @@ public class OrderController : ControllerBase
 
     // ─── Quotes ───────────────────────────────────────────────────────────────
 
-    /// <summary>Teklif listesi.</summary>
+    /// <summary>Teklif listesi (DataGrid: page/pageSize/search/sort/dir/f.* — QuoteGrid.Schema; named: memberId, status).</summary>
     [HttpGet("quotes")]
     public async Task<IActionResult> GetQuotes(
-        [FromQuery] Guid? memberId, [FromQuery] string? status,
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        [FromQuery] Guid? memberId, [FromQuery] string? status, [FromQuery] string? search, CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetQuotesQuery(memberId, status, page, pageSize), ct);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetQuotesQuery(memberId, status, grid.Page, grid.PageSize, search, grid), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Teklifleri Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: memberId, status.</summary>
+    [HttpPost("quotes/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportQuotes([FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<OrderController> logger, CancellationToken ct)
+    {
+        var filters = new QuoteListFilters(ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "memberId"), body.NamedValue("status"), body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "quotes", "teklifler", "Teklifler",
+            ECSPros.Api.Grid.QuoteExportColumns.All, max => _mediator.Send(new ExportQuotesQuery(filters, body.ToGridRequest(), max), ct), ct);
     }
 
     /// <summary>Yeni teklif oluşturur.</summary>
@@ -655,14 +667,26 @@ public class OrderController : ControllerBase
 
     // ─── Gift Cards ───────────────────────────────────────────────────────────
 
-    /// <summary>Hediye kartlarını sayfalı listeler (panel).</summary>
+    /// <summary>Hediye kartlarını sayfalı listeler (panel; DataGrid: search/sort/dir/f.* — GiftCardGrid.Schema; named: status).</summary>
     [HttpGet("gift-cards")]
     public async Task<IActionResult> GetGiftCards(
-        [FromQuery] string? status, [FromQuery] string? search,
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        [FromQuery] string? status, [FromQuery] string? search, CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetGiftCardsQuery(status, search, page, pageSize), ct);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetGiftCardsQuery(status, search, grid.Page, grid.PageSize, grid), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Hediye kartlarını Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: status.</summary>
+    [HttpPost("gift-cards/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportGiftCards([FromBody] GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<OrderController> logger, CancellationToken ct)
+    {
+        var filters = new GiftCardListFilters(body.NamedValue("status"), body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "gift-cards", "hediye-kartlari", "Hediye Kartları",
+            ECSPros.Api.Grid.GiftCardExportColumns.All, max => _mediator.Send(new ExportGiftCardsQuery(filters, body.ToGridRequest(), max), ct), ct);
     }
 
     /// <summary>Hediye kartı bakiyesi sorgular.</summary>

@@ -9,7 +9,7 @@ public enum GridFieldType { Text, Enum, Date, Number, Bool, Guid }
 /// Bir liste ucunun sıralanabilir/filtrelenebilir alanlarının BEYAZ LİSTESİ (K1). Handler alan adı → entity ifadesi
 /// eşlemesini verir; <see cref="ApplyFilters"/> ve <see cref="ApplySort"/> yalnız bu eşlemeyi kullanır.
 /// Operatörler: text contains|eq|startsWith · enum in|eq · date between|gte|gt|lte|lt · number eq|gt|gte|lt|lte|between · bool eq · guid eq.
-/// Tarih değerleri: ISO-8601 (UTC'ye çevrilir) ya da yalnız gün "yyyy-MM-dd" (İstanbul günü; between'de bitiş günü DAHİL).
+/// Tarih değerleri: ISO-8601 (UTC'ye çevrilir) ya da yalnız gün "yyyy-MM-dd" (İstanbul günü; between'de bitiş günü DAHİL). DateOnly kolonlar da desteklenir (gün karşılaştırması).
 /// Metin karşılaştırmaları mevcut arama davranışıyla aynı: <c>ToLower().Contains</c> (LOWER … LIKE).
 /// </summary>
 public sealed class GridSchema<T>
@@ -183,6 +183,7 @@ public sealed class GridSchema<T>
     {
         var parts = value.Split(',', 2, StringSplitOptions.TrimEntries);
         var underlying = Nullable.GetUnderlyingType(body.Type) ?? body.Type;
+        if (underlying == typeof(DateOnly)) return BuildDateOnly(body, op, value, parts, name);
         if (underlying != typeof(DateTime)) throw new GridException($"'{name}' tarih alanı değil.");
         Expression C(DateTime d) => Typed(Expression.Constant(d, typeof(DateTime)), body.Type);
         switch (op)
@@ -201,6 +202,38 @@ public sealed class GridSchema<T>
             case "lte": return Expression.LessThan(body, C(ParseDate(value, name, true)));     // gün verildiyse gün dahil
             default: throw new GridException($"'{name}' için geçersiz operatör: {op}");
         }
+    }
+
+    /// <summary>DateOnly/DateOnly? kolonlar (gün hassasiyetli tarihler: fatura tarihi, vade, geçerlilik): between iki uç DAHİL; eq/gte/gt/lt/lte gün karşılaştırması.</summary>
+    private static Expression BuildDateOnly(Expression body, string op, string value, string[] parts, string name)
+    {
+        Expression C(DateOnly d) => Typed(Expression.Constant(d, typeof(DateOnly)), body.Type);
+        if (op == "between")
+        {
+            if (parts.Length != 2 || parts[0].Length == 0 || parts[1].Length == 0) throw new GridException($"'{name}' between iki tarih ister (from,to).");
+            var from = ParseDay(parts[0], name); var to = ParseDay(parts[1], name);
+            if (to < from) throw new GridException($"'{name}' için bitiş, başlangıçtan önce olamaz.");
+            return Expression.AndAlso(Expression.GreaterThanOrEqual(body, C(from)), Expression.LessThanOrEqual(body, C(to)));
+        }
+        var d = ParseDay(value, name);
+        return op switch
+        {
+            "eq" => Expression.Equal(body, C(d)),
+            "gte" => Expression.GreaterThanOrEqual(body, C(d)),
+            "gt" => Expression.GreaterThan(body, C(d)),
+            "lt" => Expression.LessThan(body, C(d)),
+            "lte" => Expression.LessThanOrEqual(body, C(d)),
+            _ => throw new GridException($"'{name}' için geçersiz operatör: {op}"),
+        };
+    }
+
+    /// <summary>"yyyy-MM-dd" → gün; ISO tarih-saat → İstanbul günü.</summary>
+    private static DateOnly ParseDay(string s, string name)
+    {
+        if (DateOnly.TryParseExact(s, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return d;
+        if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var dt))
+            return DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(dt, DateTimeKind.Utc), TrTz));
+        throw new GridException($"'{name}' için geçersiz tarih: {s}");
     }
 
     /// <summary>ISO-8601 → UTC; yalnız gün ("yyyy-MM-dd") → İstanbul gün başlangıcı (endOfDayExclusive ise ertesi gün başlangıcı).</summary>

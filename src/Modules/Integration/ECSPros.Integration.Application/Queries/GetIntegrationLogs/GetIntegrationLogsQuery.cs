@@ -1,5 +1,6 @@
 using ECSPros.Integration.Application.Services;
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,7 +15,9 @@ public record GetIntegrationLogsQuery(
     DateTime? To = null,
     int Page = 1,
     int PageSize = 50,
-    List<Guid>? FirmIntegrationIds = null) : IRequest<Result<PagedResult<IntegrationLogDto>>>;
+    List<Guid>? FirmIntegrationIds = null,
+    /// <summary>DataGrid (2026-09-08): verilirse sayfa/sıralama/filtre/arama buradan (IntegrationLogGrid.Schema); Page/PageSize yok sayılır.</summary>
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<IntegrationLogDto>>>;
 
 public record IntegrationLogDto(
     Guid Id,
@@ -34,33 +37,22 @@ public class GetIntegrationLogsQueryHandler(IIntegrationDbContext db)
     public async Task<Result<PagedResult<IntegrationLogDto>>> Handle(
         GetIntegrationLogsQuery request, CancellationToken ct)
     {
-        var q = db.IntegrationLogs.AsNoTracking();
-
-        if (request.FirmIntegrationId.HasValue)
-            q = q.Where(x => x.FirmIntegrationId == request.FirmIntegrationId.Value);
-        if (request.FirmIntegrationIds is { Count: > 0 })
-            q = q.Where(x => request.FirmIntegrationIds.Contains(x.FirmIntegrationId));
-        if (!string.IsNullOrWhiteSpace(request.ServiceType))
-            q = q.Where(x => x.ServiceType == request.ServiceType);
-        if (!string.IsNullOrWhiteSpace(request.OperationType))
-            q = q.Where(x => x.OperationType == request.OperationType);
-        if (!string.IsNullOrWhiteSpace(request.Status))
-            q = q.Where(x => x.Status == request.Status);
-        if (request.From.HasValue)
-            q = q.Where(x => x.CreatedAt >= request.From.Value);
-        if (request.To.HasValue)
-            q = q.Where(x => x.CreatedAt <= request.To.Value);
+        // DataGrid (2026-09-08): adlandırılmış filtreler + beyaz listeli grid filtre/sıralama (IntegrationLogGrid); Grid yoksa eski davranış.
+        var q = IntegrationLogGrid.ApplyAll(db.IntegrationLogs.AsNoTracking(), new IntegrationLogListFilters(
+            request.FirmIntegrationId, request.ServiceType, request.OperationType, request.Status, request.From, request.To,
+            request.FirmIntegrationIds, request.Grid?.Search), request.Grid);
+        var page = request.Grid?.Page ?? request.Page;
+        var pageSize = request.Grid?.PageSize ?? request.PageSize;
 
         var total = await q.CountAsync(ct);
-        var items = await q
-            .OrderByDescending(x => x.CreatedAt)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+        var items = await IntegrationLogGrid.Schema.ApplySort(q, request.Grid)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(x => new IntegrationLogDto(
                 x.Id, x.FirmIntegrationId, x.ServiceType, x.OperationType,
                 x.Status, x.ErrorMessage, x.DurationMs, x.ReferenceId, x.ReferenceType, x.CreatedAt))
             .ToListAsync(ct);
 
-        return Result.Success(new PagedResult<IntegrationLogDto>(items, total, request.Page, request.PageSize));
+        return Result.Success(new PagedResult<IntegrationLogDto>(items, total, page, pageSize));
     }
 }

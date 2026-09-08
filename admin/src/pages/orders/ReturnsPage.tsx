@@ -10,6 +10,11 @@ import { RETURN_STATUS_MAP } from './orderConstants'
 import { DataGrid, useGridState, type GridColumn, type GridFilterField } from '@/components/grid'
 import { errText } from '@/components/ui/DataTable.utils'
 
+// Sunucu Enum alanları yalnız in|eq kabul eder → seçenek listeleri (ReturnGrid: returnType/refundMethod/refundStatus serbest değerli enum)
+const RETURN_TYPE_OPTIONS = [{ value: 'return', label: 'İade' }, { value: 'refund', label: 'Geri ödeme' }]
+const REFUND_STATUS_OPTIONS = [{ value: 'pending', label: 'Bekliyor' }, { value: 'completed', label: 'Tamamlandı' }]
+const REFUND_METHOD_OPTIONS = [{ value: 'original_payment', label: 'Orijinal ödeme' }, { value: 'wallet', label: 'Cüzdan' }]
+
 const TABS = [
   { key: 'requested', label: 'Talep Edilen' },
   { key: 'approved',  label: 'Onaylı' },
@@ -187,16 +192,17 @@ export function ReturnsPage() {
   const switchTab = (key: string) => grid.mutate(n => { if (key === 'requested') n.delete('tab'); else n.set('tab', key) })
 
   const columns: GridColumn<ReturnSummary>[] = [
-    { key: 'returnNumber', header: 'İADE NO', filters: [{ field: 'trackingNumber', label: 'Kargo takip no', type: 'text' }, { field: 'cargoReturnCode', label: 'Kargo iade kodu', type: 'text' }], frozen: true, lockVisible: true, sortable: true, minWidth: 140,
+    { key: 'returnNumber', header: 'İADE NO', filter: { type: 'text', label: 'İade no', ops: ['startswith', 'contains', 'eq'] }, filters: [{ field: 'trackingNumber', label: 'Kargo takip no', type: 'text' }], frozen: true, lockVisible: true, sortable: true, minWidth: 140,
       cell: r => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{r.returnNumber}</code> },
-    { key: 'returnType', header: 'TİP', priority: 3, cell: r => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{r.returnType === 'refund' ? 'İade' : r.returnType}</span> },
+    { key: 'returnType', header: 'TİP', priority: 3, filter: { type: 'enum', label: 'Tip', options: RETURN_TYPE_OPTIONS }, cell: r => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{r.returnType === 'refund' ? 'İade' : r.returnType}</span> },
     { key: 'refundAmount', header: 'TUTAR', sortable: true, align: 'right', priority: 1, filter: { type: 'number', label: 'Tutar' },
       cell: r => <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{r.refundAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺</span> },
-    { key: 'refundStatus', header: 'GERİ ÖDEME', filters: [{ field: 'refundStatus', label: 'Geri ödeme durumu', type: 'text', ops: ['eq', 'contains'] }, { field: 'refundMethod', label: 'Geri ödeme yöntemi', type: 'text', ops: ['eq', 'contains'] }], sortable: true, priority: 2,
+    { key: 'refundStatus', header: 'GERİ ÖDEME', filter: { type: 'enum', multiple: true, label: 'Geri ödeme durumu', options: REFUND_STATUS_OPTIONS }, filters: [{ field: 'refundMethod', label: 'Geri ödeme yöntemi', type: 'enum', multiple: true, options: REFUND_METHOD_OPTIONS }], sortable: true, priority: 2,
       cell: r => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{r.refundMethod}{r.refundStatus ? ` · ${r.refundStatus}` : ''}</span> },
     { key: 'status', header: 'DURUM', lockVisible: true, sortable: true, priority: 1,
+      filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(RETURN_STATUS_MAP).map(([value, v]) => ({ value, label: v.label })) },
       cell: r => { const st = RETURN_STATUS_MAP[r.status] ?? { label: r.status, variant: 'neutral' as const }; return <Badge variant={st.variant}>{st.label}</Badge> } },
-    { key: 'cargoReturnCode', header: 'KARGO İADE KODU', priority: 3, defaultVisible: false, cell: r => <span className="text-xs font-mono" style={{ color: 'var(--text-s)' }}>{r.cargoReturnCode ?? '—'}</span> },
+    { key: 'cargoReturnCode', header: 'KARGO İADE KODU', priority: 3, defaultVisible: false, filter: { type: 'text', label: 'Kargo iade kodu' }, cell: r => <span className="text-xs font-mono" style={{ color: 'var(--text-s)' }}>{r.cargoReturnCode ?? '—'}</span> },
     { key: 'createdAt', header: 'TARİH', filters: [{ field: 'cargoReceivedAt', label: 'Teslim alınma tarihi', type: 'date' }], sortable: true, priority: 2, filter: { type: 'date', label: 'Tarih', quick: true },
       cell: r => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(r.createdAt).toLocaleDateString('tr-TR')}</span> },
     { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },

@@ -65,8 +65,22 @@ public class UsersController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetUsersQuery(search, activeOnly, page, pageSize), ct);
+        // DataGrid (2026-09-08): f.* filtreleri + sort/dir + role (UserGrid.Schema); eski parametreler korunur, sayfa boyu merkezi clamp
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: pageSize);
+        var result = await _mediator.Send(new GetUsersQuery(search, activeOnly, grid.Page, grid.PageSize, grid), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Kullanıcıları Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: activeOnly.</summary>
+    [HttpPost("users/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportUsers([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<UsersController> logger, CancellationToken ct)
+    {
+        var filters = new UserListFilters(body.Search, ECSPros.Api.Grid.GridExportEndpoint.Bayrak(body, "activeOnly") ?? false);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "users", "kullanicilar", "Kullanıcılar",
+            ECSPros.Api.Grid.UserExportColumns.All, max => _mediator.Send(new ExportUsersQuery(filters, body.ToGridRequest(), max), ct), ct);
     }
 
     /// <summary>Yeni kullanıcı oluşturur.</summary>
@@ -130,12 +144,28 @@ public class UsersController : ControllerBase
     [HttpGet("audit-logs")]
     public async Task<IActionResult> GetAuditLogs(
         [FromQuery] Guid? userId, [FromQuery] string? entityType, [FromQuery] string? action,
-        [FromQuery] DateTime? from, [FromQuery] DateTime? to,
+        [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] string? search,
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
+        // DataGrid (2026-09-08): global arama + f.* filtreleri + sort/dir (AuditLogGrid.Schema); adlandırılmış parametreler korunur
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: pageSize);
         var result = await _mediator.Send(new GetAuditLogsQuery(
-            userId, entityType, null, action, from, to, page, pageSize), ct);
+            userId, entityType, null, action, from, to, grid.Page, grid.PageSize, search, grid), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Denetim loglarını Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: userId/entityType/action/from/to.</summary>
+    [HttpPost("audit-logs/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportAuditLogs([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<UsersController> logger, CancellationToken ct)
+    {
+        var g = ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "userId");
+        var filters = new AuditLogListFilters(g, body.NamedValue("entityType"), null, body.NamedValue("action"),
+            ECSPros.Api.Grid.GridExportEndpoint.Tarih(body, "from"), ECSPros.Api.Grid.GridExportEndpoint.Tarih(body, "to"), body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "audit-logs", "denetim-loglari", "Denetim Logları",
+            ECSPros.Api.Grid.AuditLogExportColumns.All, max => _mediator.Send(new ExportAuditLogsQuery(filters, body.ToGridRequest(), max), ct), ct);
     }
 
     // ─── Roles ─────────────────────────────────────────────────────────────────

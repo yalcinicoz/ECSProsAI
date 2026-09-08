@@ -34,6 +34,26 @@ public static class StockGrid
         .Sort("updatedAt", s => s.UpdatedAt)
         .TieBreaker(s => s.Id);
 
+    /// <summary>
+    /// ÜRÜN kolonu başlık filtresi <c>f.product</c> (kod / ad / barkod / SKU): Stock'ta ürün alanı yok → şemada değil; global aramayla aynı
+    /// varyant kümesi mantığı. Şema uygulanırken "product" atlanır (<see cref="ApplyFiltersWithProductAsync"/>).
+    /// </summary>
+    public static string? ProductFilter(GridRequest? grid)
+        => grid?.Filters.FirstOrDefault(f => string.Equals(f.Field, "product", StringComparison.OrdinalIgnoreCase))?.Value?.Trim() is { Length: > 0 } v ? v : null;
+
+    /// <summary>Şema filtreleri + f.product varyant daraltması. Eşleşen varyant yoksa <c>null</c> döner (boş sonuç).</summary>
+    public static async Task<IQueryable<Stock>?> ApplyFiltersWithProductAsync(IQueryable<Stock> query, GridRequest? grid, ICatalogDbContext catDb, CancellationToken ct)
+    {
+        var product = ProductFilter(grid);
+        if (product is not null)
+        {
+            var ids = await GetStocksAdminHandler.SearchVariantIdsAsync(catDb, product, ct);
+            if (ids.Count == 0) return null;
+            query = query.Where(st => ids.Contains(st.VariantId));
+        }
+        return Schema.ApplyFilters(query, grid, "product");
+    }
+
     /// <summary>Grid sıralaması varsa o; yoksa mevcut varyant + kısım + raf sırası (aynı varyantın rafları alt alta).</summary>
     public static IQueryable<Stock> ApplySortCompat(IQueryable<Stock> q, GridRequest? grid)
         => grid?.Sort is { Length: > 0 } ? Schema.ApplySort(q, grid)
@@ -69,7 +89,9 @@ public class ExportStocksQueryHandler(IInventoryDbContext invDb, ICatalogDbConte
         if (f.VariantId.HasValue) query = query.Where(st => st.VariantId == f.VariantId);
         if (f.SectionId.HasValue) query = query.Where(st => st.SectionId == f.SectionId);
         if (f.BinId.HasValue) query = query.Where(st => st.BinId == f.BinId);
-        query = StockGrid.Schema.ApplyFilters(query, r.Grid);
+        var filtered = await StockGrid.ApplyFiltersWithProductAsync(query, r.Grid, catDb, ct);
+        if (filtered is null) return Result.Success(new GridExportSource<StockExportRow>(0, Array.Empty<StockExportRow>().AsQueryable()));
+        query = filtered;
 
         var count = await query.CountAsync(ct);
         if (count > r.MaxRows)

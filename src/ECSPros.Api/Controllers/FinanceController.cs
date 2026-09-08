@@ -24,17 +24,29 @@ public class FinanceController : ControllerBase
 
     // ─── Supplier Invoices ─────────────────────────────────────────────────────
 
-    /// <summary>Tedarikçi faturalarını listeler.</summary>
+    /// <summary>Tedarikçi faturalarını listeler (DataGrid: page/pageSize/search/sort/dir/f.* — SupplierInvoiceGrid.Schema; named: currentAccountId, status).</summary>
     [HttpGet("supplier-invoices")]
     public async Task<IActionResult> GetSupplierInvoices(
         [FromQuery] Guid? currentAccountId,
         [FromQuery] string? status,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search,
         CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetSupplierInvoicesQuery(currentAccountId, status, page, pageSize), ct);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetSupplierInvoicesQuery(currentAccountId, status, grid.Page, grid.PageSize, search, grid), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Tedarikçi faturalarını Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: currentAccountId, status.</summary>
+    [HttpPost("supplier-invoices/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportSupplierInvoices([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<FinanceController> logger, CancellationToken ct)
+    {
+        var filters = new SupplierInvoiceListFilters(ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "currentAccountId"), body.NamedValue("status"), body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "supplier-invoices", "tedarikci-faturalari", "Tedarikçi Faturaları",
+            ECSPros.Api.Grid.SupplierInvoiceExportColumns.All, max => _mediator.Send(new ExportSupplierInvoicesQuery(filters, body.ToGridRequest(), max), ct), ct);
     }
 
     /// <summary>Tedarikçi faturası oluşturur.</summary>

@@ -53,8 +53,8 @@ export function TrackingPage() {
   const qc = useQueryClient()
   const [selectedChannelId, setSelectedChannelId] = useState<string>(() => sessionStorage.getItem('tracking.channelId') ?? '')
   const [tab, setTab] = useState('')
-  // DataGrid F4 mekanik göç (outbox): sayfa/sayfa boyu grid durumunda; uç sort/filtre desteklemez
-  const grid = useGridState('tracking-outbox', { defaultPageSize: 30 })
+  // DataGrid (2026-09-08): outbox sunucu filtre/sıralama/arama (TrackingOutboxGrid.Schema) + Excel export; kanal + durum sekmesi adlandırılmış parametre
+  const grid = useGridState('tracking-outbox', { defaultPageSize: 30, defaultSort: 'createdAt', defaultDir: 'desc' })
   const [testMsg, setTestMsg] = useState<string | null>(null)
 
   const { data: firms = [] } = useQuery<Firm[]>({ queryKey: ['firms'], queryFn: async () => (await api.get('/core/firms')).data.data ?? [] })
@@ -82,6 +82,7 @@ export function TrackingPage() {
     queryFn: async () => (await api.get(`/tracking/outbox?${grid.toParams({ firmPlatformId: effectiveChannelId, status: tab || undefined })}`)).data.data,
     enabled: !!effectiveChannelId, refetchInterval: 15000,
     placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
   const { data: feed } = useQuery<FeedStatusDto>({
     queryKey: ['tracking-feed', effectiveChannelId],
@@ -129,13 +130,27 @@ export function TrackingPage() {
 
   const outboxRows = ob?.items ?? []
   const outboxColumns: GridColumn<OutboxRow>[] = [
-    { key: 'createdAt', header: 'ZAMAN', priority: 1, lockVisible: true, frozen: true, cell: r => tarihSaat(r.createdAt) },
-    { key: 'eventName', header: 'EVENT', priority: 1, cell: r => <code className="text-xs font-mono">{r.eventName}</code> },
-    { key: 'source', header: 'KAYNAK', priority: 2, cell: r => r.source },
-    { key: 'status', header: 'DURUM', priority: 1, cell: r => <Badge variant={DURUM[r.status]?.[1] ?? 'default'}>{DURUM[r.status]?.[0] ?? r.status}</Badge> },
-    { key: 'targets', header: 'HEDEFLER', priority: 3, cell: r => <span className="text-xs font-mono break-all" title={r.targetsJson ?? ''}>{(r.targetsJson ?? '[]').slice(0, 90)}</span> },
-    { key: 'attempts', header: 'DENEME', priority: 2, cell: r => `${r.attemptCount}${r.nextAttemptAt ? ' → ' + tarihSaat(r.nextAttemptAt) : ''}` },
-    { key: 'lastError', header: 'HATA', priority: 2, cell: r => <span className="text-xs text-red-600" title={r.lastError ?? ''}>{(r.lastError ?? '').slice(0, 80)}</span> },
+    { key: 'createdAt', header: 'ZAMAN', priority: 1, lockVisible: true, frozen: true, sortable: true,
+      filter: { type: 'date', label: 'Zaman', quick: true },
+      filters: [{ field: 'occurredAt', label: 'Olay zamanı', type: 'date' }, { field: 'processedAt', label: 'İşlenme', type: 'date' }],
+      cell: r => tarihSaat(r.createdAt) },
+    { key: 'eventName', header: 'EVENT', priority: 1, sortable: true, filter: { type: 'text', label: 'Event' },
+      filters: [{ field: 'dedupId', label: 'Dedup id', type: 'text' }],
+      cell: r => <code className="text-xs font-mono">{r.eventName}</code> },
+    { key: 'source', header: 'KAYNAK', priority: 2, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Kaynak', options: [{ value: 'web', label: 'Web' }, { value: 'mobile', label: 'Mobil' }, { value: 'server', label: 'Sunucu' }] },
+      cell: r => r.source },
+    { key: 'status', header: 'DURUM', priority: 1, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(DURUM).map(([value, [label]]) => ({ value, label })) },
+      cell: r => <Badge variant={DURUM[r.status]?.[1] ?? 'default'}>{DURUM[r.status]?.[0] ?? r.status}</Badge> },
+    { key: 'targets', header: 'HEDEFLER', priority: 3, filter: { type: 'boolean', field: 'hasTargets', label: 'Hedef sonucu var' },
+      cell: r => <span className="text-xs font-mono break-all" title={r.targetsJson ?? ''}>{(r.targetsJson ?? '[]').slice(0, 90)}</span> },
+    { key: 'attempts', header: 'DENEME', priority: 2, sortable: true, align: 'right', filter: { type: 'number', label: 'Deneme sayısı' },
+      filters: [{ field: 'nextAttemptAt', label: 'Sonraki deneme', type: 'date' }],
+      cell: r => `${r.attemptCount}${r.nextAttemptAt ? ' → ' + tarihSaat(r.nextAttemptAt) : ''}` },
+    { key: 'lastError', header: 'HATA', priority: 2, filter: { type: 'text', label: 'Hata metni', ops: ['contains', 'startswith'] },
+      filters: [{ field: 'hasError', label: 'Hatası var', type: 'boolean' }],
+      cell: r => <span className="text-xs text-red-600" title={r.lastError ?? ''}>{(r.lastError ?? '').slice(0, 80)}</span> },
     { key: 'actions', header: '', priority: 2, align: 'right', exportable: false, stopRowClick: true, cell: r => (r.status === 'error' || r.status === 'skipped') ? (
       <RowActions><Button variant="secondary" size="sm" onClick={() => retry.mutate(r.id)} title="Yeniden dene"><RotateCcw className="w-3.5 h-3.5" /></Button></RowActions>) : null },
   ]
@@ -259,8 +274,11 @@ export function TrackingPage() {
       </div>
       <DataGrid<OutboxRow>
         gridId="tracking-outbox"
+        views
         grid={grid}
         columns={outboxColumns}
+        search={{ placeholder: 'Event, dedup id, hata metni ara…' }}
+        export={{ endpoint: '/tracking/outbox/export', named: () => ({ firmPlatformId: effectiveChannelId || undefined, status: tab || undefined }), fallbackFileName: 'takip-kuyrugu.xlsx' }}
         rows={outboxRows}
         totalCount={ob?.totalCount ?? 0}
         loading={obLoading && !!effectiveChannelId}

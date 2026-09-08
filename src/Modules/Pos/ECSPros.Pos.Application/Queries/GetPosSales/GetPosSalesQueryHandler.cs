@@ -16,29 +16,17 @@ public class GetPosSalesQueryHandler : IRequestHandler<GetPosSalesQuery, Result<
 
     public async Task<Result<PagedResult<PosSaleListDto>>> Handle(GetPosSalesQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.PosSales.AsQueryable();
-
-        if (request.SessionId.HasValue)
-            query = query.Where(s => s.SessionId == request.SessionId.Value);
-
-        if (request.RegisterId.HasValue)
-            query = query.Where(s => s.RegisterId == request.RegisterId.Value);
-
-        if (request.DateFrom.HasValue)
-            query = query.Where(s => s.CreatedAt >= request.DateFrom.Value);
-
-        if (request.DateTo.HasValue)
-            query = query.Where(s => s.CreatedAt <= request.DateTo.Value);
-
-        if (!string.IsNullOrEmpty(request.Status))
-            query = query.Where(s => s.Status == request.Status);
+        // DataGrid (2026-09-08): adlandırılmış filtreler + beyaz listeli grid filtre/sıralama (PosSaleGrid); Grid yoksa eski davranış.
+        var query = PosSaleGrid.ApplyAll(_context.PosSales.AsNoTracking(),
+            new PosSaleListFilters(request.SessionId, request.RegisterId, request.DateFrom, request.DateTo, request.Status, request.Grid?.Search), request.Grid);
+        var page = request.Grid?.Page ?? request.Page;
+        var pageSize = request.Grid?.PageSize ?? request.PageSize;
 
         var total = await query.CountAsync(cancellationToken);
 
-        var items = await query
-            .OrderByDescending(s => s.CreatedAt)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+        var items = await PosSaleGrid.Schema.ApplySort(query, request.Grid)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(s => new PosSaleListDto(
                 s.Id,
                 s.SaleNumber,
@@ -47,9 +35,10 @@ public class GetPosSalesQueryHandler : IRequestHandler<GetPosSalesQuery, Result<
                 s.MemberId,
                 s.Status,
                 s.GrandTotal,
-                s.CreatedAt))
+                s.CreatedAt,
+                s.Session.Register.Name))
             .ToListAsync(cancellationToken);
 
-        return Result.Success(new PagedResult<PosSaleListDto>(items, total, request.Page, request.PageSize));
+        return Result.Success(new PagedResult<PosSaleListDto>(items, total, page, pageSize));
     }
 }

@@ -337,7 +337,7 @@ public class FulfillmentController : ControllerBase
         return Ok(new { success = true, data = new { rerouted = result.Value } });
     }
 
-    /// <summary>Toplama planlarını listeler.</summary>
+    /// <summary>Toplama planlarını listeler. DataGrid (2026-09-08): page/pageSize/search/sort/dir/f.* (PickingPlanGrid.Schema); status/warehouseId adlandırılmış filtre olarak korunur.</summary>
     [HttpGet("picking-plans")]
     public async Task<IActionResult> GetPickingPlans(
         [FromQuery] string? status,
@@ -346,8 +346,21 @@ public class FulfillmentController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetPickingPlansQuery(status, warehouseId, page, pageSize), ct);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 20);
+        var result = await _mediator.Send(new GetPickingPlansQuery(status, warehouseId, page, pageSize, grid), ct);
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Toplama planlarını Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: status, warehouseId.</summary>
+    [HttpPost("picking-plans/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportPickingPlans([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<FulfillmentController> logger, CancellationToken ct)
+    {
+        var filters = new PickingPlanListFilters(body.NamedValue("status"), ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "warehouseId"), body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "picking-plans", "toplama-planlari", "Toplama Planları",
+            ECSPros.Api.Grid.PickingPlanExportColumns.All, max => _mediator.Send(new ExportPickingPlansQuery(filters, body.ToGridRequest(), max), ct), ct);
     }
 
     /// <summary>Yeni toplama planı oluşturur.</summary>

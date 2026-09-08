@@ -1,13 +1,14 @@
 // Müşteri İlişkileri — kayıt listesi (eski /crm/musteri-iliskileri-yonetimi). Varsayılan: gizli olmayan durumlar;
 // sayaç kutuları durum süzgeci; satır tıklama → detay (takip no). "Kontrol" sütunu = son işlemi ben okudum mu.
 // DataGrid F4 (2026-09-08): filtre/arama/sıralama/sayfa URL'de (eski ?status=&search=&customer=… derin linkleri korunur — adlandırılmış
-// parametreler sunucuda aynen çalışır); grid f.* filtreleri TicketGrid.Schema beyaz listesi; kolon tercihleri localStorage'da.
+// parametreler sunucuda aynen çalışır); grid f.* filtreleri TicketGrid.Schema beyaz listesi (+ f.readByMe "Kontrol" handler'da kullanıcıya göre);
+// her sütun başlığında filtre (Tür/Konu, Durum, Kontrol dahil); kolon tercihleri localStorage'da.
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
-import { DataGrid, useGridState, type GridColumn, type GridFilterField } from '@/components/grid'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
 import { errText } from '@/components/ui/DataTable.utils'
 import { TYPE_LABEL, fmtTarih, fmtTelefon, useTicketSettings, useAdminUsers, usePlatformNames, type TicketListItem, type TicketPage } from './ticketShared'
 
@@ -34,9 +35,9 @@ export function TicketsPage() {
     retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
-  const extraFilters: GridFilterField[] = [
-    { key: 'type', label: 'Tür', type: 'enum', quick: true, options: [{ value: 'complaint', label: 'Şikayet' }, { value: 'request', label: 'Talep' }] },
-  ]
+  // Başlık filtreleri için seçenekler (Tür / Konu / Durum) — durum ve konu listesi ayarlardan
+  const subjectOptions = (settings?.subjects ?? []).map(s => ({ value: s.id, label: s.name }))
+  const statusOptions = (settings?.statuses ?? []).map(s => ({ value: s.code, label: s.name }))
 
   const columns: GridColumn<TicketListItem>[] = [
     { key: 'trackingNo', header: 'Takip No', frozen: true, lockVisible: true, sortable: true, filter: { type: 'number', label: 'Takip no' },
@@ -46,6 +47,8 @@ export function TicketsPage() {
         {t.isHidden && <span className="ml-1 text-[10px] px-1 rounded" style={{ background: '#6b728020', color: '#6b7280' }}>gizli</span>}
       </span> },
     { key: 'type', header: 'Tür / Konu', sortable: true, priority: 1,
+      filter: { type: 'enum', label: 'Tür', quick: true, options: [{ value: 'complaint', label: 'Şikayet' }, { value: 'request', label: 'Talep' }] },
+      filters: [{ field: 'subjectId', label: 'Konu', type: 'enum', options: subjectOptions }],
       cell: t => <span style={{ color: 'var(--text)' }}><span className="text-xs" style={{ color: t.type === 'complaint' ? '#ef4444' : '#3b82f6' }}>{TYPE_LABEL[t.type] ?? t.type}</span><br />{t.subjectName}</span> },
     { key: 'order', header: 'Sipariş', filters: [{ field: 'orderNumber', label: 'Sipariş no', type: 'text', ops: ['eq', 'startswith', 'contains'] }], priority: 2,
       cell: t => <span className="font-mono text-xs whitespace-nowrap" style={{ color: 'var(--text)' }}>
@@ -59,9 +62,9 @@ export function TicketsPage() {
       cell: t => <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{fmtTarih(t.createdAt)}<br />{t.createdByName}</span> },
     { key: 'lastActivityAt', header: 'Son İşlem', filters: [{ field: 'lastActivityAt', label: 'Son işlem tarihi', type: 'date' }, { field: 'activityCount', label: 'İşlem sayısı', type: 'number' }], sortable: true, priority: 3,
       cell: t => <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-m)' }}>{fmtTarih(t.lastActivityAt)}<br />{t.updatedByName ?? ''} {t.activityCount > 0 && <span style={{ color: 'var(--text-s)' }}>({t.activityCount})</span>}</span> },
-    { key: 'control', header: 'Kontrol', priority: 2, exportable: false,
+    { key: 'control', header: 'Kontrol', priority: 2, exportable: false, filter: { type: 'boolean', label: 'Kontrol edildi', field: 'readByMe' },
       cell: t => t.readByMe ? <span className="text-xs" style={{ color: '#22c55e' }}>Kontrol edildi</span> : <span className="text-xs font-semibold" style={{ color: '#ef4444' }}>Kontrol edilmedi</span> },
-    { key: 'status', header: 'Durum', filters: [{ field: 'hidden', label: 'Gizli', type: 'boolean' }], lockVisible: true, sortable: true, priority: 1,
+    { key: 'status', header: 'Durum', filter: { type: 'enum', multiple: true, label: 'Durum', options: statusOptions }, filters: [{ field: 'hidden', label: 'Gizli', type: 'boolean' }], lockVisible: true, sortable: true, priority: 1,
       cell: t => <span className="text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap" style={{ background: `${t.statusColor}20`, color: t.statusColor }}>{t.statusName}</span> },
   ]
 
@@ -104,7 +107,6 @@ export function TicketsPage() {
         views
         grid={grid}
         columns={columns}
-        extraFilters={extraFilters}
         search={{ placeholder: 'İçerikte ara (kayıt + işlem metinleri)…' }}
         filterLeading={
           <>

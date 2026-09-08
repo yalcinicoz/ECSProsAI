@@ -64,12 +64,12 @@ export function MembersPage() {
       cell: m => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{m.phone ?? '—'}</span> },
     { key: 'isRegistered', header: 'ÜYELİK', filters: [{ field: 'legacyMemberId', label: 'Eski üye no', type: 'number' }], sortable: true, priority: 3,
       cell: m => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{m.isRegistered ? 'Kayıtlı' : 'Misafir'}</span> },
-    { key: 'isActive', header: 'DURUM', sortable: true, priority: 1, lockVisible: true,
+    { key: 'isActive', header: 'DURUM', sortable: true, priority: 1, lockVisible: true, filter: { type: 'boolean', label: 'Aktif' },
       cell: m => <Badge variant={m.isActive ? 'success' : 'neutral'}>{m.isActive ? 'Aktif' : 'Pasif'}</Badge> },
     { key: 'createdAt', header: 'KAYIT', filters: [{ field: 'lastLoginAt', label: 'Son giriş', type: 'date' }], sortable: true, priority: 2, filter: { type: 'date', label: 'Kayıt tarihi', quick: true },
       cell: m => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(m.createdAt).toLocaleDateString('tr-TR')}</span> },
-    { key: 'firstName', header: 'AD', sortable: true, priority: 3, defaultVisible: false, cell: m => m.firstName },
-    { key: 'lastName', header: 'SOYAD', sortable: true, priority: 3, defaultVisible: false, cell: m => m.lastName },
+    { key: 'firstName', header: 'AD', sortable: true, priority: 3, defaultVisible: false, filter: { type: 'text', label: 'Ad' }, cell: m => m.firstName },
+    { key: 'lastName', header: 'SOYAD', sortable: true, priority: 3, defaultVisible: false, filter: { type: 'text', label: 'Soyad' }, cell: m => m.lastName },
     { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
   ]
 

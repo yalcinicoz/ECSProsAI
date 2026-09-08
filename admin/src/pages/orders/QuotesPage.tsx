@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
@@ -34,15 +35,18 @@ const SEKMELER = [['', 'Tümü'], ['draft', 'Taslak'], ['sent', 'Gönderildi'], 
 
 export function QuotesPage() {
   const queryClient = useQueryClient()
-  const [tab, setTab] = useState('')
+  const [sp] = useSearchParams()
+  const tab = sp.get('tab') ?? ''
   const [error, setError] = useState('')
-  // DataGrid F4 mekanik göç: sayfa/sayfa boyu grid durumunda (URL + localStorage); uç sort/filtre desteklemez
-  const grid = useGridState('quotes', { defaultPageSize: 20 })
+  // DataGrid: sunucu filtre/sıralama/arama (QuoteGrid.Schema) + Excel export; sekme ?tab= (durum adlandırılmış parametre)
+  const grid = useGridState('quotes', { defaultPageSize: 20, defaultSort: 'createdAt', defaultDir: 'desc' })
+  const switchTab = (v: string) => grid.mutate(n => { if (v) n.set('tab', v); else n.delete('tab') })
 
   const { data, isLoading, isFetching, error: listError } = useQuery<PagedResult<Quote>>({
     queryKey: ['quotes', tab, ...grid.queryKey],
     queryFn: async () => (await api.get(`/orders/quotes?${grid.toParams({ status: tab || undefined })}`)).data.data,
     placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
   const aksiyon = useMutation({
@@ -56,12 +60,17 @@ export function QuotesPage() {
 
   const quotes = data?.items ?? []
   const columns: GridColumn<Quote>[] = [
-    { key: 'quoteNumber', header: 'TEKLİF NO', priority: 1, lockVisible: true, frozen: true, cell: q => <code className="text-xs font-mono">{q.quoteNumber}</code> },
-    { key: 'total', header: 'TUTAR', priority: 1, cell: q => <span className="font-medium">{para(q.grandTotal, q.currencyCode === 'TRY' ? '₺' : q.currencyCode)}</span> },
-    { key: 'validUntil', header: 'GEÇERLİLİK', priority: 2, cell: q => tarih(q.validUntil) },
-    { key: 'sentAt', header: 'GÖNDERİM', priority: 3, cell: q => tarihSaat(q.sentAt) },
-    { key: 'createdAt', header: 'OLUŞTURMA', priority: 3, cell: q => tarih(q.createdAt) },
-    { key: 'status', header: 'DURUM', priority: 1, lockVisible: true, cell: q => { const [l, v] = DURUM[q.status] ?? [q.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
+    { key: 'quoteNumber', header: 'TEKLİF NO', priority: 1, lockVisible: true, frozen: true, sortable: true, filter: { type: 'text', label: 'Teklif no', ops: ['startswith', 'contains', 'eq'] },
+      cell: q => <code className="text-xs font-mono">{q.quoteNumber}</code> },
+    { key: 'total', header: 'TUTAR', priority: 1, sortable: true, align: 'right', filter: { type: 'number', label: 'Tutar' },
+      cell: q => <span className="font-medium">{para(q.grandTotal, q.currencyCode === 'TRY' ? '₺' : q.currencyCode)}</span> },
+    { key: 'validUntil', header: 'GEÇERLİLİK', priority: 2, sortable: true, filter: { type: 'date', label: 'Geçerlilik' }, cell: q => tarih(q.validUntil) },
+    { key: 'sentAt', header: 'GÖNDERİM', priority: 3, sortable: true, filter: { type: 'date', label: 'Gönderim' }, cell: q => tarihSaat(q.sentAt) },
+    { key: 'createdAt', header: 'OLUŞTURMA', priority: 3, sortable: true, filter: { type: 'date', label: 'Oluşturma', quick: true }, cell: q => tarih(q.createdAt) },
+    { key: 'status', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(DURUM).map(([value, [label]]) => ({ value, label })) },
+      filters: [{ field: 'converted', label: 'Siparişe dönüştü', type: 'boolean' }],
+      cell: q => { const [l, v] = DURUM[q.status] ?? [q.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
     {
       key: 'actions', header: '', priority: 2, align: 'right', exportable: false, stopRowClick: true, cell: q => (
         <RowActions className="whitespace-nowrap">
@@ -97,13 +106,13 @@ export function QuotesPage() {
     <div className="p-6">
       <div className="mb-4">
         <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Teklifler</h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{data?.totalCount ?? 0} kayıt</p>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{(data?.totalCount ?? 0).toLocaleString('tr-TR')} kayıt{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}</p>
       </div>
 
       <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
         {SEKMELER.map(([v, l]) => (
           <button key={v} className={cn('stab', tab === v && 'active')}
-            onClick={() => { setTab(v); grid.setPage(1) }}>{l}</button>
+            onClick={() => switchTab(v)}>{l}</button>
         ))}
       </div>
 
@@ -113,6 +122,9 @@ export function QuotesPage() {
         gridId="quotes"
         grid={grid}
         columns={columns}
+        search={{ placeholder: 'Teklif no ara…' }}
+        export={{ endpoint: '/orders/quotes/export', named: () => ({ status: tab || undefined }), fallbackFileName: 'teklifler.xlsx' }}
+        views
         rows={quotes}
         totalCount={data?.totalCount ?? 0}
         loading={isLoading}

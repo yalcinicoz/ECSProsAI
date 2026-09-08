@@ -1,4 +1,5 @@
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 
 namespace ECSPros.Iam.Application.Queries.GetUsers;
@@ -7,7 +8,9 @@ public record GetUsersQuery(
     string? Search = null,
     bool ActiveOnly = false,
     int Page = 1,
-    int PageSize = 20) : IRequest<Result<PagedUserResult>>;
+    int PageSize = 20,
+    GridRequest? Grid = null) : IRequest<Result<PagedUserResult>>;
+    // Grid (2026-09-08, DataGrid): beyaz listeli f.* filtreleri + sort/dir + `role` (UserGrid); null → eski davranış (username artan)
 
 public record PagedUserResult(List<UserListDto> Items, int TotalCount, int Page, int PageSize)
 {

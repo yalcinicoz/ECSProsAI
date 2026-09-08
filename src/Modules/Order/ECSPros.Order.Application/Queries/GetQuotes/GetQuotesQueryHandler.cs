@@ -16,25 +16,21 @@ public class GetQuotesQueryHandler : IRequestHandler<GetQuotesQuery, Result<Page
 
     public async Task<Result<PagedResult<QuoteListDto>>> Handle(GetQuotesQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.Quotes.AsQueryable();
-
-        if (request.MemberId.HasValue)
-            query = query.Where(q => q.MemberId == request.MemberId.Value);
-
-        if (!string.IsNullOrEmpty(request.Status))
-            query = query.Where(q => q.Status == request.Status);
+        var filters = new QuoteListFilters(request.MemberId, request.Status, request.Search);
+        var query = QuoteGrid.ApplyAll(_context.Quotes.AsNoTracking(), filters, request.Grid);
+        var page = request.Grid?.Page ?? request.Page;
+        var pageSize = request.Grid?.PageSize ?? request.PageSize;
 
         var total = await query.CountAsync(cancellationToken);
-        var items = await query
-            .OrderByDescending(q => q.CreatedAt)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+        var items = await QuoteGrid.Schema.ApplySort(query, request.Grid)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(q => new QuoteListDto(
                 q.Id, q.QuoteNumber, q.MemberId, q.Status,
                 q.CurrencyCode, q.GrandTotal, q.ValidUntil,
                 q.SentAt, q.ConvertedOrderId, q.CreatedAt))
             .ToListAsync(cancellationToken);
 
-        return Result.Success(new PagedResult<QuoteListDto>(items, total, request.Page, request.PageSize));
+        return Result.Success(new PagedResult<QuoteListDto>(items, total, page, pageSize));
     }
 }

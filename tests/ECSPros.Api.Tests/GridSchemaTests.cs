@@ -69,6 +69,35 @@ public sealed class GridSchemaTests
         Assert.ThrowsExactly<GridException>(() => Apply(Req(("createdAt", "between", "dün,bugün"))));
     }
 
+    private sealed record DayRow(Guid Id, DateOnly InvoiceDate, DateOnly? DueDate);
+    private static readonly List<DayRow> DayRows = new()
+    {
+        new(Guid.Parse("00000000-0000-0000-0000-00000000000a"), new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30)),
+        new(Guid.Parse("00000000-0000-0000-0000-00000000000b"), new DateOnly(2026, 9, 8), null),
+        new(Guid.Parse("00000000-0000-0000-0000-00000000000c"), new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 15)),
+    };
+    private static readonly GridSchema<DayRow> DaySchema = new GridSchema<DayRow>()
+        .Date("invoiceDate", r => r.InvoiceDate)
+        .Date("dueDate", r => r.DueDate)
+        .Sort("dueDate", r => r.DueDate).DefaultSort(r => r.InvoiceDate).TieBreaker(r => r.Id);
+
+    [TestMethod]
+    public void DateOnly_between_is_inclusive_and_operators_compare_days()
+    {
+        static List<DayRow> F(string field, string op, string value) =>
+            DaySchema.ApplyFilters(DayRows.AsQueryable(), new GridRequest { Filters = new() { new(field, op, value) } }).ToList();
+        Assert.AreEqual(2, F("invoiceDate", "between", "2026-09-01,2026-09-08").Count);           // iki uç dahil
+        Assert.AreEqual(1, F("invoiceDate", "between", "2026-09-02,2026-09-30").Count);
+        Assert.AreEqual(1, F("invoiceDate", "eq", "2026-09-08").Count);
+        Assert.AreEqual(2, F("invoiceDate", "gte", "2026-09-08").Count);
+        Assert.AreEqual(1, F("invoiceDate", "gt", "2026-09-08").Count);
+        Assert.AreEqual(1, F("invoiceDate", "lt", "2026-09-08").Count);
+        Assert.AreEqual(1, F("dueDate", "lte", "2026-09-30").Count);                                   // null vade eşleşmez
+        Assert.AreEqual(1, F("invoiceDate", "auto", "2026-09-08T10:00:00Z,2026-09-08T23:00:00Z").Count); // ISO → İstanbul günü
+        Assert.ThrowsExactly<GridException>(() => F("invoiceDate", "between", "2026-09-08,2026-09-01"));
+        Assert.ThrowsExactly<GridException>(() => F("invoiceDate", "eq", "dün"));
+    }
+
     [TestMethod]
     public void Number_bool_guid_operators()
     {

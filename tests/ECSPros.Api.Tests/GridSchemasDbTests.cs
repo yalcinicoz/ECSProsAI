@@ -4,11 +4,24 @@ using ECSPros.Catalog.Infrastructure.Persistence;
 using ECSPros.Crm.Application.Queries.GetMembers;
 using ECSPros.Crm.Application.Tickets.Queries;
 using ECSPros.Crm.Infrastructure.Persistence;
+using ECSPros.Finance.Application.Queries.GetSupplierInvoices;
+using ECSPros.Finance.Infrastructure.Persistence;
+using ECSPros.Fulfillment.Application.Queries.GetPickingPlans;
+using ECSPros.Fulfillment.Infrastructure.Persistence;
+using ECSPros.Iam.Application.Queries.GetAuditLogs;
+using ECSPros.Iam.Application.Queries.GetUsers;
+using ECSPros.Iam.Infrastructure.Persistence;
+using ECSPros.Integration.Application.Queries.GetIntegrationLogs;
+using ECSPros.Integration.Infrastructure.Persistence;
 using ECSPros.Inventory.Infrastructure.Persistence;
+using ECSPros.Order.Application.Queries.GetGiftCards;
 using ECSPros.Order.Application.Queries.GetInvoices;
 using ECSPros.Order.Application.Queries.GetOrders;
+using ECSPros.Order.Application.Queries.GetQuotes;
 using ECSPros.Order.Application.Queries.GetReturns;
 using ECSPros.Order.Infrastructure.Persistence;
+using ECSPros.Pos.Application.Queries.GetPosSales;
+using ECSPros.Pos.Infrastructure.Persistence;
 using ECSPros.Promotion.Application.Queries.GetCampaigns;
 using ECSPros.Promotion.Infrastructure.Persistence;
 using ECSPros.Shared.Kernel.Grid;
@@ -82,6 +95,8 @@ public sealed class GridSchemasDbTests
             hatalar.AddRange(await ExerciseAsync("orders", OrderGrid.Schema, db.Orders.AsNoTracking()));
             hatalar.AddRange(await ExerciseAsync("invoices", InvoiceGrid.Schema, db.Invoices.AsNoTracking()));
             hatalar.AddRange(await ExerciseAsync("returns", ReturnGrid.Schema, db.Returns.AsNoTracking()));
+            hatalar.AddRange(await ExerciseAsync("quotes", QuoteGrid.Schema, db.Quotes.AsNoTracking()));
+            hatalar.AddRange(await ExerciseAsync("gift-cards", GiftCardGrid.Schema, db.GiftCards.AsNoTracking()));
         }
         await using (var db = new CatalogDbContext(Opt<CatalogDbContext>(ds)))
             hatalar.AddRange(await ExerciseAsync("products", ProductGrid.Schema, db.Products.AsNoTracking()));
@@ -94,6 +109,23 @@ public sealed class GridSchemasDbTests
             hatalar.AddRange(await ExerciseAsync("stocks", StockGrid.Schema, db.Stocks.AsNoTracking()));
         await using (var db = new PromotionDbContext(Opt<PromotionDbContext>(ds)))
             hatalar.AddRange(await ExerciseAsync("campaigns", CampaignGrid.Schema, db.Campaigns.AsNoTracking()));
+        // "Tüm sütunlarda filtre" (2026-09-08): backend grid'e alınan 9 sayfa
+        await using (var db = new IamDbContext(Opt<IamDbContext>(ds)))
+        {
+            hatalar.AddRange(await ExerciseAsync("users", UserGrid.Schema, db.Users.AsNoTracking()));
+            hatalar.AddRange(await ExerciseAsync("audit-logs", AuditLogGrid.Schema, db.AuditLogs.AsNoTracking()));
+        }
+        await using (var db = new FinanceDbContext(Opt<FinanceDbContext>(ds)))
+            hatalar.AddRange(await ExerciseAsync("supplier-invoices", SupplierInvoiceGrid.Schema, db.SupplierInvoices.AsNoTracking()));
+        await using (var db = new FulfillmentDbContext(Opt<FulfillmentDbContext>(ds)))
+            hatalar.AddRange(await ExerciseAsync("picking-plans", PickingPlanGrid.Schema, db.PickingPlans.AsNoTracking()));
+        await using (var db = new PosDbContext(Opt<PosDbContext>(ds)))
+            hatalar.AddRange(await ExerciseAsync("pos-sales", PosSaleGrid.Schema, db.PosSales.AsNoTracking()));
+        await using (var db = new IntegrationDbContext(Opt<IntegrationDbContext>(ds)))
+        {
+            hatalar.AddRange(await ExerciseAsync("integration-logs", IntegrationLogGrid.Schema, db.IntegrationLogs.AsNoTracking()));
+            hatalar.AddRange(await ExerciseAsync("tracking-outbox", TrackingOutboxGrid.Schema, db.TrackingEventOutbox.AsNoTracking()));
+        }
 
         Assert.AreEqual(0, hatalar.Count, "SQL'e çevrilemeyen alanlar:\n" + string.Join("\n", hatalar));
     }

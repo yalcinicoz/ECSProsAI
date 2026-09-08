@@ -11,14 +11,14 @@ const PAGES = [
   { path: '/admin/orders/invoices', gridId: 'invoices', list: '/api/orders/invoices' },
   { path: '/admin/orders/returns', gridId: 'returns', list: '/api/orders/returns' },
   { path: '/admin/promotion/campaigns', gridId: 'campaigns', list: '/api/promotion/campaigns' },
-  // F4 kalan: eski DataTable+Pager sayfaları (backend grid desteği yok → sıralama/filtre/export beklenmez)
-  { path: '/admin/settings/audit-logs', gridId: 'audit-logs', list: '/api/iam/audit-logs', basic: true },
-  { path: '/admin/integrations/logs', gridId: 'integration-logs', list: '/api/integrations/logs', basic: true },
-  { path: '/admin/fulfillment/picking-plans', gridId: 'picking-plans', list: '/api/fulfillment/picking-plans', basic: true },
-  { path: '/admin/pos/sales', gridId: 'pos-sales', list: '/api/pos/sales', basic: true },
-  { path: '/admin/orders/quotes', gridId: 'quotes', list: '/api/orders/quotes', basic: true },
-  { path: '/admin/finance/supplier-invoices', gridId: 'supplier-invoices', list: '/api/finance/supplier-invoices', basic: true },
-  { path: '/admin/orders/gift-cards', gridId: 'gift-cards', list: '/api/orders/gift-cards', basic: true },
+  // 2026-09-08 'tüm sütunlarda filtre': bu 7 sayfa da artık backend grid'li (sıralama/filtre/export/arama)
+  { path: '/admin/settings/audit-logs', gridId: 'audit-logs', list: '/api/iam/audit-logs' },
+  { path: '/admin/integrations/logs', gridId: 'integration-logs', list: '/api/integrations/logs' },
+  { path: '/admin/fulfillment/picking-plans', gridId: 'picking-plans', list: '/api/fulfillment/picking-plans' },
+  { path: '/admin/pos/sales', gridId: 'pos-sales', list: '/api/pos/sales' },
+  { path: '/admin/orders/quotes', gridId: 'quotes', list: '/api/orders/quotes' },
+  { path: '/admin/finance/supplier-invoices', gridId: 'supplier-invoices', list: '/api/finance/supplier-invoices' },
+  { path: '/admin/orders/gift-cards', gridId: 'gift-cards', list: '/api/orders/gift-cards' },
 ]
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH, args: ['--no-sandbox'] })
 const sonuc = []

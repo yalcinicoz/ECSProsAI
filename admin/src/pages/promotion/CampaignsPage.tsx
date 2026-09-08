@@ -4,13 +4,13 @@ import api from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
-import { DataGrid, useGridState, type GridColumn, type GridFilterField } from '@/components/grid'
+import { DataGrid, useGridState, type GridColumn } from '@/components/grid'
 import { errText } from '@/components/ui/DataTable.utils'
 
 // Kampanyalar — DataGrid F4: `page` parametresiyle sayfalı uç (CampaignGrid.Schema); sekme ?tab=active|all (all varsayılan).
-// Ad (NameI18n jsonb) sıralanmaz/filtrelenmez; arama kod + rozet etiketi.
+// Ad (NameI18n jsonb "tr") sunucuda GridJson DbFunction ile filtrelenir/sıralanır; arama kod + rozet + ad. Her sütun başlığında filtre.
 
-interface CampaignType { id: string; nameI18n: Record<string, string> }
+interface CampaignType { id: string; code: string; nameI18n: Record<string, string> }
 interface Campaign {
   id: string; code: string; nameI18n: Record<string, string>
   startsAt: string; endsAt?: string; isActive: boolean; priority: number
@@ -20,10 +20,6 @@ interface PagedResult<T> { items: T[]; totalCount: number; page: number; pageSiz
 
 const tr = (m?: Record<string, string> | null) => m?.['tr'] ?? Object.values(m ?? {})[0] ?? '—'
 const FILL_LABEL: Record<string, string> = { all: 'Tüm ürünler', manual: 'Manuel', filter: 'Filtre', mixed: 'Karma' }
-
-const EXTRA_FILTERS: GridFilterField[] = [
-  { key: 'isActive', label: 'Aktif', type: 'boolean', quick: true },
-]
 
 export function CampaignsPage() {
   const navigate = useNavigate()
@@ -49,13 +45,13 @@ export function CampaignsPage() {
   const columns: GridColumn<Campaign>[] = [
     { key: 'code', header: 'KOD', filters: [{ field: 'badgeLabel', label: 'Rozet', type: 'text' }], frozen: true, lockVisible: true, sortable: true, minWidth: 120,
       cell: c => <code className="text-xs font-mono font-medium" style={{ color: 'var(--text)' }}>{c.code}</code> },
-    { key: 'name', header: 'AD', priority: 1, exportable: true, cell: c => <span className="text-sm" style={{ color: 'var(--text)' }}>{tr(c.nameI18n)}</span> },
-    { key: 'campaignTypeCode', header: 'TİP', priority: 2, cell: c => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{typeName(c.campaignTypeId, c.campaignTypeCode)}</span> },
+    { key: 'name', header: 'AD', priority: 1, exportable: true, sortable: true, filter: { type: 'text', label: 'Ad' }, cell: c => <span className="text-sm" style={{ color: 'var(--text)' }}>{tr(c.nameI18n)}</span> },
+    { key: 'campaignTypeCode', header: 'TİP', priority: 2, filter: { type: 'enum', multiple: true, label: 'Tip', options: types.map(t => ({ value: t.code, label: tr(t.nameI18n) })) }, cell: c => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{typeName(c.campaignTypeId, c.campaignTypeCode)}</span> },
     { key: 'fillType', header: 'KAPSAM', filters: [{ field: 'fillType', label: 'Kapsam', type: 'enum', multiple: true, options: Object.entries(FILL_LABEL).map(([value, label]) => ({ value, label })) }], priority: 3, cell: c => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{FILL_LABEL[c.fillType] ?? c.fillType}</span> },
     { key: 'startsAt', header: 'TARİH', filters: [{ field: 'endsAt', label: 'Bitiş', type: 'date' }], sortable: true, priority: 2, filter: { type: 'date', label: 'Başlangıç', quick: true },
       cell: c => <span className="text-xs" style={{ color: 'var(--text-s)' }}>{new Date(c.startsAt).toLocaleDateString('tr-TR')} → {c.endsAt ? new Date(c.endsAt).toLocaleDateString('tr-TR') : 'süresiz'}</span> },
     { key: 'priority', header: 'ÖNCELİK', filters: [{ field: 'priority', label: 'Öncelik', type: 'number' }], sortable: true, align: 'right', priority: 2, cell: c => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{c.priority}</span> },
-    { key: 'isActive', header: 'DURUM', lockVisible: true, sortable: true, priority: 1, cell: c => <Badge variant={c.isActive ? 'success' : 'neutral'}>{c.isActive ? 'Aktif' : 'Pasif'}</Badge> },
+    { key: 'isActive', header: 'DURUM', lockVisible: true, sortable: true, priority: 1, filter: { type: 'boolean', label: 'Aktif', quick: true }, cell: c => <Badge variant={c.isActive ? 'success' : 'neutral'}>{c.isActive ? 'Aktif' : 'Pasif'}</Badge> },
     { key: 'edit', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Düzenle →</span> },
   ]
 
@@ -79,7 +75,6 @@ export function CampaignsPage() {
         views
         grid={grid}
         columns={columns}
-        extraFilters={EXTRA_FILTERS}
         search={{ placeholder: 'Kampanya kodu veya rozet etiketi…' }}
         rows={campaigns}
         totalCount={totalCount}

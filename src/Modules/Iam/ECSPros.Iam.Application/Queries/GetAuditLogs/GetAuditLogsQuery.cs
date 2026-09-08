@@ -1,5 +1,6 @@
 using ECSPros.Iam.Application.Services;
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,8 +14,11 @@ public record GetAuditLogsQuery(
     DateTime? From = null,
     DateTime? To = null,
     int Page = 1,
-    int PageSize = 20
+    int PageSize = 20,
+    string? Search = null,
+    GridRequest? Grid = null
 ) : IRequest<Result<PagedResult<AuditLogDto>>>;
+// Search + Grid (2026-09-08, DataGrid): global arama + beyaz listeli f.* filtreleri + sort/dir (AuditLogGrid); null → eski davranış
 
 public record AuditLogDto(
     Guid Id,
@@ -23,7 +27,8 @@ public record AuditLogDto(
     Guid EntityId,
     string Action,
     string? IpAddress,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? UserName = null
 );
 
 public class GetAuditLogsQueryHandler : IRequestHandler<GetAuditLogsQuery, Result<PagedResult<AuditLogDto>>>
@@ -34,27 +39,16 @@ public class GetAuditLogsQueryHandler : IRequestHandler<GetAuditLogsQuery, Resul
 
     public async Task<Result<PagedResult<AuditLogDto>>> Handle(GetAuditLogsQuery request, CancellationToken ct)
     {
-        var query = _db.AuditLogs.AsQueryable();
-
-        if (request.UserId.HasValue)
-            query = query.Where(l => l.UserId == request.UserId);
-        if (!string.IsNullOrEmpty(request.EntityType))
-            query = query.Where(l => l.EntityType == request.EntityType);
-        if (request.EntityId.HasValue)
-            query = query.Where(l => l.EntityId == request.EntityId);
-        if (!string.IsNullOrEmpty(request.Action))
-            query = query.Where(l => l.Action == request.Action);
-        if (request.From.HasValue)
-            query = query.Where(l => l.CreatedAt >= request.From.Value);
-        if (request.To.HasValue)
-            query = query.Where(l => l.CreatedAt <= request.To.Value);
+        // DataGrid (2026-09-08): adlandırılmış filtreler + global arama + grid filtreleri TEK yerden (AuditLogGrid).
+        var query = AuditLogGrid.ApplyAll(_db.AuditLogs.AsQueryable(), new AuditLogListFilters(
+            request.UserId, request.EntityType, request.EntityId, request.Action, request.From, request.To, request.Search), request.Grid);
 
         var total = await query.CountAsync(ct);
-        var items = await query
-            .OrderByDescending(l => l.CreatedAt)
+        var items = await AuditLogGrid.Schema.ApplySort(query, request.Grid)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(l => new AuditLogDto(l.Id, l.UserId, l.EntityType, l.EntityId, l.Action, l.IpAddress, l.CreatedAt))
+            .Select(l => new AuditLogDto(l.Id, l.UserId, l.EntityType, l.EntityId, l.Action, l.IpAddress, l.CreatedAt,
+                _db.Users.Where(u => u.Id == l.UserId).Select(u => u.Username).FirstOrDefault()))
             .ToListAsync(ct);
 
         return Result.Success(new PagedResult<AuditLogDto>(items, total, request.Page, request.PageSize));

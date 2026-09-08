@@ -173,6 +173,7 @@ Otomatik karta dönüştürme YOK; operasyonel karşılaştırma için tablo yap
 | **Pilot kapanışı** | Sticky scroll + frozen + yoğun filtre + sayfalama + kolon kişiselleştirme + Excel **Siparişler'de birlikte** doğrulanmadan F4'e geçilmez [E7]. | onay |
 | **F4 Yaygınlaştırma ✅ (2026-09-08)** | Ürünler, Üyeler, Talepler, Stoklar, Faturalar, İadeler, Kampanyalar (her biri: backend harita + export + göç; ayrı commit); DataTable'daki 14 sayfa mekanik göç; eski `Pager`/sayfa içi sayfalayıcılar kaldırılır. | sayfa başına kısa test |
 | **F5 İleri ✅ (2026-09-08)** | kişisel kaydedilmiş görünümler (sunucu tercihleri), mobil kompakt görünüm, satır seçimi standardı. | |
+| **F6 Tüm sütunlarda filtre ✅ (2026-09-08, kullanıcı kararı)** | 17 DataGrid sayfasında başlığı olan her kolonda başlık filtresi; kalan 9 sayfa (Kullanıcılar, Denetim logları, Teklifler, Hediye kartları, Tedarikçi faturaları, Toplama planları, POS satışları, Entegrasyon logları, Tracking outbox) sunucu şeması + export + görünümler; `GridSchema.Date` DateOnly desteği; jsonb ad alanları `GridJson.Text` ile filtre/sıralama (Ürünler, Kampanyalar). | `grid-f6-check.mjs` 17/17, `GridSchemasDbTests` 17 şema, F4 210/210 |
 
 Her faz: izole publish (5051) → kullanıcı testi → canlı publish; restart kullanıcıda.
 

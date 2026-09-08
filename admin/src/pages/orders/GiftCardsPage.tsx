@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
@@ -113,26 +114,36 @@ function YeniKartModal({ onClose }: { onClose: () => void }) {
 }
 
 export function GiftCardsPage() {
-  const [tab, setTab] = useState<'active' | ''>('active')
-  // DataGrid F4 mekanik göç: arama/sayfa URL'de, sayfa boyu localStorage'da; uç sort/filtre desteklemez
-  const grid = useGridState('gift-cards', { defaultPageSize: 20 })
-  const [search, setSearch] = useState(grid.state.search)
+  // DataGrid: sunucu filtre/sıralama/arama (GiftCardGrid.Schema) + Excel export; sekme ?tab=all (varsayılan: aktif)
+  const [sp] = useSearchParams()
+  const tab: 'active' | '' = sp.get('tab') === 'all' ? '' : 'active'
+  const grid = useGridState('gift-cards', { defaultPageSize: 20, defaultSort: 'createdAt', defaultDir: 'desc' })
+  const switchTab = (v: 'active' | '') => grid.mutate(n => { if (v === '') n.set('tab', 'all'); else n.delete('tab') })
   const [creating, setCreating] = useState(false)
 
   const { data, isLoading, isFetching, error: listError } = useQuery<PagedResult<GiftCard>>({
     queryKey: ['gift-cards', tab, ...grid.queryKey],
     queryFn: async () => (await api.get(`/orders/gift-cards?${grid.toParams({ status: tab || undefined })}`)).data.data,
     placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
   const cards = data?.items ?? []
   const columns: GridColumn<GiftCard>[] = [
-    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, cell: g => <code className="text-xs font-mono font-medium">{g.code}</code> },
-    { key: 'originalAmount', header: 'TUTAR', priority: 2, cell: g => para(g.originalAmount) },
-    { key: 'remainingAmount', header: 'KALAN', priority: 1, cell: g => <span className="font-medium">{para(g.remainingAmount)}</span> },
-    { key: 'validity', header: 'GEÇERLİLİK', priority: 2, cell: g => `${new Date(g.validFrom).toLocaleDateString('tr-TR')} → ${g.validUntil ? new Date(g.validUntil).toLocaleDateString('tr-TR') : 'süresiz'}` },
-    { key: 'isSingleUse', header: 'TEK KULLANIM', priority: 3, cell: g => (g.isSingleUse ? 'Evet' : 'Hayır') },
-    { key: 'status', header: 'DURUM', priority: 1, lockVisible: true, cell: g => { const [l, v] = DURUM[g.status] ?? [g.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
+    { key: 'code', header: 'KOD', priority: 1, lockVisible: true, frozen: true, sortable: true, filter: { type: 'text', label: 'Kod', ops: ['startswith', 'contains', 'eq'] },
+      cell: g => <code className="text-xs font-mono font-medium">{g.code}</code> },
+    { key: 'originalAmount', header: 'TUTAR', priority: 2, sortable: true, align: 'right', filter: { type: 'number', label: 'Tutar' }, cell: g => para(g.originalAmount) },
+    { key: 'remainingAmount', header: 'KALAN', priority: 1, sortable: true, align: 'right', filter: { type: 'number', label: 'Kalan' },
+      filters: [{ field: 'hasBalance', label: 'Bakiyesi olan', type: 'boolean' }],
+      cell: g => <span className="font-medium">{para(g.remainingAmount)}</span> },
+    { key: 'validUntil', header: 'GEÇERLİLİK', priority: 2, sortable: true, filter: { type: 'date', label: 'Bitiş' },
+      filters: [{ field: 'validFrom', label: 'Başlangıç', type: 'date' }],
+      cell: g => `${new Date(g.validFrom).toLocaleDateString('tr-TR')} → ${g.validUntil ? new Date(g.validUntil).toLocaleDateString('tr-TR') : 'süresiz'}` },
+    { key: 'isSingleUse', header: 'TEK KULLANIM', priority: 3, sortable: true, filter: { type: 'boolean', label: 'Tek kullanım' }, cell: g => (g.isSingleUse ? 'Evet' : 'Hayır') },
+    { key: 'status', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(DURUM).map(([value, [label]]) => ({ value, label })) },
+      filters: [{ field: 'createdAt', label: 'Oluşturma', type: 'date' }],
+      cell: g => { const [l, v] = DURUM[g.status] ?? [g.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
   ]
 
   return (
@@ -140,14 +151,14 @@ export function GiftCardsPage() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Hediye Kartları</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{data?.totalCount ?? 0} kayıt</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{(data?.totalCount ?? 0).toLocaleString('tr-TR')} kayıt{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}</p>
         </div>
         <Button size="sm" onClick={() => setCreating(true)}>+ Yeni Hediye Kartı</Button>
       </div>
 
       <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
-        <button className={cn('stab', tab === 'active' && 'active')} onClick={() => { setTab('active'); grid.setPage(1) }}>Aktif</button>
-        <button className={cn('stab', tab === '' && 'active')} onClick={() => { setTab(''); grid.setPage(1) }}>Tümü</button>
+        <button className={cn('stab', tab === 'active' && 'active')} onClick={() => switchTab('active')}>Aktif</button>
+        <button className={cn('stab', tab === '' && 'active')} onClick={() => switchTab('')}>Tümü</button>
       </div>
 
       <DataGrid<GiftCard>
@@ -160,20 +171,9 @@ export function GiftCardsPage() {
         fetching={isFetching}
         error={listError ? errText(listError) : null}
         empty='Hediye kartı yok. "+ Yeni Hediye Kartı" ile oluşturun.'
-        toolbarLeft={
-          <div className="flex items-center gap-2">
-            <input className="inp text-sm py-1.5 px-3 h-auto" style={{ minWidth: 220 }}
-              placeholder="Kart kodu ara…" value={search}
-              onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') grid.setSearch(search) }} />
-            <button onClick={() => grid.setSearch(search)}
-              className="px-3 py-1.5 rounded-lg text-sm"
-              style={{ border: '1px solid var(--border)', color: 'var(--text)' }}>Ara</button>
-            {grid.state.search && (
-              <button onClick={() => { setSearch(''); grid.setSearch('') }} className="text-xs underline" style={{ color: 'var(--text-s)' }}>temizle</button>
-            )}
-          </div>
-        }
+        search={{ placeholder: 'Kart kodu ara…' }}
+        export={{ endpoint: '/orders/gift-cards/export', named: () => ({ status: tab || undefined }), fallbackFileName: 'hediye-kartlari.xlsx' }}
+        views
       />
       {creating && <YeniKartModal onClose={() => setCreating(false)} />}
     </div>

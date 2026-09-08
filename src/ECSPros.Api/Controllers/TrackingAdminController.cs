@@ -1,5 +1,6 @@
 using ECSPros.Api.Services.Store;
 using ECSPros.Api.Services.Tracking;
+using ECSPros.Integration.Application.Queries.GetIntegrationLogs;
 using ECSPros.Integration.Application.Services;
 using ECSPros.Shared.Contracts.Tracking;
 using Microsoft.AspNetCore.Authorization;
@@ -157,15 +158,16 @@ public class TrackingAdminController(
         return Ok(new { success = true, data = new { days = 30, total, fullAccept = tam, fullReject = red, partial = total - tam - red, withMember = uyeli, analytics, ads, lastAt = son } });
     }
 
+    /// <summary>Outbox listesi. DataGrid (2026-09-08): page/pageSize/search/sort/dir/f.* (TrackingOutboxGrid.Schema); firmPlatformId + status adlandırılmış.</summary>
     [HttpGet("outbox")]
     public async Task<IActionResult> Outbox([FromQuery] Guid firmPlatformId, [FromQuery] string? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
     {
         if (firmPlatformId == Guid.Empty) return BadRequest(new { success = false, error = "firmPlatformId gerekli." });
-        page = Math.Max(1, page); pageSize = Math.Clamp(pageSize, 1, 200);
-        var q = integrationDb.TrackingEventOutbox.AsNoTracking().Where(o => o.FirmPlatformId == firmPlatformId);
-        if (!string.IsNullOrWhiteSpace(status)) q = q.Where(o => o.Status == status);
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 50);
+        page = grid.Page; pageSize = grid.PageSize;
+        var q = TrackingOutboxGrid.ApplyAll(integrationDb.TrackingEventOutbox.AsNoTracking(), firmPlatformId, status, grid.Search, grid);
         var total = await q.CountAsync(ct);
-        var items = await q.OrderByDescending(o => o.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize)
+        var items = await TrackingOutboxGrid.Schema.ApplySort(q, grid).Skip((page - 1) * pageSize).Take(pageSize)
             .Select(o => new
             {
                 id = o.Id, eventName = o.EventName, dedupId = o.DedupId, source = o.Source, status = o.Status,
@@ -173,6 +175,29 @@ public class TrackingAdminController(
                 targetsJson = o.TargetsJson, createdAt = o.CreatedAt, processedAt = o.ProcessedAt, occurredAt = o.OccurredAt
             }).ToListAsync(ct);
         return Ok(new { success = true, data = new { items, totalCount = total, page, pageSize } });
+    }
+
+    /// <summary>Outbox'ı Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: firmPlatformId (zorunlu), status.</summary>
+    [HttpPost("outbox/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportOutbox([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+        [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam, [FromServices] ILogger<TrackingAdminController> logger, CancellationToken ct)
+    {
+        var firmPlatformId = ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "firmPlatformId") ?? Guid.Empty;
+        if (firmPlatformId == Guid.Empty) return BadRequest(new { success = false, error = "firmPlatformId gerekli." });
+        var status = body.NamedValue("status");
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "tracking-outbox", "takip-kuyrugu", "Takip Kuyruğu",
+            ECSPros.Api.Grid.TrackingOutboxExportColumns.All, async max =>
+            {
+                var grid = body.ToGridRequest();
+                var q = TrackingOutboxGrid.ApplyAll(integrationDb.TrackingEventOutbox.AsNoTracking(), firmPlatformId, status, grid.Search, grid);
+                var count = await q.CountAsync(ct);
+                if (count > max)
+                    return ECSPros.Shared.Kernel.Common.Result.Failure<ECSPros.Shared.Kernel.Grid.GridExportSource<TrackingOutboxExportRow>>(ECSPros.Api.Grid.GridExportEndpoint.TavanMesaji(count, max));
+                var rows = TrackingOutboxGrid.Schema.ApplySort(q, grid).Select(o => new TrackingOutboxExportRow(
+                    o.CreatedAt, o.OccurredAt, o.EventName, o.DedupId, o.Source, o.Status, o.AttemptCount, o.NextAttemptAt, o.ProcessedAt, o.LastError, o.TargetsJson));
+                return ECSPros.Shared.Kernel.Common.Result.Success(new ECSPros.Shared.Kernel.Grid.GridExportSource<TrackingOutboxExportRow>(count, rows));
+            }, ct);
     }
 
     [HttpPost("outbox/{id:guid}/retry")]

@@ -1,4 +1,5 @@
 using ECSPros.Shared.Kernel.Common;
+using ECSPros.Shared.Kernel.Grid;
 using MediatR;
 
 namespace ECSPros.Fulfillment.Application.Queries.GetPickingPlans;
@@ -7,7 +8,9 @@ public record GetPickingPlansQuery(
     string? Status,
     Guid? WarehouseId,
     int Page = 1,
-    int PageSize = 20) : IRequest<Result<PagedResult<PickingPlanDto>>>;
+    int PageSize = 20,
+    /// <summary>DataGrid (2026-09-08): verilirse sayfa/sıralama/filtre/arama buradan (PickingPlanGrid.Schema); Page/PageSize yok sayılır.</summary>
+    GridRequest? Grid = null) : IRequest<Result<PagedResult<PickingPlanDto>>>;
 
 public record PickingPlanDto(
     Guid Id,

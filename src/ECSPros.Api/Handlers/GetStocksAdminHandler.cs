@@ -89,8 +89,11 @@ public class GetStocksAdminHandler(
         if (request.VariantId.HasValue) query = query.Where(st => st.VariantId == request.VariantId);
         if (request.SectionId.HasValue) query = query.Where(st => st.SectionId == request.SectionId);
         if (request.BinId.HasValue) query = query.Where(st => st.BinId == request.BinId);
-        // DataGrid F4: beyaz listeli grid filtreleri (StockGrid.Schema)
-        query = ECSPros.Api.Grid.StockGrid.Schema.ApplyFilters(query, request.Grid);
+        // DataGrid F4: beyaz listeli grid filtreleri (StockGrid.Schema) + ÜRÜN başlık filtresi f.product (varyant kümesi)
+        var filtered = await ECSPros.Api.Grid.StockGrid.ApplyFiltersWithProductAsync(query, request.Grid, catDb, ct);
+        if (filtered is null)
+            return Result.Success(new PagedResult<StockAdminRowDto>([], 0, request.Page, request.PageSize));
+        query = filtered;
 
         var total = await query.CountAsync(ct);
 
@@ -183,7 +186,9 @@ public class GetStocksAdminFacetsHandler(
         var query = invDb.Stocks.AsNoTracking().Where(st => variantIds.Contains(st.VariantId));
         if (request.WarehouseId.HasValue) query = query.Where(st => st.WarehouseId == request.WarehouseId);
         if (request.AvailableOnly) query = query.Where(st => st.Quantity > st.ReservedQuantity);
-        query = ECSPros.Api.Grid.StockGrid.Schema.ApplyFilters(query, request.Grid);   // DataGrid F4: sayaçlar listeyle tutarlı
+        var filtered = await ECSPros.Api.Grid.StockGrid.ApplyFiltersWithProductAsync(query, request.Grid, catDb, ct);   // DataGrid F4: sayaçlar listeyle tutarlı (f.product dahil)
+        if (filtered is null) return Result.Success(bos);
+        query = filtered;
 
         var rows = await query
             .Select(st => new { st.VariantId, st.WarehouseId, st.SectionId, st.BinId })

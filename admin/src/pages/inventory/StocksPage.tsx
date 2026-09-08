@@ -81,6 +81,7 @@ type AdjustForm = {
 
 // DataGrid F4 (2026-09-08): arama (global search), depo ve ikincil facet seçimleri (variantId/sectionId/binId) adlandırılmış URL
 // parametreleri; "Mevcut" anahtarı f.inStock boolean grid filtresi; sıralama miktar/rezerve/mevcut; kolon tercihleri localStorage'da.
+// Başlık filtreleri: ÜRÜN f.product (handler'da varyant kümesi), DEPO/KISIM/RAF Guid eq, STOK/REZ./MEVCUT sayı.
 const NAMED_KEYS = ['warehouseId', 'variantId', 'sectionId', 'binId'] as const
 
 const EXTRA_FILTERS: GridFilterField[] = [
@@ -191,8 +192,11 @@ export function StocksPage() {
     setTimeout(() => barcodeRef.current?.focus(), 100)
   }
 
+  // Başlık filtreleri (f.warehouseId / f.sectionId / f.binId — Guid eq; adlandırılmış ?warehouseId= seçicileriyle paralel çalışır, ikisi de AND).
+  // Kısım/raf seçenekleri facet'lerden gelir (yalnız arama varken dolu).
+  const warehouseOptions = warehouses.map(w => ({ value: w.id, label: getWarehouseName(w) }))
   const columns: GridColumn<StockAdminRow>[] = [
-    { key: 'productCode', header: 'ÜRÜN', frozen: true, lockVisible: true, minWidth: 260,
+    { key: 'productCode', header: 'ÜRÜN', frozen: true, lockVisible: true, minWidth: 260, filter: { type: 'text', label: 'Ürün (kod / ad / barkod)', field: 'product', ops: ['contains'] },
       cell: s => (
         <div className="flex items-center gap-2">
           {s.imageUrl
@@ -206,9 +210,9 @@ export function StocksPage() {
             </div>
           </div>
         </div>) },
-    { key: 'warehouse', header: 'DEPO', priority: 1, lockVisible: true, cell: s => <span className="text-sm" style={{ color: 'var(--text)' }}>{s.warehouseName}</span> },
-    { key: 'section', header: 'KISIM', priority: 2, cell: s => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{s.sectionName ?? '—'}</span> },
-    { key: 'bin', header: 'RAF', priority: 2, cell: s => s.binCode
+    { key: 'warehouse', header: 'DEPO', priority: 1, lockVisible: true, filter: { type: 'enum', label: 'Depo', field: 'warehouseId', options: warehouseOptions }, cell: s => <span className="text-sm" style={{ color: 'var(--text)' }}>{s.warehouseName}</span> },
+    { key: 'section', header: 'KISIM', priority: 2, filter: { type: 'enum', label: 'Kısım', field: 'sectionId', options: sectionOptions.map(o => ({ value: o.id, label: o.label })) }, cell: s => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{s.sectionName ?? '—'}</span> },
+    { key: 'bin', header: 'RAF', priority: 2, filter: { type: 'enum', label: 'Raf', field: 'binId', options: binOptions.map(o => ({ value: o.id, label: o.label })) }, cell: s => s.binCode
       ? <code className="text-xs font-mono" style={{ color: 'var(--text-m)' }}>{s.binCode}</code>
       : <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span> },
     { key: 'quantity', header: 'STOK', filters: [{ field: 'quantity', label: 'Stok', type: 'number' }, { field: 'stockType', label: 'Stok tipi', type: 'enum', options: [{ value: 'physical', label: 'Fiziksel' }, { value: 'virtual', label: 'Sanal' }] }, { field: 'updatedAt', label: 'Güncellenme', type: 'date' }], sortable: true, align: 'right', priority: 1, cell: s => <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{s.quantity}</span> },

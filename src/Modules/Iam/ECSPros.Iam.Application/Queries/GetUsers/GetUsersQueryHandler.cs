@@ -16,26 +16,12 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, Result<PagedU
 
     public async Task<Result<PagedUserResult>> Handle(GetUsersQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.Users.Where(u => !u.IsDeleted);
-
-        if (request.ActiveOnly)
-            query = query.Where(u => u.IsActive);
-
-        if (!string.IsNullOrWhiteSpace(request.Search))
-        {
-            var s = request.Search.ToLower();
-            query = query.Where(u =>
-                u.Username.ToLower().Contains(s) ||
-                u.Email.ToLower().Contains(s) ||
-                u.FirstName.ToLower().Contains(s) ||
-                u.LastName.ToLower().Contains(s) ||
-                (u.Phone != null && u.Phone.Contains(s)));
-        }
+        // DataGrid (2026-09-08): adlandırılmış filtre + global arama + beyaz listeli grid filtreleri TEK yerden (UserGrid).
+        var query = UserGrid.ApplyAll(_context.Users.AsQueryable(), new UserListFilters(request.Search, request.ActiveOnly), request.Grid);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var users = await query
-            .OrderBy(u => u.Username)
+        var users = await UserGrid.Schema.ApplySort(query, request.Grid)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(u => new

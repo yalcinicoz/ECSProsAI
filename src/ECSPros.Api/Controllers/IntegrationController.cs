@@ -35,10 +35,27 @@ public class IntegrationController(
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
+        // DataGrid (2026-09-08): page/pageSize/search/sort/dir/f.* (IntegrationLogGrid.Schema); adlandırılmış filtreler korunur
+        var grid = ECSPros.Api.Grid.GridRequestParser.Parse(Request.Query, defaultPageSize: 50);
         var result = await mediator.Send(new GetIntegrationLogsQuery(
-            firmIntegrationId, serviceType, operationType, status, from, to, page, pageSize), ct);
+            firmIntegrationId, serviceType, operationType, status, from, to, page, pageSize, null, grid), ct);
         if (result.IsFailure) return BadRequest(new { success = false, error = result.Error });
         return Ok(new { success = true, data = result.Value });
+    }
+
+    /// <summary>Entegrasyon loglarını Excel'e aktarır (DataGrid): gövde search/sort/dir/filters/columns + named: firmIntegrationId, serviceType, operationType, status, from, to.</summary>
+    [HttpPost("logs/export")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("grid-export")]
+    public async Task<IActionResult> ExportLogs([FromBody] ECSPros.Shared.Kernel.Grid.GridExportRequest body,
+        [FromServices] IConfiguration config, [FromServices] ECSPros.Iam.Application.Services.IIamDbContext iam,
+        [FromServices] ILogger<IntegrationController> logger, CancellationToken ct)
+    {
+        var filters = new IntegrationLogListFilters(
+            ECSPros.Api.Grid.GridExportEndpoint.Kimlik(body, "firmIntegrationId"), body.NamedValue("serviceType"), body.NamedValue("operationType"),
+            body.NamedValue("status"), ECSPros.Api.Grid.GridExportEndpoint.Tarih(body, "from"), ECSPros.Api.Grid.GridExportEndpoint.Tarih(body, "to"),
+            null, body.Search);
+        return await ECSPros.Api.Grid.GridExportEndpoint.RunAsync(this, body, config, iam, logger, "integration-logs", "entegrasyon-loglari", "Entegrasyon Logları",
+            ECSPros.Api.Grid.IntegrationLogExportColumns.All, max => mediator.Send(new ExportIntegrationLogsQuery(filters, body.ToGridRequest(), max), ct), ct);
     }
 
     // ─── Marketplace ────────────────────────────────────────────────────

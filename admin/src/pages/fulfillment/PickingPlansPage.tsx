@@ -26,6 +26,11 @@ interface PickingPlan {
 
 interface PagedResult<T> { items: T[]; totalCount: number; page: number; pageSize: number }
 
+const DAGITIM_SECENEK = [
+  { value: 'none', label: 'Satır yok' }, { value: 'unassigned', label: 'Dağıtım yapılmadı' },
+  { value: 'partial', label: 'Dağıtım eksik' }, { value: 'full', label: 'Dağıtım tamam' },
+]
+
 /** Toplanma ilerlemesi — picked/total + yüzde çubuğu. */
 export function ToplanmaIlerleme({ picked, total }: { picked: number; total: number }) {
   if (total === 0) return <span className="text-xs" style={{ color: 'var(--text-s)' }}>—</span>
@@ -47,8 +52,8 @@ export function ToplanmaIlerleme({ picked, total }: { picked: number; total: num
 export function PickingPlansPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  // DataGrid F4 (mekanik göç): durum sekmesi URL'de `?tab=`, sayfa/sayfa boyu grid'de.
-  const grid = useGridState('picking-plans', { defaultPageSize: 20 })
+  // DataGrid (2026-09-08): sunucu filtre/sıralama/arama (PickingPlanGrid.Schema) + Excel export; durum sekmesi URL'de `?tab=` (adlandırılmış parametre).
+  const grid = useGridState('picking-plans', { defaultPageSize: 20, defaultSort: 'plannedAt', defaultDir: 'desc' })
   const [sp] = useSearchParams()
   const tab = sp.get('tab') ?? ''
   const setTab = (v: string) => grid.mutate(n => { if (v) n.set('tab', v); else n.delete('tab') })
@@ -58,6 +63,7 @@ export function PickingPlansPage() {
     queryKey: ['picking-plans', tab, ...grid.queryKey],
     queryFn: async () => (await api.get(`/fulfillment/picking-plans?${grid.toParams({ status: tab || undefined })}`)).data.data,
     placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
 
   const aksiyon = useMutation({
@@ -71,24 +77,37 @@ export function PickingPlansPage() {
 
   const plans = data?.items ?? []
   const columns: GridColumn<PickingPlan>[] = [
-    { key: 'planNumber', header: 'PLAN NO', priority: 1, lockVisible: true, frozen: true, cell: p => <code className="text-xs font-mono">{p.planNumber}</code> },
+    { key: 'planNumber', header: 'PLAN NO', priority: 1, lockVisible: true, frozen: true, sortable: true,
+      filter: { type: 'text', label: 'Plan no', ops: ['startswith', 'contains', 'eq'] },
+      cell: p => <code className="text-xs font-mono">{p.planNumber}</code> },
     {
-      key: 'planType', header: 'TİP', priority: 2, cell: p => (
+      key: 'planType', header: 'TİP', priority: 2, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Tip', options: Object.entries(PLAN_TIP).map(([value, label]) => ({ value, label })) },
+      cell: p => (
         <Badge variant={p.planType === 'single_item' ? 'info' : 'neutral'}>
           {PLAN_TIP[p.planType] ?? p.planType}
         </Badge>
       ),
     },
-    { key: 'orderCount', header: 'SİPARİŞ', priority: 2, cell: p => <span style={{ color: 'var(--text-m)' }}>{p.orderCount || '—'}</span> },
+    { key: 'orderCount', header: 'SİPARİŞ', priority: 2, sortable: true, align: 'right', filter: { type: 'number', label: 'Sipariş sayısı' },
+      cell: p => <span style={{ color: 'var(--text-m)' }}>{p.orderCount || '—'}</span> },
     {
-      key: 'assignment', header: 'DAĞITIM', priority: 2, cell: p => {
+      key: 'assignment', header: 'DAĞITIM', priority: 2,
+      filter: { type: 'enum', multiple: true, label: 'Dağıtım', options: DAGITIM_SECENEK },
+      cell: p => {
         const d = dagitimDurum(p.assignedLines, p.totalLines)
         return <Badge variant={d.variant}>{d.label}</Badge>
       },
     },
-    { key: 'progress', header: 'TOPLANMA', priority: 1, cell: p => <ToplanmaIlerleme picked={p.pickedLines} total={p.totalLines} /> },
-    { key: 'plannedAt', header: 'PLANLAMA', priority: 3, cell: p => tarihSaat(p.plannedAt) },
-    { key: 'status', header: 'DURUM', priority: 1, cell: p => { const [l, v] = PLAN_DURUM[p.status] ?? [p.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
+    { key: 'progress', header: 'TOPLANMA', priority: 1, sortable: true, filter: { type: 'number', label: 'Toplanma %' },
+      filters: [{ field: 'pickedLines', label: 'Toplanan satır', type: 'number' }, { field: 'totalLines', label: 'Toplam satır', type: 'number' }],
+      cell: p => <ToplanmaIlerleme picked={p.pickedLines} total={p.totalLines} /> },
+    { key: 'plannedAt', header: 'PLANLAMA', priority: 3, sortable: true, filter: { type: 'date', label: 'Planlama', quick: true },
+      filters: [{ field: 'startedAt', label: 'Başlangıç', type: 'date' }, { field: 'completedAt', label: 'Tamamlanma', type: 'date' }],
+      cell: p => tarihSaat(p.plannedAt) },
+    { key: 'status', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(PLAN_DURUM).map(([value, [label]]) => ({ value, label })) },
+      cell: p => { const [l, v] = PLAN_DURUM[p.status] ?? [p.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
     {
       key: 'actions', header: '', priority: 1, align: 'right', stopRowClick: true, exportable: false, cell: p => (
         <RowActions className="whitespace-nowrap">
@@ -114,7 +133,7 @@ export function PickingPlansPage() {
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>Toplama Görevleri</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{data?.totalCount ?? 0} kayıt</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{(data?.totalCount ?? 0).toLocaleString('tr-TR')} kayıt{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}</p>
         </div>
         <Button size="sm" onClick={() => navigate('/fulfillment/tasks/new')}>+ Yeni Görev</Button>
       </div>
@@ -130,8 +149,11 @@ export function PickingPlansPage() {
 
       <DataGrid<PickingPlan>
         gridId="picking-plans"
+        views
         grid={grid}
         columns={columns}
+        search={{ placeholder: 'Plan no ara…' }}
+        export={{ endpoint: '/fulfillment/picking-plans/export', named: () => ({ status: tab || undefined }), fallbackFileName: 'toplama-planlari.xlsx' }}
         rows={plans}
         totalCount={data?.totalCount ?? 0}
         loading={isLoading}

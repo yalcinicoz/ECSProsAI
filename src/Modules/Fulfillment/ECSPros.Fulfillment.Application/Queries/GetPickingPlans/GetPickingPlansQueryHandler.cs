@@ -16,20 +16,17 @@ public class GetPickingPlansQueryHandler : IRequestHandler<GetPickingPlansQuery,
 
     public async Task<Result<PagedResult<PickingPlanDto>>> Handle(GetPickingPlansQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.PickingPlans.AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(request.Status))
-            query = query.Where(p => p.Status == request.Status);
-
-        if (request.WarehouseId.HasValue)
-            query = query.Where(p => p.WarehouseId == request.WarehouseId);
+        // DataGrid (2026-09-08): adlandırılmış filtreler + beyaz listeli grid filtre/sıralama (PickingPlanGrid); Grid yoksa eski davranış.
+        var query = PickingPlanGrid.ApplyAll(_context.PickingPlans.AsNoTracking(),
+            new PickingPlanListFilters(request.Status, request.WarehouseId, request.Grid?.Search), request.Grid);
+        var page = request.Grid?.Page ?? request.Page;
+        var pageSize = request.Grid?.PageSize ?? request.PageSize;
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var items = await query
-            .OrderByDescending(p => p.PlannedAt)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+        var items = await PickingPlanGrid.Schema.ApplySort(query, request.Grid)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(p => new PickingPlanDto(
                 p.Id,
                 p.PlanNumber,
@@ -66,6 +63,6 @@ public class GetPickingPlansQueryHandler : IRequestHandler<GetPickingPlansQuery,
                 .ToList();
         }
 
-        return Result.Success(new PagedResult<PickingPlanDto>(items, totalCount, request.Page, request.PageSize));
+        return Result.Success(new PagedResult<PickingPlanDto>(items, totalCount, page, pageSize));
     }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import api from '@/api/client'
@@ -18,7 +18,10 @@ interface PosSale {
   status: string
   grandTotal: number
   createdAt: string
+  registerName?: string | null
 }
+
+interface PosRegister { id: string; code: string; name: string; isActive: boolean }
 
 interface PosSaleDetail extends PosSale {
   subtotal: number
@@ -31,8 +34,12 @@ interface PosSaleDetail extends PosSale {
 
 interface PagedResult<T> { items: T[]; totalCount: number; page: number; pageSize: number }
 
+const REGISTERS_BOS: PosRegister[] = []
+
 const DURUM: Record<string, [string, BadgeVariant]> = {
+  open:      ['Açık', 'warning'],
   completed: ['Tamamlandı', 'success'],
+  cancelled: ['İptal', 'neutral'],
   refunded:  ['İade Edildi', 'danger'],
 }
 
@@ -125,8 +132,8 @@ function DetayModal({ saleId, onClose }: { saleId: string; onClose: () => void }
 }
 
 export function PosSalesPage() {
-  // DataGrid F4 (mekanik göç): durum sekmesi URL'de `?tab=`, sayfa/sayfa boyu grid'de.
-  const grid = useGridState('pos-sales', { defaultPageSize: 20 })
+  // DataGrid (2026-09-08): sunucu filtre/sıralama/arama (PosSaleGrid.Schema) + Excel export; durum sekmesi URL'de `?tab=` (adlandırılmış parametre).
+  const grid = useGridState('pos-sales', { defaultPageSize: 20, defaultSort: 'createdAt', defaultDir: 'desc' })
   const [sp] = useSearchParams()
   const tab = sp.get('tab') ?? ''
   const setTab = (v: string) => grid.mutate(n => { if (v) n.set('tab', v); else n.delete('tab') })
@@ -136,14 +143,30 @@ export function PosSalesPage() {
     queryKey: ['pos-sales', tab, ...grid.queryKey],
     queryFn: async () => (await api.get(`/pos/sales?${grid.toParams({ status: tab || undefined })}`)).data.data,
     placeholderData: prev => prev,
+    retry: (n, e) => (e as { response?: { status?: number } })?.response?.status === 400 ? false : n < 2,
   })
+  const { data: registers = REGISTERS_BOS } = useQuery<PosRegister[]>({
+    queryKey: ['pos-registers', 'all'],
+    queryFn: async () => (await api.get('/pos/registers?activeOnly=false')).data.data ?? [],
+  })
+  const registerOptions = useMemo(() => registers.map(r => ({ value: r.id, label: r.name || r.code })), [registers])
 
   const sales = data?.items ?? []
   const columns: GridColumn<PosSale>[] = [
-    { key: 'saleNumber', header: 'FİŞ NO', priority: 1, lockVisible: true, cell: s => <code className="text-xs font-mono">{s.saleNumber}</code> },
-    { key: 'total', header: 'TUTAR', priority: 1, cell: s => <span className="font-medium">{para(s.grandTotal)}</span> },
-    { key: 'createdAt', header: 'TARİH', priority: 2, cell: s => tarihSaat(s.createdAt) },
-    { key: 'status', header: 'DURUM', priority: 1, cell: s => { const [l, v] = DURUM[s.status] ?? [s.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
+    { key: 'saleNumber', header: 'FİŞ NO', priority: 1, lockVisible: true, frozen: true, sortable: true,
+      filter: { type: 'text', label: 'Fiş no', ops: ['startswith', 'contains', 'eq'] },
+      cell: s => <code className="text-xs font-mono">{s.saleNumber}</code> },
+    { key: 'register', header: 'KASA', priority: 2, sortable: true,
+      filter: { type: 'enum', field: 'registerId', label: 'Kasa', options: registerOptions },
+      cell: s => <span className="text-sm" style={{ color: 'var(--text-m)' }}>{s.registerName ?? '—'}</span> },
+    { key: 'total', header: 'TUTAR', priority: 1, sortable: true, align: 'right', filter: { type: 'number', label: 'Tutar' },
+      filters: [{ field: 'totalDiscount', label: 'İndirim', type: 'number' }, { field: 'itemCount', label: 'Kalem sayısı', type: 'number' }],
+      cell: s => <span className="font-medium">{para(s.grandTotal)}</span> },
+    { key: 'createdAt', header: 'TARİH', priority: 2, sortable: true, filter: { type: 'date', label: 'Tarih', quick: true }, cell: s => tarihSaat(s.createdAt) },
+    { key: 'status', header: 'DURUM', priority: 1, lockVisible: true, sortable: true,
+      filter: { type: 'enum', multiple: true, label: 'Durum', options: Object.entries(DURUM).map(([value, [label]]) => ({ value, label })) },
+      filters: [{ field: 'hasMember', label: 'Üyeli satış', type: 'boolean' }],
+      cell: s => { const [l, v] = DURUM[s.status] ?? [s.status, 'neutral' as BadgeVariant]; return <Badge variant={v}>{l}</Badge> } },
     { key: 'detail', header: '', priority: 3, align: 'right', exportable: false, cell: () => <span className="text-xs" style={{ color: 'var(--text-s)' }}>Detay →</span> },
   ]
 
@@ -151,7 +174,7 @@ export function PosSalesPage() {
     <div className="p-6">
       <div className="mb-4">
         <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>POS Satışları</h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{data?.totalCount ?? 0} kayıt</p>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--text-s)' }}>{(data?.totalCount ?? 0).toLocaleString('tr-TR')} kayıt{grid.activeFilterCount || grid.state.search ? ' (filtreli)' : ''}</p>
       </div>
 
       <div className="tab-scroll flex gap-1 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -163,8 +186,11 @@ export function PosSalesPage() {
 
       <DataGrid<PosSale>
         gridId="pos-sales"
+        views
         grid={grid}
         columns={columns}
+        search={{ placeholder: 'Fiş no ara…' }}
+        export={{ endpoint: '/pos/sales/export', named: () => ({ status: tab || undefined }), fallbackFileName: 'pos-satislari.xlsx' }}
         rows={sales}
         totalCount={data?.totalCount ?? 0}
         loading={isLoading}
